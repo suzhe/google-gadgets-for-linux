@@ -24,7 +24,8 @@
 
 FIND_LIBRARY(MLIB_LIBRARY m
   /usr/lib
-  /usr/local/lib)
+  /usr/local/lib
+)
 
 IF(MLIB_LIBRARY)
   SET(MLIB_LIBRARIES ${MLIB_LIBRARY})
