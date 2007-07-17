@@ -17,8 +17,6 @@
 #ifndef GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
 #define GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
 
-#include <string>
-
 #include "scriptableinterface.h"
 
 /**
@@ -30,7 +28,7 @@ class ViewInterface : public ScriptableInterface {
    * Initializes a view.
    * @param xml XML document specifying the view to generate.
    */
-  virtual bool Init(const std::string &xml) = 0;
+  virtual bool Init(const char *xml) = 0;
 };
 
 #endif // GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
