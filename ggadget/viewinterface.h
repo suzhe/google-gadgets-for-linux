@@ -31,9 +31,6 @@ class ViewInterface : public ScriptableInterface {
    * @param xml XML document specifying the view to generate.
    */
   virtual bool Init(const std::string &xml) = 0;
-
- private:
-  ViewInterface() {};
 };
 
 #endif // GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
