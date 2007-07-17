@@ -25,10 +25,9 @@
 class View : public ViewInterface {
  public:
   /** 
-   * Initializes a view.
-   * @param xml XML document specifying the view to generate.
+   * @see ViewInterface::Init
    */
-  virtual bool Init(const std::string &xml);
+  virtual bool Init(const char *xml);
 
  private: 
   View(const View &view);
