@@ -17,7 +17,7 @@
 #ifndef GOOGLE_GADGETS_LIB_VIEW_H__
 #define GOOGLE_GADGETS_LIB_VIEW_H__
 
-#include "viewinterface.h"
+#include "view_interface.h"
 
 /**
  * Main View implementation.
@@ -27,7 +27,7 @@ class View : public ViewInterface {
   /** 
    * @see ViewInterface::Init
    */
-  virtual bool Init(const char *xml);
+  virtual bool Init();
 
  private: 
   View(const View &view);
