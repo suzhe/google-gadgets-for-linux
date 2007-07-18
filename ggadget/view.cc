@@ -18,6 +18,6 @@
 //#include "gadget.h"
 //#include "filemanager.h"
 
-bool View::Init(const char *xml) {
+bool View::Init() {
   return true;
 }

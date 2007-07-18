@@ -14,20 +14,21 @@
   limitations under the License.
 */
 
-#ifndef GOOGLE_GADGETS_LIB_ELEMENT_INTERFACE_H__
-#define GOOGLE_GADGETS_LIB_ELEMENT_INTERFACE_H__
+#ifndef GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
+#define GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
 
-#include "scriptableinterface.h"
+#include "scriptable_interface.h"
 
 /**
- * Interface for representing an Element in the Gadget API.
+ * Interface for representing a View in the Gadget API.
  */
-class ElementInterface : public ScriptableInterface {
+class ViewInterface : public ScriptableInterface {
  public:
   /** 
-   * Initializes an element.
+   * Initializes a view.
+   * @param xml XML document specifying the view to generate.
    */
   virtual bool Init() = 0;
 };
 
-#endif // GOOGLE_GADGETS_LIB_ELEMENT_INTERFACE_H__
+#endif // GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
