@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GOOGLE_GADGETS_LIB_VIEW_H__
-#define GOOGLE_GADGETS_LIB_VIEW_H__
+#ifndef GGADGET_VIEW_H__
+#define GGADGET_VIEW_H__
 
 #include "view_interface.h"
 
@@ -33,4 +33,4 @@ class View : public ViewInterface {
   View(const View &view);
 };
 
-#endif // GOOGLE_GADGETS_LIB_VIEW_H__
+#endif // GGADGET_VIEW_H__

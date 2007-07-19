@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
-#define GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
+#ifndef GGADGET_VIEW_INTERFACE_H__
+#define GGADGET_VIEW_INTERFACE_H__
 
 #include "scriptable_interface.h"
 
@@ -31,4 +31,4 @@ class ViewInterface : public ScriptableInterface {
   virtual bool Init() = 0;
 };
 
-#endif // GOOGLE_GADGETS_LIB_VIEW_INTERFACE_H__
+#endif // GGADGET_VIEW_INTERFACE_H__
