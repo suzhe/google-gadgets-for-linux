@@ -77,10 +77,8 @@ namespace ggadget {
  * argument type convertable to a target type.
  *
  * <p>The From type can be inferred, so the preferred syntax for using
- * implicit_cast is the same as for static_cast etc.:</p>
- * <code>
- *   implicit_cast<ToType>(expr)
- * </code>
+ * implicit_cast is the same as for static_cast etc.:
+ * <code>implicit_cast<To>(expr)</code></p>
  *
  * <p>@c implicit_cast would have been part of the C++ standard library,
  * but the proposal was submitted too late.  It will probably make
@@ -103,7 +101,7 @@ inline To implicit_cast(From const &f) {
  * use @c dynamic_cast to double-check the downcast is legal (we die
  * if it's not).  In normal mode, we do the efficient @c static_cast
  * instead.
- * <p>Use like this: <code>down_cast<T*>(foo)</code>.
+ * <p>Use like this: <code>down_cast<To *>(foo)</code>.</p>
  */
 template<typename To, typename From>
 inline To down_cast(From* f) {          // so we only accept pointers
@@ -132,7 +130,7 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
 /**
  * The @c arraysize(arr) macro returns the # of elements in an array arr.
  * The expression is a compile-time constant, and therefore can be
- * used in defining new arrays, for example.  If you use arraysize on
+ * used in defining new arrays, for example.  If you use @c arraysize on
  * a pointer by mistake, you will get a compile-time error.
  *
  * One caveat is that @c arraysize() doesn't accept any array of an
