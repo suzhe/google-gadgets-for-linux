@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GOOGLE_GADGETS_LIB_ELEMENT_INTERFACE_H__
-#define GOOGLE_GADGETS_LIB_ELEMENT_INTERFACE_H__
+#ifndef GGADGET_ELEMENT_INTERFACE_H__
+#define GGADGET_ELEMENT_INTERFACE_H__
 
 #include "scriptable_interface.h"
 
@@ -30,4 +30,4 @@ class ElementInterface : public ScriptableInterface {
   virtual bool Init() = 0;
 };
 
-#endif // GOOGLE_GADGETS_LIB_ELEMENT_INTERFACE_H__
+#endif // GGADGET_ELEMENT_INTERFACE_H__
