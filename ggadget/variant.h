@@ -1,11 +1,24 @@
-// Copyright 2007 Google Inc. All Rights Reserved.
-// Author: wangxianzhu@google.com (Xianzhu Wang)
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+       http://www.apache.org/licenses/LICENSE-2.0
+  
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
 
 #ifndef GGADGET_VARIANT_H__
 #define GGADGET_VARIANT_H__
 
 #include <string>
-#include "commons.h"
+#include "common.h"
 
 namespace ggadget {
 
@@ -15,7 +28,6 @@ class Slot;
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
- * It doesn't support <code>[unsigned] long</code> types.
  */
 struct Variant {
   /**
