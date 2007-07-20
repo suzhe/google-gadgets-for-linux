@@ -17,7 +17,7 @@
 # The PROJECT_NAME tag is a single word (or a sequence of words surrounded 
 # by quotes) that should identify the project.
 
-PROJECT_NAME           = "Total Recall Linux"
+PROJECT_NAME           = "Google Gadgets for Linux"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. 
 # This could be handy for archiving the generated documentation or 
@@ -146,7 +146,7 @@ JAVADOC_AUTOBRIEF      = YES
 # The new default is to treat a multi-line C++ comment block as a detailed 
 # description. Set this tag to YES if you prefer the old behaviour instead.
 
-MULTILINE_CPP_IS_BRIEF = NO
+MULTILINE_CPP_IS_BRIEF = YES
 
 # If the DETAILS_AT_TOP tag is set to YES then Doxygen 
 # will output the detailed description near the top, like JavaDoc.
@@ -202,7 +202,7 @@ OPTIMIZE_OUTPUT_JAVA   = NO
 # func(std::string) {}). This also make the inheritance and collaboration 
 # diagrams that involve STL classes more complete and accurate.
 
-BUILTIN_STL_SUPPORT    = NO
+BUILTIN_STL_SUPPORT    = YES
 
 # If member grouping is used in the documentation and the DISTRIBUTE_GROUP_DOC 
 # tag is set to YES, then doxygen will reuse the documentation of the first 
@@ -244,7 +244,7 @@ EXTRACT_STATIC         = NO
 # defined locally in source files will be included in the documentation. 
 # If set to NO only classes defined in header files are included.
 
-EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_CLASSES  = NO
 
 # This flag is only useful for Objective-C code. When set to YES local 
 # methods, which are defined in the implementation section but not in 
@@ -459,7 +459,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = 
+INPUT                  = ggadget
 
 # If the value of the INPUT tag contains directories, you can use the 
 # FILE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
@@ -494,7 +494,7 @@ EXCLUDE_SYMLINKS       = NO
 # against the file with absolute path, so to exclude all test directories 
 # for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = */test/*
+EXCLUDE_PATTERNS       = */tests/* *_impl.h *.cc
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or 
 # directories that contain example code fragments that are included (see 
@@ -1012,10 +1012,7 @@ INCLUDE_FILE_PATTERNS  =
 # undefined via #undef or recursively expanded use the := operator 
 # instead of the = operator.
 
-PREDEFINED             = ZEXPORT= \
-                         ZEXTERN= \
-                         ZCALLBACK= \
-                         OF(args)=args
+PREDEFINED             = 
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then 
 # this tag can be used to specify a list of macro names that should be expanded. 
