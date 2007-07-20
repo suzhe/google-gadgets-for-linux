@@ -212,7 +212,7 @@ typedef Signal1<Slot *, int> MetaSignal;
 typedef Signal9<void, long, bool, std::string, std::string, const char *,
                 int, unsigned short, int, unsigned long> Signal9VoidCompatible;
 
-const int kNumTestData = sizeof(testdata)/sizeof(TestData); 
+const int kNumTestData = arraysize(testdata); 
 
 static void CheckSlot(int i, Slot *slot) {
   ASSERT_TRUE(slot->HasMetadata());

@@ -200,7 +200,7 @@ struct TestData {
     Variant(), "TestVoidMethod2: a ffffffff" },
 };
 
-const int kNumTestData = sizeof(testdata)/sizeof(TestData); 
+const int kNumTestData = arraysize(testdata); 
 
 TEST(slot, Slot) {
   TestClass obj;
