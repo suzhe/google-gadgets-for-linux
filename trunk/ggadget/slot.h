@@ -58,6 +58,13 @@ class Slot {
    */
   virtual const Variant::Type *GetArgTypes() const { return NULL; }
 
+  /**
+   * Equality tester, only for unit testing.
+   * The slots to be tested must be of the same type, otherwise the program
+   * may crash.
+   */
+  virtual bool operator==(const Slot &another) const = 0;
+
  protected:
   Slot() { }
 };
@@ -68,7 +75,7 @@ class Slot {
 template <typename R>
 class Slot0 : public Slot {
  public:
-  virtual Variant::Type GetReturnType() const { return VariantType<R>(); }
+  virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
 
 /**
@@ -86,10 +93,14 @@ template <typename R>
 class FunctionSlot0 : public Slot0<R> {
  public:
   typedef R (*Function)();
+  typedef FunctionSlot0<R> SelfType;
   FunctionSlot0(Function function) : function_(function) { }
   virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     return Variant(function_());
+  }
+  virtual bool operator==(const Slot &another) const {
+    return function_ == down_cast<const SelfType *>(&another)->function_;
   }
  private:
   Function function_;
@@ -102,11 +113,15 @@ template <>
 class FunctionSlot0<void> : public Slot0<void> {
  public:
   typedef void (*Function)();
+  typedef FunctionSlot0<void> SelfType;
   FunctionSlot0(Function function) : function_(function) { }
   virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     function_();
     return Variant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    return function_ == down_cast<const SelfType *>(&another)->function_;
   }
  private:
   Function function_;
@@ -119,10 +134,15 @@ template <typename T, typename R>
 class MethodSlot0 : public Slot0<R> {
  public:
   typedef R (T::*Method)();
+  typedef MethodSlot0<T, R> SelfType;
   MethodSlot0(T* object, Method method) : object_(object), method_(method) { }
   virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     return Variant((object_->*method_)());
+  }
+  virtual bool operator==(const Slot &another) const {
+    return object_ == down_cast<const SelfType *>(&another)->object_ &&
+           method_ == down_cast<const SelfType *>(&another)->method_;
   }
  private:
   T* object_;
@@ -136,11 +156,16 @@ template <typename T>
 class MethodSlot0<T, void> : public Slot0<void> {
  public:
   typedef void (T::*Method)();
+  typedef MethodSlot0<T, void> SelfType;
   MethodSlot0(T* object, Method method) : object_(object), method_(method) { }
   virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     (object_->*method_)();
     return Variant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    return object_ == down_cast<const SelfType *>(&another)->object_ &&
+           method_ == down_cast<const SelfType *>(&another)->method_;
   }
  private:
   T* object_;
@@ -170,37 +195,43 @@ inline Slot0<R> *NewSlot(T *object, R (T::*method)()) {
  */
 #define DEFINE_SLOT(n, _arg_types, _arg_type_names,                           \
                     _init_arg_types, _call_args)                              \
+template <_arg_types>                                                         \
+inline const Variant::Type *ArgTypesHelper() {                                \
+  static Variant::Type arg_types[] = { _init_arg_types };                     \
+  return arg_types;                                                           \
+}                                                                             \
+                                                                              \
 template <typename R, _arg_types>                                             \
 class Slot##n : public Slot {                                                 \
  public:                                                                      \
-  virtual Variant::Type GetReturnType() const { return VariantType<R>(); }    \
+  virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }\
   virtual int GetArgCount() const { return n; }                               \
-  virtual const Variant::Type *GetArgTypes() const { return arg_types_; }     \
- protected:                                                                   \
-  Slot##n() { _init_arg_types; }                                              \
- private:                                                                     \
-  Variant::Type arg_types_[n];                                                \
+  virtual const Variant::Type *GetArgTypes() const {                          \
+    return ArgTypesHelper<_arg_type_names>();                                 \
+  }                                                                           \
 };                                                                            \
                                                                               \
 template <_arg_types>                                                         \
 class Slot##n<void, _arg_type_names> : public Slot {                          \
  public:                                                                      \
   virtual int GetArgCount() const { return n; }                               \
-  virtual const Variant::Type *GetArgTypes() const { return arg_types_; }     \
- protected:                                                                   \
-  Slot##n() { _init_arg_types; }                                              \
- private:                                                                     \
-  Variant::Type arg_types_[n];                                                \
+  virtual const Variant::Type *GetArgTypes() const {                          \
+    return ArgTypesHelper<_arg_type_names>();                                 \
+  }                                                                           \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types>                                             \
 class FunctionSlot##n : public Slot##n<R, _arg_type_names> {                  \
  public:                                                                      \
   typedef R (*Function)(_arg_type_names);                                     \
+  typedef FunctionSlot##n<R, _arg_type_names> SelfType;                       \
   FunctionSlot##n(Function function) : function_(function) { }                \
   virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     return Variant(function_(_call_args));                                    \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    return function_ == down_cast<const SelfType *>(&another)->function_;     \
   }                                                                           \
  private:                                                                     \
   Function function_;                                                         \
@@ -211,11 +242,15 @@ class FunctionSlot##n<void, _arg_type_names> :                                \
     public Slot##n<void, _arg_type_names> {                                   \
  public:                                                                      \
   typedef void (*Function)(_arg_type_names);                                  \
+  typedef FunctionSlot##n<void, _arg_type_names> SelfType;                    \
   FunctionSlot##n(Function function) : function_(function) { }                \
   virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     function_(_call_args);                                                    \
     return Variant();                                                         \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    return function_ == down_cast<const SelfType *>(&another)->function_;     \
   }                                                                           \
  private:                                                                     \
   Function function_;                                                         \
@@ -225,10 +260,15 @@ template <typename T, typename R, _arg_types>                                 \
 class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
  public:                                                                      \
   typedef R (T::*Method)(_arg_type_names);                                    \
+  typedef MethodSlot##n<T, R, _arg_type_names> SelfType;                      \
   MethodSlot##n(T *obj, Method method) : obj_(obj), method_(method) { }       \
   virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     return Variant((obj_->*method_)(_call_args));                             \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    return obj_ == down_cast<const SelfType *>(&another)->obj_ &&             \
+           method_ == down_cast<const SelfType *>(&another)->method_;         \
   }                                                                           \
  private:                                                                     \
   T* obj_;                                                                    \
@@ -240,11 +280,16 @@ class MethodSlot##n<T, void, _arg_type_names> :                               \
     public Slot##n<void, _arg_type_names> {                                   \
  public:                                                                      \
   typedef void (T::*Method)(_arg_type_names);                                 \
+  typedef MethodSlot##n<T, void, _arg_type_names> SelfType;                   \
   MethodSlot##n(T *obj, Method method) : obj_(obj), method_(method) { }       \
   virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
     return Variant();                                                         \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    return obj_ == down_cast<const SelfType *>(&another)->obj_ &&             \
+           method_ == down_cast<const SelfType *>(&another)->method_;         \
   }                                                                           \
  private:                                                                     \
   T* obj_;                                                                    \
@@ -262,7 +307,7 @@ NewSlot(T *obj, R (T::*method)(_arg_type_names)) {                            \
   return new MethodSlot##n<T, R, _arg_type_names>(obj, method);               \
 }                                                                             \
 
-#define INIT_ARG_TYPE(n) arg_types_[n-1] = VariantType<P##n>()
+#define INIT_ARG_TYPE(n) VariantType<P##n>::type
 #define GET_ARG(n)       VariantValue<P##n>()(argv[n-1])
 
 #define ARG_TYPES1      typename P1
@@ -273,49 +318,49 @@ DEFINE_SLOT(1, ARG_TYPES1, ARG_TYPE_NAMES1, INIT_ARG_TYPES1, CALL_ARGS1)
 
 #define ARG_TYPES2      ARG_TYPES1, typename P2
 #define ARG_TYPE_NAMES2 ARG_TYPE_NAMES1, P2
-#define INIT_ARG_TYPES2      INIT_ARG_TYPES1; INIT_ARG_TYPE(2)
+#define INIT_ARG_TYPES2      INIT_ARG_TYPES1, INIT_ARG_TYPE(2)
 #define CALL_ARGS2      CALL_ARGS1, GET_ARG(2)
 DEFINE_SLOT(2, ARG_TYPES2, ARG_TYPE_NAMES2, INIT_ARG_TYPES2, CALL_ARGS2)
 
 #define ARG_TYPES3      ARG_TYPES2, typename P3
 #define ARG_TYPE_NAMES3 ARG_TYPE_NAMES2, P3
-#define INIT_ARG_TYPES3      INIT_ARG_TYPES2; INIT_ARG_TYPE(3)
+#define INIT_ARG_TYPES3      INIT_ARG_TYPES2, INIT_ARG_TYPE(3)
 #define CALL_ARGS3      CALL_ARGS2, GET_ARG(3)
 DEFINE_SLOT(3, ARG_TYPES3, ARG_TYPE_NAMES3, INIT_ARG_TYPES3, CALL_ARGS3)
 
 #define ARG_TYPES4      ARG_TYPES3, typename P4
 #define ARG_TYPE_NAMES4 ARG_TYPE_NAMES3, P4
-#define INIT_ARG_TYPES4      INIT_ARG_TYPES3; INIT_ARG_TYPE(4)
+#define INIT_ARG_TYPES4      INIT_ARG_TYPES3, INIT_ARG_TYPE(4)
 #define CALL_ARGS4      CALL_ARGS3, GET_ARG(4)
 DEFINE_SLOT(4, ARG_TYPES4, ARG_TYPE_NAMES4, INIT_ARG_TYPES4, CALL_ARGS4)
 
 #define ARG_TYPES5      ARG_TYPES4, typename P5
 #define ARG_TYPE_NAMES5 ARG_TYPE_NAMES4, P5
-#define INIT_ARG_TYPES5      INIT_ARG_TYPES4; INIT_ARG_TYPE(5)
+#define INIT_ARG_TYPES5      INIT_ARG_TYPES4, INIT_ARG_TYPE(5)
 #define CALL_ARGS5      CALL_ARGS4, GET_ARG(5)
 DEFINE_SLOT(5, ARG_TYPES5, ARG_TYPE_NAMES5, INIT_ARG_TYPES5, CALL_ARGS5)
 
 #define ARG_TYPES6      ARG_TYPES5, typename P6
 #define ARG_TYPE_NAMES6 ARG_TYPE_NAMES5, P6
-#define INIT_ARG_TYPES6      INIT_ARG_TYPES5; INIT_ARG_TYPE(6)
+#define INIT_ARG_TYPES6      INIT_ARG_TYPES5, INIT_ARG_TYPE(6)
 #define CALL_ARGS6      CALL_ARGS5, GET_ARG(6)
 DEFINE_SLOT(6, ARG_TYPES6, ARG_TYPE_NAMES6, INIT_ARG_TYPES6, CALL_ARGS6)
 
 #define ARG_TYPES7      ARG_TYPES6, typename P7
 #define ARG_TYPE_NAMES7 ARG_TYPE_NAMES6, P7
-#define INIT_ARG_TYPES7      INIT_ARG_TYPES6; INIT_ARG_TYPE(7)
+#define INIT_ARG_TYPES7      INIT_ARG_TYPES6, INIT_ARG_TYPE(7)
 #define CALL_ARGS7      CALL_ARGS6, GET_ARG(7)
 DEFINE_SLOT(7, ARG_TYPES7, ARG_TYPE_NAMES7, INIT_ARG_TYPES7, CALL_ARGS7)
 
 #define ARG_TYPES8      ARG_TYPES7, typename P8
 #define ARG_TYPE_NAMES8 ARG_TYPE_NAMES7, P8
-#define INIT_ARG_TYPES8      INIT_ARG_TYPES7; INIT_ARG_TYPE(8)
+#define INIT_ARG_TYPES8      INIT_ARG_TYPES7, INIT_ARG_TYPE(8)
 #define CALL_ARGS8      CALL_ARGS7, GET_ARG(8)
 DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, INIT_ARG_TYPES8, CALL_ARGS8)
 
 #define ARG_TYPES9      ARG_TYPES8, typename P9
 #define ARG_TYPE_NAMES9 ARG_TYPE_NAMES8, P9
-#define INIT_ARG_TYPES9      INIT_ARG_TYPES8; INIT_ARG_TYPE(9)
+#define INIT_ARG_TYPES9      INIT_ARG_TYPES8, INIT_ARG_TYPE(9)
 #define CALL_ARGS9      CALL_ARGS8, GET_ARG(9)
 DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, INIT_ARG_TYPES9, CALL_ARGS9)
 

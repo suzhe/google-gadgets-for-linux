@@ -67,6 +67,66 @@ namespace ggadget {
   TypeName();                                    \
   DISALLOW_EVIL_CONSTRUCTORS(TypeName)
 
+
+#undef LOG
+#undef ASSERT
+#undef ASSERT_M
+#undef VERIFY
+#undef VERIFY_M
+#undef DLOG
+
+/**
+ * Print log with printf format parameters.
+ * It works in both debug and release versions.
+ */
+// TODO: Let log information go into debug console.
+#define LOG  printf
+
+#ifdef NDEBUG
+#define ASSERT(x)
+#define ASSERT_M(x, y)
+#define VERIFY(x)
+#define VERIFY_M(x, y)
+#define DLOG(x)
+#else // NDEBUG
+
+/**
+ * Assert an expression and abort if it is not true.
+ * Normally it only works in debug versions.
+ */
+#define ASSERT(x) assert(x)
+
+/**
+ * Assert an expression with a message in printf format.
+ * It only works in debug versions.
+ * Sample usage: <code>ASSERT_M(a==b, ("%d==%d failed\n", a, b));</code>
+ */
+#define ASSERT_M(x, y) do { if (!(x)) { DLOG y; assert(x); } } while (0)
+
+/**
+ * Verify an expression and print a message if the expression is not true.
+ * It only works in debug versions.
+ */ 
+#define VERIFY(x) do { if (!(x)) \
+    DLOG("%s:%d: VERIFY FAILED", __FILE__, __LINE__); } while (0)
+
+/**
+ * Verify an expression with a message in printf format.
+ * It only works in debug versions.
+ * Sample usage: <code>VERIFY_M(a==b, ("%d==%d failed\n", a, b));</code>
+ */ 
+#define VERIFY_M(x, y) do { if (!(x)) { DLOG y; VERIFY(x); } } while (0)
+
+/**
+ * Print debug log with printf format parameters.
+ * It only works in debug versions.
+ */
+// TODO: Let log information go into debug console.
+#define DLOG  printf
+
+#endif // else NDEBUG
+
+
 /** Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
  * for upcasting in the type hierarchy.
  * It's used to cast a pointer to @c Foo to a pointer to @c SuperclassOfFoo
@@ -139,65 +199,6 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
  * eventually be removed, but it hasn't happened yet.
  */
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
-
-
-#undef LOG
-#undef ASSERT
-#undef ASSERT_M
-#undef VERIFY
-#undef VERIFY_M
-#undef DLOG
-
-/**
- * Print log with printf format parameters.
- * It works in both debug and release versions.
- */
-// TODO: Let log information go into debug console.
-#define LOG  printf
-
-#ifdef NDEBUG
-#define ASSERT(x)
-#define ASSERT_M(x, y)
-#define VERIFY(x)
-#define VERIFY_M(x, y)
-#define DLOG(x)
-#else // NDEBUG
-
-/**
- * Assert an expression and abort if it is not true.
- * Normally it only works in debug versions.
- */
-#define ASSERT(x) assert(x)
-
-/**
- * Assert an expression with a message in printf format.
- * It only works in debug versions.
- * Sample usage: <code>ASSERT_M(a==b, ("%d==%d failed\n", a, b));</code>
- */
-#define ASSERT_M(x, y) do { if (!(x)) { DLOG y; assert(x); } } while (0)
-
-/**
- * Verify an expression and print a message if the expression is not true.
- * It only works in debug versions.
- */ 
-#define VERIFY(x) do { if (!(x)) \
-    DLOG("%s:%d: VERIFY FAILED", __FILE__, __LINE__); } while (0)
-
-/**
- * Verify an expression with a message in printf format.
- * It only works in debug versions.
- * Sample usage: <code>VERIFY_M(a==b, ("%d==%d failed\n", a, b));</code>
- */ 
-#define VERIFY_M(x, y) do { if (!(x)) { DLOG y; VERIFY(x); } } while (0)
-
-/**
- * Print debug log with printf format parameters.
- * It only works in debug versions.
- */
-// TODO: Let log information go into debug console.
-#define DLOG  printf
-
-#endif // else NDEBUG
 
 } // namespace ggadget
 

@@ -209,81 +209,81 @@ struct Variant {
  * This template is for all integral types.
  */
 template <typename T>
-inline Variant::Type VariantType() {
-  return Variant::TYPE_INT64;
-}
+struct VariantType {
+  static const Variant::Type type = Variant::TYPE_INT64; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for @c void type.
  */
 template <>
-inline Variant::Type VariantType<void>() {
-  return Variant::TYPE_VOID;
-}
+struct VariantType<void> {
+  static const Variant::Type type = Variant::TYPE_VOID; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for @c bool type.
  */
 template <>
-inline Variant::Type VariantType<bool>() {
-  return Variant::TYPE_BOOL;
-}
+struct VariantType<bool> {
+  static const Variant::Type type = Variant::TYPE_BOOL; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for @c double type.
  */
 template <>
-inline Variant::Type VariantType<double>() {
-  return Variant::TYPE_DOUBLE;
-}
+struct VariantType<double> {
+  static const Variant::Type type = Variant::TYPE_DOUBLE; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for <code>const char *</code> type.
  */
 template <>
-inline Variant::Type VariantType<const char *>() {
-  return Variant::TYPE_STRING;
-}
+struct VariantType<const char *> {
+  static const Variant::Type type = Variant::TYPE_STRING; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for <code>const std::string &</code> type.
  */
 template <>
-inline Variant::Type VariantType<const std::string &>() {
-  return Variant::TYPE_STRING;
-}
+struct VariantType<const std::string &> {
+  static const Variant::Type type = Variant::TYPE_STRING; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for @c std::string type.
  */
 template <>
-inline Variant::Type VariantType<std::string>() {
-  return Variant::TYPE_STRING;
-}
+struct VariantType<std::string> {
+  static const Variant::Type type = Variant::TYPE_STRING; 
+};
 
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for <code>ScriptableInterface *</code> type.
  */
 template <>
-inline Variant::Type VariantType<ScriptableInterface *>() {
-  return Variant::TYPE_SCRIPTABLE;
-}
+struct VariantType<ScriptableInterface *> {
+  static const Variant::Type type = Variant::TYPE_SCRIPTABLE; 
+};
  
 /**
  * Get the @c Variant::Type of a type.
  * Specialized for <code>Slot *</code> type.
  */
 template <>
-inline Variant::Type VariantType<Slot *>() {
-  return Variant::TYPE_SLOT;
-}
+struct VariantType<Slot *> {
+  static const Variant::Type type = Variant::TYPE_SLOT; 
+};
 
 /**
  * Get the value of a @c Variant.

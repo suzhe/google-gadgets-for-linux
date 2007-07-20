@@ -138,6 +138,11 @@ class SignalSlot : public Slot {
   virtual const Variant::Type *GetArgTypes() const {
     return signal_->GetArgTypes();
   }
+  virtual bool operator==(const Slot &another) const {
+    // Don't support this.
+    ASSERT(false);
+    return false;
+  }
  private:
   Signal *signal_;
 };
@@ -151,7 +156,7 @@ class Signal0 : public Signal {
   Signal0() { }
   Connection *Connect(Slot0<R> *slot) { return Signal::Connect(slot); }
   R operator()() { return VariantValue<R>()(Emit(0, NULL)); }
-  virtual Variant::Type GetReturnType() const { return VariantType<R>(); }
+  virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
 
 /**
@@ -203,11 +208,11 @@ class Signal##n : public Signal {                                             \
     _init_args;                                                               \
     return VariantValue<R>()(Emit(n, vargs));                                 \
   }                                                                           \
-  virtual Variant::Type GetReturnType() const { VariantType<R>(); }           \
+  virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }\
   virtual int GetArgCount() const { return n; }                               \
-  virtual const Variant::Type *GetArgTypes() const { return arg_types_; }     \
- private:                                                                     \
-  Variant::Type arg_types_[n];                                                \
+  virtual const Variant::Type *GetArgTypes() const {                          \
+    return ArgTypesHelper<_arg_type_names>();                                 \
+  }                                                                           \
 };                                                                            \
                                                                               \
 template <_arg_types>                                                         \
@@ -223,9 +228,9 @@ class Signal##n<void, _arg_type_names> : public Signal {                      \
     Emit(n, vargs);                                                           \
   }                                                                           \
   virtual int GetArgCount() const { return n; }                               \
-  virtual const Variant::Type *GetArgTypes() const { return arg_types_; }     \
- private:                                                                     \
-  Variant::Type arg_types_[n];                                                \
+  virtual const Variant::Type *GetArgTypes() const {                          \
+    return ArgTypesHelper<_arg_type_names>();                                 \
+  }                                                                           \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types>                                             \
@@ -239,7 +244,7 @@ NewSignal(R (T::*method)(_arg_type_names)) {                                  \
   return new Signal##n<R, _arg_type_names>();                                 \
 }                                                                             \
 
-#define INIT_ARG_TYPE(n) arg_types_[n-1] = VariantType<P##n>()
+#define INIT_ARG_TYPE(n) VariantType<P##n>::type
 #define INIT_ARG(n)      vargs[n-1] = Variant(p##n)
 
 #define ARG_TYPES1      typename P1
@@ -260,7 +265,7 @@ DEFINE_SIGNAL(2, ARG_TYPES2, ARG_TYPE_NAMES2,
 
 #define ARG_TYPES3      ARG_TYPES2, typename P3
 #define ARG_TYPE_NAMES3 ARG_TYPE_NAMES2, P3
-#define INIT_ARG_TYPES3 INIT_ARG_TYPES2; INIT_ARG_TYPE(3)
+#define INIT_ARG_TYPES3 INIT_ARG_TYPES2, INIT_ARG_TYPE(3)
 #define ARGS3           ARGS2, P3 p3
 #define INIT_ARGS3      INIT_ARGS2; INIT_ARG(3)
 DEFINE_SIGNAL(3, ARG_TYPES3, ARG_TYPE_NAMES3,
@@ -268,7 +273,7 @@ DEFINE_SIGNAL(3, ARG_TYPES3, ARG_TYPE_NAMES3,
 
 #define ARG_TYPES4      ARG_TYPES3, typename P4
 #define ARG_TYPE_NAMES4 ARG_TYPE_NAMES3, P4
-#define INIT_ARG_TYPES4 INIT_ARG_TYPES3; INIT_ARG_TYPE(4)
+#define INIT_ARG_TYPES4 INIT_ARG_TYPES3, INIT_ARG_TYPE(4)
 #define ARGS4           ARGS3, P4 p4
 #define INIT_ARGS4      INIT_ARGS3; INIT_ARG(4)
 DEFINE_SIGNAL(4, ARG_TYPES4, ARG_TYPE_NAMES4,
@@ -276,7 +281,7 @@ DEFINE_SIGNAL(4, ARG_TYPES4, ARG_TYPE_NAMES4,
 
 #define ARG_TYPES5      ARG_TYPES4, typename P5
 #define ARG_TYPE_NAMES5 ARG_TYPE_NAMES4, P5
-#define INIT_ARG_TYPES5 INIT_ARG_TYPES4; INIT_ARG_TYPE(5)
+#define INIT_ARG_TYPES5 INIT_ARG_TYPES4, INIT_ARG_TYPE(5)
 #define ARGS5           ARGS4, P5 p5
 #define INIT_ARGS5      INIT_ARGS4; INIT_ARG(5)
 DEFINE_SIGNAL(5, ARG_TYPES5, ARG_TYPE_NAMES5,
@@ -284,7 +289,7 @@ DEFINE_SIGNAL(5, ARG_TYPES5, ARG_TYPE_NAMES5,
 
 #define ARG_TYPES6      ARG_TYPES5, typename P6
 #define ARG_TYPE_NAMES6 ARG_TYPE_NAMES5, P6
-#define INIT_ARG_TYPES6 INIT_ARG_TYPES5; INIT_ARG_TYPE(6)
+#define INIT_ARG_TYPES6 INIT_ARG_TYPES5, INIT_ARG_TYPE(6)
 #define ARGS6           ARGS5, P6 p6
 #define INIT_ARGS6      INIT_ARGS5; INIT_ARG(6)
 DEFINE_SIGNAL(6, ARG_TYPES6, ARG_TYPE_NAMES6,
@@ -292,7 +297,7 @@ DEFINE_SIGNAL(6, ARG_TYPES6, ARG_TYPE_NAMES6,
 
 #define ARG_TYPES7      ARG_TYPES6, typename P7
 #define ARG_TYPE_NAMES7 ARG_TYPE_NAMES6, P7
-#define INIT_ARG_TYPES7 INIT_ARG_TYPES6; INIT_ARG_TYPE(7)
+#define INIT_ARG_TYPES7 INIT_ARG_TYPES6, INIT_ARG_TYPE(7)
 #define ARGS7           ARGS6, P7 p7
 #define INIT_ARGS7      INIT_ARGS6; INIT_ARG(7)
 DEFINE_SIGNAL(7, ARG_TYPES7, ARG_TYPE_NAMES7,
@@ -300,7 +305,7 @@ DEFINE_SIGNAL(7, ARG_TYPES7, ARG_TYPE_NAMES7,
 
 #define ARG_TYPES8      ARG_TYPES7, typename P8
 #define ARG_TYPE_NAMES8 ARG_TYPE_NAMES7, P8
-#define INIT_ARG_TYPES8 INIT_ARG_TYPES7; INIT_ARG_TYPE(8)
+#define INIT_ARG_TYPES8 INIT_ARG_TYPES7, INIT_ARG_TYPE(8)
 #define ARGS8           ARGS7, P8 p8
 #define INIT_ARGS8      INIT_ARGS7; INIT_ARG(8)
 DEFINE_SIGNAL(8, ARG_TYPES8, ARG_TYPE_NAMES8,
@@ -308,7 +313,7 @@ DEFINE_SIGNAL(8, ARG_TYPES8, ARG_TYPE_NAMES8,
 
 #define ARG_TYPES9      ARG_TYPES8, typename P9
 #define ARG_TYPE_NAMES9 ARG_TYPE_NAMES8, P9
-#define INIT_ARG_TYPES9 INIT_ARG_TYPES8; INIT_ARG_TYPE(9)
+#define INIT_ARG_TYPES9 INIT_ARG_TYPES8, INIT_ARG_TYPE(9)
 #define ARGS9           ARGS8, P9 p9
 #define INIT_ARGS9      INIT_ARGS8; INIT_ARG(9)
 DEFINE_SIGNAL(9, ARG_TYPES9, ARG_TYPE_NAMES9,
