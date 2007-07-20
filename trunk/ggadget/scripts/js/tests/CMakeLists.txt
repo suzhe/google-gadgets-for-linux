@@ -13,8 +13,3 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-IF(UNIX)
-  ADD_DEFINITIONS(-DOS_LINUX)
-ENDIF(UNIX)
-ADD_LIBRARY(gunit SHARED gunit.cc)
-OUTPUT_LIBRARY(gunit)

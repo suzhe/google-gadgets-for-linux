@@ -42,11 +42,11 @@ struct Variant {
     TYPE_INT64,
     /** @c double type. */
     TYPE_DOUBLE,
-    /** String type. */
+    /** <code>const char *</code> type. */
     TYPE_STRING,
-    /** @c Scriptable object pointer. */
+    /** <code>ScriptableInterface *</code> type. */
     TYPE_SCRIPTABLE,
-    /** @c Slot target. */
+    /** <code>Slot *</code> type. */
     TYPE_SLOT,
   };
 
@@ -160,7 +160,7 @@ struct Variant {
 
   /**
    * Construct a @c Variant with a @c Slot pointer value.
-   * This @c Variant doesn't owns the @c Slot pointer.
+   * This @c Variant doesn't owns the <code>Slot *</code>.
    * The type of the constructed @c Variant is @c TYPE_SLOT.
    */
   explicit Variant(Slot *value) : type(TYPE_SLOT) {
