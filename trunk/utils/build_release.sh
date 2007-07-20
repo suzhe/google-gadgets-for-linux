@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+set -e
 here=`pwd`
 cd `dirname $0`/..
 srcdir=`pwd`
