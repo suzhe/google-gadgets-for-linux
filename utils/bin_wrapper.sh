@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-set -e
 progname="$0"
 
 here=`/bin/pwd`
