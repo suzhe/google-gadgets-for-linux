@@ -38,7 +38,7 @@ class Slot {
    * @param argv argument array.  Can be @c NULL if <code>argc==0</code>.
    * @return the return value of the @c Slot target.
    */
-  virtual Variant Call(int argc, Variant argv[]) const = 0;
+  virtual Variant Call(int argc, Variant argv[]) = 0;
 
   /**
    * @return @c true if this @c Slot can provide metadata.
@@ -86,57 +86,53 @@ class Slot0<void> : public Slot {
 };
 
 /**
- * A @c Slot that is targeted to a C/C++ function or static method
- * with no parameter.
+ * A @c Slot that is targeted to a functor with no parameter.
  */
-template <typename R>
-class FunctionSlot0 : public Slot0<R> {
+template <typename R, typename F>
+class FunctorSlot0 : public Slot0<R> {
  public:
-  typedef R (*Function)();
-  typedef FunctionSlot0<R> SelfType;
-  FunctionSlot0(Function function) : function_(function) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  typedef FunctorSlot0<R, F> SelfType;
+  FunctorSlot0(F functor) : functor_(functor) { }
+  virtual Variant Call(int argc, Variant argv[]) {
     ASSERT(argc == 0);
-    return Variant(function_());
+    return Variant(functor_());
   }
   virtual bool operator==(const Slot &another) const {
-    return function_ == down_cast<const SelfType *>(&another)->function_;
+    return functor_ == down_cast<const SelfType *>(&another)->functor_;
   }
  private:
-  Function function_;
+  F functor_;
 };
 
 /**
- * Partial specialized @c FunctionSlot0 that returns @c void.
+ * Partial specialized @c FunctorSlot0 that returns @c void.
  */
-template <>
-class FunctionSlot0<void> : public Slot0<void> {
+template <typename F>
+class FunctorSlot0<void, F> : public Slot0<void> {
  public:
-  typedef void (*Function)();
-  typedef FunctionSlot0<void> SelfType;
-  FunctionSlot0(Function function) : function_(function) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  typedef FunctorSlot0<void, F> SelfType;
+  FunctorSlot0(F functor) : functor_(functor) { }
+  virtual Variant Call(int argc, Variant argv[]) {
     ASSERT(argc == 0);
-    function_();
+    functor_();
     return Variant();
   }
   virtual bool operator==(const Slot &another) const {
-    return function_ == down_cast<const SelfType *>(&another)->function_;
+    return functor_ == down_cast<const SelfType *>(&another)->functor_;
   }
  private:
-  Function function_;
+  F functor_;
 };
 
 /**
  * A @c Slot that is targeted to a C++ non-static method with no parameter.
  */
-template <typename T, typename R>
+template <typename R, typename T, typename M>
 class MethodSlot0 : public Slot0<R> {
  public:
-  typedef R (T::*Method)();
-  typedef MethodSlot0<T, R> SelfType;
-  MethodSlot0(T* object, Method method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  typedef MethodSlot0<R, T, M> SelfType;
+  MethodSlot0(T* object, M method) : object_(object), method_(method) { }
+  virtual Variant Call(int argc, Variant argv[]) {
     ASSERT(argc == 0);
     return Variant((object_->*method_)());
   }
@@ -146,19 +142,18 @@ class MethodSlot0 : public Slot0<R> {
   }
  private:
   T* object_;
-  Method method_;
+  M method_;
 };
 
 /**
  * Partial specialized @c MethodSlot0 that returns @c void.
  */
-template <typename T>
-class MethodSlot0<T, void> : public Slot0<void> {
+template <typename T, typename M>
+class MethodSlot0<void, T, M> : public Slot0<void> {
  public:
-  typedef void (T::*Method)();
-  typedef MethodSlot0<T, void> SelfType;
-  MethodSlot0(T* object, Method method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  typedef MethodSlot0<void, T, M> SelfType;
+  MethodSlot0(T* object, M method) : object_(object), method_(method) { }
+  virtual Variant Call(int argc, Variant argv[]) {
     ASSERT(argc == 0);
     (object_->*method_)();
     return Variant();
@@ -169,25 +164,44 @@ class MethodSlot0<T, void> : public Slot0<void> {
   }
  private:
   T* object_;
-  Method method_;
+  M method_;
 };
 
 /**
- * Helper function to create a @c FunctionSlot0 instance.
+ * Helper functor to create a @c FunctorSlot0 instance with a C/C++ function
+ * or a static method.
  * The caller should delete the instance after use.
  */
 template <typename R>
-inline Slot0<R> *NewSlot(R (*function)()) {
-  return new FunctionSlot0<R>(function);
+inline Slot0<R> *NewSlot(R (*functor)()) {
+  return new FunctorSlot0<R, R (*)()>(functor);
 }
 
 /**
- * Helper function to create a @c MethodSlot0 instance.
+ * Helper functor to create a @c MethodSlot0 instance.
+ * The type of method must be of
+ * <code>R (T::*)()</code> or <code>R (T::*)() const</code>.
  * The caller should delete the instance after use.
  */
-template <typename T, typename R>
+template <typename R, typename T>
 inline Slot0<R> *NewSlot(T *object, R (T::*method)()) {
-  return new MethodSlot0<T, R>(object, method);
+  return new MethodSlot0<R, T, R (T::*)()>(object, method);
+}
+template <typename R, typename T>
+inline Slot0<R> *NewSlot(T *object, R (T::*method)() const) {
+  return new MethodSlot0<R, T, R (T::*)() const>(object, method);
+}
+
+/**
+ * Helper functor to create a @c FunctorSlot0 instance with a functor object.
+ * The caller should delete the instance after use.
+ * Place <code>typename F</code> at the end of the template parameter to
+ * let the compiler populate the default type.
+ * <p>Usage: <code>NewFunctorSlot<int>(AFunctor());</code></p>
+ */
+template <typename R, typename F>
+inline Slot0<R> *NewFunctorSlot(F functor) {
+  return new FunctorSlot0<R, F>(functor);
 }
 
 /**
@@ -220,49 +234,46 @@ class Slot##n<void, _arg_type_names> : public Slot {                          \
   }                                                                           \
 };                                                                            \
                                                                               \
-template <typename R, _arg_types>                                             \
-class FunctionSlot##n : public Slot##n<R, _arg_type_names> {                  \
+template <typename R, _arg_types, typename F>                                 \
+class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
  public:                                                                      \
-  typedef R (*Function)(_arg_type_names);                                     \
-  typedef FunctionSlot##n<R, _arg_type_names> SelfType;                       \
-  FunctionSlot##n(Function function) : function_(function) { }                \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  typedef FunctorSlot##n<R, _arg_type_names, F> SelfType;                     \
+  FunctorSlot##n(F functor) : functor_(functor) { }                           \
+  virtual Variant Call(int argc, Variant argv[]) {                            \
     ASSERT(argc == n);                                                        \
-    return Variant(function_(_call_args));                                    \
+    return Variant(functor_(_call_args));                                     \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return function_ == down_cast<const SelfType *>(&another)->function_;     \
+    return functor_ == down_cast<const SelfType *>(&another)->functor_;       \
   }                                                                           \
  private:                                                                     \
-  Function function_;                                                         \
+  F functor_;                                                                 \
 };                                                                            \
                                                                               \
-template <_arg_types>                                                         \
-class FunctionSlot##n<void, _arg_type_names> :                                \
+template <_arg_types, typename F>                                             \
+class FunctorSlot##n<void, _arg_type_names, F> :                              \
     public Slot##n<void, _arg_type_names> {                                   \
  public:                                                                      \
-  typedef void (*Function)(_arg_type_names);                                  \
-  typedef FunctionSlot##n<void, _arg_type_names> SelfType;                    \
-  FunctionSlot##n(Function function) : function_(function) { }                \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  typedef FunctorSlot##n<void, _arg_type_names, F> SelfType;                  \
+  FunctorSlot##n(F functor) : functor_(functor) { }                           \
+  virtual Variant Call(int argc, Variant argv[]) {                            \
     ASSERT(argc == n);                                                        \
-    function_(_call_args);                                                    \
+    functor_(_call_args);                                                     \
     return Variant();                                                         \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return function_ == down_cast<const SelfType *>(&another)->function_;     \
+    return functor_ == down_cast<const SelfType *>(&another)->functor_;       \
   }                                                                           \
  private:                                                                     \
-  Function function_;                                                         \
+  F functor_;                                                                 \
 };                                                                            \
                                                                               \
-template <typename T, typename R, _arg_types>                                 \
+template <typename R, _arg_types, typename T, typename M>                     \
 class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
  public:                                                                      \
-  typedef R (T::*Method)(_arg_type_names);                                    \
-  typedef MethodSlot##n<T, R, _arg_type_names> SelfType;                      \
-  MethodSlot##n(T *obj, Method method) : obj_(obj), method_(method) { }       \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  typedef MethodSlot##n<R, _arg_type_names, T, M> SelfType;                   \
+  MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
+  virtual Variant Call(int argc, Variant argv[])  {                           \
     ASSERT(argc == n);                                                        \
     return Variant((obj_->*method_)(_call_args));                             \
   }                                                                           \
@@ -272,17 +283,16 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
   }                                                                           \
  private:                                                                     \
   T* obj_;                                                                    \
-  Method method_;                                                             \
+  M method_;                                                                  \
 };                                                                            \
                                                                               \
-template <typename T, _arg_types>                                             \
-class MethodSlot##n<T, void, _arg_type_names> :                               \
+template <_arg_types, typename T, typename M>                                 \
+class MethodSlot##n<void, _arg_type_names, T, M> :                            \
     public Slot##n<void, _arg_type_names> {                                   \
  public:                                                                      \
-  typedef void (T::*Method)(_arg_type_names);                                 \
-  typedef MethodSlot##n<T, void, _arg_type_names> SelfType;                   \
-  MethodSlot##n(T *obj, Method method) : obj_(obj), method_(method) { }       \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  typedef MethodSlot##n<void, _arg_type_names, T, M> SelfType;                \
+  MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
+  virtual Variant Call(int argc, Variant argv[]) {                            \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
     return Variant();                                                         \
@@ -293,18 +303,28 @@ class MethodSlot##n<T, void, _arg_type_names> :                               \
   }                                                                           \
  private:                                                                     \
   T* obj_;                                                                    \
-  Method method_;                                                             \
+  M method_;                                                                  \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types>                                             \
-inline Slot##n<R, _arg_type_names> *                                          \
-NewSlot(R (*function)(_arg_type_names)) {                                     \
-  return new FunctionSlot##n<R, _arg_type_names>(function);                   \
+inline Slot##n<R, _arg_type_names> *NewSlot(R (*f)(_arg_type_names)) {        \
+  return new FunctorSlot##n<R, _arg_type_names, R (*)(_arg_type_names)>(f);   \
 }                                                                             \
-template <typename T, typename R, _arg_types>                                 \
+template <typename R, _arg_types, typename T>                                 \
 inline Slot##n<R, _arg_type_names> *                                          \
 NewSlot(T *obj, R (T::*method)(_arg_type_names)) {                            \
-  return new MethodSlot##n<T, R, _arg_type_names>(obj, method);               \
+  return new MethodSlot##n<R, _arg_type_names, T,                             \
+                           R (T::*)(_arg_type_names)>(obj, method);           \
+}                                                                             \
+template <typename R, _arg_types, typename T>                                 \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(T *obj, R (T::*method)(_arg_type_names) const) {                      \
+  return new MethodSlot##n<R, _arg_type_names, T,                             \
+                           R (T::*)(_arg_type_names) const>(obj, method);     \
+}                                                                             \
+template <typename R, _arg_types, typename F>                                 \
+inline Slot##n<R, _arg_type_names> * NewFunctorSlot(F f) {                    \
+  return new FunctorSlot##n<R, _arg_type_names, F>(f);                        \
 }                                                                             \
 
 #define INIT_ARG_TYPE(n) VariantType<P##n>::type
@@ -405,6 +425,65 @@ DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, INIT_ARG_TYPES9, CALL_ARGS9)
 #undef ARG_TYPE_NAMES9
 #undef INIT_ARG_TYPES9
 #undef CALL_ARGS9
+
+template <typename T>
+class FixedGetter {
+ public:
+  FixedGetter(T value) : value_(value) { }
+  T operator()() { return value_; }
+ private:
+  T value_;
+};
+
+template <typename T>
+class SimpleGetter {
+ public:
+  SimpleGetter(const T *value_ptr) : value_ptr_(value_ptr) { }
+  T operator()() { return *value_ptr_; }
+ private:
+  const T *value_ptr_;
+};
+
+template <typename T>
+class SimpleSetter {
+ public:
+  SimpleSetter(T *value_ptr) : value_ptr_(value_ptr) { }
+  void operator()(T value) { *value_ptr_ = value; }
+ private:
+  T *value_ptr_;
+};
+
+/**
+ * Helper function to new a @c Slot that always return a fixed @a value.
+ * @param value the fixed value.
+ * @return the getter @c Slot.
+ */
+template <typename T>
+inline Slot0<T> *NewFixedGetterSlot(T value) {
+  return NewFunctorSlot<T>(FixedGetter<T>(value));
+}
+
+/**
+ * Helper function to new a @c Slot that can set a value to @a value_ptr.
+/**
+ * Helper function to new a @c Slot that can get a value from @a value_ptr.
+ * @param value_ptr pointer to a value.
+ * @return the getter @c Slot.
+ */
+template <typename T>
+inline Slot0<T> *NewSimpleGetterSlot(const T *value_ptr) {
+  return NewFunctorSlot<T>(SimpleGetter<T>(value_ptr));
+}
+
+/**
+ * Helper function to new a @c Slot that can set a value to @a value_ptr.
+ * @param value_ptr pointer to a value.
+ * @return the getter @c Slot.
+ */
+template <typename T>
+inline Slot1<void, T> *NewSimpleSetterSlot(const T *value_ptr) {
+  return NewFunctorSlot<void, T>(SimpleSetter<T>(value_ptr));
+}
 
 } // namespace ggadget
 

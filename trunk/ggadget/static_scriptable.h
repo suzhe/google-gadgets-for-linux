@@ -7,9 +7,10 @@
 #include "scriptable_interface.h"
 #include "variant.h"
 
-class Slot;
-
 namespace ggadget {
+
+class Slot;
+class Signal;
 
 /**
  * A @c ScriptableInterface implementation for objects whose definitions
@@ -18,6 +19,7 @@ namespace ggadget {
 class StaticScriptable : public ScriptableInterface {
  public:
   StaticScriptable();
+  virtual ~StaticScriptable();
 
   /**
    * Register a scriptable property.
@@ -37,10 +39,17 @@ class StaticScriptable : public ScriptableInterface {
    */
   void RegisterMethod(const char *name, Slot *slot);
 
-  /** @see ScriptableInterface::AddRef() */
-  virtual int AddRef();
-  /** @see ScriptableInterface::Release() */
-  virtual int Release();
+  /**
+   * Register a @c Signal that can connect to various @c Slot callbacks.
+   * After this call, a same named property will be automatically registered
+   * that can be used to get/set the @c Slot callback.
+   * @param name the name of the @a signal.
+   * @param signal the @c Signal to be registered.
+   */
+  void RegisterSignal(const char *name, Signal *signal);
+
+  /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
+  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   /** @see ScriptableInterface::GetPropertyInfoByName() */
   virtual bool GetPropertyInfoByName(const char *name,
                                      int *id, Variant *prototype,
@@ -54,9 +63,6 @@ class StaticScriptable : public ScriptableInterface {
   virtual bool SetProperty(int id, Variant value);
 
  private:
-  // Only allow to delete by itself.
-  virtual ~StaticScriptable();
-
   class Impl;
   Impl *impl_;
 };

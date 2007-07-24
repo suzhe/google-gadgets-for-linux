@@ -21,6 +21,9 @@
 
 namespace ggadget {
 
+class Connection;
+template <typename R> class Slot0;
+
 /**
  * Object interface that can be called from script languages.
  * Only objects with dynamic properties or methods need to directly
@@ -29,21 +32,12 @@ namespace ggadget {
 class ScriptableInterface {
  public:
   /**
-   * Add a reference to the instance.
-   * The implementation must maintain a reference counting mechanism to track
-   * references.  The references can be coarse-grained, for example, all C++
-   * references are counted as 1, and all JavaScript references are counted
-   * as another.
-   * @return the new reference count.
-   */ 
-  virtual int AddRef() = 0;
-
-  /**
-   * Release a @c ScriptableInterface pointer after use.
-   * The instance should be deleted if the reference count reaches 0.
-   * @return the new reference count.
+   * Connect a callback @c Slot to the "ondelete" signal.
+   * @param slot the callback @c Slot to be called when the @c Scriptable
+   *     object is to be deleted.
+   * @return the connected @c Connection or @c NULL if fails.
    */
-  virtual int Release() = 0;
+  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) = 0;
 
   /**
    * Get the info of a property by its name.

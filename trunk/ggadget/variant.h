@@ -18,6 +18,7 @@
 #define GGADGET_VARIANT_H__
 
 #include <string>
+#include <ostream>
 #include "common.h"
 
 namespace ggadget {
@@ -171,20 +172,7 @@ struct Variant {
    * For testing convenience.
    * Not suggested to use in production code.
    */
-  bool operator==(const Variant &another) {
-    if (another.type != type)
-      return false;
-    switch (type) {
-      case TYPE_VOID: return true;
-      case TYPE_BOOL: return another.v.bool_value == v.bool_value;
-      case TYPE_INT64: return another.v.int64_value == v.int64_value;
-      case TYPE_DOUBLE: return another.v.double_value == v.double_value;
-      case TYPE_SCRIPTABLE:
-        return another.v.scriptable_value == v.scriptable_value;
-      case TYPE_SLOT: return another.v.slot_value == v.slot_value;
-      default: return false;
-    }
-  }
+  bool operator==(const Variant &another) const;
 
   /**
    * Type of the <code>Variant</code>'s value.
@@ -203,6 +191,11 @@ struct Variant {
     Slot *slot_value;
   } v;
 };
+
+/**
+ * Print a @c Variant into an output stream, only for debugging and testing.
+ */ 
+std::ostream &operator<<(std::ostream &out, const Variant &v);
 
 /**
  * Get the @c Variant::Type of a type.
