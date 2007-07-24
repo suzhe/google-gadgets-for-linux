@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 ADD_EXECUTABLE(slot_test slot_test.cc)
 TARGET_LINK_LIBRARIES(slot_test gunit ggadget)
@@ -20,3 +21,7 @@ TEST_WRAPPER(slot_test TRUE)
 ADD_EXECUTABLE(signal_test signal_test.cc)
 TARGET_LINK_LIBRARIES(signal_test gunit ggadget)
 TEST_WRAPPER(signal_test TRUE)
+
+ADD_EXECUTABLE(static_scriptable_test static_scriptable_test.cc)
+TARGET_LINK_LIBRARIES(static_scriptable_test gunit ggadget)
+TEST_WRAPPER(static_scriptable_test TRUE)

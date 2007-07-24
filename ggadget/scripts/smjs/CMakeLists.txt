@@ -12,5 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+#
+
+INCLUDE_DIRECTORIES(/usr/include/smjs)
+
+IF(UNIX)
+  ADD_DEFINITIONS(-DXP_UNIX)
+ENDIF(UNIX)
 
 ADD_SUBDIRECTORY(tests)
+
+SET(SRCS
+  converter.cc
+  native_js_wrapper.cc
+)
+
+ADD_LIBRARY(ggadget_js SHARED ${SRCS})
+OUTPUT_LIBRARY(ggadget_js)

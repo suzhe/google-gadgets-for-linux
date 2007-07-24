@@ -12,15 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 # ADD_SUBDIRECTORY(graphics)
-ADD_SUBDIRECTORY(scripts)
+# ADD_SUBDIRECTORY(scripts)
 # ADD_SUBDIRECTORY(sysdeps)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
   signal.cc
   static_scriptable.cc
+  variant.cc
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

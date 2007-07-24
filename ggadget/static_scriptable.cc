@@ -18,6 +18,8 @@
 #include <map>
 #include <vector>
 #include "static_scriptable.h"
+#include "signal.h"
+#include "signal_consts.h"
 #include "slot.h"
 
 namespace ggadget {
@@ -29,6 +31,8 @@ class StaticScriptable::Impl {
 
   void RegisterProperty(const char *name, Slot *getter, Slot *setter);
   void RegisterMethod(const char *name, Slot *slot);
+  void RegisterSignal(const char *name, Signal *signal);
+  Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   bool GetPropertyInfoByName(const char *name,
                              int *id, Variant *prototype,
                              bool *is_method);
@@ -36,16 +40,14 @@ class StaticScriptable::Impl {
   Variant GetProperty(int id);
   bool SetProperty(int id, Variant value);
 
-  int reference_count_;
-
  private:
-  struct StringCmp {
+  struct CompareString {
     bool operator() (const char* s1, const char* s2) const {
       return (strcmp(s1, s2) < 0);
     }
   };
 
-  typedef std::map<const char *, int, StringCmp> SlotIndexMap;
+  typedef std::map<const char *, int, CompareString> SlotIndexMap;
   typedef std::vector<Variant> VariantVector;
   typedef std::vector<Slot *> SlotVector;
 
@@ -53,10 +55,11 @@ class StaticScriptable::Impl {
   VariantVector slot_prototypes_;
   SlotVector getter_slots_;
   SlotVector setter_slots_;
+  Signal0<void> *ondelete_signal_;
 };
 
 StaticScriptable::Impl::Impl()
-    : reference_count_(0) {
+    : ondelete_signal_(NULL) {
 }
 
 StaticScriptable::Impl::~Impl() {
@@ -106,6 +109,35 @@ void StaticScriptable::Impl::RegisterMethod(const char *name, Slot *slot) {
   setter_slots_.push_back(NULL);
 }
 
+void StaticScriptable::Impl::RegisterSignal(const char *name, Signal *signal) {
+  ASSERT(name);
+  ASSERT(signal);
+
+  if (strcmp(name, kOnDeleteSignal) == 0)
+    ondelete_signal_ = down_cast<OnDeleteSignal *>(signal);
+
+  slot_index_[name] = slot_prototypes_.size();
+
+  // Create a SignalSlot as the value of the prototype to let others know
+  // the calling convention.  It is owned by slot_prototypes.
+  slot_prototypes_.push_back(Variant(new SignalSlot(signal)));
+
+  // Allocate an initially unconnected connection.  This connection is
+  // dedicated to be used by the script.
+  Connection *connection = signal->ConnectGeneral(NULL);
+  // The getter returns the connected slot of the connection.
+  getter_slots_.push_back(NewSlot(connection, &Connection::slot));
+  // The setter accepts a Slot * parameter and connect it to the signal.
+  setter_slots_.push_back(NewSlot(connection, &Connection::Reconnect));
+}
+
+Connection *StaticScriptable::Impl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
+  if (ondelete_signal_)
+    return ondelete_signal_->ConnectGeneral(slot);
+  else
+    return NULL;
+}
+
 bool StaticScriptable::Impl::GetPropertyInfoByName(const char *name,
                                                    int *id, Variant *prototype,
                                                    bool *is_method) {
@@ -119,6 +151,8 @@ bool StaticScriptable::Impl::GetPropertyInfoByName(const char *name,
     return false;
 
   int index = it->second;
+  // 0, 1, 2, ... ==> -1, -2, -3, ... to distinguish property ids from
+  // array indexes.
   *id = -(index + 1);
   *prototype = slot_prototypes_[index];
   *is_method = getter_slots_[index] == NULL;
@@ -134,6 +168,7 @@ bool StaticScriptable::Impl::GetPropertyInfoById(int id, Variant *prototype,
   if (id >= 0)
     return false;
 
+  // -1, -2, -3, ... ==> 0, 1, 2, ...
   int index = -id - 1;
   if (index >= slot_prototypes_.size())
     return false;
@@ -148,6 +183,7 @@ Variant StaticScriptable::Impl::GetProperty(int id) {
   if (id >= 0)
     return Variant();
 
+  // -1, -2, -3, ... ==> 0, 1, 2, ...
   int index = -id - 1;
   if (index >= getter_slots_.size())
     return Variant();
@@ -168,10 +204,10 @@ bool StaticScriptable::Impl::SetProperty(int id, Variant value) {
     return false;
 
   int index = -id - 1;
-  if (index >= getter_slots_.size())
+  if (index >= setter_slots_.size())
     return false;
 
-  Slot *slot = getter_slots_[index];
+  Slot *slot = setter_slots_[index];
   if (slot == NULL)
     return false;
 
@@ -197,18 +233,12 @@ void StaticScriptable::RegisterMethod(const char *name, Slot *slot) {
   impl_->RegisterMethod(name, slot);
 }
 
-int StaticScriptable::AddRef() {
-  ASSERT(impl_->reference_count_ >= 0);
-  return ++(impl_->reference_count_);
+void StaticScriptable::RegisterSignal(const char *name, Signal *signal) {
+  impl_->RegisterSignal(name, signal);
 }
 
-int StaticScriptable::Release() {
-  ASSERT(impl_->reference_count_ > 0);
-  if (--impl_->reference_count_ == 0) {
-    delete this;
-    return 0;
-  }
-  return impl_->reference_count_;
+Connection *StaticScriptable::ConnectToOnDeleteSignal(Slot0<void> *slot) {
+  return impl_->ConnectToOnDeleteSignal(slot);
 }
 
 bool StaticScriptable::GetPropertyInfoByName(const char *name,

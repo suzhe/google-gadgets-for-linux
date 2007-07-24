@@ -22,6 +22,8 @@
 
 namespace ggadget {
 
+class Signal;
+
 /**
  * The connection object between a @c Singal and a @c Slot.
  * The caller can use the connection to temporarily block the slot.
@@ -35,15 +37,28 @@ class Connection {
    * underlying object has been deleted.
    */
   void Block() { blocked_ = true; }
+  void Unblock() { if (slot_) blocked_ = false; }
+  bool blocked() const { return blocked_; }
 
   /**
    * Disconnect the connection.
    * After disconnection, the connection can't be unblocked any more.
    */
-  void Disconnect() { blocked_ = true; slot_ = NULL; }
+  void Disconnect();
 
-  void Unblock() { if (slot_) blocked_ = false; }
-  bool blocked() { return blocked_; }
+  /**
+   * Reconnect the connection to another @c Slot.
+   * The connection will be unblocked if it has been blocked or disconnected.
+   * @param slot the new @c Slot to be connected.
+   * @return @c true if succeeds.
+   */
+  bool Reconnect(Slot *slot);
+
+  /** Get the target @c Slot */
+  Slot *slot() const { return slot_; }
+
+  /** Get the owner @c Signal */
+  const Signal *signal() const { return signal_; }
 
  private:
   friend class Signal;
@@ -52,10 +67,12 @@ class Connection {
    * Connection can be only constructed and destructed by @c Signal.
    * The connection owns the slot.
    */
-  Connection(Slot *slot) : blocked_(false), slot_(slot) { }
-  ~Connection() { if (slot_) delete slot_; }
+  Connection(const Signal *signal, Slot *slot);
+  ~Connection();
+  void ReleaseSlot();
 
   bool blocked_;
+  const Signal *signal_;
   Slot *slot_;
 };
 
@@ -73,11 +90,22 @@ class Signal {
    * @c ConnectGeneral() at runtime.
    * @param slot the slot to connect. After conntected, this signal takes
    *     the ownership of the slot pointer, so don't share slots with other
-   *     owners.
+   *     owners.  If it's NULL, a unconnected @c Connection will be returned.
    * @return the connected @c Connection.  The pointer is owned by this signal.
    *     Return @c NULL on any error, such as argument incompatibility.
    */
   Connection *ConnectGeneral(Slot *slot);
+
+  /**
+   * Check if a @c Slot is compatible with this @c Signal.
+   */
+  bool CheckCompatibility(const Slot *slot) const;
+
+  /**
+   * Check if there is active (not blocked) connections.
+   * @return true if there is at least one active connections.
+   */
+  bool HasActiveConnections() const;
 
   /**
    * Emit the signal in general format.
@@ -126,7 +154,9 @@ class SignalSlot : public Slot {
    */
   SignalSlot(Signal *signal) : signal_(signal) { }
 
-  virtual Variant Call(int argc, Variant argv[]) const {
+  Signal *signal() const { return signal_; }
+
+  virtual Variant Call(int argc, Variant argv[]) {
     return signal_->Emit(argc, argv);
   }
   virtual Variant::Type GetReturnType() const {
@@ -139,9 +169,7 @@ class SignalSlot : public Slot {
     return signal_->GetArgTypes();
   }
   virtual bool operator==(const Slot &another) const {
-    // Don't support this.
-    ASSERT(false);
-    return false;
+    return signal_ == (down_cast<const SignalSlot *>(&another))->signal_;
   }
  private:
   Signal *signal_;
