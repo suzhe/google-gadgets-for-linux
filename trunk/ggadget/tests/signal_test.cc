@@ -34,6 +34,7 @@ typedef Signal1<Slot *, int> MetaSignal;
 
 typedef Signal9<void, long, bool, std::string, std::string, const char *,
                 int, unsigned short, int, unsigned long> Signal9VoidCompatible;
+typedef Signal1<IntOrString, IntOrString> SignalIntOrString;
 
 static void CheckSlot(int i, Slot *slot) {
   ASSERT_TRUE(slot->HasMetadata());
@@ -131,10 +132,12 @@ TEST(signal, SignalSlotCompatibility) {
   Signal2Void signal6, signal10;
   Signal2Double signal7;
   Signal9VoidCompatible signal9_compatible;
+  SignalIntOrString signal15, signal16;
 
   Signal *signals[] = { &signal0, &signal1, &signal2, &signal3, &signal4,
                         &signal5, &signal6, &signal7, &signal8, &signal9,
-                        &signal10, &signal11, &signal12, &signal13, &signal14 };
+                        &signal10, &signal11, &signal12, &signal13, &signal14,
+                        &signal15, &signal16 };
 
   for (int i = 0; i < kNumTestData; i++)
     ASSERT_TRUE(signals[i]->ConnectGeneral(meta_signal(i)) != NULL);

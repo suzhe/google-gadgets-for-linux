@@ -30,6 +30,23 @@ TEST("Test property & method basics", function() {
   scriptable.Buffer = "";
   ASSERT(STRICT_EQ(3.25, scriptable.DoubleProperty));
   ASSERT(EQ("GetDoubleProperty()=3.250\n", scriptable.Buffer));
+
+  ASSERT(STRICT_EQ(0, scriptable.SimpleInt));
+  scriptable.SimpleInt = 12345;
+  ASSERT(EQ(12345, scriptable.SimpleInt));
+  scriptable.SimpleInt = "100.2";
+  ASSERT(EQ(100, scriptable.SimpleInt));
+
+  ASSERT(EQ(123456789, scriptable.FixedInt));
+
+  ASSERT(STRICT_EQ(0, scriptable.IntOrStringProperty));
+  scriptable.IntOrStringProperty = 1234;
+  ASSERT(EQ(1234, scriptable.IntOrStringProperty));
+  scriptable.IntOrStringProperty = "100.2";
+  ASSERT(EQ(100, scriptable.IntOrStringProperty));
+  scriptable.IntOrStringProperty = "80%";
+  ASSERT(EQ("80%", scriptable.IntOrStringProperty));
+
   END_TEST();
 });
 

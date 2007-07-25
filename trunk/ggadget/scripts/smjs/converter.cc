@@ -88,9 +88,10 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
   JSBool result = JS_TRUE;
+  ScriptableInterface *scriptable;
   if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
-    *native_val = Variant(static_cast<ScriptableInterface *>(NULL));
-  } /*else if (JSVAL_IS_STRING(js_val)) {
+    scriptable = NULL;
+  /*} else if (JSVAL_IS_STRING(js_val)) {
     
     // Sometimew we allow a string containing a function definition in place
     // of an IDispatch callback object.
@@ -105,22 +106,41 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
     result = JSFunctionDispatchWrapper::Wrap(cx,
                                              JS_ValueToFunction(cx, js_val),
                                              &com_val->pdispVal);
+    */
   } else if (JSVAL_IS_OBJECT(js_val)) {
     // This object may be a JS wrapped native object.
     // If it is not, NativeJSWrapper::Unwrap simply fails.
     // We don't support wrapping JS object into native object now.
-    result = NativeJSWrapper::Unwrap(cx, JSVAL_TO_OBJECT(js_val),
-                                     &com_val->pdispVal);
-  } */else {
+    result = NativeJSWrapper::Unwrap(cx, JSVAL_TO_OBJECT(js_val), &scriptable);
+  } else {
     result = JS_FALSE;
   }
 
+  if (result)
+    *native_val = Variant(scriptable);
   return result;
 }
 
 static JSBool ConvertJSToSlot(JSContext *cx, jsval js_val,
                               Variant *native_val) {
   // TODO: implement it.
+  return JS_FALSE;
+}
+
+static JSBool ConvertJSToIntOrString(JSContext *cx, jsval js_val,
+                                     Variant *native_val) {
+  Variant temp;
+  if (ConvertJSToNativeInt(cx, js_val, &temp)) {
+    *native_val = Variant(
+        CreateIntOrString(static_cast<int>(temp.v.int64_value)));
+    return JS_TRUE;
+  }
+
+  if (ConvertJSToNativeString(cx, js_val, &temp)) {
+    *native_val = Variant(CreateIntOrString(temp.v.string_value));
+    return JS_TRUE;
+  }
+
   return JS_FALSE;
 }
 
@@ -134,11 +154,12 @@ static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
   ConvertJSToNativeString,
   ConvertJSToScriptable,
   ConvertJSToSlot,
+  ConvertJSToIntOrString,
 };
 
 JSBool ConvertJSToNative(JSContext *cx, Variant::Type type,
                          jsval js_val, Variant *native_val) {
-  if (type >= Variant::TYPE_VOID && type <= Variant::TYPE_SLOT)
+  if (type >= Variant::TYPE_VOID && type <= Variant::TYPE_INT_OR_STRING)
     return kConvertJSToNativeFuncs[type](cx, js_val, native_val);
   else
     return JS_FALSE;
@@ -240,6 +261,16 @@ static JSBool ConvertNativeToJSFunction(JSContext *cx, Variant native_val,
   }
 }
 
+static JSBool ConvertNativeToJSIntOrString(JSContext *cx, Variant native_val,
+                                           jsval *js_val) {
+  if (native_val.v.int_or_string_value.type == IntOrString::TYPE_STRING)
+    return ConvertNativeToJSString(cx,
+        Variant(native_val.v.int_or_string_value.v.string_value), js_val);
+  else
+    return ConvertNativeToJSInt(cx,
+        Variant(native_val.v.int_or_string_value.v.int_value), js_val);
+}
+
 typedef JSBool (*ConvertNativeToJSFunc)(JSContext *cx, Variant native_val,
                                         jsval *js_val);
 static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
@@ -250,6 +281,7 @@ static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
   ConvertNativeToJSString,
   ConvertNativeToJSObject,
   ConvertNativeToJSFunction,
+  ConvertNativeToJSIntOrString,
 };
 
 JSBool ConvertNativeToJS(JSContext *cx, Variant native_val, jsval *js_val) {

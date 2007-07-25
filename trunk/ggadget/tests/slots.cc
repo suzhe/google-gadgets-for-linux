@@ -46,6 +46,16 @@ bool TestBoolFunction9(int p1, bool p2, const char *p3, const std::string &p4,
   return true;
 }
 
+IntOrString TestIntOrString(IntOrString p) {
+  if (p.type == IntOrString::TYPE_INT) {
+    sprintf(result, "TestIntOrString: %d", p.v.int_value);
+    return CreateIntOrString("String");
+  } else {
+    sprintf(result, "TestIntOrString: %s", p.v.string_value);
+    return CreateIntOrString(4321);
+  }
+}
+
 struct TestVoidFunctor0 {
   void operator()() {
     strcpy(result, "TestVoidFunctor0");
@@ -148,6 +158,8 @@ class TestClass : public TestClass0 {
                                      const std::string &, std::string, char,
                                      unsigned char, short, unsigned short>
                                     (TestBoolFunctor9());
+      case 15: return NewSlot(&TestIntOrString);
+      case 16: return NewSlot(&TestIntOrString);
       default: return NULL;
     }
   }
@@ -307,6 +319,13 @@ struct TestData {
                              Variant(111),
                            },
     Variant(true), "TestBoolFunctor9: 100 0 d eee fff X Y -222 111" },
+  { 1, Variant::TYPE_INT_OR_STRING, { Variant::TYPE_INT_OR_STRING },
+    { Variant(CreateIntOrString(1234)) }, Variant(CreateIntOrString("String")),
+    "TestIntOrString: 1234" },
+  { 1, Variant::TYPE_INT_OR_STRING, { Variant::TYPE_INT_OR_STRING },
+    { Variant(CreateIntOrString("Test")) }, Variant(CreateIntOrString(4321)),
+    "TestIntOrString: Test" },
+
 };
 
 const int kNumTestData = arraysize(testdata);

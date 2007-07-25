@@ -65,6 +65,7 @@ TEST(static_scriptable, TestPropertyInfo) {
       Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
     { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
     { "Fixed", -8, false, Variant(Variant::TYPE_INT64) },
+    { "IntOrStringProperty", -9, false, Variant(Variant::TYPE_INT_OR_STRING) },
   };
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
@@ -129,6 +130,10 @@ TEST(static_scriptable, TestPropertyAndMethod) {
   ASSERT_EQ(Variant(123456789), scriptable->GetProperty(-8));
   ASSERT_FALSE(scriptable->SetProperty(-8, Variant(12345)));
 
+  // -9: the "IntOrStringProperty" property.
+  ASSERT_EQ(Variant(CreateIntOrString(0)), scriptable->GetProperty(-9));
+  ASSERT_TRUE(scriptable->SetProperty(-9, Variant(CreateIntOrString("abcd"))));
+  ASSERT_EQ(Variant(CreateIntOrString("abcd")), scriptable->GetProperty(-9));
   delete scriptable;
 }
 

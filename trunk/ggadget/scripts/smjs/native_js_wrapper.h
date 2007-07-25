@@ -5,6 +5,7 @@
 #define GGADGET_NATIVE_JS_WRAPPER_H__
 
 #include <jsapi.h>
+#include "ggadget/common.h"
 
 namespace ggadget {
 
@@ -63,6 +64,8 @@ class NativeJSWrapper {
   JSBool ResolveProperty(jsval id);
 
 private:
+  DISALLOW_EVIL_CONSTRUCTORS(NativeJSWrapper);
+
   NativeJSWrapper(JSContext *js_context, ScriptableInterface *scriptable);
   void OnDelete() { deleted_ = true; }
 

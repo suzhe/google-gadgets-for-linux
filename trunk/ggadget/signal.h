@@ -18,6 +18,7 @@
 #define GGADGET_SIGNAL_H__
 
 #include <list>
+#include "common.h"
 #include "slot.h"
 
 namespace ggadget {
@@ -61,6 +62,8 @@ class Connection {
   const Signal *signal() const { return signal_; }
 
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(Connection);
+
   friend class Signal;
 
   /**
@@ -139,6 +142,8 @@ class Signal {
   Connection *Connect(Slot *slot);
 
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(Signal);
+
   typedef std::list<Connection *> ConnectionList;
   ConnectionList connections_;
 };
@@ -172,6 +177,8 @@ class SignalSlot : public Slot {
     return signal_ == (down_cast<const SignalSlot *>(&another))->signal_;
   }
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(SignalSlot);
+
   Signal *signal_;
 };
 
@@ -333,47 +340,38 @@ DEFINE_SIGNAL(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS9, INIT_ARGS9)
 
 #undef ARG_TYPES1
 #undef ARG_TYPE_NAMES1
-#undef INIT_ARG_TYPES1
 #undef INIT_ARGS1
 #undef ARGS1
 #undef ARG_TYPES2
 #undef ARG_TYPE_NAMES2
-#undef INIT_ARG_TYPES2
 #undef INIT_ARGS2
 #undef ARGS2
 #undef ARG_TYPES3
 #undef ARG_TYPE_NAMES3
-#undef INIT_ARG_TYPES3
 #undef INIT_ARGS3
 #undef ARGS3
 #undef ARG_TYPES4
 #undef ARG_TYPE_NAMES4
-#undef INIT_ARG_TYPES4
 #undef INIT_ARGS4
 #undef ARGS4
 #undef ARG_TYPES5
 #undef ARG_TYPE_NAMES5
-#undef INIT_ARG_TYPES5
 #undef INIT_ARGS5
 #undef ARGS5
 #undef ARG_TYPES6
 #undef ARG_TYPE_NAMES6
-#undef INIT_ARG_TYPES6
 #undef INIT_ARGS6
 #undef ARGS6
 #undef ARG_TYPES7
 #undef ARG_TYPE_NAMES7
-#undef INIT_ARG_TYPES7
 #undef INIT_ARGS7
 #undef ARGS7
 #undef ARG_TYPES8
 #undef ARG_TYPE_NAMES8
-#undef INIT_ARG_TYPES8
 #undef INIT_ARGS8
 #undef ARGS8
 #undef ARG_TYPES9
 #undef ARG_TYPE_NAMES9
-#undef INIT_ARG_TYPES9
 #undef INIT_ARGS9
 #undef ARGS9
 
