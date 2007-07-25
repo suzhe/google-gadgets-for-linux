@@ -170,7 +170,7 @@ bool StaticScriptable::Impl::GetPropertyInfoById(int id, Variant *prototype,
 
   // -1, -2, -3, ... ==> 0, 1, 2, ...
   int index = -id - 1;
-  if (index >= slot_prototypes_.size())
+  if (index >= static_cast<int>(slot_prototypes_.size()))
     return false;
 
   *prototype = slot_prototypes_[index];
@@ -185,7 +185,7 @@ Variant StaticScriptable::Impl::GetProperty(int id) {
 
   // -1, -2, -3, ... ==> 0, 1, 2, ...
   int index = -id - 1;
-  if (index >= getter_slots_.size())
+  if (index >= static_cast<int>(getter_slots_.size()))
     return Variant();
 
   Slot *slot = getter_slots_[index];
@@ -204,7 +204,7 @@ bool StaticScriptable::Impl::SetProperty(int id, Variant value) {
     return false;
 
   int index = -id - 1;
-  if (index >= setter_slots_.size())
+  if (index >= static_cast<int>(setter_slots_.size()))
     return false;
 
   Slot *slot = setter_slots_[index];
