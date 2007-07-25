@@ -50,7 +50,7 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
     jsdouble double_val;
     result = JS_ValueToNumber(cx, js_val, &double_val);
     if (result)
-      *native_val = Variant(static_cast<int64>(double_val));
+      *native_val = Variant(static_cast<int64_t>(double_val));
   }
   return result;
 }
@@ -196,7 +196,7 @@ static JSBool ConvertNativeToJSBool(JSContext *cx, Variant native_val,
 
 static JSBool ConvertNativeToJSInt(JSContext *cx, Variant native_val,
                                    jsval *js_val) {
-  int64 value = native_val.v.int64_value;
+  int64_t value = native_val.v.int64_value;
   if (value >= JSVAL_INT_MIN && value <= JSVAL_INT_MAX) {
     *js_val = INT_TO_JSVAL(value);
     return JS_TRUE;
