@@ -16,4 +16,6 @@
 #
 
 LD_LIBRARY_PATH="%%LIBRARY_PATH%%:$LD_LIBRARY_PATH" \
-"%%WRAPPEE_LOCATION%%" "$@"
+  "%%SHELL_LOCATION%%" \
+    "%%CMAKE_SOURCE_DIR%%/testing/js_unittest.js" \
+    "%%CMAKE_CURRENT_SOURCE_DIR%%/%%WRAPPEE_JS%%"
