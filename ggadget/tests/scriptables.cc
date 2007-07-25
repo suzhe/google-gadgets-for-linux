@@ -24,7 +24,7 @@
 #include "ggadget/slot.h"
 #include "ggadget/static_scriptable.h"
 
-using namespace ggadget;
+namespace ggadget {
 
 // Store testing status to be checked in unit test code.
 std::string g_buffer;
@@ -44,7 +44,8 @@ class TestScriptable1 : public ScriptableInterface {
  public:
   TestScriptable1()
       : static_scriptable_(new StaticScriptable()),
-        double_property_(0) {
+        double_property_(0),
+        int_property_(0) {
     g_buffer.clear();
     static_scriptable_->RegisterMethod("TestMethodVoid0",
         NewSlot(this, &TestScriptable1::TestMethodVoid0));
@@ -53,9 +54,17 @@ class TestScriptable1 : public ScriptableInterface {
     static_scriptable_->RegisterProperty("DoubleProperty",
         NewSlot(this, &TestScriptable1::GetDoubleProperty),
         NewSlot(this, &TestScriptable1::SetDoubleProperty));
-    static_scriptable_->RegisterProperty("Buffer",
+    static_scriptable_->RegisterProperty("BufferReadOnly",
         NewSlot(this, &TestScriptable1::GetBuffer), NULL);
+    static_scriptable_->RegisterProperty("Buffer",
+        NewSlot(this, &TestScriptable1::GetBuffer),
+        NewSlot(this, &TestScriptable1::SetBuffer));
     static_scriptable_->RegisterSignal(kOnDeleteSignal, &ondelete_signal_);
+    static_scriptable_->RegisterProperty("IntSimple",
+        NewSimpleGetterSlot(&int_property_),
+        NewSimpleSetterSlot(&int_property_));
+    static_scriptable_->RegisterProperty("Fixed",
+        NewFixedGetterSlot(123456789), NULL);
   }
 
   virtual ~TestScriptable1() {
@@ -88,18 +97,22 @@ class TestScriptable1 : public ScriptableInterface {
   }
   double TestMethodDouble2(bool p1, long p2) {
     AppendBuffer("TestMethodDouble2(%d, %ld)\n", p1, p2);
+    return p1 ? p2 : -p2;
   }
   void SetDoubleProperty(double double_property) {
     double_property_ = double_property;
     AppendBuffer("SetDoubleProperty(%.3lf)\n", double_property_);
   }
-  double GetDoubleProperty() {
+  double GetDoubleProperty() const {
     AppendBuffer("GetDoubleProperty()=%.3lf\n", double_property_);
     return double_property_;
   }
 
-  const char *GetBuffer() {
-    return g_buffer.c_str();
+  std::string GetBuffer() const {
+    return g_buffer;
+  }
+  void SetBuffer(const std::string& buffer) {
+    g_buffer = buffer;
   }
 
   OnDeleteSignal ondelete_signal_;
@@ -107,6 +120,7 @@ class TestScriptable1 : public ScriptableInterface {
  private:
   StaticScriptable *static_scriptable_;
   double double_property_;
+  int int_property_;
 };
 
 // A scriptable class with some dynamic properties, supporting array indexes,
@@ -120,3 +134,5 @@ class TestScriptable2 : public TestScriptable1 {
   virtual ~TestScriptable2() {
   }
 };
+
+} // namespace ggadget

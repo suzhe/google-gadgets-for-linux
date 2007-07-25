@@ -17,6 +17,8 @@
 // This file defines different types of slots to be tested.
 // This file should be included by other unittest files.
 
+namespace ggadget {
+
 // Hold the result of test functions/methods.
 char result[1024];
 
@@ -308,3 +310,5 @@ struct TestData {
 };
 
 const int kNumTestData = arraysize(testdata);
+
+} // namespace ggadget
