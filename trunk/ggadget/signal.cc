@@ -39,6 +39,7 @@ bool Connection::Reconnect(Slot *slot) {
     return false;
   slot_ = slot;
   Unblock();
+  return true;
 }
 
 void Connection::ReleaseSlot() {

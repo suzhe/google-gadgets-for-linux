@@ -431,6 +431,9 @@ class FixedGetter {
  public:
   FixedGetter(T value) : value_(value) { }
   T operator()() { return value_; }
+  bool operator==(FixedGetter<T> another) const {
+    return value_ == another.value_;
+  }
  private:
   T value_;
 };
@@ -440,6 +443,9 @@ class SimpleGetter {
  public:
   SimpleGetter(const T *value_ptr) : value_ptr_(value_ptr) { }
   T operator()() { return *value_ptr_; }
+  bool operator==(SimpleGetter<T> another) const {
+    return value_ptr_ == another.value_ptr_;
+  }
  private:
   const T *value_ptr_;
 };
@@ -449,6 +455,9 @@ class SimpleSetter {
  public:
   SimpleSetter(T *value_ptr) : value_ptr_(value_ptr) { }
   void operator()(T value) { *value_ptr_ = value; }
+  bool operator==(SimpleSetter<T> another) const {
+    return value_ptr_ == another.value_ptr_;
+  }
  private:
   T *value_ptr_;
 };
@@ -463,8 +472,6 @@ inline Slot0<T> *NewFixedGetterSlot(T value) {
   return NewFunctorSlot<T>(FixedGetter<T>(value));
 }
 
-/**
- * Helper function to new a @c Slot that can set a value to @a value_ptr.
 /**
  * Helper function to new a @c Slot that can get a value from @a value_ptr.
  * @param value_ptr pointer to a value.
@@ -481,7 +488,7 @@ inline Slot0<T> *NewSimpleGetterSlot(const T *value_ptr) {
  * @return the getter @c Slot.
  */
 template <typename T>
-inline Slot1<void, T> *NewSimpleSetterSlot(const T *value_ptr) {
+inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
   return NewFunctorSlot<void, T>(SimpleSetter<T>(value_ptr));
 }
 
