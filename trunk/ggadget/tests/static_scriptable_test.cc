@@ -58,13 +58,16 @@ TEST(static_scriptable, TestPropertyInfo) {
       // Here the result of NewSlot leaks.  Ignore it.
       Variant(NewSlot(scriptable, &TestScriptable1::TestMethodDouble2)) },
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
-    { "Buffer", -4, false, Variant(Variant::TYPE_STRING) },
-    { kOnDeleteSignal, -5, false,
+    { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
+    { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
+    { kOnDeleteSignal, -6, false,
       // Here the result of new SignalSlot leaks.  Ignore it.
       Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
+    { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
+    { "Fixed", -8, false, Variant(Variant::TYPE_INT64) },
   };
 
-  for (int i = 0; i < arraysize(property_info); i++) {
+  for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
     CheckProperty(i, scriptable, property_info[i]);
   }
 
@@ -84,7 +87,7 @@ TEST(static_scriptable, TestOnDelete) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
   ASSERT_TRUE(scriptable->ConnectToOnDeleteSignal(NewSlot(TestOnDelete)));
-  scriptable->SetProperty(-5, Variant(NewSlot(TestOnDeleteAsEventSink)));
+  scriptable->SetProperty(-6, Variant(NewSlot(TestOnDeleteAsEventSink)));
   delete scriptable;
   EXPECT_STREQ("TestOnDeleteAsEventSink\nTestOnDelete\nDestruct\n",
                g_buffer.c_str());
@@ -93,10 +96,10 @@ TEST(static_scriptable, TestOnDelete) {
 TEST(static_scriptable, TestPropertyAndMethod) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
-  // -4: the "Buffer" property.
+  // -4: the "BufferReadOnly" property.
   ASSERT_EQ(Variant(""), scriptable->GetProperty(-4));
   AppendBuffer("TestBuffer\n");
-  // "Buffer" is a readonly property.
+  // "BufferReadOnly" is a readonly property.
   ASSERT_FALSE(scriptable->SetProperty(-4, Variant("Buffer\n")));
   ASSERT_EQ(Variant("TestBuffer\n"), scriptable->GetProperty(-4));
   g_buffer.clear();
@@ -116,6 +119,15 @@ TEST(static_scriptable, TestPropertyAndMethod) {
   ASSERT_EQ(result1.type, Variant::TYPE_SLOT);
   ASSERT_EQ(Variant(), result1.v.slot_value->Call(0, NULL));
   ASSERT_STREQ("", g_buffer.c_str());
+
+  // -7: the "SimpleInt" property.
+  ASSERT_EQ(Variant(0), scriptable->GetProperty(-7));
+  ASSERT_TRUE(scriptable->SetProperty(-7, Variant(54321)));
+  ASSERT_EQ(Variant(54321), scriptable->GetProperty(-7));
+
+  // -8: the "Fixed" property.
+  ASSERT_EQ(Variant(123456789), scriptable->GetProperty(-8));
+  ASSERT_FALSE(scriptable->SetProperty(-8, Variant(12345)));
 
   delete scriptable;
 }

@@ -15,7 +15,7 @@
 #
 
 # ADD_SUBDIRECTORY(graphics)
-# ADD_SUBDIRECTORY(scripts)
+ADD_SUBDIRECTORY(scripts)
 # ADD_SUBDIRECTORY(sysdeps)
 ADD_SUBDIRECTORY(tests)
 

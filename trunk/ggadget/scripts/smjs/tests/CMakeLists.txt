@@ -14,3 +14,35 @@
 #  limitations under the License.
 #
 
+SET(READLINE_FOUND TRUE)  # TODO: 
+SET(HISTORY_FOUND TRUE)   # TODO: 
+SET(READLINE_LIBRARIES readline) # TODO: 
+SET(HISTORY_LIBRARIES history)   # TODO: 
+SET(READLINE_LIBRARY) # TODO: 
+SET(HISTORY_LIBRARY)   # TODO: 
+
+IF(READLINE_FOUND)
+  ADD_DEFINITIONS(-DHAS_READLINE)
+  IF(HISTORY_FOUND)
+    ADD_DEFINITIONS(-DHAS_HISTORY)
+  ENDIF(HISTORY_FOUND)
+ENDIF(READLINE_FOUND)
+
+SET(LIBS
+  ${READLINE_LIBRARIES}
+  ${HISTORY_LIBRARIES}
+  gunit
+  ggadget
+  ggadget_smjs
+)
+
+# General js_shell without custom objects.
+ADD_EXECUTABLE(js_shell js_shell.cc)
+TARGET_LINK_LIBRARIES(js_shell ${LIBS})
+TEST_WRAPPER(js_shell)
+
+# Customized js_shell with test scriptables.
+ADD_EXECUTABLE(wrapper_test_shell wrapper_test_shell.cc)
+TARGET_LINK_LIBRARIES(wrapper_test_shell ${LIBS})
+TEST_WRAPPER(wrapper_test_shell)
+JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)
