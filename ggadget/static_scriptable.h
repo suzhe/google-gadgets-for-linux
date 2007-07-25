@@ -63,6 +63,8 @@ class StaticScriptable : public ScriptableInterface {
   virtual bool SetProperty(int id, Variant value);
 
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(StaticScriptable);
+
   class Impl;
   Impl *impl_;
 };

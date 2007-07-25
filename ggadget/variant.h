@@ -27,6 +27,55 @@ class ScriptableInterface;
 class Slot;
 
 /**
+ * A value that can be a string or a integer.
+ * Used to represent some properties in Gadget API, such as
+ * @c basicElement.width.
+ */
+struct IntOrString {
+  enum Type {
+    TYPE_INT,
+    TYPE_STRING,
+  };
+
+  Type type;
+  union {
+    int int_value;
+    const char *string_value;
+  } v;
+
+  bool operator==(IntOrString another) const;
+};
+
+/**
+ * Construct a @c IntOrString with a @c int value.
+ * Because @c IntOrString is used in a union in @c Variant, it is not allowed
+ * to have constructors.
+ */
+inline IntOrString CreateIntOrString(int value) {
+  IntOrString v;
+  v.type = IntOrString::TYPE_INT;
+  v.v.int_value = value;
+  return v;
+}
+
+/**
+ * Construct a @c IntOrString with a <code>const char *</code> value.
+ * Because @c IntOrString is used in a union in @c Variant, it is not allowed
+ * to have constructors.
+ */
+inline IntOrString CreateIntOrString(const char *value) {
+  IntOrString v;
+  v.type = IntOrString::TYPE_STRING;
+  v.v.string_value = value;
+  return v;
+}
+
+/**
+ * Print a @c Variant into an output stream, only for debugging and testing.
+ */ 
+std::ostream &operator<<(std::ostream &out, IntOrString v);
+
+/**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
  */
@@ -49,6 +98,8 @@ struct Variant {
     TYPE_SCRIPTABLE,
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
+    /** @c StringOrInt type */
+    TYPE_INT_OR_STRING,
   };
 
   /**
@@ -60,7 +111,7 @@ struct Variant {
   /**
    * Construct a @c Variant by type with default value (zero).
    */
-  Variant(Type type) : type(type) { 
+  Variant(Type a_type) : type(a_type) { 
     if (type == TYPE_STRING) v.string_value = "";
     else v.double_value = 0;  // Also sets other unions to 0.
   }
@@ -169,10 +220,18 @@ struct Variant {
   }
 
   /**
+   * Construct a @c Variant with a @c StringOrInt value.
+   * The type of the constructed @c Variant is @c TYPE_STRING_OR_INT.
+   */
+  explicit Variant(IntOrString value) : type(TYPE_INT_OR_STRING) {
+    v.int_or_string_value = value;
+  }
+
+  /**
    * For testing convenience.
    * Not suggested to use in production code.
    */
-  bool operator==(const Variant &another) const;
+  bool operator==(Variant another) const;
 
   /**
    * Type of the <code>Variant</code>'s value.
@@ -189,16 +248,17 @@ struct Variant {
     const char *string_value;
     ScriptableInterface *scriptable_value;
     Slot *slot_value;
+    IntOrString int_or_string_value;
   } v;
 };
 
 /**
  * Print a @c Variant into an output stream, only for debugging and testing.
  */ 
-std::ostream &operator<<(std::ostream &out, const Variant &v);
+std::ostream &operator<<(std::ostream &out, Variant v);
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * This template is for all integral types.
  */
 template <typename T>
@@ -207,7 +267,7 @@ struct VariantType {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for @c void type.
  */
 template <>
@@ -216,7 +276,7 @@ struct VariantType<void> {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for @c bool type.
  */
 template <>
@@ -225,7 +285,7 @@ struct VariantType<bool> {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for @c double type.
  */
 template <>
@@ -234,7 +294,7 @@ struct VariantType<double> {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for <code>const char *</code> type.
  */
 template <>
@@ -243,7 +303,7 @@ struct VariantType<const char *> {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for <code>const std::string &</code> type.
  */
 template <>
@@ -252,7 +312,7 @@ struct VariantType<const std::string &> {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for @c std::string type.
  */
 template <>
@@ -261,7 +321,7 @@ struct VariantType<std::string> {
 };
 
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for <code>ScriptableInterface *</code> type.
  */
 template <>
@@ -270,12 +330,21 @@ struct VariantType<ScriptableInterface *> {
 };
  
 /**
- * Get the @c Variant::Type of a type.
+ * Get the @c Variant::Type of a C++ type.
  * Specialized for <code>Slot *</code> type.
  */
 template <>
 struct VariantType<Slot *> {
   static const Variant::Type type = Variant::TYPE_SLOT; 
+};
+
+/**
+ * Get the @c Variant::Type of a C++ type.
+ * Specialized for @c IntOrString type.
+ */
+template <>
+struct VariantType<IntOrString> {
+  static const Variant::Type type = Variant::TYPE_INT_OR_STRING; 
 };
 
 /**
@@ -385,6 +454,18 @@ struct VariantValue<Slot *> {
   Slot *operator()(Variant v) {
     ASSERT(v.type == Variant::TYPE_SLOT);
     return v.v.slot_value;
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for @c IntOrString type.
+ */
+template <>
+struct VariantValue<IntOrString> {
+  IntOrString operator()(Variant v) {
+    ASSERT(v.type == Variant::TYPE_INT_OR_STRING);
+    return v.v.int_or_string_value;
   }
 };
 

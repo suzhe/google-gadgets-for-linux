@@ -45,7 +45,8 @@ class TestScriptable1 : public ScriptableInterface {
   TestScriptable1()
       : static_scriptable_(new StaticScriptable()),
         double_property_(0),
-        int_property_(0) {
+        int_property_(0),
+        int_or_string_property_(CreateIntOrString(0)) {
     g_buffer.clear();
     static_scriptable_->RegisterMethod("TestMethodVoid0",
         NewSlot(this, &TestScriptable1::TestMethodVoid0));
@@ -65,6 +66,9 @@ class TestScriptable1 : public ScriptableInterface {
         NewSimpleSetterSlot(&int_property_));
     static_scriptable_->RegisterProperty("Fixed",
         NewFixedGetterSlot(123456789), NULL);
+    static_scriptable_->RegisterProperty("IntOrStringProperty",
+        NewSimpleGetterSlot(&int_or_string_property_),
+        NewSimpleSetterSlot(&int_or_string_property_));
   }
 
   virtual ~TestScriptable1() {
@@ -121,6 +125,7 @@ class TestScriptable1 : public ScriptableInterface {
   StaticScriptable *static_scriptable_;
   double double_property_;
   int int_property_;
+  IntOrString int_or_string_property_;
 };
 
 // A scriptable class with some dynamic properties, supporting array indexes,
