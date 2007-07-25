@@ -18,6 +18,7 @@
 #define GGADGET_COMMONS_H__
 
 #include <cassert>
+#include <stdarg.h>
 #include <stdint.h>         // Integer types and macros.
 
 namespace ggadget {
@@ -36,7 +37,7 @@ namespace ggadget {
  */
 #define SCANF_ATTRIBUTE(arg1,arg2) \
     __attribute__((__format__ (__scanf__, arg1, arg2)))
-    
+
 #else // __GNUC__
 
 #define PRINTF_ATTRIBUTE(arg1, arg2)
@@ -75,12 +76,26 @@ namespace ggadget {
 #undef VERIFY_M
 #undef DLOG
 
+struct LogHelper {
+  LogHelper(const char *file, int line) : file_(file), line_(line) { }
+  void operator()(const char *format, ...) PRINTF_ATTRIBUTE(2, 3) {
+    // TODO: Let log information go into debug console.
+    va_list ap;
+    va_start(ap, format);
+    printf("%s:%d: ", file_, line_);
+    vprintf(format, ap);
+    va_end(ap);
+    fflush(stdout);
+  }
+  const char *file_;
+  int line_;
+};
+
 /**
  * Print log with printf format parameters.
  * It works in both debug and release versions.
  */
-// TODO: Let log information go into debug console.
-#define LOG  printf
+#define LOG LogHelper(__FILE__, __LINE__)
 
 #ifdef NDEBUG
 #define ASSERT(x)
@@ -106,23 +121,21 @@ namespace ggadget {
 /**
  * Verify an expression and print a message if the expression is not true.
  * It only works in debug versions.
- */ 
-#define VERIFY(x) do { if (!(x)) \
-    DLOG("%s:%d: VERIFY FAILED", __FILE__, __LINE__); } while (0)
+ */
+#define VERIFY(x) do { if (!(x)) DLOG("VERIFY FAILED: %s", #x); } while (0)
 
 /**
  * Verify an expression with a message in printf format.
  * It only works in debug versions.
  * Sample usage: <code>VERIFY_M(a==b, ("%d==%d failed\n", a, b));</code>
- */ 
+ */
 #define VERIFY_M(x, y) do { if (!(x)) { DLOG y; VERIFY(x); } } while (0)
 
 /**
  * Print debug log with printf format parameters.
  * It only works in debug versions.
  */
-// TODO: Let log information go into debug console.
-#define DLOG  printf
+#define DLOG LOG
 
 #endif // else NDEBUG
 
