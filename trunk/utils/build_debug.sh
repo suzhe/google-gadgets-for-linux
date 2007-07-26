@@ -23,4 +23,6 @@ mkdir -p build/debug
 cd build/debug
 cmake -DCMAKE_BUILD_TYPE=Debug "$srcdir"
 make
-ctest .
+if ! ctest . ; then
+  cat Testing/Temporary/LastTest.log
+fi

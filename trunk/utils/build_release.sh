@@ -23,4 +23,6 @@ mkdir -p build/release
 cd build/release
 cmake -DCMAKE_BUILD_TYPE=Release "$srcdir"
 make
-ctest .
+if ! ctest . ; then
+  cat Testing/Temporary/LastTest.log
+fi
