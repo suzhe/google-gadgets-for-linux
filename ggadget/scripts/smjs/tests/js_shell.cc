@@ -189,9 +189,8 @@ static JSBool Assert(JSContext *cx, JSObject *obj,
 static void ErrorReporter(JSContext *cx, const char *message,
                           JSErrorReport *report) {
   if (!g_interactive &&
-      
       // If the error is an assertion failure, don't quit now because
-      // we have thrown an exception to be handled by the JavaScript code. 
+      // we have thrown an exception to be handled by the JavaScript code.
       strncmp(message, kAssertFailurePrefix,
               sizeof(kAssertFailurePrefix) - 1) != 0) {
     if (JSREPORT_IS_EXCEPTION(report->flags) ||
@@ -229,7 +228,7 @@ int main(int argc, char *argv[]) {
 
   JS_SetErrorReporter(cx, ErrorReporter);
 
-  JSClass global_class = { 
+  JSClass global_class = {
       "global", 0,
       JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub,  JS_PropertyStub,
       JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,   JS_FinalizeStub
