@@ -23,6 +23,7 @@ SET(SRCS
   signal.cc
   static_scriptable.cc
   variant.cc
+  elements.cc
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

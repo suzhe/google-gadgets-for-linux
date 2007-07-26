@@ -14,14 +14,15 @@
 # limitations under the License.
 #
 
-ADD_EXECUTABLE(slot_test slot_test.cc)
-TARGET_LINK_LIBRARIES(slot_test gunit ggadget)
-TEST_WRAPPER(slot_test TRUE)
+ADD_DEFINITIONS(-DUNIT_TEST)
 
-ADD_EXECUTABLE(signal_test signal_test.cc)
-TARGET_LINK_LIBRARIES(signal_test gunit ggadget)
-TEST_WRAPPER(signal_test TRUE)
+MACRO(UNIT_TEST TEST_NAME)
+  ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget)
+  TEST_WRAPPER(${TEST_NAME} TRUE)
+ENDMACRO(UNIT_TEST TEST_NAME)
 
-ADD_EXECUTABLE(static_scriptable_test static_scriptable_test.cc)
-TARGET_LINK_LIBRARIES(static_scriptable_test gunit ggadget)
-TEST_WRAPPER(static_scriptable_test TRUE)
+UNIT_TEST(slot_test)
+UNIT_TEST(signal_test)
+UNIT_TEST(static_scriptable_test)
+UNIT_TEST(elements_test)

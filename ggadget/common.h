@@ -18,7 +18,8 @@
 #define GGADGET_COMMONS_H__
 
 #include <cassert>
-#include <stdarg.h>
+#include <cstdarg>
+#include <cstdio>
 #include <stdint.h>         // Integer types and macros.
 
 namespace ggadget {

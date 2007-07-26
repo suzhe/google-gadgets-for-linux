@@ -17,17 +17,16 @@
 #ifndef GGADGET_ELEMENT_INTERFACE_H__
 #define GGADGET_ELEMENT_INTERFACE_H__
 
-#include "scriptable_interface.h"
+namespace ggadget {
 
-/**
- * Interface for representing an Element in the Gadget API.
- */
-class ElementInterface : public ScriptableInterface {
+class ElementInterface {
  public:
-  /** 
-   * Initializes an element.
-   */
-  virtual bool Init() = 0;
+  /** Get the type of the current object. */
+  virtual const char *type() const = 0;
+  /** Destroy the current object. */
+  virtual void Release() = 0;
+};
+
 };
 
 #endif // GGADGET_ELEMENT_INTERFACE_H__
