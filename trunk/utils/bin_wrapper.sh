@@ -33,7 +33,8 @@ done
 if [ -x "$progbase".bin ]; then
   cd "$here"
   export PREFIX=`dirname "$progdir"`
-  export LD_LIBRARY_PATH="$PREFIX/lib"
+  export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$PREFIX/lib:$DYLD_LIBRARY_PATH"
   "$progdir/$progbase.bin" "$@"
   exit $?
 else
