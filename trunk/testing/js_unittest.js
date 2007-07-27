@@ -24,16 +24,15 @@
 //   setVerbose(true|false) : enable/disable verbose error reporting.
 //
 // General JavaScript unittest format:
-// TEST(name, function() {
-//   test_body;
+// TEST("Name", function() {
 //   ASSERT(Predicate(...)[, message]);
 //   ...
-//   END_TEST();
 // }
-// TEST(another_test, function() {
+// DEATH_TEST("Death test", function() {
 //   ...
+//   ASSERT(DEATH());
 // }
-// 
+//
 // DO_ALL_TESTS();
 
 const QUIT_JSERROR = -2;
@@ -75,8 +74,14 @@ function RUN_ALL_TESTS() {
     setVerbose(!_gIsDeathTest[i]);
     try {
       _gAllTestCases[i]();
+      if (_gIsDeathTest[i]) {
+        _gCurrentTestFailed = true;
+        print("***Missing ASSERT(DEATH()) at the end of DEATH_TEST body."); 
+      } else {
+        _gCurrentTestFailed = false;
+      }
     } catch (e) {
-      // The exception thrown by ASSERT is of value ASSERT_EXCEPTION_MAGIC. 
+      // The exception thrown by ASSERT is of value ASSERT_EXCEPTION_MAGIC.
       if (e !== ASSERT_EXCEPTION_MAGIC)
         print(e);
     }
@@ -95,12 +100,9 @@ function RUN_ALL_TESTS() {
   }
 }
 
-function END_TEST() {
-  _gCurrentTestFailed = !_gCurrentTestFailed;
-}
-
-function _Message(expected, actual) {
-  return "  Actual: " + actual + "\nExpected: " + expected;
+function _Message(relation, expected, actual) {
+  return "  Actual: " + actual + " (" + typeof(actual) + ")\n" +
+    "Expected: " + relation + " " + expected + " (" + typeof(expected) + ")\n";
 }
 
 // General format of ASSERT:
@@ -108,77 +110,80 @@ function _Message(expected, actual) {
 // or
 //   ASSERT(PREDICATE(args), "message");
 //
-// The following are definitions of predicates. 
+// The following are definitions of predicates.
 
 // Succeeds if arg is equivalent to true.
 // Use EQ or STRICT_EQ instead to test if arg is equal to false.
 function TRUE(arg) {
-  return arg ? "" : _Message("true equivalent", arg);
+  return arg ? "" : _Message("Equivalent to", true, arg);
 }
 
 // Succeeds if arg is equivalent to false.
 // Use EQ or STRICT_EQ instead to test if arg is equal to false.
 function FALSE(arg) {
-  return !arg ? "" : _Message("false equivalent", arg);
+  return !arg ? "" : _Message("Equivalent to", false, arg);
 }
 
 function NULL(arg) {
-  return arg == null ? "" : _Message("null", arg);
+  return arg == null ? "" : _Message("==", null, arg);
 }
 
 function NOT_NULL(arg) {
-  return arg != null ? "" : _Message("not null", arg);
+  return arg != null ? "" : _Message("!=", null, arg);
 }
 
 function UNDEFINED(arg) {
-  return arg == undefined ? "" : _Message("undefined", arg);
+  return arg == undefined ? "" : _Message("==", undefined, arg);
 }
 
 function NOT_UNDEFINED(arg) {
-  return arg != undefined ? "" : _Message("not undefined", arg);
+  return arg != undefined ? "" : _Message("!=", undefined, arg);
 }
 
 function NAN(arg) {
-  return isNaN(arg) ? "" : _Message("NaN", arg);
+  return isNaN(arg) ? "" : _Message("is", NaN, arg);
 }
 
 function NOT_NAN(arg) {
-  return !isNaN(arg) ? "" : _Message("not NaN", arg);
+  return !isNaN(arg) ? "" : _Message("not", NaN, arg);
 }
 
 function EQ(arg1, arg2) {
-  return arg1 == arg2 ? "" : _Message(arg1, arg2);
+  return arg1 == arg2 ? "" : _Message("==", arg1, arg2);
 }
 
 function STRICT_EQ(arg1, arg2) {
-  return arg1 === arg2 ? "" : _Message(arg1, arg2);
+  return arg1 === arg2 ? "" : _Message("===", arg1, arg2);
 }
 
 function NE(arg1, arg2) {
-  return arg1 != arg2 ? "" : _Message("!=" + arg1, arg2);
+  return arg1 != arg2 ? "" : _Message("!=", arg1, arg2);
 }
 
 function STRICT_NE(arg1, arg2) {
-  return arg1 !== arg2 ? "" : _Message("!==" + arg1, arg2);
+  return arg1 !== arg2 ? "" : _Message("!==", arg1, arg2);
 }
 
 function LT(arg1, arg2) {
-  return arg1 < arg2 ? "" : _Message("<" + arg1, arg2);
+  return arg1 < arg2 ? "" : _Message("<", arg1, arg2);
 }
 
 function LE(arg1, arg2) {
-  return arg1 <= arg2 ? "" : _Message("<= " + arg1, arg2);
+  return arg1 <= arg2 ? "" : _Message("<=", arg1, arg2);
 }
 
 function GT(arg1, arg2) {
-  return arg1 > arg2 ? "" : _Message(">" + arg1, arg2);
+  return arg1 > arg2 ? "" : _Message(">", arg1, arg2);
 }
 
 function GE(arg1, arg2) {
-  return arg1 != arg2 ? "" : _Message(">=" + arg1, arg2);
+  return arg1 != arg2 ? "" : _Message(">=", arg1, arg2);
 }
 
-function _ObjectEquals(array1, array2) {
+function _ArrayEquals(array1, array2) {
+  if (typeof(array1) != "object" || typeof(array2) != "object" ||
+      array1.length == undefined || array2.length == undefined)
+    return false;
   if (array1.length != array2.length)
     return false;
   for (var i = 0; i < array1.length; i++) {
@@ -188,7 +193,10 @@ function _ObjectEquals(array1, array2) {
   return true;
 }
 
-function _ObjectStrictEquals(array1, array2) {
+function _ArrayStrictEquals(array1, array2) {
+  if (typeof(array1) != "object" || typeof(array2) != "object" ||
+      array1.length == undefined || array2.length == undefined)
+    return false;
   if (array1.length != array2.length)
     return false;
   for (var i = 0; i < array1.length; i++) {
@@ -199,27 +207,33 @@ function _ObjectStrictEquals(array1, array2) {
 }
 
 function ARRAY_EQ(array1, array2) {
-  return _ObjectEquals(array1, array2) ? "" :
-         _Message("ARRAY==" + array1, array2);
+  return _ArrayEquals(array1, array2) ? "" :
+         _Message("ARRAY==", array1, array2);
 }
 
 function ARRAY_NE(array1, array2) {
-  return !_ObjectEquals(array1, array2) ? "" :
-         _Message("ARRAY!=" + array1, array2);
+  return !_ArrayEquals(array1, array2) ? "" :
+         _Message("ARRAY!=", array1, array2);
 }
-  
+
 function ARRAY_STRICT_EQ(array1, array2) {
-  return _ObjectStrictEquals(array1, array2) ? "" :
-         _Message("ARRAY===" + array1, array2);
+  return _ArrayStrictEquals(array1, array2) ? "" :
+         _Message("ARRAY===", array1, array2);
 }
 
 function ARRAY_STRICT_NE(array1, array2) {
-  return !_ObjectStrictEquals(array1, array2) ? "" :
-         _Message("ARRAY!==" + array1, array2);
+  return !_ArrayStrictEquals(array1, array2) ? "" :
+         _Message("ARRAY!==", array1, array2);
 }
-  
+
 function _ObjectEquals(object1, object2) {
+  if (typeof(object1) != "object" || typeof(object2) != "object")
+    return false;
   for (var i in object1) {
+    if (object1[i] != object2[i])
+      return false;
+  }
+  for (i in object2) {
     if (object1[i] != object2[i])
       return false;
   }
@@ -227,7 +241,13 @@ function _ObjectEquals(object1, object2) {
 }
 
 function _ObjectStrictEquals(object1, object2) {
+  if (typeof(object1) != "object" || typeof(object2) != "object")
+    return false;
   for (var i in object1) {
+    if (object1[i] !== object2[i])
+      return false;
+  }
+  for (i in object2) {
     if (object1[i] !== object2[i])
       return false;
   }
@@ -236,20 +256,26 @@ function _ObjectStrictEquals(object1, object2) {
 
 function OBJECT_EQ(object1, object2) {
   return _ObjectEquals(object1, object2) ? "" :
-         _Message("OBJECT==" + object1, object2);
+         _Message("OBJECT==", object1, object2);
 }
 
 function OBJECT_NE(object1, object2) {
   return !_ObjectEquals(object1, object2) ? "" :
-         _Message("OBJECT!=" + object1, object2);
+         _Message("OBJECT!=", object1, object2);
 }
-  
+
 function OBJECT_STRICT_EQ(object1, object2) {
   return _ObjectStrictEquals(object1, object2) ? "" :
-         _Message("OBJECT===" + object1, object2);
+         _Message("OBJECT===", object1, object2);
 }
 
 function OBJECT_STRICT_NE(object1, object2) {
   return !_ObjectStrictEquals(object1, object2) ? "" :
-         _Message("OBJECT!==" + object1, object2);
+         _Message("OBJECT!==", object1, object2);
+}
+
+function DEATH() {
+  setVerbose(true);
+  _gCurrentTestFailed = true;
+  return _Message("", "Death", "No death -- Bad!");
 }

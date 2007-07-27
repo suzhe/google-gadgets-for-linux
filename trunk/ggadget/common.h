@@ -70,6 +70,18 @@ namespace ggadget {
   DISALLOW_EVIL_CONSTRUCTORS(TypeName)
 
 
+#ifdef NDEBUG
+#define DISALLOW_DIRECT_DELETION(TypeName)
+#else
+/**
+ * A macro to disallow direct deletion of a pointer to @c TypeName.
+ * This should be used at the end of an interface declaration.
+ */
+#define DISALLOW_DIRECT_DELETION(TypeName) \
+ protected:                                \
+  ~TypeName() { }
+#endif
+
 #undef LOG
 #undef ASSERT
 #undef ASSERT_M

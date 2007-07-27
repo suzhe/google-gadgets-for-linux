@@ -14,170 +14,53 @@
   limitations under the License.
 */
 
-// This file defines different types of slots to be tested.
-// This file should be included by other unittest files.
+#include "ggadget/slot.h"
+#include "slots.h"
 
-namespace ggadget {
+using namespace ggadget;
 
 // Hold the result of test functions/methods.
 char result[1024];
 
-void TestVoidFunction0() {
-  strcpy(result, "TestVoidFunction0");
-}
-
-void TestVoidFunction9(int p1, bool p2, const char *p3, const std::string &p4,
-                       std::string p5, char p6, unsigned char p7,
-                       short p8, unsigned short p9) {
-  sprintf(result, "TestVoidFunction9: %d %d %s %s %s %c %c %d %d",
-          p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
-}
-
-bool TestBoolFunction0() {
-  strcpy(result, "TestBoolFunction0");
-  return false;
-}
-
-bool TestBoolFunction9(int p1, bool p2, const char *p3, const std::string &p4,
-                       std::string p5, char p6, unsigned char p7,
-                       short p8, unsigned short p9) {
-  sprintf(result, "TestBoolFunction9: %d %d %s %s %s %c %c %d %d",
-          p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
-  return true;
-}
-
-IntOrString TestIntOrString(IntOrString p) {
-  if (p.type == IntOrString::TYPE_INT) {
-    sprintf(result, "TestIntOrString: %d", p.v.int_value);
-    return CreateIntOrString("String");
-  } else {
-    sprintf(result, "TestIntOrString: %s", p.v.string_value);
-    return CreateIntOrString(4321);
+Slot *TestClass::TestSlotMethod(int i) {
+  switch (i) {
+    case 0: return NewSlot(&TestVoidFunction0);
+    case 1: return NewSlot(&TestVoidFunction9);
+    case 2: return NewSlot(&TestBoolFunction0);
+    case 3: return NewSlot(&TestBoolFunction9);
+    case 4: return NewSlot(this, &TestClass::TestVoidMethod0);
+    case 5: return NewSlot(this, &TestClass::TestBoolMethod0);
+    case 6: return NewSlot(this, &TestClass::TestVoidMethod2);
+    case 7: return NewSlot(this, &TestClass::TestDoubleMethod2);
+    case 8: return NewSlot(this, &TestClass::TestVoidMethod9);
+    case 9: return NewSlot(this, &TestClass::TestBoolMethod9);
+    case 10: return NewSlot((TestClass0 *)this, &TestClass0::TestVoidMethod2);
+    case 11: return NewFunctorSlot<void>
+                                  (TestVoidFunctor0());
+    case 12: return NewFunctorSlot<void,
+                                   int, bool, const char *,
+                                   const std::string &, std::string, char,
+                                   unsigned char, short, unsigned short>
+                                  (TestVoidFunctor9());
+    case 13: return NewFunctorSlot<bool>
+                                  (TestBoolFunctor0());
+    case 14: return NewFunctorSlot<bool,
+                                   int, bool, const char *,
+                                   const std::string &, std::string, char,
+                                   unsigned char, short, unsigned short>
+                                  (TestBoolFunctor9());
+    case 15: return NewSlot(&TestIntOrString);
+    case 16: return NewSlot(&TestIntOrString);
+    default: return NULL;
   }
 }
-
-struct TestVoidFunctor0 {
-  void operator()() {
-    strcpy(result, "TestVoidFunctor0");
-  }
-  // This operator== is required for testing.  Slot's == will call it.
-  bool operator==(TestVoidFunctor0 f) const { return true; }
-};
-
-struct TestVoidFunctor9 {
-  void operator()(int p1, bool p2, const char *p3, const std::string &p4,
-                  std::string p5, char p6, unsigned char p7,
-                  short p8, unsigned short p9) {
-    sprintf(result, "TestVoidFunctor9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
-  }
-  // This operator== is required for testing.  Slot's == will call it.
-  bool operator==(TestVoidFunctor9 f) const { return true; }
-};
-
-struct TestBoolFunctor0 {
-  bool operator()() {
-    strcpy(result, "TestBoolFunctor0");
-    return false;
-  }
-  // This operator== is required for testing.  Slot's == will call it.
-  bool operator==(TestBoolFunctor0 f) const { return true; }
-};
-
-struct TestBoolFunctor9 {
-  bool operator()(int p1, bool p2, const char *p3, const std::string &p4,
-                  std::string p5, char p6, unsigned char p7,
-                  short p8, unsigned short p9) {
-    sprintf(result, "TestBoolFunctor9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
-    return true;
-  }
-  // This operator== is required for testing.  Slot's == will call it.
-  bool operator==(TestBoolFunctor9 f) const { return true; }
-};
-
-class TestClass0 {
- public:
-  virtual void TestVoidMethod2(char p1, unsigned long p2) = 0;
-};
-
-class TestClass : public TestClass0 {
- public:
-  void TestVoidMethod0() {
-    strcpy(result, "TestVoidMethod0");
-  }
-  bool TestBoolMethod0() const {
-    strcpy(result, "TestBoolMethod0");
-    return true;
-  }
-  virtual void TestVoidMethod2(char p1, unsigned long p2) {
-    sprintf(result, "TestVoidMethod2: %c %lx", p1, p2);
-  }
-  double TestDoubleMethod2(int p1, double p2) const {
-    sprintf(result, "TestDoubleMethod2: %d %.3lf", p1, p2);
-    return 2;
-  }
-  void TestVoidMethod9(int p1, bool p2, const char *p3, const std::string &p4,
-                       std::string p5, char p6, unsigned char p7,
-                       short p8, unsigned short p9) const {
-    sprintf(result, "TestVoidMethod9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
-  }
-  bool TestBoolMethod9(int p1, bool p2, const char *p3, const std::string &p4,
-                       std::string p5, char p6, unsigned char p7,
-                       short p8, unsigned short p9) {
-    sprintf(result, "TestBoolMethod9: %d %d %s %s %s %c %c %d %d",
-            p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
-    return false;
-  }
-
-  Slot *TestSlotMethod(int i) {
-    switch (i) {
-      case 0: return NewSlot(&TestVoidFunction0);
-      case 1: return NewSlot(&TestVoidFunction9);
-      case 2: return NewSlot(&TestBoolFunction0);
-      case 3: return NewSlot(&TestBoolFunction9);
-      case 4: return NewSlot(this, &TestClass::TestVoidMethod0);
-      case 5: return NewSlot(this, &TestClass::TestBoolMethod0);
-      case 6: return NewSlot(this, &TestClass::TestVoidMethod2);
-      case 7: return NewSlot(this, &TestClass::TestDoubleMethod2);
-      case 8: return NewSlot(this, &TestClass::TestVoidMethod9);
-      case 9: return NewSlot(this, &TestClass::TestBoolMethod9);
-      case 10: return NewSlot((TestClass0 *)this, &TestClass0::TestVoidMethod2);
-      case 11: return NewFunctorSlot<void>
-                                    (TestVoidFunctor0());
-      case 12: return NewFunctorSlot<void,
-                                     int, bool, const char *,
-                                     const std::string &, std::string, char,
-                                     unsigned char, short, unsigned short>
-                                    (TestVoidFunctor9());
-      case 13: return NewFunctorSlot<bool>
-                                    (TestBoolFunctor0());
-      case 14: return NewFunctorSlot<bool,
-                                     int, bool, const char *,
-                                     const std::string &, std::string, char,
-                                     unsigned char, short, unsigned short>
-                                    (TestBoolFunctor9());
-      case 15: return NewSlot(&TestIntOrString);
-      case 16: return NewSlot(&TestIntOrString);
-      default: return NULL;
-    }
-  }
-};
 
 std::string str_b("bbb");
 std::string str_c("ccc");
 std::string str_e("eee");
 std::string str_f("fff");
 
-struct TestData {
-  int argc;
-  Variant::Type return_type;
-  Variant::Type arg_types[10];
-  Variant args[10];
-  Variant return_value;
-  const char *result;
-} testdata[] = {
+TestData testdata[] = {
   { 0, Variant::TYPE_VOID, { }, { }, Variant(), "TestVoidFunction0" },
   { 9, Variant::TYPE_VOID, { Variant::TYPE_INT64,
                              Variant::TYPE_BOOL,
@@ -329,5 +212,3 @@ struct TestData {
 };
 
 const int kNumTestData = arraysize(testdata);
-
-} // namespace ggadget

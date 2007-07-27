@@ -18,18 +18,8 @@ class ScriptableInterface;
 class NativeJSWrapper {
 
  public:
+   NativeJSWrapper(JSContext *js_context, ScriptableInterface *scriptable);
   ~NativeJSWrapper();
-
-  /**
-   * Wrap a native @c ScriptableInterface object into a JavaScript object.
-   * The caller must immediately hook the object in the JS object tree to
-   * prevent it from being unexpectedly GC'ed.
-   * @param cx JavaScript context.
-   * @param scriptable the native @c ScriptableInterface object to be wrapped.
-   * @return the wrapped JavaScript object, or @c NULL on errors.
-   */
-  static JSObject *Wrap(JSContext *cx,
-                        ScriptableInterface *scriptableInterface);
 
   /**
    * Unwrap a native @c ScriptableInterface object from a JavaScript object.
@@ -39,35 +29,35 @@ class NativeJSWrapper {
   static JSBool Unwrap(JSContext *cx, JSObject *obj,
                        ScriptableInterface **scriptable);
 
-  /**
-   * Get the @c NativeJSWrapper pointer from a JS wrapped
-   * @c ScriptableInterface object.
-   */
-  static NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(
-      JSContext *cx, JSObject *js_object);
-
-  /**
-   * Invoke a native method.
-   */
-  JSBool InvokeMethod(uintN argc, jsval *argv, jsval *rval);
-  /**
-   * Get a native property.
-   */
-  JSBool GetProperty(jsval id, jsval *vp);
-  /**
-   * Set a native property.
-   */
-  JSBool SetProperty(jsval id, jsval vp);
-  /**
-   * Resolve a property.
-   */
-  JSBool ResolveProperty(jsval id);
+  JSObject *js_object() const { return js_object_; }
+  ScriptableInterface *scriptable() const { return scriptable_; }
 
 private:
   DISALLOW_EVIL_CONSTRUCTORS(NativeJSWrapper);
 
-  NativeJSWrapper(JSContext *js_context, ScriptableInterface *scriptable);
   void OnDelete() { deleted_ = true; }
+
+  /**
+   * Get the @c NativeJSWrapper pointer from a JS wrapped
+   * @c ScriptableInterface object.
+   */
+  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
+
+  static JSBool CallWrapperMethod(JSContext *cx, JSObject *obj,
+                                  uintN argc, jsval *argv, jsval *rval);
+  static JSBool GetWrapperProperty(JSContext *cx, JSObject *obj,
+                                   jsval id, jsval *vp);
+  static JSBool SetWrapperProperty(JSContext *cx, JSObject *obj,
+                                   jsval id, jsval *vp);
+  static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id);
+  static void FinalizeWrapper(JSContext *cx, JSObject *obj);
+
+  JSBool InvokeMethod(uintN argc, jsval *argv, jsval *rval);
+  JSBool GetProperty(jsval id, jsval *vp);
+  JSBool SetProperty(jsval id, jsval vp);
+  JSBool ResolveProperty(jsval id);
+
+  static JSClass wrapper_js_class_;
 
   bool deleted_;
   JSContext *js_context_;

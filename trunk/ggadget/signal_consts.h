@@ -24,7 +24,7 @@ namespace ggadget {
  */
 
 /** The owner @c ScriptableInterface object is to be deleted. */
-const char *kOnDeleteSignal = "ondelete";
+const char *const kOnDeleteSignal = "ondelete";
 typedef Signal0<void> OnDeleteSignal;
 
 } // name space ggadget

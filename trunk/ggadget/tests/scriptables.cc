@@ -14,17 +14,9 @@
   limitations under the License.
 */
 
-// This file is to be included by unittest files
+#include "scriptables.h"
 
-#include <stdarg.h>
-#include <stdio.h>
-#include "ggadget/scriptable_interface.h"
-#include "ggadget/signal.h"
-#include "ggadget/signal_consts.h"
-#include "ggadget/slot.h"
-#include "ggadget/static_scriptable.h"
-
-namespace ggadget {
+using namespace ggadget;
 
 // Store testing status to be checked in unit test code.
 std::string g_buffer;
@@ -39,105 +31,75 @@ void AppendBuffer(const char *format, ...) {
   printf("AppendBuffer: %s\n", buffer);
 }
 
-// A normal scriptable class.
-class TestScriptable1 : public ScriptableInterface {
- public:
-  TestScriptable1()
-      : static_scriptable_(new StaticScriptable()),
-        double_property_(0),
-        int_property_(0),
-        int_or_string_property_(CreateIntOrString(0)) {
-    g_buffer.clear();
-    static_scriptable_->RegisterMethod("TestMethodVoid0",
-        NewSlot(this, &TestScriptable1::TestMethodVoid0));
-    static_scriptable_->RegisterMethod("TestMethodDouble2",
-        NewSlot(this, &TestScriptable1::TestMethodDouble2));
-    static_scriptable_->RegisterProperty("DoubleProperty",
-        NewSlot(this, &TestScriptable1::GetDoubleProperty),
-        NewSlot(this, &TestScriptable1::SetDoubleProperty));
-    static_scriptable_->RegisterProperty("BufferReadOnly",
-        NewSlot(this, &TestScriptable1::GetBuffer), NULL);
-    static_scriptable_->RegisterProperty("Buffer",
-        NewSlot(this, &TestScriptable1::GetBuffer),
-        NewSlot(this, &TestScriptable1::SetBuffer));
-    static_scriptable_->RegisterSignal(kOnDeleteSignal, &ondelete_signal_);
-    static_scriptable_->RegisterProperty("IntSimple",
-        NewSimpleGetterSlot(&int_property_),
-        NewSimpleSetterSlot(&int_property_));
-    static_scriptable_->RegisterProperty("Fixed",
-        NewFixedGetterSlot(123456789), NULL);
-    static_scriptable_->RegisterProperty("IntOrStringProperty",
-        NewSimpleGetterSlot(&int_or_string_property_),
-        NewSimpleSetterSlot(&int_or_string_property_));
-  }
+TestScriptable1::TestScriptable1()
+    : static_scriptable_(new StaticScriptable()),
+      double_property_(0),
+      int_property_(0),
+      int_or_string_property_(CreateIntOrString(0)) {
+  g_buffer.clear();
+  RegisterMethod("TestMethodVoid0",
+                 NewSlot(this, &TestScriptable1::TestMethodVoid0));
+  RegisterMethod("TestMethodDouble2",
+                 NewSlot(this, &TestScriptable1::TestMethodDouble2));
+  RegisterProperty("DoubleProperty",
+                   NewSlot(this, &TestScriptable1::GetDoubleProperty),
+                   NewSlot(this, &TestScriptable1::SetDoubleProperty));
+  RegisterProperty("BufferReadOnly",
+                   NewSlot(this, &TestScriptable1::GetBuffer), NULL);
+  RegisterProperty("Buffer",
+                   NewSlot(this, &TestScriptable1::GetBuffer),
+                   NewSlot(this, &TestScriptable1::SetBuffer));
+  RegisterSignal(kOnDeleteSignal, &ondelete_signal_);
+  RegisterSimpleProperty("IntSimple", &int_property_);
+  RegisterConstant("Fixed", 123456789);
+  RegisterSimpleProperty("IntOrStringProperty", &int_or_string_property_);
 
-  virtual ~TestScriptable1() {
-    ondelete_signal_();
-    AppendBuffer("Destruct\n");
+  // Register 10 integer constants.
+  static char names_arr[20][20]; // Ugly...
+  char *names[10];
+  for (int i = 0; i < 10; i++) {
+    names[i] = names_arr[i];
+    sprintf(names[i], "ICONSTANT%d", i);
   }
+  static_scriptable_->RegisterConstants(10, names, NULL);
 
-  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {
-    return static_scriptable_->ConnectToOnDeleteSignal(slot);
+  // Register 10 string constants.
+  Variant const_values[10];
+  for (int i = 0; i < 10; i++) {
+    names[i] = names_arr[i + 10];
+    sprintf(names[i], "SCONSTANT%d", i);
+    const_values[i] = Variant(names[i]);
   }
-  virtual bool GetPropertyInfoByName(const char *name,
-                                     int *id, Variant *prototype,
-                                     bool *is_method) {
-    return static_scriptable_->GetPropertyInfoByName(name, id,
-                                                     prototype, is_method);
-  }
-  virtual bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method) {
-    return static_scriptable_->GetPropertyInfoById(id, prototype, is_method);
-  }
-  virtual Variant GetProperty(int id) {
-    return static_scriptable_->GetProperty(id);
-  }
-  virtual bool SetProperty(int id, Variant value) {
-    return static_scriptable_->SetProperty(id, value);
-  }
+  static_scriptable_->RegisterConstants(10, names, const_values);
+}
 
-  void TestMethodVoid0() {
-    g_buffer.clear();
-  }
-  double TestMethodDouble2(bool p1, long p2) {
-    AppendBuffer("TestMethodDouble2(%d, %ld)\n", p1, p2);
-    return p1 ? p2 : -p2;
-  }
-  void SetDoubleProperty(double double_property) {
-    double_property_ = double_property;
-    AppendBuffer("SetDoubleProperty(%.3lf)\n", double_property_);
-  }
-  double GetDoubleProperty() const {
-    AppendBuffer("GetDoubleProperty()=%.3lf\n", double_property_);
-    return double_property_;
-  }
+TestScriptable1::~TestScriptable1() {
+  ondelete_signal_();
+  delete static_scriptable_;
+  AppendBuffer("Destruct\n");
+}
 
-  std::string GetBuffer() const {
-    return g_buffer;
-  }
-  void SetBuffer(const std::string& buffer) {
-    g_buffer = buffer;
-  }
+TestPrototype *TestPrototype::instance_ = NULL;
 
-  OnDeleteSignal ondelete_signal_;
+TestPrototype::TestPrototype()
+    : static_scriptable_(new StaticScriptable()) {
+  RegisterMethod("PrototypeMethod", NewSlot(this, &TestPrototype::Method));
+  RegisterProperty("Self", NewSlot(this, &TestPrototype::GetSelf), NULL);
+  RegisterSignal("ontest", &ontest_signal_);
+  RegisterConstant("Const", 987654321);
+  RegisterProperty("OverrideSelf",
+                   NewSlot(this, &TestPrototype::GetSelf), NULL);
+}
 
- private:
-  StaticScriptable *static_scriptable_;
-  double double_property_;
-  int int_property_;
-  IntOrString int_or_string_property_;
-};
-
-// A scriptable class with some dynamic properties, supporting array indexes,
-// and some property/methods with arguments or return types of Scriptable.
-class TestScriptable2 : public TestScriptable1 {
- public:
-  TestScriptable2() {
-    // Register...
-  }
- protected:
-  virtual ~TestScriptable2() {
-  }
-};
-
-} // namespace ggadget
+TestScriptable2::TestScriptable2() {
+  RegisterMethod("TestMethod", NewSlot(this, &TestScriptable2::TestMethod));
+  RegisterSignal("onlunch", &onlunch_signal_);
+  RegisterSignal("onsupper", &onsupper_signal_);
+  RegisterProperty("time",
+      NewSimpleGetterSlot(&time_), NewSlot(this, &TestScriptable2::SetTime));
+  RegisterProperty("OverrideSelf",
+                   NewSlot(this, &TestScriptable2::GetSelf), NULL);
+  RegisterConstant("length", kArraySize);
+  RegisterReadonlySimpleProperty("SignalResult", &signal_result_);
+  SetPrototype(TestPrototype::GetInstance());
+}

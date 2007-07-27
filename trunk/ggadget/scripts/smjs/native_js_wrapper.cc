@@ -15,24 +15,15 @@
 */
 
 #include "native_js_wrapper.h"
-#include "converter.h"
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/slot.h"
+#include "converter.h"
+#include "js_script_context.h"
 
 namespace ggadget {
 
-// Forward declaration of callback functions.
-static JSBool InvokeWrapperMethod(JSContext *cx, JSObject *obj,
-                                  uintN argc, jsval *argv, jsval *rval);
-static JSBool GetWrapperProperty(JSContext *cx, JSObject *obj,
-                                 jsval id, jsval *vp);
-static JSBool SetWrapperProperty(JSContext *cx, JSObject *obj,
-                                 jsval id, jsval *vp);
-static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id);
-static void FinalizeWrapper(JSContext *cx, JSObject *obj);
-
 // This JSClass is used to create wrapper JSObjects.
-static JSClass g_wrapper_js_class = {
+JSClass NativeJSWrapper::wrapper_js_class_ = {
   "NativeJSWrapper",
   // Use the private slot to store the wrapper.
   JSCLASS_HAS_PRIVATE,
@@ -41,42 +32,13 @@ static JSClass g_wrapper_js_class = {
   JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
-static JSBool InvokeWrapperMethod(JSContext *cx, JSObject *obj,
-                                  uintN argc, jsval *argv, jsval *rval) {
-  NativeJSWrapper *wrapper = NativeJSWrapper::GetWrapperFromJS(cx, obj);
-  return wrapper && wrapper->InvokeMethod(argc, argv, rval);
-}
-
-static JSBool GetWrapperProperty(JSContext *cx, JSObject *obj,
-                                 jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = NativeJSWrapper::GetWrapperFromJS(cx, obj);
-  return wrapper && wrapper->GetProperty(id, vp);
-}
-
-static JSBool SetWrapperProperty(JSContext *cx, JSObject *obj,
-                                 jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = NativeJSWrapper::GetWrapperFromJS(cx, obj);
-  return wrapper && wrapper->SetProperty(id, *vp);
-}
-
-static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id) {
-  NativeJSWrapper *wrapper = NativeJSWrapper::GetWrapperFromJS(cx, obj);
-  return wrapper && wrapper->ResolveProperty(id);
-}
-
-static void FinalizeWrapper(JSContext *cx, JSObject *obj) {
-  NativeJSWrapper *wrapper = NativeJSWrapper::GetWrapperFromJS(cx, obj);
-  if (wrapper)
-    delete wrapper;
-}
-
 NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
                                  ScriptableInterface *scriptable)
     : deleted_(false),
       js_context_(js_context),
       scriptable_(scriptable) {
 
-  js_object_ = JS_NewObject(js_context, &g_wrapper_js_class, NULL, NULL);
+  js_object_ = JS_NewObject(js_context, &wrapper_js_class_, NULL, NULL);
   if (!js_object_)
     // Can't continue.
     return;
@@ -90,12 +52,6 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
-}
-
-JSObject *NativeJSWrapper::Wrap(JSContext *cx,
-                                ScriptableInterface *scriptable) {
-  NativeJSWrapper *wrapper = new NativeJSWrapper(cx, scriptable);
-  return wrapper->js_object_;
 }
 
 JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
@@ -114,12 +70,18 @@ JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
 NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
                                                    JSObject *js_object) {
   if (js_object != NULL &&
-      JS_GET_CLASS(cx, js_object) == &g_wrapper_js_class) {
-    NativeJSWrapper *result = reinterpret_cast<NativeJSWrapper *>
-                              (JS_GetPrivate(cx, js_object));
-    ASSERT(result && result->js_context_ == cx &&
-           result->js_object_ == js_object);
-    return result;
+      JS_GET_CLASS(cx, js_object) == &wrapper_js_class_) {
+    NativeJSWrapper *wrapper = reinterpret_cast<NativeJSWrapper *>
+                               (JS_GetPrivate(cx, js_object));
+    ASSERT(wrapper && wrapper->js_context_ == cx &&
+           wrapper->js_object_ == js_object);
+
+    if (wrapper->deleted_) {
+      JS_ReportError(wrapper->js_context_, "Native object has been deleted");
+      return NULL;
+    } else {
+      return wrapper;
+    }
   } else {
     JS_ReportError(cx, "Object is not a native wrapper");
     // The JSObject is not a JS wrapped ScriptableInterface object.
@@ -127,68 +89,39 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
   }
 }
 
-// If the wrapped native scriptable has been deleted, report an error and
-// return JS_FALSE.
-#define CHECK_DELETED do { \
-  if (deleted_) { \
-    JS_ReportError(js_context_, "Native object has been deleted"); \
-    return JS_FALSE; } \
-  } while (0)
-
-JSBool NativeJSWrapper::InvokeMethod(uintN argc, jsval *argv, jsval *rval) {
-  CHECK_DELETED;
-
-  // According to JS stack structure, argv[-2] is the current function object.
-  JSObject *func_object = JSVAL_TO_OBJECT(argv[-2]);
-  // Get the method slot from the reserved slot.
-  jsval val;
-  if (!JS_GetReservedSlot(js_context_, func_object, 0, &val) ||
-      !JSVAL_IS_INT(val))
+JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
+                                          uintN argc, jsval *argv,
+                                          jsval *rval) {
+  if (!GetWrapperFromJS(cx, obj))
     return JS_FALSE;
-  Slot *slot = reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val));
+  return JSScriptContext::CallNativeSlot(cx, obj, argc, argv, rval);
+}
 
-  const Variant::Type *arg_types = NULL;
-  if (slot->HasMetadata()) {
-    if (argc != static_cast<uintN>(slot->GetArgCount())) {
-      // Argc mismatch.
-      JS_ReportError(js_context_, "Wrong number of arguments: %d. %d expected",
-                     argc, slot->GetArgCount());
-      return JS_FALSE;
-    }
-    arg_types = slot->GetArgTypes();
-  }
+JSBool NativeJSWrapper::GetWrapperProperty(JSContext *cx, JSObject *obj,
+                                           jsval id, jsval *vp) {
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return wrapper && wrapper->GetProperty(id, vp);
+}
 
-  Variant *params = NULL;
-  if (argc > 0) {
-    params = new Variant[argc];
-    for (uintN i = 0; i < argc; i++) {
-      JSBool result = arg_types != NULL ?
-          ConvertJSToNative(js_context_, arg_types[i], argv[i], &params[i]) :
-          ConvertJSToNativeVariant(js_context_, argv[i], &params[i]);
-      if (!result) {
-        JS_ReportError(js_context_,
-                       "Failed to convert argument %d to native", i);
-        delete [] params;
-        return JS_FALSE;
-      }
-    }
-  }
+JSBool NativeJSWrapper::SetWrapperProperty(JSContext *cx, JSObject *obj,
+                                           jsval id, jsval *vp) {
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return wrapper && wrapper->SetProperty(id, *vp);
+}
 
-  Variant return_value = slot->Call(argc, params);
-  JSBool result = ConvertNativeToJS(js_context_, return_value, rval);
-  if (!result)
-    JS_ReportError(js_context_, "Failed to convert result to JavaScript");
-  
-  if (argc > 0) {
-    // TODO: how to cleanup Variant if it contains some heap-allocated things?
-    delete [] params;
-  }
-  return result;
+JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
+                                               jsval id) {
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return wrapper && wrapper->ResolveProperty(id);
+}
+
+void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  if (wrapper)
+    delete wrapper;
 }
 
 JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
-  CHECK_DELETED;
-
   if (!JSVAL_IS_INT(id))
     // Use the default logic. This may occur if the property is a method or
     // an arbitrary JavaScript property.
@@ -199,12 +132,15 @@ JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
     // This property is not supported by the Scriptable, use default logic.
     return JS_TRUE;
 
-  return ConvertNativeToJS(js_context_, return_value, vp);
+  if (!ConvertNativeToJS(js_context_, return_value, vp)) {
+    JS_ReportError(js_context_, "Failed to convert native (%s) to jsval",
+                   return_value.ToString().c_str());
+    return JS_FALSE;
+  }
+  return JS_TRUE;
 }
 
 JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
-  CHECK_DELETED;
-
   if (!JSVAL_IS_INT(id))
     // Use the default logic. This may occur if the property is a method or
     // an arbitrary JavaScript property.
@@ -221,23 +157,21 @@ JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
     return JS_TRUE;
 
   Variant value;
-  if (!ConvertJSToNative(js_context_, prototype.type, js_val, &value)) {
-    JS_ReportError(js_context_, "Failed to convert value to native");
+  if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
+    JS_ReportError(js_context_, "Failed to convert jsval (%s) to native",
+                   ConvertJSToChars(js_context_, js_val));
     // TODO: check result and raise exception.
     return JS_FALSE;
   }
 
-  if (!scriptable_->SetProperty(int_id, value)) {
+  if (!scriptable_->SetProperty(int_id, value))
+    // It's only a warning.  Continue to return JS_TRUE.
     JS_ReportError(js_context_,
                    "Failed to set property %d (may be readonly)", int_id);
-    return JS_FALSE;
-  }
   return JS_TRUE;
 }
 
 JSBool NativeJSWrapper::ResolveProperty(jsval id) {
-  CHECK_DELETED;
-
   if (!JSVAL_IS_STRING(id))
     return JS_TRUE;
 
@@ -258,7 +192,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
     // Define a Javascript function.
     Slot *slot = prototype.v.slot_value;
     JSFunction *function = JS_DefineFunction(js_context_, js_object_, name,
-                                             InvokeWrapperMethod,
+                                             CallWrapperMethod,
                                              slot->GetArgCount(), 0);
     if (!function)
       return JS_FALSE;
@@ -275,13 +209,30 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
     // Define a JavaScript property.
     // Javascript tinyid is a 8-bit integer, and should  be negative to avoid
     // conflict with array indexes.
-    ASSERT(int_id < 0 && int_id >= -128);
-    if (!JS_DefinePropertyWithTinyId(js_context_, js_object_, name,
-                                     static_cast<int8>(int_id),
-                                     INT_TO_JSVAL(0),
-                                     NULL, NULL,  // Use class getter/setter.
-                                     JSPROP_ENUMERATE | JSPROP_PERMANENT))
+    ASSERT(int_id <= 0 && int_id >= -128);
+    jsval js_val;
+    if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
+      JS_ReportError(js_context_, "Failed to convert init value (%s) to jsval",
+                     prototype.ToString().c_str());
       return JS_FALSE;
+    }
+
+    if (int_id == 0) {
+      // This property is a constant, register a property with initial value
+      // and without a tiny ID.  Then the JavaScript engine will handle it.
+      if (!JS_DefineProperty(js_context_, js_object_, name,
+                             js_val, NULL, NULL,
+                             JSPROP_READONLY | JSPROP_PERMANENT))
+        return JS_FALSE;
+    } else {
+      // This property is a normal property.  The 'get' and 'set' operations
+      // will call back to native slots.
+      if (!JS_DefinePropertyWithTinyId(js_context_, js_object_, name,
+                                       static_cast<int8>(int_id), js_val,
+                                       NULL, NULL,  // Use class getter/setter.
+                                       JSPROP_PERMANENT))
+        return JS_FALSE;
+    }
   }
 
   return JS_TRUE;
