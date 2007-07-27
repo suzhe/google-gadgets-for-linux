@@ -71,13 +71,14 @@ static JSBool GetLine(FILE *file, char *buffer, int size, const char *prompt) {
 #endif // else HAS_READLINE
 }
 
-static const int kBufferSize = 65536; 
+static const int kBufferSize = 65536;
 static char g_buffer[kBufferSize];
-static void Process(JSContext *cx, JSObject *obj, char *filename) {
+static void Process(JSContext *cx, JSObject *obj, const char *filename) {
   FILE *file;
   if (!filename || strcmp(filename, "-") == 0) {
     g_interactive = true;
     file = stdin;
+    filename = "(stdin)";
   } else {
     g_interactive = false;
     file = fopen(filename, "r");
@@ -186,6 +187,8 @@ static JSBool Assert(JSContext *cx, JSObject *obj,
   return JS_TRUE;
 }
 
+JSBool g_verbose = JS_TRUE;
+
 static void ErrorReporter(JSContext *cx, const char *message,
                           JSErrorReport *report) {
   if (!g_interactive &&
@@ -205,16 +208,37 @@ static void ErrorReporter(JSContext *cx, const char *message,
   }
 
   fflush(stdout);
-  fprintf(stderr, "%s:%d: %s\n", report->filename, report->lineno, message);
+  if (g_verbose)
+    fprintf(stderr, "%s:%d: %s\n", report->filename, report->lineno, message);
   fflush(stderr);
 }
 
+static JSBool SetVerbose(JSContext *cx, JSObject *obj,
+                         uintN argc, jsval *argv, jsval *rval) {
+  return JS_ValueToBoolean(cx, argv[0], &g_verbose);
+}
+
+static void TempErrorReporter(JSContext *cx, const char *message,
+                              JSErrorReport *report) {
+  printf("%s:%d\n", report->filename, report->lineno);
+}
+
+static JSBool ShowFileAndLine(JSContext *cx, JSObject *obj,
+                              uintN argc, jsval *argv, jsval *rval) {
+  JSErrorReporter old_reporter = JS_SetErrorReporter(cx, TempErrorReporter);
+  JS_ReportError(cx, "");
+  JS_SetErrorReporter(cx, old_reporter);
+  return JS_TRUE;
+}
+
 static JSFunctionSpec global_functions[] = {
-  {"print", Print, 0},
-  {"quit", Quit, 0},
-  {"gc", GC, 0},
-  {"ASSERT", Assert, 1},
-  {0}
+  { "print", Print, 0 },
+  { "quit", Quit, 0 },
+  { "gc", GC, 0 },
+  { "setVerbose", SetVerbose, 1 },
+  { "showFileAndLine", ShowFileAndLine, 0 },
+  { "ASSERT", Assert, 1 },
+  { 0 }
 };
 
 int main(int argc, char *argv[]) {
@@ -253,7 +277,6 @@ int main(int argc, char *argv[]) {
       if (g_quit_code != DONT_QUIT)
         break;
     }
-    g_quit_code = QUIT_OK;
   } else {
     Process(cx, global, NULL);
   }
@@ -261,5 +284,8 @@ int main(int argc, char *argv[]) {
   JS_DestroyContext(cx);
   JS_DestroyRuntime(rt);
   JS_ShutDown();
+
+  if (g_quit_code == DONT_QUIT)
+    g_quit_code = QUIT_OK;
   return g_quit_code;
 }
