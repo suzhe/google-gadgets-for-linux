@@ -256,7 +256,7 @@ static JSBool ConvertNativeToJSBool(JSContext *cx, Variant native_val,
 
 static JSBool ConvertNativeToJSInt(JSContext *cx, Variant native_val,
                                    jsval *js_val) {
-  int64_t value = native_val.v.int64_value;
+  int64 value = native_val.v.int64_value;
   if (value >= JSVAL_INT_MIN && value <= JSVAL_INT_MAX) {
     *js_val = INT_TO_JSVAL(static_cast<int32>(value));
     return JS_TRUE;
