@@ -308,6 +308,15 @@ SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
 SPECIALIZE_VARIANT_TYPE(IntOrString, TYPE_INT_OR_STRING)
 
 /**
+ * Get the @c Variant::Type of a C++ type.
+ * Specialized for @c IntOrString type.
+ */
+template <>
+struct VariantType<IntOrString> {
+  static const Variant::Type type = Variant::TYPE_INT_OR_STRING; 
+};
+
+/**
  * Get the value of a @c Variant.
  * This template is for all <code>ScriptableInterface *</code> types.
  * All unspecialized types will fall into this template, and if it is not
@@ -381,6 +390,18 @@ struct VariantValue<const std::string &> {
 
 #undef SPECIALIZE_VARIANT_TYPE
 #undef SPECIALIZE_VARIANT_VALUE
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for @c IntOrString type.
+ */
+template <>
+struct VariantValue<IntOrString> {
+  IntOrString operator()(Variant v) {
+    ASSERT(v.type == Variant::TYPE_INT_OR_STRING);
+    return v.v.int_or_string_value;
+  }
+};
 
 } // namespace ggadget
 
