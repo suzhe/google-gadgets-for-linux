@@ -122,9 +122,9 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToSlot(JSContext *cx, Variant prototype,
                               jsval js_val, Variant *native_val) {
   JSBool result = JS_TRUE;
-  JSFunction *function;
+  jsval function_val;
   if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
-    function = NULL;
+    function_val = JSVAL_NULL;
   } else if (JSVAL_IS_STRING(js_val)) {
     JSString *script_source = JSVAL_TO_STRING(js_val);
     const char *filename;
@@ -136,23 +136,20 @@ static JSBool ConvertJSToSlot(JSContext *cx, Variant prototype,
         filename, lineno);
     if (!function)
       result = JS_FALSE;
+    function_val = OBJECT_TO_JSVAL(JS_GetFunctionObject(function));
   } else {
     // If js_val is a function, JS_ValueToFunction will succeed.
-    LOG("******* calling function: %s\n", ConvertJSToChars(cx, js_val));
-    jsval rval;
-    JS_CallFunctionValue(cx, NULL, js_val, 0, NULL, &rval);
-    function = JS_ValueToFunction(cx, js_val);
-    LOG("******* function=%p object=%p\n", function, JS_GetFunctionObject(function));
-    if (!function)
+    if (!JS_ValueToFunction(cx, js_val))
       result = JS_FALSE;
+    function_val = js_val;
   }
 
   if (result) {
     Slot *slot = NULL;
-    if (function)
+    if (function_val != JSVAL_NULL)
       slot = JSScriptContext::NewJSFunctionSlot(cx,
                                                 prototype.v.slot_value,
-                                                function);
+                                                function_val);
     *native_val = Variant(slot);
   }
   return result;
@@ -314,17 +311,8 @@ static JSBool ConvertNativeToJSObject(JSContext *cx, Variant native_val,
 static JSBool ConvertNativeToJSFunction(JSContext *cx, Variant native_val,
                                         jsval *js_val) {
   Slot *slot = native_val.v.slot_value;
-  if (slot) {
-    JSFunction *function = JSScriptContext::ConvertNativeSlotToJS(cx, slot);
-    if (!function) {
-      *js_val = JSVAL_NULL;
-      return JS_FALSE;
-    }
-    *js_val = OBJECT_TO_JSVAL(JS_GetFunctionObject(function));
-    LOG("******* GET function=%p object=%p\n", function, JS_GetFunctionObject(function));
-  } else {
-    *js_val = JSVAL_NULL;
-  }
+  *js_val = slot ? JSScriptContext::ConvertNativeSlotToJS(cx, slot) :
+            JSVAL_NULL;
   return JS_TRUE;
 }
 

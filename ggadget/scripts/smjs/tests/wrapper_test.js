@@ -102,7 +102,7 @@ TEST("Test array", function() {
   ASSERT(UNDEFINED(scriptable2[scriptable2.length + 1]));
 });
 
-/*
+
 TEST("Test signals", function() {
   // Defined in scriptable1.
   ASSERT(NULL(scriptable2.ondelete));
@@ -110,45 +110,48 @@ TEST("Test signals", function() {
   ASSERT(NULL(scriptable2.ontest));
   ASSERT(NULL(scriptable2.onlunch));
   ASSERT(NULL(scriptable2.onsupper));
-  print("********After NULL test");
   var scriptable2_in_closure = scriptable2;
 
   var onlunch_triggered = false;
   var onsupper_triggered = false;
-  print("********Before onlunch_function definition");
-  onlunch_function1 = function(s) {
+  onlunch_function = function(s) {
+    print(3);
     ASSERT(EQ(scriptable2, scriptable2_in_closure));
     ASSERT(EQ("Have lunch", s));
     // A long lunch taking a whole afternoon :).
+    print(4);
     scriptable2.time = "supper";   // Will cause recursive onsupper.
+    print(5);
     ASSERT(TRUE(onsupper_triggered));
     ASSERT(EQ("Supper finished", scriptable2.SignalResult));
     // Lunch is finished after finishing supper :).
     onlunch_triggered = true;
+    print(6);
     return "Lunch finished";
   };
-  
-  onsupper_function1 = function(s) {
+
+  var supper_is_lunch = false;
+  onsupper_function = function(s) {
+    print(7);
     ASSERT(EQ(scriptable2, scriptable2_in_closure));
-    ASSERT(EQ("Have supper", s));
+    if (supper_is_lunch)
+      ASSERT(EQ("Have lunch", s));
+    else
+      ASSERT(EQ("Have supper", s));
     onsupper_triggered = true;
+    print(8);
     return "Supper finished";
   };
-  print("********After onsupper_function definition");
 
-  var onlunch_function = function(s) {
-    return onlunch_function1(s);
-  };
-  var onsupper_function = function(s) {
-    return onsupper_function1(s);
-  };
-  scriptable2.onlunch = onlunch_function1;
-  scriptable2.onsupper = onsupper_function1;
-
-  onsupper_function("Have supper");
+  scriptable2.onlunch = onlunch_function;
+  ASSERT(EQ(onlunch_function, scriptable2.onlunch));
+  scriptable2.onsupper = onsupper_function;
+  ASSERT(EQ(onsupper_function, scriptable2.onsupper));
 
   // Trigger onlunch.
+  print(1);
   scriptable2.time = "lunch";
+  print(2);
   ASSERT(EQ("Lunch finished", scriptable2.SignalResult));
   ASSERT(TRUE(onsupper_triggered));
   ASSERT(TRUE(onlunch_triggered));
@@ -156,16 +159,17 @@ TEST("Test signals", function() {
   onlunch_triggered = false;
   onsupper_triggered = false;
   // Now we have supper when the others are having lunch.
+  supper_is_lunch = true;
   scriptable2.onlunch = onsupper_function;
-  ASSERT(STRICT_EQ(scriptable2.onlunch, scriptable2.onsupper));
+  ASSERT(EQ(scriptable2.onlunch, scriptable2.onsupper));
   scriptable2.time = "lunch";
   ASSERT(EQ("Supper finished", scriptable2.SignalResult));
-  ASSERT(FALSE(onsupper_triggered));
-  ASSERT(TRUE(onlunch_triggered));
+  ASSERT(TRUE(onsupper_triggered));
+  ASSERT(FALSE(onlunch_triggered));
 
   // Test disconnect.
   scriptable2.onlunch = null;
-  ASSERT(NULL(scriptable2.onlunch));
+  ASSERT(NULL(scriptable2.onlunch)); 
 });
-*/
+
 RUN_ALL_TESTS();
