@@ -128,43 +128,44 @@ JSObject *JSScriptContext::WrapNativeObjectToJS(
   return NULL;
 }
 
-JSFunction *JSScriptContext::ConvertNativeSlotToJSInternal(Slot *slot) {
+jsval JSScriptContext::ConvertNativeSlotToJSInternal(Slot *slot) {
   ASSERT(slot);
   SlotJSMap::iterator it = slot_js_map_.find(slot);
   if (it != slot_js_map_.end()) {
     // If found, it->second may be a previous JavaScript wrapper of a native
     // slot, or a pure JavaScript function object that has been wrapped into
     // a JSFunctionSlot.
-    return JS_ValueToFunction(context_, OBJECT_TO_JSVAL(it->second));
+    return it->second;
   }
 
   JSFunction *function = JS_NewFunction(context_, CallNativeSlot,
                                         slot->GetArgCount(),
                                         0, NULL, NULL);
   if (!function)
-    return function;
+    return JSVAL_NULL;
 
   JSObject *func_object = JS_GetFunctionObject(function);
   if (!func_object)
-    return NULL;
+    return JSVAL_NULL;
   // Put the slot pointer into the first reserved slot of the
   // function object.  A function object has 2 reserved slots.
   if (!JS_SetReservedSlot(context_, func_object,
                           0, PRIVATE_TO_JSVAL(slot)))
-    return NULL;
+    return JSVAL_NULL;
 
-  slot_js_map_[slot] = func_object;
+  jsval function_val = OBJECT_TO_JSVAL(func_object);
+  slot_js_map_[slot] = function_val;
   // Add a reference to the function object to prevent it from being GC'ed.
   JS_AddRoot(context_, &slot_js_map_[slot]);
-  return function;
+  return function_val;
 }
 
-JSFunction *JSScriptContext::ConvertNativeSlotToJS(JSContext *cx, Slot *slot) {
+jsval JSScriptContext::ConvertNativeSlotToJS(JSContext *cx, Slot *slot) {
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
     return context_wrapper->ConvertNativeSlotToJSInternal(slot);
-  return NULL;
+  return JSVAL_NULL;
 }
 
 JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
@@ -218,13 +219,11 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
   return result;
 }
 
-// A Slot that is targeted to a JSFunction.
+// A Slot that is targeted to a JavaScript function object.
 class JSFunctionSlot : public Slot {
  public:
-  JSFunctionSlot(const Slot *prototype,
-                 JSContext *context,
-                 JSFunction *function)
-      : prototype_(prototype), context_(context), function_(function) {
+  JSFunctionSlot(const Slot *prototype, JSContext *context, jsval function_val)
+      : prototype_(prototype), context_(context), function_val_(function_val) {
   }
 
   virtual Variant Call(int argc, Variant argv[]);
@@ -240,17 +239,17 @@ class JSFunctionSlot : public Slot {
     return prototype_ ? prototype_->GetArgTypes() : NULL;
   }
   virtual bool operator==(const Slot &another) const {
-    return function_ == down_cast<const JSFunctionSlot *>(&another)->function_;
+    return function_val_ ==
+           down_cast<const JSFunctionSlot *>(&another)->function_val_;
   }
 
  private:
   const Slot *prototype_;
   JSContext *context_;
-  JSFunction *function_;
+  jsval function_val_;
 };
 
 Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
-  LOG("******* CALL function=%p object=%p\n", function_, JS_GetFunctionObject(function_));
   jsval *js_args = NULL;
   Variant return_value(GetReturnType());
   if (argc > 0) {
@@ -266,8 +265,8 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
   }
 
   jsval rval;
-  JSBool result = JS_CallFunctionValue(context_, NULL,
-      OBJECT_TO_JSVAL(JS_GetFunctionObject(function_)), argc, js_args, &rval);
+  JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
+                                       argc, js_args, &rval);
   if (result) {
     result = ConvertJSToNative(context_, return_value, rval, &return_value);
     if (!result)
@@ -278,11 +277,11 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
 }
 
 Slot *JSScriptContext::NewJSFunctionSlotInternal(const Slot *prototype,
-                                                 JSFunction *js_function) {
-  Slot *slot = new JSFunctionSlot(prototype, context_, js_function);
+                                                 jsval function_val) {
+  Slot *slot = new JSFunctionSlot(prototype, context_, function_val);
   // Put it here to make it possible for ConvertNativeSlotToJS to unwrap
   // a JSFunctionSlot.
-  slot_js_map_[slot] = JS_GetFunctionObject(js_function);
+  slot_js_map_[slot] = function_val;
   // Add a reference to the function object to prevent it from being GC'ed.
   JS_AddRoot(context_, &slot_js_map_[slot]);
   return slot;
@@ -290,11 +289,11 @@ Slot *JSScriptContext::NewJSFunctionSlotInternal(const Slot *prototype,
 
 Slot *JSScriptContext::NewJSFunctionSlot(JSContext *cx,
                                          const Slot *prototype,
-                                         JSFunction *js_function) {
+                                         jsval function_val) {
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
-    return context_wrapper->NewJSFunctionSlotInternal(prototype, js_function);
+    return context_wrapper->NewJSFunctionSlotInternal(prototype, function_val);
   return NULL;
 }
 
@@ -307,7 +306,8 @@ Slot *JSScriptContext::Compile(const char *script,
   if (!function)
     return NULL;
 
-  return new JSFunctionSlot(NULL, context_, function);
+  return new JSFunctionSlot(
+      NULL, context_, OBJECT_TO_JSVAL(JS_GetFunctionObject(function)));
 }
 
 bool JSScriptContext::SetValue(const char *object_expression,
