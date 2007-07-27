@@ -18,7 +18,7 @@
 #include "ggadget/slot.h"
 #include "testing/gunit.h"
 
-#include "slots.cc"
+#include "slots.h"
 
 using namespace ggadget;
 

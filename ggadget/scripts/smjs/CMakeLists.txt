@@ -44,6 +44,7 @@ ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
   converter.cc
+  js_script_context.cc
   native_js_wrapper.cc
 )
 

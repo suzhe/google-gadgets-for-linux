@@ -14,6 +14,9 @@
   limitations under the License.
 */
 
+// Glibc require this macro in order to use the format macros in inttypes.h. 
+#define __STDC_FORMAT_MACROS  
+#include <inttypes.h>  // for PRId64
 #include <string.h>
 #include "variant.h"
 #include "slot.h"
@@ -36,14 +39,17 @@ bool IntOrString::operator==(IntOrString another) const {
 }
 
 // Used in unittests.
-std::ostream &operator<<(std::ostream &out, IntOrString v) {
-  switch (v.type) {
-    case IntOrString::TYPE_INT:
-      return out << "INT:" << v.v.int_value;
+std::string IntOrString::ToString() const {
+  switch (type) {
+    case IntOrString::TYPE_INT: {
+      char buffer[32];
+      sprintf(buffer, "INT: %d", v.int_value);
+      return std::string(buffer);
+    }
     case IntOrString::TYPE_STRING:
-      return out << "STRING:" << v.v.string_value;
+      return std::string("STRING:") + v.string_value;
     default:
-      return out << "UNKNOWN:" << v.type;
+      return "INVALID";
   }
 }
 
@@ -78,26 +84,31 @@ bool Variant::operator==(Variant another) const {
 }
 
 // Used in unittests.
-std::ostream &operator<<(std::ostream &out, Variant v) {
-  switch (v.type) {
+std::string Variant::ToString() const {
+  char buffer[32];
+  switch (type) {
     case Variant::TYPE_VOID:
-      return out << "VOID";
+      return std::string("VOID");
     case Variant::TYPE_BOOL:
-      return out << "BOOL:" << v.v.bool_value;
+      return std::string("BOOL:") + (v.bool_value ? "true" : "false");
     case Variant::TYPE_INT64:
-      return out << "INT64:" << v.v.int64_value;
+      sprintf(buffer, "INT64:%" PRId64, v.int64_value);
+      return std::string(buffer);
     case Variant::TYPE_DOUBLE:
-      return out << "DOUBLE:" << v.v.double_value;
+      sprintf(buffer, "DOUBLE:%lf", v.double_value);
+      return std::string(buffer);
     case Variant::TYPE_STRING:
-      return out << "STRING:" << v.v.string_value;
+      return std::string("STRING:") + v.string_value;
     case Variant::TYPE_SCRIPTABLE:
-      return out << "SCRIPTABLE";
+      sprintf(buffer, "SCRIPTABLE:%p", v.scriptable_value);
+      return std::string(buffer);
     case Variant::TYPE_SLOT:
-      return out << "SLOT";
+      sprintf(buffer, "SLOT:%p", v.slot_value);
+      return std::string(buffer);
     case Variant::TYPE_INT_OR_STRING:
-      return out << "INT_OR_STRING:" << v.v.int_or_string_value;
+      return std::string("INT_OR_STRING:") + v.int_or_string_value.ToString();
     default:
-      return out << "UNKNOWN:" << v.type;
+      return std::string("INVALID");
   }
 }
 

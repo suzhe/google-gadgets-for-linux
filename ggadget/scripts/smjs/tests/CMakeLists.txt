@@ -37,12 +37,19 @@ SET(LIBS
 )
 
 # General js_shell without custom objects.
-ADD_EXECUTABLE(js_shell js_shell.cc)
+ADD_EXECUTABLE(js_shell
+  js_shell.cc
+  init_custom_objects_stub.cc
+)
 TARGET_LINK_LIBRARIES(js_shell ${LIBS})
 TEST_WRAPPER(js_shell)
 
 # Customized js_shell with test scriptables.
-ADD_EXECUTABLE(wrapper_test_shell wrapper_test_shell.cc)
+ADD_EXECUTABLE(wrapper_test_shell
+  js_shell.cc
+  wrapper_test_shell.cc
+  ${CMAKE_SOURCE_DIR}/ggadget/tests/scriptables.cc
+)
 TARGET_LINK_LIBRARIES(wrapper_test_shell ${LIBS})
 TEST_WRAPPER(wrapper_test_shell)
 JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)

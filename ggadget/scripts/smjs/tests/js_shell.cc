@@ -241,12 +241,19 @@ static JSFunctionSpec global_functions[] = {
   { 0 }
 };
 
-int main(int argc, char *argv[]) {
-  JSRuntime *rt = JS_NewRuntime(64L * 1024L * 1024L);
-  if (!rt)
-    return QUIT_ERROR;
+#include "ggadget/common.h"
+#include "ggadget/scripts/smjs/js_script_context.h"
 
-  JSContext *cx = JS_NewContext(rt, 8192);
+using namespace ggadget;
+
+// A hook to initialize custom objects before running scripts.
+JSBool InitCustomObjects(JSScriptContext *context);
+
+int main(int argc, char *argv[]) {
+  JSScriptRuntime *runtime = new JSScriptRuntime();
+  JSScriptContext *context =
+      down_cast<JSScriptContext *>(runtime->CreateContext());
+  JSContext *cx = context->context();
   if (!cx)
     return QUIT_ERROR;
 
@@ -254,8 +261,8 @@ int main(int argc, char *argv[]) {
 
   JSClass global_class = {
       "global", 0,
-      JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub,  JS_PropertyStub,
-      JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,   JS_FinalizeStub
+      JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
+      JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub
   };
   JSObject *global = JS_NewObject(cx, &global_class, NULL, NULL);
   if (!global)
@@ -265,11 +272,8 @@ int main(int argc, char *argv[]) {
   if (!JS_DefineFunctions(cx, global, global_functions))
     return QUIT_ERROR;
 
-#ifdef INIT_CUSTOM_OBJECTS
-  JSBool INIT_CUSTOM_OBJECTS(JSContext *cx, JSObject *obj);
-  if (!INIT_CUSTOM_OBJECTS(cx, global))
+  if (!InitCustomObjects(context))
     return QUIT_ERROR;
-#endif
 
   if (argc > 1) {
     for (int i = 1; i < argc; i++) {
@@ -281,9 +285,8 @@ int main(int argc, char *argv[]) {
     Process(cx, global, NULL);
   }
 
-  JS_DestroyContext(cx);
-  JS_DestroyRuntime(rt);
-  JS_ShutDown();
+  runtime->DestroyContext(context);
+  runtime->Destroy();
 
   if (g_quit_code == DONT_QUIT)
     g_quit_code = QUIT_OK;

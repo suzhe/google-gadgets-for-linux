@@ -44,6 +44,7 @@ struct IntOrString {
   } v;
 
   bool operator==(IntOrString another) const;
+  std::string ToString() const;
 };
 
 /**
@@ -73,7 +74,9 @@ inline IntOrString CreateIntOrString(const char *value) {
 /**
  * Print a @c Variant into an output stream, only for debugging and testing.
  */ 
-std::ostream &operator<<(std::ostream &out, IntOrString v);
+inline std::ostream &operator<<(std::ostream &out, IntOrString v) {
+  return out << v.ToString();
+}
 
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
@@ -233,6 +236,8 @@ struct Variant {
    */
   bool operator==(Variant another) const;
 
+  std::string ToString() const;
+
   /**
    * Type of the <code>Variant</code>'s value.
    */
@@ -255,157 +260,98 @@ struct Variant {
 /**
  * Print a @c Variant into an output stream, only for debugging and testing.
  */ 
-std::ostream &operator<<(std::ostream &out, Variant v);
+inline std::ostream &operator<<(std::ostream &out, Variant v) {
+  return out << v.ToString();
+}
 
 /**
  * Get the @c Variant::Type of a C++ type.
- * This template is for all integral types.
+ * This template is for all <code>ScriptableInterface *</code> types.
+ * All unspecialized types will fall into this template, and if it is not
+ * <code>ScriptableInterface *</code>, it may cause compilation error.  
  */
 template <typename T>
 struct VariantType {
-  static const Variant::Type type = Variant::TYPE_INT64; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for @c void type.
- */
-template <>
-struct VariantType<void> {
-  static const Variant::Type type = Variant::TYPE_VOID; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for @c bool type.
- */
-template <>
-struct VariantType<bool> {
-  static const Variant::Type type = Variant::TYPE_BOOL; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for @c double type.
- */
-template <>
-struct VariantType<double> {
-  static const Variant::Type type = Variant::TYPE_DOUBLE; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for <code>const char *</code> type.
- */
-template <>
-struct VariantType<const char *> {
-  static const Variant::Type type = Variant::TYPE_STRING; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for <code>const std::string &</code> type.
- */
-template <>
-struct VariantType<const std::string &> {
-  static const Variant::Type type = Variant::TYPE_STRING; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for @c std::string type.
- */
-template <>
-struct VariantType<std::string> {
-  static const Variant::Type type = Variant::TYPE_STRING; 
-};
-
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for <code>ScriptableInterface *</code> type.
- */
-template <>
-struct VariantType<ScriptableInterface *> {
   static const Variant::Type type = Variant::TYPE_SCRIPTABLE; 
 };
- 
-/**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for <code>Slot *</code> type.
- */
-template <>
-struct VariantType<Slot *> {
-  static const Variant::Type type = Variant::TYPE_SLOT; 
-};
 
 /**
  * Get the @c Variant::Type of a C++ type.
- * Specialized for @c IntOrString type.
+ * Specialized for certain C++ type.
  */
-template <>
-struct VariantType<IntOrString> {
-  static const Variant::Type type = Variant::TYPE_INT_OR_STRING; 
+#define SPECIALIZE_VARIANT_TYPE(c_type, variant_type)      \
+template <>                                                \
+struct VariantType<c_type> {                               \
+  static const Variant::Type type = Variant::variant_type; \
 };
+
+SPECIALIZE_VARIANT_TYPE(void, TYPE_VOID)
+SPECIALIZE_VARIANT_TYPE(bool, TYPE_BOOL)
+SPECIALIZE_VARIANT_TYPE(char, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(unsigned char, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(short, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(unsigned short, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(int, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(unsigned int, TYPE_INT64)
+#ifndef LONG_INT64_T_EQUIVALENT
+SPECIALIZE_VARIANT_TYPE(long, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(unsigned long, TYPE_INT64)
+#endif
+SPECIALIZE_VARIANT_TYPE(int64_t, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(uint64_t, TYPE_INT64)
+SPECIALIZE_VARIANT_TYPE(float, TYPE_DOUBLE)
+SPECIALIZE_VARIANT_TYPE(double, TYPE_DOUBLE)
+SPECIALIZE_VARIANT_TYPE(const char *, TYPE_STRING)
+SPECIALIZE_VARIANT_TYPE(const std::string &, TYPE_STRING)
+SPECIALIZE_VARIANT_TYPE(std::string, TYPE_STRING)
+SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
+SPECIALIZE_VARIANT_TYPE(IntOrString, TYPE_INT_OR_STRING)
 
 /**
  * Get the value of a @c Variant.
- * This template is for all integral types.
+ * This template is for all <code>ScriptableInterface *</code> types.
+ * All unspecialized types will fall into this template, and if it is not
+ * <code>ScriptableInterface *</code>, it may cause compilation error.  
  */
 template <typename T>
 struct VariantValue {
   T operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_INT64);
-    return static_cast<T>(v.v.int64_value);
+    ASSERT(v.type == Variant::TYPE_SCRIPTABLE);
+    return down_cast<T>(v.v.scriptable_value);
   }
 };
 
 /**
- * Get the value of a @c Variant.
- * Specialized for @c bool type.
+ * Get the @c Variant::Type of a C++ type.
+ * Specialized for certain C++ type.
  */
-template <>
-struct VariantValue<bool> {
-  bool operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_BOOL);
-    return v.v.bool_value;
-  }
+#define SPECIALIZE_VARIANT_VALUE(c_type, variant_field) \
+template <>                                             \
+struct VariantValue<c_type> {                           \
+  c_type operator()(Variant v) {                        \
+    ASSERT(v.type == VariantType<c_type>::type);        \
+    return static_cast<c_type>(v.v.variant_field);      \
+  }                                                     \
 };
 
-/**
- * Get the value of a @c Variant.
- * Specialized for @c float type.
- */
-template <>
-struct VariantValue<float> {
-  float operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_DOUBLE);
-    return static_cast<float>(v.v.double_value);
-  }
-};
-
-/**
- * Get the value of a @c Variant.
- * Specialized for @c double type.
- */
-template <>
-struct VariantValue<double> {
-  double operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_DOUBLE);
-    return v.v.double_value;
-  }
-};
-
-/**
- * Get the value of a @c Variant.
- * Specialized for <code>const char *</code> type.
- */
-template <>
-struct VariantValue<const char *> {
-  const char *operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_STRING);
-    return v.v.string_value;
-  }
-};
+SPECIALIZE_VARIANT_VALUE(char, int64_value)
+SPECIALIZE_VARIANT_VALUE(bool, bool_value)
+SPECIALIZE_VARIANT_VALUE(unsigned char, int64_value)
+SPECIALIZE_VARIANT_VALUE(short, int64_value)
+SPECIALIZE_VARIANT_VALUE(unsigned short, int64_value)
+SPECIALIZE_VARIANT_VALUE(int, int64_value)
+SPECIALIZE_VARIANT_VALUE(unsigned int, int64_value)
+#ifndef LONG_INT64_T_EQUIVALENT
+SPECIALIZE_VARIANT_VALUE(long, int64_value)
+SPECIALIZE_VARIANT_VALUE(unsigned long, int64_value)
+#endif
+SPECIALIZE_VARIANT_VALUE(int64_t, int64_value)
+SPECIALIZE_VARIANT_VALUE(uint64_t, int64_value)
+SPECIALIZE_VARIANT_VALUE(float, double_value)
+SPECIALIZE_VARIANT_VALUE(double, double_value)
+SPECIALIZE_VARIANT_VALUE(const char *, string_value)
+SPECIALIZE_VARIANT_VALUE(Slot *, slot_value)
+SPECIALIZE_VARIANT_VALUE(IntOrString, int_or_string_value)
 
 /**
  * Get the value of a @c Variant.
@@ -433,41 +379,8 @@ struct VariantValue<const std::string &> {
   }
 };
 
-/**
- * Get the value of a @c Variant.
- * Specialized for <code>ScriptableInterface *</code> type.
- */
-template <>
-struct VariantValue<ScriptableInterface *> {
-  ScriptableInterface *operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_SCRIPTABLE);
-    return v.v.scriptable_value;
-  }
-};
-
-/**
- * Get the value of a @c Variant.
- * Specialized for <code>Slot *</code> type.
- */
-template <>
-struct VariantValue<Slot *> {
-  Slot *operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_SLOT);
-    return v.v.slot_value;
-  }
-};
-
-/**
- * Get the value of a @c Variant.
- * Specialized for @c IntOrString type.
- */
-template <>
-struct VariantValue<IntOrString> {
-  IntOrString operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_INT_OR_STRING);
-    return v.v.int_or_string_value;
-  }
-};
+#undef SPECIALIZE_VARIANT_TYPE
+#undef SPECIALIZE_VARIANT_VALUE
 
 } // namespace ggadget
 

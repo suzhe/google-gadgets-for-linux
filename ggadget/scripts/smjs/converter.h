@@ -25,12 +25,12 @@ namespace ggadget {
 /**
  * Convert a @c jsval to a @c Variant of desired type.
  * @param cx JavaScript context.
- * @param type desired target type.
+ * @param prototype providing the desired target type information.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertJSToNative(JSContext *cx, Variant::Type type,
+JSBool ConvertJSToNative(JSContext *cx, Variant prototype,
                          jsval js_val, Variant *native_val);
 
 /**
@@ -42,6 +42,14 @@ JSBool ConvertJSToNative(JSContext *cx, Variant::Type type,
  */
 JSBool ConvertJSToNativeVariant(JSContext *cx,
                                 jsval js_val, Variant *native_val);
+
+/**
+ * Convert a @c jsval to a char string.
+ * Used to print a jsval in error reports.
+ * @return a pointer to a string.  The user must use it immediately, because
+ *     the JavaScript engine may GC it eventually.
+ */
+const char *ConvertJSToChars(JSContext *cx, jsval js_val);
 
 /**
  * Convert a @c Variant to a @c jsval.

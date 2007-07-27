@@ -17,12 +17,27 @@
 ADD_DEFINITIONS(-DUNIT_TEST)
 
 MACRO(UNIT_TEST TEST_NAME)
-  ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
   TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget)
   TEST_WRAPPER(${TEST_NAME} TRUE)
 ENDMACRO(UNIT_TEST TEST_NAME)
 
+ADD_EXECUTABLE(slot_test
+  slot_test.cc
+  slots.cc
+)
 UNIT_TEST(slot_test)
+
+ADD_EXECUTABLE(signal_test
+  signal_test.cc
+  slots.cc
+)
 UNIT_TEST(signal_test)
+
+ADD_EXECUTABLE(static_scriptable_test
+  static_scriptable_test.cc
+  scriptables.cc
+)
 UNIT_TEST(static_scriptable_test)
+
+ADD_EXECUTABLE(elements_test elements_test.cc)
 UNIT_TEST(elements_test)

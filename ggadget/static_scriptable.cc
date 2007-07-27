@@ -32,6 +32,10 @@ class StaticScriptable::Impl {
   void RegisterProperty(const char *name, Slot *getter, Slot *setter);
   void RegisterMethod(const char *name, Slot *slot);
   void RegisterSignal(const char *name, Signal *signal);
+  void RegisterConstants(int count,
+                         const char * const names[],
+                         const Variant values[]);
+  void SetPrototype(ScriptableInterface *prototype) { prototype_ = prototype; }
   Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   bool GetPropertyInfoByName(const char *name,
                              int *id, Variant *prototype,
@@ -50,16 +54,36 @@ class StaticScriptable::Impl {
   typedef std::map<const char *, int, CompareString> SlotIndexMap;
   typedef std::vector<Variant> VariantVector;
   typedef std::vector<Slot *> SlotVector;
+  typedef std::map<const char *, Variant, CompareString> ConstantMap;
 
+  // If true, no more new RegisterXXX or SetPrototype can be called.
+  // It'll be set to true in any ScriptableInterface operation on properties. 
+  bool sealed_;
+
+  // Index of property slots.  The keys are property names, and the values
+  // are indexes into slot_prototype_, getter_slots_ and setter_slots_.
   SlotIndexMap slot_index_;
   VariantVector slot_prototypes_;
   SlotVector getter_slots_;
   SlotVector setter_slots_;
+
+  // Redundant value to simplify code.
+  // It should always equal to the size of above collections.
+  int property_count_;
+
+  // Containing constant definitions.  The keys are property names, and the
+  // values are constant values.
+  ConstantMap constants_;
+
   Signal0<void> *ondelete_signal_;
+  ScriptableInterface *prototype_;
 };
 
 StaticScriptable::Impl::Impl()
-    : ondelete_signal_(NULL) {
+    : sealed_(false),
+      property_count_(0),
+      ondelete_signal_(NULL),
+      prototype_(NULL) {
 }
 
 StaticScriptable::Impl::~Impl() {
@@ -85,6 +109,7 @@ StaticScriptable::Impl::~Impl() {
 
 void StaticScriptable::Impl::RegisterProperty(const char *name,
                                               Slot *getter, Slot *setter) {
+  ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(getter && getter->GetArgCount() == 0);
   Variant prototype(getter->GetReturnType());
@@ -93,30 +118,36 @@ void StaticScriptable::Impl::RegisterProperty(const char *name,
     ASSERT(prototype.type == setter->GetArgTypes()[0]);
   }
 
-  slot_index_[name] = slot_prototypes_.size();
+  slot_index_[name] = property_count_;
   slot_prototypes_.push_back(prototype);
   getter_slots_.push_back(getter);
   setter_slots_.push_back(setter);
+  property_count_++;
+  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
 }
 
 void StaticScriptable::Impl::RegisterMethod(const char *name, Slot *slot) {
+  ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(slot);
 
-  slot_index_[name] = slot_prototypes_.size();
+  slot_index_[name] = property_count_;
   slot_prototypes_.push_back(Variant(slot));
   getter_slots_.push_back(NULL);
   setter_slots_.push_back(NULL);
+  property_count_++;
+  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
 }
 
 void StaticScriptable::Impl::RegisterSignal(const char *name, Signal *signal) {
+  ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(signal);
 
   if (strcmp(name, kOnDeleteSignal) == 0)
     ondelete_signal_ = down_cast<OnDeleteSignal *>(signal);
 
-  slot_index_[name] = slot_prototypes_.size();
+  slot_index_[name] = property_count_;
 
   // Create a SignalSlot as the value of the prototype to let others know
   // the calling convention.  It is owned by slot_prototypes.
@@ -129,9 +160,20 @@ void StaticScriptable::Impl::RegisterSignal(const char *name, Signal *signal) {
   getter_slots_.push_back(NewSlot(connection, &Connection::slot));
   // The setter accepts a Slot * parameter and connect it to the signal.
   setter_slots_.push_back(NewSlot(connection, &Connection::Reconnect));
+
+  property_count_++;
+  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
+}
+
+void StaticScriptable::Impl::RegisterConstants(int count,
+                                               const char * const names[],
+                                               const Variant values[]) {
+  for (int i = 0; i < count; i++)
+    constants_[names[i]] = values ? values[i] : Variant(i);
 }
 
 Connection *StaticScriptable::Impl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
+  ASSERT(!sealed_);
   if (ondelete_signal_)
     return ondelete_signal_->ConnectGeneral(slot);
   else
@@ -145,12 +187,33 @@ bool StaticScriptable::Impl::GetPropertyInfoByName(const char *name,
   ASSERT(id);
   ASSERT(prototype);
   ASSERT(is_method);
+  sealed_ = false;
 
-  SlotIndexMap::iterator it = slot_index_.find(name);
-  if (it == slot_index_.end())
-    return false;
+  // First check if the property is a constant.
+  ConstantMap::iterator constants_it = constants_.find(name);
+  if (constants_it != constants_.end()) {
+    *id = 0;
+    *prototype = constants_it->second;
+    *is_method = false;
+    return true;
+  }
 
-  int index = it->second;
+  // Find the index by name.
+  SlotIndexMap::iterator slot_index_it = slot_index_.find(name);
+  if (slot_index_it == slot_index_.end()) {
+    if (prototype_) {
+      bool result = prototype_->GetPropertyInfoByName(name, id,
+                                                      prototype, is_method);
+      // Make the id distinct.
+      if (result && *id != 0)  // If id == 0, the property is a constant.
+        *id -= property_count_;
+      return result;
+    } else {
+      return false;
+    }
+  }
+
+  int index = slot_index_it->second;
   // 0, 1, 2, ... ==> -1, -2, -3, ... to distinguish property ids from
   // array indexes.
   *id = -(index + 1);
@@ -163,6 +226,7 @@ bool StaticScriptable::Impl::GetPropertyInfoById(int id, Variant *prototype,
                                                  bool *is_method) {
   ASSERT(prototype);
   ASSERT(is_method);
+  sealed_ = true;
 
   // Array index is not supported here.
   if (id >= 0)
@@ -170,8 +234,13 @@ bool StaticScriptable::Impl::GetPropertyInfoById(int id, Variant *prototype,
 
   // -1, -2, -3, ... ==> 0, 1, 2, ...
   int index = -id - 1;
-  if (index >= static_cast<int>(slot_prototypes_.size()))
-    return false;
+  if (index >= property_count_) {
+    if (prototype_)
+      return prototype_->GetPropertyInfoById(id + property_count_,
+                                             prototype, is_method);
+    else
+      return false;
+  }
 
   *prototype = slot_prototypes_[index];
   *is_method = getter_slots_[index] == NULL;
@@ -179,14 +248,19 @@ bool StaticScriptable::Impl::GetPropertyInfoById(int id, Variant *prototype,
 }
 
 Variant StaticScriptable::Impl::GetProperty(int id) {
+  sealed_ = true;
   // Array index is not supported here.
   if (id >= 0)
     return Variant();
 
   // -1, -2, -3, ... ==> 0, 1, 2, ...
   int index = -id - 1;
-  if (index >= static_cast<int>(getter_slots_.size()))
-    return Variant();
+  if (index >= property_count_) {
+    if (prototype_)
+      return prototype_->GetProperty(id + property_count_);
+    else
+      return Variant();
+  }
 
   Slot *slot = getter_slots_[index];
   if (slot == NULL)
@@ -199,13 +273,18 @@ Variant StaticScriptable::Impl::GetProperty(int id) {
 }
 
 bool StaticScriptable::Impl::SetProperty(int id, Variant value) {
+  sealed_ = true;
   // Array index is not supported here.
   if (id >= 0)
     return false;
 
   int index = -id - 1;
-  if (index >= static_cast<int>(setter_slots_.size()))
-    return false;
+  if (index >= property_count_) {
+    if (prototype_)
+      return prototype_->SetProperty(id + property_count_, value);
+    else
+      return false;
+  }
 
   Slot *slot = setter_slots_[index];
   if (slot == NULL)
@@ -235,6 +314,16 @@ void StaticScriptable::RegisterMethod(const char *name, Slot *slot) {
 
 void StaticScriptable::RegisterSignal(const char *name, Signal *signal) {
   impl_->RegisterSignal(name, signal);
+}
+
+void StaticScriptable::RegisterConstants(int count,
+                                         const char * const names[],
+                                         const Variant values[]) {
+  impl_->RegisterConstants(count, names, values);
+}
+
+void StaticScriptable::SetPrototype(ScriptableInterface *prototype) {
+  impl_->SetPrototype(prototype);
 }
 
 Connection *StaticScriptable::ConnectToOnDeleteSignal(Slot0<void> *slot) {

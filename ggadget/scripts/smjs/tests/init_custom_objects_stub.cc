@@ -16,17 +16,10 @@
 
 #include "ggadget/scripts/smjs/js_script_context.h"
 
-#include "ggadget/tests/scriptables.h"
-
 using namespace ggadget;
 
 // Called by the initialization code in js_shell.cc.
+// Used to compile a standalone js_shell.
 JSBool InitCustomObjects(JSScriptContext *context) {
-  TestScriptable1 *test_scriptable1 = new TestScriptable1();
-  // test_scriptable1 leaks.
-  context->SetValue(NULL, "scriptable", Variant(test_scriptable1));
-  TestScriptable1 *test_scriptable2 = new TestScriptable2();
-  // test_scriptable1 leaks.
-  context->SetValue(NULL, "scriptable2", Variant(test_scriptable2));
   return JS_TRUE;
 }

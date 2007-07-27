@@ -17,6 +17,7 @@
 #ifndef GGADGET_SCRIPTABLE_INTERFACE_H__
 #define GGADGET_SCRIPTABLE_INTERFACE_H__
 
+#include "common.h"
 #include "variant.h"
 
 namespace ggadget {
@@ -50,7 +51,8 @@ class ScriptableInterface {
    * @param name the name of the property.
    * @param[out] id return the property's id which can be used in later
    *     @c GetProperty(), @c SetProperty() and @c InvokeMethod() calls.
-   *     The value must be a @b negative number.
+   *     If the returned id is @c 0, the script engine will treat the property
+   *     as a constant.  Otherwise, the value must be a @b negative number.
    * @param[out] prototype return a prototype of the property value, from
    *     which the script engine can get detailed information.
    * @param[out] is_method @c true if this property corresponds a method.
@@ -95,6 +97,7 @@ class ScriptableInterface {
    */
   virtual bool SetProperty(int id, Variant value) = 0;
 
+  DISALLOW_DIRECT_DELETION(ScriptableInterface);
 };
 
 } // namespace ggadget
