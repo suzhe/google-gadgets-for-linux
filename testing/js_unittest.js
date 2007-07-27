@@ -21,6 +21,7 @@
 //   quit([code]) : quit current program with given exit code.
 //   ASSERT(predicte_result[, message]) : do an assertion.
 //   gc() : do JavaScript gc.
+//   setVerbose(true|false) : enable/disable verbose error reporting.
 //
 // General JavaScript unittest format:
 // TEST(name, function() {
@@ -70,6 +71,8 @@ function RUN_ALL_TESTS() {
     print("Running " + (_gIsDeathTest[i] ? "death " : "") +
           "test case " + count + ": " + i + " . . .");
     _gCurrentTestFailed = !_gIsDeathTest[i];
+    // Suppress error report when doing a death test.
+    setVerbose(!_gIsDeathTest[i]);
     try {
       _gAllTestCases[i]();
     } catch (e) {
@@ -87,6 +90,9 @@ function RUN_ALL_TESTS() {
   print(count + " test cases ran.");
   print(passed + " passed.");
   print((count - passed) + " failed.");
+  if (count > passed) {
+    quit(QUIT_ASSERT);
+  }
 }
 
 function END_TEST() {
