@@ -296,5 +296,8 @@ int main(int argc, char *argv[]) {
 
   if (g_quit_code == DONT_QUIT)
     g_quit_code = QUIT_OK;
+
+  if (g_quit_code == DONT_QUIT)
+    g_quit_code = QUIT_OK;
   return g_quit_code;
 }
