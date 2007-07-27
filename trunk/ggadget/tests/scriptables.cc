@@ -16,8 +16,6 @@
 
 #include "scriptables.h"
 
-namespace ggadget {
-
 // Store testing status to be checked in unit test code.
 std::string g_buffer;
 
