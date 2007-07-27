@@ -212,5 +212,3 @@ TestData testdata[] = {
 };
 
 const int kNumTestData = arraysize(testdata);
-
-} // namespace ggadget
