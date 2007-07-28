@@ -217,7 +217,7 @@ inline Signal0<R> *NewSignal(R (*function)()) {
 
 /**
  * Helper function to create a new @c Signal from a method prototype.
- * This is useful only when <code>Signal *</code> is used polymorphically.    
+ * This is useful only when <code>Signal *</code> is used polymorphically.
  * @param method the method used as a prototype.
  * @return the created @c Signal.
  */

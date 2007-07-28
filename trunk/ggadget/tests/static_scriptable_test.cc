@@ -66,7 +66,6 @@ TEST(static_scriptable, TestPropertyInfo) {
       Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
     { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
     { "IntOrStringProperty", -8, false, Variant(Variant::TYPE_INT_OR_STRING) },
-    { "IntOrStringProperty", -9, false, Variant(Variant::TYPE_INT_OR_STRING) },
   };
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {

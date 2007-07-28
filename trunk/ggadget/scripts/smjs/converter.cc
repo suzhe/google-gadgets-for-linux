@@ -104,7 +104,6 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   ScriptableInterface *scriptable;
   if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
     scriptable = NULL;
-    */
   } else if (JSVAL_IS_OBJECT(js_val)) {
     // This object may be a JS wrapped native object.
     // If it is not, NativeJSWrapper::Unwrap simply fails.
@@ -172,23 +171,6 @@ static JSBool ConvertJSToIntOrString(JSContext *cx, jsval js_val,
   return JS_FALSE;
 }
 
-static JSBool ConvertJSToIntOrString(JSContext *cx, jsval js_val,
-                                     Variant *native_val) {
-  Variant temp;
-  if (ConvertJSToNativeInt(cx, js_val, &temp)) {
-    *native_val = Variant(
-        CreateIntOrString(static_cast<int>(temp.v.int64_value)));
-    return JS_TRUE;
-  }
-
-  if (ConvertJSToNativeString(cx, js_val, &temp)) {
-    *native_val = Variant(CreateIntOrString(temp.v.string_value));
-    return JS_TRUE;
-  }
-
-  return JS_FALSE;
-}
-
 typedef JSBool (*ConvertJSToNativeFunc)(JSContext *cx, jsval js_val,
                                         Variant *native_val);
 static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
@@ -199,7 +181,6 @@ static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
   ConvertJSToNativeString,
   ConvertJSToScriptable,
   NULL, // ConvertJSToSlot is special because it needs the prototype argument.
-  ConvertJSToIntOrString,
   ConvertJSToIntOrString,
 };
 

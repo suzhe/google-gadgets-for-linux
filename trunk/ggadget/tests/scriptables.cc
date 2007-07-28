@@ -16,6 +16,8 @@
 
 #include "scriptables.h"
 
+using namespace ggadget;
+
 // Store testing status to be checked in unit test code.
 std::string g_buffer;
 
@@ -78,9 +80,6 @@ TestScriptable1::~TestScriptable1() {
 }
 
 TestPrototype *TestPrototype::instance_ = NULL;
-  void SetBuffer(const std::string& buffer) {
-    g_buffer = buffer;
-  }
 
 TestPrototype::TestPrototype()
     : static_scriptable_(new StaticScriptable()) {

@@ -4,9 +4,9 @@
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
-  
+
        http://www.apache.org/licenses/LICENSE-2.0
-  
+
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -73,7 +73,7 @@ inline IntOrString CreateIntOrString(const char *value) {
 
 /**
  * Print a @c Variant into an output stream, only for debugging and testing.
- */ 
+ */
 inline std::ostream &operator<<(std::ostream &out, IntOrString v) {
   return out << v.ToString();
 }
@@ -114,7 +114,7 @@ struct Variant {
   /**
    * Construct a @c Variant by type with default value (zero).
    */
-  Variant(Type a_type) : type(a_type) { 
+  Variant(Type a_type) : type(a_type) {
     if (type == TYPE_STRING) v.string_value = "";
     else v.double_value = 0;  // Also sets other unions to 0.
   }
@@ -259,7 +259,7 @@ struct Variant {
 
 /**
  * Print a @c Variant into an output stream, only for debugging and testing.
- */ 
+ */
 inline std::ostream &operator<<(std::ostream &out, Variant v) {
   return out << v.ToString();
 }
@@ -268,11 +268,11 @@ inline std::ostream &operator<<(std::ostream &out, Variant v) {
  * Get the @c Variant::Type of a C++ type.
  * This template is for all <code>ScriptableInterface *</code> types.
  * All unspecialized types will fall into this template, and if it is not
- * <code>ScriptableInterface *</code>, it may cause compilation error.  
+ * <code>ScriptableInterface *</code>, it may cause compilation error.
  */
 template <typename T>
 struct VariantType {
-  static const Variant::Type type = Variant::TYPE_SCRIPTABLE; 
+  static const Variant::Type type = Variant::TYPE_SCRIPTABLE;
 };
 
 /**
@@ -308,19 +308,10 @@ SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
 SPECIALIZE_VARIANT_TYPE(IntOrString, TYPE_INT_OR_STRING)
 
 /**
- * Get the @c Variant::Type of a C++ type.
- * Specialized for @c IntOrString type.
- */
-template <>
-struct VariantType<IntOrString> {
-  static const Variant::Type type = Variant::TYPE_INT_OR_STRING; 
-};
-
-/**
  * Get the value of a @c Variant.
  * This template is for all <code>ScriptableInterface *</code> types.
  * All unspecialized types will fall into this template, and if it is not
- * <code>ScriptableInterface *</code>, it may cause compilation error.  
+ * <code>ScriptableInterface *</code>, it may cause compilation error.
  */
 template <typename T>
 struct VariantValue {
@@ -390,18 +381,6 @@ struct VariantValue<const std::string &> {
 
 #undef SPECIALIZE_VARIANT_TYPE
 #undef SPECIALIZE_VARIANT_VALUE
-
-/**
- * Get the value of a @c Variant.
- * Specialized for @c IntOrString type.
- */
-template <>
-struct VariantValue<IntOrString> {
-  IntOrString operator()(Variant v) {
-    ASSERT(v.type == Variant::TYPE_INT_OR_STRING);
-    return v.v.int_or_string_value;
-  }
-};
 
 } // namespace ggadget
 

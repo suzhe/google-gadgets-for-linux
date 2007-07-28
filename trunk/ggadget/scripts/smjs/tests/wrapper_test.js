@@ -203,14 +203,14 @@ TEST("Test dynamic allocated objects", function() {
   scriptable2.DeleteObject(b);
   ASSERT(TRUE(b_deleted));
 });
-/*
+
 DEATH_TEST("Test access after deleted", function() {
   var a = scriptable2.NewObject();
   scriptable2.DeleteObject(a);
   a.Buffer = "Buffer";
   ASSERT(DEATH());
 });
-*/
+
 TEST("Test GC of wrapper object", function() {
   var a = scriptable2.NewObject();
   var lunch_msg;
