@@ -20,6 +20,7 @@
 #include <map>
 #include <jsapi.h>
 #include "ggadget/script_context_interface.h"
+#include "ggadget/slot.h"
 
 namespace ggadget {
 
@@ -68,19 +69,19 @@ class JSScriptContext : public ScriptContextInterface {
       JSContext *cx, ScriptableInterface *scriptableInterface);
 
   /**
-   * Convert a native @c Slot into a JavaScript function object (in jsval).
-   * <ul>
-   * <li>If @a slot is a @c JSFunctionSlot (a private class defined in
-   * js_script_context.cc, this method returns the original JavaScript
-   * function object.</li>
-   * <li>Otherwise, the @a slot is wrapped into a JavaScript function
-   * object.</li>
-   * </ul>
-   * @param cx JavaScript context.
-   * @param slot the native @c Slot to be wrapped.
-   * @return the converted JavaScript function object (in jsval).
+   * Called when JavaScript engine is to finalized a JavaScript object wrapper
    */
-  static jsval ConvertNativeSlotToJS(JSContext *cx, Slot *slot);
+  static void FinalizeNativeJSWrapper(JSContext *cx, NativeJSWrapper *wrapper);
+
+  /**
+   * Convert a native @c Slot into a JavaScript function object (in jsval).
+   * @param cx JavaScript context.
+   * @param slot the native @c Slot.
+   * @return the converted JavaScript function object (in jsval).
+   *     Return @c JSVAL_NULL if @a slot is not previously returned from
+   *     @c NewJSFunctionSlot.
+   */
+  static jsval ConvertSlotToJS(JSContext *cx, Slot *slot);
 
   /**
    * The callback of a @c JSFunction that wraps a native @c Slot.
@@ -91,7 +92,7 @@ class JSScriptContext : public ScriptContextInterface {
                                jsval *rval);
 
   /**
-   * Create a @c Slot that is  targeted to a JavaScript function object.
+   * Create a @c Slot that is targeted to a JavaScript function object.
    * @param cx JavaScript context.
    * @param prototype another @c Slot acting as the prototype that has
    *     compatible parameter list and return value.  Can be @c NULL.
@@ -123,9 +124,10 @@ class JSScriptContext : public ScriptContextInterface {
   void GetCurrentFileAndLineInternal(const char **filename, int *lineno);
   JSObject *WrapNativeObjectToJSInternal(
       ScriptableInterface *scriptableInterface);
-  jsval ConvertNativeSlotToJSInternal(Slot *slot);
+  jsval ConvertSlotToJSInternal(Slot *slot);
   Slot *NewJSFunctionSlotInternal(const Slot *prototype,
                                   jsval function_val);
+  void FinalizeNativeJSWrapperInternal(NativeJSWrapper *wrapper);
 
   const char *JSValToString(jsval js_val);
 

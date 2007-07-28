@@ -194,12 +194,16 @@ TEST(static_scriptable, TestPropertyInfo2) {
     { "time", -12, false, Variant(Variant::TYPE_STRING) },
     { "OverrideSelf", -13, false, Variant(Variant::TYPE_SCRIPTABLE) },
     { "SignalResult", -14, false, Variant(Variant::TYPE_STRING) },
+    { "NewObject", -15, true,
+      Variant(NewSlot(scriptable, &TestScriptable2::NewObject)) },
+    { "DeleteObject", -16, true,
+      Variant(NewSlot(scriptable, &TestScriptable2::DeleteObject)) },
 
     // The following are defined in the prototype.
-    { "PrototypeMethod", -15, true,
+    { "PrototypeMethod", -17, true,
       Variant(NewSlot(TestPrototype::GetInstance(), &TestPrototype::Method)) },
-    { "Self", -16, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "ontest", -17, false,
+    { "PrototypeSelf", -18, false, Variant(Variant::TYPE_SCRIPTABLE) },
+    { "ontest", -19, false,
       Variant(new SignalSlot(&TestPrototype::GetInstance()->ontest_signal_)) },
     // Prototype's OverrideSelf is overriden by TestScriptable2's OverrideSelf.
   };

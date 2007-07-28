@@ -16,6 +16,7 @@
 
 #include "native_js_wrapper.h"
 #include "ggadget/scriptable_interface.h"
+#include "ggadget/signal.h"
 #include "ggadget/slot.h"
 #include "converter.h"
 #include "js_script_context.h"
@@ -36,7 +37,9 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
                                  ScriptableInterface *scriptable)
     : deleted_(false),
       js_context_(js_context),
-      scriptable_(scriptable) {
+      js_object_(NULL),
+      scriptable_(scriptable),
+      ondelete_connection_(NULL) {
 
   js_object_ = JS_NewObject(js_context, &wrapper_js_class_, NULL, NULL);
   if (!js_object_)
@@ -47,17 +50,19 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
   JS_SetPrivate(js_context, js_object_, this);
 
   // Connect the "ondelete" callback.
-  scriptable->ConnectToOnDeleteSignal(
+  ondelete_connection_ = scriptable->ConnectToOnDeleteSignal(
       NewSlot(this, &NativeJSWrapper::OnDelete));
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
+  if (!deleted_)
+    ondelete_connection_->Disconnect();
 }
 
 JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
                                ScriptableInterface **scriptable) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
-  if (wrapper && !wrapper->deleted_) {
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
+  if (wrapper) {
     *scriptable = wrapper->scriptable_;
     return JS_TRUE;
   } else {
@@ -68,7 +73,8 @@ JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
 // Get the NativeJSWrapper from a JS wrapped ScriptableInterface object.
 // The NativeJSWrapper pointer is stored in the object's private slot.
 NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
-                                                   JSObject *js_object) {
+                                                   JSObject *js_object,
+                                                   JSBool finalizing) {
   if (js_object != NULL &&
       JS_GET_CLASS(cx, js_object) == &wrapper_js_class_) {
     NativeJSWrapper *wrapper = reinterpret_cast<NativeJSWrapper *>
@@ -76,7 +82,9 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
     ASSERT(wrapper && wrapper->js_context_ == cx &&
            wrapper->js_object_ == js_object);
 
-    if (wrapper->deleted_) {
+    if (!finalizing && wrapper->deleted_) {
+      // Don't report error when finalizing.
+      // Early deletion of a native object is allowed.
       JS_ReportError(wrapper->js_context_, "Native object has been deleted");
       return NULL;
     } else {
@@ -92,33 +100,44 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
 JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
                                           uintN argc, jsval *argv,
                                           jsval *rval) {
-  if (!GetWrapperFromJS(cx, obj))
+  if (!GetWrapperFromJS(cx, obj, false))
     return JS_FALSE;
   return JSScriptContext::CallNativeSlot(cx, obj, argc, argv, rval);
 }
 
 JSBool NativeJSWrapper::GetWrapperProperty(JSContext *cx, JSObject *obj,
                                            jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
   return wrapper && wrapper->GetProperty(id, vp);
 }
 
 JSBool NativeJSWrapper::SetWrapperProperty(JSContext *cx, JSObject *obj,
                                            jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
   return wrapper && wrapper->SetProperty(id, *vp);
 }
 
 JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
                                                jsval id) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
   return wrapper && wrapper->ResolveProperty(id);
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
-  if (wrapper)
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
+  if (wrapper) {
+    if (!wrapper->deleted_)
+      JSScriptContext::FinalizeNativeJSWrapper(cx, wrapper);
     delete wrapper;
+  }
+}
+
+void NativeJSWrapper::OnDelete() {
+  ondelete_connection_->Disconnect();
+  deleted_ = true;
+  // Remove the wrapper mapping from the context, but leave this wrapper
+  // alive to accept mistaken JavaScript calls gracefully. 
+  JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
 }
 
 JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
@@ -158,8 +177,7 @@ JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
 
   Variant value;
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
-    JS_ReportError(js_context_, "Failed to convert jsval (%s) to native",
-                   ConvertJSToChars(js_context_, js_val));
+    JS_ReportError(js_context_, "Failed to convert jsval to native");
     // TODO: check result and raise exception.
     return JS_FALSE;
   }

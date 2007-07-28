@@ -232,13 +232,6 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
   return JS_FALSE;
 }
 
-const char *ConvertJSToChars(JSContext *cx, jsval js_val) {
-  Variant v("");
-  // Ignore the result and return default value on error.
-  ConvertJSToNativeString(cx, js_val, &v);
-  return v.v.string_value;
-}
-
 static JSBool ConvertNativeToJSVoid(JSContext *cx, Variant native_val,
                                     jsval *js_val) {
   *js_val = JSVAL_VOID;
@@ -311,7 +304,7 @@ static JSBool ConvertNativeToJSObject(JSContext *cx, Variant native_val,
 static JSBool ConvertNativeToJSFunction(JSContext *cx, Variant native_val,
                                         jsval *js_val) {
   Slot *slot = native_val.v.slot_value;
-  *js_val = slot ? JSScriptContext::ConvertNativeSlotToJS(cx, slot) :
+  *js_val = slot ? JSScriptContext::ConvertSlotToJS(cx, slot) :
             JSVAL_NULL;
   return JS_TRUE;
 }

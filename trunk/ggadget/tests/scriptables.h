@@ -146,7 +146,9 @@ class TestScriptable2 : public TestScriptable1 {
   }
 
   TestScriptable2 *GetSelf() { return this; }
-  TestScriptable2 *TestMethod(TestScriptable2 *t) { return t; } 
+  TestScriptable2 *TestMethod(TestScriptable2 *t) { return t; }
+  TestScriptable2 *NewObject() { return new TestScriptable2; }
+  void DeleteObject(TestScriptable2 *obj) { delete obj; }
 
   // Place signal declarations here for testing.
   // In production code, they should be palced in private section.
