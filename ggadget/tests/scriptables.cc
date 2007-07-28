@@ -85,7 +85,8 @@ TestPrototype *TestPrototype::instance_ = NULL;
 TestPrototype::TestPrototype()
     : static_scriptable_(new StaticScriptable()) {
   RegisterMethod("PrototypeMethod", NewSlot(this, &TestPrototype::Method));
-  RegisterProperty("Self", NewSlot(this, &TestPrototype::GetSelf), NULL);
+  RegisterProperty("PrototypeSelf", NewSlot(this, &TestPrototype::GetSelf),
+                   NULL);
   RegisterSignal("ontest", &ontest_signal_);
   RegisterConstant("Const", 987654321);
   RegisterProperty("OverrideSelf",
@@ -102,5 +103,7 @@ TestScriptable2::TestScriptable2() {
                    NewSlot(this, &TestScriptable2::GetSelf), NULL);
   RegisterConstant("length", kArraySize);
   RegisterReadonlySimpleProperty("SignalResult", &signal_result_);
+  RegisterMethod("NewObject", NewSlot(this, &TestScriptable2::NewObject));
+  RegisterMethod("DeleteObject", NewSlot(this, &TestScriptable2::DeleteObject));
   SetPrototype(TestPrototype::GetInstance());
 }

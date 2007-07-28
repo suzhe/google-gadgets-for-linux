@@ -173,7 +173,6 @@ void StaticScriptable::Impl::RegisterConstants(int count,
 }
 
 Connection *StaticScriptable::Impl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
-  ASSERT(!sealed_);
   if (ondelete_signal_)
     return ondelete_signal_->ConnectGeneral(slot);
   else

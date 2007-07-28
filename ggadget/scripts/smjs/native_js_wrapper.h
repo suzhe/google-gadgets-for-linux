@@ -10,6 +10,7 @@
 namespace ggadget {
 
 class ScriptableInterface;
+class Connection;
 
 /**
  * A wrapper wrapping a native @c ScriptableInterface object into a
@@ -35,13 +36,15 @@ class NativeJSWrapper {
 private:
   DISALLOW_EVIL_CONSTRUCTORS(NativeJSWrapper);
 
-  void OnDelete() { deleted_ = true; }
+  void OnDelete();
 
   /**
    * Get the @c NativeJSWrapper pointer from a JS wrapped
    * @c ScriptableInterface object.
    */
-  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
+  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx,
+                                           JSObject *js_object,
+                                           JSBool finalizing);
 
   static JSBool CallWrapperMethod(JSContext *cx, JSObject *obj,
                                   uintN argc, jsval *argv, jsval *rval);
@@ -63,6 +66,7 @@ private:
   JSContext *js_context_;
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
+  Connection *ondelete_connection_;
 };
 
 } // namespace ggadget

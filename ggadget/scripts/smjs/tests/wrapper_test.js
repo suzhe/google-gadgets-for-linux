@@ -115,31 +115,25 @@ TEST("Test signals", function() {
   var onlunch_triggered = false;
   var onsupper_triggered = false;
   onlunch_function = function(s) {
-    print(3);
     ASSERT(EQ(scriptable2, scriptable2_in_closure));
     ASSERT(EQ("Have lunch", s));
     // A long lunch taking a whole afternoon :).
-    print(4);
     scriptable2.time = "supper";   // Will cause recursive onsupper.
-    print(5);
     ASSERT(TRUE(onsupper_triggered));
     ASSERT(EQ("Supper finished", scriptable2.SignalResult));
     // Lunch is finished after finishing supper :).
     onlunch_triggered = true;
-    print(6);
     return "Lunch finished";
   };
 
   var supper_is_lunch = false;
   onsupper_function = function(s) {
-    print(7);
     ASSERT(EQ(scriptable2, scriptable2_in_closure));
     if (supper_is_lunch)
       ASSERT(EQ("Have lunch", s));
     else
       ASSERT(EQ("Have supper", s));
     onsupper_triggered = true;
-    print(8);
     return "Supper finished";
   };
 
@@ -149,9 +143,7 @@ TEST("Test signals", function() {
   ASSERT(EQ(onsupper_function, scriptable2.onsupper));
 
   // Trigger onlunch.
-  print(1);
   scriptable2.time = "lunch";
-  print(2);
   ASSERT(EQ("Lunch finished", scriptable2.SignalResult));
   ASSERT(TRUE(onsupper_triggered));
   ASSERT(TRUE(onlunch_triggered));
@@ -169,7 +161,74 @@ TEST("Test signals", function() {
 
   // Test disconnect.
   scriptable2.onlunch = null;
-  ASSERT(NULL(scriptable2.onlunch)); 
+  ASSERT(NULL(scriptable2.onlunch));
+});
+
+TEST("Test scriptables", function() {
+  // Self is defined in prototype, a different object from scriptable2.
+  ASSERT(EQ(scriptable2.PrototypeSelf, scriptable2.PrototypeSelf));
+  // Test prototype object itself.
+  var proto = scriptable2.PrototypeSelf;
+  ASSERT(EQ(proto, proto.PrototypeSelf));
+
+  ASSERT(NULL(proto.PrototypeMethod(null)));
+  ASSERT(EQ(scriptable, proto.PrototypeMethod(scriptable)));
+  ASSERT(EQ(proto, proto.PrototypeMethod(proto)));
+  ASSERT(EQ(scriptable2, proto.PrototypeMethod(scriptable2)));
+
+  ASSERT(EQ(scriptable2, scriptable2.OverrideSelf));
+});
+
+TEST("Test dynamic allocated objects", function() {
+  var a = scriptable2.NewObject();
+  var a_deleted = false;
+  a.ondelete = function() {
+    a_deleted = true;
+  };
+  var b = scriptable2.NewObject();
+  var b_deleted = false;
+  b.ondelete = function() {
+    b_deleted = true;
+  }
+  ASSERT(NOT_NULL(a));
+  ASSERT(NOT_NULL(b));
+  ASSERT(NE(a, b));
+  ASSERT(NE(scriptable2, a));
+  ASSERT(NE(scriptable2, b));
+  TestScriptableBasics(a);
+  TestScriptableBasics(b);
+  scriptable2.DeleteObject(a);
+  ASSERT(TRUE(a_deleted));
+  ASSERT(FALSE(b_deleted));
+  scriptable2.DeleteObject(b);
+  ASSERT(TRUE(b_deleted));
+});
+/*
+DEATH_TEST("Test access after deleted", function() {
+  var a = scriptable2.NewObject();
+  scriptable2.DeleteObject(a);
+  a.Buffer = "Buffer";
+  ASSERT(DEATH());
+});
+*/
+TEST("Test GC of wrapper object", function() {
+  var a = scriptable2.NewObject();
+  var lunch_msg;
+  a.onlunch = function(s) {
+    lunch_msg = s;
+  };
+  gc();
+  // They should still work after gc.
+  TestScriptableBasics(a);
+  a.time = "lunch";
+  ASSERT(EQ("Have lunch", lunch_msg));
+  scriptable2.DeleteObject(a);
+});
+
+TEST("Test string callback", function() {
+  scriptable2.onlunch = "msg = 'lunch_callback'; print(msg);";
+  scriptable2.time = "lunch";
+  ASSERT(EQ("lunch_callback", msg));
 });
 
 RUN_ALL_TESTS();

@@ -44,14 +44,6 @@ JSBool ConvertJSToNativeVariant(JSContext *cx,
                                 jsval js_val, Variant *native_val);
 
 /**
- * Convert a @c jsval to a char string.
- * Used to print a jsval in error reports.
- * @return a pointer to a string.  The user must use it immediately, because
- *     the JavaScript engine may GC it eventually.
- */
-const char *ConvertJSToChars(JSContext *cx, jsval js_val);
-
-/**
  * Convert a @c Variant to a @c jsval.
  * @param cx JavaScript context.
  * @param native_val source @c Variant value.

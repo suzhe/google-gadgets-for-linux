@@ -53,6 +53,79 @@ void JSScriptRuntime::Destroy() {
   delete this;
 }
 
+/**
+ * A Slot that wraps a JavaScript function object.
+ */
+class JSFunctionSlot : public Slot {
+ public:
+  JSFunctionSlot(const Slot *prototype,
+                 JSContext *context,
+                 jsval function_val);
+  virtual ~JSFunctionSlot();
+
+  virtual Variant Call(int argc, Variant argv[]);
+
+  virtual bool HasMetadata() const { return prototype_ != NULL; }
+  virtual Variant::Type GetReturnType() const {
+    return prototype_ ? prototype_->GetReturnType() : Variant::TYPE_VOID;
+  }
+  virtual int GetArgCount() const {
+    return prototype_ ? prototype_->GetArgCount() : 0;
+  }
+  virtual const Variant::Type *GetArgTypes() const {
+    return prototype_ ? prototype_->GetArgTypes() : NULL;
+  }
+  virtual bool operator==(const Slot &another) const {
+    return function_val_ ==
+           down_cast<const JSFunctionSlot *>(&another)->function_val_;
+  }
+
+ private:
+  const Slot *prototype_;
+  JSContext *context_;
+  jsval function_val_;
+};
+
+JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
+                               JSContext *context,
+                               jsval function_val)
+    : prototype_(prototype),
+      context_(context),
+      function_val_(function_val) {
+  // Add a reference to the function object to prevent it from being GC'ed.
+  JS_AddRoot(context_, &function_val_);
+}
+
+JSFunctionSlot::~JSFunctionSlot() {
+  JS_RemoveRoot(context_, &function_val_);
+}
+
+Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
+  jsval *js_args = NULL;
+  Variant return_value(GetReturnType());
+  if (argc > 0) {
+    js_args = new jsval[argc];
+    for (int i = 0; i < argc; i++) {
+      if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
+        JS_ReportError(context_, "Failed to convert argument %d (%s) to jsval",
+                       i, argv[i].ToString().c_str());
+        delete js_args;
+        return return_value;
+      }
+    }
+  }
+
+  jsval rval;
+  JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
+                                       argc, js_args, &rval);
+  if (result) {
+    result = ConvertJSToNative(context_, return_value, rval, &return_value);
+    if (!result)
+      JS_ReportError(context_, "Failed to convert jsval to native");
+  }
+  return return_value;
+}
+
 JSScriptContext::JSScriptContext(JSContext *context)
     : context_(context),
       filename_(NULL),
@@ -128,43 +201,36 @@ JSObject *JSScriptContext::WrapNativeObjectToJS(
   return NULL;
 }
 
-jsval JSScriptContext::ConvertNativeSlotToJSInternal(Slot *slot) {
-  ASSERT(slot);
-  SlotJSMap::iterator it = slot_js_map_.find(slot);
-  if (it != slot_js_map_.end()) {
-    // If found, it->second may be a previous JavaScript wrapper of a native
-    // slot, or a pure JavaScript function object that has been wrapped into
-    // a JSFunctionSlot.
-    return it->second;
-  }
-
-  JSFunction *function = JS_NewFunction(context_, CallNativeSlot,
-                                        slot->GetArgCount(),
-                                        0, NULL, NULL);
-  if (!function)
-    return JSVAL_NULL;
-
-  JSObject *func_object = JS_GetFunctionObject(function);
-  if (!func_object)
-    return JSVAL_NULL;
-  // Put the slot pointer into the first reserved slot of the
-  // function object.  A function object has 2 reserved slots.
-  if (!JS_SetReservedSlot(context_, func_object,
-                          0, PRIVATE_TO_JSVAL(slot)))
-    return JSVAL_NULL;
-
-  jsval function_val = OBJECT_TO_JSVAL(func_object);
-  slot_js_map_[slot] = function_val;
-  // Add a reference to the function object to prevent it from being GC'ed.
-  JS_AddRoot(context_, &slot_js_map_[slot]);
-  return function_val;
+void JSScriptContext::FinalizeNativeJSWrapperInternal(
+    NativeJSWrapper *wrapper) {
+  wrapper_map_.erase(wrapper->scriptable());
 }
 
-jsval JSScriptContext::ConvertNativeSlotToJS(JSContext *cx, Slot *slot) {
+void JSScriptContext::FinalizeNativeJSWrapper(JSContext *cx,
+                                              NativeJSWrapper *wrapper) {
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
-    return context_wrapper->ConvertNativeSlotToJSInternal(slot);
+    context_wrapper->FinalizeNativeJSWrapperInternal(wrapper);
+}
+
+jsval JSScriptContext::ConvertSlotToJSInternal(Slot *slot) {
+  ASSERT(slot);
+  SlotJSMap::iterator it = slot_js_map_.find(slot);
+  if (it != slot_js_map_.end()) {
+    // If found, it->second JavaScript function object that has been wrapped
+    // into a JSFunctionSlot.
+    return it->second;
+  }
+  // We don't allow JavaScript to call native slot in this way.
+  return JSVAL_NULL;
+}
+
+jsval JSScriptContext::ConvertSlotToJS(JSContext *cx, Slot *slot) {
+  JSScriptContext *context_wrapper = GetJSScriptContext(cx);
+  ASSERT(context_wrapper);
+  if (context_wrapper)
+    return context_wrapper->ConvertSlotToJSInternal(slot);
   return JSVAL_NULL;
 }
 
@@ -198,8 +264,7 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
           ConvertJSToNative(cx, Variant(arg_types[i]), argv[i], &params[i]) :
           ConvertJSToNativeVariant(cx, argv[i], &params[i]);
       if (!result) {
-        JS_ReportError(cx, "Failed to convert argument %d (%s) to native",
-                       i, ConvertJSToChars(cx, argv[i]));
+        JS_ReportError(cx, "Failed to convert argument %d to native", i);
         delete [] params;
         return JS_FALSE;
       }
@@ -219,71 +284,12 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
   return result;
 }
 
-// A Slot that is targeted to a JavaScript function object.
-class JSFunctionSlot : public Slot {
- public:
-  JSFunctionSlot(const Slot *prototype, JSContext *context, jsval function_val)
-      : prototype_(prototype), context_(context), function_val_(function_val) {
-  }
-
-  virtual Variant Call(int argc, Variant argv[]);
-
-  virtual bool HasMetadata() const { return prototype_ != NULL; }
-  virtual Variant::Type GetReturnType() const {
-    return prototype_ ? prototype_->GetReturnType() : Variant::TYPE_VOID;
-  }
-  virtual int GetArgCount() const {
-    return prototype_ ? prototype_->GetArgCount() : 0;
-  }
-  virtual const Variant::Type *GetArgTypes() const {
-    return prototype_ ? prototype_->GetArgTypes() : NULL;
-  }
-  virtual bool operator==(const Slot &another) const {
-    return function_val_ ==
-           down_cast<const JSFunctionSlot *>(&another)->function_val_;
-  }
-
- private:
-  const Slot *prototype_;
-  JSContext *context_;
-  jsval function_val_;
-};
-
-Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
-  jsval *js_args = NULL;
-  Variant return_value(GetReturnType());
-  if (argc > 0) {
-    js_args = new jsval[argc];
-    for (int i = 0; i < argc; i++) {
-      if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
-        JS_ReportError(context_, "Failed to convert argument %d (%s) to jsval",
-                       i, argv[i].ToString().c_str());
-        delete js_args;
-        return return_value;
-      }
-    }
-  }
-
-  jsval rval;
-  JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
-                                       argc, js_args, &rval);
-  if (result) {
-    result = ConvertJSToNative(context_, return_value, rval, &return_value);
-    if (!result)
-      JS_ReportError(context_, "Failed to convert jsval (%s) to native",
-                     ConvertJSToChars(context_, rval));
-  }
-  return return_value;
-}
-
 Slot *JSScriptContext::NewJSFunctionSlotInternal(const Slot *prototype,
                                                  jsval function_val) {
   Slot *slot = new JSFunctionSlot(prototype, context_, function_val);
   // Put it here to make it possible for ConvertNativeSlotToJS to unwrap
   // a JSFunctionSlot.
   slot_js_map_[slot] = function_val;
-  // Add a reference to the function object to prevent it from being GC'ed.
-  JS_AddRoot(context_, &slot_js_map_[slot]);
   return slot;
 }
 
