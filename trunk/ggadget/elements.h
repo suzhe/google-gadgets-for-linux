@@ -19,13 +19,13 @@
 
 #include "common.h"
 
-namespace {
+namespace ggadget {
+
+namespace internal {
 
 class ElementsImpl;
 
-} // namespace <anonymous>
-
-namespace ggadget {
+} // namespace ggadget::internal
 
 class ElementInterface;
 class ElementFactoryInterface;
@@ -98,7 +98,7 @@ class Elements {
   bool RemoveElement(const ElementInterface *element);
 
  private:
-  ElementsImpl *impl_;
+  internal::ElementsImpl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(Elements);
 };
 

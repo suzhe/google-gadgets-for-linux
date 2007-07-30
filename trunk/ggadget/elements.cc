@@ -17,39 +17,23 @@
 #include <vector>
 #include <algorithm>
 #include "elements.h"
+#include "elements_impl.h"
 #include "element_interface.h"
 #include "element_factory_interface.h"
 #include "common.h"
 
-namespace {
+namespace ggadget {
 
-class ElementsImpl {
- public:
-  ElementsImpl(ggadget::ElementFactoryInterface *factory,
-               ggadget::ElementInterface *owner);
-  ~ElementsImpl();
-  bool Init();
-  int GetCount() const;
-  ggadget::ElementInterface *GetItem(int index);
-  const ggadget::ElementInterface *GetItem(int index) const;
-  ggadget::ElementInterface *AppendElement(const char *type);
-  ggadget::ElementInterface *InsertElement(
-      const char *type, const ggadget::ElementInterface *before);
-  bool RemoveElement(const ggadget::ElementInterface *element);
+namespace internal {
 
-  ggadget::ElementFactoryInterface *factory_;
-  ggadget::ElementInterface *owner_;
-  std::vector<ggadget::ElementInterface *> children_;
-};
-
-ElementsImpl::ElementsImpl(ggadget::ElementFactoryInterface *factory,
-                           ggadget::ElementInterface *owner)
+ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
+                           ElementInterface *owner)
     : factory_(factory), owner_(owner) {
   ASSERT(factory);
 }
 
 ElementsImpl::~ElementsImpl() {
-  for (std::vector<ggadget::ElementInterface *>::iterator ite =
+  for (std::vector<ElementInterface *>::iterator ite =
        children_.begin(); ite != children_.end(); ++ite)
     (*ite)->Release();
 }
@@ -62,39 +46,39 @@ int ElementsImpl::GetCount() const {
   return children_.size();
 }
 
-ggadget::ElementInterface *ElementsImpl::GetItem(int index) {
+ElementInterface *ElementsImpl::GetItem(int index) {
   if (index >= 0 && index < static_cast<int>(children_.size()))
     return children_[index];
   return NULL;
 }
 
-const ggadget::ElementInterface *ElementsImpl::GetItem(int index) const {
+const ElementInterface *ElementsImpl::GetItem(int index) const {
   if (index >= 0 && index < static_cast<int>(children_.size()))
     return children_[index];
   return NULL;
 }
 
-ggadget::ElementInterface *ElementsImpl::AppendElement(const char *type) {
-  ggadget::ElementInterface *e = factory_->CreateElement(type, owner_);
+ElementInterface *ElementsImpl::AppendElement(const char *type) {
+  ElementInterface *e = factory_->CreateElement(type, owner_);
   if (e == NULL)
     return NULL;
   children_.push_back(e);
   return e;
 }
 
-ggadget::ElementInterface *ElementsImpl::InsertElement(
-    const char *type, const ggadget::ElementInterface *before) {
-  ggadget::ElementInterface *e = factory_->CreateElement(type, owner_);
+ElementInterface *ElementsImpl::InsertElement(
+    const char *type, const ElementInterface *before) {
+  ElementInterface *e = factory_->CreateElement(type, owner_);
   if (e == NULL)
     return NULL;
-  std::vector<ggadget::ElementInterface *>::iterator ite = std::find(
+  std::vector<ElementInterface *>::iterator ite = std::find(
       children_.begin(), children_.end(), before);
   children_.insert(ite, e);
   return e;
 }
 
-bool ElementsImpl::RemoveElement(const ggadget::ElementInterface *element) {
-  std::vector<ggadget::ElementInterface *>::iterator ite = std::find(
+bool ElementsImpl::RemoveElement(const ElementInterface *element) {
+  std::vector<ElementInterface *>::iterator ite = std::find(
       children_.begin(), children_.end(), element);
   if (ite == children_.end())
     return false;
@@ -103,15 +87,11 @@ bool ElementsImpl::RemoveElement(const ggadget::ElementInterface *element) {
   return true;
 }
 
-} // namespace <anonymouse>
-
-#ifndef UNIT_TEST
-
-namespace ggadget {
+} // namespace internal
 
 Elements::Elements(ElementFactoryInterface *factory,
                    ElementInterface *owner) {
-  impl_ = new ElementsImpl(factory, owner);
+  impl_ = new internal::ElementsImpl(factory, owner);
 }
 
 Elements::~Elements() {
@@ -155,5 +135,3 @@ bool Elements::RemoveElement(const ElementInterface *element) {
 }
 
 } // namespace ggadget
-
-#endif // not UNIT_TEST
