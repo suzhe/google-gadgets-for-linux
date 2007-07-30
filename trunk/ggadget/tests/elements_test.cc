@@ -79,7 +79,6 @@ class ElementsTest : public testing::Test {
   virtual void SetUp() {
     factory = new MockedElementFactory();
     elements = new ggadget::Elements(factory, NULL);
-    elements->Init();
   }
 
   virtual void TearDown() {

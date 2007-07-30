@@ -38,10 +38,6 @@ ElementsImpl::~ElementsImpl() {
     (*ite)->Release();
 }
 
-bool ElementsImpl::Init() {
-  return true;
-}
-
 int ElementsImpl::GetCount() const {
   return children_.size();
 }
@@ -96,11 +92,6 @@ Elements::Elements(ElementFactoryInterface *factory,
 
 Elements::~Elements() {
   delete impl_;
-}
-
-bool Elements::Init() {
-  ASSERT(impl_);
-  return impl_ != NULL;
 }
 
 int Elements::GetCount() const {

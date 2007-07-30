@@ -39,9 +39,6 @@ class ElementFactory : public ElementFactoryInterface {
   ~ElementFactory();
 
  public:
-  bool Init();
-
- public:
   virtual ElementInterface *CreateElement(const char *type,
                                           ElementInterface *parent);
   virtual bool RegisterElementClass(

@@ -107,6 +107,5 @@ TEST_F(ElementFactoryTest, TestCreate) {
 
 int main(int argc, char *argv[]) {
   testing::ParseGUnitFlags(&argc, argv);
-  ggadget::ElementFactory::GetInstance()->Init();
   return RUN_ALL_TESTS();
 }

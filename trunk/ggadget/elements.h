@@ -43,12 +43,6 @@ class Elements {
   ~Elements();
 
  public:
-  /**
-   * Initialize the object.
-   * @return @c true if initialization succeeded, @c false if failed.
-   */
-  bool Init();
-
   /** Get the children count. */
   int GetCount() const;
 

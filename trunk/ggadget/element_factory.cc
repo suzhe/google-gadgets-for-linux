@@ -40,11 +40,6 @@ ElementFactory::~ElementFactory() {
   delete impl_;
 }
 
-bool ElementFactory::Init() {
-  ASSERT(impl_);
-  return impl_->Init();
-}
-
 ElementInterface *ElementFactory::CreateElement(const char *type,
                                                 ElementInterface *parent) {
   ASSERT(impl_);
@@ -58,11 +53,6 @@ bool ElementFactory::RegisterElementClass(
 }
 
 namespace internal {
-
-bool ElementFactoryImpl::Init() {
-  ASSERT(creators_.size() == 0);
-  return true;
-}
 
 ElementInterface *ElementFactoryImpl::CreateElement(
     const char *type, ElementInterface *parent) {

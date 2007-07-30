@@ -30,7 +30,6 @@ class ElementsImpl {
  public:
   ElementsImpl(ElementFactoryInterface *factory, ElementInterface *owner);
   ~ElementsImpl();
-  bool Init();
   int GetCount() const;
   ElementInterface *GetItem(int index);
   const ElementInterface *GetItem(int index) const;

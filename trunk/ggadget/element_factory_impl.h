@@ -31,7 +31,6 @@ namespace internal {
  */
 class ElementFactoryImpl {
  public:
-  bool Init();
   ElementInterface *CreateElement(const char *type,
                                   ElementInterface *parent);
   bool RegisterElementClass(
