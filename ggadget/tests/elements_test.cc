@@ -16,7 +16,8 @@
 
 #include <cstdio>
 #include "testing/gunit.h"
-#include "ggadget/elements.cc"
+#include "ggadget/elements_impl.h"
+#include "ggadget/elements.h"
 #include "ggadget/element_interface.h"
 #include "ggadget/element_factory_interface.h"
 
@@ -83,7 +84,7 @@ class ElementsImplTest : public testing::Test {
  protected:
   virtual void SetUp() {
     factory = new MockedElementFactory();
-    elements = new ElementsImpl(factory, NULL);
+    elements = new ggadget::Elements(factory, NULL);
     elements->Init();
   }
 
@@ -94,7 +95,7 @@ class ElementsImplTest : public testing::Test {
   }
 
   MockedElementFactory *factory;
-  ElementsImpl *elements;
+  ggadget::Elements *elements;
 };
 
 TEST_F(ElementsImplTest, TestCreate) {
