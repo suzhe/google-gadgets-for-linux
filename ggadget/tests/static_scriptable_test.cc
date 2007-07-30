@@ -65,7 +65,7 @@ TEST(static_scriptable, TestPropertyInfo) {
       // Here the result of new SignalSlot leaks.  Ignore it.
       Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
     { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
-    { "IntOrStringProperty", -8, false, Variant(Variant::TYPE_INT_OR_STRING) },
+    { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
   };
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
@@ -126,10 +126,10 @@ TEST(static_scriptable, TestPropertyAndMethod) {
   ASSERT_TRUE(scriptable->SetProperty(-7, Variant(54321)));
   ASSERT_EQ(Variant(54321), scriptable->GetProperty(-7));
 
-  // -8: the "IntOrStringProperty" property.
-  ASSERT_EQ(Variant(CreateIntOrString(0)), scriptable->GetProperty(-8));
-  ASSERT_TRUE(scriptable->SetProperty(-8, Variant(CreateIntOrString("abcd"))));
-  ASSERT_EQ(Variant(CreateIntOrString("abcd")), scriptable->GetProperty(-8));
+  // -8: the "VariantProperty" property.
+  ASSERT_EQ(Variant(0), scriptable->GetProperty(-8));
+  ASSERT_TRUE(scriptable->SetProperty(-8, Variant(1234)));
+  ASSERT_EQ(Variant(1234), scriptable->GetProperty(-8));
   delete scriptable;
 }
 
@@ -181,7 +181,7 @@ TEST(static_scriptable, TestPropertyInfo2) {
       // Here the result of new SignalSlot leaks.  Ignore it.
       Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
     { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
-    { "IntOrStringProperty", -8, false, Variant(Variant::TYPE_INT_OR_STRING) },
+    { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
 
     // -9 ~ -14 are defined in TestScriptable2 itself.
     { "TestMethod", -9, true,

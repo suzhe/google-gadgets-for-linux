@@ -35,7 +35,7 @@ TestScriptable1::TestScriptable1()
     : static_scriptable_(new StaticScriptable()),
       double_property_(0),
       int_property_(0),
-      int_or_string_property_(CreateIntOrString(0)) {
+      variant_property_(0) {
   g_buffer.clear();
   RegisterMethod("TestMethodVoid0",
                  NewSlot(this, &TestScriptable1::TestMethodVoid0));
@@ -52,7 +52,7 @@ TestScriptable1::TestScriptable1()
   RegisterSignal(kOnDeleteSignal, &ondelete_signal_);
   RegisterSimpleProperty("IntSimple", &int_property_);
   RegisterConstant("Fixed", 123456789);
-  RegisterSimpleProperty("IntOrStringProperty", &int_or_string_property_);
+  RegisterSimpleProperty("VariantProperty", &variant_property_);
 
   // Register 10 integer constants.
   static char names_arr[20][20]; // Ugly...

@@ -49,8 +49,7 @@ Slot *TestClass::TestSlotMethod(int i) {
                                    const std::string &, std::string, char,
                                    unsigned char, short, unsigned short>
                                   (TestBoolFunctor9());
-    case 15: return NewSlot(&TestIntOrString);
-    case 16: return NewSlot(&TestIntOrString);
+    case 15: return NewSlot(&TestVariant);
     default: return NULL;
   }
 }
@@ -202,13 +201,9 @@ TestData testdata[] = {
                              Variant(111),
                            },
     Variant(true), "TestBoolFunctor9: 100 0 d eee fff X Y -222 111" },
-  { 1, Variant::TYPE_INT_OR_STRING, { Variant::TYPE_INT_OR_STRING },
-    { Variant(CreateIntOrString(1234)) }, Variant(CreateIntOrString("String")),
-    "TestIntOrString: 1234" },
-  { 1, Variant::TYPE_INT_OR_STRING, { Variant::TYPE_INT_OR_STRING },
-    { Variant(CreateIntOrString("Test")) }, Variant(CreateIntOrString(4321)),
-    "TestIntOrString: Test" },
-
+  { 1, Variant::TYPE_VARIANT, { Variant::TYPE_VARIANT },
+    { Variant(Variant::TYPE_VARIANT) }, Variant(Variant::TYPE_VARIANT),
+    "VARIANT" }
 };
 
 const int kNumTestData = arraysize(testdata);
