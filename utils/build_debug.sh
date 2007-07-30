@@ -22,7 +22,7 @@ srcdir=`pwd`
 mkdir -p build/debug
 cd build/debug
 cmake -DCMAKE_BUILD_TYPE=Debug "$srcdir"
-make
+make "$@"
 if ! ctest . ; then
   cat Testing/Temporary/LastTest.log
 fi
