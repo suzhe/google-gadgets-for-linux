@@ -23,37 +23,7 @@
 
 namespace ggadget {
 
-bool IntOrString::operator==(IntOrString another) const {
-  if (type != another.type)
-    return false;
-
-  switch (type) {
-    case TYPE_INT:
-      return v.int_value == another.v.int_value;
-    case TYPE_STRING:
-      return v.string_value == another.v.string_value ||
-             strcmp(v.string_value, another.v.string_value) == 0;
-    default:
-      return false;
-  }
-}
-
-// Used in unittests.
-std::string IntOrString::ToString() const {
-  switch (type) {
-    case IntOrString::TYPE_INT: {
-      char buffer[32];
-      sprintf(buffer, "INT: %d", v.int_value);
-      return std::string(buffer);
-    }
-    case IntOrString::TYPE_STRING:
-      return std::string("STRING:") + v.string_value;
-    default:
-      return "INVALID";
-  }
-}
-
-bool Variant::operator==(Variant another) const {
+bool Variant::operator==(const Variant &another) const {
   if (type != another.type)
     return false;
 
@@ -76,8 +46,8 @@ bool Variant::operator==(Variant another) const {
       Slot *slot2 = another.v.slot_value;
       return slot1 == slot2 || (slot1 && slot2 && *slot1 == *slot2);
     }
-    case TYPE_INT_OR_STRING:
-      return v.int_or_string_value == another.v.int_or_string_value; 
+    case TYPE_VARIANT:
+      return true;
     default:
       return false;
   }
@@ -105,8 +75,8 @@ std::string Variant::ToString() const {
     case Variant::TYPE_SLOT:
       sprintf(buffer, "SLOT:%p", v.slot_value);
       return std::string(buffer);
-    case Variant::TYPE_INT_OR_STRING:
-      return std::string("INT_OR_STRING:") + v.int_or_string_value.ToString();
+    case Variant::TYPE_VARIANT:
+      return std::string("VARIANT");
     default:
       return std::string("INVALID");
   }

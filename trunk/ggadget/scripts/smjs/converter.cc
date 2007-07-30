@@ -154,48 +154,6 @@ static JSBool ConvertJSToSlot(JSContext *cx, Variant prototype,
   return result;
 }
 
-static JSBool ConvertJSToIntOrString(JSContext *cx, jsval js_val,
-                                     Variant *native_val) {
-  Variant temp;
-  if (ConvertJSToNativeInt(cx, js_val, &temp)) {
-    *native_val = Variant(
-        CreateIntOrString(static_cast<int>(temp.v.int64_value)));
-    return JS_TRUE;
-  }
-
-  if (ConvertJSToNativeString(cx, js_val, &temp)) {
-    *native_val = Variant(CreateIntOrString(temp.v.string_value));
-    return JS_TRUE;
-  }
-
-  return JS_FALSE;
-}
-
-typedef JSBool (*ConvertJSToNativeFunc)(JSContext *cx, jsval js_val,
-                                        Variant *native_val);
-static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
-  ConvertJSToNativeVoid,
-  ConvertJSToNativeBool,
-  ConvertJSToNativeInt,
-  ConvertJSToNativeDouble,
-  ConvertJSToNativeString,
-  ConvertJSToScriptable,
-  NULL, // ConvertJSToSlot is special because it needs the prototype argument.
-  ConvertJSToIntOrString,
-};
-
-JSBool ConvertJSToNative(JSContext *cx, Variant prototype,
-                         jsval js_val, Variant *native_val) {
-  if (prototype.type == Variant::TYPE_SLOT)
-    return ConvertJSToSlot(cx, prototype, js_val, native_val);
-
-  if (prototype.type >= Variant::TYPE_VOID &&
-      prototype.type <= Variant::TYPE_INT_OR_STRING)
-    return kConvertJSToNativeFuncs[prototype.type](cx, js_val, native_val);
-
-  return JS_FALSE;
-}
-
 JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
                                 Variant *native_val) {
   if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val))
@@ -210,6 +168,31 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
     return ConvertJSToNativeString(cx, js_val, native_val);
   if (JSVAL_IS_OBJECT(js_val))
     return ConvertJSToScriptable(cx, js_val, native_val);
+  return JS_FALSE;
+}
+
+typedef JSBool (*ConvertJSToNativeFunc)(JSContext *cx, jsval js_val,
+                                        Variant *native_val);
+static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
+  ConvertJSToNativeVoid,
+  ConvertJSToNativeBool,
+  ConvertJSToNativeInt,
+  ConvertJSToNativeDouble,
+  ConvertJSToNativeString,
+  ConvertJSToScriptable,
+  NULL, // ConvertJSToSlot is special because it needs the prototype argument.
+  ConvertJSToNativeVariant,
+};
+
+JSBool ConvertJSToNative(JSContext *cx, Variant prototype,
+                         jsval js_val, Variant *native_val) {
+  if (prototype.type == Variant::TYPE_SLOT)
+    return ConvertJSToSlot(cx, prototype, js_val, native_val);
+
+  if (prototype.type >= Variant::TYPE_VOID &&
+      prototype.type <= Variant::TYPE_VARIANT)
+    return kConvertJSToNativeFuncs[prototype.type](cx, js_val, native_val);
+
   return JS_FALSE;
 }
 
@@ -290,16 +273,6 @@ static JSBool ConvertNativeToJSFunction(JSContext *cx, Variant native_val,
   return JS_TRUE;
 }
 
-static JSBool ConvertNativeToJSIntOrString(JSContext *cx, Variant native_val,
-                                           jsval *js_val) {
-  if (native_val.v.int_or_string_value.type == IntOrString::TYPE_STRING)
-    return ConvertNativeToJSString(cx,
-        Variant(native_val.v.int_or_string_value.v.string_value), js_val);
-  else
-    return ConvertNativeToJSInt(cx,
-        Variant(native_val.v.int_or_string_value.v.int_value), js_val);
-}
-
 typedef JSBool (*ConvertNativeToJSFunc)(JSContext *cx, Variant native_val,
                                         jsval *js_val);
 static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
@@ -310,7 +283,7 @@ static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
   ConvertNativeToJSString,
   ConvertNativeToJSObject,
   ConvertNativeToJSFunction,
-  ConvertNativeToJSIntOrString,
+  ConvertNativeToJSVoid,        /* Treat TYPE_VARIANT specially */
 };
 
 JSBool ConvertNativeToJS(JSContext *cx, Variant native_val, jsval *js_val) {

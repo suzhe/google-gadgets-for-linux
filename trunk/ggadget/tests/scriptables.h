@@ -75,7 +75,7 @@ class TestScriptable1 : public ScriptableInterface {
 
   double double_property_;
   int int_property_;
-  IntOrString int_or_string_property_;
+  Variant variant_property_;
 };
 
 typedef Signal1<std::string, const std::string &> OnLunchSignal;

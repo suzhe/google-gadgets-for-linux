@@ -50,14 +50,9 @@ inline bool TestBoolFunction9(int p1, bool p2, const char *p3,
   return true;
 }
 
-inline IntOrString TestIntOrString(IntOrString p) {
-  if (p.type == IntOrString::TYPE_INT) {
-    sprintf(result, "TestIntOrString: %d", p.v.int_value);
-    return CreateIntOrString("String");
-  } else {
-    sprintf(result, "TestIntOrString: %s", p.v.string_value);
-    return CreateIntOrString(4321);
-  }
+inline Variant TestVariant(Variant p) {
+  sprintf(result, "%s", p.ToString().c_str());
+  return p;
 }
 
 struct TestVoidFunctor0 {

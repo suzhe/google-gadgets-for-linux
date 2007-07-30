@@ -27,58 +27,6 @@ class ScriptableInterface;
 class Slot;
 
 /**
- * A value that can be a string or a integer.
- * Used to represent some properties in Gadget API, such as
- * @c basicElement.width.
- */
-struct IntOrString {
-  enum Type {
-    TYPE_INT,
-    TYPE_STRING,
-  };
-
-  Type type;
-  union {
-    int int_value;
-    const char *string_value;
-  } v;
-
-  bool operator==(IntOrString another) const;
-  std::string ToString() const;
-};
-
-/**
- * Construct a @c IntOrString with a @c int value.
- * Because @c IntOrString is used in a union in @c Variant, it is not allowed
- * to have constructors.
- */
-inline IntOrString CreateIntOrString(int value) {
-  IntOrString v;
-  v.type = IntOrString::TYPE_INT;
-  v.v.int_value = value;
-  return v;
-}
-
-/**
- * Construct a @c IntOrString with a <code>const char *</code> value.
- * Because @c IntOrString is used in a union in @c Variant, it is not allowed
- * to have constructors.
- */
-inline IntOrString CreateIntOrString(const char *value) {
-  IntOrString v;
-  v.type = IntOrString::TYPE_STRING;
-  v.v.string_value = value;
-  return v;
-}
-
-/**
- * Print a @c Variant into an output stream, only for debugging and testing.
- */
-inline std::ostream &operator<<(std::ostream &out, IntOrString v) {
-  return out << v.ToString();
-}
-
-/**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
  */
@@ -102,7 +50,7 @@ struct Variant {
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
     /** @c StringOrInt type */
-    TYPE_INT_OR_STRING,
+    TYPE_VARIANT,
   };
 
   /**
@@ -223,18 +171,10 @@ struct Variant {
   }
 
   /**
-   * Construct a @c Variant with a @c StringOrInt value.
-   * The type of the constructed @c Variant is @c TYPE_STRING_OR_INT.
-   */
-  explicit Variant(IntOrString value) : type(TYPE_INT_OR_STRING) {
-    v.int_or_string_value = value;
-  }
-
-  /**
    * For testing convenience.
    * Not suggested to use in production code.
    */
-  bool operator==(Variant another) const;
+  bool operator==(const Variant &another) const;
 
   std::string ToString() const;
 
@@ -253,14 +193,13 @@ struct Variant {
     const char *string_value;
     ScriptableInterface *scriptable_value;
     Slot *slot_value;
-    IntOrString int_or_string_value;
   } v;
 };
 
 /**
  * Print a @c Variant into an output stream, only for debugging and testing.
  */
-inline std::ostream &operator<<(std::ostream &out, Variant v) {
+inline std::ostream &operator<<(std::ostream &out, const Variant &v) {
   return out << v.ToString();
 }
 
@@ -305,7 +244,7 @@ SPECIALIZE_VARIANT_TYPE(const char *, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(const std::string &, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(std::string, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
-SPECIALIZE_VARIANT_TYPE(IntOrString, TYPE_INT_OR_STRING)
+SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
 
 /**
  * Get the value of a @c Variant.
@@ -315,7 +254,7 @@ SPECIALIZE_VARIANT_TYPE(IntOrString, TYPE_INT_OR_STRING)
  */
 template <typename T>
 struct VariantValue {
-  T operator()(Variant v) {
+  T operator()(const Variant &v) {
     ASSERT(v.type == Variant::TYPE_SCRIPTABLE);
     return down_cast<T>(v.v.scriptable_value);
   }
@@ -328,7 +267,7 @@ struct VariantValue {
 #define SPECIALIZE_VARIANT_VALUE(c_type, variant_field) \
 template <>                                             \
 struct VariantValue<c_type> {                           \
-  c_type operator()(Variant v) {                        \
+  c_type operator()(const Variant &v) {                 \
     ASSERT(v.type == VariantType<c_type>::type);        \
     return static_cast<c_type>(v.v.variant_field);      \
   }                                                     \
@@ -351,7 +290,6 @@ SPECIALIZE_VARIANT_VALUE(float, double_value)
 SPECIALIZE_VARIANT_VALUE(double, double_value)
 SPECIALIZE_VARIANT_VALUE(const char *, string_value)
 SPECIALIZE_VARIANT_VALUE(Slot *, slot_value)
-SPECIALIZE_VARIANT_VALUE(IntOrString, int_or_string_value)
 
 /**
  * Get the value of a @c Variant.
@@ -359,7 +297,7 @@ SPECIALIZE_VARIANT_VALUE(IntOrString, int_or_string_value)
  */
 template <>
 struct VariantValue<std::string> {
-  std::string operator()(Variant v) {
+  std::string operator()(const Variant &v) {
     ASSERT(v.type == Variant::TYPE_STRING);
     if (v.v.string_value) return std::string(v.v.string_value);
     return std::string();
@@ -372,10 +310,21 @@ struct VariantValue<std::string> {
  */
 template <>
 struct VariantValue<const std::string &> {
-  std::string operator()(Variant v) {
+  std::string operator()(const Variant &v) {
     ASSERT(v.type == Variant::TYPE_STRING);
     if (v.v.string_value) return std::string(v.v.string_value);
     return std::string();
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for <code>Variant</code> type itself.
+ */
+template <>
+struct VariantValue<Variant> {
+  const Variant& operator()(const Variant &v) {
+    return v;
   }
 };
 
