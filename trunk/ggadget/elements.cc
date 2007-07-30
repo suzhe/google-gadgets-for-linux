@@ -90,8 +90,8 @@ bool ElementsImpl::RemoveElement(const ElementInterface *element) {
 } // namespace internal
 
 Elements::Elements(ElementFactoryInterface *factory,
-                   ElementInterface *owner) {
-  impl_ = new internal::ElementsImpl(factory, owner);
+                   ElementInterface *owner)
+    : impl_(new internal::ElementsImpl(factory, owner)) {
 }
 
 Elements::~Elements() {

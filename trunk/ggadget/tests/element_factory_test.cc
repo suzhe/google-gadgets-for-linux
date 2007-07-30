@@ -1,0 +1,112 @@
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include "testing/gunit.h"
+#include "ggadget/element_factory_impl.h"
+#include "ggadget/element_factory.h"
+#include "mocked_element.h"
+
+class Muffin : public MockedElement {
+ public:
+  Muffin(ggadget::ElementInterface *parent) : MockedElement(parent) {
+  }
+
+  virtual ~Muffin() {
+  }
+
+ public:
+  virtual const char *type() const {
+    return "muffin";
+  }
+
+ public:
+  static ggadget::ElementInterface *CreateInstance(
+      ggadget::ElementInterface *parent) {
+    return new Muffin(parent);
+  }
+};
+
+class Pie : public MockedElement {
+ public:
+  Pie(ggadget::ElementInterface *parent) : MockedElement(parent) {
+  }
+
+  virtual ~Pie() {
+  }
+
+ public:
+  virtual const char *type() const {
+    return "pie";
+  }
+
+ public:
+  static ggadget::ElementInterface *CreateInstance(
+      ggadget::ElementInterface *parent) {
+    return new Pie(parent);
+  }
+};
+
+class ElementFactoryTest : public testing::Test {
+ protected:
+  virtual void SetUp() {
+  }
+
+  virtual void TearDown() {
+  }
+};
+
+TEST_F(ElementFactoryTest, TestSingleton) {
+  ggadget::ElementFactoryInterface *inter1 =
+      ggadget::ElementFactory::GetInstance();
+  ggadget::ElementFactoryInterface *inter2 =
+      ggadget::ElementFactory::GetInstance();
+  ASSERT_TRUE(inter1 == inter2);
+}
+
+TEST_F(ElementFactoryTest, TestRegister) {
+  ggadget::internal::ElementFactoryImpl impl;
+  ASSERT_TRUE(impl.RegisterElementClass("muffin", Muffin::CreateInstance));
+  ASSERT_FALSE(impl.RegisterElementClass("muffin", Muffin::CreateInstance));
+  ASSERT_TRUE(impl.RegisterElementClass("pie", Pie::CreateInstance));
+  ASSERT_FALSE(impl.RegisterElementClass("pie", Pie::CreateInstance));
+}
+
+TEST_F(ElementFactoryTest, TestCreate) {
+  ggadget::ElementFactoryInterface *factory =
+      ggadget::ElementFactory::GetInstance();
+  factory->RegisterElementClass("muffin", Muffin::CreateInstance);
+  factory->RegisterElementClass("pie", Pie::CreateInstance);
+
+  ggadget::ElementInterface *e1 = factory->CreateElement("muffin", NULL);
+  ASSERT_TRUE(e1 != NULL);
+  ASSERT_STREQ(e1->type(), "muffin");
+
+  ggadget::ElementInterface *e2 = factory->CreateElement("pie", e1);
+  ASSERT_TRUE(e2 != NULL);
+  ASSERT_STREQ(e2->type(), "pie");
+
+  ggadget::ElementInterface *e3 = factory->CreateElement("bread", e2);
+  ASSERT_TRUE(e3 == NULL);
+
+  e1->Release();
+  e2->Release();
+}
+
+int main(int argc, char *argv[]) {
+  testing::ParseGUnitFlags(&argc, argv);
+  ggadget::ElementFactory::GetInstance()->Init();
+  return RUN_ALL_TESTS();
+}

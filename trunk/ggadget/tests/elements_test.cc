@@ -20,17 +20,18 @@
 #include "ggadget/elements.h"
 #include "ggadget/element_interface.h"
 #include "ggadget/element_factory_interface.h"
+#include "mocked_element.h"
 
 // The total count of elements.
 int count = 0;
 
-class Muffin : public ggadget::ElementInterface {
+class Muffin : public MockedElement {
  public:
-  Muffin(ggadget::ElementInterface *parent) {
+  Muffin(ggadget::ElementInterface *parent) : MockedElement(parent) {
     ++count;
   }
 
-  ~Muffin() {
+  virtual ~Muffin() {
     --count;
   }
 
@@ -38,29 +39,21 @@ class Muffin : public ggadget::ElementInterface {
   virtual const char *type() const {
     return "muffin";
   }
-
-  virtual void Release() {
-    delete this;
-  }
 };
 
-class Pie : public ggadget::ElementInterface {
+class Pie : public MockedElement {
  public:
-  Pie(ggadget::ElementInterface *parent) {
+  Pie(ggadget::ElementInterface *parent) : MockedElement(parent) {
     ++count;
   }
 
-  ~Pie() {
+  virtual ~Pie() {
     --count;
   }
 
  public:
   virtual const char *type() const {
     return "pie";
-  }
-
-  virtual void Release() {
-    delete this;
   }
 };
 
@@ -74,13 +67,14 @@ class MockedElementFactory : public ggadget::ElementFactoryInterface {
     return NULL;
   }
 
-  virtual bool RegisterElementClass(const char *type,
-                                    ggadget::ElementInterface *(*creator)()) {
+  virtual bool RegisterElementClass(
+      const char *type,
+      ggadget::ElementInterface *(*creator)(ggadget::ElementInterface *)) {
     return true;
   }
 };
 
-class ElementsImplTest : public testing::Test {
+class ElementsTest : public testing::Test {
  protected:
   virtual void SetUp() {
     factory = new MockedElementFactory();
@@ -98,7 +92,7 @@ class ElementsImplTest : public testing::Test {
   ggadget::Elements *elements;
 };
 
-TEST_F(ElementsImplTest, TestCreate) {
+TEST_F(ElementsTest, TestCreate) {
   ggadget::ElementInterface *e1 = elements->AppendElement("muffin");
   ASSERT_TRUE(e1 != NULL);
   ggadget::ElementInterface *e2 = elements->AppendElement("pie");
@@ -107,7 +101,7 @@ TEST_F(ElementsImplTest, TestCreate) {
   ASSERT_TRUE(e3 == NULL);
 }
 
-TEST_F(ElementsImplTest, TestOrder) {
+TEST_F(ElementsTest, TestOrder) {
   ggadget::ElementInterface *e1 = elements->AppendElement("muffin");
   ggadget::ElementInterface *e2 = elements->AppendElement("pie");
   ggadget::ElementInterface *e3 = elements->AppendElement("pie");
@@ -118,7 +112,7 @@ TEST_F(ElementsImplTest, TestOrder) {
   ASSERT_TRUE(NULL == elements->GetItem(3));
 }
 
-TEST_F(ElementsImplTest, TestInsert) {
+TEST_F(ElementsTest, TestInsert) {
   ggadget::ElementInterface *e1 = elements->InsertElement("muffin", NULL);
   ggadget::ElementInterface *e2 = elements->InsertElement("pie", e1);
   ggadget::ElementInterface *e3 = elements->InsertElement("pie", e2);
@@ -128,7 +122,7 @@ TEST_F(ElementsImplTest, TestInsert) {
   ASSERT_TRUE(e3 == elements->GetItem(0));
 }
 
-TEST_F(ElementsImplTest, TestRemove) {
+TEST_F(ElementsTest, TestRemove) {
   ggadget::ElementInterface *e1 = elements->AppendElement("muffin");
   ggadget::ElementInterface *e2 = elements->AppendElement("pie");
   ggadget::ElementInterface *e3 = elements->AppendElement("pie");

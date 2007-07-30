@@ -17,27 +17,19 @@
 ADD_DEFINITIONS(-DUNIT_TEST)
 
 MACRO(UNIT_TEST TEST_NAME)
+  IF(${ARGC} GREATER 1)
+    SET(FILES ${ARGV})
+    LIST(REMOVE_AT FILES 0)
+    ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc ${FILES})
+  ELSE(${ARGC} GREATER 1)
+    ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  ENDIF(${ARGC} GREATER 1)
   TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget)
   TEST_WRAPPER(${TEST_NAME} TRUE)
 ENDMACRO(UNIT_TEST TEST_NAME)
 
-ADD_EXECUTABLE(slot_test
-  slot_test.cc
-  slots.cc
-)
-UNIT_TEST(slot_test)
-
-ADD_EXECUTABLE(signal_test
-  signal_test.cc
-  slots.cc
-)
-UNIT_TEST(signal_test)
-
-ADD_EXECUTABLE(static_scriptable_test
-  static_scriptable_test.cc
-  scriptables.cc
-)
-UNIT_TEST(static_scriptable_test)
-
-ADD_EXECUTABLE(elements_test elements_test.cc)
-UNIT_TEST(elements_test)
+UNIT_TEST(slot_test slots.cc)
+UNIT_TEST(signal_test slots.cc)
+UNIT_TEST(static_scriptable_test scriptables.cc)
+UNIT_TEST(elements_test mocked_element.h)
+UNIT_TEST(element_factory_test mocked_element.h)
