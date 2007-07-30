@@ -24,11 +24,6 @@
  */
 class ViewInterface : public ScriptableInterface {
  public:
-  /** 
-   * Initializes a view.
-   * @param xml XML document specifying the view to generate.
-   */
-  virtual bool Init() = 0;
 };
 
 #endif // GGADGET_VIEW_INTERFACE_H__

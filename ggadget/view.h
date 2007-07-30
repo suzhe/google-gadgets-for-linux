@@ -24,11 +24,6 @@
  */
 class View : public ViewInterface {
  public:
-  /** 
-   * @see ViewInterface::Init
-   */
-  virtual bool Init();
-
  private: 
   View(const View &view);
 };

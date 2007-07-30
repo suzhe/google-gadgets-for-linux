@@ -17,7 +17,3 @@
 #include "view.h"
 //#include "gadget.h"
 //#include "filemanager.h"
-
-bool View::Init() {
-  return true;
-}
