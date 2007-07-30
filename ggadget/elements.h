@@ -25,7 +25,7 @@ namespace internal {
 
 class ElementsImpl;
 
-} // namespace ggadget::internal
+} // namespace internal
 
 class ElementInterface;
 class ElementFactoryInterface;

@@ -24,6 +24,7 @@ SET(SRCS
   static_scriptable.cc
   variant.cc
   elements.cc
+  element_factory.cc
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

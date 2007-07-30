@@ -14,38 +14,35 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_ELEMENTS_IMPL_H__
-#define GGADGET_ELEMENTS_IMPL_H__
+#ifndef GGADGET_ELEMENT_FACTORY_IMPL_H__
+#define GGADGET_ELEMENT_FACTORY_IMPL_H__
 
-#include <vector>
+#include <map>
+#include <string>
 
 namespace ggadget {
 
-class ElementFactoryInterface;
 class ElementInterface;
 
 namespace internal {
 
-class ElementsImpl {
+/**
+ * Interface for creating an Element in the Gadget API.
+ */
+class ElementFactoryImpl {
  public:
-  ElementsImpl(ElementFactoryInterface *factory, ElementInterface *owner);
-  ~ElementsImpl();
   bool Init();
-  int GetCount() const;
-  ElementInterface *GetItem(int index);
-  const ElementInterface *GetItem(int index) const;
-  ElementInterface *AppendElement(const char *type);
-  ElementInterface *InsertElement(const char *type,
-                                  const ElementInterface *before);
-  bool RemoveElement(const ElementInterface *element);
+  ElementInterface *CreateElement(const char *type,
+                                  ElementInterface *parent);
+  bool RegisterElementClass(
+      const char *type,
+      ElementInterface *(*creator)(ElementInterface *));
 
-  ElementFactoryInterface *factory_;
-  ElementInterface *owner_;
-  std::vector<ElementInterface *> children_;
+  std::map<std::string, ElementInterface *(*)(ElementInterface *)> creators_;
 };
 
 } // namespace internal
 
 } // namespace ggadget
 
-#endif // GGADGET_ELEMENTS_IMPL_H__
+#endif // GGADGET_ELEMENT_FACTORY_IMPL_H__

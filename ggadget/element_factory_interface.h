@@ -45,8 +45,8 @@ class ElementFactoryInterface {
    * @return @c true if registered successfully, or @c false if the specified
    *     type already exists.
    */
-  virtual bool RegisterElementClass(const char *type,
-                                    ElementInterface *(*creator)()) = 0;
+  virtual bool RegisterElementClass(
+      const char *type, ElementInterface *(*creator)(ElementInterface *)) = 0;
 };
 
 } // namespace ggadget
