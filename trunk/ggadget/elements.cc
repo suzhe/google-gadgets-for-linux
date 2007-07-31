@@ -54,8 +54,9 @@ const ElementInterface *ElementsImpl::GetItem(int index) const {
   return NULL;
 }
 
-ElementInterface *ElementsImpl::AppendElement(const char *type) {
-  ElementInterface *e = factory_->CreateElement(type, owner_);
+ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
+                                              const char *name) {
+  ElementInterface *e = factory_->CreateElement(tag_name, owner_, name);
   if (e == NULL)
     return NULL;
   children_.push_back(e);
@@ -63,8 +64,8 @@ ElementInterface *ElementsImpl::AppendElement(const char *type) {
 }
 
 ElementInterface *ElementsImpl::InsertElement(
-    const char *type, const ElementInterface *before) {
-  ElementInterface *e = factory_->CreateElement(type, owner_);
+    const char *tag_name, const ElementInterface *before, const char *name) {
+  ElementInterface *e = factory_->CreateElement(tag_name, owner_, name);
   if (e == NULL)
     return NULL;
   std::vector<ElementInterface *>::iterator ite = std::find(
@@ -73,7 +74,7 @@ ElementInterface *ElementsImpl::InsertElement(
   return e;
 }
 
-bool ElementsImpl::RemoveElement(const ElementInterface *element) {
+bool ElementsImpl::RemoveElement(ElementInterface *element) {
   std::vector<ElementInterface *>::iterator ite = std::find(
       children_.begin(), children_.end(), element);
   if (ite == children_.end())
@@ -109,18 +110,20 @@ const ElementInterface *Elements::GetItem(int index) const {
   return impl_->GetItem(index);
 }
 
-ElementInterface *Elements::AppendElement(const char *type) {
+ElementInterface *Elements::AppendElement(const char *tag_name,
+                                          const char *name) {
   ASSERT(impl_);
-  return impl_->AppendElement(type);
+  return impl_->AppendElement(tag_name, name);
 }
 
-ElementInterface *Elements::InsertElement(const char *type,
-                                          const ElementInterface *before) {
+ElementInterface *Elements::InsertElement(const char *tag_name,
+                                          const ElementInterface *before,
+                                          const char *name) {
   ASSERT(impl_);
-  return impl_->InsertElement(type, before);
+  return impl_->InsertElement(tag_name, before, name);
 }
 
-bool Elements::RemoveElement(const ElementInterface *element) {
+bool Elements::RemoveElement(ElementInterface *element) {
   ASSERT(impl_);
   return impl_->RemoveElement(element);
 }

@@ -40,38 +40,41 @@ ElementFactory::~ElementFactory() {
   delete impl_;
 }
 
-ElementInterface *ElementFactory::CreateElement(const char *type,
-                                                ElementInterface *parent) {
+ElementInterface *ElementFactory::CreateElement(const char *tag_name,
+                                                ElementInterface *parent,
+                                                const char *name) {
   ASSERT(impl_);
-  return impl_->CreateElement(type, parent);
+  return impl_->CreateElement(tag_name, parent, name);
 }
 
 bool ElementFactory::RegisterElementClass(
-    const char *type, ElementInterface *(*creator)(ElementInterface *)) {
+    const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                       const char *)) {
   ASSERT(impl_);
-  return impl_->RegisterElementClass(type, creator);
+  return impl_->RegisterElementClass(tag_name, creator);
 }
 
 namespace internal {
 
 ElementInterface *ElementFactoryImpl::CreateElement(
-    const char *type, ElementInterface *parent) {
+    const char *tag_name, ElementInterface *parent, const char *name) {
   std::map<std::string,
-      ElementInterface *(*)(ElementInterface *)>::iterator ite =
-      creators_.find(type);
+      ElementInterface *(*)(ElementInterface *, const char *)>::iterator ite =
+      creators_.find(tag_name);
   if (ite == creators_.end())
     return NULL;
-  return ite->second(parent);
+  return ite->second(parent, name);
 }
 
 bool ElementFactoryImpl::RegisterElementClass(
-    const char *type, ElementInterface *(*creator)(ElementInterface *)) {
+    const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                       const char *)) {
   std::map<std::string,
-      ElementInterface *(*)(ElementInterface *)>::iterator ite =
-      creators_.find(type);
+      ElementInterface *(*)(ElementInterface *, const char *)>::iterator ite =
+      creators_.find(tag_name);
   if (ite != creators_.end())
     return false;
-  creators_[type] = creator;
+  creators_[tag_name] = creator;
   return true;
 }
 

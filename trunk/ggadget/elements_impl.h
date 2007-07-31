@@ -33,10 +33,11 @@ class ElementsImpl {
   int GetCount() const;
   ElementInterface *GetItem(int index);
   const ElementInterface *GetItem(int index) const;
-  ElementInterface *AppendElement(const char *type);
-  ElementInterface *InsertElement(const char *type,
-                                  const ElementInterface *before);
-  bool RemoveElement(const ElementInterface *element);
+  ElementInterface *AppendElement(const char *tag_name, const char *name);
+  ElementInterface *InsertElement(const char *tag_name,
+                                  const ElementInterface *before,
+                                  const char *name);
+  bool RemoveElement(ElementInterface *element);
 
   ElementFactoryInterface *factory_;
   ElementInterface *owner_;

@@ -34,7 +34,7 @@ class Muffin : public MockedElement {
 
  public:
   static ggadget::ElementInterface *CreateInstance(
-      ggadget::ElementInterface *parent) {
+      ggadget::ElementInterface *parent, const char *name) {
     return new Muffin(parent);
   }
 };
@@ -54,7 +54,7 @@ class Pie : public MockedElement {
 
  public:
   static ggadget::ElementInterface *CreateInstance(
-      ggadget::ElementInterface *parent) {
+      ggadget::ElementInterface *parent, const char *name) {
     return new Pie(parent);
   }
 };
@@ -90,15 +90,15 @@ TEST_F(ElementFactoryTest, TestCreate) {
   factory->RegisterElementClass("muffin", Muffin::CreateInstance);
   factory->RegisterElementClass("pie", Pie::CreateInstance);
 
-  ggadget::ElementInterface *e1 = factory->CreateElement("muffin", NULL);
+  ggadget::ElementInterface *e1 = factory->CreateElement("muffin", NULL, NULL);
   ASSERT_TRUE(e1 != NULL);
   ASSERT_STREQ(e1->type(), "muffin");
 
-  ggadget::ElementInterface *e2 = factory->CreateElement("pie", e1);
+  ggadget::ElementInterface *e2 = factory->CreateElement("pie", e1, NULL);
   ASSERT_TRUE(e2 != NULL);
   ASSERT_STREQ(e2->type(), "pie");
 
-  ggadget::ElementInterface *e3 = factory->CreateElement("bread", e2);
+  ggadget::ElementInterface *e3 = factory->CreateElement("bread", e2, NULL);
   ASSERT_TRUE(e3 == NULL);
 
   e1->Release();

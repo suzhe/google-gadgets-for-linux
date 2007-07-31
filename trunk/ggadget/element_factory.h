@@ -39,10 +39,14 @@ class ElementFactory : public ElementFactoryInterface {
   ~ElementFactory();
 
  public:
-  virtual ElementInterface *CreateElement(const char *type,
-                                          ElementInterface *parent);
+  /** @see ElementFactoryInterface::CreateElement. */
+  virtual ElementInterface *CreateElement(const char *tag_name,
+                                          ElementInterface *parent,
+                                          const char *name);
+  /** @see ElementFactoryInterface::RegisterElementClass. */
   virtual bool RegisterElementClass(
-      const char *type, ElementInterface *(*creator)(ElementInterface *));
+      const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                         const char *));
 
  public:
   /**

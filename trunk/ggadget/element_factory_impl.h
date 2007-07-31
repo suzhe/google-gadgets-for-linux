@@ -31,13 +31,15 @@ namespace internal {
  */
 class ElementFactoryImpl {
  public:
-  ElementInterface *CreateElement(const char *type,
-                                  ElementInterface *parent);
+  ElementInterface *CreateElement(const char *tag_name,
+                                  ElementInterface *parent,
+                                  const char *name);
   bool RegisterElementClass(
-      const char *type,
-      ElementInterface *(*creator)(ElementInterface *));
+      const char *tag_name,
+      ElementInterface *(*creator)(ElementInterface *, const char *));
 
-  std::map<std::string, ElementInterface *(*)(ElementInterface *)> creators_;
+  std::map<std::string, ElementInterface *(*)(ElementInterface *,
+                                              const char *)> creators_;
 };
 
 } // namespace internal
