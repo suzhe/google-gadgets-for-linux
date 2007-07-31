@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+cd "%%CMAKE_CURRENT_BINARY_DIR%%"
 LD_LIBRARY_PATH="%%LIBRARY_PATH%%:$LD_LIBRARY_PATH" \
   DYLD_LIBRARY_PATH="%%LIBRARY_PATH%%:$DYLD_LIBRARY_PATH" \
-    "%%WRAPPEE_LOCATION%%" "$@"
+    "./%%WRAPPEE_BASE%%" "$@"
