@@ -29,24 +29,27 @@ class ElementInterface;
 class ElementFactoryInterface {
  public:
   /**
-   * Create an ElementInterface of the specified type.
-   * @param type the type name of the object.
+   * Creates an ElementInterface of the specified type.
+   * @param tag_name the tag name name of the object.
    * @param parent the parent object of the newly created object.
+   * @param name the name of the newly created element.
    * @return the pointer to the newly created object or @c NULL if failed.
    */
-  virtual ElementInterface *CreateElement(const char *type,
-                                          ElementInterface *parent) = 0;
+  virtual ElementInterface *CreateElement(const char *tag_name,
+                                          ElementInterface *parent,
+                                          const char *name) = 0;
 
   /**
-   * Register a new subclass of ElementInterface.
-   * @param type the type name of the subclass.
+   * Registers a new subclass of ElementInterface.
+   * @param tag_name the tag name name of the subclass.
    * @param creator the function pointer of the creator, which returns a new
-   *     instance of an object of this type.
+   *     instance of an object of this tag name.
    * @return @c true if registered successfully, or @c false if the specified
-   *     type already exists.
+   *     tag name already exists.
    */
   virtual bool RegisterElementClass(
-      const char *type, ElementInterface *(*creator)(ElementInterface *)) = 0;
+      const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                         const char *)) = 0;
 };
 
 } // namespace ggadget
