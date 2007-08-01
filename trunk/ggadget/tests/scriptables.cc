@@ -20,6 +20,7 @@ using namespace ggadget;
 
 // Store testing status to be checked in unit test code.
 std::string g_buffer;
+const char *enum_type_names[] = { "VALUE_0", "VALUE_1", "VALUE_2" };
 
 void AppendBuffer(const char *format, ...) {
   char buffer[1024];
@@ -32,9 +33,8 @@ void AppendBuffer(const char *format, ...) {
 }
 
 TestScriptable1::TestScriptable1()
-    : static_scriptable_(new StaticScriptable()),
-      double_property_(0),
-      int_property_(0),
+    : double_property_(0),
+      enum_property_(VALUE_0),
       variant_property_(0) {
   g_buffer.clear();
   RegisterMethod("TestMethodVoid0",
@@ -49,10 +49,12 @@ TestScriptable1::TestScriptable1()
   RegisterProperty("Buffer",
                    NewSlot(this, &TestScriptable1::GetBuffer),
                    NewSlot(this, &TestScriptable1::SetBuffer));
-  RegisterSignal(kOnDeleteSignal, &ondelete_signal_);
-  RegisterSimpleProperty("IntSimple", &int_property_);
+  // This signal is only for test, no relation to ConnectToOndeleteSignal.
+  RegisterSignal("my_ondelete", &my_ondelete_signal_);
+  RegisterSimpleProperty("EnumSimple", &enum_property_);
   RegisterConstant("Fixed", 123456789);
   RegisterSimpleProperty("VariantProperty", &variant_property_);
+  RegisterConstants(arraysize(enum_type_names), enum_type_names, NULL);
 
   // Register 10 integer constants.
   static char names_arr[20][20]; // Ugly...
@@ -61,7 +63,7 @@ TestScriptable1::TestScriptable1()
     names[i] = names_arr[i];
     sprintf(names[i], "ICONSTANT%d", i);
   }
-  static_scriptable_->RegisterConstants(10, names, NULL);
+  RegisterConstants(10, names, NULL);
 
   // Register 10 string constants.
   Variant const_values[10];
@@ -70,19 +72,19 @@ TestScriptable1::TestScriptable1()
     sprintf(names[i], "SCONSTANT%d", i);
     const_values[i] = Variant(names[i]);
   }
-  static_scriptable_->RegisterConstants(10, names, const_values);
+  RegisterConstants(10, names, const_values);
 }
 
 TestScriptable1::~TestScriptable1() {
-  ondelete_signal_();
-  delete static_scriptable_;
+  my_ondelete_signal_();
   AppendBuffer("Destruct\n");
+  // Then StaticScriptable::~StaticScriptable will be called, and in turn
+  // the "official" ondelete signal will be emitted.
 }
 
 TestPrototype *TestPrototype::instance_ = NULL;
 
-TestPrototype::TestPrototype()
-    : static_scriptable_(new StaticScriptable()) {
+TestPrototype::TestPrototype() {
   RegisterMethod("PrototypeMethod", NewSlot(this, &TestPrototype::Method));
   RegisterProperty("PrototypeSelf", NewSlot(this, &TestPrototype::GetSelf),
                    NULL);
@@ -92,7 +94,8 @@ TestPrototype::TestPrototype()
                    NewSlot(this, &TestPrototype::GetSelf), NULL);
 }
 
-TestScriptable2::TestScriptable2() {
+TestScriptable2::TestScriptable2(bool script_owned)
+    : script_owned_(script_owned) {
   RegisterMethod("TestMethod", NewSlot(this, &TestScriptable2::TestMethod));
   RegisterSignal("onlunch", &onlunch_signal_);
   RegisterSignal("onsupper", &onsupper_signal_);

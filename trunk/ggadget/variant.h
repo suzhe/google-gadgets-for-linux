@@ -178,6 +178,8 @@ struct Variant {
 
   std::string ToString() const;
 
+  bool CheckScriptableType(int class_id) const;
+
   /**
    * Type of the <code>Variant</code>'s value.
    */
@@ -205,12 +207,22 @@ inline std::ostream &operator<<(std::ostream &out, const Variant &v) {
 
 /**
  * Get the @c Variant::Type of a C++ type.
- * This template is for all <code>ScriptableInterface *</code> types.
- * All unspecialized types will fall into this template, and if it is not
- * <code>ScriptableInterface *</code>, it may cause compilation error.
+ * This template is for all integral types.  All unspecialized types will fall
+ * into this template, and if it is integral, compilation error may occur.
  */
 template <typename T>
 struct VariantType {
+  static const Variant::Type type = Variant::TYPE_INT64;
+};
+
+/**
+ * Get the @c Variant::Type of a C++ type.
+ * This template is for all <code>ScriptableInterface *</code> types.
+ * All unspecialized types will fall into this template, and if it is not
+ * <code>ScriptableInterface *</code>, compilation error may occur.
+ */
+template <typename T>
+struct VariantType<T *> {
   static const Variant::Type type = Variant::TYPE_SCRIPTABLE;
 };
 
@@ -226,18 +238,6 @@ struct VariantType<c_type> {                               \
 
 SPECIALIZE_VARIANT_TYPE(void, TYPE_VOID)
 SPECIALIZE_VARIANT_TYPE(bool, TYPE_BOOL)
-SPECIALIZE_VARIANT_TYPE(char, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(unsigned char, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(short, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(unsigned short, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(int, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(unsigned int, TYPE_INT64)
-#ifndef LONG_INT64_T_EQUIVALENT
-SPECIALIZE_VARIANT_TYPE(long, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(unsigned long, TYPE_INT64)
-#endif
-SPECIALIZE_VARIANT_TYPE(int64_t, TYPE_INT64)
-SPECIALIZE_VARIANT_TYPE(uint64_t, TYPE_INT64)
 SPECIALIZE_VARIANT_TYPE(float, TYPE_DOUBLE)
 SPECIALIZE_VARIANT_TYPE(double, TYPE_DOUBLE)
 SPECIALIZE_VARIANT_TYPE(const char *, TYPE_STRING)
@@ -248,15 +248,29 @@ SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
 
 /**
  * Get the value of a @c Variant.
- * This template is for all <code>ScriptableInterface *</code> types.
- * All unspecialized types will fall into this template, and if it is not
- * <code>ScriptableInterface *</code>, it may cause compilation error.
+ * This template is for all integral types.  All unspecialized types will fall
+ * into this template, and if it is integral, compilation error may occur.
  */
 template <typename T>
 struct VariantValue {
   T operator()(const Variant &v) {
+    ASSERT(v.type == Variant::TYPE_INT64);
+    return static_cast<T>(v.v.int64_value);
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * This template is for all <code>ScriptableInterface *</code> types.
+ * All unspecialized types will fall into this template, and if it is not
+ * <code>ScriptableInterface *</code>, compilation error may occur.
+ */
+template <typename T>
+struct VariantValue<T *> {
+  T *operator()(const Variant &v) {
     ASSERT(v.type == Variant::TYPE_SCRIPTABLE);
-    return down_cast<T>(v.v.scriptable_value);
+    return v.CheckScriptableType(T::CLASS_ID) ?
+           down_cast<T *>(v.v.scriptable_value) : NULL;
   }
 };
 
@@ -275,17 +289,6 @@ struct VariantValue<c_type> {                           \
 
 SPECIALIZE_VARIANT_VALUE(char, int64_value)
 SPECIALIZE_VARIANT_VALUE(bool, bool_value)
-SPECIALIZE_VARIANT_VALUE(unsigned char, int64_value)
-SPECIALIZE_VARIANT_VALUE(short, int64_value)
-SPECIALIZE_VARIANT_VALUE(unsigned short, int64_value)
-SPECIALIZE_VARIANT_VALUE(int, int64_value)
-SPECIALIZE_VARIANT_VALUE(unsigned int, int64_value)
-#ifndef LONG_INT64_T_EQUIVALENT
-SPECIALIZE_VARIANT_VALUE(long, int64_value)
-SPECIALIZE_VARIANT_VALUE(unsigned long, int64_value)
-#endif
-SPECIALIZE_VARIANT_VALUE(int64_t, int64_value)
-SPECIALIZE_VARIANT_VALUE(uint64_t, int64_value)
 SPECIALIZE_VARIANT_VALUE(float, double_value)
 SPECIALIZE_VARIANT_VALUE(double, double_value)
 SPECIALIZE_VARIANT_VALUE(const char *, string_value)

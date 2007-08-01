@@ -98,6 +98,7 @@ struct LogHelper {
     printf("%s:%d: ", file_, line_);
     vprintf(format, ap);
     va_end(ap);
+    putchar('\n');
     fflush(stdout);
   }
   const char *file_;

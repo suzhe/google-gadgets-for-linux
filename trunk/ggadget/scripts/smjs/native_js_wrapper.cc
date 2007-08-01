@@ -52,11 +52,14 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
   // Connect the "ondelete" callback.
   ondelete_connection_ = scriptable->ConnectToOnDeleteSignal(
       NewSlot(this, &NativeJSWrapper::OnDelete));
+  scriptable->Attach();
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
-  if (!deleted_)
+  if (!deleted_) {
     ondelete_connection_->Disconnect();
+    scriptable_->Detach();
+  }
 }
 
 JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,

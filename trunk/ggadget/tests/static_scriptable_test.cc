@@ -61,10 +61,10 @@ TEST(static_scriptable, TestPropertyInfo) {
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
     { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
     { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
-    { kOnDeleteSignal, -6, false,
+    { "my_ondelete", -6, false,
       // Here the result of new SignalSlot leaks.  Ignore it.
-      Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
-    { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
+      Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
+    { "EnumSimple", -7, false, Variant(Variant::TYPE_INT64) },
     { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
   };
 
@@ -90,7 +90,7 @@ TEST(static_scriptable, TestOnDelete) {
   ASSERT_TRUE(scriptable->ConnectToOnDeleteSignal(NewSlot(TestOnDelete)));
   scriptable->SetProperty(-6, Variant(NewSlot(TestOnDeleteAsEventSink)));
   delete scriptable;
-  EXPECT_STREQ("TestOnDeleteAsEventSink\nTestOnDelete\nDestruct\n",
+  EXPECT_STREQ("TestOnDeleteAsEventSink\nDestruct\nTestOnDelete\n",
                g_buffer.c_str());
 }
 
@@ -121,10 +121,10 @@ TEST(static_scriptable, TestPropertyAndMethod) {
   ASSERT_EQ(Variant(), result1.v.slot_value->Call(0, NULL));
   ASSERT_STREQ("", g_buffer.c_str());
 
-  // -7: the "SimpleInt" property.
-  ASSERT_EQ(Variant(0), scriptable->GetProperty(-7));
-  ASSERT_TRUE(scriptable->SetProperty(-7, Variant(54321)));
-  ASSERT_EQ(Variant(54321), scriptable->GetProperty(-7));
+  // -7: the "EnumSimple" property.
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-7));
+  ASSERT_TRUE(scriptable->SetProperty(-7, Variant(TestScriptable1::VALUE_2)));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_2), scriptable->GetProperty(-7));
 
   // -8: the "VariantProperty" property.
   ASSERT_EQ(Variant(0), scriptable->GetProperty(-8));
@@ -177,10 +177,10 @@ TEST(static_scriptable, TestPropertyInfo2) {
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
     { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
     { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
-    { kOnDeleteSignal, -6, false,
+    { "my_ondelete", -6, false,
       // Here the result of new SignalSlot leaks.  Ignore it.
-      Variant(new SignalSlot(&scriptable->ondelete_signal_)) },
-    { "IntSimple", -7, false, Variant(Variant::TYPE_INT64) },
+      Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
+    { "EnumSimple", -7, false, Variant(Variant::TYPE_INT64) },
     { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
 
     // -9 ~ -14 are defined in TestScriptable2 itself.

@@ -15,6 +15,8 @@ namespace ggadget {
 
 class ScriptContextInterface;
 class Slot;
+template <typename R, typename P1> class Slot1;
+class Connection;
 
 /**
  * The script engine runtime.
@@ -39,6 +41,20 @@ class ScriptRuntimeInterface {
    * Destroy this runtime.
    */
   virtual void Destroy() = 0;
+
+  /**
+   * An @c ErrorReporter can be connected to the error reporter signal.
+   * It will receive a message string when it is called.
+   */ 
+  typedef Slot1<void, const char *> ErrorReporter;
+
+  /**
+   * Connect a error reporter to the error reporter signal.
+   * After connected, the reporter will receive all Script error reports.
+   * @param reporter the error reporter.
+   * @return the signal @c Connection.
+   */
+  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter) = 0;
 
   DISALLOW_DIRECT_DELETION(ScriptRuntimeInterface);
 };

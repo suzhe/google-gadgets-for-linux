@@ -32,6 +32,29 @@ template <typename R> class Slot0;
  */
 class ScriptableInterface {
  public:
+  static const int CLASS_ID = 0;
+
+  /**
+   * Attach this object to the script engine.
+   * Normally if the object is always owned by the native side, the
+   * implementation should do nothing in this method.
+   * If the ownership can be transfered or shared between the native side
+   * and the script side, the implementation should do appropriate things,
+   * such as reference counting, etc. to manage the owership. 
+   */
+  virtual void Attach() = 0;
+
+  /**
+   * Detach this object from the script engine.
+   * @see Attach()
+   */
+  virtual void Detach() = 0;
+
+  /**
+   * Judge if this instance is of a given class.
+   */
+  virtual bool IsInstanceOf(int class_id) = 0;
+
   /**
    * Connect a callback @c Slot to the "ondelete" signal.
    * @param slot the callback @c Slot to be called when the @c Scriptable
