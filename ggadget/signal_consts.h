@@ -17,15 +17,13 @@
 #ifndef GGADGET_SIGNAL_CONSTS_H__
 #define GGADGET_SIGNAL_CONSTS_H__
 
+#include "signal.h"
+
 namespace ggadget {
 
 /**
  * Define signal constants.
  */
-
-/** The owner @c ScriptableInterface object is to be deleted. */
-const char *const kOnDeleteSignal = "ondelete";
-typedef Signal0<void> OnDeleteSignal;
 
 } // name space ggadget
 

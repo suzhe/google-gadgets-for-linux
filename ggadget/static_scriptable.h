@@ -104,6 +104,12 @@ class StaticScriptable : public ScriptableInterface {
    */
   void SetPrototype(ScriptableInterface *prototype);
 
+  /** @see ScriptableInterface::Attach() */
+  virtual void Attach() { ASSERT(false); }
+  /** @see ScriptableInterface::Detach() */
+  virtual void Detach() { ASSERT(false); }
+  /** @see ScriptableInterface::IsInstanceof() */
+  virtual bool IsInstanceOf(int class_id) { ASSERT(false); return false; }
   /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
   virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   /** @see ScriptableInterface::GetPropertyInfoByName() */
@@ -126,25 +132,33 @@ class StaticScriptable : public ScriptableInterface {
 };
 
 /**
+ * A macro used to declare default ownership policy, that is, the native side
+ * always has the ownership of the scriptable object.
+ */
+#define DEFAULT_OWNERSHIP_POLICY \
+virtual void Attach() { }        \
+virtual void Detach() { }
+
+/**
  * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to delegate all @c ScriptableInterface methods to another
+ * implementation to delegate most @c ScriptableInterface methods to another
  * object (normally @c StaticScriptable).
  */
 #define DELEGATE_SCRIPTABLE_INTERFACE(delegate)                               \
 virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {              \
-  return (delegate)->ConnectToOnDeleteSignal(slot);                           \
+  return (delegate).ConnectToOnDeleteSignal(slot);                            \
 }                                                                             \
 virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
                                    Variant *prototype, bool *is_method) {     \
-  return (delegate)->GetPropertyInfoByName(name, id, prototype, is_method);   \
+  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
 }                                                                             \
 virtual bool GetPropertyInfoById(int id, Variant *prototype,                  \
                                  bool *is_method) {                           \
-  return (delegate)->GetPropertyInfoById(id, prototype, is_method);           \
+  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
 }                                                                             \
-virtual Variant GetProperty(int id) { return (delegate)->GetProperty(id); }   \
+virtual Variant GetProperty(int id) { return (delegate).GetProperty(id); }    \
 virtual bool SetProperty(int id, Variant value) {                             \
-  return (delegate)->SetProperty(id, value);                                  \
+  return (delegate).SetProperty(id, value);                                   \
 }
 
 /**
@@ -154,31 +168,31 @@ virtual bool SetProperty(int id, Variant value) {                             \
  */
 #define DELEGATE_SCRIPTABLE_REGISTER(delegate)                                \
 void RegisterProperty(const char *name, Slot *getter, Slot *setter) {         \
-  (delegate)->RegisterProperty(name, getter, setter);                         \
+  (delegate).RegisterProperty(name, getter, setter);                          \
 }                                                                             \
 template <typename T>                                                         \
 void RegisterSimpleProperty(const char *name, T *valuep) {                    \
-  (delegate)->RegisterSimpleProperty<T>(name, valuep);                        \
+  (delegate).RegisterSimpleProperty<T>(name, valuep);                         \
 }                                                                             \
 template <typename T>                                                         \
 void RegisterReadonlySimpleProperty(const char *name, const T *valuep) {      \
-  (delegate)->RegisterReadonlySimpleProperty<T>(name, valuep);                \
+  (delegate).RegisterReadonlySimpleProperty<T>(name, valuep);                 \
 }                                                                             \
 void RegisterMethod(const char *name, Slot *slot) {                           \
-  (delegate)->RegisterMethod(name, slot);                                     \
+  (delegate).RegisterMethod(name, slot);                                      \
 }                                                                             \
 void RegisterSignal(const char *name, Signal *signal) {                       \
-  (delegate)->RegisterSignal(name, signal);                                   \
+  (delegate).RegisterSignal(name, signal);                                    \
 }                                                                             \
 void RegisterConstants(int c, const char *const n[], const Variant v[]) {     \
-  (delegate)->RegisterConstants(c, n, v);                                     \
+  (delegate).RegisterConstants(c, n, v);                                      \
 }                                                                             \
 template <typename T>                                                         \
 void RegisterConstant(const char *name, T value) {                            \
-  (delegate)->RegisterConstant(name, value);                                  \
+  (delegate).RegisterConstant(name, value);                                   \
 }                                                                             \
 void SetPrototype(ScriptableInterface *prototype) {                           \
-  (delegate)->SetPrototype(prototype);                                        \
+  (delegate).SetPrototype(prototype);                                         \
 }
 
 } // namespace ggadget

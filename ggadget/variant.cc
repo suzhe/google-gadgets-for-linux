@@ -18,7 +18,7 @@
 #define __STDC_FORMAT_MACROS  
 #include <inttypes.h>  // for PRId64
 #include <string.h>
-#include "variant.h"
+#include "scriptable_interface.h"
 #include "slot.h"
 
 namespace ggadget {
@@ -80,6 +80,15 @@ std::string Variant::ToString() const {
     default:
       return std::string("INVALID");
   }
+}
+
+bool Variant::CheckScriptableType(int class_id) const {
+  ASSERT(type == TYPE_SCRIPTABLE);
+  if (v.scriptable_value && !v.scriptable_value->IsInstanceOf(class_id)) {
+    LOG("The parameter is not an instance pointer of %d", class_id);
+    return false;
+  }
+  return true;
 }
 
 } // namespace ggadget

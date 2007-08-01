@@ -27,11 +27,12 @@ function TestScriptableBasics(scriptable) {
   ASSERT(STRICT_EQ(3.25, scriptable.DoubleProperty));
   ASSERT(EQ("GetDoubleProperty()=3.250\n", scriptable.Buffer));
 
-  ASSERT(STRICT_EQ(0, scriptable.IntSimple));
-  scriptable.IntSimple = 12345;
-  ASSERT(EQ(12345, scriptable.IntSimple));
-  scriptable.IntSimple = "100.2";
-  ASSERT(EQ(100, scriptable.IntSimple));
+  ASSERT(STRICT_EQ(scriptable.VALUE_0, scriptable.EnumSimple));
+  ASSERT(EQ(1, scriptable.VALUE_1));
+  scriptable.EnumSimple = scriptable.VALUE_1;
+  ASSERT(EQ(scriptable.VALUE_1, scriptable.EnumSimple));
+  scriptable.EnumSimple = "100.2";
+  ASSERT(EQ(100, scriptable.EnumSimple));
 
   ASSERT(EQ(123456789, scriptable.Fixed));
 
@@ -65,7 +66,7 @@ TEST("Test readonly property", function() {
 
 DEATH_TEST("Test integer property with non-number", function() {
   // The following assignment should cause an error.
-  scriptable.IntSimple = "80%";
+  scriptable.EnumSimple = "80%";
   ASSERT(DEATH());
 });
 
@@ -177,17 +178,20 @@ TEST("Test scriptables", function() {
   ASSERT(EQ(scriptable2, proto.PrototypeMethod(scriptable2)));
 
   ASSERT(EQ(scriptable2, scriptable2.OverrideSelf));
+  ASSERT(NULL(scriptable2.TestMethod(null)));
+  // Incompatible type.
+  ASSERT(NULL(scriptable2.TestMethod(scriptable)));
 });
 
 TEST("Test dynamic allocated objects", function() {
-  var a = scriptable2.NewObject();
+  var a = scriptable2.NewObject(false);
   var a_deleted = false;
-  a.ondelete = function() {
+  a.my_ondelete = function() {
     a_deleted = true;
   };
-  var b = scriptable2.NewObject();
+  var b = scriptable2.NewObject(false);
   var b_deleted = false;
-  b.ondelete = function() {
+  b.my_ondelete = function() {
     b_deleted = true;
   }
   ASSERT(NOT_NULL(a));
@@ -205,14 +209,20 @@ TEST("Test dynamic allocated objects", function() {
 });
 
 DEATH_TEST("Test access after deleted", function() {
-  var a = scriptable2.NewObject();
+  var a = scriptable2.NewObject(false);
   scriptable2.DeleteObject(a);
   a.Buffer = "Buffer";
   ASSERT(DEATH());
 });
 
-TEST("Test GC of wrapper object", function() {
-  var a = scriptable2.NewObject();
+TEST("Test string callback", function() {
+  scriptable2.onlunch = "msg = 'lunch_callback'; print(msg);";
+  scriptable2.time = "lunch";
+  ASSERT(EQ("lunch_callback", msg));
+});
+
+TEST("Test ownership policies", function() {
+  var a = scriptable2.NewObject(false); // native owned
   var lunch_msg;
   a.onlunch = function(s) {
     lunch_msg = s;
@@ -223,12 +233,28 @@ TEST("Test GC of wrapper object", function() {
   a.time = "lunch";
   ASSERT(EQ("Have lunch", lunch_msg));
   scriptable2.DeleteObject(a);
-});
 
-TEST("Test string callback", function() {
-  scriptable2.onlunch = "msg = 'lunch_callback'; print(msg);";
-  scriptable2.time = "lunch";
-  ASSERT(EQ("lunch_callback", msg));
+  a = scriptable2.NewObject(true);  // script owned
+  scriptable.Buffer = "";
+  a = null;
+  gc();
+  ASSERT(EQ("Destruct\n", scriptable.Buffer));
+
+  var b = scriptable2.NewObject(true);  // script owned
+  b = scriptable2.TestMethod(b);
+  b = null;
+  scriptable.Buffer = "";
+  gc();
+  ASSERT(EQ("Destruct\n", scriptable.Buffer));
+
+  a = scriptable2.NewObject(true);  // script owned
+  scriptable.Buffer = "";
+  // Pass the ownership to the native side, and at the same time, the native
+  // side deletes it.
+  scriptable2.DeleteObject(a);   
+  a = null;
+  ASSERT(EQ("Destruct\n", scriptable.Buffer));
+  gc();  // Should not cause errors.
 });
 
 RUN_ALL_TESTS();

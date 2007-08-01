@@ -37,9 +37,15 @@ void AppendBuffer(const char *format, ...);
 // A normal scriptable class.
 class TestScriptable1 : public ScriptableInterface {
  public:
+  static const int CLASS_ID = -999;
   TestScriptable1();
   virtual ~TestScriptable1();
 
+  virtual bool IsInstanceOf(int class_id) {
+    return class_id == CLASS_ID || class_id == ScriptableInterface::CLASS_ID; 
+  }
+
+  DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
   DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_)
 
@@ -66,15 +72,17 @@ class TestScriptable1 : public ScriptableInterface {
     g_buffer = buffer;
   }
 
+  // This signal is only for test, no relation to ConnectToOndeleteSignal.
   // Place this signal declaration here for testing.
-  // In production code, it should be palced in private section. 
-  OnDeleteSignal ondelete_signal_;
+  Signal0<void> my_ondelete_signal_;
 
+  enum EnumType { VALUE_0, VALUE_1, VALUE_2 };
+  
  private:
-  StaticScriptable *static_scriptable_;
+  StaticScriptable static_scriptable_;
 
   double double_property_;
-  int int_property_;
+  EnumType enum_property_;
   Variant variant_property_;
 };
 
@@ -83,10 +91,17 @@ typedef Signal1<std::string, const std::string &> OnSupperSignal;
 
 class TestPrototype : public ScriptableInterface {
  public:
+  static const int CLASS_ID = -888;
   static TestPrototype *GetInstance() {
     return instance_ ? instance_ : (instance_ = new TestPrototype());
   }
-  
+
+  // Should not be called.
+  virtual bool IsInstanceOf(int class_id) {
+    return class_id == ScriptableInterface::CLASS_ID || class_id == CLASS_ID;
+  }
+
+  DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
   DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_)
 
@@ -101,14 +116,21 @@ class TestPrototype : public ScriptableInterface {
   TestPrototype();
 
   static TestPrototype *instance_;
-  StaticScriptable *static_scriptable_;
+  StaticScriptable static_scriptable_;
 };
 
 // A scriptable class with some dynamic properties, supporting array indexes,
 // and some property/methods with arguments or return types of Scriptable.
 class TestScriptable2 : public TestScriptable1 {
  public:
-  TestScriptable2();
+  static const int CLASS_ID = -1000;
+  TestScriptable2(bool script_owned_ = false);
+
+  virtual void Detach() { if (script_owned_) delete this; }
+
+  virtual bool IsInstanceOf(int class_id) {
+    return class_id == CLASS_ID || TestScriptable1::IsInstanceOf(class_id); 
+  }
 
   // A scriptable providing array indexed access should override the following
   // methods.
@@ -147,7 +169,9 @@ class TestScriptable2 : public TestScriptable1 {
 
   TestScriptable2 *GetSelf() { return this; }
   TestScriptable2 *TestMethod(TestScriptable2 *t) { return t; }
-  TestScriptable2 *NewObject() { return new TestScriptable2; }
+  TestScriptable2 *NewObject(bool script_owned) {
+    return new TestScriptable2(script_owned);
+  }
   void DeleteObject(TestScriptable2 *obj) { delete obj; }
 
   // Place signal declarations here for testing.
@@ -156,6 +180,7 @@ class TestScriptable2 : public TestScriptable1 {
   OnSupperSignal onsupper_signal_;
 
  private:
+  bool script_owned_;
   int array_[kArraySize];
   std::string time_;
   std::string signal_result_;

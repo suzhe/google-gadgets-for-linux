@@ -75,18 +75,20 @@ class StaticScriptable::Impl {
   // values are constant values.
   ConstantMap constants_;
 
-  Signal0<void> *ondelete_signal_;
+  Signal0<void> ondelete_signal_;
   ScriptableInterface *prototype_;
 };
 
 StaticScriptable::Impl::Impl()
     : sealed_(false),
       property_count_(0),
-      ondelete_signal_(NULL),
       prototype_(NULL) {
 }
 
 StaticScriptable::Impl::~Impl() {
+  // Emit the ondelete signal, as early as possible.
+  ondelete_signal_();
+
   // Free all owned slots.
   for (VariantVector::iterator it = slot_prototypes_.begin();
        it != slot_prototypes_.end(); ++it) {
@@ -144,11 +146,7 @@ void StaticScriptable::Impl::RegisterSignal(const char *name, Signal *signal) {
   ASSERT(name);
   ASSERT(signal);
 
-  if (strcmp(name, kOnDeleteSignal) == 0)
-    ondelete_signal_ = down_cast<OnDeleteSignal *>(signal);
-
   slot_index_[name] = property_count_;
-
   // Create a SignalSlot as the value of the prototype to let others know
   // the calling convention.  It is owned by slot_prototypes.
   slot_prototypes_.push_back(Variant(new SignalSlot(signal)));
@@ -173,10 +171,7 @@ void StaticScriptable::Impl::RegisterConstants(int count,
 }
 
 Connection *StaticScriptable::Impl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
-  if (ondelete_signal_)
-    return ondelete_signal_->ConnectGeneral(slot);
-  else
-    return NULL;
+  return ondelete_signal_.ConnectGeneral(slot);
 }
 
 bool StaticScriptable::Impl::GetPropertyInfoByName(const char *name,

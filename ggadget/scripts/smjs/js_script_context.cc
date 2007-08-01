@@ -25,10 +25,11 @@ namespace ggadget {
 const uint32 kDefaultContextSize = 64 * 1024 * 1024;
 const uint32 kDefaultStackTrunkSize = 4096;
 
-JSScriptRuntime::JSScriptRuntime() {
-  runtime_ = JS_NewRuntime(kDefaultContextSize);
+JSScriptRuntime::JSScriptRuntime()
+    : runtime_(JS_NewRuntime(kDefaultContextSize)) {
   // TODO: deal with errors in release build.
   ASSERT(runtime_);
+  JS_SetRuntimePrivate(runtime_, this);
 }
 
 ScriptContextInterface *JSScriptRuntime::CreateContext() {
@@ -37,6 +38,7 @@ ScriptContextInterface *JSScriptRuntime::CreateContext() {
   ASSERT(context);
   if (!context)
     return NULL;
+  JS_SetErrorReporter(context, ReportError);
   return new JSScriptContext(context);
 }
 
@@ -51,6 +53,28 @@ void JSScriptRuntime::Destroy() {
   ASSERT(runtime_);
   JS_DestroyRuntime(runtime_);
   delete this;
+}
+
+Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {
+  return error_reporter_signal_.Connect(reporter);
+}
+
+void JSScriptRuntime::ReportError(JSContext *cx, const char *message,
+                                  JSErrorReport *report) {
+  JSRuntime *js_runtime = JS_GetRuntime(cx);
+  ASSERT(js_runtime);
+  JSScriptRuntime *runtime = reinterpret_cast<JSScriptRuntime *>
+      (JS_GetRuntimePrivate(js_runtime));
+  ASSERT(runtime);
+
+  char lineno_buf[16];
+  snprintf(lineno_buf, sizeof(lineno_buf), "%d", report->lineno);
+  std::string error_report(report->filename);
+  error_report += ':';
+  error_report += lineno_buf;
+  error_report += ": ";
+  error_report += message;
+  runtime->error_reporter_signal_(error_report.c_str());
 }
 
 /**
@@ -144,8 +168,8 @@ static JSScriptContext *GetJSScriptContext(JSContext *context) {
 
 // As we don't want to depend on only the public SpiderMonkey APIs, the only
 // way to get the current filename and lineno is from the JSErrorReport.
-void JSScriptContext::FileAndLineRecorder(JSContext *cx, const char *message,
-                                          JSErrorReport *report) {
+void JSScriptContext::RecordFileAndLine(JSContext *cx, const char *message,
+                                        JSErrorReport *report) {
   JSScriptContext *context = GetJSScriptContext(cx);
   if (context) {
     context->filename_ = report->filename;
@@ -158,8 +182,8 @@ void JSScriptContext::GetCurrentFileAndLineInternal(const char **filename,
   filename_ = NULL;
   lineno_ = 0;
   JSErrorReporter old_reporter = JS_SetErrorReporter(context_,
-                                                     FileAndLineRecorder);
-  // Let the JavaScript engine call TempErrorReporter.
+                                                     RecordFileAndLine);
+  // Let the JavaScript engine call RecordFileAndLine.
   JS_ReportError(context_, "");
   JS_SetErrorReporter(context_, old_reporter);
   *filename = filename_;

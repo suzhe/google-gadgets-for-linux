@@ -330,6 +330,6 @@ bool operator!=(T* p, const scoped_ptr_malloc<T,FP>& b) {
   return p != b.get();
 }
 
-}  // namespace google_breakpad
+}  // namespace ggadget
 
 #endif // GGADGET_SCOPED_PTR_H__

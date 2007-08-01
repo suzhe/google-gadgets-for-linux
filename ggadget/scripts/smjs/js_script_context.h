@@ -20,7 +20,7 @@
 #include <map>
 #include <jsapi.h>
 #include "ggadget/script_context_interface.h"
-#include "ggadget/slot.h"
+#include "ggadget/signal.h"
 
 namespace ggadget {
 
@@ -39,9 +39,17 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
   virtual void DestroyContext(ScriptContextInterface *context);
   /** @see ScriptRuntimeInterface::Destroy() */
   virtual void Destroy();
+  /** @see ScriptRuntimeInterface::ConnectErrorReporter() */
+  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);
+
   ~JSScriptRuntime() { }
+
+  static void ReportError(JSContext *cx, const char *message,
+                          JSErrorReport *report);
+
+  Signal1<void, const char *> error_reporter_signal_;
   JSRuntime *runtime_;
 };
 
@@ -65,8 +73,8 @@ class JSScriptContext : public ScriptContextInterface {
    * @param scriptable the native @c ScriptableInterface object to be wrapped.
    * @return the wrapped JavaScript object, or @c NULL on errors.
    */
-  static JSObject *WrapNativeObjectToJS(
-      JSContext *cx, ScriptableInterface *scriptable);
+  static JSObject *WrapNativeObjectToJS(JSContext *cx,
+                                        ScriptableInterface *scriptable);
 
   /**
    * Called when JavaScript engine is to finalized a JavaScript object wrapper
@@ -137,8 +145,8 @@ class JSScriptContext : public ScriptContextInterface {
    * As we don't want to depend on only the public SpiderMonkey APIs, the only
    * way to get the current filename and lineno is from the JSErrorReport.
    */
-  static void FileAndLineRecorder(JSContext *cx, const char *message,
-                                  JSErrorReport *report);
+  static void RecordFileAndLine(JSContext *cx, const char *message,
+                                JSErrorReport *report);
 
   JSContext *context_;
   // The following two fields are only used during GetCurrentFileAndLine.
