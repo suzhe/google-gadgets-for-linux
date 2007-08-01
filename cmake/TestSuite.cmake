@@ -33,7 +33,7 @@ ELSE(WIN32)
       COMMAND ${SED_CMD}
           -e "s,%%LIBRARY_PATH%%,${CMAKE_BINARY_DIR}/output/lib,g"
           -e "s,%%WRAPPEE_BASE%%,${WRAPPEE_BASE},g"
-          -e "s,%%CMAKE_CURRENT_BINARY_DIR,${CMAKE_CURRENT_BINARY_DIR},g"
+          -e "s,%%CMAKE_CURRENT_BINARY_DIR%%,${CMAKE_CURRENT_BINARY_DIR},g"
           ${CMAKE_SOURCE_DIR}/utils/${TEST_WRAPPER_NAME}
           > ${WRAPPEE_LOCATION}.sh
       COMMAND ${MAKE_EXECUTABLE} ${WRAPPEE_LOCATION}.sh
