@@ -21,41 +21,43 @@
 
 class Muffin : public MockedElement {
  public:
-  Muffin(ggadget::ElementInterface *parent) : MockedElement(parent) {
+  Muffin(ggadget::ElementInterface *parent,
+         const char *name) : MockedElement(parent, name) {
   }
 
   virtual ~Muffin() {
   }
 
  public:
-  virtual const char *type() const {
+  virtual const char *tag_name() const {
     return "muffin";
   }
 
  public:
   static ggadget::ElementInterface *CreateInstance(
       ggadget::ElementInterface *parent, const char *name) {
-    return new Muffin(parent);
+    return new Muffin(parent, name);
   }
 };
 
 class Pie : public MockedElement {
  public:
-  Pie(ggadget::ElementInterface *parent) : MockedElement(parent) {
+  Pie(ggadget::ElementInterface *parent,
+      const char *name) : MockedElement(parent, name) {
   }
 
   virtual ~Pie() {
   }
 
  public:
-  virtual const char *type() const {
+  virtual const char *tag_name() const {
     return "pie";
   }
 
  public:
   static ggadget::ElementInterface *CreateInstance(
       ggadget::ElementInterface *parent, const char *name) {
-    return new Pie(parent);
+    return new Pie(parent, name);
   }
 };
 
@@ -92,11 +94,11 @@ TEST_F(ElementFactoryTest, TestCreate) {
 
   ggadget::ElementInterface *e1 = factory->CreateElement("muffin", NULL, NULL);
   ASSERT_TRUE(e1 != NULL);
-  ASSERT_STREQ(e1->type(), "muffin");
+  ASSERT_STREQ(e1->tag_name(), "muffin");
 
   ggadget::ElementInterface *e2 = factory->CreateElement("pie", e1, NULL);
   ASSERT_TRUE(e2 != NULL);
-  ASSERT_STREQ(e2->type(), "pie");
+  ASSERT_STREQ(e2->tag_name(), "pie");
 
   ggadget::ElementInterface *e3 = factory->CreateElement("bread", e2, NULL);
   ASSERT_TRUE(e3 == NULL);

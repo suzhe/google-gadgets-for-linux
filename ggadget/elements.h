@@ -18,6 +18,7 @@
 #define GGADGET_ELEMENTS_H__
 
 #include "common.h"
+#include "elements_interface.h"
 
 namespace ggadget {
 
@@ -34,7 +35,7 @@ class ElementFactoryInterface;
  * Elements is used for storing and managing a set of objects which
  * implement the @c ElementInterface.
  */
-class Elements {
+class Elements : public ElementsInterface {
  public:
   /** Create an Elements object and assign the given factory to it. */
   Elements(ElementFactoryInterface *factory, ElementInterface *owner);
@@ -43,24 +44,14 @@ class Elements {
   ~Elements();
 
  public:
-  /** Get the children count. */
-  int GetCount() const;
+  /** @see ElementsInterface::GetCount */
+  virtual int GetCount() const;
 
-  /**
-   * Get children by index.
-   * @param index the position of the element.
-   * @return the pointer to the specified element, or @c NULL if the index is
-   *     out of range.
-   */
-  ElementInterface *GetItem(int index);
+  /** @see ElementsInterface::GetItem */
+  virtual ElementInterface *GetItem(Variant child);
 
-  /**
-   * Get children by index.
-   * @param index the position of the element.
-   * @return the pointer to the specified element, or @c NULL if the index is
-   *     out of range.
-   */
-  const ElementInterface *GetItem(int index) const;
+  /** @see ElementsInterface::GetItem */
+  virtual const ElementInterface *GetItem(Variant child) const;
 
   /**
    * Create a new Element and add it to the end of the children list.

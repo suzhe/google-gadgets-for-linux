@@ -27,7 +27,8 @@ int count = 0;
 
 class Muffin : public MockedElement {
  public:
-  Muffin(ggadget::ElementInterface *parent) : MockedElement(parent) {
+  Muffin(ggadget::ElementInterface *parent, const char *name)
+      : MockedElement(parent, name) {
     ++count;
   }
 
@@ -36,14 +37,15 @@ class Muffin : public MockedElement {
   }
 
  public:
-  virtual const char *type() const {
+  virtual const char *tag_name() const {
     return "muffin";
   }
 };
 
 class Pie : public MockedElement {
  public:
-  Pie(ggadget::ElementInterface *parent) : MockedElement(parent) {
+  Pie(ggadget::ElementInterface *parent, const char *name)
+      : MockedElement(parent, name) {
     ++count;
   }
 
@@ -52,7 +54,7 @@ class Pie : public MockedElement {
   }
 
  public:
-  virtual const char *type() const {
+  virtual const char *tag_name() const {
     return "pie";
   }
 };
@@ -63,9 +65,9 @@ class MockedElementFactory : public ggadget::ElementFactoryInterface {
       ggadget::ElementInterface *parent,
       const char *name) {
     if (strcmp(tag_name, "muffin") == 0)
-      return new Muffin(parent);
+      return new Muffin(parent, name);
     if (strcmp(tag_name, "pie") == 0)
-      return new Pie(parent);
+      return new Pie(parent, name);
     return NULL;
   }
 
@@ -108,10 +110,23 @@ TEST_F(ElementsTest, TestOrder) {
   ggadget::ElementInterface *e2 = elements->AppendElement("pie", NULL);
   ggadget::ElementInterface *e3 = elements->AppendElement("pie", NULL);
   ASSERT_EQ(3, elements->GetCount());
-  ASSERT_TRUE(e1 == elements->GetItem(0));
-  ASSERT_TRUE(e2 == elements->GetItem(1));
-  ASSERT_TRUE(e3 == elements->GetItem(2));
-  ASSERT_TRUE(NULL == elements->GetItem(3));
+  ASSERT_TRUE(e1 == elements->GetItem(ggadget::Variant(0)));
+  ASSERT_TRUE(e2 == elements->GetItem(ggadget::Variant(1)));
+  ASSERT_TRUE(e3 == elements->GetItem(ggadget::Variant(2)));
+  ASSERT_TRUE(NULL == elements->GetItem(ggadget::Variant(3)));
+}
+
+TEST_F(ElementsTest, TestGetByName) {
+  ggadget::ElementInterface *e1 = elements->AppendElement("muffin", "muffin1");
+  ggadget::ElementInterface *e2 = elements->AppendElement("pie", "pie2");
+  ggadget::ElementInterface *e3 = elements->AppendElement("pie", "pie3");
+  ggadget::ElementInterface *e4 = elements->AppendElement("pie", "pie3");
+  ASSERT_TRUE(e4 != e3);
+  ASSERT_EQ(4, elements->GetCount());
+  ASSERT_TRUE(e1 == elements->GetItem(ggadget::Variant("muffin1")));
+  ASSERT_TRUE(e2 == elements->GetItem(ggadget::Variant("pie2")));
+  ASSERT_TRUE(e3 == elements->GetItem(ggadget::Variant("pie3")));
+  ASSERT_TRUE(NULL == elements->GetItem(ggadget::Variant("hungry")));
 }
 
 TEST_F(ElementsTest, TestInsert) {
@@ -119,9 +134,9 @@ TEST_F(ElementsTest, TestInsert) {
   ggadget::ElementInterface *e2 = elements->InsertElement("pie", e1, NULL);
   ggadget::ElementInterface *e3 = elements->InsertElement("pie", e2, NULL);
   ASSERT_EQ(3, elements->GetCount());
-  ASSERT_TRUE(e1 == elements->GetItem(2));
-  ASSERT_TRUE(e2 == elements->GetItem(1));
-  ASSERT_TRUE(e3 == elements->GetItem(0));
+  ASSERT_TRUE(e1 == elements->GetItem(ggadget::Variant(2)));
+  ASSERT_TRUE(e2 == elements->GetItem(ggadget::Variant(1)));
+  ASSERT_TRUE(e3 == elements->GetItem(ggadget::Variant(0)));
 }
 
 TEST_F(ElementsTest, TestRemove) {
@@ -131,11 +146,11 @@ TEST_F(ElementsTest, TestRemove) {
   ASSERT_EQ(3, elements->GetCount());
   ASSERT_TRUE(elements->RemoveElement(e2));
   ASSERT_EQ(2, elements->GetCount());
-  ASSERT_TRUE(elements->GetItem(0) == e1);
-  ASSERT_TRUE(elements->GetItem(1) == e3);
+  ASSERT_TRUE(elements->GetItem(ggadget::Variant(0)) == e1);
+  ASSERT_TRUE(elements->GetItem(ggadget::Variant(1)) == e3);
   ASSERT_TRUE(elements->RemoveElement(e1));
   ASSERT_FALSE(elements->RemoveElement(e1));
-  ASSERT_TRUE(elements->GetItem(0) == e3);
+  ASSERT_TRUE(elements->GetItem(ggadget::Variant(0)) == e3);
 }
 
 int main(int argc, char *argv[]) {

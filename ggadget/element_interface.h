@@ -32,7 +32,7 @@ class ElementsInterface;
 class ElementInterface {
  public:
   /** Get the type of the current object. */
-  virtual const char *type() const = 0;
+  virtual const char *tag_name() const = 0;
   /** Destroy the current object. */
   virtual void Release() = 0;
 
@@ -275,6 +275,6 @@ class ElementInterface {
   virtual void KillFocus() = 0;
 };
 
-};
+} // namespace ggadget
 
 #endif // GGADGET_ELEMENT_INTERFACE_H__
