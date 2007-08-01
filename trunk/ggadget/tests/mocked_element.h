@@ -21,10 +21,16 @@
 
 class MockedElement : public ggadget::ElementInterface {
  public:
-  MockedElement(ggadget::ElementInterface *parent) {
+  MockedElement(ggadget::ElementInterface *parent,
+                const char *name) : name_(NULL) {
+    if (name) {
+      name_ = new char[strlen(name)];
+      strcpy(name_, name);
+    }
   }
 
   virtual ~MockedElement() {
+    delete name_;
   }
 
  public:
@@ -65,7 +71,7 @@ class MockedElement : public ggadget::ElementInterface {
   }
 
   virtual const char *name() const {
-    return "mocked";
+    return name_;
   }
 
   virtual const char *mask() const {
@@ -201,6 +207,9 @@ class MockedElement : public ggadget::ElementInterface {
 
   virtual void KillFocus() {
   }
+
+ private:
+  char *name_;
 };
 
 #endif // GGADGETS_TEST_MOCKED_ELEMENT_H__

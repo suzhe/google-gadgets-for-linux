@@ -42,15 +42,24 @@ int ElementsImpl::GetCount() const {
   return children_.size();
 }
 
-ElementInterface *ElementsImpl::GetItem(int index) {
-  if (index >= 0 && index < static_cast<int>(children_.size()))
-    return children_[index];
-  return NULL;
+ElementInterface *ElementsImpl::GetItem(Variant child) {
+  switch (child.type) {
+  case Variant::TYPE_BOOL:
+    if (child.v.bool_value)
+      return NULL;
+    return GetItemByIndex(0);
+  case Variant::TYPE_DOUBLE:
+    return GetItemByIndex(static_cast<int>(child.v.double_value));
+  case Variant::TYPE_INT64:
+    return GetItemByIndex(static_cast<int>(child.v.int64_value));
+  case Variant::TYPE_STRING:
+    return GetItemByName(child.v.string_value);
+  default:
+    return NULL;
+  }
 }
 
-const ElementInterface *ElementsImpl::GetItem(int index) const {
-  if (index >= 0 && index < static_cast<int>(children_.size()))
-    return children_[index];
+const ElementInterface *ElementsImpl::GetItem(Variant child) const {
   return NULL;
 }
 
@@ -84,6 +93,37 @@ bool ElementsImpl::RemoveElement(ElementInterface *element) {
   return true;
 }
 
+ElementInterface *ElementsImpl::GetItemByIndex(int index) {
+  if (index >= 0 && index < static_cast<int>(children_.size()))
+    return children_[index];
+  return NULL;
+}
+
+const ElementInterface *ElementsImpl::GetItemByIndex(int index) const {
+  if (index >= 0 && index < static_cast<int>(children_.size()))
+    return children_[index];
+  return NULL;
+}
+
+ElementInterface *ElementsImpl::GetItemByName(const char *name) {
+  return GetItemByIndex(GetIndexByName(name));
+}
+
+const ElementInterface *ElementsImpl::GetItemByName(const char *name) const {
+  return GetItemByIndex(GetIndexByName(name));
+}
+
+int ElementsImpl::GetIndexByName(const char *name) const {
+  if (name == NULL || strlen(name) == 0)
+    return -1;
+  for (std::vector<ElementInterface *>::const_iterator ite = children_.begin();
+       ite != children_.end(); ++ite) {
+    if (strcmp((*ite)->name(), name) == 0)
+      return ite - children_.begin();
+  }
+  return -1;
+}
+
 } // namespace internal
 
 Elements::Elements(ElementFactoryInterface *factory,
@@ -100,14 +140,14 @@ int Elements::GetCount() const {
   return impl_->GetCount();
 }
 
-ElementInterface *Elements::GetItem(int index) {
+ElementInterface *Elements::GetItem(Variant child) {
   ASSERT(impl_);
-  return impl_->GetItem(index);
+  return impl_->GetItem(child);
 }
 
-const ElementInterface *Elements::GetItem(int index) const {
+const ElementInterface *Elements::GetItem(Variant child) const {
   ASSERT(impl_);
-  return impl_->GetItem(index);
+  return impl_->GetItem(child);
 }
 
 ElementInterface *Elements::AppendElement(const char *tag_name,

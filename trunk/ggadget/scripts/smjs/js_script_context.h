@@ -66,7 +66,7 @@ class JSScriptContext : public ScriptContextInterface {
    * @return the wrapped JavaScript object, or @c NULL on errors.
    */
   static JSObject *WrapNativeObjectToJS(
-      JSContext *cx, ScriptableInterface *scriptableInterface);
+      JSContext *cx, ScriptableInterface *scriptable);
 
   /**
    * Called when JavaScript engine is to finalized a JavaScript object wrapper
