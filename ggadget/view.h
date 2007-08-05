@@ -19,6 +19,8 @@
 
 #include "view_interface.h"
 
+namespace ggadget {
+
 /**
  * Main View implementation.
  */
@@ -27,5 +29,7 @@ class View : public ViewInterface {
  private: 
   View(const View &view);
 };
+
+} // namespace ggadget
 
 #endif // GGADGET_VIEW_H__

@@ -19,11 +19,15 @@
 
 #include "scriptable_interface.h"
 
+namespace ggadget {
+
 /**
  * Interface for representing a View in the Gadget API.
  */
 class ViewInterface : public ScriptableInterface {
  public:
 };
+
+} // namespace ggadget
 
 #endif // GGADGET_VIEW_INTERFACE_H__

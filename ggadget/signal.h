@@ -204,27 +204,7 @@ class Signal0<void> : public Signal {
   void operator()() { Emit(0, NULL); }
 };
 
-/**
- * Helper function to create a new @c Signal from a function prototype.
- * This is useful only when <code>Signal *</code> is used polymorphically.
- * @param function the function used as a prototype.
- * @return the created @c Signal.
- */
-template <typename R>
-inline Signal0<R> *NewSignal(R (*function)()) {
-  return new Signal0<R>();
-}
-
-/**
- * Helper function to create a new @c Signal from a method prototype.
- * This is useful only when <code>Signal *</code> is used polymorphically.
- * @param method the method used as a prototype.
- * @return the created @c Signal.
- */
-template <typename R, typename T>
-inline Signal0<R> *NewSignal(R (T::*method)()) {
-  return new Signal0<R>();
-}
+typedef Signal0<void> EventSignal;
 
 /**
  * Other <code>Signal</code>s are defined by this macro.
@@ -266,17 +246,6 @@ class Signal##n<void, _arg_type_names> : public Signal {                      \
     return ArgTypesHelper<_arg_type_names>();                                 \
   }                                                                           \
 };                                                                            \
-                                                                              \
-template <typename R, _arg_types>                                             \
-inline Signal##n<R, _arg_type_names> *                                        \
-NewSignal(R (*function)(_arg_type_names)) {                                   \
-  return new Signal##n<R, _arg_type_names>();                                 \
-}                                                                             \
-template <typename R, _arg_types, typename T>                                 \
-inline Signal##n<R, _arg_type_names> *                                        \
-NewSignal(R (T::*method)(_arg_type_names)) {                                  \
-  return new Signal##n<R, _arg_type_names>();                                 \
-}                                                                             \
 
 #define INIT_ARG(n)      vargs[n-1] = Variant(p##n)
 
