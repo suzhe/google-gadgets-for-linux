@@ -20,11 +20,12 @@ ADD_SUBDIRECTORY(scripts)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
+  elements.cc
+  element_factory.cc
   signal.cc
   static_scriptable.cc
   variant.cc
-  elements.cc
-  element_factory.cc
+  view.cc
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

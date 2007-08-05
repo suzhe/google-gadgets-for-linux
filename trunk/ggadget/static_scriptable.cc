@@ -19,7 +19,6 @@
 #include <vector>
 #include "static_scriptable.h"
 #include "signal.h"
-#include "signal_consts.h"
 #include "slot.h"
 
 namespace ggadget {
