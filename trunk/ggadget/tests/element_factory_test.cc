@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "testing/gunit.h"
+#include "unittest/gunit.h"
 #include "ggadget/element_factory_impl.h"
 #include "ggadget/element_factory.h"
 #include "mocked_element.h"

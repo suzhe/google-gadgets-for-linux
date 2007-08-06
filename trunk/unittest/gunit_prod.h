@@ -23,7 +23,7 @@
 //
 // - The foo.h file:
 //
-//   #include "testing/gunit_prod.h"
+//   #include "unittest/gunit_prod.h"
 //   ...
 //   class Foo {
 //    public:
