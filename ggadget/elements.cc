@@ -38,7 +38,7 @@ ElementsImpl::~ElementsImpl() {
     (*ite)->Release();
 }
 
-int ElementsImpl::GetCount() const {
+int ElementsImpl::GetCount() {
   return children_.size();
 }
 
@@ -57,10 +57,6 @@ ElementInterface *ElementsImpl::GetItem(Variant child) {
   default:
     return NULL;
   }
-}
-
-const ElementInterface *ElementsImpl::GetItem(Variant child) const {
-  return NULL;
 }
 
 ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
@@ -99,21 +95,11 @@ ElementInterface *ElementsImpl::GetItemByIndex(int index) {
   return NULL;
 }
 
-const ElementInterface *ElementsImpl::GetItemByIndex(int index) const {
-  if (index >= 0 && index < static_cast<int>(children_.size()))
-    return children_[index];
-  return NULL;
-}
-
 ElementInterface *ElementsImpl::GetItemByName(const char *name) {
   return GetItemByIndex(GetIndexByName(name));
 }
 
-const ElementInterface *ElementsImpl::GetItemByName(const char *name) const {
-  return GetItemByIndex(GetIndexByName(name));
-}
-
-int ElementsImpl::GetIndexByName(const char *name) const {
+int ElementsImpl::GetIndexByName(const char *name) {
   if (name == NULL || strlen(name) == 0)
     return -1;
   for (std::vector<ElementInterface *>::const_iterator ite = children_.begin();

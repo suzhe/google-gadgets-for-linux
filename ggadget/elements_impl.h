@@ -31,9 +31,8 @@ class ElementsImpl {
  public:
   ElementsImpl(ElementFactoryInterface *factory, ElementInterface *owner);
   ~ElementsImpl();
-  int GetCount() const;
+  int GetCount();
   ElementInterface *GetItem(Variant child);
-  const ElementInterface *GetItem(Variant child) const;
   ElementInterface *AppendElement(const char *tag_name, const char *name);
   ElementInterface *InsertElement(const char *tag_name,
                                   const ElementInterface *before,
@@ -41,11 +40,9 @@ class ElementsImpl {
   bool RemoveElement(ElementInterface *element);
 
   ElementInterface *GetItemByIndex(int index);
-  const ElementInterface *GetItemByIndex(int index) const;
 
   ElementInterface *GetItemByName(const char *name);
-  const ElementInterface *GetItemByName(const char *name) const;
-  int GetIndexByName(const char *name) const;
+  int GetIndexByName(const char *name);
 
   ElementFactoryInterface *factory_;
   ElementInterface *owner_;
