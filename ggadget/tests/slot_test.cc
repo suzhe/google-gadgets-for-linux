@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 #include "ggadget/slot.h"
-#include "testing/gunit.h"
+#include "unittest/gunit.h"
 
 #include "slots.h"
 
