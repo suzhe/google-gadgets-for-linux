@@ -18,15 +18,17 @@ PROJECT(google_gadgets_for_linux)
 
 SET(PRODUCT_NAME libggadget)
 
+IF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"
+    AND EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
+  INCLUDE(Dart)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+ENDIF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"
+    AND EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
+
 ADD_DEFINITIONS(-DUNIX
   -DPREFIX=\\\"${CMAKE_INSTALL_PREFIX}\\\"
   -DPRODUCT_NAME=\\\"${PRODUCT_NAME}\\\")
-
-IF(EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
-  INCLUDE(CTest)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-ENDIF(EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
 
 IF(UNIX)
   SET(CMAKE_CXX_FLAGS
