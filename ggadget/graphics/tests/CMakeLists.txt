@@ -14,19 +14,15 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(graphics)
-ADD_SUBDIRECTORY(scripts)
-# ADD_SUBDIRECTORY(sysdeps)
-ADD_SUBDIRECTORY(tests)
+ADD_DEFINITIONS(-DUNIT_TEST)
 
-SET(SRCS
-  elements.cc
-  element_factory.cc
-  signal.cc
-  static_scriptable.cc
-  variant.cc
-  view.cc
-)
+MACRO(UNIT_TEST TEST_NAME)
+  ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget ggadget_cairo)
+  TEST_WRAPPER(${TEST_NAME} TRUE)
+ENDMACRO(UNIT_TEST TEST_NAME)
 
-ADD_LIBRARY(ggadget SHARED ${SRCS})
-OUTPUT_LIBRARY(ggadget)
+UNIT_TEST(cairo_canvas_test)
+UNIT_TEST(cairo_graphics_test)
+
+TEST_RESOURCES(120day.png kitty419.jpg testmask.png)
