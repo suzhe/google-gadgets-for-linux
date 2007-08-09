@@ -1,0 +1,293 @@
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include <cstdio>
+#include <cairo.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <strings.h>
+
+#include "ggadget/common.h"
+#include "ggadget/graphics/cairo_canvas.h"
+#include "ggadget/graphics/cairo_graphics.h"
+#include "unittest/gunit.h"
+
+using namespace ggadget;
+
+const double kPi = 3.141592653589793; 
+bool g_savepng = false;
+
+// fixture for creating the CairoCanvas object
+class CairoGfxTest : public testing::Test {
+ protected:
+  GraphicsInterface *gfx_;
+  CanvasInterface *target_;
+  cairo_surface_t *surface_;
+   
+  CairoGfxTest() {
+    // create a target canvas for tests
+    surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);    
+    cairo_t *cr = cairo_create(surface_);
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+    cairo_set_source_rgba(cr, 0, 0, 0, 0);
+    cairo_paint(cr);
+    target_ = new CairoCanvas(cr, 300, 150, false);
+    cairo_destroy(cr);    
+    cr = NULL;
+    
+    gfx_ = new CairoGraphics(2.0);
+  }
+  
+  ~CairoGfxTest() {
+    delete gfx_;
+    gfx_ = NULL;
+    
+    target_->Destroy();
+    target_ = NULL;
+    
+    if (g_savepng) {
+      const testing::TestInfo *const test_info = 
+        testing::UnitTest::GetInstance()->current_test_info();
+      char file[100]; 
+      snprintf(file, arraysize(file), "%s.png", test_info->name());
+      cairo_surface_write_to_png(surface_, file);      
+    }
+    
+    cairo_surface_destroy(surface_);
+    surface_ = NULL;
+  }  
+};
+
+// this test is meaningful only with -savepng
+TEST_F(CairoGfxTest, NewCanvas) {
+  EXPECT_TRUE(target_->DrawFilledRect(150, 0, 150, 150, Color(1, 1, 1)));
+  
+  CanvasInterface *c = gfx_->NewCanvas(100, 100);
+  ASSERT_TRUE(c != NULL);
+  EXPECT_TRUE(c->DrawFilledRect(0, 0, 100, 100, Color(1, 0, 0)));
+  
+  EXPECT_TRUE(target_->DrawCanvas(50, 50, c));
+  
+  c->Destroy();
+  c = NULL;
+}
+
+TEST_F(CairoGfxTest, LoadImage) {
+  char *buffer = NULL;
+  
+  int fd = open("120day.png", O_RDONLY);
+  ASSERT_NE(-1, fd);
+  
+  struct stat statvalue;
+  ASSERT_EQ(0, fstat(fd, &statvalue));
+  
+  size_t filelen = statvalue.st_size;
+  ASSERT_NE((size_t)0, filelen);
+  
+  buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
+  ASSERT_NE(MAP_FAILED, buffer);
+    
+  CanvasInterface *img = 
+    gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
+  ASSERT_FALSE(NULL == img);
+  
+  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, 0, GraphicsInterface::IMG_PNG));
+  EXPECT_TRUE(NULL == gfx_->NewImage(NULL, 500, GraphicsInterface::IMG_PNG));
+  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, filelen, 
+                                     GraphicsInterface::IMG_INVALID));
+  
+  EXPECT_EQ((size_t)450, img->width());
+  EXPECT_EQ((size_t)310, img->height());
+  EXPECT_STREQ("CairoCanvas", img->class_type());
+  EXPECT_FALSE(img->is_mask());
+  
+  img->Destroy();
+  img = NULL;
+  
+  munmap(buffer, filelen);
+}
+
+// this test is meaningful only with -savepng
+TEST_F(CairoGfxTest, DrawCanvas) {
+  char *buffer = NULL;
+  struct stat statvalue;
+  size_t filelen;
+  CanvasInterface *img;
+  double h, scale;
+  
+  // PNG
+  int fd = open("120day.png", O_RDONLY);
+  ASSERT_NE(-1, fd);
+  
+  ASSERT_EQ(0, fstat(fd, &statvalue));  
+  filelen = statvalue.st_size;
+  ASSERT_NE((size_t)0, filelen);
+  
+  buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
+  ASSERT_NE(MAP_FAILED, buffer);
+    
+  img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
+  ASSERT_FALSE(NULL == img);
+  
+  h = img->height();
+  scale = 150. / h;
+
+  EXPECT_FALSE(target_->DrawCanvas(50., 0., NULL));
+
+  EXPECT_TRUE(target_->PushState());
+  target_->ScaleCoordinates(scale, scale);  
+  EXPECT_TRUE(target_->MultiplyOpacity(.5));
+  EXPECT_TRUE(target_->DrawCanvas(150., 0., img));
+  EXPECT_TRUE(target_->PopState());
+  
+  img->Destroy();
+  img = NULL;
+  
+  munmap(buffer, filelen);
+  
+  // JPG
+  fd = open("kitty419.jpg", O_RDONLY);
+  ASSERT_NE(-1, fd);
+    
+  ASSERT_EQ(0, fstat(fd, &statvalue));    
+  filelen = statvalue.st_size;
+  ASSERT_NE((size_t)0, filelen);
+    
+  buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
+  ASSERT_NE(MAP_FAILED, buffer);
+      
+  img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_JPEG);
+  ASSERT_FALSE(NULL == img);   
+  
+  h = img->height();
+  scale = 150. / h;
+  target_->ScaleCoordinates(scale, scale);  
+  EXPECT_TRUE(target_->DrawCanvas(0., 0., img));
+    
+  img->Destroy();
+  img = NULL;
+    
+  munmap(buffer, filelen);
+}
+
+// this test is meaningful only with -savepng
+TEST_F(CairoGfxTest, DrawImageMask) {
+  char *buffer = NULL;
+  struct stat statvalue;
+  size_t filelen;
+  CanvasInterface *mask, *img;
+  double h, scale;
+
+  EXPECT_TRUE(NULL == gfx_->NewMask(buffer, 0, GraphicsInterface::IMG_PNG));
+  EXPECT_TRUE(NULL == gfx_->NewMask(NULL, 500, GraphicsInterface::IMG_PNG));
+  EXPECT_TRUE(NULL == gfx_->NewMask(buffer, filelen, 
+                                    GraphicsInterface::IMG_INVALID));
+
+  int fd = open("testmask.png", O_RDONLY);
+  ASSERT_NE(-1, fd);
+  
+  ASSERT_EQ(0, fstat(fd, &statvalue));  
+  filelen = statvalue.st_size;
+  ASSERT_NE((size_t)0, filelen);
+  
+  buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
+  ASSERT_NE(MAP_FAILED, buffer);
+    
+  mask = gfx_->NewMask(buffer, filelen, GraphicsInterface::IMG_PNG);
+  ASSERT_FALSE(NULL == mask);
+  img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
+  ASSERT_FALSE(NULL == img);
+  
+  EXPECT_EQ((size_t)450, mask->width());
+  EXPECT_EQ((size_t)310, mask->height());
+  EXPECT_STREQ("CairoCanvas", mask->class_type());
+  EXPECT_TRUE(mask->is_mask());
+  
+  h = mask->height();
+  scale = 150. / h;
+  
+  EXPECT_TRUE(target_->DrawFilledRect(0, 0, 300, 150, Color(0, 0, 1)));
+  EXPECT_TRUE(target_->DrawCanvasWithMask(0, 0, img, 0, 0, mask));
+  
+  CanvasInterface *c = gfx_->NewCanvas(100, 100);
+  ASSERT_TRUE(c != NULL);
+  EXPECT_TRUE(c->DrawFilledRect(0, 0, 100, 100, Color(0, 1, 0)));
+  EXPECT_TRUE(target_->DrawCanvasWithMask(150, 0, c, 0, 0, mask));
+  
+  mask->Destroy();
+  mask = NULL;
+  
+  img->Destroy();
+  img = NULL;
+  
+  c->Destroy();
+  c = NULL;
+  
+  munmap(buffer, filelen);  
+}
+
+TEST_F(CairoGfxTest, NewFontAndDrawText) {  
+  FontInterface *font1 = gfx_->NewFont("Serif", 14, 
+      FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_BOLD);
+  EXPECT_STREQ("CairoFont", font1->class_type());
+  EXPECT_EQ(FontInterface::STYLE_ITALIC, font1->style());
+  EXPECT_EQ(FontInterface::WEIGHT_BOLD, font1->weight());
+  EXPECT_EQ((size_t)14, font1->pt_size());
+  
+  EXPECT_FALSE(target_->DrawText(0, 0, NULL, font1, Color(1, 0, 0)));
+  EXPECT_FALSE(target_->DrawText(0, 0, "abc", NULL, Color(1, 0, 0)));
+    
+  ASSERT_TRUE(font1 != NULL);
+  EXPECT_TRUE(target_->DrawText(0, 0, "hello world", font1, Color(1, 0, 0)));
+  
+  FontInterface *font2 = gfx_->NewFont("Serif", 14, 
+      FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
+  ASSERT_TRUE(font2 != NULL);
+  EXPECT_TRUE(target_->DrawText(0, 30, "hello world", font2, Color(0, 1, 0)));
+  
+  FontInterface *font3 = gfx_->NewFont("Serif", 14, FontInterface::STYLE_NORMAL, 
+      FontInterface::WEIGHT_BOLD);
+  ASSERT_TRUE(font3 != NULL);
+  EXPECT_TRUE(target_->DrawText(0, 60, "hello world", font3, Color(0, 0, 1)));
+  
+  FontInterface *font4 = gfx_->NewFont("Serif", 14, 
+      FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_NORMAL);
+  ASSERT_TRUE(font4 != NULL);
+  EXPECT_TRUE(target_->DrawText(0, 90, "hello world", font4, Color(0, 1, 1)));
+  
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+      FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
+  ASSERT_TRUE(font5 != NULL);
+  EXPECT_TRUE(target_->DrawText(0, 120, "Hello World", font5, Color(1, 1, 0)));
+  
+  // TODO add test for underline & strikethrough
+  
+}
+
+int main(int argc, char **argv) {
+  testing::ParseGUnitFlags(&argc, argv);
+  
+  for (int i = 0; i < argc; i++) {
+    if (0 == strcasecmp(argv[i], "-savepng")) {
+      g_savepng = true;
+      break;
+    }
+  }
+  
+  return RUN_ALL_TESTS();
+}
