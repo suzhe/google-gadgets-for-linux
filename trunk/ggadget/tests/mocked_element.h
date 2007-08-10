@@ -18,11 +18,14 @@
 #define GGADGETS_TEST_MOCKED_ELEMENT_H__
 
 #include "ggadget/element_interface.h"
+#include "ggadget/view_interface.h"
 
 class MockedElement : public ggadget::ElementInterface {
  public:
   MockedElement(ggadget::ElementInterface *parent,
-                const char *name) : name_(NULL) {
+                ggadget::ViewInterface *view,
+                const char *name)
+      : name_(NULL), parent_(parent), view_(view) {
     if (name) {
       name_ = new char[strlen(name)];
       strcpy(name_, name);
@@ -34,155 +37,163 @@ class MockedElement : public ggadget::ElementInterface {
   }
 
  public:
-  virtual void Release() {
+  virtual void Destroy() {
     delete this;
   }
 
-  virtual const ggadget::ElementsInterface *children() const {
+  virtual ggadget::ViewInterface *GetView() {
+    return view_;
+  }
+
+  virtual const ggadget::ViewInterface *GetView() const {
+    return view_;
+  }
+
+  virtual const ggadget::ElementsInterface *GetChildren() const {
     return NULL;
   }
 
-  virtual ggadget::ElementsInterface *children() {
+  virtual ggadget::ElementsInterface *GetChildren() {
     return NULL;
   }
 
-  virtual const char *cursor() const {
+  virtual const char *GetCursor() const {
     return "arrow";
   }
 
-  virtual bool set_cursor(const char *cursor) {
+  virtual bool SetCursor(const char *cursor) {
     return false;
   }
 
-  virtual bool drop_target() const {
+  virtual bool IsDropTarget() const {
     return false;
   }
 
-  virtual bool set_drop_target(bool drop_target) {
+  virtual bool SetDropTarget(bool drop_target) {
     return false;
   }
 
-  virtual bool enabled() const {
+  virtual bool IsEnabled() const {
     return false;
   }
 
-  virtual bool set_enabled(bool enabled) {
+  virtual bool SetEnabled(bool enabled) {
     return false;
   }
 
-  virtual const char *name() const {
+  virtual const char *GetName() const {
     return name_;
   }
 
-  virtual const char *mask() const {
+  virtual const char *GetMask() const {
     return "";
   }
 
-  virtual bool set_mask(const char *mask) const {
+  virtual bool SetMask(const char *mask) const {
     return false;
   }
 
-  virtual ggadget::Variant width() const {
+  virtual ggadget::Variant GetWidth() const {
     return ggadget::Variant(100);
   }
 
-  virtual bool set_width(ggadget::Variant width) {
+  virtual bool SetWidth(ggadget::Variant width) {
     return false;
   }
 
-  virtual ggadget::Variant height() const {
+  virtual ggadget::Variant GetHeight() const {
     return ggadget::Variant(100);
   }
 
-  virtual bool set_height(ggadget::Variant height) {
+  virtual bool SetHeight(ggadget::Variant height) {
     return false;
   }
 
-  virtual int offset_width() const {
+  virtual int GetOffsetWidth() const {
     return 100;
   }
 
-  virtual int offset_height() const {
+  virtual int GetOffsetHeight() const {
     return 100;
   }
 
-  virtual ggadget::Variant x() const {
+  virtual ggadget::Variant GetX() const {
     return ggadget::Variant(0);
   }
 
-  virtual bool set_x(ggadget::Variant x) {
+  virtual bool SetX(ggadget::Variant x) {
     return false;
   }
 
-  virtual ggadget::Variant y() const {
+  virtual ggadget::Variant GetY() const {
     return ggadget::Variant(0);
   }
 
-  virtual bool set_y(ggadget::Variant y) {
+  virtual bool SetY(ggadget::Variant y) {
     return false;
   }
 
-  virtual int offset_x() const {
+  virtual int GetOffsetX() const {
     return 0;
   }
 
-  virtual int offset_y() const {
+  virtual int GetOffsetY() const {
     return 0;
   }
 
-  virtual int pin_x() const {
+  virtual int GetPinX() const {
     return 0;
   }
 
-  virtual bool set_pin_x(int pin_x) {
+  virtual bool SetPinX(int pin_x) {
     return false;
   }
 
-  virtual int pin_y() const {
+  virtual int GetPinY() const {
     return 0;
   }
 
-  virtual bool set_pin_y(int pin_y) {
+  virtual bool SetPinY(int pin_y) {
     return false;
   }
 
-  virtual double rotation() const {
+  virtual double GetRotation() const {
     return 0.0;
   }
 
-  virtual bool set_rotation(double rotation) {
+  virtual bool SetRotation(double rotation) {
     return false;
   }
 
-  virtual int opacity() const {
+  virtual int GetOpacity() const {
     return 0;
   }
 
-  virtual bool set_opacity(int opacity) {
+  virtual bool SetOpacity(int opacity) {
     return false;
   }
 
-  virtual bool visible() const {
+  virtual bool IsVisible() const {
     return true;
   }
 
-  virtual bool set_visible(bool visible) {
+  virtual bool SetVisible(bool visible) {
     return false;
   }
 
-  virtual ElementInterface *parent_element() {
-    return NULL;
+  virtual ElementInterface *GetParentElement() {
+    return parent_;
   }
 
-  virtual const ElementInterface *parent_element() const {
-    return NULL;
+  virtual const ElementInterface *GetParentElement() const {
+    return parent_;
   }
 
-  virtual const char *tool_tip() const {
+  virtual const char *GetToolTip() const {
     return "";
   }
 
-  virtual bool set_tool_tip(const char *tool_tip) {
+  virtual bool SetToolTip(const char *tool_tip) {
     return false;
   }
 
@@ -210,6 +221,8 @@ class MockedElement : public ggadget::ElementInterface {
 
  private:
   char *name_;
+  ggadget::ElementInterface *parent_;
+  ggadget::ViewInterface *view_;
 };
 
 #endif // GGADGETS_TEST_MOCKED_ELEMENT_H__

@@ -22,42 +22,48 @@
 class Muffin : public MockedElement {
  public:
   Muffin(ggadget::ElementInterface *parent,
-         const char *name) : MockedElement(parent, name) {
+         ggadget::ViewInterface *view,
+         const char *name) : MockedElement(parent, view, name) {
   }
 
   virtual ~Muffin() {
   }
 
  public:
-  virtual const char *tag_name() const {
+  virtual const char *GetTagName() const {
     return "muffin";
   }
 
  public:
   static ggadget::ElementInterface *CreateInstance(
-      ggadget::ElementInterface *parent, const char *name) {
-    return new Muffin(parent, name);
+      ggadget::ElementInterface *parent,
+      ggadget::ViewInterface *view,
+      const char *name) {
+    return new Muffin(parent, view, name);
   }
 };
 
 class Pie : public MockedElement {
  public:
   Pie(ggadget::ElementInterface *parent,
-      const char *name) : MockedElement(parent, name) {
+      ggadget::ViewInterface *view,
+      const char *name) : MockedElement(parent, view, name) {
   }
 
   virtual ~Pie() {
   }
 
  public:
-  virtual const char *tag_name() const {
+  virtual const char *GetTagName() const {
     return "pie";
   }
 
  public:
   static ggadget::ElementInterface *CreateInstance(
-      ggadget::ElementInterface *parent, const char *name) {
-    return new Pie(parent, name);
+      ggadget::ElementInterface *parent,
+      ggadget::ViewInterface *view,
+      const char *name) {
+    return new Pie(parent, view, name);
   }
 };
 
@@ -92,19 +98,28 @@ TEST_F(ElementFactoryTest, TestCreate) {
   factory->RegisterElementClass("muffin", Muffin::CreateInstance);
   factory->RegisterElementClass("pie", Pie::CreateInstance);
 
-  ggadget::ElementInterface *e1 = factory->CreateElement("muffin", NULL, NULL);
+  ggadget::ElementInterface *e1 = factory->CreateElement("muffin",
+                                                         NULL,
+                                                         NULL,
+                                                         NULL);
   ASSERT_TRUE(e1 != NULL);
-  ASSERT_STREQ(e1->tag_name(), "muffin");
+  ASSERT_STREQ(e1->GetTagName(), "muffin");
 
-  ggadget::ElementInterface *e2 = factory->CreateElement("pie", e1, NULL);
+  ggadget::ElementInterface *e2 = factory->CreateElement("pie",
+                                                         e1,
+                                                         NULL,
+                                                         NULL);
   ASSERT_TRUE(e2 != NULL);
-  ASSERT_STREQ(e2->tag_name(), "pie");
+  ASSERT_STREQ(e2->GetTagName(), "pie");
 
-  ggadget::ElementInterface *e3 = factory->CreateElement("bread", e2, NULL);
+  ggadget::ElementInterface *e3 = factory->CreateElement("bread",
+                                                         e2,
+                                                         NULL,
+                                                         NULL);
   ASSERT_TRUE(e3 == NULL);
 
-  e1->Release();
-  e2->Release();
+  e1->Destroy();
+  e2->Destroy();
 }
 
 int main(int argc, char *argv[]) {

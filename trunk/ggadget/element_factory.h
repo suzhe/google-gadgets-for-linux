@@ -42,10 +42,12 @@ class ElementFactory : public ElementFactoryInterface {
   /** @see ElementFactoryInterface::CreateElement. */
   virtual ElementInterface *CreateElement(const char *tag_name,
                                           ElementInterface *parent,
+                                          ViewInterface *view,
                                           const char *name);
   /** @see ElementFactoryInterface::RegisterElementClass. */
   virtual bool RegisterElementClass(
       const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                         ViewInterface *,
                                                          const char *));
 
  public:
