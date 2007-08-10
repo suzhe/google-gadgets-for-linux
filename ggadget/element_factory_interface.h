@@ -22,6 +22,7 @@
 namespace ggadget {
 
 class ElementInterface;
+class ViewInterface;
 
 /**
  * Interface for creating an Element in the Gadget API.
@@ -37,6 +38,7 @@ class ElementFactoryInterface {
    */
   virtual ElementInterface *CreateElement(const char *tag_name,
                                           ElementInterface *parent,
+                                          ViewInterface *view,
                                           const char *name) = 0;
 
   /**
@@ -49,6 +51,7 @@ class ElementFactoryInterface {
    */
   virtual bool RegisterElementClass(
       const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                         ViewInterface *,
                                                          const char *)) = 0;
 };
 

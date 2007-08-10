@@ -42,13 +42,15 @@ ElementFactory::~ElementFactory() {
 
 ElementInterface *ElementFactory::CreateElement(const char *tag_name,
                                                 ElementInterface *parent,
+                                                ViewInterface *view,
                                                 const char *name) {
   ASSERT(impl_);
-  return impl_->CreateElement(tag_name, parent, name);
+  return impl_->CreateElement(tag_name, parent, view, name);
 }
 
 bool ElementFactory::RegisterElementClass(
     const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                       ViewInterface *,
                                                        const char *)) {
   ASSERT(impl_);
   return impl_->RegisterElementClass(tag_name, creator);
@@ -56,21 +58,28 @@ bool ElementFactory::RegisterElementClass(
 
 namespace internal {
 
-ElementInterface *ElementFactoryImpl::CreateElement(
-    const char *tag_name, ElementInterface *parent, const char *name) {
+ElementInterface *ElementFactoryImpl::CreateElement(const char *tag_name,
+                                                    ElementInterface *parent,
+                                                    ViewInterface *view,
+                                                    const char *name) {
   std::map<std::string,
-      ElementInterface *(*)(ElementInterface *, const char *)>::iterator ite =
+      ElementInterface *(*)(ElementInterface *,
+                            ViewInterface *,
+                            const char *)>::iterator ite =
       creators_.find(tag_name);
   if (ite == creators_.end())
     return NULL;
-  return ite->second(parent, name);
+  return ite->second(parent, view, name);
 }
 
 bool ElementFactoryImpl::RegisterElementClass(
     const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
+                                                       ViewInterface *,
                                                        const char *)) {
   std::map<std::string,
-      ElementInterface *(*)(ElementInterface *, const char *)>::iterator ite =
+      ElementInterface *(*)(ElementInterface *,
+                            ViewInterface *,
+                            const char *)>::iterator ite =
       creators_.find(tag_name);
   if (ite != creators_.end())
     return false;

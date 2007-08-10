@@ -35,7 +35,7 @@ ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
 ElementsImpl::~ElementsImpl() {
   for (std::vector<ElementInterface *>::iterator ite =
        children_.begin(); ite != children_.end(); ++ite)
-    (*ite)->Release();
+    (*ite)->Destroy();
 }
 
 int ElementsImpl::GetCount() {
@@ -61,7 +61,10 @@ ElementInterface *ElementsImpl::GetItem(Variant child) {
 
 ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
                                               const char *name) {
-  ElementInterface *e = factory_->CreateElement(tag_name, owner_, name);
+  ElementInterface *e = factory_->CreateElement(tag_name,
+                                                owner_,
+                                                owner_->GetView(),
+                                                name);
   if (e == NULL)
     return NULL;
   children_.push_back(e);
@@ -70,7 +73,10 @@ ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
 
 ElementInterface *ElementsImpl::InsertElement(
     const char *tag_name, const ElementInterface *before, const char *name) {
-  ElementInterface *e = factory_->CreateElement(tag_name, owner_, name);
+  ElementInterface *e = factory_->CreateElement(tag_name,
+                                                owner_,
+                                                owner_->GetView(),
+                                                name);
   if (e == NULL)
     return NULL;
   std::vector<ElementInterface *>::iterator ite = std::find(
@@ -84,7 +90,7 @@ bool ElementsImpl::RemoveElement(ElementInterface *element) {
       children_.begin(), children_.end(), element);
   if (ite == children_.end())
     return false;
-  (*ite)->Release();
+  (*ite)->Destroy();
   children_.erase(ite);
   return true;
 }
@@ -104,7 +110,7 @@ int ElementsImpl::GetIndexByName(const char *name) {
     return -1;
   for (std::vector<ElementInterface *>::const_iterator ite = children_.begin();
        ite != children_.end(); ++ite) {
-    if (strcmp((*ite)->name(), name) == 0)
+    if (strcmp((*ite)->GetName(), name) == 0)
       return ite - children_.begin();
   }
   return -1;

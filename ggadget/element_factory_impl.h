@@ -23,6 +23,7 @@
 namespace ggadget {
 
 class ElementInterface;
+class ViewInterface;
 
 namespace internal {
 
@@ -33,12 +34,16 @@ class ElementFactoryImpl {
  public:
   ElementInterface *CreateElement(const char *tag_name,
                                   ElementInterface *parent,
+                                  ViewInterface *view,
                                   const char *name);
   bool RegisterElementClass(
       const char *tag_name,
-      ElementInterface *(*creator)(ElementInterface *, const char *));
+      ElementInterface *(*creator)(ElementInterface *,
+                                   ViewInterface *,
+                                   const char *));
 
   std::map<std::string, ElementInterface *(*)(ElementInterface *,
+                                              ViewInterface *,
                                               const char *)> creators_;
 };
 

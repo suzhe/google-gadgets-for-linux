@@ -22,6 +22,7 @@
 namespace ggadget {
 
 class ElementsInterface;
+class ViewInterface;
 
 /**
  * ElementInterface defines the properties, methods and events exposed on all
@@ -32,26 +33,31 @@ class ElementsInterface;
 class ElementInterface {
  public:
   /** Get the type of the current object. */
-  virtual const char *tag_name() const = 0;
+  virtual const char *GetTagName() const = 0;
   /** Destroy the current object. */
-  virtual void Release() = 0;
+  virtual void Destroy() = 0;
+
+  /** Get the associated View of the current element. */
+  virtual const ViewInterface *GetView() const = 0;
+  /** Get the associated View of the current element. */
+  virtual ViewInterface *GetView() = 0;
 
   /**
    * Retrieves a collection that contains the immediate children of this
    *     element.
    */
-  virtual const ElementsInterface *children() const = 0;
+  virtual const ElementsInterface *GetChildren() const = 0;
   /**
    * Retrieves a collection that contains the immediate children of this
    *     element.
    */
-  virtual ElementsInterface *children() = 0;
+  virtual ElementsInterface *GetChildren() = 0;
 
   /**
    * Retrieves the cursor to display when the mouse is over this element.
-   * @see set_cursor for possible values.
+   * @see SetCursor for possible values.
    */
-  virtual const char *cursor() const = 0;
+  virtual const char *GetCursor() const = 0;
   /**
    * Sets the cursor to display when the mouse is over this element.
    * @param cursor possible values:
@@ -71,166 +77,166 @@ class ElementInterface {
    *    - @c "busy"
    *    - @c "help"
    */
-  virtual bool set_cursor(const char *cursor) = 0;
+  virtual bool SetCursor(const char *cursor) = 0;
 
   /**
    * Retrieves whether this element is a target for drag/drop operations.
    * @see set_drop_target.
    */
-  virtual bool drop_target() const = 0;
+  virtual bool IsDropTarget() const = 0;
   /**
    * Sets whether this element is a target for drag/drop operations.
    * @param drop_target is true, the ondrag* events will fire when a drag/drop
    *     oeration is initiated by the user.
    */
-  virtual bool set_drop_target(bool drop_target) = 0;
+  virtual bool SetDropTarget(bool drop_target) = 0;
 
   /**
    * Retrieves whether or not the element is enabled.
    * @see set_enabled.
    */
-  virtual bool enabled() const = 0;
+  virtual bool IsEnabled() const = 0;
   /**
    * Sets whether or not the element is enabled.
    * Disabled elements do not fire any mouse or keyboard events.
    */
-  virtual bool set_enabled(bool enabled) = 0;
+  virtual bool SetEnabled(bool enabled) = 0;
 
   /** Retrieves the name of the element.  */
-  virtual const char *name() const = 0;
+  virtual const char *GetName() const = 0;
 
   /**
    * Retrieves the mask bitmap that defines the clipping path for this element.
    */
-  virtual const char *mask() const = 0;
+  virtual const char *GetMask() const = 0;
   /**
    * Sets the mask bitmap that defines the clipping path for this element.
    */
-  virtual bool set_mask(const char *mask) const = 0;
+  virtual bool SetMask(const char *mask) const = 0;
 
   /**
    * Retrieves the width.
    * @see set_width.
    */
-  virtual Variant width() const = 0;
+  virtual Variant GetWidth() const = 0;
   /**
    * Sets the width.
    * @param width the value can be expressed in pixels or as a percentage of
    * the parent's width.
    */
-  virtual bool set_width(Variant width) = 0;
+  virtual bool SetWidth(Variant width) = 0;
   /**
    * Retrieves the height.
    * @see set_height.
    */
-  virtual Variant height() const = 0;
+  virtual Variant GetHeight() const = 0;
   /**
    * Sets the height.
    * @param height the value can be expressed in pixels or as a percentage of
    *     the parent's height.
    */
-  virtual bool set_height(Variant height) = 0;
+  virtual bool SetHeight(Variant height) = 0;
   /**
    * Retrieves the width of the element relative to its parent element, in
    * pixels. This mimics the same-named DHTML property.
    */
-  virtual int offset_width() const = 0;
+  virtual int GetOffsetWidth() const = 0;
   /**
    * Retrieves the height of the element relative to its parent element, in
    * pixels. This mimics the same-named DHTML property.
    */
-  virtual int offset_height() const = 0;
+  virtual int GetOffsetHeight() const = 0;
 
   /**
    * Retrieves the horizontal position.
    * @see set_x.
    */
-  virtual Variant x() const = 0;
+  virtual Variant GetX() const = 0;
   /**
    * Sets the horizontal position.
    * @param x the value can be expressed in pixels or as a percentage of the
    *     parent's width.
    */
-  virtual bool set_x(Variant x) = 0;
+  virtual bool SetX(Variant x) = 0;
   /**
    * Retrieves the vertical position.
    * @see set_y.
    */
-  virtual Variant y() const = 0;
+  virtual Variant GetY() const = 0;
   /**
    * Sets the vertical position.
    * @param y the value can be expressed in pixels or as a percentage of the
    *     parent's height.
    */
-  virtual bool set_y(Variant y) = 0;
+  virtual bool SetY(Variant y) = 0;
   /**
    * Retrieves the x position of the element relative to its parent element, in
    * pixels. This mimics the same-named DHTML property.
    */
-  virtual int offset_x() const = 0;
+  virtual int GetOffsetX() const = 0;
   /**
    * Retrieves the y position of the element relative to its parent element, in
    * pixels. This mimics the same-named DHTML property.
    */
-  virtual int offset_y() const = 0;
+  virtual int GetOffsetY() const = 0;
 
   /** Retrieves the horizontal pin. */
-  virtual int pin_x() const = 0;
+  virtual int GetPinX() const = 0;
   /** Sets the horizontal pin. */
-  virtual bool set_pin_x(int pin_x) = 0;
+  virtual bool SetPinX(int pin_x) = 0;
   /** Retrieves the vertical pin. */
-  virtual int pin_y() const = 0;
+  virtual int GetPinY() const = 0;
   /** Sets the vertical pin. */
-  virtual bool set_pin_y(int pin_y) = 0;
+  virtual bool SetPinY(int pin_y) = 0;
 
   /**
    * Retrieves the rotation of the element, in degrees.
    */
-  virtual double rotation() const = 0;
+  virtual double GetRotation() const = 0;
   /**
    * Sets the rotation of the element, in degrees.
    */
-  virtual bool set_rotation(double rotation) = 0;
+  virtual bool SetRotation(double rotation) = 0;
 
   /**
    * Retrieves the opacity of the element.
    * @see set_opacity.
    */
-  virtual int opacity() const = 0;
+  virtual int GetOpacity() const = 0;
   /**
    * Sets the opacity of the element.
    * @param opacity valid range: 0 ~ 255.
    */
-  virtual bool set_opacity(int opacity) = 0;
+  virtual bool SetOpacity(int opacity) = 0;
 
   /**
    * Retrieves whether or not the element is visible.
    */
-  virtual bool visible() const = 0;
+  virtual bool IsVisible() const = 0;
   /**
    * Sets whether or not the element is visible.
    */
-  virtual bool set_visible(bool visible) = 0;
+  virtual bool SetVisible(bool visible) = 0;
 
   /**
    * Retrieves the parent element.
    * @return the pointer to the parent, or @c NULL if the parent is @c View.
    */
-  virtual ElementInterface *parent_element() = 0;
+  virtual ElementInterface *GetParentElement() = 0;
   /**
    * Retrieves the parent element.
    * @return the pointer to the parent, or @c NULL if the parent is @c View.
    */
-  virtual const ElementInterface *parent_element() const = 0;
+  virtual const ElementInterface *GetParentElement() const = 0;
 
   /**
    * Retrieves the tooltip displayed when the mouse hovers over this element.
    */
-  virtual const char *tool_tip() const = 0;
+  virtual const char *GetToolTip() const = 0;
   /**
    * Sets the tooltip displayed when the mouse hovers over this element.
    */
-  virtual bool set_tool_tip(const char *tool_tip) = 0;
+  virtual bool SetToolTip(const char *tool_tip) = 0;
 
  public:
   /**
