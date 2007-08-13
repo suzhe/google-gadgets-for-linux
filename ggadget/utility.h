@@ -31,34 +31,22 @@ namespace ggadget {
  * @param child_pin_x X-coordinate of the child rotation pin in child space.
  * @param child_pin_y Y-coordinate of the child rotation pin in child space.
  * @param rotation_radians The rotation of the child element in radians.
- * @param child_x Output parameter to store the converted child X-coordinate.
- * @param child_y Output parameter to store the converted child Y-coordinate.
+ * @param[out] child_x Parameter to store the converted child X-coordinate.
+ * @param[out] child_y Parameter to store the converted child Y-coordinate.
  */
 void ChildCoordFromParentCoord(double parent_x, double parent_y,
                                double child_x_pos, double child_y_pos,
                                double child_pin_x, double child_pin_y,
                                double rotation_radians,
-                               double *child_x, double *child_y) {
-  double sin_theta = sin(rotation_radians);
-  double cos_theta = cos(rotation_radians);
-  double px_x0 = child_pin_x + child_x_pos;
-  double py_y0 = child_pin_y + child_y_pos;
-  double a_13 = child_pin_x - py_y0 * sin_theta - px_x0 * cos_theta;
-  double a_23 = child_pin_y + px_x0 * sin_theta - py_y0 * cos_theta;
-  
-  *child_x = parent_x * cos_theta + parent_y * sin_theta + a_13;
-  *child_y = parent_y * cos_theta - parent_x * sin_theta + a_23;
-}
+                               double *child_x, double *child_y);
 
 /**
- * Calculator struct used to convert a parent element's coordinate space to 
+ * Calculator object used to convert a parent element's coordinate space to 
  * that of a child element. This struct is a better choice if the multiple
  * coordinate conversions need to be done for the same child element.
  */
-struct ChildCoordCalculator {
-  double sin_theta, cos_theta;
-  double a_13, a_23;
-  
+class ChildCoordCalculator {
+ public:
   /**
    * Constructs the coordinate calculator object.
    * @param child_x_pos X-coordinate of the child (0, 0) point in parent space.
@@ -69,46 +57,35 @@ struct ChildCoordCalculator {
    */
   ChildCoordCalculator(double child_x_pos, double child_y_pos,
                        double child_pin_x, double child_pin_y,
-                       double rotation_radians) {
-    double px_x0 = child_pin_x + child_x_pos;
-    double py_y0 = child_pin_y + child_y_pos;
-    
-    sin_theta = sin(rotation_radians);
-    cos_theta = cos(rotation_radians);
-    a_13 = child_pin_x - py_y0 * sin_theta - px_x0 * cos_theta;
-    a_23 = child_pin_y + px_x0 * sin_theta - py_y0 * cos_theta;  
-  }
+                       double rotation_radians);
   
   /**
    * Converts coordinates the given coordinates.
    * @param parent_x X-coordinate in the parent space to convert.
    * @param parent_y Y-coordinate in the parent space to convert. 
-   * @param child_x Output parameter to store the converted child X-coordinate.
-   * @param child_y Output parameter to store the converted child Y-coordinate.
+   * @param[out] child_x Parameter to store the converted child X-coordinate.
+   * @param[out] child_y Parameter to store the converted child Y-coordinate.
    */
   void Convert(double parent_x, double parent_y, 
-               double *child_x, double *child_y) {
-    *child_x = parent_x * cos_theta + parent_y * sin_theta + a_13;
-    *child_y = parent_y * cos_theta - parent_x * sin_theta + a_23;    
-  }  
+               double *child_x, double *child_y);
   
   /**
    * @param parent_x X-coordinate in the parent space to convert.
    * @param parent_y Y-coordinate in the parent space to convert. 
    * @return The converted child X-coordinate.
    */
-  double GetChildX(double parent_x, double parent_y) {
-    return parent_x * cos_theta + parent_y * sin_theta + a_13;
-  }
+  double GetChildX(double parent_x, double parent_y);
   
   /**
    * @param parent_x X-coordinate in the parent space to convert.
    * @param parent_y Y-coordinate in the parent space to convert. 
    * @return The converted child Y-coordinate.
    */
-  double GetChildY(double parent_x, double parent_y) {
-    return parent_y * cos_theta - parent_x * sin_theta + a_23;  
-  }
+  double GetChildY(double parent_x, double parent_y);
+
+ private:
+  double sin_theta, cos_theta;
+  double a_13, a_23;
 };
 
 /**
