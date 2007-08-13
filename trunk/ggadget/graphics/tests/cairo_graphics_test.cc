@@ -111,10 +111,10 @@ TEST_F(CairoGfxTest, LoadImage) {
   EXPECT_TRUE(NULL == gfx_->NewImage(buffer, filelen, 
                                      GraphicsInterface::IMG_INVALID));
   
-  EXPECT_EQ((size_t)450, img->width());
-  EXPECT_EQ((size_t)310, img->height());
-  EXPECT_STREQ("CairoCanvas", img->class_type());
-  EXPECT_FALSE(img->is_mask());
+  EXPECT_EQ((size_t)450, img->GetWidth());
+  EXPECT_EQ((size_t)310, img->GetHeight());
+  EXPECT_STREQ("CairoCanvas", img->ClassType());
+  EXPECT_FALSE(img->IsMask());
   
   img->Destroy();
   img = NULL;
@@ -144,7 +144,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
   ASSERT_FALSE(NULL == img);
   
-  h = img->height();
+  h = img->GetHeight();
   scale = 150. / h;
 
   EXPECT_FALSE(target_->DrawCanvas(50., 0., NULL));
@@ -174,7 +174,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_JPEG);
   ASSERT_FALSE(NULL == img);   
   
-  h = img->height();
+  h = img->GetHeight();
   scale = 150. / h;
   target_->ScaleCoordinates(scale, scale);  
   EXPECT_TRUE(target_->DrawCanvas(0., 0., img));
@@ -213,12 +213,12 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
   ASSERT_FALSE(NULL == img);
   
-  EXPECT_EQ((size_t)450, mask->width());
-  EXPECT_EQ((size_t)310, mask->height());
-  EXPECT_STREQ("CairoCanvas", mask->class_type());
-  EXPECT_TRUE(mask->is_mask());
+  EXPECT_EQ((size_t)450, mask->GetWidth());
+  EXPECT_EQ((size_t)310, mask->GetHeight());
+  EXPECT_STREQ("CairoCanvas", mask->ClassType());
+  EXPECT_TRUE(mask->IsMask());
   
-  h = mask->height();
+  h = mask->GetHeight();
   scale = 150. / h;
   
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 300, 150, Color(0, 0, 1)));
@@ -244,10 +244,10 @@ TEST_F(CairoGfxTest, DrawImageMask) {
 TEST_F(CairoGfxTest, NewFontAndDrawText) {  
   FontInterface *font1 = gfx_->NewFont("Serif", 14, 
       FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_BOLD);
-  EXPECT_STREQ("CairoFont", font1->class_type());
-  EXPECT_EQ(FontInterface::STYLE_ITALIC, font1->style());
-  EXPECT_EQ(FontInterface::WEIGHT_BOLD, font1->weight());
-  EXPECT_EQ((size_t)14, font1->pt_size());
+  EXPECT_STREQ("CairoFont", font1->ClassType());
+  EXPECT_EQ(FontInterface::STYLE_ITALIC, font1->GetStyle());
+  EXPECT_EQ(FontInterface::WEIGHT_BOLD, font1->GetWeight());
+  EXPECT_EQ((size_t)14, font1->GetPointSize());
   
   EXPECT_FALSE(target_->DrawText(0, 0, NULL, font1, Color(1, 0, 0)));
   EXPECT_FALSE(target_->DrawText(0, 0, "abc", NULL, Color(1, 0, 0)));

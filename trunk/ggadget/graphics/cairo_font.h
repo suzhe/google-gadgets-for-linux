@@ -38,15 +38,15 @@ class CairoFont : public FontInterface {
             Weight weight);
   virtual ~CairoFont();
   
-  virtual Style style() const { return style_; };
-  virtual Weight weight() const { return weight_; };
-  virtual size_t pt_size() const { return size_; };
+  virtual Style GetStyle() const { return style_; };
+  virtual Weight GetWeight() const { return weight_; };
+  virtual size_t GetPointSize() const { return size_; };
   
   virtual void Destroy() { delete this; };
   
-  virtual const char *class_type() const { return kClassType; };
-  
-  const PangoFontDescription *font() const { return font_; };
+  virtual const char *ClassType() const { return kClassType; };
+
+  const PangoFontDescription *GetFontDescription() const { return font_; };
   
   static const char *kClassType;
    
@@ -54,7 +54,7 @@ class CairoFont : public FontInterface {
   PangoFontDescription *font_;
   size_t size_;
   Style style_;
-  Weight weight_;
+  Weight weight_;  
 };
 
 } // namespace ggadget

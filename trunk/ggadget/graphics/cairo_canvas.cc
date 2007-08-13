@@ -110,17 +110,17 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
 
 bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   // verify class type before downcasting
-  if (!img || img->is_mask() ||
-      strcmp(CairoCanvas::kClassType, img->class_type())) {
+  if (!img || img->IsMask() ||
+      strcmp(CairoCanvas::kClassType, img->ClassType())) {
     return false;
   }
   
   CairoCanvas *cimg = (CairoCanvas *)img;
-  cairo_surface_t *s = cimg->surface();
+  cairo_surface_t *s = cimg->GetSurface();
   int sheight = cairo_image_surface_get_height(s);
   int swidth = cairo_image_surface_get_width(s);
-  size_t w = cimg->width();
-  size_t h = cimg->height();
+  size_t w = cimg->GetWidth();
+  size_t h = cimg->GetHeight();
   if (size_t(sheight) == h && size_t(swidth) == w) {
     // no scaling needed
     cairo_set_source_surface(cr_, s, x, y);
@@ -148,9 +148,9 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
                                     double mx, double my,
                                     const CanvasInterface *mask) {
   // verify class type before downcasting
-  if (!img || img->is_mask() || !mask || !mask->is_mask() ||
-      strcmp(CairoCanvas::kClassType, img->class_type()) ||      
-      strcmp(CairoCanvas::kClassType, mask->class_type())) {
+  if (!img || img->IsMask() || !mask || !mask->IsMask() ||
+      strcmp(CairoCanvas::kClassType, img->ClassType()) ||      
+      strcmp(CairoCanvas::kClassType, mask->ClassType())) {
     return false;
   }
 
@@ -162,12 +162,12 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
   // independently from the mask in the zoomed scenario, which produces more
   // work for us to do in order to resize the two surfaces to the same
   // resolution.
-  cairo_surface_t *simg = cimg->surface();
-  cairo_surface_t *smask = cmask->surface();
+  cairo_surface_t *simg = cimg->GetSurface();
+  cairo_surface_t *smask = cmask->GetSurface();
   int sheight = cairo_image_surface_get_height(simg);
   int swidth = cairo_image_surface_get_width(simg);
-  size_t w = cimg->width();
-  size_t h = cimg->height();
+  size_t w = cimg->GetWidth();
+  size_t h = cimg->GetHeight();
   if (size_t(sheight) == h && size_t(swidth) == w) {
     // no scaling needed
     cairo_set_source_surface(cr_, simg, x, y);
@@ -186,8 +186,8 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
       
       // this scaling is a bit off, but this type of errors are 
       // unavoidable when compositing images of different sizes
-      size_t maskw = size_t(cmask->width() / cx);
-      size_t maskh = size_t(cmask->height() / cy);  
+      size_t maskw = size_t(cmask->GetWidth() / cx);
+      size_t maskh = size_t(cmask->GetHeight() / cy);  
       target = cairo_image_surface_create(CAIRO_FORMAT_A8, maskw, maskh);
       cr = cairo_create(target);
       cairo_scale(cr, 1. / cx, 1. / cy);
@@ -227,7 +227,7 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
 bool CairoCanvas::DrawText(double x, double y, const char *text, 
                            const FontInterface *f, const Color &c) {
   if (text == NULL || f == NULL || 
-      strcmp(f->class_type(), CairoFont::kClassType)) {
+      strcmp(f->ClassType(), CairoFont::kClassType)) {
     return false;    
   }
   
@@ -237,7 +237,7 @@ bool CairoCanvas::DrawText(double x, double y, const char *text,
   const CairoFont *font = (const CairoFont*)f; 
   PangoLayout *layout = pango_cairo_create_layout(cr_);
   pango_layout_set_text(layout, text, -1);
-  pango_layout_set_font_description(layout, font->font());
+  pango_layout_set_font_description(layout, font->GetFontDescription());
   pango_cairo_show_layout(cr_, layout);
   g_object_unref(layout);
     
