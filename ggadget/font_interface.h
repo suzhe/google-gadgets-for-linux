@@ -45,17 +45,17 @@ class FontInterface {
   /**
    * @return The style option associated with the font.
    */
-  virtual Style style() const = 0;
+  virtual Style GetStyle() const = 0;
     
   /**
    * @return The style option associated with the font.
    */
-  virtual Weight weight() const = 0;
+  virtual Weight GetWeight() const = 0;
   
   /**
    * @return The size of the font, in points.
    */
-  virtual size_t pt_size() const = 0;
+  virtual size_t GetPointSize() const = 0;
   
   /**
    * Frees the FontInterface object.
@@ -65,7 +65,7 @@ class FontInterface {
   /**
    * @return A name unique to this class.
    */
-  virtual const char *class_type() const = 0;
+  virtual const char *ClassType() const = 0;
 };
   
 } // namespace ggadget

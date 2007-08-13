@@ -44,12 +44,12 @@ class CairoCanvas : public CanvasInterface {
   
   virtual void Destroy() { delete this; };
   
-  virtual size_t width() const { return width_; };
-  virtual size_t height() const { return height_; };  
+  virtual size_t GetWidth() const { return width_; };
+  virtual size_t GetHeight() const { return height_; };  
   
-  virtual bool is_mask() const { return is_mask_; };  
+  virtual bool IsMask() const { return is_mask_; };  
   
-  virtual const char *class_type() const { return kClassType; };
+  virtual const char *ClassType() const { return kClassType; };
     
   virtual bool PushState();
   virtual bool PopState();
@@ -85,7 +85,7 @@ class CairoCanvas : public CanvasInterface {
    double opacity_;
    std::stack<double> opacity_stack_;
    
-   cairo_surface_t *surface() { 
+   cairo_surface_t *GetSurface() { 
      cairo_surface_t *s = cairo_get_target(cr_);
      cairo_surface_flush(s);
      return s;

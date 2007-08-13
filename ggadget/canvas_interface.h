@@ -43,26 +43,26 @@ class CanvasInterface {
   /**
    * @return The width of the canvas in pixels.
    */
-  virtual size_t width() const = 0;
+  virtual size_t GetWidth() const = 0;
   /**
    * @return The height of the canvas in pixels.
    */
-  virtual size_t height() const = 0;  
+  virtual size_t GetHeight() const = 0;  
   
   /**
    * @return true if the canvas is a mask, false otherwise.
    */
-  virtual bool is_mask() const = 0;  
+  virtual bool IsMask() const = 0;  
   
   /**
    * @return A name unique to the concrete class type.
    */
-  virtual const char *class_type() const = 0;
+  virtual const char *ClassType() const = 0;
   
   /** 
    * Saves the current graphics state in a stack, while not changing the current 
    * state. Specifically, four aspects of the state are stored: clipping, 
-   * transformation matrix, opacity, and mask surface. Since the states are 
+   * transformation matrix, and opacity. Since the states are 
    * saved in a stack, this method may be called multiple times without losing 
    * any of the previously saved states.
    * @return true on success, false otherwise.
@@ -71,8 +71,8 @@ class CanvasInterface {
   
   /** 
    * Restores the last pushed graphics state from the state stack, overwriting 
-   * the current state. Specifically, clipping, transformation matrix, opacity, 
-   * and mask surface is restored with each pop. Since the states are saved in 
+   * the current state. Specifically, clipping, transformation matrix, 
+   * and opacity are restored with each pop. Since the states are saved in 
    * a stack, this method may be called multiple times to pop multiple 
    * previously saved states. 
    * @return true on success, false otherwise.
