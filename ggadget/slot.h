@@ -197,7 +197,8 @@ inline Slot0<R> *NewSlot(T *object, R (T::*method)() const) {
  * The caller should delete the instance after use.
  * Place <code>typename F</code> at the end of the template parameter to
  * let the compiler populate the default type.
- * <p>Usage: <code>NewFunctorSlot<int>(AFunctor());</code></p>
+ *
+ * Usage: <code>NewFunctorSlot<int>(AFunctor());</code>
  */
 template <typename R, typename F>
 inline Slot0<R> *NewFunctorSlot(F functor) {

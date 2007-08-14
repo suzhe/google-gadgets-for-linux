@@ -29,18 +29,27 @@ template <typename R> class Slot0;
  * Object interface that can be called from script languages.
  * Only objects with dynamic properties or methods need to directly
  * implement this interface.  Other objects should use @c StaticScriptable.
+ *
+ * An implementation should include a <code>static const int CLASS_ID</code>
+ * field which uniquely identifies the class.
  */
 class ScriptableInterface {
  public:
+  /**
+   * This ID uniquely identifies the class.  Each implementation should define
+   * this field as a unique integer.  You can simply use the first part of
+   * the result of uuidgen.
+   */
   static const int CLASS_ID = 0;
 
   /**
    * Attach this object to the script engine.
    * Normally if the object is always owned by the native side, the
    * implementation should do nothing in this method.
+   *
    * If the ownership can be transfered or shared between the native side
    * and the script side, the implementation should do appropriate things,
-   * such as reference counting, etc. to manage the owership. 
+   * such as reference counting, etc. to manage the ownership.
    */
   virtual void Attach() = 0;
 
@@ -65,11 +74,13 @@ class ScriptableInterface {
 
   /**
    * Get the info of a property by its name.
+   *
    * Because methods are special properties, if @c name corresponds a method,
    * a prototype of type @c Variant::TYPE_SLOT will be returned, then the
-   * caller can get the function details from the @c Slot value this prototype.
-   * A property expecting a script function also has a prototype of type
-   * @c Variant::TYPE_SLOT.
+   * caller can get the function details from @c slot_value this prototype.
+   *
+   * A signal property also expects a script function as the value, and thus
+   * also has a prototype of type @c Variant::TYPE_SLOT.
    *
    * @param name the name of the property.
    * @param[out] id return the property's id which can be used in later
@@ -79,7 +90,7 @@ class ScriptableInterface {
    * @param[out] prototype return a prototype of the property value, from
    *     which the script engine can get detailed information.
    * @param[out] is_method @c true if this property corresponds a method.
-   *     It's useful to distinguish between methods and call back properties.
+   *     It's useful to distinguish between methods and signal properties.
    * @return @c true if the property is supported and succeeds.
    */
   virtual bool GetPropertyInfoByName(const char *name,
