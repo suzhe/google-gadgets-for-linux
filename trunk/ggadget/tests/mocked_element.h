@@ -17,6 +17,7 @@
 #ifndef GGADGETS_TEST_MOCKED_ELEMENT_H__
 #define GGADGETS_TEST_MOCKED_ELEMENT_H__
 
+#include <string>
 #include "ggadget/element_interface.h"
 #include "ggadget/view_interface.h"
 
@@ -25,15 +26,12 @@ class MockedElement : public ggadget::ElementInterface {
   MockedElement(ggadget::ElementInterface *parent,
                 ggadget::ViewInterface *view,
                 const char *name)
-      : name_(NULL), parent_(parent), view_(view) {
-    if (name) {
-      name_ = new char[strlen(name)];
-      strcpy(name_, name);
-    }
+      : parent_(parent), view_(view) {
+    if (name)
+      name_ = name;
   }
 
   virtual ~MockedElement() {
-    delete name_;
   }
 
  public:
@@ -82,7 +80,7 @@ class MockedElement : public ggadget::ElementInterface {
   }
 
   virtual const char *GetName() const {
-    return name_;
+    return name_.c_str();
   }
 
   virtual const char *GetMask() const {
@@ -220,7 +218,7 @@ class MockedElement : public ggadget::ElementInterface {
   }
 
  private:
-  char *name_;
+  std::string name_;
   ggadget::ElementInterface *parent_;
   ggadget::ViewInterface *view_;
 };

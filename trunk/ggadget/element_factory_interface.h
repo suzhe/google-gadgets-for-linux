@@ -33,6 +33,7 @@ class ElementFactoryInterface {
    * Creates an ElementInterface of the specified type.
    * @param tag_name the tag name name of the object.
    * @param parent the parent object of the newly created object.
+   * @param view the top-level view object containing the current object.
    * @param name the name of the newly created element.
    * @return the pointer to the newly created object or @c NULL if failed.
    */
