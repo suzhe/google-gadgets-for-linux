@@ -157,17 +157,18 @@ struct LogHelper {
 /** Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
  * for upcasting in the type hierarchy.
  * It's used to cast a pointer to @c Foo to a pointer to @c SuperclassOfFoo
- * or casting a pointer to @c Foo to a const pointer to @c Foo).<br>
+ * or casting a pointer to @c Foo to a const pointer to @c Foo).
+ *
  * When you use @c implicit_cast, the compiler checks that the cast is safe.
  * Such explicit <code>implicit_cast</code>s are necessary in surprisingly
  * many situations where C++ demands an exact type match instead of an
  * argument type convertable to a target type.
  *
- * <p>The From type can be inferred, so the preferred syntax for using
+ * The From type can be inferred, so the preferred syntax for using
  * implicit_cast is the same as for static_cast etc.:
- * <code>implicit_cast<To>(expr)</code></p>
+ * <code>implicit_cast<To>(expr)</code>
  *
- * <p>@c implicit_cast would have been part of the C++ standard library,
+ * @c implicit_cast would have been part of the C++ standard library,
  * but the proposal was submitted too late.  It will probably make
  * its way into the language in the future.
  */
@@ -188,7 +189,8 @@ inline To implicit_cast(From const &f) {
  * use @c dynamic_cast to double-check the downcast is legal (we die
  * if it's not).  In normal mode, we do the efficient @c static_cast
  * instead.
- * <p>Use like this: <code>down_cast<To *>(foo)</code>.</p>
+ *
+ * Use like this: <code>down_cast<To *>(foo)</code>.
  */
 template<typename To, typename From>
 inline To down_cast(From* f) {          // so we only accept pointers
