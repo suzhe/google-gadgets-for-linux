@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_SLOT_H__
-#define GGADGETS_SLOT_H__
+#ifndef GGADGET_SLOT_H__
+#define GGADGET_SLOT_H__
 
 #include "variant.h"
 
@@ -495,4 +495,4 @@ inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
 
 } // namespace ggadget
 
-#endif // GGADGETS_SLOT_H__
+#endif // GGADGET_SLOT_H__

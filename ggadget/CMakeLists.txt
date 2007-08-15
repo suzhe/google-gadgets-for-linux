@@ -24,6 +24,7 @@ SET(SRCS
   element_factory.cc
   signal.cc
   static_scriptable.cc
+  unicode_utils.cc
   utility.cc
   variant.cc
   view.cc
