@@ -102,4 +102,4 @@ class ScriptContextInterface {
 
 } // namespace ggadget
 
-#endif // GGADGETS_SCRIPT_CONTEXT_INTERFACE_H__
+#endif // GGADGET_SCRIPT_CONTEXT_INTERFACE_H__
