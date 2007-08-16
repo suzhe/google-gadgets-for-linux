@@ -207,7 +207,7 @@ void JSScriptContext::GetCurrentFileAndLine(JSContext *context,
 JSObject *JSScriptContext::WrapNativeObjectToJSInternal(
     ScriptableInterface *scriptable) {
   ASSERT(scriptable);
-  WrapperMap::iterator it = wrapper_map_.find(scriptable);
+  WrapperMap::const_iterator it = wrapper_map_.find(scriptable);
   if (it == wrapper_map_.end()) {
     NativeJSWrapper *wrapper = new NativeJSWrapper(context_, scriptable);
     wrapper_map_[scriptable] = wrapper;
@@ -242,7 +242,7 @@ void JSScriptContext::FinalizeNativeJSWrapper(JSContext *cx,
 
 jsval JSScriptContext::ConvertSlotToJSInternal(Slot *slot) {
   ASSERT(slot);
-  SlotJSMap::iterator it = slot_js_map_.find(slot);
+  SlotJSMap::const_iterator it = slot_js_map_.find(slot);
   if (it != slot_js_map_.end()) {
     // If found, it->second JavaScript function object that has been wrapped
     // into a JSFunctionSlot.
