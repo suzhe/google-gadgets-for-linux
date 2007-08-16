@@ -30,13 +30,16 @@ ADD_DEFINITIONS(
   -DUNIX
   -DPREFIX=\\\"${CMAKE_INSTALL_PREFIX}\\\"
   -DPRODUCT_NAME=\\\"${PRODUCT_NAME}\\\"
+  # Let tinyxml use STL.
+  -DTIXML_USE_STL
 )
 
 IF(UNIX)
   SET(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror -Wno-non-virtual-dtor"
   )
-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wall -Werror")
+  # No "-Wall -Werror" for C flags, to avoid third_party code break.
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   SET(PROJECT_RESOURCE_DIR share/${PRODUCT_NAME})
 ELSE(UNIX)
   SET(PROJECT_RESOURCE_DIR resource)
@@ -59,4 +62,4 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 
 ADD_SUBDIRECTORY(unittest)
 ADD_SUBDIRECTORY(ggadget)
-ADD_SUBDIRECTORY(tinyxml)
+ADD_SUBDIRECTORY(third_party)
