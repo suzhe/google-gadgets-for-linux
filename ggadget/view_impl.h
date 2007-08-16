@@ -27,11 +27,11 @@ namespace internal {
 /**
  * Fires when the user chooses the Cancel button in an options view.
  */
-static const char *const kOnCancelEvent = "oncancel";
+const char *const kOnCancelEvent = "oncancel";
 /**
  * Fires when the left mouse button is clicked.
  */
-static const char *const kOnClickEvent = "onclick";
+const char *const kOnClickEvent = "onclick";
 /**
  * Fires when the view is about to be closed.
  */

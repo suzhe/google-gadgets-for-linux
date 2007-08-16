@@ -41,6 +41,12 @@ class Muffin : public MockedElement {
       const char *name) {
     return new Muffin(parent, view, name);
   }
+
+ public:
+  static const int CLASS_ID = 1111;
+  virtual bool IsInstanceOf(int class_id) const {
+    return class_id == CLASS_ID;
+  }
 };
 
 class Pie : public MockedElement {
@@ -64,6 +70,12 @@ class Pie : public MockedElement {
       ggadget::ViewInterface *view,
       const char *name) {
     return new Pie(parent, view, name);
+  }
+
+ public:
+  static const int CLASS_ID = 1111;
+  virtual bool IsInstanceOf(int class_id) const {
+    return class_id == CLASS_ID;
   }
 };
 

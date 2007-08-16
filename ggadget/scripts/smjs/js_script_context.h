@@ -32,19 +32,14 @@ class NativeJSWrapper;
 class JSScriptRuntime : public ScriptRuntimeInterface {
  public:
   JSScriptRuntime();
+  virtual ~JSScriptRuntime();
 
   /** @see ScriptRuntimeInterface::CreateContext() */
   virtual ScriptContextInterface *CreateContext();
-  /** @see ScriptRuntimeInterface::DestroyContext() */
-  virtual void DestroyContext(ScriptContextInterface *context);
-  /** @see ScriptRuntimeInterface::Destroy() */
-  virtual void Destroy();
   /** @see ScriptRuntimeInterface::ConnectErrorReporter() */
   virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);
-
-  ~JSScriptRuntime() { }
 
   static void ReportError(JSContext *cx, const char *message,
                           JSErrorReport *report);
@@ -112,6 +107,8 @@ class JSScriptContext : public ScriptContextInterface {
 
   JSContext *context() const { return context_; }
 
+  /** @see ScriptContextInterface::Destroy() */
+  virtual void Destroy();
   /** @see ScriptContextInterface::Compile() */
   virtual Slot *Compile(const char *script,
                         const char *filename,
@@ -127,7 +124,7 @@ class JSScriptContext : public ScriptContextInterface {
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
   friend class JSScriptRuntime;
   JSScriptContext(JSContext *context);
-  ~JSScriptContext();
+  virtual ~JSScriptContext();
 
   void GetCurrentFileAndLineInternal(const char **filename, int *lineno);
   JSObject *WrapNativeObjectToJSInternal(

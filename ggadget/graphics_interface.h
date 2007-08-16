@@ -28,7 +28,9 @@ namespace ggadget {
  * corresponding implementation of CanvasInterface.
  */
 class GraphicsInterface {
- public: 
+ public:
+  virtual ~GraphicsInterface() { }
+
   /**
    * Type representing different formats of images supported by ggadget.
    */

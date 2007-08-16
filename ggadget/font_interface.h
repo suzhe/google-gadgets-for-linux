@@ -25,6 +25,12 @@ namespace ggadget {
  * Call @c Destroy() to free this object once it is no longer needed.
  */
 class FontInterface {
+ protected:
+  /**
+   * Disallow direct deletion.
+   */
+  virtual ~FontInterface() { }
+
  public:   
   /**
    * Enum used to specify font styles.
@@ -41,7 +47,7 @@ class FontInterface {
     WEIGHT_NORMAL,
     WEIGHT_BOLD
   };
-   
+
   /**
    * @return The style option associated with the font.
    */

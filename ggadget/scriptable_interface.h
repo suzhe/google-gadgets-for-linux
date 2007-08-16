@@ -34,6 +34,12 @@ template <typename R> class Slot0;
  * field which uniquely identifies the class.
  */
 class ScriptableInterface {
+ protected:
+  /**
+   * Disallow direct deletion.
+   */
+  virtual ~ScriptableInterface() { }
+
  public:
   /**
    * This ID uniquely identifies the class.  Each implementation should define
@@ -62,7 +68,7 @@ class ScriptableInterface {
   /**
    * Judge if this instance is of a given class.
    */
-  virtual bool IsInstanceOf(int class_id) = 0;
+  virtual bool IsInstanceOf(int class_id) const = 0;
 
   /**
    * Connect a callback @c Slot to the "ondelete" signal.
@@ -130,8 +136,6 @@ class ScriptableInterface {
    * @return @c true if the property is supported and succeeds.
    */
   virtual bool SetProperty(int id, Variant value) = 0;
-
-  DISALLOW_DIRECT_DELETION(ScriptableInterface);
 };
 
 } // namespace ggadget

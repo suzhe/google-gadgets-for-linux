@@ -29,6 +29,8 @@ class ElementInterface;
  */
 class ElementsInterface {
  public:
+  virtual ~ElementsInterface() { }
+
   /** Get the children count. */
   virtual int GetCount() const = 0;
 

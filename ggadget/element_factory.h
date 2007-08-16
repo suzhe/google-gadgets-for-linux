@@ -35,8 +35,7 @@ class ElementInterface;
  */
 class ElementFactory : public ElementFactoryInterface {
  public:
-  // not virtual because no inheritance to this class is allowed.
-  ~ElementFactory();
+  virtual ~ElementFactory();
 
  public:
   /** @see ElementFactoryInterface::CreateElement. */

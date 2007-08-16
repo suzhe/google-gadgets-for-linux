@@ -97,6 +97,7 @@ struct TestBoolFunctor9 {
 
 class TestClass0 {
  public:
+  virtual ~TestClass0() { };
   virtual void TestVoidMethod2(char p1, unsigned long p2) = 0;
 };
 

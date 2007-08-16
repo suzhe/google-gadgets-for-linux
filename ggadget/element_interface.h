@@ -17,6 +17,7 @@
 #ifndef GGADGET_ELEMENT_INTERFACE_H__
 #define GGADGET_ELEMENT_INTERFACE_H__
 
+#include "scriptable_interface.h"
 #include "variant.h"
 
 namespace ggadget {
@@ -30,7 +31,7 @@ class ViewInterface;
  * method is said to return an @c element, that means an element defined in the
  * gadget's XML definition, descended from @c BasicElement.
  */
-class ElementInterface {
+class ElementInterface : public ScriptableInterface {
  public:
   /** Get the type of the current object. */
   virtual const char *GetTagName() const = 0;

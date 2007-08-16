@@ -44,6 +44,12 @@ class Muffin : public MockedElement {
   virtual const char *GetTagName() const {
     return "muffin";
   }
+
+ public:
+  static const int CLASS_ID = 1111;
+  virtual bool IsInstanceOf(int class_id) const {
+    return class_id == CLASS_ID;
+  }
 };
 
 class Pie : public MockedElement {
@@ -62,6 +68,12 @@ class Pie : public MockedElement {
  public:
   virtual const char *GetTagName() const {
     return "pie";
+  }
+
+ public:
+  static const int CLASS_ID = 2222;
+  virtual bool IsInstanceOf(int class_id) const {
+    return class_id == CLASS_ID;
   }
 };
 
