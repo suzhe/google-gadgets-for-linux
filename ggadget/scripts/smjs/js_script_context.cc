@@ -109,8 +109,6 @@ class JSFunctionSlot : public Slot {
   const Slot *prototype_;
   JSContext *context_;
   jsval function_val_;
-  bool has_last_return_;
-  Variant last_return_;
 };
 
 JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
@@ -168,7 +166,7 @@ static JSScriptContext *GetJSScriptContext(JSContext *context) {
   return reinterpret_cast<JSScriptContext *>(JS_GetContextPrivate(context));
 }
 
-// As we don't want to depend on only the public SpiderMonkey APIs, the only
+// As we want to depend on only the public SpiderMonkey APIs, the only
 // way to get the current filename and lineno is from the JSErrorReport.
 void JSScriptContext::RecordFileAndLine(JSContext *cx, const char *message,
                                         JSErrorReport *report) {
