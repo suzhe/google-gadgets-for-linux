@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-ADD_DEFINITIONS(-DTIXML_USE_STL)
 ADD_LIBRARY(tinyxml
   tinyxml.cpp
   tinyxmlparser.cpp
