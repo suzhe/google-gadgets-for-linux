@@ -29,8 +29,10 @@ class Slot;
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
+ * <code>Variant</code>s are immutable. 
  */
-struct Variant {
+class Variant {
+ public:
   /**
    * Type enum definition of the value of the @c Variant.
    */
@@ -49,7 +51,11 @@ struct Variant {
     TYPE_SCRIPTABLE,
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
-    /** @c StringOrInt type */
+    /**
+     * @c TYPE_VARIANT is only used to indicate a parameter or a return type
+     * can accept any above type.  A @c Variant with this type can only act
+     * as a prototype, not a real value. 
+     */
     TYPE_VARIANT,
   };
 
@@ -57,22 +63,23 @@ struct Variant {
    * Construct a @c Variant without a value.
    * The type of the constructed @c Variant is @c TYPE_VOID.
    */
-  Variant() : type(TYPE_VOID) { }
+  Variant() : type_(TYPE_VOID) {
+    v_.double_value_ = 0;  // Also sets other unions to 0.
+  }
 
   /**
    * Construct a @c Variant by type with default value (zero).
    */
-  Variant(Type a_type) : type(a_type) {
-    if (type == TYPE_STRING) v.string_value = "";
-    else v.double_value = 0;  // Also sets other unions to 0.
+  Variant(Type a_type) : type_(a_type) {
+    v_.double_value_ = 0;  // Also sets other unions to 0.
   }
 
   /**
    * Construct a @c Variant with a @c bool value.
    * The type of the constructed @c Variant is @c TYPE_BOOL.
    */
-  explicit Variant(bool value) : type(TYPE_BOOL) {
-    v.bool_value = value;
+  explicit Variant(bool value) : type_(TYPE_BOOL) {
+    v_.bool_value_ = value;
   }
 
   /**
@@ -81,16 +88,16 @@ struct Variant {
    * short</code>.
    * The type of the constructed @c Variant is @c TYPE_INT64.
    */
-  explicit Variant(int32_t value) : type(TYPE_INT64) {
-    v.int64_value = value;
+  explicit Variant(int32_t value) : type_(TYPE_INT64) {
+    v_.int64_value_ = value;
   }
 
   /**
    * Construct a @c Variant with a @c uint32_t value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
    */
-  explicit Variant(uint32_t value) : type(TYPE_INT64) {
-    v.int64_value = static_cast<int64_t>(value);
+  explicit Variant(uint32_t value) : type_(TYPE_INT64) {
+    v_.int64_value_ = static_cast<int64_t>(value);
   }
 
 #ifndef LONG_INT64_T_EQUIVALENT
@@ -98,16 +105,16 @@ struct Variant {
    * Construct a @c Variant with a @c long value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
    */
-  explicit Variant(long value) : type(TYPE_INT64) {
-    v.int64_value = value;
+  explicit Variant(long value) : type_(TYPE_INT64) {
+    v_.int64_value_ = value;
   }
 
   /**
    * Construct a @c Variant with a <code>unsigned long</code> value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
    */
-  explicit Variant(unsigned long value) : type(TYPE_INT64) {
-    v.int64_value = static_cast<int64_t>(value);
+  explicit Variant(unsigned long value) : type_(TYPE_INT64) {
+    v_.int64_value_ = static_cast<int64_t>(value);
   }
 #endif // LONG_INT64_T_EQUIVALENT
 
@@ -115,41 +122,45 @@ struct Variant {
    * Construct a @c Variant with a @c int64_t value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
    */
-  explicit Variant(int64_t value) : type(TYPE_INT64) {
-    v.int64_value = value;
+  explicit Variant(int64_t value) : type_(TYPE_INT64) {
+    v_.int64_value_ = value;
   }
 
   /**
    * Construct a @c Variant with a @c uint64_t value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
    */
-  explicit Variant(uint64_t value) : type(TYPE_INT64) {
-    v.int64_value = static_cast<int64_t>(value);
+  explicit Variant(uint64_t value) : type_(TYPE_INT64) {
+    v_.int64_value_ = static_cast<int64_t>(value);
   }
 
   /**
    * Construct a @c Variant with a @c double value.
    * The type of the constructed @c Variant is @c TYPE_DOUBLE.
    */
-  explicit Variant(double value) : type(TYPE_DOUBLE) {
-    v.double_value = value;
+  explicit Variant(double value) : type_(TYPE_DOUBLE) {
+    v_.double_value_ = value;
   }
 
   /**
    * Construct a @c Variant with a @c std::string value.
-   * The parameter must live longer than this @c Variant.
    * The type of the constructed @c Variant is @c TYPE_STRING.
    */
-  explicit Variant(const std::string &value) : type(TYPE_STRING) {
-    v.string_value = value.c_str();
+  explicit Variant(const std::string &value)
+      : type_(TYPE_STRING),
+        string_value_(value) {
+    v_.charptr_value_ = NULL;
   }
 
   /**
    * Construct a @c Variant with a <code>cost char *</code> value.
+   * This @c Variant doesn't owns the @a value pointer.
+   * If you want this @c Variant to hold a independent string value, pass a
+   * @c std::string parameter instead. 
    * The type of the constructed @c Variant is @c TYPE_STRING.
    */
-  explicit Variant(const char *value) : type(TYPE_STRING) {
-    v.string_value = value;
+  explicit Variant(const char *value) : type_(TYPE_STRING) {
+    v_.charptr_value_ = value;
   }
 
   /**
@@ -157,8 +168,8 @@ struct Variant {
    * This @c Variant doesn't owns the @c Scriptable pointer.
    * The type of the constructed @c Variant is @c TYPE_SCRIPTABLE.
    */
-  explicit Variant(ScriptableInterface *value) : type(TYPE_SCRIPTABLE) {
-    v.scriptable_value = value;
+  explicit Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
+    v_.scriptable_value_ = value;
   }
 
   /**
@@ -166,8 +177,8 @@ struct Variant {
    * This @c Variant doesn't owns the <code>Slot *</code>.
    * The type of the constructed @c Variant is @c TYPE_SLOT.
    */
-  explicit Variant(Slot *value) : type(TYPE_SLOT) {
-    v.slot_value = value;
+  explicit Variant(Slot *value) : type_(TYPE_SLOT) {
+    v_.slot_value_ = value;
   }
 
   /**
@@ -178,24 +189,38 @@ struct Variant {
 
   std::string ToString() const;
 
+  Type type() const { return type_; }
+
+ private:
   bool CheckScriptableType(int class_id) const;
 
   /**
    * Type of the <code>Variant</code>'s value.
    */
-  Type type;
+  Type type_;
 
   /**
    * Value of the Variant.
    */
   union {
-    bool bool_value;
-    int64_t int64_value;
-    double double_value;
-    const char *string_value;
-    ScriptableInterface *scriptable_value;
-    Slot *slot_value;
-  } v;
+    bool bool_value_;
+    int64_t int64_value_;
+    double double_value_;
+    const char *charptr_value_;
+    ScriptableInterface *scriptable_value_;
+    Slot *slot_value_;
+  } v_;
+
+  /**
+   * Because a std::string object has constructors, it is not allowed to be
+   * stored in the union.  This field is used to store an independent string
+   * value when needed, while @c v_.charptr_value_ is used to store a dependent
+   * string value which must be used transiently.
+   */ 
+  std::string string_value_;
+
+  template <typename T> friend struct VariantType;
+  template <typename T> friend struct VariantValue;
 };
 
 /**
@@ -254,8 +279,8 @@ SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
 template <typename T>
 struct VariantValue {
   T operator()(const Variant &v) {
-    ASSERT(v.type == Variant::TYPE_INT64);
-    return static_cast<T>(v.v.int64_value);
+    ASSERT(v.type_ == Variant::TYPE_INT64);
+    return static_cast<T>(v.v_.int64_value_);
   }
 };
 
@@ -268,9 +293,9 @@ struct VariantValue {
 template <typename T>
 struct VariantValue<T *> {
   T *operator()(const Variant &v) {
-    ASSERT(v.type == Variant::TYPE_SCRIPTABLE);
+    ASSERT(v.type_ == Variant::TYPE_SCRIPTABLE);
     return v.CheckScriptableType(T::CLASS_ID) ?
-           down_cast<T *>(v.v.scriptable_value) : NULL;
+           down_cast<T *>(v.v_.scriptable_value_) : NULL;
   }
 };
 
@@ -282,17 +307,31 @@ struct VariantValue<T *> {
 template <>                                             \
 struct VariantValue<c_type> {                           \
   c_type operator()(const Variant &v) {                 \
-    ASSERT(v.type == VariantType<c_type>::type);        \
-    return static_cast<c_type>(v.v.variant_field);      \
+    ASSERT(v.type_ == VariantType<c_type>::type);       \
+    return static_cast<c_type>(v.v_.variant_field);     \
   }                                                     \
 };
 
-SPECIALIZE_VARIANT_VALUE(char, int64_value)
-SPECIALIZE_VARIANT_VALUE(bool, bool_value)
-SPECIALIZE_VARIANT_VALUE(float, double_value)
-SPECIALIZE_VARIANT_VALUE(double, double_value)
-SPECIALIZE_VARIANT_VALUE(const char *, string_value)
-SPECIALIZE_VARIANT_VALUE(Slot *, slot_value)
+SPECIALIZE_VARIANT_VALUE(char, int64_value_)
+SPECIALIZE_VARIANT_VALUE(bool, bool_value_)
+SPECIALIZE_VARIANT_VALUE(float, double_value_)
+SPECIALIZE_VARIANT_VALUE(double, double_value_)
+SPECIALIZE_VARIANT_VALUE(Slot *, slot_value_)
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for <code>const char *</code> type.
+ * The returned value can be only used transiently, and if the user want to
+ * hold this value, a copy must be made.
+ */
+template <>
+struct VariantValue<const char *> {
+  const char *operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_STRING);
+    return v.v_.charptr_value_ ?
+           v.v_.charptr_value_ : v.string_value_.c_str();
+  }
+};
 
 /**
  * Get the value of a @c Variant.
@@ -301,9 +340,9 @@ SPECIALIZE_VARIANT_VALUE(Slot *, slot_value)
 template <>
 struct VariantValue<std::string> {
   std::string operator()(const Variant &v) {
-    ASSERT(v.type == Variant::TYPE_STRING);
-    if (v.v.string_value) return std::string(v.v.string_value);
-    return std::string();
+    ASSERT(v.type_ == Variant::TYPE_STRING);
+    return v.v_.charptr_value_ ?
+           std::string(v.v_.charptr_value_) : v.string_value_;
   }
 };
 
@@ -314,9 +353,9 @@ struct VariantValue<std::string> {
 template <>
 struct VariantValue<const std::string &> {
   std::string operator()(const Variant &v) {
-    ASSERT(v.type == Variant::TYPE_STRING);
-    if (v.v.string_value) return std::string(v.v.string_value);
-    return std::string();
+    ASSERT(v.type_ == Variant::TYPE_STRING);
+    return v.v_.charptr_value_ ?
+           std::string(v.v_.charptr_value_) : v.string_value_;
   }
 };
 

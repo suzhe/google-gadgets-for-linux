@@ -31,7 +31,7 @@ TEST(slot, Slot) {
   ASSERT_EQ(Variant::TYPE_SLOT, meta_slot->GetReturnType());
   for (int i = 0; i < kNumTestData; i++) {
     Variant param(i);
-    Slot *slot = meta_slot->Call(1, &param).v.slot_value;
+    Slot *slot = VariantValue<Slot *>()(meta_slot->Call(1, &param));
     ASSERT_TRUE(slot->HasMetadata());
     ASSERT_EQ(testdata[i].argc, slot->GetArgCount());
     ASSERT_EQ(testdata[i].return_type, slot->GetReturnType());

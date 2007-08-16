@@ -43,19 +43,19 @@ int ElementsImpl::GetCount() {
 }
 
 ElementInterface *ElementsImpl::GetItem(Variant child) {
-  switch (child.type) {
-  case Variant::TYPE_BOOL:
-    if (child.v.bool_value)
+  switch (child.type()) {
+    case Variant::TYPE_BOOL:
+      if (VariantValue<bool>()(child))
+        return NULL;
+      return GetItemByIndex(0);
+    case Variant::TYPE_DOUBLE:
+      return GetItemByIndex(static_cast<int>(VariantValue<double>()(child)));
+    case Variant::TYPE_INT64:
+      return GetItemByIndex(VariantValue<int>()(child));
+    case Variant::TYPE_STRING:
+      return GetItemByName(VariantValue<const char *>()(child));
+    default:
       return NULL;
-    return GetItemByIndex(0);
-  case Variant::TYPE_DOUBLE:
-    return GetItemByIndex(static_cast<int>(child.v.double_value));
-  case Variant::TYPE_INT64:
-    return GetItemByIndex(static_cast<int>(child.v.int64_value));
-  case Variant::TYPE_STRING:
-    return GetItemByName(child.v.string_value);
-  default:
-    return NULL;
   }
 }
 

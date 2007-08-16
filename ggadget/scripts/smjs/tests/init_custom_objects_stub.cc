@@ -23,3 +23,6 @@ using namespace ggadget;
 JSBool InitCustomObjects(JSScriptContext *context) {
   return JS_TRUE;
 }
+
+void DestroyCustomObjects(JSScriptContext *context) {
+}

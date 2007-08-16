@@ -23,18 +23,18 @@
 namespace ggadget {
 
 /**
- * Convert a @c jsval to a @c Variant of desired type.
+ * Converts a @c jsval to a @c Variant of desired type.
  * @param cx JavaScript context.
  * @param prototype providing the desired target type information.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertJSToNative(JSContext *cx, Variant prototype,
+JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
                          jsval js_val, Variant *native_val);
 
 /**
- * Convert a @c jsval to a @c Variant depending source @c jsval type.
+ * Converts a @c jsval to a @c Variant depending source @c jsval type.
  * @param cx JavaScript context.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
@@ -44,13 +44,15 @@ JSBool ConvertJSToNativeVariant(JSContext *cx,
                                 jsval js_val, Variant *native_val);
 
 /**
- * Convert a @c Variant to a @c jsval.
+ * Converts a @c Variant to a @c jsval.
  * @param cx JavaScript context.
  * @param native_val source @c Variant value.
  * @param[out] js_val result @c jsval value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertNativeToJS(JSContext* cx, Variant native_val, jsval* js_val);
+JSBool ConvertNativeToJS(JSContext* cx,
+                         const Variant &native_val,
+                         jsval* js_val);
 
 } // namespace ggadget
 

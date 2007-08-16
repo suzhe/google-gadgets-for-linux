@@ -24,29 +24,33 @@
 namespace ggadget {
 
 bool Variant::operator==(const Variant &another) const {
-  if (type != another.type)
+  if (type_ != another.type_)
     return false;
 
-  switch (type) {
+  switch (type_) {
     case TYPE_VOID:
       return true;
     case TYPE_BOOL:
-      return v.bool_value == another.v.bool_value;
+      return v_.bool_value_ == another.v_.bool_value_;
     case TYPE_INT64:
-      return v.int64_value == another.v.int64_value;
+      return v_.int64_value_ == another.v_.int64_value_;
     case TYPE_DOUBLE:
-      return v.double_value == another.v.double_value;
-    case TYPE_STRING:
-      return v.string_value == another.v.string_value ||
-             strcmp(v.string_value, another.v.string_value) == 0;
+      return v_.double_value_ == another.v_.double_value_;
+    case TYPE_STRING: {
+      const char *s1 = VariantValue<const char *>()(*this);
+      const char *s2 = VariantValue<const char *>()(another);
+      return s1 == s2 || (s1 && s2 && strcmp(s1, s2) == 0);
+    }
     case TYPE_SCRIPTABLE:
-      return v.scriptable_value == another.v.scriptable_value;
+      return v_.scriptable_value_ == another.v_.scriptable_value_;
     case TYPE_SLOT: {
-      Slot *slot1 = v.slot_value;
-      Slot *slot2 = another.v.slot_value;
+      Slot *slot1 = v_.slot_value_;
+      Slot *slot2 = another.v_.slot_value_;
       return slot1 == slot2 || (slot1 && slot2 && *slot1 == *slot2);
     }
     case TYPE_VARIANT:
+      // A Variant of type TYPE_VARIANT is only used as a prototype,
+      // so they are all equal.
       return true;
     default:
       return false;
@@ -56,24 +60,24 @@ bool Variant::operator==(const Variant &another) const {
 // Used in unittests.
 std::string Variant::ToString() const {
   char buffer[32];
-  switch (type) {
+  switch (type_) {
     case Variant::TYPE_VOID:
       return std::string("VOID");
     case Variant::TYPE_BOOL:
-      return std::string("BOOL:") + (v.bool_value ? "true" : "false");
+      return std::string("BOOL:") + (v_.bool_value_ ? "true" : "false");
     case Variant::TYPE_INT64:
-      sprintf(buffer, "INT64:%" PRId64, v.int64_value);
+      sprintf(buffer, "INT64:%" PRId64, v_.int64_value_);
       return std::string(buffer);
     case Variant::TYPE_DOUBLE:
-      sprintf(buffer, "DOUBLE:%lf", v.double_value);
+      sprintf(buffer, "DOUBLE:%lf", v_.double_value_);
       return std::string(buffer);
     case Variant::TYPE_STRING:
-      return std::string("STRING:") + v.string_value;
+      return std::string("STRING:") + VariantValue<const char *>()(*this);
     case Variant::TYPE_SCRIPTABLE:
-      sprintf(buffer, "SCRIPTABLE:%p", v.scriptable_value);
+      sprintf(buffer, "SCRIPTABLE:%p", v_.scriptable_value_);
       return std::string(buffer);
     case Variant::TYPE_SLOT:
-      sprintf(buffer, "SLOT:%p", v.slot_value);
+      sprintf(buffer, "SLOT:%p", v_.slot_value_);
       return std::string(buffer);
     case Variant::TYPE_VARIANT:
       return std::string("VARIANT");
@@ -83,8 +87,8 @@ std::string Variant::ToString() const {
 }
 
 bool Variant::CheckScriptableType(int class_id) const {
-  ASSERT(type == TYPE_SCRIPTABLE);
-  if (v.scriptable_value && !v.scriptable_value->IsInstanceOf(class_id)) {
+  ASSERT(type_ == TYPE_SCRIPTABLE);
+  if (v_.scriptable_value_ && !v_.scriptable_value_->IsInstanceOf(class_id)) {
     LOG("The parameter is not an instance pointer of %d", class_id);
     return false;
   }

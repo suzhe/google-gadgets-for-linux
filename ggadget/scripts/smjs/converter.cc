@@ -18,8 +18,9 @@
 #include <jsobj.h>
 #include <jsfun.h>
 #include "converter.h"
-#include "native_js_wrapper.h"
+#include "ggadget/scriptable_interface.h"
 #include "js_script_context.h"
+#include "native_js_wrapper.h"
 
 namespace ggadget {
 
@@ -81,9 +82,9 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
   JSBool result = JS_FALSE;
   if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
-    // Result is a blank string instead of a string containing "null", etc.
+    // Result is a null string instead of a string containing "null".
     result = JS_TRUE;
-    *native_val = Variant(std::string());
+    *native_val = Variant(static_cast<const char *>(NULL));
   } else {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
@@ -91,6 +92,7 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
       char *bytes = JS_GetStringBytes(js_string);
       if (bytes) {
         result = JS_TRUE;
+        // Use std::string to make an independent Variant value.
         *native_val = Variant(std::string(bytes));
       }
     }
@@ -118,7 +120,7 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   return result;
 }
 
-static JSBool ConvertJSToSlot(JSContext *cx, Variant prototype,
+static JSBool ConvertJSToSlot(JSContext *cx, const Variant &prototype,
                               jsval js_val, Variant *native_val) {
   JSBool result = JS_TRUE;
   jsval function_val;
@@ -146,9 +148,8 @@ static JSBool ConvertJSToSlot(JSContext *cx, Variant prototype,
   if (result) {
     Slot *slot = NULL;
     if (function_val != JSVAL_NULL)
-      slot = JSScriptContext::NewJSFunctionSlot(cx,
-                                                prototype.v.slot_value,
-                                                function_val);
+      slot = JSScriptContext::NewJSFunctionSlot(
+          cx, VariantValue<Slot *>()(prototype), function_val);
     *native_val = Variant(slot);
   }
   return result;
@@ -184,38 +185,41 @@ static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
   ConvertJSToNativeVariant,
 };
 
-JSBool ConvertJSToNative(JSContext *cx, Variant prototype,
+JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
                          jsval js_val, Variant *native_val) {
-  if (prototype.type == Variant::TYPE_SLOT)
+  if (prototype.type() == Variant::TYPE_SLOT)
     return ConvertJSToSlot(cx, prototype, js_val, native_val);
 
-  if (prototype.type >= Variant::TYPE_VOID &&
-      prototype.type <= Variant::TYPE_VARIANT)
-    return kConvertJSToNativeFuncs[prototype.type](cx, js_val, native_val);
+  if (prototype.type() >= Variant::TYPE_VOID &&
+      prototype.type() <= Variant::TYPE_VARIANT)
+    return kConvertJSToNativeFuncs[prototype.type()](cx, js_val, native_val);
 
   return JS_FALSE;
 }
 
-static JSBool ConvertNativeToJSVoid(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSVoid(JSContext *cx,
+                                    const Variant &native_val,
                                     jsval *js_val) {
   *js_val = JSVAL_VOID;
   return JS_TRUE;
 }
 
-static JSBool ConvertNativeToJSBool(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSBool(JSContext *cx,
+                                    const Variant &native_val,
                                     jsval *js_val) {
-  *js_val = BOOLEAN_TO_JSVAL(native_val.v.bool_value);
+  *js_val = BOOLEAN_TO_JSVAL(VariantValue<bool>()(native_val));
   return JS_TRUE;
 }
 
-static JSBool ConvertNativeToJSInt(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSInt(JSContext *cx,
+                                   const Variant &native_val,
                                    jsval *js_val) {
-  int64_t value = native_val.v.int64_value;
+  int64_t value = VariantValue<int64_t>()(native_val);
   if (value >= JSVAL_INT_MIN && value <= JSVAL_INT_MAX) {
     *js_val = INT_TO_JSVAL(static_cast<int32>(value));
     return JS_TRUE;
   } else {
-    jsdouble *pdouble = JS_NewDouble(cx, native_val.v.int64_value);
+    jsdouble *pdouble = JS_NewDouble(cx, value);
     if (pdouble) {
       *js_val = DOUBLE_TO_JSVAL(pdouble);
       return JS_TRUE;
@@ -225,9 +229,10 @@ static JSBool ConvertNativeToJSInt(JSContext *cx, Variant native_val,
   }
 }
 
-static JSBool ConvertNativeToJSDouble(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSDouble(JSContext *cx,
+                                      const Variant &native_val,
                                       jsval *js_val) {
-  jsdouble *pdouble = JS_NewDouble(cx, native_val.v.double_value);
+  jsdouble *pdouble = JS_NewDouble(cx, VariantValue<double>()(native_val));
   if (pdouble) {
     *js_val = DOUBLE_TO_JSVAL(pdouble);
     return JS_TRUE;
@@ -236,10 +241,12 @@ static JSBool ConvertNativeToJSDouble(JSContext *cx, Variant native_val,
   }
 }
 
-static JSBool ConvertNativeToJSString(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSString(JSContext *cx,
+                                      const Variant &native_val,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
-  JSString *js_string = JS_NewStringCopyZ(cx, native_val.v.string_value);
+  JSString *js_string = JS_NewStringCopyZ(
+      cx, VariantValue<const char *>()(native_val));
   // TODO(wangxianzhu): Convert UTF8 to jschar.
   if (js_string)
     *js_val = STRING_TO_JSVAL(js_string);
@@ -248,10 +255,12 @@ static JSBool ConvertNativeToJSString(JSContext *cx, Variant native_val,
   return result;
 }
 
-static JSBool ConvertNativeToJSObject(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSObject(JSContext *cx,
+                                      const Variant &native_val,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
-  ScriptableInterface *scriptable = native_val.v.scriptable_value;
+  ScriptableInterface *scriptable =
+      VariantValue<ScriptableInterface *>()(native_val);
   if (!scriptable) {
     *js_val = JSVAL_NULL;
   } else {
@@ -265,15 +274,16 @@ static JSBool ConvertNativeToJSObject(JSContext *cx, Variant native_val,
   return result;
 }
 
-static JSBool ConvertNativeToJSFunction(JSContext *cx, Variant native_val,
+static JSBool ConvertNativeToJSFunction(JSContext *cx,
+                                        const Variant &native_val,
                                         jsval *js_val) {
-  Slot *slot = native_val.v.slot_value;
-  *js_val = slot ? JSScriptContext::ConvertSlotToJS(cx, slot) :
-            JSVAL_NULL;
+  Slot *slot = VariantValue<Slot *>()(native_val);
+  *js_val = slot ? JSScriptContext::ConvertSlotToJS(cx, slot) : JSVAL_NULL;
   return JS_TRUE;
 }
 
-typedef JSBool (*ConvertNativeToJSFunc)(JSContext *cx, Variant native_val,
+typedef JSBool (*ConvertNativeToJSFunc)(JSContext *cx,
+                                        const Variant &native_val,
                                         jsval *js_val);
 static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
   ConvertNativeToJSVoid,
@@ -283,11 +293,18 @@ static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
   ConvertNativeToJSString,
   ConvertNativeToJSObject,
   ConvertNativeToJSFunction,
-  ConvertNativeToJSVoid,        /* Treat TYPE_VARIANT specially */
+  // Because normally there is no real value of this type, convert it to void. 
+  ConvertNativeToJSVoid,
 };
 
-JSBool ConvertNativeToJS(JSContext *cx, Variant native_val, jsval *js_val) {
-  return kConvertNativeToJSFuncs[native_val.type](cx, native_val, js_val);
+JSBool ConvertNativeToJS(JSContext *cx,
+                         const Variant &native_val,
+                         jsval *js_val) {
+  if (native_val.type() >= Variant::TYPE_VOID &&
+      native_val.type() <= Variant::TYPE_VARIANT) {
+    return kConvertNativeToJSFuncs[native_val.type()](cx, native_val, js_val);
+  }
+  return JS_FALSE;
 }
 
 } // namespace ggadget

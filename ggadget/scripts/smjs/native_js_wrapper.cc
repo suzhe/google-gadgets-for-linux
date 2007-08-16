@@ -150,7 +150,7 @@ JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
     return JS_TRUE;
 
   Variant return_value = scriptable_->GetProperty(JSVAL_TO_INT(id));
-  if (return_value.type == Variant::TYPE_VOID)
+  if (return_value.type() == Variant::TYPE_VOID)
     // This property is not supported by the Scriptable, use default logic.
     return JS_TRUE;
 
@@ -181,7 +181,6 @@ JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
   Variant value;
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
     JS_ReportError(js_context_, "Failed to convert jsval to native");
-    // TODO: check result and raise exception.
     return JS_FALSE;
   }
 
@@ -211,7 +210,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
 
   if (is_method) {
     // Define a Javascript function.
-    Slot *slot = prototype.v.slot_value;
+    Slot *slot = VariantValue<Slot *>()(prototype);
     JSFunction *function = JS_DefineFunction(js_context_, js_object_, name,
                                              CallWrapperMethod,
                                              slot->GetArgCount(), 0);
