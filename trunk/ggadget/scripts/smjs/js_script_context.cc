@@ -16,6 +16,7 @@
 
 #include "js_script_context.h"
 #include "ggadget/common.h"
+#include "ggadget/scoped_ptr.h"
 #include "ggadget/slot.h"
 #include "converter.h"
 #include "native_js_wrapper.h"
@@ -108,6 +109,8 @@ class JSFunctionSlot : public Slot {
   const Slot *prototype_;
   JSContext *context_;
   jsval function_val_;
+  bool has_last_return_;
+  Variant last_return_;
 };
 
 JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
@@ -125,15 +128,14 @@ JSFunctionSlot::~JSFunctionSlot() {
 }
 
 Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
-  jsval *js_args = NULL;
+  scoped_array<jsval> js_args;
   Variant return_value(GetReturnType());
   if (argc > 0) {
-    js_args = new jsval[argc];
+    js_args.reset(new jsval[argc]);
     for (int i = 0; i < argc; i++) {
       if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
         JS_ReportError(context_, "Failed to convert argument %d (%s) to jsval",
                        i, argv[i].ToString().c_str());
-        delete js_args;
         return return_value;
       }
     }
@@ -141,7 +143,7 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
 
   jsval rval;
   JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
-                                       argc, js_args, &rval);
+                                       argc, js_args.get(), &rval);
   if (result) {
     result = ConvertJSToNative(context_, return_value, rval, &return_value);
     if (!result)
@@ -280,31 +282,25 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
     arg_types = slot->GetArgTypes();
   }
 
-  Variant *params = NULL;
+  scoped_array<Variant> params;
   if (argc > 0) {
-    params = new Variant[argc];
+    params.reset(new Variant[argc]);
     for (uintN i = 0; i < argc; i++) {
       JSBool result = arg_types != NULL ?
           ConvertJSToNative(cx, Variant(arg_types[i]), argv[i], &params[i]) :
           ConvertJSToNativeVariant(cx, argv[i], &params[i]);
       if (!result) {
         JS_ReportError(cx, "Failed to convert argument %d to native", i);
-        delete [] params;
         return JS_FALSE;
       }
     }
   }
 
-  Variant return_value = slot->Call(argc, params);
+  Variant return_value = slot->Call(argc, params.get());
   JSBool result = ConvertNativeToJS(cx, return_value, rval);
   if (!result)
     JS_ReportError(cx, "Failed to convert result (%s) to jsval",
                    return_value.ToString().c_str());
-
-  if (argc > 0) {
-    // TODO: how to cleanup Variant if it contains some heap-allocated things?
-    delete [] params;
-  }
   return result;
 }
 

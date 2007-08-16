@@ -49,6 +49,8 @@ class Connection {
 
   /**
    * Reconnect the connection to another @c Slot.
+   * The @a slot is then owned by this connection no matter @c Reconnect
+   * succeeded or failed. 
    * The connection will be unblocked if it has been blocked or disconnected.
    * @param slot the new @c Slot to be connected.
    * @return @c true if succeeds.
@@ -91,9 +93,10 @@ class Signal {
    * templates).  It's useful to connect to <code>ScriptSlot</code>s
    * and <code>SignalSlot</code>s. Compatability is checked inside of
    * @c ConnectGeneral() at runtime.
-   * @param slot the slot to connect. After conntected, this signal takes
-   *     the ownership of the slot pointer, so don't share slots with other
-   *     owners.  If it's NULL, a unconnected @c Connection will be returned.
+   * @param slot the slot to connect. This signal takes the ownership of the
+   *     slot pointer, no matter this call succeeded or failed, so don't share
+   *     slots with other owners.
+   *     If it's @c NULL, a unconnected @c Connection will be returned.
    * @return the connected @c Connection.  The pointer is owned by this signal.
    *     Return @c NULL on any error, such as argument incompatibility.
    */

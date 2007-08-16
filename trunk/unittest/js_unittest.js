@@ -95,6 +95,7 @@ function RUN_ALL_TESTS() {
   if (count > passed) {
     quit(QUIT_ASSERT);
   }
+  quit(0);
 }
 
 function _Message(relation, expected, actual) {

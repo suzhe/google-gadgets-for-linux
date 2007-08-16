@@ -35,8 +35,12 @@ void Connection::Disconnect() {
 
 bool Connection::Reconnect(Slot *slot) {
   ReleaseSlot();
-  if (slot && !signal_->CheckCompatibility(slot))
+  if (slot && !signal_->CheckCompatibility(slot)) {
+    // According to our convention, no matter Reconnect succeeds or failes,
+    // the slot is always owned by the Connection.
+    delete slot;
     return false;
+  }
   slot_ = slot;
   Unblock();
   return true;
@@ -60,8 +64,12 @@ Signal::~Signal() {
 }
 
 Connection *Signal::ConnectGeneral(Slot *slot) {
-  if (slot && !CheckCompatibility(slot))
+  if (slot && !CheckCompatibility(slot)) {
+    // According to our convention, no matter Reconnect succeeds or failes,
+    // the slot is always owned by the Connection.
+    delete slot;
     return NULL;
+  }
   return Connect(slot);
 }
 

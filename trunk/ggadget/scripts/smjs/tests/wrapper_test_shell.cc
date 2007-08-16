@@ -20,13 +20,20 @@
 
 using namespace ggadget;
 
+static TestScriptable1 *test_scriptable1;
+static TestScriptable2 *test_scriptable2;
+
 // Called by the initialization code in js_shell.cc.
 JSBool InitCustomObjects(JSScriptContext *context) {
-  TestScriptable1 *test_scriptable1 = new TestScriptable1();
-  // test_scriptable1 leaks.
+  test_scriptable1 = new TestScriptable1();
   context->SetValue(NULL, "scriptable", Variant(test_scriptable1));
-  TestScriptable1 *test_scriptable2 = new TestScriptable2();
-  // test_scriptable1 leaks.
+  test_scriptable2 = new TestScriptable2();
   context->SetValue(NULL, "scriptable2", Variant(test_scriptable2));
   return JS_TRUE;
 }
+
+void DestroyCustomObjects(JSScriptContext *context) {
+  delete test_scriptable1;
+  delete test_scriptable2;
+}
+ 

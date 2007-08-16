@@ -53,16 +53,13 @@ TEST(static_scriptable, TestPropertyInfo) {
   // Expected property information for TestScriptable1.
   PropertyInfo property_info[] = {
     { "TestMethodVoid0", -1, true,
-      // Here the result of NewSlot leaks.  Ignore it.
       Variant(NewSlot(scriptable, &TestScriptable1::TestMethodVoid0)) },
     { "TestMethodDouble2", -2, true,
-      // Here the result of NewSlot leaks.  Ignore it.
       Variant(NewSlot(scriptable, &TestScriptable1::TestMethodDouble2)) },
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
     { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
     { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
     { "my_ondelete", -6, false,
-      // Here the result of new SignalSlot leaks.  Ignore it.
       Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
     { "EnumSimple", -7, false, Variant(Variant::TYPE_INT64) },
     { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
@@ -70,6 +67,11 @@ TEST(static_scriptable, TestPropertyInfo) {
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
     CheckProperty(i, scriptable, property_info[i]);
+  }
+
+  for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
+    if (property_info[i].prototype.type() == Variant::TYPE_SLOT)
+      delete VariantValue<Slot *>()(property_info[i].prototype);
   }
 
   delete scriptable;
@@ -117,8 +119,8 @@ TEST(static_scriptable, TestPropertyAndMethod) {
 
   // -1: the "TestMethodVoid0" method.
   Variant result1(scriptable->GetProperty(-1));
-  ASSERT_EQ(result1.type, Variant::TYPE_SLOT);
-  ASSERT_EQ(Variant(), result1.v.slot_value->Call(0, NULL));
+  ASSERT_EQ(result1.type(), Variant::TYPE_SLOT);
+  ASSERT_EQ(Variant(), VariantValue<Slot *>()(result1)->Call(0, NULL));
   ASSERT_STREQ("", g_buffer.c_str());
 
   // -7: the "EnumSimple" property.
@@ -169,16 +171,13 @@ TEST(static_scriptable, TestPropertyInfo2) {
   PropertyInfo property_info[] = {
     // -1 ~ -8 are inherited from TestScriptable1.
     { "TestMethodVoid0", -1, true,
-      // Here the result of NewSlot leaks.  Ignore it.
       Variant(NewSlot(scriptable1, &TestScriptable1::TestMethodVoid0)) },
     { "TestMethodDouble2", -2, true,
-      // Here the result of NewSlot leaks.  Ignore it.
       Variant(NewSlot(scriptable1, &TestScriptable1::TestMethodDouble2)) },
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
     { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
     { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
     { "my_ondelete", -6, false,
-      // Here the result of new SignalSlot leaks.  Ignore it.
       Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
     { "EnumSimple", -7, false, Variant(Variant::TYPE_INT64) },
     { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
@@ -214,6 +213,11 @@ TEST(static_scriptable, TestPropertyInfo2) {
   // Const is defined in prototype.
   CheckConstant("Const", scriptable, Variant(987654321));
 
+  for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
+    if (property_info[i].prototype.type() == Variant::TYPE_SLOT)
+      delete VariantValue<Slot *>()(property_info[i].prototype);
+  }
+
   delete scriptable;
   EXPECT_STREQ("Destruct\n", g_buffer.c_str());
 }
@@ -237,6 +241,7 @@ TEST(static_scriptable, TestArray) {
                                                &prototype, &is_method));
   ASSERT_FALSE(scriptable->SetProperty(invalid_id, Variant(100)));
   ASSERT_EQ(Variant(), scriptable->GetProperty(invalid_id));
+  delete scriptable;
 }
 
 int main(int argc, char **argv) {

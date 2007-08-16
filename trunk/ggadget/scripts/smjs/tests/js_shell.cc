@@ -248,6 +248,7 @@ using namespace ggadget;
 
 // A hook to initialize custom objects before running scripts.
 JSBool InitCustomObjects(JSScriptContext *context);
+void DestroyCustomObjects(JSScriptContext *context);
 
 int main(int argc, char *argv[]) {
   JSScriptRuntime *runtime = new JSScriptRuntime();
@@ -285,6 +286,7 @@ int main(int argc, char *argv[]) {
     Process(cx, global, NULL);
   }
 
+  DestroyCustomObjects(context);
   runtime->DestroyContext(context);
   runtime->Destroy();
 

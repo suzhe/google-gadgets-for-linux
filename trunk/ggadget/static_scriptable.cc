@@ -91,8 +91,8 @@ StaticScriptable::Impl::~Impl() {
   // Free all owned slots.
   for (VariantVector::iterator it = slot_prototypes_.begin();
        it != slot_prototypes_.end(); ++it) {
-    if (it->type == Variant::TYPE_SLOT)
-      delete it->v.slot_value;
+    if (it->type() == Variant::TYPE_SLOT)
+      delete VariantValue<Slot *>()(*it);
   }
 
   for (SlotVector::iterator it = getter_slots_.begin();
@@ -116,7 +116,7 @@ void StaticScriptable::Impl::RegisterProperty(const char *name,
   Variant prototype(getter->GetReturnType());
   if (setter) {
     ASSERT(setter->GetArgCount() == 1);
-    ASSERT(prototype.type == setter->GetArgTypes()[0]);
+    ASSERT(prototype.type() == setter->GetArgTypes()[0]);
   }
 
   slot_index_[name] = property_count_;
