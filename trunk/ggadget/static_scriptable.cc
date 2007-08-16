@@ -89,19 +89,19 @@ StaticScriptable::Impl::~Impl() {
   ondelete_signal_();
 
   // Free all owned slots.
-  for (VariantVector::iterator it = slot_prototypes_.begin();
+  for (VariantVector::const_iterator it = slot_prototypes_.begin();
        it != slot_prototypes_.end(); ++it) {
     if (it->type() == Variant::TYPE_SLOT)
       delete VariantValue<Slot *>()(*it);
   }
 
-  for (SlotVector::iterator it = getter_slots_.begin();
+  for (SlotVector::const_iterator it = getter_slots_.begin();
        it != getter_slots_.end(); ++it) {
     if (*it != NULL)
       delete *it;
   }
 
-  for (SlotVector::iterator it = setter_slots_.begin();
+  for (SlotVector::const_iterator it = setter_slots_.begin();
        it != setter_slots_.end(); ++it) {
     if (*it != NULL)
       delete *it;
@@ -183,7 +183,7 @@ bool StaticScriptable::Impl::GetPropertyInfoByName(const char *name,
   sealed_ = false;
 
   // First check if the property is a constant.
-  ConstantMap::iterator constants_it = constants_.find(name);
+  ConstantMap::const_iterator constants_it = constants_.find(name);
   if (constants_it != constants_.end()) {
     *id = 0;
     *prototype = constants_it->second;
@@ -192,7 +192,7 @@ bool StaticScriptable::Impl::GetPropertyInfoByName(const char *name,
   }
 
   // Find the index by name.
-  SlotIndexMap::iterator slot_index_it = slot_index_.find(name);
+  SlotIndexMap::const_iterator slot_index_it = slot_index_.find(name);
   if (slot_index_it == slot_index_.end()) {
     if (prototype_) {
       bool result = prototype_->GetPropertyInfoByName(name, id,
