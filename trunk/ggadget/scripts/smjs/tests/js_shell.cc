@@ -287,8 +287,8 @@ int main(int argc, char *argv[]) {
   }
 
   DestroyCustomObjects(context);
-  runtime->DestroyContext(context);
-  runtime->Destroy();
+  context->Destroy();
+  delete runtime;
 
   if (g_quit_code == DONT_QUIT)
     g_quit_code = QUIT_OK;

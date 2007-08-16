@@ -25,22 +25,14 @@ class Connection;
  */
 class ScriptRuntimeInterface {
  public:
+  virtual ~ScriptRuntimeInterface() { }
+
   /**
    * Create a new @c ScriptContextInterface instance.
    * Must call @c DestroyContext after use.
    * @return the created context.
    */
   virtual ScriptContextInterface *CreateContext() = 0;
-
-  /**
-   * Destroy a context after use.
-   */
-  virtual void DestroyContext(ScriptContextInterface *context) = 0;
-
-  /**
-   * Destroy this runtime.
-   */
-  virtual void Destroy() = 0;
 
   /**
    * An @c ErrorReporter can be connected to the error reporter signal.
@@ -55,8 +47,6 @@ class ScriptRuntimeInterface {
    * @return the signal @c Connection.
    */
   virtual Connection *ConnectErrorReporter(ErrorReporter *reporter) = 0;
-
-  DISALLOW_DIRECT_DELETION(ScriptRuntimeInterface);
 };
 
 /**
@@ -65,6 +55,18 @@ class ScriptRuntimeInterface {
  * @c ScriptContext instance.
  */
 class ScriptContextInterface {
+ protected:
+  /**
+   * Disallow irect deletion. 
+   */
+  virtual ~ScriptContextInterface() { }
+
+ public:
+  /**
+   * Destroy a context after use.
+   */
+  virtual void Destroy() = 0;
+
   /**
    * Compile a script fragment in the context.
    * @param script the script source code.
@@ -96,8 +98,6 @@ class ScriptContextInterface {
    * return @c true if succeeds.
    */
   virtual bool SetGlobalObject(ScriptableInterface *global_object) = 0;
-
-  DISALLOW_DIRECT_DELETION(ScriptContextInterface);
 };
 
 } // namespace ggadget

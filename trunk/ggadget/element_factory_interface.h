@@ -29,6 +29,8 @@ class ViewInterface;
  */
 class ElementFactoryInterface {
  public:
+  virtual ~ElementFactoryInterface() { }
+
   /**
    * Creates an ElementInterface of the specified type.
    * @param tag_name the tag name name of the object.

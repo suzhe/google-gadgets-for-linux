@@ -34,12 +34,18 @@ namespace ggadget {
  * creator's needs.
  */
 class CanvasInterface {
- public:      
+ protected:
+  /**
+   * Disallow direct deletion.
+   */
+  virtual ~CanvasInterface() { }
+
+ public:
   /**
    * Frees this CanvasInterface object.
    */
   virtual void Destroy() = 0;
-  
+
   /**
    * @return The width of the canvas in pixels.
    */

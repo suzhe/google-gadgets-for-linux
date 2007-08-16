@@ -40,7 +40,7 @@ class TestScriptable1 : public ScriptableInterface {
   TestScriptable1();
   virtual ~TestScriptable1();
 
-  virtual bool IsInstanceOf(int class_id) {
+  virtual bool IsInstanceOf(int class_id) const {
     return class_id == CLASS_ID || class_id == ScriptableInterface::CLASS_ID; 
   }
 
@@ -96,7 +96,7 @@ class TestPrototype : public ScriptableInterface {
   }
 
   // Should not be called.
-  virtual bool IsInstanceOf(int class_id) {
+  virtual bool IsInstanceOf(int class_id) const {
     return class_id == ScriptableInterface::CLASS_ID || class_id == CLASS_ID;
   }
 
@@ -127,7 +127,7 @@ class TestScriptable2 : public TestScriptable1 {
 
   virtual void Detach() { if (script_owned_) delete this; }
 
-  virtual bool IsInstanceOf(int class_id) {
+  virtual bool IsInstanceOf(int class_id) const {
     return class_id == CLASS_ID || TestScriptable1::IsInstanceOf(class_id); 
   }
 

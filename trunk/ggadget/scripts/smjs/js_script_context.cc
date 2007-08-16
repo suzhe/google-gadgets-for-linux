@@ -33,6 +33,11 @@ JSScriptRuntime::JSScriptRuntime()
   JS_SetRuntimePrivate(runtime_, this);
 }
 
+JSScriptRuntime::~JSScriptRuntime() {
+  ASSERT(runtime_);
+  JS_DestroyRuntime(runtime_);
+}
+
 ScriptContextInterface *JSScriptRuntime::CreateContext() {
   ASSERT(runtime_);
   JSContext *context = JS_NewContext(runtime_, kDefaultStackTrunkSize);
@@ -41,19 +46,6 @@ ScriptContextInterface *JSScriptRuntime::CreateContext() {
     return NULL;
   JS_SetErrorReporter(context, ReportError);
   return new JSScriptContext(context);
-}
-
-void JSScriptRuntime::DestroyContext(ScriptContextInterface *context) {
-  ASSERT(context);
-  JSScriptContext *js_script_context = down_cast<JSScriptContext *>(context);
-  JS_DestroyContext(js_script_context->context());
-  delete js_script_context;
-}
-
-void JSScriptRuntime::Destroy() {
-  ASSERT(runtime_);
-  JS_DestroyRuntime(runtime_);
-  delete this;
 }
 
 Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {
@@ -159,7 +151,7 @@ JSScriptContext::JSScriptContext(JSContext *context)
 }
 
 JSScriptContext::~JSScriptContext() {
-  // Don't destroy context_, because it is not owned by me.
+  JS_DestroyContext(context_);
 }
 
 static JSScriptContext *GetJSScriptContext(JSContext *context) {
@@ -319,6 +311,10 @@ Slot *JSScriptContext::NewJSFunctionSlot(JSContext *cx,
   if (context_wrapper)
     return context_wrapper->NewJSFunctionSlotInternal(prototype, function_val);
   return NULL;
+}
+
+void JSScriptContext::Destroy() {
+  delete this;
 }
 
 Slot *JSScriptContext::Compile(const char *script,

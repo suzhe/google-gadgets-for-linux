@@ -19,6 +19,7 @@
 
 #include <string>
 #include "ggadget/element_interface.h"
+#include "ggadget/static_scriptable.h"
 #include "ggadget/view_interface.h"
 
 class MockedElement : public ggadget::ElementInterface {
@@ -217,7 +218,11 @@ class MockedElement : public ggadget::ElementInterface {
   virtual void KillFocus() {
   }
 
+  DEFAULT_OWNERSHIP_POLICY;
+  DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_);
+
  private:
+  ggadget::StaticScriptable static_scriptable_;
   std::string name_;
   ggadget::ElementInterface *parent_;
   ggadget::ViewInterface *view_;
