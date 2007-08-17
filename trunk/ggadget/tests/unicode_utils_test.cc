@@ -30,7 +30,7 @@ static const size_t utf8_length[] = {
   1, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0
 };
 
-static const UTF8Char utf8_string[] = {
+static const char utf8_string[] = {
   0x61,0xc2,0x80,0xdf,0xbf,0xe0,0xa0,0x80,0xe1,0xbf,0xbf,0xe2,0x80,0x80,
   0xed,0x9f,0xbf,0xee,0x80,0x80,0xef,0xbf,0xbf,0xf0,0x90,0x80,0x80,
   0xf0,0xa2,0x80,0x80,0xf3,0xaf,0xbf,0xbf,0xf3,0xb0,0x80,0x80,
@@ -48,7 +48,7 @@ static const UTF16Char utf16_string[] = {
 };
 
 static const size_t invalid_utf8_length = 8;
-static const UTF8Char invalid_utf8_string[] = {
+static const char invalid_utf8_string[] = {
   //---------------------------------------v
   0x61,0xc2,0x80,0xdf,0xbf,0xe0,0xa0,0x80,0xb1,0xbf,0xbf,0xe2,0x80,0x80, 0
 };
@@ -69,11 +69,11 @@ static const UTF32Char invalid_utf32_string[] = {
 
 
 TEST(UnicodeUtils, ConvertChar) {
-  const UTF8Char *utf8_ptr = utf8_string;
+  const char *utf8_ptr = utf8_string;
   const UTF16Char *utf16_ptr = utf16_string;
   const UTF32Char *utf32_ptr = utf32_string;
   UTF32Char utf32;
-  UTF8Char utf8[6];
+  char utf8[6];
   UTF16Char utf16[2];
   for (size_t i = 0; utf8_length[i]; ++i) {
     EXPECT_EQ(utf8_length[i],
@@ -82,9 +82,7 @@ TEST(UnicodeUtils, ConvertChar) {
     EXPECT_EQ(utf8_length[i],
               ConvertCharUTF32ToUTF8(utf32, utf8, 6));
     EXPECT_EQ(0,
-              strncmp(reinterpret_cast<const char*>(utf8),
-                      reinterpret_cast<const char*>(utf8_ptr),
-                      utf8_length[i]));
+              strncmp(utf8, utf8_ptr, utf8_length[i]));
     EXPECT_EQ(utf16_length[i],
               ConvertCharUTF16ToUTF32(utf16_ptr, utf16_length[i], &utf32));
     EXPECT_EQ(*utf32_ptr, utf32);
@@ -99,7 +97,7 @@ TEST(UnicodeUtils, ConvertChar) {
 
 TEST(UnicodeUtils, ConvertString) {
   std::string utf8;
-  std::string orig_utf8(reinterpret_cast<const char*>(utf8_string));
+  std::string orig_utf8(utf8_string);
   UTF16String utf16;
   UTF16String orig_utf16(utf16_string);
   UTF32String utf32;
@@ -121,7 +119,7 @@ TEST(UnicodeUtils, ConvertString) {
 
 TEST(UnicodeUtils, Invalid) {
   std::string utf8;
-  std::string orig_utf8(reinterpret_cast<const char*>(invalid_utf8_string));
+  std::string orig_utf8(invalid_utf8_string);
   UTF16String utf16;
   UTF16String orig_utf16(invalid_utf16_string);
   UTF32String utf32;

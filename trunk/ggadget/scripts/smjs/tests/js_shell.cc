@@ -114,10 +114,8 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
     } while (!JS_BufferIsCompilableUnit(cx, obj, g_buffer, strlen(g_buffer)));
 
     ggadget::UTF16String utf16_string;
-    ggadget::ConvertStringUTF8ToUTF16(
-        reinterpret_cast<const ggadget::UTF8Char *>(g_buffer),
-        strlen(g_buffer),
-        &utf16_string);
+    ggadget::ConvertStringUTF8ToUTF16(g_buffer, strlen(g_buffer),
+                                      &utf16_string);
     JSScript *script = JS_CompileUCScript(cx, obj,
                                           utf16_string.c_str(),
                                           utf16_string.size(),

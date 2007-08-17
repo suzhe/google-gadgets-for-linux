@@ -324,9 +324,7 @@ Slot *JSScriptContext::Compile(const char *script,
                                const char *filename,
                                int lineno) {
   UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(reinterpret_cast<const UTF8Char *>(script),
-                           strlen(script),
-                           &utf16_string);
+  ConvertStringUTF8ToUTF16(script, strlen(script), &utf16_string);
   JSFunction *function = JS_CompileUCFunction(
       context_, NULL, NULL, 0, NULL,  // No name and no argument.
       // Don't cast utf16_string.c_str() to jschar *, to let the compiler check

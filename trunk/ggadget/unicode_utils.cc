@@ -42,6 +42,8 @@
 
 namespace ggadget {
 
+typedef unsigned char UTF8Char;
+
 static const int kHalfShift = 10;
 static const UTF32Char kHalfBase = 0x0010000UL;
 static const UTF32Char kHalfMask = 0x3FFUL;
@@ -71,13 +73,15 @@ static const UTF8Char kFirstByteMark[7] = {
   0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC
 };
 
-size_t ConvertCharUTF8ToUTF32(const UTF8Char *src, size_t src_length,
+size_t ConvertCharUTF8ToUTF32(const char *src, size_t src_length,
                               UTF32Char *dest) {
   if (!src || !*src || !src_length || !dest) {
     return 0;
   }
 
-  size_t extra_bytes = kTrailingBytesForUTF8[*src];
+  const UTF8Char *p = reinterpret_cast<const UTF8Char*>(src);
+
+  size_t extra_bytes = kTrailingBytesForUTF8[*p];
   if (extra_bytes >= src_length || !IsLegalUTF8Char(src, extra_bytes + 1)) {
     *dest = 0;
     return 0;
@@ -86,12 +90,12 @@ size_t ConvertCharUTF8ToUTF32(const UTF8Char *src, size_t src_length,
   UTF32Char result = 0;
   // The cases all fall through.
   switch (extra_bytes) {
-    case 5: result += *src++; result <<= 6;
-    case 4: result += *src++; result <<= 6;
-    case 3: result += *src++; result <<= 6;
-    case 2: result += *src++; result <<= 6;
-    case 1: result += *src++; result <<= 6;
-    case 0: result += *src++;
+    case 5: result += *p++; result <<= 6;
+    case 4: result += *p++; result <<= 6;
+    case 3: result += *p++; result <<= 6;
+    case 2: result += *p++; result <<= 6;
+    case 1: result += *p++; result <<= 6;
+    case 0: result += *p++;
   }
   result -= kOffsetsFromUTF8[extra_bytes];
   if (result > kUnicodeMaxLegalChar ||
@@ -101,7 +105,7 @@ size_t ConvertCharUTF8ToUTF32(const UTF8Char *src, size_t src_length,
   return extra_bytes + 1;
 }
 
-size_t ConvertCharUTF32ToUTF8(UTF32Char src, UTF8Char *dest,
+size_t ConvertCharUTF32ToUTF8(UTF32Char src, char *dest,
                               size_t dest_length) {
   const UTF32Char kByteMask = 0xBF;
   const UTF32Char kByteMark = 0x80;
@@ -110,6 +114,8 @@ size_t ConvertCharUTF32ToUTF8(UTF32Char src, UTF8Char *dest,
       (src >= kSurrogateHighStart && src <= kSurrogateLowEnd) ||
       !dest || !dest_length)
     return 0;
+
+  UTF8Char *p = reinterpret_cast<UTF8Char*>(dest);
 
   size_t bytes_to_write = 0;
   if (src < 0x80)
@@ -124,17 +130,17 @@ size_t ConvertCharUTF32ToUTF8(UTF32Char src, UTF8Char *dest,
   if (bytes_to_write > dest_length)
     return 0;
 
-  dest += bytes_to_write;
+  p += bytes_to_write;
   // Everything falls through.
   switch (bytes_to_write) {
     case 4:
-      *--dest = static_cast<UTF8Char>((src | kByteMark) & kByteMask); src >>=6;
+      *--p = static_cast<UTF8Char>((src | kByteMark) & kByteMask); src >>=6;
     case 3:
-      *--dest = static_cast<UTF8Char>((src | kByteMark) & kByteMask); src >>=6;
+      *--p = static_cast<UTF8Char>((src | kByteMark) & kByteMask); src >>=6;
     case 2:
-      *--dest = static_cast<UTF8Char>((src | kByteMark) & kByteMask); src >>=6;
+      *--p = static_cast<UTF8Char>((src | kByteMark) & kByteMask); src >>=6;
     case 1:
-      *--dest = static_cast<UTF8Char>(src | kFirstByteMark[bytes_to_write]);
+      *--p = static_cast<UTF8Char>(src | kFirstByteMark[bytes_to_write]);
   }
 
   return bytes_to_write;
@@ -184,7 +190,7 @@ size_t ConvertCharUTF32ToUTF16(UTF32Char src, UTF16Char *dest,
   return 0;
 }
 
-size_t ConvertStringUTF8ToUTF32(const UTF8Char *src, size_t src_length,
+size_t ConvertStringUTF8ToUTF32(const char *src, size_t src_length,
                                 UTF32String *dest) {
   if (!src || !src_length || !dest)
     return 0;
@@ -193,7 +199,7 @@ size_t ConvertStringUTF8ToUTF32(const UTF8Char *src, size_t src_length,
   size_t used_length = 0;
   size_t utf8_len;
   UTF32Char utf32;
-  while (src_length) {
+  while (src_length && *src) {
     utf8_len = ConvertCharUTF8ToUTF32(src, src_length, &utf32);
     if (!utf8_len) break;
     dest->push_back(utf32);
@@ -206,8 +212,7 @@ size_t ConvertStringUTF8ToUTF32(const UTF8Char *src, size_t src_length,
 
 size_t ConvertStringUTF8ToUTF32(const std::string &src, UTF32String *dest) {
   return
-      ConvertStringUTF8ToUTF32(reinterpret_cast<const UTF8Char*>(src.c_str()),
-                               src.length(), dest);
+      ConvertStringUTF8ToUTF32(src.c_str(), src.length(), dest);
 }
 
 size_t ConvertStringUTF32ToUTF8(const UTF32Char *src, size_t src_length,
@@ -218,11 +223,11 @@ size_t ConvertStringUTF32ToUTF8(const UTF32Char *src, size_t src_length,
   dest->clear();
   size_t used_length = 0;
   size_t utf8_len;
-  UTF8Char utf8[6];
-  while (src_length) {
+  char utf8[6];
+  while (src_length && *src) {
     utf8_len = ConvertCharUTF32ToUTF8(*src, utf8, 6);
     if (!utf8_len) break;
-    dest->append(reinterpret_cast<std::string::value_type*>(utf8), utf8_len);
+    dest->append(utf8, utf8_len);
     ++used_length;
     ++src;
     --src_length;
@@ -234,7 +239,7 @@ size_t ConvertStringUTF32ToUTF8(const UTF32String &src, std::string *dest) {
   return ConvertStringUTF32ToUTF8(src.c_str(), src.length(), dest);
 }
 
-size_t ConvertStringUTF8ToUTF16(const UTF8Char *src, size_t src_length,
+size_t ConvertStringUTF8ToUTF16(const char *src, size_t src_length,
                                 UTF16String *dest) {
   if (!src || !src_length || !dest)
     return 0;
@@ -245,7 +250,7 @@ size_t ConvertStringUTF8ToUTF16(const UTF8Char *src, size_t src_length,
   size_t utf16_len;
   UTF16Char utf16[2];
   UTF32Char utf32;
-  while (src_length) {
+  while (src_length && *src) {
     utf8_len = ConvertCharUTF8ToUTF32(src, src_length, &utf32);
     if (!utf8_len) break;
     utf16_len = ConvertCharUTF32ToUTF16(utf32, utf16, 2);
@@ -260,8 +265,7 @@ size_t ConvertStringUTF8ToUTF16(const UTF8Char *src, size_t src_length,
 
 size_t ConvertStringUTF8ToUTF16(const std::string &src, UTF16String *dest) {
   return
-      ConvertStringUTF8ToUTF16(reinterpret_cast<const UTF8Char*>(src.c_str()),
-                               src.length(), dest);
+      ConvertStringUTF8ToUTF16(src.c_str(), src.length(), dest);
 }
 
 size_t ConvertStringUTF16ToUTF8(const UTF16Char *src, size_t src_length,
@@ -273,14 +277,14 @@ size_t ConvertStringUTF16ToUTF8(const UTF16Char *src, size_t src_length,
   size_t used_length = 0;
   size_t utf8_len;
   size_t utf16_len;
-  UTF8Char utf8[6];
+  char utf8[6];
   UTF32Char utf32;
-  while (src_length) {
+  while (src_length && *src) {
     utf16_len = ConvertCharUTF16ToUTF32(src, src_length, &utf32);
     if (!utf16_len) break;
     utf8_len = ConvertCharUTF32ToUTF8(utf32, utf8, 6);
     if (!utf8_len) break;
-    dest->append(reinterpret_cast<std::string::value_type*>(utf8), utf8_len);
+    dest->append(utf8, utf8_len);
     used_length += utf16_len;
     src += utf16_len;
     src_length -= utf16_len;
@@ -301,7 +305,7 @@ size_t ConvertStringUTF16ToUTF32(const UTF16Char *src, size_t src_length,
   size_t used_length = 0;
   size_t utf16_len;
   UTF32Char utf32;
-  while (src_length) {
+  while (src_length && *src) {
     utf16_len = ConvertCharUTF16ToUTF32(src, src_length, &utf32);
     if (!utf16_len) break;
     dest->push_back(utf32);
@@ -325,7 +329,7 @@ size_t ConvertStringUTF32ToUTF16(const UTF32Char *src, size_t src_length,
   size_t used_length = 0;
   size_t utf16_len;
   UTF16Char utf16[2];
-  while (src_length) {
+  while (src_length && *src) {
     utf16_len = ConvertCharUTF32ToUTF16(*src, utf16, 2);
     if (!utf16_len) break;
     dest->append(utf16, utf16_len);
@@ -340,22 +344,26 @@ size_t ConvertStringUTF32ToUTF16(const UTF32String &src, UTF16String *dest) {
   return ConvertStringUTF32ToUTF16(src.c_str(), src.length(), dest);
 }
 
-size_t GetUTF8CharLength(const UTF8Char *src) {
-  return src ? (kTrailingBytesForUTF8[*src] + 1) : 0;
+size_t GetUTF8CharLength(const char *src) {
+  return src ?
+         (kTrailingBytesForUTF8[static_cast<UTF8Char>(*src)] + 1) :
+         0;
 }
 
-bool IsLegalUTF8Char(const UTF8Char *src, size_t length) {
+bool IsLegalUTF8Char(const char *src, size_t length) {
   if (!src || !length) return false;
 
+  const UTF8Char *srcptr = reinterpret_cast<const UTF8Char*>(src);
   UTF8Char a;
-  const UTF8Char *srcptr = src+length;
+  UTF8Char ch = *srcptr;
+  srcptr += length;
   switch (length) {
     default: return false;
     // Everything else falls through when "true"...
     case 4: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false;
     case 3: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false;
     case 2: if ((a = (*--srcptr)) > 0xBF) return false;
-      switch (*src) {
+      switch (ch) {
         // No fall-through in this inner switch
         case 0xE0: if (a < 0xA0) return false; break;
         case 0xED: if (a > 0x9F) return false; break;
@@ -363,9 +371,9 @@ bool IsLegalUTF8Char(const UTF8Char *src, size_t length) {
         case 0xF4: if (a > 0x8F) return false; break;
         default:   if (a < 0x80) return false;
       }
-    case 1: if (*src >= 0x80 && *src < 0xC2) return false;
+    case 1: if (ch >= 0x80 && ch < 0xC2) return false;
   }
-  if (*src > 0xF4) return false;
+  if (ch > 0xF4) return false;
   return true;
 }
 
