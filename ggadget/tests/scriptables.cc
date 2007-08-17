@@ -82,6 +82,8 @@ TestScriptable1::~TestScriptable1() {
   // the "official" ondelete signal will be emitted.
 }
 
+DELEGATE_SCRIPTABLE_INTERFACE_IMPL(TestPrototype, static_scriptable_)
+
 TestPrototype *TestPrototype::instance_ = NULL;
 
 TestPrototype::TestPrototype() {
