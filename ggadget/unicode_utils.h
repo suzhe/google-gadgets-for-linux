@@ -21,7 +21,6 @@
 #include "common.h"
 
 namespace ggadget {
-typedef unsigned char UTF8Char;
 typedef uint16_t UTF16Char;
 typedef uint32_t UTF32Char;
 
@@ -36,7 +35,7 @@ typedef std::basic_string<UTF32Char> UTF32String;
  * @param[out] dest result utf32 char code.
  * @return how many bytes in src have been converted.
  */
-size_t ConvertCharUTF8ToUTF32(const UTF8Char *src, size_t src_length,
+size_t ConvertCharUTF8ToUTF32(const char *src, size_t src_length,
                               UTF32Char *dest);
 
 /**
@@ -47,7 +46,7 @@ size_t ConvertCharUTF8ToUTF32(const UTF8Char *src, size_t src_length,
  * @param dest_length length of the dest utf8 char sequence buffer.
  * @return how many bytes have been written into dest.
  */
-size_t ConvertCharUTF32ToUTF8(UTF32Char src, UTF8Char *dest,
+size_t ConvertCharUTF32ToUTF8(UTF32Char src, char *dest,
                               size_t dest_length);
 
 /**
@@ -80,7 +79,7 @@ size_t ConvertCharUTF32ToUTF16(UTF32Char src, UTF16Char *dest,
  * @param[out] dest result utf32 string.
  * @return how many bytes in source utf8 string have been converted.
  */
-size_t ConvertStringUTF8ToUTF32(const UTF8Char *src, size_t src_length,
+size_t ConvertStringUTF8ToUTF32(const char *src, size_t src_length,
                                 UTF32String *dest);
 
 /**
@@ -116,7 +115,7 @@ size_t ConvertStringUTF32ToUTF8(const UTF32String &src, std::string *dest);
  * @param[out] dest result utf16 string.
  * @return how many bytes in source utf8 string have been converted.
  */
-size_t ConvertStringUTF8ToUTF16(const UTF8Char *src, size_t src_length,
+size_t ConvertStringUTF8ToUTF16(const char *src, size_t src_length,
                                 UTF16String *dest);
 
 /**
@@ -187,7 +186,7 @@ size_t ConvertStringUTF32ToUTF16(const UTF32String &src, UTF16String *dest);
  * @param src the source utf8 char sequence.
  * @return the length of a utf8 char sequence in bytes.
  */
-size_t GetUTF8CharLength(const UTF8Char *src);
+size_t GetUTF8CharLength(const char *src);
 
 /**
  * Checks if a utf8 char sequence valid.
@@ -198,7 +197,7 @@ size_t GetUTF8CharLength(const UTF8Char *src);
  *        returned by @c GetUTF8CharLength function.
  * @return true if the source utf8 char sequence is valid.
  */
-bool IsLegalUTF8Char(const UTF8Char *src, size_t length);
+bool IsLegalUTF8Char(const char *src, size_t length);
 
 /**
  * Gets the length of a utf16 char sequence.

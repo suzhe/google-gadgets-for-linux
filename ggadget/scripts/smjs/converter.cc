@@ -258,9 +258,7 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
   JSBool result = JS_TRUE;
   const char *char_ptr = VariantValue<const char *>()(native_val);
   UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(reinterpret_cast<const UTF8Char *>(char_ptr),
-                           strlen(char_ptr),
-                           &utf16_string);
+  ConvertStringUTF8ToUTF16(char_ptr, strlen(char_ptr), &utf16_string);
   // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
   // if they are compatible.
   JSString *js_string = JS_NewUCStringCopyZ(cx, utf16_string.c_str());
