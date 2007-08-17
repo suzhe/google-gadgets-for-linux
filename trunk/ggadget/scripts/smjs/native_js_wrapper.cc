@@ -181,7 +181,7 @@ JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
   Variant value;
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
     JS_ReportError(js_context_, "Failed to convert jsval(%s) to native",
-                   ConvertJSToString(js_val).c_str());
+                   ConvertJSToString(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
