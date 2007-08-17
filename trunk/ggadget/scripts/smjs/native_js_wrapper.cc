@@ -155,7 +155,7 @@ JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
     return JS_TRUE;
 
   if (!ConvertNativeToJS(js_context_, return_value, vp)) {
-    JS_ReportError(js_context_, "Failed to convert native (%s) to jsval",
+    JS_ReportError(js_context_, "Failed to convert native(%s) to jsval",
                    return_value.ToString().c_str());
     return JS_FALSE;
   }
@@ -180,7 +180,8 @@ JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
 
   Variant value;
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
-    JS_ReportError(js_context_, "Failed to convert jsval to native");
+    JS_ReportError(js_context_, "Failed to convert jsval(%s) to native",
+                   ConvertJSToString(js_val).c_str());
     return JS_FALSE;
   }
 
@@ -232,7 +233,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
     ASSERT(int_id <= 0 && int_id >= -128);
     jsval js_val;
     if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
-      JS_ReportError(js_context_, "Failed to convert init value (%s) to jsval",
+      JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
                      prototype.ToString().c_str());
       return JS_FALSE;
     }

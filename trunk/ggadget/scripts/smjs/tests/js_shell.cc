@@ -27,6 +27,11 @@
 #endif
 #endif
 
+#include "ggadget/common.h"
+#include "ggadget/scripts/smjs/js_script_context.h"
+#include "ggadget/scripts/smjs/converter.h"
+#include "ggadget/unicode_utils.h"
+
 // The exception value thrown by Assert function.
 const int kAssertExceptionMagic = 135792468;
 
@@ -108,16 +113,21 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
       lineno++;
     } while (!JS_BufferIsCompilableUnit(cx, obj, g_buffer, strlen(g_buffer)));
 
-    JSScript *script = JS_CompileScript(cx, obj, g_buffer, strlen(g_buffer),
-                                        filename, startline);
+    ggadget::UTF16String utf16_string;
+    ggadget::ConvertStringUTF8ToUTF16(
+        reinterpret_cast<const ggadget::UTF8Char *>(g_buffer),
+        strlen(g_buffer),
+        &utf16_string);
+    JSScript *script = JS_CompileUCScript(cx, obj,
+                                          utf16_string.c_str(),
+                                          utf16_string.size(),
+                                          filename, startline);
     if (script) {
       jsval result;
       if (JS_ExecuteScript(cx, obj, script, &result) &&
           result != JSVAL_VOID &&
           g_interactive) {
-        JSString *str = JS_ValueToString(cx, result);
-        if (str)
-          puts(JS_GetStringBytes(str));
+        puts(ggadget::ConvertJSToString(cx, result).c_str());
       }
       JS_DestroyScript(cx, script);
     }
@@ -128,12 +138,8 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
 
 static JSBool Print(JSContext *cx, JSObject *obj,
                     uintN argc, jsval *argv, jsval *rval) {
-  for (uintN i = 0; i < argc; i++) {
-    JSString *str = JS_ValueToString(cx, argv[i]);
-    if (!str)
-      return JS_FALSE;
-    printf("%s ", JS_GetStringBytes(str));
-  }
+  for (uintN i = 0; i < argc; i++)
+    printf("%s ", ggadget::ConvertJSToString(cx, argv[i]).c_str());
   putchar('\n');
   return JS_TRUE;
 }
@@ -161,23 +167,14 @@ const char kAssertFailurePrefix[] = "Failure\n";
 // Usage: ASSERT(EQ(a, b), "Test a and b");
 static JSBool Assert(JSContext *cx, JSObject *obj,
                      uintN argc, jsval *argv, jsval *rval) {
-  JSString *predicate_result = JS_ValueToString(cx, argv[0]);
-  if (!predicate_result)
-    return JS_FALSE;
-
-  if (JS_GetStringLength(predicate_result) > 0) {
-    jsval message_jsval = argc > 1 ? argv[1] : JS_GetEmptyStringValue(cx);
-    JSString *message = JS_ValueToString(cx, message_jsval);
-    if (!message)
-      return JS_FALSE;
-
-    if (JS_GetStringLength(message) > 0)
+  if (argv[0] != JSVAL_NULL) {
+    if (argc > 1)
       JS_ReportError(cx, "%s%s\n%s", kAssertFailurePrefix,
-                     JS_GetStringBytes(predicate_result),
-                     JS_GetStringBytes(message));
+                     ggadget::ConvertJSToString(cx, argv[0]).c_str(),
+                     ggadget::ConvertJSToString(cx, argv[1]).c_str());
     else
       JS_ReportError(cx, "%s%s", kAssertFailurePrefix,
-                     JS_GetStringBytes(predicate_result));
+                     ggadget::ConvertJSToString(cx, argv[0]).c_str());
 
     // Let the JavaScript test framework know the failure.
     // The exception value is null to tell the catcher not to print it again.
@@ -241,19 +238,14 @@ static JSFunctionSpec global_functions[] = {
   { 0 }
 };
 
-#include "ggadget/common.h"
-#include "ggadget/scripts/smjs/js_script_context.h"
-
-using namespace ggadget;
-
 // A hook to initialize custom objects before running scripts.
-JSBool InitCustomObjects(JSScriptContext *context);
-void DestroyCustomObjects(JSScriptContext *context);
+JSBool InitCustomObjects(ggadget::JSScriptContext *context);
+void DestroyCustomObjects(ggadget::JSScriptContext *context);
 
 int main(int argc, char *argv[]) {
-  JSScriptRuntime *runtime = new JSScriptRuntime();
-  JSScriptContext *context =
-      down_cast<JSScriptContext *>(runtime->CreateContext());
+  ggadget::JSScriptRuntime *runtime = new ggadget::JSScriptRuntime();
+  ggadget::JSScriptContext *context =
+      ggadget::down_cast<ggadget::JSScriptContext *>(runtime->CreateContext());
   JSContext *cx = context->context();
   if (!cx)
     return QUIT_ERROR;

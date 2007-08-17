@@ -19,6 +19,7 @@
 #include <jsfun.h>
 #include "converter.h"
 #include "ggadget/scriptable_interface.h"
+#include "ggadget/unicode_utils.h"
 #include "js_script_context.h"
 #include "native_js_wrapper.h"
 
@@ -88,12 +89,15 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
   } else {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
-      // TODO(wangxianzhu): Convert to UTF8.
-      char *bytes = JS_GetStringBytes(js_string);
-      if (bytes) {
+      jschar *chars = JS_GetStringChars(js_string);
+      if (chars) {
         result = JS_TRUE;
-        // Use std::string to make an independent Variant value.
-        *native_val = Variant(std::string(bytes));
+        std::string utf8_string;
+        // Don't cast chars to UTF16Char *, to let the compiler check if they
+        // are compatible.
+        ConvertStringUTF16ToUTF8(chars, JS_GetStringLength(js_string),
+                                 &utf8_string);
+        *native_val = Variant(utf8_string);
       }
     }
   }
@@ -197,6 +201,13 @@ JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
   return JS_FALSE;
 }
 
+std::string ConvertJSToString(JSContext *cx, jsval js_val) {
+  Variant v;
+  return ConvertJSToNativeString(cx, js_val, &v) ?
+         VariantValue<std::string>()(v) :
+         std::string("##ERROR##");
+}
+
 static JSBool ConvertNativeToJSVoid(JSContext *cx,
                                     const Variant &native_val,
                                     jsval *js_val) {
@@ -245,9 +256,14 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
                                       const Variant &native_val,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
-  JSString *js_string = JS_NewStringCopyZ(
-      cx, VariantValue<const char *>()(native_val));
-  // TODO(wangxianzhu): Convert UTF8 to jschar.
+  const char *char_ptr = VariantValue<const char *>()(native_val);
+  UTF16String utf16_string;
+  ConvertStringUTF8ToUTF16(reinterpret_cast<const UTF8Char *>(char_ptr),
+                           strlen(char_ptr),
+                           &utf16_string);
+  // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
+  // if they are compatible.
+  JSString *js_string = JS_NewUCStringCopyZ(cx, utf16_string.c_str());
   if (js_string)
     *js_val = STRING_TO_JSVAL(js_string);
   else
