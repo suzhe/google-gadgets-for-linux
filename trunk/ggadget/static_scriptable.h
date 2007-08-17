@@ -141,30 +141,77 @@ virtual void Detach() { }
 
 /**
  * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to delegate most @c ScriptableInterface methods to another
- * object (normally @c StaticScriptable).
+ * implementation to inline delegate most @c ScriptableInterface methods to
+ * another object (normally @c StaticScriptable).
  * 
  * Full qualified type names are used in this macro to allow the user to use
  * other namespaces.
  */
 #define DELEGATE_SCRIPTABLE_INTERFACE(delegate)                               \
-virtual ggadget::Connection *ConnectToOnDeleteSignal(                         \
-    ggadget::Slot0<void> *slot) {                                             \
+virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
+    ::ggadget::Slot0<void> *slot) {                                           \
   return (delegate).ConnectToOnDeleteSignal(slot);                            \
 }                                                                             \
 virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
-                                   ggadget::Variant *prototype,               \
+                                   ::ggadget::Variant *prototype,             \
                                    bool *is_method) {                         \
   return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
 }                                                                             \
-virtual bool GetPropertyInfoById(int id, ggadget::Variant *prototype,         \
+virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
                                  bool *is_method) {                           \
   return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
 }                                                                             \
-virtual ggadget::Variant GetProperty(int id) {                                \
+virtual ::ggadget::Variant GetProperty(int id) {                              \
   return (delegate).GetProperty(id);                                          \
 }                                                                             \
-virtual bool SetProperty(int id, ggadget::Variant value) {                    \
+virtual bool SetProperty(int id, ::ggadget::Variant value) {                  \
+  return (delegate).SetProperty(id, value);                                   \
+}
+
+/**
+ * A macro used in the declaration section of a @c ScriptableInterface
+ * implementation to declare @c ScriptableInterface methods.
+ * 
+ * Full qualified type names are used in this macro to allow the user to use
+ * other namespaces.
+ */
+#define SCRIPTABLE_INTERFACE_DECL                                             \
+virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
+    ::ggadget::Slot0<void> *slot);                                            \
+virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
+                                   ::ggadget::Variant *prototype,             \
+                                   bool *is_method);                          \
+virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
+                                 bool *is_method);                            \
+virtual ::ggadget::Variant GetProperty(int id);                               \
+virtual bool SetProperty(int id, ::ggadget::Variant value);
+
+/**
+ * A macro used in the .cc definition of a @c ScriptableInterface
+ * implementation to delegate most @c ScriptableInterface methods to
+ * another object (normally @c StaticScriptable)
+ * 
+ * Full qualified type names are used in this macro to allow the user to use
+ * other namespaces.
+ */
+#define DELEGATE_SCRIPTABLE_INTERFACE_IMPL(class_name, delegate)              \
+::ggadget::Connection *class_name::ConnectToOnDeleteSignal(                   \
+    ::ggadget::Slot0<void> *slot) {                                           \
+  return (delegate).ConnectToOnDeleteSignal(slot);                            \
+}                                                                             \
+bool class_name::GetPropertyInfoByName(const char *name, int *id,             \
+                                       ::ggadget::Variant *prototype,         \
+                                       bool *is_method) {                     \
+  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
+}                                                                             \
+bool class_name::GetPropertyInfoById(int id, ::ggadget::Variant *prototype,   \
+                                     bool *is_method) {                       \
+  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
+}                                                                             \
+::ggadget::Variant class_name::GetProperty(int id) {                          \
+  return (delegate).GetProperty(id);                                          \
+}                                                                             \
+bool class_name::SetProperty(int id, ::ggadget::Variant value) {              \
   return (delegate).SetProperty(id, value);                                   \
 }
 
@@ -178,7 +225,7 @@ virtual bool SetProperty(int id, ggadget::Variant value) {                    \
  */
 #define DELEGATE_SCRIPTABLE_REGISTER(delegate)                                \
 void RegisterProperty(const char *name,                                       \
-                      ggadget::Slot *getter, ggadget::Slot *setter) {         \
+                      ::ggadget::Slot *getter, ::ggadget::Slot *setter) {     \
   (delegate).RegisterProperty(name, getter, setter);                          \
 }                                                                             \
 template <typename T>                                                         \
@@ -189,21 +236,21 @@ template <typename T>                                                         \
 void RegisterReadonlySimpleProperty(const char *name, const T *valuep) {      \
   (delegate).RegisterReadonlySimpleProperty<T>(name, valuep);                 \
 }                                                                             \
-void RegisterMethod(const char *name, ggadget::Slot *slot) {                  \
+void RegisterMethod(const char *name, ::ggadget::Slot *slot) {                \
   (delegate).RegisterMethod(name, slot);                                      \
 }                                                                             \
-void RegisterSignal(const char *name, ggadget::Signal *signal) {              \
+void RegisterSignal(const char *name, ::ggadget::Signal *signal) {            \
   (delegate).RegisterSignal(name, signal);                                    \
 }                                                                             \
 void RegisterConstants(int c, const char *const n[],                          \
-                       const ggadget::Variant v[]) {                          \
+                       const ::ggadget::Variant v[]) {                        \
   (delegate).RegisterConstants(c, n, v);                                      \
 }                                                                             \
 template <typename T>                                                         \
 void RegisterConstant(const char *name, T value) {                            \
   (delegate).RegisterConstant(name, value);                                   \
 }                                                                             \
-void SetPrototype(ggadget::ScriptableInterface *prototype) {                  \
+void SetPrototype(::ggadget::ScriptableInterface *prototype) {                \
   (delegate).SetPrototype(prototype);                                         \
 }
 

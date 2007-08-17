@@ -101,7 +101,8 @@ class TestPrototype : public ScriptableInterface {
   }
 
   DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
+  SCRIPTABLE_INTERFACE_DECL
+  //DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
   DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_)
 
   // Place this signal declaration here for testing.
