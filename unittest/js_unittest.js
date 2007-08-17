@@ -113,69 +113,69 @@ function _Message(relation, expected, actual) {
 // Succeeds if arg is equivalent to true.
 // Use EQ or STRICT_EQ instead to test if arg is equal to false.
 function TRUE(arg) {
-  return arg ? "" : _Message("Equivalent to", true, arg);
+  return arg ? null : _Message("Equivalent to", true, arg);
 }
 
 // Succeeds if arg is equivalent to false.
 // Use EQ or STRICT_EQ instead to test if arg is equal to false.
 function FALSE(arg) {
-  return !arg ? "" : _Message("Equivalent to", false, arg);
+  return !arg ? null : _Message("Equivalent to", false, arg);
 }
 
 function NULL(arg) {
-  return arg == null ? "" : _Message("==", null, arg);
+  return arg == null ? null : _Message("==", null, arg);
 }
 
 function NOT_NULL(arg) {
-  return arg != null ? "" : _Message("!=", null, arg);
+  return arg != null ? null : _Message("!=", null, arg);
 }
 
 function UNDEFINED(arg) {
-  return arg == undefined ? "" : _Message("==", undefined, arg);
+  return arg == undefined ? null : _Message("==", undefined, arg);
 }
 
 function NOT_UNDEFINED(arg) {
-  return arg != undefined ? "" : _Message("!=", undefined, arg);
+  return arg != undefined ? null : _Message("!=", undefined, arg);
 }
 
 function NAN(arg) {
-  return isNaN(arg) ? "" : _Message("is", NaN, arg);
+  return isNaN(arg) ? null : _Message("is", NaN, arg);
 }
 
 function NOT_NAN(arg) {
-  return !isNaN(arg) ? "" : _Message("not", NaN, arg);
+  return !isNaN(arg) ? null : _Message("not", NaN, arg);
 }
 
 function EQ(arg1, arg2) {
-  return arg1 == arg2 ? "" : _Message("==", arg1, arg2);
+  return arg1 == arg2 ? null : _Message("==", arg1, arg2);
 }
 
 function STRICT_EQ(arg1, arg2) {
-  return arg1 === arg2 ? "" : _Message("===", arg1, arg2);
+  return arg1 === arg2 ? null : _Message("===", arg1, arg2);
 }
 
 function NE(arg1, arg2) {
-  return arg1 != arg2 ? "" : _Message("!=", arg1, arg2);
+  return arg1 != arg2 ? null : _Message("!=", arg1, arg2);
 }
 
 function STRICT_NE(arg1, arg2) {
-  return arg1 !== arg2 ? "" : _Message("!==", arg1, arg2);
+  return arg1 !== arg2 ? null : _Message("!==", arg1, arg2);
 }
 
 function LT(arg1, arg2) {
-  return arg1 < arg2 ? "" : _Message("<", arg1, arg2);
+  return arg1 < arg2 ? null : _Message("<", arg1, arg2);
 }
 
 function LE(arg1, arg2) {
-  return arg1 <= arg2 ? "" : _Message("<=", arg1, arg2);
+  return arg1 <= arg2 ? null : _Message("<=", arg1, arg2);
 }
 
 function GT(arg1, arg2) {
-  return arg1 > arg2 ? "" : _Message(">", arg1, arg2);
+  return arg1 > arg2 ? null : _Message(">", arg1, arg2);
 }
 
 function GE(arg1, arg2) {
-  return arg1 != arg2 ? "" : _Message(">=", arg1, arg2);
+  return arg1 != arg2 ? null : _Message(">=", arg1, arg2);
 }
 
 function _ArrayEquals(array1, array2) {
@@ -205,22 +205,22 @@ function _ArrayStrictEquals(array1, array2) {
 }
 
 function ARRAY_EQ(array1, array2) {
-  return _ArrayEquals(array1, array2) ? "" :
+  return _ArrayEquals(array1, array2) ? null :
          _Message("ARRAY==", array1, array2);
 }
 
 function ARRAY_NE(array1, array2) {
-  return !_ArrayEquals(array1, array2) ? "" :
+  return !_ArrayEquals(array1, array2) ? null :
          _Message("ARRAY!=", array1, array2);
 }
 
 function ARRAY_STRICT_EQ(array1, array2) {
-  return _ArrayStrictEquals(array1, array2) ? "" :
+  return _ArrayStrictEquals(array1, array2) ? null :
          _Message("ARRAY===", array1, array2);
 }
 
 function ARRAY_STRICT_NE(array1, array2) {
-  return !_ArrayStrictEquals(array1, array2) ? "" :
+  return !_ArrayStrictEquals(array1, array2) ? null :
          _Message("ARRAY!==", array1, array2);
 }
 
@@ -253,22 +253,22 @@ function _ObjectStrictEquals(object1, object2) {
 }
 
 function OBJECT_EQ(object1, object2) {
-  return _ObjectEquals(object1, object2) ? "" :
+  return _ObjectEquals(object1, object2) ? null :
          _Message("OBJECT==", object1, object2);
 }
 
 function OBJECT_NE(object1, object2) {
-  return !_ObjectEquals(object1, object2) ? "" :
+  return !_ObjectEquals(object1, object2) ? null :
          _Message("OBJECT!=", object1, object2);
 }
 
 function OBJECT_STRICT_EQ(object1, object2) {
-  return _ObjectStrictEquals(object1, object2) ? "" :
+  return _ObjectStrictEquals(object1, object2) ? null :
          _Message("OBJECT===", object1, object2);
 }
 
 function OBJECT_STRICT_NE(object1, object2) {
-  return !_ObjectStrictEquals(object1, object2) ? "" :
+  return !_ObjectStrictEquals(object1, object2) ? null :
          _Message("OBJECT!==", object1, object2);
 }
 

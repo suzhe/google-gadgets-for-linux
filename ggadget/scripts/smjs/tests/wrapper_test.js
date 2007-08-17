@@ -257,4 +257,23 @@ TEST("Test ownership policies", function() {
   gc();  // Should not cause errors.
 });
 
+TEST("Test UTF8 strings", function() {
+  scriptable.Buffer = "\u4E2D\u56FDUnicode";
+  ASSERT(EQ(9, scriptable.Buffer.length));
+  // Although we support UTF8 chars in JavaScript source code, we disencourage
+  // it.  We should Use unicode escape sequences or external string/ resources.
+  ASSERT(EQ("中", scriptable.Buffer[0]));
+  ASSERT(EQ("国", scriptable.Buffer[1]));
+  ASSERT(EQ("e", scriptable.Buffer[8]));
+  ASSERT(EQ("中国Unicode", scriptable.Buffer));
+  ASSERT(EQ(0x4E2D, scriptable.Buffer.charCodeAt(0)));
+  ASSERT(EQ(0x56FD, scriptable.Buffer.charCodeAt(1)));
+});
+
+TEST("Test string callback in UTF8", function() {
+  scriptable2.onlunch = "msg = '午餐'; print(msg);";
+  scriptable2.time = "lunch";
+  ASSERT(EQ("\u5348\u9910", msg));
+});
+
 RUN_ALL_TESTS();

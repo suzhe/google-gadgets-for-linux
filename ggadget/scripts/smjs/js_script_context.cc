@@ -18,6 +18,7 @@
 #include "ggadget/common.h"
 #include "ggadget/scoped_ptr.h"
 #include "ggadget/slot.h"
+#include "ggadget/unicode_utils.h"
 #include "converter.h"
 #include "native_js_wrapper.h"
 
@@ -124,7 +125,7 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
     js_args.reset(new jsval[argc]);
     for (int i = 0; i < argc; i++) {
       if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
-        JS_ReportError(context_, "Failed to convert argument %d (%s) to jsval",
+        JS_ReportError(context_, "Failed to convert argument %d(%s) to jsval",
                        i, argv[i].ToString().c_str());
         return return_value;
       }
@@ -137,7 +138,8 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
   if (result) {
     result = ConvertJSToNative(context_, return_value, rval, &return_value);
     if (!result)
-      JS_ReportError(context_, "Failed to convert jsval to native");
+      JS_ReportError(context_, "Failed to convert jsval(%s) to native",
+                     ConvertJSToString(rval).c_str());
   }
   return return_value;
 }
@@ -265,7 +267,7 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
   if (slot->HasMetadata()) {
     if (argc != static_cast<uintN>(slot->GetArgCount())) {
       // Argc mismatch.
-      JS_ReportError(cx, "Wrong number of arguments: %d. %d expected",
+      JS_ReportError(cx, "Wrong number of arguments: %d (expected: %d)",
                      argc, slot->GetArgCount());
       return JS_FALSE;
     }
@@ -280,7 +282,8 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
           ConvertJSToNative(cx, Variant(arg_types[i]), argv[i], &params[i]) :
           ConvertJSToNativeVariant(cx, argv[i], &params[i]);
       if (!result) {
-        JS_ReportError(cx, "Failed to convert argument %d to native", i);
+        JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
+                       i, ConvertJSToString(argv[i]));
         return JS_FALSE;
       }
     }
@@ -289,7 +292,7 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
   Variant return_value = slot->Call(argc, params.get());
   JSBool result = ConvertNativeToJS(cx, return_value, rval);
   if (!result)
-    JS_ReportError(cx, "Failed to convert result (%s) to jsval",
+    JS_ReportError(cx, "Failed to convert result(%s) to jsval",
                    return_value.ToString().c_str());
   return result;
 }
@@ -320,9 +323,16 @@ void JSScriptContext::Destroy() {
 Slot *JSScriptContext::Compile(const char *script,
                                const char *filename,
                                int lineno) {
-  JSFunction *function = JS_CompileFunction(
+  UTF16String utf16_string;
+  ConvertStringUTF8ToUTF16(reinterpret_cast<const UTF8Char *>(script),
+                           strlen(script),
+                           &utf16_string);
+  JSFunction *function = JS_CompileUCFunction(
       context_, NULL, NULL, 0, NULL,  // No name and no argument.
-      script, strlen(script), filename, lineno);
+      // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
+      // if they are compatible.
+      utf16_string.c_str(), utf16_string.size(),
+      filename, lineno);
   if (!function)
     return NULL;
 
@@ -356,7 +366,8 @@ bool JSScriptContext::SetValue(const char *object_expression,
 
   jsval js_val;
   if (!ConvertNativeToJS(context_, value, &js_val)) {
-    JS_ReportError(context_, "Failed to convert native value %s to JavaScript",
+    JS_ReportError(context_,
+                   "Failed to convert native value(%s) to JavaScript",
                    value.ToString().c_str());
     return false;
   }

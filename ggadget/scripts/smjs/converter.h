@@ -18,6 +18,8 @@
 #define CONVERTER_H__
 
 #include <jsapi.h>
+#include <string>
+
 #include "ggadget/variant.h"
 
 namespace ggadget {
@@ -42,6 +44,11 @@ JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
  */
 JSBool ConvertJSToNativeVariant(JSContext *cx,
                                 jsval js_val, Variant *native_val);
+
+/**
+ * Converts a @c jsval to a @c std::string.
+ */
+std::string ConvertJSToString(JSContext *cx, jsval js_val);
 
 /**
  * Converts a @c Variant to a @c jsval.
