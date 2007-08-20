@@ -97,6 +97,8 @@ double DegreesToRadians(double degrees) {
 
 /**
  * Checks to see if the given (x, y) is contained in an element.
+ * @param x X-coordinate of the element's (0, 0) point in parent space.
+ * @param y Y-coordinate of the element's (0, 0) point in parent space.
  * @param width Width of element.
  * @param height Height of element.
  */

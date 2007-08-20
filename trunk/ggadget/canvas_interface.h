@@ -108,7 +108,12 @@ class CanvasInterface {
   
   /** 
    * Draw a line from point (x0, y0) to (x1, y1).
+   * @param x0 X-coordinate of the line starting point.
+   * @param y0 Y-coordinate of the line starting point.
+   * @param x1 X-coordinate of the line ending point.
+   * @param y1 Y-coordinate of the line ending point.
    * @param width Width of the line to draw.
+   * @param c Line color.
    * @return true on success, false otherwise.
    */
   virtual bool DrawLine(double x0, double y0, double x1, double y1, 
@@ -116,6 +121,8 @@ class CanvasInterface {
 
   /**
    * Draw a filled rectangle with top left corner at (x, y).
+   * @param x The X-coordinate of the rectangle's top left corner.
+   * @param y The Y-coordinate of the rectangle's top left corner.
    * @param w Width of rectangle.
    * @param h Height of rectangle.
    * @param c Fill color.
@@ -129,6 +136,8 @@ class CanvasInterface {
    * transformation matrix of the target canvas is respected, ignoring
    * the current transformation matrix defined in the image parameter. However, 
    * the width and height of the parameter is preserved.
+   * @param x The X-coordinate of the image's top left corner.
+   * @param y The Y-coordinate of the image's top left corner.
    * @param img Canvas to draw.
    */
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) = 0;
@@ -138,6 +147,8 @@ class CanvasInterface {
    * respecting the current transformation matrix of the target canvas. 
    * The current transformation matrix defined in the image and mask 
    * parameters is ignored, with the exception of width and height.
+   * @param x The X-coordinate of the image's top left corner.
+   * @param y The Y-coordinate of the image's top left corner.
    * @param img The image to draw.
    * @param mask The new mask to use. It must be a mask canvas.
    * @param mx The X-coordinate of the mask's top left corner.
