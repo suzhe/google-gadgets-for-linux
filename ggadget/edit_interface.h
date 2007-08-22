@@ -14,12 +14,16 @@
   limitations under the License.
 */
 
-#ifndef  GGADGET_EDIT_INTERFACE_H_
-#define  GGADGET_EDIT_INTERFACE_H_
+#ifndef  GGADGET_EDIT_INTERFACE_H__
+#define  GGADGET_EDIT_INTERFACE_H__
+
+#include "color.h"
 
 namespace ggadget {
 
-class Canvas;
+class KeyboardEvent;
+class MouseEvent;
+class CanvasInterface;
 
 /**
  * This is the interface for a edit control.
@@ -28,93 +32,107 @@ class EditInterface {
 
  public:
 
-  /** Ask the GtkEdit to draw itself */
-  virtual void Expose(Canvas *canvas) = 0;
+  /** Draw the edit control */
+  virtual CanvasInterface *Draw(bool *modified) = 0;
 
   /** Handler of the ButtonPress event */
-  virtual void ButtonPress(GdkEventButton *event) = 0;
+  virtual void OnButtonPress(const MouseEvent &event) = 0;
 
   /** Handler of the ButtonPress event */
-  virtual void ButtonRelease(GdkEventButton *event) = 0;
+  virtual void OnButtonRelease(const MouseEvent &event) = 0;
 
   /** Handler of the Mouse Motion event */
-  virtual void MotionNotify(GdkEventMotion *event) = 0;
+  virtual void OnMotionNotify(const MouseEvent &event) = 0;
 
   /** Handler of the KeyPress event */
-  virtual void KeyPress(GdkEventKey *event) = 0;
+  virtual void OnKeyPress(const KeyboardEvent &event) = 0;
 
   /** Handler of the KeyRelease event */
-  virtual void KeyRelease(GdkEventKey *event) = 0;
+  virtual void OnKeyRelease(const KeyboardEvent &event) = 0;
+
+
+  /** Set the width of the edit control */
+  virtual void SetWidth(int width) = 0;
+
+  /** Get the width of the edit control */
+  virtual int GetWidth() = 0;
+
+  /** Set the height of the edit control */
+  virtual void SetHeight(int width) = 0;
+
+  /** Get the height of the edit control */
+  virtual int GetHeight() = 0;
 
   /** Set whether the text is bold */
-  virtual void SetBold(virtual bool bold) = 0;
+  virtual void SetBold(bool bold) = 0;
+
+  /** Retrieve whether the text is bold */
+  virtual bool IsBold() = 0;
 
   /** Set whether the text is italic */
-  virtual void SetItalic(virtual bool italic) = 0;
+  virtual void SetItalic(bool italic) = 0;
+
+  /** Retrieve whether the text is italic */
+  virtual bool IsItalic() = 0;
 
   /** Set whether the text is struck-out */
-  virtual void SetStrikeout(virtual bool strikeout) = 0;
+  virtual void SetStrikeout(bool strikeout) = 0;
+
+  /** Retrieve whether the text is struck-out */
+  virtual bool IsStrikeout() = 0;
 
   /** Set whether the text is underlined */
-  virtual void SetUnderline(virtual bool underline) = 0;
+  virtual void SetUnderline(bool underline) = 0;
+
+  /** Retrieve whether the text is underlined */
+  virtual bool IsUnderline() = 0;
 
   /** Set whether the text will be shown in multiple lines */
-  virtual void SetMultiLine(virtual bool multiline) = 0;
+  virtual void SetMultiline(bool multiline) = 0;
+
+  /** Retrieve whether the text will be shown in multiple lines */
+  virtual bool IsMultiline() = 0;
 
   /** Set whether the text will be wrapped */
-  virtual void SetWordWrap(virtual bool wrap) = 0;
+  virtual void SetWordWrap(bool wrap) = 0;
+
+  /** Retrieve whether the text will be wrapped */
+  virtual bool IsWordWrap() = 0;
 
   /** Set the content of the text */
-  virtual void SetText(const string &text) = 0;
+  virtual void SetText(const char *text) = 0;
+
+  /** Retrieve the content the text */
+  virtual const char *GetText() = 0;
 
   /** Set the background color */
-  virtual void SetBackgroundColor(const string &color) = 0;
+  virtual void SetBackgroundColor(const Color &color) = 0;
+
+  /** Retrieve the background color */
+  virtual Color GetBackgroundColor() = 0;
 
   /** Set the text color */
-  virtual void SetTextColor(const string &color) = 0;
+  virtual void SetTextColor(const Color &color) = 0;
+
+  /** Retrieve the text color */
+  virtual Color GetTextColor() = 0;
 
   /** Set the text font */
-  virtual void SetFont(const string &font) = 0;
+  virtual void SetFont(const char *font) = 0;
+
+  /** Retrieve the text font */
+  virtual const char* GetFont() = 0;
 
   /** Set the password char */
   virtual void SetPasswordChar(const char *c) = 0;
 
-  /** Retrieve whether the text is bold */
-  virtual bool GetBold() = 0;
-
-  /** Retrieve whether the text is italic */
-  virtual bool GetItalic() = 0;
-
-  /** Retrieve whether the text is struck-out */
-  virtual bool GetStrikeout() = 0;
-
-  /** Retrieve whether the text is underlined */
-  virtual bool GetUnderline() = 0;
-
-  /** Retrieve whether the text will be shown in multiple lines */
-  virtual bool GetMultiLine() = 0;
-
-  /** Retrieve whether the text will be wrapped */
-  virtual bool GetWrap() = 0;
-
-  /** Retrieve the content the text */
-  virtual string GetText() = 0;
-
-  /** Retrieve the background color */
-  virtual string GetBackgroundColor() = 0;
-
-  /** Retrieve the text color */
-  virtual string GetTextColor() = 0;
-
-  /** Retrieve the current font */
-  virtual string GetFont() = 0;
-
   /** Retrieve the password char */
-  virtual char GetPasswordChar() = 0;
+  virtual const char* GetPasswordChar() = 0;
+
 
 };  //class EditInterface
 
 }   //namespace ggadget
 
-#endif  // GGADGET_EDIT_INTERFACE_H_
+#endif  // GGADGET_EDIT_INTERFACE_H__
 
