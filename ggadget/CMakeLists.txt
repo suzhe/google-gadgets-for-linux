@@ -22,13 +22,21 @@ ADD_SUBDIRECTORY(tests)
 SET(SRCS
   elements.cc
   element_factory.cc
+  file_manager.cc
   signal.cc
   static_scriptable.cc
   unicode_utils.cc
   utility.cc
   variant.cc
   view.cc
+  windows_locales.cc
+)
+
+SET(LIBS
+  tinyxml
+  unzip
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget ${LIBS})
 OUTPUT_LIBRARY(ggadget)
