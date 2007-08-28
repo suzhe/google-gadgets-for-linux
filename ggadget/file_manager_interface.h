@@ -47,9 +47,9 @@ class FileManagerInterface {
    *   - @c file (in the @c base_path),
    *   - @c lang_TERRITORY/file (e.g. @c zh_CN/myfile),
    *   - @c lang/file (e.g. @c zh/myfile),
+   *   - @c locale_id/file (for Windows compatibility, e.g. 2052/myfile),
    *   - @c en_US/file,
    *   - @c en/file,
-   *   - @c locale_id/file (for Windows compatibility, e.g. 2052/myfile),
    *   - @c 1033/file (for Windows compatibility).
    *
    * @param file the file name relative to the base path.
@@ -60,8 +60,9 @@ class FileManagerInterface {
                                std::string *data) = 0;
 
   /**
-   * Parses an XML file.
-   * Entities defined in @c string.xml are replaced with localized strings.
+   * Parses an XML file. The file is searched in the same sequence as in
+   * @c GetFileContents().  Entities defined in @c string.xml are replaced
+   * with localized strings.
    *
    * @param file the file name relative to the base path.
    * @return the parsed document if succeeded, or @c NULL on any error.

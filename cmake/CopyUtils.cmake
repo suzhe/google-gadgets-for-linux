@@ -14,123 +14,117 @@
 # limitations under the License.
 #
 
-# Some commands under different platforms.
-IF(WIN32)
-  SET(CP_CMD copy)
-ELSE(WIN32)
-  SET(CP_CMD cp -a)
-ENDIF(WIN32)
+MACRO(COPY_FILE_INTERNAL _source _dest _depends)
+  STRING(REPLACE / + COPY_FILE_INTERNAL_target ${_dest})
+  ADD_CUSTOM_TARGET(${COPY_FILE_INTERNAL_target}_copy ALL
+    DEPENDS ${_dest})
+  FILE(TO_NATIVE_PATH ${_source} COPY_FILE_INTERNAL_native_source)
+  FILE(TO_NATIVE_PATH ${_dest} COPY_FILE_INTERNAL_native_dest)
+  IF(WIN32)
+    SET(COPY_FILE_INTERNAL_cp_cmd copy)
+  ELSE(WIN32)
+    SET(COPY_FILE_INTERNAL_cp_cmd cp -a)
+  ENDIF(WIN32)
+  ADD_CUSTOM_COMMAND(OUTPUT ${_dest}
+    COMMAND ${COPY_FILE_INTERNAL_cp_cmd}
+      ${COPY_FILE_INTERNAL_native_source} ${COPY_FILE_INTERNAL_native_dest}
+    DEPENDS ${_depends})
+ENDMACRO(COPY_FILE_INTERNAL _source _dest)
 
 #! Copy the file to the specified location.
-#! @param SOURCE the full path of the file.
-#! @param DEST_DIR the full path of the destination directory.
-#! @paramoptional NEW_NAME copy to the new directory with the new name.
-MACRO(COPY_FILE SOURCE DEST_DIR)
-  FILE(MAKE_DIRECTORY ${DEST_DIR})
+#! @param _source the full path of the file.
+#! @param _dest_dir the full path of the destination directory.
+#! @paramoptional _new_name copy to the new directory with the new name.
+MACRO(COPY_FILE _source _dest_dir)
+  FILE(MAKE_DIRECTORY ${_dest_dir})
   IF(${ARGC} GREATER 2)
-    SET(DEST_NAME ${ARGV2})
+    SET(COPY_FILE_dest_name ${ARGV2})
   ELSE(${ARGC} GREATER 2)
-    GET_FILENAME_COMPONENT(DEST_NAME ${SOURCE} NAME)
+    GET_FILENAME_COMPONENT(COPY_FILE_dest_name ${_source} NAME)
   ENDIF(${ARGC} GREATER 2)
-  STRING(REPLACE / + COPY_TARGET ${SOURCE})
-  ADD_CUSTOM_TARGET(${COPY_TARGET}_copy ALL
-    DEPENDS ${DEST_DIR}/${DEST_NAME})
-  FILE(TO_NATIVE_PATH ${SOURCE} NATIVE_TARGET_LOCATION)
-  FILE(TO_NATIVE_PATH ${DEST_DIR}/${DEST_NAME} NATIVE_NEW_TARGET_LOCATION)
-  ADD_CUSTOM_COMMAND(OUTPUT ${DEST_DIR}/${DEST_NAME}
-    COMMAND ${CP_CMD} ${NATIVE_TARGET_LOCATION} ${NATIVE_NEW_TARGET_LOCATION}
-    DEPENDS ${NATIVE_TARGET_LOCATION})
-ENDMACRO(COPY_FILE SOURCE DEST_DIR)
+  COPY_FILE_INTERNAL(${_source} ${_dest_dir}/${COPY_FILE_dest_name} ${_source})
+ENDMACRO(COPY_FILE _source _dest_dir)
 
 #! Copy the directory to the specified location.
-#! @param SOURCE the full path of the directory.
-#! @param DEST_DIR the full path of the destination directory.
-MACRO(COPY_DIR SOURCE DEST_DIR)
-  FILE(GLOB_RECURSE FILES ${SOURCE} ${SOURCE}/*)
-  GET_FILENAME_COMPONENT(SOURCE_DIR_NAME ${SOURCE} NAME)
-  FOREACH(FILENAME ${FILES})
-    FILE(RELATIVE_PATH RELATIVE_NAME ${SOURCE} ${FILENAME})
-    GET_FILENAME_COMPONENT(DEST_FILE_DIR
-      ${DEST_DIR}/${SOURCE_DIR_NAME}/${RELATIVE_NAME} PATH)
-    IF(NOT ${FILENAME} MATCHES /\\.svn/)
-      COPY_FILE(${FILENAME} ${DEST_FILE_DIR})
-    ENDIF(NOT ${FILENAME} MATCHES /\\.svn/)
-  ENDFOREACH(FILENAME ${FILES})
-ENDMACRO(COPY_DIR SOURCE DEST_DIR)
+#! @param _source the full path of the directory.
+#! @param _dest_dir the full path of the destination directory.
+MACRO(COPY_DIR _source _dest_dir)
+  FILE(GLOB_RECURSE COPY_DIR_files ${_source} ${_source}/*)
+  GET_FILENAME_COMPONENT(COPY_DIR_source_dir_name ${_source} NAME)
+  FOREACH(COPY_DIR_filename ${COPY_DIR_files})
+    FILE(RELATIVE_PATH COPY_DIR_relative_name ${_source} ${COPY_DIR_filename})
+    GET_FILENAME_COMPONENT(COPY_DIR_dest_file_dir
+      ${_dest_dir}/${COPY_DIR_source_dir_name}/${COPY_DIR_relative_name} PATH)
+    IF(NOT ${COPY_DIR_filename} MATCHES /\\.svn/)
+      COPY_FILE(${COPY_DIR_filename} ${COPY_DIR_dest_file_dir})
+    ENDIF(NOT ${COPY_DIR_filename} MATCHES /\\.svn/)
+  ENDFOREACH(COPY_DIR_filename ${COPY_DIR_files})
+ENDMACRO(COPY_DIR _source _dest_dir)
 
 #! Copy the target to the specified location.
-#! @param TARGET_NAME the name of the target.
-#! @param DEST_DIR the full path of the destination directory.
-#! @paramoptional NEW_NAME copy to the new directory with the new name.
-MACRO(COPY_TARGET TARGET_NAME DEST_DIR)
-  FILE(MAKE_DIRECTORY ${DEST_DIR})
-  GET_TARGET_PROPERTY(TARGET_LOCATION ${TARGET_NAME} LOCATION)
-  GET_FILENAME_COMPONENT(TARGET_OUTPUT ${TARGET_LOCATION} NAME)
-  FILE(TO_NATIVE_PATH ${TARGET_LOCATION} NATIVE_TARGET_LOCATION)
-  FILE(TO_NATIVE_PATH ${DEST_DIR} NATIVE_NEW_TARGET_LOCATION)
+#! @param _target_name the name of the target.
+#! @param _dest_dir the full path of the destination directory.
+#! @paramoptional _new_name copy to the new directory with the new name.
+MACRO(COPY_TARGET _target_name _dest_dir)
+  FILE(MAKE_DIRECTORY ${_dest_dir})
+  GET_TARGET_PROPERTY(COPY_TARGET_location ${_target_name} LOCATION)
+  GET_FILENAME_COMPONENT(COPY_TARGET_name ${COPY_TARGET_location} NAME)
   IF(${ARGC} GREATER 2)
-    ADD_CUSTOM_TARGET(${ARGV2}_copy ALL
-      DEPENDS ${DEST_DIR}/${ARGV2})
-    ADD_CUSTOM_COMMAND(OUTPUT ${DEST_DIR}/${ARGV2}
-      COMMAND ${CP_CMD} ${NATIVE_TARGET_LOCATION} ${NATIVE_NEW_TARGET_LOCATION}/${ARGV2}
-      DEPENDS ${TARGET_NAME})
+    COPY_FILE_INTERNAL(${COPY_TARGET_location} ${_dest_dir}/${ARGV2}
+      ${_target_name})
   ELSE(${ARGC} GREATER 2)
-    ADD_CUSTOM_TARGET(${TARGET_OUTPUT}_copy ALL
-      DEPENDS ${DEST_DIR}/${TARGET_OUTPUT})
-    ADD_CUSTOM_COMMAND(OUTPUT ${DEST_DIR}/${TARGET_OUTPUT}
-      COMMAND ${CP_CMD} ${NATIVE_TARGET_LOCATION} ${NATIVE_NEW_TARGET_LOCATION}/${TARGET_OUTPUT}
-      DEPENDS ${TARGET_NAME})
-      # Linux requires the symbolic link mechanism for .so files.
-      IF(NOT WIN32)
-        GET_TARGET_PROPERTY(TARGET_SOVERSION ${TARGET_NAME} SOVERSION)
-        GET_TARGET_PROPERTY(TARGET_VERSION ${TARGET_NAME} VERSION)
-        # SOVERSION symbolic link.
-        IF(NOT ${TARGET_SOVERSION} STREQUAL NOTFOUND)
-          ADD_CUSTOM_TARGET(${TARGET_OUTPUT}.${TARGET_SOVERSION}_copy ALL
-            DEPENDS ${DEST_DIR}/${TARGET_OUTPUT}.${TARGET_SOVERSION})
-          ADD_CUSTOM_COMMAND(OUTPUT ${DEST_DIR}/${TARGET_OUTPUT}.${TARGET_SOVERSION}
-            COMMAND ${CP_CMD} ${NATIVE_TARGET_LOCATION}.${TARGET_SOVERSION} ${NATIVE_NEW_TARGET_LOCATION}/${TARGET_OUTPUT}.${TARGET_SOVERSION}
-            DEPENDS ${TARGET_NAME})
-        ENDIF(NOT ${TARGET_SOVERSION} STREQUAL NOTFOUND)
-        # VERSION symbolic link.
-        IF(NOT ${TARGET_VERSION} STREQUAL NOTFOUND)
-          ADD_CUSTOM_TARGET(${TARGET_OUTPUT}.${TARGET_VERSION}_copy ALL
-            DEPENDS ${DEST_DIR}/${TARGET_OUTPUT}.${TARGET_VERSION})
-          ADD_CUSTOM_COMMAND(OUTPUT ${DEST_DIR}/${TARGET_OUTPUT}.${TARGET_VERSION}
-            COMMAND ${CP_CMD} ${NATIVE_TARGET_LOCATION}.${TARGET_VERSION} ${NATIVE_NEW_TARGET_LOCATION}/${TARGET_OUTPUT}.${TARGET_VERSION}
-            DEPENDS ${TARGET_NAME})
-        ENDIF(NOT ${TARGET_VERSION} STREQUAL NOTFOUND)
-      ENDIF(NOT WIN32)
+    COPY_FILE_INTERNAL(${COPY_TARGET_location} ${_dest_dir}/${COPY_TARGET_name}
+      ${_target_name})
+    # Linux requires the symbolic link mechanism for .so files.
+    IF(NOT WIN32)
+      GET_TARGET_PROPERTY(COPY_TARGET_soversion ${_target_name} SOVERSION)
+      GET_TARGET_PROPERTY(COPY_TARGET_version ${_target_name} VERSION)
+      # SOVERSION symbolic link.
+      IF(NOT ${COPY_TARGET_soversion} STREQUAL NOTFOUND)
+        COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_soversion}
+          ${COPY_TARGET_location}/${COPY_TARGET_name}.${COPY_TARGET_soversion}
+          ${_target_name})
+      ENDIF(NOT ${COPY_TARGET_soversion} STREQUAL NOTFOUND)
+      # VERSION symbolic link.
+      IF(NOT ${COPY_TARGET_version} STREQUAL NOTFOUND)
+        COPY_FILE_INTERNAL(${COPY_TARGET_location}.${COPY_TARGET_version}
+          ${COPY_TARGET_location}/${COPY_TARGET_name}.${COPY_TARGET_version}
+          ${_target_name})
+      ENDIF(NOT ${COPY_TARGET_version} STREQUAL NOTFOUND)
+    ENDIF(NOT WIN32)
   ENDIF(${ARGC} GREATER 2)
 ENDMACRO(COPY_TARGET)
 
 #! Copy the file to the specified location under ${CMAKE_BINARY_DIR}/output.
-#! @param SOURCE the full path of the file.
-#! @param DEST_DIR the full path of the destination directory.
-#! @paramoptional NEW_NAME copy to the new directory with the new name.
-MACRO(OUTPUT_FILE SOURCE DEST_DIR)
+#! @param _source the full path of the file.
+#! @param _dest_dir the full path of the destination directory.
+#! @paramoptional _new_name copy to the new directory with the new name.
+MACRO(OUTPUT_FILE _source _dest_dir)
   IF(${ARGC} GREATER 2)
-    COPY_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE} ${CMAKE_BINARY_DIR}/output/${DEST_DIR} ${ARGV2})
+    COPY_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${_source}
+      ${CMAKE_BINARY_DIR}/output/${_dest_dir} ${ARGV2})
   ELSE(${ARGC} GREATER 2)
-    COPY_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE} ${CMAKE_BINARY_DIR}/output/${DEST_DIR})
+    COPY_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${_source}
+      ${CMAKE_BINARY_DIR}/output/${_dest_dir})
   ENDIF(${ARGC} GREATER 2)
-ENDMACRO(OUTPUT_FILE SOURCE DEST_DIR)
+ENDMACRO(OUTPUT_FILE _source _dest_dir)
 
 #! Copy the directory to the specified location under ${CMAKE_BINARY_DIR}/output.
-#! @param SOURCE the full path of the directory.
-#! @param DEST_DIR the full path of the destination directory.
-MACRO(OUTPUT_DIR SOURCE DEST_DIR)
-  COPY_DIR(${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE} ${CMAKE_BINARY_DIR}/output/${DEST_DIR} ${ARGV2})
-ENDMACRO(OUTPUT_DIR SOURCE DEST_DIR)
+#! @param _source the full path of the directory.
+#! @param _dest_dir the full path of the destination directory.
+MACRO(OUTPUT_DIR _source _dest_dir)
+  COPY_DIR(${CMAKE_CURRENT_SOURCE_DIR}/${_source}
+    ${CMAKE_BINARY_DIR}/output/${_dest_dir} ${ARGV2})
+ENDMACRO(OUTPUT_DIR _source _dest_dir)
 
 #! Copy the target to the specified location under ${CMAKE_BINARY_DIR}/output.
-#! @param TARGET_NAME the name of the target.
-#! @param DEST_DIR the full path of the destination directory.
-#! @paramoptional NEW_NAME copy to the new directory with the new name.
-MACRO(OUTPUT_TARGET TARGET_NAME DEST_DIR)
+#! @param _target_name the name of the target.
+#! @param _dest_dir the full path of the destination directory.
+#! @paramoptional _new_name copy to the new directory with the new name.
+MACRO(OUTPUT_TARGET _target_name _dest_dir)
   IF(${ARGC} GREATER 2)
-    COPY_TARGET(${TARGET_NAME} ${CMAKE_BINARY_DIR}/output/${DEST_DIR} ${ARGV2})
+    COPY_TARGET(${_target_name} ${CMAKE_BINARY_DIR}/output/${_dest_dir} ${ARGV2})
   ELSE(${ARGC} GREATER 2)
-    COPY_TARGET(${TARGET_NAME} ${CMAKE_BINARY_DIR}/output/${DEST_DIR})
+    COPY_TARGET(${_target_name} ${CMAKE_BINARY_DIR}/output/${_dest_dir})
   ENDIF(${ARGC} GREATER 2)
-ENDMACRO(OUTPUT_TARGET TARGET_NAME DEST_DIR)
+ENDMACRO(OUTPUT_TARGET _target_name _dest_dir)

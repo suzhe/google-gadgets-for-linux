@@ -14,22 +14,8 @@
 # limitations under the License.
 #
 
-# FIXME need to not hard code this
-SET(CAIRO_INCLUDE_DIR /usr/include/cairo)
-SET(GTK_INCLUDE_DIR
-    /usr/include/gtk-2.0
-    /usr/lib/gtk-2.0/include
-    /usr/include/atk-1.0
-    /usr/include/pango-1.0
-    /usr/include/glib-2.0
-    /usr/lib/glib-2.0/include
-)
-SET(GTK_LIBRARIES gtk-x11-2.0 pangocairo-1.0)
-SET(CAIRO_LIBRARIES cairo)
-
-INCLUDE_DIRECTORIES(${GTK_INCLUDE_DIR}
-                    ${CAIRO_INCLUDE_DIR}
-)
+PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
+PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
 
 SET(SRCS
   cairo_canvas.cc
