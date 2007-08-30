@@ -46,8 +46,8 @@ class Muffin : public MockedElement {
   }
 
  public:
-  static const int CLASS_ID = 1111;
-  virtual bool IsInstanceOf(int class_id) const {
+  static const ClassId CLASS_ID = UINT64_C(0xabb1c79164a742aa);
+  virtual bool IsInstanceOf(ClassId class_id) const {
     return class_id == CLASS_ID;
   }
 };
@@ -71,8 +71,8 @@ class Pie : public MockedElement {
   }
 
  public:
-  static const int CLASS_ID = 2222;
-  virtual bool IsInstanceOf(int class_id) const {
+  static const ClassId CLASS_ID = UINT64_C(0x21a2b2ba7c794058);
+  virtual bool IsInstanceOf(ClassId class_id) const {
     return class_id == CLASS_ID;
   }
 };

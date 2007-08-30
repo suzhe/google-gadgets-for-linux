@@ -17,6 +17,7 @@
 #ifndef GGADGET_SCRIPTABLE_INTERFACE_H__
 #define GGADGET_SCRIPTABLE_INTERFACE_H__
 
+#include <stdint.h>
 #include "common.h"
 #include "variant.h"
 
@@ -41,12 +42,14 @@ class ScriptableInterface {
   virtual ~ScriptableInterface() { }
 
  public:
+
+  typedef uint64_t ClassId;
   /**
    * This ID uniquely identifies the class.  Each implementation should define
-   * this field as a unique integer.  You can simply use the first part of
+   * this field as a unique number.  You can simply use the first 3 parts of
    * the result of uuidgen.
    */
-  static const int CLASS_ID = 0;
+  static const ClassId CLASS_ID = 0;
 
   /**
    * Attach this object to the script engine.
@@ -68,7 +71,7 @@ class ScriptableInterface {
   /**
    * Judge if this instance is of a given class.
    */
-  virtual bool IsInstanceOf(int class_id) const = 0;
+  virtual bool IsInstanceOf(ClassId class_id) const = 0;
 
   /**
    * Connect a callback @c Slot to the "ondelete" signal.

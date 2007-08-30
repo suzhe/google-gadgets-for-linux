@@ -36,11 +36,11 @@ void AppendBuffer(const char *format, ...);
 // A normal scriptable class.
 class TestScriptable1 : public ScriptableInterface {
  public:
-  static const int CLASS_ID = -999;
+  static const ClassId CLASS_ID = UINT64_C(0xBADBEEFF00DFEED);
   TestScriptable1();
   virtual ~TestScriptable1();
 
-  virtual bool IsInstanceOf(int class_id) const {
+  virtual bool IsInstanceOf(ClassId class_id) const {
     return class_id == CLASS_ID || class_id == ScriptableInterface::CLASS_ID; 
   }
 
@@ -90,13 +90,13 @@ typedef Signal1<std::string, const std::string &> OnSupperSignal;
 
 class TestPrototype : public ScriptableInterface {
  public:
-  static const int CLASS_ID = -888;
+  static const ClassId CLASS_ID = UINT64_C(0xbb7f8eddc2e94353);
   static TestPrototype *GetInstance() {
     return instance_ ? instance_ : (instance_ = new TestPrototype());
   }
 
   // Should not be called.
-  virtual bool IsInstanceOf(int class_id) const {
+  virtual bool IsInstanceOf(ClassId class_id) const {
     return class_id == ScriptableInterface::CLASS_ID || class_id == CLASS_ID;
   }
 
@@ -123,12 +123,12 @@ class TestPrototype : public ScriptableInterface {
 // and some property/methods with arguments or return types of Scriptable.
 class TestScriptable2 : public TestScriptable1 {
  public:
-  static const int CLASS_ID = -1000;
+  static const ClassId CLASS_ID = UINT64_C(0xa88ea50b8b884e77);
   TestScriptable2(bool script_owned_ = false);
 
   virtual void Detach() { if (script_owned_) delete this; }
 
-  virtual bool IsInstanceOf(int class_id) const {
+  virtual bool IsInstanceOf(ClassId class_id) const {
     return class_id == CLASS_ID || TestScriptable1::IsInstanceOf(class_id); 
   }
 

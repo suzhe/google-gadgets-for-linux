@@ -20,6 +20,8 @@ ADD_DEFINITIONS(
   -DUNIX
   -DPREFIX=${CMAKE_INSTALL_PREFIX}
   -DPRODUCT_NAME=${PRODUCT_NAME}
+  # For stdint.h macros like INT64_C etc.
+  -D__STDC_CONSTANT_MACROS
   # Let tinyxml use STL.
   -DTIXML_USE_STL
 )
