@@ -108,8 +108,11 @@ class StaticScriptable : public ScriptableInterface {
   virtual void Attach() { ASSERT(false); }
   /** @see ScriptableInterface::Detach() */
   virtual void Detach() { ASSERT(false); }
-  /** @see ScriptableInterface::IsInstanceof() */
-  virtual bool IsInstanceOf(int class_id) const { ASSERT(false); return false; }
+  /** @see ScriptableInterface::IsInstanceOf() */
+  virtual bool IsInstanceOf(ClassId class_id) const {
+    ASSERT(false);
+    return false;
+  }
   /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
   virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   /** @see ScriptableInterface::GetPropertyInfoByName() */
