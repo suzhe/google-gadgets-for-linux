@@ -41,6 +41,49 @@ class CanvasInterface {
   virtual ~CanvasInterface() { }
 
  public:
+
+  typedef int TextFlag;
+
+  /**
+   * Enum used to specify horizontal alignment.
+   */
+  enum Alignment {
+    LEFT, 
+    CENTER, 
+    RIGHT 
+  };
+
+
+  /**
+   * Enum used to specify vertical alignment.
+   */
+  enum VAlignment {
+    TOP, 
+    MIDDLE, 
+    BOTTOM 
+  };
+
+  /**
+   * Enum used to specify trimming type.
+   */
+  enum Trimming {
+    TRIMMING_NONE,
+    TRIMMING_CHARACTER,
+    TRIMMING_WORD,
+    TRIMMING_CHARACTER_ELLIPSIS,
+    TRIMMING_WORD_ELLIPSIS,
+    TRIMMING_PATH_ELLIPSIS
+  };
+
+  /**
+   * Enum used to specify text flags.
+   */
+  enum {
+    TEXT_FLAGS_UNDERLINE = 1 << 0,
+    TEXT_FLAGS_STRIKEOUT = 1 << 1,
+    TEXT_FLAGS_WORDWRAP = 1 << 2
+  };
+
   /**
    * Frees this CanvasInterface object.
    */
@@ -163,8 +206,10 @@ class CanvasInterface {
    * Draws the specified text on the screen at the given (x, y).
    * @return true on success, false otherwise.
    */
-  virtual bool DrawText(double x, double y, const char *text, 
-                        const FontInterface *f, const Color &c) = 0;
+  virtual bool DrawText(double x, double y, double width, double height,
+                        const char *text, const FontInterface *f,
+                        const Color &c, Alignment align, VAlignment valign,
+                        Trimming trimming, TextFlag text_flag) = 0;
   
   /**
    * Intersect the clipping region with a rectangular region.

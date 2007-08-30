@@ -16,6 +16,9 @@
 
 #include "cairo_canvas.h"
 #include "cairo_font.h"
+#include "../scoped_ptr.h"
+#include <vector>
+#include <algorithm>
 
 namespace ggadget {
 
@@ -224,23 +227,245 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
   return true;
 }
 
-bool CairoCanvas::DrawText(double x, double y, const char *text, 
-                           const FontInterface *f, const Color &c) {
+bool CairoCanvas::DrawText(double x, double y, double width, double height,
+                           const char *text, const FontInterface *f, 
+                           const Color &c, Alignment align, VAlignment valign,
+                           Trimming trimming,  TextFlag text_flag) {
   if (text == NULL || f == NULL || 
       strcmp(f->ClassType(), CairoFont::kClassType)) {
     return false;    
   }
-  
-  cairo_move_to(cr_, x, y);
-  cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
-  
-  const CairoFont *font = (const CairoFont*)f; 
+
+  // If the text is blank, we need to do nothing.
+  if (strlen(text) == 0) return true;
+
+  const CairoFont *font = down_cast<const CairoFont*>(f); 
   PangoLayout *layout = pango_cairo_create_layout(cr_);
+  cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
   pango_layout_set_text(layout, text, -1);
   pango_layout_set_font_description(layout, font->GetFontDescription());
-  pango_cairo_show_layout(cr_, layout);
+  PangoAttrList *attr_list = pango_attr_list_new();
+  PangoAttribute *underline_attr = NULL;
+  PangoAttribute *strikeout_attr = NULL;
+  // Pos is used to get glyph extents in pango.
+  PangoRectangle pos;
+  // real_x and real_y represent the real position of the layout.
+  double real_x = x, real_y = y;
+  const char *const kEllipsisText = "...";
+  cairo_save(cr_);
+
+  // Restrict the output area.
+  cairo_rectangle(cr_, x, y, x + width, y + height);
+  cairo_clip(cr_);
+  
+  // Set the underline attribute
+  if (text_flag & TEXT_FLAGS_UNDERLINE) {
+    underline_attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+    // We want this attribute apply to all text.
+    underline_attr->start_index = 0;
+    underline_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, underline_attr);
+  } 
+  // Set the strikeout attribute.
+  if (text_flag & TEXT_FLAGS_STRIKEOUT) {
+    strikeout_attr = pango_attr_strikethrough_new(true);
+    // We want this attribute apply to all text.
+    strikeout_attr->start_index = 0;
+    strikeout_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, strikeout_attr);
+  }
+  // Set the wordwrap attribute.
+  if (text_flag & TEXT_FLAGS_WORDWRAP) {
+    pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
+    pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+  } else {
+    // In pango, set width = -1 to set no wordwrap.
+    pango_layout_set_width(layout, -1);
+  }
+  pango_layout_set_attributes(layout, attr_list);
+
+  // Set alignment. This is only effective when wordwrap is set
+  // because when wordwrap is unsert, the width have to be set
+  // to -1, thus the alignment is useless.
+  if (align == LEFT) 
+    pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
+  else if (align == CENTER)
+    pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
+  else if (align == RIGHT)
+    pango_layout_set_alignment(layout, PANGO_ALIGN_RIGHT);
+
+  // Get the pixel extents(logical extents) of the layout.
+  pango_layout_get_pixel_extents(layout, NULL, &pos);
+  // Calculate number of all lines.
+  int n_lines = pango_layout_get_line_count(layout);
+  int line_height = pos.height / n_lines;
+  // Calculate number of lines that could be displayed.
+  // We should display one more line as long as there 
+  // are 5 pixels of blank left. This is only effective
+  // when trimming exists.
+  int displayed_lines = (static_cast<int>(height) - 5) / line_height + 1;
+  if (displayed_lines > n_lines) displayed_lines = n_lines;
+
+  if (trimming == TRIMMING_NONE || (pos.width <= width && 
+        pango_layout_get_line_count(layout) <= displayed_lines)) {
+    // When there is no trimming, we can directly show the layout.
+
+    // Set vertical alignment.
+    if (valign == MIDDLE)
+      real_y = y + (height - pos.height) / 2;
+    else if (valign == BOTTOM)
+      real_y = y + height - pos.height;
+
+    // When wordwrap is unset, we also have to do the horizontal alignment.
+    if ((text_flag & TEXT_FLAGS_WORDWRAP) == 0) {
+      if (align == CENTER)
+        real_x = x + (width - pos.width) / 2;
+      else if (align == RIGHT)
+        real_x = x + width - pos.width;
+    }
+
+    // Show pango layout when there is no trimming.
+    cairo_move_to(cr_, real_x, real_y);
+    pango_cairo_show_layout(cr_, layout);
+
+  } else {     
+    // We will use newtext as the content of the layout,
+    // because we have to display the trimmed text.
+    scoped_array<char> newtext(new char[strlen(text) + 4]);
+
+    // Set vertical alignment.
+    if (valign == MIDDLE)
+      real_y = y + (height - line_height * displayed_lines) / 2;
+    else if (valign == BOTTOM)
+      real_y = y + height - line_height * displayed_lines;
+
+    if (displayed_lines > 1) {
+      // When there are multilines, we will show the above lines first, 
+      // because trimming will only occurs in the last line.
+      PangoLayoutLine *line = pango_layout_get_line(layout, 
+                                                    displayed_lines - 2);
+      int last_line_index = line->start_index + line->length;
+      pango_layout_set_text(layout, text, last_line_index);
+      cairo_move_to(cr_, real_x, real_y);
+      pango_cairo_show_layout(cr_, layout);
+
+      // The newtext contains the text that will be shown in the last line.
+      strcpy(newtext.get(), text + last_line_index);
+      real_y += line_height * (displayed_lines - 1);
+
+    } else {
+      // When there is only a single line, the newtext equals text.
+      strcpy(newtext.get(), text);
+    }
+    // Set the newtext as the content of the layout.
+    pango_layout_set_text(layout, newtext.get(), -1);
+
+    // This record the width of the ellipsis text.
+    int ellipsis_width = 0;
+
+    if (trimming == TRIMMING_CHARACTER_ELLIPSIS) {
+      // Pango has provided character-ellipsis trimming.
+      // FIXME: when displaying arabic, the final layout width
+      // may exceed the width we set before
+      pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
+      pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_END);
+      
+    } else if (trimming == TRIMMING_PATH_ELLIPSIS) {
+      // Pango has provided path-ellipsis trimming.
+      // FIXME: when displaying arabic, the final layout width
+      // may exceed the width we set before
+      pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
+      pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_MIDDLE);
+
+    } else {
+      // We have to do other type of trimming ourselves, including 
+      // "character", "word" and "word-ellipsis".
+
+      // We want every thing in a single line, so set no word wrap.
+      pango_layout_set_width(layout, -1); 
+      pango_layout_get_pixel_extents(layout, NULL, &pos);
+      if (trimming == TRIMMING_WORD_ELLIPSIS) {
+        // Only in this condition should we calculate the ellipsis width.
+        pango_layout_set_text(layout, kEllipsisText, -1);
+        pango_layout_get_pixel_extents(layout, NULL, &pos);
+        ellipsis_width = pos.width;
+        pango_layout_set_text(layout, newtext.get(), -1);
+      }
+
+      // Figure out how many characters can be displayed.
+      std::vector<int> cluster_index;
+      PangoLayoutIter *it = pango_layout_get_iter(layout);
+      // A cluster is the smallest linguistic unit that can be shaped.
+      do {
+        cluster_index.push_back(pango_layout_iter_get_index(it));
+      } while (pango_layout_iter_next_cluster(it));
+      cluster_index.push_back(strlen(newtext.get()));
+      std::sort(cluster_index.begin(), cluster_index.end());
+
+      std::vector<int>::iterator cluster_it = cluster_index.begin();
+      for (; cluster_it != cluster_index.end(); ++cluster_it) {
+        pango_layout_set_text(layout, newtext.get(), *cluster_it);
+        pango_layout_get_pixel_extents(layout, NULL, &pos);
+        if (pos.width > width - ellipsis_width)
+          break;
+      }
+
+      // Use conceal_index to represent the first byte that won't be displayed.
+      assert(cluster_it != cluster_index.begin());
+      int conceal_index = *(--cluster_it);
+
+      // Get the text that will finally be displayed.
+      if (trimming == TRIMMING_CHARACTER) {
+        // In "character", just show the characters before the index.
+        pango_layout_set_text(layout, newtext.get(), conceal_index);
+
+      } else {  
+        // In "word" or "word-ellipsis" trimming, we have to find out where
+        // last word stops. If we can't find out a reasonable position, then 
+        // just do trimming as in "character".
+        PangoLogAttr *log_attrs;
+        int n_attrs;
+        pango_layout_get_log_attrs(layout, &log_attrs, &n_attrs);
+        int off = g_utf8_pointer_to_offset(newtext.get(), 
+                                           newtext.get() + conceal_index);
+        while (off > 0 && !log_attrs[off].is_word_end &&
+               !log_attrs[off].is_word_start)
+          --off;
+        if (off > 0)
+          conceal_index = g_utf8_offset_to_pointer(newtext.get(), off) - 
+                                                   newtext.get();
+          newtext[conceal_index] = 0;
+
+        // In word-ellipsis, we have to append the ellipsis manualy.
+        if (trimming == TRIMMING_WORD_ELLIPSIS) 
+          strcpy(newtext.get() + conceal_index, kEllipsisText);
+
+        pango_layout_set_text(layout, newtext.get(), -1);
+      }
+
+      // We also have to do the horizontal alignment.
+      pango_layout_get_pixel_extents(layout, NULL, &pos);
+      if (align == CENTER)
+        real_x = x + (width - pos.width) / 2;
+      else if (align == RIGHT)
+        real_x = x + width - pos.width;
+    }
+
+    // Show the trimmed text.
+    cairo_move_to(cr_, real_x, real_y);
+    pango_cairo_show_layout(cr_, layout);
+    pango_layout_get_pixel_extents(layout, NULL, &pos);
+    PangoLayoutIter *it = pango_layout_get_iter(layout);
+    do {
+      pango_layout_iter_get_char_extents(it, &pos);
+    } while(pango_layout_iter_next_char(it));
+  }
+
   g_object_unref(layout);
-    
+  // This will also free underline_attr and strikeout_attr.
+  pango_attr_list_unref(attr_list);
+  cairo_restore(cr_);
+
   return true;
 }
 

@@ -70,8 +70,10 @@ class CairoCanvas : public CanvasInterface {
                                   double mx, double my,
                                   const CanvasInterface *mask);
 
-  virtual bool DrawText(double x, double y, const char *text, 
-                        const FontInterface *f, const Color &c);
+  virtual bool DrawText(double x, double y, double width, double height,
+                        const char *text, const FontInterface *f, 
+                        const Color &c, Alignment align, VAlignment valign,
+                        Trimming trimming, TextFlag text_flag);
   
   virtual bool IntersectRectClipRegion(double x, double y, 
                                        double w, double h);
