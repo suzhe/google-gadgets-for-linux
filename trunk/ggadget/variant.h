@@ -192,7 +192,7 @@ class Variant {
   Type type() const { return type_; }
 
  private:
-  bool CheckScriptableType(int class_id) const;
+  bool CheckScriptableType(uint64_t class_id) const;
 
   /**
    * Type of the <code>Variant</code>'s value.

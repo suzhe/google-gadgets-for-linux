@@ -86,10 +86,10 @@ std::string Variant::ToString() const {
   }
 }
 
-bool Variant::CheckScriptableType(int class_id) const {
+bool Variant::CheckScriptableType(uint64_t class_id) const {
   ASSERT(type_ == TYPE_SCRIPTABLE);
   if (v_.scriptable_value_ && !v_.scriptable_value_->IsInstanceOf(class_id)) {
-    LOG("The parameter is not an instance pointer of %d", class_id);
+    LOG("The parameter is not an instance pointer of %jd", class_id);
     return false;
   }
   return true;
