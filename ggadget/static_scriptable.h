@@ -109,7 +109,7 @@ class StaticScriptable : public ScriptableInterface {
   /** @see ScriptableInterface::Detach() */
   virtual void Detach() { ASSERT(false); }
   /** @see ScriptableInterface::IsInstanceOf() */
-  virtual bool IsInstanceOf(ClassId class_id) const {
+  virtual bool IsInstanceOf(uint64_t class_id) const {
     ASSERT(false);
     return false;
   }

@@ -31,8 +31,8 @@ template <typename R> class Slot0;
  * Only objects with dynamic properties or methods need to directly
  * implement this interface.  Other objects should use @c StaticScriptable.
  *
- * An implementation should include a <code>static const int CLASS_ID</code>
- * field which uniquely identifies the class.
+ * An implementation should include a <code>static const uint64_t
+ * CLASS_ID</code> field which uniquely identifies the class.
  */
 class ScriptableInterface {
  protected:
@@ -43,13 +43,12 @@ class ScriptableInterface {
 
  public:
 
-  typedef uint64_t ClassId;
   /**
    * This ID uniquely identifies the class.  Each implementation should define
    * this field as a unique number.  You can simply use the first 3 parts of
    * the result of uuidgen.
    */
-  static const ClassId CLASS_ID = 0;
+  static const uint64_t CLASS_ID = 0;
 
   /**
    * Attach this object to the script engine.
@@ -71,7 +70,7 @@ class ScriptableInterface {
   /**
    * Judge if this instance is of a given class.
    */
-  virtual bool IsInstanceOf(ClassId class_id) const = 0;
+  virtual bool IsInstanceOf(uint64_t class_id) const = 0;
 
   /**
    * Connect a callback @c Slot to the "ondelete" signal.

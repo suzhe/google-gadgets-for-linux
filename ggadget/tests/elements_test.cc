@@ -46,9 +46,9 @@ class Muffin : public MockedElement {
   }
 
  public:
-  static const ClassId CLASS_ID = UINT64_C(0xabb1c79164a742aa);
-  virtual bool IsInstanceOf(ClassId class_id) const {
-    return class_id == CLASS_ID;
+  static const uint64_t CLASS_ID = UINT64_C(0xabb1c79164a742aa);
+  virtual bool IsInstanceOf(uint64_t class_id) const {
+    return class_id == CLASS_ID || class_id == ScriptableInterface::CLASS_ID;
   }
 };
 
@@ -71,9 +71,9 @@ class Pie : public MockedElement {
   }
 
  public:
-  static const ClassId CLASS_ID = UINT64_C(0x21a2b2ba7c794058);
-  virtual bool IsInstanceOf(ClassId class_id) const {
-    return class_id == CLASS_ID;
+  static const uint64_t CLASS_ID = UINT64_C(0x21a2b2ba7c794058);
+  virtual bool IsInstanceOf(uint64_t class_id) const {
+    return class_id == CLASS_ID || class_id == ScriptableInterface::CLASS_ID;
   }
 };
 
