@@ -96,14 +96,15 @@ struct LogHelper {
  * Print log with printf format parameters.
  * It works in both debug and release versions.
  */
-#define LOG LogHelper(__FILE__, __LINE__)
+#define LOG ::ggadget::LogHelper(__FILE__, __LINE__)
 
 #ifdef NDEBUG
 #define ASSERT(x)
 #define ASSERT_M(x, y)
 #define VERIFY(x)
 #define VERIFY_M(x, y)
-#define DLOG(x)
+#define DLOG \
+    true ? (void) 0 : LOG
 #else // NDEBUG
 
 /**
