@@ -1,1 +1,369 @@
 #summary SVK Quick Start
+
+Every member here is highly recommended to use
+[http://svk.bestpractical.com/ SVK]
+to participant in the development of this project.
+This document is for the developers who are already familiar with
+[http://subversion.tigris.org/ Subversion],
+but have never used [http://svk.bestpractical.com/ SVK] before.
+If you are not familiar with
+[http://subversion.tigris.org/ Subversion] either,
+please consider reading the
+[http://svnbook.red-bean.com/ Subversion Book] first.
+
+= Installation =
+
+For Debian and Ubuntu,
+use this command to install SVK:
+
+{{{
+sudo apt-get install svk
+}}}
+
+For other distributions,
+please follow the instructions from
+[http://svk.bestpractical.com/ SVK's homepage]
+to install SVK.
+
+= Setting Up =
+
+In order to use SVK for participating in this project,
+you following the following steps to initialize your working
+environment.
+
+== Initializing ==
+
+Type this command in your virtual terminal (command line prompt):
+
+{{{
+svk depotmap
+}}}
+
+Then SVK will launch a text editor,
+and you may see this content in it:
+
+{{{
+---
+"": /home/yourname/.svk/local
+
+==edit the above depot map===
+}}}
+
+Just add this line after the second line:
+
+{{{
+ggl: /home/yourname/.svk/google-gadgets-for-linux
+}}}
+
+Then save and exit your text editor.
+Now you have successfully created a repository in your SVK.
+And we'll mirror the remote SVN repository into your local SVK
+repository in the next section.
+
+== Mirroring ==
+
+First,
+we should tell SVK the position of the remote SVN repository:
+
+{{{
+svk mirror /ggl/mirror https://google-gadgets-for-linux.googlecode.com/svn/
+}}}
+
+Then we synchronize the local mirror with the remote repository:
+
+{{{
+svk sync /ggl/mirror
+}}}
+
+Then you could leave your computer working and have a cup of coffee.
+After a not-so-short period of waiting,
+you'll have the entire SVN repository,
+including all changing history,
+mirrored to your local SVK repository.
+
+== Local Copy ==
+
+Although `/ggl/mirror` is created in your local computer,
+every operation under this directory will be synchronized to the
+remote SVN repository automatically.
+So it's highly recommended to
+create another local branch for working.
+Branching operation in SVK is
+the same as in SVN,
+just a simple copy operation:
+
+{{{
+svk cp /ggl/mirror /ggl/local
+}}}
+
+The same with SVN,
+SVK will also launch a text editor,
+asking you for the committing log.
+Just type something reasonable then save and exit your text editor.
+
+== Checking Out ==
+
+Now you can check the code out from your local working branch into
+your working directory.
+Just do the similar thing as you did to the SVN repository:
+
+{{{
+mkdir ggl
+svk co /ggl/local/trunk ggl/code
+svk co /ggl/local/wiki ggl/wiki
+}}}
+
+== Utility Scripts ==
+
+This project provides two simple utilities.
+`svkmail` is used for sending out code review request.
+`svkcommit` is used for checking
+files that you forgot to import into the version control system before
+you commit your change list.
+We highly recommend you using these tools during your development.
+
+For your convenience,
+please link these scripts to one of your `$PATH` searching directories,
+for example,
+`~/bin`.
+Then you could run these command more easily:
+
+{{{
+ln -s ggl/code/utils/svkmail ~/bin/svkmail
+ln -s ggl/code/utils/svkcommit ~/bin/svkci
+}}}
+
+`svkmail` could read every parameter it needed from the command line.
+But if you save some of the parameters in the configuration files for
+`svkmail`,
+it could save you a lot of key strokes.
+`.svkmail` must be saved at the top of your checking out directory.
+`svkmail` searches for the configuration file in the current working
+directory and each of the current working directory's successively
+higher parent directories until the file is located so you don't need to
+go up to the top level of your checking out directory before you run
+this script.
+You should put your `.svkmail` in both `ggl/code/` and `ggl/wiki/`.
+
+Here is a recommended sample configuration of `svkmail`:
+
+{{{
+# Your E-mail address. Used for sending out code review requests.
+from=change@this
+
+# Send review request to this address.
+# Note: different modules need to be reviewed by different people.
+#       So we recommended that don't uncomment this line, just using
+#       -m parameter in the command line every time.
+#m=change@this
+
+# Cc a copy of the review request to the mailing list.
+cc=google-gadgets-for-linux@googlegroups.com
+
+# Command used for sending your mails.
+# The command must be sendmail-compatible.
+# A recommended choice is msmtp.
+sendmail="msmtp -a gmail -t"
+
+# Command used for signing your mails.
+# A recommended choice is GnuPG2
+sign="gpg2 --clearsign -u your_key_id"
+}}}
+
+For more information about `msmtp` and `gpg2`,
+see [msmtp_quick_start MSMTP Quick Start] and
+[gpg_quick_start GnuPG2 Quick Start].
+
+OK! Everything is ready now.
+Just say "hooray" and then you could start your work.
+
+= Working On Your Linux Box =
+
+During your working as a developer in this project,
+a typical routine is "syncing", "merging", "updating",
+"modifying", "committing", "code reviewing" and "submitting".
+
+== Syncing ==
+
+Every time before you start your work,
+you must synchronize your local repository with the latest status of the
+SVN repository. You could simply say:
+
+{{{
+svk sync /ggl/mirror/
+}}}
+
+This command will download the latest changes made by the other
+developers.
+If nothing is new since your last synchronizing,
+you could pass the "merging" step.
+Or you will need to merge the changes from your local mirror to your
+local branch.
+
+== Merging ==
+
+This command will merge the changes from your local mirror to your local
+branch:
+
+{{{
+svk smerge /ggl/mirror/ /ggl/local/
+}}}
+
+But in most cases,
+we don't want the whole `local` repository be synchronized with the
+whole `mirror` repository, including all tags and branches,
+so maybe you prefer synchronizing only one or a few branches:
+
+{{{
+svk smerge /ggl/mirror/trunk/ /ggl/local/trunk/
+svk smerge /ggl/mirror/wiki/ /ggl/local/wiki/
+}}}
+
+== Updating ==
+
+Every changes is already on your local branch.
+Now just updating the latest changes to your working directory:
+
+{{{
+svk up
+}}}
+
+== Modifying ==
+
+Now feel free to modify your sources.
+These commands may be useful to you during your creative work:
+
+{{{
+svk add filename
+svk rm filename
+svk revert filename
+svk status
+svk diff
+}}}
+
+== Committing ==
+
+When you finish your work,
+you could commit your code into your local working branch,
+using this command:
+
+{{{
+svk commit
+}}}
+
+A text editor will be launched to ask you for committing log.
+
+Committing to the local working branch will not effect the remote SVN
+repository at all.
+So feel free to commit any changes to your local working branch.
+Nobody will be disturbed by you.  
+
+== Code Reviewing ==
+
+After committing to your local working branch,
+you could now send out a code-review request to the other developers.
+Although the SVN server doesn't disallowed any kind of directly
+committing,
+committing to the SVN server without code-review request is highly
+prohibited in our group.
+Any member did so may be kicked out from the commiter list.
+Use this command to generate a code-review request:
+
+{{{
+svkmail -m reviewer@somehost
+}}}
+
+If you had committed many changes to your local working branch before,
+you could send out a single code-review request containing all the
+changes. For example, this command sends out a review request from local
+revision 105 to 108:
+
+{{{
+svkmail -m reviewer@somehost -r 105:108
+}}}
+
+== Submitting ==
+
+If other developers replied your request and gave you positive comments
+to your changes,
+you could submit your changes to SVN repository now.
+There are three ways of submitting your changes.
+
+=== Automatically ===
+
+Just simply type this command:
+
+{{{
+svk smerge /ggl/local/trunk/ /ggl/mirror/trunk/
+}}}
+
+This command merges all changes in local branch to the local mirror.
+And every changes to the local mirror will be applied to the SVN
+repository automatically.
+A text editor will be launched to ask you for committing logs.
+
+=== Incrementally ===
+
+If you had committed multiple changes to your local branch and want
+these changes be committed to the SVN repository separately,
+rather than merging all the changes into one change list,
+you could use this command:
+
+{{{
+svk merge -i /ggl/local/trunk/ /ggl/mirror/trunk/
+}}}
+
+This command will merge your changes incrementally,
+using your previous committing log and will not ask you for committing
+log any more.
+
+=== Manually ===
+
+The best way of committing the code to SVN is using manually committing.
+This could be done in 5 steps:
+
+First,
+switch to local mirror:
+
+{{{
+svk switch /ggl/mirror/trunk/
+}}}
+
+Then,
+merge the changes from the local branch:
+
+{{{
+svk merge /ggl/local/trunk/ -r M:N .
+}}}
+
+Now you could try compiling your code,
+running the unit test,
+to ensure that every code you committed is OK.
+Then submit your changes:
+
+{{{
+svk ci
+}}}
+
+As we are already working at local mirror,
+every change to it will be applied to the SVN server,
+too.
+So we already updated the SVN repository on server side.
+
+Then we should merge the changes from mirror to local branch:
+
+{{{
+svk smerge /ggl/mirror/trunk/ /ggl/local/trunk/
+}}}
+
+At last,
+switch back to local branch:
+
+{{{
+svk switch /ggl/local/trunk/
+}}}
+
+= FAQ =
+
+If you have any questions about SVK,
+please contact us by the mailing list.
