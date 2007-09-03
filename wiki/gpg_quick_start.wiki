@@ -1,0 +1,48 @@
+﻿#summary GnuPG Quick Start
+
+In order to keep our code review safe,
+it's highly recommended to use [http://www.gnupg.org GnuPG2]
+to sign your code review request.
+
+= Installation =
+
+For Debian and Ubuntu,
+use this command to install GnuPG2:
+
+{{{
+sudo apt-get install gpg2
+}}}
+
+For other distributions,
+please follow the instructions from
+[http://www.gnupg.org GnuPG's homepage]
+to install GnuPG.
+
+= Generating a Key =
+
+Type `gpg2 --gen-key` under your command prompt,
+and follow its instruction to create a key.
+We recommend using 2048-bit RSA key to sign your code review.
+
+Then you can export your key into ASCII format by this command:
+
+{{{
+gpg2 --export -a your_key_id
+}}}
+
+Then please post your key our mailing list.
+After carefully examine the ownership of the key,
+we'll add the key to the [gpg_public_keys members' public keys] page.
+
+= Note =
+
+Every leading minus sign in gpg-signed mail will be escaped with another
+minus and a space.
+So please do:
+
+{{{
+sed 's/^- //'
+}}}
+
+To the received patch before applying it.
+Or you will be reported that the patch is in wrong format.
