@@ -152,7 +152,7 @@ from=change@this
 #m=change@this
 
 # Cc a copy of the review request to the mailing list.
-cc=google-gadgets-for-linux@googlegroups.com
+cc=google-gadgets-for-linux-dev@googlegroups.com
 
 # Command used for sending your mails.
 # The command must be sendmail-compatible.
