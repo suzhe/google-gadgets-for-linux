@@ -1,4 +1,4 @@
-#summary SVK Quick Start
+﻿#summary SVK Quick Start
 
 Every member here is highly recommended to use
 [http://svk.bestpractical.com/ SVK]
