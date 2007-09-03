@@ -21,7 +21,7 @@ But saving some of the parameters in the configuration file for MSMTP
 can save you a lot of keystrokes.
 The configuration file is `~/.msmtprc` and must not be readable to any
 other users in your workstation.
-Or MSMTP will refuse to run.
+Otherwise, MSMTP will refuse to run.
 So you must set the permission of this file to 0600:
 
 {{{
@@ -87,7 +87,7 @@ This is a test!
 EOF
 }}}
 
-Then have a look at your "Sent Mail" box - Gmail will not deliver the
-mail to your inbox if the sender is yourself, too.
-If the mail can be found in your sent box,
-everything is OK now.
+If you're sending from a Gmail account, take a look at the "Sent Mail" box on the sending account - Gmail will add the message to that box, but not deliver the
+mail to your inbox if the sender and recipient are identical.
+The message should also appear in your receiving mailbox.
+If the mail can be found in the expected mailboxes, then everything is successfully configured.
