@@ -30,19 +30,19 @@ Then you can export your key into ASCII format by this command:
 gpg2 --export -a your_key_id
 }}}
 
-Then please post your key our mailing list.
-After carefully examine the ownership of the key,
+Then please post your key to our mailing list.
+After examining the ownership of the key,
 we'll add the key to the [gpg_public_keys members' public keys] page.
 
 = Note =
 
 Every leading minus sign in gpg-signed mail will be escaped with another
 minus and a space.
-So please do:
+So please run
 
 {{{
 sed 's/^- //'
 }}}
 
-To the received patch before applying it.
-Or you will be reported that the patch is in wrong format.
+to the received patch before applying it.
+Otherwise, gpg will report that the patch is in wrong format.
