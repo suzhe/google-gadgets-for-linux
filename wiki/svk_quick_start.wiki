@@ -155,7 +155,9 @@ from=change@this
 cc=google-gadgets-for-linux-dev@googlegroups.com
 
 # Command used for sending your mails.
-# The command must be sendmail-compatible.
+# By default, svkmail uses "sendmail".
+# If you want to use other command,
+# the command must be sendmail-compatible.
 # A recommended choice is msmtp.
 sendmail="msmtp -a gmail -t"
 
