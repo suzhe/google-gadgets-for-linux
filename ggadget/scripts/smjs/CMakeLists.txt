@@ -14,31 +14,12 @@
 #  limitations under the License.
 #
 
-SET(SMJS_THREADSAFE TRUE
-  CACHE BOOL
-  "Whether SpiderMonkey library is compiled with thread-safe support") # TODO: 
-SET(SMJS_DEFINITIONS ""
-  CACHE STRING
-  "Macro definitions for SpiderMonkey") # TODO: 
-SET(SMJS_LIBRARIES smjs
-  CACHE STRING
-  "The libraries to link when using SpiderMonkey")  # TODO: 
-SET(SMJS_LIBRARY_DIR ""
-  CACHE PATH
-  "The location of the SpiderMonkey library directory")        # TODO:
-SET(SMJS_INCLUDE_DIR /usr/include/smjs
-  CACHE PATH
-  "The location of the SpiderMonkey include directory")     # TODO: 
-IF(SMJS_THREADSAFE)
-  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DJS_THREADSAFE) # TODO: 
-ENDIF(SMJS_THREADSAFE)
-
 IF(UNIX)
   SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
 ENDIF(UNIX)
 
-INCLUDE_DIRECTORIES(${SMJS_INCLUDE_DIR})
-LINK_DIRECTORIES(${SMJS_LIBRARY_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
+LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
 ADD_DEFINITIONS(${SMJS_DEFINITIONS})
 
 ADD_SUBDIRECTORY(tests)
@@ -50,5 +31,5 @@ SET(SRCS
 )
 
 ADD_LIBRARY(ggadget_smjs SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_smjs ${SMJS_LIBRARIES} ggadget)
+TARGET_LINK_LIBRARIES(ggadget_smjs js ggadget)
 OUTPUT_LIBRARY(ggadget_smjs)
