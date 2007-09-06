@@ -141,6 +141,22 @@ struct LogHelper {
 
 #endif // else NDEBUG
 
+/**
+ * The @c COMPILE_ASSERT macro can be used to verify that a compile time
+ * expression is @c true.
+ *
+ * The second argument to the macro is the name of the variable. If
+ * the expression is @c false, most compilers will issue a warning/error
+ * containing the name of the variable.
+ * Sample usage:
+ * <code>COMPILE_ASSERT(sizeof(char) == 1, invalid_size_of_char)</code>
+ *
+ * Simply using <code>typedef char msg[bool(expr) ? 1 : -1]</code> doesn't
+ * work for some compilers like gcc, because they support array types of
+ * size determined at runtime (a C99 feature).
+ */
+#define COMPILE_ASSERT(expr, msg) \
+  typedef char msg[sizeof(char[bool(expr) ? 1 : -1])]
 
 /** Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
  * for upcasting in the type hierarchy.
