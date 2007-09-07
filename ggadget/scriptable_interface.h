@@ -31,8 +31,12 @@ template <typename R> class Slot0;
  * Only objects with dynamic properties or methods need to directly
  * implement this interface.  Other objects should use @c StaticScriptable.
  *
- * An implementation should include a <code>static const uint64_t
- * CLASS_ID</code> field which uniquely identifies the class.
+ * Any interface or abstract class inheriting @c ScriptableInterface should
+ * include @c CLASS_ID_DECL and @c CLASS_ID_IMPL to define its @c CLASS_ID and
+ * @c IsInstanceOf() method.
+ *
+ * Any concrete implementation class should include @c DEFINE_CLASS_ID to
+ * define its @c CLASS_ID and @c IsInstanceOf() method.
  */
 class ScriptableInterface {
  protected:
@@ -139,6 +143,37 @@ class ScriptableInterface {
    */
   virtual bool SetProperty(int id, Variant value) = 0;
 };
+
+/**
+ * Used in the declaration section of an interface which inherits
+ * @c ScriptableInterface to declare a class id.
+ */
+#define CLASS_ID_DECL(cls_id)                                                \
+  static const uint64_t CLASS_ID = UINT64_C(cls_id);                         \
+  virtual bool IsInstanceOf(uint64_t class_id) const = 0;
+
+/**
+ * Used after the declaration section of an interface which inherits
+ * @c ScriptableInterface to define @c IsInstanceOf() method.
+ */
+#define CLASS_ID_IMPL(cls, super)                                            \
+  inline bool cls::IsInstanceOf(uint64_t class_id) const {                   \
+    return class_id == CLASS_ID || super::IsInstanceOf(class_id);            \
+  }
+
+/**
+ * Used in the declaration section of a class which implements
+ * @c ScriptableInterface or an interface inheriting @c ScriptableInterface.
+ */
+#define DEFINE_CLASS_ID(cls_id, super)                                       \
+  static const uint64_t CLASS_ID = UINT64_C(cls_id);                         \
+  virtual bool IsInstanceOf(uint64_t class_id) const {                       \
+    return class_id == CLASS_ID || super::IsInstanceOf(class_id);            \
+  }
+
+inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
+  return class_id == CLASS_ID;
+}
 
 } // namespace ggadget
 

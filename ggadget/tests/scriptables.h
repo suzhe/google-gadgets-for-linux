@@ -36,13 +36,10 @@ void AppendBuffer(const char *format, ...);
 // A normal scriptable class.
 class TestScriptable1 : public ScriptableInterface {
  public:
-  static const uint64_t CLASS_ID = UINT64_C(0xBADBEEFF00DFEED);
+  DEFINE_CLASS_ID(0xdb06ba021f1b4c05, ScriptableInterface);
+
   TestScriptable1();
   virtual ~TestScriptable1();
-
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == CLASS_ID || class_id == ScriptableInterface::CLASS_ID; 
-  }
 
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
@@ -90,14 +87,9 @@ typedef Signal1<std::string, const std::string &> OnSupperSignal;
 
 class TestPrototype : public ScriptableInterface {
  public:
-  static const uint64_t CLASS_ID = UINT64_C(0xbb7f8eddc2e94353);
+  DEFINE_CLASS_ID(0xbb7f8eddc2e94353, ScriptableInterface);
   static TestPrototype *GetInstance() {
     return instance_ ? instance_ : (instance_ = new TestPrototype());
-  }
-
-  // Should not be called.
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == ScriptableInterface::CLASS_ID || class_id == CLASS_ID;
   }
 
   DEFAULT_OWNERSHIP_POLICY
@@ -123,14 +115,10 @@ class TestPrototype : public ScriptableInterface {
 // and some property/methods with arguments or return types of Scriptable.
 class TestScriptable2 : public TestScriptable1 {
  public:
-  static const uint64_t CLASS_ID = UINT64_C(0xa88ea50b8b884e77);
+  DEFINE_CLASS_ID(0xa88ea50b8b884e, TestScriptable1);
   TestScriptable2(bool script_owned_ = false);
 
   virtual void Detach() { if (script_owned_) delete this; }
-
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == CLASS_ID || TestScriptable1::IsInstanceOf(class_id); 
-  }
 
   // A scriptable providing array indexed access should override the following
   // methods.

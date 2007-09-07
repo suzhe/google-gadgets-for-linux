@@ -24,6 +24,8 @@
 
 class MockedElement : public ggadget::ElementInterface {
  public:
+  DEFINE_CLASS_ID(0x4d0e8e629a744384, ggadget::ElementInterface);
+
   MockedElement(ggadget::ElementInterface *parent,
                 ggadget::ViewInterface *view,
                 const char *name)
