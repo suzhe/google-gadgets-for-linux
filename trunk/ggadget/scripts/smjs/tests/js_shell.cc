@@ -20,12 +20,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <jsapi.h>
-#ifdef HAS_READLINE
-#include <readline/readline.h>
-#ifdef HAS_HISTORY
-#include <readline/history.h>
-#endif
-#endif
 
 #include "ggadget/common.h"
 #include "ggadget/scripts/smjs/js_script_context.h"
@@ -46,16 +40,19 @@ enum QuitCode {
 };
 QuitCode g_quit_code = DONT_QUIT;
 
+extern "C" {
+// We use the editline library in SpiderMonkey.   
+char *readline(const char *prompt);
+void add_history(const char *line);
+}
+
 static JSBool GetLine(FILE *file, char *buffer, int size, const char *prompt) {
-#ifdef HAS_READLINE
   if (g_interactive) {
     char *linep = readline(prompt);
     if (!linep)
       return JS_FALSE;
-#ifdef HAS_HISTORY
     if (linep[0] != '\0')
       add_history(linep);
-#endif
     strncpy(buffer, linep, size - 2);
     free(linep);
     buffer[size - 2] = '\0';
@@ -65,15 +62,6 @@ static JSBool GetLine(FILE *file, char *buffer, int size, const char *prompt) {
       return JS_FALSE;
   }
   return JS_TRUE;
-#else // HAS_READLINE
-  if (g_interactive) {
-    printf("%s", prompt);
-    fflush(stdout);
-  }
-  if (!fgets(buffer, size, file))
-    return JS_FALSE;
-  return JS_TRUE;
-#endif // else HAS_READLINE
 }
 
 static const int kBufferSize = 65536;
