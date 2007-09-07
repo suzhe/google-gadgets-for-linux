@@ -20,8 +20,9 @@ ADD_SUBDIRECTORY(scripts)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
-  elements.cc
+  basic_element.cc
   element_factory.cc
+  elements.cc
   file_manager.cc
   signal.cc
   static_scriptable.cc

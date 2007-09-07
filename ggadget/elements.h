@@ -47,11 +47,17 @@ class Elements : public ElementsInterface {
   /** @see ElementsInterface::GetCount */
   virtual int GetCount() const;
 
-  /** @see ElementsInterface::GetItem */
-  virtual ElementInterface *GetItem(Variant child);
+  /** @see ElementsInterface::GetItemByIndex */
+  virtual ElementInterface *GetItemByIndex(int child);
 
-  /** @see ElementsInterface::GetItem */
-  virtual const ElementInterface *GetItem(Variant child) const;
+  /** @see ElementsInterface::GetItemByIndex */
+  virtual ElementInterface *GetItemByName(const char *child);
+
+  /** @see ElementsInterface::GetItemByIndex */
+  virtual const ElementInterface *GetItemByIndex(int child) const;
+
+  /** @see ElementsInterface::GetItemByIndex */
+  virtual const ElementInterface *GetItemByName(const char *child) const;
 
   /**
    * Create a new Element and add it to the end of the children list.
@@ -84,6 +90,11 @@ class Elements : public ElementsInterface {
    *     element doesn't exists or not the direct child of the container.
    */
   bool RemoveElement(ElementInterface *element);
+
+  /**
+   * Remove all elements from the container.
+   */
+  void RemoveAllElements();
 
  private:
   internal::ElementsImpl *impl_;

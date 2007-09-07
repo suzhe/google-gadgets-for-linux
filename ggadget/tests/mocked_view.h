@@ -14,28 +14,18 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_VIEW_INTERFACE_H__
-#define GGADGET_VIEW_INTERFACE_H__
+#ifndef GGADGETS_TEST_MOCKED_ELEMENT_H__
+#define GGADGETS_TEST_MOCKED_ELEMENT_H__
 
-namespace ggadget {
+#include <string>
+#include "ggadget/view_interface.h"
 
-/**
- * Interface for representing a View in the Gadget API.
- */
-class ViewInterface {
+class MockedView : public ggadget::ViewInterface {
  public:
-  /** Retrieves the width in pixels. */
-  virtual double GetPixelWidth() const = 0;
-  /** Retrieves the height in pixels. */
-  virtual double GetPixelHeight() const = 0;
-
+  virtual ~MockedView() {}
  public:
-  virtual ~ViewInterface() = 0;
+   double GetPixelWidth() const { return 400.0; }
+   double GetPixelHeight() const { return 300.0; }
 };
 
-inline ViewInterface::~ViewInterface() {
-}
-
-} // namespace ggadget
-
-#endif // GGADGET_VIEW_INTERFACE_H__
+#endif // GGADGETS_TEST_MOCKED_ELEMENT_H__

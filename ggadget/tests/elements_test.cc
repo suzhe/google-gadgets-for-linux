@@ -125,10 +125,10 @@ TEST_F(ElementsTest, TestOrder) {
   ggadget::ElementInterface *e2 = elements_->AppendElement("pie", NULL);
   ggadget::ElementInterface *e3 = elements_->AppendElement("pie", NULL);
   ASSERT_EQ(3, elements_->GetCount());
-  ASSERT_TRUE(e1 == elements_->GetItem(ggadget::Variant(0)));
-  ASSERT_TRUE(e2 == elements_->GetItem(ggadget::Variant(1)));
-  ASSERT_TRUE(e3 == elements_->GetItem(ggadget::Variant(2)));
-  ASSERT_TRUE(NULL == elements_->GetItem(ggadget::Variant(3)));
+  ASSERT_TRUE(e1 == elements_->GetItemByIndex(0));
+  ASSERT_TRUE(e2 == elements_->GetItemByIndex(1));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(2));
+  ASSERT_TRUE(NULL == elements_->GetItemByIndex(3));
 }
 
 TEST_F(ElementsTest, TestGetByName) {
@@ -138,35 +138,11 @@ TEST_F(ElementsTest, TestGetByName) {
   ggadget::ElementInterface *e4 = elements_->AppendElement("pie", "pie3");
   ASSERT_TRUE(e4 != e3);
   ASSERT_EQ(4, elements_->GetCount());
-  ASSERT_TRUE(e1 == elements_->GetItem(ggadget::Variant("muffin1")));
-  ASSERT_TRUE(e2 == elements_->GetItem(ggadget::Variant("pie2")));
-  ASSERT_TRUE(e3 == elements_->GetItem(ggadget::Variant("pie3")));
-  ASSERT_TRUE(NULL == elements_->GetItem(ggadget::Variant("hungry")));
-  ASSERT_TRUE(NULL == elements_->GetItem(ggadget::Variant("")));
-}
-
-TEST_F(ElementsTest, TestGetOthers) {
-  ggadget::ElementInterface *e1 = elements_->AppendElement("muffin", "muffin1");
-  ggadget::ElementInterface *e2 = elements_->AppendElement("pie", "pie2");
-  ASSERT_TRUE(e1 == elements_->GetItem(ggadget::Variant(false)));
-  ASSERT_TRUE(NULL == elements_->GetItem(ggadget::Variant(true)));
-  ASSERT_TRUE(NULL == elements_->GetItem(ggadget::Variant()));
-  ASSERT_TRUE(e1 == elements_->GetItem(ggadget::Variant(0.9)));
-  ASSERT_TRUE(e2 == elements_->GetItem(ggadget::Variant(1.1)));
-}
-
-TEST_F(ElementsTest, TestConst) {
-  ggadget::ElementInterface *e1 = elements_->AppendElement("muffin", "muffin1");
-  ggadget::ElementInterface *e2 = elements_->AppendElement("pie", "pie2");
-  const ggadget::ElementsInterface *ce = elements_;
-  ASSERT_TRUE(e1 == ce->GetItem(ggadget::Variant(false)));
-  ASSERT_TRUE(e2 == ce->GetItem(ggadget::Variant(1)));
-  ASSERT_TRUE(e2 == ce->GetItem(ggadget::Variant("pie2")));
-  ASSERT_TRUE(NULL == ce->GetItem(ggadget::Variant(true)));
-  ASSERT_TRUE(NULL == ce->GetItem(ggadget::Variant()));
-  ASSERT_TRUE(e1 == ce->GetItem(ggadget::Variant(0.9)));
-  ASSERT_TRUE(e2 == ce->GetItem(ggadget::Variant(1.1)));
-  ASSERT_TRUE(NULL == ce->GetItem(ggadget::Variant(15.7)));
+  ASSERT_TRUE(e1 == elements_->GetItemByName("muffin1"));
+  ASSERT_TRUE(e2 == elements_->GetItemByName("pie2"));
+  ASSERT_TRUE(e3 == elements_->GetItemByName("pie3"));
+  ASSERT_TRUE(NULL == elements_->GetItemByName("hungry"));
+  ASSERT_TRUE(NULL == elements_->GetItemByName(""));
 }
 
 TEST_F(ElementsTest, TestInsert) {
@@ -175,9 +151,9 @@ TEST_F(ElementsTest, TestInsert) {
   ggadget::ElementInterface *e3 = elements_->InsertElement("pie", e2, NULL);
   ggadget::ElementInterface *e4 = elements_->InsertElement("bread", e2, NULL);
   ASSERT_EQ(3, elements_->GetCount());
-  ASSERT_TRUE(e1 == elements_->GetItem(ggadget::Variant(2)));
-  ASSERT_TRUE(e2 == elements_->GetItem(ggadget::Variant(1)));
-  ASSERT_TRUE(e3 == elements_->GetItem(ggadget::Variant(0)));
+  ASSERT_TRUE(e1 == elements_->GetItemByIndex(2));
+  ASSERT_TRUE(e2 == elements_->GetItemByIndex(1));
+  ASSERT_TRUE(e3 == elements_->GetItemByIndex(0));
   ASSERT_TRUE(NULL == e4);
 }
 
@@ -188,11 +164,20 @@ TEST_F(ElementsTest, TestRemove) {
   ASSERT_EQ(3, elements_->GetCount());
   ASSERT_TRUE(elements_->RemoveElement(e2));
   ASSERT_EQ(2, elements_->GetCount());
-  ASSERT_TRUE(elements_->GetItem(ggadget::Variant(0)) == e1);
-  ASSERT_TRUE(elements_->GetItem(ggadget::Variant(1)) == e3);
+  ASSERT_TRUE(elements_->GetItemByIndex(0) == e1);
+  ASSERT_TRUE(elements_->GetItemByIndex(1) == e3);
   ASSERT_TRUE(elements_->RemoveElement(e1));
   ASSERT_FALSE(elements_->RemoveElement(e1));
-  ASSERT_TRUE(elements_->GetItem(ggadget::Variant(0)) == e3);
+  ASSERT_TRUE(elements_->GetItemByIndex(0) == e3);
+}
+
+TEST_F(ElementsTest, TestRemoveAll) {
+  elements_->AppendElement("muffin", NULL);
+  elements_->AppendElement("pie", NULL);
+  elements_->AppendElement("pie", NULL);
+  ASSERT_EQ(3, elements_->GetCount());
+  elements_->RemoveAllElements();
+  ASSERT_EQ(0, elements_->GetCount());
 }
 
 int main(int argc, char *argv[]) {

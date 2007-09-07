@@ -17,8 +17,6 @@
 #ifndef GGADGET_ELEMENTS_INTERFACE_H__
 #define GGADGET_ELEMENTS_INTERFACE_H__
 
-#include "variant.h"
-
 namespace ggadget {
 
 class ElementInterface;
@@ -35,24 +33,38 @@ class ElementsInterface {
   virtual int GetCount() const = 0;
 
   /**
-   * Returns the element identified by the name or index.
-   * @param child the index or the name of the child.
-   * @return the pointer to the specified element. If the parameter is provided
-   *     as integer and is out of range, @c NULL is returned. If the parameter
-   *     is provided as string and multiple elements are defined with the same
-   *     name, returns the first one. Returns @c NULL if no elements match.
+   * Returns the element identified by the  index.
+   * @param child the index of the child.
+   * @return the pointer to the specified element. If the parameter is out of
+   *     range, @c NULL is returned.
    */
-  virtual ElementInterface *GetItem(Variant child) = 0;
+  virtual ElementInterface *GetItemByIndex(int index) = 0;
 
   /**
-   * Returns the element identified by the name or index.
-   * @param child the index or the name of the child.
-   * @return the pointer to the specified element. If the parameter is provided
-   *     as integer and is out of range, @c NULL is returned. If the parameter
-   *     is provided as string and multiple elements are defined with the same
-   *     name, returns the first one. Returns @c NULL if no elements match.
+   * Returns the element identified by the name.
+   * @param child the name of the child.
+   * @return the pointer to the specified element. If multiple elements are
+   *     defined with the same name, returns the first one. Returns @c NULL if
+   *     no elements match.
    */
-  virtual const ElementInterface *GetItem(Variant child) const = 0;
+  virtual ElementInterface *GetItemByName(const char *name) = 0;
+
+  /**
+   * Returns the element identified by the  index.
+   * @param child the index of the child.
+   * @return the pointer to the specified element. If the parameter is out of
+   *     range, @c NULL is returned.
+   */
+  virtual const ElementInterface *GetItemByIndex(int index) const = 0;
+
+  /**
+   * Returns the element identified by the name.
+   * @param child the name of the child.
+   * @return the pointer to the specified element. If multiple elements are
+   *     defined with the same name, returns the first one. Returns @c NULL if
+   *     no elements match.
+   */
+  virtual const ElementInterface *GetItemByName(const char *name) const = 0;
 };
 
 } // namespace ggadget

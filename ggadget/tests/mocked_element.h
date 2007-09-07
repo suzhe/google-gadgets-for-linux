@@ -50,6 +50,13 @@ class MockedElement : public ggadget::ElementInterface {
     return view_;
   }
 
+  ElementInterface::HitTest GetHitTest() const {
+    return ElementInterface::HT_DEFAULT;
+  }
+
+  void SetHitTest(ElementInterface::HitTest value) {
+  }
+
   virtual const ggadget::ElementsInterface *GetChildren() const {
     return NULL;
   }
@@ -58,28 +65,25 @@ class MockedElement : public ggadget::ElementInterface {
     return NULL;
   }
 
-  virtual const char *GetCursor() const {
-    return "arrow";
+  virtual ggadget::ElementInterface::CursorType GetCursor() const {
+    return ggadget::ElementInterface::CURSOR_ARROW;
   }
 
-  virtual bool SetCursor(const char *cursor) {
-    return false;
+  virtual void SetCursor(ggadget::ElementInterface::CursorType cursor) {
   }
 
   virtual bool IsDropTarget() const {
     return false;
   }
 
-  virtual bool SetDropTarget(bool drop_target) {
-    return false;
+  virtual void SetDropTarget(bool drop_target) {
   }
 
   virtual bool IsEnabled() const {
     return false;
   }
 
-  virtual bool SetEnabled(bool enabled) {
-    return false;
+  virtual void SetEnabled(bool enabled) {
   }
 
   virtual const char *GetName() const {
@@ -90,96 +94,86 @@ class MockedElement : public ggadget::ElementInterface {
     return "";
   }
 
-  virtual bool SetMask(const char *mask) const {
-    return false;
+  virtual void SetMask(const char *mask) {
   }
 
-  virtual ggadget::Variant GetWidth() const {
-    return ggadget::Variant(100);
+  virtual double GetPixelWidth() const {
+    return double(100);
   }
 
-  virtual bool SetWidth(ggadget::Variant width) {
-    return false;
+  virtual void SetPixelWidth(double width) {
   }
 
-  virtual ggadget::Variant GetHeight() const {
-    return ggadget::Variant(100);
+  virtual double GetPixelHeight() const {
+    return double(100);
   }
 
-  virtual bool SetHeight(ggadget::Variant height) {
-    return false;
+  virtual void SetPixelHeight(double height) {
   }
 
-  virtual int GetOffsetWidth() const {
+  virtual double GetRelativeWidth() const {
     return 100;
   }
 
-  virtual int GetOffsetHeight() const {
+  virtual double GetRelativeHeight() const {
     return 100;
   }
 
-  virtual ggadget::Variant GetX() const {
-    return ggadget::Variant(0);
+  virtual double GetPixelX() const {
+    return double(0);
   }
 
-  virtual bool SetX(ggadget::Variant x) {
-    return false;
+  virtual void SetPixelX(double x) {
   }
 
-  virtual ggadget::Variant GetY() const {
-    return ggadget::Variant(0);
+  virtual double GetPixelY() const {
+    return double(0);
   }
 
-  virtual bool SetY(ggadget::Variant y) {
-    return false;
+  virtual void SetPixelY(double y) {
   }
 
-  virtual int GetOffsetX() const {
+  virtual double GetRelativeX() const {
     return 0;
   }
 
-  virtual int GetOffsetY() const {
+  virtual double GetRelativeY() const {
     return 0;
   }
 
-  virtual int GetPinX() const {
+  virtual double GetPixelPinX() const {
     return 0;
   }
 
-  virtual bool SetPinX(int pin_x) {
-    return false;
+  virtual void SetPixelPinX(double pin_x) {
   }
 
-  virtual int GetPinY() const {
+  virtual double GetPixelPinY() const {
     return 0;
   }
 
-  virtual bool SetPinY(int pin_y) {
-    return false;
+  virtual void SetPixelPinY(double pin_y) {
   }
 
   virtual double GetRotation() const {
     return 0.0;
   }
 
-  virtual bool SetRotation(double rotation) {
-    return false;
+  virtual void SetRotation(double rotation) {
   }
 
-  virtual int GetOpacity() const {
+  virtual double GetOpacity() const {
     return 0;
   }
 
-  virtual bool SetOpacity(int opacity) {
-    return false;
+  virtual void SetOpacity(double opacity) {
   }
 
   virtual bool IsVisible() const {
     return true;
   }
 
-  virtual bool SetVisible(bool visible) {
-    return false;
+  virtual void SetVisible(bool visible) {
   }
 
   virtual ElementInterface *GetParentElement() {
@@ -194,16 +188,17 @@ class MockedElement : public ggadget::ElementInterface {
     return "";
   }
 
-  virtual bool SetToolTip(const char *tool_tip) {
-    return false;
+  virtual void SetToolTip(const char *tool_tip) {
   }
 
-  virtual ElementInterface *AppendElement(const char *tag_name) {
+  virtual ElementInterface *AppendElement(const char *tag_name,
+                                          const char *name) {
     return NULL;
   }
 
   virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before) {
+                                          const ElementInterface *before,
+                                          const char *name) {
     return NULL;
   }
 
@@ -218,6 +213,56 @@ class MockedElement : public ggadget::ElementInterface {
   }
 
   virtual void KillFocus() {
+  }
+
+  virtual void SetRelativeWidth(double) {
+  }
+
+  virtual void SetRelativeHeight(double) {
+  }
+
+  virtual void SetRelativeX(double) {
+  }
+
+  virtual void SetRelativeY(double) {
+  }
+
+  virtual double GetRelativePinX() const {
+    return 0.0;
+  }
+
+  virtual void SetRelativePinX(double) {
+  }
+
+  virtual double GetRelativePinY() const {
+    return 0.0;
+  }
+
+  virtual void SetRelativePinY(double) {
+  }
+
+  virtual bool XIsRelative() const {
+    return false;
+  }
+
+  virtual bool YIsRelative() const {
+    return false;
+  }
+
+  virtual bool WidthIsRelative() const {
+    return false;
+  }
+
+  virtual bool HeightIsRelative() const {
+    return false;
+  }
+
+  virtual bool PinXIsRelative() const {
+    return false;
+  }
+
+  virtual bool PinYIsRelative() const {
+    return false;
   }
 
   DEFAULT_OWNERSHIP_POLICY;
