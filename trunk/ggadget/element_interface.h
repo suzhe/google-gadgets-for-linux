@@ -33,6 +33,8 @@ class ViewInterface;
  */
 class ElementInterface : public ScriptableInterface {
  public:
+  CLASS_ID_DECL(0xe863ac4167fa4bba);
+
   /** Get the type of the current object. */
   virtual const char *GetTagName() const = 0;
   /** Destroy the current object. */
@@ -281,6 +283,8 @@ class ElementInterface : public ScriptableInterface {
    */
   virtual void KillFocus() = 0;
 };
+
+CLASS_ID_IMPL(ElementInterface, ScriptableInterface)
 
 } // namespace ggadget
 

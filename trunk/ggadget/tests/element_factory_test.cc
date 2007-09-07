@@ -21,6 +21,8 @@
 
 class Muffin : public MockedElement {
  public:
+  DEFINE_CLASS_ID(0xabb1c79164a742aa, MockedElement);
+
   Muffin(ggadget::ElementInterface *parent,
          ggadget::ViewInterface *view,
          const char *name) : MockedElement(parent, view, name) {
@@ -41,16 +43,12 @@ class Muffin : public MockedElement {
       const char *name) {
     return new Muffin(parent, view, name);
   }
-
- public:
-  static const uint64_t CLASS_ID = UINT64_C(0xabb1c79164a742aa);
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == CLASS_ID;
-  }
 };
 
 class Pie : public MockedElement {
  public:
+  DEFINE_CLASS_ID(0x21a2b2ba7c794058, MockedElement);
+
   Pie(ggadget::ElementInterface *parent,
       ggadget::ViewInterface *view,
       const char *name) : MockedElement(parent, view, name) {
@@ -70,12 +68,6 @@ class Pie : public MockedElement {
       ggadget::ViewInterface *view,
       const char *name) {
     return new Pie(parent, view, name);
-  }
-
- public:
-  static const uint64_t CLASS_ID = UINT64_C(0x21a2b2ba7c794058);
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == CLASS_ID;
   }
 };
 
