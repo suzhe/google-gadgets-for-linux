@@ -14,27 +14,13 @@
 #  limitations under the License.
 #
 
-SET(READLINE_FOUND TRUE)  # TODO: 
-SET(HISTORY_FOUND TRUE)   # TODO: 
-SET(READLINE_LIBRARIES readline) # TODO: 
-SET(HISTORY_LIBRARIES history)   # TODO: 
-SET(READLINE_LIBRARY) # TODO: 
-SET(HISTORY_LIBRARY)   # TODO: 
-
-IF(READLINE_FOUND)
-  ADD_DEFINITIONS(-DHAS_READLINE)
-  IF(HISTORY_FOUND)
-    ADD_DEFINITIONS(-DHAS_HISTORY)
-  ENDIF(HISTORY_FOUND)
-ENDIF(READLINE_FOUND)
-
 SET(LIBS
-  ${READLINE_LIBRARIES}
-  ${HISTORY_LIBRARIES}
   gunit
   ggadget
   ggadget_smjs
+  edit  # The editline library in SpiderMonkey.
 )
+LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
 
 # General js_shell without custom objects.
 ADD_EXECUTABLE(js_shell

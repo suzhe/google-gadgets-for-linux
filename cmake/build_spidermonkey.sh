@@ -22,4 +22,5 @@ fi
 cd "$2/js/src"
 make -f Makefile.ref
 find -name '*.so' -exec cp {} "$3" \;
+find -name 'libedit.a' -exec cp {} . \;
 find -name 'jsautocfg.h' -exec cp -f {} . \;
