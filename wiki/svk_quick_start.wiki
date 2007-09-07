@@ -317,7 +317,7 @@ instead of merging all the changes into one change list,
 you can use this command:
 
 {{{
-svk merge -i /ggl/local/trunk/ /ggl/mirror/trunk/
+svk merge -I /ggl/local/trunk/ /ggl/mirror/trunk/
 }}}
 
 This command will merge your changes incrementally,
