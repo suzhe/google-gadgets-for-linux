@@ -18,7 +18,6 @@
 #define GGADGET_ELEMENT_INTERFACE_H__
 
 #include "scriptable_interface.h"
-#include "variant.h"
 
 namespace ggadget {
 
@@ -33,6 +32,52 @@ class ViewInterface;
  */
 class ElementInterface : public ScriptableInterface {
  public:
+  enum CursorType {
+    CURSOR_ARROW,
+    CURSOR_IBEAM,
+    CURSOR_WAIT,
+    CURSOR_CROSS,
+    CURSOR_UPARROW,
+    CURSOR_SIZE,
+    CURSOR_SIZENWSE,
+    CURSOR_SIZENESW,
+    CURSOR_SIZEWE,
+    CURSOR_SIZENS,
+    CURSOR_SIZEALL,
+    CURSOR_NO,
+    CURSOR_HAND,
+    CURSOR_BUSY,
+    CURSOR_HELP,
+  };
+
+  enum HitTest {
+    HT_DEFAULT,
+    HT_TRANSPARENT,
+    HT_NOWHERE,
+    HT_CLIENT,
+    HT_CAPTION,
+    HT_SYSMENU,
+    HT_SIZE,
+    HT_MENU,
+    HT_HSCROLL,
+    HT_VSCROLL,
+    HT_MINBUTTON,
+    HT_MAXBUTTON,
+    HT_LEFT,
+    HT_RIGHT,
+    HT_TOP,
+    HT_TOPLEFT,
+    HT_TOPRIGHT,
+    HT_BOTTOM,
+    HT_BOTTOMLEFT,
+    HT_BOTTOMRIGHT,
+    HT_BORDER,
+    HT_OBJECT,
+    HT_CLOSE,
+    HT_HELP
+  };
+
+ public:
   CLASS_ID_DECL(0xe863ac4167fa4bba);
 
   /** Get the type of the current object. */
@@ -45,6 +90,11 @@ class ElementInterface : public ScriptableInterface {
   /** Get the associated View of the current element. */
   virtual ViewInterface *GetView() = 0;
 
+  /** Retrieves the hit-test value for this element. */
+  virtual HitTest GetHitTest() const = 0;
+  /** Sets the hit-test value for this element. */
+  virtual void SetHitTest(HitTest value) = 0;
+
   /**
    * Retrieves a collection that contains the immediate children of this
    *     element.
@@ -56,31 +106,10 @@ class ElementInterface : public ScriptableInterface {
    */
   virtual ElementsInterface *GetChildren() = 0;
 
-  /**
-   * Retrieves the cursor to display when the mouse is over this element.
-   * @see SetCursor for possible values.
-   */
-  virtual const char *GetCursor() const = 0;
-  /**
-   * Sets the cursor to display when the mouse is over this element.
-   * @param cursor possible values:
-   *    - @c "arrow"
-   *    - @c "ibeam"
-   *    - @c "wait"
-   *    - @c "cross"
-   *    - @c "uparrow"
-   *    - @c "size"
-   *    - @c "sizenwse"
-   *    - @c "sizenesw"
-   *    - @c "sizewe"
-   *    - @c "sizens"
-   *    - @c "sizeall"
-   *    - @c "no"
-   *    - @c "hand"
-   *    - @c "busy"
-   *    - @c "help"
-   */
-  virtual bool SetCursor(const char *cursor) = 0;
+  /** Retrieves the cursor to display when the mouse is over this element. */
+  virtual CursorType GetCursor() const = 0;
+  /** Sets the cursor to display when the mouse is over this element. */
+  virtual void SetCursor(CursorType cursor) = 0;
 
   /**
    * Retrieves whether this element is a target for drag/drop operations.
@@ -92,7 +121,7 @@ class ElementInterface : public ScriptableInterface {
    * @param drop_target is true, the ondrag* events will fire when a drag/drop
    *     oeration is initiated by the user.
    */
-  virtual bool SetDropTarget(bool drop_target) = 0;
+  virtual void SetDropTarget(bool drop_target) = 0;
 
   /**
    * Retrieves whether or not the element is enabled.
@@ -103,7 +132,7 @@ class ElementInterface : public ScriptableInterface {
    * Sets whether or not the element is enabled.
    * Disabled elements do not fire any mouse or keyboard events.
    */
-  virtual bool SetEnabled(bool enabled) = 0;
+  virtual void SetEnabled(bool enabled) = 0;
 
   /** Retrieves the name of the element.  */
   virtual const char *GetName() const = 0;
@@ -115,102 +144,90 @@ class ElementInterface : public ScriptableInterface {
   /**
    * Sets the mask bitmap that defines the clipping path for this element.
    */
-  virtual bool SetMask(const char *mask) const = 0;
+  virtual void SetMask(const char *mask) = 0;
 
-  /**
-   * Retrieves the width.
-   * @see set_width.
-   */
-  virtual Variant GetWidth() const = 0;
-  /**
-   * Sets the width.
-   * @param width the value can be expressed in pixels or as a percentage of
-   * the parent's width.
-   */
-  virtual bool SetWidth(Variant width) = 0;
-  /**
-   * Retrieves the height.
-   * @see set_height.
-   */
-  virtual Variant GetHeight() const = 0;
-  /**
-   * Sets the height.
-   * @param height the value can be expressed in pixels or as a percentage of
-   *     the parent's height.
-   */
-  virtual bool SetHeight(Variant height) = 0;
-  /**
-   * Retrieves the width of the element relative to its parent element, in
-   * pixels. This mimics the same-named DHTML property.
-   */
-  virtual int GetOffsetWidth() const = 0;
-  /**
-   * Retrieves the height of the element relative to its parent element, in
-   * pixels. This mimics the same-named DHTML property.
-   */
-  virtual int GetOffsetHeight() const = 0;
+  /** Retrieves the width in pixels. */
+  virtual double GetPixelWidth() const = 0;
+  /** Sets the width in pixels. */
+  virtual void SetPixelWidth(double width) = 0;
+  /** Retrieves the height in pixels. */
+  virtual double GetPixelHeight() const = 0;
+  /** Sets the height in pixels. */
+  virtual void SetPixelHeight(double height) = 0;
 
-  /**
-   * Retrieves the horizontal position.
-   * @see set_x.
-   */
-  virtual Variant GetX() const = 0;
-  /**
-   * Sets the horizontal position.
-   * @param x the value can be expressed in pixels or as a percentage of the
-   *     parent's width.
-   */
-  virtual bool SetX(Variant x) = 0;
-  /**
-   * Retrieves the vertical position.
-   * @see set_y.
-   */
-  virtual Variant GetY() const = 0;
-  /**
-   * Sets the vertical position.
-   * @param y the value can be expressed in pixels or as a percentage of the
-   *     parent's height.
-   */
-  virtual bool SetY(Variant y) = 0;
-  /**
-   * Retrieves the x position of the element relative to its parent element, in
-   * pixels. This mimics the same-named DHTML property.
-   */
-  virtual int GetOffsetX() const = 0;
-  /**
-   * Retrieves the y position of the element relative to its parent element, in
-   * pixels. This mimics the same-named DHTML property.
-   */
-  virtual int GetOffsetY() const = 0;
+  /** Retrieves the width in relative related to the parent. */
+  virtual double GetRelativeWidth() const = 0;
+  /** Sets the width in relative related to the parent. */
+  virtual void SetRelativeWidth(double width) = 0;
+  /** Retrieves the height in relative related to the parent. */
+  virtual double GetRelativeHeight() const = 0;
+  /** Sets the height in relative related to the parent. */
+  virtual void SetRelativeHeight(double height) = 0;
 
-  /** Retrieves the horizontal pin. */
-  virtual int GetPinX() const = 0;
-  /** Sets the horizontal pin. */
-  virtual bool SetPinX(int pin_x) = 0;
-  /** Retrieves the vertical pin. */
-  virtual int GetPinY() const = 0;
-  /** Sets the vertical pin. */
-  virtual bool SetPinY(int pin_y) = 0;
+  /** Retrieves the horizontal position in pixelds. */
+  virtual double GetPixelX() const = 0;
+  /** Sets the horizontal position in pixels. */
+  virtual void SetPixelX(double x) = 0;
+  /** Retrieves the vertical position in pixels. */
+  virtual double GetPixelY() const = 0;
+  /** Sets the vertical position in pixels. */
+  virtual void SetPixelY(double y) = 0;
 
-  /**
-   * Retrieves the rotation of the element, in degrees.
-   */
+  /** Retrieves the horizontal position in relative related to the parent. */
+  virtual double GetRelativeX() const = 0;
+  /** Sets the horizontal position in relative related to the parent. */
+  virtual void SetRelativeX(double x) = 0;
+  /** Retrieves the vertical position in relative related to the parent. */
+  virtual double GetRelativeY() const = 0;
+  /** Sets the vertical position in relative related to the parent.  */
+  virtual void SetRelativeY(double y) = 0;
+
+  /** Retrieves the horizontal pin in pixels. */
+  virtual double GetPixelPinX() const = 0;
+  /** Sets the horizontal pin in pixels. */
+  virtual void SetPixelPinX(double pin_x) = 0;
+  /** Retrieves the vertical pin in pixels. */
+  virtual double GetPixelPinY() const = 0;
+  /** Sets the vertical pin in pixels. */
+  virtual void SetPixelPinY(double pin_y) = 0;
+
+  /** Retrieves the horizontal pin in relative related to the child. */
+  virtual double GetRelativePinX() const = 0;
+  /** Sets the horizontal pin in relative related to the child. */
+  virtual void SetRelativePinX(double pin_x) = 0;
+  /** Retrieves the vertical pin in relative related to the child. */
+  virtual double GetRelativePinY() const = 0;
+  /** Sets the vertical pin in relative related to the child. */
+  virtual void SetRelativePinY(double pin_y) = 0;
+
+  /** Retrieves the rotation of the element, in degrees. */
   virtual double GetRotation() const = 0;
-  /**
-   * Sets the rotation of the element, in degrees.
-   */
-  virtual bool SetRotation(double rotation) = 0;
+  /** Sets the rotation of the element, in degrees. */
+  virtual void SetRotation(double rotation) = 0;
+
+  /** Retrieve whether x is relative to its parent element. */
+  virtual bool XIsRelative() const = 0;
+  /** Retrieve whether y is relative to its parent element. */
+  virtual bool YIsRelative() const = 0;
+  /** Retrieve whether width is relative to its parent element. */
+  virtual bool WidthIsRelative() const = 0;
+  /** Retrieve whether height is relative to its parent element. */
+  virtual bool HeightIsRelative() const = 0;
+  /** Retrieve whether pin x is relative to its width. */
+  virtual bool PinXIsRelative() const = 0;
+  /** Retrieve whether pin y is relative to its height. */
+  virtual bool PinYIsRelative() const = 0;
 
   /**
    * Retrieves the opacity of the element.
    * @see set_opacity.
    */
-  virtual int GetOpacity() const = 0;
+  virtual double GetOpacity() const = 0;
   /**
    * Sets the opacity of the element.
-   * @param opacity valid range: 0 ~ 255.
+   * @param opacity valid range: 0 ~ 1.
    */
-  virtual bool SetOpacity(int opacity) = 0;
+  virtual void SetOpacity(double opacity) = 0;
 
   /**
    * Retrieves whether or not the element is visible.
@@ -219,7 +236,7 @@ class ElementInterface : public ScriptableInterface {
   /**
    * Sets whether or not the element is visible.
    */
-  virtual bool SetVisible(bool visible) = 0;
+  virtual void SetVisible(bool visible) = 0;
 
   /**
    * Retrieves the parent element.
@@ -239,7 +256,7 @@ class ElementInterface : public ScriptableInterface {
   /**
    * Sets the tooltip displayed when the mouse hovers over this element.
    */
-  virtual bool SetToolTip(const char *tool_tip) = 0;
+  virtual void SetToolTip(const char *tool_tip) = 0;
 
  public:
   /**
@@ -249,7 +266,8 @@ class ElementInterface : public ScriptableInterface {
    * @return the newly created element or @c NULL if this method is not
    *     allowed.
    */
-  virtual ElementInterface *AppendElement(const char *tag_name) = 0;
+  virtual ElementInterface *AppendElement(const char *tag_name,
+                                          const char *name) = 0;
   /**
    * Insert an element immediately before the specified element.
    * This method is appropriate only for elements (such as div, listbox, and
@@ -260,7 +278,8 @@ class ElementInterface : public ScriptableInterface {
    *     allowed.
    */
   virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before) = 0;
+                                          const ElementInterface *before,
+                                          const char *name) = 0;
   /**
    * Remove the specified child from this element.
    * @param child the element to remove.

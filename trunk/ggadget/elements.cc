@@ -33,30 +33,11 @@ ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
 }
 
 ElementsImpl::~ElementsImpl() {
-  for (std::vector<ElementInterface *>::iterator ite =
-       children_.begin(); ite != children_.end(); ++ite)
-    (*ite)->Destroy();
+  RemoveAllElements();
 }
 
 int ElementsImpl::GetCount() {
   return children_.size();
-}
-
-ElementInterface *ElementsImpl::GetItem(Variant child) {
-  switch (child.type()) {
-    case Variant::TYPE_BOOL:
-      if (VariantValue<bool>()(child))
-        return NULL;
-      return GetItemByIndex(0);
-    case Variant::TYPE_DOUBLE:
-      return GetItemByIndex(static_cast<int>(VariantValue<double>()(child)));
-    case Variant::TYPE_INT64:
-      return GetItemByIndex(VariantValue<int>()(child));
-    case Variant::TYPE_STRING:
-      return GetItemByName(VariantValue<const char *>()(child));
-    default:
-      return NULL;
-  }
 }
 
 ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
@@ -93,6 +74,14 @@ bool ElementsImpl::RemoveElement(ElementInterface *element) {
   (*ite)->Destroy();
   children_.erase(ite);
   return true;
+}
+
+void ElementsImpl::RemoveAllElements() {
+  for (std::vector<ElementInterface *>::iterator ite =
+       children_.begin(); ite != children_.end(); ++ite)
+    (*ite)->Destroy();
+  std::vector<ElementInterface *> v;
+  children_.swap(v);
 }
 
 ElementInterface *ElementsImpl::GetItemByIndex(int index) {
@@ -132,14 +121,24 @@ int Elements::GetCount() const {
   return impl_->GetCount();
 }
 
-ElementInterface *Elements::GetItem(Variant child) {
+ElementInterface *Elements::GetItemByIndex(int child) {
   ASSERT(impl_);
-  return impl_->GetItem(child);
+  return impl_->GetItemByIndex(child);
 }
 
-const ElementInterface *Elements::GetItem(Variant child) const {
+ElementInterface *Elements::GetItemByName(const char *child) {
   ASSERT(impl_);
-  return impl_->GetItem(child);
+  return impl_->GetItemByName(child);
+}
+
+const ElementInterface *Elements::GetItemByIndex(int child) const {
+  ASSERT(impl_);
+  return impl_->GetItemByIndex(child);
+}
+
+const ElementInterface *Elements::GetItemByName(const char *child) const {
+  ASSERT(impl_);
+  return impl_->GetItemByName(child);
 }
 
 ElementInterface *Elements::AppendElement(const char *tag_name,
@@ -158,6 +157,11 @@ ElementInterface *Elements::InsertElement(const char *tag_name,
 bool Elements::RemoveElement(ElementInterface *element) {
   ASSERT(impl_);
   return impl_->RemoveElement(element);
+}
+
+void Elements::RemoveAllElements() {
+  ASSERT(impl_);
+  impl_->RemoveAllElements();
 }
 
 } // namespace ggadget

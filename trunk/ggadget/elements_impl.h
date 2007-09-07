@@ -18,7 +18,6 @@
 #define GGADGET_ELEMENTS_IMPL_H__
 
 #include <vector>
-#include "variant.h"
 
 namespace ggadget {
 
@@ -32,12 +31,12 @@ class ElementsImpl {
   ElementsImpl(ElementFactoryInterface *factory, ElementInterface *owner);
   ~ElementsImpl();
   int GetCount();
-  ElementInterface *GetItem(Variant child);
   ElementInterface *AppendElement(const char *tag_name, const char *name);
   ElementInterface *InsertElement(const char *tag_name,
                                   const ElementInterface *before,
                                   const char *name);
   bool RemoveElement(ElementInterface *element);
+  void RemoveAllElements();
 
   ElementInterface *GetItemByIndex(int index);
 
