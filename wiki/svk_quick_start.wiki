@@ -39,7 +39,8 @@ Type this command in your virtual terminal (command line prompt):
 svk depotmap
 }}}
 
-SVK will launch a text editor containing something like this, where `yourname` is your username:
+SVK will launch a text editor containing something like this, where
+`yourname` is your username:
 
 {{{
 ---
@@ -119,7 +120,7 @@ committing your change list.
 We highly recommend you using these tools during your development.
 
 For your convenience,
-please link these scripts to one of your `$PATH` searching directories ---
+please link these scripts to one of your `$PATH` searching directories -
 for example,
 `~/bin`.
 Then you can run these command more easily:
@@ -131,10 +132,13 @@ ln -s ggl/code/utils/svkcommit ~/bin/svkci
 
 `svkmail` can read every parameter it needed from the command line.
 But saving some of the parameters in the configuration file for
-`svkmail` can save you a lot of keystrokes. The configuration file is named `.svkmail` and must be saved at the top of your checking out directory.
+`svkmail` can save you a lot of keystrokes.
+The configuration file is named `.svkmail` and must be saved at the top
+of your checking out directory.
 `svkmail` searches for the configuration file in the current working
 directory and each of the current working directory's successively
-higher parent directories until the file is located. Therefore you don't need to
+higher parent directories until the file is located.
+Therefore you don't need to
 go to the top level of your checkout directory before running
 this script.
 You should put your `.svkmail` in both `ggl/code/` and `ggl/wiki/`.
@@ -248,9 +252,16 @@ svk commit
 }}}
 
 A text editor will be launched to ask you for the commit log.
+Be sure to note the names of the code reviewers on the commit log,
+using this format:
+
+{{{
+r=reviewer
+}}}
 
 Committing to the local working branch will not affect the remote SVN
-repository at all, so feel free to commit any changes to your local working branch.
+repository at all,
+so feel free to commit any changes to your local working branch.
 No one else will be disturbed by you.  
 
 == Code Reviewing ==
@@ -296,6 +307,7 @@ This command merges all changes in local branch to the local mirror.
 And every change to the local mirror will be applied to the SVN
 repository automatically.
 A text editor will be launched asking you for the commit log.
+Be sure to note the names of the code reviewers on the commit log.
 
 === Incrementally ===
 
