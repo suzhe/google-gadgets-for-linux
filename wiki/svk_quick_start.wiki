@@ -1,4 +1,4 @@
-﻿#summary SVK Quick Start
+#summary SVK Quick Start
 
 Every member here is highly recommended to use
 [http://svk.bestpractical.com/ SVK]
@@ -256,7 +256,13 @@ Be sure to note the names of the code reviewers on the commit log,
 using this format:
 
 {{{
-r=reviewer
+Reviewer: reviewer@somehost
+}}}
+
+Or
+
+{{{
+Reviewers: reviewer1@somehost1, reviewer2@somehost2
 }}}
 
 Committing to the local working branch will not affect the remote SVN
