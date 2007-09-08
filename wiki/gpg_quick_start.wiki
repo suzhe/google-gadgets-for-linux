@@ -1,7 +1,7 @@
-﻿#summary GnuPG Quick Start
+#summary GnuPG Quick Start
 
 In order to keep our code review safe,
-it's highly recommended to use [http://www.gnupg.org GnuPG2]
+you may use [http://www.gnupg.org GnuPG2]
 to sign your code review request.
 
 = Installation =
