@@ -87,7 +87,6 @@ ElementInterface::CursorType BasicElementImpl::GetCursor() const {
 }
 
 void BasicElementImpl::SetCursor(ElementInterface::CursorType cursor) {
-  // TODO:
   cursor_ = cursor;
 }
 
@@ -104,7 +103,6 @@ bool BasicElementImpl::IsEnabled() const {
 }
 
 void BasicElementImpl::SetEnabled(bool enabled) {
-  // TODO:
   enabled_ = enabled;
 }
 
@@ -117,7 +115,6 @@ const char *BasicElementImpl::GetMask() const {
 }
 
 void BasicElementImpl::SetMask(const char *mask) {
-  // TODO:
   if (mask)
     mask_ = mask;
   else
@@ -167,7 +164,6 @@ double BasicElementImpl::GetPixelX() const {
 }
 
 void BasicElementImpl::SetPixelX(double x) {
-  // TODO:
   x_ = x;
   double p = GetParentWidth();
   if (p > 0.0)
@@ -180,7 +176,6 @@ double BasicElementImpl::GetPixelY() const {
 }
 
 void BasicElementImpl::SetPixelY(double y) {
-  // TODO:
   y_ = y;
   double p = GetParentHeight();
   if (p > 0.0)
@@ -201,7 +196,6 @@ double BasicElementImpl::GetPixelPinX() const {
 }
 
 void BasicElementImpl::SetPixelPinX(double pin_x) {
-  // TODO:
   pin_x_ = pin_x;
   if (width_ > 0.0)
     ppin_x_ = pin_x / width_;
@@ -215,7 +209,6 @@ double BasicElementImpl::GetPixelPinY() const {
 }
 
 void BasicElementImpl::SetPixelPinY(double pin_y) {
-  // TODO:
   pin_y_ = pin_y;
   if (height_ > 0.0)
     ppin_y_ = pin_y / height_;
@@ -279,7 +272,6 @@ double BasicElementImpl::GetRotation() const {
 }
 
 void BasicElementImpl::SetRotation(double rotation) {
-  // TODO:
   rotation_ = rotation;
 }
 
@@ -290,7 +282,6 @@ double BasicElementImpl::GetOpacity() const {
 void BasicElementImpl::SetOpacity(double opacity) {
   if (opacity >= 0.0 && opacity <= 1.0) {
     opacity_ = opacity;
-    // TODO:
   }
 }
 
@@ -299,7 +290,6 @@ bool BasicElementImpl::IsVisible() const {
 }
 
 void BasicElementImpl::SetVisible(bool visible) {
-  // TODO:
   visible_ = visible;
 }
 
@@ -339,11 +329,9 @@ void BasicElementImpl::RemoveAllElements() {
 }
 
 void BasicElementImpl::Focus() {
-  // TODO:
 }
 
 void BasicElementImpl::KillFocus() {
-  // TODO:
 }
 
 double BasicElementImpl::GetParentWidth() const {
