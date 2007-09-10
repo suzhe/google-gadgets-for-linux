@@ -106,6 +106,9 @@ TEST_F(BasicElementTest, TestChildren) {
   ASSERT_TRUE(m.GetChildren()->GetItemByIndex(0) == c2);
   ASSERT_TRUE(m.GetChildren()->GetItemByIndex(1) == c1);
   ASSERT_TRUE(m.GetChildren()->GetItemByName("First") == c2);
+  m.RemoveElement(c2);
+  ASSERT_EQ(1, m.GetChildren()->GetCount());
+  ASSERT_TRUE(m.GetChildren()->GetItemByIndex(0) == c1);
   m.RemoveAllElements();
   ASSERT_EQ(0, m.GetChildren()->GetCount());
 }
@@ -181,11 +184,22 @@ TEST_F(BasicElementTest, TestMask) {
   ASSERT_STREQ("", m.GetMask());
   m.SetMask("mymask.png");
   ASSERT_STREQ("mymask.png", m.GetMask());
+  m.SetMask(NULL);
+  ASSERT_STREQ("", m.GetMask());
 }
 
 TEST_F(BasicElementTest, TestName) {
   Muffin m(NULL, NULL, "mymuffin");
   ASSERT_STREQ("mymuffin", m.GetName());
+}
+
+TEST_F(BasicElementTest, TestConst) {
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
+  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  const ggadget::ElementInterface *cc = c;
+  ASSERT_TRUE(cc->GetView() == &v);
+  ASSERT_TRUE(cc->GetParentElement() == &m);
 }
 
 TEST_F(BasicElementTest, TestOpacity) {
@@ -209,19 +223,34 @@ TEST_F(BasicElementTest, TestPixelPinX) {
   // Modifying the width of the parent will not effect the pin x.
   m.SetPixelWidth(150.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelPinX());
+  ASSERT_FALSE(m.PinXIsRelative());
 }
 
 TEST_F(BasicElementTest, TestRelativePinX) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
   m.SetPixelWidth(200.0);
   m.SetRelativePinX(0.5);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelPinX());
   // Modifying the width of the parent will effect the pin x.
   m.SetPixelWidth(400.0);
   ASSERT_FLOAT_EQ(200.0, m.GetPixelPinX());
+  ASSERT_TRUE(m.PinXIsRelative());
 }
 
 TEST_F(BasicElementTest, TestPixelPinY) {
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
+  m.SetPixelHeight(150.0);
+  m.SetPixelPinY(100.0);
+  ASSERT_FLOAT_EQ(100.0, m.GetPixelPinY());
+  // Modifying the width of the parent will not effect the pin y.
+  m.SetPixelHeight(300.0);
+  ASSERT_FLOAT_EQ(100.0, m.GetPixelPinY());
+  ASSERT_FALSE(m.PinYIsRelative());
+}
+
+TEST_F(BasicElementTest, TestRelativePinY) {
   Muffin m(NULL, NULL, NULL);
   m.SetPixelHeight(150.0);
   m.SetRelativePinY(0.5);
@@ -229,6 +258,7 @@ TEST_F(BasicElementTest, TestPixelPinY) {
   // Modifying the width of the parent will not effect the pin y.
   m.SetPixelHeight(300.0);
   ASSERT_FLOAT_EQ(150.0, m.GetPixelPinY());
+  ASSERT_TRUE(m.PinYIsRelative());
 }
 
 TEST_F(BasicElementTest, TestRotation) {
@@ -243,6 +273,8 @@ TEST_F(BasicElementTest, TestToolTip) {
   ASSERT_STREQ("", m.GetToolTip());
   m.SetToolTip("mytooltip");
   ASSERT_STREQ("mytooltip", m.GetToolTip());
+  m.SetToolTip(NULL);
+  ASSERT_STREQ("", m.GetToolTip());
 }
 
 TEST_F(BasicElementTest, TestPixelWidth) {
@@ -291,7 +323,8 @@ TEST_F(BasicElementTest, TestVisible) {
 }
 
 TEST_F(BasicElementTest, TestPixelX) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelX());
   m.SetPixelX(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelX());
@@ -317,7 +350,8 @@ TEST_F(BasicElementTest, TestRelativeX) {
 }
 
 TEST_F(BasicElementTest, TestPixelY) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelY());
   m.SetPixelY(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelY());
