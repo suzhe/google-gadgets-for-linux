@@ -59,6 +59,10 @@ class CairoCanvas : public CanvasInterface {
   virtual void TranslateCoordinates(double dx, double dy);
   virtual void ScaleCoordinates(double cx, double cy);
     
+  /** Clears the entire surface to be empty. */
+  void ClearSurface();
+  virtual bool ClearCanvas();
+  
   virtual bool DrawLine(double x0, double y0, double x1, double y1, 
                         double width, const Color &c);
   virtual bool DrawFilledRect(double x, double y, 
@@ -77,7 +81,17 @@ class CairoCanvas : public CanvasInterface {
   
   virtual bool IntersectRectClipRegion(double x, double y, 
                                        double w, double h);
-
+  
+  /**
+   * Get the surface contained within this class for use elsewhere. 
+   * Will flush the surface before returning so it is ready to be read.
+   */
+  cairo_surface_t *GetSurface() const { 
+    cairo_surface_t *s = cairo_get_target(cr_);
+    cairo_surface_flush(s);
+    return s;
+  };   
+  
   static const char *kClassType;
   
  private:
@@ -86,12 +100,6 @@ class CairoCanvas : public CanvasInterface {
    bool is_mask_;
    double opacity_;
    std::stack<double> opacity_stack_;
-   
-   cairo_surface_t *GetSurface() { 
-     cairo_surface_t *s = cairo_get_target(cr_);
-     cairo_surface_flush(s);
-     return s;
-   };   
    
    DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
 };

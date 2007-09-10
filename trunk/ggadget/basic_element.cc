@@ -340,7 +340,7 @@ double BasicElementImpl::GetParentWidth() const {
   if ((p = GetParentElement()))
     return p->GetPixelWidth();
   else if ((v = GetView()))
-    return v->GetPixelWidth();
+    return v->GetWidth();
   return 0.0;
 }
 
@@ -350,7 +350,7 @@ double BasicElementImpl::GetParentHeight() const {
   if ((p = GetParentElement()))
     return p->GetPixelHeight();
   else if ((v = GetView()))
-    return v->GetPixelHeight();
+    return v->GetHeight();
   return 0.0;
 }
 

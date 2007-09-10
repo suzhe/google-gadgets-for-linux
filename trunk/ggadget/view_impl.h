@@ -125,7 +125,7 @@ const char *const kOnUndockEvent = "onundock";
 
 class ViewImpl {
  public:
-  ViewImpl();
+  ViewImpl(int width, int height);
   ~ViewImpl();
 
   DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_);
@@ -153,9 +153,35 @@ class ViewImpl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
 
- private:
-  StaticScriptable static_scriptable_;
+  bool AttachHost(HostInterface *host);
 
+  void OnMouseDown(const MouseEvent *event);
+  void OnMouseUp(const MouseEvent *event);
+  void OnMouseClick(const MouseEvent *event);
+  void OnMouseDblClick(const MouseEvent *event);
+  void OnMouseMove(const MouseEvent *event);
+  void OnMouseOut(const MouseEvent *event);
+  void OnMouseOver(const MouseEvent *event);
+  void OnMouseWheel(const MouseEvent *event);
+
+  void OnKeyDown(const KeyboardEvent *event);
+  void OnKeyUp(const KeyboardEvent *event);  
+  void OnKeyPress(const KeyboardEvent *event);
+  
+  void OnFocusIn(const Event *event);
+  void OnFocusOut(const Event *event);
+
+  bool SetWidth(int width);
+  bool SetHeight(int height);
+  bool SetSize(int width, int height);
+     
+  const CanvasInterface *Draw(bool *changed);     
+  
+  StaticScriptable static_scriptable_;
+  int width_, height_;
+  HostInterface *host_;
+  CanvasInterface *canvas_;
+  
 };
 
 } // namespace internal
