@@ -27,13 +27,30 @@ const char *CairoCanvas::kClassType = "CairoCanvas";
 CairoCanvas::CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask) 
   : cr_(cr), width_(w), height_(h), is_mask_(is_mask), opacity_(1.) {
   cairo_reference(cr_);
-  // many CairoCanvas methods assume no existing path, so clear any 
-  // existing paths on construction
+  // Many CairoCanvas methods assume no existing path, so clear any 
+  // existing paths on construction.
   cairo_new_path(cr_); 
 }
  
 CairoCanvas::~CairoCanvas() {
   cairo_destroy(cr_); 
+}
+
+void CairoCanvas::ClearSurface() {
+  cairo_operator_t op = cairo_get_operator(cr_);
+  cairo_set_operator(cr_, CAIRO_OPERATOR_CLEAR);
+  cairo_paint(cr_);
+  cairo_set_operator(cr_, op);
+}
+
+bool CairoCanvas::ClearCanvas() {
+  ClearSurface();
+  
+  // Reset state.
+  cairo_reset_clip(cr_);
+  opacity_ = 1.;
+  opacity_stack_ = std::stack<double>();
+  return true;
 }
 
 bool CairoCanvas::PopState() {

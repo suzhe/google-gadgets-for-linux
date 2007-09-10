@@ -17,17 +17,56 @@
 #ifndef GGADGET_VIEW_H__
 #define GGADGET_VIEW_H__
 
+#include "common.h"
 #include "view_interface.h"
 
 namespace ggadget {
+
+namespace internal {
+  class ViewImpl;
+}
 
 /**
  * Main View implementation.
  */
 class View : public ViewInterface {
  public:
+  /** Creates a new view. */
+  View(int width, int height);
+  
+  virtual bool AttachHost(HostInterface *host);
+  
+  virtual void OnMouseDown(const MouseEvent *event);
+  virtual void OnMouseUp(const MouseEvent *event);
+  virtual void OnMouseClick(const MouseEvent *event);
+  virtual void OnMouseDblClick(const MouseEvent *event);
+  virtual void OnMouseMove(const MouseEvent *event);
+  virtual void OnMouseOut(const MouseEvent *event);
+  virtual void OnMouseOver(const MouseEvent *event);
+  virtual void OnMouseWheel(const MouseEvent *event);
+  
+  virtual void OnKeyDown(const KeyboardEvent *event);
+  virtual void OnKeyUp(const KeyboardEvent *event);  
+  virtual void OnKeyPress(const KeyboardEvent *event);
+  
+  virtual void OnFocusOut(const Event *event);
+  virtual void OnFocusIn(const Event *event);
+
+  virtual bool SetWidth(int width);
+  virtual bool SetHeight(int height);
+  virtual bool SetSize(int width, int height);
+
+  virtual int GetWidth() const;
+  virtual int GetHeight() const;
+   
+  virtual const CanvasInterface *Draw(bool *changed);   
+  
+  virtual ~View();
+  
  private: 
-  View(const View &view);
+   internal::ViewImpl *impl_;
+
+   DISALLOW_EVIL_CONSTRUCTORS(View);
 };
 
 } // namespace ggadget

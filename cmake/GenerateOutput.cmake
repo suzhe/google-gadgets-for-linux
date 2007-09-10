@@ -24,7 +24,7 @@ IF(WIN32)
 ELSE(WIN32)
   MACRO(OUTPUT_EXECUTABLE _target_name)
     OUTPUT_TARGET(${_target_name} bin ${_target_name}.bin)
-    COPY_FILE(${CMAKE_SOURCE_DIR}/utils/bin_wrapper.sh
+    COPY_FILE(${CMAKE_SOURCE_DIR}/cmake/bin_wrapper.sh
       ${CMAKE_BINARY_DIR}/output/bin ${_target_name})
   ENDMACRO(OUTPUT_EXECUTABLE _target_name)
   MACRO(OUTPUT_LIBRARY _target_name)

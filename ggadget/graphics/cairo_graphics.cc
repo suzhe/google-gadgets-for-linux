@@ -28,7 +28,7 @@ CairoGraphics::CairoGraphics(double zoom) : zoom_(zoom) {
 }
 
 CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
-  CanvasInterface *c = NULL;
+  CairoCanvas *c = NULL;
   cairo_t *cr = NULL;
   cairo_surface_t *surface = NULL;
   
@@ -62,11 +62,9 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
     cairo_scale(cr, width / (double)w, height / (double)h);
   }
   
-  // clear canvas
-  cairo_set_source_rgba(cr, 0., 0., 0., 0.);
-  cairo_paint(cr);
-  
+  // clear canvas  
   c = new CairoCanvas(cr, w, h, false);
+  c->ClearSurface();
   
 exit:
   if (cr) {

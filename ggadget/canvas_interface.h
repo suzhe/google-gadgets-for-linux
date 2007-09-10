@@ -110,7 +110,7 @@ class CanvasInterface {
   
   /** 
    * Saves the current graphics state in a stack, while not changing the current 
-   * state. Specifically, four aspects of the state are stored: clipping, 
+   * state. Specifically, three aspects of the state are stored: clipping, 
    * transformation matrix, and opacity. Since the states are 
    * saved in a stack, this method may be called multiple times without losing 
    * any of the previously saved states.
@@ -148,6 +148,17 @@ class CanvasInterface {
    * Scales the current user coordinates.
    */
   virtual void ScaleCoordinates(double cx, double cy) = 0;
+  
+  /**
+   * Refresh the canvas to its initial state after construction, 
+   * irrespective of the current transformation matrix.
+   * Note that this method may actually do more than clear the canvas 
+   * depending on the implementation if the initial state is not an empty
+   * canvas.
+   * The current drawing state (matrix, opacity, etc.) is reset also.
+   * @return true on success, false otherwise.
+   */
+  virtual bool ClearCanvas() = 0;
   
   /** 
    * Draw a line from point (x0, y0) to (x1, y1).

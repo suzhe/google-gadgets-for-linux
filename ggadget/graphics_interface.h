@@ -25,7 +25,14 @@ namespace ggadget {
 /** 
  * This class is the interface for creating objects used in ggadget's 
  * graphics rendering. It's implementation should come bundled with a 
- * corresponding implementation of CanvasInterface.
+ * corresponding implementation of CanvasInterface. The gadget view obtains
+ * an instance of this class from its HostInterface. Unlike the HostInterface, 
+ * the host can decide, depending on requirements,
+ * how to assign GraphicsInterface objects to Views. For example, the host may 
+ * choose to:
+ * - use a different GraphicsInterface for each view
+ * - use a different GraphicsInterface for each gadget, but share it amongst views 
+ * - use the same GraphicsInterface for all views in the process.
  */
 class GraphicsInterface {
  public:
