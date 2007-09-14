@@ -185,6 +185,7 @@ static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
   ConvertJSToNativeDouble,
   ConvertJSToNativeString,
   ConvertJSToScriptable,
+  ConvertJSToScriptable,
   NULL, // ConvertJSToSlot is special because it needs the prototype argument.
   ConvertJSToNativeVariant,
 };
@@ -274,6 +275,9 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
   ScriptableInterface *scriptable =
+      native_val.type() == Variant::TYPE_CONST_SCRIPTABLE ?
+      const_cast<ScriptableInterface *>
+        (VariantValue<const ScriptableInterface *>()(native_val)) :
       VariantValue<ScriptableInterface *>()(native_val);
   if (!scriptable) {
     *js_val = JSVAL_NULL;
@@ -306,6 +310,7 @@ static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
   ConvertNativeToJSDouble,
   ConvertNativeToJSString,
   ConvertNativeToJSObject,
+  NULL, // Don't pass const ScriptableInterface * to JavaScript. 
   ConvertNativeToJSFunction,
   // Because normally there is no real value of this type, convert it to void. 
   ConvertNativeToJSVoid,
@@ -314,6 +319,11 @@ static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
 JSBool ConvertNativeToJS(JSContext *cx,
                          const Variant &native_val,
                          jsval *js_val) {
+  if (native_val.type() == Variant::TYPE_CONST_SCRIPTABLE) {
+    JS_ReportError(cx, "Don't pass const ScriptableInterface * to JavaScript");
+    return JS_FALSE;
+  }
+
   if (native_val.type() >= Variant::TYPE_VOID &&
       native_val.type() <= Variant::TYPE_VARIANT) {
     return kConvertNativeToJSFuncs[native_val.type()](cx, native_val, js_val);

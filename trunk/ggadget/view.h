@@ -31,26 +31,33 @@ namespace internal {
  */
 class View : public ViewInterface {
  public:
+  DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
+
   /** Creates a new view. */
   View(int width, int height);
+  virtual ~View();
   
   virtual bool AttachHost(HostInterface *host);
   
-  virtual void OnMouseDown(const MouseEvent *event);
-  virtual void OnMouseUp(const MouseEvent *event);
-  virtual void OnMouseClick(const MouseEvent *event);
-  virtual void OnMouseDblClick(const MouseEvent *event);
-  virtual void OnMouseMove(const MouseEvent *event);
-  virtual void OnMouseOut(const MouseEvent *event);
-  virtual void OnMouseOver(const MouseEvent *event);
-  virtual void OnMouseWheel(const MouseEvent *event);
+  virtual void OnMouseDown(MouseEvent *event);
+  virtual void OnMouseUp(MouseEvent *event);
+  virtual void OnClick(MouseEvent *event);
+  virtual void OnDblClick(MouseEvent *event);
+  virtual void OnMouseMove(MouseEvent *event);
+  virtual void OnMouseOut(MouseEvent *event);
+  virtual void OnMouseOver(MouseEvent *event);
+  virtual void OnMouseWheel(MouseEvent *event);
   
-  virtual void OnKeyDown(const KeyboardEvent *event);
-  virtual void OnKeyUp(const KeyboardEvent *event);  
-  virtual void OnKeyPress(const KeyboardEvent *event);
+  virtual void OnKeyDown(KeyboardEvent *event);
+  virtual void OnKeyRelease(KeyboardEvent *event);  
+  virtual void OnKeyPress(KeyboardEvent *event);
   
-  virtual void OnFocusOut(const Event *event);
-  virtual void OnFocusIn(const Event *event);
+  virtual void OnFocusOut(Event *event);
+  virtual void OnFocusIn(Event *event);
+
+  virtual void OnElementAdded(ElementInterface *element);
+  virtual void OnElementRemoved(ElementInterface *element);
+  virtual void FireEvent(Event *event, const EventSignal &event_signal);
 
   virtual bool SetWidth(int width);
   virtual bool SetHeight(int height);
@@ -58,15 +65,31 @@ class View : public ViewInterface {
 
   virtual int GetWidth() const;
   virtual int GetHeight() const;
-   
-  virtual const CanvasInterface *Draw(bool *changed);   
-  
-  virtual ~View();
-  
- private: 
-   internal::ViewImpl *impl_;
 
-   DISALLOW_EVIL_CONSTRUCTORS(View);
+  virtual const CanvasInterface *Draw(bool *changed);   
+
+  virtual void SetResizable(ResizableMode resizable);
+  virtual ResizableMode GetResizable() const;
+  virtual void SetCaption(const char *caption);
+  virtual const char *GetCaption() const;
+  virtual void SetShowCaptionAlways(bool show_always);
+  virtual bool GetShowCaptionAlways() const;
+
+  virtual ElementInterface *AppendElement(const char *tag_name,
+                                          const char *name);
+  virtual ElementInterface *InsertElement(const char *tag_name,
+                                          const ElementInterface *before,
+                                          const char *name);
+  virtual bool RemoveElement(ElementInterface *child);
+
+  DEFAULT_OWNERSHIP_POLICY
+  SCRIPTABLE_INTERFACE_DECL
+  virtual bool IsStrict() const;
+
+ private: 
+  internal::ViewImpl *impl_;
+
+  DISALLOW_EVIL_CONSTRUCTORS(View);
 };
 
 } // namespace ggadget

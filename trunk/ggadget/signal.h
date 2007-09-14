@@ -117,7 +117,7 @@ class Signal {
    * Emit the signal in general format.
    * Normally C++ code should use @c operator() in the templated subclasses.
    */
-  Variant Emit(int argc, Variant argv[]);
+  Variant Emit(int argc, Variant argv[]) const;
 
   /**
    * Get metadata of the @c Signal.
@@ -164,7 +164,7 @@ class SignalSlot : public Slot {
 
   Signal *signal() const { return signal_; }
 
-  virtual Variant Call(int argc, Variant argv[]) {
+  virtual Variant Call(int argc, Variant argv[]) const {
     return signal_->Emit(argc, argv);
   }
   virtual Variant::Type GetReturnType() const {
@@ -193,7 +193,7 @@ class Signal0 : public Signal {
  public:
   Signal0() { }
   Connection *Connect(Slot0<R> *slot) { return Signal::Connect(slot); }
-  R operator()() { return VariantValue<R>()(Emit(0, NULL)); }
+  R operator()() const { return VariantValue<R>()(Emit(0, NULL)); }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
 
@@ -204,7 +204,7 @@ template <>
 class Signal0<void> : public Signal {
  public:
   Connection *Connect(Slot0<void> *slot) { return Signal::Connect(slot); }
-  void operator()() { Emit(0, NULL); }
+  void operator()() const { Emit(0, NULL); }
 };
 
 typedef Signal0<void> EventSignal;
@@ -220,7 +220,7 @@ class Signal##n : public Signal {                                             \
   Connection *Connect(Slot##n<R, _arg_type_names> *slot) {                    \
     return Signal::Connect(slot);                                             \
   }                                                                           \
-  R operator()(_args) {                                                       \
+  R operator()(_args) const {                                                 \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
     return VariantValue<R>()(Emit(n, vargs));                                 \
@@ -239,7 +239,7 @@ class Signal##n<void, _arg_type_names> : public Signal {                      \
   Connection *Connect(Slot##n<void, _arg_type_names> *slot) {                 \
     return Signal::Connect(slot);                                             \
   }                                                                           \
-  void operator()(_args) {                                                    \
+  void operator()(_args) const {                                              \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
     Emit(n, vargs);                                                           \

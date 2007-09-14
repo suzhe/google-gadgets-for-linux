@@ -18,7 +18,7 @@
 #define GGADGET_ELEMENTS_H__
 
 #include "common.h"
-#include "elements_interface.h"
+#include "scriptable_interface.h"
 
 namespace ggadget {
 
@@ -30,34 +30,45 @@ class ElementsImpl;
 
 class ElementInterface;
 class ElementFactoryInterface;
+class ViewInterface;
 
 /**
  * Elements is used for storing and managing a set of objects which
  * implement the @c ElementInterface.
  */
-class Elements : public ElementsInterface {
+class Elements : public ScriptableInterface {
  public:
-  /** Create an Elements object and assign the given factory to it. */
-  Elements(ElementFactoryInterface *factory, ElementInterface *owner);
+  DEFINE_CLASS_ID(0xe3bdb064cb794282, ScriptableInterface)
+
+  /**
+   * Create an Elements object and assign the given factory to it.
+   * @param factory the factory used to create the child elements.
+   * @param owner the parent element. Can be @c null for top level elements
+   *     owned directly by a view.
+   * @param view the containing view. 
+   */
+  Elements(ElementFactoryInterface *factory,
+           ElementInterface *owner,
+           ViewInterface *view);
 
   /** Not virtual because no inheritation to this class is allowed. */
   ~Elements();
 
  public:
   /** @see ElementsInterface::GetCount */
-  virtual int GetCount() const;
+  int GetCount() const;
 
   /** @see ElementsInterface::GetItemByIndex */
-  virtual ElementInterface *GetItemByIndex(int child);
+  ElementInterface *GetItemByIndex(int child);
 
   /** @see ElementsInterface::GetItemByIndex */
-  virtual ElementInterface *GetItemByName(const char *child);
+  ElementInterface *GetItemByName(const char *child);
 
   /** @see ElementsInterface::GetItemByIndex */
-  virtual const ElementInterface *GetItemByIndex(int child) const;
+  const ElementInterface *GetItemByIndex(int child) const;
 
   /** @see ElementsInterface::GetItemByIndex */
-  virtual const ElementInterface *GetItemByName(const char *child) const;
+  const ElementInterface *GetItemByName(const char *child) const;
 
   /**
    * Create a new Element and add it to the end of the children list.
@@ -95,6 +106,10 @@ class Elements : public ElementsInterface {
    * Remove all elements from the container.
    */
   void RemoveAllElements();
+
+  DEFAULT_OWNERSHIP_POLICY
+  SCRIPTABLE_INTERFACE_DECL
+  virtual bool IsStrict() const { return true; }
 
  private:
   internal::ElementsImpl *impl_;

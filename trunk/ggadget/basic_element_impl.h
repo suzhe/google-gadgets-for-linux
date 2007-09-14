@@ -19,12 +19,12 @@
 
 #include <string>
 #include "element_interface.h"
-#include "static_scriptable.h"
+#include "elements.h"
+#include "scriptable_helper.h"
 
 namespace ggadget {
 
 class ViewInterface;
-class ElementsInterface;
 class Elements;
 
 namespace internal {
@@ -39,7 +39,7 @@ class BasicElementImpl {
   ViewInterface *GetView() const;
   ElementInterface::HitTest GetHitTest() const;
   void SetHitTest(ElementInterface::HitTest value);
-  ElementsInterface *GetChildren();
+  Elements *GetChildren();
   ElementInterface::CursorType GetCursor() const;
   void SetCursor(ElementInterface::CursorType cursor);
   bool IsDropTarget() const;
@@ -107,7 +107,7 @@ class BasicElementImpl {
 
  public:
   ElementInterface *parent_;
-  Elements *children_;
+  Elements children_;
   ViewInterface *view_;
   ElementInterface::HitTest hittest_;
   ElementInterface::CursorType cursor_;
@@ -137,7 +137,7 @@ class BasicElementImpl {
   double height_relative_;
   double x_relative_;
   double y_relative_;
-  StaticScriptable static_scriptable_;
+  ScriptableHelper scriptable_helper_;
 };
 
 } // namespace internal

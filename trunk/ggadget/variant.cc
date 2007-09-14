@@ -43,6 +43,8 @@ bool Variant::operator==(const Variant &another) const {
     }
     case TYPE_SCRIPTABLE:
       return v_.scriptable_value_ == another.v_.scriptable_value_;
+    case TYPE_CONST_SCRIPTABLE:
+      return v_.const_scriptable_value_ == another.v_.const_scriptable_value_;
     case TYPE_SLOT: {
       Slot *slot1 = v_.slot_value_;
       Slot *slot2 = another.v_.slot_value_;
@@ -76,6 +78,9 @@ std::string Variant::ToString() const {
     case Variant::TYPE_SCRIPTABLE:
       sprintf(buffer, "SCRIPTABLE:%p", v_.scriptable_value_);
       return std::string(buffer);
+    case Variant::TYPE_CONST_SCRIPTABLE:
+      sprintf(buffer, "CONST_SCRIPTABLE:%p", v_.const_scriptable_value_);
+      return std::string(buffer);
     case Variant::TYPE_SLOT:
       sprintf(buffer, "SLOT:%p", v_.slot_value_);
       return std::string(buffer);
@@ -87,9 +92,10 @@ std::string Variant::ToString() const {
 }
 
 bool Variant::CheckScriptableType(uint64_t class_id) const {
-  ASSERT(type_ == TYPE_SCRIPTABLE);
-  if (v_.scriptable_value_ && !v_.scriptable_value_->IsInstanceOf(class_id)) {
-    LOG("The parameter is not an instance pointer of %jd", class_id);
+  ASSERT(type_ == TYPE_SCRIPTABLE || type_ == TYPE_CONST_SCRIPTABLE);
+  if (v_.const_scriptable_value_ &&
+      !v_.const_scriptable_value_->IsInstanceOf(class_id)) {
+    LOG("The parameter is not an instance pointer of 0x%jx", class_id);
     return false;
   }
   return true;

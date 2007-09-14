@@ -33,7 +33,7 @@ TEST_RESOURCE_GG(file_manager_test_data)
 
 UNIT_TEST(slot_test slots.cc)
 UNIT_TEST(signal_test slots.cc)
-UNIT_TEST(static_scriptable_test scriptables.cc)
+UNIT_TEST(scriptable_helper_test scriptables.cc)
 UNIT_TEST(elements_test)
 UNIT_TEST(element_factory_test)
 UNIT_TEST(file_manager_test)

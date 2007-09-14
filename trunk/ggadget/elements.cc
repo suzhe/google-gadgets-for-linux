@@ -18,17 +18,18 @@
 #include <algorithm>
 #include "elements.h"
 #include "elements_impl.h"
+#include "common.h"
 #include "element_interface.h"
 #include "element_factory_interface.h"
-#include "common.h"
 
 namespace ggadget {
 
 namespace internal {
 
 ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
-                           ElementInterface *owner)
-    : factory_(factory), owner_(owner) {
+                           ElementInterface *owner,
+                           ViewInterface *view)
+    : factory_(factory), owner_(owner), view_(view) {
   ASSERT(factory);
 }
 
@@ -44,7 +45,7 @@ ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
                                               const char *name) {
   ElementInterface *e = factory_->CreateElement(tag_name,
                                                 owner_,
-                                                owner_->GetView(),
+                                                view_,
                                                 name);
   if (e == NULL)
     return NULL;
@@ -56,7 +57,7 @@ ElementInterface *ElementsImpl::InsertElement(
     const char *tag_name, const ElementInterface *before, const char *name) {
   ElementInterface *e = factory_->CreateElement(tag_name,
                                                 owner_,
-                                                owner_->GetView(),
+                                                view_,
                                                 name);
   if (e == NULL)
     return NULL;
@@ -108,8 +109,9 @@ int ElementsImpl::GetIndexByName(const char *name) {
 } // namespace internal
 
 Elements::Elements(ElementFactoryInterface *factory,
-                   ElementInterface *owner)
-    : impl_(new internal::ElementsImpl(factory, owner)) {
+                   ElementInterface *owner,
+                   ViewInterface *view)
+    : impl_(new internal::ElementsImpl(factory, owner, view)) {
 }
 
 Elements::~Elements() {
@@ -163,5 +165,7 @@ void Elements::RemoveAllElements() {
   ASSERT(impl_);
   impl_->RemoveAllElements();
 }
+
+DELEGATE_SCRIPTABLE_INTERFACE_IMPL(Elements, impl_->scriptable_helper_)
 
 } // namespace ggadget

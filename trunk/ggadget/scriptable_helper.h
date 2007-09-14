@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_STATIC_SCRIPTABLE_H__
-#define GGADGET_STATIC_SCRIPTABLE_H__
+#ifndef GGADGET_SCRIPTABLE_HELPER_H__
+#define GGADGET_SCRIPTABLE_HELPER_H__
 
 #include "scriptable_interface.h"
 #include "slot.h"
@@ -26,17 +26,16 @@ namespace ggadget {
 class Signal;
 
 /**
- * A @c ScriptableInterface implementation for objects whose definitions
- * of properties and methods don't change during their lifetime.
+ * A @c ScriptableInterface implementation helper.
  */
-class StaticScriptable : public ScriptableInterface {
+class ScriptableHelper : public ScriptableInterface {
  public:
-  StaticScriptable();
-  virtual ~StaticScriptable();
+  ScriptableHelper();
+  virtual ~ScriptableHelper();
 
   /**
    * Register a scriptable property.
-   * This @c StaticScriptable @a name owns the pointers of the
+   * This @c ScriptableHelper @a name owns the pointers of the
    * @a getter and the @a setter.
    * @param name property name.  It must point to static allocated memory.
    * @param getter the getter slot of the property.
@@ -68,7 +67,7 @@ class StaticScriptable : public ScriptableInterface {
 
   /**
    * Register a scriptable method.
-   * This @c StaticScriptable owns the pointer of @c slot.
+   * This @c ScriptableHelper owns the pointer of @c slot.
    * @param name method name.  It must point to static allocated memory.
    * @param slot the method slot.
    */
@@ -112,10 +111,35 @@ class StaticScriptable : public ScriptableInterface {
    * Set a prototype object which defines common properties (including
    * methods and signals).
    * Any operations to properties not registered in current
-   * @c StaticScriptable object are delegated to the prototype.
-   * One prototype can be shared among multiple <code>StaticScriptable</code>s. 
+   * @c ScriptableHelper object are delegated to the prototype.
+   * One prototype can be shared among multiple <code>ScriptableHelper</code>s. 
    */
   void SetPrototype(ScriptableInterface *prototype);
+
+  /**
+   * Set the array handler which will handle array accesses.
+   * @param getter handles 'get' accesses.  It accepts an int parameter as the
+   *     array index and return the result of any type that can be contained
+   *     in a @c Variant.  It should return a @c Variant of type
+   *     @c Variant::TYPE_VOID if it doesn't support the property.
+   * @param setter handles 'set' accesses.  It accepts an int parameter as the
+   *     array index and a value.  If it returns a @c bool value, @c true on
+   *     success.
+   */
+  void SetArrayHandler(Slot *getter, Slot *setter);
+
+  /**
+   * Set the dynamic property handler which will handle property accesses not
+   * registered statically.
+   *
+   * @param getter handles 'get' accesses.  It accepts a property name
+   *     parameter (<code>const char *</code>) and return the result of any
+   *     type that can be contained in a @c Variant.
+   * @param setter handles 'set' accesses.  It accepts a property name
+   *     parameter (<code>const char *</code>) and a value. If it returns a
+   *     @c bool value, @c true on success.
+   */
+  void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
 
   /** @see ScriptableInterface::Attach() */
   virtual void Attach() { ASSERT(false); }
@@ -126,6 +150,8 @@ class StaticScriptable : public ScriptableInterface {
     ASSERT(false);
     return false;
   }
+  /** @see ScriptableInterface::IsStrict() */
+  virtual bool IsStrict() const { return false; }
   /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
   virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   /** @see ScriptableInterface::GetPropertyInfoByName() */
@@ -141,100 +167,16 @@ class StaticScriptable : public ScriptableInterface {
   virtual bool SetProperty(int id, Variant value);
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(StaticScriptable);
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
 
   class Impl;
   Impl *impl_;
 };
 
 /**
- * A macro used to declare default ownership policy, that is, the native side
- * always has the ownership of the scriptable object.
- */
-#define DEFAULT_OWNERSHIP_POLICY \
-virtual void Attach() { }        \
-virtual void Detach() { }
-
-/**
  * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to inline delegate most @c ScriptableInterface methods to
- * another object (normally @c StaticScriptable).
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define DELEGATE_SCRIPTABLE_INTERFACE(delegate)                               \
-virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
-    ::ggadget::Slot0<void> *slot) {                                           \
-  return (delegate).ConnectToOnDeleteSignal(slot);                            \
-}                                                                             \
-virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
-                                   ::ggadget::Variant *prototype,             \
-                                   bool *is_method) {                         \
-  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
-}                                                                             \
-virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
-                                 bool *is_method) {                           \
-  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
-}                                                                             \
-virtual ::ggadget::Variant GetProperty(int id) {                              \
-  return (delegate).GetProperty(id);                                          \
-}                                                                             \
-virtual bool SetProperty(int id, ::ggadget::Variant value) {                  \
-  return (delegate).SetProperty(id, value);                                   \
-}
-
-/**
- * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to declare @c ScriptableInterface methods.
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define SCRIPTABLE_INTERFACE_DECL                                             \
-virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
-    ::ggadget::Slot0<void> *slot);                                            \
-virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
-                                   ::ggadget::Variant *prototype,             \
-                                   bool *is_method);                          \
-virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
-                                 bool *is_method);                            \
-virtual ::ggadget::Variant GetProperty(int id);                               \
-virtual bool SetProperty(int id, ::ggadget::Variant value);
-
-/**
- * A macro used in the .cc definition of a @c ScriptableInterface
- * implementation to delegate most @c ScriptableInterface methods to
- * another object (normally @c StaticScriptable)
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define DELEGATE_SCRIPTABLE_INTERFACE_IMPL(class_name, delegate)              \
-::ggadget::Connection *class_name::ConnectToOnDeleteSignal(                   \
-    ::ggadget::Slot0<void> *slot) {                                           \
-  return (delegate).ConnectToOnDeleteSignal(slot);                            \
-}                                                                             \
-bool class_name::GetPropertyInfoByName(const char *name, int *id,             \
-                                       ::ggadget::Variant *prototype,         \
-                                       bool *is_method) {                     \
-  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
-}                                                                             \
-bool class_name::GetPropertyInfoById(int id, ::ggadget::Variant *prototype,   \
-                                     bool *is_method) {                       \
-  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
-}                                                                             \
-::ggadget::Variant class_name::GetProperty(int id) {                          \
-  return (delegate).GetProperty(id);                                          \
-}                                                                             \
-bool class_name::SetProperty(int id, ::ggadget::Variant value) {              \
-  return (delegate).SetProperty(id, value);                                   \
-}
-
-/**
- * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to delegate all @c StaticScriptable @c RegisterXXXX methods
- * to a @c StaticScriptable object.
+ * implementation to delegate all @c ScriptableHelper @c RegisterXXXX methods
+ * to a @c ScriptableHelper object.
  * 
  * Full qualified type names are used in this macro to allow the user to use
  * other namespaces.
@@ -268,8 +210,15 @@ void RegisterConstant(const char *name, T value) {                            \
 }                                                                             \
 void SetPrototype(::ggadget::ScriptableInterface *prototype) {                \
   (delegate).SetPrototype(prototype);                                         \
+}                                                                             \
+void SetArrayHandler(::ggadget::Slot *getter, ::ggadget::Slot *setter) {      \
+  (delegate).SetArrayHandler(getter, setter);                                 \
+}                                                                             \
+void SetDynamicPropertyHandler(                                               \
+    ::ggadget::Slot *getter, ::ggadget::Slot *setter) {                       \
+  (delegate).SetDynamicPropertyHandler(getter, setter);                       \
 }
 
 } // namespace ggadget
 
-#endif // GGADGET_STATIC_SCRIPTABLE_H__
+#endif // GGADGET_SCRIPTABLE_HELPER_H__

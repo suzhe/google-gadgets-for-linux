@@ -39,7 +39,8 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
       js_context_(js_context),
       js_object_(NULL),
       scriptable_(scriptable),
-      ondelete_connection_(NULL) {
+      ondelete_connection_(NULL),
+      has_named_properties_(false) {
 
   js_object_ = JS_NewObject(js_context, &wrapper_js_class_, NULL, NULL);
   if (!js_object_)
@@ -144,12 +145,33 @@ void NativeJSWrapper::OnDelete() {
 }
 
 JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
-  if (!JSVAL_IS_INT(id))
-    // Use the default logic. This may occur if the property is a method or
-    // an arbitrary JavaScript property.
-    return JS_TRUE;
+  int int_id;
+  if (JSVAL_IS_INT(id)) {
+    int_id = JSVAL_TO_INT(id);
+  } else if (JSVAL_IS_STRING(id)) {
+    if (has_named_properties_) {
+      JSString *idstr = JSVAL_TO_STRING(id);
+      if (!idstr)
+        return JS_FALSE;
+      const char *name = JS_GetStringBytes(idstr);
+      Variant prototype;
+      bool is_method;
+      if (!scriptable_->GetPropertyInfoByName(name, &int_id,
+                                              &prototype, &is_method) ||
+          is_method ||
+          int_id == ScriptableInterface::ID_CONSTANT_PROPERTY)
+        // Let JavaScript deal with it because the property has been registered.
+        return JS_TRUE;
+    } else {
+      // Let JavaScript deal with it: either method, constant or not existing
+      // property.
+      return JS_TRUE;
+    }
+  } else {
+    return JS_FALSE;
+  }
 
-  Variant return_value = scriptable_->GetProperty(JSVAL_TO_INT(id));
+  Variant return_value = scriptable_->GetProperty(int_id);
   if (return_value.type() == Variant::TYPE_VOID)
     // This property is not supported by the Scriptable, use default logic.
     return JS_TRUE;
@@ -163,20 +185,48 @@ JSBool NativeJSWrapper::GetProperty(jsval id, jsval *vp) {
 }
 
 JSBool NativeJSWrapper::SetProperty(jsval id, jsval js_val) {
-  if (!JSVAL_IS_INT(id))
-    // Use the default logic. This may occur if the property is a method or
-    // an arbitrary JavaScript property.
-    return JS_TRUE;
-
-  int int_id = JSVAL_TO_INT(id);
+  int int_id;
   Variant prototype;
-  bool is_method;
-  if (!scriptable_->GetPropertyInfoById(int_id, &prototype, &is_method)
-      || is_method)
-    // This property is not supported by the Scriptable, use default logic.
+  bool is_method = false;
+  if (JSVAL_IS_INT(id)) {
+    int_id = JSVAL_TO_INT(id);
+    if (!scriptable_->GetPropertyInfoById(int_id, &prototype, &is_method)) {
+      // This property is not supported by the Scriptable, use default logic.
+      if (scriptable_->IsStrict()) {
+        JS_ReportError(js_context_, "Unsupported property operation: %d",
+                       int_id);
+        return JS_FALSE;
+      }
+      return JS_TRUE;
+    }
     // 'is_method' should never be true here, because only actual properties
     // are registered with tiny ids.
-    return JS_TRUE;
+    ASSERT(!is_method);
+  } else if (JSVAL_IS_STRING(id)) {
+    bool can_set = has_named_properties_;
+    if (can_set) {
+      JSString *idstr = JSVAL_TO_STRING(id);
+      if (!idstr)
+        return JS_FALSE;
+      const char *name = JS_GetStringBytes(idstr);
+      if (!scriptable_->GetPropertyInfoByName(name, &int_id,
+                                              &prototype, &is_method) ||
+          int_id == ScriptableInterface::ID_CONSTANT_PROPERTY ||
+          is_method)
+        can_set = false;
+    }
+    if (!can_set) {
+      // This property is not setable by the Scriptable, use default logic.
+      if (scriptable_->IsStrict()) {
+        JS_ReportError(js_context_, "Unsupported property operation %s",
+                       ConvertJSToString(js_context_, id).c_str());
+        return JS_FALSE;
+      }
+      return JS_TRUE;
+    }
+  } else {
+    return JS_FALSE;
+  }
 
   Variant value;
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
@@ -208,6 +258,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
                                           &prototype, &is_method))
     // This property is not supported by the Scriptable, use default logic.
     return JS_TRUE;
+  ASSERT(int_id <= 0);
 
   if (is_method) {
     // Define a Javascript function.
@@ -228,9 +279,6 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
       return JS_FALSE;
   } else {
     // Define a JavaScript property.
-    // Javascript tinyid is a 8-bit integer, and should  be negative to avoid
-    // conflict with array indexes.
-    ASSERT(int_id <= 0 && int_id >= -128);
     jsval js_val;
     if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
       JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
@@ -238,14 +286,17 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
       return JS_FALSE;
     }
 
-    if (int_id == 0) {
+    if (int_id == ScriptableInterface::ID_CONSTANT_PROPERTY) {
       // This property is a constant, register a property with initial value
       // and without a tiny ID.  Then the JavaScript engine will handle it.
       if (!JS_DefineProperty(js_context_, js_object_, name,
                              js_val, NULL, NULL,
                              JSPROP_READONLY | JSPROP_PERMANENT))
         return JS_FALSE;
-    } else {
+    } else if (int_id != ScriptableInterface::ID_DYNAMIC_PROPERTY &&
+               int_id < 0 && int_id >= -128){
+      // Javascript tinyid is a 8-bit integer, and should be negative to avoid
+      // conflict with array indexes.
       // This property is a normal property.  The 'get' and 'set' operations
       // will call back to native slots.
       if (!JS_DefinePropertyWithTinyId(js_context_, js_object_, name,
@@ -253,7 +304,11 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
                                        NULL, NULL,  // Use class getter/setter.
                                        JSPROP_PERMANENT))
         return JS_FALSE;
+    } else {
+      has_named_properties_ = true;
     }
+    // Otherwise, we do nothing in ResolveProperty, because we can't take
+    // advantage of SpiderMonkey property tinyids.
   }
 
   return JS_TRUE;

@@ -81,7 +81,7 @@ class JSFunctionSlot : public Slot {
                  jsval function_val);
   virtual ~JSFunctionSlot();
 
-  virtual Variant Call(int argc, Variant argv[]);
+  virtual Variant Call(int argc, Variant argv[]) const;
 
   virtual bool HasMetadata() const { return prototype_ != NULL; }
   virtual Variant::Type GetReturnType() const {
@@ -118,7 +118,7 @@ JSFunctionSlot::~JSFunctionSlot() {
   JS_RemoveRoot(context_, &function_val_);
 }
 
-Variant JSFunctionSlot::Call(int argc, Variant argv[]) {
+Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
   scoped_array<jsval> js_args;
   Variant return_value(GetReturnType());
   if (argc > 0) {

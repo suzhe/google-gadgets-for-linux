@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_UTILITY_H__
-#define GGADGET_UTILITY_H__
+#ifndef GGADGET_MATH_UTILS_H__
+#define GGADGET_MATH_UTILS_H__
 
 #include <cmath>
 
@@ -108,4 +108,4 @@ bool IsPointInElement(double x, double y, double width, double height) {
 
 }
 
-#endif // GGADGET_UTILITY_H__
+#endif // GGADGET_MATH_UTILS_H__

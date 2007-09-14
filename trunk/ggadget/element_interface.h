@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-class ElementsInterface;
+class Elements;
 class ViewInterface;
 
 /**
@@ -99,12 +99,12 @@ class ElementInterface : public ScriptableInterface {
    * Retrieves a collection that contains the immediate children of this
    *     element.
    */
-  virtual const ElementsInterface *GetChildren() const = 0;
+  virtual const Elements *GetChildren() const = 0;
   /**
    * Retrieves a collection that contains the immediate children of this
    *     element.
    */
-  virtual ElementsInterface *GetChildren() = 0;
+  virtual Elements *GetChildren() = 0;
 
   /** Retrieves the cursor to display when the mouse is over this element. */
   virtual CursorType GetCursor() const = 0;

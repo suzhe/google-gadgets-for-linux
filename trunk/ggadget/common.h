@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 #include <stdint.h>         // Integer types and macros.
 
 namespace ggadget {
@@ -232,6 +233,16 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
  * eventually be removed, but it hasn't happened yet.
  */
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
+
+/**
+ * A comparison functor for <code>const char *</code> parameters.
+ * It's useful when using <code>const char *</code> as the key of a map.
+ */
+struct CompareString {
+  bool operator() (const char* s1, const char* s2) const {
+    return (strcmp(s1, s2) < 0);
+  }
+};
 
 } // namespace ggadget
 

@@ -19,7 +19,8 @@
 
 #include <string>
 #include "ggadget/element_interface.h"
-#include "ggadget/static_scriptable.h"
+#include "ggadget/elements.h"
+#include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
 
 class MockedElement : public ggadget::ElementInterface {
@@ -57,11 +58,11 @@ class MockedElement : public ggadget::ElementInterface {
   void SetHitTest(ElementInterface::HitTest value) {
   }
 
-  virtual const ggadget::ElementsInterface *GetChildren() const {
+  virtual const ggadget::Elements *GetChildren() const {
     return NULL;
   }
 
-  virtual ggadget::ElementsInterface *GetChildren() {
+  virtual ggadget::Elements *GetChildren() {
     return NULL;
   }
 
@@ -266,10 +267,11 @@ class MockedElement : public ggadget::ElementInterface {
   }
 
   DEFAULT_OWNERSHIP_POLICY;
-  DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_);
+  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);
+  virtual bool IsStrict() const { return true; }
 
  private:
-  ggadget::StaticScriptable static_scriptable_;
+  ggadget::ScriptableHelper scriptable_helper_;
   std::string name_;
   ggadget::ElementInterface *parent_;
   ggadget::ViewInterface *view_;

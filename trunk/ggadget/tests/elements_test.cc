@@ -96,7 +96,7 @@ class ElementsTest : public testing::Test {
   virtual void SetUp() {
     factory_ = new MockedElementFactory();
     muffin_ = new Muffin(NULL, NULL, NULL);
-    elements_ = new ggadget::Elements(factory_, muffin_);
+    elements_ = new ggadget::Elements(factory_, muffin_, NULL);
   }
 
   virtual void TearDown() {

@@ -25,10 +25,10 @@ SET(SRCS
   elements.cc
   file_manager.cc
   gadget.cc
+  math_utils.cc
+  scriptable_helper.cc
   signal.cc
-  static_scriptable.cc
   unicode_utils.cc
-  utility.cc
   variant.cc
   view.cc
   windows_locales.cc
