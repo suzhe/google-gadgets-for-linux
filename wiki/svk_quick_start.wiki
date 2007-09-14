@@ -1,4 +1,4 @@
-#summary SVK Quick Start
+﻿#summary SVK Quick Start
 
 Every member here is highly recommended to use
 [http://svk.bestpractical.com/ SVK]
@@ -375,6 +375,30 @@ svk switch /ggl/local/trunk/
 }}}
 
 = FAQ =
+
+*Q:*
+I ran `svk ci` in preparation for a code review,
+but another developer checked in his code.
+Now in order to send out a new up-to-date review,
+my change list will include the changes made by the other developer.
+How do I send out a clean code review in this case?
+
+*A:* It's possible to send out a code review request
+without merging the remote changes in order to avoid this problem.
+But the out-of-dated patch will certainly confuse your reviewers.
+So we strongly suggest that you merge before you send out a code review request,
+leaving the troubles to yourself only.
+After merging the changes,
+you must use this command to send out the code review request:
+
+{{{
+svkmail -m reviewer@host -r M:N -genpatch "svk diff /ggl/mirror/trunk/ /ggl/local/trunk/"
+}}}
+
+Note: You'll not be able to do incrementally committing in this situation.
+Therefore try to avoid this problem altogether by making your changes small,
+reducing the number of pending changes,
+and submitting more often.
 
 If you have any questions about SVK,
 please contact us via the mailing list.
