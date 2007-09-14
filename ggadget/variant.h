@@ -49,6 +49,8 @@ class Variant {
     TYPE_STRING,
     /** <code>ScriptableInterface *</code> type. */
     TYPE_SCRIPTABLE,
+    /** <code>const ScriptableInterface *</code> type. */
+    TYPE_CONST_SCRIPTABLE,
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
     /**
@@ -173,6 +175,16 @@ class Variant {
   }
 
   /**
+   * Construct a @c Variant with a <code>ScriptableInterface *</code> value.
+   * This @c Variant doesn't owns the @c Scriptable pointer.
+   * The type of the constructed @c Variant is @c TYPE_SCRIPTABLE.
+   */
+  explicit Variant(const ScriptableInterface *value)
+      : type_(TYPE_CONST_SCRIPTABLE) {
+    v_.const_scriptable_value_ = value;
+  }
+
+  /**
    * Construct a @c Variant with a @c Slot pointer value.
    * This @c Variant doesn't owns the <code>Slot *</code>.
    * The type of the constructed @c Variant is @c TYPE_SLOT.
@@ -208,6 +220,7 @@ class Variant {
     double double_value_;
     const char *charptr_value_;
     ScriptableInterface *scriptable_value_;
+    const ScriptableInterface *const_scriptable_value_;
     Slot *slot_value_;
   } v_;
 
@@ -243,12 +256,23 @@ struct VariantType {
 /**
  * Get the @c Variant::Type of a C++ type.
  * This template is for all <code>ScriptableInterface *</code> types.
- * All unspecialized types will fall into this template, and if it is not
- * <code>ScriptableInterface *</code>, compilation error may occur.
+ * All unspecialized pointer types will fall into this template, and if it is
+ * not <code>ScriptableInterface *</code>, compilation error may occur.
  */
 template <typename T>
 struct VariantType<T *> {
   static const Variant::Type type = Variant::TYPE_SCRIPTABLE;
+};
+
+/**
+ * Get the @c Variant::Type of a C++ type.
+ * This template is for all <code>const ScriptableInterface *</code> types.
+ * All unspecialized const pointer types will fall into this template, and if
+ * it is not <code>const ScriptableInterface *</code>, compilation error may occur.
+ */
+template <typename T>
+struct VariantType<const T *> {
+  static const Variant::Type type = Variant::TYPE_CONST_SCRIPTABLE;
 };
 
 /**
@@ -287,8 +311,8 @@ struct VariantValue {
 /**
  * Get the value of a @c Variant.
  * This template is for all <code>ScriptableInterface *</code> types.
- * All unspecialized types will fall into this template, and if it is not
- * <code>ScriptableInterface *</code>, compilation error may occur.
+ * All unspecialized pointer types will fall into this template, and if it is
+ * not <code>ScriptableInterface *</code>, compilation error may occur.
  */
 template <typename T>
 struct VariantValue<T *> {
@@ -296,6 +320,22 @@ struct VariantValue<T *> {
     ASSERT(v.type_ == Variant::TYPE_SCRIPTABLE);
     return v.CheckScriptableType(T::CLASS_ID) ?
            down_cast<T *>(v.v_.scriptable_value_) : NULL;
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * This template is for all <code>const ScriptableInterface *</code> types.
+ * All unspecialized const pointer types will fall into this template, and if
+ * it is not <code>ScriptableInterface *</code>, compilation error may occur.
+ */
+template <typename T>
+struct VariantValue<const T *> {
+  const T *operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_CONST_SCRIPTABLE ||
+           v.type_ == Variant::TYPE_SCRIPTABLE);
+    return v.CheckScriptableType(T::CLASS_ID) ?
+           down_cast<const T *>(v.v_.const_scriptable_value_) : NULL;
   }
 };
 

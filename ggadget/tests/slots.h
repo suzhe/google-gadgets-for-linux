@@ -56,7 +56,7 @@ inline Variant TestVariant(Variant p) {
 }
 
 struct TestVoidFunctor0 {
-  void operator()() {
+  void operator()() const {
     strcpy(result, "TestVoidFunctor0");
   }
   // This operator== is required for testing.  Slot's == will call it.
@@ -66,7 +66,7 @@ struct TestVoidFunctor0 {
 struct TestVoidFunctor9 {
   void operator()(int p1, bool p2, const char *p3, const std::string &p4,
                   std::string p5, char p6, unsigned char p7,
-                  short p8, unsigned short p9) {
+                  short p8, unsigned short p9) const {
     sprintf(result, "TestVoidFunctor9: %d %d %s %s %s %c %c %d %d",
             p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
   }
@@ -75,7 +75,7 @@ struct TestVoidFunctor9 {
 };
 
 struct TestBoolFunctor0 {
-  bool operator()() {
+  bool operator()() const {
     strcpy(result, "TestBoolFunctor0");
     return false;
   }
@@ -86,7 +86,7 @@ struct TestBoolFunctor0 {
 struct TestBoolFunctor9 {
   bool operator()(int p1, bool p2, const char *p3, const std::string &p4,
                   std::string p5, char p6, unsigned char p7,
-                  short p8, unsigned short p9) {
+                  short p8, unsigned short p9) const {
     sprintf(result, "TestBoolFunctor9: %d %d %s %s %s %c %c %d %d",
             p1, p2, p3, p4.c_str(), p5.c_str(), p6, p7, p8, p9);
     return true;

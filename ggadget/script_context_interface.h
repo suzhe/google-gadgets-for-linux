@@ -94,8 +94,8 @@ class ScriptContextInterface {
 
   /**
    * Set the property value of a JavaScript object.
-   * @param object_expression a JavaScript expression that can be evaluated
-   *     to a JavaScript object.  If it is @c NULL or blank, the object is the
+   * @param object_expression a script expression that can be evaluated
+   *     to a script object.  If it is @c NULL or blank, the object is the
    *     global object of this @c ScriptContextInterface.
    * @param property_name the name of the property to set the value.
    * @param value the value.
@@ -107,7 +107,7 @@ class ScriptContextInterface {
 
   /**
    * Set the global object of the context.
-   * @param global_object the global object of the new context.
+   * @param global_object the global object of the context.
    * return @c true if succeeds.
    */
   virtual bool SetGlobalObject(ScriptableInterface *global_object) = 0;

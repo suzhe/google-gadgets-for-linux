@@ -14,16 +14,18 @@
 
 function TestScriptableBasics(scriptable) {
   scriptable.Buffer = "TestBuffer";
-  ASSERT(EQ("TestBuffer", scriptable.Buffer));
+  ASSERT(EQ("Buffer:TestBuffer", scriptable.Buffer));
+  scriptable.Buffer = "TestAgainBuffer";
+  ASSERT(EQ("Buffer:TestAgainBuffer", scriptable.Buffer));
   scriptable.TestMethodVoid0();  // It will clear the buffer.
   ASSERT(STRICT_EQ("", scriptable.Buffer));
 
   ASSERT(STRICT_EQ(0, scriptable.DoubleProperty));
   ASSERT(EQ("GetDoubleProperty()=0.000\n", scriptable.Buffer));
-  scriptable.Buffer = "";
+  scriptable.TestMethodVoid0();
   scriptable.DoubleProperty = 3.25;
   ASSERT(EQ("SetDoubleProperty(3.250)\n", scriptable.Buffer));
-  scriptable.Buffer = "";
+  scriptable.TestMethodVoid0();
   ASSERT(STRICT_EQ(3.25, scriptable.DoubleProperty));
   ASSERT(EQ("GetDoubleProperty()=3.250\n", scriptable.Buffer));
 
@@ -45,8 +47,6 @@ function TestScriptableBasics(scriptable) {
   ASSERT(EQ("80%", scriptable.VariantProperty));
 
   ASSERT(UNDEFINED(scriptable.NotDefinedProperty));
-  scriptable.NotDefinedProperty = "TestValue";
-  ASSERT(EQ("TestValue", scriptable.NotDefinedProperty));
 }
 
 TEST("Test property & method basics", function() {
@@ -55,13 +55,13 @@ TEST("Test property & method basics", function() {
 });
 
 TEST("Test readonly property", function() {
-  // Buffer and BufferReadOnly are backed with single C++ object.
+  // Buffer and BufferReadOnly are backed with the same single C++ object.
   scriptable.Buffer = "Buffer";
   // Assignment to a readonly property has no effect.
   setVerbose(false); 
   scriptable.BufferReadOnly = "TestBuffer";
   setVerbose(true);
-  ASSERT(EQ("Buffer", scriptable.BufferReadOnly));
+  ASSERT(EQ("Buffer:Buffer", scriptable.BufferReadOnly));
 });
 
 DEATH_TEST("Test integer property with non-number", function() {
@@ -91,13 +91,23 @@ TEST("Test inheritance & prototype", function() {
   ASSERT(EQ(987654321, scriptable2.Const));
 });
 
+DEATH_TEST("Test strict", function() {
+  scriptable.NotDefinedProperty = "TestValue";
+  ASSERT(DEATH());
+});
+
+TEST("Test not strict", function() {
+  scriptable2.NotDefinedProperty = "TestValue";
+  ASSERT(EQ("TestValue", scriptable2.NotDefinedProperty));
+});
+
 TEST("Test array", function() {
   ASSERT(EQ(20, scriptable2.length));
   for (var i = 0; i < scriptable2.length; i++)
     scriptable2[i] = i * 2;
   for (i = 0; i < scriptable2.length; i++) {
-    ASSERT(STRICT_EQ(i * 2, scriptable2[i]));
-    ASSERT(STRICT_EQ(i * 2, scriptable2["" + i]));
+    ASSERT(STRICT_EQ(10000 + i * 2, scriptable2[i]));
+    ASSERT(STRICT_EQ(10000 + i * 2, scriptable2["" + i]));
   }
   ASSERT(UNDEFINED(scriptable2[scriptable2.length]));
   ASSERT(UNDEFINED(scriptable2[scriptable2.length + 1]));
@@ -163,6 +173,13 @@ TEST("Test signals", function() {
   // Test disconnect.
   scriptable2.onlunch = null;
   ASSERT(NULL(scriptable2.onlunch));
+});
+
+TEST("Test dynamic properties", function() {
+  for (var i = 0; i < 10; i++)
+    scriptable2["d" + i] = "v" + i;
+  for (i = 0; i < 10; i++)
+    ASSERT(EQ("Value:v" + i, scriptable2["d" + i]));
 });
 
 TEST("Test scriptables", function() {
@@ -235,7 +252,7 @@ TEST("Test ownership policies", function() {
   scriptable2.DeleteObject(a);
 
   a = scriptable2.NewObject(true);  // script owned
-  scriptable.Buffer = "";
+  scriptable.TestMethodVoid0();
   a = null;
   gc();
   ASSERT(EQ("Destruct\n", scriptable.Buffer));
@@ -243,12 +260,12 @@ TEST("Test ownership policies", function() {
   var b = scriptable2.NewObject(true);  // script owned
   b = scriptable2.TestMethod(b);
   b = null;
-  scriptable.Buffer = "";
+  scriptable.TestMethodVoid0();
   gc();
   ASSERT(EQ("Destruct\n", scriptable.Buffer));
 
   a = scriptable2.NewObject(true);  // script owned
-  scriptable.Buffer = "";
+  scriptable.TestMethodVoid0();
   // Pass the ownership to the native side, and at the same time, the native
   // side deletes it.
   scriptable2.DeleteObject(a);   
@@ -259,15 +276,16 @@ TEST("Test ownership policies", function() {
 
 TEST("Test UTF8 strings", function() {
   scriptable.Buffer = "\u4E2D\u56FDUnicode";
-  ASSERT(EQ(9, scriptable.Buffer.length));
+  // 16 is the length of "Buffer:中国Unicode".
+  ASSERT(EQ(16, scriptable.Buffer.length));
   // Although we support UTF8 chars in JavaScript source code, we disencourage
   // it.  We should Use unicode escape sequences or external string/ resources.
-  ASSERT(EQ("中", scriptable.Buffer[0]));
-  ASSERT(EQ("国", scriptable.Buffer[1]));
-  ASSERT(EQ("e", scriptable.Buffer[8]));
-  ASSERT(EQ("中国Unicode", scriptable.Buffer));
-  ASSERT(EQ(0x4E2D, scriptable.Buffer.charCodeAt(0)));
-  ASSERT(EQ(0x56FD, scriptable.Buffer.charCodeAt(1)));
+  ASSERT(EQ("中", scriptable.Buffer[7]));
+  ASSERT(EQ("国", scriptable.Buffer[8]));
+  ASSERT(EQ("e", scriptable.Buffer[15]));
+  ASSERT(EQ("Buffer:中国Unicode", scriptable.Buffer));
+  ASSERT(EQ(0x4E2D, scriptable.Buffer.charCodeAt(7)));
+  ASSERT(EQ(0x56FD, scriptable.Buffer.charCodeAt(8)));
 });
 
 TEST("Test string callback in UTF8", function() {

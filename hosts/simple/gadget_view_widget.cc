@@ -132,12 +132,12 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
     // for the second click.
     MouseEvent e2(Event::EVENT_MOUSE_DBLCLICK, 
                   event->x / gvw->zoom, event->y / gvw->zoom);
-    gvw->view->OnMouseDblClick(&e2);
+    gvw->view->OnDblClick(&e2);
   }
   else {
     MouseEvent e2(Event::EVENT_MOUSE_CLICK, 
                   event->x / gvw->zoom, event->y / gvw->zoom);
-    gvw->view->OnMouseClick(&e2);
+    gvw->view->OnClick(&e2);
   }
   
   gvw->dbl_click = false;
@@ -199,7 +199,7 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_RELEASE);
   KeyboardEvent e(Event::EVENT_KEY_UP);
-  gvw->view->OnKeyUp(&e);
+  gvw->view->OnKeyRelease(&e);
   
   KeyboardEvent e2(Event::EVENT_KEY_PRESS);
   gvw->view->OnKeyPress(&e2);

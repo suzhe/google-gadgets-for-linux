@@ -108,9 +108,9 @@ bool Signal::HasActiveConnections() const {
   return false;
 }
 
-Variant Signal::Emit(int argc, Variant argv[]) {
+Variant Signal::Emit(int argc, Variant argv[]) const {
   Variant result(GetReturnType());
-  for (ConnectionList::iterator it = connections_.begin();
+  for (ConnectionList::const_iterator it = connections_.begin();
        it != connections_.end(); ++it) {
     Connection *connection = *it;
     if (!connection->blocked()) {

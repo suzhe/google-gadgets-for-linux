@@ -17,65 +17,36 @@
 #ifndef GGADGET_VIEW_IMPL_H__
 #define GGADGET_VIEW_IMPL_H__
 
+#include <map>
+#include <vector>
+
+#include "common.h"
+#include "elements.h"
+#include "scriptable_helper.h"
 #include "signal.h"
-#include "static_scriptable.h"
 
 namespace ggadget {
 
 namespace internal {
 
+// TODO: the following events should be supported by view.
+#if 0
 /**
  * Fires when the user chooses the Cancel button in an options view.
  */
 const char *const kOnCancelEvent = "oncancel";
 /**
- * Fires when the left mouse button is clicked.
- */
-const char *const kOnClickEvent = "onclick";
-/**
  * Fires when the view is about to be closed.
  */
 const char *const kOnCloseEvent = "onclose";
-/**
- * Fires when the left mouse button is double-clicked.
- */
-const char *const kOnDblClickEvent = "ondblclick";
 /**
  * Fires when the gadget is moved into the Sidebar.
  */
 const char *const kOnDockEvent = "ondock";
 /**
- * Fires when a key is pressed down.
- */
-const char *const kOnKeyDownEvent = "onkeydown";
-/**
- * Fires when a key is pressed and released.
- */
-const char *const kOnKeyPressEvent = "onkeypress";
-/**
- * Fires when a key is released.
- */
-const char *const kOnKeyReleaseEvent = "onkeyrelease";
-/**
  * Fires when the gadget is minimized.
  */
 const char *const kOnMinimizeEvent = "onminimize";
-/**
- * Fires when the left mouse button is pressed down.
- */
-const char *const kOnMouseDownEvent = "onmousedown";
-/**
- * Fires when the mouse cursor leaves the view.
- */
-const char *const kOnMouseOutEvent = "onmouseout";
-/**
- * Fires when the mouse cursor enters the view.
- */
-const char *const kOnMouseOverEvent = "onmouseover";
-/**
- * Fires when the left mouse button is released.
- */
-const char *const kOnMouseUpEvent = "onmouseup";
 /**
  * Fires when the user chooses the OK button in an options view.
  */
@@ -122,13 +93,55 @@ const char *const kOnSizingEvent = "onsizing";
  * Fires when the gadget is moved out of the Sidebar.
  */
 const char *const kOnUndockEvent = "onundock";
+#endif
 
 class ViewImpl {
  public:
-  ViewImpl(int width, int height);
+  ViewImpl(int width, int height, ViewInterface *owner);
   ~ViewImpl();
 
-  DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_);
+  bool AttachHost(HostInterface *host);
+
+  void OnMouseDown(MouseEvent *event);
+  void OnMouseUp(MouseEvent *event);
+  void OnClick(MouseEvent *event);
+  void OnDblClick(MouseEvent *event);
+  void OnMouseMove(MouseEvent *event);
+  void OnMouseOut(MouseEvent *event);
+  void OnMouseOver(MouseEvent *event);
+  void OnMouseWheel(MouseEvent *event);
+
+  void OnKeyDown(KeyboardEvent *event);
+  void OnKeyRelease(KeyboardEvent *event);  
+  void OnKeyPress(KeyboardEvent *event);
+  
+  void OnFocusIn(Event *event);
+  void OnFocusOut(Event *event);
+
+  void OnElementAdded(ElementInterface *element);
+  void OnElementRemoved(ElementInterface *element);
+
+  void FireEvent(Event *event, const EventSignal &event_signal);
+  Event *GetEvent() const;
+
+  bool SetWidth(int width);
+  bool SetHeight(int height);
+  bool SetSize(int width, int height);
+  bool ResizeBy(int width, int height);
+
+  const CanvasInterface *Draw(bool *changed);
+
+  void SetResizable(ViewInterface::ResizableMode resizable);
+  void SetCaption(const char *caption);
+  void SetShowCaptionAlways(bool show_always);
+
+  ElementInterface *AppendElement(const char *tag_name, const char *name);
+  ElementInterface *InsertElement(const char *tag_name,
+                                  const ElementInterface *before,
+                                  const char *name);
+  bool RemoveElement(ElementInterface *child);
+
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
   EventSignal oncancle_event_;
   EventSignal onclick_event_;
@@ -153,35 +166,19 @@ class ViewImpl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
 
-  bool AttachHost(HostInterface *host);
+  ScriptableHelper scriptable_helper_;
+  Elements children_;
 
-  void OnMouseDown(const MouseEvent *event);
-  void OnMouseUp(const MouseEvent *event);
-  void OnMouseClick(const MouseEvent *event);
-  void OnMouseDblClick(const MouseEvent *event);
-  void OnMouseMove(const MouseEvent *event);
-  void OnMouseOut(const MouseEvent *event);
-  void OnMouseOver(const MouseEvent *event);
-  void OnMouseWheel(const MouseEvent *event);
-
-  void OnKeyDown(const KeyboardEvent *event);
-  void OnKeyUp(const KeyboardEvent *event);  
-  void OnKeyPress(const KeyboardEvent *event);
-  
-  void OnFocusIn(const Event *event);
-  void OnFocusOut(const Event *event);
-
-  bool SetWidth(int width);
-  bool SetHeight(int height);
-  bool SetSize(int width, int height);
-     
-  const CanvasInterface *Draw(bool *changed);     
-  
-  StaticScriptable static_scriptable_;
   int width_, height_;
   HostInterface *host_;
   CanvasInterface *canvas_;
-  
+  ViewInterface::ResizableMode resizable_;
+  const char *caption_;
+  bool show_caption_always_;
+
+  std::vector<Event *> event_stack_;
+  typedef std::map<const char *, ElementInterface *, CompareString> ElementsMap;
+  ElementsMap all_elements_;
 };
 
 } // namespace internal

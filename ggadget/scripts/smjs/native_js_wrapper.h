@@ -80,6 +80,7 @@ private:
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
   Connection *ondelete_connection_;
+  bool has_named_properties_;
 };
 
 } // namespace ggadget

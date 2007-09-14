@@ -16,11 +16,10 @@
 
 #include "basic_element.h"
 #include "basic_element_impl.h"
-#include "view_interface.h"
-#include "elements.h"
-#include "element_interface.h"
-#include "element_factory.h"
 #include "common.h"
+#include "element_factory.h"
+#include "element_interface.h"
+#include "view_interface.h"
 
 namespace ggadget {
 
@@ -31,7 +30,7 @@ BasicElementImpl::BasicElementImpl(ElementInterface *parent,
                                    const char *name,
                                    ElementInterface *owner)
     : parent_(parent),
-      children_(new Elements(ElementFactory::GetInstance(), owner)),
+      children_(ElementFactory::GetInstance(), owner, view),
       view_(view),
       hittest_(ElementInterface::HT_DEFAULT),
       cursor_(ElementInterface::CURSOR_ARROW),
@@ -63,7 +62,6 @@ BasicElementImpl::BasicElementImpl(ElementInterface *parent,
 }
 
 BasicElementImpl::~BasicElementImpl() {
-  delete children_;
 }
 
 ViewInterface *BasicElementImpl::GetView() const {
@@ -78,8 +76,8 @@ void BasicElementImpl::SetHitTest(ElementInterface::HitTest value) {
   hittest_ = value;
 }
 
-ElementsInterface *BasicElementImpl::GetChildren() {
-  return children_;
+Elements *BasicElementImpl::GetChildren() {
+  return &children_;
 }
 
 ElementInterface::CursorType BasicElementImpl::GetCursor() const {
@@ -310,22 +308,20 @@ void BasicElementImpl::SetToolTip(const char *tool_tip) {
 
 ElementInterface *BasicElementImpl::AppendElement(const char *tag_name,
                                                   const char *name) {
-  ASSERT(children_);
-  return children_->AppendElement(tag_name, name);
+  return children_.AppendElement(tag_name, name);
 }
 
 ElementInterface *BasicElementImpl::InsertElement(
     const char *tag_name, const ElementInterface *before, const char *name) {
-  ASSERT(children_);
-  return children_->InsertElement(tag_name, before, name);
+  return children_.InsertElement(tag_name, before, name);
 }
 
 bool BasicElementImpl::RemoveElement(ElementInterface *child) {
-  return children_->RemoveElement(child);
+  return children_.RemoveElement(child);
 }
 
 void BasicElementImpl::RemoveAllElements() {
-  return children_->RemoveAllElements();
+  return children_.RemoveAllElements();
 }
 
 void BasicElementImpl::Focus() {
@@ -357,7 +353,7 @@ double BasicElementImpl::GetParentHeight() const {
 void BasicElementImpl::WidthChanged() {
   if (pin_x_relative_)
     SetRelativePinX(GetRelativePinX());
-  ElementsInterface *children = GetChildren();
+  Elements *children = GetChildren();
   for (int i = 0; i < children->GetCount(); ++i) {
     ElementInterface *element = children->GetItemByIndex(i);
     if (element->XIsRelative())
@@ -370,7 +366,7 @@ void BasicElementImpl::WidthChanged() {
 void BasicElementImpl::HeightChanged() {
   if (pin_y_relative_)
     SetRelativePinY(GetRelativePinY());
-  ElementsInterface *children = GetChildren();
+  Elements *children = GetChildren();
   for (int i = 0; i < children->GetCount(); ++i) {
     ElementInterface *element = children->GetItemByIndex(i);
     if (element->YIsRelative())
@@ -440,12 +436,12 @@ void BasicElement::SetHitTest(HitTest value) {
   impl_->SetHitTest(value);
 }
 
-const ElementsInterface *BasicElement::GetChildren() const {
+const Elements *BasicElement::GetChildren() const {
   ASSERT(impl_);
   return impl_->GetChildren();
 }
 
-ElementsInterface *BasicElement::GetChildren() {
+Elements *BasicElement::GetChildren() {
   ASSERT(impl_);
   return impl_->GetChildren();
 }
@@ -728,6 +724,6 @@ bool BasicElement::PinYIsRelative() const {
   return impl_->PinYIsRelative();
 }
 
-DELEGATE_SCRIPTABLE_INTERFACE_IMPL(BasicElement, impl_->static_scriptable_)
+DELEGATE_SCRIPTABLE_INTERFACE_IMPL(BasicElement, impl_->scriptable_helper_)
 
 } // namespace ggadget

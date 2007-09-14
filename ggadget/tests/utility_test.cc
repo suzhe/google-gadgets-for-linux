@@ -16,7 +16,7 @@
 
 #include <cstdio>
 
-#include "ggadget/utility.h"
+#include "ggadget/math_utils.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;

@@ -24,6 +24,7 @@ namespace ggadget {
 /**
  * A @c Slot is a calling target.
  * The real targets are implemented in subclasses.
+ * The instances are immutable, becuase all methods are @c const.
  */
 class Slot {
  public:
@@ -38,7 +39,7 @@ class Slot {
    * @param argv argument array.  Can be @c NULL if <code>argc==0</code>.
    * @return the return value of the @c Slot target.
    */
-  virtual Variant Call(int argc, Variant argv[]) = 0;
+  virtual Variant Call(int argc, Variant argv[]) const = 0;
 
   /**
    * @return @c true if this @c Slot can provide metadata.
@@ -93,7 +94,7 @@ class FunctorSlot0 : public Slot0<R> {
  public:
   typedef FunctorSlot0<R, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual Variant Call(int argc, Variant argv[]) {
+  virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     return Variant(functor_());
   }
@@ -112,7 +113,7 @@ class FunctorSlot0<void, F> : public Slot0<void> {
  public:
   typedef FunctorSlot0<void, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual Variant Call(int argc, Variant argv[]) {
+  virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     functor_();
     return Variant();
@@ -132,7 +133,7 @@ class MethodSlot0 : public Slot0<R> {
  public:
   typedef MethodSlot0<R, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, Variant argv[]) {
+  virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     return Variant((object_->*method_)());
   }
@@ -153,7 +154,7 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
  public:
   typedef MethodSlot0<void, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, Variant argv[]) {
+  virtual Variant Call(int argc, Variant argv[]) const {
     ASSERT(argc == 0);
     (object_->*method_)();
     return Variant();
@@ -240,7 +241,7 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
  public:                                                                      \
   typedef FunctorSlot##n<R, _arg_type_names, F> SelfType;                     \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual Variant Call(int argc, Variant argv[]) {                            \
+  virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     return Variant(functor_(_call_args));                                     \
   }                                                                           \
@@ -257,7 +258,7 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
  public:                                                                      \
   typedef FunctorSlot##n<void, _arg_type_names, F> SelfType;                  \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual Variant Call(int argc, Variant argv[]) {                            \
+  virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     functor_(_call_args);                                                     \
     return Variant();                                                         \
@@ -274,7 +275,7 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
  public:                                                                      \
   typedef MethodSlot##n<R, _arg_type_names, T, M> SelfType;                   \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual Variant Call(int argc, Variant argv[])  {                           \
+  virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     return Variant((obj_->*method_)(_call_args));                             \
   }                                                                           \
@@ -293,7 +294,7 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
  public:                                                                      \
   typedef MethodSlot##n<void, _arg_type_names, T, M> SelfType;                \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual Variant Call(int argc, Variant argv[]) {                            \
+  virtual Variant Call(int argc, Variant argv[]) const {                      \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
     return Variant();                                                         \
@@ -431,7 +432,7 @@ template <typename T>
 class FixedGetter {
  public:
   FixedGetter(T value) : value_(value) { }
-  T operator()() { return value_; }
+  T operator()() const { return value_; }
   bool operator==(FixedGetter<T> another) const {
     return value_ == another.value_;
   }
@@ -443,7 +444,7 @@ template <typename T>
 class SimpleGetter {
  public:
   SimpleGetter(const T *value_ptr) : value_ptr_(value_ptr) { }
-  T operator()() { return *value_ptr_; }
+  T operator()() const { return *value_ptr_; }
   bool operator==(SimpleGetter<T> another) const {
     return value_ptr_ == another.value_ptr_;
   }
@@ -455,7 +456,7 @@ template <typename T>
 class SimpleSetter {
  public:
   SimpleSetter(T *value_ptr) : value_ptr_(value_ptr) { }
-  void operator()(T value) { *value_ptr_ = value; }
+  void operator()(T value) const { *value_ptr_ = value; }
   bool operator==(SimpleSetter<T> another) const {
     return value_ptr_ == another.value_ptr_;
   }

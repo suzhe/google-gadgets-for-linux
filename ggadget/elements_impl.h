@@ -18,17 +18,21 @@
 #define GGADGET_ELEMENTS_IMPL_H__
 
 #include <vector>
+#include "scriptable_helper.h"
 
 namespace ggadget {
 
 class ElementFactoryInterface;
 class ElementInterface;
+class ViewInterface;
 
 namespace internal {
 
 class ElementsImpl {
  public:
-  ElementsImpl(ElementFactoryInterface *factory, ElementInterface *owner);
+  ElementsImpl(ElementFactoryInterface *factory,
+               ElementInterface *owner,
+               ViewInterface *view);
   ~ElementsImpl();
   int GetCount();
   ElementInterface *AppendElement(const char *tag_name, const char *name);
@@ -43,8 +47,12 @@ class ElementsImpl {
   ElementInterface *GetItemByName(const char *name);
   int GetIndexByName(const char *name);
 
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
+
+  ScriptableHelper scriptable_helper_;
   ElementFactoryInterface *factory_;
   ElementInterface *owner_;
+  ViewInterface *view_;
   std::vector<ElementInterface *> children_;
 };
 

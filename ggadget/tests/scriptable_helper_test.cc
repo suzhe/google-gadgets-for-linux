@@ -46,7 +46,16 @@ static void CheckProperty(int i, ScriptableInterface *scriptable,
   ASSERT_EQ(info.prototype, prototype);
 }
 
-TEST(static_scriptable, TestPropertyInfo) {
+static void CheckFalseProperty(ScriptableInterface *scriptable,
+                               const char *name) {
+  int id;
+  Variant prototype;
+  bool is_method;
+  ASSERT_FALSE(scriptable->GetPropertyInfoByName(name, &id,
+                                                 &prototype, &is_method));
+}
+
+TEST(scriptable_helper, TestPropertyInfo) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
 
@@ -68,6 +77,7 @@ TEST(static_scriptable, TestPropertyInfo) {
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
     CheckProperty(i, scriptable, property_info[i]);
   }
+  CheckFalseProperty(scriptable, "not_exist");
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
     if (property_info[i].prototype.type() == Variant::TYPE_SLOT)
@@ -86,7 +96,7 @@ void TestOnDeleteAsEventSink() {
   AppendBuffer("TestOnDeleteAsEventSink\n");
 }
 
-TEST(static_scriptable, TestOnDelete) {
+TEST(scriptable_helper, TestOnDelete) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
   ASSERT_TRUE(scriptable->ConnectToOnDeleteSignal(NewSlot(TestOnDelete)));
@@ -96,7 +106,7 @@ TEST(static_scriptable, TestOnDelete) {
                g_buffer.c_str());
 }
 
-TEST(static_scriptable, TestPropertyAndMethod) {
+TEST(scriptable_helper, TestPropertyAndMethod) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
   // -4: the "BufferReadOnly" property.
@@ -149,7 +159,7 @@ static void CheckConstant(const char *name,
   ASSERT_EQ(value, prototype);
 }
 
-TEST(static_scriptable, TestConstants) {
+TEST(scriptable_helper, TestConstants) {
   TestScriptable1 *scriptable = new TestScriptable1();
   CheckConstant("Fixed", scriptable, Variant(123456789));
   for (int i = 0; i < 10; i++) {
@@ -162,7 +172,7 @@ TEST(static_scriptable, TestConstants) {
   delete scriptable;
 }
 
-TEST(static_scriptable, TestPropertyInfo2) {
+TEST(scriptable_helper, TestPropertyInfo2) {
   TestScriptable2 *scriptable = new TestScriptable2();
   TestScriptable1 *scriptable1 = scriptable;
   ASSERT_STREQ("", g_buffer.c_str());
@@ -222,25 +232,49 @@ TEST(static_scriptable, TestPropertyInfo2) {
   EXPECT_STREQ("Destruct\n", g_buffer.c_str());
 }
 
-TEST(static_scriptable, TestArray) {
+TEST(scriptable_helper, TestArray) {
   TestScriptable2 *scriptable = new TestScriptable2();
-  Variant prototype;
-  bool is_method;
-  for (int i = 0; i < TestScriptable2::kArraySize; i++) {
-    ASSERT_TRUE(scriptable->GetPropertyInfoById(i, &prototype, &is_method));
-    ASSERT_EQ(false, is_method);
-    ASSERT_EQ(Variant(Variant::TYPE_INT64), prototype);
+  for (int i = 0; i < TestScriptable2::kArraySize; i++)
     ASSERT_TRUE(scriptable->SetProperty(i, Variant(i * 2)));
-  }
-  for (int i = 0; i < TestScriptable2::kArraySize; i++) {
-    ASSERT_EQ(Variant(i * 2), scriptable->GetProperty(i));
-  }
+  for (int i = 0; i < TestScriptable2::kArraySize; i++)
+    ASSERT_EQ(Variant(i * 2 + 10000), scriptable->GetProperty(i));
 
   int invalid_id = TestScriptable2::kArraySize;
-  ASSERT_FALSE(scriptable->GetPropertyInfoById(invalid_id,
-                                               &prototype, &is_method));
   ASSERT_FALSE(scriptable->SetProperty(invalid_id, Variant(100)));
   ASSERT_EQ(Variant(), scriptable->GetProperty(invalid_id));
+  delete scriptable;
+}
+
+TEST(scriptable_helper, TestDynamicProperty) {
+  TestScriptable2 *scriptable = new TestScriptable2();
+  int id;
+  Variant prototype;
+  bool is_method;
+  char name[20];
+  char value[20];
+  const int num_tests = 10;
+
+  for (int i = 0; i < num_tests; i++) {
+    snprintf(name, sizeof(name), "d%d", i);
+    snprintf(value, sizeof(value), "v%dv", i * 2);
+    ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
+                                                  &prototype, &is_method));
+    ASSERT_EQ(id, ScriptableInterface::ID_DYNAMIC_PROPERTY);
+    ASSERT_FALSE(is_method);
+    ASSERT_TRUE(scriptable->SetProperty(id, Variant(value)));
+  }
+  for (int i = 0; i < num_tests; i++) {
+    snprintf(name, sizeof(name), "d%d", i);
+    snprintf(value, sizeof(value), "Value:v%dv", i * 2);
+    ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
+                                                  &prototype, &is_method));
+    ASSERT_EQ(id, ScriptableInterface::ID_DYNAMIC_PROPERTY);
+    ASSERT_FALSE(is_method);
+    ASSERT_EQ(Variant(value), scriptable->GetProperty(id));
+  }
+
+  ASSERT_FALSE(scriptable->GetPropertyInfoByName("not_supported", &id,
+                                                 &prototype, &is_method));
   delete scriptable;
 }
 

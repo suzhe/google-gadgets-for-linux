@@ -17,7 +17,7 @@
 #include "unittest/gunit.h"
 #include "ggadget/basic_element.h"
 #include "ggadget/element_factory.h"
-#include "ggadget/elements_interface.h"
+#include "ggadget/elements.h"
 #include "mocked_view.h"
 
 class Muffin : public ggadget::BasicElement {

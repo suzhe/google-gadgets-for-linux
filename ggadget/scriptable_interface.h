@@ -17,6 +17,7 @@
 #ifndef GGADGET_SCRIPTABLE_INTERFACE_H__
 #define GGADGET_SCRIPTABLE_INTERFACE_H__
 
+#include <limits.h>
 #include <stdint.h>
 #include "common.h"
 #include "variant.h"
@@ -29,7 +30,7 @@ template <typename R> class Slot0;
 /**
  * Object interface that can be called from script languages.
  * Only objects with dynamic properties or methods need to directly
- * implement this interface.  Other objects should use @c StaticScriptable.
+ * implement this interface.  Other objects should use @c ScriptableHelper.
  *
  * Any interface or abstract class inheriting @c ScriptableInterface should
  * include @c CLASS_ID_DECL and @c CLASS_ID_IMPL to define its @c CLASS_ID and
@@ -55,6 +56,18 @@ class ScriptableInterface {
   static const uint64_t CLASS_ID = 0;
 
   /**
+   * The pseudo id for dynamic properties.
+   * @see GetPropertyInfoByName()
+   */
+  static const int ID_DYNAMIC_PROPERTY = INT_MIN;
+
+  /**
+   * The pseudo id for constant properties.
+   * @see GetPropertyInfoByName()
+   */
+  static const int ID_CONSTANT_PROPERTY = 0;
+
+  /**
    * Attach this object to the script engine.
    * Normally if the object is always owned by the native side, the
    * implementation should do nothing in this method.
@@ -77,6 +90,12 @@ class ScriptableInterface {
   virtual bool IsInstanceOf(uint64_t class_id) const = 0;
 
   /**
+   * Test if this object is 'strict', that is, not allowing the script to
+   * assign to a previously undefined property.
+   */
+  virtual bool IsStrict() const = 0;
+
+  /**
    * Connect a callback @c Slot to the "ondelete" signal.
    * @param slot the callback @c Slot to be called when the @c Scriptable
    *     object is to be deleted.
@@ -97,8 +116,13 @@ class ScriptableInterface {
    * @param name the name of the property.
    * @param[out] id return the property's id which can be used in later
    *     @c GetProperty(), @c SetProperty() and @c InvokeMethod() calls.
-   *     If the returned id is @c 0, the script engine will treat the property
-   *     as a constant.  Otherwise, the value must be a @b negative number.
+   *     If the returned id is @c ID_CONSTANT_PROPERTY, the script engine
+   *     will treat the property as a constant and the value is returned 
+   *     in @a prototype.
+   *     If the returned id is @c ID_DYNAMIC_PROPERTY, the script engine
+   *     should not register the property any way, and should call
+   *     @c GetProperty or @c SetProperty immediately.
+   *     Otherwise, the value must be a @b negative number.
    * @param[out] prototype return a prototype of the property value, from
    *     which the script engine can get detailed information.
    * @param[out] is_method @c true if this property corresponds a method.
@@ -173,6 +197,91 @@ class ScriptableInterface {
 
 inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
   return class_id == CLASS_ID;
+}
+
+
+/**
+ * A macro used to declare default ownership policy, that is, the native side
+ * always has the ownership of the scriptable object.
+ */
+#define DEFAULT_OWNERSHIP_POLICY \
+virtual void Attach() { }        \
+virtual void Detach() { }
+
+/**
+ * A macro used in the declaration section of a @c ScriptableInterface
+ * implementation to inline delegate most @c ScriptableInterface methods to
+ * another object (normally @c ScriptableHelper).
+ * 
+ * Full qualified type names are used in this macro to allow the user to use
+ * other namespaces.
+ */
+#define DELEGATE_SCRIPTABLE_INTERFACE(delegate)                               \
+virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
+    ::ggadget::Slot0<void> *slot) {                                           \
+  return (delegate).ConnectToOnDeleteSignal(slot);                            \
+}                                                                             \
+virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
+                                   ::ggadget::Variant *prototype,             \
+                                   bool *is_method) {                         \
+  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
+}                                                                             \
+virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
+                                 bool *is_method) {                           \
+  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
+}                                                                             \
+virtual ::ggadget::Variant GetProperty(int id) {                              \
+  return (delegate).GetProperty(id);                                          \
+}                                                                             \
+virtual bool SetProperty(int id, ::ggadget::Variant value) {                  \
+  return (delegate).SetProperty(id, value);                                   \
+}
+
+/**
+ * A macro used in the declaration section of a @c ScriptableInterface
+ * implementation to declare @c ScriptableInterface methods.
+ * 
+ * Full qualified type names are used in this macro to allow the user to use
+ * other namespaces.
+ */
+#define SCRIPTABLE_INTERFACE_DECL                                             \
+virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
+    ::ggadget::Slot0<void> *slot);                                            \
+virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
+                                   ::ggadget::Variant *prototype,             \
+                                   bool *is_method);                          \
+virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
+                                 bool *is_method);                            \
+virtual ::ggadget::Variant GetProperty(int id);                               \
+virtual bool SetProperty(int id, ::ggadget::Variant value);
+
+/**
+ * A macro used in the .cc definition of a @c ScriptableInterface
+ * implementation to delegate most @c ScriptableInterface methods to
+ * another object (normally @c ScriptableHelper)
+ * 
+ * Full qualified type names are used in this macro to allow the user to use
+ * other namespaces.
+ */
+#define DELEGATE_SCRIPTABLE_INTERFACE_IMPL(class_name, delegate)              \
+::ggadget::Connection *class_name::ConnectToOnDeleteSignal(                   \
+    ::ggadget::Slot0<void> *slot) {                                           \
+  return (delegate).ConnectToOnDeleteSignal(slot);                            \
+}                                                                             \
+bool class_name::GetPropertyInfoByName(const char *name, int *id,             \
+                                       ::ggadget::Variant *prototype,         \
+                                       bool *is_method) {                     \
+  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
+}                                                                             \
+bool class_name::GetPropertyInfoById(int id, ::ggadget::Variant *prototype,   \
+                                     bool *is_method) {                       \
+  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
+}                                                                             \
+::ggadget::Variant class_name::GetProperty(int id) {                          \
+  return (delegate).GetProperty(id);                                          \
+}                                                                             \
+bool class_name::SetProperty(int id, ::ggadget::Variant value) {              \
+  return (delegate).SetProperty(id, value);                                   \
 }
 
 } // namespace ggadget

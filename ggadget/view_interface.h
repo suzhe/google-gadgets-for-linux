@@ -17,11 +17,14 @@
 #ifndef GGADGET_VIEW_INTERFACE_H__
 #define GGADGET_VIEW_INTERFACE_H__
 
-#include "host_interface.h"
+#include "scriptable_interface.h"
+#include "signal.h"
 
 namespace ggadget {
 
 class CanvasInterface;
+class ElementInterface;
+class HostInterface;
 class KeyboardEvent;
 class MouseEvent;
 class Event;
@@ -29,8 +32,20 @@ class Event;
 /**
  * Interface for representing a View in the Gadget API.
  */
-class ViewInterface {
+class ViewInterface : public ScriptableInterface {
  public:
+  CLASS_ID_DECL(0xeb376007cbe64f9f);
+
+  virtual ~ViewInterface() { }
+
+  /** Used in @c SetResizable() and @c GetResizable(). */
+  enum ResizableMode {
+    RESIZABLE_FALSE,
+    RESIZABLE_TRUE,
+    /** The user can resize the view while keeping the original aspect ratio. */
+    RESIZABLE_ZOOM,
+  };
+
   /** 
    * Attach a view to a host displaying it. A view may only be associated with
    * one host at a time.
@@ -41,33 +56,41 @@ class ViewInterface {
   virtual bool AttachHost(HostInterface *host) = 0;
     
   /** Handler of the mouse button down event. */
-  virtual void OnMouseDown(const MouseEvent *event) = 0;
+  virtual void OnMouseDown(MouseEvent *event) = 0;
   /** Handler of the mouse button up event. */
-  virtual void OnMouseUp(const MouseEvent *event) = 0;
+  virtual void OnMouseUp(MouseEvent *event) = 0;
   /** Handler of the mouse button click event. */
-  virtual void OnMouseClick(const MouseEvent *event) = 0;
+  virtual void OnClick(MouseEvent *event) = 0;
   /** Handler of the mouse button double click event. */
-  virtual void OnMouseDblClick(const MouseEvent *event) = 0;
+  virtual void OnDblClick(MouseEvent *event) = 0;
   /** Handler of the mouse move event. */
-  virtual void OnMouseMove(const MouseEvent *event) = 0;
+  virtual void OnMouseMove(MouseEvent *event) = 0;
   /** Handler of the mouse out event. */
-  virtual void OnMouseOut(const MouseEvent *event) = 0;
+  virtual void OnMouseOut(MouseEvent *event) = 0;
   /** Handler of the mouse over event. */
-  virtual void OnMouseOver(const MouseEvent *event) = 0;
+  virtual void OnMouseOver(MouseEvent *event) = 0;
   /** Handler of the mouse wheel event. */
-  virtual void OnMouseWheel(const MouseEvent *event) = 0;
+  virtual void OnMouseWheel(MouseEvent *event) = 0;
 
   /** Handler of the keyboard key down event. */
-  virtual void OnKeyDown(const KeyboardEvent *event) = 0;
+  virtual void OnKeyDown(KeyboardEvent *event) = 0;
   /** Handler of the keyboard key up event. */
-  virtual void OnKeyUp(const KeyboardEvent *event) = 0;  
+  virtual void OnKeyRelease(KeyboardEvent *event) = 0;  
   /** Handler of the keyboard key press event. */
-  virtual void OnKeyPress(const KeyboardEvent *event) = 0;
+  virtual void OnKeyPress(KeyboardEvent *event) = 0;
   
   /** Indicate that the view is now receiving keyboard events. */
-  virtual void OnFocusIn(const Event *event) = 0;
+  virtual void OnFocusIn(Event *event) = 0;
   /** Indicate that focus has lost. */
-  virtual void OnFocusOut(const Event *event) = 0;
+  virtual void OnFocusOut(Event *event) = 0;
+
+  /** Called when any element is added into the view hierarchy. */
+  virtual void OnElementAdded(ElementInterface *element) = 0;
+  /** Called when any element in the view hierarchy is removed. */
+  virtual void OnElementRemoved(ElementInterface *element) = 0;
+
+  /** Any elements should call this method when it need to fire an event. */ 
+  virtual void FireEvent(Event *event, const EventSignal &event_signal) = 0;
 
   /** 
    * Set the width of the view.
@@ -90,7 +113,7 @@ class ViewInterface {
   virtual int GetWidth() const = 0;
   /** Retrieves the height of view in pixels. */
   virtual int GetHeight() const = 0;
-  
+
   /**
    * Draws the current view to a canvas. The caller does NOT own this canvas
    * and should not free it.
@@ -98,10 +121,59 @@ class ViewInterface {
    *   of the last call, false otherwise.
    * @return A canvas suitable for drawing.
    */
-  virtual const CanvasInterface *Draw(bool *changed) = 0; 
-    
-  virtual ~ViewInterface() {}
+  virtual const CanvasInterface *Draw(bool *changed) = 0;
+
+  /**
+   * Indicates what happens when the user attempts to resize the gadget using
+   * the window border.
+   * @see ResizableMode
+   */
+  virtual void SetResizable(ResizableMode resizable) = 0;
+  virtual ResizableMode GetResizable() const = 0;
+
+  /**
+   * Caption is the title of the view, by default shown when a gadget is in
+   * floating/expanded mode but not shown when the gadget is in the Sidebar.
+   * @see SetShowCaptionAlways()
+   */
+  virtual void SetCaption(const char *caption) = 0;
+  virtual const char *GetCaption() const = 0;
+
+  /**
+   * When @c true, the Sidebar always shows the caption for this view.
+   * By default this value is @c false.
+   */
+  virtual void SetShowCaptionAlways(bool show_always) = 0;
+  virtual bool GetShowCaptionAlways() const = 0;
+
+ public:
+  /**
+   * Appends an element as the last child of this view.
+   * @return the newly created element or @c NULL if this method is not
+   *     allowed.
+   */
+  virtual ElementInterface *AppendElement(const char *tag_name,
+                                          const char *name) = 0;
+  /**
+   * Insert an element immediately before the specified element.
+   * If the specified element is not the direct child of this view, the
+   * newly created element will be append as the last child of this view.
+   * @return the newly created element or @c NULL if this method is not
+   *     allowed.
+   */
+  virtual ElementInterface *InsertElement(const char *tag_name,
+                                          const ElementInterface *before,
+                                          const char *name) = 0;
+  /**
+   * Remove the specified child from this view.
+   * @param child the element to remove.
+   * @return @c true if removed successfully, or @c false if the specified
+   *     element doesn't exists or not the direct child of this view.
+   */
+  virtual bool RemoveElement(ElementInterface *child) = 0;
 };
+
+CLASS_ID_IMPL(ViewInterface, ScriptableInterface)
 
 } // namespace ggadget
 

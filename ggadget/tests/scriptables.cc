@@ -78,11 +78,11 @@ TestScriptable1::TestScriptable1()
 TestScriptable1::~TestScriptable1() {
   my_ondelete_signal_();
   AppendBuffer("Destruct\n");
-  // Then StaticScriptable::~StaticScriptable will be called, and in turn
+  // Then ScriptableHelper::~ScriptableHelper will be called, and in turn
   // the "official" ondelete signal will be emitted.
 }
 
-DELEGATE_SCRIPTABLE_INTERFACE_IMPL(TestPrototype, static_scriptable_)
+DELEGATE_SCRIPTABLE_INTERFACE_IMPL(TestPrototype, scriptable_helper_)
 
 TestPrototype *TestPrototype::instance_ = NULL;
 
@@ -110,4 +110,9 @@ TestScriptable2::TestScriptable2(bool script_owned)
   RegisterMethod("NewObject", NewSlot(this, &TestScriptable2::NewObject));
   RegisterMethod("DeleteObject", NewSlot(this, &TestScriptable2::DeleteObject));
   SetPrototype(TestPrototype::GetInstance());
+  SetArrayHandler(NewSlot(this, &TestScriptable2::GetArray),
+                  NewSlot(this, &TestScriptable2::SetArray));
+  SetDynamicPropertyHandler(
+      NewSlot(this, &TestScriptable2::GetDynamicProperty),
+      NewSlot(this, &TestScriptable2::SetDynamicProperty));
 }

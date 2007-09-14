@@ -18,7 +18,6 @@
 #define GGADGETS_BASIC_ELEMENT_H__
 
 #include "element_interface.h"
-#include "static_scriptable.h"
 
 namespace ggadget {
 
@@ -29,7 +28,7 @@ class BasicElementImpl;
 }
 
 class ViewInterface;
-class ElementsInterface;
+class Elements;
 
 class BasicElement : public ElementInterface {
  public:
@@ -47,8 +46,8 @@ class BasicElement : public ElementInterface {
   virtual const ViewInterface *GetView() const;
   virtual HitTest GetHitTest() const;
   virtual void SetHitTest(HitTest value);
-  virtual const ElementsInterface *GetChildren() const;
-  virtual ElementsInterface *GetChildren();
+  virtual const Elements *GetChildren() const;
+  virtual Elements *GetChildren();
   virtual CursorType GetCursor() const;
   virtual void SetCursor(CursorType cursor);
   virtual bool IsDropTarget() const;
@@ -109,6 +108,7 @@ class BasicElement : public ElementInterface {
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
 
+  virtual bool IsStrict() const { return true; }
   SCRIPTABLE_INTERFACE_DECL
   DEFAULT_OWNERSHIP_POLICY
 

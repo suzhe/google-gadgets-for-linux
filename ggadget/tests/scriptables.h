@@ -19,12 +19,14 @@
 
 // This file is to be included by unittest files
 
+#include <string>
+#include <map>
 #include <stdarg.h>
 #include <stdio.h>
 #include "ggadget/scriptable_interface.h"
+#include "ggadget/scriptable_helper.h"
 #include "ggadget/signal.h"
 #include "ggadget/slot.h"
-#include "ggadget/static_scriptable.h"
 
 using namespace ggadget;
 
@@ -42,8 +44,9 @@ class TestScriptable1 : public ScriptableInterface {
   virtual ~TestScriptable1();
 
   DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
-  DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_)
+  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
+  virtual bool IsStrict() const { return true; }
 
   void TestMethodVoid0() {
     g_buffer.clear();
@@ -65,7 +68,7 @@ class TestScriptable1 : public ScriptableInterface {
     return g_buffer;
   }
   void SetBuffer(const std::string& buffer) {
-    g_buffer = buffer;
+    g_buffer = "Buffer:" + buffer;
   }
 
   // This signal is only for test, no relation to ConnectToOndeleteSignal.
@@ -73,9 +76,9 @@ class TestScriptable1 : public ScriptableInterface {
   Signal0<void> my_ondelete_signal_;
 
   enum EnumType { VALUE_0, VALUE_1, VALUE_2 };
-  
+
  private:
-  StaticScriptable static_scriptable_;
+  ScriptableHelper scriptable_helper_;
 
   double double_property_;
   EnumType enum_property_;
@@ -94,21 +97,23 @@ class TestPrototype : public ScriptableInterface {
 
   DEFAULT_OWNERSHIP_POLICY
   SCRIPTABLE_INTERFACE_DECL
-  //DELEGATE_SCRIPTABLE_INTERFACE(static_scriptable_)
-  DELEGATE_SCRIPTABLE_REGISTER(static_scriptable_)
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
+  virtual bool IsStrict() const { return true; }
 
   // Place this signal declaration here for testing.
   // In production code, it should be palced in private section. 
   Signal0<void> ontest_signal_;
 
-  ScriptableInterface *Method(ScriptableInterface *s) { return s; }
+  ScriptableInterface *Method(const ScriptableInterface *s) { 
+    return const_cast<ScriptableInterface *>(s);
+  }
   TestPrototype *GetSelf() { return this; }
 
  private:
   TestPrototype();
 
   static TestPrototype *instance_;
-  StaticScriptable static_scriptable_;
+  ScriptableHelper scriptable_helper_;
 };
 
 // A scriptable class with some dynamic properties, supporting array indexes,
@@ -119,32 +124,38 @@ class TestScriptable2 : public TestScriptable1 {
   TestScriptable2(bool script_owned_ = false);
 
   virtual void Detach() { if (script_owned_) delete this; }
-
-  // A scriptable providing array indexed access should override the following
-  // methods.
-  virtual bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method) {
-    if (id >= 0 && id < kArraySize) {
-      *prototype = Variant(Variant::TYPE_INT64);
-      *is_method = false;
-      return true;
-    }
-    return TestScriptable1::GetPropertyInfoById(id, prototype, is_method);
-  }
+  virtual bool IsStrict() const { return false; }
 
   static const int kArraySize = 20;
-  virtual Variant GetProperty(int id) {
-    if (id >= 0 && id < kArraySize)
-      return Variant(array_[id]);
-    return TestScriptable1::GetProperty(id);
+
+  Variant GetArray(int index) {
+    if (index >= 0 && index < kArraySize)
+      return Variant(array_[index]);
+    return Variant();  // void
   }
 
-  virtual bool SetProperty(int id, Variant value) {
-    if (id >= 0 && id < kArraySize) {
-      array_[id] = VariantValue<int>()(value);
+  bool SetArray(int index, int value) {
+    if (index >= 0 && index < kArraySize) {
+      // Distinguish from JavaScript builtin logic.
+      array_[index] = value + 10000;
       return true;
     }
-    return TestScriptable1::SetProperty(id, value);
+    return false;
+  }
+
+  Variant GetDynamicProperty(const char *name) {
+    if (name[0] == 'd')
+      return Variant(dynamic_properties_[name]);
+    return Variant();
+  }
+
+  bool SetDynamicProperty(const char *name, const char *value) {
+    if (name[0] == 'd') {
+      // Distinguish from JavaScript builtin logic.
+      dynamic_properties_[name] = std::string("Value:") + value;
+      return true;
+    }
+    return false;
   }
 
   void SetTime(const std::string &time) {
@@ -156,7 +167,9 @@ class TestScriptable2 : public TestScriptable1 {
   }
 
   TestScriptable2 *GetSelf() { return this; }
-  TestScriptable2 *TestMethod(TestScriptable2 *t) { return t; }
+  TestScriptable2 *TestMethod(const TestScriptable2 *t) {
+    return const_cast<TestScriptable2 *>(t);
+  }
   TestScriptable2 *NewObject(bool script_owned) {
     return new TestScriptable2(script_owned);
   }
@@ -172,6 +185,7 @@ class TestScriptable2 : public TestScriptable1 {
   int array_[kArraySize];
   std::string time_;
   std::string signal_result_;
+  std::map<std::string, std::string> dynamic_properties_;
 };
 
 #endif // GGADGET_TESTS_SCRIPTABLES_H__
