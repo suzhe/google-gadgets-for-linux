@@ -24,6 +24,10 @@ Options:
 
     -sign command       The command for signing the mail.
 
+    -genpatch command   The command for generating patch for reviewing. The
+                        default genpatch command is:
+                        "svk diff %depot% -r %oldrev%:%newrev%"
+
     --help, -h          Show this message.
 EOF
 }
@@ -88,6 +92,9 @@ do
     -sign )
       state=8
       ;;
+    -genpatch )
+      state=9
+      ;;
     -usewebsvn )
       usewebsvn="yes"
       ;;
@@ -138,6 +145,10 @@ do
     ;;
   8 )
     sign="$i"
+    state=0
+    ;;
+  9 )
+    genpatch="$i"
     state=0
     ;;
   esac
@@ -197,9 +208,13 @@ if [ "$from" = "" ]; then
   from=$USER
 fi
 
+if [ "$genpatch" = "" ]; then
+  genpatch="svk diff %depot% -r %oldrev%:%newrev%"
+fi
+
 url=`echo $urltempl | \
-  sed -e "s/%hostname%/$(hostname)/g" \
-  -e "s/%user%/$USER/g"`
+    sed -e "s/%hostname%/$(hostname)/g" \
+    -e "s/%user%/$USER/g"`
 
 if [ "$VISUAL" != "" ]; then
   editor="$VISUAL"
@@ -209,7 +224,11 @@ else
   editor=vi
 fi
 
-delta=$(svk diff $depot -r `expr $oldrev - 1`:$rev | \
+patchcmd=`echo $genpatch | \
+    sed -e "s/%depot%/$depot/g" \
+    -e "s/%oldrev%/$(expr $oldrev - 1)/g" \
+    -e "s/%newrev%/$rev/g"`
+delta=$($patchcmd | \
     grep '\(^-\|^+\)[^-+]' | \
     wc -l)
 
@@ -278,7 +297,7 @@ fi
 
 svk log $depot -r $oldrev:$rev >> "$tempfile"
 echo >> "$tempfile"
-svk diff $depot -r `expr $oldrev - 1`:$rev >> "$tempfile"
+$patchcmd >> "$tempfile"
 
 cat<<EOF >> "$tempfile"
 
