@@ -225,7 +225,7 @@ else
 fi
 
 patchcmd=`echo $genpatch | \
-    sed -e "s/%depot%/$depot/g" \
+    sed -e "s#%depot%#$depot#g" \
     -e "s/%oldrev%/$(expr $oldrev - 1)/g" \
     -e "s/%newrev%/$rev/g"`
 delta=$($patchcmd | \
