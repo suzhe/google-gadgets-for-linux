@@ -23,6 +23,7 @@
 #include "ggadget/element_factory_interface.h"
 #include "ggadget/slot.h"
 #include "mocked_element.h"
+#include "mocked_view.h"
 
 // The total count of elements_.
 int count = 0;
@@ -94,18 +95,21 @@ class MockedElementFactory : public ggadget::ElementFactoryInterface {
 class ElementsTest : public testing::Test {
  protected:
   virtual void SetUp() {
+    view_ = new MockedView();
     factory_ = new MockedElementFactory();
-    muffin_ = new Muffin(NULL, NULL, NULL);
-    elements_ = new ggadget::Elements(factory_, muffin_, NULL);
+    muffin_ = new Muffin(NULL, view_, NULL);
+    elements_ = new ggadget::Elements(factory_, muffin_, view_);
   }
 
   virtual void TearDown() {
     delete elements_;
     muffin_->Destroy();
     delete factory_;
+    delete view_;
     ASSERT_EQ(0, count);
   }
 
+  MockedView *view_;
   MockedElementFactory *factory_;
   ggadget::Elements *elements_;
   Muffin *muffin_;

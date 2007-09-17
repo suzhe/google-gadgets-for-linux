@@ -185,11 +185,11 @@ class MockedElement : public ggadget::ElementInterface {
     return parent_;
   }
 
-  virtual const char *GetToolTip() const {
+  virtual const char *GetTooltip() const {
     return "";
   }
 
-  virtual void SetToolTip(const char *tool_tip) {
+  virtual void SetTooltip(const char *tool_tip) {
   }
 
   virtual ElementInterface *AppendElement(const char *tag_name,

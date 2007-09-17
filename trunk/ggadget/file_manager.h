@@ -44,9 +44,12 @@ class FileManager : public FileManagerInterface {
   virtual bool Init(const char *base_path);
   /** @see FileManagerInterface::GetFileContents() */
   virtual bool GetFileContents(const char *file,
-                               std::string *data);
-  /** @see FileManagerInterface::ParseXMLFile() */
-  virtual TiXmlDocument *ParseXMLFile(const char *file);
+                               std::string *data,
+                               std::string *path);
+  /** @see FileManagerInterface::GetXMLFileContents() */
+  virtual bool GetXMLFileContents(const char *file,
+                                  std::string *data,
+                                  std::string *path);
 
  private:
   internal::FileManagerImpl *impl_;

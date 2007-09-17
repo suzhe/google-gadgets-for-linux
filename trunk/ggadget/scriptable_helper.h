@@ -66,6 +66,21 @@ class ScriptableHelper : public ScriptableInterface {
   }
 
   /**
+   * Register a simple scriptable property that maps to a variable.
+   * @param name property name.  It must point to static allocated memory.
+   * @param valuep point to a value.
+   */
+  template <typename T>
+  void RegisterStringEnumProperty(const char *name,
+                                  Slot0<T> *getter, Slot1<void, T> *setter,
+                                  const char **names, int count) {
+    RegisterProperty(name,
+                     NewStringEnumGetterSlot<T>(getter, names, count),
+                     setter ? 
+                     NewStringEnumSetterSlot<T>(setter, names, count) : NULL);
+  }
+
+  /**
    * Register a scriptable method.
    * This @c ScriptableHelper owns the pointer of @c slot.
    * @param name method name.  It must point to static allocated memory.
@@ -193,6 +208,12 @@ void RegisterSimpleProperty(const char *name, T *valuep) {                    \
 template <typename T>                                                         \
 void RegisterReadonlySimpleProperty(const char *name, const T *valuep) {      \
   (delegate).RegisterReadonlySimpleProperty<T>(name, valuep);                 \
+}                                                                             \
+template <typename T>                                                         \
+void RegisterStringEnumProperty(const char *name,                             \
+                                Slot0<T> *getter, Slot1<void, T> *setter,     \
+                                const char **names, int count) {              \
+  (delegate).RegisterStringEnumProperty<T>(name, getter, setter, names, count);\
 }                                                                             \
 void RegisterMethod(const char *name, ::ggadget::Slot *slot) {                \
   (delegate).RegisterMethod(name, slot);                                      \

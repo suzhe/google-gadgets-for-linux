@@ -340,7 +340,7 @@ Slot *JSScriptContext::Compile(const char *script,
 
 bool JSScriptContext::SetValue(const char *object_expression,
                                const char *property_name,
-                               Variant value) {
+                               const Variant &value) {
   JSObject *object;
   if (!object_expression) {
     object = JS_GetGlobalObject(context_);

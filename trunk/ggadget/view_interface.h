@@ -28,6 +28,7 @@ class HostInterface;
 class KeyboardEvent;
 class MouseEvent;
 class Event;
+class Elements;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -75,7 +76,7 @@ class ViewInterface : public ScriptableInterface {
   /** Handler of the keyboard key down event. */
   virtual void OnKeyDown(KeyboardEvent *event) = 0;
   /** Handler of the keyboard key up event. */
-  virtual void OnKeyRelease(KeyboardEvent *event) = 0;  
+  virtual void OnKeyUp(KeyboardEvent *event) = 0;  
   /** Handler of the keyboard key press event. */
   virtual void OnKeyPress(KeyboardEvent *event) = 0;
   
@@ -148,6 +149,17 @@ class ViewInterface : public ScriptableInterface {
 
  public:
   /**
+   * Retrieves a collection that contains the immediate children of this
+   * view.
+   */
+  virtual const Elements *GetChildren() const = 0;
+  /**
+   * Retrieves a collection that contains the immediate children of this
+   * view.
+   */
+  virtual Elements *GetChildren() = 0;
+  
+  /**
    * Appends an element as the last child of this view.
    * @return the newly created element or @c NULL if this method is not
    *     allowed.
@@ -165,12 +177,25 @@ class ViewInterface : public ScriptableInterface {
                                           const ElementInterface *before,
                                           const char *name) = 0;
   /**
-   * Remove the specified child from this view.
+   * Removes the specified child from this view.
    * @param child the element to remove.
    * @return @c true if removed successfully, or @c false if the specified
    *     element doesn't exists or not the direct child of this view.
    */
   virtual bool RemoveElement(ElementInterface *child) = 0;
+
+  /**
+   * Looks up an element from all elements directly or indirectly contained
+   * in this view by its name.
+   * @param name element name.
+   * @return the element pointer if found; or @c NULL if not found.
+   */
+  virtual ElementInterface *GetElementByName(const char *name) = 0;
+
+  /**
+   * Constant version of the above GetElementByName();
+   */
+  virtual const ElementInterface *GetElementByName(const char *name) const = 0;
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

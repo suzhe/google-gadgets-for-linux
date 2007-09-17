@@ -24,10 +24,9 @@
 #include "common.h"
 #include "file_manager.h"
 #include "file_manager_impl.h"
-#include "scoped_ptr.h"
-#include "third_party/tinyxml/tinyxml.h"
 #include "third_party/unzip/unzip.h"
 #include "windows_locales.h"
+#include "xml_utils.h"
 
 namespace ggadget {
 
@@ -92,7 +91,8 @@ bool FileManagerImpl::Init(const char *base_path) {
 }
 
 bool FileManagerImpl::GetFileContents(const char *file,
-                                      std::string *data) {
+                                      std::string *data,
+                                      std::string *path) {
   ASSERT_M(!base_path_.empty(), ("Not initialized"));
   ASSERT(file);
 
@@ -115,35 +115,19 @@ bool FileManagerImpl::GetFileContents(const char *file,
         normalized_file.c_str(), base_path_.c_str());
     return false;
   } else {
+    *path = base_path_ + kPathSeparator + iter->first;
     return GetFileContentsInternal(iter, data);
   }
 }
 
-TiXmlDocument *FileManagerImpl::ParseXMLFile(const char *file) {
-  TiXmlDocument* xmldoc = NULL;
-  std::string xml;
-  if (GetTranslatedFileContents(file, &xml)) {
-    // Now we're ready to parse the xml.
-    xmldoc = new TiXmlDocument(file);
-    xmldoc->Parse(xml.c_str());
-    if (xmldoc->Error()) {
-      LOG("Error parsing xml: %s in file: %s:%d:%d in dir: %s.",
-          xmldoc->ErrorDesc(), file,
-          xmldoc->ErrorRow(), xmldoc->ErrorCol(), base_path_.c_str());
-      delete xmldoc;
-      xmldoc = NULL;
-    }
-  }
-  return xmldoc;
-}
-
-bool FileManagerImpl::GetTranslatedFileContents(const char *file,
-                                                std::string *data) {
+bool FileManagerImpl::GetXMLFileContents(const char *file,
+                                         std::string *data,
+                                         std::string *path) {
   ASSERT(data);
   data->clear();
 
   std::string raw_data;
-  if (!GetFileContents(file, &raw_data))
+  if (!GetFileContents(file, &raw_data, path))
     return false;
 
   // Process text to replace all "&..;" entities with corresponding resources.
@@ -243,31 +227,9 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
   if (!GetFileContentsInternal(iter, &data))
     return false;
 
-  TiXmlDocument xmldoc;
-  // Parse requires files to always be null-terminated.
-  xmldoc.Parse(data.c_str()); 
-  if (xmldoc.Error()) {
-    LOG("Error parsing xml: %s in file: %s:%d:%d in dir: %s.",
-        xmldoc.ErrorDesc(), string_table,
-        xmldoc.ErrorRow(), xmldoc.ErrorCol(), base_path_.c_str());
-    return false;
-  }
-
-  TiXmlElement *strings = xmldoc.FirstChildElement(kStringsTag);
-  if (!strings) {
-    LOG("No strings tag found in %s in dir: %s",
-        string_table, base_path_.c_str());
-    return false;
-  }
-
-  TiXmlElement *child = strings->FirstChildElement();
-  while (child) {
-    const char *text = child->GetText();
-    string_table_[child->Value()] = text ? text : "";
-    child = child->NextSiblingElement();
-  }
-
-  return true;
+  return ParseStringTable(data.c_str(),
+                          (base_path_ + kPathSeparator + iter->first).c_str(),
+                          &string_table_);
 }
 
 bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
@@ -464,12 +426,15 @@ bool FileManager::Init(const char *base_path) {
 }
 
 bool FileManager::GetFileContents(const char *file,
-                                  std::string *data) {
-  return impl_->GetFileContents(file, data);
+                                  std::string *data,
+                                  std::string *path) {
+  return impl_->GetFileContents(file, data, path);
 }
 
-TiXmlDocument *FileManager::ParseXMLFile(const char *file) {
-  return impl_->ParseXMLFile(file);
+bool FileManager::GetXMLFileContents(const char *file,
+                                     std::string *data,
+                                     std::string *path) {
+  return impl_->GetXMLFileContents(file, data, path);
 }
 
 } // namespace ggadget

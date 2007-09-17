@@ -18,7 +18,8 @@
 #define GGADGET_ELEMENT_FACTORY_IMPL_H__
 
 #include <map>
-#include <string>
+#include "common.h"
+#include "element_factory_interface.h"
 
 namespace ggadget {
 
@@ -36,15 +37,13 @@ class ElementFactoryImpl {
                                   ElementInterface *parent,
                                   ViewInterface *view,
                                   const char *name);
-  bool RegisterElementClass(
-      const char *tag_name,
-      ElementInterface *(*creator)(ElementInterface *,
-                                   ViewInterface *,
-                                   const char *));
+  bool RegisterElementClass(const char *tag_name,
+                            ElementFactoryInterface::ElementCreator creator);
 
-  std::map<std::string, ElementInterface *(*)(ElementInterface *,
-                                              ViewInterface *,
-                                              const char *)> creators_;
+  typedef std::map<const char *,
+                   ElementFactoryInterface::ElementCreator,
+                   CompareString> CreatorMap;
+  CreatorMap creators_;
 };
 
 } // namespace internal

@@ -97,12 +97,12 @@ class ElementInterface : public ScriptableInterface {
 
   /**
    * Retrieves a collection that contains the immediate children of this
-   *     element.
+   * element.
    */
   virtual const Elements *GetChildren() const = 0;
   /**
    * Retrieves a collection that contains the immediate children of this
-   *     element.
+   * element.
    */
   virtual Elements *GetChildren() = 0;
 
@@ -252,11 +252,11 @@ class ElementInterface : public ScriptableInterface {
   /**
    * Retrieves the tooltip displayed when the mouse hovers over this element.
    */
-  virtual const char *GetToolTip() const = 0;
+  virtual const char *GetTooltip() const = 0;
   /**
    * Sets the tooltip displayed when the mouse hovers over this element.
    */
-  virtual void SetToolTip(const char *tool_tip) = 0;
+  virtual void SetTooltip(const char *tooltip) = 0;
 
  public:
   /**

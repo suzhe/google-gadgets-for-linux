@@ -43,9 +43,6 @@ const char *const kStringsXML = "strings.xml";
 const char *const kGadgetGManifest = "gadget.gmanifest";
 const char *const kGManifestExt = ".gmanifest";
 
-// The tag name of strings element in strings.xml.
-const char *const kStringsTag = "strings";
-
 class FileManagerImpl {
  public:
   FileManagerImpl() { }
@@ -61,10 +58,12 @@ class FileManagerImpl {
   typedef std::map<std::string, unz_file_pos, CaseInsensitiveCompare> FileMap;
 
   bool Init(const char *base_path);
-  bool GetFileContents(const char *file, std::string *data);
-  TiXmlDocument *ParseXMLFile(const char *file);
-
-  bool GetTranslatedFileContents(const char *file, std::string *data);
+  bool GetFileContents(const char *file,
+                       std::string *data,
+                       std::string *path);
+  bool GetXMLFileContents(const char *file,
+                          std::string *data,
+                          std::string *path);
 
   bool InitLocaleStrings();
   static void SplitPathFilename(const char *input_path,

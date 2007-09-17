@@ -116,7 +116,7 @@ class JSScriptContext : public ScriptContextInterface {
   /** @see ScriptContextInterface::SetValue() */
   virtual bool SetValue(const char *object_expression,
                         const char *property_name,
-                        Variant value);
+                        const Variant &value);
   /** @see ScriptContextInterface::SetGlobalObject() */
   virtual bool SetGlobalObject(ScriptableInterface *global_object);
 

@@ -18,6 +18,7 @@
 #include "ggadget/basic_element.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
+#include "ggadget/xml_utils.h"
 #include "mocked_view.h"
 
 class Muffin : public ggadget::BasicElement {
@@ -26,6 +27,7 @@ class Muffin : public ggadget::BasicElement {
          ggadget::ViewInterface *view,
          const char *name)
       : ggadget::BasicElement(parent, view, name) {
+    RegisterProperty("tagName", NewSlot(this, &Muffin::GetTagName), NULL);
   }
 
   virtual ~Muffin() {
@@ -37,11 +39,8 @@ class Muffin : public ggadget::BasicElement {
   }
 
  public:
-  static const uint64_t CLASS_ID = UINT64_C(0x6c0dee0e5bbe11dc);
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == CLASS_ID ||
-        ggadget::BasicElement::IsInstanceOf(class_id);
-  }
+  DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
+  
 
  public:
   static ggadget::ElementInterface *CreateInstance(
@@ -58,6 +57,7 @@ class Pie : public ggadget::BasicElement {
       ggadget::ViewInterface *view,
       const char *name)
       : ggadget::BasicElement(parent, view, name) {
+    RegisterProperty("tagName", NewSlot(this, &Pie::GetTagName), NULL);
   }
 
   virtual ~Pie() {
@@ -69,11 +69,7 @@ class Pie : public ggadget::BasicElement {
   }
 
  public:
-  static const uint64_t CLASS_ID = UINT64_C(0x829defac5bbe11dc);
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    return class_id == CLASS_ID ||
-        ggadget::BasicElement::IsInstanceOf(class_id);
-  }
+  DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
 
  public:
   static ggadget::ElementInterface *CreateInstance(
@@ -94,12 +90,14 @@ class BasicElementTest : public testing::Test {
 };
 
 TEST_F(BasicElementTest, TestCreate) {
-  Muffin m(NULL, NULL, NULL);
-  Pie p(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
+  Pie p(NULL, &view, NULL);
 }
 
 TEST_F(BasicElementTest, TestChildren) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ggadget::ElementInterface *c1 = m.AppendElement("muffin", NULL);
   ggadget::ElementInterface *c2 = m.InsertElement("pie", c1, "First");
   ASSERT_EQ(2, m.GetChildren()->GetCount());
@@ -114,28 +112,32 @@ TEST_F(BasicElementTest, TestChildren) {
 }
 
 TEST_F(BasicElementTest, TestCursor) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_TRUE(m.GetCursor() == ggadget::ElementInterface::CURSOR_ARROW);
   m.SetCursor(ggadget::ElementInterface::CURSOR_BUSY);
   ASSERT_TRUE(m.GetCursor() == ggadget::ElementInterface::CURSOR_BUSY);
 }
 
 TEST_F(BasicElementTest, TestDropTarget) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FALSE(m.IsDropTarget());
   m.SetDropTarget(true);
   ASSERT_TRUE(m.IsDropTarget());
 }
 
 TEST_F(BasicElementTest, TestEnabled) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FALSE(m.IsEnabled());
   m.SetEnabled(true);
   ASSERT_TRUE(m.IsEnabled());
 }
 
 TEST_F(BasicElementTest, TestPixelHeight) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelHeight());
   m.SetPixelHeight(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelHeight());
@@ -173,14 +175,16 @@ TEST_F(BasicElementTest, TestRelativeHeight) {
 }
 
 TEST_F(BasicElementTest, TestHitTest) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_TRUE(m.GetHitTest() == ggadget::ElementInterface::HT_DEFAULT);
   m.SetHitTest(ggadget::ElementInterface::HT_CLIENT);
   ASSERT_TRUE(m.GetHitTest() == ggadget::ElementInterface::HT_CLIENT);
 }
 
 TEST_F(BasicElementTest, TestMask) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_STREQ("", m.GetMask());
   m.SetMask("mymask.png");
   ASSERT_STREQ("mymask.png", m.GetMask());
@@ -189,7 +193,8 @@ TEST_F(BasicElementTest, TestMask) {
 }
 
 TEST_F(BasicElementTest, TestName) {
-  Muffin m(NULL, NULL, "mymuffin");
+  MockedView view;
+  Muffin m(NULL, &view, "mymuffin");
   ASSERT_STREQ("mymuffin", m.GetName());
 }
 
@@ -203,7 +208,8 @@ TEST_F(BasicElementTest, TestConst) {
 }
 
 TEST_F(BasicElementTest, TestOpacity) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(1.0, m.GetOpacity());
   m.SetOpacity(0.5);
   ASSERT_FLOAT_EQ(0.5, m.GetOpacity());
@@ -216,7 +222,8 @@ TEST_F(BasicElementTest, TestOpacity) {
 }
 
 TEST_F(BasicElementTest, TestPixelPinX) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelPinX());
   m.SetPixelPinX(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelPinX());
@@ -251,7 +258,8 @@ TEST_F(BasicElementTest, TestPixelPinY) {
 }
 
 TEST_F(BasicElementTest, TestRelativePinY) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   m.SetPixelHeight(150.0);
   m.SetRelativePinY(0.5);
   ASSERT_FLOAT_EQ(75.0, m.GetPixelPinY());
@@ -262,23 +270,26 @@ TEST_F(BasicElementTest, TestRelativePinY) {
 }
 
 TEST_F(BasicElementTest, TestRotation) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetRotation());
   m.SetRotation(0.5);
   ASSERT_FLOAT_EQ(0.5, m.GetRotation());
 }
 
-TEST_F(BasicElementTest, TestToolTip) {
-  Muffin m(NULL, NULL, NULL);
-  ASSERT_STREQ("", m.GetToolTip());
-  m.SetToolTip("mytooltip");
-  ASSERT_STREQ("mytooltip", m.GetToolTip());
-  m.SetToolTip(NULL);
-  ASSERT_STREQ("", m.GetToolTip());
+TEST_F(BasicElementTest, TestTooltip) {
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
+  ASSERT_STREQ("", m.GetTooltip());
+  m.SetTooltip("mytooltip");
+  ASSERT_STREQ("mytooltip", m.GetTooltip());
+  m.SetTooltip(NULL);
+  ASSERT_STREQ("", m.GetTooltip());
 }
 
 TEST_F(BasicElementTest, TestPixelWidth) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelWidth());
   m.SetPixelWidth(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelWidth());
@@ -316,7 +327,8 @@ TEST_F(BasicElementTest, TestRelativeWidth) {
 }
 
 TEST_F(BasicElementTest, TestVisible) {
-  Muffin m(NULL, NULL, NULL);
+  MockedView view;
+  Muffin m(NULL, &view, NULL);
   ASSERT_TRUE(m.IsVisible());
   m.SetVisible(false);
   ASSERT_FALSE(m.IsVisible());
@@ -374,6 +386,82 @@ TEST_F(BasicElementTest, TestRelativeY) {
   // Modifying the height of the parent will effect the child.
   m.SetPixelHeight(150.0);
   ASSERT_FLOAT_EQ(75.0, c->GetPixelY());
+}
+
+// This test is not merely for BasicElement, but mixed test for xml_utils
+// and Elements.
+TEST_F(BasicElementTest, TestFromXML) {
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
+  ggadget::ElementInterface *e1 = m.GetChildren()->InsertElementFromXML(
+      "<muffin/>", NULL);
+  ggadget::ElementInterface *e2 = m.GetChildren()->InsertElementFromXML(
+      "<pie/>", e1);
+  ggadget::ElementInterface *e3 = m.GetChildren()->InsertElementFromXML(
+      "<pie name=\"a-pie\"/>", e2);
+  ggadget::ElementInterface *e4 = m.GetChildren()->AppendElementFromXML(
+      "<bread/>");
+  ggadget::ElementInterface *e5 = m.GetChildren()->InsertElementFromXML(
+      "<bread/>", e2);
+  ggadget::ElementInterface *e6 = m.GetChildren()->AppendElementFromXML(
+      "<pie name=\"big-pie\"/>");
+  ASSERT_EQ(4, m.GetChildren()->GetCount());
+  ASSERT_TRUE(e1 == m.GetChildren()->GetItemByIndex(2));
+  ASSERT_STREQ("muffin", e1->GetTagName());
+  ASSERT_STREQ("", e1->GetName());
+  ASSERT_TRUE(e2 == m.GetChildren()->GetItemByIndex(1));
+  ASSERT_STREQ("pie", e2->GetTagName());
+  ASSERT_STREQ("", e2->GetName());
+  ASSERT_TRUE(e3 == m.GetChildren()->GetItemByIndex(0));
+  ASSERT_TRUE(e3 == m.GetChildren()->GetItemByName("a-pie"));
+  ASSERT_STREQ("pie", e3->GetTagName());
+  ASSERT_STREQ("a-pie", e3->GetName());
+  ASSERT_TRUE(NULL == e4);
+  ASSERT_TRUE(NULL == e5);
+  ASSERT_TRUE(e6 == m.GetChildren()->GetItemByIndex(3));
+  ASSERT_TRUE(e6 == m.GetChildren()->GetItemByName("big-pie"));
+  ASSERT_STREQ("pie", e6->GetTagName());
+  ASSERT_STREQ("big-pie", e6->GetName());
+}
+
+// This test is not merely for BasicElement, but mixed test for xml_utils
+// and Elements.
+TEST_F(BasicElementTest, XMLConstruction) {
+  MockedView v;
+  Muffin m(NULL, &v, NULL);
+
+  const char *xml = 
+    "<muffin n1=\"yy\" name=\"top\">\n"
+    "  <pie tooltip=\"pie-tooltip\" x=\"50%\" y=\"100\">\n"
+    "    <muffin tagName=\"haha\" name=\"muffin\"/>\n"
+    "  </pie>\n"
+    "  <pie name=\"pie1\"/>\n"
+    "</muffin>\n";
+  AppendElementFromXML(m.GetChildren(), xml);
+  ASSERT_EQ(1, m.GetChildren()->GetCount());
+  ggadget::ElementInterface *e1 = m.GetChildren()->GetItemByIndex(0);
+  ASSERT_TRUE(e1);
+  ASSERT_TRUE(e1->IsInstanceOf(Muffin::CLASS_ID));
+  ASSERT_FALSE(e1->IsInstanceOf(Pie::CLASS_ID));
+  ASSERT_TRUE(e1->IsInstanceOf(ggadget::ElementInterface::CLASS_ID));
+  Muffin *m1 = ggadget::down_cast<Muffin *>(e1);
+  ASSERT_STREQ("top", m1->GetName());
+  ASSERT_STREQ("muffin", m1->GetTagName());
+  ASSERT_EQ(2, m1->GetChildren()->GetCount());
+  ggadget::ElementInterface *e2 = m1->GetChildren()->GetItemByIndex(0);
+  ASSERT_TRUE(e2);
+  ASSERT_TRUE(e2->IsInstanceOf(Pie::CLASS_ID));
+  ASSERT_FALSE(e2->IsInstanceOf(Muffin::CLASS_ID));
+  ASSERT_TRUE(e2->IsInstanceOf(ggadget::ElementInterface::CLASS_ID));
+  Pie *p1 = ggadget::down_cast<Pie *>(e2);
+  ASSERT_STREQ("", p1->GetName());
+  ASSERT_STREQ("pie", p1->GetTagName());
+  ASSERT_STREQ("pie-tooltip", p1->GetTooltip());
+  ASSERT_TRUE(p1->XIsRelative());
+  ASSERT_FLOAT_EQ(0.5, p1->GetRelativeX());
+  ASSERT_FALSE(p1->YIsRelative());
+  ASSERT_FLOAT_EQ(100, p1->GetPixelY());
+  ASSERT_EQ(1, p1->GetChildren()->GetCount());
 }
 
 int main(int argc, char *argv[]) {
