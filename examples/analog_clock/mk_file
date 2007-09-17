@@ -1,0 +1,52 @@
+SUBDIRS = []
+
+TARGET_NAME      = ""
+TARGET_TYPE      = ""
+SOURCE_CPPS      = []
+SOURCE_ASMS      = []
+SOURCE_LIBS      = []
+SOURCE_RCS       = []
+SOURCE_IDLS      = []
+ADDED_INC_DIRS   = []
+ADDED_LIB_DIRS   = []
+ADDED_C_DEFINES  = []
+ADDED_CL_FLAGS   = []
+ADDED_ASM_FLAGS  = []
+ADDED_LINK_FLAGS = []
+ADDED_RC_FLAGS   = []
+ADDED_MIDL_FLAGS = []
+PRECOMPILE_STOPFILE = ""
+PRECOMPILE_BUILDER  = ""
+MANUAL_DEPENDENCIES = {}
+BINPLACE_FILES   = []
+
+DIST_FILES = [
+  "center.png",
+  "base.png",
+  "gadget.gmanifest",
+  "hourhand.png",
+  "main.js",
+  "main.xml",
+  "minhand.png",
+  "plugin_large.png",
+  "plugin_small.png",
+  "reflection.png",
+  "secondhand.png",
+]
+
+if IsMk2():
+  PackMuppetVersions("analog_clock", "AnalogClock", DIST_FILES)
+else:
+  Import("util")
+  
+  util.PackMuppetVersions("analog_clock", "AnalogClock", DIST_FILES)
+  
+  # ===== Never edit below this line. Ever. Or I'll kick your ass. ====
+  
+  util.DoBuild( TARGET_NAME, TARGET_TYPE,
+                SOURCE_CPPS, SOURCE_ASMS, SOURCE_LIBS, SOURCE_RCS, SOURCE_IDLS,
+                ADDED_INC_DIRS, ADDED_LIB_DIRS,
+                ADDED_C_DEFINES, ADDED_CL_FLAGS, ADDED_ASM_FLAGS, ADDED_LINK_FLAGS, ADDED_RC_FLAGS, ADDED_MIDL_FLAGS,
+                PRECOMPILE_STOPFILE, PRECOMPILE_BUILDER,
+                MANUAL_DEPENDENCIES, BINPLACE_FILES )
+  util.RecurseDirs( SUBDIRS, util.PATH_FROM_BASE )
