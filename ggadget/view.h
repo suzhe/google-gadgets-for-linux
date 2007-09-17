@@ -18,6 +18,7 @@
 #define GGADGET_VIEW_H__
 
 #include "common.h"
+#include "scriptable_helper.h"
 #include "view_interface.h"
 
 namespace ggadget {
@@ -49,7 +50,7 @@ class View : public ViewInterface {
   virtual void OnMouseWheel(MouseEvent *event);
   
   virtual void OnKeyDown(KeyboardEvent *event);
-  virtual void OnKeyRelease(KeyboardEvent *event);  
+  virtual void OnKeyUp(KeyboardEvent *event);  
   virtual void OnKeyPress(KeyboardEvent *event);
   
   virtual void OnFocusOut(Event *event);
@@ -75,20 +76,27 @@ class View : public ViewInterface {
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
 
+  virtual const Elements *GetChildren() const;
+  virtual Elements *GetChildren();
   virtual ElementInterface *AppendElement(const char *tag_name,
                                           const char *name);
   virtual ElementInterface *InsertElement(const char *tag_name,
                                           const ElementInterface *before,
                                           const char *name);
   virtual bool RemoveElement(ElementInterface *child);
+  virtual ElementInterface *GetElementByName(const char *name);
+  virtual const ElementInterface *GetElementByName(const char *name) const;
 
   DEFAULT_OWNERSHIP_POLICY
-  SCRIPTABLE_INTERFACE_DECL
-  virtual bool IsStrict() const;
+  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
+  virtual bool IsStrict() const { return true; }
+
+ protected:
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
  private: 
   internal::ViewImpl *impl_;
-
+  ScriptableHelper scriptable_helper_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
 };
 

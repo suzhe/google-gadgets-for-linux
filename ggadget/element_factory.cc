@@ -49,9 +49,7 @@ ElementInterface *ElementFactory::CreateElement(const char *tag_name,
 }
 
 bool ElementFactory::RegisterElementClass(
-    const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
-                                                       ViewInterface *,
-                                                       const char *)) {
+   const char *tag_name, ElementFactoryInterface::ElementCreator creator) {
   ASSERT(impl_);
   return impl_->RegisterElementClass(tag_name, creator);
 }
@@ -62,25 +60,15 @@ ElementInterface *ElementFactoryImpl::CreateElement(const char *tag_name,
                                                     ElementInterface *parent,
                                                     ViewInterface *view,
                                                     const char *name) {
-  std::map<std::string,
-      ElementInterface *(*)(ElementInterface *,
-                            ViewInterface *,
-                            const char *)>::iterator ite =
-      creators_.find(tag_name);
+  CreatorMap::iterator ite = creators_.find(tag_name);
   if (ite == creators_.end())
     return NULL;
   return ite->second(parent, view, name);
 }
 
 bool ElementFactoryImpl::RegisterElementClass(
-    const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
-                                                       ViewInterface *,
-                                                       const char *)) {
-  std::map<std::string,
-      ElementInterface *(*)(ElementInterface *,
-                            ViewInterface *,
-                            const char *)>::iterator ite =
-      creators_.find(tag_name);
+   const char *tag_name, ElementFactoryInterface::ElementCreator creator) {
+  CreatorMap::iterator ite = creators_.find(tag_name);
   if (ite != creators_.end())
     return false;
   creators_[tag_name] = creator;

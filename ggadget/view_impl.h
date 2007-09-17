@@ -22,7 +22,6 @@
 
 #include "common.h"
 #include "elements.h"
-#include "scriptable_helper.h"
 #include "signal.h"
 
 namespace ggadget {
@@ -112,7 +111,7 @@ class ViewImpl {
   void OnMouseWheel(MouseEvent *event);
 
   void OnKeyDown(KeyboardEvent *event);
-  void OnKeyRelease(KeyboardEvent *event);  
+  void OnKeyUp(KeyboardEvent *event);  
   void OnKeyPress(KeyboardEvent *event);
   
   void OnFocusIn(Event *event);
@@ -140,8 +139,7 @@ class ViewImpl {
                                   const ElementInterface *before,
                                   const char *name);
   bool RemoveElement(ElementInterface *child);
-
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
+  ElementInterface *GetElementByName(const char *name);
 
   EventSignal oncancle_event_;
   EventSignal onclick_event_;
@@ -150,7 +148,7 @@ class ViewImpl {
   EventSignal ondock_event_;
   EventSignal onkeydown_event_;
   EventSignal onkeypress_event_;
-  EventSignal onkeyrelease_event_;
+  EventSignal onkeyup_event_;
   EventSignal onminimize_event_;
   EventSignal onmousedown_event_;
   EventSignal onmouseout_event_;
@@ -166,18 +164,16 @@ class ViewImpl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
 
-  ScriptableHelper scriptable_helper_;
   Elements children_;
-
   int width_, height_;
   HostInterface *host_;
   CanvasInterface *canvas_;
   ViewInterface::ResizableMode resizable_;
-  const char *caption_;
+  std::string caption_;
   bool show_caption_always_;
 
   std::vector<Event *> event_stack_;
-  typedef std::map<const char *, ElementInterface *, CompareString> ElementsMap;
+  typedef std::map<std::string, ElementInterface *> ElementsMap;
   ElementsMap all_elements_;
 };
 

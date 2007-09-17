@@ -294,6 +294,7 @@ SPECIALIZE_VARIANT_TYPE(const std::string &, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(std::string, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
 SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
+SPECIALIZE_VARIANT_TYPE(const Variant &, TYPE_VARIANT)
 
 /**
  * Get the value of a @c Variant.
@@ -405,6 +406,17 @@ struct VariantValue<const std::string &> {
  */
 template <>
 struct VariantValue<Variant> {
+  const Variant& operator()(const Variant &v) {
+    return v;
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for <code>const Variant &</code> type itself.
+ */
+template <>
+struct VariantValue<const Variant &> {
   const Variant& operator()(const Variant &v) {
     return v;
   }

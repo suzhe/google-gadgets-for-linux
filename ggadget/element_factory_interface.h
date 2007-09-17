@@ -45,6 +45,13 @@ class ElementFactoryInterface {
                                           const char *name) = 0;
 
   /**
+   * Used as the @c creator parameter in @c RegisterElementClass().
+   */
+  typedef ElementInterface *(*ElementCreator)(ElementInterface *parent,
+                                              ViewInterface *view,
+                                              const char *name);
+
+  /**
    * Registers a new subclass of ElementInterface.
    * @param tag_name the tag name name of the subclass.
    * @param creator the function pointer of the creator, which returns a new
@@ -52,10 +59,8 @@ class ElementFactoryInterface {
    * @return @c true if registered successfully, or @c false if the specified
    *     tag name already exists.
    */
-  virtual bool RegisterElementClass(
-      const char *tag_name, ElementInterface *(*creator)(ElementInterface *,
-                                                         ViewInterface *,
-                                                         const char *)) = 0;
+  virtual bool RegisterElementClass(const char *tag_name,
+                                    ElementCreator creator) = 0;
 };
 
 } // namespace ggadget

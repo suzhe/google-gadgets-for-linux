@@ -19,7 +19,6 @@
 
 #include "ggadget/file_manager.h"
 #include "ggadget/file_manager_impl.h"
-#include "third_party/tinyxml/tinyxml.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
@@ -122,10 +121,11 @@ TEST(file_manager, FindLocalizedFile) {
   EXPECT_TRUE(impl.files_.end() == impl.FindLocalizedFile("global"));
 }
 
-void TestFileManagerFunctions(const char *base_path) {
+void TestFileManagerFunctions(const std::string &base_path,
+                              const std::string &actual_path) {
   FileManagerImpl impl;
   ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
-  impl.Init(base_path);
+  impl.Init(base_path.c_str());
 
   for (FileManagerImpl::FileMap::const_iterator it = impl.files_.begin();
        it != impl.files_.end(); ++it)
@@ -133,32 +133,39 @@ void TestFileManagerFunctions(const char *base_path) {
 
   ASSERT_EQ(8U, impl.files_.size());
   std::string data;
-  ASSERT_TRUE(impl.GetFileContents("global_file", &data));
+  std::string path;
+  ASSERT_TRUE(impl.GetFileContents("global_file", &data, &path));
   EXPECT_STREQ("global_file at top\n", data.c_str());
-  EXPECT_FALSE(impl.GetFileContents("non-exists", &data));
-  ASSERT_TRUE(impl.GetFileContents("zh_CN_file", &data));
+  EXPECT_STREQ((actual_path + "/global_file").c_str(), path.c_str());
+  EXPECT_FALSE(impl.GetFileContents("non-exists", &data, &path));
+  ASSERT_TRUE(impl.GetFileContents("zh_CN_file", &data, &path));
+  EXPECT_STREQ((actual_path + "/zh_CN/zh_CN_file").c_str(), path.c_str());
   EXPECT_STREQ("zh_CN_file contents\n", data.c_str());
-  ASSERT_TRUE(impl.GetFileContents("2048_file", &data));
+  ASSERT_TRUE(impl.GetFileContents("2048_file", &data, &path));
   EXPECT_EQ(2048U, data.size());
-  ASSERT_TRUE(impl.GetFileContents("big_file", &data));
+  ASSERT_TRUE(impl.GetFileContents("big_file", &data, &path));
   EXPECT_EQ(32616U, data.size());
 
-  ASSERT_TRUE(impl.GetFileContents("gLoBaL_FiLe", &data));
+  ASSERT_TRUE(impl.GetFileContents("gLoBaL_FiLe", &data, &path));
+  EXPECT_STREQ((actual_path + "/global_file").c_str(), path.c_str());
   EXPECT_STREQ("global_file at top\n", data.c_str());
-  ASSERT_TRUE(impl.GetFileContents("ZH_cn_File", &data));
+  ASSERT_TRUE(impl.GetFileContents("ZH_cn_File", &data, &path));
+  EXPECT_STREQ((actual_path + "/zh_CN/zh_CN_file").c_str(), path.c_str());
   EXPECT_STREQ("zh_CN_file contents\n", data.c_str());
 }
 
 TEST(file_manager, FileManagerDir) {
-  TestFileManagerFunctions("file_manager_test_data");
+  TestFileManagerFunctions("file_manager_test_data", "file_manager_test_data");
 }
 
 TEST(file_manager, FileManagerZip) {
-  TestFileManagerFunctions("file_manager_test_data.gg");
+  TestFileManagerFunctions("file_manager_test_data.gg",
+                           "file_manager_test_data.gg");
 }
 
 TEST(file_manager, FileManagerDirManifest) {
-  TestFileManagerFunctions("file_manager_test_data/gadget.gmanifest");
+  TestFileManagerFunctions("file_manager_test_data/gadget.gmanifest",
+                           "file_manager_test_data");
 }
 
 TEST(file_manager, StringTable) {
@@ -191,12 +198,14 @@ TEST(file_manager, GetTranslatedFileContents) {
     "</root>\n";
 
   std::string data;
-  ASSERT_TRUE(impl.GetFileContents("main.xml", &data));
+  std::string path;
+  ASSERT_TRUE(impl.GetFileContents("main.xml", &data, &path));
+  EXPECT_STREQ("file_manager_test_data/main.xml", path.c_str());
   EXPECT_STREQ(kMainXMLOriginalContents, data.c_str());
-  ASSERT_TRUE(impl.GetTranslatedFileContents("main.xml", &data));
+  ASSERT_TRUE(impl.GetXMLFileContents("main.xml", &data, &path));
   EXPECT_STREQ(kMainXMLTranslatedContents, data.c_str());
 }
-
+/*
 TEST(file_manager, ParseXML) {
   FileManager file_manager;
   ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
@@ -221,7 +230,7 @@ TEST(file_manager, ParseXML) {
   EXPECT_STREQ("non-existence;", third->GetText());
   delete doc;
 }
-
+*/
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();

@@ -20,7 +20,7 @@
 #include <string>
 #include "element_interface.h"
 #include "elements.h"
-#include "scriptable_helper.h"
+#include "signal.h"
 
 namespace ggadget {
 
@@ -80,14 +80,8 @@ class BasicElementImpl {
   bool IsVisible() const;
   void SetVisible(bool visible);
   ElementInterface *GetParentElement() const;
-  const char *GetToolTip() const;
-  void SetToolTip(const char *tool_tip);
-  ElementInterface *AppendElement(const char *tag_name, const char *name);
-  ElementInterface *InsertElement(const char *tag_name,
-                                  const ElementInterface *before,
-                                  const char *name);
-  bool RemoveElement(ElementInterface *child);
-  void RemoveAllElements();
+  const char *GetTooltip() const;
+  void SetTooltip(const char *tooltip);
   void Focus();
   void KillFocus();
 
@@ -100,6 +94,19 @@ class BasicElementImpl {
   bool HeightIsRelative() const;
   bool PinXIsRelative() const;
   bool PinYIsRelative() const;
+
+  Variant GetWidth() const;
+  void SetWidth(const Variant &width);
+  Variant GetHeight() const;
+  void SetHeight(const Variant &height);
+  Variant GetX() const;
+  void SetX(const Variant &x);
+  Variant GetY() const;
+  void SetY(const Variant &y);
+  Variant GetPinX() const;
+  void SetPinX(const Variant &pin_x);
+  Variant GetPinY() const;
+  void SetPinY(const Variant &pin_y);
 
  public:
   void WidthChanged();
@@ -123,7 +130,7 @@ class BasicElementImpl {
   double rotation_;
   double opacity_;
   bool visible_;
-  std::string tool_tip_;
+  std::string tooltip_;
   std::string mask_;
   double width_;
   double height_;
@@ -137,7 +144,23 @@ class BasicElementImpl {
   double height_relative_;
   double x_relative_;
   double y_relative_;
-  ScriptableHelper scriptable_helper_;
+
+  EventSignal onclick_event_;
+  EventSignal ondblclick_event_;
+  EventSignal ondragdrop_event_;
+  EventSignal ondragout_event_;
+  EventSignal ondragover_event_;
+  EventSignal onfocusin_event_;
+  EventSignal onfocusout_event_;
+  EventSignal onkeydown_event_;
+  EventSignal onkeypress_event_;
+  EventSignal onkeyup_event_;
+  EventSignal onmousedown_event_;
+  EventSignal onmousemove_event_;
+  EventSignal onmouseout_event_;
+  EventSignal onmouseover_event_;
+  EventSignal onmouseup_event_;
+  EventSignal onmousewheel_event_;
 };
 
 } // namespace internal

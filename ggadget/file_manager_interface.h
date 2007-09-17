@@ -17,10 +17,7 @@
 #ifndef GGADGET_FILE_MANAGER_INTERFACE_H__
 #define GGADGET_FILE_MANAGER_INTERFACE_H__
 
-#include <cstddef>
 #include <string>
-
-class TiXmlDocument;  // TinyXML DOM Document.
 
 namespace ggadget {
 
@@ -54,21 +51,26 @@ class FileManagerInterface {
    *
    * @param file the file name relative to the base path.
    * @param[out] data returns the file contents.
+   * @param[out] path the actual path name of the file, for logging only.
    * @return @c true if succeeded.
    */
   virtual bool GetFileContents(const char *file,
-                               std::string *data) = 0;
+                               std::string *data,
+                               std::string *path) = 0;
 
   /**
-   * Parses an XML file. The file is searched in the same sequence as in
-   * @c GetFileContents().  Entities defined in @c string.xml are replaced
-   * with localized strings.
+   * Gets the contents of an XML file. The file is searched in the same
+   * sequence as in @c GetFileContents().  Entities defined in @c string.xml
+   * are replaced with localized strings.
    *
    * @param file the file name relative to the base path.
-   * @return the parsed document if succeeded, or @c NULL on any error.
-   *     The caller must delete the returned @c TiXmlDocument after use.
+   * @param[out] data returns the file contents.
+   * @param[out] path the actual path name of the file, for logging only.
+   * @return @c true if succeeded.
    */
-  virtual TiXmlDocument *ParseXMLFile(const char *file) = 0;
+  virtual bool GetXMLFileContents(const char *file,
+                                  std::string *data,
+                                  std::string *path) = 0;
 
 };
 

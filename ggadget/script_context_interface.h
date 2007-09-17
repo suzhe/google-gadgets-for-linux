@@ -21,7 +21,6 @@
 #ifndef GGADGET_SCRIPT_CONTEXT_INTERFACE_H__
 #define GGADGET_SCRIPT_CONTEXT_INTERFACE_H__
 
-#include "common.h"
 #include "variant.h"
 
 namespace ggadget {
@@ -103,7 +102,7 @@ class ScriptContextInterface {
    */
   virtual bool SetValue(const char *object_expression,
                         const char *property_name,
-                        Variant value) = 0;
+                        const Variant &value) = 0;
 
   /**
    * Set the global object of the context.

@@ -199,7 +199,7 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_RELEASE);
   KeyboardEvent e(Event::EVENT_KEY_UP);
-  gvw->view->OnKeyRelease(&e);
+  gvw->view->OnKeyUp(&e);
   
   KeyboardEvent e2(Event::EVENT_KEY_PRESS);
   gvw->view->OnKeyPress(&e2);

@@ -19,6 +19,7 @@
 
 #include <vector>
 #include "scriptable_helper.h"
+#include "variant.h"
 
 namespace ggadget {
 
@@ -42,8 +43,8 @@ class ElementsImpl {
   bool RemoveElement(ElementInterface *element);
   void RemoveAllElements();
 
+  ElementInterface *GetItem(const Variant &index_or_name);
   ElementInterface *GetItemByIndex(int index);
-
   ElementInterface *GetItemByName(const char *name);
   int GetIndexByName(const char *name);
 

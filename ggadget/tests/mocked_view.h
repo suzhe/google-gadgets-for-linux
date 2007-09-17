@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_TEST_MOCKED_ELEMENT_H__
-#define GGADGETS_TEST_MOCKED_ELEMENT_H__
+#ifndef GGADGETS_TEST_MOCKED_VIEW_H__
+#define GGADGETS_TEST_MOCKED_VIEW_H__
 
 #include <string>
 #include "ggadget/signal.h"
@@ -50,7 +50,7 @@ class MockedView : public ggadget::ViewInterface {
   virtual void OnMouseWheel(ggadget::MouseEvent *event) {};
 
   virtual void OnKeyDown(ggadget::KeyboardEvent *event) {};
-  virtual void OnKeyRelease(ggadget::KeyboardEvent *event) {};  
+  virtual void OnKeyUp(ggadget::KeyboardEvent *event) {};  
   virtual void OnKeyPress(ggadget::KeyboardEvent *event) {};
 
   virtual void OnFocusOut(ggadget::Event *event) {};
@@ -74,6 +74,9 @@ class MockedView : public ggadget::ViewInterface {
   virtual const char *GetCaption() const { return ""; };
   virtual void SetShowCaptionAlways(bool show_always) {};
   virtual bool GetShowCaptionAlways() const { return false; };
+
+  virtual const ggadget::Elements *GetChildren() const { return NULL; };
+  virtual ggadget::Elements *GetChildren() { return NULL; };
   virtual ggadget::ElementInterface *AppendElement(
       const char *tag_name, const char *name) { return NULL; };
   virtual ggadget::ElementInterface *InsertElement(
@@ -82,6 +85,10 @@ class MockedView : public ggadget::ViewInterface {
       const char *name) { return NULL; };
   virtual bool RemoveElement(
       ggadget::ElementInterface *child) { return false; };
+  virtual ggadget::ElementInterface *GetElementByName(
+      const char *name) { return NULL; };
+  virtual const ggadget::ElementInterface *GetElementByName(
+      const char *name) const { return NULL; };
 
   DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
   DEFAULT_OWNERSHIP_POLICY
@@ -92,4 +99,4 @@ class MockedView : public ggadget::ViewInterface {
   ggadget::ScriptableHelper scriptable_helper_;
 };
 
-#endif // GGADGETS_TEST_MOCKED_ELEMENT_H__
+#endif // GGADGETS_TEST_MOCKED_VIEW_H__

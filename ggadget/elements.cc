@@ -21,6 +21,7 @@
 #include "common.h"
 #include "element_interface.h"
 #include "element_factory_interface.h"
+#include "xml_utils.h"
 
 namespace ggadget {
 
@@ -31,6 +32,12 @@ ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
                            ViewInterface *view)
     : factory_(factory), owner_(owner), view_(view) {
   ASSERT(factory);
+  ASSERT(view);
+
+  RegisterProperty("count", NewSlot(this, &ElementsImpl::GetCount), NULL);
+  RegisterMethod("item", NewSlot(this, &ElementsImpl::GetItem));
+  SetArrayHandler(NewSlot(this, &ElementsImpl::GetItemByIndex), NULL);
+  SetDynamicPropertyHandler(NewSlot(this, &ElementsImpl::GetItemByName), NULL);
 }
 
 ElementsImpl::~ElementsImpl() {
@@ -83,6 +90,17 @@ void ElementsImpl::RemoveAllElements() {
     (*ite)->Destroy();
   std::vector<ElementInterface *> v;
   children_.swap(v);
+}
+
+ElementInterface *ElementsImpl::GetItem(const Variant &index_or_name) {
+  switch (index_or_name.type()) {
+    case Variant::TYPE_INT64:
+      return GetItemByIndex(VariantValue<int>()(index_or_name));
+    case Variant::TYPE_STRING:
+      return GetItemByName(VariantValue<const char *>()(index_or_name));
+    default:
+      return NULL;
+  }
 }
 
 ElementInterface *ElementsImpl::GetItemByIndex(int index) {
@@ -154,6 +172,15 @@ ElementInterface *Elements::InsertElement(const char *tag_name,
                                           const char *name) {
   ASSERT(impl_);
   return impl_->InsertElement(tag_name, before, name);
+}
+
+ElementInterface *Elements::AppendElementFromXML(const char *xml) {
+  return ::ggadget::AppendElementFromXML(this, xml);
+}
+
+ElementInterface *Elements::InsertElementFromXML(
+    const char *xml, const ElementInterface *before) {
+  return ::ggadget::InsertElementFromXML(this, xml, before);
 }
 
 bool Elements::RemoveElement(ElementInterface *element) {

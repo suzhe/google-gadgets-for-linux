@@ -18,6 +18,7 @@
 #define GGADGETS_BASIC_ELEMENT_H__
 
 #include "element_interface.h"
+#include "scriptable_helper.h"
 
 namespace ggadget {
 
@@ -89,8 +90,8 @@ class BasicElement : public ElementInterface {
   virtual void SetVisible(bool visible);
   virtual ElementInterface *GetParentElement();
   virtual const ElementInterface *GetParentElement() const;
-  virtual const char *GetToolTip() const;
-  virtual void SetToolTip(const char *tool_tip);
+  virtual const char *GetTooltip() const;
+  virtual void SetTooltip(const char *tooltip);
   virtual ElementInterface *AppendElement(const char *tag_name,
                                           const char *name);
   virtual ElementInterface *InsertElement(const char *tag_name,
@@ -108,12 +109,16 @@ class BasicElement : public ElementInterface {
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
 
-  virtual bool IsStrict() const { return true; }
-  SCRIPTABLE_INTERFACE_DECL
   DEFAULT_OWNERSHIP_POLICY
+  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
+  virtual bool IsStrict() const { return true; }
+
+ protected:
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
  private:
   internal::BasicElementImpl *impl_;
+  ScriptableHelper scriptable_helper_;
 };
 
 CLASS_ID_IMPL(BasicElement, ElementInterface)

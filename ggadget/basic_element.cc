@@ -295,33 +295,15 @@ ElementInterface *BasicElementImpl::GetParentElement() const {
   return parent_;
 }
 
-const char *BasicElementImpl::GetToolTip() const {
-  return tool_tip_.c_str();
+const char *BasicElementImpl::GetTooltip() const {
+  return tooltip_.c_str();
 }
 
-void BasicElementImpl::SetToolTip(const char *tool_tip) {
-  if (tool_tip)
-    tool_tip_ = tool_tip;
+void BasicElementImpl::SetTooltip(const char *tooltip) {
+  if (tooltip)
+    tooltip_ = tooltip;
   else
-    tool_tip_.clear();
-}
-
-ElementInterface *BasicElementImpl::AppendElement(const char *tag_name,
-                                                  const char *name) {
-  return children_.AppendElement(tag_name, name);
-}
-
-ElementInterface *BasicElementImpl::InsertElement(
-    const char *tag_name, const ElementInterface *before, const char *name) {
-  return children_.InsertElement(tag_name, before, name);
-}
-
-bool BasicElementImpl::RemoveElement(ElementInterface *child) {
-  return children_.RemoveElement(child);
-}
-
-void BasicElementImpl::RemoveAllElements() {
-  return children_.RemoveAllElements();
+    tooltip_.clear();
 }
 
 void BasicElementImpl::Focus() {
@@ -400,12 +382,209 @@ bool BasicElementImpl::PinYIsRelative() const {
   return pin_y_relative_;
 }
 
+static int ParsePixelOrRelative(const Variant &input, double *output) {
+  switch (input.type()) {
+    // The input is a pixel value.
+    case Variant::TYPE_INT64:
+      *output = VariantValue<int>()(input);
+      return 0;
+    // The input is a relative percent value.
+    case Variant::TYPE_STRING: {
+      const char *str_value = VariantValue<const char *>()(input);
+      char *end_ptr;
+      *output = strtol(str_value, &end_ptr, 10) / 100.0;
+      if (*end_ptr == '%' && *(end_ptr + 1) == '\0')
+        return 1;
+      LOG("Invalid relative value: %s", input.ToString().c_str());
+      return -1;
+    }
+    default:
+      LOG("Invalid pixel or relative value: %s", input.ToString().c_str());
+      return -1;
+  }
+}
+
+#define SET_PIXEL_OR_RELATIVE(value, set_pixel, set_relative) \
+  double v;                                                   \
+  switch (ParsePixelOrRelative(value, &v)) {                  \
+    case 0: set_pixel(v); break;                              \
+    case 1: set_relative(v); break;                           \
+    default: break;                                           \
+  }
+
+static Variant GetPixelOrRelative(bool is_relative,
+                                  double pixel,
+                                  double relative) {
+  if (is_relative) {
+    char buf[20];
+    snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
+    return Variant(std::string(buf));
+  } else {
+    return Variant(static_cast<int>(pixel));
+  }
+}
+
+Variant BasicElementImpl::GetWidth() const {
+  return GetPixelOrRelative(WidthIsRelative(),
+                            GetPixelWidth(),
+                            GetRelativeWidth());
+}
+void BasicElementImpl::SetWidth(const Variant &width) {
+  SET_PIXEL_OR_RELATIVE(width, SetPixelWidth, SetRelativeWidth);
+}
+
+Variant BasicElementImpl::GetHeight() const {
+  return GetPixelOrRelative(HeightIsRelative(),
+                            GetPixelHeight(),
+                            GetRelativeHeight());
+}
+void BasicElementImpl::SetHeight(const Variant &height) {
+  SET_PIXEL_OR_RELATIVE(height, SetPixelHeight, SetRelativeHeight);
+}
+
+Variant BasicElementImpl::GetX() const {
+  return GetPixelOrRelative(XIsRelative(),
+                            GetPixelX(),
+                            GetRelativeX());
+}
+void BasicElementImpl::SetX(const Variant &x) {
+  SET_PIXEL_OR_RELATIVE(x, SetPixelX, SetRelativeX);
+}
+
+Variant BasicElementImpl::GetY() const {
+  return GetPixelOrRelative(YIsRelative(),
+                            GetPixelY(),
+                            GetRelativeY());
+}
+void BasicElementImpl::SetY(const Variant &y) {
+  SET_PIXEL_OR_RELATIVE(y, SetPixelY, SetRelativeY);
+}
+
+Variant BasicElementImpl::GetPinX() const {
+  return GetPixelOrRelative(PinXIsRelative(),
+                            GetPixelPinX(),
+                            GetRelativePinX());
+}
+void BasicElementImpl::SetPinX(const Variant &pin_x) {
+  SET_PIXEL_OR_RELATIVE(pin_x, SetPixelPinX, SetRelativePinX);
+}
+
+Variant BasicElementImpl::GetPinY() const {
+  return GetPixelOrRelative(PinYIsRelative(),
+                            GetPixelPinY(),
+                            GetRelativePinY());
+}
+void BasicElementImpl::SetPinY(const Variant &pin_y) {
+  SET_PIXEL_OR_RELATIVE(pin_y, SetPixelPinY, SetRelativePinY);
+}
+
 } // namespace internal
+
+static const char *kCursorTypeNames[] = {
+  "arrow", "ibeam", "wait", "cross", "uparrow",
+  "size", "sizenwse", "sizenesw", "sizewe", "sizens", "sizeall",
+  "no", "hand", "busy", "help",
+};
+
+static const char *kHitTestNames[] = {
+  "httransparent", "htnowhere", "htclient", "htcaption", " htsysmenu",
+  "htsize", "htmenu", "hthscroll", "htvscroll", "htminbutton", "htmaxbutton",
+  "htleft", "htright", "httop", "httopleft", "httopright",
+  "htbottom", "htbottomleft", "htbottomright", "htborder",
+  "htobject", "htclose", "hthelp",
+};
 
 BasicElement::BasicElement(ElementInterface *parent,
                            ViewInterface *view,
                            const char *name)
     : impl_(new internal::BasicElementImpl(parent, view, name, this)) {
+
+  RegisterConstant("children", GetChildren());
+  RegisterStringEnumProperty("cursor",
+                             NewSlot(this, &BasicElement::GetCursor),
+                             NewSlot(this, &BasicElement::SetCursor),
+                             kCursorTypeNames, arraysize(kCursorTypeNames));
+  RegisterProperty("dropTarget",
+                   NewSlot(this, &BasicElement::IsDropTarget),
+                   NewSlot(this, &BasicElement::SetDropTarget));
+  RegisterProperty("enabled",
+                   NewSlot(this, &BasicElement::IsEnabled),
+                   NewSlot(this, &BasicElement::SetEnabled));
+  RegisterProperty("height",
+                   NewSlot(impl_, &internal::BasicElementImpl::GetHeight),
+                   NewSlot(impl_, &internal::BasicElementImpl::SetHeight));
+  RegisterStringEnumProperty("hitTest",
+                             NewSlot(this, &BasicElement::GetHitTest),
+                             NewSlot(this, &BasicElement::SetHitTest),
+                             kHitTestNames, arraysize(kHitTestNames));
+  RegisterProperty("mask",
+                   NewSlot(this, &BasicElement::GetMask),
+                   NewSlot(this, &BasicElement::SetMask));
+  RegisterProperty("name", NewSlot(this, &BasicElement::GetName), NULL);
+  RegisterProperty("offsetHeight",
+                   NewSlot(this, &BasicElement::GetPixelHeight), NULL);
+  RegisterProperty("offsetWidth",
+                   NewSlot(this, &BasicElement::GetPixelWidth), NULL);
+  RegisterProperty("offsetX",
+                   NewSlot(this, &BasicElement::GetPixelX), NULL);
+  RegisterProperty("offsetY",
+                   NewSlot(this, &BasicElement::GetPixelY), NULL);
+  RegisterProperty("parentElement",
+                   NewSlot(impl_,
+                           &internal::BasicElementImpl::GetParentElement),
+                   NULL);
+  RegisterProperty("pinX",
+                   NewSlot(impl_, &internal::BasicElementImpl::GetPinX),
+                   NewSlot(impl_, &internal::BasicElementImpl::SetPinX));
+  RegisterProperty("pinY",
+                   NewSlot(impl_, &internal::BasicElementImpl::GetPinY),
+                   NewSlot(impl_, &internal::BasicElementImpl::SetPinY));
+  RegisterProperty("rotation",
+                   NewSlot(this, &BasicElement::GetRotation),
+                   NewSlot(this, &BasicElement::SetRotation));
+  RegisterProperty("tooltip",
+                   NewSlot(this, &BasicElement::GetTooltip),
+                   NewSlot(this, &BasicElement::SetTooltip));
+  RegisterProperty("width",
+                   NewSlot(impl_, &internal::BasicElementImpl::GetWidth),
+                   NewSlot(impl_, &internal::BasicElementImpl::SetWidth));
+  RegisterProperty("visible",
+                   NewSlot(this, &BasicElement::IsVisible),
+                   NewSlot(this, &BasicElement::SetVisible));
+  RegisterProperty("x",
+                   NewSlot(impl_, &internal::BasicElementImpl::GetX),
+                   NewSlot(impl_, &internal::BasicElementImpl::SetX));
+  RegisterProperty("y",
+                   NewSlot(impl_, &internal::BasicElementImpl::GetY),
+                   NewSlot(impl_, &internal::BasicElementImpl::SetY));
+
+  RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
+  RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
+  RegisterMethod("appendElement",
+                 NewSlot(GetChildren(), &Elements::AppendElementFromXML));
+  RegisterMethod("insertElement",
+                 NewSlot(GetChildren(), &Elements::InsertElementFromXML));
+  RegisterMethod("removeElement",
+                 NewSlot(GetChildren(), &Elements::RemoveElement));
+  RegisterMethod("removeAllElements",
+                 NewSlot(GetChildren(), &Elements::RemoveAllElements));
+
+  RegisterSignal("onclick", &impl_->onclick_event_);
+  RegisterSignal("ondblclick", &impl_->ondblclick_event_);
+  RegisterSignal("ondragdrop", &impl_->ondragdrop_event_);
+  RegisterSignal("ondragout", &impl_->ondragout_event_);
+  RegisterSignal("ondragover", &impl_->ondragover_event_);
+  RegisterSignal("onfocusin", &impl_->onfocusin_event_);
+  RegisterSignal("onfocusout", &impl_->onfocusout_event_);
+  RegisterSignal("onkeydown", &impl_->onkeydown_event_);
+  RegisterSignal("onkeypress", &impl_->onkeypress_event_);
+  RegisterSignal("onkeyup", &impl_->onkeyup_event_);
+  RegisterSignal("onmousedown", &impl_->onmousedown_event_);
+  RegisterSignal("onmousemove", &impl_->onmousemove_event_);
+  RegisterSignal("onmouseout", &impl_->onmouseout_event_);
+  RegisterSignal("onmouseover", &impl_->onmouseover_event_);
+  RegisterSignal("onmouseup", &impl_->onmouseup_event_);
+  RegisterSignal("onmousewheel", &impl_->onmousewheel_event_);
 }
 
 BasicElement::~BasicElement() {
@@ -611,37 +790,37 @@ const ElementInterface *BasicElement::GetParentElement() const {
   return impl_->GetParentElement();
 }
 
-const char *BasicElement::GetToolTip() const {
+const char *BasicElement::GetTooltip() const {
   ASSERT(impl_);
-  return impl_->GetToolTip();
+  return impl_->GetTooltip();
 }
 
-void BasicElement::SetToolTip(const char *tool_tip) {
+void BasicElement::SetTooltip(const char *tooltip) {
   ASSERT(impl_);
-  return impl_->SetToolTip(tool_tip);
+  return impl_->SetTooltip(tooltip);
 }
 
 ElementInterface *BasicElement::AppendElement(const char *tag_name,
                                               const char *name) {
   ASSERT(impl_);
-  return impl_->AppendElement(tag_name, name);
+  return impl_->children_.AppendElement(tag_name, name);
 }
 
 ElementInterface *BasicElement::InsertElement(const char *tag_name,
                                               const ElementInterface *before,
                                               const char *name) {
   ASSERT(impl_);
-  return impl_->InsertElement(tag_name, before, name);
+  return impl_->children_.InsertElement(tag_name, before, name);
 }
 
 bool BasicElement::RemoveElement(ElementInterface *child) {
   ASSERT(impl_);
-  return impl_->RemoveElement(child);
+  return impl_->children_.RemoveElement(child);
 }
 
 void BasicElement::RemoveAllElements() {
   ASSERT(impl_);
-  impl_->RemoveAllElements();
+  impl_->children_.RemoveAllElements();
 }
 
 void BasicElement::Focus() {
@@ -723,7 +902,5 @@ bool BasicElement::PinYIsRelative() const {
   ASSERT(impl_);
   return impl_->PinYIsRelative();
 }
-
-DELEGATE_SCRIPTABLE_INTERFACE_IMPL(BasicElement, impl_->scriptable_helper_)
 
 } // namespace ggadget

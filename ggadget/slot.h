@@ -17,6 +17,8 @@
 #ifndef GGADGET_SLOT_H__
 #define GGADGET_SLOT_H__
 
+#include <cstring>
+#include "common.h"
 #include "variant.h"
 
 namespace ggadget {
@@ -464,6 +466,49 @@ class SimpleSetter {
   T *value_ptr_;
 };
 
+template <typename T>
+class StringEnumGetter {
+ public:
+  StringEnumGetter(Slot0<T> *slot, const char **names, int count)
+      : slot_(slot), names_(names), count_(count) { }
+  const char *operator()() const {
+    int index = VariantValue<int>()(slot_->Call(0, NULL));
+    return (index >= 0 && index < count_) ? names_[index] : NULL;
+  }
+  bool operator==(StringEnumGetter<T> another) const {
+    return slot_ == another.slot_ && names_ == another.names_ &&
+           count_ == another.count_;
+  }
+ private:
+  Slot0<T> *slot_;
+  const char **names_;
+  int count_;
+};
+
+template <typename T>
+class StringEnumSetter {
+ public:
+  StringEnumSetter(Slot1<void, T> *slot, const char **names, int count)
+      : slot_(slot), names_(names), count_(count) { }
+  void operator()(const char *name) const {
+    for (int i = 0; i < count_; i++)
+      if (strcmp(name, names_[i]) == 0) {
+        Variant param(i);
+        slot_->Call(1, &param);
+        return;
+      }
+    LOG("Invalid enumerated name: %s", name);
+  }
+  bool operator==(StringEnumSetter<T> another) const {
+    return slot_ == another.slot_ && names_ == another.names_ &&
+           count_ == another.count_;
+  }
+ private:
+  Slot1<void, T> *slot_;
+  const char **names_;
+  int count_;
+};
+
 /**
  * Helper function to new a @c Slot that always return a fixed @a value.
  * @param value the fixed value.
@@ -492,6 +537,37 @@ inline Slot0<T> *NewSimpleGetterSlot(const T *value_ptr) {
 template <typename T>
 inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
   return NewFunctorSlot<void, T>(SimpleSetter<T>(value_ptr));
+}
+
+/**
+ * Helper function to decorate another getter slot returning an enum
+ * value into a slot returning a <code>const char *</code> value.
+ * @param slot a getter slot returning an enum value.
+ * @param names a table containing string values of every enum value.
+ * @param count number of entries in the table.
+ * @return the decorated slot.
+ */  
+template <typename T>
+inline Slot0<const char *> *NewStringEnumGetterSlot(Slot0<T> *slot,
+                                                    const char **names,
+                                                    int count) {
+  return NewFunctorSlot<const char *>(StringEnumGetter<T>(slot, names, count));
+}
+
+/**
+ * Helper function to decorate another setter slot accepting an enum
+ * value into a slot accepting a <code>const char *</code> value.
+ * @param slot a setter slot accepting an enum value.
+ * @param names a table containing string values of every enum value.
+ * @param count number of entries in the table.
+ * @return the decorated slot.
+ */  
+template <typename T>
+inline Slot1<void, const char *> *NewStringEnumSetterSlot(Slot1<void, T> *slot,
+                                                          const char **names,
+                                                          int count) {
+  return NewFunctorSlot<void, const char *>(
+      StringEnumSetter<T>(slot, names, count));
 }
 
 } // namespace ggadget
