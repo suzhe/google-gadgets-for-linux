@@ -129,7 +129,10 @@ class Elements : public ScriptableInterface {
    * Remove all elements from the container.
    */
   void RemoveAllElements();
-
+  
+  /** Notifies all children that the host has changed. */
+  void HostChanged();
+  
   DEFAULT_OWNERSHIP_POLICY
   SCRIPTABLE_INTERFACE_DECL
   virtual bool IsStrict() const { return true; }

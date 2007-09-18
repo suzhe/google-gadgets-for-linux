@@ -124,6 +124,13 @@ int ElementsImpl::GetIndexByName(const char *name) {
   return -1;
 }
 
+void ElementsImpl::HostChanged() {
+  for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+         ite != children_.end(); ++ite) {
+      (*ite)->HostChanged();
+  }
+}
+
 } // namespace internal
 
 Elements::Elements(ElementFactoryInterface *factory,
@@ -191,6 +198,11 @@ bool Elements::RemoveElement(ElementInterface *element) {
 void Elements::RemoveAllElements() {
   ASSERT(impl_);
   impl_->RemoveAllElements();
+}
+
+void Elements::HostChanged() {
+  ASSERT(impl_);
+  impl_->HostChanged();
 }
 
 DELEGATE_SCRIPTABLE_INTERFACE_IMPL(Elements, impl_->scriptable_helper_)

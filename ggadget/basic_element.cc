@@ -478,6 +478,10 @@ void BasicElementImpl::SetPinY(const Variant &pin_y) {
   SET_PIXEL_OR_RELATIVE(pin_y, SetPixelPinY, SetRelativePinY);
 }
 
+void BasicElementImpl::HostChanged() {
+  children_.HostChanged();
+}
+
 } // namespace internal
 
 static const char *kCursorTypeNames[] = {
@@ -901,6 +905,11 @@ bool BasicElement::PinXIsRelative() const {
 bool BasicElement::PinYIsRelative() const {
   ASSERT(impl_);
   return impl_->PinYIsRelative();
+}
+
+void BasicElement::HostChanged() {
+  ASSERT(impl_);
+  return impl_->HostChanged();
 }
 
 } // namespace ggadget

@@ -108,6 +108,12 @@ class BasicElement : public ElementInterface {
   virtual bool HeightIsRelative() const;
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
+  
+  /** 
+   * Notifies the element and its children that the host has changed.
+   * Classes overriding this should remember to call children_.HostChanged().
+   */ 
+  virtual void HostChanged() = 0;
 
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)

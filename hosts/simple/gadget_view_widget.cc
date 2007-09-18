@@ -110,7 +110,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
   if (event->type == GDK_BUTTON_PRESS) {
     MouseEvent e(Event::EVENT_MOUSE_DOWN, 
                  event->x / gvw->zoom, event->y / gvw->zoom);
-    gvw->view->OnMouseDown(&e);
+    gvw->view->OnMouseEvent(&e);
   }
   else if (event->type == GDK_2BUTTON_PRESS) {    
     gvw->dbl_click = true;
@@ -125,19 +125,19 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   ASSERT(event->type == GDK_BUTTON_RELEASE);
   MouseEvent e(Event::EVENT_MOUSE_UP, 
                event->x / gvw->zoom, event->y / gvw->zoom);
-  gvw->view->OnMouseUp(&e);
+  gvw->view->OnMouseEvent(&e);
 
   if (gvw->dbl_click) {
     // The GTK event sequence here is: press 2press release
     // for the second click.
     MouseEvent e2(Event::EVENT_MOUSE_DBLCLICK, 
                   event->x / gvw->zoom, event->y / gvw->zoom);
-    gvw->view->OnDblClick(&e2);
+    gvw->view->OnMouseEvent(&e2);
   }
   else {
     MouseEvent e2(Event::EVENT_MOUSE_CLICK, 
                   event->x / gvw->zoom, event->y / gvw->zoom);
-    gvw->view->OnClick(&e2);
+    gvw->view->OnMouseEvent(&e2);
   }
   
   gvw->dbl_click = false;
@@ -151,7 +151,7 @@ static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
   ASSERT(event->type == GDK_ENTER_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OVER, 
                event->x / gvw->zoom, event->y / gvw->zoom);
-  gvw->view->OnMouseOver(&e);
+  gvw->view->OnMouseEvent(&e);
 
   return FALSE;
 }
@@ -162,7 +162,7 @@ static gboolean GadgetViewWidget_leave_notify(GtkWidget *widget,
   ASSERT(event->type == GDK_LEAVE_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OUT, 
                event->x / gvw->zoom, event->y / gvw->zoom);
-  gvw->view->OnMouseOut(&e);
+  gvw->view->OnMouseEvent(&e);
   
   return FALSE;
 }
@@ -173,7 +173,7 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   ASSERT(event->type == GDK_MOTION_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_MOVE, 
                event->x / gvw->zoom, event->y / gvw->zoom);
-  gvw->view->OnMouseMove(&e);
+  gvw->view->OnMouseEvent(&e);
   
   // Since motion hint is enabled, we must notify GTK that we're ready to 
   // receive the next motion event.
@@ -188,8 +188,17 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
                                            GdkEventKey *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_PRESS);
-  KeyboardEvent e(Event::EVENT_KEY_DOWN);
-  gvw->view->OnKeyDown(&e);
+  
+  // TODO handle modifier keys correctly
+  if (gvw->last_keyval != event->keyval) {
+    KeyboardEvent e(Event::EVENT_KEY_DOWN);
+    gvw->view->OnKeyEvent(&e);
+    
+    gvw->last_keyval = event->keyval;
+  }
+  
+  KeyboardEvent e2(Event::EVENT_KEY_PRESS);
+  gvw->view->OnKeyEvent(&e2);
   
   return FALSE;
 }
@@ -199,10 +208,9 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_RELEASE);
   KeyboardEvent e(Event::EVENT_KEY_UP);
-  gvw->view->OnKeyUp(&e);
+  gvw->view->OnKeyEvent(&e);
   
-  KeyboardEvent e2(Event::EVENT_KEY_PRESS);
-  gvw->view->OnKeyPress(&e2);
+  gvw->last_keyval = 0; // reset last_keyval
   
   return FALSE;
 }
@@ -212,7 +220,7 @@ static gboolean GadgetViewWidget_focus_in(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_FOCUS_CHANGE && event->in == TRUE);
   Event e(Event::EVENT_FOCUS_IN);
-  gvw->view->OnFocusIn(&e);
+  gvw->view->OnOtherEvent(&e);
   
   return FALSE;
 }
@@ -222,7 +230,7 @@ static gboolean GadgetViewWidget_focus_out(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_FOCUS_CHANGE && event->in == FALSE);
   Event e(Event::EVENT_FOCUS_OUT);
-  gvw->view->OnFocusOut(&e);
+  gvw->view->OnOtherEvent(&e);
   
   return FALSE;
 }
@@ -233,7 +241,7 @@ static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
   ASSERT(event->type == GDK_SCROLL);
   MouseEvent e(Event::EVENT_MOUSE_WHEEL, 
                event->x / gvw->zoom, event->y / gvw->zoom);
-  gvw->view->OnMouseWheel(&e);
+  gvw->view->OnMouseEvent(&e);
   
   return FALSE;
 }
@@ -270,6 +278,7 @@ static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
 
 static void GadgetViewWidget_init(GadgetViewWidget *gvw) {
   gvw->dbl_click = false;
+  gvw->last_keyval = 0; // 0 isn't used as a key value in GDK
   
   gtk_widget_set_events(GTK_WIDGET(gvw), 
                         gtk_widget_get_events(GTK_WIDGET(gvw))

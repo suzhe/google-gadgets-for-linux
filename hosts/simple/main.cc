@@ -25,6 +25,7 @@
 using ggadget::Gadget;
 
 double g_zoom = 1.;
+Gadget *g_gadget = NULL;
 
 static gboolean DeleteEventHandler(GtkWidget *widget, 
                                    GdkEvent *event, 
@@ -39,12 +40,12 @@ static gboolean DestroyHandler(GtkWidget *widget,
 }
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, const char *base_path) {
-  Gadget *gadget = new Gadget();
-  if (!gadget->InitFromPath(base_path)) {
+  g_gadget = new Gadget();
+  if (!g_gadget->InitFromPath(base_path)) {
     LOG("Error: unable to load gadget from %s", base_path);
   }
   
-  ViewInterface *main = gadget->GetMainView();
+  ViewInterface *main = g_gadget->GetMainView();
   if (!main) {
     LOG("Error: unable to get view from widget.");
   } 
@@ -91,11 +92,16 @@ static bool CreateGTKUI(const char *base_path) {
   
   if (!CreateGadgetUI(GTK_WINDOW(window), vbox, base_path)) {
     return false;
-  }
+  } 
   
   gtk_widget_show_all(window);
-  
+
   return true;
+}
+
+static void DestroyUI() {  
+  delete g_gadget;
+  g_gadget = NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -105,7 +111,8 @@ int main(int argc, char* argv[]) {
   setlocale(LC_ALL, "");
   
   if (argc < 2) {
-    printf("Error: not enough arguments. Gadget base path required.");    
+    LOG("Error: not enough arguments. Gadget base path required.");   
+    return -1;
   }  
   
   if (argc == 3) {
@@ -123,5 +130,7 @@ int main(int argc, char* argv[]) {
 
   gtk_main();
 
+  DestroyUI();
+  
   return 0;
 }

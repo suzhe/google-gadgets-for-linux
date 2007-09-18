@@ -17,12 +17,16 @@
 #ifndef HOSTS_SIMPLE_GTK_CAIRO_HOST_H__
 #define HOSTS_SIMPLE_GTK_CAIRO_HOST_H__
 
+#include <set>
+
+#include <gtk/gtk.h>
 #include "ggadget/common.h"
 #include "ggadget/host_interface.h"
 
 using ggadget::HostInterface;
 using ggadget::GraphicsInterface;
 using ggadget::ViewInterface;
+using ggadget::ElementInterface;
 
 class GadgetViewWidget;
 
@@ -34,6 +38,7 @@ class GadgetViewWidget;
 class GtkCairoHost : public HostInterface {
  public:
   GtkCairoHost(GadgetViewWidget *gvw);
+  virtual ~GtkCairoHost();
 
   virtual const GraphicsInterface *GetGraphics() const { return gfx_; };
  
@@ -43,12 +48,29 @@ class GtkCairoHost : public HostInterface {
 
   virtual bool DetachFromView();
 
-  virtual ~GtkCairoHost();
+  virtual void SetResizeable();  
+  virtual void SetCaption(const char *caption); 
+  virtual void SetShowCaptionAlways(bool always);
+  
+  virtual void *RegisterTimer(unsigned ms, 
+                              ElementInterface *target, void *data);
+  virtual bool RemoveTimer(void *token);
+  
+ private:     
+  struct TimerData {
+    TimerData(ElementInterface *t, void *d, GtkCairoHost *h) 
+        : target(t), data(d), host(h) {}
+    ElementInterface *target;
+    void *data;
+    GtkCairoHost *host; // When this is NULL, the object is marked to be freed.
+  };
    
- private:
   GadgetViewWidget *gvw_;
   GraphicsInterface *gfx_;
+  std::set<TimerData *> timers_;
    
+  static gboolean DispatchTimer(gpointer data); 
+  
   DISALLOW_EVIL_CONSTRUCTORS(GtkCairoHost);
 };
 

@@ -43,69 +43,83 @@ ViewImpl::~ViewImpl() {
   }
 }
 
-void ViewImpl::OnMouseDown(MouseEvent *event) {
-  DLOG("mousedown");
-  FireEvent(event, onmousedown_event_);
+void ViewImpl::OnMouseEvent(MouseEvent *event) {
+  switch (event->GetType()) {
+    case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
+    // DLOG("mousemove");
+    // View doesn't have mouse move event according to the API document.
+    break;
+   case Event::EVENT_MOUSE_DOWN:
+    DLOG("mousedown");
+    FireEvent(event, onmousedown_event_);
+    break;
+   case Event::EVENT_MOUSE_UP:
+    DLOG("mouseup");
+    FireEvent(event, onmouseup_event_);
+    break;
+   case Event::EVENT_MOUSE_CLICK:
+    DLOG("click %g %g", event->GetX(), event->GetY());
+    FireEvent(event, onclick_event_);
+    break;
+   case Event::EVENT_MOUSE_DBLCLICK:
+    DLOG("dblclick %g %g", event->GetX(), event->GetY());
+    FireEvent(event, ondblclick_event_);
+    break;
+   case Event::EVENT_MOUSE_OUT:
+    DLOG("mouseout");
+    FireEvent(event, onmouseout_event_);
+    break;
+   case Event::EVENT_MOUSE_OVER:
+    DLOG("mouseover");
+    FireEvent(event, onmouseover_event_);
+    break;
+   case Event::EVENT_MOUSE_WHEEL:
+    DLOG("mousewheel");
+    // View doesn't have mouse wheel event according to the API document.
+    break;
+   default:
+    ASSERT(false);
+  };
 }
 
-void ViewImpl::OnMouseUp(MouseEvent *event) {
-  DLOG("mouseup");
-  FireEvent(event, onmouseup_event_);
+void ViewImpl::OnKeyEvent(KeyboardEvent *event) {
+  switch (event->GetType()) {
+   case Event::EVENT_KEY_DOWN:
+    DLOG("keydown");
+    FireEvent(event, onkeydown_event_);      
+    break;
+   case Event::EVENT_KEY_UP:
+    DLOG("keyup");
+    FireEvent(event, onkeyup_event_);
+    break;
+   case Event::EVENT_KEY_PRESS:
+    DLOG("keypress");
+    FireEvent(event, onkeypress_event_);
+    break;
+   default:
+    ASSERT(false);
+  };
 }
 
-void ViewImpl::OnClick(MouseEvent *event) {
-  DLOG("click %g %g", event->GetX(), event->GetY());
-  FireEvent(event, onclick_event_);
-} 
-
-void ViewImpl::OnDblClick(MouseEvent *event) {
-  DLOG("dblclick %g %g", event->GetX(), event->GetY());
-  FireEvent(event, ondblclick_event_);
+void ViewImpl::OnTimerEvent(TimerEvent *event) {
+  ASSERT(event->GetType() == Event::EVENT_TIMER_TICK);
+  DLOG("timer tick");
+  // TODO: dispatch animation event?
 }
 
-void ViewImpl::OnMouseMove(MouseEvent *event) {
-  // DLOG("mousemove");
-  // View doesn't have mouse move event according to the API document.
-}
-
-void ViewImpl::OnMouseOut(MouseEvent *event) {
-  DLOG("mouseout");
-  FireEvent(event, onmouseout_event_);
-}
-
-void ViewImpl::OnMouseOver(MouseEvent *event) {
-  DLOG("mouseover");
-  FireEvent(event, onmouseover_event_);
-}
-
-void ViewImpl::OnMouseWheel(MouseEvent *event) {
-  DLOG("mousewheel");
-  // View doesn't have mouse wheel event according to the API document.
-}
-
-void ViewImpl::OnKeyDown(KeyboardEvent *event) {
-  DLOG("keydown");
-  FireEvent(event, onkeydown_event_);
-}
-
-void ViewImpl::OnKeyUp(KeyboardEvent *event) {
-  DLOG("keyup");
-  FireEvent(event, onkeyup_event_);
-}
-
-void ViewImpl::OnKeyPress(KeyboardEvent *event) {
-  DLOG("keypress");
-  FireEvent(event, onkeypress_event_);
-}
-
-void ViewImpl::OnFocusIn(Event *event) {
-  DLOG("focusin");
-  // View doesn't have focus in event according to the API document.
-}
-
-void ViewImpl::OnFocusOut(Event *event) {
-  DLOG("focusout");
-  // View doesn't have focus out event according to the API document.
+void ViewImpl::OnOtherEvent(Event *event) {
+  switch (event->GetType()) {
+   case Event::EVENT_FOCUS_IN:
+    DLOG("focusin");
+    // View doesn't have focus in event according to the API document.
+    break;
+   case Event::EVENT_FOCUS_OUT:
+    DLOG("focusout");
+    // View doesn't have focus out event according to the API document.     
+    break;
+   default:
+    ASSERT(false);
+  };
 }
 
 bool ViewImpl::SetWidth(int width) {
@@ -170,6 +184,11 @@ bool ViewImpl::AttachHost(HostInterface *host) {
   }
   
   host_ = host;
+  
+  // TODO If host != NULL, should re-register all timers
+  
+  children_.HostChanged();
+  
   return true;
 }
    
@@ -358,56 +377,20 @@ const CanvasInterface *View::Draw(bool *changed) {
   return impl_->Draw(changed);
 }
 
-void View::OnMouseDown(MouseEvent *event) {
-  impl_->OnMouseDown(event);
+void View::OnMouseEvent(MouseEvent *event) {
+  impl_->OnMouseEvent(event);
 }
 
-void View::OnMouseUp(MouseEvent *event) {
-  impl_->OnMouseUp(event);
+void View::OnKeyEvent(KeyboardEvent *event) {
+  impl_->OnKeyEvent(event);
 }
 
-void View::OnClick(MouseEvent *event) {
-  impl_->OnClick(event);
-} 
-
-void View::OnDblClick(MouseEvent *event) {
-  impl_->OnDblClick(event);
+void View::OnTimerEvent(TimerEvent *event) {
+  impl_->OnTimerEvent(event);
 }
 
-void View::OnMouseMove(MouseEvent *event) {
-  impl_->OnMouseMove(event);
-}
-
-void View::OnMouseOut(MouseEvent *event) {
-  impl_->OnMouseOut(event);
-}
-
-void View::OnMouseOver(MouseEvent *event) {
-  impl_->OnMouseOver(event);
-}
-
-void View::OnMouseWheel(MouseEvent *event) {
-  impl_->OnMouseWheel(event);
-}
-
-void View::OnKeyDown(KeyboardEvent *event) {
-  impl_->OnKeyDown(event);
-}
-
-void View::OnKeyUp(KeyboardEvent *event) {
-  impl_->OnKeyUp(event);
-}
-
-void View::OnKeyPress(KeyboardEvent *event) {
-  impl_->OnKeyPress(event);
-}
-
-void View::OnFocusIn(Event *event) {
-  impl_->OnFocusIn(event);
-}
-
-void View::OnFocusOut(Event *event) {
-  impl_->OnFocusOut(event);
+void View::OnOtherEvent(Event *event) {
+  impl_->OnOtherEvent(event);
 }
 
 void View::OnElementAdded(ElementInterface *element) {

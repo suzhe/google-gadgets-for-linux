@@ -60,7 +60,7 @@ class FileManagerInterface {
 
   /**
    * Gets the contents of an XML file. The file is searched in the same
-   * sequence as in @c GetFileContents().  Entities defined in @c string.xml
+   * sequence as in @c GetFileContents().  Entities defined in @c strings.xml
    * are replaced with localized strings.
    *
    * @param file the file name relative to the base path.

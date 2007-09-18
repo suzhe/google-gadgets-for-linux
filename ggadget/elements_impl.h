@@ -48,6 +48,8 @@ class ElementsImpl {
   ElementInterface *GetItemByName(const char *name);
   int GetIndexByName(const char *name);
 
+  void HostChanged();
+  
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
   ScriptableHelper scriptable_helper_;

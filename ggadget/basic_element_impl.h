@@ -108,6 +108,8 @@ class BasicElementImpl {
   Variant GetPinY() const;
   void SetPinY(const Variant &pin_y);
 
+  void HostChanged();
+  
  public:
   void WidthChanged();
   void HeightChanged();

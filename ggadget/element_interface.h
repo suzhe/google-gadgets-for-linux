@@ -301,6 +301,9 @@ class ElementInterface : public ScriptableInterface {
    * Removes the keyboard focus from the element.
    */
   virtual void KillFocus() = 0;
+  
+  /** Signal propagated from the parent when the host changes. */
+  virtual void HostChanged() = 0;
 };
 
 CLASS_ID_IMPL(ElementInterface, ScriptableInterface)

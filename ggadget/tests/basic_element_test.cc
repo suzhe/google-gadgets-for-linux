@@ -39,9 +39,11 @@ class Muffin : public ggadget::BasicElement {
   }
 
  public:
+  virtual void HostChanged() {}
+  
+ public:
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
   
-
  public:
   static ggadget::ElementInterface *CreateInstance(
       ggadget::ElementInterface *parent,
@@ -67,6 +69,9 @@ class Pie : public ggadget::BasicElement {
   virtual const char *GetTagName() const {
     return "pie";
   }
+  
+ public:
+  virtual void HostChanged() {}
 
  public:
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
