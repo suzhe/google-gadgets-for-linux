@@ -101,21 +101,10 @@ class ViewImpl {
 
   bool AttachHost(HostInterface *host);
 
-  void OnMouseDown(MouseEvent *event);
-  void OnMouseUp(MouseEvent *event);
-  void OnClick(MouseEvent *event);
-  void OnDblClick(MouseEvent *event);
-  void OnMouseMove(MouseEvent *event);
-  void OnMouseOut(MouseEvent *event);
-  void OnMouseOver(MouseEvent *event);
-  void OnMouseWheel(MouseEvent *event);
-
-  void OnKeyDown(KeyboardEvent *event);
-  void OnKeyUp(KeyboardEvent *event);  
-  void OnKeyPress(KeyboardEvent *event);
-  
-  void OnFocusIn(Event *event);
-  void OnFocusOut(Event *event);
+  void OnMouseEvent(MouseEvent *event);
+  void OnKeyEvent(KeyboardEvent *event);
+  void OnTimerEvent(TimerEvent *event);
+  void OnOtherEvent(Event *event);
 
   void OnElementAdded(ElementInterface *element);
   void OnElementRemoved(ElementInterface *element);

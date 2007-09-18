@@ -21,6 +21,7 @@ namespace ggadget {
 
 class GraphicsInterface;
 class ViewInterface;
+class ElementInterface;
 
 /**
  * Interface for providing host services to the gadget library. Each view 
@@ -35,6 +36,7 @@ class ViewInterface;
  */
 class HostInterface {   
  public:
+  virtual ~HostInterface() {}
    
   /** Returns the GraphicsInterface associated with this host. */
   virtual const GraphicsInterface *GetGraphics() const = 0;
@@ -57,8 +59,42 @@ class HostInterface {
    * @return true on success, false on failure.
    */ 
   virtual bool DetachFromView() = 0;   
+  
+  /**
+   * When the resizable field on the view is updated, the host needs to be 
+   * alerted of this change.
+   */
+  virtual void SetResizeable() = 0;  
 
-  virtual ~HostInterface() {}   
+  /** 
+   * Sets a caption to be shown when the View is in floating or expanded
+   * mode. 
+   */
+  virtual void SetCaption(const char *caption) = 0;
+  
+  /** Sets whether to always show the caption for this view. */
+  virtual void SetShowCaptionAlways(bool always) = 0;
+  
+  /**
+   * Registers a timer with the host. The host will call the view with a 
+   * timer event when the interval hits. The first
+   * call will occur after the first interval passes.
+   * The callback function returns true if it wants to be called again. If not, 
+   * returning false will unregister the timer from the host.
+   * @param ms timer interval in milliseconds
+   * @param target The target of this timer. NULL if target is the View.
+   * @param data context to be passed to the callback unmodified
+   * @return token to timer if set, NULL otherwise
+   */
+  virtual void *RegisterTimer(unsigned ms, 
+                              ElementInterface *target, void *data) = 0;
+  
+  /** 
+   * Unregisters a timer.
+   * @param token Timer token.
+   * @return true on success, false otherwise.
+   */
+  virtual bool RemoveTimer(void *token) = 0;
 };
 
 } // namespace ggadget

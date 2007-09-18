@@ -265,6 +265,8 @@ class MockedElement : public ggadget::ElementInterface {
   virtual bool PinYIsRelative() const {
     return false;
   }
+ 
+  virtual void HostChanged() {}
 
   DEFAULT_OWNERSHIP_POLICY;
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);

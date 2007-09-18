@@ -40,21 +40,10 @@ class View : public ViewInterface {
   
   virtual bool AttachHost(HostInterface *host);
   
-  virtual void OnMouseDown(MouseEvent *event);
-  virtual void OnMouseUp(MouseEvent *event);
-  virtual void OnClick(MouseEvent *event);
-  virtual void OnDblClick(MouseEvent *event);
-  virtual void OnMouseMove(MouseEvent *event);
-  virtual void OnMouseOut(MouseEvent *event);
-  virtual void OnMouseOver(MouseEvent *event);
-  virtual void OnMouseWheel(MouseEvent *event);
-  
-  virtual void OnKeyDown(KeyboardEvent *event);
-  virtual void OnKeyUp(KeyboardEvent *event);  
-  virtual void OnKeyPress(KeyboardEvent *event);
-  
-  virtual void OnFocusOut(Event *event);
-  virtual void OnFocusIn(Event *event);
+  virtual void OnMouseEvent(MouseEvent *event);
+  virtual void OnKeyEvent(KeyboardEvent *event);
+  virtual void OnOtherEvent(Event *event);
+  virtual void OnTimerEvent(TimerEvent *event);
 
   virtual void OnElementAdded(ElementInterface *element);
   virtual void OnElementRemoved(ElementInterface *element);

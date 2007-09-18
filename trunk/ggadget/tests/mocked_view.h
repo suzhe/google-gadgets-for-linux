@@ -40,21 +40,10 @@ class MockedView : public ggadget::ViewInterface {
 
   virtual bool AttachHost(ggadget::HostInterface *host) { return true; };
 
-  virtual void OnClick(ggadget::MouseEvent *event) {};
-  virtual void OnDblClick(ggadget::MouseEvent *event) {};
-  virtual void OnMouseDown(ggadget::MouseEvent *event) {};
-  virtual void OnMouseUp(ggadget::MouseEvent *event) {};
-  virtual void OnMouseMove(ggadget::MouseEvent *event) {};
-  virtual void OnMouseOut(ggadget::MouseEvent *event) {};
-  virtual void OnMouseOver(ggadget::MouseEvent *event) {};
-  virtual void OnMouseWheel(ggadget::MouseEvent *event) {};
-
-  virtual void OnKeyDown(ggadget::KeyboardEvent *event) {};
-  virtual void OnKeyUp(ggadget::KeyboardEvent *event) {};  
-  virtual void OnKeyPress(ggadget::KeyboardEvent *event) {};
-
-  virtual void OnFocusOut(ggadget::Event *event) {};
-  virtual void OnFocusIn(ggadget::Event *event) {};
+  virtual void OnMouseEvent(ggadget::MouseEvent *event) {};
+  virtual void OnKeyEvent(ggadget::KeyboardEvent *event) {};
+  virtual void OnOtherEvent(ggadget::Event *event) {};
+  virtual void OnTimerEvent(ggadget::TimerEvent *event) {};
 
   virtual bool SetWidth(int width) { return true; };
   virtual bool SetHeight(int height) { return true; };

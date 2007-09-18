@@ -27,6 +27,7 @@ class ElementInterface;
 class HostInterface;
 class KeyboardEvent;
 class MouseEvent;
+class TimerEvent;
 class Event;
 class Elements;
 
@@ -56,35 +57,19 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual bool AttachHost(HostInterface *host) = 0;
     
-  /** Handler of the mouse button down event. */
-  virtual void OnMouseDown(MouseEvent *event) = 0;
-  /** Handler of the mouse button up event. */
-  virtual void OnMouseUp(MouseEvent *event) = 0;
-  /** Handler of the mouse button click event. */
-  virtual void OnClick(MouseEvent *event) = 0;
-  /** Handler of the mouse button double click event. */
-  virtual void OnDblClick(MouseEvent *event) = 0;
-  /** Handler of the mouse move event. */
-  virtual void OnMouseMove(MouseEvent *event) = 0;
-  /** Handler of the mouse out event. */
-  virtual void OnMouseOut(MouseEvent *event) = 0;
-  /** Handler of the mouse over event. */
-  virtual void OnMouseOver(MouseEvent *event) = 0;
-  /** Handler of the mouse wheel event. */
-  virtual void OnMouseWheel(MouseEvent *event) = 0;
+  /** Handler of the mouse events. */
+  virtual void OnMouseEvent(MouseEvent *event) = 0;
+  /** Handler of the keyboard events. */
+  virtual void OnKeyEvent(KeyboardEvent *event) = 0;  
+  /** Handler for other events. */
+  virtual void OnOtherEvent(Event *event) = 0;
 
-  /** Handler of the keyboard key down event. */
-  virtual void OnKeyDown(KeyboardEvent *event) = 0;
-  /** Handler of the keyboard key up event. */
-  virtual void OnKeyUp(KeyboardEvent *event) = 0;  
-  /** Handler of the keyboard key press event. */
-  virtual void OnKeyPress(KeyboardEvent *event) = 0;
+  /** 
+   * Handler for timer events. 
+   * Set event->StopReceivingMore() to cancel the timer. 
+   */
+  virtual void OnTimerEvent(TimerEvent *event) = 0;
   
-  /** Indicate that the view is now receiving keyboard events. */
-  virtual void OnFocusIn(Event *event) = 0;
-  /** Indicate that focus has lost. */
-  virtual void OnFocusOut(Event *event) = 0;
-
   /** Called when any element is added into the view hierarchy. */
   virtual void OnElementAdded(ElementInterface *element) = 0;
   /** Called when any element in the view hierarchy is removed. */
