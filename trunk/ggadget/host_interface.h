@@ -95,6 +95,12 @@ class HostInterface {
    * @return true on success, false otherwise.
    */
   virtual bool RemoveTimer(void *token) = 0;
+  
+  /**
+   * Returns the current time in microsecond units. This should only 
+   * be used for relative time comparisons, to compute elapsed time.
+   */
+  virtual uint64_t GetCurrentTime() const = 0;
 };
 
 } // namespace ggadget

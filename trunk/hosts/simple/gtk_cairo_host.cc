@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <sys/time.h>
+
 #include "gtk_cairo_host.h"
 #include "gadget_view_widget.h"
 
@@ -84,7 +86,10 @@ gboolean GtkCairoHost::DispatchTimer(gpointer data) {
     return FALSE;
   }
 
-  TimerEvent tmevent(tmdata->target, tmdata->data);
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  uint64_t time = (uint64_t)tv.tv_sec + (uint64_t)(tv.tv_usec) * 1000000;
+  TimerEvent tmevent(tmdata->target, tmdata->data, time);
   tmdata->host->gvw_->view->OnTimerEvent(&tmevent);
   
   if (!tmevent.GetReceiveMore()) {
@@ -106,7 +111,7 @@ void *GtkCairoHost::RegisterTimer(unsigned ms,
   
   TimerData *tmdata = new TimerData(target, data, this);
   timers_.insert(tmdata);
-  
+   
   g_timeout_add(ms, DispatchTimer, static_cast<gpointer>(tmdata));
   
   return static_cast<void *>(tmdata);
@@ -125,4 +130,10 @@ bool GtkCairoHost::RemoveTimer(void *token) {
   timers_.erase(i);
   tmdata->host = NULL;
   return true;
+}
+
+uint64_t GtkCairoHost::GetCurrentTime() const {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return (uint64_t)tv.tv_sec + (uint64_t)(tv.tv_usec) * 1000000;
 }
