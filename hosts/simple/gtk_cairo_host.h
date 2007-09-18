@@ -56,6 +56,8 @@ class GtkCairoHost : public HostInterface {
                               ElementInterface *target, void *data);
   virtual bool RemoveTimer(void *token);
   
+  virtual uint64_t GetCurrentTime() const;
+  
  private:     
   struct TimerData {
     TimerData(ElementInterface *t, void *d, GtkCairoHost *h) 

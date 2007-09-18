@@ -92,15 +92,20 @@ class KeyboardEvent : public Event {
  */
 class TimerEvent : public Event {
  public:
-  TimerEvent(ElementInterface *target, void *data) 
+  TimerEvent(ElementInterface *target, void *data, uint64_t time) 
       : Event(EVENT_TIMER_TICK), 
-        target_(target), data_(data), receive_more_(true) { 
+        target_(target), data_(data), time_(time), receive_more_(true) { 
   };  
   
   /** Gets the target of this timer event. May be NULL if it is for the view. */
   ElementInterface *GetTarget() const { return target_; };
-  
   void *GetData() const { return data_; };
+  
+  /** 
+   * Returns the time of the event in microsecond units. This should only 
+   * be used for relative time comparisons, to compute elapsed time.
+   */
+  uint64_t GetTimeStamp() const { return time_; };
   
   /** Sets that this timer should not be received anymore. */
   void StopReceivingMore() { receive_more_ = false; }
@@ -110,6 +115,7 @@ class TimerEvent : public Event {
  private:
   ElementInterface *target_;
   void *data_;
+  unsigned long long time_;
   bool receive_more_;
 };
 
