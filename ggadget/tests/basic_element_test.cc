@@ -103,16 +103,18 @@ TEST_F(BasicElementTest, TestCreate) {
 TEST_F(BasicElementTest, TestChildren) {
   MockedView view;
   Muffin m(NULL, &view, NULL);
-  ggadget::ElementInterface *c1 = m.AppendElement("muffin", NULL);
-  ggadget::ElementInterface *c2 = m.InsertElement("pie", c1, "First");
+  ggadget::ElementInterface *c1 = 
+      m.GetChildren()->AppendElement("muffin", NULL);
+  ggadget::ElementInterface *c2 =
+      m.GetChildren()->InsertElement("pie", c1, "First");
   ASSERT_EQ(2, m.GetChildren()->GetCount());
   ASSERT_TRUE(m.GetChildren()->GetItemByIndex(0) == c2);
   ASSERT_TRUE(m.GetChildren()->GetItemByIndex(1) == c1);
   ASSERT_TRUE(m.GetChildren()->GetItemByName("First") == c2);
-  m.RemoveElement(c2);
+  m.GetChildren()->RemoveElement(c2);
   ASSERT_EQ(1, m.GetChildren()->GetCount());
   ASSERT_TRUE(m.GetChildren()->GetItemByIndex(0) == c1);
-  m.RemoveAllElements();
+  m.GetChildren()->RemoveAllElements();
   ASSERT_EQ(0, m.GetChildren()->GetCount());
 }
 
@@ -149,7 +151,7 @@ TEST_F(BasicElementTest, TestPixelHeight) {
   // Setting the height as negative value will make no effect.
   m.SetPixelHeight(-100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelHeight());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelHeight(50.0);
   // Modifying the height of the parent will not effect the child.
   m.SetPixelHeight(150.0);
@@ -162,7 +164,7 @@ TEST_F(BasicElementTest, TestRelativeHeight) {
   m.SetRelativeHeight(0.50);
   ASSERT_FLOAT_EQ(0.50, m.GetRelativeHeight());
   ASSERT_FLOAT_EQ(150.0, m.GetPixelHeight());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeHeight(0.50);
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeHeight());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelHeight());
@@ -206,7 +208,7 @@ TEST_F(BasicElementTest, TestName) {
 TEST_F(BasicElementTest, TestConst) {
   MockedView v;
   Muffin m(NULL, &v, NULL);
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   const ggadget::ElementInterface *cc = c;
   ASSERT_TRUE(cc->GetView() == &v);
   ASSERT_TRUE(cc->GetParentElement() == &m);
@@ -301,7 +303,7 @@ TEST_F(BasicElementTest, TestPixelWidth) {
   // Setting the width as negative value will make no effect.
   m.SetPixelWidth(-100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelWidth());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelWidth(50.0);
   // Modifying the width of the parent will not effect the child.
   m.SetPixelWidth(200.0);
@@ -314,7 +316,7 @@ TEST_F(BasicElementTest, TestRelativeWidth) {
   m.SetRelativeWidth(0.50);
   ASSERT_FLOAT_EQ(0.50, m.GetRelativeWidth());
   ASSERT_FLOAT_EQ(200.0, m.GetPixelWidth());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeWidth(0.50);
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeWidth());
   ASSERT_FLOAT_EQ(100.0, c->GetPixelWidth());
@@ -345,7 +347,7 @@ TEST_F(BasicElementTest, TestPixelX) {
   ASSERT_FLOAT_EQ(0.0, m.GetPixelX());
   m.SetPixelX(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelX());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelX(50.0);
   // Modifying the width of the parent will not effect the child.
   m.SetPixelWidth(150.0);
@@ -358,7 +360,7 @@ TEST_F(BasicElementTest, TestRelativeX) {
   m.SetRelativeWidth(0.5);
   m.SetRelativeX(0.5);
   ASSERT_FLOAT_EQ(200.0, m.GetPixelX());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeX(0.50);
   ASSERT_FLOAT_EQ(100.0, c->GetPixelX());
   // Modifying the width of the parent will effect the child.
@@ -372,7 +374,7 @@ TEST_F(BasicElementTest, TestPixelY) {
   ASSERT_FLOAT_EQ(0.0, m.GetPixelY());
   m.SetPixelY(100.0);
   ASSERT_FLOAT_EQ(100.0, m.GetPixelY());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelY(50.0);
   // Modifying the height of the parent will not effect the child.
   m.SetPixelHeight(150.0);
@@ -385,7 +387,7 @@ TEST_F(BasicElementTest, TestRelativeY) {
   m.SetRelativeHeight(0.5);
   m.SetRelativeY(0.5);
   ASSERT_FLOAT_EQ(150.0, m.GetPixelY());
-  ggadget::ElementInterface *c = m.AppendElement("pie", NULL);
+  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeY(0.50);
   ASSERT_FLOAT_EQ(75.0, c->GetPixelY());
   // Modifying the height of the parent will effect the child.

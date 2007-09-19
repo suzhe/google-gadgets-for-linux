@@ -92,13 +92,6 @@ class BasicElement : public ElementInterface {
   virtual const ElementInterface *GetParentElement() const;
   virtual const char *GetTooltip() const;
   virtual void SetTooltip(const char *tooltip);
-  virtual ElementInterface *AppendElement(const char *tag_name,
-                                          const char *name);
-  virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name);
-  virtual bool RemoveElement(ElementInterface *child);
-  virtual void RemoveAllElements();
   virtual void Focus();
   virtual void KillFocus();
 

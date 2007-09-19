@@ -71,9 +71,9 @@ class ViewInterface : public ScriptableInterface {
   virtual void OnTimerEvent(TimerEvent *event) = 0;
   
   /** Called when any element is added into the view hierarchy. */
-  virtual void OnElementAdded(ElementInterface *element) = 0;
-  /** Called when any element in the view hierarchy is removed. */
-  virtual void OnElementRemoved(ElementInterface *element) = 0;
+  virtual void OnElementAdd(ElementInterface *element) = 0;
+  /** Called when any element in the view hierarchy is about to be removed. */
+  virtual void OnElementRemove(ElementInterface *element) = 0;
 
   /** Any elements should call this method when it need to fire an event. */ 
   virtual void FireEvent(Event *event, const EventSignal &event_signal) = 0;
@@ -132,7 +132,7 @@ class ViewInterface : public ScriptableInterface {
   virtual void SetShowCaptionAlways(bool show_always) = 0;
   virtual bool GetShowCaptionAlways() const = 0;
 
- public:
+ public:  // Element management functions.
   /**
    * Retrieves a collection that contains the immediate children of this
    * view.
@@ -145,31 +145,6 @@ class ViewInterface : public ScriptableInterface {
   virtual Elements *GetChildren() = 0;
   
   /**
-   * Appends an element as the last child of this view.
-   * @return the newly created element or @c NULL if this method is not
-   *     allowed.
-   */
-  virtual ElementInterface *AppendElement(const char *tag_name,
-                                          const char *name) = 0;
-  /**
-   * Insert an element immediately before the specified element.
-   * If the specified element is not the direct child of this view, the
-   * newly created element will be append as the last child of this view.
-   * @return the newly created element or @c NULL if this method is not
-   *     allowed.
-   */
-  virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name) = 0;
-  /**
-   * Removes the specified child from this view.
-   * @param child the element to remove.
-   * @return @c true if removed successfully, or @c false if the specified
-   *     element doesn't exists or not the direct child of this view.
-   */
-  virtual bool RemoveElement(ElementInterface *child) = 0;
-
-  /**
    * Looks up an element from all elements directly or indirectly contained
    * in this view by its name.
    * @param name element name.
@@ -181,6 +156,67 @@ class ViewInterface : public ScriptableInterface {
    * Constant version of the above GetElementByName();
    */
   virtual const ElementInterface *GetElementByName(const char *name) const = 0;
+
+ public: // Timer, interval and animation functions.
+  /**
+   * Starts an animation timer. The @a slot is called periodically during 
+   * @a duration with a value between @a start_value and @a end_value according
+   * to the progress.
+   * 
+   * The value parameter of the slot is calculated as
+   * (where progress is a float number between 0 and 1): <code>
+   * value = start_value + (int)((end_value - start_value) * progress).</code>
+   *
+   * Note: The number of times the slot is called depends on the system
+   * performance and current load of the system. It may be as high as 100 fps.
+   * 
+   * @param slot the call target of the timer. This @c ViewInterface instance
+   *     becomes the owner of this slot after this call.
+   * @param start_value start value of the animation.
+   * @param end_value end value of the animation.
+   * @param duration the duration of the whole animation in milliseconds.
+   * @return the animation token that can be used in @c CancelAnimation().
+   */
+  virtual int BeginAnimation(Slot1<void, int> *slot,
+                             int start_value,
+                             int end_value,
+                             unsigned int duration) = 0;
+
+  /**
+   * Cancels a currently running animation.
+   * @param token the token returned by BeginAnimation().
+   */
+  virtual void CancelAnimation(int token) = 0;
+
+  /**
+   * Creates a run-once timer.
+   * @param slot the call target of the timer. This @c ViewInterface instance
+   *     becomes the owner of this slot after this call.
+   * @param duration the duration of the timer in milliseconds.
+   * @return the timeout token that can be used in @c ClearTimeout().
+   */
+  virtual int SetTimeout(Slot0<void> *slot, unsigned int duration) = 0;
+
+  /**
+   * Cancels a run-once timer.
+   * @param token the token returned by SetTimeout().
+   */
+  virtual void ClearTimeout(int token) = 0;
+
+  /**
+   * Creates a run-forever timer.
+   * @param slot the call target of the timer. This @c ViewInterface instance
+   *     becomes the owner of this slot after this call.
+   * @param duration the period between calls in milliseconds.
+   * @return the interval token than can be used in @c ClearInterval().
+   */
+  virtual int SetInterval(Slot0<void> *slot, unsigned int duration) = 0;
+
+  /**
+   * Cancels a run-forever timer.
+   * @param token the token returned by SetInterval().
+   */
+  virtual void ClearInterval(int token) = 0;
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

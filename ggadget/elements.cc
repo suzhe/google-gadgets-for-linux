@@ -21,6 +21,7 @@
 #include "common.h"
 #include "element_interface.h"
 #include "element_factory_interface.h"
+#include "view_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -57,6 +58,7 @@ ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
   if (e == NULL)
     return NULL;
   children_.push_back(e);
+  view_->OnElementAdd(e);
   return e;
 }
 
@@ -71,6 +73,7 @@ ElementInterface *ElementsImpl::InsertElement(
   std::vector<ElementInterface *>::iterator ite = std::find(
       children_.begin(), children_.end(), before);
   children_.insert(ite, e);
+  view_->OnElementAdd(e);
   return e;
 }
 
@@ -79,6 +82,7 @@ bool ElementsImpl::RemoveElement(ElementInterface *element) {
       children_.begin(), children_.end(), element);
   if (ite == children_.end())
     return false;
+  view_->OnElementRemove(*ite);
   (*ite)->Destroy();
   children_.erase(ite);
   return true;
@@ -86,8 +90,10 @@ bool ElementsImpl::RemoveElement(ElementInterface *element) {
 
 void ElementsImpl::RemoveAllElements() {
   for (std::vector<ElementInterface *>::iterator ite =
-       children_.begin(); ite != children_.end(); ++ite)
+       children_.begin(); ite != children_.end(); ++ite) {
+    view_->OnElementRemove(*ite);
     (*ite)->Destroy();
+  }
   std::vector<ElementInterface *> v;
   children_.swap(v);
 }

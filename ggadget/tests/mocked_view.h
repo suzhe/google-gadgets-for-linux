@@ -49,8 +49,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual bool SetHeight(int height) { return true; };
   virtual bool SetSize(int width, int height) { return true; };   
 
-  virtual void OnElementAdded(ggadget::ElementInterface *element) {};
-  virtual void OnElementRemoved(ggadget::ElementInterface *element) {};
+  virtual void OnElementAdd(ggadget::ElementInterface *element) {};
+  virtual void OnElementRemove(ggadget::ElementInterface *element) {};
   virtual void FireEvent(ggadget::Event *event,
                          const ggadget::EventSignal &event_signal) {};
 
@@ -66,18 +66,22 @@ class MockedView : public ggadget::ViewInterface {
 
   virtual const ggadget::Elements *GetChildren() const { return NULL; };
   virtual ggadget::Elements *GetChildren() { return NULL; };
-  virtual ggadget::ElementInterface *AppendElement(
-      const char *tag_name, const char *name) { return NULL; };
-  virtual ggadget::ElementInterface *InsertElement(
-      const char *tag_name,
-      const ggadget::ElementInterface *before,
-      const char *name) { return NULL; };
-  virtual bool RemoveElement(
-      ggadget::ElementInterface *child) { return false; };
   virtual ggadget::ElementInterface *GetElementByName(
       const char *name) { return NULL; };
   virtual const ggadget::ElementInterface *GetElementByName(
       const char *name) const { return NULL; };
+
+  virtual int BeginAnimation(ggadget::Slot1<void, int> *slot,
+                             int start_value,
+                             int end_value,
+                             unsigned int duration) { return 0; }
+  virtual void CancelAnimation(int token) { }
+  virtual int SetTimeout(ggadget::Slot0<void> *slot,
+                         unsigned int duration) { return 0; }
+  virtual void ClearTimeout(int token) { }
+  virtual int SetInterval(ggadget::Slot0<void> *slot,
+                          unsigned int duration) { return 0; }
+  virtual void ClearInterval(int token) { }
 
   DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
   DEFAULT_OWNERSHIP_POLICY

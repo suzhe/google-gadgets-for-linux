@@ -106,8 +106,8 @@ class ViewImpl {
   void OnTimerEvent(TimerEvent *event);
   void OnOtherEvent(Event *event);
 
-  void OnElementAdded(ElementInterface *element);
-  void OnElementRemoved(ElementInterface *element);
+  void OnElementAdd(ElementInterface *element);
+  void OnElementRemove(ElementInterface *element);
 
   void FireEvent(Event *event, const EventSignal &event_signal);
   Event *GetEvent() const;
@@ -123,12 +123,19 @@ class ViewImpl {
   void SetCaption(const char *caption);
   void SetShowCaptionAlways(bool show_always);
 
-  ElementInterface *AppendElement(const char *tag_name, const char *name);
-  ElementInterface *InsertElement(const char *tag_name,
-                                  const ElementInterface *before,
-                                  const char *name);
-  bool RemoveElement(ElementInterface *child);
   ElementInterface *GetElementByName(const char *name);
+
+  enum TimerType { TIMER_ANIMATION, TIMER_TIMEOUT, TIMER_INTERVAL };
+  int NewTimer(TimerType type, Slot *slot,
+               int start_value, int end_value, unsigned int duration);
+  void RemoveTimer(int token);
+  int BeginAnimation(Slot *slot, int start_value, int end_value,
+                     unsigned int duration);
+  void CancelAnimation(int token);
+  int SetTimeout(Slot *slot, unsigned int duration);
+  void ClearTimeout(int token);
+  int SetInterval(Slot *slot, unsigned int duration);
+  void ClearInterval(int token);
 
   EventSignal oncancle_event_;
   EventSignal onclick_event_;
@@ -164,6 +171,22 @@ class ViewImpl {
   std::vector<Event *> event_stack_;
   typedef std::map<std::string, ElementInterface *> ElementsMap;
   ElementsMap all_elements_;
+
+  static const unsigned int kAnimationInterval = 10;
+  struct TimerInfo {
+    int token;
+    TimerType type;
+    Slot *slot;
+    int start_value;
+    int last_value;
+    int spread;
+    unsigned int duration;
+    uint64_t start_time;
+    void *host_timer;
+  };
+  typedef std::map<int, TimerInfo> TimerMap;
+  TimerMap timer_map_;
+  int current_timer_token_;
 };
 
 } // namespace internal

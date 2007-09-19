@@ -21,6 +21,7 @@
 #include "event.h"
 #include "graphics_interface.h"
 #include "host_interface.h"
+#include "slot.h"
 
 namespace ggadget {
 
@@ -33,7 +34,8 @@ ViewImpl::ViewImpl(int width, int height, ViewInterface *owner)
       canvas_(NULL),
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_TRUE),
-      show_caption_always_(false) {
+      show_caption_always_(false),
+      current_timer_token_(1) {
 }
 
 ViewImpl::~ViewImpl() {
@@ -104,7 +106,51 @@ void ViewImpl::OnKeyEvent(KeyboardEvent *event) {
 void ViewImpl::OnTimerEvent(TimerEvent *event) {
   ASSERT(event->GetType() == Event::EVENT_TIMER_TICK);
   DLOG("timer tick");
-  // TODO: dispatch animation event?
+
+  if (event->GetTarget()) {
+    // TODO: Dispatch the event to the element target. 
+  } else {
+    // The target is this view.
+    int token = reinterpret_cast<int>(event->GetData());
+    TimerMap::iterator it = timer_map_.find(token);
+    if (it == timer_map_.end()) {
+      LOG("Timer has been removed but event still fired: %d", token);
+      return;
+    }
+
+    TimerInfo &info = it->second;
+    ASSERT(info.token == token);
+    switch (info.type) {
+      case TIMER_TIMEOUT:
+        event->StopReceivingMore();
+        RemoveTimer(token);
+        info.slot->Call(0, NULL);
+        break;
+      case TIMER_INTERVAL:
+        info.slot->Call(0, NULL);
+        break;
+      case TIMER_ANIMATION: {
+        uint64_t event_time = event->GetTimeStamp();
+        double progress = static_cast<double>(event_time - info.start_time) /
+                          1000.0 / info.duration;
+        progress = std::min(1.0, std::max(0.0, progress));
+        int value = info.start_value + static_cast<int>(progress * info.spread);
+        if (value != info.last_value) {
+          info.last_value = value;
+          Variant param(value);
+          info.slot->Call(1, &param);
+        }
+        if (progress == 1.0) {
+          event->StopReceivingMore();
+          RemoveTimer(token);
+        }
+        break;
+      }
+      default:
+        ASSERT(false);
+        break;
+    }
+  }
 }
 
 void ViewImpl::OnOtherEvent(Event *event) {
@@ -231,7 +277,7 @@ const CanvasInterface *ViewImpl::Draw(bool *changed) {
   return canvas_;
 }
 
-void ViewImpl::OnElementAdded(ElementInterface *element) {
+void ViewImpl::OnElementAdd(ElementInterface *element) {
   ASSERT(element);
   const char *name = element->GetName();
   if (name && *name &&
@@ -240,7 +286,7 @@ void ViewImpl::OnElementAdded(ElementInterface *element) {
     all_elements_[name] = element;
 }
 
-void ViewImpl::OnElementRemoved(ElementInterface *element) {
+void ViewImpl::OnElementRemove(ElementInterface *element) {
   ASSERT(element);
   const char *name = element->GetName();
   if (name && *name) {
@@ -275,24 +321,79 @@ void ViewImpl::SetShowCaptionAlways(bool show_always) {
   // TODO: Redraw?
 }
 
-ElementInterface *ViewImpl::AppendElement(const char *tag_name,
-                                          const char *name) {
-  return children_.AppendElement(tag_name, name);
-}
-
-ElementInterface *ViewImpl::InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name) {
-  return children_.InsertElement(tag_name, before, name);
-}
-
-bool ViewImpl::RemoveElement(ElementInterface *child) {
-  return children_.RemoveElement(child);
-}
-
 ElementInterface *ViewImpl::GetElementByName(const char *name) {
   ElementsMap::iterator it = all_elements_.find(name);
   return it == all_elements_.end() ? NULL : it->second;
+}
+
+int ViewImpl::NewTimer(TimerType type, Slot *slot,
+                       int start_value, int end_value, unsigned int duration) {
+  ASSERT(slot);
+  if (duration == 0 || !host_)
+    return 0;
+
+  // Find the next available timer token.
+  // Ignore the error when all timer tokens are allocated.
+  do {
+    if (current_timer_token_ < INT_MAX) current_timer_token_++;
+    else current_timer_token_ = 1;
+  } while (timer_map_.find(current_timer_token_) != timer_map_.end());
+  
+  TimerInfo &info = timer_map_[current_timer_token_];
+  info.token = current_timer_token_;
+  info.type = type;
+  info.slot = slot;
+  info.start_value = start_value;
+  info.last_value = end_value;
+  info.spread = end_value - start_value;
+  info.duration = duration;
+  info.start_time = host_->GetCurrentTime();
+  info.host_timer = host_->RegisterTimer(
+      type == TIMER_ANIMATION ? kAnimationInterval : duration, 
+      NULL,
+      // Passing an integer is safer than passing a struct pointer.
+      reinterpret_cast<void *>(current_timer_token_));
+  return current_timer_token_;
+}
+
+void ViewImpl::RemoveTimer(int token) {
+  if (token == 0)
+    return;
+
+  TimerMap::iterator it = timer_map_.find(token);
+  if (it == timer_map_.end()) {
+    LOG("Invalid timer token to remove: %d", token);
+    return;
+  }
+
+  host_->RemoveTimer(it->second.host_timer);
+  delete it->second.slot;
+  timer_map_.erase(it);
+}
+
+int ViewImpl::BeginAnimation(Slot *slot, int start_value, int end_value,
+                             unsigned int duration) {
+  return NewTimer(TIMER_ANIMATION, slot, start_value, end_value, duration);
+}
+
+void ViewImpl::CancelAnimation(int token) {
+  RemoveTimer(token);
+}
+
+int ViewImpl::SetTimeout(Slot *slot, unsigned int duration) {
+  return NewTimer(TIMER_TIMEOUT, slot, 0, 0, duration);
+}
+
+void ViewImpl::ClearTimeout(int token) {
+  RemoveTimer(token);
+}
+
+int ViewImpl::SetInterval(Slot *slot, unsigned int duration) {
+  return NewTimer(TIMER_INTERVAL, slot, 0, 0, duration);
+}
+
+void ViewImpl::ClearInterval(int token) {
+  RemoveTimer(token);
 }
 
 } // namespace internal
@@ -317,23 +418,29 @@ View::View(int width, int height)
   RegisterProperty("showCaptionAlways",
                    NewSlot(this, &View::GetShowCaptionAlways),
                    NewSlot(this, &View::SetShowCaptionAlways));
-  // TODO: RegisterMethod("alert", NewSlot(this, &ViewImpl::Alert));
-  // TODO: Support XML parameter.
+
   RegisterMethod("appendElement",
                  NewSlot(GetChildren(), &Elements::AppendElementFromXML));
-  // TODO: RegisterMethod("beginAnimation", NewSlot(this, &ViewImpl::BeginAnimation));
-  // TODO: RegisterMethod("cancelAnimation", NewSlot(this, &ViewImpl::CancelAnimation));
-  // TODO: RegisterMethod("clearInterval", NewSlot(this, &ViewImpl::ClearInterval));
-  // TODO: RegisterMethod("clearTimeout", NewSlot(this, &ViewImpl::ClearTimeout));
-  // TODO: RegisterMethod("confirm", NewSlot(this, &ViewImpl::Confirm));
   RegisterMethod("insertElement",
                  NewSlot(GetChildren(), &Elements::InsertElementFromXML));
   RegisterMethod("removeElement",
                  NewSlot(GetChildren(), &Elements::RemoveElement));
+
+  // Here register ViewImpl::BeginAnimation because the Slot1<void, int> *
+  // parameter in View::BeginAnimation can't be automatically reflected.
+  RegisterMethod("beginAnimation", NewSlot(impl_, &ViewImpl::BeginAnimation));
+  RegisterMethod("cancelAnimation", NewSlot(this, &View::CancelAnimation));
+  RegisterMethod("setTimeout", NewSlot(impl_, &ViewImpl::SetTimeout));
+  RegisterMethod("clearTimeout", NewSlot(this, &View::ClearTimeout));
+  RegisterMethod("setInterval", NewSlot(impl_, &ViewImpl::SetInterval));
+  RegisterMethod("clearInterval", NewSlot(this, &View::ClearInterval));
+
+  // TODO: RegisterMethod("alert", NewSlot(this, &ViewImpl::Alert));
+  // TODO: RegisterMethod("confirm", NewSlot(this, &ViewImpl::Confirm));
+
   RegisterMethod("resizeBy", NewSlot(impl_, &ViewImpl::ResizeBy));
   RegisterMethod("resizeTo", NewSlot(this, &View::SetSize));
-  // TODO: RegisterMethod("setTimeout", NewSlot(this, &ViewImpl::SetTimeout));
-  // TODO: RegisterMethod("setInterval", NewSlot(this, &ViewImpl::SetInterval));
+
   // TODO: Move it to OptionsView?
   RegisterSignal("oncancel", &impl_->oncancle_event_);
   RegisterSignal("onclick", &impl_->onclick_event_);
@@ -393,12 +500,12 @@ void View::OnOtherEvent(Event *event) {
   impl_->OnOtherEvent(event);
 }
 
-void View::OnElementAdded(ElementInterface *element) {
-  impl_->OnElementAdded(element);
+void View::OnElementAdd(ElementInterface *element) {
+  impl_->OnElementAdd(element);
 }
 
-void View::OnElementRemoved(ElementInterface *element) {
-  impl_->OnElementRemoved(element);
+void View::OnElementRemove(ElementInterface *element) {
+  impl_->OnElementRemove(element);
 }
 
 void View::FireEvent(Event *event, const EventSignal &event_signal) {
@@ -423,21 +530,6 @@ void View::SetResizable(ViewInterface::ResizableMode resizable) {
 
 const Elements *View::GetChildren() const { return &impl_->children_; }
 Elements *View::GetChildren() { return &impl_->children_; }
-
-ElementInterface *View::AppendElement(const char *tag_name,
-                                      const char *name) {
-  return impl_->AppendElement(tag_name, name);
-}
-
-ElementInterface *View::InsertElement(const char *tag_name,
-                                      const ElementInterface *before,
-                                      const char *name) {
-  return impl_->InsertElement(tag_name, before, name);
-}
-
-bool View::RemoveElement(ElementInterface *child) {
-  return impl_->RemoveElement(child);
-}
 
 ElementInterface *View::GetElementByName(const char *name) {
   return impl_->GetElementByName(name);
@@ -465,6 +557,34 @@ void View::SetShowCaptionAlways(bool show_always) {
 
 bool View::GetShowCaptionAlways() const {
   return impl_->show_caption_always_;
+}
+
+int View::BeginAnimation(Slot1<void, int> *slot,
+                         int start_value,
+                         int end_value,
+                         unsigned int duration) {
+  return impl_->BeginAnimation(slot,
+                               start_value, end_value, duration);
+}
+
+void View::CancelAnimation(int token) {
+  impl_->CancelAnimation(token);
+}
+
+int View::SetTimeout(Slot0<void> *slot, unsigned int duration) {
+  return impl_->SetTimeout(slot, duration);
+}
+
+void View::ClearTimeout(int token) {
+  impl_->ClearTimeout(token);
+}
+
+int View::SetInterval(Slot0<void> *slot, unsigned int duration) {
+  return impl_->SetInterval(slot, duration);
+}
+
+void View::ClearInterval(int token) {
+  impl_->ClearInterval(token);
 }
 
 } // namespace ggadget

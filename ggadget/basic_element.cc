@@ -804,29 +804,6 @@ void BasicElement::SetTooltip(const char *tooltip) {
   return impl_->SetTooltip(tooltip);
 }
 
-ElementInterface *BasicElement::AppendElement(const char *tag_name,
-                                              const char *name) {
-  ASSERT(impl_);
-  return impl_->children_.AppendElement(tag_name, name);
-}
-
-ElementInterface *BasicElement::InsertElement(const char *tag_name,
-                                              const ElementInterface *before,
-                                              const char *name) {
-  ASSERT(impl_);
-  return impl_->children_.InsertElement(tag_name, before, name);
-}
-
-bool BasicElement::RemoveElement(ElementInterface *child) {
-  ASSERT(impl_);
-  return impl_->children_.RemoveElement(child);
-}
-
-void BasicElement::RemoveAllElements() {
-  ASSERT(impl_);
-  impl_->children_.RemoveAllElements();
-}
-
 void BasicElement::Focus() {
   ASSERT(impl_);
   impl_->Focus();

@@ -21,31 +21,7 @@
 
 namespace ggadget {
 
-using internal::GadgetImpl;
-
-Gadget::Gadget() : impl_(new GadgetImpl()) {
-}
-
-Gadget::~Gadget() { 
-  delete impl_; 
-  impl_ = NULL; 
-};
-
-ViewInterface* Gadget::GetMainView() {
-  return impl_->main_;  
-}
- 
-ViewInterface* Gadget::GetOptionsView() {
-  return impl_->options_;  
-}
-
-ViewInterface* Gadget::GetDetailedView() {
-  return impl_->detailed_;  
-}
-
-bool Gadget::InitFromPath(const char *base_path) {
-  return impl_->InitFromPath(base_path);
-}
+namespace internal {
 
 bool GadgetImpl::InitFromPath(const char *base_path) {
   // TODO
@@ -65,6 +41,34 @@ GadgetImpl::~GadgetImpl() {
   
   delete options_;
   options_ = NULL;
+}
+
+} // namespace internal
+
+using internal::GadgetImpl;
+
+Gadget::Gadget() : impl_(new GadgetImpl()) {
+}
+
+Gadget::~Gadget() { 
+  delete impl_;
+  impl_ = NULL;
+}
+
+ViewInterface* Gadget::GetMainView() {
+  return impl_->main_;
+}
+
+ViewInterface* Gadget::GetOptionsView() {
+  return impl_->options_;
+}
+
+ViewInterface* Gadget::GetDetailedView() {
+  return impl_->detailed_;
+}
+
+bool Gadget::InitFromPath(const char *base_path) {
+  return impl_->InitFromPath(base_path);
 }
 
 } // namespace ggadget
