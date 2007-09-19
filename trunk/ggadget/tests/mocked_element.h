@@ -192,24 +192,6 @@ class MockedElement : public ggadget::ElementInterface {
   virtual void SetTooltip(const char *tool_tip) {
   }
 
-  virtual ElementInterface *AppendElement(const char *tag_name,
-                                          const char *name) {
-    return NULL;
-  }
-
-  virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name) {
-    return NULL;
-  }
-
-  virtual bool RemoveElement(ElementInterface *child) {
-    return false;
-  }
-
-  virtual void RemoveAllElements() {
-  }
-
   virtual void Focus() {
   }
 

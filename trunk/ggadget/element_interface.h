@@ -260,40 +260,6 @@ class ElementInterface : public ScriptableInterface {
 
  public:
   /**
-   * Appends an element as the last child of this element.
-   * This method is appropriate only for elements (such as div, listbox, and
-   * listitem) that contain other elements.
-   * @return the newly created element or @c NULL if this method is not
-   *     allowed.
-   */
-  virtual ElementInterface *AppendElement(const char *tag_name,
-                                          const char *name) = 0;
-  /**
-   * Insert an element immediately before the specified element.
-   * This method is appropriate only for elements (such as div, listbox, and
-   * listitem) that contain other elements.
-   * If the specified element is not the direct child of this element, the
-   * newly created element will be append as the last child of this element.
-   * @return the newly created element or @c NULL if this method is not
-   *     allowed.
-   */
-  virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name) = 0;
-  /**
-   * Remove the specified child from this element.
-   * @param child the element to remove.
-   * @return @c true if removed successfully, or @c false if the specified
-   *     element doesn't exists or not the direct child of the container.
-   */
-  virtual bool RemoveElement(ElementInterface *child) = 0;
-  /**
-   * Removes and destroys all immediate children of this element.
-   * This method is appropriate only for elements (such as div, listbox, and
-   * listitem) that contain other elements.
-   */
-  virtual void RemoveAllElements() = 0;
-  /**
    * Gives the keyboard focus to the element.
    */
   virtual void Focus() = 0;

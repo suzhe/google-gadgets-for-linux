@@ -45,8 +45,8 @@ class View : public ViewInterface {
   virtual void OnOtherEvent(Event *event);
   virtual void OnTimerEvent(TimerEvent *event);
 
-  virtual void OnElementAdded(ElementInterface *element);
-  virtual void OnElementRemoved(ElementInterface *element);
+  virtual void OnElementAdd(ElementInterface *element);
+  virtual void OnElementRemove(ElementInterface *element);
   virtual void FireEvent(Event *event, const EventSignal &event_signal);
 
   virtual bool SetWidth(int width);
@@ -67,14 +67,18 @@ class View : public ViewInterface {
 
   virtual const Elements *GetChildren() const;
   virtual Elements *GetChildren();
-  virtual ElementInterface *AppendElement(const char *tag_name,
-                                          const char *name);
-  virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name);
-  virtual bool RemoveElement(ElementInterface *child);
   virtual ElementInterface *GetElementByName(const char *name);
   virtual const ElementInterface *GetElementByName(const char *name) const;
+
+  virtual int BeginAnimation(Slot1<void, int> *slot,
+                             int start_value,
+                             int end_value,
+                             unsigned int duration);
+  virtual void CancelAnimation(int token);
+  virtual int SetTimeout(Slot0<void> *slot, unsigned int duration);
+  virtual void ClearTimeout(int token);
+  virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
+  virtual void ClearInterval(int token);
 
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
@@ -83,7 +87,7 @@ class View : public ViewInterface {
  protected:
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
- private: 
+ private:
   internal::ViewImpl *impl_;
   ScriptableHelper scriptable_helper_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
