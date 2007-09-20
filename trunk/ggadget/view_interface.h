@@ -78,6 +78,13 @@ class ViewInterface : public ScriptableInterface {
   /** Any elements should call this method when it need to fire an event. */ 
   virtual void FireEvent(Event *event, const EventSignal &event_signal) = 0;
 
+  /**
+   * These methods are provided to the event handlers of native gadgets to
+   * retrieve the current fired event.
+   */
+  virtual Event *GetEvent() = 0;
+  virtual const Event *GetEvent() const = 0;
+
   /** 
    * Set the width of the view.
    * @return true if new size is allowed, false otherwise. 

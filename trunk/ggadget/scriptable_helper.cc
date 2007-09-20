@@ -17,6 +17,7 @@
 #include <string.h>
 #include <map>
 #include <vector>
+#include "string_utils.h"
 #include "scriptable_helper.h"
 #include "signal.h"
 #include "slot.h"
@@ -47,10 +48,10 @@ class ScriptableHelper::Impl {
   bool SetProperty(int id, Variant value);
 
  private:
-  typedef std::map<const char *, int, CompareString> SlotIndexMap;
+  typedef std::map<const char *, int, GadgetCharPtrComparator> SlotIndexMap;
   typedef std::vector<Variant> VariantVector;
   typedef std::vector<Slot *> SlotVector;
-  typedef std::map<const char *, Variant, CompareString> ConstantMap;
+  typedef std::map<const char *, Variant, GadgetCharPtrComparator> ConstantMap;
 
   // If true, no more new RegisterXXX or SetPrototype can be called.
   // It'll be set to true in any ScriptableInterface operation on properties. 

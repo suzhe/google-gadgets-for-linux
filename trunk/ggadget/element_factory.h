@@ -18,7 +18,6 @@
 #define GGADGET_ELEMENT_FACTORY_H__
 
 #include "element_factory_interface.h"
-#include "scoped_ptr.h"
 
 namespace ggadget {
 
@@ -28,13 +27,9 @@ class ElementFactoryImpl;
 
 } // namespace internal
 
-class ElementInterface;
-
-/**
- * Singleton for creating an Element in the Gadget API.
- */
 class ElementFactory : public ElementFactoryInterface {
  public:
+  ElementFactory();
   virtual ~ElementFactory();
 
  public:
@@ -43,24 +38,28 @@ class ElementFactory : public ElementFactoryInterface {
                                           ElementInterface *parent,
                                           ViewInterface *view,
                                           const char *name);
-  /** @see ElementFactoryInterface::RegisterElementClass() */
-  virtual bool RegisterElementClass(const char *tag_name,
-                                    ElementCreator creator);
 
- public:
   /**
-   * Retrieve the only instance of the class.
+   * Used as the @c creator parameter in @c RegisterElementClass().
    */
-  static ElementFactory *GetInstance(void);
+  typedef ElementInterface *(*ElementCreator)(ElementInterface *parent,
+                                              ViewInterface *view,
+                                              const char *name);
 
- private:
-  ElementFactory(); // Singleton.
+  /**
+   * Registers a new subclass of ElementInterface.
+   * @param tag_name the tag name name of the subclass.
+   * @param creator the function pointer of the creator, which returns a new
+   *     instance of an object of this tag name.
+   * @return @c true if registered successfully, or @c false if the specified
+   *     tag name already exists.
+   */
+  bool RegisterElementClass(const char *tag_name,
+                            ElementCreator creator);
 
  private:
   internal::ElementFactoryImpl *impl_;
-  static scoped_ptr<ElementFactory> instance_;
 };
-
 
 } // namespace ggadget
 

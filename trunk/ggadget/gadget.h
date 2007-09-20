@@ -25,24 +25,30 @@ namespace ggadget {
 namespace internal {
   class GadgetImpl;
 }
+
+class ScriptRuntimeInterface;
+class FileManagerInterface;
    
 /**
  * Interface for representing a Gadget in the Desktop Gadget API.
  */
 class Gadget: public GadgetInterface {
  public:   
-  Gadget();
-   
-  virtual ViewInterface* GetMainView();
-   
-  virtual ViewInterface* GetOptionsView();
+  Gadget(ScriptRuntimeInterface *script_runtime,
+         FileManagerInterface *file_manager,
+         ViewInterface *main_view,
+         ViewInterface *options_view);
 
-  virtual ViewInterface* GetDetailedView();
-  
+  virtual ViewInterface *GetMainView();
+   
+  virtual ViewInterface *GetOptionsView();
+
+  virtual const char *GetManifestInfo(const char *key);
+
   bool InitFromPath(const char *base_path);
-  
+
   virtual ~Gadget();
-  
+
  private:
   internal::GadgetImpl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(Gadget);

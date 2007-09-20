@@ -96,7 +96,7 @@ const char *const kOnUndockEvent = "onundock";
 
 class ViewImpl {
  public:
-  ViewImpl(int width, int height, ViewInterface *owner);
+  ViewImpl(ElementFactoryInterface *factory, ViewInterface *owner);
   ~ViewImpl();
 
   bool AttachHost(HostInterface *host);
@@ -169,6 +169,8 @@ class ViewImpl {
   bool show_caption_always_;
 
   std::vector<Event *> event_stack_;
+  // NOTE: Here don't use GadgetStringComparator, because even in GDWin's
+  // case-insensitive environment, element names are still case sensitive.
   typedef std::map<std::string, ElementInterface *> ElementsMap;
   ElementsMap all_elements_;
 

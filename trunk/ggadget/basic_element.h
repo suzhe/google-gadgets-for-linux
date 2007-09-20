@@ -30,6 +30,7 @@ class BasicElementImpl;
 
 class ViewInterface;
 class Elements;
+class ElementFactoryInterface;
 
 class BasicElement : public ElementInterface {
  public:
@@ -38,6 +39,7 @@ class BasicElement : public ElementInterface {
  public:
   BasicElement(ElementInterface *parent,
                ViewInterface *view,
+               ElementFactoryInterface *element_factory,
                const char *name);
   virtual ~BasicElement();
 

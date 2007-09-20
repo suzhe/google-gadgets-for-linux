@@ -19,17 +19,11 @@
 #include "common.h"
 #include "element_interface.h"
 #include "elements.h"
+#include "gadget_consts.h"
 #include "third_party/tinyxml/tinyxml.h"
 #include "view_interface.h"
 
 namespace ggadget {
-
-// The tag name of the root element in string table files.
-const char *const kStringsTag = "strings";
-// The tag name of the root element in view file.
-const char *const kViewTag = "view";
-// The attribute name of the 'name' attribute of elements.
-const char *const kNameAttr = "name";
 
 static bool ParseXML(const char *xml,
                      const char *filename,
@@ -43,6 +37,66 @@ static bool ParseXML(const char *xml,
   return true;
 }
 
+static void SetScriptableProperty(ScriptableInterface *scriptable,
+                                  const char *name, const char *value,
+                                  const char *tag_name) {
+  int id;
+  Variant prototype;
+  bool is_method;
+  bool result = scriptable->GetPropertyInfoByName(name, &id,
+                                                  &prototype, &is_method);
+  if (!result || is_method ||
+      id == ScriptableInterface::ID_CONSTANT_PROPERTY ||
+      id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
+    LOG("Can't set property %s from xml for %s", name, tag_name);
+    return;
+  }
+
+  Variant property_value;
+  char *end_ptr;
+  switch (prototype.type()) {
+    case Variant::TYPE_BOOL:
+      property_value = Variant(GadgetStrCmp("true", value) == 0 ?
+                               true : false);
+      break;
+
+    case Variant::TYPE_INT64:
+      property_value = Variant(strtoll(value, &end_ptr, 10));
+      if (*value == '\0' || *end_ptr != '\0') {
+        LOG("Invalid integer '%s' for property %s for %s",
+            value, name, tag_name);
+        return;
+      }
+      break;
+
+    case Variant::TYPE_DOUBLE:
+      property_value = Variant(strtod(value, &end_ptr));
+      if (*value == '\0' || *end_ptr != '\0') {
+        LOG("Invalid double '%s' for property %s for %s",
+            value, name, tag_name);
+        return;
+      }
+      break;
+
+    case Variant::TYPE_STRING:
+      property_value = Variant(std::string(value));
+      break;
+
+    case Variant::TYPE_VARIANT:
+      property_value = Variant(strtoll(value, &end_ptr, 10));
+      if (*value == '\0' || *end_ptr != '\0')
+        property_value = Variant(std::string(value));
+      break;
+
+    default:
+      LOG("Can't set property %s from xml for %s", name, tag_name);
+      return;
+  }
+
+  if (!scriptable->SetProperty(id, property_value))
+    LOG("Can't set readonly property %s from xml for %s", name, tag_name);
+}
+
 static void SetupScriptableProperties(ScriptableInterface *scriptable,
                                       const TiXmlElement *xml_element) {
   const char *tag_name = xml_element->Value();
@@ -51,63 +105,19 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
        attribute = attribute->Next()) {
     const char *name = attribute->Name();
     const char *value = attribute->Value();
-    if (!name || !value)
-      continue;
 
-    int id;
-    Variant prototype;
-    bool is_method;
-    bool result = scriptable->GetPropertyInfoByName(name, &id,
-                                                    &prototype, &is_method);
-    if (!result || is_method ||
-        id == ScriptableInterface::ID_CONSTANT_PROPERTY ||
-        id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
-      LOG("Can't set property %s from xml for %s", name, tag_name);
+    if (GadgetStrCmp(kInnerTextProperty, name) == 0) {
+      LOG("%s is not allowed in XML as an attribute: ", kInnerTextProperty);
       continue;
     }
 
-    Variant property_value;
-    char *end_ptr;
-    switch (prototype.type()) {
-      case Variant::TYPE_BOOL:
-        property_value = Variant(strcasecmp("true", attribute->Value()) == 0 ?
-                                 true : false);
-        break;
-
-      case Variant::TYPE_INT64:
-        property_value = Variant(strtoll(value, &end_ptr, 10));
-        if (*value == '\0' || *end_ptr != '\0') {
-          LOG("Invalid integer '%s' for property %s", value, name);
-          continue;
-        }
-        break;
-
-      case Variant::TYPE_DOUBLE:
-        property_value = Variant(strtod(value, &end_ptr));
-        if (*value == '\0' || *end_ptr != '\0') {
-          LOG("Invalid double '%s' for property %s", value, name);
-          continue;
-        }
-        break;
-
-      case Variant::TYPE_STRING:
-        property_value = Variant(std::string(value));
-        break;
-
-      case Variant::TYPE_VARIANT:
-        property_value = Variant(strtoll(value, &end_ptr, 10));
-        if (*value == '\0' || *end_ptr != '\0')
-          property_value = Variant(std::string(value));
-        break;
-
-      default:
-        LOG("Can't set property %s from xml for %s", name, tag_name);
-        continue;
-    }
-
-    if (!scriptable->SetProperty(id, property_value))
-      LOG("Can't set readonly property %s from xml for %s", name, tag_name);
+    SetScriptableProperty(scriptable, name, value, tag_name);
   }
+
+  // Set the "innerText" property.
+  const char *text = xml_element->GetText();
+  if (text)
+    SetScriptableProperty(scriptable, kInnerTextProperty, text, tag_name);
 }
 
 static ElementInterface *InsertElementFromDOM(Elements *elements,
@@ -186,24 +196,65 @@ ElementInterface *InsertElementFromXML(Elements *elements,
   return InsertElementFromDOM(elements, xml_element, before);
 }
 
-bool ParseStringTable(const char *xml, const char *filename,
-                      std::map<std::string, std::string> *table) {
+// Count the sequence of a child in the elements of the same tag name.
+static int CountTagSequence(TiXmlElement *child, const char *tag) {
+  int count = 1;
+  for (TiXmlNode *node = child->PreviousSibling(tag);
+       node != NULL;
+       node = child->PreviousSibling(tag)) {
+    if (node->ToElement()) count++;
+  }
+  return count;
+}
+
+static void ParseDOMIntoXPathMap(TiXmlElement *element,
+                                 const std::string &prefix,
+                                 GadgetStringMap *table) {
+  for (const TiXmlAttribute *attribute = element->FirstAttribute();
+       attribute != NULL;
+       attribute = attribute->Next()) {
+    const char *name = attribute->Name();
+    const char *value = attribute->Value();
+    (*table)[prefix + '@' + name] = value;
+  }
+
+  for (TiXmlElement *child = element->FirstChildElement();
+       child != NULL;
+       child = child->NextSiblingElement()) {
+    const char *tag = child->Value();
+    const char *text = child->GetText();
+    std::string key(prefix);
+    if (!prefix.empty()) key += '/';
+    key += tag;
+
+    if (table->find(key) != table->end()) {
+      // Postpend the sequence if there are multiple elements with the same
+      // name.
+      char buf[20];
+      snprintf(buf, sizeof(buf), "[%d]", CountTagSequence(child, tag));
+      key += buf;
+    }
+    (*table)[key] = text ? text : "";
+
+    ParseDOMIntoXPathMap(child, key, table);
+  }
+}
+                                 
+bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
+                          const char *root_element_name,
+                          GadgetStringMap *table) {
   TiXmlDocument xmldoc;
   if (!ParseXML(xml, filename, &xmldoc))
     return false;
 
-  TiXmlElement *strings = xmldoc.RootElement();
-  if (!strings || strcmp(strings->Value(), kStringsTag) != 0) {
-    LOG("No valid root element in string table file: %s", filename);
+  TiXmlElement *root = xmldoc.RootElement();
+  if (!root || GadgetStrCmp(root->Value(), root_element_name) != 0) {
+    LOG("No valid root element %s in XML file: %s",
+        root_element_name, filename);
     return false;
   }
 
-  for (TiXmlElement *child = strings->FirstChildElement();
-       child != NULL;
-       child = child->NextSiblingElement()) {
-    const char *text = child->GetText();
-    (*table)[child->Value()] = text ? text : "";
-  }
+  ParseDOMIntoXPathMap(root, "", table);
   return true;
 }
 

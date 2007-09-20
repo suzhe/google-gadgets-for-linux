@@ -53,6 +53,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual void OnElementRemove(ggadget::ElementInterface *element) {};
   virtual void FireEvent(ggadget::Event *event,
                          const ggadget::EventSignal &event_signal) {};
+  virtual ggadget::Event *GetEvent() { return NULL; }
+  virtual const ggadget::Event *GetEvent() const { return NULL; }
 
   virtual const ggadget::CanvasInterface *Draw(bool *changed) { return NULL; };
 

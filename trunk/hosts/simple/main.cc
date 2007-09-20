@@ -18,14 +18,29 @@
 #include <gtk/gtk.h>
 #include <locale.h>
 
+#include "ggadget/element_factory.h"
+#include "ggadget/file_manager.h"
 #include "ggadget/gadget.h"
-
+#include "ggadget/scripts/smjs/js_script_context.h"
+#include "ggadget/view.h"
 #include "gadget_view_widget.h"
 
 using ggadget::Gadget;
+using ggadget::ElementFactoryInterface;
+using ggadget::ElementFactory;
+using ggadget::ScriptRuntimeInterface;
+using ggadget::JSScriptRuntime;
+using ggadget::View;
+using ggadget::FileManagerInterface;
+using ggadget::FileManager;
 
 double g_zoom = 1.;
 Gadget *g_gadget = NULL;
+ViewInterface *g_main_view = NULL;
+ViewInterface *g_options_view = NULL;
+ElementFactoryInterface *g_element_factory = NULL;
+ScriptRuntimeInterface *g_script_runtime = NULL;
+FileManagerInterface *g_file_manager = NULL;
 
 static gboolean DeleteEventHandler(GtkWidget *widget, 
                                    GdkEvent *event, 
@@ -40,15 +55,16 @@ static gboolean DestroyHandler(GtkWidget *widget,
 }
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, const char *base_path) {
-  g_gadget = new Gadget();
+  g_element_factory = new ElementFactory();
+  g_script_runtime = new JSScriptRuntime();
+  g_file_manager = new FileManager();
+  ViewInterface *main = new View(g_element_factory);
+  ViewInterface *options = new View(g_element_factory);
+  g_gadget = new Gadget(g_script_runtime, g_file_manager, main, options);
   if (!g_gadget->InitFromPath(base_path)) {
     LOG("Error: unable to load gadget from %s", base_path);
   }
   
-  ViewInterface *main = g_gadget->GetMainView();
-  if (!main) {
-    LOG("Error: unable to get view from widget.");
-  } 
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(main, g_zoom));
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
   
@@ -100,8 +116,13 @@ static bool CreateGTKUI(const char *base_path) {
 }
 
 static void DestroyUI() {  
+  delete g_script_runtime;
+  delete g_gadget->GetMainView();
+  delete g_gadget->GetOptionsView();
   delete g_gadget;
   g_gadget = NULL;
+  delete g_element_factory;
+  delete g_file_manager;
 }
 
 int main(int argc, char* argv[]) {

@@ -26,24 +26,28 @@ class ViewInterface;
  */
 class GadgetInterface {
  public:   
+  virtual ~GadgetInterface() { }
+
   /**
    * @return The ViewInterface object representing the main view of the gadget.
    */ 
-  virtual ViewInterface* GetMainView() = 0;
+  virtual ViewInterface *GetMainView() = 0;
    
   /**
    * @return The ViewInterface object representing the options
    * view of the gadget. Returns NULL if this view is not supported.
    */
-  virtual ViewInterface* GetOptionsView() = 0;
+  virtual ViewInterface *GetOptionsView() = 0;
 
   /**
-   * @return The ViewInterface object representing the detailed
-   * view of the gadget. Returns NULL if this view is not supported.
+   * Get a value configured in the gadget manifest file.
+   * @param key the value key like a simple XPath expression. See
+   *     gadget_consts.h for available keys, and @c ParseXMLIntoXPathMap() in
+   *     xml_utils.h for details of the XPath expression.   
+   * @return the configured value. @c NULL if not found.
    */
-  virtual ViewInterface* GetDetailedView() = 0;
-  
-  virtual ~GadgetInterface() {}; 
+  virtual const char *GetManifestInfo(const char *key) = 0;
+
 };
 
 } // namespace ggadget
