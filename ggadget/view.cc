@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include "math_utils.h"
 #include "view.h"
 #include "view_impl.h"
 #include "element_factory.h"
@@ -176,6 +177,7 @@ bool ViewImpl::SetWidth(int width) {
     canvas_ = NULL;
   }
   width_ = width;  
+  children_.OnParentWidthChange(width);
   if (host_) {
     host_->QueueDraw();
   }
@@ -192,6 +194,7 @@ bool ViewImpl::SetHeight(int height) {
     canvas_ = NULL;
   }
   height_ = height;
+  children_.OnParentHeightChange(height);
   if (host_) {
     host_->QueueDraw();
   }
@@ -209,6 +212,8 @@ bool ViewImpl::SetSize(int width, int height) {
   }
   width_ = width;  
   height_ = height;
+  children_.OnParentHeightChange(height);
+  children_.OnParentWidthChange(width);
   if (host_) {
     host_->QueueDraw();
   } 
@@ -239,32 +244,47 @@ bool ViewImpl::AttachHost(HostInterface *host) {
   return true;
 }
    
-const CanvasInterface *ViewImpl::Draw(bool *changed) {
-  // Always set changed to true for now.
+const CanvasInterface *ViewImpl::Draw(bool *changed) {  
+  CanvasInterface *canvas = NULL;
+  const CanvasInterface *children_canvas = NULL;
+  bool child_changed;
+  bool change = false;
   
-  if (!canvas_) {
-    ASSERT(host_); // host must be initialized before drawing
-    const GraphicsInterface *gfx = host_->GetGraphics();
-    canvas_ = gfx->NewCanvas(width_, height_);
+  ASSERT(host_);
+  
+  children_canvas = children_.Draw(&child_changed);
+  if (child_changed) {
+    change = true;
+  }
+  
+  if (!canvas_ || change) {
+    // Need to redraw
+    change = true;
+        
     if (!canvas_) {
-      DLOG("Error: unable to create canvas.");
-      return NULL;
+      const GraphicsInterface *gfx = host_->GetGraphics();
+      canvas_ = gfx->NewCanvas(static_cast<size_t>(width_), 
+                               static_cast<size_t>(height_));
+      if (!canvas_) {
+        DLOG("Error: unable to create canvas.");
+        goto exit;
+      }
+    }
+    else {
+      // If not new canvas, we must remember to clear canvas before drawing.
+      canvas_->ClearCanvas();
+    }
+    
+    if (children_canvas) {
+      canvas_->DrawCanvas(0., 0., children_canvas);
     }
   }
-  else {
-    // If not new canvas, we must remember to always clear canvas before 
-    // drawing since we're not checking dirty flag yet.
-    canvas_->ClearCanvas();
-  }
   
-  // TODO test demo
-  canvas_->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
-  canvas_->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
-  canvas_->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
-  canvas_->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
+  // TODO test demo, remove when we have elements
   canvas_->DrawFilledRect(10, 10, 10, 10, Color(1, 1, 1));
   canvas_->DrawFilledRect(10, 20, 10, 10, Color(0, 0, 0));
-  
+
+  canvas_->PushState();
   canvas_->MultiplyOpacity(.5);
   canvas_->PushState();
   canvas_->DrawFilledRect(10., 10., 280., 130., Color(1., 0., 0.));
@@ -273,9 +293,22 @@ const CanvasInterface *ViewImpl::Draw(bool *changed) {
   canvas_->DrawFilledRect(20., 20., 260., 110., Color(0., 1., 0.));  
   canvas_->PopState();
   canvas_->DrawFilledRect(110., 40., 90., 70., Color(0., 0., 1.));  
+  canvas_->PopState();
   // end test 
   
-  return canvas_;
+  // Draw bounding box
+  canvas_->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
+  canvas_->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
+  canvas_->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
+  canvas_->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
+  canvas_->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
+  canvas_->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
+
+  canvas = canvas_;
+  
+exit:  
+  *changed = change;
+  return canvas;
 }
 
 void ViewImpl::OnElementAdd(ElementInterface *element) {
@@ -483,6 +516,16 @@ int View::GetHeight() const { return impl_->height_; };
  
 const CanvasInterface *View::Draw(bool *changed) {
   return impl_->Draw(changed);
+}
+
+void View::QueueDraw() {
+  if (impl_->host_) { // host may not be initialized during element construction
+    impl_->host_->QueueDraw();
+  }
+}
+
+const GraphicsInterface *View::GetGraphics() const {
+  return impl_->host_->GetGraphics();  
 }
 
 void View::OnMouseEvent(MouseEvent *event) {

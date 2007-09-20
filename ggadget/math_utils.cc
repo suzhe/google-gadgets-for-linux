@@ -56,13 +56,16 @@ double ChildCoordCalculator::GetChildX(double parent_x, double parent_y) {
   return parent_x * cos_theta + parent_y * sin_theta + a_13;
 }
 
-/**
- * @param parent_x X-coordinate in the parent space to convert.
- * @param parent_y Y-coordinate in the parent space to convert. 
- * @return The converted child Y-coordinate.
- */
 double ChildCoordCalculator::GetChildY(double parent_x, double parent_y) {
   return parent_y * cos_theta - parent_x * sin_theta + a_23;  
+}
+
+double DegreesToRadians(double degrees) {
+  return degrees * M_PI / 180.;  
+}
+
+bool IsPointInElement(double x, double y, double width, double height) {
+  return 0. <= x && 0. <= y && x < width && y < height;  
 }
 
 } // namespace ggadget

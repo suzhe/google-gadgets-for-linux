@@ -23,6 +23,7 @@
 
 namespace ggadget {
 
+class CanvasInterface;
 class ElementFactoryInterface;
 class ElementInterface;
 class ViewInterface;
@@ -50,6 +51,11 @@ class ElementsImpl {
 
   void HostChanged();
   
+  void OnParentWidthChange(double width);
+  void OnParentHeightChange(double height);
+  
+  const CanvasInterface *Draw(bool *changed);
+  
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
   ScriptableHelper scriptable_helper_;
@@ -57,6 +63,10 @@ class ElementsImpl {
   ElementInterface *owner_;
   ViewInterface *view_;
   std::vector<ElementInterface *> children_;
+  double width_;
+  double height_;
+  CanvasInterface *canvas_;
+  bool count_changed_;
 };
 
 } // namespace internal

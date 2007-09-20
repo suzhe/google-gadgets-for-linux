@@ -18,8 +18,6 @@
 
 namespace ggadget {
 
-const char *CairoFont::kClassType = "CairoFont";
-
 CairoFont::CairoFont(PangoFontDescription *font, size_t size, Style style, 
                      Weight weight) 
   : font_(font), size_(size), style_(style), weight_(weight) {

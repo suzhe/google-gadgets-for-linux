@@ -23,6 +23,7 @@ namespace ggadget {
 
 class Elements;
 class ViewInterface;
+class CanvasInterface;
 
 /**
  * ElementInterface defines the properties, methods and events exposed on all
@@ -145,6 +146,8 @@ class ElementInterface : public ScriptableInterface {
    * Sets the mask bitmap that defines the clipping path for this element.
    */
   virtual void SetMask(const char *mask) = 0;
+  /** Gets the canvas for the element mask. Returns NULL if no mask is set. */
+  virtual const CanvasInterface *GetMaskCanvas() = 0;
 
   /** Retrieves the width in pixels. */
   virtual double GetPixelWidth() const = 0;
@@ -270,6 +273,24 @@ class ElementInterface : public ScriptableInterface {
   
   /** Signal propagated from the parent when the host changes. */
   virtual void HostChanged() = 0;
+  
+  /**
+   * Draws the current element to a canvas. The caller does NOT own this canvas
+   * and should not free it.
+   * @param[out] changed True if the returned canvas is different from that 
+   *   of the last call, false otherwise.
+   * @return A canvas suitable for drawing. NULL if element is not visible.
+   */
+  virtual const CanvasInterface *Draw(bool *changed) = 0;
+  
+  /** 
+   * Checks to see if position of the element has changed since the last draw
+   * relative to the parent. Specifically, this checks for changes in 
+   * X, Y, pinX, pinY, and rotation.
+   */
+  virtual bool IsPositionChanged() const = 0;
+  /** Sets the position changed state to false. */
+  virtual void ClearPositionChanged() = 0;
 };
 
 CLASS_ID_IMPL(ElementInterface, ScriptableInterface)

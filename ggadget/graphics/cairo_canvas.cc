@@ -22,8 +22,6 @@
 
 namespace ggadget {
 
-const char *CairoCanvas::kClassType = "CairoCanvas";
-
 CairoCanvas::CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask) 
   : cr_(cr), width_(w), height_(h), is_mask_(is_mask), opacity_(1.) {
   cairo_reference(cr_);
@@ -130,12 +128,11 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
 
 bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   // verify class type before downcasting
-  if (!img || img->IsMask() ||
-      strcmp(CairoCanvas::kClassType, img->ClassType())) {
+  if (!img || img->IsMask()) {
     return false;
   }
   
-  CairoCanvas *cimg = (CairoCanvas *)img;
+  const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
   cairo_surface_t *s = cimg->GetSurface();
   int sheight = cairo_image_surface_get_height(s);
   int swidth = cairo_image_surface_get_width(s);
@@ -168,14 +165,12 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
                                     double mx, double my,
                                     const CanvasInterface *mask) {
   // verify class type before downcasting
-  if (!img || img->IsMask() || !mask || !mask->IsMask() ||
-      strcmp(CairoCanvas::kClassType, img->ClassType()) ||      
-      strcmp(CairoCanvas::kClassType, mask->ClassType())) {
+  if (!img || img->IsMask() || !mask || !mask->IsMask()) {
     return false;
   }
 
-  CairoCanvas *cmask = (CairoCanvas *)mask;
-  CairoCanvas *cimg = (CairoCanvas *)img;
+  const CairoCanvas *cmask =  down_cast<const CairoCanvas *>(mask);
+  const CairoCanvas *cimg =  down_cast<const CairoCanvas *>(img);
   // In this implementation, only non-mask canvases may have surface dimensions
   // different from the canvas dimensions, so we only need to check img.
   // However, this also means that the zoom for the canvas needs to be scaled
@@ -248,8 +243,7 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
                            const char *text, const FontInterface *f, 
                            const Color &c, Alignment align, VAlignment valign,
                            Trimming trimming,  TextFlag text_flag) {
-  if (text == NULL || f == NULL || 
-      strcmp(f->ClassType(), CairoFont::kClassType)) {
+  if (text == NULL || f == NULL) {
     return false;    
   }
 

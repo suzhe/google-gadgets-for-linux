@@ -57,6 +57,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual const ggadget::Event *GetEvent() const { return NULL; }
 
   virtual const ggadget::CanvasInterface *Draw(bool *changed) { return NULL; };
+  virtual void QueueDraw() {}
+  virtual const ggadget::GraphicsInterface *GetGraphics() const { return NULL; }
 
   virtual void SetResizable(ResizableMode resizable) {};
   virtual ResizableMode GetResizable() const { return RESIZABLE_TRUE; };

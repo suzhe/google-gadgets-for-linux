@@ -30,6 +30,7 @@ class MouseEvent;
 class TimerEvent;
 class Event;
 class Elements;
+class GraphicsInterface;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -112,10 +113,18 @@ class ViewInterface : public ScriptableInterface {
    * and should not free it.
    * @param[out] changed True if the returned canvas is different from that 
    *   of the last call, false otherwise.
-   * @return A canvas suitable for drawing.
+   * @return A canvas suitable for drawing. This should never be NULL.
    */
   virtual const CanvasInterface *Draw(bool *changed) = 0;
-
+  
+  /** Asks the host to redraw the given view. */
+  virtual void QueueDraw() = 0;
+  
+  /**
+   * @return The current graphics interface used for drawing elements.
+   */
+  virtual const GraphicsInterface *GetGraphics() const = 0;
+  
   /**
    * Indicates what happens when the user attempts to resize the gadget using
    * the window border.

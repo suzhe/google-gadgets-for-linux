@@ -60,6 +60,7 @@ class BasicElement : public ElementInterface {
   virtual const char *GetName() const;
   virtual const char *GetMask() const;
   virtual void SetMask(const char *mask);
+  virtual const CanvasInterface *GetMaskCanvas();
   virtual double GetPixelWidth() const;
   virtual void SetPixelWidth(double width);
   virtual double GetPixelHeight() const;
@@ -90,6 +91,7 @@ class BasicElement : public ElementInterface {
   virtual void SetOpacity(double opacity);
   virtual bool IsVisible() const;
   virtual void SetVisible(bool visible);
+
   virtual ElementInterface *GetParentElement();
   virtual const ElementInterface *GetParentElement() const;
   virtual const char *GetTooltip() const;
@@ -108,8 +110,37 @@ class BasicElement : public ElementInterface {
    * Notifies the element and its children that the host has changed.
    * Classes overriding this should remember to call children_.HostChanged().
    */ 
-  virtual void HostChanged() = 0;
-
+  virtual void HostChanged();
+  
+  virtual const CanvasInterface *Draw(bool *changed);
+  
+  /** 
+   * Call this when drawing to initialize and prepare a canvas of the right
+   * height and width for drawing.
+   */
+  void SetUpCanvas();
+  
+  /**
+   * Checks to see if the current element has changed and needs to be redrawn.
+   * Note that it does not check any child elements, so the element may still
+   * need to be redrawn even if this method returns false.
+   * Also, this method does not consider visiblity changes, or changes in 
+   * position in relation to the parent.
+   * @return true if the element has changed, false otherwise.
+   */
+  virtual bool IsSelfChanged() const;
+  /** Sets the self changed state to false. */
+  virtual void ClearSelfChanged();
+  /** 
+   * Checks to see if visibility of the element has changed since the last draw.
+   */
+  virtual bool IsVisibilityChanged() const;
+  /** Sets the visibility changed state to false. */
+  virtual void ClearVisibilityChanged();
+  
+  virtual bool IsPositionChanged() const;
+  virtual void ClearPositionChanged();
+  
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return true; }

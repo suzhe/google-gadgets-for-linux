@@ -44,12 +44,8 @@ class CairoFont : public FontInterface {
   
   virtual void Destroy() { delete this; };
   
-  virtual const char *ClassType() const { return kClassType; };
-
   const PangoFontDescription *GetFontDescription() const { return font_; };
-  
-  static const char *kClassType;
-   
+
  private:
   PangoFontDescription *font_;
   size_t size_;

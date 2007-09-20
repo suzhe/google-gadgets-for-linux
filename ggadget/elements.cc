@@ -23,6 +23,8 @@
 #include "element_factory_interface.h"
 #include "view_interface.h"
 #include "xml_utils.h"
+#include "math_utils.h"
+#include "graphics_interface.h"
 
 namespace ggadget {
 
@@ -31,7 +33,8 @@ namespace internal {
 ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
                            ElementInterface *owner,
                            ViewInterface *view)
-    : factory_(factory), owner_(owner), view_(view) {
+    : factory_(factory), owner_(owner), view_(view), 
+    width_(.0), height_(.0), canvas_(NULL), count_changed_(true) {
   ASSERT(factory);
   ASSERT(view);
 
@@ -58,6 +61,7 @@ ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
   if (e == NULL)
     return NULL;
   children_.push_back(e);
+  count_changed_ = true;
   view_->OnElementAdd(e);
   return e;
 }
@@ -73,6 +77,7 @@ ElementInterface *ElementsImpl::InsertElement(
   std::vector<ElementInterface *>::iterator ite = std::find(
       children_.begin(), children_.end(), before);
   children_.insert(ite, e);
+  count_changed_ = true;
   view_->OnElementAdd(e);
   return e;
 }
@@ -85,6 +90,7 @@ bool ElementsImpl::RemoveElement(ElementInterface *element) {
   view_->OnElementRemove(*ite);
   (*ite)->Destroy();
   children_.erase(ite);
+  count_changed_ = true;
   return true;
 }
 
@@ -96,6 +102,7 @@ void ElementsImpl::RemoveAllElements() {
   }
   std::vector<ElementInterface *> v;
   children_.swap(v);
+  count_changed_ = true;
 }
 
 ElementInterface *ElementsImpl::GetItem(const Variant &index_or_name) {
@@ -135,6 +142,125 @@ void ElementsImpl::HostChanged() {
          ite != children_.end(); ++ite) {
       (*ite)->HostChanged();
   }
+}
+
+void ElementsImpl::OnParentWidthChange(double width) {
+  width_ = width;
+  if (canvas_) {
+      canvas_->Destroy();
+      canvas_ = NULL;
+    }
+  for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+         ite != children_.end(); ++ite) {
+      ElementInterface *element = *ite;
+      if (element->XIsRelative())
+        element->SetRelativeX(element->GetRelativeX());
+      if (element->WidthIsRelative())
+        element->SetRelativeWidth(element->GetRelativeWidth());
+  }
+}
+
+void ElementsImpl::OnParentHeightChange(double height) {
+  height_ = height;
+  if (canvas_) {
+    canvas_->Destroy();
+    canvas_ = NULL;
+  }
+  for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+         ite != children_.end(); ++ite) {
+    ElementInterface *element = *ite;
+    if (element->YIsRelative())
+      element->SetRelativeY(element->GetRelativeY());
+    if (element->HeightIsRelative())
+      element->SetRelativeHeight(element->GetRelativeHeight());
+  }
+}
+
+const CanvasInterface *ElementsImpl::Draw(bool *changed) {
+  ElementInterface *element;
+  CanvasInterface *canvas = NULL;
+  const CanvasInterface **children_canvas = NULL;
+  int child_count;
+  bool child_changed = false;
+  bool change = count_changed_;
+  
+  count_changed_ = false;
+  if (children_.empty()) {
+    *changed = change;
+    goto exit;
+  }
+  
+  // draw children into temp array
+  child_count = children_.size();
+  children_canvas = new const CanvasInterface*[child_count];
+  for (int i = 0; i < child_count; i++) {
+    element = children_[i];
+    children_canvas[i] = element->Draw(&child_changed);
+    if (child_changed || element->IsPositionChanged()) {
+      element->ClearPositionChanged();
+      change = true;
+    }    
+  }
+  
+  if (!canvas_ || change) {
+    // Need to redraw
+    change = true;
+    
+    if (!canvas_) {
+      const GraphicsInterface *gfx = view_->GetGraphics();
+      canvas_ = gfx->NewCanvas(static_cast<size_t>(width_) + 1, 
+                               static_cast<size_t>(height_) + 1);
+      if (!canvas_) {
+        DLOG("Error: unable to create canvas.");
+        change = true;
+        goto exit;
+      }
+    }
+    else {
+      // If not new canvas, we must remember to clear canvas before drawing.
+      canvas_->ClearCanvas();
+    }
+    canvas_->IntersectRectClipRegion(0., 0., width_, height_);
+      
+    for (int i = 0; i < child_count; i++) {
+      if (children_canvas[i]) {
+        canvas_->PushState();
+
+        element = children_[i];
+        canvas_->TranslateCoordinates(-element->GetPixelX(), 
+                                      -element->GetPixelY());
+        
+        if (element->GetRotation() != .0) {
+          canvas_->TranslateCoordinates(-element->GetPixelPinX(), 
+                                        -element->GetPixelPinY());
+          canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
+          canvas_->TranslateCoordinates(element->GetPixelPinX(), 
+                                        element->GetPixelPinY());
+        }
+        
+        const CanvasInterface *mask = element->GetMaskCanvas();
+        if (mask) {
+          canvas_->DrawCanvasWithMask(.0, .0, children_canvas[i], .0, .0, mask);
+        }
+        else {
+          canvas_->DrawCanvas(.0, .0, children_canvas[i]);
+        }
+        
+        canvas_->PopState();  
+      }          
+    }    
+  }
+  
+  canvas = canvas_;
+  
+exit:  
+  if (children_canvas) {
+    delete[] children_canvas;
+    children_canvas = NULL;
+  }
+
+  *changed = change;
+  return canvas;
 }
 
 } // namespace internal
@@ -209,6 +335,21 @@ void Elements::RemoveAllElements() {
 void Elements::HostChanged() {
   ASSERT(impl_);
   impl_->HostChanged();
+}
+
+void Elements::OnParentWidthChange(double width) {
+  ASSERT(impl_);
+  impl_->OnParentWidthChange(width);
+}
+
+void Elements::OnParentHeightChange(double height) {
+  ASSERT(impl_);
+  impl_->OnParentHeightChange(height);
+}
+
+const CanvasInterface *Elements::Draw(bool *changed) {
+  ASSERT(impl_);
+  return impl_->Draw(changed);
 }
 
 DELEGATE_SCRIPTABLE_INTERFACE_IMPL(Elements, impl_->scriptable_helper_)

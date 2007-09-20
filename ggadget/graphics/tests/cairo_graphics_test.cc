@@ -113,7 +113,6 @@ TEST_F(CairoGfxTest, LoadImage) {
   
   EXPECT_EQ((size_t)450, img->GetWidth());
   EXPECT_EQ((size_t)310, img->GetHeight());
-  EXPECT_STREQ("CairoCanvas", img->ClassType());
   EXPECT_FALSE(img->IsMask());
   
   img->Destroy();
@@ -215,7 +214,6 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   
   EXPECT_EQ((size_t)450, mask->GetWidth());
   EXPECT_EQ((size_t)310, mask->GetHeight());
-  EXPECT_STREQ("CairoCanvas", mask->ClassType());
   EXPECT_TRUE(mask->IsMask());
   
   h = mask->GetHeight();
@@ -245,7 +243,6 @@ TEST_F(CairoGfxTest, DrawImageMask) {
 TEST_F(CairoGfxTest, NewFontAndDrawText) {  
   FontInterface *font1 = gfx_->NewFont("Serif", 14, 
       FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_BOLD);
-  EXPECT_STREQ("CairoFont", font1->ClassType());
   EXPECT_EQ(FontInterface::STYLE_ITALIC, font1->GetStyle());
   EXPECT_EQ(FontInterface::WEIGHT_BOLD, font1->GetWeight());
   EXPECT_EQ((size_t)14, font1->GetPointSize());
