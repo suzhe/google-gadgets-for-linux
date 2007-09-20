@@ -80,14 +80,6 @@ class ElementFactoryTest : public testing::Test {
   }
 };
 
-TEST_F(ElementFactoryTest, TestSingleton) {
-  ggadget::ElementFactoryInterface *inter1 =
-      ggadget::ElementFactory::GetInstance();
-  ggadget::ElementFactoryInterface *inter2 =
-      ggadget::ElementFactory::GetInstance();
-  ASSERT_TRUE(inter1 == inter2);
-}
-
 TEST_F(ElementFactoryTest, TestRegister) {
   ggadget::internal::ElementFactoryImpl impl;
   ASSERT_TRUE(impl.RegisterElementClass("muffin", Muffin::CreateInstance));
@@ -97,29 +89,28 @@ TEST_F(ElementFactoryTest, TestRegister) {
 }
 
 TEST_F(ElementFactoryTest, TestCreate) {
-  ggadget::ElementFactoryInterface *factory =
-      ggadget::ElementFactory::GetInstance();
-  factory->RegisterElementClass("muffin", Muffin::CreateInstance);
-  factory->RegisterElementClass("pie", Pie::CreateInstance);
+  ggadget::ElementFactory factory;
+  factory.RegisterElementClass("muffin", Muffin::CreateInstance);
+  factory.RegisterElementClass("pie", Pie::CreateInstance);
 
-  ggadget::ElementInterface *e1 = factory->CreateElement("muffin",
-                                                         NULL,
-                                                         NULL,
-                                                         NULL);
+  ggadget::ElementInterface *e1 = factory.CreateElement("muffin",
+                                                        NULL,
+                                                        NULL,
+                                                        NULL);
   ASSERT_TRUE(e1 != NULL);
   ASSERT_STREQ(e1->GetTagName(), "muffin");
 
-  ggadget::ElementInterface *e2 = factory->CreateElement("pie",
-                                                         e1,
-                                                         NULL,
-                                                         NULL);
+  ggadget::ElementInterface *e2 = factory.CreateElement("pie",
+                                                        e1,
+                                                        NULL,
+                                                        NULL);
   ASSERT_TRUE(e2 != NULL);
   ASSERT_STREQ(e2->GetTagName(), "pie");
 
-  ggadget::ElementInterface *e3 = factory->CreateElement("bread",
-                                                         e2,
-                                                         NULL,
-                                                         NULL);
+  ggadget::ElementInterface *e3 = factory.CreateElement("bread",
+                                                        e2,
+                                                        NULL,
+                                                        NULL);
   ASSERT_TRUE(e3 == NULL);
 
   e1->Destroy();

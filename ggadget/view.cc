@@ -27,9 +27,10 @@ namespace ggadget {
 
 namespace internal {
 
-ViewImpl::ViewImpl(int width, int height, ViewInterface *owner) 
-    : children_(ElementFactory::GetInstance(), NULL, owner),
-      height_(height),
+ViewImpl::ViewImpl(ElementFactoryInterface *element_factory,
+                   ViewInterface *owner) 
+    : children_(element_factory, NULL, owner),
+      width_(200), height_(200),
       host_(NULL),
       canvas_(NULL),
       // TODO: Make sure the default value.
@@ -402,8 +403,8 @@ using internal::ViewImpl;
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
-View::View(int width, int height)
-    : impl_(new ViewImpl(width, height, this)) {
+View::View(ElementFactoryInterface *element_factory)
+    : impl_(new ViewImpl(element_factory, this)) {
   RegisterProperty("caption", NewSlot(this, &View::GetCaption),
                    NewSlot(this, &View::SetCaption));
   RegisterConstant("children", GetChildren());
@@ -510,6 +511,14 @@ void View::OnElementRemove(ElementInterface *element) {
 
 void View::FireEvent(Event *event, const EventSignal &event_signal) {
   impl_->FireEvent(event, event_signal);
+}
+
+Event *View::GetEvent() {
+  return impl_->GetEvent();
+}
+
+const Event *View::GetEvent() const {
+  return impl_->GetEvent();
 }
 
 bool View::SetWidth(int width) {

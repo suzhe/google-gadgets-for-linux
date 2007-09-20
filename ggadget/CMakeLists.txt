@@ -28,6 +28,7 @@ SET(SRCS
   math_utils.cc
   scriptable_helper.cc
   signal.cc
+  string_utils.cc
   unicode_utils.cc
   variant.cc
   view.cc

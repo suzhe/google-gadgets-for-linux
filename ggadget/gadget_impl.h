@@ -17,9 +17,16 @@
 #ifndef GGADGET_GADGET_IMPL_H__
 #define GGADGET_GADGET_IMPL_H__
 
-#include "view_interface.h"
+#include <map>
+#include <string>
+#include "string_utils.h"
 
 namespace ggadget {
+
+class ScriptRuntimeInterface;
+class FileManagerInterface;
+class ElementfactoryInterface;
+class ViewInterface;
 
 namespace internal {
   
@@ -28,15 +35,22 @@ namespace internal {
  */
 class GadgetImpl {
  public:   
-  GadgetImpl() : main_(NULL), options_(NULL), detailed_(NULL) {};
-  
+  GadgetImpl(ScriptRuntimeInterface *script_runtime,
+             FileManagerInterface *file_manager,
+             ViewInterface *main_view,
+             ViewInterface *options_view);
   ~GadgetImpl();
-  
-  bool InitFromPath(const char *base_path);
 
+  const char *GetManifestInfo(const char *key);
+
+  bool InitFromPath(const char *base_path);
+  bool SetupView(ViewInterface *view, const char *filename);
+
+  ScriptRuntimeInterface *script_runtime_;
+  FileManagerInterface *file_manager_;
   ViewInterface *main_;
   ViewInterface *options_;
-  ViewInterface *detailed_;
+  GadgetStringMap manifest_info_map_;
 };
 
 } // namespace internal

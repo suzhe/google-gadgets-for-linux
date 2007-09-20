@@ -27,6 +27,8 @@ namespace internal {
   class ViewImpl;
 }
 
+class ElementFactoryInterface;
+
 /**
  * Main View implementation.
  */
@@ -34,12 +36,11 @@ class View : public ViewInterface {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
-  /** Creates a new view. */
-  View(int width, int height);
+  View(ElementFactoryInterface *element_factory);
   virtual ~View();
   
   virtual bool AttachHost(HostInterface *host);
-  
+
   virtual void OnMouseEvent(MouseEvent *event);
   virtual void OnKeyEvent(KeyboardEvent *event);
   virtual void OnOtherEvent(Event *event);
@@ -48,6 +49,8 @@ class View : public ViewInterface {
   virtual void OnElementAdd(ElementInterface *element);
   virtual void OnElementRemove(ElementInterface *element);
   virtual void FireEvent(Event *event, const EventSignal &event_signal);
+  virtual Event *GetEvent();
+  virtual const Event *GetEvent() const;
 
   virtual bool SetWidth(int width);
   virtual bool SetHeight(int height);

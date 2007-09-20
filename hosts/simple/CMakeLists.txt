@@ -16,22 +16,16 @@
 
 #ADD_SUBDIRECTORY(tests)
 
-# FIXME need to not hard code this
-SET(CAIRO_INCLUDE_DIR /usr/include/cairo)
-SET(GTK_INCLUDE_DIR
-  /usr/include/gtk-2.0
-  /usr/lib/gtk-2.0/include
-  /usr/include/atk-1.0
-  /usr/include/pango-1.0
-  /usr/include/glib-2.0
-  /usr/lib/glib-2.0/include
-)
-SET(GTK_LIBRARIES gtk-x11-2.0 pangocairo-1.0)
-SET(CAIRO_LIBRARIES cairo)
+PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
+PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
 
-INCLUDE_DIRECTORIES(${GTK_INCLUDE_DIR}
-  ${CAIRO_INCLUDE_DIR}
-)
+IF(UNIX)
+  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
+ENDIF(UNIX)
+
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
+LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
+ADD_DEFINITIONS(${SMJS_DEFINITIONS})
 
 SET(SRCS
   main.cc
@@ -43,6 +37,9 @@ ADD_EXECUTABLE(ggl ${SRCS})
 OUTPUT_EXECUTABLE(ggl)
 
 TARGET_LINK_LIBRARIES(ggl 
-  ggadget ggadget_cairo 
-  ${CAIRO_LIBRARIES} ${GTK_LIBRARIES}
+  ggadget
+  ggadget_cairo
+  ggadget_smjs
+  ${CAIRO_LIBRARIES}
+  ${GTK_LIBRARIES}
 )

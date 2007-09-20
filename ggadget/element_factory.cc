@@ -20,18 +20,6 @@
 
 namespace ggadget {
 
-scoped_ptr<ElementFactory> ElementFactory::instance_;
-
-ElementFactory *ElementFactory::GetInstance(void) {
-  ElementFactory *ptr;
-  ptr = instance_.get();
-  if (!ptr) {
-    ptr = new ElementFactory();
-    instance_.reset(ptr);
-  }
-  return ptr;
-}
-
 ElementFactory::ElementFactory()
     : impl_(new internal::ElementFactoryImpl) {
 }
@@ -48,8 +36,8 @@ ElementInterface *ElementFactory::CreateElement(const char *tag_name,
   return impl_->CreateElement(tag_name, parent, view, name);
 }
 
-bool ElementFactory::RegisterElementClass(
-   const char *tag_name, ElementFactoryInterface::ElementCreator creator) {
+bool ElementFactory::RegisterElementClass(const char *tag_name,
+                                          ElementCreator creator) {
   ASSERT(impl_);
   return impl_->RegisterElementClass(tag_name, creator);
 }
@@ -67,7 +55,7 @@ ElementInterface *ElementFactoryImpl::CreateElement(const char *tag_name,
 }
 
 bool ElementFactoryImpl::RegisterElementClass(
-   const char *tag_name, ElementFactoryInterface::ElementCreator creator) {
+    const char *tag_name, ElementFactory::ElementCreator creator) {
   CreatorMap::iterator ite = creators_.find(tag_name);
   if (ite != creators_.end())
     return false;

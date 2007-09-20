@@ -124,7 +124,7 @@ int ElementsImpl::GetIndexByName(const char *name) {
     return -1;
   for (std::vector<ElementInterface *>::const_iterator ite = children_.begin();
        ite != children_.end(); ++ite) {
-    if (strcmp((*ite)->GetName(), name) == 0)
+    if (GadgetStrCmp((*ite)->GetName(), name) == 0)
       return ite - children_.begin();
   }
   return -1;

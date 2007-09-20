@@ -21,9 +21,10 @@
 #include <dirent.h>
 #include <errno.h>
 
-#include "common.h"
 #include "file_manager.h"
 #include "file_manager_impl.h"
+#include "common.h"
+#include "gadget_consts.h"
 #include "third_party/unzip/unzip.h"
 #include "windows_locales.h"
 #include "xml_utils.h"
@@ -153,7 +154,7 @@ bool FileManagerImpl::GetXMLFileContents(const char *file,
         return false;
       }
 
-      StringMap::const_iterator iter = string_table_.find(entity_name);
+      GadgetStringMap::const_iterator iter = string_table_.find(entity_name);
       if (iter != string_table_.end()) {
         start = pos + 1;  // Reset start for next chunk.
         data->append(iter->second);
@@ -227,9 +228,11 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
   if (!GetFileContentsInternal(iter, &data))
     return false;
 
-  return ParseStringTable(data.c_str(),
-                          (base_path_ + kPathSeparator + iter->first).c_str(),
-                          &string_table_);
+  return ParseXMLIntoXPathMap(
+      data.c_str(),
+      (base_path_ + kPathSeparator + iter->first).c_str(),
+      kStringsTag,
+      &string_table_);
 }
 
 bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {

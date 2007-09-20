@@ -25,7 +25,7 @@
 namespace ggadget {
 
 class ViewInterface;
-class Elements;
+class ElementFactoryInterface;
 
 namespace internal {
 
@@ -33,6 +33,7 @@ class BasicElementImpl {
  public:
   BasicElementImpl(ElementInterface *parent,
                    ViewInterface *view,
+                   ElementFactoryInterface *element_factory,
                    const char *name,
                    ElementInterface *owner);
   ~BasicElementImpl();

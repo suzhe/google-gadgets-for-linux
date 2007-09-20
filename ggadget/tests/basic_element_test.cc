@@ -21,12 +21,14 @@
 #include "ggadget/xml_utils.h"
 #include "mocked_view.h"
 
+ggadget::ElementFactory *gFactory = NULL;
+
 class Muffin : public ggadget::BasicElement {
  public:
   Muffin(ggadget::ElementInterface *parent,
          ggadget::ViewInterface *view,
          const char *name)
-      : ggadget::BasicElement(parent, view, name) {
+      : ggadget::BasicElement(parent, view, gFactory, name) {
     RegisterProperty("tagName", NewSlot(this, &Muffin::GetTagName), NULL);
   }
 
@@ -58,7 +60,7 @@ class Pie : public ggadget::BasicElement {
   Pie(ggadget::ElementInterface *parent,
       ggadget::ViewInterface *view,
       const char *name)
-      : ggadget::BasicElement(parent, view, name) {
+      : ggadget::BasicElement(parent, view, gFactory, name) {
     RegisterProperty("tagName", NewSlot(this, &Pie::GetTagName), NULL);
   }
 
@@ -473,8 +475,10 @@ TEST_F(BasicElementTest, XMLConstruction) {
 
 int main(int argc, char *argv[]) {
   testing::ParseGUnitFlags(&argc, argv);
-  ggadget::ElementFactoryInterface *f = ggadget::ElementFactory::GetInstance();
-  f->RegisterElementClass("muffin", Muffin::CreateInstance);
-  f->RegisterElementClass("pie", Pie::CreateInstance);
-  return RUN_ALL_TESTS();
+  gFactory = new ggadget::ElementFactory();
+  gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);
+  gFactory->RegisterElementClass("pie", Pie::CreateInstance);
+  int result = RUN_ALL_TESTS();
+  delete gFactory;
+  return result;
 }

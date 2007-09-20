@@ -20,6 +20,7 @@ SET(LIBS
   ggadget_smjs
   edit  # The editline library in SpiderMonkey.
 )
+# For editline static library.
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
 
 # General js_shell without custom objects.

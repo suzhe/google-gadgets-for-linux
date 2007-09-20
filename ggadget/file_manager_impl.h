@@ -22,7 +22,7 @@
 #include <cstring>
 #include <map>
 
-#include "common.h"
+#include "string_utils.h"
 #include "third_party/unzip/unzip.h"
 
 class TiXmlDocument;  // TinyXML DOM Document.
@@ -33,29 +33,12 @@ namespace internal {
 
 class Gadget;
 
-// Platform dependent file constants.
-const char kPathSeparator = '/';
-
-// Filenames of required resources in each .gg package.
-const char *const kMainXML = "main.xml";
-const char *const kOptionsXML = "options.xml";
-const char *const kStringsXML = "strings.xml";
-const char *const kGadgetGManifest = "gadget.gmanifest";
-const char *const kGManifestExt = ".gmanifest";
-
 class FileManagerImpl {
  public:
   FileManagerImpl() { }
   ~FileManagerImpl();
 
-  // This case-insensitive comparison will not match that of Windows, 
-  // but should work for most cases.
-  struct CaseInsensitiveCompare {
-    bool operator() (const std::string &s1, const std::string &s2) const {
-      return strcasecmp(s1.c_str(), s2.c_str()) < 0;
-    }
-  };
-  typedef std::map<std::string, unz_file_pos, CaseInsensitiveCompare> FileMap;
+  typedef std::map<std::string, unz_file_pos, GadgetStringComparator> FileMap;
 
   bool Init(const char *base_path);
   bool GetFileContents(const char *file,
@@ -98,8 +81,7 @@ class FileManagerImpl {
   FileMap files_;
   
   // Maps resource names to string resources from strings.xml.
-  typedef std::map<std::string, std::string> StringMap;
-  StringMap string_table_;
+  GadgetStringMap string_table_;
 };
 
 } // namespace internal

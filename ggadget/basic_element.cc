@@ -17,7 +17,7 @@
 #include "basic_element.h"
 #include "basic_element_impl.h"
 #include "common.h"
-#include "element_factory.h"
+#include "element_factory_interface.h"
 #include "element_interface.h"
 #include "view_interface.h"
 
@@ -27,10 +27,11 @@ namespace internal {
 
 BasicElementImpl::BasicElementImpl(ElementInterface *parent,
                                    ViewInterface *view,
+                                   ElementFactoryInterface *element_factory,
                                    const char *name,
                                    ElementInterface *owner)
     : parent_(parent),
-      children_(ElementFactory::GetInstance(), owner, view),
+      children_(element_factory, owner, view),
       view_(view),
       hittest_(ElementInterface::HT_DEFAULT),
       cursor_(ElementInterface::CURSOR_ARROW),
@@ -500,8 +501,10 @@ static const char *kHitTestNames[] = {
 
 BasicElement::BasicElement(ElementInterface *parent,
                            ViewInterface *view,
+                           ElementFactoryInterface *element_factory,
                            const char *name)
-    : impl_(new internal::BasicElementImpl(parent, view, name, this)) {
+    : impl_(new internal::BasicElementImpl(parent, view, element_factory,
+                                           name, this)) {
 
   RegisterConstant("children", GetChildren());
   RegisterStringEnumProperty("cursor",
