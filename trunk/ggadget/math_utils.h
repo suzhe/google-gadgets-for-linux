@@ -91,9 +91,7 @@ class ChildCoordCalculator {
 /**
  * @return The radian measure of the input parameter.
  */
-double DegreesToRadians(double degrees) {
-  return degrees * M_PI / 180.;  
-}
+double DegreesToRadians(double degrees);
 
 /**
  * Checks to see if the given (x, y) is contained in an element.
@@ -102,9 +100,7 @@ double DegreesToRadians(double degrees) {
  * @param width Width of element.
  * @param height Height of element.
  */
-bool IsPointInElement(double x, double y, double width, double height) {
-  return 0. <= x && 0. <= y && x < width && y < height;  
-}
+bool IsPointInElement(double x, double y, double width, double height);
 
 }
 

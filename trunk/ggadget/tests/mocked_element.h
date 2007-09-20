@@ -248,6 +248,21 @@ class MockedElement : public ggadget::ElementInterface {
     return false;
   }
  
+  virtual const ggadget::CanvasInterface *GetMaskCanvas() {
+    return NULL;
+  }
+  
+  virtual const ggadget::CanvasInterface *Draw(bool *changed) {
+    return NULL;
+  }
+  
+  virtual bool IsPositionChanged() const {
+    return true;
+  }
+  
+  virtual void ClearPositionChanged() {
+  }
+  
   virtual void HostChanged() {}
 
   DEFAULT_OWNERSHIP_POLICY;

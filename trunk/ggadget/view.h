@@ -60,7 +60,9 @@ class View : public ViewInterface {
   virtual int GetHeight() const;
 
   virtual const CanvasInterface *Draw(bool *changed);   
-
+  virtual const GraphicsInterface *GetGraphics() const;
+  virtual void QueueDraw();
+  
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;
   virtual void SetCaption(const char *caption);

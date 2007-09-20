@@ -115,7 +115,7 @@ static bool CreateGTKUI(const char *base_path) {
   return true;
 }
 
-static void DestroyUI() {  
+static void DestroyUI() {
   delete g_script_runtime;
   delete g_gadget->GetMainView();
   delete g_gadget->GetOptionsView();

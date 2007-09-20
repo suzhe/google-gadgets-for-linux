@@ -102,12 +102,7 @@ class CanvasInterface {
    * @return true if the canvas is a mask, false otherwise.
    */
   virtual bool IsMask() const = 0;  
-  
-  /**
-   * @return A name unique to the concrete class type.
-   */
-  virtual const char *ClassType() const = 0;
-  
+    
   /** 
    * Saves the current graphics state in a stack, while not changing the current 
    * state. Specifically, three aspects of the state are stored: clipping, 

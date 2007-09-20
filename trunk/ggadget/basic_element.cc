@@ -17,8 +17,10 @@
 #include "basic_element.h"
 #include "basic_element_impl.h"
 #include "common.h"
+#include "math_utils.h"
 #include "element_factory_interface.h"
 #include "element_interface.h"
+#include "graphics_interface.h"
 #include "view_interface.h"
 
 namespace ggadget {
@@ -29,7 +31,7 @@ BasicElementImpl::BasicElementImpl(ElementInterface *parent,
                                    ViewInterface *view,
                                    ElementFactoryInterface *element_factory,
                                    const char *name,
-                                   ElementInterface *owner)
+                                   BasicElement *owner)
     : parent_(parent),
       children_(element_factory, owner, view),
       view_(view),
@@ -57,12 +59,26 @@ BasicElementImpl::BasicElementImpl(ElementInterface *parent,
       width_relative_(0.0),
       height_relative_(0.0),
       x_relative_(0.0),
-      y_relative_(0.0) {
+      y_relative_(0.0),
+      canvas_(NULL),
+      mask_canvas_(NULL),
+      visibility_changed_(true),
+      changed_(true),
+      position_changed_(true) {
   if (name)
     name_ = name;
 }
 
 BasicElementImpl::~BasicElementImpl() {
+  if (canvas_) {
+    canvas_->Destroy();
+    canvas_ = NULL;  
+  }
+  
+  if (mask_canvas_) {
+    mask_canvas_->Destroy();
+    mask_canvas_ = NULL;  
+  }  
 }
 
 ViewInterface *BasicElementImpl::GetView() const {
@@ -118,6 +134,21 @@ void BasicElementImpl::SetMask(const char *mask) {
     mask_ = mask;
   else
     mask_.clear();
+  if (mask_canvas_) {
+    mask_canvas_->Destroy();
+    mask_canvas_ = NULL;
+  }
+  view_->QueueDraw();
+}
+
+const CanvasInterface *BasicElementImpl::GetMaskCanvas() {
+  if (!mask_canvas_ && !mask_.empty()) {
+    // TODO load mask from FM
+      
+
+  }
+
+  return mask_canvas_;
 }
 
 double BasicElementImpl::GetPixelWidth() const {
@@ -272,6 +303,8 @@ double BasicElementImpl::GetRotation() const {
 
 void BasicElementImpl::SetRotation(double rotation) {
   rotation_ = rotation;
+  position_changed_ = true;
+  view_->QueueDraw();
 }
 
 double BasicElementImpl::GetOpacity() const {
@@ -281,6 +314,7 @@ double BasicElementImpl::GetOpacity() const {
 void BasicElementImpl::SetOpacity(double opacity) {
   if (opacity >= 0.0 && opacity <= 1.0) {
     opacity_ = opacity;
+    view_->QueueDraw();
   }
 }
 
@@ -290,6 +324,8 @@ bool BasicElementImpl::IsVisible() const {
 
 void BasicElementImpl::SetVisible(bool visible) {
   visible_ = visible;
+  visibility_changed_ = true;
+  view_->QueueDraw();
 }
 
 ElementInterface *BasicElementImpl::GetParentElement() const {
@@ -336,26 +372,20 @@ double BasicElementImpl::GetParentHeight() const {
 void BasicElementImpl::WidthChanged() {
   if (pin_x_relative_)
     SetRelativePinX(GetRelativePinX());
-  Elements *children = GetChildren();
-  for (int i = 0; i < children->GetCount(); ++i) {
-    ElementInterface *element = children->GetItemByIndex(i);
-    if (element->XIsRelative())
-      element->SetRelativeX(element->GetRelativeX());
-    if (element->WidthIsRelative())
-      element->SetRelativeWidth(element->GetRelativeWidth());
+  children_.OnParentWidthChange(width_);
+  if (canvas_) { // Changes to width and height require a new canvas.
+    canvas_->Destroy();
+    canvas_ = NULL;
   }
 }
 
 void BasicElementImpl::HeightChanged() {
   if (pin_y_relative_)
     SetRelativePinY(GetRelativePinY());
-  Elements *children = GetChildren();
-  for (int i = 0; i < children->GetCount(); ++i) {
-    ElementInterface *element = children->GetItemByIndex(i);
-    if (element->YIsRelative())
-      element->SetRelativeY(element->GetRelativeY());
-    if (element->HeightIsRelative())
-      element->SetRelativeHeight(element->GetRelativeHeight());
+  children_.OnParentHeightChange(height_);
+  if (canvas_) { // Changes to width and height require a new canvas.
+    canvas_->Destroy();
+    canvas_ = NULL;
   }
 }
 
@@ -432,6 +462,7 @@ Variant BasicElementImpl::GetWidth() const {
 }
 void BasicElementImpl::SetWidth(const Variant &width) {
   SET_PIXEL_OR_RELATIVE(width, SetPixelWidth, SetRelativeWidth);
+  view_->QueueDraw();
 }
 
 Variant BasicElementImpl::GetHeight() const {
@@ -441,6 +472,7 @@ Variant BasicElementImpl::GetHeight() const {
 }
 void BasicElementImpl::SetHeight(const Variant &height) {
   SET_PIXEL_OR_RELATIVE(height, SetPixelHeight, SetRelativeHeight);
+  view_->QueueDraw();
 }
 
 Variant BasicElementImpl::GetX() const {
@@ -450,6 +482,8 @@ Variant BasicElementImpl::GetX() const {
 }
 void BasicElementImpl::SetX(const Variant &x) {
   SET_PIXEL_OR_RELATIVE(x, SetPixelX, SetRelativeX);
+  position_changed_ = true;
+  view_->QueueDraw();
 }
 
 Variant BasicElementImpl::GetY() const {
@@ -459,6 +493,8 @@ Variant BasicElementImpl::GetY() const {
 }
 void BasicElementImpl::SetY(const Variant &y) {
   SET_PIXEL_OR_RELATIVE(y, SetPixelY, SetRelativeY);
+  position_changed_ = true;
+  view_->QueueDraw();
 }
 
 Variant BasicElementImpl::GetPinX() const {
@@ -468,6 +504,8 @@ Variant BasicElementImpl::GetPinX() const {
 }
 void BasicElementImpl::SetPinX(const Variant &pin_x) {
   SET_PIXEL_OR_RELATIVE(pin_x, SetPixelPinX, SetRelativePinX);
+  position_changed_ = true;
+  view_->QueueDraw();
 }
 
 Variant BasicElementImpl::GetPinY() const {
@@ -477,10 +515,69 @@ Variant BasicElementImpl::GetPinY() const {
 }
 void BasicElementImpl::SetPinY(const Variant &pin_y) {
   SET_PIXEL_OR_RELATIVE(pin_y, SetPixelPinY, SetRelativePinY);
+  position_changed_ = true;
+  view_->QueueDraw();
 }
 
 void BasicElementImpl::HostChanged() {
   children_.HostChanged();
+}
+
+const CanvasInterface *BasicElementImpl::Draw(bool *changed) {
+  CanvasInterface *canvas = NULL;
+  const CanvasInterface *children_canvas = NULL;
+  bool child_changed;
+  bool change = visibility_changed_;
+  
+  visibility_changed_ = false;
+  if (!visible_) { // if not visible, then return no matter what
+    goto exit;
+  }
+
+  children_canvas = children_.Draw(&child_changed);
+  if (child_changed) {
+    change = true;
+  }
+  if (!children_canvas) { 
+    // The default basic element has no self to draw, so just
+    // exit if no children to draw.
+    goto exit;
+  }
+  
+  if (!canvas_ || changed_ || change) {
+    // Need to redraw
+    change = true;    
+    SetUpCanvas();
+    
+    canvas_->MultiplyOpacity(opacity_);
+    
+    // PLACEHOLDER
+    // This is where another element would draw itself.
+    
+    canvas_->DrawCanvas(0., 0., children_canvas);
+  }
+  
+  canvas = canvas_;
+  
+exit:  
+  *changed = change;
+  return canvas;
+}
+
+void BasicElementImpl::SetUpCanvas() {
+  if (!canvas_) {
+    const GraphicsInterface *gfx = view_->GetGraphics();
+    canvas_ = gfx->NewCanvas(static_cast<size_t>(width_) + 1, 
+                             static_cast<size_t>(height_) + 1);
+    if (!canvas_) {
+      DLOG("Error: unable to create canvas.");
+    }
+  }
+  else {
+    // If not new canvas, we must remember to clear canvas before drawing.
+    canvas_->ClearCanvas();
+  }
+  canvas_->IntersectRectClipRegion(0., 0., width_, height_);
 }
 
 } // namespace internal
@@ -675,6 +772,11 @@ const char *BasicElement::GetMask() const {
 void BasicElement::SetMask(const char *mask) {
   ASSERT(impl_);
   return impl_->SetMask(mask);
+}
+
+const CanvasInterface *BasicElement::GetMaskCanvas() {
+  ASSERT(impl_);
+  return impl_->GetMaskCanvas();
 }
 
 double BasicElement::GetPixelWidth() const {
@@ -890,6 +992,39 @@ bool BasicElement::PinYIsRelative() const {
 void BasicElement::HostChanged() {
   ASSERT(impl_);
   return impl_->HostChanged();
+}
+
+const CanvasInterface *BasicElement::Draw(bool *changed) {
+  ASSERT(impl_);
+  return impl_->Draw(changed);  
+}
+
+void BasicElement::ClearVisibilityChanged() {
+  impl_->visibility_changed_ = false;
+}
+
+bool BasicElement::IsVisibilityChanged() const { 
+  return impl_->visibility_changed_;
+}
+
+void BasicElement::ClearSelfChanged() { 
+  impl_->changed_ = false;
+}
+
+bool BasicElement::IsSelfChanged() const {
+  return impl_->changed_;
+}
+
+void BasicElement::ClearPositionChanged() {
+  impl_->position_changed_ = false;
+}
+
+bool BasicElement::IsPositionChanged() const { 
+  return impl_->position_changed_;
+}
+
+void BasicElement::SetUpCanvas() {
+  impl_->SetUpCanvas();
 }
 
 } // namespace ggadget

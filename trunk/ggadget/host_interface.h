@@ -55,7 +55,7 @@ class HostInterface {
    * problem of the old (detached) HostInterface not knowing that it is being
    * detached, since this action may be initiated by a different host that does
    * not know about the old host. No more HostInterface methods should be called 
-   * by the view after its detached its HostInterface.
+   * by the view after it has detached its HostInterface.
    * @return true on success, false on failure.
    */ 
   virtual bool DetachFromView() = 0;   

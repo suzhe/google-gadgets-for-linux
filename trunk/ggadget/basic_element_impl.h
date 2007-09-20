@@ -18,6 +18,7 @@
 #define GGADGETS_BASIC_ELEMENT_IMPL_H__
 
 #include <string>
+#include "canvas_interface.h"
 #include "element_interface.h"
 #include "elements.h"
 #include "signal.h"
@@ -35,7 +36,7 @@ class BasicElementImpl {
                    ViewInterface *view,
                    ElementFactoryInterface *element_factory,
                    const char *name,
-                   ElementInterface *owner);
+                   BasicElement *owner);
   ~BasicElementImpl();
   ViewInterface *GetView() const;
   ElementInterface::HitTest GetHitTest() const;
@@ -50,6 +51,7 @@ class BasicElementImpl {
   const char *GetName() const;
   const char *GetMask() const;
   void SetMask(const char *mask);
+  const CanvasInterface *GetMaskCanvas();
   double GetPixelWidth() const;
   void SetPixelWidth(double width);
   double GetPixelHeight() const;
@@ -110,6 +112,8 @@ class BasicElementImpl {
   void SetPinY(const Variant &pin_y);
 
   void HostChanged();
+  const CanvasInterface *Draw(bool *changed);
+  void SetUpCanvas();
   
  public:
   void WidthChanged();
@@ -147,7 +151,12 @@ class BasicElementImpl {
   double height_relative_;
   double x_relative_;
   double y_relative_;
-
+  CanvasInterface *canvas_;
+  CanvasInterface *mask_canvas_;
+  bool visibility_changed_;
+  bool changed_;
+  bool position_changed_;
+  
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
   EventSignal ondragdrop_event_;

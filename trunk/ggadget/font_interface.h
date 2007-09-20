@@ -67,11 +67,6 @@ class FontInterface {
    * Frees the FontInterface object.
    */
   virtual void Destroy() = 0;
-  
-  /**
-   * @return A name unique to this class.
-   */
-  virtual const char *ClassType() const = 0;
 };
   
 } // namespace ggadget

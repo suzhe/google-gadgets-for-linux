@@ -28,6 +28,7 @@ class ElementsImpl;
 
 } // namespace internal
 
+class CanvasInterface;
 class ElementInterface;
 class ElementFactoryInterface;
 class ViewInterface;
@@ -54,7 +55,7 @@ class Elements : public ScriptableInterface {
   /** Not virtual because no inheritation to this class is allowed. */
   ~Elements();
 
- public:
+ public:  
   /** @see ElementsInterface::GetCount */
   int GetCount() const;
 
@@ -133,6 +134,28 @@ class Elements : public ScriptableInterface {
   /** Notifies all children that the host has changed. */
   void HostChanged();
   
+  /** 
+   * Notifies all children using relative positioning that the 
+   * parent's width changed. 
+   * @param width new width of the parent in pixels
+   */
+  void OnParentWidthChange(double width);
+  
+  /** 
+   * Notifies all children using relative positioning that the 
+   * parent's height changed.
+   * @param height new height of the parent in pixels 
+   */
+  void OnParentHeightChange(double height);
+  
+  /**
+   * Draw all the elements in this object onto a canvas that has the same size
+   * as that of the parent.
+   * @param[out] changed false if the returned canvas is unchanged, true otherwise
+   * @return canvas with the elements drawn. NULL if GetCount() == 0.
+   */
+  const CanvasInterface *Draw(bool *changed);
+    
   DEFAULT_OWNERSHIP_POLICY
   SCRIPTABLE_INTERFACE_DECL
   virtual bool IsStrict() const { return true; }

@@ -105,15 +105,15 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
        attribute = attribute->Next()) {
     const char *name = attribute->Name();
     const char *value = attribute->Value();
-
+    
     if (GadgetStrCmp(kInnerTextProperty, name) == 0) {
       LOG("%s is not allowed in XML as an attribute: ", kInnerTextProperty);
       continue;
     }
-
+    
     SetScriptableProperty(scriptable, name, value, tag_name);
   }
-
+ 
   // Set the "innerText" property.
   const char *text = xml_element->GetText();
   if (text)
@@ -170,7 +170,7 @@ bool SetupViewFromXML(ViewInterface *view,
   Elements *children = view->GetChildren();
   for (TiXmlElement *child_xml_ele = view_element->FirstChildElement();
        child_xml_ele != NULL;
-       child_xml_ele = child_xml_ele->NextSiblingElement()) {
+       child_xml_ele = child_xml_ele->NextSiblingElement()) { 
     InsertElementFromDOM(children, child_xml_ele, NULL);
   }
   return true;

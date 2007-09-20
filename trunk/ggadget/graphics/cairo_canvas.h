@@ -48,8 +48,6 @@ class CairoCanvas : public CanvasInterface {
   virtual size_t GetHeight() const { return height_; };  
   
   virtual bool IsMask() const { return is_mask_; };  
-  
-  virtual const char *ClassType() const { return kClassType; };
     
   virtual bool PushState();
   virtual bool PopState();
@@ -91,8 +89,6 @@ class CairoCanvas : public CanvasInterface {
     cairo_surface_flush(s);
     return s;
   };   
-  
-  static const char *kClassType;
   
  private:
    cairo_t *cr_;

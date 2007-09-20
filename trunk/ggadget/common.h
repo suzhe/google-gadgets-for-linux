@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_COMMONS_H__
-#define GGADGET_COMMONS_H__
+#ifndef GGADGET_COMMON_H__
+#define GGADGET_COMMON_H__
 
 #include <cassert>
 #include <cstdarg>
@@ -238,4 +238,4 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
 
 } // namespace ggadget
 
-#endif  // GGADGET_COMMONS_H__
+#endif  // GGADGET_COMMON_H__
