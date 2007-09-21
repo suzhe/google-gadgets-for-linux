@@ -54,16 +54,18 @@ static gboolean DestroyHandler(GtkWidget *widget,
   return FALSE;
 }
 
-static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, const char *base_path) {
+static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, 
+                           const char *base_path) {
   g_element_factory = new ElementFactory();
   g_script_runtime = new JSScriptRuntime();
   g_gadget = new Gadget(g_script_runtime, g_element_factory);
+
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(g_gadget->GetMainView(),
+                                                                g_zoom, NULL));
   if (!g_gadget->InitFromPath(base_path)) {
     LOG("Error: unable to load gadget from %s", base_path);
   }
   
-  GadgetViewWidget *gvw = GADGETVIEWWIDGET(
-      GadgetViewWidget_new(g_gadget->GetMainView(), g_zoom));
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
   
   // Setting min size here allows the window to resize below the size 

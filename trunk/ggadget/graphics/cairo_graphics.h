@@ -41,11 +41,9 @@ class CairoGraphics : public GraphicsInterface {
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
   
   virtual CanvasInterface *NewImage(const char *img_bytes, 
-                                    size_t img_bytes_count, 
-                                    ImageType t) const;  
+                                    size_t img_bytes_count) const;  
   virtual CanvasInterface *NewMask(const char *img_bytes, 
-                                   size_t img_bytes_count, 
-                                   ImageType t) const;  
+                                   size_t img_bytes_count) const;  
     
   virtual FontInterface *NewFont(const char *family, size_t pt_size, 
                                  FontInterface::Style style,

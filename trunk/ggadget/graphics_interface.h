@@ -38,15 +38,6 @@ class GraphicsInterface {
  public:
   virtual ~GraphicsInterface() { }
 
-  /**
-   * Type representing different formats of images supported by ggadget.
-   */
-  enum ImageType {
-    IMG_INVALID,
-    IMG_PNG,
-    IMG_JPEG
-  };
-
   /** 
    * Creates a new blank canvas.
    * @param w Width of the new canvas.
@@ -58,24 +49,20 @@ class GraphicsInterface {
    * Creates a new image canvas.
    * @param img_bytes Array containing the raw bytes of the image.
    * @param img_bytes_count Number of bytes of the img_bytes array.
-   * @param t Type of the image to create.
    * @return NULL on error, an ImageInterface object otherwise.
    */
   virtual CanvasInterface *NewImage(const char *img_bytes, 
-                                    size_t img_bytes_count, 
-                                    ImageType t) const = 0;
+                                    size_t img_bytes_count) const = 0;
   
   /** 
    * Creates a new image mask canvas.
    * Any black pixels in the mask image are considered to be transparent.
    * @param img_bytes Array containing the raw bytes of the image.
    * @param img_bytes_count Number of bytes of the img_bytes array.
-   * @param t Type of the image to create.
    * @return NULL on error, an ImageInterface object otherwise.
    */
   virtual CanvasInterface *NewMask(const char *img_bytes, 
-                                   size_t img_bytes_count, 
-                                   ImageType t) const = 0;
+                                   size_t img_bytes_count) const = 0;
  
   /**
    * Create a new font. This font is used when rendering text to a canvas.

@@ -263,9 +263,6 @@ class MockedElement : public ggadget::ElementInterface {
   virtual void ClearPositionChanged() {
   }
   
-  virtual void HostChanged() {
-  }
-
   virtual void OnParentWidthChange(double width) {
   }
 

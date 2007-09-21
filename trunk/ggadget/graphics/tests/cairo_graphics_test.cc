@@ -102,14 +102,11 @@ TEST_F(CairoGfxTest, LoadImage) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
     
-  CanvasInterface *img = 
-    gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
+  CanvasInterface *img = gfx_->NewImage(buffer, filelen);
   ASSERT_FALSE(NULL == img);
   
-  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, 0, GraphicsInterface::IMG_PNG));
-  EXPECT_TRUE(NULL == gfx_->NewImage(NULL, 500, GraphicsInterface::IMG_PNG));
-  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, filelen, 
-                                     GraphicsInterface::IMG_INVALID));
+  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, 0));
+  EXPECT_TRUE(NULL == gfx_->NewImage(NULL, 500));
   
   EXPECT_EQ((size_t)450, img->GetWidth());
   EXPECT_EQ((size_t)310, img->GetHeight());
@@ -140,7 +137,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
     
-  img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
+  img = gfx_->NewImage(buffer, filelen);
   ASSERT_FALSE(NULL == img);
   
   h = img->GetHeight();
@@ -170,7 +167,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
       
-  img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_JPEG);
+  img = gfx_->NewImage(buffer, filelen);
   ASSERT_FALSE(NULL == img);   
   
   h = img->GetHeight();
@@ -192,10 +189,9 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   CanvasInterface *mask, *img;
   double h, scale;
 
-  EXPECT_TRUE(NULL == gfx_->NewMask(buffer, 0, GraphicsInterface::IMG_PNG));
-  EXPECT_TRUE(NULL == gfx_->NewMask(NULL, 500, GraphicsInterface::IMG_PNG));
-  EXPECT_TRUE(NULL == gfx_->NewMask(buffer, filelen, 
-                                    GraphicsInterface::IMG_INVALID));
+  EXPECT_TRUE(NULL == gfx_->NewMask(buffer, 0));
+  EXPECT_TRUE(NULL == gfx_->NewMask(NULL, 500));
+  EXPECT_TRUE(NULL == gfx_->NewMask(buffer, filelen));
 
   int fd = open("testmask.png", O_RDONLY);
   ASSERT_NE(-1, fd);
@@ -207,9 +203,9 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
     
-  mask = gfx_->NewMask(buffer, filelen, GraphicsInterface::IMG_PNG);
+  mask = gfx_->NewMask(buffer, filelen);
   ASSERT_FALSE(NULL == mask);
-  img = gfx_->NewImage(buffer, filelen, GraphicsInterface::IMG_PNG);
+  img = gfx_->NewImage(buffer, filelen);
   ASSERT_FALSE(NULL == img);
   
   EXPECT_EQ((size_t)450, mask->GetWidth());

@@ -270,10 +270,7 @@ class ElementInterface : public ScriptableInterface {
    * Removes the keyboard focus from the element.
    */
   virtual void KillFocus() = 0;
-  
-  /** Signal propagated from the parent when the host changes. */
-  virtual void HostChanged() = 0;
-  
+ 
   /**
    * Draws the current element to a canvas. The caller does NOT own this canvas
    * and should not free it.

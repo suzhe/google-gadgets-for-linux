@@ -44,7 +44,7 @@ class Image::Impl {
     ASSERT(graphics);
     ASSERT(data);
     // TODO: Remove IMG_JPEG.
-    canvas_ = graphics->NewImage(data, data_size, GraphicsInterface::IMG_JPEG);
+    canvas_ = graphics->NewImage(data, data_size);
   }
 
   Impl(const Impl &another)
@@ -73,9 +73,7 @@ class Image::Impl {
       failed_ = file_manager_->GetFileContents(filename_.c_str(),
                                                &data, &real_path);
       if (!failed_)
-        canvas_ = graphics_->NewImage(data.c_str(), data.size(),
-                                      // TODO: Remove IMG_JPEG.
-                                      GraphicsInterface::IMG_JPEG);
+        canvas_ = graphics_->NewImage(data.c_str(), data.size());
     }
     return canvas_;
   }

@@ -6,11 +6,13 @@
 #include "ggadget/common.h"
 #include "ggadget/event.h"
 #include "ggadget/graphics/cairo_canvas.h"
+#include "ggadget/graphics/cairo_graphics.h"
 
 #include "gtk_cairo_host.h"
 #include "gadget_view_widget.h"
 
 using ggadget::CairoCanvas;
+using ggadget::CairoGraphics;
 using ggadget::Event;
 using ggadget::MouseEvent;
 using ggadget::KeyboardEvent;
@@ -319,14 +321,24 @@ GType GadgetViewWidget_get_type() {
   return gw_type;
 }
 
-GtkWidget *GadgetViewWidget_new(ViewInterface *v, double zoom) {  
+GtkWidget *GadgetViewWidget_new(ViewInterface *v, double zoom, 
+                                GtkCairoHost *host) {  
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
                                  NULL));
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(v);
   gvw->view = v;
   gvw->zoom = zoom;
-  gvw->host = new GtkCairoHost(gvw);
   
+  CairoGraphics *gfx = new CairoGraphics(zoom);
+  if (host) {
+    host->SwitchWidget(gvw);
+  }
+  else {
+    host = new GtkCairoHost(gvw);
+  }
+  host->SetGraphics(gfx);
+  gvw->host = host;
+   
   return widget;
 }

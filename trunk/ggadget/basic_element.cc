@@ -411,6 +411,7 @@ class BasicElement::Impl {
   void SetUpCanvas() {
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
+      ASSERT(gfx);
       canvas_ = gfx->NewCanvas(static_cast<size_t>(width_) + 1, 
                                static_cast<size_t>(height_) + 1);
       if (!canvas_) {
@@ -853,10 +854,6 @@ void BasicElement::Focus() {
 void BasicElement::KillFocus() {
 }
 
-void BasicElement::HostChanged() {
-  return impl_->HostChanged();
-}
-
 const CanvasInterface *BasicElement::Draw(bool *changed) {
   return impl_->Draw(changed);  
 }
@@ -869,8 +866,8 @@ bool BasicElement::IsVisibilityChanged() const {
   return impl_->visibility_changed_;
 }
 
-void BasicElement::ClearSelfChanged() { 
-  impl_->changed_ = false;
+void BasicElement::SetSelfChanged(bool changed) { 
+  impl_->changed_ = changed;
 }
 
 bool BasicElement::IsSelfChanged() const {
@@ -887,6 +884,23 @@ bool BasicElement::IsPositionChanged() const {
 
 void BasicElement::SetUpCanvas() {
   impl_->SetUpCanvas();
+}
+
+CanvasInterface *BasicElement::GetCanvas() {
+  return impl_->canvas_;
+}
+
+void BasicElement::DrawBoundingBox() {
+  impl_->canvas_->DrawLine(0, 0, 0, impl_->height_, 1, Color(0, 0, 0));
+  impl_->canvas_->DrawLine(0, 0, impl_->width_, 0, 1, Color(0, 0, 0));
+  impl_->canvas_->DrawLine(impl_->width_, impl_->height_, 
+                           0, impl_->height_, 1, Color(0, 0, 0));
+  impl_->canvas_->DrawLine(impl_->width_, impl_->height_, 
+                           impl_->width_, 0, 1, Color(0, 0, 0));
+  impl_->canvas_->DrawLine(0, 0, impl_->width_, impl_->height_, 
+                           1, Color(0, 0, 0));
+  impl_->canvas_->DrawLine(impl_->width_, 0, 0, impl_->height_, 
+                           1, Color(0, 0, 0));  
 }
 
 void BasicElement::OnParentWidthChange(double width) {

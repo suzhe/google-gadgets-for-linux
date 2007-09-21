@@ -40,6 +40,20 @@ class GtkCairoHost : public HostInterface {
   GtkCairoHost(GadgetViewWidget *gvw);
   virtual ~GtkCairoHost();
 
+  /** 
+   * Sets the GraphicsInterface object associated with the host. Once it is set
+   * the object is owned by this HostInterface and should not be freed manually.
+   */
+  void SetGraphics(GraphicsInterface *gfx);
+  
+  /**
+   * Switches the GadgetViewWidget associated with this host. 
+   * When this is done, the original GadgetViewWidget will no longer have a 
+   * valid GtkCairoHost object. The new GadgetViewWidget is responsible for
+   * freeing this host.
+   */
+  void SwitchWidget(GadgetViewWidget *new_gvw);
+      
   virtual const GraphicsInterface *GetGraphics() const { return gfx_; };
  
   virtual void QueueDraw();
