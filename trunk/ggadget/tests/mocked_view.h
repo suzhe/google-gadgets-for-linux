@@ -22,17 +22,10 @@
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
 
-namespace ggadget {
-  class MouseEvent;
-  class KeyboardEvent;
-  class Event;
-  class HostInterface;
-  class CanvasInterface;
-  class ElementInterface;
-};
-
 class MockedView : public ggadget::ViewInterface {
  public:
+  MockedView(ggadget::ElementFactoryInterface *factory)
+      : factory_(factory), draw_queued_(false) { }
   virtual ~MockedView() {}
  public:
   virtual int GetWidth() const { return 400; }
@@ -57,7 +50,7 @@ class MockedView : public ggadget::ViewInterface {
   virtual const ggadget::Event *GetEvent() const { return NULL; }
 
   virtual const ggadget::CanvasInterface *Draw(bool *changed) { return NULL; };
-  virtual void QueueDraw() {}
+  virtual void QueueDraw() { draw_queued_ = true; }
   virtual const ggadget::GraphicsInterface *GetGraphics() const { return NULL; }
 
   virtual void SetResizable(ResizableMode resizable) {};
@@ -68,6 +61,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual void SetShowCaptionAlways(bool show_always) {};
   virtual bool GetShowCaptionAlways() const { return false; };
 
+  virtual ggadget::ElementFactoryInterface *GetElementFactory() const
+      { return factory_; }
   virtual const ggadget::Elements *GetChildren() const { return NULL; };
   virtual ggadget::Elements *GetChildren() { return NULL; };
   virtual ggadget::ElementInterface *GetElementByName(
@@ -86,13 +81,22 @@ class MockedView : public ggadget::ViewInterface {
   virtual int SetInterval(ggadget::Slot0<void> *slot,
                           unsigned int duration) { return 0; }
   virtual void ClearInterval(int token) { }
+  virtual ggadget::Image *LoadImage(const char *name) { return NULL; }
 
   DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return true; }
 
+  bool GetQueuedDraw() {
+    bool b = draw_queued_;
+    draw_queued_ = false;
+    return b;
+  }
+
  private:
+  ggadget::ElementFactoryInterface *factory_;
+  bool draw_queued_;
   ggadget::ScriptableHelper scriptable_helper_;
 };
 

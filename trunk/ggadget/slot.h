@@ -191,8 +191,8 @@ inline Slot0<R> *NewSlot(T *object, R (T::*method)()) {
   return new MethodSlot0<R, T, R (T::*)()>(object, method);
 }
 template <typename R, typename T>
-inline Slot0<R> *NewSlot(T *object, R (T::*method)() const) {
-  return new MethodSlot0<R, T, R (T::*)() const>(object, method);
+inline Slot0<R> *NewSlot(const T *object, R (T::*method)() const) {
+  return new MethodSlot0<R, const T, R (T::*)() const>(object, method);
 }
 
 /**
@@ -322,8 +322,8 @@ NewSlot(T *obj, R (T::*method)(_arg_type_names)) {                            \
 }                                                                             \
 template <typename R, _arg_types, typename T>                                 \
 inline Slot##n<R, _arg_type_names> *                                          \
-NewSlot(T *obj, R (T::*method)(_arg_type_names) const) {                      \
-  return new MethodSlot##n<R, _arg_type_names, T,                             \
+NewSlot(const T *obj, R (T::*method)(_arg_type_names) const) {                \
+  return new MethodSlot##n<R, _arg_type_names, const T,                       \
                            R (T::*)(_arg_type_names) const>(obj, method);     \
 }                                                                             \
 template <typename R, _arg_types, typename F>                                 \

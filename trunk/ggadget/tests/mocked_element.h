@@ -263,7 +263,14 @@ class MockedElement : public ggadget::ElementInterface {
   virtual void ClearPositionChanged() {
   }
   
-  virtual void HostChanged() {}
+  virtual void HostChanged() {
+  }
+
+  virtual void OnParentWidthChange(double width) {
+  }
+
+  virtual void OnParentHeightChange(double height) {
+  }
 
   DEFAULT_OWNERSHIP_POLICY;
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);

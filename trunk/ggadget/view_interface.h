@@ -24,6 +24,7 @@ namespace ggadget {
 
 class CanvasInterface;
 class ElementInterface;
+class ElementFactoryInterface;
 class HostInterface;
 class KeyboardEvent;
 class MouseEvent;
@@ -31,6 +32,7 @@ class TimerEvent;
 class Event;
 class Elements;
 class GraphicsInterface;
+class Image;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -150,6 +152,12 @@ class ViewInterface : public ScriptableInterface {
 
  public:  // Element management functions.
   /**
+   * Retrieves the ElementFactoryInterface used to create elements in this
+   * view.
+   */
+  virtual ElementFactoryInterface *GetElementFactory() const = 0;
+
+  /**
    * Retrieves a collection that contains the immediate children of this
    * view.
    */
@@ -233,6 +241,10 @@ class ViewInterface : public ScriptableInterface {
    * @param token the token returned by SetInterval().
    */
   virtual void ClearInterval(int token) = 0;
+
+ public:  // Other utilities.
+  virtual Image *LoadImage(const char *name) = 0;
+
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

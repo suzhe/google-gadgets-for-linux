@@ -28,7 +28,7 @@ class Muffin : public ggadget::BasicElement {
   Muffin(ggadget::ElementInterface *parent,
          ggadget::ViewInterface *view,
          const char *name)
-      : ggadget::BasicElement(parent, view, gFactory, name) {
+      : ggadget::BasicElement(parent, view, name, true) {
     RegisterProperty("tagName", NewSlot(this, &Muffin::GetTagName), NULL);
   }
 
@@ -60,7 +60,7 @@ class Pie : public ggadget::BasicElement {
   Pie(ggadget::ElementInterface *parent,
       ggadget::ViewInterface *view,
       const char *name)
-      : ggadget::BasicElement(parent, view, gFactory, name) {
+      : ggadget::BasicElement(parent, view, name, true) {
     RegisterProperty("tagName", NewSlot(this, &Pie::GetTagName), NULL);
   }
 
@@ -97,14 +97,14 @@ class BasicElementTest : public testing::Test {
 };
 
 TEST_F(BasicElementTest, TestCreate) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
-  Pie p(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
+  Pie p(NULL, &v, NULL);
 }
 
 TEST_F(BasicElementTest, TestChildren) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ggadget::ElementInterface *c1 = 
       m.GetChildren()->AppendElement("muffin", NULL);
   ggadget::ElementInterface *c2 =
@@ -121,79 +121,90 @@ TEST_F(BasicElementTest, TestChildren) {
 }
 
 TEST_F(BasicElementTest, TestCursor) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_TRUE(m.GetCursor() == ggadget::ElementInterface::CURSOR_ARROW);
   m.SetCursor(ggadget::ElementInterface::CURSOR_BUSY);
   ASSERT_TRUE(m.GetCursor() == ggadget::ElementInterface::CURSOR_BUSY);
 }
 
 TEST_F(BasicElementTest, TestDropTarget) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_FALSE(m.IsDropTarget());
   m.SetDropTarget(true);
   ASSERT_TRUE(m.IsDropTarget());
 }
 
 TEST_F(BasicElementTest, TestEnabled) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_FALSE(m.IsEnabled());
   m.SetEnabled(true);
   ASSERT_TRUE(m.IsEnabled());
 }
 
 TEST_F(BasicElementTest, TestPixelHeight) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  ASSERT_FALSE(v.GetQueuedDraw());
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelHeight());
   m.SetPixelHeight(100.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelHeight());
   // Setting the height as negative value will make no effect.
   m.SetPixelHeight(-100.0);
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelHeight());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelHeight(50.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   // Modifying the height of the parent will not effect the child.
   m.SetPixelHeight(150.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(50.0, c->GetPixelHeight());
 }
 
 TEST_F(BasicElementTest, TestRelativeHeight) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   m.SetRelativeHeight(0.50);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, m.GetRelativeHeight());
   ASSERT_FLOAT_EQ(150.0, m.GetPixelHeight());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeHeight(0.50);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeHeight());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelHeight());
   // Setting the height as negative value will make no effect.
   c->SetRelativeHeight(-0.50);
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeHeight());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelHeight());
   // Modifying the height of the parent will effect the child.
   m.SetRelativeHeight(1.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeHeight());
   ASSERT_FLOAT_EQ(150.0, c->GetPixelHeight());
   // Modifying the height of the parent will effect the child.
   m.SetPixelHeight(100.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(50.0, c->GetPixelHeight());
 }
 
 TEST_F(BasicElementTest, TestHitTest) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_TRUE(m.GetHitTest() == ggadget::ElementInterface::HT_DEFAULT);
   m.SetHitTest(ggadget::ElementInterface::HT_CLIENT);
   ASSERT_TRUE(m.GetHitTest() == ggadget::ElementInterface::HT_CLIENT);
 }
 
 TEST_F(BasicElementTest, TestMask) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_STREQ("", m.GetMask());
   m.SetMask("mymask.png");
   ASSERT_STREQ("mymask.png", m.GetMask());
@@ -202,13 +213,13 @@ TEST_F(BasicElementTest, TestMask) {
 }
 
 TEST_F(BasicElementTest, TestName) {
-  MockedView view;
+  MockedView view(gFactory);
   Muffin m(NULL, &view, "mymuffin");
   ASSERT_STREQ("mymuffin", m.GetName());
 }
 
 TEST_F(BasicElementTest, TestConst) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   const ggadget::ElementInterface *cc = c;
@@ -217,78 +228,104 @@ TEST_F(BasicElementTest, TestConst) {
 }
 
 TEST_F(BasicElementTest, TestOpacity) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(1.0, m.GetOpacity());
   m.SetOpacity(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.5, m.GetOpacity());
   // Setting the value greater than 1 will make no effect.
   m.SetOpacity(1.5);
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.5, m.GetOpacity());
   // Setting the value less than 0 will make no effect.
   m.SetOpacity(-0.5);
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.5, m.GetOpacity());
 }
 
 TEST_F(BasicElementTest, TestPixelPinX) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelPinX());
-  m.SetPixelPinX(100.0);
-  ASSERT_FLOAT_EQ(100.0, m.GetPixelPinX());
+  m.SetPixelPinX(100.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(100.5, m.GetPixelPinX());
   // Modifying the width of the parent will not effect the pin x.
-  m.SetPixelWidth(150.0);
-  ASSERT_FLOAT_EQ(100.0, m.GetPixelPinX());
+  m.SetPixelWidth(150.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(100.5, m.GetPixelPinX());
   ASSERT_FALSE(m.PinXIsRelative());
+  m.SetPixelPinX(-50.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-50.5, m.GetPixelPinX());
 }
 
 TEST_F(BasicElementTest, TestRelativePinX) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   m.SetPixelWidth(200.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   m.SetRelativePinX(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelPinX());
-  // Modifying the width of the parent will effect the pin x.
+  // Modifying the width will effect the pin x.
   m.SetPixelWidth(400.0);
   ASSERT_FLOAT_EQ(200.0, m.GetPixelPinX());
   ASSERT_TRUE(m.PinXIsRelative());
+  m.SetRelativePinX(-0.25);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-100.0, m.GetPixelPinX());
 }
 
 TEST_F(BasicElementTest, TestPixelPinY) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
-  m.SetPixelHeight(150.0);
-  m.SetPixelPinY(100.0);
-  ASSERT_FLOAT_EQ(100.0, m.GetPixelPinY());
-  // Modifying the width of the parent will not effect the pin y.
-  m.SetPixelHeight(300.0);
-  ASSERT_FLOAT_EQ(100.0, m.GetPixelPinY());
+  m.SetPixelHeight(150.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  m.SetPixelPinY(100.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(100.5, m.GetPixelPinY());
+  // Modifying the width will not effect the pin y.
+  m.SetPixelHeight(300.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(100.5, m.GetPixelPinY());
   ASSERT_FALSE(m.PinYIsRelative());
+  m.SetPixelPinY(-50.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-50.5, m.GetPixelPinY());
 }
 
 TEST_F(BasicElementTest, TestRelativePinY) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   m.SetPixelHeight(150.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   m.SetRelativePinY(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(75.0, m.GetPixelPinY());
   // Modifying the width of the parent will not effect the pin y.
   m.SetPixelHeight(300.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(150.0, m.GetPixelPinY());
   ASSERT_TRUE(m.PinYIsRelative());
+  m.SetRelativePinY(-0.25);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-75.0, m.GetPixelPinY());
 }
 
 TEST_F(BasicElementTest, TestRotation) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetRotation());
   m.SetRotation(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.5, m.GetRotation());
 }
 
 TEST_F(BasicElementTest, TestTooltip) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_STREQ("", m.GetTooltip());
   m.SetTooltip("mytooltip");
   ASSERT_STREQ("mytooltip", m.GetTooltip());
@@ -297,110 +334,144 @@ TEST_F(BasicElementTest, TestTooltip) {
 }
 
 TEST_F(BasicElementTest, TestPixelWidth) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelWidth());
   m.SetPixelWidth(100.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelWidth());
   // Setting the width as negative value will make no effect.
   m.SetPixelWidth(-100.0);
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelWidth());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelWidth(50.0);
   // Modifying the width of the parent will not effect the child.
   m.SetPixelWidth(200.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(50.0, c->GetPixelWidth());
 }
 
 TEST_F(BasicElementTest, TestRelativeWidth) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   m.SetRelativeWidth(0.50);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, m.GetRelativeWidth());
   ASSERT_FLOAT_EQ(200.0, m.GetPixelWidth());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeWidth(0.50);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeWidth());
   ASSERT_FLOAT_EQ(100.0, c->GetPixelWidth());
   // Setting the width as negative value will make no effect.
   c->SetRelativeWidth(-0.50);
+  ASSERT_FALSE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeWidth());
   ASSERT_FLOAT_EQ(100.0, c->GetPixelWidth());
   // Modifying the width of the parent will effect the child.
   m.SetRelativeWidth(1.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeWidth());
   ASSERT_FLOAT_EQ(200.0, c->GetPixelWidth());
   // Modifying the width of the parent will effect the child.
   m.SetPixelWidth(150.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelWidth());
 }
 
 TEST_F(BasicElementTest, TestVisible) {
-  MockedView view;
-  Muffin m(NULL, &view, NULL);
+  MockedView v(gFactory);
+  Muffin m(NULL, &v, NULL);
   ASSERT_TRUE(m.IsVisible());
   m.SetVisible(false);
   ASSERT_FALSE(m.IsVisible());
 }
 
 TEST_F(BasicElementTest, TestPixelX) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelX());
   m.SetPixelX(100.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelX());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelX(50.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   // Modifying the width of the parent will not effect the child.
   m.SetPixelWidth(150.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(50.0, c->GetPixelX());
+  m.SetPixelX(-50.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-50.5, m.GetPixelX());
 }
 
 TEST_F(BasicElementTest, TestRelativeX) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   m.SetRelativeWidth(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   m.SetRelativeX(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(200.0, m.GetPixelX());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeX(0.50);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, c->GetPixelX());
   // Modifying the width of the parent will effect the child.
   m.SetPixelWidth(100.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(50.0, c->GetPixelX());
+  m.SetRelativeX(-0.25);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-100.0, m.GetPixelX());
 }
 
 TEST_F(BasicElementTest, TestPixelY) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetPixelY());
   m.SetPixelY(100.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelY());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelY(50.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   // Modifying the height of the parent will not effect the child.
   m.SetPixelHeight(150.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(50.0, c->GetPixelY());
+  m.SetPixelY(-150.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-150.5, m.GetPixelY());
 }
 
 TEST_F(BasicElementTest, TestRelativeY) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   m.SetRelativeHeight(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   m.SetRelativeY(0.5);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(150.0, m.GetPixelY());
   ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeY(0.50);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelY());
   // Modifying the height of the parent will effect the child.
   m.SetPixelHeight(150.0);
+  ASSERT_TRUE(v.GetQueuedDraw());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelY());
+  m.SetRelativeY(-0.125);
+  ASSERT_TRUE(v.GetQueuedDraw());
+  ASSERT_FLOAT_EQ(-37.5, m.GetPixelY());
 }
 
 // This test is not merely for BasicElement, but mixed test for xml_utils
 // and Elements.
 TEST_F(BasicElementTest, TestFromXML) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
   ggadget::ElementInterface *e1 = m.GetChildren()->InsertElementFromXML(
       "<muffin/>", NULL);
@@ -436,7 +507,7 @@ TEST_F(BasicElementTest, TestFromXML) {
 // This test is not merely for BasicElement, but mixed test for xml_utils
 // and Elements.
 TEST_F(BasicElementTest, XMLConstruction) {
-  MockedView v;
+  MockedView v(gFactory);
   Muffin m(NULL, &v, NULL);
 
   const char *xml = 

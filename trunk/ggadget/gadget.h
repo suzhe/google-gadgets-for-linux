@@ -26,8 +26,9 @@ namespace internal {
   class GadgetImpl;
 }
 
-class ScriptRuntimeInterface;
+class ElementFactoryInterface;
 class FileManagerInterface;
+class ScriptRuntimeInterface;
    
 /**
  * Interface for representing a Gadget in the Desktop Gadget API.
@@ -35,13 +36,13 @@ class FileManagerInterface;
 class Gadget: public GadgetInterface {
  public:   
   Gadget(ScriptRuntimeInterface *script_runtime,
-         FileManagerInterface *file_manager,
-         ViewInterface *main_view,
-         ViewInterface *options_view);
+         ElementFactoryInterface *element_factory);
 
   virtual ViewInterface *GetMainView();
    
   virtual ViewInterface *GetOptionsView();
+
+  virtual FileManagerInterface *GetFileManager();
 
   virtual const char *GetManifestInfo(const char *key);
 
@@ -50,7 +51,8 @@ class Gadget: public GadgetInterface {
   virtual ~Gadget();
 
  private:
-  internal::GadgetImpl *impl_;
+  class Impl;
+  Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(Gadget);
 };
 

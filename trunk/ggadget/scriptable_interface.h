@@ -208,6 +208,15 @@ virtual void Attach() { }        \
 virtual void Detach() { }
 
 /**
+ * A macro used to declare transferrable ownership policy, that is, the native
+ * side can transfer the ownership to the script side, and when the script side
+ * calls @c Detach(), the object will be deleted.
+ */
+#define TRANSFERRABLE_OWNERSHIP_POLICY \
+virtual void Attach() { }              \
+virtual void Detach() { delete this; }
+
+/**
  * A macro used in the declaration section of a @c ScriptableInterface
  * implementation to inline delegate most @c ScriptableInterface methods to
  * another object (normally @c ScriptableHelper).

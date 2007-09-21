@@ -145,34 +145,30 @@ void ElementsImpl::HostChanged() {
 }
 
 void ElementsImpl::OnParentWidthChange(double width) {
-  width_ = width;
-  if (canvas_) {
+  if (width_ != width) {
+    width_ = width;
+    if (canvas_) {
       canvas_->Destroy();
       canvas_ = NULL;
     }
-  for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+    for (std::vector<ElementInterface *>::iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
-      ElementInterface *element = *ite;
-      if (element->XIsRelative())
-        element->SetRelativeX(element->GetRelativeX());
-      if (element->WidthIsRelative())
-        element->SetRelativeWidth(element->GetRelativeWidth());
+      (*ite)->OnParentWidthChange(width);
+    }
   }
 }
 
 void ElementsImpl::OnParentHeightChange(double height) {
-  height_ = height;
-  if (canvas_) {
-    canvas_->Destroy();
-    canvas_ = NULL;
-  }
-  for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+  if (height != height_) {
+    height_ = height;
+    if (canvas_) {
+      canvas_->Destroy();
+      canvas_ = NULL;
+    }
+    for (std::vector<ElementInterface *>::iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
-    ElementInterface *element = *ite;
-    if (element->YIsRelative())
-      element->SetRelativeY(element->GetRelativeY());
-    if (element->HeightIsRelative())
-      element->SetRelativeHeight(element->GetRelativeHeight());
+      (*ite)->OnParentHeightChange(height);
+    }
   }
 }
 
