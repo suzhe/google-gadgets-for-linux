@@ -9,16 +9,16 @@
     <img src="base.png"/>
 
     <img name="HourHand" src="hourhand.png"
-         x="52" y="52" pinX="3" pinY="27" />
+         xx="52" yy="52" pinX="3" pinY="27"/>
 
-    <img name="MinuteHand"  src="minhand.png"
-         x="52" y="52" pinX="3" pinY="40" />
+    <img name="MinuteHand" src="minhand.png"/>
+         xx="52" yy="52" pinX="3" pinY="40"/>
 
-    <img name="SecondHand" src="secondhand.png"
-         x="52" y="52" pinX="2" piny="40"/>
+    <img name="SecondHand" src="secondhand.png"/>
+         xx="52" yy="52" pinX="2" piny="40"/>
 
-    <img src="center.png" x="48" y="49" />
+    <img src="center.png" xx="48" yy="49" />
 
-    <img src="reflection.png" />
+    <imgg src="reflection.png" />
 
 </view>

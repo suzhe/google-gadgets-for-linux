@@ -88,8 +88,12 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
         property_value = Variant(std::string(value));
       break;
 
+    case Variant::TYPE_SLOT:
+      // TODO:
+
     default:
-      LOG("Can't set property %s from xml for %s", name, tag_name);
+      LOG("Unsupported type %s when setting property %s from xml for %s",
+          prototype.ToString().c_str(), name, tag_name);
       return;
   }
 
@@ -129,19 +133,6 @@ static ElementInterface *InsertElementFromDOM(Elements *elements,
   xml_element->RemoveAttribute(kNameAttr);
   if (!element)
     return element;
-
-#ifndef NDEBUG
-  // Check if "tagName" property is properly registered.
-  int id;
-  Variant v;
-  bool is_method;
-  ASSERT(element->GetPropertyInfoByName("tagName", &id,
-                                        &v, &is_method));
-  ASSERT(!is_method);
-  v = element->GetProperty(id);
-  ASSERT(v.type() == Variant::TYPE_STRING);
-  ASSERT(strcmp(VariantValue<const char *>()(v), tag_name) == 0);
-#endif
 
   SetupScriptableProperties(element, xml_element);
   Elements *children = element->GetChildren();

@@ -21,6 +21,8 @@
 #include "element_interface.h"
 #include "elements.h"
 #include "graphics_interface.h"
+#include "image.h"
+#include "string_utils.h"
 #include "view_interface.h"
 
 namespace ggadget {
@@ -60,7 +62,7 @@ class BasicElement::Impl {
         x_relative_(0.0),
         y_relative_(0.0),
         canvas_(NULL),
-        mask_canvas_(NULL),
+        mask_image_(NULL),
         visibility_changed_(true),
         changed_(true),
         position_changed_(true) {
@@ -76,34 +78,20 @@ class BasicElement::Impl {
       canvas_ = NULL;
     }
 
-    if (mask_canvas_) {
-      mask_canvas_->Destroy();
-      mask_canvas_ = NULL;  
-    }  
+    delete mask_image_;
+    mask_image_ = NULL;
   }
 
   void SetMask(const char *mask) {
-    bool changed = false;
-    if (mask && mask[0]) {
-      changed = mask_ != mask;
-      mask_ = mask;
-    } else if (!mask_.empty()) {
-      changed = true;
-      mask_.clear();
-    }
-
-    if (changed) {
-      if (mask_canvas_) {
-        mask_canvas_->Destroy();
-        mask_canvas_ = NULL;
-      }
+    if (AssignIfDiffer(mask, &mask_)) {
+      delete mask_image_;
+      mask_image_ = view_->LoadImage(mask, true);
       view_->QueueDraw();
     }
   }
 
   const CanvasInterface *GetMaskCanvas() {
-    // TODO: 
-    return NULL;
+    return mask_image_ ? mask_image_->GetCanvas() : NULL;
   }
 
   void SetPixelWidth(double width) {
@@ -482,7 +470,7 @@ class BasicElement::Impl {
   double y_relative_;
 
   CanvasInterface *canvas_;
-  CanvasInterface *mask_canvas_;
+  Image *mask_image_;
   bool visibility_changed_;
   bool changed_;
   bool position_changed_;
@@ -563,6 +551,10 @@ BasicElement::BasicElement(ElementInterface *parent,
   RegisterProperty("rotation",
                    NewSlot(this, &BasicElement::GetRotation),
                    NewSlot(this, &BasicElement::SetRotation));
+  RegisterProperty("tagname",
+                   NewSlot(implicit_cast<ElementInterface *>(this),
+                           &ElementInterface::GetTagName),
+                   NULL);
   RegisterProperty("tooltip",
                    NewSlot(this, &BasicElement::GetTooltip),
                    NewSlot(this, &BasicElement::SetTooltip));

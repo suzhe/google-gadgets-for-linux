@@ -14,16 +14,24 @@
   limitations under the License.
 */
 
-#include "canvas_interface.h"
 #include "img_element.h"
+#include "canvas_interface.h"
+#include "image.h"
+#include "string_utils.h"
+#include "view_interface.h"
 
 namespace ggadget {
 
 class ImgElement::Impl {
  public:
-  Impl() : canvas_(NULL) { }
+  Impl() : image_(NULL) { }
+  ~Impl() {
+    delete image_;
+    image_ = NULL;
+  }
+
   std::string src_;
-  CanvasInterface *canvas_;
+  Image *image_;
 };
 
 ImgElement::ImgElement(ElementInterface *parent,
@@ -31,10 +39,32 @@ ImgElement::ImgElement(ElementInterface *parent,
                        const char *name)
     : BasicElement(parent, view, name, false),
       impl_(new Impl) {
+  RegisterProperty("src",
+                   NewSlot(this, &ImgElement::GetSrc),
+                   NewSlot(this, &ImgElement::SetSrc));
+  RegisterProperty("srcWidth", NewSlot(this, &ImgElement::GetSrcWidth), NULL);
+  RegisterProperty("srcHeight", NewSlot(this, &ImgElement::GetSrcHeight), NULL);
+  RegisterMethod("setSrcSize", NewSlot(this, &ImgElement::SetSrcSize));
 }
 
 ImgElement::~ImgElement() {
   delete impl_;
+}
+
+const CanvasInterface *ImgElement::Draw(bool *changed) {
+  // TODO: better impl.
+  // Temporary impl:
+  printf("Draw image: x=%lf y=%lf width=%lf height=%lf\n",
+         GetPixelX(), GetPixelY(), GetPixelWidth(), GetPixelHeight());
+  return impl_->image_ ? impl_->image_->GetCanvas() : NULL;
+  /*
+  if (impl_->image_) {
+    GetCanvas()->DrawCanvas(0, 0, impl_->image_->GetCanvas());
+  }
+  BasicElement::Draw(changed);
+  *changed = true;
+  return GetCanvas();
+  */
 }
 
 const char *ImgElement::GetSrc() const {
@@ -42,24 +72,42 @@ const char *ImgElement::GetSrc() const {
 }
 
 void ImgElement::SetSrc(const char *src) {
-  impl_->src_ = src;
-  // TODO: load the image and convert it into a canvas.
+  if (AssignIfDiffer(src, &impl_->src_)) {
+    delete impl_->image_;
+    impl_->image_ = GetView()->LoadImage(src, false);
+    if (GetPixelWidth() == 0.0)
+      SetPixelWidth(GetSrcWidth());
+    if (GetPixelHeight() == 0.0)
+      SetPixelHeight(GetSrcHeight());
+  }
 }
 
 size_t ImgElement::GetSrcWidth() const {
-  return impl_->canvas_ ? impl_->canvas_->GetWidth() : 0;
+  if (impl_->image_) {
+    const CanvasInterface *canvas = impl_->image_->GetCanvas();
+    return canvas ? canvas->GetWidth() : 0;
+  }
+  return 0;
 }
 
-
 size_t ImgElement::GetSrcHeight() const {
-  return impl_->canvas_ ? impl_->canvas_->GetHeight() : 0;
+  if (impl_->image_) {
+    const CanvasInterface *canvas = impl_->image_->GetCanvas();
+    return canvas ? canvas->GetHeight() : 0;
+  }
+  return 0;
 }
 
 void ImgElement::SetSrcSize(size_t width, size_t height) {
-  if (impl_->canvas_) {
-    // TODO: create a new canvas, and draw the current canvas onto it.
-    // May share code with DrawSelf.
-  }
+  // Because image data may shared among elements, we don't think this method
+  // is useful, because we may require more memory to store the new resized
+  // canvas.
+}
+
+ElementInterface *ImgElement::CreateInstance(ElementInterface *parent,
+                                             ViewInterface *view,
+                                             const char *name) {
+  return new ImgElement(parent, view, name);
 }
 
 } // namespace ggadget

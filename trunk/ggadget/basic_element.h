@@ -102,6 +102,9 @@ class BasicElement : public ElementInterface {
   
   virtual const CanvasInterface *Draw(bool *changed);
   
+  virtual void OnParentWidthChange(double width);
+  virtual void OnParentHeightChange(double height);
+
   /**
    * Draw a black box with crisscrossed lines bounding the element.
    * This is used only for testing.
@@ -139,9 +142,6 @@ class BasicElement : public ElementInterface {
   
   virtual bool IsPositionChanged() const;
   virtual void ClearPositionChanged();
-
-  virtual void OnParentWidthChange(double width);
-  virtual void OnParentHeightChange(double height);
 
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)

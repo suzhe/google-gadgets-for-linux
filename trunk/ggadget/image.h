@@ -34,12 +34,17 @@ class Image {
    */
   Image(const GraphicsInterface *graphics,
         FileManagerInterface *file_manager,
-        const char *filename);
+        const char *filename,
+        bool is_mask);
 
   /**
    * Creates a new image from raw image data.
+   * The image is initialized immediately.
    */
-  Image(const GraphicsInterface *graphics, const char *data, size_t data_size);
+  Image(const GraphicsInterface *graphics,
+        const char *data,
+        size_t data_size,
+        bool is_mask);
 
   /**
    * Duplicate the image.
@@ -55,6 +60,8 @@ class Image {
   const CanvasInterface *GetCanvas();
 
  private:
+  // Don't allow assignment.
+  void operator=(const Image&);
   class Impl;
   Impl *impl_;
 };

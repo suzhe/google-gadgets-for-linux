@@ -87,7 +87,7 @@ class View : public ViewInterface {
   virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
   virtual void ClearInterval(int token);
 
-  virtual Image *LoadImage(const char *name);
+  virtual Image *LoadImage(const char *name, bool is_mask);
 
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)

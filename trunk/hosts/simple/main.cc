@@ -21,6 +21,7 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/file_manager.h"
 #include "ggadget/gadget.h"
+#include "ggadget/img_element.h"
 #include "ggadget/scripts/smjs/js_script_context.h"
 #include "ggadget/view.h"
 #include "gadget_view_widget.h"
@@ -33,12 +34,13 @@ using ggadget::JSScriptRuntime;
 using ggadget::View;
 using ggadget::FileManagerInterface;
 using ggadget::FileManager;
+using ggadget::ImgElement;
 
 double g_zoom = 1.;
 Gadget *g_gadget = NULL;
 ViewInterface *g_main_view = NULL;
 ViewInterface *g_options_view = NULL;
-ElementFactoryInterface *g_element_factory = NULL;
+ElementFactory *g_element_factory = NULL;
 ScriptRuntimeInterface *g_script_runtime = NULL;
 FileManagerInterface *g_file_manager = NULL;
 
@@ -48,7 +50,7 @@ static gboolean DeleteEventHandler(GtkWidget *widget,
   return FALSE;
 }
 
-static gboolean DestroyHandler(GtkWidget *widget,                             
+static gboolean DestroyHandler(GtkWidget *widget,
                                gpointer data) {
   gtk_main_quit();
   return FALSE;
@@ -57,15 +59,15 @@ static gboolean DestroyHandler(GtkWidget *widget,
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, 
                            const char *base_path) {
   g_element_factory = new ElementFactory();
+  g_element_factory->RegisterElementClass("img", &ImgElement::CreateInstance);
   g_script_runtime = new JSScriptRuntime();
   g_gadget = new Gadget(g_script_runtime, g_element_factory);
-
-  GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(g_gadget->GetMainView(),
-                                                                g_zoom, NULL));
   if (!g_gadget->InitFromPath(base_path)) {
     LOG("Error: unable to load gadget from %s", base_path);
   }
-  
+
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(g_gadget->GetMainView(),
+                                                                g_zoom, NULL));
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
   
   // Setting min size here allows the window to resize below the size 
@@ -74,7 +76,11 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
   geometry.min_width = geometry.min_height = 100;
   gtk_window_set_geometry_hints(window, GTK_WIDGET(gvw), 
                                 &geometry, GDK_HINT_MIN_SIZE);
-  
+  gtk_widget_show_all(GTK_WIDGET(window));
+
+  if (!g_gadget->InitFromPath(base_path)) {
+    LOG("Error: unable to load gadget from %s", base_path);
+  }
   return true;
 }
 
