@@ -137,13 +137,6 @@ int ElementsImpl::GetIndexByName(const char *name) {
   return -1;
 }
 
-void ElementsImpl::HostChanged() {
-  for (std::vector<ElementInterface *>::iterator ite = children_.begin();
-         ite != children_.end(); ++ite) {
-      (*ite)->HostChanged();
-  }
-}
-
 void ElementsImpl::OnParentWidthChange(double width) {
   if (width_ != width) {
     width_ = width;
@@ -217,23 +210,23 @@ const CanvasInterface *ElementsImpl::Draw(bool *changed) {
       canvas_->ClearCanvas();
     }
     canvas_->IntersectRectClipRegion(0., 0., width_, height_);
-      
+
     for (int i = 0; i < child_count; i++) {
       if (children_canvas[i]) {
         canvas_->PushState();
 
         element = children_[i];
-        canvas_->TranslateCoordinates(-element->GetPixelX(), 
-                                      -element->GetPixelY());
+        canvas_->TranslateCoordinates(element->GetPixelX(), 
+                                      element->GetPixelY());
         
         if (element->GetRotation() != .0) {
-          canvas_->TranslateCoordinates(-element->GetPixelPinX(), 
-                                        -element->GetPixelPinY());
-          canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
           canvas_->TranslateCoordinates(element->GetPixelPinX(), 
                                         element->GetPixelPinY());
+          canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
+          canvas_->TranslateCoordinates(-element->GetPixelPinX(), 
+                                        -element->GetPixelPinY());
         }
-        
+
         const CanvasInterface *mask = element->GetMaskCanvas();
         if (mask) {
           canvas_->DrawCanvasWithMask(.0, .0, children_canvas[i], .0, .0, mask);
@@ -326,11 +319,6 @@ bool Elements::RemoveElement(ElementInterface *element) {
 void Elements::RemoveAllElements() {
   ASSERT(impl_);
   impl_->RemoveAllElements();
-}
-
-void Elements::HostChanged() {
-  ASSERT(impl_);
-  impl_->HostChanged();
 }
 
 void Elements::OnParentWidthChange(double width) {

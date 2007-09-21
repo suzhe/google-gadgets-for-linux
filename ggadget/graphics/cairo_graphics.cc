@@ -87,28 +87,15 @@ struct CairoPNGReaderClosure {
   char *buffer_end;
 };
 
-cairo_status_t CairoPNGReader(void *closure, unsigned char *data, 
-                              unsigned int length) {
-  CairoPNGReaderClosure *c = (CairoPNGReaderClosure *)closure;
-  if (c->buffer + length > c->buffer_end) {
-    LOG("Error: attempting to read past image buffer.");
-    return CAIRO_STATUS_READ_ERROR;
-  }
-  memcpy(data, c->buffer, length);
-  c->buffer += length;
-  return CAIRO_STATUS_SUCCESS;
-}
-
 CanvasInterface *CairoGraphics::NewMask(const char *img_bytes, 
-                                        size_t img_bytes_count, 
-                                        ImageType t) const {
+                                        size_t img_bytes_count) const {
   CanvasInterface *img = NULL;
   size_t h, w;
   cairo_surface_t *surface = NULL;
   cairo_t *cr = NULL;
   GdkPixbuf *pixbuf = NULL;
     
-  if (!img_bytes || 0 == img_bytes_count || t == IMG_INVALID) {
+  if (!img_bytes || 0 == img_bytes_count) {
     goto exit;
   }
   
@@ -189,8 +176,7 @@ exit:
 }
 
 CanvasInterface *CairoGraphics::NewImage(const char *img_bytes, 
-                                         size_t img_bytes_count, 
-                                         ImageType t) const {
+                                         size_t img_bytes_count) const {
   CanvasInterface *img = NULL;
   size_t h, w;
   cairo_surface_t *surface = NULL;
@@ -200,49 +186,27 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
   if (!img_bytes || 0 == img_bytes_count) {
     goto exit;
   }
+
+  // for all other image formats, try gdk image loader
+  pixbuf = LoadPixbufFromData(img_bytes, img_bytes_count);
+  if (!pixbuf) {
+    LOG("Error: unable to load PixBuf from data.");
+    goto exit;
+  }
+    
+  w = gdk_pixbuf_get_width(pixbuf);     
+  h = gdk_pixbuf_get_height(pixbuf); 
+  surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+  if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
+    cairo_surface_destroy(surface);
+    surface = NULL;
+    goto exit;
+  }
   
-  switch (t) {
-    case IMG_PNG: {
-      CairoPNGReaderClosure closure((char *)img_bytes, img_bytes_count);
-      
-      surface = 
-        cairo_image_surface_create_from_png_stream(CairoPNGReader, &closure);
-      if (!surface) {
-        LOG("Error: unable to create Cairo surface from PNG Stream.");
-        goto exit;
-      }      
-      w = cairo_image_surface_get_width(surface);
-      h = cairo_image_surface_get_height(surface);
-      
-      cr = cairo_create(surface);      
-      break;
-    }
-    case IMG_INVALID: 
-      goto exit;
-    default:
-      // for all other image formats, try gdk image loader
-      pixbuf = LoadPixbufFromData(img_bytes, img_bytes_count);
-      if (!pixbuf) {
-        LOG("Error: unable to load PixBuf from data.");
-        goto exit;
-      }
-      
-      // verify pixbuf format?
-      
-      w = gdk_pixbuf_get_width(pixbuf);     
-      h = gdk_pixbuf_get_height(pixbuf); 
-      surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-      if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
-        cairo_surface_destroy(surface);
-        surface = NULL;
-        goto exit;
-      }
-      
-      cr = cairo_create(surface);
-      gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
-      cairo_paint(cr);         
-      break;
-  };
+  cr = cairo_create(surface);
+  gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
+  cairo_paint(cr);         
+
     
   img = new CairoCanvas(cr, w, h, false);
   

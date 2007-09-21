@@ -100,20 +100,25 @@ class BasicElement : public ElementInterface {
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
   
-  /** 
-   * Notifies the element and its children that the host has changed.
-   * Classes overriding this should remember to call children_.HostChanged().
-   */ 
-  virtual void HostChanged();
-  
   virtual const CanvasInterface *Draw(bool *changed);
+  
+  /**
+   * Draw a black box with crisscrossed lines bounding the element.
+   * This is used only for testing.
+   */
+  void DrawBoundingBox();
   
   /** 
    * Call this when drawing to initialize and prepare a canvas of the right
    * height and width for drawing.
    */
   void SetUpCanvas();
-  
+  /** 
+   * Gets the internally stored canvas. 
+   * This should only be used for drawing. 
+   */
+  CanvasInterface *GetCanvas();
+ 
   /**
    * Checks to see if the current element has changed and needs to be redrawn.
    * Note that it does not check any child elements, so the element may still
@@ -123,8 +128,8 @@ class BasicElement : public ElementInterface {
    * @return true if the element has changed, false otherwise.
    */
   virtual bool IsSelfChanged() const;
-  /** Sets the self changed state to false. */
-  virtual void ClearSelfChanged();
+  /** Sets the self changed state. */
+  virtual void SetSelfChanged(bool changed);
   /** 
    * Checks to see if visibility of the element has changed since the last draw.
    */

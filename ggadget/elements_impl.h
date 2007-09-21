@@ -49,8 +49,6 @@ class ElementsImpl {
   ElementInterface *GetItemByName(const char *name);
   int GetIndexByName(const char *name);
 
-  void HostChanged();
-  
   void OnParentWidthChange(double width);
   void OnParentHeightChange(double height);
   

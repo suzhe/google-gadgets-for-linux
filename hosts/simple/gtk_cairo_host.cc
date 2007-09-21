@@ -20,19 +20,24 @@
 #include "gadget_view_widget.h"
 
 #include "ggadget/event.h"
+#include "ggadget/graphics_interface.h"
 #include "ggadget/view_interface.h"
-#include "ggadget/graphics/cairo_graphics.h"
 
-using ggadget::CairoGraphics;
+using ggadget::GraphicsInterface;
 using ggadget::TimerEvent;
 
 GtkCairoHost::GtkCairoHost(GadgetViewWidget *gvw) 
-  : gvw_(gvw), gfx_(new CairoGraphics(gvw->zoom)) {    
+  : gvw_(gvw), gfx_(NULL) {    
 }
 
 GtkCairoHost::~GtkCairoHost() {
   delete gfx_;
   gfx_ = NULL;
+}
+
+void GtkCairoHost::SetGraphics(GraphicsInterface *gfx) {
+  delete gfx_;
+  gfx_ = gfx;
 }
 
 void GtkCairoHost::QueueDraw() {
@@ -61,6 +66,13 @@ bool GtkCairoHost::DetachFromView() {
   
   gvw_->view = NULL;
   return true; 
+}
+
+void GtkCairoHost::SwitchWidget(GadgetViewWidget *new_gvw) {
+  if (gvw_) {
+    gvw_->host = NULL; 
+  }
+  gvw_ = new_gvw;
 }
 
 void GtkCairoHost::SetResizeable() {

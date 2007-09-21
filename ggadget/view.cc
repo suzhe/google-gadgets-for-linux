@@ -47,23 +47,6 @@ class View::Impl {
 
   ~Impl() { }
 
-  bool AttachHost(HostInterface *host) {
-    if (host_) {
-      // Detach old host first
-      if (!host_->DetachFromView()) {
-        return false;
-      }
-    }
-    
-    host_ = host;
-    
-    // TODO If host != NULL, should re-register all timers
-    
-    children_.HostChanged();
-    
-    return true;
-  }
-
   void OnMouseEvent(MouseEvent *event) {
     switch (event->GetType()) {
       case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
@@ -283,23 +266,37 @@ class View::Impl {
     return SetSize(width_ + width, height_ + height);
   }
 
-  const CanvasInterface *Draw(bool *changed) {
+  bool AttachHost(HostInterface *host) {
+    if (host_) {
+      ASSERT(!host);
+      // Detach old host first
+      if (!host_->DetachFromView()) {
+        return false;
+      }
+    }
+    
+    host_ = host;
+  
+    return true;
+  }
+   
+  const CanvasInterface *Draw(bool *changed) {  
     CanvasInterface *canvas = NULL;
     const CanvasInterface *children_canvas = NULL;
     bool child_changed;
     bool change = false;
-    
+  
     ASSERT(host_);
-    
+  
     children_canvas = children_.Draw(&child_changed);
     if (child_changed) {
       change = true;
     }
-    
+  
     if (!canvas_ || change) {
       // Need to redraw
       change = true;
-          
+        
       if (!canvas_) {
         const GraphicsInterface *gfx = host_->GetGraphics();
         canvas_ = gfx->NewCanvas(static_cast<size_t>(width_), 
