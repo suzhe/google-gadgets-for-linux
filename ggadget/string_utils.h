@@ -51,6 +51,15 @@ struct GadgetStringComparator {
 typedef std::map<std::string, std::string,
                  GadgetStringComparator> GadgetStringMap;
 
+/**
+ * Assign a <code>const char *</code> string to a std::string if they are
+ * different (compared using GadgetStrCmp).
+ * @param source source string. If it is @c NULL, dest will be cleared to blank.
+ * @param dest destination string.
+ * @return @c true if assignment occurs.
+ */
+bool AssignIfDiffer(const char *source, std::string *dest);
+
 } // namespace ggadget
 
 #endif // GGADGET_STRING_UTILS_H__

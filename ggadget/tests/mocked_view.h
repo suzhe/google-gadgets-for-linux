@@ -81,7 +81,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual int SetInterval(ggadget::Slot0<void> *slot,
                           unsigned int duration) { return 0; }
   virtual void ClearInterval(int token) { }
-  virtual ggadget::Image *LoadImage(const char *name) { return NULL; }
+  virtual ggadget::Image *LoadImage(const char *name,
+                                    bool is_mask) { return NULL; }
 
   DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
   DEFAULT_OWNERSHIP_POLICY

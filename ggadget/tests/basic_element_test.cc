@@ -29,7 +29,6 @@ class Muffin : public ggadget::BasicElement {
          ggadget::ViewInterface *view,
          const char *name)
       : ggadget::BasicElement(parent, view, name, true) {
-    RegisterProperty("tagName", NewSlot(this, &Muffin::GetTagName), NULL);
   }
 
   virtual ~Muffin() {
@@ -58,7 +57,6 @@ class Pie : public ggadget::BasicElement {
       ggadget::ViewInterface *view,
       const char *name)
       : ggadget::BasicElement(parent, view, name, true) {
-    RegisterProperty("tagName", NewSlot(this, &Pie::GetTagName), NULL);
   }
 
   virtual ~Pie() {

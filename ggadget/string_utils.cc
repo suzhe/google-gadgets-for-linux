@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include "string_utils.h"
+#include "common.h"
 
 namespace ggadget {
 
@@ -25,6 +26,21 @@ int GadgetStrCmp(const char *s1, const char *s2) {
 #else
   return strcasecmp(s1, s2);
 #endif
+}
+
+bool AssignIfDiffer(const char *source, std::string *dest) {
+  ASSERT(dest);
+  bool changed = false;
+  if (source && source[0]) {
+    if (GadgetStrCmp(source, dest->c_str()) != 0) {
+      changed = true;
+      *dest = source;
+    }
+  } else if (!dest->empty()){
+    changed = true;
+    dest->clear();
+  }
+  return changed;
 }
 
 }  // namespace ggadget

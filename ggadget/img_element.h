@@ -31,8 +31,11 @@ class ImgElement : public BasicElement {
              const char *name);
   virtual ~ImgElement();
 
+  virtual const CanvasInterface *Draw(bool *changed);
+  virtual const char *GetTagName() const { return "img"; }
+
  public:
-  /** Gets and sets the file name of image to display. */ 
+  /** Gets and sets the file name of image to display. */
   const char *GetSrc() const;
   void SetSrc(const char *src);
 
@@ -49,6 +52,11 @@ class ImgElement : public BasicElement {
    * memory and improve rendering performance.
    */
   void SetSrcSize(size_t width, size_t height);
+
+ public:
+  static ElementInterface *CreateInstance(ElementInterface *parent,
+                                          ViewInterface *view,
+                                          const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ImgElement);

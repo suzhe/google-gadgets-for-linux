@@ -243,7 +243,13 @@ class ViewInterface : public ScriptableInterface {
   virtual void ClearInterval(int token) = 0;
 
  public:  // Other utilities.
-  virtual Image *LoadImage(const char *name) = 0;
+  /**
+   * Load an image from the gadget file.
+   * @param name the name within the gadget base path.
+   * @param is_mask if the image is used as a mask.
+   * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
+   */
+  virtual Image *LoadImage(const char *name, bool is_mask) = 0;
 
 };
 

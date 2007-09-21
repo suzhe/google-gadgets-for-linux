@@ -438,11 +438,6 @@ class View::Impl {
     RemoveTimer(token);
   }
 
-  Image *LoadImage(const char *name) {
-    ASSERT(host_);
-    return new Image(host_->GetGraphics(), gadget_->GetFileManager(), name);
-  }
-
   EventSignal oncancle_event_;
   EventSignal onclick_event_;
   EventSignal onclose_event_;
@@ -721,8 +716,10 @@ void View::ClearInterval(int token) {
   impl_->ClearInterval(token);
 }
 
-Image *View::LoadImage(const char *name) {
-  return impl_->LoadImage(name);
+Image *View::LoadImage(const char *name, bool is_mask) {
+  ASSERT(impl_->host_);
+  return new Image(GetGraphics(), impl_->gadget_->GetFileManager(),
+                   name, is_mask);
 }
 
 } // namespace ggadget

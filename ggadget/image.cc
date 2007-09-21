@@ -25,31 +25,38 @@ class Image::Impl {
  public:
   Impl(const GraphicsInterface *graphics,
        FileManagerInterface *file_manager,
-       const char *filename)
+       const char *filename, bool is_mask)
       : graphics_(graphics),
         file_manager_(file_manager),
-        filename_(filename_),
+        filename_(filename),
+        is_mask_(is_mask),
         canvas_(NULL),
         failed_(false) {
     ASSERT(graphics);
     ASSERT(file_manager);
     ASSERT(filename);
+    // canvas_ will be lazy initialized when it is used.
   }
 
-  Impl(const GraphicsInterface *graphics, const char *data, size_t data_size)
+  Impl(const GraphicsInterface *graphics,
+       const char *data, size_t data_size, bool is_mask)
       : graphics_(graphics),
         file_manager_(NULL),
+        is_mask_(is_mask),
         canvas_(NULL),
         failed_(false) {
     ASSERT(graphics);
     ASSERT(data);
     // TODO: Remove IMG_JPEG.
-    canvas_ = graphics->NewImage(data, data_size);
+    canvas_ = is_mask_ ?
+              graphics->NewMask(data, data_size) :
+              graphics->NewImage(data, data_size);
   }
 
   Impl(const Impl &another)
       : graphics_(another.graphics_),
         filename_(another.filename_),
+        is_mask_(another.is_mask_),
         canvas_(NULL),
         failed_(another.failed_) {
     if (!failed_ && another.canvas_) {
@@ -70,10 +77,13 @@ class Image::Impl {
     if (!failed_ && !canvas_ && !filename_.empty() && file_manager_) {
       std::string data;
       std::string real_path;
-      failed_ = file_manager_->GetFileContents(filename_.c_str(),
-                                               &data, &real_path);
-      if (!failed_)
-        canvas_ = graphics_->NewImage(data.c_str(), data.size());
+      failed_ = !file_manager_->GetFileContents(filename_.c_str(),
+                                                &data, &real_path);
+      if (!failed_) {
+        canvas_ = is_mask_ ?
+                  graphics_->NewMask(data.c_str(), data.size());
+                  graphics_->NewImage(data.c_str(), data.size());
+      }
     }
     return canvas_;
   }
@@ -81,19 +91,20 @@ class Image::Impl {
   const GraphicsInterface *graphics_;
   FileManagerInterface *file_manager_;
   std::string filename_;
+  bool is_mask_;
   CanvasInterface *canvas_;
   bool failed_;
 };
 
 Image::Image(const GraphicsInterface *graphics,
              FileManagerInterface *file_manager,
-             const char *filename)
-    : impl_(new Impl(graphics, file_manager, filename)) {
+             const char *filename, bool is_mask)
+    : impl_(new Impl(graphics, file_manager, filename, is_mask)) {
 }
 
 Image::Image(const GraphicsInterface *graphics,
-             const char *data, size_t data_size)
-    : impl_(new Impl(graphics, data, data_size)) {
+             const char *data, size_t data_size, bool is_mask)
+    : impl_(new Impl(graphics, data, data_size, is_mask)) {
 }
 
 Image::Image(const Image &another)
