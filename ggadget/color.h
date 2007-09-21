@@ -17,6 +17,8 @@
 #ifndef GGADGET_COLOR_H__
 #define GGADGET_COLOR_H__
 
+#include "common.h"
+
 namespace ggadget {
 
 /** 

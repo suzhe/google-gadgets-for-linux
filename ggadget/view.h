@@ -27,6 +27,7 @@ namespace internal {
   class ViewImpl;
 }
 
+class GadgetInterface;
 class ElementFactoryInterface;
 
 /**
@@ -36,7 +37,7 @@ class View : public ViewInterface {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
-  View(ElementFactoryInterface *element_factory);
+  View(GadgetInterface *gadget, ElementFactoryInterface *element_factory);
   virtual ~View();
   
   virtual bool AttachHost(HostInterface *host);
@@ -70,6 +71,7 @@ class View : public ViewInterface {
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
 
+  virtual ElementFactoryInterface *GetElementFactory() const;
   virtual const Elements *GetChildren() const;
   virtual Elements *GetChildren();
   virtual ElementInterface *GetElementByName(const char *name);
@@ -85,6 +87,8 @@ class View : public ViewInterface {
   virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
   virtual void ClearInterval(int token);
 
+  virtual Image *LoadImage(const char *name);
+
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return true; }
@@ -93,7 +97,8 @@ class View : public ViewInterface {
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
  private:
-  internal::ViewImpl *impl_;
+  class Impl;
+  Impl *impl_;
   ScriptableHelper scriptable_helper_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
 };

@@ -17,20 +17,14 @@
 #ifndef GGADGETS_BASIC_ELEMENT_H__
 #define GGADGETS_BASIC_ELEMENT_H__
 
+#include "common.h"
 #include "element_interface.h"
 #include "scriptable_helper.h"
 
 namespace ggadget {
 
-namespace internal {
-
-class BasicElementImpl;
-
-}
-
 class ViewInterface;
 class Elements;
-class ElementFactoryInterface;
 
 class BasicElement : public ElementInterface {
  public:
@@ -39,8 +33,8 @@ class BasicElement : public ElementInterface {
  public:
   BasicElement(ElementInterface *parent,
                ViewInterface *view,
-               ElementFactoryInterface *element_factory,
-               const char *name);
+               const char *name,
+               bool is_container);
   virtual ~BasicElement();
 
  public:
@@ -140,7 +134,10 @@ class BasicElement : public ElementInterface {
   
   virtual bool IsPositionChanged() const;
   virtual void ClearPositionChanged();
-  
+
+  virtual void OnParentWidthChange(double width);
+  virtual void OnParentHeightChange(double height);
+
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return true; }
@@ -149,8 +146,10 @@ class BasicElement : public ElementInterface {
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
  private:
-  internal::BasicElementImpl *impl_;
+  class Impl;
+  Impl *impl_;
   ScriptableHelper scriptable_helper_;
+  DISALLOW_EVIL_CONSTRUCTORS(BasicElement);
 };
 
 CLASS_ID_IMPL(BasicElement, ElementInterface)

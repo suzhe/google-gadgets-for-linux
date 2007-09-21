@@ -95,8 +95,8 @@ class MockedElementFactory : public ggadget::ElementFactoryInterface {
 class ElementsTest : public testing::Test {
  protected:
   virtual void SetUp() {
-    view_ = new MockedView();
     factory_ = new MockedElementFactory();
+    view_ = new MockedView(factory_);
     muffin_ = new Muffin(NULL, view_, NULL);
     elements_ = new ggadget::Elements(factory_, muffin_, view_);
   }

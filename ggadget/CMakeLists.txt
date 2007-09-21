@@ -25,6 +25,8 @@ SET(SRCS
   elements.cc
   file_manager.cc
   gadget.cc
+  image.cc
+  img_element.cc
   math_utils.cc
   scriptable_helper.cc
   signal.cc

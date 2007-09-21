@@ -291,6 +291,10 @@ class ElementInterface : public ScriptableInterface {
   virtual bool IsPositionChanged() const = 0;
   /** Sets the position changed state to false. */
   virtual void ClearPositionChanged() = 0;
+
+  virtual void OnParentWidthChange(double width) = 0;
+  virtual void OnParentHeightChange(double height) = 0;
+
 };
 
 CLASS_ID_IMPL(ElementInterface, ScriptableInterface)

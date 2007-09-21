@@ -19,6 +19,7 @@
 
 namespace ggadget {
 
+class FileManagerInterface;
 class ViewInterface;
 
 /**
@@ -29,21 +30,26 @@ class GadgetInterface {
   virtual ~GadgetInterface() { }
 
   /**
-   * @return The ViewInterface object representing the main view of the gadget.
+   * @return the ViewInterface object representing the main view of the gadget.
    */ 
   virtual ViewInterface *GetMainView() = 0;
-   
+
   /**
-   * @return The ViewInterface object representing the options
+   * @return the ViewInterface object representing the options
    * view of the gadget. Returns NULL if this view is not supported.
    */
   virtual ViewInterface *GetOptionsView() = 0;
 
   /**
+   * @return the FileManagerInterface object used in this gadget.
+   */
+  virtual FileManagerInterface *GetFileManager() = 0;
+
+  /**
    * Get a value configured in the gadget manifest file.
    * @param key the value key like a simple XPath expression. See
    *     gadget_consts.h for available keys, and @c ParseXMLIntoXPathMap() in
-   *     xml_utils.h for details of the XPath expression.   
+   *     xml_utils.h for details of the XPath expression.
    * @return the configured value. @c NULL if not found.
    */
   virtual const char *GetManifestInfo(const char *key) = 0;

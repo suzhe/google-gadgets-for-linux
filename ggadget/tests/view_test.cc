@@ -30,7 +30,7 @@ class Muffin : public ggadget::BasicElement {
   Muffin(ggadget::ElementInterface *parent,
          ggadget::ViewInterface *view,
          const char *name)
-      : ggadget::BasicElement(parent, view, gFactory, name) {
+      : ggadget::BasicElement(parent, view, name, true) {
     RegisterProperty("tagName", NewSlot(this, &Muffin::GetTagName), NULL);
   }
 
@@ -62,7 +62,7 @@ class Pie : public ggadget::BasicElement {
   Pie(ggadget::ElementInterface *parent,
       ggadget::ViewInterface *view,
       const char *name)
-      : ggadget::BasicElement(parent, view, gFactory, name) {
+      : ggadget::BasicElement(parent, view, name, true) {
     RegisterProperty("tagName", NewSlot(this, &Pie::GetTagName), NULL);
   }
 
@@ -124,7 +124,7 @@ class EventHandler {
 };
 
 TEST(ViewTest, FireEvent) {
-  ggadget::View view(gFactory);
+  ggadget::View view(NULL, gFactory);
   EventHandler handler(&view);
   ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN);
   view.FireEvent(&event, handler.signal1_);
@@ -134,7 +134,7 @@ TEST(ViewTest, FireEvent) {
 
 // This test is not merely for View, but mixed test for xml_utils and Elements.
 TEST(ViewTest, XMLConstruction) {
-  ggadget::View view(gFactory);
+  ggadget::View view(NULL, gFactory);
   ASSERT_FALSE(view.GetShowCaptionAlways());
   ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_TRUE, view.GetResizable());
   ASSERT_STREQ("", view.GetCaption());
