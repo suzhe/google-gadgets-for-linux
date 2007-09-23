@@ -52,7 +52,6 @@ class Muffin : public BasicElement {
          ViewInterface *view,
          const char *name)
       : BasicElement(parent, view, name, true) {
-    RegisterProperty("tagName", NewSlot(this, &Muffin::GetTagName), NULL);
   }
 
   virtual ~Muffin() {
@@ -99,7 +98,6 @@ class Pie : public BasicElement {
       ViewInterface *view,
       const char *name)
       : BasicElement(parent, view, name, false), color_(0., 0., 0.) {
-    RegisterProperty("tagName", NewSlot(this, &Pie::GetTagName), NULL);
   }
 
   virtual ~Pie() {

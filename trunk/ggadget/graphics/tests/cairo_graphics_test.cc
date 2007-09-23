@@ -127,7 +127,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   double h, scale;
   
   // PNG
-  int fd = open("120day.png", O_RDONLY);
+  int fd = open("base.png", O_RDONLY);
   ASSERT_NE(-1, fd);
   
   ASSERT_EQ(0, fstat(fd, &statvalue));  

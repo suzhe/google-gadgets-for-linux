@@ -62,9 +62,6 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
   g_element_factory->RegisterElementClass("img", &ImgElement::CreateInstance);
   g_script_runtime = new JSScriptRuntime();
   g_gadget = new Gadget(g_script_runtime, g_element_factory);
-  if (!g_gadget->InitFromPath(base_path)) {
-    LOG("Error: unable to load gadget from %s", base_path);
-  }
 
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(g_gadget->GetMainView(),
                                                                 g_zoom, NULL));
@@ -76,11 +73,15 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
   geometry.min_width = geometry.min_height = 100;
   gtk_window_set_geometry_hints(window, GTK_WIDGET(gvw), 
                                 &geometry, GDK_HINT_MIN_SIZE);
-  gtk_widget_show_all(GTK_WIDGET(window));
 
+  gtk_widget_realize(GTK_WIDGET(gvw));
+  
   if (!g_gadget->InitFromPath(base_path)) {
     LOG("Error: unable to load gadget from %s", base_path);
   }
+  
+  gtk_widget_show_all(GTK_WIDGET(window));
+  
   return true;
 }
 

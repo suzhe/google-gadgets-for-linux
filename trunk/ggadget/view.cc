@@ -38,7 +38,6 @@ class View::Impl {
       children_(element_factory, NULL, owner),
       width_(200), height_(200),
       host_(NULL),
-      canvas_(NULL),
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
@@ -202,10 +201,6 @@ class View::Impl {
   bool SetWidth(int width) {
     if (width != width_) {
       // TODO check if allowed first
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
       width_ = width;  
       children_.OnParentWidthChange(width);
       if (host_) {
@@ -221,10 +216,6 @@ class View::Impl {
   bool SetHeight(int height) {
     if (height != height_) {
       // TODO check if allowed first
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
       height_ = height;
       children_.OnParentHeightChange(height);
       if (host_) {
@@ -240,10 +231,6 @@ class View::Impl {
   bool SetSize(int width, int height) {
     if (width != width_ || height != height_) {
       // TODO check if allowed first
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
       if (width != width_) {
         width_ = width;
         children_.OnParentWidthChange(width);
@@ -281,70 +268,8 @@ class View::Impl {
   }
    
   const CanvasInterface *Draw(bool *changed) {  
-    CanvasInterface *canvas = NULL;
-    const CanvasInterface *children_canvas = NULL;
-    bool child_changed;
-    bool change = false;
-  
     ASSERT(host_);
-  
-    children_canvas = children_.Draw(&child_changed);
-    if (child_changed) {
-      change = true;
-    }
-  
-    if (!canvas_ || change) {
-      // Need to redraw
-      change = true;
-        
-      if (!canvas_) {
-        const GraphicsInterface *gfx = host_->GetGraphics();
-        canvas_ = gfx->NewCanvas(static_cast<size_t>(width_), 
-                                 static_cast<size_t>(height_));
-        if (!canvas_) {
-          DLOG("Error: unable to create canvas.");
-          goto exit;
-        }
-      }
-      else {
-        // If not new canvas, we must remember to clear canvas before drawing.
-        canvas_->ClearCanvas();
-      }
-      
-      if (children_canvas) {
-        canvas_->DrawCanvas(0., 0., children_canvas);
-      }
-    }
-    
-    // TODO test demo, remove when we have elements
-    canvas_->DrawFilledRect(10, 10, 10, 10, Color(1, 1, 1));
-    canvas_->DrawFilledRect(10, 20, 10, 10, Color(0, 0, 0));
-
-    canvas_->PushState();
-    canvas_->MultiplyOpacity(.5);
-    canvas_->PushState();
-    canvas_->DrawFilledRect(10., 10., 280., 130., Color(1., 0., 0.));
-    canvas_->IntersectRectClipRegion(30., 30., 100., 100.);
-    canvas_->IntersectRectClipRegion(70., 40., 100., 70.);
-    canvas_->DrawFilledRect(20., 20., 260., 110., Color(0., 1., 0.));  
-    canvas_->PopState();
-    canvas_->DrawFilledRect(110., 40., 90., 70., Color(0., 0., 1.));  
-    canvas_->PopState();
-    // end test 
-    
-    // Draw bounding box
-    canvas_->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
-    canvas_->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
-    canvas_->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
-    canvas_->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
-    canvas_->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
-    canvas_->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
-
-    canvas = canvas_;
-    
-  exit:  
-    *changed = change;
-    return canvas;
+    return children_.Draw(changed);
   }
 
   void SetResizable(ViewInterface::ResizableMode resizable) {
@@ -466,7 +391,6 @@ class View::Impl {
   Elements children_;
   int width_, height_;
   HostInterface *host_;
-  CanvasInterface *canvas_;
   ViewInterface::ResizableMode resizable_;
   std::string caption_;
   bool show_caption_always_;

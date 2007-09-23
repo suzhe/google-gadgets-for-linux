@@ -81,7 +81,7 @@ class Image::Impl {
                                                 &data, &real_path);
       if (!failed_) {
         canvas_ = is_mask_ ?
-                  graphics_->NewMask(data.c_str(), data.size());
+                  graphics_->NewMask(data.c_str(), data.size()) :
                   graphics_->NewImage(data.c_str(), data.size());
       }
     }
