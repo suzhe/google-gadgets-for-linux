@@ -89,7 +89,7 @@ struct CairoPNGReaderClosure {
 
 CanvasInterface *CairoGraphics::NewMask(const char *img_bytes, 
                                         size_t img_bytes_count) const {
-  CanvasInterface *img = NULL;
+  CairoCanvas *img = NULL;
   size_t h, w;
   cairo_surface_t *surface = NULL;
   cairo_t *cr = NULL;
@@ -148,15 +148,17 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
     surface = NULL;
     goto exit;
   }
+  
   cr = cairo_create(surface);
+  img = new CairoCanvas(cr, w, h, true);
+  img->ClearSurface();
+  
   gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
   cairo_paint(cr);   
   
   cairo_set_source_rgba(cr, 0., 0., 0., 0.);
-  
-  img = new CairoCanvas(cr, w, h, true);
-  
-exit:  
+    
+exit:
   if (cr) {
     cairo_destroy(cr);
     cr = NULL;
@@ -177,7 +179,7 @@ exit:
 
 CanvasInterface *CairoGraphics::NewImage(const char *img_bytes, 
                                          size_t img_bytes_count) const {
-  CanvasInterface *img = NULL;
+  CairoCanvas *img = NULL;
   size_t h, w;
   cairo_surface_t *surface = NULL;
   cairo_t *cr = NULL;
@@ -204,12 +206,14 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
   }
   
   cr = cairo_create(surface);
+  img = new CairoCanvas(cr, w, h, false);  
+  img->ClearSurface();
+  
   gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
   cairo_paint(cr);         
 
+  cairo_set_source_rgba(cr, 0., 0., 0., 0.);
     
-  img = new CairoCanvas(cr, w, h, false);
-  
 exit:  
   if (cr) {
     cairo_destroy(cr);

@@ -237,8 +237,16 @@ const CanvasInterface *ElementsImpl::Draw(bool *changed) {
         
         canvas_->PopState();  
       }          
-    }    
+    }
   }
+  
+  // Draw bounding box
+  canvas_->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
+  canvas_->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
+  canvas_->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
+  canvas_->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
+  canvas_->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
+  canvas_->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
   
   canvas = canvas_;
   
