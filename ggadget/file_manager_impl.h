@@ -47,6 +47,7 @@ class FileManagerImpl {
   bool GetXMLFileContents(const char *file,
                           std::string *data,
                           std::string *path);
+  bool ExtractFile(const char *file, std::string *into_file);
 
   bool InitLocaleStrings();
   static void SplitPathFilename(const char *input_path,
@@ -68,7 +69,7 @@ class FileManagerImpl {
   bool GetDirFileContents(FileMap::const_iterator iter, std::string *data);
   bool GetZipFileContents(FileMap::const_iterator iter, std::string *data);
 
-  // base path must in correct case (case sensitive), 
+  // base path must in correct case (case sensitive),
   // but files in base path need not to be
   std::string base_path_;
   bool is_dir_;
@@ -76,10 +77,10 @@ class FileManagerImpl {
   std::string locale_lang_prefix_;
   std::string locale_id_prefix_;
 
-  // Map filenames to data in a zip file. 
+  // Map filenames to data in a zip file.
   // Also used as cache for files if base_path is a dir.
   FileMap files_;
-  
+
   // Maps resource names to string resources from strings.xml.
   GadgetStringMap string_table_;
 };

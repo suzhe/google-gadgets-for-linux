@@ -19,7 +19,9 @@
 #include "common.h"
 #include "element_interface.h"
 #include "elements.h"
+#include "file_manager_interface.h"
 #include "gadget_consts.h"
+#include "script_context_interface.h"
 #include "third_party/tinyxml/tinyxml.h"
 #include "view_interface.h"
 
@@ -38,7 +40,11 @@ static bool ParseXML(const char *xml,
 }
 
 static void SetScriptableProperty(ScriptableInterface *scriptable,
-                                  const char *name, const char *value,
+                                  ScriptContextInterface *script_context,
+                                  const char *filename,
+                                  int row, int column,
+                                  const char *name,
+                                  const char *value,
                                   const char *tag_name) {
   int id;
   Variant prototype;
@@ -48,7 +54,8 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
   if (!result || is_method ||
       id == ScriptableInterface::ID_CONSTANT_PROPERTY ||
       id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
-    LOG("Can't set property %s from xml for %s", name, tag_name);
+    LOG("%s:%d:%d: Can't set property %s from xml for %s",
+        filename, row, column, name, tag_name);
     return;
   }
 
@@ -63,8 +70,8 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
     case Variant::TYPE_INT64:
       property_value = Variant(strtoll(value, &end_ptr, 10));
       if (*value == '\0' || *end_ptr != '\0') {
-        LOG("Invalid integer '%s' for property %s for %s",
-            value, name, tag_name);
+        LOG("%s:%d:%d: Invalid integer '%s' for property %s for %s",
+            filename, row, column, value, name, tag_name);
         return;
       }
       break;
@@ -72,8 +79,8 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
     case Variant::TYPE_DOUBLE:
       property_value = Variant(strtod(value, &end_ptr));
       if (*value == '\0' || *end_ptr != '\0') {
-        LOG("Invalid double '%s' for property %s for %s",
-            value, name, tag_name);
+        LOG("%s:%d:%d: Invalid double '%s' for property %s for %s",
+            filename, row, column, value, name, tag_name);
         return;
       }
       break;
@@ -89,19 +96,23 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       break;
 
     case Variant::TYPE_SLOT:
-      // TODO:
+      property_value = Variant(script_context->Compile(value, filename, row));
+      break;
 
     default:
-      LOG("Unsupported type %s when setting property %s from xml for %s",
-          prototype.ToString().c_str(), name, tag_name);
+      LOG("%s:%d:%d: Unsupported type %s when setting property %s for %s",
+          filename, row, column, prototype.ToString().c_str(), name, tag_name);
       return;
   }
 
   if (!scriptable->SetProperty(id, property_value))
-    LOG("Can't set readonly property %s from xml for %s", name, tag_name);
+    LOG("%s:%d:%d: Can't set readonly property %s for %s",
+        filename, row, column, name, tag_name);
 }
 
 static void SetupScriptableProperties(ScriptableInterface *scriptable,
+                                      ScriptContextInterface *script_context,
+                                      const char *filename,
                                       const TiXmlElement *xml_element) {
   const char *tag_name = xml_element->Value();
   for (const TiXmlAttribute *attribute = xml_element->FirstAttribute();
@@ -115,31 +126,94 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
       continue;
     }
     
-    SetScriptableProperty(scriptable, name, value, tag_name);
+    SetScriptableProperty(scriptable, script_context,
+                          filename, attribute->Row(), attribute->Column(),
+                          name, value, tag_name);
   }
  
   // Set the "innerText" property.
   const char *text = xml_element->GetText();
   if (text)
-    SetScriptableProperty(scriptable, kInnerTextProperty, text, tag_name);
+    SetScriptableProperty(scriptable, script_context,
+                          filename, xml_element->Row(), xml_element->Column(),
+                          kInnerTextProperty, text, tag_name);
+}
+
+static void HandleScriptElement(ScriptContextInterface *script_context,
+                                FileManagerInterface *file_manager,
+                                const char *filename,
+                                TiXmlElement *xml_element) {
+  const char *src = xml_element->Attribute(kSrcAttr);
+  const char *script = NULL;
+  int lineno = xml_element->Row();
+  std::string data;
+  std::string real_path;
+  if (src) {
+    if (file_manager->GetFileContents(src, &data, &real_path)) {
+      filename = real_path.c_str();
+      lineno = 1;
+      script = data.c_str();
+    }
+  } else {
+    for (TiXmlNode* child = xml_element->FirstChild();
+         child != NULL; child = child->NextSibling()) {
+      TiXmlComment *comment = child->ToComment();
+      if (comment) {
+        script = comment->Value();
+        break;
+      }
+    }
+
+    if (!script)
+      LOG("%s:%d:%d: Either 'src' attribute or script in XML comment needed",
+          filename, xml_element->Row(), xml_element->Column());
+  }
+
+  if (script)
+    script_context->Execute(script, filename, lineno);
+}
+
+static void HandleAllScriptElements(ViewInterface *view,
+                                    const char *filename,
+                                    TiXmlElement *xml_element) {
+  
+  TiXmlElement *child = xml_element->FirstChildElement();
+  while (child) {
+    if (GadgetStrCmp(child->Value(), kScriptTag) == 0) {
+      HandleScriptElement(view->GetScriptContext(),
+                          view->GetFileManager(),
+                          filename, child);
+      TiXmlElement *temp = child;
+      child = child->NextSiblingElement();
+      xml_element->RemoveChild(temp);
+    } else {
+      HandleAllScriptElements(view, filename, child);
+      child = child->NextSiblingElement();
+    }
+  }
 }
 
 static ElementInterface *InsertElementFromDOM(Elements *elements,
+                                              const char *filename,
                                               TiXmlElement *xml_element,
                                               const ElementInterface *before) {
   const char *tag_name = xml_element->Value();
   const char *name = xml_element->Attribute(kNameAttr);  // May be NULL.
   ElementInterface *element = elements->InsertElement(tag_name, before, name);
   xml_element->RemoveAttribute(kNameAttr);
-  if (!element)
+  if (!element) {
+    LOG("%s:%d:%d: Failed to create element %s",
+        filename,xml_element->Row(), xml_element->Column(), tag_name);
     return element;
+  }
 
-  SetupScriptableProperties(element, xml_element);
+  SetupScriptableProperties(element, element->GetView()->GetScriptContext(),
+                            filename, xml_element);
   Elements *children = element->GetChildren();
   for (TiXmlElement *child_xml_ele = xml_element->FirstChildElement();
        child_xml_ele != NULL;
        child_xml_ele = child_xml_ele->NextSiblingElement()) {
-    InsertElementFromDOM(children, child_xml_ele, NULL);
+    InsertElementFromDOM(children, filename, child_xml_ele, NULL);
   }
   return element;
 }
@@ -152,17 +226,21 @@ bool SetupViewFromXML(ViewInterface *view,
     return false;
 
   TiXmlElement *view_element = xmldoc.RootElement();
-  if (!view_element || strcmp(view_element->Value(), kViewTag) != 0) {
+  if (!view_element || GadgetStrCmp(view_element->Value(), kViewTag) != 0) {
     LOG("No valid root element in view file: %s", filename);
     return false;
   }
 
-  SetupScriptableProperties(view, view_element);
+  // <script> elements should be handled first because later parsing needs
+  // the script context.
+  HandleAllScriptElements(view, filename, view_element);
+  SetupScriptableProperties(view, view->GetScriptContext(),
+                            filename, view_element);
   Elements *children = view->GetChildren();
   for (TiXmlElement *child_xml_ele = view_element->FirstChildElement();
        child_xml_ele != NULL;
        child_xml_ele = child_xml_ele->NextSiblingElement()) { 
-    InsertElementFromDOM(children, child_xml_ele, NULL);
+    InsertElementFromDOM(children, filename, child_xml_ele, NULL);
   }
   return true;
 }
@@ -184,7 +262,7 @@ ElementInterface *InsertElementFromXML(Elements *elements,
     return NULL;
   }
 
-  return InsertElementFromDOM(elements, xml_element, before);
+  return InsertElementFromDOM(elements, "", xml_element, before);
 }
 
 // Count the sequence of a child in the elements of the same tag name.

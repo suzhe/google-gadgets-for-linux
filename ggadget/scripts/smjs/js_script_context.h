@@ -27,28 +27,6 @@ namespace ggadget {
 class NativeJSWrapper;
 
 /**
- * @c ScriptRuntime implementation for SpiderMonkey JavaScript engine.
- */
-class JSScriptRuntime : public ScriptRuntimeInterface {
- public:
-  JSScriptRuntime();
-  virtual ~JSScriptRuntime();
-
-  /** @see ScriptRuntimeInterface::CreateContext() */
-  virtual ScriptContextInterface *CreateContext();
-  /** @see ScriptRuntimeInterface::ConnectErrorReporter() */
-  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);
-
-  static void ReportError(JSContext *cx, const char *message,
-                          JSErrorReport *report);
-
-  Signal1<void, const char *> error_reporter_signal_;
-  JSRuntime *runtime_;
-};
-
-/**
  * @c ScriptContext implementation for SpiderMonkey JavaScript engine.
  */
 class JSScriptContext : public ScriptContextInterface {
@@ -109,14 +87,14 @@ class JSScriptContext : public ScriptContextInterface {
 
   /** @see ScriptContextInterface::Destroy() */
   virtual void Destroy();
+  /** @see ScriptContextInterface::Execute() */
+  virtual void Execute(const char *script,
+                       const char *filename,
+                       int lineno);
   /** @see ScriptContextInterface::Compile() */
   virtual Slot *Compile(const char *script,
                         const char *filename,
                         int lineno);
-  /** @see ScriptContextInterface::SetValue() */
-  virtual bool SetValue(const char *object_expression,
-                        const char *property_name,
-                        const Variant &value);
   /** @see ScriptContextInterface::SetGlobalObject() */
   virtual bool SetGlobalObject(ScriptableInterface *global_object);
 

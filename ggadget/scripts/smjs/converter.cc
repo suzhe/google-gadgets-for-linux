@@ -204,9 +204,26 @@ JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
 
 std::string ConvertJSToString(JSContext *cx, jsval js_val) {
   Variant v;
-  return ConvertJSToNativeString(cx, js_val, &v) ?
-         VariantValue<std::string>()(v) :
-         std::string("##ERROR##");
+  if (!ConvertJSToNativeString(cx, js_val, &v))
+    return "##ERROR##";
+
+  const char *str = VariantValue<const char *>()(v);
+  switch (JS_TypeOfValue(cx, js_val)) {
+    case JSTYPE_VOID:
+      return "VOID";
+    case JSTYPE_OBJECT:
+      return std::string("OBJECT:") + str;
+    case JSTYPE_FUNCTION:
+      return std::string("FUNCTION:") + str;
+    case JSTYPE_STRING:
+      return std::string("STRING:") + str;
+    case JSTYPE_NUMBER:
+      return std::string("NUMBER:") + str;
+    case JSTYPE_BOOLEAN:
+      return std::string("BOOLEAN:") + str;
+    default:
+      return std::string("UNKNOWN:") + str;
+  }
 }
 
 static JSBool ConvertNativeToJSVoid(JSContext *cx,

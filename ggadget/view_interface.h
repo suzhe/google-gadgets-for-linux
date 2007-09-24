@@ -33,6 +33,8 @@ class Event;
 class Elements;
 class GraphicsInterface;
 class Image;
+class ScriptContextInterface;
+class FileManagerInterface;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -59,7 +61,24 @@ class ViewInterface : public ScriptableInterface {
    * @return true on success, false otherwise. 
    */
   virtual bool AttachHost(HostInterface *host) = 0;
-    
+
+  /**
+   * @return the ScriptContextInterface object associated with this view.
+   */ 
+  virtual ScriptContextInterface *GetScriptContext() const = 0;
+
+  /**
+   * @return the FileManagerInterface object associated with this view's gadget.
+   */
+  virtual FileManagerInterface *GetFileManager() const = 0;
+
+  /**
+   * Read XML definition from the file and init the view, and start running.
+   * @param filename the file name in the gadget.
+   * @return @c true if succeedes.
+   */ 
+  virtual bool InitFromFile(const char *filename) = 0;
+
   /** Handler of the mouse events. */
   virtual void OnMouseEvent(MouseEvent *event) = 0;
   /** Handler of the keyboard events. */
@@ -123,10 +142,10 @@ class ViewInterface : public ScriptableInterface {
   virtual void QueueDraw() = 0;
   
   /**
-   * @return The current graphics interface used for drawing elements.
+   * @return the current graphics interface used for drawing elements.
    */
   virtual const GraphicsInterface *GetGraphics() const = 0;
-  
+
   /**
    * Indicates what happens when the user attempts to resize the gadget using
    * the window border.

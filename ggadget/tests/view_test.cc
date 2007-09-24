@@ -116,7 +116,7 @@ class EventHandler {
 };
 
 TEST(ViewTest, FireEvent) {
-  ggadget::View view(NULL, gFactory);
+  ggadget::View view(NULL, NULL, NULL, gFactory);
   EventHandler handler(&view);
   ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN);
   view.FireEvent(&event, handler.signal1_);
@@ -126,7 +126,7 @@ TEST(ViewTest, FireEvent) {
 
 // This test is not merely for View, but mixed test for xml_utils and Elements.
 TEST(ViewTest, XMLConstruction) {
-  ggadget::View view(NULL, gFactory);
+  ggadget::View view(NULL, NULL, NULL, gFactory);
   ASSERT_FALSE(view.GetShowCaptionAlways());
   ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_TRUE, view.GetResizable());
   ASSERT_STREQ("", view.GetCaption());

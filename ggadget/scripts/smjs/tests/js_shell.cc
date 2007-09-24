@@ -23,6 +23,7 @@
 
 #include "ggadget/common.h"
 #include "ggadget/scripts/smjs/js_script_context.h"
+#include "ggadget/scripts/smjs/js_script_runtime.h"
 #include "ggadget/scripts/smjs/converter.h"
 #include "ggadget/unicode_utils.h"
 
@@ -237,22 +238,11 @@ int main(int argc, char *argv[]) {
     return QUIT_ERROR;
 
   JS_SetErrorReporter(cx, ErrorReporter);
-
-  JSClass global_class = {
-      "global", 0,
-      JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-      JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub
-  };
-  JSObject *global = JS_NewObject(cx, &global_class, NULL, NULL);
-  if (!global)
-    return QUIT_ERROR;
-  if (!JS_InitStandardClasses(cx, global))
-    return QUIT_ERROR;
-  if (!JS_DefineFunctions(cx, global, global_functions))
-    return QUIT_ERROR;
-
   if (!InitCustomObjects(context))
     return QUIT_ERROR;
+
+  JSObject *global = JS_GetGlobalObject(cx);
+  JS_DefineFunctions(cx, global, global_functions);
 
   if (argc > 1) {
     for (int i = 1; i < argc; i++) {

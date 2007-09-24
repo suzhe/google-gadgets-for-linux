@@ -17,155 +17,176 @@
 #include <vector>
 #include <algorithm>
 #include "elements.h"
-#include "elements_impl.h"
 #include "common.h"
 #include "element_interface.h"
 #include "element_factory_interface.h"
+#include "graphics_interface.h"
+#include "math_utils.h"
+#include "scriptable_helper.h"
 #include "view_interface.h"
 #include "xml_utils.h"
-#include "math_utils.h"
-#include "graphics_interface.h"
 
 namespace ggadget {
 
-namespace internal {
+class Elements::Impl {
+ public:
+  Impl(ElementFactoryInterface *factory,
+       ElementInterface *owner,
+       ViewInterface *view)
+      : factory_(factory), owner_(owner), view_(view), 
+        width_(.0), height_(.0), canvas_(NULL), count_changed_(true) {
+    ASSERT(factory);
+    ASSERT(view);
 
-ElementsImpl::ElementsImpl(ElementFactoryInterface *factory,
-                           ElementInterface *owner,
-                           ViewInterface *view)
-    : factory_(factory), owner_(owner), view_(view), 
-    width_(.0), height_(.0), canvas_(NULL), count_changed_(true) {
-  ASSERT(factory);
-  ASSERT(view);
+    RegisterProperty("count", NewSlot(this, &Impl::GetCount), NULL);
+    RegisterMethod("item", NewSlot(this, &Impl::GetItem));
+    SetArrayHandler(NewSlot(this, &Impl::GetItemByIndex), NULL);
+    SetDynamicPropertyHandler(NewSlot(this, &Impl::GetItemByNameVariant), NULL);
+  }
 
-  RegisterProperty("count", NewSlot(this, &ElementsImpl::GetCount), NULL);
-  RegisterMethod("item", NewSlot(this, &ElementsImpl::GetItem));
-  SetArrayHandler(NewSlot(this, &ElementsImpl::GetItemByIndex), NULL);
-  SetDynamicPropertyHandler(NewSlot(this, &ElementsImpl::GetItemByName), NULL);
-}
+  ~Impl() {
+    RemoveAllElements();
+  }
 
-ElementsImpl::~ElementsImpl() {
-  RemoveAllElements();
-}
+  int GetCount() {
+    return children_.size();
+  }
 
-int ElementsImpl::GetCount() {
-  return children_.size();
-}
+  ElementInterface *AppendElement(const char *tag_name, const char *name) {
+    ElementInterface *e = factory_->CreateElement(tag_name,
+                                                  owner_,
+                                                  view_,
+                                                  name);
+    if (e == NULL)
+      return NULL;
+    children_.push_back(e);
+    count_changed_ = true;
+    view_->OnElementAdd(e);
+    return e;
+  }
 
-ElementInterface *ElementsImpl::AppendElement(const char *tag_name,
-                                              const char *name) {
-  ElementInterface *e = factory_->CreateElement(tag_name,
-                                                owner_,
-                                                view_,
-                                                name);
-  if (e == NULL)
-    return NULL;
-  children_.push_back(e);
-  count_changed_ = true;
-  view_->OnElementAdd(e);
-  return e;
-}
+  ElementInterface *InsertElement(const char *tag_name,
+                                  const ElementInterface *before,
+                                  const char *name) {
+    ElementInterface *e = factory_->CreateElement(tag_name,
+                                                  owner_,
+                                                  view_,
+                                                  name);
+    if (e == NULL)
+      return NULL;
+    std::vector<ElementInterface *>::iterator ite = std::find(
+        children_.begin(), children_.end(), before);
+    children_.insert(ite, e);
+    count_changed_ = true;
+    view_->OnElementAdd(e);
+    return e;
+  }
 
-ElementInterface *ElementsImpl::InsertElement(
-    const char *tag_name, const ElementInterface *before, const char *name) {
-  ElementInterface *e = factory_->CreateElement(tag_name,
-                                                owner_,
-                                                view_,
-                                                name);
-  if (e == NULL)
-    return NULL;
-  std::vector<ElementInterface *>::iterator ite = std::find(
-      children_.begin(), children_.end(), before);
-  children_.insert(ite, e);
-  count_changed_ = true;
-  view_->OnElementAdd(e);
-  return e;
-}
-
-bool ElementsImpl::RemoveElement(ElementInterface *element) {
-  std::vector<ElementInterface *>::iterator ite = std::find(
-      children_.begin(), children_.end(), element);
-  if (ite == children_.end())
-    return false;
-  view_->OnElementRemove(*ite);
-  (*ite)->Destroy();
-  children_.erase(ite);
-  count_changed_ = true;
-  return true;
-}
-
-void ElementsImpl::RemoveAllElements() {
-  for (std::vector<ElementInterface *>::iterator ite =
-       children_.begin(); ite != children_.end(); ++ite) {
+  bool RemoveElement(ElementInterface *element) {
+    std::vector<ElementInterface *>::iterator ite = std::find(
+        children_.begin(), children_.end(), element);
+    if (ite == children_.end())
+      return false;
     view_->OnElementRemove(*ite);
     (*ite)->Destroy();
+    children_.erase(ite);
+    count_changed_ = true;
+    return true;
   }
-  std::vector<ElementInterface *> v;
-  children_.swap(v);
-  count_changed_ = true;
-}
 
-ElementInterface *ElementsImpl::GetItem(const Variant &index_or_name) {
-  switch (index_or_name.type()) {
-    case Variant::TYPE_INT64:
-      return GetItemByIndex(VariantValue<int>()(index_or_name));
-    case Variant::TYPE_STRING:
-      return GetItemByName(VariantValue<const char *>()(index_or_name));
-    default:
-      return NULL;
+  void RemoveAllElements() {
+    for (std::vector<ElementInterface *>::iterator ite =
+         children_.begin(); ite != children_.end(); ++ite) {
+      view_->OnElementRemove(*ite);
+      (*ite)->Destroy();
+    }
+    std::vector<ElementInterface *> v;
+    children_.swap(v);
+    count_changed_ = true;
   }
-}
 
-ElementInterface *ElementsImpl::GetItemByIndex(int index) {
-  if (index >= 0 && index < static_cast<int>(children_.size()))
-    return children_[index];
-  return NULL;
-}
+  ElementInterface *GetItem(const Variant &index_or_name) {
+    switch (index_or_name.type()) {
+      case Variant::TYPE_INT64:
+        return GetItemByIndex(VariantValue<int>()(index_or_name));
+      case Variant::TYPE_STRING:
+        return GetItemByName(VariantValue<const char *>()(index_or_name));
+      default:
+        return NULL;
+    }
+  }
 
-ElementInterface *ElementsImpl::GetItemByName(const char *name) {
-  return GetItemByIndex(GetIndexByName(name));
-}
+  ElementInterface *GetItemByIndex(int index) {
+    if (index >= 0 && index < static_cast<int>(children_.size()))
+      return children_[index];
+    return NULL;
+  }
 
-int ElementsImpl::GetIndexByName(const char *name) {
-  if (name == NULL || strlen(name) == 0)
+  ElementInterface *GetItemByName(const char *name) {
+    return GetItemByIndex(GetIndexByName(name));
+  }
+
+  Variant GetItemByNameVariant(const char *name) {
+    ElementInterface *result = GetItemByName(name);
+    return result ? Variant(result) : Variant();
+  }
+
+  int GetIndexByName(const char *name) {
+    if (name == NULL || strlen(name) == 0)
+      return -1;
+    for (std::vector<ElementInterface *>::const_iterator ite =
+             children_.begin();
+         ite != children_.end(); ++ite) {
+      if (GadgetStrCmp((*ite)->GetName(), name) == 0)
+        return ite - children_.begin();
+    }
     return -1;
-  for (std::vector<ElementInterface *>::const_iterator ite = children_.begin();
-       ite != children_.end(); ++ite) {
-    if (GadgetStrCmp((*ite)->GetName(), name) == 0)
-      return ite - children_.begin();
   }
-  return -1;
-}
 
-void ElementsImpl::OnParentWidthChange(double width) {
-  if (width_ != width) {
-    width_ = width;
-    if (canvas_) {
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
-    for (std::vector<ElementInterface *>::iterator ite = children_.begin();
-         ite != children_.end(); ++ite) {
-      (*ite)->OnParentWidthChange(width);
+  void OnParentWidthChange(double width) {
+    if (width_ != width) {
+      width_ = width;
+      if (canvas_) {
+        canvas_->Destroy();
+        canvas_ = NULL;
+      }
+      for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+           ite != children_.end(); ++ite) {
+        (*ite)->OnParentWidthChange(width);
+      }
     }
   }
-}
 
-void ElementsImpl::OnParentHeightChange(double height) {
-  if (height != height_) {
-    height_ = height;
-    if (canvas_) {
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
-    for (std::vector<ElementInterface *>::iterator ite = children_.begin();
-         ite != children_.end(); ++ite) {
-      (*ite)->OnParentHeightChange(height);
+  void OnParentHeightChange(double height) {
+    if (height != height_) {
+      height_ = height;
+      if (canvas_) {
+        canvas_->Destroy();
+        canvas_ = NULL;
+      }
+      for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+           ite != children_.end(); ++ite) {
+        (*ite)->OnParentHeightChange(height);
+      }
     }
   }
-}
 
-const CanvasInterface *ElementsImpl::Draw(bool *changed) {
+  const CanvasInterface *Draw(bool *changed);
+
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
+
+  ScriptableHelper scriptable_helper_;
+  ElementFactoryInterface *factory_;
+  ElementInterface *owner_;
+  ViewInterface *view_;
+  std::vector<ElementInterface *> children_;
+  double width_;
+  double height_;
+  CanvasInterface *canvas_;
+  bool count_changed_;
+};
+
+const CanvasInterface *Elements::Impl::Draw(bool *changed) {
   ElementInterface *element;
   CanvasInterface *canvas = NULL;
   const CanvasInterface **children_canvas = NULL;
@@ -214,9 +235,10 @@ const CanvasInterface *ElementsImpl::Draw(bool *changed) {
         canvas_->PushState();
 
         element = children_[i];
-        canvas_->TranslateCoordinates(element->GetPixelX(), 
-                                      element->GetPixelY());
-        
+        canvas_->TranslateCoordinates(
+            element->GetPixelX() - element->GetPixelPinX(),
+            element->GetPixelY() - element->GetPixelPinY());
+
         if (element->GetRotation() != .0) {
           canvas_->TranslateCoordinates(element->GetPixelPinX(), 
                                         element->GetPixelPinY());
@@ -248,7 +270,7 @@ const CanvasInterface *ElementsImpl::Draw(bool *changed) {
   
   canvas = canvas_;
   
-exit:  
+exit:
   if (children_canvas) {
     delete[] children_canvas;
     children_canvas = NULL;
@@ -258,12 +280,10 @@ exit:
   return canvas;
 }
 
-} // namespace internal
-
 Elements::Elements(ElementFactoryInterface *factory,
                    ElementInterface *owner,
                    ViewInterface *view)
-    : impl_(new internal::ElementsImpl(factory, owner, view)) {
+    : impl_(new Impl(factory, owner, view)) {
 }
 
 Elements::~Elements() {

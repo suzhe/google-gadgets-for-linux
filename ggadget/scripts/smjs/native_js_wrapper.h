@@ -61,16 +61,38 @@ private:
 
   static JSBool CallWrapperMethod(JSContext *cx, JSObject *obj,
                                   uintN argc, jsval *argv, jsval *rval);
-  static JSBool GetWrapperProperty(JSContext *cx, JSObject *obj,
-                                   jsval id, jsval *vp);
-  static JSBool SetWrapperProperty(JSContext *cx, JSObject *obj,
-                                   jsval id, jsval *vp);
+
+  // This pair of methods handle all GetProperty and SetProperty callbacks
+  // for system built-in properties, unknown properties or array indexes.
+  static JSBool GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
+                                          jsval id, jsval *vp);
+  static JSBool SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
+                                          jsval id, jsval *vp);
+
+  // This pair of methods handle all GetProperty and SetProperty callbacks
+  // for registered native properties with ids fitting in tinyid (-128>=id>0).
+  static JSBool GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
+                                          jsval id, jsval *vp);
+  static JSBool SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
+                                          jsval id, jsval *vp);
+
+  // This pair of methods handle all GetProperty and SetProperty callbacks
+  // for dynamic properties and registered native properties with ids not
+  // fitting in tinyid (id<-128).
+  static JSBool GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
+                                         jsval id, jsval *vp);
+  static JSBool SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
+                                         jsval id, jsval *vp);
   static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id);
   static void FinalizeWrapper(JSContext *cx, JSObject *obj);
 
   JSBool InvokeMethod(uintN argc, jsval *argv, jsval *rval);
-  JSBool GetProperty(jsval id, jsval *vp);
-  JSBool SetProperty(jsval id, jsval vp);
+  JSBool GetPropertyDefault(jsval id, jsval *vp);
+  JSBool SetPropertyDefault(jsval id, jsval vp);
+  JSBool GetPropertyByIndex(jsval id, jsval *vp);
+  JSBool SetPropertyByIndex(jsval id, jsval vp);
+  JSBool GetPropertyByName(jsval id, jsval *vp);
+  JSBool SetPropertyByName(jsval id, jsval vp);
   JSBool ResolveProperty(jsval id);
 
   static JSClass wrapper_js_class_;
@@ -80,7 +102,6 @@ private:
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
   Connection *ondelete_connection_;
-  bool has_named_properties_;
 };
 
 } // namespace ggadget

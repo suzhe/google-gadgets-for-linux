@@ -106,7 +106,10 @@ gboolean GtkCairoHost::DispatchTimer(gpointer data) {
   
   if (!tmevent.GetReceiveMore()) {
     // Event receiver has indicated that this timer should be removed.
-    tmdata->host->timers_.erase(tmdata);
+    // RemoveTimer may have been called during view->OnTimerEvent, so double
+    // check tmdata.
+    if (tmdata->host)
+      tmdata->host->timers_.erase(tmdata);
     delete tmdata;  
     tmdata = NULL;
     return FALSE;
@@ -115,7 +118,7 @@ gboolean GtkCairoHost::DispatchTimer(gpointer data) {
 }
 
 void *GtkCairoHost::RegisterTimer(unsigned ms, 
-                                 ElementInterface *target, void *data) {
+                                  ElementInterface *target, void *data) {
   // We actually don't need to write our own callback to wrap this here, since
   // TimerCallback and GSourceFunc has the same prototype. 
   // But for safety reasons and to ensure clean host detachment, we wrap it

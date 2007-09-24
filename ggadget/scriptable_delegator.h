@@ -40,9 +40,10 @@ class ScriptableDelegator : public ScriptableInterface {
 	ScriptableDelegator(ScriptableInterface *scriptable, bool strict)
 	    : scriptable_(scriptable),
 	      strict_(strict) { }
+	virtual ~ScriptableDelegator() { }
 
-  DEFALUT_OWNERSHIP_POLICY
-	DELEGATE_SCRIPTABLE_INTERFACE(scriptable_)
+  DEFAULT_OWNERSHIP_POLICY
+	DELEGATE_SCRIPTABLE_INTERFACE(*scriptable_)
 	
   virtual bool IsInstanceOf(uint64_t class_id) const {
     return scriptable_->IsInstanceOf(class_id);

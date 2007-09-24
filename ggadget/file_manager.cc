@@ -169,6 +169,46 @@ bool FileManagerImpl::GetXMLFileContents(const char *file,
   return true;
 }
 
+bool FileManagerImpl::ExtractFile(const char *file, std::string *into_file) {
+  std::string data;
+  std::string real_path;
+  if (!GetFileContents(file, &data, &real_path))
+    return false;
+
+  // TODO: System dependent.
+  ASSERT(into_file);
+  char tmp_buffer[] = "/tmp/gglXXXXXX";
+  FILE *fp;
+  if (into_file->empty()) {
+    int fd = mkstemp(tmp_buffer);
+    if (fd < 0) {
+      LOG("Failed to mkstemp errno=%d", errno);
+      return false;
+    }
+    fp = fdopen(fd, "w");
+    if (fp == NULL) {
+      LOG("Failed to fdopen %s", tmp_buffer);
+      close(fd);
+      return false;
+    }
+    *into_file = tmp_buffer;
+  } else {
+    fp = fopen(into_file->c_str(), "w");
+    if (fp == NULL) {
+      LOG("Failed to fopen %s", into_file->c_str());
+      return false;
+    }
+  }
+
+  bool succeeded = true;
+  if (fwrite(data.c_str(), 1, data.size(), fp) != data.size()) {
+    LOG("Failed writing to file %s", into_file->c_str());
+    succeeded = false;
+  }
+  fclose(fp);
+  return succeeded;
+}
+
 bool FileManagerImpl::InitLocaleStrings() {
   char *locale = setlocale(LC_MESSAGES, NULL);
   if (!locale)
@@ -438,6 +478,10 @@ bool FileManager::GetXMLFileContents(const char *file,
                                      std::string *data,
                                      std::string *path) {
   return impl_->GetXMLFileContents(file, data, path);
+}
+
+bool FileManager::ExtractFile(const char *file, std::string *into_file) {
+  return impl_->ExtractFile(file, into_file);
 }
 
 } // namespace ggadget

@@ -55,20 +55,29 @@ class Elements : public ScriptableInterface {
   /** Not virtual because no inheritation to this class is allowed. */
   ~Elements();
 
- public:  
-  /** @see ElementsInterface::GetCount */
+ public:
+  /**
+   * @return number of children.
+   */
   int GetCount() const;
 
-  /** @see ElementsInterface::GetItemByIndex */
+  /**
+   * Returns the element identified by the index.
+   * @param child the index of the child.
+   * @return the pointer to the specified element. If the parameter is out of
+   *     range, @c NULL is returned.
+   */
   ElementInterface *GetItemByIndex(int child);
-
-  /** @see ElementsInterface::GetItemByIndex */
-  ElementInterface *GetItemByName(const char *child);
-
-  /** @see ElementsInterface::GetItemByIndex */
   const ElementInterface *GetItemByIndex(int child) const;
 
-  /** @see ElementsInterface::GetItemByIndex */
+  /**
+   * Returns the element identified by the name.
+   * @param child the name of the child.
+   * @return the pointer to the specified element. If multiple elements are
+   *     defined with the same name, returns the first one. Returns @c NULL if
+   *     no elements match.
+   */
+  ElementInterface *GetItemByName(const char *child);
   const ElementInterface *GetItemByName(const char *child) const;
 
   /**
@@ -155,13 +164,14 @@ class Elements : public ScriptableInterface {
    * @return canvas with the elements drawn. NULL if GetCount() == 0.
    */
   const CanvasInterface *Draw(bool *changed);
-    
+
   DEFAULT_OWNERSHIP_POLICY
   SCRIPTABLE_INTERFACE_DECL
   virtual bool IsStrict() const { return true; }
 
  private:
-  internal::ElementsImpl *impl_;
+  class Impl;
+  Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(Elements);
 };
 

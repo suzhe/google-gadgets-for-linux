@@ -15,25 +15,32 @@
 */
 
 #include <vector>
-#include "math_utils.h"
 #include "view.h"
 #include "element_factory_interface.h"
 #include "element_interface.h"
 #include "elements.h"
 #include "event.h"
+#include "file_manager_interface.h"
 #include "gadget_interface.h"
 #include "graphics_interface.h"
 #include "host_interface.h"
 #include "image.h"
+#include "math_utils.h"
+#include "script_context_interface.h"
+#include "scriptable_delegator.h"
 #include "slot.h"
+#include "xml_utils.h"
 
 namespace ggadget {
 
 class View::Impl {
  public:
-  Impl(GadgetInterface *gadget, ElementFactoryInterface *element_factory,
+  Impl(ScriptContextInterface *script_context,
+       GadgetInterface *gadget,
+       ElementFactoryInterface *element_factory,
        View *owner)
-    : gadget_(gadget),
+    : script_context_(script_context),
+      gadget_(gadget),
       element_factory_(element_factory),
       children_(element_factory, NULL, owner),
       width_(200), height_(200),
@@ -41,10 +48,22 @@ class View::Impl {
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
-      current_timer_token_(1) {
+      current_timer_token_(1),
+      non_strict_delegator_(new ScriptableDelegator(owner, false)) {
   }
 
-  ~Impl() { }
+  ~Impl() {
+    delete non_strict_delegator_;
+    non_strict_delegator_ = NULL;
+
+    TimerMap::iterator it = timer_map_.begin();
+    while (it != timer_map_.end()) {
+      TimerMap::iterator next = it;
+      ++next;
+      RemoveTimer(it->first);
+      it = next;
+    }
+  }
 
   void OnMouseEvent(MouseEvent *event) {
     switch (event->GetType()) {
@@ -106,10 +125,8 @@ class View::Impl {
 
   void OnTimerEvent(TimerEvent *event) {
     ASSERT(event->GetType() == Event::EVENT_TIMER_TICK);
-    DLOG("timer tick");
-
     if (event->GetTarget()) {
-      // TODO: Dispatch the event to the element target. 
+      // TODO: Dispatch the event to the element target.
     } else {
       // The target is this view.
       int token = reinterpret_cast<int>(event->GetData());
@@ -124,8 +141,8 @@ class View::Impl {
       switch (info.type) {
         case TIMER_TIMEOUT:
           event->StopReceivingMore();
-          RemoveTimer(token);
           info.slot->Call(0, NULL);
+          RemoveTimer(token);
           break;
         case TIMER_INTERVAL:
           info.slot->Call(0, NULL);
@@ -162,7 +179,7 @@ class View::Impl {
       break;
      case Event::EVENT_FOCUS_OUT:
       DLOG("focusout");
-      // View doesn't have focus out event according to the API document.     
+      // View doesn't have focus out event according to the API document.
       break;
      default:
       ASSERT(false);
@@ -206,7 +223,7 @@ class View::Impl {
       if (host_) {
         host_->QueueDraw();
       }
-  
+
       // TODO: Is NULL a proper current event object for the script?
       FireEvent(NULL, onsize_event_);
     }
@@ -221,7 +238,7 @@ class View::Impl {
       if (host_) {
         host_->QueueDraw();
       }
-  
+
       // TODO: Is NULL a proper current event object for the script?
       FireEvent(NULL, onsize_event_);
     }
@@ -292,6 +309,12 @@ class View::Impl {
     return it == all_elements_.end() ? NULL : it->second;
   }
 
+  // For script.
+  Variant GetElementByNameVariant(const char *name) {
+    ElementInterface *result = GetElementByName(name);
+    return result ? Variant(result) : Variant();
+  }
+
   enum TimerType { TIMER_ANIMATION, TIMER_TIMEOUT, TIMER_INTERVAL };
   int NewTimer(TimerType type, Slot *slot,
                int start_value, int end_value, unsigned int duration) {
@@ -305,7 +328,7 @@ class View::Impl {
       if (current_timer_token_ < INT_MAX) current_timer_token_++;
       else current_timer_token_ = 1;
     } while (timer_map_.find(current_timer_token_) != timer_map_.end());
-    
+
     TimerInfo &info = timer_map_[current_timer_token_];
     info.token = current_timer_token_;
     info.type = type;
@@ -316,7 +339,7 @@ class View::Impl {
     info.duration = duration;
     info.start_time = host_->GetCurrentTime();
     info.host_timer = host_->RegisterTimer(
-        type == TIMER_ANIMATION ? kAnimationInterval : duration, 
+        type == TIMER_ANIMATION ? kAnimationInterval : duration,
         NULL,
         // Passing an integer is safer than passing a struct pointer.
         reinterpret_cast<void *>(current_timer_token_));
@@ -333,7 +356,8 @@ class View::Impl {
       return;
     }
 
-    host_->RemoveTimer(it->second.host_timer);
+    if (host_)
+      host_->RemoveTimer(it->second.host_timer);
     delete it->second.slot;
     timer_map_.erase(it);
   }
@@ -363,6 +387,17 @@ class View::Impl {
     RemoveTimer(token);
   }
 
+  void Alert(const char *message) {
+    LOG("ALERT: %s", message);
+    // TODO:
+  }
+
+  bool Confirm(const char *message) {
+    LOG("CONFIRM: %s", message);
+    // TODO:
+    return true;
+  }
+
   EventSignal oncancle_event_;
   EventSignal onclick_event_;
   EventSignal onclose_event_;
@@ -386,6 +421,7 @@ class View::Impl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
 
+  ScriptContextInterface *script_context_;
   GadgetInterface *gadget_;
   ElementFactoryInterface *element_factory_;
   Elements children_;
@@ -416,12 +452,17 @@ class View::Impl {
   typedef std::map<int, TimerInfo> TimerMap;
   TimerMap timer_map_;
   int current_timer_token_;
+
+  ScriptableDelegator *non_strict_delegator_;
 };
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
-View::View(GadgetInterface *gadget, ElementFactoryInterface *element_factory)
-    : impl_(new Impl(gadget, element_factory, this)) {
+View::View(ScriptContextInterface *script_context,
+           GadgetInterface *gadget,
+           ScriptableInterface *prototype,
+           ElementFactoryInterface *element_factory)
+    : impl_(new Impl(script_context, gadget, element_factory, this)) {
   RegisterProperty("caption", NewSlot(this, &View::GetCaption),
                    NewSlot(this, &View::SetCaption));
   RegisterConstant("children", GetChildren());
@@ -436,6 +477,8 @@ View::View(GadgetInterface *gadget, ElementFactoryInterface *element_factory)
   RegisterProperty("showCaptionAlways",
                    NewSlot(this, &View::GetShowCaptionAlways),
                    NewSlot(this, &View::SetShowCaptionAlways));
+  // The global view object is itself.
+  RegisterConstant("view", this);
 
   RegisterMethod("appendElement",
                  NewSlot(GetChildren(), &Elements::AppendElementFromXML));
@@ -453,8 +496,8 @@ View::View(GadgetInterface *gadget, ElementFactoryInterface *element_factory)
   RegisterMethod("setInterval", NewSlot(impl_, &Impl::SetInterval));
   RegisterMethod("clearInterval", NewSlot(this, &View::ClearInterval));
 
-  // TODO: RegisterMethod("alert", NewSlot(this, &ViewImpl::Alert));
-  // TODO: RegisterMethod("confirm", NewSlot(this, &ViewImpl::Confirm));
+  RegisterMethod("alert", NewSlot(impl_, &Impl::Alert));
+  RegisterMethod("confirm", NewSlot(impl_, &Impl::Confirm));
 
   RegisterMethod("resizeBy", NewSlot(impl_, &Impl::ResizeBy));
   RegisterMethod("resizeTo", NewSlot(this, &View::SetSize));
@@ -485,7 +528,14 @@ View::View(GadgetInterface *gadget, ElementFactoryInterface *element_factory)
   RegisterSignal("onsizing", &impl_->onsizing_event_);
   RegisterSignal("onundock", &impl_->onundock_event_);
 
-  SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetElementByName), NULL);
+  SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetElementByNameVariant),
+                            NULL);
+
+  if (prototype)
+    SetPrototype(prototype);
+
+  if (script_context)
+    script_context->SetGlobalObject(impl_->non_strict_delegator_);
 }
 
 View::~View() {
@@ -495,6 +545,27 @@ View::~View() {
 
 bool View::AttachHost(HostInterface *host) {
   return impl_->AttachHost(host);
+}
+
+bool View::InitFromFile(const char *filename) {
+  std::string contents;
+  std::string real_path;
+  if (impl_->gadget_->GetFileManager()->GetXMLFileContents(
+          filename, &contents, &real_path) &&
+      SetupViewFromXML(this, contents.c_str(), real_path.c_str())) {
+    impl_->onopen_event_();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+ScriptContextInterface *View::GetScriptContext() const {
+  return impl_->script_context_;
+}
+
+FileManagerInterface *View::GetFileManager() const {
+  return impl_->gadget_->GetFileManager();
 }
 
 int View::GetWidth() const {

@@ -80,7 +80,11 @@ const char *const kStringsTag = "strings";
 const char *const kViewTag = "view";
 /** The tag name of the root element in gadget.gmanifest files. */
 const char *const kGadgetTag = "gadget";
-/** The attribute name of the 'name' attribute of elements. */
+/** The tag name of script elements */
+const char *const kScriptTag = "script";
+/** The name of the 'src' attribute of script elements. */
+const char *const kSrcAttr = "src";
+/** The name of the 'name' attribute of elements. */
 const char *const kNameAttr = "name";
 /** The property name for elements to contain its text contents. */
 const char *const kInnerTextProperty = "innerText";

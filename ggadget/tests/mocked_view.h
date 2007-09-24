@@ -32,6 +32,10 @@ class MockedView : public ggadget::ViewInterface {
   virtual int GetHeight() const { return 300; }
 
   virtual bool AttachHost(ggadget::HostInterface *host) { return true; };
+  virtual ggadget::ScriptContextInterface *GetScriptContext() const
+      { return NULL; }
+  virtual bool InitFromFile(const char *filename) { return true; }
+  virtual ggadget::FileManagerInterface *GetFileManager() const { return NULL; }
 
   virtual void OnMouseEvent(ggadget::MouseEvent *event) {};
   virtual void OnKeyEvent(ggadget::KeyboardEvent *event) {};
