@@ -22,6 +22,7 @@
 #include "ggadget/file_manager.h"
 #include "ggadget/gadget.h"
 #include "ggadget/img_element.h"
+#include "ggadget/button_element.h"
 #include "ggadget/scripts/smjs/js_script_context.h"
 #include "ggadget/view.h"
 #include "gadget_view_widget.h"
@@ -35,6 +36,7 @@ using ggadget::View;
 using ggadget::FileManagerInterface;
 using ggadget::FileManager;
 using ggadget::ImgElement;
+using ggadget::ButtonElement;
 
 double g_zoom = 1.;
 Gadget *g_gadget = NULL;
@@ -56,10 +58,15 @@ static gboolean DestroyHandler(GtkWidget *widget,
   return FALSE;
 }
 
-static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, 
-                           const char *base_path) {
+static void SetUpElementFactory() {
   g_element_factory = new ElementFactory();
   g_element_factory->RegisterElementClass("img", &ImgElement::CreateInstance);
+  g_element_factory->RegisterElementClass("button", &ButtonElement::CreateInstance);
+}
+
+static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, 
+                           const char *base_path) {
+  SetUpElementFactory();
   g_script_runtime = new JSScriptRuntime();
   g_gadget = new Gadget(g_script_runtime, g_element_factory);
 

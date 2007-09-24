@@ -27,6 +27,7 @@ SET(SRCS
   gadget.cc
   image.cc
   img_element.cc
+  button_element.cc
   math_utils.cc
   scriptable_helper.cc
   signal.cc

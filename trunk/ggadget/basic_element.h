@@ -83,6 +83,7 @@ class BasicElement : public ElementInterface {
   virtual void SetRotation(double rotation);
   virtual double GetOpacity() const;
   virtual void SetOpacity(double opacity);
+  
   virtual bool IsVisible() const;
   virtual void SetVisible(bool visible);
 
@@ -114,8 +115,9 @@ class BasicElement : public ElementInterface {
   /** 
    * Call this when drawing to initialize and prepare a canvas of the right
    * height and width for drawing.
+   * @return the canvas that was set up. Equivalent to GetCanvas()
    */
-  void SetUpCanvas();
+  CanvasInterface *SetUpCanvas();
   /** 
    * Gets the internally stored canvas. 
    * This should only be used for drawing. 
