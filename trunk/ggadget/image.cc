@@ -66,7 +66,7 @@ class Image::Impl {
     }
   }
 
-  Impl::~Impl() {
+  ~Impl() {
     if (canvas_) {
       canvas_->Destroy();
       canvas_ = NULL;
