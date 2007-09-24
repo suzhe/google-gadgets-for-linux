@@ -175,7 +175,7 @@ class ScriptableHelper : public ScriptableInterface {
                                      bool *is_method);
   /** @see ScriptableInterface::GetPropertyInfoById() */
   virtual bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method);
+                                   bool *is_method, const char **name);
   /** @see ScriptableInterface::GetProperty() */
   virtual Variant GetProperty(int id);
   /** @see ScriptableInterface::SetProperty() */

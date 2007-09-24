@@ -20,20 +20,31 @@
 
 using namespace ggadget;
 
-static TestScriptable1 *test_scriptable1;
-static TestScriptable2 *test_scriptable2;
+class GlobalObject : public ScriptableInterface {
+ public:
+  DEFINE_CLASS_ID(0x7067c76cc0d84d11, ScriptableInterface);
+  GlobalObject() {
+    scriptable_helper_.RegisterConstant("scriptable", &test_scriptable1);
+    scriptable_helper_.RegisterConstant("scriptable2", &test_scriptable2);
+  }
+  DEFAULT_OWNERSHIP_POLICY
+  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
+  virtual bool IsStrict() const { return false; }
+
+  ScriptableHelper scriptable_helper_;
+  TestScriptable1 test_scriptable1;
+  TestScriptable2 test_scriptable2;
+};
+
+static GlobalObject *global;
 
 // Called by the initialization code in js_shell.cc.
 JSBool InitCustomObjects(JSScriptContext *context) {
-  test_scriptable1 = new TestScriptable1();
-  context->SetValue(NULL, "scriptable", Variant(test_scriptable1));
-  test_scriptable2 = new TestScriptable2();
-  context->SetValue(NULL, "scriptable2", Variant(test_scriptable2));
+  global = new GlobalObject();
+  context->SetGlobalObject(global);
   return JS_TRUE;
 }
 
 void DestroyCustomObjects(JSScriptContext *context) {
-  delete test_scriptable1;
-  delete test_scriptable2;
+  delete global;
 }
- 

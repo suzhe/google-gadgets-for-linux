@@ -15,6 +15,7 @@
 */
 
 #include "js_script_context.h"
+#include "js_script_runtime.h"
 #include "ggadget/common.h"
 #include "ggadget/scoped_ptr.h"
 #include "ggadget/slot.h"
@@ -23,53 +24,6 @@
 #include "native_js_wrapper.h"
 
 namespace ggadget {
-
-const uint32 kDefaultContextSize = 64 * 1024 * 1024;
-const uint32 kDefaultStackTrunkSize = 4096;
-
-JSScriptRuntime::JSScriptRuntime()
-    : runtime_(JS_NewRuntime(kDefaultContextSize)) {
-  // TODO: deal with errors in release build.
-  ASSERT(runtime_);
-  JS_SetRuntimePrivate(runtime_, this);
-}
-
-JSScriptRuntime::~JSScriptRuntime() {
-  ASSERT(runtime_);
-  JS_DestroyRuntime(runtime_);
-}
-
-ScriptContextInterface *JSScriptRuntime::CreateContext() {
-  ASSERT(runtime_);
-  JSContext *context = JS_NewContext(runtime_, kDefaultStackTrunkSize);
-  ASSERT(context);
-  if (!context)
-    return NULL;
-  JS_SetErrorReporter(context, ReportError);
-  return new JSScriptContext(context);
-}
-
-Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {
-  return error_reporter_signal_.Connect(reporter);
-}
-
-void JSScriptRuntime::ReportError(JSContext *cx, const char *message,
-                                  JSErrorReport *report) {
-  JSRuntime *js_runtime = JS_GetRuntime(cx);
-  ASSERT(js_runtime);
-  JSScriptRuntime *runtime = reinterpret_cast<JSScriptRuntime *>
-      (JS_GetRuntimePrivate(js_runtime));
-  ASSERT(runtime);
-
-  char lineno_buf[16];
-  snprintf(lineno_buf, sizeof(lineno_buf), "%d", report->lineno);
-  std::string error_report(report->filename);
-  error_report += ':';
-  error_report += lineno_buf;
-  error_report += ": ";
-  error_report += message;
-  runtime->error_reporter_signal_(error_report.c_str());
-}
 
 /**
  * A Slot that wraps a JavaScript function object.
@@ -102,6 +56,9 @@ class JSFunctionSlot : public Slot {
   const Slot *prototype_;
   JSContext *context_;
   jsval function_val_;
+#ifdef _DEBUG
+  std::string root_name_;
+#endif
 };
 
 JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
@@ -111,7 +68,13 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
       context_(context),
       function_val_(function_val) {
   // Add a reference to the function object to prevent it from being GC'ed.
+#ifdef _DEBUG
+  root_name_ = "JSFunctionSlot jsfunc=";
+  root_name_ += JS_GetFunctionName(JS_ValueToFunction(context, function_val));
+  JS_AddNamedRoot(context_, &function_val_, root_name_.c_str());
+#else
   JS_AddRoot(context_, &function_val_);
+#endif
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
@@ -138,7 +101,8 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
   if (result) {
     result = ConvertJSToNative(context_, return_value, rval, &return_value);
     if (!result)
-      JS_ReportError(context_, "Failed to convert jsval(%s) to native",
+      JS_ReportError(context_,
+                     "Failed to convert JS function return value(%s) to native",
                      ConvertJSToString(context_, rval).c_str());
   }
   return return_value;
@@ -292,7 +256,7 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
   Variant return_value = slot->Call(argc, params.get());
   JSBool result = ConvertNativeToJS(cx, return_value, rval);
   if (!result)
-    JS_ReportError(cx, "Failed to convert result(%s) to jsval",
+    JS_ReportError(cx, "Failed to convert native function result(%s) to jsval",
                    return_value.ToString().c_str());
   return result;
 }
@@ -320,6 +284,17 @@ void JSScriptContext::Destroy() {
   delete this;
 }
 
+void JSScriptContext::Execute(const char *script,
+                              const char *filename,
+                              int lineno) {
+  UTF16String utf16_string;
+  ConvertStringUTF8ToUTF16(script, strlen(script), &utf16_string);
+  jsval rval;
+  JS_EvaluateUCScript(context_, JS_GetGlobalObject(context_),
+                      utf16_string.c_str(), utf16_string.size(),
+                      filename, lineno, &rval);
+}
+
 Slot *JSScriptContext::Compile(const char *script,
                                const char *filename,
                                int lineno) {
@@ -336,40 +311,6 @@ Slot *JSScriptContext::Compile(const char *script,
 
   return new JSFunctionSlot(
       NULL, context_, OBJECT_TO_JSVAL(JS_GetFunctionObject(function)));
-}
-
-bool JSScriptContext::SetValue(const char *object_expression,
-                               const char *property_name,
-                               const Variant &value) {
-  JSObject *object;
-  if (!object_expression) {
-    object = JS_GetGlobalObject(context_);
-  } else {
-    jsval rval;
-    if (!JS_EvaluateScript(context_, JS_GetGlobalObject(context_),
-                           object_expression, strlen(object_expression),
-                           NULL, 0, &rval) ||
-        JSVAL_IS_NULL(rval) || !JSVAL_IS_OBJECT(rval)) {
-      JS_ReportError(context_,
-          "Can't evaluate '%s' or it doesn't evaluate to a non-null object",
-          object_expression);
-      return false;
-    }
-    object = JSVAL_TO_OBJECT(rval);
-  }
-
-  if (!object)
-    // Should not occur.
-    return false;
-
-  jsval js_val;
-  if (!ConvertNativeToJS(context_, value, &js_val)) {
-    JS_ReportError(context_,
-                   "Failed to convert native value(%s) to JavaScript",
-                   value.ToString().c_str());
-    return false;
-  }
-  return JS_SetProperty(context_, object, property_name, &js_val);
 }
 
 bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {

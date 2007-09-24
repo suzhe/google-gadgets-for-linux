@@ -33,6 +33,7 @@ static void CheckProperty(int i, ScriptableInterface *scriptable,
   int id;
   Variant prototype;
   bool is_method;
+  const char *name;
   printf("CheckProperty: %d %s\n", i, info.name);
   ASSERT_TRUE(scriptable->GetPropertyInfoByName(info.name, &id,
                                                 &prototype, &is_method));
@@ -40,10 +41,12 @@ static void CheckProperty(int i, ScriptableInterface *scriptable,
   ASSERT_EQ(info.is_method, is_method);
   ASSERT_EQ(info.prototype, prototype);
 
-  ASSERT_TRUE(scriptable->GetPropertyInfoById(id, &prototype, &is_method));
+  ASSERT_TRUE(scriptable->GetPropertyInfoById(id, &prototype,
+                                              &is_method, &name));
   ASSERT_EQ(info.id, id);
   ASSERT_EQ(info.is_method, is_method);
   ASSERT_EQ(info.prototype, prototype);
+  ASSERT_STREQ(info.name, name);
 }
 
 static void CheckFalseProperty(ScriptableInterface *scriptable,

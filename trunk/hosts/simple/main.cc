@@ -23,7 +23,7 @@
 #include "ggadget/gadget.h"
 #include "ggadget/img_element.h"
 #include "ggadget/button_element.h"
-#include "ggadget/scripts/smjs/js_script_context.h"
+#include "ggadget/scripts/smjs/js_script_runtime.h"
 #include "ggadget/view.h"
 #include "gadget_view_widget.h"
 
@@ -87,8 +87,6 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
     LOG("Error: unable to load gadget from %s", base_path);
   }
   
-  gtk_widget_show_all(GTK_WIDGET(window));
-  
   return true;
 }
 
@@ -130,13 +128,14 @@ static bool CreateGTKUI(const char *base_path) {
 }
 
 static void DestroyUI() {
-  delete g_script_runtime;
-  delete g_gadget->GetMainView();
-  delete g_gadget->GetOptionsView();
   delete g_gadget;
   g_gadget = NULL;
+  delete g_script_runtime;
+  g_script_runtime = NULL;
   delete g_element_factory;
+  g_element_factory = NULL;
   delete g_file_manager;
+  g_file_manager = NULL;
 }
 
 int main(int argc, char* argv[]) {

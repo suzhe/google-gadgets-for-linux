@@ -43,7 +43,8 @@ class ScriptableHelper::Impl {
   bool GetPropertyInfoByName(const char *name,
                              int *id, Variant *prototype,
                              bool *is_method);
-  bool GetPropertyInfoById(int id, Variant *prototype, bool *is_method);
+  bool GetPropertyInfoById(int id, Variant *prototype,
+                           bool *is_method, const char **name);
   Variant GetProperty(int id);
   bool SetProperty(int id, Variant value);
 
@@ -51,6 +52,7 @@ class ScriptableHelper::Impl {
   typedef std::map<const char *, int, GadgetCharPtrComparator> SlotIndexMap;
   typedef std::vector<Variant> VariantVector;
   typedef std::vector<Slot *> SlotVector;
+  typedef std::vector<const char *> NameVector;
   typedef std::map<const char *, Variant, GadgetCharPtrComparator> ConstantMap;
 
   // If true, no more new RegisterXXX or SetPrototype can be called.
@@ -63,6 +65,7 @@ class ScriptableHelper::Impl {
   VariantVector slot_prototypes_;
   SlotVector getter_slots_;
   SlotVector setter_slots_;
+  NameVector slot_names_; 
 
   // Redundant value to simplify code.
   // It should always equal to the size of above collections.
@@ -132,6 +135,7 @@ void ScriptableHelper::Impl::RegisterProperty(const char *name,
   slot_prototypes_.push_back(prototype);
   getter_slots_.push_back(getter);
   setter_slots_.push_back(setter);
+  slot_names_.push_back(name);
   property_count_++;
   ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
 }
@@ -147,6 +151,7 @@ void ScriptableHelper::Impl::RegisterMethod(const char *name, Slot *slot) {
   slot_prototypes_.push_back(Variant(slot));
   getter_slots_.push_back(NULL);
   setter_slots_.push_back(NULL);
+  slot_names_.push_back(name);
   property_count_++;
   ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
 }
@@ -168,6 +173,7 @@ void ScriptableHelper::Impl::RegisterSignal(const char *name, Signal *signal) {
   getter_slots_.push_back(NewSlot(connection, &Connection::slot));
   // The setter accepts a Slot * parameter and connect it to the signal.
   setter_slots_.push_back(NewSlot(connection, &Connection::Reconnect));
+  slot_names_.push_back(name);
 
   property_count_++;
   ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
@@ -267,7 +273,8 @@ bool ScriptableHelper::Impl::GetPropertyInfoByName(const char *name,
 }
 
 bool ScriptableHelper::Impl::GetPropertyInfoById(int id, Variant *prototype,
-                                                 bool *is_method) {
+                                                 bool *is_method,
+                                                 const char **name) {
   ASSERT(prototype);
   ASSERT(is_method);
   sealed_ = true;
@@ -287,13 +294,14 @@ bool ScriptableHelper::Impl::GetPropertyInfoById(int id, Variant *prototype,
   if (index >= property_count_) {
     if (prototype_)
       return prototype_->GetPropertyInfoById(id + property_count_,
-                                             prototype, is_method);
+                                             prototype, is_method, name);
     else
       return false;
   }
 
   *prototype = slot_prototypes_[index];
   *is_method = getter_slots_[index] == NULL;
+  *name = slot_names_[index];
   return true;
 }
 
@@ -436,8 +444,8 @@ bool ScriptableHelper::GetPropertyInfoByName(const char *name,
 }
 
 bool ScriptableHelper::GetPropertyInfoById(int id, Variant *prototype,
-                                           bool *is_method) {
-  return impl_->GetPropertyInfoById(id, prototype, is_method);
+                                           bool *is_method, const char **name) {
+  return impl_->GetPropertyInfoById(id, prototype, is_method, name);
 }
 
 Variant ScriptableHelper::GetProperty(int id) {

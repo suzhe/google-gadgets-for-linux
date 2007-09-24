@@ -29,6 +29,7 @@ namespace internal {
 
 class GadgetInterface;
 class ElementFactoryInterface;
+class ScriptContextInterface;
 
 /**
  * Main View implementation.
@@ -37,10 +38,16 @@ class View : public ViewInterface {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
-  View(GadgetInterface *gadget, ElementFactoryInterface *element_factory);
+  View(ScriptContextInterface *script_context,
+       GadgetInterface *gadget,
+       ScriptableInterface *prototype,
+       ElementFactoryInterface *element_factory);
   virtual ~View();
-  
+
   virtual bool AttachHost(HostInterface *host);
+  virtual bool InitFromFile(const char *filename);
+  virtual ScriptContextInterface *GetScriptContext() const;
+  virtual FileManagerInterface *GetFileManager() const;
 
   virtual void OnMouseEvent(MouseEvent *event);
   virtual void OnKeyEvent(KeyboardEvent *event);
@@ -60,10 +67,10 @@ class View : public ViewInterface {
   virtual int GetWidth() const;
   virtual int GetHeight() const;
 
-  virtual const CanvasInterface *Draw(bool *changed);   
+  virtual const CanvasInterface *Draw(bool *changed);
   virtual const GraphicsInterface *GetGraphics() const;
   virtual void QueueDraw();
-  
+
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;
   virtual void SetCaption(const char *caption);

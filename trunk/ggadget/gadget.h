@@ -22,33 +22,29 @@
 
 namespace ggadget {
 
-namespace internal {
-  class GadgetImpl;
-}
-
 class ElementFactoryInterface;
 class FileManagerInterface;
 class ScriptRuntimeInterface;
-   
+
 /**
  * Interface for representing a Gadget in the Desktop Gadget API.
  */
 class Gadget: public GadgetInterface {
- public:   
+ public:
   Gadget(ScriptRuntimeInterface *script_runtime,
          ElementFactoryInterface *element_factory);
+  virtual ~Gadget();
 
   virtual ViewInterface *GetMainView();
-   
   virtual ViewInterface *GetOptionsView();
-
   virtual FileManagerInterface *GetFileManager();
-
   virtual const char *GetManifestInfo(const char *key);
 
-  bool InitFromPath(const char *base_path);
+  virtual void DebugError(const char *message);
+  virtual void DebugTrace(const char *message);
+  virtual void DebugWarning(const char *message);
 
-  virtual ~Gadget();
+  bool InitFromPath(const char *base_path);
 
  private:
   class Impl;

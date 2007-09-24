@@ -140,10 +140,12 @@ class ScriptableInterface {
    * @param[out] prototype return a prototype of the property value, from
    *     which the script engine can get detailed information.
    * @param[out] is_method true if this property corresponds a method.
+   * @param[out] name the name of the property.
    * @return @c true if the property is supported and succeeds.
    */
   virtual bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method) = 0;
+                                   bool *is_method,
+                                   const char **name) = 0;
 
   /**
    * Get the value of a property by its id.
@@ -235,8 +237,8 @@ virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
   return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
 }                                                                             \
 virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
-                                 bool *is_method) {                           \
-  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
+                                 bool *is_method, const char **name) {        \
+  return (delegate).GetPropertyInfoById(id, prototype, is_method, name);      \
 }                                                                             \
 virtual ::ggadget::Variant GetProperty(int id) {                              \
   return (delegate).GetProperty(id);                                          \
@@ -259,7 +261,7 @@ virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
                                    ::ggadget::Variant *prototype,             \
                                    bool *is_method);                          \
 virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
-                                 bool *is_method);                            \
+                                 bool *is_method, const char **name);         \
 virtual ::ggadget::Variant GetProperty(int id);                               \
 virtual bool SetProperty(int id, ::ggadget::Variant value);
 
@@ -282,8 +284,8 @@ bool class_name::GetPropertyInfoByName(const char *name, int *id,             \
   return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
 }                                                                             \
 bool class_name::GetPropertyInfoById(int id, ::ggadget::Variant *prototype,   \
-                                     bool *is_method) {                       \
-  return (delegate).GetPropertyInfoById(id, prototype, is_method);            \
+                                     bool *is_method, const char **name) {    \
+  return (delegate).GetPropertyInfoById(id, prototype, is_method, name);      \
 }                                                                             \
 ::ggadget::Variant class_name::GetProperty(int id) {                          \
   return (delegate).GetProperty(id);                                          \

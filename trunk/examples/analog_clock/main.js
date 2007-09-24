@@ -3,11 +3,14 @@ var SECOND_QUARTZ = 1;
 var SECOND_SMOOTH = 2;
 
 var OPTION_SECONDHAND = "SecondHand";
-options.putDefaultValue(OPTION_SECONDHAND, SECOND_QUARTZ);
+// options.putDefaultValue(OPTION_SECONDHAND, SECOND_QUARTZ);
 
 var _SecondInterval = 0;
 
 var _minimized = false;
+
+gadget.debug.trace("In main.js");
+gadget.debug.trace(gadget.storage.openText("main.xml"));
 
 //
 // view_onopen
@@ -130,6 +133,9 @@ var _BounceRotationIncrement = 300 * .006;
 var _NewRotation = 0;
 function UpdateSecondHand(Now)
 {
+  gadget.debug.trace("opacity:" + SecondHand.opacity + " x:" + SecondHand.x
+       + " y:" + SecondHand.y + " pinX:" + SecondHand.pinX
+       + " pinY:" + SecondHand.pinY + " rotation:" + SecondHand.rotation);
   if (_UpdateSecondHandInterval != 0)
   {
     clearInterval(_UpdateSecondHandInterval);
@@ -159,7 +165,7 @@ function ConfigureSecondHand()
     _SecondInterval = 0;
   }
 
-  switch(options(OPTION_SECONDHAND))
+/*  switch(options(OPTION_SECONDHAND))
   {
   case SECOND_NONE:
     ShowSecondHand(false);
@@ -171,12 +177,12 @@ function ConfigureSecondHand()
     _SecondInterval = SetInterval(OnSecondTimer, 25);
     break;
 
-  case SECOND_QUARTZ:
+  case SECOND_QUARTZ: */
     ShowSecondHand(true);
     OnSecondTimer();
     _SecondInterval = SetInterval(OnSecondTimer, 1000);
-    break;
-  }
+//    break;
+//  }
 }
 
 //

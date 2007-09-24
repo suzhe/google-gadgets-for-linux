@@ -16,7 +16,6 @@
 
 #include <cstdio>
 #include "unittest/gunit.h"
-#include "ggadget/elements_impl.h"
 #include "ggadget/elements.h"
 #include "ggadget/element_interface.h"
 #include "ggadget/view_interface.h"

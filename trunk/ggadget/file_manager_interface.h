@@ -34,7 +34,7 @@ class FileManagerInterface {
    * A @c FileManager instance must be initialized before use.
    * @param base_path the base path of this @c FileManager.  All file names
    *     in subsequent operations are relative to this base path.
-   * @return @c true if succeeded.   
+   * @return @c true if succeeded.
    */
   virtual bool Init(const char *base_path) = 0;
 
@@ -71,6 +71,19 @@ class FileManagerInterface {
   virtual bool GetXMLFileContents(const char *file,
                                   std::string *data,
                                   std::string *path) = 0;
+
+  /**
+   * Extracts the contents of a file into a given file name or into a
+   * temporary file.
+   *
+   * @param file the file name relative to the base path.
+   * @param[in, out] into_file if the input value is empty, the file manager
+   *     generates a unique temporary file name and save the contents into
+   *     that file and return the filename in this parameter on return;
+   *     Otherwise the file manager will save into the given file name.
+   * @return @c true if succeeded.
+   */
+  virtual bool ExtractFile(const char *file, std::string *into_file) = 0;
 
 };
 

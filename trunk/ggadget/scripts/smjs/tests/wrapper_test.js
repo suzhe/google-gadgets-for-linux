@@ -54,14 +54,12 @@ TEST("Test property & method basics", function() {
   TestScriptableBasics(scriptable);
 });
 
-TEST("Test readonly property", function() {
+DEATH_TEST("Test readonly property", function() {
   // Buffer and BufferReadOnly are backed with the same single C++ object.
   scriptable.Buffer = "Buffer";
   // Assignment to a readonly property has no effect.
-  setVerbose(false); 
   scriptable.BufferReadOnly = "TestBuffer";
-  setVerbose(true);
-  ASSERT(EQ("Buffer:Buffer", scriptable.BufferReadOnly));
+  ASSERT(DEATH());
 });
 
 DEATH_TEST("Test integer property with non-number", function() {

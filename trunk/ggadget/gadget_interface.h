@@ -26,12 +26,12 @@ class ViewInterface;
  * Interface for representing a Gadget in the Gadget API.
  */
 class GadgetInterface {
- public:   
+ public:
   virtual ~GadgetInterface() { }
 
   /**
    * @return the ViewInterface object representing the main view of the gadget.
-   */ 
+   */
   virtual ViewInterface *GetMainView() = 0;
 
   /**
@@ -53,6 +53,24 @@ class GadgetInterface {
    * @return the configured value. @c NULL if not found.
    */
   virtual const char *GetManifestInfo(const char *key) = 0;
+
+  /**
+   * When the gadget is running in debug mode, displays the string Message in
+   * the debug console as an error.
+   */
+  virtual void DebugError(const char *message) = 0;
+
+  /**
+   * When the gadget is running in debug mode, displays the string Message in
+   * the debug console.
+   */
+  virtual void DebugTrace(const char *message) = 0;
+
+  /**
+   * When the gadget is running in debug mode, displays the string Message in
+   * the debug console as a warning.
+   */
+  virtual void DebugWarning(const char *message) = 0;
 
 };
 

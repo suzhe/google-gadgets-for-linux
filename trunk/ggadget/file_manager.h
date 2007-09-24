@@ -50,6 +50,8 @@ class FileManager : public FileManagerInterface {
   virtual bool GetXMLFileContents(const char *file,
                                   std::string *data,
                                   std::string *path);
+  /** @see FileManagerInterface::ExtractFile() */
+  virtual bool ExtractFile(const char *file, std::string *into_file);
 
  private:
   internal::FileManagerImpl *impl_;
