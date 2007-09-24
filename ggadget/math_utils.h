@@ -102,6 +102,9 @@ double DegreesToRadians(double degrees);
  */
 bool IsPointInElement(double x, double y, double width, double height);
 
+/** Rounds a given double to the nearest integer. */
+int RoundToInt(double x);
+
 }
 
 #endif // GGADGET_MATH_UTILS_H__

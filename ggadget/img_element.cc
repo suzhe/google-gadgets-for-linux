@@ -51,20 +51,43 @@ ImgElement::~ImgElement() {
   delete impl_;
 }
 
-const CanvasInterface *ImgElement::Draw(bool *changed) {
-  // TODO: better impl.
-  // Temporary impl:
-  printf("Draw image: x=%lf y=%lf width=%lf height=%lf\n",
-         GetPixelX(), GetPixelY(), GetPixelWidth(), GetPixelHeight());
-  return impl_->image_ ? impl_->image_->GetCanvas() : NULL;
-  /*
-  if (impl_->image_) {
-    GetCanvas()->DrawCanvas(0, 0, impl_->image_->GetCanvas());
+const CanvasInterface *ImgElement::Draw(bool *changed) {  
+  CanvasInterface *canvas = NULL;
+  bool change = IsVisibilityChanged();
+  
+  DLOG("Draw image: x=%lf y=%lf width=%lf height=%lf opacity=%lf\n",
+       GetPixelX(), GetPixelY(), GetPixelWidth(), GetPixelHeight(), GetOpacity());
+  
+  ClearVisibilityChanged();
+  if (!IsVisible()) { // if not visible, then return no matter what
+    goto exit;
   }
-  BasicElement::Draw(changed);
-  *changed = true;
-  return GetCanvas();
-  */
+
+  change = change || IsSelfChanged() || !GetCanvas();
+  SetSelfChanged(false);
+  
+  if (changed) {
+    // Need to redraw
+    canvas = SetUpCanvas();    
+    canvas->MultiplyOpacity(GetOpacity());
+    
+    if (impl_->image_) { // draw image as last resort
+      const CanvasInterface *img = impl_->image_->GetCanvas();
+      if (img) {
+        double cx = GetPixelWidth() / img->GetWidth();
+        double cy = GetPixelHeight() / img->GetHeight();
+        if (cx != 1.0 || cy != 1.0) {
+          canvas->ScaleCoordinates(cx, cy);
+        }
+        
+        canvas->DrawCanvas(0., 0., img);
+      }
+    }
+  }
+
+exit:  
+  *changed = change;
+  return canvas;
 }
 
 const char *ImgElement::GetSrc() const {
@@ -73,6 +96,7 @@ const char *ImgElement::GetSrc() const {
 
 void ImgElement::SetSrc(const char *src) {
   if (AssignIfDiffer(src, &impl_->src_)) {
+    SetSelfChanged(true);
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(src, false);
     if (GetPixelWidth() == 0.0)

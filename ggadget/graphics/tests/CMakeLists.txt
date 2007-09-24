@@ -26,4 +26,4 @@ UNIT_TEST(cairo_canvas_test)
 UNIT_TEST(cairo_graphics_test)
 UNIT_TEST(basic_element_draw_test)
 
-TEST_RESOURCES(120day.png kitty419.jpg testmask.png)
+TEST_RESOURCES(120day.png kitty419.jpg testmask.png base.png)

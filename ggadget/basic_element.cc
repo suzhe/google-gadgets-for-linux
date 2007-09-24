@@ -140,6 +140,7 @@ class BasicElement::Impl {
       double p = GetParentWidth();
       px_ = p > 0.0 ? x_ / p : 0.0;
       x_relative_ = false;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -150,6 +151,7 @@ class BasicElement::Impl {
       double p = GetParentHeight();
       py_ = p > 0.0 ? y_ / p : 0.0;
       y_relative_ = false;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -159,6 +161,7 @@ class BasicElement::Impl {
       px_ = x;
       x_ = x * GetParentWidth();
       x_relative_ = true;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -168,6 +171,7 @@ class BasicElement::Impl {
       py_ = y;
       y_ = y * GetParentHeight();
       y_relative_ = true;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -177,6 +181,7 @@ class BasicElement::Impl {
       pin_x_ = pin_x;
       ppin_x_ = width_ > 0.0 ? pin_x / width_ : 0.0;
       pin_x_relative_ = false;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -186,6 +191,7 @@ class BasicElement::Impl {
       pin_y_ = pin_y;
       ppin_y_ = height_ > 0.0 ? pin_y / height_ : 0.0;
       pin_y_relative_ = false;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -195,6 +201,7 @@ class BasicElement::Impl {
       ppin_x_ = pin_x;
       pin_x_ = pin_x * width_;
       pin_x_relative_ = true;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -204,6 +211,7 @@ class BasicElement::Impl {
       ppin_y_ = pin_y;
       pin_y_ = pin_y * height_;
       pin_y_relative_ = true;
+      position_changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -217,8 +225,9 @@ class BasicElement::Impl {
   }
 
   void SetOpacity(double opacity) {
-    if (opacity >= 0.0 && opacity <= 1.0 && opacity != opacity_) {
+    if (opacity != opacity_) {
       opacity_ = opacity;
+      changed_ = true;
       view_->QueueDraw();
     }
   }
@@ -228,6 +237,24 @@ class BasicElement::Impl {
       visible_ = visible;
       visibility_changed_ = true;
       view_->QueueDraw();
+    }
+  }
+
+  /**
+   * Retrieves the opacity of the element.
+   * @see SetIntOpacity.
+   */
+  int GetIntOpacity() const {
+    return RoundToInt(opacity_ * 255);
+  }
+  
+  /**
+   * Sets the opacity of the element.
+   * @param opacity valid range: 0 ~ 255.
+   */
+  void SetIntOpacity(int opacity) {
+    if (0 <= opacity && 255 >= opacity) {
+      SetOpacity(opacity / 255.);
     }
   }
 
@@ -365,20 +392,19 @@ class BasicElement::Impl {
     if (!visible_) { // if not visible, then return no matter what
       goto exit;
     }
-
+    
     children_canvas = children_.Draw(&child_changed);
-    if (child_changed) {
-      change = true;
-    }
+    change = change || child_changed | changed_ || !canvas;
+    changed_ = false;
+    
     if (!children_canvas) { 
       // The default basic element has no self to draw, so just
       // exit if no children to draw.
       goto exit;
     }
 
-    if (!canvas_ || changed_ || change) {
-      // Need to redraw
-      change = true;    
+    if (change) {
+      // Need to redraw    
       SetUpCanvas();
       
       canvas_->MultiplyOpacity(opacity_);
@@ -396,7 +422,7 @@ class BasicElement::Impl {
     return canvas;
   }
     
-  void SetUpCanvas() {
+  CanvasInterface *SetUpCanvas() {
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
       ASSERT(gfx);
@@ -411,6 +437,7 @@ class BasicElement::Impl {
       canvas_->ClearCanvas();
     }
     canvas_->IntersectRectClipRegion(0., 0., width_, height_);
+    return canvas_;
   }
   
  public:
@@ -541,6 +568,9 @@ BasicElement::BasicElement(ElementInterface *parent,
                    NewSlot(this, &BasicElement::GetPixelX), NULL);
   RegisterProperty("offsetY",
                    NewSlot(this, &BasicElement::GetPixelY), NULL);
+  RegisterProperty("opacity",
+                   NewSlot(impl_, &Impl::GetIntOpacity), 
+                   NewSlot(impl_, &Impl::SetIntOpacity));
   RegisterConstant("parentElement", parent);
   RegisterProperty("pinX",
                    NewSlot(impl_, &Impl::GetPinX),
@@ -810,7 +840,9 @@ double BasicElement::GetOpacity() const {
 }
 
 void BasicElement::SetOpacity(double opacity) {
-  impl_->SetOpacity(opacity);
+  if (opacity >= 0.0 && opacity <= 1.0) { 
+    impl_->SetOpacity(opacity);
+  }
 }
 
 bool BasicElement::IsVisible() const {
@@ -863,7 +895,7 @@ void BasicElement::SetSelfChanged(bool changed) {
 }
 
 bool BasicElement::IsSelfChanged() const {
-  return impl_->changed_;
+  return true; // TODO return impl_->changed_;
 }
 
 void BasicElement::ClearPositionChanged() {
@@ -874,8 +906,8 @@ bool BasicElement::IsPositionChanged() const {
   return impl_->position_changed_;
 }
 
-void BasicElement::SetUpCanvas() {
-  impl_->SetUpCanvas();
+CanvasInterface *BasicElement::SetUpCanvas() {
+  return impl_->SetUpCanvas();
 }
 
 CanvasInterface *BasicElement::GetCanvas() {

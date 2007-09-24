@@ -68,4 +68,12 @@ bool IsPointInElement(double x, double y, double width, double height) {
   return 0. <= x && 0. <= y && x < width && y < height;  
 }
 
+int RoundToInt(double x) {
+  int value = static_cast<int>(x); 
+  if ((x - value) >= .5) {
+    value++;    
+  }
+  return value;
+}
+
 } // namespace ggadget

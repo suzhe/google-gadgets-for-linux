@@ -223,7 +223,7 @@ class ElementInterface : public ScriptableInterface {
 
   /**
    * Retrieves the opacity of the element.
-   * @see set_opacity.
+   * @see SetOpacity.
    */
   virtual double GetOpacity() const = 0;
   /**
@@ -231,7 +231,7 @@ class ElementInterface : public ScriptableInterface {
    * @param opacity valid range: 0 ~ 1.
    */
   virtual void SetOpacity(double opacity) = 0;
-
+  
   /**
    * Retrieves whether or not the element is visible.
    */

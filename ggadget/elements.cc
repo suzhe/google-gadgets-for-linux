@@ -175,7 +175,6 @@ const CanvasInterface *ElementsImpl::Draw(bool *changed) {
   
   count_changed_ = false;
   if (children_.empty()) {
-    *changed = change;
     goto exit;
   }
   
@@ -191,10 +190,9 @@ const CanvasInterface *ElementsImpl::Draw(bool *changed) {
     }    
   }
   
-  if (!canvas_ || change) {
-    // Need to redraw
-    change = true;
-    
+  change = change || !canvas;
+  if (change) {
+    // Need to redraw   
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
       canvas_ = gfx->NewCanvas(static_cast<size_t>(width_) + 1, 
