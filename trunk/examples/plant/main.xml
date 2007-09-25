@@ -1,0 +1,9 @@
+<view height="244" width="202" onopen="onOpen()" 
+    ongiftcardopen="onGiftCardOpen()" ongiftcardclose="onGiftCardClose()">
+  <img name="pot"/>
+  <button name="giftCardButton" onclick="onGiftCardButtonClick()" 
+    image="images\small_card.png" overImage="images\small_card_hover.png"/>
+  <div height="100%" name="plant" width="100%"/>
+  <script src="main.js" />
+  <script src="giftcard.js" />
+</view>
