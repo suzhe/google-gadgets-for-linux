@@ -1,0 +1,8 @@
+﻿<strings>
+  <GADGET_NAME>Plant</GADGET_NAME>
+  <GADGET_DESCRIPTION>A plant that grows</GADGET_DESCRIPTION>
+  <GADGET_ABOUT_TEXT>Plant
+  
+This plant grows!</GADGET_ABOUT_TEXT>
+  <RESET>Reset</RESET>
+</strings>
