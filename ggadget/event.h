@@ -53,9 +53,10 @@ class Event {
     EVENT_TIMER_TICK = 30000
   };
       
-  Event(Type t) : type_(t) {}; 
+  explicit Event(Type t) : type_(t) {}
+  Event(const Event &e) : type_(e.type_) {}
    
-  Type GetType() const { return type_; };
+  Type GetType() const { return type_; }
   
  private:
   Type type_; 
@@ -68,10 +69,16 @@ class MouseEvent : public Event {
  public:
   MouseEvent(Type t, double x, double y) : Event(t), x_(x), y_(y) { 
     ASSERT(t > EVENT_MOUSE_RANGE_START && t < EVENT_MOUSE_RANGE_END);
-  };
+  }
+  
+  MouseEvent(const MouseEvent &e) : Event(e), x_(e.x_), y_(e.y_) {
+  }
  
-  double GetX() const { return x_; };
-  double GetY() const { return y_; };
+  double GetX() const { return x_; }
+  double GetY() const { return y_; }
+ 
+  void SetX(double x) { x_ = x; }
+  void SetY(double y) { y_ = y; }
   
  private:
   double x_, y_;

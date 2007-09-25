@@ -24,6 +24,10 @@ namespace ggadget {
 class Elements;
 class ViewInterface;
 class CanvasInterface;
+class MouseEvent;
+class Event;
+class TimerEvent;
+class KeyboardEvent;
 
 /**
  * ElementInterface defines the properties, methods and events exposed on all
@@ -220,7 +224,23 @@ class ElementInterface : public ScriptableInterface {
   virtual bool PinXIsRelative() const = 0;
   /** Retrieve whether pin y is relative to its height. */
   virtual bool PinYIsRelative() const = 0;
+  
+  /** 
+   * Handler of the mouse events. 
+   * @return true if this element or one of its children received it.
+   */
+  virtual bool OnMouseEvent(MouseEvent *event) = 0;
+  /** Handler of the keyboard events. */
+  virtual void OnKeyEvent(KeyboardEvent *event) = 0;  
+  /** Handler for other events. */
+  virtual void OnOtherEvent(Event *event) = 0;
 
+  /** 
+   * Handler for timer events. 
+   * Set event->StopReceivingMore() to cancel the timer. 
+   */
+  virtual void OnTimerEvent(TimerEvent *event) = 0;
+  
   /**
    * Retrieves the opacity of the element.
    * @see SetOpacity.

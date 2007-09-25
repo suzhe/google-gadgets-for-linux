@@ -25,6 +25,7 @@
 #include "scriptable_helper.h"
 #include "view_interface.h"
 #include "xml_utils.h"
+#include "event.h"
 
 namespace ggadget {
 
@@ -235,13 +236,14 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
         canvas_->PushState();
 
         element = children_[i];
-        canvas_->TranslateCoordinates(
-            element->GetPixelX() - element->GetPixelPinX(),
-            element->GetPixelY() - element->GetPixelPinY());
-
-        if (element->GetRotation() != .0) {
-          canvas_->TranslateCoordinates(element->GetPixelPinX(), 
-                                        element->GetPixelPinY());
+        if (element->GetRotation() == .0) {
+          canvas_->TranslateCoordinates(
+              element->GetPixelX() - element->GetPixelPinX(),
+              element->GetPixelY() - element->GetPixelPinY());
+        }
+        else {
+          canvas_->TranslateCoordinates(element->GetPixelX(),
+                                        element->GetPixelY());
           canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
           canvas_->TranslateCoordinates(-element->GetPixelPinX(), 
                                         -element->GetPixelPinY());
@@ -360,6 +362,31 @@ void Elements::OnParentHeightChange(double height) {
 const CanvasInterface *Elements::Draw(bool *changed) {
   ASSERT(impl_);
   return impl_->Draw(changed);
+}
+
+bool Elements::OnMouseEvent(MouseEvent *event) {
+  MouseEvent new_event(*event);
+  // Iterate in reverse since higher elements are listed last.
+  for (std::vector<ElementInterface *>::reverse_iterator ite = 
+           impl_->children_.rbegin();
+       ite != impl_->children_.rend(); ++ite) {
+    double child_x, child_y;    
+    ChildCoordFromParentCoord(event->GetX(), event->GetY(),
+                              (*ite)->GetPixelX(), (*ite)->GetPixelY(),
+                              (*ite)->GetPixelPinX(), (*ite)->GetPixelPinY(),
+                              DegreesToRadians((*ite)->GetRotation()),
+                              &child_x, &child_y);
+
+    new_event.SetX(child_x);
+    new_event.SetY(child_y);
+
+    bool fired = (*ite)->OnMouseEvent(&new_event);
+    if (fired) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 DELEGATE_SCRIPTABLE_INTERFACE_IMPL(Elements, impl_->scriptable_helper_)

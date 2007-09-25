@@ -24,6 +24,7 @@
 #include "image.h"
 #include "string_utils.h"
 #include "view_interface.h"
+#include "event.h"
 
 namespace ggadget {
 
@@ -939,6 +940,99 @@ void BasicElement::OnParentHeightChange(double height) {
     impl_->SetRelativeY(impl_->py_, true);
   if (impl_->height_relative_)
     impl_->SetRelativeHeight(impl_->pheight_, true);
+}
+
+bool BasicElement::OnMouseEvent(MouseEvent *event) {
+  if (!IsPointInElement(event->GetX(), event->GetY(), 
+                        GetPixelWidth(), GetPixelHeight())) {
+    return false;      
+  }
+
+  if (impl_->children_.OnMouseEvent(event)) {
+    return true;  
+  }
+  
+  if (!IsEnabled()) {
+    return false;
+  }
+  
+  // Take this event, since no children took it, and we're enabled.
+  switch (event->GetType()) {
+    case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
+    // DLOG("mousemove");
+    impl_->view_->FireEvent(event, impl_->onmousemove_event_);
+    break;
+   case Event::EVENT_MOUSE_DOWN:
+    DLOG("mousedown");
+    impl_->view_->FireEvent(event, impl_->onmousedown_event_);
+    break;
+   case Event::EVENT_MOUSE_UP:
+    DLOG("mouseup");
+    impl_->view_->FireEvent(event, impl_->onmouseup_event_);
+    break;
+   case Event::EVENT_MOUSE_CLICK:
+    DLOG("click %g %g", event->GetX(), event->GetY());
+    impl_->view_->FireEvent(event, impl_->onclick_event_);
+    break;
+   case Event::EVENT_MOUSE_DBLCLICK:
+    DLOG("dblclick %g %g", event->GetX(), event->GetY());
+    impl_->view_->FireEvent(event, impl_->ondblclick_event_);
+    break;
+   case Event::EVENT_MOUSE_OUT:
+    DLOG("mouseout");
+    impl_->view_->FireEvent(event, impl_->onmouseout_event_);
+    break;
+   case Event::EVENT_MOUSE_OVER:
+    DLOG("mouseover");
+    impl_->view_->FireEvent(event, impl_->onmouseover_event_);
+    break;
+   case Event::EVENT_MOUSE_WHEEL:
+    DLOG("mousewheel");
+    impl_->view_->FireEvent(event, impl_->onmousewheel_event_);
+    break;
+   default:
+    ASSERT(false);
+  }
+  
+  return true;
+}
+
+void BasicElement::OnKeyEvent(KeyboardEvent *event) {
+  switch (event->GetType()) {
+   case Event::EVENT_KEY_DOWN:
+    DLOG("keydown");
+    impl_->view_->FireEvent(event, impl_->onkeydown_event_);      
+    break;
+   case Event::EVENT_KEY_UP:
+    DLOG("keyup");
+    impl_->view_->FireEvent(event, impl_->onkeyup_event_);
+    break;
+   case Event::EVENT_KEY_PRESS:
+    DLOG("keypress");
+    impl_->view_->FireEvent(event, impl_->onkeypress_event_);
+    break;
+   default:
+    ASSERT(false);
+  }
+}
+
+void BasicElement::OnOtherEvent(Event *event) {
+  switch (event->GetType()) {
+   case Event::EVENT_FOCUS_IN:
+    DLOG("focusin");
+    impl_->view_->FireEvent(event, impl_->onfocusin_event_);
+    break;
+   case Event::EVENT_FOCUS_OUT:
+    DLOG("focusout");
+    impl_->view_->FireEvent(event, impl_->onfocusout_event_);
+    break;
+   default:
+    ASSERT(false);
+  }
+}
+
+void BasicElement::OnTimerEvent(TimerEvent *event) {
+  // blank implementation
 }
 
 } // namespace ggadget

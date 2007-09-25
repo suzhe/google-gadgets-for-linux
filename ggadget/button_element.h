@@ -22,6 +22,8 @@
 
 namespace ggadget {
 
+class MouseEvent;
+
 class ButtonElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xb6fb01fd48134377, BasicElement);
@@ -50,6 +52,8 @@ class ButtonElement : public BasicElement {
   /** Gets and sets the file name of mouse down button image. */
   const char *GetDownImage() const;
   void SetDownImage(const char *img);
+  
+  virtual bool OnMouseEvent(MouseEvent *event);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,

@@ -22,6 +22,7 @@
 #include "ggadget/elements.h"
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
+#include "ggadget/event.h"
 
 class MockedElement : public ggadget::ElementInterface {
  public:
@@ -268,7 +269,20 @@ class MockedElement : public ggadget::ElementInterface {
 
   virtual void OnParentHeightChange(double height) {
   }
+  
+  virtual bool OnMouseEvent(ggadget::MouseEvent *event) {
+    return true;
+  }
 
+  virtual void OnKeyEvent(ggadget::KeyboardEvent *event) {    
+  }
+  
+  virtual void OnOtherEvent(ggadget::Event *event) {    
+  }
+  
+  virtual void OnTimerEvent(ggadget::TimerEvent *event) {    
+  }
+  
   DEFAULT_OWNERSHIP_POLICY;
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);
   virtual bool IsStrict() const { return true; }

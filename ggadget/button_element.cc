@@ -19,6 +19,7 @@
 #include "image.h"
 #include "string_utils.h"
 #include "view_interface.h"
+#include "event.h"
 
 namespace ggadget {
 
@@ -187,6 +188,31 @@ ElementInterface *ButtonElement::CreateInstance(ElementInterface *parent,
                                              ViewInterface *view,
                                              const char *name) {
   return new ButtonElement(parent, view, name);
+}
+
+bool ButtonElement::OnMouseEvent(MouseEvent *event) {
+  bool fired = BasicElement::OnMouseEvent(event);
+  
+  if (fired) {
+    switch (event->GetType()) {
+     case Event::EVENT_MOUSE_DOWN:
+      impl_->mousedown = true;
+      break;
+     case Event::EVENT_MOUSE_UP:
+      impl_->mousedown = false;
+      break;
+     case Event::EVENT_MOUSE_OUT:
+      impl_->mouseover = false;
+      break;
+     case Event::EVENT_MOUSE_OVER:
+      impl_->mouseover = true;
+      break;
+     default:
+      break;
+    }; 
+  }
+
+  return fired;
 }
 
 } // namespace ggadget
