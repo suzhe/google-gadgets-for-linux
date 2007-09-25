@@ -195,8 +195,8 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetColor(Color(1., 1., 1.));
   p->SetPixelWidth(100.);
   p->SetPixelHeight(50.);
-  p->SetPixelX(50.);
-  p->SetPixelY(25.);
+  p->SetPixelX(100.);
+  p->SetPixelY(50.);
   p->SetOpacity(.8);
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
@@ -206,8 +206,8 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetColor(Color(0., 1., 0.));
   p->SetPixelWidth(100.);
   p->SetPixelHeight(50.);
-  p->SetPixelX(50.);
-  p->SetPixelY(25.);
+  p->SetPixelX(100.);
+  p->SetPixelY(50.);
   p->SetOpacity(.5);
   p->SetRotation(90.);
   p->SetPixelPinX(50.);
@@ -218,8 +218,8 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetColor(Color(0., 0., 1.));
   p->SetPixelWidth(100.);
   p->SetPixelHeight(50.);
-  p->SetPixelX(50.);
-  p->SetPixelY(25.);
+  p->SetPixelX(100.);
+  p->SetPixelY(50.);
   p->SetOpacity(.5);
   p->SetRotation(60.);
   p->SetPixelPinX(50.);
@@ -230,8 +230,8 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetColor(Color(0., 1., 1.));
   p->SetPixelWidth(100.);
   p->SetPixelHeight(50.);
-  p->SetPixelX(50.);
-  p->SetPixelY(25.);
+  p->SetPixelX(100.);
+  p->SetPixelY(50.);
   p->SetOpacity(.5);
   p->SetRotation(30.);
   p->SetPixelPinX(50.);

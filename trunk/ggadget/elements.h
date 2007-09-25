@@ -32,6 +32,7 @@ class CanvasInterface;
 class ElementInterface;
 class ElementFactoryInterface;
 class ViewInterface;
+class MouseEvent;
 
 /**
  * Elements is used for storing and managing a set of objects which
@@ -164,7 +165,13 @@ class Elements : public ScriptableInterface {
    * @return canvas with the elements drawn. NULL if GetCount() == 0.
    */
   const CanvasInterface *Draw(bool *changed);
-
+  
+  /** 
+   * Handler of the mouse events. 
+   * @return true if one of the children in this container received it.
+   */
+  virtual bool OnMouseEvent(MouseEvent *event);
+  
   DEFAULT_OWNERSHIP_POLICY
   SCRIPTABLE_INTERFACE_DECL
   virtual bool IsStrict() const { return true; }

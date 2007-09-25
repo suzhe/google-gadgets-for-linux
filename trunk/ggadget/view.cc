@@ -66,41 +66,54 @@ class View::Impl {
   }
 
   void OnMouseEvent(MouseEvent *event) {
-    switch (event->GetType()) {
-      case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
-      // DLOG("mousemove");
-      // View doesn't have mouse move event according to the API document.
-      break;
-     case Event::EVENT_MOUSE_DOWN:
-      DLOG("mousedown");
-      FireEvent(event, onmousedown_event_);
-      break;
-     case Event::EVENT_MOUSE_UP:
-      DLOG("mouseup");
-      FireEvent(event, onmouseup_event_);
-      break;
-     case Event::EVENT_MOUSE_CLICK:
-      DLOG("click %g %g", event->GetX(), event->GetY());
-      FireEvent(event, onclick_event_);
-      break;
-     case Event::EVENT_MOUSE_DBLCLICK:
-      DLOG("dblclick %g %g", event->GetX(), event->GetY());
-      FireEvent(event, ondblclick_event_);
-      break;
-     case Event::EVENT_MOUSE_OUT:
-      DLOG("mouseout");
-      FireEvent(event, onmouseout_event_);
-      break;
-     case Event::EVENT_MOUSE_OVER:
-      DLOG("mouseover");
-      FireEvent(event, onmouseover_event_);
-      break;
-     case Event::EVENT_MOUSE_WHEEL:
-      DLOG("mousewheel");
-      // View doesn't have mouse wheel event according to the API document.
-      break;
-     default:
-      ASSERT(false);
+    // First, send event to children.
+    if (!IsPointInElement(event->GetX(), event->GetY(), width_, height_)) {
+      return;      
+    }
+        
+    bool fired = children_.OnMouseEvent(event);
+    
+    // Question: if a child changes the event object, does the view use the
+    // changed object when it receives the event?
+    
+    // Then send event to view.
+    if (fired) {
+      switch (event->GetType()) {
+        case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
+        // DLOG("mousemove");
+        // View doesn't have mouse move event according to the API document.
+        break;
+       case Event::EVENT_MOUSE_DOWN:
+        DLOG("mousedown");
+        FireEvent(event, onmousedown_event_);
+        break;
+       case Event::EVENT_MOUSE_UP:
+        DLOG("mouseup");
+        FireEvent(event, onmouseup_event_);
+        break;
+       case Event::EVENT_MOUSE_CLICK:
+        DLOG("click %g %g", event->GetX(), event->GetY());
+        FireEvent(event, onclick_event_);
+        break;
+       case Event::EVENT_MOUSE_DBLCLICK:
+        DLOG("dblclick %g %g", event->GetX(), event->GetY());
+        FireEvent(event, ondblclick_event_);
+        break;
+       case Event::EVENT_MOUSE_OUT:
+        DLOG("mouseout");
+        FireEvent(event, onmouseout_event_);
+        break;
+       case Event::EVENT_MOUSE_OVER:
+        DLOG("mouseover");
+        FireEvent(event, onmouseover_event_);
+        break;
+       case Event::EVENT_MOUSE_WHEEL:
+        DLOG("mousewheel");
+        // View doesn't have mouse wheel event according to the API document.
+        break;
+       default:
+        ASSERT(false);
+      }
     }
   }
 
@@ -125,8 +138,9 @@ class View::Impl {
 
   void OnTimerEvent(TimerEvent *event) {
     ASSERT(event->GetType() == Event::EVENT_TIMER_TICK);
-    if (event->GetTarget()) {
-      // TODO: Dispatch the event to the element target.
+    ElementInterface *target = event->GetTarget();
+    if (target) {
+      target->OnTimerEvent(event);
     } else {
       // The target is this view.
       int token = reinterpret_cast<int>(event->GetData());

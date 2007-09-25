@@ -25,10 +25,8 @@ void ChildCoordFromParentCoord(double parent_x, double parent_y,
                                double *child_x, double *child_y) {
   double sin_theta = sin(rotation_radians);
   double cos_theta = cos(rotation_radians);
-  double px_x0 = child_pin_x + child_x_pos;
-  double py_y0 = child_pin_y + child_y_pos;
-  double a_13 = child_pin_x - py_y0 * sin_theta - px_x0 * cos_theta;
-  double a_23 = child_pin_y + px_x0 * sin_theta - py_y0 * cos_theta;
+  double a_13 = child_pin_x - child_y_pos * sin_theta - child_x_pos * cos_theta;
+  double a_23 = child_pin_y + child_x_pos * sin_theta - child_y_pos * cos_theta;
   
   *child_x = parent_x * cos_theta + parent_y * sin_theta + a_13;
   *child_y = parent_y * cos_theta - parent_x * sin_theta + a_23;
@@ -36,14 +34,11 @@ void ChildCoordFromParentCoord(double parent_x, double parent_y,
 
 ChildCoordCalculator::ChildCoordCalculator(double child_x_pos, double child_y_pos,
                                            double child_pin_x, double child_pin_y,
-                                           double rotation_radians) {
-  double px_x0 = child_pin_x + child_x_pos;
-  double py_y0 = child_pin_y + child_y_pos;
-  
+                                           double rotation_radians) {  
   sin_theta = sin(rotation_radians);
   cos_theta = cos(rotation_radians);
-  a_13 = child_pin_x - py_y0 * sin_theta - px_x0 * cos_theta;
-  a_23 = child_pin_y + px_x0 * sin_theta - py_y0 * cos_theta;  
+  a_13 = child_pin_x - child_y_pos * sin_theta - child_x_pos * cos_theta;
+  a_23 = child_pin_y + child_x_pos * sin_theta - child_y_pos * cos_theta;  
 }
 
 void ChildCoordCalculator::Convert(double parent_x, double parent_y, 

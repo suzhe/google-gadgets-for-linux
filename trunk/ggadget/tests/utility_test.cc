@@ -30,30 +30,30 @@ TEST(UtilityTest, ChildCoordCalculator) {
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
-  EXPECT_NEAR(0., child_x, kErrorDelta);
-  EXPECT_DOUBLE_EQ(100., child_y);
+  EXPECT_NEAR(50., child_x, kErrorDelta);
+  EXPECT_DOUBLE_EQ(50., child_y);
 
   calc = ChildCoordCalculator(0, 0, 50, 50, M_PI);
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
-  EXPECT_DOUBLE_EQ(100., child_x);
-  EXPECT_DOUBLE_EQ(100., child_y);
+  EXPECT_DOUBLE_EQ(50., child_x);
+  EXPECT_DOUBLE_EQ(50., child_y);
 
   calc = ChildCoordCalculator(0, 0, 50, 50, 1.5 * M_PI);
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
-  EXPECT_DOUBLE_EQ(100., child_x);
-  EXPECT_NEAR(0., child_y, kErrorDelta);
+  EXPECT_DOUBLE_EQ(50., child_x);
+  EXPECT_DOUBLE_EQ(50., child_y);
 
   calc = ChildCoordCalculator(0, 0, 50, 50, 2 * M_PI);
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
-  EXPECT_NEAR(0., child_x, kErrorDelta);
-  EXPECT_NEAR(0., child_y, kErrorDelta);
-
+  EXPECT_DOUBLE_EQ(50., child_x);
+  EXPECT_DOUBLE_EQ(50., child_y);
+  
   ChildCoordCalculator calc2(0, 0, 0, 0, 0);
   for (int i = 0; i < 360; i++) {
     calc2.Convert(i, i, &child_x, &child_y);
@@ -73,8 +73,8 @@ TEST(UtilityTest, ChildCoordCalculator) {
     calc.Convert(0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
     EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
-    EXPECT_DOUBLE_EQ(0, child_x);
-    EXPECT_DOUBLE_EQ(0, child_y);
+    EXPECT_DOUBLE_EQ(i, child_x);
+    EXPECT_DOUBLE_EQ(i, child_y);
 
     // distance should be constant in a circular rotation around origin
     calc = ChildCoordCalculator(0, 0, 0, 0, DegreesToRadians(i));
@@ -95,9 +95,8 @@ TEST(UtilityTest, ChildCoordCalculator) {
     calc.Convert(0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
     EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
-    EXPECT_DOUBLE_EQ(2., 
-                     (child_x - 1) * (child_x - 1) +
-                     (child_y - 1) * (child_y - 1));
+    EXPECT_NEAR(0., (child_x - 1) * (child_x - 1) +
+                    (child_y - 1) * (child_y - 1), kErrorDelta);
   }
 }
 
@@ -105,20 +104,20 @@ TEST(UtilityTest, GetChildCoord) {
   double child_x, child_y;
 
   ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, M_PI / 2, &child_x, &child_y);
-  EXPECT_NEAR(0., child_x, kErrorDelta);
-  EXPECT_DOUBLE_EQ(100., child_y);
+  EXPECT_NEAR(50., child_x, kErrorDelta);
+  EXPECT_DOUBLE_EQ(50., child_y);
 
   ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, M_PI, &child_x, &child_y);
-  EXPECT_DOUBLE_EQ(100., child_x);
-  EXPECT_DOUBLE_EQ(100., child_y);
+  EXPECT_DOUBLE_EQ(50., child_x);
+  EXPECT_DOUBLE_EQ(50., child_y);
 
   ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, 1.5 * M_PI, &child_x, &child_y);
-  EXPECT_DOUBLE_EQ(100., child_x);
-  EXPECT_NEAR(0., child_y, kErrorDelta);
+  EXPECT_DOUBLE_EQ(50., child_x);
+  EXPECT_DOUBLE_EQ(50., child_y);
 
   ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, 2 * M_PI, &child_x, &child_y);
-  EXPECT_NEAR(0., child_x, kErrorDelta);
-  EXPECT_NEAR(0., child_y, kErrorDelta);
+  EXPECT_DOUBLE_EQ(50., child_x);
+  EXPECT_DOUBLE_EQ(50., child_y);
     
   for (int i = 0; i < 360; i++) {
     ChildCoordFromParentCoord(i, i, 0, 0, 0, 0, 0, &child_x, &child_y);
@@ -130,8 +129,8 @@ TEST(UtilityTest, GetChildCoord) {
     EXPECT_DOUBLE_EQ(-i, child_y);
     
     ChildCoordFromParentCoord(0, 0, 0, 0, i, i, 0, &child_x, &child_y);
-    EXPECT_DOUBLE_EQ(0, child_x);
-    EXPECT_DOUBLE_EQ(0, child_y);
+    EXPECT_DOUBLE_EQ(i, child_x);
+    EXPECT_DOUBLE_EQ(i, child_y);
 
     // distance should be constant in a circular rotation around origin
     ChildCoordFromParentCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i), 
@@ -146,9 +145,8 @@ TEST(UtilityTest, GetChildCoord) {
     // distance to pin should be constant in a circular rotation
     ChildCoordFromParentCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i), 
 			      &child_x, &child_y);
-    EXPECT_DOUBLE_EQ(2., 
-                     (child_x - 1) * (child_x - 1) +
-                     (child_y - 1) * (child_y - 1));
+    EXPECT_NEAR(0., (child_x - 1) * (child_x - 1) +
+                    (child_y - 1) * (child_y - 1), kErrorDelta);
   }
 }
 

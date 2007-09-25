@@ -105,7 +105,12 @@ class BasicElement : public ElementInterface {
   
   virtual void OnParentWidthChange(double width);
   virtual void OnParentHeightChange(double height);
-
+  
+  virtual bool OnMouseEvent(MouseEvent *event);
+  virtual void OnKeyEvent(KeyboardEvent *event);  
+  virtual void OnOtherEvent(Event *event);
+  virtual void OnTimerEvent(TimerEvent *event);
+  
   /**
    * Draw a black box with crisscrossed lines bounding the element.
    * This is used only for testing.
