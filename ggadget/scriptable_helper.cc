@@ -109,15 +109,18 @@ ScriptableHelper::Impl::~Impl() {
 
   for (SlotVector::const_iterator it = getter_slots_.begin();
        it != getter_slots_.end(); ++it) {
-    if (*it != NULL)
-      delete *it;
+    delete *it;
   }
 
   for (SlotVector::const_iterator it = setter_slots_.begin();
        it != setter_slots_.end(); ++it) {
-    if (*it != NULL)
-      delete *it;
+    delete *it;
   }
+
+  delete array_getter_;
+  delete array_setter_;
+  delete dynamic_property_getter_;
+  delete dynamic_property_setter_;
 }
 
 void ScriptableHelper::Impl::RegisterProperty(const char *name,
@@ -126,10 +129,8 @@ void ScriptableHelper::Impl::RegisterProperty(const char *name,
   ASSERT(name);
   ASSERT(getter && getter->GetArgCount() == 0);
   Variant prototype(getter->GetReturnType());
-  if (setter) {
-    ASSERT(setter->GetArgCount() == 1);
-    ASSERT(prototype.type() == setter->GetArgTypes()[0]);
-  }
+  ASSERT(!setter || setter && setter->GetArgCount() == 1);
+  ASSERT(!setter || setter && prototype.type() == setter->GetArgTypes()[0]);
 
   slot_index_[name] = property_count_;
   slot_prototypes_.push_back(prototype);

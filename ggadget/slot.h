@@ -468,45 +468,112 @@ class SimpleSetter {
 
 template <typename T>
 class StringEnumGetter {
+ private:
+  struct SlotWrapper {
+    Slot0<T> *slot;
+    const char **names;
+    int count;
+    int ref_count;
+  };
+
  public:
   StringEnumGetter(Slot0<T> *slot, const char **names, int count)
-      : slot_(slot), names_(names), count_(count) { }
+      : wrapper_(new SlotWrapper) {
+    wrapper_->ref_count = 1;
+    wrapper_->slot = slot;
+    wrapper_->names = names;
+    wrapper_->count = count;
+  }
+  StringEnumGetter(const StringEnumGetter &other) : wrapper_(NULL) {
+    operator=(other);
+  }
+  ~StringEnumGetter() {
+    Free();
+  }
   const char *operator()() const {
-    int index = VariantValue<int>()(slot_->Call(0, NULL));
-    return (index >= 0 && index < count_) ? names_[index] : NULL;
+    int index = VariantValue<int>()(wrapper_->slot->Call(0, NULL));
+    return (index >= 0 &&
+        index < wrapper_->count) ? wrapper_->names[index] : NULL;
   }
   bool operator==(StringEnumGetter<T> another) const {
-    return slot_ == another.slot_ && names_ == another.names_ &&
-           count_ == another.count_;
+    return wrapper_ == another.wrapper_;
+  }
+  StringEnumGetter &operator=(const StringEnumGetter &other) {
+    if (this != &other) {
+      Free();
+      ++(other.wrapper_->ref_count);
+      wrapper_ = other.wrapper_;
+    }
+    return *this;
   }
  private:
-  Slot0<T> *slot_;
-  const char **names_;
-  int count_;
+  void Free() {
+    if (wrapper_) {
+      if (--(wrapper_->ref_count) == 0) {
+        delete wrapper_->slot;
+        delete wrapper_;
+      }
+    }
+  }
+ private:
+  SlotWrapper *wrapper_;
 };
 
 template <typename T>
 class StringEnumSetter {
+ private:
+  struct SlotWrapper {
+    Slot1<void, T> *slot;
+    const char **names;
+    int count;
+    int ref_count;
+  };
+
  public:
   StringEnumSetter(Slot1<void, T> *slot, const char **names, int count)
-      : slot_(slot), names_(names), count_(count) { }
+      : wrapper_(new SlotWrapper) {
+    wrapper_->ref_count = 1;
+    wrapper_->slot = slot;
+    wrapper_->names = names;
+    wrapper_->count = count;
+  }
+  StringEnumSetter(const StringEnumSetter &other) : wrapper_(NULL) {
+    operator=(other);
+  }
+  ~StringEnumSetter() {
+    Free();
+  }
   void operator()(const char *name) const {
-    for (int i = 0; i < count_; i++)
-      if (strcmp(name, names_[i]) == 0) {
+    for (int i = 0; i < wrapper_->count; i++)
+      if (strcmp(name, wrapper_->names[i]) == 0) {
         Variant param(i);
-        slot_->Call(1, &param);
+        wrapper_->slot->Call(1, &param);
         return;
       }
     LOG("Invalid enumerated name: %s", name);
   }
   bool operator==(StringEnumSetter<T> another) const {
-    return slot_ == another.slot_ && names_ == another.names_ &&
-           count_ == another.count_;
+    return wrapper_ == another.wrapper_;
+  }
+  StringEnumSetter &operator=(const StringEnumSetter &other) {
+    if (this != &other) {
+      Free();
+      ++(other.wrapper_->ref_count);
+      wrapper_ = other.wrapper_;
+    }
+    return *this;
   }
  private:
-  Slot1<void, T> *slot_;
-  const char **names_;
-  int count_;
+  void Free() {
+    if (wrapper_) {
+      if (--(wrapper_->ref_count) == 0) {
+        delete wrapper_->slot;
+        delete wrapper_;
+      }
+    }
+  }
+ private:
+   SlotWrapper *wrapper_;
 };
 
 /**
