@@ -19,7 +19,7 @@ set -e
 here=`pwd`
 cd `dirname $0`/..
 srcdir=`pwd`
-if [ -x cmake/build_spidermonkey.sh ]; then
+if [ ! -x cmake/build_spidermonkey.sh ]; then
   chmod +x cmake/build_spidermonkey.sh
 fi
 mkdir -p build/release
