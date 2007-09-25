@@ -161,8 +161,8 @@ done
 
 if [ "$depot" = "" ]; then
   depot=`svk info $target_dir | \
-      grep 'Depot Path: [0-9]\+$' | \
-      sed 's/Depot Path: \([0-9]\+\)$/\1/g'`
+      grep 'Depot Path: .*\+$' | \
+      sed 's/Depot Path: \(.*\+\)$/\1/g'`
 fi
 
 if [ "$rev" = "" ]; then
