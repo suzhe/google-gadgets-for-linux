@@ -17,18 +17,18 @@
 #ifndef GGADGET_SCRIPTABLE_HELPER_H__
 #define GGADGET_SCRIPTABLE_HELPER_H__
 
-#include "scriptable_interface.h"
 #include "slot.h"
 #include "variant.h"
 
 namespace ggadget {
 
+class Connection;
 class Signal;
 
 /**
  * A @c ScriptableInterface implementation helper.
  */
-class ScriptableHelper : public ScriptableInterface {
+class ScriptableHelper {
  public:
   ScriptableHelper();
   virtual ~ScriptableHelper();
@@ -157,29 +157,22 @@ class ScriptableHelper : public ScriptableInterface {
   void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
 
   /** @see ScriptableInterface::Attach() */
-  virtual void Attach() { ASSERT(false); }
+  void Attach() { ASSERT(false); }
   /** @see ScriptableInterface::Detach() */
-  virtual void Detach() { ASSERT(false); }
-  /** @see ScriptableInterface::IsInstanceOf() */
-  virtual bool IsInstanceOf(uint64_t class_id) const {
-    ASSERT(false);
-    return false;
-  }
-  /** @see ScriptableInterface::IsStrict() */
-  virtual bool IsStrict() const { return false; }
+  void Detach() { ASSERT(false); }
   /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
-  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
+  Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   /** @see ScriptableInterface::GetPropertyInfoByName() */
-  virtual bool GetPropertyInfoByName(const char *name,
-                                     int *id, Variant *prototype,
-                                     bool *is_method);
+  bool GetPropertyInfoByName(const char *name,
+                             int *id, Variant *prototype,
+                             bool *is_method);
   /** @see ScriptableInterface::GetPropertyInfoById() */
-  virtual bool GetPropertyInfoById(int id, Variant *prototype,
+  bool GetPropertyInfoById(int id, Variant *prototype,
                                    bool *is_method, const char **name);
   /** @see ScriptableInterface::GetProperty() */
-  virtual Variant GetProperty(int id);
+  Variant GetProperty(int id);
   /** @see ScriptableInterface::SetProperty() */
-  virtual bool SetProperty(int id, Variant value);
+  bool SetProperty(int id, Variant value);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);

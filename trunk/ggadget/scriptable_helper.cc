@@ -19,6 +19,7 @@
 #include <vector>
 #include "string_utils.h"
 #include "scriptable_helper.h"
+#include "scriptable_interface.h"
 #include "signal.h"
 #include "slot.h"
 
