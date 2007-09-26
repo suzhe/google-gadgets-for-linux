@@ -52,6 +52,10 @@ TestScriptable1::TestScriptable1()
   // This signal is only for test, no relation to ConnectToOndeleteSignal.
   RegisterSignal("my_ondelete", &my_ondelete_signal_);
   RegisterSimpleProperty("EnumSimple", &enum_property_);
+  RegisterStringEnumProperty("EnumString",
+                             NewSimpleGetterSlot(&enum_property_),
+                             NewSimpleSetterSlot(&enum_property_),
+                             enum_type_names, arraysize(enum_type_names));
   RegisterConstant("Fixed", 123456789);
   RegisterSimpleProperty("VariantProperty", &variant_property_);
   RegisterConstants(arraysize(enum_type_names), enum_type_names, NULL);

@@ -194,6 +194,15 @@ class Variant {
   }
 
   /**
+   * A protector to prevent pointer of unsupported type from falling into
+   * the constructor with a bool parameter.
+   * This is a runtime protector.  Compiler protection is also done.  
+   */
+  explicit Variant(void *value) {
+    ASSERT_M(false, ("Type of value is not supported by Variant"));
+  }
+
+  /**
    * For testing convenience.
    * Not suggested to use in production code.
    */
@@ -268,7 +277,8 @@ struct VariantType<T *> {
  * Get the @c Variant::Type of a C++ type.
  * This template is for all <code>const ScriptableInterface *</code> types.
  * All unspecialized const pointer types will fall into this template, and if
- * it is not <code>const ScriptableInterface *</code>, compilation error may occur.
+ * it is not <code>const ScriptableInterface *</code>, compilation error may
+ * occur.
  */
 template <typename T>
 struct VariantType<const T *> {
@@ -421,6 +431,17 @@ struct VariantValue<const Variant &> {
     return v;
   }
 };
+
+/**
+ * Checks if a type is supported by Variant and causes compilation error
+ * if the type is not supported.
+ * 
+ * You need not use this when using the VariantValue template, because
+ * the template can automatically check the type.
+ */
+#define CHECK_VARIANT_TYPE(t)  \
+    ASSERT(Variant(VariantValue<t>()(Variant(VariantType<t>::type))).type() == \
+           VariantType<t>::type)
 
 #undef SPECIALIZE_VARIANT_TYPE
 #undef SPECIALIZE_VARIANT_VALUE

@@ -74,7 +74,8 @@ TEST(scriptable_helper, TestPropertyInfo) {
     { "my_ondelete", -6, false,
       Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
     { "EnumSimple", -7, false, Variant(Variant::TYPE_INT64) },
-    { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
+    { "EnumString", -8, false, Variant(Variant::TYPE_STRING) },
+    { "VariantProperty", -9, false, Variant(Variant::TYPE_VARIANT) },
   };
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
@@ -141,10 +142,19 @@ TEST(scriptable_helper, TestPropertyAndMethod) {
   ASSERT_TRUE(scriptable->SetProperty(-7, Variant(TestScriptable1::VALUE_2)));
   ASSERT_EQ(Variant(TestScriptable1::VALUE_2), scriptable->GetProperty(-7));
 
-  // -8: the "VariantProperty" property.
-  ASSERT_EQ(Variant(0), scriptable->GetProperty(-8));
-  ASSERT_TRUE(scriptable->SetProperty(-8, Variant(1234)));
-  ASSERT_EQ(Variant(1234), scriptable->GetProperty(-8));
+  // -8: the "EnumString" property.
+  ASSERT_EQ(Variant("VALUE_2"), scriptable->GetProperty(-8));
+  ASSERT_TRUE(scriptable->SetProperty(-8, Variant("VALUE_0")));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-7));
+  ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty(-8));
+  ASSERT_TRUE(scriptable->SetProperty(-8, Variant("VALUE_INVALID")));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-7));
+  ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty(-8));
+  
+  // -9: the "VariantProperty" property.
+  ASSERT_EQ(Variant(0), scriptable->GetProperty(-9));
+  ASSERT_TRUE(scriptable->SetProperty(-9, Variant(1234)));
+  ASSERT_EQ(Variant(1234), scriptable->GetProperty(-9));
   delete scriptable;
 }
 
@@ -193,28 +203,29 @@ TEST(scriptable_helper, TestPropertyInfo2) {
     { "my_ondelete", -6, false,
       Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
     { "EnumSimple", -7, false, Variant(Variant::TYPE_INT64) },
-    { "VariantProperty", -8, false, Variant(Variant::TYPE_VARIANT) },
+    { "EnumString", -8, false, Variant(Variant::TYPE_STRING) },
+    { "VariantProperty", -9, false, Variant(Variant::TYPE_VARIANT) },
 
     // -9 ~ -14 are defined in TestScriptable2 itself.
-    { "TestMethod", -9, true,
+    { "TestMethod", -10, true,
       Variant(NewSlot(scriptable, &TestScriptable2::TestMethod)) },
-    { "onlunch", -10, false,
+    { "onlunch", -11, false,
       Variant(new SignalSlot(&scriptable->onlunch_signal_)) },
-    { "onsupper", -11, false,
+    { "onsupper", -12, false,
       Variant(new SignalSlot(&scriptable->onsupper_signal_)) },
-    { "time", -12, false, Variant(Variant::TYPE_STRING) },
-    { "OverrideSelf", -13, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "SignalResult", -14, false, Variant(Variant::TYPE_STRING) },
-    { "NewObject", -15, true,
+    { "time", -13, false, Variant(Variant::TYPE_STRING) },
+    { "OverrideSelf", -14, false, Variant(Variant::TYPE_SCRIPTABLE) },
+    { "SignalResult", -15, false, Variant(Variant::TYPE_STRING) },
+    { "NewObject", -16, true,
       Variant(NewSlot(scriptable, &TestScriptable2::NewObject)) },
-    { "DeleteObject", -16, true,
+    { "DeleteObject", -17, true,
       Variant(NewSlot(scriptable, &TestScriptable2::DeleteObject)) },
 
     // The following are defined in the prototype.
-    { "PrototypeMethod", -17, true,
+    { "PrototypeMethod", -18, true,
       Variant(NewSlot(TestPrototype::GetInstance(), &TestPrototype::Method)) },
-    { "PrototypeSelf", -18, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "ontest", -19, false,
+    { "PrototypeSelf", -19, false, Variant(Variant::TYPE_SCRIPTABLE) },
+    { "ontest", -20, false,
       Variant(new SignalSlot(&TestPrototype::GetInstance()->ontest_signal_)) },
     // Prototype's OverrideSelf is overriden by TestScriptable2's OverrideSelf.
   };
