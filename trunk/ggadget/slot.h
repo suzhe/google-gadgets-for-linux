@@ -107,6 +107,7 @@ class FunctorSlot0 : public Slot0<R> {
     return functor_ == down_cast<const SelfType *>(&another)->functor_;
   }
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot0);
   F functor_;
 };
 
@@ -127,6 +128,7 @@ class FunctorSlot0<void, F> : public Slot0<void> {
     return functor_ == down_cast<const SelfType *>(&another)->functor_;
   }
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot0);
   F functor_;
 };
 
@@ -147,6 +149,7 @@ class MethodSlot0 : public Slot0<R> {
            method_ == down_cast<const SelfType *>(&another)->method_;
   }
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlot0);
   T *object_;
   M method_;
 };
@@ -169,6 +172,7 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
            method_ == down_cast<const SelfType *>(&another)->method_;
   }
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlot0);
   T *object_;
   M method_;
 };
@@ -257,6 +261,7 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
     return functor_ == down_cast<const SelfType *>(&another)->functor_;       \
   }                                                                           \
  private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot##n);                                 \
   F functor_;                                                                 \
 };                                                                            \
                                                                               \
@@ -275,6 +280,7 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
     return functor_ == down_cast<const SelfType *>(&another)->functor_;       \
   }                                                                           \
  private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot##n);                                 \
   F functor_;                                                                 \
 };                                                                            \
                                                                               \
@@ -292,6 +298,7 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
            method_ == down_cast<const SelfType *>(&another)->method_;         \
   }                                                                           \
  private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlot##n);                                  \
   T *obj_;                                                                    \
   M method_;                                                                  \
 };                                                                            \
@@ -312,6 +319,7 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
            method_ == down_cast<const SelfType *>(&another)->method_;         \
   }                                                                           \
  private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(MethodSlot##n);                                  \
   T *obj_;                                                                    \
   M method_;                                                                  \
 };                                                                            \
@@ -472,116 +480,6 @@ class SimpleSetter {
   T *value_ptr_;
 };
 
-template <typename T>
-class StringEnumGetter {
- private:
-  struct SlotWrapper {
-    Slot0<T> *slot;
-    const char **names;
-    int count;
-    int ref_count;
-  };
-
- public:
-  StringEnumGetter(Slot0<T> *slot, const char **names, int count)
-      : wrapper_(new SlotWrapper) {
-    wrapper_->ref_count = 1;
-    wrapper_->slot = slot;
-    wrapper_->names = names;
-    wrapper_->count = count;
-  }
-  StringEnumGetter(const StringEnumGetter &other) : wrapper_(NULL) {
-    operator=(other);
-  }
-  ~StringEnumGetter() {
-    Free();
-  }
-  const char *operator()() const {
-    int index = VariantValue<int>()(wrapper_->slot->Call(0, NULL));
-    return (index >= 0 &&
-        index < wrapper_->count) ? wrapper_->names[index] : NULL;
-  }
-  bool operator==(StringEnumGetter<T> another) const {
-    return wrapper_ == another.wrapper_;
-  }
-  StringEnumGetter &operator=(const StringEnumGetter &other) {
-    if (this != &other) {
-      Free();
-      ++(other.wrapper_->ref_count);
-      wrapper_ = other.wrapper_;
-    }
-    return *this;
-  }
- private:
-  void Free() {
-    if (wrapper_) {
-      if (--(wrapper_->ref_count) == 0) {
-        delete wrapper_->slot;
-        delete wrapper_;
-      }
-    }
-  }
- private:
-  SlotWrapper *wrapper_;
-};
-
-template <typename T>
-class StringEnumSetter {
- private:
-  struct SlotWrapper {
-    Slot1<void, T> *slot;
-    const char **names;
-    int count;
-    int ref_count;
-  };
-
- public:
-  StringEnumSetter(Slot1<void, T> *slot, const char **names, int count)
-      : wrapper_(new SlotWrapper) {
-    wrapper_->ref_count = 1;
-    wrapper_->slot = slot;
-    wrapper_->names = names;
-    wrapper_->count = count;
-  }
-  StringEnumSetter(const StringEnumSetter &other) : wrapper_(NULL) {
-    operator=(other);
-  }
-  ~StringEnumSetter() {
-    Free();
-  }
-  void operator()(const char *name) const {
-    for (int i = 0; i < wrapper_->count; i++)
-      if (strcmp(name, wrapper_->names[i]) == 0) {
-        Variant param(i);
-        wrapper_->slot->Call(1, &param);
-        return;
-      }
-    LOG("Invalid enumerated name: %s", name);
-  }
-  bool operator==(StringEnumSetter<T> another) const {
-    return wrapper_ == another.wrapper_;
-  }
-  StringEnumSetter &operator=(const StringEnumSetter &other) {
-    if (this != &other) {
-      Free();
-      ++(other.wrapper_->ref_count);
-      wrapper_ = other.wrapper_;
-    }
-    return *this;
-  }
- private:
-  void Free() {
-    if (wrapper_) {
-      if (--(wrapper_->ref_count) == 0) {
-        delete wrapper_->slot;
-        delete wrapper_;
-      }
-    }
-  }
- private:
-   SlotWrapper *wrapper_;
-};
-
 /**
  * Helper function to new a @c Slot that always return a fixed @a value.
  * @param value the fixed value.
@@ -610,37 +508,6 @@ inline Slot0<T> *NewSimpleGetterSlot(const T *value_ptr) {
 template <typename T>
 inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
   return NewFunctorSlot<void, T>(SimpleSetter<T>(value_ptr));
-}
-
-/**
- * Helper function to decorate another getter slot returning an enum
- * value into a slot returning a <code>const char *</code> value.
- * @param slot a getter slot returning an enum value.
- * @param names a table containing string values of every enum value.
- * @param count number of entries in the table.
- * @return the decorated slot.
- */  
-template <typename T>
-inline Slot0<const char *> *NewStringEnumGetterSlot(Slot0<T> *slot,
-                                                    const char **names,
-                                                    int count) {
-  return NewFunctorSlot<const char *>(StringEnumGetter<T>(slot, names, count));
-}
-
-/**
- * Helper function to decorate another setter slot accepting an enum
- * value into a slot accepting a <code>const char *</code> value.
- * @param slot a setter slot accepting an enum value.
- * @param names a table containing string values of every enum value.
- * @param count number of entries in the table.
- * @return the decorated slot.
- */  
-template <typename T>
-inline Slot1<void, const char *> *NewStringEnumSetterSlot(Slot1<void, T> *slot,
-                                                          const char **names,
-                                                          int count) {
-  return NewFunctorSlot<void, const char *>(
-      StringEnumSetter<T>(slot, names, count));
 }
 
 } // namespace ggadget
