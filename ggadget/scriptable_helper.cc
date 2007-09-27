@@ -31,6 +31,9 @@ class ScriptableHelper::Impl {
   ~Impl();
 
   void RegisterProperty(const char *name, Slot *getter, Slot *setter);
+  void RegisterStringEnumProperty(const char *name,
+                                  Slot *getter, Slot *setter,
+                                  const char **names, int count);
   void RegisterMethod(const char *name, Slot *slot);
   void RegisterSignal(const char *name, Signal *signal);
   void RegisterConstants(int count,
@@ -66,7 +69,8 @@ class ScriptableHelper::Impl {
   VariantVector slot_prototypes_;
   SlotVector getter_slots_;
   SlotVector setter_slots_;
-  NameVector slot_names_; 
+  NameVector slot_names_;
+  SlotVector extra_slots_;
 
   // Redundant value to simplify code.
   // It should always equal to the size of above collections.
@@ -118,6 +122,11 @@ ScriptableHelper::Impl::~Impl() {
     delete *it;
   }
 
+  for (SlotVector::const_iterator it = extra_slots_.begin();
+       it != extra_slots_.end(); ++it) {
+    delete *it;
+  }
+
   delete array_getter_;
   delete array_setter_;
   delete dynamic_property_getter_;
@@ -140,6 +149,61 @@ void ScriptableHelper::Impl::RegisterProperty(const char *name,
   slot_names_.push_back(name);
   property_count_++;
   ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
+}
+
+class StringEnumGetter {
+ public:
+  StringEnumGetter(Slot *slot, const char **names, int count)
+      : slot_(slot), names_(names), count_(count) { }
+  const char *operator()() const {
+    int index = VariantValue<int>()(slot_->Call(0, NULL));
+    return (index >= 0 && index < count_) ? names_[index] : NULL;
+  }
+  bool operator==(const StringEnumGetter &another) const {
+    return false;
+  }
+  Slot *slot_;
+  const char **names_;
+  int count_;
+};
+
+class StringEnumSetter {
+ public:
+  StringEnumSetter(Slot *slot, const char **names, int count)
+      : slot_(slot), names_(names), count_(count) { }
+  void operator()(const char *name) const {
+    for (int i = 0; i < count_; i++)
+      if (strcmp(name, names_[i]) == 0) {
+        Variant param(i);
+        slot_->Call(1, &param);
+        return;
+      }
+    LOG("Invalid enumerated name: %s", name);
+  }
+  bool operator==(const StringEnumSetter &another) const {
+    return false;
+  }
+  Slot *slot_;
+  const char **names_;
+  int count_;
+};
+
+void ScriptableHelper::Impl::RegisterStringEnumProperty(
+    const char *name, Slot *getter, Slot *setter,
+    const char **names, int count) {
+  ASSERT(getter);
+  Slot *new_getter = NewFunctorSlot<const char *>(
+      StringEnumGetter(getter, names, count));
+  extra_slots_.push_back(getter);
+
+  Slot *new_setter = NULL;
+  if (setter) {
+    new_setter = NewFunctorSlot<void, const char *>(
+        StringEnumSetter(setter, names, count));
+    extra_slots_.push_back(setter);
+  }
+
+  RegisterProperty(name, new_getter, new_setter);
 }
 
 void ScriptableHelper::Impl::RegisterMethod(const char *name, Slot *slot) {
@@ -407,6 +471,13 @@ ScriptableHelper::~ScriptableHelper() {
 void ScriptableHelper::RegisterProperty(const char *name,
                                         Slot *getter, Slot *setter) {
   impl_->RegisterProperty(name, getter, setter);
+}
+
+void ScriptableHelper::RegisterStringEnumProperty(const char *name,
+                                                  Slot *getter, Slot *setter,
+                                                  const char **names,
+                                                  int count) {
+  impl_->RegisterStringEnumProperty(name, getter, setter, names, count);
 }
 
 void ScriptableHelper::RegisterMethod(const char *name, Slot *slot) {
