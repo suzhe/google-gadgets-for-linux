@@ -22,12 +22,12 @@ Used in descriptions for methods or functions to indicate the following word is 
 === @c _word_ ===
 The following _word_ is display using a typewriter font to indicate the word is from source code.  Use <code>...</code> for multiple words or multiple lines or to separate the 's' in plural forms.
 
-=== <code>_source code_</code> ===
+=== <code>_source-code_</code> ===
 See @c.
 
 === @deprecated _description_ ===
 
-=== @param _parameter-name_ _parameter description_ ===
+=== @param _parameter-name_ _parameter-description_ ===
   * Use {{{[out]}}} to indicate this parameter is an out parameter;
   * Use {{{[in,out]}}} to incidate this parameter is both in and out;
   * Don't use {{{[in]}}} for normal in parameters;
@@ -37,7 +37,7 @@ See @c.
   * Don't align the descriptions for multiple @param's;
 
 
-=== @return _description of the return value_ ===
+=== @return _description-of-the-return-value_ ===
   * The first character of the description is not capitalized;
   * If longer than 1 line, indent the following lines 4 characters;
 
