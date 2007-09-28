@@ -1,7 +1,7 @@
 #summary Doxygen guide for this project.
 
 = Doxygen guide =
-(Note: some paragraphcs in this wiki page were copied from Doxygen manual page.  The copyright belongs to the original 
+
 == General Rules ==
   * Don't use Doxygen tags and HTML tags not listed in this guide except for very special cases;
   * Prefer natural formatting (indents, spaces, blank lines, "-" bulletins, etc.) to tags;
