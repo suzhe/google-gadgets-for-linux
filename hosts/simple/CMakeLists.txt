@@ -31,6 +31,7 @@ SET(SRCS
   main.cc
   gtk_cairo_host.cc
   gadget_view_widget.cc
+  options.cc
 )
 
 ADD_EXECUTABLE(ggl ${SRCS})

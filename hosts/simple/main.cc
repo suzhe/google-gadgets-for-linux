@@ -21,30 +21,37 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/file_manager.h"
 #include "ggadget/gadget.h"
-#include "ggadget/img_element.h"
-#include "ggadget/button_element.h"
+#include "ggadget/options_interface.h"
 #include "ggadget/scripts/smjs/js_script_runtime.h"
 #include "ggadget/view.h"
 #include "gadget_view_widget.h"
+#include "options.h"
 
-using ggadget::Gadget;
+#include "ggadget/button_element.h"
+#include "ggadget/div_element.h"
+#include "ggadget/img_element.h"
+
 using ggadget::ElementFactoryInterface;
 using ggadget::ElementFactory;
-using ggadget::ScriptRuntimeInterface;
-using ggadget::JSScriptRuntime;
-using ggadget::View;
 using ggadget::FileManagerInterface;
 using ggadget::FileManager;
-using ggadget::ImgElement;
-using ggadget::ButtonElement;
+using ggadget::Gadget;
+using ggadget::JSScriptRuntime;
+using ggadget::OptionsInterface;
+using ggadget::ScriptRuntimeInterface;
+using ggadget::View;
 
-double g_zoom = 1.;
-Gadget *g_gadget = NULL;
-ViewInterface *g_main_view = NULL;
-ViewInterface *g_options_view = NULL;
-ElementFactory *g_element_factory = NULL;
-ScriptRuntimeInterface *g_script_runtime = NULL;
-FileManagerInterface *g_file_manager = NULL;
+using ggadget::ButtonElement;
+using ggadget::DivElement;
+using ggadget::ImgElement;
+
+static double g_zoom = 1.;
+static int g_debug_mode = 0;
+static Gadget *g_gadget = NULL;
+static ElementFactory *g_element_factory = NULL;
+static ScriptRuntimeInterface *g_script_runtime = NULL;
+static FileManagerInterface *g_file_manager = NULL;
+static OptionsInterface *g_options = NULL;
 
 static gboolean DeleteEventHandler(GtkWidget *widget, 
                                    GdkEvent *event, 
@@ -60,18 +67,21 @@ static gboolean DestroyHandler(GtkWidget *widget,
 
 static void SetUpElementFactory() {
   g_element_factory = new ElementFactory();
+  g_element_factory->RegisterElementClass("button",
+                                          &ButtonElement::CreateInstance);
+  g_element_factory->RegisterElementClass("div", &DivElement::CreateInstance);
   g_element_factory->RegisterElementClass("img", &ImgElement::CreateInstance);
-  g_element_factory->RegisterElementClass("button", &ButtonElement::CreateInstance);
 }
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, 
                            const char *base_path) {
   SetUpElementFactory();
   g_script_runtime = new JSScriptRuntime();
-  g_gadget = new Gadget(g_script_runtime, g_element_factory);
+  g_options = new Options();
+  g_gadget = new Gadget(g_script_runtime, g_element_factory, g_options);
 
-  GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(g_gadget->GetMainView(),
-                                                                g_zoom, NULL));
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(
+      g_gadget->GetMainView(), g_zoom, g_debug_mode, NULL));
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
   
   // Setting min size here allows the window to resize below the size 
@@ -136,6 +146,8 @@ static void DestroyUI() {
   g_element_factory = NULL;
   delete g_file_manager;
   g_file_manager = NULL;
+  delete g_options;
+  g_options = NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -149,11 +161,19 @@ int main(int argc, char* argv[]) {
     return -1;
   }  
   
-  if (argc == 3) {
+  if (argc >= 3) {
     sscanf(argv[2], "%lg", &g_zoom);
     if (g_zoom <= 0 || g_zoom > 5) {
       LOG("Zoom level invalid, resetting to 1");
       g_zoom = 1.;
+    }
+  }
+  
+  if (argc == 4) {
+    sscanf(argv[3], "%d", &g_debug_mode);
+    if (g_debug_mode < 0 || g_debug_mode > 2) {
+      LOG("Debug mode invalid, resetting to 0");
+      g_debug_mode = 0;
     }
   }
   

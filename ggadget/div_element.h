@@ -14,45 +14,45 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_IMG_ELEMENT_H__
-#define GGADGETS_IMG_ELEMENT_H__
+#ifndef GGADGETS_DIV_ELEMENT_H__
+#define GGADGETS_DIV_ELEMENT_H__
 
 #include <stdlib.h>
 #include "basic_element.h"
 
 namespace ggadget {
 
-class ImgElement : public BasicElement {
+class DivElement : public BasicElement {
  public:
-  DEFINE_CLASS_ID(0x95b5791e157d4373, BasicElement);
+  DEFINE_CLASS_ID(0xfca426268a584176, BasicElement);
 
-  ImgElement(ElementInterface *parent,
+  DivElement(ElementInterface *parent,
              ViewInterface *view,
              const char *name);
-  virtual ~ImgElement();
+  virtual ~DivElement();
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
-  virtual const char *GetTagName() const { return "img"; }
+  virtual const char *GetTagName() const { return "div"; }
 
  public:
-  /** Gets and sets the file name of image to display. */
-  const char *GetSrc() const;
-  void SetSrc(const char *src);
-
-  /** Gets the original width of the image being displayed. */
-  size_t GetSrcWidth() const;
-
-  /** Gets the original height of the image being displayed. */
-  size_t GetSrcHeight() const;
+  /**
+   * Gets and sets the autoscroll property.
+   * @c true if the div automatically shows scrollbars if necessary; @c false
+   * if it doesn't show scrollbars. Default is @c false. 
+   */
+  bool IsAutoscroll() const;
+  void SetAutoscroll(bool autoscroll);
 
   /**
-   * Resizes the image to specified @a width and @a height via reduced
-   * resolution.  If the source image is larger than the display area,
-   * using this method to resize the image to the output size will save 
-   * memory and improve rendering performance.
+   * Gets and sets the background color or image of the element. The image is
+   * repeated if necessary, not stretched.
    */
-  void SetSrcSize(size_t width, size_t height);
+  const char *GetBackground() const;
+  void SetBackground(const char *background);
+
+  virtual bool OnMouseEvent(MouseEvent *event);
+  virtual void OnKeyEvent(KeyboardEvent *event);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
@@ -60,7 +60,7 @@ class ImgElement : public BasicElement {
                                           const char *name);
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(ImgElement);
+  DISALLOW_EVIL_CONSTRUCTORS(DivElement);
 
   class Impl;
   Impl *impl_;
@@ -68,4 +68,4 @@ class ImgElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_IMG_ELEMENT_H__
+#endif // GGADGETS_DIV_ELEMENT_H__

@@ -51,43 +51,11 @@ ImgElement::~ImgElement() {
   delete impl_;
 }
 
-const CanvasInterface *ImgElement::Draw(bool *changed) {  
-  CanvasInterface *canvas = NULL;
-  bool change = IsVisibilityChanged();
-  
-  DLOG("Draw image: x=%lf y=%lf width=%lf height=%lf opacity=%lf\n",
-       GetPixelX(), GetPixelY(), GetPixelWidth(), GetPixelHeight(), GetOpacity());
-  
-  ClearVisibilityChanged();
-  if (!IsVisible()) { // if not visible, then return no matter what
-    goto exit;
-  }
-
-  change = change || IsSelfChanged() || !GetCanvas();
-  SetSelfChanged(false);
-  
-  if (changed) {
-    // Need to redraw
-    canvas = SetUpCanvas();    
-    canvas->MultiplyOpacity(GetOpacity());
-    
-    if (impl_->image_) { // draw image as last resort
-      const CanvasInterface *img = impl_->image_->GetCanvas();
-      if (img) {
-        double cx = GetPixelWidth() / img->GetWidth();
-        double cy = GetPixelHeight() / img->GetHeight();
-        if (cx != 1.0 || cy != 1.0) {
-          canvas->ScaleCoordinates(cx, cy);
-        }
-        
-        canvas->DrawCanvas(0., 0., img);
-      }
-    }
-  }
-
-exit:  
-  *changed = change;
-  return canvas;
+void ImgElement::DoDraw(CanvasInterface *canvas,
+                        const CanvasInterface *children_canvas) {
+  if (impl_->image_)
+    impl_->image_->StretchDraw(canvas, 0, 0,
+                               GetPixelWidth(), GetPixelHeight());
 }
 
 const char *ImgElement::GetSrc() const {
@@ -107,19 +75,11 @@ void ImgElement::SetSrc(const char *src) {
 }
 
 size_t ImgElement::GetSrcWidth() const {
-  if (impl_->image_) {
-    const CanvasInterface *canvas = impl_->image_->GetCanvas();
-    return canvas ? canvas->GetWidth() : 0;
-  }
-  return 0;
+  return impl_->image_ ? impl_->image_->GetWidth() : 0; 
 }
 
 size_t ImgElement::GetSrcHeight() const {
-  if (impl_->image_) {
-    const CanvasInterface *canvas = impl_->image_->GetCanvas();
-    return canvas ? canvas->GetHeight() : 0;
-  }
-  return 0;
+  return impl_->image_ ? impl_->image_->GetHeight() : 0;
 }
 
 void ImgElement::SetSrcSize(size_t width, size_t height) {

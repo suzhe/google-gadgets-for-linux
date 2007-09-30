@@ -19,6 +19,7 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
 #include "ggadget/event.h"
+#include "ggadget/scriptable_event.h"
 #include "ggadget/slot.h"
 #include "ggadget/view.h"
 #include "ggadget/xml_utils.h"
@@ -40,6 +41,8 @@ class Muffin : public ggadget::BasicElement {
   virtual const char *GetTagName() const {
     return "muffin";
   }
+  virtual void DoDraw(ggadget::CanvasInterface *canvas,
+                      const ggadget::CanvasInterface *children_canvas) { }
 
  public:
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
@@ -68,6 +71,8 @@ class Pie : public ggadget::BasicElement {
   virtual const char *GetTagName() const {
     return "pie";
   }
+  virtual void DoDraw(ggadget::CanvasInterface *canvas,
+                      const ggadget::CanvasInterface *children_canvas) { }
   
  public:
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
@@ -91,23 +96,30 @@ class EventHandler {
   void Handle1() {
     ASSERT_FALSE(fired2_);
     fired1_ = true;
-    ggadget::Event *current_event = view_->GetEvent();
-    ASSERT_EQ(ggadget::Event::EVENT_KEY_DOWN, current_event->GetType());
-    ggadget::MouseEvent event(ggadget::Event::EVENT_MOUSE_CLICK, 123, 456);
-    view_->FireEvent(&event, signal2_);
+    ggadget::ScriptableEvent *current_scriptable_event = view_->GetEvent();
+    ASSERT_EQ(ggadget::Event::EVENT_KEY_DOWN,
+              current_scriptable_event->GetEvent()->GetType());
+    ggadget::MouseEvent event(ggadget::Event::EVENT_MOUSE_CLICK, 123, 456,
+                              ggadget::MouseEvent::BUTTON_LEFT, 999);
+    ggadget::ScriptableEvent scriptable_event(&event, NULL, 0, 0);
+    view_->FireEvent(&scriptable_event, signal2_);
     // The current event should be the same as before. 
-    ASSERT_EQ(current_event, view_->GetEvent());
-    ASSERT_EQ(ggadget::Event::EVENT_KEY_DOWN, current_event->GetType());
+    ASSERT_EQ(current_scriptable_event, view_->GetEvent());
+    ASSERT_EQ(ggadget::Event::EVENT_KEY_DOWN,
+              current_scriptable_event->GetEvent()->GetType());
   }
   void Handle2() {
     ASSERT_TRUE(fired1_);
     fired2_ = true;
-    ggadget::Event *current_event = view_->GetEvent();
+    ggadget::ScriptableEvent *scriptable_event = view_->GetEvent();
+    ggadget::Event *current_event = scriptable_event->GetEvent();
     ASSERT_EQ(ggadget::Event::EVENT_MOUSE_CLICK, current_event->GetType());
     ggadget::MouseEvent *mouse_event =
         static_cast<ggadget::MouseEvent *>(current_event);
     ASSERT_EQ(123, mouse_event->GetX());
     ASSERT_EQ(456, mouse_event->GetY());
+    ASSERT_EQ(ggadget::MouseEvent::BUTTON_LEFT, mouse_event->GetButton());
+    ASSERT_EQ(999, mouse_event->GetWheelDelta());
   }
 
   ggadget::EventSignal signal1_, signal2_;
@@ -118,8 +130,9 @@ class EventHandler {
 TEST(ViewTest, FireEvent) {
   ggadget::View view(NULL, NULL, NULL, gFactory);
   EventHandler handler(&view);
-  ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN);
-  view.FireEvent(&event, handler.signal1_);
+  ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN, 2468);
+  ggadget::ScriptableEvent scriptable_event(&event, NULL, 0, 0);
+  view.FireEvent(&scriptable_event, handler.signal1_);
   ASSERT_TRUE(handler.fired1_);
   ASSERT_TRUE(handler.fired2_);
 }

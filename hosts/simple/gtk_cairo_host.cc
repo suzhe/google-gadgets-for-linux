@@ -26,8 +26,8 @@
 using ggadget::GraphicsInterface;
 using ggadget::TimerEvent;
 
-GtkCairoHost::GtkCairoHost(GadgetViewWidget *gvw) 
-  : gvw_(gvw), gfx_(NULL) {    
+GtkCairoHost::GtkCairoHost(GadgetViewWidget *gvw, int debug_mode) 
+  : gvw_(gvw), gfx_(NULL), debug_mode_(debug_mode) {    
 }
 
 GtkCairoHost::~GtkCairoHost() {
@@ -68,11 +68,12 @@ bool GtkCairoHost::DetachFromView() {
   return true; 
 }
 
-void GtkCairoHost::SwitchWidget(GadgetViewWidget *new_gvw) {
+void GtkCairoHost::SwitchWidget(GadgetViewWidget *new_gvw, int debug_mode) {
   if (gvw_) {
     gvw_->host = NULL; 
   }
   gvw_ = new_gvw;
+  debug_mode_ = debug_mode;
 }
 
 void GtkCairoHost::SetResizeable() {
@@ -87,6 +88,12 @@ void GtkCairoHost::SetShowCaptionAlways(bool always) {
   // todo
 }
 
+static uint64_t GetCurrentTimeInternal() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return static_cast<uint64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
+}
+
 gboolean GtkCairoHost::DispatchTimer(gpointer data) {
   TimerData *tmdata = static_cast<TimerData *>(data);
 
@@ -98,10 +105,7 @@ gboolean GtkCairoHost::DispatchTimer(gpointer data) {
     return FALSE;
   }
 
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  uint64_t time = (uint64_t)tv.tv_sec + (uint64_t)(tv.tv_usec) * 1000000;
-  TimerEvent tmevent(tmdata->target, tmdata->data, time);
+  TimerEvent tmevent(tmdata->target, tmdata->data, GetCurrentTimeInternal());
   tmdata->host->gvw_->view->OnTimerEvent(&tmevent);
   
   if (!tmevent.GetReceiveMore()) {
@@ -148,7 +152,5 @@ bool GtkCairoHost::RemoveTimer(void *token) {
 }
 
 uint64_t GtkCairoHost::GetCurrentTime() const {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return (uint64_t)tv.tv_sec + (uint64_t)(tv.tv_usec) * 1000000;
+  return GetCurrentTimeInternal();
 }

@@ -25,7 +25,7 @@ namespace ggadget {
 
 class ButtonElement::Impl {
  public:
-  Impl() : mousedown(false), mouseover(false), 
+  Impl() : mousedown_(false), mouseover_(false), 
            image_(NULL), downimage_(NULL), 
            overimage_(NULL), disabledimage_(NULL) { }
   ~Impl() {
@@ -42,8 +42,8 @@ class ButtonElement::Impl {
     disabledimage_ = NULL;   
   }
 
-  bool mousedown;
-  bool mouseover;
+  bool mousedown_;
+  bool mouseover_;
   std::string image_src_, downimage_src_, overimage_src_, disabledimage_src_;
   Image *image_, *downimage_, *overimage_, *disabledimage_;
 };
@@ -71,55 +71,26 @@ ButtonElement::~ButtonElement() {
   delete impl_;
 }
 
-const CanvasInterface *ButtonElement::Draw(bool *changed) {
-  CanvasInterface *canvas = NULL;
-  bool change = IsVisibilityChanged();
-  
-  ClearVisibilityChanged();
-  if (!IsVisible()) { // if not visible, then return no matter what
-    goto exit;
+void ButtonElement::DoDraw(CanvasInterface *canvas,
+                           const CanvasInterface *children_canvas) {
+  Image *img = NULL;
+  if (!IsEnabled()) {
+    img = impl_->disabledimage_;
   }
-
-  change = change || IsSelfChanged() || !GetCanvas();
-  SetSelfChanged(false);
-  
-  if (changed) {
-    // Need to redraw
-    canvas = SetUpCanvas();    
-    canvas->MultiplyOpacity(GetOpacity());
-    
-    Image *img = NULL;
-    if (!IsEnabled()) {
-      img = impl_->disabledimage_;
-    }
-    else if (impl_->mousedown) {
-      img = impl_->downimage_;     
-    }
-    else if (impl_->mouseover) { 
-      img = impl_->overimage_;  
-    }   
-
-    if (!img) { // draw image as last resort
-      img = impl_->image_;
-    }
-    
-    if (img) {
-      const CanvasInterface *img_canvas = img->GetCanvas();
-      if (img_canvas) {
-        double cx = GetPixelWidth() / img_canvas->GetWidth();
-        double cy = GetPixelHeight() / img_canvas->GetHeight();
-        if (cx != 1.0 || cy != 1.0) {
-          canvas->ScaleCoordinates(cx, cy);
-        }
-        
-        canvas->DrawCanvas(0., 0., img_canvas);
-      }
-    }
+  else if (impl_->mousedown_) {
+    img = impl_->downimage_;     
   }
-    
-exit:  
-  *changed = change;
-  return canvas; 
+  else if (impl_->mouseover_) { 
+    img = impl_->overimage_;
+  }   
+
+  if (!img) { // draw image as last resort
+    img = impl_->image_;
+  }
+  
+  if (img) {
+    img->StretchDraw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
+  }
 }
 
 const char *ButtonElement::GetImage() const {
@@ -196,16 +167,16 @@ bool ButtonElement::OnMouseEvent(MouseEvent *event) {
   if (fired) {
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:
-      impl_->mousedown = true;
+      impl_->mousedown_ = true;
       break;
      case Event::EVENT_MOUSE_UP:
-      impl_->mousedown = false;
+      impl_->mousedown_ = false;
       break;
      case Event::EVENT_MOUSE_OUT:
-      impl_->mouseover = false;
+      impl_->mouseover_ = false;
       break;
      case Event::EVENT_MOUSE_OVER:
-      impl_->mouseover = true;
+      impl_->mouseover_ = true;
       break;
      default:
       break;

@@ -28,7 +28,9 @@
 #include "math_utils.h"
 #include "script_context_interface.h"
 #include "scriptable_delegator.h"
+#include "scriptable_event.h"
 #include "slot.h"
+#include "texture.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -39,7 +41,8 @@ class View::Impl {
        GadgetInterface *gadget,
        ElementFactoryInterface *element_factory,
        View *owner)
-    : script_context_(script_context),
+    : owner_(owner),
+      script_context_(script_context),
       gadget_(gadget),
       element_factory_(element_factory),
       children_(element_factory, NULL, owner),
@@ -78,6 +81,7 @@ class View::Impl {
     
     // Then send event to view.
     if (fired) {
+      ScriptableEvent scriptable_event(event, owner_, 0, 0);
       switch (event->GetType()) {
         case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
         // DLOG("mousemove");
@@ -85,27 +89,27 @@ class View::Impl {
         break;
        case Event::EVENT_MOUSE_DOWN:
         DLOG("mousedown");
-        FireEvent(event, onmousedown_event_);
+        FireEvent(&scriptable_event, onmousedown_event_);
         break;
        case Event::EVENT_MOUSE_UP:
         DLOG("mouseup");
-        FireEvent(event, onmouseup_event_);
+        FireEvent(&scriptable_event, onmouseup_event_);
         break;
        case Event::EVENT_MOUSE_CLICK:
         DLOG("click %g %g", event->GetX(), event->GetY());
-        FireEvent(event, onclick_event_);
+        FireEvent(&scriptable_event, onclick_event_);
         break;
        case Event::EVENT_MOUSE_DBLCLICK:
         DLOG("dblclick %g %g", event->GetX(), event->GetY());
-        FireEvent(event, ondblclick_event_);
+        FireEvent(&scriptable_event, ondblclick_event_);
         break;
        case Event::EVENT_MOUSE_OUT:
         DLOG("mouseout");
-        FireEvent(event, onmouseout_event_);
+        FireEvent(&scriptable_event, onmouseout_event_);
         break;
        case Event::EVENT_MOUSE_OVER:
         DLOG("mouseover");
-        FireEvent(event, onmouseover_event_);
+        FireEvent(&scriptable_event, onmouseover_event_);
         break;
        case Event::EVENT_MOUSE_WHEEL:
         DLOG("mousewheel");
@@ -118,18 +122,19 @@ class View::Impl {
   }
 
   void OnKeyEvent(KeyboardEvent *event) {
+    ScriptableEvent scriptable_event(event, owner_, 0, 0);
     switch (event->GetType()) {
      case Event::EVENT_KEY_DOWN:
       DLOG("keydown");
-      FireEvent(event, onkeydown_event_);      
+      FireEvent(&scriptable_event, onkeydown_event_);      
       break;
      case Event::EVENT_KEY_UP:
       DLOG("keyup");
-      FireEvent(event, onkeyup_event_);
+      FireEvent(&scriptable_event, onkeyup_event_);
       break;
      case Event::EVENT_KEY_PRESS:
       DLOG("keypress");
-      FireEvent(event, onkeypress_event_);
+      FireEvent(&scriptable_event, onkeypress_event_);
       break;
      default:
       ASSERT(false);
@@ -152,28 +157,49 @@ class View::Impl {
 
       TimerInfo &info = it->second;
       ASSERT(info.token == token);
+
       switch (info.type) {
-        case TIMER_TIMEOUT:
+        case TIMER_TIMEOUT: {
+          ScriptableEvent scriptable_event(event, owner_, token, 0);
+          event_stack_.push_back(&scriptable_event);
           event->StopReceivingMore();
           info.slot->Call(0, NULL);
           RemoveTimer(token);
+          event_stack_.pop_back();
           break;
-        case TIMER_INTERVAL:
+        }
+        case TIMER_INTERVAL: {
+          ScriptableEvent scriptable_event(event, owner_, token, 0);
+          event_stack_.push_back(&scriptable_event);
           info.slot->Call(0, NULL);
+          event_stack_.pop_back();
           break;
+        }
         case TIMER_ANIMATION: {
           uint64_t event_time = event->GetTimeStamp();
           double progress = static_cast<double>(event_time - info.start_time) /
                             1000.0 / info.duration;
           progress = std::min(1.0, std::max(0.0, progress));
-          int value = info.start_value + static_cast<int>(progress * info.spread);
+          int value = info.start_value +
+                      static_cast<int>(progress * info.spread + 0.5);
           if (value != info.last_value) {
+            ScriptableEvent scriptable_event(event, owner_, token, value);
+            event_stack_.push_back(&scriptable_event);
             info.last_value = value;
             Variant param(value);
             info.slot->Call(1, &param);
+            event_stack_.pop_back();
           }
-          if (progress == 1.0) {
-            event->StopReceivingMore();
+
+          event->StopReceivingMore();
+          if (progress < 1.0 && host_) {
+            // Remove and re-register timer to let the actual interval adapt
+            // to the system performance. 
+            host_->RemoveTimer(info.host_timer);
+            // Reschedule timer
+            info.host_timer = host_->RegisterTimer(
+                kAnimationInterval, NULL, reinterpret_cast<void *>(token));
+          } else {
             RemoveTimer(token);
           }
           break;
@@ -214,18 +240,19 @@ class View::Impl {
     const char *name = element->GetName();
     if (name && *name) {
       ElementsMap::iterator it = all_elements_.find(name);
-      if (it->second == element)
+      if (it != all_elements_.end() && it->second == element)
         all_elements_.erase(it);
     }
   }
 
-  void FireEvent(Event *event, const EventSignal &event_signal) {
+  void FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
+    // Note: there is another place also do the similar thing: OnTimerEvent().
     event_stack_.push_back(event);
     event_signal();
     event_stack_.pop_back();
   }
 
-  Event *GetEvent() const {
+  ScriptableEvent *GetEvent() const {
     return event_stack_.empty() ? NULL : event_stack_[event_stack_.size() - 1];
   }
 
@@ -435,6 +462,13 @@ class View::Impl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
 
+  // Put all_elements_ here to make it the alst member to be destructed,
+  // because destruction of children_ needs it.
+  typedef std::map<std::string, ElementInterface *, GadgetStringComparator>
+      ElementsMap;
+  ElementsMap all_elements_;
+
+  View *owner_;
   ScriptContextInterface *script_context_;
   GadgetInterface *gadget_;
   ElementFactoryInterface *element_factory_;
@@ -445,12 +479,7 @@ class View::Impl {
   std::string caption_;
   bool show_caption_always_;
 
-  std::vector<Event *> event_stack_;
-  // NOTE: Here don't use GadgetStringComparator, because even in GDWin's
-  // case-insensitive environment, element names are still case sensitive.
-  typedef std::map<std::string, ElementInterface *> ElementsMap;
-  ElementsMap all_elements_;
-
+  std::vector<ScriptableEvent *> event_stack_;
   static const unsigned int kAnimationInterval = 10;
   struct TimerInfo {
     int token;
@@ -517,30 +546,30 @@ View::View(ScriptContextInterface *script_context,
   RegisterMethod("resizeTo", NewSlot(this, &View::SetSize));
 
   // TODO: Move it to OptionsView?
-  RegisterSignal("oncancel", &impl_->oncancle_event_);
-  RegisterSignal("onclick", &impl_->onclick_event_);
-  RegisterSignal("onclose", &impl_->onclose_event_);
-  RegisterSignal("ondblclick", &impl_->ondblclick_event_);
-  RegisterSignal("ondock", &impl_->ondock_event_);
-  RegisterSignal("onkeydown", &impl_->onkeydown_event_);
-  RegisterSignal("onkeypress", &impl_->onkeypress_event_);
-  RegisterSignal("onkeyup", &impl_->onkeyup_event_);
-  RegisterSignal("onminimize", &impl_->onminimize_event_);
-  RegisterSignal("onmousedown", &impl_->onmousedown_event_);
-  RegisterSignal("onmouseout", &impl_->onmouseout_event_);
-  RegisterSignal("onmouseover", &impl_->onmouseover_event_);
-  RegisterSignal("onmouseup", &impl_->onmouseup_event_);
+  RegisterSignal(kOnCancelEvent, &impl_->oncancle_event_);
+  RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
+  RegisterSignal(kOnCloseEvent, &impl_->onclose_event_);
+  RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
+  RegisterSignal(kOnDockEvent, &impl_->ondock_event_);
+  RegisterSignal(kOnKeyDownEvent, &impl_->onkeydown_event_);
+  RegisterSignal(kOnKeyPressEvent, &impl_->onkeypress_event_);
+  RegisterSignal(kOnKeyUpEvent, &impl_->onkeyup_event_);
+  RegisterSignal(kOnMinimizeEvent, &impl_->onminimize_event_);
+  RegisterSignal(kOnMouseDownEvent, &impl_->onmousedown_event_);
+  RegisterSignal(kOnMouseOutEvent, &impl_->onmouseout_event_);
+  RegisterSignal(kOnMouseOverEvent, &impl_->onmouseover_event_);
+  RegisterSignal(kOnMouseUpEvent, &impl_->onmouseup_event_);
   // TODO: Move it to OptionsView?
-  RegisterSignal("onok", &impl_->onok_event_);
-  RegisterSignal("onopen", &impl_->onopen_event_);
+  RegisterSignal(kOnOkEvent, &impl_->onok_event_);
+  RegisterSignal(kOnOpenEvent, &impl_->onopen_event_);
   // TODO: Move it to OptionsView?
-  RegisterSignal("onoptionchanged", &impl_->onoptionchanged_event_);
-  RegisterSignal("onpopin", &impl_->onpopin_event_);
-  RegisterSignal("onpopout", &impl_->onpopout_event_);
-  RegisterSignal("onrestore", &impl_->onrestore_event_);
-  RegisterSignal("onsize", &impl_->onsize_event_);
-  RegisterSignal("onsizing", &impl_->onsizing_event_);
-  RegisterSignal("onundock", &impl_->onundock_event_);
+  RegisterSignal(kOnOptionChangedEvent, &impl_->onoptionchanged_event_);
+  RegisterSignal(kOnPopInEvent, &impl_->onpopin_event_);
+  RegisterSignal(kOnPopOutEvent, &impl_->onpopout_event_);
+  RegisterSignal(kOnRestoreEvent, &impl_->onrestore_event_);
+  RegisterSignal(kOnSizeEvent, &impl_->onsize_event_);
+  RegisterSignal(kOnSizingEvent, &impl_->onsizing_event_);
+  RegisterSignal(kOnUndockEvent, &impl_->onundock_event_);
 
   SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetElementByNameVariant),
                             NULL);
@@ -629,15 +658,15 @@ void View::OnElementRemove(ElementInterface *element) {
   impl_->OnElementRemove(element);
 }
 
-void View::FireEvent(Event *event, const EventSignal &event_signal) {
+void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
   impl_->FireEvent(event, event_signal);
 }
 
-Event *View::GetEvent() {
+ScriptableEvent *View::GetEvent() {
   return impl_->GetEvent();
 }
 
-const Event *View::GetEvent() const {
+const ScriptableEvent *View::GetEvent() const {
   return impl_->GetEvent();
 }
 
@@ -725,10 +754,19 @@ void View::ClearInterval(int token) {
   impl_->ClearInterval(token);
 }
 
+int View::GetDebugMode() const {
+  return impl_->host_ ? impl_->host_->GetDebugMode() : 0;
+}
+
 Image *View::LoadImage(const char *name, bool is_mask) {
   ASSERT(impl_->host_);
   return new Image(GetGraphics(), impl_->gadget_->GetFileManager(),
                    name, is_mask);
+}
+
+Texture *View::LoadTexture(const char *name) {
+  ASSERT(impl_->host_);
+  return new Texture(GetGraphics(), impl_->gadget_->GetFileManager(), name);
 }
 
 } // namespace ggadget

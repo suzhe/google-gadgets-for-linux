@@ -61,25 +61,13 @@ class Muffin : public BasicElement {
     return "muffin";
   }
   
-  virtual const CanvasInterface *Draw(bool *changed) {
-    *changed = true;
-    SetUpCanvas();
-
-    CanvasInterface *canvas = GetCanvas();
-
-    canvas->MultiplyOpacity(GetOpacity());
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas) {
     canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(), 
                            Color(1., 0., 0.));
-    
-    bool c;
-    const CanvasInterface *child_canvas = GetChildren()->Draw(&c);
-    if (child_canvas) {
-      canvas->DrawCanvas(0., 0., child_canvas);
+    if (children_canvas) {
+      canvas->DrawCanvas(0., 0., children_canvas);
     }
-    
-    DrawBoundingBox();
-    
-    return canvas;
   }
   
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, BasicElement)
@@ -111,18 +99,11 @@ class Pie : public BasicElement {
     color_ = c;
   }
   
-  virtual const CanvasInterface *Draw(bool *changed) {
-    *changed = true;    
-    SetUpCanvas();
-    
-    CanvasInterface *canvas = GetCanvas();
-    canvas->MultiplyOpacity(GetOpacity());
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas) {
     canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(), color_);
-    DrawBoundingBox();
-
-    return canvas;
   }
-   
+
   DEFINE_CLASS_ID(0x829defac5bbe11dc, BasicElement)
 
   static ElementInterface *CreateInstance(

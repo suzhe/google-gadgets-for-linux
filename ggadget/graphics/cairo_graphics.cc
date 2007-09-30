@@ -80,13 +80,6 @@ exit:
   return c;
 }
 
-struct CairoPNGReaderClosure {
-  CairoPNGReaderClosure(char *buf, size_t len) : 
-    buffer(buf), buffer_end(buf + len) {};
-  char *buffer;  
-  char *buffer_end;
-};
-
 CanvasInterface *CairoGraphics::NewMask(const char *img_bytes, 
                                         size_t img_bytes_count) const {
   CairoCanvas *img = NULL;
