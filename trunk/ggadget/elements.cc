@@ -261,15 +261,17 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
       }          
     }
   }
-  
-  // Draw bounding box
+
+#if 0
+  // Draw bounding box for debug.
   canvas_->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
   canvas_->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
   canvas_->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
   canvas_->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
   canvas_->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
   canvas_->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
-  
+#endif
+
   canvas = canvas_;
   
 exit:
@@ -370,7 +372,7 @@ bool Elements::OnMouseEvent(MouseEvent *event) {
   for (std::vector<ElementInterface *>::reverse_iterator ite = 
            impl_->children_.rbegin();
        ite != impl_->children_.rend(); ++ite) {
-    double child_x, child_y;    
+    double child_x, child_y;
     ChildCoordFromParentCoord(event->GetX(), event->GetY(),
                               (*ite)->GetPixelX(), (*ite)->GetPixelY(),
                               (*ite)->GetPixelPinX(), (*ite)->GetPixelPinY(),

@@ -14,33 +14,36 @@
   limitations under the License.
 */
 
-#include "ggadget/scriptable_helper.h"
-#include "ggadget/scriptable_interface.h"
-#include "ggadget/scripts/smjs/js_script_context.h"
+#ifndef GGADGET_SCRIPTABLE_OPTIONS_H__
+#define GGADGET_SCRIPTABLE_OPTIONS_H__
 
-using namespace ggadget;
+#include "scriptable_helper.h"
+#include "scriptable_interface.h"
 
-class GlobalObject : public ScriptableInterface {
+namespace ggadget {
+
+class OptionsInterface;
+
+class ScriptableOptions : public ScriptableInterface {
  public:
-  DEFINE_CLASS_ID(0x7067c76cc0d84d11, ScriptableInterface);
-  GlobalObject() {
-  }
+  DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)
+
+  explicit ScriptableOptions(OptionsInterface *options); 
+  virtual ~ScriptableOptions();
+
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return false; }
+  virtual bool IsStrict() const { return true; }
+
+  OptionsInterface *GetOptions() const { return options_; }
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableOptions);
+  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
   ScriptableHelper scriptable_helper_;
+  OptionsInterface *options_;
 };
 
-static GlobalObject *global;
+} // namespace ggadget
 
-// Called by the initialization code in js_shell.cc.
-// Used to compile a standalone js_shell.
-JSBool InitCustomObjects(JSScriptContext *context) {
-  global = new GlobalObject();
-  context->SetGlobalObject(global);
-  return JS_TRUE;
-}
-
-void DestroyCustomObjects(JSScriptContext *context) {
-  delete global;
-}
+#endif  // GGADGET_SCRIPTABLE_OPTIONS_H__

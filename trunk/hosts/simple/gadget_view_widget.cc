@@ -111,7 +111,9 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);  
   if (event->type == GDK_BUTTON_PRESS) {
     MouseEvent e(Event::EVENT_MOUSE_DOWN, 
-                 event->x / gvw->zoom, event->y / gvw->zoom);
+                 event->x / gvw->zoom, event->y / gvw->zoom,
+                 // TODO: button and wheelDelta
+                 MouseEvent::BUTTON_NONE, 0);
     gvw->view->OnMouseEvent(&e);
   }
   else if (event->type == GDK_2BUTTON_PRESS) {    
@@ -126,19 +128,25 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_BUTTON_RELEASE);
   MouseEvent e(Event::EVENT_MOUSE_UP, 
-               event->x / gvw->zoom, event->y / gvw->zoom);
+               event->x / gvw->zoom, event->y / gvw->zoom,
+               // TODO: button and wheelDelta
+               MouseEvent::BUTTON_NONE, 0);
   gvw->view->OnMouseEvent(&e);
 
   if (gvw->dbl_click) {
     // The GTK event sequence here is: press 2press release
     // for the second click.
     MouseEvent e2(Event::EVENT_MOUSE_DBLCLICK, 
-                  event->x / gvw->zoom, event->y / gvw->zoom);
+                  event->x / gvw->zoom, event->y / gvw->zoom,
+                  // TODO: button and wheelDelta
+                  MouseEvent::BUTTON_NONE, 0);
     gvw->view->OnMouseEvent(&e2);
   }
   else {
     MouseEvent e2(Event::EVENT_MOUSE_CLICK, 
-                  event->x / gvw->zoom, event->y / gvw->zoom);
+                  event->x / gvw->zoom, event->y / gvw->zoom,
+                  // TODO: button and wheelDelta
+                  MouseEvent::BUTTON_NONE, 0);
     gvw->view->OnMouseEvent(&e2);
   }
   
@@ -152,7 +160,9 @@ static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_ENTER_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OVER, 
-               event->x / gvw->zoom, event->y / gvw->zoom);
+               event->x / gvw->zoom, event->y / gvw->zoom,
+               // TODO: button and wheelDelta
+               MouseEvent::BUTTON_NONE, 0);
   gvw->view->OnMouseEvent(&e);
 
   return FALSE;
@@ -163,7 +173,9 @@ static gboolean GadgetViewWidget_leave_notify(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_LEAVE_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OUT, 
-               event->x / gvw->zoom, event->y / gvw->zoom);
+               event->x / gvw->zoom, event->y / gvw->zoom,
+               // TODO: button and wheelDelta
+               MouseEvent::BUTTON_NONE, 0);
   gvw->view->OnMouseEvent(&e);
   
   return FALSE;
@@ -174,7 +186,9 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_MOTION_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_MOVE, 
-               event->x / gvw->zoom, event->y / gvw->zoom);
+               event->x / gvw->zoom, event->y / gvw->zoom,
+               // TODO: button and wheelDelta
+               MouseEvent::BUTTON_NONE, 0);
   gvw->view->OnMouseEvent(&e);
   
   // Since motion hint is enabled, we must notify GTK that we're ready to 
@@ -193,13 +207,17 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
   
   // TODO handle modifier keys correctly
   if (gvw->last_keyval != event->keyval) {
-    KeyboardEvent e(Event::EVENT_KEY_DOWN);
+    KeyboardEvent e(Event::EVENT_KEY_DOWN,
+                    // TODO: keyCode
+                    0);
     gvw->view->OnKeyEvent(&e);
     
     gvw->last_keyval = event->keyval;
   }
   
-  KeyboardEvent e2(Event::EVENT_KEY_PRESS);
+  KeyboardEvent e2(Event::EVENT_KEY_PRESS,
+                   // TODO: keyCode
+                   0);
   gvw->view->OnKeyEvent(&e2);
   
   return FALSE;
@@ -209,7 +227,9 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
                                              GdkEventKey *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_RELEASE);
-  KeyboardEvent e(Event::EVENT_KEY_UP);
+  KeyboardEvent e(Event::EVENT_KEY_UP,
+                  // TODO: keyCode
+                  0);
   gvw->view->OnKeyEvent(&e);
   
   gvw->last_keyval = 0; // reset last_keyval
@@ -242,7 +262,9 @@ static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_SCROLL);
   MouseEvent e(Event::EVENT_MOUSE_WHEEL, 
-               event->x / gvw->zoom, event->y / gvw->zoom);
+               event->x / gvw->zoom, event->y / gvw->zoom,
+               // TODO: button and wheelDelta
+               MouseEvent::BUTTON_NONE, 0);
   gvw->view->OnMouseEvent(&e);
   
   return FALSE;
@@ -322,7 +344,7 @@ GType GadgetViewWidget_get_type() {
 }
 
 GtkWidget *GadgetViewWidget_new(ViewInterface *v, double zoom, 
-                                GtkCairoHost *host) {  
+                                int debug_mode, GtkCairoHost *host) {  
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
                                  NULL));
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
@@ -332,10 +354,10 @@ GtkWidget *GadgetViewWidget_new(ViewInterface *v, double zoom,
   
   CairoGraphics *gfx = new CairoGraphics(zoom);
   if (host) {
-    host->SwitchWidget(gvw);
+    host->SwitchWidget(gvw, debug_mode);
   }
   else {
-    host = new GtkCairoHost(gvw);
+    host = new GtkCairoHost(gvw, debug_mode);
   }
   host->SetGraphics(gfx);
   gvw->host = host;

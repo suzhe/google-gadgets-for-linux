@@ -111,12 +111,10 @@ class BasicElement : public ElementInterface {
   virtual void OnOtherEvent(Event *event);
   virtual void OnTimerEvent(TimerEvent *event);
   
-  /**
-   * Draw a black box with crisscrossed lines bounding the element.
-   * This is used only for testing.
-   */
-  void DrawBoundingBox();
-  
+  virtual bool IsPositionChanged() const;
+  virtual void ClearPositionChanged();
+
+#if 0 // TODO: Ensure if they are needed.
   /** 
    * Call this when drawing to initialize and prepare a canvas of the right
    * height and width for drawing.
@@ -128,7 +126,22 @@ class BasicElement : public ElementInterface {
    * This should only be used for drawing. 
    */
   CanvasInterface *GetCanvas();
- 
+
+  /** 
+   * Checks to see if visibility of the element has changed since the last draw.
+   */
+  virtual bool IsVisibilityChanged() const;
+  /** Sets the visibility changed state to false. */
+  virtual void ClearVisibilityChanged();
+  
+#endif
+
+  DEFAULT_OWNERSHIP_POLICY
+  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
+  virtual bool IsStrict() const { return true; }
+
+ protected:
+
   /**
    * Checks to see if the current element has changed and needs to be redrawn.
    * Note that it does not check any child elements, so the element may still
@@ -137,22 +150,18 @@ class BasicElement : public ElementInterface {
    * position in relation to the parent.
    * @return true if the element has changed, false otherwise.
    */
-  virtual bool IsSelfChanged() const;
+  bool IsSelfChanged() const;
   /** Sets the self changed state. */
-  virtual void SetSelfChanged(bool changed);
-  /** 
-   * Checks to see if visibility of the element has changed since the last draw.
-   */
-  virtual bool IsVisibilityChanged() const;
-  /** Sets the visibility changed state to false. */
-  virtual void ClearVisibilityChanged();
-  
-  virtual bool IsPositionChanged() const;
-  virtual void ClearPositionChanged();
+  void SetSelfChanged(bool changed);
 
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
+  /**
+   * Draws the element onto the canvas.
+   * To be implemented by subclasses.
+   * @param canvas the canvas to draw the element on.
+   * @param children_canvas the canvas containing composited children.  
+   */
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas) = 0;
 
  protected:
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)

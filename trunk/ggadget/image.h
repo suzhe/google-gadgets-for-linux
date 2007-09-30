@@ -59,6 +59,21 @@ class Image {
    */
   const CanvasInterface *GetCanvas();
 
+  /**
+   * Draw the image on a canvas without stretching. 
+   */
+  void Draw(CanvasInterface *canvas, double x, double y);
+
+  /**
+   * Draw the image on a canvas stretching the image to given width and height.
+   */
+  void StretchDraw(CanvasInterface *canvas,
+                   double x, double y,
+                   double width, double height);
+
+  size_t GetWidth();
+  size_t GetHeight();
+
  private:
   // Don't allow assignment.
   void operator=(const Image&);

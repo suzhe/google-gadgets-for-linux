@@ -56,9 +56,10 @@ class View : public ViewInterface {
 
   virtual void OnElementAdd(ElementInterface *element);
   virtual void OnElementRemove(ElementInterface *element);
-  virtual void FireEvent(Event *event, const EventSignal &event_signal);
-  virtual Event *GetEvent();
-  virtual const Event *GetEvent() const;
+  virtual void FireEvent(ScriptableEvent *event,
+                         const EventSignal &event_signal);
+  virtual ScriptableEvent *GetEvent();
+  virtual const ScriptableEvent *GetEvent() const;
 
   virtual bool SetWidth(int width);
   virtual bool SetHeight(int height);
@@ -93,8 +94,10 @@ class View : public ViewInterface {
   virtual void ClearTimeout(int token);
   virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
   virtual void ClearInterval(int token);
+  virtual int GetDebugMode() const;
 
   virtual Image *LoadImage(const char *name, bool is_mask);
+  virtual Texture *LoadTexture(const char *name);
 
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)

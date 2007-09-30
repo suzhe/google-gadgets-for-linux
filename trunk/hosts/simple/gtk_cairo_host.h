@@ -37,7 +37,7 @@ class GadgetViewWidget;
  */
 class GtkCairoHost : public HostInterface {
  public:
-  GtkCairoHost(GadgetViewWidget *gvw);
+  GtkCairoHost(GadgetViewWidget *gvw, int debug_mode);
   virtual ~GtkCairoHost();
 
   /** 
@@ -52,7 +52,7 @@ class GtkCairoHost : public HostInterface {
    * valid GtkCairoHost object. The new GadgetViewWidget is responsible for
    * freeing this host.
    */
-  void SwitchWidget(GadgetViewWidget *new_gvw);
+  void SwitchWidget(GadgetViewWidget *new_gvw, int debug_mode);
       
   virtual const GraphicsInterface *GetGraphics() const { return gfx_; };
  
@@ -72,7 +72,9 @@ class GtkCairoHost : public HostInterface {
   
   virtual uint64_t GetCurrentTime() const;
   
- private:     
+  int GetDebugMode() const { return debug_mode_; }
+
+ private:
   struct TimerData {
     TimerData(ElementInterface *t, void *d, GtkCairoHost *h) 
         : target(t), data(d), host(h) {}
@@ -84,6 +86,7 @@ class GtkCairoHost : public HostInterface {
   GadgetViewWidget *gvw_;
   GraphicsInterface *gfx_;
   std::set<TimerData *> timers_;
+  int debug_mode_;
    
   static gboolean DispatchTimer(gpointer data); 
   

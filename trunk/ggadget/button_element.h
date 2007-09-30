@@ -33,7 +33,8 @@ class ButtonElement : public BasicElement {
              const char *name);
   virtual ~ButtonElement();
 
-  virtual const CanvasInterface *Draw(bool *changed);
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
   virtual const char *GetTagName() const { return "button"; }
 
  public:

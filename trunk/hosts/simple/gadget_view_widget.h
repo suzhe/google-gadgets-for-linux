@@ -59,7 +59,7 @@ struct GadgetViewWidgetClass {
 
 GType          GadgetViewWidget_get_type();
 GtkWidget*     GadgetViewWidget_new(ViewInterface *v, double zoom,
-                                    GtkCairoHost *host);
+                                    int debug_mode, GtkCairoHost *host);
 
 G_END_DECLS
 

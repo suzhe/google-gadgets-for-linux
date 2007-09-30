@@ -38,6 +38,8 @@ class Muffin : public ggadget::BasicElement {
   virtual const char *GetTagName() const {
     return "muffin";
   }
+  virtual void DoDraw(ggadget::CanvasInterface *canvas,
+                      const ggadget::CanvasInterface *children_canvas) { }
 
  public:
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
@@ -66,6 +68,8 @@ class Pie : public ggadget::BasicElement {
   virtual const char *GetTagName() const {
     return "pie";
   }
+  virtual void DoDraw(ggadget::CanvasInterface *canvas,
+                      const ggadget::CanvasInterface *children_canvas) { }
   
  public:
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)

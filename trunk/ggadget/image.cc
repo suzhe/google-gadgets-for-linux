@@ -115,4 +115,42 @@ const CanvasInterface *Image::GetCanvas() {
   return impl_->GetCanvas();
 }
 
+void Image::Draw(CanvasInterface *canvas, double x, double y) {
+  const CanvasInterface *image_canvas = impl_->GetCanvas();
+  ASSERT(canvas);
+  if (image_canvas)
+    canvas->DrawCanvas(x, y, image_canvas);
+}
+
+void Image::StretchDraw(CanvasInterface *canvas,
+                        double x, double y,
+                        double width, double height) {
+  ASSERT(canvas);
+  const CanvasInterface *image_canvas = impl_->GetCanvas();
+  if (image_canvas &&
+      image_canvas->GetWidth() > 0 &&
+      image_canvas->GetHeight() > 0) {
+    double cx = width / image_canvas->GetWidth();
+    double cy = height / image_canvas->GetHeight();
+    if (cx != 1.0 || cy != 1.0) {
+      canvas->PushState();
+      canvas->ScaleCoordinates(cx, cy);
+    }
+    canvas->DrawCanvas(x, y, image_canvas);
+    if (cx != 1.0 || cy != 1.0) {
+      canvas->PopState();
+    }
+  }
+}
+
+size_t Image::GetWidth() {
+  const CanvasInterface *canvas = impl_->GetCanvas();
+  return canvas ? canvas->GetWidth() : 0;
+}
+
+size_t Image::GetHeight() {
+  const CanvasInterface *canvas = impl_->GetCanvas();
+  return canvas ? canvas->GetHeight() : 0;
+}
+
 } // namespace ggadget

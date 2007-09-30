@@ -48,10 +48,10 @@ class MockedView : public ggadget::ViewInterface {
 
   virtual void OnElementAdd(ggadget::ElementInterface *element) {};
   virtual void OnElementRemove(ggadget::ElementInterface *element) {};
-  virtual void FireEvent(ggadget::Event *event,
+  virtual void FireEvent(ggadget::ScriptableEvent *event,
                          const ggadget::EventSignal &event_signal) {};
-  virtual ggadget::Event *GetEvent() { return NULL; }
-  virtual const ggadget::Event *GetEvent() const { return NULL; }
+  virtual ggadget::ScriptableEvent *GetEvent() { return NULL; }
+  virtual const ggadget::ScriptableEvent *GetEvent() const { return NULL; }
 
   virtual const ggadget::CanvasInterface *Draw(bool *changed) { return NULL; };
   virtual void QueueDraw() { draw_queued_ = true; }
@@ -87,6 +87,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual void ClearInterval(int token) { }
   virtual ggadget::Image *LoadImage(const char *name,
                                     bool is_mask) { return NULL; }
+  virtual ggadget::Texture *LoadTexture(const char *name) { return NULL; }
+  virtual int GetDebugMode() const { return 2; }
 
   DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
   DEFAULT_OWNERSHIP_POLICY

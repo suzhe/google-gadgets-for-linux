@@ -26,15 +26,17 @@ class CanvasInterface;
 class ElementInterface;
 class ElementFactoryInterface;
 class HostInterface;
+class Event;
 class KeyboardEvent;
 class MouseEvent;
 class TimerEvent;
-class Event;
+class ScriptableEvent;
 class Elements;
 class GraphicsInterface;
 class Image;
 class ScriptContextInterface;
 class FileManagerInterface;
+class Texture;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -98,14 +100,15 @@ class ViewInterface : public ScriptableInterface {
   virtual void OnElementRemove(ElementInterface *element) = 0;
 
   /** Any elements should call this method when it need to fire an event. */ 
-  virtual void FireEvent(Event *event, const EventSignal &event_signal) = 0;
+  virtual void FireEvent(ScriptableEvent *event,
+                         const EventSignal &event_signal) = 0;
 
   /**
    * These methods are provided to the event handlers of native gadgets to
    * retrieve the current fired event.
    */
-  virtual Event *GetEvent() = 0;
-  virtual const Event *GetEvent() const = 0;
+  virtual ScriptableEvent *GetEvent() = 0;
+  virtual const ScriptableEvent *GetEvent() const = 0;
 
   /** 
    * Set the width of the view.
@@ -261,6 +264,12 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual void ClearInterval(int token) = 0;
 
+  /**
+   * Gets the current debug mode.
+   * 0: no debug; 1: debug container elements only; 2: debug all elements.
+   */
+  virtual int GetDebugMode() const = 0;
+
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.
@@ -269,6 +278,15 @@ class ViewInterface : public ScriptableInterface {
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
   virtual Image *LoadImage(const char *name, bool is_mask) = 0;
+
+  /**
+   * Load a texture from image file or create a colored texture.
+   * @param name the name of an image file within the gadget base path, or a
+   *     color description with HTML-style color ("#rrggbb"), or HTML-style
+   *     color with alpha ("#rrggbbaa").
+   * @return the created texture ifsucceeds, or @c NULL.
+   */
+  virtual Texture *LoadTexture(const char *name) = 0;
 
 };
 

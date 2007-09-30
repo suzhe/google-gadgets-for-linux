@@ -19,6 +19,7 @@
 #include "gadget_consts.h"
 #include "string_utils.h"
 #include "scriptable_helper.h"
+#include "scriptable_options.h"
 #include "script_context_interface.h"
 #include "script_runtime_interface.h"
 #include "view.h"
@@ -67,7 +68,8 @@ class Gadget::Impl : public ScriptableInterface {
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
     GadgetGlobalPrototype(Gadget::Impl *owner) {
       scriptable_helper_.RegisterConstant("gadget", owner);
-      // TODO: options
+      scriptable_helper_.RegisterConstant("options",
+                                          &owner->scriptable_options_);
       // TODO: scriptable_helper_.SetPrototype(The System global prototype).
       // The System global prototype provides global constants and framework.
     }
@@ -79,18 +81,22 @@ class Gadget::Impl : public ScriptableInterface {
 
   Impl(ScriptRuntimeInterface *script_runtime,
        ElementFactoryInterface *element_factory,
+       OptionsInterface *options,
        Gadget *owner)
       : debug_(this),
         storage_(this),
         gadget_global_prototype_(this),
+        scriptable_options_(options),
         script_runtime_(script_runtime),
         file_manager_(new FileManager()),
         main_context_(script_runtime->CreateContext()),
-        main_(new View(main_context_, owner, &gadget_global_prototype_,
-                       element_factory)),
+        main_view_(new View(main_context_, owner,
+                            &gadget_global_prototype_,
+                            element_factory)),
         options_context_(script_runtime->CreateContext()),
-        options_(new View(options_context_, owner, &gadget_global_prototype_,
-                          element_factory)) {
+        options_view_(new View(options_context_, owner,
+                               &gadget_global_prototype_,
+                               element_factory)) {
     script_runtime_->ConnectErrorReporter(NewSlot(this,
                                                   &Impl::ReportScriptError));
     scriptable_helper_.RegisterConstant("debug", &debug_);
@@ -98,10 +104,10 @@ class Gadget::Impl : public ScriptableInterface {
   }
 
   ~Impl() {
-    delete main_;
-    main_ = NULL;
-    delete options_;
-    options_ = NULL;
+    delete main_view_;
+    main_view_ = NULL;
+    delete options_view_;
+    options_view_ = NULL;
     delete file_manager_;
     file_manager_ = NULL;
     main_context_->Destroy();
@@ -163,7 +169,7 @@ class Gadget::Impl : public ScriptableInterface {
       return false;
     // TODO: Is it necessary to check the required fields in manifest?
 
-    if (!main_->InitFromFile(kMainXML)) {
+    if (!main_view_->InitFromFile(kMainXML)) {
       DLOG("Failed to setup the main view");
       return false;
     }
@@ -181,18 +187,20 @@ class Gadget::Impl : public ScriptableInterface {
   Debug debug_;
   Storage storage_;
   GadgetGlobalPrototype gadget_global_prototype_;
+  ScriptableOptions scriptable_options_;
   ScriptRuntimeInterface *script_runtime_;
   FileManagerInterface *file_manager_;
   ScriptContextInterface *main_context_;
-  ViewInterface *main_;
+  ViewInterface *main_view_;
   ScriptContextInterface *options_context_;
-  ViewInterface *options_;
+  ViewInterface *options_view_;
   GadgetStringMap manifest_info_map_;
 };
 
 Gadget::Gadget(ScriptRuntimeInterface *script_runtime,
-               ElementFactoryInterface *element_factory)
-    : impl_(new Impl(script_runtime, element_factory, this)) {
+               ElementFactoryInterface *element_factory,
+               OptionsInterface *options)
+    : impl_(new Impl(script_runtime, element_factory, options, this)) {
 }
 
 Gadget::~Gadget() {
@@ -201,11 +209,11 @@ Gadget::~Gadget() {
 }
 
 ViewInterface* Gadget::GetMainView() {
-  return impl_->main_;
+  return impl_->main_view_;
 }
 
 ViewInterface* Gadget::GetOptionsView() {
-  return impl_->options_;
+  return impl_->options_view_;
 }
 
 FileManagerInterface *Gadget::GetFileManager() {

@@ -26,17 +26,22 @@ SET(SRCS
   file_manager.cc
   gadget.cc
   image.cc
-  img_element.cc
-  button_element.cc
   math_utils.cc
+  scriptable_event.cc
   scriptable_helper.cc
+  scriptable_options.cc
   signal.cc
   string_utils.cc
+  texture.cc
   unicode_utils.cc
   variant.cc
   view.cc
   windows_locales.cc
   xml_utils.cc
+
+  button_element.cc
+  div_element.cc
+  img_element.cc
 )
 
 SET(LIBS

@@ -25,6 +25,7 @@ namespace ggadget {
 class ElementFactoryInterface;
 class FileManagerInterface;
 class ScriptRuntimeInterface;
+class OptionsInterface;
 
 /**
  * Interface for representing a Gadget in the Desktop Gadget API.
@@ -32,7 +33,8 @@ class ScriptRuntimeInterface;
 class Gadget: public GadgetInterface {
  public:
   Gadget(ScriptRuntimeInterface *script_runtime,
-         ElementFactoryInterface *element_factory);
+         ElementFactoryInterface *element_factory,
+         OptionsInterface *options);
   virtual ~Gadget();
 
   virtual ViewInterface *GetMainView();

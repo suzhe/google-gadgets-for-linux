@@ -101,6 +101,12 @@ class HostInterface {
    * be used for relative time comparisons, to compute elapsed time.
    */
   virtual uint64_t GetCurrentTime() const = 0;
+
+  /**
+   * Gets the current debug mode.
+   * 0: no debug; 1: debug container elements only; 2: debug all elements.
+   */
+  virtual int GetDebugMode() const = 0;
 };
 
 } // namespace ggadget
