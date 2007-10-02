@@ -107,8 +107,10 @@ For this, follow a similar procedure as that of SVN:
 {{{
 mkdir ggl
 svk co /ggl/local/trunk ggl/code
-svk co /ggl/local/wiki ggl/wiki
+svk co /ggl/mirror/wiki ggl/wiki
 }}}
+
+Note: as we are not going to do the code review process on the wiki pages, we simply check out the wiki pages from the `mirror`, not the `local`.
 
 == Utility Scripts ==
 
@@ -126,6 +128,7 @@ for example,
 Then you can run these command more easily:
 
 {{{
+mkdir -p ~/bin
 ln -s ggl/code/utils/svkmail ~/bin/svkmail
 ln -s ggl/code/utils/svkcommit ~/bin/svkci
 }}}
