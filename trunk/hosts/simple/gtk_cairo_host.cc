@@ -27,7 +27,9 @@ using ggadget::GraphicsInterface;
 using ggadget::TimerEvent;
 
 GtkCairoHost::GtkCairoHost(GadgetViewWidget *gvw, int debug_mode) 
-  : gvw_(gvw), gfx_(NULL), debug_mode_(debug_mode) {    
+  : gvw_(gvw),
+    gfx_(NULL),
+    debug_mode_(debug_mode) {
 }
 
 GtkCairoHost::~GtkCairoHost() {
