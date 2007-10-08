@@ -13,7 +13,7 @@
   * Take advantage of "Automatic link generation" as much as possible (see http://www.stack.nl/~dimitri/doxygen/autolink.html);
     * Use () to indicate functions/methods in descriptions;
   * We use JAVADOC_AUTOBRIEF, so the first sentence of a description is treated as the brief introduction, no matter whether there is a line break;
-  * Don't omit template arguments when (partially) specialize a template, otherwise doxygen can't correctly generate doc for the (partial) specialized template.
+  * Don't omit template arguments when (partially) specializing a template, otherwise doxygen can't correctly generate doc for the (partial) specialized template.
   * Warnings reported by doxygen should be eliminated as many as possible.
 
 === @a _parameter-name_ ===
