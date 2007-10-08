@@ -25,7 +25,7 @@ namespace framework {
 
 namespace system {
 
-class Machine : public ggadget::framework::system::MachineInterface {
+class Machine : public MachineInterface {
  public:
   virtual const char *GetBiosSerialNumber() const;
   virtual const char *GetMachineManufacturer() const;

@@ -27,6 +27,9 @@ namespace audio {
 
 /** Used for playing back audio files. */
 class AudioclipInterface {
+ protected:
+  virtual ~AudioclipInterface() {}
+
  public:
   enum State {
     STATE_ERROR,

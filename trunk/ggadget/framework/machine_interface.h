@@ -25,6 +25,9 @@ namespace system {
 
 /** Interface for retrieving the information of the machine. */
 class MachineInterface {
+ protected:
+  virtual ~MachineInterface() {}
+
  public:
   /** Retrieves the BIOS Serial number. */
   virtual const char *GetBiosSerialNumber() const = 0;

@@ -25,6 +25,9 @@ namespace system {
 
 /** Interface for retrieving the process information. */
 class ProcessInfoInterface {
+ protected:
+  virtual ~ProcessInfoInterface() {}
+
  public:
   virtual void Destroy() = 0;
 
@@ -37,6 +40,9 @@ class ProcessInfoInterface {
 
 /** Interface for enumerating the processes. */
 class ProcessesInterface {
+ protected:
+  virtual ~ProcessesInterface() {}
+
  public:
   virtual void Destroy() = 0;
 
@@ -53,6 +59,9 @@ class ProcessesInterface {
 
 /** Interface for retrieving the information of the processes. */
 class ProcessInterface {
+ protected:
+  virtual ~ProcessInterface() {}
+
  public:
   /**
    * An enumeration of process IDs for all processes on the system.

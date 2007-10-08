@@ -43,17 +43,17 @@ int WirelessAccessPoint::GetSignalStrength() const {
   return 87;
 }
 
-void WirelessAccessPoint::Connect(ggadget::Slot1<void, bool> *callback) {
+void WirelessAccessPoint::Connect(Slot1<void, bool> *callback) {
   if (callback) {
-    ggadget::Variant result(true);
+    Variant result(true);
     callback->Call(1, &result);
     delete callback;
   }
 }
 
-void WirelessAccessPoint::Disconnect(ggadget::Slot1<void, bool> *callback) {
+void WirelessAccessPoint::Disconnect(Slot1<void, bool> *callback) {
   if (callback) {
-    ggadget::Variant result(true);
+    Variant result(true);
     callback->Call(1, &result);
     delete callback;
   }

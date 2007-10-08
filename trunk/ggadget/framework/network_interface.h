@@ -31,6 +31,9 @@ class WirelessInterface;
 
 /** Interface for retrieving the information about the network. */
 class NetworkInterface {
+ protected:
+  virtual ~NetworkInterface() {}
+
  public:
   /** The network connection type. */
   enum ConnectionType {

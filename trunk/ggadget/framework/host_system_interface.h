@@ -44,6 +44,9 @@ class AudioclipInterface;
 
 /** Interface for enumerating the files. */
 class FilesInterface {
+ protected:
+  virtual ~FilesInterface() {}
+
  public:
   virtual void Destroy() = 0;
 
@@ -63,6 +66,9 @@ class FilesInterface {
  * The interface containing methods which should be implemented by the host.
  */
 class HostSystemInterface {
+ protected:
+  virtual ~HostSystemInterface() {}
+
  public:
   /**
    * Displays the standard browse for file dialog and returns the name.
