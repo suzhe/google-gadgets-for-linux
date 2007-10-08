@@ -27,6 +27,9 @@ namespace system {
 
 /** Interface for retrieving the information of the memory. */
 class MemoryInterface {
+ protected:
+  virtual ~MemoryInterface() {}
+
  public:
   /** Gets the total number of bytes of virtual memory. */
   virtual int64_t GetTotal() const = 0;

@@ -25,7 +25,7 @@ namespace framework {
 
 namespace system {
 
-class Memory : public ggadget::framework::system::MemoryInterface {
+class Memory : public MemoryInterface {
  public:
   virtual int64_t GetTotal() const;
   virtual int64_t GetFree() const;

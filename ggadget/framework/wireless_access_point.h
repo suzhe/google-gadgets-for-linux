@@ -36,8 +36,8 @@ class WirelessAccessPoint : public WirelessAccessPointInterface {
   virtual
       WirelessAccessPointInterface::APType GetType() const;
   virtual int GetSignalStrength() const;
-  virtual void Connect(ggadget::Slot1<void, bool> *callback);
-  virtual void Disconnect(ggadget::Slot1<void, bool> *callback);
+  virtual void Connect(Slot1<void, bool> *callback);
+  virtual void Disconnect(Slot1<void, bool> *callback);
 };
 
 } // namespace network

@@ -26,6 +26,9 @@ namespace system {
 /** Interface for retrieving the information of the power and battery
  * status. */
 class PowerInterface {
+ protected:
+  virtual ~PowerInterface() {}
+
  public:
   /** Gets whether the battery is charning.  */
   virtual bool IsCharging() const = 0;
