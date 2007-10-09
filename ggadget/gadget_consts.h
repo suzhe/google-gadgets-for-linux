@@ -56,18 +56,18 @@ const char *const kManifestQueryAPIAllowModifyIndex
 
 /**
  * To enumerate all fonts to be installed, you must try the following keys:
- *   - <code>"install/font@src"    (kManifestInstallFont + "@src")
- *   - <code>"install/font[1]@src" (kManifestInstallFont + "[1]@src")
- *   - <code>"install/font[2]@src" (kManifestInstallFont + "[2]@src")
+ *   - <code>"install/font@src"    (kManifestInstallFont + "@src")</code>
+ *   - <code>"install/font[1]@src" (kManifestInstallFont + "[1]@src")</code>
+ *   - <code>"install/font[2]@src" (kManifestInstallFont + "[2]@src")</code>
  *   - ... until not found.
  */
 const char *const kManifestInstallFont = "install/font";
 
 /**
  * To enumerate all objects to be installed, you must try the following keys:
- *   - <code>"install/object"    (kManifestInstallObject)
- *   - <code>"install/object[1]" (kManifestInstallObject + "[1]")
- *   - <code>"install/object[2]" (kManifestInstallObject + "[2]")
+ *   - <code>"install/object"    (kManifestInstallObject)</code>
+ *   - <code>"install/object[1]" (kManifestInstallObject + "[1]")</code>
+ *   - <code>"install/object[2]" (kManifestInstallObject + "[2]")</code>
  *   - ... until not found.
  * For each of the config items found, access their attributes with keys by
  * postpending "@name", "@clsid", "@src" to the above keys.

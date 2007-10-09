@@ -66,9 +66,14 @@ class ScriptableHelper {
   }
 
   /**
-   * Register a simple scriptable property that maps to a variable.
+   * Register a scriptable property having enumerated values that should
+   * mapped to strings.
    * @param name property name.  It must point to static allocated memory.
-   * @param valuep point to a value.
+   * @param getter a getter slot returning an enum value.
+   * @param setter a setter slot accepting an enum value. @c NULL if the
+   *     property is readonly.
+   * @param names a table containing string values of every enum values.
+   * @param count number of entries in the @a names table.
    */
   void RegisterStringEnumProperty(const char *name,
                                   Slot *getter, Slot *setter,

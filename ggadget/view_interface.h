@@ -110,6 +110,15 @@ class ViewInterface : public ScriptableInterface {
   virtual ScriptableEvent *GetEvent() = 0;
   virtual const ScriptableEvent *GetEvent() const = 0;
 
+  /**
+   * Sets current input focus to the @a element.  If some element has the focus,
+   * removes the focus first.
+   * @param element the element to put focus on.  If it is @c NULL, only remove
+   *     the focus from the current focused element and thus no element has
+   *     the focus.
+   */ 
+  virtual void SetFocus(ElementInterface *element) = 0;
+
   /** 
    * Set the width of the view.
    * @return true if new size is allowed, false otherwise. 
@@ -287,7 +296,6 @@ class ViewInterface : public ScriptableInterface {
    * @return the created texture ifsucceeds, or @c NULL.
    */
   virtual Texture *LoadTexture(const char *name) = 0;
-
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

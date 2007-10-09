@@ -234,7 +234,7 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
  * due to a limitation in C++'s template system.  The limitation might
  * eventually be removed, but it hasn't happened yet.
  */
-#define arraysize(array) (sizeof(ArraySizeHelper(array)))
+#define arraysize(array) (sizeof(::ggadget::ArraySizeHelper(array)))
 
 } // namespace ggadget
 

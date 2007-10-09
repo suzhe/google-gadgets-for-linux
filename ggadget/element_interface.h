@@ -118,7 +118,6 @@ class ElementInterface : public ScriptableInterface {
 
   /**
    * Retrieves whether this element is a target for drag/drop operations.
-   * @see set_drop_target.
    */
   virtual bool IsDropTarget() const = 0;
   /**
@@ -130,7 +129,6 @@ class ElementInterface : public ScriptableInterface {
 
   /**
    * Retrieves whether or not the element is enabled.
-   * @see set_enabled.
    */
   virtual bool IsEnabled() const = 0;
   /**
@@ -226,12 +224,20 @@ class ElementInterface : public ScriptableInterface {
   virtual bool PinYIsRelative() const = 0;
   
   /** 
-   * Handler of the mouse events. 
-   * @return true if this element or one of its children received it.
+   * Handler of the mouse events.
+   * @param event the mouse event.
+   * @param direct if @c true, this event is sent to the element directly, so
+   *     it should not dispatch it to its children.
+   * @return the element who processed the event, or @c NULL if no one.
    */
-  virtual bool OnMouseEvent(MouseEvent *event) = 0;
+  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct) = 0;
+  /**
+   * Check if the position of mouse event is in the element.
+   * Should consider masks.
+   */
+  virtual bool IsMouseEventIn(MouseEvent *event) = 0;
   /** Handler of the keyboard events. */
-  virtual void OnKeyEvent(KeyboardEvent *event) = 0;  
+  virtual void OnKeyEvent(KeyboardEvent *event) = 0;
   /** Handler for other events. */
   virtual void OnOtherEvent(Event *event) = 0;
 
@@ -243,7 +249,6 @@ class ElementInterface : public ScriptableInterface {
   
   /**
    * Retrieves the opacity of the element.
-   * @see SetOpacity.
    */
   virtual double GetOpacity() const = 0;
   /**
@@ -303,15 +308,40 @@ class ElementInterface : public ScriptableInterface {
   /** 
    * Checks to see if position of the element has changed since the last draw
    * relative to the parent. Specifically, this checks for changes in 
-   * X, Y, pinX, pinY, and rotation.
+   * x, y, pinX, pinY, and rotation.
    */
   virtual bool IsPositionChanged() const = 0;
-  /** Sets the position changed state to false. */
+  /**
+   * Sets the position changed state to false.
+   */
   virtual void ClearPositionChanged() = 0;
 
+  /**
+   * Called by the parent when the width of the parent changes.
+   */
   virtual void OnParentWidthChange(double width) = 0;
+  /**
+   * Called by the parent when the height of the parent changes.
+   */
   virtual void OnParentHeightChange(double height) = 0;
 
+  /**
+   * Converts coordinates in a this element's space to coordinates in a
+   * child element.
+   * 
+   * The default implementation should directly call ParentCoorddToChildCoord.
+   * Element implementation should override this method if it supports 
+   * scrolling.
+   *
+   * @param child a child element of this element.
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert. 
+   * @param[out] child_x parameter to store the converted child x-coordinate.
+   * @param[out] child_y parameter to store the converted child y-coordinate.
+   */
+  virtual void SelfCoordToChildCoord(ElementInterface *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y) = 0;
 };
 
 CLASS_ID_IMPL(ElementInterface, ScriptableInterface)

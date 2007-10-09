@@ -192,6 +192,18 @@ class CanvasInterface {
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) = 0;
 
   /** 
+   * Draw a rectangle filled with the given canvas.
+   * @param x The X-coordinate of the rectangle's top left corner.
+   * @param y The Y-coordinate of the rectangle's top left corner.
+   * @param w Width of rectangle.
+   * @param h Height of rectangle.
+   * @param img Canvas to draw.
+   */
+  virtual bool DrawFilledRectWithCanvas(double x, double y, 
+                                        double w, double h,
+                                        const CanvasInterface *img) = 0;
+
+  /** 
    * Draws the given canvas at (x, y) using a mask on this canvas, while 
    * respecting the current transformation matrix of the target canvas. 
    * The current transformation matrix defined in the image and mask 

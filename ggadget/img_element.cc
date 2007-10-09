@@ -37,7 +37,7 @@ class ImgElement::Impl {
 ImgElement::ImgElement(ElementInterface *parent,
                        ViewInterface *view,
                        const char *name)
-    : BasicElement(parent, view, name, false),
+    : BasicElement(parent, view, "img", name, false),
       impl_(new Impl) {
   RegisterProperty("src",
                    NewSlot(this, &ImgElement::GetSrc),

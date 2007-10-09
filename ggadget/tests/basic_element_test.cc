@@ -28,16 +28,12 @@ class Muffin : public ggadget::BasicElement {
   Muffin(ggadget::ElementInterface *parent,
          ggadget::ViewInterface *view,
          const char *name)
-      : ggadget::BasicElement(parent, view, name, true) {
+      : ggadget::BasicElement(parent, view, "muffin", name, true) {
   }
 
   virtual ~Muffin() {
   }
 
- public:
-  virtual const char *GetTagName() const {
-    return "muffin";
-  }
   virtual void DoDraw(ggadget::CanvasInterface *canvas,
                       const ggadget::CanvasInterface *children_canvas) { }
 
@@ -58,16 +54,12 @@ class Pie : public ggadget::BasicElement {
   Pie(ggadget::ElementInterface *parent,
       ggadget::ViewInterface *view,
       const char *name)
-      : ggadget::BasicElement(parent, view, name, true) {
+      : ggadget::BasicElement(parent, view, "pie", name, true) {
   }
 
   virtual ~Pie() {
   }
 
- public:
-  virtual const char *GetTagName() const {
-    return "pie";
-  }
   virtual void DoDraw(ggadget::CanvasInterface *canvas,
                       const ggadget::CanvasInterface *children_canvas) { }
   

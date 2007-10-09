@@ -48,7 +48,6 @@ struct GadgetViewWidget {
   double zoom;
   int widget_width, widget_height; // stores the old height/width before an allocation 
   bool dbl_click;
-  guint last_keyval;
 };
 
 struct GadgetViewWidgetClass {

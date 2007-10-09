@@ -31,6 +31,7 @@ SET(SRCS
   main.cc
   gtk_cairo_host.cc
   gadget_view_widget.cc
+  gtk_key_convert.cc
   options.cc
 )
 

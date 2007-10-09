@@ -29,13 +29,12 @@ class ButtonElement : public BasicElement {
   DEFINE_CLASS_ID(0xb6fb01fd48134377, BasicElement);
 
   ButtonElement(ElementInterface *parent,
-             ViewInterface *view,
-             const char *name);
+                ViewInterface *view,
+                const char *name);
   virtual ~ButtonElement();
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
-  virtual const char *GetTagName() const { return "button"; }
 
  public:
   /** Gets and sets the file name of default button image. */
@@ -54,7 +53,7 @@ class ButtonElement : public BasicElement {
   const char *GetDownImage() const;
   void SetDownImage(const char *img);
   
-  virtual bool OnMouseEvent(MouseEvent *event);
+  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,

@@ -52,6 +52,9 @@ class View::Impl {
       resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
       current_timer_token_(1),
+      focused_element_(NULL),
+      mouseover_element_(NULL),
+      grabmouse_element_(NULL),
       non_strict_delegator_(new ScriptableDelegator(owner, false)) {
   }
 
@@ -68,76 +71,173 @@ class View::Impl {
     }
   }
 
-  void OnMouseEvent(MouseEvent *event) {
-    // First, send event to children.
-    if (!IsPointInElement(event->GetX(), event->GetY(), width_, height_)) {
-      return;      
+  void MapChildMouseEvent(MouseEvent *org_event, ElementInterface *child,
+                          MouseEvent *new_event) {
+    ASSERT(child);
+    std::vector<ElementInterface *> elements;
+    for (ElementInterface *e = child; e != NULL; e = e->GetParentElement())
+      elements.push_back(e);
+
+    double x, y;
+    ElementInterface *top = *(elements.end() - 1);
+    ParentCoordToChildCoord(org_event->GetX(), org_event->GetY(),
+                            top->GetPixelX(), top->GetPixelY(),
+                            top->GetPixelPinX(), top->GetPixelPinY(),
+                            DegreesToRadians(top->GetRotation()),
+                            &x, &y);
+
+    for (std::vector<ElementInterface *>::reverse_iterator it =
+             elements.rbegin();
+         // Note: Don't iterator to the last element.
+         it < elements.rend() - 1; ++it) {
+      // Make copies to prevent them from being overriden.
+      double x1 = x, y1 = y;
+      (*it)->SelfCoordToChildCoord(*(it + 1), x1, y1, &x, &y); 
     }
-        
-    bool fired = children_.OnMouseEvent(event);
-    
-    // Question: if a child changes the event object, does the view use the
-    // changed object when it receives the event?
-    
-    // Then send event to view.
-    if (fired) {
+    new_event->SetX(x);
+    new_event->SetY(y);
+  }
+
+  bool SendMouseEventToChildren(MouseEvent *event) {
+    Event::Type type = event->GetType();
+    if (type == Event::EVENT_MOUSE_OVER)
+      // View's EVENT_MOUSE_OVER only applicable to itself.
+      // Children's EVENT_MOUSE_OVER is triggered by other mouse events.
+      return true;
+
+    // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE and
+    // EVENT_MOUSE_UP events to it directly, until an EVENT_MOUSE_UP received.
+    if (grabmouse_element_ && grabmouse_element_->IsEnabled() &&
+        (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP)) {
+      MouseEvent new_event(*event);
+      MapChildMouseEvent(event, grabmouse_element_, &new_event);
+      grabmouse_element_->OnMouseEvent(event, true);
+
+      // Release the grabbing.
+      if (type == Event::EVENT_MOUSE_UP)
+        grabmouse_element_ = NULL;
+      return true;
+    }
+
+    if (type == Event::EVENT_MOUSE_OUT) {
+      // Clear the mouseover state.
+      if (mouseover_element_) {
+        MouseEvent new_event(*event);
+        MapChildMouseEvent(event, mouseover_element_, &new_event);
+        mouseover_element_->OnMouseEvent(event, true);
+        mouseover_element_ = NULL;
+      }
+      return true;
+    }
+
+    // Dispatch the event to children normally.
+    ElementInterface *fired_element = children_.OnMouseEvent(event);
+    if (fired_element && type == Event::EVENT_MOUSE_DOWN) {
+      // Start grabbing.
+      grabmouse_element_ = fired_element;
+      SetFocus(fired_element);
+      // In the focusin handler, the element may be removed and fired_element
+      // points to invalid element.  However, grabmouse_element_ will be valid
+      // or has been set to NULL.
+      fired_element = grabmouse_element_;
+    }
+
+    if (fired_element != mouseover_element_) {
+      ElementInterface *old_mouseover_element = mouseover_element_;
+      // Store it early to prevent crash if fired_element is removed in
+      // the mouseout handler.
+      mouseover_element_ = fired_element;
+      
+      if (old_mouseover_element) {
+        MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
+                                  event->GetX(), event->GetY(),
+                                  event->GetButton(),
+                                  event->GetWheelDelta());
+        MapChildMouseEvent(event, old_mouseover_element, &mouseout_event);
+        old_mouseover_element->OnMouseEvent(&mouseout_event, true);
+      }
+
+      if (mouseover_element_) {
+        if (!mouseover_element_->IsEnabled())
+          mouseover_element_ = NULL;
+        else {
+          MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
+                                     event->GetX(), event->GetY(),
+                                     event->GetButton(),
+                                     event->GetWheelDelta());
+          MapChildMouseEvent(event, mouseover_element_, &mouseover_event);
+          mouseover_element_->OnMouseEvent(&mouseover_event, true);
+        }
+      }
+    }
+
+    return fired_element != NULL;
+  }
+
+  void OnMouseEvent(MouseEvent *event) {
+    // Send event to children first.
+    if (SendMouseEventToChildren(event)) {
+      // Then send event to view.
       ScriptableEvent scriptable_event(event, owner_, 0, 0);
+      if (event->GetType() != Event::EVENT_MOUSE_MOVE)
+        DLOG("%s(view): %g %g %d %d", scriptable_event.GetName(),
+             event->GetX(), event->GetY(),
+             event->GetButton(), event->GetWheelDelta());
       switch (event->GetType()) {
-        case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
-        // DLOG("mousemove");
-        // View doesn't have mouse move event according to the API document.
-        break;
-       case Event::EVENT_MOUSE_DOWN:
-        DLOG("mousedown");
-        FireEvent(&scriptable_event, onmousedown_event_);
-        break;
-       case Event::EVENT_MOUSE_UP:
-        DLOG("mouseup");
-        FireEvent(&scriptable_event, onmouseup_event_);
-        break;
-       case Event::EVENT_MOUSE_CLICK:
-        DLOG("click %g %g", event->GetX(), event->GetY());
-        FireEvent(&scriptable_event, onclick_event_);
-        break;
-       case Event::EVENT_MOUSE_DBLCLICK:
-        DLOG("dblclick %g %g", event->GetX(), event->GetY());
-        FireEvent(&scriptable_event, ondblclick_event_);
-        break;
-       case Event::EVENT_MOUSE_OUT:
-        DLOG("mouseout");
-        FireEvent(&scriptable_event, onmouseout_event_);
-        break;
-       case Event::EVENT_MOUSE_OVER:
-        DLOG("mouseover");
-        FireEvent(&scriptable_event, onmouseover_event_);
-        break;
-       case Event::EVENT_MOUSE_WHEEL:
-        DLOG("mousewheel");
-        // View doesn't have mouse wheel event according to the API document.
-        break;
-       default:
-        ASSERT(false);
+        case Event::EVENT_MOUSE_MOVE:
+          // Put the high volume events near top.
+          // View itself doesn't have onmousemove handler. 
+          break;
+        case Event::EVENT_MOUSE_DOWN:
+          FireEvent(&scriptable_event, onmousedown_event_);
+          break;
+        case Event::EVENT_MOUSE_UP:
+          FireEvent(&scriptable_event, onmouseup_event_);
+          break;
+        case Event::EVENT_MOUSE_CLICK:
+          FireEvent(&scriptable_event, onclick_event_);
+          break;
+        case Event::EVENT_MOUSE_DBLCLICK:
+          FireEvent(&scriptable_event, ondblclick_event_);
+          break;
+        case Event::EVENT_MOUSE_OUT:
+          FireEvent(&scriptable_event, onmouseout_event_);
+          break;
+        case Event::EVENT_MOUSE_OVER:
+          FireEvent(&scriptable_event, onmouseover_event_);
+          break;
+        case Event::EVENT_MOUSE_WHEEL:
+          // View doesn't have mouse wheel event according to the API document.
+          break;
+        default:
+          ASSERT(false);
       }
     }
   }
 
   void OnKeyEvent(KeyboardEvent *event) {
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    // TODO: dispatch to children.
+    DLOG("%s(view): %d", scriptable_event.GetName(), event->GetKeyCode());
     switch (event->GetType()) {
-     case Event::EVENT_KEY_DOWN:
-      DLOG("keydown");
-      FireEvent(&scriptable_event, onkeydown_event_);      
-      break;
-     case Event::EVENT_KEY_UP:
-      DLOG("keyup");
-      FireEvent(&scriptable_event, onkeyup_event_);
-      break;
-     case Event::EVENT_KEY_PRESS:
-      DLOG("keypress");
-      FireEvent(&scriptable_event, onkeypress_event_);
-      break;
-     default:
-      ASSERT(false);
+      case Event::EVENT_KEY_DOWN:
+        FireEvent(&scriptable_event, onkeydown_event_);
+        break;
+      case Event::EVENT_KEY_UP:
+        FireEvent(&scriptable_event, onkeyup_event_);
+        break;
+      case Event::EVENT_KEY_PRESS:
+        FireEvent(&scriptable_event, onkeypress_event_);
+        break;
+      default:
+        ASSERT(false);
+    }
+
+    if (focused_element_) {
+      if (!focused_element_->IsEnabled())
+        focused_element_ = NULL;
+      else
+        focused_element_->OnKeyEvent(event);
     }
   }
 
@@ -213,16 +313,16 @@ class View::Impl {
 
   void OnOtherEvent(Event *event) {
     switch (event->GetType()) {
-     case Event::EVENT_FOCUS_IN:
-      DLOG("focusin");
-      // View doesn't have focus in event according to the API document.
-      break;
-     case Event::EVENT_FOCUS_OUT:
-      DLOG("focusout");
-      // View doesn't have focus out event according to the API document.
-      break;
-     default:
-      ASSERT(false);
+      case Event::EVENT_FOCUS_IN:
+        // For now we don't automatically set focus to some element.
+        DLOG("focusin");
+        break;
+      case Event::EVENT_FOCUS_OUT:
+        DLOG("focusout");
+        SetFocus(NULL);
+        break;
+      default:
+        ASSERT(false);
     }
   }
 
@@ -237,6 +337,14 @@ class View::Impl {
 
   void OnElementRemove(ElementInterface *element) {
     ASSERT(element);
+    if (element == focused_element_)
+      // Don't send EVENT_FOCUS_OUT because the element is being removed.
+      focused_element_ = NULL;
+    if (element == mouseover_element_)
+      mouseover_element_ = NULL;
+    if (element == grabmouse_element_)
+      grabmouse_element_ = NULL;
+
     const char *name = element->GetName();
     if (name && *name) {
       ElementsMap::iterator it = all_elements_.find(name);
@@ -254,6 +362,29 @@ class View::Impl {
 
   ScriptableEvent *GetEvent() const {
     return event_stack_.empty() ? NULL : event_stack_[event_stack_.size() - 1];
+  }
+
+  void SetFocus(ElementInterface *element) {
+    if (element != focused_element_) {
+      ElementInterface *old_focused_element = focused_element_;
+      // Set it early to prevent the local "element" variable from being stale
+      // if the element is removed in the event handler.
+      focused_element_ = element;
+      // Remove the current focus first.
+      if (old_focused_element) {
+        Event event(Event::EVENT_FOCUS_OUT);
+        old_focused_element->OnOtherEvent(&event);
+      }
+  
+      if (focused_element_) {
+        if (!focused_element_->IsEnabled())
+          focused_element_ = NULL;
+        else {
+          Event event(Event::EVENT_FOCUS_IN);
+          focused_element_->OnOtherEvent(&event);
+        }
+      }
+    }
   }
 
   bool SetWidth(int width) {
@@ -380,7 +511,8 @@ class View::Impl {
     info.duration = duration;
     info.start_time = host_->GetCurrentTime();
     info.host_timer = host_->RegisterTimer(
-        type == TIMER_ANIMATION ? kAnimationInterval : duration,
+        // For animation, the first event should be triggered imeediately.
+        type == TIMER_ANIMATION ? 0 : duration,
         NULL,
         // Passing an integer is safer than passing a struct pointer.
         reinterpret_cast<void *>(current_timer_token_));
@@ -480,7 +612,8 @@ class View::Impl {
   bool show_caption_always_;
 
   std::vector<ScriptableEvent *> event_stack_;
-  static const unsigned int kAnimationInterval = 10;
+
+  static const unsigned int kAnimationInterval = 30;
   struct TimerInfo {
     int token;
     TimerType type;
@@ -495,6 +628,9 @@ class View::Impl {
   typedef std::map<int, TimerInfo> TimerMap;
   TimerMap timer_map_;
   int current_timer_token_;
+  ElementInterface *focused_element_;
+  ElementInterface *mouseover_element_;
+  ElementInterface *grabmouse_element_;
 
   ScriptableDelegator *non_strict_delegator_;
 };
@@ -767,6 +903,10 @@ Image *View::LoadImage(const char *name, bool is_mask) {
 Texture *View::LoadTexture(const char *name) {
   ASSERT(impl_->host_);
   return new Texture(GetGraphics(), impl_->gadget_->GetFileManager(), name);
+}
+
+void View::SetFocus(ElementInterface *element) {
+  impl_->SetFocus(element);
 }
 
 } // namespace ggadget

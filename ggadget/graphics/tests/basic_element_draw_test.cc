@@ -51,16 +51,12 @@ class Muffin : public BasicElement {
   Muffin(ElementInterface *parent,
          ViewInterface *view,
          const char *name)
-      : BasicElement(parent, view, name, true) {
+      : BasicElement(parent, view, "muffin", name, true) {
   }
 
   virtual ~Muffin() {
   }
 
-  virtual const char *GetTagName() const {
-    return "muffin";
-  }
-  
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) {
     canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(), 
@@ -85,16 +81,12 @@ class Pie : public BasicElement {
   Pie(ElementInterface *parent,
       ViewInterface *view,
       const char *name)
-      : BasicElement(parent, view, name, false), color_(0., 0., 0.) {
+      : BasicElement(parent, view, "pie", name, false), color_(0., 0., 0.) {
   }
 
   virtual ~Pie() {
   }
 
-  virtual const char *GetTagName() const {
-    return "pie";
-  }
-  
   virtual void SetColor(const Color &c) {
     color_ = c;
   }

@@ -33,7 +33,6 @@ class DivElement : public BasicElement {
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
-  virtual const char *GetTagName() const { return "div"; }
 
  public:
   /**
@@ -51,8 +50,16 @@ class DivElement : public BasicElement {
   const char *GetBackground() const;
   void SetBackground(const char *background);
 
-  virtual bool OnMouseEvent(MouseEvent *event);
+  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
   virtual void OnKeyEvent(KeyboardEvent *event);
+
+  /**
+   * Overrides because this element supports scrolling.
+   * @see ElementInterface::SelfCoordToChildCoord()
+   */
+  virtual void SelfCoordToChildCoord(ElementInterface *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,

@@ -8,8 +8,9 @@
 #include "ggadget/graphics/cairo_canvas.h"
 #include "ggadget/graphics/cairo_graphics.h"
 
-#include "gtk_cairo_host.h"
 #include "gadget_view_widget.h"
+#include "gtk_cairo_host.h"
+#include "gtk_key_convert.h"
 
 using ggadget::CairoCanvas;
 using ggadget::CairoGraphics;
@@ -205,21 +206,34 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_PRESS);
   
-  // TODO handle modifier keys correctly
-  if (gvw->last_keyval != event->keyval) {
+  unsigned int key_code = ConvertGdkKeyvalToKeyCode(event->keyval);
+  if (key_code) {
     KeyboardEvent e(Event::EVENT_KEY_DOWN,
-                    // TODO: keyCode
-                    0);
+                    ConvertGdkKeyvalToKeyCode(event->keyval));
     gvw->view->OnKeyEvent(&e);
-    
-    gvw->last_keyval = event->keyval;
+  } else {
+    LOG("Unknown key: 0x%x", event->keyval);
   }
-  
-  KeyboardEvent e2(Event::EVENT_KEY_PRESS,
-                   // TODO: keyCode
-                   0);
-  gvw->view->OnKeyEvent(&e2);
-  
+
+  if ((event->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) == 0) {
+    guint32 key_char;
+    if (key_code == KeyboardEvent::KEY_ESCAPE ||
+        key_code == KeyboardEvent::KEY_RETURN ||
+        key_code == KeyboardEvent::KEY_BACK ||
+        key_code == KeyboardEvent::KEY_TAB) {
+      // gdk_keyval_to_unicode doesn't support the above keys.
+      key_char = key_code;
+    } else {
+      key_char = gdk_keyval_to_unicode(event->keyval);
+    }
+
+    if (key_char) {
+      // Send the char code in KEY_PRESS event.
+      KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char);
+      gvw->view->OnKeyEvent(&e2);
+    }
+  }
+
   return FALSE;
 }
 
@@ -227,13 +241,16 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
                                              GdkEventKey *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget); 
   ASSERT(event->type == GDK_KEY_RELEASE);
-  KeyboardEvent e(Event::EVENT_KEY_UP,
-                  // TODO: keyCode
-                  0);
-  gvw->view->OnKeyEvent(&e);
-  
-  gvw->last_keyval = 0; // reset last_keyval
-  
+
+  unsigned int key_code = ConvertGdkKeyvalToKeyCode(event->keyval);
+  if (key_code) {
+    KeyboardEvent e(Event::EVENT_KEY_UP,
+                    ConvertGdkKeyvalToKeyCode(event->keyval));
+    gvw->view->OnKeyEvent(&e);
+  } else {
+    LOG("Unknown key: 0x%x", event->keyval);
+  }
+
   return FALSE;
 }
 
@@ -302,7 +319,6 @@ static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
 
 static void GadgetViewWidget_init(GadgetViewWidget *gvw) {
   gvw->dbl_click = false;
-  gvw->last_keyval = 0; // 0 isn't used as a key value in GDK
   
   gtk_widget_set_events(GTK_WIDGET(gvw), 
                         gtk_widget_get_events(GTK_WIDGET(gvw))

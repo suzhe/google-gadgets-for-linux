@@ -140,7 +140,102 @@ class MouseEvent : public Event {
  */
 class KeyboardEvent : public Event {
  public:
-  KeyboardEvent(Type t, int key_code) : Event(t, 0), key_code_(key_code) { 
+  /**
+   * Key codes compatible with the Windows version.
+   * Most of the following names correspond VK_XXX macros in winuser.h, except
+   * for some confusing names. 
+   *  
+   * They are only used in @c EVENT_KEY_DOWN and @c EVENT_KEY_UP events.
+   * In @c EVENT_KEY_PRESS, the keyCode attribute is the the chararacter code.
+   */   
+  enum KeyCode {
+    KEY_CANCEL         = 3,
+    KEY_BACK           = 8,
+    KEY_TAB            = 9,
+    KEY_CLEAR          = 12,
+    KEY_RETURN         = 13,
+    KEY_SHIFT          = 16,
+    KEY_CONTROL        = 17,
+    KEY_ALT            = 18,  // VK_MENU in winuser.h.
+    KEY_PAUSE          = 19,
+    KEY_CAPITAL        = 20,
+    KEY_ESCAPE         = 31,
+    KEY_SPACE          = 32,
+    KEY_PAGE_UP        = 33,  // VK_PRIOR in winuser.h.
+    KEY_PAGE_DOWN      = 34,  // VK_NEXT in winuser.h.
+    KEY_END            = 35,
+    KEY_HOME           = 36,
+    KEY_LEFT           = 37,
+    KEY_UP             = 38,
+    KEY_RIGHT          = 39,
+    KEY_DOWN           = 40,
+    KEY_SELECT         = 41,
+    KEY_PRINT          = 42,
+    KEY_EXECUTE        = 43,
+    KEY_INSERT         = 45,
+    KEY_DELETE         = 46,
+    KEY_HELP           = 47,
+    // Mixed decimal and hexadecimal to keep consistence with windows.h.
+    // 0~9, A-Z and some punctuations are represented in their original ascii.
+    KEY_CONTEXT_MENU   = 0x5D,  // VK_APPS in winuser.h.
+    KEY_NUMPAD0        = 0x60,
+    KEY_NUMPAD1        = 0x61,
+    KEY_NUMPAD2        = 0x62,
+    KEY_NUMPAD3        = 0x63,
+    KEY_NUMPAD4        = 0x64,
+    KEY_NUMPAD5        = 0x65,
+    KEY_NUMPAD6        = 0x66,
+    KEY_NUMPAD7        = 0x67,
+    KEY_NUMPAD8        = 0x68,
+    KEY_NUMPAD9        = 0x69,
+    KEY_MULTIPLY       = 0x6A,
+    KEY_ADD            = 0x6B,
+    KEY_SEPARATOR      = 0x6C,
+    KEY_SUBTRACT       = 0x6D,
+    KEY_DECIMAL        = 0x6E,
+    KEY_DIVIDE         = 0x6F,
+    KEY_F1             = 0x70,
+    KEY_F2             = 0x71,
+    KEY_F3             = 0x72,
+    KEY_F4             = 0x73,
+    KEY_F5             = 0x74,
+    KEY_F6             = 0x75,
+    KEY_F7             = 0x76,
+    KEY_F8             = 0x77,
+    KEY_F9             = 0x78,
+    KEY_F10            = 0x79,
+    KEY_F11            = 0x7A,
+    KEY_F12            = 0x7B,
+    KEY_F13            = 0x7C,
+    KEY_F14            = 0x7D,
+    KEY_F15            = 0x7E,
+    KEY_F16            = 0x7F,
+    KEY_F17            = 0x80,
+    KEY_F18            = 0x81,
+    KEY_F19            = 0x82,
+    KEY_F20            = 0x83,
+    KEY_F21            = 0x84,
+    KEY_F22            = 0x85,
+    KEY_F23            = 0x86,
+    KEY_F24            = 0x87,
+    KEY_NUMLOCK        = 0x90,
+    KEY_SCROLL         = 0x91,
+
+    KEY_COLON          = 0xBA,  // VK_OEM_1 in winuser.h, ;: in the keyboard.
+    KEY_PLUS           = 0xBB,  // =+ in the keyboard.
+    KEY_COMMA          = 0xBC,  // ,< in the keyboard.
+    KEY_MINUS          = 0xBD,  // -_ in the keyboard.
+    KEY_PERIOD         = 0xBE,  // .> in the keyboard.
+    KEY_SLASH          = 0xBF,  // VK_OEM_2 in winuser.h, /? in the keyboard.
+    KEY_GRAVE          = 0xC0,  // VK_OEM_3 in winuser.h, `~ in the keyboard.
+    KEY_BRACKET_LEFT   = 0xDB,  // VK_OEM_4 in winuser.h, [{ in the keyboard.
+    KEY_BACK_SLASH     = 0xDC,  // VK_OEM_5 in winuser.h, \| in the keyboard.
+    KEY_BRACKET_RIGHT  = 0xDD,  // VK_OEM_6 in winuser.h, ]} in the keyboard.
+    KEY_QUOTE          = 0xDE,  // VK_OEM_7 in winuser.h, '" in the keyboard.
+  };
+
+  KeyboardEvent(Type t, unsigned int key_code)
+      : Event(t, 0), key_code_(key_code) { 
     ASSERT(IsKeyboardEvent());
   };
 
@@ -149,8 +244,8 @@ class KeyboardEvent : public Event {
     ASSERT(IsKeyboardEvent());
   }
 
-  int GetKeyCode() const { return key_code_; }
-  void SetKeyCode(int key_code) { key_code_ = key_code; }
+  unsigned int GetKeyCode() const { return key_code_; }
+  void SetKeyCode(unsigned int key_code) { key_code_ = key_code; }
 
  private:
   int key_code_;
