@@ -21,12 +21,12 @@
 
 using namespace ggadget;
 
-const double kErrorDelta = .00001;
+const double kErrorDelta = .00000001;
 
-TEST(UtilityTest, ChildCoordCalculator) {
+TEST(MathUtilsTest, ChildCoordCalculator) {
   double child_x, child_y;
   
-  ChildCoordCalculator calc = ChildCoordCalculator(0, 0, 50, 50, M_PI/2);
+  ChildCoordCalculator calc = ChildCoordCalculator(0, 0, 50, 50, M_PI_2);
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
@@ -40,7 +40,7 @@ TEST(UtilityTest, ChildCoordCalculator) {
   EXPECT_DOUBLE_EQ(50., child_x);
   EXPECT_DOUBLE_EQ(50., child_y);
 
-  calc = ChildCoordCalculator(0, 0, 50, 50, 1.5 * M_PI);
+  calc = ChildCoordCalculator(0, 0, 50, 50, M_PI + M_PI_2);
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
@@ -100,57 +100,140 @@ TEST(UtilityTest, ChildCoordCalculator) {
   }
 }
 
-TEST(UtilityTest, GetChildCoord) {
+TEST(MathUtilsTest, GetChildCoord) {
   double child_x, child_y;
 
-  ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, M_PI / 2, &child_x, &child_y);
+  ParentCoordToChildCoord(0, 0, 0, 0, 50, 50, 0, &child_x, &child_y);
+  EXPECT_DOUBLE_EQ(50, child_x);
+  EXPECT_DOUBLE_EQ(50, child_y);
+
+  ParentCoordToChildCoord(0, 0, 0, 0, 50, 50, M_PI_2, &child_x, &child_y);
   EXPECT_NEAR(50., child_x, kErrorDelta);
   EXPECT_DOUBLE_EQ(50., child_y);
 
-  ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, M_PI, &child_x, &child_y);
+  ParentCoordToChildCoord(0, 0, 0, 0, 50, 50, M_PI, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(50., child_x);
   EXPECT_DOUBLE_EQ(50., child_y);
 
-  ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, 1.5 * M_PI, &child_x, &child_y);
+  ParentCoordToChildCoord(0, 0, 0, 0, 50, 50, M_PI + M_PI_2,
+                            &child_x, &child_y);
   EXPECT_DOUBLE_EQ(50., child_x);
   EXPECT_DOUBLE_EQ(50., child_y);
 
-  ChildCoordFromParentCoord(0, 0, 0, 0, 50, 50, 2 * M_PI, &child_x, &child_y);
+  ParentCoordToChildCoord(0, 0, 0, 0, 50, 50, 2 * M_PI, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(50., child_x);
   EXPECT_DOUBLE_EQ(50., child_y);
     
   for (int i = 0; i < 360; i++) {
-    ChildCoordFromParentCoord(i, i, 0, 0, 0, 0, 0, &child_x, &child_y);
+    ParentCoordToChildCoord(i, i, 0, 0, 0, 0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(i, child_x);
     EXPECT_DOUBLE_EQ(i, child_y);
 
-    ChildCoordFromParentCoord(0, 0, i, i, 0, 0, 0, &child_x, &child_y);
+    ParentCoordToChildCoord(0, 0, i, i, 0, 0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(-i, child_x);
     EXPECT_DOUBLE_EQ(-i, child_y);
     
-    ChildCoordFromParentCoord(0, 0, 0, 0, i, i, 0, &child_x, &child_y);
+    ParentCoordToChildCoord(0, 0, 0, 0, i, i, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(i, child_x);
     EXPECT_DOUBLE_EQ(i, child_y);
 
     // distance should be constant in a circular rotation around origin
-    ChildCoordFromParentCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i), 
-			      &child_x, &child_y);
+    ParentCoordToChildCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i), 
+                            &child_x, &child_y);
     EXPECT_DOUBLE_EQ(20000., child_x * child_x + child_y * child_y);
 
     // distance should be constant in a circular rotation around top-left
-    ChildCoordFromParentCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i), 
-			      &child_x, &child_y);
+    ParentCoordToChildCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i), 
+                            &child_x, &child_y);
     EXPECT_DOUBLE_EQ(20000., child_x * child_x + child_y * child_y);
 
     // distance to pin should be constant in a circular rotation
-    ChildCoordFromParentCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i), 
-			      &child_x, &child_y);
+    ParentCoordToChildCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i), 
+                            &child_x, &child_y);
     EXPECT_NEAR(0., (child_x - 1) * (child_x - 1) +
                     (child_y - 1) * (child_y - 1), kErrorDelta);
   }
 }
 
-TEST(UtilityTest, CheckPointInElement) {
+TEST(MathUtilsTest, GetParentCoord) {
+  double parent_x, parent_y;
+
+  ChildCoordToParentCoord(40, 50, 0, 0, 40, 50, 0, &parent_x, &parent_y);
+  EXPECT_NEAR(0, parent_x, kErrorDelta);
+  EXPECT_NEAR(0, parent_y, kErrorDelta);
+
+  ChildCoordToParentCoord(40, 50, 0, 0, 40, 50, M_PI_2,
+                          &parent_x, &parent_y);
+  EXPECT_NEAR(0, parent_x, kErrorDelta);
+  EXPECT_NEAR(0, parent_y, kErrorDelta);
+
+  ChildCoordToParentCoord(40, 50, 0, 0, 40, 50, M_PI, &parent_x, &parent_y);
+  EXPECT_NEAR(0, parent_x, kErrorDelta);
+  EXPECT_NEAR(0, parent_y, kErrorDelta);
+
+  ChildCoordToParentCoord(40, 50, 0, 0, 40, 50, M_PI + M_PI_2,
+                          &parent_x, &parent_y);
+  EXPECT_NEAR(0, parent_x, kErrorDelta);
+  EXPECT_NEAR(0, parent_y, kErrorDelta);
+
+  ChildCoordToParentCoord(40, 50, 0, 0, 40, 50, 2 * M_PI,
+                          &parent_x, &parent_y);
+  EXPECT_NEAR(0, parent_x, kErrorDelta);
+  EXPECT_NEAR(0, parent_y, kErrorDelta);
+
+  for (int i = 0; i < 360; i++) {
+    ChildCoordToParentCoord(i, i, 0, 0, 0, 0, 0, &parent_x, &parent_y);
+    EXPECT_DOUBLE_EQ(i, parent_x);
+    EXPECT_DOUBLE_EQ(i, parent_y);
+
+    ChildCoordToParentCoord(0, 0, i, i, 0, 0, 0, &parent_x, &parent_y);
+    EXPECT_DOUBLE_EQ(i, parent_x);
+    EXPECT_DOUBLE_EQ(i, parent_y);
+    
+    ChildCoordToParentCoord(0, 0, 0, 0, i, i, 0, &parent_x, &parent_y);
+    EXPECT_DOUBLE_EQ(-i, parent_x);
+    EXPECT_DOUBLE_EQ(-i, parent_y);
+
+    // distance should be constant in a circular rotation around origin
+    ChildCoordToParentCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i), 
+                            &parent_x, &parent_y);
+    EXPECT_DOUBLE_EQ(20000., parent_x * parent_x + parent_y * parent_y);
+
+    // distance should be constant in a circular rotation around top-left
+    ChildCoordToParentCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i), 
+                            &parent_x, &parent_y);
+    EXPECT_DOUBLE_EQ(20000., parent_x * parent_x + parent_y * parent_y);
+
+    // distance to pin should be constant in a circular rotation
+    ChildCoordToParentCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i), 
+                            &parent_x, &parent_y);
+    EXPECT_NEAR(2., parent_x * parent_x + parent_y * parent_y, kErrorDelta);
+  }
+}
+
+TEST(MathUtilsTest, TestBackAndForth) {
+  const double child_x_pos = 25;
+  const double child_y_pos = 48;
+  const double pin_x = 77;
+  const double pin_y = 71;
+  const double parent_x = 123.4;
+  const double parent_y = 432.1;
+
+  for (int i = 0; i < 360; i++) {
+    double child_x, child_y;
+    ParentCoordToChildCoord(parent_x, parent_y, child_x_pos, child_y_pos,
+                            pin_x, pin_y, DegreesToRadians(i),
+                            &child_x, &child_y);
+    double parent_x1, parent_y1;
+    ChildCoordToParentCoord(child_x, child_y, child_x_pos, child_y_pos,
+                            pin_x, pin_y, DegreesToRadians(i),
+                            &parent_x1, &parent_y1);
+    EXPECT_NEAR(parent_x, parent_x1, kErrorDelta);
+    EXPECT_NEAR(parent_y, parent_y1, kErrorDelta);
+  }
+}
+
+TEST(MathUtilsTest, CheckPointInElement) {
   EXPECT_TRUE(IsPointInElement(0, 0, 50, 20));
   EXPECT_TRUE(IsPointInElement(1, 1, 50, 20));
   EXPECT_TRUE(IsPointInElement(49.9, 19.9, 50, 20));
@@ -160,10 +243,21 @@ TEST(UtilityTest, CheckPointInElement) {
   EXPECT_FALSE(IsPointInElement(60, 0, 50, 20));
 }
 
-TEST(UtilityTest, DegreesToRadians) {
+TEST(MathUtilsTest, DegreesToRadians) {
   EXPECT_EQ(2 * M_PI, DegreesToRadians(360.));
   EXPECT_EQ(0., DegreesToRadians(0.));
   EXPECT_EQ(M_PI, DegreesToRadians(180.));
+}
+
+TEST(MathUtilsTest, GetChildExtentInParent) {
+  double extent_width, extent_height;
+  GetChildExtentInParent(40, 50, 0, 0, 7, 8, 0, &extent_width, &extent_height);
+  EXPECT_EQ(47, extent_width);
+  EXPECT_EQ(58, extent_height);
+  GetChildExtentInParent(40, 50, 3, 4, 7, 8, 0, &extent_width, &extent_height);
+  EXPECT_EQ(44, extent_width);
+  EXPECT_EQ(54, extent_height);
+  // TODO: Add more tests.
 }
 
 int main(int argc, char **argv) {

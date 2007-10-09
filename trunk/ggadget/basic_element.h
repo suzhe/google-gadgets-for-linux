@@ -33,12 +33,14 @@ class BasicElement : public ElementInterface {
  public:
   BasicElement(ElementInterface *parent,
                ViewInterface *view,
+               const char *tag_name,
                const char *name,
                bool is_container);
   virtual ~BasicElement();
 
  public:
   virtual void Destroy();
+  virtual const char *GetTagName() const;
   virtual ViewInterface *GetView();
   virtual const ViewInterface *GetView() const;
   virtual HitTest GetHitTest() const;
@@ -105,14 +107,19 @@ class BasicElement : public ElementInterface {
   
   virtual void OnParentWidthChange(double width);
   virtual void OnParentHeightChange(double height);
-  
-  virtual bool OnMouseEvent(MouseEvent *event);
-  virtual void OnKeyEvent(KeyboardEvent *event);  
+
+  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
+  virtual bool IsMouseEventIn(MouseEvent *event);
+  virtual void OnKeyEvent(KeyboardEvent *event);
   virtual void OnOtherEvent(Event *event);
   virtual void OnTimerEvent(TimerEvent *event);
   
   virtual bool IsPositionChanged() const;
   virtual void ClearPositionChanged();
+
+  virtual void SelfCoordToChildCoord(ElementInterface *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y);
 
 #if 0 // TODO: Ensure if they are needed.
   /** 

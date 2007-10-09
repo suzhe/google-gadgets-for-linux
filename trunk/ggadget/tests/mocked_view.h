@@ -89,6 +89,7 @@ class MockedView : public ggadget::ViewInterface {
                                     bool is_mask) { return NULL; }
   virtual ggadget::Texture *LoadTexture(const char *name) { return NULL; }
   virtual int GetDebugMode() const { return 2; }
+  virtual void SetFocus(ggadget::ElementInterface *element) { }
 
   DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
   DEFAULT_OWNERSHIP_POLICY

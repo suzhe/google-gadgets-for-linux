@@ -20,6 +20,7 @@
 #include <string>
 #include "ggadget/element_interface.h"
 #include "ggadget/elements.h"
+#include "ggadget/math_utils.h"
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
 #include "ggadget/event.h"
@@ -270,7 +271,12 @@ class MockedElement : public ggadget::ElementInterface {
   virtual void OnParentHeightChange(double height) {
   }
   
-  virtual bool OnMouseEvent(ggadget::MouseEvent *event) {
+  virtual ggadget::ElementInterface *OnMouseEvent(ggadget::MouseEvent *event,
+                                                  bool direct) {
+    return this;
+  }
+
+  virtual bool IsMouseEventIn(ggadget::MouseEvent *event) {
     return true;
   }
 
@@ -283,6 +289,16 @@ class MockedElement : public ggadget::ElementInterface {
   virtual void OnTimerEvent(ggadget::TimerEvent *event) {    
   }
   
+  virtual void SelfCoordToChildCoord(ElementInterface *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y) {
+    ggadget::ParentCoordToChildCoord(
+        x, y, child->GetPixelX(), child->GetPixelY(),
+        child->GetPixelPinX(), child->GetPixelPinY(),
+        ggadget::DegreesToRadians(child->GetRotation()),
+        child_x, child_y);
+  }
+
   DEFAULT_OWNERSHIP_POLICY;
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);
   virtual bool IsStrict() const { return true; }

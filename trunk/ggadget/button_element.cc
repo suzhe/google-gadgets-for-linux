@@ -51,8 +51,9 @@ class ButtonElement::Impl {
 ButtonElement::ButtonElement(ElementInterface *parent,
                        ViewInterface *view,
                        const char *name)
-    : BasicElement(parent, view, name, false),
+    : BasicElement(parent, view, "button", name, false),
       impl_(new Impl) {
+  SetEnabled(true);
   RegisterProperty("image",
                    NewSlot(this, &ButtonElement::GetImage),
                    NewSlot(this, &ButtonElement::SetImage));
@@ -161,10 +162,11 @@ ElementInterface *ButtonElement::CreateInstance(ElementInterface *parent,
   return new ButtonElement(parent, view, name);
 }
 
-bool ButtonElement::OnMouseEvent(MouseEvent *event) {
-  bool fired = BasicElement::OnMouseEvent(event);
+ElementInterface *ButtonElement::OnMouseEvent(MouseEvent *event, bool direct) {
+  ElementInterface *fired = BasicElement::OnMouseEvent(event, direct);
   
   if (fired) {
+    ASSERT(fired == this);
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;

@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-/**
- * This header file defines interfaces between C++ and script engines.
- */
-
 #ifndef GGADGET_SCRIPT_CONTEXT_INTERFACE_H__
 #define GGADGET_SCRIPT_CONTEXT_INTERFACE_H__
 

@@ -33,7 +33,6 @@ class ImgElement : public BasicElement {
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
-  virtual const char *GetTagName() const { return "img"; }
 
  public:
   /** Gets and sets the file name of image to display. */

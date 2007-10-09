@@ -60,6 +60,7 @@ class View : public ViewInterface {
                          const EventSignal &event_signal);
   virtual ScriptableEvent *GetEvent();
   virtual const ScriptableEvent *GetEvent() const;
+  virtual void SetFocus(ElementInterface *element);
 
   virtual bool SetWidth(int width);
   virtual bool SetHeight(int height);

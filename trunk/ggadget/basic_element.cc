@@ -22,6 +22,7 @@
 #include "elements.h"
 #include "graphics_interface.h"
 #include "image.h"
+#include "math_utils.h"
 #include "scriptable_event.h"
 #include "string_utils.h"
 #include "view_interface.h"
@@ -33,9 +34,11 @@ class BasicElement::Impl {
  public:
   Impl(ElementInterface *parent,
        ViewInterface *view,
+       const char *tag_name,
        const char *name,
        BasicElement *owner)
       : parent_(parent),
+        owner_(owner),
         children_(view->GetElementFactory(), owner, view),
         view_(view),
         hittest_(ElementInterface::HT_DEFAULT),
@@ -72,6 +75,8 @@ class BasicElement::Impl {
         debug_mode_(view_->GetDebugMode()) {
     if (name)
       name_ = name;
+    if (tag_name)
+      tag_name_ = tag_name;
     if (parent)
       ASSERT(parent->GetView() == view);
   }
@@ -244,18 +249,12 @@ class BasicElement::Impl {
     }
   }
 
-  /**
-   * Retrieves the opacity of the element.
-   * @see SetIntOpacity.
-   */
+  // Retrieves the opacity of the element.
   int GetIntOpacity() const {
     return RoundToInt(opacity_ * 255);
   }
   
-  /**
-   * Sets the opacity of the element.
-   * @param opacity valid range: 0 ~ 255.
-   */
+  // Sets the opacity of the element.
   void SetIntOpacity(int opacity) {
     if (0 <= opacity && 255 >= opacity) {
       SetOpacity(opacity / 255.);
@@ -386,7 +385,7 @@ class BasicElement::Impl {
     children_.HostChanged();
   }
 
-  const CanvasInterface *Draw(bool *changed, BasicElement *owner) {
+  const CanvasInterface *Draw(bool *changed) {
     const CanvasInterface *canvas = NULL;
     const CanvasInterface *children_canvas = NULL;
     bool child_changed;
@@ -405,7 +404,7 @@ class BasicElement::Impl {
       // Need to redraw.    
       SetUpCanvas();
       canvas_->MultiplyOpacity(opacity_);
-      owner->DoDraw(canvas_, children_canvas);
+      owner_->DoDraw(canvas_, children_canvas);
 
       if (debug_mode_ == 1) {
         // TODO: draw box around children_canvas only.
@@ -439,8 +438,8 @@ class BasicElement::Impl {
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
       ASSERT(gfx);
-      canvas_ = gfx->NewCanvas(static_cast<size_t>(width_) + 1, 
-                               static_cast<size_t>(height_) + 1);
+      canvas_ = gfx->NewCanvas(static_cast<size_t>(ceil(width_)), 
+                               static_cast<size_t>(ceil(height_)));
       if (!canvas_) {
         DLOG("Error: unable to create canvas.");
       }
@@ -452,7 +451,7 @@ class BasicElement::Impl {
     canvas_->IntersectRectClipRegion(0., 0., width_, height_);
     return canvas_;
   }
-  
+
  public:
   void WidthChanged() {
     if (pin_x_relative_)
@@ -477,13 +476,110 @@ class BasicElement::Impl {
   }
 
  public:
+  ElementInterface *OnMouseEvent(MouseEvent *event, bool direct) {
+    if (!direct) {
+      // Send to the children first.
+      ElementInterface *child = children_.OnMouseEvent(event);
+      if (child)
+        return child;
+    }
+
+    // Don't check mouse position, because the event may be out of this 
+    // element when this element is grabbing mouse.
+    if (!enabled_)
+      return NULL;
+
+    // Take this event, since no children took it, and we're enabled.
+    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    if (event->GetType() != Event::EVENT_MOUSE_MOVE)
+      DLOG("%s(%s|%s): %g %g %d %d", scriptable_event.GetName(),
+           name_.c_str(), tag_name_.c_str(),
+           event->GetX(), event->GetY(),
+           event->GetButton(), event->GetWheelDelta());
+
+    switch (event->GetType()) {
+      case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
+        view_->FireEvent(&scriptable_event, onmousemove_event_);
+        break;
+      case Event::EVENT_MOUSE_DOWN:
+        view_->FireEvent(&scriptable_event, onmousedown_event_);
+        break;
+      case Event::EVENT_MOUSE_UP:
+        view_->FireEvent(&scriptable_event, onmouseup_event_);
+        break;
+      case Event::EVENT_MOUSE_CLICK:
+        view_->FireEvent(&scriptable_event, onclick_event_);
+        break;
+      case Event::EVENT_MOUSE_DBLCLICK:
+        view_->FireEvent(&scriptable_event, ondblclick_event_);
+        break;
+      case Event::EVENT_MOUSE_OUT:
+        view_->FireEvent(&scriptable_event, onmouseout_event_);
+        break;
+      case Event::EVENT_MOUSE_OVER:
+        view_->FireEvent(&scriptable_event, onmouseover_event_);
+        break;
+      case Event::EVENT_MOUSE_WHEEL:
+        view_->FireEvent(&scriptable_event, onmousewheel_event_);
+        break;
+      default:
+        ASSERT(false);
+    }
+
+    return owner_;
+  }
+
+  void OnKeyEvent(KeyboardEvent *event) {
+    if (!enabled_)
+      return;
+
+    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
+         name_.c_str(), tag_name_.c_str(), event->GetKeyCode());
+    
+    switch (event->GetType()) {
+      case Event::EVENT_KEY_DOWN:
+        view_->FireEvent(&scriptable_event, onkeydown_event_);      
+        break;
+      case Event::EVENT_KEY_UP:
+        view_->FireEvent(&scriptable_event, onkeyup_event_);
+        break;
+      case Event::EVENT_KEY_PRESS:
+        view_->FireEvent(&scriptable_event, onkeypress_event_);
+        break;
+      default:
+        ASSERT(false);
+    }
+  }
+
+  void OnOtherEvent(Event *event) {
+    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    DLOG("%s(%s|%s)", scriptable_event.GetName(),
+         name_.c_str(), tag_name_.c_str());
+
+    // TODO: focus logic.
+    switch (event->GetType()) {
+      case Event::EVENT_FOCUS_IN:
+        view_->FireEvent(&scriptable_event, onfocusin_event_);
+        break;
+      case Event::EVENT_FOCUS_OUT:
+        view_->FireEvent(&scriptable_event, onfocusout_event_);
+        break;
+      default:
+        ASSERT(false);
+    }
+  }
+
+ public:
   ElementInterface *parent_;
+  BasicElement *owner_;
   Elements children_;
   ViewInterface *view_;
   ElementInterface::HitTest hittest_;
   ElementInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
+  std::string tag_name_;
   std::string name_;
   double pin_x_;
   double pin_y_;
@@ -555,9 +651,10 @@ static const char *kHitTestNames[] = {
 
 BasicElement::BasicElement(ElementInterface *parent,
                            ViewInterface *view,
+                           const char *tag_name,
                            const char *name,
                            bool is_container)
-    : impl_(new Impl(parent, view, name, this)) {
+    : impl_(new Impl(parent, view, tag_name, name, this)) {
   RegisterStringEnumProperty("cursor",
                              NewSlot(this, &BasicElement::GetCursor),
                              NewSlot(this, &BasicElement::SetCursor),
@@ -578,7 +675,7 @@ BasicElement::BasicElement(ElementInterface *parent,
   RegisterProperty("mask",
                    NewSlot(this, &BasicElement::GetMask),
                    NewSlot(this, &BasicElement::SetMask));
-  RegisterProperty("name", NewSlot(this, &BasicElement::GetName), NULL);
+  RegisterConstant("name", impl_->name_);
   RegisterProperty("offsetHeight",
                    NewSlot(this, &BasicElement::GetPixelHeight), NULL);
   RegisterProperty("offsetWidth",
@@ -600,10 +697,7 @@ BasicElement::BasicElement(ElementInterface *parent,
   RegisterProperty("rotation",
                    NewSlot(this, &BasicElement::GetRotation),
                    NewSlot(this, &BasicElement::SetRotation));
-  RegisterProperty("tagname",
-                   NewSlot(implicit_cast<ElementInterface *>(this),
-                           &ElementInterface::GetTagName),
-                   NULL);
+  RegisterConstant("tagname", impl_->tag_name_);
   RegisterProperty("tooltip",
                    NewSlot(this, &BasicElement::GetTooltip),
                    NewSlot(this, &BasicElement::SetTooltip));
@@ -660,6 +754,10 @@ BasicElement::~BasicElement() {
 
 void BasicElement::Destroy() {
   delete this;
+}
+
+const char *BasicElement::GetTagName() const {
+  return impl_->tag_name_.c_str();
 }
 
 ViewInterface *BasicElement::GetView() {
@@ -898,7 +996,7 @@ void BasicElement::KillFocus() {
 }
 
 const CanvasInterface *BasicElement::Draw(bool *changed) {
-  return impl_->Draw(changed, this);
+  return impl_->Draw(changed);
 }
 
 void BasicElement::ClearPositionChanged() {
@@ -911,6 +1009,7 @@ bool BasicElement::IsPositionChanged() const {
 
 void BasicElement::SetSelfChanged(bool changed) { 
   impl_->changed_ = changed;
+  impl_->view_->QueueDraw();
 }
 
 bool BasicElement::IsSelfChanged() const {
@@ -949,100 +1048,34 @@ void BasicElement::OnParentHeightChange(double height) {
     impl_->SetRelativeHeight(impl_->pheight_, true);
 }
 
-bool BasicElement::OnMouseEvent(MouseEvent *event) {
-  if (!IsPointInElement(event->GetX(), event->GetY(), 
-                        GetPixelWidth(), GetPixelHeight())) {
-    return false;      
-  }
-
-  if (impl_->children_.OnMouseEvent(event)) {
-    return true;  
-  }
-  
-  if (!IsEnabled()) {
-    return false;
-  }
-  
-  // Take this event, since no children took it, and we're enabled.
-  ScriptableEvent scriptable_event(event, this, 0, 0);
-  switch (event->GetType()) {
-    case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
-    // DLOG("mousemove");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onmousemove_event_);
-    break;
-   case Event::EVENT_MOUSE_DOWN:
-    DLOG("mousedown");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onmousedown_event_);
-    break;
-   case Event::EVENT_MOUSE_UP:
-    DLOG("mouseup");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onmouseup_event_);
-    break;
-   case Event::EVENT_MOUSE_CLICK:
-    DLOG("click %g %g", event->GetX(), event->GetY());
-    impl_->view_->FireEvent(&scriptable_event, impl_->onclick_event_);
-    break;
-   case Event::EVENT_MOUSE_DBLCLICK:
-    DLOG("dblclick %g %g", event->GetX(), event->GetY());
-    impl_->view_->FireEvent(&scriptable_event, impl_->ondblclick_event_);
-    break;
-   case Event::EVENT_MOUSE_OUT:
-    DLOG("mouseout");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onmouseout_event_);
-    break;
-   case Event::EVENT_MOUSE_OVER:
-    DLOG("mouseover");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onmouseover_event_);
-    break;
-   case Event::EVENT_MOUSE_WHEEL:
-    DLOG("mousewheel");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onmousewheel_event_);
-    break;
-   default:
-    ASSERT(false);
-  }
-  
-  return true;
+ElementInterface *BasicElement::OnMouseEvent(MouseEvent *event, bool direct) {
+  return impl_->OnMouseEvent(event, direct);
 }
 
 void BasicElement::OnKeyEvent(KeyboardEvent *event) {
-  ScriptableEvent scriptable_event(event, this, 0, 0);
-  switch (event->GetType()) {
-   case Event::EVENT_KEY_DOWN:
-    DLOG("keydown");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onkeydown_event_);      
-    break;
-   case Event::EVENT_KEY_UP:
-    DLOG("keyup");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onkeyup_event_);
-    break;
-   case Event::EVENT_KEY_PRESS:
-    DLOG("keypress");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onkeypress_event_);
-    break;
-   default:
-    ASSERT(false);
-  }
+  impl_->OnKeyEvent(event);
 }
 
 void BasicElement::OnOtherEvent(Event *event) {
-  ScriptableEvent scriptable_event(event, this, 0, 0);
-  switch (event->GetType()) {
-   case Event::EVENT_FOCUS_IN:
-    DLOG("focusin");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onfocusin_event_);
-    break;
-   case Event::EVENT_FOCUS_OUT:
-    DLOG("focusout");
-    impl_->view_->FireEvent(&scriptable_event, impl_->onfocusout_event_);
-    break;
-   default:
-    ASSERT(false);
-  }
+  impl_->OnOtherEvent(event);
 }
 
 void BasicElement::OnTimerEvent(TimerEvent *event) {
   // blank implementation
+}
+
+bool BasicElement::IsMouseEventIn(MouseEvent *event) {
+  return IsPointInElement(event->GetX(), event->GetY(),
+                          impl_->width_, impl_->height_);
+}
+
+void BasicElement::SelfCoordToChildCoord(ElementInterface *child,
+                                         double x, double y,
+                                         double *child_x, double *child_y) {
+  ParentCoordToChildCoord(x, y, child->GetPixelX(), child->GetPixelY(),
+                          child->GetPixelPinX(), child->GetPixelPinY(),
+                          DegreesToRadians(child->GetRotation()),
+                          child_x, child_y);
 }
 
 } // namespace ggadget

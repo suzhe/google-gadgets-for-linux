@@ -35,7 +35,10 @@ class Elements::Impl {
        ElementInterface *owner,
        ViewInterface *view)
       : factory_(factory), owner_(owner), view_(view), 
-        width_(.0), height_(.0), canvas_(NULL), count_changed_(true) {
+        width_(.0), height_(.0),
+        canvas_(NULL),
+        count_changed_(true),
+        scrollable_(false) {
     ASSERT(factory);
     ASSERT(view);
 
@@ -172,6 +175,77 @@ class Elements::Impl {
     }
   }
 
+  void MapChildMouseEvent(MouseEvent *org_event, ElementInterface *child,
+                          MouseEvent *new_event) {
+    double child_x, child_y;
+    if (owner_) {
+      owner_->SelfCoordToChildCoord(child, org_event->GetX(), org_event->GetY(),
+                                    &child_x, &child_y);
+    } else {
+      ParentCoordToChildCoord(org_event->GetX(), org_event->GetY(),
+                              child->GetPixelX(), child->GetPixelY(),
+                              child->GetPixelPinX(), child->GetPixelPinY(),
+                              DegreesToRadians(child->GetRotation()),
+                              &child_x, &child_y);
+    }
+
+    new_event->SetX(child_x);
+    new_event->SetY(child_y);
+  }
+
+  ElementInterface *OnMouseEvent(MouseEvent *event) {
+    // The following event types are processed directly in the view.
+    ASSERT(event->GetType() != Event::EVENT_MOUSE_OVER &&
+           event->GetType() != Event::EVENT_MOUSE_OUT);
+
+    MouseEvent new_event(*event);
+    // Iterate in reverse since higher elements are listed last.
+    for (std::vector<ElementInterface *>::reverse_iterator ite =
+             children_.rbegin();
+         ite != children_.rend(); ++ite) {
+      MapChildMouseEvent(event, *ite, &new_event);
+      if ((*ite)->IsMouseEventIn(&new_event)) {
+        ElementInterface *fired_element = (*ite)->OnMouseEvent(&new_event,
+                                                               false);
+        if (fired_element)
+          return fired_element;
+      }
+    }
+    return NULL;
+  }
+
+  // Update the maximum children extent.
+  void UpdateChildExtent(ElementInterface *child,
+                         double *extent_width, double *extent_height) {
+    double x = child->GetPixelX();
+    double y = child->GetPixelY();
+    double pin_x = child->GetPixelPinX();
+    double pin_y = child->GetPixelPinY();
+    double width = child->GetPixelWidth();
+    double height = child->GetPixelHeight();
+    // Estimate the biggest possible extent with low cost.
+    double est_maximum_extent = std::max(pin_x, width - pin_x) +
+                                std::max(pin_y, height - pin_y);
+    double child_extent_width = x + est_maximum_extent;
+    double child_extent_height = y + est_maximum_extent;
+    // Calculate the actual extent only if the estimated value is bigger than
+    // current extent.
+    if (child_extent_width > *extent_width ||
+        child_extent_height > *extent_height) {
+      GetChildExtentInParent(x, y, pin_x, pin_y, width, height,
+                             child->GetRotation(),
+                             &child_extent_width, &child_extent_height);
+      if (child_extent_width > *extent_width)
+        *extent_width = child_extent_width;
+      if (child_extent_height > *extent_height)
+        *extent_height = child_extent_height;
+    }
+  }
+
+  void SetScrollable(bool scrollable) {
+    scrollable_ = scrollable;
+  }
+
   const CanvasInterface *Draw(bool *changed);
 
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
@@ -185,6 +259,7 @@ class Elements::Impl {
   double height_;
   CanvasInterface *canvas_;
   bool count_changed_;
+  bool scrollable_;
 };
 
 const CanvasInterface *Elements::Impl::Draw(bool *changed) {
@@ -199,29 +274,58 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
   if (children_.empty()) {
     goto exit;
   }
-  
-  // draw children into temp array
+
+  // Draw children into temp array.
   child_count = children_.size();
   children_canvas = new const CanvasInterface*[child_count];
   for (int i = 0; i < child_count; i++) {
     element = children_[i];
     children_canvas[i] = element->Draw(&child_changed);
-    if (child_changed || element->IsPositionChanged()) {
+    if (element->IsPositionChanged()) {
       element->ClearPositionChanged();
-      change = true;
-    }    
+      child_changed = true;
+    }
+    change = change || child_changed;
   }
-  
+
   change = change || !canvas;
   if (change) {
-    // Need to redraw   
-    if (!canvas_) {
+    size_t canvas_width, canvas_height;
+    if (scrollable_) {
+      if (child_changed || !canvas_) {
+        double children_extent_width = 0;
+        double children_extent_height = 0;
+        for (int i = 0; i < child_count; i++) {
+          UpdateChildExtent(children_[i],
+                            &children_extent_width,
+                            &children_extent_height);
+        }
+        canvas_width = static_cast<size_t>(ceil(children_extent_width));
+        canvas_height = static_cast<size_t>(ceil(children_extent_height));
+      } else {
+        canvas_width = canvas_->GetWidth();
+        canvas_height = canvas_->GetHeight();
+      }
+    } else {
+      canvas_width = static_cast<size_t>(ceil(width_));
+      canvas_height = static_cast<size_t>(ceil(height_));
+    }
+
+    // Need to redraw.
+    if (!canvas_ || canvas_->GetWidth() != canvas_width ||
+        canvas_->GetHeight() != canvas_height) {
+      if (canvas_)
+        canvas_->Destroy();
+
+      if (canvas_width == 0 || canvas_height == 0) {
+        canvas_ = NULL;
+        goto exit;
+      }
+
       const GraphicsInterface *gfx = view_->GetGraphics();
-      canvas_ = gfx->NewCanvas(static_cast<size_t>(width_) + 1, 
-                               static_cast<size_t>(height_) + 1);
+      canvas_ = gfx->NewCanvas(canvas_width, canvas_height);
       if (!canvas_) {
         DLOG("Error: unable to create canvas.");
-        change = true;
         goto exit;
       }
     }
@@ -229,7 +333,10 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
       // If not new canvas, we must remember to clear canvas before drawing.
       canvas_->ClearCanvas();
     }
-    canvas_->IntersectRectClipRegion(0., 0., width_, height_);
+
+    // TODO: Ensure whether it is useful.
+    if (!scrollable_)
+      canvas_->IntersectRectClipRegion(0., 0., width_, height_);
 
     for (int i = 0; i < child_count; i++) {
       if (children_canvas[i]) {
@@ -256,24 +363,26 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
         else {
           canvas_->DrawCanvas(.0, .0, children_canvas[i]);
         }
-        
-        canvas_->PopState();  
+
+        canvas_->PopState();
       }          
     }
   }
 
-#if 0
-  // Draw bounding box for debug.
-  canvas_->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
-  canvas_->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
-  canvas_->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
-  canvas_->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
-  canvas_->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
-  canvas_->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
-#endif
+  if (view_->GetDebugMode() > 0) {
+    // Draw bounding box for debug.
+    double w = canvas_->GetWidth();
+    double h = canvas_->GetHeight();
+    canvas_->DrawLine(0, 0, 0, h, 1, Color(0, 0, 0));
+    canvas_->DrawLine(0, 0, w, 0, 1, Color(0, 0, 0));
+    canvas_->DrawLine(w, h, 0, h, 1, Color(0, 0, 0));
+    canvas_->DrawLine(w, h, w, 0, 1, Color(0, 0, 0));
+    canvas_->DrawLine(0, 0, w, h, 1, Color(0, 0, 0));
+    canvas_->DrawLine(w, 0, 0, h, 1, Color(0, 0, 0));
+  }
 
   canvas = canvas_;
-  
+
 exit:
   if (children_canvas) {
     delete[] children_canvas;
@@ -366,29 +475,14 @@ const CanvasInterface *Elements::Draw(bool *changed) {
   return impl_->Draw(changed);
 }
 
-bool Elements::OnMouseEvent(MouseEvent *event) {
-  MouseEvent new_event(*event);
-  // Iterate in reverse since higher elements are listed last.
-  for (std::vector<ElementInterface *>::reverse_iterator ite = 
-           impl_->children_.rbegin();
-       ite != impl_->children_.rend(); ++ite) {
-    double child_x, child_y;
-    ChildCoordFromParentCoord(event->GetX(), event->GetY(),
-                              (*ite)->GetPixelX(), (*ite)->GetPixelY(),
-                              (*ite)->GetPixelPinX(), (*ite)->GetPixelPinY(),
-                              DegreesToRadians((*ite)->GetRotation()),
-                              &child_x, &child_y);
+ElementInterface *Elements::OnMouseEvent(MouseEvent *event) {
+  ASSERT(impl_);
+  return impl_->OnMouseEvent(event);
+}
 
-    new_event.SetX(child_x);
-    new_event.SetY(child_y);
-
-    bool fired = (*ite)->OnMouseEvent(&new_event);
-    if (fired) {
-      return true;
-    }
-  }
-
-  return false;
+void Elements::SetScrollable(bool scrollable) {
+  ASSERT(impl_);
+  impl_->SetScrollable(scrollable);
 }
 
 DELEGATE_SCRIPTABLE_INTERFACE_IMPL(Elements, impl_->scriptable_helper_)

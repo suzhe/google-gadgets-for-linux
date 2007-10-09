@@ -64,9 +64,9 @@ ElementInterface *InsertElementFromXML(Elements *elements,
  *   - element_name/subele_name: retrieves the text content of the third level
  *     element named 'subele_name' under the second level element named
  *     'element_name';
- *   - @attr_name: retrives the value of attribute named 'attr_name' in the
+ *   - @@attr_name: retrives the value of attribute named 'attr_name' in the
  *     top level element; 
- *   - element_name@attr_name: retrieves the value of attribute named
+ *   - element_name@@attr_name: retrieves the value of attribute named
  *     'attr_name' in the secondd level element named 'element_name'.
  *
  * If there are multiple elements with the same name under the same element,

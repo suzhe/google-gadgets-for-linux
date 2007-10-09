@@ -168,10 +168,15 @@ class Elements : public ScriptableInterface {
   
   /** 
    * Handler of the mouse events. 
-   * @return true if one of the children in this container received it.
+   * @return the element who processed the event, or @c NULL if no one.
    */
-  virtual bool OnMouseEvent(MouseEvent *event);
-  
+  ElementInterface *OnMouseEvent(MouseEvent *event);
+
+  /**
+   * Sets if the drawing contents can be scrolled within the parent.
+   */
+  void SetScrollable(bool scrollable);
+
   DEFAULT_OWNERSHIP_POLICY
   SCRIPTABLE_INTERFACE_DECL
   virtual bool IsStrict() const { return true; }

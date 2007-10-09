@@ -59,18 +59,17 @@ class Texture::Impl {
     size_t canvas_height = canvas->GetHeight();
 
     if (image_) {
-      // Don't apply opacity_ here because it is only applicable with color_. 
-      size_t image_width = image_->GetWidth();
-      size_t image_height = image_->GetHeight();
-      if (image_width > 0 && image_height > 0) {
-        for (size_t x = 0; x < canvas_width; x += image_width)
-          for (size_t y = 0; y < canvas_height; y += image_height)
-            image_->Draw(canvas, x, y);
-      }
+      // Don't apply opacity_ here because it is only applicable with color_.
+      canvas->DrawFilledRectWithCanvas(0, 0, canvas_width, canvas_height,
+                                       image_->GetCanvas());
     } else if (opacity_ > 0) {
-      canvas->MultiplyOpacity(opacity_);
+      if (opacity_ != 1.0) {
+        canvas->PushState();
+        canvas->MultiplyOpacity(opacity_);
+      }
       canvas->DrawFilledRect(0, 0, canvas_width, canvas_height, color_);
-      canvas->MultiplyOpacity(1.0/opacity_);
+      if (opacity_ != 1.0)
+        canvas->PopState();
     }
   }
 

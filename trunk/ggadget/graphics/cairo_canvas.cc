@@ -104,8 +104,8 @@ void CairoCanvas::ScaleCoordinates(double cx, double cy) {
 }
 
 bool CairoCanvas::DrawFilledRect(double x, double y, 
-                                  double w, double h, const Color &c) {
-  if (w < 0.0 || h < 0.0) {
+                                 double w, double h, const Color &c) {
+  if (w <= 0.0 || h <= 0.0) {
     return false;    
   }
 
@@ -116,8 +116,8 @@ bool CairoCanvas::DrawFilledRect(double x, double y,
 }
 
 bool CairoCanvas::IntersectRectClipRegion(double x, double y, 
-                                            double w, double h) {
-  if (w < 0.0 || h < 0.0) {
+                                          double w, double h) {
+  if (w <= 0.0 || h <= 0.0) {
     return false;    
   }
   
@@ -127,7 +127,6 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
 }
 
 bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
-  // verify class type before downcasting
   if (!img || img->IsMask()) {
     return false;
   }
@@ -157,6 +156,40 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
     cairo_restore(cr_);
   }
     
+  return true;
+}
+
+bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y, 
+                                           double w, double h,
+                                           const CanvasInterface *img) {
+  if (!img || img->IsMask() || w <= 0.0 || h <= 0.0) {
+    return false;    
+  }
+
+  const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
+  cairo_surface_t *s = cimg->GetSurface();
+  cairo_save(cr_);
+  IntersectRectClipRegion(x, y, w, h);
+
+  int sheight = cairo_image_surface_get_height(s);
+  int swidth = cairo_image_surface_get_width(s);
+  size_t sw = cimg->GetWidth();
+  size_t sh = cimg->GetHeight();
+  if (static_cast<size_t>(sheight) != sh || static_cast<size_t>(swidth) != sw) {
+    // CairoGraphics supports only uniform scaling in both X, Y, but due to 
+    // rounding differences, we need to compute the exact scaling individually
+    // for X and Y.
+    double cx = sw / swidth;
+    double cy = sh / sheight;
+    cairo_scale(cr_, cx, cy);
+  }
+
+  cairo_pattern_t *pattern = cairo_pattern_create_for_surface(s);
+  cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+  cairo_set_source(cr_, pattern);
+  cairo_paint_with_alpha(cr_, opacity_);
+  cairo_pattern_destroy(pattern);
+  cairo_restore(cr_);
   return true;
 }
 
