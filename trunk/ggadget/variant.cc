@@ -50,6 +50,9 @@ bool Variant::operator==(const Variant &another) const {
       Slot *slot2 = another.v_.slot_value_;
       return slot1 == slot2 || (slot1 && slot2 && *slot1 == *slot2);
     }
+    case TYPE_JSON:
+      return VariantValue<JSONString>()(*this).value ==
+             VariantValue<JSONString>()(another).value;
     case TYPE_VARIANT:
       // A Variant of type TYPE_VARIANT is only used as a prototype,
       // so they are all equal.
@@ -84,6 +87,8 @@ std::string Variant::ToString() const {
     case Variant::TYPE_SLOT:
       sprintf(buffer, "SLOT:%p", v_.slot_value_);
       return std::string(buffer);
+    case Variant::TYPE_JSON:
+      return std::string("JSON:") + VariantValue<JSONString>()(*this).value;
     case Variant::TYPE_VARIANT:
       return std::string("VARIANT");
     default:

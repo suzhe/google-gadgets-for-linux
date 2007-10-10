@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef CONVERTER_H__
-#define CONVERTER_H__
+#ifndef GGADGET_CONVERTER_H__
+#define GGADGET_CONVERTER_H__
 
 #include <jsapi.h>
 #include <string>
@@ -46,9 +46,9 @@ JSBool ConvertJSToNativeVariant(JSContext *cx,
                                 jsval js_val, Variant *native_val);
 
 /**
- * Converts a @c jsval to a @c std::string.
+ * Converts a @c jsval to a @c std::string for printing.
  */
-std::string ConvertJSToString(JSContext *cx, jsval js_val);
+std::string PrintJSValue(JSContext *cx, jsval js_val);
 
 /**
  * Converts a @c Variant to a @c jsval.
@@ -63,4 +63,4 @@ JSBool ConvertNativeToJS(JSContext* cx,
 
 } // namespace ggadget
 
-#endif  // CONVERTER_H__
+#endif  // GGADGET_CONVERTER_H__

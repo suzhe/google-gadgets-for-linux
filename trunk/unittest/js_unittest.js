@@ -40,6 +40,10 @@ const ASSERT_EXCEPTION_MAGIC = 135792468;
 var _gAllTestCases = new Object();
 var _gIsDeathTest = new Object();
 
+// The following two functions are used to temporarily disable a test.
+function D_TEST() { }
+function DEATH_D_TEST() { }
+
 // Define a test case.
 // The test case body should include one or more ASSERTs and finish with
 // END_TEST().
@@ -81,7 +85,7 @@ function RUN_ALL_TESTS() {
     } catch (e) {
       // The exception thrown by ASSERT is of value ASSERT_EXCEPTION_MAGIC.
       if (e !== ASSERT_EXCEPTION_MAGIC)
-        print(e);
+        print("Exception rasied in test:", e);
     }
     if (!_gCurrentTestFailed)
       passed++;

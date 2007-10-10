@@ -71,6 +71,13 @@ class TestScriptable1 : public ScriptableInterface {
     g_buffer = "Buffer:" + buffer;
   }
 
+  JSONString GetJSON() const {
+    return JSONString(g_buffer);
+  }
+  void SetJSON(const JSONString json) {
+    g_buffer = json.value;
+  }
+
   // This signal is only for test, no relation to ConnectToOndeleteSignal.
   // Place this signal declaration here for testing.
   Signal0<void> my_ondelete_signal_;
@@ -84,9 +91,6 @@ class TestScriptable1 : public ScriptableInterface {
   EnumType enum_property_;
   Variant variant_property_;
 };
-
-typedef Signal1<std::string, const std::string &> OnLunchSignal;
-typedef Signal1<std::string, const std::string &> OnSupperSignal;
 
 class TestPrototype : public ScriptableInterface {
  public:
@@ -163,7 +167,7 @@ class TestScriptable2 : public TestScriptable1 {
     if (time == "lunch")
       signal_result_ = onlunch_signal_(std::string("Have lunch"));
     else if (time == "supper")
-      signal_result_= onsupper_signal_(std::string("Have supper"));
+      signal_result_= onsupper_signal_(std::string("Have supper"), this);
   }
 
   TestScriptable2 *GetSelf() { return this; }
@@ -177,6 +181,10 @@ class TestScriptable2 : public TestScriptable1 {
 
   // Place signal declarations here for testing.
   // In production code, they should be palced in private section.
+  typedef Signal1<std::string, const std::string &> OnLunchSignal;
+  typedef Signal2<std::string, const std::string &,
+                  TestScriptable2 *> OnSupperSignal;
+
   OnLunchSignal onlunch_signal_;
   OnSupperSignal onsupper_signal_;
 

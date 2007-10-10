@@ -17,6 +17,16 @@ function TestScriptableBasics(scriptable) {
   ASSERT(EQ("Buffer:TestBuffer", scriptable.Buffer));
   scriptable.Buffer = "TestAgainBuffer";
   ASSERT(EQ("Buffer:TestAgainBuffer", scriptable.Buffer));
+  scriptable.Buffer = true;
+  ASSERT(EQ("Buffer:true", scriptable.Buffer));
+  scriptable.Buffer = 123.45;
+  ASSERT(EQ("Buffer:123.45", scriptable.Buffer));
+  scriptable.Buffer = NaN;
+  ASSERT(EQ("Buffer:NaN", scriptable.Buffer));
+  scriptable.Buffer = Number.POSITIVE_INFINITY;
+  ASSERT(EQ("Buffer:Infinity", scriptable.Buffer));
+  scriptable.Buffer = Number.NEGATIVE_INFINITY;
+  ASSERT(EQ("Buffer:-Infinity", scriptable.Buffer));
   scriptable.TestMethodVoid0();  // It will clear the buffer.
   ASSERT(STRICT_EQ("", scriptable.Buffer));
 
@@ -35,6 +45,8 @@ function TestScriptableBasics(scriptable) {
   ASSERT(EQ(scriptable.VALUE_1, scriptable.EnumSimple));
   scriptable.EnumSimple = "100.2";
   ASSERT(EQ(100, scriptable.EnumSimple));
+  scriptable.EnumSimple = "100.5";
+  ASSERT(EQ(101, scriptable.EnumSimple));
 
   ASSERT(EQ(123456789, scriptable.Fixed));
 
@@ -65,6 +77,24 @@ DEATH_TEST("Test readonly property", function() {
 DEATH_TEST("Test integer property with non-number", function() {
   // The following assignment should cause an error.
   scriptable.EnumSimple = "80%";
+  ASSERT(DEATH());
+});
+
+DEATH_TEST("Test string property with object", function() {
+  // The following assignment should cause an error.
+  scriptable.Buffer = { a: 10 };
+  ASSERT(DEATH());
+});
+
+DEATH_TEST("Test string property with an array", function() {
+  // The following assignment should cause an error.
+  scriptable.Buffer = [1,2,3];
+  ASSERT(DEATH());
+});
+
+DEATH_TEST("Test string property with null", function() {
+  // The following assignment should cause an error.
+  scriptable.Buffer = null;
   ASSERT(DEATH());
 });
 
@@ -136,12 +166,14 @@ TEST("Test signals", function() {
   };
 
   var supper_is_lunch = false;
-  onsupper_function = function(s) {
+  onsupper_function = function(s, s_param) {
     ASSERT(EQ(scriptable2, scriptable2_in_closure));
-    if (supper_is_lunch)
+    if (supper_is_lunch) {
       ASSERT(EQ("Have lunch", s));
-    else
+    } else {
+      ASSERT(EQ(scriptable2, s_param));
       ASSERT(EQ("Have supper", s));
+    }
     onsupper_triggered = true;
     return "Supper finished";
   };
@@ -231,9 +263,10 @@ DEATH_TEST("Test access after deleted", function() {
 });
 
 TEST("Test string callback", function() {
-  scriptable2.onlunch = "msg = 'lunch_callback'; print(msg);";
+  scriptable2.onlunch = "msg = 'lunch_callback'; return msg;";
   scriptable2.time = "lunch";
   ASSERT(EQ("lunch_callback", msg));
+  ASSERT(EQ(msg, scriptable2.SignalResult));
 });
 
 TEST("Test ownership policies", function() {
@@ -241,12 +274,14 @@ TEST("Test ownership policies", function() {
   var lunch_msg;
   a.onlunch = function(s) {
     lunch_msg = s;
+    return s;
   };
   gc();
   // They should still work after gc.
   TestScriptableBasics(a);
   a.time = "lunch";
   ASSERT(EQ("Have lunch", lunch_msg));
+  ASSERT(EQ(lunch_msg, a.SignalResult));
   scriptable2.DeleteObject(a);
 
   a = scriptable2.NewObject(true);  // script owned
@@ -287,9 +322,16 @@ TEST("Test UTF8 strings", function() {
 });
 
 TEST("Test string callback in UTF8", function() {
-  scriptable2.onlunch = "msg = '午餐'; print(msg);";
+  scriptable2.onlunch = "msg = '午餐'; return msg;";
   scriptable2.time = "lunch";
   ASSERT(EQ("\u5348\u9910", msg));
+  ASSERT(EQ(msg, scriptable2.SignalResult));
+});
+
+TEST("Test JSON property", function() {
+  scriptable.JSON = {};
+  ASSERT(EQ("{}", scriptable.Buffer));
+  ASSERT(OBJECT_STRICT_EQ({}, scriptable.JSON));
 });
 
 RUN_ALL_TESTS();

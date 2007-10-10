@@ -22,9 +22,10 @@
 #include <jsapi.h>
 
 #include "ggadget/common.h"
+#include "ggadget/scripts/smjs/converter.h"
 #include "ggadget/scripts/smjs/js_script_context.h"
 #include "ggadget/scripts/smjs/js_script_runtime.h"
-#include "ggadget/scripts/smjs/converter.h"
+#include "ggadget/scripts/smjs/json.h"
 #include "ggadget/unicode_utils.h"
 
 // The exception value thrown by Assert function.
@@ -114,7 +115,7 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
       if (JS_ExecuteScript(cx, obj, script, &result) &&
           result != JSVAL_VOID &&
           g_interactive) {
-        puts(ggadget::ConvertJSToString(cx, result).c_str());
+        puts(ggadget::PrintJSValue(cx, result).c_str());
       }
       JS_DestroyScript(cx, script);
     }
@@ -126,7 +127,7 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
 static JSBool Print(JSContext *cx, JSObject *obj,
                     uintN argc, jsval *argv, jsval *rval) {
   for (uintN i = 0; i < argc; i++)
-    printf("%s ", ggadget::ConvertJSToString(cx, argv[i]).c_str());
+    printf("%s ", ggadget::PrintJSValue(cx, argv[i]).c_str());
   putchar('\n');
   return JS_TRUE;
 }
@@ -157,11 +158,11 @@ static JSBool Assert(JSContext *cx, JSObject *obj,
   if (argv[0] != JSVAL_NULL) {
     if (argc > 1)
       JS_ReportError(cx, "%s%s\n%s", kAssertFailurePrefix,
-                     ggadget::ConvertJSToString(cx, argv[0]).c_str(),
-                     ggadget::ConvertJSToString(cx, argv[1]).c_str());
+                     ggadget::PrintJSValue(cx, argv[0]).c_str(),
+                     ggadget::PrintJSValue(cx, argv[1]).c_str());
     else
       JS_ReportError(cx, "%s%s", kAssertFailurePrefix,
-                     ggadget::ConvertJSToString(cx, argv[0]).c_str());
+                     ggadget::PrintJSValue(cx, argv[0]).c_str());
 
     // Let the JavaScript test framework know the failure.
     // The exception value is null to tell the catcher not to print it again.
@@ -215,12 +216,34 @@ static JSBool ShowFileAndLine(JSContext *cx, JSObject *obj,
   return JS_TRUE;
 }
 
+static JSBool JSONEncodeFunc(JSContext *cx, JSObject *obj,
+                             uintN argc, jsval *argv, jsval *rval) {
+  std::string json;
+  if (ggadget::JSONEncode(cx, argv[0], &json)) {
+    *rval = STRING_TO_JSVAL(JS_NewStringCopyN(cx, json.c_str(), json.length()));
+    return JS_TRUE;
+  }
+  argv[0] = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, "JSONEncode failed"));
+  return Assert(cx, obj, argc, argv, rval);
+}
+
+static JSBool JSONDecodeFunc(JSContext *cx, JSObject *obj,
+                             uintN argc, jsval *argv, jsval *rval) {
+  JSString *str = JS_ValueToString(cx, argv[0]);
+  if (str && ggadget::JSONDecode(cx, JS_GetStringBytes(str), rval))
+    return JS_TRUE;
+  argv[0] = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, "JSONDecode failed"));
+  return Assert(cx, obj, argc, argv, rval);
+}
+
 static JSFunctionSpec global_functions[] = {
   { "print", Print, 0 },
   { "quit", Quit, 0 },
   { "gc", GC, 0 },
   { "setVerbose", SetVerbose, 1 },
   { "showFileAndLine", ShowFileAndLine, 0 },
+  { "jsonEncode", JSONEncodeFunc, 1 },
+  { "jsonDecode", JSONDecodeFunc, 1 },
   { "ASSERT", Assert, 1 },
   { 0 }
 };
