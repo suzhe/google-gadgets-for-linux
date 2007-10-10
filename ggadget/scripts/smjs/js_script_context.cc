@@ -103,7 +103,7 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
     if (!result)
       JS_ReportError(context_,
                      "Failed to convert JS function return value(%s) to native",
-                     ConvertJSToString(context_, rval).c_str());
+                     PrintJSValue(context_, rval).c_str());
   }
   return return_value;
 }
@@ -247,7 +247,7 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
           ConvertJSToNativeVariant(cx, argv[i], &params[i]);
       if (!result) {
         JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
-                       i, ConvertJSToString(cx, argv[i]).c_str());
+                       i, PrintJSValue(cx, argv[i]).c_str());
         return JS_FALSE;
       }
     }

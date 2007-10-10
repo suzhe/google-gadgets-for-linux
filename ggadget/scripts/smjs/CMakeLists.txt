@@ -28,6 +28,7 @@ SET(SRCS
   converter.cc
   js_script_context.cc
   js_script_runtime.cc
+  json.cc
   native_js_wrapper.cc
 )
 

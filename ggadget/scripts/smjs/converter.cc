@@ -21,6 +21,7 @@
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/unicode_utils.h"
 #include "js_script_context.h"
+#include "json.h"
 #include "native_js_wrapper.h"
 
 namespace ggadget {
@@ -56,7 +57,7 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
       // string containing non-numeric chars.
       if (!isnan(double_val) || js_val == JS_GetNaNValue(cx))
-        *native_val = Variant(static_cast<int64_t>(double_val));
+        *native_val = Variant(static_cast<int64_t>(round(double_val)));
       else
         result = JS_FALSE;
     }
@@ -82,11 +83,8 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
   JSBool result = JS_FALSE;
-  if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
-    // Result is a null string instead of a string containing "null".
-    result = JS_TRUE;
-    *native_val = Variant(static_cast<const char *>(NULL));
-  } else {
+  if (JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val) ||
+      JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
       jschar *chars = JS_GetStringChars(js_string);
@@ -108,7 +106,7 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
   JSBool result = JS_TRUE;
   ScriptableInterface *scriptable;
-  if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
+  if (JSVAL_IS_NULL(js_val)) {
     scriptable = NULL;
   } else if (JSVAL_IS_OBJECT(js_val)) {
     // This object may be a JS wrapped native object.
@@ -128,7 +126,7 @@ static JSBool ConvertJSToSlot(JSContext *cx, const Variant &prototype,
                               jsval js_val, Variant *native_val) {
   JSBool result = JS_TRUE;
   jsval function_val;
-  if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
+  if (JSVAL_IS_NULL(js_val)) {
     function_val = JSVAL_NULL;
   } else if (JSVAL_IS_STRING(js_val)) {
     JSString *script_source = JSVAL_TO_STRING(js_val);
@@ -159,6 +157,14 @@ static JSBool ConvertJSToSlot(JSContext *cx, const Variant &prototype,
   return result;
 }
 
+static JSBool ConvertJSToJSON(JSContext *cx, jsval js_val,
+                              Variant *native_val) {
+  std::string json;
+  JSONEncode(cx, js_val, &json);
+  *native_val = Variant(JSONString(json));
+  return JS_TRUE;
+}
+
 JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
                                 Variant *native_val) {
   if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val))
@@ -187,6 +193,7 @@ static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
   ConvertJSToScriptable,
   ConvertJSToScriptable,
   NULL, // ConvertJSToSlot is special because it needs the prototype argument.
+  ConvertJSToJSON,
   ConvertJSToNativeVariant,
 };
 
@@ -202,27 +209,31 @@ JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
   return JS_FALSE;
 }
 
-std::string ConvertJSToString(JSContext *cx, jsval js_val) {
-  Variant v;
-  if (!ConvertJSToNativeString(cx, js_val, &v))
-    return "##ERROR##";
-
-  const char *str = VariantValue<const char *>()(v);
+std::string PrintJSValue(JSContext *cx, jsval js_val) {
   switch (JS_TypeOfValue(cx, js_val)) {
-    case JSTYPE_VOID:
-      return "VOID";
+    case JSTYPE_STRING: {
+      Variant v;
+      ConvertJSToNativeString(cx, js_val, &v);
+      return VariantValue<std::string>()(v);
+    }
     case JSTYPE_OBJECT:
-      return std::string("OBJECT:") + str;
-    case JSTYPE_FUNCTION:
-      return std::string("FUNCTION:") + str;
-    case JSTYPE_STRING:
-      return std::string("STRING:") + str;
     case JSTYPE_NUMBER:
-      return std::string("NUMBER:") + str;
-    case JSTYPE_BOOLEAN:
-      return std::string("BOOLEAN:") + str;
-    default:
-      return std::string("UNKNOWN:") + str;
+    case JSTYPE_BOOLEAN: {
+      std::string json;
+      JSONEncode(cx, js_val, &json);
+      return json;
+    }
+    case JSTYPE_VOID:
+      return "void";
+    default: {
+      JSString *str = JS_ValueToString(cx, js_val);
+      if (str) {
+        char *bytes = JS_GetStringBytes(str);
+        if (bytes)
+          return std::string(bytes);
+      }
+      return "##ERROR##";
+    }
   }
 }
 
@@ -317,6 +328,13 @@ static JSBool ConvertNativeToJSFunction(JSContext *cx,
   return JS_TRUE;
 }
 
+static JSBool ConvertJSONToJS(JSContext *cx,
+                              const Variant &native_val,
+                              jsval *js_val) {
+  JSONString json_str = VariantValue<JSONString>()(native_val);
+  return JSONDecode(cx, json_str.value.c_str(), js_val);
+}
+
 typedef JSBool (*ConvertNativeToJSFunc)(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val);
@@ -329,6 +347,7 @@ static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
   ConvertNativeToJSObject,
   NULL, // Don't pass const ScriptableInterface * to JavaScript. 
   ConvertNativeToJSFunction,
+  ConvertJSONToJS,
   // Because normally there is no real value of this type, convert it to void. 
   ConvertNativeToJSVoid,
 };

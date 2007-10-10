@@ -39,4 +39,5 @@ ADD_EXECUTABLE(wrapper_test_shell
 )
 TARGET_LINK_LIBRARIES(wrapper_test_shell ${LIBS})
 TEST_WRAPPER(wrapper_test_shell)
+JS_TEST_WRAPPER(js_shell json_test.js TRUE)
 JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)

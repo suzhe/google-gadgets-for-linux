@@ -188,7 +188,7 @@ JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
     // unregistered properties.
     JS_ReportError(js_context_,
                    "The native object doesn't support setting property %s.",
-                   ConvertJSToString(js_context_, id).c_str());
+                   PrintJSValue(js_context_, id).c_str());
     return JS_FALSE;
   }
   // Use the default JavaScript logic.
@@ -234,7 +234,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property value(%s) to native",
-                   ConvertJSToString(js_context_, js_val).c_str());
+                   PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
@@ -303,7 +303,7 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property value(%s) to native.",
-                   ConvertJSToString(js_context_, js_val).c_str());
+                   PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 

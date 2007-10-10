@@ -27,6 +27,16 @@ class ScriptableInterface;
 class Slot;
 
 /**
+ * Used as a wrapper to a string indicating this string contains a JSON
+ * expression.  For json, see http://www.json.org. 
+ */
+struct JSONString {
+  explicit JSONString(const char *a_value) : value(a_value) { }
+  explicit JSONString(const std::string &a_value) : value(a_value) { }
+  std::string value;
+};
+
+/**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
  * <code>Variant</code>s are immutable. 
@@ -53,10 +63,12 @@ class Variant {
     TYPE_CONST_SCRIPTABLE,
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
+    /** A string containing a JSON expression */
+    TYPE_JSON,
     /**
      * @c TYPE_VARIANT is only used to indicate a parameter or a return type
      * can accept any above type.  A @c Variant with this type can only act
-     * as a prototype, not a real value. 
+     * as a prototype, not a real value.
      */
     TYPE_VARIANT,
   };
@@ -193,6 +205,10 @@ class Variant {
     v_.slot_value_ = value;
   }
 
+  explicit Variant(const JSONString &value)
+      : type_(TYPE_JSON), string_value_(value.value) {
+  }
+
   /**
    * A protector to prevent pointer of unsupported type from falling into
    * the constructor with a bool parameter.
@@ -303,6 +319,8 @@ SPECIALIZE_VARIANT_TYPE(const char *, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(const std::string &, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(std::string, TYPE_STRING)
 SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
+SPECIALIZE_VARIANT_TYPE(JSONString, TYPE_JSON)
+SPECIALIZE_VARIANT_TYPE(const JSONString &, TYPE_JSON)
 SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
 SPECIALIZE_VARIANT_TYPE(const Variant &, TYPE_VARIANT)
 
@@ -407,6 +425,30 @@ struct VariantValue<const std::string &> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     return v.v_.charptr_value_ ?
            std::string(v.v_.charptr_value_) : v.string_value_;
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for @c JSONString type.
+ */
+template <>
+struct VariantValue<JSONString> {
+  JSONString operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_JSON);
+    return JSONString(v.string_value_);
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * Specialized for <code>const JSONString &</code> type.
+ */
+template <>
+struct VariantValue<const JSONString &> {
+  JSONString operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_STRING);
+    return JSONString(v.string_value_);
   }
 };
 
