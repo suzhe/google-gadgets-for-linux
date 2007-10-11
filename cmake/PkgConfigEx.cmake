@@ -72,7 +72,11 @@ MACRO(PKGCONFIG_EX _package _min_version _libraries)
       ARGS ${_package} --libs-only-L
       OUTPUT_VARIABLE PKGCONFIG_EX_Lflags)
     REMOVE_TRAILING_NEWLINE(PKGCONFIG_EX_Lflags)
-    SET(CMAKE_EXTRA_LINK_FLAGS ${CMAKE_EXTRA_LINK_FLAGS} ${PKGCONFIG_EX_Lflags})
+    STRING(REGEX REPLACE "^-L" ""
+      PKGCONFIG_EX_Lflags ${PKGCONFIG_EX_Lflags})
+    STRING(REGEX REPLACE " -L" ";"
+      PKGCONFIG_EX_Lflags ${PKGCONFIG_EX_Lflags})
+    LINK_DIRECTORIES(${PKGCONFIG_EX_Lflags})
 
     # Get other link flags.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
