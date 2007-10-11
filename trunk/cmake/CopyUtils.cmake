@@ -23,7 +23,7 @@ MACRO(COPY_FILE_INTERNAL _source _dest _depends)
   IF(WIN32)
     SET(COPY_FILE_INTERNAL_cp_cmd copy)
   ELSE(WIN32)
-    SET(COPY_FILE_INTERNAL_cp_cmd cp -a)
+    SET(COPY_FILE_INTERNAL_cp_cmd cp -PpR)
   ENDIF(WIN32)
   ADD_CUSTOM_COMMAND(OUTPUT ${_dest}
     COMMAND ${COPY_FILE_INTERNAL_cp_cmd}

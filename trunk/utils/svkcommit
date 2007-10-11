@@ -15,7 +15,7 @@ cd $topdir
 for file in $(svk st | \
               grep '^?' | \
               grep -v 'swp$' | \
-              sed 's/?\s\+//' | \
+              sed 's/?[ \t]*//' | \
               grep -v '^\.')
 do
   if [ -e $file ]; then
