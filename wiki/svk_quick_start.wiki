@@ -106,7 +106,7 @@ For this, follow a similar procedure as that of SVN:
 
 {{{
 mkdir ggl
-svk co /ggl/local/trunk ggl/code
+svk co /ggl/local/trunk ggl/trunk
 svk co /ggl/mirror/wiki ggl/wiki
 }}}
 
@@ -129,8 +129,8 @@ Then you can run these command more easily:
 
 {{{
 mkdir -p ~/bin
-ln -s ggl/code/utils/svkmail ~/bin/svkmail
-ln -s ggl/code/utils/svkcommit ~/bin/svkci
+ln -s ggl/trunk/utils/svkmail ~/bin/svkmail
+ln -s ggl/trunk/utils/svkcommit ~/bin/svkci
 }}}
 
 `svkmail` can read every parameter it needed from the command line.
@@ -144,7 +144,7 @@ higher parent directories until the file is located.
 Therefore you don't need to
 go to the top level of your checkout directory before running
 this script.
-You should put your `.svkmail` in both `ggl/code/` and `ggl/wiki/`.
+You should put your `.svkmail` in both `ggl/trunk/` and `ggl/wiki/`.
 
 Here is a recommended sample configuration of `svkmail`:
 
