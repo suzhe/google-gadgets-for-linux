@@ -1,0 +1,11 @@
+DIRECTORY STRUCTURE
+===================
+
+build:    Build output directory.
+cmake:    CMake modules.
+docs:     Documentations.
+examples: Source files of example gadgets.
+ggadget:  Source files of gadget library.
+hosts:    Source files of gadget container.
+testing:  Source files of Testing framework.
+utils:    Build scripts.

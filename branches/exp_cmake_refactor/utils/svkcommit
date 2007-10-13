@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+if ! svk info &> /dev/null; then
+  echo "Not a working directory."
+  exit 1
+fi
+
+while svk info &> /dev/null;
+do
+  topdir=`pwd`
+  cd ..
+done
+cd $topdir
+
+for file in $(svk st | \
+              grep '^?' | \
+              grep -v 'swp$' | \
+              sed 's/?[ \t]*//' | \
+              grep -v '^\.')
+do
+  if [ -e $file ]; then
+    shouldadd="no"
+    if [ ! -f .svkignore ]; then
+      shouldadd="yes"
+    else
+      if ! grep -q $file .svkignore; then
+        shouldadd="yes"
+      fi
+    fi
+    if [ "$shouldadd" = "yes" ]; then
+      echo "File $file is not under the version control, add it now?"
+      isok="no"
+      while [ "$isok" = "no" ];
+      do
+        echo "(a)dd it, (n)ot yet, ne(v)er add, (d)elete it"
+        read  choice
+        isok="yes"
+        case $choice in
+        A | a )
+          svk add $file
+          ;;
+        N | n )
+          ;;
+        V | v )
+          echo $file >> .svkignore
+          ;;
+        D | d )
+          rm -rf $file
+          ;;
+        * )
+          isok="no"
+          ;;
+        esac
+      done
+    fi
+  fi
+done
+svk ci
