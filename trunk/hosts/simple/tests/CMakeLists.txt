@@ -14,37 +14,20 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(tests)
-
-PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
 PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
 PKGCONFIG_EX(libcurl 7.16.0 LIBCURL_LIBRARIES)
 
-IF(UNIX)
-  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
-ENDIF(UNIX)
-
-INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
-LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
-ADD_DEFINITIONS(${SMJS_DEFINITIONS})
-
-SET(SRCS
-  main.cc
-  gtk_cairo_host.cc
-  gadget_view_widget.cc
-  gtk_key_convert.cc
-  options.cc
-  xml_http_request.cc
+ADD_EXECUTABLE(xml_http_request_test
+  xml_http_request_test.cc
+  ${CMAKE_SOURCE_DIR}/hosts/simple/gtk_cairo_host.cc
+  ${CMAKE_SOURCE_DIR}/hosts/simple/xml_http_request.cc
 )
-
-ADD_EXECUTABLE(ggl ${SRCS})
-OUTPUT_EXECUTABLE(ggl)
-
-TARGET_LINK_LIBRARIES(ggl 
+TARGET_LINK_LIBRARIES(xml_http_request_test
+  pthread
+  gunit
   ggadget
-  ggadget_cairo
-  ggadget_smjs
-  ${CAIRO_LIBRARIES}
   ${GTK_LIBRARIES}
   ${LIBCURL_LIBRARIES}
 )
+TEST_WRAPPER(xml_http_request_test TRUE)
+TEST_RESOURCE_DIR(xml_http_request_test_data)

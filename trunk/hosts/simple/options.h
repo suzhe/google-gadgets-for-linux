@@ -22,22 +22,18 @@
 #include "ggadget/options_interface.h"
 #include "ggadget/string_utils.h"
 
-using ggadget::OptionsInterface;
-using ggadget::Variant;
-using ggadget::GadgetStringComparator;
-
-class Options : public OptionsInterface {
+class Options : public ggadget::OptionsInterface {
  public:
   Options(); 
   virtual ~Options();
 
   virtual size_t GetCount();
-  virtual void Add(const char *name, const Variant &value);
+  virtual void Add(const char *name, const ggadget::Variant &value);
   virtual bool Exists(const char *name);
-  virtual Variant GetDefaultValue(const char *name);
-  virtual void PutDefaultValue(const char *name, const Variant &value);
-  virtual Variant GetValue(const char *name);
-  virtual void PutValue(const char *name, const Variant &value);
+  virtual ggadget::Variant GetDefaultValue(const char *name);
+  virtual void PutDefaultValue(const char *name, const ggadget::Variant &value);
+  virtual ggadget::Variant GetValue(const char *name);
+  virtual void PutValue(const char *name, const ggadget::Variant &value);
   virtual void Remove(const char *name);
   virtual void RemoveAll();
 
@@ -45,7 +41,8 @@ class Options : public OptionsInterface {
   DISALLOW_EVIL_CONSTRUCTORS(Options);
 
   void FireChangedEvent(const char *name);
-  typedef std::map<std::string, Variant, GadgetStringComparator> OptionsMap;
+  typedef std::map<std::string, ggadget::Variant,
+                   ggadget::GadgetStringComparator> OptionsMap;
   OptionsMap values_;
   OptionsMap defaults_;
 };

@@ -7,6 +7,7 @@
 #include "ggadget/event.h"
 #include "ggadget/graphics/cairo_canvas.h"
 #include "ggadget/graphics/cairo_graphics.h"
+#include "ggadget/view_interface.h"
 
 #include "gadget_view_widget.h"
 #include "gtk_cairo_host.h"
@@ -18,6 +19,7 @@ using ggadget::Event;
 using ggadget::MouseEvent;
 using ggadget::KeyboardEvent;
 using ggadget::Color;
+using ggadget::ViewInterface;
 
 static GtkWidgetClass *parent_class = NULL;
 

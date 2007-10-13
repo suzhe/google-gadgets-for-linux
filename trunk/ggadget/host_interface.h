@@ -22,6 +22,7 @@ namespace ggadget {
 class GraphicsInterface;
 class ViewInterface;
 class ElementInterface;
+class XMLHttpRequestInterface;
 
 /**
  * Interface for providing host services to the gadget library. Each view 
@@ -81,21 +82,24 @@ class HostInterface {
    * call will occur after the first interval passes.
    * The callback function returns true if it wants to be called again. If not, 
    * returning false will unregister the timer from the host.
-   * @param ms timer interval in milliseconds
-   * @param target The target of this timer. NULL if target is the View.
-   * @param data context to be passed to the callback unmodified
-   * @return token to timer if set, NULL otherwise
+   * @param ms timer interval in milliseconds.
+   * @param data context to be passed to the callback unmodified.
+   * @return token to timer (!= 0) if set, 0 otherwise.
    */
-  virtual void *RegisterTimer(unsigned ms, 
-                              ElementInterface *target, void *data) = 0;
+  virtual int RegisterTimer(unsigned ms, void *data) = 0;
   
-  /** 
+  /**
    * Unregisters a timer.
    * @param token Timer token.
    * @return true on success, false otherwise.
    */
-  virtual bool RemoveTimer(void *token) = 0;
-  
+  virtual bool RemoveTimer(int token) = 0;
+
+  /**
+   * Create a new XMLHttpRequestInterface instance.
+   */
+  virtual XMLHttpRequestInterface *NewXMLHttpRequest() = 0;
+
   /**
    * Returns the current time in microsecond units. This should only 
    * be used for relative time comparisons, to compute elapsed time.

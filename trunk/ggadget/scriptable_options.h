@@ -42,6 +42,8 @@ class ScriptableOptions : public ScriptableInterface {
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
   ScriptableHelper scriptable_helper_;
   OptionsInterface *options_;
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace ggadget

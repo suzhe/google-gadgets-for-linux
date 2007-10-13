@@ -23,11 +23,9 @@
 #include "ggadget/common.h"
 #include "ggadget/host_interface.h"
 
-using ggadget::HostInterface;
-using ggadget::GraphicsInterface;
-using ggadget::ViewInterface;
-using ggadget::ElementInterface;
-
+namespace ggadget {
+template <typename R, typename P1> class Slot1;
+}
 class GadgetViewWidget;
 
 /**
@@ -35,7 +33,7 @@ class GadgetViewWidget;
  * In this implementation, there is one instance of GtkCairoHost per view, 
  * and one instance of GraphicsInterface per GtkCairoHost.
  */
-class GtkCairoHost : public HostInterface {
+class GtkCairoHost : public ggadget::HostInterface {
  public:
   GtkCairoHost(GadgetViewWidget *gvw, int debug_mode);
   virtual ~GtkCairoHost();
@@ -44,7 +42,7 @@ class GtkCairoHost : public HostInterface {
    * Sets the GraphicsInterface object associated with the host. Once it is set
    * the object is owned by this HostInterface and should not be freed manually.
    */
-  void SetGraphics(GraphicsInterface *gfx);
+  void SetGraphics(ggadget::GraphicsInterface *gfx);
   
   /**
    * Switches the GadgetViewWidget associated with this host. 
@@ -54,8 +52,10 @@ class GtkCairoHost : public HostInterface {
    */
   void SwitchWidget(GadgetViewWidget *new_gvw, int debug_mode);
       
-  virtual const GraphicsInterface *GetGraphics() const { return gfx_; };
- 
+  virtual const ggadget::GraphicsInterface *GetGraphics() const {
+    return gfx_;
+  }
+
   virtual void QueueDraw();
    
   virtual bool GrabKeyboardFocus();
@@ -66,30 +66,36 @@ class GtkCairoHost : public HostInterface {
   virtual void SetCaption(const char *caption); 
   virtual void SetShowCaptionAlways(bool always);
   
-  virtual void *RegisterTimer(unsigned ms, 
-                              ElementInterface *target, void *data);
-  virtual bool RemoveTimer(void *token);
-  
+  virtual int RegisterTimer(unsigned ms, void *data);
+  virtual bool RemoveTimer(int token);
   virtual uint64_t GetCurrentTime() const;
-  
+
+  virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest();
+
+  typedef ggadget::Slot1<void, int> IOWatchCallback;
+  int RegisterReadWatch(int fd, IOWatchCallback *callback);
+  int RegisterWriteWatch(int fd, IOWatchCallback *callback);
+  bool RemoveIOWatch(int token);
+
   int GetDebugMode() const { return debug_mode_; }
 
  private:
-  struct TimerData {
-    TimerData(ElementInterface *t, void *d, GtkCairoHost *h) 
-        : target(t), data(d), host(h) {}
-    ElementInterface *target;
-    void *data;
-    GtkCairoHost *host; // When this is NULL, the object is marked to be freed.
-  };
-   
+  class CallbackData;
+  class IOWatchCallbackData;
+  int RegisterIOWatch(bool read_or_write, int fd, IOWatchCallback *callback);
+  bool RemoveCallback(int token);
+
+  static gboolean DispatchTimer(gpointer data);
+  static gboolean DispatchIOWatch(GIOChannel *source,
+                                  GIOCondition cond,
+                                  gpointer data);
+
   GadgetViewWidget *gvw_;
-  GraphicsInterface *gfx_;
-  std::set<TimerData *> timers_;
+  ggadget::GraphicsInterface *gfx_;
+  typedef std::map<int, CallbackData *> CallbackMap;
+  CallbackMap callbacks_;
   int debug_mode_;
-   
-  static gboolean DispatchTimer(gpointer data); 
-  
+
   DISALLOW_EVIL_CONSTRUCTORS(GtkCairoHost);
 };
 

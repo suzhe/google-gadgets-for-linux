@@ -19,6 +19,7 @@
 
 #include <map>
 #include <string>
+#include "common.h"
 
 namespace ggadget {
 
@@ -51,14 +52,53 @@ struct GadgetStringComparator {
 typedef std::map<std::string, std::string,
                  GadgetStringComparator> GadgetStringMap;
 
+struct CaseInsensitiveCharPtrComparator {
+  bool operator()(const char* s1, const char* s2) const {
+    return strcasecmp(s1, s2) < 0;
+  }
+};
+
+struct CaseInsensitiveStringComparator {
+  bool operator()(const std::string &s1, const std::string &s2) const {
+    return strcasecmp(s1.c_str(), s2.c_str()) < 0;
+  }
+};
+
+typedef std::map<std::string, std::string,
+                 CaseInsensitiveStringComparator> CaseInsensitiveStringMap;
+
 /**
- * Assign a <code>const char *</code> string to a std::string if they are
+ * Assigns a <code>const char *</code> string to a std::string if they are
  * different (compared using GadgetStrCmp).
  * @param source source string. If it is @c NULL, dest will be cleared to blank.
  * @param dest destination string.
  * @return @c true if assignment occurs.
  */
 bool AssignIfDiffer(const char *source, std::string *dest);
+
+/**
+ * Removes the starting and ending spaces from a string.
+ */
+std::string TrimString(const std::string &s);
+
+/**
+ * Converts a string into lowercase.
+ * Note: Only converts ASCII chars.
+ */
+std::string ToLower(const std::string &s);
+
+/**
+ * Converts a string into uppercase.
+ * Note: Only converts ASCII chars.
+ */
+std::string ToUpper(const std::string &s);
+
+/**
+ * Format data into a C++ string.
+ */
+std::string StringPrintf(const char* format, ...)
+  // Tell the compiler to do printf format string checking.
+  PRINTF_ATTRIBUTE(1,2);
 
 } // namespace ggadget
 

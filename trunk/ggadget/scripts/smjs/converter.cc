@@ -83,8 +83,8 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
   JSBool result = JS_FALSE;
-  if (JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val) ||
-      JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
+  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val)
+      || JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
       jschar *chars = JS_GetStringChars(js_string);
