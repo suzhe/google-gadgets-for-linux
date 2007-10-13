@@ -51,7 +51,6 @@ class View::Impl {
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
-      current_timer_token_(1),
       focused_element_(NULL),
       mouseover_element_(NULL),
       grabmouse_element_(NULL),
@@ -243,72 +242,85 @@ class View::Impl {
 
   void OnTimerEvent(TimerEvent *event) {
     ASSERT(event->GetType() == Event::EVENT_TIMER_TICK);
-    ElementInterface *target = event->GetTarget();
-    if (target) {
-      target->OnTimerEvent(event);
-    } else {
-      // The target is this view.
-      int token = reinterpret_cast<int>(event->GetData());
-      TimerMap::iterator it = timer_map_.find(token);
-      if (it == timer_map_.end()) {
-        LOG("Timer has been removed but event still fired: %d", token);
-        return;
-      }
-
-      TimerInfo &info = it->second;
-      ASSERT(info.token == token);
-
-      switch (info.type) {
-        case TIMER_TIMEOUT: {
-          ScriptableEvent scriptable_event(event, owner_, token, 0);
-          event_stack_.push_back(&scriptable_event);
-          event->StopReceivingMore();
-          info.slot->Call(0, NULL);
-          RemoveTimer(token);
-          event_stack_.pop_back();
-          break;
-        }
-        case TIMER_INTERVAL: {
-          ScriptableEvent scriptable_event(event, owner_, token, 0);
-          event_stack_.push_back(&scriptable_event);
-          info.slot->Call(0, NULL);
-          event_stack_.pop_back();
-          break;
-        }
-        case TIMER_ANIMATION: {
-          uint64_t event_time = event->GetTimeStamp();
-          double progress = static_cast<double>(event_time - info.start_time) /
-                            1000.0 / info.duration;
-          progress = std::min(1.0, std::max(0.0, progress));
-          int value = info.start_value +
-                      static_cast<int>(progress * info.spread + 0.5);
-          if (value != info.last_value) {
-            ScriptableEvent scriptable_event(event, owner_, token, value);
-            event_stack_.push_back(&scriptable_event);
-            info.last_value = value;
-            Variant param(value);
-            info.slot->Call(1, &param);
-            event_stack_.pop_back();
-          }
-
-          event->StopReceivingMore();
-          if (progress < 1.0 && host_) {
-            // Remove and re-register timer to let the actual interval adapt
-            // to the system performance. 
-            host_->RemoveTimer(info.host_timer);
-            // Reschedule timer
-            info.host_timer = host_->RegisterTimer(
-                kAnimationInterval, NULL, reinterpret_cast<void *>(token));
-          } else {
-            RemoveTimer(token);
-          }
-          break;
-        }
-        default:
-          ASSERT(false);
-          break;
-      }
+    TimerInfo *info = reinterpret_cast<TimerInfo *>(event->GetData());
+    TimerMap::iterator it = timer_map_.find(info->token);
+    if (it == timer_map_.end()) {
+      DLOG("Timer has been removed but event still fired: %d", info->token);
+      return;
     }
+    ASSERT(info == it->second);
+
+    if (event->GetTimeStamp() - info->last_finished_time <
+        kMinInterval * 1000) {
+      // To avoid some frequent interval/animation timers or slow handlers
+      // eat up all CPU resources, here automaticlly ignores some timer events. 
+      DLOG("Automatically ignored a timer event");
+      return;
+    }
+
+    // It's important to save info->token into a local variable, because the
+    // pointer may be invalid after event handling.
+    int token = info->token;
+    switch (info->type) {
+      case TIMER_TIMEOUT: {
+        ScriptableEvent scriptable_event(event, owner_, token, 0);
+        event_stack_.push_back(&scriptable_event);
+        event->StopReceivingMore();
+        info->slot->Call(0, NULL);
+        RemoveTimer(token);
+        event_stack_.pop_back();
+        break;
+      }
+      case TIMER_INTERVAL: {
+        ScriptableEvent scriptable_event(event, owner_, token, 0);
+        event_stack_.push_back(&scriptable_event);
+        info->slot->Call(0, NULL);
+        event_stack_.pop_back();
+        break;
+      }
+      case TIMER_ANIMATION_FIRST: {
+        ScriptableEvent scriptable_event(event, owner_, token,
+                                         info->start_value);
+        event_stack_.push_back(&scriptable_event);
+        event->StopReceivingMore();
+        info->slot->Call(0, NULL);
+        RemoveTimer(token);
+        break;
+      }
+      case TIMER_ANIMATION: {
+        double progress = 1.0;
+        if (info->duration > 0) {
+          uint64_t event_time = event->GetTimeStamp();
+          progress = static_cast<double>(event_time - info->start_time) /
+                     1000.0 / info->duration;
+          progress = std::min(1.0, std::max(0.0, progress));
+        }
+
+        int value = info->start_value +
+                    static_cast<int>(round(progress * info->spread));
+        if (value != info->last_value) {
+          ScriptableEvent scriptable_event(event, owner_, token, value);
+          event_stack_.push_back(&scriptable_event);
+          info->last_value = value;
+          info->slot->Call(0, NULL);
+          event_stack_.pop_back();
+        }
+
+        if (progress == 1.0) {
+          event->StopReceivingMore();
+          RemoveTimer(token);
+        }
+        break;
+      }
+      default:
+        ASSERT(false);
+        break;
+    }
+
+    // Record the time when this event is finished processing.
+    // Must check if the token is still there to ensure info pointer is valid.
+    if (host_ && timer_map_.find(token) != timer_map_.end())
+      info->last_finished_time = host_->GetCurrentTime();
   }
 
   void OnOtherEvent(Event *event) {
@@ -487,36 +499,31 @@ class View::Impl {
     return result ? Variant(result) : Variant();
   }
 
-  enum TimerType { TIMER_ANIMATION, TIMER_TIMEOUT, TIMER_INTERVAL };
+  enum TimerType {
+    TIMER_ANIMATION,
+    // Used to indicate the first immediate timer event of an animation.
+    TIMER_ANIMATION_FIRST,
+    TIMER_TIMEOUT,
+    TIMER_INTERVAL
+  };
   int NewTimer(TimerType type, Slot *slot,
                int start_value, int end_value, unsigned int duration) {
     ASSERT(slot);
-    if (duration == 0 || !host_)
+    if (!host_)
       return 0;
 
-    // Find the next available timer token.
-    // Ignore the error when all timer tokens are allocated.
-    do {
-      if (current_timer_token_ < INT_MAX) current_timer_token_++;
-      else current_timer_token_ = 1;
-    } while (timer_map_.find(current_timer_token_) != timer_map_.end());
-
-    TimerInfo &info = timer_map_[current_timer_token_];
-    info.token = current_timer_token_;
-    info.type = type;
-    info.slot = slot;
-    info.start_value = start_value;
-    info.last_value = end_value;
-    info.spread = end_value - start_value;
-    info.duration = duration;
-    info.start_time = host_->GetCurrentTime();
-    info.host_timer = host_->RegisterTimer(
-        // For animation, the first event should be triggered imeediately.
-        type == TIMER_ANIMATION ? 0 : duration,
-        NULL,
-        // Passing an integer is safer than passing a struct pointer.
-        reinterpret_cast<void *>(current_timer_token_));
-    return current_timer_token_;
+    TimerInfo *info = new TimerInfo();
+    info->type = type;
+    info->slot = slot;
+    info->start_value = start_value;
+    info->last_value = start_value;
+    info->spread = end_value - start_value;
+    info->duration = duration;
+    info->start_time = host_->GetCurrentTime();
+    info->token = host_->RegisterTimer(
+        type == TIMER_ANIMATION ? kAnimationInterval : duration, info);
+    timer_map_[info->token] = info;
+    return info->token;
   }
 
   void RemoveTimer(int token) {
@@ -530,13 +537,18 @@ class View::Impl {
     }
 
     if (host_)
-      host_->RemoveTimer(it->second.host_timer);
-    delete it->second.slot;
+      host_->RemoveTimer(it->second->token);
+    // TIMER_ANIMATION_FIRST and TIMER_ANIMATION share the slot.
+    if (it->second->type != TIMER_ANIMATION_FIRST)
+      delete it->second->slot;
+    delete it->second;
     timer_map_.erase(it);
   }
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
                      unsigned int duration) {
+    // Create an additional timer which fires immediately.
+    NewTimer(TIMER_ANIMATION_FIRST, slot, start_value, end_value, 0);
     return NewTimer(TIMER_ANIMATION, slot, start_value, end_value, duration);
   }
 
@@ -613,7 +625,8 @@ class View::Impl {
 
   std::vector<ScriptableEvent *> event_stack_;
 
-  static const unsigned int kAnimationInterval = 30;
+  static const unsigned int kAnimationInterval = 20;
+  static const unsigned int kMinInterval = 5;
   struct TimerInfo {
     int token;
     TimerType type;
@@ -623,11 +636,11 @@ class View::Impl {
     int spread;
     unsigned int duration;
     uint64_t start_time;
-    void *host_timer;
+    // The time when the last event was finished processing.
+    uint64_t last_finished_time;
   };
-  typedef std::map<int, TimerInfo> TimerMap;
+  typedef std::map<int, TimerInfo *> TimerMap;
   TimerMap timer_map_;
-  int current_timer_token_;
   ElementInterface *focused_element_;
   ElementInterface *mouseover_element_;
   ElementInterface *grabmouse_element_;

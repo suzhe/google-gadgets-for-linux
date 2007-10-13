@@ -19,8 +19,6 @@
 
 namespace ggadget {
 
-class ElementInterface;
-
 /** 
  * Class for holding event information. There are several subclasses for 
  * events features in common.
@@ -285,13 +283,11 @@ class DragEvent : public Event {
  */
 class TimerEvent : public Event {
  public:
-  TimerEvent(ElementInterface *target, void *data, uint64_t time) 
+  TimerEvent(void *data, uint64_t time) 
       : Event(EVENT_TIMER_TICK, 0), 
-        target_(target), data_(data), time_(time), receive_more_(true) { 
+        data_(data), time_(time), receive_more_(true) { 
   };
 
-  /** Gets the target of this timer event. May be NULL if it is for the view. */
-  ElementInterface *GetTarget() const { return target_; };
   void *GetData() const { return data_; };
 
   /** 
@@ -306,7 +302,6 @@ class TimerEvent : public Event {
   bool GetReceiveMore() const { return receive_more_; };
   
  private:
-  ElementInterface *target_;
   void *data_;
   uint64_t time_;
   bool receive_more_;

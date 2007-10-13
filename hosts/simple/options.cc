@@ -16,6 +16,8 @@
 
 #include "options.h"
 
+using ggadget::Variant;
+
 Options::Options() {
 }
 

@@ -19,30 +19,66 @@
 
 namespace ggadget {
 
+class ScriptableOptions::Impl {
+ public:
+  Impl(OptionsInterface *options) : options_(options) {
+  }
+
+  void Add(const char *name, const JSONString &value) {
+    options_->Add(name, Variant(value));
+  }
+
+  JSONString GetDefaultValue(const char *name) {
+    Variant value = options_->GetDefaultValue(name);
+    return value.type() == Variant::TYPE_JSON ?
+           VariantValue<JSONString>()(value) : JSONString("");
+  }
+
+  void PutDefaultValue(const char *name, const JSONString &value) {
+    options_->PutDefaultValue(name, Variant(value));
+  }
+
+  JSONString GetValue(const char *name) {
+    Variant value = options_->GetValue(name);
+    return value.type() == Variant::TYPE_JSON ?
+           VariantValue<JSONString>()(value) : JSONString("");
+  }
+
+  void PutValue(const char *name, const JSONString &value) {
+    options_->PutValue(name, Variant(value));
+  }
+
+  OptionsInterface *options_;
+};
+
 ScriptableOptions::ScriptableOptions(OptionsInterface *options)
-    : options_(options) {
+    : impl_(new Impl(options)) {
   RegisterProperty("count",
                    NewSlot(options, &OptionsInterface::GetCount), NULL);
   // Partly support the deprecated "item" property.
-  RegisterMethod("item", NewSlot(options, &OptionsInterface::GetValue));
+  RegisterMethod("item", NewSlot(impl_, &Impl::GetValue));
   // Partly support the deprecated "defaultValue" property.
   RegisterMethod("defaultValue",
-                 NewSlot(options, &OptionsInterface::GetDefaultValue));
-  RegisterMethod("add", NewSlot(options, &OptionsInterface::Add));
+                 NewSlot(impl_, &Impl::GetDefaultValue));
+  RegisterMethod("add", NewSlot(impl_, &Impl::Add));
   RegisterMethod("exists", NewSlot(options, &OptionsInterface::Exists));
   RegisterMethod("getDefaultValue",
                  NewSlot(options, &OptionsInterface::GetDefaultValue));
-  RegisterMethod("getValue", NewSlot(options, &OptionsInterface::GetValue));
+  RegisterMethod("getValue", NewSlot(impl_, &Impl::GetValue));
   RegisterMethod("putDefaultValue",
-                 NewSlot(options, &OptionsInterface::PutDefaultValue));
-  RegisterMethod("putValue", NewSlot(options, &OptionsInterface::PutValue));
+                 NewSlot(impl_, &Impl::PutDefaultValue));
+  RegisterMethod("putValue", NewSlot(impl_, &Impl::PutValue));
   RegisterMethod("remove", NewSlot(options, &OptionsInterface::Remove));
   RegisterMethod("removeAll", NewSlot(options, &OptionsInterface::RemoveAll));
-  SetDynamicPropertyHandler(NewSlot(options, &OptionsInterface::GetValue),
-                            NewSlot(options, &OptionsInterface::PutValue));
+
+  // Disable the following for now, because it's not in the public API document.
+  // SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetValue),
+  //                           NewSlot(impl_, &Impl::PutValue));
 }
 
 ScriptableOptions::~ScriptableOptions() {
+  delete impl_;
+  impl_ = NULL;
 }
 
 } // namespace ggadget

@@ -21,9 +21,9 @@
 #include <gtk/gtk.h>
 #include <string>
 
-#include "ggadget/view_interface.h"
-
-using ggadget::ViewInterface;
+namespace ggadget{
+class ViewInterface;
+}
 
 class GtkCairoHost;
 
@@ -44,7 +44,7 @@ struct GadgetViewWidget {
   GtkDrawingArea drawingarea;
 
   GtkCairoHost *host;
-  ViewInterface *view;
+  ggadget::ViewInterface *view;
   double zoom;
   int widget_width, widget_height; // stores the old height/width before an allocation 
   bool dbl_click;
@@ -57,7 +57,7 @@ struct GadgetViewWidgetClass {
 };
 
 GType          GadgetViewWidget_get_type();
-GtkWidget*     GadgetViewWidget_new(ViewInterface *v, double zoom,
+GtkWidget*     GadgetViewWidget_new(ggadget::ViewInterface *v, double zoom,
                                     int debug_mode, GtkCairoHost *host);
 
 G_END_DECLS

@@ -18,13 +18,27 @@
 
 #include "gtk_cairo_host.h"
 #include "gadget_view_widget.h"
-
 #include "ggadget/event.h"
 #include "ggadget/graphics_interface.h"
 #include "ggadget/view_interface.h"
+#include "xml_http_request.h"
 
+using ggadget::HostInterface;
 using ggadget::GraphicsInterface;
+using ggadget::ViewInterface;
 using ggadget::TimerEvent;
+using ggadget::Variant;
+using ggadget::XMLHttpRequestInterface;
+
+class GtkCairoHost::CallbackData {
+ public:
+  CallbackData(void *d, GtkCairoHost *h) 
+      : data(d), host(h) { }
+  virtual ~CallbackData() { }
+  int id;
+  void *data;
+  GtkCairoHost *host; // When this is NULL, the object is marked to be freed.
+};
 
 GtkCairoHost::GtkCairoHost(GadgetViewWidget *gvw, int debug_mode) 
   : gvw_(gvw), gfx_(NULL), debug_mode_(debug_mode) {    
@@ -53,19 +67,18 @@ bool GtkCairoHost::GrabKeyboardFocus() {
 // is still active. Only detach when the host is about to be destroyed. 
 // Otherwise, bad things will happen!
 bool GtkCairoHost::DetachFromView() {
-  // Stop all timers.
-  std::set<TimerData *>::iterator i = timers_.begin();
-  for (; i != timers_.end(); ++i) {
-    // Cannot simply delete the TimerData objects here since GDK might
-    // still call the DispatchTimer callback with a stale TimerData object.
-    // Therefore only DispatchTimer can free those objects.
-    // The only thing we can do here is mark the object to be deleted
-    (*i)->host = NULL;
+  // Remove all timer and IO watch callbacks.
+  CallbackMap::iterator i = callbacks_.begin();
+  while (i != callbacks_.end()) {
+    CallbackMap::iterator next = i;
+    ++next;
+    RemoveCallback(i->first);
+    i = next;
   }
-  timers_.clear();
-  
+  ASSERT(callbacks_.empty());
+
   gvw_->view = NULL;
-  return true; 
+  return true;
 }
 
 void GtkCairoHost::SwitchWidget(GadgetViewWidget *new_gvw, int debug_mode) {
@@ -95,62 +108,100 @@ static uint64_t GetCurrentTimeInternal() {
 }
 
 gboolean GtkCairoHost::DispatchTimer(gpointer data) {
-  TimerData *tmdata = static_cast<TimerData *>(data);
+  CallbackData *tmdata = static_cast<CallbackData *>(data);
+  // view->OnTimerEvent may call RemoveTimer, causing tmdata pointer invalid,
+  // so save the valid host pointer first.
+  GtkCairoHost *host = tmdata->host;
+  int id = tmdata->id;
+  // DLOG("DispatchTimer id=%d", id);
+  TimerEvent tmevent(tmdata->data, GetCurrentTimeInternal());
+  host->gvw_->view->OnTimerEvent(&tmevent);
 
-  // Only signal view if timer is not already marked as to be deleted.
-  if (!tmdata->host) {
-    // tmdata should already have been removed from timers_ here.
-    delete tmdata;  
-    tmdata = NULL;
-    return FALSE;
-  }
-
-  TimerEvent tmevent(tmdata->target, tmdata->data, GetCurrentTimeInternal());
-  tmdata->host->gvw_->view->OnTimerEvent(&tmevent);
-  
   if (!tmevent.GetReceiveMore()) {
     // Event receiver has indicated that this timer should be removed.
-    // RemoveTimer may have been called during view->OnTimerEvent, so double
-    // check tmdata.
-    if (tmdata->host)
-      tmdata->host->timers_.erase(tmdata);
-    delete tmdata;  
-    tmdata = NULL;
+    host->RemoveCallback(id);
     return FALSE;
   }
   return TRUE;
 }
 
-void *GtkCairoHost::RegisterTimer(unsigned ms, 
-                                  ElementInterface *target, void *data) {
-  // We actually don't need to write our own callback to wrap this here, since
-  // TimerCallback and GSourceFunc has the same prototype. 
-  // But for safety reasons and to ensure clean host detachment, we wrap it
-  // anyway.    
-  
-  TimerData *tmdata = new TimerData(target, data, this);
-  timers_.insert(tmdata);
-   
-  g_timeout_add(ms, DispatchTimer, static_cast<gpointer>(tmdata));
-  
-  return static_cast<void *>(tmdata);
+int GtkCairoHost::RegisterTimer(unsigned ms, void *data) {
+  CallbackData *tmdata = new CallbackData(data, this);
+  tmdata->id = static_cast<int>(g_timeout_add(ms, DispatchTimer, tmdata));
+  callbacks_[tmdata->id] = tmdata;
+  // DLOG("RegisterTimer id=%d", tmdata->id);
+  return tmdata->id;
 }
 
-bool GtkCairoHost::RemoveTimer(void *token) {
-  TimerData *tmdata = static_cast<TimerData *>(token);
-  
-  ASSERT(tmdata);
-  // Important: can only mark timers for removal here, due to the stale
-  // TimerData object problem.
-  std::set<TimerData *>::iterator i = timers_.find(tmdata);
-  if (i == timers_.end()) {
+bool GtkCairoHost::RemoveTimer(int token) {
+  // DLOG("RemoveTimer id=%d", token);
+  return RemoveCallback(token);
+}
+
+class GtkCairoHost::IOWatchCallbackData : public GtkCairoHost::CallbackData {
+ public:
+  IOWatchCallbackData(IOWatchCallback *callback, GtkCairoHost *h) 
+      : CallbackData(callback, h) { }
+  virtual ~IOWatchCallbackData() {
+    delete static_cast<IOWatchCallback *>(data);
+  }
+};
+
+gboolean GtkCairoHost::DispatchIOWatch(GIOChannel *source,
+                                       GIOCondition cond,
+                                       gpointer data) {
+  CallbackData *iodata = static_cast<CallbackData *>(data);
+  IOWatchCallback *slot = static_cast<IOWatchCallback *>(iodata->data);
+  if (slot) {
+    Variant param(g_io_channel_unix_get_fd(source));
+    slot->Call(1, &param);
+  }
+  return TRUE;
+}
+
+int GtkCairoHost::RegisterIOWatch(bool read_or_write, int fd,
+                                  IOWatchCallback *callback) {
+  GIOCondition cond = read_or_write ? G_IO_IN : G_IO_OUT;
+  GIOChannel *channel = g_io_channel_unix_new(fd);
+  IOWatchCallbackData *iodata = new IOWatchCallbackData(callback, this);
+  iodata->id = static_cast<int>(g_io_add_watch(channel, cond,
+                                               DispatchIOWatch, iodata));
+  callbacks_[iodata->id] = iodata;
+  return iodata->id;
+}
+
+int GtkCairoHost::RegisterReadWatch(int fd, IOWatchCallback *callback) {
+  return RegisterIOWatch(true, fd, callback);
+}
+
+int GtkCairoHost::RegisterWriteWatch(int fd, IOWatchCallback *callback) {
+  return RegisterIOWatch(false, fd, callback);
+}
+
+bool GtkCairoHost::RemoveIOWatch(int token) {
+  return RemoveCallback(token);
+}
+
+bool GtkCairoHost::RemoveCallback(int token) {
+  ASSERT(token);
+
+  CallbackMap::iterator i = callbacks_.find(token);
+  if (i == callbacks_.end())
+    // This data may be a stale pointer.
     return false;
-  }  
-  timers_.erase(i);
-  tmdata->host = NULL;
+
+  if (!g_source_remove(token))
+    return false;
+
+  delete i->second;
+  callbacks_.erase(i);
   return true;
 }
 
 uint64_t GtkCairoHost::GetCurrentTime() const {
   return GetCurrentTimeInternal();
+}
+
+XMLHttpRequestInterface *GtkCairoHost::NewXMLHttpRequest() {
+  return new XMLHttpRequest(this);
 }

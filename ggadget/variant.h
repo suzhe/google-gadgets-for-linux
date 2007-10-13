@@ -447,7 +447,7 @@ struct VariantValue<JSONString> {
 template <>
 struct VariantValue<const JSONString &> {
   JSONString operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_STRING);
+    ASSERT(v.type_ == Variant::TYPE_JSON);
     return JSONString(v.string_value_);
   }
 };

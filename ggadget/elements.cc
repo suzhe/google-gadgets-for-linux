@@ -44,8 +44,11 @@ class Elements::Impl {
 
     RegisterProperty("count", NewSlot(this, &Impl::GetCount), NULL);
     RegisterMethod("item", NewSlot(this, &Impl::GetItem));
-    SetArrayHandler(NewSlot(this, &Impl::GetItemByIndex), NULL);
-    SetDynamicPropertyHandler(NewSlot(this, &Impl::GetItemByNameVariant), NULL);
+    // Disable the following for now, because they are not in the public
+    // API document.
+    // SetArrayHandler(NewSlot(this, &Impl::GetItemByIndex), NULL);
+    // SetDynamicPropertyHandler(NewSlot(this, &Impl::GetItemByNameVariant),
+    //                           NULL);
   }
 
   ~Impl() {
