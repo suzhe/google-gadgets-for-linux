@@ -62,7 +62,7 @@ function OnReset(text) {
 //
 function view_init() {
   for (var i = 0; i < names.length; ++i) {
-    view.children[names[i]].src = GetImgName(i);
+    view.children.item(names[i]).src = GetImgName(i);
   }
 }
 
@@ -141,7 +141,7 @@ function growNext() {
   state += growth;
   SetState(index, state);
 
-  view.insertElement(GetNextElementXML(index), view.children[names[index]]);
+  view.insertElement(GetNextElementXML(index), view.children.item(names[index]));
 
   beginAnimation("_FadePlant(\""+names[index]+"\")",
                  kMaxOpacity, kFadeOutOpacity, kFadeOutLength);
@@ -161,7 +161,7 @@ function resetAnimation() {
 
 function _animate(element) {
   for (var i = 0; i < element.children.count; i++) {
-    var drop = element.children[i];
+    var drop = element.children.item(i);
     drop.y = Math.abs((drop.y + 1) % (element.height - 11));
 
     var delta = GetRandomOpacityDelta();
@@ -185,7 +185,7 @@ function _animate(element) {
 }
 
 function _FadePlant(name) {
-  view.children[name].opacity = event.value;
+  view.children.item(name).opacity = event.value;
 }
 
 // Gracefully end the rain
@@ -225,7 +225,7 @@ function GetNextRandom() {
 }
 
 function GetNextElementXML(index) {
-  var element = view.children[names[index]];
+  var element = view.children.item(names[index]);
   var ret = "<img name=\"" + GetTempElemName(index) + "\"";
   ret += " src=\"" + GetImgName(index) + "\"";
   ret += " x=\"" + element.x + "\" y=\"" + element.y + "\"";
@@ -235,9 +235,9 @@ function GetNextElementXML(index) {
 }
 
 function _RemoveNextElementXML(index) {
-  view.children[names[index]].src = GetImgName(index);
-  view.children[names[index]].opacity = kMaxOpacity;
-  view.removeElement(view.children[GetTempElemName(index)]);
+  view.children.item(names[index]).src = GetImgName(index);
+  view.children.item(names[index]).opacity = kMaxOpacity;
+  view.removeElement(view.children.item(GetTempElemName(index)));
 }
 
 
@@ -250,25 +250,25 @@ function GetTempElemName(index) {
 }
 
 function GetState(index) {
-  return Number(options[names[index]]);
+  return Number(options.getValue(names[index]));
 }
 
 function SetState(index, state) {
-  options[names[index]] = String(state);
+  options.putValue(names[index], String(state));
 }
 
 function GetPetCount() {
-  return Number(options[kPetCount]);
+  return Number(options.getValue(kPetCount));
 }
 
 function SetPetCount(count) {
-  options[kPetCount] = String(count);
+  options.putValue(kPetCount, String(count));
 }
 
 function GetAbandonCount() {
-  return Number(options[kAbandonCount]);
+  return Number(options.getValue(kAbandonCount));
 }
 
 function SetAbandonCount(count) {
-  options[kAbandonCount] = String(count);
+  options.putValue(kAbandonCount, String(count));
 }
