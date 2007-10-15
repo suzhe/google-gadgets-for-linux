@@ -20,7 +20,7 @@
 namespace ggadget {
 
 class FileManagerInterface;
-class ViewInterface;
+class ViewHostInterface;
 
 /**
  * Interface for representing a Gadget in the Gadget API.
@@ -30,20 +30,15 @@ class GadgetInterface {
   virtual ~GadgetInterface() { }
 
   /**
-   * @return the ViewInterface object representing the main view of the gadget.
+   * Init the gadget by loading the gadget definitions.
+   * @param file_manager the file manager used to load this gadget.  This
+   *     @c GadgetInterface instance owns the pointer after this method call.
+   * @return @c true if succeeded, @c false otherwise.
    */
-  virtual ViewInterface *GetMainView() = 0;
+  virtual bool Init(FileManagerInterface *file_manager) = 0;
 
-  /**
-   * @return the ViewInterface object representing the options
-   * view of the gadget. Returns NULL if this view is not supported.
-   */
-  virtual ViewInterface *GetOptionsView() = 0;
-
-  /**
-   * @return the FileManagerInterface object used in this gadget.
-   */
-  virtual FileManagerInterface *GetFileManager() = 0;
+  /** @return the host of the main view */
+  virtual ViewHostInterface *GetMainViewHost() = 0;
 
   /**
    * Get a value configured in the gadget manifest file.
@@ -53,24 +48,6 @@ class GadgetInterface {
    * @return the configured value. @c NULL if not found.
    */
   virtual const char *GetManifestInfo(const char *key) = 0;
-
-  /**
-   * When the gadget is running in debug mode, displays the string Message in
-   * the debug console as an error.
-   */
-  virtual void DebugError(const char *message) = 0;
-
-  /**
-   * When the gadget is running in debug mode, displays the string Message in
-   * the debug console.
-   */
-  virtual void DebugTrace(const char *message) = 0;
-
-  /**
-   * When the gadget is running in debug mode, displays the string Message in
-   * the debug console as a warning.
-   */
-  virtual void DebugWarning(const char *message) = 0;
 
 };
 

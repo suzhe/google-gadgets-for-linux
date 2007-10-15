@@ -32,6 +32,10 @@ const char *const kStringsXML      = "strings.xml";
 const char *const kGadgetGManifest = "gadget.gmanifest";
 const char *const kGManifestExt    = ".gmanifest";
 
+/** Internal config keys */
+const char *const kOptionZoom          = "__zoom";
+const char *const kOptionDebugMode     = "__debug_mode";
+
 /** Information XPath identifiers in gadget.gmanifest file. */
 const char *const kManifestMinVersion  = "@minimumGoogleDesktopVersion";
 const char *const kManifestId          = "about/id";

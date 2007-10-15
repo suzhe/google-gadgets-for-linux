@@ -111,6 +111,11 @@ Image::Image(const Image &another)
     : impl_(new Impl(*another.impl_)) {
 }
 
+Image::~Image() {
+  delete impl_;
+  impl_ = NULL;
+}
+
 const CanvasInterface *Image::GetCanvas() {
   return impl_->GetCanvas();
 }

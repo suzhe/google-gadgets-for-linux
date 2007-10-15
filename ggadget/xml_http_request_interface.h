@@ -17,8 +17,7 @@
 #ifndef GGADGETS_XML_HTTP_REQUEST_INTERFACE_H__
 #define GGADGETS_XML_HTTP_REQUEST_INTERFACE_H__
 
-#include "element_interface.h"
-#include "scriptable_helper.h"
+#include "scriptable_interface.h"
 
 namespace ggadget {
 
@@ -32,8 +31,9 @@ class DOMDocument;
  *   - http://msdn.microsoft.com/library/default.asp?url=/library/en-us/xmlsdk/html/xmobjxmlhttprequest.asp
  *   - http://developer.mozilla.org/cn/docs/XMLHttpRequest
  */
-class XMLHttpRequestInterface {
+class XMLHttpRequestInterface : public ScriptableInterface {
  public:
+  CLASS_ID_DECL(0x301dceaec56141d6);
 
   enum State {
     UNSENT,
@@ -62,6 +62,8 @@ class XMLHttpRequestInterface {
   virtual unsigned short GetStatus() = 0;
   virtual const char *GetStatusText() = 0;
 };
+
+CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)
 
 } // namespace ggadget
 

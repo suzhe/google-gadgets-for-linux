@@ -21,9 +21,8 @@
 #include "elements.h"
 #include "event.h"
 #include "file_manager_interface.h"
-#include "gadget_interface.h"
+#include "gadget_host_interface.h"
 #include "graphics_interface.h"
-#include "host_interface.h"
 #include "image.h"
 #include "math_utils.h"
 #include "script_context_interface.h"
@@ -31,23 +30,26 @@
 #include "scriptable_event.h"
 #include "slot.h"
 #include "texture.h"
+#include "view_host_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
 
 class View::Impl {
  public:
-  Impl(ScriptContextInterface *script_context,
-       GadgetInterface *gadget,
+  Impl(ViewHostInterface *host,
        ElementFactoryInterface *element_factory,
+       int debug_mode,
        View *owner)
     : owner_(owner),
-      script_context_(script_context),
-      gadget_(gadget),
+      host_(host),
+      gadget_host_(host->GetGadgetHost()),
+      script_context_(host->GetScriptContext()),
+      file_manager_(NULL),
       element_factory_(element_factory),
       children_(element_factory, NULL, owner),
+      debug_mode_(debug_mode),
       width_(200), height_(200),
-      host_(NULL),
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
@@ -67,6 +69,16 @@ class View::Impl {
       ++next;
       RemoveTimer(it->first);
       it = next;
+    }
+  }
+
+  bool InitFromFile(FileManagerInterface *file_manager, const char *filename) {
+    file_manager_ = file_manager;
+    if (SetupViewFromFile(owner_, filename)) {
+      onopen_event_();
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -91,7 +103,7 @@ class View::Impl {
          it < elements.rend() - 1; ++it) {
       // Make copies to prevent them from being overriden.
       double x1 = x, y1 = y;
-      (*it)->SelfCoordToChildCoord(*(it + 1), x1, y1, &x, &y); 
+      (*it)->SelfCoordToChildCoord(*(it + 1), x1, y1, &x, &y);
     }
     new_event->SetX(x);
     new_event->SetY(y);
@@ -104,18 +116,20 @@ class View::Impl {
       // Children's EVENT_MOUSE_OVER is triggered by other mouse events.
       return true;
 
+    bool result = true;
     // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE and
     // EVENT_MOUSE_UP events to it directly, until an EVENT_MOUSE_UP received.
     if (grabmouse_element_ && grabmouse_element_->IsEnabled() &&
         (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP)) {
       MouseEvent new_event(*event);
       MapChildMouseEvent(event, grabmouse_element_, &new_event);
-      grabmouse_element_->OnMouseEvent(event, true);
+      ElementInterface *fired_element;
+      result = grabmouse_element_->OnMouseEvent(event, true, &fired_element);
 
       // Release the grabbing.
       if (type == Event::EVENT_MOUSE_UP)
         grabmouse_element_ = NULL;
-      return true;
+      return result;
     }
 
     if (type == Event::EVENT_MOUSE_OUT) {
@@ -123,21 +137,23 @@ class View::Impl {
       if (mouseover_element_) {
         MouseEvent new_event(*event);
         MapChildMouseEvent(event, mouseover_element_, &new_event);
-        mouseover_element_->OnMouseEvent(event, true);
+        ElementInterface *temp;
+        result = mouseover_element_->OnMouseEvent(event, true, &temp);
         mouseover_element_ = NULL;
       }
-      return true;
+      return result;
     }
 
     // Dispatch the event to children normally.
-    ElementInterface *fired_element = children_.OnMouseEvent(event);
+    ElementInterface *fired_element = NULL;
+    result = children_.OnMouseEvent(event, &fired_element);
     if (fired_element && type == Event::EVENT_MOUSE_DOWN) {
       // Start grabbing.
       grabmouse_element_ = fired_element;
       SetFocus(fired_element);
       // In the focusin handler, the element may be removed and fired_element
-      // points to invalid element.  However, grabmouse_element_ will be valid
-      // or has been set to NULL.
+      // points to invalid element.  However, grabmouse_element_ will still
+      // be valid or has been set to NULL.
       fired_element = grabmouse_element_;
     }
 
@@ -146,14 +162,15 @@ class View::Impl {
       // Store it early to prevent crash if fired_element is removed in
       // the mouseout handler.
       mouseover_element_ = fired_element;
-      
+
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
                                   event->GetX(), event->GetY(),
                                   event->GetButton(),
                                   event->GetWheelDelta());
         MapChildMouseEvent(event, old_mouseover_element, &mouseout_event);
-        old_mouseover_element->OnMouseEvent(&mouseout_event, true);
+        ElementInterface *temp;
+        old_mouseover_element->OnMouseEvent(&mouseout_event, true, &temp);
       }
 
       if (mouseover_element_) {
@@ -165,56 +182,58 @@ class View::Impl {
                                      event->GetButton(),
                                      event->GetWheelDelta());
           MapChildMouseEvent(event, mouseover_element_, &mouseover_event);
-          mouseover_element_->OnMouseEvent(&mouseover_event, true);
+          ElementInterface *temp;
+          mouseover_element_->OnMouseEvent(&mouseover_event, true, &temp);
         }
       }
     }
 
-    return fired_element != NULL;
+    return result;
   }
 
-  void OnMouseEvent(MouseEvent *event) {
-    // Send event to children first.
-    if (SendMouseEventToChildren(event)) {
-      // Then send event to view.
-      ScriptableEvent scriptable_event(event, owner_, 0, 0);
-      if (event->GetType() != Event::EVENT_MOUSE_MOVE)
-        DLOG("%s(view): %g %g %d %d", scriptable_event.GetName(),
-             event->GetX(), event->GetY(),
-             event->GetButton(), event->GetWheelDelta());
-      switch (event->GetType()) {
-        case Event::EVENT_MOUSE_MOVE:
-          // Put the high volume events near top.
-          // View itself doesn't have onmousemove handler. 
-          break;
-        case Event::EVENT_MOUSE_DOWN:
-          FireEvent(&scriptable_event, onmousedown_event_);
-          break;
-        case Event::EVENT_MOUSE_UP:
-          FireEvent(&scriptable_event, onmouseup_event_);
-          break;
-        case Event::EVENT_MOUSE_CLICK:
-          FireEvent(&scriptable_event, onclick_event_);
-          break;
-        case Event::EVENT_MOUSE_DBLCLICK:
-          FireEvent(&scriptable_event, ondblclick_event_);
-          break;
-        case Event::EVENT_MOUSE_OUT:
-          FireEvent(&scriptable_event, onmouseout_event_);
-          break;
-        case Event::EVENT_MOUSE_OVER:
-          FireEvent(&scriptable_event, onmouseover_event_);
-          break;
-        case Event::EVENT_MOUSE_WHEEL:
+  bool OnMouseEvent(MouseEvent *event) {
+    // Send event to view first.
+    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    if (event->GetType() != Event::EVENT_MOUSE_MOVE)
+      DLOG("%s(view): %g %g %d %d", scriptable_event.GetName(),
+           event->GetX(), event->GetY(),
+           event->GetButton(), event->GetWheelDelta());
+    switch (event->GetType()) {
+      case Event::EVENT_MOUSE_MOVE:
+        // Put the high volume events near top.
+        // View itself doesn't have onmousemove handler.
+        break;
+      case Event::EVENT_MOUSE_DOWN:
+        FireEvent(&scriptable_event, onmousedown_event_);
+        break;
+      case Event::EVENT_MOUSE_UP:
+        FireEvent(&scriptable_event, onmouseup_event_);
+        break;
+      case Event::EVENT_MOUSE_CLICK:
+        FireEvent(&scriptable_event, onclick_event_);
+        break;
+      case Event::EVENT_MOUSE_DBLCLICK:
+        FireEvent(&scriptable_event, ondblclick_event_);
+        break;
+      case Event::EVENT_MOUSE_OUT:
+        FireEvent(&scriptable_event, onmouseout_event_);
+        break;
+      case Event::EVENT_MOUSE_OVER:
+        FireEvent(&scriptable_event, onmouseover_event_);
+        break;
+      case Event::EVENT_MOUSE_WHEEL:
           // View doesn't have mouse wheel event according to the API document.
           break;
-        default:
-          ASSERT(false);
-      }
+      default:
+        ASSERT(false);
     }
+
+    if (scriptable_event.GetReturnValue())
+      return SendMouseEventToChildren(event);
+    return true;
   }
 
-  void OnKeyEvent(KeyboardEvent *event) {
+  bool OnKeyEvent(KeyboardEvent *event) {
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
     // TODO: dispatch to children.
     DLOG("%s(view): %d", scriptable_event.GetName(), event->GetKeyCode());
@@ -232,98 +251,19 @@ class View::Impl {
         ASSERT(false);
     }
 
+    if (!scriptable_event.GetReturnValue())
+      return false;
+
     if (focused_element_) {
       if (!focused_element_->IsEnabled())
         focused_element_ = NULL;
       else
-        focused_element_->OnKeyEvent(event);
+        return focused_element_->OnKeyEvent(event);
     }
+    return true;
   }
 
-  void OnTimerEvent(TimerEvent *event) {
-    ASSERT(event->GetType() == Event::EVENT_TIMER_TICK);
-    TimerInfo *info = reinterpret_cast<TimerInfo *>(event->GetData());
-    TimerMap::iterator it = timer_map_.find(info->token);
-    if (it == timer_map_.end()) {
-      DLOG("Timer has been removed but event still fired: %d", info->token);
-      return;
-    }
-    ASSERT(info == it->second);
-
-    if (event->GetTimeStamp() - info->last_finished_time <
-        kMinInterval * 1000) {
-      // To avoid some frequent interval/animation timers or slow handlers
-      // eat up all CPU resources, here automaticlly ignores some timer events. 
-      DLOG("Automatically ignored a timer event");
-      return;
-    }
-
-    // It's important to save info->token into a local variable, because the
-    // pointer may be invalid after event handling.
-    int token = info->token;
-    switch (info->type) {
-      case TIMER_TIMEOUT: {
-        ScriptableEvent scriptable_event(event, owner_, token, 0);
-        event_stack_.push_back(&scriptable_event);
-        event->StopReceivingMore();
-        info->slot->Call(0, NULL);
-        RemoveTimer(token);
-        event_stack_.pop_back();
-        break;
-      }
-      case TIMER_INTERVAL: {
-        ScriptableEvent scriptable_event(event, owner_, token, 0);
-        event_stack_.push_back(&scriptable_event);
-        info->slot->Call(0, NULL);
-        event_stack_.pop_back();
-        break;
-      }
-      case TIMER_ANIMATION_FIRST: {
-        ScriptableEvent scriptable_event(event, owner_, token,
-                                         info->start_value);
-        event_stack_.push_back(&scriptable_event);
-        event->StopReceivingMore();
-        info->slot->Call(0, NULL);
-        RemoveTimer(token);
-        break;
-      }
-      case TIMER_ANIMATION: {
-        double progress = 1.0;
-        if (info->duration > 0) {
-          uint64_t event_time = event->GetTimeStamp();
-          progress = static_cast<double>(event_time - info->start_time) /
-                     1000.0 / info->duration;
-          progress = std::min(1.0, std::max(0.0, progress));
-        }
-
-        int value = info->start_value +
-                    static_cast<int>(round(progress * info->spread));
-        if (value != info->last_value) {
-          ScriptableEvent scriptable_event(event, owner_, token, value);
-          event_stack_.push_back(&scriptable_event);
-          info->last_value = value;
-          info->slot->Call(0, NULL);
-          event_stack_.pop_back();
-        }
-
-        if (progress == 1.0) {
-          event->StopReceivingMore();
-          RemoveTimer(token);
-        }
-        break;
-      }
-      default:
-        ASSERT(false);
-        break;
-    }
-
-    // Record the time when this event is finished processing.
-    // Must check if the token is still there to ensure info pointer is valid.
-    if (host_ && timer_map_.find(token) != timer_map_.end())
-      info->last_finished_time = host_->GetCurrentTime();
-  }
-
-  void OnOtherEvent(Event *event) {
+  bool OnOtherEvent(Event *event) {
     switch (event->GetType()) {
       case Event::EVENT_FOCUS_IN:
         // For now we don't automatically set focus to some element.
@@ -336,6 +276,8 @@ class View::Impl {
       default:
         ASSERT(false);
     }
+    // TODO: Returns false if a cancelable event is canceled.
+    return true;
   }
 
   void OnElementAdd(ElementInterface *element) {
@@ -387,7 +329,7 @@ class View::Impl {
         Event event(Event::EVENT_FOCUS_OUT);
         old_focused_element->OnOtherEvent(&event);
       }
-  
+
       if (focused_element_) {
         if (!focused_element_->IsEnabled())
           focused_element_ = NULL;
@@ -402,11 +344,9 @@ class View::Impl {
   bool SetWidth(int width) {
     if (width != width_) {
       // TODO check if allowed first
-      width_ = width;  
+      width_ = width;
       children_.OnParentWidthChange(width);
-      if (host_) {
-        host_->QueueDraw();
-      }
+      host_->QueueDraw();
 
       // TODO: Is NULL a proper current event object for the script?
       FireEvent(NULL, onsize_event_);
@@ -419,9 +359,7 @@ class View::Impl {
       // TODO check if allowed first
       height_ = height;
       children_.OnParentHeightChange(height);
-      if (host_) {
-        host_->QueueDraw();
-      }
+      host_->QueueDraw();
 
       // TODO: Is NULL a proper current event object for the script?
       FireEvent(NULL, onsize_event_);
@@ -440,10 +378,8 @@ class View::Impl {
         height_ = height;
         children_.OnParentHeightChange(height);
       }
-      if (host_) {
-        host_->QueueDraw();
-      } 
-      
+      host_->QueueDraw();
+
       // TODO: Is NULL a proper current event object for the script?
       FireEvent(NULL, onsize_event_);
     }
@@ -454,22 +390,7 @@ class View::Impl {
     return SetSize(width_ + width, height_ + height);
   }
 
-  bool AttachHost(HostInterface *host) {
-    if (host_) {
-      ASSERT(!host);
-      // Detach old host first
-      if (!host_->DetachFromView()) {
-        return false;
-      }
-    }
-    
-    host_ = host;
-  
-    return true;
-  }
-   
-  const CanvasInterface *Draw(bool *changed) {  
-    ASSERT(host_);
+  const CanvasInterface *Draw(bool *changed) {
     return children_.Draw(changed);
   }
 
@@ -509,8 +430,6 @@ class View::Impl {
   int NewTimer(TimerType type, Slot *slot,
                int start_value, int end_value, unsigned int duration) {
     ASSERT(slot);
-    if (!host_)
-      return 0;
 
     TimerInfo *info = new TimerInfo();
     info->type = type;
@@ -519,9 +438,10 @@ class View::Impl {
     info->last_value = start_value;
     info->spread = end_value - start_value;
     info->duration = duration;
-    info->start_time = host_->GetCurrentTime();
-    info->token = host_->RegisterTimer(
-        type == TIMER_ANIMATION ? kAnimationInterval : duration, info);
+    info->start_time = gadget_host_->GetCurrentTime();
+    info->token = gadget_host_->RegisterTimer(
+        type == TIMER_ANIMATION ? kAnimationInterval : duration,
+        NewSlot(this, &Impl::TimerCallback));
     timer_map_[info->token] = info;
     return info->token;
   }
@@ -536,13 +456,95 @@ class View::Impl {
       return;
     }
 
-    if (host_)
-      host_->RemoveTimer(it->second->token);
+    gadget_host_->RemoveTimer(it->second->token);
     // TIMER_ANIMATION_FIRST and TIMER_ANIMATION share the slot.
     if (it->second->type != TIMER_ANIMATION_FIRST)
       delete it->second->slot;
     delete it->second;
     timer_map_.erase(it);
+  }
+
+  bool TimerCallback(int token) {
+    bool wants_more = true;
+    TimerMap::iterator it = timer_map_.find(token);
+    if (it == timer_map_.end()) {
+      DLOG("Timer has been removed but event still fired: %d", token);
+      return false;
+    }
+    TimerInfo *info = it->second;
+
+    if (info->type != TIMER_TIMEOUT &&
+        gadget_host_->GetCurrentTime() - info->last_finished_time <
+            kMinInterval * 1000) {
+      // To avoid some frequent interval/animation timers or slow handlers
+      // eat up all CPU resources, here automaticlly ignores some timer events.
+      DLOG("Automatically ignored a timer event");
+      return true;
+    }
+
+    Event *event = new Event(Event::EVENT_TIMER_TICK);
+    switch (info->type) {
+      case TIMER_TIMEOUT: {
+        ScriptableEvent scriptable_event(event, owner_, token, 0);
+        event_stack_.push_back(&scriptable_event);
+        info->slot->Call(0, NULL);
+        wants_more = false;
+        RemoveTimer(token);
+        event_stack_.pop_back();
+        break;
+      }
+      case TIMER_INTERVAL: {
+        ScriptableEvent scriptable_event(event, owner_, token, 0);
+        event_stack_.push_back(&scriptable_event);
+        info->slot->Call(0, NULL);
+        event_stack_.pop_back();
+        break;
+      }
+      case TIMER_ANIMATION_FIRST: {
+        ScriptableEvent scriptable_event(event, owner_, token,
+                                         info->start_value);
+        event_stack_.push_back(&scriptable_event);
+        info->slot->Call(0, NULL);
+        wants_more = false;
+        RemoveTimer(token);
+        break;
+      }
+      case TIMER_ANIMATION: {
+        double progress = 1.0;
+        if (info->duration > 0) {
+          uint64_t event_time = gadget_host_->GetCurrentTime();
+          progress = static_cast<double>(event_time - info->start_time) /
+                     1000.0 / info->duration;
+          progress = std::min(1.0, std::max(0.0, progress));
+        }
+
+        int value = info->start_value +
+                    static_cast<int>(round(progress * info->spread));
+        if (value != info->last_value) {
+          ScriptableEvent scriptable_event(event, owner_, token, value);
+          event_stack_.push_back(&scriptable_event);
+          info->last_value = value;
+          info->slot->Call(0, NULL);
+          event_stack_.pop_back();
+        }
+
+        if (progress == 1.0) {
+          wants_more = false;
+          RemoveTimer(token);
+        }
+        break;
+      }
+      default:
+        ASSERT(false);
+        break;
+    }
+
+    // Record the time when this event is finished processing.
+    // Must check if the token is still there to ensure info pointer is valid.
+    if (timer_map_.find(token) != timer_map_.end())
+      info->last_finished_time = gadget_host_->GetCurrentTime();
+    delete event;
+    return wants_more;
   }
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
@@ -613,12 +615,14 @@ class View::Impl {
   ElementsMap all_elements_;
 
   View *owner_;
+  ViewHostInterface *host_;
+  GadgetHostInterface *gadget_host_;
   ScriptContextInterface *script_context_;
-  GadgetInterface *gadget_;
+  FileManagerInterface *file_manager_;
   ElementFactoryInterface *element_factory_;
   Elements children_;
+  int debug_mode_;
   int width_, height_;
-  HostInterface *host_;
   ViewInterface::ResizableMode resizable_;
   std::string caption_;
   bool show_caption_always_;
@@ -628,6 +632,7 @@ class View::Impl {
   static const unsigned int kAnimationInterval = 20;
   static const unsigned int kMinInterval = 5;
   struct TimerInfo {
+    Impl *view;
     int token;
     TimerType type;
     Slot *slot;
@@ -650,11 +655,11 @@ class View::Impl {
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
-View::View(ScriptContextInterface *script_context,
-           GadgetInterface *gadget,
+View::View(ViewHostInterface *host,
            ScriptableInterface *prototype,
-           ElementFactoryInterface *element_factory)
-    : impl_(new Impl(script_context, gadget, element_factory, this)) {
+           ElementFactoryInterface *element_factory,
+           int debug_mode)
+    : impl_(new Impl(host, element_factory, debug_mode, this)) {
   RegisterProperty("caption", NewSlot(this, &View::GetCaption),
                    NewSlot(this, &View::SetCaption));
   RegisterConstant("children", GetChildren());
@@ -726,8 +731,8 @@ View::View(ScriptContextInterface *script_context,
   if (prototype)
     SetPrototype(prototype);
 
-  if (script_context)
-    script_context->SetGlobalObject(impl_->non_strict_delegator_);
+  if (impl_->script_context_)
+    impl_->script_context_->SetGlobalObject(impl_->non_strict_delegator_);
 }
 
 View::~View() {
@@ -735,29 +740,17 @@ View::~View() {
   impl_ = NULL;
 }
 
-bool View::AttachHost(HostInterface *host) {
-  return impl_->AttachHost(host);
-}
-
-bool View::InitFromFile(const char *filename) {
-  std::string contents;
-  std::string real_path;
-  if (impl_->gadget_->GetFileManager()->GetXMLFileContents(
-          filename, &contents, &real_path) &&
-      SetupViewFromXML(this, contents.c_str(), real_path.c_str())) {
-    impl_->onopen_event_();
-    return true;
-  } else {
-    return false;
-  }
-}
-
 ScriptContextInterface *View::GetScriptContext() const {
   return impl_->script_context_;
 }
 
 FileManagerInterface *View::GetFileManager() const {
-  return impl_->gadget_->GetFileManager();
+  return impl_->file_manager_;
+}
+
+bool View::InitFromFile(FileManagerInterface *file_manager,
+                        const char *filename) {
+  return impl_->InitFromFile(file_manager, filename);
 }
 
 int View::GetWidth() const {
@@ -767,36 +760,29 @@ int View::GetWidth() const {
 int View::GetHeight() const {
   return impl_->height_;
 }
- 
+
 const CanvasInterface *View::Draw(bool *changed) {
   return impl_->Draw(changed);
 }
 
 void View::QueueDraw() {
-  // Host may not be initialized during element construction.
-  if (impl_->host_) {
-    impl_->host_->QueueDraw();
-  }
+  impl_->host_->QueueDraw();
 }
 
 const GraphicsInterface *View::GetGraphics() const {
-  return impl_->host_->GetGraphics();  
+  return impl_->host_->GetGraphics();
 }
 
-void View::OnMouseEvent(MouseEvent *event) {
-  impl_->OnMouseEvent(event);
+bool View::OnMouseEvent(MouseEvent *event) {
+  return impl_->OnMouseEvent(event);
 }
 
-void View::OnKeyEvent(KeyboardEvent *event) {
-  impl_->OnKeyEvent(event);
+bool View::OnKeyEvent(KeyboardEvent *event) {
+  return impl_->OnKeyEvent(event);
 }
 
-void View::OnTimerEvent(TimerEvent *event) {
-  impl_->OnTimerEvent(event);
-}
-
-void View::OnOtherEvent(Event *event) {
-  impl_->OnOtherEvent(event);
+bool View::OnOtherEvent(Event *event) {
+  return impl_->OnOtherEvent(event);
 }
 
 void View::OnElementAdd(ElementInterface *element) {
@@ -904,18 +890,17 @@ void View::ClearInterval(int token) {
 }
 
 int View::GetDebugMode() const {
-  return impl_->host_ ? impl_->host_->GetDebugMode() : 0;
+  return impl_->debug_mode_;
 }
 
 Image *View::LoadImage(const char *name, bool is_mask) {
-  ASSERT(impl_->host_);
-  return new Image(GetGraphics(), impl_->gadget_->GetFileManager(),
-                   name, is_mask);
+  ASSERT(impl_->file_manager_);
+  return new Image(GetGraphics(), impl_->file_manager_, name, is_mask);
 }
 
 Texture *View::LoadTexture(const char *name) {
-  ASSERT(impl_->host_);
-  return new Texture(GetGraphics(), impl_->gadget_->GetFileManager(), name);
+  ASSERT(impl_->file_manager_);
+  return new Texture(GetGraphics(), impl_->file_manager_, name);
 }
 
 void View::SetFocus(ElementInterface *element) {

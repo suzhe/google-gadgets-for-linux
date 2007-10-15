@@ -27,8 +27,9 @@ namespace ggadget {
 
 class DivElement::Impl {
  public:
-  Impl()
-      : background_texture_(NULL),
+  Impl(DivElement *owner)
+      : owner_(owner),
+        background_texture_(NULL),
         autoscroll_(false),
         scroll_pos_x_(0), scroll_pos_y_(0),
         scroll_width_(0), scroll_height_(0),
@@ -42,7 +43,7 @@ class DivElement::Impl {
   void UpdateScrollPos(DivElement *owner, size_t width, size_t height) {
     scroll_width_ = static_cast<int>(width);
     scroll_height_ = static_cast<int>(height);
-    int owner_width = static_cast<int>(ceil(owner->GetPixelWidth())); 
+    int owner_width = static_cast<int>(ceil(owner->GetPixelWidth()));
     int owner_height = static_cast<int>(ceil(owner->GetPixelHeight()));
     scroll_range_x_ = std::max(0, scroll_width_ - owner_width);
     scroll_range_y_ = std::max(0, scroll_height_ - owner_height);
@@ -52,17 +53,25 @@ class DivElement::Impl {
   }
 
   void ScrollX(int distance) {
+    int old_pos = scroll_pos_x_;
     scroll_pos_x_ += distance;
     scroll_pos_x_ = std::min(scroll_range_x_, std::max(0, scroll_pos_x_));
+    if (old_pos != scroll_pos_x_)
+      owner_->SetSelfChanged(true);
   }
 
   void ScrollY(int distance) {
+    int old_pos = scroll_pos_y_;
     scroll_pos_y_ += distance;
     scroll_pos_y_ = std::min(scroll_range_y_, std::max(0, scroll_pos_y_));
+    if (old_pos != scroll_pos_y_)
+      owner_->SetSelfChanged(true);
   }
 
-  void OnKeyEvent(DivElement *owner, KeyboardEvent *event) {
+  bool OnKeyEvent(KeyboardEvent *event) {
+    bool result = true;
     if (autoscroll_ && event->GetType() == Event::EVENT_KEY_DOWN) {
+      result = false;
       switch (event->GetKeyCode()) {
         case KeyboardEvent::KEY_UP:
           ScrollY(-kLineHeight);
@@ -77,19 +86,23 @@ class DivElement::Impl {
           ScrollX(kLineWidth);
           break;
         case KeyboardEvent::KEY_PAGE_UP:
-          ScrollY(-static_cast<int>(ceil(owner->GetPixelHeight())));
+          ScrollY(-static_cast<int>(ceil(owner_->GetPixelHeight())));
           break;
         case KeyboardEvent::KEY_PAGE_DOWN:
-          ScrollY(static_cast<int>(ceil(owner->GetPixelHeight())));
+          ScrollY(static_cast<int>(ceil(owner_->GetPixelHeight())));
+          break;
+        default:
+          result = true;
           break;
       }
-      owner->GetView()->QueueDraw();
     }
+    return result;
   }
 
   static const int kLineHeight = 5;
   static const int kLineWidth = 5;
 
+  DivElement *owner_;
   std::string background_;
   Texture *background_texture_;
   bool autoscroll_;
@@ -102,7 +115,7 @@ DivElement::DivElement(ElementInterface *parent,
                        ViewInterface *view,
                        const char *name)
     : BasicElement(parent, view, "div", name, true),
-      impl_(new Impl) {
+      impl_(new Impl(this)) {
   RegisterProperty("autoscroll",
                    NewSlot(this, &DivElement::IsAutoscroll),
                    NewSlot(this, &DivElement::SetAutoscroll));
@@ -164,20 +177,21 @@ ElementInterface *DivElement::CreateInstance(ElementInterface *parent,
   return new DivElement(parent, view, name);
 }
 
-ElementInterface *DivElement::OnMouseEvent(MouseEvent *event, bool direct) {
-  ElementInterface *fired = BasicElement::OnMouseEvent(event, direct);
+bool DivElement::OnMouseEvent(MouseEvent *event, bool direct,
+                              ElementInterface **fired_element) {
+  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
 
-  if (fired) {
+  // Handle mouse event only if the event has been fired and not canceled.
+  if (*fired_element && result) {
     if (impl_->autoscroll_ && event->GetType() == Event::EVENT_MOUSE_WHEEL) {
       // TODO:
     }
   }
-  return fired;
+  return result;
 }
 
-void DivElement::OnKeyEvent(KeyboardEvent *event) {
-  impl_->OnKeyEvent(this, event);
-  BasicElement::OnKeyEvent(event);
+bool DivElement::OnKeyEvent(KeyboardEvent *event) {
+  return BasicElement::OnKeyEvent(event) && impl_->OnKeyEvent(event);
 }
 
 void DivElement::SelfCoordToChildCoord(ElementInterface *child,

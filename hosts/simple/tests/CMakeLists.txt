@@ -14,20 +14,3 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
-PKGCONFIG_EX(libcurl 7.16.0 LIBCURL_LIBRARIES)
-
-ADD_EXECUTABLE(xml_http_request_test
-  xml_http_request_test.cc
-  ${CMAKE_SOURCE_DIR}/hosts/simple/gtk_cairo_host.cc
-  ${CMAKE_SOURCE_DIR}/hosts/simple/xml_http_request.cc
-)
-TARGET_LINK_LIBRARIES(xml_http_request_test
-  pthread
-  gunit
-  ggadget
-  ${GTK_LIBRARIES}
-  ${LIBCURL_LIBRARIES}
-)
-TEST_WRAPPER(xml_http_request_test TRUE)
-TEST_RESOURCE_DIR(xml_http_request_test_data)

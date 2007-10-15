@@ -44,16 +44,17 @@ class ButtonElement : public BasicElement {
   /** Gets and sets the file name of disabled button image. */
   const char *GetDisabledImage() const;
   void SetDisabledImage(const char *img);
-  
+
   /** Gets and sets the file name of mouse over button image. */
   const char *GetOverImage() const;
   void SetOverImage(const char *img);
-  
+
   /** Gets and sets the file name of mouse down button image. */
   const char *GetDownImage() const;
   void SetDownImage(const char *img);
-  
-  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
+
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,

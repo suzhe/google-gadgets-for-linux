@@ -34,7 +34,7 @@ class Elements::Impl {
   Impl(ElementFactoryInterface *factory,
        ElementInterface *owner,
        ViewInterface *view)
-      : factory_(factory), owner_(owner), view_(view), 
+      : factory_(factory), owner_(owner), view_(view),
         width_(.0), height_(.0),
         canvas_(NULL),
         count_changed_(true),
@@ -53,6 +53,10 @@ class Elements::Impl {
 
   ~Impl() {
     RemoveAllElements();
+    if (canvas_) {
+      canvas_->Destroy();
+      canvas_ = NULL;
+    }
   }
 
   int GetCount() {
@@ -196,11 +200,12 @@ class Elements::Impl {
     new_event->SetY(child_y);
   }
 
-  ElementInterface *OnMouseEvent(MouseEvent *event) {
+  bool OnMouseEvent(MouseEvent *event, ElementInterface **fired_element) {
     // The following event types are processed directly in the view.
     ASSERT(event->GetType() != Event::EVENT_MOUSE_OVER &&
            event->GetType() != Event::EVENT_MOUSE_OUT);
 
+    *fired_element = NULL;
     MouseEvent new_event(*event);
     // Iterate in reverse since higher elements are listed last.
     for (std::vector<ElementInterface *>::reverse_iterator ite =
@@ -208,13 +213,12 @@ class Elements::Impl {
          ite != children_.rend(); ++ite) {
       MapChildMouseEvent(event, *ite, &new_event);
       if ((*ite)->IsMouseEventIn(&new_event)) {
-        ElementInterface *fired_element = (*ite)->OnMouseEvent(&new_event,
-                                                               false);
-        if (fired_element)
-          return fired_element;
+        bool result = (*ite)->OnMouseEvent(&new_event, false, fired_element);
+        if (*fired_element)
+          return result;
       }
     }
-    return NULL;
+    return true;
   }
 
   // Update the maximum children extent.
@@ -272,7 +276,7 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
   int child_count;
   bool child_changed = false;
   bool change = count_changed_;
-  
+
   count_changed_ = false;
   if (children_.empty()) {
     goto exit;
@@ -355,7 +359,7 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
           canvas_->TranslateCoordinates(element->GetPixelX(),
                                         element->GetPixelY());
           canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
-          canvas_->TranslateCoordinates(-element->GetPixelPinX(), 
+          canvas_->TranslateCoordinates(-element->GetPixelPinX(),
                                         -element->GetPixelPinY());
         }
 
@@ -368,7 +372,7 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
         }
 
         canvas_->PopState();
-      }          
+      }
     }
   }
 
@@ -478,9 +482,10 @@ const CanvasInterface *Elements::Draw(bool *changed) {
   return impl_->Draw(changed);
 }
 
-ElementInterface *Elements::OnMouseEvent(MouseEvent *event) {
+bool Elements::OnMouseEvent(MouseEvent *event,
+                            ElementInterface **fired_element) {
   ASSERT(impl_);
-  return impl_->OnMouseEvent(event);
+  return impl_->OnMouseEvent(event, fired_element);
 }
 
 void Elements::SetScrollable(bool scrollable) {

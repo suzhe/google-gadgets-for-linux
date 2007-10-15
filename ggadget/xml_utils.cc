@@ -15,6 +15,7 @@
 */
 
 #include <cstring>
+#include <cmath>
 #include "xml_utils.h"
 #include "common.h"
 #include "element_interface.h"
@@ -34,6 +35,31 @@ static bool ParseXML(const char *xml,
   if (xmldoc->Error()) {
     LOG("Error parsing xml: %s in %s:%d:%d",
         xmldoc->ErrorDesc(), filename, xmldoc->ErrorRow(), xmldoc->ErrorCol());
+    return false;
+  }
+  return true;
+}
+
+static bool ParseBoolValue(const char *value, bool *result) {
+  if (strcasecmp("true", value) == 0) {
+    *result = true;
+    return true;
+  }
+  if (strcasecmp("false", value) == 0) {
+    *result = false;
+    return true;
+  }
+  return false;
+}
+
+static bool ParseDoubleValue(const char *value, double *result) {
+  char *end_ptr;
+  *result = strtod(value, &end_ptr);
+  if (*value == '\0' || *end_ptr != '\0' ||
+      // We don't allow hexidecimal numbers.
+      strchr(value, 'x') || strchr(value, 'X') ||
+      // We don't allow INFINITY or NAN.
+      strchr(value, 'n') || strchr(value, 'N')) {
     return false;
   }
   return true;
@@ -60,41 +86,52 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
   }
 
   Variant property_value;
-  char *end_ptr;
   switch (prototype.type()) {
-    case Variant::TYPE_BOOL:
-      property_value = Variant(GadgetStrCmp("true", value) == 0 ?
+    case Variant::TYPE_BOOL: {
+      bool b;
+      if (ParseBoolValue(value, &b)) {
+        property_value = Variant(b);
+      } else {
+        LOG("%s:%d:%d: Invalid bool '%s' for property %s of %s",
+            filename, row, column, value, name, tag_name);
+        property_value = Variant(GadgetStrCmp("true", value) == 0 ?
                                true : false);
+        return;
+      }
       break;
-
+    }
     case Variant::TYPE_INT64:
-      property_value = Variant(strtoll(value, &end_ptr, 10));
-      if (*value == '\0' || *end_ptr != '\0') {
-        LOG("%s:%d:%d: Invalid integer '%s' for property %s for %s",
+    case Variant::TYPE_DOUBLE: {
+      double d;
+      if (ParseDoubleValue(value, &d)) {
+        property_value = prototype.type() == Variant::TYPE_INT64 ?
+                         Variant(static_cast<int64_t>(round(d))) :
+                         Variant(d);
+      } else {
+        LOG("%s:%d:%d: Invalid integer '%s' for property %s of %s",
             filename, row, column, value, name, tag_name);
         return;
       }
       break;
-
-    case Variant::TYPE_DOUBLE:
-      property_value = Variant(strtod(value, &end_ptr));
-      if (*value == '\0' || *end_ptr != '\0') {
-        LOG("%s:%d:%d: Invalid double '%s' for property %s for %s",
-            filename, row, column, value, name, tag_name);
-        return;
-      }
-      break;
-
+    }
     case Variant::TYPE_STRING:
       property_value = Variant(std::string(value));
       break;
 
-    case Variant::TYPE_VARIANT:
-      property_value = Variant(strtoll(value, &end_ptr, 10));
-      if (*value == '\0' || *end_ptr != '\0')
+    case Variant::TYPE_VARIANT: {
+      double d;
+      bool b;
+      if (ParseDoubleValue(value, &d)) {
+        // '5.0' should be converted to a double instead of integer.
+        property_value = strchr(value, '.') || round(d) != d ?
+                         Variant(d) : Variant(static_cast<int64_t>(d));
+      } else if (ParseBoolValue(value, &b)) {
+        property_value = Variant(b);
+      } else {
         property_value = Variant(std::string(value));
+      }
       break;
-
+    }
     case Variant::TYPE_SLOT:
       property_value = Variant(script_context->Compile(value, filename, row));
       break;
@@ -120,17 +157,17 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
        attribute = attribute->Next()) {
     const char *name = attribute->Name();
     const char *value = attribute->Value();
-    
+
     if (GadgetStrCmp(kInnerTextProperty, name) == 0) {
       LOG("%s is not allowed in XML as an attribute: ", kInnerTextProperty);
       continue;
     }
-    
+
     SetScriptableProperty(scriptable, script_context,
                           filename, attribute->Row(), attribute->Column(),
                           name, value, tag_name);
   }
- 
+
   // Set the "innerText" property.
   const char *text = xml_element->GetText();
   if (text)
@@ -176,7 +213,6 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
 static void HandleAllScriptElements(ViewInterface *view,
                                     const char *filename,
                                     TiXmlElement *xml_element) {
-  
   TiXmlElement *child = xml_element->FirstChildElement();
   while (child) {
     if (GadgetStrCmp(child->Value(), kScriptTag) == 0) {
@@ -218,8 +254,17 @@ static ElementInterface *InsertElementFromDOM(Elements *elements,
   return element;
 }
 
-bool SetupViewFromXML(ViewInterface *view,
-                      const char *xml,
+bool SetupViewFromFile(ViewInterface *view, const char *filename) {
+  std::string contents;
+  std::string real_path;
+  if (!view->GetFileManager()->GetXMLFileContents(filename,
+                                                  &contents, &real_path))
+    return false;
+
+  return SetupViewFromXML(view, contents.c_str(), real_path.c_str());
+}
+
+bool SetupViewFromXML(ViewInterface *view, const char *xml,
                       const char *filename) {
   TiXmlDocument xmldoc;
   if (!ParseXML(xml, filename, &xmldoc))
@@ -239,7 +284,7 @@ bool SetupViewFromXML(ViewInterface *view,
   Elements *children = view->GetChildren();
   for (TiXmlElement *child_xml_ele = view_element->FirstChildElement();
        child_xml_ele != NULL;
-       child_xml_ele = child_xml_ele->NextSiblingElement()) { 
+       child_xml_ele = child_xml_ele->NextSiblingElement()) {
     InsertElementFromDOM(children, filename, child_xml_ele, NULL);
   }
   return true;
@@ -308,7 +353,7 @@ static void ParseDOMIntoXPathMap(TiXmlElement *element,
     ParseDOMIntoXPathMap(child, key, table);
   }
 }
-                                 
+
 bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
                           const char *root_element_name,
                           GadgetStringMap *table) {

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_TEST_MOCKED_VIEW_H__
-#define GGADGETS_TEST_MOCKED_VIEW_H__
+#ifndef GGADGET_TESTS_MOCKED_VIEW_H__
+#define GGADGET_TESTS_MOCKED_VIEW_H__
 
 #include <string>
 #include "ggadget/signal.h"
@@ -31,20 +31,19 @@ class MockedView : public ggadget::ViewInterface {
   virtual int GetWidth() const { return 400; }
   virtual int GetHeight() const { return 300; }
 
-  virtual bool AttachHost(ggadget::HostInterface *host) { return true; };
+  virtual ggadget::FileManagerInterface *GetFileManager() const { return NULL; }
   virtual ggadget::ScriptContextInterface *GetScriptContext() const
       { return NULL; }
-  virtual bool InitFromFile(const char *filename) { return true; }
-  virtual ggadget::FileManagerInterface *GetFileManager() const { return NULL; }
+  virtual bool InitFromFile(ggadget::FileManagerInterface *file_manager,
+                            const char *filename) { return true; }
 
-  virtual void OnMouseEvent(ggadget::MouseEvent *event) {};
-  virtual void OnKeyEvent(ggadget::KeyboardEvent *event) {};
-  virtual void OnOtherEvent(ggadget::Event *event) {};
-  virtual void OnTimerEvent(ggadget::TimerEvent *event) {};
+  virtual bool OnMouseEvent(ggadget::MouseEvent *event) { return true; }
+  virtual bool OnKeyEvent(ggadget::KeyboardEvent *event) { return true; }
+  virtual bool OnOtherEvent(ggadget::Event *event) { return true; }
 
   virtual bool SetWidth(int width) { return true; };
   virtual bool SetHeight(int height) { return true; };
-  virtual bool SetSize(int width, int height) { return true; };   
+  virtual bool SetSize(int width, int height) { return true; };
 
   virtual void OnElementAdd(ggadget::ElementInterface *element) {};
   virtual void OnElementRemove(ggadget::ElementInterface *element) {};
@@ -108,4 +107,4 @@ class MockedView : public ggadget::ViewInterface {
   ggadget::ScriptableHelper scriptable_helper_;
 };
 
-#endif // GGADGETS_TEST_MOCKED_VIEW_H__
+#endif // GGADGET_TESTS_MOCKED_VIEW_H__

@@ -23,11 +23,7 @@
 
 namespace ggadget {
 
-namespace internal {
-  class ViewImpl;
-}
-
-class GadgetInterface;
+class ViewHostInterface;
 class ElementFactoryInterface;
 class ScriptContextInterface;
 
@@ -38,21 +34,20 @@ class View : public ViewInterface {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
-  View(ScriptContextInterface *script_context,
-       GadgetInterface *gadget,
+  View(ViewHostInterface *host,
        ScriptableInterface *prototype,
-       ElementFactoryInterface *element_factory);
+       ElementFactoryInterface *element_factory,
+       int debug_mode);
   virtual ~View();
 
-  virtual bool AttachHost(HostInterface *host);
-  virtual bool InitFromFile(const char *filename);
   virtual ScriptContextInterface *GetScriptContext() const;
   virtual FileManagerInterface *GetFileManager() const;
+  virtual bool InitFromFile(FileManagerInterface *file_manager,
+                            const char *filename);
 
-  virtual void OnMouseEvent(MouseEvent *event);
-  virtual void OnKeyEvent(KeyboardEvent *event);
-  virtual void OnOtherEvent(Event *event);
-  virtual void OnTimerEvent(TimerEvent *event);
+  virtual bool OnMouseEvent(MouseEvent *event);
+  virtual bool OnKeyEvent(KeyboardEvent *event);
+  virtual bool OnOtherEvent(Event *event);
 
   virtual void OnElementAdd(ElementInterface *element);
   virtual void OnElementRemove(ElementInterface *element);
