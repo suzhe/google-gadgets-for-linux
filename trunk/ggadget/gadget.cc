@@ -15,14 +15,14 @@
 */
 
 #include "gadget.h"
-#include "file_manager.h"
+#include "file_manager_interface.h"
 #include "gadget_consts.h"
-#include "string_utils.h"
+#include "gadget_host_interface.h"
+#include "options_interface.h"
 #include "scriptable_helper.h"
 #include "scriptable_options.h"
-#include "script_context_interface.h"
-#include "script_runtime_interface.h"
-#include "view.h"
+#include "view_host_interface.h"
+#include "view_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -79,66 +79,51 @@ class Gadget::Impl : public ScriptableInterface {
     ScriptableHelper scriptable_helper_;
   };
 
-  Impl(ScriptRuntimeInterface *script_runtime,
-       ElementFactoryInterface *element_factory,
-       OptionsInterface *options,
-       Gadget *owner)
-      : debug_(this),
+  Impl(GadgetHostInterface *host, OptionsInterface *options, Gadget *owner)
+      : host_(host),
+        debug_(this),
         storage_(this),
         gadget_global_prototype_(this),
+        options_(options),
         scriptable_options_(options),
-        script_runtime_(script_runtime),
-        file_manager_(new FileManager()),
-        main_context_(script_runtime->CreateContext()),
-        main_view_(new View(main_context_, owner,
-                            &gadget_global_prototype_,
-                            element_factory)),
-        options_context_(script_runtime->CreateContext()),
-        options_view_(new View(options_context_, owner,
-                               &gadget_global_prototype_,
-                               element_factory)) {
-    script_runtime_->ConnectErrorReporter(NewSlot(this,
-                                                  &Impl::ReportScriptError));
+        file_manager_(NULL),
+        main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
+                                          &gadget_global_prototype_,
+                                          options)) {
     scriptable_helper_.RegisterConstant("debug", &debug_);
     scriptable_helper_.RegisterConstant("storage", &storage_);
   }
 
   ~Impl() {
-    delete main_view_;
-    main_view_ = NULL;
-    delete options_view_;
-    options_view_ = NULL;
+    delete main_view_host_;
+    main_view_host_ = NULL;
     delete file_manager_;
     file_manager_ = NULL;
-    main_context_->Destroy();
-    main_context_ = NULL;
-    options_context_->Destroy();
-    options_context_ = NULL;
-  }
-
-  void ReportScriptError(const char *message) {
-    LOG("Script ERROR: %s", message);
+    delete options_;
+    options_ = NULL;
   }
 
   void DebugError(const char *message) {
-    LOG("ERROR: %s", message);
+    host_->DebugOutput(GadgetHostInterface::DEBUG_ERROR, message);
   }
 
   void DebugTrace(const char *message) {
-    LOG("TRACE: %s", message);
+    host_->DebugOutput(GadgetHostInterface::DEBUG_TRACE, message);
   }
 
-  void DebugWarning(const char *warning) {
-    LOG("WARNING: %s", warning);
+  void DebugWarning(const char *message) {
+    host_->DebugOutput(GadgetHostInterface::DEBUG_WARNING, message);
   }
 
   std::string ExtractFile(const char *filename) {
+    ASSERT(file_manager_);
     std::string extracted_file;
     return file_manager_->ExtractFile(filename, &extracted_file) ?
            extracted_file : "";
   }
 
   std::string OpenTextFile(const char *filename) {
+    ASSERT(file_manager_);
     std::string data;
     std::string real_path;
     return file_manager_->GetFileContents(filename, &data, &real_path) ?
@@ -152,15 +137,15 @@ class Gadget::Impl : public ScriptableInterface {
     return it->second.c_str();
   }
 
-  bool InitFromPath(const char *base_path) {
-    if (!file_manager_->Init(base_path))
-      return false;
+  bool Init(FileManagerInterface *file_manager) {
+    ASSERT(file_manager);
+    file_manager_ = file_manager;
 
     std::string manifest_contents;
     std::string manifest_path;
-    if (!file_manager_->GetXMLFileContents(kGadgetGManifest,
-                                           &manifest_contents,
-                                           &manifest_path))
+    if (!file_manager->GetXMLFileContents(kGadgetGManifest,
+                                          &manifest_contents,
+                                          &manifest_path))
       return false;
     if (!ParseXMLIntoXPathMap(manifest_contents.c_str(),
                               manifest_path.c_str(),
@@ -169,7 +154,7 @@ class Gadget::Impl : public ScriptableInterface {
       return false;
     // TODO: Is it necessary to check the required fields in manifest?
 
-    if (!main_view_->InitFromFile(kMainXML)) {
+    if (!main_view_host_->GetView()->InitFromFile(file_manager, kMainXML)) {
       DLOG("Failed to setup the main view");
       return false;
     }
@@ -183,24 +168,21 @@ class Gadget::Impl : public ScriptableInterface {
   DEFAULT_OWNERSHIP_POLICY
   DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return true; }
+
+  GadgetHostInterface *host_;
   ScriptableHelper scriptable_helper_;
   Debug debug_;
   Storage storage_;
   GadgetGlobalPrototype gadget_global_prototype_;
+  OptionsInterface *options_;
   ScriptableOptions scriptable_options_;
-  ScriptRuntimeInterface *script_runtime_;
   FileManagerInterface *file_manager_;
-  ScriptContextInterface *main_context_;
-  ViewInterface *main_view_;
-  ScriptContextInterface *options_context_;
-  ViewInterface *options_view_;
+  ViewHostInterface *main_view_host_;
   GadgetStringMap manifest_info_map_;
 };
 
-Gadget::Gadget(ScriptRuntimeInterface *script_runtime,
-               ElementFactoryInterface *element_factory,
-               OptionsInterface *options)
-    : impl_(new Impl(script_runtime, element_factory, options, this)) {
+Gadget::Gadget(GadgetHostInterface *host, OptionsInterface *options)
+    : impl_(new Impl(host, options, this)) {
 }
 
 Gadget::~Gadget() {
@@ -208,36 +190,16 @@ Gadget::~Gadget() {
   impl_ = NULL;
 }
 
-ViewInterface* Gadget::GetMainView() {
-  return impl_->main_view_;
+bool Gadget::Init(FileManagerInterface *file_manager) {
+  return impl_->Init(file_manager);
 }
 
-ViewInterface* Gadget::GetOptionsView() {
-  return impl_->options_view_;
-}
-
-FileManagerInterface *Gadget::GetFileManager() {
-  return impl_->file_manager_;
-}
-
-bool Gadget::InitFromPath(const char *base_path) {
-  return impl_->InitFromPath(base_path);
+ViewHostInterface *Gadget::GetMainViewHost() {
+  return impl_->main_view_host_;
 }
 
 const char *Gadget::GetManifestInfo(const char *key) {
   return impl_->GetManifestInfo(key);
-}
-
-void Gadget::DebugError(const char *message) {
-  return impl_->DebugError(message);
-}
-
-void Gadget::DebugTrace(const char *message) {
-  return impl_->DebugTrace(message);
-}
-
-void Gadget::DebugWarning(const char *message) {
-  return impl_->DebugWarning(message);
 }
 
 } // namespace ggadget

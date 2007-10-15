@@ -85,7 +85,7 @@ class BasicElement : public ElementInterface {
   virtual void SetRotation(double rotation);
   virtual double GetOpacity() const;
   virtual void SetOpacity(double opacity);
-  
+
   virtual bool IsVisible() const;
   virtual void SetVisible(bool visible);
 
@@ -102,18 +102,18 @@ class BasicElement : public ElementInterface {
   virtual bool HeightIsRelative() const;
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
-  
+
   virtual const CanvasInterface *Draw(bool *changed);
-  
+
   virtual void OnParentWidthChange(double width);
   virtual void OnParentHeightChange(double height);
 
-  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element);
   virtual bool IsMouseEventIn(MouseEvent *event);
-  virtual void OnKeyEvent(KeyboardEvent *event);
-  virtual void OnOtherEvent(Event *event);
-  virtual void OnTimerEvent(TimerEvent *event);
-  
+  virtual bool OnKeyEvent(KeyboardEvent *event);
+  virtual bool OnOtherEvent(Event *event);
+
   virtual bool IsPositionChanged() const;
   virtual void ClearPositionChanged();
 
@@ -122,25 +122,25 @@ class BasicElement : public ElementInterface {
                                      double *child_x, double *child_y);
 
 #if 0 // TODO: Ensure if they are needed.
-  /** 
+  /**
    * Call this when drawing to initialize and prepare a canvas of the right
    * height and width for drawing.
    * @return the canvas that was set up. Equivalent to GetCanvas()
    */
   CanvasInterface *SetUpCanvas();
-  /** 
-   * Gets the internally stored canvas. 
-   * This should only be used for drawing. 
+  /**
+   * Gets the internally stored canvas.
+   * This should only be used for drawing.
    */
   CanvasInterface *GetCanvas();
 
-  /** 
+  /**
    * Checks to see if visibility of the element has changed since the last draw.
    */
   virtual bool IsVisibilityChanged() const;
   /** Sets the visibility changed state to false. */
   virtual void ClearVisibilityChanged();
-  
+
 #endif
 
   DEFAULT_OWNERSHIP_POLICY
@@ -153,7 +153,7 @@ class BasicElement : public ElementInterface {
    * Checks to see if the current element has changed and needs to be redrawn.
    * Note that it does not check any child elements, so the element may still
    * need to be redrawn even if this method returns false.
-   * Also, this method does not consider visiblity changes, or changes in 
+   * Also, this method does not consider visiblity changes, or changes in
    * position in relation to the parent.
    * @return true if the element has changed, false otherwise.
    */
@@ -165,7 +165,7 @@ class BasicElement : public ElementInterface {
    * Draws the element onto the canvas.
    * To be implemented by subclasses.
    * @param canvas the canvas to draw the element on.
-   * @param children_canvas the canvas containing composited children.  
+   * @param children_canvas the canvas containing composited children.
    */
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;

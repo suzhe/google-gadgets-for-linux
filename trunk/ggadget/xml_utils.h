@@ -26,15 +26,23 @@ class ElementInterface;
 class Elements;
 
 /**
+ * Sets up a view by loading xml content from a file and parsing it.
+ * @param view a newly created blank view.
+ * @param filename the name of the XML file (relative to the gadget base path).
+ * @return @c true if loading and XML parsing succeeds. Errors during
+ *     view/element hierarchy setup are only logged.
+ */
+bool SetupViewFromFile(ViewInterface *view, const char *filename);
+
+/**
  * Sets up a view by parsing xml content.
  * @param view a newly created blank view.
- * @param xml the content of an XML file.
+ * @param xml the xml content.
  * @param filename the name of the XML file (only for logging).
  * @return @c true if XML parsing succeeds. Errors during view/element
- *     hierarchy setup are only logged. 
+ *     hierarchy setup are only logged.
  */
-bool SetupViewFromXML(ViewInterface *view,
-                      const char *xml,
+bool SetupViewFromXML(ViewInterface *view, const char *xml,
                       const char *filename);
 
 /**
@@ -56,7 +64,7 @@ ElementInterface *InsertElementFromXML(Elements *elements,
 
 /**
  * Parses a XML file and store the result into a string map.
- * 
+ *
  * The string map acts like a simple DOM that supporting XPath like queries.
  * When a key is given:
  *   - element_name: retreives the text content of the second level element
@@ -65,18 +73,18 @@ ElementInterface *InsertElementFromXML(Elements *elements,
  *     element named 'subele_name' under the second level element named
  *     'element_name';
  *   - @@attr_name: retrives the value of attribute named 'attr_name' in the
- *     top level element; 
+ *     top level element;
  *   - element_name@@attr_name: retrieves the value of attribute named
  *     'attr_name' in the secondd level element named 'element_name'.
  *
  * If there are multiple elements with the same name under the same element,
  * the name of the elements from the second one will be postpended with "[n]"
  * where 'n' is the sequence of the element in the elements with the same name
- * (count from 1). 
+ * (count from 1).
  *
  * @param xml the content of an XML file.
  * @param filename the name of the XML file (only for logging).
- * @param root_element_name expected name of the root element. 
+ * @param root_element_name expected name of the root element.
  * @param table the string table to fill.
  * @return @c true if succeeds.
  */

@@ -38,7 +38,7 @@ class DivElement : public BasicElement {
   /**
    * Gets and sets the autoscroll property.
    * @c true if the div automatically shows scrollbars if necessary; @c false
-   * if it doesn't show scrollbars. Default is @c false. 
+   * if it doesn't show scrollbars. Default is @c false.
    */
   bool IsAutoscroll() const;
   void SetAutoscroll(bool autoscroll);
@@ -50,8 +50,9 @@ class DivElement : public BasicElement {
   const char *GetBackground() const;
   void SetBackground(const char *background);
 
-  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
-  virtual void OnKeyEvent(KeyboardEvent *event);
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element);
+  virtual bool OnKeyEvent(KeyboardEvent *event);
 
   /**
    * Overrides because this element supports scrolling.

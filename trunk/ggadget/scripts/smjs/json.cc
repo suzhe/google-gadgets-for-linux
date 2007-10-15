@@ -103,6 +103,7 @@ static void AppendObjectToJSON(JSContext *cx, JSObject *object,
       json->erase(json->end() - 1);
   }
   (*json) += '}';
+  JS_DestroyIdArray(cx, id_array);
 }
 
 static void AppendNumberToJSON(JSContext *cx, jsval js_val, std::string *json) {

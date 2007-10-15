@@ -104,7 +104,7 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_MOUSE_OUT: return kOnMouseOutEvent;
     case Event::EVENT_MOUSE_OVER: return kOnMouseOverEvent;
     case Event::EVENT_MOUSE_WHEEL: return kOnMouseWheelEvent;
-  
+
     case Event::EVENT_KEY_DOWN: return kOnKeyDownEvent;
     case Event::EVENT_KEY_UP: return kOnKeyUpEvent;
     case Event::EVENT_KEY_PRESS: return kOnKeyPressEvent;

@@ -25,21 +25,21 @@ namespace ggadget {
 
 class ButtonElement::Impl {
  public:
-  Impl() : mousedown_(false), mouseover_(false), 
-           image_(NULL), downimage_(NULL), 
+  Impl() : mousedown_(false), mouseover_(false),
+           image_(NULL), downimage_(NULL),
            overimage_(NULL), disabledimage_(NULL) { }
   ~Impl() {
     delete image_;
     image_ = NULL;
-    
+
     delete downimage_;
     downimage_ = NULL;
-    
+
     delete overimage_;
     overimage_ = NULL;
-    
+
     delete disabledimage_;
-    disabledimage_ = NULL;   
+    disabledimage_ = NULL;
   }
 
   bool mousedown_;
@@ -57,13 +57,13 @@ ButtonElement::ButtonElement(ElementInterface *parent,
   RegisterProperty("image",
                    NewSlot(this, &ButtonElement::GetImage),
                    NewSlot(this, &ButtonElement::SetImage));
-  RegisterProperty("downImage", 
-                   NewSlot(this, &ButtonElement::GetDownImage), 
+  RegisterProperty("downImage",
+                   NewSlot(this, &ButtonElement::GetDownImage),
                    NewSlot(this, &ButtonElement::SetDownImage));
-  RegisterProperty("overImage", 
-                   NewSlot(this, &ButtonElement::GetOverImage), 
+  RegisterProperty("overImage",
+                   NewSlot(this, &ButtonElement::GetOverImage),
                    NewSlot(this, &ButtonElement::SetOverImage));
-  RegisterProperty("disabledImage", 
+  RegisterProperty("disabledImage",
                    NewSlot(this, &ButtonElement::GetDisabledImage),
                    NewSlot(this, &ButtonElement::SetDisabledImage));
 }
@@ -79,16 +79,16 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
     img = impl_->disabledimage_;
   }
   else if (impl_->mousedown_) {
-    img = impl_->downimage_;     
+    img = impl_->downimage_;
   }
-  else if (impl_->mouseover_) { 
+  else if (impl_->mouseover_) {
     img = impl_->overimage_;
-  }   
+  }
 
   if (!img) { // draw image as last resort
     img = impl_->image_;
   }
-  
+
   if (img) {
     img->StretchDraw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
   }
@@ -114,7 +114,7 @@ void ButtonElement::SetImage(const char *img) {
         const CanvasInterface *canvas = impl_->image_->GetCanvas();
         if (canvas) {
           SetPixelHeight(canvas->GetHeight());
-        }        
+        }
       }
     }
   }
@@ -162,11 +162,14 @@ ElementInterface *ButtonElement::CreateInstance(ElementInterface *parent,
   return new ButtonElement(parent, view, name);
 }
 
-ElementInterface *ButtonElement::OnMouseEvent(MouseEvent *event, bool direct) {
-  ElementInterface *fired = BasicElement::OnMouseEvent(event, direct);
-  
-  if (fired) {
-    ASSERT(fired == this);
+bool ButtonElement::OnMouseEvent(MouseEvent *event, bool direct,
+                                 ElementInterface **fired_element) {
+  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
+
+  // Handle the event only when the event is fired and not canceled.
+  if (*fired_element && result) {
+    ASSERT(*fired_element == this);
+    bool changed = true;
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;
@@ -181,11 +184,13 @@ ElementInterface *ButtonElement::OnMouseEvent(MouseEvent *event, bool direct) {
       impl_->mouseover_ = true;
       break;
      default:
+      changed = false;
       break;
-    }; 
+    }
+    SetSelfChanged(changed);
   }
 
-  return fired;
+  return result;
 }
 
 } // namespace ggadget

@@ -38,7 +38,7 @@ void Options::Add(const char *name, const Variant &value) {
 bool Options::Exists(const char *name) {
   return values_.find(name) != values_.end();
 }
-  
+
 Variant Options::GetDefaultValue(const char *name) {
   OptionsMap::const_iterator it = defaults_.find(name);
   return it == defaults_.end() ? Variant() : it->second;

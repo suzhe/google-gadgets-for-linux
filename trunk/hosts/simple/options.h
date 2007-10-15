@@ -18,13 +18,11 @@
 #define HOSTS_SIMPLE_OPTIONS_H__
 
 #include <map>
-
-#include "ggadget/options_interface.h"
-#include "ggadget/string_utils.h"
+#include "ggadget/ggadget.h"
 
 class Options : public ggadget::OptionsInterface {
  public:
-  Options(); 
+  Options();
   virtual ~Options();
 
   virtual size_t GetCount();

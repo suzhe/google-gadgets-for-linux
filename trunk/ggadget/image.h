@@ -51,6 +51,8 @@ class Image {
    */ 
   Image(const Image &another);
 
+  ~Image();
+
   /**
    * Get the canvas containing the image data.
    * Note: this method is not a const method because we allow lazy

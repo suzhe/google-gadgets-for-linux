@@ -14,21 +14,83 @@
   limitations under the License.
 */
 
+#include <vector>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/poll.h>
 
-#include "hosts/simple/gtk_cairo_host.h"
-#include "hosts/simple/xml_http_request.h"
+#include "ggadget/xml_http_request.h"
+#include "mocked_gadget_host.h"
 #include "unittest/gunit.h"
 
+using ggadget::GadgetHostInterface;
 using ggadget::XMLHttpRequestInterface;
 using ggadget::NewSlot;
 
+class MockedGadgetHostWithIOWatch : public MockedGadgetHost {
+ public:
+  virtual XMLHttpRequestInterface *NewXMLHttpRequest() {
+    return new ggadget::XMLHttpRequest(this);
+  }
+  virtual int RegisterReadWatch(int fd, IOWatchCallback *callback) {
+    callbacks_.push_back(callback);
+    fds_.push_back(fd);
+    read_or_write_.push_back(true);
+    return static_cast<int>(fds_.size());
+  }
+  virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback) {
+    callbacks_.push_back(callback);
+    fds_.push_back(fd);
+    read_or_write_.push_back(false);
+    return static_cast<int>(fds_.size());
+  }
+  virtual bool RemoveIOWatch(int token) {
+    size_type index = static_cast<size_type>(token - 1);
+    if (callbacks_[index]) {
+      delete callbacks_[index];
+      callbacks_[index] = NULL;
+      fds_[index] = 0;
+      return true;
+    }
+    return false;
+  }
+
+  void Iterate() {
+    size_type size = fds_.size();
+    pollfd *fds = new pollfd[size];
+    for (size_type i = 0; i < size; i++) {
+      if (fds_[i]) {
+        fds[i].fd = fds_[i];
+        fds[i].events = read_or_write_[i] ? POLLIN : POLLOUT;
+        fds[i].revents = 0;
+      }
+    }
+    if (poll(fds, size, 0) > 0) {
+      for (size_type i = 0; i < size; i++) {
+        if (callbacks_[i]) {
+          if (((fds[i].revents & POLLIN) && read_or_write_[i]) ||
+              ((fds[i].revents & POLLOUT) && !read_or_write_[i])) {
+            ggadget::Variant param(fds[i].fd);
+            callbacks_[i]->Call(1, &param);
+          }
+        }
+      }
+    }
+    delete [] fds;
+  }
+
+  typedef std::vector<int>::size_type size_type;
+  std::vector<int> fds_;
+  std::vector<IOWatchCallback *> callbacks_;
+  std::vector<bool> read_or_write_;
+};
+
 TEST(XMLHttpRequest, States) {
-  GtkCairoHost *host = new GtkCairoHost(NULL, 0);
+  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
   XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
@@ -82,7 +144,7 @@ class Callback {
 };
 
 TEST(XMLHttpRequest, SyncLocalFile) {
-  GtkCairoHost *host = new GtkCairoHost(NULL, 0);
+  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
   XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
 
   Callback callback(request);
@@ -107,7 +169,7 @@ TEST(XMLHttpRequest, SyncLocalFile) {
 }
 
 TEST(XMLHttpRequest, AsyncLocalFile) {
-  GtkCairoHost *host = new GtkCairoHost(NULL, 0);
+  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
   XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
 
   Callback callback(request);
@@ -232,7 +294,7 @@ void *ServerThread(void *arg) {
 }
 
 TEST(XMLHttpRequest, SyncNetworkFile) {
-  GtkCairoHost *host = new GtkCairoHost(NULL, 0);
+  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
   XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
 
   pthread_t thread;
@@ -278,7 +340,7 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
 }
 
 TEST(XMLHttpRequest, AsyncNetworkFile) {
-  GtkCairoHost *host = new GtkCairoHost(NULL, 0);
+  MockedGadgetHostWithIOWatch *host = new MockedGadgetHostWithIOWatch();
   XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
 
   pthread_t thread;
@@ -303,26 +365,26 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
 
   size_t size;
   semaphore = 1;
-  for (int i = 0; i < 10; i++) { Wait(10); gtk_main_iteration_do(false); }
+  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
   ASSERT_EQ(XMLHttpRequestInterface::OPEN, request->GetReadyState());
   ASSERT_EQ(2, callback.callback_count_);
-  // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state. 
+  // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state.
   ASSERT_TRUE(NULL == request->GetAllResponseHeaders());
   ASSERT_TRUE(NULL == request->GetResponseBody(&size));
   ASSERT_TRUE(NULL == request->GetStatusText());
   ASSERT_EQ(0u, size);
 
   semaphore = 2;
-  for (int i = 0; i < 10; i++) { Wait(10); gtk_main_iteration_do(false); }
+  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
   ASSERT_EQ(XMLHttpRequestInterface::OPEN, request->GetReadyState());
-  // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state. 
+  // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state.
   ASSERT_TRUE(NULL == request->GetAllResponseHeaders());
   ASSERT_TRUE(NULL == request->GetResponseBody(&size));
   ASSERT_TRUE(NULL == request->GetStatusText());
   ASSERT_EQ(0u, size);
-  
+
   semaphore = 3;
-  for (int i = 0; i < 10; i++) { Wait(10); gtk_main_iteration_do(false); }
+  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
   ASSERT_EQ(XMLHttpRequestInterface::LOADING, request->GetReadyState());
   ASSERT_EQ(4, callback.callback_count_);
   ASSERT_STREQ((std::string(kResponse1) + kResponse2).c_str(),
@@ -338,7 +400,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_STREQ("Value2a, Value2b", request->GetResponseHeader("TestHeader2"));
 
   semaphore = 4;
-  for (int i = 0; i < 10; i++) { Wait(10); gtk_main_iteration_do(false); }
+  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
   ASSERT_STREQ((std::string(kResponse1) + kResponse2).c_str(),
@@ -356,7 +418,6 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
 }
 
 int main(int argc, char **argv) {
-  gtk_init(&argc, &argv);
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }
