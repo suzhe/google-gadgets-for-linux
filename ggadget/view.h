@@ -93,6 +93,7 @@ class View : public ViewInterface {
   virtual int GetDebugMode() const;
 
   virtual Image *LoadImage(const char *name, bool is_mask);
+  virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);
   virtual Texture *LoadTexture(const char *name);
 
   DEFAULT_OWNERSHIP_POLICY

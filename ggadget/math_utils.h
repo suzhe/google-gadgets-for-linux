@@ -69,7 +69,7 @@ void ChildCoordToParentCoord(double child_x, double child_y,
  * @param rotation_radians The rotation of the child element in radians.
  * @param[out] extent_width The maximum X-coordinate of the child rect
  *     in parent space.
- * @param[out] extent_height The maximum Y-corrdinate of the child rect
+ * @param[out] extent_height The maximum Y-coordinate of the child rect
  *     in parent space.
  */
 void GetChildExtentInParent(double child_x_pos, double child_y_pos,
@@ -186,9 +186,6 @@ double DegreesToRadians(double degrees);
  * @param height Height of element.
  */
 bool IsPointInElement(double x, double y, double width, double height);
-
-/** Rounds a given double to the nearest integer. */
-int RoundToInt(double x);
 
 }
 

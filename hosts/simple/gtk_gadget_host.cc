@@ -17,17 +17,19 @@
 #include <sys/time.h>
 
 #include "gtk_gadget_host.h"
-#include "ggadget/element_factory.h"
 #include "ggadget/file_manager.h"
+#include "ggadget/element_factory.h"
 #include "ggadget/gadget.h"
 #include "ggadget/scripts/smjs/js_script_runtime.h"
 #include "ggadget/xml_http_request.h"
 #include "gtk_view_host.h"
 #include "options.h"
+#include "simplehost_file_manager.h"
 
 #include "ggadget/button_element.h"
 #include "ggadget/div_element.h"
 #include "ggadget/img_element.h"
+#include "ggadget/scrollbar_element.h"
 
 class GtkGadgetHost::CallbackData {
  public:
@@ -44,7 +46,7 @@ class GtkGadgetHost::CallbackData {
 
 GtkGadgetHost::GtkGadgetHost()
     : script_runtime_(new ggadget::JSScriptRuntime()),
-      element_factory_(NULL) {
+      element_factory_(NULL), global_file_manager_(new SimpleHostFileManager()) {
   ggadget::ElementFactory *factory = new ggadget::ElementFactory();
   factory->RegisterElementClass("button",
                                 &ggadget::ButtonElement::CreateInstance);
@@ -52,8 +54,12 @@ GtkGadgetHost::GtkGadgetHost()
                                 &ggadget::DivElement::CreateInstance);
   factory->RegisterElementClass("img",
                                 &ggadget::ImgElement::CreateInstance);
+  factory->RegisterElementClass("scrollbar",
+                                &ggadget::ScrollBarElement::CreateInstance);
   element_factory_ = factory;
 
+  global_file_manager_->Init(NULL);
+  
   script_runtime_->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
 }
@@ -72,6 +78,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   element_factory_ = NULL;
   delete script_runtime_;
   script_runtime_ = NULL;
+  delete global_file_manager_;
+  global_file_manager_ = NULL;
 }
 
 ggadget::ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
@@ -81,6 +89,10 @@ ggadget::ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
 
 ggadget::ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
   return element_factory_;
+}
+
+ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
+  return global_file_manager_;  
 }
 
 ggadget::XMLHttpRequestInterface *GtkGadgetHost::NewXMLHttpRequest() {

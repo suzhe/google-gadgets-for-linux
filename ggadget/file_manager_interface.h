@@ -34,6 +34,7 @@ class FileManagerInterface {
    * A @c FileManager instance must be initialized before use.
    * @param base_path the base path of this @c FileManager.  All file names
    *     in subsequent operations are relative to this base path.
+   *     Pass in NULL for the global namespace.
    * @return @c true if succeeded.
    */
   virtual bool Init(const char *base_path) = 0;

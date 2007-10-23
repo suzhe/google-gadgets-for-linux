@@ -58,11 +58,13 @@ class BasicElement : public ElementInterface {
   virtual void SetMask(const char *mask);
   virtual const CanvasInterface *GetMaskCanvas();
   virtual double GetPixelWidth() const;
-  virtual void SetPixelWidth(double width);
   virtual double GetPixelHeight() const;
-  virtual void SetPixelHeight(double height);
   virtual double GetRelativeWidth() const;
   virtual double GetRelativeHeight() const;
+  virtual void SetPixelWidth(double width);  
+  virtual void SetPixelHeight(double height);
+  virtual void SetRelativeWidth(double width);
+  virtual void SetRelativeHeight(double height);  
   virtual double GetPixelX() const;
   virtual void SetPixelX(double x);
   virtual double GetPixelY() const;
@@ -73,8 +75,6 @@ class BasicElement : public ElementInterface {
   virtual void SetPixelPinX(double pin_x);
   virtual double GetPixelPinY() const;
   virtual void SetPixelPinY(double pin_y);
-  virtual void SetRelativeWidth(double width);
-  virtual void SetRelativeHeight(double height);
   virtual void SetRelativeX(double x);
   virtual void SetRelativeY(double y);
   virtual double GetRelativePinX() const;
@@ -149,6 +149,7 @@ class BasicElement : public ElementInterface {
 
  protected:
 
+#if 0 
   /**
    * Checks to see if the current element has changed and needs to be redrawn.
    * Note that it does not check any child elements, so the element may still
@@ -158,9 +159,11 @@ class BasicElement : public ElementInterface {
    * @return true if the element has changed, false otherwise.
    */
   bool IsSelfChanged() const;
+  
   /** Sets the self changed state. */
   void SetSelfChanged(bool changed);
-
+#endif
+  
   /**
    * Draws the element onto the canvas.
    * To be implemented by subclasses.
@@ -169,7 +172,13 @@ class BasicElement : public ElementInterface {
    */
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
-
+  
+  /** 
+   * Sets the changed bit to true and if visible, 
+   * requests the view to be redrawn. 
+   */
+  virtual void QueueDraw();
+  
  protected:
   DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 

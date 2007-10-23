@@ -28,6 +28,9 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::ElementFactoryInterface *GetElementFactory() {
     return NULL;
   }
+  virtual ggadget::FileManagerInterface *GetGlobalFileManager() {
+    return NULL;
+  }  
   virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest() {
     return NULL;
   }

@@ -268,8 +268,11 @@ FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,
   PangoFontDescription *font = pango_font_description_new();
   
   pango_font_description_set_family(font, family);
-  pango_font_description_set_size(font, pt_size * PANGO_SCALE);
-  
+  // Calculate pixel size based on the Windows DPI of 96 for compatibility
+  // reasons.
+  double px_size = pt_size * PANGO_SCALE * 96. / 72.;
+  pango_font_description_set_absolute_size(font, px_size);
+
   if (weight == FontInterface::WEIGHT_BOLD) {
     pango_font_description_set_weight(font, PANGO_WEIGHT_BOLD);    
   }

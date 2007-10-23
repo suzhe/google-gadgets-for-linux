@@ -61,7 +61,14 @@ class DivElement : public BasicElement {
   virtual void SelfCoordToChildCoord(ElementInterface *child,
                                      double x, double y,
                                      double *child_x, double *child_y);
-
+  
+  virtual void SetPixelWidth(double width);  
+  virtual void SetPixelHeight(double height);
+  virtual void SetRelativeWidth(double width);
+  virtual void SetRelativeHeight(double height);  
+  virtual void OnParentWidthChange(double width);
+  virtual void OnParentHeightChange(double height);
+  
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
