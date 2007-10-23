@@ -124,8 +124,9 @@ class View::Impl {
       MouseEvent new_event(*event);
       MapChildMouseEvent(event, grabmouse_element_, &new_event);
       ElementInterface *fired_element;
-      result = grabmouse_element_->OnMouseEvent(event, true, &fired_element);
-
+      result = grabmouse_element_->OnMouseEvent(&new_event, true, 
+                                                &fired_element);
+      
       // Release the grabbing.
       if (type == Event::EVENT_MOUSE_UP)
         grabmouse_element_ = NULL;
@@ -138,7 +139,7 @@ class View::Impl {
         MouseEvent new_event(*event);
         MapChildMouseEvent(event, mouseover_element_, &new_event);
         ElementInterface *temp;
-        result = mouseover_element_->OnMouseEvent(event, true, &temp);
+        result = mouseover_element_->OnMouseEvent(&new_event, true, &temp);
         mouseover_element_ = NULL;
       }
       return result;
@@ -162,7 +163,7 @@ class View::Impl {
       // Store it early to prevent crash if fired_element is removed in
       // the mouseout handler.
       mouseover_element_ = fired_element;
-
+      
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
                                   event->GetX(), event->GetY(),
@@ -897,6 +898,13 @@ Image *View::LoadImage(const char *name, bool is_mask) {
   ASSERT(impl_->file_manager_);
   return new Image(GetGraphics(), impl_->file_manager_, name, is_mask);
 }
+
+
+Image *View::LoadImageFromGlobal(const char *name, bool is_mask) {
+  return new Image(GetGraphics(), impl_->gadget_host_->GetGlobalFileManager(),
+                   name, is_mask);
+}
+
 
 Texture *View::LoadTexture(const char *name) {
   ASSERT(impl_->file_manager_);

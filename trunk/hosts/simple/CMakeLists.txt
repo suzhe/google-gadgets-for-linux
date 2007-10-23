@@ -33,6 +33,7 @@ SET(SRCS
   gtk_view_host.cc
   gadget_view_widget.cc
   gtk_key_convert.cc
+  simplehost_file_manager.cc
   options.cc
 )
 

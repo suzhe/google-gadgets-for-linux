@@ -86,6 +86,8 @@ class MockedView : public ggadget::ViewInterface {
   virtual void ClearInterval(int token) { }
   virtual ggadget::Image *LoadImage(const char *name,
                                     bool is_mask) { return NULL; }
+  virtual ggadget::Image *LoadImageFromGlobal(const char *name,
+                                              bool is_mask) { return NULL; }
   virtual ggadget::Texture *LoadTexture(const char *name) { return NULL; }
   virtual int GetDebugMode() const { return 2; }
   virtual void SetFocus(ggadget::ElementInterface *element) { }

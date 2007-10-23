@@ -64,13 +64,13 @@ const char *ImgElement::GetSrc() const {
 
 void ImgElement::SetSrc(const char *src) {
   if (AssignIfDiffer(src, &impl_->src_)) {
-    SetSelfChanged(true);
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(src, false);
     if (GetPixelWidth() == 0.0)
       SetPixelWidth(GetSrcWidth());
     if (GetPixelHeight() == 0.0)
       SetPixelHeight(GetSrcHeight());
+    QueueDraw();
   }
 }
 

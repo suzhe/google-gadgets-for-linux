@@ -47,7 +47,6 @@ class Image::Impl {
         failed_(false) {
     ASSERT(graphics);
     ASSERT(data);
-    // TODO: Remove IMG_JPEG.
     canvas_ = is_mask_ ?
               graphics->NewMask(data, data_size) :
               graphics->NewImage(data, data_size);
@@ -132,18 +131,16 @@ void Image::StretchDraw(CanvasInterface *canvas,
                         double width, double height) {
   ASSERT(canvas);
   const CanvasInterface *image_canvas = impl_->GetCanvas();
-  if (image_canvas &&
-      image_canvas->GetWidth() > 0 &&
-      image_canvas->GetHeight() > 0) {
+  if (image_canvas) {
     double cx = width / image_canvas->GetWidth();
     double cy = height / image_canvas->GetHeight();
     if (cx != 1.0 || cy != 1.0) {
       canvas->PushState();
       canvas->ScaleCoordinates(cx, cy);
-    }
-    canvas->DrawCanvas(x, y, image_canvas);
-    if (cx != 1.0 || cy != 1.0) {
+      canvas->DrawCanvas(x / cx, y / cy, image_canvas);
       canvas->PopState();
+    } else {
+      canvas->DrawCanvas(x, y, image_canvas);
     }
   }
 }

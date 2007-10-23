@@ -1,0 +1,38 @@
+<!-- Copyright (c) 2007 Google Inc. -->
+<!-- All rights reserved -->
+<!-- -->
+<!-- This file is part of the Google Desktop SDK and may be freely copied and used. -->
+<!-- To download the latest version of the SDK please visit -->
+<!-- http://desktop.google.com/dev/ -->
+<!-- -->
+<!-- Our developer support group is at: -->
+<!-- http://groups.google.com/group/Google-Desktop-Developer -->
+
+<view width="100" height="132">
+  <script src="main.js" />
+  
+  <div name="scrollarea" width="100" height="132">
+    <img src="oarfish.jpg" name="oarfishImg" width="530" height="120" />
+    <scrollbar name="sb"
+        x="0"
+        y="120"
+        orientation="horizontal"
+        lineStep="10"
+        pageStep="95" 
+        width="100%"
+        height="12"
+        min="0"
+        max="430"
+        value="0"
+        enabled="true" 
+        onchange="sb_onchange()"
+        background="images/scroll_background.png"
+        leftImage="images/scrollleft_u.png"
+            leftDownImage="images/scrollleft_d.png" leftOverImage="images/scrollleft_o.png"
+        rightImage="images/scrollright_u.png"
+            rightDownImage="images/scrollright_d.png" rightOverImage="images/scrollright_o.png"
+        thumbImage="images/scrollthumb_u.png"
+            thumbOverImage="images/scrollthumb_o.png" thumbDownImage="images/scrollthumb_d.png" 
+    />
+  </div>
+</view>

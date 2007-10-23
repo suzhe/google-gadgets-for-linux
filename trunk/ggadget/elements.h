@@ -141,9 +141,6 @@ class Elements : public ScriptableInterface {
    */
   void RemoveAllElements();
 
-  /** Notifies all children that the host has changed. */
-  void HostChanged();
-
   /**
    * Notifies all children using relative positioning that the
    * parent's width changed.

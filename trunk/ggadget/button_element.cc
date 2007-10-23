@@ -85,7 +85,7 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
     img = impl_->overimage_;
   }
 
-  if (!img) { // draw image as last resort
+  if (!img) { // draw image_ as last resort
     img = impl_->image_;
   }
 
@@ -100,7 +100,6 @@ const char *ButtonElement::GetImage() const {
 
 void ButtonElement::SetImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->image_src_)) {
-    SetSelfChanged(true);
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(img, false);
     if (impl_->image_) {
@@ -117,6 +116,7 @@ void ButtonElement::SetImage(const char *img) {
         }
       }
     }
+    QueueDraw();
   }
 }
 
@@ -126,9 +126,11 @@ const char *ButtonElement::GetDisabledImage() const {
 
 void ButtonElement::SetDisabledImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->disabledimage_src_)) {
-    SetSelfChanged(true);
     delete impl_->disabledimage_;
     impl_->disabledimage_ = GetView()->LoadImage(img, false);
+    if (!IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -138,9 +140,11 @@ const char *ButtonElement::GetOverImage() const {
 
 void ButtonElement::SetOverImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->overimage_src_)) {
-    SetSelfChanged(true);
     delete impl_->overimage_;
     impl_->overimage_ = GetView()->LoadImage(img, false);
+    if (impl_->mouseover_) {
+      QueueDraw();
+    }
   }
 }
 
@@ -150,9 +154,11 @@ const char *ButtonElement::GetDownImage() const {
 
 void ButtonElement::SetDownImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->downimage_src_)) {
-    SetSelfChanged(true);
     delete impl_->downimage_;
     impl_->downimage_ = GetView()->LoadImage(img, false);
+    if (impl_->mousedown_) {
+      QueueDraw();
+    }
   }
 }
 
@@ -168,26 +174,28 @@ bool ButtonElement::OnMouseEvent(MouseEvent *event, bool direct,
 
   // Handle the event only when the event is fired and not canceled.
   if (*fired_element && result) {
+    ASSERT(!IsEnabled());
     ASSERT(*fired_element == this);
-    bool changed = true;
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;
+      QueueDraw();
       break;
      case Event::EVENT_MOUSE_UP:
       impl_->mousedown_ = false;
+      QueueDraw();
       break;
      case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
+      QueueDraw();
       break;
      case Event::EVENT_MOUSE_OVER:
       impl_->mouseover_ = true;
+      QueueDraw();
       break;
      default:
-      changed = false;
       break;
     }
-    SetSelfChanged(changed);
   }
 
   return result;

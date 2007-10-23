@@ -93,6 +93,19 @@ const char *const kNameAttr = "name";
 /** The property name for elements to contain its text contents. */
 const char *const kInnerTextProperty = "innerText";
 
+/** Prefix for global file resources. */
+const char *const kGlobalResourcePrefix = ":resources/";
+const char *const kScrollDefaultBackground = ":resources/scroll_background.png";
+const char *const kScrollDefaultThumb = ":resources/scrollbar_u.png";
+const char *const kScrollDefaultThumbDown = ":resources/scrollbar_d.png";
+const char *const kScrollDefaultThumbOver = ":resources/scrollbar_o.png";
+const char *const kScrollDefaultLeft = ":resources/scrollleft_u.png";
+const char *const kScrollDefaultLeftDown = ":resources/scrollleft_d.png";
+const char *const kScrollDefaultLeftOver = ":resources/scrollleft_o.png";
+const char *const kScrollDefaultRight = ":resources/scrollright_u.png";
+const char *const kScrollDefaultRightDown = ":resources/scrollright_d.png";
+const char *const kScrollDefaultRightOver = ":resources/scrollright_o.png";
+
 } // namespace ggadget
 
 #endif // GGADGET_GADGET_CONSTS_H__

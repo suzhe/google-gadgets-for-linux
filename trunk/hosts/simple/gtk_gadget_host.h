@@ -33,6 +33,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
       ScriptRuntimeType type);
   virtual ggadget::ElementFactoryInterface *GetElementFactory();
+  virtual ggadget::FileManagerInterface *GetGlobalFileManager();
   virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest();
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type,
@@ -74,6 +75,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
 
   ggadget::ScriptRuntimeInterface *script_runtime_;
   ggadget::ElementFactoryInterface *element_factory_;
+  ggadget::FileManagerInterface *global_file_manager_;
 
   typedef std::map<int, CallbackData *> CallbackMap;
   CallbackMap callbacks_;
