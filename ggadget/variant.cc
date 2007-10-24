@@ -24,6 +24,7 @@
 namespace ggadget {
 
 Variant::Variant(const Variant &source) {
+  v_.double_value_ = 0;
   operator=(source);
 }
 
