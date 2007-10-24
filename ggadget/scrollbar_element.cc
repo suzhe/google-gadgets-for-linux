@@ -56,7 +56,7 @@ class ScrollBarElement::Impl {
            thumb_state_(STATE_NORMAL),
            // The values below are the default ones in Windows.
            min_(0), max_(100), value_(0), pagestep_(10), linestep_(1),
-           drag_delta_(0.),
+           accum_wheel_delta_(0), drag_delta_(0.), 
            // Windows default to horizontal for orientation, 
            // but puzzlingly use vertical images as default.
            orientation_(ORIENTATION_VERTICAL) {
@@ -107,6 +107,7 @@ class ScrollBarElement::Impl {
   Image *left_[STATE_COUNT], *right_[STATE_COUNT], *thumb_[STATE_COUNT], 
         *background_;
   int min_, max_, value_, pagestep_, linestep_;
+  int accum_wheel_delta_;
   double drag_delta_;
   Orientation orientation_;
   EventSignal onchange_event_;
@@ -691,7 +692,23 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
         }
         break;
       case Event::EVENT_MOUSE_WHEEL:
-        // TODO impl_->Scroll(downleft, true);
+        {
+          impl_->accum_wheel_delta_ += event->GetWheelDelta();        
+          bool downleft;
+          int delta = impl_->accum_wheel_delta_;         
+          if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
+            impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
+            downleft = true;
+          } else if (delta < 0 && -delta >= MouseEvent::kWheelDelta) {
+            impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
+            downleft = false;
+          }
+          else {
+            break; // don't scroll in this case
+          }        
+          impl_->Scroll(downleft, true);
+        }
+        break;
       default:
         break;
     }; 

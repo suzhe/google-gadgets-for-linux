@@ -261,10 +261,18 @@ static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
                                         GdkEventScroll *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_SCROLL);
+  int delta;
+  if (event->direction == GDK_SCROLL_UP) {
+    delta = MouseEvent::kWheelDelta;
+  } else if (event->direction == GDK_SCROLL_DOWN) {
+    delta = -MouseEvent::kWheelDelta;
+  } else {
+    delta = 0;
+  }
   MouseEvent e(Event::EVENT_MOUSE_WHEEL,
                event->x / gvw->zoom, event->y / gvw->zoom,
-               // TODO: button and wheelDelta
-               MouseEvent::BUTTON_NONE, 0);
+               // TODO: button
+               MouseEvent::BUTTON_NONE, delta);
   return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
 }
 
