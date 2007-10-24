@@ -55,7 +55,7 @@ Variant &Variant::operator=(const Variant &source) {
                          new std::string(*source.v_.string_value_) : NULL;
       break;
     case TYPE_UTF16STRING:
-      delete v_.utf16_string_value;
+      delete v_.utf16_string_value_;
       v_.utf16_string_value_ = source.v_.utf16_string_value_ ?
                                new UTF16String(*source.v_.utf16_string_value_) :
                                NULL;
