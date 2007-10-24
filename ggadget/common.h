@@ -157,11 +157,15 @@ struct LogHelper {
  * Simply using <code>typedef char msg[bool(expr) ? 1 : -1]</code> doesn't
  * work for some compilers like gcc, because they support array types of
  * size determined at runtime (a C99 feature).
+ *
+ * The below expression may seem over-complex, but only it works along
+ * with IsDerived in a template class.
  */
 #define COMPILE_ASSERT(expr, msg) \
-  typedef char msg[sizeof(char[bool(expr) ? 1 : -1])]
+  typedef char msg[bool(expr) ? (int)sizeof(char[bool(expr) ? 1 : -1]) : -1];
 
-/** Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
+/**
+ * Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
  * for upcasting in the type hierarchy.
  * It's used to cast a pointer to @c Foo to a pointer to @c SuperclassOfFoo
  * or casting a pointer to @c Foo to a const pointer to @c Foo).
@@ -212,6 +216,23 @@ inline To down_cast(From* f) {          // so we only accept pointers
   ASSERT(f == NULL || dynamic_cast<To>(f) != NULL); // RTTI: debug mode only!
   return static_cast<To>(f);
 }
+
+/**
+ * Detects at compile time whether type @a Derived is derived or the same as
+ * type @a Base.
+ * This is an incomplete implementation omitting many special cases, but works
+ * in almost all cases in this product.
+ *
+ * Usage: <code>if (IsDerived<Base, Derived>::value) ...</code> or use it in
+ * COMPILE_ASSERT macro. 
+ */
+template <typename Base, typename Derived>
+struct IsDerived {
+  static char Check(Base *);
+  static int Check(void *);
+  static const bool value =
+      sizeof(Check(static_cast<Derived *>(NULL))) == sizeof(char);
+};
 
 /**
  * This template function declaration is used in defining arraysize.

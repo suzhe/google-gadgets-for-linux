@@ -19,6 +19,7 @@
 
 #include <curl/curl.h>
 #include "common.h"
+#include "scriptable_helper.h"
 #include "signal.h"
 #include "string_utils.h"
 #include "xml_http_request_interface.h"
@@ -27,7 +28,7 @@ namespace ggadget {
 
 class GadgetHostInterface;
 
-class XMLHttpRequest : public XMLHttpRequestInterface {
+class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0x98a6c56c71ae45c7, XMLHttpRequestInterface);
 
@@ -50,10 +51,6 @@ class XMLHttpRequest : public XMLHttpRequestInterface {
   virtual DOMDocument *GetResponseXML();
   virtual unsigned short GetStatus();
   virtual const char *GetStatusText();
-
-  DEFAULT_OWNERSHIP_POLICY
-  SCRIPTABLE_INTERFACE_DECL
-  virtual bool IsStrict() const { return true; }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(XMLHttpRequest);

@@ -26,7 +26,7 @@ namespace ggadget {
 class ViewInterface;
 class Elements;
 
-class BasicElement : public ElementInterface {
+class BasicElement : public ScriptableHelper<ElementInterface> {
  public:
   CLASS_ID_DECL(0xfd70820c5bbf11dc);
 
@@ -143,10 +143,6 @@ class BasicElement : public ElementInterface {
 
 #endif
 
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
  protected:
 
 #if 0 
@@ -179,13 +175,9 @@ class BasicElement : public ElementInterface {
    */
   virtual void QueueDraw();
   
- protected:
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-
  private:
   class Impl;
   Impl *impl_;
-  ScriptableHelper scriptable_helper_;
   DISALLOW_EVIL_CONSTRUCTORS(BasicElement);
 };
 

@@ -42,13 +42,30 @@ class ScriptableDelegator : public ScriptableInterface {
 	      strict_(strict) { }
 	virtual ~ScriptableDelegator() { }
 
-  DEFAULT_OWNERSHIP_POLICY
-	DELEGATE_SCRIPTABLE_INTERFACE(*scriptable_)
-	
   virtual bool IsInstanceOf(uint64_t class_id) const {
     return scriptable_->IsInstanceOf(class_id);
   }
+  virtual void Attach() { }
+  virtual void Detach() { }
   virtual bool IsStrict() const { return strict_; }
+  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {
+    return scriptable_->ConnectToOnDeleteSignal(slot);
+  }
+  virtual bool GetPropertyInfoByName(const char *name,
+                                     int *id, Variant *prototype,
+                                     bool *is_method) {
+    return scriptable_->GetPropertyInfoByName(name, id, prototype, is_method);
+  }
+  virtual bool GetPropertyInfoById(int id, Variant *prototype,
+                                   bool *is_method, const char **name) {
+    return scriptable_->GetPropertyInfoById(id, prototype, is_method, name);
+  }
+  virtual Variant GetProperty(int id) {
+    return scriptable_->GetProperty(id);
+  }
+  virtual bool SetProperty(int id, Variant value) {
+    return scriptable_->SetProperty(id, value);
+  }
 
  private:
   ScriptableInterface *scriptable_;

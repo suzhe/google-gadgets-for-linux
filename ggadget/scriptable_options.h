@@ -18,29 +18,22 @@
 #define GGADGET_SCRIPTABLE_OPTIONS_H__
 
 #include "scriptable_helper.h"
-#include "scriptable_interface.h"
 
 namespace ggadget {
 
 class OptionsInterface;
 
-class ScriptableOptions : public ScriptableInterface {
+class ScriptableOptions : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)
 
   explicit ScriptableOptions(OptionsInterface *options); 
   virtual ~ScriptableOptions();
 
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
   OptionsInterface *GetOptions() const { return options_; }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableOptions);
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-  ScriptableHelper scriptable_helper_;
   OptionsInterface *options_;
   class Impl;
   Impl *impl_;

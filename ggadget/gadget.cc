@@ -27,56 +27,38 @@
 
 namespace ggadget {
 
-class Gadget::Impl : public ScriptableInterface {
+class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
 
-  class Debug : public ScriptableInterface {
+  class Debug : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xa9b59e70c74649da, ScriptableInterface);
     Debug(Gadget::Impl *owner) {
-      scriptable_helper_.RegisterMethod("error",
-                                        NewSlot(owner, &Impl::DebugError));
-      scriptable_helper_.RegisterMethod("trace",
-                                        NewSlot(owner, &Impl::DebugTrace));
-      scriptable_helper_.RegisterMethod("warning",
-                                        NewSlot(owner, &Impl::DebugWarning));
+      RegisterMethod("error", NewSlot(owner, &Impl::DebugError));
+      RegisterMethod("trace", NewSlot(owner, &Impl::DebugTrace));
+      RegisterMethod("warning", NewSlot(owner, &Impl::DebugWarning));
     }
-    DEFAULT_OWNERSHIP_POLICY
-    DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-    virtual bool IsStrict() const { return true; }
-    ScriptableHelper scriptable_helper_;
   };
 
-  class Storage : public ScriptableInterface {
+  class Storage : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xd48715e0098f43d1, ScriptableInterface);
     Storage(Gadget::Impl *owner) {
-      scriptable_helper_.RegisterMethod("extract",
-                                        NewSlot(owner, &Impl::ExtractFile));
-      scriptable_helper_.RegisterMethod("openText",
-                                        NewSlot(owner, &Impl::OpenTextFile));
+      RegisterMethod("extract", NewSlot(owner, &Impl::ExtractFile));
+      RegisterMethod("openText", NewSlot(owner, &Impl::OpenTextFile));
     }
-    DEFAULT_OWNERSHIP_POLICY
-    DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-    virtual bool IsStrict() const { return true; }
-    ScriptableHelper scriptable_helper_;
   };
 
-  class GadgetGlobalPrototype : public ScriptableInterface {
+  class GadgetGlobalPrototype : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
     GadgetGlobalPrototype(Gadget::Impl *owner) {
-      scriptable_helper_.RegisterConstant("gadget", owner);
-      scriptable_helper_.RegisterConstant("options",
-                                          &owner->scriptable_options_);
-      // TODO: scriptable_helper_.SetPrototype(The System global prototype).
+      RegisterConstant("gadget", owner);
+      RegisterConstant("options", &owner->scriptable_options_);
+      // TODO: SetPrototype(The System global prototype).
       // The System global prototype provides global constants and framework.
     }
-    DEFAULT_OWNERSHIP_POLICY
-    DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-    virtual bool IsStrict() const { return true; }
-    ScriptableHelper scriptable_helper_;
   };
 
   Impl(GadgetHostInterface *host, OptionsInterface *options, Gadget *owner)
@@ -90,8 +72,8 @@ class Gadget::Impl : public ScriptableInterface {
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           &gadget_global_prototype_,
                                           options)) {
-    scriptable_helper_.RegisterConstant("debug", &debug_);
-    scriptable_helper_.RegisterConstant("storage", &storage_);
+    RegisterConstant("debug", &debug_);
+    RegisterConstant("storage", &storage_);
   }
 
   ~Impl() {
@@ -165,12 +147,7 @@ class Gadget::Impl : public ScriptableInterface {
     return true;
   }
 
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
   GadgetHostInterface *host_;
-  ScriptableHelper scriptable_helper_;
   Debug debug_;
   Storage storage_;
   GadgetGlobalPrototype gadget_global_prototype_;

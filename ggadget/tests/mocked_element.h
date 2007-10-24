@@ -25,7 +25,8 @@
 #include "ggadget/view_interface.h"
 #include "ggadget/event.h"
 
-class MockedElement : public ggadget::ElementInterface {
+class MockedElement :
+    public ggadget::ScriptableHelper<ggadget::ElementInterface> {
  public:
   DEFINE_CLASS_ID(0x4d0e8e629a744384, ggadget::ElementInterface);
 
@@ -299,12 +300,7 @@ class MockedElement : public ggadget::ElementInterface {
         child_x, child_y);
   }
 
-  DEFAULT_OWNERSHIP_POLICY;
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);
-  virtual bool IsStrict() const { return true; }
-
  private:
-  ggadget::ScriptableHelper scriptable_helper_;
   std::string name_;
   ggadget::ElementInterface *parent_;
   ggadget::ViewInterface *view_;

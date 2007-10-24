@@ -18,7 +18,7 @@
 #define GGADGET_ELEMENTS_H__
 
 #include "common.h"
-#include "scriptable_interface.h"
+#include "scriptable_helper.h"
 
 namespace ggadget {
 
@@ -38,7 +38,7 @@ class MouseEvent;
  * Elements is used for storing and managing a set of objects which
  * implement the @c ElementInterface.
  */
-class Elements : public ScriptableInterface {
+class Elements : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0xe3bdb064cb794282, ScriptableInterface)
 
@@ -179,10 +179,6 @@ class Elements : public ScriptableInterface {
    * Sets if the drawing contents can be scrolled within the parent.
    */
   void SetScrollable(bool scrollable);
-
-  DEFAULT_OWNERSHIP_POLICY
-  SCRIPTABLE_INTERFACE_DECL
-  virtual bool IsStrict() const { return true; }
 
  private:
   class Impl;

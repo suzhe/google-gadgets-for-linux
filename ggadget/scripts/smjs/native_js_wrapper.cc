@@ -201,12 +201,16 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
     return JS_FALSE;
 
   int int_id = JSVAL_TO_INT(id);
-  Variant return_value = scriptable_->GetProperty(int_id);
-  if (!ConvertNativeToJS(js_context_, return_value, vp)) {
-    JS_ReportError(js_context_,
-                   "Failed to convert native property value(%s) to jsval.",
-                   return_value.ToString().c_str());
-    return JS_FALSE;
+  try {
+    Variant return_value = scriptable_->GetProperty(int_id);
+    if (!ConvertNativeToJS(js_context_, return_value, vp)) {
+      JS_ReportError(js_context_,
+                     "Failed to convert native property value(%s) to jsval.",
+                     return_value.ToString().c_str());
+      return JS_FALSE;
+    }
+  } catch (ScriptableExceptionHolder e) {
+    return JSScriptContext::HandleException(js_context_, e);
   }
   return JS_TRUE;
 }
@@ -216,34 +220,41 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
     // Should not occur.
     return JS_FALSE;
 
-  int int_id = JSVAL_TO_INT(id);
-  Variant prototype;
-  bool is_method = false;
-  const char *name = NULL;
-  if (!scriptable_->GetPropertyInfoById(int_id, &prototype,
-                                        &is_method, &name)) {
-    // This property is not supported by the Scriptable, use default logic.
-    JS_ReportError(js_context_,
-                   "The native object doesn't support setting property %s(%d).",
-                   name, int_id);
-    return JS_FALSE;
-  }
-  ASSERT(!is_method);
+  try {
+    int int_id = JSVAL_TO_INT(id);
+    Variant prototype;
+    bool is_method = false;
+    const char *name = NULL;
 
-  Variant value;
-  if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
-    JS_ReportError(js_context_,
-                   "Failed to convert JS property value(%s) to native",
-                   PrintJSValue(js_context_, js_val).c_str());
-    return JS_FALSE;
+    if (!scriptable_->GetPropertyInfoById(int_id, &prototype,
+                                          &is_method, &name)) {
+      // This property is not supported by the Scriptable, use default logic.
+      JS_ReportError(
+          js_context_,
+          "The native object doesn't support setting property %s(%d).",
+          name, int_id);
+      return JS_FALSE;
+    }
+    ASSERT(!is_method);
+  
+    Variant value;
+    if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
+      JS_ReportError(js_context_,
+                     "Failed to convert JS property value(%s) to native",
+                     PrintJSValue(js_context_, js_val).c_str());
+      return JS_FALSE;
+    }
+  
+    if (!scriptable_->SetProperty(int_id, value)) {
+      JS_ReportError(js_context_,
+                     "Failed to set native property %s(%d) (may be readonly)",
+                     name, int_id);
+      return JS_FALSE;
+    }
+  } catch (ScriptableExceptionHolder e) {
+    return JSScriptContext::HandleException(js_context_, e);
   }
 
-  if (!scriptable_->SetProperty(int_id, value)) {
-    JS_ReportError(js_context_,
-                   "Failed to set native property %s(%d) (may be readonly)",
-                   name, int_id);
-    return JS_FALSE;
-  }
   return JS_TRUE;
 }
 
@@ -252,29 +263,34 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
     // Should not occur
     return JS_FALSE;
 
-  JSString *idstr = JSVAL_TO_STRING(id);
-  if (!idstr)
-    return JS_FALSE;
-  const char *name = JS_GetStringBytes(idstr);
-  int int_id;
-  Variant prototype;
-  bool is_method;
-  if (!scriptable_->GetPropertyInfoByName(name, &int_id,
-                                          &prototype, &is_method)) {
-    // This must be a dynamic property which is no more available.
-    // Remove the property and fallback to the default handler.
-    JS_DeleteProperty(js_context_, js_object_, name);
-    return GetPropertyDefault(id, vp);
+  try {
+    JSString *idstr = JSVAL_TO_STRING(id);
+    if (!idstr)
+      return JS_FALSE;
+    const char *name = JS_GetStringBytes(idstr);
+    int int_id;
+    Variant prototype;
+    bool is_method;
+    if (!scriptable_->GetPropertyInfoByName(name, &int_id,
+                                            &prototype, &is_method)) {
+      // This must be a dynamic property which is no more available.
+      // Remove the property and fallback to the default handler.
+      JS_DeleteProperty(js_context_, js_object_, name);
+      return GetPropertyDefault(id, vp);
+    }
+    ASSERT(!is_method);
+  
+    Variant return_value = scriptable_->GetProperty(int_id);
+    if (!ConvertNativeToJS(js_context_, return_value, vp)) {
+      JS_ReportError(js_context_,
+                     "Failed to convert native property value(%s) to jsval",
+                     return_value.ToString().c_str());
+      return JS_FALSE;
+    }
+  } catch (ScriptableExceptionHolder e) {
+    return JSScriptContext::HandleException(js_context_, e);
   }
-  ASSERT(!is_method);
 
-  Variant return_value = scriptable_->GetProperty(int_id);
-  if (!ConvertNativeToJS(js_context_, return_value, vp)) {
-    JS_ReportError(js_context_,
-                   "Failed to convert native property value(%s) to jsval",
-                   return_value.ToString().c_str());
-    return JS_FALSE;
-  }
   return JS_TRUE;
 }
 
@@ -283,36 +299,41 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
     // Should not occur
     return JS_FALSE;
 
-  JSString *idstr = JSVAL_TO_STRING(id);
-  if (!idstr)
-    return JS_FALSE;
-  const char *name = JS_GetStringBytes(idstr);
-  int int_id;
-  Variant prototype;
-  bool is_method;
-  if (!scriptable_->GetPropertyInfoByName(name, &int_id,
-                                          &prototype, &is_method)) {
-    // This must be a dynamic property which is no more available.
-    // Remove the property and fallback to the default handler.
-    JS_DeleteProperty(js_context_, js_object_, name);
-    return SetPropertyDefault(id, js_val);
+  try {
+    JSString *idstr = JSVAL_TO_STRING(id);
+    if (!idstr)
+      return JS_FALSE;
+    const char *name = JS_GetStringBytes(idstr);
+    int int_id;
+    Variant prototype;
+    bool is_method;
+    if (!scriptable_->GetPropertyInfoByName(name, &int_id,
+                                            &prototype, &is_method)) {
+      // This must be a dynamic property which is no more available.
+      // Remove the property and fallback to the default handler.
+      JS_DeleteProperty(js_context_, js_object_, name);
+      return SetPropertyDefault(id, js_val);
+    }
+    ASSERT(!is_method);
+  
+    Variant value;
+    if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
+      JS_ReportError(js_context_,
+                     "Failed to convert JS property value(%s) to native.",
+                     PrintJSValue(js_context_, js_val).c_str());
+      return JS_FALSE;
+    }
+  
+    if (!scriptable_->SetProperty(int_id, value)) {
+      JS_ReportError(js_context_,
+                     "Failed to set native property %s(%d) (may be readonly).",
+                     name, int_id);
+      return JS_FALSE;
+    }
+  } catch (ScriptableExceptionHolder e) {
+    return JSScriptContext::HandleException(js_context_, e);
   }
-  ASSERT(!is_method);
 
-  Variant value;
-  if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
-    JS_ReportError(js_context_,
-                   "Failed to convert JS property value(%s) to native.",
-                   PrintJSValue(js_context_, js_val).c_str());
-    return JS_FALSE;
-  }
-
-  if (!scriptable_->SetProperty(int_id, value)) {
-    JS_ReportError(js_context_,
-                   "Failed to set native property %s(%d) (may be readonly).",
-                   name, int_id);
-    return JS_FALSE;
-  }
   return JS_TRUE;
 }
 
@@ -328,10 +349,16 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
   int int_id;
   Variant prototype;
   bool is_method;
-  if (!scriptable_->GetPropertyInfoByName(name, &int_id,
-                                          &prototype, &is_method))
-    // This property is not supported by the Scriptable, use default logic.
-    return JS_TRUE;
+
+  try {
+    if (!scriptable_->GetPropertyInfoByName(name, &int_id,
+                                            &prototype, &is_method))
+      // This property is not supported by the Scriptable, use default logic.
+      return JS_TRUE;
+  } catch (ScriptableExceptionHolder e) {
+    return JSScriptContext::HandleException(js_context_, e);
+  }
+
   ASSERT(int_id <= 0);
 
   if (is_method) {

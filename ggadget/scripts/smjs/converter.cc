@@ -83,6 +83,7 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
   JSBool result = JS_FALSE;
+  // For now don't allow passing NULL to a native string.
   if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val)
       || JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
@@ -97,6 +98,23 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                  &utf8_string);
         *native_val = Variant(utf8_string);
       }
+    }
+  }
+  return result;
+}
+
+static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
+                                           Variant *native_val) {
+  JSBool result = JS_FALSE;
+  // For now don't allow passing NULL to a UTF16String.
+  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val)
+      || JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
+    JSString *js_string = JS_ValueToString(cx, js_val);
+    if (js_string) {
+      jschar *chars = JS_GetStringChars(js_string);
+      // Don't cast chars to UTF16Char *, to let the compiler check if they
+      // are compatible.
+      *native_val = Variant(chars);
     }
   }
   return result;
@@ -182,31 +200,42 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
   return JS_FALSE;
 }
 
-typedef JSBool (*ConvertJSToNativeFunc)(JSContext *cx, jsval js_val,
-                                        Variant *native_val);
-static const ConvertJSToNativeFunc kConvertJSToNativeFuncs[] = {
-  ConvertJSToNativeVoid,
-  ConvertJSToNativeBool,
-  ConvertJSToNativeInt,
-  ConvertJSToNativeDouble,
-  ConvertJSToNativeString,
-  ConvertJSToScriptable,
-  ConvertJSToScriptable,
-  NULL, // ConvertJSToSlot is special because it needs the prototype argument.
-  ConvertJSToJSON,
-  ConvertJSToNativeVariant,
-};
+JSBool ConvertJSToNativeInvalid(JSContext *cx, jsval js_val,
+                                Variant *native_val) {
+  return JS_FALSE;
+}
 
 JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
                          jsval js_val, Variant *native_val) {
-  if (prototype.type() == Variant::TYPE_SLOT)
-    return ConvertJSToSlot(cx, prototype, js_val, native_val);
-
-  if (prototype.type() >= Variant::TYPE_VOID &&
-      prototype.type() <= Variant::TYPE_VARIANT)
-    return kConvertJSToNativeFuncs[prototype.type()](cx, js_val, native_val);
-
-  return JS_FALSE;
+  switch (prototype.type()) {
+    case Variant::TYPE_VOID:
+      return ConvertJSToNativeVoid(cx, js_val, native_val);
+    case Variant::TYPE_BOOL:
+      return ConvertJSToNativeBool(cx, js_val, native_val);
+    case Variant::TYPE_INT64:
+      return ConvertJSToNativeInt(cx, js_val, native_val);
+    case Variant::TYPE_DOUBLE:
+      return ConvertJSToNativeDouble(cx, js_val, native_val);
+    case Variant::TYPE_STRING:
+      return ConvertJSToNativeString(cx, js_val, native_val);
+    case Variant::TYPE_JSON:
+      return ConvertJSToJSON(cx, js_val, native_val);
+    case Variant::TYPE_UTF16STRING:
+      return ConvertJSToNativeUTF16String(cx, js_val, native_val);
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE:
+      return ConvertJSToScriptable(cx, js_val, native_val);
+    case Variant::TYPE_SLOT:
+      return ConvertJSToSlot(cx, prototype, js_val, native_val);
+    case Variant::TYPE_ANY:
+    case Variant::TYPE_CONST_ANY:
+      JS_ReportError(cx, "Script adapter doesn't support void * type");
+      return JS_FALSE;
+    case Variant::TYPE_VARIANT:
+      return ConvertJSToNativeVariant(cx, js_val, native_val);
+    default:
+      return JS_FALSE;
+  }
 }
 
 std::string PrintJSValue(JSContext *cx, jsval js_val) {
@@ -286,15 +315,38 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
   const char *char_ptr = VariantValue<const char *>()(native_val);
-  UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(char_ptr, strlen(char_ptr), &utf16_string);
-  // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
-  // if they are compatible.
-  JSString *js_string = JS_NewUCStringCopyZ(cx, utf16_string.c_str());
-  if (js_string)
-    *js_val = STRING_TO_JSVAL(js_string);
-  else
-    result = JS_FALSE;
+  if (!char_ptr) {
+    *js_val = JSVAL_NULL;
+  } else {
+    UTF16String utf16_string;
+    ConvertStringUTF8ToUTF16(char_ptr, strlen(char_ptr), &utf16_string);
+    // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
+    // if they are compatible.
+    JSString *js_string = JS_NewUCStringCopyZ(cx, utf16_string.c_str());
+    if (js_string)
+      *js_val = STRING_TO_JSVAL(js_string);
+    else
+      result = JS_FALSE;
+  }
+  return result;
+}
+
+static JSBool ConvertNativeUTF16ToJSString(JSContext *cx,
+                                           const Variant &native_val,
+                                           jsval *js_val) {
+  JSBool result = JS_TRUE;
+  const UTF16Char *char_ptr = VariantValue<const UTF16Char *>()(native_val);
+  if (!char_ptr) {
+    *js_val = JSVAL_NULL;
+  } else {
+    // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
+    // if they are compatible.
+    JSString *js_string = JS_NewUCStringCopyZ(cx, char_ptr);
+    if (js_string)
+      *js_val = STRING_TO_JSVAL(js_string);
+    else
+      result = JS_FALSE;
+  }
   return result;
 }
 
@@ -335,36 +387,42 @@ static JSBool ConvertJSONToJS(JSContext *cx,
   return JSONDecode(cx, json_str.value.c_str(), js_val);
 }
 
-typedef JSBool (*ConvertNativeToJSFunc)(JSContext *cx,
-                                        const Variant &native_val,
-                                        jsval *js_val);
-static const ConvertNativeToJSFunc kConvertNativeToJSFuncs[] = {
-  ConvertNativeToJSVoid,
-  ConvertNativeToJSBool,
-  ConvertNativeToJSInt,
-  ConvertNativeToJSDouble,
-  ConvertNativeToJSString,
-  ConvertNativeToJSObject,
-  NULL, // Don't pass const ScriptableInterface * to JavaScript. 
-  ConvertNativeToJSFunction,
-  ConvertJSONToJS,
-  // Because normally there is no real value of this type, convert it to void. 
-  ConvertNativeToJSVoid,
-};
-
 JSBool ConvertNativeToJS(JSContext *cx,
                          const Variant &native_val,
                          jsval *js_val) {
-  if (native_val.type() == Variant::TYPE_CONST_SCRIPTABLE) {
-    JS_ReportError(cx, "Don't pass const ScriptableInterface * to JavaScript");
-    return JS_FALSE;
+  switch (native_val.type()) {
+    case Variant::TYPE_VOID:
+      return ConvertNativeToJSVoid(cx, native_val, js_val);
+    case Variant::TYPE_BOOL:
+      return ConvertNativeToJSBool(cx, native_val, js_val);
+    case Variant::TYPE_INT64:
+      return ConvertNativeToJSInt(cx, native_val, js_val);
+    case Variant::TYPE_DOUBLE:
+      return ConvertNativeToJSDouble(cx, native_val, js_val);
+    case Variant::TYPE_STRING:
+      return ConvertNativeToJSString(cx, native_val, js_val);
+    case Variant::TYPE_JSON:
+      return ConvertJSONToJS(cx, native_val, js_val);
+    case Variant::TYPE_UTF16STRING:
+      return ConvertNativeUTF16ToJSString(cx, native_val, js_val);
+    case Variant::TYPE_SCRIPTABLE:
+      return ConvertNativeToJSObject(cx, native_val, js_val);
+    case Variant::TYPE_CONST_SCRIPTABLE:
+      JS_ReportError(cx,
+                     "Don't pass const ScriptableInterface * to JavaScript");
+      return JS_FALSE;
+    case Variant::TYPE_SLOT:
+      return ConvertNativeToJSFunction(cx, native_val, js_val);
+    case Variant::TYPE_ANY:
+    case Variant::TYPE_CONST_ANY:
+      JS_ReportError(cx, "Don't pass (const) void * to JavaScript");
+      return JS_FALSE;
+    case Variant::TYPE_VARIANT:
+      // Normally there is no real value of this type, so convert it to void. 
+      return ConvertNativeToJSVoid(cx, native_val, js_val);
+    default:
+      return JS_FALSE;
   }
-
-  if (native_val.type() >= Variant::TYPE_VOID &&
-      native_val.type() <= Variant::TYPE_VARIANT) {
-    return kConvertNativeToJSFuncs[native_val.type()](cx, native_val, js_val);
-  }
-  return JS_FALSE;
 }
 
 } // namespace ggadget

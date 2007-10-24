@@ -429,9 +429,6 @@ class XMLHttpRequest::Impl {
     return NULL;
   }
 
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_);
-
-  ScriptableHelper scriptable_helper_;
   GadgetHostInterface *host_;
   Signal0<void> onreadystatechange_signal_;
 
@@ -520,7 +517,5 @@ unsigned short XMLHttpRequest::GetStatus() {
 const char *XMLHttpRequest::GetStatusText() {
   return impl_->GetStatusText();
 }
-
-DELEGATE_SCRIPTABLE_INTERFACE_IMPL(XMLHttpRequest, impl_->scriptable_helper_)
 
 } // namespace ggadget
