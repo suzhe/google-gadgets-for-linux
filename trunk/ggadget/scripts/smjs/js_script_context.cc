@@ -253,12 +253,29 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
     }
   }
 
-  Variant return_value = slot->Call(argc, params.get());
-  JSBool result = ConvertNativeToJS(cx, return_value, rval);
-  if (!result)
-    JS_ReportError(cx, "Failed to convert native function result(%s) to jsval",
-                   return_value.ToString().c_str());
-  return result;
+  try {
+    Variant return_value = slot->Call(argc, params.get());
+    JSBool result = ConvertNativeToJS(cx, return_value, rval);
+    if (!result)
+      JS_ReportError(cx,
+                     "Failed to convert native function result(%s) to jsval",
+                     return_value.ToString().c_str());
+    return result;
+  } catch (ScriptableExceptionHolder e) {
+    return HandleException(cx, e);
+  }
+}
+
+JSBool JSScriptContext::HandleException(JSContext *cx,
+                                        const ScriptableExceptionHolder &e) {
+  jsval js_exception;
+  if (!ConvertNativeToJS(cx, Variant(e.scriptable_exception()),
+                         &js_exception)) {
+    JS_ReportError(cx, "Failed to convert native exception to jsval");
+    return JS_FALSE;
+  }
+  JS_SetPendingException(cx, js_exception);
+  return JS_TRUE;
 }
 
 Slot *JSScriptContext::NewJSFunctionSlotInternal(const Slot *prototype,

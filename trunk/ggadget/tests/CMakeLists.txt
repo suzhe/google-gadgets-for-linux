@@ -31,6 +31,8 @@ ENDMACRO(UNIT_TEST TEST_NAME)
 TEST_RESOURCE_DIR(file_manager_test_data)
 TEST_RESOURCE_GG(file_manager_test_data)
 
+UNIT_TEST(common_test)
+UNIT_TEST(variant_test)
 UNIT_TEST(slot_test slots.cc)
 UNIT_TEST(signal_test slots.cc)
 UNIT_TEST(scriptable_helper_test scriptables.cc)

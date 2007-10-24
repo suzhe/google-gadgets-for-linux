@@ -862,12 +862,11 @@ bool View::GetShowCaptionAlways() const {
   return impl_->show_caption_always_;
 }
 
-int View::BeginAnimation(Slot1<void, int> *slot,
+int View::BeginAnimation(Slot0<void> *slot,
                          int start_value,
                          int end_value,
                          unsigned int duration) {
-  return impl_->BeginAnimation(slot,
-                               start_value, end_value, duration);
+  return impl_->BeginAnimation(slot, start_value, end_value, duration);
 }
 
 void View::CancelAnimation(int token) {

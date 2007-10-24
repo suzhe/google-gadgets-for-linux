@@ -234,7 +234,7 @@ class ViewInterface : public ScriptableInterface {
    * @param duration the duration of the whole animation in milliseconds.
    * @return the animation token that can be used in @c CancelAnimation().
    */
-  virtual int BeginAnimation(Slot1<void, int> *slot,
+  virtual int BeginAnimation(Slot0<void> *slot,
                              int start_value,
                              int end_value,
                              unsigned int duration) = 0;

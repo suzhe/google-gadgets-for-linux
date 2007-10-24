@@ -45,16 +45,14 @@ int WirelessAccessPoint::GetSignalStrength() const {
 
 void WirelessAccessPoint::Connect(Slot1<void, bool> *callback) {
   if (callback) {
-    Variant result(true);
-    callback->Call(1, &result);
+    (*callback)(true);
     delete callback;
   }
 }
 
 void WirelessAccessPoint::Disconnect(Slot1<void, bool> *callback) {
   if (callback) {
-    Variant result(true);
-    callback->Call(1, &result);
+    (*callback)(true);
     delete callback;
   }
 }

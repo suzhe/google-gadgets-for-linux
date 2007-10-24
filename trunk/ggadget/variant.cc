@@ -23,6 +23,67 @@
 
 namespace ggadget {
 
+Variant::Variant(const Variant &source) {
+  operator=(source);
+}
+
+Variant::~Variant() {
+  if (type_ == TYPE_STRING || type_ == TYPE_JSON)
+    delete v_.string_value_;
+  if (type_ == TYPE_UTF16STRING)
+    delete v_.utf16_string_value_;
+}
+
+Variant &Variant::operator=(const Variant &source) {
+  type_ = source.type_;
+  switch (type_) {
+    case TYPE_VOID:
+      break;
+    case TYPE_BOOL:
+      v_.bool_value_ = source.v_.bool_value_;
+      break;
+    case TYPE_INT64:
+      v_.int64_value_ = source.v_.int64_value_;
+      break;
+    case TYPE_DOUBLE:
+      v_.double_value_ = source.v_.double_value_;
+      break;
+    case TYPE_STRING:
+    case TYPE_JSON:
+      delete v_.string_value_;
+      v_.string_value_ = source.v_.string_value_ ?
+                         new std::string(*source.v_.string_value_) : NULL;
+      break;
+    case TYPE_UTF16STRING:
+      delete v_.utf16_string_value;
+      v_.utf16_string_value_ = source.v_.utf16_string_value_ ?
+                               new UTF16String(*source.v_.utf16_string_value_) :
+                               NULL;
+      break;
+    case TYPE_SCRIPTABLE:
+      v_.scriptable_value_ = source.v_.scriptable_value_;
+      break;
+    case TYPE_CONST_SCRIPTABLE:
+      v_.const_scriptable_value_ = source.v_.const_scriptable_value_;
+      break;
+    case TYPE_SLOT:
+      v_.slot_value_ = source.v_.slot_value_;
+      break;
+    case TYPE_ANY:
+      v_.any_value_ = source.v_.any_value_;
+      break;
+    case TYPE_CONST_ANY:
+      v_.const_any_value_ = source.v_.const_any_value_;
+      break;
+    case TYPE_VARIANT:
+      // A Variant of type TYPE_VARIANT is only used as a prototype.
+      break;
+    default:
+      break;
+  }
+  return *this;
+}
+
 bool Variant::operator==(const Variant &another) const {
   if (type_ != another.type_)
     return false;
@@ -36,11 +97,15 @@ bool Variant::operator==(const Variant &another) const {
       return v_.int64_value_ == another.v_.int64_value_;
     case TYPE_DOUBLE:
       return v_.double_value_ == another.v_.double_value_;
-    case TYPE_STRING: {
-      const char *s1 = VariantValue<const char *>()(*this);
-      const char *s2 = VariantValue<const char *>()(another);
-      return s1 == s2 || (s1 && s2 && strcmp(s1, s2) == 0);
-    }
+    case TYPE_STRING:
+    case TYPE_JSON:
+      return v_.string_value_ == another.v_.string_value_ ||
+            (v_.string_value_ && another.v_.string_value_ &&
+             *v_.string_value_ == *another.v_.string_value_);
+    case TYPE_UTF16STRING:
+      return v_.utf16_string_value_ == another.v_.utf16_string_value_ ||
+            (v_.utf16_string_value_ && another.v_.utf16_string_value_ &&
+             *v_.utf16_string_value_ == *another.v_.utf16_string_value_);
     case TYPE_SCRIPTABLE:
       return v_.scriptable_value_ == another.v_.scriptable_value_;
     case TYPE_CONST_SCRIPTABLE:
@@ -50,9 +115,10 @@ bool Variant::operator==(const Variant &another) const {
       Slot *slot2 = another.v_.slot_value_;
       return slot1 == slot2 || (slot1 && slot2 && *slot1 == *slot2);
     }
-    case TYPE_JSON:
-      return VariantValue<JSONString>()(*this).value ==
-             VariantValue<JSONString>()(another).value;
+    case TYPE_ANY:
+      return v_.any_value_ == another.v_.any_value_;
+    case TYPE_CONST_ANY:
+      return v_.const_any_value_ == another.v_.const_any_value_;
     case TYPE_VARIANT:
       // A Variant of type TYPE_VARIANT is only used as a prototype,
       // so they are all equal.
@@ -77,7 +143,17 @@ std::string Variant::ToString() const {
       sprintf(buffer, "DOUBLE:%lf", v_.double_value_);
       return std::string(buffer);
     case Variant::TYPE_STRING:
-      return std::string("STRING:") + VariantValue<const char *>()(*this);
+      return std::string("STRING:") +
+             (v_.string_value_ ? v_.string_value_->c_str() : "(nil");
+    case Variant::TYPE_JSON:
+      return std::string("JSON:") + VariantValue<JSONString>()(*this).value;
+    case Variant::TYPE_UTF16STRING:
+      if (v_.utf16_string_value_) {
+        std::string utf8_string;
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &utf8_string);
+        return "UTF16STRING:" + utf8_string;
+      }
+      return "UTF16STRING:(nil)"; 
     case Variant::TYPE_SCRIPTABLE:
       sprintf(buffer, "SCRIPTABLE:%p", v_.scriptable_value_);
       return std::string(buffer);
@@ -87,8 +163,12 @@ std::string Variant::ToString() const {
     case Variant::TYPE_SLOT:
       sprintf(buffer, "SLOT:%p", v_.slot_value_);
       return std::string(buffer);
-    case Variant::TYPE_JSON:
-      return std::string("JSON:") + VariantValue<JSONString>()(*this).value;
+    case Variant::TYPE_ANY:
+      sprintf(buffer, "ANY:%p", v_.any_value_);
+      return std::string(buffer);
+    case Variant::TYPE_CONST_ANY:
+      sprintf(buffer, "CONST_ANY:%p", v_.const_any_value_);
+      return std::string(buffer);
     case Variant::TYPE_VARIANT:
       return std::string("VARIANT");
     default:

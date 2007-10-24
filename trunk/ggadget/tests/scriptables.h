@@ -36,17 +36,12 @@ extern std::string g_buffer;
 void AppendBuffer(const char *format, ...);
 
 // A normal scriptable class.
-class TestScriptable1 : public ScriptableInterface {
+class TestScriptable1 : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0xdb06ba021f1b4c05, ScriptableInterface);
 
   TestScriptable1();
   virtual ~TestScriptable1();
-
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
 
   void TestMethodVoid0() {
     g_buffer.clear();
@@ -85,24 +80,18 @@ class TestScriptable1 : public ScriptableInterface {
   enum EnumType { VALUE_0, VALUE_1, VALUE_2 };
 
  private:
-  ScriptableHelper scriptable_helper_;
 
   double double_property_;
   EnumType enum_property_;
   Variant variant_property_;
 };
 
-class TestPrototype : public ScriptableInterface {
+class TestPrototype : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0xbb7f8eddc2e94353, ScriptableInterface);
   static TestPrototype *GetInstance() {
     return instance_ ? instance_ : (instance_ = new TestPrototype());
   }
-
-  DEFAULT_OWNERSHIP_POLICY
-  SCRIPTABLE_INTERFACE_DECL
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
 
   // Place this signal declaration here for testing.
   // In production code, it should be palced in private section. 
@@ -117,7 +106,6 @@ class TestPrototype : public ScriptableInterface {
   TestPrototype();
 
   static TestPrototype *instance_;
-  ScriptableHelper scriptable_helper_;
 };
 
 // A scriptable class with some dynamic properties, supporting array indexes,

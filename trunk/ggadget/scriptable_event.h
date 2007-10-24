@@ -59,7 +59,7 @@ const char *const kOnUndockEvent        = "onundock";
 /**
  * Scriptable decorator for @c Event.
  */
-class ScriptableEvent : public ScriptableInterface {
+class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x6732238aacb4468a, ScriptableInterface)
 
@@ -67,10 +67,6 @@ class ScriptableEvent : public ScriptableInterface {
                   int cookie, int value);
 
   const char *GetName() const;
-
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
 
   Event *GetEvent() { return event_; }
   const Event *GetEvent() const { return event_; }
@@ -84,14 +80,12 @@ class ScriptableEvent : public ScriptableInterface {
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableEvent);
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
 
   Event *event_;
   bool return_value_;
   ScriptableInterface *src_element_;
   int cookie_;
   int value_;
-  ScriptableHelper scriptable_helper_;
 };
 
 } // namespace ggadget

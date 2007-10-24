@@ -41,14 +41,6 @@ class Elements::Impl {
         scrollable_(false) {
     ASSERT(factory);
     ASSERT(view);
-
-    RegisterProperty("count", NewSlot(this, &Impl::GetCount), NULL);
-    RegisterMethod("item", NewSlot(this, &Impl::GetItem));
-    // Disable the following for now, because they are not in the public
-    // API document.
-    // SetArrayHandler(NewSlot(this, &Impl::GetItemByIndex), NULL);
-    // SetDynamicPropertyHandler(NewSlot(this, &Impl::GetItemByNameVariant),
-    //                           NULL);
   }
 
   ~Impl() {
@@ -255,9 +247,6 @@ class Elements::Impl {
 
   const CanvasInterface *Draw(bool *changed);
 
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-
-  ScriptableHelper scriptable_helper_;
   ElementFactoryInterface *factory_;
   ElementInterface *owner_;
   ViewInterface *view_;
@@ -404,6 +393,13 @@ Elements::Elements(ElementFactoryInterface *factory,
                    ElementInterface *owner,
                    ViewInterface *view)
     : impl_(new Impl(factory, owner, view)) {
+  RegisterProperty("count", NewSlot(impl_, &Impl::GetCount), NULL);
+  RegisterMethod("item", NewSlot(impl_, &Impl::GetItem));
+  // Disable the following for now, because they are not in the public
+  // API document.
+  // SetArrayHandler(NewSlot(impl_, &Impl::GetItemByIndex), NULL);
+  // SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetItemByNameVariant),
+  //                           NULL);
 }
 
 Elements::~Elements() {
@@ -492,7 +488,5 @@ void Elements::SetScrollable(bool scrollable) {
   ASSERT(impl_);
   impl_->SetScrollable(scrollable);
 }
-
-DELEGATE_SCRIPTABLE_INTERFACE_IMPL(Elements, impl_->scriptable_helper_)
 
 } // namespace ggadget

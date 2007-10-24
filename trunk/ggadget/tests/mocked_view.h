@@ -22,8 +22,10 @@
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
 
-class MockedView : public ggadget::ViewInterface {
+class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
  public:
+  DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
+
   MockedView(ggadget::ElementFactoryInterface *factory)
       : factory_(factory), draw_queued_(false) { }
   virtual ~MockedView() {}
@@ -73,7 +75,7 @@ class MockedView : public ggadget::ViewInterface {
   virtual const ggadget::ElementInterface *GetElementByName(
       const char *name) const { return NULL; };
 
-  virtual int BeginAnimation(ggadget::Slot1<void, int> *slot,
+  virtual int BeginAnimation(ggadget::Slot0<void> *slot,
                              int start_value,
                              int end_value,
                              unsigned int duration) { return 0; }
@@ -92,11 +94,6 @@ class MockedView : public ggadget::ViewInterface {
   virtual int GetDebugMode() const { return 2; }
   virtual void SetFocus(ggadget::ElementInterface *element) { }
 
-  DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
   bool GetQueuedDraw() {
     bool b = draw_queued_;
     draw_queued_ = false;
@@ -106,7 +103,6 @@ class MockedView : public ggadget::ViewInterface {
  private:
   ggadget::ElementFactoryInterface *factory_;
   bool draw_queued_;
-  ggadget::ScriptableHelper scriptable_helper_;
 };
 
 #endif // GGADGET_TESTS_MOCKED_VIEW_H__

@@ -23,6 +23,7 @@
 
 namespace ggadget {
 
+template <typename R> class Slot0;
 class ViewHostInterface;
 class ElementFactoryInterface;
 class ScriptContextInterface;
@@ -30,7 +31,7 @@ class ScriptContextInterface;
 /**
  * Main View implementation.
  */
-class View : public ViewInterface {
+class View : public ScriptableHelper<ViewInterface> {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
@@ -81,7 +82,7 @@ class View : public ViewInterface {
   virtual ElementInterface *GetElementByName(const char *name);
   virtual const ElementInterface *GetElementByName(const char *name) const;
 
-  virtual int BeginAnimation(Slot1<void, int> *slot,
+  virtual int BeginAnimation(Slot0<void> *slot,
                              int start_value,
                              int end_value,
                              unsigned int duration);
@@ -96,17 +97,9 @@ class View : public ViewInterface {
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);
   virtual Texture *LoadTexture(const char *name);
 
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
- protected:
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-
  private:
   class Impl;
   Impl *impl_;
-  ScriptableHelper scriptable_helper_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
 };
 

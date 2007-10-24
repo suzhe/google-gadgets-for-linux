@@ -78,6 +78,7 @@ class Slot {
 template <typename R>
 class Slot0 : public Slot {
  public:
+  R operator()() const { return VariantValue<R>()(Call(0, NULL)); }
   virtual Variant::Type GetReturnType() const {
     CHECK_VARIANT_TYPE(R);
     return VariantType<R>::type;
@@ -89,6 +90,8 @@ class Slot0 : public Slot {
  */
 template <>
 class Slot0<void> : public Slot {
+ public:
+  void operator()() const { Call(0, NULL); }
 };
 
 /**
@@ -218,7 +221,7 @@ inline Slot0<R> *NewFunctorSlot(F functor) {
 /**
  * <code>Slot</code>s with 1 or more parameters are defined by this macro.
  */
-#define DEFINE_SLOT(n, _arg_types, _arg_type_names,                           \
+#define DEFINE_SLOT(n, _arg_types, _arg_type_names, _args, _init_args,        \
                     _init_arg_types, _call_args)                              \
 template <_arg_types>                                                         \
 inline const Variant::Type *ArgTypesHelper() {                                \
@@ -229,6 +232,11 @@ inline const Variant::Type *ArgTypesHelper() {                                \
 template <typename R, _arg_types>                                             \
 class Slot##n : public Slot {                                                 \
  public:                                                                      \
+  R operator()(_args) const {                                                 \
+    Variant vargs[n];                                                         \
+    _init_args;                                                               \
+    return VariantValue<R>()(Call(n, vargs));                                 \
+  }                                                                           \
   virtual Variant::Type GetReturnType() const {                               \
     CHECK_VARIANT_TYPE(R);                                                    \
     return VariantType<R>::type;                                              \
@@ -242,6 +250,11 @@ class Slot##n : public Slot {                                                 \
 template <_arg_types>                                                         \
 class Slot##n<void, _arg_type_names> : public Slot {                          \
  public:                                                                      \
+  void operator()(_args) const {                                              \
+    Variant vargs[n];                                                         \
+    _init_args;                                                               \
+    Call(n, vargs);                                                           \
+  }                                                                           \
   virtual int GetArgCount() const { return n; }                               \
   virtual const Variant::Type *GetArgTypes() const {                          \
     return ArgTypesHelper<_arg_type_names>();                                 \
@@ -347,60 +360,88 @@ inline Slot##n<R, _arg_type_names> * NewFunctorSlot(F f) {                    \
 
 #define INIT_ARG_TYPE(n) VariantType<P##n>::type
 #define GET_ARG(n)       VariantValue<P##n>()(argv[n-1])
+#define INIT_ARG(n)      vargs[n-1] = Variant(p##n)
 
 #define ARG_TYPES1      typename P1
 #define ARG_TYPE_NAMES1 P1
+#define ARGS1           P1 p1
+#define INIT_ARGS1      INIT_ARG(1)
 #define INIT_ARG_TYPES1 INIT_ARG_TYPE(1)
 #define CALL_ARGS1      GET_ARG(1)
-DEFINE_SLOT(1, ARG_TYPES1, ARG_TYPE_NAMES1, INIT_ARG_TYPES1, CALL_ARGS1)
+DEFINE_SLOT(1, ARG_TYPES1, ARG_TYPE_NAMES1, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES1, CALL_ARGS1)
 
 #define ARG_TYPES2      ARG_TYPES1, typename P2
 #define ARG_TYPE_NAMES2 ARG_TYPE_NAMES1, P2
+#define ARGS2           ARGS1, P2 p2
+#define INIT_ARGS2      INIT_ARGS1; INIT_ARG(2)
 #define INIT_ARG_TYPES2 INIT_ARG_TYPES1, INIT_ARG_TYPE(2)
 #define CALL_ARGS2      CALL_ARGS1, GET_ARG(2)
-DEFINE_SLOT(2, ARG_TYPES2, ARG_TYPE_NAMES2, INIT_ARG_TYPES2, CALL_ARGS2)
+DEFINE_SLOT(2, ARG_TYPES2, ARG_TYPE_NAMES2, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES2, CALL_ARGS2)
 
 #define ARG_TYPES3      ARG_TYPES2, typename P3
 #define ARG_TYPE_NAMES3 ARG_TYPE_NAMES2, P3
+#define ARGS3           ARGS2, P3 p3
+#define INIT_ARGS3      INIT_ARGS2; INIT_ARG(3)
 #define INIT_ARG_TYPES3 INIT_ARG_TYPES2, INIT_ARG_TYPE(3)
 #define CALL_ARGS3      CALL_ARGS2, GET_ARG(3)
-DEFINE_SLOT(3, ARG_TYPES3, ARG_TYPE_NAMES3, INIT_ARG_TYPES3, CALL_ARGS3)
+DEFINE_SLOT(3, ARG_TYPES3, ARG_TYPE_NAMES3, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES3, CALL_ARGS3)
 
 #define ARG_TYPES4      ARG_TYPES3, typename P4
 #define ARG_TYPE_NAMES4 ARG_TYPE_NAMES3, P4
+#define ARGS4           ARGS3, P4 p4
+#define INIT_ARGS4      INIT_ARGS3; INIT_ARG(4)
 #define INIT_ARG_TYPES4 INIT_ARG_TYPES3, INIT_ARG_TYPE(4)
 #define CALL_ARGS4      CALL_ARGS3, GET_ARG(4)
-DEFINE_SLOT(4, ARG_TYPES4, ARG_TYPE_NAMES4, INIT_ARG_TYPES4, CALL_ARGS4)
+DEFINE_SLOT(4, ARG_TYPES4, ARG_TYPE_NAMES4, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES4, CALL_ARGS4)
 
 #define ARG_TYPES5      ARG_TYPES4, typename P5
 #define ARG_TYPE_NAMES5 ARG_TYPE_NAMES4, P5
+#define ARGS5           ARGS4, P5 p5
+#define INIT_ARGS5      INIT_ARGS4; INIT_ARG(5)
 #define INIT_ARG_TYPES5 INIT_ARG_TYPES4, INIT_ARG_TYPE(5)
 #define CALL_ARGS5      CALL_ARGS4, GET_ARG(5)
-DEFINE_SLOT(5, ARG_TYPES5, ARG_TYPE_NAMES5, INIT_ARG_TYPES5, CALL_ARGS5)
+DEFINE_SLOT(5, ARG_TYPES5, ARG_TYPE_NAMES5, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES5, CALL_ARGS5)
 
 #define ARG_TYPES6      ARG_TYPES5, typename P6
 #define ARG_TYPE_NAMES6 ARG_TYPE_NAMES5, P6
+#define ARGS6           ARGS5, P6 p6
+#define INIT_ARGS6      INIT_ARGS5; INIT_ARG(6)
 #define INIT_ARG_TYPES6 INIT_ARG_TYPES5, INIT_ARG_TYPE(6)
 #define CALL_ARGS6      CALL_ARGS5, GET_ARG(6)
-DEFINE_SLOT(6, ARG_TYPES6, ARG_TYPE_NAMES6, INIT_ARG_TYPES6, CALL_ARGS6)
+DEFINE_SLOT(6, ARG_TYPES6, ARG_TYPE_NAMES6, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES6, CALL_ARGS6)
 
 #define ARG_TYPES7      ARG_TYPES6, typename P7
 #define ARG_TYPE_NAMES7 ARG_TYPE_NAMES6, P7
+#define ARGS7           ARGS6, P7 p7
+#define INIT_ARGS7      INIT_ARGS6; INIT_ARG(7)
 #define INIT_ARG_TYPES7 INIT_ARG_TYPES6, INIT_ARG_TYPE(7)
 #define CALL_ARGS7      CALL_ARGS6, GET_ARG(7)
-DEFINE_SLOT(7, ARG_TYPES7, ARG_TYPE_NAMES7, INIT_ARG_TYPES7, CALL_ARGS7)
+DEFINE_SLOT(7, ARG_TYPES7, ARG_TYPE_NAMES7, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES7, CALL_ARGS7)
 
 #define ARG_TYPES8      ARG_TYPES7, typename P8
 #define ARG_TYPE_NAMES8 ARG_TYPE_NAMES7, P8
+#define ARGS8           ARGS7, P8 p8
+#define INIT_ARGS8      INIT_ARGS7; INIT_ARG(8)
 #define INIT_ARG_TYPES8 INIT_ARG_TYPES7, INIT_ARG_TYPE(8)
 #define CALL_ARGS8      CALL_ARGS7, GET_ARG(8)
-DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, INIT_ARG_TYPES8, CALL_ARGS8)
+DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES8, CALL_ARGS8)
 
 #define ARG_TYPES9      ARG_TYPES8, typename P9
 #define ARG_TYPE_NAMES9 ARG_TYPE_NAMES8, P9
+#define ARGS9           ARGS8, P9 p9
+#define INIT_ARGS9      INIT_ARGS8; INIT_ARG(9)
 #define INIT_ARG_TYPES9 INIT_ARG_TYPES8, INIT_ARG_TYPE(9)
 #define CALL_ARGS9      CALL_ARGS8, GET_ARG(9)
-DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, INIT_ARG_TYPES9, CALL_ARGS9)
+DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS1, INIT_ARGS1,
+            INIT_ARG_TYPES9, CALL_ARGS9)
 
 // Undefine macros to avoid name polution.
 #undef DEFINE_SLOT
@@ -409,38 +450,56 @@ DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, INIT_ARG_TYPES9, CALL_ARGS9)
 
 #undef ARG_TYPES1
 #undef ARG_TYPE_NAMES1
+#undef ARGS1
+#undef INIT_ARGS1
 #undef INIT_ARG_TYPES1
 #undef CALL_ARGS1
 #undef ARG_TYPES2
 #undef ARG_TYPE_NAMES2
+#undef ARGS2
+#undef INIT_ARGS2
 #undef INIT_ARG_TYPES2
 #undef CALL_ARGS2
 #undef ARG_TYPES3
 #undef ARG_TYPE_NAMES3
+#undef ARGS3
+#undef INIT_ARGS3
 #undef INIT_ARG_TYPES3
 #undef CALL_ARGS3
 #undef ARG_TYPES4
 #undef ARG_TYPE_NAMES4
+#undef ARGS4
+#undef INIT_ARGS4
 #undef INIT_ARG_TYPES4
 #undef CALL_ARGS4
 #undef ARG_TYPES5
 #undef ARG_TYPE_NAMES5
+#undef ARGS5
+#undef INIT_ARGS5
 #undef INIT_ARG_TYPES5
 #undef CALL_ARGS5
 #undef ARG_TYPES6
 #undef ARG_TYPE_NAMES6
+#undef ARGS6
+#undef INIT_ARGS6
 #undef INIT_ARG_TYPES6
 #undef CALL_ARGS6
 #undef ARG_TYPES7
 #undef ARG_TYPE_NAMES7
+#undef ARGS7
+#undef INIT_ARGS7
 #undef INIT_ARG_TYPES7
 #undef CALL_ARGS7
 #undef ARG_TYPES8
 #undef ARG_TYPE_NAMES8
+#undef ARGS8
+#undef INIT_ARGS8
 #undef INIT_ARG_TYPES8
 #undef CALL_ARGS8
 #undef ARG_TYPES9
 #undef ARG_TYPE_NAMES9
+#undef ARGS9
+#undef INIT_ARGS9
 #undef INIT_ARG_TYPES9
 #undef CALL_ARGS9
 

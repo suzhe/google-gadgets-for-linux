@@ -17,21 +17,54 @@
 #ifndef GGADGET_SCRIPTABLE_HELPER_H__
 #define GGADGET_SCRIPTABLE_HELPER_H__
 
+#include "common.h"
 #include "slot.h"
 #include "variant.h"
+#include "scriptable_interface.h"
 
 namespace ggadget {
 
 class Connection;
 class Signal;
 
+namespace internal {
+
+class ScriptableHelperImplInterface : public ScriptableInterface {
+ public:
+  virtual ~ScriptableHelperImplInterface() { }
+  virtual void RegisterProperty(const char *name,
+                                Slot *getter, Slot *setter) = 0;
+  virtual void RegisterStringEnumProperty(const char *name,
+                                          Slot *getter, Slot *setter,
+                                          const char **names, int count) = 0;
+  virtual void RegisterMethod(const char *name, Slot *slot) = 0;
+  virtual void RegisterSignal(const char *name, Signal *signal) = 0;
+  virtual void RegisterConstants(int count,
+                                 const char *const names[],
+                                 const Variant values[]) = 0;
+  virtual void SetPrototype(ScriptableInterface *prototype) = 0;
+  virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
+  virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
+};
+
+ScriptableHelperImplInterface *NewScriptableHelperImpl();
+
+} // namespace internal
+
 /**
  * A @c ScriptableInterface implementation helper.
  */
-class ScriptableHelper {
+template <typename I>
+class ScriptableHelper : public I {
+ private:
+  // Checks at compile time if the argument I is ScriptableInterface or
+  // derived from it.
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, I>::value),
+                 I_must_be_ScriptableInterface_or_derived_from_it);
+
  public:
-  ScriptableHelper();
-  virtual ~ScriptableHelper();
+  ScriptableHelper() : impl_(internal::NewScriptableHelperImpl()) { }
+  virtual ~ScriptableHelper() { delete impl_; impl_ = NULL; }
 
   /**
    * Register a scriptable property.
@@ -41,7 +74,9 @@ class ScriptableHelper {
    * @param getter the getter slot of the property.
    * @param setter the setter slot of the property.
    */
-  void RegisterProperty(const char *name, Slot *getter, Slot *setter);
+  void RegisterProperty(const char *name, Slot *getter, Slot *setter) {
+    impl_->RegisterProperty(name, getter, setter);
+  }
 
   /**
    * Register a simple scriptable property that maps to a variable.
@@ -50,9 +85,9 @@ class ScriptableHelper {
    */
   template <typename T>
   void RegisterSimpleProperty(const char *name, T *valuep) {
-    RegisterProperty(name,
-                     NewSimpleGetterSlot<T>(valuep),
-                     NewSimpleSetterSlot<T>(valuep));
+    impl_->RegisterProperty(name,
+                            NewSimpleGetterSlot<T>(valuep),
+                            NewSimpleSetterSlot<T>(valuep));
   }
 
   /**
@@ -62,7 +97,7 @@ class ScriptableHelper {
    */
   template <typename T>
   void RegisterReadonlySimpleProperty(const char *name, const T *valuep) {
-    RegisterProperty(name, NewSimpleGetterSlot<T>(valuep), NULL);
+    impl_->RegisterProperty(name, NewSimpleGetterSlot<T>(valuep), NULL);
   }
 
   /**
@@ -77,7 +112,9 @@ class ScriptableHelper {
    */
   void RegisterStringEnumProperty(const char *name,
                                   Slot *getter, Slot *setter,
-                                  const char **names, int count);
+                                  const char **names, int count) {
+    impl_->RegisterStringEnumProperty(name, getter, setter, names, count);
+  }
 
   /**
    * Register a scriptable method.
@@ -85,7 +122,9 @@ class ScriptableHelper {
    * @param name method name.  It must point to static allocated memory.
    * @param slot the method slot.
    */
-  void RegisterMethod(const char *name, Slot *slot);
+  void RegisterMethod(const char *name, Slot *slot) {
+    impl_->RegisterMethod(name, slot);
+  }
 
   /**
    * Register a @c Signal that can connect to various @c Slot callbacks.
@@ -95,7 +134,9 @@ class ScriptableHelper {
    *     allocated memory.
    * @param signal the @c Signal to be registered.
    */
-  void RegisterSignal(const char *name, Signal *signal);
+  void RegisterSignal(const char *name, Signal *signal) {
+    impl_->RegisterSignal(name, signal);
+  }
 
   /**
    * Register a set of constants.
@@ -108,7 +149,9 @@ class ScriptableHelper {
    */
   void RegisterConstants(int count,
                          const char *const names[],
-                         const Variant values[]);
+                         const Variant values[]) {
+    impl_->RegisterConstants(count, names, values);
+  }
 
   /**
    * Register a constant.
@@ -118,7 +161,7 @@ class ScriptableHelper {
   template <typename T>
   void RegisterConstant(const char *name, T value) {
     Variant variant(value);
-    RegisterConstants(1, &name, &variant);
+    impl_->RegisterConstants(1, &name, &variant);
   }
 
   /**
@@ -128,7 +171,9 @@ class ScriptableHelper {
    * @c ScriptableHelper object are delegated to the prototype.
    * One prototype can be shared among multiple <code>ScriptableHelper</code>s. 
    */
-  void SetPrototype(ScriptableInterface *prototype);
+  void SetPrototype(ScriptableInterface *prototype) {
+    impl_->SetPrototype(prototype);
+  }
 
   /**
    * Set the array handler which will handle array accesses.
@@ -140,7 +185,9 @@ class ScriptableHelper {
    *     array index and a value.  If it returns a @c bool value, @c true on
    *     success.
    */
-  void SetArrayHandler(Slot *getter, Slot *setter);
+  void SetArrayHandler(Slot *getter, Slot *setter) {
+    impl_->SetArrayHandler(getter, setter);
+  }
 
   /**
    * Set the dynamic property handler which will handle property accesses not
@@ -153,83 +200,62 @@ class ScriptableHelper {
    *     parameter (<code>const char *</code>) and a value. If it returns a
    *     @c bool value, @c true on success.
    */
-  void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
+  void SetDynamicPropertyHandler(Slot *getter, Slot *setter) {
+    impl_->SetDynamicPropertyHandler(getter, setter);
+  }
 
-  /** @see ScriptableInterface::Attach() */
-  void Attach() { ASSERT(false); }
-  /** @see ScriptableInterface::Detach() */
-  void Detach() { ASSERT(false); }
+  /**
+   * Blank implementation of Attach(), meaning default ownership policy.
+   * @see ScriptableInterface::Attach()
+   */
+  virtual void Attach() { }
+  /**
+   * Blank implementation of Detach(), meaning default ownership policy.
+   * @see ScriptableInterface::Detach()
+   */
+  virtual void Detach() { }
+  /**
+   * Default strict policy.
+   * @see ScriptableInterface::IsStrict()
+   */
+  virtual bool IsStrict() const { return true; }
+
   /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
-  Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
+  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {
+    return impl_->ConnectToOnDeleteSignal(slot);
+  }
+
   /** @see ScriptableInterface::GetPropertyInfoByName() */
-  bool GetPropertyInfoByName(const char *name,
-                             int *id, Variant *prototype,
-                             bool *is_method);
+  virtual bool GetPropertyInfoByName(const char *name,
+                                     int *id, Variant *prototype,
+                                     bool *is_method) {
+    return impl_->GetPropertyInfoByName(name, id, prototype, is_method);
+  }
+
   /** @see ScriptableInterface::GetPropertyInfoById() */
-  bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method, const char **name);
+  virtual bool GetPropertyInfoById(int id, Variant *prototype,
+                                   bool *is_method, const char **name) {
+    return impl_->GetPropertyInfoById(id, prototype, is_method, name);
+  }
+
   /** @see ScriptableInterface::GetProperty() */
-  Variant GetProperty(int id);
+  virtual Variant GetProperty(int id) {
+    return impl_->GetProperty(id);
+  }
+
   /** @see ScriptableInterface::SetProperty() */
-  bool SetProperty(int id, Variant value);
+  virtual bool SetProperty(int id, Variant value) {
+    return impl_->SetProperty(id, value);
+  }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
 
-  class Impl;
-  Impl *impl_;
+  internal::ScriptableHelperImplInterface *impl_;
 };
 
-/**
- * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to delegate all @c ScriptableHelper @c RegisterXXXX methods
- * to a @c ScriptableHelper object.
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define DELEGATE_SCRIPTABLE_REGISTER(delegate)                                \
-void RegisterProperty(const char *name,                                       \
-                      ::ggadget::Slot *getter, ::ggadget::Slot *setter) {     \
-  (delegate).RegisterProperty(name, getter, setter);                          \
-}                                                                             \
-template <typename T>                                                         \
-void RegisterSimpleProperty(const char *name, T *valuep) {                    \
-  (delegate).RegisterSimpleProperty<T>(name, valuep);                         \
-}                                                                             \
-template <typename T>                                                         \
-void RegisterReadonlySimpleProperty(const char *name, const T *valuep) {      \
-  (delegate).RegisterReadonlySimpleProperty<T>(name, valuep);                 \
-}                                                                             \
-void RegisterStringEnumProperty(const char *name,                             \
-                                Slot *getter, Slot *setter,                   \
-                                const char **names, int count) {              \
-  (delegate).RegisterStringEnumProperty(name, getter, setter, names, count);  \
-}                                                                             \
-void RegisterMethod(const char *name, ::ggadget::Slot *slot) {                \
-  (delegate).RegisterMethod(name, slot);                                      \
-}                                                                             \
-void RegisterSignal(const char *name, ::ggadget::Signal *signal) {            \
-  (delegate).RegisterSignal(name, signal);                                    \
-}                                                                             \
-void RegisterConstants(int c, const char *const n[],                          \
-                       const ::ggadget::Variant v[]) {                        \
-  (delegate).RegisterConstants(c, n, v);                                      \
-}                                                                             \
-template <typename T>                                                         \
-void RegisterConstant(const char *name, T value) {                            \
-  (delegate).RegisterConstant(name, value);                                   \
-}                                                                             \
-void SetPrototype(::ggadget::ScriptableInterface *prototype) {                \
-  (delegate).SetPrototype(prototype);                                         \
-}                                                                             \
-void SetArrayHandler(::ggadget::Slot *getter, ::ggadget::Slot *setter) {      \
-  (delegate).SetArrayHandler(getter, setter);                                 \
-}                                                                             \
-void SetDynamicPropertyHandler(                                               \
-    ::ggadget::Slot *getter, ::ggadget::Slot *setter) {                       \
-  (delegate).SetDynamicPropertyHandler(getter, setter);                       \
-}
+// Use the following line to test if the COMPILE_ASSERT is effective: 
+// class B : public ScriptableHelper<Variant> { };
 
 } // namespace ggadget
 

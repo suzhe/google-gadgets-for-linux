@@ -19,6 +19,7 @@
 
 #include <map>
 #include <jsapi.h>
+#include "ggadget/scriptable_interface.h"
 #include "ggadget/script_context_interface.h"
 #include "ggadget/signal.h"
 
@@ -71,6 +72,12 @@ class JSScriptContext : public ScriptContextInterface {
   static JSBool CallNativeSlot(JSContext *cx, JSObject *obj,
                                uintN argc, jsval *argv,
                                jsval *rval);
+
+  /**
+   * Handles a native exception and throws it into the script engine.
+   */
+  static JSBool HandleException(JSContext *cx,
+                                const ScriptableExceptionHolder &e);
 
   /**
    * Create a @c Slot that is targeted to a JavaScript function object.

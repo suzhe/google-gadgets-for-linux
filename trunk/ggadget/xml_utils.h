@@ -75,7 +75,7 @@ ElementInterface *InsertElementFromXML(Elements *elements,
  *   - @@attr_name: retrives the value of attribute named 'attr_name' in the
  *     top level element;
  *   - element_name@@attr_name: retrieves the value of attribute named
- *     'attr_name' in the secondd level element named 'element_name'.
+ *     'attr_name' in the second level element named 'element_name'.
  *
  * If there are multiple elements with the same name under the same element,
  * the name of the elements from the second one will be postpended with "[n]"
