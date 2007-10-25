@@ -14,12 +14,15 @@
 # limitations under the License.
 #
 
+INCLUDE(LibXml2Config)
+
 ADD_SUBDIRECTORY(graphics)
 ADD_SUBDIRECTORY(scripts)
 # ADD_SUBDIRECTORY(sysdeps)
 ADD_SUBDIRECTORY(tests)
 
 PKGCONFIG_EX(libcurl 7.16.0 LIBCURL_LIBRARIES)
+LIBXML2_CONFIG(2.6.20 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
@@ -49,9 +52,9 @@ SET(SRCS
 )
 
 SET(LIBS
-  tinyxml
   unzip
   ${LIBCURL_LIBRARIES}
+  ${LIBXML2_LIBRARIES}
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

@@ -92,6 +92,13 @@ bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
                           const char *root_element_name,
                           GadgetStringMap *table);
 
+/**
+ * Checks if an XML name is a valid name.
+ * @param name the XML name in UTF8 encoding.
+ * @return @c true if the name is valid.
+ */
+bool CheckXMLName(const char *name);
+
 } // namespace ggadget
 
 #endif // GGADGET_XML_UTILS_H__

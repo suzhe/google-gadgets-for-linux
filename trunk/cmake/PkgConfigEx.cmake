@@ -25,7 +25,8 @@ ENDMACRO(REMOVE_TRAILING_NEWLINE _variable)
 #!   - Include directories of that package will be appended to
 #!     @c INCLUDE_DIRECTORIES;
 #!   - Other cflags will be appended to @c CMAKE_C_FLAGS and @c CMAKE_CXX_FLAGS;
-#!   - Link flags (other than -l flags) will be appended to
+#!   - Link directories are registered with the LINK_DIRECTORIES() macro;
+#!   - Link flags (other than -l and -L flags) will be appended to
 #!     @c CMAKE_EXTRA_LINK_FLAGS;
 #!
 #! @param _package the package name.

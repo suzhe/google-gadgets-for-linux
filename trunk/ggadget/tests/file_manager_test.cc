@@ -205,32 +205,7 @@ TEST(file_manager, GetTranslatedFileContents) {
   ASSERT_TRUE(impl.GetXMLFileContents("main.xml", &data, &path));
   EXPECT_STREQ(kMainXMLTranslatedContents, data.c_str());
 }
-/*
-TEST(file_manager, ParseXML) {
-  FileManager file_manager;
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
-  file_manager.Init("file_manager_test_data");
 
-  TiXmlDocument *doc = file_manager.ParseXMLFile("main.xml");
-  ASSERT_TRUE(doc);
-  TiXmlElement *root = doc->RootElement();
-  ASSERT_TRUE(root);
-  EXPECT_STREQ("root", root->Value());
-  EXPECT_STREQ("root-value1", root->Attribute("root-attr1"));
-  EXPECT_STREQ("根元素属性2", root->Attribute("root-attr2"));
-  EXPECT_STREQ("<&>xyz ", root->Attribute("root-attr3"));
-
-  TiXmlElement *second = root->FirstChildElement();
-  ASSERT_TRUE(second);
-  EXPECT_STREQ("第二层元素的文本内容", second->GetText());
-
-  TiXmlElement *third = second->NextSiblingElement();
-  ASSERT_TRUE(third);
-  // TinyXML removes the starting '&' of a non-existing entity.
-  EXPECT_STREQ("non-existence;", third->GetText());
-  delete doc;
-}
-*/
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();
