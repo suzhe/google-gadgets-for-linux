@@ -16,6 +16,11 @@
 
 #include <cstring>
 #include <cmath>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+// For xmlCreateMemoryParserCtxt and xmlParseName.
+#include <libxml/parserInternals.h>
+
 #include "xml_utils.h"
 #include "common.h"
 #include "element_interface.h"
@@ -23,21 +28,73 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "script_context_interface.h"
-#include "third_party/tinyxml/tinyxml.h"
 #include "view_interface.h"
 
 namespace ggadget {
 
-static bool ParseXML(const char *xml,
-                     const char *filename,
-                     TiXmlDocument *xmldoc) {
-  xmldoc->Parse(xml);
-  if (xmldoc->Error()) {
-    LOG("Error parsing xml: %s in %s:%d:%d",
-        xmldoc->ErrorDesc(), filename, xmldoc->ErrorRow(), xmldoc->ErrorCol());
-    return false;
+static inline char *FromXmlCharPtr(xmlChar *xml_char_ptr) {
+  return reinterpret_cast<char *>(xml_char_ptr);
+}
+
+static inline const char *FromXmlCharPtr(const xmlChar *xml_char_ptr) {
+  return reinterpret_cast<const char *>(xml_char_ptr);
+}
+
+static inline const xmlChar *ToXmlCharPtr(const char *char_ptr) {
+  return reinterpret_cast<const xmlChar *>(char_ptr);
+}
+
+static void ReportXMLError(void *ctx, bool is_error,
+                           const char *msg, va_list args) {
+  xmlParserCtxt *ctxt = static_cast<xmlParserCtxt *>(ctx);
+  // Copy the filename stored in context user data to input->file to let
+  // the built-in libxml2 error reporter print the correct filename.
+  if (ctxt && ctxt->inputNr > 0 && ctxt->inputTab[0] &&
+      ctxt->inputTab[0]->filename) {
+    ctxt->inputTab[0]->filename = xmlMemStrdup(
+        static_cast<const char *>(ctxt->_private));
+    if (is_error)
+      xmlStopParser(ctxt);
   }
-  return true;
+
+  char buf[512];
+  vsnprintf(buf, sizeof(buf), msg, args);
+  if (is_error)
+    xmlParserError(ctx, "%s", buf);
+  else
+    xmlParserWarning(ctx, "%s", buf);
+}
+
+static void OnXMLWarning(void *ctx, const char *msg, ...) {
+  va_list ap;
+  va_start(ap, msg);
+  ReportXMLError(ctx, false, msg, ap);
+  va_end(ap);
+}
+
+static void OnXMLError(void *ctx, const char *msg, ...) {
+  va_list ap;
+  va_start(ap, msg);
+  ReportXMLError(ctx, true, msg, ap);
+  va_end(ap);
+}
+
+// There is no non-const version of ToXmlChar *because it's not allowed to
+// transfer a non-const char * to libxml.
+
+static xmlDoc *ParseXML(const char *xml, const char *filename) {
+  xmlSAXHandler sax_handler;
+  memset(&sax_handler, 0, sizeof(xmlSAXHandler));
+  xmlSAX2InitDefaultSAXHandler(&sax_handler, 0);
+  sax_handler.warning = OnXMLWarning;
+  sax_handler.error = OnXMLError;
+  sax_handler.fatalError = OnXMLError;
+
+  // filename is stored in the context as private.
+  // sax_handler will be freed by libxml2.
+  return xmlSAXParseMemoryWithData(
+      &sax_handler, xml, strlen(xml), 0,
+      static_cast<void *>(const_cast<char *>(filename)));
 }
 
 static bool ParseBoolValue(const char *value, bool *result) {
@@ -68,7 +125,7 @@ static bool ParseDoubleValue(const char *value, double *result) {
 static void SetScriptableProperty(ScriptableInterface *scriptable,
                                   ScriptContextInterface *script_context,
                                   const char *filename,
-                                  int row, int column,
+                                  int row,
                                   const char *name,
                                   const char *value,
                                   const char *tag_name) {
@@ -80,8 +137,7 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
   if (!result || is_method ||
       id == ScriptableInterface::ID_CONSTANT_PROPERTY ||
       id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
-    LOG("%s:%d:%d: Can't set property %s from xml for %s",
-        filename, row, column, name, tag_name);
+    LOG("%s:%d: Can't set property %s for %s", filename, row, name, tag_name);
     return;
   }
 
@@ -92,8 +148,8 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       if (ParseBoolValue(value, &b)) {
         property_value = Variant(b);
       } else {
-        LOG("%s:%d:%d: Invalid bool '%s' for property %s of %s",
-            filename, row, column, value, name, tag_name);
+        LOG("%s:%d: Invalid bool '%s' for property %s of %s",
+            filename, row, value, name, tag_name);
         property_value = Variant(GadgetStrCmp("true", value) == 0 ?
                                true : false);
         return;
@@ -108,8 +164,8 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
                          Variant(static_cast<int64_t>(round(d))) :
                          Variant(d);
       } else {
-        LOG("%s:%d:%d: Invalid integer '%s' for property %s of %s",
-            filename, row, column, value, name, tag_name);
+        LOG("%s:%d: Invalid integer '%s' for property %s of %s",
+            filename, row, value, name, tag_name);
         return;
       }
       break;
@@ -137,26 +193,26 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       break;
 
     default:
-      LOG("%s:%d:%d: Unsupported type %s when setting property %s for %s",
-          filename, row, column, prototype.ToString().c_str(), name, tag_name);
+      LOG("%s:%d: Unsupported type %s when setting property %s for %s",
+          filename, row, prototype.ToString().c_str(), name, tag_name);
       return;
   }
 
   if (!scriptable->SetProperty(id, property_value))
-    LOG("%s:%d:%d: Can't set readonly property %s for %s",
-        filename, row, column, name, tag_name);
+    LOG("%s:%d: Can't set readonly property %s for %s",
+        filename, row, name, tag_name);
 }
 
 static void SetupScriptableProperties(ScriptableInterface *scriptable,
                                       ScriptContextInterface *script_context,
                                       const char *filename,
-                                      const TiXmlElement *xml_element) {
-  const char *tag_name = xml_element->Value();
-  for (const TiXmlAttribute *attribute = xml_element->FirstAttribute();
-       attribute != NULL;
-       attribute = attribute->Next()) {
-    const char *name = attribute->Name();
-    const char *value = attribute->Value();
+                                      xmlNode *xml_element) {
+  const char *tag_name = FromXmlCharPtr(xml_element->name);
+  for (xmlAttr *attribute = xml_element->properties;
+       attribute != NULL; attribute = attribute->next) {
+    const char *name = FromXmlCharPtr(attribute->name);
+    char *value = FromXmlCharPtr(
+        xmlNodeGetContent(reinterpret_cast<xmlNode *>(attribute)));
 
     if (GadgetStrCmp(kInnerTextProperty, name) == 0) {
       LOG("%s is not allowed in XML as an attribute: ", kInnerTextProperty);
@@ -164,92 +220,123 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
     }
 
     SetScriptableProperty(scriptable, script_context,
-                          filename, attribute->Row(), attribute->Column(),
+                          filename, xml_element->line,
                           name, value, tag_name);
+    if (value)
+      xmlFree(value);
   }
 
   // Set the "innerText" property.
-  const char *text = xml_element->GetText();
-  if (text)
-    SetScriptableProperty(scriptable, script_context,
-                          filename, xml_element->Row(), xml_element->Column(),
-                          kInnerTextProperty, text, tag_name);
+  char *text = FromXmlCharPtr(xmlNodeGetContent(xml_element));
+  if (text) {
+    std::string trimmed_text = TrimString(std::string(text));
+    if (!trimmed_text.empty()) {
+      SetScriptableProperty(scriptable, script_context,
+                            filename, xml_element->line, kInnerTextProperty,
+                            trimmed_text.c_str(), tag_name);
+    }
+    xmlFree(text);
+  }
 }
 
 static void HandleScriptElement(ScriptContextInterface *script_context,
                                 FileManagerInterface *file_manager,
                                 const char *filename,
-                                TiXmlElement *xml_element) {
-  const char *src = xml_element->Attribute(kSrcAttr);
-  const char *script = NULL;
-  int lineno = xml_element->Row();
-  std::string data;
+                                xmlNode *xml_element) {
+  char *src = FromXmlCharPtr(xmlGetProp(xml_element, ToXmlCharPtr(kSrcAttr)));
+  int lineno = xml_element->line;
+  std::string script;
   std::string real_path;
   if (src) {
-    if (file_manager->GetFileContents(src, &data, &real_path)) {
+    if (file_manager->GetFileContents(src, &script, &real_path)) {
       filename = real_path.c_str();
       lineno = 1;
-      script = data.c_str();
     }
   } else {
-    for (TiXmlNode* child = xml_element->FirstChild();
-         child != NULL; child = child->NextSibling()) {
-      TiXmlComment *comment = child->ToComment();
-      if (comment) {
-        script = comment->Value();
+    // Uses the Windows version convention, that inline scripts should be
+    // quoted in comments.
+    for (xmlNode *child = xml_element->children;
+         child != NULL; child = child->next) {
+      char *content = FromXmlCharPtr(xmlNodeGetContent(child));
+      if (content) {
+        script = content;
+        xmlFree(content);
+      }
+
+      if (child->type == XML_COMMENT_NODE)
+        break;
+
+      // Other contents are not allowed under <script></script>.
+      // libxml2 sometimes returns 0 for text nodes.
+      if ((child->type != XML_TEXT_NODE && child->type != 0) ||
+          !TrimString(script).empty()) {
+        LOG("%s:%d: This content is not allowed in script element",
+            filename, xml_element->line);
         break;
       }
     }
-
-    if (!script)
-      LOG("%s:%d:%d: Either 'src' attribute or script in XML comment needed",
-          filename, xml_element->Row(), xml_element->Column());
   }
 
-  if (script)
-    script_context->Execute(script, filename, lineno);
+  if (!script.empty())
+    script_context->Execute(script.c_str(), filename, lineno);
 }
 
 static void HandleAllScriptElements(ViewInterface *view,
                                     const char *filename,
-                                    TiXmlElement *xml_element) {
-  TiXmlElement *child = xml_element->FirstChildElement();
+                                    xmlNode *xml_element) {
+  xmlNode *child = xml_element->children;
   while (child) {
-    if (GadgetStrCmp(child->Value(), kScriptTag) == 0) {
+    if (child->type != XML_ELEMENT_NODE) {
+      child = child->next;
+    } else if (GadgetStrCmp(FromXmlCharPtr(child->name), kScriptTag) == 0) {
       HandleScriptElement(view->GetScriptContext(),
                           view->GetFileManager(),
                           filename, child);
-      TiXmlElement *temp = child;
-      child = child->NextSiblingElement();
-      xml_element->RemoveChild(temp);
+      // Remove the script node to prevent further processing.
+      xmlNode *temp = child;
+      child = child->next;
+      xmlUnlinkNode(temp);
+      xmlFreeNode(temp);
     } else {
       HandleAllScriptElements(view, filename, child);
-      child = child->NextSiblingElement();
+      child = child->next;
     }
   }
 }
 
 static ElementInterface *InsertElementFromDOM(Elements *elements,
                                               const char *filename,
-                                              TiXmlElement *xml_element,
+                                              xmlNode *xml_element,
                                               const ElementInterface *before) {
-  const char *tag_name = xml_element->Value();
-  const char *name = xml_element->Attribute(kNameAttr);  // May be NULL.
+  const char *tag_name = FromXmlCharPtr(xml_element->name);
+  char *name = NULL;
+  xmlAttr *nameAttr = xmlHasProp(xml_element, ToXmlCharPtr(kNameAttr));
+  if (nameAttr) {
+    name = FromXmlCharPtr(
+        xmlNodeGetContent(reinterpret_cast<xmlNode *>(nameAttr)));
+  }
+  
   ElementInterface *element = elements->InsertElement(tag_name, before, name);
-  xml_element->RemoveAttribute(kNameAttr);
+  // Remove the "name" attribute to prevent further processing.
+  if (nameAttr) {
+    xmlRemoveProp(nameAttr);
+    if (name)
+      xmlFree(name);
+  }
+
   if (!element) {
-    LOG("%s:%d:%d: Failed to create element %s",
-        filename,xml_element->Row(), xml_element->Column(), tag_name);
+    LOG("%s:%d: Failed to create element %s",
+        filename, xml_element->line, tag_name);
     return element;
   }
 
   SetupScriptableProperties(element, element->GetView()->GetScriptContext(),
                             filename, xml_element);
   Elements *children = element->GetChildren();
-  for (TiXmlElement *child_xml_ele = xml_element->FirstChildElement();
-       child_xml_ele != NULL;
-       child_xml_ele = child_xml_ele->NextSiblingElement()) {
-    InsertElementFromDOM(children, filename, child_xml_ele, NULL);
+  for (xmlNode *child = xml_element->children;
+       child != NULL; child = child->next) {
+    if (child->type == XML_ELEMENT_NODE)
+      InsertElementFromDOM(children, filename, child, NULL);
   }
   return element;
 }
@@ -266,13 +353,15 @@ bool SetupViewFromFile(ViewInterface *view, const char *filename) {
 
 bool SetupViewFromXML(ViewInterface *view, const char *xml,
                       const char *filename) {
-  TiXmlDocument xmldoc;
-  if (!ParseXML(xml, filename, &xmldoc))
+  xmlDoc *xmldoc = ParseXML(xml, filename);
+  if (!xmldoc)
     return false;
 
-  TiXmlElement *view_element = xmldoc.RootElement();
-  if (!view_element || GadgetStrCmp(view_element->Value(), kViewTag) != 0) {
+  xmlNode *view_element = xmlDocGetRootElement(xmldoc);
+  if (!view_element ||
+      GadgetStrCmp(FromXmlCharPtr(view_element->name), kViewTag) != 0) {
     LOG("No valid root element in view file: %s", filename);
+    xmlFreeDoc(xmldoc);
     return false;
   }
 
@@ -282,11 +371,13 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
   SetupScriptableProperties(view, view->GetScriptContext(),
                             filename, view_element);
   Elements *children = view->GetChildren();
-  for (TiXmlElement *child_xml_ele = view_element->FirstChildElement();
-       child_xml_ele != NULL;
-       child_xml_ele = child_xml_ele->NextSiblingElement()) {
-    InsertElementFromDOM(children, filename, child_xml_ele, NULL);
+  for (xmlNode *child = view_element->children;
+       child != NULL; child = child->next) {
+    if (child->type == XML_ELEMENT_NODE)
+      InsertElementFromDOM(children, filename, child, NULL);
   }
+
+  xmlFreeDoc(xmldoc);
   return true;
 }
 
@@ -297,79 +388,99 @@ ElementInterface *AppendElementFromXML(Elements *elements, const char *xml) {
 ElementInterface *InsertElementFromXML(Elements *elements,
                                        const char *xml,
                                        const ElementInterface *before) {
-  TiXmlDocument xmldoc;
-  if (!ParseXML(xml, xml, &xmldoc))
+  xmlDoc *xmldoc = ParseXML(xml, xml);
+  if (!xmldoc)
     return NULL;
 
-  TiXmlElement *xml_element = xmldoc.RootElement();
+  xmlNode *xml_element = xmlDocGetRootElement(xmldoc);
   if (!xml_element) {
     LOG("No root element in xml definition: %s", xml);
+    xmlFreeDoc(xmldoc);
     return NULL;
   }
 
-  return InsertElementFromDOM(elements, "", xml_element, before);
+  ElementInterface *result = InsertElementFromDOM(elements, "",
+                                                  xml_element, before);
+  xmlFreeDoc(xmldoc);
+  return result;
 }
 
 // Count the sequence of a child in the elements of the same tag name.
-static int CountTagSequence(TiXmlElement *child, const char *tag) {
+static int CountTagSequence(const xmlNode *child, const char *tag) {
   int count = 1;
-  for (TiXmlNode *node = child->PreviousSibling(tag);
-       node != NULL;
-       node = child->PreviousSibling(tag)) {
-    if (node->ToElement()) count++;
+  for (const xmlNode *node = child->prev; node != NULL; node = node->prev) {
+    if (node->type == XML_ELEMENT_NODE &&
+        GadgetStrCmp(tag, FromXmlCharPtr(node->name)) == 0)
+      count++;
   }
   return count;
 }
 
-static void ParseDOMIntoXPathMap(TiXmlElement *element,
+static void ParseDOMIntoXPathMap(const xmlNode *element,
                                  const std::string &prefix,
                                  GadgetStringMap *table) {
-  for (const TiXmlAttribute *attribute = element->FirstAttribute();
-       attribute != NULL;
-       attribute = attribute->Next()) {
-    const char *name = attribute->Name();
-    const char *value = attribute->Value();
-    (*table)[prefix + '@' + name] = value;
+  for (xmlAttr *attribute = element->properties;
+       attribute != NULL; attribute = attribute->next) {
+    const char *name = FromXmlCharPtr(attribute->name);
+    char *value = FromXmlCharPtr(
+        xmlNodeGetContent(reinterpret_cast<xmlNode *>(attribute)));
+    (*table)[prefix + '@' + name] = std::string(value ? value : "");
+    if (value)
+      xmlFree(value);
   }
 
-  for (TiXmlElement *child = element->FirstChildElement();
-       child != NULL;
-       child = child->NextSiblingElement()) {
-    const char *tag = child->Value();
-    const char *text = child->GetText();
-    std::string key(prefix);
-    if (!prefix.empty()) key += '/';
-    key += tag;
-
-    if (table->find(key) != table->end()) {
-      // Postpend the sequence if there are multiple elements with the same
-      // name.
-      char buf[20];
-      snprintf(buf, sizeof(buf), "[%d]", CountTagSequence(child, tag));
-      key += buf;
+  for (xmlNode *child = element->children; child != NULL; child = child->next) {
+    if (child->type == XML_ELEMENT_NODE) {
+      const char *tag = FromXmlCharPtr(child->name);
+      char *text = FromXmlCharPtr(xmlNodeGetContent(child));
+      std::string key(prefix);
+      if (!prefix.empty()) key += '/';
+      key += tag;
+  
+      if (table->find(key) != table->end()) {
+        // Postpend the sequence if there are multiple elements with the same
+        // name.
+        char buf[20];
+        snprintf(buf, sizeof(buf), "[%d]", CountTagSequence(child, tag));
+        key += buf;
+      }
+      (*table)[key] = text ? text : "";
+      if (text) xmlFree(text);
+  
+      ParseDOMIntoXPathMap(child, key, table);
     }
-    (*table)[key] = text ? text : "";
-
-    ParseDOMIntoXPathMap(child, key, table);
   }
 }
 
 bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
                           const char *root_element_name,
                           GadgetStringMap *table) {
-  TiXmlDocument xmldoc;
-  if (!ParseXML(xml, filename, &xmldoc))
+  xmlDoc *xmldoc = ParseXML(xml, filename);
+  if (!xmldoc)
     return false;
 
-  TiXmlElement *root = xmldoc.RootElement();
-  if (!root || GadgetStrCmp(root->Value(), root_element_name) != 0) {
+  xmlNode *root = xmlDocGetRootElement(xmldoc);
+  if (!root ||
+      GadgetStrCmp(FromXmlCharPtr(root->name), root_element_name) != 0) {
     LOG("No valid root element %s in XML file: %s",
         root_element_name, filename);
+    xmlFreeDoc(xmldoc);
     return false;
   }
 
   ParseDOMIntoXPathMap(root, "", table);
+  xmlFreeDoc(xmldoc);
   return true;
+}
+
+bool CheckXMLName(const char *name) {
+  xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(name, strlen(name));
+  if (ctxt) {
+    const xmlChar *result = xmlParseName(ctxt);
+    xmlFreeParserCtxt(ctxt);
+    return result != NULL;
+  }
+  return false;
 }
 
 } // namespace ggadget

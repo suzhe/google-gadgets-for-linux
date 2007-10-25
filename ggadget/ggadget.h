@@ -43,6 +43,7 @@
 #include "variant.h"
 #include "view_host_interface.h"
 #include "view_interface.h"
+#include "xml_dom_interface.h"
 #include "xml_http_request_interface.h"
 #include "xml_utils.h"
 

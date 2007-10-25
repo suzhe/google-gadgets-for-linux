@@ -23,7 +23,7 @@
 
 namespace ggadget {
 
-Variant::Variant(const Variant &source) {
+Variant::Variant(const Variant &source) : type_(TYPE_VOID) {
   v_.double_value_ = 0;
   operator=(source);
 }
@@ -36,6 +36,11 @@ Variant::~Variant() {
 }
 
 Variant &Variant::operator=(const Variant &source) {
+  if (type_ == TYPE_STRING || type_ == TYPE_JSON)
+    delete v_.string_value_;
+  if (type_ == TYPE_UTF16STRING)
+    delete v_.utf16_string_value_;
+
   type_ = source.type_;
   switch (type_) {
     case TYPE_VOID:
@@ -51,12 +56,10 @@ Variant &Variant::operator=(const Variant &source) {
       break;
     case TYPE_STRING:
     case TYPE_JSON:
-      delete v_.string_value_;
       v_.string_value_ = source.v_.string_value_ ?
                          new std::string(*source.v_.string_value_) : NULL;
       break;
     case TYPE_UTF16STRING:
-      delete v_.utf16_string_value_;
       v_.utf16_string_value_ = source.v_.utf16_string_value_ ?
                                new UTF16String(*source.v_.utf16_string_value_) :
                                NULL;
