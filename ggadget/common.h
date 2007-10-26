@@ -157,12 +157,10 @@ struct LogHelper {
  * Simply using <code>typedef char msg[bool(expr) ? 1 : -1]</code> doesn't
  * work for some compilers like gcc, because they support array types of
  * size determined at runtime (a C99 feature).
- *
- * The below expression may seem over-complex, but only it works along
- * with IsDerived in a template class.
  */
+template <bool> struct CompileAssertHelper { };
 #define COMPILE_ASSERT(expr, msg) \
-  typedef char msg[bool(expr) ? (int)sizeof(char[bool(expr) ? 1 : -1]) : -1];
+  typedef ::ggadget::CompileAssertHelper<bool(expr)> msg[bool(expr) ? 1 : -1]
 
 /**
  * Use @c implicit_cast as a safe version of @c static_cast or @c const_cast
