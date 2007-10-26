@@ -108,7 +108,7 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_KEY_DOWN: return kOnKeyDownEvent;
     case Event::EVENT_KEY_UP: return kOnKeyUpEvent;
     case Event::EVENT_KEY_PRESS: return kOnKeyPressEvent;
-  
+
     case Event::EVENT_DRAG_DROP: return kOnDragDropEvent;
     case Event::EVENT_DRAG_OUT: return kOnDragOutEvent;
     case Event::EVENT_DRAG_OVER: return kOnDragOverEvent;

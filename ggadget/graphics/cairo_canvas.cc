@@ -29,7 +29,7 @@ CairoCanvas::CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask)
   // existing paths on construction.
   cairo_new_path(cr_); 
 }
- 
+
 CairoCanvas::~CairoCanvas() {
   cairo_destroy(cr_); 
 }
@@ -43,7 +43,7 @@ void CairoCanvas::ClearSurface() {
 
 bool CairoCanvas::ClearCanvas() {
   ClearSurface();
-  
+
   // Reset state.
   cairo_reset_clip(cr_);
   opacity_ = 1.;
@@ -55,7 +55,7 @@ bool CairoCanvas::PopState() {
   if (opacity_stack_.empty()) {
     return false;
   }
-  
+
   opacity_ = opacity_stack_.top();
   opacity_stack_.pop();
   cairo_restore(cr_);
@@ -81,13 +81,13 @@ bool CairoCanvas::DrawLine(double x0, double y0, double x1, double y1,
   if (width < 0.0) {
     return false;
   }
-  
+
   cairo_set_line_width(cr_, width);
   cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
   cairo_move_to(cr_, x0, y0);
   cairo_line_to(cr_, x1, y1);
   cairo_stroke(cr_);
-  
+
   return true;
 }
 
@@ -120,7 +120,7 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
   if (w <= 0.0 || h <= 0.0) {
     return false;    
   }
-  
+
   cairo_rectangle(cr_, x, y, w, h);
   cairo_clip(cr_);
   return true;
@@ -130,7 +130,7 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   if (!img || img->IsMask()) {
     return false;
   }
-  
+
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
   cairo_surface_t *s = cimg->GetSurface();
   int sheight = cairo_image_surface_get_height(s);
@@ -148,14 +148,14 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
     // for X and Y.
     double cx = double(w) / swidth;
     double cy = double(h) / sheight;
-    
+
     cairo_save(cr_);
     cairo_scale(cr_, cx, cy);
     cairo_set_source_surface(cr_, s, x / cx, y / cy);
     cairo_paint_with_alpha(cr_, opacity_);
     cairo_restore(cr_);
   }
-    
+
   return true;
 }
 
@@ -223,7 +223,7 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
   }
   else {  
     cairo_save(cr_);
-    
+
     cairo_t *cr;
     cairo_surface_t *target;    
     double cx = double(w) / swidth;
@@ -231,7 +231,7 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
     // enlarge the lower resolution surface
     if (cx < 1.) { // only check cx since cx should be approx same as cy
       // img is higher res (zoom > 1), resize mask
-      
+
       // this scaling is a bit off, but this type of errors are 
       // unavoidable when compositing images of different sizes
       size_t maskw = size_t(cmask->GetWidth() / cx);
@@ -244,14 +244,14 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
       smask = target;
       cairo_destroy(cr); // destroy before target is used
       cr = NULL;    
-            
+
       cairo_scale(cr_, cx, cy);
       cairo_set_source_surface(cr_, simg, x / cx, y / cy);
       cairo_mask_surface(cr_, smask, mx / cx, my / cy);
     }
     else {
       // img is lower res (zoom < 1), resize img
-      
+
       target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
       cr = cairo_create(target);
       cairo_scale(cr, cx, cy);
@@ -260,7 +260,7 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
       simg = target;
       cairo_destroy(cr); // destroy before target is used
       cr = NULL;    
-            
+
       cairo_scale(cr_, 1. / cx, 1. / cy);
       cairo_set_source_surface(cr_, simg, x * cx, y * cy);
       cairo_mask_surface(cr_, smask, mx * cx, my * cy);
@@ -268,7 +268,7 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
     cairo_surface_destroy(target);    
     cairo_restore(cr_);
   }
-     
+
   return true;
 }
 
@@ -301,7 +301,7 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
   // Restrict the output area.
   cairo_rectangle(cr_, x, y, x + width, y + height);
   cairo_clip(cr_);
-  
+
   // Set the underline attribute
   if (text_flag & TEXT_FLAGS_UNDERLINE) {
     underline_attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
@@ -413,7 +413,7 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
       // may exceed the width we set before
       pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
       pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_END);
-      
+
     } else if (trimming == TRIMMING_PATH_ELLIPSIS) {
       // Pango has provided path-ellipsis trimming.
       // FIXME: when displaying arabic, the final layout width

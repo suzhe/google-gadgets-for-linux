@@ -126,7 +126,7 @@ class View::Impl {
       ElementInterface *fired_element;
       result = grabmouse_element_->OnMouseEvent(&new_event, true, 
                                                 &fired_element);
-      
+
       // Release the grabbing.
       if (type == Event::EVENT_MOUSE_UP)
         grabmouse_element_ = NULL;
@@ -163,7 +163,7 @@ class View::Impl {
       // Store it early to prevent crash if fired_element is removed in
       // the mouseout handler.
       mouseover_element_ = fired_element;
-      
+
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
                                   event->GetX(), event->GetY(),

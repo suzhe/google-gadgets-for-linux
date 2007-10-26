@@ -38,7 +38,7 @@ TEST(StringUtils, AssignIfDiffer) {
   ASSERT_TRUE(AssignIfDiffer(NULL, &s));
   ASSERT_STREQ("", s.c_str());
 }
-  
+
 TEST(StringUtils, TrimString) {
   EXPECT_STREQ("", TrimString("").c_str());
   EXPECT_STREQ("", TrimString("  \n \r \t ").c_str());

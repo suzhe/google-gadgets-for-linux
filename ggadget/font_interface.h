@@ -39,7 +39,7 @@ class FontInterface {
     STYLE_NORMAL,
     STYLE_ITALIC
   };
-   
+
   /**
    * Enum used to specify font weight.
    */
@@ -52,23 +52,23 @@ class FontInterface {
    * @return The style option associated with the font.
    */
   virtual Style GetStyle() const = 0;
-    
+
   /**
    * @return The style option associated with the font.
    */
   virtual Weight GetWeight() const = 0;
-  
+
   /**
    * @return The size of the font, in points.
    */
   virtual size_t GetPointSize() const = 0;
-  
+
   /**
    * Frees the FontInterface object.
    */
   virtual void Destroy() = 0;
 };
-  
+
 } // namespace ggadget
 
 #endif // GGADGET_FONT_INTERFACE_H__

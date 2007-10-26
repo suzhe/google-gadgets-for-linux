@@ -96,7 +96,7 @@ class ChildCoordCalculator {
   ChildCoordCalculator(double child_x_pos, double child_y_pos,
                        double child_pin_x, double child_pin_y,
                        double rotation_radians);
-  
+
   /**
    * Converts coordinates the given coordinates.
    * @param parent_x X-coordinate in the parent space to convert.
@@ -106,14 +106,14 @@ class ChildCoordCalculator {
    */
   void Convert(double parent_x, double parent_y,
                double *child_x, double *child_y);
-  
+
   /**
    * @param parent_x X-coordinate in the parent space to convert.
    * @param parent_y Y-coordinate in the parent space to convert. 
    * @return The converted child X-coordinate.
    */
   double GetChildX(double parent_x, double parent_y);
-  
+
   /**
    * @param parent_x X-coordinate in the parent space to convert.
    * @param parent_y Y-coordinate in the parent space to convert. 
@@ -144,7 +144,7 @@ class ParentCoordCalculator {
   ParentCoordCalculator(double child_x_pos, double child_y_pos,
                        double child_pin_x, double child_pin_y,
                        double rotation_radians);
-  
+
   /**
    * Converts child coordinates into parent coordinations.
    * @param child_x X-coordinate in the child space to convert.
@@ -160,7 +160,7 @@ class ParentCoordCalculator {
    * @return The converted parent X-coordinate.
    */
   double GetParentX(double child_x, double child_y);
-  
+
   /**
    * @param child_x X-coordinate in the child space to convert.
    * @param child_y Y-coordinate in the child space to convert. 

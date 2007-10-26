@@ -37,28 +37,28 @@ class CairoGraphics : public GraphicsInterface {
    */
   CairoGraphics(double zoom);
   virtual ~CairoGraphics() {};
-  
+
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
-  
+
   virtual CanvasInterface *NewImage(const char *img_bytes, 
                                     size_t img_bytes_count) const;  
   virtual CanvasInterface *NewMask(const char *img_bytes, 
                                    size_t img_bytes_count) const;  
-    
+
   virtual FontInterface *NewFont(const char *family, size_t pt_size, 
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
-  
+
  private:
    double zoom_;
-   
+
    /**
     * Load a GdkPixbuf from raw image data. 
     * @return NULL on failure, GdkPixbuf otherwise.
     */
    static GdkPixbuf *LoadPixbufFromData(const char *img_bytes, 
                                         size_t img_bytes_count);
-   
+
    DISALLOW_EVIL_CONSTRUCTORS(CairoGraphics);
 };
 

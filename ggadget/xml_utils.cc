@@ -315,7 +315,7 @@ static ElementInterface *InsertElementFromDOM(Elements *elements,
     name = FromXmlCharPtr(
         xmlNodeGetContent(reinterpret_cast<xmlNode *>(nameAttr)));
   }
-  
+
   ElementInterface *element = elements->InsertElement(tag_name, before, name);
   // Remove the "name" attribute to prevent further processing.
   if (nameAttr) {
@@ -436,7 +436,7 @@ static void ParseDOMIntoXPathMap(const xmlNode *element,
       std::string key(prefix);
       if (!prefix.empty()) key += '/';
       key += tag;
-  
+
       if (table->find(key) != table->end()) {
         // Postpend the sequence if there are multiple elements with the same
         // name.
@@ -446,7 +446,7 @@ static void ParseDOMIntoXPathMap(const xmlNode *element,
       }
       (*table)[key] = text ? text : "";
       if (text) xmlFree(text);
-  
+
       ParseDOMIntoXPathMap(child, key, table);
     }
   }

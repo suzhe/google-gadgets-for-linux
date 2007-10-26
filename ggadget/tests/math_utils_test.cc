@@ -25,7 +25,7 @@ const double kErrorDelta = .00000001;
 
 TEST(MathUtilsTest, ChildCoordCalculator) {
   double child_x, child_y;
-  
+
   ChildCoordCalculator calc = ChildCoordCalculator(0, 0, 50, 50, M_PI_2);
   calc.Convert(0, 0, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
@@ -53,7 +53,7 @@ TEST(MathUtilsTest, ChildCoordCalculator) {
   EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
   EXPECT_DOUBLE_EQ(50., child_x);
   EXPECT_DOUBLE_EQ(50., child_y);
-  
+
   ChildCoordCalculator calc2(0, 0, 0, 0, 0);
   for (int i = 0; i < 360; i++) {
     calc2.Convert(i, i, &child_x, &child_y);
@@ -68,7 +68,7 @@ TEST(MathUtilsTest, ChildCoordCalculator) {
     EXPECT_DOUBLE_EQ(child_y, calc.GetChildY(0, 0));
     EXPECT_DOUBLE_EQ(-i, child_x);
     EXPECT_DOUBLE_EQ(-i, child_y);
-    
+
     calc = ChildCoordCalculator(0, 0, i, i, 0);
     calc.Convert(0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(child_x, calc.GetChildX(0, 0));
@@ -123,7 +123,7 @@ TEST(MathUtilsTest, GetChildCoord) {
   ParentCoordToChildCoord(0, 0, 0, 0, 50, 50, 2 * M_PI, &child_x, &child_y);
   EXPECT_DOUBLE_EQ(50., child_x);
   EXPECT_DOUBLE_EQ(50., child_y);
-    
+
   for (int i = 0; i < 360; i++) {
     ParentCoordToChildCoord(i, i, 0, 0, 0, 0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(i, child_x);
@@ -132,7 +132,7 @@ TEST(MathUtilsTest, GetChildCoord) {
     ParentCoordToChildCoord(0, 0, i, i, 0, 0, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(-i, child_x);
     EXPECT_DOUBLE_EQ(-i, child_y);
-    
+
     ParentCoordToChildCoord(0, 0, 0, 0, i, i, 0, &child_x, &child_y);
     EXPECT_DOUBLE_EQ(i, child_x);
     EXPECT_DOUBLE_EQ(i, child_y);
@@ -189,7 +189,7 @@ TEST(MathUtilsTest, GetParentCoord) {
     ChildCoordToParentCoord(0, 0, i, i, 0, 0, 0, &parent_x, &parent_y);
     EXPECT_DOUBLE_EQ(i, parent_x);
     EXPECT_DOUBLE_EQ(i, parent_y);
-    
+
     ChildCoordToParentCoord(0, 0, 0, 0, i, i, 0, &parent_x, &parent_y);
     EXPECT_DOUBLE_EQ(-i, parent_x);
     EXPECT_DOUBLE_EQ(-i, parent_y);
@@ -262,6 +262,6 @@ TEST(MathUtilsTest, GetChildExtentInParent) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
-  
+
   return RUN_ALL_TESTS();
 }

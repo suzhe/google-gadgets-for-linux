@@ -96,12 +96,12 @@ std::string StringPrintf(const char* format, ...) {
         length = result + 1;
       }
       char* buf = new char[length];
-  
+
       // Restore the va_list before we use it again
       va_copy(backup_ap, ap);
       result = vsnprintf(buf, length, format, backup_ap);
       va_end(backup_ap);
-  
+
       if ((result >= 0) && (result < length)) {
         // It fits.
         dst = buf;

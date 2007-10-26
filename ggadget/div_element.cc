@@ -40,11 +40,11 @@ class DivElement::Impl {
   ~Impl() {
     delete background_texture_;
     background_texture_ = NULL;
-    
+
     delete scrollbar_;
     scrollbar_ = NULL;
   }
-  
+
   void ScrollBarUpdated() {
     int v = scrollbar_->GetValue();
     if (scroll_pos_y_ != v) {
@@ -68,7 +68,7 @@ class DivElement::Impl {
       scrollbar_->ConnectOnChangeEvent(slot);
     }
   }
-  
+
   void UpdateScrollPos(size_t width, size_t height) {
     scroll_height_ = static_cast<int>(height);
     int owner_height = static_cast<int>(ceil(owner_->GetPixelHeight()));
@@ -81,7 +81,7 @@ class DivElement::Impl {
       scrollbar_->SetValue(scroll_pos_y_);
     }
     scrollbar_->SetVisible(show_scrollbar);
-           
+
     scroll_width_ = static_cast<int>(width);
     double owner_width = owner_->GetPixelWidth();
     if (show_scrollbar) {
@@ -185,7 +185,7 @@ void DivElement::DoDraw(CanvasInterface *canvas,
       canvas->DrawCanvas(0, 0, children_canvas);
     }
   }
-  
+
   if (impl_->scrollbar_) {
     bool c;
     const CanvasInterface *scrollbar = impl_->scrollbar_->Draw(&c);
@@ -273,7 +273,7 @@ void DivElement::SelfCoordToChildCoord(ElementInterface *child,
     x -= impl_->scroll_pos_x_;
     y -= impl_->scroll_pos_y_;
   }
-  
+
   BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);
 }
 
@@ -283,7 +283,7 @@ void DivElement::SetPixelWidth(double width) {
     impl_->scrollbar_->SetPixelX(width - impl_->scrollbar_->GetPixelWidth());
   }
 }
-  
+
 void DivElement::SetPixelHeight(double height) {
   BasicElement::SetPixelHeight(height);
   if (impl_->scrollbar_) {

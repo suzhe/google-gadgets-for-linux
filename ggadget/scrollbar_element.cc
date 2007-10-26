@@ -66,21 +66,21 @@ class ScrollBarElement::Impl {
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeftDown, false);
     left_[STATE_OVER] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeftOver, false);
-    
+
     right_[STATE_NORMAL] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultRight, false);
     right_[STATE_DOWN] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightDown, false);
     right_[STATE_OVER] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightOver, false);  
-    
+
     thumb_[STATE_NORMAL] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumb, false);
     thumb_[STATE_DOWN] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbDown, false);
     thumb_[STATE_OVER] = 
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbOver, false);  
-    
+
     background_ = owner->GetView()->LoadImageFromGlobal(kScrollDefaultBackground, 
                                                         false);
   }
@@ -88,14 +88,14 @@ class ScrollBarElement::Impl {
     for (int i = STATE_NORMAL; i < STATE_COUNT; i++) {
       delete left_[i];
       left_[i] = NULL;
-      
+
       delete right_[i];
       right_[i] = NULL;
-      
+
       delete thumb_[i];
       thumb_[i] = NULL;
     }
-    
+
     delete background_;
     background_ = NULL;
   }
@@ -111,13 +111,13 @@ class ScrollBarElement::Impl {
   double drag_delta_;
   Orientation orientation_;
   EventSignal onchange_event_;
-  
+
   void ClearDisplayStates() {
     left_state_ = STATE_NORMAL;
     right_state_ = STATE_NORMAL;
     thumb_state_ = STATE_NORMAL;
   }
-  
+
   void GetButtonLocation(bool downleft, 
                          double *x, double *y, double *w, double *h) {
     Image *img = downleft ? left_[left_state_] : right_[right_state_];
@@ -133,7 +133,7 @@ class ScrollBarElement::Impl {
     *w = imgw;
     *h = imgh;
   }
-    
+
   void GetThumbLocation(double leftx, double lefty, 
                         double leftwidth, double leftheight, 
                         double rightx, double righty, 
@@ -158,7 +158,7 @@ class ScrollBarElement::Impl {
     *w = imgw;
     *h = imgh;
   }
-  
+
   /** 
    * Utility function for getting the int value from a position on the
    * scrollbar. It does not check to make sure that the value is within range.
@@ -169,7 +169,7 @@ class ScrollBarElement::Impl {
     GetButtonLocation(true, &lx, &ly, &lw, &lh);
     double rx, ry, unused;
     GetButtonLocation(false, &rx, &ry, &unused, &unused);
-    
+
     Image *img = thumb_[thumb_state_];
     int delta = max_ - min_;
     double position, denominator;
@@ -187,16 +187,16 @@ class ScrollBarElement::Impl {
     if (denominator == 0) { // prevent overflow
       position = 0;
     }
-    
+
     int answer = static_cast<int>(position);
     answer += min_;
     return answer;
   }
-  
+
   void SetValue(int value) {
     if (value != value_) {
       value_ = value;
-      
+
       if (value_ > max_) {
         value_ = max_;
       } else if (value_ < min_) {
@@ -215,7 +215,7 @@ class ScrollBarElement::Impl {
     int v = value_ + (downleft ? -delta : delta);
     SetValue(v);    
   }
-  
+
   /**
    * Returns the scrollbar component that is under the (x, y) position.
    * For buttons, also return the top left coordinate of that component.
@@ -228,20 +228,20 @@ class ScrollBarElement::Impl {
     GetButtonLocation(false, &rx, &ry, &rw, &rh);
     double tx, ty, tw, th;
     GetThumbLocation(lx, ly, lw, lh, rx, ry, &tx, &ty, &tw, &th);
-    
+
     // Check in reverse of drawn order: thumb, right, left.
     if (IsPointInElement(x - tx, y - ty, tw, th)) {
       *compx = tx;
       *compy = ty;
       return COMPONENT_THUMB_BUTTON;
     }  
-    
+
     if (IsPointInElement(x - rx, y - ry, rw, rh)) {
       *compx = rx;
       *compy = ry;
       return COMPONENT_UPRIGHT_BUTTON;
     }
-    
+
     if (IsPointInElement(x - lx, y - ly, lw, lh)) {
       *compx = lx;
       *compy = ly;
@@ -251,7 +251,7 @@ class ScrollBarElement::Impl {
     if ((orientation_ == ORIENTATION_HORIZONTAL) ? (x < tx) : (y < ty)) {
       return COMPONENT_DOWNLEFT_BAR;
     }
-    
+
     return COMPONENT_UPRIGHT_BAR;    
   }
 };
@@ -310,7 +310,7 @@ ScrollBarElement::ScrollBarElement(ElementInterface *parent,
   RegisterProperty("value", 
                    NewSlot(this, &ScrollBarElement::GetValue), 
                    NewSlot(this, &ScrollBarElement::SetValue));
-  
+
   RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);  
 }
 
@@ -329,7 +329,7 @@ void ScrollBarElement::DoDraw(CanvasInterface *canvas,
                           &tx, &ty, &unused, &unused);
   /*DLOG("DRAW wh %f %f, l %f %f, r %f %f, t %f %f", 
        width, height, lx, ly, rx, ry, tx, ty);*/
-  
+
   // Drawing order: background, left, right, thumb.
   impl_->background_->StretchDraw(canvas, 0, 0, width, height);
   impl_->left_[impl_->left_state_]->Draw(canvas, lx, ly);
@@ -669,7 +669,7 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
           } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
             impl_->left_state_ = STATE_OVER;
           }
-  
+
           // Restore the down states, overwriting the over states if necessary.
           if (oldthumb == STATE_DOWN) {
             impl_->thumb_state_ = STATE_DOWN;
@@ -682,7 +682,7 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
           } else if (oldleft == STATE_DOWN) {
             impl_->left_state_ = STATE_DOWN;
           }
-  
+
           bool redraw = (impl_->left_state_ != oldleft || 
               impl_->right_state_ != oldright || 
               impl_->thumb_state_ != oldthumb);  

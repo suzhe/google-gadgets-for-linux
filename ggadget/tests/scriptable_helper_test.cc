@@ -151,7 +151,7 @@ TEST(scriptable_helper, TestPropertyAndMethod) {
   ASSERT_TRUE(scriptable->SetProperty(-9, Variant("VALUE_INVALID")));
   ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-8));
   ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty(-9));
-  
+
   // -10: the "VariantProperty" property.
   ASSERT_EQ(Variant(0), scriptable->GetProperty(-10));
   ASSERT_TRUE(scriptable->SetProperty(-10, Variant(1234)));

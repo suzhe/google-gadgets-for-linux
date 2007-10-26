@@ -31,7 +31,7 @@ struct Color {
     ASSERT(g >= 0. && g <= 1.);
     ASSERT(b >= 0. && b <= 1.);
   };      
-  
+
   /**
    * Utility function to create a Color object from 8-bit color channel values.
    */
@@ -39,7 +39,7 @@ struct Color {
                               unsigned char b) {
     return Color(r / 255.0, g / 255.0, b / 255.0);
   };  
-  
+
   double red, green, blue;  
 };
 

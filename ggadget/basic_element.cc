@@ -384,7 +384,7 @@ class BasicElement::Impl {
       default: break;
     }
   }
-  
+
   const CanvasInterface *Draw(bool *changed) {
     const CanvasInterface *canvas = NULL;
     const CanvasInterface *children_canvas = NULL;

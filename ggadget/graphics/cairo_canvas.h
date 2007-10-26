@@ -41,31 +41,31 @@ class CairoCanvas : public CanvasInterface {
    */
   CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask);
   virtual ~CairoCanvas();
-  
+
   virtual void Destroy() { delete this; };
-  
+
   virtual size_t GetWidth() const { return width_; };
   virtual size_t GetHeight() const { return height_; };  
-  
+
   virtual bool IsMask() const { return is_mask_; };  
-    
+
   virtual bool PushState();
   virtual bool PopState();
-  
+
   virtual bool MultiplyOpacity(double opacity);
   virtual void RotateCoordinates(double radians);
   virtual void TranslateCoordinates(double dx, double dy);
   virtual void ScaleCoordinates(double cx, double cy);
-    
+
   /** Clears the entire surface to be empty. */
   void ClearSurface();
   virtual bool ClearCanvas();
-  
+
   virtual bool DrawLine(double x0, double y0, double x1, double y1, 
                         double width, const Color &c);
   virtual bool DrawFilledRect(double x, double y, 
                               double w, double h, const Color &c);  
-  
+
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img);
   virtual bool DrawFilledRectWithCanvas(double x, double y, 
                                         double w, double h,
@@ -79,10 +79,10 @@ class CairoCanvas : public CanvasInterface {
                         const char *text, const FontInterface *f, 
                         const Color &c, Alignment align, VAlignment valign,
                         Trimming trimming, TextFlag text_flag);
-  
+
   virtual bool IntersectRectClipRegion(double x, double y, 
                                        double w, double h);
-  
+
   /**
    * Get the surface contained within this class for use elsewhere. 
    * Will flush the surface before returning so it is ready to be read.
@@ -92,14 +92,14 @@ class CairoCanvas : public CanvasInterface {
     cairo_surface_flush(s);
     return s;
   };   
-  
+
  private:
    cairo_t *cr_;
    size_t width_, height_;
    bool is_mask_;
    double opacity_;
    std::stack<double> opacity_stack_;
-   
+
    DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
 };
 

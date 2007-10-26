@@ -155,11 +155,11 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    * @return true if the element has changed, false otherwise.
    */
   bool IsSelfChanged() const;
-  
+
   /** Sets the self changed state. */
   void SetSelfChanged(bool changed);
 #endif
-  
+
   /**
    * Draws the element onto the canvas.
    * To be implemented by subclasses.
@@ -168,13 +168,13 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
-  
+
   /** 
    * Sets the changed bit to true and if visible, 
    * requests the view to be redrawn. 
    */
   virtual void QueueDraw();
-  
+
  private:
   class Impl;
   Impl *impl_;
