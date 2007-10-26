@@ -28,7 +28,7 @@
 #include "resources/resources.cc"
 
 SimpleHostFileManager::SimpleHostFileManager() {
-  
+
 }
 
 SimpleHostFileManager::~SimpleHostFileManager() {
@@ -49,7 +49,7 @@ bool SimpleHostFileManager::GetFileContents(const char *file,
                                             std::string *data,
                                             std::string *path) {
   data->clear();
-  
+
   int res_prefix_len = strlen(ggadget::kGlobalResourcePrefix);
   if (0 == strncmp(file, ggadget::kGlobalResourcePrefix, res_prefix_len)) {
     // This is a resource file, so look up resources array.
@@ -62,14 +62,14 @@ bool SimpleHostFileManager::GetFileContents(const char *file,
     // This lookup should never fail since resource names are statically coded.
     ASSERT(pos && pos < kResourceList + arraysize(kResourceList) &&
         0 == strcmp(res_name, pos->filename));
-    
+
     data->append(pos->data, pos->data_size);    
     *path = file;
     return true;
   }
-  
+
   // TODO: add localized lookup support?
-  
+
   return false;
 }
 

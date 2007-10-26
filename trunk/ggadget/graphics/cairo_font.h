@@ -37,13 +37,13 @@ class CairoFont : public FontInterface {
   CairoFont(PangoFontDescription *font, size_t size, Style style, 
             Weight weight);
   virtual ~CairoFont();
-  
+
   virtual Style GetStyle() const { return style_; };
   virtual Weight GetWeight() const { return weight_; };
   virtual size_t GetPointSize() const { return size_; };
-  
+
   virtual void Destroy() { delete this; };
-  
+
   const PangoFontDescription *GetFontDescription() const { return font_; };
 
  private:

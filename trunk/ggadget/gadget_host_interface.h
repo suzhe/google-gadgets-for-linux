@@ -50,7 +50,7 @@ class GadgetHostInterface {
 
   /** Returns the @c FileManagerInterface used to load global resources. */ 
   virtual FileManagerInterface *GetGlobalFileManager() = 0;
-  
+
   /** Creates a new @c XMLHttpRequestInterface instance. */
   virtual XMLHttpRequestInterface *NewXMLHttpRequest() = 0;
 

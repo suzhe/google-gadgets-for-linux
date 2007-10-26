@@ -236,7 +236,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
       return JS_FALSE;
     }
     ASSERT(!is_method);
-  
+
     Variant value;
     if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
       JS_ReportError(js_context_,
@@ -244,7 +244,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
                      PrintJSValue(js_context_, js_val).c_str());
       return JS_FALSE;
     }
-  
+
     if (!scriptable_->SetProperty(int_id, value)) {
       JS_ReportError(js_context_,
                      "Failed to set native property %s(%d) (may be readonly)",
@@ -279,7 +279,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
       return GetPropertyDefault(id, vp);
     }
     ASSERT(!is_method);
-  
+
     Variant return_value = scriptable_->GetProperty(int_id);
     if (!ConvertNativeToJS(js_context_, return_value, vp)) {
       JS_ReportError(js_context_,
@@ -315,7 +315,7 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
       return SetPropertyDefault(id, js_val);
     }
     ASSERT(!is_method);
-  
+
     Variant value;
     if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
       JS_ReportError(js_context_,
@@ -323,7 +323,7 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
                      PrintJSValue(js_context_, js_val).c_str());
       return JS_FALSE;
     }
-  
+
     if (!scriptable_->SetProperty(int_id, value)) {
       JS_ReportError(js_context_,
                      "Failed to set native property %s(%d) (may be readonly).",

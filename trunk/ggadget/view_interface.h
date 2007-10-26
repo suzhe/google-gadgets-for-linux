@@ -289,7 +289,7 @@ class ViewInterface : public ScriptableInterface {
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
   virtual Image *LoadImage(const char *name, bool is_mask) = 0;
-  
+
   /**
    * Load an image from the global file manager.
    * @param name the name within the gadget base path.
@@ -297,7 +297,7 @@ class ViewInterface : public ScriptableInterface {
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask) = 0;
-  
+
   /**
    * Load a texture from image file or create a colored texture.
    * @param name the name of an image file within the gadget base path, or a

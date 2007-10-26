@@ -33,7 +33,7 @@ class CairoCanvasTest : public testing::Test {
  protected:
   CanvasInterface *gfx_;
   cairo_surface_t *surface_;
-   
+
   CairoCanvasTest() {
     surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);    
     cairo_t *cr = cairo_create(surface_);
@@ -44,11 +44,11 @@ class CairoCanvasTest : public testing::Test {
     cairo_destroy(cr);
     cr = NULL;
   }
-  
+
   ~CairoCanvasTest() {
     gfx_->Destroy();
     gfx_ = NULL;
-    
+
     if (g_savepng) {
       const testing::TestInfo *const test_info = 
         testing::UnitTest::GetInstance()->current_test_info();
@@ -56,7 +56,7 @@ class CairoCanvasTest : public testing::Test {
       snprintf(file, arraysize(file), "%s.png", test_info->name());
       cairo_surface_write_to_png(surface_, file);      
     }
-    
+
     cairo_surface_destroy(surface_);
     surface_ = NULL;
   }  
@@ -64,12 +64,12 @@ class CairoCanvasTest : public testing::Test {
 
 TEST_F(CairoCanvasTest, PushPopStateReturnValues) {
   EXPECT_FALSE(gfx_->PopState());
-  
+
   // push 1x, pop 1x
   EXPECT_TRUE(gfx_->PushState());  
   EXPECT_TRUE(gfx_->PopState());  
   EXPECT_FALSE(gfx_->PopState());
-  
+
   // push 3x, pop 3x
   EXPECT_TRUE(gfx_->PushState());  
   EXPECT_TRUE(gfx_->PushState());  
@@ -78,7 +78,7 @@ TEST_F(CairoCanvasTest, PushPopStateReturnValues) {
   EXPECT_TRUE(gfx_->PopState());
   EXPECT_TRUE(gfx_->PopState());
   EXPECT_FALSE(gfx_->PopState());
-  
+
   EXPECT_FALSE(gfx_->PopState());
 }
 
@@ -142,16 +142,16 @@ TEST_F(CairoCanvasTest, Transformations) {
   gfx_->RotateCoordinates(kPi/6);
   EXPECT_TRUE(gfx_->DrawLine(10., 10., 200., 10., 10., Color(0., 1., 0.)));
   EXPECT_TRUE(gfx_->PopState());
-  
+
   EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
   EXPECT_TRUE(gfx_->PushState()); 
-  
+
   // scale
   EXPECT_TRUE(gfx_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
   gfx_->ScaleCoordinates(1.3, 1.5);
   EXPECT_TRUE(gfx_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
   EXPECT_TRUE(gfx_->PopState());
-  
+
   // translation
   EXPECT_TRUE(gfx_->DrawLine(10., 110., 200., 110., 10., Color(0., 0., 1.)));
   gfx_->TranslateCoordinates(20., 25.);
@@ -172,13 +172,13 @@ TEST_F(CairoCanvasTest, FillRectAndClipping) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
-  
+
   for (int i = 0; i < argc; i++) {
     if (0 == strcasecmp(argv[i], "-savepng")) {
       g_savepng = true;
       break;
     }
   }
-  
+
   return RUN_ALL_TESTS();
 }

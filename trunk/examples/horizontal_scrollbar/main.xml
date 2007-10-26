@@ -10,7 +10,7 @@
 
 <view width="100" height="132">
   <script src="main.js" />
-  
+
   <div name="scrollarea" width="100" height="132">
     <img src="oarfish.jpg" name="oarfishImg" width="530" height="120" />
     <scrollbar name="sb"

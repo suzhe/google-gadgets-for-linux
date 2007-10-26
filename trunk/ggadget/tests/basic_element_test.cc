@@ -39,7 +39,7 @@ class Muffin : public ggadget::BasicElement {
 
  public:
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
-  
+
  public:
   static ggadget::ElementInterface *CreateInstance(
       ggadget::ElementInterface *parent,
@@ -62,7 +62,7 @@ class Pie : public ggadget::BasicElement {
 
   virtual void DoDraw(ggadget::CanvasInterface *canvas,
                       const ggadget::CanvasInterface *children_canvas) { }
-  
+
  public:
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
 

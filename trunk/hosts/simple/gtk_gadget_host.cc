@@ -59,7 +59,7 @@ GtkGadgetHost::GtkGadgetHost()
   element_factory_ = factory;
 
   global_file_manager_->Init(NULL);
-  
+
   script_runtime_->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
 }

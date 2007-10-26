@@ -97,12 +97,12 @@ class CanvasInterface {
    * @return The height of the canvas in pixels.
    */
   virtual size_t GetHeight() const = 0;  
-  
+
   /**
    * @return true if the canvas is a mask, false otherwise.
    */
   virtual bool IsMask() const = 0;  
-    
+
   /** 
    * Saves the current graphics state in a stack, while not changing the current 
    * state. Specifically, three aspects of the state are stored: clipping, 
@@ -112,7 +112,7 @@ class CanvasInterface {
    * @return true on success, false otherwise.
    */
   virtual bool PushState() = 0;
-  
+
   /** 
    * Restores the last pushed graphics state from the state stack, overwriting 
    * the current state. Specifically, clipping, transformation matrix, 
@@ -130,7 +130,7 @@ class CanvasInterface {
    * @return true if successful, false if no changes are made (i.e. error).
    */
   virtual bool MultiplyOpacity(double opacity) = 0;
-  
+
   /**
    * Rotates the current user coordinates.
    */
@@ -143,7 +143,7 @@ class CanvasInterface {
    * Scales the current user coordinates.
    */
   virtual void ScaleCoordinates(double cx, double cy) = 0;
-  
+
   /**
    * Refresh the canvas to its initial state after construction, 
    * irrespective of the current transformation matrix.
@@ -154,7 +154,7 @@ class CanvasInterface {
    * @return true on success, false otherwise.
    */
   virtual bool ClearCanvas() = 0;
-  
+
   /** 
    * Draw a line from point (x0, y0) to (x1, y1).
    * @param x0 X-coordinate of the line starting point.
@@ -228,7 +228,7 @@ class CanvasInterface {
                         const char *text, const FontInterface *f,
                         const Color &c, Alignment align, VAlignment valign,
                         Trimming trimming, TextFlag text_flag) = 0;
-  
+
   /**
    * Intersect the clipping region with a rectangular region.
    * @param x X-coordinate of top left corner of rectangle.

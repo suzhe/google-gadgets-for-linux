@@ -44,7 +44,7 @@ class GraphicsInterface {
    * @param h Height of the new canvas.
    */
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const = 0;
-  
+
   /** 
    * Creates a new image canvas.
    * @param img_bytes Array containing the raw bytes of the image.
@@ -53,7 +53,7 @@ class GraphicsInterface {
    */
   virtual CanvasInterface *NewImage(const char *img_bytes, 
                                     size_t img_bytes_count) const = 0;
-  
+
   /** 
    * Creates a new image mask canvas.
    * Any black pixels in the mask image are considered to be transparent.
@@ -63,7 +63,7 @@ class GraphicsInterface {
    */
   virtual CanvasInterface *NewMask(const char *img_bytes, 
                                    size_t img_bytes_count) const = 0;
- 
+
   /**
    * Create a new font. This font is used when rendering text to a canvas.
    */ 

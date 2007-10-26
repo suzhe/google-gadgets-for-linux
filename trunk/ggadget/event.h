@@ -129,7 +129,7 @@ class MouseEvent : public Event {
   void SetWheelDelta(int wheel_delta) { wheel_delta_ = wheel_delta; }
 
   static const int kWheelDelta = 120;
-  
+
  private:
   double x_, y_;
   Button button_;
