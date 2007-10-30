@@ -28,7 +28,9 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "script_context_interface.h"
+#include "unicode_utils.h"
 #include "view_interface.h"
+#include "xml_dom.h"
 
 namespace ggadget {
 
@@ -267,9 +269,7 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
         break;
 
       // Other contents are not allowed under <script></script>.
-      // libxml2 sometimes returns 0 for text nodes.
-      if ((child->type != XML_TEXT_NODE && child->type != 0) ||
-          !TrimString(script).empty()) {
+      if (child->type != XML_TEXT_NODE || !TrimString(script).empty()) {
         LOG("%s:%d: This content is not allowed in script element",
             filename, xml_element->line);
         break;
@@ -416,9 +416,9 @@ static int CountTagSequence(const xmlNode *child, const char *tag) {
   return count;
 }
 
-static void ParseDOMIntoXPathMap(const xmlNode *element,
-                                 const std::string &prefix,
-                                 GadgetStringMap *table) {
+static void ConvertElementIntoXPathMap(const xmlNode *element,
+                                       const std::string &prefix,
+                                       GadgetStringMap *table) {
   for (xmlAttr *attribute = element->properties;
        attribute != NULL; attribute = attribute->next) {
     const char *name = FromXmlCharPtr(attribute->name);
@@ -447,7 +447,7 @@ static void ParseDOMIntoXPathMap(const xmlNode *element,
       (*table)[key] = text ? text : "";
       if (text) xmlFree(text);
 
-      ParseDOMIntoXPathMap(child, key, table);
+      ConvertElementIntoXPathMap(child, key, table);
     }
   }
 }
@@ -468,19 +468,147 @@ bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
     return false;
   }
 
-  ParseDOMIntoXPathMap(root, "", table);
+  ConvertElementIntoXPathMap(root, "", table);
   xmlFreeDoc(xmldoc);
   return true;
 }
 
 bool CheckXMLName(const char *name) {
+  if (!name || !*name)
+    return false;
+
   xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(name, strlen(name));
   if (ctxt) {
-    const xmlChar *result = xmlParseName(ctxt);
+    const char *result = FromXmlCharPtr(xmlParseName(ctxt));
+    bool succeeded = result && strcmp(result, name) == 0;
     xmlFreeParserCtxt(ctxt);
-    return result != NULL;
+    return succeeded;
   }
   return false;
+}
+
+static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
+                                        DOMNodeInterface *parent,
+                                        xmlNode *xmltext) {
+  char *text = FromXmlCharPtr(xmlNodeGetContent(xmltext));
+  UTF16String utf16_text;
+  if (text) {
+    std::string text_str(text);
+    ConvertStringUTF8ToUTF16(text_str, &utf16_text);
+    xmlFree(text);
+  }
+
+  DOMCharacterDataInterface *data = NULL;
+  switch (xmltext->type) {
+    case XML_TEXT_NODE:
+      // Don't create empty text nodes.
+      if (!utf16_text.empty())
+        data = domdoc->CreateTextNode(utf16_text.c_str());
+      break;
+    case XML_ENTITY_REF_NODE:
+      data = domdoc->CreateTextNode(utf16_text.c_str());
+      break;
+    case XML_CDATA_SECTION_NODE:
+      data = domdoc->CreateCDATASection(utf16_text.c_str());
+      break;
+    case XML_COMMENT_NODE:
+      data = domdoc->CreateComment(utf16_text.c_str());
+      break;
+    default:
+      ASSERT(false);
+      break;
+  }
+  if (data)
+    parent->AppendChild(data);
+}
+
+static void ConvertPIIntoDOM(DOMDocumentInterface *domdoc,
+                             DOMNodeInterface *parent,
+                             xmlNode *xmlpi) {
+  const char *target = FromXmlCharPtr(xmlpi->name);
+  char *data = FromXmlCharPtr(xmlNodeGetContent(xmlpi));
+  DOMProcessingInstructionInterface *pi;
+  domdoc->CreateProcessingInstruction(target, data, &pi);
+  if (pi)
+    parent->AppendChild(pi);
+  if (data)
+    xmlFree(data);
+}
+
+static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
+                                  DOMNodeInterface *parent,
+                                  xmlNode *xmlele);
+
+static void ConvertChildrenIntoDOM(DOMDocumentInterface *domdoc,
+                                   DOMNodeInterface *parent,
+                                   xmlNode *xmlnode) {
+  for (xmlNode *child = xmlnode->children; child != NULL; child = child->next) {
+    switch (child->type) {
+      case XML_ELEMENT_NODE:
+        ConvertElementIntoDOM(domdoc, parent, child);
+        break;
+      case XML_TEXT_NODE:
+      case XML_ENTITY_REF_NODE:
+      case XML_CDATA_SECTION_NODE:
+      case XML_COMMENT_NODE:
+        ConvertCharacterDataIntoDOM(domdoc, parent, child);
+        break;
+      case XML_PI_NODE:
+        ConvertPIIntoDOM(domdoc, parent, child);
+        break;
+      default:
+        DLOG("Ignore XML Node of type %d\n", child->type);
+        break;
+    }
+  }
+}
+
+static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
+                                  DOMNodeInterface *parent,
+                                  xmlNode *xmlele) {
+  DOMElementInterface *element;
+  domdoc->CreateElement(FromXmlCharPtr(xmlele->name), &element);
+  if (!element || DOM_NO_ERR != parent->AppendChild(element)) {
+    // Unlikely to happen.
+    DLOG("Failed to create DOM element or to add it to parent");
+    delete element;
+    return;
+  }
+
+  for (xmlAttr *attribute = xmlele->properties;
+       attribute != NULL; attribute = attribute->next) {
+    const char *name = FromXmlCharPtr(attribute->name);
+    char *value = FromXmlCharPtr(
+        xmlNodeGetContent(reinterpret_cast<xmlNode *>(attribute)));
+    element->SetAttribute(name, value);
+    if (value)
+      xmlFree(value);
+  }
+
+  ConvertChildrenIntoDOM(domdoc, element, xmlele);
+}
+
+bool ParseXMLIntoDOM(const char *xml, const char *filename,
+                     DOMDocumentInterface *domdoc) {
+  ASSERT(domdoc);
+  if (domdoc->HasChildNodes())
+    return false;
+
+  xmlDoc *xmldoc = ParseXML(xml, filename);
+  if (!xmldoc)
+    return false;
+
+  if (!xmlDocGetRootElement(xmldoc)) {
+    LOG("No root element in XML file: %s", filename);
+    xmlFreeDoc(xmldoc);
+    return false;
+  }
+
+  ConvertChildrenIntoDOM(domdoc, domdoc, reinterpret_cast<xmlNode *>(xmldoc));
+  domdoc->Normalize();
+
+  xmlFreeDoc(xmldoc);
+  return true;
 }
 
 } // namespace ggadget

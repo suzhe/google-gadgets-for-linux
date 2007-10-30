@@ -42,6 +42,7 @@ SET(SRCS
   variant.cc
   view.cc
   windows_locales.cc
+  xml_dom.cc
   xml_http_request.cc
   xml_utils.cc
 

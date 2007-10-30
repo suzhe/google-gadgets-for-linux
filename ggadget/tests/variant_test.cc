@@ -46,6 +46,10 @@ void CheckVariant(T value) {
   Variant v1(v);
   ASSERT_EQ(Type, v1.type());
   ASSERT_TRUE(value == VariantValue<T>()(v1));
+  Variant v2;
+  v2 = v;
+  ASSERT_EQ(Type, v2.type());
+  ASSERT_TRUE(value == VariantValue<T>()(v2));
   printf("%s\n", v.ToString().c_str());
 }
 
@@ -100,7 +104,15 @@ void CheckStringVariantBase(T value) {
   Variant v1(v);
   ASSERT_EQ(Type, v1.type());
   ASSERT_TRUE(VT(value) == VT(VariantValue<T>()(v1)));
+  Variant v2;
+  v2 = v;
+  ASSERT_EQ(Type, v2.type());
+  ASSERT_TRUE(VT(value) == VT(VariantValue<T>()(v2)));
   printf("%s\n", v.ToString().c_str());
+  Variant v3("1234");
+  v3 = v;
+  ASSERT_EQ(Type, v3.type());
+  ASSERT_TRUE(VT(value) == VT(VariantValue<T>()(v3)));
 }
 
 template <typename T>
@@ -117,6 +129,12 @@ TEST(Variant, TestString) {
   ASSERT_TRUE(NULL == VariantValue<const char *>()(v));
   Variant v1(v);
   ASSERT_TRUE(NULL == VariantValue<const char *>()(v1));
+  Variant v2;
+  v2 = v;
+  ASSERT_TRUE(NULL == VariantValue<const char *>()(v2));
+  Variant v3("xyz");
+  v3 = v;
+  ASSERT_TRUE(NULL == VariantValue<const char *>()(v3));
 }
 
 TEST(Variant, TestJSON) {

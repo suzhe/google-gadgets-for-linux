@@ -262,7 +262,8 @@ JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
                      return_value.ToString().c_str());
     return result;
   } catch (ScriptableExceptionHolder e) {
-    return HandleException(cx, e);
+    HandleException(cx, e);
+    return JS_FALSE;
   }
 }
 

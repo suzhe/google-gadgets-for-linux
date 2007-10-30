@@ -35,16 +35,25 @@ const char *const kXMLNSPrefix = "xmlns";
 const char *const kXMLNSNamespaceURI = "http://www.w3.org/2000/xmlns/";
 */
 
-const char *const kCDATASectionName = "#cdata-section";
-const char *const kCommentName = "#comment";
-const char *const kDocumentName = "#document";
-const char *const kDocumentFragmentName = "#document-fragment";
-const char *const kTextName = "#text";
+const char *const kDOMCDATASectionName = "#cdata-section";
+const char *const kDOMCommentName = "#comment";
+const char *const kDOMDocumentName = "#document";
+const char *const kDOMDocumentFragmentName = "#document-fragment";
+const char *const kDOMTextName = "#text";
 
 /**
  * DOM interfaces.
  * Reference:
  *   - http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/
+ *
+ * Notes about memory management:
+ *   - All passed in <code>const char *</code> arguments are made copies.
+ *   - All returned <code>const char *</code> must be used transiently, or
+ *     the caller must make copies by itself.
+ *   - @see @c DOMNodeInterface::Attach()
+ *   - @see @c DOMNodeInterface::Detach()
+ *   - @see @c DOMNodeListInterface::Destroy()
+ *   - @see @c DOMNamedNodeMapInterface::Destroy()
  */
 enum DOMExceptionCode {
   /**
@@ -73,6 +82,10 @@ enum DOMExceptionCode {
   DOM_NULL_POINTER_ERR            = 100,
 };
 
+namespace internal {
+class DOMNodeImpl;
+}
+
 class DOMNodeInterface : public ScriptableInterface {
  public:
   CLASS_ID_DECL(0x7787eb3be55b4266);
@@ -92,15 +105,42 @@ class DOMNodeInterface : public ScriptableInterface {
     NOTATION_NODE               = 12,
   };
 
-  /** For implementation only. */
-  virtual void *GetImplData() = 0;
+  /** For implementation only.  Placed here to ensure consistent vtbl offset. */
+  virtual internal::DOMNodeImpl *GetImpl() const = 0;
+
+  /**
+   * Redeclare @c ScriptableInterface::Attach() and
+   * @c ScriptableInterface::Detach() here to give additional notes.
+   *
+   * All @c DOMNodeInterface derived objects are reference counted. Normally
+   * you should use @c Attach() and @c Detach() to add and remove references.
+   *
+   * Reference counting is based on DOM trees. References to any node in
+   * a tree are counted as the reference count of the whole tree. When the
+   * reference count decreases to zero, the whole tree will be deleted. When a
+   * subtree is removed from a tree, the reference count will be splitted into
+   * two, each containing the sum count of the individual new tree. When a
+   * tree is added into another tree, the reference count will be summed up.
+   *
+   * The reference count of a document includes not only the references to the
+   * tree itself, but also the number of orphan trees, because one can find
+   * the document through a node in an orphan tree.
+   *
+   * All newly created nodes returned from DOMDocumentInterface::CreateXXX(),
+   * any CloneNode() or SplitText() are initially have a zero count.
+   * You should either use the @c delete operator to delete the node,
+   * or call @c Attach() if you need to further operate on it,
+   * but never ignore the results from such methods.
+   */
+  virtual void Attach() = 0;
+  virtual void Detach() = 0;
 
   virtual const char *GetNodeName() const = 0;
   virtual const char *GetNodeValue() const = 0;
   virtual void SetNodeValue(const char *node_value) = 0;
   virtual NodeType GetNodeType() const = 0;
 
-  virtual DOMNodeInterface *GetParent() = 0;
+  virtual DOMNodeInterface *GetParentNode() = 0;
   virtual const DOMNodeInterface *GetParentNode() const = 0;
   virtual DOMNodeListInterface *GetChildNodes() = 0;
   virtual const DOMNodeListInterface *GetChildNodes() const = 0;
@@ -125,7 +165,7 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual DOMExceptionCode AppendChild(DOMNodeInterface *new_child) = 0;
 
   virtual bool HasChildNodes() const = 0;
-  virtual DOMNodeInterface *CloneNode(bool deep) = 0;
+  virtual DOMNodeInterface *CloneNode(bool deep) const = 0;
 
   /**
    * Though Node.normalize() is in DOM2, DOM1 has only Element.normalize().
@@ -144,6 +184,13 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual const DOMNodeListInterface *GetElementsByTagName(
       const char *name) const = 0;
 
+  /**
+   * @c textContent is a DOM3 property.
+   * Defined here for convenience and compatibility with the Windows version.
+   */
+  virtual const char *GetTextContent() const = 0;
+  virtual void SetTextContent(const char *text_content) = 0;
+
   /* TODO: DOM2
   virtual bool IsSupported(const char *feature, const char *version) const = 0;
   virtual const char *GetNamespaceURI() const = 0;
@@ -161,9 +208,18 @@ class DOMNodeInterface : public ScriptableInterface {
 CLASS_ID_IMPL(DOMNodeInterface, ScriptableInterface)
 
 class DOMNodeListInterface : public ScriptableInterface {
+ protected:
+  /** Disallow direct deletion. */
+  virtual ~DOMNodeListInterface() { }
+
  public:
   CLASS_ID_DECL(0x9935a8188f734afe);
 
+  /**
+   * Destroys the object after use.
+   * @c DOMNodeListInterface objects are not reference counted.
+   */
+  virtual void Destroy() const = 0;
   virtual DOMNodeInterface *GetItem(size_t index) = 0;
   virtual const DOMNodeInterface *GetItem(size_t index) const = 0;
   virtual size_t GetLength() const = 0;
@@ -171,14 +227,22 @@ class DOMNodeListInterface : public ScriptableInterface {
 CLASS_ID_IMPL(DOMNodeListInterface, ScriptableInterface)
 
 class DOMNamedNodeMapInterface : public ScriptableInterface {
+ protected:
+  /** Disallow direct deletion. */
+  virtual ~DOMNamedNodeMapInterface() { }
+
  public:
   CLASS_ID_DECL(0xd2c849db6fb6416f);
 
+  /**
+   * Destroys the object after use.
+   * @c DOMNodeListInterface objects are not reference counted.
+   */
+  virtual void Destroy() const = 0;
   virtual DOMNodeInterface *GetNamedItem(const char *name) = 0;
   virtual const DOMNodeInterface *GetNamedItem(const char *name) const = 0;
   virtual DOMExceptionCode SetNamedItem(DOMNodeInterface *arg) = 0;
-  virtual DOMExceptionCode RemoveNamedItem(
-      const char *name, DOMNodeInterface **removed_node) = 0;
+  virtual DOMExceptionCode RemoveNamedItem(const char *name) = 0;
   virtual DOMNodeInterface *GetItem(size_t index) = 0;
   virtual const DOMNodeInterface *GetItem(size_t index) const = 0;
   virtual size_t GetLength() const = 0;
@@ -189,10 +253,8 @@ class DOMNamedNodeMapInterface : public ScriptableInterface {
   virtual const DOMNodeInterface *GetNamedItemNS(const char *namespace_uri,
                                          const char *local_name) const = 0;
   virtual DOMExceptionCode SetNamedItemNS(DOMNodeInterface *arg) = 0;
-  virtual DOMExceptionCode RemoveNamedItemNS(
-      const char *namespace_uri,
-      const char *local_name,
-      DOMNodeInterface **removed_node) = 0;
+  virtual DOMExceptionCode RemoveNamedItemNS(const char *namespace_uri,
+                                             const char *local_name) = 0;
   */
 };
 CLASS_ID_IMPL(DOMNamedNodeMapInterface, ScriptableInterface)
@@ -241,8 +303,7 @@ class DOMElementInterface : public DOMNodeInterface {
   virtual void RemoveAttribute(const char *name) = 0;
   virtual DOMAttrInterface *GetAttributeNode(const char *name) = 0;
   virtual const DOMAttrInterface *GetAttributeNode(const char *name) const = 0;
-  virtual DOMExceptionCode SetAttributeNode(
-      DOMAttrInterface *new_attr, DOMAttrInterface **replaced_attr) = 0;
+  virtual DOMExceptionCode SetAttributeNode(DOMAttrInterface *new_attr) = 0;
   virtual DOMExceptionCode RemoveAttributeNode(DOMAttrInterface *old_attr) = 0;
   // GetElementsByTagName has been declared in DOMNodeInterface.
   virtual DOMNamedNodeMapInterface *GetAttributes() = 0;
@@ -260,8 +321,7 @@ class DOMElementInterface : public DOMNodeInterface {
                                                const char *local_name) = 0;
   virtual const DOMAttrInterface *GetAttributeNodeNS(
       const char *namespace_uri, const char *local_name) const = 0;
-  virtual DOMExceptionCode SetAttributeNodeNS(
-      DOMAttrInterface *new_attr, DOMAttrInterface **replaced_attr) = 0;
+  virtual DOMExceptionCode SetAttributeNodeNS(DOMAttrInterface *new_attr) = 0;
   // GetElementsByTagNameNS has been declared in DOMNodeInterface.
   virtual bool HasAttribute(const char *name) const = 0;
   virtual bool HasAttributeNS(const char *namespace_uri,
@@ -278,6 +338,12 @@ class DOMTextInterface : public DOMCharacterDataInterface {
 };
 CLASS_ID_IMPL(DOMTextInterface, DOMCharacterDataInterface)
 
+class DOMCommentInterface : public DOMCharacterDataInterface {
+ public:
+  CLASS_ID_DECL(0x2be4711d5e9b4400);
+};
+CLASS_ID_IMPL(DOMCommentInterface, DOMCharacterDataInterface)
+
 class DOMCDATASectionInterface : public DOMTextInterface {
  public:
   CLASS_ID_DECL(0x16ce6e727f694f7b);
@@ -291,8 +357,17 @@ class DOMDocumentFragmentInterface : public DOMNodeInterface {
 CLASS_ID_IMPL(DOMDocumentFragmentInterface, DOMNodeInterface)
 
 class DOMDocumentTypeInterface;
-class DOMProcesssingInstructionInterface;
 class DOMEntityReferenceInterface;
+
+class DOMProcessingInstructionInterface : public DOMNodeInterface {
+ public:
+  CLASS_ID_DECL(0xb3f35b20e5854943);
+
+  virtual const char *GetTarget() const = 0;
+  virtual const char *GetData() const = 0;
+  virtual void SetData(const char *data) = 0;
+};
+CLASS_ID_IMPL(DOMProcessingInstructionInterface, DOMNodeInterface)
 
 class DOMImplementationInterface : public ScriptableInterface {
  public:
@@ -327,16 +402,27 @@ class DOMDocumentInterface : public DOMNodeInterface {
                                          DOMElementInterface **result) = 0;
   virtual DOMDocumentFragmentInterface *CreateDocumentFragment() = 0;
   virtual DOMTextInterface *CreateTextNode(const UTF16Char *data) = 0;
+  virtual DOMCommentInterface *CreateComment(const UTF16Char *data) = 0;
   virtual DOMCDATASectionInterface *CreateCDATASection(
       const UTF16Char *data) = 0;
   virtual DOMExceptionCode CreateProcessingInstruction(
       const char *target, const char *data,
-      DOMProcesssingInstructionInterface **result) = 0;
+      DOMProcessingInstructionInterface **result) = 0;
   virtual DOMExceptionCode CreateAttribute(const char *name,
                                            DOMAttrInterface **result) = 0;
   virtual DOMExceptionCode CreateEntityReference(
       const char *name, DOMEntityReferenceInterface **result) = 0;
   // GetElementsByName is declared in DOMNodeInterface.
+
+  /**
+   * Load from xml string and build up the DOM document.
+   * If the document has already contents, they will be removed first.
+   * This method is not defined in DOM spec. Defined here for convenience and
+   * compatibility with the Windows version.
+   * @param xml a string containing XML definition.
+   * @return @c true if succeeded.
+   */
+  virtual bool LoadXML(const char *xml) = 0;
 
   /* TODO: DOM2
   virtual DOMExceptionCode ImportNode(DOMNodeInterface *imported_node,
