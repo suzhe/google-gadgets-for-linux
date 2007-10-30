@@ -83,9 +83,12 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
   JSBool result = JS_FALSE;
-  // For now don't allow passing NULL to a native string.
-  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val)
-      || JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
+  if (JSVAL_IS_NULL(js_val)) {
+    *native_val = Variant(static_cast<const char *>(NULL));
+    result = JS_TRUE;
+  } else if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
+             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val) ||
+             JSVAL_IS_STRING(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
       jschar *chars = JS_GetStringChars(js_string);
@@ -106,11 +109,15 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
                                            Variant *native_val) {
   JSBool result = JS_FALSE;
-  // For now don't allow passing NULL to a UTF16String.
-  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) || JSVAL_IS_INT(js_val)
-      || JSVAL_IS_DOUBLE(js_val) || JSVAL_IS_STRING(js_val)) {
+  if (JSVAL_IS_NULL(js_val)) {
+    *native_val = Variant(static_cast<const UTF16Char *>(NULL));
+    result = JS_TRUE;
+  } else if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
+             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val) ||
+             JSVAL_IS_STRING(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
+      result = JS_TRUE;
       jschar *chars = JS_GetStringChars(js_string);
       // Don't cast chars to UTF16Char *, to let the compiler check if they
       // are compatible.
@@ -418,7 +425,7 @@ JSBool ConvertNativeToJS(JSContext *cx,
       JS_ReportError(cx, "Don't pass (const) void * to JavaScript");
       return JS_FALSE;
     case Variant::TYPE_VARIANT:
-      // Normally there is no real value of this type, so convert it to void. 
+      // Normally there is no real value of this type, so convert it to void.
       return ConvertNativeToJSVoid(cx, native_val, js_val);
     default:
       return JS_FALSE;

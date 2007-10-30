@@ -92,12 +92,6 @@ DEATH_TEST("Test string property with an array", function() {
   ASSERT(DEATH());
 });
 
-DEATH_TEST("Test string property with null", function() {
-  // The following assignment should cause an error.
-  scriptable.Buffer = null;
-  ASSERT(DEATH());
-});
-
 TEST("Test constants", function() {
   ASSERT(EQ(123456789, scriptable.Fixed));
   for (var i = 0; i < 10; i++) {

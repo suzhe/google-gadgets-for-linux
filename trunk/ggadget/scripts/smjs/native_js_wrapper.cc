@@ -210,7 +210,8 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
       return JS_FALSE;
     }
   } catch (ScriptableExceptionHolder e) {
-    return JSScriptContext::HandleException(js_context_, e);
+    JSScriptContext::HandleException(js_context_, e);
+    return JS_FALSE;
   }
   return JS_TRUE;
 }
@@ -252,7 +253,8 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
       return JS_FALSE;
     }
   } catch (ScriptableExceptionHolder e) {
-    return JSScriptContext::HandleException(js_context_, e);
+    JSScriptContext::HandleException(js_context_, e);
+    return JS_FALSE;
   }
 
   return JS_TRUE;
@@ -288,7 +290,8 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
       return JS_FALSE;
     }
   } catch (ScriptableExceptionHolder e) {
-    return JSScriptContext::HandleException(js_context_, e);
+    JSScriptContext::HandleException(js_context_, e);
+    return JS_FALSE;
   }
 
   return JS_TRUE;
@@ -331,7 +334,8 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
       return JS_FALSE;
     }
   } catch (ScriptableExceptionHolder e) {
-    return JSScriptContext::HandleException(js_context_, e);
+    JSScriptContext::HandleException(js_context_, e);
+    return JS_FALSE;
   }
 
   return JS_TRUE;
@@ -356,7 +360,8 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
       // This property is not supported by the Scriptable, use default logic.
       return JS_TRUE;
   } catch (ScriptableExceptionHolder e) {
-    return JSScriptContext::HandleException(js_context_, e);
+    JSScriptContext::HandleException(js_context_, e);
+    return JS_FALSE;
   }
 
   ASSERT(int_id <= 0);

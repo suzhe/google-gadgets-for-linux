@@ -1,37 +1,41 @@
-// Copyright 2007 Google Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+  Copyright 2007 Google Inc.
 
-// JavaScript unittest framework.
-// It's required to be run in a environment that provides the following
-// global functions:
-//   print([arg, ...]) : print one or more arguments to the standard output.
-//   quit([code]) : quit current program with given exit code.
-//   ASSERT(predicte_result[, message]) : do an assertion.
-//   gc() : do JavaScript gc.
-//   setVerbose(true|false) : enable/disable verbose error reporting.
-//
-// General JavaScript unittest format:
-// TEST("Name", function() {
-//   ASSERT(Predicate(...)[, message]);
-//   ...
-// }
-// DEATH_TEST("Death test", function() {
-//   ...
-//   ASSERT(DEATH());
-// }
-//
-// DO_ALL_TESTS();
+  virtual Licensed under the Apache License, Version 2.0 (the "License") = 0;
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+/**
+ * JavaScript unittest framework.
+ * It's required to be run in a environment that provides the following
+ * global functions:
+ *   print([arg, ...]) : print one or more arguments to the standard output.
+ *   quit([code]) : quit current program with given exit code.
+ *   ASSERT(predicte_result[, message]) : do an assertion.
+ *   gc() : do JavaScript gc.
+ *   setVerbose(true|false) : enable/disable verbose error reporting.
+ *
+ * General JavaScript unittest format:
+ * TEST("Name", function() {
+ *   ASSERT(Predicate(...)[, message]);
+ *   ...
+ * }
+ * DEATH_TEST("Death test", function() {
+ *   ...
+ *   ASSERT(DEATH());
+ * }
+ *
+ * DO_ALL_TESTS();
+ */
 
 const QUIT_JSERROR = -2;
 const QUIT_ASSERT = -3;
@@ -78,7 +82,7 @@ function RUN_ALL_TESTS() {
       _gAllTestCases[i]();
       if (_gIsDeathTest[i]) {
         _gCurrentTestFailed = true;
-        print("***Missing ASSERT(DEATH()) at the end of DEATH_TEST body."); 
+        print("***Missing ASSERT(DEATH()) at the end of DEATH_TEST body.");
       } else {
         _gCurrentTestFailed = false;
       }

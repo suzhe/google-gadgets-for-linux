@@ -24,6 +24,7 @@ namespace ggadget {
 class ViewInterface;
 class ElementInterface;
 class Elements;
+class DOMDocumentInterface;
 
 /**
  * Sets up a view by loading xml content from a file and parsing it.
@@ -63,7 +64,7 @@ ElementInterface *InsertElementFromXML(Elements *elements,
                                        const ElementInterface *before);
 
 /**
- * Parses a XML file and store the result into a string map.
+ * Parses an XML file and store the result into a string map.
  *
  * The string map acts like a simple DOM that supporting XPath like queries.
  * When a key is given:
@@ -98,6 +99,17 @@ bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
  * @return @c true if the name is valid.
  */
 bool CheckXMLName(const char *name);
+
+/**
+ * Parses an XML file and build the DOM tree.
+ * @param xml the content of an XML file.
+ * @param filename the name of the XML file (only for logging).
+ * @param domdoc the DOM document. It must be blank before calling this
+ *     function, and will be filled with DOM data if this function succeeds.
+ * @return @c true if succeeds.
+ */
+bool ParseXMLIntoDOM(const char *xml, const char *filename,
+                     DOMDocumentInterface *domdoc);
 
 } // namespace ggadget
 

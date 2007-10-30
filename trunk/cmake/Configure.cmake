@@ -22,8 +22,6 @@ ADD_DEFINITIONS(
   -DPRODUCT_NAME=${PRODUCT_NAME}
   # For stdint.h macros like INT64_C etc.
   -D__STDC_CONSTANT_MACROS
-  # Let tinyxml use STL.
-  -DTIXML_USE_STL
 )
 
 IF(UNIX)
