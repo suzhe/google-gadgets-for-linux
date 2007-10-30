@@ -19,12 +19,13 @@
 
 #include "element_interface.h"
 #include "scriptable_helper.h"
+#include "canvas_interface.h"
 
 namespace ggadget {
 
-class CanvasInterface;
 class GraphicsInterface;
 class FileManagerInterface;
+class FontInterface;
 
 class Texture {
  public:
@@ -51,6 +52,16 @@ class Texture {
    * If the texture is an image, the image is repeated to fill the canvas.
    */ 
   void Draw(CanvasInterface *canvas);
+  
+  /**
+   * Draws the specified text on canvas.
+   */
+  void DrawText(CanvasInterface *canvas, double x, double y, double width, 
+                double height, const char *text, const FontInterface *f,  
+                CanvasInterface::Alignment align, 
+                CanvasInterface::VAlignment valign,
+                CanvasInterface::Trimming trimming, 
+                CanvasInterface::TextFlag text_flag);
 
  private:
   // Don't allow assignment.

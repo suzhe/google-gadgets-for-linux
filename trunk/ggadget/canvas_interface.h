@@ -48,19 +48,18 @@ class CanvasInterface {
    * Enum used to specify horizontal alignment.
    */
   enum Alignment {
-    LEFT, 
-    CENTER, 
-    RIGHT 
+    ALIGN_LEFT, 
+    ALIGN_CENTER, 
+    ALIGN_RIGHT 
   };
-
 
   /**
    * Enum used to specify vertical alignment.
    */
   enum VAlignment {
-    TOP, 
-    MIDDLE, 
-    BOTTOM 
+    VALIGN_TOP, 
+    VALIGN_MIDDLE, 
+    VALIGN_BOTTOM 
   };
 
   /**
@@ -229,6 +228,17 @@ class CanvasInterface {
                         const Color &c, Alignment align, VAlignment valign,
                         Trimming trimming, TextFlag text_flag) = 0;
 
+  /** 
+   * Draws the specified text on the screen at the given (x, y) using the
+   * specified texture. See @c DrawText for details. 
+   */
+  virtual bool DrawTextWithTexture(double x, double y, double width, 
+                                   double height, const char *text, 
+                                   const FontInterface *f, 
+                                   const CanvasInterface *texture, 
+                                   Alignment align, VAlignment valign,
+                                   Trimming trimming, TextFlag text_flag) = 0;
+  
   /**
    * Intersect the clipping region with a rectangular region.
    * @param x X-coordinate of top left corner of rectangle.

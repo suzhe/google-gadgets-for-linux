@@ -600,7 +600,7 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
   // Handle the event only when the event is fired and not canceled.
   if (*fired_element && result) {
     ASSERT(*fired_element == this);
-    double compx, compy;
+    double compx = .0, compy = .0;
     ScrollBarComponent c = impl_->GetComponentFromPosition(event->GetX(), 
                                                            event->GetY(),
                                                            &compx, &compy);
@@ -608,7 +608,7 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
     switch (event->GetType()) {
       case Event::EVENT_MOUSE_DOWN: 
         {
-          bool downleft, line;
+          bool downleft = true, line = true;
           impl_->ClearDisplayStates();       
           if (c == COMPONENT_THUMB_BUTTON) {
             impl_->thumb_state_ = STATE_DOWN;
