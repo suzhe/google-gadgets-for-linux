@@ -33,7 +33,12 @@ class Texture::Impl {
     if (name[0] == '#' && (name_len == 7 || name_len == 9)) {
       int r = 0, g = 0, b = 0;
       int alpha = 255;
-      int result = sscanf(name + 1, "%02x%02x%02x%02x", &r, &g, &b, &alpha);
+      int result;
+      if (name_len == 7) {
+        result = sscanf(name + 1, "%02x%02x%02x", &r, &g, &b);
+      } else {
+        result = sscanf(name + 1, "%02x%02x%02x%02x", &alpha, &r, &g, &b);
+      }
       if (result < 3)
         LOG("Invalid color: %s", name);
       color_ = Color(r / 255.0, g / 255.0, b / 255.0);
@@ -91,6 +96,30 @@ Texture::Texture(const Texture &another)
 void Texture::Draw(CanvasInterface *canvas) {
   ASSERT(canvas);
   impl_->Draw(canvas);
+}
+
+void Texture::DrawText(CanvasInterface *canvas, double x, double y, 
+                       double width, double height, const char *text, 
+                       const FontInterface *f, CanvasInterface::Alignment align, 
+                       CanvasInterface::VAlignment valign,
+                       CanvasInterface::Trimming trimming, 
+                       CanvasInterface::TextFlag text_flag) {
+  ASSERT(canvas);
+  if (impl_->image_) {
+    // Don't apply opacity_ here because it is only applicable with color_.    
+    canvas->DrawTextWithTexture(x, y, width, height, text, f, 
+                                impl_->image_->GetCanvas(), 
+                                align, valign, trimming, text_flag);
+  } else if (impl_->opacity_ > 0) {
+    if (impl_->opacity_ != 1.0) {
+      canvas->PushState();
+      canvas->MultiplyOpacity(impl_->opacity_);
+    }
+    canvas->DrawText(x, y, width, height, text, f, impl_->color_, 
+                     align, valign, trimming, text_flag);
+    if (impl_->opacity_ != 1.0)
+      canvas->PopState();
+  }
 }
 
 } // namespace ggadget

@@ -79,7 +79,13 @@ class CairoCanvas : public CanvasInterface {
                         const char *text, const FontInterface *f, 
                         const Color &c, Alignment align, VAlignment valign,
                         Trimming trimming, TextFlag text_flag);
-
+  virtual bool DrawTextWithTexture(double x, double y, double width, 
+                                   double height, const char *text, 
+                                   const FontInterface *f, 
+                                   const CanvasInterface *texture, 
+                                   Alignment align, VAlignment valign,
+                                   Trimming trimming, TextFlag text_flag);
+  
   virtual bool IntersectRectClipRegion(double x, double y, 
                                        double w, double h);
 
@@ -100,6 +106,12 @@ class CairoCanvas : public CanvasInterface {
    double opacity_;
    std::stack<double> opacity_stack_;
 
+   bool DrawTextInternal(double x, double y, double width, 
+                         double height, const char *text, 
+                         const FontInterface *f, 
+                         Alignment align, VAlignment valign,
+                         Trimming trimming, TextFlag text_flag);
+   
    DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
 };
 

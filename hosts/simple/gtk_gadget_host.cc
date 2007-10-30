@@ -30,6 +30,9 @@
 #include "ggadget/div_element.h"
 #include "ggadget/img_element.h"
 #include "ggadget/scrollbar_element.h"
+#include "ggadget/label_element.h"
+//#include "ggadget/anchor_element.h"
+//#include "ggadget/checkbox_element.h"
 
 class GtkGadgetHost::CallbackData {
  public:
@@ -56,6 +59,12 @@ GtkGadgetHost::GtkGadgetHost()
                                 &ggadget::ImgElement::CreateInstance);
   factory->RegisterElementClass("scrollbar",
                                 &ggadget::ScrollBarElement::CreateInstance);
+  factory->RegisterElementClass("label",
+                                &ggadget::LabelElement::CreateInstance);
+  /*factory->RegisterElementClass("a",
+                                &ggadget::AnchorElement::CreateInstance);
+  factory->RegisterElementClass("checkbox",
+                                &ggadget::CheckBoxElement::CreateInstance);*/
   element_factory_ = factory;
 
   global_file_manager_->Init(NULL);
@@ -107,7 +116,7 @@ ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(
 }
 
 void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) {
-  const char *str_level;
+  const char *str_level = "";
   switch (level) {
     case DEBUG_TRACE: str_level = "TRACE: "; break;
     case DEBUG_WARNING: str_level = "WARNING: "; break;

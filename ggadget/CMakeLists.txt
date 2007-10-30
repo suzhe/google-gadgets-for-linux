@@ -50,6 +50,7 @@ SET(SRCS
   div_element.cc
   img_element.cc
   scrollbar_element.cc
+  label_element.cc
 )
 
 SET(LIBS
