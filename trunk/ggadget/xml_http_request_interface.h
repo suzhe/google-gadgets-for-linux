@@ -23,7 +23,7 @@ namespace ggadget {
 
 template <typename R> class Slot0;
 class Connection;
-class DOMDocument;
+class DOMDocumentInterface;
 
 /**
  * References:
@@ -35,10 +35,21 @@ class XMLHttpRequestInterface : public ScriptableInterface {
  public:
   CLASS_ID_DECL(0x301dceaec56141d6);
 
+  enum ExceptionCode {
+    NO_ERR = 0,
+    INVALID_STATE_ERR = 11,
+    SYNTAX_ERR = 12,
+    SECURITY_ERR = 18,
+    NETWORK_ERR = 101,
+    ABORT_ERR = 102,
+    NULL_POINTER_ERR = 200,
+    OTHER_ERR = 300,
+  };
+
   enum State {
     UNSENT,
-    OPEN,
-    SENT,
+    OPENED,
+    HEADERS_RECEIVED,
     LOADING,
     DONE,
   };
@@ -48,19 +59,23 @@ class XMLHttpRequestInterface : public ScriptableInterface {
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) = 0;
   virtual State GetReadyState() = 0;
 
-  virtual bool Open(const char *method, const char *url, bool async,
-                    const char *user, const char *password) = 0;
-  virtual bool SetRequestHeader(const char *header, const char *value) = 0;
-  virtual bool Send(const char *data) = 0;
-  virtual bool Send(const DOMDocument *data) = 0;
+  virtual ExceptionCode Open(const char *method, const char *url, bool async,
+                             const char *user, const char *password) = 0;
+  virtual ExceptionCode SetRequestHeader(const char *header,
+                                         const char *value) = 0;
+  virtual ExceptionCode Send(const char *data) = 0;
+  virtual ExceptionCode Send(const DOMDocumentInterface *data) = 0;
   virtual void Abort() = 0;
 
-  virtual const char *GetAllResponseHeaders() = 0;
-  virtual const char *GetResponseHeader(const char *header) = 0;
-  virtual const char *GetResponseBody(size_t *size) = 0;
-  virtual DOMDocument *GetResponseXML() = 0;
-  virtual unsigned short GetStatus() = 0;
-  virtual const char *GetStatusText() = 0;
+  virtual ExceptionCode GetAllResponseHeaders(const char **result) = 0;
+  virtual ExceptionCode GetResponseHeader(const char *header,
+                                          const char **result) = 0;
+  virtual ExceptionCode GetResponseText(const char **result) = 0;
+  virtual ExceptionCode GetResponseBody(const char **result,
+                                        size_t *size) = 0;
+  virtual ExceptionCode GetResponseXML(DOMDocumentInterface **result) = 0;
+  virtual ExceptionCode GetStatus(unsigned short *result) = 0;
+  virtual ExceptionCode GetStatusText(const char **result) = 0;
 };
 
 CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)

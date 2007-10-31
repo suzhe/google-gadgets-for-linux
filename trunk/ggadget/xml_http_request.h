@@ -17,46 +17,13 @@
 #ifndef GGADGET_XML_HTTP_REQUEST_H__
 #define GGADGET_XML_HTTP_REQUEST_H__
 
-#include <curl/curl.h>
-#include "common.h"
-#include "scriptable_helper.h"
-#include "signal.h"
-#include "string_utils.h"
 #include "xml_http_request_interface.h"
 
 namespace ggadget {
 
 class GadgetHostInterface;
 
-class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
- public:
-  DEFINE_CLASS_ID(0x98a6c56c71ae45c7, XMLHttpRequestInterface);
-
-  XMLHttpRequest(GadgetHostInterface *host);
-  virtual ~XMLHttpRequest();
-
-  virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler);
-  virtual State GetReadyState();
-
-  virtual bool Open(const char *method, const char *url, bool async,
-                    const char *user, const char *password);
-  virtual bool SetRequestHeader(const char *header, const char *value);
-  virtual bool Send(const char *data);
-  virtual bool Send(const DOMDocument *data);
-  virtual void Abort();
-
-  virtual const char *GetAllResponseHeaders();
-  virtual const char *GetResponseHeader(const char *header);
-  virtual const char *GetResponseBody(size_t *size);
-  virtual DOMDocument *GetResponseXML();
-  virtual unsigned short GetStatus();
-  virtual const char *GetStatusText();
-
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(XMLHttpRequest);
-  class Impl;
-  Impl *impl_;
-};
+XMLHttpRequestInterface *CreateXMLHttpRequest(GadgetHostInterface *host);
 
 } // namespace ggadget
 

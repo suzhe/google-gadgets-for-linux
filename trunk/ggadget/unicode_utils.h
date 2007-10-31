@@ -219,6 +219,38 @@ size_t GetUTF16CharLength(const UTF16Char *src);
  */
 bool IsLegalUTF16Char(const UTF16Char *src, size_t length);
 
+/**
+ * Checks if a string is a valid UTF8 string.
+ *
+ * @param src the string to be checked.
+ * @param src_length length of the source string.
+ * @return true if the source string is a valid UTF8 string.
+ */
+bool IsLegalUTF8String(const char *src, size_t length);
+
+/**
+ * Checks if a string is a valid UTF8 string.
+ *
+ * Same as above function but takes a @c std::string object as source.
+ */
+bool IsLegalUTF8String(const std::string &src);
+
+/**
+ * Checks if a string is a valid UTF16 string.
+ *
+ * @param src the string to be checked.
+ * @param src_length length of the source string.
+ * @return true if the source string is a valid UTF16 string.
+ */
+bool IsLegalUTF16String(const UTF16Char *src, size_t length);
+
+/**
+ * Checks if a string is a valid UTF8 string.
+ *
+ * Same as above function but takes a @c std::string object as source.
+ */
+bool IsLegalUTF16String(const UTF16String &src);
+
 static const UTF32Char kUnicodeReplacementChar = 0xFFFD;
 static const UTF32Char kUnicodeMaxLegalChar = 0x10FFFF;
 static const UTF32Char kUnicodeMaxBMPChar = 0xFFFF;

@@ -101,15 +101,50 @@ bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
 bool CheckXMLName(const char *name);
 
 /**
- * Parses an XML file and build the DOM tree.
+ * Parses XML and build the DOM tree.
  * @param xml the content of an XML file.
  * @param filename the name of the XML file (only for logging).
+ * @param is_html @c true if the input is an HTML document.
  * @param domdoc the DOM document. It must be blank before calling this
  *     function, and will be filled with DOM data if this function succeeds.
+ * @param[out] return the detected encoding. Can be @c NULL if the caller
+ *     doesn't need it.
  * @return @c true if succeeds.
  */
 bool ParseXMLIntoDOM(const char *xml, const char *filename,
-                     DOMDocumentInterface *domdoc);
+                     DOMDocumentInterface *domdoc,
+                     std::string *encoding);
+
+
+/**
+ * Parses HTML and build the DOM tree.
+ */
+bool ParseHTMLIntoDOM(const char *html, const char *filename,
+                      DOMDocumentInterface *domdoc,
+                      std::string *encoding);
+
+/**
+ * Converts a string in given encoding to a utf8 string.
+ *
+ * @param src the string to be converted.
+ * @param src_length length of the source string.
+ * @param encoding the name of encoding of the source string. If it is @c NULL
+ *     or blank, the function will detect the encoding by detecting Unicode BOM.
+ * @param[out] dest result utf8 string.
+ * @return @c true if succeeded.
+ */
+bool ConvertStringToUTF8(const char *src, size_t src_length,
+                         const char *encoding,
+                         std::string *dest);
+
+/**
+ * Converts a string in given encoding to a utf8 string.
+ *
+ * Same as above function but takes a std::string object as source.
+ */
+bool ConvertStringToUTF8(const std::string &src,
+                         const char *encoding,
+                         std::string *dest);
 
 } // namespace ggadget
 

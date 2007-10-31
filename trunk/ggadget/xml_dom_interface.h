@@ -79,7 +79,7 @@ enum DOMExceptionCode {
   DOM_INVALID_ACCESS_ERR          = 15,
   */
   /** Extended error code to indicate an unexpected null pointer argument. */
-  DOM_NULL_POINTER_ERR            = 100,
+  DOM_NULL_POINTER_ERR            = 200,
 };
 
 namespace internal {
@@ -134,6 +134,12 @@ class DOMNodeInterface : public ScriptableInterface {
    */
   virtual void Attach() = 0;
   virtual void Detach() = 0;
+  /**
+   * Transiently detach a reference. The object will not be deleted even if
+   * there is no references. This is useful for returning an object from a
+   * method.
+   */
+  virtual void TransientDetach() = 0;
 
   virtual const char *GetNodeName() const = 0;
   virtual const char *GetNodeValue() const = 0;

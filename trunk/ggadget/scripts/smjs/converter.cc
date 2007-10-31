@@ -18,6 +18,7 @@
 #include <jsobj.h>
 #include <jsfun.h>
 #include "converter.h"
+#include "ggadget/scriptable_binary_data.h"
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/unicode_utils.h"
 #include "js_script_context.h"
@@ -101,6 +102,19 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                  &utf8_string);
         *native_val = Variant(utf8_string);
       }
+    }
+  } else if (JSVAL_IS_OBJECT(js_val)) {
+    // Here allows asssigning ScriptableBinaryData to a native string, because
+    // Windows version also allows it.
+    ScriptableInterface *scriptable;
+    result = NativeJSWrapper::Unwrap(cx, JSVAL_TO_OBJECT(js_val), &scriptable);
+    if (result && scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
+      ScriptableBinaryData *data =
+          down_cast<ScriptableBinaryData *>(scriptable);
+      // Any data after '0' will be truncated.
+      *native_val = Variant(data->data());
+    } else {
+      result = JS_FALSE;
     }
   }
   return result;

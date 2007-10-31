@@ -24,6 +24,7 @@
 using namespace ggadget;
 
 const char *xml =
+  "<?xml version=\"1.0\" encoding=\"iso8859-1\"?>"
   "<?pi value?>"
   "<!DOCTYPE root [\n"
   "  <!ENTITY test \"Test Entity\">\n"
@@ -81,8 +82,10 @@ TEST(XMLUtils, CheckXMLName) {
 // correctly.  Test cases about DOM itself are in xml_dom_test.cc.
 TEST(XMLUtils, ParseXMLIntoDOM) {
   DOMDocumentInterface *domdoc = CreateDOMDocument();
+  std::string encoding;
   domdoc->Attach();
-  ASSERT_TRUE(ParseXMLIntoDOM(xml, "TheFileName", domdoc));
+  ASSERT_TRUE(ParseXMLIntoDOM(xml, "TheFileName", domdoc, &encoding));
+  ASSERT_STREQ("iso8859-1", encoding.c_str());
   DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
   ASSERT_TRUE(doc_ele);
   EXPECT_STREQ("root", doc_ele->GetTagName());
@@ -120,8 +123,40 @@ TEST(XMLUtils, ParseXMLIntoDOM) {
 TEST(XMLUtils, ParseXMLIntoDOM_InvalidXML) {
   DOMDocumentInterface *domdoc = CreateDOMDocument();
   domdoc->Attach();
-  ASSERT_FALSE(ParseXMLIntoDOM("<a></b>", "Bad", domdoc));
+  ASSERT_FALSE(ParseXMLIntoDOM("<a></b>", "Bad", domdoc, NULL));
   domdoc->Detach();
+}
+
+TEST(XMLUtils, ConvertStringToUTF8) {
+  const char *src = "ASCII string, no BOM";
+  std::string output;
+  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_STREQ(src, output.c_str());
+  ASSERT_TRUE(ConvertStringToUTF8(std::string(src), NULL, &output));
+  ASSERT_STREQ(src, output.c_str());
+
+  src = "\xEF\xBB\xBFUTF8 String, with BOM";
+  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_STREQ(src, output.c_str());
+
+  // The last '\0' omitted, because the compiler will add it for us. 
+  const char utf16le[] = "\xFF\xFEU\0T\0F\0001\0006\0 \0S\0t\0r\0i\0n\0g";
+  const char *dest = "\xEF\xBB\xBFUTF16 String";
+  ASSERT_TRUE(ConvertStringToUTF8(utf16le, sizeof(utf16le), NULL, &output));
+  ASSERT_STREQ(dest, output.c_str());
+
+  src = "\xBA\xBA\xD7\xD6";
+  dest = "\xE6\xB1\x89\xE5\xAD\x97";
+  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), "GB2312", &output));
+  ASSERT_STREQ(dest, output.c_str());
+
+  ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_STREQ("", output.c_str());
+
+  src = "<?xml version=\"1.0\" encoding=\"gb2312\"?>\n"
+        "<root>\xBA\xBA\xD7\xD6</root>\n";
+  ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_STREQ("", output.c_str());
 }
 
 int main(int argc, char **argv) {
