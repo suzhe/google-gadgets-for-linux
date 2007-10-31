@@ -95,7 +95,7 @@ for file in $(svk st | \
 do
   if [ -f $file ]; then
     dos2unix "$file"
-    sed -e 's/^\s\+$//' -i "$file"
+    sed -e 's/^[ \t]\{,\}$//' -i "$file"
   fi
 done
 

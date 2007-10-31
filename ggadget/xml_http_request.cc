@@ -311,7 +311,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static size_t ReadCallback(void *ptr, size_t size,
                              size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: ReadCallback: %d*%d", size, mem_block);
+    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
@@ -326,7 +326,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: WriteHeaderCallback: %d*%d", size, mem_block);
+    DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
@@ -429,7 +429,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static size_t WriteBodyCallback(void *ptr, size_t size,
                                   size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: WriteBodyCallback: %d*%d", size, mem_block);
+    DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED || this_p->state_ == LOADING);
