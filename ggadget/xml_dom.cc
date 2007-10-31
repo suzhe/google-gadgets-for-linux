@@ -672,14 +672,10 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual DOMNodeImpl *GetImpl() const { return impl_; }
 
   // Implements ScriptableInterface::Attach().
-  virtual void Attach() {
-    impl_->AttachMulti(1);
-  }
-
+  virtual void Attach() { impl_->AttachMulti(1); }
   // Implements ScriptableInterface::Detach().
-  virtual void Detach() {
-    impl_->DetachMulti(1, false);
-  }
+  virtual void Detach() { impl_->DetachMulti(1, false); }
+  virtual void TransientDetach() { impl_->DetachMulti(1, true); }
 
   virtual const char *GetNodeName() const { return impl_->name_.c_str(); }
   virtual const char *GetNodeValue() const { return NULL; }
@@ -1498,7 +1494,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
   virtual bool LoadXML(const char *xml) {
     GetImpl()->RemoveAllChildren();
-    return ParseXMLIntoDOM(xml, "NONAME", this);
+    return ParseXMLIntoDOM(xml, "NONAME", this, NULL);
   }
 
   virtual NodeType GetNodeType() const { return DOCUMENT_NODE; }

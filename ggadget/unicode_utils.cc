@@ -391,5 +391,34 @@ bool IsLegalUTF16Char(const UTF16Char *src, size_t length) {
   return length && length == GetUTF16CharLength(src);
 }
 
+bool IsLegalUTF8String(const char *src, size_t length) {
+  if (!src) return false;
+  while (length > 0) {
+    size_t char_length = GetUTF8CharLength(src);
+    if (!char_length || char_length > length) return false;
+    length -= char_length;
+    src += char_length;
+  }
+  return true;
+}
+
+bool IsLegalUTF8String(const std::string &src) {
+  return IsLegalUTF8String(src.c_str(), src.length());
+}
+
+bool IsLegalUTF16String(const UTF16Char *src, size_t length) {
+  if (!src) return false;
+  while (length > 0) {
+    size_t char_length = GetUTF16CharLength(src);
+    if (!char_length || char_length > length) return false;
+    length -= char_length;
+    src += char_length;
+  }
+  return true;
+}
+
+bool IsLegalUTF16String(const UTF16String &src) {
+  return IsLegalUTF16String(src.c_str(), src.length());
+}
 
 } // namespace ggadget

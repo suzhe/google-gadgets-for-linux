@@ -105,7 +105,7 @@ ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
 }
 
 ggadget::XMLHttpRequestInterface *GtkGadgetHost::NewXMLHttpRequest() {
-  return new ggadget::XMLHttpRequest(this);
+  return ggadget::CreateXMLHttpRequest(this);
 }
 
 ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(

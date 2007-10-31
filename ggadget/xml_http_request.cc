@@ -15,16 +15,25 @@
 */
 
 #include <cstring>
+#include <curl/curl.h>
+
 #include "xml_http_request.h"
 #include "gadget_host_interface.h"
+#include "scriptable_binary_data.h"
 #include "scriptable_helper.h"
 #include "signal.h"
+#include "string_utils.h"
+#include "xml_dom.h"
+#include "xml_utils.h"
 
 namespace ggadget {
+namespace {
 
-class XMLHttpRequest::Impl {
+class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
-  Impl(GadgetHostInterface *host)
+  DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
+
+  XMLHttpRequest(GadgetHostInterface *host)
       : host_(host),
         async_(false),
         curl_(NULL),
@@ -34,19 +43,46 @@ class XMLHttpRequest::Impl {
         socket_write_watch_(0),
         state_(UNSENT),
         send_flag_(false),
-        headers_(NULL) {
-    // TODO: Register Scriptables.
+        headers_(NULL),
+        response_dom_(NULL) {
+    RegisterSignal("onreadystatechange", &onreadystatechange_signal_);
+    RegisterReadonlySimpleProperty("readyState", &state_);
+    RegisterMethod("open", NewSlot(this, &XMLHttpRequest::ScriptOpen));
+    RegisterMethod("setRequestHeader",
+                   NewSlot(this, &XMLHttpRequest::ScriptSetRequestHeader));
+    RegisterMethod("send", NewSlot(this, &XMLHttpRequest::ScriptSend));
+    RegisterMethod("abort", NewSlot(this, &XMLHttpRequest::Abort));
+    RegisterMethod("getAllResponseHeaders",
+                   NewSlot(this, &XMLHttpRequest::ScriptGetAllResponseHeaders));
+    RegisterMethod("getResponseHeader",
+                   NewSlot(this, &XMLHttpRequest::ScriptGetResponseHeader));
+    RegisterProperty("responseStream",
+                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseBody),
+                     NULL);
+    RegisterProperty("responseBody",
+                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseBody),
+                     NULL);
+    RegisterProperty("responseText",
+                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseText),
+                     NULL);
+    RegisterProperty("responseXML",
+                     NewSlot(this, &XMLHttpRequest::ScriptGetResponseXML),
+                     NULL);
+    RegisterProperty("status", NewSlot(this, &XMLHttpRequest::ScriptGetStatus),
+                     NULL);
+    RegisterProperty("statusText",
+                     NewSlot(this, &XMLHttpRequest::ScriptGetStatusText), NULL);
   }
 
-  ~Impl() {
+  ~XMLHttpRequest() {
     Abort();
   }
 
-  Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
+  virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
     return onreadystatechange_signal_.Connect(handler);
   }
 
-  XMLHttpRequestInterface::State GetReadyState() {
+  virtual State GetReadyState() {
     return state_;
   }
 
@@ -55,14 +91,18 @@ class XMLHttpRequest::Impl {
     onreadystatechange_signal_();
   }
 
-  bool Open(const char *method, const char *url, bool async,
-            const char *user, const char *password) {
+  virtual ExceptionCode Open(const char *method, const char *url, bool async,
+                             const char *user, const char *password) {
     Abort();
+    if (!method || !url)
+      return NULL_POINTER_ERR;
+
+    url_ = url;
     curl_ = curl_easy_init();
     if (!curl_) {
       DLOG("XMLHttpRequest: curl_easy_init failed");
       // TODO: Send errors.
-      return false;
+      return OTHER_ERR;
     }
 
     if (strcasecmp(method, "HEAD") == 0) {
@@ -77,7 +117,7 @@ class XMLHttpRequest::Impl {
       curl_easy_setopt(curl_, CURLOPT_UPLOAD, 1);
     } else {
       LOG("XMLHttpRequest: Unsupported method: %s", method);
-      return false;
+      return SYNTAX_ERR;
     }
     curl_easy_setopt(curl_, CURLOPT_URL, url);
 
@@ -92,15 +132,51 @@ class XMLHttpRequest::Impl {
     }
 
     async_ = async;
-    ChangeState(OPEN);
-    return true;
+    ChangeState(OPENED);
+    return NO_ERR;
   }
 
-  bool SetRequestHeader(const char *header, const char *value) {
-    if (state_ != OPEN || send_flag_) {
+  virtual ExceptionCode SetRequestHeader(const char *header,
+                                         const char *value) {
+    static const char *kForbiddenHeaders[] = {
+        "Accept-Charset",
+        "Accept-Encoding",
+        "Connection",
+        "Content-Length",
+        "Content-Transfer-Encoding",
+        "Date",
+        "Expect",
+        "Host",
+        "Keep-Alive",
+        "Referer",
+        "TE",
+        "Trailer",
+        "Transfer-Encoding",
+        "Upgrade",
+        "Via"
+    };
+
+    if (!header)
+      return NULL_POINTER_ERR;
+    if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: SetRequestHeader: Invalid state: %d", state_);
-      return false;
+      return INVALID_STATE_ERR;
     }
+
+    if (strncasecmp("Proxy-", header, 6) == 0) {
+      DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
+      return NO_ERR;
+    }
+
+    const char **found = std::lower_bound(
+        kForbiddenHeaders, kForbiddenHeaders + arraysize(kForbiddenHeaders),
+        header, CaseInsensitiveCharPtrComparator());
+    if (found != kForbiddenHeaders + arraysize(kForbiddenHeaders) &&
+        strcasecmp(*found, header) == 0) {
+      DLOG("XMLHttpRequest::SetRequestHeader: Forbidden header %s", header);
+      return NO_ERR;
+    }
+
     // TODO: Filter headers according to the specification.
     std::string whole_header(header);
     whole_header += ": ";
@@ -108,13 +184,13 @@ class XMLHttpRequest::Impl {
       whole_header += value;
     // TODO: Check what does curl do when set a header for multiple times.
     headers_ = curl_slist_append(headers_, whole_header.c_str());
-    return true;
+    return NO_ERR;
   }
 
-  bool Send(const char *data) {
-    if (state_ != OPEN || send_flag_) {
+  virtual ExceptionCode Send(const char *data) {
+    if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: Send: Invalid state: %d", state_);
-      return false;
+      return INVALID_STATE_ERR;
     }
   #ifdef _DEBUG
     curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1);
@@ -140,12 +216,12 @@ class XMLHttpRequest::Impl {
       if (code != CURLM_OK) {
         DLOG("XMLHttpRequest: Send: curl_multi_add_handle failed: %s",
              curl_multi_strerror(code));
-        return false;
+        return NETWORK_ERR;
       }
 
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
-      ChangeState(OPEN);
+      ChangeState(OPENED);
       int still_running = 1;
       do {
         code = curl_multi_socket_all(curlm_, &still_running);
@@ -154,7 +230,7 @@ class XMLHttpRequest::Impl {
       if (code != CURLM_OK) {
         DLOG("XMLHttpRequest: Send: curl_multi_perform failed: %s",
              curl_multi_strerror(code));
-        return false;
+        return NETWORK_ERR;
       }
 
       if (!still_running) {
@@ -164,22 +240,22 @@ class XMLHttpRequest::Impl {
     } else {
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
-      ChangeState(OPEN);
+      ChangeState(OPENED);
       CURLcode code = curl_easy_perform(curl_);
       if (code != CURLE_OK) {
         DLOG("XMLHttpRequest: Send: curl_easy_perform failed: %s",
              curl_easy_strerror(code));
-        return false;
+        return NETWORK_ERR;
       }
       DLOG("XMLHttpRequest: Send(sync): DONE");
       Done();
     }
-    return true;
+    return NO_ERR;
   }
 
-  bool Send(const DOMDocument *data) {
+  virtual ExceptionCode Send(const DOMDocumentInterface *data) {
     // TODO:
-    return true;
+    return NO_ERR;
   }
 
   void OnIOReady(int fd) {
@@ -205,7 +281,7 @@ class XMLHttpRequest::Impl {
   static int SocketCallback(CURL *handle, curl_socket_t socket, int type,
                             void *user_p, void *sock_p) {
     DLOG("SocketCallback: the socket: %d, type: %d\n", socket, type);
-    Impl* this_p = reinterpret_cast<Impl *>(user_p);
+    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(user_p);
     ASSERT(this_p->curl_ == handle);
 
     if (this_p->socket_ == 0)
@@ -215,11 +291,11 @@ class XMLHttpRequest::Impl {
 
     if (!this_p->socket_read_watch_ && (type & CURL_POLL_IN)) {
       this_p->socket_read_watch_ = this_p->host_->RegisterReadWatch(
-          socket, NewSlot(this_p, &Impl::OnIOReady));
+          socket, NewSlot(this_p, &XMLHttpRequest::OnIOReady));
     }
     if (!this_p->socket_write_watch_ && (type & CURL_POLL_OUT)) {
       this_p->socket_write_watch_ = this_p->host_->RegisterWriteWatch(
-          socket, NewSlot(this_p, &Impl::OnIOReady));
+          socket, NewSlot(this_p, &XMLHttpRequest::OnIOReady));
     }
 
     if (type & CURL_POLL_REMOVE) {
@@ -236,9 +312,9 @@ class XMLHttpRequest::Impl {
   static size_t ReadCallback(void *ptr, size_t size,
                              size_t mem_block, void *data) {
     DLOG("XMLHttpRequest: ReadCallback: %d*%d", size, mem_block);
-    Impl *this_p = reinterpret_cast<Impl *>(data);
+    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
-    ASSERT(this_p->state_ == OPEN);
+    ASSERT(this_p->state_ == OPENED);
     ASSERT(!this_p->async_ || this_p->send_flag_);
 
     size_t real_size = std::min(this_p->send_data_.length(), size * mem_block);
@@ -251,9 +327,9 @@ class XMLHttpRequest::Impl {
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *data) {
     DLOG("XMLHttpRequest: WriteHeaderCallback: %d*%d", size, mem_block);
-    Impl *this_p = reinterpret_cast<Impl *>(data);
+    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
-    ASSERT(this_p->state_ == OPEN);
+    ASSERT(this_p->state_ == OPENED);
     ASSERT(!this_p->async_ || this_p->send_flag_);
 
     size_t real_size = size * mem_block;
@@ -261,27 +337,27 @@ class XMLHttpRequest::Impl {
     return real_size;
   }
 
-  static bool SplitStatusAndHeaders(std::string *headers, std::string *status) {
+  bool SplitStatusAndHeaders() {
     // RFC 2616 doesn't mentioned if HTTP/1.1 is case-sensitive, so implies
     // it is case-insensitive.
     // We only support HTTP version 1.0 or above.
-    if (strncasecmp(headers->c_str(), "HTTP/", 5) == 0) {
+    if (strncasecmp(response_headers_.c_str(), "HTTP/", 5) == 0) {
       // First split the status line and headers.
-      std::string::size_type end_of_status = headers->find("\r\n", 0);
+      std::string::size_type end_of_status = response_headers_.find("\r\n", 0);
       if (end_of_status == std::string::npos) {
-        *status = *headers;
-        headers->erase();
+        status_text_ = response_headers_;
+        response_headers_.clear();
       } else {
-        *status = headers->substr(0, end_of_status);
-        headers->erase(0, end_of_status + 2);
+        status_text_ = response_headers_.substr(0, end_of_status);
+        response_headers_.erase(0, end_of_status + 2);
       }
 
       // Then extract the status text from the status line.
-      std::string::size_type space_pos = status->find(' ', 0);
+      std::string::size_type space_pos = status_text_.find(' ', 0);
       if (space_pos != std::string::npos) {
-        space_pos = status->find(' ', space_pos + 1);
+        space_pos = status_text_.find(' ', space_pos + 1);
         if (space_pos != std::string::npos)
-          status->erase(0, space_pos + 1);
+          status_text_.erase(0, space_pos + 1);
       }
       // Otherwise, just leave the whole status line in status.
       return true;
@@ -290,37 +366,61 @@ class XMLHttpRequest::Impl {
     return false;
   }
 
-  static void ParseResponseHeaders(const std::string &headers,
-                                   CaseInsensitiveStringMap *map) {
+  void ParseResponseHeaders() {
     // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
     // http://www.w3.org/TR/XMLHttpRequest
     std::string::size_type pos = 0;
     while (pos != std::string::npos) {
-      std::string::size_type new_pos = headers.find("\r\n", pos);
+      std::string::size_type new_pos = response_headers_.find("\r\n", pos);
       std::string line;
       if (new_pos == std::string::npos) {
-        line = headers.substr(pos);
+        line = response_headers_.substr(pos);
         pos = new_pos;
       } else {
-        line = headers.substr(pos, new_pos - pos);
+        line = response_headers_.substr(pos, new_pos - pos);
         pos = new_pos + 2;
       }
 
       std::string name, value;
-      std::string::size_type separator = line.find(':');
-      if (separator != std::string::npos) {
-        name = TrimString(line.substr(0, separator));
-        value = TrimString(line.substr(separator + 1));
+      std::string::size_type pos = line.find(':');
+      if (pos != std::string::npos) {
+        name = TrimString(line.substr(0, pos));
+        value = TrimString(line.substr(pos + 1));
         if (!name.empty()) {
-          CaseInsensitiveStringMap::iterator it = map->find(name);
-          if (it == map->end()) {
-            map->insert(std::make_pair(name, value));
+          CaseInsensitiveStringMap::iterator it =
+              response_headers_map_.find(name);
+          if (it == response_headers_map_.end()) {
+            response_headers_map_.insert(std::make_pair(name, value));
           } else if (!value.empty()) {
             // According to XMLHttpRequest specification, the values of multiple
             // headers with the same name should be concentrated together.
             if (!it->second.empty())
               it->second += ", ";
             it->second += value;
+          }
+        }
+
+        if (strcasecmp(name.c_str(), "Content-Type") == 0) {
+          // Extract content type and encoding from the headers.
+          pos = value.find(';');
+          if (pos != std::string::npos) {
+            response_content_type_ = TrimString(value.substr(0, pos));
+            pos = value.find("encoding");
+            if (pos != std::string::npos) {
+              pos += 8;
+              while (pos < value.length() &&
+                     (isspace(value[pos]) || value[pos] == '=')) {
+                pos++;
+              }
+              std::string::size_type pos1 = pos;
+              while (pos1 < value.length() && !isspace(value[pos1]) &&
+                     value[pos1] != ';') {
+                pos1++;
+              }
+              response_encoding_ = value.substr(pos, pos1 - pos); 
+            }
+          } else {
+            response_content_type_ = value;
           }
         }
       }
@@ -330,20 +430,19 @@ class XMLHttpRequest::Impl {
   static size_t WriteBodyCallback(void *ptr, size_t size,
                                   size_t mem_block, void *data) {
     DLOG("XMLHttpRequest: WriteBodyCallback: %d*%d", size, mem_block);
-    Impl *this_p = reinterpret_cast<Impl *>(data);
+    XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
-    ASSERT(this_p->state_ == OPEN || this_p->state_ == LOADING);
+    ASSERT(this_p->state_ == OPENED || this_p->state_ == LOADING);
     ASSERT(!this_p->async_ || this_p->send_flag_);
 
-    if (this_p->state_ == OPEN) {
-      SplitStatusAndHeaders(&this_p->response_headers_, &this_p->status_text_);
-      ParseResponseHeaders(this_p->response_headers_,
-                           &this_p->response_headers_map_);
-      this_p->ChangeState(SENT);
+    if (this_p->state_ == OPENED) {
+      this_p->SplitStatusAndHeaders();
+      this_p->ParseResponseHeaders();
+      this_p->ChangeState(HEADERS_RECEIVED);
       this_p->ChangeState(LOADING);
     }
     size_t real_size = size * mem_block;
-    this_p->response_body_.append(reinterpret_cast<char *>(ptr), real_size);
+    this_p->response_body_.append(static_cast<char *>(ptr), real_size);
     return real_size;
   }
 
@@ -356,12 +455,13 @@ class XMLHttpRequest::Impl {
     socket_read_watch_ = 0;
     socket_write_watch_ = 0;
 
-    if ((state_ == OPEN && send_flag_) || state_ == SENT || state_ == LOADING)
+    if ((state_ == OPENED && send_flag_) ||
+        state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
     send_flag_ = false;
   }
 
-  void Abort() {
+  virtual void Abort() {
     Done();
 
     if (curl_) {
@@ -378,63 +478,259 @@ class XMLHttpRequest::Impl {
     response_headers_.clear();
     response_headers_map_.clear();
     response_body_.clear();
+    response_text_.clear();
     send_data_.clear();
     status_text_.clear();
+    if (response_dom_) {
+      response_dom_->Detach();
+      response_dom_ = NULL;
+    }
 
     // Don't dispatch this state change event, according to the specification.
     state_ = UNSENT;
   }
 
-  const char *GetAllResponseHeaders() {
-    if (state_ == LOADING || state_ == DONE)
-      return response_headers_.c_str();
-    return NULL;
+  virtual ExceptionCode GetAllResponseHeaders(const char **result) {
+    ASSERT(result);
+    if (state_ == LOADING || state_ == DONE) {
+      *result = response_headers_.c_str();
+      return NO_ERR;
+    }
+
+    *result = NULL;
+    return INVALID_STATE_ERR;
   }
 
-  const char *GetResponseHeader(const char *header) {
+  virtual ExceptionCode GetResponseHeader(const char *header,
+                                          const char **result) {
+    ASSERT(result);
+    if (!header)
+      return NULL_POINTER_ERR;
+
+    *result = NULL;
     if (state_ == LOADING || state_ == DONE) {
       CaseInsensitiveStringMap::iterator it = response_headers_map_.find(
           header);
-      return it == response_headers_map_.end() ? NULL : it->second.c_str();
+      if (it != response_headers_map_.end())
+        *result = it->second.c_str();
+      return NO_ERR;
     }
-    return NULL;
+    return INVALID_STATE_ERR;
   }
 
-  const char *GetResponseBody(size_t *size) {
+  void DecodeResponseText() {
+    std::string encoding;
+    const char *content_type = response_content_type_.c_str();
+    std::string::size_type content_type_len = response_content_type_.length();
+
+    if (content_type_len == 0 ||
+        strcasecmp(content_type, "text/xml") == 0 ||
+        strcasecmp(content_type, "application/xml") == 0 ||
+        (content_type_len > 4 &&
+         strcasecmp(content_type + content_type_len - 4, "+xml") == 0)) {
+      // The content type is XML.
+      response_dom_ = CreateDOMDocument();
+      response_dom_->Attach();
+      if (!ParseXMLIntoDOM(response_body_.c_str(), url_.c_str(), response_dom_,
+                           &encoding)) {
+        response_dom_->Detach();
+        response_dom_ = NULL;
+      }
+    } else if (strcasecmp(content_type, "text/html") == 0) {
+      // The content type is HTML.
+      // The spec 20071026 doesn't have this feature 
+      response_dom_ = CreateDOMDocument();
+      response_dom_->Attach();
+      if (!ParseHTMLIntoDOM(response_body_.c_str(), url_.c_str(), response_dom_,
+                            &encoding)) {
+        response_dom_->Detach();
+        response_dom_ = NULL;
+      }
+    }
+
+    // NOTE: Here the priority of encodings does not conform to XMLHttpRequest
+    // specification (and XML, HTTP, HTML specifications), because for now
+    // libxml2 doesn't allow specifying external encoding.
+    if (encoding.empty())
+      encoding = response_encoding_;
+    ConvertStringToUTF8(response_body_, encoding.c_str(), &response_text_);
+  }
+
+  virtual ExceptionCode GetResponseText(const char **result) {
+    ASSERT(result);
+
+    if (state_ == LOADING) {
+      // Though the spec allows getting responseText while loading, we can't
+      // afford this because we rely on XML/HTML parser to get the encoding. 
+      *result = "";
+      return NO_ERR;
+    } else if (state_ == DONE) {
+      if (response_text_.empty() && !response_body_.empty())
+        DecodeResponseText();
+
+      *result = response_text_.c_str();
+      return NO_ERR;
+    }
+
+    *result = NULL;
+    return INVALID_STATE_ERR;
+  }
+
+  virtual ExceptionCode GetResponseBody(const char **result, size_t *size) {
+    ASSERT(result);
+    ASSERT(size);
+
     if (state_ == LOADING || state_ == DONE) {
       *size = response_body_.length();
-      return response_body_.c_str();
+      *result = response_body_.c_str();
+      return NO_ERR;
     }
+
     *size = 0;
-    return NULL;
+    *result = NULL;
+    return INVALID_STATE_ERR;
   }
 
-  DOMDocument *GetResponseXML() {
+  virtual ExceptionCode GetResponseXML(DOMDocumentInterface **result) {
+    ASSERT(result);
+
     if (state_ == DONE) {
-      // TODO:
+      if (!response_dom_ && !response_body_.empty())
+        DecodeResponseText();
+
+      *result = response_dom_;
+      return NO_ERR;
     }
-    return NULL;
+
+    result = NULL;
+    return INVALID_STATE_ERR;
   }
 
-  unsigned short GetStatus() {
-    long curl_status = 0;
-    if (curl_)
-      curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &curl_status);
-    return static_cast<unsigned short>(curl_status);
+  virtual ExceptionCode GetStatus(unsigned short *result) {
+    ASSERT(result);
+
+    if (state_ == LOADING || state_ == DONE) {
+      long curl_status = 0;
+      if (curl_)
+        curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &curl_status);
+      *result = static_cast<unsigned short>(curl_status);
+      return NO_ERR;
+    }
+
+    *result = 0;
+    return INVALID_STATE_ERR;
   }
 
-  const char *GetStatusText() {
-    if (state_ == LOADING || state_ == DONE)
-      return status_text_.c_str();
-    return NULL;
+  virtual ExceptionCode GetStatusText(const char **result) {
+    ASSERT(result);
+
+    if (state_ == LOADING || state_ == DONE) {
+      *result = status_text_.c_str();
+      return NO_ERR;
+    }
+
+    *result = NULL;
+    return INVALID_STATE_ERR;
+  }
+
+  class XMLHttpRequestException : public ScriptableHelper<ScriptableInterface> {
+   public:
+    DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
+
+    XMLHttpRequestException(ExceptionCode code) : code_(code) {
+      RegisterSimpleProperty("code", &code_);
+    }
+   private:
+    ExceptionCode code_;
+  };
+
+  // Used in the methods for script to throw an script exception on errors.
+  void CheckException(ExceptionCode code) throw(ScriptableExceptionHolder) {
+    if (code != NO_ERR) {
+      DLOG("Throw Exception: %d", code);
+      throw ScriptableExceptionHolder(new XMLHttpRequestException(code));
+    }
+  }
+
+  template <typename T>
+  T GetArg(const Variant &v, T default_value) {
+    if (v.type() == Variant::TYPE_VOID)
+      return default_value;
+    if (v.type() == VariantType<T>::type)
+      return VariantValue<T>()(v);
+    throw ScriptableExceptionHolder(new XMLHttpRequestException(SYNTAX_ERR));
+  }
+    
+  void ScriptOpen(const char *method, const char *url, const Variant &v_async,
+                  const Variant &v_user, const Variant &v_password) {
+    bool async = GetArg(v_async, true);
+    const char *user = GetArg(v_user, static_cast<const char *>(NULL));
+    const char *password = GetArg(v_password, static_cast<const char *>(NULL));
+    CheckException(Open(method, url, async, user, password));
+  }
+
+  void ScriptSetRequestHeader(const char *header, const char *value) {
+    CheckException(SetRequestHeader(header, value));
+  }
+
+  void ScriptSend(const Variant &v_data) {
+    if (v_data.type() == Variant::TYPE_STRING) {
+      CheckException(Send(VariantValue<const char *>()(v_data)));
+    } else {
+      DOMDocumentInterface *dom =
+          GetArg(v_data, static_cast<DOMDocumentInterface *>(NULL));
+      CheckException(Send(dom));
+    }
+  }
+
+  const char *ScriptGetAllResponseHeaders() {
+    const char *result = NULL;
+    CheckException(GetAllResponseHeaders(&result));
+    return result;
+  }
+
+  const char *ScriptGetResponseHeader(const char *header) {
+    const char *result = NULL;
+    CheckException(GetResponseHeader(header, &result));
+    return result;
+  }
+
+  ScriptableBinaryData *ScriptGetResponseBody() {
+    const char *result = NULL;
+    size_t size = 0;
+    CheckException(GetResponseBody(&result, &size));
+    return new ScriptableBinaryData(result, size);
+  }
+
+  const char *ScriptGetResponseText() {
+    const char *result = NULL;
+    CheckException(GetResponseText(&result));
+    return result;
+  }
+
+  DOMDocumentInterface *ScriptGetResponseXML() {
+    DOMDocumentInterface *result = NULL;
+    CheckException(GetResponseXML(&result));
+    return result;
+  }
+
+  unsigned short ScriptGetStatus() {
+    unsigned short result = 0;
+    CheckException(GetStatus(&result));
+    return result;
+  }
+
+  const char *ScriptGetStatusText() {
+    const char *result = NULL;
+    CheckException(GetStatusText(&result));
+    return result;
   }
 
   GadgetHostInterface *host_;
   Signal0<void> onreadystatechange_signal_;
 
+  std::string url_;
   bool async_;
-  std::string user_;
-  std::string password_;
 
   CURL *curl_;
   CURLM *curlm_;
@@ -450,72 +746,19 @@ class XMLHttpRequest::Impl {
   curl_slist *headers_;
   std::string send_data_;
   std::string response_headers_;
+  std::string response_content_type_;
+  std::string response_encoding_;
   std::string status_text_;
   std::string response_body_;
-
+  std::string response_text_;
+  DOMDocumentInterface *response_dom_;
   CaseInsensitiveStringMap response_headers_map_;
 };
 
-XMLHttpRequest::XMLHttpRequest(GadgetHostInterface *host)
-    : impl_(new Impl(host)) {
-}
+} // anonymous namespace
 
-XMLHttpRequest::~XMLHttpRequest() {
-  delete impl_;
-  impl_ = NULL;
-}
-
-Connection *XMLHttpRequest::ConnectOnReadyStateChange(Slot0<void> *handler) {
-  return impl_->ConnectOnReadyStateChange(handler);
-}
-
-XMLHttpRequestInterface::State XMLHttpRequest::GetReadyState() {
-  return impl_->GetReadyState();
-}
-
-bool XMLHttpRequest::Open(const char *method, const char *url, bool async,
-                          const char *user, const char *password) {
-  return impl_->Open(method, url, async, user, password);
-}
-
-bool XMLHttpRequest::SetRequestHeader(const char *header, const char *value) {
-  return impl_->SetRequestHeader(header, value);
-}
-
-bool XMLHttpRequest::Send(const char *data) {
-  return impl_->Send(data);
-}
-
-bool XMLHttpRequest::Send(const DOMDocument *data) {
-  return impl_->Send(data);
-}
-
-void XMLHttpRequest::Abort() {
-  impl_->Abort();
-}
-
-const char *XMLHttpRequest::GetAllResponseHeaders() {
-  return impl_->GetAllResponseHeaders();
-}
-
-const char *XMLHttpRequest::GetResponseHeader(const char *header) {
-  return impl_->GetResponseHeader(header);
-}
-
-const char *XMLHttpRequest::GetResponseBody(size_t *size) {
-  return impl_->GetResponseBody(size);
-}
-
-DOMDocument *XMLHttpRequest::GetResponseXML() {
-  return impl_->GetResponseXML();
-}
-
-unsigned short XMLHttpRequest::GetStatus() {
-  return impl_->GetStatus();
-}
-
-const char *XMLHttpRequest::GetStatusText() {
-  return impl_->GetStatusText();
+XMLHttpRequestInterface *CreateXMLHttpRequest(GadgetHostInterface *host) {
+  return new XMLHttpRequest(host);
 }
 
 } // namespace ggadget

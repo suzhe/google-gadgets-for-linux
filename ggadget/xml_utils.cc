@@ -16,10 +16,11 @@
 
 #include <cstring>
 #include <cmath>
-#include <libxml/tree.h>
+#include <libxml/encoding.h>
 #include <libxml/parser.h>
 // For xmlCreateMemoryParserCtxt and xmlParseName.
 #include <libxml/parserInternals.h>
+#include <libxml/tree.h>
 
 #include "xml_utils.h"
 #include "common.h"
@@ -45,58 +46,61 @@ static inline const char *FromXmlCharPtr(const xmlChar *xml_char_ptr) {
 static inline const xmlChar *ToXmlCharPtr(const char *char_ptr) {
   return reinterpret_cast<const xmlChar *>(char_ptr);
 }
-
-static void ReportXMLError(void *ctx, bool is_error,
-                           const char *msg, va_list args) {
-  xmlParserCtxt *ctxt = static_cast<xmlParserCtxt *>(ctx);
-  // Copy the filename stored in context user data to input->file to let
-  // the built-in libxml2 error reporter print the correct filename.
-  if (ctxt && ctxt->inputNr > 0 && ctxt->inputTab[0] &&
-      ctxt->inputTab[0]->filename) {
-    ctxt->inputTab[0]->filename = xmlMemStrdup(
-        static_cast<const char *>(ctxt->_private));
-    if (is_error)
-      xmlStopParser(ctxt);
-  }
-
-  char buf[512];
-  vsnprintf(buf, sizeof(buf), msg, args);
-  if (is_error)
-    xmlParserError(ctx, "%s", buf);
-  else
-    xmlParserWarning(ctx, "%s", buf);
-}
-
-static void OnXMLWarning(void *ctx, const char *msg, ...) {
-  va_list ap;
-  va_start(ap, msg);
-  ReportXMLError(ctx, false, msg, ap);
-  va_end(ap);
-}
-
-static void OnXMLError(void *ctx, const char *msg, ...) {
-  va_list ap;
-  va_start(ap, msg);
-  ReportXMLError(ctx, true, msg, ap);
-  va_end(ap);
-}
-
 // There is no non-const version of ToXmlChar *because it's not allowed to
 // transfer a non-const char * to libxml.
 
-static xmlDoc *ParseXML(const char *xml, const char *filename) {
-  xmlSAXHandler sax_handler;
-  memset(&sax_handler, 0, sizeof(xmlSAXHandler));
-  xmlSAX2InitDefaultSAXHandler(&sax_handler, 0);
-  sax_handler.warning = OnXMLWarning;
-  sax_handler.error = OnXMLError;
-  sax_handler.fatalError = OnXMLError;
+static xmlDoc *ParseXML(const char *xml, const char *filename,
+                        std::string *encoding) {
+  if (encoding)
+    encoding->clear();
 
-  // filename is stored in the context as private.
-  // sax_handler will be freed by libxml2.
-  return xmlSAXParseMemoryWithData(
-      &sax_handler, xml, strlen(xml), 0,
-      static_cast<void *>(const_cast<char *>(filename)));
+  xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(xml, strlen(xml));
+  if (!ctxt)
+    return NULL;
+
+  // Let the built-in libxml2 error reporter print the correct filename.
+  ctxt->input->filename = xmlMemStrdup(filename);
+
+  xmlParseDocument(ctxt);
+  xmlDoc *result = NULL;
+  if (ctxt->wellFormed) {
+    result = ctxt->myDoc;
+    if (encoding)
+      *encoding = FromXmlCharPtr(ctxt->input->encoding);
+  } else {
+    xmlFreeDoc(ctxt->myDoc);
+    ctxt->myDoc = NULL;
+  }
+  xmlFreeParserCtxt(ctxt);
+
+  return result;
+}
+
+static xmlDoc *ParseHTML(const char *html, const char *filename,
+                         std::string *encoding) {
+  if (encoding)
+    encoding->clear();
+
+  htmlParserCtxt *ctxt = htmlCreateMemoryParserCtxt(html, strlen(html));
+  if (!ctxt)
+    return NULL;
+
+  // Let the built-in libxml2 error reporter print the correct filename.
+  ctxt->input->filename = xmlMemStrdup(filename);
+    
+  htmlParseDocument(ctxt);
+  xmlDoc *result = NULL;
+  if (ctxt->wellFormed) {
+    result = ctxt->myDoc;
+    if (encoding)
+      *encoding = FromXmlCharPtr(ctxt->input->encoding);
+  } else {
+    xmlFreeDoc(ctxt->myDoc);
+    ctxt->myDoc = NULL;
+  }
+  htmlFreeParserCtxt(ctxt);
+
+  return result;
 }
 
 static bool ParseBoolValue(const char *value, bool *result) {
@@ -353,7 +357,7 @@ bool SetupViewFromFile(ViewInterface *view, const char *filename) {
 
 bool SetupViewFromXML(ViewInterface *view, const char *xml,
                       const char *filename) {
-  xmlDoc *xmldoc = ParseXML(xml, filename);
+  xmlDoc *xmldoc = ParseXML(xml, filename, NULL);
   if (!xmldoc)
     return false;
 
@@ -388,7 +392,7 @@ ElementInterface *AppendElementFromXML(Elements *elements, const char *xml) {
 ElementInterface *InsertElementFromXML(Elements *elements,
                                        const char *xml,
                                        const ElementInterface *before) {
-  xmlDoc *xmldoc = ParseXML(xml, xml);
+  xmlDoc *xmldoc = ParseXML(xml, xml, NULL);
   if (!xmldoc)
     return NULL;
 
@@ -455,7 +459,7 @@ static void ConvertElementIntoXPathMap(const xmlNode *element,
 bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
                           const char *root_element_name,
                           GadgetStringMap *table) {
-  xmlDoc *xmldoc = ParseXML(xml, filename);
+  xmlDoc *xmldoc = ParseXML(xml, filename, NULL);
   if (!xmldoc)
     return false;
 
@@ -589,12 +593,13 @@ static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
 }
 
 bool ParseXMLIntoDOM(const char *xml, const char *filename,
-                     DOMDocumentInterface *domdoc) {
+                     DOMDocumentInterface *domdoc,
+                     std::string *encoding) {
   ASSERT(domdoc);
   if (domdoc->HasChildNodes())
     return false;
 
-  xmlDoc *xmldoc = ParseXML(xml, filename);
+  xmlDoc *xmldoc = ParseXML(xml, filename, encoding);
   if (!xmldoc)
     return false;
 
@@ -609,6 +614,85 @@ bool ParseXMLIntoDOM(const char *xml, const char *filename,
 
   xmlFreeDoc(xmldoc);
   return true;
+}
+
+bool ParseHTMLIntoDOM(const char *html, const char *filename,
+                      DOMDocumentInterface *domdoc,
+                      std::string *encoding) {
+  ASSERT(domdoc);
+  if (domdoc->HasChildNodes())
+    return false;
+
+  xmlDoc *xmldoc = ParseHTML(html, filename, encoding);
+  if (!xmldoc)
+    return false;
+
+  if (!xmlDocGetRootElement(xmldoc)) {
+    LOG("No root element in XML file: %s", filename);
+    xmlFreeDoc(xmldoc);
+    return false;
+  }
+
+  ConvertChildrenIntoDOM(domdoc, domdoc, reinterpret_cast<xmlNode *>(xmldoc));
+  domdoc->Normalize();
+
+  xmlFreeDoc(xmldoc);
+  return true;
+}
+
+bool ConvertStringToUTF8(const char *src, size_t src_length,
+                         const char *encoding, std::string *dest) {
+  if (!src || !dest)
+    return false;
+
+  dest->clear();
+  if (!src_length)
+    return true;
+
+  // Check if src_length can be stored into an int variable to prevent overflow
+  // in libxml2.
+  if (static_cast<int>(src_length) < 0)
+    return false;
+
+  xmlCharEncodingHandler *encoding_handler = NULL;
+  if (encoding && *encoding) {
+    encoding_handler = xmlFindCharEncodingHandler(encoding);
+  } else {
+    // xmlDetectCharEncoding detects encoding by looking at BOM.
+    xmlCharEncoding xml_encoding = xmlDetectCharEncoding(ToXmlCharPtr(src),
+                                                         src_length);
+    encoding_handler = xmlGetCharEncodingHandler(xml_encoding);
+  }
+
+  if (!encoding_handler) {
+    // libxml2 returns NULL when either the encoding is unknown or it thinks the
+    // source string doesn't need to be converted.
+    if (IsLegalUTF8String(src, src_length)) {
+      dest->assign(src, src_length);
+      return true;
+    }
+    return false;
+  }
+
+  xmlBuffer *input_buffer = xmlBufferCreateStatic(const_cast<char *>(src),
+                                                  src_length);
+  xmlBuffer *output_buffer = xmlBufferCreate();
+  int result = xmlCharEncInFunc(encoding_handler, output_buffer, input_buffer);
+  if (result > 0) {
+    ASSERT(result == xmlBufferLength(output_buffer));
+    dest->append(FromXmlCharPtr(xmlBufferContent(output_buffer)),
+                 static_cast<size_t>(result));
+  }
+
+  xmlCharEncCloseFunc(encoding_handler);
+  xmlBufferFree(input_buffer);
+  xmlBufferFree(output_buffer);
+  return result >= 0;
+}
+
+bool ConvertStringToUTF8(const std::string &src, const char *encoding,
+                         std::string *dest) {
+  return ConvertStringToUTF8(src.c_str(), src.length(), encoding, dest);
 }
 
 } // namespace ggadget

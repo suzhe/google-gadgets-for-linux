@@ -514,7 +514,7 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
 
   DOMDocumentInterface *doc = CreateDOMDocument();
   doc->Attach();
-  ASSERT_TRUE(ParseXMLIntoDOM(xml, "FILENAME", doc));
+  ASSERT_TRUE(ParseXMLIntoDOM(xml, "FILENAME", doc, NULL));
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
   LOG("Non-blank document NULL name");
   TestBlankNodeList(elements);
@@ -560,7 +560,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
 
   DOMDocumentInterface *doc = CreateDOMDocument();
   doc->Attach();
-  ASSERT_TRUE(ParseXMLIntoDOM(xml, "FILENAME", doc));
+  ASSERT_TRUE(ParseXMLIntoDOM(xml, "FILENAME", doc, NULL));
   DOMNodeListInterface *elements = doc->GetElementsByTagName("s");
   LOG("Non-blank document name 's'");
   ASSERT_EQ(6U, elements->GetLength());
