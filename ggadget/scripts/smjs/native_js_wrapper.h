@@ -18,7 +18,7 @@
 #define GGADGET_NATIVE_JS_WRAPPER_H__
 
 #include <jsapi.h>
-#include "ggadget/common.h"
+#include <ggadget/common.h>
 #include "ggadget/scriptable_interface.h"
 
 namespace ggadget {

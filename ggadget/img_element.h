@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_IMG_ELEMENT_H__
-#define GGADGETS_IMG_ELEMENT_H__
+#ifndef GGADGET_IMG_ELEMENT_H__
+#define GGADGET_IMG_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
@@ -48,7 +48,7 @@ class ImgElement : public BasicElement {
   /**
    * Resizes the image to specified @a width and @a height via reduced
    * resolution.  If the source image is larger than the display area,
-   * using this method to resize the image to the output size will save 
+   * using this method to resize the image to the output size will save
    * memory and improve rendering performance.
    */
   void SetSrcSize(size_t width, size_t height);
@@ -67,4 +67,4 @@ class ImgElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_IMG_ELEMENT_H__
+#endif // GGADGET_IMG_ELEMENT_H__

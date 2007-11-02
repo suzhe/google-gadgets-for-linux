@@ -17,7 +17,7 @@
 #ifndef GGADGET_XML_UTILS_H__
 #define GGADGET_XML_UTILS_H__
 
-#include "string_utils.h"
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 

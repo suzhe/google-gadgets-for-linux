@@ -18,8 +18,8 @@
 #define GGADGET_JS_SCRIPT_RUNTIME_H__
 
 #include <jsapi.h>
-#include "ggadget/script_runtime_interface.h"
-#include "ggadget/signal.h"
+#include <ggadget/script_runtime_interface.h>
+#include <ggadget/signals.h>
 
 namespace ggadget {
 

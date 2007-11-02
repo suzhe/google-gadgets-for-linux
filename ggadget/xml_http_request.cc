@@ -21,7 +21,7 @@
 #include "gadget_host_interface.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_helper.h"
-#include "signal.h"
+#include "signals.h"
 #include "string_utils.h"
 #include "xml_dom.h"
 #include "xml_utils.h"

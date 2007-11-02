@@ -17,8 +17,8 @@
 #ifndef GGADGET_VIEW_INTERFACE_H__
 #define GGADGET_VIEW_INTERFACE_H__
 
-#include "scriptable_interface.h"
-#include "signal.h"
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/signals.h>
 
 namespace ggadget {
 

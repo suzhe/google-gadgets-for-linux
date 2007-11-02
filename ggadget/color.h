@@ -17,30 +17,30 @@
 #ifndef GGADGET_COLOR_H__
 #define GGADGET_COLOR_H__
 
-#include "common.h"
+#include <ggadget/common.h>
 
 namespace ggadget {
 
-/** 
+/**
  * Struct for holding color information.
  * Currently, there is no support for the alpha channel.
  */
 struct Color {
-  Color(double r, double g, double b) : red(r), green(g), blue(b) { 
+  Color(double r, double g, double b) : red(r), green(g), blue(b) {
     ASSERT(r >= 0. && r <= 1.);
     ASSERT(g >= 0. && g <= 1.);
     ASSERT(b >= 0. && b <= 1.);
-  };      
+  };
 
   /**
    * Utility function to create a Color object from 8-bit color channel values.
    */
-  static Color ColorFromChars(unsigned char r, unsigned char g, 
+  static Color ColorFromChars(unsigned char r, unsigned char g,
                               unsigned char b) {
     return Color(r / 255.0, g / 255.0, b / 255.0);
-  };  
+  };
 
-  double red, green, blue;  
+  double red, green, blue;
 };
 
 } // namespace ggadget

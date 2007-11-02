@@ -18,8 +18,8 @@
 #define GGADGET_ELEMENT_FACTORY_IMPL_H__
 
 #include <map>
-#include "element_factory.h"
-#include "string_utils.h"
+#include <ggadget/element_factory.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 

@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#include <math.h>
+#include <cmath>
 #include <jsobj.h>
 #include <jsfun.h>
+#include <ggadget/scriptable_binary_data.h>
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/unicode_utils.h>
 #include "converter.h"
-#include "ggadget/scriptable_binary_data.h"
-#include "ggadget/scriptable_interface.h"
-#include "ggadget/unicode_utils.h"
 #include "js_script_context.h"
 #include "json.h"
 #include "native_js_wrapper.h"
@@ -57,7 +57,7 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
     if (result) {
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
       // string containing non-numeric chars.
-      if (!isnan(double_val) || js_val == JS_GetNaNValue(cx))
+      if (!std::isnan(double_val) || js_val == JS_GetNaNValue(cx))
         *native_val = Variant(static_cast<int64_t>(round(double_val)));
       else
         result = JS_FALSE;
@@ -73,7 +73,7 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
   if (result) {
     // If double_val is NaN, it may because js_val is NaN, or js_val is a
     // string containing non-numeric chars.
-    if (!isnan(double_val) || js_val == JS_GetNaNValue(cx))
+    if (!std::isnan(double_val) || js_val == JS_GetNaNValue(cx))
       *native_val = Variant(double_val);
     else
       result = JS_FALSE;

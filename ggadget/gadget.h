@@ -17,8 +17,8 @@
 #ifndef GGADGET_GADGET_H__
 #define GGADGET_GADGET_H__
 
-#include "common.h"
-#include "gadget_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/gadget_interface.h>
 
 namespace ggadget {
 

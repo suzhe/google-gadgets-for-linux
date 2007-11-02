@@ -17,10 +17,10 @@
 #ifndef GGADGET_SCRIPTABLE_HELPER_H__
 #define GGADGET_SCRIPTABLE_HELPER_H__
 
-#include "common.h"
-#include "slot.h"
-#include "variant.h"
-#include "scriptable_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/slot.h>
+#include <ggadget/variant.h>
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
@@ -169,7 +169,7 @@ class ScriptableHelper : public I {
    * methods and signals).
    * Any operations to properties not registered in current
    * @c ScriptableHelper object are delegated to the prototype.
-   * One prototype can be shared among multiple <code>ScriptableHelper</code>s. 
+   * One prototype can be shared among multiple <code>ScriptableHelper</code>s.
    */
   void SetPrototype(ScriptableInterface *prototype) {
     impl_->SetPrototype(prototype);
@@ -257,7 +257,7 @@ class ScriptableHelper : public I {
   internal::ScriptableHelperImplInterface *impl_;
 };
 
-// Use the following line to test if the COMPILE_ASSERT is effective: 
+// Use the following line to test if the COMPILE_ASSERT is effective:
 // class B : public ScriptableHelper<Variant> { };
 
 } // namespace ggadget

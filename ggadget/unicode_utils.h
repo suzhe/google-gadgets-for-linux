@@ -18,7 +18,7 @@
 #define GGADGET_UNICODE_UTILS_H__
 
 #include <string>
-#include "common.h"
+#include <ggadget/common.h>
 
 namespace ggadget {
 typedef uint16_t UTF16Char;

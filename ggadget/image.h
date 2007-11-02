@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_IMAGE_H__
-#define GGADGETS_IMAGE_H__
+#ifndef GGADGET_IMAGE_H__
+#define GGADGET_IMAGE_H__
 
-#include "element_interface.h"
-#include "scriptable_helper.h"
+#include <ggadget/element_interface.h>
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
@@ -48,7 +48,7 @@ class Image {
 
   /**
    * Duplicate the image.
-   */ 
+   */
   Image(const Image &another);
 
   ~Image();
@@ -62,7 +62,7 @@ class Image {
   const CanvasInterface *GetCanvas();
 
   /**
-   * Draw the image on a canvas without stretching. 
+   * Draw the image on a canvas without stretching.
    */
   void Draw(CanvasInterface *canvas, double x, double y);
 
@@ -85,4 +85,4 @@ class Image {
 
 } // namespace ggadget
 
-#endif // GGADGETS_IMAGE_H__
+#endif // GGADGET_IMAGE_H__

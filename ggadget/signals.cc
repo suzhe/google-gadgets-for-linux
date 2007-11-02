@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "signal.h"
+#include "signals.h"
 
 namespace ggadget {
 

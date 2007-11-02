@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_BUTTON_ELEMENT_H__
-#define GGADGETS_BUTTON_ELEMENT_H__
+#ifndef GGADGET_BUTTON_ELEMENT_H__
+#define GGADGET_BUTTON_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
@@ -70,4 +70,4 @@ class ButtonElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_BUTTON_ELEMENT_H__
+#endif // GGADGET_BUTTON_ELEMENT_H__

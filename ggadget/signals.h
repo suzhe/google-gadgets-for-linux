@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SIGNAL_H__
-#define GGADGET_SIGNAL_H__
+#ifndef GGADGET_SIGNALS_H__
+#define GGADGET_SIGNALS_H__
 
 #include <list>
-#include "common.h"
-#include "slot.h"
+#include <ggadget/common.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 
@@ -348,4 +348,4 @@ DEFINE_SIGNAL(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS9, INIT_ARGS9)
 
 } // namespace ggadget
 
-#endif // GGADGET_SIGNAL_H__
+#endif // GGADGET_SIGNALS_H__

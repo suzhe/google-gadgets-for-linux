@@ -35,7 +35,7 @@ SET(SRCS
   scriptable_event.cc
   scriptable_helper.cc
   scriptable_options.cc
-  signal.cc
+  signals.cc
   string_utils.cc
   texture.cc
   unicode_utils.cc

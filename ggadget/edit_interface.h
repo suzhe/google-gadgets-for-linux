@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#ifndef  GGADGET_EDIT_INTERFACE_H__
-#define  GGADGET_EDIT_INTERFACE_H__
+#ifndef GGADGET_EDIT_INTERFACE_H__
+#define GGADGET_EDIT_INTERFACE_H__
 
-#include "color.h"
+#include <ggadget/color.h>
 
 namespace ggadget {
 
@@ -135,4 +135,3 @@ class EditInterface {
 }   //namespace ggadget
 
 #endif  // GGADGET_EDIT_INTERFACE_H__
-

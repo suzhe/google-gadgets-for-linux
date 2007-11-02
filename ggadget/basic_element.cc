@@ -13,7 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-
+#include <iostream>
 #include "basic_element.h"
 #include "common.h"
 #include "math_utils.h"

@@ -17,9 +17,9 @@
 #ifndef GGADGET_VIEW_H__
 #define GGADGET_VIEW_H__
 
-#include "common.h"
-#include "scriptable_helper.h"
-#include "view_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/scriptable_helper.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 

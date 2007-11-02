@@ -222,7 +222,7 @@ inline To down_cast(From* f) {          // so we only accept pointers
  * in almost all cases in this product.
  *
  * Usage: <code>if (IsDerived<Base, Derived>::value) ...</code> or use it in
- * COMPILE_ASSERT macro. 
+ * COMPILE_ASSERT macro.
  */
 template <typename Base, typename Derived>
 struct IsDerived {

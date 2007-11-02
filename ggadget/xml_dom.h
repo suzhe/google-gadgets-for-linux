@@ -17,8 +17,8 @@
 #ifndef GGADGET_XML_DOM_H__
 #define GGADGET_XML_DOM_H__
 
-#include "common.h"
-#include "xml_dom_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/xml_dom_interface.h>
 
 namespace ggadget {
 

@@ -17,30 +17,30 @@
 #ifndef GGADGET_SCRIPTABLE_DELEGATOR_H__
 #define GGADGET_SCRIPTABLE_DELEGATOR_H__
 
-#include "scriptable_interface.h"
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
 /**
  * Wraps another @c ScriptableInterface instance and delegates all method
  * calls except @c IsStrict() to it.
- * 
+ *
  * It's useful when registering different script objects backed with the same
  * C++ object in a script context.  For example, in a view's script context,
  * the view object is registered as the global object which is not strict,
  * while at the same time, as the global 'view' variable which is strict.
  * In this case, we register the non-strict view object as the global object,
  * while register a strict @c ScriptableDelegator of the view object as the
- * 'view' variable.  
+ * 'view' variable.
  *
- * @see ScriptableInterface::IsStrict()  
+ * @see ScriptableInterface::IsStrict()
  */
 class ScriptableDelegator : public ScriptableInterface {
  public:
-	ScriptableDelegator(ScriptableInterface *scriptable, bool strict)
-	    : scriptable_(scriptable),
-	      strict_(strict) { }
-	virtual ~ScriptableDelegator() { }
+  ScriptableDelegator(ScriptableInterface *scriptable, bool strict)
+      : scriptable_(scriptable),
+    strict_(strict) { }
+  virtual ~ScriptableDelegator() { }
 
 	virtual uint64_t GetClassId() const { return scriptable_->GetClassId(); }
   virtual bool IsInstanceOf(uint64_t class_id) const {

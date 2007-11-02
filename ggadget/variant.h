@@ -19,8 +19,8 @@
 
 #include <string>
 #include <ostream>
-#include "common.h"
-#include "unicode_utils.h"
+#include <ggadget/common.h>
+#include <ggadget/unicode_utils.h>
 
 namespace ggadget {
 
@@ -29,7 +29,7 @@ class Slot;
 
 /**
  * Used as a wrapper to a string indicating this string contains a JSON
- * expression.  For json, see http://www.json.org. 
+ * expression.  For json, see http://www.json.org.
  */
 struct JSONString {
   explicit JSONString(const char *a_value) : value(a_value ? a_value : "") { }
@@ -43,7 +43,7 @@ struct JSONString {
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
- * <code>Variant</code>s are immutable. 
+ * <code>Variant</code>s are immutable.
  */
 class Variant {
  public:
@@ -579,7 +579,7 @@ struct VariantValue<void> {
 /**
  * Checks if a type is supported by Variant and causes compilation error
  * if the type is not supported.
- * 
+ *
  * You need not use this when using the VariantValue template, because
  * the template can automatically check the type.
  */

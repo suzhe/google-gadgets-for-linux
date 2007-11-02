@@ -18,7 +18,7 @@
 #define GGADGET_TESTS_MOCKED_VIEW_H__
 
 #include <string>
-#include "ggadget/signal.h"
+#include "ggadget/signals.h"
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
 
