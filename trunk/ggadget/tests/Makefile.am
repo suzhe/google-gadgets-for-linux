@@ -69,4 +69,5 @@ file_manager_test_data.gg:
 	)
 endif
 
+TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@
 TESTS 			= $(check_PROGRAMS)

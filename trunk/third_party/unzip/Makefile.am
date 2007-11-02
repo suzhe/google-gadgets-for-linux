@@ -14,18 +14,25 @@
 # limitations under the License.
 #
 
+if GGL_HOST_WINDOWS
+  WIN32_INC=iowin32.h
+  WIN32_SRC=iowin32.c
+endif
+
 noinst_HEADERS		= crypt.h \
 			  ioapi.h \
 			  mztools.h \
 			  unzip.h \
-			  zip.h
+			  zip.h \
+			  $(WIN32_INC)
 
 noinst_LTLIBRARIES	= libunzip.la
 
 libunzip_la_SOURCES	= ioapi.c \
 			  mztools.c \
 			  unzip.c \
-			  zip.c
+			  zip.c \
+			  $(WIN32_SRC)
 
 libunzip_la_CPPFLAGS	= @ZLIB_CPPFLAGS@
 libunzip_la_LDFLAGS	= @ZLIB_LDFLAGS@

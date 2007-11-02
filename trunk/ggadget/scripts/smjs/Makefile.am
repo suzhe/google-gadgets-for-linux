@@ -15,11 +15,7 @@
 #
 
 if GGL_BUILD_LIBGGADGET_SMJS
-#if GGL_ENABLE_UNIT_TESTS
-#  UNITTEST_DIR=tests
-#endif
-
-#SUBDIRS = . $(UNITTEST_DIR)
+SUBDIRS = . tests
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

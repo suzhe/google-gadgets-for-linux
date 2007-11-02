@@ -101,6 +101,11 @@ AC_ARG_ENABLE([debug],
 	      [enable_debug=$enableval],
 	      [enable_debug=no])
 
+AC_ARG_WITH([memcheck-command],
+	    AS_HELP_STRING([--with-memcheck-command=CMD],
+		[specify a memory check command for running unit tests.]),
+	    [memcheck_command=$withval],
+	    [memcheck_command=""])
 ###########################################################
 ##                  Start Configuration.                 ##
 ###########################################################
@@ -149,6 +154,9 @@ if test x$ac_cv_type_size_t != xyes; then
 fi
 
 # Check necessary libraries
+
+# Check gnu readline lib, for smjs unit tests.
+GGL_CHECK_READLINE([has_readline=yes], [has_readline=no])
 
 # Check zlib
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
@@ -223,10 +231,37 @@ AM_CONDITIONAL(
   [GGL_BUILD_SIMPLE_HOST],
   [test x$build_simple_host = xyes])
 
-AM_CONDITIONAL(
-  [GGL_HAVE_ZIP],
-  [test x$ZIP != x])
+AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
+AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
 
+# OS Specific conditions.
+case $host_os in
+  *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
+    ggl_host_type=windows
+    ;;
+  *darwin* )
+    ggl_host_type=macosx
+    ;;
+  *linux* )
+    ggl_host_type=linux
+    ;;
+  *solaris* )
+    ggl_host_type=solaris
+    ;;
+  * )
+    ggl_host_type=unknown
+    ;;
+esac
+
+AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
+AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])
+AM_CONDITIONAL([GGL_HOST_LINUX], [test x$ggl_host_type = xlinux])
+AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
+
+#Check memory check command
+if test x$memcheck_command != x; then
+  AC_CHECK_PROGS([MEMCHECK_COMMAND], [$memcheck_command])
+fi
 
 ###########################################################
 ##                 Default compiler options.             ##
@@ -254,7 +289,6 @@ esac
 ##                      Output files.                    ##
 ###########################################################
 AC_SUBST(ac_aux_dir)
-dnl		 ggadget/scripts/smjs/tests/Makefile
 AC_CONFIG_FILES([Makefile
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
@@ -262,6 +296,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/graphics/tests/Makefile
 		 ggadget/scripts/Makefile
 		 ggadget/scripts/smjs/Makefile
+		 ggadget/scripts/smjs/tests/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
 		 third_party/Makefile
