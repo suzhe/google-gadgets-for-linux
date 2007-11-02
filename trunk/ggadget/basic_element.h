@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_BASIC_ELEMENT_H__
-#define GGADGETS_BASIC_ELEMENT_H__
+#ifndef GGADGET_BASIC_ELEMENT_H__
+#define GGADGET_BASIC_ELEMENT_H__
 
-#include "common.h"
-#include "element_interface.h"
-#include "scriptable_helper.h"
+#include <ggadget/common.h>
+#include <ggadget/element_interface.h>
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
@@ -61,10 +61,10 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual double GetPixelHeight() const;
   virtual double GetRelativeWidth() const;
   virtual double GetRelativeHeight() const;
-  virtual void SetPixelWidth(double width);  
+  virtual void SetPixelWidth(double width);
   virtual void SetPixelHeight(double height);
   virtual void SetRelativeWidth(double width);
-  virtual void SetRelativeHeight(double height);  
+  virtual void SetRelativeHeight(double height);
   virtual double GetPixelX() const;
   virtual void SetPixelX(double x);
   virtual double GetPixelY() const;
@@ -145,7 +145,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
  protected:
 
-#if 0 
+#if 0
   /**
    * Checks to see if the current element has changed and needs to be redrawn.
    * Note that it does not check any child elements, so the element may still
@@ -169,9 +169,9 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
 
-  /** 
-   * Sets the changed bit to true and if visible, 
-   * requests the view to be redrawn. 
+  /**
+   * Sets the changed bit to true and if visible,
+   * requests the view to be redrawn.
    */
   virtual void QueueDraw();
 
@@ -185,4 +185,4 @@ CLASS_ID_IMPL(BasicElement, ElementInterface)
 
 } // namespace ggadget
 
-#endif // GGADGETS_BASIC_ELEMENT_H__
+#endif // GGADGET_BASIC_ELEMENT_H__

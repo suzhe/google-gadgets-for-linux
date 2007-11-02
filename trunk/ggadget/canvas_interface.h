@@ -17,20 +17,20 @@
 #ifndef GGADGET_CANVAS_INTERFACE_H__
 #define GGADGET_CANVAS_INTERFACE_H__
 
-#include "color.h"
-#include "font_interface.h"
+#include <ggadget/color.h>
+#include <ggadget/font_interface.h>
 
 namespace ggadget {
 
-/** 
- * This class is the interface abstracting all of ggadget's drawing 
- * functionality. It is designed to be independent from the rendering 
- * library used to realize this functionality. The user assumes that the object 
- * is ready to use on creation. This means that all the prerequisites for the 
- * graphics environment has been set up. In most cases, this includes an 
- * appropiately-sized blank drawing surface, an unset clipping and mask, a 
- * starting opacity of 1.0, and the identity matrix as the default 
- * transformation matrix, although these may change depending on the object 
+/**
+ * This class is the interface abstracting all of ggadget's drawing
+ * functionality. It is designed to be independent from the rendering
+ * library used to realize this functionality. The user assumes that the object
+ * is ready to use on creation. This means that all the prerequisites for the
+ * graphics environment has been set up. In most cases, this includes an
+ * appropiately-sized blank drawing surface, an unset clipping and mask, a
+ * starting opacity of 1.0, and the identity matrix as the default
+ * transformation matrix, although these may change depending on the object
  * creator's needs.
  */
 class CanvasInterface {
@@ -48,18 +48,18 @@ class CanvasInterface {
    * Enum used to specify horizontal alignment.
    */
   enum Alignment {
-    ALIGN_LEFT, 
-    ALIGN_CENTER, 
-    ALIGN_RIGHT 
+    ALIGN_LEFT,
+    ALIGN_CENTER,
+    ALIGN_RIGHT
   };
 
   /**
    * Enum used to specify vertical alignment.
    */
   enum VAlignment {
-    VALIGN_TOP, 
-    VALIGN_MIDDLE, 
-    VALIGN_BOTTOM 
+    VALIGN_TOP,
+    VALIGN_MIDDLE,
+    VALIGN_BOTTOM
   };
 
   /**
@@ -95,35 +95,35 @@ class CanvasInterface {
   /**
    * @return The height of the canvas in pixels.
    */
-  virtual size_t GetHeight() const = 0;  
+  virtual size_t GetHeight() const = 0;
 
   /**
    * @return true if the canvas is a mask, false otherwise.
    */
-  virtual bool IsMask() const = 0;  
+  virtual bool IsMask() const = 0;
 
-  /** 
-   * Saves the current graphics state in a stack, while not changing the current 
-   * state. Specifically, three aspects of the state are stored: clipping, 
-   * transformation matrix, and opacity. Since the states are 
-   * saved in a stack, this method may be called multiple times without losing 
+  /**
+   * Saves the current graphics state in a stack, while not changing the current
+   * state. Specifically, three aspects of the state are stored: clipping,
+   * transformation matrix, and opacity. Since the states are
+   * saved in a stack, this method may be called multiple times without losing
    * any of the previously saved states.
    * @return true on success, false otherwise.
    */
   virtual bool PushState() = 0;
 
-  /** 
-   * Restores the last pushed graphics state from the state stack, overwriting 
-   * the current state. Specifically, clipping, transformation matrix, 
-   * and opacity are restored with each pop. Since the states are saved in 
-   * a stack, this method may be called multiple times to pop multiple 
-   * previously saved states. 
+  /**
+   * Restores the last pushed graphics state from the state stack, overwriting
+   * the current state. Specifically, clipping, transformation matrix,
+   * and opacity are restored with each pop. Since the states are saved in
+   * a stack, this method may be called multiple times to pop multiple
+   * previously saved states.
    * @return true on success, false otherwise.
    */
   virtual bool PopState() = 0;
 
   /**
-   * Multiply the current opacity by the input parameter. This method changes 
+   * Multiply the current opacity by the input parameter. This method changes
    * the current state.
    * @param opacity factor in [0, 1] to multiply the existing opacity by.
    * @return true if successful, false if no changes are made (i.e. error).
@@ -144,9 +144,9 @@ class CanvasInterface {
   virtual void ScaleCoordinates(double cx, double cy) = 0;
 
   /**
-   * Refresh the canvas to its initial state after construction, 
+   * Refresh the canvas to its initial state after construction,
    * irrespective of the current transformation matrix.
-   * Note that this method may actually do more than clear the canvas 
+   * Note that this method may actually do more than clear the canvas
    * depending on the implementation if the initial state is not an empty
    * canvas.
    * The current drawing state (matrix, opacity, etc.) is reset also.
@@ -154,7 +154,7 @@ class CanvasInterface {
    */
   virtual bool ClearCanvas() = 0;
 
-  /** 
+  /**
    * Draw a line from point (x0, y0) to (x1, y1).
    * @param x0 X-coordinate of the line starting point.
    * @param y0 Y-coordinate of the line starting point.
@@ -164,7 +164,7 @@ class CanvasInterface {
    * @param c Line color.
    * @return true on success, false otherwise.
    */
-  virtual bool DrawLine(double x0, double y0, double x1, double y1, 
+  virtual bool DrawLine(double x0, double y0, double x1, double y1,
                         double width, const Color &c) = 0;
 
   /**
@@ -176,13 +176,13 @@ class CanvasInterface {
    * @param c Fill color.
    * @return true on success, false otherwise.
    */
-  virtual bool DrawFilledRect(double x, double y, 
-                              double w, double h, const Color &c) = 0;  
+  virtual bool DrawFilledRect(double x, double y,
+                              double w, double h, const Color &c) = 0;
 
-  /** 
-   * Draws the given canvas starting at (x, y). The current 
+  /**
+   * Draws the given canvas starting at (x, y). The current
    * transformation matrix of the target canvas is respected, ignoring
-   * the current transformation matrix defined in the image parameter. However, 
+   * the current transformation matrix defined in the image parameter. However,
    * the width and height of the parameter is preserved.
    * @param x The X-coordinate of the image's top left corner.
    * @param y The Y-coordinate of the image's top left corner.
@@ -190,7 +190,7 @@ class CanvasInterface {
    */
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) = 0;
 
-  /** 
+  /**
    * Draw a rectangle filled with the given canvas.
    * @param x The X-coordinate of the rectangle's top left corner.
    * @param y The Y-coordinate of the rectangle's top left corner.
@@ -198,14 +198,14 @@ class CanvasInterface {
    * @param h Height of rectangle.
    * @param img Canvas to draw.
    */
-  virtual bool DrawFilledRectWithCanvas(double x, double y, 
+  virtual bool DrawFilledRectWithCanvas(double x, double y,
                                         double w, double h,
                                         const CanvasInterface *img) = 0;
 
-  /** 
-   * Draws the given canvas at (x, y) using a mask on this canvas, while 
-   * respecting the current transformation matrix of the target canvas. 
-   * The current transformation matrix defined in the image and mask 
+  /**
+   * Draws the given canvas at (x, y) using a mask on this canvas, while
+   * respecting the current transformation matrix of the target canvas.
+   * The current transformation matrix defined in the image and mask
    * parameters is ignored, with the exception of width and height.
    * @param x The X-coordinate of the image's top left corner.
    * @param y The Y-coordinate of the image's top left corner.
@@ -214,7 +214,7 @@ class CanvasInterface {
    * @param mx The X-coordinate of the mask's top left corner.
    * @param my The Y-coordinate of the mask's top left corner.
    */
-  virtual bool DrawCanvasWithMask(double x, double y, 
+  virtual bool DrawCanvasWithMask(double x, double y,
                                   const CanvasInterface *img,
                                   double mx, double my,
                                   const CanvasInterface *mask) = 0;
@@ -228,17 +228,17 @@ class CanvasInterface {
                         const Color &c, Alignment align, VAlignment valign,
                         Trimming trimming, TextFlag text_flag) = 0;
 
-  /** 
+  /**
    * Draws the specified text on the screen at the given (x, y) using the
-   * specified texture. See @c DrawText for details. 
+   * specified texture. See @c DrawText for details.
    */
-  virtual bool DrawTextWithTexture(double x, double y, double width, 
-                                   double height, const char *text, 
-                                   const FontInterface *f, 
-                                   const CanvasInterface *texture, 
+  virtual bool DrawTextWithTexture(double x, double y, double width,
+                                   double height, const char *text,
+                                   const FontInterface *f,
+                                   const CanvasInterface *texture,
                                    Alignment align, VAlignment valign,
                                    Trimming trimming, TextFlag text_flag) = 0;
-  
+
   /**
    * Intersect the clipping region with a rectangular region.
    * @param x X-coordinate of top left corner of rectangle.
@@ -247,8 +247,8 @@ class CanvasInterface {
    * @param h Height of rectangle.
    * @return true on success, false otherwise.
    */
-  virtual bool IntersectRectClipRegion(double x, double y, 
-                                       double w, double h) = 0;  
+  virtual bool IntersectRectClipRegion(double x, double y,
+                                       double w, double h) = 0;
 };
 
 } // namespace ggadget

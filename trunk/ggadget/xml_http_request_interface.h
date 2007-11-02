@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_XML_HTTP_REQUEST_INTERFACE_H__
-#define GGADGETS_XML_HTTP_REQUEST_INTERFACE_H__
+#ifndef GGADGET_XML_HTTP_REQUEST_INTERFACE_H__
+#define GGADGET_XML_HTTP_REQUEST_INTERFACE_H__
 
-#include "scriptable_interface.h"
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
@@ -82,4 +82,4 @@ CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)
 
 } // namespace ggadget
 
-#endif // GGADGETS_XML_HTTP_REQUEST_INTERFACE_H__
+#endif // GGADGET_XML_HTTP_REQUEST_INTERFACE_H__

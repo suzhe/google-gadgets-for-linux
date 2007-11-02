@@ -17,57 +17,57 @@
 #ifndef GGADGET_GRAPHICS_INTERFACE_H__
 #define GGADGET_GRAPHICS_INTERFACE_H__
 
-#include "canvas_interface.h"
-#include "font_interface.h"
+#include <ggadget/canvas_interface.h>
+#include <ggadget/font_interface.h>
 
 namespace ggadget {
 
-/** 
- * This class is the interface for creating objects used in ggadget's 
- * graphics rendering. It's implementation should come bundled with a 
+/**
+ * This class is the interface for creating objects used in ggadget's
+ * graphics rendering. It's implementation should come bundled with a
  * corresponding implementation of CanvasInterface. The gadget view obtains
- * an instance of this class from its HostInterface. Unlike the HostInterface, 
+ * an instance of this class from its HostInterface. Unlike the HostInterface,
  * the host can decide, depending on requirements,
- * how to assign GraphicsInterface objects to Views. For example, the host may 
+ * how to assign GraphicsInterface objects to Views. For example, the host may
  * choose to:
  * - use a different GraphicsInterface for each view
- * - use a different GraphicsInterface for each gadget, but share it amongst views 
+ * - use a different GraphicsInterface for each gadget, but share it amongst views
  * - use the same GraphicsInterface for all views in the process.
  */
 class GraphicsInterface {
  public:
   virtual ~GraphicsInterface() { }
 
-  /** 
+  /**
    * Creates a new blank canvas.
    * @param w Width of the new canvas.
    * @param h Height of the new canvas.
    */
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const = 0;
 
-  /** 
+  /**
    * Creates a new image canvas.
    * @param img_bytes Array containing the raw bytes of the image.
    * @param img_bytes_count Number of bytes of the img_bytes array.
    * @return NULL on error, an ImageInterface object otherwise.
    */
-  virtual CanvasInterface *NewImage(const char *img_bytes, 
+  virtual CanvasInterface *NewImage(const char *img_bytes,
                                     size_t img_bytes_count) const = 0;
 
-  /** 
+  /**
    * Creates a new image mask canvas.
    * Any black pixels in the mask image are considered to be transparent.
    * @param img_bytes Array containing the raw bytes of the image.
    * @param img_bytes_count Number of bytes of the img_bytes array.
    * @return NULL on error, an ImageInterface object otherwise.
    */
-  virtual CanvasInterface *NewMask(const char *img_bytes, 
+  virtual CanvasInterface *NewMask(const char *img_bytes,
                                    size_t img_bytes_count) const = 0;
 
   /**
    * Create a new font. This font is used when rendering text to a canvas.
-   */ 
-  virtual FontInterface *NewFont(const char *family, size_t pt_size, 
+   */
+  virtual FontInterface *NewFont(const char *family, size_t pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
 };

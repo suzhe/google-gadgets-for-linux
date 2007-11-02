@@ -32,20 +32,20 @@ static const char *kVAlignNames[] = {
   "top", "middle", "bottom"
 };
 static const char *kTrimmingNames[] = {
-  "none", 
-  "character", 
-  "word", 
-  "character_ellipsis", 
-  "word-ellipsis", 
+  "none",
+  "character",
+  "word",
+  "character_ellipsis",
+  "word-ellipsis",
   "path-ellipsis"
 };
 
 class LabelElement::Impl {
  public:
-  Impl(ViewInterface *view) : color_texture_(view->LoadTexture(kDefaultColor)), 
-                              align_(CanvasInterface::ALIGN_LEFT), 
+  Impl(ViewInterface *view) : color_texture_(view->LoadTexture(kDefaultColor)),
+                              align_(CanvasInterface::ALIGN_LEFT),
                               valign_(CanvasInterface::VALIGN_TOP),
-                              trimming_(CanvasInterface::TRIMMING_NONE), 
+                              trimming_(CanvasInterface::TRIMMING_NONE),
                               bold_(false), italic_(false), strikeout_(false),
                               underline_(false), wrap_(false), size_(10),
                               font_(kDefaultFont), color_(kDefaultColor) { }
@@ -95,19 +95,19 @@ LabelElement::LabelElement(ElementInterface *parent,
   RegisterProperty("wordWrap",
                    NewSlot(this, &LabelElement::IsWordWrap),
                    NewSlot(this, &LabelElement::SetWordWrap));
-     
-  RegisterStringEnumProperty("align", 
+
+  RegisterStringEnumProperty("align",
                              NewSlot(this, &LabelElement::GetAlign),
-                             NewSlot(this, &LabelElement::SetAlign), 
+                             NewSlot(this, &LabelElement::SetAlign),
                              kAlignNames, arraysize(kAlignNames));
-  RegisterStringEnumProperty("valign", 
+  RegisterStringEnumProperty("valign",
                              NewSlot(this, &LabelElement::GetVAlign),
-                             NewSlot(this, &LabelElement::SetVAlign), 
+                             NewSlot(this, &LabelElement::SetVAlign),
                              kVAlignNames, arraysize(kVAlignNames));
-  RegisterStringEnumProperty("trimming", 
+  RegisterStringEnumProperty("trimming",
                              NewSlot(this, &LabelElement::GetTrimming),
-                             NewSlot(this, &LabelElement::SetTrimming), 
-                             kTrimmingNames, arraysize(kTrimmingNames));  
+                             NewSlot(this, &LabelElement::SetTrimming),
+                             kTrimmingNames, arraysize(kTrimmingNames));
 }
 
 LabelElement::~LabelElement() {
@@ -115,16 +115,16 @@ LabelElement::~LabelElement() {
 }
 
 void LabelElement::DoDraw(CanvasInterface *canvas,
-                        const CanvasInterface *children_canvas) {  
+                        const CanvasInterface *children_canvas) {
   if (!impl_->text_.empty()) {
     FontInterface *f =
-      GetView()->GetGraphics()->NewFont(impl_->font_.c_str(), impl_->size_, 
+      GetView()->GetGraphics()->NewFont(impl_->font_.c_str(), impl_->size_,
         impl_->italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
         impl_->bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL);
     if (!f) {
       return;
     }
-    
+
     CanvasInterface::TextFlag flag = 0;
     if (impl_->underline_) {
       flag |= CanvasInterface::TEXT_FLAGS_UNDERLINE;
@@ -136,13 +136,13 @@ void LabelElement::DoDraw(CanvasInterface *canvas,
       flag |= CanvasInterface::TEXT_FLAGS_WORDWRAP;
     }
 
-    impl_->color_texture_->DrawText(canvas, 0, 0, GetPixelWidth(), 
-                                    GetPixelHeight(), impl_->text_.c_str(), f, 
-                                    impl_->align_, impl_->valign_, 
+    impl_->color_texture_->DrawText(canvas, 0, 0, GetPixelWidth(),
+                                    GetPixelHeight(), impl_->text_.c_str(), f,
+                                    impl_->align_, impl_->valign_,
                                     impl_->trimming_, flag);
-       
+
     f->Destroy();
-  }  
+  }
 }
 
 CanvasInterface::Alignment LabelElement::GetAlign() const {

@@ -17,8 +17,8 @@
 #ifndef GGADGET_OPTIONS_INTERFACE_H__
 #define GGADGET_OPTIONS_INTERFACE_H__
 
-#include "common.h"
-#include "variant.h"
+#include <ggadget/common.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 

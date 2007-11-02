@@ -20,7 +20,7 @@
 #include <jsapi.h>
 #include <string>
 
-#include "ggadget/variant.h"
+#include <ggadget/variant.h>
 
 namespace ggadget {
 

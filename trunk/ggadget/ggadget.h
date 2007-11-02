@@ -1,14 +1,14 @@
 /*
   Copyright 2007 Google Inc.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
+  Licensed under the Apache License, Version 2.0 (the <ggadget/License>);
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
 
   Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
+  distributed under the License is distributed on an <ggadget/AS IS> BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
@@ -22,29 +22,29 @@
  * to access the public APIs of Google Gadgets library.
  */
 
-#include "common.h"
-#include "element_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/element_interface.h>
 // TODO: Make Elements an interface?
-#include "elements.h"
-#include "event.h"
-#include "file_manager_interface.h"
-#include "gadget_consts.h"
-#include "gadget_host_interface.h"
-#include "gadget_interface.h"
-#include "math_utils.h"
-#include "options_interface.h"
-#include "script_context_interface.h"
-#include "script_runtime_interface.h"
-#include "scriptable_interface.h"
-#include "signal.h"
-#include "slot.h"
-#include "string_utils.h"
-#include "unicode_utils.h"
-#include "variant.h"
-#include "view_host_interface.h"
-#include "view_interface.h"
-#include "xml_dom_interface.h"
-#include "xml_http_request_interface.h"
-#include "xml_utils.h"
+#include <ggadget/elements.h>
+#include <ggadget/event.h>
+#include <ggadget/file_manager_interface.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/gadget_host_interface.h>
+#include <ggadget/gadget_interface.h>
+#include <ggadget/math_utils.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/script_context_interface.h>
+#include <ggadget/script_runtime_interface.h>
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/signals.h>
+#include <ggadget/slot.h>
+#include <ggadget/string_utils.h>
+#include <ggadget/unicode_utils.h>
+#include <ggadget/variant.h>
+#include <ggadget/view_host_interface.h>
+#include <ggadget/view_interface.h>
+#include <ggadget/xml_dom_interface.h>
+#include <ggadget/xml_http_request_interface.h>
+#include <ggadget/xml_utils.h>
 
 #endif // GGADGET_GADGET_CONSTS_H__

@@ -17,7 +17,7 @@
 #ifndef GGADGET_SCRIPTABLE_OPTIONS_H__
 #define GGADGET_SCRIPTABLE_OPTIONS_H__
 
-#include "scriptable_helper.h"
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 

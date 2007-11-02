@@ -14,14 +14,14 @@
   limitations under the License.
 */
 
-#include "js_script_context.h"
-#include "js_script_runtime.h"
-#include "ggadget/common.h"
-#include "ggadget/scoped_ptr.h"
-#include "ggadget/slot.h"
-#include "ggadget/unicode_utils.h"
+#include <ggadget/common.h>
+#include <ggadget/scoped_ptr.h>
+#include <ggadget/slot.h>
+#include <ggadget/unicode_utils.h>
 #include "converter.h"
 #include "native_js_wrapper.h"
+#include "js_script_context.h"
+#include "js_script_runtime.h"
 
 namespace ggadget {
 

@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_DIV_ELEMENT_H__
-#define GGADGETS_DIV_ELEMENT_H__
+#ifndef GGADGET_DIV_ELEMENT_H__
+#define GGADGET_DIV_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
@@ -62,10 +62,10 @@ class DivElement : public BasicElement {
                                      double x, double y,
                                      double *child_x, double *child_y);
 
-  virtual void SetPixelWidth(double width);  
+  virtual void SetPixelWidth(double width);
   virtual void SetPixelHeight(double height);
   virtual void SetRelativeWidth(double width);
-  virtual void SetRelativeHeight(double height);  
+  virtual void SetRelativeHeight(double height);
   virtual void OnParentWidthChange(double width);
   virtual void OnParentHeightChange(double height);
 
@@ -83,4 +83,4 @@ class DivElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_DIV_ELEMENT_H__
+#endif // GGADGET_DIV_ELEMENT_H__

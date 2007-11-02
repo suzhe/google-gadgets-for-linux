@@ -17,9 +17,9 @@
 #ifndef GGADGET_XML_DOM_INTERFACE_H__
 #define GGADGET_XML_DOM_INTERFACE_H__
 
-#include "common.h"
-#include "scriptable_interface.h"
-#include "unicode_utils.h"
+#include <ggadget/common.h>
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/unicode_utils.h>
 
 namespace ggadget {
 

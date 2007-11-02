@@ -17,9 +17,9 @@
 #ifndef GGADGET_SCRIPTABLE_EVENT_H__
 #define GGADGET_SCRIPTABLE_EVENT_H__
 
-#include "common.h"
-#include "scriptable_helper.h"
-#include "scriptable_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/scriptable_helper.h>
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 

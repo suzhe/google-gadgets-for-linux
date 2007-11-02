@@ -17,11 +17,10 @@
 #ifndef GGADGET_GRAPHICS_CAIRO_GRAPHICS_H__
 #define GGADGET_GRAPHICS_CAIRO_GRAPHICS_H__
 
-#include <gdk/gdk.h>
-#include <cairo.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 
-#include "ggadget/common.h"
-#include "ggadget/graphics_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/graphics_interface.h>
 
 namespace ggadget {
 
@@ -30,9 +29,9 @@ namespace ggadget {
  * It is responsible for creating CanvasInterface objects for ggadget.
  */
 class CairoGraphics : public GraphicsInterface {
- public:   
+ public:
   /**
-   * Constructs a CairoGraphics object 
+   * Constructs a CairoGraphics object
    * @param zoom The zoom level for all new canvases.
    */
   CairoGraphics(double zoom);
@@ -40,12 +39,12 @@ class CairoGraphics : public GraphicsInterface {
 
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
 
-  virtual CanvasInterface *NewImage(const char *img_bytes, 
-                                    size_t img_bytes_count) const;  
-  virtual CanvasInterface *NewMask(const char *img_bytes, 
-                                   size_t img_bytes_count) const;  
+  virtual CanvasInterface *NewImage(const char *img_bytes,
+                                    size_t img_bytes_count) const;
+  virtual CanvasInterface *NewMask(const char *img_bytes,
+                                   size_t img_bytes_count) const;
 
-  virtual FontInterface *NewFont(const char *family, size_t pt_size, 
+  virtual FontInterface *NewFont(const char *family, size_t pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 
@@ -53,10 +52,10 @@ class CairoGraphics : public GraphicsInterface {
    double zoom_;
 
    /**
-    * Load a GdkPixbuf from raw image data. 
+    * Load a GdkPixbuf from raw image data.
     * @return NULL on failure, GdkPixbuf otherwise.
     */
-   static GdkPixbuf *LoadPixbufFromData(const char *img_bytes, 
+   static GdkPixbuf *LoadPixbufFromData(const char *img_bytes,
                                         size_t img_bytes_count);
 
    DISALLOW_EVIL_CONSTRUCTORS(CairoGraphics);

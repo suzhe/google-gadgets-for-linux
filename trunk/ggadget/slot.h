@@ -18,8 +18,8 @@
 #define GGADGET_SLOT_H__
 
 #include <cstring>
-#include "common.h"
-#include "variant.h"
+#include <ggadget/common.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 

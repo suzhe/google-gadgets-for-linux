@@ -14,17 +14,18 @@
   limitations under the License.
 */
 
+#include <gdk/gdkcairo.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
 
 namespace ggadget {
 
-CairoGraphics::CairoGraphics(double zoom) : zoom_(zoom) { 
+CairoGraphics::CairoGraphics(double zoom) : zoom_(zoom) {
   if (zoom_ <= .0) {
     zoom_ = 1.;
   }
-  g_type_init();  
+  g_type_init();
 }
 
 CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
@@ -33,10 +34,10 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
   cairo_surface_t *surface = NULL;
 
   size_t width;
-  size_t height;  
+  size_t height;
   if (zoom_ == 1.) {
     width = w;
-    height = h;    
+    height = h;
   }
   else {
     // compute new width and height based on zoom
@@ -44,7 +45,7 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
     height = size_t(h * zoom_);
 
     if (width == 0) width = 1;
-    if (height == 0) height = 1;    
+    if (height == 0) height = 1;
   }
 
   // create surface at native resolution after adjustment by scale
@@ -57,12 +58,12 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
 
   cr = cairo_create(surface);
   if (zoom_ != 1.) {
-    // divide again since x, y scale values may differ after rounding from the 
-    // initial multiplication 
+    // divide again since x, y scale values may differ after rounding from the
+    // initial multiplication
     cairo_scale(cr, width / (double)w, height / (double)h);
   }
 
-  // clear canvas  
+  // clear canvas
   c = new CairoCanvas(cr, w, h, false);
   c->ClearSurface();
 
@@ -74,13 +75,13 @@ exit:
 
   if (surface) {
     cairo_surface_destroy(surface);
-    surface = NULL; 
+    surface = NULL;
   }
 
   return c;
 }
 
-CanvasInterface *CairoGraphics::NewMask(const char *img_bytes, 
+CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
                                         size_t img_bytes_count) const {
   CairoCanvas *img = NULL;
   size_t h, w;
@@ -97,20 +98,20 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
     LOG("Error: unable to load PixBuf from data.");
     goto exit;
   }
-  w = gdk_pixbuf_get_width(pixbuf);     
-  h = gdk_pixbuf_get_height(pixbuf); 
+  w = gdk_pixbuf_get_width(pixbuf);
+  h = gdk_pixbuf_get_height(pixbuf);
 
   if (!gdk_pixbuf_get_has_alpha(pixbuf)) {
     // clone pixbuf with alpha channel and free the old one
     GdkPixbuf *a_pixbuf = gdk_pixbuf_add_alpha(pixbuf, false, 0, 0, 0);
     g_object_unref(pixbuf);
     pixbuf = a_pixbuf;
-    a_pixbuf = NULL;    
+    a_pixbuf = NULL;
   }
 
   // convert the pixels to mask specification as required by Cairo
   int rowstride, channels;
-  guchar *pixels, *p;  
+  guchar *pixels, *p;
   rowstride = gdk_pixbuf_get_rowstride(pixbuf);
   channels = gdk_pixbuf_get_n_channels(pixbuf);
   pixels = gdk_pixbuf_get_pixels(pixbuf);
@@ -119,7 +120,7 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
       4 != channels) {
     LOG("Error: unsupported PixBuf format.");
     goto exit;
-  }  
+  }
   for (size_t x = 0; x < w; x++) {
     for (size_t y = 0; y < h; y++) {
       p = pixels + y * rowstride + x * channels;
@@ -147,7 +148,7 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
   img->ClearSurface();
 
   gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
-  cairo_paint(cr);   
+  cairo_paint(cr);
 
   cairo_set_source_rgba(cr, 0., 0., 0., 0.);
 
@@ -155,11 +156,11 @@ exit:
   if (cr) {
     cairo_destroy(cr);
     cr = NULL;
-  }  
+  }
 
   if (surface) {
     cairo_surface_destroy(surface);
-    surface = NULL; 
+    surface = NULL;
   }
 
   if (pixbuf) {
@@ -170,7 +171,7 @@ exit:
   return img;
 }
 
-CanvasInterface *CairoGraphics::NewImage(const char *img_bytes, 
+CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
                                          size_t img_bytes_count) const {
   CairoCanvas *img = NULL;
   size_t h, w;
@@ -189,8 +190,8 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
     goto exit;
   }
 
-  w = gdk_pixbuf_get_width(pixbuf);     
-  h = gdk_pixbuf_get_height(pixbuf); 
+  w = gdk_pixbuf_get_width(pixbuf);
+  h = gdk_pixbuf_get_height(pixbuf);
   surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
   if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
     cairo_surface_destroy(surface);
@@ -199,15 +200,15 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
   }
 
   cr = cairo_create(surface);
-  img = new CairoCanvas(cr, w, h, false);  
+  img = new CairoCanvas(cr, w, h, false);
   img->ClearSurface();
 
   gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
-  cairo_paint(cr);         
+  cairo_paint(cr);
 
   cairo_set_source_rgba(cr, 0., 0., 0., 0.);
 
-exit:  
+exit:
   if (cr) {
     cairo_destroy(cr);
     cr = NULL;
@@ -215,7 +216,7 @@ exit:
 
   if (surface) {
     cairo_surface_destroy(surface);
-    surface = NULL; 
+    surface = NULL;
   }
 
   if (pixbuf) {
@@ -226,26 +227,26 @@ exit:
   return img;
 }
 
-GdkPixbuf *CairoGraphics::LoadPixbufFromData(const char *img_bytes, 
+GdkPixbuf *CairoGraphics::LoadPixbufFromData(const char *img_bytes,
                                              size_t img_bytes_count) {
   GdkPixbuf *pixbuf = NULL;
   GError *error = NULL;
   GdkPixbufLoader *loader = NULL;
 
   loader = gdk_pixbuf_loader_new();
-  gboolean status = gdk_pixbuf_loader_write(loader, (const guchar*)img_bytes, 
+  gboolean status = gdk_pixbuf_loader_write(loader, (const guchar*)img_bytes,
                                             img_bytes_count, &error);
   if (!status) {
-    goto exit;        
+    goto exit;
   }
   status = gdk_pixbuf_loader_close(loader, &error);
   if (!status) {
-    goto exit;        
+    goto exit;
   }
 
   pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
   if (pixbuf) {
-    gdk_pixbuf_ref(pixbuf);    
+    gdk_pixbuf_ref(pixbuf);
   }
 
 exit:
@@ -262,7 +263,7 @@ exit:
   return pixbuf;
 }
 
-FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size, 
+FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,
                                       FontInterface::Style style,
                                       FontInterface::Weight weight) const {
   PangoFontDescription *font = pango_font_description_new();
@@ -274,11 +275,11 @@ FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,
   pango_font_description_set_absolute_size(font, px_size);
 
   if (weight == FontInterface::WEIGHT_BOLD) {
-    pango_font_description_set_weight(font, PANGO_WEIGHT_BOLD);    
+    pango_font_description_set_weight(font, PANGO_WEIGHT_BOLD);
   }
 
   if (style == FontInterface::STYLE_ITALIC) {
-    pango_font_description_set_style(font, PANGO_STYLE_ITALIC);  
+    pango_font_description_set_style(font, PANGO_STYLE_ITALIC);
   }
 
   return new CairoFont(font, pt_size, style, weight);

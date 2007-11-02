@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_LABEL_ELEMENT_H__
-#define GGADGETS_LABEL_ELEMENT_H__
+#ifndef GGADGET_LABEL_ELEMENT_H__
+#define GGADGET_LABEL_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
-#include "canvas_interface.h"
+#include <ggadget/basic_element.h>
+#include <ggadget/canvas_interface.h>
 
 namespace ggadget {
 
@@ -35,11 +35,11 @@ class LabelElement : public BasicElement {
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
 
- public:   
+ public:
   /** Gets and sets the text horizontal alignment. */
   CanvasInterface::Alignment GetAlign() const;
   void SetAlign(CanvasInterface::Alignment align);
-  
+
   /** Gets and sets whether the text is bold. */
   bool IsBold() const;
   void SetBold(bool bold);
@@ -70,7 +70,7 @@ class LabelElement : public BasicElement {
   /** Gets and sets whether the text is struke-out. */
   bool IsStrikeout() const;
   void SetStrikeout(bool strikeout);
- 
+
   /** Gets and sets the trimming mode when the text is too large to display. */
   CanvasInterface::Trimming GetTrimming() const;
   void SetTrimming(CanvasInterface::Trimming trimming);
@@ -85,8 +85,8 @@ class LabelElement : public BasicElement {
 
   /** Gets and sets whether to wrap the text when it's too large to display. */
   bool IsWordWrap() const;
-  void SetWordWrap(bool wrap); 
-  
+  void SetWordWrap(bool wrap);
+
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
@@ -101,4 +101,4 @@ class LabelElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_LABEL_ELEMENT_H__
+#endif // GGADGET_LABEL_ELEMENT_H__

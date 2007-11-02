@@ -17,7 +17,7 @@
 #ifndef GGADGET_XML_HTTP_REQUEST_H__
 #define GGADGET_XML_HTTP_REQUEST_H__
 
-#include "xml_http_request_interface.h"
+#include <ggadget/xml_http_request_interface.h>
 
 namespace ggadget {
 

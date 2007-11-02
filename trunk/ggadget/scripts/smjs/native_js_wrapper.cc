@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#include "native_js_wrapper.h"
-#include "ggadget/scriptable_interface.h"
-#include "ggadget/signal.h"
-#include "ggadget/slot.h"
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/signals.h>
+#include <ggadget/slot.h>
 #include "converter.h"
+#include "native_js_wrapper.h"
 #include "js_script_context.h"
 
 namespace ggadget {

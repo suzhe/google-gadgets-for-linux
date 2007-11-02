@@ -17,7 +17,7 @@
 #ifndef GGADGET_ELEMENT_INTERFACE_H__
 #define GGADGET_ELEMENT_INTERFACE_H__
 
-#include "scriptable_interface.h"
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 

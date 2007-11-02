@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/scriptable_helper.h"
-#include "ggadget/signal.h"
+#include "ggadget/signals.h"
 #include "ggadget/slot.h"
 
 using namespace ggadget;

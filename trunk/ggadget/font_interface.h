@@ -20,7 +20,7 @@
 namespace ggadget {
 
 /**
- * Class representing a font as understood by the graphics interface. 
+ * Class representing a font as understood by the graphics interface.
  * It is created by an associated GraphicsInterface object.
  * Call @c Destroy() to free this object once it is no longer needed.
  */
@@ -31,7 +31,7 @@ class FontInterface {
    */
   virtual ~FontInterface() { }
 
- public:   
+ public:
   /**
    * Enum used to specify font styles.
    */

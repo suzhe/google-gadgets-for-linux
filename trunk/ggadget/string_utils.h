@@ -19,7 +19,7 @@
 
 #include <map>
 #include <string>
-#include "common.h"
+#include <ggadget/common.h>
 
 namespace ggadget {
 
@@ -29,7 +29,7 @@ namespace ggadget {
  * names, etc., but not include gadget element names.
  * Define @c GADGET_CASE_SENSITIVE to make the comparison case sensitive.
  * Don't define @c GADGET_CASE_SENSITIVE if compatibility with the Windows
- * version is required. 
+ * version is required.
  */
 int GadgetStrCmp(const char *s1, const char *s2);
 

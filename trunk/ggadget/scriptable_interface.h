@@ -19,7 +19,7 @@
 
 #include <limits.h>
 #include <stdint.h>
-#include "variant.h"
+#include <ggadget/variant.h>
 
 namespace ggadget {
 

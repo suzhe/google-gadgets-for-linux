@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_TEXTURE_H__
-#define GGADGETS_TEXTURE_H__
+#ifndef GGADGET_TEXTURE_H__
+#define GGADGET_TEXTURE_H__
 
-#include "element_interface.h"
-#include "scriptable_helper.h"
-#include "canvas_interface.h"
+#include <ggadget/element_interface.h>
+#include <ggadget/scriptable_helper.h>
+#include <ggadget/canvas_interface.h>
 
 namespace ggadget {
 
@@ -44,7 +44,7 @@ class Texture {
 
   /**
    * Duplicate the image.
-   */ 
+   */
   Texture(const Texture &another);
 
   ~Texture();
@@ -52,17 +52,17 @@ class Texture {
   /**
    * Draws the texture onto a canvas.
    * If the texture is an image, the image is repeated to fill the canvas.
-   */ 
+   */
   void Draw(CanvasInterface *canvas);
-  
+
   /**
    * Draws the specified text on canvas.
    */
-  void DrawText(CanvasInterface *canvas, double x, double y, double width, 
-                double height, const char *text, const FontInterface *f,  
-                CanvasInterface::Alignment align, 
+  void DrawText(CanvasInterface *canvas, double x, double y, double width,
+                double height, const char *text, const FontInterface *f,
+                CanvasInterface::Alignment align,
                 CanvasInterface::VAlignment valign,
-                CanvasInterface::Trimming trimming, 
+                CanvasInterface::Trimming trimming,
                 CanvasInterface::TextFlag text_flag);
 
  private:
@@ -74,4 +74,4 @@ class Texture {
 
 } // namespace ggadget
 
-#endif // GGADGETS_IMAGE_H__
+#endif // GGADGET_IMAGE_H__

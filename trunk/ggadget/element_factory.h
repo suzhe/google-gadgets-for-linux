@@ -17,7 +17,7 @@
 #ifndef GGADGET_ELEMENT_FACTORY_H__
 #define GGADGET_ELEMENT_FACTORY_H__
 
-#include "element_factory_interface.h"
+#include <ggadget/element_factory_interface.h>
 
 namespace ggadget {
 

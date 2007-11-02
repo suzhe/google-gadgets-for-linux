@@ -18,11 +18,10 @@
 #define GGADGET_FILE_MANAGER_H__
 
 #include <cstddef>
-#include <string>
 #include <cstring>
-#include <map>
-#include "common.h"
-#include "file_manager_interface.h"
+#include <string>
+#include <ggadget/common.h>
+#include <ggadget/file_manager_interface.h>
 #include "string_utils.h"
 #include "third_party/unzip/unzip.h"
 

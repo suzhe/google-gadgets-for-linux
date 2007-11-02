@@ -14,12 +14,12 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_SCROLLBAR_ELEMENT_H__
-#define GGADGETS_SCROLLBAR_ELEMENT_H__
+#ifndef GGADGET_SCROLLBAR_ELEMENT_H__
+#define GGADGET_SCROLLBAR_ELEMENT_H__
 
 #include <cstdlib>
-#include "slot.h"
-#include "basic_element.h"
+#include <ggadget/slot.h>
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
@@ -81,7 +81,7 @@ class ScrollBarElement : public BasicElement {
 
   /** Gets and sets the file name of the thumb hover image. */
   const char *GetThumbOverImage() const;
-  void SetThumbOverImage(const char *img);  
+  void SetThumbOverImage(const char *img);
 
    /** Gets and sets the scrollbar orientation (horizontal, vertical). */
   Orientation GetOrientation() const;
@@ -93,19 +93,19 @@ class ScrollBarElement : public BasicElement {
 
   /** Gets and sets the min scrollbar value. */
   int GetMin() const;
-  void SetMin(int value);   
+  void SetMin(int value);
 
   /** Gets and sets the page step value. */
   int GetPageStep() const;
-  void SetPageStep(int value);   
+  void SetPageStep(int value);
 
   /** Gets and sets the line step value. */
   int GetLineStep() const;
-  void SetLineStep(int value);   
+  void SetLineStep(int value);
 
   /** Gets and sets the scroll position of the thumb. */
   int GetValue() const;
-  void SetValue(int value);   
+  void SetValue(int value);
 
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
@@ -126,4 +126,4 @@ class ScrollBarElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_SCROLLBAR_ELEMENT_H__
+#endif // GGADGET_SCROLLBAR_ELEMENT_H__

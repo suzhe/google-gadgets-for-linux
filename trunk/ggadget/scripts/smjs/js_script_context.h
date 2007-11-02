@@ -20,9 +20,9 @@
 #include <map>
 #include <vector>
 #include <jsapi.h>
-#include "ggadget/scriptable_interface.h"
-#include "ggadget/script_context_interface.h"
-#include "ggadget/signal.h"
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/script_context_interface.h>
+#include <ggadget/signals.h>
 
 namespace ggadget {
 

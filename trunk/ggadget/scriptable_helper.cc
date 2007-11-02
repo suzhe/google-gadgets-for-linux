@@ -20,7 +20,7 @@
 #include "string_utils.h"
 #include "scriptable_helper.h"
 #include "scriptable_interface.h"
-#include "signal.h"
+#include "signals.h"
 #include "slot.h"
 
 namespace ggadget {

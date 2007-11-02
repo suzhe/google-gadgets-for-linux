@@ -17,8 +17,8 @@
 #ifndef GGADGET_ELEMENTS_H__
 #define GGADGET_ELEMENTS_H__
 
-#include "common.h"
-#include "scriptable_helper.h"
+#include <ggadget/common.h>
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 

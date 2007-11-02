@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_SCRIPTABLE_BINARY_DATA_H__
-#define GGADGETS_SCRIPTABLE_BINARY_DATA_H__
+#ifndef GGADGET_SCRIPTABLE_BINARY_DATA_H__
+#define GGADGET_SCRIPTABLE_BINARY_DATA_H__
 
 #include <string>
-#include "scriptable_helper.h"
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
@@ -58,4 +58,4 @@ class ScriptableBinaryData : public ScriptableHelper<ScriptableInterface> {
 
 } // namespace ggadget
 
-#endif // GGADGETS_SCRIPTABLE_BINARY_DATA_H__
+#endif // GGADGET_SCRIPTABLE_BINARY_DATA_H__
