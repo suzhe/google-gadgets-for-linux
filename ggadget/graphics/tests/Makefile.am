@@ -37,4 +37,5 @@ cairo_canvas_test_SOURCES	= cairo_canvas_test.cc
 cairo_graphics_test_SOURCES	= cairo_graphics_test.cc
 basic_element_draw_test_SOURCES	= basic_element_draw_test.cc
 
+TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@
 TESTS 			= $(check_PROGRAMS)

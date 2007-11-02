@@ -16,4 +16,4 @@
 
 ACLOCAL_AMFLAGS = -I autotools
 
-SUBDIRS = third_party ggadget hosts unittest
+SUBDIRS = third_party unittest ggadget hosts
