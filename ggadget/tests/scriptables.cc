@@ -83,8 +83,10 @@ TestScriptable1::TestScriptable1()
 }
 
 TestScriptable1::~TestScriptable1() {
+  LOG("TestScriptable1 Destruct: this=%p", this);
   my_ondelete_signal_();
   AppendBuffer("Destruct\n");
+  LOG("TestScriptable1 Destruct End: this=%p", this);
   // Then ScriptableHelper::~ScriptableHelper will be called, and in turn
   // the "official" ondelete signal will be emitted.
 }
@@ -120,4 +122,22 @@ TestScriptable2::TestScriptable2(bool script_owned)
   SetDynamicPropertyHandler(
       NewSlot(this, &TestScriptable2::GetDynamicProperty),
       NewSlot(this, &TestScriptable2::SetDynamicProperty));
+}
+
+TestScriptable2::~TestScriptable2() {
+  LOG("TestScriptable2 Destruct: this=%p", this);
+}
+
+ScriptableInterface::OwnershipPolicy TestScriptable2::Attach() {
+  return script_owned_ ? OWNERSHIP_TRANSFERRABLE : NATIVE_OWNED; 
+}
+
+bool TestScriptable2::Detach() {
+  LOG("TestScriptable2 Detach: this=%p script_owned_=%d",
+      this, script_owned_);
+  if (script_owned_) {
+    delete this;
+    return true;
+  }
+  return false;
 }

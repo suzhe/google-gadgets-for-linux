@@ -29,6 +29,11 @@ class GlobalObject : public ScriptableHelper<ScriptableInterface> {
   }
   virtual bool IsStrict() const { return false; }
 
+  ScriptableInterface *ConstructScriptable() {
+    // Return script owned object.
+    return test_scriptable2.NewObject(true);
+  }
+
   TestScriptable1 test_scriptable1;
   TestScriptable2 test_scriptable2;
 };
@@ -39,6 +44,8 @@ static GlobalObject *global;
 JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
+  context->RegisterClass("TestScriptable",
+                         NewSlot(global, &GlobalObject::ConstructScriptable));
   return JS_TRUE;
 }
 

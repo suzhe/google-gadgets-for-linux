@@ -93,6 +93,10 @@ class TestPrototype : public ScriptableHelper<ScriptableInterface> {
     return instance_ ? instance_ : (instance_ = new TestPrototype());
   }
 
+  virtual OwnershipPolicy Attach() {
+    return NATIVE_PERMANENT;
+  }
+
   // Place this signal declaration here for testing.
   // In production code, it should be palced in private section. 
   Signal0<void> ontest_signal_;
@@ -114,8 +118,10 @@ class TestScriptable2 : public TestScriptable1 {
  public:
   DEFINE_CLASS_ID(0xa88ea50b8b884e, TestScriptable1);
   TestScriptable2(bool script_owned_ = false);
+  virtual ~TestScriptable2();
 
-  virtual void Detach() { if (script_owned_) delete this; }
+  virtual OwnershipPolicy Attach();
+  virtual bool Detach();
   virtual bool IsStrict() const { return false; }
 
   static const int kArraySize = 20;

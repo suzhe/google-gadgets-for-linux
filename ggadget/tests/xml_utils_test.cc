@@ -115,8 +115,8 @@ TEST(XMLUtils, ParseXMLIntoDOM) {
             pi_node->GetNodeType());
   EXPECT_STREQ("pi", pi_node->GetNodeName());
   EXPECT_STREQ("value", pi_node->GetNodeValue());
-  children->Destroy();
-  sub_children->Destroy();
+  delete children;
+  delete sub_children;
   domdoc->Detach();
 }
 
@@ -157,6 +157,12 @@ TEST(XMLUtils, ConvertStringToUTF8) {
         "<root>\xBA\xBA\xD7\xD6</root>\n";
   ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
   ASSERT_STREQ("", output.c_str());
+}
+
+TEST(XMLUtils, EncodeXMLString) {
+  ASSERT_STREQ("", EncodeXMLString(NULL).c_str());
+  ASSERT_STREQ("", EncodeXMLString("").c_str());
+  ASSERT_STREQ("&lt;&gt;", EncodeXMLString("<>").c_str());
 }
 
 int main(int argc, char **argv) {

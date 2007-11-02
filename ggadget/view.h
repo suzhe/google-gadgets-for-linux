@@ -92,6 +92,7 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
   virtual void ClearInterval(int token);
   virtual int GetDebugMode() const;
+  virtual void OnOptionChanged(const char *name);
 
   virtual Image *LoadImage(const char *name, bool is_mask);
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);

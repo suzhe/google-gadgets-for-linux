@@ -49,7 +49,8 @@ class ScriptableBinaryData : public ScriptableHelper<ScriptableInterface> {
     return *this;
   }
 
-  virtual void Detach() { delete this; }
+  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
+  virtual bool Detach() { delete this; return true; }
 
  private:
   std::string data_;

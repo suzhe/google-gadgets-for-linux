@@ -78,6 +78,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     Abort();
   }
 
+  // This object is script owned, because it is created in script with
+  // new XMLHttpRequest().
+  virtual OwnershipPolicy Attach() {
+    return OWNERSHIP_TRANSFERRABLE;
+  }
+  virtual bool Detach() {
+    delete this;
+    return true;
+  }
+
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
     return onreadystatechange_signal_.Connect(handler);
   }
@@ -87,8 +97,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void ChangeState(State new_state) {
+    DLOG("XMLHttpRequest: ChangeState to %d", new_state);
     state_ = new_state;
     onreadystatechange_signal_();
+  }
+
+  // The maximum data size of this class can process.
+  static const size_t kMaxDataSize = 8 * 1024 * 1024;
+
+  static bool CheckSize(size_t current, size_t num_blocks, size_t block_size) {
+    return current < kMaxDataSize && block_size > 0 &&
+           (kMaxDataSize - current) / block_size > num_blocks;
   }
 
   virtual ExceptionCode Open(const char *method, const char *url, bool async,
@@ -119,7 +138,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       LOG("XMLHttpRequest: Unsupported method: %s", method);
       return SYNTAX_ERR;
     }
-    curl_easy_setopt(curl_, CURLOPT_URL, url);
+    curl_easy_setopt(curl_, CURLOPT_URL, url_.c_str());
 
     if (user || password) {
       std::string user_pwd;
@@ -187,11 +206,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return NO_ERR;
   }
 
-  virtual ExceptionCode Send(const char *data) {
+  virtual ExceptionCode Send(const char *data, size_t size) {
     if (state_ != OPENED || send_flag_) {
       LOG("XMLHttpRequest: Send: Invalid state: %d", state_);
       return INVALID_STATE_ERR;
     }
+
+    if (!CheckSize(size, 0, 512)) {
+      LOG("XMLHttpRequest: Size too big: %zu", size);
+      return SYNTAX_ERR;
+    }
+
+    send_data_.assign(data, size);
+
   #ifdef _DEBUG
     curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1);
   #endif
@@ -254,12 +281,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual ExceptionCode Send(const DOMDocumentInterface *data) {
-    // TODO:
-    return NO_ERR;
+    if (!data)
+      return Send(static_cast<char *>(NULL), 0);
+
+    const char *xml = data->GetXML();
+    return Send(xml, strlen(xml));
   }
 
   void OnIOReady(int fd) {
-    DLOG("XMLHttpRequest: OnIOReady: %d", fd);
+    // DLOG("XMLHttpRequest: OnIOReady: %d", fd);
     int still_running = 1;
     CURLMcode code;
     do {
@@ -280,7 +310,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static int SocketCallback(CURL *handle, curl_socket_t socket, int type,
                             void *user_p, void *sock_p) {
-    DLOG("SocketCallback: the socket: %d, type: %d\n", socket, type);
+    DLOG("XMLHttpRequest: SocketCallback: socket: %d, type: %d", socket, type);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(user_p);
     ASSERT(this_p->curl_ == handle);
 
@@ -298,24 +328,23 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           socket, NewSlot(this_p, &XMLHttpRequest::OnIOReady));
     }
 
-    if (type & CURL_POLL_REMOVE) {
-      if (this_p->socket_read_watch_)
-        this_p->host_->RemoveIOWatch(this_p->socket_read_watch_);
-      if (this_p->socket_write_watch_)
-        this_p->host_->RemoveIOWatch(this_p->socket_write_watch_);
-      this_p->socket_read_watch_ = 0;
-      this_p->socket_write_watch_ = 0;
-    }
+    if (type & CURL_POLL_REMOVE)
+      this_p->RemoveIOWatches();
     return 0;
   }
 
   static size_t ReadCallback(void *ptr, size_t size,
                              size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu", size, mem_block);
+    // DLOG("XMLHttpRequest: ReadCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
     ASSERT(!this_p->async_ || this_p->send_flag_);
+
+    if (!CheckSize(this_p->send_data_.length(), size, mem_block)) {
+      this_p->Abort();
+      return 0;
+    }
 
     size_t real_size = std::min(this_p->send_data_.length(), size * mem_block);
     strncpy(reinterpret_cast<char *>(ptr), this_p->send_data_.c_str(),
@@ -326,11 +355,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu", size, mem_block);
+    // DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
     ASSERT(!this_p->async_ || this_p->send_flag_);
+
+    if (!CheckSize(this_p->response_headers_.length(), size, mem_block)) {
+      this_p->Abort();
+      return 0;
+    }
 
     size_t real_size = size * mem_block;
     this_p->response_headers_.append(reinterpret_cast<char *>(ptr), real_size);
@@ -429,11 +463,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static size_t WriteBodyCallback(void *ptr, size_t size,
                                   size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu", size, mem_block);
+    // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED || this_p->state_ == LOADING);
     ASSERT(!this_p->async_ || this_p->send_flag_);
+
+    if (!CheckSize(this_p->response_body_.length(), size, mem_block)) {
+      this_p->Abort();
+      return 0;
+    }
 
     if (this_p->state_ == OPENED) {
       this_p->SplitStatusAndHeaders();
@@ -446,15 +485,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return real_size;
   }
 
-  void Done() {
-    socket_ = 0;
+  void RemoveIOWatches() {
     if (socket_read_watch_)
       host_->RemoveIOWatch(socket_read_watch_);
     if (socket_write_watch_)
       host_->RemoveIOWatch(socket_write_watch_);
     socket_read_watch_ = 0;
     socket_write_watch_ = 0;
+  }
 
+  void Done() {
+    socket_ = 0;
+    RemoveIOWatches();
     if ((state_ == OPENED && send_flag_) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
@@ -640,6 +682,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     XMLHttpRequestException(ExceptionCode code) : code_(code) {
       RegisterSimpleProperty("code", &code_);
     }
+    // This is a script owned object.
+    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
+    virtual bool Detach() { delete this; return true; }
+
    private:
     ExceptionCode code_;
   };
@@ -675,7 +721,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   void ScriptSend(const Variant &v_data) {
     if (v_data.type() == Variant::TYPE_STRING) {
-      CheckException(Send(VariantValue<const char *>()(v_data)));
+      std::string data = VariantValue<std::string>()(v_data);
+      CheckException(Send(data.c_str(), data.length()));
     } else {
       DOMDocumentInterface *dom =
           GetArg(v_data, static_cast<DOMDocumentInterface *>(NULL));

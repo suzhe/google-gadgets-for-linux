@@ -19,16 +19,70 @@
 
 #include <cstddef>
 #include <string>
+#include <cstring>
+#include <map>
 #include "common.h"
 #include "file_manager_interface.h"
+#include "string_utils.h"
+#include "third_party/unzip/unzip.h"
 
 class TiXmlDocument;  // TinyXML DOM Document.
 
 namespace ggadget {
 
 namespace internal {
-class FileManagerImpl;
-}
+
+/** Declared here only for unit testing. */
+class FileManagerImpl {
+ public:
+  FileManagerImpl() { }
+  ~FileManagerImpl();
+
+  typedef std::map<std::string, unz_file_pos, GadgetStringComparator> FileMap;
+
+  bool Init(const char *base_path);
+  bool GetFileContents(const char *file, std::string *data, std::string *path);
+  bool GetXMLFileContents(const char *file,
+                          std::string *data, std::string *path);
+  bool ExtractFile(const char *file, std::string *into_file);
+
+  bool InitLocaleStrings();
+  static void SplitPathFilename(const char *input_path,
+                                std::string *path,
+                                std::string *filename);
+
+  bool LoadStringTable(const char *stringfile);
+
+  // Generate files_ recursively starting at dir_path.
+  bool ScanDirFilenames(const char *dir_path);
+  // Generate files_ based on the directory info of a zip file.
+  bool ScanZipFilenames();
+
+  // This function will not check file in the current base_path directory.
+  // Returns iterator to entry in files_. returns files_.end() if not found.
+  FileMap::const_iterator FindLocalizedFile(const char *file) const;
+
+  bool GetFileContentsInternal(FileMap::const_iterator iter, std::string *data);
+  bool GetDirFileContents(FileMap::const_iterator iter, std::string *data);
+  bool GetZipFileContents(FileMap::const_iterator iter, std::string *data);
+
+  // base path must in correct case (case sensitive),
+  // but files in base path need not to be
+  std::string base_path_;
+  bool is_dir_;
+  std::string locale_prefix_;
+  std::string locale_lang_prefix_;
+  std::string locale_id_prefix_;
+
+  // Map filenames to data in a zip file.
+  // Also used as cache for files if base_path is a dir.
+  FileMap files_;
+
+  // Maps resource names to string resources from strings.xml.
+  GadgetStringMap string_table_;
+};
+
+} // namespace internal
 
 /**
  * Handles all file resources and file access used by a gadget.
@@ -52,6 +106,8 @@ class FileManager : public FileManagerInterface {
                                   std::string *path);
   /** @see FileManagerInterface::ExtractFile() */
   virtual bool ExtractFile(const char *file, std::string *into_file);
+  /** @see FileManagerInterface::GetStringTable() */
+  virtual GadgetStringMap *GetStringTable();
 
  private:
   internal::FileManagerImpl *impl_;

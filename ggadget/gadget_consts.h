@@ -105,6 +105,7 @@ const char *const kScrollDefaultLeftOver = ":resources/scrollleft_o.png";
 const char *const kScrollDefaultRight = ":resources/scrollright_u.png";
 const char *const kScrollDefaultRightDown = ":resources/scrollright_d.png";
 const char *const kScrollDefaultRightOver = ":resources/scrollright_o.png";
+const char *const kCommonJS = ":resources/common.js";
 
 } // namespace ggadget
 

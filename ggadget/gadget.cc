@@ -39,6 +39,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterMethod("trace", NewSlot(owner, &Impl::DebugTrace));
       RegisterMethod("warning", NewSlot(owner, &Impl::DebugWarning));
     }
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
   class Storage : public ScriptableHelper<ScriptableInterface> {
@@ -48,6 +49,22 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterMethod("extract", NewSlot(owner, &Impl::ExtractFile));
       RegisterMethod("openText", NewSlot(owner, &Impl::OpenTextFile));
     }
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
+  };
+
+  static void RegisterStrings(
+      GadgetStringMap *strings,
+      ScriptableHelper<ScriptableInterface> *scriptable) {
+    for (GadgetStringMap::const_iterator it = strings->begin();
+         it != strings->end(); ++it) {
+      scriptable->RegisterConstant(it->first.c_str(), it->second);
+    }
+  }
+
+  class Strings : public ScriptableHelper<ScriptableInterface> {
+   public:
+    DEFINE_CLASS_ID(0x13679b3ef9a5490e, ScriptableInterface);
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
   class GadgetGlobalPrototype : public ScriptableHelper<ScriptableInterface> {
@@ -56,9 +73,11 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     GadgetGlobalPrototype(Gadget::Impl *owner) {
       RegisterConstant("gadget", owner);
       RegisterConstant("options", &owner->scriptable_options_);
+      RegisterConstant("strings", &owner->strings_);
       // TODO: SetPrototype(The System global prototype).
       // The System global prototype provides global constants and framework.
     }
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
   Impl(GadgetHostInterface *host, OptionsInterface *options, Gadget *owner)
@@ -84,6 +103,8 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     delete options_;
     options_ = NULL;
   }
+
+  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
   void DebugError(const char *message) {
     host_->DebugOutput(GadgetHostInterface::DEBUG_ERROR, message);
@@ -123,6 +144,10 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     ASSERT(file_manager);
     file_manager_ = file_manager;
 
+    GadgetStringMap *strings = file_manager_->GetStringTable();
+    RegisterStrings(strings, &gadget_global_prototype_);
+    RegisterStrings(strings, &strings_);
+
     std::string manifest_contents;
     std::string manifest_path;
     if (!file_manager->GetXMLFileContents(kGadgetGManifest,
@@ -150,6 +175,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   GadgetHostInterface *host_;
   Debug debug_;
   Storage storage_;
+  Strings strings_;
   GadgetGlobalPrototype gadget_global_prototype_;
   OptionsInterface *options_;
   ScriptableOptions scriptable_options_;

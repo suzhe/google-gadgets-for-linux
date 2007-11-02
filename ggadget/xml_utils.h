@@ -115,7 +115,6 @@ bool ParseXMLIntoDOM(const char *xml, const char *filename,
                      DOMDocumentInterface *domdoc,
                      std::string *encoding);
 
-
 /**
  * Parses HTML and build the DOM tree.
  */
@@ -145,6 +144,11 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
 bool ConvertStringToUTF8(const std::string &src,
                          const char *encoding,
                          std::string *dest);
+
+/**
+ * Encode a string into XML text by escaping special chars.
+ */
+std::string EncodeXMLString(const char *src);
 
 } // namespace ggadget
 

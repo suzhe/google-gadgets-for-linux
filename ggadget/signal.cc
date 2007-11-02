@@ -25,16 +25,19 @@ Connection::Connection(const Signal *signal, Slot *slot)
 }
 
 Connection::~Connection() {
-  ReleaseSlot();
+  delete slot_;
+  slot_ = NULL;
 }
 
 void Connection::Disconnect() {
-  ReleaseSlot();
+  delete slot_;
+  slot_ = NULL;
   blocked_ = true;
 }
 
 bool Connection::Reconnect(Slot *slot) {
-  ReleaseSlot();
+  delete slot_;
+  slot_ = NULL;
   if (slot && !signal_->CheckCompatibility(slot)) {
     // According to our convention, no matter Reconnect succeeds or failes,
     // the slot is always owned by the Connection.
@@ -45,13 +48,6 @@ bool Connection::Reconnect(Slot *slot) {
   Unblock();
   return true;
 }
-
-void Connection::ReleaseSlot() {
-  if (slot_)
-    delete slot_;
-  slot_ = NULL;
-}
-
 
 Signal::Signal() {
 }

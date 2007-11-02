@@ -35,6 +35,8 @@ static GlobalObject *global;
 JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
+  context->RegisterClass("DOMDocument",
+                         NewSlot(CreateDOMDocument));
   return JS_TRUE;
 }
 

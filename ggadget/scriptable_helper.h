@@ -205,15 +205,18 @@ class ScriptableHelper : public I {
   }
 
   /**
-   * Blank implementation of Attach(), meaning default ownership policy.
+   * Implementation of Attach() for default ownership policy.
    * @see ScriptableInterface::Attach()
    */
-  virtual void Attach() { }
+  virtual ScriptableInterface::OwnershipPolicy Attach() {
+    return ScriptableInterface::NATIVE_OWNED;
+  }
+
   /**
-   * Blank implementation of Detach(), meaning default ownership policy.
+   * Implementation of Detach() for default ownership policy.
    * @see ScriptableInterface::Detach()
    */
-  virtual void Detach() { }
+  virtual bool Detach() { return false; }
   /**
    * Default strict policy.
    * @see ScriptableInterface::IsStrict()

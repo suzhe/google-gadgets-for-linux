@@ -18,6 +18,7 @@
 #define GGADGET_FILE_MANAGER_INTERFACE_H__
 
 #include <string>
+#include "string_utils.h"
 
 namespace ggadget {
 
@@ -85,6 +86,11 @@ class FileManagerInterface {
    * @return @c true if succeeded.
    */
   virtual bool ExtractFile(const char *file, std::string *into_file) = 0;
+
+  /**
+   * Gets the content of strings.xml by returning a string map. 
+   */
+  virtual GadgetStringMap *GetStringTable() = 0;
 
 };
 

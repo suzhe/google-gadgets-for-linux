@@ -275,7 +275,7 @@ TEST(scriptable_helper, TestDynamicProperty) {
     snprintf(value, sizeof(value), "v%dv", i * 2);
     ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
                                                   &prototype, &is_method));
-    ASSERT_EQ(id, ScriptableInterface::ID_DYNAMIC_PROPERTY);
+    ASSERT_EQ(id, ScriptableInterface::kDynamicPropertyId);
     ASSERT_FALSE(is_method);
     ASSERT_TRUE(scriptable->SetProperty(id, Variant(value)));
   }
@@ -284,7 +284,7 @@ TEST(scriptable_helper, TestDynamicProperty) {
     snprintf(value, sizeof(value), "Value:v%dv", i * 2);
     ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
                                                   &prototype, &is_method));
-    ASSERT_EQ(id, ScriptableInterface::ID_DYNAMIC_PROPERTY);
+    ASSERT_EQ(id, ScriptableInterface::kDynamicPropertyId);
     ASSERT_FALSE(is_method);
     ASSERT_EQ(Variant(value), scriptable->GetProperty(id));
   }

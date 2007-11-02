@@ -154,7 +154,7 @@ function toLowerArray(arr) {
 }
 
 function load(dummy1, dummy2, name) {
-  var doc = __createDOMDocument();
+  var doc = new DOMDocument();
   doc.loadXML(_xml_file_contents[name]);
   return doc;
 }

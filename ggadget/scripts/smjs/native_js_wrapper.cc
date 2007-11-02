@@ -36,37 +36,52 @@ JSClass NativeJSWrapper::wrapper_js_class_ = {
 };
 
 NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
+                                 JSObject *js_object,
                                  ScriptableInterface *scriptable)
     : deleted_(false),
       js_context_(js_context),
-      js_object_(NULL),
+      js_object_(js_object),
       scriptable_(scriptable),
-      ondelete_connection_(NULL) {
-
-  js_object_ = JS_NewObject(js_context, &wrapper_js_class_, NULL, NULL);
-  if (!js_object_)
-    // Can't continue.
-    return;
-
+      ondelete_connection_(NULL),
+      ownership_policy_(ScriptableInterface::NATIVE_OWNED) {
   // Store this wrapper into the JSObject's private slot.
   JS_SetPrivate(js_context, js_object_, this);
 
   // Connect the "ondelete" callback.
   ondelete_connection_ = scriptable->ConnectToOnDeleteSignal(
       NewSlot(this, &NativeJSWrapper::OnDelete));
-  scriptable->Attach();
+  ownership_policy_ = scriptable->Attach();
+
+  // If the object is native owned, the script side should not delete the
+  // object unless the native side tells it to do.
+  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED)
+    JS_AddRoot(js_context_, &js_object_);
+
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+  DLOG("Wrap: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
+       ownership_policy_, js_object_, this,
+       scriptable_, scriptable_->GetClassId());
+#endif
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
   if (!deleted_) {
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+    DLOG("Delete: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
+         ownership_policy_, js_object_, this,
+         scriptable_, scriptable_->GetClassId());
+#endif
+
+    deleted_ = true;
     ondelete_connection_->Disconnect();
     scriptable_->Detach();
+    DetachJS();
   }
 }
 
 JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
                                ScriptableInterface **scriptable) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
     *scriptable = wrapper->scriptable_;
     return JS_TRUE;
@@ -78,92 +93,135 @@ JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
 // Get the NativeJSWrapper from a JS wrapped ScriptableInterface object.
 // The NativeJSWrapper pointer is stored in the object's private slot.
 NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
-                                                   JSObject *js_object,
-                                                   JSBool finalizing) {
-  if (js_object != NULL &&
-      JS_GET_CLASS(cx, js_object) == &wrapper_js_class_) {
-    NativeJSWrapper *wrapper = reinterpret_cast<NativeJSWrapper *>
-                               (JS_GetPrivate(cx, js_object));
-    ASSERT(wrapper && wrapper->js_context_ == cx &&
-           wrapper->js_object_ == js_object);
+                                                   JSObject *js_object) {
+  if (js_object) {
+    JSClass *cls = JS_GET_CLASS(cx, js_object);
+    if (cls && cls->getProperty == wrapper_js_class_.getProperty &&
+        cls->setProperty == wrapper_js_class_.setProperty) {
+      ASSERT(cls->resolve == wrapper_js_class_.resolve &&
+             cls->finalize == wrapper_js_class_.finalize);
 
-    if (!finalizing && wrapper->deleted_) {
-      // Don't report error when finalizing.
-      // Early deletion of a native object is allowed.
-      JS_ReportError(wrapper->js_context_, "Native object has been deleted");
-      return NULL;
-    } else {
+      NativeJSWrapper *wrapper =
+          reinterpret_cast<NativeJSWrapper *>(JS_GetPrivate(cx, js_object));
+      if (!wrapper)
+        // This is the prototype object created by JS_InitClass();
+        return NULL;
+
+      ASSERT(wrapper && wrapper->js_context_ == cx &&
+             wrapper->js_object_ == js_object);
       return wrapper;
     }
-  } else {
-    JS_ReportError(cx, "Object is not a native wrapper");
-    // The JSObject is not a JS wrapped ScriptableInterface object.
-    return NULL;
   }
+
+  JS_ReportError(cx, "Object is not a native wrapper");
+  // The JSObject is not a JS wrapped ScriptableInterface object.
+  return NULL;
+}
+
+JSBool NativeJSWrapper::CheckNotDeleted() {
+  if (deleted_) {
+    JS_ReportError(js_context_, "Native object has been deleted");
+    return JS_FALSE;
+  }
+  return JS_TRUE;
 }
 
 JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
                                           uintN argc, jsval *argv,
                                           jsval *rval) {
-  if (!GetWrapperFromJS(cx, obj, false))
-    return JS_FALSE;
-  return JSScriptContext::CallNativeSlot(cx, obj, argc, argv, rval);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() &&
+          JSScriptContext::CallNativeSlot(cx, obj, argc, argv, rval));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->GetPropertyDefault(id, vp);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->GetPropertyDefault(id, vp));
 }
 
 JSBool NativeJSWrapper::SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->SetPropertyDefault(id, *vp);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->SetPropertyDefault(id, *vp));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->GetPropertyByIndex(id, vp);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->GetPropertyByIndex(id, vp));
 }
 
 JSBool NativeJSWrapper::SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->SetPropertyByIndex(id, *vp);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->SetPropertyByIndex(id, *vp));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->GetPropertyByName(id, vp);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->GetPropertyByName(id, vp));
 }
 
 JSBool NativeJSWrapper::SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->SetPropertyByName(id, *vp);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->SetPropertyByName(id, *vp));
 }
 
 JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
                                                jsval id) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
-  return wrapper && wrapper->ResolveProperty(id);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() && wrapper->ResolveProperty(id));
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+    DLOG("Finalize: policy=%d jsobj=%p wrapper=%p scriptable=%p",
+         wrapper->ownership_policy_, obj, wrapper, wrapper->scriptable_);
+#endif
+
     if (!wrapper->deleted_)
       JSScriptContext::FinalizeNativeJSWrapper(cx, wrapper);
     delete wrapper;
   }
 }
 
+void NativeJSWrapper::DetachJS() {
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+  DLOG("DetachJS: policy=%d jsobj=%p wrapper=%p scriptable=%p",
+       ownership_policy_, js_object_, this, scriptable_);
+#endif
+
+  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
+      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
+    JS_RemoveRoot(js_context_, &js_object_);
+}
+
 void NativeJSWrapper::OnDelete() {
-  ondelete_connection_->Disconnect();
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+  DLOG("OnDelete: policy=%d jsobj=%p wrapper=%p scriptable=%p",
+       ownership_policy_, js_object_, this, scriptable_);
+#endif
+
   deleted_ = true;
+  ondelete_connection_->Disconnect();
+
+  // As the native side has deleted the object, now the script side can also
+  // delete it.
+  DetachJS();
+
   // Remove the wrapper mapping from the context, but leave this wrapper
   // alive to accept mistaken JavaScript calls gracefully.
   JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
@@ -243,6 +301,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
       JS_ReportError(js_context_,
                      "Failed to convert JS property value(%s) to native",
                      PrintJSValue(js_context_, js_val).c_str());
+      FreeNativeValue(value);
       return JS_FALSE;
     }
 
@@ -250,8 +309,12 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
       JS_ReportError(js_context_,
                      "Failed to set native property %s(%d) (may be readonly)",
                      name, int_id);
+      FreeNativeValue(value);
       return JS_FALSE;
     }
+    // Note: if the property is a JSFunction, the reference from obj to the
+    // function will be automatically set by the engine after this method
+    // successfully returns.
   } catch (ScriptableExceptionHolder e) {
     JSScriptContext::HandleException(js_context_, e);
     return JS_FALSE;
@@ -333,6 +396,9 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
                      name, int_id);
       return JS_FALSE;
     }
+    // Note: if the property is a JSFunction, the reference from obj to the
+    // function will be automatically set by the engine after this method
+    // successfully returns.
   } catch (ScriptableExceptionHolder e) {
     JSScriptContext::HandleException(js_context_, e);
     return JS_FALSE;
@@ -392,14 +458,14 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
       return JS_FALSE;
     }
 
-    if (int_id == ScriptableInterface::ID_CONSTANT_PROPERTY)
+    if (int_id == ScriptableInterface::kConstantPropertyId)
       // This property is a constant, register a property with initial value
       // and without a tiny ID.  Then the JavaScript engine will handle it.
       return JS_DefineProperty(js_context_, js_object_, name,
                                js_val, JS_PropertyStub, JS_PropertyStub,
                                JSPROP_READONLY | JSPROP_PERMANENT);
 
-    if (int_id == ScriptableInterface::ID_DYNAMIC_PROPERTY)
+    if (int_id == ScriptableInterface::kDynamicPropertyId)
       return JS_DefineProperty(js_context_, js_object_, name, js_val,
                                GetWrapperPropertyByName,
                                SetWrapperPropertyByName,

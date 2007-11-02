@@ -20,6 +20,7 @@
 #include "gadget_view_widget.h"
 #include "ggadget/graphics/cairo_graphics.h"
 #include "ggadget/view.h"
+#include "ggadget/xml_dom.h"
 
 GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
                          ggadget::GadgetHostInterface::ViewType type,
@@ -29,7 +30,8 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
       view_(NULL),
       script_context_(NULL),
       gvw_(NULL),
-      gfx_(NULL) {
+      gfx_(NULL),
+      onoptionchanged_connection_(NULL) {
   ggadget::ScriptRuntimeInterface *script_runtime =
       gadget_host->GetScriptRuntime(ggadget::GadgetHostInterface::JAVASCRIPT);
   script_context_ = script_runtime->CreateContext();
@@ -39,6 +41,31 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
   view_ = new ggadget::View(this, prototype, gadget_host->GetElementFactory(),
                             debug_mode);
 
+  onoptionchanged_connection_ = options->ConnectOnOptionChanged(
+      NewSlot(view_, &ggadget::ViewInterface::OnOptionChanged));
+
+  // Register global classes into script context.
+  script_context_->RegisterClass("DOMDocument",
+                                 NewSlot(ggadget::CreateDOMDocument));
+  script_context_->RegisterClass(
+      "XMLHttpRequest",
+      NewSlot(gadget_host, &ggadget::GadgetHostInterface::NewXMLHttpRequest));
+
+  // Execute common.js to initialize global constants and compatibility
+  // adapters.
+  std::string common_js_contents;
+  std::string common_js_path;
+  ggadget::FileManagerInterface *global_file_manager =
+      gadget_host->GetGlobalFileManager();
+  if (global_file_manager->GetFileContents(ggadget::kCommonJS,
+                                           &common_js_contents,
+                                           &common_js_path)) {
+    script_context_->Execute(common_js_contents.c_str(),
+                             common_js_path.c_str(), 1);
+  } else {
+    LOG("Failed to load %s.", ggadget::kCommonJS);
+  }
+
   double zoom = ggadget::VariantValue<double>()(options->GetValue(
       ggadget::kOptionZoom));
   gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom));
@@ -46,6 +73,9 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
 }
 
 GtkViewHost::~GtkViewHost() {
+  if (onoptionchanged_connection_)
+    onoptionchanged_connection_->Disconnect();
+
   delete view_;
   view_ = NULL;
 

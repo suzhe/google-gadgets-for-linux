@@ -281,6 +281,11 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual int GetDebugMode() const = 0;
 
+  /**
+   * Called by the global options object when any option changed.
+   */
+  virtual void OnOptionChanged(const char *name) = 0;
+
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.

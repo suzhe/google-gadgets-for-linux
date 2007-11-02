@@ -93,6 +93,11 @@ Texture::Texture(const Texture &another)
     : impl_(new Impl(*another.impl_)) {
 }
 
+Texture::~Texture() {
+  delete impl_;
+  impl_ = NULL;
+}
+
 void Texture::Draw(CanvasInterface *canvas) {
   ASSERT(canvas);
   impl_->Draw(canvas);

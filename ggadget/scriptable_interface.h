@@ -59,13 +59,64 @@ class ScriptableInterface {
    * The pseudo id for dynamic properties.
    * @see GetPropertyInfoByName()
    */
-  static const int ID_DYNAMIC_PROPERTY = INT_MIN;
+  static const int kDynamicPropertyId = INT_MIN;
 
   /**
    * The pseudo id for constant properties.
    * @see GetPropertyInfoByName()
    */
-  static const int ID_CONSTANT_PROPERTY = 0;
+  static const int kConstantPropertyId = 0;
+
+  
+  enum OwnershipPolicy {
+    /**
+     * Default policy: C++ always hold the ownership of the scriptable objects,
+     * In order to prevent crash when the script invokes an object that has
+     * already been deleted by C++ code, @c ConnectToOnDeleteSignal() method
+     * is provided to let the C++ code inform the script engine when a
+     * scriptable object is deleted. Then the script engine can simply report
+     * an error when such object is invoked.
+     */
+    NATIVE_OWNED,
+    /**
+     * Same as @c NATIVE_OWNED, but indicates that this object's life time is
+     * longer than the script context. Useful to do memory leak test in the
+     * script adapter. 
+     */
+    NATIVE_PERMANENT,
+    /**
+     * Transferable policy: C++ code creates a scriptable object and then
+     * transfers the ownership to the script engine, then when the wrapped
+     * object is finalized by the script engine (normally occurs during garbage
+     * collection), the object deletes itself when the script adapter calls
+     * @c Detach(). In this case, the implementation should do nothing in
+     * @c Attach() and delete itself in @c Detach(). This policy is useful
+     * when an API method returns a new created object and then only used by
+     * the script side and will never be transfered back to the C++ side.
+     */
+    OWNERSHIP_TRANSFERRABLE,
+    /**
+     * Shared policy: C++ code creates a scriptable object, and then the
+     * ownership may be shared between the C++ and script side. The
+     * @c ScriptableInterface implementation must track references from both
+     * the C++ side and the script side. @c Attach() and @c Detach() can be
+     * used to track the reference from the script side. If both side has
+     * released the references, the implementation should delete itself.
+     * This policy is difficult to use, so we should avoid it as much as
+     * possible. If the object is lightweight, we can convert this policy
+     * into the transferable policy by forcing C++ code to make a copy of
+     * the object when receiving it from the script side.
+     * 
+     * NOTE: For now we don't support callback from native side to script side
+     * for objects of this policy.
+     */
+    OWNERSHIP_SHARED,
+  };
+
+  /**
+   * Gets the class id of this object. For debugging purpose only.
+   */
+  virtual uint64_t GetClassId() const = 0;
 
   /**
    * Attach this object to the script engine.
@@ -75,14 +126,18 @@ class ScriptableInterface {
    * If the ownership can be transfered or shared between the native side
    * and the script side, the implementation should do appropriate things,
    * such as reference counting, etc. to manage the ownership.
+   *
+   * @return @c true if the ownership is transferred, @c false otherwise. 
    */
-  virtual void Attach() = 0;
+  virtual OwnershipPolicy Attach() = 0;
 
   /**
    * Detach this object from the script engine.
    * @see Attach()
+   *
+   * @return @c true if the object is deleted during this call.
    */
-  virtual void Detach() = 0;
+  virtual bool Detach() = 0;
 
   /**
    * Judge if this instance is of a given class.
@@ -225,7 +280,8 @@ class ScriptableExceptionHolder {
   static const uint64_t CLASS_ID = UINT64_C(cls_id);                         \
   virtual bool IsInstanceOf(uint64_t class_id) const {                       \
     return class_id == CLASS_ID || super::IsInstanceOf(class_id);            \
-  }
+  }                                                                          \
+  virtual uint64_t GetClassId() const { return UINT64_C(cls_id); }
 
 inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
   return class_id == CLASS_ID;

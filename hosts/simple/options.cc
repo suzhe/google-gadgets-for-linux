@@ -24,6 +24,11 @@ Options::Options() {
 Options::~Options() {
 }
 
+ggadget::Connection *Options::ConnectOnOptionChanged(
+    ggadget::Slot1<void, const char *> *handler) {
+  return onoptionchanged_signal_.Connect(handler);
+}
+
 size_t Options::GetCount() {
   return values_.size();
 }
@@ -77,4 +82,5 @@ void Options::RemoveAll() {
 
 void Options::FireChangedEvent(const char *name) {
   DLOG("option changed: %s", name);
+  onoptionchanged_signal_(name);
 }

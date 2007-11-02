@@ -91,6 +91,8 @@ static JSBool IsCompilableUnit(JSContext *cx, JSObject *obj,
             p++;
           }
           if (!found) return JS_FALSE;
+        } else {
+          p++;
         }
         break;
       case '"':

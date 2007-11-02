@@ -23,6 +23,12 @@
 namespace ggadget {
 namespace internal {
 
+// Constants for XML pretty printing.
+static const size_t kLineLengthThreshold = 70;
+static const size_t kIndent = 1;
+static const char *kStandardXMLDecl =
+    "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+
 static const char *kExceptionNames[] = {
     "",
     "INDEX_SIZE_ERR",
@@ -87,6 +93,11 @@ class DOMException : public ScriptableHelper<ScriptableInterface> {
     RegisterSimpleProperty("code", &code_);
     SetPrototype(GlobalException::Get());
   }
+
+  // This is a script owned object.
+  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; } 
+  virtual bool Detach() { delete this; return true; }
+
  private:
   DOMExceptionCode code_;
 };
@@ -116,7 +127,6 @@ static DOMExceptionCode CheckCommonChildType(DOMNodeInterface *new_child) {
 
 class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
  public:
-  DEFINE_CLASS_ID(0xbc6cbb1176a8412a, DOMNodeListInterface);
   using DOMNodeListInterface::GetItem;
   DOMNodeListBase() {
     DOMNodeListInterface *super_ptr =
@@ -125,12 +135,15 @@ class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
                      NewSlot(super_ptr, &DOMNodeListInterface::GetLength),
                      NULL);
     RegisterMethod("item", NewSlot(super_ptr, &DOMNodeListInterface::GetItem));
+    SetArrayHandler(NewSlot(super_ptr, &DOMNodeListInterface::GetItem), NULL);
   }
 };
 
 // The DOMNodeList used as the return value of GetElementsByTagName().
 class ElementsByTagName : public DOMNodeListBase {
  public:
+  DEFINE_CLASS_ID(0x08b36d84ae044941, DOMNodeListInterface);
+
   ElementsByTagName(DOMNodeInterface *node, const char *name)
       : node_(node),
         name_(name ? name : ""),
@@ -139,9 +152,15 @@ class ElementsByTagName : public DOMNodeListBase {
 
   // ElementsByTagName is not reference counted. The Attach() and Detach()
   // methods are only for the script adapter.
-  virtual void Attach() { node_->Attach(); }
-  virtual void Detach() { node_->Detach(); delete this; }
-  virtual void Destroy() const { delete this; }
+  virtual OwnershipPolicy Attach() {
+    node_->Attach();
+    return OWNERSHIP_TRANSFERRABLE;
+  }
+  virtual bool Detach() {
+    node_->Detach();
+    delete this;
+    return true;
+  }
 
   virtual DOMNodeInterface *GetItem(size_t index) {
     return const_cast<DOMNodeInterface *>(GetItemFromNode(node_, &index));
@@ -182,7 +201,7 @@ class ElementsByTagName : public DOMNodeListBase {
       }
     }
 
-    children->Destroy();
+    delete children;
     return result_item;
   }
 
@@ -198,7 +217,7 @@ class ElementsByTagName : public DOMNodeListBase {
         count += CountChildElements(item);
       }
     }
-    children->Destroy();
+    delete children;
     return count;
   }
 
@@ -207,6 +226,19 @@ class ElementsByTagName : public DOMNodeListBase {
   bool wildcard_;
 };
 
+// Append a '\n' and indent to xml.
+static void AppendIndentNewLine(size_t indent, std::string *xml) {
+  if (!xml->empty() && *(xml->end() - 1) != '\n')
+    xml->append(1, '\n');
+  xml->append(indent, ' ');
+}
+
+// Append indent if the current position is a new line.
+static void AppendIndentIfNewLine(size_t indent, std::string *xml) {
+  if (xml->empty() || *(xml->end() - 1) == '\n')
+    xml->append(indent, ' ');
+}
+
 // Interface for DOMNodeImpl callbacks to its node.
 class DOMNodeImplCallbacks {
  public:
@@ -214,6 +246,8 @@ class DOMNodeImplCallbacks {
   // Subclasses should implement these methods.
   virtual DOMNodeInterface *CloneSelf() = 0;
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) = 0;
+  // Append the XML string representation to the string.
+  virtual void AppendXML(size_t indent, std::string *xml) = 0;
 };
 
 class DOMNodeImpl {
@@ -232,7 +266,6 @@ class DOMNodeImpl {
         name_(name ? name : ""),
         parent_(NULL),
         owner_node_(NULL),
-        child_nodes_(node, children_),
         ref_count_(0) {
     ASSERT(name && *name);
     if (name != kDOMDocumentName) {
@@ -273,7 +306,7 @@ class DOMNodeImpl {
   // If transient is true, the node will not be deleted even if the reference
   // count reaches zero. This is useful to return nodes from methods like
   // RemoveXXX() and ReplaceXXX().
-  void DetachMulti(int count, bool transient) {
+  bool DetachMulti(int count, bool transient) {
     ASSERT(ref_count_ >= count && count >= 0);
     if (count > 0) {
       ref_count_ -= count;
@@ -285,11 +318,15 @@ class DOMNodeImpl {
         // are accumulated, root's ref_count_ == 0 means all decendents's
         // ref_count_ == 0, thus the whole tree can be safely deleted.
         delete node_;
+        return true;
       }
     }
+    return false;
   }
 
-  DOMNodeListInterface *GetChildNodes() { return &child_nodes_; }
+  DOMNodeListInterface *GetChildNodes() {
+    return new ChildrenNodeList(node_, children_);
+  }
   DOMNodeInterface *GetFirstChild() {
     return children_.empty() ? NULL : children_.front();
   }
@@ -330,7 +367,7 @@ class DOMNodeImpl {
         if (code != DOM_NO_ERR)
           break;
       }
-      children->Destroy();
+      delete children;
       return code;
     }
 
@@ -442,7 +479,21 @@ class DOMNodeImpl {
     InsertBefore(owner_document_->CreateTextNode(utf16_content.c_str()), NULL);
   }
 
+  const char *GetXML() {
+    last_xml_.clear();
+    callbacks_->AppendXML(0, &last_xml_);
+    return last_xml_.c_str();
+  }
+
  public:
+  // The following public methods are utilities for interface implementations.
+  void AppendChildrenXML(size_t indent, std::string *xml) {
+    for (Children::iterator it = children_.begin();
+         it != children_.end(); ++it) {
+      (*it)->GetImpl()->callbacks_->AppendXML(indent, xml);
+    }
+  }
+
   void RemoveAllChildren() {
     for (Children::iterator it = children_.begin();
          it != children_.end(); ++it) 
@@ -450,7 +501,6 @@ class DOMNodeImpl {
     children_.clear();
   }
 
-  // The following public methods are utilities for interface implementations.
   DOMExceptionCode CheckNewChildCommon(DOMNodeInterface *new_child) {
     // The new_child must be in the same document of this node.
     DOMDocumentInterface *new_child_doc = new_child->GetOwnerDocument();
@@ -559,6 +609,8 @@ class DOMNodeImpl {
   // The DOMNodeList used to enumerate this node's children.
   class ChildrenNodeList : public DOMNodeListBase {
    public:
+    DEFINE_CLASS_ID(0x72b1fc54e58041ae, DOMNodeListInterface);
+
     ChildrenNodeList(DOMNodeInterface *node,
                      const Children &children)
         : node_(node), children_(children) { }
@@ -566,10 +618,15 @@ class DOMNodeImpl {
     // References to this object are counted to the owner node.
     // ChildrenNodeList is not reference counted. The Attach() and Detach()
     // methods are only for the script adapter.
-    virtual void Attach() { node_->Attach(); }
-    virtual void Detach() { node_->Detach(); }
-    // Do nothing because this object is not dynamically allocated.
-    virtual void Destroy() const { }
+    virtual OwnershipPolicy Attach() {
+      node_->Attach();
+      return OWNERSHIP_TRANSFERRABLE;
+    }
+    virtual bool Detach() {
+      node_->Detach();
+      delete this;
+      return true;
+    }
 
     DOMNodeInterface *GetItem(size_t index) {
       return index < children_.size() ? children_[index] : NULL;
@@ -594,8 +651,8 @@ class DOMNodeImpl {
   // owner element.
   DOMNodeInterface *owner_node_;
   Children children_;
-  ChildrenNodeList child_nodes_;
   std::string last_children_text_content_;
+  std::string last_xml_;
 
   // This ref_count_ records the accumulated reference count of all descendants.
   // ref_count_ == 0 means all descendants' ref_count == 0.
@@ -629,7 +686,8 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
                              &DOMNodeInterface::GetNodeType),
                      NULL);
     RegisterReadonlySimpleProperty("parentNode", &impl_->parent_);
-    RegisterConstant("childNodes", &impl_->child_nodes_);
+    RegisterProperty("childNodes", NewSlot(impl_, &DOMNodeImpl::GetChildNodes),
+                     NULL);
     RegisterProperty("firstChild", NewSlot(impl_, &DOMNodeImpl::GetFirstChild),
                      NULL);
     RegisterProperty("lastChild", NewSlot(impl_, &DOMNodeImpl::GetLastChild),
@@ -672,9 +730,14 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual DOMNodeImpl *GetImpl() const { return impl_; }
 
   // Implements ScriptableInterface::Attach().
-  virtual void Attach() { impl_->AttachMulti(1); }
+  virtual ScriptableInterface::OwnershipPolicy Attach() {
+    impl_->AttachMulti(1);
+    return ScriptableInterface::OWNERSHIP_SHARED;
+  }
   // Implements ScriptableInterface::Detach().
-  virtual void Detach() { impl_->DetachMulti(1, false); }
+  virtual bool Detach() {
+    return impl_->DetachMulti(1, false);
+  }
   virtual void TransientDetach() { impl_->DetachMulti(1, true); }
 
   virtual const char *GetNodeName() const { return impl_->name_.c_str(); }
@@ -687,9 +750,11 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return impl_->parent_;
   }
 
-  virtual DOMNodeListInterface *GetChildNodes() { return &impl_->child_nodes_; }
+  virtual DOMNodeListInterface *GetChildNodes() {
+    return impl_->GetChildNodes();
+  }
   virtual const DOMNodeListInterface *GetChildNodes() const {
-    return &impl_->child_nodes_;
+    return impl_->GetChildNodes();
   }
 
   virtual DOMNodeInterface *GetFirstChild() {
@@ -777,6 +842,10 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
       SetNodeValue(text_content);
     else
       impl_->SetChildTextContent(text_content);
+  }
+
+  virtual const char *GetXML() const {
+    return impl_->GetXML();
   }
 
  private:
@@ -954,6 +1023,14 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
 
   void SetOwnerElement(DOMElement *owner_element); // Defined after DOMElement.
 
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    // Omit the indent parameter, let the parent deal with it.
+    xml->append(GetNodeName());
+    xml->append("=\"");
+    xml->append(EncodeXMLString(GetNodeValue()));
+    xml->append(1, '"');
+  }
+
  protected:
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) {
     DOMExceptionCode code = GetImpl()->CheckNewChildCommon(new_child);
@@ -982,8 +1059,7 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   typedef std::vector<DOMAttr *> Attrs;
 
   DOMElement(DOMDocumentInterface *owner_document, const char *tag_name)
-      : Super(owner_document, tag_name),
-        attrs_named_map_(this) {
+      : Super(owner_document, tag_name) {
     RegisterProperty("tagName", NewSlot(this, &DOMElement::GetTagName), NULL);
     RegisterMethod("getAttribute", NewSlot(this, &DOMElement::GetAttribute));
     RegisterMethod("setAttribute",
@@ -1087,10 +1163,35 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
   virtual DOMNamedNodeMapInterface *GetAttributes() {
-    return &attrs_named_map_;
+    return new AttrsNamedMap(this);
   }
   virtual const DOMNamedNodeMapInterface *GetAttributes() const {
-    return &attrs_named_map_;
+    return new AttrsNamedMap(const_cast<DOMElement *>(this));
+  }
+
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    std::string::size_type line_begin = xml->length();
+    AppendIndentNewLine(indent, xml);
+    xml->append(1, '<');
+    xml->append(GetNodeName());
+    for (Attrs::iterator it = attrs_.begin(); it != attrs_.end(); ++it) {
+      xml->append(1, ' ');
+      (*it)->AppendXML(indent, xml);
+      if (xml->size() - line_begin > kLineLengthThreshold) {
+        line_begin = xml->length();
+        AppendIndentNewLine(indent + kIndent, xml);
+      }
+    }
+    if (HasChildNodes()) {
+      xml->append(1, '>');
+      GetImpl()->AppendChildrenXML(indent + kIndent, xml);
+      AppendIndentIfNewLine(indent, xml);
+      xml->append("</");
+      xml->append(GetNodeName());
+      xml->append(">\n");
+    } else {
+      xml->append("/>\n");
+    }
   }
 
  protected:
@@ -1134,10 +1235,15 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
 
     // AttrsNamedMap is not reference counted. The Attach() and Detach()
     // methods are only for the script adapter.
-    virtual void Attach() { element_->Attach(); }
-    virtual void Detach() { element_->Detach(); }
-    // Do nothing because this object is not dynamically allocated.
-    virtual void Destroy() const { }
+    virtual OwnershipPolicy Attach() {
+      element_->Attach();
+      return OWNERSHIP_TRANSFERRABLE; 
+    }
+    virtual bool Detach() {
+      element_->Detach();
+      delete this;
+      return true;
+    }
 
     virtual DOMNodeInterface *GetNamedItem(const char *name) {
       return element_->GetAttributeNode(name);
@@ -1262,7 +1368,6 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
 
   std::string tag_name_;
   Attrs attrs_;
-  AttrsNamedMap attrs_named_map_;
 };
 
 DOMElementInterface *DOMAttr::GetOwnerElement() {
@@ -1279,6 +1384,27 @@ void DOMAttr::SetOwnerElement(DOMElement *owner_element) {
   }
 }
 
+static DOMExceptionCode DoSplitText(DOMTextInterface *text,
+                                    size_t offset,
+                                    DOMTextInterface **new_text) {
+  ASSERT(new_text);
+  *new_text = NULL;
+  if (offset > text->GetLength())
+    return DOM_INDEX_SIZE_ERR;
+
+  size_t tail_size = text->GetLength() - offset;
+  UTF16Char *tail_data;
+  text->SubstringData(offset, tail_size, &tail_data);
+  *new_text = down_cast<DOMTextInterface *>(text->CloneNode(false));
+  (*new_text)->SetData(tail_data);
+  text->DeleteData(offset, tail_size);
+  delete [] tail_data;
+
+  if (text->GetParentNode())
+    text->GetParentNode()->InsertBefore(*new_text, text->GetNextSibling());
+  return DOM_NO_ERR;
+}
+
 class DOMText : public DOMCharacterData<DOMTextInterface> {
  public:
   DEFINE_CLASS_ID(0xdcd93e1ac43b49d2, DOMTextInterface);
@@ -1293,20 +1419,24 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
 
   virtual DOMExceptionCode SplitText(size_t offset,
                                      DOMTextInterface **new_text) {
-    ASSERT(new_text);
-    *new_text = NULL;
-    if (offset > GetLength())
-      return DOM_INDEX_SIZE_ERR;
-    size_t tail_size = GetLength() - offset;
-    UTF16Char *tail_data;
-    SubstringData(offset, tail_size, &tail_data);
-    *new_text = new DOMText(GetOwnerDocument(), tail_data);
-    DeleteData(offset, tail_size);
-    delete [] tail_data;
+    return DoSplitText(this, offset, new_text);
+  }
 
-    if (GetParentNode())
-      GetParentNode()->InsertBefore(*new_text, GetNextSibling());
-    return DOM_NO_ERR;
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    // Omit the indent parameter, let the parent deal with it.
+    std::string node_value(GetNodeValue());
+    std::string trimmed = TrimString(EncodeXMLString(GetNodeValue()));
+    if (!node_value.empty() &&
+        (trimmed.empty() ||
+         *(node_value.end() - 1) != *(trimmed.end() - 1))) {
+      // The tail of the text has been trimmed.
+      NodeType next_type = GetNextSibling() ?
+                           GetNextSibling()->GetNodeType() : ELEMENT_NODE;
+      if (next_type == TEXT_NODE || next_type == ENTITY_REFERENCE_NODE)
+        // Preserve one space.
+        trimmed += ' ';
+    }
+    xml->append(trimmed);
   }
 
  protected:
@@ -1333,6 +1463,14 @@ class DOMComment : public DOMCharacterData<DOMCommentInterface> {
 
   virtual NodeType GetNodeType() const { return COMMENT_NODE; }
 
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    // Omit the indent parameter, let the parent deal with it.
+    AppendIndentNewLine(indent, xml);
+    xml->append("<!--");
+    xml->append(EncodeXMLString(GetNodeValue()));
+    xml->append("-->\n");
+  }
+
  protected:
   virtual DOMNodeInterface *CloneSelf() {
     return new DOMComment(GetOwnerDocument(), GetData());
@@ -1353,20 +1491,15 @@ class DOMCDATASection : public DOMCharacterData<DOMCDATASectionInterface> {
 
   virtual DOMExceptionCode SplitText(size_t offset,
                                      DOMTextInterface **new_text) {
-    ASSERT(new_text);
-    new_text = NULL;
-    if (offset > GetLength())
-      return DOM_INDEX_SIZE_ERR;
-    size_t tail_size = GetLength() - offset;
-    UTF16Char *tail_data;
-    SubstringData(offset, tail_size, &tail_data);
-    *new_text = new DOMCDATASection(GetOwnerDocument(), tail_data);
-    DeleteData(offset, tail_size);
-    delete [] tail_data;
+    return DoSplitText(this, offset, new_text);
+  }
 
-    if (GetParentNode())
-      GetParentNode()->InsertBefore(*new_text, GetNextSibling());
-    return DOM_NO_ERR;
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    // Omit the indent parameter, let the parent deal with it.
+    AppendIndentNewLine(indent, xml);
+    xml->append("<![CDATA[");
+    xml->append(GetNodeValue());
+    xml->append("]]>\n");
   }
 
  protected:
@@ -1384,6 +1517,13 @@ class DOMDocumentFragment : public DOMNodeBase<DOMDocumentFragmentInterface> {
       : Super(owner_document, kDOMDocumentFragmentName) { }
 
   virtual NodeType GetNodeType() const { return DOCUMENT_FRAGMENT_NODE; }
+
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    // Because DOMDocumentFragment can't be child of any node, the indent
+    // should always be zero.
+    ASSERT(indent == 0);
+    GetImpl()->AppendChildrenXML(0, xml);
+  }
 
  protected:
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) {
@@ -1421,6 +1561,15 @@ class DOMProcessingInstruction
   virtual const char *GetTarget() const { return target_.c_str(); }
   virtual const char *GetData() const { return data_.c_str(); }
   virtual void SetData(const char *data) { data_ = data ? data : ""; }
+
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    AppendIndentNewLine(indent, xml);
+    xml->append("<?");
+    xml->append(GetNodeName());
+    xml->append(1, ' ');
+    xml->append(GetNodeValue());
+    xml->append("?>\n");
+  }
 
  protected:
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) {
@@ -1581,6 +1730,12 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     return DOM_NOT_SUPPORTED_ERR;
   }
 
+  virtual void AppendXML(size_t indent, std::string *xml) {
+    ASSERT(indent == 0);
+    xml->append(kStandardXMLDecl);
+    GetImpl()->AppendChildrenXML(0, xml);
+  }
+
  protected:
   virtual DOMNodeInterface *CloneSelf() {
     return NULL;
@@ -1623,7 +1778,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
         break;
       }
     }
-    children->Destroy();
+    delete children;
     return result;
   }
 
@@ -1665,7 +1820,6 @@ void RegisterDOMGlobalScriptable(
   scriptable->RegisterConstant("DOMException",
                                internal::GlobalException::Get());
   scriptable->RegisterConstant("Node", internal::GlobalNode::Get());
-  scriptable->RegisterMethod("__createDOMDocument", NewSlot(CreateDOMDocument));
 }
 
 } // namespace ggadget

@@ -44,10 +44,11 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual void SetArrayHandler(Slot *getter, Slot *setter);
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
 
-  // The following 4 methods declared in ScriptableInterface should never be
+  // The following 5 methods declared in ScriptableInterface should never be
   // called.
-  virtual void Attach() { ASSERT(false); }
-  virtual void Detach() { ASSERT(false); }
+  virtual uint64_t GetClassId() const { return 0; }
+  virtual OwnershipPolicy Attach() { ASSERT(false); return NATIVE_OWNED; }
+  virtual bool Detach() { ASSERT(false); return false; }
   virtual bool IsInstanceOf(uint64_t class_id) const {
     ASSERT(false); return false;
   }
@@ -309,7 +310,7 @@ bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
   // First check if the property is a constant.
   ConstantMap::const_iterator constants_it = constants_.find(name);
   if (constants_it != constants_.end()) {
-    *id = ScriptableInterface::ID_CONSTANT_PROPERTY;
+    *id = ScriptableInterface::kConstantPropertyId;
     *prototype = constants_it->second;
     *is_method = false;
     return true;
@@ -332,7 +333,7 @@ bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
     Variant param(name);
     last_dynamic_property_value_ = dynamic_property_getter_->Call(1, &param);
     if (last_dynamic_property_value_.type() != Variant::TYPE_VOID) {
-      *id = ScriptableInterface::ID_DYNAMIC_PROPERTY;
+      *id = ScriptableInterface::kDynamicPropertyId;
       last_dynamic_property_name_ = name;
       *prototype = last_dynamic_property_value_;
       *is_method = false;
@@ -399,7 +400,7 @@ Variant ScriptableHelperImpl::GetProperty(int id) {
     return Variant();
   }
 
-  if (id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
+  if (id == ScriptableInterface::kDynamicPropertyId) {
     // We require the script engine call GetProperty immediately after calling
     // GetPropertyInfoByName() if the returned id is ID_DYNAMIC_PROPERTY.
     // Here return the value cached in GetPropertyInfoByName().
@@ -443,7 +444,7 @@ bool ScriptableHelperImpl::SetProperty(int id, Variant value) {
     return false;
   }
 
-  if (id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
+  if (id == ScriptableInterface::kDynamicPropertyId) {
     // We require the script engine call GetProperty immediately after calling
     // GetPropertyInfoByName() if the returned id is ID_DYNAMIC_PROPERTY.
     ASSERT(dynamic_property_getter_);

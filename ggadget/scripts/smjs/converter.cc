@@ -259,6 +259,12 @@ JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
   }
 }
 
+void FreeNativeValue(const Variant &native_val) {
+  // Delete the JSFunctionSlot object that was created by ConvertJSToNative().
+  if (native_val.type() == Variant::TYPE_SLOT)
+    delete VariantValue<Slot *>()(native_val);
+}
+
 std::string PrintJSValue(JSContext *cx, jsval js_val) {
   switch (JS_TypeOfValue(cx, js_val)) {
     case JSTYPE_STRING: {

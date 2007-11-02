@@ -47,6 +47,8 @@ class Texture {
    */ 
   Texture(const Texture &another);
 
+  ~Texture();
+
   /**
    * Draws the texture onto a canvas.
    * If the texture is an image, the image is repeated to fill the canvas.

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_JS_SLOTS_H__
-#define GGADGET_JS_SLOTS_H__
+#ifndef GGADGET_JS_SCRIPT_RUNTIME_H__
+#define GGADGET_JS_SCRIPT_RUNTIME_H__
 
 #include <jsapi.h>
 #include "ggadget/script_runtime_interface.h"

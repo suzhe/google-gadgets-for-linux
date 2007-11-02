@@ -52,8 +52,6 @@ const char *const kDOMTextName = "#text";
  *     the caller must make copies by itself.
  *   - @see @c DOMNodeInterface::Attach()
  *   - @see @c DOMNodeInterface::Detach()
- *   - @see @c DOMNodeListInterface::Destroy()
- *   - @see @c DOMNamedNodeMapInterface::Destroy()
  */
 enum DOMExceptionCode {
   /**
@@ -132,8 +130,8 @@ class DOMNodeInterface : public ScriptableInterface {
    * or call @c Attach() if you need to further operate on it,
    * but never ignore the results from such methods.
    */
-  virtual void Attach() = 0;
-  virtual void Detach() = 0;
+  virtual OwnershipPolicy Attach() = 0;
+  virtual bool Detach() = 0;
   /**
    * Transiently detach a reference. The object will not be deleted even if
    * there is no references. This is useful for returning an object from a
@@ -197,6 +195,9 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual const char *GetTextContent() const = 0;
   virtual void SetTextContent(const char *text_content) = 0;
 
+  /** @c xml property is a Microsoft extension. */
+  virtual const char *GetXML() const = 0;
+
   /* TODO: DOM2
   virtual bool IsSupported(const char *feature, const char *version) const = 0;
   virtual const char *GetNamespaceURI() const = 0;
@@ -214,18 +215,9 @@ class DOMNodeInterface : public ScriptableInterface {
 CLASS_ID_IMPL(DOMNodeInterface, ScriptableInterface)
 
 class DOMNodeListInterface : public ScriptableInterface {
- protected:
-  /** Disallow direct deletion. */
-  virtual ~DOMNodeListInterface() { }
-
  public:
   CLASS_ID_DECL(0x9935a8188f734afe);
 
-  /**
-   * Destroys the object after use.
-   * @c DOMNodeListInterface objects are not reference counted.
-   */
-  virtual void Destroy() const = 0;
   virtual DOMNodeInterface *GetItem(size_t index) = 0;
   virtual const DOMNodeInterface *GetItem(size_t index) const = 0;
   virtual size_t GetLength() const = 0;
@@ -233,18 +225,9 @@ class DOMNodeListInterface : public ScriptableInterface {
 CLASS_ID_IMPL(DOMNodeListInterface, ScriptableInterface)
 
 class DOMNamedNodeMapInterface : public ScriptableInterface {
- protected:
-  /** Disallow direct deletion. */
-  virtual ~DOMNamedNodeMapInterface() { }
-
  public:
   CLASS_ID_DECL(0xd2c849db6fb6416f);
 
-  /**
-   * Destroys the object after use.
-   * @c DOMNodeListInterface objects are not reference counted.
-   */
-  virtual void Destroy() const = 0;
   virtual DOMNodeInterface *GetNamedItem(const char *name) = 0;
   virtual const DOMNodeInterface *GetNamedItem(const char *name) const = 0;
   virtual DOMExceptionCode SetNamedItem(DOMNodeInterface *arg) = 0;
