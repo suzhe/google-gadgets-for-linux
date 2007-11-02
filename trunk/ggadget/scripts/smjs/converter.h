@@ -46,6 +46,13 @@ JSBool ConvertJSToNativeVariant(JSContext *cx,
                                 jsval js_val, Variant *native_val);
 
 /**
+ * Frees a native value that was created by @c ConvertJSToNative(),
+ * if some failed conditions preventing this value from successfully
+ * passing to the native code.
+ */
+void FreeNativeValue(const Variant &native_val);
+
+/**
  * Converts a @c jsval to a @c std::string for printing.
  */
 std::string PrintJSValue(JSContext *cx, jsval js_val);

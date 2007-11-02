@@ -87,12 +87,14 @@ static gboolean GadgetViewWidget_expose(GtkWidget *widget,
   const CairoCanvas *canvas =
     ggadget::down_cast<const CairoCanvas *>(gvw->view->Draw(&changed));
 
-  cairo_set_source_surface(cr, canvas->GetSurface(), 0., 0.);
-  cairo_paint(cr);
+  // view->Draw may return NULL if it's width or height is 0.
+  if (canvas) {
+    cairo_set_source_surface(cr, canvas->GetSurface(), 0., 0.);
+    cairo_paint(cr);
+  }
 
   cairo_destroy(cr);
   cr = NULL;
-
   return FALSE;
 }
 

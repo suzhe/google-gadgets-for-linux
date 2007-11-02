@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright 2007 Google Inc.
 // All Rights Reserved.
 //
@@ -48,7 +48,7 @@ var kNameplateLeftWidth_ = 8;
 
 function _Window_OnOpen() {
   Weather_Init();
-  setInterval(Weather_Init(), kWeatherRefreshTime);
+  setInterval(Weather_Init, kWeatherRefreshTime);
 
   if (options.getValue("TrayOpen")) {
     OpenClose.src = "buttons/b_close_u.png";

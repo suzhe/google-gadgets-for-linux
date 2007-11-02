@@ -42,6 +42,7 @@ options.putDefaultValue("TrayOpen", false);
 options.putDefaultValue("language", strings.DEFAULT_LANGUAGE);
 options.putDefaultValue("Country", kUnitedStates); // ISO code
 
+/* TODO
 //
 // OPTIONS FUNCTIONS
 //
@@ -150,12 +151,12 @@ function ShowOptions(window) {
   }
 
 } // End ShowOptions
-
+*/
 
 //
 // REQUEST CALLBACKS
 //
-
+/*
 function GetCountryList(window, dropList) {
   optionsFetchState = OptionsFetchType.FetchCountry;
 
@@ -327,7 +328,7 @@ function VerifyCityAndInit(window) {
     }
   }
 }
-
+*/
 //
 // HELPER FUNCTIONS
 //

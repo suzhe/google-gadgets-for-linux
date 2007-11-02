@@ -185,6 +185,7 @@ int GtkGadgetHost::RegisterIOWatch(bool read_or_write, int fd,
   iodata->id = static_cast<int>(g_io_add_watch(channel, cond,
                                                DispatchIOWatch, iodata));
   callbacks_[iodata->id] = iodata;
+  g_io_channel_unref(channel);
   return iodata->id;
 }
 

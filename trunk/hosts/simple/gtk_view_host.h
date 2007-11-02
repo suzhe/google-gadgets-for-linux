@@ -74,6 +74,7 @@ class GtkViewHost : public ggadget::ViewHostInterface {
   ggadget::ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;
   ggadget::GraphicsInterface *gfx_;
+  ggadget::Connection *onoptionchanged_connection_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkViewHost);
 };

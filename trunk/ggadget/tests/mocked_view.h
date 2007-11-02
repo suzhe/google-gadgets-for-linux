@@ -93,6 +93,7 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual ggadget::Texture *LoadTexture(const char *name) { return NULL; }
   virtual int GetDebugMode() const { return 2; }
   virtual void SetFocus(ggadget::ElementInterface *element) { }
+  virtual void OnOptionChanged(const char *name) { }
 
   bool GetQueuedDraw() {
     bool b = draw_queued_;

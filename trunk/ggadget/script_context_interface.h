@@ -37,12 +37,12 @@ class ScriptContextInterface {
 
  public:
   /**
-   * Destroy a context after use.
+   * Destroys a context after use.
    */
   virtual void Destroy() = 0;
 
   /**
-   * Compile and execute a script fragment in the context.
+   * Compiles and execute a script fragment in the context.
    * @param script the script source code.
    * @param filename the name of the file containing the @a script.
    * @param lineno the line number of the @a script in the file.
@@ -52,7 +52,7 @@ class ScriptContextInterface {
                        int lineno) = 0;
 
   /**
-   * Compile a script fragment in the context.
+   * Compiles a script fragment in the context.
    * @param script the script source code.
    * @param filename the name of the file containing the @a script.
    * @param lineno the line number of the @a script in the file.
@@ -64,11 +64,20 @@ class ScriptContextInterface {
                         int lineno) = 0;
 
   /**
-   * Set the global object of the context.
+   * Sets the global object of the context.
    * @param global_object the global object of the context.
    * return @c true if succeeds.
    */
   virtual bool SetGlobalObject(ScriptableInterface *global_object) = 0;
+
+  /**
+   * Registers the constructor for a global class.
+   * @param name name of the class.
+   * @param constructor constructor of the class.
+   * @return @c true if succeeded.
+   */
+  virtual bool RegisterClass(const char *name, Slot *constructor) = 0;
+
 };
 
 } // namespace ggadget

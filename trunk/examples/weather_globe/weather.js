@@ -117,11 +117,11 @@ function Weather_DisplayError() {
   current_temp.innerText = "";
 
   for (var index = 0; index < 4; ++index) {
-    forecast.children("high_temp_" + index).innerText = "";
-    forecast.children("low_temp_" + index).innerText = "";
-    forecast.children("date_" + index).innerText = "";
-    forecast.children("weather_" + index).src = "question.png";
-    forecast.children("weather_" + index).tooltip = "";
+    forecast.children.item("high_temp_" + index).innerText = "";
+    forecast.children.item("low_temp_" + index).innerText = "";
+    forecast.children.item("date_" + index).innerText = "";
+    forecast.children.item("weather_" + index).src = "question.png";
+    forecast.children.item("weather_" + index).tooltip = "";
   }
 }
 
@@ -190,7 +190,7 @@ function Weather_ParseData(responseXML) {
     Weather_UpdateDisplay(Weather_currentWeatherData);
 
   } catch (e) {
-    debug.error("weather_parsedata: " + e.message);
+    gadget.debug.error("weather_parsedata: " + e);
     Weather_DisplayError();
   }
 }
@@ -225,15 +225,15 @@ function Weather_UpdateDisplay(weatherData) {
 
   // update forecast pane
   for (var i = 0; i < weatherData.forecastDays.length; ++i) {
-    forecast.children("high_temp_" + i).innerText =
+    forecast.children.item("high_temp_" + i).innerText =
         weatherData.forecastHighs[i];
-    forecast.children("low_temp_" + i).innerText =
+    forecast.children.item("low_temp_" + i).innerText =
         weatherData.forecastLows[i];
-    forecast.children("date_" + i).innerText =
+    forecast.children.item("date_" + i).innerText =
         weatherData.forecastDays[i];
-    forecast.children("weather_" + i).src =
+    forecast.children.item("weather_" + i).src =
         weatherData.forecastIcons[i];
-    forecast.children("weather_" + i).tooltip =
+    forecast.children.item("weather_" + i).tooltip =
         weatherData.forecastConditions[i];
   }
 }
@@ -380,7 +380,7 @@ function Weather_GetWeatherIcon(condition, isMain, opt_day) {
       icon = "mini/mini_" + type.day + ".png";
     }
   }
-  debug.trace("Condition: " + condition + "  Icon: "+icon);
+  gadget.debug.trace("Condition: " + condition + "  Icon: "+icon);
   return icon;
 }
 
@@ -406,10 +406,10 @@ function Weather_BuildWeatherURL() {
       url += options.getValue(kCityName);
       break;
     default:
-      debug.error("Invalid location setting = "+options.getValue(kLocationSetting));
+      gadget.debug.error("Invalid location setting = "+options.getValue(kLocationSetting));
       break;
   }
-  debug.trace("URL: " + url);
+  gadget.debug.trace("URL: " + url);
   return url;
 }
 

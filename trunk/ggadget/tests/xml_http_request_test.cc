@@ -103,7 +103,7 @@ TEST(XMLHttpRequest, States) {
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid state.
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
-            request->Send(static_cast<const char *>(NULL)));
+            request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Valid request.
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
@@ -168,7 +168,7 @@ TEST(XMLHttpRequest, SyncLocalFile) {
   ASSERT_EQ(1, callback.callback_count_);
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL)));
+            request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(5, callback.callback_count_);
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   const char *str;
@@ -199,7 +199,7 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
   ASSERT_EQ(1, callback.callback_count_);
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL)));
+            request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(5, callback.callback_count_);
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   const char *str;
@@ -339,7 +339,7 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
             request->SetRequestHeader("TestHeader", "TestHeaderValue"));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL)));
+            request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
 
@@ -402,7 +402,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
             request->SetRequestHeader("TestHeader", "TestHeaderValue"));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL)));
+            request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(2, callback.callback_count_);
 
@@ -496,7 +496,7 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
             request->Open("GET", "file:///tmp/xml_http_request_test_data",
                           false, NULL, NULL));
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL)));
+            request->Send(static_cast<const char *>(NULL), 0));
   const char *text;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseText(&text));
   ASSERT_STREQ("<?xml version=\"1.0\" encoding=\"gb2312\"?>\n"

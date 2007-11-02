@@ -27,8 +27,10 @@ class ScriptableOptions : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)
 
-  explicit ScriptableOptions(OptionsInterface *options); 
+  explicit ScriptableOptions(OptionsInterface *options);
   virtual ~ScriptableOptions();
+
+  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
   OptionsInterface *GetOptions() const { return options_; }
 

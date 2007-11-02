@@ -49,7 +49,7 @@ class View::Impl {
       element_factory_(element_factory),
       children_(element_factory, NULL, owner),
       debug_mode_(debug_mode),
-      width_(200), height_(200),
+      width_(0), height_(0),
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
@@ -483,10 +483,10 @@ class View::Impl {
       return true;
     }
 
-    Event *event = new Event(Event::EVENT_TIMER_TICK);
+    Event event(Event::EVENT_TIMER_TICK);
     switch (info->type) {
       case TIMER_TIMEOUT: {
-        ScriptableEvent scriptable_event(event, owner_, token, 0);
+        ScriptableEvent scriptable_event(&event, owner_, token, 0);
         event_stack_.push_back(&scriptable_event);
         info->slot->Call(0, NULL);
         wants_more = false;
@@ -495,14 +495,14 @@ class View::Impl {
         break;
       }
       case TIMER_INTERVAL: {
-        ScriptableEvent scriptable_event(event, owner_, token, 0);
+        ScriptableEvent scriptable_event(&event, owner_, token, 0);
         event_stack_.push_back(&scriptable_event);
         info->slot->Call(0, NULL);
         event_stack_.pop_back();
         break;
       }
       case TIMER_ANIMATION_FIRST: {
-        ScriptableEvent scriptable_event(event, owner_, token,
+        ScriptableEvent scriptable_event(&event, owner_, token,
                                          info->start_value);
         event_stack_.push_back(&scriptable_event);
         info->slot->Call(0, NULL);
@@ -522,7 +522,7 @@ class View::Impl {
         int value = info->start_value +
                     static_cast<int>(round(progress * info->spread));
         if (value != info->last_value) {
-          ScriptableEvent scriptable_event(event, owner_, token, value);
+          ScriptableEvent scriptable_event(&event, owner_, token, value);
           event_stack_.push_back(&scriptable_event);
           info->last_value = value;
           info->slot->Call(0, NULL);
@@ -544,7 +544,6 @@ class View::Impl {
     // Must check if the token is still there to ensure info pointer is valid.
     if (timer_map_.find(token) != timer_map_.end())
       info->last_finished_time = gadget_host_->GetCurrentTime();
-    delete event;
     return wants_more;
   }
 
@@ -584,6 +583,12 @@ class View::Impl {
     LOG("CONFIRM: %s", message);
     // TODO:
     return true;
+  }
+
+  void OnOptionChanged(const char *name) {
+    OptionChangedEvent event(name);
+    ScriptableEvent scriptable_event(&event, owner_, 0, 0);
+    FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
   EventSignal oncancle_event_;
@@ -717,7 +722,6 @@ View::View(ViewHostInterface *host,
   // TODO: Move it to OptionsView?
   RegisterSignal(kOnOkEvent, &impl_->onok_event_);
   RegisterSignal(kOnOpenEvent, &impl_->onopen_event_);
-  // TODO: Move it to OptionsView?
   RegisterSignal(kOnOptionChangedEvent, &impl_->onoptionchanged_event_);
   RegisterSignal(kOnPopInEvent, &impl_->onpopin_event_);
   RegisterSignal(kOnPopOutEvent, &impl_->onpopout_event_);
@@ -912,6 +916,10 @@ Texture *View::LoadTexture(const char *name) {
 
 void View::SetFocus(ElementInterface *element) {
   impl_->SetFocus(element);
+}
+
+void View::OnOptionChanged(const char *name) {
+  impl_->OnOptionChanged(name);
 }
 
 } // namespace ggadget

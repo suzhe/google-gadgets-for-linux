@@ -83,3 +83,7 @@ bool SimpleHostFileManager::ExtractFile(const char *file,
                                         std::string *into_file) {
   return false; // not implemented
 }
+
+ggadget::GadgetStringMap *SimpleHostFileManager::GetStringTable() {
+  return NULL; // not implemented
+}

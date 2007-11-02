@@ -33,7 +33,7 @@ void TestBlankNode(DOMNodeInterface *node) {
 
   DOMNodeListInterface *children = node->GetChildNodes();
   EXPECT_EQ(0U, children->GetLength());
-  children->Destroy();
+  delete children;
 }
 
 void TestChildren(DOMNodeInterface *parent, DOMNodeListInterface *children,
@@ -43,7 +43,6 @@ void TestChildren(DOMNodeInterface *parent, DOMNodeListInterface *children,
   if (num_child == 0) {
     EXPECT_TRUE(parent->GetFirstChild() == NULL);
     EXPECT_TRUE(parent->GetLastChild() == NULL);
-    children->Destroy();
     return;
   }
 
@@ -208,7 +207,7 @@ TEST(XMLDOM, TestParentChild) {
   LOG("No Child");
   TestChildren(root_ele, children, 0);
 
-  children->Destroy();
+  delete children;
   doc->Detach();
 }
 
@@ -358,7 +357,7 @@ TEST(XMLDOM, TestElementAttr) {
   ele->RemoveAttribute("not-exists");
   TestAttributes(ele, attrs, 0);
 
-  attrs->Destroy();
+  delete attrs;
   doc->Detach();
 }
 
@@ -403,7 +402,7 @@ TEST(XMLDOM, TestElementAttributes) {
   TestAttributes(ele, attrs, 0);
   ASSERT_TRUE(attrs->GetNamedItem("not-exist") == NULL);
 
-  attrs->Destroy();
+  delete attrs;
   doc->Detach();
 }
 
@@ -466,7 +465,7 @@ TEST(XMLDOM, TestElementAttrErrors) {
   delete attr_doc1;
   doc1->Detach();
 
-  attrs->Destroy();
+  delete attrs;
   doc->Detach();
 }
 
@@ -483,22 +482,22 @@ TEST(XMLDOM, TestBlankGetElementsByTagName) {
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
   LOG("Blank document NULL name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   elements = doc->GetElementsByTagName("");
   LOG("Blank document blank name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   elements = doc->GetElementsByTagName("*");
   LOG("Blank document wildcard name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   elements = doc->GetElementsByTagName("not-exist");
   LOG("Blank document non-existent name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   doc->Detach();
 }
@@ -518,17 +517,17 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
   LOG("Non-blank document NULL name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   elements = doc->GetElementsByTagName("");
   LOG("Non-blank document blank name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   elements = doc->GetElementsByTagName("not-exist");
   LOG("Non-blank document non-existant name");
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   elements = doc->GetElementsByTagName("*");
   LOG("Non-blank document wildcard name");
@@ -544,7 +543,7 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
   ASSERT_TRUE(elements->GetItem(7U) == NULL);
   ASSERT_EQ(DOM_NO_ERR, doc->RemoveChild(doc->GetDocumentElement()));
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   doc->Detach();
 }
@@ -583,7 +582,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
   ASSERT_TRUE(elements->GetItem(4U) == NULL);
   ASSERT_EQ(DOM_NO_ERR, doc->RemoveChild(doc->GetDocumentElement()));
   TestBlankNodeList(elements);
-  elements->Destroy();
+  delete elements;
 
   doc->Detach();
 }
@@ -804,6 +803,32 @@ TEST(XMLDOM, Others) {
 
   ASSERT_TRUE(doc->CloneNode(true) == NULL);
 
+  doc->Detach();
+}
+
+TEST(XMLDOM, TestXMLLoadAndSerialize) {
+  const char *xml =
+    "<?pi pi=\"pi\"?>\n"
+    "<root attr=\"lt;&quot;&gt;\" attr2=\"&amp;1234\">"
+    " <s/>text&lt;&gt;"
+    " <s1><s/><![CDATA[\n cdata <>\n]]></s1>\n"
+    " <s><s><!-- some comments --><s/></s></s>\n"
+    " <s><s1><s1>text</s1></s1></s>\n"
+    "</root>";
+
+  DOMDocumentInterface *doc = CreateDOMDocument();
+  doc->Attach();
+  doc->LoadXML(xml);
+  DOMElementInterface *ele = doc->GetDocumentElement();
+  for (int i = 0; i < 20; i++) {
+    ele->SetAttribute(StringPrintf("new-attr%d", i).c_str(),
+                      StringPrintf("new-value%d", i).c_str());
+  }
+  std::string xml_out = doc->GetXML();
+  LOG("xml_out: '%s'", xml_out.c_str());
+  doc->LoadXML(xml_out.c_str());
+  std::string xml_out2 = doc->GetXML();
+  ASSERT_STREQ(xml_out2.c_str(), xml_out.c_str());
   doc->Detach();
 }
 

@@ -42,11 +42,12 @@ class ScriptableDelegator : public ScriptableInterface {
 	      strict_(strict) { }
 	virtual ~ScriptableDelegator() { }
 
+	virtual uint64_t GetClassId() const { return scriptable_->GetClassId(); }
   virtual bool IsInstanceOf(uint64_t class_id) const {
     return scriptable_->IsInstanceOf(class_id);
   }
-  virtual void Attach() { }
-  virtual void Detach() { }
+  virtual OwnershipPolicy Attach() { return NATIVE_OWNED; }
+  virtual bool Detach() { return false; }
   virtual bool IsStrict() const { return strict_; }
   virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {
     return scriptable_->ConnectToOnDeleteSignal(slot);

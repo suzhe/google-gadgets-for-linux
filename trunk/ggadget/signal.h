@@ -74,7 +74,6 @@ class Connection {
    */
   Connection(const Signal *signal, Slot *slot);
   ~Connection();
-  void ReleaseSlot();
 
   bool blocked_;
   const Signal *signal_;

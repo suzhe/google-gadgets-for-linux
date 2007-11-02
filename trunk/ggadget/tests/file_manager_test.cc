@@ -18,7 +18,6 @@
 #include <locale.h>
 
 #include "ggadget/file_manager.h"
-#include "ggadget/file_manager_impl.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;

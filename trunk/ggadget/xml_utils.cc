@@ -65,7 +65,7 @@ static xmlDoc *ParseXML(const char *xml, const char *filename,
   xmlDoc *result = NULL;
   if (ctxt->wellFormed) {
     result = ctxt->myDoc;
-    if (encoding)
+    if (encoding && ctxt->input && ctxt->input->encoding)
       *encoding = FromXmlCharPtr(ctxt->input->encoding);
   } else {
     xmlFreeDoc(ctxt->myDoc);
@@ -141,8 +141,8 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
   bool result = scriptable->GetPropertyInfoByName(name, &id,
                                                   &prototype, &is_method);
   if (!result || is_method ||
-      id == ScriptableInterface::ID_CONSTANT_PROPERTY ||
-      id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
+      id == ScriptableInterface::kConstantPropertyId ||
+      id == ScriptableInterface::kDynamicPropertyId) {
     LOG("%s:%d: Can't set property %s for %s", filename, row, name, tag_name);
     return;
   }
@@ -233,7 +233,10 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
   }
 
   // Set the "innerText" property.
-  char *text = FromXmlCharPtr(xmlNodeGetContent(xml_element));
+  char *text = FromXmlCharPtr(xmlNodeListGetString(xml_element->doc,
+                                                   xml_element->children,
+                                                   1));
+
   if (text) {
     std::string trimmed_text = TrimString(std::string(text));
     if (!trimmed_text.empty()) {
@@ -249,15 +252,18 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
                                 FileManagerInterface *file_manager,
                                 const char *filename,
                                 xmlNode *xml_element) {
-  char *src = FromXmlCharPtr(xmlGetProp(xml_element, ToXmlCharPtr(kSrcAttr)));
   int lineno = xml_element->line;
   std::string script;
-  std::string real_path;
+  xmlChar *src = xmlGetProp(xml_element, ToXmlCharPtr(kSrcAttr));
+  std::string real_path; // Must defined here because we need it's c_str().
+
   if (src) {
-    if (file_manager->GetFileContents(src, &script, &real_path)) {
+    if (file_manager->GetFileContents(FromXmlCharPtr(src),
+                                      &script, &real_path)) {
       filename = real_path.c_str();
       lineno = 1;
     }
+    xmlFree(src);
   } else {
     // Uses the Windows version convention, that inline scripts should be
     // quoted in comments.
@@ -497,8 +503,7 @@ static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
   char *text = FromXmlCharPtr(xmlNodeGetContent(xmltext));
   UTF16String utf16_text;
   if (text) {
-    std::string text_str(text);
-    ConvertStringUTF8ToUTF16(text_str, &utf16_text);
+    ConvertStringUTF8ToUTF16(text, strlen(text), &utf16_text);
     xmlFree(text);
   }
 
@@ -693,6 +698,17 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
 bool ConvertStringToUTF8(const std::string &src, const char *encoding,
                          std::string *dest) {
   return ConvertStringToUTF8(src.c_str(), src.length(), encoding, dest);
+}
+
+std::string EncodeXMLString(const char *src) {
+  if (!src || !*src)
+    return std::string();
+
+  char *result = FromXmlCharPtr(xmlEncodeSpecialChars(NULL, ToXmlCharPtr(src)));
+  std::string result_str(result ? result : "");
+  if (result)
+    xmlFree(result);
+  return result_str;
 }
 
 } // namespace ggadget
