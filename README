@@ -8,4 +8,4 @@ examples: Source files of example gadgets.
 ggadget:  Source files of gadget library.
 hosts:    Source files of gadget container.
 testing:  Source files of Testing framework.
-utils:    Build scripts.
+utils:    Build scripts and utils.
