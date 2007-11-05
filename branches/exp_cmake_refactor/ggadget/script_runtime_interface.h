@@ -17,7 +17,7 @@
 #ifndef GGADGET_SCRIPT_RUNTIME_INTERFACE_H__
 #define GGADGET_SCRIPT_RUNTIME_INTERFACE_H__
 
-#include "variant.h"
+#include <ggadget/variant.h>
 
 namespace ggadget {
 

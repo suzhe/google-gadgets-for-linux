@@ -23,8 +23,10 @@
 #include "ggadget/slot.h"
 #include "ggadget/view.h"
 #include "ggadget/xml_utils.h"
+#include "mocked_view_host.h"
 
 ggadget::ElementFactory *gFactory = NULL;
+MockedViewHost *gViewHost = NULL;
 
 class Muffin : public ggadget::BasicElement {
  public:
@@ -42,7 +44,7 @@ class Muffin : public ggadget::BasicElement {
 
  public:
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
-  
+
  public:
   static ggadget::ElementInterface *CreateInstance(
       ggadget::ElementInterface *parent,
@@ -65,7 +67,7 @@ class Pie : public ggadget::BasicElement {
 
   virtual void DoDraw(ggadget::CanvasInterface *canvas,
                       const ggadget::CanvasInterface *children_canvas) { }
-  
+
  public:
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
 
@@ -95,7 +97,7 @@ class EventHandler {
                               ggadget::MouseEvent::BUTTON_LEFT, 999);
     ggadget::ScriptableEvent scriptable_event(&event, NULL, 0, 0);
     view_->FireEvent(&scriptable_event, signal2_);
-    // The current event should be the same as before. 
+    // The current event should be the same as before.
     ASSERT_EQ(current_scriptable_event, view_->GetEvent());
     ASSERT_EQ(ggadget::Event::EVENT_KEY_DOWN,
               current_scriptable_event->GetEvent()->GetType());
@@ -120,7 +122,7 @@ class EventHandler {
 };
 
 TEST(ViewTest, FireEvent) {
-  ggadget::View view(NULL, NULL, NULL, gFactory);
+  ggadget::View view(gViewHost, NULL, gFactory, 0);
   EventHandler handler(&view);
   ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN, 2468);
   ggadget::ScriptableEvent scriptable_event(&event, NULL, 0, 0);
@@ -131,7 +133,7 @@ TEST(ViewTest, FireEvent) {
 
 // This test is not merely for View, but mixed test for xml_utils and Elements.
 TEST(ViewTest, XMLConstruction) {
-  ggadget::View view(NULL, NULL, NULL, gFactory);
+  ggadget::View view(gViewHost, NULL, gFactory, 0);
   ASSERT_FALSE(view.GetShowCaptionAlways());
   ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_TRUE, view.GetResizable());
   ASSERT_STREQ("", view.GetCaption());
@@ -174,6 +176,7 @@ TEST(ViewTest, XMLConstruction) {
 
 int main(int argc, char *argv[]) {
   testing::ParseGUnitFlags(&argc, argv);
+  gViewHost = new MockedViewHost();
   gFactory = new ggadget::ElementFactory();
   gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);
   gFactory->RegisterElementClass("pie", Pie::CreateInstance);

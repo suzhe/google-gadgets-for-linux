@@ -12,10 +12,42 @@ do
 done
 cd $topdir
 
+if [ -f .svkcommit ]; then
+  . .svkcommit
+fi
+
+if [ "$extensions" = "" ]; then
+  extensions="
+    c
+    cc
+    cmake
+    cpp
+    cxx
+    def
+    h
+    hh
+    hpp
+    htm
+    html
+    hxx
+    js
+    sh
+    txt
+    xml
+    "
+fi
+
+pattern=""
+for item in $extensions
+do
+    pattern="$pattern\|\.$item\$"
+done
+pattern=`echo "$pattern" | sed 's/^..//'`
+
 for file in $(svk st | \
               grep '^?' | \
               grep -v 'swp$' | \
-              sed 's/?[ \t]*//' | \
+              sed 's/^?[ \t]*//' | \
               grep -v '^\.')
 do
   if [ -e $file ]; then
@@ -55,4 +87,16 @@ do
     fi
   fi
 done
+
+for file in $(svk st | \
+              grep -v '^?' | \
+              grep "$pattern" | \
+              sed 's/^?[ \t]*//')
+do
+  if [ -f $file ]; then
+    dos2unix "$file"
+    sed -e 's/^[ \t]\{,\}$//' -i "$file"
+  fi
+done
+
 svk ci

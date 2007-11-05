@@ -18,9 +18,11 @@
 #define GGADGET_JS_SCRIPT_CONTEXT_H__
 
 #include <map>
+#include <vector>
 #include <jsapi.h>
-#include "ggadget/script_context_interface.h"
-#include "ggadget/signal.h"
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/script_context_interface.h>
+#include <ggadget/signals.h>
 
 namespace ggadget {
 
@@ -65,12 +67,16 @@ class JSScriptContext : public ScriptContextInterface {
   static jsval ConvertSlotToJS(JSContext *cx, Slot *slot);
 
   /**
-   * The callback of a @c JSFunction that wraps a native @c Slot.
-   * It conforms to @c JSNative.
+   * Calls a native slot from the JavaScript side.
    */
   static JSBool CallNativeSlot(JSContext *cx, JSObject *obj,
-                               uintN argc, jsval *argv,
-                               jsval *rval);
+                               uintN argc, jsval *argv, jsval *rval);
+
+  /**
+   * Handles a native exception and throws it into the script engine.
+   */
+  static JSBool HandleException(JSContext *cx,
+                                const ScriptableExceptionHolder &e);
 
   /**
    * Create a @c Slot that is targeted to a JavaScript function object.
@@ -97,6 +103,8 @@ class JSScriptContext : public ScriptContextInterface {
                         int lineno);
   /** @see ScriptContextInterface::SetGlobalObject() */
   virtual bool SetGlobalObject(ScriptableInterface *global_object);
+  /** @see ScriptContextInterface::RegisterClass() */
+  virtual bool RegisterClass(const char *name, Slot *constructor);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
@@ -106,7 +114,7 @@ class JSScriptContext : public ScriptContextInterface {
 
   void GetCurrentFileAndLineInternal(const char **filename, int *lineno);
   JSObject *WrapNativeObjectToJSInternal(
-      ScriptableInterface *scriptableInterface);
+      JSObject *js_object, ScriptableInterface *scriptableInterface);
   jsval ConvertSlotToJSInternal(Slot *slot);
   Slot *NewJSFunctionSlotInternal(const Slot *prototype,
                                   jsval function_val);
@@ -123,6 +131,20 @@ class JSScriptContext : public ScriptContextInterface {
   static void RecordFileAndLine(JSContext *cx, const char *message,
                                 JSErrorReport *report);
 
+  /** Callback function for native classes. */
+  static JSBool ConstructObject(JSContext *cx, JSObject *obj,
+                                uintN argc, jsval *argv, jsval *rval);
+
+  class JSClassWithNativeCtor {
+   public:
+    JSClassWithNativeCtor(const char *name, Slot *constructor);
+    ~JSClassWithNativeCtor();
+    JSClass js_class_;
+    Slot *constructor_;
+   private:
+    DISALLOW_EVIL_CONSTRUCTORS(JSClassWithNativeCtor);
+  };
+
   JSContext *context_;
   // The following two fields are only used during GetCurrentFileAndLine.
   const char *filename_;
@@ -133,6 +155,9 @@ class JSScriptContext : public ScriptContextInterface {
   // Native slot to JavaScript function object (in jsval) map.
   typedef std::map<Slot *, jsval> SlotJSMap;
   SlotJSMap slot_js_map_;
+
+  typedef std::vector<JSClassWithNativeCtor *> ClassVector;
+  ClassVector registered_classes_;
 };
 
 } // namespace ggadget

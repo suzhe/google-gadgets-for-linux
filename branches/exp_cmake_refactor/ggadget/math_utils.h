@@ -25,7 +25,7 @@ namespace ggadget {
  * Converts coordinates in a parent element's space to coordinates in a
  * child element.
  * @param parent_x X-coordinate in the parent space to convert.
- * @param parent_y Y-coordinate in the parent space to convert. 
+ * @param parent_y Y-coordinate in the parent space to convert.
  * @param child_x_pos X-coordinate of the child pin point in parent space.
  * @param child_y_pos Y-coordinate of the child pin point in parent space.
  * @param child_pin_x X-coordinate of the child rotation pin in child space.
@@ -43,7 +43,7 @@ void ParentCoordToChildCoord(double parent_x, double parent_y,
 /**
  * Reversed function of the above function.
  * @param child_x X-coordinate in the child space to convert.
- * @param child_y Y-coordinate in the child space to convert. 
+ * @param child_y Y-coordinate in the child space to convert.
  * @param child_x_pos X-coordinate of the child pin point in parent space.
  * @param child_y_pos Y-coordinate of the child pin point in parent space.
  * @param child_pin_x X-coordinate of the child rotation pin in child space.
@@ -69,7 +69,7 @@ void ChildCoordToParentCoord(double child_x, double child_y,
  * @param rotation_radians The rotation of the child element in radians.
  * @param[out] extent_width The maximum X-coordinate of the child rect
  *     in parent space.
- * @param[out] extent_height The maximum Y-corrdinate of the child rect
+ * @param[out] extent_height The maximum Y-coordinate of the child rect
  *     in parent space.
  */
 void GetChildExtentInParent(double child_x_pos, double child_y_pos,
@@ -79,7 +79,7 @@ void GetChildExtentInParent(double child_x_pos, double child_y_pos,
                             double *extent_width, double *extent_height);
 
 /**
- * Calculator object used to convert a parent element's coordinate space to 
+ * Calculator object used to convert a parent element's coordinate space to
  * that of a child element. This struct is a better choice if the multiple
  * coordinate conversions need to be done for the same child element.
  */
@@ -96,27 +96,27 @@ class ChildCoordCalculator {
   ChildCoordCalculator(double child_x_pos, double child_y_pos,
                        double child_pin_x, double child_pin_y,
                        double rotation_radians);
-  
+
   /**
    * Converts coordinates the given coordinates.
    * @param parent_x X-coordinate in the parent space to convert.
-   * @param parent_y Y-coordinate in the parent space to convert. 
+   * @param parent_y Y-coordinate in the parent space to convert.
    * @param[out] child_x Parameter to store the converted child X-coordinate.
    * @param[out] child_y Parameter to store the converted child Y-coordinate.
    */
   void Convert(double parent_x, double parent_y,
                double *child_x, double *child_y);
-  
+
   /**
    * @param parent_x X-coordinate in the parent space to convert.
-   * @param parent_y Y-coordinate in the parent space to convert. 
+   * @param parent_y Y-coordinate in the parent space to convert.
    * @return The converted child X-coordinate.
    */
   double GetChildX(double parent_x, double parent_y);
-  
+
   /**
    * @param parent_x X-coordinate in the parent space to convert.
-   * @param parent_y Y-coordinate in the parent space to convert. 
+   * @param parent_y Y-coordinate in the parent space to convert.
    * @return The converted child Y-coordinate.
    */
   double GetChildY(double parent_x, double parent_y);
@@ -127,7 +127,7 @@ class ChildCoordCalculator {
 };
 
 /**
- * Calculator object used to convert a child element's coordinate space to 
+ * Calculator object used to convert a child element's coordinate space to
  * that of the parent element. This struct is a better choice if the multiple
  * coordinate conversions need to be done for the same child element.
  */
@@ -144,11 +144,11 @@ class ParentCoordCalculator {
   ParentCoordCalculator(double child_x_pos, double child_y_pos,
                        double child_pin_x, double child_pin_y,
                        double rotation_radians);
-  
+
   /**
    * Converts child coordinates into parent coordinations.
    * @param child_x X-coordinate in the child space to convert.
-   * @param child_y Y-coordinate in the child space to convert. 
+   * @param child_y Y-coordinate in the child space to convert.
    * @param[out] parent_x Parameter to store the converted parent X-coordinate.
    * @param[out] parent_y Parameter to store the converted parent Y-coordinate.
    */
@@ -156,14 +156,14 @@ class ParentCoordCalculator {
                double *parent_x, double *parent_y);
   /**
    * @param child_x X-coordinate in the child space to convert.
-   * @param child_y Y-coordinate in the child space to convert. 
+   * @param child_y Y-coordinate in the child space to convert.
    * @return The converted parent X-coordinate.
    */
   double GetParentX(double child_x, double child_y);
-  
+
   /**
    * @param child_x X-coordinate in the child space to convert.
-   * @param child_y Y-coordinate in the child space to convert. 
+   * @param child_y Y-coordinate in the child space to convert.
    * @return The converted parent Y-coordinate.
    */
   double GetParentY(double child_x, double child_y);
@@ -186,9 +186,6 @@ double DegreesToRadians(double degrees);
  * @param height Height of element.
  */
 bool IsPointInElement(double x, double y, double width, double height);
-
-/** Rounds a given double to the nearest integer. */
-int RoundToInt(double x);
 
 }
 

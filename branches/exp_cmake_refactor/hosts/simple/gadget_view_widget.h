@@ -21,11 +21,9 @@
 #include <gtk/gtk.h>
 #include <string>
 
-namespace ggadget{
-class ViewInterface;
-}
+#include "ggadget/ggadget.h"
 
-class GtkCairoHost;
+class GtkViewHost;
 
 G_BEGIN_DECLS
 
@@ -43,22 +41,22 @@ G_BEGIN_DECLS
 struct GadgetViewWidget {
   GtkDrawingArea drawingarea;
 
-  GtkCairoHost *host;
+  GtkViewHost *host;
   ggadget::ViewInterface *view;
   double zoom;
-  int widget_width, widget_height; // stores the old height/width before an allocation 
+  // Stores the old height/width before an allocation.
+  int widget_width, widget_height;
   bool dbl_click;
 };
 
 struct GadgetViewWidgetClass {
-  GtkDrawingAreaClass parent_class; 
+  GtkDrawingAreaClass parent_class;
 
-  void (* gadgetviewwidget)    (GadgetViewWidget *gvw);
+  void (* gadgetviewwidget)(GadgetViewWidget *gvw);
 };
 
-GType          GadgetViewWidget_get_type();
-GtkWidget*     GadgetViewWidget_new(ggadget::ViewInterface *v, double zoom,
-                                    int debug_mode, GtkCairoHost *host);
+GType GadgetViewWidget_get_type();
+GtkWidget* GadgetViewWidget_new(GtkViewHost *host, double zoom);
 
 G_END_DECLS
 

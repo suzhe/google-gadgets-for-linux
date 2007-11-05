@@ -20,7 +20,7 @@
 namespace ggadget {
 
 /**
- * Class representing a font as understood by the graphics interface. 
+ * Class representing a font as understood by the graphics interface.
  * It is created by an associated GraphicsInterface object.
  * Call @c Destroy() to free this object once it is no longer needed.
  */
@@ -31,7 +31,7 @@ class FontInterface {
    */
   virtual ~FontInterface() { }
 
- public:   
+ public:
   /**
    * Enum used to specify font styles.
    */
@@ -39,7 +39,7 @@ class FontInterface {
     STYLE_NORMAL,
     STYLE_ITALIC
   };
-   
+
   /**
    * Enum used to specify font weight.
    */
@@ -52,23 +52,23 @@ class FontInterface {
    * @return The style option associated with the font.
    */
   virtual Style GetStyle() const = 0;
-    
+
   /**
    * @return The style option associated with the font.
    */
   virtual Weight GetWeight() const = 0;
-  
+
   /**
    * @return The size of the font, in points.
    */
   virtual size_t GetPointSize() const = 0;
-  
+
   /**
    * Frees the FontInterface object.
    */
   virtual void Destroy() = 0;
 };
-  
+
 } // namespace ggadget
 
 #endif // GGADGET_FONT_INTERFACE_H__

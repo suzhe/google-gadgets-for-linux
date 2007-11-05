@@ -14,6 +14,5 @@
 #  limitations under the License.
 #
 
-ADD_SUBDIRECTORY(tinyxml)
 ADD_SUBDIRECTORY(unzip)
 ADD_SUBDIRECTORY(smjs)

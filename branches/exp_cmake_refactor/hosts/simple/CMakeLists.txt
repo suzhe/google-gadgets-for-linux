@@ -18,7 +18,6 @@ ADD_SUBDIRECTORY(tests)
 
 PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
 PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
-PKGCONFIG_EX(libcurl 7.16.0 LIBCURL_LIBRARIES)
 
 IF(UNIX)
   SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
@@ -30,11 +29,12 @@ ADD_DEFINITIONS(${SMJS_DEFINITIONS})
 
 SET(SRCS
   main.cc
-  gtk_cairo_host.cc
+  gtk_gadget_host.cc
+  gtk_view_host.cc
   gadget_view_widget.cc
   gtk_key_convert.cc
+  simplehost_file_manager.cc
   options.cc
-  xml_http_request.cc
 )
 
 DECORATE_EXECUTABLE(ggl EXECUTABLE_NAME)
@@ -47,5 +47,4 @@ TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME}
   ggadget_smjs
   ${CAIRO_LIBRARIES}
   ${GTK_LIBRARIES}
-  ${LIBCURL_LIBRARIES}
 )

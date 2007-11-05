@@ -17,42 +17,38 @@
 #ifndef GGADGET_VIEW_H__
 #define GGADGET_VIEW_H__
 
-#include "common.h"
-#include "scriptable_helper.h"
-#include "view_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/scriptable_helper.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
-namespace internal {
-  class ViewImpl;
-}
-
-class GadgetInterface;
+template <typename R> class Slot0;
+class ViewHostInterface;
 class ElementFactoryInterface;
 class ScriptContextInterface;
 
 /**
  * Main View implementation.
  */
-class View : public ViewInterface {
+class View : public ScriptableHelper<ViewInterface> {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
-  View(ScriptContextInterface *script_context,
-       GadgetInterface *gadget,
+  View(ViewHostInterface *host,
        ScriptableInterface *prototype,
-       ElementFactoryInterface *element_factory);
+       ElementFactoryInterface *element_factory,
+       int debug_mode);
   virtual ~View();
 
-  virtual bool AttachHost(HostInterface *host);
-  virtual bool InitFromFile(const char *filename);
   virtual ScriptContextInterface *GetScriptContext() const;
   virtual FileManagerInterface *GetFileManager() const;
+  virtual bool InitFromFile(FileManagerInterface *file_manager,
+                            const char *filename);
 
-  virtual void OnMouseEvent(MouseEvent *event);
-  virtual void OnKeyEvent(KeyboardEvent *event);
-  virtual void OnOtherEvent(Event *event);
-  virtual void OnTimerEvent(TimerEvent *event);
+  virtual bool OnMouseEvent(MouseEvent *event);
+  virtual bool OnKeyEvent(KeyboardEvent *event);
+  virtual bool OnOtherEvent(Event *event);
 
   virtual void OnElementAdd(ElementInterface *element);
   virtual void OnElementRemove(ElementInterface *element);
@@ -86,7 +82,7 @@ class View : public ViewInterface {
   virtual ElementInterface *GetElementByName(const char *name);
   virtual const ElementInterface *GetElementByName(const char *name) const;
 
-  virtual int BeginAnimation(Slot1<void, int> *slot,
+  virtual int BeginAnimation(Slot0<void> *slot,
                              int start_value,
                              int end_value,
                              unsigned int duration);
@@ -96,21 +92,17 @@ class View : public ViewInterface {
   virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
   virtual void ClearInterval(int token);
   virtual int GetDebugMode() const;
+  virtual void OnOptionChanged(const char *name);
 
   virtual Image *LoadImage(const char *name, bool is_mask);
+  virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);
   virtual Texture *LoadTexture(const char *name);
-
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
- protected:
-  DELEGATE_SCRIPTABLE_REGISTER(scriptable_helper_)
-
+  
+  virtual bool OpenURL(const char *url) const; 
+  
  private:
   class Impl;
   Impl *impl_;
-  ScriptableHelper scriptable_helper_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
 };
 

@@ -18,43 +18,18 @@
 #include <gtk/gtk.h>
 #include <locale.h>
 
-#include "ggadget/element_factory.h"
-#include "ggadget/file_manager.h"
-#include "ggadget/gadget.h"
-#include "ggadget/options_interface.h"
-#include "ggadget/scripts/smjs/js_script_runtime.h"
-#include "ggadget/view.h"
+#include "ggadget/ggadget.h"
 #include "gadget_view_widget.h"
-#include "options.h"
-
-#include "ggadget/button_element.h"
-#include "ggadget/div_element.h"
-#include "ggadget/img_element.h"
-
-using ggadget::ElementFactoryInterface;
-using ggadget::ElementFactory;
-using ggadget::FileManagerInterface;
-using ggadget::FileManager;
-using ggadget::Gadget;
-using ggadget::JSScriptRuntime;
-using ggadget::OptionsInterface;
-using ggadget::ScriptRuntimeInterface;
-using ggadget::View;
-
-using ggadget::ButtonElement;
-using ggadget::DivElement;
-using ggadget::ImgElement;
+#include "gtk_gadget_host.h"
+#include "gtk_view_host.h"
 
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
-static Gadget *g_gadget = NULL;
-static ElementFactory *g_element_factory = NULL;
-static ScriptRuntimeInterface *g_script_runtime = NULL;
-static FileManagerInterface *g_file_manager = NULL;
-static OptionsInterface *g_options = NULL;
+static GtkGadgetHost *g_gadget_host = NULL;
+static ggadget::GadgetInterface *g_gadget = NULL;
 
-static gboolean DeleteEventHandler(GtkWidget *widget, 
-                                   GdkEvent *event, 
+static gboolean DeleteEventHandler(GtkWidget *widget,
+                                   GdkEvent *event,
                                    gpointer data) {
   return FALSE;
 }
@@ -65,38 +40,26 @@ static gboolean DestroyHandler(GtkWidget *widget,
   return FALSE;
 }
 
-static void SetUpElementFactory() {
-  g_element_factory = new ElementFactory();
-  g_element_factory->RegisterElementClass("button",
-                                          &ButtonElement::CreateInstance);
-  g_element_factory->RegisterElementClass("div", &DivElement::CreateInstance);
-  g_element_factory->RegisterElementClass("img", &ImgElement::CreateInstance);
-}
-
-static bool CreateGadgetUI(GtkWindow *window, GtkBox *box, 
+static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
-  SetUpElementFactory();
-  g_script_runtime = new JSScriptRuntime();
-  g_options = new Options();
-  g_gadget = new Gadget(g_script_runtime, g_element_factory, g_options);
+  g_gadget_host = new GtkGadgetHost();
+  g_gadget = g_gadget_host->LoadGadget(base_path, g_zoom, g_debug_mode);
+  if (!g_gadget) {
+    LOG("Error: unable to load gadget from %s", base_path);
+    return false;
+  }
 
-  GadgetViewWidget *gvw = GADGETVIEWWIDGET(GadgetViewWidget_new(
-      g_gadget->GetMainView(), g_zoom, g_debug_mode, NULL));
+  GtkViewHost *view_host = ggadget::down_cast<GtkViewHost *>(
+      g_gadget->GetMainViewHost());
+  GadgetViewWidget *gvw = view_host->GetWidget();
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
-  
-  // Setting min size here allows the window to resize below the size 
+
+  // Setting min size here allows the window to resize below the size
   // request of the gadget view.
   GdkGeometry geometry;
   geometry.min_width = geometry.min_height = 100;
-  gtk_window_set_geometry_hints(window, GTK_WIDGET(gvw), 
+  gtk_window_set_geometry_hints(window, GTK_WIDGET(gvw),
                                 &geometry, GDK_HINT_MIN_SIZE);
-
-  gtk_widget_realize(GTK_WIDGET(gvw));
-  
-  if (!g_gadget->InitFromPath(base_path)) {
-    LOG("Error: unable to load gadget from %s", base_path);
-  }
-  
   return true;
 }
 
@@ -109,9 +72,9 @@ static bool CreateGTKUI(const char *base_path) {
 
   window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(window), "Google Gadgets");
-  g_signal_connect(G_OBJECT(window), "delete_event", 
+  g_signal_connect(G_OBJECT(window), "delete_event",
                    G_CALLBACK(DeleteEventHandler), NULL);
-  g_signal_connect(G_OBJECT(window), "destroy", 
+  g_signal_connect(G_OBJECT(window), "destroy",
                    G_CALLBACK(DestroyHandler), NULL);
 
   vbox = GTK_BOX(gtk_vbox_new(FALSE, 0));
@@ -127,11 +90,11 @@ static bool CreateGTKUI(const char *base_path) {
 
   label = gtk_label_new("Gadget Main View:");
   gtk_box_pack_start(vbox, label, FALSE, FALSE, 0);
-  
+
   if (!CreateGadgetUI(GTK_WINDOW(window), vbox, base_path)) {
     return false;
-  } 
-  
+  }
+
   gtk_widget_show_all(window);
 
   return true;
@@ -140,27 +103,21 @@ static bool CreateGTKUI(const char *base_path) {
 static void DestroyUI() {
   delete g_gadget;
   g_gadget = NULL;
-  delete g_script_runtime;
-  g_script_runtime = NULL;
-  delete g_element_factory;
-  g_element_factory = NULL;
-  delete g_file_manager;
-  g_file_manager = NULL;
-  delete g_options;
-  g_options = NULL;
+  delete g_gadget_host;
+  g_gadget_host = NULL;
 }
 
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
-  
+
   // set locale according to env vars
   setlocale(LC_ALL, "");
-  
+
   if (argc < 2) {
-    LOG("Error: not enough arguments. Gadget base path required.");   
+    LOG("Error: not enough arguments. Gadget base path required.");
     return -1;
-  }  
-  
+  }
+
   if (argc >= 3) {
     sscanf(argv[2], "%lg", &g_zoom);
     if (g_zoom <= 0 || g_zoom > 5) {
@@ -168,7 +125,7 @@ int main(int argc, char* argv[]) {
       g_zoom = 1.;
     }
   }
-  
+
   if (argc == 4) {
     sscanf(argv[3], "%d", &g_debug_mode);
     if (g_debug_mode < 0 || g_debug_mode > 2) {
@@ -176,7 +133,7 @@ int main(int argc, char* argv[]) {
       g_debug_mode = 0;
     }
   }
-  
+
   if (!CreateGTKUI(argv[1])) {
     LOG("Error: unable to create UI");
     return -1;
@@ -185,6 +142,6 @@ int main(int argc, char* argv[]) {
   gtk_main();
 
   DestroyUI();
-  
+
   return 0;
 }

@@ -131,7 +131,35 @@ TEST(UnicodeUtils, Invalid) {
   EXPECT_EQ(invalid_utf32_length, ConvertStringUTF32ToUTF16(orig_utf32, &utf16));
   EXPECT_EQ(invalid_utf8_length, ConvertStringUTF8ToUTF16(orig_utf8, &utf16));
   EXPECT_EQ(invalid_utf16_length, ConvertStringUTF16ToUTF8(orig_utf16, &utf8));
+  EXPECT_EQ(0U, ConvertStringUTF8ToUTF32(NULL, 0, &utf32));
+  EXPECT_EQ(0U, ConvertStringUTF32ToUTF8(NULL, 0, &utf8));
+  EXPECT_EQ(0U, ConvertStringUTF16ToUTF32(NULL, 0, &utf32));
+  EXPECT_EQ(0U, ConvertStringUTF32ToUTF16(NULL, 0, &utf16));
+  EXPECT_EQ(0U, ConvertStringUTF8ToUTF16(NULL, 0, &utf16));
+  EXPECT_EQ(0U, ConvertStringUTF16ToUTF8(NULL, 0, &utf8));
 }
+
+TEST(UnicodeUtils, IsLegalString) {
+  EXPECT_TRUE(IsLegalUTF8String("", 0));
+  EXPECT_FALSE(IsLegalUTF8String(NULL, 0));
+  EXPECT_TRUE(IsLegalUTF8String(std::string("")));
+  EXPECT_TRUE(IsLegalUTF8String(utf8_string, strlen(utf8_string)));
+  EXPECT_TRUE(IsLegalUTF8String(std::string(utf8_string)));
+  EXPECT_FALSE(IsLegalUTF8String(invalid_utf8_string,
+                                 strlen(invalid_utf8_string)));
+  EXPECT_FALSE(IsLegalUTF8String(std::string(invalid_utf8_string)));
+  EXPECT_TRUE(IsLegalUTF8String(invalid_utf8_string, invalid_utf8_length));
+
+  EXPECT_TRUE(IsLegalUTF16String(utf16_string, 0));
+  EXPECT_FALSE(IsLegalUTF16String(NULL, 0));
+  EXPECT_TRUE(IsLegalUTF16String(UTF16String(utf16_string, 0)));
+  EXPECT_TRUE(IsLegalUTF16String(utf16_string, arraysize(utf16_string) - 1));
+  EXPECT_TRUE(IsLegalUTF16String(UTF16String(utf16_string)));
+  EXPECT_FALSE(IsLegalUTF16String(invalid_utf16_string,
+                                  arraysize(invalid_utf16_string) - 1));
+  EXPECT_FALSE(IsLegalUTF16String(UTF16String(invalid_utf16_string)));
+  EXPECT_TRUE(IsLegalUTF16String(invalid_utf16_string, invalid_utf16_length));
+} 
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);

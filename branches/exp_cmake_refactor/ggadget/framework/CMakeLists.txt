@@ -18,6 +18,7 @@ SET(SRCS
   machine.cc
   memory.cc
   network.cc
+  perfmon.cc
   power.cc
   process.cc
   wireless_access_point.cc

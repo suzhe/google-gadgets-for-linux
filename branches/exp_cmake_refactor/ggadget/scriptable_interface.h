@@ -19,12 +19,13 @@
 
 #include <limits.h>
 #include <stdint.h>
-#include "variant.h"
+#include <ggadget/variant.h>
 
 namespace ggadget {
 
 class Connection;
 template <typename R> class Slot0;
+class ScriptException;
 
 /**
  * Object interface that can be called from script languages.
@@ -58,13 +59,64 @@ class ScriptableInterface {
    * The pseudo id for dynamic properties.
    * @see GetPropertyInfoByName()
    */
-  static const int ID_DYNAMIC_PROPERTY = INT_MIN;
+  static const int kDynamicPropertyId = INT_MIN;
 
   /**
    * The pseudo id for constant properties.
    * @see GetPropertyInfoByName()
    */
-  static const int ID_CONSTANT_PROPERTY = 0;
+  static const int kConstantPropertyId = 0;
+
+  
+  enum OwnershipPolicy {
+    /**
+     * Default policy: C++ always hold the ownership of the scriptable objects,
+     * In order to prevent crash when the script invokes an object that has
+     * already been deleted by C++ code, @c ConnectToOnDeleteSignal() method
+     * is provided to let the C++ code inform the script engine when a
+     * scriptable object is deleted. Then the script engine can simply report
+     * an error when such object is invoked.
+     */
+    NATIVE_OWNED,
+    /**
+     * Same as @c NATIVE_OWNED, but indicates that this object's life time is
+     * longer than the script context. Useful to do memory leak test in the
+     * script adapter. 
+     */
+    NATIVE_PERMANENT,
+    /**
+     * Transferable policy: C++ code creates a scriptable object and then
+     * transfers the ownership to the script engine, then when the wrapped
+     * object is finalized by the script engine (normally occurs during garbage
+     * collection), the object deletes itself when the script adapter calls
+     * @c Detach(). In this case, the implementation should do nothing in
+     * @c Attach() and delete itself in @c Detach(). This policy is useful
+     * when an API method returns a new created object and then only used by
+     * the script side and will never be transfered back to the C++ side.
+     */
+    OWNERSHIP_TRANSFERRABLE,
+    /**
+     * Shared policy: C++ code creates a scriptable object, and then the
+     * ownership may be shared between the C++ and script side. The
+     * @c ScriptableInterface implementation must track references from both
+     * the C++ side and the script side. @c Attach() and @c Detach() can be
+     * used to track the reference from the script side. If both side has
+     * released the references, the implementation should delete itself.
+     * This policy is difficult to use, so we should avoid it as much as
+     * possible. If the object is lightweight, we can convert this policy
+     * into the transferable policy by forcing C++ code to make a copy of
+     * the object when receiving it from the script side.
+     * 
+     * NOTE: For now we don't support callback from native side to script side
+     * for objects of this policy.
+     */
+    OWNERSHIP_SHARED,
+  };
+
+  /**
+   * Gets the class id of this object. For debugging purpose only.
+   */
+  virtual uint64_t GetClassId() const = 0;
 
   /**
    * Attach this object to the script engine.
@@ -74,14 +126,18 @@ class ScriptableInterface {
    * If the ownership can be transfered or shared between the native side
    * and the script side, the implementation should do appropriate things,
    * such as reference counting, etc. to manage the ownership.
+   *
+   * @return @c true if the ownership is transferred, @c false otherwise. 
    */
-  virtual void Attach() = 0;
+  virtual OwnershipPolicy Attach() = 0;
 
   /**
    * Detach this object from the script engine.
    * @see Attach()
+   *
+   * @return @c true if the object is deleted during this call.
    */
-  virtual void Detach() = 0;
+  virtual bool Detach() = 0;
 
   /**
    * Judge if this instance is of a given class.
@@ -127,6 +183,7 @@ class ScriptableInterface {
    * @param[out] is_method @c true if this property corresponds a method.
    *     It's useful to distinguish between methods and signal properties.
    * @return @c true if the property is supported and succeeds.
+   * @throws ScriptableExceptionHolder.
    */
   virtual bool GetPropertyInfoByName(const char *name,
                                      int *id, Variant *prototype,
@@ -142,6 +199,7 @@ class ScriptableInterface {
    * @param[out] is_method true if this property corresponds a method.
    * @param[out] name the name of the property.
    * @return @c true if the property is supported and succeeds.
+   * @throws ScriptableExceptionHolder.
    */
   virtual bool GetPropertyInfoById(int id, Variant *prototype,
                                    bool *is_method,
@@ -154,6 +212,7 @@ class ScriptableInterface {
    *     property.
    * @return the property value, or a @c Variant of type @c Variant::TYPE_VOID
    *     if this property is not supported,
+   * @throws ScriptableExceptionHolder.
    */
   virtual Variant GetProperty(int id) = 0;
 
@@ -165,8 +224,35 @@ class ScriptableInterface {
    * @param value the property value. The type must be compatible with the
    *     prototype returned from @c GetPropertyInfoByName().
    * @return @c true if the property is supported and succeeds.
+   * @throws ScriptableExceptionHolder.
    */
   virtual bool SetProperty(int id, Variant value) = 0;
+};
+
+/**
+ * The exception that may be thrown by native scriptable callbacks.
+ * When it is thrown, the wrapped scriptable exception will be converted to
+ * an script exception and thrown into the script engine by the script adapter.
+ */
+class ScriptableExceptionHolder {
+ public:
+  /**
+   * Wraps a native scriptable exception object into a holder. 
+   * @param scriptable_exception the exception object that will be thrown into
+   *    the script engine. Normally it should have transferrable ownership
+   *    policy to let the script engine clean it up. 
+   */
+  ScriptableExceptionHolder(ScriptableInterface *scriptable_exception)
+      : scriptable_exception_(scriptable_exception) { }
+
+  // The default copy constructors and '=' operator are allowed.
+
+  ScriptableInterface *scriptable_exception() const {
+    return scriptable_exception_;
+  }
+
+ private:
+  ScriptableInterface *scriptable_exception_;
 };
 
 /**
@@ -194,104 +280,11 @@ class ScriptableInterface {
   static const uint64_t CLASS_ID = UINT64_C(cls_id);                         \
   virtual bool IsInstanceOf(uint64_t class_id) const {                       \
     return class_id == CLASS_ID || super::IsInstanceOf(class_id);            \
-  }
+  }                                                                          \
+  virtual uint64_t GetClassId() const { return UINT64_C(cls_id); }
 
 inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
   return class_id == CLASS_ID;
-}
-
-
-/**
- * A macro used to declare default ownership policy, that is, the native side
- * always has the ownership of the scriptable object.
- */
-#define DEFAULT_OWNERSHIP_POLICY \
-virtual void Attach() { }        \
-virtual void Detach() { }
-
-/**
- * A macro used to declare transferrable ownership policy, that is, the native
- * side can transfer the ownership to the script side, and when the script side
- * calls @c Detach(), the object will be deleted.
- */
-#define TRANSFERRABLE_OWNERSHIP_POLICY \
-virtual void Attach() { }              \
-virtual void Detach() { delete this; }
-
-/**
- * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to inline delegate most @c ScriptableInterface methods to
- * another object (normally @c ScriptableHelper).
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define DELEGATE_SCRIPTABLE_INTERFACE(delegate)                               \
-virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
-    ::ggadget::Slot0<void> *slot) {                                           \
-  return (delegate).ConnectToOnDeleteSignal(slot);                            \
-}                                                                             \
-virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
-                                   ::ggadget::Variant *prototype,             \
-                                   bool *is_method) {                         \
-  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
-}                                                                             \
-virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
-                                 bool *is_method, const char **name) {        \
-  return (delegate).GetPropertyInfoById(id, prototype, is_method, name);      \
-}                                                                             \
-virtual ::ggadget::Variant GetProperty(int id) {                              \
-  return (delegate).GetProperty(id);                                          \
-}                                                                             \
-virtual bool SetProperty(int id, ::ggadget::Variant value) {                  \
-  return (delegate).SetProperty(id, value);                                   \
-}
-
-/**
- * A macro used in the declaration section of a @c ScriptableInterface
- * implementation to declare @c ScriptableInterface methods.
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define SCRIPTABLE_INTERFACE_DECL                                             \
-virtual ::ggadget::Connection *ConnectToOnDeleteSignal(                       \
-    ::ggadget::Slot0<void> *slot);                                            \
-virtual bool GetPropertyInfoByName(const char *name, int *id,                 \
-                                   ::ggadget::Variant *prototype,             \
-                                   bool *is_method);                          \
-virtual bool GetPropertyInfoById(int id, ::ggadget::Variant *prototype,       \
-                                 bool *is_method, const char **name);         \
-virtual ::ggadget::Variant GetProperty(int id);                               \
-virtual bool SetProperty(int id, ::ggadget::Variant value);
-
-/**
- * A macro used in the .cc definition of a @c ScriptableInterface
- * implementation to delegate most @c ScriptableInterface methods to
- * another object (normally @c ScriptableHelper)
- * 
- * Full qualified type names are used in this macro to allow the user to use
- * other namespaces.
- */
-#define DELEGATE_SCRIPTABLE_INTERFACE_IMPL(class_name, delegate)              \
-::ggadget::Connection *class_name::ConnectToOnDeleteSignal(                   \
-    ::ggadget::Slot0<void> *slot) {                                           \
-  return (delegate).ConnectToOnDeleteSignal(slot);                            \
-}                                                                             \
-bool class_name::GetPropertyInfoByName(const char *name, int *id,             \
-                                       ::ggadget::Variant *prototype,         \
-                                       bool *is_method) {                     \
-  return (delegate).GetPropertyInfoByName(name, id, prototype, is_method);    \
-}                                                                             \
-bool class_name::GetPropertyInfoById(int id, ::ggadget::Variant *prototype,   \
-                                     bool *is_method, const char **name) {    \
-  return (delegate).GetPropertyInfoById(id, prototype, is_method, name);      \
-}                                                                             \
-::ggadget::Variant class_name::GetProperty(int id) {                          \
-  return (delegate).GetProperty(id);                                          \
-}                                                                             \
-bool class_name::SetProperty(int id, ::ggadget::Variant value) {              \
-  return (delegate).SetProperty(id, value);                                   \
 }
 
 } // namespace ggadget

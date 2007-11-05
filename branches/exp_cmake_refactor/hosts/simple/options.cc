@@ -24,6 +24,11 @@ Options::Options() {
 Options::~Options() {
 }
 
+ggadget::Connection *Options::ConnectOnOptionChanged(
+    ggadget::Slot1<void, const char *> *handler) {
+  return onoptionchanged_signal_.Connect(handler);
+}
+
 size_t Options::GetCount() {
   return values_.size();
 }
@@ -38,7 +43,7 @@ void Options::Add(const char *name, const Variant &value) {
 bool Options::Exists(const char *name) {
   return values_.find(name) != values_.end();
 }
-  
+
 Variant Options::GetDefaultValue(const char *name) {
   OptionsMap::const_iterator it = defaults_.find(name);
   return it == defaults_.end() ? Variant() : it->second;
@@ -77,4 +82,5 @@ void Options::RemoveAll() {
 
 void Options::FireChangedEvent(const char *name) {
   DLOG("option changed: %s", name);
+  onoptionchanged_signal_(name);
 }

@@ -20,18 +20,20 @@
 
 using namespace ggadget;
 
-class GlobalObject : public ScriptableInterface {
+class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d11, ScriptableInterface);
   GlobalObject() {
-    scriptable_helper_.RegisterConstant("scriptable", &test_scriptable1);
-    scriptable_helper_.RegisterConstant("scriptable2", &test_scriptable2);
+    RegisterConstant("scriptable", &test_scriptable1);
+    RegisterConstant("scriptable2", &test_scriptable2);
   }
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return false; }
 
-  ScriptableHelper scriptable_helper_;
+  ScriptableInterface *ConstructScriptable() {
+    // Return script owned object.
+    return test_scriptable2.NewObject(true);
+  }
+
   TestScriptable1 test_scriptable1;
   TestScriptable2 test_scriptable2;
 };
@@ -42,6 +44,8 @@ static GlobalObject *global;
 JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
+  context->RegisterClass("TestScriptable",
+                         NewSlot(global, &GlobalObject::ConstructScriptable));
   return JS_TRUE;
 }
 

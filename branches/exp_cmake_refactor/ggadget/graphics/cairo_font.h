@@ -17,10 +17,9 @@
 #ifndef GGADGET_GRAPHICS_CAIRO_FONT_H__
 #define GGADGET_GRAPHICS_CAIRO_FONT_H__
 
-#include <cairo.h>
-#include <gdk/gdk.h>
+#include <pango/pango.h>
 
-#include "ggadget/font_interface.h"
+#include <ggadget/font_interface.h>
 
 namespace ggadget {
 
@@ -31,26 +30,26 @@ namespace ggadget {
 class CairoFont : public FontInterface {
  public:
   /**
-   * Constructor for CairoFont. Takes a PangoFontDescription object and its 
+   * Constructor for CairoFont. Takes a PangoFontDescription object and its
    * ownership. Will free the PangoFontDescription object on destruction.
-   */ 
-  CairoFont(PangoFontDescription *font, size_t size, Style style, 
+   */
+  CairoFont(PangoFontDescription *font, size_t size, Style style,
             Weight weight);
   virtual ~CairoFont();
-  
+
   virtual Style GetStyle() const { return style_; };
   virtual Weight GetWeight() const { return weight_; };
   virtual size_t GetPointSize() const { return size_; };
-  
+
   virtual void Destroy() { delete this; };
-  
+
   const PangoFontDescription *GetFontDescription() const { return font_; };
 
  private:
   PangoFontDescription *font_;
   size_t size_;
   Style style_;
-  Weight weight_;  
+  Weight weight_;
 };
 
 } // namespace ggadget

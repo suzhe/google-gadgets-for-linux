@@ -15,7 +15,7 @@
 */
 
 #include <stdio.h>
-#include "ggadget/signal.h"
+#include "ggadget/signals.h"
 #include "unittest/gunit.h"
 
 #include "slots.h"

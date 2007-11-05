@@ -20,15 +20,12 @@
 
 using namespace ggadget;
 
-class GlobalObject : public ScriptableInterface {
+class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d11, ScriptableInterface);
   GlobalObject() {
   }
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
   virtual bool IsStrict() const { return false; }
-  ScriptableHelper scriptable_helper_;
 };
 
 static GlobalObject *global;

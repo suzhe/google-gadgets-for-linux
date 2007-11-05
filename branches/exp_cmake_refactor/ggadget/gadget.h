@@ -17,36 +17,22 @@
 #ifndef GGADGET_GADGET_H__
 #define GGADGET_GADGET_H__
 
-#include "common.h"
-#include "gadget_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/gadget_interface.h>
 
 namespace ggadget {
 
-class ElementFactoryInterface;
-class FileManagerInterface;
-class ScriptRuntimeInterface;
+class GadgetHostInterface;
 class OptionsInterface;
 
-/**
- * Interface for representing a Gadget in the Desktop Gadget API.
- */
 class Gadget: public GadgetInterface {
  public:
-  Gadget(ScriptRuntimeInterface *script_runtime,
-         ElementFactoryInterface *element_factory,
-         OptionsInterface *options);
+  Gadget(GadgetHostInterface *host, OptionsInterface *options);
   virtual ~Gadget();
 
-  virtual ViewInterface *GetMainView();
-  virtual ViewInterface *GetOptionsView();
-  virtual FileManagerInterface *GetFileManager();
+  virtual bool Init(FileManagerInterface *file_manager);
+  virtual ViewHostInterface *GetMainViewHost();
   virtual const char *GetManifestInfo(const char *key);
-
-  virtual void DebugError(const char *message);
-  virtual void DebugTrace(const char *message);
-  virtual void DebugWarning(const char *message);
-
-  bool InitFromPath(const char *base_path);
 
  private:
   class Impl;

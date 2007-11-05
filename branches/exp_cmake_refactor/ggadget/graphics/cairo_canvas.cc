@@ -16,22 +16,26 @@
 
 #include "cairo_canvas.h"
 #include "cairo_font.h"
-#include "../scoped_ptr.h"
+#include <ggadget/scoped_ptr.h>
 #include <vector>
 #include <algorithm>
+#include <pango/pango.h>
+#include <pango/pangocairo.h>
 
 namespace ggadget {
 
-CairoCanvas::CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask) 
+const char *const kEllipsisText = "...";
+
+CairoCanvas::CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask)
   : cr_(cr), width_(w), height_(h), is_mask_(is_mask), opacity_(1.) {
   cairo_reference(cr_);
-  // Many CairoCanvas methods assume no existing path, so clear any 
+  // Many CairoCanvas methods assume no existing path, so clear any
   // existing paths on construction.
-  cairo_new_path(cr_); 
+  cairo_new_path(cr_);
 }
- 
+
 CairoCanvas::~CairoCanvas() {
-  cairo_destroy(cr_); 
+  cairo_destroy(cr_);
 }
 
 void CairoCanvas::ClearSurface() {
@@ -43,7 +47,7 @@ void CairoCanvas::ClearSurface() {
 
 bool CairoCanvas::ClearCanvas() {
   ClearSurface();
-  
+
   // Reset state.
   cairo_reset_clip(cr_);
   opacity_ = 1.;
@@ -55,7 +59,7 @@ bool CairoCanvas::PopState() {
   if (opacity_stack_.empty()) {
     return false;
   }
-  
+
   opacity_ = opacity_stack_.top();
   opacity_stack_.pop();
   cairo_restore(cr_);
@@ -70,24 +74,24 @@ bool CairoCanvas::PushState() {
 
 bool CairoCanvas::MultiplyOpacity(double opacity) {
   if (opacity >= 0.0 && opacity <= 1.0) {
-    opacity_ *= opacity;    
+    opacity_ *= opacity;
     return true;
   }
-  return false; 
+  return false;
 }
 
-bool CairoCanvas::DrawLine(double x0, double y0, double x1, double y1, 
+bool CairoCanvas::DrawLine(double x0, double y0, double x1, double y1,
                              double width, const Color &c) {
   if (width < 0.0) {
     return false;
   }
-  
+
   cairo_set_line_width(cr_, width);
   cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
   cairo_move_to(cr_, x0, y0);
   cairo_line_to(cr_, x1, y1);
   cairo_stroke(cr_);
-  
+
   return true;
 }
 
@@ -96,31 +100,31 @@ void CairoCanvas::RotateCoordinates(double radians) {
 }
 
 void CairoCanvas::TranslateCoordinates(double dx, double dy) {
-  cairo_translate(cr_, dx, dy);  
+  cairo_translate(cr_, dx, dy);
 }
 
 void CairoCanvas::ScaleCoordinates(double cx, double cy) {
-  cairo_scale(cr_, cx, cy);  
+  cairo_scale(cr_, cx, cy);
 }
 
-bool CairoCanvas::DrawFilledRect(double x, double y, 
+bool CairoCanvas::DrawFilledRect(double x, double y,
                                  double w, double h, const Color &c) {
   if (w <= 0.0 || h <= 0.0) {
-    return false;    
+    return false;
   }
 
   cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
   cairo_rectangle(cr_, x, y, w, h);
-  cairo_fill(cr_);  
+  cairo_fill(cr_);
   return true;
 }
 
-bool CairoCanvas::IntersectRectClipRegion(double x, double y, 
+bool CairoCanvas::IntersectRectClipRegion(double x, double y,
                                           double w, double h) {
   if (w <= 0.0 || h <= 0.0) {
-    return false;    
+    return false;
   }
-  
+
   cairo_rectangle(cr_, x, y, w, h);
   cairo_clip(cr_);
   return true;
@@ -130,7 +134,7 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   if (!img || img->IsMask()) {
     return false;
   }
-  
+
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
   cairo_surface_t *s = cimg->GetSurface();
   int sheight = cairo_image_surface_get_height(s);
@@ -143,27 +147,27 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
     cairo_paint_with_alpha(cr_, opacity_);
   }
   else {
-    // CairoGraphics supports only uniform scaling in both X, Y, but due to 
+    // CairoGraphics supports only uniform scaling in both X, Y, but due to
     // rounding differences, we need to compute the exact scaling individually
     // for X and Y.
     double cx = double(w) / swidth;
     double cy = double(h) / sheight;
-    
+
     cairo_save(cr_);
     cairo_scale(cr_, cx, cy);
     cairo_set_source_surface(cr_, s, x / cx, y / cy);
     cairo_paint_with_alpha(cr_, opacity_);
     cairo_restore(cr_);
   }
-    
+
   return true;
 }
 
-bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y, 
+bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
                                            double w, double h,
                                            const CanvasInterface *img) {
   if (!img || img->IsMask() || w <= 0.0 || h <= 0.0) {
-    return false;    
+    return false;
   }
 
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
@@ -176,7 +180,7 @@ bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
   size_t sw = cimg->GetWidth();
   size_t sh = cimg->GetHeight();
   if (static_cast<size_t>(sheight) != sh || static_cast<size_t>(swidth) != sw) {
-    // CairoGraphics supports only uniform scaling in both X, Y, but due to 
+    // CairoGraphics supports only uniform scaling in both X, Y, but due to
     // rounding differences, we need to compute the exact scaling individually
     // for X and Y.
     double cx = sw / swidth;
@@ -193,7 +197,7 @@ bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
   return true;
 }
 
-bool CairoCanvas::DrawCanvasWithMask(double x, double y, 
+bool CairoCanvas::DrawCanvasWithMask(double x, double y,
                                     const CanvasInterface *img,
                                     double mx, double my,
                                     const CanvasInterface *mask) {
@@ -221,21 +225,21 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
     cairo_set_source_surface(cr_, simg, x, y);
     cairo_mask_surface(cr_, smask, mx, my);
   }
-  else {  
+  else {
     cairo_save(cr_);
-    
+
     cairo_t *cr;
-    cairo_surface_t *target;    
+    cairo_surface_t *target;
     double cx = double(w) / swidth;
     double cy = double(h) / sheight;
     // enlarge the lower resolution surface
     if (cx < 1.) { // only check cx since cx should be approx same as cy
       // img is higher res (zoom > 1), resize mask
-      
-      // this scaling is a bit off, but this type of errors are 
+
+      // this scaling is a bit off, but this type of errors are
       // unavoidable when compositing images of different sizes
       size_t maskw = size_t(cmask->GetWidth() / cx);
-      size_t maskh = size_t(cmask->GetHeight() / cy);  
+      size_t maskh = size_t(cmask->GetHeight() / cy);
       target = cairo_image_surface_create(CAIRO_FORMAT_A8, maskw, maskh);
       cr = cairo_create(target);
       cairo_scale(cr, 1. / cx, 1. / cy);
@@ -243,15 +247,15 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
       cairo_paint(cr);
       smask = target;
       cairo_destroy(cr); // destroy before target is used
-      cr = NULL;    
-            
+      cr = NULL;
+
       cairo_scale(cr_, cx, cy);
       cairo_set_source_surface(cr_, simg, x / cx, y / cy);
       cairo_mask_surface(cr_, smask, mx / cx, my / cy);
     }
     else {
       // img is lower res (zoom < 1), resize img
-      
+
       target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
       cr = cairo_create(target);
       cairo_scale(cr, cx, cy);
@@ -259,33 +263,91 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
       cairo_paint(cr);
       simg = target;
       cairo_destroy(cr); // destroy before target is used
-      cr = NULL;    
-            
+      cr = NULL;
+
       cairo_scale(cr_, 1. / cx, 1. / cy);
       cairo_set_source_surface(cr_, simg, x * cx, y * cy);
       cairo_mask_surface(cr_, smask, mx * cx, my * cy);
     }
-    cairo_surface_destroy(target);    
+    cairo_surface_destroy(target);
     cairo_restore(cr_);
   }
-     
+
   return true;
 }
 
 bool CairoCanvas::DrawText(double x, double y, double width, double height,
-                           const char *text, const FontInterface *f, 
+                           const char *text, const FontInterface *f,
                            const Color &c, Alignment align, VAlignment valign,
                            Trimming trimming,  TextFlag text_flag) {
+
+  cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
+
+  return DrawTextInternal(x, y, width, height, text, f, align,
+                          valign, trimming, text_flag);
+}
+
+
+bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
+                                      double height, const char *text,
+                                      const FontInterface *f,
+                                      const CanvasInterface *texture,
+                                      Alignment align, VAlignment valign,
+                                      Trimming trimming, TextFlag text_flag) {
+  const CairoCanvas *cimg = down_cast<const CairoCanvas *>(texture);
+  cairo_surface_t *s = cimg->GetSurface();
+  cairo_pattern_t *pattern = cairo_pattern_create_for_surface(s);
+  if (!pattern) {
+    return false;
+  }
+  cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+
+  bool result;
+  int sheight = cairo_image_surface_get_height(s);
+  int swidth = cairo_image_surface_get_width(s);
+  size_t sw = cimg->GetWidth();
+  size_t sh = cimg->GetHeight();
+  cairo_save(cr_);
+  if (static_cast<size_t>(sheight) != sh || static_cast<size_t>(swidth) != sw) {
+    // CairoGraphics supports only uniform scaling in both X, Y, but due to
+    // rounding differences, we need to compute the exact scaling individually
+    // for X and Y.
+    double cx = sw / swidth;
+    double cy = sh / sheight;
+    cairo_scale(cr_, cx, cy);
+    cairo_set_source(cr_, pattern);
+    result =  DrawTextInternal(x / cx, y / cy, width / cx, height / cy,
+                               text, f, align, valign, trimming, text_flag);
+  } else {
+    cairo_set_source(cr_, pattern);
+    result =  DrawTextInternal(x, y, width, height, text, f, align,
+                               valign, trimming, text_flag);
+  }
+
+  cairo_pattern_destroy(pattern);
+  cairo_restore(cr_);
+  return result;
+}
+
+bool CairoCanvas::DrawTextInternal(double x, double y, double width,
+                                   double height, const char *text,
+                                   const FontInterface *f,
+                                   Alignment align, VAlignment valign,
+                                   Trimming trimming, TextFlag text_flag) {
   if (text == NULL || f == NULL) {
-    return false;    
+    return false;
   }
 
   // If the text is blank, we need to do nothing.
   if (strlen(text) == 0) return true;
 
-  const CairoFont *font = down_cast<const CairoFont*>(f); 
+  cairo_save(cr_);
+  // Restrict the output area.
+  cairo_rectangle(cr_, x, y, x + width, y + height);
+  cairo_clip(cr_);
+
+  const CairoFont *font = down_cast<const CairoFont*>(f);
   PangoLayout *layout = pango_cairo_create_layout(cr_);
-  cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
   pango_layout_set_text(layout, text, -1);
   pango_layout_set_font_description(layout, font->GetFontDescription());
   PangoAttrList *attr_list = pango_attr_list_new();
@@ -295,13 +357,7 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
   PangoRectangle pos;
   // real_x and real_y represent the real position of the layout.
   double real_x = x, real_y = y;
-  const char *const kEllipsisText = "...";
-  cairo_save(cr_);
 
-  // Restrict the output area.
-  cairo_rectangle(cr_, x, y, x + width, y + height);
-  cairo_clip(cr_);
-  
   // Set the underline attribute
   if (text_flag & TEXT_FLAGS_UNDERLINE) {
     underline_attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
@@ -309,7 +365,7 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
     underline_attr->start_index = 0;
     underline_attr->end_index = 0xFFFFFFFF;
     pango_attr_list_insert(attr_list, underline_attr);
-  } 
+  }
   // Set the strikeout attribute.
   if (text_flag & TEXT_FLAGS_STRIKEOUT) {
     strikeout_attr = pango_attr_strikethrough_new(true);
@@ -331,11 +387,11 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
   // Set alignment. This is only effective when wordwrap is set
   // because when wordwrap is unsert, the width have to be set
   // to -1, thus the alignment is useless.
-  if (align == LEFT) 
+  if (align == ALIGN_LEFT)
     pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
-  else if (align == CENTER)
+  else if (align == ALIGN_CENTER)
     pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
-  else if (align == RIGHT)
+  else if (align == ALIGN_RIGHT)
     pango_layout_set_alignment(layout, PANGO_ALIGN_RIGHT);
 
   // Get the pixel extents(logical extents) of the layout.
@@ -344,27 +400,27 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
   int n_lines = pango_layout_get_line_count(layout);
   int line_height = pos.height / n_lines;
   // Calculate number of lines that could be displayed.
-  // We should display one more line as long as there 
+  // We should display one more line as long as there
   // are 5 pixels of blank left. This is only effective
   // when trimming exists.
   int displayed_lines = (static_cast<int>(height) - 5) / line_height + 1;
   if (displayed_lines > n_lines) displayed_lines = n_lines;
 
-  if (trimming == TRIMMING_NONE || (pos.width <= width && 
+  if (trimming == TRIMMING_NONE || (pos.width <= width &&
         pango_layout_get_line_count(layout) <= displayed_lines)) {
     // When there is no trimming, we can directly show the layout.
 
     // Set vertical alignment.
-    if (valign == MIDDLE)
+    if (valign == VALIGN_MIDDLE)
       real_y = y + (height - pos.height) / 2;
-    else if (valign == BOTTOM)
+    else if (valign == VALIGN_BOTTOM)
       real_y = y + height - pos.height;
 
     // When wordwrap is unset, we also have to do the horizontal alignment.
     if ((text_flag & TEXT_FLAGS_WORDWRAP) == 0) {
-      if (align == CENTER)
+      if (align == ALIGN_CENTER)
         real_x = x + (width - pos.width) / 2;
-      else if (align == RIGHT)
+      else if (align == ALIGN_RIGHT)
         real_x = x + width - pos.width;
     }
 
@@ -372,21 +428,21 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
     cairo_move_to(cr_, real_x, real_y);
     pango_cairo_show_layout(cr_, layout);
 
-  } else {     
+  } else {
     // We will use newtext as the content of the layout,
     // because we have to display the trimmed text.
     scoped_array<char> newtext(new char[strlen(text) + 4]);
 
     // Set vertical alignment.
-    if (valign == MIDDLE)
+    if (valign == VALIGN_MIDDLE)
       real_y = y + (height - line_height * displayed_lines) / 2;
-    else if (valign == BOTTOM)
+    else if (valign == VALIGN_BOTTOM)
       real_y = y + height - line_height * displayed_lines;
 
     if (displayed_lines > 1) {
-      // When there are multilines, we will show the above lines first, 
+      // When there are multilines, we will show the above lines first,
       // because trimming will only occurs in the last line.
-      PangoLayoutLine *line = pango_layout_get_line(layout, 
+      PangoLayoutLine *line = pango_layout_get_line(layout,
                                                     displayed_lines - 2);
       int last_line_index = line->start_index + line->length;
       pango_layout_set_text(layout, text, last_line_index);
@@ -413,7 +469,7 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
       // may exceed the width we set before
       pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
       pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_END);
-      
+
     } else if (trimming == TRIMMING_PATH_ELLIPSIS) {
       // Pango has provided path-ellipsis trimming.
       // FIXME: when displaying arabic, the final layout width
@@ -422,11 +478,11 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
       pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_MIDDLE);
 
     } else {
-      // We have to do other type of trimming ourselves, including 
+      // We have to do other type of trimming ourselves, including
       // "character", "word" and "word-ellipsis".
 
       // We want every thing in a single line, so set no word wrap.
-      pango_layout_set_width(layout, -1); 
+      pango_layout_set_width(layout, -1);
       pango_layout_get_pixel_extents(layout, NULL, &pos);
       if (trimming == TRIMMING_WORD_ELLIPSIS) {
         // Only in this condition should we calculate the ellipsis width.
@@ -463,25 +519,25 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
         // In "character", just show the characters before the index.
         pango_layout_set_text(layout, newtext.get(), conceal_index);
 
-      } else {  
+      } else {
         // In "word" or "word-ellipsis" trimming, we have to find out where
-        // last word stops. If we can't find out a reasonable position, then 
+        // last word stops. If we can't find out a reasonable position, then
         // just do trimming as in "character".
         PangoLogAttr *log_attrs;
         int n_attrs;
         pango_layout_get_log_attrs(layout, &log_attrs, &n_attrs);
-        int off = g_utf8_pointer_to_offset(newtext.get(), 
+        int off = g_utf8_pointer_to_offset(newtext.get(),
                                            newtext.get() + conceal_index);
         while (off > 0 && !log_attrs[off].is_word_end &&
                !log_attrs[off].is_word_start)
           --off;
         if (off > 0)
-          conceal_index = g_utf8_offset_to_pointer(newtext.get(), off) - 
+          conceal_index = g_utf8_offset_to_pointer(newtext.get(), off) -
                                                    newtext.get();
           newtext[conceal_index] = 0;
 
         // In word-ellipsis, we have to append the ellipsis manualy.
-        if (trimming == TRIMMING_WORD_ELLIPSIS) 
+        if (trimming == TRIMMING_WORD_ELLIPSIS)
           strcpy(newtext.get() + conceal_index, kEllipsisText);
 
         pango_layout_set_text(layout, newtext.get(), -1);
@@ -489,9 +545,9 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
 
       // We also have to do the horizontal alignment.
       pango_layout_get_pixel_extents(layout, NULL, &pos);
-      if (align == CENTER)
+      if (align == ALIGN_CENTER)
         real_x = x + (width - pos.width) / 2;
-      else if (align == RIGHT)
+      else if (align == ALIGN_RIGHT)
         real_x = x + width - pos.width;
     }
 
@@ -505,11 +561,60 @@ bool CairoCanvas::DrawText(double x, double y, double width, double height,
     } while(pango_layout_iter_next_char(it));
   }
 
-  g_object_unref(layout);
   // This will also free underline_attr and strikeout_attr.
   pango_attr_list_unref(attr_list);
+  g_object_unref(layout);
   cairo_restore(cr_);
 
+  return true;
+}
+
+bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f, 
+                                 TextFlag text_flag, double *width, 
+                                 double *height) {
+  if (text == NULL || f == NULL) {
+    return false;    
+  }
+
+  // If the text is blank, we need to do nothing.
+  if (strlen(text) == 0) {
+    *width = *height = 0; 
+    return true;
+  }
+  
+  const CairoFont *font = down_cast<const CairoFont*>(f); 
+  PangoLayout *layout = pango_cairo_create_layout(cr_);
+  pango_layout_set_text(layout, text, -1);
+  pango_layout_set_font_description(layout, font->GetFontDescription());
+
+  PangoAttrList *attr_list = pango_attr_list_new();
+  if (text_flag & TEXT_FLAGS_UNDERLINE) {
+    PangoAttribute *underline_attr = 
+      pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+    // We want this attribute apply to all text.
+    underline_attr->start_index = 0;
+    underline_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, underline_attr);
+  } 
+  if (text_flag & TEXT_FLAGS_STRIKEOUT) {
+    PangoAttribute *strikeout_attr = pango_attr_strikethrough_new(true);
+    // We want this attribute apply to all text.
+    strikeout_attr->start_index = 0;
+    strikeout_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, strikeout_attr);
+  }
+  pango_layout_set_width(layout, -1); // no word wrap
+  pango_layout_set_attributes(layout, attr_list);
+
+  // Get the pixel extents(logical extents) of the layout.
+  int w, h;
+  pango_layout_get_pixel_size(layout, &w, &h);
+  *width = w;
+  *height = h;
+  
+  // This will also free underline_attr and strikeout_attr.
+  pango_attr_list_unref(attr_list);
+  g_object_unref(layout);
   return true;
 }
 

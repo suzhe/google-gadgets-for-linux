@@ -39,5 +39,15 @@ ADD_EXECUTABLE(wrapper_test_shell
 )
 TARGET_LINK_LIBRARIES(wrapper_test_shell ${LIBS})
 TEST_WRAPPER(wrapper_test_shell)
+
+# Customized js_shell for testing DOM.
+ADD_EXECUTABLE(dom_test_shell
+  js_shell.cc
+  dom_test_shell.cc
+)
+TARGET_LINK_LIBRARIES(dom_test_shell ${LIBS})
+TEST_WRAPPER(dom_test_shell)
+
 JS_TEST_WRAPPER(js_shell json_test.js TRUE)
 JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)
+JS_TEST_WRAPPER(dom_test_shell dom1_test.js TRUE)

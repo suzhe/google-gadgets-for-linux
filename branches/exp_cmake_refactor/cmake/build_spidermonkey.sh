@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+set -e
+
 if [ "$1" = "Release" ]; then
   BUILD_OPT=1
 fi

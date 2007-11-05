@@ -35,7 +35,7 @@ class Muffin : public MockedElement {
   virtual const char *GetTagName() const {
     return "muffin";
   }
-  
+
  public:
   static ggadget::ElementInterface *CreateInstance(
       ggadget::ElementInterface *parent,

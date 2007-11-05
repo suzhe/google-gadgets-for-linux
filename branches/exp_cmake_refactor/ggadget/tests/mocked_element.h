@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_TEST_MOCKED_ELEMENT_H__
-#define GGADGETS_TEST_MOCKED_ELEMENT_H__
+#ifndef GGADGET_TESTS_MOCKED_ELEMENT_H__
+#define GGADGET_TESTS_MOCKED_ELEMENT_H__
 
 #include <string>
 #include "ggadget/element_interface.h"
@@ -25,7 +25,8 @@
 #include "ggadget/view_interface.h"
 #include "ggadget/event.h"
 
-class MockedElement : public ggadget::ElementInterface {
+class MockedElement :
+    public ggadget::ScriptableHelper<ggadget::ElementInterface> {
  public:
   DEFINE_CLASS_ID(0x4d0e8e629a744384, ggadget::ElementInterface);
 
@@ -249,46 +250,46 @@ class MockedElement : public ggadget::ElementInterface {
   virtual bool PinYIsRelative() const {
     return false;
   }
- 
+
   virtual const ggadget::CanvasInterface *GetMaskCanvas() {
     return NULL;
   }
-  
+
   virtual const ggadget::CanvasInterface *Draw(bool *changed) {
     return NULL;
   }
-  
+
   virtual bool IsPositionChanged() const {
     return true;
   }
-  
+
   virtual void ClearPositionChanged() {
   }
-  
+
   virtual void OnParentWidthChange(double width) {
   }
 
   virtual void OnParentHeightChange(double height) {
   }
-  
-  virtual ggadget::ElementInterface *OnMouseEvent(ggadget::MouseEvent *event,
-                                                  bool direct) {
-    return this;
+
+  virtual bool OnMouseEvent(ggadget::MouseEvent *event, bool direct,
+                            ggadget::ElementInterface **fired_element) {
+    *fired_element = this;
+    return true;
   }
 
   virtual bool IsMouseEventIn(ggadget::MouseEvent *event) {
     return true;
   }
 
-  virtual void OnKeyEvent(ggadget::KeyboardEvent *event) {    
+  virtual bool OnKeyEvent(ggadget::KeyboardEvent *event) {
+    return true;
   }
-  
-  virtual void OnOtherEvent(ggadget::Event *event) {    
+
+  virtual bool OnOtherEvent(ggadget::Event *event) {
+    return true;
   }
-  
-  virtual void OnTimerEvent(ggadget::TimerEvent *event) {    
-  }
-  
+
   virtual void SelfCoordToChildCoord(ElementInterface *child,
                                      double x, double y,
                                      double *child_x, double *child_y) {
@@ -299,15 +300,10 @@ class MockedElement : public ggadget::ElementInterface {
         child_x, child_y);
   }
 
-  DEFAULT_OWNERSHIP_POLICY;
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_);
-  virtual bool IsStrict() const { return true; }
-
  private:
-  ggadget::ScriptableHelper scriptable_helper_;
   std::string name_;
   ggadget::ElementInterface *parent_;
   ggadget::ViewInterface *view_;
 };
 
-#endif // GGADGETS_TEST_MOCKED_ELEMENT_H__
+#endif // GGADGETS_TESTS_MOCKED_ELEMENT_H__

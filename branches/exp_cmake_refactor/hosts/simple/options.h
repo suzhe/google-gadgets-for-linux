@@ -18,15 +18,15 @@
 #define HOSTS_SIMPLE_OPTIONS_H__
 
 #include <map>
-
-#include "ggadget/options_interface.h"
-#include "ggadget/string_utils.h"
+#include "ggadget/ggadget.h"
 
 class Options : public ggadget::OptionsInterface {
  public:
-  Options(); 
+  Options();
   virtual ~Options();
 
+  virtual ggadget::Connection *ConnectOnOptionChanged(
+      ggadget::Slot1<void, const char *> *handler);
   virtual size_t GetCount();
   virtual void Add(const char *name, const ggadget::Variant &value);
   virtual bool Exists(const char *name);
@@ -45,6 +45,7 @@ class Options : public ggadget::OptionsInterface {
                    ggadget::GadgetStringComparator> OptionsMap;
   OptionsMap values_;
   OptionsMap defaults_;
+  ggadget::Signal1<void, const char *> onoptionchanged_signal_;
 };
 
 #endif  // HOSTS_SIMPLE_OPTIONS_H__

@@ -17,14 +17,24 @@
 #ifndef GGADGET_OPTIONS_INTERFACE_H__
 #define GGADGET_OPTIONS_INTERFACE_H__
 
-#include "common.h"
-#include "variant.h"
+#include <ggadget/common.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
+
+class Connection;
+template <typename R, typename P1> class Slot1;
 
 class OptionsInterface {
  public:
   virtual ~OptionsInterface() { }
+
+  /**
+   * Connects a handler which will be called when any option changed.
+   * The name of the changed option will be sent as the parameter.
+   */
+  virtual Connection *ConnectOnOptionChanged(
+      Slot1<void, const char *> *handler) = 0;
 
   /**
    * @return the number of items in the options.

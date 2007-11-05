@@ -18,11 +18,18 @@
 #include <locale.h>
 
 #include "ggadget/file_manager.h"
-#include "ggadget/file_manager_impl.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
 using namespace ggadget::internal;
+
+std::string actual_dir_path = "file_manager_test_data";
+std::string actual_gg_path = "file_manager_test_data.gg";
+std::string actual_manifest_path = "file_manager_test_data";
+
+std::string base_dir_path = "file_manager_test_data";
+std::string base_gg_path = "file_manager_test_data.gg";
+std::string base_manifest_path = "file_manager_test_data/gadget.gmanifest";
 
 TEST(file_manager, InitLocaleStrings) {
   FileManagerImpl impl;
@@ -38,7 +45,7 @@ TEST(file_manager, InitLocaleStrings) {
   EXPECT_STREQ("en_US/", impl.locale_prefix_.c_str());
   EXPECT_STREQ("1033/", impl.locale_id_prefix_.c_str());
 
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
+  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.InitLocaleStrings();
   EXPECT_STREQ("zh/", impl.locale_lang_prefix_.c_str());
   EXPECT_STREQ("zh_CN/", impl.locale_prefix_.c_str());
@@ -104,7 +111,7 @@ TEST(file_manager, FindLocalizedFile) {
                impl.FindLocalizedFile("1033_file")->first.c_str());
   EXPECT_TRUE(impl.files_.end() == impl.FindLocalizedFile("zh_CN_file"));
 
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
+  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.InitLocaleStrings();
   EXPECT_STREQ("zh_CN/strings.xml",
                impl.FindLocalizedFile("strings.xml")->first.c_str());
@@ -124,7 +131,7 @@ TEST(file_manager, FindLocalizedFile) {
 void TestFileManagerFunctions(const std::string &base_path,
                               const std::string &actual_path) {
   FileManagerImpl impl;
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
+  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.Init(base_path.c_str());
 
   for (FileManagerImpl::FileMap::const_iterator it = impl.files_.begin();
@@ -155,23 +162,21 @@ void TestFileManagerFunctions(const std::string &base_path,
 }
 
 TEST(file_manager, FileManagerDir) {
-  TestFileManagerFunctions("file_manager_test_data", "file_manager_test_data");
+  TestFileManagerFunctions(base_dir_path, actual_dir_path);
 }
 
 TEST(file_manager, FileManagerZip) {
-  TestFileManagerFunctions("file_manager_test_data.gg",
-                           "file_manager_test_data.gg");
+  TestFileManagerFunctions(base_gg_path, actual_gg_path);
 }
 
 TEST(file_manager, FileManagerDirManifest) {
-  TestFileManagerFunctions("file_manager_test_data/gadget.gmanifest",
-                           "file_manager_test_data");
+  TestFileManagerFunctions(base_manifest_path, actual_manifest_path);
 }
 
 TEST(file_manager, StringTable) {
   FileManagerImpl impl;
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
-  impl.Init("file_manager_test_data");
+  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
+  impl.Init(base_dir_path.c_str());
 
   EXPECT_EQ(3U, impl.string_table_.size());
   EXPECT_STREQ("", impl.string_table_["blank-value"].c_str());
@@ -181,8 +186,8 @@ TEST(file_manager, StringTable) {
 
 TEST(file_manager, GetTranslatedFileContents) {
   FileManagerImpl impl;
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
-  impl.Init("file_manager_test_data");
+  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
+  impl.Init(base_dir_path.c_str());
 
   const char *kMainXMLOriginalContents = 
     "<root root-attr1=\"root-value1\" root-attr2=\"&root-attr2;\""
@@ -200,38 +205,30 @@ TEST(file_manager, GetTranslatedFileContents) {
   std::string data;
   std::string path;
   ASSERT_TRUE(impl.GetFileContents("main.xml", &data, &path));
-  EXPECT_STREQ("file_manager_test_data/main.xml", path.c_str());
+  EXPECT_STREQ((actual_dir_path + "/main.xml").c_str(), path.c_str());
   EXPECT_STREQ(kMainXMLOriginalContents, data.c_str());
   ASSERT_TRUE(impl.GetXMLFileContents("main.xml", &data, &path));
   EXPECT_STREQ(kMainXMLTranslatedContents, data.c_str());
 }
-/*
-TEST(file_manager, ParseXML) {
-  FileManager file_manager;
-  ASSERT_STREQ("zh_CN.UTF8", setlocale(LC_MESSAGES, "zh_CN.UTF8"));
-  file_manager.Init("file_manager_test_data");
 
-  TiXmlDocument *doc = file_manager.ParseXMLFile("main.xml");
-  ASSERT_TRUE(doc);
-  TiXmlElement *root = doc->RootElement();
-  ASSERT_TRUE(root);
-  EXPECT_STREQ("root", root->Value());
-  EXPECT_STREQ("root-value1", root->Attribute("root-attr1"));
-  EXPECT_STREQ("根元素属性2", root->Attribute("root-attr2"));
-  EXPECT_STREQ("<&>xyz ", root->Attribute("root-attr3"));
-
-  TiXmlElement *second = root->FirstChildElement();
-  ASSERT_TRUE(second);
-  EXPECT_STREQ("第二层元素的文本内容", second->GetText());
-
-  TiXmlElement *third = second->NextSiblingElement();
-  ASSERT_TRUE(third);
-  // TinyXML removes the starting '&' of a non-existing entity.
-  EXPECT_STREQ("non-existence;", third->GetText());
-  delete doc;
-}
-*/
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
+
+  // Hack for running test out of source tree.
+  // .gg file will be generated in builddir on the fly.
+  char *srcdir = getenv("srcdir");
+  char *builddir = getenv("builddir");
+  if (srcdir && *srcdir) {
+    std::cout << "srcdir=" << srcdir << std::endl;
+    actual_dir_path = std::string(srcdir) + std::string("/") + actual_dir_path;
+    actual_manifest_path = std::string(srcdir) + std::string("/") + actual_manifest_path;
+    base_dir_path = std::string(srcdir) + std::string("/") + base_dir_path;
+    base_manifest_path = std::string(srcdir) + std::string("/") + base_manifest_path;
+  }
+  if (builddir && *builddir) {
+    std::cout << "builddir=" << builddir << std::endl;
+    actual_gg_path = std::string(srcdir) + std::string("/") + actual_gg_path;
+    base_gg_path = std::string(srcdir) + std::string("/") + base_gg_path;
+  }
   return RUN_ALL_TESTS();
 }

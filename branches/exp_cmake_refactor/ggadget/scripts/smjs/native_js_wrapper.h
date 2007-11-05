@@ -18,11 +18,11 @@
 #define GGADGET_NATIVE_JS_WRAPPER_H__
 
 #include <jsapi.h>
-#include "ggadget/common.h"
+#include <ggadget/common.h>
+#include "ggadget/scriptable_interface.h"
 
 namespace ggadget {
 
-class ScriptableInterface;
 class Connection;
 
 /**
@@ -32,7 +32,8 @@ class Connection;
 class NativeJSWrapper {
 
  public:
-   NativeJSWrapper(JSContext *js_context, ScriptableInterface *scriptable);
+   NativeJSWrapper(JSContext *js_context, JSObject *js_object,
+                   ScriptableInterface *scriptable);
   ~NativeJSWrapper();
 
   /**
@@ -45,6 +46,17 @@ class NativeJSWrapper {
 
   JSObject *js_object() const { return js_object_; }
   ScriptableInterface *scriptable() const { return scriptable_; }
+  ScriptableInterface::OwnershipPolicy ownership_policy() const {
+    return ownership_policy_;
+  }
+
+  static JSClass *GetWrapperJSClass() { return &wrapper_js_class_; }
+
+  /**
+   * Detach the wrapper object from JavaScript so that the engine can
+   * GC it. 
+   */
+  void DetachJS();
 
 private:
   DISALLOW_EVIL_CONSTRUCTORS(NativeJSWrapper);
@@ -55,9 +67,7 @@ private:
    * Get the @c NativeJSWrapper pointer from a JS wrapped
    * @c ScriptableInterface object.
    */
-  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx,
-                                           JSObject *js_object,
-                                           JSBool finalizing);
+  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
 
   static JSBool CallWrapperMethod(JSContext *cx, JSObject *obj,
                                   uintN argc, jsval *argv, jsval *rval);
@@ -86,6 +96,7 @@ private:
   static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id);
   static void FinalizeWrapper(JSContext *cx, JSObject *obj);
 
+  JSBool CheckNotDeleted();
   JSBool InvokeMethod(uintN argc, jsval *argv, jsval *rval);
   JSBool GetPropertyDefault(jsval id, jsval *vp);
   JSBool SetPropertyDefault(jsval id, jsval vp);
@@ -102,6 +113,7 @@ private:
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
   Connection *ondelete_connection_;
+  ScriptableInterface::OwnershipPolicy ownership_policy_;
 };
 
 } // namespace ggadget

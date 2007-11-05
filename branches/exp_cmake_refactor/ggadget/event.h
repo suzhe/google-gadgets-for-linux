@@ -19,8 +19,8 @@
 
 namespace ggadget {
 
-/** 
- * Class for holding event information. There are several subclasses for 
+/**
+ * Class for holding event information. There are several subclasses for
  * events features in common.
  */
 class Event {
@@ -40,6 +40,8 @@ class Event {
     EVENT_UNDOCK,
     EVENT_FOCUS_IN,
     EVENT_FOCUS_OUT,
+    EVENT_TIMER_TICK,
+    EVENT_CHANGE,
     EVENT_SIMPLE_RANGE_END,
 
     EVENT_MOUSE_RANGE_START = 10000,
@@ -52,24 +54,23 @@ class Event {
     EVENT_MOUSE_OVER,
     EVENT_MOUSE_WHEEL,
     EVENT_MOUSE_RANGE_END,
-    
+
     EVENT_KEY_RANGE_START = 20000,
     EVENT_KEY_DOWN,
     EVENT_KEY_UP,
     EVENT_KEY_PRESS,
     EVENT_KEY_RANGE_END,
-    
+
     EVENT_DRAG_RANGE_START = 30000,
     EVENT_DRAG_DROP,
     EVENT_DRAG_OUT,
     EVENT_DRAG_OVER,
     EVENT_DRAG_RANGE_END,
 
-    EVENT_TIMER_TICK = 40000,
-    EVENT_SIZING,
+    EVENT_SIZING = 40000,
     EVENT_OPTION_CHANGED,
   };
-      
+
   explicit Event(Type t) : type_(t) { ASSERT(IsSimpleEvent()); }
   Event(const Event &e) : type_(e.type_) { ASSERT(IsSimpleEvent()); }
 
@@ -88,7 +89,7 @@ class Event {
   Event(Type t, int dummy) : type_(t) { }
 
  private:
-  Type type_; 
+  Type type_;
 };
 
 /**
@@ -105,7 +106,7 @@ class MouseEvent : public Event {
   };
 
   MouseEvent(Type t, double x, double y, Button button, int wheel_delta)
-      : Event(t, 0), x_(x), y_(y), button_(button), wheel_delta_(wheel_delta) { 
+      : Event(t, 0), x_(x), y_(y), button_(button), wheel_delta_(wheel_delta) {
     ASSERT(IsMouseEvent());
   }
 
@@ -127,13 +128,15 @@ class MouseEvent : public Event {
   int GetWheelDelta() const { return wheel_delta_; }
   void SetWheelDelta(int wheel_delta) { wheel_delta_ = wheel_delta; }
 
+  static const int kWheelDelta = 120;
+
  private:
   double x_, y_;
   Button button_;
   int wheel_delta_;
 };
 
-/** 
+/**
  * Class representing a keyboard event.
  */
 class KeyboardEvent : public Event {
@@ -141,11 +144,11 @@ class KeyboardEvent : public Event {
   /**
    * Key codes compatible with the Windows version.
    * Most of the following names correspond VK_XXX macros in winuser.h, except
-   * for some confusing names. 
-   *  
+   * for some confusing names.
+   *
    * They are only used in @c EVENT_KEY_DOWN and @c EVENT_KEY_UP events.
    * In @c EVENT_KEY_PRESS, the keyCode attribute is the the chararacter code.
-   */   
+   */
   enum KeyCode {
     KEY_CANCEL         = 3,
     KEY_BACK           = 8,
@@ -233,7 +236,7 @@ class KeyboardEvent : public Event {
   };
 
   KeyboardEvent(Type t, unsigned int key_code)
-      : Event(t, 0), key_code_(key_code) { 
+      : Event(t, 0), key_code_(key_code) {
     ASSERT(IsKeyboardEvent());
   };
 
@@ -255,7 +258,7 @@ class KeyboardEvent : public Event {
 class DragEvent : public Event {
  public:
   DragEvent(Type t, double x, double y, const char **files)
-      : Event(t, 0), x_(x), y_(y), files_(files) { 
+      : Event(t, 0), x_(x), y_(y), files_(files) {
     ASSERT(IsDragEvent());
   }
 
@@ -278,42 +281,13 @@ class DragEvent : public Event {
   const char **files_;
 };
 
-/** 
- * Class representing a timer event.
- */
-class TimerEvent : public Event {
- public:
-  TimerEvent(void *data, uint64_t time) 
-      : Event(EVENT_TIMER_TICK, 0), 
-        data_(data), time_(time), receive_more_(true) { 
-  };
-
-  void *GetData() const { return data_; };
-
-  /** 
-   * Returns the time of the event in microsecond units. This should only 
-   * be used for relative time comparisons, to compute elapsed time.
-   */
-  uint64_t GetTimeStamp() const { return time_; };
-
-  /** Sets that this timer should not be received anymore. */
-  void StopReceivingMore() { receive_more_ = false; }
-  /** Gets whether or not more events should be received. */
-  bool GetReceiveMore() const { return receive_more_; };
-  
- private:
-  void *data_;
-  uint64_t time_;
-  bool receive_more_;
-};
-
 /**
  * Class representing a sizing event.
  */
 class SizingEvent : public Event {
  public:
   SizingEvent(double width, double height)
-      : Event(EVENT_SIZING, 0), width_(width), height_(height) { 
+      : Event(EVENT_SIZING, 0), width_(width), height_(height) {
   }
 
   SizingEvent(const SizingEvent &e)
@@ -337,7 +311,7 @@ class SizingEvent : public Event {
 class OptionChangedEvent : public Event {
  public:
   OptionChangedEvent(const char *property_name)
-      : Event(EVENT_OPTION_CHANGED, 0), property_name_(property_name) { 
+      : Event(EVENT_OPTION_CHANGED, 0), property_name_(property_name) {
   }
 
   OptionChangedEvent(const OptionChangedEvent &e)

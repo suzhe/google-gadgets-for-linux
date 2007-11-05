@@ -20,37 +20,48 @@
 #include "string_utils.h"
 #include "scriptable_helper.h"
 #include "scriptable_interface.h"
-#include "signal.h"
+#include "signals.h"
 #include "slot.h"
 
 namespace ggadget {
+namespace internal {
 
-class ScriptableHelper::Impl {
+class ScriptableHelperImpl : public ScriptableHelperImplInterface {
  public:
-  Impl();
-  ~Impl();
+  ScriptableHelperImpl();
+  virtual ~ScriptableHelperImpl();
 
-  void RegisterProperty(const char *name, Slot *getter, Slot *setter);
-  void RegisterStringEnumProperty(const char *name,
-                                  Slot *getter, Slot *setter,
-                                  const char **names, int count);
-  void RegisterMethod(const char *name, Slot *slot);
-  void RegisterSignal(const char *name, Signal *signal);
-  void RegisterConstants(int count,
-                         const char * const names[],
-                         const Variant values[]);
-  void SetPrototype(ScriptableInterface *prototype);
-  void SetArrayHandler(Slot *getter, Slot *setter);
-  void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
+  virtual void RegisterProperty(const char *name, Slot *getter, Slot *setter);
+  virtual void RegisterStringEnumProperty(const char *name,
+                                          Slot *getter, Slot *setter,
+                                          const char **names, int count);
+  virtual void RegisterMethod(const char *name, Slot *slot);
+  virtual void RegisterSignal(const char *name, Signal *signal);
+  virtual void RegisterConstants(int count,
+                                 const char * const names[],
+                                 const Variant values[]);
+  virtual void SetPrototype(ScriptableInterface *prototype);
+  virtual void SetArrayHandler(Slot *getter, Slot *setter);
+  virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
 
-  Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
-  bool GetPropertyInfoByName(const char *name,
-                             int *id, Variant *prototype,
-                             bool *is_method);
-  bool GetPropertyInfoById(int id, Variant *prototype,
-                           bool *is_method, const char **name);
-  Variant GetProperty(int id);
-  bool SetProperty(int id, Variant value);
+  // The following 5 methods declared in ScriptableInterface should never be
+  // called.
+  virtual uint64_t GetClassId() const { return 0; }
+  virtual OwnershipPolicy Attach() { ASSERT(false); return NATIVE_OWNED; }
+  virtual bool Detach() { ASSERT(false); return false; }
+  virtual bool IsInstanceOf(uint64_t class_id) const {
+    ASSERT(false); return false;
+  }
+  virtual bool IsStrict() const { ASSERT(false); return false; }
+
+  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
+  virtual bool GetPropertyInfoByName(const char *name,
+                                     int *id, Variant *prototype,
+                                     bool *is_method);
+  virtual bool GetPropertyInfoById(int id, Variant *prototype,
+                                   bool *is_method, const char **name);
+  virtual Variant GetProperty(int id);
+  virtual bool SetProperty(int id, Variant value);
 
  private:
   typedef std::map<const char *, int, GadgetCharPtrComparator> SlotIndexMap;
@@ -90,7 +101,11 @@ class ScriptableHelper::Impl {
   Variant last_dynamic_property_value_;
 };
 
-ScriptableHelper::Impl::Impl()
+ScriptableHelperImplInterface *NewScriptableHelperImpl() {
+  return new ScriptableHelperImpl();
+}
+
+ScriptableHelperImpl::ScriptableHelperImpl()
     : sealed_(false),
       property_count_(0),
       prototype_(NULL),
@@ -101,7 +116,7 @@ ScriptableHelper::Impl::Impl()
       last_dynamic_property_name_(NULL) {
 }
 
-ScriptableHelper::Impl::~Impl() {
+ScriptableHelperImpl::~ScriptableHelperImpl() {
   // Emit the ondelete signal, as early as possible.
   ondelete_signal_();
 
@@ -133,7 +148,7 @@ ScriptableHelper::Impl::~Impl() {
   delete dynamic_property_setter_;
 }
 
-void ScriptableHelper::Impl::RegisterProperty(const char *name,
+void ScriptableHelperImpl::RegisterProperty(const char *name,
                                               Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
   ASSERT(name);
@@ -188,7 +203,7 @@ class StringEnumSetter {
   int count_;
 };
 
-void ScriptableHelper::Impl::RegisterStringEnumProperty(
+void ScriptableHelperImpl::RegisterStringEnumProperty(
     const char *name, Slot *getter, Slot *setter,
     const char **names, int count) {
   ASSERT(getter);
@@ -206,7 +221,7 @@ void ScriptableHelper::Impl::RegisterStringEnumProperty(
   RegisterProperty(name, new_getter, new_setter);
 }
 
-void ScriptableHelper::Impl::RegisterMethod(const char *name, Slot *slot) {
+void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
   ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(slot);
@@ -222,7 +237,7 @@ void ScriptableHelper::Impl::RegisterMethod(const char *name, Slot *slot) {
   ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
 }
 
-void ScriptableHelper::Impl::RegisterSignal(const char *name, Signal *signal) {
+void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
   ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(signal);
@@ -245,19 +260,19 @@ void ScriptableHelper::Impl::RegisterSignal(const char *name, Signal *signal) {
   ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
 }
 
-void ScriptableHelper::Impl::RegisterConstants(int count,
-                                               const char * const names[],
-                                               const Variant values[]) {
+void ScriptableHelperImpl::RegisterConstants(int count,
+                                             const char * const names[],
+                                             const Variant values[]) {
   for (int i = 0; i < count; i++)
     constants_[names[i]] = values ? values[i] : Variant(i);
 }
 
-void ScriptableHelper::Impl::SetPrototype(ScriptableInterface *prototype) {
+void ScriptableHelperImpl::SetPrototype(ScriptableInterface *prototype) {
   ASSERT(!sealed_);
   prototype_ = prototype;
 }
 
-void ScriptableHelper::Impl::SetArrayHandler(Slot *getter, Slot *setter) {
+void ScriptableHelperImpl::SetArrayHandler(Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
   ASSERT(getter && getter->GetArgCount() == 1 &&
          getter->GetArgTypes()[0] == Variant::TYPE_INT64);
@@ -267,7 +282,7 @@ void ScriptableHelper::Impl::SetArrayHandler(Slot *getter, Slot *setter) {
   array_setter_ = setter;
 }
 
-void ScriptableHelper::Impl::SetDynamicPropertyHandler(
+void ScriptableHelperImpl::SetDynamicPropertyHandler(
     Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
   ASSERT(getter && getter->GetArgCount() == 1 &&
@@ -278,13 +293,14 @@ void ScriptableHelper::Impl::SetDynamicPropertyHandler(
   dynamic_property_setter_ = setter;
 }
 
-Connection *ScriptableHelper::Impl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
+Connection *ScriptableHelperImpl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
   return ondelete_signal_.ConnectGeneral(slot);
 }
 
-bool ScriptableHelper::Impl::GetPropertyInfoByName(const char *name,
-                                                   int *id, Variant *prototype,
-                                                   bool *is_method) {
+// NOTE: Must be exception-safe because the handler may throw exceptions.
+bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
+                                                 int *id, Variant *prototype,
+                                                 bool *is_method) {
   ASSERT(name);
   ASSERT(id);
   ASSERT(prototype);
@@ -294,7 +310,7 @@ bool ScriptableHelper::Impl::GetPropertyInfoByName(const char *name,
   // First check if the property is a constant.
   ConstantMap::const_iterator constants_it = constants_.find(name);
   if (constants_it != constants_.end()) {
-    *id = ScriptableInterface::ID_CONSTANT_PROPERTY;
+    *id = ScriptableInterface::kConstantPropertyId;
     *prototype = constants_it->second;
     *is_method = false;
     return true;
@@ -314,10 +330,10 @@ bool ScriptableHelper::Impl::GetPropertyInfoByName(const char *name,
 
   // Not found in registered properties, try dynamic property getter.
   if (dynamic_property_getter_) {
-    Variant params[] = { Variant(name) };
-    last_dynamic_property_value_ = dynamic_property_getter_->Call(1, params);
+    Variant param(name);
+    last_dynamic_property_value_ = dynamic_property_getter_->Call(1, &param);
     if (last_dynamic_property_value_.type() != Variant::TYPE_VOID) {
-      *id = ScriptableInterface::ID_DYNAMIC_PROPERTY;
+      *id = ScriptableInterface::kDynamicPropertyId;
       last_dynamic_property_name_ = name;
       *prototype = last_dynamic_property_value_;
       *is_method = false;
@@ -338,9 +354,9 @@ bool ScriptableHelper::Impl::GetPropertyInfoByName(const char *name,
   return false;
 }
 
-bool ScriptableHelper::Impl::GetPropertyInfoById(int id, Variant *prototype,
-                                                 bool *is_method,
-                                                 const char **name) {
+bool ScriptableHelperImpl::GetPropertyInfoById(int id, Variant *prototype,
+                                               bool *is_method,
+                                               const char **name) {
   ASSERT(prototype);
   ASSERT(is_method);
   sealed_ = true;
@@ -371,7 +387,8 @@ bool ScriptableHelper::Impl::GetPropertyInfoById(int id, Variant *prototype,
   return true;
 }
 
-Variant ScriptableHelper::Impl::GetProperty(int id) {
+// NOTE: Must be exception-safe because the handler may throw exceptions.
+Variant ScriptableHelperImpl::GetProperty(int id) {
   sealed_ = true;
   if (id >= 0) {
     // The id is an array index.
@@ -383,7 +400,7 @@ Variant ScriptableHelper::Impl::GetProperty(int id) {
     return Variant();
   }
 
-  if (id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
+  if (id == ScriptableInterface::kDynamicPropertyId) {
     // We require the script engine call GetProperty immediately after calling
     // GetPropertyInfoByName() if the returned id is ID_DYNAMIC_PROPERTY.
     // Here return the value cached in GetPropertyInfoByName().
@@ -410,7 +427,8 @@ Variant ScriptableHelper::Impl::GetProperty(int id) {
   return slot->Call(0, NULL);
 }
 
-bool ScriptableHelper::Impl::SetProperty(int id, Variant value) {
+// NOTE: Must be exception-safe because the handler may throw exceptions.
+bool ScriptableHelperImpl::SetProperty(int id, Variant value) {
   sealed_ = true;
   if (id >= 0) {
     // The id is an array index.
@@ -426,7 +444,7 @@ bool ScriptableHelper::Impl::SetProperty(int id, Variant value) {
     return false;
   }
 
-  if (id == ScriptableInterface::ID_DYNAMIC_PROPERTY) {
+  if (id == ScriptableInterface::kDynamicPropertyId) {
     // We require the script engine call GetProperty immediately after calling
     // GetPropertyInfoByName() if the returned id is ID_DYNAMIC_PROPERTY.
     ASSERT(dynamic_property_getter_);
@@ -459,74 +477,5 @@ bool ScriptableHelper::Impl::SetProperty(int id, Variant value) {
   return true;
 }
 
-// All ScriptableHelper operations are delegated to impl_.
-ScriptableHelper::ScriptableHelper()
-    : impl_(new Impl()) {
-}
-
-ScriptableHelper::~ScriptableHelper() {
-  delete impl_;
-}
-
-void ScriptableHelper::RegisterProperty(const char *name,
-                                        Slot *getter, Slot *setter) {
-  impl_->RegisterProperty(name, getter, setter);
-}
-
-void ScriptableHelper::RegisterStringEnumProperty(const char *name,
-                                                  Slot *getter, Slot *setter,
-                                                  const char **names,
-                                                  int count) {
-  impl_->RegisterStringEnumProperty(name, getter, setter, names, count);
-}
-
-void ScriptableHelper::RegisterMethod(const char *name, Slot *slot) {
-  impl_->RegisterMethod(name, slot);
-}
-
-void ScriptableHelper::RegisterSignal(const char *name, Signal *signal) {
-  impl_->RegisterSignal(name, signal);
-}
-
-void ScriptableHelper::RegisterConstants(int count,
-                                         const char * const names[],
-                                         const Variant values[]) {
-  impl_->RegisterConstants(count, names, values);
-}
-
-void ScriptableHelper::SetPrototype(ScriptableInterface *prototype) {
-  impl_->SetPrototype(prototype);
-}
-
-void ScriptableHelper::SetArrayHandler(Slot *getter, Slot *setter) {
-  impl_->SetArrayHandler(getter, setter);
-}
-
-void ScriptableHelper::SetDynamicPropertyHandler(Slot *getter, Slot *setter) {
-  impl_->SetDynamicPropertyHandler(getter, setter);
-}
-
-Connection *ScriptableHelper::ConnectToOnDeleteSignal(Slot0<void> *slot) {
-  return impl_->ConnectToOnDeleteSignal(slot);
-}
-
-bool ScriptableHelper::GetPropertyInfoByName(const char *name,
-                                             int *id, Variant *prototype,
-                                             bool *is_method) {
-  return impl_->GetPropertyInfoByName(name, id, prototype, is_method);
-}
-
-bool ScriptableHelper::GetPropertyInfoById(int id, Variant *prototype,
-                                           bool *is_method, const char **name) {
-  return impl_->GetPropertyInfoById(id, prototype, is_method, name);
-}
-
-Variant ScriptableHelper::GetProperty(int id) {
-  return impl_->GetProperty(id);
-}
-
-bool ScriptableHelper::SetProperty(int id, Variant value) {
-  return impl_->SetProperty(id, value);
-}
-
+} // namespace internal
 } // namespace ggadget

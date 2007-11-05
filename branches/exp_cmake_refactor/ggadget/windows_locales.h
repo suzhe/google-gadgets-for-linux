@@ -23,7 +23,7 @@ namespace ggadget {
 
 /**
  * Gets the corresponding Windows locale identifier for a given locale name.
- *  
+ *
  * This function is only for historical compatibility. Google desktop gadget
  * library for Windows uses Windows locale identifiers as the names of
  * subdirectories containing localized resources.

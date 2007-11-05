@@ -1,16 +1,18 @@
-// Copyright 2007 Google Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
 
 function TestScriptableBasics(scriptable) {
   scriptable.Buffer = "TestBuffer";
@@ -89,12 +91,6 @@ DEATH_TEST("Test string property with object", function() {
 DEATH_TEST("Test string property with an array", function() {
   // The following assignment should cause an error.
   scriptable.Buffer = [1,2,3];
-  ASSERT(DEATH());
-});
-
-DEATH_TEST("Test string property with null", function() {
-  // The following assignment should cause an error.
-  scriptable.Buffer = null;
   ASSERT(DEATH());
 });
 
@@ -332,6 +328,37 @@ TEST("Test JSON property", function() {
   scriptable.JSON = {};
   ASSERT(EQ("{}", scriptable.Buffer));
   ASSERT(OBJECT_STRICT_EQ({}, scriptable.JSON));
+});
+
+function NewAndUse() {
+  var s = new TestScriptable();
+  s.onlunch = function() {
+    s.EnumSimple = 100;
+  };
+  gc(); // The function should not be deleted now.
+  s.time = "lunch";
+  ASSERT(EQ(100, s.EnumSimple));
+  scriptable.TestMethodVoid0();
+}
+
+TEST("Test global class", function() {
+  var s = new TestScriptable();
+  TestScriptableBasics(s);
+  scriptable.TestMethodVoid0();
+  s = new TestScriptable();
+  gc();
+  // The previous 's' should be deleted now.
+  ASSERT(EQ("Destruct\n", scriptable.Buffer));
+
+  NewAndUse();
+  gc();
+  // The object allocated in NewAndUse() should be deleted now.
+  ASSERT(EQ("Destruct\n", scriptable.Buffer));
+
+  TestScriptableBasics(s);
+  var s1 = new TestScriptable();
+  TestScriptableBasics(s1);
+  // Don't call GC now to test GC on destroying the script context.
 });
 
 RUN_ALL_TESTS();

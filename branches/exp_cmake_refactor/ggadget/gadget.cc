@@ -15,130 +15,118 @@
 */
 
 #include "gadget.h"
-#include "file_manager.h"
+#include "file_manager_interface.h"
 #include "gadget_consts.h"
-#include "string_utils.h"
+#include "gadget_host_interface.h"
+#include "options_interface.h"
 #include "scriptable_helper.h"
 #include "scriptable_options.h"
-#include "script_context_interface.h"
-#include "script_runtime_interface.h"
-#include "view.h"
+#include "view_host_interface.h"
+#include "view_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
 
-class Gadget::Impl : public ScriptableInterface {
+class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
 
-  class Debug : public ScriptableInterface {
+  class Debug : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xa9b59e70c74649da, ScriptableInterface);
     Debug(Gadget::Impl *owner) {
-      scriptable_helper_.RegisterMethod("error",
-                                        NewSlot(owner, &Impl::DebugError));
-      scriptable_helper_.RegisterMethod("trace",
-                                        NewSlot(owner, &Impl::DebugTrace));
-      scriptable_helper_.RegisterMethod("warning",
-                                        NewSlot(owner, &Impl::DebugWarning));
+      RegisterMethod("error", NewSlot(owner, &Impl::DebugError));
+      RegisterMethod("trace", NewSlot(owner, &Impl::DebugTrace));
+      RegisterMethod("warning", NewSlot(owner, &Impl::DebugWarning));
     }
-    DEFAULT_OWNERSHIP_POLICY
-    DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-    virtual bool IsStrict() const { return true; }
-    ScriptableHelper scriptable_helper_;
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  class Storage : public ScriptableInterface {
+  class Storage : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xd48715e0098f43d1, ScriptableInterface);
     Storage(Gadget::Impl *owner) {
-      scriptable_helper_.RegisterMethod("extract",
-                                        NewSlot(owner, &Impl::ExtractFile));
-      scriptable_helper_.RegisterMethod("openText",
-                                        NewSlot(owner, &Impl::OpenTextFile));
+      RegisterMethod("extract", NewSlot(owner, &Impl::ExtractFile));
+      RegisterMethod("openText", NewSlot(owner, &Impl::OpenTextFile));
     }
-    DEFAULT_OWNERSHIP_POLICY
-    DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-    virtual bool IsStrict() const { return true; }
-    ScriptableHelper scriptable_helper_;
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  class GadgetGlobalPrototype : public ScriptableInterface {
+  static void RegisterStrings(
+      GadgetStringMap *strings,
+      ScriptableHelper<ScriptableInterface> *scriptable) {
+    for (GadgetStringMap::const_iterator it = strings->begin();
+         it != strings->end(); ++it) {
+      scriptable->RegisterConstant(it->first.c_str(), it->second);
+    }
+  }
+
+  class Strings : public ScriptableHelper<ScriptableInterface> {
+   public:
+    DEFINE_CLASS_ID(0x13679b3ef9a5490e, ScriptableInterface);
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
+  };
+
+  class GadgetGlobalPrototype : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
     GadgetGlobalPrototype(Gadget::Impl *owner) {
-      scriptable_helper_.RegisterConstant("gadget", owner);
-      scriptable_helper_.RegisterConstant("options",
-                                          &owner->scriptable_options_);
-      // TODO: scriptable_helper_.SetPrototype(The System global prototype).
+      RegisterConstant("gadget", owner);
+      RegisterConstant("options", &owner->scriptable_options_);
+      RegisterConstant("strings", &owner->strings_);
+      // TODO: SetPrototype(The System global prototype).
       // The System global prototype provides global constants and framework.
     }
-    DEFAULT_OWNERSHIP_POLICY
-    DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-    virtual bool IsStrict() const { return true; }
-    ScriptableHelper scriptable_helper_;
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  Impl(ScriptRuntimeInterface *script_runtime,
-       ElementFactoryInterface *element_factory,
-       OptionsInterface *options,
-       Gadget *owner)
-      : debug_(this),
+  Impl(GadgetHostInterface *host, OptionsInterface *options, Gadget *owner)
+      : host_(host),
+        debug_(this),
         storage_(this),
         gadget_global_prototype_(this),
+        options_(options),
         scriptable_options_(options),
-        script_runtime_(script_runtime),
-        file_manager_(new FileManager()),
-        main_context_(script_runtime->CreateContext()),
-        main_view_(new View(main_context_, owner,
-                            &gadget_global_prototype_,
-                            element_factory)),
-        options_context_(script_runtime->CreateContext()),
-        options_view_(new View(options_context_, owner,
-                               &gadget_global_prototype_,
-                               element_factory)) {
-    script_runtime_->ConnectErrorReporter(NewSlot(this,
-                                                  &Impl::ReportScriptError));
-    scriptable_helper_.RegisterConstant("debug", &debug_);
-    scriptable_helper_.RegisterConstant("storage", &storage_);
+        file_manager_(NULL),
+        main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
+                                          &gadget_global_prototype_,
+                                          options)) {
+    RegisterConstant("debug", &debug_);
+    RegisterConstant("storage", &storage_);
   }
 
   ~Impl() {
-    delete main_view_;
-    main_view_ = NULL;
-    delete options_view_;
-    options_view_ = NULL;
+    delete main_view_host_;
+    main_view_host_ = NULL;
     delete file_manager_;
     file_manager_ = NULL;
-    main_context_->Destroy();
-    main_context_ = NULL;
-    options_context_->Destroy();
-    options_context_ = NULL;
+    delete options_;
+    options_ = NULL;
   }
 
-  void ReportScriptError(const char *message) {
-    LOG("Script ERROR: %s", message);
-  }
+  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
   void DebugError(const char *message) {
-    LOG("ERROR: %s", message);
+    host_->DebugOutput(GadgetHostInterface::DEBUG_ERROR, message);
   }
 
   void DebugTrace(const char *message) {
-    LOG("TRACE: %s", message);
+    host_->DebugOutput(GadgetHostInterface::DEBUG_TRACE, message);
   }
 
-  void DebugWarning(const char *warning) {
-    LOG("WARNING: %s", warning);
+  void DebugWarning(const char *message) {
+    host_->DebugOutput(GadgetHostInterface::DEBUG_WARNING, message);
   }
 
   std::string ExtractFile(const char *filename) {
+    ASSERT(file_manager_);
     std::string extracted_file;
     return file_manager_->ExtractFile(filename, &extracted_file) ?
            extracted_file : "";
   }
 
   std::string OpenTextFile(const char *filename) {
+    ASSERT(file_manager_);
     std::string data;
     std::string real_path;
     return file_manager_->GetFileContents(filename, &data, &real_path) ?
@@ -152,15 +140,19 @@ class Gadget::Impl : public ScriptableInterface {
     return it->second.c_str();
   }
 
-  bool InitFromPath(const char *base_path) {
-    if (!file_manager_->Init(base_path))
-      return false;
+  bool Init(FileManagerInterface *file_manager) {
+    ASSERT(file_manager);
+    file_manager_ = file_manager;
+
+    GadgetStringMap *strings = file_manager_->GetStringTable();
+    RegisterStrings(strings, &gadget_global_prototype_);
+    RegisterStrings(strings, &strings_);
 
     std::string manifest_contents;
     std::string manifest_path;
-    if (!file_manager_->GetXMLFileContents(kGadgetGManifest,
-                                           &manifest_contents,
-                                           &manifest_path))
+    if (!file_manager->GetXMLFileContents(kGadgetGManifest,
+                                          &manifest_contents,
+                                          &manifest_path))
       return false;
     if (!ParseXMLIntoXPathMap(manifest_contents.c_str(),
                               manifest_path.c_str(),
@@ -169,7 +161,7 @@ class Gadget::Impl : public ScriptableInterface {
       return false;
     // TODO: Is it necessary to check the required fields in manifest?
 
-    if (!main_view_->InitFromFile(kMainXML)) {
+    if (!main_view_host_->GetView()->InitFromFile(file_manager, kMainXML)) {
       DLOG("Failed to setup the main view");
       return false;
     }
@@ -180,27 +172,20 @@ class Gadget::Impl : public ScriptableInterface {
     return true;
   }
 
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-  ScriptableHelper scriptable_helper_;
+  GadgetHostInterface *host_;
   Debug debug_;
   Storage storage_;
+  Strings strings_;
   GadgetGlobalPrototype gadget_global_prototype_;
+  OptionsInterface *options_;
   ScriptableOptions scriptable_options_;
-  ScriptRuntimeInterface *script_runtime_;
   FileManagerInterface *file_manager_;
-  ScriptContextInterface *main_context_;
-  ViewInterface *main_view_;
-  ScriptContextInterface *options_context_;
-  ViewInterface *options_view_;
+  ViewHostInterface *main_view_host_;
   GadgetStringMap manifest_info_map_;
 };
 
-Gadget::Gadget(ScriptRuntimeInterface *script_runtime,
-               ElementFactoryInterface *element_factory,
-               OptionsInterface *options)
-    : impl_(new Impl(script_runtime, element_factory, options, this)) {
+Gadget::Gadget(GadgetHostInterface *host, OptionsInterface *options)
+    : impl_(new Impl(host, options, this)) {
 }
 
 Gadget::~Gadget() {
@@ -208,36 +193,16 @@ Gadget::~Gadget() {
   impl_ = NULL;
 }
 
-ViewInterface* Gadget::GetMainView() {
-  return impl_->main_view_;
+bool Gadget::Init(FileManagerInterface *file_manager) {
+  return impl_->Init(file_manager);
 }
 
-ViewInterface* Gadget::GetOptionsView() {
-  return impl_->options_view_;
-}
-
-FileManagerInterface *Gadget::GetFileManager() {
-  return impl_->file_manager_;
-}
-
-bool Gadget::InitFromPath(const char *base_path) {
-  return impl_->InitFromPath(base_path);
+ViewHostInterface *Gadget::GetMainViewHost() {
+  return impl_->main_view_host_;
 }
 
 const char *Gadget::GetManifestInfo(const char *key) {
   return impl_->GetManifestInfo(key);
-}
-
-void Gadget::DebugError(const char *message) {
-  return impl_->DebugError(message);
-}
-
-void Gadget::DebugTrace(const char *message) {
-  return impl_->DebugTrace(message);
-}
-
-void Gadget::DebugWarning(const char *message) {
-  return impl_->DebugWarning(message);
 }
 
 } // namespace ggadget

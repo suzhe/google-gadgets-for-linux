@@ -17,8 +17,8 @@
 #ifndef GGADGET_ELEMENTS_H__
 #define GGADGET_ELEMENTS_H__
 
-#include "common.h"
-#include "scriptable_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
@@ -38,7 +38,7 @@ class MouseEvent;
  * Elements is used for storing and managing a set of objects which
  * implement the @c ElementInterface.
  */
-class Elements : public ScriptableInterface {
+class Elements : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0xe3bdb064cb794282, ScriptableInterface)
 
@@ -140,46 +140,45 @@ class Elements : public ScriptableInterface {
    * Remove all elements from the container.
    */
   void RemoveAllElements();
-  
-  /** Notifies all children that the host has changed. */
-  void HostChanged();
-  
-  /** 
-   * Notifies all children using relative positioning that the 
-   * parent's width changed. 
-   * @param width new width of the parent in pixels
+
+  /**
+   * Notifies all children using relative positioning that the
+   * parent's width changed.
+   * @param width new width of the parent in pixels.
    */
   void OnParentWidthChange(double width);
-  
-  /** 
-   * Notifies all children using relative positioning that the 
+
+  /**
+   * Notifies all children using relative positioning that the
    * parent's height changed.
-   * @param height new height of the parent in pixels 
+   * @param height new height of the parent in pixels.
    */
   void OnParentHeightChange(double height);
-  
+
   /**
    * Draw all the elements in this object onto a canvas that has the same size
    * as that of the parent.
-   * @param[out] changed false if the returned canvas is unchanged, true otherwise
-   * @return canvas with the elements drawn. NULL if GetCount() == 0.
+   * @param[out] changed @c false if the returned canvas is unchanged, @c true
+   *     otherwise.
+   * @return canvas with the elements drawn. @c NULL if
+   *     <code>GetCount() == 0</code>.
    */
   const CanvasInterface *Draw(bool *changed);
-  
-  /** 
-   * Handler of the mouse events. 
-   * @return the element who processed the event, or @c NULL if no one.
+
+  /**
+   * Handler of the mouse events.
+   * @param event the mouse event.
+   * @param[out] fired_event the element who processed the event, or
+   *     @c NULL if no one.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
    */
-  ElementInterface *OnMouseEvent(MouseEvent *event);
+  bool OnMouseEvent(MouseEvent *event, ElementInterface **fired_element);
 
   /**
    * Sets if the drawing contents can be scrolled within the parent.
    */
   void SetScrollable(bool scrollable);
-
-  DEFAULT_OWNERSHIP_POLICY
-  SCRIPTABLE_INTERFACE_DECL
-  virtual bool IsStrict() const { return true; }
 
  private:
   class Impl;

@@ -22,7 +22,6 @@
 #include <errno.h>
 
 #include "file_manager.h"
-#include "file_manager_impl.h"
 #include "common.h"
 #include "gadget_consts.h"
 #include "third_party/unzip/unzip.h"
@@ -53,6 +52,10 @@ bool FileManagerImpl::Init(const char *base_path) {
                  kGManifestExt) == 0) {
     base_path_ = path;
   }
+
+  // Remove the trailing slash if any.
+  if (*(base_path_.end() - 1) == kPathSeparator)
+    base_path_.erase(base_path_.end() - 1);
 
   struct stat stat_value;
   bzero(&stat_value, sizeof(stat_value));
@@ -482,6 +485,10 @@ bool FileManager::GetXMLFileContents(const char *file,
 
 bool FileManager::ExtractFile(const char *file, std::string *into_file) {
   return impl_->ExtractFile(file, into_file);
+}
+
+GadgetStringMap *FileManager::GetStringTable() {
+  return &impl_->string_table_;
 }
 
 } // namespace ggadget

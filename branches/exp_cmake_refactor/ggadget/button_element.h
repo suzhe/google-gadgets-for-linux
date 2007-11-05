@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_BUTTON_ELEMENT_H__
-#define GGADGETS_BUTTON_ELEMENT_H__
+#ifndef GGADGET_BUTTON_ELEMENT_H__
+#define GGADGET_BUTTON_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
@@ -44,16 +44,17 @@ class ButtonElement : public BasicElement {
   /** Gets and sets the file name of disabled button image. */
   const char *GetDisabledImage() const;
   void SetDisabledImage(const char *img);
-  
+
   /** Gets and sets the file name of mouse over button image. */
   const char *GetOverImage() const;
   void SetOverImage(const char *img);
-  
+
   /** Gets and sets the file name of mouse down button image. */
   const char *GetDownImage() const;
   void SetDownImage(const char *img);
-  
-  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
+
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
@@ -69,4 +70,4 @@ class ButtonElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_BUTTON_ELEMENT_H__
+#endif // GGADGET_BUTTON_ELEMENT_H__

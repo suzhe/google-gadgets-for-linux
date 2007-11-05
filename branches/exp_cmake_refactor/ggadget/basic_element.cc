@@ -13,7 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-
+#include <iostream>
 #include "basic_element.h"
 #include "common.h"
 #include "math_utils.h"
@@ -251,9 +251,9 @@ class BasicElement::Impl {
 
   // Retrieves the opacity of the element.
   int GetIntOpacity() const {
-    return RoundToInt(opacity_ * 255);
+    return static_cast<int>(round(opacity_ * 255));
   }
-  
+
   // Sets the opacity of the element.
   void SetIntOpacity(int opacity) {
     if (0 <= opacity && 255 >= opacity) {
@@ -271,9 +271,13 @@ class BasicElement::Impl {
 
   static int ParsePixelOrRelative(const Variant &input, double *output) {
     switch (input.type()) {
-      // The input is a pixel value.
+      // The input is an integer pixel value.
       case Variant::TYPE_INT64:
         *output = VariantValue<int>()(input);
+        return 0;
+      // The input is a double pixel value.
+      case Variant::TYPE_DOUBLE:
+        *output = round(VariantValue<double>()(input));
         return 0;
       // The input is a relative percent value.
       case Variant::TYPE_STRING: {
@@ -299,7 +303,7 @@ class BasicElement::Impl {
       snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
       return Variant(std::string(buf));
     } else {
-      return Variant(static_cast<int>(pixel));
+      return Variant(static_cast<int>(round(pixel)));
     }
   }
 
@@ -310,8 +314,8 @@ class BasicElement::Impl {
   void SetWidth(const Variant &width) {
     double v;
     switch (ParsePixelOrRelative(width, &v)) {
-      case 0: SetPixelWidth(v); break;
-      case 1: SetRelativeWidth(v, false); break;
+      case 0: owner_->SetPixelWidth(v); break;
+      case 1: owner_->SetRelativeWidth(v); break;
       default: break;
     }
   }
@@ -323,8 +327,8 @@ class BasicElement::Impl {
   void SetHeight(const Variant &height) {
     double v;
     switch (ParsePixelOrRelative(height, &v)) {
-      case 0: SetPixelHeight(v); break;
-      case 1: SetRelativeHeight(v, false); break;
+      case 0: owner_->SetPixelHeight(v); break;
+      case 1: owner_->SetRelativeHeight(v); break;
       default: break;
     }
   }
@@ -381,10 +385,6 @@ class BasicElement::Impl {
     }
   }
 
-  void HostChanged() {
-    children_.HostChanged();
-  }
-
   const CanvasInterface *Draw(bool *changed) {
     const CanvasInterface *canvas = NULL;
     const CanvasInterface *children_canvas = NULL;
@@ -395,13 +395,13 @@ class BasicElement::Impl {
     if (!visible_) { // if not visible, then return no matter what
       goto exit;
     }
-    
+
     children_canvas = children_.Draw(&child_changed);
     change = change || child_changed | changed_ || !canvas_;
     changed_ = false;
-    
+
     if (change) {
-      // Need to redraw.    
+      // Need to redraw.
       SetUpCanvas();
       canvas_->MultiplyOpacity(opacity_);
       owner_->DoDraw(canvas_, children_canvas);
@@ -415,7 +415,7 @@ class BasicElement::Impl {
 
     canvas = canvas_;
 
-  exit:  
+  exit:
     *changed = change;
     return canvas;
   }
@@ -438,7 +438,7 @@ class BasicElement::Impl {
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
       ASSERT(gfx);
-      canvas_ = gfx->NewCanvas(static_cast<size_t>(ceil(width_)), 
+      canvas_ = gfx->NewCanvas(static_cast<size_t>(ceil(width_)),
                                static_cast<size_t>(ceil(height_)));
       if (!canvas_) {
         DLOG("Error: unable to create canvas.");
@@ -476,18 +476,21 @@ class BasicElement::Impl {
   }
 
  public:
-  ElementInterface *OnMouseEvent(MouseEvent *event, bool direct) {
+  bool OnMouseEvent(MouseEvent *event, bool direct,
+                    ElementInterface **fired_element) {
+    *fired_element = NULL;
     if (!direct) {
       // Send to the children first.
-      ElementInterface *child = children_.OnMouseEvent(event);
-      if (child)
-        return child;
+      bool result = children_.OnMouseEvent(event, fired_element);
+      if (*fired_element)
+        return result;
     }
 
-    // Don't check mouse position, because the event may be out of this 
-    // element when this element is grabbing mouse.
     if (!enabled_)
-      return NULL;
+      return true;
+
+    // Don't check mouse position, because the event may be out of this
+    // element when this element is grabbing mouse.
 
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
@@ -514,9 +517,11 @@ class BasicElement::Impl {
         view_->FireEvent(&scriptable_event, ondblclick_event_);
         break;
       case Event::EVENT_MOUSE_OUT:
+        // TODO reset cursor
         view_->FireEvent(&scriptable_event, onmouseout_event_);
         break;
       case Event::EVENT_MOUSE_OVER:
+        // TODO set cursor
         view_->FireEvent(&scriptable_event, onmouseover_event_);
         break;
       case Event::EVENT_MOUSE_WHEEL:
@@ -526,20 +531,21 @@ class BasicElement::Impl {
         ASSERT(false);
     }
 
-    return owner_;
+    *fired_element = owner_;
+    return scriptable_event.GetReturnValue();
   }
 
-  void OnKeyEvent(KeyboardEvent *event) {
+  bool OnKeyEvent(KeyboardEvent *event) {
     if (!enabled_)
-      return;
+      return true;
 
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
     DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str(), event->GetKeyCode());
-    
+
     switch (event->GetType()) {
       case Event::EVENT_KEY_DOWN:
-        view_->FireEvent(&scriptable_event, onkeydown_event_);      
+        view_->FireEvent(&scriptable_event, onkeydown_event_);
         break;
       case Event::EVENT_KEY_UP:
         view_->FireEvent(&scriptable_event, onkeyup_event_);
@@ -550,9 +556,13 @@ class BasicElement::Impl {
       default:
         ASSERT(false);
     }
+    return scriptable_event.GetReturnValue();
   }
 
-  void OnOtherEvent(Event *event) {
+  bool OnOtherEvent(Event *event) {
+    if (!enabled_)
+      return true;
+
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
     DLOG("%s(%s|%s)", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str());
@@ -568,6 +578,7 @@ class BasicElement::Impl {
       default:
         ASSERT(false);
     }
+    return scriptable_event.GetReturnValue();
   }
 
  public:
@@ -685,7 +696,7 @@ BasicElement::BasicElement(ElementInterface *parent,
   RegisterProperty("offsetY",
                    NewSlot(this, &BasicElement::GetPixelY), NULL);
   RegisterProperty("opacity",
-                   NewSlot(impl_, &Impl::GetIntOpacity), 
+                   NewSlot(impl_, &Impl::GetIntOpacity),
                    NewSlot(impl_, &Impl::SetIntOpacity));
   RegisterConstant("parentElement", parent);
   RegisterProperty("pinX",
@@ -957,7 +968,7 @@ double BasicElement::GetOpacity() const {
 }
 
 void BasicElement::SetOpacity(double opacity) {
-  if (opacity >= 0.0 && opacity <= 1.0) { 
+  if (opacity >= 0.0 && opacity <= 1.0) {
     impl_->SetOpacity(opacity);
   }
 }
@@ -1003,17 +1014,8 @@ void BasicElement::ClearPositionChanged() {
   impl_->position_changed_ = false;
 }
 
-bool BasicElement::IsPositionChanged() const { 
+bool BasicElement::IsPositionChanged() const {
   return impl_->position_changed_;
-}
-
-void BasicElement::SetSelfChanged(bool changed) { 
-  impl_->changed_ = changed;
-  impl_->view_->QueueDraw();
-}
-
-bool BasicElement::IsSelfChanged() const {
-  return impl_->changed_;
 }
 
 #if 0 // TODO: ensure if they are needed.
@@ -1021,7 +1023,7 @@ void BasicElement::ClearVisibilityChanged() {
   impl_->visibility_changed_ = false;
 }
 
-bool BasicElement::IsVisibilityChanged() const { 
+bool BasicElement::IsVisibilityChanged() const {
   return impl_->visibility_changed_;
 }
 
@@ -1032,7 +1034,23 @@ CanvasInterface *BasicElement::SetUpCanvas() {
 CanvasInterface *BasicElement::GetCanvas() {
   return impl_->canvas_;
 }
+
+void BasicElement::SetSelfChanged(bool changed) { 
+  impl_->changed_ = changed;
+  impl_->view_->QueueDraw();
+}
+
+bool BasicElement::IsSelfChanged() const {
+  return impl_->changed_;
+}
 #endif
+
+void BasicElement::QueueDraw() {
+  impl_->changed_ = true;
+  if (impl_->visible_) {
+    impl_->view_->QueueDraw();
+  }
+}
 
 void BasicElement::OnParentWidthChange(double width) {
   if (impl_->x_relative_)
@@ -1048,20 +1066,17 @@ void BasicElement::OnParentHeightChange(double height) {
     impl_->SetRelativeHeight(impl_->pheight_, true);
 }
 
-ElementInterface *BasicElement::OnMouseEvent(MouseEvent *event, bool direct) {
-  return impl_->OnMouseEvent(event, direct);
+bool BasicElement::OnMouseEvent(MouseEvent *event, bool direct,
+                                ElementInterface **fired_element) {
+  return impl_->OnMouseEvent(event, direct, fired_element);
 }
 
-void BasicElement::OnKeyEvent(KeyboardEvent *event) {
-  impl_->OnKeyEvent(event);
+bool BasicElement::OnKeyEvent(KeyboardEvent *event) {
+  return impl_->OnKeyEvent(event);
 }
 
-void BasicElement::OnOtherEvent(Event *event) {
-  impl_->OnOtherEvent(event);
-}
-
-void BasicElement::OnTimerEvent(TimerEvent *event) {
-  // blank implementation
+bool BasicElement::OnOtherEvent(Event *event) {
+  return impl_->OnOtherEvent(event);
 }
 
 bool BasicElement::IsMouseEventIn(MouseEvent *event) {

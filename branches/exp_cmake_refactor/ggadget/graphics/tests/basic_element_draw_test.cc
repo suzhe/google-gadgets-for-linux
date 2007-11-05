@@ -33,15 +33,15 @@ class ViewWithGraphics : public MockedView {
  public:
    ViewWithGraphics() : MockedView(gFactory), gfx_(new CairoGraphics(1.0)) {
    }
-   
+
    ~ViewWithGraphics() {
      delete gfx_;
    }
-   
+
    virtual const GraphicsInterface *GetGraphics() const {
      return gfx_;
    }
-   
+
  private:
    GraphicsInterface *gfx_; 
 };
@@ -65,9 +65,9 @@ class Muffin : public BasicElement {
       canvas->DrawCanvas(0., 0., children_canvas);
     }
   }
-  
+
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, BasicElement)
-  
+
   static ElementInterface *CreateInstance(
       ElementInterface *parent,
       ViewInterface *view,
@@ -90,7 +90,7 @@ class Pie : public BasicElement {
   virtual void SetColor(const Color &c) {
     color_ = c;
   }
-  
+
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) {
     canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(), color_);
@@ -104,7 +104,7 @@ class Pie : public BasicElement {
       const char *name) {
     return new Pie(parent, view, name);
   }
-  
+
  private:
   Color color_;
 };
@@ -114,7 +114,7 @@ class BasicElementTest : public testing::Test {
   CanvasInterface *target_;
   cairo_surface_t *surface_;
   ViewInterface *view_;
-   
+
   BasicElementTest() {
     // create a target canvas for tests
     surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);    
@@ -125,17 +125,17 @@ class BasicElementTest : public testing::Test {
     target_ = new CairoCanvas(cr, 300, 150, false);
     cairo_destroy(cr);    
     cr = NULL;
-    
+
     view_ = new ViewWithGraphics();
   }
-   
+
   ~BasicElementTest() {
     delete view_;
     view_ = NULL;
-    
+
     target_->Destroy();
     target_ = NULL;
-    
+
     if (g_savepng) {
       const testing::TestInfo *const test_info = 
         testing::UnitTest::GetInstance()->current_test_info();
@@ -143,11 +143,11 @@ class BasicElementTest : public testing::Test {
       snprintf(file, arraysize(file), "%s.png", test_info->name());
       cairo_surface_write_to_png(surface_, file);      
     }
-    
+
     cairo_surface_destroy(surface_);
     surface_ = NULL;
   }  
-  
+
   virtual void SetUp() {
   }
 
@@ -159,10 +159,10 @@ class BasicElementTest : public testing::Test {
 TEST_F(BasicElementTest, ElementsDraw) {
   Muffin m(NULL, view_, NULL);
   Pie *p = NULL;
-  
+
   m.SetPixelWidth(200.);
   m.SetPixelHeight(100.);
-  
+
   m.GetChildren()->AppendElement("pie", NULL);    
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(0));
   p->SetColor(Color(1., 1., 1.));
@@ -173,7 +173,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetOpacity(.8);
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
-  
+
   m.GetChildren()->AppendElement("pie", NULL);    
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(1));
   p->SetColor(Color(0., 1., 0.));
@@ -185,7 +185,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetRotation(90.);
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
-  
+
   m.GetChildren()->AppendElement("pie", NULL);    
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(2));
   p->SetColor(Color(0., 0., 1.));
@@ -197,7 +197,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetRotation(60.);
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
-  
+
   m.GetChildren()->AppendElement("pie", NULL);    
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(3));
   p->SetColor(Color(0., 1., 1.));
@@ -209,15 +209,15 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetRotation(30.);
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
-  
+
   bool changed = false;
   const CanvasInterface *canvas = m.Draw(&changed);
   ASSERT_TRUE(canvas != NULL);
   EXPECT_TRUE(changed);
-  
+
   EXPECT_TRUE(target_->DrawCanvas(10, 10, canvas));
 }
- 
+
 int main(int argc, char *argv[]) {
   testing::ParseGUnitFlags(&argc, argv);  
   for (int i = 0; i < argc; i++) {
@@ -226,7 +226,7 @@ int main(int argc, char *argv[]) {
       break;
     }
   }
-  
+
   gFactory = new ElementFactory();
   gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);
   gFactory->RegisterElementClass("pie", Pie::CreateInstance);

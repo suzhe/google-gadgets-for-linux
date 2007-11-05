@@ -17,7 +17,7 @@
 #ifndef GGADGET_ELEMENT_INTERFACE_H__
 #define GGADGET_ELEMENT_INTERFACE_H__
 
-#include "scriptable_interface.h"
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
@@ -222,31 +222,39 @@ class ElementInterface : public ScriptableInterface {
   virtual bool PinXIsRelative() const = 0;
   /** Retrieve whether pin y is relative to its height. */
   virtual bool PinYIsRelative() const = 0;
-  
-  /** 
+
+  /**
    * Handler of the mouse events.
    * @param event the mouse event.
    * @param direct if @c true, this event is sent to the element directly, so
    *     it should not dispatch it to its children.
-   * @return the element who processed the event, or @c NULL if no one.
+   * @param[out] fired_event the element who processed the event, or
+   *     @c NULL if no one.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
    */
-  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct) = 0;
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element) = 0;
   /**
    * Check if the position of mouse event is in the element.
    * Should consider masks.
    */
   virtual bool IsMouseEventIn(MouseEvent *event) = 0;
-  /** Handler of the keyboard events. */
-  virtual void OnKeyEvent(KeyboardEvent *event) = 0;
-  /** Handler for other events. */
-  virtual void OnOtherEvent(Event *event) = 0;
-
-  /** 
-   * Handler for timer events. 
-   * Set event->StopReceivingMore() to cancel the timer. 
+  /**
+   * Handler of the keyboard events.
+   * @param event the keyboard event.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
    */
-  virtual void OnTimerEvent(TimerEvent *event) = 0;
-  
+  virtual bool OnKeyEvent(KeyboardEvent *event) = 0;
+  /**
+   * Handler for other events.
+   * @param event the keyboard event.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
+   */
+  virtual bool OnOtherEvent(Event *event) = 0;
+
   /**
    * Retrieves the opacity of the element.
    */
@@ -256,7 +264,7 @@ class ElementInterface : public ScriptableInterface {
    * @param opacity valid range: 0 ~ 1.
    */
   virtual void SetOpacity(double opacity) = 0;
-  
+
   /**
    * Retrieves whether or not the element is visible.
    */
@@ -295,19 +303,19 @@ class ElementInterface : public ScriptableInterface {
    * Removes the keyboard focus from the element.
    */
   virtual void KillFocus() = 0;
- 
+
   /**
    * Draws the current element to a canvas. The caller does NOT own this canvas
    * and should not free it.
-   * @param[out] changed True if the returned canvas is different from that 
+   * @param[out] changed True if the returned canvas is different from that
    *   of the last call, false otherwise.
    * @return A canvas suitable for drawing. NULL if element is not visible.
    */
   virtual const CanvasInterface *Draw(bool *changed) = 0;
-  
-  /** 
+
+  /**
    * Checks to see if position of the element has changed since the last draw
-   * relative to the parent. Specifically, this checks for changes in 
+   * relative to the parent. Specifically, this checks for changes in
    * x, y, pinX, pinY, and rotation.
    */
   virtual bool IsPositionChanged() const = 0;
@@ -328,14 +336,14 @@ class ElementInterface : public ScriptableInterface {
   /**
    * Converts coordinates in a this element's space to coordinates in a
    * child element.
-   * 
+   *
    * The default implementation should directly call ParentCoorddToChildCoord.
-   * Element implementation should override this method if it supports 
+   * Element implementation should override this method if it supports
    * scrolling.
    *
    * @param child a child element of this element.
    * @param x x-coordinate in this element's space to convert.
-   * @param y y-coordinate in this element's space to convert. 
+   * @param y y-coordinate in this element's space to convert.
    * @param[out] child_x parameter to store the converted child x-coordinate.
    * @param[out] child_y parameter to store the converted child y-coordinate.
    */

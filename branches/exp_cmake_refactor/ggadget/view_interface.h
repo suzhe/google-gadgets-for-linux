@@ -17,8 +17,8 @@
 #ifndef GGADGET_VIEW_INTERFACE_H__
 #define GGADGET_VIEW_INTERFACE_H__
 
-#include "scriptable_interface.h"
-#include "signal.h"
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/signals.h>
 
 namespace ggadget {
 
@@ -29,7 +29,6 @@ class HostInterface;
 class Event;
 class KeyboardEvent;
 class MouseEvent;
-class TimerEvent;
 class ScriptableEvent;
 class Elements;
 class GraphicsInterface;
@@ -55,15 +54,6 @@ class ViewInterface : public ScriptableInterface {
     RESIZABLE_ZOOM,
   };
 
-  /** 
-   * Attach a view to a host displaying it. A view may only be associated with
-   * one host at a time.
-   * @param host HostInterface to attach to this view. 
-   *   Pass in NULL to detach view from any host.
-   * @return true on success, false otherwise. 
-   */
-  virtual bool AttachHost(HostInterface *host) = 0;
-
   /**
    * @return the ScriptContextInterface object associated with this view.
    */ 
@@ -78,28 +68,40 @@ class ViewInterface : public ScriptableInterface {
    * Read XML definition from the file and init the view, and start running.
    * @param filename the file name in the gadget.
    * @return @c true if succeedes.
-   */ 
-  virtual bool InitFromFile(const char *filename) = 0;
-
-  /** Handler of the mouse events. */
-  virtual void OnMouseEvent(MouseEvent *event) = 0;
-  /** Handler of the keyboard events. */
-  virtual void OnKeyEvent(KeyboardEvent *event) = 0;  
-  /** Handler for other events. */
-  virtual void OnOtherEvent(Event *event) = 0;
-
-  /** 
-   * Handler for timer events. 
-   * Set event->StopReceivingMore() to cancel the timer. 
    */
-  virtual void OnTimerEvent(TimerEvent *event) = 0;
-  
+  virtual bool InitFromFile(FileManagerInterface *file_manager,
+                            const char *filename) = 0;
+
+  /**
+   * Handler of the mouse events.
+   * @param event the mouse event.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
+   */
+  virtual bool OnMouseEvent(MouseEvent *event) = 0;
+
+  /**
+   * Handler of the keyboard events.
+   * @param event the keyboard event.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
+   */
+  virtual bool OnKeyEvent(KeyboardEvent *event) = 0;
+
+  /**
+   * Handler for other events.
+   * @param event the event.
+   * @return @c false to disable the default handling of this event, or
+   *     @c true otherwise.
+   */
+  virtual bool OnOtherEvent(Event *event) = 0;
+
   /** Called when any element is added into the view hierarchy. */
   virtual void OnElementAdd(ElementInterface *element) = 0;
   /** Called when any element in the view hierarchy is about to be removed. */
   virtual void OnElementRemove(ElementInterface *element) = 0;
 
-  /** Any elements should call this method when it need to fire an event. */ 
+  /** Any elements should call this method when it need to fire an event. */
   virtual void FireEvent(ScriptableEvent *event,
                          const EventSignal &event_signal) = 0;
 
@@ -116,26 +118,26 @@ class ViewInterface : public ScriptableInterface {
    * @param element the element to put focus on.  If it is @c NULL, only remove
    *     the focus from the current focused element and thus no element has
    *     the focus.
-   */ 
+   */
   virtual void SetFocus(ElementInterface *element) = 0;
 
-  /** 
+  /**
    * Set the width of the view.
-   * @return true if new size is allowed, false otherwise. 
+   * @return true if new size is allowed, false otherwise.
    * */
   virtual bool SetWidth(int width) = 0;
-  /** 
-   * Set the height of the view. 
+  /**
+   * Set the height of the view.
    * @return true if new size is allowed, false otherwise.
    */
   virtual bool SetHeight(int height) = 0;
-  /** 
-   * Set the size of the view. Use this when setting both height and width 
-   * to prevent two invocations of the sizing event. 
+  /**
+   * Set the size of the view. Use this when setting both height and width
+   * to prevent two invocations of the sizing event.
    * @return true if new size is allowed, false otherwise.
    * */
   virtual bool SetSize(int width, int height) = 0;
-    
+
   /** Retrieves the width of the view in pixels. */
   virtual int GetWidth() const = 0;
   /** Retrieves the height of view in pixels. */
@@ -144,15 +146,15 @@ class ViewInterface : public ScriptableInterface {
   /**
    * Draws the current view to a canvas. The caller does NOT own this canvas
    * and should not free it.
-   * @param[out] changed True if the returned canvas is different from that 
+   * @param[out] changed True if the returned canvas is different from that
    *   of the last call, false otherwise.
    * @return A canvas suitable for drawing. This should never be NULL.
    */
   virtual const CanvasInterface *Draw(bool *changed) = 0;
-  
+
   /** Asks the host to redraw the given view. */
   virtual void QueueDraw() = 0;
-  
+
   /**
    * @return the current graphics interface used for drawing elements.
    */
@@ -198,7 +200,7 @@ class ViewInterface : public ScriptableInterface {
    * view.
    */
   virtual Elements *GetChildren() = 0;
-  
+
   /**
    * Looks up an element from all elements directly or indirectly contained
    * in this view by its name.
@@ -214,17 +216,17 @@ class ViewInterface : public ScriptableInterface {
 
  public: // Timer, interval and animation functions.
   /**
-   * Starts an animation timer. The @a slot is called periodically during 
+   * Starts an animation timer. The @a slot is called periodically during
    * @a duration with a value between @a start_value and @a end_value according
    * to the progress.
-   * 
+   *
    * The value parameter of the slot is calculated as
    * (where progress is a float number between 0 and 1): <code>
    * value = start_value + (int)((end_value - start_value) * progress).</code>
    *
    * Note: The number of times the slot is called depends on the system
    * performance and current load of the system. It may be as high as 100 fps.
-   * 
+   *
    * @param slot the call target of the timer. This @c ViewInterface instance
    *     becomes the owner of this slot after this call.
    * @param start_value start value of the animation.
@@ -232,7 +234,7 @@ class ViewInterface : public ScriptableInterface {
    * @param duration the duration of the whole animation in milliseconds.
    * @return the animation token that can be used in @c CancelAnimation().
    */
-  virtual int BeginAnimation(Slot1<void, int> *slot,
+  virtual int BeginAnimation(Slot0<void> *slot,
                              int start_value,
                              int end_value,
                              unsigned int duration) = 0;
@@ -279,6 +281,11 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual int GetDebugMode() const = 0;
 
+  /**
+   * Called by the global options object when any option changed.
+   */
+  virtual void OnOptionChanged(const char *name) = 0;
+
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.
@@ -289,6 +296,14 @@ class ViewInterface : public ScriptableInterface {
   virtual Image *LoadImage(const char *name, bool is_mask) = 0;
 
   /**
+   * Load an image from the global file manager.
+   * @param name the name within the gadget base path.
+   * @param is_mask if the image is used as a mask.
+   * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
+   */
+  virtual Image *LoadImageFromGlobal(const char *name, bool is_mask) = 0;
+
+  /**
    * Load a texture from image file or create a colored texture.
    * @param name the name of an image file within the gadget base path, or a
    *     color description with HTML-style color ("#rrggbb"), or HTML-style
@@ -296,6 +311,12 @@ class ViewInterface : public ScriptableInterface {
    * @return the created texture ifsucceeds, or @c NULL.
    */
   virtual Texture *LoadTexture(const char *name) = 0;
+
+  /** 
+   * Open the given URL in the user's default web brower.
+   * Only HTTP, HTTPS, and FTP URLs are supported.
+   */
+  virtual bool OpenURL(const char *url) const = 0;
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

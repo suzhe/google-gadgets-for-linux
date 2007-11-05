@@ -17,38 +17,56 @@
 #ifndef GGADGET_SCRIPTABLE_DELEGATOR_H__
 #define GGADGET_SCRIPTABLE_DELEGATOR_H__
 
-#include "scriptable_interface.h"
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
 /**
  * Wraps another @c ScriptableInterface instance and delegates all method
  * calls except @c IsStrict() to it.
- * 
+ *
  * It's useful when registering different script objects backed with the same
  * C++ object in a script context.  For example, in a view's script context,
  * the view object is registered as the global object which is not strict,
  * while at the same time, as the global 'view' variable which is strict.
  * In this case, we register the non-strict view object as the global object,
  * while register a strict @c ScriptableDelegator of the view object as the
- * 'view' variable.  
+ * 'view' variable.
  *
- * @see ScriptableInterface::IsStrict()  
+ * @see ScriptableInterface::IsStrict()
  */
 class ScriptableDelegator : public ScriptableInterface {
  public:
-	ScriptableDelegator(ScriptableInterface *scriptable, bool strict)
-	    : scriptable_(scriptable),
-	      strict_(strict) { }
-	virtual ~ScriptableDelegator() { }
+  ScriptableDelegator(ScriptableInterface *scriptable, bool strict)
+      : scriptable_(scriptable),
+    strict_(strict) { }
+  virtual ~ScriptableDelegator() { }
 
-  DEFAULT_OWNERSHIP_POLICY
-	DELEGATE_SCRIPTABLE_INTERFACE(*scriptable_)
-	
+	virtual uint64_t GetClassId() const { return scriptable_->GetClassId(); }
   virtual bool IsInstanceOf(uint64_t class_id) const {
     return scriptable_->IsInstanceOf(class_id);
   }
+  virtual OwnershipPolicy Attach() { return NATIVE_OWNED; }
+  virtual bool Detach() { return false; }
   virtual bool IsStrict() const { return strict_; }
+  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {
+    return scriptable_->ConnectToOnDeleteSignal(slot);
+  }
+  virtual bool GetPropertyInfoByName(const char *name,
+                                     int *id, Variant *prototype,
+                                     bool *is_method) {
+    return scriptable_->GetPropertyInfoByName(name, id, prototype, is_method);
+  }
+  virtual bool GetPropertyInfoById(int id, Variant *prototype,
+                                   bool *is_method, const char **name) {
+    return scriptable_->GetPropertyInfoById(id, prototype, is_method, name);
+  }
+  virtual Variant GetProperty(int id) {
+    return scriptable_->GetProperty(id);
+  }
+  virtual bool SetProperty(int id, Variant value) {
+    return scriptable_->SetProperty(id, value);
+  }
 
  private:
   ScriptableInterface *scriptable_;

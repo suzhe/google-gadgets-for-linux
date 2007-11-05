@@ -14,16 +14,18 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_TEST_MOCKED_VIEW_H__
-#define GGADGETS_TEST_MOCKED_VIEW_H__
+#ifndef GGADGET_TESTS_MOCKED_VIEW_H__
+#define GGADGET_TESTS_MOCKED_VIEW_H__
 
 #include <string>
-#include "ggadget/signal.h"
+#include "ggadget/signals.h"
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/view_interface.h"
 
-class MockedView : public ggadget::ViewInterface {
+class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
  public:
+  DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
+
   MockedView(ggadget::ElementFactoryInterface *factory)
       : factory_(factory), draw_queued_(false) { }
   virtual ~MockedView() {}
@@ -31,20 +33,19 @@ class MockedView : public ggadget::ViewInterface {
   virtual int GetWidth() const { return 400; }
   virtual int GetHeight() const { return 300; }
 
-  virtual bool AttachHost(ggadget::HostInterface *host) { return true; };
+  virtual ggadget::FileManagerInterface *GetFileManager() const { return NULL; }
   virtual ggadget::ScriptContextInterface *GetScriptContext() const
       { return NULL; }
-  virtual bool InitFromFile(const char *filename) { return true; }
-  virtual ggadget::FileManagerInterface *GetFileManager() const { return NULL; }
+  virtual bool InitFromFile(ggadget::FileManagerInterface *file_manager,
+                            const char *filename) { return true; }
 
-  virtual void OnMouseEvent(ggadget::MouseEvent *event) {};
-  virtual void OnKeyEvent(ggadget::KeyboardEvent *event) {};
-  virtual void OnOtherEvent(ggadget::Event *event) {};
-  virtual void OnTimerEvent(ggadget::TimerEvent *event) {};
+  virtual bool OnMouseEvent(ggadget::MouseEvent *event) { return true; }
+  virtual bool OnKeyEvent(ggadget::KeyboardEvent *event) { return true; }
+  virtual bool OnOtherEvent(ggadget::Event *event) { return true; }
 
   virtual bool SetWidth(int width) { return true; };
   virtual bool SetHeight(int height) { return true; };
-  virtual bool SetSize(int width, int height) { return true; };   
+  virtual bool SetSize(int width, int height) { return true; };
 
   virtual void OnElementAdd(ggadget::ElementInterface *element) {};
   virtual void OnElementRemove(ggadget::ElementInterface *element) {};
@@ -74,7 +75,7 @@ class MockedView : public ggadget::ViewInterface {
   virtual const ggadget::ElementInterface *GetElementByName(
       const char *name) const { return NULL; };
 
-  virtual int BeginAnimation(ggadget::Slot1<void, int> *slot,
+  virtual int BeginAnimation(ggadget::Slot0<void> *slot,
                              int start_value,
                              int end_value,
                              unsigned int duration) { return 0; }
@@ -87,15 +88,15 @@ class MockedView : public ggadget::ViewInterface {
   virtual void ClearInterval(int token) { }
   virtual ggadget::Image *LoadImage(const char *name,
                                     bool is_mask) { return NULL; }
+  virtual ggadget::Image *LoadImageFromGlobal(const char *name,
+                                              bool is_mask) { return NULL; }
   virtual ggadget::Texture *LoadTexture(const char *name) { return NULL; }
   virtual int GetDebugMode() const { return 2; }
   virtual void SetFocus(ggadget::ElementInterface *element) { }
+  virtual void OnOptionChanged(const char *name) { }
 
-  DEFINE_CLASS_ID(0x8840c50905e84f15, ViewInterface)
-  DEFAULT_OWNERSHIP_POLICY
-  DELEGATE_SCRIPTABLE_INTERFACE(scriptable_helper_)
-  virtual bool IsStrict() const { return true; }
-
+  virtual bool OpenURL(const char *url) const { return true; }
+  
   bool GetQueuedDraw() {
     bool b = draw_queued_;
     draw_queued_ = false;
@@ -105,7 +106,6 @@ class MockedView : public ggadget::ViewInterface {
  private:
   ggadget::ElementFactoryInterface *factory_;
   bool draw_queued_;
-  ggadget::ScriptableHelper scriptable_helper_;
 };
 
-#endif // GGADGETS_TEST_MOCKED_VIEW_H__
+#endif // GGADGET_TESTS_MOCKED_VIEW_H__

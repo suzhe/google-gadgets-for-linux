@@ -43,7 +43,7 @@ enum QuitCode {
 QuitCode g_quit_code = DONT_QUIT;
 
 extern "C" {
-// We use the editline library in SpiderMonkey.   
+// We use the editline library in SpiderMonkey.
 char *readline(const char *prompt);
 void add_history(const char *line);
 }
@@ -63,6 +63,52 @@ static JSBool GetLine(FILE *file, char *buffer, int size, const char *prompt) {
     if (!fgets(buffer, size, file))
       return JS_FALSE;
   }
+  return JS_TRUE;
+}
+
+static JSBool IsCompilableUnit(JSContext *cx, JSObject *obj,
+                               const char *buffer) {
+  if (!JS_BufferIsCompilableUnit(cx, obj, buffer, strlen(buffer)))
+    return JS_FALSE;
+  // JS_BufferIsCompilableUnit in SpiderMonkey version 1.6 and 1.7
+  // can't judge multiline comments correctly.
+  const char *p = buffer;
+  while (*p) {
+    switch (*p) {
+      case '/':
+        if (p[1] == '/') {
+          p++;
+          do p++; while (*p && *p != '\n');
+        } else if (p[1] == '*') {
+          p += 2;
+          bool found = false;
+          while (*p && p[1]) {
+            if (*p == '*' && p[1] == '/') {
+              p += 2;
+              found = true;
+              break;
+            }
+            p++;
+          }
+          if (!found) return JS_FALSE;
+        } else {
+          p++;
+        }
+        break;
+      case '"':
+        do p++; while (*p && (*p != '"' || (p != buffer && p[-1] == '\\')));
+        if (*p == '"') p++;
+        break;
+      case '\'':
+        do p++; while (*p && (*p != '\'' || (p != buffer && p[-1] == '\\')));
+        if (*p == '\'') p++;
+        break;
+      default:
+        p++;
+        break;
+    }
+  }
+  // Omit errors in string literals, because JS engine will handle them.
   return JS_TRUE;
 }
 
@@ -101,7 +147,7 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
       bufp += line_len;
       remain_size -= line_len;
       lineno++;
-    } while (!JS_BufferIsCompilableUnit(cx, obj, g_buffer, strlen(g_buffer)));
+    } while (!IsCompilableUnit(cx, obj, g_buffer));
 
     ggadget::UTF16String utf16_string;
     ggadget::ConvertStringUTF8ToUTF16(g_buffer, strlen(g_buffer),

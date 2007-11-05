@@ -14,11 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGETS_DIV_ELEMENT_H__
-#define GGADGETS_DIV_ELEMENT_H__
+#ifndef GGADGET_DIV_ELEMENT_H__
+#define GGADGET_DIV_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
@@ -38,7 +38,7 @@ class DivElement : public BasicElement {
   /**
    * Gets and sets the autoscroll property.
    * @c true if the div automatically shows scrollbars if necessary; @c false
-   * if it doesn't show scrollbars. Default is @c false. 
+   * if it doesn't show scrollbars. Default is @c false.
    */
   bool IsAutoscroll() const;
   void SetAutoscroll(bool autoscroll);
@@ -50,8 +50,9 @@ class DivElement : public BasicElement {
   const char *GetBackground() const;
   void SetBackground(const char *background);
 
-  virtual ElementInterface *OnMouseEvent(MouseEvent *event, bool direct);
-  virtual void OnKeyEvent(KeyboardEvent *event);
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element);
+  virtual bool OnKeyEvent(KeyboardEvent *event);
 
   /**
    * Overrides because this element supports scrolling.
@@ -60,6 +61,13 @@ class DivElement : public BasicElement {
   virtual void SelfCoordToChildCoord(ElementInterface *child,
                                      double x, double y,
                                      double *child_x, double *child_y);
+
+  virtual void SetPixelWidth(double width);
+  virtual void SetPixelHeight(double height);
+  virtual void SetRelativeWidth(double width);
+  virtual void SetRelativeHeight(double height);
+  virtual void OnParentWidthChange(double width);
+  virtual void OnParentHeightChange(double height);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
@@ -75,4 +83,4 @@ class DivElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGETS_DIV_ELEMENT_H__
+#endif // GGADGET_DIV_ELEMENT_H__
