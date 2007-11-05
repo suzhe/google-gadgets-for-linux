@@ -17,6 +17,7 @@
 #include "button_element.h"
 #include "canvas_interface.h"
 #include "image.h"
+#include "text_frame.h"
 #include "string_utils.h"
 #include "view_interface.h"
 #include "event.h"
@@ -25,9 +26,13 @@ namespace ggadget {
 
 class ButtonElement::Impl {
  public:
-  Impl() : mousedown_(false), mouseover_(false),
+  Impl(BasicElement *owner, ViewInterface *view) : text_(owner, view),
+           mousedown_(false), mouseover_(false),
            image_(NULL), downimage_(NULL),
-           overimage_(NULL), disabledimage_(NULL) { }
+           overimage_(NULL), disabledimage_(NULL) { 
+    text_.SetAlign(CanvasInterface::ALIGN_CENTER);
+    text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
+  }
   ~Impl() {
     delete image_;
     image_ = NULL;
@@ -42,6 +47,7 @@ class ButtonElement::Impl {
     disabledimage_ = NULL;
   }
 
+  TextFrame text_;
   bool mousedown_;
   bool mouseover_;
   std::string image_src_, downimage_src_, overimage_src_, disabledimage_src_;
@@ -52,7 +58,7 @@ ButtonElement::ButtonElement(ElementInterface *parent,
                        ViewInterface *view,
                        const char *name)
     : BasicElement(parent, view, "button", name, false),
-      impl_(new Impl) {
+      impl_(new Impl(this, view)) {
   SetEnabled(true);
   RegisterProperty("image",
                    NewSlot(this, &ButtonElement::GetImage),
@@ -66,6 +72,11 @@ ButtonElement::ButtonElement(ElementInterface *parent,
   RegisterProperty("disabledImage",
                    NewSlot(this, &ButtonElement::GetDisabledImage),
                    NewSlot(this, &ButtonElement::SetDisabledImage));
+  
+  // undocumented
+  RegisterProperty("caption",
+                   NewSlot(&impl_->text_, &TextFrame::GetText),
+                   NewSlot(&impl_->text_, &TextFrame::SetText));
 }
 
 ButtonElement::~ButtonElement() {
@@ -89,9 +100,12 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
     img = impl_->image_;
   }
 
+  double width = GetPixelWidth();
+  double height = GetPixelHeight();
   if (img) {
-    img->StretchDraw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
+    img->StretchDraw(canvas, 0, 0, width, height);
   }
+  impl_->text_.Draw(canvas, 0, 0, width, height);
 }
 
 const char *ButtonElement::GetImage() const {
@@ -174,7 +188,7 @@ bool ButtonElement::OnMouseEvent(MouseEvent *event, bool direct,
 
   // Handle the event only when the event is fired and not canceled.
   if (*fired_element && result) {
-    ASSERT(!IsEnabled());
+    ASSERT(IsEnabled());
     ASSERT(*fired_element == this);
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:

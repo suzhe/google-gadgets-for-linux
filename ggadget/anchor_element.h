@@ -14,29 +14,44 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LABEL_ELEMENT_H__
-#define GGADGET_LABEL_ELEMENT_H__
+#ifndef GGADGET_ANCHOR_ELEMENT_H__
+#define GGADGET_ANCHOR_ELEMENT_H__
 
 #include <stdlib.h>
-#include <ggadget/basic_element.h>
-#include <ggadget/canvas_interface.h>
+#include "basic_element.h"
+#include "label_element.h"
 
 namespace ggadget {
 
-class LabelElement : public BasicElement {
+class AnchorElement : public BasicElement {
  public:
-  DEFINE_CLASS_ID(0x4b128d3ef8da40e6, BasicElement);
-
-  LabelElement(ElementInterface *parent,
+  DEFINE_CLASS_ID(0x50ef5c291807400c, BasicElement);
+  
+  AnchorElement(ElementInterface *parent,
              ViewInterface *view,
              const char *name);
-  virtual ~LabelElement();
+  virtual ~AnchorElement();
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
-
+  
+ public:   
   /** Sets the text of the frame. */
   void SetText(const char *text);
+   
+  /**
+   * Gets and sets the mouseover text color or texture image of the element.
+   * The image is repeated if necessary, not stretched.
+   */
+  const char *GetOverColor() const;
+  void SetOverColor(const char *color);
+  
+  /** Gets and sets the URL to be launched when this link is clicked. */
+  const char *GetHref() const;
+  void SetHref(const char *href);
+  
+  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
+                            ElementInterface **fired_element);
   
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
@@ -44,7 +59,7 @@ class LabelElement : public BasicElement {
                                           const char *name);
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(LabelElement);
+  DISALLOW_EVIL_CONSTRUCTORS(AnchorElement);
 
   class Impl;
   Impl *impl_;
@@ -52,4 +67,4 @@ class LabelElement : public BasicElement {
 
 } // namespace ggadget
 
-#endif // GGADGET_LABEL_ELEMENT_H__
+#endif // GGADGET_ANCHOR_ELEMENT_H__

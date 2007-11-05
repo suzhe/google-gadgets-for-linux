@@ -48,6 +48,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
     return 0;
   }
   virtual bool RemoveIOWatch(int token) { return true; }
+  virtual bool OpenURL(const char *url) const { return true; }
 };
 
 #endif // GGADGET_TESTS_MOCKED_GADGET_HOST_H__

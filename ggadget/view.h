@@ -97,7 +97,9 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual Image *LoadImage(const char *name, bool is_mask);
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);
   virtual Texture *LoadTexture(const char *name);
-
+  
+  virtual bool OpenURL(const char *url) const; 
+  
  private:
   class Impl;
   Impl *impl_;

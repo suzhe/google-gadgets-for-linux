@@ -57,7 +57,7 @@ class DivElement::Impl {
   void CreateScrollBar() {
     if (!scrollbar_) {
       scrollbar_ = new ScrollBarElement(owner_, owner_->GetView(), "");
-      scrollbar_->SetPixelHeight(owner_->GetPixelHeight());    DLOG("a height %f", scrollbar_->GetPixelHeight());
+      scrollbar_->SetPixelHeight(owner_->GetPixelHeight());
       scrollbar_->SetPixelWidth(12); // width of default images
       scrollbar_->SetEnabled(true);
       scrollbar_->SetPixelX(owner_->GetPixelWidth() -  

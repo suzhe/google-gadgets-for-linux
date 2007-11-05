@@ -247,8 +247,16 @@ class CanvasInterface {
    * @param h Height of rectangle.
    * @return true on success, false otherwise.
    */
-  virtual bool IntersectRectClipRegion(double x, double y,
+  virtual bool IntersectRectClipRegion(double x, double y, 
                                        double w, double h) = 0;
+  
+  /** 
+   * Gets the width and height of the specified text without wrapping
+   * or trimming. 
+   */
+  virtual bool GetTextExtents(const char *text, const FontInterface *f, 
+                              TextFlag text_flag, 
+                              double *width, double *height) = 0;  
 };
 
 } // namespace ggadget

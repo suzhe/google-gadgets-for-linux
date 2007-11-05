@@ -28,7 +28,7 @@
 
 namespace ggadget {
 
-const char *const kOnChangeEvent = "onchange";
+static const char *const kOnChangeEvent = "onchange";
 
 enum DisplayState {
   STATE_NORMAL,
@@ -194,14 +194,14 @@ class ScrollBarElement::Impl {
   }
 
   void SetValue(int value) {
+    if (value > max_) {
+      value = max_;
+    } else if (value < min_) {
+      value = min_;
+    }
+        
     if (value != value_) {
       value_ = value;
-
-      if (value_ > max_) {
-        value_ = max_;
-      } else if (value_ < min_) {
-        value_ = min_;
-      }
       DLOG("scroll value: %d", value_);
       Event event(Event::EVENT_CHANGE);
       ScriptableEvent s_event(&event, owner_, 0, 0);
