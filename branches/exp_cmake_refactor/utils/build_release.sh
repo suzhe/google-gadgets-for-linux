@@ -24,8 +24,9 @@ if [ ! -x cmake/build_spidermonkey.sh ]; then
 fi
 mkdir -p build/release
 cd build/release
-cmake -DCMAKE_BUILD_TYPE=Release "$srcdir"
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="/opt/google/ggadget" "$srcdir"
 make "$@"
+# sudo make install
 if ! ctest . ; then
   cat Testing/Temporary/LastTest.log
 fi

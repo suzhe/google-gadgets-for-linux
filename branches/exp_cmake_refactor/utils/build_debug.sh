@@ -24,8 +24,8 @@ if [ ! -x cmake/build_spidermonkey.sh ]; then
 fi
 mkdir -p build/debug
 cd build/debug
-cmake -DCMAKE_BUILD_TYPE=Debug "$srcdir"
-make "$@"
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX="`pwd`/output" "$srcdir"
+make "$@" install
 if ! ctest . ; then
   cat Testing/Temporary/LastTest.log
 fi

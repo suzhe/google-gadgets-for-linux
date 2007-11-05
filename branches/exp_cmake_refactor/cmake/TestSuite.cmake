@@ -28,7 +28,6 @@ ELSE(WIN32)
       DEPENDS ${TEST_WRAPPER_wrappee_location}.sh)
     ADD_CUSTOM_COMMAND(OUTPUT ${TEST_WRAPPER_output}
       COMMAND sed
-          -e "s,%%LIBRARY_PATH%%,${CMAKE_BINARY_DIR}/output/lib,g"
           -e "s,%%WRAPPEE_BASE%%,${_wrappee_base},g"
           -e "s,%%CMAKE_CURRENT_BINARY_DIR%%,${CMAKE_CURRENT_BINARY_DIR},g"
           ${TEST_WRAPPER_template}
@@ -48,7 +47,6 @@ ELSE(WIN32)
     GET_TARGET_PROPERTY(SHELL_LOCATION ${_wrappee_shell} LOCATION)
     ADD_CUSTOM_COMMAND(OUTPUT ${JS_TEST_WRAPPER_output}
       COMMAND sed
-          -e "s,%%LIBRARY_PATH%%,${CMAKE_BINARY_DIR}/output/lib,g"
           -e "s,%%SHELL_LOCATION%%,${SHELL_LOCATION},g"
           -e "s,%%WRAPPEE_JS%%,${_wrappee_js},g"
           -e "s,%%CMAKE_SOURCE_DIR%%,${CMAKE_SOURCE_DIR},g"
