@@ -56,10 +56,6 @@ smjs_CPPFLAGS=""
 smjs_LDFLAGS=""
 smjs_LIBS=""
 
-if test "x$host_os" = "x"; then
-  AC_CANONICAL_HOST
-fi
-
 case $host_os in
   *beos* )
     smjs_CPPFLAGS="$smjs_CPPFLAGS -DXP_BEOS"
