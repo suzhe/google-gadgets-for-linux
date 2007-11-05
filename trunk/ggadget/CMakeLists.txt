@@ -38,6 +38,7 @@ SET(SRCS
   signals.cc
   string_utils.cc
   texture.cc
+  text_frame.cc
   unicode_utils.cc
   variant.cc
   view.cc
@@ -51,6 +52,8 @@ SET(SRCS
   img_element.cc
   scrollbar_element.cc
   label_element.cc
+  anchor_element.cc
+  checkbox_element.cc
 )
 
 SET(LIBS

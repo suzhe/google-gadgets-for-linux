@@ -121,6 +121,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
                                      double x, double y,
                                      double *child_x, double *child_y);
 
+  /** 
+   * Sets the changed bit to true and if visible, 
+   * requests the view to be redrawn. 
+   */
+  virtual void QueueDraw();
+  
 #if 0 // TODO: Ensure if they are needed.
   /**
    * Call this when drawing to initialize and prepare a canvas of the right
@@ -168,12 +174,6 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
-
-  /**
-   * Sets the changed bit to true and if visible,
-   * requests the view to be redrawn.
-   */
-  virtual void QueueDraw();
 
  private:
   class Impl;

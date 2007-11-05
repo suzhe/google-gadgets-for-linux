@@ -311,6 +311,12 @@ class ViewInterface : public ScriptableInterface {
    * @return the created texture ifsucceeds, or @c NULL.
    */
   virtual Texture *LoadTexture(const char *name) = 0;
+
+  /** 
+   * Open the given URL in the user's default web brower.
+   * Only HTTP, HTTPS, and FTP URLs are supported.
+   */
+  virtual bool OpenURL(const char *url) const = 0;
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

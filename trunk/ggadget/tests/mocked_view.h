@@ -95,6 +95,8 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual void SetFocus(ggadget::ElementInterface *element) { }
   virtual void OnOptionChanged(const char *name) { }
 
+  virtual bool OpenURL(const char *url) const { return true; }
+  
   bool GetQueuedDraw() {
     bool b = draw_queued_;
     draw_queued_ = false;

@@ -517,9 +517,11 @@ class BasicElement::Impl {
         view_->FireEvent(&scriptable_event, ondblclick_event_);
         break;
       case Event::EVENT_MOUSE_OUT:
+        // TODO reset cursor
         view_->FireEvent(&scriptable_event, onmouseout_event_);
         break;
       case Event::EVENT_MOUSE_OVER:
+        // TODO set cursor
         view_->FireEvent(&scriptable_event, onmouseover_event_);
         break;
       case Event::EVENT_MOUSE_WHEEL:

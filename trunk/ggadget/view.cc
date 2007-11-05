@@ -35,6 +35,10 @@
 
 namespace ggadget {
 
+static const char *const kFTPPrefix = "ftp://";
+static const char *const kHTTPPrefix = "http://";
+static const char *const kHTTPSPrefix = "https://";
+
 class View::Impl {
  public:
   Impl(ViewHostInterface *host,
@@ -908,7 +912,6 @@ Image *View::LoadImageFromGlobal(const char *name, bool is_mask) {
                    name, is_mask);
 }
 
-
 Texture *View::LoadTexture(const char *name) {
   ASSERT(impl_->file_manager_);
   return new Texture(GetGraphics(), impl_->file_manager_, name);
@@ -916,6 +919,19 @@ Texture *View::LoadTexture(const char *name) {
 
 void View::SetFocus(ElementInterface *element) {
   impl_->SetFocus(element);
+}
+
+bool View::OpenURL(const char *url) const {
+  // Important: verify that URL is valid first. 
+  // Otherwise could be a security problem.
+  if (0 == strncmp(url, kFTPPrefix, strlen(kFTPPrefix)) ||
+      0 == strncmp(url, kHTTPPrefix, strlen(kHTTPPrefix)) ||
+      0 == strncmp(url, kHTTPSPrefix, strlen(kHTTPSPrefix))) {  
+    return impl_->gadget_host_->OpenURL(url);
+  }
+
+  DLOG("Malformed URL: %s", url);
+  return false;
 }
 
 void View::OnOptionChanged(const char *name) {

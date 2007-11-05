@@ -88,7 +88,11 @@ class CairoCanvas : public CanvasInterface {
 
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h);
-
+  
+  virtual bool GetTextExtents(const char *text, const FontInterface *f, 
+                              TextFlag text_flag, double *width, double *height);
+  
+  
   /**
    * Get the surface contained within this class for use elsewhere.
    * Will flush the surface before returning so it is ready to be read.

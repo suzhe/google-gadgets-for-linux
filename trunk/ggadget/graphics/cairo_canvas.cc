@@ -561,11 +561,60 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
     } while(pango_layout_iter_next_char(it));
   }
 
-  g_object_unref(layout);
   // This will also free underline_attr and strikeout_attr.
   pango_attr_list_unref(attr_list);
+  g_object_unref(layout);
   cairo_restore(cr_);
 
+  return true;
+}
+
+bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f, 
+                                 TextFlag text_flag, double *width, 
+                                 double *height) {
+  if (text == NULL || f == NULL) {
+    return false;    
+  }
+
+  // If the text is blank, we need to do nothing.
+  if (strlen(text) == 0) {
+    *width = *height = 0; 
+    return true;
+  }
+  
+  const CairoFont *font = down_cast<const CairoFont*>(f); 
+  PangoLayout *layout = pango_cairo_create_layout(cr_);
+  pango_layout_set_text(layout, text, -1);
+  pango_layout_set_font_description(layout, font->GetFontDescription());
+
+  PangoAttrList *attr_list = pango_attr_list_new();
+  if (text_flag & TEXT_FLAGS_UNDERLINE) {
+    PangoAttribute *underline_attr = 
+      pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+    // We want this attribute apply to all text.
+    underline_attr->start_index = 0;
+    underline_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, underline_attr);
+  } 
+  if (text_flag & TEXT_FLAGS_STRIKEOUT) {
+    PangoAttribute *strikeout_attr = pango_attr_strikethrough_new(true);
+    // We want this attribute apply to all text.
+    strikeout_attr->start_index = 0;
+    strikeout_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, strikeout_attr);
+  }
+  pango_layout_set_width(layout, -1); // no word wrap
+  pango_layout_set_attributes(layout, attr_list);
+
+  // Get the pixel extents(logical extents) of the layout.
+  int w, h;
+  pango_layout_get_pixel_size(layout, &w, &h);
+  *width = w;
+  *height = h;
+  
+  // This will also free underline_attr and strikeout_attr.
+  pango_attr_list_unref(attr_list);
+  g_object_unref(layout);
   return true;
 }
 

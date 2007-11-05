@@ -47,6 +47,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual int RegisterReadWatch(int fd, IOWatchCallback *callback);
   virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback);
   virtual bool RemoveIOWatch(int token);
+  virtual bool OpenURL(const char *url) const;
 
   /**
    * Load a gadget from file system.

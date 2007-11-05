@@ -15,24 +15,27 @@
 */
 
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
-#include "gtk_gadget_host.h"
 #include "ggadget/file_manager.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/gadget.h"
 #include "ggadget/scripts/smjs/js_script_runtime.h"
 #include "ggadget/xml_http_request.h"
-#include "gtk_view_host.h"
-#include "options.h"
-#include "simplehost_file_manager.h"
 
 #include "ggadget/button_element.h"
 #include "ggadget/div_element.h"
 #include "ggadget/img_element.h"
 #include "ggadget/scrollbar_element.h"
 #include "ggadget/label_element.h"
-//#include "ggadget/anchor_element.h"
-//#include "ggadget/checkbox_element.h"
+#include "ggadget/anchor_element.h"
+#include "ggadget/checkbox_element.h"
+
+#include "gtk_gadget_host.h"
+#include "gtk_view_host.h"
+#include "options.h"
+#include "simplehost_file_manager.h"
 
 class GtkGadgetHost::CallbackData {
  public:
@@ -61,10 +64,10 @@ GtkGadgetHost::GtkGadgetHost()
                                 &ggadget::ScrollBarElement::CreateInstance);
   factory->RegisterElementClass("label",
                                 &ggadget::LabelElement::CreateInstance);
-  /*factory->RegisterElementClass("a",
+  factory->RegisterElementClass("a",
                                 &ggadget::AnchorElement::CreateInstance);
   factory->RegisterElementClass("checkbox",
-                                &ggadget::CheckBoxElement::CreateInstance);*/
+                                &ggadget::CheckBoxElement::CreateInstance);
   element_factory_ = factory;
 
   global_file_manager_->Init(NULL);
@@ -214,6 +217,71 @@ bool GtkGadgetHost::RemoveCallback(int token) {
 
   delete i->second;
   callbacks_.erase(i);
+  return true;
+}
+
+/** 
+ * Taken from GDLinux. 
+ * May move this function elsewhere if other classes use it too.
+ */
+std::string GetFullPathOfSysCommand(const std::string &command) {
+  const char *env_path_value = getenv("PATH");
+  if (env_path_value == NULL)
+    return "";
+
+  std::string all_path = std::string(env_path_value);
+  size_t cur_colon_pos = 0;
+  size_t next_colon_pos = 0;
+  // Iterator through all the parts in env value.
+  while ((next_colon_pos = all_path.find(":", cur_colon_pos)) != std::string::npos) {
+    std::string path = all_path.substr(cur_colon_pos, next_colon_pos - cur_colon_pos);
+    path += "/";
+    path += command;
+    if (access(path.c_str(), X_OK) == 0) {
+      return path;
+    }
+    cur_colon_pos = next_colon_pos + 1;
+  }
+  return "";
+}
+
+bool GtkGadgetHost::OpenURL(const char *url) const {
+  std::string xdg_open = GetFullPathOfSysCommand("xdg-open");
+  if (xdg_open.empty()) {
+    xdg_open = GetFullPathOfSysCommand("gnome-open");
+    if (xdg_open.empty()) {
+      LOG("Couldn't find xdg-open or gnome-open.");
+      return false;
+    }
+  }
+
+  DLOG("Launching URL: %s", url);
+  
+  pid_t pid;
+  // fork and run the command.
+  if ((pid = fork()) == 0) {
+    if (fork() != 0)
+      _exit(0);
+
+    // Restore original LD_LIBRARY_PATH, to prevent external applications
+    // from loading our private libraries.
+    //char *ld_path_old = getenv("LD_LIBRARY_PATH_GDL_BACKUP");
+
+    //if (ld_path_old)
+    //  setenv("LD_LIBRARY_PATH", ld_path_old, 1);
+    //else
+    //  unsetenv("LD_LIBRARY_PATH");
+
+    execl(xdg_open.c_str(), xdg_open.c_str(), url, NULL);
+
+    DLOG("Failed to exec command: %s", xdg_open.c_str());
+    _exit(-1);
+  }
+
+  int status = 0;
+  waitpid(pid, &status, 0);
+
+  // Assume xdg-open will always succeed.
   return true;
 }
 
