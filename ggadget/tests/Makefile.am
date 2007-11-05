@@ -20,7 +20,6 @@ INCLUDES		= -I$(top_builddir) \
 LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-# TODO: file_manager_test
 check_PROGRAMS		= common_test \
 			  variant_test \
 			  slot_test \

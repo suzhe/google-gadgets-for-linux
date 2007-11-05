@@ -25,9 +25,11 @@ gglincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget
 
 noinst_HEADERS		= element_factory_impl.h
 
-gglinclude_HEADERS	= basic_element.h \
+gglinclude_HEADERS	= anchor_element.h \
+			  basic_element.h \
 			  button_element.h \
 			  canvas_interface.h \
+			  checkbox_element.h \
 			  color.h \
 			  common.h \
 			  div_element.h \
@@ -64,6 +66,7 @@ gglinclude_HEADERS	= basic_element.h \
 			  signals.h \
 			  slot.h \
 			  string_utils.h \
+			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
 			  variant.h \
@@ -80,8 +83,10 @@ gglinclude_HEADERS	= basic_element.h \
 lib_LTLIBRARIES		= libggadget@GGL_EPOCH@.la
 
 libggadget@GGL_EPOCH@_la_SOURCES = \
+			  anchor_element.cc \
 			  basic_element.cc \
 			  button_element.cc \
+			  checkbox_element.cc \
 			  div_element.cc \
 			  element_factory.cc \
 			  elements.cc \
@@ -97,6 +102,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scrollbar_element.cc \
 			  signals.cc \
 			  string_utils.cc \
+			  text_frame.cc \
 			  texture.cc \
 			  unicode_utils.cc \
 			  variant.cc \
