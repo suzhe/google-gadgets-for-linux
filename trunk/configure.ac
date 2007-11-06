@@ -289,6 +289,13 @@ esac
 ##                      Output files.                    ##
 ###########################################################
 AC_SUBST(ac_aux_dir)
+
+# Workaround a bug in autoconf 2.59, which doesn't export these variables.
+AC_SUBST(abs_srcdir)
+AC_SUBST(abs_builddir)
+AC_SUBST(abs_top_srcdir)
+AC_SUBST(abs_top_builddir)
+
 AC_CONFIG_FILES([Makefile
 		 ggadget/Makefile
 		 ggadget/tests/Makefile

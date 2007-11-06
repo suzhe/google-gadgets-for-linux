@@ -59,11 +59,15 @@ xml_http_request_test_LDADD	= -lpthread \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 if GGL_HAVE_ZIP
+# FIXME: It'll fail if $(abs_builddir) = $(abs_srcdir)
 noinst_DATA		= file_manager_test_data.gg
-file_manager_test_data.gg:
+file_manager_test_data.gg: file_manager_test_data
 	(\
-	  cd $(abs_srcdir)/file_manager_test_data/;\
-	  find . -type f \! -name '.*' |\
+	  rm -fr $(abs_builddir)/file_manager_test_data;\
+	  cp -R $(abs_srcdir)/file_manager_test_data $(abs_builddir)/;\
+	  find $(abs_builddir)/file_manager_test_data -name '.*' -exec rm -f {} \;;\
+	  cd $(abs_builddir)/file_manager_test_data/;\
+	  find . -type f |\
 	  $(ZIP) -r -u $(abs_builddir)/file_manager_test_data.gg -@\
 	)
 endif
