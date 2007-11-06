@@ -26,7 +26,12 @@
 
 namespace ggadget {
 
+class JSScriptRuntime;
+
+namespace internal {
+
 class NativeJSWrapper;
+class JSFunctionSlot;
 
 /**
  * @c ScriptContext implementation for SpiderMonkey JavaScript engine.
@@ -85,9 +90,9 @@ class JSScriptContext : public ScriptContextInterface {
    *     compatible parameter list and return value.  Can be @c NULL.
    * @param function_val a JavaScript function object (in jsval).
    */
-  static Slot *NewJSFunctionSlot(JSContext *cx,
-                                 const Slot *prototype,
-                                 jsval function_val);
+  static JSFunctionSlot *NewJSFunctionSlot(JSContext *cx,
+                                           const Slot *prototype,
+                                           jsval function_val);
 
   JSContext *context() const { return context_; }
 
@@ -105,10 +110,14 @@ class JSScriptContext : public ScriptContextInterface {
   virtual bool SetGlobalObject(ScriptableInterface *global_object);
   /** @see ScriptContextInterface::RegisterClass() */
   virtual bool RegisterClass(const char *name, Slot *constructor);
+  /** @see ScriptContextInterface::LockObject() */
+  virtual void LockObject(ScriptableInterface *object);
+  /** @see ScriptContextInterface::UnlockObject() */
+  virtual void UnlockObject(ScriptableInterface *object);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
-  friend class JSScriptRuntime;
+  friend class ::ggadget::JSScriptRuntime;
   JSScriptContext(JSContext *context);
   virtual ~JSScriptContext();
 
@@ -116,8 +125,8 @@ class JSScriptContext : public ScriptContextInterface {
   JSObject *WrapNativeObjectToJSInternal(
       JSObject *js_object, ScriptableInterface *scriptableInterface);
   jsval ConvertSlotToJSInternal(Slot *slot);
-  Slot *NewJSFunctionSlotInternal(const Slot *prototype,
-                                  jsval function_val);
+  JSFunctionSlot *NewJSFunctionSlotInternal(const Slot *prototype,
+                                            jsval function_val);
   void FinalizeNativeJSWrapperInternal(NativeJSWrapper *wrapper);
 
   const char *JSValToString(jsval js_val);
@@ -160,6 +169,22 @@ class JSScriptContext : public ScriptContextInterface {
   ClassVector registered_classes_;
 };
 
+/**
+ * This class is used in JavaScript callback functions to ensure that the local
+ * newly created JavaScript objects won't be GC'ed during the callbacks.
+ */
+class AutoLocalRootScope {
+ public:
+  AutoLocalRootScope(JSContext *cx)
+      : cx_(cx), good_(JS_EnterLocalRootScope(cx)) { }
+  ~AutoLocalRootScope() { if (good_) JS_LeaveLocalRootScope(cx_); }
+  JSBool good() { return good_; }
+ private:
+  JSContext *cx_;
+  JSBool good_;
+};
+
+} // namespace internal
 } // namespace ggadget
 
 #endif  // GGADGET_JS_SCRIPT_CONTEXT_H__

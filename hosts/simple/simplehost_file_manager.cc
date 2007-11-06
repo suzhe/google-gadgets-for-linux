@@ -22,8 +22,8 @@
 #include <errno.h>
 #include <string.h> 
 
-#include "ggadget/gadget_consts.h"
-#include "third_party/unzip/unzip.h"
+#include <ggadget/gadget_consts.h>
+#include <third_party/unzip/unzip.h>
 #include "simplehost_file_manager.h"
 #include "resources/resources.cc"
 

@@ -18,7 +18,7 @@
 #define HOSTS_SIMPLE_OPTIONS_H__
 
 #include <map>
-#include "ggadget/ggadget.h"
+#include <ggadget/ggadget.h>
 
 class Options : public ggadget::OptionsInterface {
  public:

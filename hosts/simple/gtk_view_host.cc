@@ -16,11 +16,12 @@
 
 #include <sys/time.h>
 
+#include <ggadget/graphics/cairo_graphics.h>
+#include <ggadget/view.h>
+#include <ggadget/xml_dom.h>
+#include <ggadget/xml_http_request.h>
 #include "gtk_view_host.h"
 #include "gadget_view_widget.h"
-#include "ggadget/graphics/cairo_graphics.h"
-#include "ggadget/view.h"
-#include "ggadget/xml_dom.h"
 
 GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
                          ggadget::GadgetHostInterface::ViewType type,
@@ -48,8 +49,7 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
   script_context_->RegisterClass("DOMDocument",
                                  NewSlot(ggadget::CreateDOMDocument));
   script_context_->RegisterClass(
-      "XMLHttpRequest",
-      NewSlot(gadget_host, &ggadget::GadgetHostInterface::NewXMLHttpRequest));
+      "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
 
   // Execute common.js to initialize global constants and compatibility
   // adapters.
@@ -86,6 +86,10 @@ GtkViewHost::~GtkViewHost() {
 
   delete gfx_;
   gfx_ = NULL;
+}
+
+ggadget::XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
+  return ggadget::CreateXMLHttpRequest(gadget_host_, script_context_);
 }
 
 void GtkViewHost::QueueDraw() {

@@ -78,6 +78,24 @@ class ScriptContextInterface {
    */
   virtual bool RegisterClass(const char *name, Slot *constructor) = 0;
 
+  /**
+   * Locks an scriptable object to prevent the script engine from garbage
+   * collecting the object. Object with @c ScriptableInterface::NATIVE_OWNED
+   * or @c ScriptableInterface::NATIVE_PERMANENT ownership policies need NOT
+   * call this because the script adapter should do this automatically.
+   * The object must has already been attached into the script engine when
+   * this method is called, otherwise this method does nothing. 
+   */
+  virtual void LockObject(ScriptableInterface *object) = 0;
+
+  /**
+   * Unlocks an scriptable object to allow the script engine to garbage
+   * collect the object when possible.
+   * The object must has already been attached into the script engine when
+   * this method is called, otherwise this method does nothing. 
+   */
+  virtual void UnlockObject(ScriptableInterface *object) = 0;
+
 };
 
 } // namespace ggadget

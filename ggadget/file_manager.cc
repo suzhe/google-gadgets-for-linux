@@ -21,10 +21,10 @@
 #include <dirent.h>
 #include <errno.h>
 
+#include <third_party/unzip/unzip.h>
 #include "file_manager.h"
 #include "common.h"
 #include "gadget_consts.h"
-#include "third_party/unzip/unzip.h"
 #include "windows_locales.h"
 #include "xml_utils.h"
 
@@ -408,8 +408,11 @@ bool FileManagerImpl::GetDirFileContents(FileMap::const_iterator iter,
   if (ferror(datafile)) {
     LOG("Error when reading file: %s", real_name.c_str());
     data->clear();
+    fclose(datafile);
     return false;
   }
+
+  fclose(datafile);
   return true;
 }
 

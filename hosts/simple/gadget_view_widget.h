@@ -21,7 +21,7 @@
 #include <gtk/gtk.h>
 #include <string>
 
-#include "ggadget/ggadget.h"
+#include <ggadget/ggadget.h>
 
 class GtkViewHost;
 

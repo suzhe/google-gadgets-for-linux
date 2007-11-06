@@ -21,7 +21,13 @@
 #include "native_js_wrapper.h"
 #include "js_script_context.h"
 
+#ifdef _DEBUG
+// Uncomment the following to debug wrapper memory.
+// #define DEBUG_JS_WRAPPER_MEMORY
+#endif
+
 namespace ggadget {
+namespace internal {
 
 // This JSClass is used to create wrapper JSObjects.
 JSClass NativeJSWrapper::wrapper_js_class_ = {
@@ -54,13 +60,17 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
 
   // If the object is native owned, the script side should not delete the
   // object unless the native side tells it to do.
-  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED)
+  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
+      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
     JS_AddRoot(js_context_, &js_object_);
 
 #ifdef DEBUG_JS_WRAPPER_MEMORY
   DLOG("Wrap: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
        ownership_policy_, js_object_, this,
        scriptable_, scriptable_->GetClassId());
+  // This GC forces many hidden memory allocation errors to expose.
+  DLOG("ForceGC");
+  JS_GC(js_context_);
 #endif
 }
 
@@ -73,9 +83,8 @@ NativeJSWrapper::~NativeJSWrapper() {
 #endif
 
     deleted_ = true;
-    ondelete_connection_->Disconnect();
-    scriptable_->Detach();
     DetachJS();
+    scriptable_->Detach();
   }
 }
 
@@ -132,7 +141,7 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
-          JSScriptContext::CallNativeSlot(cx, obj, argc, argv, rval));
+          wrapper->InvokeMethod(argc, argv, rval));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
@@ -204,6 +213,7 @@ void NativeJSWrapper::DetachJS() {
        ownership_policy_, js_object_, this, scriptable_);
 #endif
 
+  ondelete_connection_->Disconnect();
   if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
       ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
     JS_RemoveRoot(js_context_, &js_object_);
@@ -216,7 +226,6 @@ void NativeJSWrapper::OnDelete() {
 #endif
 
   deleted_ = true;
-  ondelete_connection_->Disconnect();
 
   // As the native side has deleted the object, now the script side can also
   // delete it.
@@ -225,6 +234,48 @@ void NativeJSWrapper::OnDelete() {
   // Remove the wrapper mapping from the context, but leave this wrapper
   // alive to accept mistaken JavaScript calls gracefully.
   JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
+
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+  // This GC forces many hidden memory allocation errors to expose.
+  DLOG("ForceGC");
+  JS_GC(js_context_);
+#endif
+}
+
+JSBool NativeJSWrapper::InvokeMethod(uintN argc, jsval *argv, jsval *rval) {
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
+  // According to JS stack structure, argv[-2] is the current function object.
+  JSObject *func_object = JSVAL_TO_OBJECT(argv[-2]);
+  // Get the method slot from the reserved slot.
+  jsval val;
+  if (!JS_GetReservedSlot(js_context_, func_object, 0, &val) ||
+      !JSVAL_IS_INT(val))
+    return JS_FALSE;
+  Slot *slot = reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val));
+
+  Variant *params = NULL;
+  uintN expected_argc = argc;
+  if (!ConvertJSArgsToNative(js_context_, js_object_, slot, argc, argv,
+                             &params, &expected_argc))
+    return JS_FALSE;
+
+  try {
+    Variant return_value = slot->Call(expected_argc, params);
+    JSBool result = ConvertNativeToJS(js_context_, return_value, rval);
+    if (!result)
+      JS_ReportError(js_context_,
+                     "Failed to convert native function result(%s) to jsval",
+                     return_value.ToString().c_str());
+    delete [] params;
+    return result;
+  } catch (ScriptableExceptionHolder e) {
+    delete [] params;
+    JSScriptContext::HandleException(js_context_, e);
+    return JS_FALSE;
+  }
 }
 
 JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
@@ -258,6 +309,10 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
     // Should not occur.
     return JS_FALSE;
 
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   int int_id = JSVAL_TO_INT(id);
   try {
     Variant return_value = scriptable_->GetProperty(int_id);
@@ -279,6 +334,10 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
     // Should not occur.
     return JS_FALSE;
 
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   try {
     int int_id = JSVAL_TO_INT(id);
     Variant prototype;
@@ -297,7 +356,8 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
     ASSERT(!is_method);
 
     Variant value;
-    if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
+    if (!ConvertJSToNative(js_context_, js_object_, prototype, js_val,
+                           &value)) {
       JS_ReportError(js_context_,
                      "Failed to convert JS property value(%s) to native",
                      PrintJSValue(js_context_, js_val).c_str());
@@ -312,9 +372,6 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
       FreeNativeValue(value);
       return JS_FALSE;
     }
-    // Note: if the property is a JSFunction, the reference from obj to the
-    // function will be automatically set by the engine after this method
-    // successfully returns.
   } catch (ScriptableExceptionHolder e) {
     JSScriptContext::HandleException(js_context_, e);
     return JS_FALSE;
@@ -328,14 +385,20 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
     // Should not occur
     return JS_FALSE;
 
+  JSString *idstr = JSVAL_TO_STRING(id);
+  if (!idstr)
+    return JS_FALSE;
+
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   try {
-    JSString *idstr = JSVAL_TO_STRING(id);
-    if (!idstr)
-      return JS_FALSE;
     const char *name = JS_GetStringBytes(idstr);
     int int_id;
     Variant prototype;
     bool is_method;
+
     if (!scriptable_->GetPropertyInfoByName(name, &int_id,
                                             &prototype, &is_method)) {
       // This must be a dynamic property which is no more available.
@@ -365,14 +428,20 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
     // Should not occur
     return JS_FALSE;
 
+  JSString *idstr = JSVAL_TO_STRING(id);
+  if (!idstr)
+    return JS_FALSE;
+
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   try {
-    JSString *idstr = JSVAL_TO_STRING(id);
-    if (!idstr)
-      return JS_FALSE;
     const char *name = JS_GetStringBytes(idstr);
     int int_id;
     Variant prototype;
     bool is_method;
+
     if (!scriptable_->GetPropertyInfoByName(name, &int_id,
                                             &prototype, &is_method)) {
       // This must be a dynamic property which is no more available.
@@ -383,7 +452,8 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
     ASSERT(!is_method);
 
     Variant value;
-    if (!ConvertJSToNative(js_context_, prototype, js_val, &value)) {
+    if (!ConvertJSToNative(js_context_, js_object_, prototype, js_val,
+                           &value)) {
       JS_ReportError(js_context_,
                      "Failed to convert JS property value(%s) to native.",
                      PrintJSValue(js_context_, js_val).c_str());
@@ -410,6 +480,10 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
 JSBool NativeJSWrapper::ResolveProperty(jsval id) {
   if (!JSVAL_IS_STRING(id))
     return JS_TRUE;
+
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
 
   JSString *idstr = JS_ValueToString(js_context_, id);
   if (!idstr)
@@ -493,4 +567,5 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
   return JS_TRUE;
 }
 
+} // namespace internal
 } // namespace ggadget

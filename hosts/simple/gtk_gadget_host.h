@@ -20,7 +20,7 @@
 #include <set>
 
 #include <gtk/gtk.h>
-#include "ggadget/ggadget.h"
+#include <ggadget/ggadget.h>
 
 /**
  * An implementation of @c GadgetHostInterface for the simple gadget host.
@@ -34,7 +34,6 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
       ScriptRuntimeType type);
   virtual ggadget::ElementFactoryInterface *GetElementFactory();
   virtual ggadget::FileManagerInterface *GetGlobalFileManager();
-  virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest();
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type,
       ggadget::ScriptableInterface *prototype,

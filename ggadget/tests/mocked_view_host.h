@@ -27,6 +27,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual ggadget::ScriptContextInterface *GetScriptContext() const {
     return NULL;
   }
+  virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest() { return NULL; }
   virtual const ggadget::GraphicsInterface *GetGraphics() const { return NULL; }
   virtual void QueueDraw() { }
   virtual bool GrabKeyboardFocus() { return false; }

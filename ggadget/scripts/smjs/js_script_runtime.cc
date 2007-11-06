@@ -41,7 +41,7 @@ ScriptContextInterface *JSScriptRuntime::CreateContext() {
   if (!context)
     return NULL;
   JS_SetErrorReporter(context, ReportError);
-  return new JSScriptContext(context);
+  return new internal::JSScriptContext(context);
 }
 
 Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {

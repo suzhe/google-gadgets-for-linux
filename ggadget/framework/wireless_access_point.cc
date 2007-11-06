@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#include "wireless_access_point.h"
+#include <ggadget/slot.h>
+#include <ggadget/variant.h>
 
-#include "ggadget/slot.h"
-#include "ggadget/variant.h"
+#include "wireless_access_point.h"
 
 namespace ggadget {
 

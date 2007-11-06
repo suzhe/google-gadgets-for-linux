@@ -22,8 +22,8 @@
 #include <string>
 #include <ggadget/common.h>
 #include <ggadget/file_manager_interface.h>
-#include "string_utils.h"
-#include "third_party/unzip/unzip.h"
+#include <ggadget/string_utils.h>
+#include <third_party/unzip/unzip.h>
 
 class TiXmlDocument;  // TinyXML DOM Document.
 

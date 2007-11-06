@@ -28,6 +28,10 @@
 #include "ggadget/scripts/smjs/json.h"
 #include "ggadget/unicode_utils.h"
 
+using ggadget::internal::PrintJSValue;
+using ggadget::internal::JSScriptContext;
+using ggadget::JSScriptRuntime;
+
 // The exception value thrown by Assert function.
 const int kAssertExceptionMagic = 135792468;
 
@@ -161,7 +165,7 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
       if (JS_ExecuteScript(cx, obj, script, &result) &&
           result != JSVAL_VOID &&
           g_interactive) {
-        puts(ggadget::PrintJSValue(cx, result).c_str());
+        puts(PrintJSValue(cx, result).c_str());
       }
       JS_DestroyScript(cx, script);
     }
@@ -173,7 +177,7 @@ static void Process(JSContext *cx, JSObject *obj, const char *filename) {
 static JSBool Print(JSContext *cx, JSObject *obj,
                     uintN argc, jsval *argv, jsval *rval) {
   for (uintN i = 0; i < argc; i++)
-    printf("%s ", ggadget::PrintJSValue(cx, argv[i]).c_str());
+    printf("%s ", PrintJSValue(cx, argv[i]).c_str());
   putchar('\n');
   return JS_TRUE;
 }
@@ -204,11 +208,11 @@ static JSBool Assert(JSContext *cx, JSObject *obj,
   if (argv[0] != JSVAL_NULL) {
     if (argc > 1)
       JS_ReportError(cx, "%s%s\n%s", kAssertFailurePrefix,
-                     ggadget::PrintJSValue(cx, argv[0]).c_str(),
-                     ggadget::PrintJSValue(cx, argv[1]).c_str());
+                     PrintJSValue(cx, argv[0]).c_str(),
+                     PrintJSValue(cx, argv[1]).c_str());
     else
       JS_ReportError(cx, "%s%s", kAssertFailurePrefix,
-                     ggadget::PrintJSValue(cx, argv[0]).c_str());
+                     PrintJSValue(cx, argv[0]).c_str());
 
     // Let the JavaScript test framework know the failure.
     // The exception value is null to tell the catcher not to print it again.
@@ -295,13 +299,13 @@ static JSFunctionSpec global_functions[] = {
 };
 
 // A hook to initialize custom objects before running scripts.
-JSBool InitCustomObjects(ggadget::JSScriptContext *context);
-void DestroyCustomObjects(ggadget::JSScriptContext *context);
+JSBool InitCustomObjects(JSScriptContext *context);
+void DestroyCustomObjects(JSScriptContext *context);
 
 int main(int argc, char *argv[]) {
-  ggadget::JSScriptRuntime *runtime = new ggadget::JSScriptRuntime();
-  ggadget::JSScriptContext *context =
-      ggadget::down_cast<ggadget::JSScriptContext *>(runtime->CreateContext());
+  JSScriptRuntime *runtime = new JSScriptRuntime();
+  JSScriptContext *context = ggadget::down_cast<JSScriptContext *>(
+      runtime->CreateContext());
   JSContext *cx = context->context();
   if (!cx)
     return QUIT_ERROR;

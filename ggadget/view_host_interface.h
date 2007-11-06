@@ -23,6 +23,7 @@ class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
 class ViewInterface;
+class XMLHttpRequestInterface;
 
 /**
  * Interface for providing host services to views.. Each view contains a
@@ -50,6 +51,9 @@ class ViewHostInterface {
 
   /** Returns the @c GraphicsInterface associated with this host. */
   virtual const GraphicsInterface *GetGraphics() const = 0;
+
+  /** Creates a new @c XMLHttpRequestInterface instance. */
+  virtual XMLHttpRequestInterface *NewXMLHttpRequest() = 0;
 
   /** Asks the host to redraw the given view. */
   virtual void QueueDraw() = 0;

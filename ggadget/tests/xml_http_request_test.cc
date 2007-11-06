@@ -36,9 +36,6 @@ using ggadget::DOMDocumentInterface;
 
 class MockedGadgetHostWithIOWatch : public MockedGadgetHost {
  public:
-  virtual XMLHttpRequestInterface *NewXMLHttpRequest() {
-    return ggadget::CreateXMLHttpRequest(this);
-  }
   virtual int RegisterReadWatch(int fd, IOWatchCallback *callback) {
     callbacks_.push_back(callback);
     fds_.push_back(fd);
@@ -95,7 +92,7 @@ class MockedGadgetHostWithIOWatch : public MockedGadgetHost {
 
 TEST(XMLHttpRequest, States) {
   GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -154,7 +151,7 @@ class Callback {
 
 TEST(XMLHttpRequest, SyncLocalFile) {
   GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
 
   Callback callback(request);
 
@@ -186,7 +183,7 @@ TEST(XMLHttpRequest, SyncLocalFile) {
 
 TEST(XMLHttpRequest, AsyncLocalFile) {
   GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
 
   Callback callback(request);
   system("echo GFEDCBA123 >/tmp/xml_http_request_test_data");
@@ -318,7 +315,7 @@ void *ServerThread(void *arg) {
 
 TEST(XMLHttpRequest, SyncNetworkFile) {
   GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
 
   pthread_t thread;
   bool async = false;
@@ -381,7 +378,7 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
 
 TEST(XMLHttpRequest, AsyncNetworkFile) {
   MockedGadgetHostWithIOWatch *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
 
   pthread_t thread;
   bool async = true;
@@ -484,7 +481,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
 
 TEST(XMLHttpRequest, ResponseTextAndXML) {
   GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = host->NewXMLHttpRequest();
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
 
   Callback callback(request);
 

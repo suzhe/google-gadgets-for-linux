@@ -20,7 +20,7 @@
 #include <set>
 
 #include <gtk/gtk.h>
-#include "ggadget/ggadget.h"
+#include <ggadget/ggadget.h>
 
 class GadgetViewWidget;
 
@@ -57,6 +57,7 @@ class GtkViewHost : public ggadget::ViewHostInterface {
   virtual ggadget::ScriptContextInterface *GetScriptContext() const {
     return script_context_;
   }
+  virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest();
   virtual const ggadget::GraphicsInterface *GetGraphics() const { return gfx_; }
 
   virtual void QueueDraw();
