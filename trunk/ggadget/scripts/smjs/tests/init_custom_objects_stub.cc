@@ -19,6 +19,7 @@
 #include "ggadget/scripts/smjs/js_script_context.h"
 
 using namespace ggadget;
+using namespace ggadget::internal;
 
 class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:

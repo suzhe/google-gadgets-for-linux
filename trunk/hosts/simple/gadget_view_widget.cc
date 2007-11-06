@@ -3,8 +3,8 @@
 
 #include <cairo.h>
 
+#include <ggadget/graphics/cairo_canvas.h>
 #include "gadget_view_widget.h"
-#include "ggadget/graphics/cairo_canvas.h"
 
 #include "gtk_view_host.h"
 #include "gtk_key_convert.h"

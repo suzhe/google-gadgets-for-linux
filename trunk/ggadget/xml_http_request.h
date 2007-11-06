@@ -22,8 +22,10 @@
 namespace ggadget {
 
 class GadgetHostInterface;
+class ScriptContextInterface;
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(GadgetHostInterface *host);
+XMLHttpRequestInterface *CreateXMLHttpRequest(
+    GadgetHostInterface *host, ScriptContextInterface *script_context);
 
 } // namespace ggadget
 

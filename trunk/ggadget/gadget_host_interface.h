@@ -26,7 +26,6 @@ class OptionsInterface;
 class ScriptableInterface;
 class ScriptRuntimeInterface;
 class ViewHostInterface;
-class XMLHttpRequestInterface;
 
 /**
  * Interface for providing host services to the gadgets.
@@ -50,9 +49,6 @@ class GadgetHostInterface {
 
   /** Returns the @c FileManagerInterface used to load global resources. */ 
   virtual FileManagerInterface *GetGlobalFileManager() = 0;
-
-  /** Creates a new @c XMLHttpRequestInterface instance. */
-  virtual XMLHttpRequestInterface *NewXMLHttpRequest() = 0;
 
   enum ViewType {
     VIEW_MAIN,

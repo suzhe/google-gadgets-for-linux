@@ -19,6 +19,7 @@
 #include "ggadget/tests/scriptables.h"
 
 using namespace ggadget;
+using namespace ggadget::internal;
 
 class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:

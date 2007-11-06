@@ -19,11 +19,13 @@
 
 #include <jsapi.h>
 #include <ggadget/common.h>
-#include "ggadget/scriptable_interface.h"
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
 class Connection;
+
+namespace internal {
 
 /**
  * A wrapper wrapping a native @c ScriptableInterface object into a
@@ -44,9 +46,9 @@ class NativeJSWrapper {
   static JSBool Unwrap(JSContext *cx, JSObject *obj,
                        ScriptableInterface **scriptable);
 
-  JSObject *js_object() const { return js_object_; }
-  ScriptableInterface *scriptable() const { return scriptable_; }
-  ScriptableInterface::OwnershipPolicy ownership_policy() const {
+  JSObject *&js_object() { return js_object_; }
+  ScriptableInterface *scriptable() { return scriptable_; }
+  ScriptableInterface::OwnershipPolicy ownership_policy() {
     return ownership_policy_;
   }
 
@@ -116,6 +118,7 @@ private:
   ScriptableInterface::OwnershipPolicy ownership_policy_;
 };
 
+} // namespace internal
 } // namespace ggadget
 
 #endif // GGADGET_NATIVE_JS_WRAPPER_H__

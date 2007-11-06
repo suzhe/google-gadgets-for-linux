@@ -19,8 +19,8 @@
 
 #include <cstddef>
 #include <string>
-#include "ggadget/common.h"
-#include "ggadget/file_manager_interface.h"
+#include <ggadget/common.h>
+#include <ggadget/file_manager_interface.h>
 
 /**
  * Handles all global file resources (i.e. resources not belonging to a 

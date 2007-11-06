@@ -18,19 +18,18 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "ggadget/file_manager.h"
-#include "ggadget/element_factory.h"
-#include "ggadget/gadget.h"
-#include "ggadget/scripts/smjs/js_script_runtime.h"
-#include "ggadget/xml_http_request.h"
+#include <ggadget/file_manager.h>
+#include <ggadget/element_factory.h>
+#include <ggadget/gadget.h>
+#include <ggadget/scripts/smjs/js_script_runtime.h>
 
-#include "ggadget/button_element.h"
-#include "ggadget/div_element.h"
-#include "ggadget/img_element.h"
-#include "ggadget/scrollbar_element.h"
-#include "ggadget/label_element.h"
-#include "ggadget/anchor_element.h"
-#include "ggadget/checkbox_element.h"
+#include <ggadget/button_element.h>
+#include <ggadget/div_element.h>
+#include <ggadget/img_element.h>
+#include <ggadget/scrollbar_element.h>
+#include <ggadget/label_element.h>
+#include <ggadget/anchor_element.h>
+#include <ggadget/checkbox_element.h>
 
 #include "gtk_gadget_host.h"
 #include "gtk_view_host.h"
@@ -105,10 +104,6 @@ ggadget::ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
 
 ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
   return global_file_manager_;  
-}
-
-ggadget::XMLHttpRequestInterface *GtkGadgetHost::NewXMLHttpRequest() {
-  return ggadget::CreateXMLHttpRequest(this);
 }
 
 ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(

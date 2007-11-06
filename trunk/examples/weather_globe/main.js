@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright 2007 Google Inc.
 // All Rights Reserved.
 //
@@ -21,7 +21,7 @@ var kViewMaxWidth = 200;
 
 var kShakeLimit = 1;
 
-var kWeatherRefreshTime = 15 * 60 * 1000;
+var kWeatherRefreshTime = 15 * /* 60 * */ 1000;
 
 var randomNumbers = false;
 var kRandomNumbersLength = 25;
@@ -132,6 +132,8 @@ function Globe_OnMouseOver() {
   }
   mouseOverCount++;
   setTimeout(StartFadeOut, 3550);
+  // Uncomment this to test continuously memory leaks.
+  // setTimeout(Globe_OnMouseOver, 5000);
   if (Weather_currentWeatherType != WeatherType.Rain &&
       Weather_currentWeatherType != WeatherType.Storm &&
       Weather_currentWeatherType != WeatherType.Thunderstorm &&

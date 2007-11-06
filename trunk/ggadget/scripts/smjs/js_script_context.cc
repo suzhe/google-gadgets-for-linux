@@ -15,98 +15,16 @@
 */
 
 #include <ggadget/common.h>
-#include <ggadget/scoped_ptr.h>
 #include <ggadget/slot.h>
 #include <ggadget/unicode_utils.h>
+#include "js_script_context.h"
 #include "converter.h"
 #include "native_js_wrapper.h"
-#include "js_script_context.h"
+#include "js_function_slot.h"
 #include "js_script_runtime.h"
 
 namespace ggadget {
-
-const char *kFunctionReference = "@@@FunctionReference@@@";
-
-/**
- * A Slot that wraps a JavaScript function object.
- */
-class JSFunctionSlot : public Slot {
-public:
-  JSFunctionSlot(const Slot *prototype, JSContext *context, jsval function_val);
-  virtual ~JSFunctionSlot();
-
-  virtual Variant Call(int argc, Variant argv[]) const;
-
-  virtual bool HasMetadata() const { return prototype_ != NULL; }
-  virtual Variant::Type GetReturnType() const {
-    return prototype_ ? prototype_->GetReturnType() : Variant::TYPE_VOID;
-  }
-  virtual int GetArgCount() const {
-    return prototype_ ? prototype_->GetArgCount() : 0;
-  }
-  virtual const Variant::Type *GetArgTypes() const {
-    return prototype_ ? prototype_->GetArgTypes() : NULL;
-  }
-  virtual bool operator==(const Slot &another) const {
-    return function_val_ ==
-           down_cast<const JSFunctionSlot *>(&another)->function_val_;
-  }
-
-  // Add a reference from obj to the function object to prevent it from being
-  // GC'ed while it is being hold by a C++ object.
-  void SetReferenceFrom(JSObject *obj);
-
-private:
-  const Slot *prototype_;
-  JSContext *context_;
-  jsval function_val_;
-  JSObject *reference_from_;
-};
-
-JSFunctionSlot::JSFunctionSlot(const Slot *prototype, JSContext *context,
-                               jsval function_val)
-    : prototype_(prototype),
-      context_(context),
-      function_val_(function_val),
-      reference_from_(NULL) {
-}
-
-void JSFunctionSlot::SetReferenceFrom(JSObject *obj) {
-  reference_from_ = obj;
-  JS_DefineProperty(context_, obj, kFunctionReference, function_val_,
-                    JS_PropertyStub, JS_PropertyStub, 0);
-}
-
-JSFunctionSlot::~JSFunctionSlot() {
-  // The reference seems no need to delete.
-}
-
-Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
-  scoped_array<jsval> js_args;
-  Variant return_value(GetReturnType());
-  if (argc > 0) {
-    js_args.reset(new jsval[argc]);
-    for (int i = 0; i < argc; i++) {
-      if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
-        JS_ReportError(context_, "Failed to convert argument %d(%s) to jsval",
-                       i, argv[i].ToString().c_str());
-        return return_value;
-      }
-    }
-  }
-
-  jsval rval;
-  JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
-                                       argc, js_args.get(), &rval);
-  if (result) {
-    result = ConvertJSToNative(context_, return_value, rval, &return_value);
-    if (!result)
-      JS_ReportError(context_,
-                     "Failed to convert JS function return value(%s) to native",
-                     PrintJSValue(context_, rval).c_str());
-  }
-  return return_value;
-}
+namespace internal {
 
 JSScriptContext::JSScriptContext(JSContext *context)
     : context_(context),
@@ -251,100 +169,6 @@ jsval JSScriptContext::ConvertSlotToJS(JSContext *cx, Slot *slot) {
   return JSVAL_NULL;
 }
 
-static JSBool CheckAndConvertArgs(JSContext *cx, JSObject *obj, Slot *slot,
-                                  uintN argc, jsval *argv,
-                                  Variant **params, uintN *expected_argc) {
-  *params = NULL;
-  const Variant::Type *arg_types = NULL;
-  *expected_argc = argc; 
-  if (slot->HasMetadata()) {
-    arg_types = slot->GetArgTypes();
-    *expected_argc = static_cast<uintN>(slot->GetArgCount());
-    if (argc != *expected_argc) {
-      uintN min_arg_count = *expected_argc;
-      if (argc < *expected_argc) {
-        for (uintN i = min_arg_count - 1; i >= 0; i--) {
-          // Variant parameters at the end of the parameter list are optional.
-          if (arg_types[i] == Variant::TYPE_VARIANT)
-            min_arg_count--;
-          else
-            break;
-        }
-      }
-
-      if (argc > *expected_argc || argc < min_arg_count) {
-        // Argc mismatch.
-        JS_ReportError(cx, "Wrong number of arguments: %u "
-                       "(expected: %u, at least: %u)",
-                       argc, slot->GetArgCount(), min_arg_count);
-        return JS_FALSE;
-      }
-    }
-  }
-
-  if (*expected_argc > 0) {
-    *params = new Variant[*expected_argc];
-    for (uintN i = 0; i < argc; i++) {
-      JSBool result = arg_types != NULL ?
-          ConvertJSToNative(cx, Variant(arg_types[i]), argv[i], &(*params)[i]) :
-          ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
-      if (!result) {
-        for (uintN j = 0; j <= i; j++)
-          FreeNativeValue((*params)[j]);
-        delete [] *params;
-        *params = NULL;
-        JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
-                       i, PrintJSValue(cx, argv[i]).c_str());
-        return JS_FALSE;
-      }
-    }
-    // Not specified optional parameters remain TYPE_VOID. 
-
-    for (uintN i = 0; i < argc; i++) {
-      if ((*params)[i].type() == Variant::TYPE_SLOT) {
-        // Add a reference from obj to JSFunction, which is an analog reference
-        // of the C++ reference from native obj to the slot.
-        Slot *slot = VariantValue<Slot *>()((*params)[i]);
-        down_cast<JSFunctionSlot *>(slot)->SetReferenceFrom(obj);
-      }
-    }
-    // Not specified optional parameters remain TYPE_VOID. 
-  }
-  return JS_TRUE;
-}
-
-JSBool JSScriptContext::CallNativeSlot(JSContext *cx, JSObject *obj,
-                                       uintN argc, jsval *argv, jsval *rval) {
-  // According to JS stack structure, argv[-2] is the current function object.
-  JSObject *func_object = JSVAL_TO_OBJECT(argv[-2]);
-  // Get the method slot from the reserved slot.
-  jsval val;
-  if (!JS_GetReservedSlot(cx, func_object, 0, &val) ||
-      !JSVAL_IS_INT(val))
-    return JS_FALSE;
-  Slot *slot = reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val));
-
-  Variant *params = NULL;
-  uintN expected_argc = argc;
-  if (!CheckAndConvertArgs(cx, obj, slot, argc, argv, &params, &expected_argc))
-    return JS_FALSE;
-
-  try {
-    Variant return_value = slot->Call(expected_argc, params);
-    JSBool result = ConvertNativeToJS(cx, return_value, rval);
-    if (!result)
-      JS_ReportError(cx,
-                     "Failed to convert native function result(%s) to jsval",
-                     return_value.ToString().c_str());
-    delete [] params;
-    return result;
-  } catch (ScriptableExceptionHolder e) {
-    delete [] params;
-    HandleException(cx, e);
-    return JS_FALSE;
-  }
-}
-
 JSBool JSScriptContext::HandleException(JSContext *cx,
                                         const ScriptableExceptionHolder &e) {
   jsval js_exception;
@@ -357,18 +181,18 @@ JSBool JSScriptContext::HandleException(JSContext *cx,
   return JS_TRUE;
 }
 
-Slot *JSScriptContext::NewJSFunctionSlotInternal(const Slot *prototype,
-                                                 jsval function_val) {
-  Slot *slot = new JSFunctionSlot(prototype, context_, function_val);
+JSFunctionSlot *JSScriptContext::NewJSFunctionSlotInternal(
+    const Slot *prototype, jsval function_val) {
+  JSFunctionSlot *slot = new JSFunctionSlot(prototype, context_, function_val);
   // Put it here to make it possible for ConvertNativeSlotToJS to unwrap
   // a JSFunctionSlot.
   slot_js_map_[slot] = function_val;
   return slot;
 }
 
-Slot *JSScriptContext::NewJSFunctionSlot(JSContext *cx,
-                                         const Slot *prototype,
-                                         jsval function_val) {
+JSFunctionSlot *JSScriptContext::NewJSFunctionSlot(JSContext *cx,
+                                                   const Slot *prototype,
+                                                   jsval function_val) {
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
@@ -430,14 +254,18 @@ JSScriptContext::JSClassWithNativeCtor::~JSClassWithNativeCtor() {
 
 JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                                         uintN argc, jsval *argv, jsval *rval) {
+  AutoLocalRootScope local_root_scope(cx);
+  if (!local_root_scope.good())
+    return JS_FALSE;
+
   JSClassWithNativeCtor *cls =
       reinterpret_cast<JSClassWithNativeCtor *>(JS_GET_CLASS(cx, obj));
   ASSERT(cls);
 
   Variant *params = NULL;
   uintN expected_argc = argc;
-  if (!CheckAndConvertArgs(cx, obj, cls->constructor_, argc, argv,
-                           &params, &expected_argc))
+  if (!ConvertJSArgsToNative(cx, obj, cls->constructor_, argc, argv,
+                             &params, &expected_argc))
     return JS_FALSE;
 
   try {
@@ -476,4 +304,32 @@ bool JSScriptContext::RegisterClass(const char *name, Slot *constructor) {
   return true;
 }
 
+void JSScriptContext::LockObject(ScriptableInterface *object) {
+  ASSERT(object);
+  WrapperMap::const_iterator it = wrapper_map_.find(object);
+  if (it == wrapper_map_.end()) {
+    DLOG("Can't lock %p(CLASS_ID=%jx) not attached to JavaScript",
+         object, object->GetClassId());
+  } else {
+    DLOG("Lock: policy=%d jsobj=%p wrapper=%p scriptable=%p",
+         it->second->ownership_policy(), it->second->js_object(),
+         it->second, it->second->scriptable());
+    JS_AddRoot(context_, &(it->second->js_object()));
+  }
+}
+
+void JSScriptContext::UnlockObject(ScriptableInterface *object) {
+  ASSERT(object);
+  WrapperMap::const_iterator it = wrapper_map_.find(object);
+  if (it == wrapper_map_.end()) {
+    DLOG("Can't unlock %p not attached to JavaScript", object);
+  } else {
+    DLOG("Unlock: policy=%d jsobj=%p wrapper=%p scriptable=%p",
+         it->second->ownership_policy(), it->second->js_object(),
+         it->second, it->second->scriptable());
+    JS_RemoveRoot(context_, &(it->second->js_object()));
+  }
+}
+
+} // namespace internal
 } // namespace ggadget

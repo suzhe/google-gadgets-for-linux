@@ -20,6 +20,7 @@
 #include "xml_http_request.h"
 #include "gadget_host_interface.h"
 #include "scriptable_binary_data.h"
+#include "script_context_interface.h"
 #include "scriptable_helper.h"
 #include "signals.h"
 #include "string_utils.h"
@@ -33,8 +34,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
-  XMLHttpRequest(GadgetHostInterface *host)
+  XMLHttpRequest(GadgetHostInterface *host,
+                 ScriptContextInterface *script_context)
       : host_(host),
+        script_context_(script_context),
         async_(false),
         curl_(NULL),
         curlm_(NULL),
@@ -97,7 +100,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void ChangeState(State new_state) {
-    DLOG("XMLHttpRequest: ChangeState to %d", new_state);
+    DLOG("XMLHttpRequest: ChangeState from %d to %d", state_, new_state);
     state_ = new_state;
     onreadystatechange_signal_();
   }
@@ -264,6 +267,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         DLOG("XMLHttpRequest: Send(async): DONE");
         Done();
       }
+
+      // Prevent this object from being GC'ed during handling the request.
+      if (script_context_)
+        script_context_->LockObject(this);
     } else {
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
@@ -501,6 +508,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
     send_flag_ = false;
+
+    if (async_ && script_context_)
+      script_context_->UnlockObject(this);
   }
 
   virtual void Abort() {
@@ -774,6 +784,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   GadgetHostInterface *host_;
+  ScriptContextInterface *script_context_;
   Signal0<void> onreadystatechange_signal_;
 
   std::string url_;
@@ -804,8 +815,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
 } // anonymous namespace
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(GadgetHostInterface *host) {
-  return new XMLHttpRequest(host);
+XMLHttpRequestInterface *CreateXMLHttpRequest(
+    GadgetHostInterface *host, ScriptContextInterface *script_context) {
+  return new XMLHttpRequest(host, script_context);
 }
 
 } // namespace ggadget

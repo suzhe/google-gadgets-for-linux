@@ -31,9 +31,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::FileManagerInterface *GetGlobalFileManager() {
     return NULL;
   }  
-  virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest() {
-    return NULL;
-  }
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type, ggadget::ScriptableInterface *prototype,
       ggadget::OptionsInterface *options) {

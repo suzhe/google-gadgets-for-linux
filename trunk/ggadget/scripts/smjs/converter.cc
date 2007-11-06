@@ -21,11 +21,13 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/unicode_utils.h>
 #include "converter.h"
+#include "js_function_slot.h"
 #include "js_script_context.h"
 #include "json.h"
 #include "native_js_wrapper.h"
 
 namespace ggadget {
+namespace internal {
 
 static JSBool ConvertJSToNativeVoid(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
@@ -161,7 +163,8 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   return result;
 }
 
-static JSBool ConvertJSToSlot(JSContext *cx, const Variant &prototype,
+static JSBool ConvertJSToSlot(JSContext *cx, JSObject *obj,
+                              const Variant &prototype,
                               jsval js_val, Variant *native_val) {
   JSBool result = JS_TRUE;
   jsval function_val;
@@ -187,10 +190,15 @@ static JSBool ConvertJSToSlot(JSContext *cx, const Variant &prototype,
   }
 
   if (result) {
-    Slot *slot = NULL;
-    if (function_val != JSVAL_NULL)
+    JSFunctionSlot *slot = NULL;
+    if (function_val != JSVAL_NULL) {
       slot = JSScriptContext::NewJSFunctionSlot(
           cx, VariantValue<Slot *>()(prototype), function_val);
+      // Add a reference from obj to JSFunction, which is an analog reference
+      // of the C++ reference from native obj to the slot.
+      if (obj)
+        slot->SetReferenceFrom(obj);
+    }
     *native_val = Variant(slot);
   }
   return result;
@@ -226,7 +234,7 @@ JSBool ConvertJSToNativeInvalid(JSContext *cx, jsval js_val,
   return JS_FALSE;
 }
 
-JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
+JSBool ConvertJSToNative(JSContext *cx, JSObject *obj, const Variant &prototype,
                          jsval js_val, Variant *native_val) {
   switch (prototype.type()) {
     case Variant::TYPE_VOID:
@@ -247,7 +255,7 @@ JSBool ConvertJSToNative(JSContext *cx, const Variant &prototype,
     case Variant::TYPE_CONST_SCRIPTABLE:
       return ConvertJSToScriptable(cx, js_val, native_val);
     case Variant::TYPE_SLOT:
-      return ConvertJSToSlot(cx, prototype, js_val, native_val);
+      return ConvertJSToSlot(cx, obj, prototype, js_val, native_val);
     case Variant::TYPE_ANY:
     case Variant::TYPE_CONST_ANY:
       JS_ReportError(cx, "Script adapter doesn't support void * type");
@@ -291,6 +299,59 @@ std::string PrintJSValue(JSContext *cx, jsval js_val) {
       return "##ERROR##";
     }
   }
+}
+
+JSBool ConvertJSArgsToNative(JSContext *cx, JSObject *obj, Slot *slot,
+                             uintN argc, jsval *argv,
+                             Variant **params, uintN *expected_argc) {
+  *params = NULL;
+  const Variant::Type *arg_types = NULL;
+  *expected_argc = argc; 
+  if (slot->HasMetadata()) {
+    arg_types = slot->GetArgTypes();
+    *expected_argc = static_cast<uintN>(slot->GetArgCount());
+    if (argc != *expected_argc) {
+      uintN min_arg_count = *expected_argc;
+      if (argc < *expected_argc) {
+        for (uintN i = min_arg_count - 1; i >= 0; i--) {
+          // Variant parameters at the end of the parameter list are optional.
+          if (arg_types[i] == Variant::TYPE_VARIANT)
+            min_arg_count--;
+          else
+            break;
+        }
+      }
+
+      if (argc > *expected_argc || argc < min_arg_count) {
+        // Argc mismatch.
+        JS_ReportError(cx, "Wrong number of arguments: %u "
+                       "(expected: %u, at least: %u)",
+                       argc, slot->GetArgCount(), min_arg_count);
+        return JS_FALSE;
+      }
+    }
+  }
+
+  if (*expected_argc > 0) {
+    *params = new Variant[*expected_argc];
+    for (uintN i = 0; i < argc; i++) {
+      JSBool result = arg_types != NULL ?
+          ConvertJSToNative(cx, obj, Variant(arg_types[i]), argv[i],
+                            &(*params)[i]) :
+          ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
+      if (!result) {
+        for (uintN j = 0; j <= i; j++)
+          FreeNativeValue((*params)[j]);
+        delete [] *params;
+        *params = NULL;
+        JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
+                       i, PrintJSValue(cx, argv[i]).c_str());
+        return JS_FALSE;
+      }
+    }
+    // Not specified optional parameters remain TYPE_VOID. 
+  }
+  return JS_TRUE;
 }
 
 static JSBool ConvertNativeToJSVoid(JSContext *cx,
@@ -452,4 +513,5 @@ JSBool ConvertNativeToJS(JSContext *cx,
   }
 }
 
+} // namespace internal
 } // namespace ggadget

@@ -18,7 +18,7 @@
 #include <gtk/gtk.h>
 #include <locale.h>
 
-#include "ggadget/ggadget.h"
+#include <ggadget/ggadget.h>
 #include "gadget_view_widget.h"
 #include "gtk_gadget_host.h"
 #include "gtk_view_host.h"
