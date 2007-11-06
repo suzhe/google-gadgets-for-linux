@@ -67,6 +67,7 @@ LIBS="$readline_LIBS $LIBS"
 AC_LINK_IFELSE([[
 #include<stdio.h>
 #include<readline/readline.h>
+#include<readline/history.h>
 
 int main() {
   readline("Hello");

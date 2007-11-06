@@ -214,6 +214,9 @@ TEST(file_manager, GetTranslatedFileContents) {
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
 
+  // Disable this path hack, because now the test data will be copied to
+  // builddir.
+#if 0
   // Hack for running test out of source tree.
   // .gg file will be generated in builddir on the fly.
   char *srcdir = getenv("srcdir");
@@ -230,5 +233,6 @@ int main(int argc, char **argv) {
     actual_gg_path = std::string(srcdir) + std::string("/") + actual_gg_path;
     base_gg_path = std::string(srcdir) + std::string("/") + base_gg_path;
   }
+#endif
   return RUN_ALL_TESTS();
 }
