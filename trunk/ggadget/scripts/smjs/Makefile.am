@@ -23,6 +23,7 @@ INCLUDES		= -I$(top_builddir) \
 smjsincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/scripts/smjs
 
 smjsinclude_HEADERS	= converter.h \
+			  js_function_slot.h \
 			  js_script_context.h \
 			  js_script_runtime.h \
 			  json.h \
@@ -32,6 +33,7 @@ lib_LTLIBRARIES		= libggadget-smjs@GGL_EPOCH@.la
 
 libggadget_smjs@GGL_EPOCH@_la_SOURCES = \
 			  converter.cc \
+			  js_function_slot.cc \
 			  js_script_context.cc \
 			  js_script_runtime.cc \
 			  json.cc \
