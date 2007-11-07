@@ -194,13 +194,13 @@ void CheckBoxElement::SetImage(const char *img) {
     delete impl_->image_[STATE_NORMAL];
     impl_->image_[STATE_NORMAL] = GetView()->LoadImage(img, false);
     if (impl_->image_[STATE_NORMAL]) {
-      if (GetPixelWidth() == 0.0) {
+      if (!WidthIsSpecified()) {
         const CanvasInterface *canvas = impl_->image_[STATE_NORMAL]->GetCanvas();
         if (canvas) {
           SetPixelWidth(canvas->GetWidth());
         }
       }
-      if (GetPixelHeight() == 0.0) {
+      if (!HeightIsSpecified()) {
         const CanvasInterface *canvas = impl_->image_[STATE_NORMAL]->GetCanvas();
         if (canvas) {
           SetPixelHeight(canvas->GetHeight());
@@ -262,13 +262,13 @@ void CheckBoxElement::SetCheckedImage(const char *img) {
     delete impl_->image_[STATE_CHECKED];
     impl_->image_[STATE_CHECKED] = GetView()->LoadImage(img, false);
     if (impl_->image_[STATE_CHECKED]) {
-      if (GetPixelWidth() == 0.0) {
+      if (!WidthIsSpecified()) {
         const CanvasInterface *canvas = impl_->image_[STATE_CHECKED]->GetCanvas();
         if (canvas) {
           SetPixelWidth(canvas->GetWidth());
         }
       }
-      if (GetPixelHeight() == 0.0) {
+      if (!HeightIsSpecified()) {
         const CanvasInterface *canvas = impl_->image_[STATE_CHECKED]->GetCanvas();
         if (canvas) {
           SetPixelHeight(canvas->GetHeight());

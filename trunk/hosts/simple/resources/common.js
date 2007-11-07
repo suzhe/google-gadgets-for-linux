@@ -259,29 +259,33 @@ contentRankingAlgorithm.MostSteep = 8;
 // Windows Enumerator adapter
 function Enumerator(coll) {
   var pos_ = 0;
+  var last_item_ = null;
   if (coll.length == undefined && coll.count == undefined)
     throw "Enumerator's argument must have either length or count property.";
   if (coll.constructor != Array && typeof(coll.item) != "function")
     throw "Enumerator's argument must be either a JavaScript array" +
           " or an object providing item(integer) method."; 
 
-  this.atEnd = function atEnd() {
-    if (coll.length != undefined)
-      return pos_ >= coll.length;
-    return pos_ >= coll.count;
+  this.atEnd = function() {
+    return pos_ >= (coll.length == undefined ? coll.count : coll.length);  
   };
 
-  this.item = function item() {
-    if (coll.constructor == Array)
-      return coll[pos_];
-    return coll.item(pos_);
+  this.item = function() {
+    if (this.atEnd()) return null;
+    return coll.constructor == Array ? coll[pos_] : coll.item(pos_);
   };
 
-  this.moveFirst = function moveFirst() {
+  this.moveFirst = function() {
     pos_ = 0;
+    last_item_ = this.item();
   };
 
-  this.moveNext = function moveNext() {
-    pos_++;
+  this.moveNext = function() {
+    if (!this.atEnd()) {
+      if (this.item() == last_item_) pos_++;
+      last_item_ = this.item();
+    }
   };
+
+  last_item_ = this.item();
 }

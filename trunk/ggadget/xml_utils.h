@@ -86,11 +86,15 @@ ElementInterface *InsertElementFromXML(Elements *elements,
  * @param xml the content of an XML file.
  * @param filename the name of the XML file (only for logging).
  * @param root_element_name expected name of the root element.
+ * @param[in, out] encoding on input, it is the hint encoding if the input xml
+ *     has no Unicode BOF or xml encoding declaration. On output, it contains
+ *     the detected encoding. Can be @c NULL if the caller doesn't need it.
  * @param table the string table to fill.
  * @return @c true if succeeds.
  */
 bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
                           const char *root_element_name,
+                          std::string *encoding,
                           GadgetStringMap *table);
 
 /**
@@ -107,8 +111,9 @@ bool CheckXMLName(const char *name);
  * @param is_html @c true if the input is an HTML document.
  * @param domdoc the DOM document. It must be blank before calling this
  *     function, and will be filled with DOM data if this function succeeds.
- * @param[out] return the detected encoding. Can be @c NULL if the caller
- *     doesn't need it.
+ * @param[in, out] encoding on input, it is the hint encoding if the input xml
+ *     has no Unicode BOF or xml encoding declaration. On output, it contains
+ *     the detected encoding. Can be @c NULL if the caller doesn't need it.
  * @return @c true if succeeds.
  */
 bool ParseXMLIntoDOM(const char *xml, const char *filename,
@@ -123,18 +128,21 @@ bool ParseHTMLIntoDOM(const char *html, const char *filename,
                       std::string *encoding);
 
 /**
- * Converts a string in given encoding to a utf8 string.
+ * Converts a string in given encoding to a utf8. Conversion will be only taken
+ * when it's confident, i.e., if Unicode BOF exists, or successfully converted
+ * using the given encoding.
  *
  * @param src the string to be converted.
  * @param src_length length of the source string.
- * @param encoding the name of encoding of the source string. If it is @c NULL
- *     or blank, the function will detect the encoding by detecting Unicode BOM.
+ * @param[in, out] encoding on input if it is not empty, it will be used in
+ *     convertion, otherwise the encoding will be detected with BOF.
+ *     On output, it contains the detected encoding.
+ *     Can be @c NULL if the caller doesn't need it.
  * @param[out] dest result utf8 string.
- * @return @c true if succeeded.
+ * @return @c true if it has enough information to detect the encoding.
  */
 bool ConvertStringToUTF8(const char *src, size_t src_length,
-                         const char *encoding,
-                         std::string *dest);
+                         std::string *encoding, std::string *dest);
 
 /**
  * Converts a string in given encoding to a utf8 string.
@@ -142,8 +150,7 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
  * Same as above function but takes a std::string object as source.
  */
 bool ConvertStringToUTF8(const std::string &src,
-                         const char *encoding,
-                         std::string *dest);
+                         std::string *encoding, std::string *dest);
 
 /**
  * Encode a string into XML text by escaping special chars.

@@ -395,6 +395,9 @@ Elements::Elements(ElementFactoryInterface *factory,
     : impl_(new Impl(factory, owner, view)) {
   RegisterProperty("count", NewSlot(impl_, &Impl::GetCount), NULL);
   RegisterMethod("item", NewSlot(impl_, &Impl::GetItem));
+  // Register the "default" method, allowing this object be called directly
+  // as a function.
+  RegisterMethod("", NewSlot(impl_, &Impl::GetItem));
   // Disable the following for now, because they are not in the public
   // API document.
   // SetArrayHandler(NewSlot(impl_, &Impl::GetItemByIndex), NULL);

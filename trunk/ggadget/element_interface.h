@@ -223,6 +223,15 @@ class ElementInterface : public ScriptableInterface {
   /** Retrieve whether pin y is relative to its height. */
   virtual bool PinYIsRelative() const = 0;
 
+  /** Retrieve whether x is explicitly specified. */
+  virtual bool XIsSpecified() const = 0;
+  /** Retrieve whether y is explicitly specified. */
+  virtual bool YIsSpecified() const = 0;
+  /** Retrieve whether width is explicitly specified. */
+  virtual bool WidthIsSpecified() const = 0;
+  /** Retrieve whether height is explicitly specified. */
+  virtual bool HeightIsSpecified() const = 0;
+
   /**
    * Handler of the mouse events.
    * @param event the mouse event.

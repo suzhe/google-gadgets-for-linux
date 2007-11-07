@@ -37,6 +37,16 @@ static JSBool ConvertJSToNativeVoid(JSContext *cx, jsval js_val,
 
 static JSBool ConvertJSToNativeBool(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
+  if (JSVAL_IS_STRING(js_val)) {
+    JSString *js_string = JSVAL_TO_STRING(js_val);
+    char *bytes = JS_GetStringBytes(js_string);
+    if (!bytes)
+      return JS_FALSE;
+    // Convert "" or "false" to bool value false.
+    *native_val = Variant(*bytes && strcasecmp(bytes, "false") != 0);
+    return JS_TRUE;
+  }
+
   JSBool value;
   if (!JS_ValueToBoolean(cx, js_val, &value))
     return JS_FALSE;
@@ -47,6 +57,11 @@ static JSBool ConvertJSToNativeBool(JSContext *cx, jsval js_val,
 
 static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
                                    Variant *native_val) {
+  if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
+    *native_val = Variant(0);
+    return JS_TRUE;
+  }
+
   JSBool result = JS_FALSE;
   if (JSVAL_IS_INT(js_val)) {
     int32 int_val;
@@ -71,6 +86,11 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
   double double_val;
+  if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
+    *native_val = Variant(0.0);
+    return JS_TRUE;
+  }
+
   JSBool result = JS_ValueToNumber(cx, js_val, &double_val);
   if (result) {
     // If double_val is NaN, it may because js_val is NaN, or js_val is a

@@ -71,6 +71,10 @@ ScriptableOptions::ScriptableOptions(OptionsInterface *options)
   RegisterMethod("remove", NewSlot(options, &OptionsInterface::Remove));
   RegisterMethod("removeAll", NewSlot(options, &OptionsInterface::RemoveAll));
 
+  // Register the "default" method, allowing this object be called directly
+  // as a function.
+  RegisterMethod("", NewSlot(impl_, &Impl::GetValue));
+
   // Disable the following for now, because it's not in the public API document.
   // SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetValue),
   //                           NewSlot(impl_, &Impl::PutValue));

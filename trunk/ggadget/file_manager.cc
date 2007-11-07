@@ -88,7 +88,7 @@ bool FileManagerImpl::Init(const char *base_path) {
   // Now Load strings.xml.
   if (!LoadStringTable(kStringsXML)) {
     LOG("Failed to load %s in dir: %s", kStringsXML, base_path_.c_str());
-    return false;
+    // Only warn about this error.
   }
 
   return true;
@@ -271,11 +271,18 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
   if (!GetFileContentsInternal(iter, &data))
     return false;
 
-  return ParseXMLIntoXPathMap(
-      data.c_str(),
-      (base_path_ + kPathSeparator + iter->first).c_str(),
-      kStringsTag,
-      &string_table_);
+  std::string filename(base_path_ + kPathSeparator + iter->first);
+  bool result = ParseXMLIntoXPathMap(data.c_str(), filename.c_str(),
+                                     kStringsTag, NULL, &string_table_);
+
+  if (!result) {
+    // For compatibility with some Windows gadget files that use ISO8859-1
+    // encoding without declaration.
+    std::string encoding("ISO8859-1");
+    result = ParseXMLIntoXPathMap(data.c_str(), filename.c_str(),
+                                  kStringsTag, &encoding, &string_table_); 
+  }
+  return false;
 }
 
 bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {

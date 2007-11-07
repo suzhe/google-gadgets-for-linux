@@ -62,10 +62,14 @@ class BasicElement::Impl {
         pheight_(0.0),
         px_(0.0),
         py_(0.0),
-        width_relative_(0.0),
-        height_relative_(0.0),
-        x_relative_(0.0),
-        y_relative_(0.0),
+        width_relative_(false),
+        height_relative_(false),
+        x_relative_(false),
+        y_relative_(false),
+        width_specified_(false),
+        height_specified_(false),
+        x_specified_(false),
+        y_specified_(false),
         canvas_(NULL),
         mask_image_(NULL),
         visibility_changed_(true),
@@ -269,8 +273,11 @@ class BasicElement::Impl {
     return parent_ ? parent_->GetPixelHeight() : view_->GetHeight();
   }
 
+  // Returns when input is: pixel: 0; relative: 1; 2: unspecified; invalid: -1.
   static int ParsePixelOrRelative(const Variant &input, double *output) {
     switch (input.type()) {
+      case Variant::TYPE_VOID:
+        return 2;
       // The input is an integer pixel value.
       case Variant::TYPE_INT64:
         *output = VariantValue<int>()(input);
@@ -282,6 +289,9 @@ class BasicElement::Impl {
       // The input is a relative percent value.
       case Variant::TYPE_STRING: {
         const char *str_value = VariantValue<const char *>()(input);
+        if (!str_value || !*str_value)
+          return 2;
+
         char *end_ptr;
         *output = strtol(str_value, &end_ptr, 10) / 100.0;
         if (*end_ptr == '%' && *(end_ptr + 1) == '\0')
@@ -296,8 +306,12 @@ class BasicElement::Impl {
   }
 
   static Variant GetPixelOrRelative(bool is_relative,
+                                    bool is_specified,
                                     double pixel,
                                     double relative) {
+    if (!is_specified)
+      return Variant();
+
     if (is_relative) {
       char buf[20];
       snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
@@ -308,59 +322,101 @@ class BasicElement::Impl {
   }
 
   Variant GetWidth() const {
-    return GetPixelOrRelative(width_relative_, width_, pwidth_);
+    return GetPixelOrRelative(width_relative_, width_specified_,
+                              width_, pwidth_);
   }
 
   void SetWidth(const Variant &width) {
     double v;
     switch (ParsePixelOrRelative(width, &v)) {
-      case 0: owner_->SetPixelWidth(v); break;
-      case 1: owner_->SetRelativeWidth(v); break;
-      default: break;
+      case 0:
+        width_specified_ = true;
+        SetPixelWidth(v);
+        break;
+      case 1:
+        width_specified_ = true;
+        SetRelativeWidth(v, false);
+        break;
+      case 2:
+        width_specified_ = false;
+        break;
+      default:
+        break;
     }
   }
 
   Variant GetHeight() const {
-    return GetPixelOrRelative(height_relative_, height_, pheight_);
+    return GetPixelOrRelative(height_relative_, height_specified_,
+                              height_, pheight_);
   }
 
   void SetHeight(const Variant &height) {
     double v;
     switch (ParsePixelOrRelative(height, &v)) {
-      case 0: owner_->SetPixelHeight(v); break;
-      case 1: owner_->SetRelativeHeight(v); break;
-      default: break;
+      case 0:
+        height_specified_ = true;
+        SetPixelHeight(v);
+        break;
+      case 1:
+        height_specified_ = true;
+        SetRelativeHeight(v, false);
+        break;
+      case 2:
+        height_specified_ = false;
+        break;
+      default:
+        break;
     }
   }
 
   Variant GetX() const {
-    return GetPixelOrRelative(x_relative_, x_, px_);
+    return GetPixelOrRelative(x_relative_, x_specified_, x_, px_);
   }
 
   void SetX(const Variant &x) {
     double v;
     switch (ParsePixelOrRelative(x, &v)) {
-      case 0: SetPixelX(v); break;
-      case 1: SetRelativeX(v, false); break;
-      default: break;
+      case 0:
+        x_specified_ = true;
+        SetPixelX(v);
+        break;
+      case 1:
+        x_specified_ = true;
+        SetRelativeX(v, false);
+        break;
+      case 2:
+        x_specified_ = false;
+        break;
+      default:
+        break;
     }
   }
 
   Variant GetY() const {
-    return GetPixelOrRelative(y_relative_, y_, py_);
+    return GetPixelOrRelative(y_relative_, y_specified_, y_, py_);
   }
 
   void SetY(const Variant &y) {
     double v;
     switch (ParsePixelOrRelative(y, &v)) {
-      case 0: SetPixelY(v); break;
-      case 1: SetRelativeY(v, false); break;
-      default: break;
+      case 0:
+        y_specified_ = true;
+        SetPixelY(v);
+        break;
+      case 1:
+        y_specified_ = true;
+        SetRelativeY(v, false);
+        break;
+      case 2:
+        y_specified_ = false;
+        break;
+      default:
+        break;
     }
   }
 
   Variant GetPinX() const {
-    return GetPixelOrRelative(pin_x_relative_, pin_x_, ppin_x_);
+    return GetPixelOrRelative(pin_x_relative_, true, pin_x_, ppin_x_);
   }
 
   void SetPinX(const Variant &pin_x) {
@@ -373,7 +429,7 @@ class BasicElement::Impl {
   }
 
   Variant GetPinY() const {
-    return GetPixelOrRelative(pin_y_relative_, pin_y_, ppin_y_);
+    return GetPixelOrRelative(pin_y_relative_, true, pin_y_, ppin_y_);
   }
 
   void SetPinY(const Variant &pin_y) {
@@ -611,10 +667,14 @@ class BasicElement::Impl {
   double pheight_;
   double px_;
   double py_;
-  double width_relative_;
-  double height_relative_;
-  double x_relative_;
-  double y_relative_;
+  bool width_relative_;
+  bool height_relative_;
+  bool x_relative_;
+  bool y_relative_;
+  bool width_specified_;
+  bool height_specified_;
+  bool x_specified_;
+  bool y_specified_;
 
   CanvasInterface *canvas_;
   Image *mask_image_;
@@ -953,6 +1013,22 @@ bool BasicElement::PinXIsRelative() const {
 
 bool BasicElement::PinYIsRelative() const {
   return impl_->pin_y_relative_;
+}
+
+bool BasicElement::XIsSpecified() const {
+  return impl_->x_specified_;
+}
+
+bool BasicElement::YIsSpecified() const {
+  return impl_->y_specified_;
+}
+
+bool BasicElement::WidthIsSpecified() const {
+  return impl_->width_specified_;
+}
+
+bool BasicElement::HeightIsSpecified() const {
+  return impl_->height_specified_;
 }
 
 double BasicElement::GetRotation() const {

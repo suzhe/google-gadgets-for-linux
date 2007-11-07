@@ -117,13 +117,13 @@ void ButtonElement::SetImage(const char *img) {
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(img, false);
     if (impl_->image_) {
-      if (GetPixelWidth() == 0.0) {
+      if (!WidthIsSpecified()) {
         const CanvasInterface *canvas = impl_->image_->GetCanvas();
         if (canvas) {
           SetPixelWidth(canvas->GetWidth());
         }
       }
-      if (GetPixelHeight() == 0.0) {
+      if (!HeightIsSpecified()) {
         const CanvasInterface *canvas = impl_->image_->GetCanvas();
         if (canvas) {
           SetPixelHeight(canvas->GetHeight());

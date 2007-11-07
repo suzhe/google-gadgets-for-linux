@@ -45,7 +45,7 @@ const char *xml =
 
 TEST(XMLUtils, ParseXMLIntoXPathMap) {
   GadgetStringMap map;
-  ASSERT_TRUE(ParseXMLIntoXPathMap(xml, "TheFileName", "root", &map));
+  ASSERT_TRUE(ParseXMLIntoXPathMap(xml, "TheFileName", "root", NULL, &map));
   ASSERT_EQ(19U, map.size());
   EXPECT_STREQ("v", map.find("@a")->second.c_str());
   EXPECT_STREQ("v1", map.find("@a1")->second.c_str());
@@ -61,12 +61,12 @@ TEST(XMLUtils, ParseXMLIntoXPathMap) {
 
 TEST(XMLUtils, ParseXMLIntoXPathMap_InvalidRoot) {
   GadgetStringMap map;
-  ASSERT_FALSE(ParseXMLIntoXPathMap(xml, "TheFileName", "another", &map));
+  ASSERT_FALSE(ParseXMLIntoXPathMap(xml, "TheFileName", "another", NULL, &map));
 }
 
 TEST(XMLUtils, ParseXMLIntoXPathMap_InvalidXML) {
   GadgetStringMap map;
-  ASSERT_FALSE(ParseXMLIntoXPathMap("<a></b>", "Bad", "a", &map));
+  ASSERT_FALSE(ParseXMLIntoXPathMap("<a></b>", "Bad", "a", NULL, &map));
 }
 
 TEST(XMLUtils, CheckXMLName) {
@@ -130,25 +130,36 @@ TEST(XMLUtils, ParseXMLIntoDOM_InvalidXML) {
 TEST(XMLUtils, ConvertStringToUTF8) {
   const char *src = "ASCII string, no BOM";
   std::string output;
-  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
-  ASSERT_STREQ(src, output.c_str());
-  ASSERT_TRUE(ConvertStringToUTF8(std::string(src), NULL, &output));
-  ASSERT_STREQ(src, output.c_str());
+  // ConvertStringToUTF8 returns false because it has no enough information
+  // to judge the encoding.
+  ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_FALSE(ConvertStringToUTF8(std::string(src), NULL, &output));
 
   src = "\xEF\xBB\xBFUTF8 String, with BOM";
   ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
   ASSERT_STREQ(src, output.c_str());
+  std::string encoding;
+  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), &encoding, &output));
+  ASSERT_STREQ(src, output.c_str());
+  ASSERT_STREQ("UTF-8", encoding.c_str());
 
   // The last '\0' omitted, because the compiler will add it for us. 
   const char utf16le[] = "\xFF\xFEU\0T\0F\0001\0006\0 \0S\0t\0r\0i\0n\0g";
   const char *dest = "\xEF\xBB\xBFUTF16 String";
   ASSERT_TRUE(ConvertStringToUTF8(utf16le, sizeof(utf16le), NULL, &output));
   ASSERT_STREQ(dest, output.c_str());
+  encoding.clear();
+  ASSERT_TRUE(ConvertStringToUTF8(utf16le, sizeof(utf16le),
+                                  &encoding, &output));
+  ASSERT_STREQ(dest, output.c_str());
+  ASSERT_STREQ("UTF-16", encoding.c_str());
 
   src = "\xBA\xBA\xD7\xD6";
   dest = "\xE6\xB1\x89\xE5\xAD\x97";
-  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), "GB2312", &output));
+  encoding = "GB2312";
+  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), &encoding, &output));
   ASSERT_STREQ(dest, output.c_str());
+  ASSERT_STREQ("GB2312", encoding.c_str());
 
   ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
   ASSERT_STREQ("", output.c_str());
@@ -157,6 +168,65 @@ TEST(XMLUtils, ConvertStringToUTF8) {
         "<root>\xBA\xBA\xD7\xD6</root>\n";
   ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
   ASSERT_STREQ("", output.c_str());
+}
+
+void TestXMLEncoding(const char *xml, const char *name,
+                     const char *expected_text,
+                     const char *hint_encoding,
+                     const char *expected_encoding) {
+  LOG("TestXMLEncoding %s", name);
+  DOMDocumentInterface *domdoc = CreateDOMDocument();
+  domdoc->Attach();
+  std::string encoding(hint_encoding);
+  ASSERT_TRUE(ParseXMLIntoDOM(xml, name, domdoc, &encoding));
+  ASSERT_STREQ(expected_text, domdoc->GetDocumentElement()->GetTextContent());
+  ASSERT_STREQ(expected_encoding, encoding.c_str());
+  domdoc->Detach();
+}
+
+void TestXMLEncodingExpectFail(const char *xml, const char *name,
+                               const char *hint_encoding) {
+  LOG("TestXMLEncoding expect fail %s", name);
+  DOMDocumentInterface *domdoc = CreateDOMDocument();
+  domdoc->Attach();
+  std::string encoding(hint_encoding);
+  ASSERT_FALSE(ParseXMLIntoDOM(xml, name, domdoc, &encoding));
+  domdoc->Detach();
+}
+
+TEST(XMLUtils, ParseXMLIntoDOM_Encoding) {
+  TestXMLEncoding("\xEF\xBB\xBF<a>\xE5\xAD\x97</a>", "UTF-8 BOF, no hint",
+                  "\xE5\xAD\x97", "", "UTF-8");
+  TestXMLEncoding("<a>\xE5\xAD\x97</a>", "No BOF, no hint",
+                  "\xE5\xAD\x97", "", "UTF-8");
+  TestXMLEncoding("\xEF\xBB\xBF<a>\xE5\xAD\x97</a>", "UTF-8 BOF, hint GB2312",
+                  "\xE5\xAD\x97", "GB2312", "UTF-8");
+  TestXMLEncoding("\xEF\xBB\xBF<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                      "<a>\xE5\xAD\x97</a>",
+                  "UTF-8 BOF with declaration, hint GB2312",
+                  "\xE5\xAD\x97", "GB2312", "UTF-8");
+  TestXMLEncoding("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                      "<a>\xE5\xAD\x97</a>",
+                  "No with UTF-8 declaration, hint GB2312",
+                  "\xE5\xAD\x97", "GB2312", "UTF-8");
+  TestXMLEncoding("<?xml version=\"1.0\" encoding=\"GB2312\"?><a>\xD7\xD6</a>",
+                  "GB2312 declaration, no hint",
+                  "\xE5\xAD\x97", "", "GB2312");
+  TestXMLEncoding("<?xml version=\"1.0\" encoding=\"GB2312\"?><a>\xD7\xD6</a>",
+                  "GB2312 declaration, GB2312 hint",
+                  "\xE5\xAD\x97", "GB2312", "GB2312");
+  TestXMLEncoding("<?xml version=\"1.0\" encoding=\"GB2312\"?><a>\xD7\xD6</a>",
+                  "GB2312 declaration, UTF-8 hint",
+                  "\xE5\xAD\x97", "UTF-8", "GB2312");
+  TestXMLEncoding("<?xml version=\"1.0\" encoding=\"ISO8859-1\"?>"
+                      "<a>\xE5\xAD\x97</a>",
+                  "UTF-8 like document with ISO8859-1 declaration, no hint",
+                  "\xC3\xA5\xC2\xAD\xC2\x97", "", "ISO8859-1");
+  TestXMLEncoding("<a>\xE5\xAD\x97</a>",
+                  "UTF-8 like document with ISO8859-1 hint",
+                  "\xC3\xA5\xC2\xAD\xC2\x97", "ISO8859-1", "ISO8859-1");
+  TestXMLEncodingExpectFail("<a>\xD7\xD6</a>",
+                            "No BOF, decl, hint, but GB2312", "");
 }
 
 TEST(XMLUtils, EncodeXMLString) {
