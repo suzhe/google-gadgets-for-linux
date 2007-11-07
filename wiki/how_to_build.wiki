@@ -23,6 +23,7 @@ You need install following packages in order to prepare and build the source cod
  * [http://cairographics.org cairo] >= 1.0.0
  * [http://www.gtk.org gtk] >= 2.8.0
  * [http://www.zlib.net zlib] >= 1.2.0
+ * [http://tiswww.case.edu/php/chet/readline/rltop.html readline] >= 5.0, for unit tests.
 
 === Prepare build environment ===
 Change to the root directory of the source code, then run:
@@ -69,3 +70,27 @@ If you want to run all unit tests, just use this command:
 {{{
 $ make check
 }}}
+
+=== Useful configure options ===
+ * --with-memcheck-command=CMD
+  specify a memory check command for running unit tests. For example, valgrind can be specified to check memory leak.
+ * --with-readline-libdir=DIR
+  specify where to find readline library
+ * --with-readline-incdir=DIR
+  specify where to find readline header files, without 'readline' subdir.
+ * --with-zlib-libdir=DIR
+  specify where to find zlib library
+ * --with-zlib-incdir=DIR
+  specify where to find zlib header files
+ * --with-libcurl=DIR
+  look for the curl library in DIR
+ * --with-xml-prefix=PFX
+  Prefix where libxml is installed (optional)
+ * --with-xml-exec-prefix=PFX
+  Exec prefix where libxml is installed (optional)
+ * --with-smjs-cppflags=CPPFLAGS
+  specify optional C precompile flags for spidermonkey library. JS_THREADSAFE flag will be detected automatically.
+ * --with-smjs-libdir=DIR
+  specify where to find spidermonkey library
+ * --with-smjs-incdir=DIR
+  specify where to find spidermonkey header files
