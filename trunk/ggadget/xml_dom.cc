@@ -103,12 +103,14 @@ class DOMException : public ScriptableHelper<ScriptableInterface> {
 };
 
 // Used in the methods for script to throw an script exception on errors.
-static void CheckException(DOMExceptionCode code)
-    throw(ScriptableExceptionHolder) {
+template <typename T>
+static bool GlobalCheckException(T *owner, DOMExceptionCode code) {
   if (code != DOM_NO_ERR) {
     DLOG("Throw DOMException: %d", code);
-    throw ScriptableExceptionHolder(new DOMException(code));
+    owner->SetPendingException(new DOMException(code));
+    return false;
   }
+  return true;
 }
 
 // Check if child type is acceptable for Element, DocumentFragment,
@@ -248,6 +250,7 @@ class DOMNodeImplCallbacks {
   virtual DOMExceptionCode CheckNewChild(DOMNodeInterface *new_child) = 0;
   // Append the XML string representation to the string.
   virtual void AppendXML(size_t indent, std::string *xml) = 0;
+  virtual bool CheckException(DOMExceptionCode code) = 0;
 };
 
 class DOMNodeImpl {
@@ -533,8 +536,8 @@ class DOMNodeImpl {
 
   DOMNodeInterface *ScriptInsertBefore(DOMNodeInterface *new_child,
                                        DOMNodeInterface *ref_child) {
-    CheckException(InsertBefore(new_child, ref_child));
-    return new_child;
+    return callbacks_->CheckException(InsertBefore(new_child, ref_child))?
+           new_child : NULL;
   }
 
   DOMNodeInterface *ScriptReplaceChild(DOMNodeInterface *new_child,
@@ -547,8 +550,8 @@ class DOMNodeImpl {
     // error.
     if (old_child)
       old_child->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-    CheckException(code);
-    return old_child;
+
+    return callbacks_->CheckException(code) ? old_child : NULL;
   }
 
   DOMNodeInterface *ScriptRemoveChild(DOMNodeInterface *old_child) {
@@ -559,8 +562,8 @@ class DOMNodeImpl {
     // Remove the transient reference but still keep the node.
     if (old_child)
       old_child->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-    CheckException(code);
-    return old_child;
+
+    return callbacks_->CheckException(code) ? old_child : NULL;
   }
 
   DOMNodeInterface *ScriptAppendChild(DOMNodeInterface *new_child) {
@@ -848,6 +851,10 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return impl_->GetXML();
   }
 
+  virtual bool CheckException(DOMExceptionCode code) {
+    return GlobalCheckException(this, code);
+  }
+
  private:
   DOMNodeImpl *impl_;
 };
@@ -957,10 +964,12 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
  private:
   UTF16String ScriptSubstringData(size_t offset, size_t count) {
     UTF16Char *result = NULL;
-    CheckException(SubstringData(offset, count, &result));
-    UTF16String str_result(result ? result : kBlankUTF16Str);
-    delete [] result;
-    return str_result;
+    if (CheckException(SubstringData(offset, count, &result))) {
+      UTF16String str_result(result ? result : kBlankUTF16Str);
+      delete [] result;
+      return str_result;
+    }
+    return kBlankUTF16Str;
   }
 
   void ScriptInsertData(size_t offset, const UTF16Char *arg) {
@@ -1276,12 +1285,30 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
 
    private:
     DOMNodeInterface *ScriptSetNamedItem(DOMNodeInterface *arg) {
-      if (!arg)
-        CheckException(DOM_NULL_POINTER_ERR);
-      if (arg->GetNodeType() != ATTRIBUTE_NODE)
-        CheckException(DOM_HIERARCHY_REQUEST_ERR);
-      return element_->ScriptSetAttributeNode(
-          down_cast<DOMAttrInterface *>(arg));
+      if (!arg) {
+        GlobalCheckException(this, DOM_NULL_POINTER_ERR);
+        return NULL;
+      } else if (arg->GetNodeType() != ATTRIBUTE_NODE) {
+        GlobalCheckException(this, DOM_HIERARCHY_REQUEST_ERR);
+        return NULL;
+      } else {
+        DOMAttrInterface *new_attr = down_cast<DOMAttrInterface *>(arg);
+        DOMAttrInterface *replaced_attr = NULL;
+        if (arg) {
+          // Add a temporary reference to the replaced attr to prevent it from
+          // being deleted in SetAttributeNode().
+          replaced_attr = element_->GetAttributeNode(new_attr->GetName());
+          if (replaced_attr)
+            replaced_attr->Attach();
+        }
+        DOMExceptionCode code = element_->SetAttributeNode(new_attr);
+        if (replaced_attr) {
+          // Remove the temporary reference transiently if no error.
+          replaced_attr->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
+        }
+
+        return GlobalCheckException(this, code) ? replaced_attr : NULL;
+      }
     }
 
     DOMNodeInterface *ScriptRemoveNamedItem(const char *name) {
@@ -1291,8 +1318,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
       DOMExceptionCode code = RemoveNamedItem(name);
       if (removed_node)
         removed_node->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-      CheckException(code);
-      return removed_node;
+
+      return GlobalCheckException(this, code) ? removed_node : NULL;
     }
 
     DOMElement *element_;
@@ -1316,13 +1343,12 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
       // Remove the temporary reference transiently if no error.
       replaced_attr->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
     }
-    CheckException(code);
-    return replaced_attr;
+
+    return CheckException(code) ? replaced_attr : NULL;
   }
 
   DOMAttrInterface *ScriptRemoveAttributeNode(DOMAttrInterface *old_attr) {
-    CheckException(RemoveAttributeNode(old_attr));
-    return old_attr;
+    return CheckException(RemoveAttributeNode(old_attr)) ? old_attr : NULL;
   }
 
   bool RemoveAttributeInternal(const char *name) {
@@ -1447,8 +1473,7 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
  private:
   DOMTextInterface *ScriptSplitText(size_t offset) {
     DOMTextInterface *result = NULL;
-    CheckException(SplitText(offset, &result));
-    return result;
+    return CheckException(SplitText(offset, &result)) ? result : NULL;
   }
 };
 
@@ -1784,21 +1809,19 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
   DOMElementInterface *ScriptCreateElement(const char *tag_name) {
     DOMElementInterface *result = NULL;
-    CheckException(CreateElement(tag_name, &result));
-    return result;
+    return CheckException(CreateElement(tag_name, &result)) ? result : NULL;
   }
 
   DOMProcessingInstructionInterface *ScriptCreateProcessingInstruction(
       const char *target, const char *data) {
     DOMProcessingInstructionInterface *result = NULL;
-    CheckException(CreateProcessingInstruction(target, data, &result));
-    return result;
+    return CheckException(CreateProcessingInstruction(target, data, &result)) ?
+           result : NULL;
   }
 
   DOMAttrInterface *ScriptCreateAttribute(const char *name) {
     DOMAttrInterface *result = NULL;
-    CheckException(CreateAttribute(name, &result));
-    return result;
+    return CheckException(CreateAttribute(name, &result)) ? result : NULL;
   }
 
   ScriptableInterface *ScriptCreateEntityReference(const char *name) {

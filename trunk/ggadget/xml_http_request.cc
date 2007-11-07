@@ -701,27 +701,43 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   };
 
   // Used in the methods for script to throw an script exception on errors.
-  void CheckException(ExceptionCode code) throw(ScriptableExceptionHolder) {
+  bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
-      DLOG("Throw Exception: %d", code);
-      throw ScriptableExceptionHolder(new XMLHttpRequestException(code));
+      DLOG("XMLHttpRequest: Set pending exception: %d", code);
+      SetPendingException(new XMLHttpRequestException(code));
+      return false;
     }
+    return true;
   }
 
   template <typename T>
-  T GetArg(const Variant &v, T default_value) {
-    if (v.type() == Variant::TYPE_VOID)
-      return default_value;
-    if (v.type() == VariantType<T>::type)
-      return VariantValue<T>()(v);
-    throw ScriptableExceptionHolder(new XMLHttpRequestException(SYNTAX_ERR));
+  bool GetArg(const Variant &v, T *value) {
+    if (v.type() == Variant::TYPE_VOID) {
+      // Leave the original value.
+      return true;
+    }
+    if (v.type() == VariantType<T>::type) {
+      *value = VariantValue<T>()(v);
+      return true;
+    }
+    SetPendingException(new XMLHttpRequestException(SYNTAX_ERR));
+    return false;
   }
-    
+
   void ScriptOpen(const char *method, const char *url, const Variant &v_async,
                   const Variant &v_user, const Variant &v_password) {
-    bool async = GetArg(v_async, true);
-    const char *user = GetArg(v_user, static_cast<const char *>(NULL));
-    const char *password = GetArg(v_password, static_cast<const char *>(NULL));
+    bool async = true;
+    if (!GetArg(v_async, &async))
+      return;
+
+    const char *user = NULL;
+    if (!GetArg(v_user, &user))
+      return;
+
+    const char *password = NULL;
+    if (!GetArg(v_password, &password))
+      return;
+
     CheckException(Open(method, url, async, user, password));
   }
 
@@ -734,9 +750,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       std::string data = VariantValue<std::string>()(v_data);
       CheckException(Send(data.c_str(), data.length()));
     } else {
-      DOMDocumentInterface *dom =
-          GetArg(v_data, static_cast<DOMDocumentInterface *>(NULL));
-      CheckException(Send(dom));
+      DOMDocumentInterface *dom = NULL;
+      if (GetArg(v_data, &dom))
+        CheckException(Send(dom));
     }
   }
 
@@ -755,8 +771,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   ScriptableBinaryData *ScriptGetResponseBody() {
     const char *result = NULL;
     size_t size = 0;
-    CheckException(GetResponseBody(&result, &size));
-    return new ScriptableBinaryData(result, size);
+    if (CheckException(GetResponseBody(&result, &size)))
+      return new ScriptableBinaryData(result, size);
+    return NULL;
   }
 
   const char *ScriptGetResponseText() {

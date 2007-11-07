@@ -67,6 +67,9 @@ class ScriptableDelegator : public ScriptableInterface {
   virtual bool SetProperty(int id, Variant value) {
     return scriptable_->SetProperty(id, value);
   }
+  virtual ScriptableInterface *GetPendingException(bool clear) {
+    return scriptable_->GetPendingException(clear);
+  }
 
  private:
   ScriptableInterface *scriptable_;

@@ -63,6 +63,9 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual Variant GetProperty(int id);
   virtual bool SetProperty(int id, Variant value);
 
+  virtual void SetPendingException(ScriptableInterface *exception);
+  virtual ScriptableInterface *GetPendingException(bool clear);
+
  private:
   typedef std::map<const char *, int, GadgetCharPtrComparator> SlotIndexMap;
   typedef std::vector<Variant> VariantVector;
@@ -99,6 +102,8 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   Slot *dynamic_property_setter_;
   const char *last_dynamic_property_name_;
   Variant last_dynamic_property_value_;
+
+  ScriptableInterface *pending_exception_;
 };
 
 ScriptableHelperImplInterface *NewScriptableHelperImpl() {
@@ -113,7 +118,8 @@ ScriptableHelperImpl::ScriptableHelperImpl()
       array_setter_(NULL),
       dynamic_property_getter_(NULL),
       dynamic_property_setter_(NULL),
-      last_dynamic_property_name_(NULL) {
+      last_dynamic_property_name_(NULL),
+      pending_exception_(NULL) {
 }
 
 ScriptableHelperImpl::~ScriptableHelperImpl() {
@@ -149,7 +155,7 @@ ScriptableHelperImpl::~ScriptableHelperImpl() {
 }
 
 void ScriptableHelperImpl::RegisterProperty(const char *name,
-                                              Slot *getter, Slot *setter) {
+                                            Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(getter && getter->GetArgCount() == 0);
@@ -475,6 +481,18 @@ bool ScriptableHelperImpl::SetProperty(int id, Variant value) {
 
   slot->Call(1, &value);
   return true;
+}
+
+void ScriptableHelperImpl::SetPendingException(ScriptableInterface *exception) {
+  ASSERT(pending_exception_ == NULL);
+  pending_exception_ = exception;
+}
+
+ScriptableInterface *ScriptableHelperImpl::GetPendingException(bool clear) {
+  ScriptableInterface *result = pending_exception_;
+  if (clear)
+    pending_exception_ = NULL;
+  return result;
 }
 
 } // namespace internal

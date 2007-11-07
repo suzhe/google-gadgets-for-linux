@@ -78,10 +78,10 @@ class JSScriptContext : public ScriptContextInterface {
                                uintN argc, jsval *argv, jsval *rval);
 
   /**
-   * Handles a native exception and throws it into the script engine.
+   * Checks if there is pending exception. If there is, handles it and throws
+   * it into the script engine.
    */
-  static JSBool HandleException(JSContext *cx,
-                                const ScriptableExceptionHolder &e);
+  static JSBool CheckException(JSContext *cx, ScriptableInterface *scriptable);
 
   /**
    * Create a @c Slot that is targeted to a JavaScript function object.
