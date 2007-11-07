@@ -72,6 +72,10 @@ $ make check
 }}}
 
 === Useful configure options ===
+ * --prefix=PREFIX
+  specify the installation directory. By default, it's /usr/local
+ * --enable-debug
+  Turn on debug compile options 
  * --with-memcheck-command=CMD
   specify a memory check command for running unit tests. For example, valgrind can be specified to check memory leak.
  * --with-readline-libdir=DIR
