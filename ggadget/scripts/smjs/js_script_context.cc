@@ -169,16 +169,20 @@ jsval JSScriptContext::ConvertSlotToJS(JSContext *cx, Slot *slot) {
   return JSVAL_NULL;
 }
 
-JSBool JSScriptContext::HandleException(JSContext *cx,
-                                        const ScriptableExceptionHolder &e) {
+JSBool JSScriptContext::CheckException(JSContext *cx,
+                                       ScriptableInterface *scriptable) {
+  ScriptableInterface *exception = scriptable->GetPendingException(true);
+  if (!exception)
+    return JS_TRUE;
+
   jsval js_exception;
-  if (!ConvertNativeToJS(cx, Variant(e.scriptable_exception()),
-                         &js_exception)) {
+  if (!ConvertNativeToJS(cx, Variant(exception), &js_exception)) {
     JS_ReportError(cx, "Failed to convert native exception to jsval");
     return JS_FALSE;
   }
+
   JS_SetPendingException(cx, js_exception);
-  return JS_TRUE;
+  return JS_FALSE;
 }
 
 JSFunctionSlot *JSScriptContext::NewJSFunctionSlotInternal(
@@ -268,23 +272,17 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                              &params, &expected_argc))
     return JS_FALSE;
 
-  try {
-    Variant return_value = cls->constructor_->Call(expected_argc, params);
-    ASSERT(return_value.type() == Variant::TYPE_SCRIPTABLE);
-    ScriptableInterface *scriptable =
-        VariantValue<ScriptableInterface *>()(return_value);
-    
-    JSScriptContext *context_wrapper = GetJSScriptContext(cx);
-    ASSERT(context_wrapper);
-    if (context_wrapper)
-      context_wrapper->WrapNativeObjectToJSInternal(obj, scriptable);
-    delete [] params;
-    return JS_TRUE;
-  } catch (ScriptableExceptionHolder e) {
-    delete [] params;
-    HandleException(cx, e);
-    return JS_FALSE;
-  }
+  Variant return_value = cls->constructor_->Call(expected_argc, params);
+  ASSERT(return_value.type() == Variant::TYPE_SCRIPTABLE);
+  ScriptableInterface *scriptable =
+      VariantValue<ScriptableInterface *>()(return_value);
+  
+  JSScriptContext *context_wrapper = GetJSScriptContext(cx);
+  ASSERT(context_wrapper);
+  if (context_wrapper)
+    context_wrapper->WrapNativeObjectToJSInternal(obj, scriptable);
+  delete [] params;
+  return JS_TRUE;
 }
 
 bool JSScriptContext::RegisterClass(const char *name, Slot *constructor) {

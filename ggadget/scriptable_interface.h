@@ -25,7 +25,6 @@ namespace ggadget {
 
 class Connection;
 template <typename R> class Slot0;
-class ScriptException;
 
 /**
  * Object interface that can be called from script languages.
@@ -183,7 +182,6 @@ class ScriptableInterface {
    * @param[out] is_method @c true if this property corresponds a method.
    *     It's useful to distinguish between methods and signal properties.
    * @return @c true if the property is supported and succeeds.
-   * @throws ScriptableExceptionHolder.
    */
   virtual bool GetPropertyInfoByName(const char *name,
                                      int *id, Variant *prototype,
@@ -199,7 +197,6 @@ class ScriptableInterface {
    * @param[out] is_method true if this property corresponds a method.
    * @param[out] name the name of the property.
    * @return @c true if the property is supported and succeeds.
-   * @throws ScriptableExceptionHolder.
    */
   virtual bool GetPropertyInfoById(int id, Variant *prototype,
                                    bool *is_method,
@@ -212,7 +209,6 @@ class ScriptableInterface {
    *     property.
    * @return the property value, or a @c Variant of type @c Variant::TYPE_VOID
    *     if this property is not supported,
-   * @throws ScriptableExceptionHolder.
    */
   virtual Variant GetProperty(int id) = 0;
 
@@ -224,35 +220,18 @@ class ScriptableInterface {
    * @param value the property value. The type must be compatible with the
    *     prototype returned from @c GetPropertyInfoByName().
    * @return @c true if the property is supported and succeeds.
-   * @throws ScriptableExceptionHolder.
    */
   virtual bool SetProperty(int id, Variant value) = 0;
-};
 
-/**
- * The exception that may be thrown by native scriptable callbacks.
- * When it is thrown, the wrapped scriptable exception will be converted to
- * an script exception and thrown into the script engine by the script adapter.
- */
-class ScriptableExceptionHolder {
- public:
   /**
-   * Wraps a native scriptable exception object into a holder. 
-   * @param scriptable_exception the exception object that will be thrown into
-   *    the script engine. Normally it should have transferrable ownership
-   *    policy to let the script engine clean it up. 
+   * Gets and clears the current pending exception.
+   * The script adapter will call this method after each call of
+   * @c GetPropertyInfoById(), @c GetPropertyInfoByName(), @c GetProperty()
+   * and @c SetProoperty().
+   * @param clear if @c true, the pending exception will be cleared.
+   * @return the pending exception.
    */
-  ScriptableExceptionHolder(ScriptableInterface *scriptable_exception)
-      : scriptable_exception_(scriptable_exception) { }
-
-  // The default copy constructors and '=' operator are allowed.
-
-  ScriptableInterface *scriptable_exception() const {
-    return scriptable_exception_;
-  }
-
- private:
-  ScriptableInterface *scriptable_exception_;
+  virtual ScriptableInterface *GetPendingException(bool clear) = 0;
 };
 
 /**

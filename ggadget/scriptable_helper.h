@@ -45,6 +45,7 @@ class ScriptableHelperImplInterface : public ScriptableInterface {
   virtual void SetPrototype(ScriptableInterface *prototype) = 0;
   virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
+  virtual void SetPendingException(ScriptableInterface *exception) = 0;
 };
 
 ScriptableHelperImplInterface *NewScriptableHelperImpl();
@@ -205,6 +206,15 @@ class ScriptableHelper : public I {
   }
 
   /**
+   * Sets the exception to be raised to the script engine.
+   * There must be no pending exception when this method is called to prevent
+   * memory leaks.
+   */
+  void SetPendingException(ScriptableInterface *exception) {
+    impl_->SetPendingException(exception);
+  }
+
+  /**
    * Implementation of Attach() for default ownership policy.
    * @see ScriptableInterface::Attach()
    */
@@ -249,6 +259,11 @@ class ScriptableHelper : public I {
   /** @see ScriptableInterface::SetProperty() */
   virtual bool SetProperty(int id, Variant value) {
     return impl_->SetProperty(id, value);
+  }
+
+  /** @see ScriptableInterface::GetPendingException() */
+  virtual ScriptableInterface *GetPendingException(bool clear) {
+    return impl_->GetPendingException(clear);
   }
 
  private:
