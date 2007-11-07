@@ -1,0 +1,13 @@
+#summary One-sentence summary of this page.
+
+= Introduction =
+
+This page describe the method of building google gadgets for linux from source code.
+
+
+= Details =
+
+== Prepare the source code ==
+Currently you can only get the source code from our svn repository. Please follow the instruction on [http://code.google.com/p/google-gadgets-for-linux/source Source] page.
+
+== Build with autoconf/automake ==
