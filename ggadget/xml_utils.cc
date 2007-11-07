@@ -49,12 +49,48 @@ static inline const xmlChar *ToXmlCharPtr(const char *char_ptr) {
 // There is no non-const version of ToXmlChar *because it's not allowed to
 // transfer a non-const char * to libxml.
 
-static xmlDoc *ParseXML(const char *xml, const char *filename,
-                        std::string *encoding) {
+// Rules of encoding convertion:
+// 1. if there is UTF BOF at the beginning, use the BOF to convert the input
+//    into UTF-8, stop.
+// 2. else, if there is xml encoding declaration, stop.
+// 3. else, convert to the hint encoding.
+// 4. if 4 failed, return the input.
+static void ConvertXMLEncoding(const char *xml, std::string *encoding,
+                               std::string *output) {
+  size_t length = strlen(xml);
+  // Step 1. and 2.
+  std::string detected_encoding;
+  if (ConvertStringToUTF8(xml, length, &detected_encoding, output)) {
+    if (encoding)
+      encoding->assign(detected_encoding);
+    return;
+  }
+  // Step 2.
+  if (strncmp(xml, "<?xml ", 6) == 0) {
+    // The actual encoding is to be detected.
+    output->assign(xml, length);
+    if (encoding)
+      encoding->clear();
+    return;
+  }
+  // Step 3.
+  if (encoding && !encoding->empty() &&
+    ConvertStringToUTF8(xml, length, encoding, output)) {
+    return;
+  }
+  // Step 4.
+  output->assign(xml, length);
   if (encoding)
     encoding->clear();
+}
 
-  xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(xml, strlen(xml));
+static xmlDoc *ParseXML(const char *xml, const char *filename,
+                        std::string *encoding) {
+  std::string converted_xml;
+  ConvertXMLEncoding(xml, encoding, &converted_xml);
+
+  xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(converted_xml.c_str(),
+                                                  converted_xml.length());
   if (!ctxt)
     return NULL;
 
@@ -65,8 +101,12 @@ static xmlDoc *ParseXML(const char *xml, const char *filename,
   xmlDoc *result = NULL;
   if (ctxt->wellFormed) {
     result = ctxt->myDoc;
-    if (encoding && ctxt->input && ctxt->input->encoding)
-      *encoding = FromXmlCharPtr(ctxt->input->encoding);
+    if (encoding && encoding->empty()) {
+      if (ctxt->input && ctxt->input->encoding)
+        *encoding = FromXmlCharPtr(ctxt->input->encoding);
+      else
+        *encoding = "UTF-8";
+    }
   } else {
     xmlFreeDoc(ctxt->myDoc);
     ctxt->myDoc = NULL;
@@ -294,22 +334,15 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
 static void HandleAllScriptElements(ViewInterface *view,
                                     const char *filename,
                                     xmlNode *xml_element) {
-  xmlNode *child = xml_element->children;
-  while (child) {
-    if (child->type != XML_ELEMENT_NODE) {
-      child = child->next;
-    } else if (GadgetStrCmp(FromXmlCharPtr(child->name), kScriptTag) == 0) {
-      HandleScriptElement(view->GetScriptContext(),
-                          view->GetFileManager(),
-                          filename, child);
-      // Remove the script node to prevent further processing.
-      xmlNode *temp = child;
-      child = child->next;
-      xmlUnlinkNode(temp);
-      xmlFreeNode(temp);
-    } else {
-      HandleAllScriptElements(view, filename, child);
-      child = child->next;
+  for (xmlNode *child = xml_element->children; child; child = child->next) {
+    if (child->type == XML_ELEMENT_NODE) {
+      if (GadgetStrCmp(FromXmlCharPtr(child->name), kScriptTag) == 0) {
+        HandleScriptElement(view->GetScriptContext(),
+                            view->GetFileManager(),
+                            filename, child);
+      } else {
+        HandleAllScriptElements(view, filename, child);
+      }
     }
   }
 }
@@ -319,6 +352,9 @@ static ElementInterface *InsertElementFromDOM(Elements *elements,
                                               xmlNode *xml_element,
                                               const ElementInterface *before) {
   const char *tag_name = FromXmlCharPtr(xml_element->name);
+  if (GadgetStrCmp(tag_name, kScriptTag) == 0)
+    return NULL;
+
   char *name = NULL;
   xmlAttr *nameAttr = xmlHasProp(xml_element, ToXmlCharPtr(kNameAttr));
   if (nameAttr) {
@@ -375,17 +411,17 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
     return false;
   }
 
-  // <script> elements should be handled first because later parsing needs
-  // the script context.
-  HandleAllScriptElements(view, filename, view_element);
   SetupScriptableProperties(view, view->GetScriptContext(),
                             filename, view_element);
+
   Elements *children = view->GetChildren();
   for (xmlNode *child = view_element->children;
        child != NULL; child = child->next) {
     if (child->type == XML_ELEMENT_NODE)
       InsertElementFromDOM(children, filename, child, NULL);
   }
+
+  HandleAllScriptElements(view, filename, view_element);
 
   xmlFreeDoc(xmldoc);
   return true;
@@ -464,8 +500,9 @@ static void ConvertElementIntoXPathMap(const xmlNode *element,
 
 bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
                           const char *root_element_name,
+                          std::string *encoding,
                           GadgetStringMap *table) {
-  xmlDoc *xmldoc = ParseXML(xml, filename, NULL);
+  xmlDoc *xmldoc = ParseXML(xml, filename, encoding);
   if (!xmldoc)
     return false;
 
@@ -646,7 +683,7 @@ bool ParseHTMLIntoDOM(const char *html, const char *filename,
 }
 
 bool ConvertStringToUTF8(const char *src, size_t src_length,
-                         const char *encoding, std::string *dest) {
+                         std::string *encoding, std::string *dest) {
   if (!src || !dest)
     return false;
 
@@ -659,25 +696,41 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
   if (static_cast<int>(src_length) < 0)
     return false;
 
+  // xmlDetectCharEncoding detects encoding by looking at the first several
+  // chars or BOM.
+  xmlCharEncoding xml_encoding = xmlDetectCharEncoding(ToXmlCharPtr(src),
+                                                       src_length);
   xmlCharEncodingHandler *encoding_handler = NULL;
-  if (encoding && *encoding) {
-    encoding_handler = xmlFindCharEncodingHandler(encoding);
-  } else {
-    // xmlDetectCharEncoding detects encoding by looking at BOM.
-    xmlCharEncoding xml_encoding = xmlDetectCharEncoding(ToXmlCharPtr(src),
-                                                         src_length);
-    encoding_handler = xmlGetCharEncodingHandler(xml_encoding);
-  }
 
-  if (!encoding_handler) {
-    // libxml2 returns NULL when either the encoding is unknown or it thinks the
-    // source string doesn't need to be converted.
-    if (IsLegalUTF8String(src, src_length)) {
+  // We can't be confident if the detected encoding is UTF8 but there is no
+  // BOF, because some valid UTF8 sequence may be also valid in other encodings,
+  // such as ISO8859-1.
+  if ((xml_encoding == XML_CHAR_ENCODING_UTF8 && src[0] != '\xEF') ||
+      xml_encoding == XML_CHAR_ENCODING_NONE ||
+      xml_encoding == XML_CHAR_ENCODING_ERROR) {
+    if (!encoding || encoding->empty())
+      return false;
+    encoding_handler = xmlFindCharEncodingHandler(encoding->c_str());
+  } else {
+    if (encoding) {
+      encoding->clear();
+      const char *encoding_name = xmlGetCharEncodingName(xml_encoding);
+      if (!encoding_name)
+        return false;
+      encoding->assign(encoding_name);
+    }
+
+    encoding_handler = xmlGetCharEncodingHandler(xml_encoding);
+    if (!encoding_handler) {
+      // libxml2 returns NULL in this case because it thinks the source string
+      // doesn't need to be converted.
       dest->assign(src, src_length);
       return true;
     }
-    return false;
   }
+
+  if (!encoding_handler)
+    return false;
 
   xmlBuffer *input_buffer = xmlBufferCreateStatic(const_cast<char *>(src),
                                                   src_length);
@@ -695,7 +748,7 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
   return result >= 0;
 }
 
-bool ConvertStringToUTF8(const std::string &src, const char *encoding,
+bool ConvertStringToUTF8(const std::string &src, std::string *encoding,
                          std::string *dest) {
   return ConvertStringToUTF8(src.c_str(), src.length(), encoding, dest);
 }

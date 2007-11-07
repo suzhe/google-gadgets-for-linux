@@ -251,6 +251,22 @@ class MockedElement :
     return false;
   }
 
+  virtual bool XIsSpecified() const {
+    return false;
+  }
+
+  virtual bool YIsSpecified() const {
+    return false;
+  }
+
+  virtual bool WidthIsSpecified() const {
+    return false;
+  }
+
+  virtual bool HeightIsSpecified() const {
+    return false;
+  }
+
   virtual const ggadget::CanvasInterface *GetMaskCanvas() {
     return NULL;
   }

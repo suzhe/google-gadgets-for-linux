@@ -67,6 +67,41 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
+  class Plugin : public ScriptableHelper<ScriptableInterface> {
+   public:
+    DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
+    Plugin(Gadget::Impl *owner)
+        : property_stub_(0) {
+      // TODO: implement them.
+      RegisterSimpleProperty("plugin_flags", &property_stub_);
+      RegisterMethod("RemoveMe", NewSlot(RemoveMeStub));
+      RegisterMethod("ShowDetailsView", NewSlot(ShowDetailsViewStub));
+      RegisterMethod("CloseDetailsView", NewSlot(CloseDetailsViewStub));
+      RegisterMethod("ShowOptionsDialog", NewSlot(ShowOptionsDialog));
+      RegisterSignal("onShowOptionsDlg", &onshowoptionsdlg_signal_);
+      RegisterSignal("onAddCustomMenuItems", &onaddcustommenuitems_signal_);
+      RegisterSignal("onCommand", &oncommand_signal_);
+      RegisterSignal("onDisplayStateChange", &ondisplaystatechange_signal_);
+      RegisterSignal("onDisplayTargetChange", &ondisplaytargetchange_signal_);
+    }
+    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
+
+    static void RemoveMeStub(bool save_data) { }
+    static void ShowDetailsViewStub(ScriptableInterface *details_control,
+                                    const char *title, int flags,
+                                    Slot *callback) { }
+    static void CloseDetailsViewStub() { }
+    static void ShowOptionsDialog() { }
+                                  
+    int property_stub_;
+    // TODO: implement them and change the arguments to proper types.
+    Signal1<bool, ScriptableInterface *> onshowoptionsdlg_signal_;
+    Signal1<void, ScriptableInterface *> onaddcustommenuitems_signal_;
+    Signal1<void, int> oncommand_signal_;
+    Signal1<void, int> ondisplaystatechange_signal_;
+    Signal1<void, int> ondisplaytargetchange_signal_;
+  };
+
   class GadgetGlobalPrototype : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
@@ -74,6 +109,14 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterConstant("gadget", owner);
       RegisterConstant("options", &owner->scriptable_options_);
       RegisterConstant("strings", &owner->strings_);
+      RegisterConstant("plugin", &owner->plugin_);
+      RegisterConstant("pluginHelper", &owner->plugin_);
+
+      // As an unofficial feature, "gadget.debug" and "gadget.storage" can also
+      // be accessed as "debug" and "storage" global objects.
+      RegisterConstant("debug", &owner->debug_);
+      RegisterConstant("storage", &owner->storage_);
+
       // TODO: SetPrototype(The System global prototype).
       // The System global prototype provides global constants and framework.
     }
@@ -84,6 +127,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       : host_(host),
         debug_(this),
         storage_(this),
+        plugin_(this),
         gadget_global_prototype_(this),
         options_(options),
         scriptable_options_(options),
@@ -156,10 +200,15 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       return false;
     if (!ParseXMLIntoXPathMap(manifest_contents.c_str(),
                               manifest_path.c_str(),
-                              kGadgetTag,
+                              kGadgetTag, NULL,
                               &manifest_info_map_))
       return false;
+
     // TODO: Is it necessary to check the required fields in manifest?
+    DLOG("Gadget min version: %s", GetManifestInfo(kManifestMinVersion));
+    DLOG("Gadget id: %s", GetManifestInfo(kManifestId));
+    DLOG("Gadget name: %s", GetManifestInfo(kManifestName));
+    DLOG("Gadget description: %s", GetManifestInfo(kManifestDescription));
 
     if (!main_view_host_->GetView()->InitFromFile(file_manager, kMainXML)) {
       DLOG("Failed to setup the main view");
@@ -176,6 +225,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   Debug debug_;
   Storage storage_;
   Strings strings_;
+  Plugin plugin_;
   GadgetGlobalPrototype gadget_global_prototype_;
   OptionsInterface *options_;
   ScriptableOptions scriptable_options_;

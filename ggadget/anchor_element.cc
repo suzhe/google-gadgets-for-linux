@@ -82,14 +82,14 @@ void AnchorElement::DoDraw(CanvasInterface *canvas,
 
 void AnchorElement::SetText(const char *text) {
   impl_->text_.SetText(text);
-  if (GetPixelWidth() == 0.0 || GetPixelHeight() == 0.0) {
+  if (!WidthIsSpecified() || !HeightIsSpecified()) {
     double w, h;
     CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
     if (impl_->text_.GetSimpleExtents(canvas, &w, &h)) {
-      if (GetPixelWidth() == 0.0) {
+      if (!WidthIsSpecified()) {
         SetPixelWidth(w);
       }
-      if (GetPixelHeight() == 0.0) {
+      if (!HeightIsSpecified()) {
         SetPixelHeight(h);        
       }
     }      

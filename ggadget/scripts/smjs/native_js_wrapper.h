@@ -65,12 +65,12 @@ private:
 
   void OnDelete();
 
-  /**
-   * Get the @c NativeJSWrapper pointer from a JS wrapped
-   * @c ScriptableInterface object.
-   */
+  // Gets the NativeJSWrapper pointer from a JS wrapped object.
   static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
 
+  // Callback for invocation of the object itself as a function.
+  static JSBool CallWrapperSelf(JSContext *cx, JSObject *obj,
+                                uintN argc, jsval *argv, jsval *rval);
   static JSBool CallWrapperMethod(JSContext *cx, JSObject *obj,
                                   uintN argc, jsval *argv, jsval *rval);
 
@@ -99,7 +99,9 @@ private:
   static void FinalizeWrapper(JSContext *cx, JSObject *obj);
 
   JSBool CheckNotDeleted();
-  JSBool InvokeMethod(uintN argc, jsval *argv, jsval *rval);
+  JSBool CallSelf(uintN argc, jsval *argv, jsval *rval);
+  JSBool CallMethod(uintN argc, jsval *argv, jsval *rval);
+  JSBool CallNativeSlot(Slot *slot, uintN argc, jsval *argv, jsval *rval);
   JSBool GetPropertyDefault(jsval id, jsval *vp);
   JSBool SetPropertyDefault(jsval id, jsval vp);
   JSBool GetPropertyByIndex(jsval id, jsval *vp);

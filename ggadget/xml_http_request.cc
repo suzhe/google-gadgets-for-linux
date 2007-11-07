@@ -571,7 +571,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void DecodeResponseText() {
-    std::string encoding;
+    std::string encoding(response_encoding_);
     const char *content_type = response_content_type_.c_str();
     std::string::size_type content_type_len = response_content_type_.length();
 
@@ -605,7 +605,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // libxml2 doesn't allow specifying external encoding.
     if (encoding.empty())
       encoding = response_encoding_;
-    ConvertStringToUTF8(response_body_, encoding.c_str(), &response_text_);
+    ConvertStringToUTF8(response_body_, &encoding, &response_text_);
   }
 
   virtual ExceptionCode GetResponseText(const char **result) {

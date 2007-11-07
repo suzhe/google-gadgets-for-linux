@@ -38,7 +38,8 @@ JSClass NativeJSWrapper::wrapper_js_class_ = {
   GetWrapperPropertyDefault, SetWrapperPropertyDefault,
   JS_EnumerateStub, ResolveWrapperProperty,
   JS_ConvertStub, FinalizeWrapper,
-  JSCLASS_NO_OPTIONAL_MEMBERS
+  NULL, NULL, CallWrapperSelf,
+  JSCLASS_NO_RESERVED_MEMBERS
 };
 
 NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
@@ -135,13 +136,24 @@ JSBool NativeJSWrapper::CheckNotDeleted() {
   return JS_TRUE;
 }
 
+JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
+                                        uintN argc, jsval *argv,
+                                        jsval *rval) {
+  // In this case, the real self object being called is at argv[-2].
+  JSObject *self_object = JSVAL_TO_OBJECT(argv[-2]);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, self_object);
+  return !wrapper ||
+         (wrapper->CheckNotDeleted() &&
+          wrapper->CallSelf(argc, argv, rval));
+}
+
 JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
                                           uintN argc, jsval *argv,
                                           jsval *rval) {
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
-          wrapper->InvokeMethod(argc, argv, rval));
+          wrapper->CallMethod(argc, argv, rval));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
@@ -242,11 +254,27 @@ void NativeJSWrapper::OnDelete() {
 #endif
 }
 
-JSBool NativeJSWrapper::InvokeMethod(uintN argc, jsval *argv, jsval *rval) {
-  AutoLocalRootScope local_root_scope(js_context_);
-  if (!local_root_scope.good())
+JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
+  Variant prototype;
+  int int_id;
+  bool is_method;
+  try {
+    // Get the default method for this object.
+    if (!scriptable_->GetPropertyInfoByName("", &int_id,
+                                            &prototype, &is_method)) {
+      JS_ReportError(js_context_, "Object can't be called as a function");
+      return JS_FALSE;
+    }
+  } catch (ScriptableExceptionHolder e) {
+    JSScriptContext::HandleException(js_context_, e);
     return JS_FALSE;
+  }
 
+  ASSERT(is_method);
+  return CallNativeSlot(VariantValue<Slot *>()(prototype), argc, argv, rval);
+}
+
+JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
   // According to JS stack structure, argv[-2] is the current function object.
   JSObject *func_object = JSVAL_TO_OBJECT(argv[-2]);
   // Get the method slot from the reserved slot.
@@ -254,7 +282,16 @@ JSBool NativeJSWrapper::InvokeMethod(uintN argc, jsval *argv, jsval *rval) {
   if (!JS_GetReservedSlot(js_context_, func_object, 0, &val) ||
       !JSVAL_IS_INT(val))
     return JS_FALSE;
-  Slot *slot = reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val));
+
+  return CallNativeSlot(reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val)),
+                        argc, argv, rval);
+}
+
+JSBool NativeJSWrapper::CallNativeSlot(Slot *slot, uintN argc, jsval *argv,
+                                       jsval *rval) {
+  AutoLocalRootScope local_root_scope(js_context_);
+  if (!local_root_scope.good())
+    return JS_FALSE;
 
   Variant *params = NULL;
   uintN expected_argc = argc;

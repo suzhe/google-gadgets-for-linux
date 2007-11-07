@@ -102,6 +102,10 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual bool HeightIsRelative() const;
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
+  virtual bool XIsSpecified() const;
+  virtual bool YIsSpecified() const;
+  virtual bool WidthIsSpecified() const;
+  virtual bool HeightIsSpecified() const;
 
   virtual const CanvasInterface *Draw(bool *changed);
 
