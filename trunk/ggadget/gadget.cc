@@ -18,8 +18,9 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
-#include "options_interface.h"
+#include "menu_interface.h"
 #include "scriptable_helper.h"
+#include "scriptable_menu.h"
 #include "scriptable_options.h"
 #include "view_host_interface.h"
 #include "view_interface.h"
@@ -70,14 +71,18 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   class Plugin : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
-    Plugin(Gadget::Impl *owner)
-        : property_stub_(0) {
-      // TODO: implement them.
-      RegisterSimpleProperty("plugin_flags", &property_stub_);
-      RegisterMethod("RemoveMe", NewSlot(RemoveMeStub));
+    Plugin(GadgetHostInterface *host) {
+      RegisterProperty("plugin_flags", NewSlot(PluginFlagsGetterStub),
+                       NewSlot(host, &GadgetHostInterface::SetPluginFlags));
+      RegisterMethod("RemoveMe",
+                     NewSlot(host, &GadgetHostInterface::RemoveMe));
+      // TODO:
       RegisterMethod("ShowDetailsView", NewSlot(ShowDetailsViewStub));
-      RegisterMethod("CloseDetailsView", NewSlot(CloseDetailsViewStub));
-      RegisterMethod("ShowOptionsDialog", NewSlot(ShowOptionsDialog));
+      RegisterMethod("CloseDetailsView",
+                     NewSlot(host, &GadgetHostInterface::CloseDetailsView));
+      RegisterMethod("ShowOptionsDialog",
+                     NewSlot(host, &GadgetHostInterface::ShowOptionsDialog));
+
       RegisterSignal("onShowOptionsDlg", &onshowoptionsdlg_signal_);
       RegisterSignal("onAddCustomMenuItems", &onaddcustommenuitems_signal_);
       RegisterSignal("onCommand", &oncommand_signal_);
@@ -86,17 +91,27 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     }
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
-    static void RemoveMeStub(bool save_data) { }
+    // TODO:
     static void ShowDetailsViewStub(ScriptableInterface *details_control,
                                     const char *title, int flags,
                                     Slot *callback) { }
-    static void CloseDetailsViewStub() { }
-    static void ShowOptionsDialog() { }
-                                  
-    int property_stub_;
-    // TODO: implement them and change the arguments to proper types.
+
+    void OnAddCustomMenuItems(void *menu) {
+      // Because ScriptableMenu's ownership can be transferred, don't emit
+      // the signal if there is no handler, otherwise the ScriptableMenu object
+      // will leak. There should be at most 1 script handlers because of our
+      // ScriptableHelper design.
+      if (onaddcustommenuitems_signal_.HasActiveConnections()) {
+        onaddcustommenuitems_signal_(
+            new ScriptableMenu(static_cast<MenuInterface *>(menu)));
+      }
+    }
+
+    // "plugin_flags" is a write-only property. Returns 0 on read.
+    static int PluginFlagsGetterStub() { return 0; }
+
     Signal1<bool, ScriptableInterface *> onshowoptionsdlg_signal_;
-    Signal1<void, ScriptableInterface *> onaddcustommenuitems_signal_;
+    Signal1<void, ScriptableMenu *> onaddcustommenuitems_signal_;
     Signal1<void, int> oncommand_signal_;
     Signal1<void, int> ondisplaystatechange_signal_;
     Signal1<void, int> ondisplaytargetchange_signal_;
@@ -123,18 +138,15 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  Impl(GadgetHostInterface *host, OptionsInterface *options, Gadget *owner)
+  Impl(GadgetHostInterface *host, Gadget *owner)
       : host_(host),
         debug_(this),
         storage_(this),
-        plugin_(this),
+        plugin_(host),
+        scriptable_options_(host->GetOptions()),
         gadget_global_prototype_(this),
-        options_(options),
-        scriptable_options_(options),
-        file_manager_(NULL),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
-                                          &gadget_global_prototype_,
-                                          options)) {
+                                          &gadget_global_prototype_)) {
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
   }
@@ -154,10 +166,6 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
 
     delete main_view_host_;
     main_view_host_ = NULL;
-    delete file_manager_;
-    file_manager_ = NULL;
-    delete options_;
-    options_ = NULL;
   }
 
   virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
@@ -175,17 +183,19 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   }
 
   std::string ExtractFile(const char *filename) {
-    ASSERT(file_manager_);
+    FileManagerInterface *file_manager = host_->GetFileManager();
+    ASSERT(file_manager);
     std::string extracted_file;
-    return file_manager_->ExtractFile(filename, &extracted_file) ?
+    return file_manager->ExtractFile(filename, &extracted_file) ?
            extracted_file : "";
   }
 
   std::string OpenTextFile(const char *filename) {
-    ASSERT(file_manager_);
+    FileManagerInterface *file_manager = host_->GetFileManager();
+    ASSERT(file_manager);
     std::string data;
     std::string real_path;
-    return file_manager_->GetFileContents(filename, &data, &real_path) ?
+    return file_manager->GetFileContents(filename, &data, &real_path) ?
            data : "";
   }
 
@@ -196,11 +206,11 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     return it->second.c_str();
   }
 
-  bool Init(FileManagerInterface *file_manager) {
+  bool Init() {
+    FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
-    file_manager_ = file_manager;
 
-    GadgetStringMap *strings = file_manager_->GetStringTable();
+    GadgetStringMap *strings = file_manager->GetStringTable();
     RegisterStrings(strings, &gadget_global_prototype_);
     RegisterStrings(strings, &strings_);
 
@@ -227,14 +237,14 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
       // Keys are of the form "install/font@src" or "install/font[k]@src"
-      if (0 == key.find(kManifestInstallFont) && 
+      if (0 == key.find(kManifestInstallFont) &&
           (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
         // ignore return, error not fatal
         host_->LoadFont(i->second.c_str(), file_manager);
       }
     }
 
-    if (!main_view_host_->GetView()->InitFromFile(file_manager, kMainXML)) {
+    if (!main_view_host_->GetView()->InitFromFile(kMainXML)) {
       DLOG("Failed to setup the main view");
       return false;
     }
@@ -250,16 +260,14 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   Storage storage_;
   Strings strings_;
   Plugin plugin_;
-  GadgetGlobalPrototype gadget_global_prototype_;
-  OptionsInterface *options_;
   ScriptableOptions scriptable_options_;
-  FileManagerInterface *file_manager_;
+  GadgetGlobalPrototype gadget_global_prototype_;
   ViewHostInterface *main_view_host_;
   GadgetStringMap manifest_info_map_;
 };
 
-Gadget::Gadget(GadgetHostInterface *host, OptionsInterface *options)
-    : impl_(new Impl(host, options, this)) {
+Gadget::Gadget(GadgetHostInterface *host)
+    : impl_(new Impl(host, this)) {
 }
 
 Gadget::~Gadget() {
@@ -267,8 +275,8 @@ Gadget::~Gadget() {
   impl_ = NULL;
 }
 
-bool Gadget::Init(FileManagerInterface *file_manager) {
-  return impl_->Init(file_manager);
+bool Gadget::Init() {
+  return impl_->Init();
 }
 
 ViewHostInterface *Gadget::GetMainViewHost() {
@@ -277,6 +285,27 @@ ViewHostInterface *Gadget::GetMainViewHost() {
 
 const char *Gadget::GetManifestInfo(const char *key) {
   return impl_->GetManifestInfo(key);
+}
+
+bool Gadget::OnShowOptionsDlg(GDDisplayWindowInterface *window) {
+  // TODO: implement it.
+  return true;
+}
+
+void Gadget::OnAddCustomMenuItems(MenuInterface *menu) {
+  impl_->plugin_.OnAddCustomMenuItems(menu);
+}
+
+void Gadget::OnCommand(Command command) {
+  impl_->plugin_.oncommand_signal_(command);
+}
+
+void Gadget::OnDisplayStateChange(DisplayState display_state) {
+  impl_->plugin_.ondisplaystatechange_signal_(display_state);
+}
+
+void Gadget::OnDisplayTargetChange(DisplayTarget display_target) {
+  impl_->plugin_.ondisplaytargetchange_signal_(display_target);
 }
 
 } // namespace ggadget

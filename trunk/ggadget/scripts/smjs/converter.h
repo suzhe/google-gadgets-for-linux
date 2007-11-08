@@ -25,16 +25,19 @@
 namespace ggadget {
 namespace internal {
 
+class NativeJSWrapper;
+
 /**
  * Converts a @c jsval to a @c Variant of desired type.
  * @param cx JavaScript context.
- * @param obj the related JavaScript object.
+ * @param wrapper the related JavaScript object wrapper.
  * @param prototype providing the desired target type information.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertJSToNative(JSContext *cx, JSObject *obj, const Variant &prototype,
+JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *wrapper,
+                         const Variant &prototype,
                          jsval js_val, Variant *native_val);
 
 /**
@@ -62,8 +65,8 @@ std::string PrintJSValue(JSContext *cx, jsval js_val);
 /**
  * Converts JavaScript arguments to native for a native slot.
  */
-JSBool ConvertJSArgsToNative(JSContext *cx, JSObject *obj, Slot *slot,
-                             uintN argc, jsval *argv,
+JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
+                             Slot *slot, uintN argc, jsval *argv,
                              Variant **params, uintN *expected_argc);
 
 /**

@@ -34,6 +34,7 @@ SET(SRCS
   math_utils.cc
   scriptable_event.cc
   scriptable_helper.cc
+  scriptable_menu.cc
   scriptable_options.cc
   signals.cc
   string_utils.cc

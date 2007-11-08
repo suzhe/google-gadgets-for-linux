@@ -52,7 +52,6 @@ static const CursorTypeMapping[] = {
 
 GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
                          ggadget::GadgetHostInterface::ViewType type,
-                         ggadget::OptionsInterface *options,
                          ggadget::ScriptableInterface *prototype)
     : gadget_host_(gadget_host),
       view_(NULL),
@@ -64,6 +63,7 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
       gadget_host->GetScriptRuntime(ggadget::GadgetHostInterface::JAVASCRIPT);
   script_context_ = script_runtime->CreateContext();
 
+  ggadget::OptionsInterface *options = gadget_host->GetOptions();
   int debug_mode = ggadget::VariantValue<int>()(options->GetValue(
       ggadget::kOptionDebugMode));
   view_ = new ggadget::View(this, prototype, gadget_host->GetElementFactory(),

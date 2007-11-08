@@ -26,7 +26,6 @@
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
 static GtkGadgetHost *g_gadget_host = NULL;
-static ggadget::GadgetInterface *g_gadget = NULL;
 
 static gboolean DeleteEventHandler(GtkWidget *widget,
                                    GdkEvent *event,
@@ -43,14 +42,13 @@ static gboolean DestroyHandler(GtkWidget *widget,
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
   g_gadget_host = new GtkGadgetHost();
-  g_gadget = g_gadget_host->LoadGadget(base_path, g_zoom, g_debug_mode);
-  if (!g_gadget) {
-    LOG("Error: unable to load gadget from %s", base_path);
+  if (!g_gadget_host->LoadGadget(box, base_path, g_zoom, g_debug_mode)) {
+    LOG("Failed to load gadget from: %s", base_path);
     return false;
   }
 
   GtkViewHost *view_host = ggadget::down_cast<GtkViewHost *>(
-      g_gadget->GetMainViewHost());
+      g_gadget_host->GetGadget()->GetMainViewHost());
   GadgetViewWidget *gvw = view_host->GetWidget();
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
 
@@ -64,32 +62,23 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
 }
 
 static bool CreateGTKUI(const char *base_path) {
-  GtkWidget *window;
-  GtkWidget *exit_button;
-  GtkWidget *separator;
-  GtkWidget *label;
-  GtkBox *vbox;
-
-  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(window), "Google Gadgets");
   g_signal_connect(G_OBJECT(window), "delete_event",
                    G_CALLBACK(DeleteEventHandler), NULL);
   g_signal_connect(G_OBJECT(window), "destroy",
                    G_CALLBACK(DestroyHandler), NULL);
 
-  vbox = GTK_BOX(gtk_vbox_new(FALSE, 0));
+  GtkBox *vbox = GTK_BOX(gtk_vbox_new(FALSE, 0));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(vbox));
 
-  exit_button = gtk_button_new_with_label("Exit");
+  GtkWidget *exit_button = gtk_button_new_with_label("Exit");
   gtk_box_pack_end(vbox, exit_button, FALSE, FALSE, 0);
   g_signal_connect_swapped(G_OBJECT(exit_button), "clicked",
                            G_CALLBACK(gtk_widget_destroy), G_OBJECT(window));
 
-  separator = gtk_hseparator_new();
+  GtkWidget *separator = gtk_hseparator_new();
   gtk_box_pack_end(vbox, separator, TRUE, TRUE, 5);
-
-  label = gtk_label_new("Gadget Main View:");
-  gtk_box_pack_start(vbox, label, FALSE, FALSE, 0);
 
   if (!CreateGadgetUI(GTK_WINDOW(window), vbox, base_path)) {
     return false;
@@ -101,8 +90,6 @@ static bool CreateGTKUI(const char *base_path) {
 }
 
 static void DestroyUI() {
-  delete g_gadget;
-  g_gadget = NULL;
   delete g_gadget_host;
   g_gadget_host = NULL;
 }

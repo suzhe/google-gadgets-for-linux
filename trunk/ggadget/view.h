@@ -43,8 +43,7 @@ class View : public ScriptableHelper<ViewInterface> {
 
   virtual ScriptContextInterface *GetScriptContext() const;
   virtual FileManagerInterface *GetFileManager() const;
-  virtual bool InitFromFile(FileManagerInterface *file_manager,
-                            const char *filename);
+  virtual bool InitFromFile(const char *filename);
 
   virtual bool OnMouseEvent(MouseEvent *event);
   virtual bool OnKeyEvent(KeyboardEvent *event);

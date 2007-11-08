@@ -17,6 +17,7 @@
 #ifndef GGADGET_JS_FUNCTION_SLOT_H__
 #define GGADGET_JS_FUNCTION_SLOT_H__
 
+#include <map>
 #include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
@@ -24,12 +25,15 @@
 namespace ggadget {
 namespace internal {
 
+class NativeJSWrapper;
+
 /**
  * A Slot that wraps a JavaScript function object.
  */
 class JSFunctionSlot : public Slot {
  public:
-  JSFunctionSlot(const Slot *prototype, JSContext *context, jsval function_val);
+  JSFunctionSlot(const Slot *prototype, JSContext *context,
+                 NativeJSWrapper *wrapper, jsval function_val);
   virtual ~JSFunctionSlot();
 
   virtual Variant Call(int argc, Variant argv[]) const;
@@ -49,19 +53,21 @@ class JSFunctionSlot : public Slot {
            down_cast<const JSFunctionSlot *>(&another)->function_val_;
   }
 
-  /**
-   * Add a reference from obj to the function object to prevent it from being
-   * GC'ed while it is being hold by a C++ object.
-   */
-  void SetReferenceFrom(JSObject *obj);
+  /** Called by the wrapper to mark this object is reachable from GC roots. */
+  void Mark();
+  /** Called by the wrapper when the wrapper is about to be finalized. */ 
+  void Finalize();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSFunctionSlot);
 
+  JSBool RemoveReferenceFrom();
+
   const Slot *prototype_;
   JSContext *context_;
+  NativeJSWrapper *wrapper_;
   jsval function_val_;
-  JSObject *reference_from_;
+  bool finalized_;
 };
 
 } // namespace internal

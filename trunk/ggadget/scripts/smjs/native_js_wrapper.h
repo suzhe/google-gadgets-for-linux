@@ -17,6 +17,7 @@
 #ifndef GGADGET_NATIVE_JS_WRAPPER_H__
 #define GGADGET_NATIVE_JS_WRAPPER_H__
 
+#include <set>
 #include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/scriptable_interface.h>
@@ -27,6 +28,8 @@ class Connection;
 
 namespace internal {
 
+class JSFunctionSlot;
+
 /**
  * A wrapper wrapping a native @c ScriptableInterface object into a
  * JavaScript object.
@@ -34,9 +37,16 @@ namespace internal {
 class NativeJSWrapper {
 
  public:
-   NativeJSWrapper(JSContext *js_context, JSObject *js_object,
-                   ScriptableInterface *scriptable);
+  /**
+   * Creation of a NativeJSWrapper can be in one or two steps.
+   * Passing a non-NULL scriptable in the constructor creates the
+   * @c NativeJSWrapper in one step. Passing a NULL scriptable in the
+   * constructor, and then calling the Wrap method are two steps.
+   */
+  NativeJSWrapper(JSContext *js_context, JSObject *js_object,
+                  ScriptableInterface *scriptable);
   ~NativeJSWrapper();
+  void Wrap(ScriptableInterface *scriptable);
 
   /**
    * Unwrap a native @c ScriptableInterface object from a JavaScript object.
@@ -54,19 +64,25 @@ class NativeJSWrapper {
 
   static JSClass *GetWrapperJSClass() { return &wrapper_js_class_; }
 
-  /**
-   * Detach the wrapper object from JavaScript so that the engine can
-   * GC it. 
-   */
+  /** Gets the NativeJSWrapper pointer from a JS wrapped object. */
+  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
+
+  /** Detach the wrapper object from JavaScript so that the engine can GC it. */
   void DetachJS();
+
+  /**
+   * Registers an owned @c JSFunctionSlot.
+   * It will be called when a JavaScript function is passed to one of the
+   * methods or property setters. This object manages the references to these
+   * functions.
+   */
+  void AddJSFunctionSlot(JSFunctionSlot *slot);
+  void RemoveJSFunctionSlot(JSFunctionSlot *slot);
 
 private:
   DISALLOW_EVIL_CONSTRUCTORS(NativeJSWrapper);
 
   void OnDelete();
-
-  // Gets the NativeJSWrapper pointer from a JS wrapped object.
-  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
 
   // Callback for invocation of the object itself as a function.
   static JSBool CallWrapperSelf(JSContext *cx, JSObject *obj,
@@ -97,6 +113,7 @@ private:
                                          jsval id, jsval *vp);
   static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id);
   static void FinalizeWrapper(JSContext *cx, JSObject *obj);
+  static uint32 MarkWrapper(JSContext *cx, JSObject *obj, void *arg);
 
   JSBool CheckNotDeleted();
   JSBool CallSelf(uintN argc, jsval *argv, jsval *rval);
@@ -109,6 +126,7 @@ private:
   JSBool GetPropertyByName(jsval id, jsval *vp);
   JSBool SetPropertyByName(jsval id, jsval vp);
   JSBool ResolveProperty(jsval id);
+  void Mark();
 
   static JSClass wrapper_js_class_;
 
@@ -118,6 +136,9 @@ private:
   ScriptableInterface *scriptable_;
   Connection *ondelete_connection_;
   ScriptableInterface::OwnershipPolicy ownership_policy_;
+
+  typedef std::set<JSFunctionSlot *> JSFunctionSlots;
+  JSFunctionSlots js_function_slots_;
 };
 
 } // namespace internal

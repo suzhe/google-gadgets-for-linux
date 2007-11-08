@@ -23,16 +23,20 @@
 namespace ggadget {
 
 class GadgetHostInterface;
-class OptionsInterface;
 
 class Gadget: public GadgetInterface {
  public:
-  Gadget(GadgetHostInterface *host, OptionsInterface *options);
+  Gadget(GadgetHostInterface *host);
   virtual ~Gadget();
 
-  virtual bool Init(FileManagerInterface *file_manager);
+  virtual bool Init();
   virtual ViewHostInterface *GetMainViewHost();
   virtual const char *GetManifestInfo(const char *key);
+  virtual bool OnShowOptionsDlg(GDDisplayWindowInterface *window);
+  virtual void OnAddCustomMenuItems(MenuInterface *menu);
+  virtual void OnCommand(Command command);
+  virtual void OnDisplayStateChange(DisplayState display_state);
+  virtual void OnDisplayTargetChange(DisplayTarget display_target);
 
  private:
   class Impl;

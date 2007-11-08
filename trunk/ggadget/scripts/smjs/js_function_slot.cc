@@ -19,40 +19,41 @@
 #include "js_function_slot.h"
 #include "converter.h"
 #include "js_script_context.h"
+#include "native_js_wrapper.h"
 
 namespace ggadget {
 namespace internal {
 
-const char *kFunctionReferencePrefix = "@@@FunctionReference@@@";
-
-JSFunctionSlot::JSFunctionSlot(const Slot *prototype, JSContext *context,
+JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
+                               JSContext *context,
+                               NativeJSWrapper *wrapper,
                                jsval function_val)
     : prototype_(prototype),
       context_(context),
+      wrapper_(wrapper),
       function_val_(function_val),
-      reference_from_(NULL) {
-  JS_AddRoot(context, &function_val_);
+      finalized_(false) {
+  if (wrapper)
+    wrapper->AddJSFunctionSlot(this);
+  else
+    JS_AddRoot(context, &function_val_);
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
-  if (!reference_from_)
-    JS_RemoveRoot(context_, &function_val_);
-  // Otherwise leave the reference, because we don't know if reference_from_
-  // is still valid now, and leaving it wonn't cause accumulated leaks.
-}
-
-void JSFunctionSlot::SetReferenceFrom(JSObject *obj) {
-  static unsigned int reference_seq = 1;
-  DLOG("SetReferenceFrom: func=%p obj=%p", JSVAL_TO_OBJECT(function_val_), obj);
-  reference_from_ = obj;
-  std::string reference_name = StringPrintf("%s%u", kFunctionReferencePrefix,
-                                            reference_seq++);
-  JS_DefineProperty(context_, obj, reference_name.c_str(), function_val_,
-                    JS_PropertyStub, JS_PropertyStub, 0);
-  JS_RemoveRoot(context_, &function_val_);
+  if (!finalized_) {
+    if (wrapper_)
+      wrapper_->RemoveJSFunctionSlot(this);
+    else
+      JS_RemoveRoot(context_, &function_val_);
+  }
 }
 
 Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
+  if (finalized_) {
+    JS_ReportError(context_, "Finalized JavaScript funcction still be called");
+    return Variant();
+  }
+
   AutoLocalRootScope local_root_scope(context_);
   if (!local_root_scope.good())
     return Variant();
@@ -82,6 +83,15 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
                      PrintJSValue(context_, rval).c_str());
   }
   return return_value;
+}
+
+void JSFunctionSlot::Mark() {
+  JS_MarkGCThing(context_, JSVAL_TO_OBJECT(function_val_),
+                 "JSFunctionSlot", NULL);
+}
+
+void JSFunctionSlot::Finalize() {
+  finalized_ = true;
 }
 
 } // namespace internal

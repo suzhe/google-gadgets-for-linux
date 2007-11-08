@@ -22,20 +22,21 @@
 class MockedGadgetHost : public ggadget::GadgetHostInterface {
  public:
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
-      ScriptRuntimeType type) {
-    return NULL;
-  }
-  virtual ggadget::ElementFactoryInterface *GetElementFactory() {
-    return NULL;
-  }
-  virtual ggadget::FileManagerInterface *GetGlobalFileManager() {
-    return NULL;
-  }  
+      ScriptRuntimeType type) { return NULL; }
+  virtual ggadget::ElementFactoryInterface *GetElementFactory() { return NULL; }
+  virtual ggadget::FileManagerInterface *GetFileManager() { return NULL; }
+  virtual ggadget::FileManagerInterface *GetGlobalFileManager() { return NULL; }  
+  virtual ggadget::OptionsInterface *GetOptions() { return NULL; }
+  virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
   virtual ggadget::ViewHostInterface *NewViewHost(
-      ViewType type, ggadget::ScriptableInterface *prototype,
-      ggadget::OptionsInterface *options) {
-    return NULL;
-  }
+      ViewType type, ggadget::ScriptableInterface *prototype) { return NULL; }
+  virtual void SetPluginFlags(int plugin_flags) { }
+  virtual void RemoveMe(bool save_data) { }
+  virtual void ShowDetailsView(ggadget::DetailsViewInterface *details_view,
+                               const char *title, int flags,
+                               ggadget::Slot1<void, int> *feedback_handler) { }
+  virtual void CloseDetailsView() { }
+  virtual void ShowOptionsDialog() { }
   virtual void DebugOutput(DebugLevel level, const char *message) { }
   virtual uint64_t GetCurrentTime() const { return 0; }
   virtual int RegisterTimer(unsigned ms, TimerCallback *callback) { return 0; }

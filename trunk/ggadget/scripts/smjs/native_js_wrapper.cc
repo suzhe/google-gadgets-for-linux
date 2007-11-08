@@ -17,8 +17,9 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
-#include "converter.h"
 #include "native_js_wrapper.h"
+#include "converter.h"
+#include "js_function_slot.h"
 #include "js_script_context.h"
 
 #ifdef _DEBUG
@@ -38,8 +39,8 @@ JSClass NativeJSWrapper::wrapper_js_class_ = {
   GetWrapperPropertyDefault, SetWrapperPropertyDefault,
   JS_EnumerateStub, ResolveWrapperProperty,
   JS_ConvertStub, FinalizeWrapper,
-  NULL, NULL, CallWrapperSelf,
-  JSCLASS_NO_RESERVED_MEMBERS
+  NULL, NULL, CallWrapperSelf, NULL,
+  NULL, NULL, MarkWrapper, NULL,
 };
 
 NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
@@ -48,31 +49,16 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
     : deleted_(false),
       js_context_(js_context),
       js_object_(js_object),
-      scriptable_(scriptable),
+      scriptable_(NULL),
       ondelete_connection_(NULL),
       ownership_policy_(ScriptableInterface::NATIVE_OWNED) {
+  ASSERT(js_object);
+
   // Store this wrapper into the JSObject's private slot.
   JS_SetPrivate(js_context, js_object_, this);
 
-  // Connect the "ondelete" callback.
-  ondelete_connection_ = scriptable->ConnectToOnDeleteSignal(
-      NewSlot(this, &NativeJSWrapper::OnDelete));
-  ownership_policy_ = scriptable->Attach();
-
-  // If the object is native owned, the script side should not delete the
-  // object unless the native side tells it to do.
-  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
-      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
-    JS_AddRoot(js_context_, &js_object_);
-
-#ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("Wrap: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
-       ownership_policy_, js_object_, this,
-       scriptable_, scriptable_->GetClassId());
-  // This GC forces many hidden memory allocation errors to expose.
-  DLOG("ForceGC");
-  JS_GC(js_context_);
-#endif
+  if (scriptable)
+    Wrap(scriptable);
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
@@ -87,6 +73,30 @@ NativeJSWrapper::~NativeJSWrapper() {
     DetachJS();
     scriptable_->Detach();
   }
+}
+
+void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
+  ASSERT(scriptable && !scriptable_);
+  scriptable_ = scriptable;
+  // Connect the "ondelete" callback.
+  ondelete_connection_ = scriptable->ConnectToOnDeleteSignal(
+      NewSlot(this, &NativeJSWrapper::OnDelete));
+  ownership_policy_ = scriptable->Attach();
+  
+  // If the object is native owned, the script side should not delete the
+  // object unless the native side tells it to do.
+  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
+      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
+    JS_AddRoot(js_context_, &js_object_);
+  
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+  DLOG("Wrap: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
+       ownership_policy_, js_object_, this,
+       scriptable_, scriptable_->GetClassId());
+  // This GC forces many hidden memory allocation errors to expose.
+  DLOG("ForceGC");
+  JS_GC(js_context_);
+#endif
 }
 
 JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
@@ -215,8 +225,19 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
 
     if (!wrapper->deleted_)
       JSScriptContext::FinalizeNativeJSWrapper(cx, wrapper);
+
+    for (JSFunctionSlots::iterator it = wrapper->js_function_slots_.begin();
+         it != wrapper->js_function_slots_.end(); ++it)
+      (*it)->Finalize();
     delete wrapper;
   }
+}
+
+uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  if (wrapper && !wrapper->deleted_)
+    wrapper->Mark();
+  return 0;
 }
 
 void NativeJSWrapper::DetachJS() {
@@ -255,10 +276,11 @@ void NativeJSWrapper::OnDelete() {
 }
 
 JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
+  ASSERT(scriptable_);
+
   Variant prototype;
   int int_id;
   bool is_method;
-
   // Get the default method for this object.
   if (!scriptable_->GetPropertyInfoByName("", &int_id,
                                           &prototype, &is_method)) {
@@ -274,6 +296,8 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
 }
 
 JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
+  ASSERT(scriptable_);
+
   // According to JS stack structure, argv[-2] is the current function object.
   JSObject *func_object = JSVAL_TO_OBJECT(argv[-2]);
   // Get the method slot from the reserved slot.
@@ -288,13 +312,15 @@ JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
 
 JSBool NativeJSWrapper::CallNativeSlot(Slot *slot, uintN argc, jsval *argv,
                                        jsval *rval) {
+  ASSERT(scriptable_);
+
   AutoLocalRootScope local_root_scope(js_context_);
   if (!local_root_scope.good())
     return JS_FALSE;
 
   Variant *params = NULL;
   uintN expected_argc = argc;
-  if (!ConvertJSArgsToNative(js_context_, js_object_, slot, argc, argv,
+  if (!ConvertJSArgsToNative(js_context_, this, slot, argc, argv,
                              &params, &expected_argc))
     return JS_FALSE;
 
@@ -323,6 +349,8 @@ JSBool NativeJSWrapper::GetPropertyDefault(jsval id, jsval *vp) {
 }
 
 JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
+  ASSERT(scriptable_);
+
   if (JSVAL_IS_INT(id))
     // The script wants to set the property by an array index.
     return SetPropertyByIndex(id, js_val);
@@ -340,6 +368,8 @@ JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
 }
 
 JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
+  ASSERT(scriptable_);
+
   if (!JSVAL_IS_INT(id))
     // Should not occur.
     return JS_FALSE;
@@ -361,6 +391,8 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
 }
 
 JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
+  ASSERT(scriptable_);
+
   if (!JSVAL_IS_INT(id))
     // Should not occur.
     return JS_FALSE;
@@ -389,8 +421,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   ASSERT(!is_method);
 
   Variant value;
-  if (!ConvertJSToNative(js_context_, js_object_, prototype, js_val,
-                         &value)) {
+  if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property value(%s) to native",
                    PrintJSValue(js_context_, js_val).c_str());
@@ -410,6 +441,8 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
 }
 
 JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
+  ASSERT(scriptable_);
+
   if (!JSVAL_IS_STRING(id))
     // Should not occur
     return JS_FALSE;
@@ -453,6 +486,8 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
 }
 
 JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
+  ASSERT(scriptable_);
+
   if (!JSVAL_IS_STRING(id))
     // Should not occur
     return JS_FALSE;
@@ -483,8 +518,7 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   ASSERT(!is_method);
 
   Variant value;
-  if (!ConvertJSToNative(js_context_, js_object_, prototype, js_val,
-                         &value)) {
+  if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property value(%s) to native.",
                    PrintJSValue(js_context_, js_val).c_str());
@@ -502,6 +536,8 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
 }
 
 JSBool NativeJSWrapper::ResolveProperty(jsval id) {
+  ASSERT(scriptable_);
+
   if (!JSVAL_IS_STRING(id))
     return JS_TRUE;
 
@@ -587,6 +623,20 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
   }
 
   return JS_TRUE;
+}
+
+void NativeJSWrapper::AddJSFunctionSlot(JSFunctionSlot *slot) {
+  js_function_slots_.insert(slot);
+}
+
+void NativeJSWrapper::RemoveJSFunctionSlot(JSFunctionSlot *slot) {
+  js_function_slots_.erase(slot);
+}
+
+void NativeJSWrapper::Mark() {
+  for (JSFunctionSlots::const_iterator it = js_function_slots_.begin();
+       it != js_function_slots_.end(); ++it)
+    (*it)->Mark();
 }
 
 } // namespace internal

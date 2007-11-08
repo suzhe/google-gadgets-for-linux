@@ -32,6 +32,7 @@
 #include <ggadget/gadget_host_interface.h>
 #include <ggadget/gadget_interface.h>
 #include <ggadget/math_utils.h>
+#include <ggadget/menu_interface.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>

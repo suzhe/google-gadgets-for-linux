@@ -116,20 +116,7 @@ void ButtonElement::SetImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->image_src_)) {
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(img, false);
-    if (impl_->image_) {
-      if (!WidthIsSpecified()) {
-        const CanvasInterface *canvas = impl_->image_->GetCanvas();
-        if (canvas) {
-          SetPixelWidth(canvas->GetWidth());
-        }
-      }
-      if (!HeightIsSpecified()) {
-        const CanvasInterface *canvas = impl_->image_->GetCanvas();
-        if (canvas) {
-          SetPixelHeight(canvas->GetHeight());
-        }
-      }
-    }
+    OnDefaultSizeChanged();
     QueueDraw();
   }
 }
@@ -213,6 +200,17 @@ bool ButtonElement::OnMouseEvent(MouseEvent *event, bool direct,
   }
 
   return result;
+}
+
+void ButtonElement::GetDefaultSize(double *width, double *height) const {
+  const CanvasInterface *canvas = impl_->image_->GetCanvas();
+  if (canvas) {
+    *width = canvas->GetWidth();
+    *height = canvas->GetHeight();
+  } else {
+    *width = 0;
+    *height = 0;
+  }
 }
 
 } // namespace ggadget

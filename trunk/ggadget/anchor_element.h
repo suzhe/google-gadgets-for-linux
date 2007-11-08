@@ -32,13 +32,7 @@ class AnchorElement : public BasicElement {
              const char *name);
   virtual ~AnchorElement();
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-  
  public:   
-  /** Sets the text of the frame. */
-  void SetText(const char *text);
-   
   /**
    * Gets and sets the mouseover text color or texture image of the element.
    * The image is repeated if necessary, not stretched.
@@ -57,6 +51,11 @@ class AnchorElement : public BasicElement {
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
                                           const char *name);
+
+ protected:
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(AnchorElement);

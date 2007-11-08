@@ -31,9 +31,6 @@ class ImgElement : public BasicElement {
              const char *name);
   virtual ~ImgElement();
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-
  public:
   /** Gets and sets the file name of image to display. */
   const char *GetSrc() const;
@@ -57,6 +54,11 @@ class ImgElement : public BasicElement {
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
                                           const char *name);
+
+ protected:
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ImgElement);

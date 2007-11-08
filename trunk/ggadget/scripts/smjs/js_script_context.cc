@@ -104,8 +104,9 @@ void JSScriptContext::GetCurrentFileAndLine(JSContext *context,
   }
 }
 
-JSObject *JSScriptContext::WrapNativeObjectToJSInternal(
-    JSObject *js_object, ScriptableInterface *scriptable) {
+NativeJSWrapper *JSScriptContext::WrapNativeObjectToJSInternal(
+    JSObject *js_object, NativeJSWrapper *wrapper,
+    ScriptableInterface *scriptable) {
   ASSERT(scriptable);
   WrapperMap::const_iterator it = wrapper_map_.find(scriptable);
   if (it == wrapper_map_.end()) {
@@ -115,24 +116,28 @@ JSObject *JSScriptContext::WrapNativeObjectToJSInternal(
     if (!js_object)
       return NULL;
 
-    NativeJSWrapper *wrapper = new NativeJSWrapper(context_,
-                                                   js_object,
-                                                   scriptable);
+    if (!wrapper)
+      wrapper = new NativeJSWrapper(context_, js_object, scriptable);
+    else
+      wrapper->Wrap(scriptable);
+
     wrapper_map_[scriptable] = wrapper;
     ASSERT(wrapper->scriptable() == scriptable);
-    return wrapper->js_object();
+    return wrapper;
   } else {
+    ASSERT(!wrapper);
     ASSERT(!js_object);
-    return it->second->js_object();
+    return it->second;
   }
 }
 
-JSObject *JSScriptContext::WrapNativeObjectToJS(
+NativeJSWrapper *JSScriptContext::WrapNativeObjectToJS(
     JSContext *cx, ScriptableInterface *scriptable) {
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
-    return context_wrapper->WrapNativeObjectToJSInternal(NULL, scriptable);
+    return context_wrapper->WrapNativeObjectToJSInternal(NULL, NULL,
+                                                         scriptable);
   return NULL;
 }
 
@@ -186,8 +191,9 @@ JSBool JSScriptContext::CheckException(JSContext *cx,
 }
 
 JSFunctionSlot *JSScriptContext::NewJSFunctionSlotInternal(
-    const Slot *prototype, jsval function_val) {
-  JSFunctionSlot *slot = new JSFunctionSlot(prototype, context_, function_val);
+    NativeJSWrapper *wrapper, const Slot *prototype, jsval function_val) {
+  JSFunctionSlot *slot = new JSFunctionSlot(prototype, context_, wrapper,
+                                            function_val);
   // Put it here to make it possible for ConvertNativeSlotToJS to unwrap
   // a JSFunctionSlot.
   slot_js_map_[slot] = function_val;
@@ -195,12 +201,14 @@ JSFunctionSlot *JSScriptContext::NewJSFunctionSlotInternal(
 }
 
 JSFunctionSlot *JSScriptContext::NewJSFunctionSlot(JSContext *cx,
+                                                   NativeJSWrapper *wrapper,
                                                    const Slot *prototype,
                                                    jsval function_val) {
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
-    return context_wrapper->NewJSFunctionSlotInternal(prototype, function_val);
+    return context_wrapper->NewJSFunctionSlotInternal(wrapper, prototype,
+                                                      function_val);
   return NULL;
 }
 
@@ -234,11 +242,12 @@ Slot *JSScriptContext::Compile(const char *script,
     return NULL;
 
   return new JSFunctionSlot(
-      NULL, context_, OBJECT_TO_JSVAL(JS_GetFunctionObject(function)));
+      NULL, context_, NULL, OBJECT_TO_JSVAL(JS_GetFunctionObject(function)));
 }
 
 bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
-  JSObject *js_global = WrapNativeObjectToJS(context_, global_object);
+  NativeJSWrapper *wrapper = WrapNativeObjectToJS(context_, global_object);
+  JSObject *js_global = wrapper->js_object();
   if (!js_global)
     return false;
   return JS_InitStandardClasses(context_, js_global);
@@ -266,9 +275,14 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
       reinterpret_cast<JSClassWithNativeCtor *>(JS_GET_CLASS(cx, obj));
   ASSERT(cls);
 
+  // Create a wrapper first which doesn't really wrap a scriptable object,
+  // because it is not available before the constructor is called.
+  // This wrapper is important if there are any JavaScript callbacks in the
+  // constructor argument list.
+  NativeJSWrapper *wrapper = new NativeJSWrapper(cx, obj, NULL);
   Variant *params = NULL;
   uintN expected_argc = argc;
-  if (!ConvertJSArgsToNative(cx, obj, cls->constructor_, argc, argv,
+  if (!ConvertJSArgsToNative(cx, wrapper, cls->constructor_, argc, argv,
                              &params, &expected_argc))
     return JS_FALSE;
 
@@ -280,7 +294,7 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
-    context_wrapper->WrapNativeObjectToJSInternal(obj, scriptable);
+    context_wrapper->WrapNativeObjectToJSInternal(obj, wrapper, scriptable);
   delete [] params;
   return JS_TRUE;
 }

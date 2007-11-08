@@ -183,7 +183,7 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   return result;
 }
 
-static JSBool ConvertJSToSlot(JSContext *cx, JSObject *obj,
+static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *wrapper,
                               const Variant &prototype,
                               jsval js_val, Variant *native_val) {
   JSBool result = JS_TRUE;
@@ -213,11 +213,7 @@ static JSBool ConvertJSToSlot(JSContext *cx, JSObject *obj,
     JSFunctionSlot *slot = NULL;
     if (function_val != JSVAL_NULL) {
       slot = JSScriptContext::NewJSFunctionSlot(
-          cx, VariantValue<Slot *>()(prototype), function_val);
-      // Add a reference from obj to JSFunction, which is an analog reference
-      // of the C++ reference from native obj to the slot.
-      if (obj)
-        slot->SetReferenceFrom(obj);
+          cx, wrapper, VariantValue<Slot *>()(prototype), function_val);
     }
     *native_val = Variant(slot);
   }
@@ -254,7 +250,8 @@ JSBool ConvertJSToNativeInvalid(JSContext *cx, jsval js_val,
   return JS_FALSE;
 }
 
-JSBool ConvertJSToNative(JSContext *cx, JSObject *obj, const Variant &prototype,
+JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *wrapper,
+                         const Variant &prototype,
                          jsval js_val, Variant *native_val) {
   switch (prototype.type()) {
     case Variant::TYPE_VOID:
@@ -275,7 +272,7 @@ JSBool ConvertJSToNative(JSContext *cx, JSObject *obj, const Variant &prototype,
     case Variant::TYPE_CONST_SCRIPTABLE:
       return ConvertJSToScriptable(cx, js_val, native_val);
     case Variant::TYPE_SLOT:
-      return ConvertJSToSlot(cx, obj, prototype, js_val, native_val);
+      return ConvertJSToSlot(cx, wrapper, prototype, js_val, native_val);
     case Variant::TYPE_ANY:
     case Variant::TYPE_CONST_ANY:
       JS_ReportError(cx, "Script adapter doesn't support void * type");
@@ -321,8 +318,8 @@ std::string PrintJSValue(JSContext *cx, jsval js_val) {
   }
 }
 
-JSBool ConvertJSArgsToNative(JSContext *cx, JSObject *obj, Slot *slot,
-                             uintN argc, jsval *argv,
+JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
+                             Slot *slot, uintN argc, jsval *argv,
                              Variant **params, uintN *expected_argc) {
   *params = NULL;
   const Variant::Type *arg_types = NULL;
@@ -356,7 +353,7 @@ JSBool ConvertJSArgsToNative(JSContext *cx, JSObject *obj, Slot *slot,
     *params = new Variant[*expected_argc];
     for (uintN i = 0; i < argc; i++) {
       JSBool result = arg_types != NULL ?
-          ConvertJSToNative(cx, obj, Variant(arg_types[i]), argv[i],
+          ConvertJSToNative(cx, wrapper, Variant(arg_types[i]), argv[i],
                             &(*params)[i]) :
           ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
       if (!result) {
@@ -471,7 +468,7 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
     *js_val = JSVAL_NULL;
   } else {
     JSObject *js_object =
-        JSScriptContext::WrapNativeObjectToJS(cx, scriptable);
+        JSScriptContext::WrapNativeObjectToJS(cx, scriptable)->js_object();
     if (js_object)
       *js_val = OBJECT_TO_JSVAL(js_object);
     else

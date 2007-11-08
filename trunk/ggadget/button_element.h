@@ -33,9 +33,6 @@ class ButtonElement : public BasicElement {
                 const char *name);
   virtual ~ButtonElement();
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-
  public:
   /** Gets and sets the file name of default button image. */
   const char *GetImage() const;
@@ -60,6 +57,11 @@ class ButtonElement : public BasicElement {
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
                                           const char *name);
+
+ protected:
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ButtonElement);
