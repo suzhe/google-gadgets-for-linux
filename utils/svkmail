@@ -36,8 +36,6 @@ Options:
 EOF
 }
 
-usewebsvn="no"
-
 # Avoid localized messages.
 LANG=en_US
 LANGUAGE=en_US:en
@@ -55,6 +53,8 @@ LC_MEASUREMENT="en_US"
 LC_IDENTIFICATION="en_US"
 LC_ALL=
 
+usewebsvn="no"
+
 target_dir=`pwd`
 while [[ ! -f "$target_dir/.svkmail" && "$target_dir" != "/" ]];
 do
@@ -63,23 +63,6 @@ done
 
 if [ -f "$target_dir/.svkmail" ]; then
   . "$target_dir/.svkmail"
-fi
-
-target_dir=`pwd`
-if ! svk info &> /dev/null; then
-  echo "Not a working directory."
-  exit 1
-fi
-
-while svk info &> /dev/null;
-do
-  target_dir=`pwd`
-  cd ..
-done
-cd $target_dir
-
-if [ "$stat" = "" ]; then
-  stat="stat -c \"%y\""
 fi
 
 # Parse the command line.
@@ -182,6 +165,19 @@ do
   esac
 done
 
+target_dir=`pwd`
+if ! svk info &> /dev/null; then
+  echo "Not a working directory."
+  exit 1
+fi
+
+while svk info &> /dev/null;
+do
+  target_dir=`pwd`
+  cd ..
+done
+cd $target_dir
+
 while [ "$m" = "" ];
 do
   read -p "Please enter the reviewer's id: " m
@@ -264,6 +260,10 @@ patchcmd=`echo $genpatch | \
 delta=$($patchcmd | \
     grep '\(^-\|^+\)[^-+]' | \
     wc -l)
+
+if [ "$stat" = "" ]; then
+  stat="stat -c \"%y\""
+fi
 
 size="A lice-sized"
 if [ "$delta" -gt 50 ]; then
