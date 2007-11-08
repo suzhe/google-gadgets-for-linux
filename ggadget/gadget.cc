@@ -140,6 +140,18 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   }
 
   ~Impl() {
+    // unload any fonts
+    for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
+         i != manifest_info_map_.end(); ++i) {
+      const std::string &key = i->first;
+      // Keys are of the form "install/font@src" or "install/font[k]@src"
+      if (0 == key.find(kManifestInstallFont) && 
+          (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
+        // ignore return, error not fatal
+        host_->UnloadFont(i->second.c_str());
+      }
+    }
+
     delete main_view_host_;
     main_view_host_ = NULL;
     delete file_manager_;
@@ -209,6 +221,18 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     DLOG("Gadget id: %s", GetManifestInfo(kManifestId));
     DLOG("Gadget name: %s", GetManifestInfo(kManifestName));
     DLOG("Gadget description: %s", GetManifestInfo(kManifestDescription));
+
+    // load fonts
+    for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
+         i != manifest_info_map_.end(); ++i) {
+      const std::string &key = i->first;
+      // Keys are of the form "install/font@src" or "install/font[k]@src"
+      if (0 == key.find(kManifestInstallFont) && 
+          (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
+        // ignore return, error not fatal
+        host_->LoadFont(i->second.c_str(), file_manager);
+      }
+    }
 
     if (!main_view_host_->GetView()->InitFromFile(file_manager, kMainXML)) {
       DLOG("Failed to setup the main view");

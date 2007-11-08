@@ -46,6 +46,12 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   }
   virtual bool RemoveIOWatch(int token) { return true; }
   virtual bool OpenURL(const char *url) const { return true; }
+
+  virtual bool LoadFont(const char *filename, 
+                        ggadget::FileManagerInterface *fm) { 
+    return true; 
+  }
+  virtual bool UnloadFont(const char *filename) { return true; }
 };
 
 #endif // GGADGET_TESTS_MOCKED_GADGET_HOST_H__

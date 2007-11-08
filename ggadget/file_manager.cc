@@ -207,6 +207,7 @@ bool FileManagerImpl::ExtractFile(const char *file, std::string *into_file) {
   if (fwrite(data.c_str(), 1, data.size(), fp) != data.size()) {
     LOG("Failed writing to file %s", into_file->c_str());
     succeeded = false;
+    unlink(into_file->c_str()); // ignore return
   }
   fclose(fp);
   return succeeded;

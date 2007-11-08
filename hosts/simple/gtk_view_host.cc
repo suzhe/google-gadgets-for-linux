@@ -23,6 +23,33 @@
 #include "gtk_view_host.h"
 #include "gadget_view_widget.h"
 
+using ggadget::ElementInterface;
+
+/*struct { 
+  ElementInterface::CursorType type,
+  GdkCursorType gdk_type
+} CursorTypeMapping;
+
+// Ordering in this array must match the declaration in ElementInterface.
+static const CursorTypeMapping[] = {
+  { ElementInterface::CURSOR_ARROW, GDK_ARROW }, // need special handling
+  { ElementInterface::CURSOR_IBEAM, GDK_XTERM},
+  { ElementInterface::CURSOR_WAIT, GDK_WATCH},
+  { ElementInterface::CURSOR_CROSS, GDK_CROSS},
+  { ElementInterface::CURSOR_UPARROW, GDK_SB_UP_ARROW},
+  { ElementInterface::CURSOR_SIZE, GDK_SIZING},
+  { ElementInterface::CURSOR_SIZENWSE, GDK_ARROW}, // need special handling 
+  { ElementInterface::CURSOR_SIZENESW, GDK_ARROW}, // need special handling
+  { ElementInterface::CURSOR_SIZEWE, GDK_ARROW}, // need special handling
+  { ElementInterface::CURSOR_SIZENS, GDK_ARROW}, // need special handling
+  { ElementInterface::CURSOR_SIZEALL, },
+  { ElementInterface::CURSOR_NO, GDK_X_CURSOR},
+  { ElementInterface::CURSOR_HAND, GDK_HAND1},
+  { ElementInterface::CURSOR_BUSY, },
+  { ElementInterface::CURSOR_HELP, }
+};
+*/
+
 GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
                          ggadget::GadgetHostInterface::ViewType type,
                          ggadget::OptionsInterface *options,
@@ -126,4 +153,39 @@ void GtkViewHost::SetCaption(const char *caption) {
 
 void GtkViewHost::SetShowCaptionAlways(bool always) {
   // TODO:
+}
+
+void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
+  if (gvw_) {
+    if (type == ElementInterface::CURSOR_ARROW) {
+      // Use parent cursor in this case.
+      gdk_window_set_cursor(GTK_WIDGET(gvw_)->window, NULL);
+      return;
+    }
+
+    /*
+    GdkCursorType gdk_type;
+    switch (type) {
+     case ElementInterface::CURSOR_ARROW:
+       gdk_type = 
+     case ElementInterface::CURSOR_IBEAM:
+     case ElementInterface::CURSOR_WAIT:
+     case ElementInterface::CURSOR_CROSS:
+     case ElementInterface::CURSOR_UPARROW:
+     case ElementInterface::CURSOR_SIZE:
+     case ElementInterface::CURSOR_SIZENWSE:
+     case ElementInterface::CURSOR_SIZENESW:
+     case ElementInterface::CURSOR_SIZEWE:
+     case ElementInterface::CURSOR_SIZENS:
+     case ElementInterface::CURSOR_SIZEALL:
+     case ElementInterface::CURSOR_NO:
+     case ElementInterface::CURSOR_HAND:
+     case ElementInterface::CURSOR_BUSY:
+     case ElementInterface::CURSOR_HELP:
+     default:
+       return;
+    };
+    */
+
+  }
 }

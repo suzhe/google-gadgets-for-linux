@@ -20,6 +20,9 @@
 
 namespace ggadget {
 
+static const char kSlash      = '/';
+static const char kBackSlash = '\\';
+
 int GadgetStrCmp(const char *s1, const char *s2) {
 #ifdef GADGET_CASE_SENSITIVE
   return strcmp(s1, s2);
@@ -113,6 +116,50 @@ std::string StringPrintf(const char* format, ...) {
   }
   va_end(ap);
   return dst;
+}
+
+bool IsValidURLChar(unsigned char c) {
+  // See RFC 2396 for information: http://www.ietf.org/rfc/rfc2396.txt
+  // check for INVALID character (in US-ASCII: 0-127) and consider all
+  // others valid
+  return !(c <= ' ' || '<'==c || '>'==c || '\"'==c || '{'==c || '}'==c ||
+          // '|'==c ||     // Technically | is unadvised, but it is valid, and some URLs use it
+          // '^'==c ||     // Also technically invalid but Yahoo news use it... others too
+          // '`'==c ||     // Yahoo uses this
+          kBackSlash==c || '['==c || ']'==c
+          // Comparison below is always false for char:
+          || c >= 128);  // Enable converting non-ascii chars
+}
+
+void EncodeURL(const std::string &source, std::string *dest) {
+  ASSERT(dest);
+
+  dest->clear();
+
+  for (size_t c = 0; c < source.length(); c++) {
+    unsigned char src = source[c];
+
+    if (src == kBackSlash) {
+      dest->append(1, kSlash);
+      continue;
+    }
+
+    // %-encode disallowed URL chars (b/w 0-127)
+    // (chars >=128 are considered valid... although technically they're not)
+    if (!IsValidURLChar(src)) {
+      // output the percent, followed by the hex value of the character
+      // Note: we know it's a char in US-ASCII (0-127)
+      //
+      dest->append(1, '%');
+
+      static const char kHexChars[] = "0123456789abcdef";
+      dest->append(1, kHexChars[src >> 4]);
+      dest->append(1, kHexChars[src & 0xF]);
+    } else {
+      // not a special char: just copy
+      dest->append(1, src);
+    }
+  }
 }
 
 }  // namespace ggadget

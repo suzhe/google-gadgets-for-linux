@@ -1,0 +1,50 @@
+<!-- 
+Copyright (C) 2007 Google Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<view width="152" height="57"
+      onopen="view_onOpen()"
+      onoptionchanged="view_onOptionChanged()"
+      onminimize="view_onMinimize()"
+      onrestore="view_onRestore()">
+
+    <script src="milktheme.js"/>
+    <script src="main.js"/>
+
+    <div name="Face" x="6" y="6" width="123" height="38" background="#CECEC2">
+
+      <!-- Set all labels below to the LCD2 font. -->
+      <!-- The LCD2 font was imported within the "gadget.manifest" file -->
+
+      <label name="AmPm" x="4" y="17" color="#333333" font="LCD2" bold="True" size="9"/>
+
+      <label name="TimeLabel" align="right" width="86" y="8" color="#333333" font="LCD2" bold="True" size="18"/>
+
+      <label name="DateLabel" align="right" width="31" x="86" y="8" font="LCD2" bold="True" size="8"/>
+
+      <label name="MyWeekday" align ="right" width="31" x="86" y="20" color="#333333" font="LCD2" bold="True" size="8"/>
+
+    </div>
+
+    <img name="Frame" src="frame.png"/>
+
+    <div name="ColorButton" x="131" y="23" width="10" height="9" background="#DDDDDD"/>
+
+    <button x="131" y="23" image="color_reflection.png" tooltip="&TOOLTIP_CHANGE_COLOR;"
+            onmouseover="NextColor_onMouseOver()"
+            onmouseout="NextColor_onMouseOut()"
+            onclick="NextColor_onClick()"/>
+
+</view>

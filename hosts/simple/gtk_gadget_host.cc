@@ -17,10 +17,12 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fontconfig/fontconfig.h>
 
 #include <ggadget/file_manager.h>
 #include <ggadget/element_factory.h>
 #include <ggadget/gadget.h>
+#include <ggadget/common.h>
 #include <ggadget/scripts/smjs/js_script_runtime.h>
 
 #include <ggadget/button_element.h>
@@ -63,16 +65,19 @@ GtkGadgetHost::GtkGadgetHost()
                                 &ggadget::ScrollBarElement::CreateInstance);
   factory->RegisterElementClass("label",
                                 &ggadget::LabelElement::CreateInstance);
-  factory->RegisterElementClass("a",
-                                &ggadget::AnchorElement::CreateInstance);
+  factory->RegisterElementClass("a", &ggadget::AnchorElement::CreateInstance);
   factory->RegisterElementClass("checkbox",
-                                &ggadget::CheckBoxElement::CreateInstance);
+                                &ggadget::CheckBoxElement::CreateCheckBoxInstance);
+  factory->RegisterElementClass("radio",
+                                &ggadget::CheckBoxElement::CreateRadioInstance);
   element_factory_ = factory;
 
   global_file_manager_->Init(NULL);
 
   script_runtime_->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
+
+  FcInit(); // Just in case this hasn't been done.
 }
 
 GtkGadgetHost::~GtkGadgetHost() {
@@ -251,7 +256,7 @@ bool GtkGadgetHost::OpenURL(const char *url) const {
   }
 
   DLOG("Launching URL: %s", url);
-  
+
   pid_t pid;
   // fork and run the command.
   if ((pid = fork()) == 0) {
@@ -304,4 +309,34 @@ ggadget::GadgetInterface *GtkGadgetHost::LoadGadget(const char *base_path,
     return NULL;
   }
   return gadget;
+}
+
+bool GtkGadgetHost::LoadFont(const char *filename, 
+                             ggadget::FileManagerInterface *fm) {
+  std::string fontfile; 
+  if (!fm->ExtractFile(filename, &fontfile)) {
+    return false;
+  }
+
+  loaded_fonts_[filename] = fontfile;
+
+  FcConfig *config = FcConfigGetCurrent();
+  bool success = FcConfigAppFontAddFile(config, 
+                   reinterpret_cast<const FcChar8 *>(fontfile.c_str()));
+  DLOG("LoadFont: %s %s", filename, fontfile.c_str());
+  return success;
+}
+
+bool GtkGadgetHost::UnloadFont(const char *filename) {
+  // FontConfig doesn't actually allow dynamic removal of App Fonts, so 
+  // just remove the file.
+  std::map<std::string, std::string>::iterator i = loaded_fonts_.find(filename);
+  if (i == loaded_fonts_.end()) {
+    return false;
+  }
+
+  unlink((i->second).c_str()); // ignore return
+  loaded_fonts_.erase(i);
+
+  return true; 
 }
