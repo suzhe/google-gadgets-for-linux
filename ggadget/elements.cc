@@ -203,6 +203,9 @@ class Elements::Impl {
     for (std::vector<ElementInterface *>::reverse_iterator ite =
              children_.rbegin();
          ite != children_.rend(); ++ite) {
+      if (!(*ite)->IsVisible())
+        continue;
+
       MapChildMouseEvent(event, *ite, &new_event);
       if ((*ite)->IsMouseEventIn(&new_event)) {
         bool result = (*ite)->OnMouseEvent(&new_event, false, fired_element);

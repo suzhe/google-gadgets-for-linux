@@ -251,14 +251,6 @@ class MockedElement :
     return false;
   }
 
-  virtual bool XIsSpecified() const {
-    return false;
-  }
-
-  virtual bool YIsSpecified() const {
-    return false;
-  }
-
   virtual bool WidthIsSpecified() const {
     return false;
   }

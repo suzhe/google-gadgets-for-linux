@@ -24,7 +24,7 @@ namespace ggadget {
 
 class ImgElement::Impl {
  public:
-  Impl() : image_(NULL) { }
+  Impl() : image_(NULL), src_width_(0), src_height_(0) { }
   ~Impl() {
     delete image_;
     image_ = NULL;
@@ -32,6 +32,7 @@ class ImgElement::Impl {
 
   std::string src_;
   Image *image_;
+  size_t src_width_, src_height_;
 };
 
 ImgElement::ImgElement(ElementInterface *parent,
@@ -66,26 +67,44 @@ void ImgElement::SetSrc(const char *src) {
   if (AssignIfDiffer(src, &impl_->src_)) {
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(src, false);
-    if (!WidthIsSpecified())
-      SetPixelWidth(GetSrcWidth());
-    if (!HeightIsSpecified())
-      SetPixelHeight(GetSrcHeight());
+    if (impl_->image_) {
+      const CanvasInterface *canvas = impl_->image_->GetCanvas();
+      if (canvas) {
+        impl_->src_width_ = canvas->GetWidth();
+        impl_->src_height_ = canvas->GetHeight();
+      } else {
+        impl_->src_width_ = 0;
+        impl_->src_height_ = 0;
+      }
+    } else {
+      impl_->src_width_ = 0;
+      impl_->src_height_ = 0;
+    }
+
+    OnDefaultSizeChanged();
     QueueDraw();
   }
 }
 
 size_t ImgElement::GetSrcWidth() const {
-  return impl_->image_ ? impl_->image_->GetWidth() : 0; 
+  return impl_->src_width_;
 }
 
 size_t ImgElement::GetSrcHeight() const {
-  return impl_->image_ ? impl_->image_->GetHeight() : 0;
+  return impl_->src_height_;
+}
+
+void ImgElement::GetDefaultSize(double *width, double *height) const {
+  *width = impl_->src_width_;
+  *height = impl_->src_height_;
 }
 
 void ImgElement::SetSrcSize(size_t width, size_t height) {
   // Because image data may shared among elements, we don't think this method
   // is useful, because we may require more memory to store the new resized
   // canvas.
+  impl_->src_width_ = width;
+  impl_->src_height_ = height;
 }
 
 ElementInterface *ImgElement::CreateInstance(ElementInterface *parent,

@@ -181,6 +181,27 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
 };
 
 /**
+ * A @c Slot that is targeted to another general typed slot with no parameter.
+ * Useful to proxy not-typed script slot to typed slot.
+ */
+template <typename R>
+class SlotProxy0 : public Slot0<R> {
+ public:
+  typedef SlotProxy0<R> SelfType;
+  SlotProxy0(Slot* slot) : slot_(slot) { }
+  ~SlotProxy0() { delete slot_; slot_ = NULL; }
+  virtual Variant Call(int argc, Variant argv[]) const {
+    return slot_->Call(argc, argv);
+  }
+  virtual bool operator==(const Slot &another) const {
+    return slot_ == down_cast<const SelfType *>(&another)->slot_;
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(SlotProxy0);
+  Slot *slot_;
+};
+
+/**
  * Helper functor to create a @c FunctorSlot0 instance with a C/C++ function
  * or a static method.
  * The caller should delete the instance after use.
@@ -335,6 +356,23 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
   DISALLOW_EVIL_CONSTRUCTORS(MethodSlot##n);                                  \
   T *obj_;                                                                    \
   M method_;                                                                  \
+};                                                                            \
+                                                                              \
+template <typename R, _arg_types>                                             \
+class SlotProxy##n : public Slot##n<R, _arg_type_names> {                     \
+ public:                                                                      \
+  typedef SlotProxy##n<R, _arg_type_names> SelfType;                          \
+  SlotProxy##n(Slot* slot) : slot_(slot) { }                                  \
+  ~SlotProxy##n() { delete slot_; slot_ = NULL; }                             \
+  virtual Variant Call(int argc, Variant argv[]) const {                      \
+    return slot_->Call(argc, argv);                                           \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    return slot_ == down_cast<const SelfType *>(&another)->slot_;             \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(SlotProxy##n);                                   \
+  Slot *slot_;                                                                \
 };                                                                            \
                                                                               \
 template <typename R, _arg_types>                                             \

@@ -69,8 +69,7 @@ class ViewInterface : public ScriptableInterface {
    * @param filename the file name in the gadget.
    * @return @c true if succeedes.
    */
-  virtual bool InitFromFile(FileManagerInterface *file_manager,
-                            const char *filename) = 0;
+  virtual bool InitFromFile(const char *filename) = 0;
 
   /**
    * Handler of the mouse events.

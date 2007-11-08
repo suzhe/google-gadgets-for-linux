@@ -34,9 +34,6 @@ class CheckBoxElement : public BasicElement {
                 bool is_checkbox);
   virtual ~CheckBoxElement();
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-
  public:
   /** Gets and sets the file name of default checkbox image. */
   const char *GetImage() const;
@@ -86,6 +83,11 @@ class CheckBoxElement : public BasicElement {
                                       ViewInterface *view, const char *name);
   static ElementInterface *CreateRadioInstance(ElementInterface *parent,
                                       ViewInterface *view, const char *name);
+
+ protected:
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(CheckBoxElement);

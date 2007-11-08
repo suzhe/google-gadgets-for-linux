@@ -22,6 +22,8 @@
 #include <gtk/gtk.h>
 #include <ggadget/ggadget.h>
 
+class GtkMenuImpl;
+
 /**
  * An implementation of @c GadgetHostInterface for the simple gadget host.
  */
@@ -33,11 +35,20 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
       ScriptRuntimeType type);
   virtual ggadget::ElementFactoryInterface *GetElementFactory();
+  virtual ggadget::FileManagerInterface *GetFileManager();
   virtual ggadget::FileManagerInterface *GetGlobalFileManager();
+  virtual ggadget::OptionsInterface *GetOptions();
+  virtual ggadget::GadgetInterface *GetGadget();
   virtual ggadget::ViewHostInterface *NewViewHost(
-      ViewType type,
-      ggadget::ScriptableInterface *prototype,
-      ggadget::OptionsInterface *options);
+      ViewType type, ggadget::ScriptableInterface *prototype);
+
+  virtual void SetPluginFlags(int plugin_flags);
+  virtual void RemoveMe(bool save_data);
+  virtual void ShowDetailsView(ggadget::DetailsViewInterface *details_view,
+                               const char *title, int flags,
+                               ggadget::Slot1<void, int> *feedback_handler);
+  virtual void CloseDetailsView();
+  virtual void ShowOptionsDialog();
 
   virtual void DebugOutput(DebugLevel level, const char *message);
   virtual uint64_t GetCurrentTime() const;
@@ -52,7 +63,8 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual bool UnloadFont(const char *filename);
 
   /**
-   * Load a gadget from file system.
+   * Loads a gadget from file system and hosts it.
+   * @param container the gtk widget to contain this gadget.
    * @param base_path the base path of this gadget. It can be a directory or
    *     path to a .gg file.
    * @param zoom zoom factor of this gadget.
@@ -61,8 +73,8 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
    * @return the loaded gadget if succeeded, or @c NULL otherwise.
    */
   // TODO: store zoom (and debug_mode?) into options repository.
-  ggadget::GadgetInterface *LoadGadget(const char *base_path,
-                                       double zoom, int debug_mode);
+  bool LoadGadget(GtkBox *container,
+                  const char *base_path, double zoom, int debug_mode);
 
  private:
   void ReportScriptError(const char *message);
@@ -76,15 +88,34 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
                                   GIOCondition cond,
                                   gpointer data);
 
+  static void OnMenuClicked(GtkButton *button, gpointer user_data);
+  static void OnBackClicked(GtkButton *button, gpointer user_data);
+  static void OnForwardClicked(GtkButton *button, gpointer user_data);
+  static void OnDetailsClicked(GtkButton *button, gpointer user_data);
+  static void OnCollapseActivate(GtkMenuItem *menu_item, gpointer user_data);
+  static void OnOptionsActivate(GtkMenuItem *menu_item, gpointer user_data);
+  static void OnAboutActivate(GtkMenuItem *menu_item, gpointer user_data);
+  static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
+
   ggadget::ScriptRuntimeInterface *script_runtime_;
   ggadget::ElementFactoryInterface *element_factory_;
+  ggadget::FileManagerInterface *file_manager_;
   ggadget::FileManagerInterface *global_file_manager_;
+  ggadget::OptionsInterface *options_;
+  ggadget::GadgetInterface *gadget_;
 
+  int plugin_flags_;
   typedef std::map<int, CallbackData *> CallbackMap;
   CallbackMap callbacks_;
 
   // Maps original font filename to temp font filename
   std::map<std::string, std::string> loaded_fonts_;
+
+  GtkBox *toolbox_;
+  GtkWidget *menu_button_, *back_button_, *forward_button_, *details_button_;
+  GtkMenuImpl *menu_;
+  GtkWidget *collapse_menu_item_, *options_menu_item_,
+            *about_menu_item_, *dock_menu_item_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkGadgetHost);
 };

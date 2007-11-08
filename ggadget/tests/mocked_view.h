@@ -36,8 +36,7 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual ggadget::FileManagerInterface *GetFileManager() const { return NULL; }
   virtual ggadget::ScriptContextInterface *GetScriptContext() const
       { return NULL; }
-  virtual bool InitFromFile(ggadget::FileManagerInterface *file_manager,
-                            const char *filename) { return true; }
+  virtual bool InitFromFile(const char *filename) { return true; }
 
   virtual bool OnMouseEvent(ggadget::MouseEvent *event) { return true; }
   virtual bool OnKeyEvent(ggadget::KeyboardEvent *event) { return true; }

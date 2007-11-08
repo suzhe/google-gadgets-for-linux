@@ -61,6 +61,8 @@ class View::Impl {
       mouseover_element_(NULL),
       grabmouse_element_(NULL),
       non_strict_delegator_(new ScriptableDelegator(owner, false)) {
+    if (gadget_host_)
+      file_manager_ = gadget_host_->GetFileManager();
   }
 
   ~Impl() {
@@ -76,8 +78,7 @@ class View::Impl {
     }
   }
 
-  bool InitFromFile(FileManagerInterface *file_manager, const char *filename) {
-    file_manager_ = file_manager;
+  bool InitFromFile(const char *filename) {
     if (SetupViewFromFile(owner_, filename)) {
       onopen_event_();
       return true;
@@ -124,6 +125,7 @@ class View::Impl {
     // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE and
     // EVENT_MOUSE_UP events to it directly, until an EVENT_MOUSE_UP received.
     if (grabmouse_element_ && grabmouse_element_->IsEnabled() &&
+        grabmouse_element_->IsVisible() &&
         (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP)) {
       MouseEvent new_event(*event);
       MapChildMouseEvent(event, grabmouse_element_, &new_event);
@@ -179,7 +181,8 @@ class View::Impl {
       }
 
       if (mouseover_element_) {
-        if (!mouseover_element_->IsEnabled())
+        if (!mouseover_element_->IsEnabled() ||
+            !mouseover_element_->IsVisible())
           mouseover_element_ = NULL;
         else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
@@ -266,7 +269,7 @@ class View::Impl {
       return false;
 
     if (focused_element_) {
-      if (!focused_element_->IsEnabled())
+      if (!focused_element_->IsEnabled() || !focused_element_->IsVisible())
         focused_element_ = NULL;
       else
         return focused_element_->OnKeyEvent(event);
@@ -342,7 +345,7 @@ class View::Impl {
       }
 
       if (focused_element_) {
-        if (!focused_element_->IsEnabled())
+        if (!focused_element_->IsEnabled() || !focused_element_->IsVisible())
           focused_element_ = NULL;
         else {
           Event event(Event::EVENT_FOCUS_IN);
@@ -769,9 +772,8 @@ FileManagerInterface *View::GetFileManager() const {
   return impl_->file_manager_;
 }
 
-bool View::InitFromFile(FileManagerInterface *file_manager,
-                        const char *filename) {
-  return impl_->InitFromFile(file_manager, filename);
+bool View::InitFromFile(const char *filename) {
+  return impl_->InitFromFile(filename);
 }
 
 int View::GetWidth() const {

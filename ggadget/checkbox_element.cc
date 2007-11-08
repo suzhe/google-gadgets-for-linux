@@ -16,6 +16,7 @@
 
 #include "checkbox_element.h"
 #include "canvas_interface.h"
+#include "graphics_interface.h"
 #include "image.h"
 #include "text_frame.h"
 #include "string_utils.h"
@@ -35,11 +36,11 @@ static const char *const kOnChangeEvent = "onchange";
 
 class CheckBoxElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view, bool is_checkbox) 
-    : is_checkbox_(is_checkbox), text_(owner, view), 
-      mousedown_(false), mouseover_(false), checkbox_on_right_(false), 
+  Impl(BasicElement *owner, ViewInterface *view, bool is_checkbox)
+    : is_checkbox_(is_checkbox), text_(owner, view),
+      mousedown_(false), mouseover_(false), checkbox_on_right_(false),
       value_(STATE_CHECKED) {
-    for (int i = 0; i < STATE_COUNT; i++) {      
+    for (int i = 0; i < STATE_COUNT; i++) {
       image_[i] = NULL;
       downimage_[i] = NULL;
       overimage_[i] = NULL;
@@ -48,7 +49,7 @@ class CheckBoxElement::Impl {
     text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
   }
   ~Impl() {
-    for (int i = 0; i < STATE_COUNT; i++) {      
+    for (int i = 0; i < STATE_COUNT; i++) {
       delete image_[i];
       image_[i] = NULL;
 
@@ -63,22 +64,32 @@ class CheckBoxElement::Impl {
     }
   }
 
+  Image *GetCurrentImage(const CheckBoxElement *owner) {
+    if (!owner->IsEnabled())
+      return disabledimage_[value_];
+    if (mousedown_)
+      return downimage_[value_];
+    if (mouseover_)
+      return overimage_[value_];
+    return image_[value_];
+  }
+
   bool is_checkbox_;
   TextFrame text_;
   bool mousedown_;
   bool mouseover_;
   bool checkbox_on_right_;
   CheckedState value_;
-  std::string image_src_[STATE_COUNT], downimage_src_[STATE_COUNT], 
+  std::string image_src_[STATE_COUNT], downimage_src_[STATE_COUNT],
               overimage_src_[STATE_COUNT], disabledimage_src_[STATE_COUNT];
-  Image *image_[STATE_COUNT], *downimage_[STATE_COUNT], 
+  Image *image_[STATE_COUNT], *downimage_[STATE_COUNT],
         *overimage_[STATE_COUNT], *disabledimage_[STATE_COUNT];
   EventSignal onchange_event_;
 };
 
 CheckBoxElement::CheckBoxElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name, bool is_checkbox)
+                                 ViewInterface *view,
+                                 const char *name, bool is_checkbox)
     : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
       impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
@@ -119,7 +130,7 @@ CheckBoxElement::CheckBoxElement(ElementInterface *parent,
                    NewSlot(this, &CheckBoxElement::IsCheckBoxOnRight),
                    NewSlot(this, &CheckBoxElement::SetCheckBoxOnRight));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);  
+  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 
 CheckBoxElement::~CheckBoxElement() {
@@ -127,21 +138,8 @@ CheckBoxElement::~CheckBoxElement() {
 }
 
 void CheckBoxElement::DoDraw(CanvasInterface *canvas,
-                           const CanvasInterface *children_canvas) {  
-  Image *img = NULL;
-  if (!IsEnabled()) {
-    img = impl_->disabledimage_[impl_->value_];
-  }
-  else if (impl_->mousedown_) {
-    img = impl_->downimage_[impl_->value_];
-  }
-  else if (impl_->mouseover_) {
-    img = impl_->overimage_[impl_->value_];
-  }
-
-  if (!img) { // draw image_ as last resort
-    img = impl_->image_[impl_->value_];
-  }
+                           const CanvasInterface *children_canvas) {
+  Image *img = impl_->GetCurrentImage(this);
 
   const double h = GetPixelHeight();
   double textx = 0;
@@ -181,7 +179,7 @@ void CheckBoxElement::SetValue(bool value) {
     impl_->value_ = value ? STATE_CHECKED : STATE_NORMAL;
     Event event(Event::EVENT_CHANGE);
     ScriptableEvent s_event(&event, this, 0, 0);
-    GetView()->FireEvent(&s_event, impl_->onchange_event_);    
+    GetView()->FireEvent(&s_event, impl_->onchange_event_);
     QueueDraw();
   }
 }
@@ -262,20 +260,7 @@ void CheckBoxElement::SetCheckedImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->image_src_[STATE_CHECKED])) {
     delete impl_->image_[STATE_CHECKED];
     impl_->image_[STATE_CHECKED] = GetView()->LoadImage(img, false);
-    if (impl_->image_[STATE_CHECKED]) {
-      if (!WidthIsSpecified()) {
-        const CanvasInterface *canvas = impl_->image_[STATE_CHECKED]->GetCanvas();
-        if (canvas) {
-          SetPixelWidth(canvas->GetWidth());
-        }
-      }
-      if (!HeightIsSpecified()) {
-        const CanvasInterface *canvas = impl_->image_[STATE_CHECKED]->GetCanvas();
-        if (canvas) {
-          SetPixelHeight(canvas->GetHeight());
-        }
-      }
-    }
+    OnDefaultSizeChanged();
     QueueDraw();
   }
 }
@@ -333,24 +318,28 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;
+      OnDefaultSizeChanged();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_UP:
       impl_->mousedown_ = false;
+      OnDefaultSizeChanged();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
+      OnDefaultSizeChanged();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_OVER:
       impl_->mouseover_ = true;
+      OnDefaultSizeChanged();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_CLICK:
-      { // Toggle checked state and fire event         
+      { // Toggle checked state and fire event
         if (impl_->is_checkbox_) {
-          impl_->value_ = (impl_->value_ == STATE_NORMAL) ? 
+          impl_->value_ = (impl_->value_ == STATE_NORMAL) ?
                             STATE_CHECKED : STATE_NORMAL;
         } else {
           if (impl_->value_ == STATE_CHECKED) {
@@ -360,7 +349,8 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
         }
         Event event(Event::EVENT_CHANGE);
         ScriptableEvent s_event(&event, this, 0, 0);
-        GetView()->FireEvent(&s_event, impl_->onchange_event_);       
+        GetView()->FireEvent(&s_event, impl_->onchange_event_);
+        OnDefaultSizeChanged();
         QueueDraw();
       }
       break;
@@ -370,6 +360,27 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
   }
 
   return result;
+}
+
+void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
+  double image_width = 0, image_height = 0;
+  Image *image = impl_->GetCurrentImage(this);
+  if (image) {
+    const CanvasInterface *canvas = image->GetCanvas();
+    if (canvas) {
+      image_width = canvas->GetWidth();
+      image_height = canvas->GetHeight();
+    }
+  }
+
+  double text_width = 0, text_height = 0;
+  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
+  impl_->text_.GetSimpleExtents(canvas, &text_width, &text_height);
+  canvas->Destroy();
+
+  *width = image_width = text_width;
+  *height = std::max(image_height, text_height);
+  LOG("Checkbox default size: %lf %lf", *width, *height);
 }
 
 ElementInterface *CheckBoxElement::CreateCheckBoxInstance(ElementInterface *parent,
@@ -383,4 +394,5 @@ ElementInterface *CheckBoxElement::CreateRadioInstance(ElementInterface *parent,
                                              const char *name) {
   return new CheckBoxElement(parent, view, name, false);
 }
+
 } // namespace ggadget

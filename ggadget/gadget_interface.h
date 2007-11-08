@@ -20,6 +20,8 @@
 namespace ggadget {
 
 class FileManagerInterface;
+class GDDisplayWindowInterface;
+class MenuInterface;
 class ViewHostInterface;
 
 /**
@@ -31,11 +33,9 @@ class GadgetInterface {
 
   /**
    * Init the gadget by loading the gadget definitions.
-   * @param file_manager the file manager used to load this gadget.  This
-   *     @c GadgetInterface instance owns the pointer after this method call.
    * @return @c true if succeeded, @c false otherwise.
    */
-  virtual bool Init(FileManagerInterface *file_manager) = 0;
+  virtual bool Init() = 0;
 
   /** @return the host of the main view */
   virtual ViewHostInterface *GetMainViewHost() = 0;
@@ -49,6 +49,63 @@ class GadgetInterface {
    */
   virtual const char *GetManifestInfo(const char *key) = 0;
 
+  /**
+   * Fires just before the gadget's options dialog is displayed.
+   * Handle this event to initialize the options dialog.
+   * @param window The display window.
+   * @return if @c true the options dialog will appear after return.
+   */
+  virtual bool OnShowOptionsDlg(GDDisplayWindowInterface *window) = 0;
+
+  /**
+   * Fires just before the gadget's menu is displayed. Handle this event to
+   * customize the menu.
+   */
+  virtual void OnAddCustomMenuItems(MenuInterface *menu) = 0;
+
+  enum Command {
+    /** Show About dialog. */
+    gddCmdAboutDialog = 1,
+    /** User clicked the 'back' button. */
+    gddCmdToolbarBack = 2,
+    /** User clicked the 'forward' button. */
+    gddCmdToolbarForward = 3,
+  };
+  virtual void OnCommand(Command command) = 0;
+
+  enum DisplayState {
+    /** Tile is not visible. */
+    gddTileDisplayStateHidden = 0,
+    /** Tile is restored from being minimized or popped out states. */
+    gddTileDisplayStateRestored = 1,
+    /** Tile is minimized and only the title bar is visible. */
+    gddTileDisplayStateMinimized = 2,
+    /** Tile is 'popped-out' of the sidebar in a separate window. */
+    gddTileDisplayStatePoppedOut = 3,
+    /** Tile is resized. */
+    gddTileDisplayStateResized = 4,
+  };
+
+  /**
+   * Fires after a gadget's display state changes -- for example, when it's
+   * resized or minimized.
+   */
+  virtual void OnDisplayStateChange(DisplayState display_state) = 0;
+
+  enum DisplayTarget {
+    /** Item is being displayed/drawn in the Sidebar. */
+    gddTargetSidebar = 0,
+    /** Item is being displayed/drawn in the notification window. */
+    gddTargetNotifier = 1,
+    /** Item is being displayed in its own window floating on the desktop */
+    gddTargetFloatingView = 2,
+  };
+
+  /**
+   * Fires just before the gadget's display location changes, such as from the
+   * Sidebar to a floating desktop window.
+   */
+  virtual void OnDisplayTargetChange(DisplayTarget display_target) = 0;
 };
 
 } // namespace ggadget

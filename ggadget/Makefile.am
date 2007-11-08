@@ -52,6 +52,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  img_element.h \
 			  label_element.h \
 			  math_utils.h \
+			  menu_interface.h \
 			  options_interface.h \
 			  scoped_ptr.h \
 			  script_context_interface.h \
@@ -61,6 +62,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_event.h \
 			  scriptable_helper.h \
 			  scriptable_interface.h \
+			  scriptable_menu.h \
 			  scriptable_options.h \
 			  scrollbar_element.h \
 			  signals.h \
@@ -98,6 +100,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  math_utils.cc \
 			  scriptable_event.cc \
 			  scriptable_helper.cc \
+			  scriptable_menu.cc \
 			  scriptable_options.cc \
 			  scrollbar_element.cc \
 			  signals.cc \

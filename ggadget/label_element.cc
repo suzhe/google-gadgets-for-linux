@@ -37,7 +37,7 @@ LabelElement::LabelElement(ElementInterface *parent,
       impl_(new Impl(this, view)) {
   RegisterProperty("innerText",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
-                   NewSlot(this, &LabelElement::SetText));
+                   NewSlot(&impl_->text_, &TextFrame::SetText));
 }
 
 LabelElement::~LabelElement() {
@@ -49,28 +49,19 @@ void LabelElement::DoDraw(CanvasInterface *canvas,
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
 }
 
-void LabelElement::SetText(const char *text) {
-  impl_->text_.SetText(text);
-  if (!WidthIsSpecified() || !HeightIsSpecified()) {
-    double w, h;
-    CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
-    if (impl_->text_.GetSimpleExtents(canvas, &w, &h)) {
-      if (!WidthIsSpecified()) {
-        SetPixelWidth(w);
-      }
-      if (!HeightIsSpecified()) {
-        SetPixelHeight(h);
-      }
-    }
-    canvas->Destroy();
-    canvas = NULL;
-  }
-}
-
 ElementInterface *LabelElement::CreateInstance(ElementInterface *parent,
                                              ViewInterface *view,
                                              const char *name) {
   return new LabelElement(parent, view, name);
+}
+
+void LabelElement::GetDefaultSize(double *width, double *height) const {
+  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
+  if (!impl_->text_.GetSimpleExtents(canvas, width, height)) {
+    *width = 0;
+    *height = 0;
+  }
+  canvas->Destroy();
 }
 
 } // namespace ggadget

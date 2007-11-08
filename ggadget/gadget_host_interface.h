@@ -20,11 +20,14 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
+class DetailsViewInterface;
 class ElementFactoryInterface;
 class FileManagerInterface;
+class GadgetInterface;
 class OptionsInterface;
 class ScriptableInterface;
 class ScriptRuntimeInterface;
+class Signal;
 class ViewHostInterface;
 
 /**
@@ -47,8 +50,17 @@ class GadgetHostInterface {
   /** Returns the global @c ElementFactoryInterface instance. */
   virtual ElementFactoryInterface *GetElementFactory() = 0;
 
+  /** Get the file manager used to load this gadget. */
+  virtual FileManagerInterface *GetFileManager() = 0;
+
   /** Returns the @c FileManagerInterface used to load global resources. */ 
   virtual FileManagerInterface *GetGlobalFileManager() = 0;
+
+  /** Returns the @c OptionsInterface instance for this gadget. */
+  virtual OptionsInterface *GetOptions() = 0;
+
+  /** Returns the hosted gadget. */
+  virtual GadgetInterface *GetGadget() = 0;
 
   enum ViewType {
     VIEW_MAIN,
@@ -59,11 +71,62 @@ class GadgetHostInterface {
    * Creates a new @c ViewHostInterface for a view
    * @param type type of view.
    * @param prototype the scriptable prototype that can be shared among views.
-   * @param options the options of the gadget containing the view.
    */
   virtual ViewHostInterface *NewViewHost(ViewType type,
-                                         ScriptableInterface *prototype,
-                                         OptionsInterface *options) = 0;
+                                         ScriptableInterface *prototype) = 0;
+
+  enum PluginFlags {
+    gddPluginFlagNone = 0,
+    /** Adds a "back" button in the plugin toolbar. */
+    gddPluginFlagToolbarBack = 1,
+    /** Adds a "forward" button in the plugin toolbar. */
+    gddPluginFlagToolbarForward = 2,
+  };
+
+  /**
+   * @param plugin_flags combination of PluginFlags.
+   */
+  virtual void SetPluginFlags(int plugin_flags) = 0;
+
+  /**
+   * Requests that the gadget be removed from the container (e.g. sidebar).
+   * @param save_data if @c true, the gadget's state is saved before the gadget
+   *     is removed.
+   */
+  virtual void RemoveMe(bool save_data) = 0;
+
+  enum DetailsViewFlags {
+    gddDetailsViewFlagNone = 0,
+    /** Makes the details view title clickable like a button. */
+    gddDetailsViewFlagToolbarOpen = 1,
+    /** Adds a negative feedback button in the details view. */
+    gddDetailsViewFlagNegativeFeedback = 2,
+    /** Adds a "Remove" button in the details view. */
+    gddDetailsViewFlagRemoveButton = 4,
+    /** Adds a button to display the friends list. */
+    gddDetailsViewFlagShareWithButton = 8,
+  };
+
+  /**
+   * Displays a details view containing the specified details control and the
+   * specified title.  If there is already details view opened, it will be
+   * closed first. 
+   * @param title the title of the details view.
+   * @param flags combination of @c DetailsViewFlags.
+   * @param feedback_handler called when user clicks on feedback buttons. The
+   *     handler has one parameter, which specifies @c DetailsViewFlags.
+   */
+  virtual void ShowDetailsView(DetailsViewInterface *details_view,
+                               const char *title, int flags,
+                               Slot1<void, int> *feedback_handler) = 0;
+
+  /**
+   * Hides and destroys the details view that is being shown for this gadget.
+   */
+  virtual void CloseDetailsView() = 0;
+
+  /** Shows the options dialog. */
+  virtual void ShowOptionsDialog() = 0;
 
   enum DebugLevel {
     DEBUG_TRACE,

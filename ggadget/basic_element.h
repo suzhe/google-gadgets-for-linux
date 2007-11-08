@@ -102,8 +102,6 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual bool HeightIsRelative() const;
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
-  virtual bool XIsSpecified() const;
-  virtual bool YIsSpecified() const;
   virtual bool WidthIsSpecified() const;
   virtual bool HeightIsSpecified() const;
 
@@ -131,45 +129,10 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   virtual void QueueDraw();
   
-#if 0 // TODO: Ensure if they are needed.
-  /**
-   * Call this when drawing to initialize and prepare a canvas of the right
-   * height and width for drawing.
-   * @return the canvas that was set up. Equivalent to GetCanvas()
-   */
-  CanvasInterface *SetUpCanvas();
-  /**
-   * Gets the internally stored canvas.
-   * This should only be used for drawing.
-   */
-  CanvasInterface *GetCanvas();
-
-  /**
-   * Checks to see if visibility of the element has changed since the last draw.
-   */
-  virtual bool IsVisibilityChanged() const;
-  /** Sets the visibility changed state to false. */
-  virtual void ClearVisibilityChanged();
-
-#endif
+  /** Called by child classes when the default size changed. */
+  void OnDefaultSizeChanged();
 
  protected:
-
-#if 0
-  /**
-   * Checks to see if the current element has changed and needs to be redrawn.
-   * Note that it does not check any child elements, so the element may still
-   * need to be redrawn even if this method returns false.
-   * Also, this method does not consider visiblity changes, or changes in
-   * position in relation to the parent.
-   * @return true if the element has changed, false otherwise.
-   */
-  bool IsSelfChanged() const;
-
-  /** Sets the self changed state. */
-  void SetSelfChanged(bool changed);
-#endif
-
   /**
    * Draws the element onto the canvas.
    * To be implemented by subclasses.
@@ -178,6 +141,13 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
+
+  /**
+   * Return the default size of the element in pixels.
+   * The default size is used when no "width" or "height" property is specified
+   * for the element.
+   */
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   class Impl;

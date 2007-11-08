@@ -53,8 +53,8 @@ class JSScriptContext : public ScriptContextInterface {
    * @param scriptable the native @c ScriptableInterface object to be wrapped.
    * @return the wrapped JavaScript object, or @c NULL on errors.
    */
-  static JSObject *WrapNativeObjectToJS(JSContext *cx,
-                                        ScriptableInterface *scriptable);
+  static NativeJSWrapper *WrapNativeObjectToJS(JSContext *cx,
+                                               ScriptableInterface *scriptable);
 
   /**
    * Called when JavaScript engine is to finalized a JavaScript object wrapper
@@ -86,11 +86,13 @@ class JSScriptContext : public ScriptContextInterface {
   /**
    * Create a @c Slot that is targeted to a JavaScript function object.
    * @param cx JavaScript context.
+   * @param wrapper the related JavaScript object wrapper.
    * @param prototype another @c Slot acting as the prototype that has
    *     compatible parameter list and return value.  Can be @c NULL.
    * @param function_val a JavaScript function object (in jsval).
    */
   static JSFunctionSlot *NewJSFunctionSlot(JSContext *cx,
+                                           NativeJSWrapper *wrapper,
                                            const Slot *prototype,
                                            jsval function_val);
 
@@ -122,10 +124,12 @@ class JSScriptContext : public ScriptContextInterface {
   virtual ~JSScriptContext();
 
   void GetCurrentFileAndLineInternal(const char **filename, int *lineno);
-  JSObject *WrapNativeObjectToJSInternal(
-      JSObject *js_object, ScriptableInterface *scriptableInterface);
+  NativeJSWrapper *WrapNativeObjectToJSInternal(
+      JSObject *js_object, NativeJSWrapper *wrapper,
+      ScriptableInterface *scriptable);
   jsval ConvertSlotToJSInternal(Slot *slot);
-  JSFunctionSlot *NewJSFunctionSlotInternal(const Slot *prototype,
+  JSFunctionSlot *NewJSFunctionSlotInternal(NativeJSWrapper *wrapper,
+                                            const Slot *prototype,
                                             jsval function_val);
   void FinalizeNativeJSWrapperInternal(NativeJSWrapper *wrapper);
 

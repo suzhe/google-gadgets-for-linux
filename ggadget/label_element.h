@@ -32,16 +32,15 @@ class LabelElement : public BasicElement {
              const char *name);
   virtual ~LabelElement();
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-
-  /** Sets the text of the frame. */
-  void SetText(const char *text);
-  
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
                                           const char *name);
+
+ protected:
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(LabelElement);

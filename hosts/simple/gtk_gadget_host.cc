@@ -34,6 +34,7 @@
 #include <ggadget/checkbox_element.h>
 
 #include "gtk_gadget_host.h"
+#include "gtk_menu_impl.h"
 #include "gtk_view_host.h"
 #include "options.h"
 #include "simplehost_file_manager.h"
@@ -53,7 +54,16 @@ class GtkGadgetHost::CallbackData {
 
 GtkGadgetHost::GtkGadgetHost()
     : script_runtime_(new ggadget::JSScriptRuntime()),
-      element_factory_(NULL), global_file_manager_(new SimpleHostFileManager()) {
+      element_factory_(NULL),
+      file_manager_(new ggadget::FileManager()),
+      global_file_manager_(new SimpleHostFileManager()),
+      options_(new Options()),
+      gadget_(NULL),
+      plugin_flags_(0),
+      toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
+      forward_button_(NULL), details_button_(NULL),
+      menu_(NULL), collapse_menu_item_(NULL), options_menu_item_(NULL),
+      about_menu_item_(NULL), dock_menu_item_(NULL) {
   ggadget::ElementFactory *factory = new ggadget::ElementFactory();
   factory->RegisterElementClass("button",
                                 &ggadget::ButtonElement::CreateInstance);
@@ -90,12 +100,20 @@ GtkGadgetHost::~GtkGadgetHost() {
   }
   ASSERT(callbacks_.empty());
 
+  delete gadget_;
+  gadget_ = NULL;
+  delete options_;
+  options_ = NULL;
   delete element_factory_;
   element_factory_ = NULL;
   delete script_runtime_;
   script_runtime_ = NULL;
+  delete file_manager_;
+  file_manager_ = NULL;
   delete global_file_manager_;
   global_file_manager_ = NULL;
+  delete menu_;
+  menu_ = NULL;
 }
 
 ggadget::ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
@@ -107,15 +125,52 @@ ggadget::ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
   return element_factory_;
 }
 
+ggadget::FileManagerInterface *GtkGadgetHost::GetFileManager() {
+  return file_manager_;  
+}
+
 ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
   return global_file_manager_;  
 }
 
+ggadget::OptionsInterface *GtkGadgetHost::GetOptions() {
+  return options_;
+}
+
+ggadget::GadgetInterface *GtkGadgetHost::GetGadget() {
+  return gadget_;
+}
+
 ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(
-    ViewType type,
-    ggadget::ScriptableInterface *prototype,
-    ggadget::OptionsInterface *options) {
-  return new GtkViewHost(this, type, options, prototype);
+    ViewType type, ggadget::ScriptableInterface *prototype) {
+  return new GtkViewHost(this, type, prototype);
+}
+
+void GtkGadgetHost::SetPluginFlags(int plugin_flags) {
+  if (plugin_flags & gddPluginFlagToolbarBack)
+    gtk_widget_show(back_button_);
+  else
+    gtk_widget_hide(back_button_);
+  
+  if (plugin_flags & gddPluginFlagToolbarForward)
+    gtk_widget_show(forward_button_);
+  else
+    gtk_widget_hide(forward_button_);
+}
+
+void GtkGadgetHost::RemoveMe(bool save_data) {
+}
+
+void GtkGadgetHost::ShowDetailsView(
+    ggadget::DetailsViewInterface *details_view,
+    const char *title, int flags,
+    ggadget::Slot1<void, int> *feedback_handler) {
+}
+
+void GtkGadgetHost::CloseDetailsView() {
+}
+
+void GtkGadgetHost::ShowOptionsDialog() {
 }
 
 void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) {
@@ -289,31 +344,9 @@ void GtkGadgetHost::ReportScriptError(const char *message) {
   DebugOutput(DEBUG_ERROR, (std::string("Script error: " ) + message).c_str());
 }
 
-ggadget::GadgetInterface *GtkGadgetHost::LoadGadget(const char *base_path,
-                                                    double zoom,
-                                                    int debug_mode) {
-  // TODO: store zoom (and debug_mode?) into options repository.
-  ggadget::FileManagerInterface *file_manager = new ggadget::FileManager();
-  if (!file_manager->Init(base_path)) {
-    delete file_manager;
-    return NULL;
-  }
-
-  ggadget::OptionsInterface *options = new Options();
-  options->PutValue(ggadget::kOptionZoom, ggadget::Variant(zoom));
-  options->PutValue(ggadget::kOptionDebugMode, ggadget::Variant(debug_mode));
-
-  ggadget::GadgetInterface *gadget = new ggadget::Gadget(this, options);
-  if (!gadget->Init(file_manager)) {
-    delete gadget;
-    return NULL;
-  }
-  return gadget;
-}
-
-bool GtkGadgetHost::LoadFont(const char *filename, 
+bool GtkGadgetHost::LoadFont(const char *filename,
                              ggadget::FileManagerInterface *fm) {
-  std::string fontfile; 
+  std::string fontfile;
   if (!fm->ExtractFile(filename, &fontfile)) {
     return false;
   }
@@ -321,14 +354,14 @@ bool GtkGadgetHost::LoadFont(const char *filename,
   loaded_fonts_[filename] = fontfile;
 
   FcConfig *config = FcConfigGetCurrent();
-  bool success = FcConfigAppFontAddFile(config, 
+  bool success = FcConfigAppFontAddFile(config,
                    reinterpret_cast<const FcChar8 *>(fontfile.c_str()));
   DLOG("LoadFont: %s %s", filename, fontfile.c_str());
   return success;
 }
 
 bool GtkGadgetHost::UnloadFont(const char *filename) {
-  // FontConfig doesn't actually allow dynamic removal of App Fonts, so 
+  // FontConfig doesn't actually allow dynamic removal of App Fonts, so
   // just remove the file.
   std::map<std::string, std::string>::iterator i = loaded_fonts_.find(filename);
   if (i == loaded_fonts_.end()) {
@@ -338,5 +371,113 @@ bool GtkGadgetHost::UnloadFont(const char *filename) {
   unlink((i->second).c_str()); // ignore return
   loaded_fonts_.erase(i);
 
-  return true; 
+  return true;
+}
+
+bool GtkGadgetHost::LoadGadget(GtkBox *container,
+                               const char *base_path,
+                               double zoom, int debug_mode) {
+  // TODO: store zoom (and debug_mode?) into options repository.
+  options_->PutValue(ggadget::kOptionZoom, ggadget::Variant(zoom));
+  options_->PutValue(ggadget::kOptionDebugMode, ggadget::Variant(debug_mode));
+  gadget_ = new ggadget::Gadget(this);
+  if (!file_manager_->Init(base_path) || !gadget_->Init())
+    return false;
+
+  toolbox_ = GTK_BOX(gtk_hbox_new(FALSE, 0));
+  gtk_box_pack_start(container, GTK_WIDGET(toolbox_), FALSE, FALSE, 0);
+
+  menu_button_ = gtk_button_new_with_label("Menu");
+  gtk_box_pack_end(toolbox_, menu_button_, FALSE, FALSE, 0);
+  g_signal_connect(menu_button_, "clicked",
+                   G_CALLBACK(OnMenuClicked), this);
+  back_button_ = gtk_button_new_with_label(" < ");
+  gtk_box_pack_end(toolbox_, back_button_, FALSE, FALSE, 0);
+  g_signal_connect(back_button_, "clicked",
+                   G_CALLBACK(OnBackClicked), this);
+  forward_button_ = gtk_button_new_with_label(" > ");
+  gtk_box_pack_end(toolbox_, forward_button_, FALSE, FALSE, 0);
+  g_signal_connect(forward_button_, "clicked",
+                   G_CALLBACK(OnForwardClicked), this);
+  details_button_ = gtk_button_new_with_label("<<");
+  gtk_box_pack_end(toolbox_, details_button_, FALSE, FALSE, 0);
+  g_signal_connect(details_button_, "clicked",
+                   G_CALLBACK(OnDetailsClicked), this);
+
+  SetPluginFlags(0);
+
+  GtkMenu *menu = GTK_MENU(gtk_menu_new());
+  gtk_menu_attach_to_widget(menu, menu_button_, NULL);
+  menu_ = new GtkMenuImpl(GTK_MENU(menu));
+  gadget_->OnAddCustomMenuItems(menu_);
+
+  GtkMenuShell *menu_shell = GTK_MENU_SHELL(menu);
+  if (g_list_length(gtk_container_get_children(GTK_CONTAINER(menu))) > 0)
+    gtk_menu_shell_append(menu_shell,
+                          GTK_WIDGET(gtk_separator_menu_item_new()));
+
+  collapse_menu_item_ = gtk_menu_item_new_with_label("Collapse");
+  gtk_menu_shell_append(menu_shell, collapse_menu_item_);
+  g_signal_connect(collapse_menu_item_, "activate",
+                   G_CALLBACK(OnCollapseActivate), this);
+  options_menu_item_ = gtk_menu_item_new_with_label("Options...");
+  gtk_menu_shell_append(menu_shell, options_menu_item_);
+  g_signal_connect(options_menu_item_, "activate",
+                   G_CALLBACK(OnOptionsActivate), this);
+  gtk_menu_shell_append(menu_shell,
+                        GTK_WIDGET(gtk_separator_menu_item_new()));
+  about_menu_item_ = gtk_menu_item_new_with_label("About...");
+  gtk_menu_shell_append(menu_shell, about_menu_item_);
+  g_signal_connect(about_menu_item_, "activate",
+                   G_CALLBACK(OnAboutActivate), this);
+  dock_menu_item_ = gtk_menu_item_new_with_label("Undock from Sidebar");
+  gtk_menu_shell_append(menu_shell, dock_menu_item_);
+  g_signal_connect(dock_menu_item_, "activate",
+                   G_CALLBACK(OnDockActivate), this);
+  gtk_widget_show_all(GTK_WIDGET(menu));
+  return true;
+}
+
+void GtkGadgetHost::OnMenuClicked(GtkButton *button, gpointer user_data) {
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+}
+
+void GtkGadgetHost::OnBackClicked(GtkButton *button, gpointer user_data) {
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+}
+
+void GtkGadgetHost::OnForwardClicked(GtkButton *button, gpointer user_data) {
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+}
+
+void GtkGadgetHost::OnDetailsClicked(GtkButton *button, gpointer user_data) {
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+}
+
+void GtkGadgetHost::OnCollapseActivate(GtkMenuItem *menu_item,
+                                       gpointer user_data) {
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("CollapseActivate");
+}
+
+void GtkGadgetHost::OnOptionsActivate(GtkMenuItem *menu_item,
+                                      gpointer user_data) {
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("OptionsActivate");
+}
+
+void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
+                                    gpointer user_data) {
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("AboutActivate");
+}
+
+void GtkGadgetHost::OnDockActivate(GtkMenuItem *menu_item,
+                                   gpointer user_data) {
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("DockActivate");
 }

@@ -68,8 +68,6 @@ class BasicElement::Impl {
         y_relative_(false),
         width_specified_(false),
         height_specified_(false),
-        x_specified_(false),
-        y_specified_(false),
         canvas_(NULL),
         mask_image_(NULL),
         visibility_changed_(true),
@@ -337,9 +335,13 @@ class BasicElement::Impl {
         width_specified_ = true;
         SetRelativeWidth(v, false);
         break;
-      case 2:
+      case 2: {
+        double width, height;
+        owner_->GetDefaultSize(&width, &height);
         width_specified_ = false;
+        SetPixelWidth(width);
         break;
+      }
       default:
         break;
     }
@@ -361,31 +363,33 @@ class BasicElement::Impl {
         height_specified_ = true;
         SetRelativeHeight(v, false);
         break;
-      case 2:
+      case 2: {
+        double width, height;
+        owner_->GetDefaultSize(&width, &height);
         height_specified_ = false;
+        SetPixelHeight(height);
         break;
+      }
       default:
         break;
     }
   }
 
   Variant GetX() const {
-    return GetPixelOrRelative(x_relative_, x_specified_, x_, px_);
+    return GetPixelOrRelative(x_relative_, true, x_, px_);
   }
 
   void SetX(const Variant &x) {
     double v;
     switch (ParsePixelOrRelative(x, &v)) {
       case 0:
-        x_specified_ = true;
         SetPixelX(v);
         break;
       case 1:
-        x_specified_ = true;
         SetRelativeX(v, false);
         break;
       case 2:
-        x_specified_ = false;
+        SetPixelX(0);
         break;
       default:
         break;
@@ -393,22 +397,20 @@ class BasicElement::Impl {
   }
 
   Variant GetY() const {
-    return GetPixelOrRelative(y_relative_, y_specified_, y_, py_);
+    return GetPixelOrRelative(y_relative_, true, y_, py_);
   }
 
   void SetY(const Variant &y) {
     double v;
     switch (ParsePixelOrRelative(y, &v)) {
       case 0:
-        y_specified_ = true;
         SetPixelY(v);
         break;
       case 1:
-        y_specified_ = true;
         SetRelativeY(v, false);
         break;
       case 2:
-        y_specified_ = false;
+        SetPixelY(0);
         break;
       default:
         break;
@@ -542,7 +544,7 @@ class BasicElement::Impl {
         return result;
     }
 
-    if (!enabled_)
+    if (!enabled_ || !visible_)
       return true;
 
     // Don't check mouse position, because the event may be out of this
@@ -679,8 +681,6 @@ class BasicElement::Impl {
   bool y_relative_;
   bool width_specified_;
   bool height_specified_;
-  bool x_specified_;
-  bool y_specified_;
 
   CanvasInterface *canvas_;
   Image *mask_image_;
@@ -1025,14 +1025,6 @@ bool BasicElement::PinYIsRelative() const {
   return impl_->pin_y_relative_;
 }
 
-bool BasicElement::XIsSpecified() const {
-  return impl_->x_specified_;
-}
-
-bool BasicElement::YIsSpecified() const {
-  return impl_->y_specified_;
-}
-
 bool BasicElement::WidthIsSpecified() const {
   return impl_->width_specified_;
 }
@@ -1104,33 +1096,6 @@ bool BasicElement::IsPositionChanged() const {
   return impl_->position_changed_;
 }
 
-#if 0 // TODO: ensure if they are needed.
-void BasicElement::ClearVisibilityChanged() {
-  impl_->visibility_changed_ = false;
-}
-
-bool BasicElement::IsVisibilityChanged() const {
-  return impl_->visibility_changed_;
-}
-
-CanvasInterface *BasicElement::SetUpCanvas() {
-  return impl_->SetUpCanvas();
-}
-
-CanvasInterface *BasicElement::GetCanvas() {
-  return impl_->canvas_;
-}
-
-void BasicElement::SetSelfChanged(bool changed) { 
-  impl_->changed_ = changed;
-  impl_->view_->QueueDraw();
-}
-
-bool BasicElement::IsSelfChanged() const {
-  return impl_->changed_;
-}
-#endif
-
 void BasicElement::QueueDraw() {
   impl_->changed_ = true;
   if (impl_->visible_) {
@@ -1177,6 +1142,24 @@ void BasicElement::SelfCoordToChildCoord(ElementInterface *child,
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
                           child_x, child_y);
+}
+
+void BasicElement::GetDefaultSize(double *width, double *height) const {
+  ASSERT(width);
+  ASSERT(height);
+  *width = 0;
+  *height = 0;
+}
+
+void BasicElement::OnDefaultSizeChanged() {
+  if (!impl_->width_specified_ || !impl_->height_specified_) {
+    double width, height;
+    GetDefaultSize(&width, &height);
+    if (!impl_->width_specified_)
+      impl_->SetPixelWidth(width);
+    if (!impl_->height_specified_)
+      impl_->SetPixelHeight(height);
+  }
 }
 
 } // namespace ggadget

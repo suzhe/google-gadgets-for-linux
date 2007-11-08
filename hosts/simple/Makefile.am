@@ -22,6 +22,7 @@ INCLUDES		= -I$(top_builddir) \
 noinst_HEADERS		=  gadget_view_widget.h \
 			   gtk_gadget_host.h \
 			   gtk_key_convert.h \
+			   gtk_menu_impl.h \
 			   gtk_view_host.h \
 			   options.h \
 			   simplehost_file_manager.h
@@ -31,6 +32,7 @@ bin_PROGRAMS		= ggl-simple
 ggl_simple_SOURCES	= gadget_view_widget.cc \
 			  gtk_gadget_host.cc \
 			  gtk_key_convert.cc \
+			  gtk_menu_impl.cc \
 			  gtk_view_host.cc \
 			  main.cc \
 			  options.cc \
