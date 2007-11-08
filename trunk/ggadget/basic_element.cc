@@ -572,6 +572,12 @@ class BasicElement::Impl {
       case Event::EVENT_MOUSE_DBLCLICK:
         view_->FireEvent(&scriptable_event, ondblclick_event_);
         break;
+      case Event::EVENT_MOUSE_RCLICK:
+        view_->FireEvent(&scriptable_event, onrclick_event_);
+        break;
+      case Event::EVENT_MOUSE_RDBLCLICK:
+        view_->FireEvent(&scriptable_event, onrdblclick_event_);
+        break;
       case Event::EVENT_MOUSE_OUT:
         // TODO reset cursor
         view_->FireEvent(&scriptable_event, onmouseout_event_);
@@ -688,6 +694,8 @@ class BasicElement::Impl {
 
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
+  EventSignal onrclick_event_;
+  EventSignal onrdblclick_event_;
   EventSignal ondragdrop_event_;
   EventSignal ondragout_event_;
   EventSignal ondragover_event_;
@@ -803,6 +811,8 @@ BasicElement::BasicElement(ElementInterface *parent,
 
   RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
   RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
+  RegisterSignal(kOnRClickEvent, &impl_->onrclick_event_);
+  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);  
   RegisterSignal(kOnDragDropEvent, &impl_->ondragdrop_event_);
   RegisterSignal(kOnDragOutEvent, &impl_->ondragout_event_);
   RegisterSignal(kOnDragOverEvent, &impl_->ondragover_event_);

@@ -69,6 +69,40 @@ TEST(StringUtils, StringPrintf) {
   delete buf;
 }
 
+TEST(StringUtils, EncodeURL) {
+  // Valid url chars, no conversion
+  char src1[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`-=;',./~!@#$%^&*()_+|:?";
+
+  // Invalid url chars, will be converted
+  char src2[] = " []{}<>\"";
+
+  // Back slash, will be converted to '/'
+  char src3[] = "\\";
+
+  // Valid but invisible chars, will be converted
+  char src4[] = "\a\b\f\n\r\t\v\007\013\xb\x7";
+
+  // Non-ascii chars(except \x7f), will be converted
+  char src5[] = "\x7f\x80\x81 asd\x8f 3\x9a\xaa\xfe\xff";
+
+  std::string dest;
+
+  EncodeURL(src1, &dest);
+  EXPECT_STREQ(src1, dest.c_str());
+
+  EncodeURL(src2, &dest);
+  EXPECT_STREQ("%20%5b%5d%7b%7d%3c%3e%22", dest.c_str());
+
+  EncodeURL(src3, &dest);
+  EXPECT_STREQ("/", dest.c_str());
+
+  EncodeURL(src4, &dest);
+  EXPECT_STREQ("%07%08%0c%0a%0d%09%0b%07%0b%0b%07", dest.c_str());
+
+  EncodeURL(src5, &dest);
+  EXPECT_STREQ("\x7f%80%81%20asd%8f%203%9a%aa%fe%ff", dest.c_str());
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();

@@ -35,10 +35,10 @@ static const char *const kOnChangeEvent = "onchange";
 
 class CheckBoxElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view) 
-    : text_(owner, view), 
+  Impl(BasicElement *owner, ViewInterface *view, bool is_checkbox) 
+    : is_checkbox_(is_checkbox), text_(owner, view), 
       mousedown_(false), mouseover_(false), checkbox_on_right_(false), 
-      value_(STATE_NORMAL) {
+      value_(STATE_CHECKED) {
     for (int i = 0; i < STATE_COUNT; i++) {      
       image_[i] = NULL;
       downimage_[i] = NULL;
@@ -63,6 +63,7 @@ class CheckBoxElement::Impl {
     }
   }
 
+  bool is_checkbox_;
   TextFrame text_;
   bool mousedown_;
   bool mouseover_;
@@ -77,11 +78,11 @@ class CheckBoxElement::Impl {
 
 CheckBoxElement::CheckBoxElement(ElementInterface *parent,
                        ViewInterface *view,
-                       const char *name)
-    : BasicElement(parent, view, "checkbox", name, false),
-      impl_(new Impl(this, view)) {
+                       const char *name, bool is_checkbox)
+    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
+      impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
-  
+
   RegisterProperty("value",
                    NewSlot(this, &CheckBoxElement::GetValue),
                    NewSlot(this, &CheckBoxElement::SetValue));
@@ -109,7 +110,7 @@ CheckBoxElement::CheckBoxElement(ElementInterface *parent,
   RegisterProperty("checkedDisabledImage",
                    NewSlot(this, &CheckBoxElement::GetCheckedDisabledImage),
                    NewSlot(this, &CheckBoxElement::SetCheckedDisabledImage));
-  
+
   // undocumented properties
   RegisterProperty("caption",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
@@ -117,7 +118,7 @@ CheckBoxElement::CheckBoxElement(ElementInterface *parent,
   RegisterProperty("checkboxOnRight",
                    NewSlot(this, &CheckBoxElement::IsCheckBoxOnRight),
                    NewSlot(this, &CheckBoxElement::SetCheckBoxOnRight));
-  
+
   RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);  
 }
 
@@ -321,12 +322,6 @@ void CheckBoxElement::SetCheckedDownImage(const char *img) {
   }
 }
 
-ElementInterface *CheckBoxElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
-  return new CheckBoxElement(parent, view, name);
-}
-
 bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
                                  ElementInterface **fired_element) {
   bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
@@ -354,8 +349,15 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
       break;
      case Event::EVENT_MOUSE_CLICK:
       { // Toggle checked state and fire event         
-        impl_->value_ = (impl_->value_ == STATE_NORMAL) ? 
-                          STATE_CHECKED : STATE_NORMAL;
+        if (impl_->is_checkbox_) {
+          impl_->value_ = (impl_->value_ == STATE_NORMAL) ? 
+                            STATE_CHECKED : STATE_NORMAL;
+        } else {
+          if (impl_->value_ == STATE_CHECKED) {
+            break; // Radio buttons don't change state in this situation.
+          }
+          impl_->value_ = STATE_CHECKED;
+        }
         Event event(Event::EVENT_CHANGE);
         ScriptableEvent s_event(&event, this, 0, 0);
         GetView()->FireEvent(&s_event, impl_->onchange_event_);       
@@ -370,4 +372,15 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
   return result;
 }
 
+ElementInterface *CheckBoxElement::CreateCheckBoxInstance(ElementInterface *parent,
+                                             ViewInterface *view,
+                                             const char *name) {
+  return new CheckBoxElement(parent, view, name, true);
+}
+
+ElementInterface *CheckBoxElement::CreateRadioInstance(ElementInterface *parent,
+                                             ViewInterface *view,
+                                             const char *name) {
+  return new CheckBoxElement(parent, view, name, false);
+}
 } // namespace ggadget

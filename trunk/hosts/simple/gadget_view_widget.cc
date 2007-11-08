@@ -103,21 +103,32 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
   bool handler_result = true;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   if (event->type == GDK_BUTTON_PRESS) {
-    MouseEvent e(Event::EVENT_MOUSE_DOWN,
-                 event->x / gvw->zoom, event->y / gvw->zoom,
-                 // TODO: button and wheelDelta
-                 MouseEvent::BUTTON_NONE, 0);
-    handler_result = gvw->view->OnMouseEvent(&e);
+    if (event->button == 1) {
+      MouseEvent e(Event::EVENT_MOUSE_DOWN,
+                   event->x / gvw->zoom, event->y / gvw->zoom,
+                   MouseEvent::BUTTON_LEFT, 0);
+      handler_result = gvw->view->OnMouseEvent(&e);
+    }
   }
   else if (event->type == GDK_2BUTTON_PRESS) {
     gvw->dbl_click = true;
     // The GTK event sequence here is: press 2press release
     // for the second click.
-    MouseEvent e(Event::EVENT_MOUSE_DBLCLICK,
-                  event->x / gvw->zoom, event->y / gvw->zoom,
-                  // TODO: button and wheelDelta
-                  MouseEvent::BUTTON_NONE, 0);
-    handler_result = gvw->view->OnMouseEvent(&e);
+    Event::Type t;
+    MouseEvent::Button button;
+    if (event->button == 1) {
+      button = MouseEvent::BUTTON_LEFT;
+      t = Event::EVENT_MOUSE_DBLCLICK;
+    } else if (event->button == 3) {
+      button = MouseEvent::BUTTON_RIGHT;
+      t = Event::EVENT_MOUSE_RDBLCLICK;
+    } else {
+      button = MouseEvent::BUTTON_NONE;
+    }
+    if (button != MouseEvent::BUTTON_NONE) {
+      MouseEvent e(t, event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
+      handler_result = gvw->view->OnMouseEvent(&e);
+    }
   }
 
   return handler_result ? FALSE : TRUE;
@@ -128,18 +139,29 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   bool handler_result = true;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_BUTTON_RELEASE);
-  MouseEvent e(Event::EVENT_MOUSE_UP,
-               event->x / gvw->zoom, event->y / gvw->zoom,
-               // TODO: button and wheelDelta
-               MouseEvent::BUTTON_NONE, 0);
-  handler_result = gvw->view->OnMouseEvent(&e);
+  if (event->button == 1) {
+    MouseEvent e(Event::EVENT_MOUSE_UP,
+                 event->x / gvw->zoom, event->y / gvw->zoom,
+                 MouseEvent::BUTTON_LEFT, 0);
+    handler_result = gvw->view->OnMouseEvent(&e);
+  }
 
   if (!gvw->dbl_click) {
-    MouseEvent e2(Event::EVENT_MOUSE_CLICK,
-                  event->x / gvw->zoom, event->y / gvw->zoom,
-                  // TODO: button and wheelDelta
-                  MouseEvent::BUTTON_NONE, 0);
-    gvw->view->OnMouseEvent(&e2);
+    Event::Type t;
+    MouseEvent::Button button;
+    if (event->button == 1) {
+      button = MouseEvent::BUTTON_LEFT;
+      t = Event::EVENT_MOUSE_CLICK;
+    } else if (event->button == 3) {
+      button = MouseEvent::BUTTON_RIGHT;
+      t = Event::EVENT_MOUSE_RCLICK;
+    } else {
+      button = MouseEvent::BUTTON_NONE;
+    }
+    if (button != MouseEvent::BUTTON_NONE) {
+      MouseEvent e2(t, event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
+      handler_result = gvw->view->OnMouseEvent(&e2);
+    }
   } else {
     gvw->dbl_click = false;
   }

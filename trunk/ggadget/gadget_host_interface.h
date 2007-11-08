@@ -127,9 +127,15 @@ class GadgetHostInterface {
    * @return @c true on success, @c false otherwise.
    */
   virtual bool RemoveIOWatch(int token) = 0;
-  
+
   /** Open the given URL in the user's default web brower. */
   virtual bool OpenURL(const char *url) const = 0;
+
+ /** Temporarily install a given font on the system. */
+  virtual bool LoadFont(const char *filename, FileManagerInterface *fm) = 0;
+
+  /** Remove a previously installed font. */
+  virtual bool UnloadFont(const char *filename) = 0;
 };
 
 } // namespace ggadget

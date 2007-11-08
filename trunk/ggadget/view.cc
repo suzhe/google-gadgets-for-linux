@@ -35,9 +35,9 @@
 
 namespace ggadget {
 
-static const char *const kFTPPrefix = "ftp://";
-static const char *const kHTTPPrefix = "http://";
-static const char *const kHTTPSPrefix = "https://";
+static const char kFTPPrefix[] = "ftp://";
+static const char kHTTPPrefix[] = "http://";
+static const char kHTTPSPrefix[] = "https://";
 
 class View::Impl {
  public:
@@ -219,6 +219,12 @@ class View::Impl {
         break;
       case Event::EVENT_MOUSE_DBLCLICK:
         FireEvent(&scriptable_event, ondblclick_event_);
+        break;
+      case Event::EVENT_MOUSE_RCLICK:
+        FireEvent(&scriptable_event, onrclick_event_);
+        break;
+      case Event::EVENT_MOUSE_RDBLCLICK:
+        FireEvent(&scriptable_event, onrdblclick_event_);
         break;
       case Event::EVENT_MOUSE_OUT:
         FireEvent(&scriptable_event, onmouseout_event_);
@@ -599,6 +605,8 @@ class View::Impl {
   EventSignal onclick_event_;
   EventSignal onclose_event_;
   EventSignal ondblclick_event_;
+  EventSignal onrclick_event_;
+  EventSignal onrdblclick_event_;
   EventSignal ondock_event_;
   EventSignal onkeydown_event_;
   EventSignal onkeypress_event_;
@@ -693,6 +701,8 @@ View::View(ViewHostInterface *host,
                  NewSlot(GetChildren(), &Elements::InsertElementFromXML));
   RegisterMethod("removeElement",
                  NewSlot(GetChildren(), &Elements::RemoveElement));
+  RegisterMethod("removeAllElements",
+                 NewSlot(GetChildren(), &Elements::RemoveAllElements));
 
   // Here register ViewImpl::BeginAnimation because the Slot1<void, int> *
   // parameter in View::BeginAnimation can't be automatically reflected.
@@ -714,6 +724,8 @@ View::View(ViewHostInterface *host,
   RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
   RegisterSignal(kOnCloseEvent, &impl_->onclose_event_);
   RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
+  RegisterSignal(kOnRClickEvent, &impl_->onrclick_event_);
+  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);  
   RegisterSignal(kOnDockEvent, &impl_->ondock_event_);
   RegisterSignal(kOnKeyDownEvent, &impl_->onkeydown_event_);
   RegisterSignal(kOnKeyPressEvent, &impl_->onkeypress_event_);
@@ -924,13 +936,15 @@ void View::SetFocus(ElementInterface *element) {
 bool View::OpenURL(const char *url) const {
   // Important: verify that URL is valid first. 
   // Otherwise could be a security problem.
-  if (0 == strncmp(url, kFTPPrefix, strlen(kFTPPrefix)) ||
-      0 == strncmp(url, kHTTPPrefix, strlen(kHTTPPrefix)) ||
-      0 == strncmp(url, kHTTPSPrefix, strlen(kHTTPSPrefix))) {  
-    return impl_->gadget_host_->OpenURL(url);
+  std::string newurl;
+  EncodeURL(url, &newurl);
+  if (0 == strncmp(newurl.c_str(), kFTPPrefix, sizeof(kFTPPrefix) - 1) ||
+      0 == strncmp(newurl.c_str(), kHTTPPrefix, sizeof(kHTTPPrefix) - 1) ||
+      0 == strncmp(newurl.c_str(), kHTTPSPrefix, sizeof(kHTTPSPrefix) - 1)) {  
+    return impl_->gadget_host_->OpenURL(newurl.c_str());
   }
 
-  DLOG("Malformed URL: %s", url);
+  DLOG("Malformed URL: %s", newurl.c_str());
   return false;
 }
 

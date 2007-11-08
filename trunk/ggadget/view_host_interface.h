@@ -17,6 +17,8 @@
 #ifndef GGADGET_VIEW_HOST_INTERFACE_H__
 #define GGADGET_VIEW_HOST_INTERFACE_H__
 
+#include "element_interface.h"
+
 namespace ggadget {
 
 class GadgetHostInterface;
@@ -75,6 +77,10 @@ class ViewHostInterface {
 
   /** Sets whether to always show the caption for this view. */
   virtual void SetShowCaptionAlways(bool always) = 0;
+
+  /** Sets the current mouse cursor. */
+  virtual void SetCursor(ElementInterface::CursorType type) = 0;
+
 
   // TODO: Add other methods about menu, tooltip, etc.
 };

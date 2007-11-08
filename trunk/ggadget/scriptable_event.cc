@@ -100,6 +100,8 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_MOUSE_UP: return kOnMouseUpEvent;
     case Event::EVENT_MOUSE_CLICK: return kOnClickEvent;
     case Event::EVENT_MOUSE_DBLCLICK: return kOnDblClickEvent;
+    case Event::EVENT_MOUSE_RCLICK: return kOnRClickEvent;
+    case Event::EVENT_MOUSE_RDBLCLICK: return kOnRDblClickEvent;
     case Event::EVENT_MOUSE_MOVE: return kOnMouseMoveEvent;
     case Event::EVENT_MOUSE_OUT: return kOnMouseOutEvent;
     case Event::EVENT_MOUSE_OVER: return kOnMouseOverEvent;

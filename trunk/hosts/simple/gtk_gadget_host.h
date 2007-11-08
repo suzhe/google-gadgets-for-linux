@@ -47,6 +47,9 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback);
   virtual bool RemoveIOWatch(int token);
   virtual bool OpenURL(const char *url) const;
+  virtual bool LoadFont(const char *filename, 
+                        ggadget::FileManagerInterface *fm);
+  virtual bool UnloadFont(const char *filename);
 
   /**
    * Load a gadget from file system.
@@ -79,6 +82,9 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
 
   typedef std::map<int, CallbackData *> CallbackMap;
   CallbackMap callbacks_;
+
+  // Maps original font filename to temp font filename
+  std::map<std::string, std::string> loaded_fonts_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkGadgetHost);
 };

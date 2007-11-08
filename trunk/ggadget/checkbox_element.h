@@ -30,7 +30,8 @@ class CheckBoxElement : public BasicElement {
 
   CheckBoxElement(ElementInterface *parent,
                 ViewInterface *view,
-                const char *name);
+                const char *name, 
+                bool is_checkbox);
   virtual ~CheckBoxElement();
 
   virtual void DoDraw(CanvasInterface *canvas,
@@ -52,7 +53,7 @@ class CheckBoxElement : public BasicElement {
   /** Gets and sets the file name of mouse down checkbox image. */
   const char *GetDownImage() const;
   void SetDownImage(const char *img);
-  
+
   /** Gets and sets the file name of default checkbox image. */
   const char *GetCheckedImage() const;
   void SetCheckedImage(const char *img);
@@ -68,22 +69,23 @@ class CheckBoxElement : public BasicElement {
   /** Gets and sets the file name of mouse down checked checkbox image. */
   const char *GetCheckedDownImage() const;
   void SetCheckedDownImage(const char *img);
-  
+
   /** Gets and sets whether the checkbox is checked. A checked state is true. */
   bool GetValue() const;
   void SetValue(bool value);
-  
+
   /** Gets and sets whether the checkbox is on the right side. Undocumented. */
   bool IsCheckBoxOnRight() const;
   void SetCheckBoxOnRight(bool right);
-  
+
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
 
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static ElementInterface *CreateCheckBoxInstance(ElementInterface *parent,
+                                      ViewInterface *view, const char *name);
+  static ElementInterface *CreateRadioInstance(ElementInterface *parent,
+                                      ViewInterface *view, const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(CheckBoxElement);

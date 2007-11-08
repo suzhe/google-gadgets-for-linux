@@ -66,6 +66,7 @@ class GtkViewHost : public ggadget::ViewHostInterface {
   virtual void SetResizeable();
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
+  virtual void SetCursor(ggadget::ElementInterface::CursorType type);
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 
