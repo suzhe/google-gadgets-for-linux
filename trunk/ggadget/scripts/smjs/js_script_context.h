@@ -62,39 +62,10 @@ class JSScriptContext : public ScriptContextInterface {
   static void FinalizeNativeJSWrapper(JSContext *cx, NativeJSWrapper *wrapper);
 
   /**
-   * Convert a native @c Slot into a JavaScript function object (in jsval).
-   * @param cx JavaScript context.
-   * @param slot the native @c Slot.
-   * @return the converted JavaScript function object (in jsval).
-   *     Return @c JSVAL_NULL if @a slot is not previously returned from
-   *     @c NewJSFunctionSlot.
-   */
-  static jsval ConvertSlotToJS(JSContext *cx, Slot *slot);
-
-  /**
-   * Calls a native slot from the JavaScript side.
-   */
-  static JSBool CallNativeSlot(JSContext *cx, JSObject *obj,
-                               uintN argc, jsval *argv, jsval *rval);
-
-  /**
    * Checks if there is pending exception. If there is, handles it and throws
    * it into the script engine.
    */
   static JSBool CheckException(JSContext *cx, ScriptableInterface *scriptable);
-
-  /**
-   * Create a @c Slot that is targeted to a JavaScript function object.
-   * @param cx JavaScript context.
-   * @param wrapper the related JavaScript object wrapper.
-   * @param prototype another @c Slot acting as the prototype that has
-   *     compatible parameter list and return value.  Can be @c NULL.
-   * @param function_val a JavaScript function object (in jsval).
-   */
-  static JSFunctionSlot *NewJSFunctionSlot(JSContext *cx,
-                                           NativeJSWrapper *wrapper,
-                                           const Slot *prototype,
-                                           jsval function_val);
 
   JSContext *context() const { return context_; }
 
@@ -127,10 +98,6 @@ class JSScriptContext : public ScriptContextInterface {
   NativeJSWrapper *WrapNativeObjectToJSInternal(
       JSObject *js_object, NativeJSWrapper *wrapper,
       ScriptableInterface *scriptable);
-  jsval ConvertSlotToJSInternal(Slot *slot);
-  JSFunctionSlot *NewJSFunctionSlotInternal(NativeJSWrapper *wrapper,
-                                            const Slot *prototype,
-                                            jsval function_val);
   void FinalizeNativeJSWrapperInternal(NativeJSWrapper *wrapper);
 
   const char *JSValToString(jsval js_val);
@@ -165,9 +132,6 @@ class JSScriptContext : public ScriptContextInterface {
 
   typedef std::map<ScriptableInterface *, NativeJSWrapper *> WrapperMap;
   WrapperMap wrapper_map_;
-  // Native slot to JavaScript function object (in jsval) map.
-  typedef std::map<Slot *, jsval> SlotJSMap;
-  SlotJSMap slot_js_map_;
 
   typedef std::vector<JSClassWithNativeCtor *> ClassVector;
   ClassVector registered_classes_;

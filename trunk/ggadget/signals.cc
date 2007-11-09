@@ -38,14 +38,18 @@ void Connection::Disconnect() {
 bool Connection::Reconnect(Slot *slot) {
   delete slot_;
   slot_ = NULL;
-  if (slot && !signal_->CheckCompatibility(slot)) {
-    // According to our convention, no matter Reconnect succeeds or failes,
-    // the slot is always owned by the Connection.
-    delete slot;
-    return false;
+  if (slot) {
+    if (!signal_->CheckCompatibility(slot)) {
+      // According to our convention, no matter Reconnect succeeds or failes,
+      // the slot is always owned by the Connection.
+      delete slot;
+      return false;
+    }
+    slot_ = slot;
+    Unblock();
+  } else {
+    Block();
   }
-  slot_ = slot;
-  Unblock();
   return true;
 }
 

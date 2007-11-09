@@ -198,6 +198,11 @@ TEST("Test signals", function() {
 
   // Test disconnect.
   scriptable2.onlunch = null;
+  onlunch_triggered = false;
+  onsupper_triggered = false;
+  scriptable2.time = "lunch";
+  ASSERT(FALSE(onsupper_triggered));
+  ASSERT(FALSE(onlunch_triggered));
   ASSERT(NULL(scriptable2.onlunch));
 });
 

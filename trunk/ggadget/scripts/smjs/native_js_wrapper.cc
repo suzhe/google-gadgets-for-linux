@@ -583,7 +583,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
       return JS_FALSE;
   } else {
     // Define a JavaScript property.
-    jsval js_val;
+    jsval js_val = JSVAL_VOID;
     if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
       JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
                      prototype.ToString().c_str());
