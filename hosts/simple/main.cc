@@ -78,7 +78,7 @@ static bool CreateGTKUI(const char *base_path) {
                            G_CALLBACK(gtk_widget_destroy), G_OBJECT(window));
 
   GtkWidget *separator = gtk_hseparator_new();
-  gtk_box_pack_end(vbox, separator, TRUE, TRUE, 5);
+  gtk_box_pack_end(vbox, separator, FALSE, FALSE, 5);
 
   if (!CreateGadgetUI(GTK_WINDOW(window), vbox, base_path)) {
     return false;

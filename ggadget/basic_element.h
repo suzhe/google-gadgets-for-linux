@@ -130,7 +130,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void QueueDraw();
   
   /** Called by child classes when the default size changed. */
-  void OnDefaultSizeChanged();
+  void OnDefaultSizeChange();
 
  protected:
   /**

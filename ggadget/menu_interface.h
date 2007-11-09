@@ -29,6 +29,7 @@ class MenuInterface {
   enum MenuItemFlag {
     gddMenuItemFlagGrayed = 1,
     gddMenuItemFlagChecked = 8,
+    gddMenuItemFlagSeparator = 0x800,  // Not an official feature.
   };
 
   /**

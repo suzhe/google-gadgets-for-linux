@@ -41,10 +41,11 @@ class GtkMenuImpl : public ggadget::MenuInterface {
   DISALLOW_EVIL_CONSTRUCTORS(GtkMenuImpl);
 
   static void OnItemActivate(GtkMenuItem *menu_item, gpointer user_data);
-  
+  static void SetMenuItemStyle(GtkMenuItem *menu_item, int style);
+
   struct MenuItemInfo {
     std::string item_text;
-    GtkWidget *menu_item;
+    GtkMenuItem *menu_item;
     int style;
     ggadget::Slot1<void, const char *> *handler;
     GtkMenuImpl *submenu;
@@ -53,7 +54,7 @@ class GtkMenuImpl : public ggadget::MenuInterface {
   GtkMenu *menu_;
   typedef std::map<std::string, MenuItemInfo> ItemMap;
   ItemMap item_map_;
-  static bool in_handler_;
+  static bool setting_style_;
 };
 
 #endif // HOSTS_SIMPLE_GTK_MENU_IMPL_H__

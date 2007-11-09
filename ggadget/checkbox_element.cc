@@ -192,20 +192,7 @@ void CheckBoxElement::SetImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->image_src_[STATE_NORMAL])) {
     delete impl_->image_[STATE_NORMAL];
     impl_->image_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-    if (impl_->image_[STATE_NORMAL]) {
-      if (!WidthIsSpecified()) {
-        const CanvasInterface *canvas = impl_->image_[STATE_NORMAL]->GetCanvas();
-        if (canvas) {
-          SetPixelWidth(canvas->GetWidth());
-        }
-      }
-      if (!HeightIsSpecified()) {
-        const CanvasInterface *canvas = impl_->image_[STATE_NORMAL]->GetCanvas();
-        if (canvas) {
-          SetPixelHeight(canvas->GetHeight());
-        }
-      }
-    }
+    OnDefaultSizeChange();
     QueueDraw();
   }
 }
@@ -219,6 +206,7 @@ void CheckBoxElement::SetDisabledImage(const char *img) {
     delete impl_->disabledimage_[STATE_NORMAL];
     impl_->disabledimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
     if (!IsEnabled()) {
+      OnDefaultSizeChange();
       QueueDraw();
     }
   }
@@ -233,6 +221,7 @@ void CheckBoxElement::SetOverImage(const char *img) {
     delete impl_->overimage_[STATE_NORMAL];
     impl_->overimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
     if (impl_->mouseover_) {
+      OnDefaultSizeChange();
       QueueDraw();
     }
   }
@@ -247,6 +236,7 @@ void CheckBoxElement::SetDownImage(const char *img) {
     delete impl_->downimage_[STATE_NORMAL];
     impl_->downimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
     if (impl_->mousedown_) {
+      OnDefaultSizeChange();
       QueueDraw();
     }
   }
@@ -260,7 +250,7 @@ void CheckBoxElement::SetCheckedImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->image_src_[STATE_CHECKED])) {
     delete impl_->image_[STATE_CHECKED];
     impl_->image_[STATE_CHECKED] = GetView()->LoadImage(img, false);
-    OnDefaultSizeChanged();
+    OnDefaultSizeChange();
     QueueDraw();
   }
 }
@@ -274,6 +264,7 @@ void CheckBoxElement::SetCheckedDisabledImage(const char *img) {
     delete impl_->disabledimage_[STATE_CHECKED];
     impl_->disabledimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
     if (!IsEnabled()) {
+      OnDefaultSizeChange();
       QueueDraw();
     }
   }
@@ -288,6 +279,7 @@ void CheckBoxElement::SetCheckedOverImage(const char *img) {
     delete impl_->overimage_[STATE_CHECKED];
     impl_->overimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
     if (impl_->mouseover_) {
+      OnDefaultSizeChange();
       QueueDraw();
     }
   }
@@ -302,6 +294,7 @@ void CheckBoxElement::SetCheckedDownImage(const char *img) {
     delete impl_->downimage_[STATE_CHECKED];
     impl_->downimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
     if (impl_->mousedown_) {
+      OnDefaultSizeChange();
       QueueDraw();
     }
   }
@@ -318,22 +311,22 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
     switch (event->GetType()) {
      case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;
-      OnDefaultSizeChanged();
+      OnDefaultSizeChange();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_UP:
       impl_->mousedown_ = false;
-      OnDefaultSizeChanged();
+      OnDefaultSizeChange();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
-      OnDefaultSizeChanged();
+      OnDefaultSizeChange();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_OVER:
       impl_->mouseover_ = true;
-      OnDefaultSizeChanged();
+      OnDefaultSizeChange();
       QueueDraw();
       break;
      case Event::EVENT_MOUSE_CLICK:
@@ -350,7 +343,7 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
         Event event(Event::EVENT_CHANGE);
         ScriptableEvent s_event(&event, this, 0, 0);
         GetView()->FireEvent(&s_event, impl_->onchange_event_);
-        OnDefaultSizeChanged();
+        OnDefaultSizeChange();
         QueueDraw();
       }
       break;
@@ -378,9 +371,8 @@ void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   impl_->text_.GetSimpleExtents(canvas, &text_width, &text_height);
   canvas->Destroy();
 
-  *width = image_width = text_width;
+  *width = image_width + text_width;
   *height = std::max(image_height, text_height);
-  LOG("Checkbox default size: %lf %lf", *width, *height);
 }
 
 ElementInterface *CheckBoxElement::CreateCheckBoxInstance(ElementInterface *parent,
