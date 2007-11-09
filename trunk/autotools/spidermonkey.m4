@@ -26,11 +26,12 @@
 
 
 AC_DEFUN([GGL_CHECK_SPIDERMONKEY], [
-AC_ARG_ENABLE([smjs-threadsafe],
-	      AS_HELP_STRING([--enable-smjs-threadsafe],
-		[use threadsafe enabled spidermonkey library]),
-	      [enable_smjs_threadsafe=$enableval],
-	      [enable_smjs_threadsafe=no])
+AC_ARG_WITH([smjs-cppflags],
+	    AS_HELP_STRING([--with-smjs-cppflags=CPPFLAGS],
+		[specify optional C precompile flags for spidermonkey library.]
+		[JS_THREADSAFE flag will be detected automatically.]),
+	    [smjs_cppflags=$withval],
+	    [smjs_cppflags=""])
 
 AC_ARG_WITH([smjs-libdir],
 	    AS_HELP_STRING([--with-smjs-libdir=DIR],
@@ -52,7 +53,7 @@ ac_save_CPPFLAGS="$CPPFLAGS"
 ac_save_LIBS="$LIBS"
 ac_save_LDFLAGS="$LDFLAGS"
 
-smjs_CPPFLAGS=""
+smjs_CPPFLAGS="$smjs_cppflags"
 smjs_LDFLAGS=""
 smjs_LIBS=""
 
@@ -63,17 +64,10 @@ case $host_os in
   *os2* )
     smjs_CPPFLAGS="$smjs_CPPFLAGS -DXP_OS2"
     ;;
-  *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
-    smjs_CPPFLAGS="$smjs_CPPFLAGS -DXP_WIN"
-    ;;
   * )
     smjs_CPPFLAGS="$smjs_CPPFLAGS -DXP_UNIX"
     ;;
 esac
-
-if test "x$enable_smjs_threadsafe" = "xyes" ; then
-  smjs_CPPFLAGS="$smjs_CPPFLAGS -DJS_THREADSAFE"
-fi
 
 if test "x$smjs_incdir" != "x" ; then
   smjs_CPPFLAGS="$smjs_CPPFLAGS -I$smjs_incdir"
@@ -91,28 +85,57 @@ if test "x$smjs_libdir" != "x" ; then
   smjs_LDFLAGS="$smjs_LDFLAGS -L$smjs_libdir"
 fi
 
-CPPFLAGS="$smjs_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$smjs_LDFLAGS $LDFLAGS"
 
 for checklib in js smjs; do
   smjs_LIBS="-l$checklib"
-  LIBS="$smjs_LIBS $LIBS"
+  LIBS="$smjs_LIBS $ac_save_LIBS"
+  CPPFLAGS="$smjs_CPPFLAGS -DJS_THREADSAFE $ac_save_CPPFLAGS"
 
+# First try with -DJS_THREADSAFE.
   AC_LINK_IFELSE([[
-#include<jsapi.h>
-#include<jsconfig.h>
+    #include<jsapi.h>
+    #include<jsconfig.h>
 
-#if JS_VERSION < $min_smjs_version
-#error "SpiderMonkey version is too low."
-#endif
+    #if JS_VERSION < $min_smjs_version
+    #error "SpiderMonkey version is too low."
+    #endif
 
-int main() {
-  JSRuntime *runtime;
-  runtime = JS_NewRuntime(1048576);
-  JS_DestroyRuntime(runtime);
-  JS_ShutDown();
-  return 0;
-}
+    int main() {
+      JSRuntime *runtime;
+      runtime = JS_NewRuntime(1048576);
+      JS_DestroyRuntime(runtime);
+      JS_BeginRequest(0);
+      JS_ShutDown();
+      return 0;
+    }
+  ]],
+  [ac_have_smjs_threadsafe=yes],
+  [ac_have_smjs_threadsafe=no])
+
+  if test "x$ac_have_smjs_threadsafe" = "xyes"; then
+    smjs_CPPFLAGS="$smjs_CPPFLAGS -DJS_THREADSAFE"
+    ac_have_smjs=yes
+    break
+  fi
+
+# Second try without -DJS_THREADSAFE.
+  CPPFLAGS="$smjs_CPPFLAGS $ac_save_CPPFLAGS"
+  AC_LINK_IFELSE([[
+    #include<jsapi.h>
+    #include<jsconfig.h>
+
+    #if JS_VERSION < $min_smjs_version
+    #error "SpiderMonkey version is too low."
+    #endif
+
+    int main() {
+      JSRuntime *runtime;
+      runtime = JS_NewRuntime(1048576);
+      JS_DestroyRuntime(runtime);
+      JS_ShutDown();
+      return 0;
+    }
   ]],
   [ac_have_smjs=yes],
   [ac_have_smjs=no])
@@ -120,7 +143,6 @@ int main() {
   if test "x$ac_have_smjs" = "xyes"; then
     break
   fi
-  LIBS="$ac_save_LIBS"
 done
 
 if test "x$ac_have_smjs" = "xyes" ; then
