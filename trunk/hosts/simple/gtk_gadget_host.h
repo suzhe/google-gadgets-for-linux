@@ -89,6 +89,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
                                   gpointer data);
 
   static void OnMenuClicked(GtkButton *button, gpointer user_data);
+  void GtkGadgetHost::PopupMenu();
   static void OnBackClicked(GtkButton *button, gpointer user_data);
   static void OnForwardClicked(GtkButton *button, gpointer user_data);
   static void OnDetailsClicked(GtkButton *button, gpointer user_data);
@@ -114,8 +115,6 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   GtkBox *toolbox_;
   GtkWidget *menu_button_, *back_button_, *forward_button_, *details_button_;
   GtkMenuImpl *menu_;
-  GtkWidget *collapse_menu_item_, *options_menu_item_,
-            *about_menu_item_, *dock_menu_item_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkGadgetHost);
 };

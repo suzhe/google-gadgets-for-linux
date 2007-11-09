@@ -17,6 +17,7 @@
 #ifndef GGADGET_SCRIPTABLE_MENU_H__
 #define GGADGET_SCRIPTABLE_MENU_H__
 
+#include <vector>
 #include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
@@ -30,11 +31,6 @@ class ScriptableMenu : public ScriptableHelper<ScriptableInterface> {
   explicit ScriptableMenu(MenuInterface *menu);
   virtual ~ScriptableMenu();
 
-  /** This wrapper's ownership is transferrable, but it doesn't owns the menu */
-  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-
-  MenuInterface *GetMenu() const { return menu_; }
-
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableMenu);
 
@@ -42,6 +38,7 @@ class ScriptableMenu : public ScriptableHelper<ScriptableInterface> {
   ScriptableMenu *ScriptAddPopup(const char *popup_text);
 
   MenuInterface *menu_;
+  std::vector<ScriptableMenu *> submenus_;
 };
 
 } // namespace ggadget

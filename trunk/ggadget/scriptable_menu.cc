@@ -28,6 +28,11 @@ ScriptableMenu::ScriptableMenu(MenuInterface *menu)
 }
 
 ScriptableMenu::~ScriptableMenu() {
+  for (std::vector<ScriptableMenu *>::iterator it = submenus_.begin();
+       it != submenus_.end(); ++it) {
+    delete *it;
+  }
+  submenus_.clear();
 }
 
 void ScriptableMenu::ScriptAddItem(const char *item_text, int style,
@@ -36,7 +41,9 @@ void ScriptableMenu::ScriptAddItem(const char *item_text, int style,
 }
 
 ScriptableMenu *ScriptableMenu::ScriptAddPopup(const char *popup_text) {
-  return new ScriptableMenu(menu_->AddPopup(popup_text));
+  ScriptableMenu *submenu = new ScriptableMenu(menu_->AddPopup(popup_text));
+  submenus_.push_back(submenu);
+  return submenu;
 }
 
 } // namespace ggadget

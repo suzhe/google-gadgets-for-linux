@@ -1151,7 +1151,7 @@ void BasicElement::GetDefaultSize(double *width, double *height) const {
   *height = 0;
 }
 
-void BasicElement::OnDefaultSizeChanged() {
+void BasicElement::OnDefaultSizeChange() {
   if (!impl_->width_specified_ || !impl_->height_specified_) {
     double width, height;
     GetDefaultSize(&width, &height);

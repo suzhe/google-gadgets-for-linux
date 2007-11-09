@@ -96,15 +96,9 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
                                     const char *title, int flags,
                                     Slot *callback) { }
 
-    void OnAddCustomMenuItems(void *menu) {
-      // Because ScriptableMenu's ownership can be transferred, don't emit
-      // the signal if there is no handler, otherwise the ScriptableMenu object
-      // will leak. There should be at most 1 script handlers because of our
-      // ScriptableHelper design.
-      if (onaddcustommenuitems_signal_.HasActiveConnections()) {
-        onaddcustommenuitems_signal_(
-            new ScriptableMenu(static_cast<MenuInterface *>(menu)));
-      }
+    void OnAddCustomMenuItems(MenuInterface *menu) {
+      ScriptableMenu scriptable_menu(menu);
+      onaddcustommenuitems_signal_(&scriptable_menu);
     }
 
     // "plugin_flags" is a write-only property. Returns 0 on read.

@@ -32,8 +32,6 @@ class AnchorElement::Impl {
     : text_(owner, view),
       overcolor_texture_(view->LoadTexture(kDefaultColor)),
       mouseover_(false), overcolor_(kDefaultColor) { 
-    text_.SetColor(kDefaultColor);
-    text_.SetUnderline(true);
   }
   ~Impl() {
     delete overcolor_texture_;
@@ -53,7 +51,12 @@ AnchorElement::AnchorElement(ElementInterface *parent,
       impl_(new Impl(this, view)) {
   SetCursor(ElementInterface::CURSOR_HAND);
   SetEnabled(true);
-  
+
+  // Moved from Impl constructor to here because they will indirectly call
+  // OnDefaultSizeChange() before impl_ is initialized.
+  impl_->text_.SetColor(kDefaultColor);
+  impl_->text_.SetUnderline(true);
+
   RegisterProperty("overColor",
                    NewSlot(this, &AnchorElement::GetOverColor),
                    NewSlot(this, &AnchorElement::SetOverColor));

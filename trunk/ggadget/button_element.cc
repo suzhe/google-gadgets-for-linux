@@ -116,7 +116,7 @@ void ButtonElement::SetImage(const char *img) {
   if (AssignIfDiffer(img, &impl_->image_src_)) {
     delete impl_->image_;
     impl_->image_ = GetView()->LoadImage(img, false);
-    OnDefaultSizeChanged();
+    OnDefaultSizeChange();
     QueueDraw();
   }
 }

@@ -62,8 +62,7 @@ GtkGadgetHost::GtkGadgetHost()
       plugin_flags_(0),
       toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
       forward_button_(NULL), details_button_(NULL),
-      menu_(NULL), collapse_menu_item_(NULL), options_menu_item_(NULL),
-      about_menu_item_(NULL), dock_menu_item_(NULL) {
+      menu_(NULL) {
   ggadget::ElementFactory *factory = new ggadget::ElementFactory();
   factory->RegisterElementClass("button",
                                 &ggadget::ButtonElement::CreateInstance);
@@ -391,24 +390,33 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
   gtk_box_pack_end(toolbox_, menu_button_, FALSE, FALSE, 0);
   g_signal_connect(menu_button_, "clicked",
                    G_CALLBACK(OnMenuClicked), this);
-  back_button_ = gtk_button_new_with_label(" < ");
-  gtk_box_pack_end(toolbox_, back_button_, FALSE, FALSE, 0);
-  g_signal_connect(back_button_, "clicked",
-                   G_CALLBACK(OnBackClicked), this);
   forward_button_ = gtk_button_new_with_label(" > ");
   gtk_box_pack_end(toolbox_, forward_button_, FALSE, FALSE, 0);
   g_signal_connect(forward_button_, "clicked",
                    G_CALLBACK(OnForwardClicked), this);
+  back_button_ = gtk_button_new_with_label(" < ");
+  gtk_box_pack_end(toolbox_, back_button_, FALSE, FALSE, 0);
+  g_signal_connect(back_button_, "clicked",
+                   G_CALLBACK(OnBackClicked), this);
   details_button_ = gtk_button_new_with_label("<<");
   gtk_box_pack_end(toolbox_, details_button_, FALSE, FALSE, 0);
   g_signal_connect(details_button_, "clicked",
                    G_CALLBACK(OnDetailsClicked), this);
 
   SetPluginFlags(0);
+  return true;
+}
+
+void GtkGadgetHost::PopupMenu() {
+  if (menu_) {
+    gtk_widget_destroy(GTK_WIDGET(menu_->menu()));
+    delete menu_;
+  }
 
   GtkMenu *menu = GTK_MENU(gtk_menu_new());
   gtk_menu_attach_to_widget(menu, menu_button_, NULL);
   menu_ = new GtkMenuImpl(GTK_MENU(menu));
+
   gadget_->OnAddCustomMenuItems(menu_);
 
   GtkMenuShell *menu_shell = GTK_MENU_SHELL(menu);
@@ -416,46 +424,43 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
     gtk_menu_shell_append(menu_shell,
                           GTK_WIDGET(gtk_separator_menu_item_new()));
 
-  collapse_menu_item_ = gtk_menu_item_new_with_label("Collapse");
-  gtk_menu_shell_append(menu_shell, collapse_menu_item_);
-  g_signal_connect(collapse_menu_item_, "activate",
-                   G_CALLBACK(OnCollapseActivate), this);
-  options_menu_item_ = gtk_menu_item_new_with_label("Options...");
-  gtk_menu_shell_append(menu_shell, options_menu_item_);
-  g_signal_connect(options_menu_item_, "activate",
-                   G_CALLBACK(OnOptionsActivate), this);
+  GtkWidget *item = gtk_menu_item_new_with_label("Collapse");
+  gtk_menu_shell_append(menu_shell, item);
+  g_signal_connect(item, "activate", G_CALLBACK(OnCollapseActivate), this);
+  item = gtk_menu_item_new_with_label("Options...");
+  gtk_menu_shell_append(menu_shell, item);
+  g_signal_connect(item, "activate", G_CALLBACK(OnOptionsActivate), this);
   gtk_menu_shell_append(menu_shell,
                         GTK_WIDGET(gtk_separator_menu_item_new()));
-  about_menu_item_ = gtk_menu_item_new_with_label("About...");
-  gtk_menu_shell_append(menu_shell, about_menu_item_);
-  g_signal_connect(about_menu_item_, "activate",
-                   G_CALLBACK(OnAboutActivate), this);
-  dock_menu_item_ = gtk_menu_item_new_with_label("Undock from Sidebar");
-  gtk_menu_shell_append(menu_shell, dock_menu_item_);
-  g_signal_connect(dock_menu_item_, "activate",
-                   G_CALLBACK(OnDockActivate), this);
+  item = gtk_menu_item_new_with_label("About...");
+  gtk_menu_shell_append(menu_shell, item);
+  g_signal_connect(item, "activate", G_CALLBACK(OnAboutActivate), this);
+  item = gtk_menu_item_new_with_label("Undock from Sidebar");
+  gtk_menu_shell_append(menu_shell, item);
+  g_signal_connect(item, "activate", G_CALLBACK(OnDockActivate), this);
+
   gtk_widget_show_all(GTK_WIDGET(menu));
-  return true;
+  gtk_menu_popup(menu_->menu(), NULL, NULL, NULL, menu_, 0, 0);
 }
 
 void GtkGadgetHost::OnMenuClicked(GtkButton *button, gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+  this_p->PopupMenu();
 }
 
 void GtkGadgetHost::OnBackClicked(GtkButton *button, gpointer user_data) {
-  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("Back");
 }
 
 void GtkGadgetHost::OnForwardClicked(GtkButton *button, gpointer user_data) {
-  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("Forward");
 }
 
 void GtkGadgetHost::OnDetailsClicked(GtkButton *button, gpointer user_data) {
-  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  gtk_menu_popup(this_p->menu_->menu(), NULL, NULL, NULL, this_p->menu_, 0, 0);
+  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  DLOG("Details");
 }
 
 void GtkGadgetHost::OnCollapseActivate(GtkMenuItem *menu_item,

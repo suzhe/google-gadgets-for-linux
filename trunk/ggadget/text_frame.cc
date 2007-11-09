@@ -33,11 +33,11 @@ static const char *kVAlignNames[] = {
   "top", "middle", "bottom"
 };
 static const char *kTrimmingNames[] = {
-  "none", 
-  "character", 
-  "word", 
-  "character_ellipsis", 
-  "word-ellipsis", 
+  "none",
+  "character",
+  "word",
+  "character-ellipsis",
+  "word-ellipsis",
   "path-ellipsis"
 };
 
@@ -125,7 +125,7 @@ void TextFrame::SetBold(bool bold) {
   if (bold != bold_) {
     ClearFont();
     bold_ = bold;
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   }
 }
@@ -149,7 +149,7 @@ const char *TextFrame::GetFont() const {
 void TextFrame::SetFont(const char *font) {
   if (AssignIfDiffer(font, &font_name_)) {
     ClearFont();
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   }
 }
@@ -162,7 +162,7 @@ void TextFrame::SetItalic(bool italic) {
   if (italic != italic_) {
     ClearFont();
     italic_ = italic;
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   }
 }
@@ -175,7 +175,7 @@ void TextFrame::SetSize(int size) {
   if (size != size_) {
     ClearFont();
     size_ = size;
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   } 
 }
@@ -209,7 +209,7 @@ bool TextFrame::IsUnderline() const {
 void TextFrame::SetUnderline(bool underline) {
   if (underline != !!(flag_ & CanvasInterface::TEXT_FLAGS_UNDERLINE)) {
     flag_ ^= CanvasInterface::TEXT_FLAGS_UNDERLINE;
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   }
 }
@@ -232,7 +232,7 @@ bool TextFrame::IsWordWrap() const {
 void TextFrame::SetWordWrap(bool wrap) {
   if (wrap != !!(flag_ & CanvasInterface::TEXT_FLAGS_WORDWRAP)) {
     flag_ ^= CanvasInterface::TEXT_FLAGS_WORDWRAP;
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   }
 }
@@ -243,7 +243,7 @@ const char *TextFrame::GetText() const {
 
 void TextFrame::SetText(const char *text) {  
   if (AssignIfDiffer(text, &text_)) {
-    owner_->OnDefaultSizeChanged();
+    owner_->OnDefaultSizeChange();
     owner_->QueueDraw();
   } 
 }
