@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "ggadget/scripts/smjs/js_script_context.h"
+#include "ggadget/smjs/js_script_context.h"
 
 #include "ggadget/tests/scriptables.h"
 

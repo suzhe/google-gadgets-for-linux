@@ -23,8 +23,8 @@
 #include <strings.h>
 
 #include "ggadget/common.h"
-#include "ggadget/graphics/cairo_canvas.h"
-#include "ggadget/graphics/cairo_graphics.h"
+#include "ggadget/gtk/cairo_canvas.h"
+#include "ggadget/gtk/cairo_graphics.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;

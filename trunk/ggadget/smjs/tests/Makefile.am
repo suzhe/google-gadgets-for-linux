@@ -27,7 +27,7 @@ AM_LDFLAGS		= @READLINE_LDFLAGS@ \
 LDADD			= @READLINE_LIBS@ \
 			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/scripts/smjs/libggadget-smjs@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/smjs/libggadget-smjs@GGL_EPOCH@.la
 
 check_PROGRAMS		= js_shell \
 			  wrapper_test_shell \

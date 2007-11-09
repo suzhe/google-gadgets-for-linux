@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-if GGL_BUILD_LIBGGADGET_CAIRO
+if GGL_BUILD_LIBGGADGET_GTK
 
 # Putting . into SBUDIRS list to force building current directory first.
 SUBDIRS = . tests
@@ -28,26 +28,26 @@ graphicsinclude_HEADERS	= cairo_canvas.h \
 			  cairo_font.h \
 			  cairo_graphics.h
 
-lib_LTLIBRARIES		= libggadget-cairo@GGL_EPOCH@.la
+lib_LTLIBRARIES		= libggadget-gtk@GGL_EPOCH@.la
 
-libggadget_cairo@GGL_EPOCH@_la_SOURCES = \
+libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_canvas.cc \
 			  cairo_font.cc \
 			  cairo_graphics.cc
 
 
-libggadget_cairo@GGL_EPOCH@_la_CPPFLAGS = \
+libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @CAIRO_CFLAGS@ \
 			  @PANGO_CFLAGS@ \
 			  @GDK2_CFLAGS@
 
-libggadget_cairo@GGL_EPOCH@_la_LIBADD = \
+libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  @CAIRO_LIBS@ \
 			  @PANGO_LIBS@ \
 			  @GDK2_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-libggadget_cairo@GGL_EPOCH@_la_LDFLAGS = \
+libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
 			  -export-dynamic \
 			  -rpath $(libdir)

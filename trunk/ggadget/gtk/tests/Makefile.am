@@ -26,7 +26,7 @@ LDADD			= @CAIRO_LIBS@ \
 			  @GDK2_LIBS@ \
 			  $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/graphics/libggadget-cairo@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
 
 check_PROGRAMS		= cairo_canvas_test \

@@ -20,7 +20,7 @@
 
 #include "ggadget/common.h"
 #include "ggadget/canvas_interface.h"
-#include "ggadget/graphics/cairo_canvas.h"
+#include "ggadget/gtk/cairo_canvas.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;

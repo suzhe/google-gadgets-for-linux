@@ -22,10 +22,10 @@
 #include <jsapi.h>
 
 #include "ggadget/common.h"
-#include "ggadget/scripts/smjs/converter.h"
-#include "ggadget/scripts/smjs/js_script_context.h"
-#include "ggadget/scripts/smjs/js_script_runtime.h"
-#include "ggadget/scripts/smjs/json.h"
+#include "ggadget/smjs/converter.h"
+#include "ggadget/smjs/js_script_context.h"
+#include "ggadget/smjs/js_script_runtime.h"
+#include "ggadget/smjs/json.h"
 #include "ggadget/unicode_utils.h"
 
 using ggadget::internal::PrintJSValue;
