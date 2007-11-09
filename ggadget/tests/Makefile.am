@@ -65,7 +65,7 @@ file_manager_test_data.gg: file_manager_test_data
 	(\
 	  rm -fr $(abs_builddir)/file_manager_test_data;\
 	  cp -R $(abs_srcdir)/file_manager_test_data $(abs_builddir)/;\
-	  find $(abs_builddir)/file_manager_test_data -name '.*' -exec rm -f {} \;;\
+	  find $(abs_builddir)/file_manager_test_data -name '.*' -exec rm -fr {} \;;\
 	  cd $(abs_builddir)/file_manager_test_data/;\
 	  find . -type f |\
 	  $(ZIP) -r -u $(abs_builddir)/file_manager_test_data.gg -@\

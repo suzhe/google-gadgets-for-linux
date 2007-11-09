@@ -20,8 +20,8 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
 #include "ggadget/xml_utils.h"
-#include "ggadget/graphics/cairo_graphics.h"
-#include "ggadget/graphics/cairo_canvas.h"
+#include "ggadget/gtk/cairo_graphics.h"
+#include "ggadget/gtk/cairo_canvas.h"
 #include "ggadget/tests/mocked_view.h"
 
 using namespace ggadget;

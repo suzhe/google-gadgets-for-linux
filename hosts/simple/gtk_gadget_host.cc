@@ -23,7 +23,7 @@
 #include <ggadget/element_factory.h>
 #include <ggadget/gadget.h>
 #include <ggadget/common.h>
-#include <ggadget/scripts/smjs/js_script_runtime.h>
+#include <ggadget/smjs/js_script_runtime.h>
 
 #include <ggadget/button_element.h>
 #include <ggadget/div_element.h>

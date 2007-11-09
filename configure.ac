@@ -186,7 +186,7 @@ GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 ##                  Process Config options.              ##
 ###########################################################
 
-build_libggadget_cairo=yes
+build_libggadget_gtk=yes
 build_libggadget_smjs=yes
 build_simple_host=yes
 
@@ -204,7 +204,7 @@ fi
 
 if test x$has_cairo != xyes -o x$has_pango != xyes -o x$has_gdk2 != xyes; then
   AC_MSG_WARN([Library cairo, pango or gdk-2.0 are not available, libggadget-cairo and simple host won't be built])
-  build_libggadget_cairo=no
+  build_libggadget_gtk=no
   build_simple_host=no
 fi
 
@@ -220,8 +220,8 @@ if test x$has_spidermonkey != xyes; then
 fi
 
 AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_CAIRO],
-  [test x$build_libggadget_cairo = xyes])
+  [GGL_BUILD_LIBGGADGET_GTK],
+  [test x$build_libggadget_gtk = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_SMJS],
@@ -299,11 +299,10 @@ AC_SUBST(abs_top_builddir)
 AC_CONFIG_FILES([Makefile
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
-		 ggadget/graphics/Makefile
-		 ggadget/graphics/tests/Makefile
-		 ggadget/scripts/Makefile
-		 ggadget/scripts/smjs/Makefile
-		 ggadget/scripts/smjs/tests/Makefile
+		 ggadget/gtk/Makefile
+		 ggadget/gtk/tests/Makefile
+		 ggadget/smjs/Makefile
+		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
 		 third_party/Makefile
@@ -319,7 +318,7 @@ Build options:
   Build shared libs        $enable_shared
   Build static libs        $enable_static
   Enable debug             $enable_debug
-  Build libggadget-cairo   $build_libggadget_cairo
+  Build libggadget-gtk     $build_libggadget_gtk
   Build libggadget-smjs    $build_libggadget_smjs
   Build simple host        $build_simple_host
 ])

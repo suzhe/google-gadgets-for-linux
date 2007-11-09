@@ -16,7 +16,7 @@
 
 #include <sys/time.h>
 
-#include <ggadget/graphics/cairo_graphics.h>
+#include <ggadget/gtk/cairo_graphics.h>
 #include <ggadget/view.h>
 #include <ggadget/xml_dom.h>
 #include <ggadget/xml_http_request.h>

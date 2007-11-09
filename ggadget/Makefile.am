@@ -15,7 +15,7 @@
 
 
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . graphics scripts tests
+SUBDIRS = . gtk smjs tests
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

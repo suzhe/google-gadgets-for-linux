@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
-#include <string.h> 
+#include <string.h>
 
 #include <ggadget/gadget_consts.h>
 #include <third_party/unzip/unzip.h>

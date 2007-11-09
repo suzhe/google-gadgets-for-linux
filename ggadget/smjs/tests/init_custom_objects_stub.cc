@@ -16,7 +16,7 @@
 
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/scriptable_interface.h"
-#include "ggadget/scripts/smjs/js_script_context.h"
+#include "ggadget/smjs/js_script_context.h"
 
 using namespace ggadget;
 using namespace ggadget::internal;
