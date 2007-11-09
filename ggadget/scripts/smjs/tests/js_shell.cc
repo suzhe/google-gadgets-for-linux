@@ -179,6 +179,7 @@ static JSBool Print(JSContext *cx, JSObject *obj,
   for (uintN i = 0; i < argc; i++)
     printf("%s ", PrintJSValue(cx, argv[i]).c_str());
   putchar('\n');
+  fflush(stdout);
   return JS_TRUE;
 }
 

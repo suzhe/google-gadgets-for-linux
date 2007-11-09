@@ -212,8 +212,8 @@ static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *wrapper,
   if (result) {
     JSFunctionSlot *slot = NULL;
     if (function_val != JSVAL_NULL) {
-      slot = JSScriptContext::NewJSFunctionSlot(
-          cx, wrapper, VariantValue<Slot *>()(prototype), function_val);
+      slot = new JSFunctionSlot(VariantValue<Slot *>()(prototype),
+                                cx, wrapper, function_val);
     }
     *native_val = Variant(slot);
   }
@@ -480,8 +480,8 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
-  Slot *slot = VariantValue<Slot *>()(native_val);
-  *js_val = slot ? JSScriptContext::ConvertSlotToJS(cx, slot) : JSVAL_NULL;
+  DLOG("Reading native function in JavaScript");
+  // Just leave the value that SpiderMonkey recorded in SetProperty.
   return JS_TRUE;
 }
 

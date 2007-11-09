@@ -154,26 +154,6 @@ void JSScriptContext::FinalizeNativeJSWrapper(JSContext *cx,
     context_wrapper->FinalizeNativeJSWrapperInternal(wrapper);
 }
 
-jsval JSScriptContext::ConvertSlotToJSInternal(Slot *slot) {
-  ASSERT(slot);
-  SlotJSMap::const_iterator it = slot_js_map_.find(slot);
-  if (it != slot_js_map_.end()) {
-    // If found, it->second JavaScript function object that has been wrapped
-    // into a JSFunctionSlot.
-    return it->second;
-  }
-  // We don't allow JavaScript to call native slot in this way.
-  return JSVAL_NULL;
-}
-
-jsval JSScriptContext::ConvertSlotToJS(JSContext *cx, Slot *slot) {
-  JSScriptContext *context_wrapper = GetJSScriptContext(cx);
-  ASSERT(context_wrapper);
-  if (context_wrapper)
-    return context_wrapper->ConvertSlotToJSInternal(slot);
-  return JSVAL_NULL;
-}
-
 JSBool JSScriptContext::CheckException(JSContext *cx,
                                        ScriptableInterface *scriptable) {
   ScriptableInterface *exception = scriptable->GetPendingException(true);
@@ -188,28 +168,6 @@ JSBool JSScriptContext::CheckException(JSContext *cx,
 
   JS_SetPendingException(cx, js_exception);
   return JS_FALSE;
-}
-
-JSFunctionSlot *JSScriptContext::NewJSFunctionSlotInternal(
-    NativeJSWrapper *wrapper, const Slot *prototype, jsval function_val) {
-  JSFunctionSlot *slot = new JSFunctionSlot(prototype, context_, wrapper,
-                                            function_val);
-  // Put it here to make it possible for ConvertNativeSlotToJS to unwrap
-  // a JSFunctionSlot.
-  slot_js_map_[slot] = function_val;
-  return slot;
-}
-
-JSFunctionSlot *JSScriptContext::NewJSFunctionSlot(JSContext *cx,
-                                                   NativeJSWrapper *wrapper,
-                                                   const Slot *prototype,
-                                                   jsval function_val) {
-  JSScriptContext *context_wrapper = GetJSScriptContext(cx);
-  ASSERT(context_wrapper);
-  if (context_wrapper)
-    return context_wrapper->NewJSFunctionSlotInternal(wrapper, prototype,
-                                                      function_val);
-  return NULL;
 }
 
 void JSScriptContext::Destroy() {
