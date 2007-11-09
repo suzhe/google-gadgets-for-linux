@@ -89,7 +89,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
                                   gpointer data);
 
   static void OnMenuClicked(GtkButton *button, gpointer user_data);
-  void GtkGadgetHost::PopupMenu();
+  void PopupMenu();
   static void OnBackClicked(GtkButton *button, gpointer user_data);
   static void OnForwardClicked(GtkButton *button, gpointer user_data);
   static void OnDetailsClicked(GtkButton *button, gpointer user_data);
