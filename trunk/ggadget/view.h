@@ -54,6 +54,8 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual void OnElementRemove(ElementInterface *element);
   virtual void FireEvent(ScriptableEvent *event,
                          const EventSignal &event_signal);
+  virtual void PostEvent(ScriptableEvent *event,
+                         const EventSignal &event_signal);
   virtual ScriptableEvent *GetEvent();
   virtual const ScriptableEvent *GetEvent() const;
   virtual void SetFocus(ElementInterface *element);

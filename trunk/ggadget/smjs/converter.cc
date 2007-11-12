@@ -73,11 +73,11 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
     result = JS_ValueToNumber(cx, js_val, &double_val);
     if (result) {
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
-      // string containing non-numeric chars.
-      if (!std::isnan(double_val) || js_val == JS_GetNaNValue(cx))
-        *native_val = Variant(static_cast<int64_t>(round(double_val)));
-      else
-        result = JS_FALSE;
+      // string containing non-numeric chars. Both case are invalid for int.
+      if (!isnan(double_val))
+				*native_val = Variant(static_cast<int64_t>(round(double_val)));
+		  else
+	      result = JS_FALSE;
     }
   }
   return result;
@@ -85,17 +85,17 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
 
 static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
-  double double_val;
   if (JSVAL_IS_NULL(js_val) || JSVAL_IS_VOID(js_val)) {
     *native_val = Variant(0.0);
     return JS_TRUE;
   }
 
+  double double_val = 0;
   JSBool result = JS_ValueToNumber(cx, js_val, &double_val);
   if (result) {
-    // If double_val is NaN, it may because js_val is NaN, or js_val is a
-    // string containing non-numeric chars.
-    if (!std::isnan(double_val) || js_val == JS_GetNaNValue(cx))
+    if (JSVAL_IS_DOUBLE(js_val) || !isnan(double_val))
+      // If double_val is NaN, it may because js_val is NaN, or js_val is a
+      // string containing non-numeric chars. The former case is acceptable.
       *native_val = Variant(double_val);
     else
       result = JS_FALSE;
@@ -109,9 +109,12 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
   if (JSVAL_IS_NULL(js_val)) {
     *native_val = Variant(static_cast<const char *>(NULL));
     result = JS_TRUE;
-  } else if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
-             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val) ||
-             JSVAL_IS_STRING(js_val)) {
+  } else if (JSVAL_IS_VOID(js_val)) {
+    // Default value of a string is ""; 
+    *native_val = Variant("");
+    return JS_TRUE;
+  } else if (JSVAL_IS_STRING(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
+             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
       jschar *chars = JS_GetStringChars(js_string);
@@ -144,13 +147,16 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
 
 static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
                                            Variant *native_val) {
+  static const UTF16Char kEmptyUTF16String[] = { 0 };
   JSBool result = JS_FALSE;
   if (JSVAL_IS_NULL(js_val)) {
     *native_val = Variant(static_cast<const UTF16Char *>(NULL));
     result = JS_TRUE;
-  } else if (JSVAL_IS_VOID(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
-             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val) ||
-             JSVAL_IS_STRING(js_val)) {
+  } else if (JSVAL_IS_VOID(js_val)) {
+    *native_val = Variant(kEmptyUTF16String);
+    result = JS_TRUE;
+  } else if (JSVAL_IS_STRING(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
+             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val)) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
       result = JS_TRUE;
@@ -297,15 +303,11 @@ std::string PrintJSValue(JSContext *cx, jsval js_val) {
       ConvertJSToNativeString(cx, js_val, &v);
       return VariantValue<std::string>()(v);
     }
-    case JSTYPE_OBJECT:
-    case JSTYPE_NUMBER:
-    case JSTYPE_BOOLEAN: {
+    case JSTYPE_OBJECT: {
       std::string json;
       JSONEncode(cx, js_val, &json);
       return json;
     }
-    case JSTYPE_VOID:
-      return "void";
     default: {
       JSString *str = JS_ValueToString(cx, js_val);
       if (str) {

@@ -24,6 +24,7 @@
 namespace ggadget {
 
 class Event;
+class ElementInterface;
 
 /** Event names */
 const char *const kOnCancelEvent        = "oncancel";
@@ -65,7 +66,7 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x6732238aacb4468a, ScriptableInterface)
 
-  ScriptableEvent(Event *event, ScriptableInterface *src_element,
+  ScriptableEvent(Event *event, ElementInterface *src_element,
                   int cookie, int value);
   virtual ~ScriptableEvent();
 
@@ -74,8 +75,8 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
   Event *GetEvent() { return event_; }
   const Event *GetEvent() const { return event_; }
 
-  ScriptableInterface *GetSrcElement() { return src_element_; }
-  const ScriptableInterface *GetSrcElement() const { return src_element_; }
+  ElementInterface *GetSrcElement() { return src_element_; }
+  const ElementInterface *GetSrcElement() const { return src_element_; }
 
   bool GetReturnValue() const { return return_value_; }
   int GetCookie() const { return cookie_; }
@@ -86,7 +87,7 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
 
   Event *event_;
   bool return_value_;
-  ScriptableInterface *src_element_;
+  ElementInterface *src_element_;
   int cookie_;
   int value_;
 };

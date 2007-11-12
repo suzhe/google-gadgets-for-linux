@@ -51,6 +51,8 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual void OnElementRemove(ggadget::ElementInterface *element) {};
   virtual void FireEvent(ggadget::ScriptableEvent *event,
                          const ggadget::EventSignal &event_signal) {};
+  virtual void PostEvent(ggadget::ScriptableEvent *event,
+                         const ggadget::EventSignal &event_signal) {};
   virtual ggadget::ScriptableEvent *GetEvent() { return NULL; }
   virtual const ggadget::ScriptableEvent *GetEvent() const { return NULL; }
 
