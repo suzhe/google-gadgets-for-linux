@@ -176,7 +176,6 @@ static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
   ASSERT(event->type == GDK_ENTER_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OVER,
                event->x / gvw->zoom, event->y / gvw->zoom,
-               // TODO: button and wheelDelta
                MouseEvent::BUTTON_NONE, 0);
   return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
 }
@@ -187,7 +186,6 @@ static gboolean GadgetViewWidget_leave_notify(GtkWidget *widget,
   ASSERT(event->type == GDK_LEAVE_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OUT,
                event->x / gvw->zoom, event->y / gvw->zoom,
-               // TODO: button and wheelDelta
                MouseEvent::BUTTON_NONE, 0);
   return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
 }
@@ -198,7 +196,6 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   ASSERT(event->type == GDK_MOTION_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
                event->x / gvw->zoom, event->y / gvw->zoom,
-               // TODO: button and wheelDelta
                MouseEvent::BUTTON_NONE, 0);
   bool handler_result = gvw->view->OnMouseEvent(&e);
 

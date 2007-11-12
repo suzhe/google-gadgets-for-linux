@@ -72,7 +72,7 @@ ButtonElement::ButtonElement(ElementInterface *parent,
   RegisterProperty("disabledImage",
                    NewSlot(this, &ButtonElement::GetDisabledImage),
                    NewSlot(this, &ButtonElement::SetDisabledImage));
-  
+
   // undocumented
   RegisterProperty("caption",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
@@ -88,11 +88,9 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
   Image *img = NULL;
   if (!IsEnabled()) {
     img = impl_->disabledimage_;
-  }
-  else if (impl_->mousedown_) {
+  } else if (impl_->mousedown_) {
     img = impl_->downimage_;
-  }
-  else if (impl_->mouseover_) {
+  } else if (impl_->mouseover_) {
     img = impl_->overimage_;
   }
 
@@ -142,7 +140,7 @@ Variant ButtonElement::GetOverImage() const {
 
 void ButtonElement::SetOverImage(const Variant &img) {
   LoadImage(GetView(), img, &impl_->overimage_src_, &impl_->overimage_);
-  if (impl_->mouseover_) {
+  if (impl_->mouseover_ && IsEnabled()) {
     QueueDraw();
   }
 }
@@ -153,7 +151,7 @@ Variant ButtonElement::GetDownImage() const {
 
 void ButtonElement::SetDownImage(const Variant &img) {
   LoadImage(GetView(), img, &impl_->downimage_src_, &impl_->downimage_);
-  if (impl_->mousedown_) {
+  if (impl_->mousedown_ && IsEnabled()) {
     QueueDraw();
   }
 }

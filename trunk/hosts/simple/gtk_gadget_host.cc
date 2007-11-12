@@ -32,6 +32,7 @@
 #include <ggadget/label_element.h>
 #include <ggadget/anchor_element.h>
 #include <ggadget/checkbox_element.h>
+#include <ggadget/progressbar_element.h>
 
 #include "gtk_gadget_host.h"
 #include "gtk_menu_impl.h"
@@ -70,6 +71,8 @@ GtkGadgetHost::GtkGadgetHost()
                                 &ggadget::DivElement::CreateInstance);
   factory->RegisterElementClass("img",
                                 &ggadget::ImgElement::CreateInstance);
+  factory->RegisterElementClass("progressbar",
+                                &ggadget::ProgressBarElement::CreateInstance);
   factory->RegisterElementClass("scrollbar",
                                 &ggadget::ScrollBarElement::CreateInstance);
   factory->RegisterElementClass("label",
@@ -150,7 +153,7 @@ void GtkGadgetHost::SetPluginFlags(int plugin_flags) {
     gtk_widget_show(back_button_);
   else
     gtk_widget_hide(back_button_);
-  
+
   if (plugin_flags & gddPluginFlagToolbarForward)
     gtk_widget_show(forward_button_);
   else

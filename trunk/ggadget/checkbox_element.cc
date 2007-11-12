@@ -65,13 +65,19 @@ class CheckBoxElement::Impl {
   }
 
   Image *GetCurrentImage(const CheckBoxElement *owner) {
-    if (!owner->IsEnabled())
-      return disabledimage_[value_];
-    if (mousedown_)
-      return downimage_[value_];
-    if (mouseover_)
-      return overimage_[value_];
-    return image_[value_];
+    Image *img = NULL;
+    if (!owner->IsEnabled()) {
+      img = disabledimage_[value_];
+    } else if (mousedown_) {
+      img = downimage_[value_];
+    } else if (mouseover_) {
+      img = overimage_[value_];
+    }
+
+    if (!img) { // Leave this case as fallback if the exact image is NULL. 
+      img = image_[value_];  
+    }    
+    return img;
   }
 
   bool is_checkbox_;
@@ -222,7 +228,7 @@ Variant CheckBoxElement::GetOverImage() const {
 void CheckBoxElement::SetOverImage(const Variant &img) {
   LoadImage(GetView(), img, &impl_->overimage_src_[STATE_NORMAL],
             &impl_->overimage_[STATE_NORMAL]);
-  if (impl_->mouseover_) {
+  if (impl_->mouseover_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
   }
@@ -235,7 +241,7 @@ Variant CheckBoxElement::GetDownImage() const {
 void CheckBoxElement::SetDownImage(const Variant &img) {
   LoadImage(GetView(), img, &impl_->downimage_src_[STATE_NORMAL],
             &impl_->downimage_[STATE_NORMAL]);
-  if (impl_->mousedown_) {
+  if (impl_->mousedown_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
   }
@@ -272,7 +278,7 @@ Variant CheckBoxElement::GetCheckedOverImage() const {
 void CheckBoxElement::SetCheckedOverImage(const Variant &img) {
   LoadImage(GetView(), img, &impl_->overimage_src_[STATE_CHECKED],
             &impl_->overimage_[STATE_CHECKED]);
-  if (impl_->mouseover_) {
+  if (impl_->mouseover_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
   }
@@ -285,7 +291,7 @@ Variant CheckBoxElement::GetCheckedDownImage() const {
 void CheckBoxElement::SetCheckedDownImage(const Variant &img) {
   LoadImage(GetView(), img, &impl_->downimage_src_[STATE_CHECKED],
             &impl_->downimage_[STATE_CHECKED]);
-  if (impl_->mousedown_) {
+  if (impl_->mousedown_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
   }
