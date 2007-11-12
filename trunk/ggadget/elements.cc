@@ -174,8 +174,8 @@ class Elements::Impl {
     }
   }
 
-  void MapChildMouseEvent(MouseEvent *org_event, ElementInterface *child,
-                          MouseEvent *new_event) {
+  void MapChildPositionEvent(PositionEvent *org_event, ElementInterface *child,
+                             PositionEvent *new_event) {
     double child_x, child_y;
     if (owner_) {
       owner_->SelfCoordToChildCoord(child, org_event->GetX(), org_event->GetY(),
@@ -206,14 +206,37 @@ class Elements::Impl {
       if (!(*ite)->IsVisible())
         continue;
 
-      MapChildMouseEvent(event, *ite, &new_event);
-      if ((*ite)->IsMouseEventIn(&new_event)) {
+      MapChildPositionEvent(event, *ite, &new_event);
+      if ((*ite)->IsPointIn(new_event.GetX(), new_event.GetY())) {
         bool result = (*ite)->OnMouseEvent(&new_event, false, fired_element);
         if (*fired_element)
           return result;
       }
     }
     return true;
+  }
+
+  bool OnDragEvent(DragEvent *event, ElementInterface **fired_element) {
+    // Only the following event type is dispatched along the element tree.
+    ASSERT(event->GetType() == Event::EVENT_DRAG_MOTION);
+
+    *fired_element = NULL;
+    DragEvent new_event(*event);
+    // Iterate in reverse since higher elements are listed last.
+    for (std::vector<ElementInterface *>::reverse_iterator ite =
+             children_.rbegin();
+         ite != children_.rend(); ++ite) {
+      if (!(*ite)->IsVisible())
+        continue;
+
+      MapChildPositionEvent(event, *ite, &new_event);
+      if ((*ite)->IsPointIn(new_event.GetX(), new_event.GetY())) {
+        bool result = (*ite)->OnDragEvent(&new_event, false, fired_element);
+        if (*fired_element)
+          return result;
+      }
+    }
+    return false;
   }
 
   // Update the maximum children extent.
@@ -488,6 +511,12 @@ bool Elements::OnMouseEvent(MouseEvent *event,
                             ElementInterface **fired_element) {
   ASSERT(impl_);
   return impl_->OnMouseEvent(event, fired_element);
+}
+
+bool Elements::OnDragEvent(DragEvent *event,
+                           ElementInterface **fired_element) {
+  ASSERT(impl_);
+  return impl_->OnDragEvent(event, fired_element);
 }
 
 void Elements::SetScrollable(bool scrollable) {

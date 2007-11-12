@@ -68,6 +68,8 @@ class BasicElement::Impl {
         y_relative_(false),
         width_specified_(false),
         height_specified_(false),
+        x_specified_(false),
+        y_specified_(false),
         canvas_(NULL),
         mask_image_(NULL),
         visibility_changed_(true),
@@ -96,7 +98,7 @@ class BasicElement::Impl {
   void SetMask(const char *mask) {
     if (AssignIfDiffer(mask, &mask_)) {
       delete mask_image_;
-      mask_image_ = view_->LoadImage(mask, true);
+      mask_image_ = view_->LoadImage(Variant(mask), true);
       view_->QueueDraw();
     }
   }
@@ -335,16 +337,19 @@ class BasicElement::Impl {
         width_specified_ = true;
         SetRelativeWidth(v, false);
         break;
-      case 2: {
-        double width, height;
-        owner_->GetDefaultSize(&width, &height);
-        width_specified_ = false;
-        SetPixelWidth(width);
+      case 2:
+        ResetWidthToDefault();
         break;
-      }
       default:
         break;
     }
+  }
+
+  void ResetWidthToDefault() {
+    double width, height;
+    owner_->GetDefaultSize(&width, &height);
+    width_specified_ = false;
+    SetPixelWidth(width);
   }
 
   Variant GetHeight() const {
@@ -363,32 +368,38 @@ class BasicElement::Impl {
         height_specified_ = true;
         SetRelativeHeight(v, false);
         break;
-      case 2: {
-        double width, height;
-        owner_->GetDefaultSize(&width, &height);
-        height_specified_ = false;
-        SetPixelHeight(height);
+      case 2:
+        ResetHeightToDefault();
         break;
-      }
       default:
         break;
     }
   }
 
+  void ResetHeightToDefault() {
+    double width, height;
+    owner_->GetDefaultSize(&width, &height);
+    height_specified_ = false;
+    SetPixelHeight(height);
+  }
+
   Variant GetX() const {
-    return GetPixelOrRelative(x_relative_, true, x_, px_);
+    return GetPixelOrRelative(x_relative_, x_specified_, x_, px_);
   }
 
   void SetX(const Variant &x) {
     double v;
     switch (ParsePixelOrRelative(x, &v)) {
       case 0:
+        x_specified_ = true;
         SetPixelX(v);
         break;
       case 1:
+        x_specified_ = true;
         SetRelativeX(v, false);
         break;
       case 2:
+        x_specified_ = false;
         SetPixelX(0);
         break;
       default:
@@ -397,49 +408,26 @@ class BasicElement::Impl {
   }
 
   Variant GetY() const {
-    return GetPixelOrRelative(y_relative_, true, y_, py_);
+    return GetPixelOrRelative(y_relative_, y_specified_, y_, py_);
   }
 
   void SetY(const Variant &y) {
     double v;
     switch (ParsePixelOrRelative(y, &v)) {
       case 0:
+        y_specified_ = true;
         SetPixelY(v);
         break;
       case 1:
+        y_specified_ = true;
         SetRelativeY(v, false);
         break;
       case 2:
+        y_specified_ = false;
         SetPixelY(0);
         break;
       default:
         break;
-    }
-  }
-
-  Variant GetPinX() const {
-    return GetPixelOrRelative(pin_x_relative_, true, pin_x_, ppin_x_);
-  }
-
-  void SetPinX(const Variant &pin_x) {
-    double v;
-    switch (ParsePixelOrRelative(pin_x, &v)) {
-      case 0: SetPixelPinX(v); break;
-      case 1: SetRelativePinX(v, false); break;
-      default: break;
-    }
-  }
-
-  Variant GetPinY() const {
-    return GetPixelOrRelative(pin_y_relative_, true, pin_y_, ppin_y_);
-  }
-
-  void SetPinY(const Variant &pin_y) {
-    double v;
-    switch (ParsePixelOrRelative(pin_y, &v)) {
-      case 0: SetPixelPinY(v); break;
-      case 1: SetRelativePinY(v, false); break;
-      default: break;
     }
   }
 
@@ -599,6 +587,47 @@ class BasicElement::Impl {
     return scriptable_event.GetReturnValue();
   }
 
+  bool OnDragEvent(DragEvent *event, bool direct,
+                   ElementInterface **fired_element) {
+    *fired_element = NULL;
+    if (!direct) {
+      // Send to the children first.
+      bool result = children_.OnDragEvent(event, fired_element);
+      if (*fired_element)
+        return result;
+    }
+
+    if (!drop_target_ || !visible_)
+      return true;
+
+    // Take this event, since no children took it, and we're enabled.
+    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    if (event->GetType() != Event::EVENT_DRAG_MOTION)
+      DLOG("%s(%s|%s): %g %g file0=%s", scriptable_event.GetName(),
+           name_.c_str(), tag_name_.c_str(),
+           event->GetX(), event->GetY(), event->GetDragFiles()[0]);
+
+    switch (event->GetType()) {
+      case Event::EVENT_DRAG_MOTION: // put the high volume events near top
+        // This event is only for drop target testing.
+        break;
+      case Event::EVENT_DRAG_OUT:
+        view_->FireEvent(&scriptable_event, ondragout_event_);
+        break;
+      case Event::EVENT_DRAG_OVER:
+        view_->FireEvent(&scriptable_event, ondragover_event_);
+        break;
+      case Event::EVENT_DRAG_DROP:
+        view_->FireEvent(&scriptable_event, ondragdrop_event_);
+        break;
+      default:
+        ASSERT(false);
+    }
+
+    *fired_element = owner_;
+    return scriptable_event.GetReturnValue();
+  }
+
   bool OnKeyEvent(KeyboardEvent *event) {
     if (!enabled_)
       return true;
@@ -681,6 +710,8 @@ class BasicElement::Impl {
   bool y_relative_;
   bool width_specified_;
   bool height_specified_;
+  bool x_specified_;
+  bool y_specified_;
 
   CanvasInterface *canvas_;
   Image *mask_image_;
@@ -767,12 +798,15 @@ BasicElement::BasicElement(ElementInterface *parent,
                    NewSlot(impl_, &Impl::GetIntOpacity),
                    NewSlot(impl_, &Impl::SetIntOpacity));
   RegisterConstant("parentElement", parent);
+  // Though we support relative pinX and pinY, this feature is not published
+  // in the current public API, so pinX and pinY are still exposed to
+  // script in pixels. 
   RegisterProperty("pinX",
-                   NewSlot(impl_, &Impl::GetPinX),
-                   NewSlot(impl_, &Impl::SetPinX));
+                   NewSlot(this, &BasicElement::GetPixelPinX),
+                   NewSlot(this, &BasicElement::SetPixelPinX));
   RegisterProperty("pinY",
-                   NewSlot(impl_, &Impl::GetPinY),
-                   NewSlot(impl_, &Impl::SetPinY));
+                   NewSlot(this, &BasicElement::GetPixelPinY),
+                   NewSlot(this, &BasicElement::SetPixelPinY));
   RegisterProperty("rotation",
                    NewSlot(this, &BasicElement::GetRotation),
                    NewSlot(this, &BasicElement::SetRotation));
@@ -910,6 +944,7 @@ double BasicElement::GetPixelWidth() const {
 }
 
 void BasicElement::SetPixelWidth(double width) {
+  impl_->width_specified_ = true;
   impl_->SetPixelWidth(width);
 }
 
@@ -918,7 +953,8 @@ double BasicElement::GetPixelHeight() const {
 }
 
 void BasicElement::SetPixelHeight(double height) {
-  return impl_->SetPixelHeight(height);
+  impl_->height_specified_ = true;
+  impl_->SetPixelHeight(height);
 }
 
 double BasicElement::GetRelativeWidth() const {
@@ -934,6 +970,7 @@ double BasicElement::GetPixelX() const {
 }
 
 void BasicElement::SetPixelX(double x) {
+  impl_->x_specified_ = true;
   impl_->SetPixelX(x);
 }
 
@@ -942,6 +979,7 @@ double BasicElement::GetPixelY() const {
 }
 
 void BasicElement::SetPixelY(double y) {
+  impl_->y_specified_ = true;
   impl_->SetPixelY(y);
 }
 
@@ -970,18 +1008,22 @@ void BasicElement::SetPixelPinY(double pin_y) {
 }
 
 void BasicElement::SetRelativeWidth(double width) {
+  impl_->width_specified_ = true;
   impl_->SetRelativeWidth(width, false);
 }
 
 void BasicElement::SetRelativeHeight(double height) {
+  impl_->height_specified_ = true;
   impl_->SetRelativeHeight(height, false);
 }
 
 void BasicElement::SetRelativeX(double x) {
+  impl_->x_specified_ = true;
   impl_->SetRelativeX(x, false);
 }
 
 void BasicElement::SetRelativeY(double y) {
+  impl_->y_specified_ = true;
   impl_->SetRelativeY(y, false);
 }
 
@@ -1029,8 +1071,16 @@ bool BasicElement::WidthIsSpecified() const {
   return impl_->width_specified_;
 }
 
+void BasicElement::ResetWidthToDefault() {
+  impl_->ResetWidthToDefault();
+}
+
 bool BasicElement::HeightIsSpecified() const {
   return impl_->height_specified_;
+}
+
+void BasicElement::ResetHeightToDefault() {
+  impl_->ResetHeightToDefault();
 }
 
 double BasicElement::GetRotation() const {
@@ -1122,6 +1172,11 @@ bool BasicElement::OnMouseEvent(MouseEvent *event, bool direct,
   return impl_->OnMouseEvent(event, direct, fired_element);
 }
 
+bool BasicElement::OnDragEvent(DragEvent *event, bool direct,
+                               ElementInterface **fired_element) {
+  return impl_->OnDragEvent(event, direct, fired_element);
+}
+
 bool BasicElement::OnKeyEvent(KeyboardEvent *event) {
   return impl_->OnKeyEvent(event);
 }
@@ -1130,9 +1185,8 @@ bool BasicElement::OnOtherEvent(Event *event) {
   return impl_->OnOtherEvent(event);
 }
 
-bool BasicElement::IsMouseEventIn(MouseEvent *event) {
-  return IsPointInElement(event->GetX(), event->GetY(),
-                          impl_->width_, impl_->height_);
+bool BasicElement::IsPointIn(double x, double y) {
+  return IsPointInElement(x, y, impl_->width_, impl_->height_);
 }
 
 void BasicElement::SelfCoordToChildCoord(ElementInterface *child,

@@ -28,6 +28,7 @@ class MouseEvent;
 class Event;
 class TimerEvent;
 class KeyboardEvent;
+class DragEvent;
 
 /**
  * ElementInterface defines the properties, methods and events exposed on all
@@ -225,8 +226,12 @@ class ElementInterface : public ScriptableInterface {
 
   /** Retrieve whether width is explicitly specified. */
   virtual bool WidthIsSpecified() const = 0;
+  /** Clear the specified width value and use the default. */
+  virtual void ResetWidthToDefault() = 0;
   /** Retrieve whether height is explicitly specified. */
   virtual bool HeightIsSpecified() const = 0;
+  /** Clear the specified height value and use the default. */
+  virtual void ResetHeightToDefault() = 0;
 
   /**
    * Handler of the mouse events.
@@ -240,11 +245,25 @@ class ElementInterface : public ScriptableInterface {
    */
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element) = 0;
+
   /**
-   * Check if the position of mouse event is in the element.
-   * Should consider masks.
+   * Handler of the drag and drop events.
+   * @param event the darg and drop event.
+   * @param direct if @c true, this event is sent to the element directly, so
+   *     it should not dispatch it to its children.
+   * @param[out] fired_event the element who processed the event, or
+   *     @c NULL if no one.
+   * @return @c true if the event is accepted by some element.
    */
-  virtual bool IsMouseEventIn(MouseEvent *event) = 0;
+  virtual bool OnDragEvent(DragEvent *event, bool direct,
+                           ElementInterface **fired_element) = 0;
+
+  /**
+   * Check if the position of a position event (mouse or drag) is in the
+   * element.
+   */
+  virtual bool IsPointIn(double x, double y) = 0;
+
   /**
    * Handler of the keyboard events.
    * @param event the keyboard event.
@@ -252,6 +271,7 @@ class ElementInterface : public ScriptableInterface {
    *     @c true otherwise.
    */
   virtual bool OnKeyEvent(KeyboardEvent *event) = 0;
+
   /**
    * Handler for other events.
    * @param event the keyboard event.

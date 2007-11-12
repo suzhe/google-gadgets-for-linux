@@ -47,8 +47,8 @@ class DivElement : public BasicElement {
    * Gets and sets the background color or image of the element. The image is
    * repeated if necessary, not stretched.
    */
-  const char *GetBackground() const;
-  void SetBackground(const char *background);
+  Variant GetBackground() const;
+  void SetBackground(const Variant &background);
 
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);

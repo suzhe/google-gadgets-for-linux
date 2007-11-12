@@ -32,9 +32,12 @@ class ImgElement : public BasicElement {
   virtual ~ImgElement();
 
  public:
-  /** Gets and sets the file name of image to display. */
-  const char *GetSrc() const;
-  void SetSrc(const char *src);
+  /**
+   * Gets and sets the source of image to display.
+   * @see ViewInterface::LoadImage()
+   */
+  Variant GetSrc() const;
+  void SetSrc(const Variant &src);
 
   /** Gets the original width of the image being displayed. */
   size_t GetSrcWidth() const;

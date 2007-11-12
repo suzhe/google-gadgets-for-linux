@@ -40,6 +40,7 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
 
   virtual bool OnMouseEvent(ggadget::MouseEvent *event) { return true; }
   virtual bool OnKeyEvent(ggadget::KeyboardEvent *event) { return true; }
+  virtual bool OnDragEvent(ggadget::DragEvent *event) { return true; }
   virtual bool OnOtherEvent(ggadget::Event *event) { return true; }
 
   virtual bool SetWidth(int width) { return true; };
@@ -85,11 +86,12 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual int SetInterval(ggadget::Slot0<void> *slot,
                           unsigned int duration) { return 0; }
   virtual void ClearInterval(int token) { }
-  virtual ggadget::Image *LoadImage(const char *name,
+  virtual ggadget::Image *LoadImage(const ggadget::Variant &src,
                                     bool is_mask) { return NULL; }
   virtual ggadget::Image *LoadImageFromGlobal(const char *name,
                                               bool is_mask) { return NULL; }
-  virtual ggadget::Texture *LoadTexture(const char *name) { return NULL; }
+  virtual ggadget::Texture *LoadTexture(const ggadget::Variant &src)
+      { return NULL; }
   virtual int GetDebugMode() const { return 2; }
   virtual void SetFocus(ggadget::ElementInterface *element) { }
   virtual void OnOptionChanged(const char *name) { }

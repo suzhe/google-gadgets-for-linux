@@ -159,10 +159,15 @@ std::string Variant::ToString() const {
       }
       return "UTF16STRING:(nil)"; 
     case Variant::TYPE_SCRIPTABLE:
-      sprintf(buffer, "SCRIPTABLE:%p", v_.scriptable_value_);
+      sprintf(buffer, "SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
+              v_.scriptable_value_ ?
+                  v_.scriptable_value_->GetClassId() : 0);
       return std::string(buffer);
     case Variant::TYPE_CONST_SCRIPTABLE:
-      sprintf(buffer, "CONST_SCRIPTABLE:%p", v_.const_scriptable_value_);
+      sprintf(buffer, "CONST_SCRIPTABLE:%p(CLASS_ID=%jx):",
+              v_.const_scriptable_value_,
+              v_.const_scriptable_value_ ?
+                  v_.const_scriptable_value_->GetClassId() : 0);
       return std::string(buffer);
     case Variant::TYPE_SLOT:
       sprintf(buffer, "SLOT:%p", v_.slot_value_);

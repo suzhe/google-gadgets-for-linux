@@ -25,6 +25,7 @@
 #include "math_utils.h"
 #include "gadget_consts.h"
 #include "slot.h"
+#include "scriptable_binary_data.h"
 
 namespace ggadget {
 
@@ -51,37 +52,38 @@ static const char *kOrientationNames[] = {
 
 class ScrollBarElement::Impl {
  public:
-  Impl(ScrollBarElement *owner) : owner_(owner),
-           left_state_(STATE_NORMAL), right_state_(STATE_NORMAL), 
-           thumb_state_(STATE_NORMAL),
-           // The values below are the default ones in Windows.
-           min_(0), max_(100), value_(0), pagestep_(10), linestep_(1),
-           accum_wheel_delta_(0), drag_delta_(0.), 
-           // Windows default to horizontal for orientation, 
-           // but puzzlingly use vertical images as default.
-           orientation_(ORIENTATION_VERTICAL) {
-    left_[STATE_NORMAL] = 
+  Impl(ScrollBarElement *owner)
+      : owner_(owner),
+        left_state_(STATE_NORMAL), right_state_(STATE_NORMAL),
+        thumb_state_(STATE_NORMAL),
+        // The values below are the default ones in Windows.
+        min_(0), max_(100), value_(0), pagestep_(10), linestep_(1),
+        accum_wheel_delta_(0), drag_delta_(0.),
+        // Windows default to horizontal for orientation,
+        // but puzzlingly use vertical images as default.
+        orientation_(ORIENTATION_VERTICAL) {
+    left_[STATE_NORMAL] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeft, false);
-    left_[STATE_DOWN] = 
+    left_[STATE_DOWN] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeftDown, false);
-    left_[STATE_OVER] = 
+    left_[STATE_OVER] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeftOver, false);
 
-    right_[STATE_NORMAL] = 
+    right_[STATE_NORMAL] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultRight, false);
-    right_[STATE_DOWN] = 
+    right_[STATE_DOWN] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightDown, false);
-    right_[STATE_OVER] = 
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightOver, false);  
+    right_[STATE_OVER] =
+      owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightOver, false);
 
-    thumb_[STATE_NORMAL] = 
+    thumb_[STATE_NORMAL] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumb, false);
-    thumb_[STATE_DOWN] = 
+    thumb_[STATE_DOWN] =
       owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbDown, false);
-    thumb_[STATE_OVER] = 
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbOver, false);  
+    thumb_[STATE_OVER] =
+      owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbOver, false);
 
-    background_ = owner->GetView()->LoadImageFromGlobal(kScrollDefaultBackground, 
+    background_ = owner->GetView()->LoadImageFromGlobal(kScrollDefaultBackground,
                                                         false);
   }
   ~Impl() {
@@ -102,9 +104,9 @@ class ScrollBarElement::Impl {
 
   ScrollBarElement *owner_;
   DisplayState left_state_, right_state_, thumb_state_;
-  std::string left_src_[STATE_COUNT], right_src_[STATE_COUNT], 
+  std::string left_src_[STATE_COUNT], right_src_[STATE_COUNT],
               thumb_src_[STATE_COUNT], background_src_;
-  Image *left_[STATE_COUNT], *right_[STATE_COUNT], *thumb_[STATE_COUNT], 
+  Image *left_[STATE_COUNT], *right_[STATE_COUNT], *thumb_[STATE_COUNT],
         *background_;
   int min_, max_, value_, pagestep_, linestep_;
   int accum_wheel_delta_;
@@ -118,11 +120,11 @@ class ScrollBarElement::Impl {
     thumb_state_ = STATE_NORMAL;
   }
 
-  void GetButtonLocation(bool downleft, 
+  void GetButtonLocation(bool downleft,
                          double *x, double *y, double *w, double *h) {
     Image *img = downleft ? left_[left_state_] : right_[right_state_];
     double imgw =  img ? img->GetWidth() : 0;
-    double imgh =  img ? img->GetHeight() : 0;    
+    double imgh =  img ? img->GetHeight() : 0;
     if (orientation_ == ORIENTATION_HORIZONTAL) {
       *x = downleft ? 0 : owner_->GetPixelWidth() - imgw;
       *y = (owner_->GetPixelHeight() - imgh) / 2.;
@@ -134,9 +136,9 @@ class ScrollBarElement::Impl {
     *h = imgh;
   }
 
-  void GetThumbLocation(double leftx, double lefty, 
-                        double leftwidth, double leftheight, 
-                        double rightx, double righty, 
+  void GetThumbLocation(double leftx, double lefty,
+                        double leftwidth, double leftheight,
+                        double rightx, double righty,
                         double *x, double *y, double *w, double *h) {
     Image *img = thumb_[thumb_state_];
     double imgw =  img ? img->GetWidth() : 0;
@@ -144,28 +146,28 @@ class ScrollBarElement::Impl {
 
     double position = static_cast<double>(value_ - min_) / (max_ - min_);
     if (max_ == min_) { // prevent overflow
-      position = 0;      
+      position = 0;
     }
     if (orientation_ == ORIENTATION_HORIZONTAL) {
       leftx += leftwidth;
-      *x = leftx + (rightx - leftx - imgw) * position; 
+      *x = leftx + (rightx - leftx - imgw) * position;
       *y = (owner_->GetPixelHeight() - imgh) / 2.;
-    } else {      
+    } else {
       *x = (owner_->GetPixelWidth() - imgw) / 2.;
-      lefty += leftheight;      
+      lefty += leftheight;
       *y = lefty + (righty - lefty - imgh) * position;
     }
     *w = imgw;
     *h = imgh;
   }
 
-  /** 
+  /**
    * Utility function for getting the int value from a position on the
    * scrollbar. It does not check to make sure that the value is within range.
    */
   int GetValueFromLocation(double x, double y) {
-    // cache these values? 
-    double lx, ly, lw, lh;   
+    // cache these values?
+    double lx, ly, lw, lh;
     GetButtonLocation(true, &lx, &ly, &lw, &lh);
     double rx, ry, unused;
     GetButtonLocation(false, &rx, &ry, &unused, &unused);
@@ -174,7 +176,7 @@ class ScrollBarElement::Impl {
     int delta = max_ - min_;
     double position, denominator;
     if (orientation_ == ORIENTATION_HORIZONTAL) {
-      double imgw =  img ? img->GetWidth() : 0;      
+      double imgw =  img ? img->GetWidth() : 0;
       lx += lw;
       denominator = rx - imgw - lx;
       position = delta * (x - lx - drag_delta_) / denominator;
@@ -199,7 +201,7 @@ class ScrollBarElement::Impl {
     } else if (value < min_) {
       value = min_;
     }
-        
+
     if (value != value_) {
       value_ = value;
       DLOG("scroll value: %d", value_);
@@ -213,16 +215,16 @@ class ScrollBarElement::Impl {
   void Scroll(bool downleft, bool line) {
     int delta = line ? linestep_ : pagestep_;
     int v = value_ + (downleft ? -delta : delta);
-    SetValue(v);    
+    SetValue(v);
   }
 
   /**
    * Returns the scrollbar component that is under the (x, y) position.
    * For buttons, also return the top left coordinate of that component.
    */
-  ScrollBarComponent GetComponentFromPosition(double x, double y, 
+  ScrollBarComponent GetComponentFromPosition(double x, double y,
                                               double *compx, double *compy) {
-    double lx, ly, lw, lh;   
+    double lx, ly, lw, lh;
     GetButtonLocation(true, &lx, &ly, &lw, &lh);
     double rx, ry, rw, rh;
     GetButtonLocation(false, &rx, &ry, &rw, &rh);
@@ -234,7 +236,7 @@ class ScrollBarElement::Impl {
       *compx = tx;
       *compy = ty;
       return COMPONENT_THUMB_BUTTON;
-    }  
+    }
 
     if (IsPointInElement(x - rx, y - ry, rw, rh)) {
       *compx = rx;
@@ -252,7 +254,7 @@ class ScrollBarElement::Impl {
       return COMPONENT_DOWNLEFT_BAR;
     }
 
-    return COMPONENT_UPRIGHT_BAR;    
+    return COMPONENT_UPRIGHT_BAR;
   }
 };
 
@@ -264,54 +266,54 @@ ScrollBarElement::ScrollBarElement(ElementInterface *parent,
   RegisterProperty("background",
                    NewSlot(this, &ScrollBarElement::GetBackground),
                    NewSlot(this, &ScrollBarElement::SetBackground));
-  RegisterProperty("leftDownImage", 
-                   NewSlot(this, &ScrollBarElement::GetLeftDownImage), 
+  RegisterProperty("leftDownImage",
+                   NewSlot(this, &ScrollBarElement::GetLeftDownImage),
                    NewSlot(this, &ScrollBarElement::SetLeftDownImage));
-  RegisterProperty("leftImage", 
-                   NewSlot(this, &ScrollBarElement::GetLeftImage), 
+  RegisterProperty("leftImage",
+                   NewSlot(this, &ScrollBarElement::GetLeftImage),
                    NewSlot(this, &ScrollBarElement::SetLeftImage));
-  RegisterProperty("leftOverImage", 
+  RegisterProperty("leftOverImage",
                    NewSlot(this, &ScrollBarElement::GetLeftOverImage),
                    NewSlot(this, &ScrollBarElement::SetLeftOverImage));
   RegisterProperty("lineStep",
                    NewSlot(this, &ScrollBarElement::GetLineStep),
                    NewSlot(this, &ScrollBarElement::SetLineStep));
-  RegisterProperty("max", 
-                   NewSlot(this, &ScrollBarElement::GetMax), 
+  RegisterProperty("max",
+                   NewSlot(this, &ScrollBarElement::GetMax),
                    NewSlot(this, &ScrollBarElement::SetMax));
-  RegisterProperty("min", 
+  RegisterProperty("min",
                    NewSlot(this, &ScrollBarElement::GetMin),
                    NewSlot(this, &ScrollBarElement::SetMin));
-  RegisterStringEnumProperty("orientation", 
+  RegisterStringEnumProperty("orientation",
                    NewSlot(this, &ScrollBarElement::GetOrientation),
-                   NewSlot(this, &ScrollBarElement::SetOrientation), 
+                   NewSlot(this, &ScrollBarElement::SetOrientation),
                    kOrientationNames, arraysize(kOrientationNames));
   RegisterProperty("pageStep",
                    NewSlot(this, &ScrollBarElement::GetPageStep),
                    NewSlot(this, &ScrollBarElement::SetPageStep));
   RegisterProperty("rightDownImage",
-                   NewSlot(this, &ScrollBarElement::GetRightDownImage), 
+                   NewSlot(this, &ScrollBarElement::GetRightDownImage),
                    NewSlot(this, &ScrollBarElement::SetRightDownImage));
   RegisterProperty("rightImage",
-                   NewSlot(this, &ScrollBarElement::GetRightImage), 
+                   NewSlot(this, &ScrollBarElement::GetRightImage),
                    NewSlot(this, &ScrollBarElement::SetRightImage));
-  RegisterProperty("rightOverImage", 
+  RegisterProperty("rightOverImage",
                    NewSlot(this, &ScrollBarElement::GetRightOverImage),
                    NewSlot(this, &ScrollBarElement::SetRightOverImage));
-  RegisterProperty("thumbDownImage", 
-                   NewSlot(this, &ScrollBarElement::GetThumbDownImage), 
+  RegisterProperty("thumbDownImage",
+                   NewSlot(this, &ScrollBarElement::GetThumbDownImage),
                    NewSlot(this, &ScrollBarElement::SetThumbDownImage));
-  RegisterProperty("thumbImage", 
-                   NewSlot(this, &ScrollBarElement::GetThumbImage), 
+  RegisterProperty("thumbImage",
+                   NewSlot(this, &ScrollBarElement::GetThumbImage),
                    NewSlot(this, &ScrollBarElement::SetThumbImage));
-  RegisterProperty("thumbOverImage", 
+  RegisterProperty("thumbOverImage",
                    NewSlot(this, &ScrollBarElement::GetThumbOverImage),
-                   NewSlot(this, &ScrollBarElement::SetThumbOverImage));  
-  RegisterProperty("value", 
-                   NewSlot(this, &ScrollBarElement::GetValue), 
+                   NewSlot(this, &ScrollBarElement::SetThumbOverImage));
+  RegisterProperty("value",
+                   NewSlot(this, &ScrollBarElement::GetValue),
                    NewSlot(this, &ScrollBarElement::SetValue));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);  
+  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 
 ScrollBarElement::~ScrollBarElement() {
@@ -325,9 +327,9 @@ void ScrollBarElement::DoDraw(CanvasInterface *canvas,
   double lx, ly, rx, ry, tx, ty, lw, lh, unused;
   impl_->GetButtonLocation(true, &lx, &ly, &lw, &lh);
   impl_->GetButtonLocation(false, &rx, &ry, &unused, &unused);
-  impl_->GetThumbLocation(lx, ly, lw, lh, rx, ry, 
+  impl_->GetThumbLocation(lx, ly, lw, lh, rx, ry,
                           &tx, &ty, &unused, &unused);
-  /*DLOG("DRAW wh %f %f, l %f %f, r %f %f, t %f %f", 
+  /*DLOG("DRAW wh %f %f, l %f %f, r %f %f, t %f %f",
        width, height, lx, ly, rx, ry, tx, ty);*/
 
   // Drawing order: background, left, right, thumb.
@@ -400,193 +402,154 @@ void ScrollBarElement::SetOrientation(ScrollBarElement::Orientation o) {
   }
 }
 
-const char *ScrollBarElement::GetBackground() const {
-  return impl_->background_src_.c_str();
+static bool VariantIsEmpty(const Variant &img) {
+  switch (img.type()) {
+    case Variant::TYPE_VOID:
+      return true;
+    case Variant::TYPE_STRING:
+      return VariantValue<std::string>()(img).empty();
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE:
+      return VariantValue<ScriptableBinaryData *>()(img) == NULL;
+    default:
+      // Any values or types not recognized are treated as empty.
+      return true;
+  }
+  return false;
 }
 
-void ScrollBarElement::SetBackground(const char *img) {
-  if (AssignIfDiffer(img, &impl_->background_src_)) {
-    delete impl_->background_;
-    if (impl_->background_src_.empty()) {
-      impl_->background_ = GetView()->LoadImageFromGlobal(kScrollDefaultBackground, 
-                                                          false);
-    } else {
-      impl_->background_ = GetView()->LoadImage(img, false);
-    }
+static void LoadImage(ViewInterface *view, const Variant &src,
+                      const char *default_image_name,
+                      std::string *src_var, Image **image) {
+  delete *image;
+  src_var->clear();
+  if (VariantIsEmpty(src)) {
+    *image = view->LoadImageFromGlobal(default_image_name, false);
+  } else {
+    *image = view->LoadImage(src, false);
+    if (image)
+      *src_var = (*image)->GetSrc();
+  }
+}
+
+Variant ScrollBarElement::GetBackground() const {
+  return Variant(impl_->background_src_);
+}
+
+void ScrollBarElement::SetBackground(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultBackground,
+            &impl_->background_src_, &impl_->background_);
+  QueueDraw();
+}
+
+Variant ScrollBarElement::GetLeftDownImage() const {
+  return Variant(impl_->left_src_[STATE_DOWN]);
+}
+
+void ScrollBarElement::SetLeftDownImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultLeftDown,
+            &impl_->left_src_[STATE_DOWN], &impl_->left_[STATE_DOWN]);
+  if (impl_->left_state_ == STATE_DOWN) {
     QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetLeftDownImage() const {
-  return impl_->left_src_[STATE_DOWN].c_str();
+Variant ScrollBarElement::GetLeftImage() const {
+  return Variant(impl_->left_src_[STATE_NORMAL]);
 }
 
-void ScrollBarElement::SetLeftDownImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->left_src_[STATE_DOWN])) {
-    delete impl_->left_[STATE_DOWN];
-    if (impl_->left_src_[STATE_DOWN].empty()) {
-      impl_->left_[STATE_DOWN] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultLeftDown, false);
-    } else {    
-      impl_->left_[STATE_DOWN] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->left_state_ == STATE_DOWN) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetLeftImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultLeft,
+            &impl_->left_src_[STATE_NORMAL], &impl_->left_[STATE_NORMAL]);
+  if (impl_->left_state_ == STATE_NORMAL) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetLeftImage() const {
-  return impl_->left_src_[STATE_NORMAL].c_str();
+Variant ScrollBarElement::GetLeftOverImage() const {
+  return Variant(impl_->left_src_[STATE_OVER]);
 }
 
-void ScrollBarElement::SetLeftImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->left_src_[STATE_NORMAL])) {
-    delete impl_->left_[STATE_NORMAL];
-    if (impl_->left_src_[STATE_NORMAL].empty()) {
-      impl_->left_[STATE_NORMAL] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultLeft, false);
-    } else {        
-      impl_->left_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->left_state_ == STATE_NORMAL) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetLeftOverImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultLeftOver,
+            &impl_->left_src_[STATE_OVER], &impl_->left_[STATE_OVER]);
+  if (impl_->left_state_ == STATE_OVER) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetLeftOverImage() const {
-  return impl_->left_src_[STATE_OVER].c_str();
+Variant ScrollBarElement::GetRightDownImage() const {
+  return Variant(impl_->right_src_[STATE_DOWN]);
 }
 
-void ScrollBarElement::SetLeftOverImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->left_src_[STATE_OVER])) {
-    delete impl_->left_[STATE_OVER];
-    if (impl_->left_src_[STATE_OVER].empty()) {
-      impl_->left_[STATE_OVER] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultLeftOver, false);
-    } else {        
-      impl_->left_[STATE_OVER] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->left_state_ == STATE_OVER) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetRightDownImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultRightDown,
+            &impl_->right_src_[STATE_DOWN], &impl_->right_[STATE_DOWN]);
+  if (impl_->right_state_ == STATE_DOWN) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetRightDownImage() const {
-  return impl_->right_src_[STATE_DOWN].c_str();
+Variant ScrollBarElement::GetRightImage() const {
+  return Variant(impl_->right_src_[STATE_NORMAL]);
 }
 
-void ScrollBarElement::SetRightDownImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->right_src_[STATE_DOWN])) {
-    delete impl_->right_[STATE_DOWN];
-    if (impl_->right_src_[STATE_DOWN].empty()) {
-      impl_->right_[STATE_DOWN] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultRightDown, false);
-    } else {        
-      impl_->right_[STATE_DOWN] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->right_state_ == STATE_DOWN) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetRightImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultRight,
+            &impl_->right_src_[STATE_NORMAL], &impl_->right_[STATE_NORMAL]);
+  if (impl_->right_state_ == STATE_NORMAL) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetRightImage() const {
-  return impl_->right_src_[STATE_NORMAL].c_str();
+Variant ScrollBarElement::GetRightOverImage() const {
+  return Variant(impl_->right_src_[STATE_OVER]);
 }
 
-void ScrollBarElement::SetRightImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->right_src_[STATE_NORMAL])) {
-    delete impl_->right_[STATE_NORMAL];
-    if (impl_->right_src_[STATE_NORMAL].empty()) {
-      impl_->right_[STATE_NORMAL] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultRight, false);
-    } else {        
-      impl_->right_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->right_state_ == STATE_NORMAL) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetRightOverImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultRightOver,
+            &impl_->right_src_[STATE_OVER], &impl_->right_[STATE_OVER]);
+  if (impl_->right_state_ == STATE_OVER) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetRightOverImage() const {
-  return impl_->right_src_[STATE_OVER].c_str();
+Variant ScrollBarElement::GetThumbDownImage() const {
+  return Variant(impl_->thumb_src_[STATE_DOWN]);
 }
 
-void ScrollBarElement::SetRightOverImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->right_src_[STATE_OVER])) {
-    delete impl_->right_[STATE_OVER];
-    if (impl_->right_src_[STATE_OVER].empty()) {
-      impl_->right_[STATE_OVER] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultRightOver, false);  
-    } else {        
-      impl_->right_[STATE_OVER] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->right_state_ == STATE_OVER) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetThumbDownImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultThumbDown,
+            &impl_->thumb_src_[STATE_DOWN], &impl_->thumb_[STATE_DOWN]);
+  if (impl_->thumb_state_ == STATE_DOWN) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetThumbDownImage() const {
-  return impl_->thumb_src_[STATE_DOWN].c_str();
+Variant ScrollBarElement::GetThumbImage() const {
+  return Variant(impl_->thumb_src_[STATE_NORMAL]);
 }
 
-void ScrollBarElement::SetThumbDownImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->thumb_src_[STATE_DOWN])) {
-    delete impl_->thumb_[STATE_DOWN];
-    if (impl_->thumb_src_[STATE_DOWN].empty()) {     
-      impl_->thumb_[STATE_DOWN] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultThumbDown, false);
-    } else {        
-      impl_->thumb_[STATE_DOWN] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->thumb_state_ == STATE_DOWN) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetThumbImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultThumb,
+            &impl_->thumb_src_[STATE_NORMAL], &impl_->thumb_[STATE_NORMAL]);
+  if (impl_->thumb_state_ == STATE_NORMAL) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetThumbImage() const {
-  return impl_->thumb_src_[STATE_NORMAL].c_str();
+Variant ScrollBarElement::GetThumbOverImage() const {
+  return Variant(impl_->thumb_src_[STATE_OVER]);
 }
 
-void ScrollBarElement::SetThumbImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->thumb_src_[STATE_NORMAL])) {
-    delete impl_->thumb_[STATE_NORMAL];
-    if (impl_->thumb_src_[STATE_NORMAL].empty()) {     
-      impl_->thumb_[STATE_NORMAL] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultThumb, false);
-    } else {
-      impl_->thumb_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->thumb_state_ == STATE_NORMAL) {
-      QueueDraw();
-    }
+void ScrollBarElement::SetThumbOverImage(const Variant &img) {
+  LoadImage(GetView(), img, kScrollDefaultThumbOver,
+            &impl_->thumb_src_[STATE_OVER], &impl_->thumb_[STATE_OVER]);
+  if (impl_->thumb_state_ == STATE_OVER) {
+    QueueDraw();
   }
 }
 
-const char *ScrollBarElement::GetThumbOverImage() const {
-  return impl_->thumb_src_[STATE_OVER].c_str();
-}
-
-void ScrollBarElement::SetThumbOverImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->thumb_src_[STATE_OVER])) {
-    delete impl_->thumb_[STATE_OVER];
-    if (impl_->thumb_src_[STATE_OVER].empty()) {
-      impl_->thumb_[STATE_OVER] = 
-        GetView()->LoadImageFromGlobal(kScrollDefaultThumbOver, false);  
-    } else {    
-      impl_->thumb_[STATE_OVER] = GetView()->LoadImage(img, false);
-    }
-    if (impl_->thumb_state_ == STATE_OVER) {
-      QueueDraw();
-    }
-  }
-}
 ElementInterface *ScrollBarElement::CreateInstance(ElementInterface *parent,
                                              ViewInterface *view,
                                              const char *name) {
@@ -601,15 +564,15 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
   if (*fired_element && result) {
     ASSERT(*fired_element == this);
     double compx = .0, compy = .0;
-    ScrollBarComponent c = impl_->GetComponentFromPosition(event->GetX(), 
+    ScrollBarComponent c = impl_->GetComponentFromPosition(event->GetX(),
                                                            event->GetY(),
                                                            &compx, &compy);
     // Resolve in opposite order as drawn: thumb, right, left.
     switch (event->GetType()) {
-      case Event::EVENT_MOUSE_DOWN: 
+      case Event::EVENT_MOUSE_DOWN:
         {
           bool downleft = true, line = true;
-          impl_->ClearDisplayStates();       
+          impl_->ClearDisplayStates();
           if (c == COMPONENT_THUMB_BUTTON) {
             impl_->thumb_state_ = STATE_DOWN;
             if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
@@ -623,22 +586,22 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
             impl_->right_state_ = STATE_DOWN;
             downleft = false; line = true;
           } else if (c == COMPONENT_UPRIGHT_BAR) {
-            downleft = line = false;        
+            downleft = line = false;
           } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
             impl_->left_state_ = STATE_DOWN;
             downleft = line = true;
           } else if (c == COMPONENT_DOWNLEFT_BAR) {
-            downleft = true; line = false;        
+            downleft = true; line = false;
           }
           impl_->Scroll(downleft, line);
         }
         break;
-      case Event::EVENT_MOUSE_UP: 
+      case Event::EVENT_MOUSE_UP:
         {
           DisplayState oldthumb = impl_->thumb_state_;
           DisplayState oldleft = impl_->left_state_;
           DisplayState oldright = impl_->right_state_;
-          impl_->ClearDisplayStates();        
+          impl_->ClearDisplayStates();
           if (c == COMPONENT_THUMB_BUTTON) {
             impl_->thumb_state_ = STATE_OVER;
           } else if (c == COMPONENT_UPRIGHT_BUTTON) {
@@ -646,9 +609,9 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
           } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
             impl_->left_state_ = STATE_OVER;
           }
-          bool redraw = (impl_->left_state_ != oldleft || 
-              impl_->right_state_ != oldright || 
-              impl_->thumb_state_ != oldthumb);          
+          bool redraw = (impl_->left_state_ != oldleft ||
+              impl_->right_state_ != oldright ||
+              impl_->thumb_state_ != oldthumb);
           if (redraw) {
             QueueDraw();
           }
@@ -661,7 +624,7 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
           DisplayState oldthumb = impl_->thumb_state_;
           DisplayState oldleft = impl_->left_state_;
           DisplayState oldright = impl_->right_state_;
-          impl_->ClearDisplayStates();      
+          impl_->ClearDisplayStates();
           if (c == COMPONENT_THUMB_BUTTON) {
             impl_->thumb_state_ = STATE_OVER;
           } else if (c == COMPONENT_UPRIGHT_BUTTON) {
@@ -683,19 +646,19 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
             impl_->left_state_ = STATE_DOWN;
           }
 
-          bool redraw = (impl_->left_state_ != oldleft || 
-              impl_->right_state_ != oldright || 
-              impl_->thumb_state_ != oldthumb);  
+          bool redraw = (impl_->left_state_ != oldleft ||
+              impl_->right_state_ != oldright ||
+              impl_->thumb_state_ != oldthumb);
           if (redraw) {
             QueueDraw();
-          }    
+          }
         }
         break;
       case Event::EVENT_MOUSE_WHEEL:
         {
-          impl_->accum_wheel_delta_ += event->GetWheelDelta();        
+          impl_->accum_wheel_delta_ += event->GetWheelDelta();
           bool downleft;
-          int delta = impl_->accum_wheel_delta_;         
+          int delta = impl_->accum_wheel_delta_;
           if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
             impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
             downleft = true;
@@ -705,13 +668,13 @@ bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
           }
           else {
             break; // don't scroll in this case
-          }        
+          }
           impl_->Scroll(downleft, true);
         }
         break;
       default:
         break;
-    }; 
+    };
   }
 
   return result;

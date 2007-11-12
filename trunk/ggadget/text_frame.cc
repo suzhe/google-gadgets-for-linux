@@ -43,7 +43,7 @@ static const char *kTrimmingNames[] = {
 
 TextFrame::TextFrame(BasicElement *owner, ViewInterface *view)
   : owner_(owner), view_(view), font_(NULL),
-    color_texture_(view->LoadTexture(kDefaultColor)), 
+    color_texture_(view->LoadTexture(Variant(kDefaultColor))), 
     align_(CanvasInterface::ALIGN_LEFT), 
     valign_(CanvasInterface::VALIGN_TOP),
     trimming_(CanvasInterface::TRIMMING_NONE), 
@@ -137,7 +137,7 @@ const char *TextFrame::GetColor() const {
 void TextFrame::SetColor(const char *color) {
   if (AssignIfDiffer(color, &color_)) {
     delete color_texture_;
-    color_texture_ = view_->LoadTexture(color);
+    color_texture_ = view_->LoadTexture(Variant(color));
     owner_->QueueDraw();
   }
 }

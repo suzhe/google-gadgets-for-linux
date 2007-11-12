@@ -31,6 +31,7 @@ SET(SRCS
   gadget.cc
   image.cc
   math_utils.cc
+  scriptable_array.cc
   scriptable_event.cc
   scriptable_helper.cc
   scriptable_menu.cc

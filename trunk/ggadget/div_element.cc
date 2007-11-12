@@ -189,22 +189,23 @@ void DivElement::DoDraw(CanvasInterface *canvas,
   if (impl_->scrollbar_) {
     bool c;
     const CanvasInterface *scrollbar = impl_->scrollbar_->Draw(&c);
-    canvas->DrawCanvas(impl_->scrollbar_->GetPixelX(), 
-                       impl_->scrollbar_->GetPixelY(), 
+    canvas->DrawCanvas(impl_->scrollbar_->GetPixelX(),
+                       impl_->scrollbar_->GetPixelY(),
                        scrollbar);
   }
 }
 
-const char *DivElement::GetBackground() const {
-  return impl_->background_.c_str();
+Variant DivElement::GetBackground() const {
+  return Variant(impl_->background_);
 }
 
-void DivElement::SetBackground(const char *background) {
-  if (AssignIfDiffer(background, &impl_->background_)) {
-    delete impl_->background_texture_;
-    impl_->background_texture_ = GetView()->LoadTexture(background);
-    QueueDraw();
-  }
+void DivElement::SetBackground(const Variant &background) {
+  delete impl_->background_texture_;
+  impl_->background_texture_ = GetView()->LoadTexture(background);
+  impl_->background_ = impl_->background_texture_ ?
+                       impl_->background_texture_->GetSrc() : "";
+
+  QueueDraw();
 }
 
 bool DivElement::IsAutoscroll() const {

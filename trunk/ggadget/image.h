@@ -76,6 +76,12 @@ class Image {
   size_t GetWidth();
   size_t GetHeight();
 
+  /**
+   * @return the file name this image is loaded from a file, otherwise
+   *     returns an empty string.
+   */ 
+  const char *GetSrc();
+
  private:
   // Don't allow assignment.
   void operator=(const Image&);

@@ -57,6 +57,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scoped_ptr.h \
 			  script_context_interface.h \
 			  script_runtime_interface.h \
+			  scriptable_array.h \
 			  scriptable_binary_data.h \
 			  scriptable_delegator.h \
 			  scriptable_event.h \
@@ -98,6 +99,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  img_element.cc \
 			  label_element.cc \
 			  math_utils.cc \
+			  scriptable_array.cc \
 			  scriptable_event.cc \
 			  scriptable_helper.cc \
 			  scriptable_menu.cc \
