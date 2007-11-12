@@ -41,8 +41,8 @@ class ScriptableBinaryData : public ScriptableHelper<ScriptableInterface> {
   ScriptableBinaryData(const ScriptableBinaryData &data)
       : data_(data.data_) { }
 
-  const char *data() { return data_.c_str(); }
-  size_t size() { return data_.size(); }
+  const char *data() const { return data_.c_str(); }
+  size_t size() const { return data_.size(); }
 
   ScriptableBinaryData &operator =(const ScriptableBinaryData &data) {
     data_ = data.data_;

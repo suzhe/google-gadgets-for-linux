@@ -67,6 +67,7 @@ class Event {
     EVENT_DRAG_DROP,
     EVENT_DRAG_OUT,
     EVENT_DRAG_OVER,
+    EVENT_DRAG_MOTION, // Only for dispatching in C++ code.
     EVENT_DRAG_RANGE_END,
 
     EVENT_SIZING = 40000,
@@ -94,10 +95,27 @@ class Event {
   Type type_;
 };
 
+class PositionEvent : public Event {
+ public:
+  double GetX() const { return x_; }
+  double GetY() const { return y_; }
+
+  void SetX(double x) { x_ = x; }
+  void SetY(double y) { y_ = y; }
+
+ protected:
+  PositionEvent(Type t, double x, double y)
+      : Event(t, 0), x_(x), y_(y) {
+  }
+
+ private:
+  double x_, y_;
+};
+
 /**
  * Class representing a mouse event.
  */
-class MouseEvent : public Event {
+class MouseEvent : public PositionEvent {
  public:
   enum Button {
     BUTTON_NONE = 0,
@@ -108,21 +126,15 @@ class MouseEvent : public Event {
   };
 
   MouseEvent(Type t, double x, double y, Button button, int wheel_delta)
-      : Event(t, 0), x_(x), y_(y), button_(button), wheel_delta_(wheel_delta) {
+      : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta) {
     ASSERT(IsMouseEvent());
   }
 
   MouseEvent(const MouseEvent &e)
-      : Event(e.GetType(), 0),
-        x_(e.x_), y_(e.y_), button_(e.button_), wheel_delta_(e.wheel_delta_) {
+      : PositionEvent(e.GetType(), e.GetX(), e.GetY()),
+        button_(e.button_), wheel_delta_(e.wheel_delta_) {
     ASSERT(IsMouseEvent());
   }
-
-  double GetX() const { return x_; }
-  double GetY() const { return y_; }
-
-  void SetX(double x) { x_ = x; }
-  void SetY(double y) { y_ = y; }
 
   Button GetButton() const { return button_; }
   void SetButton(Button button) { button_ = button; }
@@ -133,7 +145,6 @@ class MouseEvent : public Event {
   static const int kWheelDelta = 120;
 
  private:
-  double x_, y_;
   Button button_;
   int wheel_delta_;
 };
@@ -257,30 +268,24 @@ class KeyboardEvent : public Event {
 /**
  * Class representing a drag & drop event.
  */
-class DragEvent : public Event {
+class DragEvent : public PositionEvent {
  public:
-  DragEvent(Type t, double x, double y, const char **files)
-      : Event(t, 0), x_(x), y_(y), files_(files) {
+  DragEvent(Type t, double x, double y, const char **drag_files)
+      : PositionEvent(t, x, y), drag_files_(drag_files) {
     ASSERT(IsDragEvent());
   }
 
   DragEvent(const DragEvent &e)
-      : Event(e.GetType(), 0), x_(e.x_), y_(e.y_), files_(e.files_) {
+      : PositionEvent(e.GetType(), e.GetX(), e.GetY()),
+        drag_files_(e.drag_files_) {
     ASSERT(IsDragEvent());
   }
 
-  double GetX() const { return x_; }
-  double GetY() const { return y_; }
-
-  void SetX(double x) { x_ = x; }
-  void SetY(double y) { y_ = y; }
-
-  const char **GetFiles() const { return files_; }
-  void GetFiles(const char **files) { files_ = files; }
+  const char **GetDragFiles() const { return drag_files_; }
+  void SetDragFiles(const char **drag_files) { drag_files_ = drag_files; }
 
  private:
-  double x_, y_;
-  const char **files_;
+  const char **drag_files_;
 };
 
 /**

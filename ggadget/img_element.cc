@@ -59,31 +59,25 @@ void ImgElement::DoDraw(CanvasInterface *canvas,
                                GetPixelWidth(), GetPixelHeight());
 }
 
-const char *ImgElement::GetSrc() const {
-  return impl_->src_.c_str();
+Variant ImgElement::GetSrc() const {
+  return Variant(impl_->src_);
 }
 
-void ImgElement::SetSrc(const char *src) {
-  if (AssignIfDiffer(src, &impl_->src_)) {
-    delete impl_->image_;
-    impl_->image_ = GetView()->LoadImage(src, false);
-    if (impl_->image_) {
-      const CanvasInterface *canvas = impl_->image_->GetCanvas();
-      if (canvas) {
-        impl_->src_width_ = canvas->GetWidth();
-        impl_->src_height_ = canvas->GetHeight();
-      } else {
-        impl_->src_width_ = 0;
-        impl_->src_height_ = 0;
-      }
-    } else {
-      impl_->src_width_ = 0;
-      impl_->src_height_ = 0;
-    }
-
-    OnDefaultSizeChange();
-    QueueDraw();
+void ImgElement::SetSrc(const Variant &src) {
+  delete impl_->image_;
+  impl_->image_ = GetView()->LoadImage(src, false);
+  if (impl_->image_) {
+    impl_->src_ = impl_->image_->GetSrc();
+    impl_->src_width_ = impl_->image_->GetWidth();
+    impl_->src_height_ = impl_->image_->GetHeight();
+  } else {
+    impl_->src_.clear();
+    impl_->src_width_ = 0;
+    impl_->src_height_ = 0;
   }
+
+  OnDefaultSizeChange();
+  QueueDraw();
 }
 
 size_t ImgElement::GetSrcWidth() const {

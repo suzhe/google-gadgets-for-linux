@@ -29,6 +29,7 @@ class HostInterface;
 class Event;
 class KeyboardEvent;
 class MouseEvent;
+class DragEvent;
 class ScriptableEvent;
 class Elements;
 class GraphicsInterface;
@@ -86,6 +87,13 @@ class ViewInterface : public ScriptableInterface {
    *     @c true otherwise.
    */
   virtual bool OnKeyEvent(KeyboardEvent *event) = 0;
+
+  /**
+   * Handler of the drag and drop events.
+   * @param event the drag and drop event.
+   * @return @c true if the dragged contents are accepted by an element.
+   */
+  virtual bool OnDragEvent(DragEvent *event) = 0;
 
   /**
    * Handler for other events.
@@ -288,11 +296,15 @@ class ViewInterface : public ScriptableInterface {
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.
-   * @param name the name within the gadget base path.
+   * @param src the image source, can be of the following types:
+   *     - @c Variant::TYPE_STRING: the name within the gadget base path;
+   *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and
+   *       the scriptable object's type is ScriptableBinaryData: the binary
+   *       data of the image.
    * @param is_mask if the image is used as a mask.
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
-  virtual Image *LoadImage(const char *name, bool is_mask) = 0;
+  virtual Image *LoadImage(const Variant &src, bool is_mask) = 0;
 
   /**
    * Load an image from the global file manager.
@@ -304,12 +316,16 @@ class ViewInterface : public ScriptableInterface {
 
   /**
    * Load a texture from image file or create a colored texture.
-   * @param name the name of an image file within the gadget base path, or a
-   *     color description with HTML-style color ("#rrggbb"), or HTML-style
-   *     color with alpha ("#rrggbbaa").
+   * @param src the source of the texture image, can be of the following types:
+   *     - @c Variant::TYPE_STRING: the name within the gadget base path, or a 
+   *       color description with HTML-style color ("#rrggbb"), or HTML-style
+   *       color with alpha ("#aarrggbb").
+   *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and
+   *       the scriptable object's type is ScriptableBinaryData: the binary
+   *       data of the image.
    * @return the created texture ifsucceeds, or @c NULL.
    */
-  virtual Texture *LoadTexture(const char *name) = 0;
+  virtual Texture *LoadTexture(const Variant &src) = 0;
 
   /** 
    * Open the given URL in the user's default web brower.

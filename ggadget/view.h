@@ -47,6 +47,7 @@ class View : public ScriptableHelper<ViewInterface> {
 
   virtual bool OnMouseEvent(MouseEvent *event);
   virtual bool OnKeyEvent(KeyboardEvent *event);
+  virtual bool OnDragEvent(DragEvent *event);
   virtual bool OnOtherEvent(Event *event);
 
   virtual void OnElementAdd(ElementInterface *element);
@@ -93,10 +94,10 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual int GetDebugMode() const;
   virtual void OnOptionChanged(const char *name);
 
-  virtual Image *LoadImage(const char *name, bool is_mask);
+  virtual Image *LoadImage(const Variant &src, bool is_mask);
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);
-  virtual Texture *LoadTexture(const char *name);
-  
+  virtual Texture *LoadTexture(const Variant &src);
+
   virtual bool OpenURL(const char *url) const; 
   
  private:

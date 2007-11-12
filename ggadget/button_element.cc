@@ -108,58 +108,53 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
   impl_->text_.Draw(canvas, 0, 0, width, height);
 }
 
-const char *ButtonElement::GetImage() const {
-  return impl_->image_src_.c_str();
+static void LoadImage(ViewInterface *view, const Variant &src,
+                      std::string *src_var, Image **image) {
+  delete *image;
+  *image = view->LoadImage(src, false);
+  *src_var = *image ? (*image)->GetSrc() : "";
 }
 
-void ButtonElement::SetImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->image_src_)) {
-    delete impl_->image_;
-    impl_->image_ = GetView()->LoadImage(img, false);
-    OnDefaultSizeChange();
+Variant ButtonElement::GetImage() const {
+  return Variant(impl_->image_src_);
+}
+
+void ButtonElement::SetImage(const Variant &img) {
+  LoadImage(GetView(), img, &impl_->image_src_, &impl_->image_);
+  OnDefaultSizeChange();
+  QueueDraw();
+}
+
+Variant ButtonElement::GetDisabledImage() const {
+  return Variant(impl_->disabledimage_src_);
+}
+
+void ButtonElement::SetDisabledImage(const Variant &img) {
+  LoadImage(GetView(), img, &impl_->disabledimage_src_, &impl_->disabledimage_);
+  if (!IsEnabled()) {
     QueueDraw();
   }
 }
 
-const char *ButtonElement::GetDisabledImage() const {
-  return impl_->disabledimage_src_.c_str();
+Variant ButtonElement::GetOverImage() const {
+  return Variant(impl_->overimage_src_);
 }
 
-void ButtonElement::SetDisabledImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->disabledimage_src_)) {
-    delete impl_->disabledimage_;
-    impl_->disabledimage_ = GetView()->LoadImage(img, false);
-    if (!IsEnabled()) {
-      QueueDraw();
-    }
+void ButtonElement::SetOverImage(const Variant &img) {
+  LoadImage(GetView(), img, &impl_->overimage_src_, &impl_->overimage_);
+  if (impl_->mouseover_) {
+    QueueDraw();
   }
 }
 
-const char *ButtonElement::GetOverImage() const {
-  return impl_->overimage_src_.c_str();
+Variant ButtonElement::GetDownImage() const {
+  return Variant(impl_->downimage_src_);
 }
 
-void ButtonElement::SetOverImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->overimage_src_)) {
-    delete impl_->overimage_;
-    impl_->overimage_ = GetView()->LoadImage(img, false);
-    if (impl_->mouseover_) {
-      QueueDraw();
-    }
-  }
-}
-
-const char *ButtonElement::GetDownImage() const {
-  return impl_->downimage_src_.c_str();
-}
-
-void ButtonElement::SetDownImage(const char *img) {
-  if (AssignIfDiffer(img, &impl_->downimage_src_)) {
-    delete impl_->downimage_;
-    impl_->downimage_ = GetView()->LoadImage(img, false);
-    if (impl_->mousedown_) {
-      QueueDraw();
-    }
+void ButtonElement::SetDownImage(const Variant &img) {
+  LoadImage(GetView(), img, &impl_->downimage_src_, &impl_->downimage_);
+  if (impl_->mousedown_) {
+    QueueDraw();
   }
 }
 
@@ -203,10 +198,9 @@ bool ButtonElement::OnMouseEvent(MouseEvent *event, bool direct,
 }
 
 void ButtonElement::GetDefaultSize(double *width, double *height) const {
-  const CanvasInterface *canvas = impl_->image_->GetCanvas();
-  if (canvas) {
-    *width = canvas->GetWidth();
-    *height = canvas->GetHeight();
+  if (impl_->image_) {
+    *width = impl_->image_->GetWidth();
+    *height = impl_->image_->GetHeight();
   } else {
     *width = 0;
     *height = 0;

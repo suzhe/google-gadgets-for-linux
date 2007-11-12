@@ -102,8 +102,11 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual bool HeightIsRelative() const;
   virtual bool PinXIsRelative() const;
   virtual bool PinYIsRelative() const;
+
   virtual bool WidthIsSpecified() const;
+  virtual void ResetWidthToDefault();
   virtual bool HeightIsSpecified() const;
+  virtual void ResetHeightToDefault();
 
   virtual const CanvasInterface *Draw(bool *changed);
 
@@ -112,7 +115,9 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
-  virtual bool IsMouseEventIn(MouseEvent *event);
+  virtual bool OnDragEvent(DragEvent *event, bool direct,
+                           ElementInterface **fired_element);
+  virtual bool IsPointIn(double x, double y);
   virtual bool OnKeyEvent(KeyboardEvent *event);
   virtual bool OnOtherEvent(Event *event);
 

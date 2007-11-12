@@ -67,6 +67,7 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
 
   ScriptableEvent(Event *event, ScriptableInterface *src_element,
                   int cookie, int value);
+  virtual ~ScriptableEvent();
 
   const char *GetName() const;
 

@@ -13,6 +13,7 @@ using ggadget::CairoCanvas;
 using ggadget::Event;
 using ggadget::MouseEvent;
 using ggadget::KeyboardEvent;
+using ggadget::DragEvent;
 using ggadget::Color;
 using ggadget::ViewInterface;
 
@@ -372,6 +373,110 @@ GType GadgetViewWidget_get_type() {
   return gw_type;
 }
 
+static char *kUriListTarget = "text/uri-list";
+
+static void DisableDrag(GtkWidget *widget, GdkDragContext *context,
+                        guint time) {
+  gdk_drag_status(context, static_cast<GdkDragAction>(0), time);
+  gtk_drag_unhighlight(widget);
+}
+
+static gboolean OnDragEvent(GtkWidget *widget, GdkDragContext *context,
+                            gint x, gint y, guint time,
+                            const char *name, Event::Type event_type) {
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
+  gvw->current_drag_event = DragEvent(event_type, x, y, NULL);
+
+  GdkAtom target = gtk_drag_dest_find_target(
+      widget, context, gtk_drag_dest_get_target_list(widget));
+  if (target != GDK_NONE) {
+    gtk_drag_get_data(widget, context, target, time);
+    return TRUE;
+  } else {
+    DLOG("Drag target or action not acceptable");
+    DisableDrag(widget, context, time);
+    return FALSE;
+  }
+}
+
+static gboolean OnDragMotion(GtkWidget *widget, GdkDragContext *context,
+                             gint x, gint y, guint time, gpointer user_data) {
+  return OnDragEvent(widget, context, x, y, time, "DragMotion",
+                     Event::EVENT_DRAG_MOTION);
+}
+
+static gboolean OnDragDrop(GtkWidget *widget, GdkDragContext *context,
+                           gint x, gint y, guint time, gpointer user_data) {
+  gboolean result = OnDragEvent(widget, context, x, y, time, "DragDrop",
+                                Event::EVENT_DRAG_DROP);
+  gtk_drag_finish(context, result, FALSE, time);
+  return result;
+}
+
+static void OnDragLeave(GtkWidget *widget, GdkDragContext *context,
+                        guint time, gpointer user_data) {
+  OnDragEvent(widget, context, 0, 0, time, "DragLeave", Event::EVENT_DRAG_OUT);
+}
+
+static void OnDragDataReceived(GtkWidget *widget, GdkDragContext *context,
+                               gint x, gint y, GtkSelectionData *data,
+                               guint info, guint time, gpointer user_data) {
+  gchar **uris = gtk_selection_data_get_uris(data);
+  if (!uris) {
+    DLOG("No URI in drag data");
+    DisableDrag(widget, context, time);
+    return;
+  }
+
+  guint count = g_strv_length(uris);
+  const char **drag_files = new const char *[count + 1];
+
+  guint accepted_count = 0;
+  for (guint i = 0; i < count; i++) {
+    gchar *hostname;
+    gchar *filename = g_filename_from_uri(uris[i], &hostname, NULL);
+    if (filename) {
+      if (!hostname)
+        drag_files[accepted_count++] = filename;
+      else
+        g_free(filename);
+    }
+    g_free(hostname);
+  }
+
+  if (accepted_count == 0) {
+    DLOG("No acceptable URI in drag data");
+    DisableDrag(widget, context, time);
+    return;
+  }
+
+  drag_files[accepted_count] = NULL;
+
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
+  gvw->current_drag_event.SetDragFiles(drag_files);
+  bool result = gvw->view->OnDragEvent(&gvw->current_drag_event);
+  if (result) {
+    Event::Type type = gvw->current_drag_event.GetType();
+    if (type == Event::EVENT_DRAG_DROP || type == Event::EVENT_DRAG_OUT) {
+      gtk_drag_unhighlight(widget);
+    } else {
+      gdk_drag_status(context, GDK_ACTION_COPY, time);
+      gtk_drag_highlight(widget);
+    }
+  } else {
+    DLOG("Drag event is not accepted by the gadget");
+    DisableDrag(widget, context, time);
+  }
+
+  gvw->current_drag_event.SetDragFiles(NULL);
+  for (guint i = 0; i < count; i++) {
+    g_free(const_cast<gchar *>(drag_files[i]));
+  }
+  delete [] drag_files;
+
+  g_strfreev(uris);
+}
+
 GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
                                  NULL));
@@ -380,6 +485,20 @@ GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
   gvw->view = host->GetView();
   ASSERT(gvw->view);
   gvw->zoom = zoom;
+
+  static const GtkTargetEntry kDragTargets[] = {
+    { kUriListTarget, 0, 0 },
+  };
+
+  gtk_drag_dest_set(widget, static_cast<GtkDestDefaults>(0),
+                    kDragTargets, arraysize(kDragTargets), GDK_ACTION_COPY);
+  g_signal_connect(widget, "drag-motion", G_CALLBACK(OnDragMotion), NULL);
+  g_signal_connect(widget, "drag-leave", G_CALLBACK(OnDragLeave), NULL);
+  g_signal_connect(widget, "drag-drop", G_CALLBACK(OnDragDrop), NULL);
+  g_signal_connect(widget, "drag_data_received",
+                   G_CALLBACK(OnDragDataReceived), NULL);
+  // GTK_DEST_DEFAULT_ALL, 
+  // GTK_DEST_DEFAULT_MOTION GTK_DEST_DEFAULT_HIGHLIGHT GTK_DEST_DEFAULT_DROP
 
   return widget;
 }

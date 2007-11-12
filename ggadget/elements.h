@@ -33,6 +33,7 @@ class ElementInterface;
 class ElementFactoryInterface;
 class ViewInterface;
 class MouseEvent;
+class DragEvent;
 
 /**
  * Elements is used for storing and managing a set of objects which
@@ -174,6 +175,15 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    *     @c true otherwise.
    */
   bool OnMouseEvent(MouseEvent *event, ElementInterface **fired_element);
+
+  /**
+   * Handler of the drag and drop events.
+   * @param event the darg and drop event.
+   * @param[out] fired_event the element who processed the event, or
+   *     @c NULL if no one.
+   * @return @c true if the event is accepted by some element.
+   */
+  bool OnDragEvent(DragEvent *event, ElementInterface **fired_element);
 
   /**
    * Sets if the drawing contents can be scrolled within the parent.

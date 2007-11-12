@@ -27,7 +27,7 @@ class Texture::Impl {
   Impl(const GraphicsInterface *graphics,
        FileManagerInterface *file_manager,
        const char *name)
-      : image_(NULL), color_(.0, .0, .0), opacity_(1.0) {
+      : image_(NULL), color_(.0, .0, .0), opacity_(1.0), name_(name) {
     ASSERT(name);
     size_t name_len = strlen(name);
     if (name[0] == '#' && (name_len == 7 || name_len == 9)) {
@@ -48,10 +48,18 @@ class Texture::Impl {
     }
   }
 
+  Impl(const GraphicsInterface *graphics,
+       const char *data,
+       size_t data_size)
+      : image_(new Image(graphics, data, data_size, false)),
+        color_(.0, .0, .0), opacity_(1.0) {
+  }
+
   Impl(const Impl &another)
       : image_(new Image(*(another.image_))),
         color_(another.color_),
-        opacity_(another.opacity_) {
+        opacity_(another.opacity_),
+        name_(another.name_) {
   }
 
   ~Impl() {
@@ -81,12 +89,19 @@ class Texture::Impl {
   Image *image_;
   Color color_;
   double opacity_;
+  std::string name_;
 };
 
 Texture::Texture(const GraphicsInterface *graphics,
                  FileManagerInterface *file_manager,
                  const char *name)
     : impl_(new Impl(graphics, file_manager, name)) {
+}
+
+Texture::Texture(const GraphicsInterface *graphics,
+                 const char *data,
+                 size_t data_size)
+    : impl_(new Impl(graphics, data, data_size)) {
 }
 
 Texture::Texture(const Texture &another)
@@ -125,6 +140,10 @@ void Texture::DrawText(CanvasInterface *canvas, double x, double y,
     if (impl_->opacity_ != 1.0)
       canvas->PopState();
   }
+}
+
+const char *Texture::GetSrc() {
+  return impl_->name_.c_str();
 }
 
 } // namespace ggadget

@@ -36,36 +36,36 @@ class CheckBoxElement : public BasicElement {
 
  public:
   /** Gets and sets the file name of default checkbox image. */
-  const char *GetImage() const;
-  void SetImage(const char *img);
+  Variant GetImage() const;
+  void SetImage(const Variant &img);
 
   /** Gets and sets the file name of disabled checkbox image. */
-  const char *GetDisabledImage() const;
-  void SetDisabledImage(const char *img);
+  Variant GetDisabledImage() const;
+  void SetDisabledImage(const Variant &img);
 
   /** Gets and sets the file name of mouse over checkbox image. */
-  const char *GetOverImage() const;
-  void SetOverImage(const char *img);
+  Variant GetOverImage() const;
+  void SetOverImage(const Variant &img);
 
   /** Gets and sets the file name of mouse down checkbox image. */
-  const char *GetDownImage() const;
-  void SetDownImage(const char *img);
+  Variant GetDownImage() const;
+  void SetDownImage(const Variant &img);
 
   /** Gets and sets the file name of default checkbox image. */
-  const char *GetCheckedImage() const;
-  void SetCheckedImage(const char *img);
+  Variant GetCheckedImage() const;
+  void SetCheckedImage(const Variant &img);
 
   /** Gets and sets the file name of disabled checked checkbox image. */
-  const char *GetCheckedDisabledImage() const;
-  void SetCheckedDisabledImage(const char *img);
+  Variant GetCheckedDisabledImage() const;
+  void SetCheckedDisabledImage(const Variant &img);
 
   /** Gets and sets the file name of mouse over checked checkbox image. */
-  const char *GetCheckedOverImage() const;
-  void SetCheckedOverImage(const char *img);
+  Variant GetCheckedOverImage() const;
+  void SetCheckedOverImage(const Variant &img);
 
   /** Gets and sets the file name of mouse down checked checkbox image. */
-  const char *GetCheckedDownImage() const;
-  void SetCheckedDownImage(const char *img);
+  Variant GetCheckedDownImage() const;
+  void SetCheckedDownImage(const Variant &img);
 
   /** Gets and sets whether the checkbox is checked. A checked state is true. */
   bool GetValue() const;

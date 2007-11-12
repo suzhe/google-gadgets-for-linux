@@ -47,6 +47,8 @@ struct GadgetViewWidget {
   // Stores the old height/width before an allocation.
   int widget_width, widget_height;
   bool dbl_click;
+
+  ggadget::DragEvent current_drag_event;
 };
 
 struct GadgetViewWidgetClass {

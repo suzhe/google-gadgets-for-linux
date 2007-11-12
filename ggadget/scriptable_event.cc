@@ -16,8 +16,22 @@
 
 #include "scriptable_event.h"
 #include "event.h"
+#include "scriptable_array.h"
 
 namespace ggadget {
+
+class DragFilesHelper {
+ public:
+  DragFilesHelper(const char **drag_files) : drag_files_(drag_files) { }
+  ScriptableArray *operator()() const {
+    return ScriptableArray::Create(drag_files_, false);
+  }
+  bool operator ==(const DragFilesHelper &another) const {
+    return another.drag_files_ == drag_files_;
+  }
+ private:
+  const char **drag_files_;
+};
 
 ScriptableEvent::ScriptableEvent(Event *event,
                                  ScriptableInterface *src_element,
@@ -36,8 +50,9 @@ ScriptableEvent::ScriptableEvent(Event *event,
 
   if (event->IsMouseEvent()) {
     MouseEvent *mouse_event = static_cast<MouseEvent *>(event);
-    RegisterProperty("x", NewSlot(mouse_event, &MouseEvent::GetX), NULL);
-    RegisterProperty("y", NewSlot(mouse_event, &MouseEvent::GetX), NULL);
+    PositionEvent *position_event = static_cast<PositionEvent *>(event);
+    RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
+    RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetX), NULL);
     RegisterProperty("button",
                      NewSlot(mouse_event, &MouseEvent::GetButton), NULL);
     RegisterProperty("wheelDelta",
@@ -48,10 +63,13 @@ ScriptableEvent::ScriptableEvent(Event *event,
                      NewSlot(key_event, &KeyboardEvent::GetKeyCode), NULL);
   } else if (event->IsDragEvent()) {
     DragEvent *drag_event = static_cast<DragEvent *>(event);
-    RegisterProperty("x", NewSlot(drag_event, &DragEvent::GetX), NULL);
-    RegisterProperty("y", NewSlot(drag_event, &DragEvent::GetX), NULL);
-    // TODO:
-    // RegisterProperty("files", NewSlot(drag_event, ....);
+    PositionEvent *position_event = static_cast<PositionEvent *>(event);
+    RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
+    RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetX), NULL);
+    RegisterProperty("dragFiles",
+                     NewFunctorSlot<ScriptableArray *>(
+                         DragFilesHelper(drag_event->GetDragFiles())),
+                     NULL);
   } else {
     Event::Type type = event->GetType();
     switch (type) {
@@ -78,6 +96,9 @@ ScriptableEvent::ScriptableEvent(Event *event,
         break;
     }
   }
+}
+
+ScriptableEvent::~ScriptableEvent() {
 }
 
 const char *ScriptableEvent::GetName() const {

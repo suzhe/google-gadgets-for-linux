@@ -26,6 +26,7 @@
 #include "image.h"
 #include "math_utils.h"
 #include "script_context_interface.h"
+#include "scriptable_binary_data.h"
 #include "scriptable_delegator.h"
 #include "scriptable_event.h"
 #include "slot.h"
@@ -60,6 +61,7 @@ class View::Impl {
       focused_element_(NULL),
       mouseover_element_(NULL),
       grabmouse_element_(NULL),
+      dragover_element_(NULL),
       non_strict_delegator_(new ScriptableDelegator(owner, false)) {
     if (gadget_host_)
       file_manager_ = gadget_host_->GetFileManager();
@@ -87,8 +89,8 @@ class View::Impl {
     }
   }
 
-  void MapChildMouseEvent(MouseEvent *org_event, ElementInterface *child,
-                          MouseEvent *new_event) {
+  void MapChildPositionEvent(PositionEvent *org_event, ElementInterface *child,
+                             PositionEvent *new_event) {
     ASSERT(child);
     std::vector<ElementInterface *> elements;
     for (ElementInterface *e = child; e != NULL; e = e->GetParentElement())
@@ -128,7 +130,7 @@ class View::Impl {
         grabmouse_element_->IsVisible() &&
         (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP)) {
       MouseEvent new_event(*event);
-      MapChildMouseEvent(event, grabmouse_element_, &new_event);
+      MapChildPositionEvent(event, grabmouse_element_, &new_event);
       ElementInterface *fired_element;
       result = grabmouse_element_->OnMouseEvent(&new_event, true, 
                                                 &fired_element);
@@ -143,7 +145,7 @@ class View::Impl {
       // Clear the mouseover state.
       if (mouseover_element_) {
         MouseEvent new_event(*event);
-        MapChildMouseEvent(event, mouseover_element_, &new_event);
+        MapChildPositionEvent(event, mouseover_element_, &new_event);
         ElementInterface *temp;
         result = mouseover_element_->OnMouseEvent(&new_event, true, &temp);
         mouseover_element_ = NULL;
@@ -175,12 +177,13 @@ class View::Impl {
                                   event->GetX(), event->GetY(),
                                   event->GetButton(),
                                   event->GetWheelDelta());
-        MapChildMouseEvent(event, old_mouseover_element, &mouseout_event);
+        MapChildPositionEvent(event, old_mouseover_element, &mouseout_event);
         ElementInterface *temp;
         old_mouseover_element->OnMouseEvent(&mouseout_event, true, &temp);
       }
 
       if (mouseover_element_) {
+        // The enabled and visible states may change during event handling.
         if (!mouseover_element_->IsEnabled() ||
             !mouseover_element_->IsVisible())
           mouseover_element_ = NULL;
@@ -189,7 +192,7 @@ class View::Impl {
                                      event->GetX(), event->GetY(),
                                      event->GetButton(),
                                      event->GetWheelDelta());
-          MapChildMouseEvent(event, mouseover_element_, &mouseover_event);
+          MapChildPositionEvent(event, mouseover_element_, &mouseover_event);
           ElementInterface *temp;
           mouseover_element_->OnMouseEvent(&mouseover_event, true, &temp);
         }
@@ -245,6 +248,58 @@ class View::Impl {
     if (scriptable_event.GetReturnValue())
       return SendMouseEventToChildren(event);
     return true;
+  }
+
+  bool OnDragEvent(DragEvent *event) {
+    Event::Type type = event->GetType();
+    bool result = false;
+    if (type == Event::EVENT_DRAG_OUT || type == Event::EVENT_DRAG_DROP) {
+      // Send the event and clear the dragover state.
+      if (dragover_element_) {
+        DragEvent new_event(*event);
+        MapChildPositionEvent(event, dragover_element_, &new_event);
+        ElementInterface *temp;
+        result = dragover_element_->OnDragEvent(&new_event, true, &temp);
+        dragover_element_ = NULL;
+      }
+      return result;
+    }
+
+    ASSERT(type == Event::EVENT_DRAG_MOTION);
+    // Dispatch the event to children normally.
+    ElementInterface *fired_element = NULL;
+    result = children_.OnDragEvent(event, &fired_element);
+    if (fired_element != dragover_element_) {
+      ElementInterface *old_dragover_element = dragover_element_;
+      // Store it early to prevent crash if fired_element is removed in
+      // the dragout handler.
+      dragover_element_ = fired_element;
+
+      if (old_dragover_element) {
+        DragEvent dragout_event(Event::EVENT_DRAG_OUT,
+                                event->GetX(), event->GetY(),
+                                event->GetDragFiles());
+        MapChildPositionEvent(event, old_dragover_element, &dragout_event);
+        ElementInterface *temp;
+        old_dragover_element->OnDragEvent(&dragout_event, true, &temp);
+      }
+
+      if (dragover_element_) {
+        // The visible state may change during event handling.
+        if (!dragover_element_->IsVisible())
+          dragover_element_ = NULL;
+        else {
+          DragEvent dragover_event(Event::EVENT_DRAG_OVER,
+                                   event->GetX(), event->GetY(),
+                                   event->GetDragFiles());
+          MapChildPositionEvent(event, dragover_element_, &dragover_event);
+          ElementInterface *temp;
+          dragover_element_->OnDragEvent(&dragover_event, true, &temp);
+        }
+      }
+    }
+
+    return result;
   }
 
   bool OnKeyEvent(KeyboardEvent *event) {
@@ -312,6 +367,8 @@ class View::Impl {
       mouseover_element_ = NULL;
     if (element == grabmouse_element_)
       grabmouse_element_ = NULL;
+    if (element == dragover_element_)
+      dragover_element_ = NULL;
 
     const char *name = element->GetName();
     if (name && *name) {
@@ -670,6 +727,7 @@ class View::Impl {
   ElementInterface *focused_element_;
   ElementInterface *mouseover_element_;
   ElementInterface *grabmouse_element_;
+  ElementInterface *dragover_element_;
 
   ScriptableDelegator *non_strict_delegator_;
 };
@@ -804,6 +862,10 @@ bool View::OnKeyEvent(KeyboardEvent *event) {
   return impl_->OnKeyEvent(event);
 }
 
+bool View::OnDragEvent(DragEvent *event) {
+  return impl_->OnDragEvent(event);
+}
+
 bool View::OnOtherEvent(Event *event) {
   return impl_->OnOtherEvent(event);
 }
@@ -915,20 +977,52 @@ int View::GetDebugMode() const {
   return impl_->debug_mode_;
 }
 
-Image *View::LoadImage(const char *name, bool is_mask) {
+Image *View::LoadImage(const Variant &src, bool is_mask) {
   ASSERT(impl_->file_manager_);
-  return new Image(GetGraphics(), impl_->file_manager_, name, is_mask);
+  switch (src.type()) {
+    case Variant::TYPE_STRING:
+      return new Image(GetGraphics(), impl_->file_manager_,
+                       VariantValue<const char *>()(src), is_mask);
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE: {
+      const ScriptableBinaryData *binary =
+          VariantValue<const ScriptableBinaryData *>()(src);
+      if (binary)
+        return new Image(GetGraphics(), binary->data(), binary->size(),
+                         is_mask);
+      // else falls through!
+    }
+    default:
+      LOG("Unsupported type of image src.");
+      DLOG("src=%s", src.ToString().c_str());
+      return NULL;
+  }
 }
-
 
 Image *View::LoadImageFromGlobal(const char *name, bool is_mask) {
   return new Image(GetGraphics(), impl_->gadget_host_->GetGlobalFileManager(),
                    name, is_mask);
 }
 
-Texture *View::LoadTexture(const char *name) {
+Texture *View::LoadTexture(const Variant &src) {
   ASSERT(impl_->file_manager_);
-  return new Texture(GetGraphics(), impl_->file_manager_, name);
+  switch (src.type()) {
+    case Variant::TYPE_STRING:
+      return new Texture(GetGraphics(), impl_->file_manager_,
+                         VariantValue<const char *>()(src));
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE: {
+      const ScriptableBinaryData *binary =
+          VariantValue<const ScriptableBinaryData *>()(src);
+      if (binary)
+        return new Texture(GetGraphics(), binary->data(), binary->size());
+      // else falls through!
+    }
+    default:
+      LOG("Unsupported type of texture src.");
+      DLOG("src=%s", src.ToString().c_str());
+      return NULL;
+  }
 }
 
 void View::SetFocus(ElementInterface *element) {

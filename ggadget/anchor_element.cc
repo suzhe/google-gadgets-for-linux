@@ -30,7 +30,7 @@ class AnchorElement::Impl {
  public:
   Impl(BasicElement *owner, ViewInterface *view) 
     : text_(owner, view),
-      overcolor_texture_(view->LoadTexture(kDefaultColor)),
+      overcolor_texture_(view->LoadTexture(Variant(kDefaultColor))),
       mouseover_(false), overcolor_(kDefaultColor) { 
   }
   ~Impl() {
@@ -90,7 +90,7 @@ const char *AnchorElement::GetOverColor() const {
 void AnchorElement::SetOverColor(const char *color) {
   if (AssignIfDiffer(color, &impl_->overcolor_)) {
     delete impl_->overcolor_texture_;
-    impl_->overcolor_texture_ = GetView()->LoadTexture(color);
+    impl_->overcolor_texture_ = GetView()->LoadTexture(Variant(color));
     if (impl_->mouseover_) {
       QueueDraw();
     }

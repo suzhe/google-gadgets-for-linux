@@ -44,44 +44,44 @@ class ScrollBarElement : public BasicElement {
 
  public:
   /** Gets and sets the file name of the background image. */
-  const char *GetBackground() const;
-  void SetBackground(const char *img);
+  Variant GetBackground() const;
+  void SetBackground(const Variant &img);
 
   /** Gets and sets the file name of the left/up button down image. */
-  const char *GetLeftDownImage() const;
-  void SetLeftDownImage(const char *img);
+  Variant GetLeftDownImage() const;
+  void SetLeftDownImage(const Variant &img);
 
   /** Gets and sets the file name of the left/up image. */
-  const char *GetLeftImage() const;
-  void SetLeftImage(const char *img);
+  Variant GetLeftImage() const;
+  void SetLeftImage(const Variant &img);
 
   /** Gets and sets the file name of the left/up hover image. */
-  const char *GetLeftOverImage() const;
-  void SetLeftOverImage(const char *img);
+  Variant GetLeftOverImage() const;
+  void SetLeftOverImage(const Variant &img);
 
   /** Gets and sets the file name of the right/down button down image. */
-  const char *GetRightDownImage() const;
-  void SetRightDownImage(const char *img);
+  Variant GetRightDownImage() const;
+  void SetRightDownImage(const Variant &img);
 
   /** Gets and sets the file name of the right/down image. */
-  const char *GetRightImage() const;
-  void SetRightImage(const char *img);
+  Variant GetRightImage() const;
+  void SetRightImage(const Variant &img);
 
   /** Gets and sets the file name of the right/down hover image. */
-  const char *GetRightOverImage() const;
-  void SetRightOverImage(const char *img);
+  Variant GetRightOverImage() const;
+  void SetRightOverImage(const Variant &img);
 
   /** Gets and sets the file name of the thumb button down image. */
-  const char *GetThumbDownImage() const;
-  void SetThumbDownImage(const char *img);
+  Variant GetThumbDownImage() const;
+  void SetThumbDownImage(const Variant &img);
 
   /** Gets and sets the file name of the thumb  image. */
-  const char *GetThumbImage() const;
-  void SetThumbImage(const char *img);
+  Variant GetThumbImage() const;
+  void SetThumbImage(const Variant &img);
 
   /** Gets and sets the file name of the thumb hover image. */
-  const char *GetThumbOverImage() const;
-  void SetThumbOverImage(const char *img);
+  Variant GetThumbOverImage() const;
+  void SetThumbOverImage(const Variant &img);
 
    /** Gets and sets the scrollbar orientation (horizontal, vertical). */
   Orientation GetOrientation() const;

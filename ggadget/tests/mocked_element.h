@@ -255,8 +255,14 @@ class MockedElement :
     return false;
   }
 
+  virtual void ResetWidthToDefault() {
+  }
+
   virtual bool HeightIsSpecified() const {
     return false;
+  }
+
+  virtual void ResetHeightToDefault() {
   }
 
   virtual const ggadget::CanvasInterface *GetMaskCanvas() {
@@ -286,7 +292,13 @@ class MockedElement :
     return true;
   }
 
-  virtual bool IsMouseEventIn(ggadget::MouseEvent *event) {
+  virtual bool OnDragEvent(ggadget::DragEvent *event, bool direct,
+                           ggadget::ElementInterface **fired_element) {
+    *fired_element = this;
+    return true;
+  }
+
+  virtual bool IsPointIn(double x, double y) {
     return true;
   }
 
