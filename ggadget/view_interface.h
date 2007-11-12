@@ -108,8 +108,24 @@ class ViewInterface : public ScriptableInterface {
   /** Called when any element in the view hierarchy is about to be removed. */
   virtual void OnElementRemove(ElementInterface *element) = 0;
 
-  /** Any elements should call this method when it need to fire an event. */
+  /**
+   * Any elements should call this method when it need to fire an event.
+   * @param event the event to be fired. The caller can choose to allocate the
+   *     event object on stack or heap.
+   * @param event_signal
+   */
   virtual void FireEvent(ScriptableEvent *event,
+                         const EventSignal &event_signal) = 0;
+
+  /**
+   * Post an event into the event queue.  The event will be fired in the next
+   * event loop.
+   * @param event the event to be fired. The caller must allocate the
+   *     @c ScriptableEvent and the @c Event objects on heap. They will be
+   *     deleted by this view.
+   * @param event_signal
+   */
+  virtual void PostEvent(ScriptableEvent *event,
                          const EventSignal &event_signal) = 0;
 
   /**

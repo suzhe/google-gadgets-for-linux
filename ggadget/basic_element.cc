@@ -273,35 +273,61 @@ class BasicElement::Impl {
     return parent_ ? parent_->GetPixelHeight() : view_->GetHeight();
   }
 
+  enum ParsePixelOrRelativeResult {
+    PR_PIXEL,
+    PR_RELATIVE,
+    PR_UNSPECIFIED,
+    PR_INVALID = -1,
+  };
+
   // Returns when input is: pixel: 0; relative: 1; 2: unspecified; invalid: -1.
-  static int ParsePixelOrRelative(const Variant &input, double *output) {
+  static ParsePixelOrRelativeResult ParsePixelOrRelative(const Variant &input,
+                                                         double *output) {
+    ASSERT(output);
+    *output = 0;
+
     switch (input.type()) {
       case Variant::TYPE_VOID:
-        return 2;
+        return PR_UNSPECIFIED;
       // The input is an integer pixel value.
       case Variant::TYPE_INT64:
         *output = VariantValue<int>()(input);
-        return 0;
+        return PR_PIXEL;
       // The input is a double pixel value.
       case Variant::TYPE_DOUBLE:
-        *output = round(VariantValue<double>()(input));
-        return 0;
+        *output = VariantValue<double>()(input);
+        if (isnan(*output) || isinf(*output)) {
+          *output = 0;
+          return PR_UNSPECIFIED;
+        }
+        return PR_PIXEL;
       // The input is a relative percent value.
       case Variant::TYPE_STRING: {
         const char *str_value = VariantValue<const char *>()(input);
         if (!str_value || !*str_value)
-          return 2;
+          return PR_UNSPECIFIED;
 
         char *end_ptr;
-        *output = strtol(str_value, &end_ptr, 10) / 100.0;
-        if (*end_ptr == '%' && *(end_ptr + 1) == '\0')
-          return 1;
+        *output = strtod(str_value, &end_ptr);
+        if (*end_ptr == '\0') {
+          // There is only a number without '%'.
+          if (isnan(*output) || isinf(*output)) {
+            *output = 0;
+            return PR_UNSPECIFIED;
+          }
+          return PR_PIXEL;
+        }
+        if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
+          *output /= 100.0;
+          return PR_RELATIVE;
+        }
+        *output = 0;
         LOG("Invalid relative value: %s", input.ToString().c_str());
-        return -1;
+        return PR_INVALID;
       }
       default:
         LOG("Invalid pixel or relative value: %s", input.ToString().c_str());
-        return -1;
+        return PR_INVALID;
     }
   }
 
@@ -329,15 +355,15 @@ class BasicElement::Impl {
   void SetWidth(const Variant &width) {
     double v;
     switch (ParsePixelOrRelative(width, &v)) {
-      case 0:
+      case PR_PIXEL:
         width_specified_ = true;
         SetPixelWidth(v);
         break;
-      case 1:
+      case PR_RELATIVE:
         width_specified_ = true;
         SetRelativeWidth(v, false);
         break;
-      case 2:
+      case PR_UNSPECIFIED:
         ResetWidthToDefault();
         break;
       default:
@@ -360,15 +386,15 @@ class BasicElement::Impl {
   void SetHeight(const Variant &height) {
     double v;
     switch (ParsePixelOrRelative(height, &v)) {
-      case 0:
+      case PR_PIXEL:
         height_specified_ = true;
         SetPixelHeight(v);
         break;
-      case 1:
+      case PR_RELATIVE:
         height_specified_ = true;
         SetRelativeHeight(v, false);
         break;
-      case 2:
+      case PR_UNSPECIFIED:
         ResetHeightToDefault();
         break;
       default:
@@ -390,15 +416,15 @@ class BasicElement::Impl {
   void SetX(const Variant &x) {
     double v;
     switch (ParsePixelOrRelative(x, &v)) {
-      case 0:
+      case PR_PIXEL:
         x_specified_ = true;
         SetPixelX(v);
         break;
-      case 1:
+      case PR_RELATIVE:
         x_specified_ = true;
         SetRelativeX(v, false);
         break;
-      case 2:
+      case PR_UNSPECIFIED:
         x_specified_ = false;
         SetPixelX(0);
         break;
@@ -414,15 +440,15 @@ class BasicElement::Impl {
   void SetY(const Variant &y) {
     double v;
     switch (ParsePixelOrRelative(y, &v)) {
-      case 0:
+      case PR_PIXEL:
         y_specified_ = true;
         SetPixelY(v);
         break;
-      case 1:
+      case PR_RELATIVE:
         y_specified_ = true;
         SetRelativeY(v, false);
         break;
-      case 2:
+      case PR_UNSPECIFIED:
         y_specified_ = false;
         SetPixelY(0);
         break;
@@ -499,6 +525,13 @@ class BasicElement::Impl {
   }
 
  public:
+  void PostSizeEvent() {
+    Event *event = new Event(Event::EVENT_SIZE);
+    ScriptableEvent *scriptable_event = new ScriptableEvent(event, owner_,
+                                                            0, 0);
+    view_->PostEvent(scriptable_event, onsize_event_);
+  }
+
   void WidthChanged() {
     if (pin_x_relative_)
       SetRelativePinX(ppin_x_, true);
@@ -508,6 +541,7 @@ class BasicElement::Impl {
       canvas_ = NULL;
     }
     view_->QueueDraw();
+    PostSizeEvent();
   }
 
   void HeightChanged() {
@@ -519,6 +553,7 @@ class BasicElement::Impl {
       canvas_ = NULL;
     }
     view_->QueueDraw();
+    PostSizeEvent();
   }
 
  public:
@@ -741,6 +776,7 @@ class BasicElement::Impl {
   EventSignal onmouseover_event_;
   EventSignal onmouseup_event_;
   EventSignal onmousewheel_event_;
+  EventSignal onsize_event_;
 };
 
 int BasicElement::Impl::total_debug_color_index_ = 0;
@@ -861,6 +897,7 @@ BasicElement::BasicElement(ElementInterface *parent,
   RegisterSignal(kOnMouseOverEvent, &impl_->onmouseover_event_);
   RegisterSignal(kOnMouseUpEvent, &impl_->onmouseup_event_);
   RegisterSignal(kOnMouseWheelEvent, &impl_->onmousewheel_event_);
+  RegisterSignal(kOnSizeEvent, &impl_->onsize_event_);
 }
 
 BasicElement::~BasicElement() {

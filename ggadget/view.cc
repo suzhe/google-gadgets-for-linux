@@ -62,7 +62,9 @@ class View::Impl {
       mouseover_element_(NULL),
       grabmouse_element_(NULL),
       dragover_element_(NULL),
-      non_strict_delegator_(new ScriptableDelegator(owner, false)) {
+      non_strict_delegator_(new ScriptableDelegator(owner, false)),
+      posting_event_element_(NULL),
+      post_event_token_(0) {
     if (gadget_host_)
       file_manager_ = gadget_host_->GetFileManager();
   }
@@ -204,7 +206,7 @@ class View::Impl {
 
   bool OnMouseEvent(MouseEvent *event) {
     // Send event to view first.
-    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    ScriptableEvent scriptable_event(event, NULL, 0, 0);
     if (event->GetType() != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(view): %g %g %d %d", scriptable_event.GetName(),
            event->GetX(), event->GetY(),
@@ -303,7 +305,7 @@ class View::Impl {
   }
 
   bool OnKeyEvent(KeyboardEvent *event) {
-    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    ScriptableEvent scriptable_event(event, NULL, 0, 0);
     // TODO: dispatch to children.
     DLOG("%s(view): %d", scriptable_event.GetName(), event->GetKeyCode());
     switch (event->GetType()) {
@@ -370,6 +372,19 @@ class View::Impl {
     if (element == dragover_element_)
       dragover_element_ = NULL;
 
+    for (PostedEvents::iterator it = posted_events_.begin();
+         it != posted_events_.end(); ++it) {
+      if (it->first && it->first->GetSrcElement() == element) {
+        // The source element of the posted event has been removed,
+        // clean up the event.
+        delete it->first->GetEvent();
+        delete it->first;
+        it->first = NULL;
+      }
+    }
+    if (posting_event_element_ == element)
+      posting_event_element_ = NULL;
+
     const char *name = element->GetName();
     if (name && *name) {
       ElementsMap::iterator it = all_elements_.find(name);
@@ -383,6 +398,50 @@ class View::Impl {
     event_stack_.push_back(event);
     event_signal();
     event_stack_.pop_back();
+  }
+
+  bool FirePostedEvents(int token) {
+    ASSERT(token == post_event_token_);
+    post_event_token_ = 0;
+
+    for (PostedEvents::iterator it = posted_events_.begin();
+         it != posted_events_.end(); ++it) {
+      if (it->first) { // The event is still valid.
+        posting_event_element_ = it->first->GetSrcElement();
+        FireEvent(it->first, *it->second);
+        if (posting_event_element_) {
+          // The element is still there, clean the event up.
+          delete it->first->GetEvent();
+          delete it->first;
+          it->first = NULL;
+        }
+      }
+    }
+    posting_event_element_ = NULL;
+    posted_events_.clear();
+    return false;
+  }
+
+  void PostEvent(ScriptableEvent *event, const EventSignal &event_signal) {
+    ASSERT(event);
+    ASSERT(event->GetEvent());
+    // Merge multiple size events into one for each element.
+    if (event->GetEvent()->GetType() == Event::EVENT_SIZE) {
+      for (PostedEvents::const_iterator it = posted_events_.begin();
+           it != posted_events_.end(); ++it) {
+        if (it->first && // The event is still valid.
+            it->first->GetEvent()->GetType() == Event::EVENT_SIZE &&
+            it->first->GetSrcElement() == event->GetSrcElement())
+          // The size event already posted for this element.
+          return;
+      }
+    }
+    posted_events_.push_back(std::make_pair(event, &event_signal));
+
+    if (!post_event_token_) {
+      post_event_token_ = gadget_host_->RegisterTimer(
+          0, NewSlot(this, &Impl::FirePostedEvents));
+    }
   }
 
   ScriptableEvent *GetEvent() const {
@@ -413,29 +472,11 @@ class View::Impl {
   }
 
   bool SetWidth(int width) {
-    if (width != width_) {
-      // TODO check if allowed first
-      width_ = width;
-      children_.OnParentWidthChange(width);
-      host_->QueueDraw();
-
-      // TODO: Is NULL a proper current event object for the script?
-      FireEvent(NULL, onsize_event_);
-    }
-    return true;
+    return SetSize(width, height_);
   }
 
   bool SetHeight(int height) {
-    if (height != height_) {
-      // TODO check if allowed first
-      height_ = height;
-      children_.OnParentHeightChange(height);
-      host_->QueueDraw();
-
-      // TODO: Is NULL a proper current event object for the script?
-      FireEvent(NULL, onsize_event_);
-    }
-    return true;
+    return SetSize(width_, height);
   }
 
   bool SetSize(int width, int height) {
@@ -451,8 +492,9 @@ class View::Impl {
       }
       host_->QueueDraw();
 
-      // TODO: Is NULL a proper current event object for the script?
-      FireEvent(NULL, onsize_event_);
+      Event event(Event::EVENT_SIZE);
+      ScriptableEvent scriptable_event(&event, NULL, 0, 0);
+      FireEvent(&scriptable_event, onsize_event_);
     }
     return true;
   }
@@ -556,7 +598,7 @@ class View::Impl {
     Event event(Event::EVENT_TIMER_TICK);
     switch (info->type) {
       case TIMER_TIMEOUT: {
-        ScriptableEvent scriptable_event(&event, owner_, token, 0);
+        ScriptableEvent scriptable_event(&event, NULL, token, 0);
         event_stack_.push_back(&scriptable_event);
         info->slot->Call(0, NULL);
         wants_more = false;
@@ -565,14 +607,14 @@ class View::Impl {
         break;
       }
       case TIMER_INTERVAL: {
-        ScriptableEvent scriptable_event(&event, owner_, token, 0);
+        ScriptableEvent scriptable_event(&event, NULL, token, 0);
         event_stack_.push_back(&scriptable_event);
         info->slot->Call(0, NULL);
         event_stack_.pop_back();
         break;
       }
       case TIMER_ANIMATION_FIRST: {
-        ScriptableEvent scriptable_event(&event, owner_, token,
+        ScriptableEvent scriptable_event(&event, NULL, token,
                                          info->start_value);
         event_stack_.push_back(&scriptable_event);
         info->slot->Call(0, NULL);
@@ -592,7 +634,7 @@ class View::Impl {
         int value = info->start_value +
                     static_cast<int>(round(progress * info->spread));
         if (value != info->last_value) {
-          ScriptableEvent scriptable_event(&event, owner_, token, value);
+          ScriptableEvent scriptable_event(&event, NULL, token, value);
           event_stack_.push_back(&scriptable_event);
           info->last_value = value;
           info->slot->Call(0, NULL);
@@ -657,7 +699,7 @@ class View::Impl {
 
   void OnOptionChanged(const char *name) {
     OptionChangedEvent event(name);
-    ScriptableEvent scriptable_event(&event, owner_, 0, 0);
+    ScriptableEvent scriptable_event(&event, NULL, 0, 0);
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
@@ -730,6 +772,12 @@ class View::Impl {
   ElementInterface *dragover_element_;
 
   ScriptableDelegator *non_strict_delegator_;
+
+  typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
+      PostedEvents;
+  PostedEvents posted_events_;
+  ElementInterface *posting_event_element_;
+  int post_event_token_;
 };
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
@@ -880,6 +928,10 @@ void View::OnElementRemove(ElementInterface *element) {
 
 void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
   impl_->FireEvent(event, event_signal);
+}
+
+void View::PostEvent(ScriptableEvent *event, const EventSignal &event_signal) {
+  impl_->PostEvent(event, event_signal);
 }
 
 ScriptableEvent *View::GetEvent() {

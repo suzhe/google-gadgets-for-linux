@@ -15,6 +15,7 @@
 */
 
 #include "scriptable_event.h"
+#include "element_interface.h"
 #include "event.h"
 #include "scriptable_array.h"
 
@@ -34,7 +35,7 @@ class DragFilesHelper {
 };
 
 ScriptableEvent::ScriptableEvent(Event *event,
-                                 ScriptableInterface *src_element,
+                                 ElementInterface *src_element,
                                  int cookie,
                                  int value)
     : event_(event),
