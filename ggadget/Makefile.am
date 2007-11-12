@@ -99,6 +99,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  img_element.cc \
 			  label_element.cc \
 			  math_utils.cc \
+			  progressbar_element.cc \
 			  scriptable_array.cc \
 			  scriptable_event.cc \
 			  scriptable_helper.cc \

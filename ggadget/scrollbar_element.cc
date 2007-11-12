@@ -144,9 +144,11 @@ class ScrollBarElement::Impl {
     double imgw =  img ? img->GetWidth() : 0;
     double imgh =  img ? img->GetHeight() : 0;
 
-    double position = static_cast<double>(value_ - min_) / (max_ - min_);
+    double position;
     if (max_ == min_) { // prevent overflow
       position = 0;
+    } else {
+      position = static_cast<double>(value_ - min_) / (max_ - min_);
     }
     if (orientation_ == ORIENTATION_HORIZONTAL) {
       leftx += leftwidth;
@@ -179,15 +181,20 @@ class ScrollBarElement::Impl {
       double imgw =  img ? img->GetWidth() : 0;
       lx += lw;
       denominator = rx - imgw - lx;
-      position = delta * (x - lx - drag_delta_) / denominator;
+      if (denominator == 0) { // prevent overflow
+        position = 0;
+      } else {
+        position = delta * (x - lx - drag_delta_) / denominator;
+      }
     } else {
       double imgh =  img ? img->GetHeight() : 0;
       ly += lh;
       denominator = ry - imgh - ly;
-      position = delta * (y - ly - drag_delta_) / denominator;
-    }
-    if (denominator == 0) { // prevent overflow
-      position = 0;
+      if (denominator == 0) { // prevent overflow
+        position = 0;
+      } else {
+        position = delta * (y - ly - drag_delta_) / denominator;
+      }
     }
 
     int answer = static_cast<int>(position);

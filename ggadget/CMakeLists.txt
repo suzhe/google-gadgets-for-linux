@@ -55,6 +55,7 @@ SET(SRCS
   label_element.cc
   anchor_element.cc
   checkbox_element.cc
+  progressbar_element.cc
 )
 
 SET(LIBS
