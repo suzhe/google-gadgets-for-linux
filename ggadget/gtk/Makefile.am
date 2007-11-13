@@ -22,9 +22,9 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-graphicsincludedir	= $(includedir)/ggl@GGL_EPOCH@/ggadget/graphics
+gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
 
-graphicsinclude_HEADERS	= cairo_canvas.h \
+gtkinclude_HEADERS	= cairo_canvas.h \
 			  cairo_font.h \
 			  cairo_graphics.h
 

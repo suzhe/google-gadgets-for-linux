@@ -14,6 +14,11 @@
 # limitations under the License.
 #
 
+EXTRA_DIST		= 120day.png \
+			  base.png \
+			  kitty419.jpg \
+			  testmask.png
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 

@@ -23,13 +23,13 @@
 using namespace ggadget;
 using namespace ggadget::internal;
 
-std::string actual_dir_path = "file_manager_test_data";
+std::string actual_dir_path = "file_manager_test_data.dest";
 std::string actual_gg_path = "file_manager_test_data.gg";
-std::string actual_manifest_path = "file_manager_test_data";
+std::string actual_manifest_path = "file_manager_test_data.dest";
 
-std::string base_dir_path = "file_manager_test_data";
+std::string base_dir_path = "file_manager_test_data.dest";
 std::string base_gg_path = "file_manager_test_data.gg";
-std::string base_manifest_path = "file_manager_test_data/gadget.gmanifest";
+std::string base_manifest_path = "file_manager_test_data.dest/gadget.gmanifest";
 
 TEST(file_manager, InitLocaleStrings) {
   FileManagerImpl impl(NULL);
@@ -189,13 +189,13 @@ TEST(file_manager, GetTranslatedFileContents) {
   ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.Init(base_dir_path.c_str());
 
-  const char *kMainXMLOriginalContents = 
+  const char *kMainXMLOriginalContents =
     "<root root-attr1=\"root-value1\" root-attr2=\"&root-attr2;\""
     " root-attr3=\"&lt;&amp;&gt;xyz \">\n"
     "<second>&second-value;</second>\n"
     "<third>&blank-value;&non-existence;</third>\n"
     "</root>\n";
-  const char *kMainXMLTranslatedContents = 
+  const char *kMainXMLTranslatedContents =
     "<root root-attr1=\"root-value1\" root-attr2=\"根元素属性2\""
     " root-attr3=\"&lt;&amp;&gt;xyz \">\n"
     "<second>第二层元素的文本内容</second>\n"
@@ -213,26 +213,5 @@ TEST(file_manager, GetTranslatedFileContents) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
-
-  // Disable this path hack, because now the test data will be copied to
-  // builddir.
-#if 0
-  // Hack for running test out of source tree.
-  // .gg file will be generated in builddir on the fly.
-  char *srcdir = getenv("srcdir");
-  char *builddir = getenv("builddir");
-  if (srcdir && *srcdir) {
-    std::cout << "srcdir=" << srcdir << std::endl;
-    actual_dir_path = std::string(srcdir) + std::string("/") + actual_dir_path;
-    actual_manifest_path = std::string(srcdir) + std::string("/") + actual_manifest_path;
-    base_dir_path = std::string(srcdir) + std::string("/") + base_dir_path;
-    base_manifest_path = std::string(srcdir) + std::string("/") + base_manifest_path;
-  }
-  if (builddir && *builddir) {
-    std::cout << "builddir=" << builddir << std::endl;
-    actual_gg_path = std::string(srcdir) + std::string("/") + actual_gg_path;
-    base_gg_path = std::string(srcdir) + std::string("/") + base_gg_path;
-  }
-#endif
   return RUN_ALL_TESTS();
 }

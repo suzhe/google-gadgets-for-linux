@@ -54,6 +54,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  math_utils.h \
 			  menu_interface.h \
 			  options_interface.h \
+			  progressbar_element.h \
 			  scoped_ptr.h \
 			  script_context_interface.h \
 			  script_runtime_interface.h \
