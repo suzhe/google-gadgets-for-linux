@@ -45,6 +45,8 @@ class SimpleHostFileManager : public ggadget::FileManagerInterface {
   virtual bool ExtractFile(const char *file, std::string *into_file);
   /** @see FileManagerInterface::GetStringTable() */
   virtual ggadget::GadgetStringMap *GetStringTable();
+  /** @see FileManagerInterface::FileExists() */
+  virtual bool FileExists(const char *file);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(SimpleHostFileManager);
