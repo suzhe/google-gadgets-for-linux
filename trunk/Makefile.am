@@ -17,3 +17,8 @@
 ACLOCAL_AMFLAGS = -I autotools
 
 SUBDIRS = third_party unittest ggadget hosts
+
+EXTRA_DIST = examples
+
+dist-hook:
+	rm -rf `find $(distdir) -name '.svn'`

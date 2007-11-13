@@ -21,7 +21,7 @@
 #  Version
 #  Bug report address
 AC_INIT([google-gadgets-for-linux],
-	[0.0.0],
+	[0.0.1],
 	[google-gadgets-for-linux-dev@googlegroups.com])
 
 # Requires autoconf version >= 2.50
@@ -42,7 +42,7 @@ AC_CONFIG_MACRO_DIR([autotools])
 # Version numbers of Google Gadgets for Linux package.
 GGL_MAJOR_VERSION=0
 GGL_MINOR_VERSION=0
-GGL_MICRO_VERSION=0
+GGL_MICRO_VERSION=1
 
 GGL_VERSION=$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION
 

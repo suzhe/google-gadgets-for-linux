@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+EXTRA_DIST		= dom1_test.js \
+			  json_test.js \
+			  wrapper_test.js
+
 if GGL_HAVE_READLINE
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+EXTRA_DIST		= resources
 if GGL_BUILD_SIMPLE_HOST
 
 INCLUDES		= -I$(top_builddir) \

@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+EXTRA_DIST		= js_unittest.js
+
 noinst_HEADERS		= gunit-internal-inl.h \
 			  gunit-internal.h \
 			  gunit.h \

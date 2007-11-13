@@ -74,10 +74,10 @@ static JSBool ConvertJSToNativeInt(JSContext *cx, jsval js_val,
     if (result) {
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
       // string containing non-numeric chars. Both case are invalid for int.
-      if (!isnan(double_val))
-				*native_val = Variant(static_cast<int64_t>(round(double_val)));
-		  else
-	      result = JS_FALSE;
+      if (!std::isnan(double_val))
+        *native_val = Variant(static_cast<int64_t>(round(double_val)));
+      else
+        result = JS_FALSE;
     }
   }
   return result;
@@ -93,7 +93,7 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
   double double_val = 0;
   JSBool result = JS_ValueToNumber(cx, js_val, &double_val);
   if (result) {
-    if (JSVAL_IS_DOUBLE(js_val) || !isnan(double_val))
+    if (JSVAL_IS_DOUBLE(js_val) || !std::isnan(double_val))
       // If double_val is NaN, it may because js_val is NaN, or js_val is a
       // string containing non-numeric chars. The former case is acceptable.
       *native_val = Variant(double_val);
@@ -110,7 +110,7 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
     *native_val = Variant(static_cast<const char *>(NULL));
     result = JS_TRUE;
   } else if (JSVAL_IS_VOID(js_val)) {
-    // Default value of a string is ""; 
+    // Default value of a string is "";
     *native_val = Variant("");
     return JS_TRUE;
   } else if (JSVAL_IS_STRING(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
@@ -325,7 +325,7 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
                              Variant **params, uintN *expected_argc) {
   *params = NULL;
   const Variant::Type *arg_types = NULL;
-  *expected_argc = argc; 
+  *expected_argc = argc;
   if (slot->HasMetadata()) {
     arg_types = slot->GetArgTypes();
     *expected_argc = static_cast<uintN>(slot->GetArgCount());

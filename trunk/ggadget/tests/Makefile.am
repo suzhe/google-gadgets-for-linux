@@ -12,13 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
+EXTRA_DIST		= file_manager_test_data
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+noinst_HEADERS		= mocked_element.h \
+			  mocked_gadget_host.h \
+			  mocked_view.h \
+			  mocked_view_host.h \
+			  scriptables.h \
+			  slots.h
 
 check_PROGRAMS		= common_test \
 			  variant_test \
@@ -58,18 +66,13 @@ xml_http_request_test_LDADD	= -lpthread \
 				  $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
+file_manager_test_data.dest: file_manager_test_data
+	(rm -fr $@; cp -R $< $@; find $@ -name '.*' -exec rm -fr {} \;)
+
 if GGL_HAVE_ZIP
-# FIXME: It'll fail if $(abs_builddir) = $(abs_srcdir)
 noinst_DATA		= file_manager_test_data.gg
-file_manager_test_data.gg: file_manager_test_data
-	(\
-	  rm -fr $(abs_builddir)/file_manager_test_data;\
-	  cp -R $(abs_srcdir)/file_manager_test_data $(abs_builddir)/;\
-	  find $(abs_builddir)/file_manager_test_data -name '.*' -exec rm -fr {} \;;\
-	  cd $(abs_builddir)/file_manager_test_data/;\
-	  find . -type f |\
-	  $(ZIP) -r -u $(abs_builddir)/file_manager_test_data.gg -@\
-	)
+file_manager_test_data.gg: file_manager_test_data.dest
+	(cd $<; find . -type f | $(ZIP) -r -u $(abs_builddir)/$@ -@)
 endif
 
 TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@

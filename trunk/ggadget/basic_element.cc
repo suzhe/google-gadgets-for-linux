@@ -296,7 +296,7 @@ class BasicElement::Impl {
       // The input is a double pixel value.
       case Variant::TYPE_DOUBLE:
         *output = VariantValue<double>()(input);
-        if (isnan(*output) || isinf(*output)) {
+        if (std::isnan(*output) || std::isinf(*output)) {
           *output = 0;
           return PR_UNSPECIFIED;
         }
@@ -311,7 +311,7 @@ class BasicElement::Impl {
         *output = strtod(str_value, &end_ptr);
         if (*end_ptr == '\0') {
           // There is only a number without '%'.
-          if (isnan(*output) || isinf(*output)) {
+          if (std::isnan(*output) || std::isinf(*output)) {
             *output = 0;
             return PR_UNSPECIFIED;
           }

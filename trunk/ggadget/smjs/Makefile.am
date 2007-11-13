@@ -20,7 +20,7 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-smjsincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/scripts/smjs
+smjsincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/smjs
 
 smjsinclude_HEADERS	= converter.h \
 			  js_function_slot.h \

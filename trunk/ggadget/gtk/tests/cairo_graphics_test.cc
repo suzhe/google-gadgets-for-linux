@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <strings.h>
+#include <string>
 
 #include "ggadget/common.h"
 #include "ggadget/gtk/cairo_canvas.h"
@@ -29,8 +30,13 @@
 
 using namespace ggadget;
 
-const double kPi = 3.141592653589793; 
+const double kPi = 3.141592653589793;
 bool g_savepng = false;
+
+static std::string kTestFile120day("120day.png");
+static std::string kTestFileBase("base.png");
+static std::string kTestFileKitty419("kitty419.jpg");
+static std::string kTestFileTestMask("testmask.png");
 
 // fixture for creating the CairoCanvas object
 class CairoGfxTest : public testing::Test {
@@ -42,14 +48,14 @@ class CairoGfxTest : public testing::Test {
   CairoGfxTest() {
     // create a target canvas for tests
     surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);
-    //surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 600, 300);    
+    //surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 600, 300);
     cairo_t *cr = cairo_create(surface_);
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
     cairo_set_source_rgba(cr, 0, 0, 0, 0);
     cairo_paint(cr);
     //cairo_scale(cr, 2, 2);
     target_ = new CairoCanvas(cr, 300, 150, false);
-    cairo_destroy(cr);    
+    cairo_destroy(cr);
     cr = NULL;
 
     gfx_ = new CairoGraphics(2.0);
@@ -63,16 +69,16 @@ class CairoGfxTest : public testing::Test {
     target_ = NULL;
 
     if (g_savepng) {
-      const testing::TestInfo *const test_info = 
+      const testing::TestInfo *const test_info =
         testing::UnitTest::GetInstance()->current_test_info();
-      char file[100]; 
+      char file[100];
       snprintf(file, arraysize(file), "%s.png", test_info->name());
-      cairo_surface_write_to_png(surface_, file);      
+      cairo_surface_write_to_png(surface_, file);
     }
 
     cairo_surface_destroy(surface_);
     surface_ = NULL;
-  }  
+  }
 };
 
 // this test is meaningful only with -savepng
@@ -92,7 +98,7 @@ TEST_F(CairoGfxTest, NewCanvas) {
 TEST_F(CairoGfxTest, LoadImage) {
   char *buffer = NULL;
 
-  int fd = open("120day.png", O_RDONLY);
+  int fd = open(kTestFile120day.c_str(), O_RDONLY);
   ASSERT_NE(-1, fd);
 
   struct stat statvalue;
@@ -129,10 +135,10 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   double h, scale;
 
   // PNG
-  int fd = open("base.png", O_RDONLY);
+  int fd = open(kTestFileBase.c_str(), O_RDONLY);
   ASSERT_NE(-1, fd);
 
-  ASSERT_EQ(0, fstat(fd, &statvalue));  
+  ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
   ASSERT_NE((size_t)0, filelen);
 
@@ -148,7 +154,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   EXPECT_FALSE(target_->DrawCanvas(50., 0., NULL));
 
   EXPECT_TRUE(target_->PushState());
-  target_->ScaleCoordinates(scale, scale);  
+  target_->ScaleCoordinates(scale, scale);
   EXPECT_TRUE(target_->MultiplyOpacity(.5));
   EXPECT_TRUE(target_->DrawCanvas(150., 0., img));
   EXPECT_TRUE(target_->PopState());
@@ -159,10 +165,10 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   munmap(buffer, filelen);
 
   // JPG
-  fd = open("kitty419.jpg", O_RDONLY);
+  fd = open(kTestFileKitty419.c_str(), O_RDONLY);
   ASSERT_NE(-1, fd);
 
-  ASSERT_EQ(0, fstat(fd, &statvalue));    
+  ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
   ASSERT_NE((size_t)0, filelen);
 
@@ -170,11 +176,11 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   ASSERT_NE(MAP_FAILED, buffer);
 
   img = gfx_->NewImage(buffer, filelen);
-  ASSERT_FALSE(NULL == img);   
+  ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
   scale = 150. / h;
-  target_->ScaleCoordinates(scale, scale);  
+  target_->ScaleCoordinates(scale, scale);
   EXPECT_TRUE(target_->DrawCanvas(0., 0., img));
 
   img->Destroy();
@@ -195,10 +201,10 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   EXPECT_TRUE(NULL == gfx_->NewMask(NULL, 500));
   EXPECT_TRUE(NULL == gfx_->NewMask(buffer, filelen));
 
-  int fd = open("testmask.png", O_RDONLY);
+  int fd = open(kTestFileTestMask.c_str(), O_RDONLY);
   ASSERT_NE(-1, fd);
 
-  ASSERT_EQ(0, fstat(fd, &statvalue));  
+  ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
   ASSERT_NE((size_t)0, filelen);
 
@@ -234,60 +240,60 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   c->Destroy();
   c = NULL;
 
-  munmap(buffer, filelen);  
+  munmap(buffer, filelen);
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, NewFontAndDrawText) {  
-  FontInterface *font1 = gfx_->NewFont("Serif", 14, 
+TEST_F(CairoGfxTest, NewFontAndDrawText) {
+  FontInterface *font1 = gfx_->NewFont("Serif", 14,
       FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_BOLD);
   EXPECT_EQ(FontInterface::STYLE_ITALIC, font1->GetStyle());
   EXPECT_EQ(FontInterface::WEIGHT_BOLD, font1->GetWeight());
   EXPECT_EQ((size_t)14, font1->GetPointSize());
 
-  EXPECT_FALSE(target_->DrawText(0, 0, 100, 30, NULL, font1, Color(1, 0, 0), 
-              CanvasInterface::ALIGN_LEFT, CanvasInterface::VALIGN_TOP, 
+  EXPECT_FALSE(target_->DrawText(0, 0, 100, 30, NULL, font1, Color(1, 0, 0),
+              CanvasInterface::ALIGN_LEFT, CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
-  EXPECT_FALSE(target_->DrawText(0, 0, 100, 30, "abc", NULL, Color(1, 0, 0), 
-              CanvasInterface::ALIGN_LEFT, CanvasInterface::VALIGN_TOP, 
+  EXPECT_FALSE(target_->DrawText(0, 0, 100, 30, "abc", NULL, Color(1, 0, 0),
+              CanvasInterface::ALIGN_LEFT, CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
 
   ASSERT_TRUE(font1 != NULL);
-  EXPECT_TRUE(target_->DrawText(0, 0, 100, 30, "hello world", font1, 
-              Color(1, 0, 0), CanvasInterface::ALIGN_LEFT, 
+  EXPECT_TRUE(target_->DrawText(0, 0, 100, 30, "hello world", font1,
+              Color(1, 0, 0), CanvasInterface::ALIGN_LEFT,
               CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
 
-  FontInterface *font2 = gfx_->NewFont("Serif", 14, 
+  FontInterface *font2 = gfx_->NewFont("Serif", 14,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
   ASSERT_TRUE(font2 != NULL);
-  EXPECT_TRUE(target_->DrawText(0, 30, 100, 30, "hello world", font2, 
-              Color(0, 1, 0), CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, 
+  EXPECT_TRUE(target_->DrawText(0, 30, 100, 30, "hello world", font2,
+              Color(0, 1, 0), CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
 
   FontInterface *font3 = gfx_->NewFont("Serif", 14, FontInterface::STYLE_NORMAL,
       FontInterface::WEIGHT_BOLD);
   ASSERT_TRUE(font3 != NULL);
   EXPECT_TRUE(target_->DrawText(0, 60, 100, 30, "hello world", font3,
-              Color(0, 0, 1), CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, 
+              Color(0, 0, 1), CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
 
-  FontInterface *font4 = gfx_->NewFont("Serif", 14, 
+  FontInterface *font4 = gfx_->NewFont("Serif", 14,
       FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_NORMAL);
   ASSERT_TRUE(font4 != NULL);
-  EXPECT_TRUE(target_->DrawText(0, 90, 100, 30, "hello world", font4, 
-              Color(0, 1, 1), CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, 
+  EXPECT_TRUE(target_->DrawText(0, 90, 100, 30, "hello world", font4,
+              Color(0, 1, 1), CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
 
-  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
   ASSERT_TRUE(font5 != NULL);
-  EXPECT_TRUE(target_->DrawText(0, 120, 100, 30, "hello world", font5, 
-              Color(1, 1, 0), CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, 
+  EXPECT_TRUE(target_->DrawText(0, 120, 100, 30, "hello world", font5,
+              Color(1, 1, 0), CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP,
               CanvasInterface::TRIMMING_NONE, 0));
 
   font1->Destroy();
@@ -298,102 +304,102 @@ TEST_F(CairoGfxTest, NewFontAndDrawText) {
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, DrawTextWithTexture) {  
+TEST_F(CairoGfxTest, DrawTextWithTexture) {
   char *buffer = NULL;
   struct stat statvalue;
   size_t filelen;
   CanvasInterface *img;
-  
-  int fd = open("kitty419.jpg", O_RDONLY);
+
+  int fd = open(kTestFileKitty419.c_str(), O_RDONLY);
   ASSERT_NE(-1, fd);
-     
-  ASSERT_EQ(0, fstat(fd, &statvalue));    
+
+  ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
   ASSERT_NE((size_t)0, filelen);
-     
+
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
-      
+
   img = gfx_->NewImage(buffer, filelen);
-  ASSERT_FALSE(NULL == img);   
-  
-  FontInterface *font = gfx_->NewFont("Sans Serif", 20, 
+  ASSERT_FALSE(NULL == img);
+
+  FontInterface *font = gfx_->NewFont("Sans Serif", 20,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_BOLD);
- 
+
   // test underline, strikeout and wrap
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 150, 90, Color(.7, 0, 0)));
-  EXPECT_TRUE(target_->DrawTextWithTexture(0, 0, 150, 90, 
-              "hello world, gooooooogle", 
-              font, img, CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE, 
+  EXPECT_TRUE(target_->DrawTextWithTexture(0, 0, 150, 90,
+              "hello world, gooooooogle",
+              font, img, CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE,
               CanvasInterface::TEXT_FLAGS_UNDERLINE |
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
-  EXPECT_TRUE(target_->DrawFilledRect(0, 100, 150, 50, Color(.7, 0, 0)));  
-  EXPECT_TRUE(target_->DrawTextWithTexture(0, 100, 150, 50, "hello world", 
-              font, img, CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE, 
+  EXPECT_TRUE(target_->DrawFilledRect(0, 100, 150, 50, Color(.7, 0, 0)));
+  EXPECT_TRUE(target_->DrawTextWithTexture(0, 100, 150, 50, "hello world",
+              font, img, CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE,
               CanvasInterface::TEXT_FLAGS_UNDERLINE |
               CanvasInterface::TEXT_FLAGS_STRIKEOUT));
- 
+
   // test alignment
   EXPECT_TRUE(target_->DrawFilledRect(180, 0, 120, 60, Color(.7, 0, 0)));
-  EXPECT_TRUE(target_->DrawTextWithTexture(180, 0, 120, 60, "hello", font, 
-              img, CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawTextWithTexture(180, 0, 120, 60, "hello", font,
+              img, CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_NONE, 0));
   EXPECT_TRUE(target_->DrawFilledRect(180, 80, 120, 60, Color(.7, 0, 0)));
-  EXPECT_TRUE(target_->DrawTextWithTexture(180, 80, 120, 60, "hello", font, 
-              img, CanvasInterface::ALIGN_RIGHT, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawTextWithTexture(180, 80, 120, 60, "hello", font,
+              img, CanvasInterface::ALIGN_RIGHT,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_NONE, 0));
-   
+
   img->Destroy();
   img = NULL;
- 
+
   font->Destroy();
   font = NULL;
-  
-  munmap(buffer, filelen);  
+
+  munmap(buffer, filelen);
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, TextAttributeAndAlignment) {  
-  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+TEST_F(CairoGfxTest, TextAttributeAndAlignment) {
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
 
   // test underline, strikeout and wrap
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 100, 110, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(0, 120, 100, 30, Color(.3, .3, .1)));
-  EXPECT_TRUE(target_->DrawText(0, 0, 100, 120, "hello world, gooooooogle", 
-              font5, Color(1, 1, 0), CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE, 
+  EXPECT_TRUE(target_->DrawText(0, 0, 100, 120, "hello world, gooooooogle",
+              font5, Color(1, 1, 0), CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE,
               CanvasInterface::TEXT_FLAGS_UNDERLINE |
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
   EXPECT_TRUE(target_->DrawText(0, 120, 100, 30, "hello world", font5,
-              Color(1, 1, 0), CanvasInterface::ALIGN_LEFT, 
-              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE, 
+              Color(1, 1, 0), CanvasInterface::ALIGN_LEFT,
+              CanvasInterface::VALIGN_TOP, CanvasInterface::TRIMMING_NONE,
               CanvasInterface::TEXT_FLAGS_UNDERLINE |
               CanvasInterface::TEXT_FLAGS_STRIKEOUT));
 
   // test alignment
   EXPECT_TRUE(target_->DrawFilledRect(200, 0, 100, 60, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(200, 80, 100, 60, Color(.3, .3, .1)));
-  EXPECT_TRUE(target_->DrawText(200, 0, 100, 60, "hello", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(200, 0, 100, 60, "hello", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_NONE, 0));
-  EXPECT_TRUE(target_->DrawText(200, 80, 100, 60, "hello", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_RIGHT, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawText(200, 80, 100, 60, "hello", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_RIGHT,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_NONE, 0));
 
   font5->Destroy();
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, SinglelineTrimming) {  
-  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+TEST_F(CairoGfxTest, SinglelineTrimming) {
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
 
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 100, 30, Color(.1, .1, 0)));
@@ -403,37 +409,37 @@ TEST_F(CairoGfxTest, SinglelineTrimming) {
   EXPECT_TRUE(target_->DrawFilledRect(0, 80, 100, 30, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(200, 80, 100, 30, Color(.1, .1, 0)));
 
-  EXPECT_TRUE(target_->DrawText(0, 0, 100, 30, "hello world", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawText(0, 0, 100, 30, "hello world", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_NONE, 0));
-  EXPECT_TRUE(target_->DrawText(0, 40, 100, 30, "hello world", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawText(0, 40, 100, 30, "hello world", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_CHARACTER, 0));
-  EXPECT_TRUE(target_->DrawText(0, 80, 100, 30, "hello world", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawText(0, 80, 100, 30, "hello world", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS, 0));
-  EXPECT_TRUE(target_->DrawText(200, 0, 100, 30, "hello world", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawText(200, 0, 100, 30, "hello world", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_WORD, 0));
-  EXPECT_TRUE(target_->DrawText(200, 40, 100, 30, "hello world", font5, 
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_BOTTOM, 
+  EXPECT_TRUE(target_->DrawText(200, 40, 100, 30, "hello world", font5,
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_WORD_ELLIPSIS, 0));
   EXPECT_TRUE(target_->DrawText(200, 80, 100, 30, "hello world", font5,
-              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_BOTTOM, 
+              Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_BOTTOM,
               CanvasInterface::TRIMMING_PATH_ELLIPSIS, 0));
 
   font5->Destroy();
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, MultilineTrimming) {  
-  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+TEST_F(CairoGfxTest, MultilineTrimming) {
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
 
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 100, 40, Color(.1, .1, 0)));
@@ -442,47 +448,47 @@ TEST_F(CairoGfxTest, MultilineTrimming) {
   EXPECT_TRUE(target_->DrawFilledRect(200, 0, 100, 40, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(200, 50, 100, 40, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(200, 100, 100, 40, Color(.1, .1, 0)));
-  EXPECT_TRUE(target_->DrawText(0, 0, 100, 40, "Hello world, gooooogle", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
-              CanvasInterface::TRIMMING_NONE, 
+  EXPECT_TRUE(target_->DrawText(0, 0, 100, 40, "Hello world, gooooogle",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
+              CanvasInterface::TRIMMING_NONE,
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
-  EXPECT_TRUE(target_->DrawText(0, 50, 100, 40, "Hello world, gooooogle", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(0, 50, 100, 40, "Hello world, gooooogle",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_CHARACTER,
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
-  EXPECT_TRUE(target_->DrawText(0, 100, 100, 40, "Hello world, gooooogle", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
-              CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS, 
+  EXPECT_TRUE(target_->DrawText(0, 100, 100, 40, "Hello world, gooooogle",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
+              CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS,
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
-  EXPECT_TRUE(target_->DrawText(200, 0, 100, 40, "Hello world, gooooogle", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, CanvasInterface::TRIMMING_WORD, 
+  EXPECT_TRUE(target_->DrawText(200, 0, 100, 40, "Hello world, gooooogle",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE, CanvasInterface::TRIMMING_WORD,
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
-  EXPECT_TRUE(target_->DrawText(200, 50, 100, 40, "Hello world, gooooogle", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
-              CanvasInterface::TRIMMING_WORD_ELLIPSIS, 
+  EXPECT_TRUE(target_->DrawText(200, 50, 100, 40, "Hello world, gooooogle",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
+              CanvasInterface::TRIMMING_WORD_ELLIPSIS,
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
-  EXPECT_TRUE(target_->DrawText(200, 100, 100, 40, "Hello world, gooooogle", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
-              CanvasInterface::TRIMMING_PATH_ELLIPSIS, 
+  EXPECT_TRUE(target_->DrawText(200, 100, 100, 40, "Hello world, gooooogle",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
+              CanvasInterface::TRIMMING_PATH_ELLIPSIS,
               CanvasInterface::TEXT_FLAGS_WORDWRAP));
 
   font5->Destroy();
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, ChineseTrimming) {  
-  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+TEST_F(CairoGfxTest, ChineseTrimming) {
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
 
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 105, 40, Color(.1, .1, 0)));
@@ -491,42 +497,42 @@ TEST_F(CairoGfxTest, ChineseTrimming) {
   EXPECT_TRUE(target_->DrawFilledRect(180, 0, 105, 40, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(180, 50, 105, 40, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(180, 100, 105, 40, Color(.1, .1, 0)));
-  EXPECT_TRUE(target_->DrawText(0, 0, 105, 40, "你好，谷歌", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(0, 0, 105, 40, "你好，谷歌",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_NONE, 0));
 
-  EXPECT_TRUE(target_->DrawText(0, 50, 105, 40, "你好，谷歌", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(0, 50, 105, 40, "你好，谷歌",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_CHARACTER,0));
 
-  EXPECT_TRUE(target_->DrawText(0, 100, 105, 40, "你好，谷歌", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(0, 100, 105, 40, "你好，谷歌",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS, 0));
 
-  EXPECT_TRUE(target_->DrawText(180, 0, 105, 40, "你好，谷歌", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(180, 0, 105, 40, "你好，谷歌",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_WORD, 0));
 
-  EXPECT_TRUE(target_->DrawText(180, 50, 105, 40, "你好，谷歌", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(180, 50, 105, 40, "你好，谷歌",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_WORD_ELLIPSIS, 0));
 
-  EXPECT_TRUE(target_->DrawText(180, 100, 105, 40, "你好，谷歌", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(180, 100, 105, 40, "你好，谷歌",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_PATH_ELLIPSIS, 0));
 
   font5->Destroy();
 }
 
 // this test is meaningful only with -savepng
-TEST_F(CairoGfxTest, RTLTrimming) {  
-  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16, 
+TEST_F(CairoGfxTest, RTLTrimming) {
+  FontInterface *font5 = gfx_->NewFont("Sans Serif", 16,
       FontInterface::STYLE_NORMAL, FontInterface::WEIGHT_NORMAL);
 
   EXPECT_TRUE(target_->DrawFilledRect(0, 0, 100, 40, Color(.1, .1, 0)));
@@ -536,39 +542,39 @@ TEST_F(CairoGfxTest, RTLTrimming) {
   EXPECT_TRUE(target_->DrawFilledRect(200, 50, 100, 40, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawFilledRect(200, 100, 100, 40, Color(.1, .1, 0)));
   EXPECT_TRUE(target_->DrawText(0, 0, 100, 40,
-              "سَدفهلكجشِلكَفهسدفلكجسدف", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+              "سَدفهلكجشِلكَفهسدفلكجسدف",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_NONE, 0));
 
-  EXPECT_TRUE(target_->DrawText(0, 50, 100, 40, 
-              "سَدفهلكجشِلكَفهسدفلكجسدف", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(0, 50, 100, 40,
+              "سَدفهلكجشِلكَفهسدفلكجسدف",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_CHARACTER,0));
 
-  EXPECT_TRUE(target_->DrawText(0, 100, 100, 40, 
-              "سَدفهلكجشِلكَفهسدفلكجسدف", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(0, 100, 100, 40,
+              "سَدفهلكجشِلكَفهسدفلكجسدف",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS, 0));
 
-  EXPECT_TRUE(target_->DrawText(200, 0, 100, 40, 
-              "سَدفهلكجشِلكَفهسدفلكجسدف", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(200, 0, 100, 40,
+              "سَدفهلكجشِلكَفهسدفلكجسدف",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_WORD, 0));
 
-  EXPECT_TRUE(target_->DrawText(200, 50, 100, 40, 
-              "سَدفهلكجشِلكَفهسدفلكجسدف", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(200, 50, 100, 40,
+              "سَدفهلكجشِلكَفهسدفلكجسدف",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_WORD_ELLIPSIS, 0));
 
-  EXPECT_TRUE(target_->DrawText(200, 100, 100, 40, 
-              "سَدفهلكجشِلكَفهسدفلكجسدف", 
-              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER, 
-              CanvasInterface::VALIGN_MIDDLE, 
+  EXPECT_TRUE(target_->DrawText(200, 100, 100, 40,
+              "سَدفهلكجشِلكَفهسدفلكجسدف",
+              font5, Color(1, 1, 1), CanvasInterface::ALIGN_CENTER,
+              CanvasInterface::VALIGN_MIDDLE,
               CanvasInterface::TRIMMING_PATH_ELLIPSIS, 0));
 
   font5->Destroy();
@@ -576,6 +582,15 @@ TEST_F(CairoGfxTest, RTLTrimming) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
+
+  // Hack for autoconf out-of-tree build.
+  char *srcdir = getenv("srcdir");
+  if (srcdir && *srcdir) {
+    kTestFile120day = std::string(srcdir) + std::string("/") + kTestFile120day;
+    kTestFileBase = std::string(srcdir) + std::string("/") + kTestFileBase;
+    kTestFileKitty419 = std::string(srcdir) + std::string("/") + kTestFileKitty419;
+    kTestFileTestMask = std::string(srcdir) + std::string("/") + kTestFileTestMask;
+  }
 
   for (int i = 0; i < argc; i++) {
     if (0 == strcasecmp(argv[i], "-savepng")) {
