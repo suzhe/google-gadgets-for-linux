@@ -370,7 +370,7 @@ GType GadgetViewWidget_get_type() {
   return gw_type;
 }
 
-static char *kUriListTarget = "text/uri-list";
+static const char *kUriListTarget = "text/uri-list";
 
 static void DisableDrag(GtkWidget *widget, GdkDragContext *context,
                         guint time) {
@@ -484,7 +484,7 @@ GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
   gvw->zoom = zoom;
 
   static const GtkTargetEntry kDragTargets[] = {
-    { kUriListTarget, 0, 0 },
+    { const_cast<char *>(kUriListTarget), 0, 0 },
   };
 
   gtk_drag_dest_set(widget, static_cast<GtkDestDefaults>(0),
