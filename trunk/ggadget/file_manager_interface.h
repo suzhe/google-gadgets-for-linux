@@ -51,7 +51,8 @@ class FileManagerInterface {
    *   - @c en/file,
    *   - @c 1033/file (for Windows compatibility).
    *
-   * @param file the file name relative to the base path.
+   * @param file the file name relative to the base path or an absolute
+   *     filename in the file system.
    * @param[out] data returns the file contents.
    * @param[out] path the actual path name of the file, for logging only.
    * @return @c true if succeeded.
@@ -78,7 +79,8 @@ class FileManagerInterface {
    * Extracts the contents of a file into a given file name or into a
    * temporary file.
    *
-   * @param file the file name relative to the base path.
+   * @param file the file name relative to the base path, or an absolute
+   *     filename in the file system.
    * @param[in, out] into_file if the input value is empty, the file manager
    *     generates a unique temporary file name and save the contents into
    *     that file and return the filename in this parameter on return;
@@ -91,6 +93,12 @@ class FileManagerInterface {
    * Gets the content of strings.xml by returning a string map. 
    */
   virtual GadgetStringMap *GetStringTable() = 0;
+
+  /**
+   * Check if a file with the given name exists under the base_path of this
+   * file manager. Returns @c false if the filename is absolute.
+   */
+  virtual bool FileExists(const char *file) = 0;
 
 };
 

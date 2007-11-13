@@ -56,8 +56,8 @@ class GtkGadgetHost::CallbackData {
 GtkGadgetHost::GtkGadgetHost()
     : script_runtime_(new ggadget::JSScriptRuntime()),
       element_factory_(NULL),
-      file_manager_(new ggadget::FileManager()),
       global_file_manager_(new SimpleHostFileManager()),
+      file_manager_(new ggadget::FileManager(global_file_manager_)),
       options_(new Options()),
       gadget_(NULL),
       plugin_flags_(0),

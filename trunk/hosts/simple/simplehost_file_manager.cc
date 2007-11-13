@@ -45,32 +45,72 @@ static inline bool ResourceNameCompare(const Resource &r1,
   return strcmp(r1.filename, r2.filename) < 0;
 }
 
-bool SimpleHostFileManager::GetFileContents(const char *file,
-                                            std::string *data,
-                                            std::string *path) {
-  data->clear();
-
+static const Resource *FindResource(const char *file) {
   int res_prefix_len = strlen(ggadget::kGlobalResourcePrefix);
   if (0 == strncmp(file, ggadget::kGlobalResourcePrefix, res_prefix_len)) {
     // This is a resource file, so look up resources array.
     const char *res_name = file + res_prefix_len;
     //DLOG("global fm lookup: %s, %s", file, res_name);
-    Resource r = {res_name, 0, NULL};    
+    Resource r = {res_name, 0, NULL};
     const Resource *pos = std::lower_bound(
         kResourceList, kResourceList + arraysize(kResourceList), r,
         ResourceNameCompare);
-    // This lookup should never fail since resource names are statically coded.
-    ASSERT(pos && pos < kResourceList + arraysize(kResourceList) &&
-        0 == strcmp(res_name, pos->filename));
+    if (pos && pos < kResourceList + arraysize(kResourceList) &&
+        0 == strcmp(res_name, pos->filename)) {
+      return pos;
+    }
+  }
+  return NULL;
+}
 
+bool SimpleHostFileManager::GetFileContents(const char *file,
+                                            std::string *data,
+                                            std::string *path) {
+  ASSERT(data);
+  data->clear();
+  const Resource *pos = FindResource(file);
+  if (pos) {
     data->append(pos->data, pos->data_size);    
     *path = file;
     return true;
   }
 
-  // TODO: add localized lookup support?
+  // TODO: check security?
+  // Try to read from the file system.
+  path->assign(file);
 
-  return false;
+  FILE *datafile = fopen(file, "r");
+  if (!datafile) {
+    LOG("Failed to open file: %s", file);
+    return false;
+  }
+
+  const size_t kChunkSize = 2048;
+  const size_t kMaxFileSize = 4 * 1024 * 1024;
+  char buffer[kChunkSize];
+  while (true) {
+    size_t read_size = fread(buffer, 1, kChunkSize, datafile);
+    data->append(buffer, read_size);
+    if (data->length() > kMaxFileSize || read_size < kChunkSize)
+      break;
+  }
+
+  if (ferror(datafile)) {
+    LOG("Error when reading file: %s", file);
+    data->clear();
+    fclose(datafile);
+    return false;
+  }
+
+  if (data->length() > kMaxFileSize) {
+    LOG("File is too big (> %zu): %s", kMaxFileSize, file);
+    data->clear();
+    fclose(datafile);
+    return false;
+  }
+
+  fclose(datafile);
+  return true;
 }
 
 bool SimpleHostFileManager::GetXMLFileContents(const char *file,
@@ -86,4 +126,10 @@ bool SimpleHostFileManager::ExtractFile(const char *file,
 
 ggadget::GadgetStringMap *SimpleHostFileManager::GetStringTable() {
   return NULL; // not implemented
+}
+
+bool SimpleHostFileManager::FileExists(const char *file) {
+  if (FindResource(file))
+    return true;
+  return (access(file, F_OK) == 0);
 }

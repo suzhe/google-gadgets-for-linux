@@ -461,7 +461,7 @@ static void OnDragDataReceived(GtkWidget *widget, GdkDragContext *context,
       gtk_drag_highlight(widget);
     }
   } else {
-    DLOG("Drag event is not accepted by the gadget");
+    // Drag event is not accepted by the gadget.
     DisableDrag(widget, context, time);
   }
 

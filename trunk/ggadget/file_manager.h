@@ -34,7 +34,7 @@ namespace internal {
 /** Declared here only for unit testing. */
 class FileManagerImpl {
  public:
-  FileManagerImpl() { }
+  FileManagerImpl(FileManagerInterface *global_file_manager);
   ~FileManagerImpl();
 
   typedef std::map<std::string, unz_file_pos, GadgetStringComparator> FileMap;
@@ -44,6 +44,7 @@ class FileManagerImpl {
   bool GetXMLFileContents(const char *file,
                           std::string *data, std::string *path);
   bool ExtractFile(const char *file, std::string *into_file);
+  bool FileExists(const char *file);
 
   bool InitLocaleStrings();
   static void SplitPathFilename(const char *input_path,
@@ -64,7 +65,10 @@ class FileManagerImpl {
   bool GetFileContentsInternal(FileMap::const_iterator iter, std::string *data);
   bool GetDirFileContents(FileMap::const_iterator iter, std::string *data);
   bool GetZipFileContents(FileMap::const_iterator iter, std::string *data);
+  FileMap::const_iterator FindFile(const char *file,
+                                   std::string *normalized_file);
 
+  FileManagerInterface *global_file_manager_;
   // base path must in correct case (case sensitive),
   // but files in base path need not to be
   std::string base_path_;
@@ -90,8 +94,13 @@ class FileManagerImpl {
  */
 class FileManager : public FileManagerInterface {
  public:
-  FileManager();
-  ~FileManager();
+  /**
+   * @param global_file_manager the file manager used to access global files
+   *     in the file system. Can be NULL if the file manager is not allowed to
+   *     access files in the file system.
+   */
+  FileManager(FileManagerInterface *global_file_manager);
+  virtual ~FileManager();
 
   /** @see FileManagerInterface::Init() */
   virtual bool Init(const char *base_path);
@@ -107,6 +116,8 @@ class FileManager : public FileManagerInterface {
   virtual bool ExtractFile(const char *file, std::string *into_file);
   /** @see FileManagerInterface::GetStringTable() */
   virtual GadgetStringMap *GetStringTable();
+  /** @see FileManagerInterface::FileExists() */
+  virtual bool FileExists(const char *file);
 
  private:
   internal::FileManagerImpl *impl_;

@@ -100,8 +100,8 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
 
   ggadget::ScriptRuntimeInterface *script_runtime_;
   ggadget::ElementFactoryInterface *element_factory_;
-  ggadget::FileManagerInterface *file_manager_;
   ggadget::FileManagerInterface *global_file_manager_;
+  ggadget::FileManagerInterface *file_manager_;
   ggadget::OptionsInterface *options_;
   ggadget::GadgetInterface *gadget_;
 

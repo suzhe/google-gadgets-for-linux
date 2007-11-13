@@ -32,6 +32,11 @@ namespace ggadget {
 
 namespace internal {
 
+FileManagerImpl::FileManagerImpl(FileManagerInterface *global_file_manager)
+    : global_file_manager_(global_file_manager),
+      is_dir_(false) {
+}
+
 FileManagerImpl::~FileManagerImpl() {
 }
 
@@ -94,27 +99,40 @@ bool FileManagerImpl::Init(const char *base_path) {
   return true;
 }
 
-bool FileManagerImpl::GetFileContents(const char *file,
-                                      std::string *data,
-                                      std::string *path) {
+FileManagerImpl::FileMap::const_iterator FileManagerImpl::FindFile(
+    const char *file, std::string *normalized_file) {
   ASSERT_M(!base_path_.empty(), ("Not initialized"));
   ASSERT(file);
 
-  std::string normalized_file(file);
-  for (std::string::iterator i = normalized_file.begin();
-       i != normalized_file.end(); ++i) {
+  normalized_file->assign(file);;
+  for (std::string::iterator i = normalized_file->begin();
+       i != normalized_file->end(); ++i) {
     // In Linux replace all \ with / for Windows compatibility.
     if ('\\' == *i)
       *i = kPathSeparator;
   }
 
   // First try non-localized file.
-  FileMap::const_iterator iter = files_.find(normalized_file);
+  FileMap::const_iterator iter = files_.find(*normalized_file);
   if (iter == files_.end())
     // Second try localized file.
-    iter = FindLocalizedFile(normalized_file.c_str());
+    iter = FindLocalizedFile(normalized_file->c_str());
 
+  return iter;
+}
+
+bool FileManagerImpl::GetFileContents(const char *file,
+                                      std::string *data,
+                                      std::string *path) {
+  std::string normalized_file;
+  FileMap::const_iterator iter = FindFile(file, &normalized_file);
   if (iter == files_.end()) {
+    if (file[0] == kPathSeparator && global_file_manager_) {
+      // The file name is absolute, pointing to a file system file.
+      return global_file_manager_->GetFileContents(normalized_file.c_str(),
+                                                   data, path);
+    }
+
     LOG("File not found: %s in dir: %s",
         normalized_file.c_str(), base_path_.c_str());
     return false;
@@ -470,9 +488,16 @@ bool FileManagerImpl::GetZipFileContents(FileMap::const_iterator iter,
   return status;
 }
 
+bool FileManagerImpl::FileExists(const char *file) {
+  std::string normalized_file;
+  FileMap::const_iterator iter = FindFile(file, &normalized_file);
+  return iter != files_.end();
+}
+
 } // namespace internal
 
-FileManager::FileManager() : impl_(new internal::FileManagerImpl()) { }
+FileManager::FileManager(FileManagerInterface *global_file_manager)
+    : impl_(new internal::FileManagerImpl(global_file_manager)) { }
 
 FileManager::~FileManager() {
   delete impl_;
@@ -500,6 +525,10 @@ bool FileManager::ExtractFile(const char *file, std::string *into_file) {
 
 GadgetStringMap *FileManager::GetStringTable() {
   return &impl_->string_table_;
+}
+
+bool FileManager::FileExists(const char *file) {
+  return impl_->FileExists(file);
 }
 
 } // namespace ggadget
