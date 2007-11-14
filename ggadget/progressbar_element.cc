@@ -228,8 +228,8 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
   double fraction = impl_->GetFractionalValue();
   bool drawfullimage = impl_->fullimage_ && fraction > 0;
 
-  double x, y, fw, fh, fy;
-  bool fstretch;  
+  double x = 0, y = 0, fw = 0, fh = 0, fy = 0;
+  bool fstretch = false;  
   if (drawfullimage) {
     // Need to calculate fullimage positions first in order to determine
     // clip rectangle for emptyimage.
