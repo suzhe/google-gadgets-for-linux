@@ -65,25 +65,25 @@ class GadgetInterface {
 
   enum Command {
     /** Show About dialog. */
-    gddCmdAboutDialog = 1,
+    CMD_ABOUT_DIALOG = 1,
     /** User clicked the 'back' button. */
-    gddCmdToolbarBack = 2,
+    CMD_TOOLBAR_BACK = 2,
     /** User clicked the 'forward' button. */
-    gddCmdToolbarForward = 3,
+    CMD_TOOLBAR_FORWARD = 3,
   };
   virtual void OnCommand(Command command) = 0;
 
   enum DisplayState {
     /** Tile is not visible. */
-    gddTileDisplayStateHidden = 0,
+    TILE_DISPLAY_STATE_HIDDEN = 0,
     /** Tile is restored from being minimized or popped out states. */
-    gddTileDisplayStateRestored = 1,
+    TILE_DISPLAY_STATE_RESTORED = 1,
     /** Tile is minimized and only the title bar is visible. */
-    gddTileDisplayStateMinimized = 2,
+    TILE_DISPLAY_STATE_MINIMIZED = 2,
     /** Tile is 'popped-out' of the sidebar in a separate window. */
-    gddTileDisplayStatePoppedOut = 3,
+    TILE_DISPLAY_STATE_POPPED_OUT = 3,
     /** Tile is resized. */
-    gddTileDisplayStateResized = 4,
+    TILE_DISPLAY_STATE_RESIZED = 4,
   };
 
   /**
@@ -94,11 +94,11 @@ class GadgetInterface {
 
   enum DisplayTarget {
     /** Item is being displayed/drawn in the Sidebar. */
-    gddTargetSidebar = 0,
+    TARGET_SIDEBAR = 0,
     /** Item is being displayed/drawn in the notification window. */
-    gddTargetNotifier = 1,
+    TARGET_NOTIFIER = 1,
     /** Item is being displayed in its own window floating on the desktop */
-    gddTargetFloatingView = 2,
+    TARGET_FLOATING_VIEW = 2,
   };
 
   /**

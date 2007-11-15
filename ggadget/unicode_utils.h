@@ -223,7 +223,7 @@ bool IsLegalUTF16Char(const UTF16Char *src, size_t length);
  * Checks if a string is a valid UTF8 string.
  *
  * @param src the string to be checked.
- * @param src_length length of the source string.
+ * @param length length of the source string.
  * @return true if the source string is a valid UTF8 string.
  */
 bool IsLegalUTF8String(const char *src, size_t length);
@@ -239,7 +239,7 @@ bool IsLegalUTF8String(const std::string &src);
  * Checks if a string is a valid UTF16 string.
  *
  * @param src the string to be checked.
- * @param src_length length of the source string.
+ * @param length length of the source string.
  * @return true if the source string is a valid UTF16 string.
  */
 bool IsLegalUTF16String(const UTF16Char *src, size_t length);

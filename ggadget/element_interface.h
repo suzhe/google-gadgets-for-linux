@@ -238,7 +238,7 @@ class ElementInterface : public ScriptableInterface {
    * @param event the mouse event.
    * @param direct if @c true, this event is sent to the element directly, so
    *     it should not dispatch it to its children.
-   * @param[out] fired_event the element who processed the event, or
+   * @param[out] fired_element the element who processed the event, or
    *     @c NULL if no one.
    * @return @c false to disable the default handling of this event, or
    *     @c true otherwise.
@@ -251,7 +251,7 @@ class ElementInterface : public ScriptableInterface {
    * @param event the darg and drop event.
    * @param direct if @c true, this event is sent to the element directly, so
    *     it should not dispatch it to its children.
-   * @param[out] fired_event the element who processed the event, or
+   * @param[out] fired_element the element who processed the event, or
    *     @c NULL if no one.
    * @return @c true if the event is accepted by some element.
    */

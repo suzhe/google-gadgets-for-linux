@@ -128,11 +128,11 @@ ggadget::ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
 }
 
 ggadget::FileManagerInterface *GtkGadgetHost::GetFileManager() {
-  return file_manager_;  
+  return file_manager_;
 }
 
 ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
-  return global_file_manager_;  
+  return global_file_manager_;
 }
 
 ggadget::OptionsInterface *GtkGadgetHost::GetOptions() {
@@ -149,12 +149,12 @@ ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(
 }
 
 void GtkGadgetHost::SetPluginFlags(int plugin_flags) {
-  if (plugin_flags & gddPluginFlagToolbarBack)
+  if (plugin_flags & PLUGIN_FLAG_TOOLBAR_BACK)
     gtk_widget_show(back_button_);
   else
     gtk_widget_hide(back_button_);
 
-  if (plugin_flags & gddPluginFlagToolbarForward)
+  if (plugin_flags & PLUGIN_FLAG_TOOLBAR_FORWARD)
     gtk_widget_show(forward_button_);
   else
     gtk_widget_hide(forward_button_);
@@ -175,7 +175,7 @@ void GtkGadgetHost::CloseDetailsView() {
 void GtkGadgetHost::ShowOptionsDialog() {
 }
 
-void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) {
+void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) const {
   const char *str_level = "";
   switch (level) {
     case DEBUG_TRACE: str_level = "TRACE: "; break;
@@ -277,8 +277,8 @@ bool GtkGadgetHost::RemoveCallback(int token) {
   return true;
 }
 
-/** 
- * Taken from GDLinux. 
+/**
+ * Taken from GDLinux.
  * May move this function elsewhere if other classes use it too.
  */
 std::string GetFullPathOfSysCommand(const std::string &command) {
@@ -346,10 +346,9 @@ void GtkGadgetHost::ReportScriptError(const char *message) {
   DebugOutput(DEBUG_ERROR, (std::string("Script error: " ) + message).c_str());
 }
 
-bool GtkGadgetHost::LoadFont(const char *filename,
-                             ggadget::FileManagerInterface *fm) {
+bool GtkGadgetHost::LoadFont(const char *filename) {
   std::string fontfile;
-  if (!fm->ExtractFile(filename, &fontfile)) {
+  if (!file_manager_->ExtractFile(filename, &fontfile)) {
     return false;
   }
 
@@ -397,10 +396,12 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
   gtk_box_pack_end(toolbox_, forward_button_, FALSE, FALSE, 0);
   g_signal_connect(forward_button_, "clicked",
                    G_CALLBACK(OnForwardClicked), this);
+  gtk_widget_set_no_show_all(forward_button_, TRUE);
   back_button_ = gtk_button_new_with_label(" < ");
   gtk_box_pack_end(toolbox_, back_button_, FALSE, FALSE, 0);
   g_signal_connect(back_button_, "clicked",
                    G_CALLBACK(OnBackClicked), this);
+  gtk_widget_set_no_show_all(back_button_, TRUE);
   details_button_ = gtk_button_new_with_label("<<");
   gtk_box_pack_end(toolbox_, details_button_, FALSE, FALSE, 0);
   g_signal_connect(details_button_, "clicked",
@@ -452,13 +453,13 @@ void GtkGadgetHost::OnMenuClicked(GtkButton *button, gpointer user_data) {
 }
 
 void GtkGadgetHost::OnBackClicked(GtkButton *button, gpointer user_data) {
-  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  DLOG("Back");
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  this_p->gadget_->OnCommand(ggadget::GadgetInterface::CMD_TOOLBAR_BACK);
 }
 
 void GtkGadgetHost::OnForwardClicked(GtkButton *button, gpointer user_data) {
-  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  DLOG("Forward");
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  this_p->gadget_->OnCommand(ggadget::GadgetInterface::CMD_TOOLBAR_FORWARD);
 }
 
 void GtkGadgetHost::OnDetailsClicked(GtkButton *button, gpointer user_data) {
@@ -488,4 +489,36 @@ void GtkGadgetHost::OnDockActivate(GtkMenuItem *menu_item,
                                    gpointer user_data) {
   // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
   DLOG("DockActivate");
+}
+
+const char *GtkGadgetHost::BrowseForFile(const char *filter) {
+  // TODO:
+  return "/etc/hosts";
+}
+
+ggadget::FilesInterface *GtkGadgetHost::BrowseForFiles(const char *filter) {
+  // TODO:
+  return NULL;
+}
+
+void GtkGadgetHost::GetCursorPos(int *x, int *y) const {
+  gdk_display_get_pointer(gdk_display_get_default(), NULL, x, y, NULL);
+}
+
+void GtkGadgetHost::GetScreenSize(int *width, int *height) const {
+  GdkScreen *screen;
+  gdk_display_get_pointer(gdk_display_get_default(), &screen, NULL, NULL, NULL);
+  *width = gdk_screen_get_width(screen);
+  *height = gdk_screen_get_height(screen);
+}
+
+const char *GtkGadgetHost::GetFileIcon(const char *filename) const {
+  // TODO:
+  return "/usr/share/icons/application-default-icon.png";
+}
+
+ggadget::AudioclipInterface *GtkGadgetHost::CreateAudioclip(
+    const char *filename) {
+  // TODO:
+  return NULL;
 }

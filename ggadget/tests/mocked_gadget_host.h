@@ -23,9 +23,11 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
  public:
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
       ScriptRuntimeType type) { return NULL; }
-  virtual ggadget::ElementFactoryInterface *GetElementFactory() { return NULL; }
+  virtual ggadget::ElementFactoryInterface *GetElementFactory() {
+    return NULL;
+  }
   virtual ggadget::FileManagerInterface *GetFileManager() { return NULL; }
-  virtual ggadget::FileManagerInterface *GetGlobalFileManager() { return NULL; }  
+  virtual ggadget::FileManagerInterface *GetGlobalFileManager() { return NULL; }
   virtual ggadget::OptionsInterface *GetOptions() { return NULL; }
   virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
   virtual ggadget::ViewHostInterface *NewViewHost(
@@ -37,7 +39,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
                                ggadget::Slot1<void, int> *feedback_handler) { }
   virtual void CloseDetailsView() { }
   virtual void ShowOptionsDialog() { }
-  virtual void DebugOutput(DebugLevel level, const char *message) { }
+  virtual void DebugOutput(DebugLevel level, const char *message) const { }
   virtual uint64_t GetCurrentTime() const { return 0; }
   virtual int RegisterTimer(unsigned ms, TimerCallback *callback) { return 0; }
   virtual bool RemoveTimer(int token) { return true; }
@@ -48,11 +50,18 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual bool RemoveIOWatch(int token) { return true; }
   virtual bool OpenURL(const char *url) const { return true; }
 
-  virtual bool LoadFont(const char *filename, 
-                        ggadget::FileManagerInterface *fm) { 
-    return true; 
-  }
+  virtual bool LoadFont(const char *filename) { return true; }
   virtual bool UnloadFont(const char *filename) { return true; }
+  virtual const char *BrowseForFile(const char *filter) { return ""; }
+  virtual ggadget::FilesInterface *BrowseForFiles(const char *filter) {
+    return NULL;
+  }
+  virtual void GetCursorPos(int *x, int *y) const { }
+  virtual void GetScreenSize(int *width, int *height) const { }
+  virtual const char *GetFileIcon(const char *filename) const { return ""; }
+  virtual ggadget::AudioclipInterface *CreateAudioclip(const char *filename) {
+    return NULL;
+  }
 };
 
 #endif // GGADGET_TESTS_MOCKED_GADGET_HOST_H__

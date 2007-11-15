@@ -50,7 +50,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual void CloseDetailsView();
   virtual void ShowOptionsDialog();
 
-  virtual void DebugOutput(DebugLevel level, const char *message);
+  virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual uint64_t GetCurrentTime() const;
   virtual int RegisterTimer(unsigned ms, TimerCallback *callback);
   virtual bool RemoveTimer(int token);
@@ -58,9 +58,14 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback);
   virtual bool RemoveIOWatch(int token);
   virtual bool OpenURL(const char *url) const;
-  virtual bool LoadFont(const char *filename, 
-                        ggadget::FileManagerInterface *fm);
+  virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
+  virtual const char *BrowseForFile(const char *filter);
+  virtual ggadget::FilesInterface *BrowseForFiles(const char *filter);
+  virtual void GetCursorPos(int *x, int *y) const;
+  virtual void GetScreenSize(int *width, int *height) const;
+  virtual const char *GetFileIcon(const char *filename) const;
+  virtual ggadget::AudioclipInterface *CreateAudioclip(const char *filename);
 
   /**
    * Loads a gadget from file system and hosts it.

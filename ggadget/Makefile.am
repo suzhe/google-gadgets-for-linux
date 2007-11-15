@@ -25,7 +25,8 @@ gglincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget
 
 noinst_HEADERS		= element_factory_impl.h
 
-gglinclude_HEADERS	= anchor_element.h \
+gglinclude_HEADERS	= audioclip_interface.h \
+			  anchor_element.h \
 			  basic_element.h \
 			  button_element.h \
 			  canvas_interface.h \
@@ -42,6 +43,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  file_manager.h \
 			  file_manager_interface.h \
 			  font_interface.h \
+			  framework_interface.h \
 			  gadget.h \
 			  gadget_consts.h \
 			  gadget_host_interface.h \

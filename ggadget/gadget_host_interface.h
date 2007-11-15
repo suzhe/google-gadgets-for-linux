@@ -20,6 +20,7 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
+class AudioclipInterface;
 class DetailsViewInterface;
 class ElementFactoryInterface;
 class FileManagerInterface;
@@ -29,6 +30,26 @@ class ScriptableInterface;
 class ScriptRuntimeInterface;
 class Signal;
 class ViewHostInterface;
+
+/** Interface for enumerating the files. */
+class FilesInterface {
+ protected:
+  virtual ~FilesInterface() {}
+
+ public:
+  virtual void Destroy() = 0;
+
+ public:
+  /** Get the number of files. */
+  virtual int GetCount() const = 0;
+  /**
+   * Get the file name according to the index.
+   * The caller should not free the pointer this method returned,
+   * and the returned pointer may be freed next time when calling to the
+   * method in some implementations.
+   */
+  virtual const char *GetItem(int index) const = 0;
+};
 
 /**
  * Interface for providing host services to the gadgets.
@@ -53,7 +74,7 @@ class GadgetHostInterface {
   /** Get the file manager used to load this gadget. */
   virtual FileManagerInterface *GetFileManager() = 0;
 
-  /** Returns the @c FileManagerInterface used to load global resources. */ 
+  /** Returns the @c FileManagerInterface used to load global resources. */
   virtual FileManagerInterface *GetGlobalFileManager() = 0;
 
   /** Returns the @c OptionsInterface instance for this gadget. */
@@ -76,11 +97,11 @@ class GadgetHostInterface {
                                          ScriptableInterface *prototype) = 0;
 
   enum PluginFlags {
-    gddPluginFlagNone = 0,
+    PLUGIN_FLAG_NONE = 0,
     /** Adds a "back" button in the plugin toolbar. */
-    gddPluginFlagToolbarBack = 1,
+    PLUGIN_FLAG_TOOLBAR_BACK = 1,
     /** Adds a "forward" button in the plugin toolbar. */
-    gddPluginFlagToolbarForward = 2,
+    PLUGIN_FLAG_TOOLBAR_FORWARD = 2,
   };
 
   /**
@@ -96,21 +117,22 @@ class GadgetHostInterface {
   virtual void RemoveMe(bool save_data) = 0;
 
   enum DetailsViewFlags {
-    gddDetailsViewFlagNone = 0,
+    DETAILS_VIEW_FLAG_NONE = 0,
     /** Makes the details view title clickable like a button. */
-    gddDetailsViewFlagToolbarOpen = 1,
+    DETAILS_VIEW_FLAG_TOOLBAR_OPEN = 1,
     /** Adds a negative feedback button in the details view. */
-    gddDetailsViewFlagNegativeFeedback = 2,
+    DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK = 2,
     /** Adds a "Remove" button in the details view. */
-    gddDetailsViewFlagRemoveButton = 4,
+    DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
     /** Adds a button to display the friends list. */
-    gddDetailsViewFlagShareWithButton = 8,
+    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
   };
 
   /**
    * Displays a details view containing the specified details control and the
    * specified title.  If there is already details view opened, it will be
-   * closed first. 
+   * closed first.
+   * @param details_view
    * @param title the title of the details view.
    * @param flags combination of @c DetailsViewFlags.
    * @param feedback_handler called when user clicks on feedback buttons. The
@@ -135,7 +157,7 @@ class GadgetHostInterface {
   };
 
   /** Output a debug string to the debug console or other places. */
-  virtual void DebugOutput(DebugLevel level, const char *message) = 0;
+  virtual void DebugOutput(DebugLevel level, const char *message) const = 0;
 
   /**
    * Returns the current time in microsecond units. This should only
@@ -194,11 +216,45 @@ class GadgetHostInterface {
   /** Open the given URL in the user's default web brower. */
   virtual bool OpenURL(const char *url) const = 0;
 
- /** Temporarily install a given font on the system. */
-  virtual bool LoadFont(const char *filename, FileManagerInterface *fm) = 0;
+  /** Temporarily install a given font on the system. */
+  virtual bool LoadFont(const char *filename) = 0;
 
   /** Remove a previously installed font. */
   virtual bool UnloadFont(const char *filename) = 0;
+
+  /**
+   * Displays the standard browse for file dialog and returns the name.
+   * @param filter in the form "Display Name|List of Types", and multiple
+   *     entries can be added to it. For example:
+   *     "Music Files|*.mp3;*.wma|All Files|*.*".
+   * @return the selected file or an empty string if the dialog is cancelled.
+   *     The caller should not free the pointer it returned.
+   */
+  virtual const char *BrowseForFile(const char *filter) = 0;
+
+  /**
+   * Displays the standard browse for file dialog and returns a collection
+   * containing the names of the selected files.
+   * @param filter in the form "Display Name|List of Types", and multiple
+   *     entries can be added to it. For example:
+   *     "Music Files|*.mp3;*.wma|All Files|*.*".
+   * @return the selected files or an empty collection if the dialog is
+   *     cancelled. The caller should call @c Destroy() to the returned
+   *     pointer after use.
+   */
+  virtual FilesInterface *BrowseForFiles(const char *filter) = 0;
+
+  /** Retrieves the position of the cursor. */
+  virtual void GetCursorPos(int *x, int *y) const = 0;
+
+  /** Retrieves the screen size. */
+  virtual void GetScreenSize(int *width, int *height) const = 0;
+
+  /** Returns the path to the icon associated with the specified file. */
+  virtual const char *GetFileIcon(const char *filename) const = 0;
+
+  /** Creates an audio clip from given file. */
+  virtual AudioclipInterface *CreateAudioclip(const char *filename) = 0;
 };
 
 } // namespace ggadget

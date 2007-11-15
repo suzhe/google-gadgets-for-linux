@@ -234,7 +234,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       if (0 == key.find(kManifestInstallFont) &&
           (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
         // ignore return, error not fatal
-        host_->LoadFont(i->second.c_str(), file_manager);
+        host_->LoadFont(i->second.c_str());
       }
     }
 
