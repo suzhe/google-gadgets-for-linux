@@ -37,7 +37,8 @@ ScriptableMenu::~ScriptableMenu() {
 
 void ScriptableMenu::ScriptAddItem(const char *item_text, int style,
                                    Slot *handler) {
-  menu_->AddItem(item_text, style, new SlotProxy1<void, const char *>(handler));
+  menu_->AddItem(item_text, style,
+                 handler ? new SlotProxy1<void, const char *>(handler) : NULL);
 }
 
 ScriptableMenu *ScriptableMenu::ScriptAddPopup(const char *popup_text) {

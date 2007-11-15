@@ -38,6 +38,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::FileManagerInterface *GetFileManager();
   virtual ggadget::FileManagerInterface *GetGlobalFileManager();
   virtual ggadget::OptionsInterface *GetOptions();
+  virtual ggadget::FrameworkInterface *GetFramework();
   virtual ggadget::GadgetInterface *GetGadget();
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type, ggadget::ScriptableInterface *prototype);
@@ -65,7 +66,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual void GetCursorPos(int *x, int *y) const;
   virtual void GetScreenSize(int *width, int *height) const;
   virtual const char *GetFileIcon(const char *filename) const;
-  virtual ggadget::AudioclipInterface *CreateAudioclip(const char *filename);
+  virtual ggadget::AudioclipInterface *CreateAudioclip(const char *src);
 
   /**
    * Loads a gadget from file system and hosts it.
@@ -108,6 +109,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   ggadget::FileManagerInterface *global_file_manager_;
   ggadget::FileManagerInterface *file_manager_;
   ggadget::OptionsInterface *options_;
+  ggadget::FrameworkInterface *framework_;
   ggadget::GadgetInterface *gadget_;
 
   int plugin_flags_;

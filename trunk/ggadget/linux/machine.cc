@@ -17,10 +17,7 @@
 #include "machine.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 const char *Machine::GetBiosSerialNumber() const {
   return "007";
@@ -62,12 +59,9 @@ int Machine::GetProcessorStepping() const {
   return 5;
 }
 
-const char *Machine::GetProcessorVender() const {
+const char *Machine::GetProcessorVendor() const {
   return "Google";
 }
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget

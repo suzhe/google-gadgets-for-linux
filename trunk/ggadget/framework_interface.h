@@ -51,8 +51,8 @@ class MachineInterface {
   virtual int GetProcessorSpeed() const = 0;
   /** Retrieves the step designation of the processor. */
   virtual int GetProcessorStepping() const = 0;
-  /** Gets the processor's vender name. */
-  virtual const char *GetProcessorVender() const = 0;
+  /** Gets the processor's vendor name. */
+  virtual const char *GetProcessorVendor() const = 0;
 };
 
 /** Interface for retrieving the information of the memory. */
@@ -104,7 +104,7 @@ class NetworkInterface {
   };
 
   /** The network connection physical media type. */
-  enum ConnectionMediaType {
+  enum PhysicalMediaType {
     /** None of the following. */
     PHISICAL_MEDIA_TYPE_UNSPECIFIED = 0,
     /**
@@ -138,7 +138,7 @@ class NetworkInterface {
   /** Gets the type of the connection. */
   virtual ConnectionType GetConnectionType() const = 0;
   /** Gets the type of the physical media. */
-  virtual ConnectionMediaType GetPhysicalMediaType() const = 0;
+  virtual PhysicalMediaType GetPhysicalMediaType() const = 0;
 };
 
 class PerfmonInterface {
@@ -297,17 +297,6 @@ class WirelessInterface {
    *     The user must call @c Destroy of the returned pointer after use
    *     if the return value is not @c NULL.
    */
-  virtual const WirelessAccessPointInterface *GetWirelessAccessPoint(
-      int index) const = 0;
-
-  /**
-   * Get information of an access points.
-   * @return the @c WirelessAccessPointInterface pointer,
-   *     or @c NULL if the access points don't support enumeration
-   *     or index out of range.
-   *     The user must call @c Destroy of the returned pointer after use
-   *     if the return value is not @c NULL.
-   */
   virtual WirelessAccessPointInterface *GetWirelessAccessPoint(int index) = 0;
 
   /** Get the name of the wireless adapter. */
@@ -323,10 +312,9 @@ class WirelessInterface {
 } // namespace framework
 
 class FrameworkInterface {
- protected:
+ public:
   virtual ~FrameworkInterface() {}
 
- public:
   virtual framework::MachineInterface *GetMachineInterface() = 0;
   virtual framework::MemoryInterface *GetMemoryInterface() = 0;
   virtual framework::NetworkInterface *GetNetworkInterface() = 0;

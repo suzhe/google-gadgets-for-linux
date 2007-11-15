@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_CONVERTER_H__
-#define GGADGET_CONVERTER_H__
+#ifndef GGADGET_SMJS_CONVERTER_H__
+#define GGADGET_SMJS_CONVERTER_H__
 
 #include <jsapi.h>
 #include <string>
@@ -83,4 +83,4 @@ JSBool ConvertNativeToJS(JSContext* cx,
 } // namespace internal
 } // namespace ggadget
 
-#endif  // GGADGET_CONVERTER_H__
+#endif  // GGADGET_SMJS_CONVERTER_H__

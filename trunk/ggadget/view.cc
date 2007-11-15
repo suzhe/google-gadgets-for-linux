@@ -404,8 +404,12 @@ class View::Impl {
     ASSERT(token == post_event_token_);
     post_event_token_ = 0;
 
-    for (PostedEvents::iterator it = posted_events_.begin();
-         it != posted_events_.end(); ++it) {
+    // Make a copy of posted_events_, because it may change during the
+    // following loop.
+    PostedEvents posted_events_copy;
+    std::swap(posted_events_, posted_events_copy);
+    for (PostedEvents::iterator it = posted_events_copy.begin();
+         it != posted_events_copy.end(); ++it) {
       if (it->first) { // The event is still valid.
         posting_event_element_ = it->first->GetSrcElement();
         FireEvent(it->first, *it->second);
@@ -417,8 +421,8 @@ class View::Impl {
         }
       }
     }
+    posted_events_copy.clear();
     posting_event_element_ = NULL;
-    posted_events_.clear();
     return false;
   }
 
@@ -431,9 +435,12 @@ class View::Impl {
            it != posted_events_.end(); ++it) {
         if (it->first && // The event is still valid.
             it->first->GetEvent()->GetType() == Event::EVENT_SIZE &&
-            it->first->GetSrcElement() == event->GetSrcElement())
+            it->first->GetSrcElement() == event->GetSrcElement()) {
+          delete event->GetEvent();
+          delete event;
           // The size event already posted for this element.
           return;
+        }
       }
     }
     posted_events_.push_back(std::make_pair(event, &event_signal));
@@ -1084,8 +1091,7 @@ void View::SetFocus(ElementInterface *element) {
 bool View::OpenURL(const char *url) const {
   // Important: verify that URL is valid first. 
   // Otherwise could be a security problem.
-  std::string newurl;
-  EncodeURL(url, &newurl);
+  std::string newurl = EncodeURL(url);
   if (0 == strncmp(newurl.c_str(), kFTPPrefix, sizeof(kFTPPrefix) - 1) ||
       0 == strncmp(newurl.c_str(), kHTTPPrefix, sizeof(kHTTPPrefix) - 1) ||
       0 == strncmp(newurl.c_str(), kHTTPSPrefix, sizeof(kHTTPSPrefix) - 1)) {  

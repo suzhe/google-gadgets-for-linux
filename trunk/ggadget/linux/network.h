@@ -14,28 +14,22 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_NETWORK_H__
-#define GGADGET_FRAMEWORK_SYSTEM_NETWORK_H__
+#ifndef GGADGET_LINUX_NETWORK_H__
+#define GGADGET_LINUX_NETWORK_H__
 
-#include "network_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 class Network : public NetworkInterface {
  public:
   virtual bool IsOnline() const;
   virtual NetworkInterface::ConnectionType GetConnectionType() const;
-  virtual NetworkInterface::ConnectionMediaType GetPhysicalMediaType() const;
+  virtual NetworkInterface::PhysicalMediaType GetPhysicalMediaType() const;
 };
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_NETWORK_H__
+#endif // GGADGET_LINUX_NETWORK_H__

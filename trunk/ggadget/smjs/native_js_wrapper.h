@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_NATIVE_JS_WRAPPER_H__
-#define GGADGET_NATIVE_JS_WRAPPER_H__
+#ifndef GGADGET_SMJS_NATIVE_JS_WRAPPER_H__
+#define GGADGET_SMJS_NATIVE_JS_WRAPPER_H__
 
 #include <set>
 #include <jsapi.h>
@@ -144,4 +144,4 @@ private:
 } // namespace internal
 } // namespace ggadget
 
-#endif // GGADGET_NATIVE_JS_WRAPPER_H__
+#endif // GGADGET_SMJS_NATIVE_JS_WRAPPER_H__

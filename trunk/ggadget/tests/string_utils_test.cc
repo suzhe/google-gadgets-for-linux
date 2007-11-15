@@ -87,20 +87,26 @@ TEST(StringUtils, EncodeURL) {
 
   std::string dest;
 
-  EncodeURL(src1, &dest);
+  dest = EncodeURL(src1);
   EXPECT_STREQ(src1, dest.c_str());
 
-  EncodeURL(src2, &dest);
+  dest = EncodeURL(src2);
   EXPECT_STREQ("%20%5b%5d%7b%7d%3c%3e%22", dest.c_str());
 
-  EncodeURL(src3, &dest);
+  dest = EncodeURL(src3);
   EXPECT_STREQ("/", dest.c_str());
 
-  EncodeURL(src4, &dest);
+  dest = EncodeURL(src4);
   EXPECT_STREQ("%07%08%0c%0a%0d%09%0b%07%0b%0b%07", dest.c_str());
 
-  EncodeURL(src5, &dest);
+  dest = EncodeURL(src5);
   EXPECT_STREQ("\x7f%80%81%20asd%8f%203%9a%aa%fe%ff", dest.c_str());
+}
+
+TEST(StringUtils, EncodeJavaScriptString) {
+  UTF16Char src1[] = { '\"', '\\', 'a', 'b', 1, 0x1f, 0xfff, 0 };
+  std::string dest = EncodeJavaScriptString(src1);
+  EXPECT_STREQ("\\\"\\\\ab\\u0001\\u001F\\u0FFF", dest.c_str());
 }
 
 int main(int argc, char **argv) {

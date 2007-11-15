@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_JSON_H__
-#define GGADGET_JSON_H__
+#ifndef GGADGET_SMJS_JSON_H__
+#define GGADGET_SMJS_JSON_H__
 
 #include <jsapi.h>
 #include <string>
@@ -34,4 +34,4 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val);
 
 } // namespace ggadget
 
-#endif  // GGADGET_JSON_H__
+#endif  // GGADGET_SMJS_JSON_H__

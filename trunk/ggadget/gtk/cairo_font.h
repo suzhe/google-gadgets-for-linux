@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GRAPHICS_CAIRO_FONT_H__
-#define GGADGET_GRAPHICS_CAIRO_FONT_H__
+#ifndef GGADGET_GTK_CAIRO_FONT_H__
+#define GGADGET_GTK_CAIRO_FONT_H__
 
 #include <pango/pango.h>
 
@@ -54,4 +54,4 @@ class CairoFont : public FontInterface {
 
 } // namespace ggadget
 
-#endif // GGADGET_GRAPHICS_CAIRO_FONT_H__
+#endif // GGADGET_GTK_CAIRO_FONT_H__

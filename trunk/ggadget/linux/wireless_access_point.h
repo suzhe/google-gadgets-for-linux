@@ -14,18 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_WIRELESS_ACCESS_POINT_H__
-#define GGADGET_FRAMEWORK_SYSTEM_WIRELESS_ACCESS_POINT_H__
+#ifndef GGADGET_LINUX_WIRELESS_ACCESS_POINT_H__
+#define GGADGET_LINUX_WIRELESS_ACCESS_POINT_H__
 
-#include "wireless_access_point_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
-
-namespace network {
 
 class WirelessAccessPoint : public WirelessAccessPointInterface {
  public:
@@ -33,19 +28,13 @@ class WirelessAccessPoint : public WirelessAccessPointInterface {
 
  public:
   virtual const char *GetName() const;
-  virtual
-      WirelessAccessPointInterface::APType GetType() const;
+  virtual WirelessAccessPointInterface::Type GetType() const;
   virtual int GetSignalStrength() const;
   virtual void Connect(Slot1<void, bool> *callback);
   virtual void Disconnect(Slot1<void, bool> *callback);
 };
 
-} // namespace network
-
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_WIRELESS_ACCESS_POINT_H__
+#endif // GGADGET_LINUX_WIRELESS_ACCESS_POINT_H__

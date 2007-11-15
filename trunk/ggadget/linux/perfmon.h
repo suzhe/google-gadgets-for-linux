@@ -14,26 +14,20 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_PERFMON_H__
-#define GGADGET_FRAMEWORK_SYSTEM_PERFMON_H__
+#ifndef GGADGET_LINUX_PERFMON_H__
+#define GGADGET_LINUX_PERFMON_H__
 
-#include "perfmon_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 class Perfmon : public PerfmonInterface {
  public:
   virtual int64_t GetCurrentValue(const char *counter_path);
 };
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_PERFMON_H__
+#endif // GGADGET_LINUX_PERFMON_H__

@@ -14,16 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_MACHINE_H__
-#define GGADGET_FRAMEWORK_SYSTEM_MACHINE_H__
+#ifndef GGADGET_LINUX_MACHINE_H__
+#define GGADGET_LINUX_MACHINE_H__
 
-#include "machine_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 class Machine : public MachineInterface {
  public:
@@ -37,13 +34,10 @@ class Machine : public MachineInterface {
   virtual const char *GetProcessorName() const;
   virtual int GetProcessorSpeed() const;
   virtual int GetProcessorStepping() const;
-  virtual const char *GetProcessorVender() const;
+  virtual const char *GetProcessorVendor() const;
 };
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_MACHINE_H__
+#endif // GGADGET_LINUX_MACHINE_H__

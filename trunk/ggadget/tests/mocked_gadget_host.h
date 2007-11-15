@@ -28,6 +28,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   }
   virtual ggadget::FileManagerInterface *GetFileManager() { return NULL; }
   virtual ggadget::FileManagerInterface *GetGlobalFileManager() { return NULL; }
+  virtual ggadget::FrameworkInterface *GetFramework() { return NULL; }
   virtual ggadget::OptionsInterface *GetOptions() { return NULL; }
   virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
   virtual ggadget::ViewHostInterface *NewViewHost(

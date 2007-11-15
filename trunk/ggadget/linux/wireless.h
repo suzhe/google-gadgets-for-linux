@@ -14,18 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_WIRELESS_H__
-#define GGADGET_FRAMEWORK_SYSTEM_WIRELESS_H__
+#ifndef GGADGET_LINUX_WIRELESS_H__
+#define GGADGET_LINUX_WIRELESS_H__
 
-#include "wireless_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
-
-namespace network {
 
 class WirelessAccessPointInterface;
 
@@ -48,12 +43,7 @@ class Wireless : public WirelessInterface {
   WirelessAccessPointInterface *_interfaces[2];
 };
 
-} // namespace network
-
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_WIRELESS_H__
+#endif // GGADGET_LINUX_WIRELESS_H__

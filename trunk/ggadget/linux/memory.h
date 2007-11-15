@@ -14,16 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_MEMORY_H__
-#define GGADGET_FRAMEWORK_SYSTEM_MEMORY_H__
+#ifndef GGADGET_LINUX_MEMORY_H__
+#define GGADGET_LINUX_MEMORY_H__
 
-#include "memory_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 class Memory : public MemoryInterface {
  public:
@@ -35,10 +32,7 @@ class Memory : public MemoryInterface {
   virtual int64_t GetUsedPhysical() const;
 };
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_MEMORY_H__
+#endif // GGADGET_LINUX_MEMORY_H__

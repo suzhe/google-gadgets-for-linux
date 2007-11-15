@@ -24,6 +24,7 @@ class AudioclipInterface;
 class DetailsViewInterface;
 class ElementFactoryInterface;
 class FileManagerInterface;
+class FrameworkInterface;
 class GadgetInterface;
 class OptionsInterface;
 class ScriptableInterface;
@@ -79,6 +80,9 @@ class GadgetHostInterface {
 
   /** Returns the @c OptionsInterface instance for this gadget. */
   virtual OptionsInterface *GetOptions() = 0;
+
+  /** Returns the global @c FrameworkInterface instance. */
+  virtual FrameworkInterface *GetFramework() = 0;
 
   /** Returns the hosted gadget. */
   virtual GadgetInterface *GetGadget() = 0;
@@ -253,8 +257,8 @@ class GadgetHostInterface {
   /** Returns the path to the icon associated with the specified file. */
   virtual const char *GetFileIcon(const char *filename) const = 0;
 
-  /** Creates an audio clip from given file. */
-  virtual AudioclipInterface *CreateAudioclip(const char *filename) = 0;
+  /** Creates an audio clip from given file or url. */
+  virtual AudioclipInterface *CreateAudioclip(const char *src) = 0;
 };
 
 } // namespace ggadget

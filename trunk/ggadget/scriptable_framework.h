@@ -14,30 +14,30 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SCRIPTABLE_OPTIONS_H__
-#define GGADGET_SCRIPTABLE_OPTIONS_H__
+#ifndef GGADGET_SCRIPTABLE_FRAMEWORK_H__
+#define GGADGET_SCRIPTABLE_FRAMEWORK_H__
 
 #include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
-class OptionsInterface;
+class GadgetHostInterface;
 
-class ScriptableOptions : public ScriptableHelper<ScriptableInterface> {
+class ScriptableFramework : public ScriptableHelper<ScriptableInterface> {
  public:
-  DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)
+  DEFINE_CLASS_ID(0x46d1edbb5e594af9, ScriptableInterface)
 
-  explicit ScriptableOptions(OptionsInterface *options);
-  virtual ~ScriptableOptions();
+  explicit ScriptableFramework(GadgetHostInterface *gadget_host);
+  virtual ~ScriptableFramework();
 
   virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(ScriptableOptions);
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableFramework);
   class Impl;
   Impl *impl_;
 };
 
 } // namespace ggadget
 
-#endif  // GGADGET_SCRIPTABLE_OPTIONS_H__
+#endif  // GGADGET_SCRIPTABLE_FRAMEWORK_H__

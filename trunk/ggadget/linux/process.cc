@@ -17,10 +17,7 @@
 #include "process.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 ProcessInfo::ProcessInfo(int pid, const std::string &path) :
     pid_(pid), path_(path) {
@@ -82,8 +79,5 @@ ProcessInfoInterface *Process::GetInfo(int pid) {
   return NULL;
 }
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
