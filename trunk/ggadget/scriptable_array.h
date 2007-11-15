@@ -34,19 +34,19 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
   virtual ~ScriptableArray();
 
   /**
-   * Creates a @c ScriptableArray.
-   * @param array the array source data. A copy will be made before return.
+   * Creates a @c ScriptableArray with an iterator and count.
+   * @param start the start position of an iterator. It can also be the start
+   *     address of an array.
    * @param count number of elements in the array.
    * @param native_owned if @c true, the created @c ScriptableArray is owned by
    *     the native code and the holder of this pointer is responsible to delete
    *     it. if @c false, the ownership will be transferred to script side.
    */
-  template <typename T>
-  static ScriptableArray *Create(const T *array, size_t count,
-                                 bool native_owned) {
+  template <typename I>
+  static ScriptableArray *Create(I start, size_t count, bool native_owned) {
     Variant *variant_array = new Variant[count];
     for (size_t i = 0; i < count; i++)
-      variant_array[i] = Variant(array[i]);
+      variant_array[i] = Variant(*start++);
     return new ScriptableArray(variant_array, count, native_owned);
   }
 
@@ -57,17 +57,23 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
   static ScriptableArray *Create(T *const *array, bool native_owned) {
     size_t size = 0;
     for (; array[size]; size++);
-    return Create<T *>(array, size, native_owned);
+    return Create(array, size, native_owned);
   }
 
   size_t GetCount() const;
-  Variant GetItem(size_t index) const;
+  /**
+   * This method can be overriden by subclasses to customize the ownership
+   * policy of the returned item.
+   */ 
+  virtual Variant GetItem(size_t index) const;
 
   virtual OwnershipPolicy Attach();
   virtual bool Detach();
 
- private:
+ protected:
   ScriptableArray(Variant *array, size_t count, bool native_owned);
+
+ private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableArray);
   class Impl;
   Impl *impl_;

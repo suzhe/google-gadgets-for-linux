@@ -108,7 +108,6 @@ bool CheckXMLName(const char *name);
  * Parses XML and build the DOM tree.
  * @param xml the content of an XML file.
  * @param filename the name of the XML file (only for logging).
- * @param is_html @c true if the input is an HTML document.
  * @param domdoc the DOM document. It must be blank before calling this
  *     function, and will be filled with DOM data if this function succeeds.
  * @param[in, out] encoding on input, it is the hint encoding if the input xml

@@ -14,16 +14,12 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_AUDIO_AUDIOCLIP_INTERFACE_H__
-#define GGADGET_FRAMEWORK_AUDIO_AUDIOCLIP_INTERFACE_H__
+#ifndef GGADGET_AUDIOCLIP_INTERFACE_H__
+#define GGADGET_AUDIOCLIP_INTERFACE_H__
 
 namespace ggadget {
 
 template <typename R, typename P1, typename P2> class Slot2;
-
-namespace framework {
-
-namespace audio {
 
 /** Used for playing back audio files. */
 class AudioclipInterface {
@@ -32,17 +28,17 @@ class AudioclipInterface {
 
  public:
   enum State {
-    STATE_ERROR,
-    STATE_STOPPED,
-    STATE_PLAYING,
-    STATE_PAUSED,
+    SOUND_STATE_ERROR = -1,
+    SOUND_STATE_STOPPED = 0,
+    SOUND_STATE_PLAYING = 1,
+    SOUND_STATE_PAUSED = 2,
   };
 
   enum ErrorCode {
-    ERROR_NO_ERROR,
-    ERROR_UNKNOWN,
-    ERROR_BAD_CLIP_SRC,
-    ERROR_FORMAT_NOT_SUPPORTED,
+    SOUND_ERROR_NO_ERROR = 0,
+    SOUND_ERROR_UNKNOWN = 1,
+    SOUND_ERROR_BAD_CLIP_SRC = 2,
+    SOUND_ERROR_FORMAT_NOT_SUPPORTED = 3,
   };
 
  public:
@@ -86,16 +82,11 @@ class AudioclipInterface {
   virtual void Stop();
 
  public:
-  virtual Slot2<void, AudioclipInterface *, State> *
-      GetOnStateChange() const = 0;
-  virtual void SetOnStateChange(
-      Slot2<void, AudioclipInterface *, State> *handle) = 0;
+  typedef Slot2<void, AudioclipInterface *, State> OnStateChangeHandler;
+  virtual OnStateChangeHandler *GetOnStateChange() const = 0;
+  virtual void SetOnStateChange(OnStateChangeHandler *handle) = 0;
 };
-
-} // namespace audio
-
-} // namespace framework
 
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_AUDIO_AUDIOCLIP_INTERFACE_H__
+#endif // GGADGET_AUDIOCLIP_INTERFACE_H__

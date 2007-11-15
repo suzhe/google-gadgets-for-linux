@@ -32,10 +32,10 @@ GtkMenuImpl::~GtkMenuImpl() {
 void GtkMenuImpl::SetMenuItemStyle(GtkMenuItem *menu_item, int style) {
   setting_style_ = true;
   gtk_widget_set_sensitive(GTK_WIDGET(menu_item),
-      (style & ggadget::MenuInterface::gddMenuItemFlagGrayed) == 0);
+      (style & ggadget::MenuInterface::MENU_ITEM_FLAG_GRAYED) == 0);
   if (GTK_IS_CHECK_MENU_ITEM(menu_item)) {
     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item),
-        (style & ggadget::MenuInterface::gddMenuItemFlagChecked) != 0);
+        (style & ggadget::MenuInterface::MENU_ITEM_FLAG_CHECKED) != 0);
   }
   setting_style_ = false;
 }
@@ -43,7 +43,7 @@ void GtkMenuImpl::SetMenuItemStyle(GtkMenuItem *menu_item, int style) {
 void GtkMenuImpl::AddItem(const char *item_text, int style,
                           ggadget::Slot1<void, const char *> *handler) {
   GtkMenuItem *item;
-  if (style & gddMenuItemFlagSeparator)
+  if (style & MENU_ITEM_FLAG_SEPARATOR)
     item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
   else
     item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_label(item_text));

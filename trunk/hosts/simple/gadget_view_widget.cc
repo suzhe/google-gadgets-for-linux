@@ -494,8 +494,5 @@ GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
   g_signal_connect(widget, "drag-drop", G_CALLBACK(OnDragDrop), NULL);
   g_signal_connect(widget, "drag_data_received",
                    G_CALLBACK(OnDragDataReceived), NULL);
-  // GTK_DEST_DEFAULT_ALL, 
-  // GTK_DEST_DEFAULT_MOTION GTK_DEST_DEFAULT_HIGHLIGHT GTK_DEST_DEFAULT_DROP
-
   return widget;
 }

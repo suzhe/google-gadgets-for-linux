@@ -169,7 +169,7 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
   /**
    * Handler of the mouse events.
    * @param event the mouse event.
-   * @param[out] fired_event the element who processed the event, or
+   * @param[out] fired_element the element who processed the event, or
    *     @c NULL if no one.
    * @return @c false to disable the default handling of this event, or
    *     @c true otherwise.
@@ -179,7 +179,7 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
   /**
    * Handler of the drag and drop events.
    * @param event the darg and drop event.
-   * @param[out] fired_event the element who processed the event, or
+   * @param[out] fired_element the element who processed the event, or
    *     @c NULL if no one.
    * @return @c true if the event is accepted by some element.
    */
