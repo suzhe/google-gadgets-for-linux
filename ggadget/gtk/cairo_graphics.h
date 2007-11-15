@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GRAPHICS_CAIRO_GRAPHICS_H__
-#define GGADGET_GRAPHICS_CAIRO_GRAPHICS_H__
+#ifndef GGADGET_GTK_CAIRO_GRAPHICS_H__
+#define GGADGET_GTK_CAIRO_GRAPHICS_H__
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
@@ -63,4 +63,4 @@ class CairoGraphics : public GraphicsInterface {
 
 }
 
-#endif // GGADGET_GRAPHICS_CAIRO_GRAPHICS_H__
+#endif // GGADGET_GTK_CAIRO_GRAPHICS_H__

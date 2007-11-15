@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_JS_SCRIPT_CONTEXT_H__
-#define GGADGET_JS_SCRIPT_CONTEXT_H__
+#ifndef GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__
+#define GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__
 
 #include <map>
 #include <vector>
@@ -155,4 +155,4 @@ class AutoLocalRootScope {
 } // namespace internal
 } // namespace ggadget
 
-#endif  // GGADGET_JS_SCRIPT_CONTEXT_H__
+#endif  // GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__

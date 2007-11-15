@@ -17,10 +17,7 @@
 #include "power.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 bool Power::IsCharging() const {
   return true;
@@ -42,8 +39,5 @@ int Power::GetTimeTotal() const {
   return 9002;
 }
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget

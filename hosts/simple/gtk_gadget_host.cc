@@ -19,10 +19,11 @@
 #include <sys/wait.h>
 #include <fontconfig/fontconfig.h>
 
-#include <ggadget/file_manager.h>
-#include <ggadget/element_factory.h>
-#include <ggadget/gadget.h>
 #include <ggadget/common.h>
+#include <ggadget/element_factory.h>
+#include <ggadget/file_manager.h>
+#include <ggadget/gadget.h>
+#include <ggadget/linux/framework.h>
 #include <ggadget/smjs/js_script_runtime.h>
 
 #include <ggadget/button_element.h>
@@ -59,6 +60,7 @@ GtkGadgetHost::GtkGadgetHost()
       global_file_manager_(new SimpleHostFileManager()),
       file_manager_(new ggadget::FileManager(global_file_manager_)),
       options_(new Options()),
+      framework_(new ggadget::Framework()),
       gadget_(NULL),
       plugin_flags_(0),
       toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
@@ -106,6 +108,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   gadget_ = NULL;
   delete options_;
   options_ = NULL;
+  delete framework_;
+  framework_ = NULL;
   delete element_factory_;
   element_factory_ = NULL;
   delete script_runtime_;
@@ -137,6 +141,10 @@ ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
 
 ggadget::OptionsInterface *GtkGadgetHost::GetOptions() {
   return options_;
+}
+
+ggadget::FrameworkInterface *GtkGadgetHost::GetFramework() {
+  return framework_;
 }
 
 ggadget::GadgetInterface *GtkGadgetHost::GetGadget() {
@@ -517,8 +525,31 @@ const char *GtkGadgetHost::GetFileIcon(const char *filename) const {
   return "/usr/share/icons/application-default-icon.png";
 }
 
-ggadget::AudioclipInterface *GtkGadgetHost::CreateAudioclip(
-    const char *filename) {
-  // TODO:
-  return NULL;
+// TODO:
+class TemporaryAudioclip : public ggadget::AudioclipInterface {
+ public:
+  virtual void Destroy() { delete this; }
+  virtual int GetBalance() const { return 0; }
+  virtual void SetBalance(int balance) { }
+  virtual int GetCurrentPosition() const { return 0; }
+  virtual void SetCurrentPosition() { }
+  virtual int GetDuration() const { return 100; }
+  virtual ErrorCode GetError() const { return SOUND_ERROR_NO_ERROR; }
+  virtual const char *GetSrc() const { return "src"; }
+  virtual void SetSrc(const char *src) { }
+  virtual State GetState() const { return SOUND_STATE_PLAYING; }
+  virtual int GetVolume() const { return 100; }
+  virtual void SetVolume(int volume) const { }
+  virtual void Play() { }
+  virtual void Pause() { }
+  virtual void Stop() { }
+  virtual OnStateChangeHandler *GetOnStateChange() const { return NULL; }
+  virtual void SetOnStateChange(OnStateChangeHandler *handler) {
+    delete handler;
+  }
+};
+
+
+ggadget::AudioclipInterface *GtkGadgetHost::CreateAudioclip(const char *src) {
+  return new TemporaryAudioclip();
 }

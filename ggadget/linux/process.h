@@ -14,17 +14,14 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_PROCESS_H__
-#define GGADGET_FRAMEWORK_SYSTEM_PROCESS_H__
+#ifndef GGADGET_LINUX_PROCESS_H__
+#define GGADGET_LINUX_PROCESS_H__
 
 #include <string>
-#include "process_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 class ProcessInfo : public ProcessInfoInterface {
  public:
@@ -58,10 +55,7 @@ class Process : public ProcessInterface {
   virtual ProcessInfoInterface *GetInfo(int pid);
 };
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_PROCESS_H__
+#endif // GGADGET_LINUX_PROCESS_H__

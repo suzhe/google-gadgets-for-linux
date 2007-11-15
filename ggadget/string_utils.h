@@ -21,6 +21,7 @@
 #include <string>
 #include <stdint.h>         // Integer types and macros.
 #include <ggadget/common.h>
+#include <ggadget/unicode_utils.h>
 
 namespace ggadget {
 
@@ -97,15 +98,21 @@ std::string ToUpper(const std::string &s);
 /**
  * Format data into a C++ string.
  */
-std::string StringPrintf(const char* format, ...)
+std::string StringPrintf(const char *format, ...)
   // Tell the compiler to do printf format string checking.
   PRINTF_ATTRIBUTE(1,2);
 
-/**  URL-encodethe first string into the second string. */
-void EncodeURL(const std::string &source, std::string *dest);
+/** URL-encode the source string. */
+std::string EncodeURL(const std::string &source);
 
 /** Returns whether the given character is valid in a URL. See RFC2396. */
 bool IsValidURLChar(unsigned char c);
+
+/**
+ * Encode a string into a JavaScript string literal (without the begining and
+ * ending quotes), by escaping special characters in the source string.
+ */
+std::string EncodeJavaScriptString(const UTF16Char *source);
 
 } // namespace ggadget
 

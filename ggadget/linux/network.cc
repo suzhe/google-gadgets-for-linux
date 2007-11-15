@@ -17,10 +17,7 @@
 #include "network.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 bool Network::IsOnline() const {
   return true;
@@ -30,12 +27,9 @@ NetworkInterface::ConnectionType Network::GetConnectionType() const {
   return NetworkInterface::CONNECTION_TYPE_802_3;
 }
 
-NetworkInterface::ConnectionMediaType Network::GetPhysicalMediaType() const {
-  return NetworkInterface::CONNECTION_MEDIA_TYPE_UNSPECIFIED;
+NetworkInterface::PhysicalMediaType Network::GetPhysicalMediaType() const {
+  return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
 }
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget

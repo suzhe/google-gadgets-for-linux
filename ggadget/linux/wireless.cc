@@ -19,12 +19,7 @@
 #include "wireless_access_point.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
-
-namespace network {
 
 bool Wireless::IsAvailable() const {
   return true;
@@ -67,10 +62,5 @@ int Wireless::GetSignalStrength() const {
   return 87;
 }
 
-} // namespace network
-
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget

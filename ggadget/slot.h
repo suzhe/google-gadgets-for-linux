@@ -188,7 +188,7 @@ template <typename R>
 class SlotProxy0 : public Slot0<R> {
  public:
   typedef SlotProxy0<R> SelfType;
-  SlotProxy0(Slot* slot) : slot_(slot) { }
+  SlotProxy0(Slot* slot) : slot_(slot) { ASSERT(slot); }
   ~SlotProxy0() { delete slot_; slot_ = NULL; }
   virtual Variant Call(int argc, Variant argv[]) const {
     return slot_->Call(argc, argv);

@@ -17,10 +17,7 @@
 #include "memory.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 int64_t Memory::GetTotal() const {
   return 12345678;
@@ -46,8 +43,5 @@ int64_t Memory::GetUsedPhysical() const {
   return 7623456;
 }
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget

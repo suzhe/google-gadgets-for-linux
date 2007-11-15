@@ -20,12 +20,7 @@
 #include "wireless_access_point.h"
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
-
-namespace network {
 
 void WirelessAccessPoint::Destroy() {
   delete this;
@@ -35,8 +30,8 @@ const char *WirelessAccessPoint::GetName() const {
   return "Dummy Wireless Access Point";
 }
 
-WirelessAccessPointInterface::APType WirelessAccessPoint::GetType() const {
-  return WirelessAccessPointInterface::APTYPE_WIRELESS_TYPE_ANY;
+WirelessAccessPointInterface::Type WirelessAccessPoint::GetType() const {
+  return WirelessAccessPointInterface::WIRELESS_TYPE_ANY;
 }
 
 int WirelessAccessPoint::GetSignalStrength() const {
@@ -57,10 +52,5 @@ void WirelessAccessPoint::Disconnect(Slot1<void, bool> *callback) {
   }
 }
 
-} // namespace network
-
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget

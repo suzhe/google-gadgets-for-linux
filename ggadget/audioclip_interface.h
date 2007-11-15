@@ -19,7 +19,7 @@
 
 namespace ggadget {
 
-template <typename R, typename P1, typename P2> class Slot2;
+template <typename R, typename P1> class Slot1;
 
 /** Used for playing back audio files. */
 class AudioclipInterface {
@@ -40,6 +40,9 @@ class AudioclipInterface {
     SOUND_ERROR_BAD_CLIP_SRC = 2,
     SOUND_ERROR_FORMAT_NOT_SUPPORTED = 3,
   };
+
+ public:
+  virtual void Destroy() = 0;
 
  public:
   /**
@@ -77,14 +80,14 @@ class AudioclipInterface {
   virtual void SetVolume(int volume) const = 0;
 
  public:
-  virtual void Play();
-  virtual void Pause();
-  virtual void Stop();
+  virtual void Play() = 0;
+  virtual void Pause() = 0;
+  virtual void Stop() = 0;
 
  public:
-  typedef Slot2<void, AudioclipInterface *, State> OnStateChangeHandler;
+  typedef Slot1<void, State> OnStateChangeHandler;
   virtual OnStateChangeHandler *GetOnStateChange() const = 0;
-  virtual void SetOnStateChange(OnStateChangeHandler *handle) = 0;
+  virtual void SetOnStateChange(OnStateChangeHandler *handler) = 0;
 };
 
 } // namespace ggadget

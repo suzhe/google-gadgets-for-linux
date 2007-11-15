@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_JS_FUNCTION_SLOT_H__
-#define GGADGET_JS_FUNCTION_SLOT_H__
+#ifndef GGADGET_SMJS_JS_FUNCTION_SLOT_H__
+#define GGADGET_SMJS_JS_FUNCTION_SLOT_H__
 
 #include <map>
 #include <jsapi.h>
@@ -73,4 +73,4 @@ class JSFunctionSlot : public Slot {
 } // namespace internal
 } // namespace ggadget
 
-#endif  // GGADGET_JS_FUNCTION_SLOT_H__
+#endif  // GGADGET_SMJS_JS_FUNCTION_SLOT_H__

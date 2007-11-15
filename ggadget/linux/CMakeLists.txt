@@ -25,4 +25,5 @@ SET(SRCS
   wireless.cc
 )
 
-ADD_LIBRARY(framework SHARED ${SRCS})
+ADD_LIBRARY(ggadget_linux SHARED ${SRCS})
+OUTPUT_LIBRARY(ggadget_linux)

@@ -17,6 +17,7 @@
 INCLUDE(LibXml2Config)
 
 ADD_SUBDIRECTORY(gtk)
+ADD_SUBDIRECTORY(linux)
 ADD_SUBDIRECTORY(smjs)
 ADD_SUBDIRECTORY(tests)
 
@@ -33,6 +34,7 @@ SET(SRCS
   math_utils.cc
   scriptable_array.cc
   scriptable_event.cc
+  scriptable_framework.cc
   scriptable_helper.cc
   scriptable_menu.cc
   scriptable_options.cc

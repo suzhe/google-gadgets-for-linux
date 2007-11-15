@@ -19,6 +19,7 @@
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
 #include "menu_interface.h"
+#include "scriptable_framework.h"
 #include "scriptable_helper.h"
 #include "scriptable_menu.h"
 #include "scriptable_options.h"
@@ -114,7 +115,8 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   class GadgetGlobalPrototype : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
-    GadgetGlobalPrototype(Gadget::Impl *owner) {
+    GadgetGlobalPrototype(Gadget::Impl *owner)
+        : framework_(owner->host_) {
       RegisterConstant("gadget", owner);
       RegisterConstant("options", &owner->scriptable_options_);
       RegisterConstant("strings", &owner->strings_);
@@ -126,10 +128,14 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterConstant("debug", &owner->debug_);
       RegisterConstant("storage", &owner->storage_);
 
-      // TODO: SetPrototype(The System global prototype).
-      // The System global prototype provides global constants and framework.
+      // Properties and methods of framework can also be accessed directly as
+      // globals.
+      RegisterConstant("framework", &framework_);
+      SetPrototype(&framework_);
     }
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
+
+    ScriptableFramework framework_; 
   };
 
   Impl(GadgetHostInterface *host, Gadget *owner)

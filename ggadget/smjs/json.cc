@@ -15,6 +15,7 @@
 */
 
 #include <cstring>
+#include <ggadget/string_utils.h>
 #include "json.h"
 
 namespace ggadget {
@@ -40,26 +41,8 @@ static void AppendStringToJSON(JSContext *cx, JSString *str,
                                std::string *json) {
   *json += '"';
   jschar *chars = JS_GetStringChars(str);
-  if (chars) {
-    size_t length = JS_GetStringLength(str);
-    for (size_t i = 0; i < length; i++) {
-      char buf[10];
-      switch (chars[i]) {
-        // The following special chars are not so complete, but also works.
-        case '"': *json += "\\\""; break;
-        case '\\': *json += "\\\\"; break;
-        case '\n': *json += "\\n"; break;
-        case '\r': *json += "\\r"; break;
-        default:
-          if (chars[i] >= 0x7f || chars[i] < 0x20) {
-            snprintf(buf, sizeof(buf), "\\u%04X", chars[i]);
-            *json += buf;
-          } else {
-            *json += static_cast<char>(chars[i]);
-          }
-      }
-    }
-  }
+  if (chars)
+    *json += EncodeJavaScriptString(chars);
   *json += '"';
 }
 

@@ -131,16 +131,13 @@ bool IsValidURLChar(unsigned char c) {
           || c >= 128);  // Enable converting non-ascii chars
 }
 
-void EncodeURL(const std::string &source, std::string *dest) {
-  ASSERT(dest);
-
-  dest->clear();
-
+std::string EncodeURL(const std::string &source) {
+  std::string dest;
   for (size_t c = 0; c < source.length(); c++) {
     unsigned char src = source[c];
 
     if (src == kBackSlash) {
-      dest->append(1, kSlash);
+      dest.append(1, kSlash);
       continue;
     }
 
@@ -150,16 +147,42 @@ void EncodeURL(const std::string &source, std::string *dest) {
       // output the percent, followed by the hex value of the character
       // Note: we know it's a char in US-ASCII (0-127)
       //
-      dest->append(1, '%');
+      dest.append(1, '%');
 
       static const char kHexChars[] = "0123456789abcdef";
-      dest->append(1, kHexChars[src >> 4]);
-      dest->append(1, kHexChars[src & 0xF]);
+      dest.append(1, kHexChars[src >> 4]);
+      dest.append(1, kHexChars[src & 0xF]);
     } else {
       // not a special char: just copy
-      dest->append(1, src);
+      dest.append(1, src);
     }
   }
+  return dest;
+}
+
+std::string EncodeJavaScriptString(const UTF16Char *source) {
+  ASSERT(source);
+
+  std::string dest;
+  for (const UTF16Char *p = source; *p; p++) {
+    switch (*p) {
+      // The following special chars are not so complete, but also works.
+      case '"': dest += "\\\""; break;
+      case '\\': dest += "\\\\"; break;
+      case '\n': dest += "\\n"; break;
+      case '\r': dest += "\\r"; break;
+      default:
+        if (*p >= 0x7f || *p < 0x20) {
+          char buf[10];
+          snprintf(buf, sizeof(buf), "\\u%04X", *p);
+          dest += buf;
+        } else {
+          dest += static_cast<char>(*p);
+        }
+        break;
+    }
+  }
+  return dest;
 }
 
 }  // namespace ggadget

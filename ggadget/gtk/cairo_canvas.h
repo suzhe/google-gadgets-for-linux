@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GRAPHICS_CAIRO_CANVAS_H__
-#define GGADGET_GRAPHICS_CAIRO_CANVAS_H__
+#ifndef GGADGET_GTK_CAIRO_CANVAS_H__
+#define GGADGET_GTK_CAIRO_CANVAS_H__
 
 #include <cairo.h>
 #include <stack>
@@ -121,4 +121,4 @@ class CairoCanvas : public CanvasInterface {
 
 }
 
-#endif // GGADGET_GRAPHICS_CAIRO_CANVAS_H__
+#endif // GGADGET_GTK_CAIRO_CANVAS_H__

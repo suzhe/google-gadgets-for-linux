@@ -14,16 +14,13 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_FRAMEWORK_SYSTEM_POWER_H__
-#define GGADGET_FRAMEWORK_SYSTEM_POWER_H__
+#ifndef GGADGET_LINUX_POWER_H__
+#define GGADGET_LINUX_POWER_H__
 
-#include "power_interface.h"
+#include <ggadget/framework_interface.h>
 
 namespace ggadget {
-
 namespace framework {
-
-namespace system {
 
 class Power : public PowerInterface {
  public:
@@ -34,10 +31,7 @@ class Power : public PowerInterface {
   virtual int GetTimeTotal() const;
 };
 
-} // namespace system
-
 } // namespace framework
-
 } // namespace ggadget
 
-#endif // GGADGET_FRAMEWORK_SYSTEM_POWER_H__
+#endif // GGADGET_LINUX_POWER_H__
