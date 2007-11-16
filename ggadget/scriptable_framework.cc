@@ -32,6 +32,14 @@ class ScriptableFramework::Impl {
         system_(gadget_host) {
   }
 
+  static Slot *GetOptionalSlot(const Variant &v) {
+    if (v.type() == Variant::TYPE_SLOT)
+      return VariantValue<Slot *>()(v);
+    if (v.type() != Variant::TYPE_VOID)
+      LOG("Invalid type of method: %s", v.ToString().c_str());
+    return NULL;
+  }
+
   class PermanentScriptable : public ScriptableHelper<ScriptableInterface> {
     DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
@@ -109,7 +117,8 @@ class ScriptableFramework::Impl {
       RegisterMethod("stop", NewSlot(this, &Audio::Stop));
     }
 
-    ScriptableAudioclip *Open(const char *src, Slot *method) {
+    ScriptableAudioclip *Open(const char *src, const Variant &method_var) {
+      Slot *method = GetOptionalSlot(method_var);
       AudioclipInterface *clip = gadget_host_->CreateAudioclip(src);
       if (clip) {
         ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
@@ -121,8 +130,8 @@ class ScriptableFramework::Impl {
       return NULL;
     }
 
-    ScriptableAudioclip *Play(const char *src, Slot *method) {
-      ScriptableAudioclip *clip = Open(src, method);
+    ScriptableAudioclip *Play(const char *src, const Variant &method_var) {
+      ScriptableAudioclip *clip = Open(src, method_var);
       if (clip)
         clip->clip_->Play();
       return clip;
@@ -192,12 +201,14 @@ class ScriptableFramework::Impl {
     virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
     virtual bool Detach() { delete this; return true; }
 
-    void Connect(Slot *callback) {
-      ap_->Connect(callback ? new SlotProxy1<void, bool>(callback) : NULL);
+    void Connect(const Variant &method_var) {
+      Slot *method = GetOptionalSlot(method_var);
+      ap_->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
     }
 
-    void Disconnect(Slot *callback) {
-      ap_->Disconnect(callback ? new SlotProxy1<void, bool>(callback) : NULL);
+    void Disconnect(const Variant &method_var) {
+      Slot *method = GetOptionalSlot(method_var);
+      ap_->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
     }
 
     framework::WirelessAccessPointInterface *ap_;
@@ -423,7 +434,8 @@ class ScriptableFramework::Impl {
       return NULL;
     }
 
-    void ConnectAP(const char *ap_name, Slot *method) {
+    void ConnectAP(const char *ap_name, const Variant &method_var) {
+      Slot *method = GetOptionalSlot(method_var);
       framework::WirelessAccessPointInterface *ap = GetAPByName(ap_name);
       if (ap) {
         ap->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
@@ -432,7 +444,8 @@ class ScriptableFramework::Impl {
       }
     }
 
-    void DisconnectAP(const char *ap_name, Slot *method) {
+    void DisconnectAP(const char *ap_name, const Variant &method_var) {
+      Slot *method = GetOptionalSlot(method_var);
       framework::WirelessAccessPointInterface *ap = GetAPByName(ap_name);
       if (ap) {
         ap->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);

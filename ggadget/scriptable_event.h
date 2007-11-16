@@ -79,6 +79,7 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
   const ElementInterface *GetSrcElement() const { return src_element_; }
 
   bool GetReturnValue() const { return return_value_; }
+  void SetReturnValue(bool return_value) { return_value_ = return_value; }
   int GetCookie() const { return cookie_; }
   int GetValue() const { return value_; }
 

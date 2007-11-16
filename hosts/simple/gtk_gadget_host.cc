@@ -533,7 +533,7 @@ class TemporaryAudioclip : public ggadget::AudioclipInterface {
   virtual int GetBalance() const { return 0; }
   virtual void SetBalance(int balance) { }
   virtual int GetCurrentPosition() const { return 0; }
-  virtual void SetCurrentPosition() { }
+  virtual void SetCurrentPosition(int position) { }
   virtual int GetDuration() const { return 100; }
   virtual ErrorCode GetError() const { return SOUND_ERROR_NO_ERROR; }
   virtual const char *GetSrc() const { return "src"; }

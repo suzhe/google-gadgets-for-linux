@@ -633,7 +633,7 @@ class BasicElement::Impl {
     }
 
     if (!drop_target_ || !visible_)
-      return true;
+      return false;
 
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
@@ -670,6 +670,10 @@ class BasicElement::Impl {
     ScriptableEvent scriptable_event(event, owner_, 0, 0);
     DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str(), event->GetKeyCode());
+
+    // Default return value of drag event is false, because if no element
+    // cares about the event, the event should be canceled.
+    scriptable_event.SetReturnValue(false);
 
     switch (event->GetType()) {
       case Event::EVENT_KEY_DOWN:
