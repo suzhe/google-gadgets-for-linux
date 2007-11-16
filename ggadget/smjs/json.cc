@@ -20,6 +20,13 @@
 
 namespace ggadget {
 
+// Use Microsoft's method to encode/decode Date object in JSON.
+// See http://msdn2.microsoft.com/en-us/library/bb299886.aspx.
+static const char kDatePrefix[] = "\"\\/Date(";
+static const char kDatePrefixReplace[] = "new Date(";
+static const char kDatePostfix[] = ")\\/\"";
+static const char kDatePostfixReplace[] = ")";
+
 static void AppendJSON(JSContext *cx, jsval js_val, std::string *json);
 
 static void AppendArrayToJSON(JSContext *cx, JSObject *array,
@@ -103,6 +110,22 @@ static void AppendNumberToJSON(JSContext *cx, jsval js_val, std::string *json) {
   }
 }
 
+static JSBool AppendDateToJSON(JSContext *cx, JSObject *obj,
+                               std::string *json) {
+  JSClass *cls = JS_GET_CLASS(cx, obj);
+  if (!cls || strcmp("Date", cls->name) != 0)
+    return JS_FALSE;
+
+  jsval rval;
+  if (!JS_CallFunctionName(cx, obj, "getTime", 0, NULL, &rval))
+    return JS_FALSE;
+
+  *json += kDatePrefix;
+  AppendNumberToJSON(cx, rval, json);
+  *json += kDatePostfix;
+  return JS_TRUE;
+}
+
 static void AppendJSON(JSContext *cx, jsval js_val, std::string *json) {
   switch (JS_TypeOfValue(cx, js_val)) {
     case JSTYPE_OBJECT: {
@@ -111,10 +134,8 @@ static void AppendJSON(JSContext *cx, jsval js_val, std::string *json) {
         (*json) += "null";
       else if (JS_IsArrayObject(cx, obj))
         AppendArrayToJSON(cx, obj, json);
-      else
+      else if (!AppendDateToJSON(cx, obj, json))
         AppendObjectToJSON(cx, obj, json);
-      // We don't support Date class now. Neither JSON grammar diagram in
-      // http://www.json.org nor RFC 4627 metioned Date.
       break;
     }
     case JSTYPE_STRING:
@@ -174,10 +195,8 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
         }
         break;
       case 2:
-        // According to our encoding format, '"' inside of strings are encoded
-        // into \x22, so we need not worry about '"'s in the string.
         if (*p == '\\')
-          p++;  // Omit the next char.  Also works for \uXXXX cases.
+          p++;  // Omit the next char. Also works for \x, \" and \uXXXX cases.
         else if (*p == '"')
           state = 0;
         break;
@@ -191,6 +210,25 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
   std::string json_script(1, '(');
   json_script += json;
   json_script += ')';
+
+  // Now change all "\/Date(.......)\/" into new Date(.......).
+  std::string::size_type pos = 0;
+  while (pos != std::string::npos) {
+    pos = json_script.find(kDatePrefix, pos);
+    if (pos != std::string::npos) {
+      json_script.replace(pos, sizeof(kDatePrefix) - 1, kDatePrefixReplace);
+      pos += sizeof(kDatePrefixReplace) - 1;
+
+      while (json_script[pos] >= '0' && json_script[pos] <= '9')
+        pos++;
+      if (strncmp(kDatePostfix, json_script.c_str() + pos,
+                  sizeof(kDatePostfix) - 1) != 0)
+        return JS_FALSE;
+      json_script.replace(pos, sizeof(kDatePostfix) - 1, kDatePostfixReplace);
+      pos += sizeof(kDatePostfixReplace) - 1;
+    }
+  }
+  
   std::string json_filename("JSON:");
   json_filename += json;
   return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),

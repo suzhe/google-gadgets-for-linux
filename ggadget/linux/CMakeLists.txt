@@ -15,6 +15,7 @@
 #
 
 SET(SRCS
+  file_system.cc
   machine.cc
   memory.cc
   network.cc

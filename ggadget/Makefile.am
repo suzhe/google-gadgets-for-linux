@@ -15,7 +15,7 @@
 
 
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . gtk smjs tests
+SUBDIRS = . gtk linux smjs tests
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -42,6 +42,7 @@ gglinclude_HEADERS	= audioclip_interface.h \
 			  event.h \
 			  file_manager.h \
 			  file_manager_interface.h \
+			  file_system_interface.h \
 			  font_interface.h \
 			  framework_interface.h \
 			  gadget.h \
@@ -64,6 +65,7 @@ gglinclude_HEADERS	= audioclip_interface.h \
 			  scriptable_binary_data.h \
 			  scriptable_delegator.h \
 			  scriptable_event.h \
+			  scriptable_file_system.h \
 			  scriptable_helper.h \
 			  scriptable_interface.h \
 			  scriptable_menu.h \
@@ -105,6 +107,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  progressbar_element.cc \
 			  scriptable_array.cc \
 			  scriptable_event.cc \
+			  scriptable_file_system.cc \
 			  scriptable_helper.cc \
 			  scriptable_menu.cc \
 			  scriptable_options.cc \

@@ -301,6 +301,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/tests/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
+		 ggadget/linux/Makefile
 		 ggadget/smjs/Makefile
 		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile

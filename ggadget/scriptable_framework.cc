@@ -393,12 +393,11 @@ class ScriptableFramework::Impl {
 
       int count = wireless->GetAPCount();
       ASSERT(count >= 0);
-      ScriptableWirelessAccessPoint **aps =
-          new ScriptableWirelessAccessPoint *[count];
+      Variant *aps = new Variant[count];
       for (int i = 0; i < count; i++) {
         framework::WirelessAccessPointInterface *ap =
             wireless->GetWirelessAccessPoint(i);
-        aps[i] = ap ? new ScriptableWirelessAccessPoint(ap) : NULL;
+        aps[i] = Variant(ap ? new ScriptableWirelessAccessPoint(ap) : NULL);
       }
       return ScriptableArray::Create(aps, static_cast<size_t>(count), false);
     }
@@ -516,16 +515,18 @@ class ScriptableFramework::Impl {
   };
 
   ScriptableArray *BrowseForFiles(const char *filter) {
-    FilesInterface *files = gadget_host_->BrowseForFiles(filter);
+    GadgetHostInterface::FilesInterface *files =
+        gadget_host_->BrowseForFiles(filter);
     if (files) {
       int count = files->GetCount();
       ASSERT(count >= 0);
-      std::string *filenames = new std::string[count];
+      Variant *filenames = new Variant[count];
       for (int i = 0; i < count; i++)
-        filenames[i] = files->GetItem(i);
+        filenames[i] = Variant(files->GetItem(i));
   
       files->Destroy();
-      return ScriptableArray::Create(filenames, count, false);
+      return ScriptableArray::Create(filenames, static_cast<size_t>(count),
+                                     false);
     } else {
       return NULL;
     }

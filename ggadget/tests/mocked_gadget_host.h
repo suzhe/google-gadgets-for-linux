@@ -54,9 +54,8 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual bool LoadFont(const char *filename) { return true; }
   virtual bool UnloadFont(const char *filename) { return true; }
   virtual const char *BrowseForFile(const char *filter) { return ""; }
-  virtual ggadget::FilesInterface *BrowseForFiles(const char *filter) {
-    return NULL;
-  }
+  virtual ggadget::GadgetHostInterface::FilesInterface *BrowseForFiles(
+      const char *filter) { return NULL; }
   virtual void GetCursorPos(int *x, int *y) const { }
   virtual void GetScreenSize(int *width, int *height) const { }
   virtual const char *GetFileIcon(const char *filename) const { return ""; }

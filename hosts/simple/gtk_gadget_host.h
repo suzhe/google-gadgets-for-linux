@@ -62,7 +62,8 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
   virtual const char *BrowseForFile(const char *filter);
-  virtual ggadget::FilesInterface *BrowseForFiles(const char *filter);
+  virtual ggadget::GadgetHostInterface::FilesInterface *BrowseForFiles(
+      const char *filter);
   virtual void GetCursorPos(int *x, int *y) const;
   virtual void GetScreenSize(int *width, int *height) const;
   virtual const char *GetFileIcon(const char *filename) const;

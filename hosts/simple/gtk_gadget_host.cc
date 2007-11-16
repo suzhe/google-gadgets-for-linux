@@ -504,7 +504,8 @@ const char *GtkGadgetHost::BrowseForFile(const char *filter) {
   return "/etc/hosts";
 }
 
-ggadget::FilesInterface *GtkGadgetHost::BrowseForFiles(const char *filter) {
+ggadget::GadgetHostInterface::FilesInterface *GtkGadgetHost::BrowseForFiles(
+    const char *filter) {
   // TODO:
   return NULL;
 }
