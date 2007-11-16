@@ -67,7 +67,7 @@ class AudioclipInterface {
    * Set the current position within the audio clip.
    * @see GetCurrentPosition().
    */
-  virtual void SetCurrentPosition() = 0;
+  virtual void SetCurrentPosition(int position) = 0;
   /**
    * The length, in seconds, of the sound.
    */

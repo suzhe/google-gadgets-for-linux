@@ -62,6 +62,7 @@ class View::Impl {
       mouseover_element_(NULL),
       grabmouse_element_(NULL),
       dragover_element_(NULL),
+      dragover_result_(false),
       non_strict_delegator_(new ScriptableDelegator(owner, false)),
       posting_event_element_(NULL),
       post_event_token_(0) {
@@ -254,11 +255,16 @@ class View::Impl {
 
   bool OnDragEvent(DragEvent *event) {
     Event::Type type = event->GetType();
-    bool result = false;
     if (type == Event::EVENT_DRAG_OUT || type == Event::EVENT_DRAG_DROP) {
+      bool result = false;
       // Send the event and clear the dragover state.
       if (dragover_element_) {
-        DragEvent new_event(*event);
+        // If the element rejects the drop, send a EVENT_DRAG_OUT
+        // on EVENT_DRAG_DROP.
+        if (!dragover_result_)
+          type = Event::EVENT_DRAG_OUT;
+        DragEvent new_event(type, event->GetX(), event->GetY(),
+                            event->GetDragFiles());
         MapChildPositionEvent(event, dragover_element_, &new_event);
         ElementInterface *temp;
         result = dragover_element_->OnDragEvent(&new_event, true, &temp);
@@ -270,8 +276,9 @@ class View::Impl {
     ASSERT(type == Event::EVENT_DRAG_MOTION);
     // Dispatch the event to children normally.
     ElementInterface *fired_element = NULL;
-    result = children_.OnDragEvent(event, &fired_element);
+    children_.OnDragEvent(event, &fired_element);
     if (fired_element != dragover_element_) {
+      dragover_result_ = false;
       ElementInterface *old_dragover_element = dragover_element_;
       // Store it early to prevent crash if fired_element is removed in
       // the dragout handler.
@@ -296,12 +303,16 @@ class View::Impl {
                                    event->GetDragFiles());
           MapChildPositionEvent(event, dragover_element_, &dragover_event);
           ElementInterface *temp;
-          dragover_element_->OnDragEvent(&dragover_event, true, &temp);
+          dragover_result_ = dragover_element_->OnDragEvent(&dragover_event,
+                                                            true, &temp);
         }
       }
     }
 
-    return result;
+    // Because gadget elements has no handler for EVENT_DRAG_MOTION, the
+    // last return result of EVENT_DRAG_OVER should be used as the return result
+    // of EVENT_DRAG_MOTION.
+    return dragover_result_;
   }
 
   bool OnKeyEvent(KeyboardEvent *event) {
@@ -777,6 +788,7 @@ class View::Impl {
   ElementInterface *mouseover_element_;
   ElementInterface *grabmouse_element_;
   ElementInterface *dragover_element_;
+  bool dragover_result_;
 
   ScriptableDelegator *non_strict_delegator_;
 
