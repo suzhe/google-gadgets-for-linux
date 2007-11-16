@@ -15,8 +15,6 @@
 */
 
 // Glibc require this macro in order to use the format macros in inttypes.h. 
-#define __STDC_FORMAT_MACROS  
-#include <inttypes.h>  // for PRId64
 #include <string.h>
 #include "scriptable_interface.h"
 #include "slot.h"
@@ -141,10 +139,10 @@ std::string Variant::ToString() const {
     case Variant::TYPE_BOOL:
       return std::string("BOOL:") + (v_.bool_value_ ? "true" : "false");
     case Variant::TYPE_INT64:
-      sprintf(buffer, "INT64:%" PRId64, v_.int64_value_);
+      snprintf(buffer, sizeof(buffer), "INT64:%jd", v_.int64_value_);
       return std::string(buffer);
     case Variant::TYPE_DOUBLE:
-      sprintf(buffer, "DOUBLE:%lf", v_.double_value_);
+      snprintf(buffer, sizeof(buffer), "DOUBLE:%lf", v_.double_value_);
       return std::string(buffer);
     case Variant::TYPE_STRING:
       return std::string("STRING:") +
@@ -159,24 +157,25 @@ std::string Variant::ToString() const {
       }
       return "UTF16STRING:(nil)"; 
     case Variant::TYPE_SCRIPTABLE:
-      sprintf(buffer, "SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
-              v_.scriptable_value_ ?
-                  v_.scriptable_value_->GetClassId() : 0);
+      snprintf(buffer, sizeof(buffer),
+               "SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
+               v_.scriptable_value_ ?
+                   v_.scriptable_value_->GetClassId() : 0);
       return std::string(buffer);
     case Variant::TYPE_CONST_SCRIPTABLE:
-      sprintf(buffer, "CONST_SCRIPTABLE:%p(CLASS_ID=%jx):",
-              v_.const_scriptable_value_,
-              v_.const_scriptable_value_ ?
-                  v_.const_scriptable_value_->GetClassId() : 0);
+      snprintf(buffer, sizeof(buffer), "CONST_SCRIPTABLE:%p(CLASS_ID=%jx):",
+               v_.const_scriptable_value_,
+               v_.const_scriptable_value_ ?
+                   v_.const_scriptable_value_->GetClassId() : 0);
       return std::string(buffer);
     case Variant::TYPE_SLOT:
-      sprintf(buffer, "SLOT:%p", v_.slot_value_);
+      snprintf(buffer, sizeof(buffer), "SLOT:%p", v_.slot_value_);
       return std::string(buffer);
     case Variant::TYPE_ANY:
-      sprintf(buffer, "ANY:%p", v_.any_value_);
+      snprintf(buffer, sizeof(buffer), "ANY:%p", v_.any_value_);
       return std::string(buffer);
     case Variant::TYPE_CONST_ANY:
-      sprintf(buffer, "CONST_ANY:%p", v_.const_any_value_);
+      snprintf(buffer, sizeof(buffer), "CONST_ANY:%p", v_.const_any_value_);
       return std::string(buffer);
     case Variant::TYPE_VARIANT:
       return std::string("VARIANT");

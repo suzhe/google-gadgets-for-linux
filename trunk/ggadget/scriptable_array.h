@@ -36,7 +36,7 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
   /**
    * Creates a @c ScriptableArray with an iterator and count.
    * @param start the start position of an iterator. It can also be the start
-   *     address of an array.
+   *     address of an array. A copy of this array will be made. 
    * @param count number of elements in the array.
    * @param native_owned if @c true, the created @c ScriptableArray is owned by
    *     the native code and the holder of this pointer is responsible to delete
@@ -51,13 +51,24 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
   }
 
   /**
-   * Same as above, but accepts a @c NULL terminated array of pointers. 
+   * Same as above, but accepts a @c NULL terminated array of pointers.
+   * A copy of the input array will be made. 
    */
   template <typename T>
   static ScriptableArray *Create(T *const *array, bool native_owned) {
     size_t size = 0;
     for (; array[size]; size++);
     return Create(array, size, native_owned);
+  }
+
+  /**
+   * Create a @c ScriptableArray with a pre-allocated @c Variant array.
+   * The created @c ScriptableArray will take the ownership of the input
+   * array.
+   */
+  static ScriptableArray *Create(Variant *array, size_t count,
+                                 bool native_owned) {
+    return new ScriptableArray(array, count, native_owned);
   }
 
   size_t GetCount() const;

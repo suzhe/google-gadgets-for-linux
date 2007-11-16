@@ -32,26 +32,6 @@ class ScriptRuntimeInterface;
 class Signal;
 class ViewHostInterface;
 
-/** Interface for enumerating the files. */
-class FilesInterface {
- protected:
-  virtual ~FilesInterface() {}
-
- public:
-  virtual void Destroy() = 0;
-
- public:
-  /** Get the number of files. */
-  virtual int GetCount() const = 0;
-  /**
-   * Get the file name according to the index.
-   * The caller should not free the pointer this method returned,
-   * and the returned pointer may be freed next time when calling to the
-   * method in some implementations.
-   */
-  virtual const char *GetItem(int index) const = 0;
-};
-
 /**
  * Interface for providing host services to the gadgets.
  * The @c GadgetHostInterface implementation should depend on the host.
@@ -235,6 +215,26 @@ class GadgetHostInterface {
    *     The caller should not free the pointer it returned.
    */
   virtual const char *BrowseForFile(const char *filter) = 0;
+
+  /** Interface for enumerating the files returned @c BrowseForFiles(). */
+  class FilesInterface {
+   protected:
+    virtual ~FilesInterface() {}
+
+   public:
+    virtual void Destroy() = 0;
+
+   public:
+    /** Get the number of files. */
+    virtual int GetCount() const = 0;
+    /**
+     * Get the file name according to the index.
+     * The caller should not free the pointer this method returned,
+     * and the returned pointer may be freed next time when calling to the
+     * method in some implementations.
+     */
+    virtual const char *GetItem(int index) const = 0;
+  };
 
   /**
    * Displays the standard browse for file dialog and returns a collection
