@@ -1,0 +1,16 @@
+How to build ggl with autoconf/automake
+=======================================
+0. Pre-requirement
+You need following packages installed before building ggl:
+autoconf >= 2.59
+automake >= 1.9.6
+libtool >= 1.5.22
+
+1. Initialize autoconf/automake
+Run autotools/bootstrap.sh.
+In project's root directory (where you found this INSTALL file), run
+autotools/bootstrap.sh
+
+2. Configure and build
+Run utils/build_debug_ac.sh to build debug version. utils/build_release_ac.sh
+is for release version.

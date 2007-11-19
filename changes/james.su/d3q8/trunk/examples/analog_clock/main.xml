@@ -1,0 +1,24 @@
+<view width="110" height="110"
+  onopen="_view_onopen()"
+  onminimize="_view_onminimize()"
+  onrestore="_view_onrestore()"
+  onpopout="_view_onpopout()">
+
+    <script src="main.js"/>
+
+    <img src="base.png"/>
+
+    <img name="HourHand" src="hourhand.png"
+         x="52" y="52" pinX="3" pinY="27"/>
+
+    <img name="MinuteHand" src="minhand.png"
+         x="52" y="52" pinX="3" pinY="40"/>
+
+    <img name="SecondHand" src="secondhand.png"
+         x="52" y="52" pinX="2" pinY="40"/>
+
+    <img src="center.png" x="48" y="49" />
+
+    <img src="reflection.png" />
+
+</view>
