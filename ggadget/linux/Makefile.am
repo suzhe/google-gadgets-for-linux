@@ -20,6 +20,19 @@
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
+linuxincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/linux
+
+linuxinclude_HEADERS	= file_system.h \
+			  framework.h \
+			  machine.h \
+			  memory.h \
+			  network.h \
+			  perfmon.h \
+			  power.h \
+			  process.h \
+			  wireless.h \
+			  wireless_access_point.h
+
 lib_LTLIBRARIES		= libggadget-linux@GGL_EPOCH@.la
 
 libggadget_linux@GGL_EPOCH@_la_SOURCES = \
@@ -30,8 +43,8 @@ libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 			  perfmon.cc \
 			  power.cc \
 			  process.cc \
-			  wireless_access_point.cc \
-			  wireless.cc
+			  wireless.cc \
+			  wireless_access_point.cc
 
 libggadget_linux@GGL_EPOCH@_la_CPPFLAGS =
 

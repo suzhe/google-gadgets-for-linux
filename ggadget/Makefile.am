@@ -25,8 +25,8 @@ gglincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget
 
 noinst_HEADERS		= element_factory_impl.h
 
-gglinclude_HEADERS	= audioclip_interface.h \
-			  anchor_element.h \
+gglinclude_HEADERS	= anchor_element.h \
+			  audioclip_interface.h \
 			  basic_element.h \
 			  button_element.h \
 			  canvas_interface.h \
@@ -66,6 +66,7 @@ gglinclude_HEADERS	= audioclip_interface.h \
 			  scriptable_delegator.h \
 			  scriptable_event.h \
 			  scriptable_file_system.h \
+			  scriptable_framework.h \
 			  scriptable_helper.h \
 			  scriptable_interface.h \
 			  scriptable_menu.h \
@@ -108,6 +109,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_array.cc \
 			  scriptable_event.cc \
 			  scriptable_file_system.cc \
+			  scriptable_framework.cc \
 			  scriptable_helper.cc \
 			  scriptable_menu.cc \
 			  scriptable_options.cc \
