@@ -67,10 +67,10 @@ xml_http_request_test_LDADD	= -lpthread \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 file_manager_test_data.dest: file_manager_test_data
-	(rm -fr $@; cp -R $< $@; find $@ -name '.*' -exec rm -fr {} \;)
+	(rm -fr $@; cp -R $< $@; find $@ -name '.*' -exec rm -fr {} \;) || true
 
 if GGL_HAVE_ZIP
-noinst_DATA		= file_manager_test_data.gg
+noinst_DATA = file_manager_test_data.gg
 file_manager_test_data.gg: file_manager_test_data.dest
 	(cd $<; find . -type f | $(ZIP) -r -u $(abs_builddir)/$@ -@)
 endif
