@@ -125,7 +125,7 @@ class MouseEvent : public PositionEvent {
     BUTTON_ALL = BUTTON_LEFT | BUTTON_MIDDLE | BUTTON_RIGHT,
   };
 
-  MouseEvent(Type t, double x, double y, Button button, int wheel_delta)
+  MouseEvent(Type t, double x, double y, int button, int wheel_delta)
       : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta) {
     ASSERT(IsMouseEvent());
   }
@@ -136,8 +136,8 @@ class MouseEvent : public PositionEvent {
     ASSERT(IsMouseEvent());
   }
 
-  Button GetButton() const { return button_; }
-  void SetButton(Button button) { button_ = button; }
+  int GetButton() const { return button_; }
+  void SetButton(int button) { button_ = button; }
 
   int GetWheelDelta() const { return wheel_delta_; }
   void SetWheelDelta(int wheel_delta) { wheel_delta_ = wheel_delta; }
@@ -145,7 +145,7 @@ class MouseEvent : public PositionEvent {
   static const int kWheelDelta = 120;
 
  private:
-  Button button_;
+  int button_;
   int wheel_delta_;
 };
 

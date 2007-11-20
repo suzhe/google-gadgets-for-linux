@@ -36,7 +36,7 @@ static const char *kOrientationNames[] = {
 class ProgressBarElement::Impl {
  public:
   Impl(ProgressBarElement *owner) : owner_(owner),
-           thumbover_(false), thumbdown_(false), mousedown_(false),
+           thumbover_(false), thumbdown_(false),
            emptyimage_(NULL), fullimage_(NULL), thumbdisabledimage_(NULL),
            thumbdownimage_(NULL), thumboverimage_(NULL), thumbimage_(NULL),
            // The values below are the default ones in Windows.
@@ -65,7 +65,7 @@ class ProgressBarElement::Impl {
   }
 
   ProgressBarElement *owner_;
-  bool thumbover_, thumbdown_, mousedown_;
+  bool thumbover_, thumbdown_;
   std::string emptyimage_src_, fullimage_src_, thumbdisabledimage_src_,
               thumbdownimage_src_, thumboverimage_src_, thumbimage_src_;
   Image *emptyimage_, *fullimage_, *thumbdisabledimage_,
@@ -461,7 +461,7 @@ bool ProgressBarElement::OnMouseEvent(MouseEvent *event, bool direct,
       case Event::EVENT_MOUSE_MOVE:
       case Event::EVENT_MOUSE_OUT:
       case Event::EVENT_MOUSE_OVER:
-        if (impl_->mousedown_) {
+        if (event->GetButton() & MouseEvent::BUTTON_LEFT) {
           int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
                                                   event->GetX(), event->GetY());
           SetValue(value); // SetValue will queue a draw.
@@ -471,9 +471,9 @@ bool ProgressBarElement::OnMouseEvent(MouseEvent *event, bool direct,
           impl_->thumbover_ = over;
           QueueDraw();
         }        
+        result = false;
         break;      
       case Event::EVENT_MOUSE_DOWN: 
-        impl_->mousedown_ = true;
         if (over) {
           // The drag delta setting here is tricky. If the button is held down
           // initially over the thumb, then the pointer should always stay 
@@ -502,13 +502,14 @@ bool ProgressBarElement::OnMouseEvent(MouseEvent *event, bool direct,
                                                   event->GetX(), event->GetY());
           SetValue(value); // SetValue will queue a draw.
         }
+        result = false;
         break;
       case Event::EVENT_MOUSE_UP:
-        impl_->mousedown_ = false;
         if (impl_->thumbdown_) {
           impl_->thumbdown_ = false;
           QueueDraw();
         }
+        result = false;
         break;
       default:
         break;
