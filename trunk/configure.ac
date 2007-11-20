@@ -283,9 +283,11 @@ fi
 if test x$enable_debug = xyes; then
   AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
   CFLAGS="-g -O0 -Werror -Wall"
+  CXXFLAGS="-g -O0 -Werror -Wall"
   CPPFLAGS="-D_DEBUG"
 else
   CFLAGS="-O2 -Werror -Wall"
+  CXXFLAGS="-O2 -Werror -Wall"
   CPPFLAGS="-DNDEBUG"
 fi
 
