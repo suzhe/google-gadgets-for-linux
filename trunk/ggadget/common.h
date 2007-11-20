@@ -24,6 +24,7 @@
 #include <stdint.h>         // Integer types and macros.
 #include <map>
 #include <string>
+#include <ggadget/sysdeps.h>
 
 namespace ggadget {
 

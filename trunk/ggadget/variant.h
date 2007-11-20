@@ -126,7 +126,7 @@ class Variant {
     v_.int64_value_ = static_cast<int64_t>(value);
   }
 
-#ifndef LONG_INT64_T_EQUIVALENT
+#if GGL_SIZEOF_LONG_INT != 8
   /**
    * Construct a @c Variant with a @c long value.
    * The type of the constructed @c Variant is @c TYPE_INT64.
@@ -142,7 +142,7 @@ class Variant {
   explicit Variant(unsigned long value) : type_(TYPE_INT64) {
     v_.int64_value_ = static_cast<int64_t>(value);
   }
-#endif // LONG_INT64_T_EQUIVALENT
+#endif
 
   /**
    * Construct a @c Variant with a @c int64_t value.

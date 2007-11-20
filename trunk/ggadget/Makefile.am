@@ -75,6 +75,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  signals.h \
 			  slot.h \
 			  string_utils.h \
+			  sysdeps.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \

@@ -14,16 +14,12 @@
   limitations under the License.
 */
 
-#include "perfmon.h"
+#ifndef GGADGET_SYSDEPS_H__
+#define GGADGET_SYSDEPS_H__
 
-namespace ggadget {
+#define GGL_SIZEOF_INT @GGL_SIZEOF_INT@
+#define GGL_SIZEOF_LONG_INT @GGL_SIZEOF_LONG_INT@
+#define GGL_SIZEOF_SIZE_T @GGL_SIZEOF_SIZE_T@
+#define GGL_SIZEOF_DOUBLE @GGL_SIZEOF_DOUBLE@
 
-namespace framework {
-
-int64_t Perfmon::GetCurrentValue(const char *counter_path) {
-  return 19;
-}
-
-} // namespace framework
-
-} // namespace ggadget
+#endif // GGADGET_SYSDEPS_H__
