@@ -29,7 +29,7 @@ class GtkMenuImpl;
  */
 class GtkGadgetHost : public ggadget::GadgetHostInterface {
  public:
-  GtkGadgetHost();
+  GtkGadgetHost(bool composited);
   virtual ~GtkGadgetHost();
 
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
@@ -119,6 +119,7 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
 
   // Maps original font filename to temp font filename
   std::map<std::string, std::string> loaded_fonts_;
+  bool composited_;
 
   GtkBox *toolbox_;
   GtkWidget *menu_button_, *back_button_, *forward_button_, *details_button_;

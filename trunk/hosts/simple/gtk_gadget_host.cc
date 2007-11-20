@@ -54,7 +54,7 @@ class GtkGadgetHost::CallbackData {
   GtkGadgetHost *host;
 };
 
-GtkGadgetHost::GtkGadgetHost()
+GtkGadgetHost::GtkGadgetHost(bool composited)
     : script_runtime_(new ggadget::JSScriptRuntime()),
       element_factory_(NULL),
       global_file_manager_(new SimpleHostFileManager()),
@@ -62,7 +62,7 @@ GtkGadgetHost::GtkGadgetHost()
       options_(new Options()),
       framework_(new ggadget::Framework()),
       gadget_(NULL),
-      plugin_flags_(0),
+      plugin_flags_(0), composited_(composited),
       toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
       forward_button_(NULL), details_button_(NULL),
       menu_(NULL) {
@@ -153,7 +153,7 @@ ggadget::GadgetInterface *GtkGadgetHost::GetGadget() {
 
 ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(
     ViewType type, ggadget::ScriptableInterface *prototype) {
-  return new GtkViewHost(this, type, prototype);
+  return new GtkViewHost(this, type, prototype, composited_);
 }
 
 void GtkGadgetHost::SetPluginFlags(int plugin_flags) {

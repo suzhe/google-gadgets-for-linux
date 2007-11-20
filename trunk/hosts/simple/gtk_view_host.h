@@ -33,7 +33,8 @@ class GtkViewHost : public ggadget::ViewHostInterface {
  public:
   GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
               ggadget::GadgetHostInterface::ViewType type,
-              ggadget::ScriptableInterface *prototype);
+              ggadget::ScriptableInterface *prototype,
+              bool composited);
   virtual ~GtkViewHost();
 
 #if 0

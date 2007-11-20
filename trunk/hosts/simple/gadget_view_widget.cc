@@ -78,9 +78,15 @@ static gboolean GadgetViewWidget_expose(GtkWidget *widget,
   gdk_drawable_get_size(widget->window, &width, &height);
   cairo_t *cr = gdk_cairo_create(widget->window);
 
-  cairo_rectangle(cr, event->area.x, event->area.y,
-                  event->area.width, event->area.height);
+  gdk_cairo_region(cr, event->region);
   cairo_clip(cr);
+
+  if (gvw->composited) {
+    cairo_operator_t op = cairo_get_operator(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(cr);
+    cairo_set_operator(cr, op);
+  }
 
   bool changed;
   // OK to downcast here since the canvas is created using GraphicsInterface
@@ -116,7 +122,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     // The GTK event sequence here is: press 2press release
     // for the second click.
     Event::Type t;
-    MouseEvent::Button button;
+    int button;
     if (event->button == 1) {
       button = MouseEvent::BUTTON_LEFT;
       t = Event::EVENT_MOUSE_DBLCLICK;
@@ -132,6 +138,18 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     }
   }
 
+  if (handler_result && !gvw->window_move) {
+    gvw->window_move = true;
+    gvw->window_move_x = (int)event->x_root;
+    gvw->window_move_y = (int)event->y_root;
+
+    // Grab the cursor to prevent losing events.
+    gdk_pointer_grab(widget->window, FALSE,
+                     (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                    GDK_POINTER_MOTION_MASK),
+                     NULL, NULL, event->time);
+  }
+
   return handler_result ? FALSE : TRUE;
 }
 
@@ -140,6 +158,12 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   bool handler_result = true;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_BUTTON_RELEASE);
+
+  if (gvw->window_move) {
+    gdk_pointer_ungrab(event->time);
+    gvw->window_move = false;    
+  }
+
   if (event->button == 1) {
     MouseEvent e(Event::EVENT_MOUSE_UP,
                  event->x / gvw->zoom, event->y / gvw->zoom,
@@ -149,7 +173,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
 
   if (!gvw->dbl_click) {
     Event::Type t;
-    MouseEvent::Button button;
+    int button;
     if (event->button == 1) {
       button = MouseEvent::BUTTON_LEFT;
       t = Event::EVENT_MOUSE_CLICK;
@@ -194,10 +218,36 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
                                                GdkEventMotion *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_MOTION_NOTIFY);
+  int button = MouseEvent::BUTTON_NONE;
+  if (event->state & GDK_BUTTON1_MASK) {
+    button |= MouseEvent::BUTTON_LEFT;
+  }
+  if (event->state & GDK_BUTTON2_MASK) {
+    button |= MouseEvent::BUTTON_MIDDLE;
+  }
+  if (event->state & GDK_BUTTON3_MASK) {
+    button |= MouseEvent::BUTTON_RIGHT;
+  }
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
-               event->x / gvw->zoom, event->y / gvw->zoom,
-               MouseEvent::BUTTON_NONE, 0);
+               event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
   bool handler_result = gvw->view->OnMouseEvent(&e);
+
+  if (handler_result && gvw->window_move && (event->state & GDK_BUTTON1_MASK)) {
+    gint pos_x, pos_y;
+    gint new_pos_x, new_pos_y;
+    GtkWidget *window = gtk_widget_get_toplevel(widget);
+    if (GTK_IS_WINDOW(window)) {
+      gtk_window_get_position(GTK_WINDOW(window), &pos_x, &pos_y);
+      new_pos_x = pos_x + ((int)event->x_root - gvw->window_move_x);
+      new_pos_y = pos_y + ((int)event->y_root - gvw->window_move_y);
+      gtk_window_move(GTK_WINDOW(window), new_pos_x, new_pos_y);
+      gvw->window_move_x = (int)event->x_root;
+      gvw->window_move_y = (int)event->y_root;
+    }
+    else {
+      DLOG("Gadget is not inside toplevel window.");
+    }
+  }
 
   // Since motion hint is enabled, we must notify GTK that we're ready to
   // receive the next motion event.
@@ -298,38 +348,10 @@ static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
   return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
 }
 
-static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
-  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(c);
-  GtkObjectClass *object_class = GTK_OBJECT_CLASS(c);
-
-  parent_class = GTK_WIDGET_CLASS(gtk_type_class(gtk_drawing_area_get_type()));
-
-  object_class->destroy = GadgetViewWidget_destroy;
-
-  widget_class->realize = GadgetViewWidget_realize;
-  widget_class->unrealize = GadgetViewWidget_unrealize;
-
-  widget_class->configure_event = GadgetViewWidget_configure;
-  widget_class->expose_event = GadgetViewWidget_expose;
-  widget_class->size_request = GadgetViewWidget_size_request;
-
-  widget_class->button_press_event = GadgetViewWidget_button_press;
-  widget_class->button_release_event = GadgetViewWidget_button_release;
-  widget_class->motion_notify_event = GadgetViewWidget_motion_notify;
-  widget_class->leave_notify_event = GadgetViewWidget_leave_notify;
-  widget_class->enter_notify_event = GadgetViewWidget_enter_notify;
-
-  widget_class->key_press_event = GadgetViewWidget_key_press;
-  widget_class->key_release_event = GadgetViewWidget_key_release;
-
-  widget_class->focus_in_event = GadgetViewWidget_focus_in;
-  widget_class->focus_out_event = GadgetViewWidget_focus_out;
-
-  widget_class->scroll_event = GadgetViewWidget_scroll;
-}
-
 static void GadgetViewWidget_init(GadgetViewWidget *gvw) {
   gvw->dbl_click = false;
+  gvw->window_move = false;
+  gvw->window_move_x = gvw->window_move_y = 0;
 
   gtk_widget_set_events(GTK_WIDGET(gvw),
                         gtk_widget_get_events(GTK_WIDGET(gvw)) |
@@ -345,31 +367,6 @@ static void GadgetViewWidget_init(GadgetViewWidget *gvw) {
   GTK_WIDGET_SET_FLAGS(GTK_WIDGET(gvw), GTK_CAN_FOCUS);
 }
 
-GType GadgetViewWidget_get_type() {
-  static GType gw_type = 0;
-
-  if (!gw_type) {
-    static const GTypeInfo gw_info = {
-      sizeof(GadgetViewWidgetClass),
-      NULL, // base_init
-      NULL, // base_finalize
-      (GClassInitFunc)GadgetViewWidget_class_init,
-      NULL, // class_finalize
-      NULL, // class_data
-      sizeof(GadgetViewWidget),
-      0, // n_preallocs
-      (GInstanceInitFunc)GadgetViewWidget_init,
-    };
-
-    gw_type = g_type_register_static(GTK_TYPE_DRAWING_AREA,
-                                     "GadgetViewWidget",
-                                     &gw_info,
-                                     (GTypeFlags)0);
-  }
-
-  return gw_type;
-}
-
 static const char *kUriListTarget = "text/uri-list";
 
 static void DisableDrag(GtkWidget *widget, GdkDragContext *context,
@@ -379,8 +376,7 @@ static void DisableDrag(GtkWidget *widget, GdkDragContext *context,
 }
 
 static gboolean OnDragEvent(GtkWidget *widget, GdkDragContext *context,
-                            gint x, gint y, guint time,
-                            const char *name, Event::Type event_type) {
+                            gint x, gint y, guint time, Event::Type event_type) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   gvw->current_drag_event = DragEvent(event_type, x, y, NULL);
 
@@ -396,28 +392,27 @@ static gboolean OnDragEvent(GtkWidget *widget, GdkDragContext *context,
   }
 }
 
-static gboolean OnDragMotion(GtkWidget *widget, GdkDragContext *context,
-                             gint x, gint y, guint time, gpointer user_data) {
-  return OnDragEvent(widget, context, x, y, time, "DragMotion",
-                     Event::EVENT_DRAG_MOTION);
+static gboolean GadgetViewWidget_drag_motion(GtkWidget *widget, 
+                        GdkDragContext *context, gint x, gint y, guint time) {
+  return OnDragEvent(widget, context, x, y, time, Event::EVENT_DRAG_MOTION);
 }
 
-static gboolean OnDragDrop(GtkWidget *widget, GdkDragContext *context,
-                           gint x, gint y, guint time, gpointer user_data) {
-  gboolean result = OnDragEvent(widget, context, x, y, time, "DragDrop",
+static gboolean GadgetViewWidget_drag_drop(GtkWidget *widget, 
+                        GdkDragContext *context, gint x, gint y, guint time) {
+  gboolean result = OnDragEvent(widget, context, x, y, time, 
                                 Event::EVENT_DRAG_DROP);
   gtk_drag_finish(context, result, FALSE, time);
   return result;
 }
 
-static void OnDragLeave(GtkWidget *widget, GdkDragContext *context,
-                        guint time, gpointer user_data) {
-  OnDragEvent(widget, context, 0, 0, time, "DragLeave", Event::EVENT_DRAG_OUT);
+static void GadgetViewWidget_drag_leave(GtkWidget *widget, 
+                        GdkDragContext *context, guint time) {
+  OnDragEvent(widget, context, 0, 0, time, Event::EVENT_DRAG_OUT);
 }
 
-static void OnDragDataReceived(GtkWidget *widget, GdkDragContext *context,
-                               gint x, gint y, GtkSelectionData *data,
-                               guint info, guint time, gpointer user_data) {
+static void GadgetViewWidget_drag_data_received(GtkWidget *widget, 
+                        GdkDragContext *context, gint x, gint y, 
+                        GtkSelectionData *data, guint info, guint time) {
   gchar **uris = gtk_selection_data_get_uris(data);
   if (!uris) {
     DLOG("No URI in drag data");
@@ -474,7 +469,68 @@ static void OnDragDataReceived(GtkWidget *widget, GdkDragContext *context,
   g_strfreev(uris);
 }
 
-GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
+static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(c);
+  GtkObjectClass *object_class = GTK_OBJECT_CLASS(c);
+
+  parent_class = GTK_WIDGET_CLASS(gtk_type_class(gtk_drawing_area_get_type()));
+
+  object_class->destroy = GadgetViewWidget_destroy;
+
+  widget_class->realize = GadgetViewWidget_realize;
+  widget_class->unrealize = GadgetViewWidget_unrealize;
+
+  widget_class->configure_event = GadgetViewWidget_configure;
+  widget_class->expose_event = GadgetViewWidget_expose;
+  widget_class->size_request = GadgetViewWidget_size_request;
+
+  widget_class->button_press_event = GadgetViewWidget_button_press;
+  widget_class->button_release_event = GadgetViewWidget_button_release;
+  widget_class->motion_notify_event = GadgetViewWidget_motion_notify;
+  widget_class->leave_notify_event = GadgetViewWidget_leave_notify;
+  widget_class->enter_notify_event = GadgetViewWidget_enter_notify;
+
+  widget_class->key_press_event = GadgetViewWidget_key_press;
+  widget_class->key_release_event = GadgetViewWidget_key_release;
+
+  widget_class->focus_in_event = GadgetViewWidget_focus_in;
+  widget_class->focus_out_event = GadgetViewWidget_focus_out;
+
+  widget_class->drag_motion = GadgetViewWidget_drag_motion;
+  widget_class->drag_leave = GadgetViewWidget_drag_leave;
+  widget_class->drag_drop = GadgetViewWidget_drag_drop;
+  widget_class->drag_data_received = GadgetViewWidget_drag_data_received;
+
+  widget_class->scroll_event = GadgetViewWidget_scroll;
+}
+
+GType GadgetViewWidget_get_type() {
+  static GType gw_type = 0;
+
+  if (!gw_type) {
+    static const GTypeInfo gw_info = {
+      sizeof(GadgetViewWidgetClass),
+      NULL, // base_init
+      NULL, // base_finalize
+      (GClassInitFunc)GadgetViewWidget_class_init,
+      NULL, // class_finalize
+      NULL, // class_data
+      sizeof(GadgetViewWidget),
+      0, // n_preallocs
+      (GInstanceInitFunc)GadgetViewWidget_init,
+    };
+
+    gw_type = g_type_register_static(GTK_TYPE_DRAWING_AREA,
+                                     "GadgetViewWidget",
+                                     &gw_info,
+                                     (GTypeFlags)0);
+  }
+
+  return gw_type;
+}
+
+GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom,
+                                bool composited) {
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
                                  NULL));
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
@@ -482,6 +538,7 @@ GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
   gvw->view = host->GetView();
   ASSERT(gvw->view);
   gvw->zoom = zoom;
+  gvw->composited = composited;
 
   static const GtkTargetEntry kDragTargets[] = {
     { const_cast<char *>(kUriListTarget), 0, 0 },
@@ -489,10 +546,5 @@ GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom) {
 
   gtk_drag_dest_set(widget, static_cast<GtkDestDefaults>(0),
                     kDragTargets, arraysize(kDragTargets), GDK_ACTION_COPY);
-  g_signal_connect(widget, "drag-motion", G_CALLBACK(OnDragMotion), NULL);
-  g_signal_connect(widget, "drag-leave", G_CALLBACK(OnDragLeave), NULL);
-  g_signal_connect(widget, "drag-drop", G_CALLBACK(OnDragDrop), NULL);
-  g_signal_connect(widget, "drag_data_received",
-                   G_CALLBACK(OnDragDataReceived), NULL);
   return widget;
 }

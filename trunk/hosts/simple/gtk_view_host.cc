@@ -52,7 +52,8 @@ static const CursorTypeMapping[] = {
 
 GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
                          ggadget::GadgetHostInterface::ViewType type,
-                         ggadget::ScriptableInterface *prototype)
+                         ggadget::ScriptableInterface *prototype,
+                         bool composited)
     : gadget_host_(gadget_host),
       view_(NULL),
       script_context_(NULL),
@@ -95,7 +96,7 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
 
   double zoom = ggadget::VariantValue<double>()(options->GetValue(
       ggadget::kOptionZoom));
-  gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom));
+  gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom, composited));
   gfx_ = new ggadget::CairoGraphics(zoom);
 }
 
