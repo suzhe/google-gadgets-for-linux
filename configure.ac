@@ -148,6 +148,20 @@ fi
 
 # Check necessary data types
 AC_TYPE_SIZE_T
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(long int)
+AC_CHECK_SIZEOF(size_t)
+AC_CHECK_SIZEOF(double)
+
+GGL_SIZEOF_INT=$ac_cv_sizeof_int
+GGL_SIZEOF_LONG_INT=$ac_cv_sizeof_long_int
+GGL_SIZEOF_SIZE_T=$ac_cv_sizeof_size_t
+GGL_SIZEOF_DOUBLE=$ac_cv_sizeof_double
+
+AC_SUBST(GGL_SIZEOF_INT)
+AC_SUBST(GGL_SIZEOF_LONG_INT)
+AC_SUBST(GGL_SIZEOF_SIZE_T)
+AC_SUBST(GGL_SIZEOF_DOUBLE)
 
 if test x$ac_cv_type_size_t != xyes; then
   AC_MSG_ERROR([No type size_t, but google Gadgets for Linux needs it!])
@@ -297,6 +311,7 @@ AC_SUBST(abs_top_srcdir)
 AC_SUBST(abs_top_builddir)
 
 AC_CONFIG_FILES([Makefile
+		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
 		 ggadget/gtk/Makefile
