@@ -16,7 +16,7 @@
 
 #include "options.h"
 
-using ggadget::Variant;
+namespace ggadget {
 
 Options::Options() {
 }
@@ -93,3 +93,5 @@ Variant Options::GetInternalValue(const char *name) {
 void Options::PutInternalValue(const char *name, const Variant &value) {
   internal_values_[name] = value;
 }
+
+} // namespace ggadget

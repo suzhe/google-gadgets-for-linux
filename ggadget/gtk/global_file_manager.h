@@ -14,22 +14,24 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_SIMPLEHOST_FILE_MANAGER_H__
-#define HOSTS_SIMPLE_SIMPLEHOST_FILE_MANAGER_H__
+#ifndef GGADGET_GTK_GLOBAL_FILE_MANAGER_H__
+#define GGADGET_GTK_GLOBAL_FILE_MANAGER_H__
 
 #include <cstddef>
 #include <string>
 #include <ggadget/common.h>
 #include <ggadget/file_manager_interface.h>
 
+namespace ggadget {
+
 /**
  * Handles all global file resources (i.e. resources not belonging to a 
  * gadget package).
  */
-class SimpleHostFileManager : public ggadget::FileManagerInterface {
+class GlobalFileManager : public ggadget::FileManagerInterface {
  public:
-  SimpleHostFileManager();
-  ~SimpleHostFileManager();
+  GlobalFileManager();
+  ~GlobalFileManager();
 
   /** @see FileManagerInterface::Init() */
   virtual bool Init(const char *base_path);
@@ -44,12 +46,14 @@ class SimpleHostFileManager : public ggadget::FileManagerInterface {
   /** @see FileManagerInterface::ExtractFile() */
   virtual bool ExtractFile(const char *file, std::string *into_file);
   /** @see FileManagerInterface::GetStringTable() */
-  virtual ggadget::GadgetStringMap *GetStringTable();
+  virtual GadgetStringMap *GetStringTable();
   /** @see FileManagerInterface::FileExists() */
   virtual bool FileExists(const char *file);
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(SimpleHostFileManager);
+  DISALLOW_EVIL_CONSTRUCTORS(GlobalFileManager);
 };
 
-#endif  // HOSTS_SIMPLE_SIMPLEHOST_FILE_MANAGER_H__
+} // namespace ggadget
+
+#endif  // GGADGET_GTK_GLOBAL_FILE_MANAGER_H__

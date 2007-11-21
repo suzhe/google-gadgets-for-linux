@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_GTK_VIEW_HOST_H__
-#define HOSTS_SIMPLE_GTK_VIEW_HOST_H__
+#ifndef GGADGET_GTK_GTK_VIEW_HOST_H__
+#define GGADGET_GTK_GTK_VIEW_HOST_H__
 
 #include <set>
 
@@ -24,16 +24,18 @@
 
 class GadgetViewWidget;
 
+namespace ggadget {
+
 /**
  * An implementation of @c ViewHostInterface for the simple gadget host.
  * In this implementation, there is one instance of @c GtkViewHost per view,
  * and one instance of GraphicsInterface per @c GtkViewHost.
  */
-class GtkViewHost : public ggadget::ViewHostInterface {
+class GtkViewHost : public ViewHostInterface {
  public:
-  GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
-              ggadget::GadgetHostInterface::ViewType type,
-              ggadget::ScriptableInterface *prototype,
+  GtkViewHost(GadgetHostInterface *gadget_host,
+              GadgetHostInterface::ViewType type,
+              ScriptableInterface *prototype,
               bool composited);
   virtual ~GtkViewHost();
 
@@ -49,16 +51,16 @@ class GtkViewHost : public ggadget::ViewHostInterface {
   void SwitchWidget(GadgetViewWidget *new_gvw);
 #endif
 
-  virtual ggadget::GadgetHostInterface *GetGadgetHost() const {
+  virtual GadgetHostInterface *GetGadgetHost() const {
     return gadget_host_;
   }
-  virtual ggadget::ViewInterface *GetView() { return view_; }
-  virtual const ggadget::ViewInterface *GetView() const { return view_; }
-  virtual ggadget::ScriptContextInterface *GetScriptContext() const {
+  virtual ViewInterface *GetView() { return view_; }
+  virtual const ViewInterface *GetView() const { return view_; }
+  virtual ScriptContextInterface *GetScriptContext() const {
     return script_context_;
   }
-  virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest();
-  virtual const ggadget::GraphicsInterface *GetGraphics() const { return gfx_; }
+  virtual XMLHttpRequestInterface *NewXMLHttpRequest();
+  virtual const GraphicsInterface *GetGraphics() const { return gfx_; }
 
   virtual void QueueDraw();
   virtual bool GrabKeyboardFocus();
@@ -66,20 +68,22 @@ class GtkViewHost : public ggadget::ViewHostInterface {
   virtual void SetResizeable();
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
-  virtual void SetCursor(ggadget::ElementInterface::CursorType type);
+  virtual void SetCursor(ElementInterface::CursorType type);
   virtual void RunDialog();
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 
  private:
-  ggadget::GadgetHostInterface *gadget_host_;
-  ggadget::ViewInterface *view_;
-  ggadget::ScriptContextInterface *script_context_;
+  GadgetHostInterface *gadget_host_;
+  ViewInterface *view_;
+  ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;
-  ggadget::GraphicsInterface *gfx_;
-  ggadget::Connection *onoptionchanged_connection_;
+  GraphicsInterface *gfx_;
+  Connection *onoptionchanged_connection_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkViewHost);
 };
 
-#endif // HOSTS_SIMPLE_GTK_VIEW_HOST_H__
+} // namespace ggadget
+
+#endif // GGADGET_GTK_GTK_VIEW_HOST_H__

@@ -14,13 +14,15 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_GTK_MENU_IMPL_H__
-#define HOSTS_SIMPLE_GTK_MENU_IMPL_H__
+#ifndef GGADGET_GTK_GTK_MENU_IMPL_H__
+#define GGADGET_GTK_GTK_MENU_IMPL_H__
 
 #include <map>
 #include <vector>
 #include <gtk/gtk.h>
 #include <ggadget/ggadget.h>
+
+namespace ggadget {
 
 /**
  * An implementation of @c MenuInterface for the simple gadget host.
@@ -57,4 +59,6 @@ class GtkMenuImpl : public ggadget::MenuInterface {
   static bool setting_style_;
 };
 
-#endif // HOSTS_SIMPLE_GTK_MENU_IMPL_H__
+} // namespace ggadget
+
+#endif // GGADGET_GTK_GTK_MENU_IMPL_H__

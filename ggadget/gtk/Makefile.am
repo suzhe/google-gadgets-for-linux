@@ -26,15 +26,28 @@ gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
 
 gtkinclude_HEADERS	= cairo_canvas.h \
 			  cairo_font.h \
-			  cairo_graphics.h
+			  cairo_graphics.h \
+			  global_file_manager.h \
+			  gadget_view_widget.h \
+              gtk_gadget_host.h \
+              gtk_key_convert.h \
+              gtk_menu_impl.h \
+              gtk_view_host.h \
+              options.h
 
 lib_LTLIBRARIES		= libggadget-gtk@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_canvas.cc \
 			  cairo_font.cc \
-			  cairo_graphics.cc
-
+			  cairo_graphics.cc \
+			  global_file_manager.cc \
+	          gadget_view_widget.cc \
+              gtk_gadget_host.cc \
+              gtk_key_convert.cc \
+              gtk_menu_impl.cc \
+              gtk_view_host.cc \
+              options.cc
 
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @CAIRO_CFLAGS@ \

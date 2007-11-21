@@ -30,13 +30,6 @@ ADD_DEFINITIONS(${SMJS_DEFINITIONS})
 
 SET(SRCS
   main.cc
-  gtk_gadget_host.cc
-  gtk_view_host.cc
-  gadget_view_widget.cc
-  gtk_key_convert.cc
-  gtk_menu_impl.cc
-  simplehost_file_manager.cc
-  options.cc
 )
 
 ADD_EXECUTABLE(ggl ${SRCS})

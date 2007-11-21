@@ -20,25 +20,11 @@ if GGL_BUILD_SIMPLE_HOST
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		=  gadget_view_widget.h \
-			   gtk_gadget_host.h \
-			   gtk_key_convert.h \
-			   gtk_menu_impl.h \
-			   gtk_view_host.h \
-			   options.h \
-			   simplehost_file_manager.h
+noinst_HEADERS		=  
 
 bin_PROGRAMS		= ggl-simple
 
-ggl_simple_SOURCES	= gadget_view_widget.cc \
-			  gtk_gadget_host.cc \
-			  gtk_key_convert.cc \
-			  gtk_menu_impl.cc \
-			  gtk_view_host.cc \
-			  main.cc \
-			  options.cc \
-			  simplehost_file_manager.cc
-
+ggl_simple_SOURCES	= main.cc 
 
 ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \

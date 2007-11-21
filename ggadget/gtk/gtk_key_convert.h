@@ -14,10 +14,12 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_GTK_KEY_CONVERT_H__
-#define HOSTS_SIMPLE_GTK_KEY_CONVERT_H__
+#ifndef GGADGET_GTK_GTK_KEY_CONVERT_H__
+#define GGADGET_GTK_GTK_KEY_CONVERT_H__
 
 #include <gdk/gdk.h>
+
+namespace ggadget {
 
 /**
  * Convert a GDK keyval to a key code accepted by @c ggadget::KeyboardEvent
@@ -26,4 +28,6 @@
  */
 unsigned int ConvertGdkKeyvalToKeyCode(guint keyval);
 
-#endif  // HOSTS_SIMPLE_GTK_KEY_CONVERT_H__
+} // namespace ggadget
+
+#endif  // GGADGET_GTK_GTK_KEY_CONVERT_H__

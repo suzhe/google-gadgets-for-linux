@@ -18,14 +18,16 @@
 #include <gtk/gtk.h>
 #include <locale.h>
 
+#include <ggadget/gtk/gadget_view_widget.h>
+#include <ggadget/gtk/gtk_gadget_host.h>
+#include <ggadget/gtk/gtk_view_host.h>
+#include <ggadget/smjs/js_script_runtime.h>
+#include <ggadget/linux/framework.h>
 #include <ggadget/ggadget.h>
-#include "gadget_view_widget.h"
-#include "gtk_gadget_host.h"
-#include "gtk_view_host.h"
 
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
-static GtkGadgetHost *g_gadget_host = NULL;
+static ggadget::GtkGadgetHost *g_gadget_host = NULL;
 static gboolean g_composited = false;
 
 static gboolean DeleteEventHandler(GtkWidget *widget,
@@ -42,13 +44,15 @@ static gboolean DestroyHandler(GtkWidget *widget,
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
-  g_gadget_host = new GtkGadgetHost(g_composited);
+  g_gadget_host = new ggadget::GtkGadgetHost(new ggadget::JSScriptRuntime(), 
+                                             new ggadget::Framework(), 
+                                             g_composited);
   if (!g_gadget_host->LoadGadget(box, base_path, g_zoom, g_debug_mode)) {
     LOG("Failed to load gadget from: %s", base_path);
     return false;
   }
 
-  GtkViewHost *view_host = ggadget::down_cast<GtkViewHost *>(
+  ggadget::GtkViewHost *view_host = ggadget::down_cast<ggadget::GtkViewHost *>(
       g_gadget_host->GetGadget()->GetMainViewHost());
   GadgetViewWidget *gvw = view_host->GetWidget();
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
