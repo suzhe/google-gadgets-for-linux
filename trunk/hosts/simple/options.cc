@@ -84,3 +84,12 @@ void Options::FireChangedEvent(const char *name) {
   DLOG("option changed: %s", name);
   onoptionchanged_signal_(name);
 }
+
+Variant Options::GetInternalValue(const char *name) {
+  OptionsMap::const_iterator it = internal_values_.find(name);
+  return it == internal_values_.end() ? Variant() : it->second;
+}
+
+void Options::PutInternalValue(const char *name, const Variant &value) {
+  internal_values_[name] = value;
+}

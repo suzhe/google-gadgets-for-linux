@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-// Glibc require this macro in order to use the format macros in inttypes.h. 
 #include <string.h>
 #include "scriptable_interface.h"
 #include "slot.h"

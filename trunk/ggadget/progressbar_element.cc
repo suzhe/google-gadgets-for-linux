@@ -519,6 +519,13 @@ bool ProgressBarElement::OnMouseEvent(MouseEvent *event, bool direct,
   return result;
 }
 
+Connection *ProgressBarElement::ConnectEvent(const char *event_name,
+                                             Slot0<void> *handler) {
+  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
+    return impl_->onchange_event_.Connect(handler);
+  return BasicElement::ConnectEvent(event_name, handler);
+}
+
 void ProgressBarElement::GetDefaultSize(double *width, double *height) const {
   if (impl_->emptyimage_) {
     *width = impl_->emptyimage_->GetWidth();

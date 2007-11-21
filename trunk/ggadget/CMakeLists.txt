@@ -26,6 +26,7 @@ LIBXML2_CONFIG(2.6.20 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
+  display_window.cc
   element_factory.cc
   elements.cc
   file_manager.cc
@@ -40,6 +41,7 @@ SET(SRCS
   scriptable_menu.cc
   scriptable_options.cc
   signals.cc
+  slot.cc
   string_utils.cc
   texture.cc
   text_frame.cc

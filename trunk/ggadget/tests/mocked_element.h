@@ -320,6 +320,11 @@ class MockedElement :
         child_x, child_y);
   }
 
+  virtual ggadget::Connection *ConnectEvent(const char *event_name,
+                                            ggadget::Slot0<void> *handler) {
+    return NULL;
+  }
+
  private:
   std::string name_;
   ggadget::ElementInterface *parent_;

@@ -35,6 +35,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
   virtual void SetCursor(ggadget::ElementInterface::CursorType type) { }
+  virtual void RunDialog() { }
 };
 
 #endif // GGADGET_TESTS_MOCKED_VIEW_HOST_H__

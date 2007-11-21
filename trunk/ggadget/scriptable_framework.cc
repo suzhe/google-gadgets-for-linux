@@ -25,19 +25,21 @@
 
 namespace ggadget {
 
+// Default argument list for methods that has single optional slot argument.
+static const Variant kDefaultArgsForSingleSlot[] = {
+  Variant(static_cast<Slot *>(NULL))
+};
+
+// Default argument list for methods whose second argument is an optional slot.
+static const Variant kDefaultArgsForSecondSlot[] = {
+  Variant(), Variant(static_cast<Slot *>(NULL))
+};
+
 class ScriptableFramework::Impl {
  public:
   Impl(GadgetHostInterface *gadget_host)
       : audio_(gadget_host),
         system_(gadget_host) {
-  }
-
-  static Slot *GetOptionalSlot(const Variant &v) {
-    if (v.type() == Variant::TYPE_SLOT)
-      return VariantValue<Slot *>()(v);
-    if (v.type() != Variant::TYPE_VOID)
-      LOG("Invalid type of method: %s", v.ToString().c_str());
-    return NULL;
   }
 
   class PermanentScriptable : public ScriptableHelper<ScriptableInterface> {
@@ -112,13 +114,14 @@ class ScriptableFramework::Impl {
   class Audio : public PermanentScriptable {
    public:
     Audio(GadgetHostInterface *gadget_host): gadget_host_(gadget_host) {
-      RegisterMethod("open", NewSlot(this, &Audio::Open));
-      RegisterMethod("play", NewSlot(this, &Audio::Play));
+      RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Open),
+                                                    kDefaultArgsForSecondSlot));
+      RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Play),
+                                                    kDefaultArgsForSecondSlot));
       RegisterMethod("stop", NewSlot(this, &Audio::Stop));
     }
 
-    ScriptableAudioclip *Open(const char *src, const Variant &method_var) {
-      Slot *method = GetOptionalSlot(method_var);
+    ScriptableAudioclip *Open(const char *src, Slot *method) {
       AudioclipInterface *clip = gadget_host_->CreateAudioclip(src);
       if (clip) {
         ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
@@ -130,8 +133,8 @@ class ScriptableFramework::Impl {
       return NULL;
     }
 
-    ScriptableAudioclip *Play(const char *src, const Variant &method_var) {
-      ScriptableAudioclip *clip = Open(src, method_var);
+    ScriptableAudioclip *Play(const char *src, Slot *method) {
+      ScriptableAudioclip *clip = Open(src, method);
       if (clip)
         clip->clip_->Play();
       return clip;
@@ -188,9 +191,13 @@ class ScriptableFramework::Impl {
                   &framework::WirelessAccessPointInterface::GetSignalStrength),
           NULL);
       RegisterMethod("connect",
-                     NewSlot(this, &ScriptableWirelessAccessPoint::Connect));
+          NewSlotWithDefaultArgs(
+              NewSlot(this, &ScriptableWirelessAccessPoint::Connect),
+              kDefaultArgsForSingleSlot));
       RegisterMethod("disconnect",
-                     NewSlot(this, &ScriptableWirelessAccessPoint::Disconnect));
+          NewSlotWithDefaultArgs(
+              NewSlot(this, &ScriptableWirelessAccessPoint::Disconnect),
+              kDefaultArgsForSingleSlot));
     }
 
     virtual ~ScriptableWirelessAccessPoint() {
@@ -201,13 +208,11 @@ class ScriptableFramework::Impl {
     virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
     virtual bool Detach() { delete this; return true; }
 
-    void Connect(const Variant &method_var) {
-      Slot *method = GetOptionalSlot(method_var);
+    void Connect(Slot *method) {
       ap_->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
     }
 
-    void Disconnect(const Variant &method_var) {
-      Slot *method = GetOptionalSlot(method_var);
+    void Disconnect(Slot *method) {
       ap_->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
     }
 
@@ -313,9 +318,12 @@ class ScriptableFramework::Impl {
           "signalStrength",
           NewSlot(wireless, &framework::WirelessInterface::GetSignalStrength),
           NULL);
-      wireless_.RegisterMethod("connect", NewSlot(this, &System::ConnectAP));
+      wireless_.RegisterMethod("connect",
+          NewSlotWithDefaultArgs(NewSlot(this, &System::ConnectAP),
+                                 kDefaultArgsForSecondSlot));
       wireless_.RegisterMethod("disconnect",
-                               NewSlot(this, &System::DisconnectAP));
+          NewSlotWithDefaultArgs(NewSlot(this, &System::DisconnectAP),
+                                 kDefaultArgsForSecondSlot));
 
       framework::PerfmonInterface *perfmon = framework_->GetPerfmonInterface();
       perfmon_.RegisterMethod(
@@ -434,8 +442,7 @@ class ScriptableFramework::Impl {
       return NULL;
     }
 
-    void ConnectAP(const char *ap_name, const Variant &method_var) {
-      Slot *method = GetOptionalSlot(method_var);
+    void ConnectAP(const char *ap_name, Slot *method) {
       framework::WirelessAccessPointInterface *ap = GetAPByName(ap_name);
       if (ap) {
         ap->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
@@ -444,8 +451,7 @@ class ScriptableFramework::Impl {
       }
     }
 
-    void DisconnectAP(const char *ap_name, const Variant &method_var) {
-      Slot *method = GetOptionalSlot(method_var);
+    void DisconnectAP(const char *ap_name, Slot *method) {
       framework::WirelessAccessPointInterface *ap = GetAPByName(ap_name);
       if (ap) {
         ap->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);

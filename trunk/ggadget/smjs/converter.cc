@@ -17,6 +17,7 @@
 #include <cmath>
 #include <jsobj.h>
 #include <jsfun.h>
+#include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/unicode_utils.h>
@@ -176,10 +177,35 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   if (JSVAL_IS_NULL(js_val)) {
     scriptable = NULL;
   } else if (JSVAL_IS_OBJECT(js_val)) {
-    // This object may be a JS wrapped native object.
-    // If it is not, NativeJSWrapper::Unwrap simply fails.
-    // We don't support wrapping JS objects into native objects.
-    result = NativeJSWrapper::Unwrap(cx, JSVAL_TO_OBJECT(js_val), &scriptable);
+    JSObject *obj = JSVAL_TO_OBJECT(js_val);
+    if (JS_IsArrayObject(cx, obj)) {
+      // Convert the JavaScript array to a temporary ScriptableArray object.
+      jsuint length = 0;
+      JS_GetArrayLength(cx, obj, &length);
+      Variant *native_array = new Variant[length];
+      for (jsuint i = 0; i < length; i++) {
+        jsval value = JSVAL_NULL;
+        JS_GetElement(cx, obj, static_cast<jsint>(i), &value);
+        if (!ConvertJSToNativeVariant(cx, value, &native_array[i])) {
+          JS_ReportError(cx, "Failed to convert array element %d(%s) to native",
+                         i, PrintJSValue(cx, value).c_str());
+          // Just a warning, continue.
+        }
+      }
+      scriptable = ScriptableArray::Create(native_array,
+                                           static_cast<size_t>(length),
+                                           // This array is owned by JS. 
+                                           false);
+      // Wrap the temporary native array into a temporary JS object, so that
+      // it can live during the scope of current AutoLocalRootScope and can be
+      // GC'ed after the scope.
+      JSScriptContext::WrapNativeObjectToJS(cx, scriptable);
+    } else {
+      // This object may be a JS wrapped native object.
+      // If it is not, NativeJSWrapper::Unwrap simply fails.
+      // We don't support wrapping JS objects into native objects.
+      result = NativeJSWrapper::Unwrap(cx, obj, &scriptable);
+    }
   } else {
     result = JS_FALSE;
   }
@@ -248,6 +274,8 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
     return ConvertJSToNativeString(cx, js_val, native_val);
   if (JSVAL_IS_OBJECT(js_val))
     return ConvertJSToScriptable(cx, js_val, native_val);
+  // Conversion from JS Function to native Slot is not supported in this
+  // function.
   return JS_FALSE;
 }
 
@@ -326,26 +354,27 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
   *params = NULL;
   const Variant::Type *arg_types = NULL;
   *expected_argc = argc;
+  const Variant *default_args = NULL;
   if (slot->HasMetadata()) {
     arg_types = slot->GetArgTypes();
     *expected_argc = static_cast<uintN>(slot->GetArgCount());
+    default_args = slot->GetDefaultArgs();
     if (argc != *expected_argc) {
-      uintN min_arg_count = *expected_argc;
-      if (argc < *expected_argc) {
-        for (uintN i = min_arg_count - 1; i >= 0; i--) {
-          // Variant parameters at the end of the parameter list are optional.
-          if (arg_types[i] == Variant::TYPE_VARIANT)
-            min_arg_count--;
+      uintN min_argc = *expected_argc;
+      if (min_argc > 0 && default_args && argc < *expected_argc) {
+        for (int i = static_cast<int>(min_argc) - 1; i >= 0; i--) {
+          if (default_args[i].type() != Variant::TYPE_VOID)
+            min_argc--;
           else
             break;
         }
       }
 
-      if (argc > *expected_argc || argc < min_arg_count) {
+      if (argc > *expected_argc || argc < min_argc) {
         // Argc mismatch.
         JS_ReportError(cx, "Wrong number of arguments: %u "
                        "(expected: %u, at least: %u)",
-                       argc, slot->GetArgCount(), min_arg_count);
+                       argc, *expected_argc, min_argc);
         return JS_FALSE;
       }
     }
@@ -353,22 +382,37 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
 
   if (*expected_argc > 0) {
     *params = new Variant[*expected_argc];
+    // Fill up trailing default argument values.
+    for (uintN i = argc; i < *expected_argc; i++) {
+      ASSERT(default_args);  // Otherwise already returned JS_FALSE.
+      (*params)[i] = default_args[i];
+    }
+
     for (uintN i = 0; i < argc; i++) {
-      JSBool result = arg_types != NULL ?
-          ConvertJSToNative(cx, wrapper, Variant(arg_types[i]), argv[i],
-                            &(*params)[i]) :
-          ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
-      if (!result) {
-        for (uintN j = 0; j <= i; j++)
-          FreeNativeValue((*params)[j]);
-        delete [] *params;
-        *params = NULL;
-        JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
-                       i, PrintJSValue(cx, argv[i]).c_str());
-        return JS_FALSE;
+      if (default_args && default_args[i].type() != Variant::TYPE_VOID &&
+          JSVAL_IS_VOID(argv[i])) {
+        // Use the default value.
+        (*params)[i] = default_args[i];
+      } else {
+        JSBool result;
+        if (arg_types) {
+          result = ConvertJSToNative(cx, wrapper,
+                                     Variant(arg_types[i]), argv[i],
+                                     &(*params)[i]);
+        } else {
+          result = ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
+        }
+        if (!result) {
+          for (uintN j = 0; j < i; j++)
+            FreeNativeValue((*params)[j]);
+          delete [] *params;
+          *params = NULL;
+          JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
+                         i, PrintJSValue(cx, argv[i]).c_str());
+          return JS_FALSE;
+        }
       }
     }
-    // Not specified optional parameters remain TYPE_VOID. 
   }
   return JS_TRUE;
 }
@@ -482,7 +526,6 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
-  DLOG("Reading native function in JavaScript");
   // Just leave the value that SpiderMonkey recorded in SetProperty.
   return JS_TRUE;
 }

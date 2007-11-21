@@ -375,6 +375,15 @@ class ElementInterface : public ScriptableInterface {
   virtual void SelfCoordToChildCoord(ElementInterface *child,
                                      double x, double y,
                                      double *child_x, double *child_y) = 0;
+
+  /**
+   * Connects an event handler to an event.
+   * Provided for native usage of this interface.
+   * The connection is independent with the connections to script handlers.
+   */
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler) = 0;
+
 };
 
 CLASS_ID_IMPL(ElementInterface, ScriptableInterface)

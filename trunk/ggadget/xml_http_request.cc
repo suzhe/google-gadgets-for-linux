@@ -30,6 +30,15 @@
 namespace ggadget {
 namespace {
 
+static const Variant kOpenDefaultArgs[] = {
+  Variant(), Variant(),
+  Variant(true),
+  Variant(static_cast<const char *>(NULL)),
+  Variant(static_cast<const char *>(NULL))
+};
+
+static const Variant kSendDefaultArgs[] = { Variant("") };
+
 class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
@@ -50,10 +59,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         response_dom_(NULL) {
     RegisterSignal("onreadystatechange", &onreadystatechange_signal_);
     RegisterReadonlySimpleProperty("readyState", &state_);
-    RegisterMethod("open", NewSlot(this, &XMLHttpRequest::ScriptOpen));
+    RegisterMethod("open",
+        NewSlotWithDefaultArgs(NewSlot(this, &XMLHttpRequest::ScriptOpen),
+                               kOpenDefaultArgs));
     RegisterMethod("setRequestHeader",
                    NewSlot(this, &XMLHttpRequest::ScriptSetRequestHeader));
-    RegisterMethod("send", NewSlot(this, &XMLHttpRequest::ScriptSend));
+    RegisterMethod("send",
+        NewSlotWithDefaultArgs(NewSlot(this, &XMLHttpRequest::ScriptSend),
+                               kSendDefaultArgs));
     RegisterMethod("abort", NewSlot(this, &XMLHttpRequest::Abort));
     RegisterMethod("getAllResponseHeaders",
                    NewSlot(this, &XMLHttpRequest::ScriptGetAllResponseHeaders));
@@ -710,34 +723,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return true;
   }
 
-  template <typename T>
-  bool GetArg(const Variant &v, T *value) {
-    if (v.type() == Variant::TYPE_VOID) {
-      // Leave the original value.
-      return true;
-    }
-    if (v.type() == VariantType<T>::type) {
-      *value = VariantValue<T>()(v);
-      return true;
-    }
-    SetPendingException(new XMLHttpRequestException(SYNTAX_ERR));
-    return false;
-  }
-
-  void ScriptOpen(const char *method, const char *url, const Variant &v_async,
-                  const Variant &v_user, const Variant &v_password) {
-    bool async = true;
-    if (!GetArg(v_async, &async))
-      return;
-
-    const char *user = NULL;
-    if (!GetArg(v_user, &user))
-      return;
-
-    const char *password = NULL;
-    if (!GetArg(v_password, &password))
-      return;
-
+  void ScriptOpen(const char *method, const char *url, bool async,
+                  const char *user, const char *password) {
     CheckException(Open(method, url, async, user, password));
   }
 
@@ -749,10 +736,17 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (v_data.type() == Variant::TYPE_STRING) {
       std::string data = VariantValue<std::string>()(v_data);
       CheckException(Send(data.c_str(), data.length()));
+    } else if (v_data.type() == Variant::TYPE_SCRIPTABLE) {
+      ScriptableInterface *scriptable =
+          VariantValue<ScriptableInterface *>()(v_data);
+      if (!scriptable ||
+          scriptable->IsInstanceOf(DOMDocumentInterface::CLASS_ID)) {
+        CheckException(Send(down_cast<DOMDocumentInterface *>(scriptable)));
+      } else {
+        CheckException(SYNTAX_ERR);
+      }
     } else {
-      DOMDocumentInterface *dom = NULL;
-      if (GetArg(v_data, &dom))
-        CheckException(Send(dom));
+      CheckException(SYNTAX_ERR);
     }
   }
 

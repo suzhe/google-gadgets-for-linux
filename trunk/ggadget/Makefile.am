@@ -33,6 +33,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  checkbox_element.h \
 			  color.h \
 			  common.h \
+			  display_window.h \
 			  div_element.h \
 			  edit_interface.h \
 			  element_factory.h \
@@ -97,6 +98,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  basic_element.cc \
 			  button_element.cc \
 			  checkbox_element.cc \
+			  display_window.cc \
 			  div_element.cc \
 			  element_factory.cc \
 			  elements.cc \
@@ -116,6 +118,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_options.cc \
 			  scrollbar_element.cc \
 			  signals.cc \
+			  slot.cc \
 			  string_utils.cc \
 			  text_frame.cc \
 			  texture.cc \

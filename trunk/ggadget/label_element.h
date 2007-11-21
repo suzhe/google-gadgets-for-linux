@@ -19,9 +19,10 @@
 
 #include <stdlib.h>
 #include <ggadget/basic_element.h>
-#include <ggadget/canvas_interface.h>
 
 namespace ggadget {
+
+class TextFrame;
 
 class LabelElement : public BasicElement {
  public:
@@ -31,6 +32,9 @@ class LabelElement : public BasicElement {
              ViewInterface *view,
              const char *name);
   virtual ~LabelElement();
+
+  /** Gets the text frame containing the text content of this label. */
+  TextFrame *GetTextFrame();
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,

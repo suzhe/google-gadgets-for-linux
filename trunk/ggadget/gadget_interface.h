@@ -47,15 +47,17 @@ class GadgetInterface {
    *     xml_utils.h for details of the XPath expression.
    * @return the configured value. @c NULL if not found.
    */
-  virtual const char *GetManifestInfo(const char *key) = 0;
+  virtual const char *GetManifestInfo(const char *key) const = 0;
+
+  /** Checks whether this gadget has options dialog. */
+  virtual bool HasOptionsDialog() const = 0;
 
   /**
-   * Fires just before the gadget's options dialog is displayed.
-   * Handle this event to initialize the options dialog.
-   * @param window The display window.
-   * @return if @c true the options dialog will appear after return.
+   * Show the options dialog, either old @c GDDisplayWindowInterface style or
+   * XML view style, depending on whether @c options.xml exists.
+   * @return @c true if succeeded.
    */
-  virtual bool OnShowOptionsDlg(GDDisplayWindowInterface *window) = 0;
+  virtual bool ShowOptionsDialog() = 0;
 
   /**
    * Fires just before the gadget's menu is displayed. Handle this event to

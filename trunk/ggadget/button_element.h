@@ -23,6 +23,7 @@
 namespace ggadget {
 
 class MouseEvent;
+class TextFrame;
 
 class ButtonElement : public BasicElement {
  public:
@@ -49,6 +50,9 @@ class ButtonElement : public BasicElement {
   /** Gets and sets the file name of mouse down button image. */
   Variant GetDownImage() const;
   void SetDownImage(const Variant &img);
+
+  /** Gets the text frame containing the caption of this button. */
+  TextFrame *GetTextFrame();
 
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);

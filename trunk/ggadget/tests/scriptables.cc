@@ -93,6 +93,10 @@ TestScriptable1::~TestScriptable1() {
 
 TestPrototype *TestPrototype::instance_ = NULL;
 
+const Variant kNewObjectDefaultArgs[] = { Variant(true) };
+const Variant kDeleteObjectDefaultArgs[] = 
+   { Variant(static_cast<ScriptableInterface *>(NULL)) };
+
 TestPrototype::TestPrototype() {
   RegisterMethod("PrototypeMethod", NewSlot(this, &TestPrototype::Method));
   RegisterProperty("PrototypeSelf", NewSlot(this, &TestPrototype::GetSelf),
@@ -114,8 +118,16 @@ TestScriptable2::TestScriptable2(bool script_owned)
                    NewSlot(this, &TestScriptable2::GetSelf), NULL);
   RegisterConstant("length", kArraySize);
   RegisterReadonlySimpleProperty("SignalResult", &signal_result_);
-  RegisterMethod("NewObject", NewSlot(this, &TestScriptable2::NewObject));
-  RegisterMethod("DeleteObject", NewSlot(this, &TestScriptable2::DeleteObject));
+
+  RegisterMethod("NewObject",
+      NewSlotWithDefaultArgs(NewSlot(this, &TestScriptable2::NewObject),
+                             kNewObjectDefaultArgs));
+  RegisterMethod("DeleteObject",
+      NewSlotWithDefaultArgs(NewSlot(this, &TestScriptable2::DeleteObject),
+                             kDeleteObjectDefaultArgs));
+  RegisterProperty("ScriptOwned",
+                   NewSlot(this, &TestScriptable2::IsScriptOwned), NULL);
+  RegisterMethod("ReverseArray", NewSlot(this, &TestScriptable2::ReverseArray));
   SetPrototype(TestPrototype::GetInstance());
   SetArrayHandler(NewSlot(this, &TestScriptable2::GetArray),
                   NewSlot(this, &TestScriptable2::SetArray));
@@ -129,7 +141,7 @@ TestScriptable2::~TestScriptable2() {
 }
 
 ScriptableInterface::OwnershipPolicy TestScriptable2::Attach() {
-  return script_owned_ ? OWNERSHIP_TRANSFERRABLE : NATIVE_OWNED; 
+  return script_owned_ ? OWNERSHIP_TRANSFERRABLE : NATIVE_OWNED;
 }
 
 bool TestScriptable2::Detach() {
@@ -140,4 +152,14 @@ bool TestScriptable2::Detach() {
     return true;
   }
   return false;
+}
+
+ScriptableArray *TestScriptable2::ReverseArray(ScriptableArray *array) {
+  if (array == NULL)
+    return NULL;
+  size_t count = array->GetCount();
+  Variant *new_array = new Variant[count];
+  for (size_t i = 0; i < count; i++)
+    new_array[count - i - 1] = array->GetItem(i);
+  return ScriptableArray::Create(new_array, count, false);
 }

@@ -15,6 +15,7 @@
 */
 
 #include "gadget.h"
+#include "display_window.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
@@ -72,8 +73,9 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   class Plugin : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
-    Plugin(GadgetHostInterface *host) {
-      RegisterProperty("plugin_flags", NewSlot(PluginFlagsGetterStub),
+    Plugin(Impl *gadget_impl) {
+      GadgetHostInterface *host = gadget_impl->host_;
+      RegisterProperty("plugin_flags", NULL, // No getter.
                        NewSlot(host, &GadgetHostInterface::SetPluginFlags));
       RegisterMethod("RemoveMe",
                      NewSlot(host, &GadgetHostInterface::RemoveMe));
@@ -82,9 +84,10 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterMethod("CloseDetailsView",
                      NewSlot(host, &GadgetHostInterface::CloseDetailsView));
       RegisterMethod("ShowOptionsDialog",
-                     NewSlot(host, &GadgetHostInterface::ShowOptionsDialog));
+                     NewSlot(gadget_impl, &Impl::ShowOptionsDialog));
 
-      RegisterSignal("onShowOptionsDlg", &onshowoptionsdlg_signal_);
+      RegisterSignal("onShowOptionsDlg",
+                     &gadget_impl->onshowoptionsdlg_signal_);
       RegisterSignal("onAddCustomMenuItems", &onaddcustommenuitems_signal_);
       RegisterSignal("onCommand", &oncommand_signal_);
       RegisterSignal("onDisplayStateChange", &ondisplaystatechange_signal_);
@@ -102,10 +105,6 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       onaddcustommenuitems_signal_(&scriptable_menu);
     }
 
-    // "plugin_flags" is a write-only property. Returns 0 on read.
-    static int PluginFlagsGetterStub() { return 0; }
-
-    Signal1<bool, ScriptableInterface *> onshowoptionsdlg_signal_;
     Signal1<void, ScriptableMenu *> onaddcustommenuitems_signal_;
     Signal1<void, int> oncommand_signal_;
     Signal1<void, int> ondisplaystatechange_signal_;
@@ -142,11 +141,12 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       : host_(host),
         debug_(this),
         storage_(this),
-        plugin_(host),
+        plugin_(this),
         scriptable_options_(host->GetOptions()),
         gadget_global_prototype_(this),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
-                                          &gadget_global_prototype_)) {
+                                          &gadget_global_prototype_)),
+        has_options_xml_(false) {
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
   }
@@ -206,6 +206,39 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     return it->second.c_str();
   }
 
+  bool HasOptionsDialog() {
+    return has_options_xml_ || onshowoptionsdlg_signal_.HasActiveConnections();
+  }
+
+  bool ShowOptionsDialog() {
+    ViewHostInterface *options_view_host = NULL;
+    DisplayWindow *window = NULL;
+    if (has_options_xml_) {
+      options_view_host = host_->NewViewHost(
+          GadgetHostInterface::VIEW_OPTIONS, &gadget_global_prototype_);
+      if (!options_view_host->GetView()->InitFromFile(kOptionsXML)) {
+        LOG("Failed to setup the options view");
+        delete options_view_host;
+        return false;
+      }
+    } else if (onshowoptionsdlg_signal_.HasActiveConnections()) {
+      options_view_host = host_->NewViewHost(
+          GadgetHostInterface::VIEW_OLD_OPTIONS, NULL);
+      window = new DisplayWindow(options_view_host->GetView());
+      onshowoptionsdlg_signal_(window);
+    } else {
+      LOG("Failed to show options dialog because there is neither options.xml"
+          "nor OnShowOptionsDlg handler");
+      delete options_view_host;
+      return false;
+    }
+
+    options_view_host->RunDialog();
+    delete window;
+    delete options_view_host;
+    return true;
+  }
+
   bool Init() {
     FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
@@ -245,16 +278,15 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     }
 
     if (!main_view_host_->GetView()->InitFromFile(kMainXML)) {
-      DLOG("Failed to setup the main view");
+      LOG("Failed to setup the main view");
       return false;
     }
 
-    // TODO: SetupView(options_, kOptionsXML); // Ignore any error.
-
-    // Start running the main view.
+    has_options_xml_ = file_manager->FileExists(kOptionsXML);
     return true;
   }
 
+  Signal1<void, DisplayWindow *> onshowoptionsdlg_signal_;
   GadgetHostInterface *host_;
   Debug debug_;
   Storage storage_;
@@ -264,6 +296,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   GadgetGlobalPrototype gadget_global_prototype_;
   ViewHostInterface *main_view_host_;
   GadgetStringMap manifest_info_map_;
+  bool has_options_xml_;
 };
 
 Gadget::Gadget(GadgetHostInterface *host)
@@ -283,13 +316,16 @@ ViewHostInterface *Gadget::GetMainViewHost() {
   return impl_->main_view_host_;
 }
 
-const char *Gadget::GetManifestInfo(const char *key) {
+const char *Gadget::GetManifestInfo(const char *key) const {
   return impl_->GetManifestInfo(key);
 }
 
-bool Gadget::OnShowOptionsDlg(GDDisplayWindowInterface *window) {
-  // TODO: implement it.
-  return true;
+bool Gadget::HasOptionsDialog() const {
+  return impl_->HasOptionsDialog();
+}
+
+bool Gadget::ShowOptionsDialog() {
+  return impl_->ShowOptionsDialog();
 }
 
 void Gadget::OnAddCustomMenuItems(MenuInterface *menu) {

@@ -713,6 +713,55 @@ class BasicElement::Impl {
     return scriptable_event.GetReturnValue();
   }
 
+  // The implementation uses if-else statements, which seems the best
+  // trade-off among code size, data size, calling frequency and time.
+  // This method is seldom called only by C++ code.
+  Connection *ConnectEvent(const char *event_name, Slot0<void> *handler) {
+    ASSERT(event_name);
+    EventSignal *signal = NULL;
+    if (GadgetStrCmp(event_name, kOnClickEvent) == 0)
+      signal = &onclick_event_;
+    else if (GadgetStrCmp(event_name, kOnDblClickEvent) == 0)
+      signal = &ondblclick_event_;
+    else if (GadgetStrCmp(event_name, kOnRClickEvent) == 0)
+      signal = &onrclick_event_;
+    else if (GadgetStrCmp(event_name, kOnRDblClickEvent) == 0)
+      signal = &onrdblclick_event_;  
+    else if (GadgetStrCmp(event_name, kOnDragDropEvent) == 0)
+      signal = &ondragdrop_event_;
+    else if (GadgetStrCmp(event_name, kOnDragOutEvent) == 0)
+      signal = &ondragout_event_;
+    else if (GadgetStrCmp(event_name, kOnDragOverEvent) == 0)
+      signal = &ondragover_event_;
+    else if (GadgetStrCmp(event_name, kOnFocusInEvent) == 0)
+      signal = &onfocusin_event_;
+    else if (GadgetStrCmp(event_name, kOnFocusOutEvent) == 0)
+      signal = &onfocusout_event_;
+    else if (GadgetStrCmp(event_name, kOnKeyDownEvent) == 0)
+      signal = &onkeydown_event_;
+    else if (GadgetStrCmp(event_name, kOnKeyPressEvent) == 0)
+      signal = &onkeypress_event_;
+    else if (GadgetStrCmp(event_name, kOnKeyUpEvent) == 0)
+      signal = &onkeyup_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseDownEvent) == 0)
+      signal = &onmousedown_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseMoveEvent) == 0)
+      signal = &onmousemove_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseOutEvent) == 0)
+      signal = &onmouseout_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseOverEvent) == 0)
+      signal = &onmouseover_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseUpEvent) == 0)
+      signal = &onmouseup_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseWheelEvent) == 0)
+      signal = &onmousewheel_event_;
+    else if (GadgetStrCmp(event_name, kOnSizeEvent) == 0)
+      signal = &onsize_event_;
+
+    ASSERT_M(signal, ("Unknown event name: %s", event_name));
+    return signal->Connect(handler);
+  }
+
  public:
   ElementInterface *parent_;
   BasicElement *owner_;
@@ -1255,6 +1304,11 @@ void BasicElement::OnDefaultSizeChange() {
     if (!impl_->height_specified_)
       impl_->SetPixelHeight(height);
   }
+}
+
+Connection *BasicElement::ConnectEvent(const char *event_name,
+                                       Slot0<void> *handler) {
+  return impl_->ConnectEvent(event_name, handler);
 }
 
 } // namespace ggadget

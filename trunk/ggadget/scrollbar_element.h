@@ -109,8 +109,9 @@ class ScrollBarElement : public BasicElement {
 
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
-
-  void ConnectOnChangeEvent(Slot0<void> *slot);
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler);
+  Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,

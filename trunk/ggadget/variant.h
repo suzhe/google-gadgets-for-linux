@@ -96,7 +96,7 @@ class Variant {
   /**
    * Construct a @c Variant by type with default value (zero).
    */
-  Variant(Type a_type) : type_(a_type) {
+  explicit Variant(Type a_type) : type_(a_type) {
     v_.double_value_ = 0;  // Also sets other unions to 0.
   }
 

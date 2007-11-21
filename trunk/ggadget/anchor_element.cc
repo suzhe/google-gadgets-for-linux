@@ -105,6 +105,10 @@ void AnchorElement::SetHref(const char *href) {
   impl_->href_ = href;
 }
 
+TextFrame *AnchorElement::GetTextFrame() {
+  return &impl_->text_;
+}
+
 bool AnchorElement::OnMouseEvent(MouseEvent *event, bool direct,
                                  ElementInterface **fired_element) {
   bool result = BasicElement::OnMouseEvent(event, direct, fired_element);

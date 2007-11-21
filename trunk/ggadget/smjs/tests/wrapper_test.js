@@ -366,4 +366,21 @@ TEST("Test global class", function() {
   // Don't call GC now to test GC on destroying the script context.
 });
 
+TEST("Test default args", function() {
+  var s = scriptable2.NewObject();
+  ASSERT(TRUE(s.ScriptOwned));
+  scriptable2.DeleteObject();
+  scriptable2.DeleteObject(s);
+});
+
+TEST("Test scriptable array", function() {
+  ASSERT(NULL(scriptable2.ReverseArray(null)));
+  var arr = scriptable2.ReverseArray([1,2,3,4,5]);
+  ASSERT(EQ(5, arr.count));
+  ASSERT(EQ(5, arr.item(0)));
+  var arr1 = scriptable2.ReverseArray(arr);
+  ASSERT(EQ(5, arr1.count));
+  ASSERT(EQ(1, arr1.item(0)));
+});
+
 RUN_ALL_TESTS();

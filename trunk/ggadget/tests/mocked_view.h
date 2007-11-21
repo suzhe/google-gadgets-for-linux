@@ -99,7 +99,9 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual void OnOptionChanged(const char *name) { }
 
   virtual bool OpenURL(const char *url) const { return true; }
-  
+  virtual ggadget::Connection *ConnectEvent(
+      const char *event_name, ggadget::Slot0<void> *handler) { return NULL; }
+
   bool GetQueuedDraw() {
     bool b = draw_queued_;
     draw_queued_ = false;

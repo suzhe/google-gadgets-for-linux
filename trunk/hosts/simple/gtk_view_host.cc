@@ -60,42 +60,51 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
       gvw_(NULL),
       gfx_(NULL),
       onoptionchanged_connection_(NULL) {
-  ggadget::ScriptRuntimeInterface *script_runtime =
-      gadget_host->GetScriptRuntime(ggadget::GadgetHostInterface::JAVASCRIPT);
-  script_context_ = script_runtime->CreateContext();
+  if (type != ggadget::GadgetHostInterface::VIEW_OLD_OPTIONS) {
+    // Only xml based views have standalone script context.
+    ggadget::ScriptRuntimeInterface *script_runtime =
+        gadget_host->GetScriptRuntime(ggadget::GadgetHostInterface::JAVASCRIPT);
+    script_context_ = script_runtime->CreateContext();
+  }
 
   ggadget::OptionsInterface *options = gadget_host->GetOptions();
-  int debug_mode = ggadget::VariantValue<int>()(options->GetValue(
-      ggadget::kOptionDebugMode));
+  int debug_mode = ggadget::VariantValue<int>()(
+      options->GetInternalValue(ggadget::kOptionDebugMode));
   view_ = new ggadget::View(this, prototype, gadget_host->GetElementFactory(),
                             debug_mode);
 
-  onoptionchanged_connection_ = options->ConnectOnOptionChanged(
-      NewSlot(view_, &ggadget::ViewInterface::OnOptionChanged));
-
-  // Register global classes into script context.
-  script_context_->RegisterClass("DOMDocument",
-                                 NewSlot(ggadget::CreateDOMDocument));
-  script_context_->RegisterClass(
-      "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
-
-  // Execute common.js to initialize global constants and compatibility
-  // adapters.
-  std::string common_js_contents;
-  std::string common_js_path;
-  ggadget::FileManagerInterface *global_file_manager =
-      gadget_host->GetGlobalFileManager();
-  if (global_file_manager->GetFileContents(ggadget::kCommonJS,
-                                           &common_js_contents,
-                                           &common_js_path)) {
-    script_context_->Execute(common_js_contents.c_str(),
-                             common_js_path.c_str(), 1);
-  } else {
-    LOG("Failed to load %s.", ggadget::kCommonJS);
+  if (type != ggadget::GadgetHostInterface::VIEW_OLD_OPTIONS) {
+    // Continue to initialize the script context.
+    onoptionchanged_connection_ = options->ConnectOnOptionChanged(
+        NewSlot(view_, &ggadget::ViewInterface::OnOptionChanged));
+  
+    // Register global classes into script context.
+    script_context_->RegisterClass(
+        "DOMDocument", NewSlot(ggadget::CreateDOMDocument));
+    script_context_->RegisterClass(
+        "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
+  
+    // Execute common.js to initialize global constants and compatibility
+    // adapters.
+    std::string common_js_contents;
+    std::string common_js_path;
+    ggadget::FileManagerInterface *global_file_manager =
+        gadget_host->GetGlobalFileManager();
+    if (global_file_manager->GetFileContents(ggadget::kCommonJS,
+                                             &common_js_contents,
+                                             &common_js_path)) {
+      script_context_->Execute(common_js_contents.c_str(),
+                               common_js_path.c_str(), 1);
+    } else {
+      LOG("Failed to load %s.", ggadget::kCommonJS);
+    }
   }
 
-  double zoom = ggadget::VariantValue<double>()(options->GetValue(
-      ggadget::kOptionZoom));
+  double zoom = 1.0;
+  if (type == ggadget::GadgetHostInterface::VIEW_MAIN) {
+    zoom = ggadget::VariantValue<double>()(
+        options->GetInternalValue(ggadget::kOptionZoom));
+  }
   gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom, composited));
   gfx_ = new ggadget::CairoGraphics(zoom);
 }
@@ -189,4 +198,49 @@ void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
     */
 
   }
+}
+
+struct DialogData {
+  GtkDialog *dialog;
+  ggadget::ViewInterface *view;
+};
+
+static void OnDialogCancel(GtkButton *button, gpointer user_data) {
+  DialogData *dialog_data = static_cast<DialogData *>(user_data);
+  ggadget::Event event(ggadget::Event::EVENT_CANCEL);
+  if (dialog_data->view->OnOtherEvent(&event)) {
+    gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_CANCEL);
+  }
+}
+
+static void OnDialogOK(GtkButton *button, gpointer user_data) {
+  DialogData *dialog_data = static_cast<DialogData *>(user_data);
+  ggadget::Event event(ggadget::Event::EVENT_OK);
+  if (dialog_data->view->OnOtherEvent(&event)) {
+    gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_OK);
+  }
+}
+
+void GtkViewHost::RunDialog() {
+  GtkDialog *dialog = GTK_DIALOG(gtk_dialog_new_with_buttons("Options", NULL,
+                                                             GTK_DIALOG_MODAL,
+                                                             NULL));
+  DialogData dialog_data = { dialog, view_ };
+
+  GtkWidget *cancel_button = gtk_dialog_add_button(dialog,
+                                                   GTK_STOCK_CANCEL,
+                                                   GTK_RESPONSE_CANCEL);
+  GtkWidget *ok_button = gtk_dialog_add_button(dialog,
+                                               GTK_STOCK_OK,
+                                               GTK_RESPONSE_OK);
+  gtk_widget_grab_default(ok_button);
+  g_signal_connect(cancel_button, "clicked",
+                   G_CALLBACK(OnDialogCancel), &dialog_data);
+  g_signal_connect(ok_button, "clicked",
+                   G_CALLBACK(OnDialogOK), &dialog_data);
+
+  gtk_container_add(GTK_CONTAINER(dialog->vbox), GTK_WIDGET(gvw_));
+  gtk_widget_show_all(GTK_WIDGET(dialog));
+  gtk_dialog_run(dialog);
+  gtk_widget_destroy(GTK_WIDGET(dialog));
 }

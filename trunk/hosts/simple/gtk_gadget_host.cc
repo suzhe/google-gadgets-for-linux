@@ -19,7 +19,7 @@
 #include <sys/wait.h>
 #include <fontconfig/fontconfig.h>
 
-#include <ggadget/common.h>
+#include <ggadget/ggadget.h>
 #include <ggadget/element_factory.h>
 #include <ggadget/file_manager.h>
 #include <ggadget/gadget.h>
@@ -178,9 +178,6 @@ void GtkGadgetHost::ShowDetailsView(
 }
 
 void GtkGadgetHost::CloseDetailsView() {
-}
-
-void GtkGadgetHost::ShowOptionsDialog() {
 }
 
 void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) const {
@@ -387,8 +384,9 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
                                const char *base_path,
                                double zoom, int debug_mode) {
   // TODO: store zoom (and debug_mode?) into options repository.
-  options_->PutValue(ggadget::kOptionZoom, ggadget::Variant(zoom));
-  options_->PutValue(ggadget::kOptionDebugMode, ggadget::Variant(debug_mode));
+  options_->PutInternalValue(ggadget::kOptionZoom, ggadget::Variant(zoom));
+  options_->PutInternalValue(ggadget::kOptionDebugMode,
+                             ggadget::Variant(debug_mode));
   gadget_ = new ggadget::Gadget(this);
   if (!file_manager_->Init(base_path) || !gadget_->Init())
     return false;
@@ -440,6 +438,7 @@ void GtkGadgetHost::PopupMenu() {
   gtk_menu_shell_append(menu_shell, item);
   g_signal_connect(item, "activate", G_CALLBACK(OnCollapseActivate), this);
   item = gtk_menu_item_new_with_label("Options...");
+  gtk_widget_set_sensitive(GTK_WIDGET(item), gadget_->HasOptionsDialog());
   gtk_menu_shell_append(menu_shell, item);
   g_signal_connect(item, "activate", G_CALLBACK(OnOptionsActivate), this);
   gtk_menu_shell_append(menu_shell,
@@ -483,14 +482,21 @@ void GtkGadgetHost::OnCollapseActivate(GtkMenuItem *menu_item,
 
 void GtkGadgetHost::OnOptionsActivate(GtkMenuItem *menu_item,
                                       gpointer user_data) {
-  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
   DLOG("OptionsActivate");
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  this_p->gadget_->ShowOptionsDialog();
 }
 
 void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
                                     gpointer user_data) {
-  // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  DLOG("AboutActivate");
+  GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
+  const char *about_text = this_p->gadget_->GetManifestInfo(
+      ggadget::kManifestAboutText);
+  if (!about_text || !*about_text) {
+    this_p->gadget_->OnCommand(ggadget::GadgetInterface::CMD_ABOUT_DIALOG);
+  } else {
+    // TODO: show the about dialog.
+  }
 }
 
 void GtkGadgetHost::OnDockActivate(GtkMenuItem *menu_item,

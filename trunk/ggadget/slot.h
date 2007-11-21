@@ -62,6 +62,23 @@ class Slot {
   virtual const Variant::Type *GetArgTypes() const { return NULL; }
 
   /**
+   * Get the default values of arguments.
+   * This method only has default implementation in all classed declaredd in
+   * this header file. A costomized @c Slot class must be defined if you need
+   * to provide default value policies.
+   * Default arguments won't be automatically filled in @c Call(). The caller
+   * must fill them before invoking @c Call().
+   *
+   * @return @c NULL if this slot has no default values for arguments.
+   *     Otherwise returns an array of <code>Variant</code>s.  The count of
+   *     items must be equal to the result of @c GetArgCount().
+   *     If the type of an item is @c Variant::TYPE_VOID, the argument is
+   *     required and has no default value; otherwise the item contains the
+   *     default value of this argument if this argument is omitted.
+   */
+  virtual const Variant *GetDefaultArgs() const { return NULL; }
+
+  /**
    * Equality tester, only for unit testing.
    * The slots to be tested must be of the same type, otherwise the program
    * may crash.
@@ -606,6 +623,18 @@ template <typename T>
 inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
   return NewFunctorSlot<void, T>(SimpleSetter<T>(value_ptr));
 }
+
+/**
+ * Create a slot with default arguments.
+ * @param slot all slot operations except @c GetDefaultArgs() will be deligate
+ *     to this slot.
+ * @param default_args an array of default argument values. The pointer must be
+ *     statically allocated, or automatically allocated but life longer than
+ *     that of the returned slot.
+ * @return a new slot with default arguments. 
+ * @see Variant::GetDefaultArgs()
+ */
+Slot *NewSlotWithDefaultArgs(Slot *slot, const Variant *default_args);
 
 } // namespace ggadget
 

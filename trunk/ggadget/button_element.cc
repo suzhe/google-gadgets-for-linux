@@ -72,8 +72,6 @@ ButtonElement::ButtonElement(ElementInterface *parent,
   RegisterProperty("disabledImage",
                    NewSlot(this, &ButtonElement::GetDisabledImage),
                    NewSlot(this, &ButtonElement::SetDisabledImage));
-
-  // undocumented
   RegisterProperty("caption",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
                    NewSlot(&impl_->text_, &TextFrame::SetText));
@@ -154,6 +152,10 @@ void ButtonElement::SetDownImage(const Variant &img) {
   if (impl_->mousedown_ && IsEnabled()) {
     QueueDraw();
   }
+}
+
+TextFrame *ButtonElement::GetTextFrame() {
+  return &impl_->text_;
 }
 
 ElementInterface *ButtonElement::CreateInstance(ElementInterface *parent,

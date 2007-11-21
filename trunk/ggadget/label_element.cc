@@ -44,6 +44,10 @@ LabelElement::~LabelElement() {
   delete impl_;
 }
 
+TextFrame *LabelElement::GetTextFrame() {
+  return &impl_->text_;
+}
+
 void LabelElement::DoDraw(CanvasInterface *canvas,
                         const CanvasInterface *children_canvas) {
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());

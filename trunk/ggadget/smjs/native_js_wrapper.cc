@@ -64,8 +64,8 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
 NativeJSWrapper::~NativeJSWrapper() {
   if (!deleted_) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-    DLOG("Delete: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
-         ownership_policy_, js_object_, this,
+    DLOG("Delete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p"
+         "(CLASS_ID=%jx)", js_context_, ownership_policy_, js_object_, this,
          scriptable_, scriptable_->GetClassId());
 #endif
 
@@ -90,8 +90,8 @@ void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
     JS_AddRoot(js_context_, &js_object_);
   
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("Wrap: policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
-       ownership_policy_, js_object_, this,
+  DLOG("Wrap: cx=%p policy=%d jsobj=%p wrapper=%p scr=%p(CLASS_ID=%jx)",
+       js_context_, ownership_policy_, js_object_, this,
        scriptable_, scriptable_->GetClassId());
   // This GC forces many hidden memory allocation errors to expose.
   DLOG("ForceGC");
@@ -127,8 +127,9 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
         // This is the prototype object created by JS_InitClass();
         return NULL;
 
-      ASSERT(wrapper && wrapper->js_context_ == cx &&
-             wrapper->js_object_ == js_object);
+      ASSERT(wrapper && wrapper->js_object_ == js_object);
+      // The current context may be different from wrapper's context during
+      // GC marking.
       return wrapper;
     }
   }
@@ -219,8 +220,8 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-    DLOG("Finalize: policy=%d jsobj=%p wrapper=%p scriptable=%p",
-         wrapper->ownership_policy_, obj, wrapper, wrapper->scriptable_);
+    DLOG("Finalize: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
+         cx, wrapper->ownership_policy_, obj, wrapper, wrapper->scriptable_);
 #endif
 
     if (!wrapper->deleted_)
@@ -242,8 +243,8 @@ uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
 
 void NativeJSWrapper::DetachJS() {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("DetachJS: policy=%d jsobj=%p wrapper=%p scriptable=%p",
-       ownership_policy_, js_object_, this, scriptable_);
+  DLOG("DetachJS: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
+       js_context_, ownership_policy_, js_object_, this, scriptable_);
 #endif
 
   ondelete_connection_->Disconnect();
@@ -254,8 +255,8 @@ void NativeJSWrapper::DetachJS() {
 
 void NativeJSWrapper::OnDelete() {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("OnDelete: policy=%d jsobj=%p wrapper=%p scriptable=%p",
-       ownership_policy_, js_object_, this, scriptable_);
+  DLOG("OnDelete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
+       js_context_, ownership_policy_, js_object_, this, scriptable_);
 #endif
 
   deleted_ = true;
@@ -325,17 +326,17 @@ JSBool NativeJSWrapper::CallNativeSlot(Slot *slot, uintN argc, jsval *argv,
     return JS_FALSE;
 
   Variant return_value = slot->Call(expected_argc, params);
-  if (!JSScriptContext::CheckException(js_context_, scriptable_)) {
-    delete [] params;
+  delete [] params;
+  params = NULL;
+
+  if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
-  }
 
   JSBool result = ConvertNativeToJS(js_context_, return_value, rval);
   if (!result)
     JS_ReportError(js_context_,
                    "Failed to convert native function result(%s) to jsval",
                    return_value.ToString().c_str());
-  delete [] params;
   return result;
 }
 
@@ -423,15 +424,14 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
-                   "Failed to convert JS property value(%s) to native",
+                   "Failed to convert JS property value(%s) to native.",
                    PrintJSValue(js_context_, js_val).c_str());
-    FreeNativeValue(value);
     return JS_FALSE;
   }
 
   if (!scriptable_->SetProperty(int_id, value)) {
     JS_ReportError(js_context_,
-                   "Failed to set native property %s(%d) (may be readonly)",
+                   "Failed to set native property %s(%d) (may be readonly).",
                    name, int_id);
     FreeNativeValue(value);
     return JS_FALSE;
@@ -529,6 +529,7 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
     JS_ReportError(js_context_,
                    "Failed to set native property %s(%d) (may be readonly).",
                    name, int_id);
+    FreeNativeValue(value);
     return JS_FALSE;
   }
 
