@@ -297,6 +297,10 @@ void CheckBoxElement::SetCheckedDownImage(const Variant &img) {
   }
 }
 
+TextFrame *CheckBoxElement::GetTextFrame() {
+  return &impl_->text_;
+}
+
 bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
                                  ElementInterface **fired_element) {
   bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
@@ -350,6 +354,13 @@ bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
   }
 
   return result;
+}
+
+Connection *CheckBoxElement::ConnectEvent(const char *event_name,
+                                          Slot0<void> *handler) {
+  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
+    return impl_->onchange_event_.Connect(handler);
+  return BasicElement::ConnectEvent(event_name, handler);
 }
 
 void CheckBoxElement::GetDefaultSize(double *width, double *height) const {

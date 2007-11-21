@@ -37,6 +37,10 @@ class Options : public ggadget::OptionsInterface {
   virtual void Remove(const char *name);
   virtual void RemoveAll();
 
+  virtual ggadget::Variant GetInternalValue(const char *name);
+  virtual void PutInternalValue(const char *name,
+                                const ggadget::Variant &value);
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(Options);
 
@@ -45,6 +49,7 @@ class Options : public ggadget::OptionsInterface {
                    ggadget::GadgetStringComparator> OptionsMap;
   OptionsMap values_;
   OptionsMap defaults_;
+  OptionsMap internal_values_;
   ggadget::Signal1<void, const char *> onoptionchanged_signal_;
 };
 

@@ -23,6 +23,7 @@
 #include <map>
 #include <stdarg.h>
 #include <stdio.h>
+#include "ggadget/scriptable_array.h"
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/signals.h"
@@ -172,6 +173,8 @@ class TestScriptable2 : public TestScriptable1 {
     return new TestScriptable2(script_owned);
   }
   void DeleteObject(TestScriptable2 *obj) { delete obj; }
+  bool IsScriptOwned() { return script_owned_; }
+  ScriptableArray *ReverseArray(ScriptableArray *input);
 
   // Place signal declarations here for testing.
   // In production code, they should be palced in private section.
@@ -190,4 +193,8 @@ class TestScriptable2 : public TestScriptable1 {
   std::map<std::string, std::string> dynamic_properties_;
 };
 
+extern const Variant kNewObjectDefaultArgs[];
+extern const Variant kDeleteObjectDefaultArgs[];
+
 #endif // GGADGET_TESTS_SCRIPTABLES_H__
+

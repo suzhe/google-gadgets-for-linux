@@ -18,10 +18,11 @@
 #define GGADGET_ANCHOR_ELEMENT_H__
 
 #include <stdlib.h>
-#include "basic_element.h"
-#include "label_element.h"
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
+
+class TextFrame;
 
 class AnchorElement : public BasicElement {
  public:
@@ -44,6 +45,9 @@ class AnchorElement : public BasicElement {
   const char *GetHref() const;
   void SetHref(const char *href);
   
+  /** Gets the text frame containing the text content of this anchor. */
+  TextFrame *GetTextFrame();
+
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
   

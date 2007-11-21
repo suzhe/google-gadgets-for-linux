@@ -309,6 +309,14 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual void OnOptionChanged(const char *name) = 0;
 
+  /**
+   * Connects an event handler to an event.
+   * Provided for native usage of this interface.
+   * The connection is independent with the connections to script handlers.
+   */
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler) = 0;
+
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.

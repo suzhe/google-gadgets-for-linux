@@ -75,8 +75,15 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
   JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
                                        argc, js_args.get(), &rval);
   if (result) {
-    result = ConvertJSToNative(context_, NULL, return_value, rval,
-                               &return_value);
+    if (JSVAL_IS_OBJECT(rval) &&
+        JS_IsArrayObject(context_, JSVAL_TO_OBJECT(rval))) {
+      // Returning an array from JS to native is not supported for now, to
+      // avoid memory management difficulties.
+      result = JS_FALSE;
+    } else {
+      result = ConvertJSToNative(context_, NULL, return_value, rval,
+                                 &return_value);
+    }
     if (!result)
       JS_ReportError(context_,
                      "Failed to convert JS function return value(%s) to native",

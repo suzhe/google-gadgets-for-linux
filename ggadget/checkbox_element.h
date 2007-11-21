@@ -23,6 +23,7 @@
 namespace ggadget {
 
 class MouseEvent;
+class TextFrame;
 
 class CheckBoxElement : public BasicElement {
  public:
@@ -75,8 +76,13 @@ class CheckBoxElement : public BasicElement {
   bool IsCheckBoxOnRight() const;
   void SetCheckBoxOnRight(bool right);
 
+  /** Gets the text frame containing the caption of this checkbox. */
+  TextFrame *GetTextFrame();
+
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler);
 
  public:
   static ElementInterface *CreateCheckBoxInstance(ElementInterface *parent,

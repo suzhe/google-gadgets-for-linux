@@ -81,6 +81,8 @@ class ProgressBarElement : public BasicElement {
 
   virtual bool OnMouseEvent(MouseEvent *event, bool direct,
                             ElementInterface **fired_element);
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,

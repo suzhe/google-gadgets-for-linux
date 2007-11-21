@@ -70,6 +70,8 @@ class GadgetHostInterface {
   enum ViewType {
     VIEW_MAIN,
     VIEW_OPTIONS,
+    /** Old style options dialog that uses @c ggadget::DisplayWindow. */
+    VIEW_OLD_OPTIONS,
   };
 
   /**
@@ -130,9 +132,6 @@ class GadgetHostInterface {
    * Hides and destroys the details view that is being shown for this gadget.
    */
   virtual void CloseDetailsView() = 0;
-
-  /** Shows the options dialog. */
-  virtual void ShowOptionsDialog() = 0;
 
   enum DebugLevel {
     DEBUG_TRACE,

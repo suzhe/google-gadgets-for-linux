@@ -219,15 +219,22 @@ TEST(scriptable_helper, TestPropertyInfo2) {
     { "OverrideSelf", -15, false, Variant(Variant::TYPE_SCRIPTABLE) },
     { "SignalResult", -16, false, Variant(Variant::TYPE_STRING) },
     { "NewObject", -17, true,
-      Variant(NewSlot(scriptable, &TestScriptable2::NewObject)) },
+      Variant(NewSlotWithDefaultArgs(
+          NewSlot(scriptable, &TestScriptable2::NewObject),
+          kNewObjectDefaultArgs)) },
     { "DeleteObject", -18, true,
-      Variant(NewSlot(scriptable, &TestScriptable2::DeleteObject)) },
+      Variant(NewSlotWithDefaultArgs(
+          NewSlot(scriptable, &TestScriptable2::DeleteObject),
+          kDeleteObjectDefaultArgs)) },
+    { "ScriptOwned", -19, false, Variant(Variant::TYPE_BOOL) },
+    { "ReverseArray", -20, true,
+      Variant(NewSlot(scriptable, &TestScriptable2::ReverseArray)) },
 
     // The following are defined in the prototype.
-    { "PrototypeMethod", -19, true,
+    { "PrototypeMethod", -21, true,
       Variant(NewSlot(TestPrototype::GetInstance(), &TestPrototype::Method)) },
-    { "PrototypeSelf", -20, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "ontest", -21, false,
+    { "PrototypeSelf", -22, false, Variant(Variant::TYPE_SCRIPTABLE) },
+    { "ontest", -23, false,
       Variant(new SignalSlot(&TestPrototype::GetInstance()->ontest_signal_)) },
     // Prototype's OverrideSelf is overriden by TestScriptable2's OverrideSelf.
   };

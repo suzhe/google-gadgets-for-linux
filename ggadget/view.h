@@ -95,6 +95,8 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual void ClearInterval(int token);
   virtual int GetDebugMode() const;
   virtual void OnOptionChanged(const char *name);
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler);
 
   virtual Image *LoadImage(const Variant &src, bool is_mask);
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);

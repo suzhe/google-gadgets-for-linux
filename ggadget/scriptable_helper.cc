@@ -158,10 +158,16 @@ void ScriptableHelperImpl::RegisterProperty(const char *name,
                                             Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
   ASSERT(name);
-  ASSERT(getter && getter->GetArgCount() == 0);
-  Variant prototype(getter->GetReturnType());
-  ASSERT(!setter || setter && setter->GetArgCount() == 1);
-  ASSERT(!setter || setter && prototype.type() == setter->GetArgTypes()[0]);
+  Variant prototype;
+  ASSERT(!setter || setter->GetArgCount() == 1);
+  if (getter) {
+    ASSERT(getter->GetArgCount() == 0);
+    prototype = Variant(getter->GetReturnType());
+    ASSERT(!setter || prototype.type() == setter->GetArgTypes()[0]);
+  } else {
+    ASSERT(setter);
+    prototype = Variant(setter->GetArgTypes()[0]);
+  }
 
   slot_index_[name] = property_count_;
   slot_prototypes_.push_back(prototype);

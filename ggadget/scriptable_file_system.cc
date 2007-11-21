@@ -14,13 +14,51 @@
   limitations under the License.
 */
 
-// Glibc require this macro in order to use the format macros in inttypes.h. 
 #include "scriptable_file_system.h"
 #include "file_system_interface.h"
 #include "scriptable_array.h"
 #include "string_utils.h"
 
 namespace ggadget {
+
+// Default args for File.Delete() and Folder.Delete().
+static const Variant kDeleteDefaultArgs[] = {
+  Variant(false)
+}; 
+// Default args for File.Copy() and Folder.Copy().
+static const Variant kCopyDefaultArgs[] = {
+  Variant(),
+  Variant(true)
+};
+// Default args for File.OpenAsTextStream().
+static const Variant kOpenAsTextStreamDefaultArgs[] = {
+  Variant(fs::FOR_READING), Variant(fs::TRISTATE_FALSE)
+};
+// Default args for FileSystem.CreateTextFile() and Folder.CreateTextFile().
+static const Variant kCreateTextFileDefaultArgs[] = {
+  Variant(),
+  Variant(true), Variant(false)
+};
+// Default args for FileSystem.OpenTextFile().
+static const Variant kOpenTextFileDefaultArgs[] = {
+  Variant(),
+  Variant(fs::FOR_READING), Variant(false), Variant(fs::TRISTATE_FALSE)
+};
+// Default args for FileSystem.DeleteFile() and FileSystem.DeleteFolder()
+static const Variant kDeleteFileOrFolderDefaultArgs[] = {
+  Variant(),
+  Variant(false)
+};
+// Default args for FileSystem.CopyFile() and FileSystem.CopyFolder()
+static const Variant kCopyFileOrFolderDefaultArgs[] = {
+  Variant(), Variant(),
+  Variant(true)
+};
+// Default args for FileSystem.GetStandardStream().
+static const Variant kGetStandardStreamDefaultArgs[] = {
+  Variant(),
+  Variant(false)
+};
 
 class ScriptableFileSystem::Impl {
  public:
@@ -45,13 +83,6 @@ class ScriptableFileSystem::Impl {
    private:
     std::string message_;
   };
-
-  template <typename T>
-  static T GetArg(const Variant &v, T default_value) {
-    if (v.type() == VariantType<T>::type)
-      return VariantValue<T>()(v);
-    return default_value;
-  }
 
   // Use Microsoft's method to encode/decode Date object in JSON.
   // See http://msdn2.microsoft.com/en-us/library/bb299886.aspx.
@@ -216,8 +247,12 @@ class ScriptableFileSystem::Impl {
       RegisterProperty("Type",
                        NewSlot(folder, &fs::FolderInterface::GetType),
                        NULL);
-      RegisterMethod("Delete", NewSlot(this, &ScriptableFolder::Delete));
-      RegisterMethod("Copy", NewSlot(this, &ScriptableFolder::Copy));
+      RegisterMethod("Delete",
+          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Delete),
+                                 kDeleteDefaultArgs));
+      RegisterMethod("Copy",
+          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Copy),
+                                 kCopyDefaultArgs));
       RegisterMethod("Move", NewSlot(this, &ScriptableFolder::Move));
       RegisterProperty("Size",
                        NewSlot(folder, &fs::FolderInterface::GetSize),
@@ -229,7 +264,9 @@ class ScriptableFileSystem::Impl {
                        NewSlot(this, &ScriptableFolder::GetFiles),
                        NULL);
       RegisterMethod("CreateTextFile",
-                     NewSlot(this, &ScriptableFolder::CreateTextFile));
+                     NewSlotWithDefaultArgs(
+                         NewSlot(this, &ScriptableFolder::CreateTextFile),
+                         kCreateTextFileDefaultArgs));
     }
 
     virtual ~ScriptableFolder() {
@@ -279,13 +316,13 @@ class ScriptableFileSystem::Impl {
       return GenerateDateJSON(folder_->GetDateLastAccessed());
     }
 
-    void Delete(const Variant &force) {
-      if (!folder_->Delete(GetArg(force, false)))
+    void Delete(bool force) {
+      if (!folder_->Delete(force))
         SetPendingException(new FileSystemException("Folder.Delete"));
     }
 
-    void Copy(const char *dest, const Variant &overwrite) {
-      if (!folder_->Copy(dest, GetArg(overwrite, true)))
+    void Copy(const char *dest, bool overwrite) {
+      if (!folder_->Copy(dest, overwrite))
         SetPendingException(new FileSystemException("Folder.Copy"));
     }
 
@@ -313,12 +350,10 @@ class ScriptableFileSystem::Impl {
     }
 
     ScriptableTextStream *CreateTextFile(const char *filename,
-                                         const Variant &overwrite,
-                                         const Variant &unicode) {
+                                         bool overwrite,
+                                         bool unicode) {
       fs::TextStreamInterface *stream =
-          folder_->CreateTextFile(filename,
-                                  GetArg(overwrite, true),
-                                  GetArg(unicode, false));
+          folder_->CreateTextFile(filename, overwrite, unicode);
       if (!stream) {
         SetPendingException(new FileSystemException("Folder.CreateTextFile"));
         return NULL;
@@ -368,11 +403,17 @@ class ScriptableFileSystem::Impl {
       RegisterProperty("Type",
                        NewSlot(file, &fs::FileInterface::GetType),
                        NULL);
-      RegisterMethod("Delete", NewSlot(this, &ScriptableFile::Delete));
-      RegisterMethod("Copy", NewSlot(this, &ScriptableFile::Copy));
+      RegisterMethod("Delete",
+          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Delete),
+                                 kDeleteDefaultArgs));
+      RegisterMethod("Copy",
+          NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Copy),
+                                 kCopyDefaultArgs));
       RegisterMethod("Move", NewSlot(this, &ScriptableFile::Move));
       RegisterMethod("OpenAsTextStream",
-                     NewSlot(this, &ScriptableFile::OpenAsTextStream));
+                     NewSlotWithDefaultArgs(
+                         NewSlot(this, &ScriptableFile::OpenAsTextStream),
+                         kOpenAsTextStreamDefaultArgs));
     }
 
     virtual ~ScriptableFile() {
@@ -422,13 +463,13 @@ class ScriptableFileSystem::Impl {
       return GenerateDateJSON(file_->GetDateLastAccessed());
     }
 
-    void Delete(const Variant &force) {
-      if (!file_->Delete(GetArg(force, false)))
+    void Delete(bool force) {
+      if (!file_->Delete(force))
         SetPendingException(new FileSystemException("File.Delete"));
     }
 
-    void Copy(const char *dest, const Variant &overwrite) {
-      if (!file_->Copy(dest, GetArg(overwrite, true)))
+    void Copy(const char *dest, bool overwrite) {
+      if (!file_->Copy(dest, overwrite))
         SetPendingException(new FileSystemException("File.Copy"));
     }
 
@@ -437,11 +478,10 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("File.Move"));
     }
 
-    ScriptableTextStream *OpenAsTextStream(const Variant &mode,
-                                           const Variant &format) {
+    ScriptableTextStream *OpenAsTextStream(fs::IOMode mode,
+                                           fs::Tristate format) {
       fs::TextStreamInterface *stream =
-          file_->OpenAsTextStream(GetArg(mode, fs::FOR_READING),
-                                  GetArg(format, fs::TRISTATE_FALSE));
+          file_->OpenAsTextStream(mode, format);
       if (!stream) {
         SetPendingException(new FileSystemException("File.OpenAsTextStream"));
         return NULL;
@@ -502,14 +542,14 @@ class ScriptableFileSystem::Impl {
     return new ScriptableFolder(folder);
   }
 
-  void DeleteFile(const char *file_spec, const Variant &force) {
-    if (!filesystem_->DeleteFile(file_spec, GetArg(force, false)))
+  void DeleteFile(const char *file_spec, bool force) {
+    if (!filesystem_->DeleteFile(file_spec, force))
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.DeleteFile"));
   }
 
-  void DeleteFolder(const char *folder_spec, const Variant &force) {
-    if (!filesystem_->DeleteFolder(folder_spec, GetArg(force, false)))
+  void DeleteFolder(const char *folder_spec, bool force) {
+    if (!filesystem_->DeleteFolder(folder_spec, force))
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.DeleteFolder"));
   }
@@ -526,16 +566,14 @@ class ScriptableFileSystem::Impl {
           "FileSystem.MoveFolder"));
   }
 
-  void CopyFile(const char *source, const char *dest,
-                const Variant &overwrite) {
-    if (!filesystem_->CopyFile(source, dest, GetArg(overwrite, true)))
+  void CopyFile(const char *source, const char *dest, bool overwrite) {
+    if (!filesystem_->CopyFile(source, dest, overwrite))
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.CopyFile"));
   }
 
-  void CopyFolder(const char *source, const char *dest,
-                  const Variant &overwrite) {
-    if (!filesystem_->CopyFolder(source, dest, GetArg(overwrite, true)))
+  void CopyFolder(const char *source, const char *dest, bool overwrite) {
+    if (!filesystem_->CopyFolder(source, dest, overwrite))
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.CopyFolder"));
   }
@@ -551,12 +589,10 @@ class ScriptableFileSystem::Impl {
   }
 
   ScriptableTextStream *CreateTextFile(const char *filename,
-                                       const Variant &overwrite,
-                                       const Variant &unicode) {
+                                       bool overwrite,
+                                       bool unicode) {
     fs::TextStreamInterface *stream =
-        filesystem_->CreateTextFile(filename,
-                                    GetArg(overwrite, true),
-                                    GetArg(unicode, false));
+        filesystem_->CreateTextFile(filename, overwrite, unicode);
     if (!stream) {
       owner_->SetPendingException(new FileSystemException(
           "Filesystem.CreateTextFile"));
@@ -565,15 +601,10 @@ class ScriptableFileSystem::Impl {
     return new ScriptableTextStream(stream);
   }
 
-  ScriptableTextStream *OpenTextFile(const char *filename,
-                                     const Variant &mode,
-                                     const Variant &create,
-                                     const Variant &format) {
+  ScriptableTextStream *OpenTextFile(const char *filename, fs::IOMode mode,
+                                     bool create, fs::Tristate format) {
     fs::TextStreamInterface *stream =
-        filesystem_->OpenTextFile(filename,
-                                  GetArg(mode, fs::FOR_READING),
-                                  GetArg(create, false),
-                                  GetArg(format, fs::TRISTATE_FALSE));
+        filesystem_->OpenTextFile(filename, mode, create, format);
     if (!stream) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.OpenTextFile"));
@@ -583,9 +614,9 @@ class ScriptableFileSystem::Impl {
   }
 
   ScriptableTextStream *GetStandardStream(fs::StandardStreamType type,
-                                          const Variant &unicode) {
+                                          bool unicode) {
     fs::TextStreamInterface *stream =
-        filesystem_->GetStandardStream(type, GetArg(unicode, false));
+        filesystem_->GetStandardStream(type, unicode);
     if (!stream) {
       owner_->SetPendingException(new FileSystemException(
           "Filesystem.GetStandardStream"));
@@ -631,16 +662,30 @@ ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem)
   RegisterMethod("GetFile", NewSlot(impl_, &Impl::GetFile));
   RegisterMethod("GetFolder", NewSlot(impl_, &Impl::GetFolder));
   RegisterMethod("GetSpecialFolder", NewSlot(impl_, &Impl::GetSpecialFolder));
-  RegisterMethod("DeleteFile", NewSlot(impl_, &Impl::DeleteFile));
-  RegisterMethod("DeleteFolder", NewSlot(impl_, &Impl::DeleteFolder));
+  RegisterMethod("DeleteFile",
+                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::DeleteFile),
+                                        kDeleteFileOrFolderDefaultArgs));
+  RegisterMethod("DeleteFolder",
+                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::DeleteFolder),
+                                        kDeleteFileOrFolderDefaultArgs));
   RegisterMethod("MoveFile", NewSlot(impl_, &Impl::MoveFile));
   RegisterMethod("MoveFolder", NewSlot(impl_, &Impl::MoveFolder));
-  RegisterMethod("CopyFile", NewSlot(impl_, &Impl::CopyFile));
-  RegisterMethod("CopyFolder", NewSlot(impl_, &Impl::CopyFolder));
+  RegisterMethod("CopyFile",
+                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CopyFile),
+                                        kCopyFileOrFolderDefaultArgs));
+  RegisterMethod("CopyFolder",
+                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CopyFolder),
+                                        kCopyFileOrFolderDefaultArgs));
   RegisterMethod("CreateFolder", NewSlot(impl_, &Impl::CreateFolder));
-  RegisterMethod("CreateTextFile", NewSlot(impl_, &Impl::CreateTextFile));
-  RegisterMethod("OpenTextFile", NewSlot(impl_, &Impl::OpenTextFile));
-  RegisterMethod("GetStandardStream", NewSlot(impl_, &Impl::GetStandardStream));
+  RegisterMethod("CreateTextFile",
+                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::CreateTextFile),
+                                        kCreateTextFileDefaultArgs));
+  RegisterMethod("OpenTextFile",
+                 NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::OpenTextFile),
+                                        kOpenTextFileDefaultArgs));
+  RegisterMethod("GetStandardStream",
+      NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::GetStandardStream),
+                             kGetStandardStreamDefaultArgs));
   RegisterMethod("GetFileVersion",
                  NewSlot(filesystem, &FileSystemInterface::GetFileVersion));
 }

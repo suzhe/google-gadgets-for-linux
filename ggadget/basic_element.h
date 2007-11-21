@@ -128,7 +128,11 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
                                      double x, double y,
                                      double *child_x, double *child_y);
 
-  /** 
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler);
+
+ public:
+  /**
    * Sets the changed bit to true and if visible, 
    * requests the view to be redrawn. 
    */

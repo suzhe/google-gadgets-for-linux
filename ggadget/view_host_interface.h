@@ -81,8 +81,10 @@ class ViewHostInterface {
   /** Sets the current mouse cursor. */
   virtual void SetCursor(ElementInterface::CursorType type) = 0;
 
-
   // TODO: Add other methods about menu, tooltip, etc.
+
+  /** Run the view in a dialog with OK and Cancel buttons. */
+  virtual void RunDialog() = 0;
 };
 
 } // namespace ggadget

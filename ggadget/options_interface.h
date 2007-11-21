@@ -81,6 +81,22 @@ class OptionsInterface {
    * Removes all values from the options.
    */
   virtual void RemoveAll() = 0;
+
+  /**
+   * This method is only for C++ code. Internal option values are not
+   * accessible from the gadget script.
+   * @return the internal options value associated with the name.
+   */
+  virtual Variant GetInternalValue(const char *name) = 0;
+
+  /**
+   * This method is only for C++ code. Internal option values are not
+   * accessible from the gadget script.
+   * Sets the internal value associated with the name, creating the entry if one
+   * doesn't already exist for the name.
+   */
+  virtual void PutInternalValue(const char *name, const Variant &value) = 0;
+
 };
 
 } // namespace ggadget

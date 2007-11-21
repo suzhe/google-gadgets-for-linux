@@ -346,14 +346,20 @@ class View::Impl {
   }
 
   bool OnOtherEvent(Event *event) {
+    ScriptableEvent scriptable_event(event, NULL, 0, 0);
+    DLOG("%s(view)", scriptable_event.GetName());
     switch (event->GetType()) {
       case Event::EVENT_FOCUS_IN:
         // For now we don't automatically set focus to some element.
-        DLOG("focusin");
         break;
       case Event::EVENT_FOCUS_OUT:
-        DLOG("focusout");
         SetFocus(NULL);
+        break;
+      case Event::EVENT_OK:
+        FireEvent(&scriptable_event, onok_event_);
+        break;
+      case Event::EVENT_CANCEL:
+        FireEvent(&scriptable_event, oncancel_event_);
         break;
       default:
         ASSERT(false);
@@ -721,7 +727,66 @@ class View::Impl {
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
-  EventSignal oncancle_event_;
+  // The implementation uses if-else statements, which seems the best
+  // trade-off among code size, data size, calling frequency and time.
+  // This method is seldom called only by C++ code.
+  Connection *ConnectEvent(const char *event_name, Slot0<void> *handler) {
+    ASSERT(event_name);
+    EventSignal *signal = NULL;
+    if (GadgetStrCmp(event_name, kOnCancelEvent) == 0)
+      signal = &oncancel_event_;
+    else if (GadgetStrCmp(event_name, kOnClickEvent) == 0)
+      signal = &onclick_event_;
+    else if (GadgetStrCmp(event_name, kOnCloseEvent) == 0)
+      signal = &onclose_event_;
+    else if (GadgetStrCmp(event_name, kOnDblClickEvent) == 0)
+      signal = &ondblclick_event_;
+    else if (GadgetStrCmp(event_name, kOnRClickEvent) == 0)
+      signal = &onrclick_event_;
+    else if (GadgetStrCmp(event_name, kOnRDblClickEvent) == 0)
+      signal = &onrdblclick_event_;  
+    else if (GadgetStrCmp(event_name, kOnDockEvent) == 0)
+      signal = &ondock_event_;
+    else if (GadgetStrCmp(event_name, kOnKeyDownEvent) == 0)
+      signal = &onkeydown_event_;
+    else if (GadgetStrCmp(event_name, kOnKeyPressEvent) == 0)
+      signal = &onkeypress_event_;
+    else if (GadgetStrCmp(event_name, kOnKeyUpEvent) == 0)
+      signal = &onkeyup_event_;
+    else if (GadgetStrCmp(event_name, kOnMinimizeEvent) == 0)
+      signal = &onminimize_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseDownEvent) == 0)
+      signal = &onmousedown_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseOutEvent) == 0)
+      signal = &onmouseout_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseOverEvent) == 0)
+      signal = &onmouseover_event_;
+    else if (GadgetStrCmp(event_name, kOnMouseUpEvent) == 0)
+      signal = &onmouseup_event_;
+    else if (GadgetStrCmp(event_name, kOnOkEvent) == 0)
+      signal = &onok_event_;
+    else if (GadgetStrCmp(event_name, kOnOpenEvent) == 0)
+      signal = &onopen_event_;
+    else if (GadgetStrCmp(event_name, kOnOptionChangedEvent) == 0)
+      signal = &onoptionchanged_event_;
+    else if (GadgetStrCmp(event_name, kOnPopInEvent) == 0)
+      signal = &onpopin_event_;
+    else if (GadgetStrCmp(event_name, kOnPopOutEvent) == 0)
+      signal = &onpopout_event_;
+    else if (GadgetStrCmp(event_name, kOnRestoreEvent) == 0)
+      signal = &onrestore_event_;
+    else if (GadgetStrCmp(event_name, kOnSizeEvent) == 0)
+      signal = &onsize_event_;
+    else if (GadgetStrCmp(event_name, kOnSizingEvent) == 0)
+      signal = &onsizing_event_;
+    else if (GadgetStrCmp(event_name, kOnUndockEvent) == 0)
+      signal = &onundock_event_;
+
+    ASSERT_M(signal, ("Unknown event name: %s", event_name));
+    return signal->Connect(handler);
+  }
+
+  EventSignal oncancel_event_;
   EventSignal onclick_event_;
   EventSignal onclose_event_;
   EventSignal ondblclick_event_;
@@ -847,8 +912,7 @@ View::View(ViewHostInterface *host,
   RegisterMethod("resizeBy", NewSlot(impl_, &Impl::ResizeBy));
   RegisterMethod("resizeTo", NewSlot(this, &View::SetSize));
 
-  // TODO: Move it to OptionsView?
-  RegisterSignal(kOnCancelEvent, &impl_->oncancle_event_);
+  RegisterSignal(kOnCancelEvent, &impl_->oncancel_event_);
   RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
   RegisterSignal(kOnCloseEvent, &impl_->onclose_event_);
   RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
@@ -863,7 +927,6 @@ View::View(ViewHostInterface *host,
   RegisterSignal(kOnMouseOutEvent, &impl_->onmouseout_event_);
   RegisterSignal(kOnMouseOverEvent, &impl_->onmouseover_event_);
   RegisterSignal(kOnMouseUpEvent, &impl_->onmouseup_event_);
-  // TODO: Move it to OptionsView?
   RegisterSignal(kOnOkEvent, &impl_->onok_event_);
   RegisterSignal(kOnOpenEvent, &impl_->onopen_event_);
   RegisterSignal(kOnOptionChangedEvent, &impl_->onoptionchanged_event_);
@@ -1116,6 +1179,11 @@ bool View::OpenURL(const char *url) const {
 
 void View::OnOptionChanged(const char *name) {
   impl_->OnOptionChanged(name);
+}
+
+Connection *View::ConnectEvent(const char *event_name,
+                               Slot0<void> *handler) {
+  return impl_->ConnectEvent(event_name, handler);
 }
 
 } // namespace ggadget
