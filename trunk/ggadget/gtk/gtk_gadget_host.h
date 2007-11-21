@@ -14,13 +14,15 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_GTK_GADGET_HOST_H__
-#define HOSTS_SIMPLE_GTK_GADGET_HOST_H__
+#ifndef GGADGET_GTK_GTK_GADGET_HOST_H__
+#define GGADGET_GTK_GTK_GADGET_HOST_H__
 
 #include <set>
 
 #include <gtk/gtk.h>
 #include <ggadget/ggadget.h>
+
+namespace ggadget {
 
 class GtkMenuImpl;
 
@@ -29,7 +31,9 @@ class GtkMenuImpl;
  */
 class GtkGadgetHost : public ggadget::GadgetHostInterface {
  public:
-  GtkGadgetHost(bool composited);
+  GtkGadgetHost(ggadget::ScriptRuntimeInterface *script_runtime,
+                ggadget::FrameworkInterface *framework,
+                bool composited);
   virtual ~GtkGadgetHost();
 
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
@@ -127,4 +131,6 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   DISALLOW_EVIL_CONSTRUCTORS(GtkGadgetHost);
 };
 
-#endif // HOSTS_SIMPLE_GTK_GADGET_HOST_H__
+} // namespace ggadget
+
+#endif // GGADGET_GTK_GTK_GADGET_HOST_H__

@@ -24,18 +24,20 @@
 
 #include <ggadget/gadget_consts.h>
 #include <third_party/unzip/unzip.h>
-#include "simplehost_file_manager.h"
-#include "resources/resources.cc"
+#include <hosts/simple/resources/resources.cc> // temp
+#include "global_file_manager.h"
 
-SimpleHostFileManager::SimpleHostFileManager() {
+namespace ggadget {
 
-}
-
-SimpleHostFileManager::~SimpleHostFileManager() {
+GlobalFileManager::GlobalFileManager() {
 
 }
 
-bool SimpleHostFileManager::Init(const char *base_path) {
+GlobalFileManager::~GlobalFileManager() {
+
+}
+
+bool GlobalFileManager::Init(const char *base_path) {
   ASSERT(!base_path);
   return true;
 }
@@ -63,7 +65,7 @@ static const Resource *FindResource(const char *file) {
   return NULL;
 }
 
-bool SimpleHostFileManager::GetFileContents(const char *file,
+bool GlobalFileManager::GetFileContents(const char *file,
                                             std::string *data,
                                             std::string *path) {
   ASSERT(data);
@@ -113,23 +115,25 @@ bool SimpleHostFileManager::GetFileContents(const char *file,
   return true;
 }
 
-bool SimpleHostFileManager::GetXMLFileContents(const char *file,
+bool GlobalFileManager::GetXMLFileContents(const char *file,
                                                std::string *data,
                                                std::string *path) {
   return false; // not implemented
 }
 
-bool SimpleHostFileManager::ExtractFile(const char *file, 
+bool GlobalFileManager::ExtractFile(const char *file, 
                                         std::string *into_file) {
   return false; // not implemented
 }
 
-ggadget::GadgetStringMap *SimpleHostFileManager::GetStringTable() {
+ggadget::GadgetStringMap *GlobalFileManager::GetStringTable() {
   return NULL; // not implemented
 }
 
-bool SimpleHostFileManager::FileExists(const char *file) {
+bool GlobalFileManager::FileExists(const char *file) {
   if (FindResource(file))
     return true;
   return (access(file, F_OK) == 0);
 }
+
+} // namespace ggadget

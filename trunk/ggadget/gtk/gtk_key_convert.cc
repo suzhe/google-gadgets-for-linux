@@ -20,6 +20,8 @@
 
 using ggadget::KeyboardEvent;
 
+namespace ggadget { 
+
 struct KeyvalKeyCode {
   guint gtk_keyval;
   unsigned int key_code;
@@ -234,3 +236,5 @@ unsigned int ConvertGdkKeyvalToKeyCode(guint keyval) {
   ASSERT(pos);
   return pos->gtk_keyval == keyval ? pos->key_code : 0;
 }
+
+} // namespace ggadget

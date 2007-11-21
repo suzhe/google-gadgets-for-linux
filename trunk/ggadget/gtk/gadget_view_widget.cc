@@ -264,10 +264,9 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_KEY_PRESS);
 
-  unsigned int key_code = ConvertGdkKeyvalToKeyCode(event->keyval);
+  unsigned int key_code = ggadget::ConvertGdkKeyvalToKeyCode(event->keyval);
   if (key_code) {
-    KeyboardEvent e(Event::EVENT_KEY_DOWN,
-                    ConvertGdkKeyvalToKeyCode(event->keyval));
+    KeyboardEvent e(Event::EVENT_KEY_DOWN, key_code);
     handler_result = gvw->view->OnKeyEvent(&e);
   } else {
     LOG("Unknown key: 0x%x", event->keyval);
@@ -301,10 +300,9 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_KEY_RELEASE);
 
-  unsigned int key_code = ConvertGdkKeyvalToKeyCode(event->keyval);
+  unsigned int key_code = ggadget::ConvertGdkKeyvalToKeyCode(event->keyval);
   if (key_code) {
-    KeyboardEvent e(Event::EVENT_KEY_UP,
-                    ConvertGdkKeyvalToKeyCode(event->keyval));
+    KeyboardEvent e(Event::EVENT_KEY_UP, key_code);
     handler_result = gvw->view->OnKeyEvent(&e);
   } else {
     LOG("Unknown key: 0x%x", event->keyval);
@@ -529,7 +527,7 @@ GType GadgetViewWidget_get_type() {
   return gw_type;
 }
 
-GtkWidget *GadgetViewWidget_new(GtkViewHost *host, double zoom,
+GtkWidget *GadgetViewWidget_new(ggadget::GtkViewHost *host, double zoom,
                                 bool composited) {
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
                                  NULL));

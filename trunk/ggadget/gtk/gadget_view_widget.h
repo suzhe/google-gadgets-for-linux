@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_GADGET_VIEW_WIDGET_H__
-#define HOSTS_SIMPLE_GADGET_VIEW_WIDGET_H__
+#ifndef GGADGET_GTK_GADGET_VIEW_WIDGET_H__
+#define GGADGET_GTK_GADGET_VIEW_WIDGET_H__
 
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -23,9 +23,11 @@
 
 #include <ggadget/ggadget.h>
 
-class GtkViewHost;
-
 G_BEGIN_DECLS
+
+namespace ggadget {
+  class GtkViewHost;
+}
 
 #define GADGETVIEWWIDGET_TYPE        (GadgetViewWidget_get_type())
 #define GADGETVIEWWIDGET(obj)        (G_TYPE_CHECK_INSTANCE_CAST((obj), \
@@ -41,7 +43,7 @@ G_BEGIN_DECLS
 struct GadgetViewWidget {
   GtkDrawingArea drawingarea;
 
-  GtkViewHost *host;
+  ggadget::GtkViewHost *host;
   ggadget::ViewInterface *view;
   double zoom;
   bool composited;
@@ -61,9 +63,9 @@ struct GadgetViewWidgetClass {
 };
 
 GType GadgetViewWidget_get_type();
-GtkWidget* GadgetViewWidget_new(GtkViewHost *host, double zoom, 
+GtkWidget* GadgetViewWidget_new(ggadget::GtkViewHost *host, double zoom, 
                                 bool composited);
 
 G_END_DECLS
 
-#endif // HOSTS_SIMPLE_GADGET_VIEW_WIDGET_H__
+#endif // GGADGET_GTK_GADGET_VIEW_WIDGET_H__

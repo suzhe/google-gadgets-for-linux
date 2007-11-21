@@ -16,14 +16,16 @@
 
 #include <sys/time.h>
 
-#include <ggadget/gtk/cairo_graphics.h>
+#include <ggadget/element_interface.h>
+#include <ggadget/gadget_host_interface.h>
 #include <ggadget/view.h>
 #include <ggadget/xml_dom.h>
 #include <ggadget/xml_http_request.h>
 #include "gtk_view_host.h"
 #include "gadget_view_widget.h"
+#include "cairo_graphics.h"
 
-using ggadget::ElementInterface;
+namespace ggadget {
 
 /*struct { 
   ElementInterface::CursorType type,
@@ -50,9 +52,9 @@ static const CursorTypeMapping[] = {
 };
 */
 
-GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
-                         ggadget::GadgetHostInterface::ViewType type,
-                         ggadget::ScriptableInterface *prototype,
+GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
+                         GadgetHostInterface::ViewType type,
+                         ScriptableInterface *prototype,
                          bool composited)
     : gadget_host_(gadget_host),
       view_(NULL),
@@ -60,27 +62,27 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
       gvw_(NULL),
       gfx_(NULL),
       onoptionchanged_connection_(NULL) {
-  if (type != ggadget::GadgetHostInterface::VIEW_OLD_OPTIONS) {
+  if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Only xml based views have standalone script context.
-    ggadget::ScriptRuntimeInterface *script_runtime =
-        gadget_host->GetScriptRuntime(ggadget::GadgetHostInterface::JAVASCRIPT);
+    ScriptRuntimeInterface *script_runtime =
+        gadget_host->GetScriptRuntime(GadgetHostInterface::JAVASCRIPT);
     script_context_ = script_runtime->CreateContext();
   }
 
-  ggadget::OptionsInterface *options = gadget_host->GetOptions();
-  int debug_mode = ggadget::VariantValue<int>()(
-      options->GetInternalValue(ggadget::kOptionDebugMode));
-  view_ = new ggadget::View(this, prototype, gadget_host->GetElementFactory(),
+  OptionsInterface *options = gadget_host->GetOptions();
+  int debug_mode = VariantValue<int>()(
+      options->GetInternalValue(kOptionDebugMode));
+  view_ = new View(this, prototype, gadget_host->GetElementFactory(),
                             debug_mode);
 
-  if (type != ggadget::GadgetHostInterface::VIEW_OLD_OPTIONS) {
+  if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Continue to initialize the script context.
     onoptionchanged_connection_ = options->ConnectOnOptionChanged(
-        NewSlot(view_, &ggadget::ViewInterface::OnOptionChanged));
+        NewSlot(view_, &ViewInterface::OnOptionChanged));
   
     // Register global classes into script context.
     script_context_->RegisterClass(
-        "DOMDocument", NewSlot(ggadget::CreateDOMDocument));
+        "DOMDocument", NewSlot(CreateDOMDocument));
     script_context_->RegisterClass(
         "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
   
@@ -88,25 +90,25 @@ GtkViewHost::GtkViewHost(ggadget::GadgetHostInterface *gadget_host,
     // adapters.
     std::string common_js_contents;
     std::string common_js_path;
-    ggadget::FileManagerInterface *global_file_manager =
+    FileManagerInterface *global_file_manager =
         gadget_host->GetGlobalFileManager();
-    if (global_file_manager->GetFileContents(ggadget::kCommonJS,
+    if (global_file_manager->GetFileContents(kCommonJS,
                                              &common_js_contents,
                                              &common_js_path)) {
       script_context_->Execute(common_js_contents.c_str(),
                                common_js_path.c_str(), 1);
     } else {
-      LOG("Failed to load %s.", ggadget::kCommonJS);
+      LOG("Failed to load %s.", kCommonJS);
     }
   }
 
   double zoom = 1.0;
-  if (type == ggadget::GadgetHostInterface::VIEW_MAIN) {
-    zoom = ggadget::VariantValue<double>()(
-        options->GetInternalValue(ggadget::kOptionZoom));
+  if (type == GadgetHostInterface::VIEW_MAIN) {
+    zoom = VariantValue<double>()(
+        options->GetInternalValue(kOptionZoom));
   }
   gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom, composited));
-  gfx_ = new ggadget::CairoGraphics(zoom);
+  gfx_ = new CairoGraphics(zoom);
 }
 
 GtkViewHost::~GtkViewHost() {
@@ -125,8 +127,8 @@ GtkViewHost::~GtkViewHost() {
   gfx_ = NULL;
 }
 
-ggadget::XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
-  return ggadget::CreateXMLHttpRequest(gadget_host_, script_context_);
+XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
+  return CreateXMLHttpRequest(gadget_host_, script_context_);
 }
 
 void GtkViewHost::QueueDraw() {
@@ -202,12 +204,12 @@ void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
 
 struct DialogData {
   GtkDialog *dialog;
-  ggadget::ViewInterface *view;
+  ViewInterface *view;
 };
 
 static void OnDialogCancel(GtkButton *button, gpointer user_data) {
   DialogData *dialog_data = static_cast<DialogData *>(user_data);
-  ggadget::Event event(ggadget::Event::EVENT_CANCEL);
+  Event event(Event::EVENT_CANCEL);
   if (dialog_data->view->OnOtherEvent(&event)) {
     gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_CANCEL);
   }
@@ -215,7 +217,7 @@ static void OnDialogCancel(GtkButton *button, gpointer user_data) {
 
 static void OnDialogOK(GtkButton *button, gpointer user_data) {
   DialogData *dialog_data = static_cast<DialogData *>(user_data);
-  ggadget::Event event(ggadget::Event::EVENT_OK);
+  Event event(Event::EVENT_OK);
   if (dialog_data->view->OnOtherEvent(&event)) {
     gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_OK);
   }
@@ -244,3 +246,5 @@ void GtkViewHost::RunDialog() {
   gtk_dialog_run(dialog);
   gtk_widget_destroy(GTK_WIDGET(dialog));
 }
+
+} // namespace ggadget

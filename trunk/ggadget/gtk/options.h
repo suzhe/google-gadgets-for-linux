@@ -14,11 +14,13 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_OPTIONS_H__
-#define HOSTS_SIMPLE_OPTIONS_H__
+#ifndef GGADGET_GTK_OPTIONS_H__
+#define GGADGET_GTK_OPTIONS_H__
 
 #include <map>
 #include <ggadget/ggadget.h>
+
+namespace ggadget {
 
 class Options : public ggadget::OptionsInterface {
  public:
@@ -53,4 +55,6 @@ class Options : public ggadget::OptionsInterface {
   ggadget::Signal1<void, const char *> onoptionchanged_signal_;
 };
 
-#endif  // HOSTS_SIMPLE_OPTIONS_H__
+} // namespace ggadget
+
+#endif  // GGADGET_GTK_OPTIONS_H__

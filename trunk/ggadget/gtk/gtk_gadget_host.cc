@@ -23,8 +23,6 @@
 #include <ggadget/element_factory.h>
 #include <ggadget/file_manager.h>
 #include <ggadget/gadget.h>
-#include <ggadget/linux/framework.h>
-#include <ggadget/smjs/js_script_runtime.h>
 
 #include <ggadget/button_element.h>
 #include <ggadget/div_element.h>
@@ -35,57 +33,55 @@
 #include <ggadget/checkbox_element.h>
 #include <ggadget/progressbar_element.h>
 
+#include "global_file_manager.h"
 #include "gtk_gadget_host.h"
 #include "gtk_menu_impl.h"
 #include "gtk_view_host.h"
 #include "options.h"
-#include "simplehost_file_manager.h"
+
+namespace ggadget {
 
 class GtkGadgetHost::CallbackData {
  public:
-  CallbackData(ggadget::Slot *s, GtkGadgetHost *h)
+  CallbackData(Slot *s, GtkGadgetHost *h)
       : callback(s), host(h) { }
   virtual ~CallbackData() {
     delete callback;
   }
 
   int id;
-  ggadget::Slot *callback;
+  Slot *callback;
   GtkGadgetHost *host;
 };
 
-GtkGadgetHost::GtkGadgetHost(bool composited)
-    : script_runtime_(new ggadget::JSScriptRuntime()),
+GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
+                             FrameworkInterface *framework,
+                             bool composited)
+    : script_runtime_(script_runtime),
       element_factory_(NULL),
-      global_file_manager_(new SimpleHostFileManager()),
-      file_manager_(new ggadget::FileManager(global_file_manager_)),
+      global_file_manager_(new GlobalFileManager()),
+      file_manager_(new FileManager(global_file_manager_)),
       options_(new Options()),
-      framework_(new ggadget::Framework()),
+      framework_(framework),
       gadget_(NULL),
       plugin_flags_(0), composited_(composited),
       toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
       forward_button_(NULL), details_button_(NULL),
       menu_(NULL) {
-  ggadget::ElementFactory *factory = new ggadget::ElementFactory();
-  factory->RegisterElementClass("button",
-                                &ggadget::ButtonElement::CreateInstance);
-  factory->RegisterElementClass("div",
-                                &ggadget::DivElement::CreateInstance);
-  factory->RegisterElementClass("img",
-                                &ggadget::ImgElement::CreateInstance);
-  factory->RegisterElementClass("progressbar",
-                                &ggadget::ProgressBarElement::CreateInstance);
-  factory->RegisterElementClass("scrollbar",
-                                &ggadget::ScrollBarElement::CreateInstance);
-  factory->RegisterElementClass("label",
-                                &ggadget::LabelElement::CreateInstance);
-  factory->RegisterElementClass("a", &ggadget::AnchorElement::CreateInstance);
+  ElementFactory *factory = new ElementFactory();
+  factory->RegisterElementClass("button", &ButtonElement::CreateInstance);
+  factory->RegisterElementClass("div", &DivElement::CreateInstance);
+  factory->RegisterElementClass("img", &ImgElement::CreateInstance);
+  factory->RegisterElementClass("progressbar", 
+                                &ProgressBarElement::CreateInstance);
+  factory->RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);
+  factory->RegisterElementClass("label", &LabelElement::CreateInstance);
+  factory->RegisterElementClass("a", &AnchorElement::CreateInstance);
   factory->RegisterElementClass("checkbox",
-                                &ggadget::CheckBoxElement::CreateCheckBoxInstance);
-  factory->RegisterElementClass("radio",
-                                &ggadget::CheckBoxElement::CreateRadioInstance);
+                                &CheckBoxElement::CreateCheckBoxInstance);
+  factory->RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   element_factory_ = factory;
-
+  
   global_file_manager_->Init(NULL);
 
   script_runtime_->ConnectErrorReporter(
@@ -122,37 +118,37 @@ GtkGadgetHost::~GtkGadgetHost() {
   menu_ = NULL;
 }
 
-ggadget::ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
+ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
     ScriptRuntimeType type) {
   return script_runtime_;
 }
 
-ggadget::ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
+ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
   return element_factory_;
 }
 
-ggadget::FileManagerInterface *GtkGadgetHost::GetFileManager() {
+FileManagerInterface *GtkGadgetHost::GetFileManager() {
   return file_manager_;
 }
 
-ggadget::FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
+FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
   return global_file_manager_;
 }
 
-ggadget::OptionsInterface *GtkGadgetHost::GetOptions() {
+OptionsInterface *GtkGadgetHost::GetOptions() {
   return options_;
 }
 
-ggadget::FrameworkInterface *GtkGadgetHost::GetFramework() {
+FrameworkInterface *GtkGadgetHost::GetFramework() {
   return framework_;
 }
 
-ggadget::GadgetInterface *GtkGadgetHost::GetGadget() {
+GadgetInterface *GtkGadgetHost::GetGadget() {
   return gadget_;
 }
 
-ggadget::ViewHostInterface *GtkGadgetHost::NewViewHost(
-    ViewType type, ggadget::ScriptableInterface *prototype) {
+ViewHostInterface *GtkGadgetHost::NewViewHost(
+    ViewType type, ScriptableInterface *prototype) {
   return new GtkViewHost(this, type, prototype, composited_);
 }
 
@@ -172,9 +168,9 @@ void GtkGadgetHost::RemoveMe(bool save_data) {
 }
 
 void GtkGadgetHost::ShowDetailsView(
-    ggadget::DetailsViewInterface *details_view,
+    DetailsViewInterface *details_view,
     const char *title, int flags,
-    ggadget::Slot1<void, int> *feedback_handler) {
+    Slot1<void, int> *feedback_handler) {
 }
 
 void GtkGadgetHost::CloseDetailsView() {
@@ -206,9 +202,9 @@ gboolean GtkGadgetHost::DispatchTimer(gpointer data) {
   int id = tmdata->id;
   // DLOG("DispatchTimer id=%d", id);
 
-  ggadget::Variant param(id);
-  ggadget::Variant result = tmdata->callback->Call(1, &param);
-  if (!ggadget::VariantValue<bool>()(result)) {
+  Variant param(id);
+  Variant result = tmdata->callback->Call(1, &param);
+  if (!VariantValue<bool>()(result)) {
     // Event receiver has indicated that this timer should be removed.
     host->RemoveCallback(id);
     return FALSE;
@@ -235,7 +231,7 @@ gboolean GtkGadgetHost::DispatchIOWatch(GIOChannel *source,
                                         GIOCondition cond,
                                         gpointer data) {
   CallbackData *iodata = static_cast<CallbackData *>(data);
-  ggadget::Variant param(g_io_channel_unix_get_fd(source));
+  Variant param(g_io_channel_unix_get_fd(source));
   iodata->callback->Call(1, &param);
   return TRUE;
 }
@@ -384,10 +380,10 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
                                const char *base_path,
                                double zoom, int debug_mode) {
   // TODO: store zoom (and debug_mode?) into options repository.
-  options_->PutInternalValue(ggadget::kOptionZoom, ggadget::Variant(zoom));
-  options_->PutInternalValue(ggadget::kOptionDebugMode,
-                             ggadget::Variant(debug_mode));
-  gadget_ = new ggadget::Gadget(this);
+  options_->PutInternalValue(kOptionZoom, Variant(zoom));
+  options_->PutInternalValue(kOptionDebugMode,
+                             Variant(debug_mode));
+  gadget_ = new Gadget(this);
   if (!file_manager_->Init(base_path) || !gadget_->Init())
     return false;
 
@@ -461,12 +457,12 @@ void GtkGadgetHost::OnMenuClicked(GtkButton *button, gpointer user_data) {
 
 void GtkGadgetHost::OnBackClicked(GtkButton *button, gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  this_p->gadget_->OnCommand(ggadget::GadgetInterface::CMD_TOOLBAR_BACK);
+  this_p->gadget_->OnCommand(GadgetInterface::CMD_TOOLBAR_BACK);
 }
 
 void GtkGadgetHost::OnForwardClicked(GtkButton *button, gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  this_p->gadget_->OnCommand(ggadget::GadgetInterface::CMD_TOOLBAR_FORWARD);
+  this_p->gadget_->OnCommand(GadgetInterface::CMD_TOOLBAR_FORWARD);
 }
 
 void GtkGadgetHost::OnDetailsClicked(GtkButton *button, gpointer user_data) {
@@ -491,9 +487,9 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
                                     gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
   const char *about_text = this_p->gadget_->GetManifestInfo(
-      ggadget::kManifestAboutText);
+      kManifestAboutText);
   if (!about_text || !*about_text) {
-    this_p->gadget_->OnCommand(ggadget::GadgetInterface::CMD_ABOUT_DIALOG);
+    this_p->gadget_->OnCommand(GadgetInterface::CMD_ABOUT_DIALOG);
   } else {
     // TODO: show the about dialog.
   }
@@ -510,7 +506,7 @@ const char *GtkGadgetHost::BrowseForFile(const char *filter) {
   return "/etc/hosts";
 }
 
-ggadget::GadgetHostInterface::FilesInterface *GtkGadgetHost::BrowseForFiles(
+GadgetHostInterface::FilesInterface *GtkGadgetHost::BrowseForFiles(
     const char *filter) {
   // TODO:
   return NULL;
@@ -533,7 +529,7 @@ const char *GtkGadgetHost::GetFileIcon(const char *filename) const {
 }
 
 // TODO:
-class TemporaryAudioclip : public ggadget::AudioclipInterface {
+class TemporaryAudioclip : public AudioclipInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetBalance() const { return 0; }
@@ -557,6 +553,8 @@ class TemporaryAudioclip : public ggadget::AudioclipInterface {
 };
 
 
-ggadget::AudioclipInterface *GtkGadgetHost::CreateAudioclip(const char *src) {
+AudioclipInterface *GtkGadgetHost::CreateAudioclip(const char *src) {
   return new TemporaryAudioclip();
 }
+
+} // namespace ggadget
