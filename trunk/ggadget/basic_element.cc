@@ -36,10 +36,12 @@ class BasicElement::Impl {
        ViewInterface *view,
        const char *tag_name,
        const char *name,
+       bool is_container,
        BasicElement *owner)
       : parent_(parent),
         owner_(owner),
-        children_(view->GetElementFactory(), owner, view),
+        children_(is_container ?
+                  new Elements(view->GetElementFactory(), owner, view) : NULL),
         view_(view),
         hittest_(ElementInterface::HT_DEFAULT),
         cursor_(ElementInterface::CURSOR_ARROW),
@@ -93,6 +95,8 @@ class BasicElement::Impl {
 
     delete mask_image_;
     mask_image_ = NULL;
+    delete children_;
+    children_ = NULL;
   }
 
   void SetMask(const char *mask) {
@@ -468,7 +472,8 @@ class BasicElement::Impl {
       goto exit;
     }
 
-    children_canvas = children_.Draw(&child_changed);
+    if (children_)
+      children_canvas = children_->Draw(&child_changed);
     change = change || child_changed | changed_ || !canvas_;
     changed_ = false;
 
@@ -535,24 +540,28 @@ class BasicElement::Impl {
   void WidthChanged() {
     if (pin_x_relative_)
       SetRelativePinX(ppin_x_, true);
-    children_.OnParentWidthChange(width_);
+    if (children_)
+      children_->OnParentWidthChange(width_);
     if (canvas_) { // Changes to width and height require a new canvas.
       canvas_->Destroy();
       canvas_ = NULL;
     }
     view_->QueueDraw();
+    owner_->OnWidthChange();
     PostSizeEvent();
   }
 
   void HeightChanged() {
     if (pin_y_relative_)
       SetRelativePinY(ppin_y_, true);
-    children_.OnParentHeightChange(height_);
+    if (children_)
+      children_->OnParentHeightChange(height_);
     if (canvas_) { // Changes to width and height require a new canvas.
       canvas_->Destroy();
       canvas_ = NULL;
     }
     view_->QueueDraw();
+    owner_->OnHeightChange();
     PostSizeEvent();
   }
 
@@ -560,9 +569,9 @@ class BasicElement::Impl {
   bool OnMouseEvent(MouseEvent *event, bool direct,
                     ElementInterface **fired_element) {
     *fired_element = NULL;
-    if (!direct) {
+    if (!direct && children_) {
       // Send to the children first.
-      bool result = children_.OnMouseEvent(event, fired_element);
+      bool result = children_->OnMouseEvent(event, fired_element);
       if (*fired_element)
         return result;
     }
@@ -625,9 +634,9 @@ class BasicElement::Impl {
   bool OnDragEvent(DragEvent *event, bool direct,
                    ElementInterface **fired_element) {
     *fired_element = NULL;
-    if (!direct) {
+    if (!direct && children_) {
       // Send to the children first.
-      bool result = children_.OnDragEvent(event, fired_element);
+      bool result = children_->OnDragEvent(event, fired_element);
       if (*fired_element)
         return result;
     }
@@ -765,7 +774,7 @@ class BasicElement::Impl {
  public:
   ElementInterface *parent_;
   BasicElement *owner_;
-  Elements children_;
+  Elements *children_;
   ViewInterface *view_;
   ElementInterface::HitTest hittest_;
   ElementInterface::CursorType cursor_;
@@ -853,7 +862,7 @@ BasicElement::BasicElement(ElementInterface *parent,
                            const char *tag_name,
                            const char *name,
                            bool is_container)
-    : impl_(new Impl(parent, view, tag_name, name, this)) {
+    : impl_(new Impl(parent, view, tag_name, name, is_container, this)) {
   RegisterStringEnumProperty("cursor",
                              NewSlot(this, &BasicElement::GetCursor),
                              NewSlot(this, &BasicElement::SetCursor),
@@ -920,7 +929,8 @@ BasicElement::BasicElement(ElementInterface *parent,
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
   if (is_container) {
-    Elements *children = &impl_->children_;
+    Elements *children = impl_->children_;
+    ASSERT(children);
     RegisterConstant("children", children);
     RegisterMethod("appendElement",
                    NewSlot(children, &Elements::AppendElementFromXML));
@@ -982,11 +992,11 @@ void BasicElement::SetHitTest(HitTest value) {
 }
 
 const Elements *BasicElement::GetChildren() const {
-  return &impl_->children_;
+  return impl_->children_;
 }
 
 Elements *BasicElement::GetChildren() {
-  return &impl_->children_;
+  return impl_->children_;
 }
 
 ElementInterface::CursorType BasicElement::GetCursor() const {
@@ -1309,6 +1319,12 @@ void BasicElement::OnDefaultSizeChange() {
 Connection *BasicElement::ConnectEvent(const char *event_name,
                                        Slot0<void> *handler) {
   return impl_->ConnectEvent(event_name, handler);
+}
+
+void BasicElement::OnWidthChange() {
+}
+
+void BasicElement::OnHeightChange() {
 }
 
 } // namespace ggadget

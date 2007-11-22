@@ -30,7 +30,6 @@ class ImgElement::Impl {
     image_ = NULL;
   }
 
-  std::string src_;
   Image *image_;
   size_t src_width_, src_height_;
 };
@@ -60,18 +59,16 @@ void ImgElement::DoDraw(CanvasInterface *canvas,
 }
 
 Variant ImgElement::GetSrc() const {
-  return Variant(impl_->src_);
+  return Variant(Image::GetSrc(impl_->image_));
 }
 
 void ImgElement::SetSrc(const Variant &src) {
   delete impl_->image_;
   impl_->image_ = GetView()->LoadImage(src, false);
   if (impl_->image_) {
-    impl_->src_ = impl_->image_->GetSrc();
     impl_->src_width_ = impl_->image_->GetWidth();
     impl_->src_height_ = impl_->image_->GetHeight();
   } else {
-    impl_->src_.clear();
     impl_->src_width_ = 0;
     impl_->src_height_ = 0;
   }

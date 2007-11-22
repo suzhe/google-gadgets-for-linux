@@ -80,6 +80,11 @@ class Texture {
    */
   const char *GetSrc();
 
+  /** Utility function to get the src of a texture which can be @c NULL. */
+  static const char *GetSrc(Texture *texture) {
+    return texture ? texture->GetSrc() : "";
+  }
+
  private:
   // Don't allow assignment.
   void operator=(const Texture&);

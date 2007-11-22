@@ -31,9 +31,6 @@ class DivElement : public BasicElement {
              const char *name);
   virtual ~DivElement();
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-
  public:
   /**
    * Gets and sets the autoscroll property.
@@ -62,17 +59,26 @@ class DivElement : public BasicElement {
                                      double x, double y,
                                      double *child_x, double *child_y);
 
-  virtual void SetPixelWidth(double width);
-  virtual void SetPixelHeight(double height);
-  virtual void SetRelativeWidth(double width);
-  virtual void SetRelativeHeight(double height);
-  virtual void OnParentWidthChange(double width);
-  virtual void OnParentHeightChange(double height);
-
  public:
   static ElementInterface *CreateInstance(ElementInterface *parent,
                                           ViewInterface *view,
                                           const char *name);
+
+ protected:
+  /**
+   * Used to subclass div elements.
+   * No scriptable interfaces will be registered in this constructor.
+   */
+  DivElement(ElementInterface *parent,
+             ViewInterface *view,
+             const char *tag_name,
+             const char *name,
+             bool is_container);
+
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual void OnWidthChange();
+  virtual void OnHeightChange();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DivElement);

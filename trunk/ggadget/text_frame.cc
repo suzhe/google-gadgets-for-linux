@@ -46,9 +46,9 @@ TextFrame::TextFrame(BasicElement *owner, ViewInterface *view)
     color_texture_(view->LoadTexture(Variant(kDefaultColor))), 
     align_(CanvasInterface::ALIGN_LEFT), 
     valign_(CanvasInterface::VALIGN_TOP),
-    trimming_(CanvasInterface::TRIMMING_NONE), 
+    trimming_(CanvasInterface::TRIMMING_NONE),
     bold_(false), italic_(false), flag_(0), size_(10),
-    font_name_(kDefaultFont), color_(kDefaultColor) { 
+    font_name_(kDefaultFont) {
   // Register Properties
   // All properties are registered except for GetText/SetText
   // since some elements call it "caption" while others call it "innerText."
@@ -130,16 +130,13 @@ void TextFrame::SetBold(bool bold) {
   }
 }
 
-const char *TextFrame::GetColor() const {
-  return color_.c_str();
+Variant TextFrame::GetColor() const {
+  return Variant(Texture::GetSrc(color_texture_));
 }
 
-void TextFrame::SetColor(const char *color) {
-  if (AssignIfDiffer(color, &color_)) {
-    delete color_texture_;
-    color_texture_ = view_->LoadTexture(Variant(color));
-    owner_->QueueDraw();
-  }
+void TextFrame::SetColor(const Variant &color) {
+  delete color_texture_;
+  color_texture_ = view_->LoadTexture(color);
 }
 
 const char *TextFrame::GetFont() const {

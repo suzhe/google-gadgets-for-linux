@@ -17,7 +17,8 @@
 #ifndef GGADGET_TEXT_FRAME_H__
 #define GGADGET_TEXT_FRAME_H__
 
-#include "canvas_interface.h"
+#include <ggadget/canvas_interface.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 
@@ -58,8 +59,8 @@ class TextFrame {
    * Gets and sets the text color or image texture of the text. The image is
    * repeated if necessary, not stretched.
    */
-  const char *GetColor() const;
-  void SetColor(const char *color);
+  Variant GetColor() const;
+  void SetColor(const Variant &color);
 
   /** Gets and sets the text font. */
   const char *GetFont() const;

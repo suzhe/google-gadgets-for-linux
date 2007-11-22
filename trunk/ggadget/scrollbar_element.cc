@@ -104,8 +104,6 @@ class ScrollBarElement::Impl {
 
   ScrollBarElement *owner_;
   DisplayState left_state_, right_state_, thumb_state_;
-  std::string left_src_[STATE_COUNT], right_src_[STATE_COUNT],
-              thumb_src_[STATE_COUNT], background_src_;
   Image *left_[STATE_COUNT], *right_[STATE_COUNT], *thumb_[STATE_COUNT],
         *background_;
   int min_, max_, value_, pagestep_, linestep_;
@@ -426,132 +424,122 @@ static bool VariantIsEmpty(const Variant &img) {
 }
 
 static void LoadImage(ViewInterface *view, const Variant &src,
-                      const char *default_image_name,
-                      std::string *src_var, Image **image) {
+                      const char *default_image_name, Image **image) {
   delete *image;
-  src_var->clear();
   if (VariantIsEmpty(src)) {
     *image = view->LoadImageFromGlobal(default_image_name, false);
   } else {
     *image = view->LoadImage(src, false);
-    if (image)
-      *src_var = (*image)->GetSrc();
   }
 }
 
 Variant ScrollBarElement::GetBackground() const {
-  return Variant(impl_->background_src_);
+  return Variant(Image::GetSrc(impl_->background_));
 }
 
 void ScrollBarElement::SetBackground(const Variant &img) {
-  LoadImage(GetView(), img, kScrollDefaultBackground,
-            &impl_->background_src_, &impl_->background_);
+  LoadImage(GetView(), img, kScrollDefaultBackground, &impl_->background_);
   QueueDraw();
 }
 
 Variant ScrollBarElement::GetLeftDownImage() const {
-  return Variant(impl_->left_src_[STATE_DOWN]);
+  return Variant(Image::GetSrc(impl_->left_[STATE_DOWN]));
 }
 
 void ScrollBarElement::SetLeftDownImage(const Variant &img) {
-  LoadImage(GetView(), img, kScrollDefaultLeftDown,
-            &impl_->left_src_[STATE_DOWN], &impl_->left_[STATE_DOWN]);
+  LoadImage(GetView(), img, kScrollDefaultLeftDown, &impl_->left_[STATE_DOWN]);
   if (impl_->left_state_ == STATE_DOWN) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetLeftImage() const {
-  return Variant(impl_->left_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->left_[STATE_NORMAL]));
 }
 
 void ScrollBarElement::SetLeftImage(const Variant &img) {
-  LoadImage(GetView(), img, kScrollDefaultLeft,
-            &impl_->left_src_[STATE_NORMAL], &impl_->left_[STATE_NORMAL]);
+  LoadImage(GetView(), img, kScrollDefaultLeft, &impl_->left_[STATE_NORMAL]);
   if (impl_->left_state_ == STATE_NORMAL) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetLeftOverImage() const {
-  return Variant(impl_->left_src_[STATE_OVER]);
+  return Variant(Image::GetSrc(impl_->left_[STATE_OVER]));
 }
 
 void ScrollBarElement::SetLeftOverImage(const Variant &img) {
-  LoadImage(GetView(), img, kScrollDefaultLeftOver,
-            &impl_->left_src_[STATE_OVER], &impl_->left_[STATE_OVER]);
+  LoadImage(GetView(), img, kScrollDefaultLeftOver, &impl_->left_[STATE_OVER]);
   if (impl_->left_state_ == STATE_OVER) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetRightDownImage() const {
-  return Variant(impl_->right_src_[STATE_DOWN]);
+  return Variant(Image::GetSrc(impl_->right_[STATE_DOWN]));
 }
 
 void ScrollBarElement::SetRightDownImage(const Variant &img) {
   LoadImage(GetView(), img, kScrollDefaultRightDown,
-            &impl_->right_src_[STATE_DOWN], &impl_->right_[STATE_DOWN]);
+            &impl_->right_[STATE_DOWN]);
   if (impl_->right_state_ == STATE_DOWN) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetRightImage() const {
-  return Variant(impl_->right_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->right_[STATE_NORMAL]));
 }
 
 void ScrollBarElement::SetRightImage(const Variant &img) {
-  LoadImage(GetView(), img, kScrollDefaultRight,
-            &impl_->right_src_[STATE_NORMAL], &impl_->right_[STATE_NORMAL]);
+  LoadImage(GetView(), img, kScrollDefaultRight, &impl_->right_[STATE_NORMAL]);
   if (impl_->right_state_ == STATE_NORMAL) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetRightOverImage() const {
-  return Variant(impl_->right_src_[STATE_OVER]);
+  return Variant(Image::GetSrc(impl_->right_[STATE_OVER]));
 }
 
 void ScrollBarElement::SetRightOverImage(const Variant &img) {
   LoadImage(GetView(), img, kScrollDefaultRightOver,
-            &impl_->right_src_[STATE_OVER], &impl_->right_[STATE_OVER]);
+            &impl_->right_[STATE_OVER]);
   if (impl_->right_state_ == STATE_OVER) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetThumbDownImage() const {
-  return Variant(impl_->thumb_src_[STATE_DOWN]);
+  return Variant(Image::GetSrc(impl_->thumb_[STATE_DOWN]));
 }
 
 void ScrollBarElement::SetThumbDownImage(const Variant &img) {
   LoadImage(GetView(), img, kScrollDefaultThumbDown,
-            &impl_->thumb_src_[STATE_DOWN], &impl_->thumb_[STATE_DOWN]);
+            &impl_->thumb_[STATE_DOWN]);
   if (impl_->thumb_state_ == STATE_DOWN) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetThumbImage() const {
-  return Variant(impl_->thumb_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->thumb_[STATE_NORMAL]));
 }
 
 void ScrollBarElement::SetThumbImage(const Variant &img) {
-  LoadImage(GetView(), img, kScrollDefaultThumb,
-            &impl_->thumb_src_[STATE_NORMAL], &impl_->thumb_[STATE_NORMAL]);
+  LoadImage(GetView(), img, kScrollDefaultThumb, &impl_->thumb_[STATE_NORMAL]);
   if (impl_->thumb_state_ == STATE_NORMAL) {
     QueueDraw();
   }
 }
 
 Variant ScrollBarElement::GetThumbOverImage() const {
-  return Variant(impl_->thumb_src_[STATE_OVER]);
+  return Variant(Image::GetSrc(impl_->thumb_[STATE_OVER]));
 }
 
 void ScrollBarElement::SetThumbOverImage(const Variant &img) {
   LoadImage(GetView(), img, kScrollDefaultThumbOver,
-            &impl_->thumb_src_[STATE_OVER], &impl_->thumb_[STATE_OVER]);
+            &impl_->thumb_[STATE_OVER]);
   if (impl_->thumb_state_ == STATE_OVER) {
     QueueDraw();
   }
