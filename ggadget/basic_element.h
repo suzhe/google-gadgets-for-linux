@@ -158,6 +158,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   virtual void GetDefaultSize(double *width, double *height) const;
 
+  /** Hook for subclasses  to react to change of width. */
+  virtual void OnWidthChange();
+
+  /** Hook for subclasses  to react to change of width. */
+  virtual void OnHeightChange();
+
  private:
   class Impl;
   Impl *impl_;

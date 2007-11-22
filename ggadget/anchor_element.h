@@ -38,8 +38,8 @@ class AnchorElement : public BasicElement {
    * Gets and sets the mouseover text color or texture image of the element.
    * The image is repeated if necessary, not stretched.
    */
-  const char *GetOverColor() const;
-  void SetOverColor(const char *color);
+  Variant GetOverColor() const;
+  void SetOverColor(const Variant &color);
   
   /** Gets and sets the URL to be launched when this link is clicked. */
   const char *GetHref() const;

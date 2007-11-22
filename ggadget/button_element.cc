@@ -50,7 +50,6 @@ class ButtonElement::Impl {
   TextFrame text_;
   bool mousedown_;
   bool mouseover_;
-  std::string image_src_, downimage_src_, overimage_src_, disabledimage_src_;
   Image *image_, *downimage_, *overimage_, *disabledimage_;
 };
 
@@ -104,51 +103,48 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
   impl_->text_.Draw(canvas, 0, 0, width, height);
 }
 
-static void LoadImage(ViewInterface *view, const Variant &src,
-                      std::string *src_var, Image **image) {
-  delete *image;
-  *image = view->LoadImage(src, false);
-  *src_var = *image ? (*image)->GetSrc() : "";
-}
-
 Variant ButtonElement::GetImage() const {
-  return Variant(impl_->image_src_);
+  return Variant(Image::GetSrc(impl_->image_));
 }
 
 void ButtonElement::SetImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->image_src_, &impl_->image_);
+  delete impl_->image_;
+  impl_->image_ = GetView()->LoadImage(img, false);
   OnDefaultSizeChange();
   QueueDraw();
 }
 
 Variant ButtonElement::GetDisabledImage() const {
-  return Variant(impl_->disabledimage_src_);
+  return Variant(Image::GetSrc(impl_->disabledimage_));
 }
 
 void ButtonElement::SetDisabledImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->disabledimage_src_, &impl_->disabledimage_);
+  delete impl_->disabledimage_;
+  impl_->disabledimage_ = GetView()->LoadImage(img, false);
   if (!IsEnabled()) {
     QueueDraw();
   }
 }
 
 Variant ButtonElement::GetOverImage() const {
-  return Variant(impl_->overimage_src_);
+  return Variant(Image::GetSrc(impl_->overimage_));
 }
 
 void ButtonElement::SetOverImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->overimage_src_, &impl_->overimage_);
+  delete impl_->overimage_;
+  impl_->overimage_ = GetView()->LoadImage(img, false);
   if (impl_->mouseover_ && IsEnabled()) {
     QueueDraw();
   }
 }
 
 Variant ButtonElement::GetDownImage() const {
-  return Variant(impl_->downimage_src_);
+  return Variant(Image::GetSrc(impl_->downimage_));
 }
 
 void ButtonElement::SetDownImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->downimage_src_, &impl_->downimage_);
+  delete impl_->downimage_;
+  impl_->downimage_ = GetView()->LoadImage(img, false);
   if (impl_->mousedown_ && IsEnabled()) {
     QueueDraw();
   }

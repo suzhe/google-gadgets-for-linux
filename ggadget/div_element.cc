@@ -41,8 +41,11 @@ class DivElement::Impl {
     delete background_texture_;
     background_texture_ = NULL;
 
-    delete scrollbar_;
-    scrollbar_ = NULL;
+    if (scrollbar_) {
+      owner_->GetView()->OnElementRemove(scrollbar_);
+      delete scrollbar_;
+      scrollbar_ = NULL;
+    }
   }
 
   void ScrollBarUpdated() {
@@ -66,17 +69,19 @@ class DivElement::Impl {
       scrollbar_->SetValue(scroll_pos_y_);
       Slot0<void> *slot = NewSlot(this, &Impl::ScrollBarUpdated);
       scrollbar_->ConnectOnChangeEvent(slot);
+      owner_->GetView()->OnElementAdd(scrollbar_);
     }
   }
 
   void UpdateScrollPos(size_t width, size_t height) {
+    ASSERT(scrollbar_);
     scroll_height_ = static_cast<int>(height);
     int owner_height = static_cast<int>(ceil(owner_->GetPixelHeight()));
     int old_range_y = scroll_range_y_;
     scroll_range_y_ = std::max(0, scroll_height_ - owner_height);
     scroll_pos_y_ = std::min(scroll_pos_y_, scroll_range_y_);
     bool show_scrollbar = scrollbar_ && (scroll_range_y_ > 0);
-    if (scrollbar_ && old_range_y != scroll_range_y_) {
+    if (old_range_y != scroll_range_y_) {
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
     }
@@ -89,7 +94,7 @@ class DivElement::Impl {
     }
     double max_range_x = scroll_width_ - owner_width;
     scroll_range_x_ = std::max(0, static_cast<int>(ceil(max_range_x)));
-    scroll_pos_x_ = std::min(scroll_pos_x_, scroll_range_x_);    
+    scroll_pos_x_ = std::min(scroll_pos_x_, scroll_range_x_);
   }
 
   void ScrollX(int distance) {
@@ -145,7 +150,6 @@ class DivElement::Impl {
   static const int kLineWidth = 5;
 
   DivElement *owner_;
-  std::string background_;
   Texture *background_texture_;
   int scroll_pos_x_, scroll_pos_y_;
   int scroll_width_, scroll_height_;
@@ -164,6 +168,15 @@ DivElement::DivElement(ElementInterface *parent,
   RegisterProperty("background",
                    NewSlot(this, &DivElement::GetBackground),
                    NewSlot(this, &DivElement::SetBackground));
+}
+
+DivElement::DivElement(ElementInterface *parent,
+                       ViewInterface *view,
+                       const char *tag_name,
+                       const char *name,
+                       bool is_container)
+    : BasicElement(parent, view, tag_name, name, is_container),
+      impl_(new Impl(this, view)) {
 }
 
 DivElement::~DivElement() {
@@ -196,15 +209,12 @@ void DivElement::DoDraw(CanvasInterface *canvas,
 }
 
 Variant DivElement::GetBackground() const {
-  return Variant(impl_->background_);
+  return Variant(Texture::GetSrc(impl_->background_texture_));
 }
 
 void DivElement::SetBackground(const Variant &background) {
   delete impl_->background_texture_;
   impl_->background_texture_ = GetView()->LoadTexture(background);
-  impl_->background_ = impl_->background_texture_ ?
-                       impl_->background_texture_->GetSrc() : "";
-
   QueueDraw();
 }
 
@@ -234,17 +244,18 @@ ElementInterface *DivElement::CreateInstance(ElementInterface *parent,
 
 bool DivElement::OnMouseEvent(MouseEvent *event, bool direct,
                               ElementInterface **fired_element) {
-  bool result;  
-  if (impl_->scrollbar_ && IsEnabled()) {
+  bool result;
+  if (!direct && impl_->scrollbar_) {
     double new_x = event->GetX() - impl_->scrollbar_->GetPixelX();
     double new_y = event->GetY() - impl_->scrollbar_->GetPixelY();
-    if (impl_->scrollbar_->IsVisible() && 
+    if (impl_->scrollbar_->IsVisible() &&
         IsPointInElement(new_x, new_y, impl_->scrollbar_->GetPixelWidth(),
                          impl_->scrollbar_->GetPixelHeight())) {
       MouseEvent new_event(*event);
       new_event.SetX(new_x);
       new_event.SetY(new_y);
-      result = impl_->scrollbar_->OnMouseEvent(&new_event, direct, fired_element);
+      result = impl_->scrollbar_->OnMouseEvent(&new_event, direct,
+                                               fired_element);
       return result;
     }
   }
@@ -278,44 +289,14 @@ void DivElement::SelfCoordToChildCoord(ElementInterface *child,
   BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);
 }
 
-void DivElement::SetPixelWidth(double width) {
-  BasicElement::SetPixelWidth(width);
+void DivElement::OnWidthChange() {
   if (impl_->scrollbar_) {
-    impl_->scrollbar_->SetPixelX(width - impl_->scrollbar_->GetPixelWidth());
-  }
-}
-
-void DivElement::SetPixelHeight(double height) {
-  BasicElement::SetPixelHeight(height);
-  if (impl_->scrollbar_) {
-    impl_->scrollbar_->SetPixelHeight(height);
-  }
-}
-
-void DivElement::SetRelativeWidth(double width) {
-  BasicElement::SetRelativeWidth(width);
-  if (impl_->scrollbar_) {
-    impl_->scrollbar_->SetPixelX(GetPixelWidth() - 
+    impl_->scrollbar_->SetPixelX(GetPixelWidth() -
                                  impl_->scrollbar_->GetPixelWidth());
   }
 }
 
-void DivElement::SetRelativeHeight(double height) {
-  BasicElement::SetRelativeHeight(height);
-  if (impl_->scrollbar_) {
-    impl_->scrollbar_->SetPixelHeight(GetPixelHeight());
-  }
-}
-
-void DivElement::OnParentWidthChange(double width) {
-  BasicElement::OnParentWidthChange(width);
-  if (impl_->scrollbar_) {
-    impl_->scrollbar_->SetPixelX(width - impl_->scrollbar_->GetPixelWidth());
-  }
-}
-
-void DivElement::OnParentHeightChange(double height) {
-  BasicElement::OnParentHeightChange(height);
+void DivElement::OnHeightChange() {
   if (impl_->scrollbar_) {
     impl_->scrollbar_->SetPixelHeight(GetPixelHeight());
   }

@@ -29,11 +29,11 @@ gtkinclude_HEADERS	= cairo_canvas.h \
 			  cairo_graphics.h \
 			  global_file_manager.h \
 			  gadget_view_widget.h \
-              gtk_gadget_host.h \
-              gtk_key_convert.h \
-              gtk_menu_impl.h \
-              gtk_view_host.h \
-              options.h
+			  gtk_gadget_host.h \
+			  gtk_key_convert.h \
+			  gtk_menu_impl.h \
+			  gtk_view_host.h \
+			  options.h
 
 lib_LTLIBRARIES		= libggadget-gtk@GGL_EPOCH@.la
 
@@ -42,22 +42,22 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_font.cc \
 			  cairo_graphics.cc \
 			  global_file_manager.cc \
-	          gadget_view_widget.cc \
-              gtk_gadget_host.cc \
-              gtk_key_convert.cc \
-              gtk_menu_impl.cc \
-              gtk_view_host.cc \
-              options.cc
+			  gadget_view_widget.cc \
+			  gtk_gadget_host.cc \
+			  gtk_key_convert.cc \
+			  gtk_menu_impl.cc \
+			  gtk_view_host.cc \
+			  options.cc
 
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @CAIRO_CFLAGS@ \
 			  @PANGO_CFLAGS@ \
-			  @GDK2_CFLAGS@
+			  @GTK2_CFLAGS@
 
 libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  @CAIRO_LIBS@ \
 			  @PANGO_LIBS@ \
-			  @GDK2_LIBS@ \
+			  @GTK2_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \

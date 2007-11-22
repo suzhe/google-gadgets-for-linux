@@ -66,8 +66,6 @@ class ProgressBarElement::Impl {
 
   ProgressBarElement *owner_;
   bool thumbover_, thumbdown_;
-  std::string emptyimage_src_, fullimage_src_, thumbdisabledimage_src_,
-              thumbdownimage_src_, thumboverimage_src_, thumbimage_src_;
   Image *emptyimage_, *fullimage_, *thumbdisabledimage_,
         *thumbdownimage_, *thumboverimage_, *thumbimage_;
   int min_, max_, value_;
@@ -360,74 +358,70 @@ void ProgressBarElement::SetOrientation(ProgressBarElement::Orientation o) {
   }
 }
 
-static void LoadImage(ViewInterface *view, const Variant &src,
-                      std::string *src_var, Image **image) {
-  delete *image;
-  *image = view->LoadImage(src, false);
-  *src_var = *image ? (*image)->GetSrc() : "";
-}
-
 Variant ProgressBarElement::GetEmptyImage() const {
-  return Variant(impl_->emptyimage_src_);
+  return Variant(Image::GetSrc(impl_->emptyimage_));
 }
 
 void ProgressBarElement::SetEmptyImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->emptyimage_src_, &impl_->emptyimage_);
+  delete impl_->emptyimage_;
+  impl_->emptyimage_ = GetView()->LoadImage(img, false);
   OnDefaultSizeChange();
   QueueDraw();
 }
 
 Variant ProgressBarElement::GetFullImage() const {
-  return Variant(impl_->fullimage_src_);
+  return Variant(Image::GetSrc(impl_->fullimage_));
 }
 
 void ProgressBarElement::SetFullImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->fullimage_src_, &impl_->fullimage_);
+  delete impl_->fullimage_;
+  impl_->fullimage_ = GetView()->LoadImage(img, false);
   if (impl_->value_ != impl_->min_) { // not empty
     QueueDraw();
   }
 }
 
 Variant ProgressBarElement::GetThumbDisabledImage() const {
-  return Variant(impl_->thumbdisabledimage_src_);
+  return Variant(Image::GetSrc(impl_->thumbdisabledimage_));
 }
 
 void ProgressBarElement::SetThumbDisabledImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->thumbdisabledimage_src_, 
-            &impl_->thumbdisabledimage_);
+  delete impl_->thumbdisabledimage_;
+  impl_->thumbdisabledimage_ = GetView()->LoadImage(img, false);
   if (!IsEnabled()) {
     QueueDraw();
   }
 }
 
 Variant ProgressBarElement::GetThumbDownImage() const {
-  return Variant(impl_->thumbdownimage_src_);
+  return Variant(Image::GetSrc(impl_->thumbdownimage_));
 }
 
 void ProgressBarElement::SetThumbDownImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->thumbdownimage_src_, 
-            &impl_->thumbdownimage_);
+  delete impl_->thumbdownimage_;
+  impl_->thumbdownimage_ = GetView()->LoadImage(img, false);
   if (impl_->thumbdown_ && IsEnabled()) {
     QueueDraw();
   }
 }
 
 Variant ProgressBarElement::GetThumbImage() const {
-  return Variant(impl_->thumbimage_src_);
+  return Variant(Image::GetSrc(impl_->thumbimage_));
 }
 
 void ProgressBarElement::SetThumbImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->thumbimage_src_, &impl_->thumbimage_);
+  delete impl_->thumbimage_;
+  impl_->thumbimage_ = GetView()->LoadImage(img, false);
   QueueDraw(); // Always queue since this is the fallback.
 }
 
 Variant ProgressBarElement::GetThumbOverImage() const {
-  return Variant(impl_->thumboverimage_src_);
+  return Variant(Image::GetSrc(impl_->thumboverimage_));
 }
 
 void ProgressBarElement::SetThumbOverImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->thumboverimage_src_, 
-            &impl_->thumboverimage_);
+  delete impl_->thumboverimage_;
+  impl_->thumboverimage_ = GetView()->LoadImage(img, false);
   if (impl_->thumbover_ && IsEnabled()) {
     QueueDraw();
   }

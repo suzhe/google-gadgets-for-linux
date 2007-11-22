@@ -86,8 +86,6 @@ class CheckBoxElement::Impl {
   bool mouseover_;
   bool checkbox_on_right_;
   CheckedState value_;
-  std::string image_src_[STATE_COUNT], downimage_src_[STATE_COUNT],
-              overimage_src_[STATE_COUNT], disabledimage_src_[STATE_COUNT];
   Image *image_[STATE_COUNT], *downimage_[STATE_COUNT],
         *overimage_[STATE_COUNT], *disabledimage_[STATE_COUNT];
   EventSignal onchange_event_;
@@ -190,31 +188,24 @@ void CheckBoxElement::SetValue(bool value) {
   }
 }
 
-static void LoadImage(ViewInterface *view, const Variant &src,
-                      std::string *src_var, Image **image) {
-  delete *image;
-  *image = view->LoadImage(src, false);
-  *src_var = *image ? (*image)->GetSrc() : "";
-}
-
 Variant CheckBoxElement::GetImage() const {
-  return Variant(impl_->image_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->image_[STATE_NORMAL]));
 }
 
 void CheckBoxElement::SetImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->image_src_[STATE_NORMAL],
-            &impl_->image_[STATE_NORMAL]);
+  delete impl_->image_[STATE_NORMAL];
+  impl_->image_[STATE_NORMAL] = GetView()->LoadImage(img, false);
   OnDefaultSizeChange();
   QueueDraw();
 }
 
 Variant CheckBoxElement::GetDisabledImage() const {
-  return Variant(impl_->disabledimage_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->disabledimage_[STATE_NORMAL]));
 }
 
 void CheckBoxElement::SetDisabledImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->disabledimage_src_[STATE_NORMAL],
-            &impl_->disabledimage_[STATE_NORMAL]);
+  delete impl_->disabledimage_[STATE_NORMAL];
+  impl_->disabledimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
   if (!IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
@@ -222,12 +213,12 @@ void CheckBoxElement::SetDisabledImage(const Variant &img) {
 }
 
 Variant CheckBoxElement::GetOverImage() const {
-  return Variant(impl_->overimage_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->overimage_[STATE_NORMAL]));
 }
 
 void CheckBoxElement::SetOverImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->overimage_src_[STATE_NORMAL],
-            &impl_->overimage_[STATE_NORMAL]);
+  delete impl_->overimage_[STATE_NORMAL];
+  impl_->overimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
   if (impl_->mouseover_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
@@ -235,12 +226,12 @@ void CheckBoxElement::SetOverImage(const Variant &img) {
 }
 
 Variant CheckBoxElement::GetDownImage() const {
-  return Variant(impl_->downimage_src_[STATE_NORMAL]);
+  return Variant(Image::GetSrc(impl_->downimage_[STATE_NORMAL]));
 }
 
 void CheckBoxElement::SetDownImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->downimage_src_[STATE_NORMAL],
-            &impl_->downimage_[STATE_NORMAL]);
+  delete impl_->downimage_[STATE_NORMAL];
+  impl_->downimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
   if (impl_->mousedown_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
@@ -248,23 +239,23 @@ void CheckBoxElement::SetDownImage(const Variant &img) {
 }
 
 Variant CheckBoxElement::GetCheckedImage() const {
-  return Variant(impl_->image_src_[STATE_CHECKED]);
+  return Variant(Image::GetSrc(impl_->image_[STATE_CHECKED]));
 }
 
 void CheckBoxElement::SetCheckedImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->image_src_[STATE_CHECKED],
-            &impl_->image_[STATE_CHECKED]);
+  delete impl_->image_[STATE_CHECKED];
+  impl_->image_[STATE_CHECKED] = GetView()->LoadImage(img, false);
   OnDefaultSizeChange();
   QueueDraw();
 }
 
 Variant CheckBoxElement::GetCheckedDisabledImage() const {
-  return Variant(impl_->disabledimage_src_[STATE_CHECKED]);
+  return Variant(Image::GetSrc(impl_->disabledimage_[STATE_CHECKED]));
 }
 
 void CheckBoxElement::SetCheckedDisabledImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->disabledimage_src_[STATE_CHECKED],
-            &impl_->disabledimage_[STATE_CHECKED]);
+  delete impl_->disabledimage_[STATE_CHECKED];
+  impl_->disabledimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
   if (!IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
@@ -272,12 +263,12 @@ void CheckBoxElement::SetCheckedDisabledImage(const Variant &img) {
 }
 
 Variant CheckBoxElement::GetCheckedOverImage() const {
-  return Variant(impl_->overimage_src_[STATE_CHECKED]);
+  return Variant(Image::GetSrc(impl_->overimage_[STATE_CHECKED]));
 }
 
 void CheckBoxElement::SetCheckedOverImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->overimage_src_[STATE_CHECKED],
-            &impl_->overimage_[STATE_CHECKED]);
+  delete impl_->overimage_[STATE_CHECKED];
+  impl_->overimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
   if (impl_->mouseover_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();
@@ -285,12 +276,12 @@ void CheckBoxElement::SetCheckedOverImage(const Variant &img) {
 }
 
 Variant CheckBoxElement::GetCheckedDownImage() const {
-  return Variant(impl_->downimage_src_[STATE_CHECKED]);
+  return Variant(Image::GetSrc(impl_->downimage_[STATE_CHECKED]));
 }
 
 void CheckBoxElement::SetCheckedDownImage(const Variant &img) {
-  LoadImage(GetView(), img, &impl_->downimage_src_[STATE_CHECKED],
-            &impl_->downimage_[STATE_CHECKED]);
+  delete impl_->downimage_[STATE_CHECKED];
+  impl_->downimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
   if (impl_->mousedown_ && IsEnabled()) {
     OnDefaultSizeChange();
     QueueDraw();

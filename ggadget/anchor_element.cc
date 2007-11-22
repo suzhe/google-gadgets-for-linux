@@ -28,10 +28,10 @@ static const char *const kDefaultColor = "#0000FF";
 
 class AnchorElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view) 
+  Impl(BasicElement *owner, ViewInterface *view)
     : text_(owner, view),
       overcolor_texture_(view->LoadTexture(Variant(kDefaultColor))),
-      mouseover_(false), overcolor_(kDefaultColor) { 
+      mouseover_(false) {
   }
   ~Impl() {
     delete overcolor_texture_;
@@ -41,7 +41,7 @@ class AnchorElement::Impl {
   TextFrame text_;
   Texture *overcolor_texture_;
   bool mouseover_;
-  std::string overcolor_, href_;
+  std::string href_;
 };
 
 AnchorElement::AnchorElement(ElementInterface *parent,
@@ -54,7 +54,7 @@ AnchorElement::AnchorElement(ElementInterface *parent,
 
   // Moved from Impl constructor to here because they will indirectly call
   // OnDefaultSizeChange() before impl_ is initialized.
-  impl_->text_.SetColor(kDefaultColor);
+  impl_->text_.SetColor(Variant(kDefaultColor));
   impl_->text_.SetUnderline(true);
 
   RegisterProperty("overColor",
@@ -83,17 +83,15 @@ void AnchorElement::DoDraw(CanvasInterface *canvas,
   }
 }
 
-const char *AnchorElement::GetOverColor() const {
-  return impl_->overcolor_.c_str();
+Variant AnchorElement::GetOverColor() const {
+  return Variant(Texture::GetSrc(impl_->overcolor_texture_));
 }
 
-void AnchorElement::SetOverColor(const char *color) {
-  if (AssignIfDiffer(color, &impl_->overcolor_)) {
-    delete impl_->overcolor_texture_;
-    impl_->overcolor_texture_ = GetView()->LoadTexture(Variant(color));
-    if (impl_->mouseover_) {
-      QueueDraw();
-    }
+void AnchorElement::SetOverColor(const Variant &color) {
+  delete impl_->overcolor_texture_;
+  impl_->overcolor_texture_ = GetView()->LoadTexture(color);
+  if (impl_->mouseover_) {
+    QueueDraw();
   }
 }
 

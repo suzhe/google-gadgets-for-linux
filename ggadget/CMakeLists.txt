@@ -53,14 +53,18 @@ SET(SRCS
   xml_http_request.cc
   xml_utils.cc
 
-  button_element.cc
-  div_element.cc
-  img_element.cc
-  scrollbar_element.cc
-  label_element.cc
   anchor_element.cc
+  button_element.cc
   checkbox_element.cc
+  combobox_element.cc
+  div_element.cc
+  edit_element.cc
+  img_element.cc
+  item_element.cc
+  label_element.cc
+  listbox_element.cc
   progressbar_element.cc
+  scrollbar_element.cc
 )
 
 SET(LIBS

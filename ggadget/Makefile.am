@@ -33,8 +33,10 @@ gglinclude_HEADERS	= anchor_element.h \
 			  checkbox_element.h \
 			  color.h \
 			  common.h \
+			  combobox_element.h \
 			  display_window.h \
 			  div_element.h \
+			  edit_element.h \
 			  edit_interface.h \
 			  element_factory.h \
 			  element_factory_interface.h \
@@ -54,7 +56,9 @@ gglinclude_HEADERS	= anchor_element.h \
 			  graphics_interface.h \
 			  image.h \
 			  img_element.h \
+			  item_element.h \
 			  label_element.h \
+			  listbox_element.h \
 			  math_utils.h \
 			  menu_interface.h \
 			  options_interface.h \
@@ -98,15 +102,19 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  basic_element.cc \
 			  button_element.cc \
 			  checkbox_element.cc \
+			  combobox_element.cc \
 			  display_window.cc \
 			  div_element.cc \
+			  edit_element.cc \
 			  element_factory.cc \
 			  elements.cc \
 			  file_manager.cc \
 			  gadget.cc \
 			  image.cc \
 			  img_element.cc \
+			  item_element.cc \
 			  label_element.cc \
+			  listbox_element.cc \
 			  math_utils.cc \
 			  progressbar_element.cc \
 			  scriptable_array.cc \

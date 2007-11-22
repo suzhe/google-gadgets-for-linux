@@ -17,7 +17,7 @@
 #ifndef GGADGET_VIEW_HOST_INTERFACE_H__
 #define GGADGET_VIEW_HOST_INTERFACE_H__
 
-#include "element_interface.h"
+#include <ggadget/element_interface.h>
 
 namespace ggadget {
 
