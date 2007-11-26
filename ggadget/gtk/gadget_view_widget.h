@@ -46,12 +46,12 @@ struct GadgetViewWidget {
   ggadget::GtkViewHost *host;
   ggadget::ViewInterface *view;
   double zoom;
-  bool composited;
+  bool composited, useshapemask;
   // Stores the old height/width before an allocation.
   int widget_width, widget_height;
   bool dbl_click;
   bool window_move;
-  int window_move_x, window_move_y;
+  double window_move_x, window_move_y;
 
   ggadget::DragEvent current_drag_event;
 };
@@ -64,7 +64,7 @@ struct GadgetViewWidgetClass {
 
 GType GadgetViewWidget_get_type();
 GtkWidget* GadgetViewWidget_new(ggadget::GtkViewHost *host, double zoom, 
-                                bool composited);
+                                bool composited, bool useshapemask);
 
 G_END_DECLS
 

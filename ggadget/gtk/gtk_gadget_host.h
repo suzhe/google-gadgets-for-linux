@@ -33,7 +33,8 @@ class GtkGadgetHost : public GadgetHostInterface {
  public:
   GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                 FrameworkInterface *framework,
-                bool composited);
+                bool composited, bool useshapemask,
+                double zoom, int debug_mode);
   virtual ~GtkGadgetHost();
 
   virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type);
@@ -78,8 +79,7 @@ class GtkGadgetHost : public GadgetHostInterface {
    * @return the loaded gadget if succeeded, or @c NULL otherwise.
    */
   // TODO: store zoom (and debug_mode?) into options repository.
-  bool LoadGadget(GtkBox *container,
-                  const char *base_path, double zoom, int debug_mode);
+  bool LoadGadget(GtkBox *container, const char *base_path);
 
  private:
   void ReportScriptError(const char *message);
@@ -117,7 +117,9 @@ class GtkGadgetHost : public GadgetHostInterface {
 
   // Maps original font filename to temp font filename
   std::map<std::string, std::string> loaded_fonts_;
-  bool composited_;
+  bool composited_, useshapemask_;
+  double zoom_;
+  int debug_mode_;
 
   GtkBox *toolbox_;
   GtkWidget *menu_button_, *back_button_, *forward_button_, *details_button_;

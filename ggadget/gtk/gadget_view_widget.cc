@@ -1,6 +1,20 @@
-// Copyright 2007 Google Inc. All Rights Reserved.
-// Author: jimz@google.com (Jim Zhuang)
+/*
+  Copyright 2007 Google Inc.
 
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include <algorithm>
 #include <cairo.h>
 
 #include <ggadget/gtk/cairo_canvas.h>
@@ -96,8 +110,43 @@ static gboolean GadgetViewWidget_expose(GtkWidget *widget,
 
   // view->Draw may return NULL if it's width or height is 0.
   if (canvas) {
-    cairo_set_source_surface(cr, canvas->GetSurface(), 0., 0.);
+    cairo_surface_t *surface = canvas->GetSurface();
+
+    cairo_set_source_surface(cr, surface, 0., 0.);
     cairo_paint(cr);
+
+    if (changed && gvw->useshapemask) {
+      // Set the window shape to be irregular.
+      int canvasw = cairo_image_surface_get_width(surface);
+      int canvash = cairo_image_surface_get_height(surface);
+
+      // create an identical bitmap to use as shape mask
+      GdkBitmap *bitmap = 
+        static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, std::min(canvasw, width), 
+                                                std::min(canvash, height), 1)); 
+      cairo_t *mask = gdk_cairo_create(bitmap);
+      // Note: Don't set clipping here, since we're resetting shape mask
+      // for the entire widget, including areas outside the exposed region.
+      cairo_set_operator(mask, CAIRO_OPERATOR_CLEAR);
+      cairo_paint(mask);
+      cairo_set_operator(mask, CAIRO_OPERATOR_OVER);
+      cairo_set_source_surface(mask, surface, 0., 0.);
+      cairo_paint(mask);
+      cairo_destroy(mask);
+      mask = NULL;
+
+      gtk_widget_shape_combine_mask(widget, bitmap, 0, 0);
+      gdk_bitmap_unref(bitmap);
+      bitmap = NULL;
+
+      GtkWidget *window = gtk_widget_get_toplevel(widget);
+      if (GTK_IS_WINDOW(window)) { 
+        // This step is necessary since the widget is probably not toplevel.
+        gdk_window_merge_child_shapes(window->window); 
+      } else {
+        DLOG("Gadget is not inside toplevel window.");
+      }
+    }    
   }
 
   cairo_destroy(cr);
@@ -140,8 +189,18 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
 
   if (handler_result && !gvw->window_move) {
     gvw->window_move = true;
-    gvw->window_move_x = (int)event->x_root;
-    gvw->window_move_y = (int)event->y_root;
+
+    GtkWidget *window = gtk_widget_get_toplevel(widget);
+    if (GTK_IS_WINDOW(window)) {
+      gint x = 0, y = 0;
+      gtk_window_get_position(GTK_WINDOW(window), &x, &y);      
+      gvw->window_move_x = event->x_root - x;
+      gvw->window_move_y = event->y_root - y;     
+    } else {
+      gvw->window_move_x = event->x;
+      gvw->window_move_y = event->y;
+      DLOG("Gadget is not inside toplevel window.");
+    }
 
     // Grab the cursor to prevent losing events.
     gdk_pointer_grab(widget->window, FALSE,
@@ -233,18 +292,12 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   bool handler_result = gvw->view->OnMouseEvent(&e);
 
   if (handler_result && gvw->window_move && (event->state & GDK_BUTTON1_MASK)) {
-    gint pos_x, pos_y;
-    gint new_pos_x, new_pos_y;
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     if (GTK_IS_WINDOW(window)) {
-      gtk_window_get_position(GTK_WINDOW(window), &pos_x, &pos_y);
-      new_pos_x = pos_x + ((int)event->x_root - gvw->window_move_x);
-      new_pos_y = pos_y + ((int)event->y_root - gvw->window_move_y);
+      gint new_pos_x = static_cast<gint>(event->x_root - gvw->window_move_x);
+      gint new_pos_y = static_cast<gint>(event->y_root - gvw->window_move_y);
       gtk_window_move(GTK_WINDOW(window), new_pos_x, new_pos_y);
-      gvw->window_move_x = (int)event->x_root;
-      gvw->window_move_y = (int)event->y_root;
-    }
-    else {
+    } else {
       DLOG("Gadget is not inside toplevel window.");
     }
   }
@@ -528,7 +581,7 @@ GType GadgetViewWidget_get_type() {
 }
 
 GtkWidget *GadgetViewWidget_new(ggadget::GtkViewHost *host, double zoom,
-                                bool composited) {
+                                bool composited, bool useshapemask) {
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
                                  NULL));
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
@@ -537,6 +590,7 @@ GtkWidget *GadgetViewWidget_new(ggadget::GtkViewHost *host, double zoom,
   ASSERT(gvw->view);
   gvw->zoom = zoom;
   gvw->composited = composited;
+  gvw->useshapemask = useshapemask;
 
   static const GtkTargetEntry kDragTargets[] = {
     { const_cast<char *>(kUriListTarget), 0, 0 },

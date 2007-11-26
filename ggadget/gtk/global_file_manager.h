@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <string>
+#include <third_party/unzip/unzip.h>
 #include <ggadget/common.h>
 #include <ggadget/file_manager_interface.h>
 
@@ -51,6 +52,15 @@ class GlobalFileManager : public ggadget::FileManagerInterface {
   virtual bool FileExists(const char *file);
 
  private:
+  std::string res_zip_path_;
+  std::string locale_prefix_;
+  std::string locale_lang_prefix_;
+
+  bool InitLocaleStrings();
+  bool GetZipFileContents(const char *file, 
+                          std::string *data, std::string *path);
+  bool SeekToFile(unzFile zip, const char *file, std::string *path);
+
   DISALLOW_EVIL_CONSTRUCTORS(GlobalFileManager);
 };
 
