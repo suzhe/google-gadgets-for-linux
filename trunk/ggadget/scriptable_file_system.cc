@@ -24,7 +24,7 @@ namespace ggadget {
 // Default args for File.Delete() and Folder.Delete().
 static const Variant kDeleteDefaultArgs[] = {
   Variant(false)
-}; 
+};
 // Default args for File.Copy() and Folder.Copy().
 static const Variant kCopyDefaultArgs[] = {
   Variant(),
@@ -83,13 +83,6 @@ class ScriptableFileSystem::Impl {
    private:
     std::string message_;
   };
-
-  // Use Microsoft's method to encode/decode Date object in JSON.
-  // See http://msdn2.microsoft.com/en-us/library/bb299886.aspx.
-  static JSONString GenerateDateJSON(time_t time) {
-    return JSONString(StringPrintf("\"\\/Date(%jd)\\/\"",
-                                   static_cast<int64_t>(time) * 1000));
-  }
 
   template <typename ScriptableT, typename ItemT, typename CollectionT>
   static ScriptableArray *ToScriptableArray(CollectionT *collection) {
@@ -236,13 +229,15 @@ class ScriptableFileSystem::Impl {
                        NewSlot(folder, &fs::FolderInterface::GetAttributes),
                        NewSlot(this, &ScriptableFolder::SetAttributes));
       RegisterProperty("DateCreated",
-                       NewSlot(this, &ScriptableFolder::GetDateCreated),
+                       NewSlot(folder, &fs::FolderInterface::GetDateCreated),
                        NULL);
       RegisterProperty("DateLastModified",
-                       NewSlot(this, &ScriptableFolder::GetDateLastModified),
+                       NewSlot(folder,
+                               &fs::FolderInterface::GetDateLastModified),
                        NULL);
       RegisterProperty("DateLastAccessed",
-                       NewSlot(this, &ScriptableFolder::GetDateLastAccessed),
+                       NewSlot(folder,
+                               &fs::FolderInterface::GetDateLastAccessed),
                        NULL);
       RegisterProperty("Type",
                        NewSlot(folder, &fs::FolderInterface::GetType),
@@ -302,18 +297,6 @@ class ScriptableFileSystem::Impl {
     void SetAttributes(fs::FileAttribute attributes) {
       if (!folder_->SetAttributes(attributes))
         SetPendingException(new FileSystemException("Folder.SetAttributes"));
-    }
-
-    JSONString GetDateCreated() {
-      return GenerateDateJSON(folder_->GetDateCreated());
-    }
-
-    JSONString GetDateLastModified() {
-      return GenerateDateJSON(folder_->GetDateLastModified());
-    }
-
-    JSONString GetDateLastAccessed() {
-      return GenerateDateJSON(folder_->GetDateLastAccessed());
     }
 
     void Delete(bool force) {
@@ -389,13 +372,13 @@ class ScriptableFileSystem::Impl {
                        NewSlot(file, &fs::FileInterface::GetAttributes),
                        NewSlot(this, &ScriptableFile::SetAttributes));
       RegisterProperty("DateCreated",
-                       NewSlot(this, &ScriptableFile::GetDateCreated),
+                       NewSlot(file, &fs::FileInterface::GetDateCreated),
                        NULL);
       RegisterProperty("DateLastModified",
-                       NewSlot(this, &ScriptableFile::GetDateLastModified),
+                       NewSlot(file, &fs::FileInterface::GetDateLastModified),
                        NULL);
       RegisterProperty("DateLastAccessed",
-                       NewSlot(this, &ScriptableFile::GetDateLastAccessed),
+                       NewSlot(file, &fs::FileInterface::GetDateLastAccessed),
                        NULL);
       RegisterProperty("Size",
                        NewSlot(file, &fs::FileInterface::GetSize),
@@ -449,18 +432,6 @@ class ScriptableFileSystem::Impl {
     void SetAttributes(fs::FileAttribute attributes) {
       if (!file_->SetAttributes(attributes))
         SetPendingException(new FileSystemException("File.SetAttributes"));
-    }
-
-    JSONString GetDateCreated() {
-      return GenerateDateJSON(file_->GetDateCreated());
-    }
-
-    JSONString GetDateLastModified() {
-      return GenerateDateJSON(file_->GetDateLastModified());
-    }
-
-    JSONString GetDateLastAccessed() {
-      return GenerateDateJSON(file_->GetDateLastAccessed());
     }
 
     void Delete(bool force) {

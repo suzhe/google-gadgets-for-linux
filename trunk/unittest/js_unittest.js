@@ -89,7 +89,7 @@ function RUN_ALL_TESTS() {
     } catch (e) {
       // The exception thrown by ASSERT is of value ASSERT_EXCEPTION_MAGIC.
       if (e !== ASSERT_EXCEPTION_MAGIC)
-        print("Exception rasied in test:", e);
+        print("Exception raised in test:", e);
     }
     if (!_gCurrentTestFailed)
       passed++;
@@ -101,8 +101,10 @@ function RUN_ALL_TESTS() {
   print(passed + " passed.");
   print((count - passed) + " failed.");
   if (count > passed) {
+    print("\nFAIL");
     quit(QUIT_ASSERT);
   }
+  print("\nPASS");
   quit(0);
 }
 

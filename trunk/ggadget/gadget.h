@@ -34,6 +34,10 @@ class Gadget: public GadgetInterface {
   virtual const char *GetManifestInfo(const char *key) const;
   virtual bool HasOptionsDialog() const;
   virtual bool ShowOptionsDialog();
+  virtual bool ShowDetailsView(DetailsView *details_view,
+                               const char *title, int flags,
+                               Slot1<void, int> *feedback_handler);
+  virtual void CloseDetailsView();
   virtual void OnAddCustomMenuItems(MenuInterface *menu);
   virtual void OnCommand(Command command);
   virtual void OnDisplayStateChange(DisplayState display_state);

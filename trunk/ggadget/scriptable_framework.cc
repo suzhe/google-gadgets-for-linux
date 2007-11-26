@@ -239,7 +239,8 @@ class ScriptableFramework::Impl {
       RegisterMethod("getFileIcon",
                      NewSlot(gadget_host, &GadgetHostInterface::GetFileIcon));
       // TODO: RegisterMethod("languageCode",)
-      // TODO: RegisterMethod("localTimeToUniversalTime", )
+      RegisterMethod("localTimeToUniversalTime",
+                     NewSlot(&LocalTimeToUniversalTime));
 
       framework::MachineInterface *machine = framework_->GetMachineInterface();
       bios_.RegisterProperty(
@@ -397,6 +398,13 @@ class ScriptableFramework::Impl {
 
       screen_.RegisterProperty("size", NewSlot(this, &System::GetScreenSize),
                                NULL);
+    }
+
+    // In standard JavaScript, the Date object supports both local time and
+    // UTC at the same time, and our Date object always use UTC, so this
+    // function always returns the input.
+    static Date LocalTimeToUniversalTime(const Date date) {
+      return date;
     }
 
     JSONString GetCursorPos() {

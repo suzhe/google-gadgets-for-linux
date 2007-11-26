@@ -15,11 +15,13 @@
 */
 
 #include "gadget.h"
+#include "details_view.h"
 #include "display_window.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
 #include "menu_interface.h"
+#include "script_context_interface.h"
 #include "scriptable_framework.h"
 #include "scriptable_helper.h"
 #include "scriptable_menu.h"
@@ -79,10 +81,10 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
                        NewSlot(host, &GadgetHostInterface::SetPluginFlags));
       RegisterMethod("RemoveMe",
                      NewSlot(host, &GadgetHostInterface::RemoveMe));
-      // TODO:
-      RegisterMethod("ShowDetailsView", NewSlot(ShowDetailsViewStub));
+      RegisterMethod("ShowDetailsView",
+                     NewSlot(gadget_impl, &Impl::ScriptShowDetailsView));
       RegisterMethod("CloseDetailsView",
-                     NewSlot(host, &GadgetHostInterface::CloseDetailsView));
+                     NewSlot(gadget_impl, &Impl::CloseDetailsView));
       RegisterMethod("ShowOptionsDialog",
                      NewSlot(gadget_impl, &Impl::ShowOptionsDialog));
 
@@ -94,11 +96,6 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterSignal("onDisplayTargetChange", &ondisplaytargetchange_signal_);
     }
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
-
-    // TODO:
-    static void ShowDetailsViewStub(ScriptableInterface *details_control,
-                                    const char *title, int flags,
-                                    Slot *callback) { }
 
     void OnAddCustomMenuItems(MenuInterface *menu) {
       ScriptableMenu scriptable_menu(menu);
@@ -146,6 +143,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
         gadget_global_prototype_(this),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           &gadget_global_prototype_)),
+        details_view_host_(NULL),
         has_options_xml_(false) {
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
@@ -164,6 +162,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       }
     }
 
+    CloseDetailsView();
     delete main_view_host_;
     main_view_host_ = NULL;
   }
@@ -239,6 +238,46 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     return true;
   }
 
+  bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
+                       Slot1<void, int> *feedback_handler) {
+    CloseDetailsView();
+    if (!details_view->ContentIsView()) {
+      LOG("HTML/Text view is not supported for now");
+      return false;
+    }
+
+    details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS,
+                                            &gadget_global_prototype_);
+    // Set up the detailsViewData variable in the opened details view.
+    details_view_host_->GetScriptContext()->AssignFromContext(
+        NULL, "", "detailsViewData",
+        main_view_host_->GetScriptContext(), details_view, "detailsViewData");
+    const char *xml_file = details_view->GetText();
+    if (!details_view_host_->GetView()->InitFromFile(xml_file)) {
+      LOG("Failed to load details view from %s", xml_file);
+      delete details_view_host_;
+      details_view_host_ = NULL;
+      return false;
+    }
+    details_view_host_->ShowInDetailsView(title, flags, feedback_handler);
+    return true;
+  }
+
+  void ScriptShowDetailsView(DetailsView *details_view,
+                             const char *title, int flags,
+                             Slot *callback) {
+    ShowDetailsView(details_view, title, flags,
+                    callback ? new SlotProxy1<void, int>(callback) : NULL);
+  }
+
+  void CloseDetailsView() {
+    if (details_view_host_) {
+      details_view_host_->CloseDetailsView();
+      delete details_view_host_;
+      details_view_host_ = NULL;
+    }
+  }
+
   bool Init() {
     FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
@@ -295,6 +334,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   ScriptableOptions scriptable_options_;
   GadgetGlobalPrototype gadget_global_prototype_;
   ViewHostInterface *main_view_host_;
+  ViewHostInterface *details_view_host_;
   GadgetStringMap manifest_info_map_;
   bool has_options_xml_;
 };
@@ -342,6 +382,16 @@ void Gadget::OnDisplayStateChange(DisplayState display_state) {
 
 void Gadget::OnDisplayTargetChange(DisplayTarget display_target) {
   impl_->plugin_.ondisplaytargetchange_signal_(display_target);
+}
+
+bool Gadget::ShowDetailsView(DetailsView *details_view,
+                             const char *title, int flags,
+                             Slot1<void, int> *feedback_handler) {
+  return impl_->ShowDetailsView(details_view, title, flags, feedback_handler);
+}
+
+void Gadget::CloseDetailsView() {
+  return impl_->CloseDetailsView();
 }
 
 } // namespace ggadget

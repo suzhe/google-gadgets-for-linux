@@ -162,8 +162,11 @@ TEST(Variant, TestScriptableAndAny) {
                Variant::TYPE_CONST_SCRIPTABLE>(NULL);
   CheckVariant<Scriptable1 *, Variant::TYPE_SCRIPTABLE>(NULL);
   CheckVariant<const Scriptable1 *, Variant::TYPE_CONST_SCRIPTABLE>(NULL);
-  CheckVariant<void *, Variant::TYPE_ANY>(NULL);
-  CheckVariant<const void *, Variant::TYPE_CONST_ANY>(NULL);
+}
+
+TEST(Variant, TestDate) {
+  CheckVariant<Date, Variant::TYPE_DATE>(Date(1234));
+  CheckVariant<const Date &, Variant::TYPE_DATE>(Date(1234));
 }
 
 TEST(Variant, TestSlot) {

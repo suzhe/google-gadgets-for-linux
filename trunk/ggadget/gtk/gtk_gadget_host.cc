@@ -187,15 +187,6 @@ void GtkGadgetHost::SetPluginFlags(int plugin_flags) {
 void GtkGadgetHost::RemoveMe(bool save_data) {
 }
 
-void GtkGadgetHost::ShowDetailsView(
-    DetailsViewInterface *details_view,
-    const char *title, int flags,
-    Slot1<void, int> *feedback_handler) {
-}
-
-void GtkGadgetHost::CloseDetailsView() {
-}
-
 void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) const {
   const char *str_level = "";
   switch (level) {

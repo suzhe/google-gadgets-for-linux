@@ -19,6 +19,8 @@
 
 namespace ggadget {
 
+template <typename R, typename P1> class Slot1;
+class DetailsView;
 class FileManagerInterface;
 class GDDisplayWindowInterface;
 class MenuInterface;
@@ -58,6 +60,25 @@ class GadgetInterface {
    * @return @c true if succeeded.
    */
   virtual bool ShowOptionsDialog() = 0;
+
+  /**
+   * Close the details view if it is opened.
+   */
+  virtual void CloseDetailsView() = 0;
+
+  /**
+   * Displays a details view containing the specified details control and the
+   * specified title.  If there is already details view opened, it will be
+   * closed first.
+   * @param details_view
+   * @param title the title of the details view.
+   * @param flags combination of @c ViewHostInterface::DetailsViewFlags.
+   * @param feedback_handler called when user clicks on feedback buttons. The
+   *     handler has one parameter, which specifies @c DetailsViewFlags.
+   */
+  virtual bool ShowDetailsView(DetailsView *details_view,
+                               const char *title, int flags,
+                               Slot1<void, int> *feedback_handler) = 0;
 
   /**
    * Fires just before the gadget's menu is displayed. Handle this event to

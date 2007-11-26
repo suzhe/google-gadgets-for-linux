@@ -118,12 +118,12 @@ class TestPrototype : public ScriptableHelper<ScriptableInterface> {
 class TestScriptable2 : public TestScriptable1 {
  public:
   DEFINE_CLASS_ID(0xa88ea50b8b884e, TestScriptable1);
-  TestScriptable2(bool script_owned_ = false);
+  TestScriptable2(bool script_owned_ = false, bool strict = false);
   virtual ~TestScriptable2();
 
   virtual OwnershipPolicy Attach();
   virtual bool Detach();
-  virtual bool IsStrict() const { return false; }
+  virtual bool IsStrict() const { return strict_; }
 
   static const int kArraySize = 20;
 
@@ -169,8 +169,8 @@ class TestScriptable2 : public TestScriptable1 {
   TestScriptable2 *TestMethod(const TestScriptable2 *t) {
     return const_cast<TestScriptable2 *>(t);
   }
-  TestScriptable2 *NewObject(bool script_owned) {
-    return new TestScriptable2(script_owned);
+  TestScriptable2 *NewObject(bool script_owned, bool strict = true) {
+    return new TestScriptable2(script_owned, strict);
   }
   void DeleteObject(TestScriptable2 *obj) { delete obj; }
   bool IsScriptOwned() { return script_owned_; }
@@ -188,6 +188,7 @@ class TestScriptable2 : public TestScriptable1 {
  private:
   bool script_owned_;
   int array_[kArraySize];
+  bool strict_;
   std::string time_;
   std::string signal_result_;
   std::map<std::string, std::string> dynamic_properties_;

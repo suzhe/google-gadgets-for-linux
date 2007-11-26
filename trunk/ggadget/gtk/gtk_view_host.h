@@ -70,16 +70,23 @@ class GtkViewHost : public ViewHostInterface {
   virtual void SetShowCaptionAlways(bool always);
   virtual void SetCursor(ElementInterface::CursorType type);
   virtual void RunDialog();
+  virtual void ShowInDetailsView(const char *title, int flags,
+                                 Slot1<void, int> *feedback_handler);
+  virtual void CloseDetailsView();
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 
  private:
+  static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);
+
   GadgetHostInterface *gadget_host_;
   ViewInterface *view_;
   ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;
   GraphicsInterface *gfx_;
   Connection *onoptionchanged_connection_;
+  GtkWidget *details_window_;
+  Slot1<void, int> *details_feedback_handler_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkViewHost);
 };

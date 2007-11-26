@@ -93,7 +93,7 @@ TestScriptable1::~TestScriptable1() {
 
 TestPrototype *TestPrototype::instance_ = NULL;
 
-const Variant kNewObjectDefaultArgs[] = { Variant(true) };
+const Variant kNewObjectDefaultArgs[] = { Variant(true), Variant(true) };
 const Variant kDeleteObjectDefaultArgs[] = 
    { Variant(static_cast<ScriptableInterface *>(NULL)) };
 
@@ -107,8 +107,8 @@ TestPrototype::TestPrototype() {
                    NewSlot(this, &TestPrototype::GetSelf), NULL);
 }
 
-TestScriptable2::TestScriptable2(bool script_owned)
-    : script_owned_(script_owned) {
+TestScriptable2::TestScriptable2(bool script_owned, bool strict)
+    : script_owned_(script_owned), strict_(strict) {
   RegisterMethod("TestMethod", NewSlot(this, &TestScriptable2::TestMethod));
   RegisterSignal("onlunch", &onlunch_signal_);
   RegisterSignal("onsupper", &onsupper_signal_);

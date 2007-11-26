@@ -301,5 +301,73 @@ void JSScriptContext::UnlockObject(ScriptableInterface *object) {
   }
 }
 
+bool JSScriptContext::AssignFromContext(ScriptableInterface *dest_object,
+                                        const char *dest_object_expr,
+                                        const char *dest_property,
+                                        ScriptContextInterface *src_context,
+                                        ScriptableInterface *src_object,
+                                        const char *src_expr) {
+  ASSERT(src_context);
+  ASSERT(dest_property);
+  ASSERT(src_expr);
+  JSScriptContext *src_js_context = down_cast<JSScriptContext *>(src_context);
+
+  JSObject *dest_js_object;
+  if (dest_object) {
+    WrapperMap::const_iterator it = wrapper_map_.find(dest_object);
+    if (it == wrapper_map_.end())
+      return false;
+    dest_js_object = it->second->js_object();
+  } else {
+    dest_js_object = JS_GetGlobalObject(context_);
+  }
+  
+  if (dest_object_expr && *dest_object_expr) {
+    UTF16String utf16_dest_object_expr;
+    ConvertStringUTF8ToUTF16(dest_object_expr, strlen(dest_object_expr),
+                             &utf16_dest_object_expr);
+    jsval rval;
+    if (!JS_EvaluateUCScript(context_, dest_js_object,
+                             utf16_dest_object_expr.c_str(),
+                             utf16_dest_object_expr.size(),
+                             "", 1, &rval)) {
+      DLOG("Failed to evaluate dest_object_expr %s against JSObject %p",
+           dest_object_expr, dest_js_object);
+      return false;
+    }
+    if (!JSVAL_IS_OBJECT(rval) || JSVAL_IS_NULL(rval)) {
+      DLOG("Expression %s doesn't evaluate to a non-null object",
+           dest_object_expr);
+      return false;
+    }
+
+    dest_js_object = JSVAL_TO_OBJECT(rval);
+  }
+
+  JSObject *src_js_object;
+  if (src_object) {
+    WrapperMap::const_iterator it =
+        src_js_context->wrapper_map_.find(src_object);
+    if (it == src_js_context->wrapper_map_.end())
+      return false;
+    src_js_object = it->second->js_object();
+  } else {
+    src_js_object = JS_GetGlobalObject(src_js_context->context_);
+  }
+
+  UTF16String utf16_src_expr;
+  ConvertStringUTF8ToUTF16(src_expr, strlen(src_expr), &utf16_src_expr);
+  jsval src_val;
+  if (!JS_EvaluateUCScript(src_js_context->context_, src_js_object,
+                           utf16_src_expr.c_str(), utf16_src_expr.size(),
+                           "", 1, &src_val)) {
+    DLOG("Failed to evaluate src_expr %s against JSObject %p",
+         src_expr, src_js_object);
+    return false;
+  }
+
+  return JS_SetProperty(context_, dest_js_object, dest_property, &src_val);
+}
+
 } // namespace internal
 } // namespace ggadget

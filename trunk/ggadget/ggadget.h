@@ -24,6 +24,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/audioclip_interface.h>
+#include <ggadget/details_view.h>
 #include <ggadget/element_interface.h>
 // TODO: Make Elements an interface?
 #include <ggadget/elements.h>

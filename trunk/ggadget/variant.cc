@@ -70,11 +70,8 @@ Variant &Variant::operator=(const Variant &source) {
     case TYPE_SLOT:
       v_.slot_value_ = source.v_.slot_value_;
       break;
-    case TYPE_ANY:
-      v_.any_value_ = source.v_.any_value_;
-      break;
-    case TYPE_CONST_ANY:
-      v_.const_any_value_ = source.v_.const_any_value_;
+    case TYPE_DATE:
+      v_.int64_value_ = source.v_.int64_value_;
       break;
     case TYPE_VARIANT:
       // A Variant of type TYPE_VARIANT is only used as a prototype.
@@ -116,10 +113,8 @@ bool Variant::operator==(const Variant &another) const {
       Slot *slot2 = another.v_.slot_value_;
       return slot1 == slot2 || (slot1 && slot2 && *slot1 == *slot2);
     }
-    case TYPE_ANY:
-      return v_.any_value_ == another.v_.any_value_;
-    case TYPE_CONST_ANY:
-      return v_.const_any_value_ == another.v_.const_any_value_;
+    case TYPE_DATE:
+      return v_.int64_value_ == another.v_.int64_value_;
     case TYPE_VARIANT:
       // A Variant of type TYPE_VARIANT is only used as a prototype,
       // so they are all equal.
@@ -170,11 +165,8 @@ std::string Variant::ToString() const {
     case Variant::TYPE_SLOT:
       snprintf(buffer, sizeof(buffer), "SLOT:%p", v_.slot_value_);
       return std::string(buffer);
-    case Variant::TYPE_ANY:
-      snprintf(buffer, sizeof(buffer), "ANY:%p", v_.any_value_);
-      return std::string(buffer);
-    case Variant::TYPE_CONST_ANY:
-      snprintf(buffer, sizeof(buffer), "CONST_ANY:%p", v_.const_any_value_);
+    case Variant::TYPE_DATE:
+      snprintf(buffer, sizeof(buffer), "DATE:%ju", v_.int64_value_);
       return std::string(buffer);
     case Variant::TYPE_VARIANT:
       return std::string("VARIANT");
