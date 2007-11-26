@@ -29,6 +29,8 @@ static double g_zoom = 1.;
 static int g_debug_mode = 0;
 static ggadget::GtkGadgetHost *g_gadget_host = NULL;
 static gboolean g_composited = false;
+static gboolean g_useshapemask = false; 
+static gboolean g_decorated = true;
 
 static gboolean DeleteEventHandler(GtkWidget *widget,
                                    GdkEvent *event,
@@ -46,8 +48,9 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
   g_gadget_host = new ggadget::GtkGadgetHost(new ggadget::JSScriptRuntime(), 
                                              new ggadget::Framework(), 
-                                             g_composited);
-  if (!g_gadget_host->LoadGadget(box, base_path, g_zoom, g_debug_mode)) {
+                                             g_composited, g_useshapemask, 
+                                             g_zoom, g_debug_mode);
+  if (!g_gadget_host->LoadGadget(box, base_path)) {
     LOG("Failed to load gadget from: %s", base_path);
     return false;
   }
@@ -69,22 +72,26 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
 static bool CreateGTKUI(const char *base_path) {
   GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(window), "Google Gadgets");
-  // gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+  if (!g_decorated) {
+    gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+  }
   g_signal_connect(G_OBJECT(window), "delete_event",
                    G_CALLBACK(DeleteEventHandler), NULL);
   g_signal_connect(G_OBJECT(window), "destroy",
                    G_CALLBACK(DestroyHandler), NULL);
-
 
   GdkScreen *screen = gtk_widget_get_screen(window);
 #if 0 // this line requires gtk 2.8
   g_composited = gdk_screen_is_composited(screen);
 #endif
   DLOG("Composited screen? %d", static_cast<int>(g_composited));
+  DLOG("Use shape mask? %d", static_cast<int>(g_useshapemask));
 
-  GdkColormap *rgba;
-  rgba = gdk_screen_get_rgba_colormap (screen);
-  gtk_widget_set_colormap (window, rgba);
+  if (g_composited) {
+    GdkColormap *rgba;
+    rgba = gdk_screen_get_rgba_colormap (screen);
+    gtk_widget_set_colormap (window, rgba);
+  }
 
   GtkBox *vbox = GTK_BOX(gtk_vbox_new(FALSE, 0));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(vbox));
@@ -133,13 +140,25 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (argc == 4) {
+  if (argc >= 4) {
     sscanf(argv[3], "%d", &g_debug_mode);
     if (g_debug_mode < 0 || g_debug_mode > 2) {
       LOG("Debug mode invalid, resetting to 0");
       g_debug_mode = 0;
     }
   }
+
+  if (argc >= 5) {
+    int useshapemask;
+    sscanf(argv[4], "%d", &useshapemask);
+    g_useshapemask = (useshapemask != 0);
+  }
+
+  if (argc >= 6) {
+    int decorated;
+    sscanf(argv[5], "%d", &decorated);
+    g_decorated = (decorated != 0);
+  }  
 
   if (!CreateGTKUI(argv[1])) {
     LOG("Error: unable to create UI");

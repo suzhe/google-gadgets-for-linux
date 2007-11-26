@@ -28,6 +28,10 @@ INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
 ADD_DEFINITIONS(${SMJS_DEFINITIONS})
 
+MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/resources 
+         ${CMAKE_BINARY_DIR}/output/bin/ggl_resources.bin
+)
+
 SET(SRCS
   main.cc
 )

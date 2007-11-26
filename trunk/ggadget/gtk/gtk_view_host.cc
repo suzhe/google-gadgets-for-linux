@@ -54,7 +54,8 @@ static const CursorTypeMapping[] = {
 GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
                          GadgetHostInterface::ViewType type,
                          ScriptableInterface *prototype,
-                         bool composited)
+                         bool composited, bool useshapemask, 
+			 double zoom, int debug_mode)
     : gadget_host_(gadget_host),
       view_(NULL),
       script_context_(NULL),
@@ -70,12 +71,10 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
     script_context_ = script_runtime->CreateContext();
   }
 
-  OptionsInterface *options = gadget_host->GetOptions();
-  int debug_mode = VariantValue<int>()(
-      options->GetInternalValue(kOptionDebugMode));
   view_ = new View(this, prototype, gadget_host->GetElementFactory(),
                    debug_mode);
 
+  OptionsInterface *options = gadget_host->GetOptions();
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Continue to initialize the script context.
     onoptionchanged_connection_ = options->ConnectOnOptionChanged(
@@ -105,12 +104,8 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
     }
   }
 
-  double zoom = 1.0;
-  if (type == GadgetHostInterface::VIEW_MAIN) {
-    zoom = VariantValue<double>()(
-        options->GetInternalValue(kOptionZoom));
-  }
-  gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom, composited));
+  gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom, 
+                                               composited, useshapemask));
   gfx_ = new CairoGraphics(zoom);
 }
 
@@ -137,12 +132,15 @@ XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
 }
 
 void GtkViewHost::QueueDraw() {
-  if (gvw_)
+  // Use GTK_IS_WIDGET instead of checking for pointer since the widget
+  // might be destroyed on shutdown but the pointer is non-NULL.
+  if (GTK_IS_WIDGET(gvw_)) { 
     gtk_widget_queue_draw(GTK_WIDGET(gvw_));
+  }
 }
 
 bool GtkViewHost::GrabKeyboardFocus() {
-  if (gvw_) {
+  if (GTK_IS_WIDGET(gvw_)) {
     gtk_widget_grab_focus(GTK_WIDGET(gvw_));
     return true;
   }
@@ -153,7 +151,7 @@ bool GtkViewHost::GrabKeyboardFocus() {
 // TODO: This host should encapsulate all widget creating/switching jobs
 // inside of it, so the interface of this method should be revised.
 void GtkViewHost::SwitchWidget(GadgetViewWidget *gvw) {
-  if (gvw_) {
+  if (GTK_IS_WIDGET(gvw_)) {
     gvw_->host = NULL;
   }
   gvw_ = new_gvw;
@@ -173,7 +171,7 @@ void GtkViewHost::SetShowCaptionAlways(bool always) {
 }
 
 void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
-  if (gvw_) {
+  if (GTK_IS_WIDGET(gvw_)) {
     if (type == ElementInterface::CURSOR_ARROW) {
       // Use parent cursor in this case.
       gdk_window_set_cursor(GTK_WIDGET(gvw_)->window, NULL);

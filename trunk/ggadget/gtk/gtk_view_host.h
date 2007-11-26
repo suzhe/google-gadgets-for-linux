@@ -36,7 +36,8 @@ class GtkViewHost : public ViewHostInterface {
   GtkViewHost(GadgetHostInterface *gadget_host,
               GadgetHostInterface::ViewType type,
               ScriptableInterface *prototype,
-              bool composited);
+              bool composited, bool useshapemask, 
+	      double zoom, int debug_mode);
   virtual ~GtkViewHost();
 
 #if 0

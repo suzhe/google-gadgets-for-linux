@@ -468,6 +468,7 @@ bool FileManagerImpl::GetZipFileContents(FileMap::const_iterator iter,
             filename, base_path_.c_str());
         data->clear();
         status = false;
+        break;
       } else {
         break;
       }

@@ -60,7 +60,8 @@ class GtkGadgetHost::CallbackData {
 
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              FrameworkInterface *framework,
-                             bool composited)
+                             bool composited, bool useshapemask,
+                             double zoom, int debug_mode)
     : script_runtime_(script_runtime),
       element_factory_(NULL),
       global_file_manager_(new GlobalFileManager()),
@@ -68,7 +69,8 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
       options_(new Options()),
       framework_(framework),
       gadget_(NULL),
-      plugin_flags_(0), composited_(composited),
+      plugin_flags_(0), composited_(composited), useshapemask_(useshapemask),
+      zoom_(zoom), debug_mode_(debug_mode),
       toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
       forward_button_(NULL), details_button_(NULL),
       menu_(NULL) {
@@ -101,7 +103,7 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
   factory->RegisterElementClass("scrollbar",
                                 &ggadget::ScrollBarElement::CreateInstance);
   element_factory_ = factory;
-  
+
   global_file_manager_->Init(NULL);
 
   script_runtime_->ConnectErrorReporter(
@@ -169,7 +171,8 @@ GadgetInterface *GtkGadgetHost::GetGadget() {
 
 ViewHostInterface *GtkGadgetHost::NewViewHost(
     ViewType type, ScriptableInterface *prototype) {
-  return new GtkViewHost(this, type, prototype, composited_);
+  return new GtkViewHost(this, type, prototype, 
+                         composited_, useshapemask_, zoom_, debug_mode_);
 }
 
 void GtkGadgetHost::SetPluginFlags(int plugin_flags) {
@@ -388,12 +391,7 @@ bool GtkGadgetHost::UnloadFont(const char *filename) {
 }
 
 bool GtkGadgetHost::LoadGadget(GtkBox *container,
-                               const char *base_path,
-                               double zoom, int debug_mode) {
-  // TODO: store zoom (and debug_mode?) into options repository.
-  options_->PutInternalValue(kOptionZoom, Variant(zoom));
-  options_->PutInternalValue(kOptionDebugMode,
-                             Variant(debug_mode));
+                               const char *base_path) {
   gadget_ = new Gadget(this);
   if (!file_manager_->Init(base_path) || !gadget_->Init())
     return false;

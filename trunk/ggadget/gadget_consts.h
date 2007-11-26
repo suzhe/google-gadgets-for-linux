@@ -33,10 +33,6 @@ const char *const kGadgetGManifest = "gadget.gmanifest";
 const char *const kGManifestExt    = ".gmanifest";
 const char *const kXMLExt          = ".xml";
 
-/** Internal config keys */
-const char *const kOptionZoom          = "__zoom";
-const char *const kOptionDebugMode     = "__debug_mode";
-
 /** Information XPath identifiers in gadget.gmanifest file. */
 const char *const kManifestMinVersion  = "@minimumGoogleDesktopVersion";
 const char *const kManifestId          = "about/id";
@@ -95,18 +91,18 @@ const char *const kNameAttr = "name";
 const char *const kInnerTextProperty = "innerText";
 
 /** Prefix for global file resources. */
-const char *const kGlobalResourcePrefix = ":resources/";
-const char *const kScrollDefaultBackground = ":resources/scroll_background.png";
-const char *const kScrollDefaultThumb = ":resources/scrollbar_u.png";
-const char *const kScrollDefaultThumbDown = ":resources/scrollbar_d.png";
-const char *const kScrollDefaultThumbOver = ":resources/scrollbar_o.png";
-const char *const kScrollDefaultLeft = ":resources/scrollleft_u.png";
-const char *const kScrollDefaultLeftDown = ":resources/scrollleft_d.png";
-const char *const kScrollDefaultLeftOver = ":resources/scrollleft_o.png";
-const char *const kScrollDefaultRight = ":resources/scrollright_u.png";
-const char *const kScrollDefaultRightDown = ":resources/scrollright_d.png";
-const char *const kScrollDefaultRightOver = ":resources/scrollright_o.png";
-const char *const kCommonJS = ":resources/common.js";
+const char kGlobalResourcePrefix[] = ":resources/";
+const char kScrollDefaultBackground[] = ":resources/scroll_background.png";
+const char kScrollDefaultThumb[] = ":resources/scrollbar_u.png";
+const char kScrollDefaultThumbDown[] = ":resources/scrollbar_d.png";
+const char kScrollDefaultThumbOver[] = ":resources/scrollbar_o.png";
+const char kScrollDefaultLeft[] = ":resources/scrollleft_u.png";
+const char kScrollDefaultLeftDown[] = ":resources/scrollleft_d.png";
+const char kScrollDefaultLeftOver[] = ":resources/scrollleft_o.png";
+const char kScrollDefaultRight[] = ":resources/scrollright_u.png";
+const char kScrollDefaultRightDown[] = ":resources/scrollright_d.png";
+const char kScrollDefaultRightOver[] = ":resources/scrollright_o.png";
+const char kCommonJS[] = ":resources/common.js";
 
 } // namespace ggadget
 
