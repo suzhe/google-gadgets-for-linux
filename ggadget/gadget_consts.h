@@ -31,6 +31,7 @@ const char *const kOptionsXML      = "options.xml";
 const char *const kStringsXML      = "strings.xml";
 const char *const kGadgetGManifest = "gadget.gmanifest";
 const char *const kGManifestExt    = ".gmanifest";
+const char *const kXMLExt          = ".xml";
 
 /** Internal config keys */
 const char *const kOptionZoom          = "__zoom";

@@ -16,8 +16,7 @@
 
 #include <sys/time.h>
 
-#include <ggadget/element_interface.h>
-#include <ggadget/gadget_host_interface.h>
+#include <ggadget/ggadget.h>
 #include <ggadget/view.h>
 #include <ggadget/xml_dom.h>
 #include <ggadget/xml_http_request.h>
@@ -61,7 +60,9 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
       script_context_(NULL),
       gvw_(NULL),
       gfx_(NULL),
-      onoptionchanged_connection_(NULL) {
+      onoptionchanged_connection_(NULL),
+      details_window_(NULL),
+      details_feedback_handler_(NULL) {
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Only xml based views have standalone script context.
     ScriptRuntimeInterface *script_runtime =
@@ -73,19 +74,21 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
   int debug_mode = VariantValue<int>()(
       options->GetInternalValue(kOptionDebugMode));
   view_ = new View(this, prototype, gadget_host->GetElementFactory(),
-                            debug_mode);
+                   debug_mode);
 
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Continue to initialize the script context.
     onoptionchanged_connection_ = options->ConnectOnOptionChanged(
         NewSlot(view_, &ViewInterface::OnOptionChanged));
-  
+
     // Register global classes into script context.
     script_context_->RegisterClass(
         "DOMDocument", NewSlot(CreateDOMDocument));
     script_context_->RegisterClass(
         "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
-  
+    script_context_->RegisterClass(
+        "DetailsView", NewSlot(DetailsView::CreateInstance));
+
     // Execute common.js to initialize global constants and compatibility
     // adapters.
     std::string common_js_contents;
@@ -114,6 +117,8 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
 GtkViewHost::~GtkViewHost() {
   if (onoptionchanged_connection_)
     onoptionchanged_connection_->Disconnect();
+
+  CloseDetailsView();
 
   delete view_;
   view_ = NULL;
@@ -245,6 +250,39 @@ void GtkViewHost::RunDialog() {
   gtk_widget_show_all(GTK_WIDGET(dialog));
   gtk_dialog_run(dialog);
   gtk_widget_destroy(GTK_WIDGET(dialog));
+}
+
+void GtkViewHost::ShowInDetailsView(const char *title, int flags,
+                                    Slot1<void, int> *feedback_handler) {
+  CloseDetailsView();
+  details_feedback_handler_ = feedback_handler;
+  details_window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  g_signal_connect(details_window_, "destroy",
+                   G_CALLBACK(OnDetailsViewDestroy), this);
+  gtk_window_set_title(GTK_WINDOW(details_window_), title);
+  // TODO: flags.
+  GtkBox *vbox = GTK_BOX(gtk_vbox_new(FALSE, 0));
+  gtk_container_add(GTK_CONTAINER(details_window_), GTK_WIDGET(vbox));
+  gtk_box_pack_start(vbox, GTK_WIDGET(gvw_), TRUE, TRUE, 0);
+  gtk_widget_show_all(details_window_);
+}
+
+void GtkViewHost::OnDetailsViewDestroy(GtkObject *object, gpointer user_data) {
+  GtkViewHost *this_p = static_cast<GtkViewHost *>(user_data);
+  if (this_p->details_window_) {
+    if (this_p->details_feedback_handler_) {
+      (*this_p->details_feedback_handler_)(DETAILS_VIEW_FLAG_NONE);
+      delete this_p->details_feedback_handler_;
+    }
+    this_p->details_window_ = NULL;
+  }
+}
+
+void GtkViewHost::CloseDetailsView() {
+  if (details_window_) {
+    gtk_widget_destroy(details_window_);
+    details_window_ = NULL;
+  }
 }
 
 } // namespace ggadget

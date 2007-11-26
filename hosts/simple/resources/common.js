@@ -289,3 +289,19 @@ function Enumerator(coll) {
 
   last_item_ = this.item();
 }
+
+// Adapters Microsoft var date type.
+Date.prototype.getVarDate = function() {
+  return this;
+}
+
+DetailsView.prototype.detailsViewData = {
+  getValue: function(key) {
+    return this.__details_view_data__ ?
+           this.__details_view_data__[key] : undefined;
+  },
+  putValue: function(key, value) {
+    if (!this.__details_view_data__) this.__details_view_data__ = { };
+    this.__details_view_data__[key] = value;
+  },
+};

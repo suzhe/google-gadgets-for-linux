@@ -21,7 +21,6 @@ namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
 class AudioclipInterface;
-class DetailsViewInterface;
 class ElementFactoryInterface;
 class FileManagerInterface;
 class FrameworkInterface;
@@ -72,6 +71,7 @@ class GadgetHostInterface {
     VIEW_OPTIONS,
     /** Old style options dialog that uses @c ggadget::DisplayWindow. */
     VIEW_OLD_OPTIONS,
+    VIEW_DETAILS,
   };
 
   /**
@@ -102,37 +102,6 @@ class GadgetHostInterface {
    */
   virtual void RemoveMe(bool save_data) = 0;
 
-  enum DetailsViewFlags {
-    DETAILS_VIEW_FLAG_NONE = 0,
-    /** Makes the details view title clickable like a button. */
-    DETAILS_VIEW_FLAG_TOOLBAR_OPEN = 1,
-    /** Adds a negative feedback button in the details view. */
-    DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK = 2,
-    /** Adds a "Remove" button in the details view. */
-    DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
-    /** Adds a button to display the friends list. */
-    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
-  };
-
-  /**
-   * Displays a details view containing the specified details control and the
-   * specified title.  If there is already details view opened, it will be
-   * closed first.
-   * @param details_view
-   * @param title the title of the details view.
-   * @param flags combination of @c DetailsViewFlags.
-   * @param feedback_handler called when user clicks on feedback buttons. The
-   *     handler has one parameter, which specifies @c DetailsViewFlags.
-   */
-  virtual void ShowDetailsView(DetailsViewInterface *details_view,
-                               const char *title, int flags,
-                               Slot1<void, int> *feedback_handler) = 0;
-
-  /**
-   * Hides and destroys the details view that is being shown for this gadget.
-   */
-  virtual void CloseDetailsView() = 0;
-
   enum DebugLevel {
     DEBUG_TRACE,
     DEBUG_WARNING,
@@ -143,8 +112,8 @@ class GadgetHostInterface {
   virtual void DebugOutput(DebugLevel level, const char *message) const = 0;
 
   /**
-   * Returns the current time in microsecond units. This should only
-   * be used for relative time comparisons, to compute elapsed time.
+   * Returns the current time in microsecond units since the Epoch
+   * (00:00:00 UTC, January 1, 1970). 
    */
   virtual uint64_t GetCurrentTime() const = 0;
 

@@ -28,9 +28,14 @@ class SlotWithDefaultArgs : public Slot {
 #ifdef _DEBUG
     ASSERT(slot);
     if (default_args) {
-      for (int i = 0; i < slot->GetArgCount(); i++)
-        ASSERT(default_args[i].type() == Variant::TYPE_VOID ||
-               default_args[i].type() == slot->GetArgTypes()[i]);
+      const Variant::Type *arg_types = slot->GetArgTypes();
+      int arg_count = slot->GetArgCount();
+      for (int i = 0; i < arg_count; i++) {
+        Variant::Type type = default_args[i].type();
+        ASSERT(type == Variant::TYPE_VOID ||
+               type == arg_types[i] ||
+               arg_types[i] == Variant::TYPE_VARIANT);
+      }
     }
 #endif
   }

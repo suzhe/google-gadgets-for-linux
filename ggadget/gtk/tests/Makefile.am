@@ -24,11 +24,11 @@ INCLUDES		= -I$(top_builddir) \
 
 AM_CPPFLAGS		= @CAIRO_CFLAGS@ \
 			  @PANGO_CFLAGS@ \
-			  @GDK2_CFLAGS@
+			  @GTK2_CFLAGS@
 
 LDADD			= @CAIRO_LIBS@ \
 			  @PANGO_LIBS@ \
-			  @GDK2_LIBS@ \
+			  @GTK2_LIBS@ \
 			  $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la

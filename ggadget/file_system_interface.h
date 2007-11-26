@@ -18,7 +18,7 @@
 #define GGADGET_FILE_SYSTEM_INTERFACE_H__
 
 #include <stdint.h>
-#include <time.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 
@@ -229,9 +229,9 @@ class FolderInterface {
   virtual FolderInterface *GetParentFolder() = 0;
   virtual FileAttribute GetAttributes() = 0;
   virtual bool SetAttributes(FileAttribute attributes) = 0;
-  virtual time_t GetDateCreated() = 0;
-  virtual time_t GetDateLastModified() = 0;
-  virtual time_t GetDateLastAccessed() = 0;
+  virtual Date GetDateCreated() = 0;
+  virtual Date GetDateLastModified() = 0;
+  virtual Date GetDateLastAccessed() = 0;
   virtual const char *GetType() = 0;
   virtual bool Delete(bool force) = 0;
   virtual bool Copy(const char *dest, bool overwrite) = 0;
@@ -276,9 +276,9 @@ class FileInterface {
   virtual FolderInterface *GetParentFolder() = 0;
   virtual FileAttribute GetAttributes() = 0;
   virtual bool SetAttributes(FileAttribute attributes) = 0;
-  virtual time_t GetDateCreated() = 0;
-  virtual time_t GetDateLastModified() = 0;
-  virtual time_t GetDateLastAccessed() = 0;
+  virtual Date GetDateCreated() = 0;
+  virtual Date GetDateLastModified() = 0;
+  virtual Date GetDateLastAccessed() = 0;
   virtual int64_t GetSize() = 0;
   virtual const char *GetType() = 0;
   virtual bool Delete(bool force) = 0;

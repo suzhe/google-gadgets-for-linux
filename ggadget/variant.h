@@ -41,6 +41,18 @@ struct JSONString {
 };
 
 /**
+ * Represents a date. The value is the number of milliseconds since the Epoch
+ * (00:00:00 UTC, January 1, 1970).
+ */ 
+struct Date {
+  explicit Date(uint64_t a_value) : value(a_value) { }
+  bool operator==(const Date &another) const {
+    return another.value == value;
+  }
+  uint64_t value;
+};
+
+/**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
  * <code>Variant</code>s are immutable.
@@ -71,10 +83,8 @@ class Variant {
     TYPE_CONST_SCRIPTABLE,
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
-    /** <code>void *</code> type. Only for C++ code, not for script. */
-    TYPE_ANY,
-    /** const version of @c TYPE_ANY. */
-    TYPE_CONST_ANY,
+    /** @c Date type. */
+    TYPE_DATE,
     /**
      * @c TYPE_VARIANT is only used to indicate a parameter or a return type
      * can accept any above type.  A @c Variant with this type can only act
@@ -247,19 +257,11 @@ class Variant {
   }
 
   /**
-   * Construct a @c Variant with a <code>void *</code> value.
-   * It should be only used for C++ APIs, not for scriptable APIs.
+   * Construct a @c Variant with a @c Date value.
+   * The type of the constructed @c Variant is @c TYPE_DATE
    */
-  explicit Variant(void *value) : type_(TYPE_ANY) {
-    v_.any_value_ = value;
-  }
-
-  /**
-   * Construct a @c Variant with a <code>const void *</code> value.
-   * It should be only used for C++ APIs, not for scriptable APIs.
-   */
-  explicit Variant(const void *value) : type_(TYPE_CONST_ANY) {
-    v_.const_any_value_ = value;
+  explicit Variant(const Date &value) : type_(TYPE_DATE) {
+    v_.int64_value_ = static_cast<int64_t>(value.value);
   }
 
   ~Variant();
@@ -296,8 +298,6 @@ class Variant {
     ScriptableInterface *scriptable_value_;
     const ScriptableInterface *const_scriptable_value_;
     Slot *slot_value_;
-    void *any_value_;
-    const void *const_any_value_;
   } v_;
 
   template <typename T> friend struct VariantType;
@@ -368,8 +368,8 @@ SPECIALIZE_VARIANT_TYPE(const UTF16Char *, TYPE_UTF16STRING)
 SPECIALIZE_VARIANT_TYPE(UTF16String, TYPE_UTF16STRING)
 SPECIALIZE_VARIANT_TYPE(const UTF16String &, TYPE_UTF16STRING)
 SPECIALIZE_VARIANT_TYPE(Slot *, TYPE_SLOT)
-SPECIALIZE_VARIANT_TYPE(void *, TYPE_ANY)
-SPECIALIZE_VARIANT_TYPE(const void *, TYPE_CONST_ANY)
+SPECIALIZE_VARIANT_TYPE(Date, TYPE_DATE)
+SPECIALIZE_VARIANT_TYPE(const Date &, TYPE_DATE)
 SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
 SPECIALIZE_VARIANT_TYPE(const Variant &, TYPE_VARIANT)
 
@@ -435,7 +435,6 @@ SPECIALIZE_VARIANT_VALUE(bool, bool_value_)
 SPECIALIZE_VARIANT_VALUE(float, double_value_)
 SPECIALIZE_VARIANT_VALUE(double, double_value_)
 SPECIALIZE_VARIANT_VALUE(Slot *, slot_value_)
-SPECIALIZE_VARIANT_VALUE(void *, any_value_)
 
 /**
  * Get the value of a @c Variant.
@@ -472,18 +471,6 @@ struct VariantValue<const std::string &> {
   std::string operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     return v.v_.string_value_ ? *v.v_.string_value_ : std::string();
-  }
-};
-
-/**
- * Get the value of a @c Variant.
- * Specialized for @c JSONString type.
- */
-template <>
-struct VariantValue<JSONString> {
-  JSONString operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_JSON);
-    return JSONString(v.v_.string_value_ ? *v.v_.string_value_ : std::string());
   }
 };
 
@@ -527,6 +514,18 @@ struct VariantValue<const UTF16String &> {
 
 /**
  * Get the value of a @c Variant.
+ * Specialized for @c JSONString type.
+ */
+template <>
+struct VariantValue<JSONString> {
+  JSONString operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_JSON);
+    return JSONString(v.v_.string_value_ ? *v.v_.string_value_ : std::string());
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
  * Specialized for <code>const JSONString &</code> type.
  */
 template <>
@@ -539,13 +538,25 @@ struct VariantValue<const JSONString &> {
 
 /**
  * Get the value of a @c Variant.
- * Speccialized for <code>const void *</code> type.
+ * Specialized for @c Date type.
  */
 template <>
-struct VariantValue<const void *> {
-  const void *operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_ANY || v.type_ == Variant::TYPE_CONST_ANY);
-    return v.v_.const_any_value_;
+struct VariantValue<Date> {
+  Date operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_DATE);
+    return Date(static_cast<uint64_t>(v.v_.int64_value_));
+  }
+};
+
+/**
+ * Get the value of a @c Variant.
+ * Speccialized for <code>const Date &</code> type.
+ */
+template <>
+struct VariantValue<const Date &> {
+  Date operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_DATE);
+    return Date(static_cast<uint64_t>(v.v_.int64_value_));
   }
 };
 

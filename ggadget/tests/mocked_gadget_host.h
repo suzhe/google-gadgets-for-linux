@@ -35,10 +35,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
       ViewType type, ggadget::ScriptableInterface *prototype) { return NULL; }
   virtual void SetPluginFlags(int plugin_flags) { }
   virtual void RemoveMe(bool save_data) { }
-  virtual void ShowDetailsView(ggadget::DetailsViewInterface *details_view,
-                               const char *title, int flags,
-                               ggadget::Slot1<void, int> *feedback_handler) { }
-  virtual void CloseDetailsView() { }
   virtual void DebugOutput(DebugLevel level, const char *message) const { }
   virtual uint64_t GetCurrentTime() const { return 0; }
   virtual int RegisterTimer(unsigned ms, TimerCallback *callback) { return 0; }

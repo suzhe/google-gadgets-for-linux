@@ -21,6 +21,7 @@
 
 namespace ggadget {
 
+template <typename R, typename P1> class Slot1;
 class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
@@ -85,6 +86,34 @@ class ViewHostInterface {
 
   /** Run the view in a dialog with OK and Cancel buttons. */
   virtual void RunDialog() = 0;
+
+  enum DetailsViewFlags {
+    DETAILS_VIEW_FLAG_NONE = 0,
+    /** Makes the details view title clickable like a button. */
+    DETAILS_VIEW_FLAG_TOOLBAR_OPEN = 1,
+    /** Adds a negative feedback button in the details view. */
+    DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK = 2,
+    /** Adds a "Remove" button in the details view. */
+    DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
+    /** Adds a button to display the friends list. */
+    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
+  };
+
+  /**
+   * Show the view in a details view.
+   * @param title the title of the details view.
+   * @param flags combination of @c DetailsViewFlags.
+   * @param feedback_handler called when user clicks on feedback buttons. The
+   *     handler has one parameter, which specifies @c DetailsViewFlags.
+   */
+  virtual void ShowInDetailsView(const char *title, int flags,
+                                 Slot1<void, int> *feedback_handler) = 0;
+
+  /**
+   * Close the details view if it is opened.
+   */
+  virtual void CloseDetailsView() = 0;
+
 };
 
 } // namespace ggadget

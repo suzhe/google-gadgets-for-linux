@@ -87,6 +87,13 @@ class JSScriptContext : public ScriptContextInterface {
   virtual void LockObject(ScriptableInterface *object);
   /** @see ScriptContextInterface::UnlockObject() */
   virtual void UnlockObject(ScriptableInterface *object);
+  /** @see ScriptContextInterface::AssignFromContext() */
+  virtual bool AssignFromContext(ScriptableInterface *dest_object,
+                                 const char *dest_object_expr,
+                                 const char *dest_property,
+                                 ScriptContextInterface *src_context,
+                                 ScriptableInterface *src_object,
+                                 const char *src_expr);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);

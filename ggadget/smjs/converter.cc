@@ -20,6 +20,7 @@
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/scriptable_interface.h>
+#include <ggadget/string_utils.h>
 #include <ggadget/unicode_utils.h>
 #include "converter.h"
 #include "js_function_slot.h"
@@ -252,6 +253,35 @@ static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *wrapper,
   return result;
 }
 
+static JSBool ConvertJSToNativeDate(JSContext *cx, jsval js_val,
+                                    Variant *native_val) {
+  if (JSVAL_IS_VOID(js_val)) {
+    // Special rule to keep compatibile with Windows version.
+    *native_val = Variant(Date(0));
+    return JS_TRUE;
+  }
+
+  if (!JSVAL_IS_OBJECT(js_val) || JSVAL_IS_NULL(js_val))
+    return JS_FALSE;
+
+  JSObject *obj = JSVAL_TO_OBJECT(js_val);
+  ASSERT(obj);
+  JSClass *cls = JS_GET_CLASS(cx, obj);
+  if (!cls || strcmp("Date", cls->name) != 0)
+    return JS_FALSE;
+
+  jsval rval;
+  if (!JS_CallFunctionName(cx, obj, "getTime", 0, NULL, &rval))
+    return JS_FALSE;
+
+  Variant int_val;
+  if (!ConvertJSToNativeInt(cx, js_val, &int_val))
+    return JS_FALSE;
+
+  *native_val = Variant(Date(VariantValue<uint64_t>()(int_val)));
+  return JS_TRUE;
+}
+
 static JSBool ConvertJSToJSON(JSContext *cx, jsval js_val,
                               Variant *native_val) {
   std::string json;
@@ -272,15 +302,13 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
     return ConvertJSToNativeDouble(cx, js_val, native_val);
   if (JSVAL_IS_STRING(js_val))
     return ConvertJSToNativeString(cx, js_val, native_val);
-  if (JSVAL_IS_OBJECT(js_val))
+  if (JSVAL_IS_OBJECT(js_val)) {
+    if (ConvertJSToNativeDate(cx, js_val, native_val))
+      return JS_TRUE;
     return ConvertJSToScriptable(cx, js_val, native_val);
+  }
   // Conversion from JS Function to native Slot is not supported in this
   // function.
-  return JS_FALSE;
-}
-
-JSBool ConvertJSToNativeInvalid(JSContext *cx, jsval js_val,
-                                Variant *native_val) {
   return JS_FALSE;
 }
 
@@ -307,10 +335,8 @@ JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *wrapper,
       return ConvertJSToScriptable(cx, js_val, native_val);
     case Variant::TYPE_SLOT:
       return ConvertJSToSlot(cx, wrapper, prototype, js_val, native_val);
-    case Variant::TYPE_ANY:
-    case Variant::TYPE_CONST_ANY:
-      JS_ReportError(cx, "Script adapter doesn't support void * type");
-      return JS_FALSE;
+    case Variant::TYPE_DATE:
+      return ConvertJSToNativeDate(cx, js_val, native_val);
     case Variant::TYPE_VARIANT:
       return ConvertJSToNativeVariant(cx, js_val, native_val);
     default:
@@ -523,6 +549,16 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
   return result;
 }
 
+static JSBool ConvertNativeToJSDate(JSContext *cx,
+                                    const Variant &native_val,
+                                    jsval *js_val) {
+  std::string new_date_script =
+      StringPrintf("new Date(%ju)", VariantValue<Date>()(native_val).value);
+  return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
+                           new_date_script.c_str(), new_date_script.length(),
+                           "", 1, js_val);
+}
+
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
@@ -563,10 +599,8 @@ JSBool ConvertNativeToJS(JSContext *cx,
       return JS_FALSE;
     case Variant::TYPE_SLOT:
       return ConvertNativeToJSFunction(cx, native_val, js_val);
-    case Variant::TYPE_ANY:
-    case Variant::TYPE_CONST_ANY:
-      JS_ReportError(cx, "Don't pass (const) void * to JavaScript");
-      return JS_FALSE;
+    case Variant::TYPE_DATE:
+      return ConvertNativeToJSDate(cx, native_val, js_val);
     case Variant::TYPE_VARIANT:
       // Normally there is no real value of this type, so convert it to void.
       return ConvertNativeToJSVoid(cx, native_val, js_val);

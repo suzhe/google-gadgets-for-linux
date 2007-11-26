@@ -26,6 +26,7 @@ LIBXML2_CONFIG(2.6.20 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
+  details_view.cc
   display_window.cc
   element_factory.cc
   elements.cc

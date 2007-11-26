@@ -25,6 +25,7 @@
 #ifdef _DEBUG
 // Uncomment the following to debug wrapper memory.
 // #define DEBUG_JS_WRAPPER_MEMORY
+// #define DEBUG_FORCE_GC
 #endif
 
 namespace ggadget {
@@ -93,15 +94,17 @@ void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
   DLOG("Wrap: cx=%p policy=%d jsobj=%p wrapper=%p scr=%p(CLASS_ID=%jx)",
        js_context_, ownership_policy_, js_object_, this,
        scriptable_, scriptable_->GetClassId());
+#ifdef DEBUG_FORCE_GC
   // This GC forces many hidden memory allocation errors to expose.
   DLOG("ForceGC");
   JS_GC(js_context_);
+#endif
 #endif
 }
 
 JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
                                ScriptableInterface **scriptable) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   if (wrapper) {
     *scriptable = wrapper->scriptable_;
     return JS_TRUE;
@@ -113,7 +116,8 @@ JSBool NativeJSWrapper::Unwrap(JSContext *cx, JSObject *obj,
 // Get the NativeJSWrapper from a JS wrapped ScriptableInterface object.
 // The NativeJSWrapper pointer is stored in the object's private slot.
 NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
-                                                   JSObject *js_object) {
+                                                   JSObject *js_object,
+                                                   bool check_context) {
   if (js_object) {
     JSClass *cls = JS_GET_CLASS(cx, js_object);
     if (cls && cls->getProperty == wrapper_js_class_.getProperty &&
@@ -129,7 +133,8 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
 
       ASSERT(wrapper && wrapper->js_object_ == js_object);
       // The current context may be different from wrapper's context during
-      // GC marking.
+      // GC marking and collecting.
+      ASSERT(!check_context || wrapper->js_context_ == cx);
       return wrapper;
     }
   }
@@ -152,7 +157,7 @@ JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
                                         jsval *rval) {
   // In this case, the real self object being called is at argv[-2].
   JSObject *self_object = JSVAL_TO_OBJECT(argv[-2]);
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, self_object);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, self_object, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
           wrapper->CallSelf(argc, argv, rval));
@@ -161,7 +166,7 @@ JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
 JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
                                           uintN argc, jsval *argv,
                                           jsval *rval) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
           wrapper->CallMethod(argc, argv, rval));
@@ -169,63 +174,66 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyDefault(id, vp));
 }
 
 JSBool NativeJSWrapper::SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyDefault(id, *vp));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyByIndex(id, vp));
 }
 
 JSBool NativeJSWrapper::SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyByIndex(id, *vp));
 }
 
 JSBool NativeJSWrapper::GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyByName(id, vp));
 }
 
 JSBool NativeJSWrapper::SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyByName(id, *vp));
 }
 
 JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
                                                jsval id) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, true);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->ResolveProperty(id));
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
   if (wrapper) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
     DLOG("Finalize: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
          cx, wrapper->ownership_policy_, obj, wrapper, wrapper->scriptable_);
 #endif
 
-    if (!wrapper->deleted_)
-      JSScriptContext::FinalizeNativeJSWrapper(cx, wrapper);
+    if (!wrapper->deleted_) {
+      // The current context may be different from wrapper's context during
+      // GC collecting. Use the wrapper's context instead.
+      JSScriptContext::FinalizeNativeJSWrapper(wrapper->js_context_, wrapper);
+    }
 
     for (JSFunctionSlots::iterator it = wrapper->js_function_slots_.begin();
          it != wrapper->js_function_slots_.end(); ++it)
@@ -235,7 +243,9 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
 }
 
 uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  // The current context may be different from wrapper's context during
+  // GC marking.
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj, false);
   if (wrapper && !wrapper->deleted_)
     wrapper->Mark();
   return 0;
@@ -270,9 +280,11 @@ void NativeJSWrapper::OnDelete() {
   JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
 
 #ifdef DEBUG_JS_WRAPPER_MEMORY
+#ifdef DEBUG_FORCE_GC
   // This GC forces many hidden memory allocation errors to expose.
   DLOG("ForceGC");
   JS_GC(js_context_);
+#endif
 #endif
 }
 

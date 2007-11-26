@@ -34,6 +34,8 @@ gglinclude_HEADERS	= anchor_element.h \
 			  color.h \
 			  common.h \
 			  combobox_element.h \
+			  content_item.h \
+			  details_view_info.h \
 			  display_window.h \
 			  div_element.h \
 			  edit_element.h \
@@ -103,6 +105,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  button_element.cc \
 			  checkbox_element.cc \
 			  combobox_element.cc \
+			  details_view.cc \
 			  display_window.cc \
 			  div_element.cc \
 			  edit_element.cc \

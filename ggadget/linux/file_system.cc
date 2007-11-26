@@ -187,19 +187,19 @@ class Folder : public FolderInterface {
     return false;
   }
 
-  virtual time_t GetDateCreated() {
+  virtual Date GetDateCreated() {
     // TODO:
-    return 0;
+    return Date(0);
   }
 
-  virtual time_t GetDateLastModified() {
+  virtual Date GetDateLastModified() {
     // TODO:
-    return 0;
+    return Date(0);
   }
 
-  virtual time_t GetDateLastAccessed() {
+  virtual Date GetDateLastAccessed() {
     // TODO:
-    return 0;
+    return Date(0);
   }
 
   virtual const char *GetType() {
@@ -323,19 +323,19 @@ class File : public FileInterface {
     return false;
   }
 
-  virtual time_t GetDateCreated() {
+  virtual Date GetDateCreated() {
     // TODO:
-    return 0;
+    return Date(0);
   }
     
-  virtual time_t GetDateLastModified() {
+  virtual Date GetDateLastModified() {
     // TODO:
-    return 0;
+    return Date(0);
   }
     
-  virtual time_t GetDateLastAccessed() {
+  virtual Date GetDateLastAccessed() {
     // TODO:
-    return 0;
+    return Date(0);
   }
     
   virtual int64_t GetSize() {

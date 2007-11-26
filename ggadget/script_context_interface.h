@@ -96,6 +96,31 @@ class ScriptContextInterface {
    */
   virtual void UnlockObject(ScriptableInterface *object) = 0;
 
+  /**
+   * Evaluates an expression in another context, and assigns the result to
+   * a property of an object in this context.
+   *
+   * @param dest_object the object against which to evaluate
+   *     @a dest_object_expr. If it is @c NULL, the global object of this
+   *     context will be used to evaluate @c dest_object_expr.
+   * @param dest_object_expr an expression to evaluate in this context that
+   *    results an object whose property is to be assigned. If it is empty or
+   *    @c NULL, @a dest_object (or global object if @a dest_object_expr is
+   *    @c NULL) will be the destination object.
+   * @param dest_property the name of the destination property to be assigned.
+   * @param src_context source context in which to evaluate @a src_expr.
+   * @param src_object the source object against which to evaluate @c src_expr.
+   *    If it is @c NULL, the global object of @a src_context will be used.
+   * @param src_expr the expression to evaluate.
+   * @return @c true if succeeded.
+   */
+  virtual bool AssignFromContext(ScriptableInterface *dest_object,
+                                 const char *dest_object_expr,
+                                 const char *dest_property,
+                                 ScriptContextInterface *src_context,
+                                 ScriptableInterface *src_object,
+                                 const char *src_expr) = 0;
+
 };
 
 } // namespace ggadget

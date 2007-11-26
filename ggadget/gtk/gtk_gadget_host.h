@@ -29,30 +29,25 @@ class GtkMenuImpl;
 /**
  * An implementation of @c GadgetHostInterface for the simple gadget host.
  */
-class GtkGadgetHost : public ggadget::GadgetHostInterface {
+class GtkGadgetHost : public GadgetHostInterface {
  public:
-  GtkGadgetHost(ggadget::ScriptRuntimeInterface *script_runtime,
-                ggadget::FrameworkInterface *framework,
+  GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
+                FrameworkInterface *framework,
                 bool composited);
   virtual ~GtkGadgetHost();
 
-  virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
-      ScriptRuntimeType type);
-  virtual ggadget::ElementFactoryInterface *GetElementFactory();
-  virtual ggadget::FileManagerInterface *GetFileManager();
-  virtual ggadget::FileManagerInterface *GetGlobalFileManager();
-  virtual ggadget::OptionsInterface *GetOptions();
-  virtual ggadget::FrameworkInterface *GetFramework();
-  virtual ggadget::GadgetInterface *GetGadget();
-  virtual ggadget::ViewHostInterface *NewViewHost(
-      ViewType type, ggadget::ScriptableInterface *prototype);
+  virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type);
+  virtual ElementFactoryInterface *GetElementFactory();
+  virtual FileManagerInterface *GetFileManager();
+  virtual FileManagerInterface *GetGlobalFileManager();
+  virtual OptionsInterface *GetOptions();
+  virtual FrameworkInterface *GetFramework();
+  virtual GadgetInterface *GetGadget();
+  virtual ViewHostInterface *NewViewHost(ViewType type,
+                                         ScriptableInterface *prototype);
 
   virtual void SetPluginFlags(int plugin_flags);
   virtual void RemoveMe(bool save_data);
-  virtual void ShowDetailsView(ggadget::DetailsViewInterface *details_view,
-                               const char *title, int flags,
-                               ggadget::Slot1<void, int> *feedback_handler);
-  virtual void CloseDetailsView();
 
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual uint64_t GetCurrentTime() const;
@@ -65,12 +60,12 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
   virtual const char *BrowseForFile(const char *filter);
-  virtual ggadget::GadgetHostInterface::FilesInterface *BrowseForFiles(
+  virtual GadgetHostInterface::FilesInterface *BrowseForFiles(
       const char *filter);
   virtual void GetCursorPos(int *x, int *y) const;
   virtual void GetScreenSize(int *width, int *height) const;
   virtual const char *GetFileIcon(const char *filename) const;
-  virtual ggadget::AudioclipInterface *CreateAudioclip(const char *src);
+  virtual AudioclipInterface *CreateAudioclip(const char *src);
 
   /**
    * Loads a gadget from file system and hosts it.
@@ -108,13 +103,13 @@ class GtkGadgetHost : public ggadget::GadgetHostInterface {
   static void OnAboutActivate(GtkMenuItem *menu_item, gpointer user_data);
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
-  ggadget::ScriptRuntimeInterface *script_runtime_;
-  ggadget::ElementFactoryInterface *element_factory_;
-  ggadget::FileManagerInterface *global_file_manager_;
-  ggadget::FileManagerInterface *file_manager_;
-  ggadget::OptionsInterface *options_;
-  ggadget::FrameworkInterface *framework_;
-  ggadget::GadgetInterface *gadget_;
+  ScriptRuntimeInterface *script_runtime_;
+  ElementFactoryInterface *element_factory_;
+  FileManagerInterface *global_file_manager_;
+  FileManagerInterface *file_manager_;
+  OptionsInterface *options_;
+  FrameworkInterface *framework_;
+  GadgetInterface *gadget_;
 
   int plugin_flags_;
   typedef std::map<int, CallbackData *> CallbackMap;
