@@ -39,4 +39,12 @@ ggl_simple_LDADD	= @CAIRO_LIBS@ \
 			  $(top_builddir)/ggadget/linux/libggadget-linux@GGL_EPOCH@.la
 
 ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
+
+
+# TODO: install it to proper directory.
+noinst_DATA = ggl_resources.bin
+
+ggl_resources.bin: resources
+	(cd $<; $(ZIP) -r -u $(abs_builddir)/$@ *.png *.js)
+
 endif

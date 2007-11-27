@@ -35,7 +35,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  common.h \
 			  combobox_element.h \
 			  content_item.h \
-			  details_view_info.h \
+			  details_view.h \
 			  display_window.h \
 			  div_element.h \
 			  edit_element.h \
