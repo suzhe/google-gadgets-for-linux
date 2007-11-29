@@ -185,4 +185,24 @@ std::string EncodeJavaScriptString(const UTF16Char *source) {
   return dest;
 }
 
+bool SplitString(const std::string &source, const std::string &separator,
+                 std::string *result_left, std::string *result_right) {
+  std::string::size_type pos = source.find(separator);
+  if (pos == source.npos) {
+    if (result_left && result_left != &source)
+      *result_left = source;
+    if (result_right)
+      result_right->clear();
+    return false;
+  }
+
+  // Make a copy to allow results overwrite source.
+  std::string source_copy(source);
+  if (result_left)
+    *result_left = source_copy.substr(0, pos);
+  if (result_right)
+    *result_right = source_copy.substr(pos + separator.length());
+  return true;
+}
+
 }  // namespace ggadget

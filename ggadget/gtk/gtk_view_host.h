@@ -66,7 +66,7 @@ class GtkViewHost : public ViewHostInterface {
   virtual void QueueDraw();
   virtual bool GrabKeyboardFocus();
 
-  virtual void SetResizeable();
+  virtual void SetResizable(ViewInterface::ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
   virtual void SetCursor(ElementInterface::CursorType type);
@@ -74,6 +74,10 @@ class GtkViewHost : public ViewHostInterface {
   virtual void ShowInDetailsView(const char *title, int flags,
                                  Slot1<void, int> *feedback_handler);
   virtual void CloseDetailsView();
+
+  virtual void Alert(const char *message);
+  virtual bool Confirm(const char *message);
+  virtual std::string Prompt(const char *message, const char *default_value);
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 

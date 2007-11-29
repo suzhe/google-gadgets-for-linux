@@ -158,7 +158,7 @@ void GtkViewHost::SwitchWidget(GadgetViewWidget *gvw) {
 }
 #endif
 
-void GtkViewHost::SetResizeable() {
+void GtkViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   // TODO:
 }
 
@@ -281,6 +281,72 @@ void GtkViewHost::CloseDetailsView() {
     gtk_widget_destroy(details_window_);
     details_window_ = NULL;
   }
+}
+
+void GtkViewHost::Alert(const char *message) {
+  GtkWidget *dialog = gtk_message_dialog_new(NULL,
+                                             GTK_DIALOG_MODAL,
+                                             GTK_MESSAGE_INFO,
+                                             GTK_BUTTONS_OK,
+                                             "%s", message);
+  gtk_window_set_title(GTK_WINDOW(dialog), view_->GetCaption());
+  gtk_dialog_run(GTK_DIALOG(dialog));
+  gtk_widget_destroy(dialog);
+}
+
+bool GtkViewHost::Confirm(const char *message) {
+  GtkWidget *dialog = gtk_message_dialog_new(NULL,
+                                             GTK_DIALOG_MODAL,
+                                             GTK_MESSAGE_QUESTION,
+                                             GTK_BUTTONS_YES_NO,
+                                             "%s", message);
+  gtk_window_set_title(GTK_WINDOW(dialog), view_->GetCaption());
+  gint result = gtk_dialog_run(GTK_DIALOG(dialog));
+  gtk_widget_destroy(dialog);
+  return result == GTK_RESPONSE_YES;
+}
+
+std::string GtkViewHost::Prompt(const char *message,
+                                const char *default_value) {
+  GtkWidget *dialog = gtk_dialog_new_with_buttons(
+      view_->GetCaption(), NULL,
+      static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR),
+      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+      GTK_STOCK_OK, GTK_RESPONSE_OK,
+      NULL);
+  gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+  gtk_window_set_skip_taskbar_hint(GTK_WINDOW(dialog), TRUE);
+  gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+
+  GtkWidget *image = gtk_image_new_from_stock(GTK_STOCK_DIALOG_QUESTION,
+                                              GTK_ICON_SIZE_DIALOG);
+  GtkWidget *label = gtk_label_new(message);
+  gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+  gtk_label_set_selectable(GTK_LABEL(label), TRUE);
+  gtk_misc_set_alignment(GTK_MISC(label), 0.0, 1.0);
+  GtkWidget *entry = gtk_entry_new();
+  if (default_value)
+    gtk_entry_set_text(GTK_ENTRY(entry), default_value);
+
+  GtkWidget *hbox = gtk_hbox_new(FALSE, 12);
+  GtkWidget *vbox = gtk_vbox_new(FALSE, 12);
+  gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(vbox), entry, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(hbox), vbox, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox, FALSE, FALSE, 0);
+
+  gtk_container_set_border_width(GTK_CONTAINER(hbox), 10);
+  gtk_container_set_border_width(
+      GTK_CONTAINER(GTK_DIALOG(dialog)->action_area), 10);
+
+  gtk_widget_show_all(dialog);
+  gint result = gtk_dialog_run(GTK_DIALOG(dialog));
+  std::string text;
+  if (result == GTK_RESPONSE_OK)
+    text = gtk_entry_get_text(GTK_ENTRY(entry));
+  gtk_widget_destroy(dialog);
+  return text;
 }
 
 } // namespace ggadget

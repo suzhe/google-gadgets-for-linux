@@ -97,6 +97,9 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual void OnOptionChanged(const char *name);
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
+  virtual void Alert(const char *message);
+  virtual bool Confirm(const char *message);
+  virtual std::string Prompt(const char *message, const char *default_value);
 
   virtual Image *LoadImage(const Variant &src, bool is_mask);
   virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);

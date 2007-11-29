@@ -246,7 +246,7 @@ GdkPixbuf *CairoGraphics::LoadPixbufFromData(const char *img_bytes,
 
   pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
   if (pixbuf) {
-    gdk_pixbuf_ref(pixbuf);
+    g_object_ref(pixbuf);
   }
 
 exit:

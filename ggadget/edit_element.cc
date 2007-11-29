@@ -45,16 +45,16 @@ class EditElement::Impl {
 EditElement::EditElement(ElementInterface *parent,
                          ViewInterface *view,
                          const char *name)
-    : DivElement(parent, view, "edit", name, false),
+    : BasicElement(parent, view, "edit", name, false),
       impl_(new Impl(this)) {
-  SetAutoscroll(true);
+  // SetAutoscroll(true);
   SetEnabled(true);
-
+/*
   RegisterProperty("background",
                    NewSlot(implicit_cast<DivElement *>(this),
                            &DivElement::GetBackground),
                    NewSlot(implicit_cast<DivElement *>(this),
-                           &DivElement::SetBackground));
+                           &DivElement::SetBackground)); */
   RegisterProperty("bold",
                    NewSlot(this, &EditElement::IsBold),
                    NewSlot(this, &EditElement::SetBold));
@@ -100,7 +100,7 @@ void EditElement::DoDraw(CanvasInterface *canvas,
                          const CanvasInterface *children_canvas) {
   // TODO: Draw the edit into a canvas and pass the canvas as children_canvas
   // to DivElement::DoDraw().
-  DivElement::DoDraw(canvas, children_canvas);
+  // BasicElement::DoDraw(canvas, children_canvas);
 }
 
 bool EditElement::IsBold() const {
@@ -204,11 +204,11 @@ void EditElement::SetWordWrap(bool wrap) {
 
 bool EditElement::OnMouseEvent(MouseEvent *event, bool direct,
                               ElementInterface **fired_element) {
-  return DivElement::OnMouseEvent(event, direct, fired_element);
+  return BasicElement::OnMouseEvent(event, direct, fired_element);
 }
 
 bool EditElement::OnKeyEvent(KeyboardEvent *event) {
-  return DivElement::OnKeyEvent(event);
+  return BasicElement::OnKeyEvent(event);
 }
 
 ElementInterface *EditElement::CreateInstance(ElementInterface *parent,

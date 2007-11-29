@@ -174,16 +174,6 @@ class GadgetHostInterface {
   /** Remove a previously installed font. */
   virtual bool UnloadFont(const char *filename) = 0;
 
-  /**
-   * Displays the standard browse for file dialog and returns the name.
-   * @param filter in the form "Display Name|List of Types", and multiple
-   *     entries can be added to it. For example:
-   *     "Music Files|*.mp3;*.wma|All Files|*.*".
-   * @return the selected file or an empty string if the dialog is cancelled.
-   *     The caller should not free the pointer it returned.
-   */
-  virtual const char *BrowseForFile(const char *filter) = 0;
-
   /** Interface for enumerating the files returned @c BrowseForFiles(). */
   class FilesInterface {
    protected:
@@ -210,11 +200,12 @@ class GadgetHostInterface {
    * @param filter in the form "Display Name|List of Types", and multiple
    *     entries can be added to it. For example:
    *     "Music Files|*.mp3;*.wma|All Files|*.*".
+   * @param multiple @c true if allow selection of multiple files.
    * @return the selected files or an empty collection if the dialog is
    *     cancelled. The caller should call @c Destroy() to the returned
    *     pointer after use.
    */
-  virtual FilesInterface *BrowseForFiles(const char *filter) = 0;
+  virtual FilesInterface *BrowseForFiles(const char *filter, bool multiple) = 0;
 
   /** Retrieves the position of the cursor. */
   virtual void GetCursorPos(int *x, int *y) const = 0;

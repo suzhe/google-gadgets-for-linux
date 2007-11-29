@@ -316,6 +316,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       }
     }
 
+    main_view_host_->GetView()->SetCaption(GetManifestInfo(kManifestName));
     if (!main_view_host_->GetView()->InitFromFile(kMainXML)) {
       LOG("Failed to setup the main view");
       return false;

@@ -114,6 +114,22 @@ bool IsValidURLChar(unsigned char c);
  */
 std::string EncodeJavaScriptString(const UTF16Char *source);
 
+/**
+ * Splits a string into two parts. 
+ * @param source the source string to split.
+ * @param separator the source string will be splitted at the first occurance
+ *     of the separator.
+ * @param[out] result_left the part before the separator. If separator is not
+ *     found, result_left will be set to source. Can be @c NULL if the caller
+ *     doesn't need it.
+ * @param[out] result_right the part after the separator. If seperator is not
+ *     found, result_right will be cleared. Can be @c NULL if the caller doesn't
+ *     need it.
+ * @return @c true if separator found.
+ */
+bool SplitString(const std::string &source, const std::string &separator,
+                 std::string *result_left, std::string *result_right);
+
 } // namespace ggadget
 
 #endif // GGADGET_STRING_UTILS_H__
