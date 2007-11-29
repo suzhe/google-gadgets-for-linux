@@ -31,7 +31,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual const ggadget::GraphicsInterface *GetGraphics() const { return NULL; }
   virtual void QueueDraw() { }
   virtual bool GrabKeyboardFocus() { return false; }
-  virtual void SetResizeable() { }
+  virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
   virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
   virtual void SetCursor(ggadget::ElementInterface::CursorType type) { }
@@ -40,6 +40,11 @@ class MockedViewHost : public ggadget::ViewHostInterface {
       const char *title, int flags,
       ggadget::Slot1<void, int> *feedback_handler) { }
   virtual void CloseDetailsView() { }
+  virtual void Alert(const char *message) { }
+  virtual bool Confirm(const char *message) { return false; }
+  virtual std::string Prompt(const char *message, const char *default_value) {
+    return std::string();
+  }
 };
 
 #endif // GGADGET_TESTS_MOCKED_VIEW_HOST_H__

@@ -41,7 +41,7 @@ struct JSONString {
 };
 
 /**
- * Represents a date. The value is the number of milliseconds since the Epoch
+ * Represents a date. The value is the number of microseconds since the Epoch
  * (00:00:00 UTC, January 1, 1970).
  */ 
 struct Date {

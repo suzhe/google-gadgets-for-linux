@@ -1229,9 +1229,11 @@ void BasicElement::SetTooltip(const char *tooltip) {
 }
 
 void BasicElement::Focus() {
+  impl_->view_->SetFocus(this);
 }
 
 void BasicElement::KillFocus() {
+  impl_->view_->SetFocus(NULL);
 }
 
 const CanvasInterface *BasicElement::Draw(bool *changed) {

@@ -33,14 +33,15 @@ class Texture::Impl {
     if (name[0] == '#' && (name_len == 7 || name_len == 9)) {
       int r = 0, g = 0, b = 0;
       int alpha = 255;
-      int result;
       if (name_len == 7) {
-        result = sscanf(name + 1, "%02x%02x%02x", &r, &g, &b);
+        int result = sscanf(name + 1, "%02x%02x%02x", &r, &g, &b);
+        if (result < 3)
+          LOG("Invalid color: %s", name);
       } else {
-        result = sscanf(name + 1, "%02x%02x%02x%02x", &alpha, &r, &g, &b);
+        int result = sscanf(name + 1, "%02x%02x%02x%02x", &alpha, &r, &g, &b);
+        if (result < 4)
+          LOG("Invalid color: %s", name);
       }
-      if (result < 3)
-        LOG("Invalid color: %s", name);
       color_ = Color(r / 255.0, g / 255.0, b / 255.0);
       opacity_ = alpha / 255.0;
     } else {

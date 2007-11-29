@@ -278,7 +278,8 @@ static JSBool ConvertJSToNativeDate(JSContext *cx, jsval js_val,
   if (!ConvertJSToNativeInt(cx, js_val, &int_val))
     return JS_FALSE;
 
-  *native_val = Variant(Date(VariantValue<uint64_t>()(int_val)));
+  // JavaScript times are in milliseconds, our Dates are in microseconds.
+  *native_val = Variant(Date(VariantValue<uint64_t>()(int_val) * 1000));
   return JS_TRUE;
 }
 
@@ -553,7 +554,9 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
                                     const Variant &native_val,
                                     jsval *js_val) {
   std::string new_date_script =
-      StringPrintf("new Date(%ju)", VariantValue<Date>()(native_val).value);
+      // JavaScript times are in milliseconds, our Dates are in microseconds.
+      StringPrintf("new Date(%ju)",
+                   VariantValue<Date>()(native_val).value / 1000);
   return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
                            new_date_script.c_str(), new_date_script.length(),
                            "", 1, js_val);

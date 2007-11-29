@@ -38,7 +38,8 @@ static const Variant kDefaultArgsForSecondSlot[] = {
 class ScriptableFramework::Impl {
  public:
   Impl(GadgetHostInterface *gadget_host)
-      : audio_(gadget_host),
+      : gadget_host_(gadget_host),
+        audio_(gadget_host),
         system_(gadget_host) {
   }
 
@@ -403,7 +404,7 @@ class ScriptableFramework::Impl {
     // In standard JavaScript, the Date object supports both local time and
     // UTC at the same time, and our Date object always use UTC, so this
     // function always returns the input.
-    static Date LocalTimeToUniversalTime(const Date date) {
+    static Date LocalTimeToUniversalTime(const Date &date) {
       return date;
     }
 
@@ -541,9 +542,18 @@ class ScriptableFramework::Impl {
     PermanentScriptable screen_;
   };
 
+  std::string BrowseForFile(const char *filter) {
+    std::string result;
+    GadgetHostInterface::FilesInterface *files =
+        gadget_host_->BrowseForFiles(filter, false);
+    if (files && files->GetCount() > 0)
+      result = files->GetItem(0);
+    return result;
+  }
+
   ScriptableArray *BrowseForFiles(const char *filter) {
     GadgetHostInterface::FilesInterface *files =
-        gadget_host_->BrowseForFiles(filter);
+        gadget_host_->BrowseForFiles(filter, true);
     if (files) {
       int count = files->GetCount();
       ASSERT(count >= 0);
@@ -570,8 +580,7 @@ ScriptableFramework::ScriptableFramework(GadgetHostInterface *gadget_host)
   RegisterConstant("audio", &impl_->audio_);
   RegisterConstant("graphics", &impl_->graphics_);
   RegisterConstant("system", &impl_->system_);
-  RegisterMethod("BrowseForFile",
-                 NewSlot(gadget_host, &GadgetHostInterface::BrowseForFile));
+  RegisterMethod("BrowseForFile", NewSlot(impl_, &Impl::BrowseForFile));
   RegisterMethod("BrowseForFiles", NewSlot(impl_, &Impl::BrowseForFiles));
 }
 

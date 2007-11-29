@@ -109,6 +109,31 @@ TEST(StringUtils, EncodeJavaScriptString) {
   EXPECT_STREQ("\\\"\\\\ab\\u0001\\u001F\\u0FFF", dest.c_str());
 }
 
+TEST(StringUtils, SplitString) {
+  std::string left, right;
+  EXPECT_TRUE(SplitString("", "", &left, &right));
+  EXPECT_STREQ("", left.c_str());
+  EXPECT_STREQ("", right.c_str());
+  EXPECT_TRUE(SplitString("abcde", "", &left, &right));
+  EXPECT_STREQ("", left.c_str());
+  EXPECT_STREQ("abcde", right.c_str());
+  EXPECT_TRUE(SplitString("abcde", "c", &left, &right));
+  EXPECT_STREQ("ab", left.c_str());
+  EXPECT_STREQ("de", right.c_str());
+  EXPECT_TRUE(SplitString("abcde", "abcde", &left, &right));
+  EXPECT_STREQ("", left.c_str());
+  EXPECT_STREQ("", right.c_str());
+  EXPECT_TRUE(SplitString("abcdeabcde", "a", &left, &right));
+  EXPECT_STREQ("", left.c_str());
+  EXPECT_STREQ("bcdeabcde", right.c_str());
+  EXPECT_TRUE(SplitString("abcdeabcde", "d", &left, &right));
+  EXPECT_STREQ("abc", left.c_str());
+  EXPECT_STREQ("eabcde", right.c_str());
+  EXPECT_FALSE(SplitString("abcde", "cb", &left, &right));
+  EXPECT_STREQ("abcde", left.c_str());
+  EXPECT_STREQ("", right.c_str());
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();

@@ -37,8 +37,9 @@
 #include <ggadget/progressbar_element.h>
 #include <ggadget/scrollbar_element.h>
 
-#include "global_file_manager.h"
 #include "gtk_gadget_host.h"
+#include "cairo_graphics.h"
+#include "global_file_manager.h"
 #include "gtk_menu_impl.h"
 #include "gtk_view_host.h"
 #include "options.h"
@@ -500,7 +501,84 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
   if (!about_text || !*about_text) {
     this_p->gadget_->OnCommand(GadgetInterface::CMD_ABOUT_DIALOG);
   } else {
-    // TODO: show the about dialog.
+    GtkWidget *dialog = gtk_dialog_new_with_buttons(
+        this_p->gadget_->GetManifestInfo(kManifestName), NULL,
+        static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR),
+        GTK_STOCK_OK, GTK_RESPONSE_OK,
+        NULL);
+    gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+    gtk_window_set_skip_taskbar_hint(GTK_WINDOW(dialog), TRUE);
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+
+    std::string about_text(TrimString(
+        this_p->gadget_->GetManifestInfo(kManifestAboutText)));
+    std::string title_text;
+    std::string copyright_text;
+    if (!SplitString(about_text, "\n", &title_text, &about_text)) {
+      about_text = title_text; 
+      title_text = this_p->gadget_->GetManifestInfo(kManifestName);
+    }
+    title_text = TrimString(title_text);
+    about_text = TrimString(about_text);
+
+    if (!SplitString(about_text, "\n", &copyright_text, &about_text)) {
+      about_text = copyright_text;
+      copyright_text = this_p->gadget_->GetManifestInfo(kManifestCopyright);
+    }
+    copyright_text = TrimString(copyright_text);
+    about_text = TrimString(about_text);
+
+    GtkWidget *title = gtk_label_new("");
+    gchar *gadget_name_markup = g_markup_printf_escaped(
+        "<b><big>%s</big></b>", title_text.c_str());
+    gtk_label_set_markup(GTK_LABEL(title), gadget_name_markup);
+    g_free(gadget_name_markup);
+    gtk_label_set_line_wrap(GTK_LABEL(title), TRUE);
+    gtk_misc_set_alignment(GTK_MISC(title), 0.0, 0.0);
+
+    GtkWidget *copyright = gtk_label_new(copyright_text.c_str());
+    gtk_label_set_line_wrap(GTK_LABEL(copyright), TRUE);
+    gtk_misc_set_alignment(GTK_MISC(copyright), 0.0, 0.0);
+
+    GtkWidget *about = gtk_label_new(about_text.c_str());
+    gtk_label_set_line_wrap(GTK_LABEL(about), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(about), TRUE);
+    gtk_misc_set_alignment(GTK_MISC(about), 0.0, 0.0);
+    GtkWidget *about_box = gtk_vbox_new(FALSE, 0);
+    gtk_container_set_border_width(GTK_CONTAINER(about_box), 10);
+    gtk_box_pack_start(GTK_BOX(about_box), about, FALSE, FALSE, 0);
+
+    GtkWidget *image = NULL;
+    const char *icon_name = this_p->gadget_->GetManifestInfo(kManifestIcon);
+    std::string data;
+    std::string real_path;
+    if (this_p->file_manager_->GetFileContents(icon_name, &data, &real_path)) {
+      GdkPixbuf *pixbuf = CairoGraphics::LoadPixbufFromData(data.c_str(),
+                                                            data.size());
+      if (pixbuf) {
+        image = gtk_image_new_from_pixbuf(pixbuf);
+        g_object_unref(pixbuf);
+      }
+    }
+
+    GtkWidget *hbox = gtk_hbox_new(FALSE, 12);
+    GtkWidget *vbox = gtk_vbox_new(FALSE, 12);
+    gtk_box_pack_start(GTK_BOX(vbox), title, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), copyright, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), image, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), vbox, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox,
+                       FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), about_box,
+                       FALSE, FALSE, 0);
+
+    gtk_container_set_border_width(GTK_CONTAINER(hbox), 10);
+    gtk_container_set_border_width(
+        GTK_CONTAINER(GTK_DIALOG(dialog)->action_area), 10);
+
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
   }
 }
 
@@ -510,15 +588,60 @@ void GtkGadgetHost::OnDockActivate(GtkMenuItem *menu_item,
   DLOG("DockActivate");
 }
 
-const char *GtkGadgetHost::BrowseForFile(const char *filter) {
-  // TODO:
-  return "/etc/hosts";
-}
+class GSListFiles : public GadgetHostInterface::FilesInterface {
+ public:
+  GSListFiles(GSList *list) : list_(list) { }
+  virtual ~GSListFiles() {
+    for (GSList *list = list_; list; list = g_slist_next(list)) {
+      g_free(list->data);
+    }
+    g_slist_free(list_);
+  }
+  virtual void Destroy() { delete this; }
+  virtual int GetCount() const { return g_slist_length(list_); }
+  virtual const char *GetItem(int index) const {
+    return static_cast<const char *>(g_slist_nth_data(list_, index));
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(GSListFiles);
+  GSList *list_;
+};
 
 GadgetHostInterface::FilesInterface *GtkGadgetHost::BrowseForFiles(
-    const char *filter) {
-  // TODO:
-  return NULL;
+    const char *filter, bool multiple) {
+  GtkWidget *dialog = gtk_file_chooser_dialog_new(
+      gadget_->GetManifestInfo(kManifestName), NULL,
+      GTK_FILE_CHOOSER_ACTION_OPEN,
+      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+      GTK_STOCK_OK, GTK_RESPONSE_OK,
+      NULL);
+
+  gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), multiple);
+  if (filter) {
+    std::string filter_str(filter);
+    std::string filter_name, patterns, pattern;
+    while (!filter_str.empty()) {
+      if (!SplitString(filter_str, "|", &filter_name, &filter_str)) {
+        LOG("Invalid filter string: %s", filter_str.c_str());
+        break;
+      }
+      GtkFileFilter *file_filter = gtk_file_filter_new();
+      gtk_file_filter_set_name(file_filter, filter_name.c_str());
+      SplitString(filter_str, "|", &patterns, &filter_str);
+      while (!patterns.empty()) {
+        SplitString(patterns, ";", &pattern, &patterns);
+        gtk_file_filter_add_pattern(file_filter, pattern.c_str());
+      }
+      gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), file_filter);
+    }
+  }
+
+  GSList *selected_files = NULL;
+  if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
+    selected_files = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
+  gtk_widget_destroy(dialog);
+
+  return new GSListFiles(selected_files);
 }
 
 void GtkGadgetHost::GetCursorPos(int *x, int *y) const {

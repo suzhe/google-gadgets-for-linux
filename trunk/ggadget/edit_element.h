@@ -17,13 +17,13 @@
 #ifndef GGADGET_EDIT_ELEMENT_H__
 #define GGADGET_EDIT_ELEMENT_H__
 
-#include <ggadget/div_element.h>
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
-class EditElement : public DivElement {
+class EditElement : public BasicElement {
  public:
-  DEFINE_CLASS_ID(0xc321ec8aeb4142c4, DivElement);
+  DEFINE_CLASS_ID(0xc321ec8aeb4142c4, BasicElement);
 
   EditElement(ElementInterface *parent, ViewInterface *view, const char *name);
   virtual ~EditElement();

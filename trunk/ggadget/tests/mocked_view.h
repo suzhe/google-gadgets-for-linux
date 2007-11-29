@@ -101,6 +101,11 @@ class MockedView : public ggadget::ScriptableHelper<ggadget::ViewInterface> {
   virtual bool OpenURL(const char *url) const { return true; }
   virtual ggadget::Connection *ConnectEvent(
       const char *event_name, ggadget::Slot0<void> *handler) { return NULL; }
+  virtual void Alert(const char *message) { }
+  virtual bool Confirm(const char *message) { return false; }
+  virtual std::string Prompt(const char *message, const char *default_value) {
+    return std::string();
+  }
 
   bool GetQueuedDraw() {
     bool b = draw_queued_;

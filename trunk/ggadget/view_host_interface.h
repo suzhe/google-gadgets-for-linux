@@ -18,6 +18,7 @@
 #define GGADGET_VIEW_HOST_INTERFACE_H__
 
 #include <ggadget/element_interface.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
@@ -25,7 +26,6 @@ template <typename R, typename P1> class Slot1;
 class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
-class ViewInterface;
 class XMLHttpRequestInterface;
 
 /**
@@ -68,7 +68,7 @@ class ViewHostInterface {
    * When the resizable field on the view is updated, the host needs to be
    * alerted of this change.
    */
-  virtual void SetResizeable() = 0;
+  virtual void SetResizable(ViewInterface::ResizableMode mode) = 0;
 
   /**
    * Sets a caption to be shown when the View is in floating or expanded
@@ -113,6 +113,26 @@ class ViewHostInterface {
    * Close the details view if it is opened.
    */
   virtual void CloseDetailsView() = 0;
+
+  /** Displays a message box containing the message string. */
+  virtual void Alert(const char *message) = 0;
+
+  /**
+   * Displays a dialog containing the message string and Yes and No buttons.
+   * @param message the message string.
+   * @return @c true if Yes button is pressed, @c false if not.
+   */
+  virtual bool Confirm(const char *message) = 0;
+
+  /**
+   * Displays a dialog asking the user to enter text.
+   * @param message the message string displayed before the edit box.
+   * @param default_value the initial default value dispalyed in the edit box.
+   * @return the user inputted text, or an empty string if user canceled the
+   *     dialog.
+   */
+  virtual std::string Prompt(const char *message,
+                             const char *default_value) = 0;
 
 };
 

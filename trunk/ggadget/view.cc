@@ -531,21 +531,6 @@ class View::Impl {
     return children_.Draw(changed);
   }
 
-  void SetResizable(ViewInterface::ResizableMode resizable) {
-    resizable_ = resizable;
-    // TODO:
-  }
-
-  void SetCaption(const char *caption) {
-    caption_ = caption ? caption : "";
-    // TODO: Redraw?
-  }
-
-  void SetShowCaptionAlways(bool show_always) {
-    show_caption_always_ = show_always;
-    // TODO: Redraw?
-  }
-
   ElementInterface *GetElementByName(const char *name) {
     ElementsMap::iterator it = all_elements_.find(name);
     return it == all_elements_.end() ? NULL : it->second;
@@ -708,17 +693,6 @@ class View::Impl {
 
   void ClearInterval(int token) {
     RemoveTimer(token);
-  }
-
-  void Alert(const char *message) {
-    LOG("ALERT: %s", message);
-    // TODO:
-  }
-
-  bool Confirm(const char *message) {
-    LOG("CONFIRM: %s", message);
-    // TODO:
-    return true;
   }
 
   void OnOptionChanged(const char *name) {
@@ -900,14 +874,15 @@ View::View(ViewHostInterface *host,
   // Here register ViewImpl::BeginAnimation because the Slot1<void, int> *
   // parameter in View::BeginAnimation can't be automatically reflected.
   RegisterMethod("beginAnimation", NewSlot(impl_, &Impl::BeginAnimation));
-  RegisterMethod("cancelAnimation", NewSlot(this, &View::CancelAnimation));
+  RegisterMethod("cancelAnimation", NewSlot(impl_, &Impl::CancelAnimation));
   RegisterMethod("setTimeout", NewSlot(impl_, &Impl::SetTimeout));
-  RegisterMethod("clearTimeout", NewSlot(this, &View::ClearTimeout));
+  RegisterMethod("clearTimeout", NewSlot(impl_, &Impl::ClearTimeout));
   RegisterMethod("setInterval", NewSlot(impl_, &Impl::SetInterval));
-  RegisterMethod("clearInterval", NewSlot(this, &View::ClearInterval));
+  RegisterMethod("clearInterval", NewSlot(impl_, &Impl::ClearInterval));
 
-  RegisterMethod("alert", NewSlot(impl_, &Impl::Alert));
-  RegisterMethod("confirm", NewSlot(impl_, &Impl::Confirm));
+  RegisterMethod("alert", NewSlot(this, &View::Alert));
+  RegisterMethod("confirm", NewSlot(this, &View::Confirm));
+  RegisterMethod("prompt", NewSlot(this, &View::Prompt));
 
   RegisterMethod("resizeBy", NewSlot(impl_, &Impl::ResizeBy));
   RegisterMethod("resizeTo", NewSlot(this, &View::SetSize));
@@ -1037,7 +1012,8 @@ bool View::SetSize(int width, int height) {
 }
 
 void View::SetResizable(ViewInterface::ResizableMode resizable) {
-  impl_->SetResizable(resizable);
+  impl_->resizable_ = resizable;
+  impl_->host_->SetResizable(resizable);
 }
 
 ElementFactoryInterface *View::GetElementFactory() const {
@@ -1065,7 +1041,8 @@ ViewInterface::ResizableMode View::GetResizable() const {
 }
 
 void View::SetCaption(const char *caption) {
-  impl_->SetCaption(caption);
+  impl_->caption_ = caption ? caption : NULL;
+  impl_->host_->SetCaption(caption);
 }
 
 const char *View::GetCaption() const {
@@ -1073,7 +1050,8 @@ const char *View::GetCaption() const {
 }
 
 void View::SetShowCaptionAlways(bool show_always) {
-  impl_->SetShowCaptionAlways(show_always);
+  impl_->show_caption_always_ = show_always;
+  impl_->host_->SetShowCaptionAlways(show_always);
 }
 
 bool View::GetShowCaptionAlways() const {
@@ -1184,6 +1162,18 @@ void View::OnOptionChanged(const char *name) {
 Connection *View::ConnectEvent(const char *event_name,
                                Slot0<void> *handler) {
   return impl_->ConnectEvent(event_name, handler);
+}
+
+void View::Alert(const char *message) {
+  impl_->host_->Alert(message);
+}
+
+bool View::Confirm(const char *message) {
+  return impl_->host_->Confirm(message);
+}
+
+std::string View::Prompt(const char *message, const char *default_result) {
+  return impl_->host_->Prompt(message, default_result);
 }
 
 } // namespace ggadget

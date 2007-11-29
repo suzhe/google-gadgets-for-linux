@@ -48,17 +48,17 @@ class CairoGraphics : public GraphicsInterface {
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 
+  /**
+   * Load a GdkPixbuf from raw image data.
+   * @return NULL on failure, GdkPixbuf otherwise.
+   */
+  static GdkPixbuf *LoadPixbufFromData(const char *img_bytes,
+                                       size_t img_bytes_count);
+
  private:
-   double zoom_;
+  double zoom_;
 
-   /**
-    * Load a GdkPixbuf from raw image data.
-    * @return NULL on failure, GdkPixbuf otherwise.
-    */
-   static GdkPixbuf *LoadPixbufFromData(const char *img_bytes,
-                                        size_t img_bytes_count);
-
-   DISALLOW_EVIL_CONSTRUCTORS(CairoGraphics);
+  DISALLOW_EVIL_CONSTRUCTORS(CairoGraphics);
 };
 
 }
