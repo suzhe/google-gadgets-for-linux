@@ -17,7 +17,7 @@
 #include "edit_element.h"
 #include "canvas_interface.h"
 #include "event.h"
-#include "view_interface.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -42,9 +42,7 @@ class EditElement::Impl {
   EventSignal onchange_event_;
 };
 
-EditElement::EditElement(ElementInterface *parent,
-                         ViewInterface *view,
-                         const char *name)
+EditElement::EditElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "edit", name, false),
       impl_(new Impl(this)) {
   // SetAutoscroll(true);
@@ -202,18 +200,17 @@ void EditElement::SetWordWrap(bool wrap) {
   // TODO:
 }
 
-bool EditElement::OnMouseEvent(MouseEvent *event, bool direct,
-                              ElementInterface **fired_element) {
-  return BasicElement::OnMouseEvent(event, direct, fired_element);
+EventResult EditElement::HandleMouseEvent(const MouseEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
 }
 
-bool EditElement::OnKeyEvent(KeyboardEvent *event) {
-  return BasicElement::OnKeyEvent(event);
+EventResult EditElement::HandleKeyEvent(const KeyboardEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
 }
 
-ElementInterface *EditElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *EditElement::CreateInstance(BasicElement *parent,
+                                          View *view,
+                                          const char *name) {
   return new EditElement(parent, view, name);
 }
 

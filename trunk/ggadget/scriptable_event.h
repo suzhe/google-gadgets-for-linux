@@ -18,13 +18,13 @@
 #define GGADGET_SCRIPTABLE_EVENT_H__
 
 #include <ggadget/common.h>
+#include <ggadget/event.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
-class Event;
-class ElementInterface;
+class BasicElement;
 
 /** Event names */
 const char *const kOnCancelEvent        = "oncancel";
@@ -66,31 +66,36 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x6732238aacb4468a, ScriptableInterface)
 
-  ScriptableEvent(Event *event, ElementInterface *src_element,
-                  int cookie, int value);
+  /**
+   * @param event it's not declared as a const reference because sometimes we
+   *     need dynamically allocated event (e.g. @c View::PostEvent()).
+   * @param src_element the element from which is event is fired.
+   *     If the event is fired from the view, @a src_element should be @c NULL.
+   * @param output_event only used for some events (such as
+   *     @c Event::EVENT_SIZING) to store the output event.
+   *     Can be @c NULL if the event has no output.
+   */
+  ScriptableEvent(const Event *event,
+                  BasicElement *src_element,
+                  Event *output_event);
   virtual ~ScriptableEvent();
 
   const char *GetName() const;
+  const Event *GetEvent() const;
 
-  Event *GetEvent() { return event_; }
-  const Event *GetEvent() const { return event_; }
+  const Event *GetOutputEvent() const;
+  Event *GetOutputEvent();
 
-  ElementInterface *GetSrcElement() { return src_element_; }
-  const ElementInterface *GetSrcElement() const { return src_element_; }
+  BasicElement *GetSrcElement();
+  const BasicElement *GetSrcElement() const;
 
-  bool GetReturnValue() const { return return_value_; }
-  void SetReturnValue(bool return_value) { return_value_ = return_value; }
-  int GetCookie() const { return cookie_; }
-  int GetValue() const { return value_; }
+  EventResult GetReturnValue() const;
+  void SetReturnValue(EventResult return_value);
 
  private:
+  class Impl;
+  Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableEvent);
-
-  Event *event_;
-  bool return_value_;
-  ElementInterface *src_element_;
-  int cookie_;
-  int value_;
 };
 
 } // namespace ggadget

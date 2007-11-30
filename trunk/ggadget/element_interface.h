@@ -17,18 +17,13 @@
 #ifndef GGADGET_ELEMENT_INTERFACE_H__
 #define GGADGET_ELEMENT_INTERFACE_H__
 
+#include <ggadget/event.h>
 #include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
-class Elements;
+class ElementsInterface;
 class ViewInterface;
-class CanvasInterface;
-class MouseEvent;
-class Event;
-class TimerEvent;
-class KeyboardEvent;
-class DragEvent;
 
 /**
  * ElementInterface defines the properties, methods and events exposed on all
@@ -86,15 +81,12 @@ class ElementInterface : public ScriptableInterface {
  public:
   CLASS_ID_DECL(0xe863ac4167fa4bba);
 
+ protected:
+  virtual ~ElementInterface() { }
+
+ public:
   /** Get the type of the current object. */
   virtual const char *GetTagName() const = 0;
-  /** Destroy the current object. */
-  virtual void Destroy() = 0;
-
-  /** Get the associated View of the current element. */
-  virtual const ViewInterface *GetView() const = 0;
-  /** Get the associated View of the current element. */
-  virtual ViewInterface *GetView() = 0;
 
   /** Retrieves the hit-test value for this element. */
   virtual HitTest GetHitTest() const = 0;
@@ -105,12 +97,12 @@ class ElementInterface : public ScriptableInterface {
    * Retrieves a collection that contains the immediate children of this
    * element.
    */
-  virtual const Elements *GetChildren() const = 0;
+  virtual const ElementsInterface *GetChildren() const = 0;
   /**
    * Retrieves a collection that contains the immediate children of this
    * element.
    */
-  virtual Elements *GetChildren() = 0;
+  virtual ElementsInterface *GetChildren() = 0;
 
   /** Retrieves the cursor to display when the mouse is over this element. */
   virtual CursorType GetCursor() const = 0;
@@ -149,8 +141,6 @@ class ElementInterface : public ScriptableInterface {
    * Sets the mask bitmap that defines the clipping path for this element.
    */
   virtual void SetMask(const char *mask) = 0;
-  /** Gets the canvas for the element mask. Returns NULL if no mask is set. */
-  virtual const CanvasInterface *GetMaskCanvas() = 0;
 
   /** Retrieves the width in pixels. */
   virtual double GetPixelWidth() const = 0;
@@ -234,53 +224,6 @@ class ElementInterface : public ScriptableInterface {
   virtual void ResetHeightToDefault() = 0;
 
   /**
-   * Handler of the mouse events.
-   * @param event the mouse event.
-   * @param direct if @c true, this event is sent to the element directly, so
-   *     it should not dispatch it to its children.
-   * @param[out] fired_element the element who processed the event, or
-   *     @c NULL if no one.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
-   */
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element) = 0;
-
-  /**
-   * Handler of the drag and drop events.
-   * @param event the darg and drop event.
-   * @param direct if @c true, this event is sent to the element directly, so
-   *     it should not dispatch it to its children.
-   * @param[out] fired_element the element who processed the event, or
-   *     @c NULL if no one.
-   * @return @c true if the event is accepted by some element.
-   */
-  virtual bool OnDragEvent(DragEvent *event, bool direct,
-                           ElementInterface **fired_element) = 0;
-
-  /**
-   * Check if the position of a position event (mouse or drag) is in the
-   * element.
-   */
-  virtual bool IsPointIn(double x, double y) = 0;
-
-  /**
-   * Handler of the keyboard events.
-   * @param event the keyboard event.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
-   */
-  virtual bool OnKeyEvent(KeyboardEvent *event) = 0;
-
-  /**
-   * Handler for other events.
-   * @param event the keyboard event.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
-   */
-  virtual bool OnOtherEvent(Event *event) = 0;
-
-  /**
    * Retrieves the opacity of the element.
    */
   virtual double GetOpacity() const = 0;
@@ -328,53 +271,6 @@ class ElementInterface : public ScriptableInterface {
    * Removes the keyboard focus from the element.
    */
   virtual void KillFocus() = 0;
-
-  /**
-   * Draws the current element to a canvas. The caller does NOT own this canvas
-   * and should not free it.
-   * @param[out] changed True if the returned canvas is different from that
-   *   of the last call, false otherwise.
-   * @return A canvas suitable for drawing. NULL if element is not visible.
-   */
-  virtual const CanvasInterface *Draw(bool *changed) = 0;
-
-  /**
-   * Checks to see if position of the element has changed since the last draw
-   * relative to the parent. Specifically, this checks for changes in
-   * x, y, pinX, pinY, and rotation.
-   */
-  virtual bool IsPositionChanged() const = 0;
-  /**
-   * Sets the position changed state to false.
-   */
-  virtual void ClearPositionChanged() = 0;
-
-  /**
-   * Called by the parent when the width of the parent changes.
-   */
-  virtual void OnParentWidthChange(double width) = 0;
-  /**
-   * Called by the parent when the height of the parent changes.
-   */
-  virtual void OnParentHeightChange(double height) = 0;
-
-  /**
-   * Converts coordinates in a this element's space to coordinates in a
-   * child element.
-   *
-   * The default implementation should directly call ParentCoorddToChildCoord.
-   * Element implementation should override this method if it supports
-   * scrolling.
-   *
-   * @param child a child element of this element.
-   * @param x x-coordinate in this element's space to convert.
-   * @param y y-coordinate in this element's space to convert.
-   * @param[out] child_x parameter to store the converted child x-coordinate.
-   * @param[out] child_y parameter to store the converted child y-coordinate.
-   */
-  virtual void SelfCoordToChildCoord(ElementInterface *child,
-                                     double x, double y,
-                                     double *child_x, double *child_y) = 0;
 
   /**
    * Connects an event handler to an event.

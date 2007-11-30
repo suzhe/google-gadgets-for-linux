@@ -15,12 +15,12 @@
 */
 
 #include "anchor_element.h"
-#include "text_frame.h"
-#include "string_utils.h"
-#include "view_interface.h"
-#include "graphics_interface.h"
-#include "texture.h"
 #include "event.h"
+#include "graphics_interface.h"
+#include "string_utils.h"
+#include "text_frame.h"
+#include "texture.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -28,7 +28,7 @@ static const char *const kDefaultColor = "#0000FF";
 
 class AnchorElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view)
+  Impl(BasicElement *owner, View *view)
     : text_(owner, view),
       overcolor_texture_(view->LoadTexture(Variant(kDefaultColor))),
       mouseover_(false) {
@@ -44,9 +44,7 @@ class AnchorElement::Impl {
   std::string href_;
 };
 
-AnchorElement::AnchorElement(ElementInterface *parent,
-                             ViewInterface *view,
-                             const char *name)
+AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "a", name, false),
       impl_(new Impl(this, view)) {
   SetCursor(ElementInterface::CURSOR_HAND);
@@ -107,41 +105,30 @@ TextFrame *AnchorElement::GetTextFrame() {
   return &impl_->text_;
 }
 
-bool AnchorElement::OnMouseEvent(MouseEvent *event, bool direct,
-                                 ElementInterface **fired_element) {
-  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
-
-  // Handle the event only when the event is fired and not canceled.
-  if (*fired_element && result) {
-    ASSERT(IsEnabled());
-    ASSERT(*fired_element == this);
-    switch (event->GetType()) {
-     case Event::EVENT_MOUSE_OUT:
+EventResult AnchorElement::HandleMouseEvent(const MouseEvent &event) {
+  switch (event.GetType()) {
+    case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
       QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_OVER:
+      return EVENT_RESULT_HANDLED;
+    case Event::EVENT_MOUSE_OVER:
       impl_->mouseover_ = true;
       QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_CLICK:
+      return EVENT_RESULT_HANDLED;
+    case Event::EVENT_MOUSE_CLICK:
       if (!impl_->href_.empty()) {
          GetView()->OpenURL(impl_->href_.c_str()); // ignore return
       }
-     default:
-      break;
-    }
+      return EVENT_RESULT_HANDLED;
+    default:
+      return EVENT_RESULT_UNHANDLED;
   }
-
-  return result;
 }
 
-ElementInterface *AnchorElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *AnchorElement::CreateInstance(BasicElement *parent, View *view,
+                                            const char *name) {
   return new AnchorElement(parent, view, name);
 }
-
 
 void AnchorElement::GetDefaultSize(double *width, double *height) const {
   CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);

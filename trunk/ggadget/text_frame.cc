@@ -17,9 +17,9 @@
 #include "text_frame.h"
 #include "basic_element.h"
 #include "graphics_interface.h"
-#include "view_interface.h"
-#include "texture.h"
 #include "string_utils.h"
+#include "texture.h"
+#include "view.h"
 
 namespace ggadget{
 
@@ -41,7 +41,7 @@ static const char *kTrimmingNames[] = {
   "path-ellipsis"
 };
 
-TextFrame::TextFrame(BasicElement *owner, ViewInterface *view)
+TextFrame::TextFrame(BasicElement *owner, View *view)
   : owner_(owner), view_(view), font_(NULL),
     color_texture_(view->LoadTexture(Variant(kDefaultColor))), 
     align_(CanvasInterface::ALIGN_LEFT), 

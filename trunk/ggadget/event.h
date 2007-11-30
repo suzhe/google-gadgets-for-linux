@@ -17,7 +17,19 @@
 #ifndef GGADGET_EVENT_H__
 #define GGADGET_EVENT_H__
 
+#include <ggadget/common.h>
+
 namespace ggadget {
+
+/** Used to indicate the result of an event handler. */ 
+enum EventResult {
+  /** The event is not handled in the handler. */
+  EVENT_RESULT_UNHANDLED,
+  /** The event is handled normally by the handler. */
+  EVENT_RESULT_HANDLED,
+  /** The handler wants the default action to be canceled. */
+  EVENT_RESULT_CANCELED,
+};
 
 /**
  * Class for holding event information. There are several subclasses for
@@ -40,7 +52,6 @@ class Event {
     EVENT_UNDOCK,
     EVENT_FOCUS_IN,
     EVENT_FOCUS_OUT,
-    EVENT_TIMER_TICK,
     EVENT_CHANGE,
     EVENT_SIMPLE_RANGE_END,
 
@@ -70,8 +81,11 @@ class Event {
     EVENT_DRAG_MOTION, // Only for dispatching in C++ code.
     EVENT_DRAG_RANGE_END,
 
-    EVENT_SIZING = 40000,
+    // Other uncategorized events.
+    EVENT_UNCATEGORIZED = 40000,
+    EVENT_SIZING,
     EVENT_OPTION_CHANGED,
+    EVENT_TIMER,
   };
 
   explicit Event(Type t) : type_(t) { ASSERT(IsSimpleEvent()); }
@@ -332,6 +346,30 @@ class OptionChangedEvent : public Event {
 
  private:
   std::string property_name_;
+};
+
+/**
+ * Class representing a timer event.
+ */
+class TimerEvent : public Event {
+ public:
+  TimerEvent(int token, int value)
+      : Event(EVENT_TIMER, 0), token_(token), value_(value) {
+  }
+
+  TimerEvent(const TimerEvent &e)
+      : Event(EVENT_TIMER, 0), token_(e.token_), value_(e.value_) {
+    ASSERT(e.GetType() == EVENT_TIMER);
+  }
+
+  int GetToken() const { return token_; }
+  void SetToken(int token) { token_ = token; }
+  int GetValue() const { return value_; }
+  void SetValue(int value) { value_ = value; }
+
+ private:
+  int token_;
+  int value_;
 };
 
 } // namespace ggadget

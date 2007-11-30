@@ -25,19 +25,15 @@
 #include "math_utils.h"
 #include "scriptable_event.h"
 #include "string_utils.h"
-#include "view_interface.h"
+#include "view.h"
 #include "event.h"
 
 namespace ggadget {
 
 class BasicElement::Impl {
  public:
-  Impl(ElementInterface *parent,
-       ViewInterface *view,
-       const char *tag_name,
-       const char *name,
-       bool is_container,
-       BasicElement *owner)
+  Impl(BasicElement *parent, View *view, const char *tag_name, const char *name,
+       bool is_container, BasicElement *owner)
       : parent_(parent),
         owner_(owner),
         children_(is_container ?
@@ -47,38 +43,22 @@ class BasicElement::Impl {
         cursor_(ElementInterface::CURSOR_ARROW),
         drop_target_(false),
         enabled_(false),
-        pin_x_(0.0),
-        pin_y_(0.0),
-        ppin_x_(0.0),
-        ppin_y_(0.0),
-        pin_x_relative_(false),
-        pin_y_relative_(false),
+        width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),
+        width_relative_(false), height_relative_(false),
+        width_specified_(false), height_specified_(false),
+        x_(0.0), y_(0.0), px_(0.0), py_(0.0),
+        x_relative_(false), y_relative_(false),
+        x_specified_(false), y_specified_(false),
+        pin_x_(0.0), pin_y_(0.0), ppin_x_(0.0), ppin_y_(0.0),
+        pin_x_relative_(false), pin_y_relative_(false),
         rotation_(0.0),
         opacity_(1.0),
         visible_(true),
-        width_(0.0),
-        height_(0.0),
-        x_(0.0),
-        y_(0.0),
-        pwidth_(0.0),
-        pheight_(0.0),
-        px_(0.0),
-        py_(0.0),
-        width_relative_(false),
-        height_relative_(false),
-        x_relative_(false),
-        y_relative_(false),
-        width_specified_(false),
-        height_specified_(false),
-        x_specified_(false),
-        y_specified_(false),
         canvas_(NULL),
         mask_image_(NULL),
-        visibility_changed_(true),
-        changed_(true),
-        position_changed_(true),
+        visibility_changed_(true), changed_(true), position_changed_(true),
         debug_color_index_(++total_debug_color_index_),
-        debug_mode_(view_->GetDebugMode()) {
+        debug_mode_(view->GetDebugMode()) {
     if (name)
       name_ = name;
     if (tag_name)
@@ -102,7 +82,7 @@ class BasicElement::Impl {
   void SetMask(const char *mask) {
     if (AssignIfDiffer(mask, &mask_)) {
       delete mask_image_;
-      mask_image_ = view_->LoadImage(Variant(mask), true);
+      mask_image_ = view_->LoadImage(Variant(mask_), true);
       view_->QueueDraw();
     }
   }
@@ -464,7 +444,7 @@ class BasicElement::Impl {
   const CanvasInterface *Draw(bool *changed) {
     const CanvasInterface *canvas = NULL;
     const CanvasInterface *children_canvas = NULL;
-    bool child_changed;
+    bool child_changed = false;
     bool change = visibility_changed_;
 
     visibility_changed_ = false;
@@ -474,7 +454,7 @@ class BasicElement::Impl {
 
     if (children_)
       children_canvas = children_->Draw(&child_changed);
-    change = change || child_changed | changed_ || !canvas_;
+    change = change || child_changed || changed_ || !canvas_;
     changed_ = false;
 
     if (change) {
@@ -532,9 +512,7 @@ class BasicElement::Impl {
  public:
   void PostSizeEvent() {
     Event *event = new Event(Event::EVENT_SIZE);
-    ScriptableEvent *scriptable_event = new ScriptableEvent(event, owner_,
-                                                            0, 0);
-    view_->PostEvent(scriptable_event, onsize_event_);
+    view_->PostEvent(new ScriptableEvent(event, owner_, NULL), onsize_event_);
   }
 
   void WidthChanged() {
@@ -566,31 +544,36 @@ class BasicElement::Impl {
   }
 
  public:
-  bool OnMouseEvent(MouseEvent *event, bool direct,
-                    ElementInterface **fired_element) {
+  EventResult OnMouseEvent(const MouseEvent &event, bool direct,
+                           BasicElement **fired_element,
+                           BasicElement **in_element) {
+    BasicElement *this_element = owner_;
+    ScopedDeathDetector death_detector(view_, &this_element);
+
     *fired_element = NULL;
     if (!direct && children_) {
       // Send to the children first.
-      bool result = children_->OnMouseEvent(event, fired_element);
-      if (*fired_element)
+      EventResult result = children_->OnMouseEvent(event, fired_element,
+                                                   in_element);
+      if (!this_element || *fired_element)
         return result;
     }
 
     if (!enabled_ || !visible_)
-      return true;
+      return EVENT_RESULT_UNHANDLED;
 
     // Don't check mouse position, because the event may be out of this
     // element when this element is grabbing mouse.
 
     // Take this event, since no children took it, and we're enabled.
-    ScriptableEvent scriptable_event(event, owner_, 0, 0);
-    if (event->GetType() != Event::EVENT_MOUSE_MOVE)
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
+    if (event.GetType() != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(%s|%s): %g %g %d %d", scriptable_event.GetName(),
            name_.c_str(), tag_name_.c_str(),
-           event->GetX(), event->GetY(),
-           event->GetButton(), event->GetWheelDelta());
+           event.GetX(), event.GetY(),
+           event.GetButton(), event.GetWheelDelta());
 
-    switch (event->GetType()) {
+    switch (event.GetType()) {
       case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
         view_->FireEvent(&scriptable_event, onmousemove_event_);
         break;
@@ -627,31 +610,37 @@ class BasicElement::Impl {
         ASSERT(false);
     }
 
-    *fired_element = owner_;
-    return scriptable_event.GetReturnValue();
+    *fired_element = this_element;
+    EventResult result = scriptable_event.GetReturnValue();
+    if (result != EVENT_RESULT_CANCELED && this_element)
+      result = std::max(result, owner_->HandleMouseEvent(event));
+    return result;
   }
 
-  bool OnDragEvent(DragEvent *event, bool direct,
-                   ElementInterface **fired_element) {
+  EventResult OnDragEvent(const DragEvent &event, bool direct,
+                          BasicElement **fired_element) {
+    BasicElement *this_element = owner_;
+    ScopedDeathDetector death_detector(view_, &this_element);
+
     *fired_element = NULL;
     if (!direct && children_) {
       // Send to the children first.
-      bool result = children_->OnDragEvent(event, fired_element);
-      if (*fired_element)
+      EventResult result = children_->OnDragEvent(event, fired_element);
+      if (!this_element || *fired_element)
         return result;
     }
 
     if (!drop_target_ || !visible_)
-      return false;
+      return EVENT_RESULT_UNHANDLED;
 
     // Take this event, since no children took it, and we're enabled.
-    ScriptableEvent scriptable_event(event, owner_, 0, 0);
-    if (event->GetType() != Event::EVENT_DRAG_MOTION)
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
+    if (event.GetType() != Event::EVENT_DRAG_MOTION)
       DLOG("%s(%s|%s): %g %g file0=%s", scriptable_event.GetName(),
            name_.c_str(), tag_name_.c_str(),
-           event->GetX(), event->GetY(), event->GetDragFiles()[0]);
+           event.GetX(), event.GetY(), event.GetDragFiles()[0]);
 
-    switch (event->GetType()) {
+    switch (event.GetType()) {
       case Event::EVENT_DRAG_MOTION: // put the high volume events near top
         // This event is only for drop target testing.
         break;
@@ -669,22 +658,24 @@ class BasicElement::Impl {
     }
 
     *fired_element = owner_;
-    return scriptable_event.GetReturnValue();
+    EventResult result = scriptable_event.GetReturnValue();
+    if (result != EVENT_RESULT_CANCELED && this_element)
+      result = std::max(result, owner_->HandleDragEvent(event));
+    return result;
   }
 
-  bool OnKeyEvent(KeyboardEvent *event) {
+  EventResult OnKeyEvent(const KeyboardEvent &event) {
     if (!enabled_)
-      return true;
+      return EVENT_RESULT_UNHANDLED;
 
-    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    BasicElement *this_element = owner_;
+    ScopedDeathDetector death_detector(view_, &this_element);
+
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
     DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
-         name_.c_str(), tag_name_.c_str(), event->GetKeyCode());
+         name_.c_str(), tag_name_.c_str(), event.GetKeyCode());
 
-    // Default return value of drag event is false, because if no element
-    // cares about the event, the event should be canceled.
-    scriptable_event.SetReturnValue(false);
-
-    switch (event->GetType()) {
+    switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
         view_->FireEvent(&scriptable_event, onkeydown_event_);
         break;
@@ -697,19 +688,26 @@ class BasicElement::Impl {
       default:
         ASSERT(false);
     }
-    return scriptable_event.GetReturnValue();
+
+    EventResult result = scriptable_event.GetReturnValue();
+    if (result != EVENT_RESULT_CANCELED && this_element)
+      result = std::max(result, owner_->HandleKeyEvent(event));
+    return result;
   }
 
-  bool OnOtherEvent(Event *event) {
+  EventResult OnOtherEvent(const Event &event) {
     if (!enabled_)
-      return true;
+      return EVENT_RESULT_UNHANDLED;
 
-    ScriptableEvent scriptable_event(event, owner_, 0, 0);
+    BasicElement *this_element = owner_;
+    ScopedDeathDetector death_detector(view_, &this_element);
+
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
     DLOG("%s(%s|%s)", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str());
 
     // TODO: focus logic.
-    switch (event->GetType()) {
+    switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
         view_->FireEvent(&scriptable_event, onfocusin_event_);
         break;
@@ -719,7 +717,10 @@ class BasicElement::Impl {
       default:
         ASSERT(false);
     }
-    return scriptable_event.GetReturnValue();
+    EventResult result = scriptable_event.GetReturnValue();
+    if (result != EVENT_RESULT_CANCELED && this_element)
+      result = std::max(result, owner_->HandleOtherEvent(event));
+    return result;
   }
 
   // The implementation uses if-else statements, which seems the best
@@ -772,43 +773,29 @@ class BasicElement::Impl {
   }
 
  public:
-  ElementInterface *parent_;
+  BasicElement *parent_;
   BasicElement *owner_;
   Elements *children_;
-  ViewInterface *view_;
+  View *view_;
   ElementInterface::HitTest hittest_;
   ElementInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
   std::string tag_name_;
   std::string name_;
-  double pin_x_;
-  double pin_y_;
-  double ppin_x_;
-  double ppin_y_;
-  bool pin_x_relative_;
-  bool pin_y_relative_;
+  double width_, height_, pwidth_, pheight_;
+  bool width_relative_, height_relative_;
+  bool width_specified_, height_specified_;
+  double x_, y_, px_, py_;
+  bool x_relative_, y_relative_;
+  bool x_specified_, y_specified_;
+  double pin_x_, pin_y_, ppin_x_, ppin_y_;
+  bool pin_x_relative_, pin_y_relative_;
   double rotation_;
   double opacity_;
   bool visible_;
   std::string tooltip_;
   std::string mask_;
-  double width_;
-  double height_;
-  double x_;
-  double y_;
-  double pwidth_;
-  double pheight_;
-  double px_;
-  double py_;
-  bool width_relative_;
-  bool height_relative_;
-  bool x_relative_;
-  bool y_relative_;
-  bool width_specified_;
-  bool height_specified_;
-  bool x_specified_;
-  bool y_specified_;
 
   CanvasInterface *canvas_;
   Image *mask_image_;
@@ -857,10 +844,8 @@ static const char *kHitTestNames[] = {
   "htobject", "htclose", "hthelp",
 };
 
-BasicElement::BasicElement(ElementInterface *parent,
-                           ViewInterface *view,
-                           const char *tag_name,
-                           const char *name,
+BasicElement::BasicElement(BasicElement *parent, View *view,
+                           const char *tag_name, const char *name,
                            bool is_container)
     : impl_(new Impl(parent, view, tag_name, name, is_container, this)) {
   RegisterStringEnumProperty("cursor",
@@ -967,19 +952,15 @@ BasicElement::~BasicElement() {
   delete impl_;
 }
 
-void BasicElement::Destroy() {
-  delete this;
-}
-
 const char *BasicElement::GetTagName() const {
   return impl_->tag_name_.c_str();
 }
 
-ViewInterface *BasicElement::GetView() {
+View *BasicElement::GetView() {
   return impl_->view_;
 }
 
-const ViewInterface *BasicElement::GetView() const {
+const View *BasicElement::GetView() const {
   return impl_->view_;
 }
 
@@ -991,11 +972,11 @@ void BasicElement::SetHitTest(HitTest value) {
   impl_->hittest_ = value;
 }
 
-const Elements *BasicElement::GetChildren() const {
+const ElementsInterface *BasicElement::GetChildren() const {
   return impl_->children_;
 }
 
-Elements *BasicElement::GetChildren() {
+ElementsInterface *BasicElement::GetChildren() {
   return impl_->children_;
 }
 
@@ -1248,6 +1229,11 @@ bool BasicElement::IsPositionChanged() const {
   return impl_->position_changed_;
 }
 
+void BasicElement::SetChildrenScrollable(bool scrollable) {
+  ASSERT(impl_->children_);
+  impl_->children_->SetScrollable(scrollable);
+}
+
 void BasicElement::QueueDraw() {
   impl_->changed_ = true;
   if (impl_->visible_) {
@@ -1269,21 +1255,22 @@ void BasicElement::OnParentHeightChange(double height) {
     impl_->SetRelativeHeight(impl_->pheight_, true);
 }
 
-bool BasicElement::OnMouseEvent(MouseEvent *event, bool direct,
-                                ElementInterface **fired_element) {
-  return impl_->OnMouseEvent(event, direct, fired_element);
+EventResult BasicElement::OnMouseEvent(const MouseEvent &event, bool direct,
+                                       BasicElement **fired_element,
+                                       BasicElement **in_element) {
+  return impl_->OnMouseEvent(event, direct, fired_element, in_element);
 }
 
-bool BasicElement::OnDragEvent(DragEvent *event, bool direct,
-                               ElementInterface **fired_element) {
+EventResult BasicElement::OnDragEvent(const DragEvent &event, bool direct,
+                                      BasicElement **fired_element) {
   return impl_->OnDragEvent(event, direct, fired_element);
 }
 
-bool BasicElement::OnKeyEvent(KeyboardEvent *event) {
+EventResult BasicElement::OnKeyEvent(const KeyboardEvent &event) {
   return impl_->OnKeyEvent(event);
 }
 
-bool BasicElement::OnOtherEvent(Event *event) {
+EventResult BasicElement::OnOtherEvent(const Event &event) {
   return impl_->OnOtherEvent(event);
 }
 
@@ -1291,9 +1278,10 @@ bool BasicElement::IsPointIn(double x, double y) {
   return IsPointInElement(x, y, impl_->width_, impl_->height_);
 }
 
-void BasicElement::SelfCoordToChildCoord(ElementInterface *child,
+void BasicElement::SelfCoordToChildCoord(const BasicElement *child,
                                          double x, double y,
-                                         double *child_x, double *child_y) {
+                                         double *child_x,
+                                         double *child_y) const {
   ParentCoordToChildCoord(x, y, child->GetPixelX(), child->GetPixelY(),
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
@@ -1321,12 +1309,6 @@ void BasicElement::OnDefaultSizeChange() {
 Connection *BasicElement::ConnectEvent(const char *event_name,
                                        Slot0<void> *handler) {
   return impl_->ConnectEvent(event_name, handler);
-}
-
-void BasicElement::OnWidthChange() {
-}
-
-void BasicElement::OnHeightChange() {
 }
 
 } // namespace ggadget

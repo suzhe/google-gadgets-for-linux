@@ -15,8 +15,9 @@
 */
 
 #include "element_factory.h"
-#include "element_factory_impl.h"
 #include "common.h"
+#include "basic_element.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -51,7 +52,9 @@ ElementInterface *ElementFactoryImpl::CreateElement(const char *tag_name,
   CreatorMap::iterator ite = creators_.find(tag_name);
   if (ite == creators_.end())
     return NULL;
-  return ite->second(parent, view, name);
+  return ite->second(down_cast<BasicElement *>(parent),
+                     down_cast<View *>(view),
+                     name);
 }
 
 bool ElementFactoryImpl::RegisterElementClass(

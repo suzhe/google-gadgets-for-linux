@@ -24,13 +24,13 @@ namespace ggadget {
 
 class Texture;
 class BasicElement;
-class ViewInterface;
+class View;
 
 class TextFrame {
  public:
-  TextFrame(BasicElement *owner, ViewInterface *view);
+  TextFrame(BasicElement *owner, View *view);
   ~TextFrame();
-  
+
   /** Gets and sets the text of the frame. */
   const char *GetText() const;
   void SetText(const char *text);
@@ -96,7 +96,7 @@ class TextFrame {
  
  private:
   BasicElement *owner_;
-  ViewInterface *view_;
+  View *view_;
    
   FontInterface *font_;
   Texture *color_texture_;

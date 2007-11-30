@@ -82,7 +82,13 @@ class ViewHostInterface {
   /** Sets the current mouse cursor. */
   virtual void SetCursor(ElementInterface::CursorType type) = 0;
 
-  // TODO: Add other methods about menu, tooltip, etc.
+  /**
+   * Shows a tooltip popup after certain initial delay at the current mouse
+   * position . The implementation should handle tooltip auto-hiding.
+   * @param tooltip the tooltip to display. If @c NULL or blank, currently
+   *     displayed tooltip will be hidden.
+   */
+  virtual void SetTooltip(const char *tooltip) = 0;
 
   /** Run the view in a dialog with OK and Cancel buttons. */
   virtual void RunDialog() = 0;

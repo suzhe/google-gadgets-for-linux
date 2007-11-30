@@ -17,13 +17,13 @@
 #include <vector>
 #include <algorithm>
 #include "elements.h"
+#include "basic_element.h"
 #include "common.h"
-#include "element_interface.h"
 #include "element_factory_interface.h"
 #include "graphics_interface.h"
 #include "math_utils.h"
 #include "scriptable_helper.h"
-#include "view_interface.h"
+#include "view.h"
 #include "xml_utils.h"
 #include "event.h"
 
@@ -31,9 +31,7 @@ namespace ggadget {
 
 class Elements::Impl {
  public:
-  Impl(ElementFactoryInterface *factory,
-       ElementInterface *owner,
-       ViewInterface *view)
+  Impl(ElementFactoryInterface *factory, BasicElement *owner, View *view)
       : factory_(factory), owner_(owner), view_(view),
         width_(.0), height_(.0),
         canvas_(NULL),
@@ -56,10 +54,8 @@ class Elements::Impl {
   }
 
   ElementInterface *AppendElement(const char *tag_name, const char *name) {
-    ElementInterface *e = factory_->CreateElement(tag_name,
-                                                  owner_,
-                                                  view_,
-                                                  name);
+    BasicElement *e = down_cast<BasicElement *>(
+        factory_->CreateElement(tag_name, owner_, view_, name));
     if (e == NULL)
       return NULL;
     children_.push_back(e);
@@ -71,14 +67,12 @@ class Elements::Impl {
   ElementInterface *InsertElement(const char *tag_name,
                                   const ElementInterface *before,
                                   const char *name) {
-    ElementInterface *e = factory_->CreateElement(tag_name,
-                                                  owner_,
-                                                  view_,
-                                                  name);
+    BasicElement *e = down_cast<BasicElement *>(
+        factory_->CreateElement(tag_name, owner_, view_, name));
     if (e == NULL)
       return NULL;
-    std::vector<ElementInterface *>::iterator ite = std::find(
-        children_.begin(), children_.end(), before);
+    Children::iterator ite = std::find(children_.begin(), children_.end(),
+                                       before);
     children_.insert(ite, e);
     count_changed_ = true;
     view_->OnElementAdd(e);
@@ -86,24 +80,24 @@ class Elements::Impl {
   }
 
   bool RemoveElement(ElementInterface *element) {
-    std::vector<ElementInterface *>::iterator ite = std::find(
-        children_.begin(), children_.end(), element);
+    Children::iterator ite = std::find(children_.begin(), children_.end(),
+                                       down_cast<BasicElement *>(element));
     if (ite == children_.end())
       return false;
     view_->OnElementRemove(*ite);
-    (*ite)->Destroy();
+    delete *ite;
     children_.erase(ite);
     count_changed_ = true;
     return true;
   }
 
   void RemoveAllElements() {
-    for (std::vector<ElementInterface *>::iterator ite =
-         children_.begin(); ite != children_.end(); ++ite) {
+    for (Children::iterator ite = children_.begin();
+         ite != children_.end(); ++ite) {
       view_->OnElementRemove(*ite);
-      (*ite)->Destroy();
+      delete *ite;
     }
-    std::vector<ElementInterface *> v;
+    Children v;
     children_.swap(v);
     count_changed_ = true;
   }
@@ -137,8 +131,7 @@ class Elements::Impl {
   int GetIndexByName(const char *name) {
     if (name == NULL || strlen(name) == 0)
       return -1;
-    for (std::vector<ElementInterface *>::const_iterator ite =
-             children_.begin();
+    for (Children::const_iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
       if (GadgetStrCmp((*ite)->GetName(), name) == 0)
         return ite - children_.begin();
@@ -153,7 +146,7 @@ class Elements::Impl {
         canvas_->Destroy();
         canvas_ = NULL;
       }
-      for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+      for (std::vector<BasicElement *>::iterator ite = children_.begin();
            ite != children_.end(); ++ite) {
         (*ite)->OnParentWidthChange(width);
       }
@@ -167,21 +160,22 @@ class Elements::Impl {
         canvas_->Destroy();
         canvas_ = NULL;
       }
-      for (std::vector<ElementInterface *>::iterator ite = children_.begin();
+      for (Children::iterator ite = children_.begin();
            ite != children_.end(); ++ite) {
         (*ite)->OnParentHeightChange(height);
       }
     }
   }
 
-  void MapChildPositionEvent(PositionEvent *org_event, ElementInterface *child,
+  void MapChildPositionEvent(const PositionEvent &org_event,
+                             BasicElement *child,
                              PositionEvent *new_event) {
     double child_x, child_y;
     if (owner_) {
-      owner_->SelfCoordToChildCoord(child, org_event->GetX(), org_event->GetY(),
+      owner_->SelfCoordToChildCoord(child, org_event.GetX(), org_event.GetY(),
                                     &child_x, &child_y);
     } else {
-      ParentCoordToChildCoord(org_event->GetX(), org_event->GetY(),
+      ParentCoordToChildCoord(org_event.GetX(), org_event.GetY(),
                               child->GetPixelX(), child->GetPixelY(),
                               child->GetPixelPinX(), child->GetPixelPinY(),
                               DegreesToRadians(child->GetRotation()),
@@ -192,55 +186,73 @@ class Elements::Impl {
     new_event->SetY(child_y);
   }
 
-  bool OnMouseEvent(MouseEvent *event, ElementInterface **fired_element) {
+  EventResult OnMouseEvent(const MouseEvent &event,
+                           BasicElement **fired_element,
+                           BasicElement **in_element) {
     // The following event types are processed directly in the view.
-    ASSERT(event->GetType() != Event::EVENT_MOUSE_OVER &&
-           event->GetType() != Event::EVENT_MOUSE_OUT);
+    ASSERT(event.GetType() != Event::EVENT_MOUSE_OVER &&
+           event.GetType() != Event::EVENT_MOUSE_OUT);
 
+    *in_element = NULL;
     *fired_element = NULL;
-    MouseEvent new_event(*event);
+    MouseEvent new_event(event);
     // Iterate in reverse since higher elements are listed last.
-    for (std::vector<ElementInterface *>::reverse_iterator ite =
-             children_.rbegin();
+    for (Children::reverse_iterator ite = children_.rbegin();
          ite != children_.rend(); ++ite) {
       if (!(*ite)->IsVisible())
         continue;
 
       MapChildPositionEvent(event, *ite, &new_event);
       if ((*ite)->IsPointIn(new_event.GetX(), new_event.GetY())) {
-        bool result = (*ite)->OnMouseEvent(&new_event, false, fired_element);
+        BasicElement *child = (*ite);
+        BasicElement *descendant_in_element = NULL;
+        ScopedDeathDetector death_detector(view_, &child);
+        ScopedDeathDetector death_detector1(view_, &descendant_in_element);
+
+        EventResult result = child->OnMouseEvent(new_event, false,
+                                                 fired_element,
+                                                 &descendant_in_element);
+        // The child has been removed by some event handler, can't continue.
+        if (!child)
+          return result;
+        if (!*in_element)
+          *in_element = descendant_in_element ? descendant_in_element : child;
         if (*fired_element)
           return result;
       }
     }
-    return true;
+    return EVENT_RESULT_UNHANDLED;
   }
 
-  bool OnDragEvent(DragEvent *event, ElementInterface **fired_element) {
+  EventResult OnDragEvent(const DragEvent &event,
+                          BasicElement **fired_element) {
     // Only the following event type is dispatched along the element tree.
-    ASSERT(event->GetType() == Event::EVENT_DRAG_MOTION);
+    ASSERT(event.GetType() == Event::EVENT_DRAG_MOTION);
 
     *fired_element = NULL;
-    DragEvent new_event(*event);
+    DragEvent new_event(event);
     // Iterate in reverse since higher elements are listed last.
-    for (std::vector<ElementInterface *>::reverse_iterator ite =
-             children_.rbegin();
+    for (Children::reverse_iterator ite = children_.rbegin();
          ite != children_.rend(); ++ite) {
-      if (!(*ite)->IsVisible())
+      BasicElement *child = (*ite);
+      if (!child->IsVisible())
         continue;
 
-      MapChildPositionEvent(event, *ite, &new_event);
-      if ((*ite)->IsPointIn(new_event.GetX(), new_event.GetY())) {
-        bool result = (*ite)->OnDragEvent(&new_event, false, fired_element);
-        if (*fired_element)
+      MapChildPositionEvent(event, child, &new_event);
+      if (child->IsPointIn(new_event.GetX(), new_event.GetY())) {
+        ScopedDeathDetector death_detector(view_, &child);
+        EventResult result = (*ite)->OnDragEvent(new_event, false,
+                                                 fired_element);
+        // The child has been removed by some event handler, can't continue.
+        if (!child || *fired_element)
           return result;
       }
     }
-    return false;
+    return EVENT_RESULT_UNHANDLED;
   }
 
   // Update the maximum children extent.
-  void UpdateChildExtent(ElementInterface *child,
+  void UpdateChildExtent(BasicElement *child,
                          double *extent_width, double *extent_height) {
     double x = child->GetPixelX();
     double y = child->GetPixelY();
@@ -274,9 +286,10 @@ class Elements::Impl {
   const CanvasInterface *Draw(bool *changed);
 
   ElementFactoryInterface *factory_;
-  ElementInterface *owner_;
-  ViewInterface *view_;
-  std::vector<ElementInterface *> children_;
+  BasicElement *owner_;
+  View *view_;
+  typedef std::vector<BasicElement *> Children;
+  Children children_;
   double width_;
   double height_;
   CanvasInterface *canvas_;
@@ -285,7 +298,7 @@ class Elements::Impl {
 };
 
 const CanvasInterface *Elements::Impl::Draw(bool *changed) {
-  ElementInterface *element;
+  BasicElement *element;
   CanvasInterface *canvas = NULL;
   const CanvasInterface **children_canvas = NULL;
   int child_count;
@@ -416,8 +429,7 @@ exit:
 }
 
 Elements::Elements(ElementFactoryInterface *factory,
-                   ElementInterface *owner,
-                   ViewInterface *view)
+                   BasicElement *owner, View *view)
     : impl_(new Impl(factory, owner, view)) {
   RegisterProperty("count", NewSlot(impl_, &Impl::GetCount), NULL);
   RegisterMethod("item", NewSlot(impl_, &Impl::GetItem));
@@ -474,53 +486,46 @@ ElementInterface *Elements::InsertElement(const char *tag_name,
 }
 
 ElementInterface *Elements::AppendElementFromXML(const char *xml) {
-  return ::ggadget::AppendElementFromXML(this, xml);
+  return ::ggadget::AppendElementFromXML(impl_->view_, this, xml);
 }
 
 ElementInterface *Elements::InsertElementFromXML(
     const char *xml, const ElementInterface *before) {
-  return ::ggadget::InsertElementFromXML(this, xml, before);
+  return ::ggadget::InsertElementFromXML(impl_->view_, this, xml, before);
 }
 
 bool Elements::RemoveElement(ElementInterface *element) {
-  ASSERT(impl_);
   return impl_->RemoveElement(element);
 }
 
 void Elements::RemoveAllElements() {
-  ASSERT(impl_);
   impl_->RemoveAllElements();
 }
 
 void Elements::OnParentWidthChange(double width) {
-  ASSERT(impl_);
   impl_->OnParentWidthChange(width);
 }
 
 void Elements::OnParentHeightChange(double height) {
-  ASSERT(impl_);
   impl_->OnParentHeightChange(height);
 }
 
 const CanvasInterface *Elements::Draw(bool *changed) {
-  ASSERT(impl_);
   return impl_->Draw(changed);
 }
 
-bool Elements::OnMouseEvent(MouseEvent *event,
-                            ElementInterface **fired_element) {
-  ASSERT(impl_);
-  return impl_->OnMouseEvent(event, fired_element);
+EventResult Elements::OnMouseEvent(const MouseEvent &event,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element) {
+  return impl_->OnMouseEvent(event, fired_element, in_element);
 }
 
-bool Elements::OnDragEvent(DragEvent *event,
-                           ElementInterface **fired_element) {
-  ASSERT(impl_);
+EventResult Elements::OnDragEvent(const DragEvent &event,
+                                  BasicElement **fired_element) {
   return impl_->OnDragEvent(event, fired_element);
 }
 
 void Elements::SetScrollable(bool scrollable) {
-  ASSERT(impl_);
   impl_->SetScrollable(scrollable);
 }
 

@@ -26,9 +26,7 @@ class DivElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xfca426268a584176, BasicElement);
 
-  DivElement(ElementInterface *parent,
-             ViewInterface *view,
-             const char *name);
+  DivElement(BasicElement *parent, View *view, const char *name);
   virtual ~DivElement();
 
  public:
@@ -47,36 +45,34 @@ class DivElement : public BasicElement {
   Variant GetBackground() const;
   void SetBackground(const Variant &background);
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
-  virtual bool OnKeyEvent(KeyboardEvent *event);
+  virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element);
 
   /**
    * Overrides because this element supports scrolling.
    * @see ElementInterface::SelfCoordToChildCoord()
    */
-  virtual void SelfCoordToChildCoord(ElementInterface *child,
+  virtual void SelfCoordToChildCoord(BasicElement *child,
                                      double x, double y,
                                      double *child_x, double *child_y);
 
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   /**
    * Used to subclass div elements.
    * No scriptable interfaces will be registered in this constructor.
    */
-  DivElement(ElementInterface *parent,
-             ViewInterface *view,
-             const char *tag_name,
-             const char *name,
-             bool is_container);
+  DivElement(BasicElement *parent, View *view,
+             const char *tag_name, const char *name);
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
   virtual void OnWidthChange();
   virtual void OnHeightChange();
 

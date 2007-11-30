@@ -28,18 +28,15 @@ class LabelElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x4b128d3ef8da40e6, BasicElement);
 
-  LabelElement(ElementInterface *parent,
-             ViewInterface *view,
-             const char *name);
+  LabelElement(BasicElement *parent, View *view, const char *name);
   virtual ~LabelElement();
 
   /** Gets the text frame containing the text content of this label. */
   TextFrame *GetTextFrame();
 
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,

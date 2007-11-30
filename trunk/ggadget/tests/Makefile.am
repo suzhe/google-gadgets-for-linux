@@ -23,7 +23,6 @@ LDADD			= $(top_builddir)/unittest/libgunit.la \
 
 noinst_HEADERS		= mocked_element.h \
 			  mocked_gadget_host.h \
-			  mocked_view.h \
 			  mocked_view_host.h \
 			  scriptables.h \
 			  slots.h

@@ -25,7 +25,7 @@ class EditElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xc321ec8aeb4142c4, BasicElement);
 
-  EditElement(ElementInterface *parent, ViewInterface *view, const char *name);
+  EditElement(BasicElement *parent, View *view, const char *name);
   virtual ~EditElement();
 
  public:
@@ -83,18 +83,16 @@ class EditElement : public BasicElement {
   bool IsWordWrap() const;
   void SetWordWrap(bool wrap);
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
-  virtual bool OnKeyEvent(KeyboardEvent *event);
-
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(EditElement);

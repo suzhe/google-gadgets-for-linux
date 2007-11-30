@@ -17,14 +17,17 @@
 #ifndef GGADGET_ELEMENT_FACTORY_H__
 #define GGADGET_ELEMENT_FACTORY_H__
 
+#include <map>
 #include <ggadget/element_factory_interface.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 
+class BasicElement;
+class View;
+
 namespace internal {
-
 class ElementFactoryImpl;
-
 } // namespace internal
 
 class ElementFactory : public ElementFactoryInterface {
@@ -42,9 +45,9 @@ class ElementFactory : public ElementFactoryInterface {
   /**
    * Used as the @c creator parameter in @c RegisterElementClass().
    */
-  typedef ElementInterface *(*ElementCreator)(ElementInterface *parent,
-                                              ViewInterface *view,
-                                              const char *name);
+  typedef BasicElement *(*ElementCreator)(BasicElement *parent,
+                                          View *view,
+                                          const char *name);
 
   /**
    * Registers a new subclass of ElementInterface.
@@ -60,6 +63,28 @@ class ElementFactory : public ElementFactoryInterface {
  private:
   internal::ElementFactoryImpl *impl_;
 };
+
+namespace internal {
+// Declared here for unittest.
+
+/**
+ * Interface for creating an Element in the Gadget API.
+ */
+class ElementFactoryImpl {
+ public:
+  ElementInterface *CreateElement(const char *tag_name,
+                                  ElementInterface *parent,
+                                  ViewInterface *view,
+                                  const char *name);
+  bool RegisterElementClass(const char *tag_name,
+                            ElementFactory::ElementCreator creator);
+
+  typedef std::map<const char *, ElementFactory::ElementCreator,
+                   GadgetCharPtrComparator> CreatorMap;
+  CreatorMap creators_;
+};
+
+} // namespace internal
 
 } // namespace ggadget
 

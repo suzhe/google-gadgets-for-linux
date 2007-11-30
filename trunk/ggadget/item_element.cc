@@ -17,7 +17,7 @@
 #include "item_element.h"
 #include "canvas_interface.h"
 #include "listbox_element.h"
-#include "view_interface.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -32,11 +32,9 @@ class ItemElement::Impl {
   bool selected_;
 };
 
-ItemElement::ItemElement(ElementInterface *parent,
-                         ViewInterface *view,
-                         const char *tagname,
-                         const char *name)
-    : DivElement(parent, view, tagname, name, true),
+ItemElement::ItemElement(BasicElement *parent, View *view,
+                         const char *tagname, const char *name)
+    : DivElement(parent, view, tagname, name),
       impl_(new Impl) {
   SetEnabled(true);
   RegisterProperty("background",
@@ -68,15 +66,14 @@ void ItemElement::SetSelected(bool selected) {
   // TODO:
 }
 
-ElementInterface *ItemElement::CreateInstance(ElementInterface *parent,
-                                              ViewInterface *view,
-                                              const char *name) {
+BasicElement *ItemElement::CreateInstance(BasicElement *parent, View *view,
+                                          const char *name) {
   return new ItemElement(parent, view, "item", name);
 }
 
-ElementInterface *ItemElement::CreateListItemInstance(ElementInterface *parent,
-                                                      ViewInterface *view,
-                                                      const char *name) {
+BasicElement *ItemElement::CreateListItemInstance(BasicElement *parent,
+                                                  View *view,
+                                                  const char *name) {
   return new ItemElement(parent, view, "listitem", name);
 }
 

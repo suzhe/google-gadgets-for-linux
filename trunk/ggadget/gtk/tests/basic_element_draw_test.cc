@@ -22,35 +22,35 @@
 #include "ggadget/xml_utils.h"
 #include "ggadget/gtk/cairo_graphics.h"
 #include "ggadget/gtk/cairo_canvas.h"
-#include "ggadget/tests/mocked_view.h"
+#include "ggadget/tests/mocked_gadget_host.h"
+#include "ggadget/tests/mocked_view_host.h"
 
 using namespace ggadget;
 
 ElementFactory *gFactory = NULL;
 bool g_savepng = false;
 
-class ViewWithGraphics : public MockedView {
+class ViewHostWithGraphics : public MockedViewHost {
  public:
-   ViewWithGraphics() : MockedView(gFactory), gfx_(new CairoGraphics(1.0)) {
-   }
+  ViewHostWithGraphics()
+      : MockedViewHost(gFactory), gfx_(new CairoGraphics(1.0)) {
+  }
 
-   ~ViewWithGraphics() {
-     delete gfx_;
-   }
+  virtual ~ViewHostWithGraphics() {
+    delete gfx_;
+  }
 
-   virtual const GraphicsInterface *GetGraphics() const {
-     return gfx_;
-   }
+  virtual const GraphicsInterface *GetGraphics() const {
+    return gfx_;
+  }
 
  private:
-   GraphicsInterface *gfx_; 
+  GraphicsInterface *gfx_; 
 };
 
 class Muffin : public BasicElement {
  public:
-  Muffin(ElementInterface *parent,
-         ViewInterface *view,
-         const char *name)
+  Muffin(BasicElement *parent, View *view, const char *name)
       : BasicElement(parent, view, "muffin", name, true) {
   }
 
@@ -68,19 +68,15 @@ class Muffin : public BasicElement {
 
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, BasicElement)
 
-  static ElementInterface *CreateInstance(
-      ElementInterface *parent,
-      ViewInterface *view,
-      const char *name) {
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name) {
     return new Muffin(parent, view, name);
   }
 };
 
 class Pie : public BasicElement {
  public:
-  Pie(ElementInterface *parent,
-      ViewInterface *view,
-      const char *name)
+  Pie(BasicElement *parent, View *view, const char *name)
       : BasicElement(parent, view, "pie", name, false), color_(0., 0., 0.) {
   }
 
@@ -98,10 +94,8 @@ class Pie : public BasicElement {
 
   DEFINE_CLASS_ID(0x829defac5bbe11dc, BasicElement)
 
-  static ElementInterface *CreateInstance(
-      ElementInterface *parent,
-      ViewInterface *view,
-      const char *name) {
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name) {
     return new Pie(parent, view, name);
   }
 
@@ -113,7 +107,7 @@ class BasicElementTest : public testing::Test {
  protected:
   CanvasInterface *target_;
   cairo_surface_t *surface_;
-  ViewInterface *view_;
+  ViewHostWithGraphics *view_host_;
 
   BasicElementTest() {
     // create a target canvas for tests
@@ -126,12 +120,12 @@ class BasicElementTest : public testing::Test {
     cairo_destroy(cr);    
     cr = NULL;
 
-    view_ = new ViewWithGraphics();
+    view_host_ = new ViewHostWithGraphics();
   }
 
   ~BasicElementTest() {
-    delete view_;
-    view_ = NULL;
+    delete view_host_;
+    view_host_ = NULL;
 
     target_->Destroy();
     target_ = NULL;
@@ -157,7 +151,7 @@ class BasicElementTest : public testing::Test {
 
 // This test is meaningful only with -savepng
 TEST_F(BasicElementTest, ElementsDraw) {
-  Muffin m(NULL, view_, NULL);
+  Muffin m(NULL, view_host_->GetViewInternal(), NULL);
   Pie *p = NULL;
 
   m.SetPixelWidth(200.);

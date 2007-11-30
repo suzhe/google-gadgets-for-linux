@@ -25,9 +25,7 @@ class ComboBoxElement : public ListBoxElement {
  public:
   DEFINE_CLASS_ID(0x848a2f5e84144915, ListBoxElement);
 
-  ComboBoxElement(ElementInterface *parent,
-                  ViewInterface *view,
-                  const char *name);
+  ComboBoxElement(BasicElement *parent, View *view, const char *name);
   virtual ~ComboBoxElement();
 
  public:
@@ -57,18 +55,15 @@ class ComboBoxElement : public ListBoxElement {
   const char *GetValue() const;
   void SetValue(const char *value);
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
-  virtual bool OnKeyEvent(KeyboardEvent *event);
-
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ComboBoxElement);

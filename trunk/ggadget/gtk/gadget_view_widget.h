@@ -53,7 +53,7 @@ struct GadgetViewWidget {
   bool window_move;
   double window_move_x, window_move_y;
 
-  ggadget::DragEvent current_drag_event;
+  ggadget::DragEvent *current_drag_event;
 };
 
 struct GadgetViewWidgetClass {

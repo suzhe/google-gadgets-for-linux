@@ -55,13 +55,16 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
                          GadgetHostInterface::ViewType type,
                          ScriptableInterface *prototype,
                          bool composited, bool useshapemask, 
-			 double zoom, int debug_mode)
+                         double zoom, int debug_mode)
     : gadget_host_(gadget_host),
       view_(NULL),
       script_context_(NULL),
       gvw_(NULL),
       gfx_(NULL),
       onoptionchanged_connection_(NULL),
+      tooltip_timer_(0),
+      tooltip_window_(NULL),
+      tooltip_label_(NULL),
       details_window_(NULL),
       details_feedback_handler_(NULL) {
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
@@ -114,6 +117,7 @@ GtkViewHost::~GtkViewHost() {
     onoptionchanged_connection_->Disconnect();
 
   CloseDetailsView();
+  HideTooltip(0);
 
   delete view_;
   view_ = NULL;
@@ -205,6 +209,70 @@ void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
   }
 }
 
+void GtkViewHost::SetTooltip(const char *tooltip) {
+  HideTooltip(0);
+  if (tooltip && *tooltip) {
+    tooltip_ = tooltip;
+    tooltip_timer_ = gadget_host_->RegisterTimer(
+        kShowTooltipDelay, NewSlot(this, &GtkViewHost::ShowTooltip));
+  }
+}
+
+static gboolean PaintTooltipWindow(GtkWidget *widget, GdkEventExpose *event,
+                                   gpointer user_data) {
+  GtkRequisition req;
+  gtk_widget_size_request(widget, &req);
+  gtk_paint_flat_box(widget->style, widget->window,
+                     GTK_STATE_NORMAL, GTK_SHADOW_OUT,
+                     NULL, widget, "tooltip",
+                     0, 0, req.width, req.height);
+  return FALSE;
+}
+
+bool GtkViewHost::ShowTooltip(int timer_id) {
+  // This method can only be called by the timer.
+  tooltip_window_ = gtk_window_new(GTK_WINDOW_POPUP);
+  // gtk_window_set_type_hint(GTK_WINDOW(tooltip_window_),
+  //                          GDK_WINDOW_TYPE_HINT_TOOLTIP);
+  gtk_widget_set_app_paintable(tooltip_window_, TRUE);
+  gtk_window_set_resizable(GTK_WINDOW(tooltip_window_), FALSE);
+  gtk_container_set_border_width(GTK_CONTAINER(tooltip_window_), 4);
+  // TODO: Is there better way?
+  GdkColor color = { 0, 0xffff, 0xffff, 0xb000 };
+  gtk_widget_modify_bg(tooltip_window_, GTK_STATE_NORMAL, &color);
+  g_signal_connect(tooltip_window_, "expose_event",
+                   G_CALLBACK(PaintTooltipWindow), NULL);
+  g_signal_connect(tooltip_window_, "destroy",
+                   G_CALLBACK(gtk_widget_destroyed), &tooltip_window_);
+
+  tooltip_label_ = gtk_label_new(tooltip_.c_str());
+  gtk_label_set_line_wrap(GTK_LABEL(tooltip_label_), TRUE);
+  gtk_misc_set_alignment(GTK_MISC(tooltip_label_), 0.5, 0.5);
+  gtk_container_add(GTK_CONTAINER(tooltip_window_), tooltip_label_);
+  gtk_widget_show_all(tooltip_window_);
+
+  int x, y;
+  gadget_host_->GetCursorPos(&x, &y);
+  gtk_window_move(GTK_WINDOW(tooltip_window_), x, y + 20);
+
+  tooltip_timer_ = gadget_host_->RegisterTimer(
+      kHideTooltipDelay, NewSlot(this, &GtkViewHost::HideTooltip));
+  return false;
+}
+
+bool GtkViewHost::HideTooltip(int timer_id) {
+  // This method may be called by the timer, or directly from this class.
+  if (tooltip_timer_) {
+    gadget_host_->RemoveTimer(tooltip_timer_);
+    tooltip_timer_ = 0;
+  }
+  if (tooltip_window_) {
+    gtk_widget_destroy(tooltip_window_);
+    tooltip_window_ = NULL;
+  }
+  return false;
+}
+
 struct DialogData {
   GtkDialog *dialog;
   ViewInterface *view;
@@ -213,7 +281,7 @@ struct DialogData {
 static void OnDialogCancel(GtkButton *button, gpointer user_data) {
   DialogData *dialog_data = static_cast<DialogData *>(user_data);
   Event event(Event::EVENT_CANCEL);
-  if (dialog_data->view->OnOtherEvent(&event)) {
+  if (dialog_data->view->OnOtherEvent(event, NULL)) {
     gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_CANCEL);
   }
 }
@@ -221,7 +289,7 @@ static void OnDialogCancel(GtkButton *button, gpointer user_data) {
 static void OnDialogOK(GtkButton *button, gpointer user_data) {
   DialogData *dialog_data = static_cast<DialogData *>(user_data);
   Event event(Event::EVENT_OK);
-  if (dialog_data->view->OnOtherEvent(&event)) {
+  if (dialog_data->view->OnOtherEvent(event, NULL)) {
     gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_OK);
   }
 }

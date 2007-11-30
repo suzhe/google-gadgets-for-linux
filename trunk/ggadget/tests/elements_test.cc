@@ -16,58 +16,16 @@
 
 #include <cstdio>
 #include "unittest/gunit.h"
+#include "ggadget/basic_element.h"
 #include "ggadget/elements.h"
-#include "ggadget/element_interface.h"
-#include "ggadget/view_interface.h"
+#include "ggadget/view.h"
 #include "ggadget/element_factory_interface.h"
 #include "ggadget/slot.h"
 #include "mocked_element.h"
-#include "mocked_view.h"
+#include "mocked_view_host.h"
 
 // The total count of elements_.
 int count = 0;
-
-class Muffin : public MockedElement {
- public:
-  DEFINE_CLASS_ID(0xabb1c79164a742aa, MockedElement);
-
-  Muffin(ggadget::ElementInterface *parent,
-         ggadget::ViewInterface *view,
-         const char *name)
-      : MockedElement(parent, view, name) {
-    ++count;
-  }
-
-  virtual ~Muffin() {
-    --count;
-  }
-
- public:
-  virtual const char *GetTagName() const {
-    return "muffin";
-  }
-};
-
-class Pie : public MockedElement {
- public:
-  DEFINE_CLASS_ID(0x21a2b2ba7c794058, MockedElement);
-
-  Pie(ggadget::ElementInterface *parent,
-      ggadget::ViewInterface *view,
-      const char *name)
-      : MockedElement(parent, view, name) {
-    ++count;
-  }
-
-  virtual ~Pie() {
-    --count;
-  }
-
- public:
-  virtual const char *GetTagName() const {
-    return "pie";
-  }
-};
 
 class MockedElementFactory : public ggadget::ElementFactoryInterface {
   virtual ggadget::ElementInterface *CreateElement(
@@ -75,19 +33,14 @@ class MockedElementFactory : public ggadget::ElementFactoryInterface {
       ggadget::ElementInterface *parent,
       ggadget::ViewInterface *view,
       const char *name) {
+    ggadget::BasicElement *p =
+        ggadget::down_cast<ggadget::BasicElement *>(parent);
+    ggadget::View *v = ggadget::down_cast<ggadget::View *>(view);
     if (strcmp(GetTagName, "muffin") == 0)
-      return new Muffin(parent, view, name);
+      return new Muffin(p, v, name);
     if (strcmp(GetTagName, "pie") == 0)
-      return new Pie(parent, view, name);
+      return new Pie(p, v, name);
     return NULL;
-  }
-
-  virtual bool RegisterElementClass(
-      const char *GetTagName,
-      ggadget::ElementInterface *(*creator)(ggadget::ElementInterface *,
-                                            ggadget::ViewInterface *,
-                                            const char *)) {
-    return true;
   }
 };
 
@@ -95,20 +48,21 @@ class ElementsTest : public testing::Test {
  protected:
   virtual void SetUp() {
     factory_ = new MockedElementFactory();
-    view_ = new MockedView(factory_);
-    muffin_ = new Muffin(NULL, view_, NULL);
-    elements_ = new ggadget::Elements(factory_, muffin_, view_);
+    view_host_ = new MockedViewHost(factory_);
+    muffin_ = new Muffin(NULL, view_host_->GetViewInternal(), NULL);
+    elements_ = new ggadget::Elements(factory_, muffin_,
+                                      view_host_->GetViewInternal());
   }
 
   virtual void TearDown() {
     delete elements_;
-    muffin_->Destroy();
+    delete muffin_;
     delete factory_;
-    delete view_;
+    delete view_host_;
     ASSERT_EQ(0, count);
   }
 
-  MockedView *view_;
+  MockedViewHost *view_host_;
   MockedElementFactory *factory_;
   ggadget::Elements *elements_;
   Muffin *muffin_;
@@ -170,7 +124,8 @@ TEST_F(ElementsTest, TestRemove) {
   ASSERT_TRUE(elements_->GetItemByIndex(0) == e1);
   ASSERT_TRUE(elements_->GetItemByIndex(1) == e3);
   ASSERT_TRUE(elements_->RemoveElement(e1));
-  ASSERT_FALSE(elements_->RemoveElement(e1));
+  // Invalid pointer causes seg fault now.
+  // ASSERT_FALSE(elements_->RemoveElement(e1));
   ASSERT_TRUE(elements_->GetItemByIndex(0) == e3);
 }
 

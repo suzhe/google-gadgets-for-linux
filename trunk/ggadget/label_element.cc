@@ -16,23 +16,21 @@
 
 #include "label_element.h"
 #include "graphics_interface.h"
-#include "view_interface.h"
 #include "text_frame.h"
+#include "view.h"
 
 namespace ggadget {
 
 class LabelElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view) : text_(owner, view) { }
+  Impl(BasicElement *owner, View *view) : text_(owner, view) { }
   ~Impl() {
   }
 
   TextFrame text_;
 };
 
-LabelElement::LabelElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name)
+LabelElement::LabelElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "label", name, false),
       impl_(new Impl(this, view)) {
   RegisterProperty("innerText",
@@ -53,9 +51,8 @@ void LabelElement::DoDraw(CanvasInterface *canvas,
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
 }
 
-ElementInterface *LabelElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *LabelElement::CreateInstance(BasicElement *parent, View *view,
+                                           const char *name) {
   return new LabelElement(parent, view, name);
 }
 

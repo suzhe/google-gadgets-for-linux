@@ -28,9 +28,7 @@ class AnchorElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x50ef5c291807400c, BasicElement);
   
-  AnchorElement(ElementInterface *parent,
-             ViewInterface *view,
-             const char *name);
+  AnchorElement(BasicElement *parent, View *view, const char *name);
   virtual ~AnchorElement();
 
  public:   
@@ -48,17 +46,14 @@ class AnchorElement : public BasicElement {
   /** Gets the text frame containing the text content of this anchor. */
   TextFrame *GetTextFrame();
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
-  
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 
  private:

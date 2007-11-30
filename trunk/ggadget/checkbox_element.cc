@@ -18,11 +18,10 @@
 #include "canvas_interface.h"
 #include "graphics_interface.h"
 #include "image.h"
-#include "text_frame.h"
-#include "string_utils.h"
-#include "view_interface.h"
-#include "event.h"
 #include "scriptable_event.h"
+#include "string_utils.h"
+#include "text_frame.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -36,7 +35,7 @@ static const char *const kOnChangeEvent = "onchange";
 
 class CheckBoxElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view, bool is_checkbox)
+  Impl(BasicElement *owner, View *view, bool is_checkbox)
     : is_checkbox_(is_checkbox), text_(owner, view),
       mousedown_(false), mouseover_(false), checkbox_on_right_(false),
       value_(STATE_CHECKED) {
@@ -91,8 +90,7 @@ class CheckBoxElement::Impl {
   EventSignal onchange_event_;
 };
 
-CheckBoxElement::CheckBoxElement(ElementInterface *parent,
-                                 ViewInterface *view,
+CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
                                  const char *name, bool is_checkbox)
     : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
       impl_(new Impl(this, view, is_checkbox)) {
@@ -142,7 +140,7 @@ CheckBoxElement::~CheckBoxElement() {
 }
 
 void CheckBoxElement::DoDraw(CanvasInterface *canvas,
-                           const CanvasInterface *children_canvas) {
+                             const CanvasInterface *children_canvas) {
   Image *img = impl_->GetCurrentImage(this);
 
   const double h = GetPixelHeight();
@@ -180,11 +178,11 @@ bool CheckBoxElement::GetValue() const {
 
 void CheckBoxElement::SetValue(bool value) {
   if (value != (impl_->value_ == STATE_CHECKED)) {
+    QueueDraw();
     impl_->value_ = value ? STATE_CHECKED : STATE_NORMAL;
     Event event(Event::EVENT_CHANGE);
-    ScriptableEvent s_event(&event, this, 0, 0);
+    ScriptableEvent s_event(&event, this, NULL);
     GetView()->FireEvent(&s_event, impl_->onchange_event_);
-    QueueDraw();
   }
 }
 
@@ -292,59 +290,50 @@ TextFrame *CheckBoxElement::GetTextFrame() {
   return &impl_->text_;
 }
 
-bool CheckBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
-                                 ElementInterface **fired_element) {
-  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
-
-  // Handle the event only when the event is fired and not canceled.
-  if (*fired_element && result) {
-    ASSERT(IsEnabled());
-    ASSERT(*fired_element == this);
-    switch (event->GetType()) {
-     case Event::EVENT_MOUSE_DOWN:
+EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
+  switch (event.GetType()) {
+    case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;
       OnDefaultSizeChange();
       QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_UP:
+      return EVENT_RESULT_HANDLED;
+    case Event::EVENT_MOUSE_UP:
       impl_->mousedown_ = false;
       OnDefaultSizeChange();
       QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_OUT:
+      return EVENT_RESULT_HANDLED;
+    case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
       OnDefaultSizeChange();
       QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_OVER:
+      return EVENT_RESULT_HANDLED;
+    case Event::EVENT_MOUSE_OVER:
       impl_->mouseover_ = true;
       OnDefaultSizeChange();
       QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_CLICK:
-      { // Toggle checked state and fire event
-        if (impl_->is_checkbox_) {
-          impl_->value_ = (impl_->value_ == STATE_NORMAL) ?
-                            STATE_CHECKED : STATE_NORMAL;
-        } else {
-          if (impl_->value_ == STATE_CHECKED) {
-            break; // Radio buttons don't change state in this situation.
-          }
-          impl_->value_ = STATE_CHECKED;
+      return EVENT_RESULT_HANDLED;
+    case Event::EVENT_MOUSE_CLICK: {
+      // Toggle checked state and fire event
+      if (impl_->is_checkbox_) {
+        impl_->value_ = (impl_->value_ == STATE_NORMAL) ?
+                          STATE_CHECKED : STATE_NORMAL;
+      } else {
+        if (impl_->value_ == STATE_CHECKED) {
+          break; // Radio buttons don't change state in this situation.
         }
-        Event event(Event::EVENT_CHANGE);
-        ScriptableEvent s_event(&event, this, 0, 0);
-        GetView()->FireEvent(&s_event, impl_->onchange_event_);
-        OnDefaultSizeChange();
-        QueueDraw();
+        impl_->value_ = STATE_CHECKED;
       }
-      break;
-     default:
-      break;
+      OnDefaultSizeChange();
+      QueueDraw();
+      Event event(Event::EVENT_CHANGE);
+      ScriptableEvent s_event(&event, this, NULL);
+      GetView()->FireEvent(&s_event, impl_->onchange_event_);
+      return EVENT_RESULT_HANDLED;
     }
+    default:
+      return EVENT_RESULT_UNHANDLED;
   }
-
-  return result;
+  return EVENT_RESULT_UNHANDLED;
 }
 
 Connection *CheckBoxElement::ConnectEvent(const char *event_name,
@@ -371,15 +360,15 @@ void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   *height = std::max(image_height, text_height);
 }
 
-ElementInterface *CheckBoxElement::CreateCheckBoxInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *CheckBoxElement::CreateCheckBoxInstance(BasicElement *parent,
+                                                      View *view,
+                                                      const char *name) {
   return new CheckBoxElement(parent, view, name, true);
 }
 
-ElementInterface *CheckBoxElement::CreateRadioInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *CheckBoxElement::CreateRadioInstance(BasicElement *parent,
+                                                   View *view,
+                                                   const char *name) {
   return new CheckBoxElement(parent, view, name, false);
 }
 

@@ -29,10 +29,9 @@ class CheckBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xe53dbec04fe34ea3, BasicElement);
 
-  CheckBoxElement(ElementInterface *parent,
-                ViewInterface *view,
-                const char *name, 
-                bool is_checkbox);
+  CheckBoxElement(BasicElement *parent, View *view,
+                  const char *name,
+                  bool is_checkbox);
   virtual ~CheckBoxElement();
 
  public:
@@ -79,20 +78,19 @@ class CheckBoxElement : public BasicElement {
   /** Gets the text frame containing the caption of this checkbox. */
   TextFrame *GetTextFrame();
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
 
  public:
-  static ElementInterface *CreateCheckBoxInstance(ElementInterface *parent,
-                                      ViewInterface *view, const char *name);
-  static ElementInterface *CreateRadioInstance(ElementInterface *parent,
-                                      ViewInterface *view, const char *name);
+  static BasicElement *CreateCheckBoxInstance(BasicElement *parent,
+                                              View *view, const char *name);
+  static BasicElement *CreateRadioInstance(BasicElement *parent,
+                                           View *view, const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 
  private:

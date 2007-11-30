@@ -25,6 +25,7 @@ namespace ggadget {
 
 template <typename R> class Slot0;
 class ViewHostInterface;
+class BasicElement;
 class ElementFactoryInterface;
 class ScriptContextInterface;
 
@@ -41,24 +42,15 @@ class View : public ScriptableHelper<ViewInterface> {
        int debug_mode);
   virtual ~View();
 
+ public: // ViewInterface methods.
   virtual ScriptContextInterface *GetScriptContext() const;
   virtual FileManagerInterface *GetFileManager() const;
   virtual bool InitFromFile(const char *filename);
 
-  virtual bool OnMouseEvent(MouseEvent *event);
-  virtual bool OnKeyEvent(KeyboardEvent *event);
-  virtual bool OnDragEvent(DragEvent *event);
-  virtual bool OnOtherEvent(Event *event);
-
-  virtual void OnElementAdd(ElementInterface *element);
-  virtual void OnElementRemove(ElementInterface *element);
-  virtual void FireEvent(ScriptableEvent *event,
-                         const EventSignal &event_signal);
-  virtual void PostEvent(ScriptableEvent *event,
-                         const EventSignal &event_signal);
-  virtual ScriptableEvent *GetEvent();
-  virtual const ScriptableEvent *GetEvent() const;
-  virtual void SetFocus(ElementInterface *element);
+  virtual EventResult OnMouseEvent(const MouseEvent &event);
+  virtual EventResult OnKeyEvent(const KeyboardEvent &event);
+  virtual EventResult OnDragEvent(const DragEvent &event);
+  virtual EventResult OnOtherEvent(const Event &event, Event *output_event);
 
   virtual bool SetWidth(int width);
   virtual bool SetHeight(int height);
@@ -68,8 +60,6 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual int GetHeight() const;
 
   virtual const CanvasInterface *Draw(bool *changed);
-  virtual const GraphicsInterface *GetGraphics() const;
-  virtual void QueueDraw();
 
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;
@@ -79,8 +69,8 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual bool GetShowCaptionAlways() const;
 
   virtual ElementFactoryInterface *GetElementFactory() const;
-  virtual const Elements *GetChildren() const;
-  virtual Elements *GetChildren();
+  virtual const ElementsInterface *GetChildren() const;
+  virtual ElementsInterface *GetChildren();
   virtual ElementInterface *GetElementByName(const char *name);
   virtual const ElementInterface *GetElementByName(const char *name) const;
 
@@ -93,24 +83,149 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual void ClearTimeout(int token);
   virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
   virtual void ClearInterval(int token);
-  virtual int GetDebugMode() const;
   virtual void OnOptionChanged(const char *name);
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
-  virtual void Alert(const char *message);
-  virtual bool Confirm(const char *message);
-  virtual std::string Prompt(const char *message, const char *default_value);
 
-  virtual Image *LoadImage(const Variant &src, bool is_mask);
-  virtual Image *LoadImageFromGlobal(const char *name, bool is_mask);
-  virtual Texture *LoadTexture(const Variant &src);
+ public:
+  /** Asks the host to redraw the given view. */
+  void QueueDraw();
 
-  virtual bool OpenURL(const char *url) const; 
-  
+  /** @return the current graphics interface used for drawing elements. */
+  const GraphicsInterface *GetGraphics() const;
+
+  /** Called when any element is added into the view hierarchy. */
+  void OnElementAdd(BasicElement *element);
+  /** Called when any element in the view hierarchy is about to be removed. */
+  void OnElementRemove(BasicElement *element);
+
+  /**
+   * Sets current input focus to the @a element. If some element has the focus,
+   * removes the focus first.
+   * @param element the element to put focus on. If it is @c NULL, only remove
+   *     the focus from the current focused element and thus no element has
+   *     the focus.
+   */
+  void SetFocus(BasicElement *element);
+
+  /**
+   * Any elements should call this method when it need to fire an event.
+   * @param event the event to be fired. The caller can choose to allocate the
+   *     event object on stack or heap.
+   * @param event_signal
+   */
+  void FireEvent(ScriptableEvent *event, const EventSignal &event_signal);
+
+  /**
+   * Post an event into the event queue.  The event will be fired in the next
+   * event loop.
+   * @param event the event to be fired. The caller must allocate the
+   *     @c ScriptableEvent and the @c Event objects on heap. They will be
+   *     deleted by this view.
+   * @param event_signal
+   */
+  void PostEvent(ScriptableEvent *event, const EventSignal &event_signal);
+
+  /**
+   * These methods are provided to the event handlers of native gadgets to
+   * retrieve the current fired event.
+   */
+  ScriptableEvent *GetEvent();
+  const ScriptableEvent *GetEvent() const;
+
+  /**
+   * Gets the current debug mode.
+   * 0: no debug; 1: debug container elements only; 2: debug all elements.
+   */
+  int GetDebugMode() const;
+
+  /**
+   * Local pointers to elements should be called with these methods before
+   * any event handler is to be called. The pointer will be set to @c NULL if
+   * the element has been removed during the event handler.
+   */
+  void PushDeathDetectedElement(BasicElement **element_ptr);
+  void PopDeathDetectedElement();
+
+ public:  // Other utilities.
+  /**
+   * Load an image from the gadget file.
+   * @param src the image source, can be of the following types:
+   *     - @c Variant::TYPE_STRING: the name within the gadget base path;
+   *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and
+   *       the scriptable object's type is ScriptableBinaryData: the binary
+   *       data of the image.
+   * @param is_mask if the image is used as a mask.
+   * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
+   */
+  Image *LoadImage(const Variant &src, bool is_mask);
+
+  /**
+   * Load an image from the global file manager.
+   * @param name the name within the gadget base path.
+   * @param is_mask if the image is used as a mask.
+   * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
+   */
+  Image *LoadImageFromGlobal(const char *name, bool is_mask);
+
+  /**
+   * Load a texture from image file or create a colored texture.
+   * @param src the source of the texture image, can be of the following types:
+   *     - @c Variant::TYPE_STRING: the name within the gadget base path, or a 
+   *       color description with HTML-style color ("#rrggbb"), or HTML-style
+   *       color with alpha ("#aarrggbb").
+   *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and
+   *       the scriptable object's type is ScriptableBinaryData: the binary
+   *       data of the image.
+   * @return the created texture ifsucceeds, or @c NULL.
+   */
+  Texture *LoadTexture(const Variant &src);
+
+  /** 
+   * Open the given URL in the user's default web brower.
+   * Only HTTP, HTTPS, and FTP URLs are supported.
+   */
+  bool OpenURL(const char *url) const;
+
+  /** Displays a message box containing the message string. */
+  void Alert(const char *message);
+
+  /**
+   * Displays a dialog containing the message string and Yes and No buttons.
+   * @param message the message string.
+   * @return @c true if Yes button is pressed, @c false if not.
+   */
+  bool Confirm(const char *message);
+
+  /**
+   * Displays a dialog asking the user to enter text.
+   * @param message the message string displayed before the edit box.
+   * @param default_value the initial default value dispalyed in the edit box.
+   * @return the user inputted text, or an empty string if user canceled the
+   *     dialog.
+   */
+  std::string Prompt(const char *message, const char *default_value);
+
  private:
   class Impl;
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
+};
+
+class ScopedDeathDetector {
+ public:
+  ScopedDeathDetector(View *view, BasicElement **element_ptr)
+      : view_(view) {
+    ASSERT(view);
+    ASSERT(element_ptr);
+    view->PushDeathDetectedElement(element_ptr);
+  }
+  ~ScopedDeathDetector() {
+    view_->PopDeathDetectedElement();
+  }
+ private:
+  View *view_;
+  DISALLOW_EVIL_CONSTRUCTORS(ScopedDeathDetector);
 };
 
 } // namespace ggadget
