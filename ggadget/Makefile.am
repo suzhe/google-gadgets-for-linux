@@ -23,8 +23,6 @@ INCLUDES		= -I$(top_builddir) \
 
 gglincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget
 
-noinst_HEADERS		= element_factory_impl.h
-
 gglinclude_HEADERS	= anchor_element.h \
 			  audioclip_interface.h \
 			  basic_element.h \
@@ -43,6 +41,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  element_factory.h \
 			  element_factory_interface.h \
 			  element_interface.h \
+			  elements_interface.h \
 			  elements.h \
 			  event.h \
 			  file_manager.h \

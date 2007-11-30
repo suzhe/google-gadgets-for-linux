@@ -23,7 +23,7 @@ namespace ggadget {
 
 class ViewInterface;
 class ElementInterface;
-class Elements;
+class ElementsInterface;
 class DOMDocumentInterface;
 
 /**
@@ -48,18 +48,23 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
 
 /**
  * Creates an element according to XML definition and appends it to elements.
+ * @param view
  * @param elements the elements collection.
  * @param xml the XML definition of the element.
  */
-ElementInterface *AppendElementFromXML(Elements *elements, const char *xml);
+ElementInterface *AppendElementFromXML(ViewInterface *view,
+                                       ElementsInterface *elements,
+                                       const char *xml);
 
 /**
  * Creates an element according to XML definition and inserts it to elements.
+ * @param view
  * @param elements the elements collection.
  * @param xml the XML definition of the element.
  * @param before insert the new element before this element.
  */
-ElementInterface *InsertElementFromXML(Elements *elements,
+ElementInterface *InsertElementFromXML(ViewInterface *view,
+                                       ElementsInterface *elements,
                                        const char *xml,
                                        const ElementInterface *before);
 

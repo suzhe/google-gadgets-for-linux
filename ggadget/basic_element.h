@@ -23,30 +23,25 @@
 
 namespace ggadget {
 
-class ViewInterface;
+class CanvasInterface;
 class Elements;
+class View;
 
 class BasicElement : public ScriptableHelper<ElementInterface> {
  public:
   CLASS_ID_DECL(0xfd70820c5bbf11dc);
 
  public:
-  BasicElement(ElementInterface *parent,
-               ViewInterface *view,
-               const char *tag_name,
-               const char *name,
-               bool is_container);
+  BasicElement(BasicElement *parent, View *view,
+               const char *tag_name, const char *name, bool is_container);
   virtual ~BasicElement();
 
- public:
-  virtual void Destroy();
+ public: // ElementInterface methods.
   virtual const char *GetTagName() const;
-  virtual ViewInterface *GetView();
-  virtual const ViewInterface *GetView() const;
   virtual HitTest GetHitTest() const;
   virtual void SetHitTest(HitTest value);
-  virtual const Elements *GetChildren() const;
-  virtual Elements *GetChildren();
+  virtual const ElementsInterface *GetChildren() const;
+  virtual ElementsInterface *GetChildren();
   virtual CursorType GetCursor() const;
   virtual void SetCursor(CursorType cursor);
   virtual bool IsDropTarget() const;
@@ -56,7 +51,6 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual const char *GetName() const;
   virtual const char *GetMask() const;
   virtual void SetMask(const char *mask);
-  virtual const CanvasInterface *GetMaskCanvas();
   virtual double GetPixelWidth() const;
   virtual double GetPixelHeight() const;
   virtual double GetRelativeWidth() const;
@@ -81,6 +75,17 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void SetRelativePinX(double pin_x);
   virtual double GetRelativePinY() const;
   virtual void SetRelativePinY(double pin_y);
+  virtual bool XIsRelative() const;
+  virtual bool YIsRelative() const;
+  virtual bool WidthIsRelative() const;
+  virtual bool HeightIsRelative() const;
+  virtual bool PinXIsRelative() const;
+  virtual bool PinYIsRelative() const;
+  virtual bool WidthIsSpecified() const;
+  virtual void ResetWidthToDefault();
+  virtual bool HeightIsSpecified() const;
+  virtual void ResetHeightToDefault();
+
   virtual double GetRotation() const;
   virtual void SetRotation(double rotation);
   virtual double GetOpacity() const;
@@ -93,51 +98,134 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual const ElementInterface *GetParentElement() const;
   virtual const char *GetTooltip() const;
   virtual void SetTooltip(const char *tooltip);
+
   virtual void Focus();
   virtual void KillFocus();
-
-  virtual bool XIsRelative() const;
-  virtual bool YIsRelative() const;
-  virtual bool WidthIsRelative() const;
-  virtual bool HeightIsRelative() const;
-  virtual bool PinXIsRelative() const;
-  virtual bool PinYIsRelative() const;
-
-  virtual bool WidthIsSpecified() const;
-  virtual void ResetWidthToDefault();
-  virtual bool HeightIsSpecified() const;
-  virtual void ResetHeightToDefault();
-
-  virtual const CanvasInterface *Draw(bool *changed);
-
-  virtual void OnParentWidthChange(double width);
-  virtual void OnParentHeightChange(double height);
-
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
-  virtual bool OnDragEvent(DragEvent *event, bool direct,
-                           ElementInterface **fired_element);
-  virtual bool IsPointIn(double x, double y);
-  virtual bool OnKeyEvent(KeyboardEvent *event);
-  virtual bool OnOtherEvent(Event *event);
-
-  virtual bool IsPositionChanged() const;
-  virtual void ClearPositionChanged();
-
-  virtual void SelfCoordToChildCoord(ElementInterface *child,
-                                     double x, double y,
-                                     double *child_x, double *child_y);
-
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
+
+ public:
+  /** Get the associated View of the current element. */
+  const View *GetView() const;
+  /** Get the associated View of the current element. */
+  View *GetView();
+
+  /** Gets the canvas for the element mask. Returns NULL if no mask is set. */
+  const CanvasInterface *GetMaskCanvas();
+
+  /**
+   * Draws the current element to a canvas. The caller does NOT own this canvas
+   * and should not free it.
+   * @param[out] changed True if the returned canvas is different from that
+   *   of the last call, false otherwise.
+   * @return A canvas suitable for drawing. NULL if element is not visible.
+   */
+  const CanvasInterface *Draw(bool *changed);
+
+  /**
+   * Handler of the mouse events. Normally subclasses should not override this
+   * method except it needs special event handling.
+   * Override @c HandleMouseEvent() if need to process mouse events.
+   * @param event the mouse event.
+   * @param direct if @c true, this event is sent to the element directly, so
+   *     it should not dispatch it to its children.
+   * @param[out] fired_element the element who processed the event, or
+   *     @c NULL if no one.
+   * @param[out] in_element the child element where the mouse is in (including
+   *     disabled child elements, but not invisible child elements).
+   * @return result of event handling.
+   */
+  virtual EventResult OnMouseEvent(const MouseEvent &event,
+                                   bool direct,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element);
+
+  /**
+   * Handler of the drag and drop events.
+   * Normally subclasses should not override this method. 
+   * Override @c HandleDragEvent() if need to process dragging events.
+   * @param event the darg and drop event.
+   * @param direct if @c true, this event is sent to the element directly, so
+   *     it should not dispatch it to its children.
+   * @param[out] fired_element the element who processed the event, or
+   *     @c NULL if no one.
+   * @return result of event handling.
+   */
+  virtual EventResult OnDragEvent(const DragEvent &event,
+                                  bool direct,
+                                  BasicElement **fired_element);
+
+  /**
+   * Check if the position of a position event (mouse or drag) is in the
+   * element.
+   */
+  bool IsPointIn(double x, double y);
+
+  /**
+   * Handler of the keyboard events.
+   * Normally subclasses should not override this method. 
+   * Override @c HandleKeyEvent() if need to process keyboard events.
+   * @param event the keyboard event.
+   * @return result of event handling.
+   */
+  virtual EventResult OnKeyEvent(const KeyboardEvent &event);
+
+  /**
+   * Handler for other events.
+   * Normally subclasses should not override this method. 
+   * Override @c HandleKeyEvent() if need to process other events.
+   * @param event the event.
+   * @return result of event handling.
+   */
+  virtual EventResult OnOtherEvent(const Event &event);
+
+  /**
+   * Checks to see if position of the element has changed since the last draw
+   * relative to the parent. Specifically, this checks for changes in
+   * x, y, pinX, pinY, and rotation.
+   */
+  bool IsPositionChanged() const;
+  /**
+   * Sets the position changed state to false.
+   */
+  void ClearPositionChanged();
+
+  /**
+   * Called by the parent when the width of the parent changes.
+   */
+  void OnParentWidthChange(double width);
+  /**
+   * Called by the parent when the height of the parent changes.
+   */
+  void OnParentHeightChange(double height);
+
+  /**
+   * Converts coordinates in a this element's space to coordinates in a
+   * child element.
+   *
+   * The default implementation should directly call ParentCoorddToChildCoord.
+   * Element implementation should override this method if it supports
+   * scrolling.
+   *
+   * @param child a child element of this element.
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert.
+   * @param[out] child_x parameter to store the converted child x-coordinate.
+   * @param[out] child_y parameter to store the converted child y-coordinate.
+   */
+  virtual void SelfCoordToChildCoord(const BasicElement *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y) const;
+
+  void SetChildrenScrollable(bool scrollable);
 
  public:
   /**
    * Sets the changed bit to true and if visible, 
    * requests the view to be redrawn. 
    */
-  virtual void QueueDraw();
-  
+  void QueueDraw();
+
   /** Called by child classes when the default size changed. */
   void OnDefaultSizeChange();
 
@@ -151,18 +239,36 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
 
+  /** To be overriden by a subclass if it need to handle mouse events. */ 
+  virtual EventResult HandleMouseEvent(const MouseEvent &event) {
+    return EVENT_RESULT_UNHANDLED;
+  }
+  /** To be overriden by a subclass if it need to handle dragging events. */ 
+  virtual EventResult HandleDragEvent(const DragEvent &event) {
+    return EVENT_RESULT_UNHANDLED;
+  }
+  /** To be overriden by a subclass if it need to handle keyboard events. */ 
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event) {
+    return EVENT_RESULT_UNHANDLED;
+  }
+  /** To be overriden by a subclass if it need to handle other events. */ 
+  virtual EventResult HandleOtherEvent(const Event &event) {
+    return EVENT_RESULT_UNHANDLED;
+  }
+
   /**
    * Return the default size of the element in pixels.
    * The default size is used when no "width" or "height" property is specified
    * for the element.
+   * The default value of default size is (0,0).
    */
   virtual void GetDefaultSize(double *width, double *height) const;
 
-  /** Hook for subclasses  to react to change of width. */
-  virtual void OnWidthChange();
+  /** Hook for subclasses to react to change of width. */
+  virtual void OnWidthChange() { } 
 
-  /** Hook for subclasses  to react to change of width. */
-  virtual void OnHeightChange();
+  /** Hook for subclasses to react to change of width. */
+  virtual void OnHeightChange() { }
 
  private:
   class Impl;

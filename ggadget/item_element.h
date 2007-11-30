@@ -25,10 +25,8 @@ class ItemElement : public DivElement {
  public:
   DEFINE_CLASS_ID(0x93a09b61fb8a4fda, DivElement);
 
-  ItemElement(ElementInterface *parent,
-              ViewInterface *view,
-              const char *tag_name,
-              const char *name);
+  ItemElement(BasicElement *parent, View *view,
+              const char *tag_name, const char *name);
   virtual ~ItemElement();
 
  public:
@@ -37,14 +35,12 @@ class ItemElement : public DivElement {
   void SetSelected(bool selected);
 
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
   /** For backward compatibility of listitem. */
-  static ElementInterface *CreateListItemInstance(ElementInterface *parent,
-                                                  ViewInterface *view,
-                                                  const char *name);
+  static BasicElement *CreateListItemInstance(BasicElement *parent, View *view,
+                                              const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,

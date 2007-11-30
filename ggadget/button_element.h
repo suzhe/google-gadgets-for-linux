@@ -29,9 +29,7 @@ class ButtonElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xb6fb01fd48134377, BasicElement);
 
-  ButtonElement(ElementInterface *parent,
-                ViewInterface *view,
-                const char *name);
+  ButtonElement(BasicElement *parent, View *view, const char *name);
   virtual ~ButtonElement();
 
  public:
@@ -54,17 +52,14 @@ class ButtonElement : public BasicElement {
   /** Gets the text frame containing the caption of this button. */
   TextFrame *GetTextFrame();
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
-
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 
  private:

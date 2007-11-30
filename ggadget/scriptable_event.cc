@@ -15,43 +15,57 @@
 */
 
 #include "scriptable_event.h"
-#include "element_interface.h"
+#include "basic_element.h"
 #include "event.h"
 #include "scriptable_array.h"
 
 namespace ggadget {
 
-class DragFilesHelper {
+class ScriptableEvent::Impl {
  public:
-  DragFilesHelper(const char **drag_files) : drag_files_(drag_files) { }
-  ScriptableArray *operator()() const {
-    return ScriptableArray::Create(drag_files_, false);
+  Impl::Impl(const Event *event, BasicElement *src_element,
+             Event *output_event)
+       : event_(event),
+         return_value_(EVENT_RESULT_UNHANDLED),
+         src_element_(src_element),
+         output_event_(output_event) {
   }
-  bool operator ==(const DragFilesHelper &another) const {
-    return another.drag_files_ == drag_files_;
+
+  ScriptableArray *ScriptGetDragFiles() {
+    ASSERT(event_->IsDragEvent());
+    const DragEvent *drag_event = static_cast<const DragEvent *>(event_);
+    return ScriptableArray::Create(drag_event->GetDragFiles(), false);
   }
- private:
-  const char **drag_files_;
+
+  bool ScriptGetReturnValue() {
+    return return_value_ != EVENT_RESULT_CANCELED;
+  }
+
+  void ScriptSetReturnValue(bool value) {
+    return_value_ = value ? EVENT_RESULT_HANDLED : EVENT_RESULT_CANCELED;
+  }
+
+  const Event *event_;
+  EventResult return_value_;
+  BasicElement *src_element_;
+  Event *output_event_;
 };
 
-ScriptableEvent::ScriptableEvent(Event *event,
-                                 ElementInterface *src_element,
-                                 int cookie,
-                                 int value)
-    : event_(event),
-      return_value_(true),
-      src_element_(src_element),
-      cookie_(cookie),
-      value_(value) {
-  RegisterSimpleProperty("returnValue", &return_value_); 
-  RegisterReadonlySimpleProperty("srcElement", &src_element_);
-  RegisterReadonlySimpleProperty("cookie", &cookie_);
-  RegisterReadonlySimpleProperty("value", &value_);
+ScriptableEvent::ScriptableEvent(const Event *event,
+                                 BasicElement *src_element,
+                                 Event *output_event)
+    : impl_(new Impl(event, src_element, output_event)) {
+  RegisterProperty("returnValue",
+                   NewSlot(impl_, &Impl::ScriptGetReturnValue),
+                   NewSlot(impl_, &Impl::ScriptSetReturnValue));
+  RegisterProperty("srcElement", NewSlot(this, &ScriptableEvent::GetSrcElement),
+                   NULL);
   RegisterProperty("type", NewSlot(this, &ScriptableEvent::GetName), NULL);
 
   if (event->IsMouseEvent()) {
-    MouseEvent *mouse_event = static_cast<MouseEvent *>(event);
-    PositionEvent *position_event = static_cast<PositionEvent *>(event);
+    const MouseEvent *mouse_event = static_cast<const MouseEvent *>(event);
+    const PositionEvent *position_event =
+        static_cast<const PositionEvent *>(event);
     RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
     RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetX), NULL);
     RegisterProperty("button",
@@ -59,37 +73,47 @@ ScriptableEvent::ScriptableEvent(Event *event,
     RegisterProperty("wheelDelta",
                      NewSlot(mouse_event, &MouseEvent::GetWheelDelta), NULL);
   } else if (event->IsKeyboardEvent()) {
-    KeyboardEvent *key_event = static_cast<KeyboardEvent *>(event);
+    const KeyboardEvent *key_event = static_cast<const KeyboardEvent *>(event);
     RegisterProperty("keyCode",
                      NewSlot(key_event, &KeyboardEvent::GetKeyCode), NULL);
   } else if (event->IsDragEvent()) {
-    DragEvent *drag_event = static_cast<DragEvent *>(event);
-    PositionEvent *position_event = static_cast<PositionEvent *>(event);
+    const PositionEvent *position_event =
+        static_cast<const PositionEvent *>(event);
     RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
     RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetX), NULL);
-    RegisterProperty("dragFiles",
-                     NewFunctorSlot<ScriptableArray *>(
-                         DragFilesHelper(drag_event->GetDragFiles())),
+    RegisterProperty("dragFiles", NewSlot(impl_, &Impl::ScriptGetDragFiles),
                      NULL);
   } else {
     Event::Type type = event->GetType();
     switch (type) {
       case Event::EVENT_SIZING: {
-        SizingEvent *sizing_event = static_cast<SizingEvent *>(event);
+        ASSERT(output_event && output_event->GetType() == Event::EVENT_SIZING);
+        const SizingEvent *sizing_event =
+            static_cast<const SizingEvent *>(event);
+        SizingEvent *output_sizing_event =
+            static_cast<SizingEvent *>(output_event);
         RegisterProperty("width",
                          NewSlot(sizing_event, &SizingEvent::GetWidth),
-                         NewSlot(sizing_event, &SizingEvent::SetWidth));
+                         NewSlot(output_sizing_event, &SizingEvent::SetWidth));
         RegisterProperty("height",
                          NewSlot(sizing_event, &SizingEvent::GetHeight),
-                         NewSlot(sizing_event, &SizingEvent::SetHeight));
+                         NewSlot(output_sizing_event, &SizingEvent::SetHeight));
         break;
       }
       case Event::EVENT_OPTION_CHANGED: {
-        OptionChangedEvent *option_changed_event =
-            static_cast<OptionChangedEvent *>(event);
+        const OptionChangedEvent *option_changed_event =
+            static_cast<const OptionChangedEvent *>(event);
         RegisterProperty("propertyName",
                          NewSlot(option_changed_event,
                                  &OptionChangedEvent::GetPropertyName),
+                         NULL);
+        break;
+      }
+      case Event::EVENT_TIMER: {
+        const TimerEvent *timer_event = static_cast<const TimerEvent *>(event);
+        RegisterProperty("cookie", NewSlot(timer_event, &TimerEvent::GetToken),
+                         NULL);
+        RegisterProperty("value", NewSlot(timer_event, &TimerEvent::GetValue),
                          NULL);
         break;
       }
@@ -100,10 +124,12 @@ ScriptableEvent::ScriptableEvent(Event *event,
 }
 
 ScriptableEvent::~ScriptableEvent() {
+  delete impl_;
+  impl_ = NULL;
 }
 
 const char *ScriptableEvent::GetName() const {
-  switch (event_->GetType()) {
+  switch (impl_->event_->GetType()) {
     case Event::EVENT_CANCEL: return kOnCancelEvent;
     case Event::EVENT_CLOSE: return kOnCloseEvent;
     case Event::EVENT_DOCK: return kOnDockEvent;
@@ -137,11 +163,37 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_DRAG_OUT: return kOnDragOutEvent;
     case Event::EVENT_DRAG_OVER: return kOnDragOverEvent;
 
-    case Event::EVENT_TIMER_TICK: return "";  // Windows version does the same.
     case Event::EVENT_SIZING: return kOnSizingEvent;
     case Event::EVENT_OPTION_CHANGED: return kOnOptionChangedEvent;
+    case Event::EVENT_TIMER: return "";  // Windows version does the same.
     default: ASSERT(false); return "";
   }
+}
+
+const Event *ScriptableEvent::GetEvent() const {
+  return impl_->event_;
+}
+
+const Event *ScriptableEvent::GetOutputEvent() const {
+  return impl_->output_event_;
+}
+Event *ScriptableEvent::GetOutputEvent() {
+  return impl_->output_event_;
+}
+
+BasicElement *ScriptableEvent::GetSrcElement() {
+  return impl_->src_element_;
+}
+const BasicElement *ScriptableEvent::GetSrcElement() const {
+  return impl_->src_element_;
+}
+
+EventResult ScriptableEvent::GetReturnValue() const {
+  return impl_->return_value_;
+}
+
+void ScriptableEvent::SetReturnValue(EventResult return_value) {
+  impl_->return_value_ = return_value;
 }
 
 } // namespace ggadget

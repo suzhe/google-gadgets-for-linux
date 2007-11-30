@@ -18,30 +18,23 @@
 #define GGADGET_ELEMENTS_H__
 
 #include <ggadget/common.h>
+#include <ggadget/event.h>
+#include <ggadget/elements_interface.h>
 #include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
-namespace internal {
-
-class ElementsImpl;
-
-} // namespace internal
-
+class BasicElement;
 class CanvasInterface;
-class ElementInterface;
-class ElementFactoryInterface;
-class ViewInterface;
-class MouseEvent;
-class DragEvent;
+class View;
 
 /**
  * Elements is used for storing and managing a set of objects which
  * implement the @c ElementInterface.
  */
-class Elements : public ScriptableHelper<ScriptableInterface> {
+class Elements : public ScriptableHelper<ElementsInterface> {
  public:
-  DEFINE_CLASS_ID(0xe3bdb064cb794282, ScriptableInterface)
+  DEFINE_CLASS_ID(0xe3bdb064cb794282, ElementsInterface)
 
   /**
    * Create an Elements object and assign the given factory to it.
@@ -50,62 +43,25 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    *     owned directly by a view.
    * @param view the containing view. 
    */
-  Elements(ElementFactoryInterface *factory,
-           ElementInterface *owner,
-           ViewInterface *view);
+  Elements(ElementFactoryInterface *factory, BasicElement *owner, View *view);
 
-  /** Not virtual because no inheritation to this class is allowed. */
-  ~Elements();
+  virtual ~Elements();
+
+ public: // ElementsInterface methods.
+  virtual int GetCount() const;
+  virtual ElementInterface *GetItemByIndex(int child);
+  virtual const ElementInterface *GetItemByIndex(int child) const;
+  virtual ElementInterface *GetItemByName(const char *child);
+  virtual const ElementInterface *GetItemByName(const char *child) const;
+  virtual ElementInterface *AppendElement(const char *tag_name,
+                                          const char *name);
+  virtual ElementInterface *InsertElement(const char *tag_name,
+                                          const ElementInterface *before,
+                                          const char *name);
+  virtual bool RemoveElement(ElementInterface *element);
+  virtual void RemoveAllElements();
 
  public:
-  /**
-   * @return number of children.
-   */
-  int GetCount() const;
-
-  /**
-   * Returns the element identified by the index.
-   * @param child the index of the child.
-   * @return the pointer to the specified element. If the parameter is out of
-   *     range, @c NULL is returned.
-   */
-  ElementInterface *GetItemByIndex(int child);
-  const ElementInterface *GetItemByIndex(int child) const;
-
-  /**
-   * Returns the element identified by the name.
-   * @param child the name of the child.
-   * @return the pointer to the specified element. If multiple elements are
-   *     defined with the same name, returns the first one. Returns @c NULL if
-   *     no elements match.
-   */
-  ElementInterface *GetItemByName(const char *child);
-  const ElementInterface *GetItemByName(const char *child) const;
-
-  /**
-   * Create a new element and add it to the end of the children list.
-   * @param tag_name a string specified the element tag name.
-   * @param name the name of the newly created element.
-   * @return the pointer to the newly created element, or @c NULL when error
-   *     occured.
-   */
-  ElementInterface *AppendElement(const char *tag_name, const char *name);
-
-  /**
-   * Create a new element before the specified element.
-   * @param tag_name a string specified the element tag name.
-   * @param before the newly created element will be inserted before the given
-   *     element. If the specified element is not the direct child of the
-   *     container or this parameter is @c NULL, this method will insert the
-   *     newly created element at the end of the children list.
-   * @param name the name of the newly created element.
-   * @return the pointer to the newly created element, or @c NULL when error
-   *     occured.
-   */
-  ElementInterface *InsertElement(const char *tag_name,
-                                  const ElementInterface *before,
-                                  const char *name);
-
   /**
    * Create a new element from XML definition and add it to the end of the
    * children list.
@@ -128,19 +84,6 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    */
   ElementInterface *InsertElementFromXML(const char *xml,
                                          const ElementInterface *before);
-
-  /**
-   * Remove the specified element from the container.
-   * @param element the element to remove.
-   * @return @c true if removed successfully, or @c false if the specified
-   *     element doesn't exists or not the direct child of the container.
-   */
-  bool RemoveElement(ElementInterface *element);
-
-  /**
-   * Remove all elements from the container.
-   */
-  void RemoveAllElements();
 
   /**
    * Notifies all children using relative positioning that the
@@ -171,19 +114,23 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    * @param event the mouse event.
    * @param[out] fired_element the element who processed the event, or
    *     @c NULL if no one.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
+   * @param[out] in_element the child element where the mouse is in (including
+   *     disabled child elements, but not invisible child elements).
+   * @return result of event handling.
    */
-  bool OnMouseEvent(MouseEvent *event, ElementInterface **fired_element);
+  EventResult OnMouseEvent(const MouseEvent &event,
+                           BasicElement **fired_element,
+                           BasicElement **in_element);
 
   /**
    * Handler of the drag and drop events.
    * @param event the darg and drop event.
    * @param[out] fired_element the element who processed the event, or
    *     @c NULL if no one.
-   * @return @c true if the event is accepted by some element.
+   * @return result of event handling.
    */
-  bool OnDragEvent(DragEvent *event, ElementInterface **fired_element);
+  EventResult OnDragEvent(const DragEvent &event,
+                          BasicElement **fired_element);
 
   /**
    * Sets if the drawing contents can be scrolled within the parent.

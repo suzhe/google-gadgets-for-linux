@@ -20,7 +20,7 @@
 #include "event.h"
 #include "item_element.h"
 #include "texture.h"
-#include "view_interface.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -47,11 +47,9 @@ class ListBoxElement::Impl {
   EventSignal onchange_event_;
 };
 
-ListBoxElement::ListBoxElement(ElementInterface *parent,
-                               ViewInterface *view,
-                               const char *tag_name,
-                               const char *name)
-    : DivElement(parent, view, tag_name, name, true),
+ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
+                               const char *tag_name, const char *name)
+    : DivElement(parent, view, tag_name, name),
       impl_(new Impl(this)) {
   SetEnabled(true);
   RegisterProperty("background",
@@ -189,17 +187,17 @@ void ListBoxElement::ClearSelection() {
   // TODO:
 }
 
-bool ListBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
-                              ElementInterface **fired_element) {
-  return DivElement::OnMouseEvent(event, direct, fired_element);
+EventResult ListBoxElement::HandleMouseEvent(const MouseEvent &event) {
+  // TODO:
+  return EVENT_RESULT_UNHANDLED;
 }
 
-bool ListBoxElement::OnKeyEvent(KeyboardEvent *event) {
-  return DivElement::OnKeyEvent(event);
+EventResult ListBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
+  // TODO:
+  return EVENT_RESULT_UNHANDLED;
 }
 
-ElementInterface *ListBoxElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
+BasicElement *ListBoxElement::CreateInstance(BasicElement *parent, View *view,
                                              const char *name) {
   return new ListBoxElement(parent, view, "listbox", name);
 }

@@ -25,6 +25,7 @@
 
 using ggadget::CairoCanvas;
 using ggadget::Event;
+using ggadget::EventResult;
 using ggadget::MouseEvent;
 using ggadget::KeyboardEvent;
 using ggadget::DragEvent;
@@ -36,6 +37,12 @@ static GtkWidgetClass *parent_class = NULL;
 static void GadgetViewWidget_destroy(GtkObject* object) {
   if (GTK_OBJECT_CLASS(parent_class)->destroy) {
     (*GTK_OBJECT_CLASS(parent_class)->destroy)(object);
+  }
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(object);
+
+  if (gvw->current_drag_event) {
+    delete gvw->current_drag_event;
+    gvw->current_drag_event = NULL;
   }
 }
 
@@ -158,12 +165,14 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
                                               GdkEventButton *event) {
   bool handler_result = true;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
+  gvw->host->HideTooltip(0);
+
   if (event->type == GDK_BUTTON_PRESS) {
     if (event->button == 1) {
       MouseEvent e(Event::EVENT_MOUSE_DOWN,
                    event->x / gvw->zoom, event->y / gvw->zoom,
                    MouseEvent::BUTTON_LEFT, 0);
-      handler_result = gvw->view->OnMouseEvent(&e);
+      handler_result = gvw->view->OnMouseEvent(e);
     }
   }
   else if (event->type == GDK_2BUTTON_PRESS) {
@@ -183,11 +192,11 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     }
     if (button != MouseEvent::BUTTON_NONE) {
       MouseEvent e(t, event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
-      handler_result = gvw->view->OnMouseEvent(&e);
+      handler_result = gvw->view->OnMouseEvent(e);
     }
   }
 
-  if (handler_result && !gvw->window_move) {
+  if (handler_result == ggadget::EVENT_RESULT_UNHANDLED && !gvw->window_move) {
     gvw->window_move = true;
 
     GtkWidget *window = gtk_widget_get_toplevel(widget);
@@ -217,6 +226,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   bool handler_result = true;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_BUTTON_RELEASE);
+  gvw->host->HideTooltip(0);
 
   if (gvw->window_move) {
     gdk_pointer_ungrab(event->time);
@@ -227,7 +237,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
     MouseEvent e(Event::EVENT_MOUSE_UP,
                  event->x / gvw->zoom, event->y / gvw->zoom,
                  MouseEvent::BUTTON_LEFT, 0);
-    handler_result = gvw->view->OnMouseEvent(&e);
+    handler_result = gvw->view->OnMouseEvent(e);
   }
 
   if (!gvw->dbl_click) {
@@ -244,7 +254,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
     }
     if (button != MouseEvent::BUTTON_NONE) {
       MouseEvent e2(t, event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
-      handler_result = gvw->view->OnMouseEvent(&e2);
+      handler_result = gvw->view->OnMouseEvent(e2);
     }
   } else {
     gvw->dbl_click = false;
@@ -260,17 +270,19 @@ static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
   MouseEvent e(Event::EVENT_MOUSE_OVER,
                event->x / gvw->zoom, event->y / gvw->zoom,
                MouseEvent::BUTTON_NONE, 0);
-  return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
+  return gvw->view->OnMouseEvent(e) ? FALSE : TRUE;
 }
 
 static gboolean GadgetViewWidget_leave_notify(GtkWidget *widget,
                                               GdkEventCrossing *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_LEAVE_NOTIFY);
+  gvw->host->HideTooltip(0);
+
   MouseEvent e(Event::EVENT_MOUSE_OUT,
                event->x / gvw->zoom, event->y / gvw->zoom,
                MouseEvent::BUTTON_NONE, 0);
-  return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
+  return gvw->view->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
@@ -289,9 +301,10 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   }
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
                event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
-  bool handler_result = gvw->view->OnMouseEvent(&e);
+  bool handler_result = gvw->view->OnMouseEvent(e);
 
-  if (handler_result && gvw->window_move && (event->state & GDK_BUTTON1_MASK)) {
+  if (handler_result == ggadget::EVENT_RESULT_UNHANDLED &&
+      gvw->window_move && (event->state & GDK_BUTTON1_MASK)) {
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     if (GTK_IS_WINDOW(window)) {
       gint new_pos_x = static_cast<gint>(event->x_root - gvw->window_move_x);
@@ -313,14 +326,15 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
 
 static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
                                            GdkEventKey *event) {
-  bool handler_result = true;
+  EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_KEY_PRESS);
+  gvw->host->HideTooltip(0);
 
   unsigned int key_code = ggadget::ConvertGdkKeyvalToKeyCode(event->keyval);
   if (key_code) {
     KeyboardEvent e(Event::EVENT_KEY_DOWN, key_code);
-    handler_result = gvw->view->OnKeyEvent(&e);
+    handler_result = gvw->view->OnKeyEvent(e);
   } else {
     LOG("Unknown key: 0x%x", event->keyval);
   }
@@ -340,28 +354,28 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
     if (key_char) {
       // Send the char code in KEY_PRESS event.
       KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char);
-      gvw->view->OnKeyEvent(&e2);
+      gvw->view->OnKeyEvent(e2);
     }
   }
 
-  return handler_result ? FALSE : TRUE;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
                                              GdkEventKey *event) {
-  bool handler_result = true;
+  EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_KEY_RELEASE);
 
   unsigned int key_code = ggadget::ConvertGdkKeyvalToKeyCode(event->keyval);
   if (key_code) {
     KeyboardEvent e(Event::EVENT_KEY_UP, key_code);
-    handler_result = gvw->view->OnKeyEvent(&e);
+    handler_result = gvw->view->OnKeyEvent(e);
   } else {
     LOG("Unknown key: 0x%x", event->keyval);
   }
 
-  return handler_result ? FALSE : TRUE;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_focus_in(GtkWidget *widget,
@@ -369,7 +383,7 @@ static gboolean GadgetViewWidget_focus_in(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_FOCUS_CHANGE && event->in == TRUE);
   Event e(Event::EVENT_FOCUS_IN);
-  return gvw->view->OnOtherEvent(&e) ? FALSE : TRUE;
+  return gvw->view->OnOtherEvent(e, NULL) != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_focus_out(GtkWidget *widget,
@@ -377,7 +391,7 @@ static gboolean GadgetViewWidget_focus_out(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_FOCUS_CHANGE && event->in == FALSE);
   Event e(Event::EVENT_FOCUS_OUT);
-  return gvw->view->OnOtherEvent(&e) ? FALSE : TRUE;
+  return gvw->view->OnOtherEvent(e, NULL) != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
@@ -396,13 +410,14 @@ static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
                event->x / gvw->zoom, event->y / gvw->zoom,
                // TODO: button
                MouseEvent::BUTTON_NONE, delta);
-  return gvw->view->OnMouseEvent(&e) ? FALSE : TRUE;
+  return gvw->view->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static void GadgetViewWidget_init(GadgetViewWidget *gvw) {
   gvw->dbl_click = false;
   gvw->window_move = false;
   gvw->window_move_x = gvw->window_move_y = 0;
+  gvw->current_drag_event = NULL;
 
   gtk_widget_set_events(GTK_WIDGET(gvw),
                         gtk_widget_get_events(GTK_WIDGET(gvw)) |
@@ -429,41 +444,64 @@ static void DisableDrag(GtkWidget *widget, GdkDragContext *context,
 static gboolean OnDragEvent(GtkWidget *widget, GdkDragContext *context,
                             gint x, gint y, guint time, Event::Type event_type) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
-  gvw->current_drag_event = DragEvent(event_type, x, y, NULL);
+  if (gvw->current_drag_event) {
+    // There are some cases that multiple drag events are fired in one event
+    // loop. For example, drag_leave and drag_drop, we use the latter one.
+    delete gvw->current_drag_event;
+    gvw->current_drag_event = NULL;
+  }
+
+  gvw->current_drag_event = new DragEvent(event_type, x, y, NULL);
+  LOG("Drag Event: %d", event_type);
 
   GdkAtom target = gtk_drag_dest_find_target(
       widget, context, gtk_drag_dest_get_target_list(widget));
   if (target != GDK_NONE) {
     gtk_drag_get_data(widget, context, target, time);
+    LOG("TRUE");
     return TRUE;
   } else {
     DLOG("Drag target or action not acceptable");
     DisableDrag(widget, context, time);
+    LOG("FALSE");
     return FALSE;
   }
 }
 
-static gboolean GadgetViewWidget_drag_motion(GtkWidget *widget, 
-                        GdkDragContext *context, gint x, gint y, guint time) {
+static gboolean GadgetViewWidget_drag_motion(GtkWidget *widget,
+                                             GdkDragContext *context,
+                                             gint x, gint y, guint time) {
   return OnDragEvent(widget, context, x, y, time, Event::EVENT_DRAG_MOTION);
 }
 
-static gboolean GadgetViewWidget_drag_drop(GtkWidget *widget, 
-                        GdkDragContext *context, gint x, gint y, guint time) {
-  gboolean result = OnDragEvent(widget, context, x, y, time, 
+static gboolean GadgetViewWidget_drag_drop(GtkWidget *widget,
+                                           GdkDragContext *context,
+                                           gint x, gint y, guint time) {
+  gboolean result = OnDragEvent(widget, context, x, y, time,
                                 Event::EVENT_DRAG_DROP);
   gtk_drag_finish(context, result, FALSE, time);
   return result;
 }
 
-static void GadgetViewWidget_drag_leave(GtkWidget *widget, 
-                        GdkDragContext *context, guint time) {
+static void GadgetViewWidget_drag_leave(GtkWidget *widget,
+                                        GdkDragContext *context, guint time) {
   OnDragEvent(widget, context, 0, 0, time, Event::EVENT_DRAG_OUT);
 }
 
 static void GadgetViewWidget_drag_data_received(GtkWidget *widget, 
-                        GdkDragContext *context, gint x, gint y, 
-                        GtkSelectionData *data, guint info, guint time) {
+                                                GdkDragContext *context,
+                                                gint x, gint y,
+                                                GtkSelectionData *data,
+                                                guint info, guint time) {
+  GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
+  if (!gvw->current_drag_event) {
+    // There are some cases that multiple drag events are fired in one event
+    // loop. For example, drag_leave and drag_drop. Although current_drag_event
+    // only contains the latter one, there are still multiple
+    // drag_data_received events fired.
+    return;
+  }
+
   gchar **uris = gtk_selection_data_get_uris(data);
   if (!uris) {
     DLOG("No URI in drag data");
@@ -495,11 +533,10 @@ static void GadgetViewWidget_drag_data_received(GtkWidget *widget,
 
   drag_files[accepted_count] = NULL;
 
-  GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
-  gvw->current_drag_event.SetDragFiles(drag_files);
-  bool result = gvw->view->OnDragEvent(&gvw->current_drag_event);
-  if (result) {
-    Event::Type type = gvw->current_drag_event.GetType();
+  gvw->current_drag_event->SetDragFiles(drag_files);
+  EventResult result = gvw->view->OnDragEvent(*gvw->current_drag_event);
+  if (result == ggadget::EVENT_RESULT_HANDLED) {
+    Event::Type type = gvw->current_drag_event->GetType();
     if (type == Event::EVENT_DRAG_DROP || type == Event::EVENT_DRAG_OUT) {
       gtk_drag_unhighlight(widget);
     } else {
@@ -511,7 +548,8 @@ static void GadgetViewWidget_drag_data_received(GtkWidget *widget,
     DisableDrag(widget, context, time);
   }
 
-  gvw->current_drag_event.SetDragFiles(NULL);
+  delete gvw->current_drag_event;
+  gvw->current_drag_event = NULL;
   for (guint i = 0; i < count; i++) {
     g_free(const_cast<gchar *>(drag_files[i]));
   }

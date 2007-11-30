@@ -70,6 +70,7 @@ class GtkViewHost : public ViewHostInterface {
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
   virtual void SetCursor(ElementInterface::CursorType type);
+  virtual void SetTooltip(const char *tooltip);
   virtual void RunDialog();
   virtual void ShowInDetailsView(const char *title, int flags,
                                  Slot1<void, int> *feedback_handler);
@@ -81,6 +82,9 @@ class GtkViewHost : public ViewHostInterface {
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 
+  bool ShowTooltip(int timer_id);
+  bool HideTooltip(int timer_id);
+
  private:
   static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);
 
@@ -90,6 +94,14 @@ class GtkViewHost : public ViewHostInterface {
   GadgetViewWidget *gvw_;
   GraphicsInterface *gfx_;
   Connection *onoptionchanged_connection_;
+
+  static const unsigned int kShowTooltipDelay = 500;
+  static const unsigned int kHideTooltipDelay = 4000;
+  std::string tooltip_;
+  int tooltip_timer_;
+  GtkWidget *tooltip_window_;
+  GtkWidget *tooltip_label_;
+
   GtkWidget *details_window_;
   Slot1<void, int> *details_feedback_handler_;
 

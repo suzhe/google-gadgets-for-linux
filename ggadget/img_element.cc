@@ -18,7 +18,7 @@
 #include "canvas_interface.h"
 #include "image.h"
 #include "string_utils.h"
-#include "view_interface.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -34,9 +34,7 @@ class ImgElement::Impl {
   size_t src_width_, src_height_;
 };
 
-ImgElement::ImgElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name)
+ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "img", name, false),
       impl_(new Impl) {
   RegisterProperty("src",
@@ -98,9 +96,8 @@ void ImgElement::SetSrcSize(size_t width, size_t height) {
   impl_->src_height_ = height;
 }
 
-ElementInterface *ImgElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *ImgElement::CreateInstance(BasicElement *parent, View *view,
+                                         const char *name) {
   return new ImgElement(parent, view, name);
 }
 

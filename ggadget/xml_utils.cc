@@ -25,7 +25,7 @@
 #include "xml_utils.h"
 #include "common.h"
 #include "element_interface.h"
-#include "elements.h"
+#include "elements_interface.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "script_context_interface.h"
@@ -347,7 +347,8 @@ static void HandleAllScriptElements(ViewInterface *view,
   }
 }
 
-static ElementInterface *InsertElementFromDOM(Elements *elements,
+static ElementInterface *InsertElementFromDOM(ViewInterface *view,
+                                              ElementsInterface *elements,
                                               const char *filename,
                                               xmlNode *xml_element,
                                               const ElementInterface *before) {
@@ -376,13 +377,13 @@ static ElementInterface *InsertElementFromDOM(Elements *elements,
     return element;
   }
 
-  SetupScriptableProperties(element, element->GetView()->GetScriptContext(),
+  SetupScriptableProperties(element, view->GetScriptContext(),
                             filename, xml_element);
-  Elements *children = element->GetChildren();
+  ElementsInterface *children = element->GetChildren();
   for (xmlNode *child = xml_element->children;
        child != NULL; child = child->next) {
     if (child->type == XML_ELEMENT_NODE)
-      InsertElementFromDOM(children, filename, child, NULL);
+      InsertElementFromDOM(view, children, filename, child, NULL);
   }
   return element;
 }
@@ -414,11 +415,11 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
   SetupScriptableProperties(view, view->GetScriptContext(),
                             filename, view_element);
 
-  Elements *children = view->GetChildren();
+  ElementsInterface *children = view->GetChildren();
   for (xmlNode *child = view_element->children;
        child != NULL; child = child->next) {
     if (child->type == XML_ELEMENT_NODE)
-      InsertElementFromDOM(children, filename, child, NULL);
+      InsertElementFromDOM(view, children, filename, child, NULL);
   }
 
   HandleAllScriptElements(view, filename, view_element);
@@ -427,11 +428,14 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
   return true;
 }
 
-ElementInterface *AppendElementFromXML(Elements *elements, const char *xml) {
-  return InsertElementFromXML(elements, xml, NULL);
+ElementInterface *AppendElementFromXML(ViewInterface *view,
+                                       ElementsInterface *elements,
+                                       const char *xml) {
+  return InsertElementFromXML(view, elements, xml, NULL);
 }
 
-ElementInterface *InsertElementFromXML(Elements *elements,
+ElementInterface *InsertElementFromXML(ViewInterface *view,
+                                       ElementsInterface *elements,
                                        const char *xml,
                                        const ElementInterface *before) {
   xmlDoc *xmldoc = ParseXML(xml, xml, NULL);
@@ -445,7 +449,7 @@ ElementInterface *InsertElementFromXML(Elements *elements,
     return NULL;
   }
 
-  ElementInterface *result = InsertElementFromDOM(elements, "",
+  ElementInterface *result = InsertElementFromDOM(view, elements, "",
                                                   xml_element, before);
   xmlFreeDoc(xmldoc);
   return result;

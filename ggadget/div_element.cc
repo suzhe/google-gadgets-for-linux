@@ -18,18 +18,17 @@
 #include "div_element.h"
 #include "canvas_interface.h"
 #include "elements.h"
-#include "event.h"
+#include "math_utils.h"
+#include "scrollbar_element.h"
 #include "string_utils.h"
 #include "texture.h"
-#include "math_utils.h"
-#include "view_interface.h"
-#include "scrollbar_element.h"
+#include "view.h"
 
 namespace ggadget {
 
 class DivElement::Impl {
  public:
-  Impl(DivElement *owner, ViewInterface *view)
+  Impl(DivElement *owner)
       : owner_(owner),
         background_texture_(NULL),
         scroll_pos_x_(0), scroll_pos_y_(0),
@@ -115,11 +114,11 @@ class DivElement::Impl {
     }
   }
 
-  bool OnKeyEvent(KeyboardEvent *event) {
-    bool result = true;
-    if (scrollbar_ && event->GetType() == Event::EVENT_KEY_DOWN) {
-      result = false;
-      switch (event->GetKeyCode()) {
+  EventResult HandleKeyEvent(const KeyboardEvent &event) {
+    EventResult result = EVENT_RESULT_UNHANDLED;
+    if (scrollbar_ && event.GetType() == Event::EVENT_KEY_DOWN) {
+      result = EVENT_RESULT_HANDLED;
+      switch (event.GetKeyCode()) {
         case KeyboardEvent::KEY_UP:
           ScrollY(-kLineHeight);
           break;
@@ -139,7 +138,7 @@ class DivElement::Impl {
           ScrollY(static_cast<int>(ceil(owner_->GetPixelHeight())));
           break;
         default:
-          result = true;
+          result = EVENT_RESULT_UNHANDLED;
           break;
       }
     }
@@ -157,11 +156,9 @@ class DivElement::Impl {
   ScrollBarElement *scrollbar_; // != NULL if and only if autoscroll=true
 };
 
-DivElement::DivElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name)
+DivElement::DivElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "div", name, true),
-      impl_(new Impl(this, view)) {
+      impl_(new Impl(this)) {
   RegisterProperty("autoscroll",
                    NewSlot(this, &DivElement::IsAutoscroll),
                    NewSlot(this, &DivElement::SetAutoscroll));
@@ -170,17 +167,15 @@ DivElement::DivElement(ElementInterface *parent,
                    NewSlot(this, &DivElement::SetBackground));
 }
 
-DivElement::DivElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *tag_name,
-                       const char *name,
-                       bool is_container)
-    : BasicElement(parent, view, tag_name, name, is_container),
-      impl_(new Impl(this, view)) {
+DivElement::DivElement(BasicElement *parent, View *view,
+                       const char *tag_name, const char *name)
+    : BasicElement(parent, view, tag_name, name, true),
+      impl_(new Impl(this)) {
 }
 
 DivElement::~DivElement() {
   delete impl_;
+  impl_ = NULL;
 }
 
 void DivElement::DoDraw(CanvasInterface *canvas,
@@ -231,52 +226,48 @@ void DivElement::SetAutoscroll(bool autoscroll) {
       delete impl_->scrollbar_;
       impl_->scrollbar_ = NULL;
     }
-    GetChildren()->SetScrollable(autoscroll);
+    SetChildrenScrollable(autoscroll);
     QueueDraw();
   }
 }
 
-ElementInterface *DivElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *DivElement::CreateInstance(BasicElement *parent, View *view,
+                                         const char *name) {
   return new DivElement(parent, view, name);
 }
 
-bool DivElement::OnMouseEvent(MouseEvent *event, bool direct,
-                              ElementInterface **fired_element) {
-  bool result;
+EventResult DivElement::OnMouseEvent(const MouseEvent &event, bool direct,
+                                     BasicElement **fired_element,
+                                     BasicElement **in_element) {
   if (!direct && impl_->scrollbar_) {
-    double new_x = event->GetX() - impl_->scrollbar_->GetPixelX();
-    double new_y = event->GetY() - impl_->scrollbar_->GetPixelY();
+    double new_x = event.GetX() - impl_->scrollbar_->GetPixelX();
+    double new_y = event.GetY() - impl_->scrollbar_->GetPixelY();
     if (impl_->scrollbar_->IsVisible() &&
         IsPointInElement(new_x, new_y, impl_->scrollbar_->GetPixelWidth(),
                          impl_->scrollbar_->GetPixelHeight())) {
-      MouseEvent new_event(*event);
+      MouseEvent new_event(event);
       new_event.SetX(new_x);
       new_event.SetY(new_y);
-      result = impl_->scrollbar_->OnMouseEvent(&new_event, direct,
-                                               fired_element);
-      return result;
+      return impl_->scrollbar_->HandleMouseEvent(new_event);
     }
   }
 
-  result = BasicElement::OnMouseEvent(event, direct, fired_element);
+  return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+}
 
-  // Handle mouse event only if the event has been fired and not canceled.
-  if (*fired_element && result) {
-    if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible() 
-        && event->GetType() == Event::EVENT_MOUSE_WHEEL) {
-      result = impl_->scrollbar_->OnMouseEvent(event, direct, fired_element);
-    }
+EventResult DivElement::HandleMouseEvent(const MouseEvent &event) {
+  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible() &&
+      event.GetType() == Event::EVENT_MOUSE_WHEEL) {
+    return impl_->scrollbar_->HandleMouseEvent(event);
   }
-  return result;
+  return EVENT_RESULT_UNHANDLED;
 }
 
-bool DivElement::OnKeyEvent(KeyboardEvent *event) {
-  return BasicElement::OnKeyEvent(event) && impl_->OnKeyEvent(event);
+EventResult DivElement::HandleKeyEvent(const KeyboardEvent &event) {
+  return impl_->HandleKeyEvent(event);
 }
 
-void DivElement::SelfCoordToChildCoord(ElementInterface *child,
+void DivElement::SelfCoordToChildCoord(BasicElement *child,
                                        double x, double y,
                                        double *child_x, double *child_y) {  
   if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible() && 

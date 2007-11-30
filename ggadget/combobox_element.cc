@@ -20,7 +20,7 @@
 #include "event.h"
 #include "item_element.h"
 #include "texture.h"
-#include "view_interface.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -40,8 +40,7 @@ static const char *kTypeNames[] = {
   "dropdown", "droplist"
 };
 
-ComboBoxElement::ComboBoxElement(ElementInterface *parent,
-                                 ViewInterface *view,
+ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
                                  const char *name)
     : ListBoxElement(parent, view, "combobox", name),
       impl_(new Impl(this)) {
@@ -109,18 +108,17 @@ void ComboBoxElement::SetValue(const char *value) {
   // TODO:
 }
 
-bool ComboBoxElement::OnMouseEvent(MouseEvent *event, bool direct,
-                              ElementInterface **fired_element) {
-  return ListBoxElement::OnMouseEvent(event, direct, fired_element);
+EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
 }
 
-bool ComboBoxElement::OnKeyEvent(KeyboardEvent *event) {
-  return ListBoxElement::OnKeyEvent(event);
+EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
 }
 
-ElementInterface *ComboBoxElement::CreateInstance(ElementInterface *parent,
-                                                  ViewInterface *view,
-                                                  const char *name) {
+BasicElement *ComboBoxElement::CreateInstance(BasicElement *parent,
+                                              View *view,
+                                              const char *name) {
   return new ComboBoxElement(parent, view, name);
 }
 

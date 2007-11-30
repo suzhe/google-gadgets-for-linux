@@ -17,24 +17,59 @@
 #ifndef GGADGET_TESTS_MOCKED_VIEW_HOST_H__
 #define GGADGET_TESTS_MOCKED_VIEW_HOST_H__
 
+#include "ggadget/graphics_interface.h"
+#include "ggadget/view.h"
 #include "ggadget/view_host_interface.h"
+#include "mocked_gadget_host.h"
+
+class MockedGraphics : public ggadget::GraphicsInterface {
+  virtual ggadget::CanvasInterface *NewCanvas(size_t w, size_t h) const {
+    return NULL;
+  }
+  virtual ggadget::CanvasInterface *NewImage(const char *img_bytes,
+                                             size_t img_bytes_count) const {
+    return NULL;
+  }
+  virtual ggadget::CanvasInterface *NewMask(const char *img_bytes,
+                                   size_t img_bytes_count) const {
+    return NULL;
+  }
+  virtual ggadget::FontInterface *NewFont(
+      const char *family, size_t pt_size,
+      ggadget::FontInterface::Style style,
+      ggadget::FontInterface::Weight weight) const {
+    return NULL;
+  }
+};
 
 class MockedViewHost : public ggadget::ViewHostInterface {
  public:
-  virtual ggadget::GadgetHostInterface *GetGadgetHost() const { return NULL; }
-  virtual ggadget::ViewInterface *GetView() { return NULL; }
-  virtual const ggadget::ViewInterface *GetView() const { return NULL; }
+  MockedViewHost(ggadget::ElementFactoryInterface *factory)
+      : view_(new ggadget::View(this, NULL, factory, 0)), draw_queued_(false) {
+  }
+  virtual ~MockedViewHost() {
+    delete view_;
+  }
+
+  virtual ggadget::GadgetHostInterface *GetGadgetHost() const {
+    return const_cast<MockedGadgetHost *>(&gadget_host_);
+  }
+  virtual ggadget::ViewInterface *GetView() { return view_; }
+  virtual const ggadget::ViewInterface *GetView() const { return view_; }
   virtual ggadget::ScriptContextInterface *GetScriptContext() const {
     return NULL;
   }
   virtual ggadget::XMLHttpRequestInterface *NewXMLHttpRequest() { return NULL; }
-  virtual const ggadget::GraphicsInterface *GetGraphics() const { return NULL; }
-  virtual void QueueDraw() { }
+  virtual const ggadget::GraphicsInterface *GetGraphics() const {
+    return const_cast<MockedGraphics *>(&graphics_);
+  }
+  virtual void QueueDraw() { draw_queued_ = true; }
   virtual bool GrabKeyboardFocus() { return false; }
   virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
   virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
   virtual void SetCursor(ggadget::ElementInterface::CursorType type) { }
+  virtual void SetTooltip(const char *tooltip) { }
   virtual void RunDialog() { }
   virtual void ShowInDetailsView(
       const char *title, int flags,
@@ -45,6 +80,19 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual std::string Prompt(const char *message, const char *default_value) {
     return std::string();
   }
+
+  bool GetQueuedDraw() {
+    bool b = draw_queued_;
+    draw_queued_ = false;
+    return b;
+  }
+  ggadget::View *GetViewInternal() { return view_; }
+
+ private:
+  MockedGadgetHost gadget_host_;
+  MockedGraphics graphics_;
+  ggadget::View *view_;
+  bool draw_queued_;
 };
 
 #endif // GGADGET_TESTS_MOCKED_VIEW_HOST_H__

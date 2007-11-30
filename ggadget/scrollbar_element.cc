@@ -16,16 +16,13 @@
 
 #include "scrollbar_element.h"
 #include "canvas_interface.h"
-#include "image.h"
-#include "string_utils.h"
-#include "event.h"
-#include "scriptable_event.h"
-#include "view_interface.h"
-#include "event.h"
-#include "math_utils.h"
 #include "gadget_consts.h"
-#include "slot.h"
+#include "image.h"
+#include "math_utils.h"
 #include "scriptable_binary_data.h"
+#include "scriptable_event.h"
+#include "string_utils.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -210,10 +207,10 @@ class ScrollBarElement::Impl {
     if (value != value_) {
       value_ = value;
       DLOG("scroll value: %d", value_);
-      Event event(Event::EVENT_CHANGE);
-      ScriptableEvent s_event(&event, owner_, 0, 0);
-      owner_->GetView()->FireEvent(&s_event, onchange_event_);
       owner_->QueueDraw();
+      Event event(Event::EVENT_CHANGE);
+      ScriptableEvent s_event(&event, owner_, NULL);
+      owner_->GetView()->FireEvent(&s_event, onchange_event_);
     }
   }
 
@@ -263,9 +260,8 @@ class ScrollBarElement::Impl {
   }
 };
 
-ScrollBarElement::ScrollBarElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name)
+ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
+                                   const char *name)
     : BasicElement(parent, view, "scrollbar", name, false),
       impl_(new Impl(this)) {
   RegisterProperty("background",
@@ -423,7 +419,7 @@ static bool VariantIsEmpty(const Variant &img) {
   return false;
 }
 
-static void LoadImage(ViewInterface *view, const Variant &src,
+static void LoadImage(View *view, const Variant &src,
                       const char *default_image_name, Image **image) {
   delete *image;
   if (VariantIsEmpty(src)) {
@@ -545,138 +541,125 @@ void ScrollBarElement::SetThumbOverImage(const Variant &img) {
   }
 }
 
-ElementInterface *ScrollBarElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *ScrollBarElement::CreateInstance(BasicElement *parent, View *view,
+                                               const char *name) {
   return new ScrollBarElement(parent, view, name);
 }
 
-bool ScrollBarElement::OnMouseEvent(MouseEvent *event, bool direct,
-                                    ElementInterface **fired_element) {
-  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
+EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
+  double compx = .0, compy = .0;
+  ScrollBarComponent c = impl_->GetComponentFromPosition(event.GetX(),
+                                                         event.GetY(),
+                                                         &compx, &compy);
+  // Resolve in opposite order as drawn: thumb, right, left.
+  switch (event.GetType()) {
+    case Event::EVENT_MOUSE_MOVE:
+    case Event::EVENT_MOUSE_OUT:
+    case Event::EVENT_MOUSE_OVER: {
+      DisplayState oldthumb = impl_->thumb_state_;
+      DisplayState oldleft = impl_->left_state_;
+      DisplayState oldright = impl_->right_state_;
+      impl_->ClearDisplayStates();
+      if (c == COMPONENT_THUMB_BUTTON) {
+        impl_->thumb_state_ = STATE_OVER;
+      } else if (c == COMPONENT_UPRIGHT_BUTTON) {
+        impl_->right_state_ = STATE_OVER;
+      } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
+        impl_->left_state_ = STATE_OVER;
+      }
 
-  // Handle the event only when the event is fired and not canceled.
-  if (*fired_element && result) {
-    ASSERT(*fired_element == this);
-    double compx = .0, compy = .0;
-    ScrollBarComponent c = impl_->GetComponentFromPosition(event->GetX(),
-                                                           event->GetY(),
-                                                           &compx, &compy);
-    // Resolve in opposite order as drawn: thumb, right, left.
-    switch (event->GetType()) {
-      case Event::EVENT_MOUSE_MOVE:
-      case Event::EVENT_MOUSE_OUT:
-      case Event::EVENT_MOUSE_OVER:
-        {
-          DisplayState oldthumb = impl_->thumb_state_;
-          DisplayState oldleft = impl_->left_state_;
-          DisplayState oldright = impl_->right_state_;
-          impl_->ClearDisplayStates();
-          result = false;
-          if (c == COMPONENT_THUMB_BUTTON) {
-            impl_->thumb_state_ = STATE_OVER;
-          } else if (c == COMPONENT_UPRIGHT_BUTTON) {
-            impl_->right_state_ = STATE_OVER;
-          } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
-            impl_->left_state_ = STATE_OVER;
-          }
+      // Restore the down states, overwriting the over states if necessary.
+      if (oldthumb == STATE_DOWN) {
+        impl_->thumb_state_ = STATE_DOWN;
+        // Special case, need to scroll.
+        int v = impl_->GetValueFromLocation(event.GetX(), event.GetY());
+        SetValue(v);
+        break;
+      } else if (oldright == STATE_DOWN) {
+        impl_->right_state_ = STATE_DOWN;
+      } else if (oldleft == STATE_DOWN) {
+        impl_->left_state_ = STATE_DOWN;
+      }
 
-          // Restore the down states, overwriting the over states if necessary.
-          if (oldthumb == STATE_DOWN) {
-            impl_->thumb_state_ = STATE_DOWN;
-            // Special case, need to scroll.
-            int v = impl_->GetValueFromLocation(event->GetX(), event->GetY());
-            SetValue(v);
-            break;
-          } else if (oldright == STATE_DOWN) {
-            impl_->right_state_ = STATE_DOWN;
-          } else if (oldleft == STATE_DOWN) {
-            impl_->left_state_ = STATE_DOWN;
-          }
+      bool redraw = (impl_->left_state_ != oldleft ||
+          impl_->right_state_ != oldright ||
+          impl_->thumb_state_ != oldthumb);
+      if (redraw) {
+        QueueDraw();
+      }
+      return EVENT_RESULT_HANDLED;
+    }
 
-          bool redraw = (impl_->left_state_ != oldleft ||
-              impl_->right_state_ != oldright ||
-              impl_->thumb_state_ != oldthumb);
-          if (redraw) {
-            QueueDraw();
-          }
-        }        
-        break;
-      case Event::EVENT_MOUSE_DOWN:
-        {
-          bool downleft = true, line = true;
-          impl_->ClearDisplayStates();
-          if (c == COMPONENT_THUMB_BUTTON) {
-            impl_->thumb_state_ = STATE_DOWN;
-            if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
-              impl_->drag_delta_ = event->GetX() - compx;
-            } else {
-              impl_->drag_delta_ = event->GetY() - compy;
-            }
-            QueueDraw();
-            break; // don't scroll, early exit
-          } else if (c == COMPONENT_UPRIGHT_BUTTON) {
-            impl_->right_state_ = STATE_DOWN;
-            downleft = false; line = true;
-          } else if (c == COMPONENT_UPRIGHT_BAR) {
-            downleft = line = false;
-          } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
-            impl_->left_state_ = STATE_DOWN;
-            downleft = line = true;
-          } else if (c == COMPONENT_DOWNLEFT_BAR) {
-            downleft = true; line = false;
-          }
-          impl_->Scroll(downleft, line);
-          result = false;
+    case Event::EVENT_MOUSE_DOWN: {
+      bool downleft = true, line = true;
+      impl_->ClearDisplayStates();
+      if (c == COMPONENT_THUMB_BUTTON) {
+        impl_->thumb_state_ = STATE_DOWN;
+        if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
+          impl_->drag_delta_ = event.GetX() - compx;
+        } else {
+          impl_->drag_delta_ = event.GetY() - compy;
         }
-        break;
-      case Event::EVENT_MOUSE_UP:
-        {
-          DisplayState oldthumb = impl_->thumb_state_;
-          DisplayState oldleft = impl_->left_state_;
-          DisplayState oldright = impl_->right_state_;
-          impl_->ClearDisplayStates();
-          if (c == COMPONENT_THUMB_BUTTON) {
-            impl_->thumb_state_ = STATE_OVER;
-          } else if (c == COMPONENT_UPRIGHT_BUTTON) {
-            impl_->right_state_ = STATE_OVER;
-          } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
-            impl_->left_state_ = STATE_OVER;
-          }
-          bool redraw = (impl_->left_state_ != oldleft ||
-              impl_->right_state_ != oldright ||
-              impl_->thumb_state_ != oldthumb);
-          if (redraw) {
-            QueueDraw();
-          }
-          result = false;
-        }
-        break;
-      case Event::EVENT_MOUSE_WHEEL:
-        {
-          impl_->accum_wheel_delta_ += event->GetWheelDelta();
-          bool downleft;
-          int delta = impl_->accum_wheel_delta_;
-          if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
-            impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
-            downleft = true;
-          } else if (delta < 0 && -delta >= MouseEvent::kWheelDelta) {
-            impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
-            downleft = false;
-          }
-          else {
-            break; // don't scroll in this case
-          }
-          impl_->Scroll(downleft, true);
-          result = false;
-        }
-        break;
-      default:
-        break;
-    };
+        QueueDraw();
+        break; // don't scroll, early exit
+      } else if (c == COMPONENT_UPRIGHT_BUTTON) {
+        impl_->right_state_ = STATE_DOWN;
+        downleft = false; line = true;
+      } else if (c == COMPONENT_UPRIGHT_BAR) {
+        downleft = line = false;
+      } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
+        impl_->left_state_ = STATE_DOWN;
+        downleft = line = true;
+      } else if (c == COMPONENT_DOWNLEFT_BAR) {
+        downleft = true; line = false;
+      }
+      impl_->Scroll(downleft, line);
+      return EVENT_RESULT_HANDLED;
+    }
+
+    case Event::EVENT_MOUSE_UP: {
+      DisplayState oldthumb = impl_->thumb_state_;
+      DisplayState oldleft = impl_->left_state_;
+      DisplayState oldright = impl_->right_state_;
+      impl_->ClearDisplayStates();
+      if (c == COMPONENT_THUMB_BUTTON) {
+        impl_->thumb_state_ = STATE_OVER;
+      } else if (c == COMPONENT_UPRIGHT_BUTTON) {
+        impl_->right_state_ = STATE_OVER;
+      } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
+        impl_->left_state_ = STATE_OVER;
+      }
+      bool redraw = (impl_->left_state_ != oldleft ||
+          impl_->right_state_ != oldright ||
+          impl_->thumb_state_ != oldthumb);
+      if (redraw) {
+        QueueDraw();
+      }
+      return EVENT_RESULT_HANDLED;
+    }
+
+    case Event::EVENT_MOUSE_WHEEL: {
+      impl_->accum_wheel_delta_ += event.GetWheelDelta();
+      bool downleft;
+      int delta = impl_->accum_wheel_delta_;
+      if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
+        impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
+        downleft = true;
+      } else if (delta < 0 && -delta >= MouseEvent::kWheelDelta) {
+        impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
+        downleft = false;
+      }
+      else {
+        break; // don't scroll in this case
+      }
+      impl_->Scroll(downleft, true);
+      return EVENT_RESULT_HANDLED;
+    }
+
+    default:
+      return EVENT_RESULT_UNHANDLED;
   }
-
-  return result;
+  return EVENT_RESULT_UNHANDLED;
 }
 
 Connection *ScrollBarElement::ConnectEvent(const char *event_name,

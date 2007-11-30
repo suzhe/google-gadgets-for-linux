@@ -34,13 +34,8 @@ class ScrollBarElement : public BasicElement {
     ORIENTATION_HORIZONTAL
   };
 
-  ScrollBarElement(ElementInterface *parent,
-                   ViewInterface *view,
-                   const char *name);
+  ScrollBarElement(BasicElement *parent, View *view, const char *name);
   virtual ~ScrollBarElement();
-
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
 
  public:
   /** Gets and sets the file name of the background image. */
@@ -107,16 +102,19 @@ class ScrollBarElement : public BasicElement {
   int GetValue() const;
   void SetValue(int value);
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
+ protected:
+  virtual void DoDraw(CanvasInterface *canvas,
+                      const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  friend class DivElement;
+
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScrollBarElement);

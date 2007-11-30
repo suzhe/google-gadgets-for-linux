@@ -17,16 +17,15 @@
 #include "button_element.h"
 #include "canvas_interface.h"
 #include "image.h"
-#include "text_frame.h"
 #include "string_utils.h"
-#include "view_interface.h"
-#include "event.h"
+#include "text_frame.h"
+#include "view.h"
 
 namespace ggadget {
 
 class ButtonElement::Impl {
  public:
-  Impl(BasicElement *owner, ViewInterface *view) : text_(owner, view),
+  Impl(BasicElement *owner, View *view) : text_(owner, view),
            mousedown_(false), mouseover_(false),
            image_(NULL), downimage_(NULL),
            overimage_(NULL), disabledimage_(NULL) { 
@@ -53,9 +52,7 @@ class ButtonElement::Impl {
   Image *image_, *downimage_, *overimage_, *disabledimage_;
 };
 
-ButtonElement::ButtonElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name)
+ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "button", name, false),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
@@ -154,43 +151,32 @@ TextFrame *ButtonElement::GetTextFrame() {
   return &impl_->text_;
 }
 
-ElementInterface *ButtonElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *ButtonElement::CreateInstance(BasicElement *parent, View *view,
+                                            const char *name) {
   return new ButtonElement(parent, view, name);
 }
 
-bool ButtonElement::OnMouseEvent(MouseEvent *event, bool direct,
-                                 ElementInterface **fired_element) {
-  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
-
-  // Handle the event only when the event is fired and not canceled.
-  if (*fired_element && result) {
-    ASSERT(IsEnabled());
-    ASSERT(*fired_element == this);
-    switch (event->GetType()) {
-     case Event::EVENT_MOUSE_DOWN:
-      impl_->mousedown_ = true;
-      QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_UP:
-      impl_->mousedown_ = false;
-      QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_OUT:
-      impl_->mouseover_ = false;
-      QueueDraw();
-      break;
-     case Event::EVENT_MOUSE_OVER:
-      impl_->mouseover_ = true;
-      QueueDraw();
-      break;
-     default:
-      break;
-    }
+EventResult ButtonElement::HandleMouseEvent(const MouseEvent &event) {
+  switch (event.GetType()) {
+   case Event::EVENT_MOUSE_DOWN:
+    impl_->mousedown_ = true;
+    QueueDraw();
+    return EVENT_RESULT_HANDLED;
+   case Event::EVENT_MOUSE_UP:
+    impl_->mousedown_ = false;
+    QueueDraw();
+    return EVENT_RESULT_HANDLED;
+   case Event::EVENT_MOUSE_OUT:
+    impl_->mouseover_ = false;
+    QueueDraw();
+    return EVENT_RESULT_HANDLED;
+   case Event::EVENT_MOUSE_OVER:
+    impl_->mouseover_ = true;
+    QueueDraw();
+    return EVENT_RESULT_HANDLED;
+   default:
+    return EVENT_RESULT_UNHANDLED;
   }
-
-  return result;
 }
 
 void ButtonElement::GetDefaultSize(double *width, double *height) const {

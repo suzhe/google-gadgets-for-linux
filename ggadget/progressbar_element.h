@@ -33,9 +33,7 @@ class ProgressBarElement : public BasicElement {
     ORIENTATION_HORIZONTAL
   };
 
-  ProgressBarElement(ElementInterface *parent,
-                   ViewInterface *view,
-                   const char *name);
+  ProgressBarElement(BasicElement *parent, View *view, const char *name);
   virtual ~ProgressBarElement();
 
  public:
@@ -79,20 +77,18 @@ class ProgressBarElement : public BasicElement {
   int GetValue() const;
   void SetValue(int value);
 
-  virtual bool OnMouseEvent(MouseEvent *event, bool direct,
-                            ElementInterface **fired_element);
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 
  public:
-  static ElementInterface *CreateInstance(ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  static BasicElement *CreateInstance(BasicElement *parent, View *view,
+                                      const char *name);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ProgressBarElement);

@@ -17,6 +17,7 @@
 #ifndef GGADGET_VIEW_INTERFACE_H__
 #define GGADGET_VIEW_INTERFACE_H__
 
+#include <ggadget/event.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
 
@@ -26,12 +27,8 @@ class CanvasInterface;
 class ElementInterface;
 class ElementFactoryInterface;
 class HostInterface;
-class Event;
-class KeyboardEvent;
-class MouseEvent;
-class DragEvent;
 class ScriptableEvent;
-class Elements;
+class ElementsInterface;
 class GraphicsInterface;
 class Image;
 class ScriptContextInterface;
@@ -57,7 +54,7 @@ class ViewInterface : public ScriptableInterface {
 
   /**
    * @return the ScriptContextInterface object associated with this view.
-   */ 
+   */
   virtual ScriptContextInterface *GetScriptContext() const = 0;
 
   /**
@@ -72,77 +69,28 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual bool InitFromFile(const char *filename) = 0;
 
-  /**
-   * Handler of the mouse events.
-   * @param event the mouse event.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
-   */
-  virtual bool OnMouseEvent(MouseEvent *event) = 0;
+  /** Handler of the mouse events. */
+  virtual EventResult OnMouseEvent(const MouseEvent &event) = 0;
 
-  /**
-   * Handler of the keyboard events.
-   * @param event the keyboard event.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
-   */
-  virtual bool OnKeyEvent(KeyboardEvent *event) = 0;
+  /** Handler of the keyboard events. */
+  virtual EventResult OnKeyEvent(const KeyboardEvent &event) = 0;
 
   /**
    * Handler of the drag and drop events.
    * @param event the drag and drop event.
-   * @return @c true if the dragged contents are accepted by an element.
+   * @return @c EVENT_RESULT_HANDLED if the dragged contents are accepted by
+   *     an element.
    */
-  virtual bool OnDragEvent(DragEvent *event) = 0;
+  virtual EventResult OnDragEvent(const DragEvent &event) = 0;
 
   /**
-   * Handler for other events.
-   * @param event the event.
-   * @return @c false to disable the default handling of this event, or
-   *     @c true otherwise.
+   * Handler of the sizing event.
+   * @param event the input event.
+   * @param[out] output_event the output event. For @c Event::EVENT_SIZING,
+   *     this parameter contains the overriding size set by the handler.
+   * @return the result of event handling.
    */
-  virtual bool OnOtherEvent(Event *event) = 0;
-
-  /** Called when any element is added into the view hierarchy. */
-  virtual void OnElementAdd(ElementInterface *element) = 0;
-  /** Called when any element in the view hierarchy is about to be removed. */
-  virtual void OnElementRemove(ElementInterface *element) = 0;
-
-  /**
-   * Any elements should call this method when it need to fire an event.
-   * @param event the event to be fired. The caller can choose to allocate the
-   *     event object on stack or heap.
-   * @param event_signal
-   */
-  virtual void FireEvent(ScriptableEvent *event,
-                         const EventSignal &event_signal) = 0;
-
-  /**
-   * Post an event into the event queue.  The event will be fired in the next
-   * event loop.
-   * @param event the event to be fired. The caller must allocate the
-   *     @c ScriptableEvent and the @c Event objects on heap. They will be
-   *     deleted by this view.
-   * @param event_signal
-   */
-  virtual void PostEvent(ScriptableEvent *event,
-                         const EventSignal &event_signal) = 0;
-
-  /**
-   * These methods are provided to the event handlers of native gadgets to
-   * retrieve the current fired event.
-   */
-  virtual ScriptableEvent *GetEvent() = 0;
-  virtual const ScriptableEvent *GetEvent() const = 0;
-
-  /**
-   * Sets current input focus to the @a element.  If some element has the focus,
-   * removes the focus first.
-   * @param element the element to put focus on.  If it is @c NULL, only remove
-   *     the focus from the current focused element and thus no element has
-   *     the focus.
-   */
-  virtual void SetFocus(ElementInterface *element) = 0;
+  virtual EventResult OnOtherEvent(const Event &event, Event *output_event) = 0;
 
   /**
    * Set the width of the view.
@@ -174,14 +122,6 @@ class ViewInterface : public ScriptableInterface {
    * @return A canvas suitable for drawing. This should never be NULL.
    */
   virtual const CanvasInterface *Draw(bool *changed) = 0;
-
-  /** Asks the host to redraw the given view. */
-  virtual void QueueDraw() = 0;
-
-  /**
-   * @return the current graphics interface used for drawing elements.
-   */
-  virtual const GraphicsInterface *GetGraphics() const = 0;
 
   /**
    * Indicates what happens when the user attempts to resize the gadget using
@@ -217,12 +157,12 @@ class ViewInterface : public ScriptableInterface {
    * Retrieves a collection that contains the immediate children of this
    * view.
    */
-  virtual const Elements *GetChildren() const = 0;
+  virtual const ElementsInterface *GetChildren() const = 0;
   /**
    * Retrieves a collection that contains the immediate children of this
    * view.
    */
-  virtual Elements *GetChildren() = 0;
+  virtual ElementsInterface *GetChildren() = 0;
 
   /**
    * Looks up an element from all elements directly or indirectly contained
@@ -299,12 +239,6 @@ class ViewInterface : public ScriptableInterface {
   virtual void ClearInterval(int token) = 0;
 
   /**
-   * Gets the current debug mode.
-   * 0: no debug; 1: debug container elements only; 2: debug all elements.
-   */
-  virtual int GetDebugMode() const = 0;
-
-  /**
    * Called by the global options object when any option changed.
    */
   virtual void OnOptionChanged(const char *name) = 0;
@@ -317,65 +251,6 @@ class ViewInterface : public ScriptableInterface {
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler) = 0;
 
-  /** Displays a message box containing the message string. */
-  virtual void Alert(const char *message) = 0;
-
-  /**
-   * Displays a dialog containing the message string and Yes and No buttons.
-   * @param message the message string.
-   * @return @c true if Yes button is pressed, @c false if not.
-   */
-  virtual bool Confirm(const char *message) = 0;
-
-  /**
-   * Displays a dialog asking the user to enter text.
-   * @param message the message string displayed before the edit box.
-   * @param default_value the initial default value dispalyed in the edit box.
-   * @return the user inputted text, or an empty string if user canceled the
-   *     dialog.
-   */
-  virtual std::string Prompt(const char *message,
-                             const char *default_value) = 0;
-
- public:  // Other utilities.
-  /**
-   * Load an image from the gadget file.
-   * @param src the image source, can be of the following types:
-   *     - @c Variant::TYPE_STRING: the name within the gadget base path;
-   *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and
-   *       the scriptable object's type is ScriptableBinaryData: the binary
-   *       data of the image.
-   * @param is_mask if the image is used as a mask.
-   * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
-   */
-  virtual Image *LoadImage(const Variant &src, bool is_mask) = 0;
-
-  /**
-   * Load an image from the global file manager.
-   * @param name the name within the gadget base path.
-   * @param is_mask if the image is used as a mask.
-   * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
-   */
-  virtual Image *LoadImageFromGlobal(const char *name, bool is_mask) = 0;
-
-  /**
-   * Load a texture from image file or create a colored texture.
-   * @param src the source of the texture image, can be of the following types:
-   *     - @c Variant::TYPE_STRING: the name within the gadget base path, or a 
-   *       color description with HTML-style color ("#rrggbb"), or HTML-style
-   *       color with alpha ("#aarrggbb").
-   *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and
-   *       the scriptable object's type is ScriptableBinaryData: the binary
-   *       data of the image.
-   * @return the created texture ifsucceeds, or @c NULL.
-   */
-  virtual Texture *LoadTexture(const Variant &src) = 0;
-
-  /** 
-   * Open the given URL in the user's default web brower.
-   * Only HTTP, HTTPS, and FTP URLs are supported.
-   */
-  virtual bool OpenURL(const char *url) const = 0;
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

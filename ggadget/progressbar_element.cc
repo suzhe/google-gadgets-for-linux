@@ -16,14 +16,12 @@
 
 #include "progressbar_element.h"
 #include "canvas_interface.h"
-#include "image.h"
-#include "string_utils.h"
-#include "event.h"
-#include "scriptable_event.h"
-#include "view_interface.h"
-#include "event.h"
-#include "math_utils.h"
 #include "gadget_consts.h"
+#include "image.h"
+#include "math_utils.h"
+#include "scriptable_event.h"
+#include "string_utils.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -35,14 +33,15 @@ static const char *kOrientationNames[] = {
 
 class ProgressBarElement::Impl {
  public:
-  Impl(ProgressBarElement *owner) : owner_(owner),
-           thumbover_(false), thumbdown_(false),
-           emptyimage_(NULL), fullimage_(NULL), thumbdisabledimage_(NULL),
-           thumbdownimage_(NULL), thumboverimage_(NULL), thumbimage_(NULL),
-           // The values below are the default ones in Windows.
-           min_(0), max_(100), value_(0),
-           drag_delta_(0.),
-           orientation_(ORIENTATION_HORIZONTAL) {
+  Impl(ProgressBarElement *owner)
+      : owner_(owner),
+        thumbover_(false), thumbdown_(false),
+        emptyimage_(NULL), fullimage_(NULL), thumbdisabledimage_(NULL),
+        thumbdownimage_(NULL), thumboverimage_(NULL), thumbimage_(NULL),
+        // The values below are the default ones in Windows.
+        min_(0), max_(100), value_(0),
+        drag_delta_(0.),
+        orientation_(ORIENTATION_HORIZONTAL) {
   }
   ~Impl() {
     delete emptyimage_;
@@ -147,10 +146,10 @@ class ProgressBarElement::Impl {
     if (value != value_) {
       value_ = value;
       DLOG("progress value: %d", value_);
-      Event event(Event::EVENT_CHANGE);
-      ScriptableEvent s_event(&event, owner_, 0, 0);
-      owner_->GetView()->FireEvent(&s_event, onchange_event_);
       owner_->QueueDraw();
+      Event event(Event::EVENT_CHANGE);
+      ScriptableEvent s_event(&event, owner_, NULL);
+      owner_->GetView()->FireEvent(&s_event, onchange_event_);
     }
   }
 
@@ -171,9 +170,8 @@ class ProgressBarElement::Impl {
   }
 };
 
-ProgressBarElement::ProgressBarElement(ElementInterface *parent,
-                       ViewInterface *view,
-                       const char *name)
+ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
+                                       const char *name)
     : BasicElement(parent, view, "progressbar", name, false),
       impl_(new Impl(this)) {
   RegisterProperty("emptyImage", 
@@ -426,90 +424,83 @@ void ProgressBarElement::SetThumbOverImage(const Variant &img) {
     QueueDraw();
   }
 }
-ElementInterface *ProgressBarElement::CreateInstance(ElementInterface *parent,
-                                             ViewInterface *view,
-                                             const char *name) {
+BasicElement *ProgressBarElement::CreateInstance(BasicElement *parent,
+                                                 View *view,
+                                                 const char *name) {
   return new ProgressBarElement(parent, view, name);
 }
 
-bool ProgressBarElement::OnMouseEvent(MouseEvent *event, bool direct,
-                                    ElementInterface **fired_element) {
-  bool result = BasicElement::OnMouseEvent(event, direct, fired_element);
-
-  // Handle the event only when the event is fired and not canceled.
-  if (*fired_element && result) {
-    ASSERT(*fired_element == this);
-    double pxwidth = GetPixelWidth();
-    double pxheight = GetPixelHeight();
-    double fraction = impl_->GetFractionalValue();
-    double tx, ty;
-    bool over = false;
-    Image *thumb = impl_->GetThumbAndLocation(pxwidth, pxheight, fraction, 
-                                              &tx, &ty);
-    if (thumb) {
-      over = IsPointInElement(event->GetX() - tx, event->GetY() - ty, 
-                              thumb->GetWidth(), thumb->GetHeight());
-    }
-
-    switch (event->GetType()) {
-      case Event::EVENT_MOUSE_MOVE:
-      case Event::EVENT_MOUSE_OUT:
-      case Event::EVENT_MOUSE_OVER:
-        if (event->GetButton() & MouseEvent::BUTTON_LEFT) {
-          int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
-                                                  event->GetX(), event->GetY());
-          SetValue(value); // SetValue will queue a draw.
-        }
-
-        if (over != impl_->thumbover_) {
-          impl_->thumbover_ = over;
-          QueueDraw();
-        }        
-        result = false;
-        break;      
-      case Event::EVENT_MOUSE_DOWN: 
-        if (over) {
-          // The drag delta setting here is tricky. If the button is held down
-          // initially over the thumb, then the pointer should always stay 
-          // on top of the same location on the thumb when dragged, thus 
-          // reflecting the value indicated by the bottom-left corner of the
-          // thumb, not the current position of the pointer.
-          // If the mouse button is held down over any other part of the 
-          // progressbar, then the pointer should reflect the value of the 
-          // point under it.
-          // This is different from scrollbar, where there's only a single
-          // case for the drag delta setting. In the progressbar, the drag
-          // delta depends on whether the initial mousedown is fired over the
-          // thumb or not.
-          if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
-            impl_->drag_delta_ = event->GetX() - tx;
-          }
-          else {
-            impl_->drag_delta_ = event->GetY() - ty;
-          }
-
-          impl_->thumbdown_ = true;          
-          QueueDraw(); // Redraw because of the thumbdown.
-        } else {
-          impl_->drag_delta_ = 0;
-          int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
-                                                  event->GetX(), event->GetY());
-          SetValue(value); // SetValue will queue a draw.
-        }
-        result = false;
-        break;
-      case Event::EVENT_MOUSE_UP:
-        if (impl_->thumbdown_) {
-          impl_->thumbdown_ = false;
-          QueueDraw();
-        }
-        result = false;
-        break;
-      default:
-        break;
-    }; 
+EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
+  double pxwidth = GetPixelWidth();
+  double pxheight = GetPixelHeight();
+  double fraction = impl_->GetFractionalValue();
+  double tx, ty;
+  bool over = false;
+  Image *thumb = impl_->GetThumbAndLocation(pxwidth, pxheight, fraction, 
+                                            &tx, &ty);
+  if (thumb) {
+    over = IsPointInElement(event.GetX() - tx, event.GetY() - ty, 
+                            thumb->GetWidth(), thumb->GetHeight());
   }
 
+  EventResult result = EVENT_RESULT_UNHANDLED;
+  switch (event.GetType()) {
+    case Event::EVENT_MOUSE_MOVE:
+    case Event::EVENT_MOUSE_OUT:
+    case Event::EVENT_MOUSE_OVER:
+      if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
+        int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
+                                                event.GetX(), event.GetY());
+        SetValue(value); // SetValue will queue a draw.
+      }
+
+      if (over != impl_->thumbover_) {
+        impl_->thumbover_ = over;
+        QueueDraw();
+      }        
+      result = EVENT_RESULT_HANDLED;
+      break;      
+    case Event::EVENT_MOUSE_DOWN: 
+      if (over) {
+        // The drag delta setting here is tricky. If the button is held down
+        // initially over the thumb, then the pointer should always stay 
+        // on top of the same location on the thumb when dragged, thus 
+        // reflecting the value indicated by the bottom-left corner of the
+        // thumb, not the current position of the pointer.
+        // If the mouse button is held down over any other part of the 
+        // progressbar, then the pointer should reflect the value of the 
+        // point under it.
+        // This is different from scrollbar, where there's only a single
+        // case for the drag delta setting. In the progressbar, the drag
+        // delta depends on whether the initial mousedown is fired over the
+        // thumb or not.
+        if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
+          impl_->drag_delta_ = event.GetX() - tx;
+        }
+        else {
+          impl_->drag_delta_ = event.GetY() - ty;
+        }
+
+        impl_->thumbdown_ = true;          
+        QueueDraw(); // Redraw because of the thumbdown.
+      } else {
+        impl_->drag_delta_ = 0;
+        int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
+                                                event.GetX(), event.GetY());
+        SetValue(value); // SetValue will queue a draw.
+      }
+      result = EVENT_RESULT_HANDLED;
+      break;
+    case Event::EVENT_MOUSE_UP:
+      if (impl_->thumbdown_) {
+        impl_->thumbdown_ = false;
+        QueueDraw();
+      }
+      result = EVENT_RESULT_HANDLED;
+      break;
+    default:
+      break;
+  }
   return result;
 }
 

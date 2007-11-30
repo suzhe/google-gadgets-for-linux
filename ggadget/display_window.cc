@@ -17,12 +17,12 @@
 #include "display_window.h"
 #include "button_element.h"
 #include "checkbox_element.h"
-// TODO: #include "edit_element.h"
+#include "edit_element.h"
 #include "element_interface.h"
 #include "label_element.h"
-// TODO: #include "listbox_element.h"
+#include "listbox_element.h"
 #include "text_frame.h"
-#include "view_interface.h"
+#include "view.h"
 
 namespace ggadget {
 
@@ -198,14 +198,14 @@ class DisplayWindow::Impl {
     Signal2<void, DisplayWindow *, Control *> onclicked_signal_;
   };
 
-  Impl(DisplayWindow *owner, ViewInterface *view)
+  Impl(DisplayWindow *owner, View *view)
       : owner_(owner), view_(view) {
   }
 
   Control *AddControl(ControlClass ctrl_class, ControlType ctrl_type,
                       const char *ctrl_id, const Variant &text,
                       int x, int y, int width, int height) {
-    ElementInterface *element = NULL;
+    BasicElement *element = NULL;
     Control *control = NULL;
     switch (ctrl_class) {
       case CLASS_LABEL:
@@ -274,12 +274,12 @@ class DisplayWindow::Impl {
   }
 
   DisplayWindow *owner_;
-  ViewInterface *view_;
+  View *view_;
   Signal1<void, ButtonId> onclose_signal_;
 };
 
 DisplayWindow::DisplayWindow(ViewInterface *view)
-    : impl_(new Impl(this, view)) {
+    : impl_(new Impl(this, down_cast<View *>(view))) {
   ASSERT(view);
   RegisterMethod("AddControl", NewSlot(impl_, &Impl::AddControl));
   RegisterMethod("GetControl", NewSlot(impl_, &Impl::GetControl));

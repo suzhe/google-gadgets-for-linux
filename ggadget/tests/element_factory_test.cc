@@ -15,61 +15,9 @@
 */
 
 #include "unittest/gunit.h"
-#include "ggadget/element_factory_impl.h"
 #include "ggadget/element_factory.h"
 #include "mocked_element.h"
-
-class Muffin : public MockedElement {
- public:
-  DEFINE_CLASS_ID(0xabb1c79164a742aa, MockedElement);
-
-  Muffin(ggadget::ElementInterface *parent,
-         ggadget::ViewInterface *view,
-         const char *name) : MockedElement(parent, view, name) {
-  }
-
-  virtual ~Muffin() {
-  }
-
- public:
-  virtual const char *GetTagName() const {
-    return "muffin";
-  }
-
- public:
-  static ggadget::ElementInterface *CreateInstance(
-      ggadget::ElementInterface *parent,
-      ggadget::ViewInterface *view,
-      const char *name) {
-    return new Muffin(parent, view, name);
-  }
-};
-
-class Pie : public MockedElement {
- public:
-  DEFINE_CLASS_ID(0x21a2b2ba7c794058, MockedElement);
-
-  Pie(ggadget::ElementInterface *parent,
-      ggadget::ViewInterface *view,
-      const char *name) : MockedElement(parent, view, name) {
-  }
-
-  virtual ~Pie() {
-  }
-
- public:
-  virtual const char *GetTagName() const {
-    return "pie";
-  }
-
- public:
-  static ggadget::ElementInterface *CreateInstance(
-      ggadget::ElementInterface *parent,
-      ggadget::ViewInterface *view,
-      const char *name) {
-    return new Pie(parent, view, name);
-  }
-};
+#include "mocked_view_host.h"
 
 class ElementFactoryTest : public testing::Test {
  protected:
@@ -90,31 +38,31 @@ TEST_F(ElementFactoryTest, TestRegister) {
 
 TEST_F(ElementFactoryTest, TestCreate) {
   ggadget::ElementFactory factory;
+  MockedViewHost vh(&factory);
   factory.RegisterElementClass("muffin", Muffin::CreateInstance);
   factory.RegisterElementClass("pie", Pie::CreateInstance);
 
   ggadget::ElementInterface *e1 = factory.CreateElement("muffin",
                                                         NULL,
-                                                        NULL,
+                                                        vh.GetView(),
                                                         NULL);
   ASSERT_TRUE(e1 != NULL);
   ASSERT_STREQ(e1->GetTagName(), "muffin");
 
   ggadget::ElementInterface *e2 = factory.CreateElement("pie",
                                                         e1,
-                                                        NULL,
+                                                        vh.GetView(),
                                                         NULL);
   ASSERT_TRUE(e2 != NULL);
   ASSERT_STREQ(e2->GetTagName(), "pie");
 
   ggadget::ElementInterface *e3 = factory.CreateElement("bread",
                                                         e2,
-                                                        NULL,
+                                                        vh.GetView(),
                                                         NULL);
   ASSERT_TRUE(e3 == NULL);
-
-  e1->Destroy();
-  e2->Destroy();
+  delete ggadget::down_cast<Muffin *>(e1);
+  delete ggadget::down_cast<Pie *>(e2);
 }
 
 int main(int argc, char *argv[]) {
