@@ -163,19 +163,28 @@ static gboolean GadgetViewWidget_expose(GtkWidget *widget,
 
 static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
                                               GdkEventButton *event) {
-  bool handler_result = true;
+  EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   gvw->host->HideTooltip(0);
 
   if (event->type == GDK_BUTTON_PRESS) {
-    if (event->button == 1) {
+    if (event->button >= 1 && event->button <= 3) {
       MouseEvent e(Event::EVENT_MOUSE_DOWN,
                    event->x / gvw->zoom, event->y / gvw->zoom,
-                   MouseEvent::BUTTON_LEFT, 0);
+                   event->button == 1 ? MouseEvent::BUTTON_LEFT :
+                   event->button == 2 ? MouseEvent::BUTTON_MIDDLE :
+                   event->button == 3 ? MouseEvent::BUTTON_RIGHT : 0, 0);
       handler_result = gvw->view->OnMouseEvent(e);
+
+      if (event->button == 1) {
+        // Grab the cursor to prevent losing events.
+        gdk_pointer_grab(widget->window, FALSE,
+                         (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                        GDK_POINTER_MOTION_MASK),
+                         NULL, NULL, event->time);
+      }
     }
-  }
-  else if (event->type == GDK_2BUTTON_PRESS) {
+  } else if (event->type == GDK_2BUTTON_PRESS) {
     gvw->dbl_click = true;
     // The GTK event sequence here is: press 2press release
     // for the second click.
@@ -196,47 +205,29 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     }
   }
 
-  if (handler_result == ggadget::EVENT_RESULT_UNHANDLED && !gvw->window_move) {
-    gvw->window_move = true;
-
-    GtkWidget *window = gtk_widget_get_toplevel(widget);
-    if (GTK_IS_WINDOW(window)) {
-      gint x = 0, y = 0;
-      gtk_window_get_position(GTK_WINDOW(window), &x, &y);      
-      gvw->window_move_x = event->x_root - x;
-      gvw->window_move_y = event->y_root - y;     
-    } else {
-      gvw->window_move_x = event->x;
-      gvw->window_move_y = event->y;
-      DLOG("Gadget is not inside toplevel window.");
-    }
-
-    // Grab the cursor to prevent losing events.
-    gdk_pointer_grab(widget->window, FALSE,
-                     (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
-                                    GDK_POINTER_MOTION_MASK),
-                     NULL, NULL, event->time);
-  }
-
-  return handler_result ? FALSE : TRUE;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
                                                 GdkEventButton *event) {
-  bool handler_result = true;
+  EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_BUTTON_RELEASE);
   gvw->host->HideTooltip(0);
 
+  gdk_pointer_ungrab(event->time);
   if (gvw->window_move) {
-    gdk_pointer_ungrab(event->time);
-    gvw->window_move = false;    
+    gvw->window_move = false;
+    // Don't send events because we are moving the window.
+    return TRUE;
   }
 
-  if (event->button == 1) {
+  if (event->button >= 1 && event->button <= 3) {
     MouseEvent e(Event::EVENT_MOUSE_UP,
                  event->x / gvw->zoom, event->y / gvw->zoom,
-                 MouseEvent::BUTTON_LEFT, 0);
+                 event->button == 1 ? MouseEvent::BUTTON_LEFT :
+                 event->button == 2 ? MouseEvent::BUTTON_MIDDLE :
+                 event->button == 3 ? MouseEvent::BUTTON_RIGHT : 0, 0);
     handler_result = gvw->view->OnMouseEvent(e);
   }
 
@@ -260,7 +251,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
     gvw->dbl_click = false;
   }
 
-  return handler_result ? FALSE : TRUE;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
@@ -270,7 +261,7 @@ static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
   MouseEvent e(Event::EVENT_MOUSE_OVER,
                event->x / gvw->zoom, event->y / gvw->zoom,
                MouseEvent::BUTTON_NONE, 0);
-  return gvw->view->OnMouseEvent(e) ? FALSE : TRUE;
+  return gvw->view->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_leave_notify(GtkWidget *widget,
@@ -289,6 +280,18 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
                                                GdkEventMotion *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_MOTION_NOTIFY);
+  if (gvw->window_move) {
+    GtkWidget *window = gtk_widget_get_toplevel(widget);
+    if (GTK_IS_WINDOW(window)) {
+      gint new_pos_x = static_cast<gint>(event->x_root - gvw->window_move_x);
+      gint new_pos_y = static_cast<gint>(event->y_root - gvw->window_move_y);
+      gtk_window_move(GTK_WINDOW(window), new_pos_x, new_pos_y);
+    } else {
+      DLOG("Gadget is not inside toplevel window.");
+    }
+    return TRUE;
+  }
+
   int button = MouseEvent::BUTTON_NONE;
   if (event->state & GDK_BUTTON1_MASK) {
     button |= MouseEvent::BUTTON_LEFT;
@@ -301,16 +304,27 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   }
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
                event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
-  bool handler_result = gvw->view->OnMouseEvent(e);
+  EventResult handler_result = gvw->view->OnMouseEvent(e);
 
   if (handler_result == ggadget::EVENT_RESULT_UNHANDLED &&
-      gvw->window_move && (event->state & GDK_BUTTON1_MASK)) {
+      (event->state & GDK_BUTTON1_MASK)) {
+    // Send a cheating mouse up event to the gadget so that we can start to
+    // drag the window.
+    MouseEvent e(Event::EVENT_MOUSE_UP,
+                 event->x / gvw->zoom, event->y / gvw->zoom,
+                 MouseEvent::BUTTON_LEFT, 0);
+    handler_result = gvw->view->OnMouseEvent(e);
+
+    gvw->window_move = true;
     GtkWidget *window = gtk_widget_get_toplevel(widget);
     if (GTK_IS_WINDOW(window)) {
-      gint new_pos_x = static_cast<gint>(event->x_root - gvw->window_move_x);
-      gint new_pos_y = static_cast<gint>(event->y_root - gvw->window_move_y);
-      gtk_window_move(GTK_WINDOW(window), new_pos_x, new_pos_y);
+      gint x = 0, y = 0;
+      gtk_window_get_position(GTK_WINDOW(window), &x, &y);
+      gvw->window_move_x = event->x_root - x;
+      gvw->window_move_y = event->y_root - y;
     } else {
+      gvw->window_move_x = event->x;
+      gvw->window_move_y = event->y;
       DLOG("Gadget is not inside toplevel window.");
     }
   }
@@ -321,7 +335,7 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   int x, y;
   gdk_window_get_pointer(widget->window, &x, &y, NULL);
 
-  return handler_result ? FALSE : TRUE;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
@@ -452,18 +466,14 @@ static gboolean OnDragEvent(GtkWidget *widget, GdkDragContext *context,
   }
 
   gvw->current_drag_event = new DragEvent(event_type, x, y, NULL);
-  LOG("Drag Event: %d", event_type);
-
   GdkAtom target = gtk_drag_dest_find_target(
       widget, context, gtk_drag_dest_get_target_list(widget));
   if (target != GDK_NONE) {
     gtk_drag_get_data(widget, context, target, time);
-    LOG("TRUE");
     return TRUE;
   } else {
     DLOG("Drag target or action not acceptable");
     DisableDrag(widget, context, time);
-    LOG("FALSE");
     return FALSE;
   }
 }

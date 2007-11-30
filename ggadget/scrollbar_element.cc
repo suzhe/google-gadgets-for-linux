@@ -547,6 +547,7 @@ BasicElement *ScrollBarElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
+  EventResult result = EVENT_RESULT_HANDLED;
   double compx = .0, compy = .0;
   ScrollBarComponent c = impl_->GetComponentFromPosition(event.GetX(),
                                                          event.GetY(),
@@ -587,7 +588,7 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
       if (redraw) {
         QueueDraw();
       }
-      return EVENT_RESULT_HANDLED;
+      break;
     }
 
     case Event::EVENT_MOUSE_DOWN: {
@@ -614,7 +615,7 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
         downleft = true; line = false;
       }
       impl_->Scroll(downleft, line);
-      return EVENT_RESULT_HANDLED;
+      break;
     }
 
     case Event::EVENT_MOUSE_UP: {
@@ -635,7 +636,7 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
       if (redraw) {
         QueueDraw();
       }
-      return EVENT_RESULT_HANDLED;
+      break;
     }
 
     case Event::EVENT_MOUSE_WHEEL: {
@@ -653,13 +654,14 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
         break; // don't scroll in this case
       }
       impl_->Scroll(downleft, true);
-      return EVENT_RESULT_HANDLED;
+      break;
     }
 
     default:
-      return EVENT_RESULT_UNHANDLED;
+      result = EVENT_RESULT_UNHANDLED;
+      break;
   }
-  return EVENT_RESULT_UNHANDLED;
+  return result;
 }
 
 Connection *ScrollBarElement::ConnectEvent(const char *event_name,

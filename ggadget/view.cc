@@ -167,13 +167,6 @@ class View::Impl {
     // Dispatch the event to children normally.
     result = children_.OnMouseEvent(event, &fired_element, &in_element);
 
-    if (in_element && type == Event::EVENT_MOUSE_MOVE) {
-      if (in_element != tooltip_element_) {
-        tooltip_element_ = in_element;
-        host_->SetTooltip(tooltip_element_->GetTooltip());
-      }
-    }
-
     if (fired_element && type == Event::EVENT_MOUSE_DOWN) {
       // Start grabbing.
       grabmouse_element_ = fired_element;
@@ -215,6 +208,16 @@ class View::Impl {
                                            &fired_element, &in_element);
         }
       }
+    }
+
+    if (in_element) {
+      host_->SetCursor(in_element->GetCursor());
+      if (type == Event::EVENT_MOUSE_MOVE && in_element != tooltip_element_) {
+        tooltip_element_ = in_element;
+        host_->SetTooltip(tooltip_element_->GetTooltip());
+      }
+    } else {
+      tooltip_element_ = NULL;
     }
 
     return result;

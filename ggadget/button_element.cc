@@ -157,26 +157,29 @@ BasicElement *ButtonElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 EventResult ButtonElement::HandleMouseEvent(const MouseEvent &event) {
+  EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
    case Event::EVENT_MOUSE_DOWN:
     impl_->mousedown_ = true;
     QueueDraw();
-    return EVENT_RESULT_HANDLED;
+    break;
    case Event::EVENT_MOUSE_UP:
     impl_->mousedown_ = false;
     QueueDraw();
-    return EVENT_RESULT_HANDLED;
+    break;
    case Event::EVENT_MOUSE_OUT:
     impl_->mouseover_ = false;
     QueueDraw();
-    return EVENT_RESULT_HANDLED;
+    break;
    case Event::EVENT_MOUSE_OVER:
     impl_->mouseover_ = true;
     QueueDraw();
-    return EVENT_RESULT_HANDLED;
+    break;
    default:
-    return EVENT_RESULT_UNHANDLED;
+    result = EVENT_RESULT_UNHANDLED;
+    break;
   }
+  return result;
 }
 
 void ButtonElement::GetDefaultSize(double *width, double *height) const {

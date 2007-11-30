@@ -291,27 +291,28 @@ TextFrame *CheckBoxElement::GetTextFrame() {
 }
 
 EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
+  EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
     case Event::EVENT_MOUSE_DOWN:
       impl_->mousedown_ = true;
       OnDefaultSizeChange();
       QueueDraw();
-      return EVENT_RESULT_HANDLED;
+      break;
     case Event::EVENT_MOUSE_UP:
       impl_->mousedown_ = false;
       OnDefaultSizeChange();
       QueueDraw();
-      return EVENT_RESULT_HANDLED;
+      break;
     case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
       OnDefaultSizeChange();
       QueueDraw();
-      return EVENT_RESULT_HANDLED;
+      break;
     case Event::EVENT_MOUSE_OVER:
       impl_->mouseover_ = true;
       OnDefaultSizeChange();
       QueueDraw();
-      return EVENT_RESULT_HANDLED;
+      break;
     case Event::EVENT_MOUSE_CLICK: {
       // Toggle checked state and fire event
       if (impl_->is_checkbox_) {
@@ -328,12 +329,13 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
       Event event(Event::EVENT_CHANGE);
       ScriptableEvent s_event(&event, this, NULL);
       GetView()->FireEvent(&s_event, impl_->onchange_event_);
-      return EVENT_RESULT_HANDLED;
+      break;
     }
     default:
-      return EVENT_RESULT_UNHANDLED;
+      result = EVENT_RESULT_UNHANDLED;
+      break;
   }
-  return EVENT_RESULT_UNHANDLED;
+  return result;
 }
 
 Connection *CheckBoxElement::ConnectEvent(const char *event_name,
