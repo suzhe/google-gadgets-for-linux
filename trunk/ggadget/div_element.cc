@@ -248,7 +248,8 @@ EventResult DivElement::OnMouseEvent(const MouseEvent &event, bool direct,
       MouseEvent new_event(event);
       new_event.SetX(new_x);
       new_event.SetY(new_y);
-      return impl_->scrollbar_->HandleMouseEvent(new_event);
+      return impl_->scrollbar_->OnMouseEvent(new_event, direct,
+                                             fired_element, in_element);
     }
   }
 

@@ -443,7 +443,7 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
                             thumb->GetWidth(), thumb->GetHeight());
   }
 
-  EventResult result = EVENT_RESULT_UNHANDLED;
+  EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
     case Event::EVENT_MOUSE_MOVE:
     case Event::EVENT_MOUSE_OUT:
@@ -458,7 +458,6 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
         impl_->thumbover_ = over;
         QueueDraw();
       }        
-      result = EVENT_RESULT_HANDLED;
       break;      
     case Event::EVENT_MOUSE_DOWN: 
       if (over) {
@@ -489,16 +488,15 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
                                                 event.GetX(), event.GetY());
         SetValue(value); // SetValue will queue a draw.
       }
-      result = EVENT_RESULT_HANDLED;
       break;
     case Event::EVENT_MOUSE_UP:
       if (impl_->thumbdown_) {
         impl_->thumbdown_ = false;
         QueueDraw();
       }
-      result = EVENT_RESULT_HANDLED;
       break;
     default:
+      result = EVENT_RESULT_UNHANDLED;
       break;
   }
   return result;
