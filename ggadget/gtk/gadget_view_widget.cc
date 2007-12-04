@@ -211,6 +211,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
 static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
                                                 GdkEventButton *event) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
+  EventResult handler_result2 = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_BUTTON_RELEASE);
   gvw->host->HideTooltip(0);
@@ -245,13 +246,14 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
     }
     if (button != MouseEvent::BUTTON_NONE) {
       MouseEvent e2(t, event->x / gvw->zoom, event->y / gvw->zoom, button, 0);
-      handler_result = gvw->view->OnMouseEvent(e2);
+      handler_result2 = gvw->view->OnMouseEvent(e2);
     }
   } else {
     gvw->dbl_click = false;
   }
 
-  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED ||
+         handler_result2 != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
@@ -308,8 +310,8 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
 
   if (handler_result == ggadget::EVENT_RESULT_UNHANDLED &&
       (event->state & GDK_BUTTON1_MASK)) {
-    // Send a cheating mouse up event to the gadget so that we can start to
-    // drag the window.
+    // Send fake mouse up and mouse click events to the gadget so 
+    // that we can start to drag the window.
     MouseEvent e(Event::EVENT_MOUSE_UP,
                  event->x / gvw->zoom, event->y / gvw->zoom,
                  MouseEvent::BUTTON_LEFT, 0);
@@ -341,6 +343,7 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
 static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
                                            GdkEventKey *event) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
+  EventResult handler_result2 = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_KEY_PRESS);
   gvw->host->HideTooltip(0);
@@ -368,11 +371,12 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
     if (key_char) {
       // Send the char code in KEY_PRESS event.
       KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char);
-      gvw->view->OnKeyEvent(e2);
+      handler_result2 = gvw->view->OnKeyEvent(e2);
     }
   }
 
-  return handler_result != ggadget::EVENT_RESULT_UNHANDLED;
+  return handler_result != ggadget::EVENT_RESULT_UNHANDLED ||
+         handler_result2 != ggadget::EVENT_RESULT_UNHANDLED;
 }
 
 static gboolean GadgetViewWidget_key_release(GtkWidget *widget,

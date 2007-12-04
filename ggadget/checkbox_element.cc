@@ -92,7 +92,7 @@ class CheckBoxElement::Impl {
 
 CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
                                  const char *name, bool is_checkbox)
-    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
+    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, NULL),
       impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
 
@@ -354,7 +354,7 @@ void CheckBoxElement::GetDefaultSize(double *width, double *height) const {
   }
 
   double text_width = 0, text_height = 0;
-  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
+  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(1, 1);
   impl_->text_.GetSimpleExtents(canvas, &text_width, &text_height);
   canvas->Destroy();
 

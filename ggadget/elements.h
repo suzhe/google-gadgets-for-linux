@@ -90,14 +90,14 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * parent's width changed.
    * @param width new width of the parent in pixels.
    */
-  void OnParentWidthChange(double width);
+  virtual void OnParentWidthChange(double width);
 
   /**
    * Notifies all children using relative positioning that the
    * parent's height changed.
    * @param height new height of the parent in pixels.
    */
-  void OnParentHeightChange(double height);
+  virtual void OnParentHeightChange(double height);
 
   /**
    * Draw all the elements in this object onto a canvas that has the same size
@@ -107,7 +107,7 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * @return canvas with the elements drawn. @c NULL if
    *     <code>GetCount() == 0</code>.
    */
-  const CanvasInterface *Draw(bool *changed);
+  virtual const CanvasInterface *Draw(bool *changed);
 
   /**
    * Handler of the mouse events.
@@ -118,9 +118,9 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    *     disabled child elements, but not invisible child elements).
    * @return result of event handling.
    */
-  EventResult OnMouseEvent(const MouseEvent &event,
-                           BasicElement **fired_element,
-                           BasicElement **in_element);
+  virtual EventResult OnMouseEvent(const MouseEvent &event,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element);
 
   /**
    * Handler of the drag and drop events.
@@ -129,8 +129,8 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    *     @c NULL if no one.
    * @return result of event handling.
    */
-  EventResult OnDragEvent(const DragEvent &event,
-                          BasicElement **fired_element);
+  virtual EventResult OnDragEvent(const DragEvent &event,
+                                  BasicElement **fired_element);
 
   /**
    * Sets if the drawing contents can be scrolled within the parent.

@@ -108,6 +108,7 @@ class ScrollBarElement::Impl {
   double drag_delta_;
   Orientation orientation_;
   EventSignal onchange_event_;
+  EventSignal redraw_event_; // Not exposed to scripts.
 
   void ClearDisplayStates() {
     left_state_ = STATE_NORMAL;
@@ -262,7 +263,7 @@ class ScrollBarElement::Impl {
 
 ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
                                    const char *name)
-    : BasicElement(parent, view, "scrollbar", name, false),
+    : BasicElement(parent, view, "scrollbar", name, NULL),
       impl_(new Impl(this)) {
   RegisterProperty("background",
                    NewSlot(this, &ScrollBarElement::GetBackground),
@@ -673,6 +674,20 @@ Connection *ScrollBarElement::ConnectEvent(const char *event_name,
 
 Connection *ScrollBarElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
+}
+
+Connection *ScrollBarElement::ConnectOnRedrawEvent(Slot0<void> *slot) {
+  return impl_->redraw_event_.Connect(slot);
+}
+
+void ScrollBarElement::QueueDraw() {
+  impl_->redraw_event_();
+  BasicElement::QueueDraw();
+}
+
+void ScrollBarElement::MarkAsChanged() {
+  impl_->redraw_event_();
+  BasicElement::MarkAsChanged();
 }
 
 } // namespace ggadget

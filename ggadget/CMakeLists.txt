@@ -30,6 +30,7 @@ SET(SRCS
   display_window.cc
   element_factory.cc
   elements.cc
+  list_elements.cc
   file_manager.cc
   gadget.cc
   image.cc

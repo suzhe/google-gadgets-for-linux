@@ -45,7 +45,7 @@ class AnchorElement::Impl {
 };
 
 AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "a", name, false),
+    : BasicElement(parent, view, "a", name, NULL),
       impl_(new Impl(this, view)) {
   SetCursor(ElementInterface::CURSOR_HAND);
   SetEnabled(true);
@@ -134,7 +134,7 @@ BasicElement *AnchorElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 void AnchorElement::GetDefaultSize(double *width, double *height) const {
-  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
+  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(1, 1);
   if (!impl_->text_.GetSimpleExtents(canvas, width, height)) {
     *width = 0;
     *height = 0;

@@ -22,6 +22,7 @@
 namespace ggadget {
 
 class ItemElement;
+class Texture;
 
 class ListBoxElement : public DivElement {
  public:
@@ -32,55 +33,23 @@ class ListBoxElement : public DivElement {
   virtual ~ListBoxElement();
 
  public:
-  /** Gets and sets item width in pixels or percentage. */
-  Variant GetItemWidth() const;
-  void SetItemWidth(const Variant &width);
+  virtual Connection *ConnectEvent(const char *event_name, 
+                                   Slot0<void> *handler);
+  Connection *ConnectOnChangeEvent(Slot0<void> *slot);
+  Connection *ConnectOnRedrawEvent(Slot0<void> *slot);
 
-  /** Gets and sets item height in pixels or percentage. */
-  Variant GetItemHeight() const;
-  void SetItemHeight(const Variant &height);
+  void FireOnChangeEvent();
 
-  /** Gets or sets the background texture of the item under the mouse cursor. */
-  Variant GetItemOverColor() const;
-  void SetItemOverColor(const Variant &color);
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
-  /** Gets or sets the background texture of the selected item. */
-  Variant GetItemSelectedColor() const;
-  void SetItemSelectedColor(const Variant &color);
-
-  /** Gets and sets whether there are separator lines between the items. */
-  bool HasItemSeparator() const;
-  void SetItemSeparator(bool separator);
-
-  /** Gets and sets whether the user can select multiple items. */
-  bool IsMultiSelect() const;
-  void SetMultiSelect(bool multiSelect);
-
-  /**
-   * Gets and sets the current selected index.
-   * If multiple items are selected, selectedIndex is the index of the first
-   * selected item.
-   * -1 means no item is selected.
-   */
-  int GetSelectedIndex() const;
-  void SetSelectedIndex(int index);
-
-  /** Gets and sets the current selected item. */
-  ItemElement *GetSelectedItem() const;
-  void SetSelectedItem(ItemElement *item);
-
-  /** Unselects all items in the listbox. */
-  void ClearSelection();
+  virtual void QueueDraw(); 
+  virtual void MarkAsChanged();
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
 
- protected:
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
-  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+  friend class ComboBoxElement;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ListBoxElement);

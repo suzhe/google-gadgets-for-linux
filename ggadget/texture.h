@@ -61,7 +61,7 @@ class Texture {
    * Draws the texture onto a canvas.
    * If the texture is an image, the image is repeated to fill the canvas.
    */
-  void Draw(CanvasInterface *canvas);
+  void Draw(CanvasInterface *canvas) const;
 
   /**
    * Draws the specified text on canvas.
@@ -71,7 +71,7 @@ class Texture {
                 CanvasInterface::Alignment align,
                 CanvasInterface::VAlignment valign,
                 CanvasInterface::Trimming trimming,
-                CanvasInterface::TextFlag text_flag);
+                CanvasInterface::TextFlag text_flag) const;
 
   /**
    * @return the file name this texture is loaded from a file; returns the

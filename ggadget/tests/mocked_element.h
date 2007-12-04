@@ -19,11 +19,14 @@
 
 #include "ggadget/basic_element.h"
 #include "ggadget/view.h"
+#include "ggadget/elements.h"
 
 class Muffin : public ggadget::BasicElement {
  public:
   Muffin(ggadget::BasicElement *parent, ggadget::View *view, const char *name)
-      : ggadget::BasicElement(parent, view, "muffin", name, true) {
+      : ggadget::BasicElement(parent, view, "muffin", name, 
+                              new ggadget::Elements(view->GetElementFactory(), 
+                                                    this, view)) {
   }
 
   virtual ~Muffin() {
@@ -46,7 +49,9 @@ class Muffin : public ggadget::BasicElement {
 class Pie : public ggadget::BasicElement {
  public:
   Pie(ggadget::BasicElement *parent, ggadget::View *view, const char *name)
-      : ggadget::BasicElement(parent, view, "pie", name, true) {
+      : ggadget::BasicElement(parent, view, "pie", name, 
+                              new ggadget::Elements(view->GetElementFactory(), 
+                                                    this, view)) {
   }
 
   virtual ~Pie() {

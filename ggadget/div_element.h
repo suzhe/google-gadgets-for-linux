@@ -48,14 +48,16 @@ class DivElement : public BasicElement {
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element);
+  virtual EventResult OnDragEvent(const DragEvent &event, bool direct,
+                                  BasicElement **fired_element);
 
   /**
    * Overrides because this element supports scrolling.
    * @see ElementInterface::SelfCoordToChildCoord()
    */
-  virtual void SelfCoordToChildCoord(BasicElement *child,
+  virtual void SelfCoordToChildCoord(const BasicElement *child,
                                      double x, double y,
-                                     double *child_x, double *child_y);
+                                     double *child_x, double *child_y) const;
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
@@ -67,7 +69,7 @@ class DivElement : public BasicElement {
    * No scriptable interfaces will be registered in this constructor.
    */
   DivElement(BasicElement *parent, View *view,
-             const char *tag_name, const char *name);
+             const char *tag_name, const char *name, Elements *children);
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);

@@ -299,7 +299,6 @@ class Elements::Impl {
 
 const CanvasInterface *Elements::Impl::Draw(bool *changed) {
   BasicElement *element;
-  CanvasInterface *canvas = NULL;
   const CanvasInterface **children_canvas = NULL;
   int child_count;
   bool child_changed = false;
@@ -323,8 +322,8 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
     change = change || child_changed;
   }
 
-  change = change || !canvas;
-  if (change) {
+  change = change || !canvas_;
+  if (change) { // Need to redraw
     size_t canvas_width, canvas_height;
     if (scrollable_) {
       if (child_changed || !canvas_) {
@@ -346,8 +345,9 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
       canvas_height = static_cast<size_t>(ceil(height_));
     }
 
-    // Need to redraw.
-    if (!canvas_ || canvas_->GetWidth() != canvas_width ||
+    // Need to create new canvas.
+    if (!canvas_ || 
+        canvas_->GetWidth() != canvas_width ||
         canvas_->GetHeight() != canvas_height) {
       if (canvas_)
         canvas_->Destroy();
@@ -363,8 +363,7 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
         DLOG("Error: unable to create canvas.");
         goto exit;
       }
-    }
-    else {
+    } else {
       // If not new canvas, we must remember to clear canvas before drawing.
       canvas_->ClearCanvas();
     }
@@ -382,8 +381,7 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
           canvas_->TranslateCoordinates(
               element->GetPixelX() - element->GetPixelPinX(),
               element->GetPixelY() - element->GetPixelPinY());
-        }
-        else {
+        } else {
           canvas_->TranslateCoordinates(element->GetPixelX(),
                                         element->GetPixelY());
           canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
@@ -394,8 +392,7 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
         const CanvasInterface *mask = element->GetMaskCanvas();
         if (mask) {
           canvas_->DrawCanvasWithMask(.0, .0, children_canvas[i], .0, .0, mask);
-        }
-        else {
+        } else {
           canvas_->DrawCanvas(.0, .0, children_canvas[i]);
         }
 
@@ -416,8 +413,6 @@ const CanvasInterface *Elements::Impl::Draw(bool *changed) {
     canvas_->DrawLine(w, 0, 0, h, 1, Color(0, 0, 0));
   }
 
-  canvas = canvas_;
-
 exit:
   if (children_canvas) {
     delete[] children_canvas;
@@ -425,7 +420,7 @@ exit:
   }
 
   *changed = change;
-  return canvas;
+  return canvas_;
 }
 
 Elements::Elements(ElementFactoryInterface *factory,

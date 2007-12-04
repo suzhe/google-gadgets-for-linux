@@ -30,7 +30,8 @@ class DivElement::Impl {
  public:
   Impl(DivElement *owner)
       : owner_(owner),
-        background_texture_(NULL),
+        background_texture_(NULL), 
+        grabbed_scrollbar_(NULL), mouseover_scrollbar_(NULL),
         scroll_pos_x_(0), scroll_pos_y_(0),
         scroll_width_(0), scroll_height_(0),
         scroll_range_x_(0), scroll_range_y_(0), 
@@ -50,10 +51,11 @@ class DivElement::Impl {
   void ScrollBarUpdated() {
     int v = scrollbar_->GetValue();
     if (scroll_pos_y_ != v) {
-      // No need to queue draw here since the scrollbar should have already 
-      // queued it.
       scroll_pos_y_ = v;
-    }
+    } 
+    // No need to queue draw here since the scrollbar should have already 
+    // queued it. Just mark changed so Div will call ScrollBarElement::Draw.
+    owner_->MarkAsChanged();
   }
 
   void CreateScrollBar() {
@@ -67,7 +69,7 @@ class DivElement::Impl {
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
       Slot0<void> *slot = NewSlot(this, &Impl::ScrollBarUpdated);
-      scrollbar_->ConnectOnChangeEvent(slot);
+      scrollbar_->ConnectOnRedrawEvent(slot);
       owner_->GetView()->OnElementAdd(scrollbar_);
     }
   }
@@ -91,8 +93,8 @@ class DivElement::Impl {
     if (show_scrollbar) {
       owner_width -= scrollbar_->GetPixelWidth();
     }
-    double max_range_x = scroll_width_ - owner_width;
-    scroll_range_x_ = std::max(0, static_cast<int>(ceil(max_range_x)));
+    int max_range_x = scroll_width_ - static_cast<int>(ceil(owner_width));
+    scroll_range_x_ = std::max(0, max_range_x);
     scroll_pos_x_ = std::min(scroll_pos_x_, scroll_range_x_);
   }
 
@@ -150,14 +152,16 @@ class DivElement::Impl {
 
   DivElement *owner_;
   Texture *background_texture_;
+  BasicElement *grabbed_scrollbar_, *mouseover_scrollbar_; 
   int scroll_pos_x_, scroll_pos_y_;
   int scroll_width_, scroll_height_;
   int scroll_range_x_, scroll_range_y_;
-  ScrollBarElement *scrollbar_; // != NULL if and only if autoscroll=true
+  ScrollBarElement *scrollbar_; // NULL if and only if autoscroll=false
 };
 
 DivElement::DivElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "div", name, true),
+    : BasicElement(parent, view, "div", name, 
+                   new Elements(view->GetElementFactory(), this, view)),
       impl_(new Impl(this)) {
   RegisterProperty("autoscroll",
                    NewSlot(this, &DivElement::IsAutoscroll),
@@ -168,8 +172,9 @@ DivElement::DivElement(BasicElement *parent, View *view, const char *name)
 }
 
 DivElement::DivElement(BasicElement *parent, View *view,
-                       const char *tag_name, const char *name)
-    : BasicElement(parent, view, tag_name, name, true),
+                       const char *tag_name, const char *name, 
+                       Elements *children)
+    : BasicElement(parent, view, tag_name, name, children),
       impl_(new Impl(this)) {
 }
 
@@ -239,27 +244,124 @@ BasicElement *DivElement::CreateInstance(BasicElement *parent, View *view,
 EventResult DivElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                      BasicElement **fired_element,
                                      BasicElement **in_element) {
-  if (!direct && impl_->scrollbar_) {
+  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
+    Event::Type t = event.GetType();
     double new_x = event.GetX() - impl_->scrollbar_->GetPixelX();
-    double new_y = event.GetY() - impl_->scrollbar_->GetPixelY();
-    if (impl_->scrollbar_->IsVisible() &&
-        IsPointInElement(new_x, new_y, impl_->scrollbar_->GetPixelWidth(),
-                         impl_->scrollbar_->GetPixelHeight())) {
+    BasicElement *new_fired = NULL, *new_in = NULL;
+    EventResult r;    
+    if (t == Event::EVENT_MOUSE_OUT && impl_->mouseover_scrollbar_) {
+      // Case: Mouse moved out of parent and child at same time.
+      // Clone mouse out event and send to child in addition to parent.
       MouseEvent new_event(event);
       new_event.SetX(new_x);
-      new_event.SetY(new_y);
-      return impl_->scrollbar_->OnMouseEvent(new_event, direct,
-                                             fired_element, in_element);
+      impl_->mouseover_scrollbar_->OnMouseEvent(new_event, true,
+                                                &new_fired, &new_in);
+      impl_->mouseover_scrollbar_ = NULL;
+
+      // Do not return, parent needs to handle this mouse out event too.
+    } else if (impl_->grabbed_scrollbar_ && 
+        (t == Event::EVENT_MOUSE_MOVE || t == Event::EVENT_MOUSE_UP)) {
+      // Case: Mouse is grabbed by child. Send to child regardless of position.
+      // Send to child directly.
+      MouseEvent new_event(event);
+      new_event.SetX(new_x);
+      r = impl_->grabbed_scrollbar_->OnMouseEvent(new_event, true, 
+                                                  fired_element, in_element);
+      if (t == Event::EVENT_MOUSE_UP) {
+        impl_->grabbed_scrollbar_ = NULL; 
+      }
+      if (*fired_element == impl_->scrollbar_) {
+        *fired_element = this;
+      }
+      if (*in_element == impl_->scrollbar_) {
+        *in_element = this;
+      }
+      return r;
+    } else if (!direct && new_x >= 0) {
+      // Case: Mouse is inside child. Dispatch event to child,
+      // except in the case where the event is a mouse over event 
+      // (when the mouse enters the child and parent at the same time).
+      if (!impl_->mouseover_scrollbar_) {
+        // Case: Mouse just moved inside child. Turn on mouseover bit and  
+        // synthesize a mouse over event. The original event still needs to 
+        // be dispatched to child.
+        impl_->mouseover_scrollbar_ = impl_->scrollbar_;
+        MouseEvent in(Event::EVENT_MOUSE_OVER, new_x, event.GetY(), 
+                      event.GetButton(), event.GetWheelDelta());
+        impl_->mouseover_scrollbar_->OnMouseEvent(in, true, 
+                                                  &new_fired, &new_in);
+        // Ignore return from handler and don't return to continue processing.
+        if (t == Event::EVENT_MOUSE_OVER) {
+          // Case: Mouse entered child and parent at same time.
+          // Parent also needs this event, so send to parent
+          // and return.
+          return BasicElement::OnMouseEvent(event, direct, 
+                                            fired_element, in_element);         
+        } 
+      }
+
+      // Send event to child.
+      MouseEvent new_event(event);
+      new_event.SetX(new_x);
+      r = impl_->scrollbar_->OnMouseEvent(new_event, direct,
+                                          fired_element, in_element);
+      if (*fired_element == impl_->scrollbar_) {
+        if (t == Event::EVENT_MOUSE_DOWN) {
+          impl_->grabbed_scrollbar_ = impl_->scrollbar_; 
+        }      
+        *fired_element = this;
+      }
+      if (*in_element == impl_->scrollbar_) {
+        *in_element = this;
+      }
+      return r;
+    } else if (impl_->mouseover_scrollbar_) {
+      // Case: Mouse isn't in child, but mouseover bit is on, so turn 
+      // it off and send a mouse out event to child. The original event is 
+      // still dispatched to parent.
+      MouseEvent new_event(Event::EVENT_MOUSE_OUT, new_x, event.GetY(), 
+                           event.GetButton(), event.GetWheelDelta());
+      impl_->mouseover_scrollbar_->OnMouseEvent(new_event, true, 
+                                                &new_fired, &new_in);
+      impl_->mouseover_scrollbar_ = NULL;
+
+      // Don't return, dispatch event to parent.
     }
+
+    // Else not handled, send to BasicElement::OnMouseEvent
+  } else {
+    // Visible state may change while grabbed or hovered.
+    impl_->grabbed_scrollbar_ = NULL;
+    impl_->mouseover_scrollbar_ = NULL;
   }
 
   return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
 }
 
+EventResult DivElement::OnDragEvent(const DragEvent &event, bool direct,
+                                     BasicElement **fired_element) {
+  if (!direct && impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
+    double new_x = event.GetX() - impl_->scrollbar_->GetPixelX();
+    if (new_x >= 0) {
+      DragEvent new_event(event);
+      new_event.SetX(new_x);
+      EventResult r = impl_->scrollbar_->OnDragEvent(new_event, direct,
+                                                     fired_element);
+      if (*fired_element == impl_->scrollbar_) {
+        *fired_element = this;
+      }
+      return r;
+    }
+  }
+
+  return BasicElement::OnDragEvent(event, direct, fired_element);
+}
+
 EventResult DivElement::HandleMouseEvent(const MouseEvent &event) {
-  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible() &&
-      event.GetType() == Event::EVENT_MOUSE_WHEEL) {
-    return impl_->scrollbar_->HandleMouseEvent(event);
+  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
+    if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
+      return impl_->scrollbar_->HandleMouseEvent(event);
+    }
   }
   return EVENT_RESULT_UNHANDLED;
 }
@@ -268,14 +370,12 @@ EventResult DivElement::HandleKeyEvent(const KeyboardEvent &event) {
   return impl_->HandleKeyEvent(event);
 }
 
-void DivElement::SelfCoordToChildCoord(BasicElement *child,
+void DivElement::SelfCoordToChildCoord(const BasicElement *child,
                                        double x, double y,
-                                       double *child_x, double *child_y) {  
-  if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible() && 
-      IsPointInElement(x, y, impl_->scrollbar_->GetPixelWidth(),
-                       impl_->scrollbar_->GetPixelHeight())) {
-    x -= impl_->scroll_pos_x_;
-    y -= impl_->scroll_pos_y_;
+                                       double *child_x, double *child_y) const {  
+  if (child != impl_->scrollbar_ && impl_->scrollbar_) {
+    x += impl_->scroll_pos_x_;
+    y += impl_->scroll_pos_y_;
   }
 
   BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);

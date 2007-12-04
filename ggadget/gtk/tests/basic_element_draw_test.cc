@@ -51,7 +51,8 @@ class ViewHostWithGraphics : public MockedViewHost {
 class Muffin : public BasicElement {
  public:
   Muffin(BasicElement *parent, View *view, const char *name)
-      : BasicElement(parent, view, "muffin", name, true) {
+      : BasicElement(parent, view, "muffin", name, 
+                     new Elements(view->GetElementFactory(), this, view)) {
   }
 
   virtual ~Muffin() {
@@ -77,7 +78,7 @@ class Muffin : public BasicElement {
 class Pie : public BasicElement {
  public:
   Pie(BasicElement *parent, View *view, const char *name)
-      : BasicElement(parent, view, "pie", name, false), color_(0., 0., 0.) {
+      : BasicElement(parent, view, "pie", name, NULL), color_(0., 0., 0.) {
   }
 
   virtual ~Pie() {

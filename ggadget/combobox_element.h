@@ -17,13 +17,13 @@
 #ifndef GGADGET_COMBOBOX_ELEMENT_H__
 #define GGADGET_COMBOBOX_ELEMENT_H__
 
-#include <ggadget/listbox_element.h>
+#include "basic_element.h"
 
 namespace ggadget {
 
-class ComboBoxElement : public ListBoxElement {
+class ComboBoxElement : public BasicElement {
  public:
-  DEFINE_CLASS_ID(0x848a2f5e84144915, ListBoxElement);
+  DEFINE_CLASS_ID(0x848a2f5e84144915, BasicElement);
 
   ComboBoxElement(BasicElement *parent, View *view, const char *name);
   virtual ~ComboBoxElement();
@@ -31,9 +31,9 @@ class ComboBoxElement : public ListBoxElement {
  public:
   enum Type {
     /** The default, editable control. */
-    DROPDOWN,
+    COMBO_DROPDOWN,
     /** Uneditable. */
-    DROPLIST,
+    COMBO_DROPLIST,
   };
 
   /** Gets and sets whether the dropdown list is visible. */
@@ -55,6 +55,37 @@ class ComboBoxElement : public ListBoxElement {
   const char *GetValue() const;
   void SetValue(const char *value);
 
+  /**
+   * Gets and sets the background color or image of the element. The image is
+   * repeated if necessary, not stretched.
+   */
+  Variant GetBackground() const;
+  void SetBackground(const Variant &background);
+
+  void SetItemWidth(const Variant &width);
+  void SetItemHeight(const Variant &height);
+
+  virtual double GetPixelHeight() const;
+
+  virtual const ElementsInterface *GetChildren() const;
+  virtual ElementsInterface *GetChildren();
+
+  // Disabled methods.
+  bool IsAutoscroll() const;
+  void SetAutoscroll(bool autoscroll);
+  bool IsMultiSelect() const;
+  void SetMultiSelect(bool multiselect);
+
+  virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element);
+  virtual EventResult OnDragEvent(const DragEvent &event, bool direct,
+                                  BasicElement **fired_element);
+
+  virtual void SelfCoordToChildCoord(const BasicElement *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y) const;
+
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
@@ -64,6 +95,8 @@ class ComboBoxElement : public ListBoxElement {
                       const CanvasInterface *children_canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+  virtual void OnWidthChange();
+  virtual void OnHeightChange();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ComboBoxElement);

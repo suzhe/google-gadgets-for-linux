@@ -33,7 +33,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
  public:
   BasicElement(BasicElement *parent, View *view,
-               const char *tag_name, const char *name, bool is_container);
+               const char *tag_name, const char *name, Elements *children);
   virtual ~BasicElement();
 
  public: // ElementInterface methods.
@@ -85,6 +85,17 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void ResetWidthToDefault();
   virtual bool HeightIsSpecified() const;
   virtual void ResetHeightToDefault();
+
+  virtual Variant GetWidth() const;
+  virtual void SetWidth(const Variant &width);
+  virtual Variant GetHeight() const;
+  virtual void SetHeight(const Variant &height);
+  virtual Variant GetX() const;
+  virtual void SetX(const Variant &y);
+  virtual Variant GetY() const;
+  virtual void SetY(const Variant &y);
+  virtual void ResetXToDefault();
+  virtual void ResetYToDefault();
 
   virtual double GetRotation() const;
   virtual void SetRotation(double rotation);
@@ -222,14 +233,48 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
  public:
   /**
    * Sets the changed bit to true and if visible, 
-   * requests the view to be redrawn. 
+   * requests the view to be redrawn. Don't call this inside a 
+   * drawing function (i.e. drawing has already started) or there 
+   * might be extra draw attempts.
    */
-  void QueueDraw();
+  virtual void QueueDraw();
+
+  /**
+   * Sets the changed bit of the element, asking it to be redrawn on the
+   * next call to Draw(). This method is useful when called in a parent's
+   * Draw() method.
+   */
+  virtual void MarkAsChanged();
 
   /** Called by child classes when the default size changed. */
   void OnDefaultSizeChange();
 
+  /** Called by child classes when the default position changed. */
+  void OnDefaultPositionChange();
+
+  /** Enum used by ParsePixelOrRelative() below. */
+  enum ParsePixelOrRelativeResult {
+    PR_PIXEL,
+    PR_RELATIVE,
+    PR_UNSPECIFIED,
+    PR_INVALID = -1,
+  };
+
+  /** 
+   * Parses an Variant into either a absolute value or 
+   * an relative percentage value. 
+   */
+  static ParsePixelOrRelativeResult ParsePixelOrRelative(const Variant &input, 
+                                                         double *output);
+  /** 
+   * Returns a Variant depending on whether the input is either absolute 
+   * pixel value or a relative percentage value. 
+   */
+  static Variant GetPixelOrRelative(bool is_relative, bool is_specified,
+                                    double pixel, double relative);
+
  protected:
+
   /**
    * Draws the element onto the canvas.
    * To be implemented by subclasses.
@@ -263,6 +308,14 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    * The default value of default size is (0,0).
    */
   virtual void GetDefaultSize(double *width, double *height) const;
+
+  /**
+   * Return the default position of the element in pixels.
+   * The default position is used when no "x" or "y" property is specified
+   * for the element.
+   * The default value is (0,0).
+   */
+  virtual void GetDefaultPosition(double *x, double *y) const;
 
   /** Hook for subclasses to react to change of width. */
   virtual void OnWidthChange() { } 
