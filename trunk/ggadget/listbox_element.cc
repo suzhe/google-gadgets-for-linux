@@ -14,81 +14,78 @@
   limitations under the License.
 */
 
-#include "listbox_element.h"
-#include "canvas_interface.h"
-#include "elements.h"
+#include <cmath>
+
 #include "event.h"
 #include "item_element.h"
-#include "texture.h"
+#include "listbox_element.h"
+#include "list_elements.h"
+#include "scriptable_event.h"
+#include "string_utils.h"
 #include "view.h"
 
 namespace ggadget {
 
+static const char kOnChangeEvent[] = "onchange";
+
 class ListBoxElement::Impl {
  public:
-  Impl(ListBoxElement *owner)
-      : owner_(owner),
-        selected_index_(-1),
-        item_over_color_(NULL), // TODO: default color
-        item_selected_color_(NULL) {  // TODO: default color
+  Impl(ListBoxElement *owner, View *view) : elements_(NULL) { 
+    ASSERT(owner->GetChildren()->IsInstanceOf(ListElements::CLASS_ID));
+    elements_ = down_cast<ListElements *>(owner->GetChildren());
   }
 
   ~Impl() {
-    delete item_over_color_;
-    item_over_color_ = NULL;
-    delete item_selected_color_;
-    item_selected_color_ = NULL;
   }
 
-  ListBoxElement *owner_;
-  Variant item_width_, item_height_;
-  int selected_index_;
-  Texture *item_over_color_, *item_selected_color_;
-  EventSignal onchange_event_;
+  ListElements *elements_;
+  EventSignal onchange_event_, redraw_event_;
 };
 
 ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
                                const char *tag_name, const char *name)
-    : DivElement(parent, view, tag_name, name),
-      impl_(new Impl(this)) {
-  SetEnabled(true);
+    : DivElement(parent, view, tag_name, name,
+                 new ListElements(view->GetElementFactory(), this, view)),
+      impl_(new Impl(this, view)) {
+  SetEnabled(true);  
+
   RegisterProperty("background",
                    NewSlot(implicit_cast<DivElement *>(this),
                            &DivElement::GetBackground),
                    NewSlot(implicit_cast<DivElement *>(this),
                            &DivElement::SetBackground));
   RegisterProperty("autoscroll",
-                   NewSlot(implicit_cast<DivElement *>(this),
+                   NewSlot(implicit_cast<DivElement *>(this), 
                            &DivElement::IsAutoscroll),
-                   NewSlot(implicit_cast<DivElement *>(this),
+                   NewSlot(implicit_cast<DivElement *>(this), 
                            &DivElement::SetAutoscroll));
   RegisterProperty("itemHeight",
-                   NewSlot(this, &ListBoxElement::GetItemHeight),
-                   NewSlot(this, &ListBoxElement::SetItemHeight));
+                   NewSlot(impl_->elements_, &ListElements::GetItemHeight),
+                   NewSlot(impl_->elements_, &ListElements::SetItemHeight));
   RegisterProperty("itemWidth",
-                   NewSlot(this, &ListBoxElement::GetItemWidth),
-                   NewSlot(this, &ListBoxElement::SetItemWidth));
+                   NewSlot(impl_->elements_, &ListElements::GetItemWidth),
+                   NewSlot(impl_->elements_, &ListElements::SetItemWidth));
   RegisterProperty("itemOverColor",
-                   NewSlot(this, &ListBoxElement::GetItemOverColor),
-                   NewSlot(this, &ListBoxElement::SetItemOverColor));
+                   NewSlot(impl_->elements_, &ListElements::GetItemOverColor),
+                   NewSlot(impl_->elements_, &ListElements::SetItemOverColor));
   RegisterProperty("itemSelectedColor",
-                   NewSlot(this, &ListBoxElement::GetItemSelectedColor),
-                   NewSlot(this, &ListBoxElement::SetItemSelectedColor));
+                   NewSlot(impl_->elements_, &ListElements::GetItemSelectedColor),
+                   NewSlot(impl_->elements_, &ListElements::SetItemSelectedColor));
   RegisterProperty("itemSeparator",
-                   NewSlot(this, &ListBoxElement::HasItemSeparator),
-                   NewSlot(this, &ListBoxElement::SetItemSeparator));
+                   NewSlot(impl_->elements_, &ListElements::HasItemSeparator),
+                   NewSlot(impl_->elements_, &ListElements::SetItemSeparator));
   RegisterProperty("multiSelect",
-                   NewSlot(this, &ListBoxElement::IsMultiSelect),
-                   NewSlot(this, &ListBoxElement::SetMultiSelect));
+                   NewSlot(impl_->elements_, &ListElements::IsMultiSelect),
+                   NewSlot(impl_->elements_, &ListElements::SetMultiSelect));
   RegisterProperty("selectedIndex",
-                   NewSlot(this, &ListBoxElement::GetSelectedIndex),
-                   NewSlot(this, &ListBoxElement::SetSelectedIndex));
+                   NewSlot(impl_->elements_, &ListElements::GetSelectedIndex),
+                   NewSlot(impl_->elements_, &ListElements::SetSelectedIndex));
   RegisterProperty("selectedItem",
-                   NewSlot(this, &ListBoxElement::GetSelectedItem),
-                   NewSlot(this, &ListBoxElement::SetSelectedItem));
+                   NewSlot(impl_->elements_, &ListElements::GetSelectedItem),
+                   NewSlot(impl_->elements_, &ListElements::SetSelectedItem));
   RegisterMethod("ClearSelection",
-                 NewSlot(this, &ListBoxElement::ClearSelection));
-  RegisterSignal("onchange", &impl_->onchange_event_);
+                 NewSlot(impl_->elements_, &ListElements::ClearSelection));
+  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 
 ListBoxElement::~ListBoxElement() {
@@ -96,105 +93,40 @@ ListBoxElement::~ListBoxElement() {
   impl_ = NULL;
 }
 
-void ListBoxElement::DoDraw(CanvasInterface *canvas,
-                         const CanvasInterface *children_canvas) {
-  DivElement::DoDraw(canvas, children_canvas);
+Connection *ListBoxElement::ConnectEvent(const char *event_name,
+                                           Slot0<void> *handler) {
+  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
+    return impl_->onchange_event_.Connect(handler);
+  return BasicElement::ConnectEvent(event_name, handler);
 }
 
-Variant ListBoxElement::GetItemWidth() const {
-  return impl_->item_width_;
+void ListBoxElement::MarkAsChanged() {
+  impl_->redraw_event_();
+  DivElement::MarkAsChanged();
 }
 
-void ListBoxElement::SetItemWidth(const Variant &width) {
-  impl_->item_width_ = width;
-  // TODO: set children height.
+void ListBoxElement::QueueDraw() {
+  impl_->redraw_event_();
+  DivElement::QueueDraw();
 }
 
-Variant ListBoxElement::GetItemHeight() const {
-  return impl_->item_height_;
+Connection *ListBoxElement::ConnectOnRedrawEvent(Slot0<void> *slot) {
+  return impl_->redraw_event_.Connect(slot);
 }
 
-void ListBoxElement::SetItemHeight(const Variant &height) {
-  impl_->item_height_ = height;
-  // TODO: set children height.
+Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
+  return impl_->onchange_event_.Connect(slot);
 }
 
-/** Gets or sets the background texture of the item under the mouse cursor. */
-Variant ListBoxElement::GetItemOverColor() const {
-  return Variant(Texture::GetSrc(impl_->item_over_color_));
-}
-
-void ListBoxElement::SetItemOverColor(const Variant &color) {
-  delete impl_->item_over_color_;
-  impl_->item_over_color_ = GetView()->LoadTexture(color);
-  QueueDraw();
-}
-
-Variant ListBoxElement::GetItemSelectedColor() const {
-  return Variant(Texture::GetSrc(impl_->item_selected_color_));
-}
-
-void ListBoxElement::SetItemSelectedColor(const Variant &color) {
-  delete impl_->item_selected_color_;
-  impl_->item_selected_color_ = GetView()->LoadTexture(color);
-  QueueDraw();
-}
-
-bool ListBoxElement::HasItemSeparator() const {
-  // TODO:
-  return false;
-}
-
-void ListBoxElement::SetItemSeparator(bool separator) {
-  // TODO:
-}
-
-bool ListBoxElement::IsMultiSelect() const {
-  // TODO:
-  return false;
-}
-
-void ListBoxElement::SetMultiSelect(bool multiSelect) {
-  // TODO:
-}
-
-int ListBoxElement::GetSelectedIndex() const {
-  if (impl_->selected_index_ >= GetChildren()->GetCount())
-    impl_->selected_index_ = -1;
-  return impl_->selected_index_;
-}
-
-void ListBoxElement::SetSelectedIndex(int index) {
-  if (impl_->selected_index_ != index) {
-    if (index < -1 || index >= GetChildren()->GetCount()) {
-      impl_->selected_index_ = -1;
-    } else {
-      impl_->selected_index_ = 0;
-    }
-    QueueDraw();
-  }
-}
-
-ItemElement *ListBoxElement::GetSelectedItem() const {
-  return NULL;
-}
-
-void ListBoxElement::SetSelectedItem(ItemElement *item) {
-  // TODO:
-}
-
-void ListBoxElement::ClearSelection() {
-  // TODO:
-}
-
-EventResult ListBoxElement::HandleMouseEvent(const MouseEvent &event) {
-  // TODO:
-  return EVENT_RESULT_UNHANDLED;
+void ListBoxElement::FireOnChangeEvent() {
+  Event event(Event::EVENT_CHANGE);
+  ScriptableEvent s_event(&event, this, NULL);
+  GetView()->FireEvent(&s_event, impl_->onchange_event_);
 }
 
 EventResult ListBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
-  // TODO:
-  return EVENT_RESULT_UNHANDLED;
+  // TODO handle shift
+  return DivElement::HandleKeyEvent(event);
 }
 
 BasicElement *ListBoxElement::CreateInstance(BasicElement *parent, View *view,

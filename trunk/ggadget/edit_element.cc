@@ -43,7 +43,7 @@ class EditElement::Impl {
 };
 
 EditElement::EditElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "edit", name, false),
+    : BasicElement(parent, view, "edit", name, NULL),
       impl_(new Impl(this)) {
   // SetAutoscroll(true);
   SetEnabled(true);

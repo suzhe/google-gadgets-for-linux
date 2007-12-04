@@ -105,6 +105,10 @@ class ScrollBarElement : public BasicElement {
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
+  Connection *ConnectOnRedrawEvent(Slot0<void> *slot);
+
+  virtual void MarkAsChanged();
+  virtual void QueueDraw();
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas,

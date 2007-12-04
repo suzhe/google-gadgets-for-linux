@@ -35,6 +35,9 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
 
   size_t width;
   size_t height;
+
+  if (w == 0) w = 1;
+  if (h == 0) h = 1;
   if (zoom_ == 1.) {
     width = w;
     height = h;
@@ -43,9 +46,6 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
     // compute new width and height based on zoom
     width = size_t(w * zoom_);
     height = size_t(h * zoom_);
-
-    if (width == 0) width = 1;
-    if (height == 0) height = 1;
   }
 
   // create surface at native resolution after adjustment by scale
@@ -66,6 +66,7 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
   // clear canvas
   c = new CairoCanvas(cr, w, h, false);
   c->ClearSurface();
+  //DLOG("new canvas %d %d %d %d", width, height, w, h);
 
 exit:
   if (cr) {

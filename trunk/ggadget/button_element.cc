@@ -53,7 +53,7 @@ class ButtonElement::Impl {
 };
 
 ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "button", name, false),
+    : BasicElement(parent, view, "button", name, NULL),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
   RegisterProperty("image",

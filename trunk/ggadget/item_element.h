@@ -17,13 +17,15 @@
 #ifndef GGADGET_ITEM_ELEMENT_H__
 #define GGADGET_ITEM_ELEMENT_H__
 
-#include <ggadget/div_element.h>
+#include <ggadget/basic_element.h>
 
 namespace ggadget {
 
-class ItemElement : public DivElement {
+class Texture;
+
+class ItemElement : public BasicElement {
  public:
-  DEFINE_CLASS_ID(0x93a09b61fb8a4fda, DivElement);
+  DEFINE_CLASS_ID(0x93a09b61fb8a4fda, BasicElement);
 
   ItemElement(BasicElement *parent, View *view,
               const char *tag_name, const char *name);
@@ -33,6 +35,47 @@ class ItemElement : public DivElement {
   /** Gets and sets whether this item is currently selected. */
   bool IsSelected() const;
   void SetSelected(bool selected);
+  void SetSelectedNoRedraw(bool selected);
+
+  /**
+   * Gets and sets the background color or image of the element. The image is
+   * repeated if necessary, not stretched.
+   */
+  Variant GetBackground() const;
+  void SetBackground(const Variant &background);
+
+  virtual void SetWidth(const Variant &width);
+  virtual void SetHeight(const Variant &height);
+
+  virtual void SetX(const Variant &x);
+  virtual void SetY(const Variant &y);
+
+  bool IsMouseOver() const;
+
+  /** 
+   * Hook these methods to also mark the parent as changed.
+   * This is OK in all scenarios since item is only used inside ListBoxes.
+   */
+  virtual void QueueDraw(); 
+  virtual void MarkAsChanged();
+
+  /** 
+   * Sets whether mouseover/selected overlays should be drawn. 
+   * This method is used in Draw() calls to temporarily disable overlay drawing. 
+   */
+  void SetDrawOverlay(bool draw);
+
+  /**
+   * Sets the current index of the item in the parent.
+   */
+  void SetIndex(int index);
+
+  /** 
+   * Gets and sets the text of the label contained inside this element, 
+   * if a labelg exists.
+   */
+  const char *GetLabelText() const;
+  void SetLabelText(const char *text);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
@@ -45,6 +88,10 @@ class ItemElement : public DivElement {
  protected:
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
+  virtual void GetDefaultSize(double *width, double *height) const;
+  virtual void GetDefaultPosition(double *x, double *y) const;
+  virtual void OnHeightChange();
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ItemElement);

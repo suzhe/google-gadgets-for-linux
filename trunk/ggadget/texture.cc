@@ -57,7 +57,7 @@ class Texture::Impl {
   }
 
   Impl(const Impl &another)
-      : image_(new Image(*(another.image_))),
+      : image_(another.image_ ? new Image(*(another.image_)) : NULL),
         color_(another.color_),
         opacity_(another.opacity_),
         name_(another.name_) {
@@ -68,7 +68,7 @@ class Texture::Impl {
     image_ = NULL;
   }
 
-  void Draw(CanvasInterface *canvas) {
+  void Draw(CanvasInterface *canvas) const {
     size_t canvas_width = canvas->GetWidth();
     size_t canvas_height = canvas->GetHeight();
 
@@ -114,7 +114,7 @@ Texture::~Texture() {
   impl_ = NULL;
 }
 
-void Texture::Draw(CanvasInterface *canvas) {
+void Texture::Draw(CanvasInterface *canvas) const {
   ASSERT(canvas);
   impl_->Draw(canvas);
 }
@@ -124,7 +124,7 @@ void Texture::DrawText(CanvasInterface *canvas, double x, double y,
                        const FontInterface *f, CanvasInterface::Alignment align, 
                        CanvasInterface::VAlignment valign,
                        CanvasInterface::Trimming trimming, 
-                       CanvasInterface::TextFlag text_flag) {
+                       CanvasInterface::TextFlag text_flag) const {
   ASSERT(canvas);
   if (impl_->image_) {
     // Don't apply opacity_ here because it is only applicable with color_.    

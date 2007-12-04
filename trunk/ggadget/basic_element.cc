@@ -33,11 +33,10 @@ namespace ggadget {
 class BasicElement::Impl {
  public:
   Impl(BasicElement *parent, View *view, const char *tag_name, const char *name,
-       bool is_container, BasicElement *owner)
+       Elements *children, BasicElement *owner)
       : parent_(parent),
         owner_(owner),
-        children_(is_container ?
-                  new Elements(view->GetElementFactory(), owner, view) : NULL),
+        children_(children),
         view_(view),
         hittest_(ElementInterface::HT_DEFAULT),
         cursor_(ElementInterface::CURSOR_ARROW),
@@ -75,6 +74,7 @@ class BasicElement::Impl {
 
     delete mask_image_;
     mask_image_ = NULL;
+
     delete children_;
     children_ = NULL;
   }
@@ -257,97 +257,23 @@ class BasicElement::Impl {
     return parent_ ? parent_->GetPixelHeight() : view_->GetHeight();
   }
 
-  enum ParsePixelOrRelativeResult {
-    PR_PIXEL,
-    PR_RELATIVE,
-    PR_UNSPECIFIED,
-    PR_INVALID = -1,
-  };
-
-  // Returns when input is: pixel: 0; relative: 1; 2: unspecified; invalid: -1.
-  static ParsePixelOrRelativeResult ParsePixelOrRelative(const Variant &input,
-                                                         double *output) {
-    ASSERT(output);
-    *output = 0;
-
-    switch (input.type()) {
-      case Variant::TYPE_VOID:
-        return PR_UNSPECIFIED;
-      // The input is an integer pixel value.
-      case Variant::TYPE_INT64:
-        *output = VariantValue<int>()(input);
-        return PR_PIXEL;
-      // The input is a double pixel value.
-      case Variant::TYPE_DOUBLE:
-        *output = VariantValue<double>()(input);
-        if (std::isnan(*output) || std::isinf(*output)) {
-          *output = 0;
-          return PR_UNSPECIFIED;
-        }
-        return PR_PIXEL;
-      // The input is a relative percent value.
-      case Variant::TYPE_STRING: {
-        const char *str_value = VariantValue<const char *>()(input);
-        if (!str_value || !*str_value)
-          return PR_UNSPECIFIED;
-
-        char *end_ptr;
-        *output = strtod(str_value, &end_ptr);
-        if (*end_ptr == '\0') {
-          // There is only a number without '%'.
-          if (std::isnan(*output) || std::isinf(*output)) {
-            *output = 0;
-            return PR_UNSPECIFIED;
-          }
-          return PR_PIXEL;
-        }
-        if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
-          *output /= 100.0;
-          return PR_RELATIVE;
-        }
-        *output = 0;
-        LOG("Invalid relative value: %s", input.ToString().c_str());
-        return PR_INVALID;
-      }
-      default:
-        LOG("Invalid pixel or relative value: %s", input.ToString().c_str());
-        return PR_INVALID;
-    }
-  }
-
-  static Variant GetPixelOrRelative(bool is_relative,
-                                    bool is_specified,
-                                    double pixel,
-                                    double relative) {
-    if (!is_specified)
-      return Variant();
-
-    if (is_relative) {
-      char buf[20];
-      snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
-      return Variant(std::string(buf));
-    } else {
-      return Variant(static_cast<int>(round(pixel)));
-    }
-  }
-
   Variant GetWidth() const {
-    return GetPixelOrRelative(width_relative_, width_specified_,
-                              width_, pwidth_);
+    return BasicElement::GetPixelOrRelative(width_relative_, width_specified_,
+                                            width_, pwidth_);
   }
 
   void SetWidth(const Variant &width) {
     double v;
     switch (ParsePixelOrRelative(width, &v)) {
-      case PR_PIXEL:
+      case BasicElement::PR_PIXEL:
         width_specified_ = true;
         SetPixelWidth(v);
         break;
-      case PR_RELATIVE:
+      case BasicElement::PR_RELATIVE:
         width_specified_ = true;
         SetRelativeWidth(v, false);
         break;
-      case PR_UNSPECIFIED:
+      case BasicElement::PR_UNSPECIFIED:
         ResetWidthToDefault();
         break;
       default:
@@ -363,22 +289,22 @@ class BasicElement::Impl {
   }
 
   Variant GetHeight() const {
-    return GetPixelOrRelative(height_relative_, height_specified_,
-                              height_, pheight_);
+    return BasicElement::GetPixelOrRelative(height_relative_, height_specified_,
+                                            height_, pheight_);
   }
 
   void SetHeight(const Variant &height) {
     double v;
     switch (ParsePixelOrRelative(height, &v)) {
-      case PR_PIXEL:
+      case BasicElement::PR_PIXEL:
         height_specified_ = true;
         SetPixelHeight(v);
         break;
-      case PR_RELATIVE:
+      case BasicElement::PR_RELATIVE:
         height_specified_ = true;
         SetRelativeHeight(v, false);
         break;
-      case PR_UNSPECIFIED:
+      case BasicElement::PR_UNSPECIFIED:
         ResetHeightToDefault();
         break;
       default:
@@ -394,55 +320,66 @@ class BasicElement::Impl {
   }
 
   Variant GetX() const {
-    return GetPixelOrRelative(x_relative_, x_specified_, x_, px_);
+    return BasicElement::GetPixelOrRelative(x_relative_, x_specified_, x_, px_);
   }
 
   void SetX(const Variant &x) {
     double v;
     switch (ParsePixelOrRelative(x, &v)) {
-      case PR_PIXEL:
+      case BasicElement::PR_PIXEL:
         x_specified_ = true;
         SetPixelX(v);
         break;
-      case PR_RELATIVE:
+      case BasicElement::PR_RELATIVE:
         x_specified_ = true;
         SetRelativeX(v, false);
         break;
-      case PR_UNSPECIFIED:
-        x_specified_ = false;
-        SetPixelX(0);
+      case BasicElement::PR_UNSPECIFIED:
+        ResetXToDefault();
         break;
       default:
         break;
     }
   }
 
+  void ResetXToDefault() {
+    double x, y;
+    owner_->GetDefaultPosition(&x, &y);
+    x_specified_ = false;
+    SetPixelX(x);
+  }
+
   Variant GetY() const {
-    return GetPixelOrRelative(y_relative_, y_specified_, y_, py_);
+    return BasicElement::GetPixelOrRelative(y_relative_, y_specified_, y_, py_);
   }
 
   void SetY(const Variant &y) {
     double v;
     switch (ParsePixelOrRelative(y, &v)) {
-      case PR_PIXEL:
+      case BasicElement::PR_PIXEL:
         y_specified_ = true;
         SetPixelY(v);
         break;
-      case PR_RELATIVE:
+      case BasicElement::PR_RELATIVE:
         y_specified_ = true;
         SetRelativeY(v, false);
         break;
-      case PR_UNSPECIFIED:
-        y_specified_ = false;
-        SetPixelY(0);
+      case BasicElement::PR_UNSPECIFIED:
+        ResetYToDefault();
         break;
       default:
         break;
     }
   }
 
+  void ResetYToDefault() {
+    double x, y;
+    owner_->GetDefaultPosition(&x, &y);
+    y_specified_ = false;
+    SetPixelY(y);
+  }
+
   const CanvasInterface *Draw(bool *changed) {
-    const CanvasInterface *canvas = NULL;
     const CanvasInterface *children_canvas = NULL;
     bool child_changed = false;
     bool change = visibility_changed_;
@@ -452,14 +389,17 @@ class BasicElement::Impl {
       goto exit;
     }
 
-    if (children_)
+    if (children_) {
       children_canvas = children_->Draw(&child_changed);
+    }
     change = change || child_changed || changed_ || !canvas_;
     changed_ = false;
 
     if (change) {
       // Need to redraw.
-      SetUpCanvas();
+      if (!SetUpCanvas()) {
+        goto exit;
+      }
       canvas_->MultiplyOpacity(opacity_);
       owner_->DoDraw(canvas_, children_canvas);
 
@@ -470,11 +410,9 @@ class BasicElement::Impl {
       }
     }
 
-    canvas = canvas_;
-
   exit:
     *changed = change;
-    return canvas;
+    return canvas_;
   }
 
   static void DrawBoundingBox(CanvasInterface *canvas,
@@ -495,8 +433,12 @@ class BasicElement::Impl {
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
       ASSERT(gfx);
-      canvas_ = gfx->NewCanvas(static_cast<size_t>(ceil(width_)),
-                               static_cast<size_t>(ceil(height_)));
+      size_t w = static_cast<size_t>(ceil(width_));
+      size_t h = static_cast<size_t>(ceil(height_));
+      if (w == 0 || h == 0) {
+        return canvas_; // NULL
+      }
+      canvas_ = gfx->NewCanvas(w, h);
       if (!canvas_) {
         DLOG("Error: unable to create canvas.");
       }
@@ -846,8 +788,8 @@ static const char *kHitTestNames[] = {
 
 BasicElement::BasicElement(BasicElement *parent, View *view,
                            const char *tag_name, const char *name,
-                           bool is_container)
-    : impl_(new Impl(parent, view, tag_name, name, is_container, this)) {
+                           Elements *children)
+    : impl_(new Impl(parent, view, tag_name, name, children, this)) {
   RegisterStringEnumProperty("cursor",
                              NewSlot(this, &BasicElement::GetCursor),
                              NewSlot(this, &BasicElement::SetCursor),
@@ -859,8 +801,8 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
                    NewSlot(this, &BasicElement::IsEnabled),
                    NewSlot(this, &BasicElement::SetEnabled));
   RegisterProperty("height",
-                   NewSlot(impl_, &Impl::GetHeight),
-                   NewSlot(impl_, &Impl::SetHeight));
+                   NewSlot(this, &BasicElement::GetHeight),
+                   NewSlot(this, &BasicElement::SetHeight));
   RegisterStringEnumProperty("hitTest",
                              NewSlot(this, &BasicElement::GetHitTest),
                              NewSlot(this, &BasicElement::SetHitTest),
@@ -898,24 +840,22 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
                    NewSlot(this, &BasicElement::GetTooltip),
                    NewSlot(this, &BasicElement::SetTooltip));
   RegisterProperty("width",
-                   NewSlot(impl_, &Impl::GetWidth),
-                   NewSlot(impl_, &Impl::SetWidth));
+                   NewSlot(this, &BasicElement::GetWidth),
+                   NewSlot(this, &BasicElement::SetWidth));
   RegisterProperty("visible",
                    NewSlot(this, &BasicElement::IsVisible),
                    NewSlot(this, &BasicElement::SetVisible));
   RegisterProperty("x",
-                   NewSlot(impl_, &Impl::GetX),
-                   NewSlot(impl_, &Impl::SetX));
+                   NewSlot(this, &BasicElement::GetX),
+                   NewSlot(this, &BasicElement::SetX));
   RegisterProperty("y",
-                   NewSlot(impl_, &Impl::GetY),
-                   NewSlot(impl_, &Impl::SetY));
+                   NewSlot(this, &BasicElement::GetY),
+                   NewSlot(this, &BasicElement::SetY));
 
   RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
-  if (is_container) {
-    Elements *children = impl_->children_;
-    ASSERT(children);
+  if (children) {
     RegisterConstant("children", children);
     RegisterMethod("appendElement",
                    NewSlot(children, &Elements::AppendElementFromXML));
@@ -1241,6 +1181,10 @@ void BasicElement::QueueDraw() {
   }
 }
 
+void BasicElement::MarkAsChanged() {
+  impl_->changed_ = true;
+}
+
 void BasicElement::OnParentWidthChange(double width) {
   if (impl_->x_relative_)
     impl_->SetRelativeX(impl_->px_, true);
@@ -1281,7 +1225,7 @@ bool BasicElement::IsPointIn(double x, double y) {
 void BasicElement::SelfCoordToChildCoord(const BasicElement *child,
                                          double x, double y,
                                          double *child_x,
-                                         double *child_y) const {
+                                         double *child_y) const { 
   ParentCoordToChildCoord(x, y, child->GetPixelX(), child->GetPixelY(),
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
@@ -1295,6 +1239,11 @@ void BasicElement::GetDefaultSize(double *width, double *height) const {
   *height = 0;
 }
 
+void BasicElement::GetDefaultPosition(double *x, double *y) const {
+  ASSERT(x && y);
+  *x = *y = 0;
+}
+
 void BasicElement::OnDefaultSizeChange() {
   if (!impl_->width_specified_ || !impl_->height_specified_) {
     double width, height;
@@ -1306,9 +1255,127 @@ void BasicElement::OnDefaultSizeChange() {
   }
 }
 
+void BasicElement::OnDefaultPositionChange() {
+  if (!impl_->x_specified_ || !impl_->y_specified_) {
+    double x, y;
+    GetDefaultPosition(&x, &y);
+    if (!impl_->x_specified_)
+      impl_->SetPixelX(x);
+    if (!impl_->y_specified_)
+      impl_->SetPixelY(y);
+  }
+}
+
+void BasicElement::ResetXToDefault() {
+  impl_->ResetXToDefault();
+}
+
+void BasicElement::ResetYToDefault() {
+  impl_->ResetYToDefault();
+}
+
+Variant BasicElement::GetWidth() const {
+  return impl_->GetWidth();
+}
+
+void BasicElement::SetWidth(const Variant &width) {
+  impl_->SetWidth(width);
+}
+
+Variant BasicElement::GetHeight() const {
+  return impl_->GetHeight();
+}
+
+void BasicElement::SetHeight(const Variant &height) {
+  impl_->SetHeight(height);
+}
+
+Variant BasicElement::GetX() const {
+  return impl_->GetX();
+}
+
+void BasicElement::SetX(const Variant &x) {
+  impl_->SetX(x);
+}
+
+Variant BasicElement::GetY() const {
+  return impl_->GetY();
+}
+
+void BasicElement::SetY(const Variant &y) {
+  impl_->SetY(y);
+}
+
 Connection *BasicElement::ConnectEvent(const char *event_name,
                                        Slot0<void> *handler) {
   return impl_->ConnectEvent(event_name, handler);
+}
+
+// Returns when input is: pixel: 0; relative: 1; 2: unspecified; invalid: -1.
+BasicElement::ParsePixelOrRelativeResult 
+    BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
+  ASSERT(output);
+  *output = 0;
+
+  switch (input.type()) {
+    case Variant::TYPE_VOID:
+      return PR_UNSPECIFIED;
+    // The input is an integer pixel value.
+    case Variant::TYPE_INT64:
+      *output = VariantValue<int>()(input);
+      return PR_PIXEL;
+    // The input is a double pixel value.
+    case Variant::TYPE_DOUBLE:
+      *output = VariantValue<double>()(input);
+      if (std::isnan(*output) || std::isinf(*output)) {
+        *output = 0;
+        return PR_UNSPECIFIED;
+      }
+      return PR_PIXEL;
+    // The input is a relative percent value.
+    case Variant::TYPE_STRING: {
+      const char *str_value = VariantValue<const char *>()(input);
+      if (!str_value || !*str_value)
+        return PR_UNSPECIFIED;
+
+      char *end_ptr;
+      *output = strtod(str_value, &end_ptr);
+      if (*end_ptr == '\0') {
+        // There is only a number without '%'.
+        if (std::isnan(*output) || std::isinf(*output)) {
+          *output = 0;
+          return PR_UNSPECIFIED;
+        }
+        return PR_PIXEL;
+      }
+      if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
+        *output /= 100.0;
+        return PR_RELATIVE;
+      }
+      *output = 0;
+      LOG("Invalid relative value: %s", input.ToString().c_str());
+      return PR_INVALID;
+    }
+    default:
+      LOG("Invalid pixel or relative value: %s", input.ToString().c_str());
+      return PR_INVALID;
+  }
+}
+
+Variant BasicElement::GetPixelOrRelative(bool is_relative,
+                                         bool is_specified,
+                                         double pixel,
+                                         double relative) {
+  if (!is_specified)
+    return Variant();
+
+  if (is_relative) {
+    char buf[20];
+    snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
+    return Variant(std::string(buf));
+  } else {
+    return Variant(static_cast<int>(round(pixel)));
+  }
 }
 
 } // namespace ggadget

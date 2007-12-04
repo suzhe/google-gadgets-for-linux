@@ -31,7 +31,7 @@ class LabelElement::Impl {
 };
 
 LabelElement::LabelElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "label", name, false),
+    : BasicElement(parent, view, "label", name, NULL),
       impl_(new Impl(this, view)) {
   RegisterProperty("innerText",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
@@ -46,6 +46,10 @@ TextFrame *LabelElement::GetTextFrame() {
   return &impl_->text_;
 }
 
+const TextFrame *LabelElement::GetTextFrame() const {
+  return &impl_->text_;
+}
+
 void LabelElement::DoDraw(CanvasInterface *canvas,
                         const CanvasInterface *children_canvas) {
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
@@ -57,7 +61,7 @@ BasicElement *LabelElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 void LabelElement::GetDefaultSize(double *width, double *height) const {
-  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(5, 5);
+  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(1, 1);
   if (!impl_->text_.GetSimpleExtents(canvas, width, height)) {
     *width = 0;
     *height = 0;

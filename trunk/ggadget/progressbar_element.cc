@@ -172,7 +172,7 @@ class ProgressBarElement::Impl {
 
 ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
                                        const char *name)
-    : BasicElement(parent, view, "progressbar", name, false),
+    : BasicElement(parent, view, "progressbar", name, NULL),
       impl_(new Impl(this)) {
   RegisterProperty("emptyImage", 
                    NewSlot(this, &ProgressBarElement::GetEmptyImage), 
