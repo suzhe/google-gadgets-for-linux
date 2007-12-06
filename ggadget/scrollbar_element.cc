@@ -685,9 +685,4 @@ void ScrollBarElement::QueueDraw() {
   BasicElement::QueueDraw();
 }
 
-void ScrollBarElement::MarkAsChanged() {
-  impl_->redraw_event_();
-  BasicElement::MarkAsChanged();
-}
-
 } // namespace ggadget

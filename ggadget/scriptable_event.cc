@@ -67,7 +67,7 @@ ScriptableEvent::ScriptableEvent(const Event *event,
     const PositionEvent *position_event =
         static_cast<const PositionEvent *>(event);
     RegisterProperty("x", NewSlot(position_event, &PositionEvent::GetX), NULL);
-    RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetX), NULL);
+    RegisterProperty("y", NewSlot(position_event, &PositionEvent::GetY), NULL);
     RegisterProperty("button",
                      NewSlot(mouse_event, &MouseEvent::GetButton), NULL);
     RegisterProperty("wheelDelta",

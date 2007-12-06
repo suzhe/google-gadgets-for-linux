@@ -43,7 +43,6 @@ class ListBoxElement : public DivElement {
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
   virtual void QueueDraw(); 
-  virtual void MarkAsChanged();
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

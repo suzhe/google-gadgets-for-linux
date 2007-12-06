@@ -101,9 +101,7 @@ class ListElements : public Elements {
   bool IsMultiSelect() const;
   void SetMultiSelect(bool multiselect);
 
-  virtual void OnParentWidthChange(double width);
-  virtual void OnParentHeightChange(double height);
-
+  virtual void Layout();
   virtual const CanvasInterface *Draw(bool *changed);
 
  private:

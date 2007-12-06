@@ -44,8 +44,8 @@ class TextFrame {
    * Returns the width and height required to display the text 
    * without wrapping or trimming.
    */ 
-  bool GetSimpleExtents(CanvasInterface *canvas, double *width, double *height);
-  
+  void GetSimpleExtents(double *width, double *height);
+
  public: // registered properties  
   /** Gets and sets the text horizontal alignment. */
   CanvasInterface::Alignment GetAlign() const;
@@ -95,21 +95,9 @@ class TextFrame {
   void SetWordWrap(bool wrap); 
  
  private:
-  BasicElement *owner_;
-  View *view_;
-   
-  FontInterface *font_;
-  Texture *color_texture_;
-  CanvasInterface::Alignment align_;
-  CanvasInterface::VAlignment valign_;
-  CanvasInterface::Trimming trimming_;
-  bool bold_, italic_;
-  CanvasInterface::TextFlag flag_;
-  int size_;
-  std::string font_name_, color_, text_;
-  
-  bool SetUpFont();
-  void ClearFont();
+  DISALLOW_EVIL_CONSTRUCTORS(TextFrame);
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace ggadget

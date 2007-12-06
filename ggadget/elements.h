@@ -86,18 +86,10 @@ class Elements : public ScriptableHelper<ElementsInterface> {
                                          const ElementInterface *before);
 
   /**
-   * Notifies all children using relative positioning that the
-   * parent's width changed.
-   * @param width new width of the parent in pixels.
+   * Adjusts the layout (e.g. size, position, etc.) of children.
+   * This method is called just before @c Draw().
    */
-  virtual void OnParentWidthChange(double width);
-
-  /**
-   * Notifies all children using relative positioning that the
-   * parent's height changed.
-   * @param height new height of the parent in pixels.
-   */
-  virtual void OnParentHeightChange(double height);
+  virtual void Layout();
 
   /**
    * Draw all the elements in this object onto a canvas that has the same size
@@ -136,6 +128,14 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * Sets if the drawing contents can be scrolled within the parent.
    */
   void SetScrollable(bool scrollable);
+
+  /**
+   * Gets the maximum extents of children.
+   * If not scrollable, the returned size equals to the size of the parent
+   * element (or view if no parent). If scrollable, the returned value is the
+   * actual max extents of children.
+   */ 
+  void GetChildrenExtents(double *width, double *height);
 
  private:
   class Impl;

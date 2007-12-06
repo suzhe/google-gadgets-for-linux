@@ -84,6 +84,8 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   bool GetQueuedDraw() {
     bool b = draw_queued_;
     draw_queued_ = false;
+    bool changed;
+    view_->Draw(&changed);
     return b;
   }
   ggadget::View *GetViewInternal() { return view_; }

@@ -107,7 +107,6 @@ Variant ButtonElement::GetImage() const {
 void ButtonElement::SetImage(const Variant &img) {
   delete impl_->image_;
   impl_->image_ = GetView()->LoadImage(img, false);
-  OnDefaultSizeChange();
   QueueDraw();
 }
 

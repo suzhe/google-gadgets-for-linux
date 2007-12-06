@@ -57,7 +57,6 @@ class ItemElement : public BasicElement {
    * This is OK in all scenarios since item is only used inside ListBoxes.
    */
   virtual void QueueDraw(); 
-  virtual void MarkAsChanged();
 
   /** 
    * Sets whether mouseover/selected overlays should be drawn. 
@@ -90,7 +89,6 @@ class ItemElement : public BasicElement {
                       const CanvasInterface *children_canvas);
   virtual void GetDefaultSize(double *width, double *height) const;
   virtual void GetDefaultPosition(double *x, double *y) const;
-  virtual void OnHeightChange();
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
  private:

@@ -57,7 +57,6 @@ ItemElement::ItemElement(BasicElement *parent, View *view,
                    new Elements(view->GetElementFactory(), this, view)),
       impl_(new Impl(parent)) {
   SetEnabled(true);
-  OnDefaultSizeChange();
   RegisterProperty("background",
                    NewSlot(this, &ItemElement::GetBackground),
                    NewSlot(this, &ItemElement::SetBackground));
@@ -101,7 +100,7 @@ void ItemElement::SetDrawOverlay(bool draw) {
     impl_->drawoverlay_ = draw;
     // This method is used inside Draw() calls to temporarily disable
     // overlays, so don't queue another draw.
-    MarkAsChanged();
+    QueueDraw();
   }
 }
 
@@ -109,20 +108,14 @@ bool ItemElement::IsMouseOver() const {
   return impl_->mouseover_;
 }
 
-void ItemElement::MarkAsChanged() {
-  impl_->parent_->MarkAsChanged();
-  BasicElement::MarkAsChanged();
-}
-
 void ItemElement::QueueDraw() {
-  impl_->parent_->MarkAsChanged();
+  impl_->parent_->QueueDraw();
   BasicElement::QueueDraw();
 }
 
 void ItemElement::SetIndex(int index) {
   if (impl_->index_ != index) {
     impl_->index_ = index;
-    OnDefaultPositionChange();
   }
 }
 
@@ -143,7 +136,7 @@ bool ItemElement::IsSelected() const {
 void ItemElement::SetSelectedNoRedraw(bool selected) {
   if (impl_->selected_ != selected) {
     impl_->selected_ = selected;
-    MarkAsChanged();
+    QueueDraw();
   }
 }
 
@@ -212,10 +205,6 @@ void ItemElement::GetDefaultSize(double *width, double *height) const {
 void ItemElement::GetDefaultPosition(double *x, double *y) const {
   *x = 0;
   *y = impl_->index_ * GetPixelHeight();
-}
-
-void ItemElement::OnHeightChange() {
-  OnDefaultPositionChange();
 }
 
 EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {

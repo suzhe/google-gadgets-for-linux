@@ -71,12 +71,16 @@ typedef std::map<std::string, std::string,
 
 /**
  * Assigns a <code>const char *</code> string to a std::string if they are
- * different (compared using GadgetStrCmp).
+ * different.
  * @param source source string. If it is @c NULL, dest will be cleared to blank.
  * @param dest destination string.
+ * @param comparator the comparator used to compare the strings, default is
+ *     @c GadgetStrCmp().
  * @return @c true if assignment occurs.
  */
-bool AssignIfDiffer(const char *source, std::string *dest);
+bool AssignIfDiffer(
+    const char *source, std::string *dest,
+    int (*comparator)(const char *s1, const char *s2) = GadgetStrCmp);
 
 /**
  * Removes the starting and ending spaces from a string.

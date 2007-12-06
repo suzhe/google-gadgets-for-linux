@@ -42,20 +42,14 @@ class DivElement::Impl {
     background_texture_ = NULL;
 
     if (scrollbar_) {
-      owner_->GetView()->OnElementRemove(scrollbar_);
       delete scrollbar_;
       scrollbar_ = NULL;
     }
   }
 
   void ScrollBarUpdated() {
-    int v = scrollbar_->GetValue();
-    if (scroll_pos_y_ != v) {
-      scroll_pos_y_ = v;
-    } 
-    // No need to queue draw here since the scrollbar should have already 
-    // queued it. Just mark changed so Div will call ScrollBarElement::Draw.
-    owner_->MarkAsChanged();
+    // Scroll position will be updated in subsequent Layout(). 
+    owner_->QueueDraw();
   }
 
   void CreateScrollBar() {
@@ -70,7 +64,6 @@ class DivElement::Impl {
       scrollbar_->SetValue(scroll_pos_y_);
       Slot0<void> *slot = NewSlot(this, &Impl::ScrollBarUpdated);
       scrollbar_->ConnectOnRedrawEvent(slot);
-      owner_->GetView()->OnElementAdd(scrollbar_);
     }
   }
 
@@ -190,8 +183,6 @@ void DivElement::DoDraw(CanvasInterface *canvas,
 
   if (children_canvas) {
     if (impl_->scrollbar_) {
-      impl_->UpdateScrollPos(children_canvas->GetWidth(),
-                             children_canvas->GetHeight());
       canvas->DrawCanvas(-impl_->scroll_pos_x_, -impl_->scroll_pos_y_,
                          children_canvas);
     } else {
@@ -381,16 +372,23 @@ void DivElement::SelfCoordToChildCoord(const BasicElement *child,
   BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);
 }
 
-void DivElement::OnWidthChange() {
+void DivElement::Layout() {
+  BasicElement::Layout();
   if (impl_->scrollbar_) {
     impl_->scrollbar_->SetPixelX(GetPixelWidth() -
                                  impl_->scrollbar_->GetPixelWidth());
-  }
-}
-
-void DivElement::OnHeightChange() {
-  if (impl_->scrollbar_) {
     impl_->scrollbar_->SetPixelHeight(GetPixelHeight());
+
+    int v = impl_->scrollbar_->GetValue();
+    if (impl_->scroll_pos_y_ != v) {
+      impl_->scroll_pos_y_ = v;
+    } 
+
+    double children_width = 0, children_height = 0;
+    down_cast<Elements *>(GetChildren())->GetChildrenExtents(&children_width,
+                                                             &children_height);
+    impl_->UpdateScrollPos(static_cast<size_t>(ceil(children_width)),
+                           static_cast<size_t>(ceil(children_height)));
   }
 }
 

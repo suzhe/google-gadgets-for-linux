@@ -107,8 +107,7 @@ class ComboBoxElement::Impl {
   EventSignal onchange_event_;
 
   void ListBoxRedraw() {
-    // ListBox should have already queued a redraw, so just mark as changed.
-    owner_->MarkAsChanged();
+    owner_->QueueDraw();
   }
 
   void ListBoxUpdated() {
@@ -311,7 +310,7 @@ int ComboBoxElement::GetMaxDroplistItems() const {
 void ComboBoxElement::SetMaxDroplistItems(int max_droplist_items) {
   if (max_droplist_items != impl_->maxitems_) {
     impl_->maxitems_ = max_droplist_items;
-    MarkAsChanged();
+    QueueDraw();
     impl_->SetListBoxHeight();
   }
 }
@@ -373,25 +372,21 @@ void ComboBoxElement::SetBackground(const Variant &background) {
 }
 
 void ComboBoxElement::SetItemWidth(const Variant &width) {
-  MarkAsChanged();
   impl_->elements_->SetItemWidth(width);
+  QueueDraw();
 }
 
 void ComboBoxElement::SetItemHeight(const Variant &height) {
-  MarkAsChanged();
-  impl_->elements_->SetItemHeight(height); 
+  impl_->elements_->SetItemHeight(height);
+  QueueDraw();
+}
 
-  // Set Y since position is used in event handling.
+void ComboBoxElement::Layout() {
+  BasicElement::Layout();
   impl_->listbox_->SetPixelY(impl_->elements_->GetItemPixelHeight());
-  impl_->SetListBoxHeight();  
-}
-
-void ComboBoxElement::OnWidthChange() {
   impl_->listbox_->SetPixelWidth(GetPixelWidth());
-}
-
-void ComboBoxElement::OnHeightChange() {
   impl_->SetListBoxHeight();
+  // TODO: Call layout of edit.
 }
 
 void ComboBoxElement::SelfCoordToChildCoord(const BasicElement *child,

@@ -32,7 +32,10 @@ class AnchorElement::Impl {
     : text_(owner, view),
       overcolor_texture_(view->LoadTexture(Variant(kDefaultColor))),
       mouseover_(false) {
+    text_.SetColor(Variant(kDefaultColor));
+    text_.SetUnderline(true);
   }
+
   ~Impl() {
     delete overcolor_texture_;
     overcolor_texture_ = NULL;
@@ -49,11 +52,6 @@ AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
       impl_(new Impl(this, view)) {
   SetCursor(ElementInterface::CURSOR_HAND);
   SetEnabled(true);
-
-  // Moved from Impl constructor to here because they will indirectly call
-  // OnDefaultSizeChange() before impl_ is initialized.
-  impl_->text_.SetColor(Variant(kDefaultColor));
-  impl_->text_.SetUnderline(true);
 
   RegisterProperty("overColor",
                    NewSlot(this, &AnchorElement::GetOverColor),
@@ -134,12 +132,7 @@ BasicElement *AnchorElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 void AnchorElement::GetDefaultSize(double *width, double *height) const {
-  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(1, 1);
-  if (!impl_->text_.GetSimpleExtents(canvas, width, height)) {
-    *width = 0;
-    *height = 0;
-  }
-  canvas->Destroy();
+  impl_->text_.GetSimpleExtents(width, height);
 }
 
 } // namespace ggadget
