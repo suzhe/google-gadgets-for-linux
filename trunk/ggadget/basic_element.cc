@@ -55,7 +55,8 @@ class BasicElement::Impl {
         visible_(true),
         canvas_(NULL),
         mask_image_(NULL),
-        visibility_changed_(true), changed_(true), position_changed_(true),
+        visibility_changed_(true), changed_(true),
+        position_changed_(true), size_changed_(true),
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()) {
     if (name)
@@ -95,9 +96,6 @@ class BasicElement::Impl {
     if (width >= 0.0 && (width != width_ || width_relative_)) {
       width_ = width;
       width_relative_ = false;
-      double p = GetParentWidth();
-      if (p > 0.0)
-        pwidth_ = width_ / p;
       WidthChanged();
     }
   }
@@ -106,26 +104,21 @@ class BasicElement::Impl {
     if (height >= 0.0 && (height != height_ || height_relative_)) {
       height_ = height;
       height_relative_ = false;
-      double p = GetParentHeight();
-      if (p > 0.0)
-        pheight_ = height_ / p;
       HeightChanged();
     }
   }
 
-  void SetRelativeWidth(double width, bool force) {
-    if (width >= 0.0 && (force || width != pwidth_ || !width_relative_)) {
+  void SetRelativeWidth(double width) {
+    if (width >= 0.0 && (width != pwidth_ || !width_relative_)) {
       pwidth_ = width;
-      width_ = width * GetParentWidth();
       width_relative_ = true;
       WidthChanged();
     }
   }
 
-  void SetRelativeHeight(double height, bool force) {
-    if (height >= 0.0 && (force || height != pheight_ || !height_relative_)) {
+  void SetRelativeHeight(double height) {
+    if (height >= 0.0 && (height != pheight_ || !height_relative_)) {
       pheight_ = height;
-      height_ = height * GetParentHeight();
       height_relative_ = true;
       HeightChanged();
     }
@@ -134,90 +127,71 @@ class BasicElement::Impl {
   void SetPixelX(double x) {
     if (x != x_ || x_relative_) {
       x_ = x;
-      double p = GetParentWidth();
-      px_ = p > 0.0 ? x_ / p : 0.0;
       x_relative_ = false;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
   void SetPixelY(double y) {
     if (y != y_ || y_relative_) {
       y_ = y;
-      double p = GetParentHeight();
-      py_ = p > 0.0 ? y_ / p : 0.0;
       y_relative_ = false;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
-  void SetRelativeX(double x, bool force) {
-    if (force || x != px_ || !x_relative_) {
+  void SetRelativeX(double x) {
+    if (x != px_ || !x_relative_) {
       px_ = x;
-      x_ = x * GetParentWidth();
       x_relative_ = true;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
-  void SetRelativeY(double y, bool force) {
-    if (force || y != py_ || !y_relative_) {
+  void SetRelativeY(double y) {
+    if (y != py_ || !y_relative_) {
       py_ = y;
-      y_ = y * GetParentHeight();
       y_relative_ = true;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
   void SetPixelPinX(double pin_x) {
     if (pin_x != pin_x_ || pin_x_relative_) {
       pin_x_ = pin_x;
-      ppin_x_ = width_ > 0.0 ? pin_x / width_ : 0.0;
       pin_x_relative_ = false;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
   void SetPixelPinY(double pin_y) {
     if (pin_y != pin_y_ || pin_y_relative_) {
       pin_y_ = pin_y;
-      ppin_y_ = height_ > 0.0 ? pin_y / height_ : 0.0;
       pin_y_relative_ = false;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
-  void SetRelativePinX(double pin_x, bool force) {
-    if (force || pin_x != ppin_x_ || !pin_x_relative_) {
+  void SetRelativePinX(double pin_x) {
+    if (pin_x != ppin_x_ || !pin_x_relative_) {
       ppin_x_ = pin_x;
-      pin_x_ = pin_x * width_;
       pin_x_relative_ = true;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
-  void SetRelativePinY(double pin_y, bool force) {
-    if (force || pin_y != ppin_y_ || !pin_y_relative_) {
+  void SetRelativePinY(double pin_y) {
+    if (pin_y != ppin_y_ || !pin_y_relative_) {
       ppin_y_ = pin_y;
-      pin_y_ = pin_y * height_;
       pin_y_relative_ = true;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
   void SetRotation(double rotation) {
     if (rotation != rotation_) {
       rotation_ = rotation;
-      position_changed_ = true;
-      view_->QueueDraw();
+      PositionChanged();
     }
   }
 
@@ -271,7 +245,7 @@ class BasicElement::Impl {
         break;
       case BasicElement::PR_RELATIVE:
         width_specified_ = true;
-        SetRelativeWidth(v, false);
+        SetRelativeWidth(v);
         break;
       case BasicElement::PR_UNSPECIFIED:
         ResetWidthToDefault();
@@ -282,10 +256,10 @@ class BasicElement::Impl {
   }
 
   void ResetWidthToDefault() {
-    double width, height;
-    owner_->GetDefaultSize(&width, &height);
-    width_specified_ = false;
-    SetPixelWidth(width);
+    if (width_specified_) {
+      width_relative_ = width_specified_ = false;
+      WidthChanged();
+    }
   }
 
   Variant GetHeight() const {
@@ -302,7 +276,7 @@ class BasicElement::Impl {
         break;
       case BasicElement::PR_RELATIVE:
         height_specified_ = true;
-        SetRelativeHeight(v, false);
+        SetRelativeHeight(v);
         break;
       case BasicElement::PR_UNSPECIFIED:
         ResetHeightToDefault();
@@ -313,10 +287,10 @@ class BasicElement::Impl {
   }
 
   void ResetHeightToDefault() {
-    double width, height;
-    owner_->GetDefaultSize(&width, &height);
-    height_specified_ = false;
-    SetPixelHeight(height);
+    if (height_specified_) {
+      height_relative_ = height_specified_ = false;
+      HeightChanged();
+    }
   }
 
   Variant GetX() const {
@@ -332,7 +306,7 @@ class BasicElement::Impl {
         break;
       case BasicElement::PR_RELATIVE:
         x_specified_ = true;
-        SetRelativeX(v, false);
+        SetRelativeX(v);
         break;
       case BasicElement::PR_UNSPECIFIED:
         ResetXToDefault();
@@ -343,10 +317,10 @@ class BasicElement::Impl {
   }
 
   void ResetXToDefault() {
-    double x, y;
-    owner_->GetDefaultPosition(&x, &y);
-    x_specified_ = false;
-    SetPixelX(x);
+    if (x_specified_) {
+      x_relative_ = x_specified_ = false;
+      PositionChanged();
+    }
   }
 
   Variant GetY() const {
@@ -362,7 +336,7 @@ class BasicElement::Impl {
         break;
       case BasicElement::PR_RELATIVE:
         y_specified_ = true;
-        SetRelativeY(v, false);
+        SetRelativeY(v);
         break;
       case BasicElement::PR_UNSPECIFIED:
         ResetYToDefault();
@@ -373,32 +347,112 @@ class BasicElement::Impl {
   }
 
   void ResetYToDefault() {
-    double x, y;
-    owner_->GetDefaultPosition(&x, &y);
-    y_specified_ = false;
-    SetPixelY(y);
+    if (y_specified_) {
+      y_relative_ = y_specified_ = false;
+      PositionChanged();
+    }
+  }
+
+  void Layout() {
+    if (!width_specified_ || !height_specified_) {
+      double width, height;
+      owner_->GetDefaultSize(&width, &height);
+      if (!width_specified_)
+        SetPixelWidth(width);
+      if (!height_specified_)
+        SetPixelHeight(height);
+    }
+    if (!x_specified_ || !y_specified_) {
+      double x, y;
+      owner_->GetDefaultPosition(&x, &y);
+      if (!x_specified_)
+        SetPixelX(x);
+      if (!y_specified_)
+        SetPixelY(y);
+    }
+
+    // Adjust relative size and positions.
+    // Only values computed with parent width and height need change-checking
+    // to react to parent size changes.
+    // Other values have already triggered position_changed_ when they were set.
+    double parent_width = GetParentWidth();
+    if (x_relative_) {
+      double new_x = px_ * parent_width;
+      if (new_x != x_) {
+        position_changed_ = true;
+        x_ = new_x;
+      }
+    } else {
+      px_ = parent_width > 0.0 ? x_ / parent_width : 0.0; 
+    }
+    if (width_relative_) {
+      double new_width = pwidth_ * parent_width;
+      if (new_width != width_) {
+        size_changed_ = true;
+        width_ = new_width;
+      }
+    } else {
+      pwidth_ = parent_width > 0.0 ? width_ / parent_width : 0.0;
+    }
+
+    double parent_height = GetParentHeight();
+    if (y_relative_) {
+      double new_y = py_ * parent_height;
+      if (new_y != y_) {
+        position_changed_ = true;
+        y_ = new_y;
+      }
+    } else {
+      py_ = parent_height > 0.0 ? y_ / parent_height : 0.0; 
+    }
+    if (height_relative_) {
+      double new_height = pheight_ * parent_height;
+      if (new_height != height_) {
+        size_changed_ = true;
+        height_ = new_height;
+      }
+    } else {
+      pheight_ = parent_height > 0.0 ? height_ / parent_height : 0.0;
+    }
+
+    if (pin_x_relative_) {
+      pin_x_ = ppin_x_ * width_;
+    } else {
+      ppin_x_ = width_ > 0.0 ? pin_x_ / width_ : 0.0;
+    }
+    if (pin_y_relative_) {
+      pin_y_ = ppin_y_ * height_;
+    } else {
+      ppin_y_ = height_ > 0.0 ? pin_y_ / height_ : 0.0;
+    }
+
+    if (size_changed_)
+      PostSizeEvent();
+    if (children_)
+      children_->Layout();
   }
 
   const CanvasInterface *Draw(bool *changed) {
-    const CanvasInterface *children_canvas = NULL;
-    bool child_changed = false;
-    bool change = visibility_changed_;
-
+    *changed = visibility_changed_;
     visibility_changed_ = false;
-    if (!visible_) { // if not visible, then return no matter what
-      goto exit;
+    if (!visible_) {
+      // If not visible, then return no matter what.
+      return NULL;
     }
 
+    const CanvasInterface *children_canvas = NULL;
     if (children_) {
+      bool child_changed = false;
       children_canvas = children_->Draw(&child_changed);
+      if (child_changed)
+        *changed = true;
     }
-    change = change || child_changed || changed_ || !canvas_;
-    changed_ = false;
 
-    if (change) {
+    *changed = *changed || changed_ || size_changed_ || !canvas_;
+    if (*changed) {
       // Need to redraw.
       if (!SetUpCanvas()) {
-        goto exit;
+        return NULL;
       }
       canvas_->MultiplyOpacity(opacity_);
       owner_->DoDraw(canvas_, children_canvas);
@@ -410,8 +464,8 @@ class BasicElement::Impl {
       }
     }
 
-  exit:
-    *changed = change;
+    size_changed_ = false;
+    changed_ = false;
     return canvas_;
   }
 
@@ -430,6 +484,11 @@ class BasicElement::Impl {
   }
 
   CanvasInterface *SetUpCanvas() {
+    if (size_changed_ && canvas_) {
+      // Changes to size require a new canvas.
+      canvas_->Destroy();
+      canvas_ = NULL;
+    }
     if (!canvas_) {
       const GraphicsInterface *gfx = view_->GetGraphics();
       ASSERT(gfx);
@@ -453,36 +512,25 @@ class BasicElement::Impl {
 
  public:
   void PostSizeEvent() {
-    Event *event = new Event(Event::EVENT_SIZE);
-    view_->PostEvent(new ScriptableEvent(event, owner_, NULL), onsize_event_);
+    if (onsize_event_.HasActiveConnections()) {
+      Event *event = new Event(Event::EVENT_SIZE);
+      view_->PostEvent(new ScriptableEvent(event, owner_, NULL), onsize_event_);
+    }
+  }
+
+  void PositionChanged() {
+    position_changed_ = true;
+    view_->QueueDraw();
   }
 
   void WidthChanged() {
-    if (pin_x_relative_)
-      SetRelativePinX(ppin_x_, true);
-    if (children_)
-      children_->OnParentWidthChange(width_);
-    if (canvas_) { // Changes to width and height require a new canvas.
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
+    size_changed_ = true;
     view_->QueueDraw();
-    owner_->OnWidthChange();
-    PostSizeEvent();
   }
 
   void HeightChanged() {
-    if (pin_y_relative_)
-      SetRelativePinY(ppin_y_, true);
-    if (children_)
-      children_->OnParentHeightChange(height_);
-    if (canvas_) { // Changes to width and height require a new canvas.
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
+    size_changed_ = true;
     view_->QueueDraw();
-    owner_->OnHeightChange();
-    PostSizeEvent();
   }
 
  public:
@@ -744,6 +792,7 @@ class BasicElement::Impl {
   bool visibility_changed_;
   bool changed_;
   bool position_changed_;
+  bool size_changed_;
 
   int debug_color_index_;
   static int total_debug_color_index_;
@@ -790,6 +839,24 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
                            const char *tag_name, const char *name,
                            Elements *children)
     : impl_(new Impl(parent, view, tag_name, name, children, this)) {
+  RegisterProperty("x",
+                   NewSlot(impl_, &Impl::GetX),
+                   NewSlot(impl_, &Impl::SetX));
+  RegisterProperty("y",
+                   NewSlot(impl_, &Impl::GetY),
+                   NewSlot(impl_, &Impl::SetY));
+  RegisterProperty("width",
+                   NewSlot(impl_, &Impl::GetWidth),
+                   NewSlot(impl_, &Impl::SetWidth));
+  RegisterProperty("height",
+                   NewSlot(impl_, &Impl::GetHeight),
+                   NewSlot(impl_, &Impl::SetHeight));
+  RegisterConstant("name", impl_->name_);
+
+  if (GadgetStrCmp(tag_name, "contentarea") == 0)
+    // The following properties and methods are not supported by contentarea.
+    return;
+
   RegisterStringEnumProperty("cursor",
                              NewSlot(this, &BasicElement::GetCursor),
                              NewSlot(this, &BasicElement::SetCursor),
@@ -800,9 +867,6 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterProperty("enabled",
                    NewSlot(this, &BasicElement::IsEnabled),
                    NewSlot(this, &BasicElement::SetEnabled));
-  RegisterProperty("height",
-                   NewSlot(this, &BasicElement::GetHeight),
-                   NewSlot(this, &BasicElement::SetHeight));
   RegisterStringEnumProperty("hitTest",
                              NewSlot(this, &BasicElement::GetHitTest),
                              NewSlot(this, &BasicElement::SetHitTest),
@@ -810,7 +874,6 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterProperty("mask",
                    NewSlot(this, &BasicElement::GetMask),
                    NewSlot(this, &BasicElement::SetMask));
-  RegisterConstant("name", impl_->name_);
   RegisterProperty("offsetHeight",
                    NewSlot(this, &BasicElement::GetPixelHeight), NULL);
   RegisterProperty("offsetWidth",
@@ -839,19 +902,9 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterProperty("tooltip",
                    NewSlot(this, &BasicElement::GetTooltip),
                    NewSlot(this, &BasicElement::SetTooltip));
-  RegisterProperty("width",
-                   NewSlot(this, &BasicElement::GetWidth),
-                   NewSlot(this, &BasicElement::SetWidth));
   RegisterProperty("visible",
                    NewSlot(this, &BasicElement::IsVisible),
                    NewSlot(this, &BasicElement::SetVisible));
-  RegisterProperty("x",
-                   NewSlot(this, &BasicElement::GetX),
-                   NewSlot(this, &BasicElement::SetX));
-  RegisterProperty("y",
-                   NewSlot(this, &BasicElement::GetY),
-                   NewSlot(this, &BasicElement::SetY));
-
   RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
@@ -1030,22 +1083,22 @@ void BasicElement::SetPixelPinY(double pin_y) {
 
 void BasicElement::SetRelativeWidth(double width) {
   impl_->width_specified_ = true;
-  impl_->SetRelativeWidth(width, false);
+  impl_->SetRelativeWidth(width);
 }
 
 void BasicElement::SetRelativeHeight(double height) {
   impl_->height_specified_ = true;
-  impl_->SetRelativeHeight(height, false);
+  impl_->SetRelativeHeight(height);
 }
 
 void BasicElement::SetRelativeX(double x) {
   impl_->x_specified_ = true;
-  impl_->SetRelativeX(x, false);
+  impl_->SetRelativeX(x);
 }
 
 void BasicElement::SetRelativeY(double y) {
   impl_->y_specified_ = true;
-  impl_->SetRelativeY(y, false);
+  impl_->SetRelativeY(y);
 }
 
 double BasicElement::GetRelativePinX() const {
@@ -1053,7 +1106,7 @@ double BasicElement::GetRelativePinX() const {
 }
 
 void BasicElement::SetRelativePinX(double x) {
-  impl_->SetRelativePinX(x, false);
+  impl_->SetRelativePinX(x);
 }
 
 double BasicElement::GetRelativePinY() const {
@@ -1061,7 +1114,7 @@ double BasicElement::GetRelativePinY() const {
 }
 
 void BasicElement::SetRelativePinY(double y) {
-  return impl_->SetRelativePinY(y, false);
+  return impl_->SetRelativePinY(y);
 }
 
 bool BasicElement::XIsRelative() const {
@@ -1157,6 +1210,10 @@ void BasicElement::KillFocus() {
   impl_->view_->SetFocus(NULL);
 }
 
+void BasicElement::Layout() {
+  impl_->Layout();
+}
+
 const CanvasInterface *BasicElement::Draw(bool *changed) {
   return impl_->Draw(changed);
 }
@@ -1169,6 +1226,10 @@ bool BasicElement::IsPositionChanged() const {
   return impl_->position_changed_;
 }
 
+bool BasicElement::IsSizeChanged() const {
+  return impl_->size_changed_;
+}
+
 void BasicElement::SetChildrenScrollable(bool scrollable) {
   ASSERT(impl_->children_);
   impl_->children_->SetScrollable(scrollable);
@@ -1179,24 +1240,6 @@ void BasicElement::QueueDraw() {
   if (impl_->visible_) {
     impl_->view_->QueueDraw();
   }
-}
-
-void BasicElement::MarkAsChanged() {
-  impl_->changed_ = true;
-}
-
-void BasicElement::OnParentWidthChange(double width) {
-  if (impl_->x_relative_)
-    impl_->SetRelativeX(impl_->px_, true);
-  if (impl_->width_relative_)
-    impl_->SetRelativeWidth(impl_->pwidth_, true);
-}
-
-void BasicElement::OnParentHeightChange(double height) {
-  if (impl_->y_relative_)
-    impl_->SetRelativeY(impl_->py_, true);
-  if (impl_->height_relative_)
-    impl_->SetRelativeHeight(impl_->pheight_, true);
 }
 
 EventResult BasicElement::OnMouseEvent(const MouseEvent &event, bool direct,
@@ -1235,35 +1278,12 @@ void BasicElement::SelfCoordToChildCoord(const BasicElement *child,
 void BasicElement::GetDefaultSize(double *width, double *height) const {
   ASSERT(width);
   ASSERT(height);
-  *width = 0;
-  *height = 0;
+  *width = *height = 0;
 }
 
 void BasicElement::GetDefaultPosition(double *x, double *y) const {
   ASSERT(x && y);
   *x = *y = 0;
-}
-
-void BasicElement::OnDefaultSizeChange() {
-  if (!impl_->width_specified_ || !impl_->height_specified_) {
-    double width, height;
-    GetDefaultSize(&width, &height);
-    if (!impl_->width_specified_)
-      impl_->SetPixelWidth(width);
-    if (!impl_->height_specified_)
-      impl_->SetPixelHeight(height);
-  }
-}
-
-void BasicElement::OnDefaultPositionChange() {
-  if (!impl_->x_specified_ || !impl_->y_specified_) {
-    double x, y;
-    GetDefaultPosition(&x, &y);
-    if (!impl_->x_specified_)
-      impl_->SetPixelX(x);
-    if (!impl_->y_specified_)
-      impl_->SetPixelY(y);
-  }
 }
 
 void BasicElement::ResetXToDefault() {

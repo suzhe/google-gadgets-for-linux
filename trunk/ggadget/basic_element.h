@@ -125,6 +125,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   const CanvasInterface *GetMaskCanvas();
 
   /**
+   * Adjusts the layout (e.g. size, position, etc.) of this element and its
+   * children. This method is called just before @c Draw().
+   */
+  virtual void Layout();
+
+  /**
    * Draws the current element to a canvas. The caller does NOT own this canvas
    * and should not free it.
    * @param[out] changed True if the returned canvas is different from that
@@ -191,24 +197,23 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual EventResult OnOtherEvent(const Event &event);
 
   /**
-   * Checks to see if position of the element has changed since the last draw
-   * relative to the parent. Specifically, this checks for changes in
-   * x, y, pinX, pinY, and rotation.
+   * Checks to see if position of the element has changed relative to the
+   * parent since the last draw. Specifically, this checks for changes in
+   * x, y, pinX, pinY and rotation.
    */
   bool IsPositionChanged() const;
+
   /**
    * Sets the position changed state to false.
    */
   void ClearPositionChanged();
 
   /**
-   * Called by the parent when the width of the parent changes.
+   * Checks to see if size of the element has changed since the last draw.
+   * Unlike @c IsPositionChanged(), this flag is cleared in Draw() because
+   * Draw() will be always called if size changed.
    */
-  void OnParentWidthChange(double width);
-  /**
-   * Called by the parent when the height of the parent changes.
-   */
-  void OnParentHeightChange(double height);
+  bool IsSizeChanged() const;
 
   /**
    * Converts coordinates in a this element's space to coordinates in a
@@ -232,25 +237,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
  public:
   /**
-   * Sets the changed bit to true and if visible, 
-   * requests the view to be redrawn. Don't call this inside a 
-   * drawing function (i.e. drawing has already started) or there 
-   * might be extra draw attempts.
+   * Sets the changed bit to true and if visible and this is not called during
+   * @c Layout(), requests the view to be redrawn. 
+   * Normally don't call this inside a drawing function (i.e. drawing has
+   * already started) or there might be extra draw attempts.
    */
   virtual void QueueDraw();
-
-  /**
-   * Sets the changed bit of the element, asking it to be redrawn on the
-   * next call to Draw(). This method is useful when called in a parent's
-   * Draw() method.
-   */
-  virtual void MarkAsChanged();
-
-  /** Called by child classes when the default size changed. */
-  void OnDefaultSizeChange();
-
-  /** Called by child classes when the default position changed. */
-  void OnDefaultPositionChange();
 
   /** Enum used by ParsePixelOrRelative() below. */
   enum ParsePixelOrRelativeResult {
@@ -316,12 +308,6 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    * The default value is (0,0).
    */
   virtual void GetDefaultPosition(double *x, double *y) const;
-
-  /** Hook for subclasses to react to change of width. */
-  virtual void OnWidthChange() { } 
-
-  /** Hook for subclasses to react to change of width. */
-  virtual void OnHeightChange() { }
 
  private:
   class Impl;

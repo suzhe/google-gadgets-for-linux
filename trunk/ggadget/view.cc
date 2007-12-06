@@ -66,7 +66,8 @@ class View::Impl {
       tooltip_element_(NULL),
       non_strict_delegator_(new ScriptableDelegator(owner, false)),
       posting_event_element_(NULL),
-      post_event_token_(0) {
+      post_event_token_(0),
+      draw_queued_(false) {
     if (gadget_host_)
       file_manager_ = gadget_host_->GetFileManager();
   }
@@ -540,14 +541,8 @@ class View::Impl {
   bool SetSize(int width, int height) {
     if (width != width_ || height != height_) {
       // TODO check if allowed first
-      if (width != width_) {
-        width_ = width;
-        children_.OnParentWidthChange(width);
-      }
-      if (height != height_) {
-        height_ = height;
-        children_.OnParentHeightChange(height);
-      }
+      width_ = width;
+      height_ = height;
       host_->QueueDraw();
 
       Event event(Event::EVENT_SIZE);
@@ -562,6 +557,10 @@ class View::Impl {
   }
 
   const CanvasInterface *Draw(bool *changed) {
+    // Any QueueDraw() called during Layout() will be ignored, because
+    // draw_queued_ is true.
+    children_.Layout();
+    draw_queued_ = false;
     return children_.Draw(changed);
   }
 
@@ -866,6 +865,7 @@ class View::Impl {
   PostedEvents posted_events_;
   BasicElement *posting_event_element_;
   int post_event_token_;
+  bool draw_queued_;
 };
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
@@ -982,7 +982,10 @@ const CanvasInterface *View::Draw(bool *changed) {
 }
 
 void View::QueueDraw() {
-  impl_->host_->QueueDraw();
+  if (!impl_->draw_queued_) {
+    impl_->draw_queued_ = true;
+    impl_->host_->QueueDraw();
+  }
 }
 
 const GraphicsInterface *View::GetGraphics() const {

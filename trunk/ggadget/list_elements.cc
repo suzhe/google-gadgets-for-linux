@@ -75,20 +75,34 @@ class ListElements::Impl {
   CanvasInterface *items_canvas_;
   Texture *item_over_color_, *item_selected_color_;
 
-  void ItemSizeChanged() {
+  void Layout() {
     // Inform children (items) that default size has changed.
     int childcount = owner_->GetCount();
     for (int i = 0; i < childcount; i++) {
       ElementInterface *child = owner_->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
-        // This will update the item position too, 
-        // since Item has a hook in OnHeightChange().
-        item->OnDefaultSizeChange(); 
+        item->SetIndex(i);
       } else {
         LOG(kErrorItemExpected);
       }
-    }    
+    }
+
+    double parent_width = parent_->GetPixelWidth();
+    if (item_width_relative_) {
+      pixel_item_width_ = rel_item_width_ * parent_width;
+    } else {
+      rel_item_width_ = parent_width > 0.0 ?
+                        pixel_item_width_ / parent_width : 0.0; 
+    }
+
+    double parent_height = parent_->GetPixelHeight();
+    if (item_height_relative_) {
+      pixel_item_height_ = rel_item_height_ * parent_height;
+    } else {
+      rel_item_height_ = parent_height > 0.0 ?
+                        pixel_item_height_ / parent_height : 0.0; 
+    }
 
     // No need to destroy items_canvas_ here, since Draw() will calculate
     // the size required and resize it if necessary.
@@ -114,6 +128,7 @@ class ListElements::Impl {
     c_canvas = new const CanvasInterface*[child_count];
     for (int i = 0; i < child_count; i++) {
       ElementInterface *item = owner_->GetItemByIndex(i);
+      LOG("Draw item: %d %f %f %f(%f) %f(%f)", i, item->GetPixelX(), item->GetPixelY(), item->GetPixelWidth(), pixel_item_width_, item->GetPixelHeight(), pixel_item_height_);
       if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *element = down_cast<ItemElement *>(item);
         element->SetIndex(i); // This will update the default position too.
@@ -217,10 +232,7 @@ class ListElements::Impl {
         (width != pixel_item_width_ || item_width_relative_)) {
       pixel_item_width_ = width;
       item_width_relative_ = false;
-      double p = parent_->GetPixelWidth();
-      if (p > 0.0)
-        rel_item_width_ = pixel_item_width_ / p;
-      ItemSizeChanged();
+      parent_->QueueDraw();
     }
   }
 
@@ -229,30 +241,24 @@ class ListElements::Impl {
         (height != pixel_item_height_ || item_height_relative_)) {
       pixel_item_height_ = height;
       item_height_relative_ = false;
-      double p = parent_->GetPixelHeight();
-      if (p > 0.0)
-        rel_item_height_ = pixel_item_height_ / p;
-      ItemSizeChanged();
+      parent_->QueueDraw();
     }
   }
 
-  void SetRelativeItemWidth(double width, bool force) {
-    if (width >= 0.0 && 
-        (force || width != rel_item_width_ || !item_width_relative_)) {
+  void SetRelativeItemWidth(double width) {
+    if (width >= 0.0 && (width != rel_item_width_ || !item_width_relative_)) {
       rel_item_width_ = width;
-      pixel_item_width_ = width * parent_->GetPixelWidth();
       item_width_relative_ = true;
-      ItemSizeChanged();
+      parent_->QueueDraw();
     }
   }
 
-  void SetRelativeItemHeight(double height, bool force) {
-    if (height >= 0.0 && 
-        (force || height != rel_item_height_ || !item_height_relative_)) {
+  void SetRelativeItemHeight(double height) {
+    if (height >= 0.0 &&
+        (height != rel_item_height_ || !item_height_relative_)) {
       rel_item_height_ = height;
-      pixel_item_height_ = height * parent_->GetPixelHeight();
       item_height_relative_ = true;
-      ItemSizeChanged();
+      parent_->QueueDraw();
     }
   }
 
@@ -318,6 +324,7 @@ ElementInterface *ListElements::InsertElement(const char *tag_name,
 }
 
 const CanvasInterface *ListElements::Draw(bool *changed) {
+  //return Elements::Draw(changed);
   return impl_->Draw(changed);
 }
 
@@ -337,7 +344,7 @@ void ListElements::SetItemWidth(const Variant &width) {
       break;
     case BasicElement::PR_RELATIVE:
       impl_->item_width_specified_ = true;
-      impl_->SetRelativeItemWidth(v, false);
+      impl_->SetRelativeItemWidth(v);
       break;
     case BasicElement::PR_UNSPECIFIED:
       impl_->item_width_specified_ = false;
@@ -364,7 +371,7 @@ void ListElements::SetItemHeight(const Variant &height) {
       break;
     case BasicElement::PR_RELATIVE:
       impl_->item_height_specified_ = true;
-      impl_->SetRelativeItemHeight(v, false);
+      impl_->SetRelativeItemHeight(v);
       break;
     case BasicElement::PR_UNSPECIFIED:
       impl_->item_height_specified_ = false;
@@ -428,7 +435,7 @@ void ListElements::SetItemSelectedColor(const Variant &color) {
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       ItemElement *item = down_cast<ItemElement *>(child);
       if (item->IsSelected()) {
-        item->MarkAsChanged();
+        item->QueueDraw();
       }
     } else {
       LOG(kErrorItemExpected);
@@ -567,14 +574,9 @@ void ListElements::AppendSelection(ItemElement *item) {
   }
 }
 
-void ListElements::OnParentWidthChange(double width) { 
-  impl_->ItemSizeChanged();
-  // Skip Elements::OnParentWidthChange()
-}
-
-void ListElements::OnParentHeightChange(double height) {
-  impl_->ItemSizeChanged();
-  // Skip Elements::OnParentHeightChange()
+void ListElements::Layout() {
+  impl_->Layout();
+  Elements::Layout();
 }
 
 } // namespace ggadget

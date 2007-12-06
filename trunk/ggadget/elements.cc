@@ -139,34 +139,6 @@ class Elements::Impl {
     return -1;
   }
 
-  void OnParentWidthChange(double width) {
-    if (width_ != width) {
-      width_ = width;
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
-      for (std::vector<BasicElement *>::iterator ite = children_.begin();
-           ite != children_.end(); ++ite) {
-        (*ite)->OnParentWidthChange(width);
-      }
-    }
-  }
-
-  void OnParentHeightChange(double height) {
-    if (height != height_) {
-      height_ = height;
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
-      for (Children::iterator ite = children_.begin();
-           ite != children_.end(); ++ite) {
-        (*ite)->OnParentHeightChange(height);
-      }
-    }
-  }
-
   void MapChildPositionEvent(const PositionEvent &org_event,
                              BasicElement *child,
                              PositionEvent *new_event) {
@@ -279,11 +251,137 @@ class Elements::Impl {
     }
   }
 
+  void Layout() {
+    int child_count = children_.size();
+    for (int i = 0; i < child_count; i++) {
+      children_[i]->Layout();
+    }
+
+    if (scrollable_) {
+      // If scrollable, the canvas size is the max extent of the children.
+      bool need_update_extents = false;
+      for (int i = 0; i < child_count; i++) {
+        if (children_[i]->IsPositionChanged() ||
+            children_[i]->IsSizeChanged()) {
+          need_update_extents = true;
+          break;
+        }
+      }
+
+      if (need_update_extents || !canvas_) {
+        width_ = height_ = 0;
+        for (int i = 0; i < child_count; i++) {
+          UpdateChildExtent(children_[i], &width_, &height_);
+        }
+      }
+    } else if (owner_) {
+      // If not scrollable, the canvas size is the same as the parent.
+      width_ = static_cast<size_t>(ceil(owner_->GetPixelWidth()));
+      height_ = static_cast<size_t>(ceil(owner_->GetPixelHeight()));
+    } else {
+      width_ = view_->GetWidth();
+      height_ = view_->GetHeight();
+    }
+  }
+
+  const CanvasInterface *Draw(bool *changed) {
+    *changed = count_changed_;
+    count_changed_ = false;
+
+    if (children_.empty())
+      return NULL;
+
+    size_t new_canvas_width = static_cast<size_t>(ceil(width_));
+    size_t new_canvas_height = static_cast<size_t>(ceil(height_));
+    if (!canvas_ || new_canvas_width != canvas_->GetWidth() ||
+        new_canvas_height != canvas_->GetHeight()) {
+      *changed = true;
+      if (canvas_) {
+        canvas_->Destroy();
+        canvas_ = NULL;
+      }
+
+      if (new_canvas_width == 0 || new_canvas_height == 0)
+        return NULL;
+
+      const GraphicsInterface *gfx = view_->GetGraphics();
+      canvas_ = gfx->NewCanvas(new_canvas_width, new_canvas_height);
+      if (!canvas_) {
+        DLOG("Error: unable to create canvas.");
+        return NULL;
+      }
+    }
+
+    // Draw children into temp array.
+    int child_count = children_.size();
+    const CanvasInterface **children_canvas =
+        new const CanvasInterface*[child_count];
+
+    for (int i = 0; i < child_count; i++) {
+      BasicElement *element = children_[i];
+      bool child_changed = false;
+      children_canvas[i] = element->Draw(&child_changed);
+      if (element->IsPositionChanged()) {
+        element->ClearPositionChanged();
+        child_changed = true;
+      }
+      *changed = *changed || child_changed;
+    }
+
+    if (*changed) {
+      canvas_->ClearCanvas();
+      canvas_->IntersectRectClipRegion(0., 0., width_, height_);
+      for (int i = 0; i < child_count; i++) {
+        if (children_canvas[i]) {
+          canvas_->PushState();
+
+          BasicElement *element = children_[i];
+          if (element->GetRotation() == .0) {
+            canvas_->TranslateCoordinates(
+                element->GetPixelX() - element->GetPixelPinX(),
+                element->GetPixelY() - element->GetPixelPinY());
+          } else {
+            canvas_->TranslateCoordinates(element->GetPixelX(),
+                                          element->GetPixelY());
+            canvas_->RotateCoordinates(
+                DegreesToRadians(element->GetRotation()));
+            canvas_->TranslateCoordinates(-element->GetPixelPinX(),
+                                          -element->GetPixelPinY());
+          }
+
+          const CanvasInterface *mask = element->GetMaskCanvas();
+          if (mask) {
+            canvas_->DrawCanvasWithMask(.0, .0, children_canvas[i],
+                                        .0, .0, mask);
+          } else {
+            canvas_->DrawCanvas(.0, .0, children_canvas[i]);
+          }
+
+          canvas_->PopState();
+        }
+      }
+
+      if (view_->GetDebugMode() > 0) {
+        // Draw bounding box for debug.
+        double w = canvas_->GetWidth();
+        double h = canvas_->GetHeight();
+        canvas_->DrawLine(0, 0, 0, h, 1, Color(0, 0, 0));
+        canvas_->DrawLine(0, 0, w, 0, 1, Color(0, 0, 0));
+        canvas_->DrawLine(w, h, 0, h, 1, Color(0, 0, 0));
+        canvas_->DrawLine(w, h, w, 0, 1, Color(0, 0, 0));
+        canvas_->DrawLine(0, 0, w, h, 1, Color(0, 0, 0));
+        canvas_->DrawLine(w, 0, 0, h, 1, Color(0, 0, 0));
+      }
+    }
+
+    delete[] children_canvas;
+    children_canvas = NULL;
+    return canvas_;
+  }
+
   void SetScrollable(bool scrollable) {
     scrollable_ = scrollable;
   }
-
-  const CanvasInterface *Draw(bool *changed);
 
   ElementFactoryInterface *factory_;
   BasicElement *owner_;
@@ -296,132 +394,6 @@ class Elements::Impl {
   bool count_changed_;
   bool scrollable_;
 };
-
-const CanvasInterface *Elements::Impl::Draw(bool *changed) {
-  BasicElement *element;
-  const CanvasInterface **children_canvas = NULL;
-  int child_count;
-  bool child_changed = false;
-  bool change = count_changed_;
-
-  count_changed_ = false;
-  if (children_.empty()) {
-    goto exit;
-  }
-
-  // Draw children into temp array.
-  child_count = children_.size();
-  children_canvas = new const CanvasInterface*[child_count];
-  for (int i = 0; i < child_count; i++) {
-    element = children_[i];
-    children_canvas[i] = element->Draw(&child_changed);
-    if (element->IsPositionChanged()) {
-      element->ClearPositionChanged();
-      child_changed = true;
-    }
-    change = change || child_changed;
-  }
-
-  change = change || !canvas_;
-  if (change) { // Need to redraw
-    size_t canvas_width, canvas_height;
-    if (scrollable_) {
-      if (child_changed || !canvas_) {
-        double children_extent_width = 0;
-        double children_extent_height = 0;
-        for (int i = 0; i < child_count; i++) {
-          UpdateChildExtent(children_[i],
-                            &children_extent_width,
-                            &children_extent_height);
-        }
-        canvas_width = static_cast<size_t>(ceil(children_extent_width));
-        canvas_height = static_cast<size_t>(ceil(children_extent_height));
-      } else {
-        canvas_width = canvas_->GetWidth();
-        canvas_height = canvas_->GetHeight();
-      }
-    } else {
-      canvas_width = static_cast<size_t>(ceil(width_));
-      canvas_height = static_cast<size_t>(ceil(height_));
-    }
-
-    // Need to create new canvas.
-    if (!canvas_ || 
-        canvas_->GetWidth() != canvas_width ||
-        canvas_->GetHeight() != canvas_height) {
-      if (canvas_)
-        canvas_->Destroy();
-
-      if (canvas_width == 0 || canvas_height == 0) {
-        canvas_ = NULL;
-        goto exit;
-      }
-
-      const GraphicsInterface *gfx = view_->GetGraphics();
-      canvas_ = gfx->NewCanvas(canvas_width, canvas_height);
-      if (!canvas_) {
-        DLOG("Error: unable to create canvas.");
-        goto exit;
-      }
-    } else {
-      // If not new canvas, we must remember to clear canvas before drawing.
-      canvas_->ClearCanvas();
-    }
-
-    // TODO: Ensure whether it is useful.
-    if (!scrollable_)
-      canvas_->IntersectRectClipRegion(0., 0., width_, height_);
-
-    for (int i = 0; i < child_count; i++) {
-      if (children_canvas[i]) {
-        canvas_->PushState();
-
-        element = children_[i];
-        if (element->GetRotation() == .0) {
-          canvas_->TranslateCoordinates(
-              element->GetPixelX() - element->GetPixelPinX(),
-              element->GetPixelY() - element->GetPixelPinY());
-        } else {
-          canvas_->TranslateCoordinates(element->GetPixelX(),
-                                        element->GetPixelY());
-          canvas_->RotateCoordinates(DegreesToRadians(element->GetRotation()));
-          canvas_->TranslateCoordinates(-element->GetPixelPinX(),
-                                        -element->GetPixelPinY());
-        }
-
-        const CanvasInterface *mask = element->GetMaskCanvas();
-        if (mask) {
-          canvas_->DrawCanvasWithMask(.0, .0, children_canvas[i], .0, .0, mask);
-        } else {
-          canvas_->DrawCanvas(.0, .0, children_canvas[i]);
-        }
-
-        canvas_->PopState();
-      }
-    }
-  }
-
-  if (view_->GetDebugMode() > 0) {
-    // Draw bounding box for debug.
-    double w = canvas_->GetWidth();
-    double h = canvas_->GetHeight();
-    canvas_->DrawLine(0, 0, 0, h, 1, Color(0, 0, 0));
-    canvas_->DrawLine(0, 0, w, 0, 1, Color(0, 0, 0));
-    canvas_->DrawLine(w, h, 0, h, 1, Color(0, 0, 0));
-    canvas_->DrawLine(w, h, w, 0, 1, Color(0, 0, 0));
-    canvas_->DrawLine(0, 0, w, h, 1, Color(0, 0, 0));
-    canvas_->DrawLine(w, 0, 0, h, 1, Color(0, 0, 0));
-  }
-
-exit:
-  if (children_canvas) {
-    delete[] children_canvas;
-    children_canvas = NULL;
-  }
-
-  *changed = change;
-  return canvas_;
-}
 
 Elements::Elements(ElementFactoryInterface *factory,
                    BasicElement *owner, View *view)
@@ -497,12 +469,8 @@ void Elements::RemoveAllElements() {
   impl_->RemoveAllElements();
 }
 
-void Elements::OnParentWidthChange(double width) {
-  impl_->OnParentWidthChange(width);
-}
-
-void Elements::OnParentHeightChange(double height) {
-  impl_->OnParentHeightChange(height);
+void Elements::Layout() {
+  impl_->Layout();
 }
 
 const CanvasInterface *Elements::Draw(bool *changed) {
@@ -522,6 +490,12 @@ EventResult Elements::OnDragEvent(const DragEvent &event,
 
 void Elements::SetScrollable(bool scrollable) {
   impl_->SetScrollable(scrollable);
+}
+
+void Elements::GetChildrenExtents(double *width, double *height) {
+  ASSERT(width && height);
+  *width = impl_->width_;
+  *height = impl_->height_;
 }
 
 } // namespace ggadget

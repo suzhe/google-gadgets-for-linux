@@ -363,7 +363,6 @@ Variant ProgressBarElement::GetEmptyImage() const {
 void ProgressBarElement::SetEmptyImage(const Variant &img) {
   delete impl_->emptyimage_;
   impl_->emptyimage_ = GetView()->LoadImage(img, false);
-  OnDefaultSizeChange();
   QueueDraw();
 }
 

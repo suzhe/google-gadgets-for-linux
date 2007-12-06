@@ -89,6 +89,8 @@ const char *const kSrcAttr = "src";
 const char *const kNameAttr = "name";
 /** The property name for elements to contain its text contents. */
 const char *const kInnerTextProperty = "innerText";
+/** The tag name of the contentarea element. */
+const char *const kContentAreaTag = "contentarea";
 
 /** Prefix for global file resources. */
 const char kGlobalResourcePrefix[] = ":resources/";

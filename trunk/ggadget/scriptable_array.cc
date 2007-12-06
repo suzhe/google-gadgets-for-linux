@@ -20,12 +20,16 @@ namespace ggadget {
 
 class ScriptableArray::Impl {
  public:
-  Impl(Variant *array, size_t count, bool native_owned)
-      : array_(array), count_(count),
+  Impl(ScriptableArray *owner, Variant *array, size_t count, bool native_owned)
+      : owner_(owner),
+        array_(array), count_(count),
         native_owned_(native_owned),
         delete_from_script_(false) {
   }
 
+  ScriptableArray *ToArray() { return owner_; }
+
+  ScriptableArray *owner_;
   Variant *array_;
   size_t count_;
   bool native_owned_;
@@ -34,9 +38,14 @@ class ScriptableArray::Impl {
 
 ScriptableArray::ScriptableArray(Variant *array, size_t count,
                                  bool native_owned)
-    : impl_(new Impl(array, count, native_owned)) {
+    : impl_(new Impl(this, array, count, native_owned)) {
   RegisterConstant("count", count);
   RegisterMethod("item", NewSlot(this, &ScriptableArray::GetItem));
+  // Simulates JavaScript array.
+  RegisterConstant("length", count);
+  SetArrayHandler(NewSlot(this, &ScriptableArray::GetItem), NULL);
+  // Simulates VBArray.
+  RegisterMethod("toArray", NewSlot(impl_, &Impl::ToArray));
 }
 
 ScriptableArray::~ScriptableArray() {

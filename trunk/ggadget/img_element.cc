@@ -71,7 +71,6 @@ void ImgElement::SetSrc(const Variant &src) {
     impl_->src_height_ = 0;
   }
 
-  OnDefaultSizeChange();
   QueueDraw();
 }
 

@@ -31,11 +31,13 @@ int GadgetStrCmp(const char *s1, const char *s2) {
 #endif
 }
 
-bool AssignIfDiffer(const char *source, std::string *dest) {
+bool AssignIfDiffer(
+    const char *source, std::string *dest,
+    int (*comparator)(const char *, const char *)) {
   ASSERT(dest);
   bool changed = false;
   if (source && source[0]) {
-    if (GadgetStrCmp(source, dest->c_str()) != 0) {
+    if (comparator(source, dest->c_str()) != 0) {
       changed = true;
       *dest = source;
     }

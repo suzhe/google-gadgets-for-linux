@@ -107,7 +107,6 @@ class ScrollBarElement : public BasicElement {
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
   Connection *ConnectOnRedrawEvent(Slot0<void> *slot);
 
-  virtual void MarkAsChanged();
   virtual void QueueDraw();
 
  protected:

@@ -100,11 +100,6 @@ Connection *ListBoxElement::ConnectEvent(const char *event_name,
   return BasicElement::ConnectEvent(event_name, handler);
 }
 
-void ListBoxElement::MarkAsChanged() {
-  impl_->redraw_event_();
-  DivElement::MarkAsChanged();
-}
-
 void ListBoxElement::QueueDraw() {
   impl_->redraw_event_();
   DivElement::QueueDraw();

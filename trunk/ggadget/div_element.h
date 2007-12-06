@@ -71,12 +71,11 @@ class DivElement : public BasicElement {
   DivElement(BasicElement *parent, View *view,
              const char *tag_name, const char *name, Elements *children);
 
+  virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-  virtual void OnWidthChange();
-  virtual void OnHeightChange();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DivElement);

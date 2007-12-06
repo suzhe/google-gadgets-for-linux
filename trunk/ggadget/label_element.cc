@@ -61,12 +61,7 @@ BasicElement *LabelElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 void LabelElement::GetDefaultSize(double *width, double *height) const {
-  CanvasInterface *canvas = GetView()->GetGraphics()->NewCanvas(1, 1);
-  if (!impl_->text_.GetSimpleExtents(canvas, width, height)) {
-    *width = 0;
-    *height = 0;
-  }
-  canvas->Destroy();
+  impl_->text_.GetSimpleExtents(width, height);
 }
 
 } // namespace ggadget

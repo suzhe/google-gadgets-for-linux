@@ -91,12 +91,11 @@ class ComboBoxElement : public BasicElement {
                                       const char *name);
 
  protected:
+  virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-  virtual void OnWidthChange();
-  virtual void OnHeightChange();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ComboBoxElement);

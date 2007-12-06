@@ -14,9 +14,9 @@
   limitations under the License.
 */
 
-#include <ggadget/details_view.h>
-#include <ggadget/gadget_consts.h>
-#include <ggadget/string_utils.h>
+#include "details_view.h"
+#include "gadget_consts.h"
+#include "string_utils.h"
 
 namespace ggadget {
 
