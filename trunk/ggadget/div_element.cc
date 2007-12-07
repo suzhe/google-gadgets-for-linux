@@ -101,10 +101,9 @@ class DivElement::Impl {
   }
 
   void ScrollY(int distance) {
-    int old_pos = scroll_pos_y_;
     scroll_pos_y_ += distance;
     scroll_pos_y_ = std::min(scroll_range_y_, std::max(0, scroll_pos_y_));
-    if (old_pos != scroll_pos_y_) {
+    if (scrollbar_) {
       scrollbar_->SetValue(scroll_pos_y_); // SetValue calls QueueDraw
     }
   }
@@ -174,6 +173,12 @@ DivElement::DivElement(BasicElement *parent, View *view,
 DivElement::~DivElement() {
   delete impl_;
   impl_ = NULL;
+}
+
+void DivElement::SetScrollYPosition(int pos) {
+  if (impl_->scrollbar_) {
+    impl_->ScrollY(pos - impl_->scroll_pos_y_);
+  }
 }
 
 void DivElement::DoDraw(CanvasInterface *canvas,
@@ -278,7 +283,8 @@ EventResult DivElement::OnMouseEvent(const MouseEvent &event, bool direct,
         // be dispatched to child.
         impl_->mouseover_scrollbar_ = impl_->scrollbar_;
         MouseEvent in(Event::EVENT_MOUSE_OVER, new_x, event.GetY(), 
-                      event.GetButton(), event.GetWheelDelta());
+                      event.GetButton(), event.GetWheelDelta(),
+                      event.GetModifier());
         impl_->mouseover_scrollbar_->OnMouseEvent(in, true, 
                                                   &new_fired, &new_in);
         // Ignore return from handler and don't return to continue processing.
@@ -311,7 +317,8 @@ EventResult DivElement::OnMouseEvent(const MouseEvent &event, bool direct,
       // it off and send a mouse out event to child. The original event is 
       // still dispatched to parent.
       MouseEvent new_event(Event::EVENT_MOUSE_OUT, new_x, event.GetY(), 
-                           event.GetButton(), event.GetWheelDelta());
+                           event.GetButton(), event.GetWheelDelta(),
+                           event.GetModifier());
       impl_->mouseover_scrollbar_->OnMouseEvent(new_event, true, 
                                                 &new_fired, &new_in);
       impl_->mouseover_scrollbar_ = NULL;

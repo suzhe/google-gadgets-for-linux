@@ -840,17 +840,17 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
                            Elements *children)
     : impl_(new Impl(parent, view, tag_name, name, children, this)) {
   RegisterProperty("x",
-                   NewSlot(impl_, &Impl::GetX),
-                   NewSlot(impl_, &Impl::SetX));
+                   NewSlot(this, &BasicElement::GetX),
+                   NewSlot(this, &BasicElement::SetX));
   RegisterProperty("y",
-                   NewSlot(impl_, &Impl::GetY),
-                   NewSlot(impl_, &Impl::SetY));
+                   NewSlot(this, &BasicElement::GetY),
+                   NewSlot(this, &BasicElement::SetY));
   RegisterProperty("width",
-                   NewSlot(impl_, &Impl::GetWidth),
-                   NewSlot(impl_, &Impl::SetWidth));
+                   NewSlot(this, &BasicElement::GetWidth),
+                   NewSlot(this, &BasicElement::SetWidth));
   RegisterProperty("height",
-                   NewSlot(impl_, &Impl::GetHeight),
-                   NewSlot(impl_, &Impl::SetHeight));
+                   NewSlot(this, &BasicElement::GetHeight),
+                   NewSlot(this, &BasicElement::SetHeight));
   RegisterConstant("name", impl_->name_);
 
   if (GadgetStrCmp(tag_name, "contentarea") == 0)

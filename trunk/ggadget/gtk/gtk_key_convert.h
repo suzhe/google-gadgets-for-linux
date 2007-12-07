@@ -28,6 +28,18 @@ namespace ggadget {
  */
 unsigned int ConvertGdkKeyvalToKeyCode(guint keyval);
 
+/** 
+ * Convert a GDKModifierType to a value understood by the modifier fields in
+ * Event classes.
+ */
+int ConvertGdkModifierToModifier(guint state);
+
+/** 
+ * Convert a GDKModifierType to a value understood by the button fields in
+ * Event classes.
+ */
+int ConvertGdkModifierToButton(guint state);
+
 } // namespace ggadget
 
 #endif  // GGADGET_GTK_GTK_KEY_CONVERT_H__

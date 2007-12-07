@@ -44,7 +44,7 @@ class ListElements::Impl {
         item_width_specified_(false), item_height_specified_(false),
         item_width_relative_(false), item_height_relative_(false),
         multiselect_(false), item_separator_(false), separator_changed_(true),
-        shiftdown_(false), selected_index_(-2), items_canvas_(NULL), 
+        selected_index_(-2), items_canvas_(NULL), 
         item_over_color_(view->LoadTexture(Variant(kDefaultItemOverColor))),
         item_selected_color_(view->LoadTexture(Variant(kDefaultItemSelectedColor))) {
   }
@@ -68,14 +68,13 @@ class ListElements::Impl {
   bool item_width_specified_, item_height_specified_;
   bool item_width_relative_, item_height_relative_;
   bool multiselect_, item_separator_, separator_changed_;
-  bool shiftdown_;
   // Only used for when the index is specified in XML. This is an index 
   // of an element "pending" to become selected. Initialized to -2.
   int selected_index_;
   CanvasInterface *items_canvas_;
   Texture *item_over_color_, *item_selected_color_;
 
-  void Layout() {
+  void Layout() { 
     // Inform children (items) that default size has changed.
     int childcount = owner_->GetCount();
     for (int i = 0; i < childcount; i++) {
@@ -128,10 +127,8 @@ class ListElements::Impl {
     c_canvas = new const CanvasInterface*[child_count];
     for (int i = 0; i < child_count; i++) {
       ElementInterface *item = owner_->GetItemByIndex(i);
-      LOG("Draw item: %d %f %f %f(%f) %f(%f)", i, item->GetPixelX(), item->GetPixelY(), item->GetPixelWidth(), pixel_item_width_, item->GetPixelHeight(), pixel_item_height_);
       if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *element = down_cast<ItemElement *>(item);
-        element->SetIndex(i); // This will update the default position too.
 
         c_canvas[i] = element->Draw(&child_changed);
         if (element->IsPositionChanged()) {
@@ -204,8 +201,8 @@ class ListElements::Impl {
           if (item_separator_) {
             // Default Windows color is 247 243 247.
             double sep_y = pixel_item_height_ - 1;
-            items_canvas_->DrawLine(0, sep_y, pixel_item_width_, sep_y, 2, 
-                                    Color::ColorFromChars(247, 243, 247));
+            items_canvas_->DrawLine(0, sep_y, pixel_item_width_, sep_y, 
+                                    2, Color::ColorFromChars(247, 243, 247));
           }
 
           items_canvas_->PopState();
@@ -283,14 +280,16 @@ class ListElements::Impl {
     int childcount = owner_->GetCount();
     for (int i = 0; i < childcount; i++) {
       ElementInterface *child = owner_->GetItemByIndex(i);
-      if (child != avoid && child->IsInstanceOf(ItemElement::CLASS_ID)) {
-        ItemElement *item = down_cast<ItemElement *>(child);
-        if (item->IsSelected()) {
-          result = true;
-          item->SetSelectedNoRedraw(false);
+      if (child != avoid) {
+        if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+          ItemElement *item = down_cast<ItemElement *>(child);
+          if (item->IsSelected()) {
+            result = true;
+            item->SetSelectedNoRedraw(false);
+          }
+        } else {
+          LOG(kErrorItemExpected);
         }
-      } else {
-        LOG(kErrorItemExpected);
       }
     }  
     return result;
@@ -556,17 +555,60 @@ void ListElements::ClearSelection() {
 }
 
 void ListElements::AppendSelection(ItemElement *item) {
-  bool changed = false;
   ASSERT(item);
-  if (!impl_->shiftdown_ || !impl_->multiselect_) {
-    bool result = impl_->ClearSelection(item);
-    if (result) {
-      changed = true;
-    }
+
+  if (!impl_->multiselect_) {
+    SetSelectedItem(item);
+    return;
   }
+
   if (!item->IsSelected()) {
-    changed = true;
     item->SetSelected(true);
+    impl_->parent_->FireOnChangeEvent();
+  }
+}
+
+void ListElements::SelectRange(ItemElement *endpoint) {
+  ASSERT(endpoint);
+
+  if (!impl_->multiselect_) {
+    SetSelectedItem(endpoint);
+    return;
+  }
+
+  bool changed = false;
+  ItemElement *endpoint2 = GetSelectedItem();
+  if (endpoint2 == NULL || endpoint == endpoint2) {
+    if (!endpoint->IsSelected()) {
+      changed = true;
+      endpoint->SetSelected(true);
+    }
+  } else {
+    bool started = false;
+    int childcount = GetCount();
+    for (int i = 0; i < childcount; i++) {
+      ElementInterface *child = GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        ItemElement *item = down_cast<ItemElement *>(child);
+        if (item == endpoint || item == endpoint2) {
+          started = !started;
+          if (!started) { // started has just been turned off
+            if (!item->IsSelected()) {
+              item->SetSelected(true);
+              changed = true;
+            }
+            break;
+          }
+        }       
+
+        if (started && !item->IsSelected()) {
+          item->SetSelected(true);
+          changed = true;
+        }
+      } else {
+        LOG(kErrorItemExpected);
+      }
+    }      
   }
 
   if (changed) {

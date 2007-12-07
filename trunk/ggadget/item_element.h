@@ -85,6 +85,7 @@ class ItemElement : public BasicElement {
                                               const char *name);
 
  protected:
+  virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
   virtual void GetDefaultSize(double *width, double *height) const;

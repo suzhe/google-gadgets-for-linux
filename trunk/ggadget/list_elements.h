@@ -70,6 +70,14 @@ class ListElements : public Elements {
    */
   void AppendSelection(ItemElement *item);
 
+  /** 
+   * Selects all items in a range from the first selected item to the given
+   * parameter if multiselect is enabled. Otherwise behaves like 
+   * SetSelectedItem.
+   * This method is not exposed to the script engine.
+   */
+  void SelectRange(ItemElement *endpoint);
+
   /** Unselects all items in the listbox. */
   void ClearSelection();
 
