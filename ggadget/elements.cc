@@ -242,7 +242,7 @@ class Elements::Impl {
     if (child_extent_width > *extent_width ||
         child_extent_height > *extent_height) {
       GetChildExtentInParent(x, y, pin_x, pin_y, width, height,
-                             child->GetRotation(),
+                             DegreesToRadians(child->GetRotation()),
                              &child_extent_width, &child_extent_height);
       if (child_extent_width > *extent_width)
         *extent_width = child_extent_width;

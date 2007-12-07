@@ -111,12 +111,6 @@ class ComboBoxElement::Impl {
   }
 
   void ListBoxUpdated() {
-    // ListBoxRedraw will queue the redraw.
-    if (listbox_->IsVisible()) {
-      // Close dropdown on selection.
-      listbox_->SetVisible(false);
-    }
-
     // Relay this event to combobox's listeners.
     Event event(Event::EVENT_CHANGE);
     ScriptableEvent s_event(&event, owner_, NULL);
@@ -135,6 +129,20 @@ class ComboBoxElement::Impl {
     }
 
     listbox_->SetPixelHeight(height);
+  }
+
+  void ScrollList(bool down) {
+    int count = elements_->GetCount();
+    if (count == 0) {
+      return;
+    }
+
+    int index = elements_->GetSelectedIndex();
+    // Scroll wraps around.
+    index += count + (down ? 1 : -1);
+    index %= count;
+    elements_->SetSelectedIndex(index);
+    listbox_->ScrollToIndex(index);
   }
 };
 
@@ -299,6 +307,9 @@ bool ComboBoxElement::IsDroplistVisible() const {
 
 void ComboBoxElement::SetDroplistVisible(bool visible) {
   if (visible != impl_->listbox_->IsVisible()) {
+    if (visible) {
+      impl_->listbox_->ScrollToIndex(impl_->elements_->GetSelectedIndex());
+    }
     impl_->listbox_->SetVisible(visible);
   }
 }
@@ -386,6 +397,7 @@ void ComboBoxElement::Layout() {
   impl_->listbox_->SetPixelY(impl_->elements_->GetItemPixelHeight());
   impl_->listbox_->SetPixelWidth(GetPixelWidth());
   impl_->SetListBoxHeight();
+  impl_->listbox_->Layout();
   // TODO: Call layout of edit.
 }
 
@@ -446,7 +458,8 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
         // be dispatched to child.
         impl_->mouseover_child_ = impl_->listbox_;
         MouseEvent in(Event::EVENT_MOUSE_OVER, event.GetX(), new_y, 
-                      event.GetButton(), event.GetWheelDelta());
+                      event.GetButton(), event.GetWheelDelta(), 
+                      event.GetModifier());
         impl_->mouseover_child_->OnMouseEvent(in, true, &new_fired, &new_in);
         // Ignore return from handler and don't return to continue processing.
         if (t == Event::EVENT_MOUSE_OVER) {
@@ -473,13 +486,19 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
       if (*in_element == impl_->listbox_) {
         *in_element = this;
       }
+      if (r == EVENT_RESULT_HANDLED && t == Event::EVENT_MOUSE_CLICK &&
+          impl_->listbox_->IsVisible()) {
+        // Close dropdown on selection.
+        impl_->listbox_->SetVisible(false);
+      }
       return r;
     } else if (impl_->mouseover_child_) {
       // Case: Mouse isn't in child, but mouseover bit is on, so turn 
       // it off and send a mouse out event to child. The original event is 
       // still dispatched to parent.
       MouseEvent new_event(Event::EVENT_MOUSE_OUT, event.GetX(), new_y, 
-                           event.GetButton(), event.GetWheelDelta());
+                           event.GetButton(), event.GetWheelDelta(),
+                           event.GetModifier());
       impl_->mouseover_child_->OnMouseEvent(new_event, true, 
                                             &new_fired, &new_in);
       impl_->mouseover_child_ = NULL;
@@ -562,8 +581,7 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
      break;
     case Event::EVENT_MOUSE_CLICK:
       // Toggle droplist visibility.
-      impl_->listbox_->SetVisible(!impl_->listbox_->IsVisible());
-      QueueDraw();
+      SetDroplistVisible(!impl_->listbox_->IsVisible());
      break;
     case Event::EVENT_MOUSE_OUT:
      if (impl_->button_over_) {
@@ -585,9 +603,30 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
 }
 
 EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
-  // TODO handle arrows
-
-  return EVENT_RESULT_UNHANDLED;
+  EventResult result = EVENT_RESULT_UNHANDLED;
+  if (event.GetType() == Event::EVENT_KEY_DOWN) {
+    result = EVENT_RESULT_HANDLED;
+    switch (event.GetKeyCode()) {
+     case KeyboardEvent::KEY_UP:
+      impl_->ScrollList(false);
+      break;
+     case KeyboardEvent::KEY_DOWN:
+      impl_->ScrollList(true);
+      break;
+     case KeyboardEvent::KEY_RETURN:
+       // Windows only allows the box to be closed with the enter key,
+       // not opened. Weird.
+      if (impl_->listbox_->IsVisible()) {
+        // Close dropdown on selection.
+        impl_->listbox_->SetVisible(false);
+      }
+      break;
+     default:
+      result = EVENT_RESULT_UNHANDLED;
+      break;
+    }
+  }
+  return result;
 }
 
 BasicElement *ComboBoxElement::CreateInstance(BasicElement *parent,

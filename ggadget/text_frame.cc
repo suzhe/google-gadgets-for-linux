@@ -98,7 +98,7 @@ class TextFrame::Impl {
 
   BasicElement *owner_;
   View *view_;
-   
+
   FontInterface *font_;
   Texture *color_texture_;
   CanvasInterface::Alignment align_;
@@ -141,7 +141,7 @@ TextFrame::TextFrame(BasicElement *owner, View *view)
   owner->RegisterProperty("wordWrap",
                           NewSlot(this, &TextFrame::IsWordWrap),
                           NewSlot(this, &TextFrame::SetWordWrap));
-     
+
   owner->RegisterStringEnumProperty("align",
                                     NewSlot(this, &TextFrame::GetAlign),
                                     NewSlot(this, &TextFrame::SetAlign),
@@ -230,7 +230,7 @@ bool TextFrame::IsStrikeout() const {
 }
 
 void TextFrame::SetStrikeout(bool strikeout) {
-  if (strikeout != !!(impl_->flag_ & CanvasInterface::TEXT_FLAGS_STRIKEOUT)) {
+  if (strikeout == !(impl_->flag_ & CanvasInterface::TEXT_FLAGS_STRIKEOUT)) {
     impl_->flag_ ^= CanvasInterface::TEXT_FLAGS_STRIKEOUT;
     impl_->ResetFont();
   }
@@ -252,7 +252,7 @@ bool TextFrame::IsUnderline() const {
 }
 
 void TextFrame::SetUnderline(bool underline) {
-  if (underline != !!(impl_->flag_ & CanvasInterface::TEXT_FLAGS_UNDERLINE)) {
+  if (underline == !(impl_->flag_ & CanvasInterface::TEXT_FLAGS_UNDERLINE)) {
     impl_->flag_ ^= CanvasInterface::TEXT_FLAGS_UNDERLINE;
     impl_->ResetFont();
   }
@@ -274,7 +274,7 @@ bool TextFrame::IsWordWrap() const {
 }
 
 void TextFrame::SetWordWrap(bool wrap) {
-  if (wrap != !!(impl_->flag_ & CanvasInterface::TEXT_FLAGS_WORDWRAP)) {
+  if (wrap == !(impl_->flag_ & CanvasInterface::TEXT_FLAGS_WORDWRAP)) {
     impl_->flag_ ^= CanvasInterface::TEXT_FLAGS_WORDWRAP;
     impl_->ResetFont();
   }

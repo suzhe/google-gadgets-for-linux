@@ -88,6 +88,13 @@ class Event {
     EVENT_TIMER,
   };
 
+  enum Modifier {
+    MOD_NONE = 0,
+    MOD_SHIFT = 1,
+    MOD_CONTROL = 2,
+    MOD_ALT = 4  
+  };
+
   explicit Event(Type t) : type_(t) { ASSERT(IsSimpleEvent()); }
   Event(const Event &e) : type_(e.type_) { ASSERT(IsSimpleEvent()); }
 
@@ -139,19 +146,25 @@ class MouseEvent : public PositionEvent {
     BUTTON_ALL = BUTTON_LEFT | BUTTON_MIDDLE | BUTTON_RIGHT,
   };
 
-  MouseEvent(Type t, double x, double y, int button, int wheel_delta)
-      : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta) {
+  MouseEvent(Type t, double x, double y, int button, int wheel_delta, 
+             int modifier)
+      : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta),
+        modifier_(modifier) {
     ASSERT(IsMouseEvent());
   }
 
   MouseEvent(const MouseEvent &e)
       : PositionEvent(e.GetType(), e.GetX(), e.GetY()),
-        button_(e.button_), wheel_delta_(e.wheel_delta_) {
+        button_(e.button_), wheel_delta_(e.wheel_delta_), 
+        modifier_(e.modifier_) {
     ASSERT(IsMouseEvent());
   }
 
   int GetButton() const { return button_; }
   void SetButton(int button) { button_ = button; }
+
+  int GetModifier() const { return modifier_; }
+  void SetModifier(int m) { modifier_ = m; }
 
   int GetWheelDelta() const { return wheel_delta_; }
   void SetWheelDelta(int wheel_delta) { wheel_delta_ = wheel_delta; }
@@ -161,6 +174,7 @@ class MouseEvent : public PositionEvent {
  private:
   int button_;
   int wheel_delta_;
+  int modifier_;
 };
 
 /**
@@ -262,21 +276,25 @@ class KeyboardEvent : public Event {
     KEY_QUOTE          = 0xDE,  // VK_OEM_7 in winuser.h, '" in the keyboard.
   };
 
-  KeyboardEvent(Type t, unsigned int key_code)
-      : Event(t, 0), key_code_(key_code) {
+  KeyboardEvent(Type t, unsigned int key_code, int modifier)
+      : Event(t, 0), key_code_(key_code), modifier_(modifier) {
     ASSERT(IsKeyboardEvent());
   };
 
   KeyboardEvent(const KeyboardEvent &e)
-      : Event(e.GetType(), 0), key_code_(e.key_code_) {
+      : Event(e.GetType(), 0), key_code_(e.key_code_), modifier_(e.modifier_) {
     ASSERT(IsKeyboardEvent());
   }
 
   unsigned int GetKeyCode() const { return key_code_; }
   void SetKeyCode(unsigned int key_code) { key_code_ = key_code; }
 
+  int GetModifier() const { return modifier_; }
+  void SetModifier(int m) { modifier_ = m; }
+
  private:
   int key_code_;
+  int modifier_;
 };
 
 /**
@@ -327,7 +345,7 @@ class SizingEvent : public Event {
 };
 
 /**
- * Class representing a sizing event.
+ * Class representing a changed option.
  */
 class OptionChangedEvent : public Event {
  public:

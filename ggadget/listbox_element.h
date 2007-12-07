@@ -38,11 +38,15 @@ class ListBoxElement : public DivElement {
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
   Connection *ConnectOnRedrawEvent(Slot0<void> *slot);
 
+  void ScrollToIndex(int index);
+
   void FireOnChangeEvent();
 
-  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-
   virtual void QueueDraw(); 
+
+  virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

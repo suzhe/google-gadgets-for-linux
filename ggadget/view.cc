@@ -187,8 +187,8 @@ class View::Impl {
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
                                   event.GetX(), event.GetY(),
-                                  event.GetButton(),
-                                  event.GetWheelDelta());
+                                  event.GetButton(), event.GetWheelDelta(), 
+                                  event.GetModifier());
         MapChildPositionEvent(event, old_mouseover_element, &mouseout_event);
         old_mouseover_element->OnMouseEvent(mouseout_event, true,
                                             &fired_element, &in_element);
@@ -202,8 +202,8 @@ class View::Impl {
         else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
                                      event.GetX(), event.GetY(),
-                                     event.GetButton(),
-                                     event.GetWheelDelta());
+                                     event.GetButton(), event.GetWheelDelta(),
+				     event.GetModifier());
           MapChildPositionEvent(event, mouseover_element_, &mouseover_event);
           mouseover_element_->OnMouseEvent(mouseover_event, true,
                                            &fired_element, &in_element);
@@ -228,9 +228,9 @@ class View::Impl {
     // Send event to view first.
     ScriptableEvent scriptable_event(&event, NULL, NULL);
     if (event.GetType() != Event::EVENT_MOUSE_MOVE)
-      DLOG("%s(view): %g %g %d %d", scriptable_event.GetName(),
+      DLOG("%s(view): %g %g %d %d %d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
-           event.GetButton(), event.GetWheelDelta());
+           event.GetButton(), event.GetWheelDelta(), event.GetModifier());
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_MOVE:
         // Put the high volume events near top.
@@ -339,7 +339,8 @@ class View::Impl {
   EventResult OnKeyEvent(const KeyboardEvent &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
     // TODO: dispatch to children.
-    DLOG("%s(view): %d", scriptable_event.GetName(), event.GetKeyCode());
+    DLOG("%s(view): %d %d", scriptable_event.GetName(), 
+	 event.GetKeyCode(), event.GetModifier());
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
         FireEvent(&scriptable_event, onkeydown_event_);

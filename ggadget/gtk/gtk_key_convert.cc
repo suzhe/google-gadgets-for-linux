@@ -237,4 +237,32 @@ unsigned int ConvertGdkKeyvalToKeyCode(guint keyval) {
   return pos->gtk_keyval == keyval ? pos->key_code : 0;
 }
 
+int ConvertGdkModifierToModifier(guint state) {
+  int mod = Event::MOD_NONE;
+  if (state & GDK_SHIFT_MASK) {
+    mod |= Event::MOD_SHIFT;
+  }
+  if (state & GDK_CONTROL_MASK) {
+    mod |= Event::MOD_CONTROL;
+  }
+  if (state & GDK_MOD1_MASK) {
+    mod |= Event::MOD_ALT;
+  }
+  return mod;
+}
+
+int ConvertGdkModifierToButton(guint state) {
+  int button = MouseEvent::BUTTON_NONE;
+  if (state & GDK_BUTTON1_MASK) {
+    button |= MouseEvent::BUTTON_LEFT;
+  }
+  if (state & GDK_BUTTON2_MASK) {
+    button |= MouseEvent::BUTTON_MIDDLE;
+  }
+  if (state & GDK_BUTTON3_MASK) {
+    button |= MouseEvent::BUTTON_RIGHT;
+  }
+  return button;
+}
+
 } // namespace ggadget

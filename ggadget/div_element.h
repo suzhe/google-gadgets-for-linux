@@ -38,6 +38,9 @@ class DivElement : public BasicElement {
   bool IsAutoscroll() const;
   void SetAutoscroll(bool autoscroll);
 
+  /** Called by subclasses to scroll to an absolute position. */
+  void SetScrollYPosition(int pos);
+
   /**
    * Gets and sets the background color or image of the element. The image is
    * repeated if necessary, not stretched.

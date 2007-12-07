@@ -207,6 +207,10 @@ void ItemElement::GetDefaultPosition(double *x, double *y) const {
   *y = impl_->index_ * GetPixelHeight();
 }
 
+void ItemElement::Layout() {
+  BasicElement::Layout();
+}
+
 EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
@@ -214,7 +218,13 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
      if (impl_->elements_) {
        // Need to invoke selection through parent, since
        // parent knows about multiselect status.
-       impl_->elements_->AppendSelection(this);
+       if (event.GetModifier() & Event::MOD_SHIFT) {
+         impl_->elements_->SelectRange(this);
+       } else if (event.GetModifier() & Event::MOD_CONTROL) {
+         impl_->elements_->AppendSelection(this);
+       } else {
+         impl_->elements_->SetSelectedItem(this);
+       }
      }     
     break;
    case Event::EVENT_MOUSE_OUT:
@@ -226,6 +236,9 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
     QueueDraw();
     break;
    default:
+     if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
+       DLOG("wheel");
+     }
     result = EVENT_RESULT_UNHANDLED;
     break;
   }

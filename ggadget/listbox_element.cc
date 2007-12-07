@@ -105,6 +105,11 @@ void ListBoxElement::QueueDraw() {
   DivElement::QueueDraw();
 }
 
+void ListBoxElement::ScrollToIndex(int index) {
+  SetScrollYPosition(index * 
+                     static_cast<int>(impl_->elements_->GetItemPixelHeight()));
+}
+
 Connection *ListBoxElement::ConnectOnRedrawEvent(Slot0<void> *slot) {
   return impl_->redraw_event_.Connect(slot);
 }
@@ -119,9 +124,14 @@ void ListBoxElement::FireOnChangeEvent() {
   GetView()->FireEvent(&s_event, impl_->onchange_event_);
 }
 
-EventResult ListBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
-  // TODO handle shift
-  return DivElement::HandleKeyEvent(event);
+EventResult ListBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
+                                     BasicElement **fired_element,
+                                     BasicElement **in_element) {
+  // Interecept mouse wheel events from Item elements and send to Div 
+  // directly to enable wheel scrolling.
+  bool wheel = (event.GetType() == Event::EVENT_MOUSE_WHEEL);
+  return DivElement::OnMouseEvent(event, wheel ? true : direct, 
+                                  fired_element, in_element);  
 }
 
 BasicElement *ListBoxElement::CreateInstance(BasicElement *parent, View *view,
