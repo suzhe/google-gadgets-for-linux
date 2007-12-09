@@ -14,53 +14,113 @@
   limitations under the License.
 */
 
+#include <vector>
+#include <sys/utsname.h>
+
 #include "machine.h"
+#include <ggadget/common.h>
 
 namespace ggadget {
 namespace framework {
 
+static const char* kKeysInMachineInfo[] = { "cpu family", "model", "stepping",
+    "vendor_id", "model name", "cpu MHz" };
+
+// Represents the file names for reading CPU info.
+static const char* kCPUInfoFile = "/proc/cpuinfo";
+
+Machine::Machine() {
+  InitArchInfo();
+  InitProcInfo();
+}
+
 const char *Machine::GetBiosSerialNumber() const {
-  return "007";
+  return "to be continued...";
 }
 
 const char *Machine::GetMachineManufacturer() const {
-  return "Google";
+  return "to be continued...to be continued...\";";
 }
 
 const char *Machine::GetMachineModel() const {
-  return "Google007";
+  return "to be continued...";
 }
 
 const char *Machine::GetProcessorArchitecture() const {
-  return "GoogleX86";
+  return sysinfo_[CPU_ARCH].c_str();
 }
 
 int Machine::GetProcessorCount() const {
-  return 1;
+  return cpu_count_;
 }
 
 int Machine::GetProcessorFamily() const {
-  return 7;
+  return strtol(sysinfo_[CPU_FAMILY].c_str(), NULL, 10);
 }
 
 int Machine::GetProcessorModel() const {
-  return 8;
+  return strtol(sysinfo_[CPU_MODEL].c_str(), NULL, 10);
 }
 
-const char *Machine::GetProcessorName() const {
-  return "GoogleMachine";
+const char* Machine::GetProcessorName() const {
+  return sysinfo_[CPU_NAME].c_str();
 }
 
 int Machine::GetProcessorSpeed() const {
-  return 9999;
+  return strtol(sysinfo_[CPU_SPEED].c_str(), NULL, 10);
 }
 
 int Machine::GetProcessorStepping() const {
-  return 5;
+  return strtol(sysinfo_[CPU_STEPPING].c_str(), NULL, 10);
 }
 
 const char *Machine::GetProcessorVendor() const {
-  return "Google";
+  return sysinfo_[CPU_VENDOR].c_str();
+}
+
+void Machine::InitArchInfo() {
+  utsname name;
+  if (uname(&name) == -1) { // indicates error when -1 is returned.
+    sysinfo_[CPU_ARCH] = "";
+    return;
+  }
+
+  sysinfo_[CPU_ARCH] = std::string(name.machine);
+}
+
+void Machine::InitProcInfo() {
+  FILE* fp = fopen(kCPUInfoFile, "r");
+  if (fp == NULL)
+    return;
+
+  char line[1001] = { 0 };
+  cpu_count_ = 0;
+  std::string key, value;
+
+  // get the processor count
+  while (fgets(line, sizeof(line) - 1, fp)) {
+    if (!SplitString(line, ":", &key, &value))
+      continue;
+
+    key = TrimString(key);
+    value = TrimString(value);
+    
+    if (key == "processor") {
+      cpu_count_ ++;
+      continue;
+    }
+
+    if (cpu_count_ > 1) continue;
+
+    for (size_t i = 0; i < arraysize(kKeysInMachineInfo); ++i) {
+      if (key == kKeysInMachineInfo[i]) {
+        sysinfo_[i] = value;
+        break;
+      }
+    }
+  }
+
+  fclose(fp);
 }
 
 } // namespace framework

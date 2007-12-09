@@ -14,33 +14,100 @@
   limitations under the License.
 */
 
+#include <string>
+#include <sys/time.h>
+#include <ggadget/string_utils.h>
+
 #include "memory.h"
+#include "machine.h"
 
 namespace ggadget {
 namespace framework {
 
-int64_t Memory::GetTotal() const {
-  return 12345678;
+// Represents the time interval for refreshing the memory info in seconds.
+time_t kTimeInterval = 2;
+
+// Represents the memory info file name.
+static const char* kMemInfoFile = "/proc/meminfo";
+
+// Represents the keys for memory info in proc file system.
+static const char* kKeysInMemInfo[] = { "MemTotal", "MemFree", "SwapTotal",
+    "SwapFree", "Buffers", "Cached", "SwapCached" };
+
+Memory::Memory() {
+  timestamp_ = 0;
 }
 
-int64_t Memory::GetFree() const {
-  return 2345678;
+int64_t Memory::GetTotal() {
+  Refresh();
+  return mem_info_[TOTAL_PHYSICAL] + mem_info_[TOTAL_SWAP];
 }
 
-int64_t Memory::GetUsed() const {
-  return 98765434;
+int64_t Memory::GetFree() {
+  Refresh();
+  return mem_info_[FREE_PHYSICAL] + mem_info_[BUFFERS] + mem_info_[CACHED] +
+         mem_info_[SWAP_CACHED] + mem_info_[FREE_SWAP];
 }
 
-int64_t Memory::GetFreePhysical() const {
-  return 123456;
+int64_t Memory::GetUsed() {
+  return GetTotal() - GetFree();
 }
 
-int64_t Memory::GetTotalPhysical() const {
-  return 1223456;
+int64_t Memory::GetFreePhysical() {
+  Refresh();
+  
+  // here: free physical memory = free + buffer + cache + swap_cache
+  return mem_info_[FREE_PHYSICAL] + mem_info_[BUFFERS] + mem_info_[CACHED] +
+         mem_info_[SWAP_CACHED];
 }
 
-int64_t Memory::GetUsedPhysical() const {
-  return 7623456;
+int64_t Memory::GetTotalPhysical() {
+  Refresh();
+  return mem_info_[TOTAL_PHYSICAL];
+}
+
+int64_t Memory::GetUsedPhysical() {
+  return GetTotalPhysical() - GetFreePhysical();
+}
+
+void Memory::Refresh() {
+  timeval tv;
+  
+  // if time interval is less than 2 seconds, just return
+  if (!gettimeofday(&tv, NULL) && tv.tv_sec - timestamp_ <= kTimeInterval)
+    return;
+
+  ReadMemInfoFromProc();
+
+  // update the time stamp
+  timestamp_ = tv.tv_sec;
+}
+
+void Memory::ReadMemInfoFromProc() {
+  FILE* fp = fopen(kMemInfoFile, "r");
+  if (!fp)
+    return;
+
+  char line[1001]; // big enough to hold the line
+  std::string key, value;
+
+  // search the MemInfo file and get the expected memory value
+  while (fgets(line, sizeof(line), fp)) {
+    if (!SplitString(line, ":", &key, &value))
+      continue;
+
+    key = TrimString(key);
+    value = TrimString(value);
+
+    for (int i = 0; i < MEM_INFO_COUNT; ++i) {
+      if (key == kKeysInMemInfo[i]) {
+        mem_info_[i] = strtoll(value.c_str(), NULL, 10);
+        break;
+      }
+    }
+  }
+
+  fclose(fp);
 }
 
 } // namespace framework

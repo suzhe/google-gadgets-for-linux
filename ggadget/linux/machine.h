@@ -17,13 +17,20 @@
 #ifndef GGADGET_LINUX_MACHINE_H__
 #define GGADGET_LINUX_MACHINE_H__
 
+#include <string>
 #include <ggadget/framework_interface.h>
 
 namespace ggadget {
 namespace framework {
 
+bool SplitString(const std::string &source, const std::string &separator,
+                 std::string *result_left, std::string *result_right);
+
+std::string TrimString(const std::string& s);
+
 class Machine : public MachineInterface {
- public:
+public:
+  Machine::Machine();
   virtual const char *GetBiosSerialNumber() const;
   virtual const char *GetMachineManufacturer() const;
   virtual const char *GetMachineModel() const;
@@ -35,6 +42,26 @@ class Machine : public MachineInterface {
   virtual int GetProcessorSpeed() const;
   virtual int GetProcessorStepping() const;
   virtual const char *GetProcessorVendor() const;
+
+private:
+  /**
+   * Initializes the CPU architecture information.
+   * Note that empty string will be set if any error occurs.
+   */
+  void InitArchInfo();
+
+  /**
+   * Gets the CPU information from proc file system.
+   * Note that empty string will be assumed if can't read the CPU info.
+   */
+  void InitProcInfo();
+
+private:
+  enum {CPU_FAMILY, CPU_MODEL, CPU_STEPPING, CPU_VENDOR, CPU_NAME, CPU_SPEED,
+        CPU_ARCH, CPU_KEYS_COUNT};
+
+  std::string sysinfo_[CPU_KEYS_COUNT];
+  int cpu_count_;
 };
 
 } // namespace framework

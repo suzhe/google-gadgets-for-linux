@@ -62,17 +62,17 @@ class MemoryInterface {
 
  public:
   /** Gets the total number of bytes of virtual memory. */
-  virtual int64_t GetTotal() const = 0;
+  virtual int64_t GetTotal() = 0;
   /** Gets the total number of bytes of virtual memory currently free. */
-  virtual int64_t GetFree() const = 0;
+  virtual int64_t GetFree() = 0;
   /** Gets the number of bytes of virtual memory currently in use. */
-  virtual int64_t GetUsed() const = 0;
+  virtual int64_t GetUsed() = 0;
   /** Gets the number of bytes of physical memory currently free. */
-  virtual int64_t GetFreePhysical() const = 0;
+  virtual int64_t GetFreePhysical() = 0;
   /** Gets the total number of bytes of physical memory. */
-  virtual int64_t GetTotalPhysical() const = 0;
+  virtual int64_t GetTotalPhysical() = 0;
   /** Gets the number of bytes of physical memory currently in use. */
-  virtual int64_t GetUsedPhysical() const = 0;
+  virtual int64_t GetUsedPhysical() = 0;
 };
 
 /** Interface for retrieving the information about the network. */

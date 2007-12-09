@@ -18,10 +18,13 @@
 #define GGADGET_LINUX_PROCESS_H__
 
 #include <string>
+#include <vector>
 #include <ggadget/framework_interface.h>
 
 namespace ggadget {
 namespace framework {
+
+typedef std::pair<int, std::string> IntStringPair;
 
 class ProcessInfo : public ProcessInfoInterface {
  public:
@@ -41,11 +44,17 @@ class ProcessInfo : public ProcessInfoInterface {
 
 class Processes : public ProcessesInterface {
  public:
+  Processes();
   virtual void Destroy();
 
- public:
   virtual int GetCount() const;
   virtual ProcessInfoInterface *GetItem(int index);
+
+ private:
+  void InitProcesses();
+
+ private:
+   std::vector<IntStringPair> procs_;
 };
 
 class Process : public ProcessInterface {
