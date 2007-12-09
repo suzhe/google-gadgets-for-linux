@@ -22,14 +22,37 @@
 namespace ggadget {
 namespace framework {
 
+
+
 class Memory : public MemoryInterface {
  public:
-  virtual int64_t GetTotal() const;
-  virtual int64_t GetFree() const;
-  virtual int64_t GetUsed() const;
-  virtual int64_t GetFreePhysical() const;
-  virtual int64_t GetTotalPhysical() const;
-  virtual int64_t GetUsedPhysical() const;
+  Memory::Memory();
+  virtual int64_t GetTotal();
+  virtual int64_t GetFree();
+  virtual int64_t GetUsed();
+  virtual int64_t GetFreePhysical();
+  virtual int64_t GetTotalPhysical();
+  virtual int64_t GetUsedPhysical();
+
+ private:
+  /**
+   * Refreshes the memory information.
+   */
+  void Refresh();
+
+  /**
+   * Retrieves the corresponding information from the proc file MemInfo.
+   */
+  void ReadMemInfoFromProc();
+
+ private:
+  enum {TOTAL_PHYSICAL, FREE_PHYSICAL, TOTAL_SWAP, FREE_SWAP, BUFFERS, CACHED,
+         SWAP_CACHED, MEM_INFO_COUNT};
+
+  int64_t mem_info_[MEM_INFO_COUNT];
+  time_t timestamp_;
+  
+
 };
 
 } // namespace framework
