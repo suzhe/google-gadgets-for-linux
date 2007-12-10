@@ -19,6 +19,7 @@
 
 #include "machine.h"
 #include <ggadget/common.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 namespace framework {
@@ -104,7 +105,7 @@ void Machine::InitProcInfo() {
 
     key = TrimString(key);
     value = TrimString(value);
-    
+
     if (key == "processor") {
       cpu_count_ ++;
       continue;
