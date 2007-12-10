@@ -223,6 +223,11 @@ class ElementInterface : public ScriptableInterface {
   /** Clear the specified height value and use the default. */
   virtual void ResetHeightToDefault() = 0;
 
+  /** Gets the client width (pixel width - width of scrollbar etc. if any). */
+  virtual double GetClientWidth() = 0;
+  /** Gets the client height (pixel width - height of scrollbar etc. if any). */
+  virtual double GetClientHeight() = 0;
+
   /**
    * Retrieves the opacity of the element.
    */

@@ -69,6 +69,7 @@ SET(SRCS
   listbox_element.cc
   progressbar_element.cc
   scrollbar_element.cc
+  scrolling_element.cc
 )
 
 SET(LIBS

@@ -53,6 +53,7 @@ class BasicElement::Impl {
         rotation_(0.0),
         opacity_(1.0),
         visible_(true),
+        implicit_(false),
         canvas_(NULL),
         mask_image_(NULL),
         visibility_changed_(true), changed_(true),
@@ -84,7 +85,7 @@ class BasicElement::Impl {
     if (AssignIfDiffer(mask, &mask_)) {
       delete mask_image_;
       mask_image_ = view_->LoadImage(Variant(mask_), true);
-      view_->QueueDraw();
+      QueueDraw();
     }
   }
 
@@ -198,8 +199,7 @@ class BasicElement::Impl {
   void SetOpacity(double opacity) {
     if (opacity != opacity_) {
       opacity_ = opacity;
-      changed_ = true;
-      view_->QueueDraw();
+      QueueDraw();
     }
   }
 
@@ -207,7 +207,7 @@ class BasicElement::Impl {
     if (visible != visible_) {
       visible_ = visible;
       visibility_changed_ = true;
-      view_->QueueDraw();
+      QueueDraw();
     }
   }
 
@@ -224,11 +224,11 @@ class BasicElement::Impl {
   }
 
   double GetParentWidth() const {
-    return parent_ ? parent_->GetPixelWidth() : view_->GetWidth();
+    return parent_ ? parent_->GetClientWidth() : view_->GetWidth();
   }
 
   double GetParentHeight() const {
-    return parent_ ? parent_->GetPixelHeight() : view_->GetHeight();
+    return parent_ ? parent_->GetClientHeight() : view_->GetHeight();
   }
 
   Variant GetWidth() const {
@@ -511,6 +511,18 @@ class BasicElement::Impl {
   }
 
  public:
+  void QueueDraw() {
+    changed_ = true;
+    if (implicit_) {
+      // Any change of an implicit child must be passed to its parent to ensure
+      // correct redraw.
+      ASSERT(parent_);
+      parent_->QueueDraw();
+    } else if (visible_ || visibility_changed_) {
+      view_->QueueDraw();
+    }
+  }
+
   void PostSizeEvent() {
     if (onsize_event_.HasActiveConnections()) {
       Event *event = new Event(Event::EVENT_SIZE);
@@ -520,17 +532,23 @@ class BasicElement::Impl {
 
   void PositionChanged() {
     position_changed_ = true;
-    view_->QueueDraw();
+    // Don't call this->QueueDraw() here, because change of position should
+    // only change the parent.
+    if (parent_) {
+      parent_->QueueDraw();
+    } else {
+      view_->QueueDraw();
+    }
   }
 
   void WidthChanged() {
     size_changed_ = true;
-    view_->QueueDraw();
+    QueueDraw();
   }
 
   void HeightChanged() {
     size_changed_ = true;
-    view_->QueueDraw();
+    QueueDraw();
   }
 
  public:
@@ -786,6 +804,7 @@ class BasicElement::Impl {
   bool visible_;
   std::string tooltip_;
   std::string mask_;
+  bool implicit_;
 
   CanvasInterface *canvas_;
   Image *mask_image_;
@@ -1157,6 +1176,14 @@ void BasicElement::ResetHeightToDefault() {
   impl_->ResetHeightToDefault();
 }
 
+double BasicElement::GetClientWidth() {
+  return GetPixelWidth();
+}
+
+double BasicElement::GetClientHeight() {
+  return GetPixelHeight();
+}
+
 double BasicElement::GetRotation() const {
   return impl_->rotation_;
 }
@@ -1236,10 +1263,7 @@ void BasicElement::SetChildrenScrollable(bool scrollable) {
 }
 
 void BasicElement::QueueDraw() {
-  impl_->changed_ = true;
-  if (impl_->visible_) {
-    impl_->view_->QueueDraw();
-  }
+  impl_->QueueDraw();
 }
 
 EventResult BasicElement::OnMouseEvent(const MouseEvent &event, bool direct,
@@ -1396,6 +1420,15 @@ Variant BasicElement::GetPixelOrRelative(bool is_relative,
   } else {
     return Variant(static_cast<int>(round(pixel)));
   }
+}
+
+bool BasicElement::IsImplicit() const {
+  return impl_->implicit_;
+}
+
+void BasicElement::SetImplicit(bool implicit) {
+  ASSERT(!implicit || impl_->parent_);
+  impl_->implicit_ = implicit;
 }
 
 } // namespace ggadget

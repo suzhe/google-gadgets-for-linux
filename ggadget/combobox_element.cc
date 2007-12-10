@@ -75,8 +75,7 @@ class ComboBoxElement::Impl {
     listbox_->SetAutoscroll(true);
     Slot0<void> *slot = NewSlot(this, &Impl::ListBoxUpdated);
     listbox_->ConnectOnChangeEvent(slot);
-    slot = NewSlot(this, &Impl::ListBoxRedraw);
-    listbox_->ConnectOnRedrawEvent(slot);
+    listbox_->SetImplicit(true);
 
     // TODO edit control
 

@@ -18,49 +18,24 @@
 #define GGADGET_DIV_ELEMENT_H__
 
 #include <stdlib.h>
-#include <ggadget/basic_element.h>
+#include <ggadget/scrolling_element.h>
 
 namespace ggadget {
 
-class DivElement : public BasicElement {
+class DivElement : public ScrollingElement {
  public:
-  DEFINE_CLASS_ID(0xfca426268a584176, BasicElement);
+  DEFINE_CLASS_ID(0xfca426268a584176, ScrollingElement);
 
   DivElement(BasicElement *parent, View *view, const char *name);
   virtual ~DivElement();
 
  public:
   /**
-   * Gets and sets the autoscroll property.
-   * @c true if the div automatically shows scrollbars if necessary; @c false
-   * if it doesn't show scrollbars. Default is @c false.
-   */
-  bool IsAutoscroll() const;
-  void SetAutoscroll(bool autoscroll);
-
-  /** Called by subclasses to scroll to an absolute position. */
-  void SetScrollYPosition(int pos);
-
-  /**
    * Gets and sets the background color or image of the element. The image is
    * repeated if necessary, not stretched.
    */
   Variant GetBackground() const;
   void SetBackground(const Variant &background);
-
-  virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
-                                   BasicElement **fired_element,
-                                   BasicElement **in_element);
-  virtual EventResult OnDragEvent(const DragEvent &event, bool direct,
-                                  BasicElement **fired_element);
-
-  /**
-   * Overrides because this element supports scrolling.
-   * @see ElementInterface::SelfCoordToChildCoord()
-   */
-  virtual void SelfCoordToChildCoord(const BasicElement *child,
-                                     double x, double y,
-                                     double *child_x, double *child_y) const;
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
@@ -74,11 +49,10 @@ class DivElement : public BasicElement {
   DivElement(BasicElement *parent, View *view,
              const char *tag_name, const char *name, Elements *children);
 
-  virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+  virtual void GetContentSize(double *width, double *height);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DivElement);
