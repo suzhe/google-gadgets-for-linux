@@ -83,8 +83,21 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
   RegisterProperty("selectedItem",
                    NewSlot(impl_->elements_, &ListElements::GetSelectedItem),
                    NewSlot(impl_->elements_, &ListElements::SetSelectedItem));
-  RegisterMethod("ClearSelection",
+
+  RegisterMethod("clearSelection",
                  NewSlot(impl_->elements_, &ListElements::ClearSelection));
+
+  // Version 5.5 newly added methods and properties.
+  RegisterProperty("itemSeparatorColor",
+                   NewSlot(impl_->elements_, &ListElements::GetItemSeparatorColor),
+                   NewSlot(impl_->elements_, &ListElements::SetItemSeparatorColor));
+  RegisterMethod("appendString",
+                 NewSlot(impl_->elements_, &ListElements::AppendString));
+  RegisterMethod("insertStringAt",
+                 NewSlot(impl_->elements_, &ListElements::InsertStringAt));
+  RegisterMethod("removeString",
+                 NewSlot(impl_->elements_, &ListElements::RemoveString));
+
   RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 

@@ -70,11 +70,13 @@ class ItemElement : public BasicElement {
   void SetIndex(int index);
 
   /** 
-   * Gets and sets the text of the label contained inside this element, 
-   * if a labelg exists.
+   * Gets and sets the text of the label contained inside this element. 
+   * AddLabelWithText will create the Label, the other methods will 
+   * assume it exists.
    */
   const char *GetLabelText() const;
   void SetLabelText(const char *text);
+  bool AddLabelWithText(const char *text);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
