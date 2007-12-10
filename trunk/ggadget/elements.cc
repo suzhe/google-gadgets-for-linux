@@ -58,9 +58,13 @@ class Elements::Impl {
         factory_->CreateElement(tag_name, owner_, view_, name));
     if (e == NULL)
       return NULL;
-    children_.push_back(e);
-    count_changed_ = true;
-    view_->OnElementAdd(e);
+    if (view_->OnElementAdd(e)) { 
+      children_.push_back(e);
+      count_changed_ = true;
+    } else {
+      delete e;
+      e = NULL;
+    }
     return e;
   }
 
@@ -71,11 +75,15 @@ class Elements::Impl {
         factory_->CreateElement(tag_name, owner_, view_, name));
     if (e == NULL)
       return NULL;
-    Children::iterator ite = std::find(children_.begin(), children_.end(),
-                                       before);
-    children_.insert(ite, e);
-    count_changed_ = true;
-    view_->OnElementAdd(e);
+    if (view_->OnElementAdd(e)) {
+      Children::iterator ite = std::find(children_.begin(), children_.end(),
+                                         before);
+      children_.insert(ite, e);
+      count_changed_ = true;
+    } else {
+      delete e;
+      e = NULL;
+    }
     return e;
   }
 

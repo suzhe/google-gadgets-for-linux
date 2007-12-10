@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cmath>
 #include "texture.h"
 #include "canvas_interface.h"
 #include "graphics_interface.h"
@@ -47,6 +48,15 @@ class Texture::Impl {
     } else {
       image_ = new Image(graphics, file_manager, name, false);
     }
+  }
+
+  Impl(const Color &color, double opacity)
+      : image_(NULL), color_(color), opacity_(opacity),
+        name_(StringPrintf("#%02x%02x%02x%02x",
+                           static_cast<int>(round(opacity * 255)),
+                           static_cast<int>(round(color.red * 255)),
+                           static_cast<int>(round(color.green * 255)),
+                           static_cast<int>(round(color.blue * 255)))) {
   }
 
   Impl(const GraphicsInterface *graphics,
@@ -105,6 +115,10 @@ Texture::Texture(const GraphicsInterface *graphics,
     : impl_(new Impl(graphics, data, data_size)) {
 }
 
+Texture::Texture(const Color &color, double opacity)
+    : impl_(new Impl(color, opacity)) {
+}
+
 Texture::Texture(const Texture &another)
     : impl_(new Impl(*another.impl_)) {
 }
@@ -124,23 +138,27 @@ void Texture::DrawText(CanvasInterface *canvas, double x, double y,
                        const FontInterface *f, CanvasInterface::Alignment align, 
                        CanvasInterface::VAlignment valign,
                        CanvasInterface::Trimming trimming, 
-                       CanvasInterface::TextFlag text_flag) const {
+                       int text_flags) const {
   ASSERT(canvas);
   if (impl_->image_) {
     // Don't apply opacity_ here because it is only applicable with color_.    
     canvas->DrawTextWithTexture(x, y, width, height, text, f, 
                                 impl_->image_->GetCanvas(), 
-                                align, valign, trimming, text_flag);
+                                align, valign, trimming, text_flags);
   } else if (impl_->opacity_ > 0) {
     if (impl_->opacity_ != 1.0) {
       canvas->PushState();
       canvas->MultiplyOpacity(impl_->opacity_);
     }
     canvas->DrawText(x, y, width, height, text, f, impl_->color_, 
-                     align, valign, trimming, text_flag);
+                     align, valign, trimming, text_flags);
     if (impl_->opacity_ != 1.0)
       canvas->PopState();
   }
+}
+
+Color Texture::GetColor() {
+  return impl_->color_;
 }
 
 const char *Texture::GetSrc() {

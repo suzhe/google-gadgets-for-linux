@@ -15,6 +15,8 @@
 */
 
 #include "gadget.h"
+#include "contentarea_element.h"
+#include "content_item.h"
 #include "details_view.h"
 #include "display_window.h"
 #include "file_manager_interface.h"
@@ -22,12 +24,13 @@
 #include "gadget_host_interface.h"
 #include "menu_interface.h"
 #include "script_context_interface.h"
+#include "scriptable_array.h"
 #include "scriptable_framework.h"
 #include "scriptable_helper.h"
 #include "scriptable_menu.h"
 #include "scriptable_options.h"
 #include "view_host_interface.h"
-#include "view_interface.h"
+#include "view.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -75,26 +78,62 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   class Plugin : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
-    Plugin(Impl *gadget_impl) {
-      GadgetHostInterface *host = gadget_impl->host_;
+    Plugin(Impl *gadget_impl) :
+        gadget_host_(gadget_impl->host_),
+        main_view_(down_cast<View *>(gadget_impl->main_view_host_->GetView())) {
       RegisterProperty("plugin_flags", NULL, // No getter.
-                       NewSlot(host, &GadgetHostInterface::SetPluginFlags));
+                       NewSlot(gadget_host_,
+                               &GadgetHostInterface::SetPluginFlags));
       RegisterMethod("RemoveMe",
-                     NewSlot(host, &GadgetHostInterface::RemoveMe));
+                     NewSlot(gadget_host_, &GadgetHostInterface::RemoveMe));
       RegisterMethod("ShowDetailsView",
                      NewSlot(gadget_impl, &Impl::ScriptShowDetailsView));
       RegisterMethod("CloseDetailsView",
                      NewSlot(gadget_impl, &Impl::CloseDetailsView));
       RegisterMethod("ShowOptionsDialog",
                      NewSlot(gadget_impl, &Impl::ShowOptionsDialog));
-
       RegisterSignal("onShowOptionsDlg",
                      &gadget_impl->onshowoptionsdlg_signal_);
       RegisterSignal("onAddCustomMenuItems", &onaddcustommenuitems_signal_);
       RegisterSignal("onCommand", &oncommand_signal_);
       RegisterSignal("onDisplayStateChange", &ondisplaystatechange_signal_);
       RegisterSignal("onDisplayTargetChange", &ondisplaytargetchange_signal_);
+
+      // Deprecated or unofficial properties and methods.
+      RegisterProperty("title", NULL, // No getter.
+                       NewSlot(implicit_cast<ViewInterface *>(main_view_),
+                               &ViewInterface::SetCaption));
+      RegisterProperty("about_text", NULL, // No getter.
+                       NewSlot(gadget_impl, &Impl::SetAboutText));
+      RegisterProperty("window_width",
+                       NewSlot(implicit_cast<ViewInterface *>(main_view_),
+                               &ViewInterface::GetWidth), NULL);
+      RegisterProperty("window_height",
+                       NewSlot(implicit_cast<ViewInterface *>(main_view_),
+                               &ViewInterface::GetHeight), NULL);
+      RegisterMethod("SetFlags", NewSlot(this, &Plugin::SetFlags));
+      RegisterMethod("SetIcons", NewSlot(this, &Plugin::SetIcons));
+
+      // Register properties and methods for content area.
+      RegisterProperty("contant_flags", NULL, // Write only.
+                       NewSlot(this, &Plugin::SetContentFlags));
+      RegisterProperty("max_content_items",
+                       NewSlot(this, &Plugin::GetMaxContentItems),
+                       NewSlot(this, &Plugin::SetMaxContentItems));
+      RegisterProperty("content_items",
+                       NewSlot(this, &Plugin::GetContentItems),
+                       NewSlot(this, &Plugin::SetContentItems));
+      RegisterProperty("pin_images",
+                       NewSlot(this, &Plugin::GetPinImages),
+                       NewSlot(this, &Plugin::SetPinImages));
+      RegisterMethod("AddContentItem",
+                     NewSlot(this, &Plugin::AddContentItem));
+      RegisterMethod("RemoveContentItem",
+                     NewSlot(this, &Plugin::RemoveContentItem));
+      RegisterMethod("RemoveAllContentItems",
+                     NewSlot(this, &Plugin::RemoveAllContentItems));
     }
+
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
     void OnAddCustomMenuItems(MenuInterface *menu) {
@@ -102,6 +141,63 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       onaddcustommenuitems_signal_(&scriptable_menu);
     }
 
+    void SetFlags(int plugin_flags, int content_flags) {
+      gadget_host_->SetPluginFlags(plugin_flags);
+      SetContentFlags(content_flags);
+    }
+
+    void SetIcons(const Variant &param1, const Variant &param2) {
+      LOG("pluginHelper.SetIcons is no longer supported. "
+          "Please specify icons in the manifest file.");
+    }
+
+    void SetContentFlags(int flags) {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->SetContentFlags(flags);
+    }
+
+    size_t GetMaxContentItems() {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      return content_area ? content_area->GetMaxContentItems() : 0;
+    }
+
+    void SetMaxContentItems(size_t max_content_items) {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->SetMaxContentItems(max_content_items);
+    }
+
+    ScriptableArray *GetContentItems() {
+      LOG("pluginHelper.content_items is no longer supported. "
+          "Please use the methods of the contentarea element instead.");
+      return NULL;
+    }
+    void SetContentItems(ScriptableArray *array) { GetContentItems(); }
+
+    ScriptableArray *GetPinImages() {
+      LOG("pluginHelper.pin_images is no longer supported. "
+          "Please use the methods of contentarea element instead.");
+      return NULL;
+    }
+    void SetPinImages(ScriptableArray *array) { GetPinImages(); }
+
+    void AddContentItem(ContentItem *item,
+                        ContentAreaElement::DisplayOptions options) {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->AddContentItem(item, options);
+    }
+
+    void RemoveContentItem(ContentItem *item) {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->RemoveContentItem(item);
+    }
+
+    void RemoveAllContentItems() {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->RemoveAllContentItems();
+    }
+
+    GadgetHostInterface *gadget_host_;
+    View *main_view_;
     Signal1<void, ScriptableMenu *> onaddcustommenuitems_signal_;
     Signal1<void, int> oncommand_signal_;
     Signal1<void, int> ondisplaystatechange_signal_;
@@ -138,11 +234,11 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       : host_(host),
         debug_(this),
         storage_(this),
-        plugin_(this),
         scriptable_options_(host->GetOptions()),
         gadget_global_prototype_(this),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           &gadget_global_prototype_)),
+        plugin_(this),
         details_view_host_(NULL),
         has_options_xml_(false) {
     RegisterConstant("debug", &debug_);
@@ -326,15 +422,19 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     return true;
   }
 
+  void SetAboutText(const char *about_text) {
+    manifest_info_map_[kManifestAboutText] = about_text;
+  }
+
   Signal1<void, DisplayWindow *> onshowoptionsdlg_signal_;
   GadgetHostInterface *host_;
   Debug debug_;
   Storage storage_;
   Strings strings_;
-  Plugin plugin_;
   ScriptableOptions scriptable_options_;
   GadgetGlobalPrototype gadget_global_prototype_;
   ViewHostInterface *main_view_host_;
+  Plugin plugin_;
   ViewHostInterface *details_view_host_;
   GadgetStringMap manifest_info_map_;
   bool has_options_xml_;

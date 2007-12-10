@@ -42,6 +42,8 @@ class Texture {
           FileManagerInterface *file_manager,
           const char *name);
 
+  Texture(const Color &color, double opacity);
+
   /**
    * Creates a new texture from the gadget package or directory.
    * The image is initialized immediately.
@@ -71,7 +73,7 @@ class Texture {
                 CanvasInterface::Alignment align,
                 CanvasInterface::VAlignment valign,
                 CanvasInterface::Trimming trimming,
-                CanvasInterface::TextFlag text_flag) const;
+                int text_flags) const;
 
   /**
    * @return the file name this texture is loaded from a file; returns the
@@ -79,6 +81,9 @@ class Texture {
    *     string.
    */
   const char *GetSrc();
+
+  /** @return the color. If this texture is an image texture, returns black. */
+  Color GetColor();
 
   /** Utility function to get the src of a texture which can be @c NULL. */
   static const char *GetSrc(Texture *texture) {

@@ -329,7 +329,7 @@ bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
         // Ignore the result, continue to scan other files even on error.
         ScanDirFilenames(abs_path.c_str());
       } else {
-        unz_file_pos dummy_unz_pos = { 0 };
+        unz_file_pos dummy_unz_pos = { 0, 0 };
         files_[abs_path.substr(base_path_.size() + 1)] = dummy_unz_pos;
       }
     }

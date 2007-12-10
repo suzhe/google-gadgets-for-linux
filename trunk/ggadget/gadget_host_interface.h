@@ -112,8 +112,8 @@ class GadgetHostInterface {
   virtual void DebugOutput(DebugLevel level, const char *message) const = 0;
 
   /**
-   * Returns the current time in microsecond units since the Epoch
-   * (00:00:00 UTC, January 1, 1970). 
+   * Returns the current time in millisecond units since the Epoch
+   * (00:00:00 UTC, January 1, 1970).
    */
   virtual uint64_t GetCurrentTime() const = 0;
 
