@@ -182,6 +182,20 @@ void ItemElement::SetLabelText(const char *text) {
   }
 }
 
+bool ItemElement::AddLabelWithText(const char *text) {
+  ElementInterface *e = GetChildren()->AppendElement("label", "");
+  if (e) {
+    ASSERT(e->IsInstanceOf(LabelElement::CLASS_ID));
+    LabelElement *label = down_cast<LabelElement *>(e);
+    label->GetTextFrame()->SetText(text);
+
+    QueueDraw();
+    return true;
+  } 
+
+  return false;  
+}
+
 BasicElement *ItemElement::CreateInstance(BasicElement *parent, View *view,
                                           const char *name) {
   return new ItemElement(parent, view, "item", name);

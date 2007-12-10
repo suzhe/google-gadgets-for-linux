@@ -48,7 +48,6 @@ class ListElements : public Elements {
                                            const char *name);
 
  public:
-
   /**
    * Gets and sets the current selected index.
    * If multiple items are selected, selectedIndex is the index of the first
@@ -101,6 +100,10 @@ class ListElements : public Elements {
   const Texture *GetItemSelectedTexture() const;
   void SetItemSelectedColor(const Variant &color);
 
+  /** Gets or sets the texture of the item separator. */
+  Variant GetItemSeparatorColor() const;
+  void SetItemSeparatorColor(const Variant &color);
+
   /** Gets and sets whether there are separator lines between the items. */
   bool HasItemSeparator() const;
   void SetItemSeparator(bool separator);
@@ -109,6 +112,26 @@ class ListElements : public Elements {
   bool IsMultiSelect() const;
   void SetMultiSelect(bool multiselect);
 
+  /** 
+   * Creates an Item element with a single Label child with the specified text.
+   * @return true on success, false otherwise.
+   */
+  bool AppendString(const char *str);
+
+  /** 
+   * Creates an Item element with a single Label child with the specified text,
+   * at the specified index.
+   * @return true on success, false otherwise.
+   */
+  bool InsertStringAt(const char *str, int index);
+
+  /** 
+   * Searches for the lowest-indexed Item element that has one Label child
+   * with the specified text,
+   */
+  void RemoveString(const char *str);
+
+ public: // Overridden Elements methods
   virtual void Layout();
   virtual const CanvasInterface *Draw(bool *changed);
 

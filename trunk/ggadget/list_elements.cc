@@ -34,6 +34,7 @@ static const char kErrorItemExpected[] =
 // Default values obtained from the Windows version.
 static const char kDefaultItemOverColor[] = "#DEFBFF";
 static const char kDefaultItemSelectedColor[] = "#C6F7F7";
+static const char kDefaultItemSepColor[] = "#F7F3F7";
 
 class ListElements::Impl {
  public:
@@ -46,7 +47,8 @@ class ListElements::Impl {
         multiselect_(false), item_separator_(false), separator_changed_(true),
         selected_index_(-2), items_canvas_(NULL), 
         item_over_color_(view->LoadTexture(Variant(kDefaultItemOverColor))),
-        item_selected_color_(view->LoadTexture(Variant(kDefaultItemSelectedColor))) {
+        item_selected_color_(view->LoadTexture(Variant(kDefaultItemSelectedColor))),
+        item_separator_color_(view->LoadTexture(Variant(kDefaultItemSepColor))) {
   }
 
   ~Impl() {
@@ -54,6 +56,8 @@ class ListElements::Impl {
     item_over_color_ = NULL;
     delete item_selected_color_;
     item_selected_color_ = NULL;  
+    delete item_separator_color_;
+    item_separator_color_ = NULL;
 
     if (items_canvas_) {
       items_canvas_->Destroy();
@@ -72,7 +76,7 @@ class ListElements::Impl {
   // of an element "pending" to become selected. Initialized to -2.
   int selected_index_;
   CanvasInterface *items_canvas_;
-  Texture *item_over_color_, *item_selected_color_;
+  Texture *item_over_color_, *item_selected_color_, *item_separator_color_;
 
   void Layout() { 
     // Inform children (items) that default size has changed.
@@ -109,6 +113,7 @@ class ListElements::Impl {
 
   const CanvasInterface *Draw(bool *changed) {
     const CanvasInterface **c_canvas = NULL;  
+    CanvasInterface *separator = NULL;
     bool child_changed = false;
 
     bool change = separator_changed_;
@@ -165,7 +170,7 @@ class ListElements::Impl {
         const GraphicsInterface *gfx = parent_->GetView()->GetGraphics();
         items_canvas_ = gfx->NewCanvas(canvas_width, canvas_height);
         if (!items_canvas_) {
-          DLOG("Error: unable to create canvas.");
+          DLOG("Error: unable to create list elements canvas.");
           goto exit;
         }
       } else {
@@ -173,7 +178,20 @@ class ListElements::Impl {
         items_canvas_->ClearCanvas();
       }
 
+      if (item_separator_ && item_separator_color_) {
+        const GraphicsInterface *gfx = parent_->GetView()->GetGraphics();
+        separator = gfx->NewCanvas(static_cast<size_t>(ceil(pixel_item_width_)), 
+                                   2);
+        if (!separator) {
+          DLOG("Error: unable to create separator canvas.");
+          goto exit;
+        }
+
+        item_separator_color_->Draw(separator);
+      }
+
       double y = 0;
+      double sep_y = pixel_item_height_ - 2;
       for (int i = 0; i < child_count; i++, y+= pixel_item_height_) {
         if (c_canvas[i]) {        
           items_canvas_->PushState();
@@ -198,11 +216,8 @@ class ListElements::Impl {
             items_canvas_->DrawCanvas(.0, .0, c_canvas[i]);
           }
 
-          if (item_separator_) {
-            // Default Windows color is 247 243 247.
-            double sep_y = pixel_item_height_ - 1;
-            items_canvas_->DrawLine(0, sep_y, pixel_item_width_, sep_y, 
-                                    2, Color::ColorFromChars(247, 243, 247));
+          if (separator) {
+            items_canvas_->DrawCanvas(0, sep_y, separator);
           }
 
           items_canvas_->PopState();
@@ -216,6 +231,11 @@ class ListElements::Impl {
     if (c_canvas) {
       delete[] c_canvas;
       c_canvas = NULL;
+    }
+
+    if (separator) {
+      separator->Destroy();
+      separator = NULL;
     }
 
     // This field is no longer used after the first draw.
@@ -293,7 +313,7 @@ class ListElements::Impl {
       }
     }  
     return result;
-  }  
+  }
 };
 
 ListElements::ListElements(ElementFactoryInterface *factory,
@@ -440,6 +460,16 @@ void ListElements::SetItemSelectedColor(const Variant &color) {
       LOG(kErrorItemExpected);
     }
   }  
+  impl_->parent_->QueueDraw();
+}
+
+Variant ListElements::GetItemSeparatorColor() const {
+  return Variant(Texture::GetSrc(impl_->item_separator_color_));
+}
+
+void ListElements::SetItemSeparatorColor(const Variant &color) {
+  delete impl_->item_separator_color_;
+  impl_->item_separator_color_ = impl_->parent_->GetView()->LoadTexture(color);
   impl_->parent_->QueueDraw();
 }
 
@@ -614,6 +644,64 @@ void ListElements::SelectRange(ItemElement *endpoint) {
   if (changed) {
     impl_->parent_->FireOnChangeEvent();
   }
+}
+
+bool ListElements::AppendString(const char *str) {
+  ElementInterface *child = AppendElement("item", "");
+  if (!child) {
+    return false;
+  }
+
+  ASSERT(child->IsInstanceOf(ItemElement::CLASS_ID));
+  ItemElement *item = down_cast<ItemElement *>(child);
+  bool result = item->AddLabelWithText(str);
+  if (!result) {
+    // Cleanup on failure.
+    RemoveElement(child);
+  }    
+  return result;
+}
+
+bool ListElements::InsertStringAt(const char *str, int index) {
+  if (GetCount() == index) {
+    return AppendString(str);
+  }
+
+  const ElementInterface *before = GetItemByIndex(index);
+  if (!before) {
+    return false;
+  }
+
+  ElementInterface *child = InsertElement("item", before, ""); 
+  if (!child) {
+    return false;
+  }
+
+  ASSERT(child->IsInstanceOf(ItemElement::CLASS_ID));
+  ItemElement *item = down_cast<ItemElement *>(child);
+  bool result = item->AddLabelWithText(str);  
+  if (!result) {
+    // Cleanup on failure.
+    RemoveElement(child);
+  }    
+  return result;
+}
+
+void ListElements::RemoveString(const char *str) {
+  int childcount = GetCount();
+  for (int i = 0; i < childcount; i++) {
+    ElementInterface *child = GetItemByIndex(i);
+    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+      ItemElement *item = down_cast<ItemElement *>(child);
+      const char *text = item->GetLabelText();
+      if (text && strcmp(str, text) == 0) {
+        RemoveElement(child);
+        return;
+      }
+    } else {
+      LOG(kErrorItemExpected);
+    }
+  }  
 }
 
 void ListElements::Layout() {
