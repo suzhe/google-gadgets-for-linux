@@ -42,8 +42,6 @@ class ListBoxElement : public DivElement {
 
   void FireOnChangeEvent();
 
-  virtual void QueueDraw(); 
-
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element);

@@ -39,7 +39,7 @@ class ListBoxElement::Impl {
   }
 
   ListElements *elements_;
-  EventSignal onchange_event_, redraw_event_;
+  EventSignal onchange_event_;
 };
 
 ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
@@ -55,10 +55,10 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
                    NewSlot(implicit_cast<DivElement *>(this),
                            &DivElement::SetBackground));
   RegisterProperty("autoscroll",
-                   NewSlot(implicit_cast<DivElement *>(this), 
-                           &DivElement::IsAutoscroll),
-                   NewSlot(implicit_cast<DivElement *>(this), 
-                           &DivElement::SetAutoscroll));
+                   NewSlot(implicit_cast<ScrollingElement *>(this), 
+                           &ScrollingElement::IsAutoscroll),
+                   NewSlot(implicit_cast<ScrollingElement *>(this), 
+                           &ScrollingElement::SetAutoscroll));
   RegisterProperty("itemHeight",
                    NewSlot(impl_->elements_, &ListElements::GetItemHeight),
                    NewSlot(impl_->elements_, &ListElements::SetItemHeight));
@@ -113,18 +113,9 @@ Connection *ListBoxElement::ConnectEvent(const char *event_name,
   return BasicElement::ConnectEvent(event_name, handler);
 }
 
-void ListBoxElement::QueueDraw() {
-  impl_->redraw_event_();
-  DivElement::QueueDraw();
-}
-
 void ListBoxElement::ScrollToIndex(int index) {
   SetScrollYPosition(index * 
                      static_cast<int>(impl_->elements_->GetItemPixelHeight()));
-}
-
-Connection *ListBoxElement::ConnectOnRedrawEvent(Slot0<void> *slot) {
-  return impl_->redraw_event_.Connect(slot);
 }
 
 Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {

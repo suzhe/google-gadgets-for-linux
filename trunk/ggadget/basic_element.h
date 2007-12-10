@@ -85,6 +85,8 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void ResetWidthToDefault();
   virtual bool HeightIsSpecified() const;
   virtual void ResetHeightToDefault();
+  virtual double GetClientWidth();
+  virtual double GetClientHeight();
 
   virtual Variant GetWidth() const;
   virtual void SetWidth(const Variant &width);
@@ -116,6 +118,15 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
                                    Slot0<void> *handler);
 
  public:
+  /**
+   * Gets and sets whether this element is an implicit child of its parent.
+   * An implicit child is createdd by its parent merely for implementation.
+   * It is invisible from the script and the view/element hierarchy.
+   * For example, the div element contains an implicit scrollbar child.
+   */
+  bool IsImplicit() const;
+  void SetImplicit(bool implicit);
+
   /** Get the associated View of the current element. */
   const View *GetView() const;
   /** Get the associated View of the current element. */
@@ -242,7 +253,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    * Normally don't call this inside a drawing function (i.e. drawing has
    * already started) or there might be extra draw attempts.
    */
-  virtual void QueueDraw();
+  void QueueDraw();
 
   /** Enum used by ParsePixelOrRelative() below. */
   enum ParsePixelOrRelativeResult {

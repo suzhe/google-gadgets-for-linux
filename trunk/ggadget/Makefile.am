@@ -80,6 +80,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_menu.h \
 			  scriptable_options.h \
 			  scrollbar_element.h \
+			  scrolling_element.h \
 			  signals.h \
 			  slot.h \
 			  string_utils.h \
@@ -132,6 +133,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_menu.cc \
 			  scriptable_options.cc \
 			  scrollbar_element.cc \
+			  scrolling_element.cc \
 			  signals.cc \
 			  slot.cc \
 			  string_utils.cc \
