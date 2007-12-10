@@ -23,11 +23,6 @@
 namespace ggadget {
 namespace framework {
 
-bool SplitString(const std::string &source, const std::string &separator,
-                 std::string *result_left, std::string *result_right);
-
-std::string TrimString(const std::string& s);
-
 class Machine : public MachineInterface {
 public:
   Machine::Machine();

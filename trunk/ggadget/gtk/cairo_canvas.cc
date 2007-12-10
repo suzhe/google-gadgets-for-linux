@@ -385,8 +385,8 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
   pango_layout_set_attributes(layout, attr_list);
 
   // Set alignment. This is only effective when wordwrap is set
-  // because when wordwrap is unsert, the width have to be set
-  // to -1, thus the alignment is useless.
+  // because when wordwrap is unset, the width has to be 
+  // -1, thus the alignment is useless.
   if (align == ALIGN_LEFT)
     pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
   else if (align == ALIGN_CENTER)
@@ -581,7 +581,7 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
     *width = *height = 0; 
     return true;
   }
-  
+
   const CairoFont *font = down_cast<const CairoFont*>(f); 
   PangoLayout *layout = pango_cairo_create_layout(cr_);
   pango_layout_set_text(layout, text, -1);
@@ -611,7 +611,7 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
   pango_layout_get_pixel_size(layout, &w, &h);
   *width = w;
   *height = h;
-  
+
   // This will also free underline_attr and strikeout_attr.
   pango_attr_list_unref(attr_list);
   g_object_unref(layout);
