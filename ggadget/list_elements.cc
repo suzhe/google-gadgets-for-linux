@@ -18,6 +18,7 @@
 #include "listbox_element.h"
 #include "item_element.h"
 #include "basic_element.h"
+#include "color.h"
 #include "common.h"
 #include "element_factory_interface.h"
 #include "graphics_interface.h"
@@ -28,13 +29,15 @@
 
 namespace ggadget {
 
-static const char kErrorItemExpected[] = 
+static const char kErrorItemExpected[] =
   "Incorrect element type: Item/ListItem expected.";
 
 // Default values obtained from the Windows version.
-static const char kDefaultItemOverColor[] = "#DEFBFF";
-static const char kDefaultItemSelectedColor[] = "#C6F7F7";
-static const char kDefaultItemSepColor[] = "#F7F3F7";
+static const Color kDefaultItemOverColor(0xDE/255.0, 0xFB/255.0, 1.0);
+static const Color kDefaultItemSelectedColor(0xC6/255.0,
+                                             0xF7/255.0,
+                                             0xF7/255.0);
+static const Color kDefaultItemSepColor(0xF7/255.0, 0xF3/255.0, 0xF7/255.0);
 
 class ListElements::Impl {
  public:
@@ -45,17 +48,17 @@ class ListElements::Impl {
         item_width_specified_(false), item_height_specified_(false),
         item_width_relative_(false), item_height_relative_(false),
         multiselect_(false), item_separator_(false), separator_changed_(true),
-        selected_index_(-2), items_canvas_(NULL), 
-        item_over_color_(view->LoadTexture(Variant(kDefaultItemOverColor))),
-        item_selected_color_(view->LoadTexture(Variant(kDefaultItemSelectedColor))),
-        item_separator_color_(view->LoadTexture(Variant(kDefaultItemSepColor))) {
+        selected_index_(-2), items_canvas_(NULL),
+        item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
+        item_selected_color_(new Texture(kDefaultItemSelectedColor, 1.0)),
+        item_separator_color_(new Texture(kDefaultItemSepColor, 1.0)) {
   }
 
   ~Impl() {
     delete item_over_color_;
     item_over_color_ = NULL;
     delete item_selected_color_;
-    item_selected_color_ = NULL;  
+    item_selected_color_ = NULL;
     delete item_separator_color_;
     item_separator_color_ = NULL;
 

@@ -21,8 +21,10 @@
 
 #include <gtk/gtk.h>
 #include <ggadget/ggadget.h>
+#include <ggadget/view.h>
 
 class GadgetViewWidget;
+class View;
 
 namespace ggadget {
 
@@ -89,7 +91,7 @@ class GtkViewHost : public ViewHostInterface {
   static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);
 
   GadgetHostInterface *gadget_host_;
-  ViewInterface *view_;
+  View *view_;
   ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;
   GraphicsInterface *gfx_;

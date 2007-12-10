@@ -114,11 +114,11 @@ var gddFontBold = 577;
 var gddFontSnippet = 575;
 var gddFontExtraInfo = 576;
 
-// Text Color IDs
-var gddColorNormalText = -704;
-var gddColorNormalBackground = -701;
-var gddColorSnippet = 550;
-var gddColorExtraInfo = 551;
+// Text Color Names
+var gddColorNormalText = "#000000";
+var gddColorNormalBackground = "#FBFBFB";
+var gddColorSnippet = "#666666";
+var gddColorExtraInfo = "#224499";
 
 // Text flags
 var gddTextFlagCenter = 1;

@@ -17,7 +17,7 @@
 #include <sys/time.h>
 
 #include <ggadget/ggadget.h>
-#include <ggadget/view.h>
+#include <ggadget/content_item.h>
 #include <ggadget/xml_dom.h>
 #include <ggadget/xml_http_request.h>
 #include "gtk_view_host.h"
@@ -81,7 +81,8 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Continue to initialize the script context.
     onoptionchanged_connection_ = options->ConnectOnOptionChanged(
-        NewSlot(view_, &ViewInterface::OnOptionChanged));
+        NewSlot(implicit_cast<ViewInterface *>(view_),
+                &ViewInterface::OnOptionChanged));
 
     // Register global classes into script context.
     script_context_->RegisterClass(
@@ -90,6 +91,9 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
         "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
     script_context_->RegisterClass(
         "DetailsView", NewSlot(DetailsView::CreateInstance));
+    script_context_->RegisterClass(
+        "ContentItem", NewFunctorSlot<ContentItem *>(
+             ContentItem::ContentItemCreator(view_)));
 
     // Execute common.js to initialize global constants and compatibility
     // adapters.

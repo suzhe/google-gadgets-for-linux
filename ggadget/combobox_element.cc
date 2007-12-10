@@ -77,7 +77,6 @@ class ComboBoxElement::Impl {
     listbox_->ConnectOnChangeEvent(slot);
     slot = NewSlot(this, &Impl::ListBoxRedraw);
     listbox_->ConnectOnRedrawEvent(slot);
-    view->OnElementAdd(listbox_);
 
     // TODO edit control
 

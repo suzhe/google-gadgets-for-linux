@@ -22,6 +22,7 @@
 
 namespace ggadget {
 
+class Color;
 class Texture;
 class BasicElement;
 class View;
@@ -33,7 +34,8 @@ class TextFrame {
 
   /** Gets and sets the text of the frame. */
   const char *GetText() const;
-  void SetText(const char *text);
+  /** Returns @c true if the text changed. */
+  bool SetText(const char *text);
   
   void DrawWithTexture(CanvasInterface *canvas, double x, double y, 
                        double width, double height, Texture *texture);
@@ -43,8 +45,14 @@ class TextFrame {
   /** 
    * Returns the width and height required to display the text 
    * without wrapping or trimming.
-   */ 
+   */
   void GetSimpleExtents(double *width, double *height);
+
+  /**
+   * Returns the width and height required to display to text within given
+   * in_width without trimming.
+   */
+  void GetExtents(double in_width, double *width, double *height);
 
  public: // registered properties  
   /** Gets and sets the text horizontal alignment. */
@@ -61,11 +69,12 @@ class TextFrame {
    */
   Variant GetColor() const;
   void SetColor(const Variant &color);
+  void SetColor(const Color &color, double opacity);
 
   /** Gets and sets the text font. */
   const char *GetFont() const;
   void SetFont(const char *font);
-  
+
   /** Gets and sets whether the text is italicized. */
   bool IsItalic() const;
   void SetItalic(bool italic);

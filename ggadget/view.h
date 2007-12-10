@@ -26,6 +26,7 @@ namespace ggadget {
 template <typename R> class Slot0;
 class ViewHostInterface;
 class BasicElement;
+class ContentAreaElement;
 class ElementFactoryInterface;
 class ScriptContextInterface;
 
@@ -94,8 +95,11 @@ class View : public ScriptableHelper<ViewInterface> {
   /** @return the current graphics interface used for drawing elements. */
   const GraphicsInterface *GetGraphics() const;
 
-  /** Called when any element is added into the view hierarchy. */
-  void OnElementAdd(BasicElement *element);
+  /**
+   * Called when any element is about to be added into the view hierarchy.
+   * @return @c true if the element is allowed to be added into the view.
+   */
+  bool OnElementAdd(BasicElement *element);
   /** Called when any element in the view hierarchy is about to be removed. */
   void OnElementRemove(BasicElement *element);
 
@@ -205,6 +209,15 @@ class View : public ScriptableHelper<ViewInterface> {
    *     dialog.
    */
   std::string Prompt(const char *message, const char *default_value);
+
+  /**
+   * Gets the current time.
+   * Delegated to @c GadgetHostInterface::GetCurrentTime().
+   */
+  uint64_t GetCurrentTime();
+
+  /** Returns the content area element if there is one, or @c NULL. */
+  ContentAreaElement *GetContentAreaElement();
 
  private:
   class Impl;

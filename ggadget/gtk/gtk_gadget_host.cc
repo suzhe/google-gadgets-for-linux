@@ -28,6 +28,7 @@
 #include <ggadget/button_element.h>
 #include <ggadget/checkbox_element.h>
 #include <ggadget/combobox_element.h>
+#include <ggadget/contentarea_element.h>
 #include <ggadget/div_element.h>
 #include <ggadget/edit_element.h>
 #include <ggadget/img_element.h>
@@ -83,6 +84,8 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              &ggadget::CheckBoxElement::CreateCheckBoxInstance);
   factory->RegisterElementClass("combobox",
                                 &ggadget::ComboBoxElement::CreateInstance);
+  factory->RegisterElementClass("contentarea",
+                                &ggadget::ContentAreaElement::CreateInstance);
   factory->RegisterElementClass("div",
                                 &ggadget::DivElement::CreateInstance);
   factory->RegisterElementClass("edit",
@@ -206,7 +209,7 @@ void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) const {
 uint64_t GtkGadgetHost::GetCurrentTime() const {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  return static_cast<uint64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
+  return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
 
 gboolean GtkGadgetHost::DispatchTimer(gpointer data) {

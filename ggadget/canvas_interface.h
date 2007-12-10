@@ -41,9 +41,6 @@ class CanvasInterface {
   virtual ~CanvasInterface() { }
 
  public:
-
-  typedef int TextFlag;
-
   /**
    * Enum used to specify horizontal alignment.
    */
@@ -77,7 +74,7 @@ class CanvasInterface {
   /**
    * Enum used to specify text flags.
    */
-  enum {
+  enum TextFlag {
     TEXT_FLAGS_UNDERLINE = 1 << 0,
     TEXT_FLAGS_STRIKEOUT = 1 << 1,
     TEXT_FLAGS_WORDWRAP = 1 << 2
@@ -221,23 +218,24 @@ class CanvasInterface {
 
   /**
    * Draws the specified text on the screen at the given (x, y).
+   * text_flag is combination of zero or more TextFlag enum values.
    * @return true on success, false otherwise.
    */
   virtual bool DrawText(double x, double y, double width, double height,
                         const char *text, const FontInterface *f,
                         const Color &c, Alignment align, VAlignment valign,
-                        Trimming trimming, TextFlag text_flag) = 0;
+                        Trimming trimming, int text_flags) = 0;
 
   /**
    * Draws the specified text on the screen at the given (x, y) using the
-   * specified texture. See @c DrawText for details.
+   * specified texture. See @c DrawText() for details.
    */
   virtual bool DrawTextWithTexture(double x, double y, double width,
                                    double height, const char *text,
                                    const FontInterface *f,
                                    const CanvasInterface *texture,
                                    Alignment align, VAlignment valign,
-                                   Trimming trimming, TextFlag text_flag) = 0;
+                                   Trimming trimming, int text_flags) = 0;
 
   /**
    * Intersect the clipping region with a rectangular region.
@@ -251,12 +249,13 @@ class CanvasInterface {
                                        double w, double h) = 0;
   
   /** 
-   * Gets the width and height of the specified text without wrapping
-   * or trimming. 
+   * Gets the width and height of the specified text.
+   * @c in_width <= 0 means the text should not be wrapped or trimmed.
    */
   virtual bool GetTextExtents(const char *text, const FontInterface *f, 
-                              TextFlag text_flag, 
-                              double *width, double *height) = 0;  
+                              int text_flags, double in_width,
+                              double *width, double *height) = 0;
+
 };
 
 } // namespace ggadget

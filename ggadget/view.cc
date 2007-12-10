@@ -17,6 +17,7 @@
 #include <vector>
 #include "view.h"
 #include "basic_element.h"
+#include "contentarea_element.h"
 #include "element_factory_interface.h"
 #include "elements.h"
 #include "event.h"
@@ -64,6 +65,7 @@ class View::Impl {
       dragover_element_(NULL),
       dragover_result_(EVENT_RESULT_UNHANDLED),
       tooltip_element_(NULL),
+      content_area_element_(NULL),
       non_strict_delegator_(new ScriptableDelegator(owner, false)),
       posting_event_element_(NULL),
       post_event_token_(0),
@@ -393,13 +395,22 @@ class View::Impl {
     return scriptable_event.GetReturnValue();
   }
 
-  void OnElementAdd(BasicElement *element) {
+  bool OnElementAdd(BasicElement *element) {
     ASSERT(element);
+    if (element->IsInstanceOf(ContentAreaElement::CLASS_ID)) {
+      if (content_area_element_) {
+        LOG("Only one contentarea element is allowed in a view");
+        return false;
+      }
+      content_area_element_ = down_cast<ContentAreaElement *>(element);
+    }
+
     const char *name = element->GetName();
     if (name && *name &&
         // Don't overwrite the existing element with the same name.
         all_elements_.find(name) == all_elements_.end())
       all_elements_[name] = element;
+    return true;
   }
 
   void OnElementRemove(BasicElement *element) {
@@ -417,6 +428,8 @@ class View::Impl {
       host_->SetTooltip(NULL);
       tooltip_element_ = NULL;
     }
+    if (element == content_area_element_)
+      content_area_element_ = NULL;
 
     for (std::vector<BasicElement **>::iterator it =
              death_detected_elements_.begin();
@@ -631,7 +644,7 @@ class View::Impl {
 
     if (info->type != TIMER_TIMEOUT &&
         gadget_host_->GetCurrentTime() - info->last_finished_time <
-            kMinInterval * 1000) {
+            kMinInterval) {
       // To avoid some frequent interval/animation timers or slow handlers
       // eat up all CPU resources, here automaticlly ignores some timer events.
       DLOG("Automatically ignored a timer event");
@@ -661,7 +674,7 @@ class View::Impl {
         if (info->duration > 0) {
           uint64_t event_time = gadget_host_->GetCurrentTime();
           progress = static_cast<double>(event_time - info->start_time) /
-                     1000.0 / info->duration;
+                     info->duration;
           progress = std::min(1.0, std::max(0.0, progress));
         }
 
@@ -853,6 +866,7 @@ class View::Impl {
   BasicElement *dragover_element_;
   EventResult dragover_result_;
   BasicElement *tooltip_element_;
+  ContentAreaElement *content_area_element_;
 
   // Local pointers to elements should be pushed into this vector before any
   // event handler be called, and the pointer will be set to NULL if the 
@@ -1009,8 +1023,8 @@ EventResult View::OnOtherEvent(const Event &event, Event *output_event) {
   return impl_->OnOtherEvent(event, output_event);
 }
 
-void View::OnElementAdd(BasicElement *element) {
-  impl_->OnElementAdd(element);
+bool View::OnElementAdd(BasicElement *element) {
+  return impl_->OnElementAdd(element);
 }
 
 void View::OnElementRemove(BasicElement *element) {
@@ -1216,6 +1230,14 @@ bool View::Confirm(const char *message) {
 
 std::string View::Prompt(const char *message, const char *default_result) {
   return impl_->host_->Prompt(message, default_result);
+}
+
+uint64_t View::GetCurrentTime() {
+  return impl_->gadget_host_->GetCurrentTime();
+}
+
+ContentAreaElement *View::GetContentAreaElement() {
+  return impl_->content_area_element_;
 }
 
 } // namespace ggadget

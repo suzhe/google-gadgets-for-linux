@@ -336,7 +336,7 @@ bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
     // array indexes.
     *id = -(index + 1);
     *prototype = slot_prototypes_[index];
-    *is_method = getter_slots_[index] == NULL;
+    *is_method = (getter_slots_[index] == NULL && setter_slots_[index] == NULL);
     return true;
   }
 
@@ -394,7 +394,7 @@ bool ScriptableHelperImpl::GetPropertyInfoById(int id, Variant *prototype,
   }
 
   *prototype = slot_prototypes_[index];
-  *is_method = getter_slots_[index] == NULL;
+  *is_method = (getter_slots_[index] == NULL && setter_slots_[index] == NULL);
   *name = slot_names_[index];
   return true;
 }

@@ -78,21 +78,21 @@ class CairoCanvas : public CanvasInterface {
   virtual bool DrawText(double x, double y, double width, double height,
                         const char *text, const FontInterface *f,
                         const Color &c, Alignment align, VAlignment valign,
-                        Trimming trimming, TextFlag text_flag);
+                        Trimming trimming, int text_flags);
   virtual bool DrawTextWithTexture(double x, double y, double width,
                                    double height, const char *text,
                                    const FontInterface *f,
                                    const CanvasInterface *texture,
                                    Alignment align, VAlignment valign,
-                                   Trimming trimming, TextFlag text_flag);
+                                   Trimming trimming, int text_flags);
 
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h);
   
   virtual bool GetTextExtents(const char *text, const FontInterface *f, 
-                              TextFlag text_flag, double *width, double *height);
-  
-  
+                              int text_flags, double in_width,
+                              double *width, double *height);
+
   /**
    * Get the surface contained within this class for use elsewhere.
    * Will flush the surface before returning so it is ready to be read.
@@ -114,7 +114,7 @@ class CairoCanvas : public CanvasInterface {
                          double height, const char *text,
                          const FontInterface *f,
                          Alignment align, VAlignment valign,
-                         Trimming trimming, TextFlag text_flag);
+                         Trimming trimming, int text_flags);
 
    DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
 };

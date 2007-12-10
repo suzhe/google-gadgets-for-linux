@@ -26,6 +26,7 @@ LIBXML2_CONFIG(2.6.20 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
+  content_item.cc
   details_view.cc
   display_window.cc
   element_factory.cc
@@ -59,6 +60,7 @@ SET(SRCS
   button_element.cc
   checkbox_element.cc
   combobox_element.cc
+  contentarea_element.cc
   div_element.cc
   edit_element.cc
   img_element.cc

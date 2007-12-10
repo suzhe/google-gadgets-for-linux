@@ -15,6 +15,7 @@
 */
 
 #include "anchor_element.h"
+#include "color.h"
 #include "event.h"
 #include "graphics_interface.h"
 #include "string_utils.h"
@@ -24,15 +25,15 @@
 
 namespace ggadget {
 
-static const char *const kDefaultColor = "#0000FF";
+static const Color kDefaultColor(0.0, 0.0, 1.0);
 
 class AnchorElement::Impl {
  public:
   Impl(BasicElement *owner, View *view)
     : text_(owner, view),
-      overcolor_texture_(view->LoadTexture(Variant(kDefaultColor))),
+      overcolor_texture_(new Texture(kDefaultColor, 1.0)),
       mouseover_(false) {
-    text_.SetColor(Variant(kDefaultColor));
+    text_.SetColor(kDefaultColor, 1.0);
     text_.SetUnderline(true);
   }
 

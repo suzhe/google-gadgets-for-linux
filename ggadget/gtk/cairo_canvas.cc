@@ -279,12 +279,12 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
 bool CairoCanvas::DrawText(double x, double y, double width, double height,
                            const char *text, const FontInterface *f,
                            const Color &c, Alignment align, VAlignment valign,
-                           Trimming trimming,  TextFlag text_flag) {
+                           Trimming trimming,  int text_flags) {
 
   cairo_set_source_rgba(cr_, c.red, c.green, c.blue, opacity_);
 
   return DrawTextInternal(x, y, width, height, text, f, align,
-                          valign, trimming, text_flag);
+                          valign, trimming, text_flags);
 }
 
 
@@ -293,7 +293,7 @@ bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
                                       const FontInterface *f,
                                       const CanvasInterface *texture,
                                       Alignment align, VAlignment valign,
-                                      Trimming trimming, TextFlag text_flag) {
+                                      Trimming trimming, int text_flags) {
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(texture);
   cairo_surface_t *s = cimg->GetSurface();
   cairo_pattern_t *pattern = cairo_pattern_create_for_surface(s);
@@ -317,11 +317,11 @@ bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
     cairo_scale(cr_, cx, cy);
     cairo_set_source(cr_, pattern);
     result =  DrawTextInternal(x / cx, y / cy, width / cx, height / cy,
-                               text, f, align, valign, trimming, text_flag);
+                               text, f, align, valign, trimming, text_flags);
   } else {
     cairo_set_source(cr_, pattern);
     result =  DrawTextInternal(x, y, width, height, text, f, align,
-                               valign, trimming, text_flag);
+                               valign, trimming, text_flags);
   }
 
   cairo_pattern_destroy(pattern);
@@ -329,11 +329,45 @@ bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
   return result;
 }
 
+static void SetPangoLayoutAttrFromTextFlags(PangoLayout *layout,
+                                            int text_flags, double width) {
+  PangoAttrList *attr_list = pango_attr_list_new();
+  PangoAttribute *underline_attr = NULL;
+  PangoAttribute *strikeout_attr = NULL;
+  // Set the underline attribute
+  if (text_flags & CanvasInterface::TEXT_FLAGS_UNDERLINE) {
+    underline_attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+    // We want this attribute apply to all text.
+    underline_attr->start_index = 0;
+    underline_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, underline_attr);
+  }
+  // Set the strikeout attribute.
+  if (text_flags & CanvasInterface::TEXT_FLAGS_STRIKEOUT) {
+    strikeout_attr = pango_attr_strikethrough_new(true);
+    // We want this attribute apply to all text.
+    strikeout_attr->start_index = 0;
+    strikeout_attr->end_index = 0xFFFFFFFF;
+    pango_attr_list_insert(attr_list, strikeout_attr);
+  }
+  // Set the wordwrap attribute.
+  if (text_flags & CanvasInterface::TEXT_FLAGS_WORDWRAP) {
+    pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
+    pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+  } else {
+    // In pango, set width = -1 to set no wordwrap.
+    pango_layout_set_width(layout, -1);
+  }
+  pango_layout_set_attributes(layout, attr_list);
+  // This will also free underline_attr and strikeout_attr.
+  pango_attr_list_unref(attr_list);
+}
+ 
 bool CairoCanvas::DrawTextInternal(double x, double y, double width,
                                    double height, const char *text,
                                    const FontInterface *f,
                                    Alignment align, VAlignment valign,
-                                   Trimming trimming, TextFlag text_flag) {
+                                   Trimming trimming, int text_flags) {
   if (text == NULL || f == NULL) {
     return false;
   }
@@ -350,39 +384,11 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
   PangoLayout *layout = pango_cairo_create_layout(cr_);
   pango_layout_set_text(layout, text, -1);
   pango_layout_set_font_description(layout, font->GetFontDescription());
-  PangoAttrList *attr_list = pango_attr_list_new();
-  PangoAttribute *underline_attr = NULL;
-  PangoAttribute *strikeout_attr = NULL;
+  SetPangoLayoutAttrFromTextFlags(layout, text_flags, width);
   // Pos is used to get glyph extents in pango.
   PangoRectangle pos;
   // real_x and real_y represent the real position of the layout.
   double real_x = x, real_y = y;
-
-  // Set the underline attribute
-  if (text_flag & TEXT_FLAGS_UNDERLINE) {
-    underline_attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
-    // We want this attribute apply to all text.
-    underline_attr->start_index = 0;
-    underline_attr->end_index = 0xFFFFFFFF;
-    pango_attr_list_insert(attr_list, underline_attr);
-  }
-  // Set the strikeout attribute.
-  if (text_flag & TEXT_FLAGS_STRIKEOUT) {
-    strikeout_attr = pango_attr_strikethrough_new(true);
-    // We want this attribute apply to all text.
-    strikeout_attr->start_index = 0;
-    strikeout_attr->end_index = 0xFFFFFFFF;
-    pango_attr_list_insert(attr_list, strikeout_attr);
-  }
-  // Set the wordwrap attribute.
-  if (text_flag & TEXT_FLAGS_WORDWRAP) {
-    pango_layout_set_width(layout, static_cast<int>(width) * PANGO_SCALE);
-    pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-  } else {
-    // In pango, set width = -1 to set no wordwrap.
-    pango_layout_set_width(layout, -1);
-  }
-  pango_layout_set_attributes(layout, attr_list);
 
   // Set alignment. This is only effective when wordwrap is set
   // because when wordwrap is unset, the width has to be 
@@ -417,7 +423,7 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
       real_y = y + height - pos.height;
 
     // When wordwrap is unset, we also have to do the horizontal alignment.
-    if ((text_flag & TEXT_FLAGS_WORDWRAP) == 0) {
+    if ((text_flags & TEXT_FLAGS_WORDWRAP) == 0) {
       if (align == ALIGN_CENTER)
         real_x = x + (width - pos.width) / 2;
       else if (align == ALIGN_RIGHT)
@@ -561,8 +567,6 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
     } while(pango_layout_iter_next_char(it));
   }
 
-  // This will also free underline_attr and strikeout_attr.
-  pango_attr_list_unref(attr_list);
   g_object_unref(layout);
   cairo_restore(cr_);
 
@@ -570,15 +574,16 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
 }
 
 bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f, 
-                                 TextFlag text_flag, double *width, 
-                                 double *height) {
+                                 int text_flags, double in_width,
+                                 double *width, double *height) {
   if (text == NULL || f == NULL) {
+    *width = *height = 0;
     return false;    
   }
 
   // If the text is blank, we need to do nothing.
-  if (strlen(text) == 0) {
-    *width = *height = 0; 
+  if (!*text) {
+    *width = *height = 0;
     return true;
   }
 
@@ -587,24 +592,10 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
   pango_layout_set_text(layout, text, -1);
   pango_layout_set_font_description(layout, font->GetFontDescription());
 
-  PangoAttrList *attr_list = pango_attr_list_new();
-  if (text_flag & TEXT_FLAGS_UNDERLINE) {
-    PangoAttribute *underline_attr = 
-      pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
-    // We want this attribute apply to all text.
-    underline_attr->start_index = 0;
-    underline_attr->end_index = 0xFFFFFFFF;
-    pango_attr_list_insert(attr_list, underline_attr);
-  } 
-  if (text_flag & TEXT_FLAGS_STRIKEOUT) {
-    PangoAttribute *strikeout_attr = pango_attr_strikethrough_new(true);
-    // We want this attribute apply to all text.
-    strikeout_attr->start_index = 0;
-    strikeout_attr->end_index = 0xFFFFFFFF;
-    pango_attr_list_insert(attr_list, strikeout_attr);
+  if (in_width <= 0) {
+    text_flags &= ~TEXT_FLAGS_WORDWRAP;
   }
-  pango_layout_set_width(layout, -1); // no word wrap
-  pango_layout_set_attributes(layout, attr_list);
+  SetPangoLayoutAttrFromTextFlags(layout, text_flags, in_width);
 
   // Get the pixel extents(logical extents) of the layout.
   int w, h;
@@ -612,8 +603,6 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
   *width = w;
   *height = h;
 
-  // This will also free underline_attr and strikeout_attr.
-  pango_attr_list_unref(attr_list);
   g_object_unref(layout);
   return true;
 }
