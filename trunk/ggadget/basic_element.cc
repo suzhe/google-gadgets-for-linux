@@ -1257,9 +1257,20 @@ bool BasicElement::IsSizeChanged() const {
   return impl_->size_changed_;
 }
 
-void BasicElement::SetChildrenScrollable(bool scrollable) {
-  ASSERT(impl_->children_);
-  impl_->children_->SetScrollable(scrollable);
+bool BasicElement::SetChildrenScrollable(bool scrollable) {
+  if (impl_->children_) {
+    impl_->children_->SetScrollable(scrollable);
+    return true;
+  }
+  return false;
+}
+
+bool BasicElement::GetChildrenExtents(double *width, double *height) {
+  if (impl_->children_) {
+    impl_->children_->GetChildrenExtents(width, height);
+    return true;
+  }
+  return false;
 }
 
 void BasicElement::QueueDraw() {

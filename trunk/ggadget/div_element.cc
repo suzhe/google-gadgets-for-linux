@@ -64,6 +64,17 @@ DivElement::~DivElement() {
   impl_ = NULL;
 }
 
+void DivElement::Layout() {
+  ScrollingElement::Layout();
+  double children_width = 0, children_height = 0;
+  GetChildrenExtents(&children_width, &children_height);
+  if (UpdateScrollBar(static_cast<int>(ceil(children_width)),
+                      static_cast<int>(ceil(children_height)))) {
+    // Layout again to reflect change of the scroll bar.
+    Layout();
+  }
+}
+
 void DivElement::DoDraw(CanvasInterface *canvas,
                         const CanvasInterface *children_canvas) {
   if (impl_->background_texture_) {
@@ -125,11 +136,6 @@ EventResult DivElement::HandleKeyEvent(const KeyboardEvent &event) {
     }
   }
   return result;
-}
-
-void DivElement::GetContentSize(double *width, double *height) {
-  ASSERT(GetChildren());
-  down_cast<Elements *>(GetChildren())->GetChildrenExtents(width, height);
 }
 
 } // namespace ggadget

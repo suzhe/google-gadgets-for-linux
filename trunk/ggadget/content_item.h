@@ -186,12 +186,12 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
 
   /** Called when the user opens/double clicks the item. */
   void OpenItem();
-  Connection *ConnectOnOpenItem(Slot1<void, ContentItem *> *handler);
+  Connection *ConnectOnOpenItem(Slot1<bool, ContentItem *> *handler);
 
   /** Called when the user clicks the 'pin' button of an item. */ 
   void ToggleItemPinnedState();
   Connection *ConnectOnToggleItemPinnedState(
-      Slot1<void, ContentItem *> *handler);
+      Slot1<bool, ContentItem *> *handler);
 
   /** Called to check if a tooltip is required for the item. */
   bool IsTooltipRequired(GadgetInterface::DisplayTarget target,
@@ -210,13 +210,13 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
    * Connects to the signal which will be fired to process the user action in
    * the details view.
    * Prototype: <code>
-   * void ProcessDetailsViewFeedbackHandler(ContentItem *item,
+   * bool ProcessDetailsViewFeedbackHandler(ContentItem *item,
    *                                        int details_view_flags);
    * </code>
    * flags is combination of @c ViewHostInterface::DetailsViewFlags.
    */
   Connection *ConnectOnProcessDetailsViewFeedback(
-      Slot2<void, ContentItem *, int> *handler);
+      Slot2<bool, ContentItem *, int> *handler);
 
   /**
    * Called when the user removes and item from the display.

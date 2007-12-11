@@ -220,8 +220,8 @@ void ScrollingElement::DrawScrollbar(CanvasInterface *canvas) {
   }
 }
 
-void ScrollingElement::Layout() {
-  BasicElement::Layout();
+bool ScrollingElement::UpdateScrollBar(int content_width, int content_height) {
+
   if (impl_->scrollbar_) {
     bool scrollbar_visible = impl_->scrollbar_->IsVisible();
     impl_->scrollbar_->SetPixelX(GetPixelWidth() -
@@ -233,17 +233,10 @@ void ScrollingElement::Layout() {
       impl_->scroll_pos_y_ = v;
     }
 
-    double content_width = 0, content_height = 0;
-    GetContentSize(&content_width, &content_height);
-    impl_->UpdateScrollPos(static_cast<size_t>(ceil(content_width)),
-                           static_cast<size_t>(ceil(content_height)));
-
-    if (scrollbar_visible != impl_->scrollbar_->IsVisible()) {
-      // Must layout again if the visibility of scrollbar changed, because the
-      // client size of this element also changed.
-      BasicElement::Layout();
-    }
+    impl_->UpdateScrollPos(content_width, content_height);
+    return scrollbar_visible != impl_->scrollbar_->IsVisible();
   }
+  return false;
 }
 
 double ScrollingElement::GetClientWidth() {

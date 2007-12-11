@@ -219,6 +219,12 @@ class View : public ScriptableHelper<ViewInterface> {
   /** Returns the content area element if there is one, or @c NULL. */
   ContentAreaElement *GetContentAreaElement();
 
+  /**
+   * Display tooltip at the current cursor position. The tooltip will be
+   * automatically hidden when appropriate.
+   */
+  void SetTooltip(const char *tooltip);
+
  private:
   class Impl;
   Impl *impl_;
