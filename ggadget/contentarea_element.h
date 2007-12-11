@@ -18,13 +18,13 @@
 #define GGADGET_CONTENT_AREA_ELEMENT_H__
 
 #include <vector>
-#include <ggadget/basic_element.h>
+#include <ggadget/scrolling_element.h>
 
 namespace ggadget {
 
 class ContentItem;
 
-class ContentAreaElement : public BasicElement {
+class ContentAreaElement : public ScrollingElement {
  public:
   DEFINE_CLASS_ID(0xa16cc04f24b24cce, BasicElement);
 

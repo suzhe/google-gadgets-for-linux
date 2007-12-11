@@ -72,11 +72,16 @@ class ScrollingElement : public BasicElement {
    */
   void DrawScrollbar(CanvasInterface *canvas);
 
-  virtual void Layout();
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  /**
+   * Update the scrollbar status and position. Subclasses must call this in
+   * their @c Layout() method.
+   * @return @c true if the visibility of the scroll bar changed, and the
+   *     caller must update layout again, for example, recursively call
+   *     @c Layout() again. Otherwise, returns @c false.
+   */
+  bool UpdateScrollBar(int content_width, int content_height);
 
-  /** Gets the size of the scrollable contents. */
-  virtual void GetContentSize(double *width, double *height) = 0;
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScrollingElement);

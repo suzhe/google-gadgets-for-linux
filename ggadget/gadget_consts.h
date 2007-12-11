@@ -104,9 +104,9 @@ const char kScrollDefaultLeftOver[] = ":resources/scrollleft_o.png";
 const char kScrollDefaultRight[] = ":resources/scrollright_u.png";
 const char kScrollDefaultRightDown[] = ":resources/scrollright_d.png";
 const char kScrollDefaultRightOver[] = ":resources/scrollright_o.png";
-const char kContentItemPinned[] = ":resource/pinned.png";
-const char kContentItemUnpinned[] = ":resource/unpinned.png";
-const char kContentItemPinnedOver[] = ":resource/pinned_over.png";
+const char kContentItemPinned[] = ":resources/pinned.png";
+const char kContentItemUnpinned[] = ":resources/unpinned.png";
+const char kContentItemPinnedOver[] = ":resources/pinned_over.png";
 const char kCommonJS[] = ":resources/common.js";
 
 } // namespace ggadget

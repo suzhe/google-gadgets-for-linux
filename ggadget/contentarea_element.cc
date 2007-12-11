@@ -19,6 +19,7 @@
 #include "canvas_interface.h"
 #include "color.h"
 #include "content_item.h"
+#include "event.h"
 #include "gadget_consts.h"
 #include "graphics_interface.h"
 #include "image.h"
@@ -34,6 +35,7 @@ static const Color kMouseOverBackground(0.83, 0.93, 0.98);
 static const Color kMouseDownBackground(0.73, 0.83, 0.88);
 static const Color kSelectedBackground(0.83, 0.93, 0.98);
 static const int kItemBorderWidth = 2;
+static const unsigned int kRefreshInterval = 30000; // 30 seconds. 
 
 class ContentAreaElement::Impl {
  public:
@@ -51,16 +53,27 @@ class ContentAreaElement::Impl {
         content_flags_(CONTENT_FLAG_NONE),
         target_(GadgetInterface::TARGET_SIDEBAR),
         max_content_items_(kDefaultMaxContentItems),
-        pin_image_max_width_(0), pin_image_max_height_(0) {
+        pin_image_max_width_(0), pin_image_max_height_(0),
+        mouse_down_(false), mouse_over_pin_(false),
+        mouse_x_(-1), mouse_y_(-1), mouse_over_item_(NULL),
+        content_height_(0),
+        refresh_timer_(0) {
     pin_images_[PIN_IMAGE_PINNED] = owner->GetView()->LoadImageFromGlobal(
         kContentItemPinned, false);
     pin_images_[PIN_IMAGE_PINNED_OVER] = owner->GetView()->LoadImageFromGlobal(
         kContentItemPinnedOver, false);
     pin_images_[PIN_IMAGE_UNPINNED] = owner->GetView()->LoadImageFromGlobal(
         kContentItemUnpinned, false);
+
+    // Schedule a interval timer to redraw the content area periodically,
+    // to refresh the relative time stamps of the items.
+    refresh_timer_ = owner->GetView()->SetInterval(
+        NewSlot(this, &Impl::QueueDraw), kRefreshInterval);
   }
 
   ~Impl() {
+    owner_->GetView()->ClearInterval(refresh_timer_);
+    refresh_timer_ = 0;
     RemoveAllContentItems();
     for (size_t i = 0; i < arraysize(pin_images_); i++) {
       delete pin_images_[i];
@@ -68,6 +81,10 @@ class ContentAreaElement::Impl {
     }
     layout_canvas_->Destroy();
     layout_canvas_ = NULL;
+  }
+
+  void QueueDraw() {
+    owner_->QueueDraw();
   }
 
   void Layout() {
@@ -83,18 +100,28 @@ class ContentAreaElement::Impl {
                 static_cast<int>(pin_images_[i]->GetHeight()));
           }
         }
+        pin_image_max_width_ += kItemBorderWidth;
       }
     } else {
       pin_image_max_width_ = pin_image_max_height_ = 0;
     }
 
     int y = kItemBorderWidth;
-    int width = static_cast<int>(ceil(owner_->GetPixelWidth())) -
+    int width = static_cast<int>(ceil(owner_->GetClientWidth())) -
                 2 * kItemBorderWidth;
     int item_width = width - pin_image_max_width_;
 
-    if (!(content_flags_ & CONTENT_FLAG_MANUAL_LAYOUT)) {
-      size_t item_count = content_items_.size();
+    content_height_ = 0;
+    size_t item_count = content_items_.size();
+    if (content_flags_ & CONTENT_FLAG_MANUAL_LAYOUT) {
+      for (size_t i = 0; i < item_count; i++) {
+        ContentItem *item = content_items_[i];
+        ASSERT(item);
+        int temp_x, temp_y, temp_width, item_height;
+        item->GetRect(&temp_x, &temp_y, &temp_width, &item_height);
+        content_height_ = std::max(content_height_, item_height);
+      }
+    } else {
       for (size_t i = 0; i < item_count; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
@@ -110,12 +137,13 @@ class ContentAreaElement::Impl {
           y += item_height + kItemBorderWidth * 2;
         }
       }
+      content_height_ = y;
     }
   }
 
-  void Draw(ContentAreaElement *owner, CanvasInterface *canvas) {
-    int width = static_cast<int>(ceil(owner->GetPixelWidth()));
-    int height = static_cast<int>(ceil(owner->GetPixelHeight()));
+  void Draw(CanvasInterface *canvas) {
+    int width = static_cast<int>(ceil(owner_->GetClientWidth()));
+    int height = static_cast<int>(ceil(owner_->GetClientHeight()));
     canvas->DrawFilledRect(0, 0, width, height, kDefaultBackground);
 
     int item_count = content_items_.size();
@@ -127,19 +155,48 @@ class ContentAreaElement::Impl {
 
       int item_x = 0, item_y = 0, item_width = 0, item_height = 0;
       item->GetRect(&item_x, &item_y, &item_width, &item_height);
+      item_x -= owner_->GetScrollXPosition();
+      item_y -= owner_->GetScrollYPosition();
       if (item_width > 0 && item_height > 0 && item_y < height) {
+        bool mouse_over = mouse_x_ != -1 && mouse_y_ != -1 &&
+                          mouse_x_ >= item_x &&
+                          mouse_x_ < item_x + item_width &&
+                          mouse_y_ >= item_y &&
+                          mouse_y_ < item_y + item_height;
+        bool mouse_over_pin = false;
+
         if (content_flags_ & CONTENT_FLAG_PINNABLE &&
             pin_image_max_width_ > 0 && pin_image_max_height_ > 0) {
           Image *pin_image = pin_images_[PIN_IMAGE_UNPINNED];
-          if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
-            pin_image = pin_images_[PIN_IMAGE_PINNED];
-            // TODO: mouseover
+          mouse_over_pin = mouse_over && mouse_x_ < pin_image_max_width_;
+          if (mouse_over_pin) {
+            const Color &color = mouse_down_ ?
+                                 kMouseDownBackground : kMouseOverBackground;
+            canvas->DrawFilledRect(item_x - kItemBorderWidth,
+                                   item_y - kItemBorderWidth,
+                                   pin_image_max_width_ + kItemBorderWidth * 2,
+                                   item_height + kItemBorderWidth * 2,
+                                   color);
           }
-          if (pin_image)
+          if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
+            pin_image = pin_images_[mouse_over_pin ?
+                                    PIN_IMAGE_PINNED_OVER : PIN_IMAGE_PINNED];
+          }
+          if (pin_image) {
             pin_image->Draw(canvas, item_x, item_y);
-
+          }
           item_x += pin_image_max_width_;
           item_width -= pin_image_max_width_;
+        }
+
+        if (mouse_over) {
+          const Color &color = mouse_down_ && !mouse_over_pin ?
+                               kMouseDownBackground : kMouseOverBackground;
+          canvas->DrawFilledRect(item_x - kItemBorderWidth,
+                                 item_y - kItemBorderWidth,
+                                 item_width + kItemBorderWidth * 2,
+                                 item_height + kItemBorderWidth * 2,
+                                 color);
         }
         item->Draw(target_, canvas, item_x, item_y, item_width, item_height);
       }
@@ -152,7 +209,19 @@ class ContentAreaElement::Impl {
   }
 
   void ScriptSetContentItems(ScriptableArray *array) {
-    // TODO:
+    RemoveAllContentItems();
+    if (array) {
+      for (size_t i = 0; i < array->GetCount(); i++) {
+        Variant v = array->GetItem(i);
+        if (v.type() != Variant::TYPE_SCRIPTABLE) {
+          ContentItem *item = VariantValue<ContentItem *>()(v);
+          if (item) {
+            AddContentItem(item, ITEM_DISPLAY_IN_SIDEBAR);
+          }
+        }
+      }
+    }
+    QueueDraw();
   }
 
   void GetPinImages(Variant *pinned, Variant *pinned_over, Variant *unpinned) {
@@ -174,7 +243,7 @@ class ContentAreaElement::Impl {
     pin_images_[PIN_IMAGE_UNPINNED] = owner_->GetView()->LoadImage(unpinned,
                                                                    false);
     pin_image_max_width_ = pin_image_max_height_ = 0;
-    owner_->QueueDraw();
+    QueueDraw();
   }
 
   ScriptableArray *ScriptGetPinImages() {
@@ -188,10 +257,11 @@ class ContentAreaElement::Impl {
   }
 
   bool SetMaxContentItems(size_t max_content_items) {
-    max_content_items = std::min(max_content_items, kMaxContentItemsUpperLimit);
+    max_content_items = std::min(std::max(1U, max_content_items),
+                                 kMaxContentItemsUpperLimit);
     if (max_content_items_ != max_content_items) {
       max_content_items_ = max_content_items;
-      return RemoveExtraItems();
+      return RemoveExtraItems(content_items_.begin());
     }
     return false;
   }
@@ -201,25 +271,15 @@ class ContentAreaElement::Impl {
                                           content_items_.end(),
                                           item);
     if (it == content_items_.end()) {
-      // Insert the new item at the beginning on default.
-      it = content_items_.begin();
-      if (content_flags_ & CONTENT_FLAG_PINNABLE) {
-        // Pinned items are shown in the same order that they were added.
-        for (; it != content_items_.end(); ++it) {
-          if ((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED)
-            break;
-        }
-      }
-
       item->AttachContentArea(owner_);
-      content_items_.insert(it, item);
-      RemoveExtraItems();
+      content_items_.insert(content_items_.begin(), item);
+      RemoveExtraItems(content_items_.begin() + 1);
       return true;
     }
     return false;
   }
 
-  bool RemoveExtraItems() {
+  bool RemoveExtraItems(ContentItems::iterator begin) {
     if (content_items_.size() <= max_content_items_)
       return false;
 
@@ -227,13 +287,13 @@ class ContentAreaElement::Impl {
     while (content_items_.size() > max_content_items_) {
       ContentItems::iterator it = content_items_.end() - 1;
       if (!all_pinned && (content_flags_ & CONTENT_FLAG_PINNABLE)) {
-        // Find the first unpinned item which can be removed. If cant find
+        // Find the first unpinned item which can be removed. If can't find
         // anything last item will be removed.
-        for (; it != content_items_.begin(); --it) {
-          if ((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED)
+        for (; it > begin; --it) {
+          if (!((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED))
             break;
         }
-        if (it == content_items_.begin() && 
+        if (it == begin &&
             ((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED)) {
           all_pinned = true;
           it = content_items_.end() - 1;
@@ -266,7 +326,85 @@ class ContentAreaElement::Impl {
   }
 
   EventResult HandleMouseEvent(const MouseEvent &event) {
-    return EVENT_RESULT_UNHANDLED;
+    bool queue_draw = false;
+    EventResult result = EVENT_RESULT_UNHANDLED;
+    if (event.GetType() == Event::EVENT_MOUSE_OUT) {
+      mouse_over_pin_ = false;
+      mouse_over_item_ = NULL;
+      mouse_x_ = mouse_y_ = -1;
+      mouse_down_ = false;
+      queue_draw = true;
+      result = EVENT_RESULT_HANDLED;
+    } else {
+      mouse_x_ = static_cast<int>(round(event.GetX()));
+      mouse_y_ = static_cast<int>(round(event.GetY()));
+      ContentItem *new_mouse_over_item = NULL;
+      bool tooltip_required = false;
+      for (ContentItems::iterator it = content_items_.begin();
+           it != content_items_.end(); ++it) {
+        int x, y, w, h;
+        (*it)->GetRect(&x, &y, &w, &h);
+        x -= owner_->GetScrollXPosition();
+        y -= owner_->GetScrollYPosition();
+        if (mouse_x_ >= x && mouse_x_ < x + w &&
+            mouse_y_ >= y && mouse_y_ < y + h) {
+          new_mouse_over_item = *it;
+          tooltip_required = new_mouse_over_item->IsTooltipRequired(
+              target_, layout_canvas_, x, y, w, h);
+          break;
+        }
+      }
+  
+      bool new_mouse_over_pin = (mouse_x_ < pin_image_max_width_);
+      if (mouse_over_item_ != new_mouse_over_item) {
+        mouse_over_item_ = new_mouse_over_item;
+        mouse_over_pin_ = new_mouse_over_pin;
+        const char *tooltip = tooltip_required ?
+                              new_mouse_over_item->GetTooltip() : NULL;
+        // Store the tooltip to let view display it when appropriate using
+        // the default mouse-in logic.
+        owner_->SetTooltip(tooltip);
+        // Display the tooltip now, because view only displays tooltip when
+        // the mouse-in element changes.
+        owner_->GetView()->SetTooltip(tooltip);
+        queue_draw = true;
+      } else if (new_mouse_over_pin != mouse_over_pin_) {
+        mouse_over_pin_ = new_mouse_over_pin;
+        queue_draw = true;
+      }
+  
+      if (event.GetType() != Event::EVENT_MOUSE_MOVE &&
+          event.GetButton() == MouseEvent::BUTTON_LEFT) {
+        result = EVENT_RESULT_HANDLED;
+  
+        switch (event.GetType()) {
+          case Event::EVENT_MOUSE_DOWN:
+            mouse_down_ = true;
+            queue_draw = true;
+            break;
+          case Event::EVENT_MOUSE_UP:
+            mouse_down_ = false;
+            queue_draw = true;
+            break;
+          case Event::EVENT_MOUSE_CLICK:
+            if (mouse_over_item_) {
+              if (mouse_over_pin_) {
+                mouse_over_item_->ToggleItemPinnedState();
+              } else {
+                // TODO: show details view for this item.
+              }
+            }
+            break;
+          default:
+            result = EVENT_RESULT_UNHANDLED;
+            break;
+        }
+      }
+    }
+
+    if (queue_draw)
+      QueueDraw();
+    return result;
   }
 
   ContentAreaElement *owner_;
@@ -277,13 +415,21 @@ class ContentAreaElement::Impl {
   ContentItems content_items_;
   Image *pin_images_[PIN_IMAGE_COUNT];
   int pin_image_max_width_, pin_image_max_height_;
+  bool mouse_down_, mouse_over_pin_;
+  int mouse_x_, mouse_y_;
+  // This pointer is only used in HandleMouseEvent() to check if mouse over
+  // item changes. Don't dereference the pointer because it may be stale.
+  ContentItem *mouse_over_item_;
+  int content_height_;
+  int refresh_timer_;
 };
 
 ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
                                        const char *name)
-    : BasicElement(parent, view, "contentarea", name, false),
+    : ScrollingElement(parent, view, "contentarea", name, false),
       impl_(new Impl(this)) {
   SetEnabled(true);
+  SetAutoscroll(true);
   RegisterProperty("contentFlags", NULL, // Write only.
                    NewSlot(this, &ContentAreaElement::SetContentFlags));
   RegisterProperty("maxContentItems",
@@ -361,17 +507,33 @@ void ContentAreaElement::RemoveAllContentItems() {
 }
 
 void ContentAreaElement::Layout() {
-  BasicElement::Layout();
+  static int recurse_depth = 0;
+  // Check to prevent infinite recursion when updating scroll bar.
+  // This may be caused by a bad GetHeight() handler of a ContentItem.
+  if (++recurse_depth > 2)
+    return;
+
+  ScrollingElement::Layout();
   impl_->Layout();
+
+  if (UpdateScrollBar(static_cast<int>(ceil(GetClientWidth())),
+                      impl_->content_height_)) {
+    // Layout again to reflect change of the scroll bar.
+    Layout();
+  }
+  --recurse_depth;
 }
 
 void ContentAreaElement::DoDraw(CanvasInterface *canvas,
                                 const CanvasInterface *children_canvas) {
-  impl_->Draw(this, canvas);
+  impl_->Draw(canvas);
+  DrawScrollbar(canvas);
 }
 
 EventResult ContentAreaElement::HandleMouseEvent(const MouseEvent &event) {
-  return impl_->HandleMouseEvent(event);
+  EventResult result = impl_->HandleMouseEvent(event);
+  return result == EVENT_RESULT_UNHANDLED ?
+         ScrollingElement::HandleMouseEvent(event) : result;
 }
 
 BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,

@@ -340,9 +340,8 @@ class View::Impl {
 
   EventResult OnKeyEvent(const KeyboardEvent &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
-    // TODO: dispatch to children.
     DLOG("%s(view): %d %d", scriptable_event.GetName(), 
-	 event.GetKeyCode(), event.GetModifier());
+         event.GetKeyCode(), event.GetModifier());
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
         FireEvent(&scriptable_event, onkeydown_event_);
@@ -573,6 +572,7 @@ class View::Impl {
   const CanvasInterface *Draw(bool *changed) {
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
+    draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
     return children_.Draw(changed);
@@ -1238,6 +1238,10 @@ uint64_t View::GetCurrentTime() {
 
 ContentAreaElement *View::GetContentAreaElement() {
   return impl_->content_area_element_;
+}
+
+void View::SetTooltip(const char *tooltip) {
+  impl_->host_->SetTooltip(tooltip);
 }
 
 } // namespace ggadget

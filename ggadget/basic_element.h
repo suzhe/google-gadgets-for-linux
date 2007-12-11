@@ -120,7 +120,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
  public:
   /**
    * Gets and sets whether this element is an implicit child of its parent.
-   * An implicit child is createdd by its parent merely for implementation.
+   * An implicit child is created by its parent merely for implementation.
    * It is invisible from the script and the view/element hierarchy.
    * For example, the div element contains an implicit scrollbar child.
    */
@@ -244,7 +244,17 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
                                      double x, double y,
                                      double *child_x, double *child_y) const;
 
-  void SetChildrenScrollable(bool scrollable);
+  /**
+   * Delegates to @c Elements::SetScrollable().
+   * @return @c false if this element is not a container.
+   */
+  bool SetChildrenScrollable(bool scrollable);
+
+  /**
+   * Delegates to @c Elements::GetChildrenExtents().
+   * @return @c false if this element is not a container.
+   */
+  bool GetChildrenExtents(double *width, double *height);
 
  public:
   /**

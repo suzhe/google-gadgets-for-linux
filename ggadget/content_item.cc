@@ -86,6 +86,12 @@ class ContentItem::Impl {
   void ScriptSetRect(int x, int y, int width, int height) {
     if (!content_area_ || (content_area_->GetContentFlags() &
                            ContentAreaElement::CONTENT_FLAG_MANUAL_LAYOUT)) {
+      SetRect(x, y, width, height);
+    }
+  }
+
+  void SetRect(int x, int y, int width, int height) {
+    if (x_ != x || y_ != y || width_ != width || height_ != height) {
       x_ = x;
       y_ = y;
       width_ = width;
@@ -113,13 +119,13 @@ class ContentItem::Impl {
          ScriptableCanvas *, int, int, int, int> on_draw_item_signal_;
   Signal4<int, ContentItem *, GadgetInterface::DisplayTarget,
           ScriptableCanvas *, int> on_get_height_signal_;
-  Signal1<void, ContentItem *> on_open_item_signal_;
-  Signal1<void, ContentItem *> on_toggle_item_pinned_state_signal_;
+  Signal1<bool, ContentItem *> on_open_item_signal_;
+  Signal1<bool, ContentItem *> on_toggle_item_pinned_state_signal_;
   Signal7<bool, ContentItem *, GadgetInterface::DisplayTarget,
           ScriptableCanvas *, int, int, int, int>
       on_get_is_tooltip_required_signal_;
   Signal1<void /*TODO: DetailsViewInfo * */, ContentItem *> on_details_view_signal_;
-  Signal2<void, ContentItem *, int> on_process_details_view_feedback_signal_;
+  Signal2<bool, ContentItem *, int> on_process_details_view_feedback_signal_;
   Signal1<bool, ContentItem *> on_remove_item_signal_;
 };
 
@@ -300,11 +306,7 @@ void ContentItem::SetTooltip(const char *tooltip) {
 }
 
 void ContentItem::SetRect(int x, int y, int width, int height) {
-  impl_->x_ = x;
-  impl_->y_ = y;
-  impl_->width_ = width;
-  impl_->height_ = height;
-  impl_->QueueDraw();
+  impl_->SetRect(x, y, width, height);
 }
 
 void ContentItem::GetRect(int *x, int *y, int *width, int *height) {
@@ -446,24 +448,39 @@ void ContentItem::OpenItem() {
 }
 
 Connection *ContentItem::ConnectOnOpenItem(
-    Slot1<void, ContentItem *> *handler) {
+    Slot1<bool, ContentItem *> *handler) {
   return impl_->on_open_item_signal_.Connect(handler);
 }
 
 void ContentItem::ToggleItemPinnedState() {
-  // TODO:
+  bool result = false;
+  if (impl_->on_toggle_item_pinned_state_signal_.HasActiveConnections())
+    result = impl_->on_toggle_item_pinned_state_signal_(this);
+
+  if (!result) {
+    impl_->flags_ ^= CONTENT_ITEM_FLAG_PINNED;
+    impl_->QueueDraw();
+  }
 }
 
 Connection *ContentItem::ConnectOnToggleItemPinnedState(
-    Slot1<void, ContentItem *> *handler) {
+    Slot1<bool, ContentItem *> *handler) {
   return impl_->on_toggle_item_pinned_state_signal_.Connect(handler);
 }
 
 bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
                                     CanvasInterface *canvas,
                                     int x, int y, int width, int height) {
-  // TODO:
-  return true;
+  if (impl_->on_get_is_tooltip_required_signal_.HasActiveConnections()) {
+    ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
+    return impl_->on_get_is_tooltip_required_signal_(this, target,
+                                                     &scriptable_canvas,
+                                                     x, y, width, height);
+  }
+
+  const char *heading = impl_->heading_text_.GetText();
+  return !impl_->tooltip_.empty() &&
+         (!heading || strcmp(heading, impl_->tooltip_.c_str()) != 0);
 }
 
 Connection *ContentItem::ConnectOnGetIsTooltipRequired(
@@ -477,7 +494,7 @@ typedef Slot1<DetailsViewInfo *, ContentItem *> OnDetailsViewHandler;
 Connection *ConnectOnDetailsView(OnDetailsViewHandler *handler); */
 
 Connection *ContentItem::ConnectOnProcessDetailsViewFeedback(
-    Slot2<void, ContentItem *, int> *handler) {
+    Slot2<bool, ContentItem *, int> *handler) {
   return impl_->on_process_details_view_feedback_signal_.Connect(handler);
 }
 
