@@ -262,7 +262,7 @@ class ScrollBarElement::Impl {
 
 ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
                                    const char *name)
-    : BasicElement(parent, view, "scrollbar", name, NULL),
+    : BasicElement(parent, view, "scrollbar", name, false),
       impl_(new Impl(this)) {
   RegisterProperty("background",
                    NewSlot(this, &ScrollBarElement::GetBackground),
@@ -591,54 +591,54 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
       break;
     }
 
-    case Event::EVENT_MOUSE_DOWN: {
-      bool downleft = true, line = true;
-      impl_->ClearDisplayStates();
-      if (c == COMPONENT_THUMB_BUTTON) {
-        impl_->thumb_state_ = STATE_DOWN;
-        if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
-          impl_->drag_delta_ = event.GetX() - compx;
-        } else {
-          impl_->drag_delta_ = event.GetY() - compy;
-        }
-        QueueDraw();
-        break; // don't scroll, early exit
-      } else if (c == COMPONENT_UPRIGHT_BUTTON) {
-        impl_->right_state_ = STATE_DOWN;
-        downleft = false; line = true;
-      } else if (c == COMPONENT_UPRIGHT_BAR) {
-        downleft = line = false;
-      } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
-        impl_->left_state_ = STATE_DOWN;
-        downleft = line = true;
-      } else if (c == COMPONENT_DOWNLEFT_BAR) {
-        downleft = true; line = false;
-      }
-      impl_->Scroll(downleft, line);
-      break;
-    }
-
-    case Event::EVENT_MOUSE_UP: {
-      DisplayState oldthumb = impl_->thumb_state_;
-      DisplayState oldleft = impl_->left_state_;
-      DisplayState oldright = impl_->right_state_;
-      impl_->ClearDisplayStates();
-      if (c == COMPONENT_THUMB_BUTTON) {
-        impl_->thumb_state_ = STATE_OVER;
-      } else if (c == COMPONENT_UPRIGHT_BUTTON) {
-        impl_->right_state_ = STATE_OVER;
-      } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
-        impl_->left_state_ = STATE_OVER;
-      }
-      bool redraw = (impl_->left_state_ != oldleft ||
-          impl_->right_state_ != oldright ||
-          impl_->thumb_state_ != oldthumb);
-      if (redraw) {
-        QueueDraw();
-      }
-      break;
-    }
-
+    case Event::EVENT_MOUSE_DOWN: 
+     if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
+       bool downleft = true, line = true;
+       impl_->ClearDisplayStates();
+       if (c == COMPONENT_THUMB_BUTTON) {
+         impl_->thumb_state_ = STATE_DOWN;
+         if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
+           impl_->drag_delta_ = event.GetX() - compx;
+         } else {
+           impl_->drag_delta_ = event.GetY() - compy;
+         }
+         QueueDraw();
+         break; // don't scroll, early exit
+       } else if (c == COMPONENT_UPRIGHT_BUTTON) {
+         impl_->right_state_ = STATE_DOWN;
+         downleft = false; line = true;
+       } else if (c == COMPONENT_UPRIGHT_BAR) {
+         downleft = line = false;
+       } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
+         impl_->left_state_ = STATE_DOWN;
+         downleft = line = true;
+       } else if (c == COMPONENT_DOWNLEFT_BAR) {
+         downleft = true; line = false;
+       }
+       impl_->Scroll(downleft, line);
+     }
+     break;
+    case Event::EVENT_MOUSE_UP: 
+     if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
+       DisplayState oldthumb = impl_->thumb_state_;
+       DisplayState oldleft = impl_->left_state_;
+       DisplayState oldright = impl_->right_state_;
+       impl_->ClearDisplayStates();
+       if (c == COMPONENT_THUMB_BUTTON) {
+         impl_->thumb_state_ = STATE_OVER;
+       } else if (c == COMPONENT_UPRIGHT_BUTTON) {
+         impl_->right_state_ = STATE_OVER;
+       } else if (c == COMPONENT_DOWNLEFT_BUTTON) {
+         impl_->left_state_ = STATE_OVER;
+       }
+       bool redraw = (impl_->left_state_ != oldleft ||
+           impl_->right_state_ != oldright ||
+           impl_->thumb_state_ != oldthumb);
+       if (redraw) {
+         QueueDraw();
+       }
+     }
+     break;
     case Event::EVENT_MOUSE_WHEEL: {
       impl_->accum_wheel_delta_ += event.GetWheelDelta();
       bool downleft;

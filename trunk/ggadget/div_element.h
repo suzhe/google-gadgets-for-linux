@@ -47,7 +47,7 @@ class DivElement : public ScrollingElement {
    * No scriptable interfaces will be registered in this constructor.
    */
   DivElement(BasicElement *parent, View *view,
-             const char *tag_name, const char *name, Elements *children);
+             const char *tag_name, const char *name);
 
   virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas,

@@ -33,10 +33,10 @@ namespace ggadget {
 class BasicElement::Impl {
  public:
   Impl(BasicElement *parent, View *view, const char *tag_name, const char *name,
-       Elements *children, BasicElement *owner)
+       bool children, BasicElement *owner)
       : parent_(parent),
         owner_(owner),
-        children_(children),
+        children_(NULL),
         view_(view),
         hittest_(ElementInterface::HT_DEFAULT),
         cursor_(ElementInterface::CURSOR_ARROW),
@@ -66,6 +66,9 @@ class BasicElement::Impl {
       tag_name_ = tag_name;
     if (parent)
       ASSERT(parent->GetView() == view);
+    if (children) {
+      children_ = new Elements(view->GetElementFactory(), owner, view);
+    }
   }
 
   ~Impl() {
@@ -856,7 +859,7 @@ static const char *kHitTestNames[] = {
 
 BasicElement::BasicElement(BasicElement *parent, View *view,
                            const char *tag_name, const char *name,
-                           Elements *children)
+                           bool children)
     : impl_(new Impl(parent, view, tag_name, name, children, this)) {
   RegisterProperty("x",
                    NewSlot(this, &BasicElement::GetX),
@@ -928,15 +931,15 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
   if (children) {
-    RegisterConstant("children", children);
+    RegisterConstant("children", impl_->children_);
     RegisterMethod("appendElement",
-                   NewSlot(children, &Elements::AppendElementFromXML));
+                   NewSlot(impl_->children_, &Elements::AppendElementFromXML));
     RegisterMethod("insertElement",
-                   NewSlot(children, &Elements::InsertElementFromXML));
+                   NewSlot(impl_->children_, &Elements::InsertElementFromXML));
     RegisterMethod("removeElement",
-                   NewSlot(children, &Elements::RemoveElement));
+                   NewSlot(impl_->children_, &Elements::RemoveElement));
     RegisterMethod("removeAllElements",
-                   NewSlot(children, &Elements::RemoveAllElements));
+                   NewSlot(impl_->children_, &Elements::RemoveAllElements));
   }
 
   RegisterSignal(kOnClickEvent, &impl_->onclick_event_);

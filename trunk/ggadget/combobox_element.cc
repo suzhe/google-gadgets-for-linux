@@ -22,7 +22,6 @@
 #include "elements.h"
 #include "event.h"
 #include "listbox_element.h"
-#include "list_elements.h"
 #include "math_utils.h"
 #include "gadget_consts.h"
 #include "image.h"
@@ -42,7 +41,7 @@ static const char *kTypeNames[] = {
 class ComboBoxElement::Impl {
  public:
   Impl(ComboBoxElement *owner, View *view)
-      : owner_(owner), elements_(NULL), 
+      : owner_(owner), 
         mouseover_child_(NULL), grabbed_child_(NULL),
         type_(COMBO_DROPDOWN), maxitems_(10),
         listbox_(new ListBoxElement(owner, view, "listbox", "")),
@@ -52,23 +51,22 @@ class ComboBoxElement::Impl {
         button_down_img_(view->LoadImageFromGlobal(kScrollDefaultRightDown, false)), 
         button_over_img_(view->LoadImageFromGlobal(kScrollDefaultRightOver, false)),
         background_(NULL) {
-    ASSERT(listbox_->GetChildren()->IsInstanceOf(ListElements::CLASS_ID));
-    elements_ = down_cast<ListElements *>(listbox_->GetChildren());
-
     // Register container methods since combobox is really a container.
-    owner_->RegisterConstant("children", elements_);
+    ElementsInterface *elements = listbox_->GetChildren();
+    ASSERT(elements->IsInstanceOf(Elements::CLASS_ID));
+    owner_->RegisterConstant("children", elements);
     owner_->RegisterMethod("appendElement",
-                           NewSlot(implicit_cast<Elements *>(elements_), 
-                                   &ListElements::AppendElementFromXML));
+                           NewSlot(down_cast<Elements *>(elements), 
+                                   &Elements::AppendElementFromXML));
     owner_->RegisterMethod("insertElement",
-                           NewSlot(implicit_cast<Elements *>(elements_), 
-                                   &ListElements::InsertElementFromXML));
+                           NewSlot(down_cast<Elements *>(elements), 
+                                   &Elements::InsertElementFromXML));
     owner_->RegisterMethod("removeElement",
-                           NewSlot(implicit_cast<Elements *>(elements_), 
-                                   &ListElements::RemoveElement));
+                           NewSlot(down_cast<Elements *>(elements), 
+                                   &Elements::RemoveElement));
     owner_->RegisterMethod("removeAllElements",
-                           NewSlot(implicit_cast<Elements *>(elements_), 
-                                   &ListElements::RemoveAllElements));
+                           NewSlot(down_cast<Elements *>(elements), 
+                                   &Elements::RemoveAllElements));
 
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
@@ -93,7 +91,6 @@ class ComboBoxElement::Impl {
   }
 
   ComboBoxElement *owner_;
-  ListElements *elements_;
   BasicElement *mouseover_child_, *grabbed_child_;
   Type type_;
   int maxitems_;
@@ -118,7 +115,7 @@ class ComboBoxElement::Impl {
   void SetListBoxHeight() {
     // GetPixelHeight is overridden, so specify BasicElement::
     double elem_height = owner_->BasicElement::GetPixelHeight();
-    double item_height = elements_->GetItemPixelHeight();
+    double item_height = listbox_->GetItemPixelHeight();
 
     double max_height = maxitems_ * item_height;    
     double height = std::min(max_height, elem_height - item_height);
@@ -130,23 +127,23 @@ class ComboBoxElement::Impl {
   }
 
   void ScrollList(bool down) {
-    int count = elements_->GetCount();
+    int count = listbox_->GetChildren()->GetCount();
     if (count == 0) {
       return;
     }
 
-    int index = elements_->GetSelectedIndex();
+    int index = listbox_->GetSelectedIndex();
     // Scroll wraps around.
     index += count + (down ? 1 : -1);
     index %= count;
-    elements_->SetSelectedIndex(index);
+    listbox_->SetSelectedIndex(index);
     listbox_->ScrollToIndex(index);
   }
 };
 
 ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
                                  const char *name)
-    : BasicElement(parent, view, "combobox", name, NULL),
+    : BasicElement(parent, view, "combobox", name, false),
       impl_(new Impl(this, view)) {
   SetEnabled(true);  
 
@@ -154,26 +151,26 @@ ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
                    NewSlot(this, &ComboBoxElement::GetBackground),
                    NewSlot(this, &ComboBoxElement::SetBackground));
   RegisterProperty("itemHeight",
-                   NewSlot(impl_->elements_, &ListElements::GetItemHeight),
-                   NewSlot(this, &ComboBoxElement::SetItemHeight));
+                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemHeight),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemHeight));
   RegisterProperty("itemWidth",
-                   NewSlot(impl_->elements_, &ListElements::GetItemWidth),
-                   NewSlot(this, &ComboBoxElement::SetItemWidth));
+                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemWidth),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemWidth));
   RegisterProperty("itemOverColor",
-                   NewSlot(impl_->elements_, &ListElements::GetItemOverColor),
-                   NewSlot(impl_->elements_, &ListElements::SetItemOverColor));
+                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemOverColor),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemOverColor));
   RegisterProperty("itemSelectedColor",
-                   NewSlot(impl_->elements_, &ListElements::GetItemSelectedColor),
-                   NewSlot(impl_->elements_, &ListElements::SetItemSelectedColor));
+                   NewSlot(impl_->listbox_, &ListBoxElement::GetItemSelectedColor),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemSelectedColor));
   RegisterProperty("itemSeparator",
-                   NewSlot(impl_->elements_, &ListElements::HasItemSeparator),
-                   NewSlot(impl_->elements_, &ListElements::SetItemSeparator));
+                   NewSlot(impl_->listbox_, &ListBoxElement::HasItemSeparator),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetItemSeparator));
   RegisterProperty("selectedIndex",
-                   NewSlot(impl_->elements_, &ListElements::GetSelectedIndex),
-                   NewSlot(impl_->elements_, &ListElements::SetSelectedIndex));
+                   NewSlot(impl_->listbox_, &ListBoxElement::GetSelectedIndex),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetSelectedIndex));
   RegisterProperty("selectedItem",
-                   NewSlot(impl_->elements_, &ListElements::GetSelectedItem),
-                   NewSlot(impl_->elements_, &ListElements::SetSelectedItem));
+                   NewSlot(impl_->listbox_, &ListBoxElement::GetSelectedItem),
+                   NewSlot(impl_->listbox_, &ListBoxElement::SetSelectedItem));
   RegisterProperty("droplistVisible",
                    NewSlot(this, &ComboBoxElement::IsDroplistVisible),
                    NewSlot(this, &ComboBoxElement::SetDroplistVisible));
@@ -189,18 +186,20 @@ ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
                              kTypeNames, arraysize(kTypeNames));
 
   RegisterMethod("clearSelection",
-                 NewSlot(impl_->elements_, &ListElements::ClearSelection));
+                 NewSlot(impl_->listbox_, &ListBoxElement::ClearSelection));
 
   // Version 5.5 newly added methods and properties.
   RegisterProperty("itemSeparatorColor",
-                   NewSlot(impl_->elements_, &ListElements::GetItemSeparatorColor),
-                   NewSlot(impl_->elements_, &ListElements::SetItemSeparatorColor));
+                   NewSlot(impl_->listbox_, 
+                           &ListBoxElement::GetItemSeparatorColor),
+                   NewSlot(impl_->listbox_, 
+                           &ListBoxElement::SetItemSeparatorColor));
   RegisterMethod("appendString",
-                 NewSlot(impl_->elements_, &ListElements::AppendString));
+                 NewSlot(impl_->listbox_, &ListBoxElement::AppendString));
   RegisterMethod("insertStringAt",
-                 NewSlot(impl_->elements_, &ListElements::InsertStringAt));
+                 NewSlot(impl_->listbox_, &ListBoxElement::InsertStringAt));
   RegisterMethod("removeString",
-                 NewSlot(impl_->elements_, &ListElements::RemoveString));
+                 NewSlot(impl_->listbox_, &ListBoxElement::RemoveString));
 
   // Disabled
   RegisterProperty("autoscroll",
@@ -221,7 +220,7 @@ ComboBoxElement::~ComboBoxElement() {
 void ComboBoxElement::DoDraw(CanvasInterface *canvas,
                              const CanvasInterface *children_canvas) {
   bool expanded = impl_->listbox_->IsVisible();
-  double item_height = impl_->elements_->GetItemPixelHeight();
+  double item_height = impl_->listbox_->GetItemPixelHeight();
   double elem_width = GetPixelWidth();
   bool c; // Used for drawing.
 
@@ -238,7 +237,7 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
   // TODO dropdown type isn't supported right now
 
   // Draw item
-  ItemElement *item = impl_->elements_->GetSelectedItem();
+  ItemElement *item = impl_->listbox_->GetSelectedItem();
   if (item) {
     item->SetDrawOverlay(false);
     const CanvasInterface *item_canvas = item->Draw(&c);
@@ -295,18 +294,18 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
 }
 
 const ElementsInterface *ComboBoxElement::GetChildren() const {
-  return impl_->elements_;
+  return impl_->listbox_->GetChildren();
 }
 
 ElementsInterface *ComboBoxElement::GetChildren() {
-  return impl_->elements_;  
+  return impl_->listbox_->GetChildren();  
 }
 
 double ComboBoxElement::GetPixelHeight() const {
   if (impl_->listbox_->IsVisible()) {
     return BasicElement::GetPixelHeight(); 
   } else {
-    return impl_->elements_->GetItemPixelHeight();
+    return impl_->listbox_->GetItemPixelHeight();
   }
 }
 
@@ -317,7 +316,7 @@ bool ComboBoxElement::IsDroplistVisible() const {
 void ComboBoxElement::SetDroplistVisible(bool visible) {
   if (visible != impl_->listbox_->IsVisible()) {
     if (visible) {
-      impl_->listbox_->ScrollToIndex(impl_->elements_->GetSelectedIndex());
+      impl_->listbox_->ScrollToIndex(impl_->listbox_->GetSelectedIndex());
     }
     impl_->listbox_->SetVisible(visible);
   }
@@ -348,7 +347,7 @@ void ComboBoxElement::SetType(Type type) {
 }
 
 const char *ComboBoxElement::GetValue() const {
-  const ItemElement *item = impl_->elements_->GetSelectedItem();
+  const ItemElement *item = impl_->listbox_->GetSelectedItem();
   if (item) {
     return item->GetLabelText();
   }
@@ -357,7 +356,7 @@ const char *ComboBoxElement::GetValue() const {
 }
 
 void ComboBoxElement::SetValue(const char *value) {
-  ItemElement *item = impl_->elements_->GetSelectedItem();
+  ItemElement *item = impl_->listbox_->GetSelectedItem();
   if (item) {
     item->SetLabelText(value);
   } else {
@@ -391,19 +390,9 @@ void ComboBoxElement::SetBackground(const Variant &background) {
   QueueDraw();
 }
 
-void ComboBoxElement::SetItemWidth(const Variant &width) {
-  impl_->elements_->SetItemWidth(width);
-  QueueDraw();
-}
-
-void ComboBoxElement::SetItemHeight(const Variant &height) {
-  impl_->elements_->SetItemHeight(height);
-  QueueDraw();
-}
-
 void ComboBoxElement::Layout() {
   BasicElement::Layout();
-  impl_->listbox_->SetPixelY(impl_->elements_->GetItemPixelHeight());
+  impl_->listbox_->SetPixelY(impl_->listbox_->GetItemPixelHeight());
   impl_->listbox_->SetPixelWidth(GetPixelWidth());
   impl_->SetListBoxHeight();
   impl_->listbox_->Layout();
@@ -583,7 +572,7 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
      }
      break;    
     case Event::EVENT_MOUSE_DOWN:
-     if (in_button) {
+     if (in_button && event.GetButton() & MouseEvent::BUTTON_LEFT) {
        impl_->button_down_ = true;
        QueueDraw();
      }

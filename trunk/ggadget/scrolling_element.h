@@ -29,7 +29,7 @@ class ScrollingElement : public BasicElement {
  protected:
   ScrollingElement(BasicElement *parent, View *view,
                    const char *tag_name, const char *name,
-                   Elements *children);
+                   bool children);
   virtual ~ScrollingElement();
 
  public:

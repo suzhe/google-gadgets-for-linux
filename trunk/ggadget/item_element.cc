@@ -16,9 +16,10 @@
 
 #include "item_element.h"
 #include "canvas_interface.h"
+#include "elements_interface.h"
+#include "graphics_interface.h"
 #include "label_element.h"
 #include "listbox_element.h"
-#include "list_elements.h"
 #include "texture.h"
 #include "text_frame.h"
 #include "view.h"
@@ -28,15 +29,13 @@ namespace ggadget {
 class ItemElement::Impl {
  public:
   Impl(BasicElement *parent) 
-    : parent_(parent), selected_(false), mouseover_(false), 
+    : parent_(NULL), selected_(false), mouseover_(false), 
       drawoverlay_(true), background_(NULL), index_(0) {
-    ElementsInterface *children;
-    if (parent && 
-        (children = parent->GetChildren())->IsInstanceOf(ListElements::CLASS_ID)) {
-      elements_ = down_cast<ListElements *>(children);
+    if (parent->IsInstanceOf(ListBoxElement::CLASS_ID)) {
+      parent_ = down_cast<ListBoxElement *>(parent);
     } else {
-	  LOG("Item element is not contained inside a parent of the correct type");
-    }
+      LOG("Item element is not contained inside a parent of the correct type.");
+    }    
   }
 
   ~Impl() {    
@@ -44,17 +43,15 @@ class ItemElement::Impl {
     background_ = NULL;
   }
 
-  BasicElement *parent_;
+  ListBoxElement *parent_;
   bool selected_, mouseover_, drawoverlay_;
   Texture *background_;
   int index_;
-  ListElements *elements_;
 };
 
 ItemElement::ItemElement(BasicElement *parent, View *view,
                          const char *tagname, const char *name)
-    : BasicElement(parent, view, tagname, name, 
-                   new Elements(view->GetElementFactory(), this, view)),
+    : BasicElement(parent, view, tagname, name, true),
       impl_(new Impl(parent)) {
   SetEnabled(true);
   RegisterProperty("background",
@@ -77,12 +74,12 @@ void ItemElement::DoDraw(CanvasInterface *canvas,
   }
 
   if (impl_->drawoverlay_ && (impl_->selected_ || impl_->mouseover_)) {
-    if (impl_->elements_) {
+    if (impl_->parent_) {
       const Texture *overlay; 
       if (impl_->selected_) {
-        overlay = impl_->elements_->GetItemSelectedTexture();
+        overlay = impl_->parent_->GetItemSelectedTexture();
       } else {
-        overlay = impl_->elements_->GetItemOverTexture();
+        overlay = impl_->parent_->GetItemOverTexture();
       }       
       if (overlay) {
         overlay->Draw(canvas);
@@ -93,6 +90,24 @@ void ItemElement::DoDraw(CanvasInterface *canvas,
   if (children_canvas) {
     canvas->DrawCanvas(0, 0, children_canvas);
   }
+
+  if (impl_->drawoverlay_ && impl_->parent_->HasItemSeparator()) {
+    const Texture *item_separator = impl_->parent_->GetItemSeparatorTexture();
+    if (item_separator) {
+      const GraphicsInterface *gfx = GetView()->GetGraphics();
+      CanvasInterface *separator = gfx->NewCanvas(canvas->GetWidth(), 2);
+      if (!separator) {
+        DLOG("Error: unable to create separator canvas.");
+        return;
+      }
+
+      item_separator->Draw(separator);      
+      canvas->DrawCanvas(0, canvas->GetHeight() - 2, separator);
+
+      separator->Destroy();
+      separator = NULL;
+    }    
+  }  
 }
 
 void ItemElement::SetDrawOverlay(bool draw) {
@@ -109,7 +124,9 @@ bool ItemElement::IsMouseOver() const {
 }
 
 void ItemElement::QueueDraw() {
-  impl_->parent_->QueueDraw();
+  if (impl_->parent_) {
+    impl_->parent_->QueueDraw();
+  }
   BasicElement::QueueDraw();
 }
 
@@ -131,13 +148,6 @@ void ItemElement::SetBackground(const Variant &background) {
 
 bool ItemElement::IsSelected() const {
   return impl_->selected_;
-}
-
-void ItemElement::SetSelectedNoRedraw(bool selected) {
-  if (impl_->selected_ != selected) {
-    impl_->selected_ = selected;
-    QueueDraw();
-  }
 }
 
 void ItemElement::SetSelected(bool selected) {
@@ -208,9 +218,9 @@ BasicElement *ItemElement::CreateListItemInstance(BasicElement *parent,
 }
 
 void ItemElement::GetDefaultSize(double *width, double *height) const {
-  if (impl_->elements_) {
-    *width  = impl_->elements_->GetItemPixelWidth();
-    *height = impl_->elements_->GetItemPixelHeight();
+  if (impl_->parent_) {
+    *width  = impl_->parent_->GetItemPixelWidth();
+    *height = impl_->parent_->GetItemPixelHeight();
   } else {
     *width = *height = 0;
   }  
@@ -221,23 +231,19 @@ void ItemElement::GetDefaultPosition(double *x, double *y) const {
   *y = impl_->index_ * GetPixelHeight();
 }
 
-void ItemElement::Layout() {
-  BasicElement::Layout();
-}
-
 EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
    case Event::EVENT_MOUSE_CLICK:   
-     if (impl_->elements_) {
+     if (impl_->parent_) {
        // Need to invoke selection through parent, since
        // parent knows about multiselect status.
        if (event.GetModifier() & Event::MOD_SHIFT) {
-         impl_->elements_->SelectRange(this);
+         impl_->parent_->SelectRange(this);
        } else if (event.GetModifier() & Event::MOD_CONTROL) {
-         impl_->elements_->AppendSelection(this);
+         impl_->parent_->AppendSelection(this);
        } else {
-         impl_->elements_->SetSelectedItem(this);
+         impl_->parent_->SetSelectedItem(this);
        }
      }     
     break;
@@ -250,9 +256,6 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
     QueueDraw();
     break;
    default:
-     if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
-       DLOG("wheel");
-     }
     result = EVENT_RESULT_UNHANDLED;
     break;
   }

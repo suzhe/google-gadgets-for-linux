@@ -89,7 +89,7 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * Adjusts the layout (e.g. size, position, etc.) of children.
    * This method is called just before @c Draw().
    */
-  virtual void Layout();
+  void Layout();
 
   /**
    * Draw all the elements in this object onto a canvas that has the same size
@@ -99,7 +99,7 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * @return canvas with the elements drawn. @c NULL if
    *     <code>GetCount() == 0</code>.
    */
-  virtual const CanvasInterface *Draw(bool *changed);
+  const CanvasInterface *Draw(bool *changed);
 
   /**
    * Handler of the mouse events.
@@ -110,9 +110,9 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    *     disabled child elements, but not invisible child elements).
    * @return result of event handling.
    */
-  virtual EventResult OnMouseEvent(const MouseEvent &event,
-                                   BasicElement **fired_element,
-                                   BasicElement **in_element);
+  EventResult OnMouseEvent(const MouseEvent &event,
+                           BasicElement **fired_element,
+                           BasicElement **in_element);
 
   /**
    * Handler of the drag and drop events.
@@ -121,8 +121,8 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    *     @c NULL if no one.
    * @return result of event handling.
    */
-  virtual EventResult OnDragEvent(const DragEvent &event,
-                                  BasicElement **fired_element);
+  EventResult OnDragEvent(const DragEvent &event,
+                          BasicElement **fired_element);
 
   /**
    * Sets if the drawing contents can be scrolled within the parent.

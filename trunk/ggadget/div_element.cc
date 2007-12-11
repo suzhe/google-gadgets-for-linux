@@ -39,8 +39,7 @@ class DivElement::Impl {
 };
 
 DivElement::DivElement(BasicElement *parent, View *view, const char *name)
-    : ScrollingElement(parent, view, "div", name, 
-                       new Elements(view->GetElementFactory(), this, view)),
+    : ScrollingElement(parent, view, "div", name, true),
       impl_(new Impl(this)) {
   RegisterProperty("autoscroll",
                    NewSlot(implicit_cast<ScrollingElement *>(this),
@@ -53,9 +52,8 @@ DivElement::DivElement(BasicElement *parent, View *view, const char *name)
 }
 
 DivElement::DivElement(BasicElement *parent, View *view,
-                       const char *tag_name, const char *name, 
-                       Elements *children)
-    : ScrollingElement(parent, view, tag_name, name, children),
+                       const char *tag_name, const char *name)
+    : ScrollingElement(parent, view, tag_name, name, true),
       impl_(new Impl(this)) {
 }
 

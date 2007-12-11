@@ -36,15 +36,100 @@ class ListBoxElement : public DivElement {
   virtual Connection *ConnectEvent(const char *event_name, 
                                    Slot0<void> *handler);
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
-  Connection *ConnectOnRedrawEvent(Slot0<void> *slot);
 
   void ScrollToIndex(int index);
 
-  void FireOnChangeEvent();
+  //void FireOnChangeEvent();
 
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element);
+  virtual void Layout();
+
+ public:
+  /**
+   * Gets and sets the current selected index.
+   * If multiple items are selected, selectedIndex is the index of the first
+   * selected item.
+   * -1 means no item is selected.
+   */
+  int GetSelectedIndex() const;
+  void SetSelectedIndex(int index);
+
+  /** Gets and sets the current selected item. */
+  ItemElement *GetSelectedItem();
+  const ItemElement *GetSelectedItem() const;
+  void SetSelectedItem(ItemElement *item);
+
+  /** 
+   * AppendSelection differs from SetSelectedItem in that this method allows  
+   * multiselect if it is enabled.
+   * This method is not exposed to the script engine.
+   */
+  void AppendSelection(ItemElement *item);
+
+  /** 
+   * Selects all items in a range from the first selected item to the given
+   * parameter if multiselect is enabled. Otherwise behaves like 
+   * SetSelectedItem.
+   * This method is not exposed to the script engine.
+   */
+  void SelectRange(ItemElement *endpoint);
+
+  /** Unselects all items in the listbox. */
+  void ClearSelection();
+
+  /** Gets and sets item width in pixels or percentage. */
+  double GetItemPixelWidth() const;
+  Variant GetItemWidth() const;
+  void SetItemWidth(const Variant &width);
+
+  /** Gets and sets item height in pixels or percentage. */
+  double GetItemPixelHeight() const;
+  Variant GetItemHeight() const;
+  void SetItemHeight(const Variant &height);
+
+  /** Gets or sets the background texture of the item under the mouse cursor. */
+  Variant GetItemOverColor() const;
+  const Texture *GetItemOverTexture() const;
+  void SetItemOverColor(const Variant &color);
+
+  /** Gets or sets the background texture of the selected item. */
+  Variant GetItemSelectedColor() const;
+  const Texture *GetItemSelectedTexture() const;
+  void SetItemSelectedColor(const Variant &color);
+
+  /** Gets or sets the texture of the item separator. */
+  Variant GetItemSeparatorColor() const;
+  const Texture *GetItemSeparatorTexture() const;
+  void SetItemSeparatorColor(const Variant &color);
+
+  /** Gets and sets whether there are separator lines between the items. */
+  bool HasItemSeparator() const;
+  void SetItemSeparator(bool separator);
+
+  /** Gets and sets whether the user can select multiple items. */
+  bool IsMultiSelect() const;
+  void SetMultiSelect(bool multiselect);
+
+  /** 
+   * Creates an Item element with a single Label child with the specified text.
+   * @return true on success, false otherwise.
+   */
+  bool AppendString(const char *str);
+
+  /** 
+   * Creates an Item element with a single Label child with the specified text,
+   * at the specified index.
+   * @return true on success, false otherwise.
+   */
+  bool InsertStringAt(const char *str, int index);
+
+  /** 
+   * Searches for the lowest-indexed Item element that has one Label child
+   * with the specified text,
+   */
+  void RemoveString(const char *str);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

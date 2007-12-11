@@ -17,6 +17,7 @@
 #include <cmath>
 #include "scrolling_element.h"
 #include "canvas_interface.h"
+#include "common.h"
 #include "elements.h"
 #include "math_utils.h"
 #include "scrollbar_element.h"
@@ -110,7 +111,7 @@ class ScrollingElement::Impl {
 
 ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
                                    const char *tag_name, const char *name,
-                                   Elements *children)
+                                   bool children)
     : BasicElement(parent, view, tag_name, name, children),
       impl_(new Impl(this)) {
 }

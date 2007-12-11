@@ -92,7 +92,7 @@ class CheckBoxElement::Impl {
 
 CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
                                  const char *name, bool is_checkbox)
-    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, NULL),
+    : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
       impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
 
@@ -286,12 +286,16 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
     case Event::EVENT_MOUSE_DOWN:
-      impl_->mousedown_ = true;
-      QueueDraw();
+      if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
+        impl_->mousedown_ = true;
+        QueueDraw();  
+      }
       break;
     case Event::EVENT_MOUSE_UP:
-      impl_->mousedown_ = false;
-      QueueDraw();
+      if (impl_->mousedown_) {
+        impl_->mousedown_ = false;
+        QueueDraw();  
+      }      
       break;
     case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;
