@@ -172,7 +172,7 @@ class ProgressBarElement::Impl {
 
 ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
                                        const char *name)
-    : BasicElement(parent, view, "progressbar", name, NULL),
+    : BasicElement(parent, view, "progressbar", name, false),
       impl_(new Impl(this)) {
   RegisterProperty("emptyImage", 
                    NewSlot(this, &ProgressBarElement::GetEmptyImage), 
@@ -458,35 +458,37 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
         QueueDraw();
       }        
       break;      
-    case Event::EVENT_MOUSE_DOWN: 
-      if (over) {
-        // The drag delta setting here is tricky. If the button is held down
-        // initially over the thumb, then the pointer should always stay 
-        // on top of the same location on the thumb when dragged, thus 
-        // reflecting the value indicated by the bottom-left corner of the
-        // thumb, not the current position of the pointer.
-        // If the mouse button is held down over any other part of the 
-        // progressbar, then the pointer should reflect the value of the 
-        // point under it.
-        // This is different from scrollbar, where there's only a single
-        // case for the drag delta setting. In the progressbar, the drag
-        // delta depends on whether the initial mousedown is fired over the
-        // thumb or not.
-        if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
-          impl_->drag_delta_ = event.GetX() - tx;
-        }
-        else {
-          impl_->drag_delta_ = event.GetY() - ty;
-        }
+    case Event::EVENT_MOUSE_DOWN:
+      if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
+        if (over) {
+          // The drag delta setting here is tricky. If the button is held down
+          // initially over the thumb, then the pointer should always stay 
+          // on top of the same location on the thumb when dragged, thus 
+          // reflecting the value indicated by the bottom-left corner of the
+          // thumb, not the current position of the pointer.
+          // If the mouse button is held down over any other part of the 
+          // progressbar, then the pointer should reflect the value of the 
+          // point under it.
+          // This is different from scrollbar, where there's only a single
+          // case for the drag delta setting. In the progressbar, the drag
+          // delta depends on whether the initial mousedown is fired over the
+          // thumb or not.
+          if (impl_->orientation_ == ORIENTATION_HORIZONTAL) {
+            impl_->drag_delta_ = event.GetX() - tx;
+          }
+          else {
+            impl_->drag_delta_ = event.GetY() - ty;
+          }
 
-        impl_->thumbdown_ = true;          
-        QueueDraw(); // Redraw because of the thumbdown.
-      } else {
-        impl_->drag_delta_ = 0;
-        int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
-                                                event.GetX(), event.GetY());
-        SetValue(value); // SetValue will queue a draw.
-      }
+          impl_->thumbdown_ = true;          
+          QueueDraw(); // Redraw because of the thumbdown.
+        } else {
+          impl_->drag_delta_ = 0;
+          int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
+                                                  event.GetX(), event.GetY());
+          SetValue(value); // SetValue will queue a draw.
+        }  
+      }     
       break;
     case Event::EVENT_MOUSE_UP:
       if (impl_->thumbdown_) {

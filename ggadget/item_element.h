@@ -35,7 +35,6 @@ class ItemElement : public BasicElement {
   /** Gets and sets whether this item is currently selected. */
   bool IsSelected() const;
   void SetSelected(bool selected);
-  void SetSelectedNoRedraw(bool selected);
 
   /**
    * Gets and sets the background color or image of the element. The image is
@@ -87,7 +86,6 @@ class ItemElement : public BasicElement {
                                               const char *name);
 
  protected:
-  virtual void Layout();
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas);
   virtual void GetDefaultSize(double *width, double *height) const;

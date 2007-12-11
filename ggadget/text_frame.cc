@@ -70,7 +70,7 @@ class TextFrame::Impl {
 
   void ResetFont() {
     ClearFont();
-    return ResetExtents();
+    ResetExtents();
   }
 
   void ResetExtents() {

@@ -24,9 +24,7 @@
 class Muffin : public ggadget::BasicElement {
  public:
   Muffin(ggadget::BasicElement *parent, ggadget::View *view, const char *name)
-      : ggadget::BasicElement(parent, view, "muffin", name, 
-                              new ggadget::Elements(view->GetElementFactory(), 
-                                                    this, view)) {
+      : ggadget::BasicElement(parent, view, "muffin", name, true) {
   }
 
   virtual ~Muffin() {
@@ -49,9 +47,7 @@ class Muffin : public ggadget::BasicElement {
 class Pie : public ggadget::BasicElement {
  public:
   Pie(ggadget::BasicElement *parent, ggadget::View *view, const char *name)
-      : ggadget::BasicElement(parent, view, "pie", name, 
-                              new ggadget::Elements(view->GetElementFactory(), 
-                                                    this, view)) {
+      : ggadget::BasicElement(parent, view, "pie", name, true) {
   }
 
   virtual ~Pie() {

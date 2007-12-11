@@ -33,7 +33,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
  public:
   BasicElement(BasicElement *parent, View *view,
-               const char *tag_name, const char *name, Elements *children);
+               const char *tag_name, const char *name, bool children);
   virtual ~BasicElement();
 
  public: // ElementInterface methods.
