@@ -14,45 +14,75 @@
   limitations under the License.
 */
 
+#include <cmath>
+#include "edit_interface.h"
 #include "edit_element.h"
 #include "canvas_interface.h"
+#include "graphics_interface.h"
 #include "event.h"
 #include "view.h"
+#include "scriptable_event.h"
+#include "slot.h"
+#include "string_utils.h"
+#include "texture.h"
+#include "scrolling_element.h"
 
 namespace ggadget {
+
+static const int kDefaultEditElementWidth = 60;
+static const int kDefaultEditElementHeight = 16;
+static const Color kDefaultBackgroundColor(1, 1, 1);
+static const char *const kOnChangeEvent = "onchange";
 
 class EditElement::Impl {
  public:
   Impl(EditElement *owner)
-      : owner_(owner) {
+      : owner_(owner),
+        accum_wheel_delta_(0) {
+    edit_ = owner_->GetView()->NewEdit(kDefaultEditElementWidth,
+                                       kDefaultEditElementHeight);
+    edit_->SetBackground(new Texture(kDefaultBackgroundColor, 1.0));
   }
   ~Impl() {
+    edit_->Destroy();
   }
 
-  const char *ScriptGetPasswordChar() {
-    // TODO:
-    return NULL;
+  void FireOnChangeEvent() {
+    Event event(Event::EVENT_CHANGE);
+    ScriptableEvent s_event(&event, owner_, NULL);
+    owner_->GetView()->FireEvent(&s_event, onchange_event_);
   }
 
-  void ScriptSetPasswordChar(const char *) {
-    // TODO:
+  JSONString GetIdealBoundingRect() {
+    int w, h;
+    owner_->GetIdealBoundingRect(&w, &h);
+    return JSONString(StringPrintf("{\"width\":%d,\"height\":%d}", w, h));
+  }
+
+  void OnScrolled() {
+    edit_->ScrollTo(owner_->GetScrollYPosition());
   }
 
   EditElement *owner_;
+  EditInterface *edit_;
   EventSignal onchange_event_;
+  int accum_wheel_delta_;
 };
 
 EditElement::EditElement(BasicElement *parent, View *view, const char *name)
-    : BasicElement(parent, view, "edit", name, false),
+    : ScrollingElement(parent, view, "edit", name, false),
       impl_(new Impl(this)) {
-  // SetAutoscroll(true);
   SetEnabled(true);
-/*
+  SetAutoscroll(true);
+
+  impl_->edit_->ConnectOnQueueDraw(NewSlot(static_cast<BasicElement*>(this),
+                                           &BasicElement::QueueDraw));
+  impl_->edit_->ConnectOnTextChanged(NewSlot(impl_, &Impl::FireOnChangeEvent));
+  ConnectOnScrolledEvent(NewSlot(impl_, &Impl::OnScrolled));
+
   RegisterProperty("background",
-                   NewSlot(implicit_cast<DivElement *>(this),
-                           &DivElement::GetBackground),
-                   NewSlot(implicit_cast<DivElement *>(this),
-                           &DivElement::SetBackground)); */
+                   NewSlot(this, &EditElement::GetBackground),
+                   NewSlot(this, &EditElement::SetBackground));
   RegisterProperty("bold",
                    NewSlot(this, &EditElement::IsBold),
                    NewSlot(this, &EditElement::SetBold));
@@ -69,8 +99,8 @@ EditElement::EditElement(BasicElement *parent, View *view, const char *name)
                    NewSlot(this, &EditElement::IsMultiline),
                    NewSlot(this, &EditElement::SetMultiline));
   RegisterProperty("passwordChar",
-                   NewSlot(impl_, &Impl::ScriptGetPasswordChar),
-                   NewSlot(impl_, &Impl::ScriptSetPasswordChar));
+                   NewSlot(this, &EditElement::GetPasswordChar),
+                   NewSlot(this, &EditElement::SetPasswordChar));
   RegisterProperty("size",
                    NewSlot(this, &EditElement::GetSize),
                    NewSlot(this, &EditElement::SetSize));
@@ -86,126 +116,216 @@ EditElement::EditElement(BasicElement *parent, View *view, const char *name)
   RegisterProperty("wordWrap",
                    NewSlot(this, &EditElement::IsWordWrap),
                    NewSlot(this, &EditElement::SetWordWrap));
-  RegisterSignal("onchange", &impl_->onchange_event_);
+  RegisterProperty("readonly",
+                   NewSlot(this, &EditElement::IsReadOnly),
+                   NewSlot(this, &EditElement::SetReadOnly));
+  RegisterProperty("idealBoundingRect",
+                   NewSlot(impl_, &Impl::GetIdealBoundingRect),
+                   NULL);
+
+  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 
 EditElement::~EditElement() {
   delete impl_;
-  impl_ = NULL;
+}
+
+void EditElement::Layout() {
+  ScrollingElement::Layout();
+  int range, line_step, page_step, cur_pos;
+
+  impl_->edit_->SetWidth(static_cast<int>(ceil(GetClientWidth())));
+  impl_->edit_->SetHeight(static_cast<int>(ceil(GetClientHeight())));
+  impl_->edit_->GetScrollBarInfo(&range, &line_step, &page_step, &cur_pos);
+
+  // If the scrollbar display state was changed, then call Layout() recursively
+  // to redo Layout.
+  if (UpdateScrollBar(0, range)) {
+    Layout();
+  } else {
+    SetScrollYPosition(cur_pos);
+    SetYLineStep(line_step);
+    SetYPageStep(page_step);
+  }
+}
+
+Variant EditElement::GetBackground() const {
+  return Variant(Texture::GetSrc(impl_->edit_->GetBackground()));
+}
+
+void EditElement::SetBackground(const Variant &background) {
+  impl_->edit_->SetBackground(GetView()->LoadTexture(background));
+}
+
+bool EditElement::IsBold() const {
+  return impl_->edit_->IsBold();
+}
+
+void EditElement::SetBold(bool bold) {
+  impl_->edit_->SetBold(bold);
+}
+
+std::string EditElement::GetColor() const {
+  Texture texture(impl_->edit_->GetTextColor(), 1.0);
+  return texture.GetSrc();
+}
+
+void EditElement::SetColor(const char *color) {
+  Texture texture(GetView()->GetGraphics(), GetView()->GetFileManager(), color);
+  impl_->edit_->SetTextColor(texture.GetColor());
+}
+
+std::string EditElement::GetFont() const {
+  return impl_->edit_->GetFontFamily();
+}
+
+void EditElement::SetFont(const char *font) {
+  impl_->edit_->SetFontFamily(font);
+}
+
+bool EditElement::IsItalic() const {
+  return impl_->edit_->IsItalic();
+}
+
+void EditElement::SetItalic(bool italic) {
+  impl_->edit_->SetItalic(italic);
+}
+
+bool EditElement::IsMultiline() const {
+  return impl_->edit_->IsMultiline();
+}
+
+void EditElement::SetMultiline(bool multiline) {
+  impl_->edit_->SetMultiline(multiline);
+}
+
+std::string EditElement::GetPasswordChar() const {
+  return impl_->edit_->GetPasswordChar();
+}
+
+void EditElement::SetPasswordChar(const char *passwordChar) {
+  impl_->edit_->SetPasswordChar(passwordChar);
+}
+
+int EditElement::GetSize() const {
+  return impl_->edit_->GetFontSize();
+}
+
+void EditElement::SetSize(int size) {
+  impl_->edit_->SetFontSize(size);
+}
+
+bool EditElement::IsStrikeout() const {
+  return impl_->edit_->IsStrikeout();
+}
+
+void EditElement::SetStrikeout(bool strikeout) {
+  impl_->edit_->SetStrikeout(strikeout);
+}
+
+bool EditElement::IsUnderline() const {
+  return impl_->edit_->IsUnderline();
+}
+
+void EditElement::SetUnderline(bool underline) {
+  impl_->edit_->SetUnderline(underline);
+}
+
+std::string EditElement::GetValue() const {
+  return impl_->edit_->GetText();
+}
+
+void EditElement::SetValue(const char *value) {
+  impl_->edit_->SetText(value);
+}
+
+bool EditElement::IsWordWrap() const {
+  return impl_->edit_->IsWordWrap();
+}
+
+void EditElement::SetWordWrap(bool wrap) {
+  impl_->edit_->SetWordWrap(wrap);
+}
+
+bool EditElement::IsReadOnly() const {
+  return impl_->edit_->IsReadOnly();
+}
+
+void EditElement::SetReadOnly(bool readonly) {
+  impl_->edit_->SetReadOnly(readonly);
+}
+
+void EditElement::GetIdealBoundingRect(int *width, int *height) {
+  int w, h;
+  impl_->edit_->GetSizeRequest(&w, &h);
+  if (width) *width = w;
+  if (height) *height = h;
+}
+
+Connection *EditElement::ConnectEvent(const char *event_name,
+                                      Slot0<void> *handler) {
+  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
+    return impl_->onchange_event_.Connect(handler);
+  return BasicElement::ConnectEvent(event_name, handler);
+}
+Connection *EditElement::ConnectOnChangeEvent(Slot0<void> *slot) {
+  return impl_->onchange_event_.Connect(slot);
 }
 
 void EditElement::DoDraw(CanvasInterface *canvas,
                          const CanvasInterface *children_canvas) {
-  // TODO: Draw the edit into a canvas and pass the canvas as children_canvas
-  // to DivElement::DoDraw().
-  // BasicElement::DoDraw(canvas, children_canvas);
-}
-
-bool EditElement::IsBold() const {
-  // TODO:
-  return false;
-}
-
-void EditElement::SetBold(bool bold) {
-  // TODO:
-}
-
-const char *EditElement::GetColor() const {
-  // TODO:
-  return "";
-}
-
-void EditElement::SetColor(const char *color) {
-  // TODO:
-}
-
-const char *EditElement::GetFont() const {
-  // TODO:
-  return "";
-}
-
-void EditElement::SetFont(const char *font) {
-  // TODO:
-}
-
-bool EditElement::IsItalic() const {
-  // TODO:
-  return false;
-}
-
-void EditElement::SetItalic(bool italic) {
-  // TODO:
-}
-
-bool EditElement::IsMultiline() const {
-  // TODO:
-  return false;
-}
-
-void EditElement::SetMultiline(bool multiline) {
-  // TODO:
-}
-
-char EditElement::GetPasswordChar() const {
-  // TODO:
-  return '\0';
-}
-
-void EditElement::SetPassordChar(char passwordChar) {
-  // TODO:
-}
-
-int EditElement::GetSize() const {
-  // TODO:
-  return 10;
-}
-
-void EditElement::SetSize(int size) {
-  // TODO:
-}
-
-bool EditElement::IsStrikeout() const {
-  // TODO:
-  return false;
-}
-
-void EditElement::SetStrikeout(bool strikeout) {
-  // TODO:
-}
-
-bool EditElement::IsUnderline() const {
-  // TODO:
-  return false;
-}
-
-void EditElement::SetUnderline(bool underline) {
-  // TODO:
-}
-
-const char *EditElement::GetValue() const {
-  // TODO:
-  return "Edit";
-}
-
-void EditElement::SetValue(const char *value) {
-  // TODO:
-}
-
-bool EditElement::IsWordWrap() const {
-  // TODO:
-  return false;
-}
-
-void EditElement::SetWordWrap(bool wrap) {
-  // TODO:
+  bool modified;
+  CanvasInterface *content = impl_->edit_->Draw(&modified);
+  canvas->DrawCanvas(0, 0, content);
+  DrawScrollbar(canvas);
 }
 
 EventResult EditElement::HandleMouseEvent(const MouseEvent &event) {
-  return EVENT_RESULT_UNHANDLED;
+  if (ScrollingElement::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
+    return EVENT_RESULT_HANDLED;
+#if 0
+  if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
+    int range, line_step, page_step, cur_pos;
+    impl_->edit_->GetScrollBarInfo(&range, &line_step, &page_step, &cur_pos);
+    impl_->accum_wheel_delta_ += event.GetWheelDelta();
+    if (impl_->accum_wheel_delta_ > 0 &&
+        impl_->accum_wheel_delta_ >= MouseEvent::kWheelDelta) {
+      impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
+      impl_->edit_->ScrollTo(cur_pos - line_step);
+      ScrollY(-line_step);
+    } else if (impl_->accum_wheel_delta_ < 0 &&
+        impl_->accum_wheel_delta_ <= -MouseEvent::kWheelDelta) {
+      impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
+      impl_->edit_->ScrollTo(cur_pos + line_step);
+      ScrollY(line_step);
+    }
+    return EVENT_RESULT_HANDLED;
+  }
+#endif
+
+  return impl_->edit_->OnMouseEvent(event);
 }
 
 EventResult EditElement::HandleKeyEvent(const KeyboardEvent &event) {
+  return impl_->edit_->OnKeyEvent(event);
+}
+
+EventResult EditElement::HandleOtherEvent(const Event &event) {
+  if (event.GetType() == Event::EVENT_FOCUS_IN) {
+    impl_->edit_->FocusIn();
+    return EVENT_RESULT_HANDLED;
+  } else if(event.GetType() == Event::EVENT_FOCUS_OUT) {
+    impl_->edit_->FocusOut();
+    return EVENT_RESULT_HANDLED;
+  }
   return EVENT_RESULT_UNHANDLED;
+}
+
+void EditElement::GetDefaultSize(double *width, double *height) const {
+  ASSERT(width && height);
+
+  *width = kDefaultEditElementWidth;
+  *height = kDefaultEditElementHeight;
 }
 
 BasicElement *EditElement::CreateInstance(BasicElement *parent,

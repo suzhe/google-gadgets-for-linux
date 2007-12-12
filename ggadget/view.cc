@@ -189,7 +189,7 @@ class View::Impl {
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
                                   event.GetX(), event.GetY(),
-                                  event.GetButton(), event.GetWheelDelta(), 
+                                  event.GetButton(), event.GetWheelDelta(),
                                   event.GetModifier());
         MapChildPositionEvent(event, old_mouseover_element, &mouseout_event);
         old_mouseover_element->OnMouseEvent(mouseout_event, true,
@@ -205,7 +205,7 @@ class View::Impl {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
                                      event.GetX(), event.GetY(),
                                      event.GetButton(), event.GetWheelDelta(),
-				     event.GetModifier());
+                                     event.GetModifier());
           MapChildPositionEvent(event, mouseover_element_, &mouseover_event);
           mouseover_element_->OnMouseEvent(mouseover_event, true,
                                            &fired_element, &in_element);
@@ -340,7 +340,7 @@ class View::Impl {
 
   EventResult OnKeyEvent(const KeyboardEvent &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
-    DLOG("%s(view): %d %d", scriptable_event.GetName(), 
+    DLOG("%s(view): %d %d", scriptable_event.GetName(),
          event.GetKeyCode(), event.GetModifier());
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
@@ -755,7 +755,7 @@ class View::Impl {
     else if (GadgetStrCmp(event_name, kOnRClickEvent) == 0)
       signal = &onrclick_event_;
     else if (GadgetStrCmp(event_name, kOnRDblClickEvent) == 0)
-      signal = &onrdblclick_event_;  
+      signal = &onrdblclick_event_;
     else if (GadgetStrCmp(event_name, kOnDockEvent) == 0)
       signal = &ondock_event_;
     else if (GadgetStrCmp(event_name, kOnKeyDownEvent) == 0)
@@ -869,7 +869,7 @@ class View::Impl {
   ContentAreaElement *content_area_element_;
 
   // Local pointers to elements should be pushed into this vector before any
-  // event handler be called, and the pointer will be set to NULL if the 
+  // event handler be called, and the pointer will be set to NULL if the
   // element has been removed during the event handler.
   std::vector<BasicElement **> death_detected_elements_;
 
@@ -937,7 +937,7 @@ View::View(ViewHostInterface *host,
   RegisterSignal(kOnCloseEvent, &impl_->onclose_event_);
   RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
   RegisterSignal(kOnRClickEvent, &impl_->onrclick_event_);
-  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);  
+  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);
   RegisterSignal(kOnDockEvent, &impl_->ondock_event_);
   RegisterSignal(kOnKeyDownEvent, &impl_->onkeydown_event_);
   RegisterSignal(kOnKeyPressEvent, &impl_->onkeypress_event_);
@@ -1198,12 +1198,12 @@ void View::SetFocus(BasicElement *element) {
 }
 
 bool View::OpenURL(const char *url) const {
-  // Important: verify that URL is valid first. 
+  // Important: verify that URL is valid first.
   // Otherwise could be a security problem.
   std::string newurl = EncodeURL(url);
   if (0 == strncmp(newurl.c_str(), kFTPPrefix, sizeof(kFTPPrefix) - 1) ||
       0 == strncmp(newurl.c_str(), kHTTPPrefix, sizeof(kHTTPPrefix) - 1) ||
-      0 == strncmp(newurl.c_str(), kHTTPSPrefix, sizeof(kHTTPSPrefix) - 1)) {  
+      0 == strncmp(newurl.c_str(), kHTTPSPrefix, sizeof(kHTTPSPrefix) - 1)) {
     return impl_->gadget_host_->OpenURL(newurl.c_str());
   }
 
@@ -1242,6 +1242,10 @@ ContentAreaElement *View::GetContentAreaElement() {
 
 void View::SetTooltip(const char *tooltip) {
   impl_->host_->SetTooltip(tooltip);
+}
+
+EditInterface *View::NewEdit(size_t w, size_t h) {
+  return impl_->host_->NewEdit(w, h);
 }
 
 } // namespace ggadget

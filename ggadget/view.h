@@ -29,6 +29,7 @@ class BasicElement;
 class ContentAreaElement;
 class ElementFactoryInterface;
 class ScriptContextInterface;
+class EditInterface;
 
 /**
  * Main View implementation.
@@ -185,7 +186,7 @@ class View : public ScriptableHelper<ViewInterface> {
    */
   Texture *LoadTexture(const Variant &src);
 
-  /** 
+  /**
    * Open the given URL in the user's default web brower.
    * Only HTTP, HTTPS, and FTP URLs are supported.
    */
@@ -224,6 +225,12 @@ class View : public ScriptableHelper<ViewInterface> {
    * automatically hidden when appropriate.
    */
   void SetTooltip(const char *tooltip);
+
+  /**
+   * Call the corresponding method of ViewHost to create an
+   * Edit box object.
+   */
+  EditInterface *NewEdit(size_t w, size_t h);
 
  private:
   class Impl;

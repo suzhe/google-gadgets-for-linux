@@ -133,24 +133,24 @@ void Texture::Draw(CanvasInterface *canvas) const {
   impl_->Draw(canvas);
 }
 
-void Texture::DrawText(CanvasInterface *canvas, double x, double y, 
-                       double width, double height, const char *text, 
-                       const FontInterface *f, CanvasInterface::Alignment align, 
+void Texture::DrawText(CanvasInterface *canvas, double x, double y,
+                       double width, double height, const char *text,
+                       const FontInterface *f, CanvasInterface::Alignment align,
                        CanvasInterface::VAlignment valign,
-                       CanvasInterface::Trimming trimming, 
+                       CanvasInterface::Trimming trimming,
                        int text_flags) const {
   ASSERT(canvas);
   if (impl_->image_) {
-    // Don't apply opacity_ here because it is only applicable with color_.    
-    canvas->DrawTextWithTexture(x, y, width, height, text, f, 
-                                impl_->image_->GetCanvas(), 
+    // Don't apply opacity_ here because it is only applicable with color_.
+    canvas->DrawTextWithTexture(x, y, width, height, text, f,
+                                impl_->image_->GetCanvas(),
                                 align, valign, trimming, text_flags);
   } else if (impl_->opacity_ > 0) {
     if (impl_->opacity_ != 1.0) {
       canvas->PushState();
       canvas->MultiplyOpacity(impl_->opacity_);
     }
-    canvas->DrawText(x, y, width, height, text, f, impl_->color_, 
+    canvas->DrawText(x, y, width, height, text, f, impl_->color_,
                      align, valign, trimming, text_flags);
     if (impl_->opacity_ != 1.0)
       canvas->PopState();
@@ -161,7 +161,7 @@ Color Texture::GetColor() {
   return impl_->color_;
 }
 
-const char *Texture::GetSrc() {
+const char *Texture::GetSrc() const {
   return impl_->name_.c_str();
 }
 

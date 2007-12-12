@@ -81,11 +81,13 @@ class GtkViewHost : public ViewHostInterface {
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message, const char *default_value);
+  virtual EditInterface *NewEdit(size_t w, size_t h);
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 
   bool ShowTooltip(int timer_id);
   bool HideTooltip(int timer_id);
+
 
  private:
   static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);

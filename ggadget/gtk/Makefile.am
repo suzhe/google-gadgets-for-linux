@@ -29,6 +29,7 @@ gtkinclude_HEADERS	= cairo_canvas.h \
 			  cairo_graphics.h \
 			  global_file_manager.h \
 			  gadget_view_widget.h \
+			  gtk_edit.h \
 			  gtk_gadget_host.h \
 			  gtk_key_convert.h \
 			  gtk_menu_impl.h \
@@ -43,6 +44,7 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_graphics.cc \
 			  global_file_manager.cc \
 			  gadget_view_widget.cc \
+			  gtk_edit.cc \
 			  gtk_gadget_host.cc \
 			  gtk_key_convert.cc \
 			  gtk_menu_impl.cc \

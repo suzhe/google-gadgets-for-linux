@@ -138,6 +138,8 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   /**
    * Adjusts the layout (e.g. size, position, etc.) of this element and its
    * children. This method is called just before @c Draw().
+   * The implementation of this method of the derived classes must call through
+   * that of the base classes first.
    */
   virtual void Layout();
 
@@ -170,7 +172,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
   /**
    * Handler of the drag and drop events.
-   * Normally subclasses should not override this method. 
+   * Normally subclasses should not override this method.
    * Override @c HandleDragEvent() if need to process dragging events.
    * @param event the darg and drop event.
    * @param direct if @c true, this event is sent to the element directly, so
@@ -191,7 +193,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
   /**
    * Handler of the keyboard events.
-   * Normally subclasses should not override this method. 
+   * Normally subclasses should not override this method.
    * Override @c HandleKeyEvent() if need to process keyboard events.
    * @param event the keyboard event.
    * @return result of event handling.
@@ -200,7 +202,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
 
   /**
    * Handler for other events.
-   * Normally subclasses should not override this method. 
+   * Normally subclasses should not override this method.
    * Override @c HandleKeyEvent() if need to process other events.
    * @param event the event.
    * @return result of event handling.
@@ -259,7 +261,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
  public:
   /**
    * Sets the changed bit to true and if visible and this is not called during
-   * @c Layout(), requests the view to be redrawn. 
+   * @c Layout(), requests the view to be redrawn.
    * Normally don't call this inside a drawing function (i.e. drawing has
    * already started) or there might be extra draw attempts.
    */
@@ -273,15 +275,15 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
     PR_INVALID = -1,
   };
 
-  /** 
-   * Parses an Variant into either a absolute value or 
-   * an relative percentage value. 
+  /**
+   * Parses an Variant into either a absolute value or
+   * an relative percentage value.
    */
-  static ParsePixelOrRelativeResult ParsePixelOrRelative(const Variant &input, 
+  static ParsePixelOrRelativeResult ParsePixelOrRelative(const Variant &input,
                                                          double *output);
-  /** 
-   * Returns a Variant depending on whether the input is either absolute 
-   * pixel value or a relative percentage value. 
+  /**
+   * Returns a Variant depending on whether the input is either absolute
+   * pixel value or a relative percentage value.
    */
   static Variant GetPixelOrRelative(bool is_relative, bool is_specified,
                                     double pixel, double relative);
@@ -297,19 +299,19 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) = 0;
 
-  /** To be overriden by a subclass if it need to handle mouse events. */ 
+  /** To be overriden by a subclass if it need to handle mouse events. */
   virtual EventResult HandleMouseEvent(const MouseEvent &event) {
     return EVENT_RESULT_UNHANDLED;
   }
-  /** To be overriden by a subclass if it need to handle dragging events. */ 
+  /** To be overriden by a subclass if it need to handle dragging events. */
   virtual EventResult HandleDragEvent(const DragEvent &event) {
     return EVENT_RESULT_UNHANDLED;
   }
-  /** To be overriden by a subclass if it need to handle keyboard events. */ 
+  /** To be overriden by a subclass if it need to handle keyboard events. */
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event) {
     return EVENT_RESULT_UNHANDLED;
   }
-  /** To be overriden by a subclass if it need to handle other events. */ 
+  /** To be overriden by a subclass if it need to handle other events. */
   virtual EventResult HandleOtherEvent(const Event &event) {
     return EVENT_RESULT_UNHANDLED;
   }

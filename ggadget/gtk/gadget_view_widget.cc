@@ -343,7 +343,7 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
   int mod = ggadget::ConvertGdkModifierToModifier(event->state);
   unsigned int key_code = ggadget::ConvertGdkKeyvalToKeyCode(event->keyval);
   if (key_code) {
-    KeyboardEvent e(Event::EVENT_KEY_DOWN, key_code, mod);
+    KeyboardEvent e(Event::EVENT_KEY_DOWN, key_code, mod, event);
     handler_result = gvw->view->OnKeyEvent(e);
   } else {
     LOG("Unknown key: 0x%x", event->keyval);
@@ -363,7 +363,7 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
 
     if (key_char) {
       // Send the char code in KEY_PRESS event.
-      KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char, mod);
+      KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char, mod, event);
       handler_result2 = gvw->view->OnKeyEvent(e2);
     }
   }
@@ -381,7 +381,7 @@ static gboolean GadgetViewWidget_key_release(GtkWidget *widget,
   int mod = ggadget::ConvertGdkModifierToModifier(event->state);
   unsigned int key_code = ggadget::ConvertGdkKeyvalToKeyCode(event->keyval);
   if (key_code) {
-    KeyboardEvent e(Event::EVENT_KEY_UP, key_code, mod);
+    KeyboardEvent e(Event::EVENT_KEY_UP, key_code, mod, event);
     handler_result = gvw->view->OnKeyEvent(e);
   } else {
     LOG("Unknown key: 0x%x", event->keyval);

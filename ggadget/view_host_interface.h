@@ -27,6 +27,7 @@ class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
 class XMLHttpRequestInterface;
+class EditInterface;
 
 /**
  * Interface for providing host services to views.. Each view contains a
@@ -140,6 +141,12 @@ class ViewHostInterface {
   virtual std::string Prompt(const char *message,
                              const char *default_value) = 0;
 
+  /**
+   * Create a new edit box object for specified ViewHost.
+   * @param w Width of the new edit box.
+   * @param h Height of the new edit box.
+   */
+  virtual EditInterface *NewEdit(size_t w, size_t h) = 0;
 };
 
 } // namespace ggadget

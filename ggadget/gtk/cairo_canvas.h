@@ -103,6 +103,13 @@ class CairoCanvas : public CanvasInterface {
     return s;
   };
 
+  /**
+   * Get the cairo context contained within this class for use elsewhere.
+   */
+  cairo_t *GetCairoContext() const {
+    return cr_;
+  }
+
  private:
    cairo_t *cr_;
    size_t width_, height_;

@@ -17,31 +17,36 @@
 #ifndef GGADGET_EDIT_ELEMENT_H__
 #define GGADGET_EDIT_ELEMENT_H__
 
+#include <string>
 #include <ggadget/basic_element.h>
+#include <ggadget/scrolling_element.h>
 
 namespace ggadget {
 
-class EditElement : public BasicElement {
+class EditElement : public ScrollingElement {
  public:
   DEFINE_CLASS_ID(0xc321ec8aeb4142c4, BasicElement);
 
   EditElement(BasicElement *parent, View *view, const char *name);
   virtual ~EditElement();
 
+  virtual void Layout();
+
  public:
+  /** Gets and sets the background color or texture of the text */
+  Variant GetBackground() const;
+  void SetBackground(const Variant &background);
+
   /** Gets and sets whether the text is bold. */
   bool IsBold() const;
   void SetBold(bool bold);
 
-  /**
-   * Gets and sets the text color or image texture of the text. The image is
-   * repeated if necessary, not stretched.
-   */
-  const char *GetColor() const;
+  /** Gets and sets the text color of the text. */
+  std::string GetColor() const;
   void SetColor(const char *color);
 
   /** Gets and sets the text font. */
-  const char *GetFont() const;
+  std::string GetFont() const;
   void SetFont(const char *font);
 
   /** Gets and sets whether the text is italicized. */
@@ -57,11 +62,11 @@ class EditElement : public BasicElement {
 
   /**
    * Gets and sets the character that should be displayed each time the user
-   * enters a character. By default, the value is @c '\0', which means that the
+   * enters a character. By default, the value is @c "\0", which means that the
    * typed character is displayed as-is.
    */
-  char GetPasswordChar() const;
-  void SetPassordChar(char passwordChar);
+  std::string GetPasswordChar() const;
+  void SetPasswordChar(const char *passwordChar);
 
   /** Gets and sets the text size in points. */
   int GetSize() const;
@@ -70,18 +75,31 @@ class EditElement : public BasicElement {
   /** Gets and sets whether the text is struke-out. */
   bool IsStrikeout() const;
   void SetStrikeout(bool strikeout);
- 
+
   /** Gets and sets whether the text is underlined. */
   bool IsUnderline() const;
   void SetUnderline(bool underline);
 
   /** Gets and sets the value of the element. */
-  const char *GetValue() const;
+  std::string GetValue() const;
   void SetValue(const char *value);
 
   /** Gets and sets whether to wrap the text when it's too large to display. */
   bool IsWordWrap() const;
   void SetWordWrap(bool wrap);
+
+  /** Gets and sets whether the edit element is readonly */
+  bool IsReadOnly() const;
+  void SetReadOnly(bool readonly);
+
+  /** Gets the ideal bounding rect for the edit element which is large enough
+   * for displaying the content without scrolling. */
+  void GetIdealBoundingRect(int *width, int *height);
+
+
+  virtual Connection *ConnectEvent(const char *event_name,
+                                   Slot0<void> *handler);
+  Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
@@ -92,7 +110,8 @@ class EditElement : public BasicElement {
                       const CanvasInterface *children_canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-
+  virtual EventResult HandleOtherEvent(const Event &event);
+  virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(EditElement);

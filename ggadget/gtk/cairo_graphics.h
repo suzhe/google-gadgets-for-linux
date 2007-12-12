@@ -24,6 +24,8 @@
 
 namespace ggadget {
 
+class GtkViewHost;
+
 /**
  * This class realizes the GraphicsInterface using the Cairo graphics library.
  * It is responsible for creating CanvasInterface objects for ggadget.

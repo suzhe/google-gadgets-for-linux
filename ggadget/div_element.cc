@@ -27,7 +27,7 @@ class DivElement::Impl {
  public:
   Impl(DivElement *owner)
       : owner_(owner),
-        background_texture_(NULL) { 
+        background_texture_(NULL) {
   }
   ~Impl() {
     delete background_texture_;
@@ -66,8 +66,14 @@ void DivElement::Layout() {
   ScrollingElement::Layout();
   double children_width = 0, children_height = 0;
   GetChildrenExtents(&children_width, &children_height);
-  if (UpdateScrollBar(static_cast<int>(ceil(children_width)),
-                      static_cast<int>(ceil(children_height)))) {
+
+  int x_range = static_cast<int>(ceil(children_width - GetClientWidth()));
+  int y_range = static_cast<int>(ceil(children_height - GetClientHeight()));
+
+  if (x_range < 0) x_range = 0;
+  if (y_range < 0) y_range = 0;
+
+  if (UpdateScrollBar(x_range, y_range)) {
     // Layout again to reflect change of the scroll bar.
     Layout();
   }

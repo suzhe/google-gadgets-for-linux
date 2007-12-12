@@ -18,10 +18,14 @@
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
+#include "gtk_view_host.h"
+#include "gtk_edit.h"
+#include <ggadget/edit_interface.h>
 
 namespace ggadget {
 
-CairoGraphics::CairoGraphics(double zoom) : zoom_(zoom) {
+CairoGraphics::CairoGraphics(double zoom)
+    : zoom_(zoom) {
   if (zoom_ <= .0) {
     zoom_ = 1.;
   }

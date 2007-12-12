@@ -70,6 +70,7 @@ class GraphicsInterface {
   virtual FontInterface *NewFont(const char *family, size_t pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
+
 };
 
 } // namespace ggadget

@@ -45,12 +45,28 @@ class ScrollingElement : public BasicElement {
   void ScrollX(int distance);
   /** Scroll vertically. */
   void ScrollY(int distance);
+
   /** Gets and Sets the absolute position. */
   int GetScrollXPosition() const;
   void SetScrollXPosition(int pos);
   int GetScrollYPosition() const;
   void SetScrollYPosition(int pos);
 
+  /** Gets and sets the page step value. */
+  int GetXPageStep() const;
+  void SetXPageStep(int value);
+
+  int GetYPageStep() const;
+  void SetYPageStep(int value);
+
+  /** Gets and sets the line step value. */
+  int GetXLineStep() const;
+  void SetXLineStep(int value);
+
+  int GetYLineStep() const;
+  void SetYLineStep(int value);
+
+  /** Get pixel size of client area */
   virtual double GetClientWidth();
   virtual double GetClientHeight();
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
@@ -60,11 +76,18 @@ class ScrollingElement : public BasicElement {
   /**
    * Overrides because this element supports scrolling.
    * @see ElementInterface::SelfCoordToChildCoord()
+   *
+   * Derived classes shall override this method if they have private children
+   * to be handled specially.
    */
   virtual void SelfCoordToChildCoord(const BasicElement *child,
                                      double x, double y,
                                      double *child_x, double *child_y) const;
 
+  /** Register a slot to listen to on-scrolled event.
+   * When the scrollbar is scrolled by user, this slot will be called.
+   */
+  Connection *ConnectOnScrolledEvent(Slot0<void> *slot);
  protected:
   /**
    * Draws scrollbar on the canvas. Subclasses must call this in their
@@ -73,13 +96,14 @@ class ScrollingElement : public BasicElement {
   void DrawScrollbar(CanvasInterface *canvas);
 
   /**
-   * Update the scrollbar status and position. Subclasses must call this in
+   * Update the scrollbar's range and layout. Subclasses must call this in
    * their @c Layout() method.
+   * If y_range equals to zero, then means the scroll bar should be hid.
    * @return @c true if the visibility of the scroll bar changed, and the
    *     caller must update layout again, for example, recursively call
    *     @c Layout() again. Otherwise, returns @c false.
    */
-  bool UpdateScrollBar(int content_width, int content_height);
+  bool UpdateScrollBar(int x_range, int y_range);
 
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
