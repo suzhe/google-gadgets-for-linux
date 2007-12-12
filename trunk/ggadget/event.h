@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-/** Used to indicate the result of an event handler. */ 
+/** Used to indicate the result of an event handler. */
 enum EventResult {
   /** The event is not handled in the handler. */
   EVENT_RESULT_UNHANDLED,
@@ -65,7 +65,7 @@ class Event {
     EVENT_MOUSE_OVER,
     EVENT_MOUSE_WHEEL,
     EVENT_MOUSE_RCLICK,
-    EVENT_MOUSE_RDBLCLICK,    
+    EVENT_MOUSE_RDBLCLICK,
     EVENT_MOUSE_RANGE_END,
 
     EVENT_KEY_RANGE_START = 20000,
@@ -92,7 +92,7 @@ class Event {
     MOD_NONE = 0,
     MOD_SHIFT = 1,
     MOD_CONTROL = 2,
-    MOD_ALT = 4  
+    MOD_ALT = 4
   };
 
   explicit Event(Type t) : type_(t) { ASSERT(IsSimpleEvent()); }
@@ -146,7 +146,7 @@ class MouseEvent : public PositionEvent {
     BUTTON_ALL = BUTTON_LEFT | BUTTON_MIDDLE | BUTTON_RIGHT,
   };
 
-  MouseEvent(Type t, double x, double y, int button, int wheel_delta, 
+  MouseEvent(Type t, double x, double y, int button, int wheel_delta,
              int modifier)
       : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta),
         modifier_(modifier) {
@@ -155,7 +155,7 @@ class MouseEvent : public PositionEvent {
 
   MouseEvent(const MouseEvent &e)
       : PositionEvent(e.GetType(), e.GetX(), e.GetY()),
-        button_(e.button_), wheel_delta_(e.wheel_delta_), 
+        button_(e.button_), wheel_delta_(e.wheel_delta_),
         modifier_(e.modifier_) {
     ASSERT(IsMouseEvent());
   }
@@ -276,18 +276,24 @@ class KeyboardEvent : public Event {
     KEY_QUOTE          = 0xDE,  // VK_OEM_7 in winuser.h, '" in the keyboard.
   };
 
-  KeyboardEvent(Type t, unsigned int key_code, int modifier)
-      : Event(t, 0), key_code_(key_code), modifier_(modifier) {
+  KeyboardEvent(Type t, unsigned int key_code, int modifier, void *original)
+      : Event(t, 0), key_code_(key_code), modifier_(modifier),
+        original_event_(original) {
     ASSERT(IsKeyboardEvent());
   };
 
   KeyboardEvent(const KeyboardEvent &e)
-      : Event(e.GetType(), 0), key_code_(e.key_code_), modifier_(e.modifier_) {
+      : Event(e.GetType(), 0), key_code_(e.key_code_), modifier_(e.modifier_),
+        original_event_(e.original_event_) {
     ASSERT(IsKeyboardEvent());
   }
 
   unsigned int GetKeyCode() const { return key_code_; }
   void SetKeyCode(unsigned int key_code) { key_code_ = key_code; }
+  void *GetOriginalEvent() const { return original_event_; }
+  void SetOriginalEvent(void *original_event) {
+    original_event_ = original_event;
+  }
 
   int GetModifier() const { return modifier_; }
   void SetModifier(int m) { modifier_ = m; }
@@ -295,6 +301,7 @@ class KeyboardEvent : public Event {
  private:
   int key_code_;
   int modifier_;
+  void *original_event_;
 };
 
 /**

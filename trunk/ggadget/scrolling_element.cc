@@ -30,15 +30,11 @@ class ScrollingElement::Impl {
   Impl(ScrollingElement *owner)
       : owner_(owner),
         scroll_pos_x_(0), scroll_pos_y_(0),
-        scroll_width_(0), scroll_height_(0),
-        scroll_range_x_(0), scroll_range_y_(0), 
+        scroll_range_x_(0), scroll_range_y_(0),
         scrollbar_(NULL) {
   }
   ~Impl() {
-    if (scrollbar_) {
-      delete scrollbar_;
-      scrollbar_ = NULL;
-    }
+    if (scrollbar_) delete scrollbar_;
   }
 
   void CreateScrollBar() {
@@ -52,18 +48,17 @@ class ScrollingElement::Impl {
                             scrollbar_->GetPixelWidth());
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
+      scrollbar_->ConnectOnChangeEvent(NewSlot(this, &Impl::OnScrollBarChange));
       // Inform the view of this scrollbar to let the view handle mouse grabbing
       // and mouse over/out logics of the scrollbar.
       owner_->GetView()->OnElementAdd(scrollbar_);
     }
   }
 
-  void UpdateScrollPos(size_t width, size_t height) {
+  void UpdateScrollBar(int x_range, int y_range) {
     ASSERT(scrollbar_);
-    scroll_height_ = static_cast<int>(height);
-    int owner_height = static_cast<int>(ceil(owner_->GetPixelHeight()));
     int old_range_y = scroll_range_y_;
-    scroll_range_y_ = std::max(0, scroll_height_ - owner_height);
+    scroll_range_y_ = std::max(0, y_range);
     scroll_pos_y_ = std::min(scroll_pos_y_, scroll_range_y_);
     bool show_scrollbar = scrollbar_ && (scroll_range_y_ > 0);
     if (old_range_y != scroll_range_y_) {
@@ -72,13 +67,7 @@ class ScrollingElement::Impl {
     }
     scrollbar_->SetVisible(show_scrollbar);
 
-    scroll_width_ = static_cast<int>(width);
-    double owner_width = owner_->GetPixelWidth();
-    if (show_scrollbar) {
-      owner_width -= scrollbar_->GetPixelWidth();
-    }
-    int max_range_x = scroll_width_ - static_cast<int>(ceil(owner_width));
-    scroll_range_x_ = std::max(0, max_range_x);
+    scroll_range_x_ = std::max(0, x_range);
     scroll_pos_x_ = std::min(scroll_pos_x_, scroll_range_x_);
   }
 
@@ -100,13 +89,16 @@ class ScrollingElement::Impl {
     }
   }
 
+  void OnScrollBarChange() {
+    scroll_pos_y_ = scrollbar_->GetValue();
+    on_scrolled_event_();
+  }
+
   ScrollingElement *owner_;
-  Texture *background_texture_;
-  BasicElement *grabbed_scrollbar_, *mouseover_scrollbar_; 
   int scroll_pos_x_, scroll_pos_y_;
-  int scroll_width_, scroll_height_;
   int scroll_range_x_, scroll_range_y_;
   ScrollBarElement *scrollbar_; // NULL if and only if autoscroll=false
+  EventSignal on_scrolled_event_;
 };
 
 ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
@@ -118,7 +110,6 @@ ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
 
 ScrollingElement::~ScrollingElement() {
   delete impl_;
-  impl_ = NULL;
 }
 
 bool ScrollingElement::IsAutoscroll() const {
@@ -129,8 +120,7 @@ void ScrollingElement::SetAutoscroll(bool autoscroll) {
   if ((impl_->scrollbar_ != NULL) != autoscroll) {
     if (autoscroll) {
       impl_->CreateScrollBar();
-    }
-    else {
+    } else {
       delete impl_->scrollbar_;
       impl_->scrollbar_ = NULL;
     }
@@ -171,6 +161,46 @@ void ScrollingElement::SetScrollYPosition(int pos) {
   }
 }
 
+int ScrollingElement::GetXPageStep() const {
+  // TODO: X scroll bar is not supported yet.
+  return 0;
+}
+
+void ScrollingElement::SetXPageStep(int value) {
+  // TODO: X scroll bar is not supported yet.
+}
+
+int ScrollingElement::GetYPageStep() const {
+  if (impl_->scrollbar_)
+    return impl_->scrollbar_->GetPageStep();
+  return 0;
+}
+
+void ScrollingElement::SetYPageStep(int value) {
+  if (impl_->scrollbar_)
+    impl_->scrollbar_->SetPageStep(value);
+}
+
+int ScrollingElement::GetXLineStep() const {
+  // TODO: X scroll bar is not supported yet.
+  return 0;
+}
+
+void ScrollingElement::SetXLineStep(int value) {
+  // TODO: X scroll bar is not supported yet.
+}
+
+int ScrollingElement::GetYLineStep() const {
+  if (impl_->scrollbar_)
+    return impl_->scrollbar_->GetLineStep();
+  return 0;
+}
+
+void ScrollingElement::SetYLineStep(int value) {
+  if (impl_->scrollbar_)
+    impl_->scrollbar_->SetLineStep(value);
+}
+
 EventResult ScrollingElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                            BasicElement **fired_element,
                                            BasicElement **in_element) {
@@ -202,7 +232,7 @@ EventResult ScrollingElement::HandleMouseEvent(const MouseEvent &event) {
 void ScrollingElement::SelfCoordToChildCoord(const BasicElement *child,
                                              double x, double y,
                                              double *child_x,
-                                             double *child_y) const {  
+                                             double *child_y) const {
   if (child != impl_->scrollbar_ && impl_->scrollbar_) {
     x += impl_->scroll_pos_x_;
     y += impl_->scroll_pos_y_;
@@ -221,21 +251,16 @@ void ScrollingElement::DrawScrollbar(CanvasInterface *canvas) {
   }
 }
 
-bool ScrollingElement::UpdateScrollBar(int content_width, int content_height) {
+bool ScrollingElement::UpdateScrollBar(int x_range, int y_range) {
 
   if (impl_->scrollbar_) {
-    bool scrollbar_visible = impl_->scrollbar_->IsVisible();
+    bool old_visible = impl_->scrollbar_->IsVisible();
     impl_->scrollbar_->SetPixelX(GetPixelWidth() -
                                  impl_->scrollbar_->GetPixelWidth());
     impl_->scrollbar_->SetPixelHeight(GetPixelHeight());
 
-    int v = impl_->scrollbar_->GetValue();
-    if (impl_->scroll_pos_y_ != v) {
-      impl_->scroll_pos_y_ = v;
-    }
-
-    impl_->UpdateScrollPos(content_width, content_height);
-    return scrollbar_visible != impl_->scrollbar_->IsVisible();
+    impl_->UpdateScrollBar(x_range, y_range);
+    return old_visible != impl_->scrollbar_->IsVisible();
   }
   return false;
 }
@@ -249,6 +274,10 @@ double ScrollingElement::GetClientWidth() {
 double ScrollingElement::GetClientHeight() {
   // Horizontal scrollbar is not supported for now.
   return GetPixelHeight();
+}
+
+Connection *ScrollingElement::ConnectOnScrolledEvent(Slot0<void> *slot) {
+  return impl_->on_scrolled_event_.Connect(slot);
 }
 
 } // namespace ggadget

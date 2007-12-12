@@ -80,13 +80,13 @@ class Texture {
    *     color name if this texture is a color; otherwise returns an empty
    *     string.
    */
-  const char *GetSrc();
+  const char *GetSrc() const;
 
   /** @return the color. If this texture is an image texture, returns black. */
   Color GetColor();
 
   /** Utility function to get the src of a texture which can be @c NULL. */
-  static const char *GetSrc(Texture *texture) {
+  static const char *GetSrc(const Texture *texture) {
     return texture ? texture->GetSrc() : "";
   }
 

@@ -23,6 +23,7 @@
 #include "gtk_view_host.h"
 #include "gadget_view_widget.h"
 #include "cairo_graphics.h"
+#include "gtk_edit.h"
 
 namespace ggadget {
 
@@ -111,7 +112,7 @@ GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
     }
   }
 
-  gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom, 
+  gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom,
                                                composited, useshapemask));
   gfx_ = new CairoGraphics(zoom);
 }
@@ -419,6 +420,10 @@ std::string GtkViewHost::Prompt(const char *message,
     text = gtk_entry_get_text(GTK_ENTRY(entry));
   gtk_widget_destroy(dialog);
   return text;
+}
+
+EditInterface *GtkViewHost::NewEdit(size_t w, size_t h) {
+  return new GtkEdit(this, w, h);
 }
 
 } // namespace ggadget

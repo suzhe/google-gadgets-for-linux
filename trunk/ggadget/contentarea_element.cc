@@ -35,7 +35,7 @@ static const Color kMouseOverBackground(0.83, 0.93, 0.98);
 static const Color kMouseDownBackground(0.73, 0.83, 0.88);
 static const Color kSelectedBackground(0.83, 0.93, 0.98);
 static const int kItemBorderWidth = 2;
-static const unsigned int kRefreshInterval = 30000; // 30 seconds. 
+static const unsigned int kRefreshInterval = 30000; // 30 seconds.
 
 class ContentAreaElement::Impl {
  public:
@@ -257,7 +257,7 @@ class ContentAreaElement::Impl {
   }
 
   bool SetMaxContentItems(size_t max_content_items) {
-    max_content_items = std::min(std::max(1U, max_content_items),
+    max_content_items = std::min(std::max((size_t)1, max_content_items),
                                  kMaxContentItemsUpperLimit);
     if (max_content_items_ != max_content_items) {
       max_content_items_ = max_content_items;
@@ -354,7 +354,7 @@ class ContentAreaElement::Impl {
           break;
         }
       }
-  
+
       bool new_mouse_over_pin = (mouse_x_ < pin_image_max_width_);
       if (mouse_over_item_ != new_mouse_over_item) {
         mouse_over_item_ = new_mouse_over_item;
@@ -372,11 +372,11 @@ class ContentAreaElement::Impl {
         mouse_over_pin_ = new_mouse_over_pin;
         queue_draw = true;
       }
-  
+
       if (event.GetType() != Event::EVENT_MOUSE_MOVE &&
           event.GetButton() == MouseEvent::BUTTON_LEFT) {
         result = EVENT_RESULT_HANDLED;
-  
+
         switch (event.GetType()) {
           case Event::EVENT_MOUSE_DOWN:
             mouse_down_ = true;
