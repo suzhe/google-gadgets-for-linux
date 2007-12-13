@@ -23,6 +23,8 @@
 #include <ggadget/ggadget.h>
 #include <ggadget/view.h>
 
+#include "gtk_gadget_host.h"
+
 class GadgetViewWidget;
 class View;
 
@@ -35,11 +37,11 @@ namespace ggadget {
  */
 class GtkViewHost : public ViewHostInterface {
  public:
-  GtkViewHost(GadgetHostInterface *gadget_host,
+  GtkViewHost(GtkGadgetHost *gadget_host,
               GadgetHostInterface::ViewType type,
               ScriptableInterface *prototype,
-              bool composited, bool useshapemask, 
-	      double zoom, int debug_mode);
+              bool composited, bool useshapemask,
+              double zoom, int debug_mode);
   virtual ~GtkViewHost();
 
 #if 0
@@ -88,11 +90,14 @@ class GtkViewHost : public ViewHostInterface {
   bool ShowTooltip(int timer_id);
   bool HideTooltip(int timer_id);
 
+  GtkGadgetHost *GetGtkGadgetHost() const {
+    return gadget_host_;
+  }
 
  private:
   static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);
 
-  GadgetHostInterface *gadget_host_;
+  GtkGadgetHost *gadget_host_;
   View *view_;
   ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;

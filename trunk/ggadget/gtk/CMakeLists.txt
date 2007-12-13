@@ -20,8 +20,9 @@ PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
 SET(SRCS
   cairo_canvas.cc
   cairo_graphics.cc
-  cairo_font.cc  
+  cairo_font.cc
   global_file_manager.cc
+  gtk_edit.cc
   gtk_gadget_host.cc
   gtk_view_host.cc
   gadget_view_widget.cc

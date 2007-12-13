@@ -317,6 +317,13 @@ void ContentItem::GetRect(int *x, int *y, int *width, int *height) {
   *height = impl_->height_;
 }
 
+bool ContentItem::CanOpen() const {
+  return !(impl_->flags_ & CONTENT_ITEM_FLAG_HIDDEN) &&
+         !(impl_->flags_ & CONTENT_ITEM_FLAG_STATIC) &&
+         (!impl_->open_command_.empty() ||
+          impl_->on_open_item_signal_.HasActiveConnections());
+}
+
 void ContentItem::Draw(GadgetInterface::DisplayTarget target,
                        CanvasInterface *canvas,
                        int x, int y, int width, int height) {
@@ -325,6 +332,7 @@ void ContentItem::Draw(GadgetInterface::DisplayTarget target,
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
     impl_->on_draw_item_signal_(this, target, &scriptable_canvas,
                                 x, y, width, height);
+    return;
   }
 
   // Then the default logic.
@@ -444,7 +452,12 @@ Connection *ContentItem::ConnectOnGetHeight(
 }
 
 void ContentItem::OpenItem() {
-  // TODO:
+  bool result = false;
+  if (impl_->on_open_item_signal_.HasActiveConnections())
+    result = impl_->on_open_item_signal_(this);
+
+  if (!result)
+    impl_->view_->OpenURL(impl_->open_command_.c_str());
 }
 
 Connection *ContentItem::ConnectOnOpenItem(
@@ -493,6 +506,12 @@ Connection *ContentItem::ConnectOnGetIsTooltipRequired(
 typedef Slot1<DetailsViewInfo *, ContentItem *> OnDetailsViewHandler;
 Connection *ConnectOnDetailsView(OnDetailsViewHandler *handler); */
 
+bool ContentItem::ProcessDetailsViewFeedback(int flags) {
+  if (impl_->on_process_details_view_feedback_signal_.HasActiveConnections())
+    return impl_->on_process_details_view_feedback_signal_(this, flags);
+  return false;
+}
+
 Connection *ContentItem::ConnectOnProcessDetailsViewFeedback(
     Slot2<bool, ContentItem *, int> *handler) {
   return impl_->on_process_details_view_feedback_signal_.Connect(handler);
@@ -500,7 +519,7 @@ Connection *ContentItem::ConnectOnProcessDetailsViewFeedback(
 
 bool ContentItem::OnUserRemove() {
   return impl_->on_remove_item_signal_.HasActiveConnections() ?
-         impl_->on_remove_item_signal_(this) : true;
+         impl_->on_remove_item_signal_(this) : false;
 }
 
 Connection *ContentItem::ConnectOnRemoveItem(

@@ -180,7 +180,7 @@ void CheckBoxElement::SetValue(bool value) {
   if (value != (impl_->value_ == STATE_CHECKED)) {
     QueueDraw();
     impl_->value_ = value ? STATE_CHECKED : STATE_NORMAL;
-    Event event(Event::EVENT_CHANGE);
+    SimpleEvent event(Event::EVENT_CHANGE);
     ScriptableEvent s_event(&event, this, NULL);
     GetView()->FireEvent(&s_event, impl_->onchange_event_);
   }
@@ -317,7 +317,7 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
         impl_->value_ = STATE_CHECKED;
       }
       QueueDraw();
-      Event event(Event::EVENT_CHANGE);
+      SimpleEvent event(Event::EVENT_CHANGE);
       ScriptableEvent s_event(&event, this, NULL);
       GetView()->FireEvent(&s_event, impl_->onchange_event_);
       break;

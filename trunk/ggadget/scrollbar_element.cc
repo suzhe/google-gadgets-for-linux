@@ -208,7 +208,7 @@ class ScrollBarElement::Impl {
       value_ = value;
       DLOG("scroll value: %d", value_);
       owner_->QueueDraw();
-      Event event(Event::EVENT_CHANGE);
+      SimpleEvent event(Event::EVENT_CHANGE);
       ScriptableEvent s_event(&event, owner_, NULL);
       owner_->GetView()->FireEvent(&s_event, onchange_event_);
     }

@@ -187,6 +187,9 @@ BasicElement *ScriptableEvent::GetSrcElement() {
 const BasicElement *ScriptableEvent::GetSrcElement() const {
   return impl_->src_element_;
 }
+void ScriptableEvent::SetSrcElement(BasicElement *src_element) {
+  impl_->src_element_ = src_element;
+}
 
 EventResult ScriptableEvent::GetReturnValue() const {
   return impl_->return_value_;

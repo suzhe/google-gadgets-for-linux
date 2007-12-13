@@ -426,43 +426,68 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
   return true;
 }
 
-void GtkGadgetHost::PopupMenu() {
-  if (menu_) {
-    gtk_widget_destroy(GTK_WIDGET(menu_->menu()));
-    delete menu_;
-  }
-
+GtkMenuImpl *GtkGadgetHost::NewContextMenu() {
+  DestroyContextMenu();
   GtkMenu *menu = GTK_MENU(gtk_menu_new());
-  gtk_menu_attach_to_widget(menu, menu_button_, NULL);
   menu_ = new GtkMenuImpl(GTK_MENU(menu));
-
-  gadget_->OnAddCustomMenuItems(menu_);
-
-  GtkMenuShell *menu_shell = GTK_MENU_SHELL(menu);
-  if (g_list_length(gtk_container_get_children(GTK_CONTAINER(menu))) > 0)
-    gtk_menu_shell_append(menu_shell,
-                          GTK_WIDGET(gtk_separator_menu_item_new()));
-
-  GtkWidget *item = gtk_menu_item_new_with_label("Collapse");
-  gtk_menu_shell_append(menu_shell, item);
-  g_signal_connect(item, "activate", G_CALLBACK(OnCollapseActivate), this);
-  item = gtk_menu_item_new_with_label("Options...");
-  gtk_widget_set_sensitive(GTK_WIDGET(item), gadget_->HasOptionsDialog());
-  gtk_menu_shell_append(menu_shell, item);
-  g_signal_connect(item, "activate", G_CALLBACK(OnOptionsActivate), this);
-  gtk_menu_shell_append(menu_shell,
-                        GTK_WIDGET(gtk_separator_menu_item_new()));
-  item = gtk_menu_item_new_with_label("About...");
-  gtk_menu_shell_append(menu_shell, item);
-  g_signal_connect(item, "activate", G_CALLBACK(OnAboutActivate), this);
-  item = gtk_menu_item_new_with_label("Undock from Sidebar");
-  gtk_menu_shell_append(menu_shell, item);
-  g_signal_connect(item, "activate", G_CALLBACK(OnDockActivate), this);
-
-  gtk_widget_show_all(GTK_WIDGET(menu));
-  gtk_menu_popup(menu_->menu(), NULL, NULL, NULL, menu_, 0, 0);
+  return menu_;
 }
 
+bool GtkGadgetHost::PopupContextMenu(bool add_default_items, guint button) {
+  GtkMenu *menu = GTK_MENU(menu_->gtk_menu());
+
+  if (add_default_items) {
+    GtkMenuShell *menu_shell = GTK_MENU_SHELL(menu);
+    guint item_count = g_list_length(gtk_container_get_children(
+        GTK_CONTAINER(menu)));
+
+    if (item_count > 0) {
+      gtk_menu_shell_append(menu_shell,
+                            GTK_WIDGET(gtk_separator_menu_item_new()));
+    }
+    gadget_->OnAddCustomMenuItems(menu_);
+  
+    if (g_list_length(gtk_container_get_children(GTK_CONTAINER(menu))) >
+        item_count) {
+      gtk_menu_shell_append(menu_shell,
+                            GTK_WIDGET(gtk_separator_menu_item_new()));
+    }
+    GtkWidget *item = gtk_menu_item_new_with_label("Collapse");
+    gtk_menu_shell_append(menu_shell, item);
+    g_signal_connect(item, "activate", G_CALLBACK(OnCollapseActivate), this);
+    item = gtk_menu_item_new_with_label("Options...");
+    gtk_widget_set_sensitive(GTK_WIDGET(item), gadget_->HasOptionsDialog());
+    gtk_menu_shell_append(menu_shell, item);
+    g_signal_connect(item, "activate", G_CALLBACK(OnOptionsActivate), this);
+    gtk_menu_shell_append(menu_shell,
+                          GTK_WIDGET(gtk_separator_menu_item_new()));
+    item = gtk_menu_item_new_with_label("About...");
+    gtk_menu_shell_append(menu_shell, item);
+    g_signal_connect(item, "activate", G_CALLBACK(OnAboutActivate), this);
+    item = gtk_menu_item_new_with_label("Undock from Sidebar");
+    gtk_menu_shell_append(menu_shell, item);
+    g_signal_connect(item, "activate", G_CALLBACK(OnDockActivate), this);
+  } else if (g_list_length(gtk_container_get_children(GTK_CONTAINER(menu)))
+                 == 0) {
+      return false;
+  }
+
+  gtk_widget_show_all(GTK_WIDGET(menu));
+  gtk_menu_popup(menu, NULL, NULL, NULL, menu_,
+                 button, gtk_get_current_event_time());
+  return true;
+}
+
+void GtkGadgetHost::DestroyContextMenu() {
+  delete menu_;
+  menu_ = NULL;
+}
+
+void GtkGadgetHost::PopupMenu() {
+  NewContextMenu();
+  PopupContextMenu(true, 0);
+}
+  
 void GtkGadgetHost::OnMenuClicked(GtkButton *button, gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
   this_p->PopupMenu();

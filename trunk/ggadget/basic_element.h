@@ -25,6 +25,7 @@ namespace ggadget {
 
 class CanvasInterface;
 class Elements;
+class MenuInterface;
 class View;
 
 class BasicElement : public ScriptableHelper<ElementInterface> {
@@ -208,6 +209,14 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    * @return result of event handling.
    */
   virtual EventResult OnOtherEvent(const Event &event);
+
+  /**
+   * Called to let this element add customized context menu items.
+   * @return @c false if the handler doesn't want the default menu items shown.
+   *     If no menu item is added in this handler, and @c false is returned,
+   *     the host won't show the whole context menu.
+   */
+  virtual bool OnAddContextMenuItems(MenuInterface *menu);
 
   /**
    * Checks to see if position of the element has changed relative to the

@@ -83,6 +83,9 @@ class ContentAreaElement : public ScrollingElement {
   void RemoveAllContentItems();
 
  public:
+  virtual bool OnAddContextMenuItems(MenuInterface *menu);
+
+ public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
 

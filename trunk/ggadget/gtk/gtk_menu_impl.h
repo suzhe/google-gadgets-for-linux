@@ -29,7 +29,7 @@ namespace ggadget {
  */
 class GtkMenuImpl : public ggadget::MenuInterface {
  public:
-  GtkMenuImpl(GtkMenu *menu);
+  GtkMenuImpl(GtkMenu *gtk_menu);
   virtual ~GtkMenuImpl();
 
   virtual void AddItem(const char *item_text, int style,
@@ -37,7 +37,7 @@ class GtkMenuImpl : public ggadget::MenuInterface {
   virtual void SetItemStyle(const char *item_text, int style);
   virtual MenuInterface *AddPopup(const char *popup_text);
 
-  GtkMenu *menu() { return menu_; }
+  GtkMenu *gtk_menu() { return gtk_menu_; }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(GtkMenuImpl);
@@ -47,13 +47,13 @@ class GtkMenuImpl : public ggadget::MenuInterface {
 
   struct MenuItemInfo {
     std::string item_text;
-    GtkMenuItem *menu_item;
+    GtkMenuItem *gtk_menu_item;
     int style;
     ggadget::Slot1<void, const char *> *handler;
     GtkMenuImpl *submenu;
   };
 
-  GtkMenu *menu_;
+  GtkMenu *gtk_menu_;
   typedef std::map<std::string, MenuItemInfo> ItemMap;
   ItemMap item_map_;
   static bool setting_style_;
