@@ -23,8 +23,8 @@ namespace ggadget {
 
 class ScriptableEvent::Impl {
  public:
-  Impl::Impl(const Event *event, BasicElement *src_element,
-             Event *output_event)
+  Impl(const Event *event, BasicElement *src_element,
+       Event *output_event)
        : event_(event),
          return_value_(EVENT_RESULT_UNHANDLED),
          src_element_(src_element),

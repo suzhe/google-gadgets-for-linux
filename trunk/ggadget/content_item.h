@@ -235,9 +235,9 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
    * @param short_form if short form of time string needed.
    * @return the formatted time string.
    */
-  static std::string ContentItem::GetTimeDisplayString(uint64_t time,
-                                                       uint64_t current_time,
-                                                       bool short_form);
+  static std::string GetTimeDisplayString(uint64_t time,
+                                          uint64_t current_time,
+                                          bool short_form);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ContentItem);
