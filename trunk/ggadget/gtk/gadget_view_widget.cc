@@ -211,7 +211,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     // The GTK event sequence here is: press 2press release
     // for the second click.
     if (button != MouseEvent::BUTTON_NONE) {
-      Event::Type t;
+      Event::Type t = Event::EVENT_SIMPLE_RANGE_START;
       if (event->button == 1) {
         t = Event::EVENT_MOUSE_DBLCLICK;
       } else if (event->button == 3) {
@@ -258,7 +258,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
 
   if (!gvw->dbl_click) {
     if (button != MouseEvent::BUTTON_NONE) {
-      Event::Type t;
+      Event::Type t = Event::EVENT_SIMPLE_RANGE_START;
       if (event->button == 1) {
         t = Event::EVENT_MOUSE_CLICK;
       } else if (event->button == 3) {

@@ -1062,7 +1062,7 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
 
 void GtkEdit::MoveCursor(MovementStep step, int count, bool extend_selection) {
   ResetImContext();
-  int new_pos;
+  int new_pos(0);
   // Clear selection first if not extend it.
   if (cursor_ != selection_bound_ && !extend_selection)
     SetCursor(cursor_);
