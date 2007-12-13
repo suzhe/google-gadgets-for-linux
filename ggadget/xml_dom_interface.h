@@ -139,7 +139,7 @@ class DOMNodeInterface : public ScriptableInterface {
    */
   virtual void TransientDetach() = 0;
 
-  virtual const char *GetNodeName() const = 0;
+  virtual std::string GetNodeName() const = 0;
   virtual const char *GetNodeValue() const = 0;
   virtual void SetNodeValue(const char *node_value) = 0;
   virtual NodeType GetNodeType() const = 0;
@@ -192,18 +192,18 @@ class DOMNodeInterface : public ScriptableInterface {
    * @c textContent is a DOM3 property.
    * Defined here for convenience and compatibility with the Windows version.
    */
-  virtual const char *GetTextContent() const = 0;
+  virtual std::string GetTextContent() const = 0;
   virtual void SetTextContent(const char *text_content) = 0;
 
   /** @c xml property is a Microsoft extension. */
-  virtual const char *GetXML() const = 0;
+  virtual std::string GetXML() const = 0;
 
   /* TODO: DOM2
   virtual bool IsSupported(const char *feature, const char *version) const = 0;
-  virtual const char *GetNamespaceURI() const = 0;
-  virtual const char *GetPrefix() const = 0;
+  virtual std::string GetNamespaceURI() const = 0;
+  virtual std::string GetPrefix() const = 0;
   virtual DOMExceptionCode SetPrefix(const char *prefix) = 0;
-  virtual const char *GetLocalName() const = 0;
+  virtual std::string GetLocalName() const = 0;
   virtual bool HasAttributes() const = 0;
   // Declare these methods here for convenience.
   virtual DOMNodeListInterface *GetElementsByTagNameNS(
@@ -252,12 +252,12 @@ class DOMCharacterDataInterface : public DOMNodeInterface {
  public:
   CLASS_ID_DECL(0x199ea7a610e048b9);
 
-  virtual const UTF16Char *GetData() const = 0;
+  virtual UTF16String GetData() const = 0;
   virtual void SetData(const UTF16Char *data) = 0;
   virtual size_t GetLength() const = 0;
   /** The caller should free the pointer with delete [] operator after use. */
   virtual DOMExceptionCode SubstringData(size_t offset, size_t count,
-                                         UTF16Char **result) const = 0;
+                                         UTF16String *result) const = 0;
   virtual void AppendData(const UTF16Char *arg) = 0;
   virtual DOMExceptionCode InsertData(size_t offset, const UTF16Char *arg) = 0;
   virtual DOMExceptionCode DeleteData(size_t offset, size_t count) = 0;
@@ -270,9 +270,9 @@ class DOMAttrInterface : public DOMNodeInterface {
  public:
   CLASS_ID_DECL(0xc1c04a2ea6ed45fc);
 
-  virtual const char *GetName() const = 0;
+  virtual std::string GetName() const = 0;
   virtual bool IsSpecified() const = 0;
-  virtual const char *GetValue() const = 0;
+  virtual std::string GetValue() const = 0;
   virtual void SetValue(const char *value) = 0;
 
   /** DOM2 property, but useful. */
@@ -285,8 +285,8 @@ class DOMElementInterface : public DOMNodeInterface {
  public:
   CLASS_ID_DECL(0x98722c98a65a4801);
 
-  virtual const char *GetTagName() const = 0;
-  virtual const char *GetAttribute(const char *name) const = 0;
+  virtual std::string GetTagName() const = 0;
+  virtual std::string GetAttribute(const char *name) const = 0;
   virtual DOMExceptionCode SetAttribute(const char *name,
                                         const char *value) = 0;
   virtual void RemoveAttribute(const char *name) = 0;
@@ -299,7 +299,7 @@ class DOMElementInterface : public DOMNodeInterface {
   virtual const DOMNamedNodeMapInterface *GetAttributes() const = 0;
 
   /* TODO: DOM2
-  virtual const char *GetAttributeNS(const char *namespace_uri,
+  virtual std::string GetAttributeNS(const char *namespace_uri,
                                      const char *local_name) = 0;
   virtual DOMExceptionCode SetAttributeNS(const char *namespace_uri,
                                           const char *qualified_name,
@@ -352,8 +352,8 @@ class DOMProcessingInstructionInterface : public DOMNodeInterface {
  public:
   CLASS_ID_DECL(0xb3f35b20e5854943);
 
-  virtual const char *GetTarget() const = 0;
-  virtual const char *GetData() const = 0;
+  virtual std::string GetTarget() const = 0;
+  virtual std::string GetData() const = 0;
   virtual void SetData(const char *data) = 0;
 };
 CLASS_ID_IMPL(DOMProcessingInstructionInterface, DOMNodeInterface)

@@ -44,10 +44,6 @@ class ViewHostWithGraphics : public MockedViewHost {
     return gfx_;
   }
 
-  virtual EditInterface *NewEdit(size_t w, size_t h) {
-    return NULL;
-  }
-
  private:
   GraphicsInterface *gfx_; 
 };

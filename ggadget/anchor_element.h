@@ -40,7 +40,7 @@ class AnchorElement : public BasicElement {
   void SetOverColor(const Variant &color);
   
   /** Gets and sets the URL to be launched when this link is clicked. */
-  const char *GetHref() const;
+  std::string GetHref() const;
   void SetHref(const char *href);
   
   /** Gets the text frame containing the text content of this anchor. */

@@ -18,7 +18,6 @@
 #define GGADGET_VIEW_HOST_INTERFACE_H__
 
 #include <ggadget/element_interface.h>
-#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
@@ -26,6 +25,7 @@ template <typename R, typename P1> class Slot1;
 class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
+class ViewInterface;
 class XMLHttpRequestInterface;
 class EditInterface;
 
@@ -65,11 +65,19 @@ class ViewHostInterface {
   /** Asks the host to deliver keyboard events to the view. */
   virtual bool GrabKeyboardFocus() = 0;
 
+  /** Used in @c SetResizable(). */
+  enum ResizableMode {
+    RESIZABLE_FALSE,
+    RESIZABLE_TRUE,
+    /** The user can resize the view while keeping the original aspect ratio. */
+    RESIZABLE_ZOOM,
+  };
+
   /**
    * When the resizable field on the view is updated, the host needs to be
    * alerted of this change.
    */
-  virtual void SetResizable(ViewInterface::ResizableMode mode) = 0;
+  virtual void SetResizable(ResizableMode mode) = 0;
 
   /**
    * Sets a caption to be shown when the View is in floating or expanded
@@ -80,8 +88,26 @@ class ViewHostInterface {
   /** Sets whether to always show the caption for this view. */
   virtual void SetShowCaptionAlways(bool always) = 0;
 
+  enum CursorType {
+    CURSOR_ARROW,
+    CURSOR_IBEAM,
+    CURSOR_WAIT,
+    CURSOR_CROSS,
+    CURSOR_UPARROW,
+    CURSOR_SIZE,
+    CURSOR_SIZENWSE,
+    CURSOR_SIZENESW,
+    CURSOR_SIZEWE,
+    CURSOR_SIZENS,
+    CURSOR_SIZEALL,
+    CURSOR_NO,
+    CURSOR_HAND,
+    CURSOR_BUSY,
+    CURSOR_HELP,
+  };
+
   /** Sets the current mouse cursor. */
-  virtual void SetCursor(ElementInterface::CursorType type) = 0;
+  virtual void SetCursor(CursorType type) = 0;
 
   /**
    * Shows a tooltip popup after certain initial delay at the current mouse

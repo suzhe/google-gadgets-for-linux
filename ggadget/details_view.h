@@ -57,9 +57,9 @@ class DetailsView : public ScriptableHelper<ScriptableInterface> {
    */
   void SetContentFromItem(ContentItem *item);
 
-  const char *GetSource() const { return source_.c_str(); }
+  std::string GetSource() const { return source_; }
   Date GetTimeCreated() const { return time_created_; }
-  const char *GetText() const { return text_.c_str(); }
+  std::string GetText() const { return text_; }
   bool IsTimeAbsolute() const { return time_absolute_; }
   ContentItem::Layout GetLayout() const { return layout_; }
 

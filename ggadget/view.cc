@@ -58,7 +58,7 @@ class View::Impl {
       debug_mode_(debug_mode),
       width_(0), height_(0),
       // TODO: Make sure the default value.
-      resizable_(ViewInterface::RESIZABLE_TRUE),
+      resizable_(ViewHostInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
       focused_element_(NULL),
       mouseover_element_(NULL),
@@ -228,7 +228,7 @@ class View::Impl {
       host_->SetCursor(in_element->GetCursor());
       if (type == Event::EVENT_MOUSE_MOVE && in_element != tooltip_element_) {
         tooltip_element_ = in_element;
-        host_->SetTooltip(tooltip_element_->GetTooltip());
+        host_->SetTooltip(tooltip_element_->GetTooltip().c_str());
       }
     } else {
       tooltip_element_ = NULL;
@@ -415,8 +415,8 @@ class View::Impl {
       content_area_element_ = down_cast<ContentAreaElement *>(element);
     }
 
-    const char *name = element->GetName();
-    if (name && *name &&
+    std::string name = element->GetName();
+    if (!name.empty() &&
         // Don't overwrite the existing element with the same name.
         all_elements_.find(name) == all_elements_.end())
       all_elements_[name] = element;
@@ -468,8 +468,8 @@ class View::Impl {
     if (posting_event_element_ == element)
       posting_event_element_ = NULL;
 
-    const char *name = element->GetName();
-    if (name && *name) {
+    std::string name = element->GetName();
+    if (!name.empty()) {
       ElementsMap::iterator it = all_elements_.find(name);
       if (it != all_elements_.end() && it->second == element)
         all_elements_.erase(it);
@@ -757,65 +757,6 @@ class View::Impl {
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
-  // The implementation uses if-else statements, which seems the best
-  // trade-off among code size, data size, calling frequency and time.
-  // This method is seldom called only by C++ code.
-  Connection *ConnectEvent(const char *event_name, Slot0<void> *handler) {
-    ASSERT(event_name);
-    EventSignal *signal = NULL;
-    if (GadgetStrCmp(event_name, kOnCancelEvent) == 0)
-      signal = &oncancel_event_;
-    else if (GadgetStrCmp(event_name, kOnClickEvent) == 0)
-      signal = &onclick_event_;
-    else if (GadgetStrCmp(event_name, kOnCloseEvent) == 0)
-      signal = &onclose_event_;
-    else if (GadgetStrCmp(event_name, kOnDblClickEvent) == 0)
-      signal = &ondblclick_event_;
-    else if (GadgetStrCmp(event_name, kOnRClickEvent) == 0)
-      signal = &onrclick_event_;
-    else if (GadgetStrCmp(event_name, kOnRDblClickEvent) == 0)
-      signal = &onrdblclick_event_;
-    else if (GadgetStrCmp(event_name, kOnDockEvent) == 0)
-      signal = &ondock_event_;
-    else if (GadgetStrCmp(event_name, kOnKeyDownEvent) == 0)
-      signal = &onkeydown_event_;
-    else if (GadgetStrCmp(event_name, kOnKeyPressEvent) == 0)
-      signal = &onkeypress_event_;
-    else if (GadgetStrCmp(event_name, kOnKeyUpEvent) == 0)
-      signal = &onkeyup_event_;
-    else if (GadgetStrCmp(event_name, kOnMinimizeEvent) == 0)
-      signal = &onminimize_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseDownEvent) == 0)
-      signal = &onmousedown_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseOutEvent) == 0)
-      signal = &onmouseout_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseOverEvent) == 0)
-      signal = &onmouseover_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseUpEvent) == 0)
-      signal = &onmouseup_event_;
-    else if (GadgetStrCmp(event_name, kOnOkEvent) == 0)
-      signal = &onok_event_;
-    else if (GadgetStrCmp(event_name, kOnOpenEvent) == 0)
-      signal = &onopen_event_;
-    else if (GadgetStrCmp(event_name, kOnOptionChangedEvent) == 0)
-      signal = &onoptionchanged_event_;
-    else if (GadgetStrCmp(event_name, kOnPopInEvent) == 0)
-      signal = &onpopin_event_;
-    else if (GadgetStrCmp(event_name, kOnPopOutEvent) == 0)
-      signal = &onpopout_event_;
-    else if (GadgetStrCmp(event_name, kOnRestoreEvent) == 0)
-      signal = &onrestore_event_;
-    else if (GadgetStrCmp(event_name, kOnSizeEvent) == 0)
-      signal = &onsize_event_;
-    else if (GadgetStrCmp(event_name, kOnSizingEvent) == 0)
-      signal = &onsizing_event_;
-    else if (GadgetStrCmp(event_name, kOnUndockEvent) == 0)
-      signal = &onundock_event_;
-
-    ASSERT_M(signal, ("Unknown event name: %s", event_name));
-    return signal->Connect(handler);
-  }
-
   class DeathDetectedSlot : public Slot {
    public:
     DeathDetectedSlot(Impl *impl, BasicElement *element, Slot *slot)
@@ -889,7 +830,7 @@ class View::Impl {
   Elements children_;
   int debug_mode_;
   int width_, height_;
-  ViewInterface::ResizableMode resizable_;
+  ViewHostInterface::ResizableMode resizable_;
   std::string caption_;
   bool show_caption_always_;
 
@@ -1111,7 +1052,11 @@ bool View::SetSize(int width, int height) {
   return impl_->SetSize(width, height);
 }
 
-void View::SetResizable(ViewInterface::ResizableMode resizable) {
+ViewHostInterface::ResizableMode View::GetResizable() const {
+  return impl_->resizable_;
+}
+
+void View::SetResizable(ViewHostInterface::ResizableMode resizable) {
   impl_->resizable_ = resizable;
   impl_->host_->SetResizable(resizable);
 }
@@ -1136,17 +1081,13 @@ const ElementInterface *View::GetElementByName(const char *name) const {
   return impl_->GetElementByName(name);
 }
 
-ViewInterface::ResizableMode View::GetResizable() const {
-  return impl_->resizable_;
-}
-
 void View::SetCaption(const char *caption) {
   impl_->caption_ = caption ? caption : NULL;
   impl_->host_->SetCaption(caption);
 }
 
-const char *View::GetCaption() const {
-  return impl_->caption_.c_str();
+std::string View::GetCaption() const {
+  return impl_->caption_;
 }
 
 void View::SetShowCaptionAlways(bool show_always) {
@@ -1208,7 +1149,7 @@ Image *View::LoadImage(const Variant &src, bool is_mask) {
       const ScriptableBinaryData *binary =
           VariantValue<const ScriptableBinaryData *>()(src);
       if (binary)
-        return new Image(GetGraphics(), binary->data(), binary->size(),
+        return new Image(GetGraphics(), binary->data().c_str(), binary->size(),
                          is_mask);
       // else falls through!
     }
@@ -1235,7 +1176,8 @@ Texture *View::LoadTexture(const Variant &src) {
       const ScriptableBinaryData *binary =
           VariantValue<const ScriptableBinaryData *>()(src);
       if (binary)
-        return new Texture(GetGraphics(), binary->data(), binary->size());
+        return new Texture(GetGraphics(), binary->data().c_str(),
+                           binary->size());
       // else falls through!
     }
     default:
@@ -1265,11 +1207,6 @@ bool View::OpenURL(const char *url) const {
 
 void View::OnOptionChanged(const char *name) {
   impl_->OnOptionChanged(name);
-}
-
-Connection *View::ConnectEvent(const char *event_name,
-                               Slot0<void> *handler) {
-  return impl_->ConnectEvent(event_name, handler);
 }
 
 void View::Alert(const char *message) {
@@ -1316,6 +1253,79 @@ Slot *View::NewDeathDetectedSlot(BasicElement *element, Slot *slot) {
 
 EditInterface *View::NewEdit(size_t w, size_t h) {
   return impl_->host_->NewEdit(w, h);
+}
+
+Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {
+  return impl_->oncancel_event_.Connect(handler);
+}
+Connection *View::ConnectOnClickEvent(Slot0<void> *handler) {
+  return impl_->onclick_event_.Connect(handler);
+}
+Connection *View::ConnectOnCloseEvent(Slot0<void> *handler) {
+  return impl_->onclose_event_.Connect(handler);
+}
+Connection *View::ConnectOnDblClickEvent(Slot0<void> *handler) {
+  return impl_->ondblclick_event_.Connect(handler);
+}
+Connection *View::ConnectOnRClickEvent(Slot0<void> *handler) {
+  return impl_->onrclick_event_.Connect(handler);
+}
+Connection *View::ConnectOnRDblClickCancelEvent(Slot0<void> *handler) {
+  return impl_->onrdblclick_event_.Connect(handler);
+}
+Connection *View::ConnectOnDockEvent(Slot0<void> *handler) {
+  return impl_->ondock_event_.Connect(handler);
+}
+Connection *View::ConnectOnKeyDownEvent(Slot0<void> *handler) {
+  return impl_->onkeydown_event_.Connect(handler);
+}
+Connection *View::ConnectOnPressEvent(Slot0<void> *handler) {
+  return impl_->onkeypress_event_.Connect(handler);
+}
+Connection *View::ConnectOnKeyUpEvent(Slot0<void> *handler) {
+  return impl_->onkeyup_event_.Connect(handler);
+}
+Connection *View::ConnectOnMinimizeEvent(Slot0<void> *handler) {
+  return impl_->onminimize_event_.Connect(handler);
+}
+Connection *View::ConnectOnMouseDownEvent(Slot0<void> *handler) {
+  return impl_->onmousedown_event_.Connect(handler);
+}
+Connection *View::ConnectOnMouseOverEvent(Slot0<void> *handler) {
+  return impl_->onmouseover_event_.Connect(handler);
+}
+Connection *View::ConnectOnMouseOutEvent(Slot0<void> *handler) {
+  return impl_->onmouseout_event_.Connect(handler);
+}
+Connection *View::ConnectOnMouseUpEvent(Slot0<void> *handler) {
+  return impl_->onmouseup_event_.Connect(handler);
+}
+Connection *View::ConnectOnOkEvent(Slot0<void> *handler) {
+  return impl_->onok_event_.Connect(handler);
+}
+Connection *View::ConnectOnOpenEvent(Slot0<void> *handler) {
+  return impl_->onopen_event_.Connect(handler);
+}
+Connection *View::ConnectOnOptionChangedEvent(Slot0<void> *handler) {
+  return impl_->onoptionchanged_event_.Connect(handler);
+}
+Connection *View::ConnectOnPopInEvent(Slot0<void> *handler) {
+  return impl_->onpopin_event_.Connect(handler);
+}
+Connection *View::ConnectOnPopOutEvent(Slot0<void> *handler) {
+  return impl_->onpopout_event_.Connect(handler);
+}
+Connection *View::ConnectOnRestoreEvent(Slot0<void> *handler) {
+  return impl_->onrestore_event_.Connect(handler);
+}
+Connection *View::ConnectOnSizeEvent(Slot0<void> *handler) {
+  return impl_->onsize_event_.Connect(handler);
+}
+Connection *View::ConnectOnSizingEvent(Slot0<void> *handler) {
+  return impl_->onsizing_event_.Connect(handler);
+}
+Connection *View::ConnectOnUndockEvent(Slot0<void> *handler) {
+  return impl_->onundock_event_.Connect(handler);
 }
 
 } // namespace ggadget

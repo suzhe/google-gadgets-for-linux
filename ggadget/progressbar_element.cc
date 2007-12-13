@@ -503,11 +503,8 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
   return result;
 }
 
-Connection *ProgressBarElement::ConnectEvent(const char *event_name,
-                                             Slot0<void> *handler) {
-  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
-    return impl_->onchange_event_.Connect(handler);
-  return BasicElement::ConnectEvent(event_name, handler);
+Connection *ProgressBarElement::ConnectOnChangeEvent(Slot0<void> *handler) {
+  return impl_->onchange_event_.Connect(handler);
 }
 
 void ProgressBarElement::GetDefaultSize(double *width, double *height) const {

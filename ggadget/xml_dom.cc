@@ -449,7 +449,7 @@ class DOMNodeImpl {
           if (last_child->GetNodeType() == DOMNodeInterface::TEXT_NODE) {
             // Merge the two node into one.
             DOMTextInterface *text0 = down_cast<DOMTextInterface *>(last_child);
-            text0->InsertData(text0->GetLength(), text->GetData());
+            text0->InsertData(text0->GetLength(), text->GetData().c_str());
             RemoveChild(text);
             i--;
           }
@@ -460,16 +460,16 @@ class DOMNodeImpl {
     }
   }
 
-  const char *GetChildrenTextContent() {
-    last_children_text_content_.clear();
+  std::string GetChildrenTextContent() {
+    std::string result;
     for (Children::iterator it = children_.begin();
          it != children_.end(); ++it) {
       DOMNodeInterface::NodeType type = (*it)->GetNodeType();
       if (type != DOMNodeInterface::COMMENT_NODE &&
           type != DOMNodeInterface::PROCESSING_INSTRUCTION_NODE)
-        last_children_text_content_ += (*it)->GetTextContent();
+        result += (*it)->GetTextContent();
     }
-    return last_children_text_content_.c_str();
+    return result;
   }
 
   void SetChildTextContent(const char *text_content) {
@@ -482,10 +482,10 @@ class DOMNodeImpl {
     InsertBefore(owner_document_->CreateTextNode(utf16_content.c_str()), NULL);
   }
 
-  const char *GetXML() {
-    last_xml_.clear();
-    callbacks_->AppendXML(0, &last_xml_);
-    return last_xml_.c_str();
+  std::string GetXML() {
+    std::string result;
+    callbacks_->AppendXML(0, &result);
+    return result;
   }
 
  public:
@@ -654,7 +654,6 @@ class DOMNodeImpl {
   // owner element.
   DOMNodeInterface *owner_node_;
   Children children_;
-  std::string last_children_text_content_;
   std::string last_xml_;
 
   // This ref_count_ records the accumulated reference count of all descendants.
@@ -743,7 +742,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   }
   virtual void TransientDetach() { impl_->DetachMulti(1, true); }
 
-  virtual const char *GetNodeName() const { return impl_->name_.c_str(); }
+  virtual std::string GetNodeName() const { return impl_->name_; }
   virtual const char *GetNodeValue() const { return NULL; }
   virtual void SetNodeValue(const char *node_value) { }
   // GetNodeType() is still abstract.
@@ -835,7 +834,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return new ElementsByTagName(const_cast<DOMNodeBase *>(this), name);
   }
 
-  virtual const char *GetTextContent() const {
+  virtual std::string GetTextContent() const {
     const char *content = GetNodeValue();
     return content ? content : impl_->GetChildrenTextContent();
   }
@@ -847,7 +846,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
       impl_->SetChildTextContent(text_content);
   }
 
-  virtual const char *GetXML() const {
+  virtual std::string GetXML() const {
     return impl_->GetXML();
   }
 
@@ -895,7 +894,7 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
     utf8_data_.clear();
   }
 
-  virtual const UTF16Char *GetData() const { return data_.c_str(); }
+  virtual UTF16String GetData() const { return data_; }
   virtual void SetData(const UTF16Char *data) {
     data_ = data ? data : kBlankUTF16Str;
     utf8_data_.clear();
@@ -903,16 +902,13 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
   virtual size_t GetLength() const { return data_.length(); }
 
   virtual DOMExceptionCode SubstringData(size_t offset, size_t count,
-                                         UTF16Char **result) const {
+                                         UTF16String *result) const {
     ASSERT(result);
-    *result = NULL;
+    result->clear();
     if (offset > data_.length())
       return DOM_INDEX_SIZE_ERR;
     count = std::min(data_.length() - offset, count);
-
-    *result = new UTF16Char[count + 1];
-    memcpy(*result, data_.c_str() + offset, count * sizeof(UTF16Char));
-    (*result)[count] = 0;
+    *result = data_.substr(offset, count);
     return DOM_NO_ERR;
   }
 
@@ -963,13 +959,9 @@ class DOMCharacterData : public DOMNodeBase<Interface1> {
 
  private:
   UTF16String ScriptSubstringData(size_t offset, size_t count) {
-    UTF16Char *result = NULL;
-    if (CheckException(SubstringData(offset, count, &result))) {
-      UTF16String str_result(result ? result : kBlankUTF16Str);
-      delete [] result;
-      return str_result;
-    }
-    return kBlankUTF16Str;
+    UTF16String result;
+    CheckException(SubstringData(offset, count, &result));
+    return result;
   }
 
   void ScriptInsertData(size_t offset, const UTF16Char *arg) {
@@ -1014,17 +1006,18 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
   }
 
   virtual const char *GetNodeValue() const {
-    return GetImpl()->GetChildrenTextContent();
+    last_node_value_ = GetImpl()->GetChildrenTextContent();
+    return last_node_value_.c_str();
   }
   virtual void SetNodeValue(const char *value) {
     GetImpl()->SetChildTextContent(value);
   }
   virtual NodeType GetNodeType() const { return ATTRIBUTE_NODE; }
 
-  virtual const char *GetName() const { return GetNodeName(); }
+  virtual std::string GetName() const { return GetNodeName(); }
   // Our DOMAttrs are always specified, because we don't support DTD for now.
   virtual bool IsSpecified() const { return true; }
-  virtual const char *GetValue() const { return GetNodeValue(); }
+  virtual std::string GetValue() const { return GetNodeValue(); }
   virtual void SetValue(const char *value) { SetNodeValue(value); }
 
   virtual DOMElementInterface *GetOwnerElement(); // Defined later.
@@ -1054,11 +1047,12 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
   virtual DOMNodeInterface *CloneSelf() {
     // The content will be cloned by common CloneNode implementation,
     // because for Attr.cloneNode(), children are always cloned.
-    return new DOMAttr(GetOwnerDocument(), GetName(), NULL);
+    return new DOMAttr(GetOwnerDocument(), GetName().c_str(), NULL);
   }
 
  private:
   DOMElement *owner_element_;
+  mutable std::string last_node_value_;
 };
 
 class DOMElement : public DOMNodeBase<DOMElementInterface> {
@@ -1093,7 +1087,7 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
   virtual NodeType GetNodeType() const { return ELEMENT_NODE; }
-  virtual const char *GetTagName() const { return GetNodeName(); }
+  virtual std::string GetTagName() const { return GetNodeName(); }
 
   virtual void Normalize() {
     Super::Normalize();
@@ -1101,7 +1095,7 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
       (*it)->Normalize();
   }
 
-  virtual const char *GetAttribute(const char *name) const {
+  virtual std::string GetAttribute(const char *name) const {
     Attrs::const_iterator it = FindAttr(name);
     // TODO: Default value logic.
     return it == attrs_.end() ? "" : (*it)->GetValue();
@@ -1212,7 +1206,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
   virtual DOMNodeInterface *CloneSelf() {
-    DOMElement *element = new DOMElement(GetOwnerDocument(), GetTagName());
+    DOMElement *element = new DOMElement(GetOwnerDocument(),
+                                         GetTagName().c_str());
     for (Attrs::iterator it = attrs_.begin(); it != attrs_.end(); ++it) {
       DOMAttrInterface *cloned_attr =
           down_cast<DOMAttrInterface *>((*it)->CloneNode(true));
@@ -1297,7 +1292,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
         if (arg) {
           // Add a temporary reference to the replaced attr to prevent it from
           // being deleted in SetAttributeNode().
-          replaced_attr = element_->GetAttributeNode(new_attr->GetName());
+          replaced_attr = element_->GetAttributeNode(
+              new_attr->GetName().c_str());
           if (replaced_attr)
             replaced_attr->Attach();
         }
@@ -1334,7 +1330,7 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     if (new_attr) {
       // Add a temporary reference to the replaced attr to prevent it from
       // being deleted in SetAttributeNode().
-      replaced_attr = GetAttributeNode(new_attr->GetName());
+      replaced_attr = GetAttributeNode(new_attr->GetName().c_str());
       if (replaced_attr)
         replaced_attr->Attach();
     }
@@ -1362,10 +1358,9 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     // TODO: Deal with default values if we support DTD.
   }
 
-  Attrs::iterator FindAttr(const char *name) {
-    ASSERT(name);
+  Attrs::iterator FindAttr(const std::string &name) {
     for (Attrs::iterator it = attrs_.begin(); it != attrs_.end(); ++it)
-      if (strcmp((*it)->GetName(), name) == 0)
+      if ((*it)->GetName() == name)
         return it;
     return attrs_.end();
   }
@@ -1377,10 +1372,9 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     return it;
   }
 
-  Attrs::const_iterator FindAttr(const char *name) const {
-    ASSERT(name);
+  Attrs::const_iterator FindAttr(const std::string &name) const {
     for (Attrs::const_iterator it = attrs_.begin(); it != attrs_.end(); ++it)
-      if (strcmp((*it)->GetName(), name) == 0)
+      if ((*it)->GetName() == name)
         return it;
     return attrs_.end();
   }
@@ -1419,12 +1413,11 @@ static DOMExceptionCode DoSplitText(DOMTextInterface *text,
     return DOM_INDEX_SIZE_ERR;
 
   size_t tail_size = text->GetLength() - offset;
-  UTF16Char *tail_data;
+  UTF16String tail_data;
   text->SubstringData(offset, tail_size, &tail_data);
   *new_text = down_cast<DOMTextInterface *>(text->CloneNode(false));
-  (*new_text)->SetData(tail_data);
+  (*new_text)->SetData(tail_data.c_str());
   text->DeleteData(offset, tail_size);
-  delete [] tail_data;
 
   if (text->GetParentNode())
     text->GetParentNode()->InsertBefore(*new_text, text->GetNextSibling());
@@ -1467,7 +1460,7 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
 
  protected:
   virtual DOMNodeInterface *CloneSelf() {
-    return new DOMText(GetOwnerDocument(), GetData());
+    return new DOMText(GetOwnerDocument(), GetData().c_str());
   }
 
  private:
@@ -1498,7 +1491,7 @@ class DOMComment : public DOMCharacterData<DOMCommentInterface> {
 
  protected:
   virtual DOMNodeInterface *CloneSelf() {
-    return new DOMComment(GetOwnerDocument(), GetData());
+    return new DOMComment(GetOwnerDocument(), GetData().c_str());
   }
 };
 
@@ -1529,7 +1522,7 @@ class DOMCDATASection : public DOMCharacterData<DOMCDATASectionInterface> {
 
  protected:
   virtual DOMNodeInterface *CloneSelf() {
-    return new DOMCDATASection(GetOwnerDocument(), GetData());
+    return new DOMCDATASection(GetOwnerDocument(), GetData().c_str());
   }
 };
 
@@ -1579,12 +1572,12 @@ class DOMProcessingInstruction
                      NewSlot(this, &DOMProcessingInstruction::SetData));
   }
 
-  virtual const char *GetNodeValue() const { return GetData(); }
+  virtual const char *GetNodeValue() const { return data_.c_str(); }
   virtual void SetNodeValue(const char *value) { SetData(value); }
   virtual NodeType GetNodeType() const { return PROCESSING_INSTRUCTION_NODE; }
 
-  virtual const char *GetTarget() const { return target_.c_str(); }
-  virtual const char *GetData() const { return data_.c_str(); }
+  virtual std::string GetTarget() const { return target_; }
+  virtual std::string GetData() const { return data_; }
   virtual void SetData(const char *data) { data_ = data ? data : ""; }
 
   virtual void AppendXML(size_t indent, std::string *xml) {
@@ -1592,7 +1585,7 @@ class DOMProcessingInstruction
     xml->append("<?");
     xml->append(GetNodeName());
     xml->append(1, ' ');
-    xml->append(GetNodeValue());
+    xml->append(GetData());
     xml->append("?>\n");
   }
 

@@ -88,9 +88,9 @@ TEST(XMLUtils, ParseXMLIntoDOM) {
   ASSERT_STREQ("iso8859-1", encoding.c_str());
   DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
   ASSERT_TRUE(doc_ele);
-  EXPECT_STREQ("root", doc_ele->GetTagName());
-  EXPECT_STREQ("v", doc_ele->GetAttribute("a"));
-  EXPECT_STREQ("v1", doc_ele->GetAttribute("a1"));
+  EXPECT_STREQ("root", doc_ele->GetTagName().c_str());
+  EXPECT_STREQ("v", doc_ele->GetAttribute("a").c_str());
+  EXPECT_STREQ("v1", doc_ele->GetAttribute("a1").c_str());
   DOMNodeListInterface *children = doc_ele->GetChildNodes();
   EXPECT_EQ(13U, children->GetLength());
 
@@ -113,7 +113,7 @@ TEST(XMLUtils, ParseXMLIntoDOM) {
   DOMNodeInterface *pi_node = domdoc->GetFirstChild();
   EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,
             pi_node->GetNodeType());
-  EXPECT_STREQ("pi", pi_node->GetNodeName());
+  EXPECT_STREQ("pi", pi_node->GetNodeName().c_str());
   EXPECT_STREQ("value", pi_node->GetNodeValue());
   delete children;
   delete sub_children;
@@ -179,7 +179,8 @@ void TestXMLEncoding(const char *xml, const char *name,
   domdoc->Attach();
   std::string encoding(hint_encoding);
   ASSERT_TRUE(ParseXMLIntoDOM(xml, name, domdoc, &encoding));
-  ASSERT_STREQ(expected_text, domdoc->GetDocumentElement()->GetTextContent());
+  ASSERT_STREQ(expected_text,
+               domdoc->GetDocumentElement()->GetTextContent().c_str());
   ASSERT_STREQ(expected_encoding, encoding.c_str());
   domdoc->Detach();
 }

@@ -20,6 +20,7 @@
 #include <ggadget/common.h>
 #include <ggadget/element_interface.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/view_host_interface.h>
 
 namespace ggadget {
 
@@ -38,20 +39,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual ~BasicElement();
 
  public: // ElementInterface methods.
-  virtual const char *GetTagName() const;
-  virtual HitTest GetHitTest() const;
-  virtual void SetHitTest(HitTest value);
+  virtual std::string GetTagName() const;
   virtual const ElementsInterface *GetChildren() const;
   virtual ElementsInterface *GetChildren();
-  virtual CursorType GetCursor() const;
-  virtual void SetCursor(CursorType cursor);
-  virtual bool IsDropTarget() const;
-  virtual void SetDropTarget(bool drop_target);
-  virtual bool IsEnabled() const;
-  virtual void SetEnabled(bool enabled);
-  virtual const char *GetName() const;
-  virtual const char *GetMask() const;
-  virtual void SetMask(const char *mask);
+  virtual std::string GetName() const;
+  virtual ElementInterface *GetParentElement();
+  virtual const ElementInterface *GetParentElement() const;
   virtual double GetPixelWidth() const;
   virtual double GetPixelHeight() const;
   virtual double GetRelativeWidth() const;
@@ -86,37 +79,93 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void ResetWidthToDefault();
   virtual bool HeightIsSpecified() const;
   virtual void ResetHeightToDefault();
+  virtual bool XIsSpecified() const;
+  virtual void ResetXToDefault();
+  virtual bool YIsSpecified() const;
+  virtual void ResetYToDefault();
   virtual double GetClientWidth();
   virtual double GetClientHeight();
-
-  virtual Variant GetWidth() const;
-  virtual void SetWidth(const Variant &width);
-  virtual Variant GetHeight() const;
-  virtual void SetHeight(const Variant &height);
-  virtual Variant GetX() const;
-  virtual void SetX(const Variant &y);
-  virtual Variant GetY() const;
-  virtual void SetY(const Variant &y);
-  virtual void ResetXToDefault();
-  virtual void ResetYToDefault();
-
   virtual double GetRotation() const;
   virtual void SetRotation(double rotation);
-  virtual double GetOpacity() const;
-  virtual void SetOpacity(double opacity);
 
-  virtual bool IsVisible() const;
-  virtual void SetVisible(bool visible);
+ public:
+  /** Retrieves the hit-test value for this element. */
+  HitTest GetHitTest() const;
+  /** Sets the hit-test value for this element. */
+  void SetHitTest(HitTest value);
 
-  virtual ElementInterface *GetParentElement();
-  virtual const ElementInterface *GetParentElement() const;
-  virtual const char *GetTooltip() const;
-  virtual void SetTooltip(const char *tooltip);
+  /** Retrieves the cursor to display when the mouse is over this element. */
+  ViewHostInterface::CursorType GetCursor() const;
+  /** Sets the cursor to display when the mouse is over this element. */
+  void SetCursor(ViewHostInterface::CursorType cursor);
 
-  virtual void Focus();
-  virtual void KillFocus();
-  virtual Connection *ConnectEvent(const char *event_name,
-                                   Slot0<void> *handler);
+  /**
+   * Retrieves whether this element is a target for drag/drop operations.
+   */
+  bool IsDropTarget() const;
+  /**
+   * Sets whether this element is a target for drag/drop operations.
+   * @param drop_target is true, the ondrag* events will fire when a drag/drop
+   *     oeration is initiated by the user.
+   */
+  void SetDropTarget(bool drop_target);
+
+  /**
+   * Retrieves whether or not the element is enabled.
+   */
+  bool IsEnabled() const;
+  /**
+   * Sets whether or not the element is enabled.
+   * Disabled elements do not fire any mouse or keyboard events.
+   */
+  void SetEnabled(bool enabled);
+
+  /**
+   * Retrieves the mask bitmap that defines the clipping path for this element.
+   */
+  std::string GetMask() const;
+  /**
+   * Sets the mask bitmap that defines the clipping path for this element.
+   */
+  void SetMask(const char *mask);
+
+  /**
+   * Retrieves the opacity of the element.
+   */
+  double GetOpacity() const;
+  /**
+   * Sets the opacity of the element.
+   * @param opacity valid range: 0 ~ 1.
+   */
+  void SetOpacity(double opacity);
+
+  /**
+   * Retrieves whether or not the element is visible.
+   */
+  bool IsVisible() const;
+  /**
+   * Sets whether or not the element is visible.
+   */
+  void SetVisible(bool visible);
+
+  /**
+   * Retrieves the tooltip displayed when the mouse hovers over this element.
+   */
+  std::string GetTooltip() const;
+  /**
+   * Sets the tooltip displayed when the mouse hovers over this element.
+   */
+  void SetTooltip(const char *tooltip);
+
+ public:
+  /**
+   * Gives the keyboard focus to the element.
+   */
+  void Focus();
+  /**
+   * Removes the keyboard focus from the element.
+   */
+  void KillFocus();
 
  public:
   /**
@@ -267,7 +316,6 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   bool GetChildrenExtents(double *width, double *height);
 
- public:
   /**
    * Sets the changed bit to true and if visible and this is not called during
    * @c Layout(), requests the view to be redrawn.
@@ -276,6 +324,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   void QueueDraw();
 
+ public:
   /** Enum used by ParsePixelOrRelative() below. */
   enum ParsePixelOrRelativeResult {
     PR_PIXEL,
@@ -296,6 +345,28 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   static Variant GetPixelOrRelative(bool is_relative, bool is_specified,
                                     double pixel, double relative);
+
+ public:
+  // Event handler connection methods.
+  Connection *ConnectOnClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnDblClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnRClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnRDblClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnDragDropEvent(Slot0<void> *handler);
+  Connection *ConnectOnDragOutEvent(Slot0<void> *handler);
+  Connection *ConnectOnDragOverEvent(Slot0<void> *handler);
+  Connection *ConnectOnFocusInEvent(Slot0<void> *handler);
+  Connection *ConnectOnFocusOutEvent(Slot0<void> *handler);
+  Connection *ConnectOnKeyDownEvent(Slot0<void> *handler);
+  Connection *ConnectOnKeyPressEvent(Slot0<void> *handler);
+  Connection *ConnectOnKeyUpEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseDownEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseMoveEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseOverEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseOutEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseUpEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseWheelEvent(Slot0<void> *handler);
+  Connection *ConnectOnSizeEvent(Slot0<void> *handler);
 
  protected:
 

@@ -20,13 +20,13 @@
 #include <ggadget/event.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
+#include <ggadget/view_host_interface.h>
 
 namespace ggadget {
 
 class CanvasInterface;
 class ElementInterface;
 class ElementFactoryInterface;
-class HostInterface;
 class ScriptableEvent;
 class ElementsInterface;
 class GraphicsInterface;
@@ -44,14 +44,6 @@ class ViewInterface : public ScriptableInterface {
   CLASS_ID_DECL(0xeb376007cbe64f9f);
 
   virtual ~ViewInterface() { }
-
-  /** Used in @c SetResizable() and @c GetResizable(). */
-  enum ResizableMode {
-    RESIZABLE_FALSE,
-    RESIZABLE_TRUE,
-    /** The user can resize the view while keeping the original aspect ratio. */
-    RESIZABLE_ZOOM,
-  };
 
   /**
    * @return the ScriptContextInterface object associated with this view.
@@ -129,8 +121,8 @@ class ViewInterface : public ScriptableInterface {
    * the window border.
    * @see ResizableMode
    */
-  virtual void SetResizable(ResizableMode resizable) = 0;
-  virtual ResizableMode GetResizable() const = 0;
+  virtual void SetResizable(ViewHostInterface::ResizableMode resizable) = 0;
+  virtual ViewHostInterface::ResizableMode GetResizable() const = 0;
 
   /**
    * Caption is the title of the view, by default shown when a gadget is in
@@ -138,7 +130,7 @@ class ViewInterface : public ScriptableInterface {
    * @see SetShowCaptionAlways()
    */
   virtual void SetCaption(const char *caption) = 0;
-  virtual const char *GetCaption() const = 0;
+  virtual std::string GetCaption() const = 0;
 
   /**
    * When @c true, the Sidebar always shows the caption for this view.
@@ -178,79 +170,11 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual const ElementInterface *GetElementByName(const char *name) const = 0;
 
- public: // Timer, interval and animation functions.
-  /**
-   * Starts an animation timer. The @a slot is called periodically during
-   * @a duration with a value between @a start_value and @a end_value according
-   * to the progress.
-   *
-   * The value parameter of the slot is calculated as
-   * (where progress is a float number between 0 and 1): <code>
-   * value = start_value + (int)((end_value - start_value) * progress).</code>
-   *
-   * Note: The number of times the slot is called depends on the system
-   * performance and current load of the system. It may be as high as 100 fps.
-   *
-   * @param slot the call target of the timer. This @c ViewInterface instance
-   *     becomes the owner of this slot after this call.
-   * @param start_value start value of the animation.
-   * @param end_value end value of the animation.
-   * @param duration the duration of the whole animation in milliseconds.
-   * @return the animation token that can be used in @c CancelAnimation().
-   */
-  virtual int BeginAnimation(Slot0<void> *slot,
-                             int start_value,
-                             int end_value,
-                             unsigned int duration) = 0;
-
-  /**
-   * Cancels a currently running animation.
-   * @param token the token returned by BeginAnimation().
-   */
-  virtual void CancelAnimation(int token) = 0;
-
-  /**
-   * Creates a run-once timer.
-   * @param slot the call target of the timer. This @c ViewInterface instance
-   *     becomes the owner of this slot after this call.
-   * @param duration the duration of the timer in milliseconds.
-   * @return the timeout token that can be used in @c ClearTimeout().
-   */
-  virtual int SetTimeout(Slot0<void> *slot, unsigned int duration) = 0;
-
-  /**
-   * Cancels a run-once timer.
-   * @param token the token returned by SetTimeout().
-   */
-  virtual void ClearTimeout(int token) = 0;
-
-  /**
-   * Creates a run-forever timer.
-   * @param slot the call target of the timer. This @c ViewInterface instance
-   *     becomes the owner of this slot after this call.
-   * @param duration the period between calls in milliseconds.
-   * @return the interval token than can be used in @c ClearInterval().
-   */
-  virtual int SetInterval(Slot0<void> *slot, unsigned int duration) = 0;
-
-  /**
-   * Cancels a run-forever timer.
-   * @param token the token returned by SetInterval().
-   */
-  virtual void ClearInterval(int token) = 0;
-
+ public:
   /**
    * Called by the global options object when any option changed.
    */
   virtual void OnOptionChanged(const char *name) = 0;
-
-  /**
-   * Connects an event handler to an event.
-   * Provided for native usage of this interface.
-   * The connection is independent with the connections to script handlers.
-   */
-  virtual Connection *ConnectEvent(const char *event_name,
-                                   Slot0<void> *handler) = 0;
 
   /**
    * Called by the host to let the view add customized context menu items, and
@@ -260,7 +184,6 @@ class ViewInterface : public ScriptableInterface {
    *     the host won't show the whole context menu.
    */
   virtual bool OnAddContextMenuItems(MenuInterface *menu) = 0;
-
 };
 
 CLASS_ID_IMPL(ViewInterface, ScriptableInterface)

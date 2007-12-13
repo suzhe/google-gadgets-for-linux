@@ -17,6 +17,7 @@
 #ifndef GGADGET_FRAMEWORK_INTERFACE_H__
 #define GGADGET_FRAMEWORK_INTERFACE_H__
 
+#include <string>
 #include <stdint.h>
 
 namespace ggadget {
@@ -32,13 +33,13 @@ class MachineInterface {
 
  public:
   /** Retrieves the BIOS Serial number. */
-  virtual const char *GetBiosSerialNumber() const = 0;
+  virtual std::string GetBiosSerialNumber() const = 0;
   /** Retrieves the machine's manuafacturere name. */
-  virtual const char *GetMachineManufacturer() const = 0;
+  virtual std::string GetMachineManufacturer() const = 0;
   /** Retrieves the machine's model. */
-  virtual const char *GetMachineModel() const = 0;
+  virtual std::string GetMachineModel() const = 0;
   /** Retrieves the machine's architecture. */
-  virtual const char *GetProcessorArchitecture() const = 0;
+  virtual std::string GetProcessorArchitecture() const = 0;
   /** Retrieves the number of processors running the gadget. */
   virtual int GetProcessorCount() const = 0;
   /** Retrieves the family name of the processor. */
@@ -46,13 +47,13 @@ class MachineInterface {
   /** Retrieves the model number of the processor. */
   virtual int GetProcessorModel() const = 0;
   /** Retrieves the processor's name. */
-  virtual const char *GetProcessorName() const = 0;
+  virtual std::string GetProcessorName() const = 0;
   /** Gets the speed of the processor, in MHz. */
   virtual int GetProcessorSpeed() const = 0;
   /** Retrieves the step designation of the processor. */
   virtual int GetProcessorStepping() const = 0;
   /** Gets the processor's vendor name. */
-  virtual const char *GetProcessorVendor() const = 0;
+  virtual std::string GetProcessorVendor() const = 0;
 };
 
 /** Interface for retrieving the information of the memory. */
@@ -186,7 +187,7 @@ class ProcessInfoInterface {
   /** Gets the process Id. */
   virtual int GetProcessId() const = 0;
   /** Gets the path of the running process. */
-  virtual const char *GetExecutablePath() const = 0;
+  virtual std::string GetExecutablePath() const = 0;
 };
 
 /** Interface for enumerating the processes. */
@@ -251,7 +252,7 @@ class WirelessAccessPointInterface {
 
  public:
   /** Gets the name of the access point. */
-  virtual const char *GetName() const = 0;
+  virtual std::string GetName() const = 0;
   /** Gets the type of the wireless service. */
   virtual Type GetType() const = 0;
   /**
@@ -300,10 +301,10 @@ class WirelessInterface {
   virtual WirelessAccessPointInterface *GetWirelessAccessPoint(int index) = 0;
 
   /** Get the name of the wireless adapter. */
-  virtual const char *GetName() const = 0;
+  virtual std::string GetName() const = 0;
 
   /** Get the name of the network. */
-  virtual const char *GetNetworkName() const = 0;
+  virtual std::string GetNetworkName() const = 0;
 
   /** Get the wireless connection's signal strength, in percentage. */
   virtual int GetSignalStrength() const = 0;

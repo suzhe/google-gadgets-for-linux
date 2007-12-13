@@ -49,7 +49,7 @@ class GadgetInterface {
    *     xml_utils.h for details of the XPath expression.
    * @return the configured value. @c NULL if not found.
    */
-  virtual const char *GetManifestInfo(const char *key) const = 0;
+  virtual std::string GetManifestInfo(const char *key) const = 0;
 
   /** Checks whether this gadget has options dialog. */
   virtual bool HasOptionsDialog() const = 0;

@@ -155,8 +155,8 @@ size_t Image::GetHeight() {
   return canvas ? canvas->GetHeight() : 0;
 }
 
-const char *Image::GetSrc() {
-  return impl_->filename_.c_str();
+std::string Image::GetSrc() {
+  return impl_->filename_;
 }
 
 } // namespace ggadget

@@ -26,17 +26,17 @@ namespace framework {
 class Machine : public MachineInterface {
 public:
   Machine();
-  virtual const char *GetBiosSerialNumber() const;
-  virtual const char *GetMachineManufacturer() const;
-  virtual const char *GetMachineModel() const;
-  virtual const char *GetProcessorArchitecture() const;
+  virtual std::string GetBiosSerialNumber() const;
+  virtual std::string GetMachineManufacturer() const;
+  virtual std::string GetMachineModel() const;
+  virtual std::string GetProcessorArchitecture() const;
   virtual int GetProcessorCount() const;
   virtual int GetProcessorFamily() const;
   virtual int GetProcessorModel() const;
-  virtual const char *GetProcessorName() const;
+  virtual std::string GetProcessorName() const;
   virtual int GetProcessorSpeed() const;
   virtual int GetProcessorStepping() const;
-  virtual const char *GetProcessorVendor() const;
+  virtual std::string GetProcessorVendor() const;
 
 private:
   /**

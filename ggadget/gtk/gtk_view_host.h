@@ -70,10 +70,10 @@ class GtkViewHost : public ViewHostInterface {
   virtual void QueueDraw();
   virtual bool GrabKeyboardFocus();
 
-  virtual void SetResizable(ViewInterface::ResizableMode mode);
+  virtual void SetResizable(ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
-  virtual void SetCursor(ElementInterface::CursorType type);
+  virtual void SetCursor(CursorType type);
   virtual void SetTooltip(const char *tooltip);
   virtual void RunDialog();
   virtual void ShowInDetailsView(const char *title, int flags,

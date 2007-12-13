@@ -43,12 +43,6 @@ class ItemElement : public BasicElement {
   Variant GetBackground() const;
   void SetBackground(const Variant &background);
 
-  virtual void SetWidth(const Variant &width);
-  virtual void SetHeight(const Variant &height);
-
-  virtual void SetX(const Variant &x);
-  virtual void SetY(const Variant &y);
-
   bool IsMouseOver() const;
 
   /** 
@@ -73,7 +67,7 @@ class ItemElement : public BasicElement {
    * AddLabelWithText will create the Label, the other methods will 
    * assume it exists.
    */
-  const char *GetLabelText() const;
+  std::string GetLabelText() const;
   void SetLabelText(const char *text);
   bool AddLabelWithText(const char *text);
 

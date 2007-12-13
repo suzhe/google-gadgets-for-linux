@@ -43,6 +43,9 @@ class ItemElement::Impl {
     background_ = NULL;
   }
 
+  void DummySetter(const Variant &value) { }
+  Variant DummyGetter() const { return Variant(); }
+
   ListBoxElement *parent_;
   bool selected_, mouseover_, drawoverlay_;
   Texture *background_;
@@ -60,6 +63,20 @@ ItemElement::ItemElement(BasicElement *parent, View *view,
   RegisterProperty("selected",
                    NewSlot(this, &ItemElement::IsSelected),
                    NewSlot(this, &ItemElement::SetSelected));
+  if (impl_->parent_) {
+    RegisterProperty("x",
+                     NewSlot(impl_, &Impl::DummyGetter),
+                     NewSlot(impl_, &Impl::DummySetter));
+    RegisterProperty("y",
+                     NewSlot(impl_, &Impl::DummyGetter),
+                     NewSlot(impl_, &Impl::DummySetter));
+    RegisterProperty("width",
+                     NewSlot(impl_->parent_, &ListBoxElement::GetItemWidth),
+                     NewSlot(impl_, &Impl::DummySetter));
+    RegisterProperty("height",
+                     NewSlot(impl_->parent_, &ListBoxElement::GetItemHeight),
+                     NewSlot(impl_, &Impl::DummySetter));
+  }
 }
 
 ItemElement::~ItemElement() {
@@ -157,29 +174,14 @@ void ItemElement::SetSelected(bool selected) {
   }
 }
 
-void ItemElement::SetWidth(const Variant &width) {
-  // Disabled
-}
-void ItemElement::SetHeight(const Variant &height) {
-  // Disabled
-}
-
-void ItemElement::SetX(const Variant &x) {
-  // Disabled
-}
-
-void ItemElement::SetY(const Variant &y) {
-  // Disabled
-}
-
-const char *ItemElement::GetLabelText() const {
+std::string ItemElement::GetLabelText() const {
   const ElementInterface *e = GetChildren()->GetItemByIndex(0);
   if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
     const LabelElement *label = down_cast<const LabelElement *>(e);
     return label->GetTextFrame()->GetText();
   }
-  LOG("Label element not found inside Item element %s", GetName());
-  return NULL;
+  LOG("Label element not found inside Item element %s", GetName().c_str());
+  return std::string();
 }
 
 void ItemElement::SetLabelText(const char *text) {
@@ -188,7 +190,7 @@ void ItemElement::SetLabelText(const char *text) {
     LabelElement *label = down_cast<LabelElement *>(e);
     label->GetTextFrame()->SetText(text);
   } else {
-    LOG("Label element not found inside Item element %s", GetName());
+    LOG("Label element not found inside Item element %s", GetName().c_str());
   }
 }
 

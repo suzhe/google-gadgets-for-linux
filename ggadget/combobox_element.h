@@ -21,6 +21,9 @@
 
 namespace ggadget {
 
+class EditElement;
+class ListBoxElement;
+
 class ComboBoxElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x848a2f5e84144915, BasicElement);
@@ -52,7 +55,7 @@ class ComboBoxElement : public BasicElement {
   void SetType(Type type);
 
   /** Gets and sets the value of the edit area, only for dropdown mode. */
-  const char *GetValue() const;
+  std::string GetValue() const;
   void SetValue(const char *value);
 
   /**
@@ -64,6 +67,11 @@ class ComboBoxElement : public BasicElement {
 
   void SetItemWidth(const Variant &width);
   void SetItemHeight(const Variant &height);
+
+  EditElement *GetEdit();
+  const EditElement *GetEdit() const;
+  ListBoxElement *GetListBox();
+  const ListBoxElement *GetListBox() const;
 
   virtual double GetPixelHeight() const;
 
@@ -85,6 +93,8 @@ class ComboBoxElement : public BasicElement {
   virtual void SelfCoordToChildCoord(const BasicElement *child,
                                      double x, double y,
                                      double *child_x, double *child_y) const;
+
+  Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

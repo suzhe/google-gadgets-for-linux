@@ -65,10 +65,10 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   }
   virtual void QueueDraw() { draw_queued_ = true; }
   virtual bool GrabKeyboardFocus() { return false; }
-  virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
+  virtual void SetResizable(ResizableMode mode) { }
   virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
-  virtual void SetCursor(ggadget::ElementInterface::CursorType type) { }
+  virtual void SetCursor(CursorType type) { }
   virtual void SetTooltip(const char *tooltip) { }
   virtual void RunDialog() { }
   virtual void ShowInDetailsView(
@@ -88,9 +88,6 @@ class MockedViewHost : public ggadget::ViewHostInterface {
     bool changed;
     view_->Draw(&changed);
     return b;
-  }
-  ggadget::EditInterface *NewEdit(size_t w, size_t h) {
-    return NULL;
   }
   ggadget::View *GetViewInternal() { return view_; }
 

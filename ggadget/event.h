@@ -340,7 +340,7 @@ class OptionChangedEvent : public Event {
       : Event(EVENT_OPTION_CHANGED), property_name_(property_name) {
   }
 
-  const char *GetPropertyName() const { return property_name_.c_str(); }
+  std::string GetPropertyName() const { return property_name_; }
   void SetPropertyname(
       const char *property_name) { property_name_ = property_name; }
 

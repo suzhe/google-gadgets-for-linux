@@ -47,14 +47,14 @@ TEST_F(ElementFactoryTest, TestCreate) {
                                                         vh.GetView(),
                                                         NULL);
   ASSERT_TRUE(e1 != NULL);
-  ASSERT_STREQ(e1->GetTagName(), "muffin");
+  ASSERT_STREQ("muffin", e1->GetTagName().c_str());
 
   ggadget::ElementInterface *e2 = factory.CreateElement("pie",
                                                         e1,
                                                         vh.GetView(),
                                                         NULL);
   ASSERT_TRUE(e2 != NULL);
-  ASSERT_STREQ(e2->GetTagName(), "pie");
+  ASSERT_STREQ("pie", e2->GetTagName().c_str());
 
   ggadget::ElementInterface *e3 = factory.CreateElement("bread",
                                                         e2,

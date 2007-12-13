@@ -97,21 +97,21 @@ class FileSystemInterface {
   /** Get drives collection. */
   virtual fs::DrivesInterface *GetDrives() = 0;
   /** Generate a path from an existing path and a name. */
-  virtual const char *BuildPath(const char *path, const char *name) = 0;
+  virtual std::string BuildPath(const char *path, const char *name) = 0;
   /** Return drive from a path. */
-  virtual const char *GetDriveName(const char *path) = 0;
+  virtual std::string GetDriveName(const char *path) = 0;
   /** Return path to the parent folder. */
-  virtual const char *GetParentFolderName(const char *path) = 0;
+  virtual std::string GetParentFolderName(const char *path) = 0;
   /** Return the file name from a path. */
-  virtual const char *GetFileName(const char *path) = 0;
+  virtual std::string GetFileName(const char *path) = 0;
   /** Return base name from a path. */
-  virtual const char *GetBaseName(const char *path) = 0;
+  virtual std::string GetBaseName(const char *path) = 0;
   /** Return extension from path. */
-  virtual const char *GetExtensionName(const char *path) = 0;
+  virtual std::string GetExtensionName(const char *path) = 0;
   /** Return the canonical representation of the path. */
-  virtual const char *GetAbsolutePathName(const char *path) = 0;
+  virtual std::string GetAbsolutePathName(const char *path) = 0;
   /** Generate name that can be used to name a temporary file. */
-  virtual const char *GetTempName() = 0;
+  virtual std::string GetTempName() = 0;
   /** Check if a drive or a share exists. */
   virtual bool DriveExists(const char *drive_spec) = 0;
   /** Check if a file exists. */
@@ -156,7 +156,7 @@ class FileSystemInterface {
   virtual fs::TextStreamInterface *GetStandardStream(
       fs::StandardStreamType type, bool unicode) = 0;
   /** Retrieve the file version of the specified file into a string. */
-  virtual const char *GetFileVersion(const char *filename) = 0;
+  virtual std::string GetFileVersion(const char *filename) = 0;
 };
 
 namespace fs {
@@ -183,17 +183,17 @@ class DriveInterface {
   virtual void Destroy() = 0;
 
  public:
-  virtual const char *GetPath() = 0;
-  virtual const char *GetDriveLetter() = 0;
-  virtual const char *GetShareName() = 0;
+  virtual std::string GetPath() = 0;
+  virtual std::string GetDriveLetter() = 0;
+  virtual std::string GetShareName() = 0;
   virtual DriveType GetDriveType() = 0;
   virtual FolderInterface *GetRootFolder() = 0;
   virtual int64_t GetAvailableSpace() = 0;
   virtual int64_t GetFreeSpace() = 0;
   virtual int64_t GetTotalSize() = 0;
-  virtual const char *GetVolumnName() = 0;
+  virtual std::string GetVolumnName() = 0;
   virtual bool SetVolumnName(const char *name) = 0;
-  virtual const char *GetFileSystem() = 0;
+  virtual std::string GetFileSystem() = 0;
   virtual int64_t GetSerialNumber() = 0;
   virtual bool IsReady() = 0;
 };
@@ -220,11 +220,11 @@ class FolderInterface {
   virtual void Destroy() = 0;
 
  public:
-  virtual const char *GetPath() = 0;
-  virtual const char *GetName() = 0;
+  virtual std::string GetPath() = 0;
+  virtual std::string GetName() = 0;
   virtual bool SetName(const char *name) = 0;
-  virtual const char *GetShortPath() = 0;
-  virtual const char *GetShortName() = 0;
+  virtual std::string GetShortPath() = 0;
+  virtual std::string GetShortName() = 0;
   virtual DriveInterface *GetDrive() = 0;
   virtual FolderInterface *GetParentFolder() = 0;
   virtual FileAttribute GetAttributes() = 0;
@@ -232,7 +232,7 @@ class FolderInterface {
   virtual Date GetDateCreated() = 0;
   virtual Date GetDateLastModified() = 0;
   virtual Date GetDateLastAccessed() = 0;
-  virtual const char *GetType() = 0;
+  virtual std::string GetType() = 0;
   virtual bool Delete(bool force) = 0;
   virtual bool Copy(const char *dest, bool overwrite) = 0;
   virtual bool Move(const char *dest) = 0;
@@ -267,11 +267,11 @@ class FileInterface {
   virtual void Destroy() = 0;
 
  public:
-  virtual const char *GetPath() = 0;
-  virtual const char *GetName() = 0;
+  virtual std::string GetPath() = 0;
+  virtual std::string GetName() = 0;
   virtual bool SetName(const char *name) = 0;
-  virtual const char *GetShortPath() = 0;
-  virtual const char *GetShortName() = 0;
+  virtual std::string GetShortPath() = 0;
+  virtual std::string GetShortName() = 0;
   virtual DriveInterface *GetDrive() = 0;
   virtual FolderInterface *GetParentFolder() = 0;
   virtual FileAttribute GetAttributes() = 0;
@@ -280,7 +280,7 @@ class FileInterface {
   virtual Date GetDateLastModified() = 0;
   virtual Date GetDateLastAccessed() = 0;
   virtual int64_t GetSize() = 0;
-  virtual const char *GetType() = 0;
+  virtual std::string GetType() = 0;
   virtual bool Delete(bool force) = 0;
   virtual bool Copy(const char *dest, bool overwrite) = 0;
   virtual bool Move(const char *dest) = 0;
@@ -305,11 +305,11 @@ class TextStreamInterface {
   /** Is the current position at the end of a line? */
   virtual bool IsAtEndOfLine() = 0;
   /** Read a specific number of characters into a string. */
-  virtual const char *Read(int characters) = 0;
+  virtual std::string Read(int characters) = 0;
   /** Read an entire line into a string. */
-  virtual const char *ReadLine() = 0;
+  virtual std::string ReadLine() = 0;
   /** Read the entire stream into a string. */
-  virtual const char *ReadAll() = 0;
+  virtual std::string ReadAll() = 0;
   /** Write a string to the stream. */
   virtual void Write(const char *text) = 0;
   /** Write a string and an end of line to the stream. */

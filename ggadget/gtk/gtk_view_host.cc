@@ -168,7 +168,7 @@ void GtkViewHost::SwitchWidget(GadgetViewWidget *gvw) {
 }
 #endif
 
-void GtkViewHost::SetResizable(ViewInterface::ResizableMode mode) {
+void GtkViewHost::SetResizable(ResizableMode mode) {
   // TODO:
 }
 
@@ -180,9 +180,9 @@ void GtkViewHost::SetShowCaptionAlways(bool always) {
   // TODO:
 }
 
-void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
+void GtkViewHost::SetCursor(CursorType type) {
   if (GTK_IS_WIDGET(gvw_)) {
-    if (type == ElementInterface::CURSOR_ARROW) {
+    if (type == CURSOR_ARROW) {
       // Use parent cursor in this case.
       gdk_window_set_cursor(GTK_WIDGET(gvw_)->window, NULL);
       return;
@@ -191,22 +191,22 @@ void GtkViewHost::SetCursor(ElementInterface::CursorType type) {
     /*
     GdkCursorType gdk_type;
     switch (type) {
-     case ElementInterface::CURSOR_ARROW:
+     case CURSOR_ARROW:
        gdk_type = 
-     case ElementInterface::CURSOR_IBEAM:
-     case ElementInterface::CURSOR_WAIT:
-     case ElementInterface::CURSOR_CROSS:
-     case ElementInterface::CURSOR_UPARROW:
-     case ElementInterface::CURSOR_SIZE:
-     case ElementInterface::CURSOR_SIZENWSE:
-     case ElementInterface::CURSOR_SIZENESW:
-     case ElementInterface::CURSOR_SIZEWE:
-     case ElementInterface::CURSOR_SIZENS:
-     case ElementInterface::CURSOR_SIZEALL:
-     case ElementInterface::CURSOR_NO:
-     case ElementInterface::CURSOR_HAND:
-     case ElementInterface::CURSOR_BUSY:
-     case ElementInterface::CURSOR_HELP:
+     case CURSOR_IBEAM:
+     case CURSOR_WAIT:
+     case CURSOR_CROSS:
+     case CURSOR_UPARROW:
+     case CURSOR_SIZE:
+     case CURSOR_SIZENWSE:
+     case CURSOR_SIZENESW:
+     case CURSOR_SIZEWE:
+     case CURSOR_SIZENS:
+     case CURSOR_SIZEALL:
+     case CURSOR_NO:
+     case CURSOR_HAND:
+     case CURSOR_BUSY:
+     case CURSOR_HELP:
      default:
        return;
     };
@@ -363,7 +363,7 @@ void GtkViewHost::Alert(const char *message) {
                                              GTK_MESSAGE_INFO,
                                              GTK_BUTTONS_OK,
                                              "%s", message);
-  gtk_window_set_title(GTK_WINDOW(dialog), view_->GetCaption());
+  gtk_window_set_title(GTK_WINDOW(dialog), view_->GetCaption().c_str());
   gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
 }
@@ -374,7 +374,7 @@ bool GtkViewHost::Confirm(const char *message) {
                                              GTK_MESSAGE_QUESTION,
                                              GTK_BUTTONS_YES_NO,
                                              "%s", message);
-  gtk_window_set_title(GTK_WINDOW(dialog), view_->GetCaption());
+  gtk_window_set_title(GTK_WINDOW(dialog), view_->GetCaption().c_str());
   gint result = gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
   return result == GTK_RESPONSE_YES;
@@ -383,7 +383,7 @@ bool GtkViewHost::Confirm(const char *message) {
 std::string GtkViewHost::Prompt(const char *message,
                                 const char *default_value) {
   GtkWidget *dialog = gtk_dialog_new_with_buttons(
-      view_->GetCaption(), NULL,
+      view_->GetCaption().c_str(), NULL,
       static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR),
       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
       GTK_STOCK_OK, GTK_RESPONSE_OK,

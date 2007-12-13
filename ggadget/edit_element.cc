@@ -262,12 +262,6 @@ void EditElement::GetIdealBoundingRect(int *width, int *height) {
   if (height) *height = h;
 }
 
-Connection *EditElement::ConnectEvent(const char *event_name,
-                                      Slot0<void> *handler) {
-  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
-    return impl_->onchange_event_.Connect(handler);
-  return BasicElement::ConnectEvent(event_name, handler);
-}
 Connection *EditElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }

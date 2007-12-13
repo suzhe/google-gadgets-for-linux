@@ -80,10 +80,10 @@ class Image {
    * @return the file name this image is loaded from a file, otherwise
    *     returns an empty string.
    */
-  const char *GetSrc();
+  std::string GetSrc();
 
   /** Utility function to get the src of an image which can be @c NULL. */
-  static const char *GetSrc(Image *image) {
+  static std::string GetSrc(Image *image) {
     return image ? image->GetSrc() : "";
   }
 

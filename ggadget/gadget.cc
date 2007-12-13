@@ -101,16 +101,13 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
 
       // Deprecated or unofficial properties and methods.
       RegisterProperty("title", NULL, // No getter.
-                       NewSlot(implicit_cast<ViewInterface *>(main_view_),
-                               &ViewInterface::SetCaption));
+                       NewSlot(main_view_, &View::SetCaption));
       RegisterProperty("about_text", NULL, // No getter.
                        NewSlot(gadget_impl, &Impl::SetAboutText));
       RegisterProperty("window_width",
-                       NewSlot(implicit_cast<ViewInterface *>(main_view_),
-                               &ViewInterface::GetWidth), NULL);
+                       NewSlot(main_view_, &View::GetWidth), NULL);
       RegisterProperty("window_height",
-                       NewSlot(implicit_cast<ViewInterface *>(main_view_),
-                               &ViewInterface::GetHeight), NULL);
+                       NewSlot(main_view_, &View::GetHeight), NULL);
       RegisterMethod("SetFlags", NewSlot(this, &Plugin::SetFlags));
       RegisterMethod("SetIcons", NewSlot(this, &Plugin::SetIcons));
 
@@ -294,11 +291,11 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
            data : "";
   }
 
-  const char *GetManifestInfo(const char *key) {
+  std::string GetManifestInfo(const char *key) {
     GadgetStringMap::const_iterator it = manifest_info_map_.find(key);
     if (it == manifest_info_map_.end())
       return NULL;
-    return it->second.c_str();
+    return it->second;
   }
 
   bool HasOptionsDialog() {
@@ -348,9 +345,9 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     details_view_host_->GetScriptContext()->AssignFromContext(
         NULL, "", "detailsViewData",
         main_view_host_->GetScriptContext(), details_view, "detailsViewData");
-    const char *xml_file = details_view->GetText();
-    if (!details_view_host_->GetView()->InitFromFile(xml_file)) {
-      LOG("Failed to load details view from %s", xml_file);
+    std::string xml_file = details_view->GetText();
+    if (!details_view_host_->GetView()->InitFromFile(xml_file.c_str())) {
+      LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_host_;
       details_view_host_ = NULL;
       return false;
@@ -395,10 +392,12 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       return false;
 
     // TODO: Is it necessary to check the required fields in manifest?
-    DLOG("Gadget min version: %s", GetManifestInfo(kManifestMinVersion));
-    DLOG("Gadget id: %s", GetManifestInfo(kManifestId));
-    DLOG("Gadget name: %s", GetManifestInfo(kManifestName));
-    DLOG("Gadget description: %s", GetManifestInfo(kManifestDescription));
+    DLOG("Gadget min version: %s",
+         GetManifestInfo(kManifestMinVersion).c_str());
+    DLOG("Gadget id: %s", GetManifestInfo(kManifestId).c_str());
+    DLOG("Gadget name: %s", GetManifestInfo(kManifestName).c_str());
+    DLOG("Gadget description: %s",
+         GetManifestInfo(kManifestDescription).c_str());
 
     // load fonts
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
@@ -412,7 +411,8 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       }
     }
 
-    main_view_host_->GetView()->SetCaption(GetManifestInfo(kManifestName));
+    main_view_host_->GetView()->SetCaption(
+        GetManifestInfo(kManifestName).c_str());
     if (!main_view_host_->GetView()->InitFromFile(kMainXML)) {
       LOG("Failed to setup the main view");
       return false;
@@ -457,7 +457,7 @@ ViewHostInterface *Gadget::GetMainViewHost() {
   return impl_->main_view_host_;
 }
 
-const char *Gadget::GetManifestInfo(const char *key) const {
+std::string Gadget::GetManifestInfo(const char *key) const {
   return impl_->GetManifestInfo(key);
 }
 

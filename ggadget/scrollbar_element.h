@@ -102,8 +102,6 @@ class ScrollBarElement : public BasicElement {
   int GetValue() const;
   void SetValue(int value);
 
-  virtual Connection *ConnectEvent(const char *event_name,
-                                   Slot0<void> *handler);
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  protected:

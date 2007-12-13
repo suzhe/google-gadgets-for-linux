@@ -142,6 +142,22 @@ class ListBoxElement::Impl {
     owner_->GetView()->FireEvent(&s_event, onchange_event_);
   }
 
+  ItemElement *FindItemByString(const char *str) {
+    ElementsInterface *elements = owner_->GetChildren();
+    int childcount = elements->GetCount();
+    for (int i = 0; i < childcount; i++) {
+      ElementInterface *child = elements->GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        ItemElement *item = down_cast<ItemElement *>(child);
+        std::string text = item->GetLabelText();
+        if (text == str) {
+          return item;
+        }
+      }
+    }
+    return NULL;
+  }
+
   ListBoxElement *owner_;
   double pixel_item_width_, pixel_item_height_;
   double rel_item_width_, rel_item_height_;
@@ -216,13 +232,6 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
 ListBoxElement::~ListBoxElement() {
   delete impl_;
   impl_ = NULL;
-}
-
-Connection *ListBoxElement::ConnectEvent(const char *event_name,
-                                           Slot0<void> *handler) {
-  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
-    return impl_->onchange_event_.Connect(handler);
-  return BasicElement::ConnectEvent(event_name, handler);
 }
 
 void ListBoxElement::ScrollToIndex(int index) {
@@ -616,21 +625,10 @@ bool ListBoxElement::InsertStringAt(const char *str, int index) {
 }
 
 void ListBoxElement::RemoveString(const char *str) {
-  ElementsInterface *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    ElementInterface *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      ItemElement *item = down_cast<ItemElement *>(child);
-      const char *text = item->GetLabelText();
-      if (text && strcmp(str, text) == 0) {
-        elements->RemoveElement(child);
-        return;
-      }
-    } else {
-      LOG(kErrorItemExpected);
-    }
-  }  
+  ItemElement *item = FindItemByString(str);
+  if (item) {
+    GetChildren()->RemoveElement(item);
+  }
 }
 
 void ListBoxElement::Layout() { 
@@ -672,6 +670,14 @@ void ListBoxElement::Layout() {
 
   // No need to destroy items_canvas_ here, since Draw() will calculate
   // the size required and resize it if necessary.
+}
+
+ItemElement *ListBoxElement::FindItemByString(const char *str) {
+  return impl_->FindItemByString(str);
+}
+
+const ItemElement *ListBoxElement::FindItemByString(const char *str) const {
+  return impl_->FindItemByString(str);
 }
 
 BasicElement *ListBoxElement::CreateInstance(BasicElement *parent, View *view,

@@ -161,8 +161,8 @@ Color Texture::GetColor() {
   return impl_->color_;
 }
 
-const char *Texture::GetSrc() const {
-  return impl_->name_.c_str();
+std::string Texture::GetSrc() const {
+  return impl_->name_;
 }
 
 } // namespace ggadget
