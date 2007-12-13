@@ -101,8 +101,10 @@ class GtkEdit : public EditInterface {
 
   /** Remove the cached layout. */
   void ResetLayout();
-  /** Create pango layout on-demand. If the layout is not changed, return the
-   * cached one. */
+  /**
+   * Create pango layout on-demand. If the layout is not changed, return the
+   * cached one.
+   */
   PangoLayout* EnsureLayout();
   /** Create a new layout containning current edit content */
   PangoLayout* CreateLayout();
@@ -110,9 +112,11 @@ class GtkEdit : public EditInterface {
   CairoCanvas* EnsureCanvas();
   /** Adjust the scroll information */
   void AdjustScroll();
-  /** Send out a request to refresh all informations of the edit control
+  /**
+   * Send out a request to refresh all informations of the edit control
    * and queue a draw request.
-   * If @c relayout is true then the layout will be regenerated. */
+   * If @c relayout is true then the layout will be regenerated.
+   * */
   void QueueRefresh(bool relayout);
   /** Callback to do real refresh task */
   bool RefreshCallback(int timer_id);
@@ -196,6 +200,12 @@ class GtkEdit : public EditInterface {
   /** Gets the color of selection text. */
   Color GetSelectionTextColor();
 
+  /**
+   * Gets the cursor location for gtk im context. relative to the widget
+   * coordinate
+   */
+  void GetCursorLocationForIMContext(GdkRectangle *cur);
+
   /** Callback function for IM "commit" signal */
   static void CommitCallback(GtkIMContext *context,
                              const char *str, void *gg);
@@ -211,8 +221,10 @@ class GtkEdit : public EditInterface {
   static void PreeditChangedCallback(GtkIMContext *context, void *gg);
   /** Callback function for IM "preedit-end" signal */
   static void PreeditEndCallback(GtkIMContext *context, void *gg);
-  /** Callback for gtk_clipboard_request_text function.
-    This function performs real paste. */
+  /**
+   * Callback for gtk_clipboard_request_text function.
+   * This function performs real paste.
+   */
   static void PasteCallback(GtkClipboard *clipboard,
                             const gchar *str, void *gg);
 
@@ -247,8 +259,10 @@ class GtkEdit : public EditInterface {
   int cursor_;
   /** The preedit cursor position within the preedit string */
   int preedit_cursor_;
-  /** The current selection bound in number of characters,
-   * range between cursor_ and selection_bound_ are selected. */
+  /**
+   * The current selection bound in number of characters,
+   * range between cursor_ and selection_bound_ are selected.
+   */
   int selection_bound_;
   /** Length of current text in number of chars */
   int text_length_;
@@ -261,7 +275,8 @@ class GtkEdit : public EditInterface {
     int refresh_timer_;
   /** Timer id of cursor blink callback */
   int cursor_blink_timer_;
-  /** Indicates the status of cursor blinking,
+  /**
+   * Indicates the status of cursor blinking,
    * 0 means hide cursor
    * otherwise means show cursor.
    * The maximum value would be 2, and decrased by one in each cursor blink

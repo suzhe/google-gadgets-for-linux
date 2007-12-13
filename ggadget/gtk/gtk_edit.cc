@@ -20,6 +20,7 @@
 #include <cairo.h>
 #include <pango/pango.h>
 #include <gtk/gtk.h>
+#include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 
 #include <ggadget/common.h>
@@ -113,10 +114,9 @@ CanvasInterface *GtkEdit::Draw(bool *modified) {
 
   if (modified_) {
     // If no background is set, then use transparent background.
+    canvas->ClearCanvas();
     if (background_)
       background_->Draw(canvas);
-    else
-      canvas->ClearCanvas();
 
     canvas->IntersectRectClipRegion(kInnerBorder - 1,
                                     kInnerBorder - 1,
@@ -141,6 +141,14 @@ void GtkEdit::FocusIn() {
     if (!readonly_ && im_context_) {
       need_im_reset_ = true;
       gtk_im_context_focus_in(im_context_);
+
+      GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
+      if (widget->window) {
+        gtk_im_context_set_client_window(im_context_, widget->window);
+        GdkRectangle cur;
+        GetCursorLocationForIMContext(&cur);
+        gtk_im_context_set_cursor_location(im_context_, &cur);
+      }
     }
     QueueRefresh(false);
   }
@@ -383,21 +391,30 @@ bool GtkEdit::IsScrollBarRequired() {
 
 void GtkEdit::GetScrollBarInfo(int *range, int *line_step,
                                int *page_step, int *cur_pos) {
-  int request_height;
-  int real_height = height_ - kInnerBorder * 2;
   PangoLayout *layout = EnsureLayout();
-  pango_layout_get_pixel_size(layout, NULL, &request_height);
+  int nlines = pango_layout_get_line_count(layout);
 
-  if (range)
-    *range = (request_height > real_height? (request_height - real_height) : 0);
-  if (line_step) {
-    *line_step = request_height / pango_layout_get_line_count(layout);
-    if (*line_step == 0) *line_step = 1;
+  // Only enable scrolling when there are more than one lines.
+  if (nlines > 1) {
+    int request_height;
+    int real_height = height_ - kInnerBorder * 2;
+    pango_layout_get_pixel_size(layout, NULL, &request_height);
+    if (range)
+      *range = (request_height > real_height? (request_height - real_height) : 0);
+    if (line_step) {
+      *line_step = request_height / nlines;
+      if (*line_step == 0) *line_step = 1;
+    }
+    if (page_step)
+      *page_step = real_height;
+    if (cur_pos)
+      *cur_pos = - scroll_offset_y_;
+  } else {
+    if (range) *range = 0;
+    if (line_step) *line_step = 0;
+    if (page_step) *page_step = 0;
+    if (cur_pos) *cur_pos = 0;
   }
-  if (page_step)
-    *page_step = real_height;
-  if (cur_pos)
-    *cur_pos = - scroll_offset_y_;
 }
 
 void GtkEdit::ScrollTo(int position) {
@@ -1435,6 +1452,20 @@ Color GtkEdit::GetSelectionTextColor() {
                  static_cast<double>(color->blue) / 65535.0);
   }
   return kDefaultSelectionTextColor;
+}
+
+void GtkEdit::GetCursorLocationForIMContext(GdkRectangle *cur) {
+  // TODO: Gets the real cursor location.
+  GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
+  if (widget->window) {
+    gdk_drawable_get_size(GDK_DRAWABLE(widget->window), &cur->x, &cur->y);
+    cur->x = 0;
+  } else {
+    cur->x = 0;
+    cur->y = 0;
+  }
+  cur->width = 0;
+  cur->height = 0;
 }
 
 void GtkEdit::CommitCallback(GtkIMContext *context, const char *str, void *gg) {
