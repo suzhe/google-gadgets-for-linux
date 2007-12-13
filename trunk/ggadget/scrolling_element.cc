@@ -34,7 +34,7 @@ class ScrollingElement::Impl {
         scrollbar_(NULL) {
   }
   ~Impl() {
-    if (scrollbar_) delete scrollbar_;
+    delete scrollbar_;
   }
 
   void CreateScrollBar() {
