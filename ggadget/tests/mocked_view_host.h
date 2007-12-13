@@ -89,6 +89,9 @@ class MockedViewHost : public ggadget::ViewHostInterface {
     view_->Draw(&changed);
     return b;
   }
+  ggadget::EditInterface *NewEdit(size_t w, size_t h) {
+    return NULL;
+  }
   ggadget::View *GetViewInternal() { return view_; }
 
  private:
