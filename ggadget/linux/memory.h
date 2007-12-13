@@ -26,7 +26,7 @@ namespace framework {
 
 class Memory : public MemoryInterface {
  public:
-  Memory::Memory();
+  Memory();
   virtual int64_t GetTotal();
   virtual int64_t GetFree();
   virtual int64_t GetUsed();

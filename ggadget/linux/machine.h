@@ -25,7 +25,7 @@ namespace framework {
 
 class Machine : public MachineInterface {
 public:
-  Machine::Machine();
+  Machine();
   virtual const char *GetBiosSerialNumber() const;
   virtual const char *GetMachineManufacturer() const;
   virtual const char *GetMachineModel() const;
