@@ -452,8 +452,10 @@ EventResult GtkEdit::OnMouseEvent(const MouseEvent &event) {
     return EVENT_RESULT_UNHANDLED;
 
   Event::Type type = event.GetType();
-  int x = event.GetX() - kInnerBorder - scroll_offset_x_;
-  int y = event.GetY() - kInnerBorder - scroll_offset_y_;
+  int x = static_cast<int>(round(event.GetX())) -
+            kInnerBorder - scroll_offset_x_;
+  int y = static_cast<int>(round(event.GetY())) -
+            kInnerBorder - scroll_offset_y_;
   int offset = XYToOffset(x, y);
   int sel_start, sel_end;
   GetSelectionBounds(&sel_start, &sel_end);
@@ -1006,7 +1008,11 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
     end_index =
       g_utf8_offset_to_pointer(text, end_off) - text;
     for(int line_index = 0; line_index < n_lines; ++line_index) {
+#if PANGO_VERSION_CHECK(1,16,0)
       PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
+#else
+      PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
+#endif
       if (line->start_index + line->length < start_index)
         continue;
       if (end_index < line->start_index)
@@ -1132,7 +1138,11 @@ int GtkEdit::MoveWords(int current_pos, int count) {
     int index = g_utf8_offset_to_pointer(text, current_pos) - text;
     int line_index;
     pango_layout_index_to_line_x(layout, index, false, &line_index, NULL);
+#if PANGO_VERSION_CHECK(1,16,0)
     PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
+#else
+    PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
+#endif
     bool rtl = (line->resolved_dir == PANGO_DIRECTION_RTL);
     while (count != 0) {
       if (((rtl && count < 0) || (!rtl && count > 0)) &&
@@ -1179,7 +1189,11 @@ int GtkEdit::MoveDisplayLines(int current_pos, int count) {
     return text_length_;
   } else {
     int trailing;
+#if PANGO_VERSION_CHECK(1,16,0)
     PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
+#else
+    PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
+#endif
     // Find out the cursor x offset related to the new line position.
     if (line->resolved_dir == PANGO_DIRECTION_RTL) {
       pango_layout_get_cursor_pos(layout, line->start_index + line->length,
@@ -1220,7 +1234,11 @@ int GtkEdit::MoveLineEnds(int current_pos, int count) {
 
   // Find current line
   pango_layout_index_to_line_x(layout, index, FALSE, &line_index, NULL);
+#if PANGO_VERSION_CHECK(1,16,0)
   PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
+#else
+  PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
+#endif
 
   if (line->length == 0)
     return current_pos;
