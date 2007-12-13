@@ -51,7 +51,7 @@ class AnchorElement::Impl {
 AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "a", name, false),
       impl_(new Impl(this, view)) {
-  SetCursor(ElementInterface::CURSOR_HAND);
+  SetCursor(ViewHostInterface::CURSOR_HAND);
   SetEnabled(true);
 
   RegisterProperty("overColor",
@@ -92,8 +92,8 @@ void AnchorElement::SetOverColor(const Variant &color) {
   }
 }
 
-const char *AnchorElement::GetHref() const {
-  return impl_->href_.c_str();
+std::string AnchorElement::GetHref() const {
+  return impl_->href_;
 }
 
 void AnchorElement::SetHref(const char *href) {

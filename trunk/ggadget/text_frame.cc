@@ -212,8 +212,8 @@ void TextFrame::SetColor(const Color &color, double opacity) {
   impl_->QueueDraw();
 }
 
-const char *TextFrame::GetFont() const {
-  return impl_->font_name_.c_str();
+std::string TextFrame::GetFont() const {
+  return impl_->font_name_;
 }
 
 void TextFrame::SetFont(const char *font) {
@@ -299,8 +299,8 @@ void TextFrame::SetWordWrap(bool wrap) {
   }
 }
 
-const char *TextFrame::GetText() const {
-  return impl_->text_.c_str();
+std::string TextFrame::GetText() const {
+  return impl_->text_;
 }
 
 bool TextFrame::SetText(const char *text) {

@@ -17,6 +17,9 @@
 #ifndef GGADGET_GADGET_HOST_INTERFACE_H__
 #define GGADGET_GADGET_HOST_INTERFACE_H__
 
+#include <vector>
+#include <string>
+
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
@@ -174,26 +177,6 @@ class GadgetHostInterface {
   /** Remove a previously installed font. */
   virtual bool UnloadFont(const char *filename) = 0;
 
-  /** Interface for enumerating the files returned @c BrowseForFiles(). */
-  class FilesInterface {
-   protected:
-    virtual ~FilesInterface() {}
-
-   public:
-    virtual void Destroy() = 0;
-
-   public:
-    /** Get the number of files. */
-    virtual int GetCount() const = 0;
-    /**
-     * Get the file name according to the index.
-     * The caller should not free the pointer this method returned,
-     * and the returned pointer may be freed next time when calling to the
-     * method in some implementations.
-     */
-    virtual const char *GetItem(int index) const = 0;
-  };
-
   /**
    * Displays the standard browse for file dialog and returns a collection
    * containing the names of the selected files.
@@ -201,11 +184,12 @@ class GadgetHostInterface {
    *     entries can be added to it. For example:
    *     "Music Files|*.mp3;*.wma|All Files|*.*".
    * @param multiple @c true if allow selection of multiple files.
-   * @return the selected files or an empty collection if the dialog is
-   *     cancelled. The caller should call @c Destroy() to the returned
-   *     pointer after use.
+   * @param[out] result the selected files or an empty collection if dialog is
+   *     canceled.
+   * @return @c false if the dialog is canceled.
    */
-  virtual FilesInterface *BrowseForFiles(const char *filter, bool multiple) = 0;
+  virtual bool BrowseForFiles(const char *filter, bool multiple,
+                              std::vector<std::string> *result) = 0;
 
   /** Retrieves the position of the cursor. */
   virtual void GetCursorPos(int *x, int *y) const = 0;
@@ -214,7 +198,7 @@ class GadgetHostInterface {
   virtual void GetScreenSize(int *width, int *height) const = 0;
 
   /** Returns the path to the icon associated with the specified file. */
-  virtual const char *GetFileIcon(const char *filename) const = 0;
+  virtual std::string GetFileIcon(const char *filename) const = 0;
 
   /** Creates an audio clip from given file or url. */
   virtual AudioclipInterface *CreateAudioclip(const char *src) = 0;

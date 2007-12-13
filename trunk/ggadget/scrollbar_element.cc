@@ -664,13 +664,6 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
   return result;
 }
 
-Connection *ScrollBarElement::ConnectEvent(const char *event_name,
-                                           Slot0<void> *handler) {
-  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
-    return impl_->onchange_event_.Connect(handler);
-  return BasicElement::ConnectEvent(event_name, handler);
-}
-
 Connection *ScrollBarElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }

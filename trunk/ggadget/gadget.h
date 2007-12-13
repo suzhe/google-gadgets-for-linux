@@ -31,7 +31,7 @@ class Gadget: public GadgetInterface {
 
   virtual bool Init();
   virtual ViewHostInterface *GetMainViewHost();
-  virtual const char *GetManifestInfo(const char *key) const;
+  virtual std::string GetManifestInfo(const char *key) const;
   virtual bool HasOptionsDialog() const;
   virtual bool ShowOptionsDialog();
   virtual bool ShowDetailsView(DetailsView *details_view,

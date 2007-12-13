@@ -24,7 +24,6 @@
 namespace ggadget {
 
 template <typename R> class Slot0;
-class ViewHostInterface;
 class BasicElement;
 class ContentAreaElement;
 class DetailsView;
@@ -60,16 +59,15 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual bool SetWidth(int width);
   virtual bool SetHeight(int height);
   virtual bool SetSize(int width, int height);
-
   virtual int GetWidth() const;
   virtual int GetHeight() const;
 
   virtual const CanvasInterface *Draw(bool *changed);
 
-  virtual void SetResizable(ResizableMode resizable);
-  virtual ResizableMode GetResizable() const;
+  virtual void SetResizable(ViewHostInterface::ResizableMode resizable);
+  virtual ViewHostInterface::ResizableMode GetResizable() const;
   virtual void SetCaption(const char *caption);
-  virtual const char *GetCaption() const;
+  virtual std::string GetCaption() const;
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
 
@@ -79,19 +77,67 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual ElementInterface *GetElementByName(const char *name);
   virtual const ElementInterface *GetElementByName(const char *name) const;
 
-  virtual int BeginAnimation(Slot0<void> *slot,
-                             int start_value,
-                             int end_value,
-                             unsigned int duration);
-  virtual void CancelAnimation(int token);
-  virtual int SetTimeout(Slot0<void> *slot, unsigned int duration);
-  virtual void ClearTimeout(int token);
-  virtual int SetInterval(Slot0<void> *slot, unsigned int duration);
-  virtual void ClearInterval(int token);
   virtual void OnOptionChanged(const char *name);
-  virtual Connection *ConnectEvent(const char *event_name,
-                                   Slot0<void> *handler);
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
+
+ public: // Timer, interval and animation functions.
+  /**
+   * Starts an animation timer. The @a slot is called periodically during
+   * @a duration with a value between @a start_value and @a end_value according
+   * to the progress.
+   *
+   * The value parameter of the slot is calculated as
+   * (where progress is a float number between 0 and 1): <code>
+   * value = start_value + (int)((end_value - start_value) * progress).</code>
+   *
+   * Note: The number of times the slot is called depends on the system
+   * performance and current load of the system. It may be as high as 100 fps.
+   *
+   * @param slot the call target of the timer. This @c ViewInterface instance
+   *     becomes the owner of this slot after this call.
+   * @param start_value start value of the animation.
+   * @param end_value end value of the animation.
+   * @param duration the duration of the whole animation in milliseconds.
+   * @return the animation token that can be used in @c CancelAnimation().
+   */
+  int BeginAnimation(Slot0<void> *slot,
+                     int start_value, int end_value, unsigned int duration);
+
+  /**
+   * Cancels a currently running animation.
+   * @param token the token returned by BeginAnimation().
+   */
+  void CancelAnimation(int token);
+
+  /**
+   * Creates a run-once timer.
+   * @param slot the call target of the timer. This @c ViewInterface instance
+   *     becomes the owner of this slot after this call.
+   * @param duration the duration of the timer in milliseconds.
+   * @return the timeout token that can be used in @c ClearTimeout().
+   */
+  int SetTimeout(Slot0<void> *slot, unsigned int duration);
+
+  /**
+   * Cancels a run-once timer.
+   * @param token the token returned by SetTimeout().
+   */
+  void ClearTimeout(int token);
+
+  /**
+   * Creates a run-forever timer.
+   * @param slot the call target of the timer. This @c ViewInterface instance
+   *     becomes the owner of this slot after this call.
+   * @param duration the period between calls in milliseconds.
+   * @return the interval token than can be used in @c ClearInterval().
+   */
+  int SetInterval(Slot0<void> *slot, unsigned int duration);
+
+  /**
+   * Cancels a run-forever timer.
+   * @param token the token returned by SetInterval().
+   */
+  void ClearInterval(int token);
 
  public:
   /** Asks the host to redraw the given view. */
@@ -246,6 +292,32 @@ class View : public ScriptableHelper<ViewInterface> {
    * Edit box object.
    */
   EditInterface *NewEdit(size_t w, size_t h);
+
+ public: // Event connection methods.
+  Connection *ConnectOnCancelEvent(Slot0<void> *handler);
+  Connection *ConnectOnClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnCloseEvent(Slot0<void> *handler);
+  Connection *ConnectOnDblClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnRClickEvent(Slot0<void> *handler);
+  Connection *ConnectOnRDblClickCancelEvent(Slot0<void> *handler);
+  Connection *ConnectOnDockEvent(Slot0<void> *handler);
+  Connection *ConnectOnKeyDownEvent(Slot0<void> *handler);
+  Connection *ConnectOnPressEvent(Slot0<void> *handler);
+  Connection *ConnectOnKeyUpEvent(Slot0<void> *handler);
+  Connection *ConnectOnMinimizeEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseDownEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseOverEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseOutEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseUpEvent(Slot0<void> *handler);
+  Connection *ConnectOnOkEvent(Slot0<void> *handler);
+  Connection *ConnectOnOpenEvent(Slot0<void> *handler);
+  Connection *ConnectOnOptionChangedEvent(Slot0<void> *handler);
+  Connection *ConnectOnPopInEvent(Slot0<void> *handler);
+  Connection *ConnectOnPopOutEvent(Slot0<void> *handler);
+  Connection *ConnectOnRestoreEvent(Slot0<void> *handler);
+  Connection *ConnectOnSizeEvent(Slot0<void> *handler);
+  Connection *ConnectOnSizingEvent(Slot0<void> *handler);
+  Connection *ConnectOnUndockEvent(Slot0<void> *handler);
 
  private:
   class Impl;

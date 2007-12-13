@@ -40,7 +40,7 @@ class BasicElement::Impl {
         children_(NULL),
         view_(view),
         hittest_(ElementInterface::HT_DEFAULT),
-        cursor_(ElementInterface::CURSOR_ARROW),
+        cursor_(ViewHostInterface::CURSOR_ARROW),
         drop_target_(false),
         enabled_(false),
         width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),
@@ -735,62 +735,13 @@ class BasicElement::Impl {
     return result;
   }
 
-  // The implementation uses if-else statements, which seems the best
-  // trade-off among code size, data size, calling frequency and time.
-  // This method is seldom called only by C++ code.
-  Connection *ConnectEvent(const char *event_name, Slot0<void> *handler) {
-    ASSERT(event_name);
-    EventSignal *signal = NULL;
-    if (GadgetStrCmp(event_name, kOnClickEvent) == 0)
-      signal = &onclick_event_;
-    else if (GadgetStrCmp(event_name, kOnDblClickEvent) == 0)
-      signal = &ondblclick_event_;
-    else if (GadgetStrCmp(event_name, kOnRClickEvent) == 0)
-      signal = &onrclick_event_;
-    else if (GadgetStrCmp(event_name, kOnRDblClickEvent) == 0)
-      signal = &onrdblclick_event_;  
-    else if (GadgetStrCmp(event_name, kOnDragDropEvent) == 0)
-      signal = &ondragdrop_event_;
-    else if (GadgetStrCmp(event_name, kOnDragOutEvent) == 0)
-      signal = &ondragout_event_;
-    else if (GadgetStrCmp(event_name, kOnDragOverEvent) == 0)
-      signal = &ondragover_event_;
-    else if (GadgetStrCmp(event_name, kOnFocusInEvent) == 0)
-      signal = &onfocusin_event_;
-    else if (GadgetStrCmp(event_name, kOnFocusOutEvent) == 0)
-      signal = &onfocusout_event_;
-    else if (GadgetStrCmp(event_name, kOnKeyDownEvent) == 0)
-      signal = &onkeydown_event_;
-    else if (GadgetStrCmp(event_name, kOnKeyPressEvent) == 0)
-      signal = &onkeypress_event_;
-    else if (GadgetStrCmp(event_name, kOnKeyUpEvent) == 0)
-      signal = &onkeyup_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseDownEvent) == 0)
-      signal = &onmousedown_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseMoveEvent) == 0)
-      signal = &onmousemove_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseOutEvent) == 0)
-      signal = &onmouseout_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseOverEvent) == 0)
-      signal = &onmouseover_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseUpEvent) == 0)
-      signal = &onmouseup_event_;
-    else if (GadgetStrCmp(event_name, kOnMouseWheelEvent) == 0)
-      signal = &onmousewheel_event_;
-    else if (GadgetStrCmp(event_name, kOnSizeEvent) == 0)
-      signal = &onsize_event_;
-
-    ASSERT_M(signal, ("Unknown event name: %s", event_name));
-    return signal->Connect(handler);
-  }
-
  public:
   BasicElement *parent_;
   BasicElement *owner_;
   Elements *children_;
   View *view_;
   ElementInterface::HitTest hittest_;
-  ElementInterface::CursorType cursor_;
+  ViewHostInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
   std::string tag_name_;
@@ -863,18 +814,19 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
                            bool children)
     : impl_(new Impl(parent, view, tag_name, name, children, this)) {
   RegisterProperty("x",
-                   NewSlot(this, &BasicElement::GetX),
-                   NewSlot(this, &BasicElement::SetX));
+                   NewSlot(impl_, &Impl::GetX),
+                   NewSlot(impl_, &Impl::SetX));
   RegisterProperty("y",
-                   NewSlot(this, &BasicElement::GetY),
-                   NewSlot(this, &BasicElement::SetY));
+                   NewSlot(impl_, &Impl::GetY),
+                   NewSlot(impl_, &Impl::SetY));
   RegisterProperty("width",
-                   NewSlot(this, &BasicElement::GetWidth),
-                   NewSlot(this, &BasicElement::SetWidth));
+                   NewSlot(impl_, &Impl::GetWidth),
+                   NewSlot(impl_, &Impl::SetWidth));
   RegisterProperty("height",
-                   NewSlot(this, &BasicElement::GetHeight),
-                   NewSlot(this, &BasicElement::SetHeight));
+                   NewSlot(impl_, &Impl::GetHeight),
+                   NewSlot(impl_, &Impl::SetHeight));
   RegisterConstant("name", impl_->name_);
+  RegisterConstant("tagName", impl_->tag_name_);
 
   if (GadgetStrCmp(tag_name, "contentarea") == 0)
     // The following properties and methods are not supported by contentarea.
@@ -968,8 +920,8 @@ BasicElement::~BasicElement() {
   delete impl_;
 }
 
-const char *BasicElement::GetTagName() const {
-  return impl_->tag_name_.c_str();
+std::string BasicElement::GetTagName() const {
+  return impl_->tag_name_;
 }
 
 View *BasicElement::GetView() {
@@ -996,11 +948,11 @@ ElementsInterface *BasicElement::GetChildren() {
   return impl_->children_;
 }
 
-ElementInterface::CursorType BasicElement::GetCursor() const {
+ViewHostInterface::CursorType BasicElement::GetCursor() const {
   return impl_->cursor_;
 }
 
-void BasicElement::SetCursor(ElementInterface::CursorType cursor) {
+void BasicElement::SetCursor(ViewHostInterface::CursorType cursor) {
   impl_->cursor_ = cursor;
 }
 
@@ -1020,12 +972,12 @@ void BasicElement::SetEnabled(bool enabled) {
   impl_->enabled_ = enabled;
 }
 
-const char *BasicElement::GetName() const {
-  return impl_->name_.c_str();
+std::string BasicElement::GetName() const {
+  return impl_->name_;
 }
 
-const char *BasicElement::GetMask() const {
-  return impl_->mask_.c_str();
+std::string BasicElement::GetMask() const {
+  return impl_->mask_;
 }
 
 void BasicElement::SetMask(const char *mask) {
@@ -1180,6 +1132,22 @@ void BasicElement::ResetHeightToDefault() {
   impl_->ResetHeightToDefault();
 }
 
+bool BasicElement::XIsSpecified() const {
+  return impl_->x_specified_;
+}
+
+void BasicElement::ResetXToDefault() {
+  impl_->ResetXToDefault();
+}
+
+bool BasicElement::YIsSpecified() const {
+  return impl_->y_specified_;
+}
+
+void BasicElement::ResetYToDefault() {
+  impl_->ResetYToDefault();
+}
+
 double BasicElement::GetClientWidth() {
   return GetPixelWidth();
 }
@@ -1222,8 +1190,8 @@ const ElementInterface *BasicElement::GetParentElement() const {
   return impl_->parent_;
 }
 
-const char *BasicElement::GetTooltip() const {
-  return impl_->tooltip_.c_str();
+std::string BasicElement::GetTooltip() const {
+  return impl_->tooltip_;
 }
 
 void BasicElement::SetTooltip(const char *tooltip) {
@@ -1325,51 +1293,6 @@ void BasicElement::GetDefaultPosition(double *x, double *y) const {
   *x = *y = 0;
 }
 
-void BasicElement::ResetXToDefault() {
-  impl_->ResetXToDefault();
-}
-
-void BasicElement::ResetYToDefault() {
-  impl_->ResetYToDefault();
-}
-
-Variant BasicElement::GetWidth() const {
-  return impl_->GetWidth();
-}
-
-void BasicElement::SetWidth(const Variant &width) {
-  impl_->SetWidth(width);
-}
-
-Variant BasicElement::GetHeight() const {
-  return impl_->GetHeight();
-}
-
-void BasicElement::SetHeight(const Variant &height) {
-  impl_->SetHeight(height);
-}
-
-Variant BasicElement::GetX() const {
-  return impl_->GetX();
-}
-
-void BasicElement::SetX(const Variant &x) {
-  impl_->SetX(x);
-}
-
-Variant BasicElement::GetY() const {
-  return impl_->GetY();
-}
-
-void BasicElement::SetY(const Variant &y) {
-  impl_->SetY(y);
-}
-
-Connection *BasicElement::ConnectEvent(const char *event_name,
-                                       Slot0<void> *handler) {
-  return impl_->ConnectEvent(event_name, handler);
-}
-
 // Returns when input is: pixel: 0; relative: 1; 2: unspecified; invalid: -1.
 BasicElement::ParsePixelOrRelativeResult 
     BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
@@ -1451,6 +1374,64 @@ bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
   return !IsEnabled() ||
   // If rclick event won't be handled, let the context menu shown.
          !impl_->onrclick_event_.HasActiveConnections();
+}
+
+Connection *BasicElement::ConnectOnClickEvent(Slot0<void> *handler) {
+  return impl_->onclick_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnDblClickEvent(Slot0<void> *handler) {
+  return impl_->ondblclick_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnRClickEvent(Slot0<void> *handler) {
+  return impl_->onrclick_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnRDblClickEvent(Slot0<void> *handler) {
+  return impl_->onrdblclick_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnDragDropEvent(Slot0<void> *handler) {
+  return impl_->ondragdrop_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnDragOutEvent(Slot0<void> *handler) {
+  return impl_->ondragout_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnDragOverEvent(Slot0<void> *handler) {
+  return impl_->ondragover_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnFocusInEvent(Slot0<void> *handler) {
+  return impl_->onfocusin_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnFocusOutEvent(Slot0<void> *handler) {
+  return impl_->onfocusout_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnKeyDownEvent(Slot0<void> *handler) {
+  return impl_->onkeydown_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnKeyPressEvent(Slot0<void> *handler) {
+  return impl_->onkeypress_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnKeyUpEvent(Slot0<void> *handler) {
+  return impl_->onkeyup_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnMouseDownEvent(Slot0<void> *handler) {
+  return impl_->onmousedown_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnMouseMoveEvent(Slot0<void> *handler) {
+  return impl_->onmousemove_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnMouseOverEvent(Slot0<void> *handler) {
+  return impl_->onmouseover_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnMouseOutEvent(Slot0<void> *handler) {
+  return impl_->onmouseout_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnMouseUpEvent(Slot0<void> *handler) {
+  return impl_->onmouseup_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
+  return impl_->onmousewheel_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
+  return impl_->onsize_event_.Connect(handler);
 }
 
 } // namespace ggadget

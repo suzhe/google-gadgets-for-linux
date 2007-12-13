@@ -293,6 +293,22 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
   } 
 }
 
+EditElement *ComboBoxElement::GetEdit() {
+  return impl_->edit_;
+}
+
+const EditElement *ComboBoxElement::GetEdit() const {
+  return impl_->edit_;
+}
+
+ListBoxElement *ComboBoxElement::GetListBox() {
+  return impl_->listbox_;
+}
+
+const ListBoxElement *ComboBoxElement::GetListBox() const {
+  return impl_->listbox_;
+}
+
 const ElementsInterface *ComboBoxElement::GetChildren() const {
   return impl_->listbox_->GetChildren();
 }
@@ -346,13 +362,13 @@ void ComboBoxElement::SetType(Type type) {
   }
 }
 
-const char *ComboBoxElement::GetValue() const {
+std::string ComboBoxElement::GetValue() const {
   const ItemElement *item = impl_->listbox_->GetSelectedItem();
   if (item) {
     return item->GetLabelText();
   }
   LOG("ComboBox: No item selected");
-  return NULL;
+  return std::string();
 }
 
 void ComboBoxElement::SetValue(const char *value) {
@@ -625,6 +641,10 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
     }
   }
   return result;
+}
+
+Connection *ComboBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
+  return impl_->onchange_event_.Connect(slot);
 }
 
 BasicElement *ComboBoxElement::CreateInstance(BasicElement *parent,

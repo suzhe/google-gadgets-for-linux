@@ -329,11 +329,8 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
   return result;
 }
 
-Connection *CheckBoxElement::ConnectEvent(const char *event_name,
-                                          Slot0<void> *handler) {
-  if (GadgetStrCmp(event_name, kOnChangeEvent) == 0)
-    return impl_->onchange_event_.Connect(handler);
-  return BasicElement::ConnectEvent(event_name, handler);
+Connection *CheckBoxElement::ConnectOnChangeEvent(Slot0<void> *handler) {
+  return impl_->onchange_event_.Connect(handler);
 }
 
 void CheckBoxElement::GetDefaultSize(double *width, double *height) const {

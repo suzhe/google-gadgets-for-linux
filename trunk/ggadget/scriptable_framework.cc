@@ -443,7 +443,7 @@ class ScriptableFramework::Impl {
         framework::WirelessAccessPointInterface *ap =
             wireless->GetWirelessAccessPoint(i);
         if (ap) {
-          if (ap->GetName() && strcmp(ap->GetName(), ap_name) == 0)
+          if (ap->GetName() == ap_name)
             return ap;
           ap->Destroy();
         }
@@ -481,9 +481,9 @@ class ScriptableFramework::Impl {
       if (!proc_info)
         return "null";
 
-      const char *path = proc_info->GetExecutablePath();
+      std::string path = proc_info->GetExecutablePath();
       UTF16String utf16_path;
-      ConvertStringUTF8ToUTF16(path, strlen(path), &utf16_path);
+      ConvertStringUTF8ToUTF16(path.c_str(), path.size(), &utf16_path);
       return StringPrintf("{\"processId\":%d,\"executablePath\":\"%s\"}",
                           proc_info->GetProcessId(),
                           EncodeJavaScriptString(utf16_path.c_str()).c_str());
@@ -544,29 +544,17 @@ class ScriptableFramework::Impl {
 
   std::string BrowseForFile(const char *filter) {
     std::string result;
-    GadgetHostInterface::FilesInterface *files =
-        gadget_host_->BrowseForFiles(filter, false);
-    if (files && files->GetCount() > 0)
-      result = files->GetItem(0);
+    std::vector<std::string> files; 
+    if (gadget_host_->BrowseForFiles(filter, false, &files) &&
+        files.size() > 0)
+      result = files[0];
     return result;
   }
 
   ScriptableArray *BrowseForFiles(const char *filter) {
-    GadgetHostInterface::FilesInterface *files =
-        gadget_host_->BrowseForFiles(filter, true);
-    if (files) {
-      int count = files->GetCount();
-      ASSERT(count >= 0);
-      Variant *filenames = new Variant[count];
-      for (int i = 0; i < count; i++)
-        filenames[i] = Variant(files->GetItem(i));
-  
-      files->Destroy();
-      return ScriptableArray::Create(filenames, static_cast<size_t>(count),
-                                     false);
-    } else {
-      return NULL;
-    }
+    std::vector<std::string> files;
+    gadget_host_->BrowseForFiles(filter, true, &files);
+    return ScriptableArray::Create(files.begin(), files.size(), false);
   }
 
   GadgetHostInterface *gadget_host_;

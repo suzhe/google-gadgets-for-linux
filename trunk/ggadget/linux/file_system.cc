@@ -46,17 +46,17 @@ class Drive : public DriveInterface {
   }
 
  public:
-  virtual const char *GetPath() {
+  virtual std::string GetPath() {
     // TODO:
     return "";
   }
 
-  virtual const char *GetDriveLetter() {
+  virtual std::string GetDriveLetter() {
     // TODO:
     return "";
   }
 
-  virtual const char *GetShareName() {
+  virtual std::string GetShareName() {
     // TODO:
     return "";
   }
@@ -86,7 +86,7 @@ class Drive : public DriveInterface {
     return 0;
   }
 
-  virtual const char *GetVolumnName() {
+  virtual std::string GetVolumnName() {
     // TODO:
     return "";
   }
@@ -96,7 +96,7 @@ class Drive : public DriveInterface {
     return false;
   }
 
-  virtual const char *GetFileSystem() {
+  virtual std::string GetFileSystem() {
     // TODO:
     return "";
   }
@@ -142,12 +142,12 @@ class Folder : public FolderInterface {
   }
 
  public:
-  virtual const char *GetPath() {
+  virtual std::string GetPath() {
     // TODO:
     return "";
   }
 
-  virtual const char *GetName() {
+  virtual std::string GetName() {
     // TODO:
     return "";
   }
@@ -157,12 +157,12 @@ class Folder : public FolderInterface {
     return false;
   }
 
-  virtual const char *GetShortPath() {
+  virtual std::string GetShortPath() {
     // TODO:
     return "";
   }
 
-  virtual const char *GetShortName() {
+  virtual std::string GetShortName() {
     // TODO:
     return "";
   }
@@ -202,7 +202,7 @@ class Folder : public FolderInterface {
     return Date(0);
   }
 
-  virtual const char *GetType() {
+  virtual std::string GetType() {
     // TODO:
     return "";
   }
@@ -278,12 +278,12 @@ class File : public FileInterface {
   }
 
  public:
-  virtual const char *GetPath() {
+  virtual std::string GetPath() {
     // TODO:
     return "";
   }
 
-  virtual const char *GetName() {
+  virtual std::string GetName() {
     // TODO:
     return "";
   }
@@ -293,12 +293,12 @@ class File : public FileInterface {
     return false;
   }
 
-  virtual const char *GetShortPath() {
+  virtual std::string GetShortPath() {
     // TODO:
     return "";
   }
 
-  virtual const char *GetShortName() {
+  virtual std::string GetShortName() {
     // TODO:
     return "";
   }
@@ -343,7 +343,7 @@ class File : public FileInterface {
     return 0;
   }
     
-  virtual const char *GetType() {
+  virtual std::string GetType() {
     // TODO:
     return "";
   }
@@ -401,17 +401,17 @@ class TextStream : public TextStreamInterface {
     return true;
   }
 
-  virtual const char *Read(int characters) {
+  virtual std::string Read(int characters) {
     // TODO:
     return "";
   }
 
-  virtual const char *ReadLine() {
+  virtual std::string ReadLine() {
     // TODO:
     return "";
   }
 
-  virtual const char *ReadAll() {
+  virtual std::string ReadAll() {
     // TODO:
     return "";
   }
@@ -449,42 +449,42 @@ class FileSystem : public FileSystemInterface {
     return NULL;
   }
 
-  virtual const char *BuildPath(const char *path, const char *name) {
+  virtual std::string BuildPath(const char *path, const char *name) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetDriveName(const char *path) {
+  virtual std::string GetDriveName(const char *path) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetParentFolderName(const char *path) {
+  virtual std::string GetParentFolderName(const char *path) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetFileName(const char *path) {
+  virtual std::string GetFileName(const char *path) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetBaseName(const char *path) {
+  virtual std::string GetBaseName(const char *path) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetExtensionName(const char *path) {
+  virtual std::string GetExtensionName(const char *path) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetAbsolutePathName(const char *path) {
+  virtual std::string GetAbsolutePathName(const char *path) {
     // TODO:
     return path;
   }
 
-  virtual const char *GetTempName() {
+  virtual std::string GetTempName() {
     // TODO:
     return "/tmp/tmptmp";
   }
@@ -583,7 +583,7 @@ class FileSystem : public FileSystemInterface {
     return new fs::TextStream(type);
   }
 
-  virtual const char *GetFileVersion(const char *filename) {
+  virtual std::string GetFileVersion(const char *filename) {
     // TODO:
     return "";
   }

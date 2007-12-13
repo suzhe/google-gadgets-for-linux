@@ -33,8 +33,6 @@ class ListBoxElement : public DivElement {
   virtual ~ListBoxElement();
 
  public:
-  virtual Connection *ConnectEvent(const char *event_name, 
-                                   Slot0<void> *handler);
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
   void ScrollToIndex(int index);
@@ -127,9 +125,16 @@ class ListBoxElement : public DivElement {
 
   /** 
    * Searches for the lowest-indexed Item element that has one Label child
-   * with the specified text,
+   * with the specified text, and remove the element if found.
    */
   void RemoveString(const char *str);
+
+  /**
+   * Searches for the lowest-indexed Item element that has one Label child
+   * with the specified text,
+   */
+  ItemElement *FindItemByString(const char *str);
+  const ItemElement *FindItemByString(const char *str) const;
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

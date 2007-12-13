@@ -35,20 +35,20 @@ Machine::Machine() {
   InitProcInfo();
 }
 
-const char *Machine::GetBiosSerialNumber() const {
+std::string Machine::GetBiosSerialNumber() const {
   return "to be continued...";
 }
 
-const char *Machine::GetMachineManufacturer() const {
+std::string Machine::GetMachineManufacturer() const {
   return "to be continued...to be continued...\";";
 }
 
-const char *Machine::GetMachineModel() const {
+std::string Machine::GetMachineModel() const {
   return "to be continued...";
 }
 
-const char *Machine::GetProcessorArchitecture() const {
-  return sysinfo_[CPU_ARCH].c_str();
+std::string Machine::GetProcessorArchitecture() const {
+  return sysinfo_[CPU_ARCH];
 }
 
 int Machine::GetProcessorCount() const {
@@ -63,8 +63,8 @@ int Machine::GetProcessorModel() const {
   return strtol(sysinfo_[CPU_MODEL].c_str(), NULL, 10);
 }
 
-const char* Machine::GetProcessorName() const {
-  return sysinfo_[CPU_NAME].c_str();
+std::string Machine::GetProcessorName() const {
+  return sysinfo_[CPU_NAME];
 }
 
 int Machine::GetProcessorSpeed() const {
@@ -75,8 +75,8 @@ int Machine::GetProcessorStepping() const {
   return strtol(sysinfo_[CPU_STEPPING].c_str(), NULL, 10);
 }
 
-const char *Machine::GetProcessorVendor() const {
-  return sysinfo_[CPU_VENDOR].c_str();
+std::string Machine::GetProcessorVendor() const {
+  return sysinfo_[CPU_VENDOR];
 }
 
 void Machine::InitArchInfo() {

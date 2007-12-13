@@ -73,7 +73,7 @@ class AudioclipInterface {
    */
   virtual int GetDuration() const = 0;
   virtual ErrorCode GetError() const = 0;
-  virtual const char *GetSrc() const = 0;
+  virtual std::string GetSrc() const = 0;
   virtual void SetSrc(const char *src) = 0;
   virtual State GetState() const = 0;
   virtual int GetVolume() const = 0;

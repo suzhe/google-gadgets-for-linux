@@ -133,22 +133,22 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
   std::string GetTimeDisplayString() const;
 
   /** Gets and sets the item's display title. */
-  const char *GetHeading() const;
+  std::string GetHeading() const;
   void SetHeading(const char *heading);
 
   /** Gets and sets the item's displayed website/news source. */
-  const char *GetSource() const;
+  std::string GetSource() const;
   void SetSource(const char *source);
 
   /** Gets and sets the item's displayed snippet. */
-  const char *GetSnippet() const;
+  std::string GetSnippet() const;
   void SetSnippet(const char *snippet);
 
   /**
    * Gets and sets the URL/file path opened when the user opens/double clicks
    * the item.
    */
-  const char *GetOpenCommand() const;
+  std::string GetOpenCommand() const;
   void SetOpenCommand(const char *open_command);
 
   /** Gets and sets the format in which the item should be displayed. */
@@ -163,7 +163,7 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
   void SetFlags(int flags);
 
   /** Gets and sets the tooltip text, such as full path, full headlines, etc. */
-  const char *GetTooltip() const;
+  std::string GetTooltip() const;
   void SetTooltip(const char *tooltip);
 
   /** Sets the item's display position. */

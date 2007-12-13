@@ -50,11 +50,11 @@ WirelessAccessPointInterface *Wireless::GetWirelessAccessPoint(int index) {
   return NULL;
 }
 
-const char *Wireless::GetName() const {
+std::string Wireless::GetName() const {
   return "Dummy Wireless";
 }
 
-const char *Wireless::GetNetworkName() const {
+std::string Wireless::GetNetworkName() const {
   return "Dummy Wireless Network";
 }
 

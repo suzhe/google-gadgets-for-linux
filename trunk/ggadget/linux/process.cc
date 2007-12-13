@@ -41,8 +41,8 @@ int ProcessInfo::GetProcessId() const {
   return pid_;
 }
 
-const char *ProcessInfo::GetExecutablePath() const {
-  return path_.c_str();
+std::string ProcessInfo::GetExecutablePath() const {
+  return path_;
 }
 
 // ---------------------------Processes Class---------------------------------//

@@ -35,7 +35,7 @@ class ProcessInfo : public ProcessInfoInterface {
 
  public:
   virtual int GetProcessId() const;
-  virtual const char *GetExecutablePath() const;
+  virtual std::string GetExecutablePath() const;
 
  private:
   int pid_;

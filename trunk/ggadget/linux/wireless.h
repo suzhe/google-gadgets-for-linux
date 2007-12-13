@@ -35,8 +35,8 @@ class Wireless : public WirelessInterface {
       int index) const;
   virtual WirelessAccessPointInterface *GetWirelessAccessPoint(int index);
 
-  virtual const char *GetName() const;
-  virtual const char *GetNetworkName() const;
+  virtual std::string GetName() const;
+  virtual std::string GetNetworkName() const;
   virtual int GetSignalStrength() const;
 
  private:

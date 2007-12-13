@@ -33,7 +33,7 @@ class TextFrame {
   ~TextFrame();
 
   /** Gets and sets the text of the frame. */
-  const char *GetText() const;
+  std::string GetText() const;
   /** Returns @c true if the text changed. */
   bool SetText(const char *text);
   
@@ -72,7 +72,7 @@ class TextFrame {
   void SetColor(const Color &color, double opacity);
 
   /** Gets and sets the text font. */
-  const char *GetFont() const;
+  std::string GetFont() const;
   void SetFont(const char *font);
 
   /** Gets and sets whether the text is italicized. */

@@ -60,11 +60,11 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
-  virtual GadgetHostInterface::FilesInterface *BrowseForFiles(
-      const char *filter, bool multiple);
+  virtual bool BrowseForFiles(const char *filter, bool multiple,
+                              std::vector<std::string> *result);
   virtual void GetCursorPos(int *x, int *y) const;
   virtual void GetScreenSize(int *width, int *height) const;
-  virtual const char *GetFileIcon(const char *filename) const;
+  virtual std::string GetFileIcon(const char *filename) const;
   virtual AudioclipInterface *CreateAudioclip(const char *src);
 
   /**

@@ -96,9 +96,6 @@ class EditElement : public ScrollingElement {
    * for displaying the content without scrolling. */
   void GetIdealBoundingRect(int *width, int *height);
 
-
-  virtual Connection *ConnectEvent(const char *event_name,
-                                   Slot0<void> *handler);
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  public:

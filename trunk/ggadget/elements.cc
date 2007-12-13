@@ -141,7 +141,7 @@ class Elements::Impl {
       return -1;
     for (Children::const_iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
-      if (GadgetStrCmp((*ite)->GetName(), name) == 0)
+      if (GadgetStrCmp((*ite)->GetName().c_str(), name) == 0)
         return ite - children_.begin();
     }
     return -1;

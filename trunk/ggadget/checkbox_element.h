@@ -78,8 +78,7 @@ class CheckBoxElement : public BasicElement {
   /** Gets the text frame containing the caption of this checkbox. */
   TextFrame *GetTextFrame();
 
-  virtual Connection *ConnectEvent(const char *event_name,
-                                   Slot0<void> *handler);
+  Connection *ConnectOnChangeEvent(Slot0<void> *handler);
 
  public:
   static BasicElement *CreateCheckBoxInstance(BasicElement *parent,

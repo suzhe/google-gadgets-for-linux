@@ -524,13 +524,13 @@ void GtkGadgetHost::OnOptionsActivate(GtkMenuItem *menu_item,
 void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
                                     gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
-  const char *about_text = this_p->gadget_->GetManifestInfo(
-      kManifestAboutText);
-  if (!about_text || !*about_text) {
+  std::string about_text =
+      this_p->gadget_->GetManifestInfo(kManifestAboutText);
+  if (about_text.empty()) {
     this_p->gadget_->OnCommand(GadgetInterface::CMD_ABOUT_DIALOG);
   } else {
     GtkWidget *dialog = gtk_dialog_new_with_buttons(
-        this_p->gadget_->GetManifestInfo(kManifestName), NULL,
+        this_p->gadget_->GetManifestInfo(kManifestName).c_str(), NULL,
         static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR),
         GTK_STOCK_OK, GTK_RESPONSE_OK,
         NULL);
@@ -538,8 +538,8 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(dialog), TRUE);
     gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
 
-    std::string about_text(TrimString(
-        this_p->gadget_->GetManifestInfo(kManifestAboutText)));
+    about_text = TrimString(
+        this_p->gadget_->GetManifestInfo(kManifestAboutText));
     std::string title_text;
     std::string copyright_text;
     if (!SplitString(about_text, "\n", &title_text, &about_text)) {
@@ -577,10 +577,11 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
     gtk_box_pack_start(GTK_BOX(about_box), about, FALSE, FALSE, 0);
 
     GtkWidget *image = NULL;
-    const char *icon_name = this_p->gadget_->GetManifestInfo(kManifestIcon);
+    std::string icon_name = this_p->gadget_->GetManifestInfo(kManifestIcon);
     std::string data;
     std::string real_path;
-    if (this_p->file_manager_->GetFileContents(icon_name, &data, &real_path)) {
+    if (this_p->file_manager_->GetFileContents(icon_name.c_str(),
+                                               &data, &real_path)) {
       GdkPixbuf *pixbuf = CairoGraphics::LoadPixbufFromData(data.c_str(),
                                                             data.size());
       if (pixbuf) {
@@ -616,29 +617,13 @@ void GtkGadgetHost::OnDockActivate(GtkMenuItem *menu_item,
   DLOG("DockActivate");
 }
 
-class GSListFiles : public GadgetHostInterface::FilesInterface {
- public:
-  GSListFiles(GSList *list) : list_(list) { }
-  virtual ~GSListFiles() {
-    for (GSList *list = list_; list; list = g_slist_next(list)) {
-      g_free(list->data);
-    }
-    g_slist_free(list_);
-  }
-  virtual void Destroy() { delete this; }
-  virtual int GetCount() const { return g_slist_length(list_); }
-  virtual const char *GetItem(int index) const {
-    return static_cast<const char *>(g_slist_nth_data(list_, index));
-  }
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(GSListFiles);
-  GSList *list_;
-};
+bool GtkGadgetHost::BrowseForFiles(const char *filter, bool multiple,
+                                   std::vector<std::string> *result) {
+  ASSERT(result);
+  result->clear();
 
-GadgetHostInterface::FilesInterface *GtkGadgetHost::BrowseForFiles(
-    const char *filter, bool multiple) {
   GtkWidget *dialog = gtk_file_chooser_dialog_new(
-      gadget_->GetManifestInfo(kManifestName), NULL,
+      gadget_->GetManifestInfo(kManifestName).c_str(), NULL,
       GTK_FILE_CHOOSER_ACTION_OPEN,
       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
       GTK_STOCK_OK, GTK_RESPONSE_OK,
@@ -669,7 +654,14 @@ GadgetHostInterface::FilesInterface *GtkGadgetHost::BrowseForFiles(
     selected_files = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
   gtk_widget_destroy(dialog);
 
-  return new GSListFiles(selected_files);
+  if (!selected_files)
+    return false;
+
+  while (selected_files) {
+    result->push_back(static_cast<const char *>(selected_files->data));
+    selected_files = g_slist_next(selected_files);
+  }
+  return true;
 }
 
 void GtkGadgetHost::GetCursorPos(int *x, int *y) const {
@@ -683,7 +675,7 @@ void GtkGadgetHost::GetScreenSize(int *width, int *height) const {
   *height = gdk_screen_get_height(screen);
 }
 
-const char *GtkGadgetHost::GetFileIcon(const char *filename) const {
+std::string GtkGadgetHost::GetFileIcon(const char *filename) const {
   // TODO:
   return "/usr/share/icons/application-default-icon.png";
 }
@@ -698,7 +690,7 @@ class TemporaryAudioclip : public AudioclipInterface {
   virtual void SetCurrentPosition(int position) { }
   virtual int GetDuration() const { return 100; }
   virtual ErrorCode GetError() const { return SOUND_ERROR_NO_ERROR; }
-  virtual const char *GetSrc() const { return "src"; }
+  virtual std::string GetSrc() const { return "src"; }
   virtual void SetSrc(const char *src) { }
   virtual State GetState() const { return SOUND_STATE_PLAYING; }
   virtual int GetVolume() const { return 100; }

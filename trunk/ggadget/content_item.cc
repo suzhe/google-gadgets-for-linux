@@ -238,7 +238,7 @@ void ContentItem::SetTimeCreated(const Date &time) {
   }
 }
 
-const char *ContentItem::GetHeading() const {
+std::string ContentItem::GetHeading() const {
   return impl_->heading_text_.GetText();
 }
 
@@ -247,7 +247,7 @@ void ContentItem::SetHeading(const char *heading) {
     impl_->QueueDraw();
 }
 
-const char *ContentItem::GetSource() const {
+std::string ContentItem::GetSource() const {
   return impl_->source_text_.GetText();
 }
 
@@ -256,7 +256,7 @@ void ContentItem::SetSource(const char *source) {
     impl_->QueueDraw();
 }
 
-const char *ContentItem::GetSnippet() const {
+std::string ContentItem::GetSnippet() const {
   return impl_->snippet_text_.GetText();
 }
 
@@ -265,8 +265,8 @@ void ContentItem::SetSnippet(const char *snippet) {
     impl_->QueueDraw();
 }
 
-const char *ContentItem::GetOpenCommand() const {
-  return impl_->open_command_.c_str();
+std::string ContentItem::GetOpenCommand() const {
+  return impl_->open_command_;
 }
 
 void ContentItem::SetOpenCommand(const char *open_command) {
@@ -297,8 +297,8 @@ void ContentItem::SetFlags(int flags) {
   }
 }
 
-const char *ContentItem::GetTooltip() const {
-  return impl_->tooltip_.c_str();
+std::string ContentItem::GetTooltip() const {
+  return impl_->tooltip_;
 }
   
 void ContentItem::SetTooltip(const char *tooltip) {
@@ -490,10 +490,7 @@ bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
                                                      &scriptable_canvas,
                                                      x, y, width, height);
   }
-
-  const char *heading = impl_->heading_text_.GetText();
-  return !impl_->tooltip_.empty() &&
-         (!heading || strcmp(heading, impl_->tooltip_.c_str()) != 0);
+  return !impl_->tooltip_.empty();
 }
 
 Connection *ContentItem::ConnectOnGetIsTooltipRequired(

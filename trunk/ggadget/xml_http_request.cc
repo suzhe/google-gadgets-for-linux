@@ -304,8 +304,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (!data)
       return Send(static_cast<char *>(NULL), 0);
 
-    const char *xml = data->GetXML();
-    return Send(xml, strlen(xml));
+    std::string xml = data->GetXML();
+    return Send(xml.c_str(), xml.size());
   }
 
   void OnIOReady(int fd) {

@@ -27,7 +27,7 @@ class WirelessAccessPoint : public WirelessAccessPointInterface {
   virtual void Destroy();
 
  public:
-  virtual const char *GetName() const;
+  virtual std::string GetName() const;
   virtual WirelessAccessPointInterface::Type GetType() const;
   virtual int GetSignalStrength() const;
   virtual void Connect(Slot1<void, bool> *callback);

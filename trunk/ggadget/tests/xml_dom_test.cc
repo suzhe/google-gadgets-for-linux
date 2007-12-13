@@ -84,7 +84,7 @@ void TestNullNodeValue(DOMNodeInterface *node) {
 TEST(XMLDOM, TestBlankDocument) {
   DOMDocumentInterface *doc = CreateDOMDocument();
   ASSERT_TRUE(doc);
-  EXPECT_STREQ(kDOMDocumentName, doc->GetNodeName());
+  EXPECT_STREQ(kDOMDocumentName, doc->GetNodeName().c_str());
   EXPECT_EQ(DOMNodeInterface::DOCUMENT_NODE, doc->GetNodeType());
   EXPECT_TRUE(doc->GetOwnerDocument() == NULL);
   EXPECT_TRUE(doc->GetAttributes() == NULL);
@@ -99,8 +99,8 @@ TEST(XMLDOM, TestBlankElement) {
   doc->Attach();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
-  EXPECT_STREQ("root", root_ele->GetNodeName());
-  EXPECT_STREQ("root", root_ele->GetTagName());
+  EXPECT_STREQ("root", root_ele->GetNodeName().c_str());
+  EXPECT_STREQ("root", root_ele->GetTagName().c_str());
   EXPECT_EQ(DOMNodeInterface::ELEMENT_NODE, root_ele->GetNodeType());
   TestBlankNode(root_ele);
   TestNullNodeValue(root_ele);
@@ -122,26 +122,26 @@ TEST(XMLDOM, TestAttrSelf) {
   doc->Attach();
   DOMAttrInterface *attr;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateAttribute("attr", &attr));
-  EXPECT_STREQ("attr", attr->GetNodeName());
-  EXPECT_STREQ("attr", attr->GetName());
+  EXPECT_STREQ("attr", attr->GetNodeName().c_str());
+  EXPECT_STREQ("attr", attr->GetName().c_str());
   EXPECT_EQ(DOMNodeInterface::ATTRIBUTE_NODE, attr->GetNodeType());
   TestBlankNode(attr);
   EXPECT_TRUE(attr->GetAttributes() == NULL);
   EXPECT_STREQ("", attr->GetNodeValue());
-  EXPECT_STREQ("", attr->GetValue());
-  EXPECT_STREQ("", attr->GetTextContent());
+  EXPECT_STREQ("", attr->GetValue().c_str());
+  EXPECT_STREQ("", attr->GetTextContent().c_str());
   attr->SetNodeValue("value1");
   EXPECT_STREQ("value1", attr->GetNodeValue());
-  EXPECT_STREQ("value1", attr->GetValue());
-  EXPECT_STREQ("value1", attr->GetTextContent());
+  EXPECT_STREQ("value1", attr->GetValue().c_str());
+  EXPECT_STREQ("value1", attr->GetTextContent().c_str());
   attr->SetValue("value2");
   EXPECT_STREQ("value2", attr->GetNodeValue());
-  EXPECT_STREQ("value2", attr->GetValue());
-  EXPECT_STREQ("value2", attr->GetTextContent());
+  EXPECT_STREQ("value2", attr->GetValue().c_str());
+  EXPECT_STREQ("value2", attr->GetTextContent().c_str());
   attr->SetTextContent("value3");
   EXPECT_STREQ("value3", attr->GetNodeValue());
-  EXPECT_STREQ("value3", attr->GetValue());
-  EXPECT_STREQ("value3", attr->GetTextContent());
+  EXPECT_STREQ("value3", attr->GetValue().c_str());
+  EXPECT_STREQ("value3", attr->GetTextContent().c_str());
   EXPECT_TRUE(attr->GetOwnerDocument() == doc);
 
   DOMAttrInterface *attr1 = attr;
@@ -293,9 +293,9 @@ void TestAttributes(DOMElementInterface *ele, DOMNamedNodeMapInterface *attrs,
     const char *name = va_arg(ap, const char *);
     const char *value = va_arg(ap, const char *);
     DOMAttrInterface *attr = down_cast<DOMAttrInterface *>(attrs->GetItem(i));
-    EXPECT_STREQ(value, ele->GetAttribute(name));
-    EXPECT_STREQ(name, attr->GetName());
-    EXPECT_STREQ(value, attr->GetValue());
+    EXPECT_STREQ(value, ele->GetAttribute(name).c_str());
+    EXPECT_STREQ(name, attr->GetName().c_str());
+    EXPECT_STREQ(value, attr->GetValue().c_str());
     EXPECT_TRUE(attr->GetOwnerElement() == ele);
     EXPECT_TRUE(ele->GetAttributeNode(name) == attr);
     EXPECT_TRUE(attrs->GetNamedItem(name) == attr);
@@ -536,7 +536,7 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
   ASSERT_TRUE(elements->GetItem(0U) == doc->GetDocumentElement());
   DOMNodeInterface *node = elements->GetItem(4U);
   ASSERT_TRUE(node->GetParentNode() == doc->GetDocumentElement());
-  ASSERT_STREQ("s", node->GetNodeName());
+  ASSERT_STREQ("s", node->GetNodeName().c_str());
   ASSERT_EQ(DOMNodeInterface::ELEMENT_NODE, node->GetNodeType());
   ASSERT_EQ(DOM_NO_ERR, doc->GetDocumentElement()->RemoveChild(node));
   ASSERT_EQ(7U, elements->GetLength());
@@ -566,7 +566,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
   ASSERT_TRUE(elements->GetItem(6U) == NULL);
   for (size_t i = 0; i < 6U; i++) {
     DOMNodeInterface *node = elements->GetItem(i);
-    ASSERT_STREQ("s", node->GetNodeName());
+    ASSERT_STREQ("s", node->GetNodeName().c_str());
     ASSERT_EQ(DOMNodeInterface::ELEMENT_NODE, node->GetNodeType());
   }
 
@@ -575,7 +575,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
   ASSERT_EQ(4U, elements->GetLength());
   for (size_t i = 0; i < 4U; i++) {
     DOMNodeInterface *node = elements->GetItem(i);
-    ASSERT_STREQ("s", node->GetNodeName());
+    ASSERT_STREQ("s", node->GetNodeName().c_str());
     ASSERT_EQ(DOMNodeInterface::ELEMENT_NODE, node->GetNodeType());
   }
 
@@ -597,38 +597,34 @@ TEST(XMLDOM, TestText) {
   UTF16String blank_utf16;
   EXPECT_TRUE(UTF16String(text->GetData()) == data);
 
-  EXPECT_STREQ(kDOMTextName, text->GetNodeName());
+  EXPECT_STREQ(kDOMTextName, text->GetNodeName().c_str());
   TestBlankNode(text);
   EXPECT_STREQ("data", text->GetNodeValue());
-  EXPECT_STREQ("data", text->GetTextContent());
+  EXPECT_STREQ("data", text->GetTextContent().c_str());
   text->SetNodeValue(NULL);
   EXPECT_STREQ("", text->GetNodeValue());
-  EXPECT_STREQ("", text->GetTextContent());
+  EXPECT_STREQ("", text->GetTextContent().c_str());
   EXPECT_TRUE(blank_utf16 == text->GetData());
   text->SetTextContent("data1");
   EXPECT_STREQ("data1", text->GetNodeValue());
-  EXPECT_STREQ("data1", text->GetTextContent());
+  EXPECT_STREQ("data1", text->GetTextContent().c_str());
 
   text->SetData(data);
   EXPECT_STREQ("data", text->GetNodeValue());
   EXPECT_TRUE(UTF16String(text->GetData()) == data);
 
-  UTF16Char *data_out = data;
+  UTF16String data_out = data;
   EXPECT_EQ(DOM_NO_ERR, text->SubstringData(0, 5, &data_out));
-  EXPECT_TRUE(UTF16String(data_out) == data);
-  delete [] data_out;
+  EXPECT_TRUE(data_out == data);
   EXPECT_EQ(DOM_INDEX_SIZE_ERR, text->SubstringData(5, 0, &data_out));
-  EXPECT_TRUE(data_out == NULL);
+  EXPECT_TRUE(data_out == blank_utf16);
   EXPECT_EQ(DOM_NO_ERR, text->SubstringData(0, 4, &data_out));
-  EXPECT_TRUE(UTF16String(data_out) == data);
-  delete [] data_out;
+  EXPECT_TRUE(data_out == data);
   EXPECT_EQ(DOM_NO_ERR, text->SubstringData(1, 2, &data_out));
   UTF16Char expected_data[] = { 'a', 't', 0 };
-  EXPECT_TRUE(UTF16String(expected_data) == data_out);
-  delete [] data_out;
+  EXPECT_TRUE(data_out == expected_data);
   EXPECT_EQ(DOM_NO_ERR, text->SubstringData(1, 0, &data_out));
   EXPECT_TRUE(blank_utf16 == data_out);
-  delete [] data_out;
 
   text->AppendData(NULL);
   EXPECT_TRUE(UTF16String(text->GetData()) == data);
@@ -746,25 +742,25 @@ TEST(XMLDOM, TestDocumentFragmentAndTextContent) {
   static UTF16Char data[] = { 'd', 'a', 't', 'a', 0 };
   fragment->SetTextContent("DATA");
   ASSERT_EQ(DOM_NO_ERR, fragment->AppendChild(doc->CreateTextNode(data)));
-  ASSERT_STREQ("DATAdata", fragment->GetTextContent());
+  ASSERT_STREQ("DATAdata", fragment->GetTextContent().c_str());
   ASSERT_EQ(DOM_NO_ERR, root_ele->AppendChild(fragment));
   TestBlankNode(fragment);
-  ASSERT_STREQ("", fragment->GetTextContent());
+  ASSERT_STREQ("", fragment->GetTextContent().c_str());
 
   EXPECT_TRUE(root_ele->GetFirstChild());
   EXPECT_TRUE(root_ele->GetFirstChild()->GetNextSibling());
   EXPECT_TRUE(root_ele->GetFirstChild()->GetNextSibling()->GetNextSibling() ==
               NULL);
-  EXPECT_STREQ("DATAdata", root_ele->GetTextContent());
+  EXPECT_STREQ("DATAdata", root_ele->GetTextContent().c_str());
   ASSERT_EQ(DOM_NO_ERR, root_ele->AppendChild(root_ele->CloneNode(true)));
   data[0] = 'E';
   ASSERT_EQ(DOM_NO_ERR, root_ele->AppendChild(doc->CreateCDATASection(data)));
   data[0] = 'F';
   ASSERT_EQ(DOM_NO_ERR, root_ele->AppendChild(doc->CreateComment(data)));
-  EXPECT_STREQ("DATAdataDATAdataEata", root_ele->GetTextContent());
+  EXPECT_STREQ("DATAdataDATAdataEata", root_ele->GetTextContent().c_str());
 
   root_ele->SetTextContent("NEW");
-  EXPECT_STREQ("NEW", root_ele->GetTextContent());
+  EXPECT_STREQ("NEW", root_ele->GetTextContent().c_str());
 
   fragment->Detach();
   doc->Detach();

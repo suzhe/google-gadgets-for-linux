@@ -416,7 +416,7 @@ class ContentAreaElement::Impl {
         mouse_over_item_ = new_mouse_over_item;
         mouse_over_pin_ = new_mouse_over_pin;
         const char *tooltip = tooltip_required ?
-                              new_mouse_over_item->GetTooltip() : NULL;
+                              new_mouse_over_item->GetTooltip().c_str() : NULL;
         // Store the tooltip to let view display it when appropriate using
         // the default mouse-in logic.
         owner_->SetTooltip(tooltip);

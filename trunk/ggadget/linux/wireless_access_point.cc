@@ -26,7 +26,7 @@ void WirelessAccessPoint::Destroy() {
   delete this;
 }
 
-const char *WirelessAccessPoint::GetName() const {
+std::string WirelessAccessPoint::GetName() const {
   return "Dummy Wireless Access Point";
 }
 

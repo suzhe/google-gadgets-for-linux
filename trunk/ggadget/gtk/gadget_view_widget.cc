@@ -210,13 +210,11 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     gvw->dbl_click = true;
     // The GTK event sequence here is: press 2press release
     // for the second click.
-    if (button != MouseEvent::BUTTON_NONE) {
-      Event::Type t = Event::EVENT_SIMPLE_RANGE_START;
-      if (event->button == 1) {
-        t = Event::EVENT_MOUSE_DBLCLICK;
-      } else if (event->button == 3) {
-        t = Event::EVENT_MOUSE_RDBLCLICK;
-      }
+    if (button == MouseEvent::BUTTON_LEFT ||
+        button == MouseEvent::BUTTON_RIGHT) {
+      Event::Type t = button == MouseEvent::BUTTON_LEFT ?
+                      Event::EVENT_MOUSE_DBLCLICK :
+                      Event::EVENT_MOUSE_RDBLCLICK; 
       MouseEvent e(t, event->x / gvw->zoom, event->y / gvw->zoom,
                    button, 0, mod);
       handler_result = gvw->view->OnMouseEvent(e);
@@ -257,13 +255,10 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   }
 
   if (!gvw->dbl_click) {
-    if (button != MouseEvent::BUTTON_NONE) {
-      Event::Type t = Event::EVENT_SIMPLE_RANGE_START;
-      if (event->button == 1) {
-        t = Event::EVENT_MOUSE_CLICK;
-      } else if (event->button == 3) {
-        t = Event::EVENT_MOUSE_RCLICK;
-      }
+    if (button == MouseEvent::BUTTON_LEFT ||
+        button == MouseEvent::BUTTON_RIGHT) {
+      Event::Type t = button == MouseEvent::BUTTON_LEFT ?
+                      Event::EVENT_MOUSE_CLICK : Event::EVENT_MOUSE_RCLICK; 
       MouseEvent e2(t, event->x / gvw->zoom, event->y / gvw->zoom,
                     button, 0, mod);
       handler_result2 = gvw->view->OnMouseEvent(e2);

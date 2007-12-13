@@ -502,7 +502,7 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseXML(&dom));
   ASSERT_TRUE(dom);
   ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
-               dom->GetDocumentElement()->GetTextContent());
+               dom->GetDocumentElement()->GetTextContent().c_str());
   delete request;
   delete host;
 }

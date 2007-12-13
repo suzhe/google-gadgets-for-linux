@@ -73,11 +73,13 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
 
   virtual bool LoadFont(const char *filename) { return true; }
   virtual bool UnloadFont(const char *filename) { return true; }
-  virtual ggadget::GadgetHostInterface::FilesInterface *BrowseForFiles(
-      const char *filter, bool multiple) { return NULL; }
+  virtual bool BrowseForFiles(const char *filter, bool multiple,
+                              std::vector<std::string> *result) {
+    return false;
+  }
   virtual void GetCursorPos(int *x, int *y) const { }
   virtual void GetScreenSize(int *width, int *height) const { }
-  virtual const char *GetFileIcon(const char *filename) const { return ""; }
+  virtual std::string GetFileIcon(const char *filename) const { return ""; }
   virtual ggadget::AudioclipInterface *CreateAudioclip(const char *filename) {
     return NULL;
   }
