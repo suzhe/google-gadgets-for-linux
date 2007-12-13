@@ -34,6 +34,7 @@ class Image;
 class ScriptContextInterface;
 class FileManagerInterface;
 class Texture;
+class MenuInterface;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -250,6 +251,15 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler) = 0;
+
+  /**
+   * Called by the host to let the view add customized context menu items, and
+   * control whether the context menu should be shown.
+   * @return @c false if the handler doesn't want the default menu items shown.
+   *     If no menu item is added in this handler, and @c false is returned,
+   *     the host won't show the whole context menu.
+   */
+  virtual bool OnAddContextMenuItems(MenuInterface *menu) = 0;
 
 };
 

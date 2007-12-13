@@ -88,6 +88,7 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
 
   BasicElement *GetSrcElement();
   const BasicElement *GetSrcElement() const;
+  void SetSrcElement(BasicElement *src_element);
 
   EventResult GetReturnValue() const;
   void SetReturnValue(EventResult return_value);

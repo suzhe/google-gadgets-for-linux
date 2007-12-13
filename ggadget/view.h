@@ -27,8 +27,11 @@ template <typename R> class Slot0;
 class ViewHostInterface;
 class BasicElement;
 class ContentAreaElement;
+class DetailsView;
 class ElementFactoryInterface;
+class MenuInterface;
 class ScriptContextInterface;
+class Slot;
 class EditInterface;
 
 /**
@@ -88,6 +91,7 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual void OnOptionChanged(const char *name);
   virtual Connection *ConnectEvent(const char *event_name,
                                    Slot0<void> *handler);
+  virtual bool OnAddContextMenuItems(MenuInterface *menu);
 
  public:
   /** Asks the host to redraw the given view. */
@@ -225,6 +229,17 @@ class View : public ScriptableHelper<ViewInterface> {
    * automatically hidden when appropriate.
    */
   void SetTooltip(const char *tooltip);
+
+  /** Delegates to GadgetInterface::ShowDetailsView(). */
+  bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
+                       Slot1<void, int> *feedback_handler);
+
+  /**
+   * Creates a slot based on an original slot. When this slot is called, this
+   * view calls the original slot if the element is not dead.
+   * This is useful to register menu item callbacks.
+   */
+  Slot *NewDeathDetectedSlot(BasicElement *element, Slot *slot);
 
   /**
    * Call the corresponding method of ViewHost to create an

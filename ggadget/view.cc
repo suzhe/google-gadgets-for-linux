@@ -23,6 +23,7 @@
 #include "event.h"
 #include "file_manager_interface.h"
 #include "gadget_host_interface.h"
+#include "gadget_interface.h"
 #include "graphics_interface.h"
 #include "image.h"
 #include "math_utils.h"
@@ -139,20 +140,29 @@ class View::Impl {
     ScopedDeathDetector death_detector1(owner_, &in_element);
 
     EventResult result = EVENT_RESULT_UNHANDLED;
-    // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE and
-    // EVENT_MOUSE_UP events to it directly, until an EVENT_MOUSE_UP received.
-    if (grabmouse_element_ && grabmouse_element_->IsEnabled() &&
-        grabmouse_element_->IsVisible() &&
-        (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP)) {
-      MouseEvent new_event(event);
-      MapChildPositionEvent(event, grabmouse_element_, &new_event);
-      result = grabmouse_element_->OnMouseEvent(new_event, true,
-                                                &fired_element, &in_element);
-
-      // Release the grabbing.
-      if (type == Event::EVENT_MOUSE_UP)
+    // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE,
+    // EVENT_MOUSE_UP and EVENT_MOUSE_CLICK events to it directly, until
+    // an EVENT_MOUSE_CLICK received, or any mouse event received without
+    // left button down.
+    if (grabmouse_element_) {
+      if (grabmouse_element_->IsEnabled() &&
+          grabmouse_element_->IsVisible() &&
+          (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
+          (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
+           type == Event::EVENT_MOUSE_CLICK)) {
+        MouseEvent new_event(event);
+        MapChildPositionEvent(event, grabmouse_element_, &new_event);
+        result = grabmouse_element_->OnMouseEvent(new_event, true,
+                                                  &fired_element, &in_element);
+        // Release the grabbing on EVENT_MOUSE_CLICK not EVENT_MOUSE_UP,
+        // otherwise the click event may be sent to wrong element.
+        if (type == Event::EVENT_MOUSE_CLICK)
+          grabmouse_element_ = NULL;
+        return result;
+      } else {
+        // Release the grabbing on any mouse event without left button down.
         grabmouse_element_ = NULL;
-      return result;
+      }
     }
 
     if (type == Event::EVENT_MOUSE_OUT) {
@@ -170,10 +180,11 @@ class View::Impl {
     // Dispatch the event to children normally.
     result = children_.OnMouseEvent(event, &fired_element, &in_element);
 
-    if (fired_element && type == Event::EVENT_MOUSE_DOWN) {
+    if (fired_element && type == Event::EVENT_MOUSE_DOWN &&
+        (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
       // Start grabbing.
       grabmouse_element_ = fired_element;
-      SetFocus(fired_element, false);
+      SetFocus(fired_element);
       // In the focusin handler, the element may be removed and fired_element
       // points to invalid element.  However, grabmouse_element_ will still
       // be valid or has been set to NULL.
@@ -377,7 +388,7 @@ class View::Impl {
         // For now we don't automatically set focus to some element.
         break;
       case Event::EVENT_FOCUS_OUT:
-        SetFocus(NULL, true);
+        SetFocus(NULL);
         break;
       case Event::EVENT_OK:
         FireEvent(&scriptable_event, onok_event_);
@@ -412,6 +423,7 @@ class View::Impl {
     return true;
   }
 
+  // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
     if (element == focused_element_)
@@ -435,6 +447,12 @@ class View::Impl {
          it != death_detected_elements_.end(); ++it) {
       if (**it == element)
         *it = NULL;
+    }
+
+    for (std::vector<ScriptableEvent *>::iterator it = event_stack_.begin();
+         it != event_stack_.end(); ++it) {
+      if ((*it)->GetSrcElement() == element)
+        (*it)->SetSrcElement(NULL);
     }
 
     for (PostedEvents::iterator it = posted_events_.begin();
@@ -521,22 +539,23 @@ class View::Impl {
   }
 
   ScriptableEvent *GetEvent() const {
-    return event_stack_.empty() ? NULL : event_stack_[event_stack_.size() - 1];
+    return event_stack_.empty() ? NULL : *(event_stack_.end() - 1);
   }
 
-  void SetFocus(BasicElement *element, bool force) {
+  void SetFocus(BasicElement *element) {
     if (element != focused_element_) {
       ScopedDeathDetector death_detector(owner_, &element);
       // Remove the current focus first.
       if (!focused_element_ ||
-          focused_element_->OnOtherEvent(Event(Event::EVENT_FOCUS_OUT)) !=
+          focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_OUT)) !=
               EVENT_RESULT_CANCELED) {
         focused_element_ = element;
         if (focused_element_) {
-          if (!focused_element_->IsEnabled() || !focused_element_->IsVisible())
+          if (!focused_element_->IsEnabled() ||
+              !focused_element_->IsVisible() ||
+              focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_IN))
+                  == EVENT_RESULT_CANCELED) {
             focused_element_ = NULL;
-          else {
-            focused_element_->OnOtherEvent(Event(Event::EVENT_FOCUS_IN));
           }
         }
       }
@@ -558,7 +577,7 @@ class View::Impl {
       height_ = height;
       host_->QueueDraw();
 
-      Event event(Event::EVENT_SIZE);
+      SimpleEvent event(Event::EVENT_SIZE);
       ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
     }
@@ -796,6 +815,39 @@ class View::Impl {
     ASSERT_M(signal, ("Unknown event name: %s", event_name));
     return signal->Connect(handler);
   }
+
+  class DeathDetectedSlot : public Slot {
+   public:
+    DeathDetectedSlot(Impl *impl, BasicElement *element, Slot *slot)
+        : impl_(impl), element_(element), slot_(slot) {
+      ASSERT(impl && element && slot);
+      // Insert the detector at the beginning of the vector, because the other
+      // end of the vector is used in stack manner for ScopedDeathDetector.
+      impl->death_detected_elements_.insert(
+          impl->death_detected_elements_.begin(), &element_);
+    }
+    ~DeathDetectedSlot() {
+      std::vector<BasicElement **>::iterator it = std::find(
+          impl_->death_detected_elements_.begin(),
+          impl_->death_detected_elements_.end(), &element_);
+      ASSERT(it != impl_->death_detected_elements_.end());
+      impl_->death_detected_elements_.erase(it);
+      delete slot_;
+      slot_ = NULL;
+    }
+    virtual Variant Call(int argc, Variant argv[]) const {
+      if (element_) {
+        // If it is still live.
+        return slot_->Call(argc, argv);
+      }
+      return Variant(slot_->GetReturnType());
+    }
+    virtual bool operator==(const Slot &another) const { return false; }
+
+    Impl *impl_;
+    BasicElement *element_;
+    Slot *slot_;
+  };
 
   EventSignal oncancel_event_;
   EventSignal onclick_event_;
@@ -1194,7 +1246,7 @@ Texture *View::LoadTexture(const Variant &src) {
 }
 
 void View::SetFocus(BasicElement *element) {
-  impl_->SetFocus(element, false);
+  impl_->SetFocus(element);
 }
 
 bool View::OpenURL(const char *url) const {
@@ -1242,6 +1294,24 @@ ContentAreaElement *View::GetContentAreaElement() {
 
 void View::SetTooltip(const char *tooltip) {
   impl_->host_->SetTooltip(tooltip);
+}
+
+bool View::ShowDetailsView(DetailsView *details_view,
+                           const char *title, int flags,
+                           Slot1<void, int> *feedback_handler) {
+  return impl_->gadget_host_->GetGadget()->ShowDetailsView(details_view, title,
+                                                           flags,
+                                                           feedback_handler);
+}
+
+bool View::OnAddContextMenuItems(MenuInterface *menu) {
+  if (impl_->mouseover_element_)
+    return impl_->mouseover_element_->OnAddContextMenuItems(menu);
+  return true;
+}
+
+Slot *View::NewDeathDetectedSlot(BasicElement *element, Slot *slot) {
+  return new Impl::DeathDetectedSlot(impl_, element, slot);
 }
 
 EditInterface *View::NewEdit(size_t w, size_t h) {

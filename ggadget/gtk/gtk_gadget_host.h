@@ -80,6 +80,24 @@ class GtkGadgetHost : public GadgetHostInterface {
   // TODO: store zoom (and debug_mode?) into options repository.
   bool LoadGadget(GtkBox *container, const char *base_path);
 
+  /**
+   * Returns a newly initialized context menu, so that the caller can add
+   * menu items in it.
+   */
+  GtkMenuImpl *NewContextMenu();
+
+  /**
+   * Popups the current context menu with or without default menu items.
+   * If the current context menu contains no items, the method does nothing.
+   * @param default_items whether to add the default menu items.
+   * @param button the mouse button which was pressed to initiate the popup.
+   * @return @c false if the menu contains nothing and was not popped up.
+   */
+  bool PopupContextMenu(bool default_items, guint button);
+
+  /** Destroy the current context menu. */
+  void DestroyContextMenu();
+
  private:
   void ReportScriptError(const char *message);
 

@@ -23,8 +23,10 @@
 #include "gadget_consts.h"
 #include "graphics_interface.h"
 #include "image.h"
+#include "menu_interface.h"
 #include "scriptable_array.h"
 #include "view.h"
+#include "view_host_interface.h"
 
 namespace ggadget {
 
@@ -55,9 +57,13 @@ class ContentAreaElement::Impl {
         max_content_items_(kDefaultMaxContentItems),
         pin_image_max_width_(0), pin_image_max_height_(0),
         mouse_down_(false), mouse_over_pin_(false),
-        mouse_x_(-1), mouse_y_(-1), mouse_over_item_(NULL),
+        mouse_x_(-1), mouse_y_(-1),
+        mouse_over_item_(NULL),
         content_height_(0),
-        refresh_timer_(0) {
+        refresh_timer_(0),
+        modified_(false),
+        death_detector_(NULL),
+        context_menu_time_(0) {
     pin_images_[PIN_IMAGE_PINNED] = owner->GetView()->LoadImageFromGlobal(
         kContentItemPinned, false);
     pin_images_[PIN_IMAGE_PINNED_OVER] = owner->GetView()->LoadImageFromGlobal(
@@ -72,6 +78,11 @@ class ContentAreaElement::Impl {
   }
 
   ~Impl() {
+    if (death_detector_) {
+      // Inform the death detector that this element is dying.
+      *death_detector_ = true;
+    }
+
     owner_->GetView()->ClearInterval(refresh_timer_);
     refresh_timer_ = 0;
     RemoveAllContentItems();
@@ -85,6 +96,13 @@ class ContentAreaElement::Impl {
 
   void QueueDraw() {
     owner_->QueueDraw();
+  }
+
+  // Called when content items are added, removed or reordered.
+  void Modified() {
+    modified_ = true;
+    mouse_over_item_ = NULL;
+    QueueDraw();
   }
 
   void Layout() {
@@ -111,18 +129,27 @@ class ContentAreaElement::Impl {
                 2 * kItemBorderWidth;
     int item_width = width - pin_image_max_width_;
 
+    // Add a modification checker to detect whether the set of content items
+    // or this object itself is modified during the following loop. If such
+    // things happen, break the loop and return to ensure safety.
+    modified_ = false;
+    bool dead = false;
+    death_detector_ = &dead;
+
     content_height_ = 0;
     size_t item_count = content_items_.size();
     if (content_flags_ & CONTENT_FLAG_MANUAL_LAYOUT) {
-      for (size_t i = 0; i < item_count; i++) {
+      for (size_t i = 0; i < item_count && dead && !modified_; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
         int temp_x, temp_y, temp_width, item_height;
         item->GetRect(&temp_x, &temp_y, &temp_width, &item_height);
+        if (dead)
+          break;
         content_height_ = std::max(content_height_, item_height);
       }
     } else {
-      for (size_t i = 0; i < item_count; i++) {
+      for (size_t i = 0; i < item_count && !dead && !modified_ ; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
         if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) {
@@ -130,6 +157,8 @@ class ContentAreaElement::Impl {
         } else {
           int item_height = item->GetHeight(target_, layout_canvas_,
                                             item_width);
+          if (dead)
+            break;
           item_height = std::max(item_height, pin_image_max_height_);
           // Note: SetRect still uses the width including pin_image,
           // while Draw and GetHeight use the width excluding pin_image.
@@ -137,8 +166,12 @@ class ContentAreaElement::Impl {
           y += item_height + kItemBorderWidth * 2;
         }
       }
-      content_height_ = y;
+      if (!dead)
+        content_height_ = y;
     }
+
+    if (!dead)
+      death_detector_ = NULL;
   }
 
   void Draw(CanvasInterface *canvas) {
@@ -146,8 +179,15 @@ class ContentAreaElement::Impl {
     int height = static_cast<int>(ceil(owner_->GetClientHeight()));
     canvas->DrawFilledRect(0, 0, width, height, kDefaultBackground);
 
+    // Add a modification checker to detect whether the set of content items
+    // or this object itself is modified during the following loop. If such
+    // things happen, break the loop and return to ensure safety.
+    modified_ = false;
+    bool dead = false;
+    death_detector_ = &dead;
+
     int item_count = content_items_.size();
-    for (int i = 0; i < item_count; i++) {
+    for (int i = 0; i < item_count && !dead && !modified_; i++) {
       ContentItem *item = content_items_[i];
       ASSERT(item);
       if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)
@@ -189,7 +229,8 @@ class ContentAreaElement::Impl {
           item_width -= pin_image_max_width_;
         }
 
-        if (mouse_over) {
+        if (mouse_over &&
+            !(item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
           const Color &color = mouse_down_ && !mouse_over_pin ?
                                kMouseDownBackground : kMouseOverBackground;
           canvas->DrawFilledRect(item_x - kItemBorderWidth,
@@ -201,6 +242,8 @@ class ContentAreaElement::Impl {
         item->Draw(target_, canvas, item_x, item_y, item_width, item_height);
       }
     }
+    if (!dead)
+      death_detector_ = NULL;
   }
 
   ScriptableArray *ScriptGetContentItems() {
@@ -261,7 +304,10 @@ class ContentAreaElement::Impl {
                                  kMaxContentItemsUpperLimit);
     if (max_content_items_ != max_content_items) {
       max_content_items_ = max_content_items;
-      return RemoveExtraItems(content_items_.begin());
+      if (RemoveExtraItems(content_items_.begin())) {
+        Modified();
+        return true;
+      }
     }
     return false;
   }
@@ -274,6 +320,7 @@ class ContentAreaElement::Impl {
       item->AttachContentArea(owner_);
       content_items_.insert(content_items_.begin(), item);
       RemoveExtraItems(content_items_.begin() + 1);
+      Modified();
       return true;
     }
     return false;
@@ -313,6 +360,7 @@ class ContentAreaElement::Impl {
     if (it != content_items_.end()) {
       (*it)->DetachContentArea(owner_);
       content_items_.erase(it);
+      Modified();
       return true;
     }
     return false;
@@ -323,17 +371,23 @@ class ContentAreaElement::Impl {
          it != content_items_.end(); ++it) {
       (*it)->DetachContentArea(owner_);
     }
+    Modified();
   }
 
+  static const unsigned int kContextMenuMouseOutInterval = 50;
   EventResult HandleMouseEvent(const MouseEvent &event) {
     bool queue_draw = false;
     EventResult result = EVENT_RESULT_UNHANDLED;
     if (event.GetType() == Event::EVENT_MOUSE_OUT) {
-      mouse_over_pin_ = false;
-      mouse_over_item_ = NULL;
-      mouse_x_ = mouse_y_ = -1;
-      mouse_down_ = false;
-      queue_draw = true;
+      // Ignore the mouseout event caused by the context menu.
+      if (owner_->GetView()->GetCurrentTime() - context_menu_time_ >
+          kContextMenuMouseOutInterval) {
+        mouse_over_pin_ = false;
+        mouse_over_item_ = NULL;
+        mouse_x_ = mouse_y_ = -1;
+        mouse_down_ = false;
+        queue_draw = true;
+      }
       result = EVENT_RESULT_HANDLED;
     } else {
       mouse_x_ = static_cast<int>(round(event.GetX()));
@@ -342,16 +396,18 @@ class ContentAreaElement::Impl {
       bool tooltip_required = false;
       for (ContentItems::iterator it = content_items_.begin();
            it != content_items_.end(); ++it) {
-        int x, y, w, h;
-        (*it)->GetRect(&x, &y, &w, &h);
-        x -= owner_->GetScrollXPosition();
-        y -= owner_->GetScrollYPosition();
-        if (mouse_x_ >= x && mouse_x_ < x + w &&
-            mouse_y_ >= y && mouse_y_ < y + h) {
-          new_mouse_over_item = *it;
-          tooltip_required = new_mouse_over_item->IsTooltipRequired(
-              target_, layout_canvas_, x, y, w, h);
-          break;
+        if (!((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)) {
+          int x, y, w, h;
+          (*it)->GetRect(&x, &y, &w, &h);
+          x -= owner_->GetScrollXPosition();
+          y -= owner_->GetScrollYPosition();
+          if (mouse_x_ >= x && mouse_x_ < x + w &&
+              mouse_y_ >= y && mouse_y_ < y + h) {
+            new_mouse_over_item = *it;
+            tooltip_required = new_mouse_over_item->IsTooltipRequired(
+                target_, layout_canvas_, x, y, w, h);
+            break;
+          }
         }
       }
 
@@ -374,7 +430,7 @@ class ContentAreaElement::Impl {
       }
 
       if (event.GetType() != Event::EVENT_MOUSE_MOVE &&
-          event.GetButton() == MouseEvent::BUTTON_LEFT) {
+          (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
         result = EVENT_RESULT_HANDLED;
 
         switch (event.GetType()) {
@@ -391,9 +447,13 @@ class ContentAreaElement::Impl {
               if (mouse_over_pin_) {
                 mouse_over_item_->ToggleItemPinnedState();
               } else {
-                // TODO: show details view for this item.
+                // TODO: mouse_over_item_->ShowDetailsView();
               }
             }
+            break;
+          case Event::EVENT_MOUSE_DBLCLICK:
+            if (mouse_over_item_ && !mouse_over_pin_)
+              mouse_over_item_->OpenItem();
             break;
           default:
             result = EVENT_RESULT_UNHANDLED;
@@ -407,6 +467,44 @@ class ContentAreaElement::Impl {
     return result;
   }
 
+  // Handler of the "Open" menu item.
+  void OnItemOpen(const char *menu_item) {
+    if (mouse_over_item_)
+      mouse_over_item_->OpenItem();
+  }
+
+  // Handler of the "Remove" menu item.
+  void OnItemRemove(const char *menu_item) {
+    if (mouse_over_item_) {
+      bool dead = false;
+      death_detector_ = &dead;
+      if (!mouse_over_item_->ProcessDetailsViewFeedback(
+              ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
+          !dead && mouse_over_item_ &&
+          !mouse_over_item_->OnUserRemove() &&
+          !dead && mouse_over_item_) {
+        RemoveContentItem(mouse_over_item_);
+      }
+      if (!dead)
+        death_detector_ = NULL;
+    }
+  }
+
+  // Handler of the "Don't show me ..." menu item.
+  void OnItemNegativeFeedback(const char *menu_item) {
+    if (mouse_over_item_) {
+      bool dead = false;
+      death_detector_ = &dead;
+      if (!mouse_over_item_->ProcessDetailsViewFeedback(
+              ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
+          !dead && mouse_over_item_) {
+        RemoveContentItem(mouse_over_item_);
+      }
+      if (!dead)
+        death_detector_ = NULL;
+    }
+  }
+
   ContentAreaElement *owner_;
   CanvasInterface *layout_canvas_; // Only used during Layout().
   int content_flags_;
@@ -417,11 +515,12 @@ class ContentAreaElement::Impl {
   int pin_image_max_width_, pin_image_max_height_;
   bool mouse_down_, mouse_over_pin_;
   int mouse_x_, mouse_y_;
-  // This pointer is only used in HandleMouseEvent() to check if mouse over
-  // item changes. Don't dereference the pointer because it may be stale.
   ContentItem *mouse_over_item_;
   int content_height_;
   int refresh_timer_;
+  bool modified_; // Flags whether items were added, removed or reordered.
+  bool *death_detector_;
+  uint64_t context_menu_time_;
 };
 
 ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
@@ -470,8 +569,7 @@ size_t ContentAreaElement::GetMaxContentItems() const {
 }
 
 void ContentAreaElement::SetMaxContentItems(size_t max_content_items) {
-  if (impl_->SetMaxContentItems(max_content_items))
-    QueueDraw();
+  impl_->SetMaxContentItems(max_content_items);
 }
 
 const std::vector<ContentItem *> &ContentAreaElement::GetContentItems() {
@@ -492,18 +590,15 @@ void ContentAreaElement::SetPinImages(const Variant &pinned,
 
 void ContentAreaElement::AddContentItem(ContentItem *item,
                                         DisplayOptions options) {
-  if (impl_->AddContentItem(item, options))
-    QueueDraw();
+  impl_->AddContentItem(item, options);
 }
 
 void ContentAreaElement::RemoveContentItem(ContentItem *item) {
-  if (impl_->RemoveContentItem(item))
-    QueueDraw();
+  impl_->RemoveContentItem(item);
 }
 
 void ContentAreaElement::RemoveAllContentItems() {
   impl_->RemoveAllContentItems();
-  QueueDraw();
 }
 
 void ContentAreaElement::Layout() {
@@ -540,6 +635,35 @@ BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,
                                                  View *view,
                                                  const char *name) {
   return new ContentAreaElement(parent, view, name);
+}
+
+bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
+  if (impl_->mouse_over_item_) {
+    impl_->context_menu_time_ = GetView()->GetCurrentTime();
+    if (impl_->mouse_over_item_->CanOpen()) {
+      menu->AddItem("Open", 0,
+                    new SlotProxy1<void, const char *>(
+                        GetView()->NewDeathDetectedSlot(
+                            this, NewSlot(impl_, &Impl::OnItemOpen))));
+    }
+    if (!(impl_->mouse_over_item_->GetFlags() &
+        ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
+      menu->AddItem("Remove", 0,
+                    new SlotProxy1<void, const char *>(
+                        GetView()->NewDeathDetectedSlot(
+                            this, NewSlot(impl_, &Impl::OnItemRemove))));
+    }
+    if (impl_->mouse_over_item_->GetFlags() &
+        ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
+      menu->AddItem("Don't show me items like this", 0,
+                    new SlotProxy1<void, const char *>(
+                        GetView()->NewDeathDetectedSlot(
+                            this,
+                            NewSlot(impl_, &Impl::OnItemNegativeFeedback))));
+    }
+  }
+  // To keep compatible with the Windows version, don't show default menu items.
+  return false;
 }
 
 } // namespace ggadget

@@ -52,6 +52,8 @@ struct GadgetViewWidget {
   bool dbl_click;
   bool window_move;
   double window_move_x, window_move_y;
+  uint64_t mouse_down_time;
+  bool ignore_right_button;
 
   ggadget::DragEvent *current_drag_event;
 };

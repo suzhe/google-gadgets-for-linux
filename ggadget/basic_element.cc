@@ -23,6 +23,7 @@
 #include "graphics_interface.h"
 #include "image.h"
 #include "math_utils.h"
+#include "menu_interface.h"
 #include "scriptable_event.h"
 #include "string_utils.h"
 #include "view.h"
@@ -528,7 +529,7 @@ class BasicElement::Impl {
 
   void PostSizeEvent() {
     if (onsize_event_.HasActiveConnections()) {
-      Event *event = new Event(Event::EVENT_SIZE);
+      Event *event = new SimpleEvent(Event::EVENT_SIZE);
       view_->PostEvent(new ScriptableEvent(event, owner_, NULL), onsize_event_);
     }
   }
@@ -1443,6 +1444,13 @@ bool BasicElement::IsImplicit() const {
 void BasicElement::SetImplicit(bool implicit) {
   ASSERT(!implicit || impl_->parent_);
   impl_->implicit_ = implicit;
+}
+
+bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
+  // A disabled element won't handle mouse events, let the context menu shown.
+  return !IsEnabled() ||
+  // If rclick event won't be handled, let the context menu shown.
+         !impl_->onrclick_event_.HasActiveConnections();
 }
 
 } // namespace ggadget

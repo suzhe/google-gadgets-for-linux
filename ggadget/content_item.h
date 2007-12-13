@@ -170,6 +170,9 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
   void SetRect(int x, int y, int width, int height);
   void GetRect(int *x, int *y, int *width, int *height);
 
+  /** Returns if this item can be opened by the user. */
+  bool CanOpen() const;
+
   /** Draws the item. */
   void Draw(GadgetInterface::DisplayTarget target, CanvasInterface *canvas,
             int x, int y, int width, int height);
@@ -209,19 +212,18 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
   /**
    * Connects to the signal which will be fired to process the user action in
    * the details view.
-   * Prototype: <code>
-   * bool ProcessDetailsViewFeedbackHandler(ContentItem *item,
-   *                                        int details_view_flags);
-   * </code>
-   * flags is combination of @c ViewHostInterface::DetailsViewFlags.
+   * @param flags is combination of @c ViewHostInterface::DetailsViewFlags.
+   * @return @c true to cancel the default action of this feedback, @c false to
+   *     continue the default action.
    */
+  bool ProcessDetailsViewFeedback(int flags);
   Connection *ConnectOnProcessDetailsViewFeedback(
       Slot2<bool, ContentItem *, int> *handler);
 
   /**
    * Called when the user removes and item from the display.
-   * The handler returns @c true to cancel the remove and keep the item,
-   * @c false to continue and remove the item.
+   * @return @c true to cancel the remove and keep the item, @c false to
+   *     continue and remove the item.
    */
   bool OnUserRemove();
   Connection *ConnectOnRemoveItem(Slot1<bool, ContentItem *> *handler);

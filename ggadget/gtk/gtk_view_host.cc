@@ -52,10 +52,10 @@ static const CursorTypeMapping[] = {
 };
 */
 
-GtkViewHost::GtkViewHost(GadgetHostInterface *gadget_host,
+GtkViewHost::GtkViewHost(GtkGadgetHost *gadget_host,
                          GadgetHostInterface::ViewType type,
                          ScriptableInterface *prototype,
-                         bool composited, bool useshapemask, 
+                         bool composited, bool useshapemask,
                          double zoom, int debug_mode)
     : gadget_host_(gadget_host),
       view_(NULL),
@@ -123,6 +123,7 @@ GtkViewHost::~GtkViewHost() {
 
   CloseDetailsView();
   HideTooltip(0);
+  gadget_host_->DestroyContextMenu();
 
   delete view_;
   view_ = NULL;
@@ -285,7 +286,7 @@ struct DialogData {
 
 static void OnDialogCancel(GtkButton *button, gpointer user_data) {
   DialogData *dialog_data = static_cast<DialogData *>(user_data);
-  Event event(Event::EVENT_CANCEL);
+  SimpleEvent event(Event::EVENT_CANCEL);
   if (dialog_data->view->OnOtherEvent(event, NULL)) {
     gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_CANCEL);
   }
@@ -293,7 +294,7 @@ static void OnDialogCancel(GtkButton *button, gpointer user_data) {
 
 static void OnDialogOK(GtkButton *button, gpointer user_data) {
   DialogData *dialog_data = static_cast<DialogData *>(user_data);
-  Event event(Event::EVENT_OK);
+  SimpleEvent event(Event::EVENT_OK);
   if (dialog_data->view->OnOtherEvent(event, NULL)) {
     gtk_dialog_response(dialog_data->dialog, GTK_RESPONSE_OK);
   }

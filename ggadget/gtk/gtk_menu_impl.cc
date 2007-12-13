@@ -20,10 +20,15 @@ namespace ggadget {
 
 bool GtkMenuImpl::setting_style_ = false;
 
-GtkMenuImpl::GtkMenuImpl(GtkMenu *menu) : menu_(menu) {
+GtkMenuImpl::GtkMenuImpl(GtkMenu *gtk_menu)
+    : gtk_menu_(gtk_menu) {
 }
 
 GtkMenuImpl::~GtkMenuImpl() {
+  if (gtk_menu_) {
+    gtk_widget_destroy(GTK_WIDGET(gtk_menu_));
+    gtk_menu_ = NULL;
+  }
   for (ItemMap::iterator it = item_map_.begin(); it != item_map_.end(); ++it) {
     delete it->second.handler;
     delete it->second.submenu;
@@ -57,13 +62,13 @@ void GtkMenuImpl::AddItem(const char *item_text, int style,
   item_map_[text_str] = menu_item_info;
   g_signal_connect(item, "activate", G_CALLBACK(OnItemActivate),
                    &item_map_[text_str]);
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu_), GTK_WIDGET(item));
+  gtk_menu_shell_append(GTK_MENU_SHELL(gtk_menu_), GTK_WIDGET(item));
 }
 
 void GtkMenuImpl::SetItemStyle(const char *item_text, int style) {
   ItemMap::const_iterator it = item_map_.find(item_text);
   if (it != item_map_.end())
-    SetMenuItemStyle(it->second.menu_item, style);
+    SetMenuItemStyle(it->second.gtk_menu_item, style);
 }
 
 ggadget::MenuInterface *GtkMenuImpl::AddPopup(const char *popup_text) {
@@ -75,7 +80,7 @@ ggadget::MenuInterface *GtkMenuImpl::AddPopup(const char *popup_text) {
   std::string text_str(popup_text);
   struct MenuItemInfo menu_item_info = { text_str, item, 0, NULL, submenu };
   item_map_[text_str] = menu_item_info;
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu_), GTK_WIDGET(item));
+  gtk_menu_shell_append(GTK_MENU_SHELL(gtk_menu_), GTK_WIDGET(item));
   return submenu;
 }
 
@@ -85,7 +90,7 @@ void GtkMenuImpl::OnItemActivate(GtkMenuItem *menu_item, gpointer user_data) {
     return;
 
   MenuItemInfo *menu_item_info = static_cast<MenuItemInfo *>(user_data);
-  ASSERT(GTK_MENU_ITEM(menu_item_info->menu_item) == menu_item);
+  ASSERT(GTK_MENU_ITEM(menu_item_info->gtk_menu_item) == menu_item);
   if (menu_item_info->handler) {
     DLOG("Call menu item handler: %s", menu_item_info->item_text.c_str());
     (*menu_item_info->handler)(menu_item_info->item_text.c_str());

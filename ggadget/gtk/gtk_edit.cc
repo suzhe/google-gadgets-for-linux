@@ -32,6 +32,10 @@
 #include "gtk_view_host.h"
 #include "gtk_gadget_host.h"
 
+#ifndef PANGO_VERSION_CHECK
+#define PANGO_VERSION_CHECK(a,b,c) 0
+#endif
+
 namespace ggadget {
 static const int kInnerBorder = 1;
 static const int kCursorBlinkTimeout = 500;

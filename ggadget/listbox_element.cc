@@ -137,7 +137,7 @@ class ListBoxElement::Impl {
   }
 
   void FireOnChangeEvent() {
-    Event event(Event::EVENT_CHANGE);
+    SimpleEvent event(Event::EVENT_CHANGE);
     ScriptableEvent s_event(&event, owner_, NULL);
     owner_->GetView()->FireEvent(&s_event, onchange_event_);
   }

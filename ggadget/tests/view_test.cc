@@ -72,7 +72,8 @@ class EventHandler {
 TEST(ViewTest, FireEvent) {
   MockedViewHost vh(gFactory);
   EventHandler handler(vh.GetViewInternal());
-  ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN, 2468, 1357);
+  ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN,
+                               2468, 1357, NULL);
   ggadget::ScriptableEvent scriptable_event(&event, NULL, NULL);
   vh.GetViewInternal()->FireEvent(&scriptable_event, handler.signal1_);
   ASSERT_TRUE(handler.fired1_);

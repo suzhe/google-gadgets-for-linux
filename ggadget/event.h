@@ -95,9 +95,11 @@ class Event {
     MOD_ALT = 4
   };
 
-  explicit Event(Type t) : type_(t) { ASSERT(IsSimpleEvent()); }
-  Event(const Event &e) : type_(e.type_) { ASSERT(IsSimpleEvent()); }
+ protected:
+  // This class is abstract.
+  explicit Event(Type t) : type_(t) { }
 
+ public:
   Type GetType() const { return type_; }
 
   bool IsSimpleEvent() const { return type_ > EVENT_SIMPLE_RANGE_START &&
@@ -109,11 +111,13 @@ class Event {
   bool IsDragEvent() const { return type_ > EVENT_DRAG_RANGE_START &&
                                     type_ < EVENT_DRAG_RANGE_END; }
 
- protected:
-  Event(Type t, int dummy) : type_(t) { }
-
  private:
   Type type_;
+};
+
+class SimpleEvent : public Event {
+ public:
+  explicit SimpleEvent(Type t) : Event(t) { ASSERT(IsSimpleEvent()); }
 };
 
 class PositionEvent : public Event {
@@ -126,7 +130,7 @@ class PositionEvent : public Event {
 
  protected:
   PositionEvent(Type t, double x, double y)
-      : Event(t, 0), x_(x), y_(y) {
+      : Event(t), x_(x), y_(y) {
   }
 
  private:
@@ -150,13 +154,6 @@ class MouseEvent : public PositionEvent {
              int modifier)
       : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta),
         modifier_(modifier) {
-    ASSERT(IsMouseEvent());
-  }
-
-  MouseEvent(const MouseEvent &e)
-      : PositionEvent(e.GetType(), e.GetX(), e.GetY()),
-        button_(e.button_), wheel_delta_(e.wheel_delta_),
-        modifier_(e.modifier_) {
     ASSERT(IsMouseEvent());
   }
 
@@ -277,14 +274,8 @@ class KeyboardEvent : public Event {
   };
 
   KeyboardEvent(Type t, unsigned int key_code, int modifier, void *original)
-      : Event(t, 0), key_code_(key_code), modifier_(modifier),
+      : Event(t), key_code_(key_code), modifier_(modifier),
         original_event_(original) {
-    ASSERT(IsKeyboardEvent());
-  };
-
-  KeyboardEvent(const KeyboardEvent &e)
-      : Event(e.GetType(), 0), key_code_(e.key_code_), modifier_(e.modifier_),
-        original_event_(e.original_event_) {
     ASSERT(IsKeyboardEvent());
   }
 
@@ -314,12 +305,6 @@ class DragEvent : public PositionEvent {
     ASSERT(IsDragEvent());
   }
 
-  DragEvent(const DragEvent &e)
-      : PositionEvent(e.GetType(), e.GetX(), e.GetY()),
-        drag_files_(e.drag_files_) {
-    ASSERT(IsDragEvent());
-  }
-
   const char **GetDragFiles() const { return drag_files_; }
   void SetDragFiles(const char **drag_files) { drag_files_ = drag_files; }
 
@@ -333,12 +318,7 @@ class DragEvent : public PositionEvent {
 class SizingEvent : public Event {
  public:
   SizingEvent(double width, double height)
-      : Event(EVENT_SIZING, 0), width_(width), height_(height) {
-  }
-
-  SizingEvent(const SizingEvent &e)
-      : Event(EVENT_SIZING, 0), width_(e.width_), height_(e.height_) {
-    ASSERT(e.GetType() == EVENT_SIZING);
+      : Event(EVENT_SIZING), width_(width), height_(height) {
   }
 
   double GetWidth() const { return width_; }
@@ -357,12 +337,7 @@ class SizingEvent : public Event {
 class OptionChangedEvent : public Event {
  public:
   OptionChangedEvent(const char *property_name)
-      : Event(EVENT_OPTION_CHANGED, 0), property_name_(property_name) {
-  }
-
-  OptionChangedEvent(const OptionChangedEvent &e)
-      : Event(EVENT_OPTION_CHANGED, 0), property_name_(e.property_name_) {
-    ASSERT(e.GetType() == EVENT_OPTION_CHANGED);
+      : Event(EVENT_OPTION_CHANGED), property_name_(property_name) {
   }
 
   const char *GetPropertyName() const { return property_name_.c_str(); }
@@ -379,12 +354,7 @@ class OptionChangedEvent : public Event {
 class TimerEvent : public Event {
  public:
   TimerEvent(int token, int value)
-      : Event(EVENT_TIMER, 0), token_(token), value_(value) {
-  }
-
-  TimerEvent(const TimerEvent &e)
-      : Event(EVENT_TIMER, 0), token_(e.token_), value_(e.value_) {
-    ASSERT(e.GetType() == EVENT_TIMER);
+      : Event(EVENT_TIMER), token_(token), value_(value) {
   }
 
   int GetToken() const { return token_; }
