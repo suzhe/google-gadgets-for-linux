@@ -129,10 +129,11 @@ class View::Impl {
 
   EventResult SendMouseEventToChildren(const MouseEvent &event) {
     Event::Type type = event.GetType();
-    if (type == Event::EVENT_MOUSE_OVER)
+    if (type == Event::EVENT_MOUSE_OVER) {
       // View's EVENT_MOUSE_OVER only applicable to itself.
       // Children's EVENT_MOUSE_OVER is triggered by other mouse events.
       return EVENT_RESULT_UNHANDLED;
+    }
 
     BasicElement *fired_element = NULL;
     BasicElement *in_element = NULL;
@@ -166,7 +167,7 @@ class View::Impl {
     }
 
     if (type == Event::EVENT_MOUSE_OUT) {
-      // Clear the mouseover state.
+      // The mouse has been moved out of the view, clear the mouseover state.
       if (mouseover_element_) {
         MouseEvent new_event(event);
         MapChildPositionEvent(event, mouseover_element_, &new_event);
@@ -210,9 +211,9 @@ class View::Impl {
       if (mouseover_element_) {
         // The enabled and visible states may change during event handling.
         if (!mouseover_element_->IsEnabled() ||
-            !mouseover_element_->IsVisible())
+            !mouseover_element_->IsVisible()) {
           mouseover_element_ = NULL;
-        else {
+        } else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
                                      event.GetX(), event.GetY(),
                                      event.GetButton(), event.GetWheelDelta(),
@@ -543,19 +544,30 @@ class View::Impl {
   }
 
   void SetFocus(BasicElement *element) {
-    if (element != focused_element_) {
+    if (element != focused_element_ &&
+        (!element || (element->IsEnabled() && element->IsVisible()))) {
       ScopedDeathDetector death_detector(owner_, &element);
       // Remove the current focus first.
       if (!focused_element_ ||
           focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_OUT)) !=
               EVENT_RESULT_CANCELED) {
+        BasicElement *old_focused_element = focused_element_;
+        ScopedDeathDetector death_detector(owner_, &old_focused_element);
         focused_element_ = element;
         if (focused_element_) {
+          // The enabled or visible state may changed, so check again. 
           if (!focused_element_->IsEnabled() ||
               !focused_element_->IsVisible() ||
               focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_IN))
                   == EVENT_RESULT_CANCELED) {
-            focused_element_ = NULL;
+            // If the EVENT_FOCUS_IN is canceled, set focus back to the old
+            // focused element.
+            focused_element_ = old_focused_element;
+            if (focused_element_ &&
+                focused_element_->OnOtherEvent(SimpleEvent(
+                    Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
+              focused_element_ = NULL;
+            }
           }
         }
       }

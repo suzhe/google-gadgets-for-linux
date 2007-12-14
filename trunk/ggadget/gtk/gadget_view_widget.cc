@@ -168,6 +168,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   gvw->host->HideTooltip(0);
+  gtk_widget_grab_focus(widget);
 
   int mod = ggadget::ConvertGdkModifierToModifier(event->state);
   int button = event->button == 1 ? MouseEvent::BUTTON_LEFT :
