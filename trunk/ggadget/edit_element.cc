@@ -60,6 +60,7 @@ class EditElement::Impl {
   }
 
   void OnScrolled() {
+    DLOG("EditElement::OnScrolled(%d)", owner_->GetScrollYPosition());
     edit_->ScrollTo(owner_->GetScrollYPosition());
   }
 
@@ -277,26 +278,6 @@ void EditElement::DoDraw(CanvasInterface *canvas,
 EventResult EditElement::HandleMouseEvent(const MouseEvent &event) {
   if (ScrollingElement::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
     return EVENT_RESULT_HANDLED;
-#if 0
-  if (event.GetType() == Event::EVENT_MOUSE_WHEEL) {
-    int range, line_step, page_step, cur_pos;
-    impl_->edit_->GetScrollBarInfo(&range, &line_step, &page_step, &cur_pos);
-    impl_->accum_wheel_delta_ += event.GetWheelDelta();
-    if (impl_->accum_wheel_delta_ > 0 &&
-        impl_->accum_wheel_delta_ >= MouseEvent::kWheelDelta) {
-      impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
-      impl_->edit_->ScrollTo(cur_pos - line_step);
-      ScrollY(-line_step);
-    } else if (impl_->accum_wheel_delta_ < 0 &&
-        impl_->accum_wheel_delta_ <= -MouseEvent::kWheelDelta) {
-      impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
-      impl_->edit_->ScrollTo(cur_pos + line_step);
-      ScrollY(line_step);
-    }
-    return EVENT_RESULT_HANDLED;
-  }
-#endif
-
   return impl_->edit_->OnMouseEvent(event);
 }
 

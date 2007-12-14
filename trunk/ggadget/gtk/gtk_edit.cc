@@ -37,7 +37,8 @@
 #endif
 
 namespace ggadget {
-static const int kInnerBorder = 1;
+static const int kInnerBorderX = 2;
+static const int kInnerBorderY = 1;
 static const int kCursorBlinkTimeout = 500;
 static const char *kDefaultFontFamily = "Sans";
 static const int kDefaultFontSize = 10;
@@ -122,10 +123,10 @@ CanvasInterface *GtkEdit::Draw(bool *modified) {
     if (background_)
       background_->Draw(canvas);
 
-    canvas->IntersectRectClipRegion(kInnerBorder - 1,
-                                    kInnerBorder - 1,
-                                    width_-kInnerBorder + 1,
-                                    height_-kInnerBorder + 1);
+    canvas->IntersectRectClipRegion(kInnerBorderX - 1,
+                                    kInnerBorderY - 1,
+                                    width_- kInnerBorderX + 1,
+                                    height_ - kInnerBorderY + 1);
     DrawText(canvas);
     DrawCursor(canvas);
   }
@@ -154,7 +155,9 @@ void GtkEdit::FocusIn() {
         gtk_im_context_set_cursor_location(im_context_, &cur);
       }
     }
-    QueueRefresh(false);
+    // Don't adjust scroll.
+    QueueCursorBlink();
+    QueueDraw();
   }
 }
 
@@ -165,15 +168,17 @@ void GtkEdit::FocusOut() {
       need_im_reset_ = true;
       gtk_im_context_focus_out(im_context_);
     }
-    QueueRefresh(false);
+    // Don't adjust scroll.
+    QueueCursorBlink();
+    QueueDraw();
   }
 }
 
 void GtkEdit::SetWidth(int width) {
   if (width_ != width) {
     width_ = width;
-    if (width_ <= kInnerBorder * 2)
-      width_ = kInnerBorder * 2 + 1;
+    if (width_ <= kInnerBorderX * 2)
+      width_ = kInnerBorderX * 2 + 1;
     QueueRefresh(true);
   }
 }
@@ -185,8 +190,8 @@ int GtkEdit::GetWidth() {
 void GtkEdit::SetHeight(int height) {
   if (height_ != height) {
     height_ = height;
-    if (height_ <= kInnerBorder * 2)
-      height_ = kInnerBorder * 2 + 1;
+    if (height_ <= kInnerBorderY * 2)
+      height_ = kInnerBorderY * 2 + 1;
     QueueRefresh(false);
   }
 }
@@ -201,8 +206,8 @@ void GtkEdit::GetSizeRequest(int *width, int *height) {
 
   pango_layout_get_pixel_size(layout, &layout_width, &layout_height);
 
-  layout_width += kInnerBorder * 2;
-  layout_height += kInnerBorder * 2;
+  layout_width += kInnerBorderX * 2;
+  layout_height += kInnerBorderY * 2;
 
   if (wrap_ && layout_width < width_)
     layout_width = width_;
@@ -401,7 +406,7 @@ void GtkEdit::GetScrollBarInfo(int *range, int *line_step,
   // Only enable scrolling when there are more than one lines.
   if (nlines > 1) {
     int request_height;
-    int real_height = height_ - kInnerBorder * 2;
+    int real_height = height_ - kInnerBorderY * 2;
     pango_layout_get_pixel_size(layout, NULL, &request_height);
     if (range)
       *range = (request_height > real_height? (request_height - real_height) : 0);
@@ -423,7 +428,7 @@ void GtkEdit::GetScrollBarInfo(int *range, int *line_step,
 
 void GtkEdit::ScrollTo(int position) {
   int request_height;
-  int real_height = height_ - kInnerBorder * 2;
+  int real_height = height_ - kInnerBorderY * 2;
   PangoLayout *layout = EnsureLayout();
   pango_layout_get_pixel_size(layout, NULL, &request_height);
 
@@ -457,9 +462,9 @@ EventResult GtkEdit::OnMouseEvent(const MouseEvent &event) {
 
   Event::Type type = event.GetType();
   int x = static_cast<int>(round(event.GetX())) -
-            kInnerBorder - scroll_offset_x_;
+            kInnerBorderX - scroll_offset_x_;
   int y = static_cast<int>(round(event.GetY())) -
-            kInnerBorder - scroll_offset_y_;
+            kInnerBorderY - scroll_offset_y_;
   int offset = XYToOffset(x, y);
   int sel_start, sel_end;
   GetSelectionBounds(&sel_start, &sel_end);
@@ -515,6 +520,8 @@ EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
   bool shift = (gdk_event->state & GDK_SHIFT_MASK);
   bool ctrl = (gdk_event->state & GDK_CONTROL_MASK);
 
+  DLOG("GtkEdit::OnKeyEvent(%d, shift:%d ctrl:%d)", keyval, shift, ctrl);
+
   if (keyval == GDK_Left || keyval == GDK_KP_Left) {
     if (!ctrl) MoveCursor(VISUALLY, -1, shift);
     else MoveCursor(WORDS, -1, shift);
@@ -555,6 +562,9 @@ EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
   } else if (keyval == GDK_Return || keyval == GDK_KP_Enter) {
     // If multiline_ is unset, just ignore new_line.
     if (multiline_) EnterText("\n");
+  } else if (keyval == GDK_Tab) {
+    // The Tab key will likely be consumed by input method.
+    EnterText("\t");
   } else {
     return EVENT_RESULT_UNHANDLED;
   }
@@ -587,7 +597,7 @@ PangoLayout* GtkEdit::CreateLayout() {
 
   /* Set necessary parameters */
   if (wrap_) {
-    pango_layout_set_width(layout, (width_ - kInnerBorder * 2) * PANGO_SCALE);
+    pango_layout_set_width(layout, (width_ - kInnerBorderX * 2) * PANGO_SCALE);
     pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
   } else {
     pango_layout_set_width(layout, -1);
@@ -704,8 +714,8 @@ CairoCanvas* GtkEdit::EnsureCanvas() {
 
 void GtkEdit::AdjustScroll() {
   PangoLayout *layout = EnsureLayout();
-  int display_width = width_ - kInnerBorder * 2;
-  int display_height = height_ - kInnerBorder * 2;
+  int display_width = width_ - kInnerBorderX * 2;
+  int display_height = height_ - kInnerBorderY * 2;
   const char *text = pango_layout_get_text(layout);
   size_t cursor_index =
       g_utf8_offset_to_pointer(text, cursor_ + preedit_cursor_) - text;
@@ -745,10 +755,14 @@ void GtkEdit::AdjustScroll() {
     }
   }
 
-  if (scroll_offset_y_ + strong.y + strong.height > display_height)
-    scroll_offset_y_ = display_height - strong.y - strong.height;
-  if (scroll_offset_y_ + strong.y < 0)
-    scroll_offset_y_ = -strong.y;
+  if (display_height > text_height) {
+    scroll_offset_y_ = 0;
+  } else {
+    if (scroll_offset_y_ + strong.y + strong.height > display_height)
+      scroll_offset_y_ = display_height - strong.y - strong.height;
+    if (scroll_offset_y_ + strong.y < 0)
+      scroll_offset_y_ = -strong.y;
+  }
 }
 
 void GtkEdit::QueueRefresh(bool relayout) {
@@ -913,60 +927,50 @@ void GtkEdit::DrawCursor(CairoCanvas *canvas) {
 
   // Draw strong cursor.
   // TODO: Is the color ok?
-  canvas->DrawLine(strong.x + kInnerBorder + scroll_offset_x_,
-                   strong.y + kInnerBorder + scroll_offset_y_,
-                   strong.x + kInnerBorder + scroll_offset_x_,
-                   strong.y + strong.height + kInnerBorder + scroll_offset_y_,
+  canvas->DrawLine(strong.x + kInnerBorderX + scroll_offset_x_,
+                   strong.y + kInnerBorderY + scroll_offset_y_,
+                   strong.x + kInnerBorderX + scroll_offset_x_,
+                   strong.y + strong.height + kInnerBorderY + scroll_offset_y_,
                    kStrongCursorWidth, kStrongCursorColor);
   // Draw a small arror towards weak cursor
   if (strong.x > weak.x) {
     canvas->DrawLine(
-        strong.x + kInnerBorder + scroll_offset_x_ - kStrongCursorWidth * 2.5,
-        strong.y + kInnerBorder + scroll_offset_y_ + kStrongCursorWidth,
-        strong.x + kInnerBorder + scroll_offset_x_,
-        strong.y + kInnerBorder + scroll_offset_y_ + kStrongCursorWidth,
+        strong.x + kInnerBorderX + scroll_offset_x_ - kStrongCursorWidth * 2.5,
+        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
+        strong.x + kInnerBorderX + scroll_offset_x_,
+        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
         kStrongCursorWidth, kStrongCursorColor);
   } else if (strong.x < weak.x) {
     canvas->DrawLine(
-        strong.x + kInnerBorder + scroll_offset_x_,
-        strong.y + kInnerBorder + scroll_offset_y_ + kStrongCursorWidth,
-        strong.x + kInnerBorder + scroll_offset_x_ + kStrongCursorWidth * 2.5,
-        strong.y + kInnerBorder + scroll_offset_y_ + kStrongCursorWidth,
-        kStrongCursorWidth, kStrongCursorColor);
-  }
-
-  // Draw a line at bottom of the cursor to indicate overwrite mode.
-  if (overwrite_) {
-    canvas->DrawLine(
-        strong.x + kInnerBorder + scroll_offset_x_ - kStrongCursorWidth * 2.5,
-        strong.y + strong.height + kInnerBorder + scroll_offset_y_,
-        strong.x + kInnerBorder + scroll_offset_x_ + kStrongCursorWidth * 2.5,
-        strong.y + strong.height + kInnerBorder + scroll_offset_y_,
+        strong.x + kInnerBorderX + scroll_offset_x_,
+        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
+        strong.x + kInnerBorderX + scroll_offset_x_ + kStrongCursorWidth * 2.5,
+        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
         kStrongCursorWidth, kStrongCursorColor);
   }
 
   if (strong.x != weak.x ) {
     // Draw weak cursor.
     // TODO: Is the color ok?
-    canvas->DrawLine(weak.x + kInnerBorder + scroll_offset_x_,
-                     weak.y + kInnerBorder + scroll_offset_y_,
-                     weak.x + kInnerBorder + scroll_offset_x_,
-                     weak.y + weak.height + kInnerBorder + scroll_offset_y_,
+    canvas->DrawLine(weak.x + kInnerBorderX + scroll_offset_x_,
+                     weak.y + kInnerBorderY + scroll_offset_y_,
+                     weak.x + kInnerBorderX + scroll_offset_x_,
+                     weak.y + weak.height + kInnerBorderY + scroll_offset_y_,
                      kWeakCursorWidth, kWeakCursorColor);
     // Draw a small arror towards strong cursor
     if (weak.x > strong.x) {
       canvas->DrawLine(
-          weak.x + kInnerBorder + scroll_offset_x_ - kWeakCursorWidth * 2.5,
-          weak.y + kInnerBorder + scroll_offset_y_ + kWeakCursorWidth,
-          weak.x + kInnerBorder + scroll_offset_x_,
-          weak.y + kInnerBorder + scroll_offset_y_ + kWeakCursorWidth,
+          weak.x + kInnerBorderX + scroll_offset_x_ - kWeakCursorWidth * 2.5,
+          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
+          weak.x + kInnerBorderX + scroll_offset_x_,
+          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
           kWeakCursorWidth, kWeakCursorColor);
     } else {
       canvas->DrawLine(
-          weak.x + kInnerBorder + scroll_offset_x_,
-          weak.y + kInnerBorder + scroll_offset_y_ + kWeakCursorWidth,
-          weak.x + kInnerBorder + scroll_offset_x_ + kWeakCursorWidth * 2.5,
-          weak.y + kInnerBorder + scroll_offset_y_ + kWeakCursorWidth,
+          weak.x + kInnerBorderX + scroll_offset_x_,
+          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
+          weak.x + kInnerBorderX + scroll_offset_x_ + kWeakCursorWidth * 2.5,
+          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
           kWeakCursorWidth, kWeakCursorColor);
     }
   }
@@ -981,8 +985,8 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
                        text_color_.green,
                        text_color_.blue);
   cairo_move_to(canvas->GetCairoContext(),
-                scroll_offset_x_ + kInnerBorder,
-                scroll_offset_y_ + kInnerBorder);
+                scroll_offset_x_ + kInnerBorderX,
+                scroll_offset_y_ + kInnerBorderY);
   pango_cairo_show_layout(canvas->GetCairoContext(), layout);
 
   // Draw selection background.
@@ -1030,8 +1034,8 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
       for(int i = 0; i < n_ranges; ++i) {
         cairo_rectangle(
             canvas->GetCairoContext(),
-            kInnerBorder + scroll_offset_x_ + PANGO_PIXELS(ranges[i * 2]),
-            kInnerBorder + scroll_offset_y_ + PANGO_PIXELS(pos.y),
+            kInnerBorderX + scroll_offset_x_ + PANGO_PIXELS(ranges[i * 2]),
+            kInnerBorderY + scroll_offset_y_ + PANGO_PIXELS(pos.y),
             PANGO_PIXELS(ranges[i * 2 + 1] - ranges[i * 2]),
             line_extents.height);
       }
@@ -1049,8 +1053,8 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
     cairo_paint(canvas->GetCairoContext());
 
     cairo_move_to(canvas->GetCairoContext(),
-                  scroll_offset_x_ + kInnerBorder,
-                  scroll_offset_y_ + kInnerBorder);
+                  scroll_offset_x_ + kInnerBorderX,
+                  scroll_offset_y_ + kInnerBorderY);
     cairo_set_source_rgb(canvas->GetCairoContext(),
                          text_color.red,
                          text_color.green,
@@ -1223,7 +1227,7 @@ int GtkEdit::MovePages(int current_pos, int count) {
   pango_layout_get_pixel_size(layout, NULL, &layout_height);
   int n_lines = pango_layout_get_line_count(layout);
   int line_height = layout_height / n_lines;
-  int page_lines = (height_ - kInnerBorder * 2) / line_height;
+  int page_lines = (height_ - kInnerBorderY * 2) / line_height;
   return MoveDisplayLines(current_pos, count * page_lines);
 }
 
