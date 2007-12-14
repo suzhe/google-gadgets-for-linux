@@ -89,7 +89,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterMethod("ShowDetailsView",
                      NewSlot(gadget_impl, &Impl::ScriptShowDetailsView));
       RegisterMethod("CloseDetailsView",
-                     NewSlot(gadget_impl, &Impl::CloseDetailsView));
+                     NewSlot(gadget_impl, &Impl::DelayedCloseDetailsView));
       RegisterMethod("ShowOptionsDialog",
                      NewSlot(gadget_impl, &Impl::ShowOptionsDialog));
       RegisterSignal("onShowOptionsDlg",
@@ -237,12 +237,18 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
                                           &gadget_global_prototype_)),
         plugin_(this),
         details_view_host_(NULL),
-        has_options_xml_(false) {
+        has_options_xml_(false),
+        close_details_view_timer_(0) {
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
   }
 
   ~Impl() {
+    if (close_details_view_timer_ != 0) {
+      host_->RemoveTimer(close_details_view_timer_);
+      close_details_view_timer_ = 0;
+    }
+
     // unload any fonts
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
@@ -371,6 +377,21 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     }
   }
 
+  bool CloseDetailsViewCallback(int timer_id) {
+    ASSERT(timer_id == close_details_view_timer_);
+    CloseDetailsView();
+    close_details_view_timer_ = 0;
+    return false;
+  }
+
+  // Close the details view in the next event loop.
+  void DelayedCloseDetailsView() {
+    if (close_details_view_timer_ == 0) {
+      close_details_view_timer_ = host_->RegisterTimer(
+          0, NewSlot(this, &Impl::CloseDetailsViewCallback));
+    }
+  }
+
   bool Init() {
     FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
@@ -438,6 +459,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
   ViewHostInterface *details_view_host_;
   GadgetStringMap manifest_info_map_;
   bool has_options_xml_;
+  int close_details_view_timer_;
 };
 
 Gadget::Gadget(GadgetHostInterface *host)

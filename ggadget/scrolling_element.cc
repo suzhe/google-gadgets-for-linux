@@ -265,13 +265,13 @@ bool ScrollingElement::UpdateScrollBar(int x_range, int y_range) {
   return false;
 }
 
-double ScrollingElement::GetClientWidth() {
+double ScrollingElement::GetClientWidth() const {
   return impl_->scrollbar_ && impl_->scrollbar_->IsVisible() ?
          std::max(GetPixelWidth() - impl_->scrollbar_->GetPixelWidth(), 0.0) :
          GetPixelWidth();
 }
 
-double ScrollingElement::GetClientHeight() {
+double ScrollingElement::GetClientHeight() const {
   // Horizontal scrollbar is not supported for now.
   return GetPixelHeight();
 }

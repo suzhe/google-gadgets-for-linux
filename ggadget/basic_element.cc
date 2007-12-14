@@ -1148,11 +1148,11 @@ void BasicElement::ResetYToDefault() {
   impl_->ResetYToDefault();
 }
 
-double BasicElement::GetClientWidth() {
+double BasicElement::GetClientWidth() const {
   return GetPixelWidth();
 }
 
-double BasicElement::GetClientHeight() {
+double BasicElement::GetClientHeight() const {
   return GetPixelHeight();
 }
 

@@ -83,8 +83,8 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void ResetXToDefault();
   virtual bool YIsSpecified() const;
   virtual void ResetYToDefault();
-  virtual double GetClientWidth();
-  virtual double GetClientHeight();
+  virtual double GetClientWidth() const;
+  virtual double GetClientHeight() const;
   virtual double GetRotation() const;
   virtual void SetRotation(double rotation);
 
