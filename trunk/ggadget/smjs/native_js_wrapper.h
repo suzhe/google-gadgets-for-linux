@@ -65,8 +65,7 @@ class NativeJSWrapper {
   static JSClass *GetWrapperJSClass() { return &wrapper_js_class_; }
 
   /** Gets the NativeJSWrapper pointer from a JS wrapped object. */
-  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object,
-                                           bool check_context);
+  static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
 
   /** Detach the wrapper object from JavaScript so that the engine can GC it. */
   void DetachJS();

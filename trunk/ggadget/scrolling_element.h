@@ -67,8 +67,8 @@ class ScrollingElement : public BasicElement {
   void SetYLineStep(int value);
 
   /** Get pixel size of client area */
-  virtual double GetClientWidth();
-  virtual double GetClientHeight();
+  virtual double GetClientWidth() const;
+  virtual double GetClientHeight() const;
   virtual EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element);

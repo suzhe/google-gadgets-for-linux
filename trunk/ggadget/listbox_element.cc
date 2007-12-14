@@ -44,8 +44,7 @@ class ListBoxElement::Impl {
  public:
   Impl(ListBoxElement *owner, View *view) : 
     owner_(owner),
-    pixel_item_width_(0), pixel_item_height_(0),
-    rel_item_width_(0), rel_item_height_(0),
+    item_width_(0), item_height_(0),
     item_width_specified_(false), item_height_specified_(false),
     item_width_relative_(false), item_height_relative_(false),
     multiselect_(false), item_separator_(false),
@@ -66,8 +65,8 @@ class ListBoxElement::Impl {
 
   void SetPixelItemWidth(double width) {
     if (width >= 0.0 && 
-        (width != pixel_item_width_ || item_width_relative_)) {
-      pixel_item_width_ = width;
+        (width != item_width_ || item_width_relative_)) {
+      item_width_ = width;
       item_width_relative_ = false;
       owner_->QueueDraw();
     }
@@ -75,16 +74,16 @@ class ListBoxElement::Impl {
 
   void SetPixelItemHeight(double height) {
     if (height >= 0.0 && 
-        (height != pixel_item_height_ || item_height_relative_)) {
-      pixel_item_height_ = height;
+        (height != item_height_ || item_height_relative_)) {
+      item_height_ = height;
       item_height_relative_ = false;
       owner_->QueueDraw();
     }
   }
 
   void SetRelativeItemWidth(double width) {
-    if (width >= 0.0 && (width != rel_item_width_ || !item_width_relative_)) {
-      rel_item_width_ = width;
+    if (width >= 0.0 && (width != item_width_ || !item_width_relative_)) {
+      item_width_ = width;
       item_width_relative_ = true;
       owner_->QueueDraw();
     }
@@ -92,8 +91,8 @@ class ListBoxElement::Impl {
 
   void SetRelativeItemHeight(double height) {
     if (height >= 0.0 &&
-        (height != rel_item_height_ || !item_height_relative_)) {
-      rel_item_height_ = height;
+        (height != item_height_ || !item_height_relative_)) {
+      item_height_ = height;
       item_height_relative_ = true;
       owner_->QueueDraw();
     }
@@ -159,8 +158,7 @@ class ListBoxElement::Impl {
   }
 
   ListBoxElement *owner_;
-  double pixel_item_width_, pixel_item_height_;
-  double rel_item_width_, rel_item_height_;
+  double item_width_, item_height_;
   bool item_width_specified_, item_height_specified_;
   bool item_width_relative_, item_height_relative_;
   bool multiselect_, item_separator_;
@@ -256,8 +254,8 @@ EventResult ListBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
 Variant ListBoxElement::GetItemWidth() const {
   return BasicElement::GetPixelOrRelative(impl_->item_width_relative_, 
                                           impl_->item_width_specified_,
-                                          impl_->pixel_item_width_, 
-                                          impl_->rel_item_width_);
+                                          impl_->item_width_, 
+                                          impl_->item_width_);
 }
 
 void ListBoxElement::SetItemWidth(const Variant &width) {
@@ -283,8 +281,8 @@ void ListBoxElement::SetItemWidth(const Variant &width) {
 Variant ListBoxElement::GetItemHeight() const {
   return BasicElement::GetPixelOrRelative(impl_->item_height_relative_, 
                                           impl_->item_height_specified_,
-                                          impl_->pixel_item_height_, 
-                                          impl_->rel_item_height_);
+                                          impl_->item_height_, 
+                                          impl_->item_height_);
 }
 
 void ListBoxElement::SetItemHeight(const Variant &height) {
@@ -308,11 +306,13 @@ void ListBoxElement::SetItemHeight(const Variant &height) {
 }
 
 double ListBoxElement::GetItemPixelWidth() const {
-  return impl_->pixel_item_width_;  
+  return impl_->item_width_relative_ ?
+         impl_->item_width_ * GetClientWidth() : impl_->item_width_;
 }
 
 double ListBoxElement::GetItemPixelHeight() const {
-  return impl_->pixel_item_height_;
+  return impl_->item_height_relative_ ?
+         impl_->item_height_ * GetClientHeight() : impl_->item_height_;
 }
 
 Variant ListBoxElement::GetItemOverColor() const {
@@ -651,22 +651,6 @@ void ListBoxElement::Layout() {
 
   // Call parent Layout() after SetIndex().
   DivElement::Layout();
-
-  double parent_width = GetPixelWidth();
-  if (impl_->item_width_relative_) {
-    impl_->pixel_item_width_ = impl_->rel_item_width_ * parent_width;
-  } else {
-    impl_->rel_item_width_ = parent_width > 0.0 ?
-                              impl_->pixel_item_width_ / parent_width : 0.0; 
-  }
-
-  double parent_height = GetPixelHeight();
-  if (impl_->item_height_relative_) {
-    impl_->pixel_item_height_ = impl_->rel_item_height_ * parent_height;
-  } else {
-    impl_->rel_item_height_ = parent_height > 0.0 ?
-                                impl_->pixel_item_height_ / parent_height : 0.0; 
-  }
 
   // No need to destroy items_canvas_ here, since Draw() will calculate
   // the size required and resize it if necessary.

@@ -187,9 +187,9 @@ class ElementInterface : public ScriptableInterface {
   virtual void ResetYToDefault() = 0;
 
   /** Gets the client width (pixel width - width of scrollbar etc. if any). */
-  virtual double GetClientWidth() = 0;
+  virtual double GetClientWidth() const = 0;
   /** Gets the client height (pixel width - height of scrollbar etc. if any). */
-  virtual double GetClientHeight() = 0;
+  virtual double GetClientHeight() const = 0;
 };
 
 CLASS_ID_IMPL(ElementInterface, ScriptableInterface)
