@@ -49,6 +49,8 @@ class ScrollingElement::Impl {
       scrollbar_->SetMax(scroll_range_y_);
       scrollbar_->SetValue(scroll_pos_y_);
       scrollbar_->ConnectOnChangeEvent(NewSlot(this, &Impl::OnScrollBarChange));
+      scrollbar_->ConnectOnFocusInEvent(NewSlot(this,
+                                                &Impl::OnScrollBarFocusIn));
       // Inform the view of this scrollbar to let the view handle mouse grabbing
       // and mouse over/out logics of the scrollbar.
       owner_->GetView()->OnElementAdd(scrollbar_);
@@ -92,6 +94,11 @@ class ScrollingElement::Impl {
   void OnScrollBarChange() {
     scroll_pos_y_ = scrollbar_->GetValue();
     on_scrolled_event_();
+  }
+
+  void OnScrollBarFocusIn() {
+    // When user clicks the scroll bar, let the view give focus to this element.
+    owner_->GetView()->SetFocus(owner_);
   }
 
   ScrollingElement *owner_;
@@ -252,7 +259,6 @@ void ScrollingElement::DrawScrollbar(CanvasInterface *canvas) {
 }
 
 bool ScrollingElement::UpdateScrollBar(int x_range, int y_range) {
-
   if (impl_->scrollbar_) {
     bool old_visible = impl_->scrollbar_->IsVisible();
     impl_->scrollbar_->SetPixelX(GetPixelWidth() -
