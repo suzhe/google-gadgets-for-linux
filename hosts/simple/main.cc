@@ -81,7 +81,7 @@ static bool CreateGTKUI(const char *base_path) {
                    G_CALLBACK(DestroyHandler), NULL);
 
   GdkScreen *screen = gtk_widget_get_screen(window);
-#if 0 // this line requires gtk 2.8
+#if GTK_CHECK_VERSION(2,10,0) // this line requires gtk 2.10
   g_composited = gdk_screen_is_composited(screen);
 #endif
   DLOG("Composited screen? %d", static_cast<int>(g_composited));
