@@ -18,7 +18,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class Drives : public DrivesInterface {
  public:
@@ -63,7 +63,7 @@ class Drive : public DriveInterface {
 
   virtual DriveType GetDriveType() {
     // TODO:
-    return UNKNOWN_TYPE;
+    return DRIVE_TYPE_UNKNOWN;
   }
 
   virtual FolderInterface *GetRootFolder() {
@@ -179,7 +179,7 @@ class Folder : public FolderInterface {
 
   virtual FileAttribute GetAttributes() {
     // TODO:
-    return NORMAL;
+    return FILE_ATTR_NORMAL;
   }
 
   virtual bool SetAttributes(FileAttribute attributes) {
@@ -315,7 +315,7 @@ class File : public FileInterface {
 
   virtual FileAttribute GetAttributes() {
     // TODO:
-    return NORMAL;
+    return FILE_ATTR_NORMAL;
   }
 
   virtual bool SetAttributes(FileAttribute attributes) {
@@ -592,6 +592,6 @@ std::string FileSystem::GetFileVersion(const char *filename) {
   return "";
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

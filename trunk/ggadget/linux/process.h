@@ -23,7 +23,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class ProcessInfo : public ProcessInfoInterface {
  public:
@@ -64,7 +64,7 @@ class Process : public ProcessInterface {
   virtual ProcessInfoInterface *GetInfo(int pid);
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 

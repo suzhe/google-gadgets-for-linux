@@ -18,7 +18,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 bool Power::IsCharging() const {
   // TODO:
@@ -45,6 +45,6 @@ int Power::GetTimeTotal() const {
   return 9002;
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

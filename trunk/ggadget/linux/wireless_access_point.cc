@@ -21,7 +21,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 void WirelessAccessPoint::Destroy() {
   delete this;
@@ -58,6 +58,6 @@ void WirelessAccessPoint::Disconnect(Slot1<void, bool> *callback) {
   }
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

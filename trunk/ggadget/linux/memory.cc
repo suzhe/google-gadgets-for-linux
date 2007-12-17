@@ -23,7 +23,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 // Represents the time interval for refreshing the memory info in seconds.
 time_t kTimeInterval = 2;
@@ -113,6 +113,6 @@ void Memory::ReadMemInfoFromProc() {
   fclose(fp);
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

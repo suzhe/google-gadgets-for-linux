@@ -21,7 +21,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class Network : public NetworkInterface {
  public:
@@ -30,7 +30,7 @@ class Network : public NetworkInterface {
   virtual NetworkInterface::PhysicalMediaType GetPhysicalMediaType() const;
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 

@@ -18,13 +18,13 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 int64_t Perfmon::GetCurrentValue(const char *counter_path) {
   // TODO:
   return 19;
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

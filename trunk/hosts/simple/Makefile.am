@@ -20,11 +20,11 @@ if GGL_BUILD_SIMPLE_HOST
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		=  
+noinst_HEADERS		=
 
 bin_PROGRAMS		= ggl-simple
 
-ggl_simple_SOURCES	= main.cc 
+ggl_simple_SOURCES	= main.cc
 
 ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \

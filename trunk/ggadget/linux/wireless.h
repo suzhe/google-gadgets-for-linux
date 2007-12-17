@@ -21,9 +21,9 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
 
 class WirelessAccessPointInterface;
+namespace linux_os {
 
 class Wireless : public WirelessInterface {
  public:
@@ -41,7 +41,7 @@ class Wireless : public WirelessInterface {
   virtual int GetSignalStrength() const;
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 

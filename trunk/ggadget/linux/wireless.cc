@@ -20,7 +20,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 bool Wireless::IsAvailable() const {
   // TODO:
@@ -72,6 +72,6 @@ int Wireless::GetSignalStrength() const {
   return 87;
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

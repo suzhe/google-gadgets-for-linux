@@ -39,6 +39,7 @@ lib_LTLIBRARIES		= libggadget-linux@GGL_EPOCH@.la
 
 libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 			  file_system.cc \
+			  framework.cc \
 			  machine.cc \
 			  memory.cc \
 			  network.cc \

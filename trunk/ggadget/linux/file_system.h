@@ -21,7 +21,8 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+// Can't use linux, because it conflicts with gcc predefined macro.
+namespace linux_os {
 
 class FileSystem : public FileSystemInterface {
  public:
@@ -66,7 +67,7 @@ class FileSystem : public FileSystemInterface {
   virtual std::string GetFileVersion(const char *filename);
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 
