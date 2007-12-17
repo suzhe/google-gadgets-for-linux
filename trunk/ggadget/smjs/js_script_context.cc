@@ -177,25 +177,14 @@ void JSScriptContext::Destroy() {
 void JSScriptContext::Execute(const char *script,
                               const char *filename,
                               int lineno) {
-  UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(script, strlen(script), &utf16_string);
   jsval rval;
-  JS_EvaluateUCScript(context_, JS_GetGlobalObject(context_),
-                      utf16_string.c_str(), utf16_string.size(),
-                      filename, lineno, &rval);
+  EvaluateScript(context_, script, filename, lineno, &rval);
 }
 
 Slot *JSScriptContext::Compile(const char *script,
                                const char *filename,
                                int lineno) {
-  UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(script, strlen(script), &utf16_string);
-  JSFunction *function = JS_CompileUCFunction(
-      context_, NULL, NULL, 0, NULL,  // No name and no argument.
-      // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
-      // if they are compatible.
-      utf16_string.c_str(), utf16_string.size(),
-      filename, lineno);
+  JSFunction *function = CompileFunction(context_, script, filename, lineno);
   if (!function)
     return NULL;
 

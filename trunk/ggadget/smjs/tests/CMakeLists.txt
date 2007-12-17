@@ -51,3 +51,15 @@ TEST_WRAPPER(dom_test_shell)
 JS_TEST_WRAPPER(js_shell json_test.js TRUE)
 JS_TEST_WRAPPER(wrapper_test_shell wrapper_test.js TRUE)
 JS_TEST_WRAPPER(dom_test_shell dom1_test.js TRUE)
+
+ADD_EXECUTABLE(massager
+  massager.cc
+  ../jscript_massager.cc
+)
+
+ADD_EXECUTABLE(jscript_massager_test
+  jscript_massager_test.cc
+  ../jscript_massager.cc
+)
+TARGET_LINK_LIBRARIES(jscript_massager_test gunit)
+TEST_WRAPPER(jscript_massager_test TRUE)

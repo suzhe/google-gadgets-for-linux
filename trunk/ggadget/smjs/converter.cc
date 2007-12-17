@@ -25,6 +25,7 @@
 #include "converter.h"
 #include "js_function_slot.h"
 #include "js_script_context.h"
+#include "jscript_massager.h"
 #include "json.h"
 #include "native_js_wrapper.h"
 
@@ -225,13 +226,19 @@ static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *wrapper,
     function_val = JSVAL_NULL;
   } else if (JSVAL_IS_STRING(js_val)) {
     JSString *script_source = JSVAL_TO_STRING(js_val);
+    jschar *script_chars = JS_GetStringChars(script_source);
+    if (!script_chars)
+      return JS_FALSE;
+
+    std::string utf8_script;
+    ConvertStringUTF16ToUTF8(script_chars, JS_GetStringLength(script_source),
+                             &utf8_script);
+
     const char *filename;
     int lineno;
     JSScriptContext::GetCurrentFileAndLine(cx, &filename, &lineno);
-    JSFunction *function = JS_CompileUCFunction(
-        cx, NULL, NULL, 0, NULL,  // No name and no argument.
-        JS_GetStringChars(script_source), JS_GetStringLength(script_source),
-        filename, lineno);
+    JSFunction *function = CompileFunction(cx, utf8_script.c_str(),
+                                           filename, lineno);
     if (!function)
       result = JS_FALSE;
     function_val = OBJECT_TO_JSVAL(JS_GetFunctionObject(function));
@@ -607,6 +614,32 @@ JSBool ConvertNativeToJS(JSContext *cx,
     default:
       return JS_FALSE;
   }
+}
+
+JSFunction *CompileFunction(JSContext *cx, const char *script,
+                            const char *filename, int lineno) {
+  if (!script)
+    return NULL;
+
+  std::string massaged_script = MassageJScript(script, filename, lineno);
+  UTF16String utf16_string;
+  ConvertStringUTF8ToUTF16(massaged_script, &utf16_string);
+  return JS_CompileUCFunction(cx, NULL, NULL, 0, NULL,
+                              utf16_string.c_str(), utf16_string.size(),
+                              filename, lineno);
+}
+
+JSBool EvaluateScript(JSContext *cx, const char *script,
+                      const char *filename, int lineno, jsval *rval) {
+  if (!script)
+    return JS_FALSE;
+
+  std::string massaged_script = MassageJScript(script, filename, lineno);
+  UTF16String utf16_string;
+  ConvertStringUTF8ToUTF16(massaged_script, &utf16_string);
+  return JS_EvaluateUCScript(cx, JS_GetGlobalObject(cx),
+                             utf16_string.c_str(), utf16_string.size(),
+                             filename, lineno, rval);
 }
 
 } // namespace smjs

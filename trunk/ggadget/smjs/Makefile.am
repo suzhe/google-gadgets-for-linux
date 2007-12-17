@@ -23,6 +23,7 @@ INCLUDES		= -I$(top_builddir) \
 noinst_HEADERS		= converter.h \
 			  js_function_slot.h \
 			  js_script_context.h \
+			  jscript_massager.h \
 			  json.h \
 			  native_js_wrapper.h
 
@@ -36,6 +37,7 @@ libggadget_smjs@GGL_EPOCH@_la_SOURCES = \
 			  js_function_slot.cc \
 			  js_script_context.cc \
 			  js_script_runtime.cc \
+			  jscript_massager.cc \
 			  json.cc \
 			  native_js_wrapper.cc
 

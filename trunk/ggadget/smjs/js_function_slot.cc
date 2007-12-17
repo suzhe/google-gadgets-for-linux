@@ -77,8 +77,8 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
   if (result) {
     if (JSVAL_IS_OBJECT(rval) &&
         JS_IsArrayObject(context_, JSVAL_TO_OBJECT(rval))) {
-      // Returning an array from JS to native is not supported for now, to
-      // avoid memory management difficulties.
+      JS_ReportError(context_,
+                     "Returning an array from JS to native is not supported");
       result = JS_FALSE;
     } else {
       result = ConvertJSToNative(context_, NULL, return_value, rval,

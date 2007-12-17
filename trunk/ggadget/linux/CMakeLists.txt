@@ -16,6 +16,7 @@
 
 SET(SRCS
   file_system.cc
+  framework.cc
   machine.cc
   memory.cc
   network.cc
