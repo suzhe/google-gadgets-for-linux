@@ -22,6 +22,7 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 static const char* kDirName = "/proc";
 
@@ -115,7 +116,7 @@ ProcessInfoInterface *Process::GetInfo(int pid) {
 static bool ReadCmdPath(int pid, std::string *cmdline) {
   if (pid <= 0 || !cmdline)
     return false;
-  
+
   char filename[PATH_MAX + 2] = {0};
   snprintf(filename, sizeof(filename) - 1, "%s/%d/exe", kDirName, pid);
 
@@ -133,5 +134,6 @@ static bool ReadCmdPath(int pid, std::string *cmdline) {
   return true;
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget

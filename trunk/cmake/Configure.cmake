@@ -22,6 +22,8 @@ ADD_DEFINITIONS(
   -DPRODUCT_NAME=${PRODUCT_NAME}
   # For stdint.h macros like INT64_C etc.
   -D__STDC_CONSTANT_MACROS
+  # TODO: only for Linux by now
+  -DGGL_HOST_LINUX
 )
 
 IF(UNIX)

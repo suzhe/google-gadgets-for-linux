@@ -17,6 +17,7 @@
 #include "options.h"
 
 namespace ggadget {
+namespace gtk {
 
 Options::Options() {
 }
@@ -94,4 +95,5 @@ void Options::PutInternalValue(const char *name, const Variant &value) {
   internal_values_[name] = value;
 }
 
+} // namespace gtk
 } // namespace ggadget

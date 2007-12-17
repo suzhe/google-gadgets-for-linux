@@ -505,12 +505,12 @@ class BasicElement::Impl {
       if (!canvas_) {
         DLOG("Error: unable to create canvas.");
       }
-    }
-    else {
+    } else {
       // If not new canvas, we must remember to clear canvas before drawing.
       canvas_->ClearCanvas();
     }
-    canvas_->IntersectRectClipRegion(0., 0., width_, height_);
+    // It'll affect the performance a lot, weird.
+    //canvas_->IntersectRectClipRegion(0., 0., width_, height_);
     return canvas_;
   }
 

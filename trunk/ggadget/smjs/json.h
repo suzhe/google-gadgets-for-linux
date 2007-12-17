@@ -21,6 +21,7 @@
 #include <string>
 
 namespace ggadget {
+namespace smjs {
 
 /**
  * Encodes a JavaScript value into JSON string.
@@ -32,6 +33,7 @@ JSBool JSONEncode(JSContext *cx, jsval js_val, std::string *json);
  */
 JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val);
 
+} // namespace smjs
 } // namespace ggadget
 
 #endif  // GGADGET_SMJS_JSON_H__

@@ -80,9 +80,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual void GetCursorPos(int *x, int *y) const { }
   virtual void GetScreenSize(int *width, int *height) const { }
   virtual std::string GetFileIcon(const char *filename) const { return ""; }
-  virtual ggadget::AudioclipInterface *CreateAudioclip(const char *filename) {
-    return NULL;
-  }
  private:
   MockedFileManager file_manager_;
 };

@@ -29,7 +29,7 @@
 #endif
 
 namespace ggadget {
-namespace internal {
+namespace smjs {
 
 // This JSClass is used to create wrapper JSObjects.
 JSClass NativeJSWrapper::wrapper_js_class_ = {
@@ -648,5 +648,5 @@ void NativeJSWrapper::Mark() {
     (*it)->Mark();
 }
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget

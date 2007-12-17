@@ -22,19 +22,19 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
-
-gtkinclude_HEADERS	= cairo_canvas.h \
+noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
 			  cairo_graphics.h \
 			  global_file_manager.h \
-			  gadget_view_widget.h \
 			  gtk_edit.h \
-			  gtk_gadget_host.h \
 			  gtk_key_convert.h \
 			  gtk_menu_impl.h \
-			  gtk_view_host.h \
 			  options.h
+
+gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
+gtkinclude_HEADERS	= gadget_view_widget.h \
+			  gtk_gadget_host.h \
+			  gtk_view_host.h
 
 lib_LTLIBRARIES		= libggadget-gtk@GGL_EPOCH@.la
 

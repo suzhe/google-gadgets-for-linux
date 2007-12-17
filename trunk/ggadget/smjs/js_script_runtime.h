@@ -22,6 +22,7 @@
 #include <ggadget/signals.h>
 
 namespace ggadget {
+namespace smjs {
 
 /**
  * @c ScriptRuntime implementation for SpiderMonkey JavaScript engine.
@@ -45,6 +46,7 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
   JSRuntime *runtime_;
 };
 
+} // namespace smjs
 } // namespace ggadget
 
 #endif  // GGADGET_SMJS_JS_SCRIPT_RUNTIME_H__

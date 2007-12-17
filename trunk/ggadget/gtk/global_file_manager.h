@@ -24,9 +24,10 @@
 #include <ggadget/file_manager_interface.h>
 
 namespace ggadget {
+namespace gtk {
 
 /**
- * Handles all global file resources (i.e. resources not belonging to a 
+ * Handles all global file resources (i.e. resources not belonging to a
  * gadget package).
  */
 class GlobalFileManager : public ggadget::FileManagerInterface {
@@ -57,13 +58,14 @@ class GlobalFileManager : public ggadget::FileManagerInterface {
   std::string locale_lang_prefix_;
 
   bool InitLocaleStrings();
-  bool GetZipFileContents(const char *file, 
+  bool GetZipFileContents(const char *file,
                           std::string *data, std::string *path);
   bool SeekToFile(unzFile zip, const char *file, std::string *path);
 
   DISALLOW_EVIL_CONSTRUCTORS(GlobalFileManager);
 };
 
+} // namespace gtk
 } // namespace ggadget
 
 #endif  // GGADGET_GTK_GLOBAL_FILE_MANAGER_H__

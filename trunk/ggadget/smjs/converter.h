@@ -23,7 +23,7 @@
 #include <ggadget/variant.h>
 
 namespace ggadget {
-namespace internal {
+namespace smjs {
 
 class NativeJSWrapper;
 
@@ -80,7 +80,7 @@ JSBool ConvertNativeToJS(JSContext* cx,
                          const Variant &native_val,
                          jsval* js_val);
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget
 
 #endif  // GGADGET_SMJS_CONVERTER_H__

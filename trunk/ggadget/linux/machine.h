@@ -22,6 +22,7 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 class Machine : public MachineInterface {
 public:
@@ -52,13 +53,22 @@ private:
   void InitProcInfo();
 
 private:
-  enum {CPU_FAMILY, CPU_MODEL, CPU_STEPPING, CPU_VENDOR, CPU_NAME, CPU_SPEED,
-        CPU_ARCH, CPU_KEYS_COUNT};
+  enum {
+    CPU_FAMILY,
+    CPU_MODEL,
+    CPU_STEPPING,
+    CPU_VENDOR,
+    CPU_NAME,
+    CPU_SPEED,
+    CPU_ARCH,
+    CPU_KEYS_COUNT
+  };
 
   std::string sysinfo_[CPU_KEYS_COUNT];
   int cpu_count_;
 };
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget
 

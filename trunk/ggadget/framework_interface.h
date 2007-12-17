@@ -26,6 +26,9 @@ template <typename R, typename P1> class Slot1;
 
 namespace framework {
 
+class FileSystemInterface;
+class AudioclipInterface;
+
 /** Interface for retrieving the information of the machine. */
 class MachineInterface {
  protected:
@@ -316,13 +319,15 @@ class FrameworkInterface {
  public:
   virtual ~FrameworkInterface() {}
 
-  virtual framework::MachineInterface *GetMachineInterface() = 0;
-  virtual framework::MemoryInterface *GetMemoryInterface() = 0;
-  virtual framework::NetworkInterface *GetNetworkInterface() = 0;
-  virtual framework::PerfmonInterface *GetPerfmonInterface() = 0;
-  virtual framework::PowerInterface *GetPowerInterface() = 0;
-  virtual framework::ProcessInterface *GetProcessInterface() = 0;
-  virtual framework::WirelessInterface *GetWirelessInterface() = 0;
+  virtual framework::MachineInterface *GetMachine() = 0;
+  virtual framework::MemoryInterface *GetMemory() = 0;
+  virtual framework::NetworkInterface *GetNetwork() = 0;
+  virtual framework::PerfmonInterface *GetPerfmon() = 0;
+  virtual framework::PowerInterface *GetPower() = 0;
+  virtual framework::ProcessInterface *GetProcess() = 0;
+  virtual framework::WirelessInterface *GetWireless() = 0;
+  virtual framework::FileSystemInterface *GetFileSystem() = 0;
+  virtual framework::AudioclipInterface *CreateAudioclip(const char *src) = 0;
 };
 
 } // namespace ggadget

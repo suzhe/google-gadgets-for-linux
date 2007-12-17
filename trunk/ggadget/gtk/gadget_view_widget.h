@@ -23,11 +23,13 @@
 
 #include <ggadget/ggadget.h>
 
-G_BEGIN_DECLS
-
 namespace ggadget {
-  class GtkViewHost;
+namespace gtk {
+class GtkViewHost;
 }
+}
+
+G_BEGIN_DECLS
 
 #define GADGETVIEWWIDGET_TYPE        (GadgetViewWidget_get_type())
 #define GADGETVIEWWIDGET(obj)        (G_TYPE_CHECK_INSTANCE_CAST((obj), \
@@ -40,32 +42,11 @@ namespace ggadget {
 #define IS_GADGETVIEWWIDGET_CLASS(c) (G_TYPE_CHECK_CLASS_TYPE((c), \
                                       GADGETVIEWWIDGET_TYPE))
 
-struct GadgetViewWidget {
-  GtkDrawingArea drawingarea;
-
-  ggadget::GtkViewHost *host;
-  ggadget::ViewInterface *view;
-  double zoom;
-  bool composited, useshapemask;
-  // Stores the old height/width before an allocation.
-  int widget_width, widget_height;
-  bool dbl_click;
-  bool window_move;
-  double window_move_x, window_move_y;
-  uint64_t mouse_down_time;
-  bool ignore_right_button;
-
-  ggadget::DragEvent *current_drag_event;
-};
-
-struct GadgetViewWidgetClass {
-  GtkDrawingAreaClass parent_class;
-
-  void (* gadgetviewwidget)(GadgetViewWidget *gvw);
-};
+typedef struct _GadgetViewWidget GadgetViewWidget;
+typedef struct _GadgetViewWidgetClass GadgetViewWidgetClass;
 
 GType GadgetViewWidget_get_type();
-GtkWidget* GadgetViewWidget_new(ggadget::GtkViewHost *host, double zoom, 
+GtkWidget* GadgetViewWidget_new(ggadget::gtk::GtkViewHost *host, double zoom,
                                 bool composited, bool useshapemask);
 
 G_END_DECLS

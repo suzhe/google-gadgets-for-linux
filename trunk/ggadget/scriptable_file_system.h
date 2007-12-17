@@ -21,13 +21,15 @@
 
 namespace ggadget {
 
+namespace framework {
 class FileSystemInterface;
+}
 
 class ScriptableFileSystem : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x881b7d66c6bf4ca5, ScriptableInterface)
 
-  explicit ScriptableFileSystem(FileSystemInterface *filesystem);
+  explicit ScriptableFileSystem(framework::FileSystemInterface *filesystem);
   virtual ~ScriptableFileSystem();
 
   virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }

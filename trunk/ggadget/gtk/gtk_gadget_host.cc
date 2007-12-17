@@ -46,6 +46,7 @@
 #include "options.h"
 
 namespace ggadget {
+namespace gtk {
 
 class GtkGadgetHost::CallbackData {
  public:
@@ -175,7 +176,7 @@ GadgetInterface *GtkGadgetHost::GetGadget() {
 
 ViewHostInterface *GtkGadgetHost::NewViewHost(
     ViewType type, ScriptableInterface *prototype) {
-  return new GtkViewHost(this, type, prototype, 
+  return new GtkViewHost(this, type, prototype,
                          composited_, useshapemask_, zoom_, debug_mode_);
 }
 
@@ -680,33 +681,5 @@ std::string GtkGadgetHost::GetFileIcon(const char *filename) const {
   return "/usr/share/icons/application-default-icon.png";
 }
 
-// TODO:
-class TemporaryAudioclip : public AudioclipInterface {
- public:
-  virtual void Destroy() { delete this; }
-  virtual int GetBalance() const { return 0; }
-  virtual void SetBalance(int balance) { }
-  virtual int GetCurrentPosition() const { return 0; }
-  virtual void SetCurrentPosition(int position) { }
-  virtual int GetDuration() const { return 100; }
-  virtual ErrorCode GetError() const { return SOUND_ERROR_NO_ERROR; }
-  virtual std::string GetSrc() const { return "src"; }
-  virtual void SetSrc(const char *src) { }
-  virtual State GetState() const { return SOUND_STATE_PLAYING; }
-  virtual int GetVolume() const { return 100; }
-  virtual void SetVolume(int volume) const { }
-  virtual void Play() { }
-  virtual void Pause() { }
-  virtual void Stop() { }
-  virtual OnStateChangeHandler *GetOnStateChange() const { return NULL; }
-  virtual void SetOnStateChange(OnStateChangeHandler *handler) {
-    delete handler;
-  }
-};
-
-
-AudioclipInterface *GtkGadgetHost::CreateAudioclip(const char *src) {
-  return new TemporaryAudioclip();
-}
-
+} // namespace gtk
 } // namespace ggadget

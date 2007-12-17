@@ -21,12 +21,14 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 class Perfmon : public PerfmonInterface {
  public:
   virtual int64_t GetCurrentValue(const char *counter_path);
 };
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget
 

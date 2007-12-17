@@ -18,18 +18,28 @@
 #include <gtk/gtk.h>
 #include <locale.h>
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <ggadget/script_runtime_interface.h>
 #include <ggadget/gtk/gadget_view_widget.h>
 #include <ggadget/gtk/gtk_gadget_host.h>
 #include <ggadget/gtk/gtk_view_host.h>
 #include <ggadget/smjs/js_script_runtime.h>
-#include <ggadget/linux/framework.h>
 #include <ggadget/ggadget.h>
+
+#ifdef GGL_HOST_LINUX
+#include <ggadget/linux/framework.h>
+#else
+#include <ggadget/dummy_framework.h>
+#endif
 
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
-static ggadget::GtkGadgetHost *g_gadget_host = NULL;
+static ggadget::gtk::GtkGadgetHost *g_gadget_host = NULL;
 static gboolean g_composited = false;
-static gboolean g_useshapemask = false; 
+static gboolean g_useshapemask = false;
 static gboolean g_decorated = true;
 
 static gboolean DeleteEventHandler(GtkWidget *widget,
@@ -46,17 +56,27 @@ static gboolean DestroyHandler(GtkWidget *widget,
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
-  g_gadget_host = new ggadget::GtkGadgetHost(new ggadget::JSScriptRuntime(), 
-                                             new ggadget::Framework(), 
-                                             g_composited, g_useshapemask, 
-                                             g_zoom, g_debug_mode);
+  ggadget::ScriptRuntimeInterface *script_runtime =
+      new ggadget::smjs::JSScriptRuntime();
+
+#ifdef GGL_HOST_LINUX
+  ggadget::FrameworkInterface *framework = new ggadget::linux::Framework();
+#else
+  ggadget::FrameworkInterface *framework = new ggadget::DummyFramework();
+#endif
+
+  g_gadget_host = new ggadget::gtk::GtkGadgetHost(script_runtime,
+                                                  framework, g_composited,
+                                                  g_useshapemask, g_zoom,
+                                                  g_debug_mode);
   if (!g_gadget_host->LoadGadget(box, base_path)) {
     LOG("Failed to load gadget from: %s", base_path);
     return false;
   }
 
-  ggadget::GtkViewHost *view_host = ggadget::down_cast<ggadget::GtkViewHost *>(
-      g_gadget_host->GetGadget()->GetMainViewHost());
+  ggadget::gtk::GtkViewHost *view_host =
+      ggadget::down_cast<ggadget::gtk::GtkViewHost *>(
+          g_gadget_host->GetGadget()->GetMainViewHost());
   GadgetViewWidget *gvw = view_host->GetWidget();
   gtk_box_pack_start(box, GTK_WIDGET(gvw), TRUE, TRUE, 0);
 
@@ -158,7 +178,7 @@ int main(int argc, char* argv[]) {
     int decorated;
     sscanf(argv[5], "%d", &decorated);
     g_decorated = (decorated != 0);
-  }  
+  }
 
   if (!CreateGTKUI(argv[1])) {
     LOG("Error: unable to create UI");

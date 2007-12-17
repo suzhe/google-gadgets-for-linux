@@ -26,6 +26,7 @@
 #include "ggadget/tests/mocked_view_host.h"
 
 using namespace ggadget;
+using namespace ggadget::gtk;
 
 ElementFactory *gFactory = NULL;
 bool g_savepng = false;
@@ -45,7 +46,7 @@ class ViewHostWithGraphics : public MockedViewHost {
   }
 
  private:
-  GraphicsInterface *gfx_; 
+  GraphicsInterface *gfx_;
 };
 
 class Muffin : public BasicElement {
@@ -59,7 +60,7 @@ class Muffin : public BasicElement {
 
   virtual void DoDraw(CanvasInterface *canvas,
                       const CanvasInterface *children_canvas) {
-    canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(), 
+    canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(),
                            Color(1., 0., 0.));
     if (children_canvas) {
       canvas->DrawCanvas(0., 0., children_canvas);
@@ -111,13 +112,13 @@ class BasicElementTest : public testing::Test {
 
   BasicElementTest() {
     // create a target canvas for tests
-    surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);    
+    surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);
     cairo_t *cr = cairo_create(surface_);
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
     cairo_set_source_rgba(cr, 0, 0, 0, 0);
     cairo_paint(cr);
     target_ = new CairoCanvas(cr, 300, 150, false);
-    cairo_destroy(cr);    
+    cairo_destroy(cr);
     cr = NULL;
 
     view_host_ = new ViewHostWithGraphics();
@@ -131,16 +132,16 @@ class BasicElementTest : public testing::Test {
     target_ = NULL;
 
     if (g_savepng) {
-      const testing::TestInfo *const test_info = 
+      const testing::TestInfo *const test_info =
         testing::UnitTest::GetInstance()->current_test_info();
-      char file[100]; 
+      char file[100];
       snprintf(file, arraysize(file), "%s.png", test_info->name());
-      cairo_surface_write_to_png(surface_, file);      
+      cairo_surface_write_to_png(surface_, file);
     }
 
     cairo_surface_destroy(surface_);
     surface_ = NULL;
-  }  
+  }
 
   virtual void SetUp() {
   }
@@ -157,7 +158,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   m.SetPixelWidth(200.);
   m.SetPixelHeight(100.);
 
-  m.GetChildren()->AppendElement("pie", NULL);    
+  m.GetChildren()->AppendElement("pie", NULL);
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(0));
   p->SetColor(Color(1., 1., 1.));
   p->SetPixelWidth(100.);
@@ -168,7 +169,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  m.GetChildren()->AppendElement("pie", NULL);    
+  m.GetChildren()->AppendElement("pie", NULL);
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(1));
   p->SetColor(Color(0., 1., 0.));
   p->SetPixelWidth(100.);
@@ -180,7 +181,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  m.GetChildren()->AppendElement("pie", NULL);    
+  m.GetChildren()->AppendElement("pie", NULL);
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(2));
   p->SetColor(Color(0., 0., 1.));
   p->SetPixelWidth(100.);
@@ -192,7 +193,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  m.GetChildren()->AppendElement("pie", NULL);    
+  m.GetChildren()->AppendElement("pie", NULL);
   p = down_cast<Pie*>(m.GetChildren()->GetItemByIndex(3));
   p->SetColor(Color(0., 1., 1.));
   p->SetPixelWidth(100.);
@@ -213,7 +214,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
 }
 
 int main(int argc, char *argv[]) {
-  testing::ParseGUnitFlags(&argc, argv);  
+  testing::ParseGUnitFlags(&argc, argv);
   for (int i = 0; i < argc; i++) {
     if (0 == strcasecmp(argv[i], "-savepng")) {
       g_savepng = true;

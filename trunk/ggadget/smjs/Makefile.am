@@ -20,14 +20,14 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-smjsincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/smjs
-
-smjsinclude_HEADERS	= converter.h \
+noinst_HEADERS		= converter.h \
 			  js_function_slot.h \
 			  js_script_context.h \
-			  js_script_runtime.h \
 			  json.h \
 			  native_js_wrapper.h
+
+smjsincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/smjs
+smjsinclude_HEADERS	= js_script_runtime.h
 
 lib_LTLIBRARIES		= libggadget-smjs@GGL_EPOCH@.la
 

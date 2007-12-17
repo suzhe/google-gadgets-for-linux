@@ -22,13 +22,14 @@
 #include <gtk/gtk.h>
 #include <ggadget/ggadget.h>
 #include <ggadget/view.h>
-
-#include "gtk_gadget_host.h"
-
-class GadgetViewWidget;
-class View;
+#include <ggadget/gtk/gtk_gadget_host.h>
+#include <ggadget/gtk/gadget_view_widget.h>
 
 namespace ggadget {
+
+class View;
+
+namespace gtk {
 
 /**
  * An implementation of @c ViewHostInterface for the simple gadget host.
@@ -117,6 +118,7 @@ class GtkViewHost : public ViewHostInterface {
   DISALLOW_EVIL_CONSTRUCTORS(GtkViewHost);
 };
 
+} // namespace gtk
 } // namespace ggadget
 
 #endif // GGADGET_GTK_GTK_VIEW_HOST_H__

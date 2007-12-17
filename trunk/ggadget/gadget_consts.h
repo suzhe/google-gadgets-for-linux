@@ -24,6 +24,7 @@ namespace ggadget {
 
 /** Path separator used in Linux platform */
 const char kPathSeparator = '/';
+const char *const kPathSeparatorStr = "/";
 
 /** Filenames of required resources in each .gg package. */
 const char *const kMainXML         = "main.xml";

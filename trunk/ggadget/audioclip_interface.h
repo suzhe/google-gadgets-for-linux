@@ -21,6 +21,8 @@ namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
 
+namespace framework {
+
 /** Used for playing back audio files. */
 class AudioclipInterface {
  protected:
@@ -89,6 +91,8 @@ class AudioclipInterface {
   virtual OnStateChangeHandler *GetOnStateChange() const = 0;
   virtual void SetOnStateChange(OnStateChangeHandler *handler) = 0;
 };
+
+} // namespace framework
 
 } // namespace ggadget
 

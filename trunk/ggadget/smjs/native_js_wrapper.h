@@ -26,7 +26,7 @@ namespace ggadget {
 
 class Connection;
 
-namespace internal {
+namespace smjs {
 
 class JSFunctionSlot;
 
@@ -141,7 +141,7 @@ private:
   JSFunctionSlots js_function_slots_;
 };
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget
 
 #endif // GGADGET_SMJS_NATIVE_JS_WRAPPER_H__

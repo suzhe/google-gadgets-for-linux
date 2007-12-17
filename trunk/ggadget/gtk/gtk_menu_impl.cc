@@ -17,6 +17,7 @@
 #include "gtk_menu_impl.h"
 
 namespace ggadget {
+namespace gtk {
 
 bool GtkMenuImpl::setting_style_ = false;
 
@@ -97,4 +98,5 @@ void GtkMenuImpl::OnItemActivate(GtkMenuItem *menu_item, gpointer user_data) {
   }
 }
 
+} // namespace gtk
 } // namespace ggadget

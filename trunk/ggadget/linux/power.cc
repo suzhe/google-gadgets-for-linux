@@ -18,26 +18,33 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 bool Power::IsCharging() const {
+  // TODO:
   return true;
 }
 
 bool Power::IsPluggedIn() const {
+  // TODO:
   return true;
 }
 
 int Power::GetPercentRemaining() const {
+  // TODO:
   return 79;
 }
 
 int Power::GetTimeRemaining() const {
+  // TODO:
   return 5463;
 }
 
 int Power::GetTimeTotal() const {
+  // TODO:
   return 9002;
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget

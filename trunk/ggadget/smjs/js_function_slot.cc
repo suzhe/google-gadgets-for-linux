@@ -22,7 +22,7 @@
 #include "native_js_wrapper.h"
 
 namespace ggadget {
-namespace internal {
+namespace smjs {
 
 JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
                                JSContext *context,
@@ -101,5 +101,5 @@ void JSFunctionSlot::Finalize() {
   finalized_ = true;
 }
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget

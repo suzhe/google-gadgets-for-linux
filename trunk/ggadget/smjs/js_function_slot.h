@@ -23,7 +23,7 @@
 #include <ggadget/slot.h>
 
 namespace ggadget {
-namespace internal {
+namespace smjs {
 
 class NativeJSWrapper;
 
@@ -70,7 +70,7 @@ class JSFunctionSlot : public Slot {
   bool finalized_;
 };
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget
 
 #endif  // GGADGET_SMJS_JS_FUNCTION_SLOT_H__

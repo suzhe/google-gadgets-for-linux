@@ -17,8 +17,8 @@
 #include "file_system.h"
 
 namespace ggadget {
-
-namespace fs {
+namespace framework {
+namespace linux {
 
 class Drives : public DrivesInterface {
  public:
@@ -261,7 +261,7 @@ class Files : public FilesInterface {
     // TODO:
     return 0;
   }
-    
+
   virtual FileInterface *GetItem(int index) {
     // TODO:
     return NULL;
@@ -327,22 +327,22 @@ class File : public FileInterface {
     // TODO:
     return Date(0);
   }
-    
+
   virtual Date GetDateLastModified() {
     // TODO:
     return Date(0);
   }
-    
+
   virtual Date GetDateLastAccessed() {
     // TODO:
     return Date(0);
   }
-    
+
   virtual int64_t GetSize() {
     // TODO:
     return 0;
   }
-    
+
   virtual std::string GetType() {
     // TODO:
     return "";
@@ -441,156 +441,157 @@ class TextStream : public TextStreamInterface {
   }
 };
 
-} // namespace fs
-
-class FileSystem : public FileSystemInterface {
- public:
-  virtual fs::DrivesInterface *GetDrives() {
-    return NULL;
-  }
-
-  virtual std::string BuildPath(const char *path, const char *name) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetDriveName(const char *path) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetParentFolderName(const char *path) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetFileName(const char *path) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetBaseName(const char *path) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetExtensionName(const char *path) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetAbsolutePathName(const char *path) {
-    // TODO:
-    return path;
-  }
-
-  virtual std::string GetTempName() {
-    // TODO:
-    return "/tmp/tmptmp";
-  }
-
-  virtual bool DriveExists(const char *drive_spec) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool FileExists(const char *file_spec) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool FolderExists(const char *folder_spec) {
-    // TODO:
-    return false;
-  }
-
-  virtual fs::DriveInterface *GetDrive(const char *drive_spec) {
-    // TODO:
-    return new fs::Drive(drive_spec);
-  }
-
-  virtual fs::FileInterface *GetFile(const char *file_path) {
-    // TODO:
-    return new fs::File(file_path);
-  }
-
-  virtual fs::FolderInterface *GetFolder(const char *folder_path) {
-    // TODO:
-    return new fs::Folder(folder_path);
-  }
-
-  virtual fs::FolderInterface *GetSpecialFolder(
-      fs::SpecialFolder special_folder) {
-    // TODO:
-    return new fs::Folder("/");
-  }
-
-  virtual bool DeleteFile(const char *file_spec, bool force) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool DeleteFolder(const char *folder_spec, bool force) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool MoveFile(const char *source, const char *dest) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool MoveFolder(const char *source, const char *dest) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool CopyFile(const char *source, const char *dest,
-                        bool overwrite) {
-    // TODO:
-    return false;
-  }
-
-  virtual bool CopyFolder(const char *source, const char *dest,
-                          bool overwrite) {
-    // TODO:
-    return false;
-  }
-
-  virtual fs::FolderInterface *CreateFolder(const char *path) {
-    // TODO:
-    return new fs::Folder(path);
-  }
-
-  virtual fs::TextStreamInterface *CreateTextFile(const char *filename,
-                                                  bool overwrite,
-                                                  bool unicode) {
-    // TODO:
-    return new fs::TextStream(filename);
-  }
-
-  virtual fs::TextStreamInterface *OpenTextFile(const char *filename,
-                                                fs::IOMode mode,
-                                                bool create,
-                                                fs::Tristate format) {
-    // TODO:
-    return new fs::TextStream(filename);
-  }
-
-  virtual fs::TextStreamInterface *GetStandardStream(
-      fs::StandardStreamType type, bool unicode) {
-    // TODO:
-    return new fs::TextStream(type);
-  }
-
-  virtual std::string GetFileVersion(const char *filename) {
-    // TODO:
-    return "";
-  }
-};
-
-FileSystemInterface *CreateFileSystem() {
-  return new FileSystem();
+// Implementation of FileSystem
+FileSystem::FileSystem() {
+  // TODO:
 }
 
+FileSystem::~FileSystem() {
+  // TODO:
+}
+
+DrivesInterface *FileSystem::GetDrives() {
+  return NULL;
+}
+
+std::string FileSystem::BuildPath(const char *path, const char *name) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetDriveName(const char *path) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetParentFolderName(const char *path) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetFileName(const char *path) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetBaseName(const char *path) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetExtensionName(const char *path) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetAbsolutePathName(const char *path) {
+  // TODO:
+  return path;
+}
+
+std::string FileSystem::GetTempName() {
+  // TODO:
+  return "/tmp/tmptmp";
+}
+
+bool FileSystem::DriveExists(const char *drive_spec) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::FileExists(const char *file_spec) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::FolderExists(const char *folder_spec) {
+  // TODO:
+  return false;
+}
+
+DriveInterface *FileSystem::GetDrive(const char *drive_spec) {
+  // TODO:
+  return new Drive(drive_spec);
+}
+
+FileInterface *FileSystem::GetFile(const char *file_path) {
+  // TODO:
+  return new File(file_path);
+}
+
+FolderInterface *FileSystem::GetFolder(const char *folder_path) {
+  // TODO:
+  return new Folder(folder_path);
+}
+
+FolderInterface *FileSystem::GetSpecialFolder(SpecialFolder special_folder) {
+  // TODO:
+  return new Folder("/");
+}
+
+bool FileSystem::DeleteFile(const char *file_spec, bool force) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::DeleteFolder(const char *folder_spec, bool force) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::MoveFile(const char *source, const char *dest) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::MoveFolder(const char *source, const char *dest) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::CopyFile(const char *source, const char *dest,
+                               bool overwrite) {
+  // TODO:
+  return false;
+}
+
+bool FileSystem::CopyFolder(const char *source, const char *dest,
+                                 bool overwrite) {
+  // TODO:
+  return false;
+}
+
+FolderInterface *FileSystem::CreateFolder(const char *path) {
+  // TODO:
+  return new Folder(path);
+}
+
+TextStreamInterface *FileSystem::CreateTextFile(const char *filename,
+                                                     bool overwrite,
+                                                     bool unicode) {
+  // TODO:
+  return new TextStream(filename);
+}
+
+TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
+                                                   IOMode mode,
+                                                   bool create,
+                                                   Tristate format) {
+  // TODO:
+  return new TextStream(filename);
+}
+
+TextStreamInterface *
+FileSystem::GetStandardStream(StandardStreamType type, bool unicode) {
+  // TODO:
+  return new TextStream(type);
+}
+
+std::string FileSystem::GetFileVersion(const char *filename) {
+  // TODO:
+  return "";
+}
+
+} // namespace linux
+} // namespace framework
 } // namespace ggadget

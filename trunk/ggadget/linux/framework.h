@@ -18,50 +18,34 @@
 #define GGADGET_LINUX_FRAMEWORK_H__
 
 #include <ggadget/framework_interface.h>
-#include <ggadget/linux/machine.h>
-#include <ggadget/linux/memory.h>
-#include <ggadget/linux/network.h>
-#include <ggadget/linux/perfmon.h>
-#include <ggadget/linux/power.h>
-#include <ggadget/linux/process.h>
-#include <ggadget/linux/wireless.h>
+#include <ggadget/file_system_interface.h>
+#include <ggadget/audioclip_interface.h>
 
 namespace ggadget {
+namespace linux {
 
 class Framework : public FrameworkInterface {
  public:
-  virtual framework::MachineInterface *GetMachineInterface() {
-    return &machine_;
-  }
-  virtual framework::MemoryInterface *GetMemoryInterface() {
-    return &memory_;
-  }
-  virtual framework::NetworkInterface *GetNetworkInterface() {
-    return &network_;
-  }
-  virtual framework::PerfmonInterface *GetPerfmonInterface() {
-    return &perfmon_;
-  }
-  virtual framework::PowerInterface *GetPowerInterface() {
-    return &power_;
-  }
-  virtual framework::ProcessInterface *GetProcessInterface() {
-    return &process_;
-  }
-  virtual framework::WirelessInterface *GetWirelessInterface() {
-    return &wireless_;
-  }
+  Framework();
+  virtual ~Framework();
+
+ public:
+  virtual framework::MachineInterface *GetMachine();
+  virtual framework::MemoryInterface *GetMemory();
+  virtual framework::NetworkInterface *GetNetwork();
+  virtual framework::PerfmonInterface *GetPerfmon();
+  virtual framework::PowerInterface *GetPower();
+  virtual framework::ProcessInterface *GetProcess();
+  virtual framework::WirelessInterface *GetWireless();
+  virtual framework::FileSystemInterface *GetFileSystem();
+  virtual framework::AudioclipInterface *CreateAudioclip(const char *src);
 
  private:
-  framework::Machine machine_;
-  framework::Memory memory_;
-  framework::Network network_;
-  framework::Perfmon perfmon_;
-  framework::Power power_;
-  framework::Process process_;
-  framework::Wireless wireless_;
+  class Impl;
+  Impl *impl_;
 };
 
+} // namespace linux
 } // namespace ggadget
 
 #endif // GGADGET_LINUX_MACHINE_H__

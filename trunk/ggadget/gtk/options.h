@@ -21,6 +21,7 @@
 #include <ggadget/ggadget.h>
 
 namespace ggadget {
+namespace gtk {
 
 class Options : public ggadget::OptionsInterface {
  public:
@@ -55,6 +56,7 @@ class Options : public ggadget::OptionsInterface {
   ggadget::Signal1<void, const char *> onoptionchanged_signal_;
 };
 
+} // namespace gtk
 } // namespace ggadget
 
 #endif  // GGADGET_GTK_OPTIONS_H__

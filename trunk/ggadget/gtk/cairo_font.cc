@@ -17,6 +17,7 @@
 #include "cairo_font.h"
 
 namespace ggadget {
+namespace gtk {
 
 CairoFont::CairoFont(PangoFontDescription *font, size_t size, Style style,
                      Weight weight)
@@ -28,4 +29,5 @@ CairoFont::~CairoFont() {
   font_ = NULL;
 }
 
-}; // namespace ggadget
+} // namespace gtk
+} // namespace ggadget

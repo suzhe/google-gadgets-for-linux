@@ -21,6 +21,8 @@
 
 namespace ggadget {
 
+using namespace framework;
+
 // Default args for File.Delete() and Folder.Delete().
 static const Variant kDeleteDefaultArgs[] = {
   Variant(false)
@@ -32,7 +34,7 @@ static const Variant kCopyDefaultArgs[] = {
 };
 // Default args for File.OpenAsTextStream().
 static const Variant kOpenAsTextStreamDefaultArgs[] = {
-  Variant(fs::FOR_READING), Variant(fs::TRISTATE_FALSE)
+  Variant(IO_MODE_READING), Variant(TRISTATE_FALSE)
 };
 // Default args for FileSystem.CreateTextFile() and Folder.CreateTextFile().
 static const Variant kCreateTextFileDefaultArgs[] = {
@@ -42,7 +44,7 @@ static const Variant kCreateTextFileDefaultArgs[] = {
 // Default args for FileSystem.OpenTextFile().
 static const Variant kOpenTextFileDefaultArgs[] = {
   Variant(),
-  Variant(fs::FOR_READING), Variant(false), Variant(fs::TRISTATE_FALSE)
+  Variant(IO_MODE_READING), Variant(false), Variant(TRISTATE_FALSE)
 };
 // Default args for FileSystem.DeleteFile() and FileSystem.DeleteFolder()
 static const Variant kDeleteFileOrFolderDefaultArgs[] = {
@@ -99,36 +101,34 @@ class ScriptableFileSystem::Impl {
   class ScriptableTextStream : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x34828c47e6a243c5, ScriptableInterface);
-    ScriptableTextStream(fs::TextStreamInterface *stream) : stream_(stream) {
+    ScriptableTextStream(TextStreamInterface *stream) : stream_(stream) {
       ASSERT(stream);
       RegisterProperty("Line",
-                       NewSlot(stream, &fs::TextStreamInterface::GetLine),
+                       NewSlot(stream, &TextStreamInterface::GetLine),
                        NULL);
       RegisterProperty("Column",
-                       NewSlot(stream, &fs::TextStreamInterface::GetColumn),
+                       NewSlot(stream, &TextStreamInterface::GetColumn),
                        NULL);
       RegisterProperty("AtEndOfStream",
-                       NewSlot(stream,
-                               &fs::TextStreamInterface::IsAtEndOfStream),
+                       NewSlot(stream, &TextStreamInterface::IsAtEndOfStream),
                        NULL);
       RegisterProperty("AtEndOfLine",
-                       NewSlot(stream, &fs::TextStreamInterface::IsAtEndOfLine),
+                       NewSlot(stream, &TextStreamInterface::IsAtEndOfLine),
                        NULL);
-      RegisterMethod("Read", NewSlot(stream, &fs::TextStreamInterface::Read));
+      RegisterMethod("Read", NewSlot(stream, &TextStreamInterface::Read));
       RegisterMethod("ReadLine",
-                     NewSlot(stream, &fs::TextStreamInterface::ReadLine));
+                     NewSlot(stream, &TextStreamInterface::ReadLine));
       RegisterMethod("ReadAll",
-                     NewSlot(stream, &fs::TextStreamInterface::ReadAll));
-      RegisterMethod("Write", NewSlot(stream, &fs::TextStreamInterface::Write));
+                     NewSlot(stream, &TextStreamInterface::ReadAll));
+      RegisterMethod("Write", NewSlot(stream, &TextStreamInterface::Write));
       RegisterMethod("WriteLine",
-                     NewSlot(stream, &fs::TextStreamInterface::WriteLine));
+                     NewSlot(stream, &TextStreamInterface::WriteLine));
       RegisterMethod("WriteBlankLines",
-                     NewSlot(stream,
-                             &fs::TextStreamInterface::WriteBlankLines));
-      RegisterMethod("Skip", NewSlot(stream, &fs::TextStreamInterface::Skip));
+                     NewSlot(stream, &TextStreamInterface::WriteBlankLines));
+      RegisterMethod("Skip", NewSlot(stream, &TextStreamInterface::Skip));
       RegisterMethod("SkipLine",
-                     NewSlot(stream, &fs::TextStreamInterface::SkipLine));
-      RegisterMethod("Close", NewSlot(stream, &fs::TextStreamInterface::Close));
+                     NewSlot(stream, &TextStreamInterface::SkipLine));
+      RegisterMethod("Close", NewSlot(stream, &TextStreamInterface::Close));
     }
 
     virtual ~ScriptableTextStream() {
@@ -138,50 +138,50 @@ class ScriptableFileSystem::Impl {
     virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
     virtual bool Detach() { delete this; return true; }
 
-    fs::TextStreamInterface *stream_;
+    TextStreamInterface *stream_;
   };
 
   class ScriptableFolder;
   class ScriptableDrive : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x0a34071a4804434b, ScriptableInterface);
-    ScriptableDrive(fs::DriveInterface *drive) : drive_(drive) {
+    ScriptableDrive(DriveInterface *drive) : drive_(drive) {
       ASSERT(drive);
       RegisterProperty("Path",
-                       NewSlot(drive, &fs::DriveInterface::GetPath),
+                       NewSlot(drive, &DriveInterface::GetPath),
                        NULL);
       RegisterProperty("DriveLetter",
-                       NewSlot(drive, &fs::DriveInterface::GetDriveLetter),
+                       NewSlot(drive, &DriveInterface::GetDriveLetter),
                        NULL);
       RegisterProperty("ShareName",
-                       NewSlot(drive, &fs::DriveInterface::GetShareName),
+                       NewSlot(drive, &DriveInterface::GetShareName),
                        NULL);
       RegisterProperty("DriveType",
-                       NewSlot(drive, &fs::DriveInterface::GetDriveType),
+                       NewSlot(drive, &DriveInterface::GetDriveType),
                        NULL);
       RegisterProperty("RootFolder",
                        NewSlot(this, &ScriptableDrive::GetRootFolder),
                        NULL);
       RegisterProperty("AvailableSpace",
-                       NewSlot(drive, &fs::DriveInterface::GetAvailableSpace),
+                       NewSlot(drive, &DriveInterface::GetAvailableSpace),
                        NULL);
       RegisterProperty("FreeSpace",
-                       NewSlot(drive, &fs::DriveInterface::GetFreeSpace),
+                       NewSlot(drive, &DriveInterface::GetFreeSpace),
                        NULL);
       RegisterProperty("TotalSize",
-                       NewSlot(drive, &fs::DriveInterface::GetTotalSize),
+                       NewSlot(drive, &DriveInterface::GetTotalSize),
                        NULL);
       RegisterProperty("VolumnName",
-                       NewSlot(drive, &fs::DriveInterface::GetVolumnName),
+                       NewSlot(drive, &DriveInterface::GetVolumnName),
                        NewSlot(this, &ScriptableDrive::SetVolumnName));
       RegisterProperty("FileSystem",
-                       NewSlot(drive, &fs::DriveInterface::GetFileSystem),
+                       NewSlot(drive, &DriveInterface::GetFileSystem),
                        NULL);
       RegisterProperty("SerialNumber",
-                       NewSlot(drive, &fs::DriveInterface::GetSerialNumber),
+                       NewSlot(drive, &DriveInterface::GetSerialNumber),
                        NULL);
       RegisterProperty("IsReady",
-                       NewSlot(drive, &fs::DriveInterface::IsReady),
+                       NewSlot(drive, &DriveInterface::IsReady),
                        NULL);
     }
 
@@ -199,25 +199,25 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("Drive.SetVolumnName"));
     }
 
-    fs::DriveInterface *drive_;
+    DriveInterface *drive_;
   };
 
   class ScriptableFolder : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xa2e7a3ef662a445c, ScriptableInterface);
-    ScriptableFolder(fs::FolderInterface *folder) : folder_(folder) {
+    ScriptableFolder(FolderInterface *folder) : folder_(folder) {
       ASSERT(folder);
       RegisterProperty("Path",
-                       NewSlot(folder, &fs::FolderInterface::GetPath),
+                       NewSlot(folder, &FolderInterface::GetPath),
                        NULL);
       RegisterProperty("Name",
-                       NewSlot(folder, &fs::FolderInterface::GetName),
+                       NewSlot(folder, &FolderInterface::GetName),
                        NewSlot(this, &ScriptableFolder::SetName));
       RegisterProperty("ShortPath",
-                       NewSlot(folder, &fs::FolderInterface::GetShortPath),
+                       NewSlot(folder, &FolderInterface::GetShortPath),
                        NULL);
       RegisterProperty("ShortName",
-                       NewSlot(folder, &fs::FolderInterface::GetShortName),
+                       NewSlot(folder, &FolderInterface::GetShortName),
                        NULL);
       RegisterProperty("Drive",
                        NewSlot(this, &ScriptableFolder::GetDrive),
@@ -226,21 +226,19 @@ class ScriptableFileSystem::Impl {
                        NewSlot(this, &ScriptableFolder::GetParentFolder),
                        NULL);
       RegisterProperty("Attributes",
-                       NewSlot(folder, &fs::FolderInterface::GetAttributes),
+                       NewSlot(folder, &FolderInterface::GetAttributes),
                        NewSlot(this, &ScriptableFolder::SetAttributes));
       RegisterProperty("DateCreated",
-                       NewSlot(folder, &fs::FolderInterface::GetDateCreated),
+                       NewSlot(folder, &FolderInterface::GetDateCreated),
                        NULL);
       RegisterProperty("DateLastModified",
-                       NewSlot(folder,
-                               &fs::FolderInterface::GetDateLastModified),
+                       NewSlot(folder, &FolderInterface::GetDateLastModified),
                        NULL);
       RegisterProperty("DateLastAccessed",
-                       NewSlot(folder,
-                               &fs::FolderInterface::GetDateLastAccessed),
+                       NewSlot(folder, &FolderInterface::GetDateLastAccessed),
                        NULL);
       RegisterProperty("Type",
-                       NewSlot(folder, &fs::FolderInterface::GetType),
+                       NewSlot(folder, &FolderInterface::GetType),
                        NULL);
       RegisterMethod("Delete",
           NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFolder::Delete),
@@ -250,7 +248,7 @@ class ScriptableFileSystem::Impl {
                                  kCopyDefaultArgs));
       RegisterMethod("Move", NewSlot(this, &ScriptableFolder::Move));
       RegisterProperty("Size",
-                       NewSlot(folder, &fs::FolderInterface::GetSize),
+                       NewSlot(folder, &FolderInterface::GetSize),
                        NULL);
       RegisterProperty("SubFolders",
                        NewSlot(this, &ScriptableFolder::GetSubFolders),
@@ -277,7 +275,7 @@ class ScriptableFileSystem::Impl {
     }
 
     ScriptableDrive *GetDrive() {
-      fs::DriveInterface *drive = folder_->GetDrive();
+      DriveInterface *drive = folder_->GetDrive();
       if (!drive) {
         SetPendingException(new FileSystemException("Folder.GetDrive"));
         return NULL;
@@ -286,7 +284,7 @@ class ScriptableFileSystem::Impl {
     }
 
     ScriptableFolder *GetParentFolder() {
-      fs::FolderInterface *folder = folder_->GetParentFolder();
+      FolderInterface *folder = folder_->GetParentFolder();
       if (!folder) {
         SetPendingException(new FileSystemException("Folder.GetParentFolder"));
         return NULL;
@@ -294,7 +292,7 @@ class ScriptableFileSystem::Impl {
       return new ScriptableFolder(folder);
     }
 
-    void SetAttributes(fs::FileAttribute attributes) {
+    void SetAttributes(FileAttribute attributes) {
       if (!folder_->SetAttributes(attributes))
         SetPendingException(new FileSystemException("Folder.SetAttributes"));
     }
@@ -315,27 +313,27 @@ class ScriptableFileSystem::Impl {
     }
 
     ScriptableArray *GetSubFolders() {
-      fs::FoldersInterface *folders = folder_->GetSubFolders();
+      FoldersInterface *folders = folder_->GetSubFolders();
       if (!folders) {
         SetPendingException(new FileSystemException("Folder.GetSubFolders"));
         return NULL;
       }
-      return ToScriptableArray<ScriptableFolder, fs::FolderInterface>(folders);
+      return ToScriptableArray<ScriptableFolder, FolderInterface>(folders);
     }
 
     ScriptableArray *GetFiles() {
-      fs::FilesInterface *files = folder_->GetFiles();
+      FilesInterface *files = folder_->GetFiles();
       if (!files) {
         SetPendingException(new FileSystemException("Folder.GetFiles"));
         return NULL;
       }
-      return ToScriptableArray<ScriptableFile, fs::FileInterface>(files);
+      return ToScriptableArray<ScriptableFile, FileInterface>(files);
     }
 
     ScriptableTextStream *CreateTextFile(const char *filename,
                                          bool overwrite,
                                          bool unicode) {
-      fs::TextStreamInterface *stream =
+      TextStreamInterface *stream =
           folder_->CreateTextFile(filename, overwrite, unicode);
       if (!stream) {
         SetPendingException(new FileSystemException("Folder.CreateTextFile"));
@@ -344,47 +342,47 @@ class ScriptableFileSystem::Impl {
       return new ScriptableTextStream(stream);
     }
 
-    fs::FolderInterface *folder_;
+    FolderInterface *folder_;
   };
 
   class ScriptableFile : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xd8071714bc0a4d2c, ScriptableInterface);
-    ScriptableFile(fs::FileInterface *file) : file_(file) {
+    ScriptableFile(FileInterface *file) : file_(file) {
       ASSERT(file);
       RegisterProperty("Path",
-                       NewSlot(file, &fs::FileInterface::GetPath),
+                       NewSlot(file, &FileInterface::GetPath),
                        NULL);
       RegisterProperty("Name",
-                       NewSlot(file, &fs::FileInterface::GetName),
+                       NewSlot(file, &FileInterface::GetName),
                        NewSlot(this, &ScriptableFile::SetName));
       RegisterProperty("ShortPath",
-                       NewSlot(file, &fs::FileInterface::GetShortPath),
+                       NewSlot(file, &FileInterface::GetShortPath),
                        NULL);
       RegisterProperty("ShortName",
-                       NewSlot(file, &fs::FileInterface::GetShortName),
+                       NewSlot(file, &FileInterface::GetShortName),
                        NULL);
       RegisterProperty("Drive", NewSlot(this, &ScriptableFile::GetDrive), NULL);
       RegisterProperty("ParentFolder",
                        NewSlot(this, &ScriptableFile::GetParentFolder),
                        NULL);
       RegisterProperty("Attributes",
-                       NewSlot(file, &fs::FileInterface::GetAttributes),
+                       NewSlot(file, &FileInterface::GetAttributes),
                        NewSlot(this, &ScriptableFile::SetAttributes));
       RegisterProperty("DateCreated",
-                       NewSlot(file, &fs::FileInterface::GetDateCreated),
+                       NewSlot(file, &FileInterface::GetDateCreated),
                        NULL);
       RegisterProperty("DateLastModified",
-                       NewSlot(file, &fs::FileInterface::GetDateLastModified),
+                       NewSlot(file, &FileInterface::GetDateLastModified),
                        NULL);
       RegisterProperty("DateLastAccessed",
-                       NewSlot(file, &fs::FileInterface::GetDateLastAccessed),
+                       NewSlot(file, &FileInterface::GetDateLastAccessed),
                        NULL);
       RegisterProperty("Size",
-                       NewSlot(file, &fs::FileInterface::GetSize),
+                       NewSlot(file, &FileInterface::GetSize),
                        NULL);
       RegisterProperty("Type",
-                       NewSlot(file, &fs::FileInterface::GetType),
+                       NewSlot(file, &FileInterface::GetType),
                        NULL);
       RegisterMethod("Delete",
           NewSlotWithDefaultArgs(NewSlot(this, &ScriptableFile::Delete),
@@ -412,7 +410,7 @@ class ScriptableFileSystem::Impl {
     }
 
     ScriptableDrive *GetDrive() {
-      fs::DriveInterface *drive = file_->GetDrive();
+      DriveInterface *drive = file_->GetDrive();
       if (!drive) {
         SetPendingException(new FileSystemException("File.GetDrive"));
         return NULL;
@@ -421,7 +419,7 @@ class ScriptableFileSystem::Impl {
     }
 
     ScriptableFolder *GetParentFolder() {
-      fs::FolderInterface *folder = file_->GetParentFolder();
+      FolderInterface *folder = file_->GetParentFolder();
       if (!folder) {
         SetPendingException(new FileSystemException("File.GetParentFolder"));
         return NULL;
@@ -429,7 +427,7 @@ class ScriptableFileSystem::Impl {
       return new ScriptableFolder(folder);
     }
 
-    void SetAttributes(fs::FileAttribute attributes) {
+    void SetAttributes(FileAttribute attributes) {
       if (!file_->SetAttributes(attributes))
         SetPendingException(new FileSystemException("File.SetAttributes"));
     }
@@ -449,9 +447,8 @@ class ScriptableFileSystem::Impl {
         SetPendingException(new FileSystemException("File.Move"));
     }
 
-    ScriptableTextStream *OpenAsTextStream(fs::IOMode mode,
-                                           fs::Tristate format) {
-      fs::TextStreamInterface *stream =
+    ScriptableTextStream *OpenAsTextStream(IOMode mode, Tristate format) {
+      TextStreamInterface *stream =
           file_->OpenAsTextStream(mode, format);
       if (!stream) {
         SetPendingException(new FileSystemException("File.OpenAsTextStream"));
@@ -460,21 +457,21 @@ class ScriptableFileSystem::Impl {
       return new ScriptableTextStream(stream);
     }
 
-    fs::FileInterface *file_;
+    FileInterface *file_;
   };
 
   ScriptableArray *GetDrives() {
-    fs::DrivesInterface *drives = filesystem_->GetDrives();
+    DrivesInterface *drives = filesystem_->GetDrives();
     if (!drives) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.GetDrives"));
       return NULL;
     }
-    return ToScriptableArray<ScriptableDrive, fs::DriveInterface>(drives);
+    return ToScriptableArray<ScriptableDrive, DriveInterface>(drives);
   }
 
   ScriptableDrive *GetDrive(const char *drive_spec) {
-    fs::DriveInterface *drive = filesystem_->GetDrive(drive_spec);
+    DriveInterface *drive = filesystem_->GetDrive(drive_spec);
     if (!drive) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.GetDrive"));
@@ -484,7 +481,7 @@ class ScriptableFileSystem::Impl {
   }
 
   ScriptableFile *GetFile(const char *file_path) {
-    fs::FileInterface *file = filesystem_->GetFile(file_path);
+    FileInterface *file = filesystem_->GetFile(file_path);
     if (!file) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.GetFile"));
@@ -494,7 +491,7 @@ class ScriptableFileSystem::Impl {
   }
 
   ScriptableFolder *GetFolder(const char *folder_path) {
-    fs::FolderInterface *folder = filesystem_->GetFolder(folder_path);
+    FolderInterface *folder = filesystem_->GetFolder(folder_path);
     if (!folder) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.GetFolder"));
@@ -503,8 +500,8 @@ class ScriptableFileSystem::Impl {
     return new ScriptableFolder(folder);
   }
 
-  ScriptableFolder *GetSpecialFolder(fs::SpecialFolder special) {
-    fs::FolderInterface *folder = filesystem_->GetSpecialFolder(special);
+  ScriptableFolder *GetSpecialFolder(SpecialFolder special) {
+    FolderInterface *folder = filesystem_->GetSpecialFolder(special);
     if (!folder) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.GetSpecialFolder"));
@@ -550,7 +547,7 @@ class ScriptableFileSystem::Impl {
   }
 
   ScriptableFolder *CreateFolder(const char *path) {
-    fs::FolderInterface *folder = filesystem_->CreateFolder(path);
+    FolderInterface *folder = filesystem_->CreateFolder(path);
     if (!folder) {
       owner_->SetPendingException(new FileSystemException(
           "FileSystem.CreateFolder"));
@@ -562,7 +559,7 @@ class ScriptableFileSystem::Impl {
   ScriptableTextStream *CreateTextFile(const char *filename,
                                        bool overwrite,
                                        bool unicode) {
-    fs::TextStreamInterface *stream =
+    TextStreamInterface *stream =
         filesystem_->CreateTextFile(filename, overwrite, unicode);
     if (!stream) {
       owner_->SetPendingException(new FileSystemException(
@@ -572,9 +569,9 @@ class ScriptableFileSystem::Impl {
     return new ScriptableTextStream(stream);
   }
 
-  ScriptableTextStream *OpenTextFile(const char *filename, fs::IOMode mode,
-                                     bool create, fs::Tristate format) {
-    fs::TextStreamInterface *stream =
+  ScriptableTextStream *OpenTextFile(const char *filename, IOMode mode,
+                                     bool create, Tristate format) {
+    TextStreamInterface *stream =
         filesystem_->OpenTextFile(filename, mode, create, format);
     if (!stream) {
       owner_->SetPendingException(new FileSystemException(
@@ -584,9 +581,9 @@ class ScriptableFileSystem::Impl {
     return new ScriptableTextStream(stream);
   }
 
-  ScriptableTextStream *GetStandardStream(fs::StandardStreamType type,
+  ScriptableTextStream *GetStandardStream(StandardStreamType type,
                                           bool unicode) {
-    fs::TextStreamInterface *stream =
+    TextStreamInterface *stream =
         filesystem_->GetStandardStream(type, unicode);
     if (!stream) {
       owner_->SetPendingException(new FileSystemException(
@@ -663,7 +660,7 @@ ScriptableFileSystem::ScriptableFileSystem(FileSystemInterface *filesystem)
 
 ScriptableFileSystem::Impl::ScriptableFolder *
 ScriptableFileSystem::Impl::ScriptableDrive::GetRootFolder() {
-  fs::FolderInterface *folder = drive_->GetRootFolder();
+  FolderInterface *folder = drive_->GetRootFolder();
   if (!folder) {
     SetPendingException(new FileSystemException("Drive.GetRootFolder"));
     return NULL;

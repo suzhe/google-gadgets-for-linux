@@ -18,18 +18,23 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 bool Network::IsOnline() const {
+  // TODO:
   return true;
 }
 
 NetworkInterface::ConnectionType Network::GetConnectionType() const {
+  // TODO:
   return NetworkInterface::CONNECTION_TYPE_802_3;
 }
 
 NetworkInterface::PhysicalMediaType Network::GetPhysicalMediaType() const {
+  // TODO:
   return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget

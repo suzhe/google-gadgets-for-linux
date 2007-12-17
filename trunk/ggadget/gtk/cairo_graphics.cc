@@ -23,6 +23,7 @@
 #include <ggadget/edit_interface.h>
 
 namespace ggadget {
+namespace gtk {
 
 CairoGraphics::CairoGraphics(double zoom)
     : zoom_(zoom) {
@@ -290,4 +291,5 @@ FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,
   return new CairoFont(font, pt_size, style, weight);
 }
 
+} // namespace gtk
 } // namespace ggadget
