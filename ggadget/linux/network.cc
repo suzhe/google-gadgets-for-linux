@@ -18,7 +18,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 bool Network::IsOnline() const {
   // TODO:
@@ -35,6 +35,6 @@ NetworkInterface::PhysicalMediaType Network::GetPhysicalMediaType() const {
   return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

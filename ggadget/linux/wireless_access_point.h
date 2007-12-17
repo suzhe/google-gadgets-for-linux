@@ -21,7 +21,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class WirelessAccessPoint : public WirelessAccessPointInterface {
  public:
@@ -35,7 +35,7 @@ class WirelessAccessPoint : public WirelessAccessPointInterface {
   virtual void Disconnect(Slot1<void, bool> *callback);
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 

@@ -22,12 +22,11 @@
 #include <ggadget/audioclip_interface.h>
 
 namespace ggadget {
-namespace linux {
 
-class Framework : public FrameworkInterface {
+class LinuxFramework : public FrameworkInterface {
  public:
-  Framework();
-  virtual ~Framework();
+  LinuxFramework();
+  virtual ~LinuxFramework();
 
  public:
   virtual framework::MachineInterface *GetMachine();
@@ -45,7 +44,6 @@ class Framework : public FrameworkInterface {
   Impl *impl_;
 };
 
-} // namespace linux
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_MACHINE_H__
+#endif // GGADGET_LINUX_FRAMEWORK_H__

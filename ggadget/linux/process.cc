@@ -22,7 +22,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 static const char* kDirName = "/proc";
 
@@ -134,6 +134,6 @@ static bool ReadCmdPath(int pid, std::string *cmdline) {
   return true;
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

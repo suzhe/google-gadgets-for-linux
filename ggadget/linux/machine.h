@@ -22,7 +22,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class Machine : public MachineInterface {
 public:
@@ -68,7 +68,7 @@ private:
   int cpu_count_;
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 

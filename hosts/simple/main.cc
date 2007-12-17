@@ -60,7 +60,7 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
       new ggadget::smjs::JSScriptRuntime();
 
 #ifdef GGL_HOST_LINUX
-  ggadget::FrameworkInterface *framework = new ggadget::linux::Framework();
+  ggadget::FrameworkInterface *framework = new ggadget::LinuxFramework();
 #else
   ggadget::FrameworkInterface *framework = new ggadget::DummyFramework();
 #endif

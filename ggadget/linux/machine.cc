@@ -23,7 +23,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 static const char* kKeysInMachineInfo[] = {
   "cpu family", "model", "stepping",
@@ -33,7 +33,7 @@ static const char* kKeysInMachineInfo[] = {
 // Represents the file names for reading CPU info.
 static const char* kCPUInfoFile = "/proc/cpuinfo";
 
-xMachine::Machine() {
+Machine::Machine() {
   InitArchInfo();
   InitProcInfo();
 }
@@ -130,6 +130,6 @@ void Machine::InitProcInfo() {
   fclose(fp);
 }
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget

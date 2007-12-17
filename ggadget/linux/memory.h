@@ -21,7 +21,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class Memory : public MemoryInterface {
  public:
@@ -61,7 +61,7 @@ class Memory : public MemoryInterface {
 
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 

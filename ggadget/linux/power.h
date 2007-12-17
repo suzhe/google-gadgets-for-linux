@@ -21,7 +21,7 @@
 
 namespace ggadget {
 namespace framework {
-namespace linux {
+namespace linux_os {
 
 class Power : public PowerInterface {
  public:
@@ -32,7 +32,7 @@ class Power : public PowerInterface {
   virtual int GetTimeTotal() const;
 };
 
-} // namespace linux
+} // namespace linux_os
 } // namespace framework
 } // namespace ggadget
 
