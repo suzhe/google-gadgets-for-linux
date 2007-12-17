@@ -23,6 +23,7 @@
 #include <ggadget/graphics_interface.h>
 
 namespace ggadget {
+namespace gtk {
 
 class GtkViewHost;
 
@@ -63,6 +64,7 @@ class CairoGraphics : public GraphicsInterface {
   DISALLOW_EVIL_CONSTRUCTORS(CairoGraphics);
 };
 
-}
+} // namespace gtk
+} // namespace ggadget
 
 #endif // GGADGET_GTK_CAIRO_GRAPHICS_H__

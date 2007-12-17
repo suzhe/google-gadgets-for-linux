@@ -23,6 +23,7 @@
 #include <ggadget/ggadget.h>
 
 namespace ggadget {
+namespace gtk {
 
 class GtkMenuImpl;
 
@@ -65,7 +66,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual void GetCursorPos(int *x, int *y) const;
   virtual void GetScreenSize(int *width, int *height) const;
   virtual std::string GetFileIcon(const char *filename) const;
-  virtual AudioclipInterface *CreateAudioclip(const char *src);
 
   /**
    * Loads a gadget from file system and hosts it.
@@ -145,6 +145,7 @@ class GtkGadgetHost : public GadgetHostInterface {
   DISALLOW_EVIL_CONSTRUCTORS(GtkGadgetHost);
 };
 
+} // namespace gtk
 } // namespace ggadget
 
 #endif // GGADGET_GTK_GTK_GADGET_HOST_H__

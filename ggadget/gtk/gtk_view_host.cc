@@ -26,8 +26,9 @@
 #include "gtk_edit.h"
 
 namespace ggadget {
+namespace gtk {
 
-/*struct { 
+/*struct {
   ElementInterface::CursorType type,
   GdkCursorType gdk_type
 } CursorTypeMapping;
@@ -40,7 +41,7 @@ static const CursorTypeMapping[] = {
   { ElementInterface::CURSOR_CROSS, GDK_CROSS},
   { ElementInterface::CURSOR_UPARROW, GDK_SB_UP_ARROW},
   { ElementInterface::CURSOR_SIZE, GDK_SIZING},
-  { ElementInterface::CURSOR_SIZENWSE, GDK_ARROW}, // need special handling 
+  { ElementInterface::CURSOR_SIZENWSE, GDK_ARROW}, // need special handling
   { ElementInterface::CURSOR_SIZENESW, GDK_ARROW}, // need special handling
   { ElementInterface::CURSOR_SIZEWE, GDK_ARROW}, // need special handling
   { ElementInterface::CURSOR_SIZENS, GDK_ARROW}, // need special handling
@@ -144,7 +145,7 @@ XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
 void GtkViewHost::QueueDraw() {
   // Use GTK_IS_WIDGET instead of checking for pointer since the widget
   // might be destroyed on shutdown but the pointer is non-NULL.
-  if (GTK_IS_WIDGET(gvw_)) { 
+  if (GTK_IS_WIDGET(gvw_)) {
     gtk_widget_queue_draw(GTK_WIDGET(gvw_));
   }
 }
@@ -192,7 +193,7 @@ void GtkViewHost::SetCursor(CursorType type) {
     GdkCursorType gdk_type;
     switch (type) {
      case CURSOR_ARROW:
-       gdk_type = 
+       gdk_type =
      case CURSOR_IBEAM:
      case CURSOR_WAIT:
      case CURSOR_CROSS:
@@ -427,4 +428,5 @@ EditInterface *GtkViewHost::NewEdit(size_t w, size_t h) {
   return new GtkEdit(this, w, h);
 }
 
+} // namespace gtk
 } // namespace ggadget

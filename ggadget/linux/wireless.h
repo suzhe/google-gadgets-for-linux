@@ -21,6 +21,7 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 class WirelessAccessPointInterface;
 
@@ -38,11 +39,9 @@ class Wireless : public WirelessInterface {
   virtual std::string GetName() const;
   virtual std::string GetNetworkName() const;
   virtual int GetSignalStrength() const;
-
- private:
-  WirelessAccessPointInterface *_interfaces[2];
 };
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget
 

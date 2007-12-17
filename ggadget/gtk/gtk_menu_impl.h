@@ -23,6 +23,7 @@
 #include <ggadget/ggadget.h>
 
 namespace ggadget {
+namespace gtk {
 
 /**
  * An implementation of @c MenuInterface for the simple gadget host.
@@ -59,6 +60,7 @@ class GtkMenuImpl : public ggadget::MenuInterface {
   static bool setting_style_;
 };
 
+} // namesapce gtk
 } // namespace ggadget
 
 #endif // GGADGET_GTK_GTK_MENU_IMPL_H__

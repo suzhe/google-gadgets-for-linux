@@ -23,6 +23,7 @@
 #include <pango/pangocairo.h>
 
 namespace ggadget {
+namespace gtk {
 
 const char *const kEllipsisText = "...";
 
@@ -362,7 +363,7 @@ static void SetPangoLayoutAttrFromTextFlags(PangoLayout *layout,
   // This will also free underline_attr and strikeout_attr.
   pango_attr_list_unref(attr_list);
 }
- 
+
 bool CairoCanvas::DrawTextInternal(double x, double y, double width,
                                    double height, const char *text,
                                    const FontInterface *f,
@@ -391,7 +392,7 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
   double real_x = x, real_y = y;
 
   // Set alignment. This is only effective when wordwrap is set
-  // because when wordwrap is unset, the width has to be 
+  // because when wordwrap is unset, the width has to be
   // -1, thus the alignment is useless.
   if (align == ALIGN_LEFT)
     pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
@@ -573,12 +574,12 @@ bool CairoCanvas::DrawTextInternal(double x, double y, double width,
   return true;
 }
 
-bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f, 
+bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
                                  int text_flags, double in_width,
                                  double *width, double *height) {
   if (text == NULL || f == NULL) {
     *width = *height = 0;
-    return false;    
+    return false;
   }
 
   // If the text is blank, we need to do nothing.
@@ -587,7 +588,7 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
     return true;
   }
 
-  const CairoFont *font = down_cast<const CairoFont*>(f); 
+  const CairoFont *font = down_cast<const CairoFont*>(f);
   PangoLayout *layout = pango_cairo_create_layout(cr_);
   pango_layout_set_text(layout, text, -1);
   pango_layout_set_font_description(layout, font->GetFontDescription());
@@ -607,4 +608,5 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
   return true;
 }
 
+} // namespace gtk
 } // namespace ggadget

@@ -27,22 +27,22 @@ class TextFrame;
 class AnchorElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x50ef5c291807400c, BasicElement);
-  
+
   AnchorElement(BasicElement *parent, View *view, const char *name);
   virtual ~AnchorElement();
 
- public:   
+ public:
   /**
    * Gets and sets the mouseover text color or texture image of the element.
    * The image is repeated if necessary, not stretched.
    */
   Variant GetOverColor() const;
   void SetOverColor(const Variant &color);
-  
+
   /** Gets and sets the URL to be launched when this link is clicked. */
   std::string GetHref() const;
   void SetHref(const char *href);
-  
+
   /** Gets the text frame containing the text content of this anchor. */
   TextFrame *GetTextFrame();
 

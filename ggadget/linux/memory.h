@@ -21,8 +21,7 @@
 
 namespace ggadget {
 namespace framework {
-
-
+namespace linux {
 
 class Memory : public MemoryInterface {
  public:
@@ -46,15 +45,23 @@ class Memory : public MemoryInterface {
   void ReadMemInfoFromProc();
 
  private:
-  enum {TOTAL_PHYSICAL, FREE_PHYSICAL, TOTAL_SWAP, FREE_SWAP, BUFFERS, CACHED,
-         SWAP_CACHED, MEM_INFO_COUNT};
+  enum {
+    TOTAL_PHYSICAL,
+    FREE_PHYSICAL,
+    TOTAL_SWAP,
+    FREE_SWAP,
+    BUFFERS,
+    CACHED,
+    SWAP_CACHED,
+    MEM_INFO_COUNT
+  };
 
   int64_t mem_info_[MEM_INFO_COUNT];
   time_t timestamp_;
-  
 
 };
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget
 

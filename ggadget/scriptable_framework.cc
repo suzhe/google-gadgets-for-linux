@@ -15,6 +15,7 @@
 */
 
 #include "scriptable_framework.h"
+#include "scriptable_file_system.h"
 #include "audioclip_interface.h"
 #include "framework_interface.h"
 #include "gadget_host_interface.h"
@@ -24,6 +25,19 @@
 #include "unicode_utils.h"
 
 namespace ggadget {
+
+using framework::MachineInterface;
+using framework::MemoryInterface;
+using framework::NetworkInterface;
+using framework::PerfmonInterface;
+using framework::PowerInterface;
+using framework::ProcessesInterface;
+using framework::ProcessInfoInterface;
+using framework::ProcessInterface;
+using framework::WirelessAccessPointInterface;
+using framework::WirelessInterface;
+using framework::FileSystemInterface;
+using framework::AudioclipInterface;
 
 // Default argument list for methods that has single optional slot argument.
 static const Variant kDefaultArgsForSingleSlot[] = {
@@ -39,7 +53,7 @@ class ScriptableFramework::Impl {
  public:
   Impl(GadgetHostInterface *gadget_host)
       : gadget_host_(gadget_host),
-        audio_(gadget_host),
+        audio_(gadget_host->GetFramework()),
         system_(gadget_host) {
   }
 
@@ -114,7 +128,7 @@ class ScriptableFramework::Impl {
 
   class Audio : public PermanentScriptable {
    public:
-    Audio(GadgetHostInterface *gadget_host): gadget_host_(gadget_host) {
+    Audio(FrameworkInterface *framework): framework_(framework) {
       RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Open),
                                                     kDefaultArgsForSecondSlot));
       RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Play),
@@ -123,7 +137,8 @@ class ScriptableFramework::Impl {
     }
 
     ScriptableAudioclip *Open(const char *src, Slot *method) {
-      AudioclipInterface *clip = gadget_host_->CreateAudioclip(src);
+      AudioclipInterface *clip =
+          framework_->CreateAudioclip(src);
       if (clip) {
         ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
         scriptable_clip->SetOnStateChange(method);
@@ -146,7 +161,7 @@ class ScriptableFramework::Impl {
         clip->clip_->Stop();
     }
 
-    GadgetHostInterface *gadget_host_;
+    FrameworkInterface *framework_;
   };
 
   class Graphics : public PermanentScriptable {
@@ -175,22 +190,18 @@ class ScriptableFramework::Impl {
       : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0xcf8c688383b54c43, ScriptableInterface);
-    ScriptableWirelessAccessPoint(framework::WirelessAccessPointInterface *ap)
+    ScriptableWirelessAccessPoint(WirelessAccessPointInterface *ap)
         : ap_(ap) {
       ASSERT(ap);
       RegisterProperty(
           "name",
-          NewSlot(ap_, &framework::WirelessAccessPointInterface::GetName),
-          NULL);
+          NewSlot(ap_, &WirelessAccessPointInterface::GetName), NULL);
       RegisterProperty(
           "type",
-          NewSlot(ap_, &framework::WirelessAccessPointInterface::GetType),
-          NULL);
+          NewSlot(ap_, &WirelessAccessPointInterface::GetType), NULL);
       RegisterProperty(
           "signalStrength",
-          NewSlot(ap_,
-                  &framework::WirelessAccessPointInterface::GetSignalStrength),
-          NULL);
+          NewSlot(ap_, &WirelessAccessPointInterface::GetSignalStrength), NULL);
       RegisterMethod("connect",
           NewSlotWithDefaultArgs(
               NewSlot(this, &ScriptableWirelessAccessPoint::Connect),
@@ -217,7 +228,7 @@ class ScriptableFramework::Impl {
       ap_->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
     }
 
-    framework::WirelessAccessPointInterface *ap_;
+    WirelessAccessPointInterface *ap_;
   };
 
   class System : public PermanentScriptable {
@@ -225,7 +236,8 @@ class ScriptableFramework::Impl {
     DEFINE_CLASS_ID(0x81227fff6f63494a, ScriptableInterface);
     System(GadgetHostInterface *gadget_host) :
         gadget_host_(gadget_host),
-        framework_(gadget_host->GetFramework()) {
+        framework_(gadget_host->GetFramework()),
+        filesystem_(gadget_host->GetFramework()->GetFileSystem()) {
       RegisterConstant("bios", &bios_);
       RegisterConstant("cursor", &cursor_);
       RegisterConstant("filesystem", &filesystem_);
@@ -243,83 +255,71 @@ class ScriptableFramework::Impl {
       RegisterMethod("localTimeToUniversalTime",
                      NewSlot(&LocalTimeToUniversalTime));
 
-      framework::MachineInterface *machine = framework_->GetMachineInterface();
+      MachineInterface *machine = framework_->GetMachine();
       bios_.RegisterProperty(
           "serialNumber",
-          NewSlot(machine, &framework::MachineInterface::GetBiosSerialNumber),
-          NULL);
-      cursor_.RegisterProperty("position", NewSlot(this, &System::GetCursorPos),
-                               NULL);
+          NewSlot(machine, &MachineInterface::GetBiosSerialNumber), NULL);
+      cursor_.RegisterProperty(
+          "position",
+          NewSlot(this, &System::GetCursorPos), NULL);
       machine_.RegisterProperty(
           "manufacturer",
-          NewSlot(machine,
-                  &framework::MachineInterface::GetMachineManufacturer),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetMachineManufacturer), NULL);
       machine_.RegisterProperty(
           "model",
-          NewSlot(machine, &framework::MachineInterface::GetMachineModel),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetMachineModel), NULL);
 
-      framework::MemoryInterface *memory = framework_->GetMemoryInterface();
+      MemoryInterface *memory = framework_->GetMemory();
       memory_.RegisterProperty(
-          "free", NewSlot(memory, &framework::MemoryInterface::GetFree), NULL);
+          "free", NewSlot(memory, &MemoryInterface::GetFree), NULL);
       memory_.RegisterProperty(
-          "total", NewSlot(memory, &framework::MemoryInterface::GetTotal),
-          NULL);
+          "total", NewSlot(memory, &MemoryInterface::GetTotal), NULL);
       memory_.RegisterProperty(
-          "used", NewSlot(memory, &framework::MemoryInterface::GetUsed), NULL);
+          "used", NewSlot(memory, &MemoryInterface::GetUsed), NULL);
       memory_.RegisterProperty(
           "freePhysical",
-          NewSlot(memory, &framework::MemoryInterface::GetFreePhysical), NULL);
+          NewSlot(memory, &MemoryInterface::GetFreePhysical), NULL);
       memory_.RegisterProperty(
           "totalPhysical",
-          NewSlot(memory, &framework::MemoryInterface::GetTotalPhysical), NULL);
+          NewSlot(memory, &MemoryInterface::GetTotalPhysical), NULL);
       memory_.RegisterProperty(
           "usedPhysical",
-          NewSlot(memory, &framework::MemoryInterface::GetUsedPhysical), NULL);
+          NewSlot(memory, &MemoryInterface::GetUsedPhysical), NULL);
 
-      framework::NetworkInterface *network = framework_->GetNetworkInterface();
+      NetworkInterface *network = framework_->GetNetwork();
       network_.RegisterProperty(
-          "online", NewSlot(network, &framework::NetworkInterface::IsOnline),
-          NULL);
+          "online", NewSlot(network, &NetworkInterface::IsOnline), NULL);
       network_.RegisterProperty(
           "connectionType",
-          NewSlot(network, &framework::NetworkInterface::GetConnectionType),
-          NULL);
+          NewSlot(network, &NetworkInterface::GetConnectionType), NULL);
       network_.RegisterProperty(
           "physicalMediaType",
-          NewSlot(network, &framework::NetworkInterface::GetPhysicalMediaType),
-          NULL);
+          NewSlot(network, &NetworkInterface::GetPhysicalMediaType), NULL);
       network_.RegisterConstant("wireless", &wireless_);
-      // TODO: Is there framework.system.network.wirelessaccesspoint? 
+      // TODO: Is there framework.system.network.wirelessaccesspoint?
 
-      framework::WirelessInterface *wireless =
-          framework_->GetWirelessInterface();
+      WirelessInterface *wireless = framework_->GetWireless();
       wireless_.RegisterProperty(
           "available",
-          NewSlot(wireless, &framework::WirelessInterface::IsAvailable), NULL);
+          NewSlot(wireless, &WirelessInterface::IsAvailable), NULL);
       wireless_.RegisterProperty(
           "connected",
-          NewSlot(wireless, &framework::WirelessInterface::IsConnected), NULL);
+          NewSlot(wireless, &WirelessInterface::IsConnected), NULL);
       wireless_.RegisterProperty(
           "enumerateAvailableAccessPoints",
           NewSlot(this, &System::EnumerateAvailableAPs), NULL);
       wireless_.RegisterProperty(
           "enumerationSupported",
-          NewSlot(wireless,
-                  &framework::WirelessInterface::EnumerationSupported),
-          NULL);
+          NewSlot(wireless, &WirelessInterface::EnumerationSupported), NULL);
       wireless_.RegisterProperty(
           "name",
-          NewSlot(wireless, &framework::WirelessInterface::GetName), NULL);
+          NewSlot(wireless, &WirelessInterface::GetName), NULL);
       wireless_.RegisterProperty(
           "networkName",
-          NewSlot(wireless, &framework::WirelessInterface::GetNetworkName),
-          NULL);
+          NewSlot(wireless, &WirelessInterface::GetNetworkName), NULL);
       wireless_.RegisterProperty(
           "signalStrength",
-          NewSlot(wireless, &framework::WirelessInterface::GetSignalStrength),
-          NULL);
+          NewSlot(wireless, &WirelessInterface::GetSignalStrength), NULL);
       wireless_.RegisterMethod("connect",
           NewSlotWithDefaultArgs(NewSlot(this, &System::ConnectAP),
                                  kDefaultArgsForSecondSlot));
@@ -327,29 +327,28 @@ class ScriptableFramework::Impl {
           NewSlotWithDefaultArgs(NewSlot(this, &System::DisconnectAP),
                                  kDefaultArgsForSecondSlot));
 
-      framework::PerfmonInterface *perfmon = framework_->GetPerfmonInterface();
+      PerfmonInterface *perfmon = framework_->GetPerfmon();
       perfmon_.RegisterMethod(
           "currentValue",
-          NewSlot(perfmon, &framework::PerfmonInterface::GetCurrentValue));
+          NewSlot(perfmon, &PerfmonInterface::GetCurrentValue));
       perfmon_.RegisterMethod("addCounter",
                               NewSlot(this, &System::AddPerfmonCounter));
       perfmon_.RegisterMethod("removeCounter",
                               NewSlot(this, &System::RemovePerfmonCounter));
 
-      framework::PowerInterface *power = framework_->GetPowerInterface();
+      PowerInterface *power = framework_->GetPower();
       power_.RegisterProperty(
           "charing",
-          NewSlot(power, &framework::PowerInterface::IsCharging), NULL);
+          NewSlot(power, &PowerInterface::IsCharging), NULL);
       power_.RegisterProperty(
           "percentRemaining",
-          NewSlot(power, &framework::PowerInterface::GetPercentRemaining),
-          NULL);
+          NewSlot(power, &PowerInterface::GetPercentRemaining), NULL);
       power_.RegisterProperty(
           "pluggedIn",
-          NewSlot(power, &framework::PowerInterface::IsPluggedIn), NULL);
+          NewSlot(power, &PowerInterface::IsPluggedIn), NULL);
       power_.RegisterProperty(
           "timeRemaining",
-          NewSlot(power, &framework::PowerInterface::GetTimeRemaining), NULL);
+          NewSlot(power, &PowerInterface::GetTimeRemaining), NULL);
       power_.RegisterProperty(
           "timeTotal",
           NewSlot(power, &framework::PowerInterface::GetTimeTotal), NULL);
@@ -365,37 +364,28 @@ class ScriptableFramework::Impl {
 
       processor_.RegisterProperty(
           "architecture",
-          NewSlot(machine,
-                  &framework::MachineInterface::GetProcessorArchitecture),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorArchitecture), NULL);
       processor_.RegisterProperty(
           "count",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorCount),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorCount), NULL);
       processor_.RegisterProperty(
           "family",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorFamily),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorFamily), NULL);
       processor_.RegisterProperty(
           "model",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorModel),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorModel), NULL);
       processor_.RegisterProperty(
           "name",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorName),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorName), NULL);
       processor_.RegisterProperty(
           "speed",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorSpeed),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorSpeed), NULL);
       processor_.RegisterProperty(
           "stepping",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorStepping),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorStepping), NULL);
       processor_.RegisterProperty(
           "vendor",
-          NewSlot(machine, &framework::MachineInterface::GetProcessorVendor),
-          NULL);
+          NewSlot(machine, &MachineInterface::GetProcessorVendor), NULL);
 
       screen_.RegisterProperty("size", NewSlot(this, &System::GetScreenSize),
                                NULL);
@@ -415,33 +405,29 @@ class ScriptableFramework::Impl {
     }
 
     ScriptableArray *EnumerateAvailableAPs() {
-      framework::WirelessInterface *wireless =
-          framework_->GetWirelessInterface();
+      WirelessInterface *wireless = framework_->GetWireless();
       ASSERT(wireless);
 
       int count = wireless->GetAPCount();
       ASSERT(count >= 0);
       Variant *aps = new Variant[count];
       for (int i = 0; i < count; i++) {
-        framework::WirelessAccessPointInterface *ap =
-            wireless->GetWirelessAccessPoint(i);
+        WirelessAccessPointInterface *ap = wireless->GetWirelessAccessPoint(i);
         aps[i] = Variant(ap ? new ScriptableWirelessAccessPoint(ap) : NULL);
       }
       return ScriptableArray::Create(aps, static_cast<size_t>(count), false);
     }
 
-    framework::WirelessAccessPointInterface *GetAPByName(const char *ap_name) {
+    WirelessAccessPointInterface *GetAPByName(const char *ap_name) {
       if (!ap_name) return NULL;
 
-      framework::WirelessInterface *wireless =
-          framework_->GetWirelessInterface();
+      WirelessInterface *wireless = framework_->GetWireless();
       ASSERT(wireless);
 
       int count = wireless->GetAPCount();
       ASSERT(count >= 0);
       for (int i = 0; i < count; i++) {
-        framework::WirelessAccessPointInterface *ap =
-            wireless->GetWirelessAccessPoint(i);
+        WirelessAccessPointInterface *ap = wireless->GetWirelessAccessPoint(i);
         if (ap) {
           if (ap->GetName() == ap_name)
             return ap;
@@ -452,7 +438,7 @@ class ScriptableFramework::Impl {
     }
 
     void ConnectAP(const char *ap_name, Slot *method) {
-      framework::WirelessAccessPointInterface *ap = GetAPByName(ap_name);
+      WirelessAccessPointInterface *ap = GetAPByName(ap_name);
       if (ap) {
         ap->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
       } else {
@@ -461,7 +447,7 @@ class ScriptableFramework::Impl {
     }
 
     void DisconnectAP(const char *ap_name, Slot *method) {
-      framework::WirelessAccessPointInterface *ap = GetAPByName(ap_name);
+      WirelessAccessPointInterface *ap = GetAPByName(ap_name);
       if (ap) {
         ap->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
       } else {
@@ -477,7 +463,7 @@ class ScriptableFramework::Impl {
       // TODO:
     }
 
-    std::string EncodeProcessInfo(framework::ProcessInfoInterface *proc_info) {
+    std::string EncodeProcessInfo(ProcessInfoInterface *proc_info) {
       if (!proc_info)
         return "null";
 
@@ -490,8 +476,8 @@ class ScriptableFramework::Impl {
     }
 
     JSONString EnumerateProcesses() {
-      framework::ProcessesInterface *processes =
-          framework_->GetProcessInterface()->EnumerateProcesses();
+      ProcessesInterface *processes =
+          framework_->GetProcess()->EnumerateProcesses();
       if (processes) {
         std::string json("[");
         int count = processes->GetCount();
@@ -510,12 +496,12 @@ class ScriptableFramework::Impl {
     }
 
     JSONString GetForegroundProcess() {
-      return JSONString(EncodeProcessInfo(framework_->GetProcessInterface()->
+      return JSONString(EncodeProcessInfo(framework_->GetProcess()->
                                           GetForeground()));
     }
 
     JSONString GetProcessInfo(int pid) {
-      return JSONString(EncodeProcessInfo(framework_->GetProcessInterface()->
+      return JSONString(EncodeProcessInfo(framework_->GetProcess()->
                                           GetInfo(pid)));
     }
 
@@ -530,7 +516,7 @@ class ScriptableFramework::Impl {
     FrameworkInterface *framework_;
     PermanentScriptable bios_;
     PermanentScriptable cursor_;
-    PermanentScriptable filesystem_;
+    ScriptableFileSystem filesystem_;
     PermanentScriptable machine_;
     PermanentScriptable memory_;
     PermanentScriptable network_;
@@ -544,7 +530,7 @@ class ScriptableFramework::Impl {
 
   std::string BrowseForFile(const char *filter) {
     std::string result;
-    std::vector<std::string> files; 
+    std::vector<std::string> files;
     if (gadget_host_->BrowseForFiles(filter, false, &files) &&
         files.size() > 0)
       result = files[0];

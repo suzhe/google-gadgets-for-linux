@@ -29,7 +29,7 @@
 #include "native_js_wrapper.h"
 
 namespace ggadget {
-namespace internal {
+namespace smjs {
 
 static JSBool ConvertJSToNativeVoid(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
@@ -609,5 +609,5 @@ JSBool ConvertNativeToJS(JSContext *cx,
   }
 }
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget

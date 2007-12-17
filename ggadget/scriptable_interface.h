@@ -66,7 +66,7 @@ class ScriptableInterface {
    */
   static const int kConstantPropertyId = 0;
 
-  
+
   enum OwnershipPolicy {
     /**
      * Default policy: C++ always hold the ownership of the scriptable objects,
@@ -80,7 +80,7 @@ class ScriptableInterface {
     /**
      * Same as @c NATIVE_OWNED, but indicates that this object's life time is
      * longer than the script context. Useful to do memory leak test in the
-     * script adapter. 
+     * script adapter.
      */
     NATIVE_PERMANENT,
     /**
@@ -105,7 +105,7 @@ class ScriptableInterface {
      * possible. If the object is lightweight, we can convert this policy
      * into the transferable policy by forcing C++ code to make a copy of
      * the object when receiving it from the script side.
-     * 
+     *
      * NOTE: For now we don't support callback from native side to script side
      * for objects of this policy.
      */
@@ -126,7 +126,7 @@ class ScriptableInterface {
    * and the script side, the implementation should do appropriate things,
    * such as reference counting, etc. to manage the ownership.
    *
-   * @return @c true if the ownership is transferred, @c false otherwise. 
+   * @return @c true if the ownership is transferred, @c false otherwise.
    */
   virtual OwnershipPolicy Attach() = 0;
 
@@ -171,7 +171,7 @@ class ScriptableInterface {
    * @param[out] id return the property's id which can be used in later
    *     @c GetProperty(), @c SetProperty() and @c InvokeMethod() calls.
    *     If the returned id is @c ID_CONSTANT_PROPERTY, the script engine
-   *     will treat the property as a constant and the value is returned 
+   *     will treat the property as a constant and the value is returned
    *     in @a prototype.
    *     If the returned id is @c ID_DYNAMIC_PROPERTY, the script engine
    *     should not register the property any way, and should call
@@ -193,9 +193,10 @@ class ScriptableInterface {
    *     @c GetPropertyInfoByName(); otherwise it is the array index of a
    *     property.
    * @param[out] prototype return a prototype of the property value, from
-   *     which the script engine can get detailed information.
+   *             which the script engine can get detailed information.
    * @param[out] is_method true if this property corresponds a method.
-   * @param[out] name the name of the property.
+   * @param[out] name the name of the property. The returned value is a
+   *             constant string, which shall not be freed or modified.
    * @return @c true if the property is supported and succeeds.
    */
   virtual bool GetPropertyInfoById(int id, Variant *prototype,

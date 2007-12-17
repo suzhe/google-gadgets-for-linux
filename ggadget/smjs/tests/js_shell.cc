@@ -28,9 +28,9 @@
 #include "ggadget/smjs/json.h"
 #include "ggadget/unicode_utils.h"
 
-using ggadget::internal::PrintJSValue;
-using ggadget::internal::JSScriptContext;
-using ggadget::JSScriptRuntime;
+using ggadget::smjs::PrintJSValue;
+using ggadget::smjs::JSScriptContext;
+using ggadget::smjs::JSScriptRuntime;
 
 // The exception value thrown by Assert function.
 const int kAssertExceptionMagic = 135792468;
@@ -270,7 +270,7 @@ static JSBool ShowFileAndLine(JSContext *cx, JSObject *obj,
 static JSBool JSONEncodeFunc(JSContext *cx, JSObject *obj,
                              uintN argc, jsval *argv, jsval *rval) {
   std::string json;
-  if (ggadget::JSONEncode(cx, argv[0], &json)) {
+  if (ggadget::smjs::JSONEncode(cx, argv[0], &json)) {
     *rval = STRING_TO_JSVAL(JS_NewStringCopyN(cx, json.c_str(), json.length()));
     return JS_TRUE;
   }
@@ -281,7 +281,7 @@ static JSBool JSONEncodeFunc(JSContext *cx, JSObject *obj,
 static JSBool JSONDecodeFunc(JSContext *cx, JSObject *obj,
                              uintN argc, jsval *argv, jsval *rval) {
   JSString *str = JS_ValueToString(cx, argv[0]);
-  if (str && ggadget::JSONDecode(cx, JS_GetStringBytes(str), rval))
+  if (str && ggadget::smjs::JSONDecode(cx, JS_GetStringBytes(str), rval))
     return JS_TRUE;
   argv[0] = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, "JSONDecode failed"));
   return Assert(cx, obj, argc, argv, rval);

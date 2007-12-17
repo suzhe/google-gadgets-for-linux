@@ -23,28 +23,34 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
-static const char* kKeysInMachineInfo[] = { "cpu family", "model", "stepping",
-    "vendor_id", "model name", "cpu MHz" };
+static const char* kKeysInMachineInfo[] = {
+  "cpu family", "model", "stepping",
+  "vendor_id", "model name", "cpu MHz"
+};
 
 // Represents the file names for reading CPU info.
 static const char* kCPUInfoFile = "/proc/cpuinfo";
 
-Machine::Machine() {
+xMachine::Machine() {
   InitArchInfo();
   InitProcInfo();
 }
 
 std::string Machine::GetBiosSerialNumber() const {
-  return "to be continued...";
+  // TODO:
+  return "Unknown";
 }
 
 std::string Machine::GetMachineManufacturer() const {
-  return "to be continued...to be continued...\";";
+  // TODO:
+  return "Unknown";
 }
 
 std::string Machine::GetMachineModel() const {
-  return "to be continued...";
+  // TODO:
+  return "Unknown";
 }
 
 std::string Machine::GetProcessorArchitecture() const {
@@ -124,5 +130,6 @@ void Machine::InitProcInfo() {
   fclose(fp);
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget

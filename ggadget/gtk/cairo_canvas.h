@@ -24,6 +24,7 @@
 #include <ggadget/canvas_interface.h>
 
 namespace ggadget {
+namespace gtk {
 
 /**
  * This class realizes the CanvasInterface using the Cairo graphics library.
@@ -88,8 +89,8 @@ class CairoCanvas : public CanvasInterface {
 
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h);
-  
-  virtual bool GetTextExtents(const char *text, const FontInterface *f, 
+
+  virtual bool GetTextExtents(const char *text, const FontInterface *f,
                               int text_flags, double in_width,
                               double *width, double *height);
 
@@ -126,6 +127,7 @@ class CairoCanvas : public CanvasInterface {
    DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
 };
 
-}
+} // namespace gtk
+} // namespace ggadget
 
 #endif // GGADGET_GTK_CAIRO_CANVAS_H__

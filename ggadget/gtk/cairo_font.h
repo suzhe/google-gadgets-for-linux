@@ -22,6 +22,7 @@
 #include <ggadget/font_interface.h>
 
 namespace ggadget {
+namespace gtk {
 
 /**
  * A Cairo/Pango-based implementation of the FontInterface. Internally,
@@ -52,6 +53,7 @@ class CairoFont : public FontInterface {
   Weight weight_;
 };
 
+} // namespace gtk
 } // namespace ggadget
 
 #endif // GGADGET_GTK_CAIRO_FONT_H__

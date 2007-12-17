@@ -25,11 +25,9 @@
 #include <ggadget/signals.h>
 
 namespace ggadget {
+namespace smjs {
 
 class JSScriptRuntime;
-
-namespace internal {
-
 class NativeJSWrapper;
 class JSFunctionSlot;
 
@@ -97,7 +95,7 @@ class JSScriptContext : public ScriptContextInterface {
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
-  friend class ::ggadget::JSScriptRuntime;
+  friend class ::ggadget::smjs::JSScriptRuntime;
   JSScriptContext(JSContext *context);
   virtual ~JSScriptContext();
 
@@ -159,7 +157,7 @@ class AutoLocalRootScope {
   JSBool good_;
 };
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget
 
 #endif  // GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__

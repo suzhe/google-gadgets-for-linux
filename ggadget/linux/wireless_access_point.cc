@@ -21,24 +21,29 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 void WirelessAccessPoint::Destroy() {
   delete this;
 }
 
 std::string WirelessAccessPoint::GetName() const {
+  // TODO::
   return "Dummy Wireless Access Point";
 }
 
 WirelessAccessPointInterface::Type WirelessAccessPoint::GetType() const {
+  // TODO::
   return WirelessAccessPointInterface::WIRELESS_TYPE_ANY;
 }
 
 int WirelessAccessPoint::GetSignalStrength() const {
+  // TODO::
   return 87;
 }
 
 void WirelessAccessPoint::Connect(Slot1<void, bool> *callback) {
+  // TODO::
   if (callback) {
     (*callback)(true);
     delete callback;
@@ -46,11 +51,13 @@ void WirelessAccessPoint::Connect(Slot1<void, bool> *callback) {
 }
 
 void WirelessAccessPoint::Disconnect(Slot1<void, bool> *callback) {
+  // TODO::
   if (callback) {
     (*callback)(true);
     delete callback;
   }
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget

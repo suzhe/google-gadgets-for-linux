@@ -20,12 +20,54 @@
 #include <ggadget/file_system_interface.h>
 
 namespace ggadget {
+namespace framework {
+namespace linux {
 
-/**
- * Create a new instance of @c FileSystemInterface.
- */
-FileSystemInterface *CreateFileSystem();
+class FileSystem : public FileSystemInterface {
+ public:
+  FileSystem();
+  virtual ~FileSystem();
 
+ public:
+  virtual DrivesInterface *GetDrives();
+  virtual std::string BuildPath(const char *path, const char *name);
+  virtual std::string GetDriveName(const char *path);
+  virtual std::string GetParentFolderName(const char *path);
+  virtual std::string GetFileName(const char *path);
+  virtual std::string GetBaseName(const char *path);
+  virtual std::string GetExtensionName(const char *path);
+  virtual std::string GetAbsolutePathName(const char *path);
+  virtual std::string GetTempName();
+  virtual bool DriveExists(const char *drive_spec);
+  virtual bool FileExists(const char *file_spec);
+  virtual bool FolderExists(const char *folder_spec);
+  virtual DriveInterface *GetDrive(const char *drive_spec);
+  virtual FileInterface *GetFile(const char *file_path);
+  virtual FolderInterface *GetFolder(const char *folder_path);
+  virtual FolderInterface *GetSpecialFolder(SpecialFolder special_folder);
+  virtual bool DeleteFile(const char *file_spec, bool force);
+  virtual bool DeleteFolder(const char *folder_spec, bool force);
+  virtual bool MoveFile(const char *source, const char *dest);
+  virtual bool MoveFolder(const char *source, const char *dest);
+  virtual bool CopyFile(const char *source, const char *dest,
+                        bool overwrite);
+  virtual bool CopyFolder(const char *source, const char *dest,
+                          bool overwrite);
+  virtual FolderInterface *CreateFolder(const char *path);
+  virtual TextStreamInterface *CreateTextFile(const char *filename,
+                                              bool overwrite,
+                                              bool unicode);
+  virtual TextStreamInterface *OpenTextFile(const char *filename,
+                                            IOMode mode,
+                                            bool create,
+                                            Tristate format);
+  virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
+                                                 bool unicode);
+  virtual std::string GetFileVersion(const char *filename);
+};
+
+} // namespace linux
+} // namespace framework
 } // namespace ggadget
 
 #endif // GGADGET_LINUX_FILE_SYSTEM_H__

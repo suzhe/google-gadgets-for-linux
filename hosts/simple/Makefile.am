@@ -30,13 +30,17 @@ ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
 			  @SPIDERMONKEY_CPPFLAGS@
 
+if GGL_HOST_LINUX
+SYSDEPS_LIB=$(top_builddir)/ggadget/linux/libggadget-linux@GGL_EPOCH@.la
+endif
+
 ggl_simple_LDADD	= @CAIRO_LIBS@ \
 			  @GTK2_LIBS@ \
 			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/smjs/libggadget-smjs@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/linux/libggadget-linux@GGL_EPOCH@.la
+			  $(SYSDEPS_LIB)
 
 ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 

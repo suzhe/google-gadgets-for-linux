@@ -29,11 +29,14 @@
 
 namespace ggadget {
 
+class Texture;
+
+namespace gtk {
+
 class CairoCanvas;
 class CairoGraphics;
 class GtkViewHost;
 class GtkGadgetHost;
-class Texture;
 
 /** GtkEdit is the gtk implementation of EditInterface */
 class GtkEdit : public EditInterface {
@@ -332,6 +335,7 @@ class GtkEdit : public EditInterface {
   DISALLOW_EVIL_CONSTRUCTORS(GtkEdit);
 };  // class GtkEdit
 
-}   // namespace ggadget
+} // namespace gtk
+} // namespace ggadget
 
 #endif   // GGADGET_GTK_GTKEDIT_H__

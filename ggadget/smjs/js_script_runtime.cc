@@ -18,6 +18,7 @@
 #include "js_script_context.h"
 
 namespace ggadget {
+namespace smjs {
 
 const uint32 kDefaultContextSize = 64 * 1024 * 1024;
 const uint32 kDefaultStackTrunkSize = 4096;
@@ -41,7 +42,7 @@ ScriptContextInterface *JSScriptRuntime::CreateContext() {
   if (!context)
     return NULL;
   JS_SetErrorReporter(context, ReportError);
-  return new internal::JSScriptContext(context);
+  return new smjs::JSScriptContext(context);
 }
 
 Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {
@@ -70,4 +71,5 @@ void JSScriptRuntime::ReportError(JSContext *cx, const char *message,
   runtime->error_reporter_signal_(error_report.c_str());
 }
 
+} // namespace smjs
 } // namespace ggadget

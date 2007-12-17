@@ -17,13 +17,14 @@
 #include "perfmon.h"
 
 namespace ggadget {
-
 namespace framework {
+namespace linux {
 
 int64_t Perfmon::GetCurrentValue(const char *counter_path) {
+  // TODO:
   return 19;
 }
 
+} // namespace linux
 } // namespace framework
-
 } // namespace ggadget

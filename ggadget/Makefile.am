@@ -15,7 +15,16 @@
 
 
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . gtk linux smjs tests
+SUBDIRS = . tests
+if GGL_BUILD_LIBGGADGET_GTK
+SUBDIRS += gtk
+endif
+if GGL_BUILD_LIBGGADGET_SMJS
+SUBDIRS += smjs
+endif
+if GGL_HOST_LINUX
+SUBDIRS += linux
+endif
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -37,6 +46,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  details_view.h \
 			  display_window.h \
 			  div_element.h \
+			  dummy_framework.h \
 			  edit_element.h \
 			  edit_interface.h \
 			  element_factory.h \
@@ -111,6 +121,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  details_view.cc \
 			  display_window.cc \
 			  div_element.cc \
+			  dummy_framework.cc \
 			  edit_element.cc \
 			  element_factory.cc \
 			  elements.cc \

@@ -17,13 +17,12 @@
 # Putting . into SBUDIRS list to force building current directory first.
 # SUBDIRS = . tests
 
+if GGL_HOST_LINUX
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-linuxincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/linux
-
-linuxinclude_HEADERS	= file_system.h \
-			  framework.h \
+noinst_HEADERS		= file_system.h \
 			  machine.h \
 			  memory.h \
 			  network.h \
@@ -32,6 +31,9 @@ linuxinclude_HEADERS	= file_system.h \
 			  process.h \
 			  wireless.h \
 			  wireless_access_point.h
+
+linuxincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/linux
+linuxinclude_HEADERS	= framework.h
 
 lib_LTLIBRARIES		= libggadget-linux@GGL_EPOCH@.la
 
@@ -55,3 +57,5 @@ libggadget_linux@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
 			  -export-dynamic \
 			  -rpath $(libdir)
+
+endif

@@ -23,7 +23,6 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class AudioclipInterface;
 class ElementFactoryInterface;
 class FileManagerInterface;
 class FrameworkInterface;
@@ -199,9 +198,6 @@ class GadgetHostInterface {
 
   /** Returns the path to the icon associated with the specified file. */
   virtual std::string GetFileIcon(const char *filename) const = 0;
-
-  /** Creates an audio clip from given file or url. */
-  virtual AudioclipInterface *CreateAudioclip(const char *src) = 0;
 };
 
 } // namespace ggadget

@@ -19,6 +19,7 @@
 #include "json.h"
 
 namespace ggadget {
+namespace smjs {
 
 // Use Microsoft's method to encode/decode Date object in JSON.
 // See http://msdn2.microsoft.com/en-us/library/bb299886.aspx.
@@ -228,7 +229,7 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
       pos += sizeof(kDatePostfixReplace) - 1;
     }
   }
-  
+
   std::string json_filename("JSON:");
   json_filename += json;
   return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
@@ -236,4 +237,5 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
                            json_filename.c_str(), 1, js_val);
 }
 
+} // namespace smjs
 } // namespace ggadget

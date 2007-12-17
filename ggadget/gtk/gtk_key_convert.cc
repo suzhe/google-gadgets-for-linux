@@ -20,7 +20,8 @@
 
 using ggadget::KeyboardEvent;
 
-namespace ggadget { 
+namespace ggadget {
+namespace gtk {
 
 struct KeyvalKeyCode {
   guint gtk_keyval;
@@ -265,4 +266,5 @@ int ConvertGdkModifierToButton(guint state) {
   return button;
 }
 
+} // namespace gtk
 } // namespace ggadget

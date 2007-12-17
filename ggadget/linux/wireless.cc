@@ -20,47 +20,58 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 bool Wireless::IsAvailable() const {
+  // TODO:
   return true;
 }
 
 bool Wireless::IsConnected() const {
+  // TODO:
   return true;
 }
 
 bool Wireless::EnumerationSupported() const {
+  // TODO:
   return true;
 }
 
 int Wireless::GetAPCount() const {
+  // TODO:
   return 1;
 }
 
-const WirelessAccessPointInterface *Wireless::GetWirelessAccessPoint(int index)
-    const {
+const WirelessAccessPointInterface *
+Wireless::GetWirelessAccessPoint(int index) const {
+  // TODO:
   if (index == 0)
     return new WirelessAccessPoint();
   return NULL;
 }
 
 WirelessAccessPointInterface *Wireless::GetWirelessAccessPoint(int index) {
+  // TODO:
   if (index == 0)
     return new WirelessAccessPoint();
   return NULL;
 }
 
 std::string Wireless::GetName() const {
+  // TODO:
   return "Dummy Wireless";
 }
 
 std::string Wireless::GetNetworkName() const {
+  // TODO:
   return "Dummy Wireless Network";
 }
 
 int Wireless::GetSignalStrength() const {
+  // TODO:
   return 87;
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget

@@ -29,6 +29,7 @@ SET(SRCS
   content_item.cc
   details_view.cc
   display_window.cc
+  dummy_framework.cc
   element_factory.cc
   elements.cc
   file_manager.cc

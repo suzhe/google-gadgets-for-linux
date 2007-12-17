@@ -22,7 +22,7 @@
 
 namespace ggadget {
 
-namespace fs {
+namespace framework {
 
 class DrivesInterface;
 class DriveInterface;
@@ -33,9 +33,9 @@ class FolderInterface;
 class TextStreamInterface;
 
 enum IOMode {
-  FOR_READING = 1,
-  FOR_WRITING = 2,
-  FOR_APPENDING = 8
+  IO_MODE_READING = 1,
+  IO_MODE_WRITING = 2,
+  IO_MODE_APPENDING = 8
 };
 
 enum Tristate {
@@ -46,39 +46,37 @@ enum Tristate {
 };
 
 enum FileAttribute {
-  NORMAL = 0,
-  READONLY = 1,
-  HIDDEN = 2,
-  SYSTEM = 4,
-  VOLUME = 8,
-  DIRECTORY = 16,
-  ARCHIVE = 32,
-  ALIAS = 1024,
-  COMPRESSED = 2048
+  FILE_ATTR_NORMAL = 0,
+  FILE_ATTR_READONLY = 1,
+  FILE_ATTR_HIDDEN = 2,
+  FILE_ATTR_SYSTEM = 4,
+  FILE_ATTR_VOLUME = 8,
+  FILE_ATTR_DIRECTORY = 16,
+  FILE_ATTR_ARCHIVE = 32,
+  FILE_ATTR_ALIAS = 1024,
+  FILE_ATTR_COMPRESSED = 2048
 };
 
 enum SpecialFolder {
-  WINDOWS_FOLDER = 0,
-  SYSTEM_FOLDER = 1,
-  TEMPORARY_FOLDER = 2
+  SPECIAL_FOLDER_WINDOWS = 0,
+  SPECIAL_FOLDER_SYSTEM = 1,
+  SPECIAL_FOLDER_TEMPORARY = 2
 };
 
 enum StandardStreamType {
-  STD_IN = 0,
-  STD_OUT = 1,
-  STD_ERR = 2
+  STD_STREAM_IN = 0,
+  STD_STREAM_OUT = 1,
+  STD_STREAM_ERR = 2
 };
 
 enum DriveType {
-  UNKNOWN_TYPE = 0,
-  REMOVABLE = 1,
-  FIXED = 2,
-  REMOTE = 3,
-  CDROM = 4,
-  RAM_DISK = 5
+  DRIVE_TYPE_UNKNOWN = 0,
+  DRIVE_TYPE_REMOVABLE = 1,
+  DRIVE_TYPE_FIXED = 2,
+  DRIVE_TYPE_REMOTE = 3,
+  DRIVE_TYPE_CDROM = 4,
+  DRIVE_TYPE_RAM_DISK = 5
 };
-
-} // namespace fs
 
 /**
  * Simulates the Microsoft IFileSystem3 interface.
@@ -87,7 +85,7 @@ enum DriveType {
  * NOTE: if a method returns <code>const char *</code>, the pointer must be
  * used transiently or made a copy. The pointer may become invalid after
  * another call to a method also returns <code>const char *</code> in some
- * implementations.    
+ * implementations.
  */
 class FileSystemInterface {
  public:
@@ -95,7 +93,7 @@ class FileSystemInterface {
 
  public:
   /** Get drives collection. */
-  virtual fs::DrivesInterface *GetDrives() = 0;
+  virtual DrivesInterface *GetDrives() = 0;
   /** Generate a path from an existing path and a name. */
   virtual std::string BuildPath(const char *path, const char *name) = 0;
   /** Return drive from a path. */
@@ -119,14 +117,13 @@ class FileSystemInterface {
   /** Check if a path exists. */
   virtual bool FolderExists(const char *folder_spec) = 0;
   /** Get drive or UNC share. */
-  virtual fs::DriveInterface *GetDrive(const char *drive_spec) = 0;
+  virtual DriveInterface *GetDrive(const char *drive_spec) = 0;
   /** Get file. */
-  virtual fs::FileInterface *GetFile(const char *file_path) = 0;
+  virtual FileInterface *GetFile(const char *file_path) = 0;
   /** Get folder. */
-  virtual fs::FolderInterface *GetFolder(const char *folder_path) = 0;
+  virtual FolderInterface *GetFolder(const char *folder_path) = 0;
   /** Get location of various system folders. */
-  virtual fs::FolderInterface *GetSpecialFolder(
-      fs::SpecialFolder special_folder) = 0;
+  virtual FolderInterface *GetSpecialFolder(SpecialFolder special_folder) = 0;
   /** Delete a file. */
   virtual bool DeleteFile(const char *file_spec, bool force) = 0;
   /** Delete a folder. */
@@ -142,24 +139,22 @@ class FileSystemInterface {
   virtual bool CopyFolder(const char *source, const char *dest,
                           bool overwrite) = 0;
   /** Create a folder. */
-  virtual fs::FolderInterface *CreateFolder(const char *path) = 0;
+  virtual FolderInterface *CreateFolder(const char *path) = 0;
   /** Create a file as a TextStream. */
-  virtual fs::TextStreamInterface *CreateTextFile(const char *filename,
-                                                  bool overwrite,
-                                                  bool unicode) = 0;
+  virtual TextStreamInterface *CreateTextFile(const char *filename,
+                                              bool overwrite,
+                                              bool unicode) = 0;
   /** Open a file as a TextStream. */
-  virtual fs::TextStreamInterface *OpenTextFile(const char *filename,
-                                                fs::IOMode mode,
-                                                bool create,
-                                                fs::Tristate format) = 0;
+  virtual TextStreamInterface *OpenTextFile(const char *filename,
+                                            IOMode mode,
+                                            bool create,
+                                            Tristate format) = 0;
   /** Retrieve the standard input, output or error stream. */
-  virtual fs::TextStreamInterface *GetStandardStream(
-      fs::StandardStreamType type, bool unicode) = 0;
+  virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
+                                                 bool unicode) = 0;
   /** Retrieve the file version of the specified file into a string. */
   virtual std::string GetFileVersion(const char *filename) = 0;
 };
-
-namespace fs {
 
 /** IDriveCollection. */
 class DrivesInterface {
@@ -178,7 +173,7 @@ class DrivesInterface {
 class DriveInterface {
  protected:
   virtual ~DriveInterface() { }
-  
+
  public:
   virtual void Destroy() = 0;
 
@@ -285,7 +280,7 @@ class FileInterface {
   virtual bool Copy(const char *dest, bool overwrite) = 0;
   virtual bool Move(const char *dest) = 0;
   virtual TextStreamInterface *OpenAsTextStream(IOMode IOMode,
-                                                Tristate Format) = 0; 
+                                                Tristate Format) = 0;
 };
 
 class TextStreamInterface {
@@ -324,7 +319,7 @@ class TextStreamInterface {
   virtual void Close() = 0;
 };
 
-} // namespace fs
+} // namespace framework
 
 } // namespace ggadget
 

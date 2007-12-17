@@ -37,6 +37,8 @@
 #endif
 
 namespace ggadget {
+namespace gtk {
+
 static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
 static const int kCursorBlinkTimeout = 500;
@@ -1548,4 +1550,5 @@ void GtkEdit::PasteCallback(GtkClipboard *clipboard,
   reinterpret_cast<GtkEdit*>(gg)->QueueRefresh(false);
 }
 
-} // end of namespace ggadget
+} // namespace gtk
+} // namespace ggadget

@@ -23,8 +23,7 @@
 
 namespace ggadget {
 namespace framework {
-
-typedef std::pair<int, std::string> IntStringPair;
+namespace linux {
 
 class ProcessInfo : public ProcessInfoInterface {
  public:
@@ -54,6 +53,7 @@ class Processes : public ProcessesInterface {
   void InitProcesses();
 
  private:
+  typedef std::pair<int, std::string> IntStringPair;
    std::vector<IntStringPair> procs_;
 };
 
@@ -64,6 +64,7 @@ class Process : public ProcessInterface {
   virtual ProcessInfoInterface *GetInfo(int pid);
 };
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget
 

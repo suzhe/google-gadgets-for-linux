@@ -29,6 +29,7 @@
 #include "unittest/gunit.h"
 
 using namespace ggadget;
+using namespace ggadget::gtk;
 
 const double kPi = 3.141592653589793;
 bool g_savepng = false;

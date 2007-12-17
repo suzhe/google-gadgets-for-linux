@@ -196,6 +196,18 @@ AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 # Check spidermonkey library
 GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 
+# Check D-Bus library
+PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.0, [has_dbus=yes], [has_dbus=no])
+
+if test x$has_dbus = xyes; then
+  if test -z "$DBUS_SYSTEM_BUS_SOCKET"; then
+    # use default
+    DBUS_SYSTEM_BUS_SOCKET="unix:path=/var/run/dbus/system_bus_socket"
+  fi
+  AC_DEFINE_UNQUOTED(DBUS_SYSTEM_BUS_SOCKET, ["$DBUS_SYSTEM_BUS_SOCKET"],
+                     [dbus system bus socket path])
+fi
+
 ###########################################################
 ##                  Process Config options.              ##
 ###########################################################
@@ -203,6 +215,7 @@ GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 build_libggadget_gtk=yes
 build_libggadget_smjs=yes
 build_simple_host=yes
+build_libggadget_dbus=yes
 
 if test x$has_libcurl != xyes; then
   AC_MSG_ERROR([Library curl is not available.])
@@ -233,6 +246,11 @@ if test x$has_spidermonkey != xyes; then
   build_simple_host=no
 fi
 
+if test x$has_dbus != xyes; then
+  AC_MSG_WARN([Library D-Bus is not available, libggadget-dbus won't be built.])
+  build_libggadget_dbus=no
+fi
+
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_GTK],
   [test x$build_libggadget_gtk = xyes])
@@ -245,6 +263,10 @@ AM_CONDITIONAL(
   [GGL_BUILD_SIMPLE_HOST],
   [test x$build_simple_host = xyes])
 
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_DBUS],
+  [test x$build_libggadget_dbus = xyes])
+
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
 
@@ -252,15 +274,19 @@ AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
 case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
     ggl_host_type=windows
+    AC_DEFINE(GGL_HOST_WINDOWS,1,[Windows host])
     ;;
   *darwin* )
     ggl_host_type=macosx
+    AC_DEFINE(GGL_HOST_MACOSX,1,[Mac OS X host])
     ;;
   *linux* )
     ggl_host_type=linux
+    AC_DEFINE(GGL_HOST_LINUX,1,[Linux host])
     ;;
   *solaris* )
     ggl_host_type=solaris
+    AC_DEFINE(GGL_HOST_SOLARIS,1,[Solaris host])
     ;;
   * )
     ggl_host_type=unknown
@@ -336,8 +362,10 @@ Build options:
   Build shared libs        $enable_shared
   Build static libs        $enable_static
   Enable debug             $enable_debug
+  Host type                $ggl_host_type
   Build libggadget-gtk     $build_libggadget_gtk
   Build libggadget-smjs    $build_libggadget_smjs
+  Build libggadget-dbus    $build_libggadget_dbus
   Build simple host        $build_simple_host
 ])
 

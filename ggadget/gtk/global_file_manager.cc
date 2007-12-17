@@ -34,14 +34,15 @@ struct Resource {
   const char *data;
 };
 
-static const Resource kResourceList[] = {  
-  {"invalid", 0, NULL} 
+static const Resource kResourceList[] = {
+  {"invalid", 0, NULL}
 };
 #endif
 
 namespace ggadget {
+namespace gtk {
 
-static const char kResourceZipName[] = "ggl_resources.bin"; 
+static const char kResourceZipName[] = "ggl_resources.bin";
 
 GlobalFileManager::GlobalFileManager() {
 
@@ -84,7 +85,7 @@ bool GlobalFileManager::Init(const char *base_path) {
   std::string filename;
   unzFile zip;
 
-  // TODO: try other dirs first 
+  // TODO: try other dirs first
 
   // Try current directory.
   filename = kResourceZipName;
@@ -94,7 +95,7 @@ bool GlobalFileManager::Init(const char *base_path) {
     goto exit;
   }
 
-exit:  
+exit:
   res_zip_path_ = filename;
   if (res_zip_path_.empty()) {
     LOG("Failed to open resource file.");
@@ -122,12 +123,12 @@ static const Resource *FindResource(const char *res_name) {
   return NULL;
 }
 
-bool GlobalFileManager::SeekToFile(unzFile zip, const char *file, 
+bool GlobalFileManager::SeekToFile(unzFile zip, const char *file,
                                    std::string *path) {
   ASSERT(path);
   path->clear();
 
-  bool status = true;  
+  bool status = true;
   std::string filename = file;
   // Use case-sensitive comparisons.
   if (unzLocateFile(zip, filename.c_str(), 1) == UNZ_OK) {
@@ -169,7 +170,7 @@ exit:
 }
 
 bool GlobalFileManager::GetZipFileContents(const char *filename,
-                                           std::string *data, 
+                                           std::string *data,
                                            std::string *path) {
   unzFile zip = unzOpen(res_zip_path_.c_str());
   if (!zip) {
@@ -228,7 +229,7 @@ bool GlobalFileManager::GetFileContents(const char *file,
     const char *res_name = file + res_prefix_len;
     const Resource *pos = FindResource(res_name);
     if (pos) {
-      data->append(pos->data, pos->data_size);    
+      data->append(pos->data, pos->data_size);
       *path = file;
       return true;
     }
@@ -290,7 +291,7 @@ bool GlobalFileManager::GetXMLFileContents(const char *file,
   return false; // not implemented
 }
 
-bool GlobalFileManager::ExtractFile(const char *file, 
+bool GlobalFileManager::ExtractFile(const char *file,
                                         std::string *into_file) {
   return false; // not implemented
 }
@@ -305,4 +306,5 @@ bool GlobalFileManager::FileExists(const char *file) {
   return (access(file, F_OK) == 0);
 }
 
+} // namespace gtk
 } // namespace ggadget

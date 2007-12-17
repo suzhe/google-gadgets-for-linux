@@ -24,7 +24,7 @@
 #include "js_script_runtime.h"
 
 namespace ggadget {
-namespace internal {
+namespace smjs {
 
 JSScriptContext::JSScriptContext(JSContext *context)
     : context_(context),
@@ -35,7 +35,7 @@ JSScriptContext::JSScriptContext(JSContext *context)
 }
 
 JSScriptContext::~JSScriptContext() {
-  // Force a GC to make it possible to check if there are leaks. 
+  // Force a GC to make it possible to check if there are leaks.
   JS_GC(context_);
 
   for (WrapperMap::iterator it = wrapper_map_.begin();
@@ -248,7 +248,7 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   ASSERT(return_value.type() == Variant::TYPE_SCRIPTABLE);
   ScriptableInterface *scriptable =
       VariantValue<ScriptableInterface *>()(return_value);
-  
+
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
   if (context_wrapper)
@@ -321,7 +321,7 @@ bool JSScriptContext::AssignFromContext(ScriptableInterface *dest_object,
   } else {
     dest_js_object = JS_GetGlobalObject(context_);
   }
-  
+
   if (dest_object_expr && *dest_object_expr) {
     UTF16String utf16_dest_object_expr;
     ConvertStringUTF8ToUTF16(dest_object_expr, strlen(dest_object_expr),
@@ -369,5 +369,5 @@ bool JSScriptContext::AssignFromContext(ScriptableInterface *dest_object,
   return JS_SetProperty(context_, dest_js_object, dest_property, &src_val);
 }
 
-} // namespace internal
+} // namespace smjs
 } // namespace ggadget

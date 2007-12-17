@@ -23,6 +23,7 @@
 
 namespace ggadget {
 namespace framework {
+namespace linux {
 
 // Represents the time interval for refreshing the memory info in seconds.
 time_t kTimeInterval = 2;
@@ -31,8 +32,10 @@ time_t kTimeInterval = 2;
 static const char* kMemInfoFile = "/proc/meminfo";
 
 // Represents the keys for memory info in proc file system.
-static const char* kKeysInMemInfo[] = { "MemTotal", "MemFree", "SwapTotal",
-    "SwapFree", "Buffers", "Cached", "SwapCached" };
+static const char* kKeysInMemInfo[] = {
+  "MemTotal", "MemFree", "SwapTotal",
+  "SwapFree", "Buffers", "Cached", "SwapCached"
+};
 
 Memory::Memory() {
   timestamp_ = 0;
@@ -55,7 +58,7 @@ int64_t Memory::GetUsed() {
 
 int64_t Memory::GetFreePhysical() {
   Refresh();
-  
+
   // here: free physical memory = free + buffer + cache + swap_cache
   return mem_info_[FREE_PHYSICAL] + mem_info_[BUFFERS] + mem_info_[CACHED] +
          mem_info_[SWAP_CACHED];
@@ -72,7 +75,7 @@ int64_t Memory::GetUsedPhysical() {
 
 void Memory::Refresh() {
   timeval tv;
-  
+
   // if time interval is less than 2 seconds, just return
   if (!gettimeofday(&tv, NULL) && tv.tv_sec - timestamp_ <= kTimeInterval)
     return;
@@ -110,5 +113,6 @@ void Memory::ReadMemInfoFromProc() {
   fclose(fp);
 }
 
+} // namespace linux
 } // namespace framework
 } // namespace ggadget
