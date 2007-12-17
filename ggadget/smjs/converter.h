@@ -80,6 +80,18 @@ JSBool ConvertNativeToJS(JSContext* cx,
                          const Variant &native_val,
                          jsval* js_val);
 
+/**
+ * Compiles function source into <code>JSFunction *</code>.
+ */
+JSFunction *CompileFunction(JSContext *cx, const char *script,
+                            const char *filename, int lineno);
+
+/**
+ * Compile and evaluate a piece of script.
+ */
+JSBool EvaluateScript(JSContext *cx, const char *script,
+                      const char *filename, int lineno, jsval *rval);
+
 } // namespace smjs
 } // namespace ggadget
 

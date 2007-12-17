@@ -35,20 +35,29 @@ LDADD			= @READLINE_LIBS@ \
 
 check_PROGRAMS		= js_shell \
 			  wrapper_test_shell \
-			  dom_test_shell
+			  dom_test_shell \
+			  jscript_massager_test \
+			  massager
 
 js_shell_SOURCES	= js_shell.cc \
 			  init_custom_objects_stub.cc
 
-wrapper_test_shell_SOURCES= js_shell.cc \
-			    wrapper_test_shell.cc \
-			    $(top_srcdir)/ggadget/tests/scriptables.cc
+wrapper_test_shell_SOURCES = js_shell.cc \
+			     wrapper_test_shell.cc \
+			     $(top_srcdir)/ggadget/tests/scriptables.cc
 
 dom_test_shell_SOURCES	= js_shell.cc \
 			  dom_test_shell.cc
 
+jscript_massager_test_SOURCES = jscript_massager_test.cc
+
+massager_SOURCES	= massager.cc
+
 TESTS_ENVIRONMENT	= @SHELL@
-TESTS			= js_shell.sh wrapper_test_shell.sh dom_test_shell.sh
+TESTS			= js_shell.sh \
+			  wrapper_test_shell.sh \
+			  dom_test_shell.sh \
+			  jscript_massager_test
 
 js_shell.sh: Makefile
 	echo @MEMCHECK_COMMAND@ $(abs_builddir)/js_shell \
