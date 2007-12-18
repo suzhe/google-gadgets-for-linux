@@ -19,6 +19,7 @@
 #include <strings.h>
 
 #include "ggadget/common.h"
+#include "ggadget/color.h"
 #include "ggadget/canvas_interface.h"
 #include "ggadget/gtk/cairo_canvas.h"
 #include "unittest/gunit.h"
@@ -169,6 +170,27 @@ TEST_F(CairoCanvasTest, FillRectAndClipping) {
   EXPECT_TRUE(gfx_->DrawFilledRect(20., 20., 260., 110., Color(0., 1., 0.)));
   EXPECT_TRUE(gfx_->PopState());
   EXPECT_TRUE(gfx_->DrawFilledRect(110., 40., 90., 70., Color(0., 0., 1.)));
+}
+
+TEST_F(CairoCanvasTest, GetPointValue) {
+  Color color;
+  double opacity;
+
+  EXPECT_TRUE(gfx_->MultiplyOpacity(0.5));
+  EXPECT_TRUE(gfx_->DrawFilledRect(10., 50., 280., 100., Color(1., 0., 0.)));
+
+  EXPECT_TRUE(gfx_->GetPointValue(10, 70, &color, &opacity));
+  EXPECT_DOUBLE_EQ(0.5, opacity);
+  EXPECT_DOUBLE_EQ(1.0, color.red);
+  EXPECT_DOUBLE_EQ(0, color.green);
+  EXPECT_DOUBLE_EQ(0, color.blue);
+  EXPECT_TRUE(gfx_->GetPointValue(70, 10, &color, &opacity));
+  EXPECT_DOUBLE_EQ(0, opacity);
+  EXPECT_DOUBLE_EQ(0, color.red);
+  EXPECT_DOUBLE_EQ(0, color.green);
+  EXPECT_DOUBLE_EQ(0, color.blue);
+  EXPECT_FALSE(gfx_->GetPointValue(310, 20, &color, &opacity));
+  EXPECT_FALSE(gfx_->GetPointValue(20, -2, &color, &opacity));
 }
 
 int main(int argc, char **argv) {

@@ -14,13 +14,14 @@
   limitations under the License.
 */
 
-#include "cairo_canvas.h"
-#include "cairo_font.h"
-#include <ggadget/scoped_ptr.h>
+#include <cmath>
 #include <vector>
 #include <algorithm>
 #include <pango/pango.h>
 #include <pango/pangocairo.h>
+#include <ggadget/scoped_ptr.h>
+#include "cairo_canvas.h"
+#include "cairo_font.h"
 
 namespace ggadget {
 namespace gtk {
@@ -606,6 +607,77 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
 
   g_object_unref(layout);
   return true;
+}
+
+bool CairoCanvas::GetPointValue(double x, double y,
+                                Color *color, double *opacity) const {
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+
+#define BYTE_TO_DOUBLE(x) ((x) == 0xFF ? 1.0 : static_cast<double>(x)/256.0)
+
+  cairo_surface_t *surface = GetSurface();
+
+  // Only support Image surface for now.
+  if (!surface || cairo_surface_get_type(surface) != CAIRO_SURFACE_TYPE_IMAGE)
+    return false;
+
+  int width = cairo_image_surface_get_width(surface);
+  int height = cairo_image_surface_get_height(surface);
+
+  cairo_user_to_device(cr_, &x, &y);
+  int xi = static_cast<int>(round(x));
+  int yi = static_cast<int>(round(y));
+
+  // The pixel is outside the canvas.
+  if (xi < 0 || xi >= width || yi < 0 || yi >= height)
+    return false;
+
+  cairo_format_t format = cairo_image_surface_get_format(surface);
+  unsigned char *data = cairo_image_surface_get_data(surface);
+  int stride = cairo_image_surface_get_stride(surface);
+  double red, green, blue, op;
+  if (format == CAIRO_FORMAT_ARGB32 || format == CAIRO_FORMAT_RGB24) {
+    uint32_t *ptr = reinterpret_cast<uint32_t *>(data + (stride * yi) + xi * 4);
+    uint32_t cell = *ptr;
+    if (format == CAIRO_FORMAT_ARGB32)
+      op = BYTE_TO_DOUBLE((cell >> 24) & 0xFF);
+    else
+      op = 1.0;
+    red = BYTE_TO_DOUBLE((cell >> 16) & 0xFF);
+    green = BYTE_TO_DOUBLE((cell >> 8) & 0xFF);
+    blue = BYTE_TO_DOUBLE(cell & 0xFF);
+    if (op != 0) {
+      red /= op;
+      green /= op;
+      blue /= op;
+    }
+    if (red < 0) red = 0;
+    else if (red > 1) red = 1;
+    if (green < 0) green = 0;
+    else if (green > 1) green = 1;
+    if (blue < 0) blue = 0;
+    else if (blue > 1) blue = 1;
+  } else if (format == CAIRO_FORMAT_A8) {
+    unsigned char *ptr = data + (stride * xi) + yi;
+    op = BYTE_TO_DOUBLE(*ptr);
+    red = 0;
+    green = 0;
+    blue = 0;
+  } else {
+    // TODO: support CAIRO_FORMAT_A1
+    return false;
+  }
+  if (color) {
+    color->red = red;
+    color->green = green;
+    color->blue = blue;
+  }
+  if (opacity) *opacity = op;
+  return true;
+#undef BYTE_TO_DOUBLE
+#else
+  return false;
+#endif
 }
 
 } // namespace gtk

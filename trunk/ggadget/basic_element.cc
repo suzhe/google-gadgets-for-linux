@@ -458,6 +458,7 @@ class BasicElement::Impl {
       if (!SetUpCanvas()) {
         return NULL;
       }
+      canvas_->PushState();
       canvas_->MultiplyOpacity(opacity_);
       owner_->DoDraw(canvas_, children_canvas);
 
@@ -466,6 +467,7 @@ class BasicElement::Impl {
       } else if (debug_mode_ == 2) {
         DrawBoundingBox(canvas_, width_, height_, debug_color_index_);
       }
+      canvas_->PopState();
     }
 
     size_changed_ = false;
@@ -1275,7 +1277,7 @@ bool BasicElement::IsPointIn(double x, double y) {
 void BasicElement::SelfCoordToChildCoord(const BasicElement *child,
                                          double x, double y,
                                          double *child_x,
-                                         double *child_y) const { 
+                                         double *child_y) const {
   ParentCoordToChildCoord(x, y, child->GetPixelX(), child->GetPixelY(),
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
