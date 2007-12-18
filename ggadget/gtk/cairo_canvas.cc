@@ -175,7 +175,8 @@ bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
   cairo_surface_t *s = cimg->GetSurface();
   cairo_save(cr_);
-  IntersectRectClipRegion(x, y, w, h);
+  cairo_rectangle(cr_, x, y, w, h);
+  cairo_clip(cr_);
 
   int sheight = cairo_image_surface_get_height(s);
   int swidth = cairo_image_surface_get_width(s);
@@ -613,7 +614,7 @@ bool CairoCanvas::GetPointValue(double x, double y,
                                 Color *color, double *opacity) const {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
 
-#define BYTE_TO_DOUBLE(x) ((x) == 0xFF ? 1.0 : static_cast<double>(x)/256.0)
+#define BYTE_TO_DOUBLE(x) (static_cast<double>(x)/255.0)
 
   cairo_surface_t *surface = GetSurface();
 
@@ -639,33 +640,27 @@ bool CairoCanvas::GetPointValue(double x, double y,
   if (format == CAIRO_FORMAT_ARGB32 || format == CAIRO_FORMAT_RGB24) {
     uint32_t *ptr = reinterpret_cast<uint32_t *>(data + (stride * yi) + xi * 4);
     uint32_t cell = *ptr;
-    if (format == CAIRO_FORMAT_ARGB32)
-      op = BYTE_TO_DOUBLE((cell >> 24) & 0xFF);
-    else
-      op = 1.0;
     red = BYTE_TO_DOUBLE((cell >> 16) & 0xFF);
     green = BYTE_TO_DOUBLE((cell >> 8) & 0xFF);
     blue = BYTE_TO_DOUBLE(cell & 0xFF);
-    if (op != 0) {
-      red /= op;
-      green /= op;
-      blue /= op;
-    }
-    if (red < 0) red = 0;
-    else if (red > 1) red = 1;
-    if (green < 0) green = 0;
-    else if (green > 1) green = 1;
-    if (blue < 0) blue = 0;
-    else if (blue > 1) blue = 1;
+    if (format == CAIRO_FORMAT_ARGB32) {
+      op = BYTE_TO_DOUBLE((cell >> 24) & 0xFF);
+      if (op != 0) {
+        red /= op;
+        green /= op;
+        blue /= op;
+        if (red > 1) red = 1;
+        if (green > 1) green = 1;
+        if (blue > 1) blue = 1;
+      }
+    } else
+      op = 1.0;
   } else if (format == CAIRO_FORMAT_A8) {
     unsigned char *ptr = data + (stride * xi) + yi;
     op = BYTE_TO_DOUBLE(*ptr);
     red = 0;
     green = 0;
     blue = 0;
-  } else {
-    // TODO: support CAIRO_FORMAT_A1
-    return false;
   }
   if (color) {
     color->red = red;

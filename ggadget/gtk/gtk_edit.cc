@@ -316,7 +316,12 @@ void GtkEdit::SetText(const char* text) {
   g_utf8_validate(text, -1, &end);
 
   if (text && *text && end > text) {
-    text_.assign(text, end);
+    std::string txt(text, end - text); 
+    if (txt == text_) {
+      return; // prevent some redraws
+    }
+
+    text_.assign(txt);
     text_length_ = g_utf8_strlen(text_.c_str(), text_.length());
     cursor_ = text_length_;
     selection_bound_ = text_length_;
@@ -1147,12 +1152,19 @@ int GtkEdit::MoveWords(int current_pos, int count) {
     const char *text = pango_layout_get_text(layout);
     int index = g_utf8_offset_to_pointer(text, current_pos) - text;
     int line_index;
-    pango_layout_index_to_line_x(layout, index, false, &line_index, NULL);
+    pango_layout_index_to_line_x(layout, index, FALSE, &line_index, NULL);
+
+    // Weird bug: line_index here may be >= than line count?
+    int line_count = pango_layout_get_line_count(layout);
+    if (line_index >= line_count) {
+      line_index = line_count - 1;
+    }
+
 #if PANGO_VERSION_CHECK(1,16,0)
     PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
 #else
     PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
-#endif
+#endif        
     bool rtl = (line->resolved_dir == PANGO_DIRECTION_RTL);
     while (count != 0) {
       if (((rtl && count < 0) || (!rtl && count > 0)) &&
@@ -1188,6 +1200,12 @@ int GtkEdit::MoveDisplayLines(int current_pos, int count) {
 
   // Find the current cursor X position in layout
   pango_layout_index_to_line_x(layout, index, FALSE, &line_index, &x_off);
+
+  // Weird bug: line_index here may be >= than line count?
+  if (line_index >= n_lines) {
+    line_index = n_lines - 1;
+  }
+
   pango_layout_get_cursor_pos(layout, index, &rect, NULL);
   x_off = rect.x;
 
@@ -1244,6 +1262,13 @@ int GtkEdit::MoveLineEnds(int current_pos, int count) {
 
   // Find current line
   pango_layout_index_to_line_x(layout, index, FALSE, &line_index, NULL);
+
+  // Weird bug: line_index here may be >= than line count?
+  int line_count = pango_layout_get_line_count(layout);
+  if (line_index >= line_count) {
+    line_index = line_count - 1;
+  }
+
 #if PANGO_VERSION_CHECK(1,16,0)
   PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
 #else

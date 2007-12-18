@@ -43,7 +43,8 @@ class CairoGraphics : public GraphicsInterface {
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
 
   virtual CanvasInterface *NewImage(const char *img_bytes,
-                                    size_t img_bytes_count) const;
+                                    size_t img_bytes_count,
+                                    const Color *colormultiply) const;
   virtual CanvasInterface *NewMask(const char *img_bytes,
                                    size_t img_bytes_count) const;
 

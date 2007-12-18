@@ -111,11 +111,11 @@ TEST_F(CairoGfxTest, LoadImage) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  CanvasInterface *img = gfx_->NewImage(buffer, filelen);
+  CanvasInterface *img = gfx_->NewImage(buffer, filelen, NULL);
   ASSERT_FALSE(NULL == img);
 
-  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, 0));
-  EXPECT_TRUE(NULL == gfx_->NewImage(NULL, 500));
+  EXPECT_TRUE(NULL == gfx_->NewImage(buffer, 0, NULL));
+  EXPECT_TRUE(NULL == gfx_->NewImage(NULL, 500, NULL));
 
   EXPECT_EQ((size_t)450, img->GetWidth());
   EXPECT_EQ((size_t)310, img->GetHeight());
@@ -146,7 +146,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_->NewImage(buffer, filelen);
+  img = gfx_->NewImage(buffer, filelen, NULL);
   ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
@@ -176,7 +176,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_->NewImage(buffer, filelen);
+  img = gfx_->NewImage(buffer, filelen, NULL);
   ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
@@ -214,7 +214,7 @@ TEST_F(CairoGfxTest, DrawImageMask) {
 
   mask = gfx_->NewMask(buffer, filelen);
   ASSERT_FALSE(NULL == mask);
-  img = gfx_->NewImage(buffer, filelen);
+  img = gfx_->NewImage(buffer, filelen, NULL);
   ASSERT_FALSE(NULL == img);
 
   EXPECT_EQ((size_t)450, mask->GetWidth());
@@ -321,7 +321,7 @@ TEST_F(CairoGfxTest, DrawTextWithTexture) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_->NewImage(buffer, filelen);
+  img = gfx_->NewImage(buffer, filelen, NULL);
   ASSERT_FALSE(NULL == img);
 
   FontInterface *font = gfx_->NewFont("Sans Serif", 20,

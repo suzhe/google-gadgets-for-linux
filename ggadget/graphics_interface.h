@@ -22,6 +22,8 @@
 
 namespace ggadget {
 
+struct Color;
+
 /**
  * This class is the interface for creating objects used in ggadget's
  * graphics rendering. It's implementation should come bundled with a
@@ -49,10 +51,13 @@ class GraphicsInterface {
    * Creates a new image canvas.
    * @param img_bytes Array containing the raw bytes of the image.
    * @param img_bytes_count Number of bytes of the img_bytes array.
+   * @param colormultiply a color value by which each pixel value is multiplied.
+   *   Pass in NULL if no color value should be multiplied. 
    * @return NULL on error, an ImageInterface object otherwise.
    */
   virtual CanvasInterface *NewImage(const char *img_bytes,
-                                    size_t img_bytes_count) const = 0;
+                                    size_t img_bytes_count,
+                                    const Color *colormultiply) const = 0;
 
   /**
    * Creates a new image mask canvas.

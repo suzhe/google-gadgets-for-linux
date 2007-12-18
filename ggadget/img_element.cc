@@ -14,18 +14,28 @@
   limitations under the License.
 */
 
+#include <algorithm>
+
 #include "img_element.h"
 #include "canvas_interface.h"
+#include "color.h"
 #include "image.h"
 #include "string_utils.h"
+#include "texture.h"
 #include "view.h"
 #include "color.h"
 
 namespace ggadget {
 
+static const char *kCropMaintainAspectNames[] = {
+  "false", "true", "photo"
+};
+
 class ImgElement::Impl {
  public:
-  Impl() : image_(NULL), src_width_(0), src_height_(0) { }
+  Impl() 
+    : image_(NULL), src_width_(0), src_height_(0), 
+      crop_(CROP_FALSE) { }
   ~Impl() {
     delete image_;
     image_ = NULL;
@@ -33,6 +43,8 @@ class ImgElement::Impl {
 
   Image *image_;
   size_t src_width_, src_height_;
+  CropMaintainAspect crop_;
+  std::string colormultiply_;
 };
 
 ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
@@ -43,6 +55,14 @@ ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
                    NewSlot(this, &ImgElement::SetSrc));
   RegisterProperty("srcWidth", NewSlot(this, &ImgElement::GetSrcWidth), NULL);
   RegisterProperty("srcHeight", NewSlot(this, &ImgElement::GetSrcHeight), NULL);
+  RegisterProperty("colorMultiply", 
+                   NewSlot(this, &ImgElement::GetColorMultiply), 
+                   NewSlot(this, &ImgElement::SetColorMultiply));
+  RegisterStringEnumProperty("cropMaintainAspect", 
+                             NewSlot(this, &ImgElement::GetCropMaintainAspect), 
+                             NewSlot(this, &ImgElement::SetCropMaintainAspect),
+                             kCropMaintainAspectNames, 
+                             arraysize(kCropMaintainAspectNames));
   RegisterMethod("setSrcSize", NewSlot(this, &ImgElement::SetSrcSize));
 }
 
@@ -75,9 +95,34 @@ bool ImgElement::IsPointIn(double x, double y) {
 
 void ImgElement::DoDraw(CanvasInterface *canvas,
                         const CanvasInterface *children_canvas) {
-  if (impl_->image_)
-    impl_->image_->StretchDraw(canvas, 0, 0,
-                               GetPixelWidth(), GetPixelHeight());
+  if (impl_->image_) {
+    double x, y, w, h;
+    double pxwidth = GetPixelWidth();
+    double pxheight = GetPixelHeight();
+    if (impl_->crop_ == CROP_FALSE) {
+      x = y = 0;
+      w = pxwidth;
+      h = pxheight;
+    } else {
+      size_t imgw = impl_->image_->GetWidth();
+      size_t imgh = impl_->image_->GetHeight();
+      if (imgw == 0 || imgh == 0) {
+        return;
+      }
+
+      double scale = std::max(pxwidth / imgw, pxheight / imgh);      
+      // Windows also caps the scale to a fixed maximum. This is probably a bug.
+      w = scale * imgw;
+      h = scale * imgh;
+
+      x = (pxwidth - w) / 2.;
+      y = (pxheight - h) / 2.;
+      if (impl_->crop_ == CROP_PHOTO && y < 0.) {
+        y = 0.; // Never crop the top in photo setting.
+      }
+    }
+    impl_->image_->StretchDraw(canvas, x, y, w, h);
+  }
 }
 
 Variant ImgElement::GetSrc() const {
@@ -96,6 +141,30 @@ void ImgElement::SetSrc(const Variant &src) {
   }
 
   QueueDraw();
+}
+
+std::string ImgElement::GetColorMultiply() const {
+  return impl_->colormultiply_;
+}
+
+void ImgElement::SetColorMultiply(const char *color) {
+  if (AssignIfDiffer(color, &impl_->colormultiply_, strcmp)) {
+    View *view = GetView();
+    Texture texture(view->GetGraphics(), view->GetFileManager(), color);
+    impl_->image_->SetColorMultiply(texture.GetColor());
+    QueueDraw();
+  } 
+}
+
+ImgElement::CropMaintainAspect ImgElement::GetCropMaintainAspect() const {
+  return impl_->crop_;
+}
+
+void ImgElement::SetCropMaintainAspect(ImgElement::CropMaintainAspect crop) {
+  if (crop != impl_->crop_) {
+    impl_->crop_ = crop;
+    QueueDraw();
+  }
 }
 
 size_t ImgElement::GetSrcWidth() const {
