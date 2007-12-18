@@ -14,10 +14,11 @@
   limitations under the License.
 */
 
-#include <vector>
 #include <sys/utsname.h>
+#include <vector>
 
 #include "machine.h"
+#include <ggadget/dbus/dbus_utils.h>
 #include <ggadget/common.h>
 #include <ggadget/string_utils.h>
 
@@ -36,21 +37,64 @@ static const char* kCPUInfoFile = "/proc/cpuinfo";
 Machine::Machine() {
   InitArchInfo();
   InitProcInfo();
+  DBusProxy *proxy = new DBusProxy(BUS_TYPE_SYSTEM,
+                                   "org.freedesktop.Hal",
+                                   "/org/freedesktop/Hal/devices/computer",
+                                   "org.freedesktop.Hal.Device");
+
+  const char* str = NULL;
+  if (!proxy->SyncCall("GetPropertyString", -1,
+                        MESSAGE_TYPE_STRING, "system.hardware.uuid",
+                        MESSAGE_TYPE_INVALID,
+                        MESSAGE_TYPE_STRING, &str,
+                        MESSAGE_TYPE_INVALID)) {
+    /** The Hal specification changed one time. */
+    proxy->SyncCall("GetPropertyString", -1,
+                     MESSAGE_TYPE_STRING, "smbios.system.uuid",
+                     MESSAGE_TYPE_INVALID,
+                     MESSAGE_TYPE_STRING, &str,
+                     MESSAGE_TYPE_INVALID);
+  }
+  if (str) serial_number_ = str;
+
+  /** get machine vendor */
+  if (!proxy->SyncCall("GetPropertyString", -1,
+                        MESSAGE_TYPE_STRING, "system.hardware.vendor",
+                        MESSAGE_TYPE_INVALID,
+                        MESSAGE_TYPE_STRING, &str,
+                        MESSAGE_TYPE_INVALID)) {
+    /** The Hal specification changed one time. */
+    proxy->SyncCall("GetPropertyString", -1,
+                     MESSAGE_TYPE_STRING, "system.vendor",
+                     MESSAGE_TYPE_INVALID,
+                     MESSAGE_TYPE_STRING, &str,
+                     MESSAGE_TYPE_INVALID);
+  }
+  if (str) machine_vendor_ = str;
+
+  /** get machine model */
+  proxy->SyncCall("GetPropertyString", -1,
+                   MESSAGE_TYPE_STRING, "system.product",
+                   MESSAGE_TYPE_INVALID,
+                   MESSAGE_TYPE_STRING, &str,
+                   MESSAGE_TYPE_INVALID);
+  if (str) machine_model_ = str;
+  delete proxy;
+}
+
+Machine::~Machine() {
 }
 
 std::string Machine::GetBiosSerialNumber() const {
-  // TODO:
-  return "Unknown";
+  return serial_number_;
 }
 
 std::string Machine::GetMachineManufacturer() const {
-  // TODO:
-  return "Unknown";
+  return machine_vendor_;
 }
 
 std::string Machine::GetMachineModel() const {
-  // TODO:
-  return "Unknown";
+  return machine_model_;
 }
 
 std::string Machine::GetProcessorArchitecture() const {

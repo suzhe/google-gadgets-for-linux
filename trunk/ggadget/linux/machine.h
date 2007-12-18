@@ -25,8 +25,10 @@ namespace framework {
 namespace linux_os {
 
 class Machine : public MachineInterface {
-public:
+ public:
   Machine();
+  ~Machine();
+
   virtual std::string GetBiosSerialNumber() const;
   virtual std::string GetMachineManufacturer() const;
   virtual std::string GetMachineModel() const;
@@ -39,7 +41,7 @@ public:
   virtual int GetProcessorStepping() const;
   virtual std::string GetProcessorVendor() const;
 
-private:
+ private:
   /**
    * Initializes the CPU architecture information.
    * Note that empty string will be set if any error occurs.
@@ -52,7 +54,7 @@ private:
    */
   void InitProcInfo();
 
-private:
+ private:
   enum {
     CPU_FAMILY,
     CPU_MODEL,
@@ -63,6 +65,10 @@ private:
     CPU_ARCH,
     CPU_KEYS_COUNT
   };
+
+  std::string serial_number_;
+  std::string machine_vendor_;
+  std::string machine_model_;
 
   std::string sysinfo_[CPU_KEYS_COUNT];
   int cpu_count_;

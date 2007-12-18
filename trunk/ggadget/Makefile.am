@@ -25,10 +25,12 @@ endif
 if GGL_HOST_LINUX
 SUBDIRS += linux
 endif
+if GGL_BUILD_LIBGGADGET_DBUS
+SUBDIRS += dbus
+endif
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
-
 
 gglincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget
 
@@ -170,5 +172,3 @@ libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
 			  -export-dynamic \
 			  -rpath $(libdir)
-
-
