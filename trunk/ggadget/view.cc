@@ -42,8 +42,16 @@ static const char kFTPPrefix[] = "ftp://";
 static const char kHTTPPrefix[] = "http://";
 static const char kHTTPSPrefix[] = "https://";
 
+static const char *kResizableNames[] = { "false", "true", "zoom" };
+
 class View::Impl {
  public:
+  class GlobalObject : public ScriptableHelper<ScriptableInterface> {
+   public:
+    DEFINE_CLASS_ID(0x23840d38ed164ab2, ScriptableInterface);
+    virtual bool IsStrict() const { return false; }
+  };
+
   Impl(ViewHostInterface *host,
        ElementFactoryInterface *element_factory,
        int debug_mode,
@@ -67,7 +75,6 @@ class View::Impl {
       dragover_result_(EVENT_RESULT_UNHANDLED),
       tooltip_element_(NULL),
       content_area_element_(NULL),
-      non_strict_delegator_(new ScriptableDelegator(owner, false)),
       posting_event_element_(NULL),
       post_event_token_(0),
       draw_queued_(false) {
@@ -79,9 +86,6 @@ class View::Impl {
     ASSERT(event_stack_.empty());
     ASSERT(death_detected_elements_.empty());
 
-    delete non_strict_delegator_;
-    non_strict_delegator_ = NULL;
-
     TimerMap::iterator it = timer_map_.begin();
     while (it != timer_map_.end()) {
       TimerMap::iterator next = it;
@@ -89,6 +93,79 @@ class View::Impl {
       RemoveTimer(it->first);
       it = next;
     }
+  }
+
+  template <typename T>
+  void RegisterProperties(T *obj) {
+    obj->RegisterProperty("caption", NewSlot(owner_, &View::GetCaption),
+                          NewSlot(owner_, &View::SetCaption));
+    obj->RegisterConstant("children", &children_);
+    obj->RegisterProperty("event", NewSlot(this, &Impl::GetEvent), NULL);
+    obj->RegisterProperty("height",
+                          NewSlot(owner_, &View::GetHeight),
+                          NewSlot(owner_, &View::SetHeight));
+    obj->RegisterProperty("width",
+                          NewSlot(owner_, &View::GetWidth),
+                          NewSlot(owner_, &View::SetWidth));
+    obj->RegisterStringEnumProperty("resizable",
+                                    NewSlot(owner_, &View::GetResizable),
+                                    NewSlot(owner_, &View::SetResizable),
+                                    kResizableNames,
+                                    arraysize(kResizableNames));
+    obj->RegisterProperty("showCaptionAlways",
+                          NewSlot(owner_, &View::GetShowCaptionAlways),
+                          NewSlot(owner_, &View::SetShowCaptionAlways));
+
+    obj->RegisterMethod("appendElement",
+                        NewSlot(&children_, &Elements::AppendElementFromXML));
+    obj->RegisterMethod("insertElement",
+                        NewSlot(&children_, &Elements::InsertElementFromXML));
+    obj->RegisterMethod("removeElement",
+                        NewSlot(&children_, &Elements::RemoveElement));
+    obj->RegisterMethod("removeAllElements",
+                        NewSlot(&children_, &Elements::RemoveAllElements));
+
+    // Here register ViewImpl::BeginAnimation because the Slot1<void, int> *
+    // parameter in View::BeginAnimation can't be automatically reflected.
+    obj->RegisterMethod("beginAnimation", NewSlot(this, &Impl::BeginAnimation));
+    obj->RegisterMethod("cancelAnimation",
+                        NewSlot(this, &Impl::CancelAnimation));
+    obj->RegisterMethod("setTimeout", NewSlot(this, &Impl::SetTimeout));
+    obj->RegisterMethod("clearTimeout", NewSlot(this, &Impl::ClearTimeout));
+    obj->RegisterMethod("setInterval", NewSlot(this, &Impl::SetInterval));
+    obj->RegisterMethod("clearInterval", NewSlot(this, &Impl::ClearInterval));
+
+    obj->RegisterMethod("alert", NewSlot(owner_, &View::Alert));
+    obj->RegisterMethod("confirm", NewSlot(owner_, &View::Confirm));
+    obj->RegisterMethod("prompt", NewSlot(owner_, &View::Prompt));
+
+    obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
+    obj->RegisterMethod("resizeTo", NewSlot(owner_, &View::SetSize));
+
+    obj->RegisterSignal(kOnCancelEvent, &oncancel_event_);
+    obj->RegisterSignal(kOnClickEvent, &onclick_event_);
+    obj->RegisterSignal(kOnCloseEvent, &onclose_event_);
+    obj->RegisterSignal(kOnDblClickEvent, &ondblclick_event_);
+    obj->RegisterSignal(kOnRClickEvent, &onrclick_event_);
+    obj->RegisterSignal(kOnRDblClickEvent, &onrdblclick_event_);
+    obj->RegisterSignal(kOnDockEvent, &ondock_event_);
+    obj->RegisterSignal(kOnKeyDownEvent, &onkeydown_event_);
+    obj->RegisterSignal(kOnKeyPressEvent, &onkeypress_event_);
+    obj->RegisterSignal(kOnKeyUpEvent, &onkeyup_event_);
+    obj->RegisterSignal(kOnMinimizeEvent, &onminimize_event_);
+    obj->RegisterSignal(kOnMouseDownEvent, &onmousedown_event_);
+    obj->RegisterSignal(kOnMouseOutEvent, &onmouseout_event_);
+    obj->RegisterSignal(kOnMouseOverEvent, &onmouseover_event_);
+    obj->RegisterSignal(kOnMouseUpEvent, &onmouseup_event_);
+    obj->RegisterSignal(kOnOkEvent, &onok_event_);
+    obj->RegisterSignal(kOnOpenEvent, &onopen_event_);
+    obj->RegisterSignal(kOnOptionChangedEvent, &onoptionchanged_event_);
+    obj->RegisterSignal(kOnPopInEvent, &onpopin_event_);
+    obj->RegisterSignal(kOnPopOutEvent, &onpopout_event_);
+    obj->RegisterSignal(kOnRestoreEvent, &onrestore_event_);
+    obj->RegisterSignal(kOnSizeEvent, &onsize_event_);
+    obj->RegisterSignal(kOnSizingEvent, &onsizing_event_);
+    obj->RegisterSignal(kOnUndockEvent, &onundock_event_);
   }
 
   bool InitFromFile(const char *filename) {
@@ -829,8 +906,9 @@ class View::Impl {
 
   // Put all_elements_ here to make it the alst member to be destructed,
   // because destruction of children_ needs it.
-  typedef std::map<std::string, BasicElement *, GadgetStringComparator>
-      ElementsMap;
+  // Note: though other things are case-insenstive, this map is case-sensitive,
+  // to keep compatible with the Windows version.
+  typedef std::map<std::string, BasicElement *> ElementsMap;
   ElementsMap all_elements_;
 
   View *owner_;
@@ -878,7 +956,7 @@ class View::Impl {
   // element has been removed during the event handler.
   std::vector<BasicElement **> death_detected_elements_;
 
-  ScriptableDelegator *non_strict_delegator_;
+  GlobalObject global_object_;
 
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedEvents;
@@ -888,88 +966,21 @@ class View::Impl {
   bool draw_queued_;
 };
 
-static const char *kResizableNames[] = { "false", "true", "zoom" };
-
 View::View(ViewHostInterface *host,
            ScriptableInterface *prototype,
            ElementFactoryInterface *element_factory,
            int debug_mode)
     : impl_(new Impl(host, element_factory, debug_mode, this)) {
-  RegisterProperty("caption", NewSlot(this, &View::GetCaption),
-                   NewSlot(this, &View::SetCaption));
-  RegisterConstant("children", GetChildren());
-  RegisterProperty("event", NewSlot(impl_, &Impl::GetEvent), NULL);
-  RegisterProperty("height", NewSlot(this, &View::GetHeight),
-                   NewSlot(this, &View::SetHeight));
-  RegisterProperty("width", NewSlot(this, &View::GetWidth),
-                   NewSlot(this, &View::SetWidth));
-  RegisterStringEnumProperty("resizable", NewSlot(this, &View::GetResizable),
-                             NewSlot(this, &View::SetResizable),
-                             kResizableNames, arraysize(kResizableNames));
-  RegisterProperty("showCaptionAlways",
-                   NewSlot(this, &View::GetShowCaptionAlways),
-                   NewSlot(this, &View::SetShowCaptionAlways));
-  // The global view object is itself.
-  RegisterConstant("view", this);
-
-  RegisterMethod("appendElement",
-                 NewSlot(&impl_->children_, &Elements::AppendElementFromXML));
-  RegisterMethod("insertElement",
-                 NewSlot(&impl_->children_, &Elements::InsertElementFromXML));
-  RegisterMethod("removeElement",
-                 NewSlot(&impl_->children_, &Elements::RemoveElement));
-  RegisterMethod("removeAllElements",
-                 NewSlot(&impl_->children_, &Elements::RemoveAllElements));
-
-  // Here register ViewImpl::BeginAnimation because the Slot1<void, int> *
-  // parameter in View::BeginAnimation can't be automatically reflected.
-  RegisterMethod("beginAnimation", NewSlot(impl_, &Impl::BeginAnimation));
-  RegisterMethod("cancelAnimation", NewSlot(impl_, &Impl::CancelAnimation));
-  RegisterMethod("setTimeout", NewSlot(impl_, &Impl::SetTimeout));
-  RegisterMethod("clearTimeout", NewSlot(impl_, &Impl::ClearTimeout));
-  RegisterMethod("setInterval", NewSlot(impl_, &Impl::SetInterval));
-  RegisterMethod("clearInterval", NewSlot(impl_, &Impl::ClearInterval));
-
-  RegisterMethod("alert", NewSlot(this, &View::Alert));
-  RegisterMethod("confirm", NewSlot(this, &View::Confirm));
-  RegisterMethod("prompt", NewSlot(this, &View::Prompt));
-
-  RegisterMethod("resizeBy", NewSlot(impl_, &Impl::ResizeBy));
-  RegisterMethod("resizeTo", NewSlot(this, &View::SetSize));
-
-  RegisterSignal(kOnCancelEvent, &impl_->oncancel_event_);
-  RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
-  RegisterSignal(kOnCloseEvent, &impl_->onclose_event_);
-  RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
-  RegisterSignal(kOnRClickEvent, &impl_->onrclick_event_);
-  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);
-  RegisterSignal(kOnDockEvent, &impl_->ondock_event_);
-  RegisterSignal(kOnKeyDownEvent, &impl_->onkeydown_event_);
-  RegisterSignal(kOnKeyPressEvent, &impl_->onkeypress_event_);
-  RegisterSignal(kOnKeyUpEvent, &impl_->onkeyup_event_);
-  RegisterSignal(kOnMinimizeEvent, &impl_->onminimize_event_);
-  RegisterSignal(kOnMouseDownEvent, &impl_->onmousedown_event_);
-  RegisterSignal(kOnMouseOutEvent, &impl_->onmouseout_event_);
-  RegisterSignal(kOnMouseOverEvent, &impl_->onmouseover_event_);
-  RegisterSignal(kOnMouseUpEvent, &impl_->onmouseup_event_);
-  RegisterSignal(kOnOkEvent, &impl_->onok_event_);
-  RegisterSignal(kOnOpenEvent, &impl_->onopen_event_);
-  RegisterSignal(kOnOptionChangedEvent, &impl_->onoptionchanged_event_);
-  RegisterSignal(kOnPopInEvent, &impl_->onpopin_event_);
-  RegisterSignal(kOnPopOutEvent, &impl_->onpopout_event_);
-  RegisterSignal(kOnRestoreEvent, &impl_->onrestore_event_);
-  RegisterSignal(kOnSizeEvent, &impl_->onsize_event_);
-  RegisterSignal(kOnSizingEvent, &impl_->onsizing_event_);
-  RegisterSignal(kOnUndockEvent, &impl_->onundock_event_);
-
-  SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetElementByNameVariant),
-                            NULL);
-
+  impl_->RegisterProperties(this);
+  impl_->RegisterProperties(&impl_->global_object_);
+  impl_->global_object_.RegisterConstant("view", this);
+  impl_->global_object_.SetDynamicPropertyHandler(
+      NewSlot(impl_, &Impl::GetElementByNameVariant), NULL);
   if (prototype)
-    SetPrototype(prototype);
+    impl_->global_object_.SetPrototype(prototype);
 
   if (impl_->script_context_)
-    impl_->script_context_->SetGlobalObject(impl_->non_strict_delegator_);
+    impl_->script_context_->SetGlobalObject(&impl_->global_object_);
 }
 
 View::~View() {

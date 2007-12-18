@@ -111,7 +111,8 @@ private:
                                          jsval id, jsval *vp);
   static JSBool SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                          jsval id, jsval *vp);
-  static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id);
+  static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id,
+                                       uintN flags, JSObject **objp);
   static void FinalizeWrapper(JSContext *cx, JSObject *obj);
   static uint32 MarkWrapper(JSContext *cx, JSObject *obj, void *arg);
 
@@ -125,7 +126,7 @@ private:
   JSBool SetPropertyByIndex(jsval id, jsval vp);
   JSBool GetPropertyByName(jsval id, jsval *vp);
   JSBool SetPropertyByName(jsval id, jsval vp);
-  JSBool ResolveProperty(jsval id);
+  JSBool ResolveProperty(jsval id, uintN flags, JSObject **objp);
   void Mark();
 
   static JSClass wrapper_js_class_;

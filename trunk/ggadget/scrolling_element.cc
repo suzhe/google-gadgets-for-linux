@@ -34,7 +34,12 @@ class ScrollingElement::Impl {
         scrollbar_(NULL) {
   }
   ~Impl() {
-    delete scrollbar_;
+    // Inform the view of this scrollbar to let the view handle mouse grabbing
+    // and mouse over/out logics of the scrollbar.
+    if (scrollbar_) {
+      owner_->GetView()->OnElementRemove(scrollbar_);
+      delete scrollbar_;
+    }
   }
 
   void CreateScrollBar() {
@@ -98,7 +103,7 @@ class ScrollingElement::Impl {
 
   void OnScrollBarFocusIn() {
     // When user clicks the scroll bar, let the view give focus to this element.
-    owner_->GetView()->SetFocus(owner_);
+    owner_->Focus();
   }
 
   ScrollingElement *owner_;

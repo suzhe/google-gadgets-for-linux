@@ -58,33 +58,13 @@ class Elements : public ScriptableHelper<ElementsInterface> {
   virtual ElementInterface *InsertElement(const char *tag_name,
                                           const ElementInterface *before,
                                           const char *name);
+  virtual ElementInterface *AppendElementFromXML(const char *xml);
+  virtual ElementInterface *InsertElementFromXML(
+      const char *xml, const ElementInterface *before);
   virtual bool RemoveElement(ElementInterface *element);
   virtual void RemoveAllElements();
 
  public:
-  /**
-   * Create a new element from XML definition and add it to the end of the
-   * children list.
-   * @param xml the XML definition of the element.
-   * @return the pointer to the newly created element, or @c NULL when error
-   *     occured.
-   */
-  ElementInterface *AppendElementFromXML(const char *xml);
-
-  /**
-   * Create a new element from XML definition and insert it before the
-   * specified element.
-   * @param xml the XML definition of the element.
-   * @param before the newly created element will be inserted before the given
-   *     element. If the specified element is not the direct child of the
-   *     container or this parameter is @c NULL, this method will insert the
-   *     newly created element at the end of the children list.
-   * @return the pointer to the newly created element, or @c NULL when error
-   *     occured.
-   */
-  ElementInterface *InsertElementFromXML(const char *xml,
-                                         const ElementInterface *before);
-
   /**
    * Adjusts the layout (e.g. size, position, etc.) of children.
    * This method is called just before @c Draw().

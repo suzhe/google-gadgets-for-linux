@@ -14,19 +14,11 @@
 # limitations under the License.
 #
 
-SET(SRCS
-  file_system.cc
-  framework.cc
-  machine.cc
-  memory.cc
-  network.cc
-  perfmon.cc
-  power.cc
-  process.cc
-  wireless_access_point.cc
-  wireless.cc
-)
+ADD_SUBDIRECTORY(tests)
 
-ADD_LIBRARY(ggadget_linux SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_linux ggadget_dbus)
-OUTPUT_LIBRARY(ggadget_linux)
+PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
+
+SET(SRCS dbus_utils.cc)
+ADD_LIBRARY(ggadget_dbus SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget_dbus ${DBUS_LIBRARIES}) 
+OUTPUT_LIBRARY(ggadget_dbus)

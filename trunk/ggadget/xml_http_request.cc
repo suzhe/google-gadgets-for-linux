@@ -563,6 +563,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = NULL;
+    LOG("XMLHttpRequest: GetAllResponseHeaders: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
@@ -580,19 +581,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         *result = it->second.c_str();
       return NO_ERR;
     }
+    LOG("XMLHttpRequest: GetRequestHeader: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
   void DecodeResponseText() {
     std::string encoding(response_encoding_);
+    DLOG("XMLHttpRequest: content_type: %s", response_content_type_.c_str());
+#if 0
     const char *content_type = response_content_type_.c_str();
     std::string::size_type content_type_len = response_content_type_.length();
-
     if (content_type_len == 0 ||
         strcasecmp(content_type, "text/xml") == 0 ||
         strcasecmp(content_type, "application/xml") == 0 ||
         (content_type_len > 4 &&
          strcasecmp(content_type + content_type_len - 4, "+xml") == 0)) {
+#endif
       // The content type is XML.
       response_dom_ = CreateDOMDocument();
       response_dom_->Attach();
@@ -601,6 +605,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         response_dom_->Detach();
         response_dom_ = NULL;
       }
+#if 0
     } else if (strcasecmp(content_type, "text/html") == 0) {
       // The content type is HTML.
       // The spec 20071026 doesn't have this feature 
@@ -612,6 +617,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         response_dom_ = NULL;
       }
     }
+#endif
 
     // NOTE: Here the priority of encodings does not conform to XMLHttpRequest
     // specification (and XML, HTTP, HTML specifications), because for now
@@ -638,6 +644,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = NULL;
+    LOG("XMLHttpRequest: GetResponseText: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
@@ -653,6 +660,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     *size = 0;
     *result = NULL;
+    LOG("XMLHttpRequest: GetResponseBody: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
@@ -668,6 +676,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     result = NULL;
+    LOG("XMLHttpRequest: GetResponseXML: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
@@ -683,6 +692,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = 0;
+    LOG("XMLHttpRequest: GetStatus: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 
@@ -695,6 +705,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     *result = NULL;
+    LOG("XMLHttpRequest: GetStatusText: Invalid state: %d", state_);
     return INVALID_STATE_ERR;
   }
 

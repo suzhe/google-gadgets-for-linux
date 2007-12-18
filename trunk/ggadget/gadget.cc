@@ -324,6 +324,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
           GadgetHostInterface::VIEW_OLD_OPTIONS, NULL);
       window = new DisplayWindow(options_view_host->GetView());
       onshowoptionsdlg_signal_(window);
+      window->AdjustSize();
     } else {
       LOG("Failed to show options dialog because there is neither options.xml"
           "nor OnShowOptionsDlg handler");

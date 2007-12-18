@@ -35,6 +35,9 @@ class DisplayWindow: public ScriptableHelper<ScriptableInterface> {
   DisplayWindow(ViewInterface *view);
   virtual ~DisplayWindow();
 
+  /** Adjust the size of the window to proper size. */
+  void AdjustSize();
+
  private:
   class Impl;
   Impl *impl_;

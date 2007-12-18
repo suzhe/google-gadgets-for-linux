@@ -173,6 +173,7 @@ TEST_F(CairoCanvasTest, FillRectAndClipping) {
 }
 
 TEST_F(CairoCanvasTest, GetPointValue) {
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
   Color color;
   double opacity;
 
@@ -191,6 +192,7 @@ TEST_F(CairoCanvasTest, GetPointValue) {
   EXPECT_DOUBLE_EQ(0, color.blue);
   EXPECT_FALSE(gfx_->GetPointValue(310, 20, &color, &opacity));
   EXPECT_FALSE(gfx_->GetPointValue(20, -2, &color, &opacity));
+#endif
 }
 
 int main(int argc, char **argv) {

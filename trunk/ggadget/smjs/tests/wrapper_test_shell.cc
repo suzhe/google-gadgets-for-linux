@@ -27,6 +27,9 @@ class GlobalObject : public ScriptableHelper<ScriptableInterface> {
   GlobalObject() {
     RegisterConstant("scriptable", &test_scriptable1);
     RegisterConstant("scriptable2", &test_scriptable2);
+    // For testing name overriding.
+    RegisterConstant("s1", &test_scriptable1);
+    RegisterProperty("s2", NewSlot(this, &GlobalObject::GetS2), NULL);
   }
   virtual bool IsStrict() const { return false; }
 
@@ -34,6 +37,8 @@ class GlobalObject : public ScriptableHelper<ScriptableInterface> {
     // Return script owned object.
     return test_scriptable2.NewObject(true);
   }
+
+  ScriptableInterface *GetS2() { return &test_scriptable2; }
 
   TestScriptable1 test_scriptable1;
   TestScriptable2 test_scriptable2;

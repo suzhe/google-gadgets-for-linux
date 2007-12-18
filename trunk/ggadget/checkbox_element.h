@@ -35,6 +35,9 @@ class CheckBoxElement : public BasicElement {
   virtual ~CheckBoxElement();
 
  public:
+  /** Lets this button use default images. */ 
+  void UseDefaultImages();
+
   /** Gets and sets the file name of default checkbox image. */
   Variant GetImage() const;
   void SetImage(const Variant &img);

@@ -18,6 +18,7 @@
 #include "button_element.h"
 #include "checkbox_element.h"
 #include "combobox_element.h"
+#include "div_element.h"
 #include "edit_element.h"
 #include "element_interface.h"
 #include "elements_interface.h"
@@ -25,10 +26,18 @@
 #include "label_element.h"
 #include "listbox_element.h"
 #include "scriptable_array.h"
+#include "string_utils.h"
 #include "text_frame.h"
 #include "view.h"
 
 namespace ggadget {
+
+static const int kLabelTextSize = 9;
+static const int kListItemHeight = 19;
+static const double kZoomRatio = 1.1;
+static const char *kControlBorderColor = "#808080";
+static const char *kBackgroundColor = "#FFFFFF";
+static const int kMaxComboBoxHeight = 150;
 
 class DisplayWindow::Impl {
  public:
@@ -81,9 +90,6 @@ class DisplayWindow::Impl {
       RegisterSignal("onChanged", &onchanged_signal_);
       RegisterSignal("onClicked", &onclicked_signal_);
     }
-
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     ScriptableArray *GetListBoxItems(ListBoxElement *listbox) {
       int count = listbox->GetChildren()->GetCount();
@@ -145,6 +151,15 @@ class DisplayWindow::Impl {
 
     void SetText(const Variant &text) {
       switch (text.type()) {
+        case Variant::TYPE_BOOL:
+          SetText(Variant(VariantValue<bool>()(text) ? "true" : "false"));
+          break;
+        case Variant::TYPE_INT64:
+          SetText(Variant(StringPrintf("%jd", VariantValue<int64_t>()(text))));
+          break;
+        case Variant::TYPE_DOUBLE:
+          SetText(Variant(StringPrintf("%lf", VariantValue<double>()(text))));
+          break;
         case Variant::TYPE_STRING: {
           const char *text_str = VariantValue<const char *>()(text);
           if (element_->IsInstanceOf(ButtonElement::CLASS_ID)) {
@@ -181,6 +196,7 @@ class DisplayWindow::Impl {
                   text.ToString().c_str(), element_->GetName().c_str());
             }
           }
+          break;
         }
         default:
           LOG("Invalid type of text(%s) for control %s",
@@ -255,6 +271,13 @@ class DisplayWindow::Impl {
       }
     }
 
+    void SetRect(int x, int y, int width, int height) {
+      element_->SetPixelX(x);
+      element_->SetPixelY(y);
+      element_->SetPixelWidth(width);
+      element_->SetPixelHeight(height);
+    }
+
     void OnChange() {
       onchanged_signal_(window_, this);
     }
@@ -270,41 +293,77 @@ class DisplayWindow::Impl {
   };
 
   Impl(DisplayWindow *owner, View *view)
-      : owner_(owner), view_(view) {
+      : owner_(owner), view_(view),
+        min_x_(9999), min_y_(9999), max_x_(0), max_y_(0) {
+  }
+
+  ~Impl() {
+    for (ControlsMap::iterator it = controls_.begin();
+         it != controls_.end(); ++it) {
+      delete it->second;
+    }
+    controls_.clear();
+  }
+
+  DivElement *CreateFrameDiv(ElementsInterface *elements) {
+    DivElement *div = down_cast<DivElement *>(elements->AppendElement("div",
+                                                                      NULL));
+    div->SetBackground(Variant(kControlBorderColor));
+    return div;
   }
 
   Control *AddControl(ControlClass ctrl_class, ControlType ctrl_type,
                       const char *ctrl_id, const Variant &text,
                       int x, int y, int width, int height) {
-    BasicElement *element = NULL;
     Control *control = NULL;
+    ElementsInterface *elements = view_->GetChildren();
+    DivElement *div = NULL;  // Some elements may need a frame.
+
     switch (ctrl_class) {
-      case CLASS_LABEL:
-        element = LabelElement::CreateInstance(NULL, view_, ctrl_id);
+      case CLASS_LABEL: {
+        LabelElement *element = down_cast<LabelElement *>(
+            elements->AppendElement("label", ctrl_id));
+        element->GetTextFrame()->SetWordWrap(true);
+        element->GetTextFrame()->SetSize(kLabelTextSize);
         control = new Control(owner_, element);
         break;
-      case CLASS_EDIT:
-        element = EditElement::CreateInstance(NULL, view_, ctrl_id);
-        control = new Control(owner_, element);
+      }
+      case CLASS_EDIT: {
+        // Our border is thinner than Windows version, so thrink the height.
+        y += 1;
+        height -= 2;
+        div = CreateFrameDiv(elements);
+        EditElement *element = down_cast<EditElement *>(
+            elements->AppendElement("edit", ctrl_id));
         if (ctrl_type == TYPE_EDIT_PASSWORD)
-          down_cast<EditElement *>(element)->SetPasswordChar("*");
-        down_cast<EditElement *>(element)->ConnectOnChangeEvent(
-            NewSlot(control, &Control::OnChange));
+          element->SetPasswordChar("*");
+        control = new Control(owner_, element);
+        element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
         break;
+      }
       case CLASS_LIST:
         switch (ctrl_type) {
-          case TYPE_LIST_OPEN:
-            element = ListBoxElement::CreateInstance(NULL, view_, ctrl_id);
+          case TYPE_LIST_OPEN: {
+            div = CreateFrameDiv(elements);
+            ListBoxElement *element = down_cast<ListBoxElement *>(
+                elements->AppendElement("listbox", ctrl_id));
+            element->SetItemWidth(Variant("100%"));
+            element->SetItemHeight(Variant(kListItemHeight));
             control = new Control(owner_, element);
-            down_cast<ListBoxElement *>(element)->ConnectOnChangeEvent(
-                NewSlot(control, &Control::OnChange));
+            element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
             break;
-          case TYPE_LIST_DROP:
-            element = ComboBoxElement::CreateInstance(NULL, view_, ctrl_id);
+          }
+          case TYPE_LIST_DROP: {
+            div = CreateFrameDiv(elements);
+            ComboBoxElement *element = down_cast<ComboBoxElement *>(
+                elements->AppendElement("combobox", ctrl_id));
+            element->GetListBox()->SetItemWidth(Variant("100%"));
+            element->GetListBox()->SetItemHeight(Variant(kListItemHeight));
+            element->SetBackground(Variant(kBackgroundColor));
             control = new Control(owner_, element);
-            down_cast<ComboBoxElement *>(element)->ConnectOnChangeEvent(
-                NewSlot(control, &Control::OnChange));
+            element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
             break;
+          }
           default:
             LOG("Unknown button control type: %d", ctrl_type);
             break;
@@ -312,21 +371,31 @@ class DisplayWindow::Impl {
         break;
       case CLASS_BUTTON:
         switch (ctrl_type) {
-          case TYPE_BUTTON_PUSH:
-            element = ButtonElement::CreateInstance(NULL, view_, ctrl_id);
+          case TYPE_BUTTON_PUSH: {
+            ButtonElement *element = down_cast<ButtonElement *>(
+                elements->AppendElement("button", ctrl_id));
+            element->GetTextFrame()->SetSize(kLabelTextSize);
+            element->UseDefaultImages();
             control = new Control(owner_, element);
             element->ConnectOnClickEvent(NewSlot(control, &Control::OnClicked));
             break;
-          case TYPE_BUTTON_CHECK:
-            element = CheckBoxElement::CreateCheckBoxInstance(NULL, view_,
-                                                              ctrl_id);
-            control = new Control(owner_, element);
+          }
+          case TYPE_BUTTON_CHECK: {
+            CheckBoxElement *element = down_cast<CheckBoxElement *>(
+                elements->AppendElement("checkbox", ctrl_id));
+            element->GetTextFrame()->SetSize(kLabelTextSize);
+            element->UseDefaultImages();
+            // Default value of gadget checkbox element is false, but here
+            // the default value should be false. 
+            element->SetValue(false);
             // Note: the event name is "onchange", not "onclick", but the
             // handler is "onclick", because of the difference between
             // checkbox API and the old options API.
-            down_cast<CheckBoxElement *>(element)->ConnectOnChangeEvent(
-                NewSlot(control, &Control::OnClicked));
+            control = new Control(owner_, element);
+            element->ConnectOnChangeEvent(NewSlot(control,
+                                                  &Control::OnClicked));
             break;
+          }
           default:
             LOG("Unknown button control type: %d", ctrl_type);
             break;
@@ -337,27 +406,63 @@ class DisplayWindow::Impl {
         break;
     }
 
-    if (element) {
-      ASSERT(control);
-      element->SetPixelX(x);
-      element->SetPixelY(y);
-      element->SetPixelWidth(width);
-      element->SetPixelHeight(height);
+    if (control) {
+      // The control sizes in the gadgets are too small for GTK.
+      x = static_cast<int>(x * kZoomRatio);
+      y = static_cast<int>(y * kZoomRatio);
+      width = static_cast<int>(width * kZoomRatio);
+      height = static_cast<int>(height * kZoomRatio);
+
+      if (div) {
+        div->SetPixelX(x);
+        div->SetPixelY(y);
+        div->SetPixelWidth(width);
+        if (ctrl_type == TYPE_LIST_DROP) {
+          div->SetPixelHeight(kListItemHeight + 2);
+          // Because our combobox can't pop out of the dialog box, we must
+          // limit the height of the combobox
+          if (height > kMaxComboBoxHeight)
+            height = kMaxComboBoxHeight;
+        } else {
+          div->SetPixelHeight(height);
+        }
+        control->SetRect(x + 1, y + 1, width - 2, height - 2);
+      } else {
+        control->SetRect(x, y, width, height);
+      }
       control->SetText(text);
+      min_x_ = std::min(std::max(0, x), min_x_);
+      min_y_ = std::min(std::max(0, y), min_y_);
+      max_x_ = std::max(x + width, max_x_);
+      max_y_ = std::max(y + height, max_y_);
+
+      controls_.insert(make_pair(std::string(ctrl_id), control));
       return control;
     }
+
     return NULL;
   }
 
   Control *GetControl(const char *ctrl_id) {
-    ElementInterface *element = view_->GetElementByName(ctrl_id);
-    return element ? new Control(owner_, down_cast<BasicElement *>(element)) :
-           NULL;
+    ControlsMap::iterator it = controls_.find(ctrl_id);
+    return it == controls_.end() ? NULL : it->second;
+  }
+
+  void OnOk() {
+    onclose_signal_(owner_, ID_OK);
+  }
+
+  void OnCancel() {
+    onclose_signal_(owner_, ID_CANCEL);
   }
 
   DisplayWindow *owner_;
   View *view_;
-  Signal1<void, ButtonId> onclose_signal_;
+  Signal2<void, DisplayWindow *, ButtonId> onclose_signal_;
+  int min_x_, min_y_, max_x_, max_y_;
+  typedef std::multimap<std::string, Control *,
+                        GadgetStringComparator> ControlsMap;
+  ControlsMap controls_;
 };
 
 DisplayWindow::DisplayWindow(ViewInterface *view)
@@ -366,11 +471,18 @@ DisplayWindow::DisplayWindow(ViewInterface *view)
   RegisterMethod("AddControl", NewSlot(impl_, &Impl::AddControl));
   RegisterMethod("GetControl", NewSlot(impl_, &Impl::GetControl));
   RegisterSignal("OnClose", &impl_->onclose_signal_);
+  impl_->view_->ConnectOnOkEvent(NewSlot(impl_, &Impl::OnOk));
+  impl_->view_->ConnectOnCancelEvent(NewSlot(impl_, &Impl::OnCancel));
 }
 
 DisplayWindow::~DisplayWindow() {
   delete impl_;
   impl_ = NULL;
+}
+
+void DisplayWindow::AdjustSize() {
+  impl_->view_->SetSize(impl_->max_x_ + impl_->min_x_,
+                        impl_->max_y_ + impl_->min_y_);
 }
 
 } // namespace ggadget

@@ -383,4 +383,20 @@ TEST("Test scriptable array", function() {
   ASSERT(EQ(1, arr1.item(0)));
 });
 
+// The global scriptable object has properties named 's1' and 's2'.
+// The following declarations should override the properties.
+var s1 = { a: 1, b: 2};
+function s2() {
+}
+
+TEST("Test name overriding", function() {
+  ASSERT(EQ(1, s1.a));
+  ASSERT(EQ("function", typeof(s2)));
+});
+
+TEST("Test name overriding1", function() {
+  var s1 = 100;
+  ASSERT(EQ(100, s1));
+});
+
 RUN_ALL_TESTS();
