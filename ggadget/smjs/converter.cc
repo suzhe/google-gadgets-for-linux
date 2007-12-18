@@ -546,12 +546,17 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
   if (!scriptable) {
     *js_val = JSVAL_NULL;
   } else {
-    JSObject *js_object =
-        JSScriptContext::WrapNativeObjectToJS(cx, scriptable)->js_object();
-    if (js_object)
-      *js_val = OBJECT_TO_JSVAL(js_object);
-    else
+    NativeJSWrapper *wrapper = JSScriptContext::WrapNativeObjectToJS(
+        cx, scriptable);
+    if (wrapper) { 
+      JSObject *js_object = wrapper->js_object();
+      if (js_object)
+        *js_val = OBJECT_TO_JSVAL(js_object);
+      else
+        result = JS_FALSE;
+    } else {
       result = JS_FALSE;
+    }
   }
   return result;
 }

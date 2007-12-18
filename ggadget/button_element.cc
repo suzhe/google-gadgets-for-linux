@@ -16,6 +16,7 @@
 
 #include "button_element.h"
 #include "canvas_interface.h"
+#include "gadget_consts.h"
 #include "image.h"
 #include "string_utils.h"
 #include "text_frame.h"
@@ -98,6 +99,18 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
     img->StretchDraw(canvas, 0, 0, width, height);
   }
   impl_->text_.Draw(canvas, 0, 0, width, height);
+}
+
+void ButtonElement::UseDefaultImages() {
+  delete impl_->image_;
+  impl_->image_ = GetView()->LoadImageFromGlobal(kButtonImage, false);
+  delete impl_->overimage_;
+  impl_->overimage_ = GetView()->LoadImageFromGlobal(kButtonOverImage, false);
+  delete impl_->downimage_;
+  impl_->downimage_ = GetView()->LoadImageFromGlobal(kButtonDownImage, false);
+  // No default disabled image.
+  delete impl_->disabledimage_;
+  impl_->disabledimage_ = NULL;
 }
 
 Variant ButtonElement::GetImage() const {

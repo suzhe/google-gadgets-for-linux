@@ -90,6 +90,29 @@ class ElementsInterface : public ScriptableInterface {
                                           const char *name) = 0;
 
   /**
+   * Create a new element from XML definition and add it to the end of the
+   * children list.
+   * @param xml the XML definition of the element.
+   * @return the pointer to the newly created element, or @c NULL when error
+   *     occured.
+   */
+  virtual ElementInterface *AppendElementFromXML(const char *xml) = 0;
+
+  /**
+   * Create a new element from XML definition and insert it before the
+   * specified element.
+   * @param xml the XML definition of the element.
+   * @param before the newly created element will be inserted before the given
+   *     element. If the specified element is not the direct child of the
+   *     container or this parameter is @c NULL, this method will insert the
+   *     newly created element at the end of the children list.
+   * @return the pointer to the newly created element, or @c NULL when error
+   *     occured.
+   */
+  virtual ElementInterface *InsertElementFromXML(
+      const char *xml, const ElementInterface *before) = 0;
+
+  /**
    * Remove the specified element from the container.
    * @param element the element to remove.
    * @return @c true if removed successfully, or @c false if the specified

@@ -14,19 +14,10 @@
 # limitations under the License.
 #
 
-SET(SRCS
-  file_system.cc
-  framework.cc
-  machine.cc
-  memory.cc
-  network.cc
-  perfmon.cc
-  power.cc
-  process.cc
-  wireless_access_point.cc
-  wireless.cc
-)
+ADD_DEFINITIONS(-DUNIT_TEST)
 
-ADD_LIBRARY(ggadget_linux SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_linux ggadget_dbus)
-OUTPUT_LIBRARY(ggadget_linux)
+PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
+
+ADD_EXECUTABLE(dbus_test dbus_test.cc)
+TARGET_LINK_LIBRARIES(dbus_test gunit ggadget ggadget_dbus ${DBUS_LIBRARIES})
+TEST_WRAPPER(dbus_test TRUE)

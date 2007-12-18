@@ -26,15 +26,16 @@ GtkMenuImpl::GtkMenuImpl(GtkMenu *gtk_menu)
 }
 
 GtkMenuImpl::~GtkMenuImpl() {
-  if (gtk_menu_) {
-    gtk_widget_destroy(GTK_WIDGET(gtk_menu_));
-    gtk_menu_ = NULL;
-  }
   for (ItemMap::iterator it = item_map_.begin(); it != item_map_.end(); ++it) {
     delete it->second.handler;
     delete it->second.submenu;
   }
   item_map_.clear();
+
+  if (GTK_IS_WIDGET(gtk_menu_)) {
+    gtk_widget_destroy(GTK_WIDGET(gtk_menu_));
+    gtk_menu_ = NULL;
+  }
 }
 
 void GtkMenuImpl::SetMenuItemStyle(GtkMenuItem *menu_item, int style) {

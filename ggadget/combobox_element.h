@@ -65,9 +65,6 @@ class ComboBoxElement : public BasicElement {
   Variant GetBackground() const;
   void SetBackground(const Variant &background);
 
-  void SetItemWidth(const Variant &width);
-  void SetItemHeight(const Variant &height);
-
   EditElement *GetEdit();
   const EditElement *GetEdit() const;
   ListBoxElement *GetListBox();

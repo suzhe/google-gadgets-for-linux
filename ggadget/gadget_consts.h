@@ -95,6 +95,7 @@ const char *const kContentAreaTag = "contentarea";
 
 /** Prefix for global file resources. */
 const char kGlobalResourcePrefix[] = ":resources/";
+
 const char kScrollDefaultBackground[] = ":resources/scroll_background.png";
 const char kScrollDefaultThumb[] = ":resources/scrollbar_u.png";
 const char kScrollDefaultThumbDown[] = ":resources/scrollbar_d.png";
@@ -105,9 +106,23 @@ const char kScrollDefaultLeftOver[] = ":resources/scrollleft_o.png";
 const char kScrollDefaultRight[] = ":resources/scrollright_u.png";
 const char kScrollDefaultRightDown[] = ":resources/scrollright_d.png";
 const char kScrollDefaultRightOver[] = ":resources/scrollright_o.png";
+
 const char kContentItemPinned[] = ":resources/pinned.png";
 const char kContentItemUnpinned[] = ":resources/unpinned.png";
 const char kContentItemPinnedOver[] = ":resources/pinned_over.png";
+
+// The following kButtonXXX and kCheckBoxXXX images are not for element
+// defaults, but for convenience of native gadgets.
+const char kButtonImage[] = ":resources/button_up.png";
+const char kButtonDownImage[] = ":resources/button_down.png";
+const char kButtonOverImage[] = ":resources/button_over.png";
+const char kCheckBoxImage[] = ":resources/checkbox_up.png";
+const char kCheckBoxDownImage[] = ":resources/checkbox_down.png";
+const char kCheckBoxOverImage[] = ":resources/checkbox_over.png";
+const char kCheckBoxCheckedImage[] = ":resources/checkbox_checked_up.png";
+const char kCheckBoxCheckedDownImage[] = ":resources/checkbox_checked_down.png";
+const char kCheckBoxCheckedOverImage[] = ":resources/checkbox_checked_over.png";
+
 const char kCommonJS[] = ":resources/common.js";
 
 } // namespace ggadget

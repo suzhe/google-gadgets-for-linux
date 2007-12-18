@@ -49,17 +49,20 @@ JSFunctionSlot::~JSFunctionSlot() {
 }
 
 Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
+  Variant return_value(GetReturnType());
+  if (JS_IsExceptionPending(context_))
+    return return_value;
+
   if (finalized_) {
-    JS_ReportError(context_, "Finalized JavaScript funcction still be called");
-    return Variant();
+    JS_ReportError(context_, "Finalized JavaScript function still be called");
+    return return_value;
   }
 
   AutoLocalRootScope local_root_scope(context_);
   if (!local_root_scope.good())
-    return Variant();
+    return return_value;
 
   scoped_array<jsval> js_args;
-  Variant return_value(GetReturnType());
   if (argc > 0) {
     js_args.reset(new jsval[argc]);
     for (int i = 0; i < argc; i++) {

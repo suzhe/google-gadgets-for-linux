@@ -16,6 +16,7 @@
 
 #include "checkbox_element.h"
 #include "canvas_interface.h"
+#include "gadget_consts.h"
 #include "graphics_interface.h"
 #include "image.h"
 #include "scriptable_event.h"
@@ -184,6 +185,30 @@ void CheckBoxElement::SetValue(bool value) {
     ScriptableEvent s_event(&event, this, NULL);
     GetView()->FireEvent(&s_event, impl_->onchange_event_);
   }
+}
+
+void CheckBoxElement::UseDefaultImages() {
+  delete impl_->image_[STATE_NORMAL];
+  impl_->image_[STATE_NORMAL] = GetView()->LoadImageFromGlobal(
+      kCheckBoxImage, false);
+  delete impl_->overimage_[STATE_NORMAL];
+  impl_->overimage_[STATE_NORMAL] = GetView()->LoadImageFromGlobal(
+      kCheckBoxOverImage, false);
+  delete impl_->downimage_[STATE_NORMAL];
+  impl_->downimage_[STATE_NORMAL] = GetView()->LoadImageFromGlobal(
+      kCheckBoxDownImage, false);
+  delete impl_->image_[STATE_CHECKED];
+  impl_->image_[STATE_CHECKED] = GetView()->LoadImageFromGlobal(
+      kCheckBoxCheckedImage, false);
+  delete impl_->overimage_[STATE_CHECKED];
+  impl_->overimage_[STATE_CHECKED] = GetView()->LoadImageFromGlobal(
+      kCheckBoxCheckedOverImage, false);
+  delete impl_->downimage_[STATE_CHECKED];
+  impl_->downimage_[STATE_CHECKED] = GetView()->LoadImageFromGlobal(
+      kCheckBoxCheckedDownImage, false);
+  // No default disabled images.
+  delete impl_->disabledimage_[STATE_NORMAL];
+  impl_->disabledimage_[STATE_NORMAL] = NULL;
 }
 
 Variant CheckBoxElement::GetImage() const {

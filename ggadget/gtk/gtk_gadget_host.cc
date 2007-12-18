@@ -397,10 +397,6 @@ bool GtkGadgetHost::UnloadFont(const char *filename) {
 
 bool GtkGadgetHost::LoadGadget(GtkBox *container,
                                const char *base_path) {
-  gadget_ = new Gadget(this);
-  if (!file_manager_->Init(base_path) || !gadget_->Init())
-    return false;
-
   toolbox_ = GTK_BOX(gtk_hbox_new(FALSE, 0));
   gtk_box_pack_start(container, GTK_WIDGET(toolbox_), FALSE, FALSE, 0);
 
@@ -424,6 +420,10 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
                    G_CALLBACK(OnDetailsClicked), this);
 
   SetPluginFlags(0);
+  gadget_ = new Gadget(this);
+  if (!file_manager_->Init(base_path) || !gadget_->Init())
+    return false;
+
   return true;
 }
 

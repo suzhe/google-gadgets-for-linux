@@ -35,10 +35,10 @@ namespace smjs {
 JSClass NativeJSWrapper::wrapper_js_class_ = {
   "NativeJSWrapper",
   // Use the private slot to store the wrapper.
-  JSCLASS_HAS_PRIVATE,
+  JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE,
   JS_PropertyStub, JS_PropertyStub,
   GetWrapperPropertyDefault, SetWrapperPropertyDefault,
-  JS_EnumerateStub, ResolveWrapperProperty,
+  JS_EnumerateStub, reinterpret_cast<JSResolveOp>(ResolveWrapperProperty),
   JS_ConvertStub, FinalizeWrapper,
   NULL, NULL, CallWrapperSelf, NULL,
   NULL, NULL, MarkWrapper, NULL,
@@ -151,6 +151,8 @@ JSBool NativeJSWrapper::CheckNotDeleted() {
 JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
                                         uintN argc, jsval *argv,
                                         jsval *rval) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
   // In this case, the real self object being called is at argv[-2].
   JSObject *self_object = JSVAL_TO_OBJECT(argv[-2]);
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, self_object);
@@ -162,6 +164,8 @@ JSBool NativeJSWrapper::CallWrapperSelf(JSContext *cx, JSObject *obj,
 JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
                                           uintN argc, jsval *argv,
                                           jsval *rval) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() &&
@@ -170,6 +174,7 @@ JSBool NativeJSWrapper::CallWrapperMethod(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
+  // Don't check exception here to let exception handling succeed.
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyDefault(id, vp));
@@ -177,6 +182,7 @@ JSBool NativeJSWrapper::GetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
+  // Don't check exception here to let exception handling succeed.
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyDefault(id, *vp));
@@ -184,6 +190,8 @@ JSBool NativeJSWrapper::SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyByIndex(id, vp));
@@ -191,6 +199,8 @@ JSBool NativeJSWrapper::GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
                                                   jsval id, jsval *vp) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyByIndex(id, *vp));
@@ -198,6 +208,8 @@ JSBool NativeJSWrapper::SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->GetPropertyByName(id, vp));
@@ -205,16 +217,20 @@ JSBool NativeJSWrapper::GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
 
 JSBool NativeJSWrapper::SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyByName(id, *vp));
 }
 
 JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
-                                               jsval id) {
+                                               jsval id, uintN flags,
+                                               JSObject **objp) {
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
-         (wrapper->CheckNotDeleted() && wrapper->ResolveProperty(id));
+         (wrapper->CheckNotDeleted() &&
+          wrapper->ResolveProperty(id, flags, objp));
 }
 
 void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
@@ -544,8 +560,11 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   return JSScriptContext::CheckException(js_context_, scriptable_);
 }
 
-JSBool NativeJSWrapper::ResolveProperty(jsval id) {
+JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
+                                        JSObject **objp) {
   ASSERT(scriptable_);
+  ASSERT(objp);
+  *objp = NULL;
 
   if (!JSVAL_IS_STRING(id))
     return JS_TRUE;
@@ -558,6 +577,11 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
   if (!idstr)
     return JS_FALSE;
   const char *name = JS_GetStringBytes(idstr);
+
+  // The JS program defines a new symbol. This has higher priority than the
+  // properties of the global scriptable object. 
+  if (flags & JSRESOLVE_DECLARING)
+    return JS_TRUE;
 
   int int_id;
   Variant prototype;
@@ -590,48 +614,53 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id) {
     if (!JS_SetReservedSlot(js_context_, func_object,
                             0, PRIVATE_TO_JSVAL(slot)))
       return JS_FALSE;
-  } else {
-    // Define a JavaScript property.
-    jsval js_val = JSVAL_VOID;
-    if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
-      JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
-                     prototype.ToString().c_str());
-      return JS_FALSE;
-    }
 
-    if (int_id == ScriptableInterface::kConstantPropertyId)
-      // This property is a constant, register a property with initial value
-      // and without a tiny ID.  Then the JavaScript engine will handle it.
-      return JS_DefineProperty(js_context_, js_object_, name,
-                               js_val, JS_PropertyStub, JS_PropertyStub,
-                               JSPROP_READONLY | JSPROP_PERMANENT);
+    *objp = js_object_;
+    return JS_TRUE;
+  }
 
-    if (int_id == ScriptableInterface::kDynamicPropertyId)
-      return JS_DefineProperty(js_context_, js_object_, name, js_val,
-                               GetWrapperPropertyByName,
-                               SetWrapperPropertyByName,
-                               0);
+  // Define a JavaScript property.
+  jsval js_val = JSVAL_VOID;
+  if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
+    JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
+                   prototype.ToString().c_str());
+    return JS_FALSE;
+  }
 
-    if (int_id < 0 && int_id >= -128)
-      // Javascript tinyid is a 8-bit integer, and should be negative to avoid
-      // conflict with array indexes.
-      // This property is a normal property.  The 'get' and 'set' operations
-      // will call back to native slots.
-      return JS_DefinePropertyWithTinyId(js_context_, js_object_, name,
-                                         static_cast<int8>(int_id), js_val,
-                                         GetWrapperPropertyByIndex,
-                                         SetWrapperPropertyByIndex,
-                                         JSPROP_PERMANENT);
+  *objp = js_object_;
+  if (int_id == ScriptableInterface::kConstantPropertyId) {
+    // This property is a constant, register a property with initial value
+    // and without a tiny ID.  Then the JavaScript engine will handle it.
+    return JS_DefineProperty(js_context_, js_object_, name,
+                             js_val, JS_PropertyStub, JS_PropertyStub,
+                             JSPROP_READONLY | JSPROP_PERMANENT);
+  }
 
-    // Too many properties, can't register all with tiny id.  The rest are
-    // registered by name.
+  if (int_id == ScriptableInterface::kDynamicPropertyId) {
     return JS_DefineProperty(js_context_, js_object_, name, js_val,
                              GetWrapperPropertyByName,
                              SetWrapperPropertyByName,
-                             JSPROP_PERMANENT);
+                             0);
   }
 
-  return JS_TRUE;
+  if (int_id < 0 && int_id >= -128) {
+    // Javascript tinyid is a 8-bit integer, and should be negative to avoid
+    // conflict with array indexes.
+    // This property is a normal property.  The 'get' and 'set' operations
+    // will call back to native slots.
+    return JS_DefinePropertyWithTinyId(js_context_, js_object_, name,
+                                       static_cast<int8>(int_id), js_val,
+                                       GetWrapperPropertyByIndex,
+                                       SetWrapperPropertyByIndex,
+                                       JSPROP_PERMANENT);
+  }
+
+  // Too many properties, can't register all with tiny id.  The rest are
+  // registered by name.
+  return JS_DefineProperty(js_context_, js_object_, name, js_val,
+                           GetWrapperPropertyByName,
+                           SetWrapperPropertyByName,
+                           JSPROP_PERMANENT);
 }
 
 void NativeJSWrapper::AddJSFunctionSlot(JSFunctionSlot *slot) {
