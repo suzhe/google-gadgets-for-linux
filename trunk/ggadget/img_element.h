@@ -31,6 +31,12 @@ class ImgElement : public BasicElement {
 
   virtual bool IsPointIn(double x, double y);
  public:
+  enum CropMaintainAspect {
+    CROP_FALSE = 0,
+    CROP_TRUE,
+    CROP_PHOTO
+  };
+
   /**
    * Gets and sets the source of image to display.
    * @see ViewInterface::LoadImage()
@@ -43,6 +49,14 @@ class ImgElement : public BasicElement {
 
   /** Gets the original height of the image being displayed. */
   size_t GetSrcHeight() const;
+
+  /** Gets and sets the colorMultiply property of the image. */
+  std::string GetColorMultiply() const;
+  void SetColorMultiply(const char *color);
+
+  /** Gets and sets the cropMaintainAspect property of the image. */
+  CropMaintainAspect GetCropMaintainAspect() const;
+  void SetCropMaintainAspect(CropMaintainAspect crop);
 
   /**
    * Resizes the image to specified @a width and @a height via reduced

@@ -27,8 +27,9 @@ class MockedGraphics : public ggadget::GraphicsInterface {
     return NULL;
   }
   virtual ggadget::CanvasInterface *NewImage(const char *img_bytes,
-                                             size_t img_bytes_count) const {
-    return NULL;
+                                   size_t img_bytes_count,
+                                   const ggadget::Color *colormultiply) const {
+      return NULL;
   }
   virtual ggadget::CanvasInterface *NewMask(const char *img_bytes,
                                    size_t img_bytes_count) const {

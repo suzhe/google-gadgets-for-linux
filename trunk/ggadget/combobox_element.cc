@@ -33,6 +33,7 @@
 namespace ggadget {
 
 static const char kOnChangeEvent[] = "onchange";
+static const char kOnTextChangeEvent[] = "ontextchange";
 
 static const char *kTypeNames[] = {
   "dropdown", "droplist"
@@ -43,10 +44,11 @@ class ComboBoxElement::Impl {
   Impl(ComboBoxElement *owner, View *view)
       : owner_(owner), 
         mouseover_child_(NULL), grabbed_child_(NULL),
-        type_(COMBO_DROPDOWN), maxitems_(10),
+        maxitems_(10),
+        keyboard_(false),
         listbox_(new ListBoxElement(owner, view, "listbox", "")),
-        edit_(NULL), // TODO
-        button_over_(false), button_down_(false),
+        edit_(NULL),
+        button_over_(false), button_down_(false), update_edit_value_(true),
         button_up_img_(view->LoadImageFromGlobal(kScrollDefaultRight, false)), 
         button_down_img_(view->LoadImageFromGlobal(kScrollDefaultRightDown, false)), 
         button_over_img_(view->LoadImageFromGlobal(kScrollDefaultRightOver, false)),
@@ -71,15 +73,15 @@ class ComboBoxElement::Impl {
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
     listbox_->SetAutoscroll(true);
-    Slot0<void> *slot = NewSlot(this, &Impl::ListBoxUpdated);
-    listbox_->ConnectOnChangeEvent(slot);
+    listbox_->ConnectOnChangeEvent(NewSlot(this, &Impl::ListBoxUpdated));
     listbox_->SetImplicit(true);
+    view->OnElementAdd(listbox_); // ListBox is exposed to the View.
 
-    // TODO edit control
-
+    CreateEdit(); // COMBO_DROPDOWN is default.
   }
 
   ~Impl() {
+    owner_->GetView()->OnElementRemove(listbox_);
     delete listbox_;
     listbox_ = NULL;
 
@@ -92,20 +94,45 @@ class ComboBoxElement::Impl {
 
   ComboBoxElement *owner_;
   BasicElement *mouseover_child_, *grabbed_child_;
-  Type type_;
   int maxitems_;
+  bool keyboard_;
   ListBoxElement *listbox_;
-  EditElement *edit_; // TODO
+  EditElement *edit_; // is NULL if and only if COMBO_DROPLIST mode
   bool button_over_, button_down_;
+  bool update_edit_value_;
   Image *button_up_img_, *button_down_img_, *button_over_img_;
   Texture *background_;
-  EventSignal onchange_event_;
+  EventSignal onchange_event_, ontextchange_event_;
 
-  void ListBoxRedraw() {
-    owner_->QueueDraw();
+  std::string GetSelectedText() {
+    const ItemElement *item = listbox_->GetSelectedItem();
+    if (item) {
+      return item->GetLabelText();
+    }
+    return std::string();
+  }
+
+  void CreateEdit() {
+    edit_ = new EditElement(owner_, owner_->GetView(), "");
+    update_edit_value_ = true;
+    edit_->ConnectOnChangeEvent(NewSlot(this, &Impl::TextChanged));
+    edit_->SetImplicit(true);
+  }
+
+  void TextChanged() {    
+    SimpleEvent event(Event::EVENT_CHANGE);
+    ScriptableEvent s_event(&event, owner_, NULL);
+    owner_->GetView()->FireEvent(&s_event, ontextchange_event_);
   }
 
   void ListBoxUpdated() {
+    if (!keyboard_ && listbox_->IsVisible()) {
+      // Close dropdown on selection.
+      listbox_->SetVisible(false);
+    }
+
+    update_edit_value_ = true;
+
     // Relay this event to combobox's listeners.
     SimpleEvent event(Event::EVENT_CHANGE);
     ScriptableEvent s_event(&event, owner_, NULL);
@@ -138,6 +165,16 @@ class ComboBoxElement::Impl {
     index %= count;
     listbox_->SetSelectedIndex(index);
     listbox_->ScrollToIndex(index);
+  }
+
+  Image *GetButtonImage() {
+    if (button_down_) {
+      return button_down_img_;
+    } else if (button_over_) {
+      return button_over_img_;
+    } else {
+      return button_up_img_;
+    }
   }
 };
 
@@ -210,6 +247,7 @@ ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
                    NewSlot(this, &ComboBoxElement::SetMultiSelect));
 
   RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+  RegisterSignal(kOnTextChangeEvent, &impl_->ontextchange_event_);
 }
 
 ComboBoxElement::~ComboBoxElement() {
@@ -234,49 +272,45 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
     impl_->background_->Draw(canvas);
   }
 
-  // TODO dropdown type isn't supported right now
+  if (impl_->edit_) {
+    const CanvasInterface *editbox = impl_->edit_->Draw(&c);
+    canvas->DrawCanvas(.0, .0, editbox);    
+  } else {
+    // Draw item      
+    ItemElement *item = impl_->listbox_->GetSelectedItem();
+    if (item) {
+      item->SetDrawOverlay(false);
+      const CanvasInterface *item_canvas = item->Draw(&c);
+      item->SetDrawOverlay(true);
 
-  // Draw item
-  ItemElement *item = impl_->listbox_->GetSelectedItem();
-  if (item) {
-    item->SetDrawOverlay(false);
-    const CanvasInterface *item_canvas = item->Draw(&c);
-    item->SetDrawOverlay(true);
+      // Support rotations, masks, etc. here. Windows version supports these, 
+      // but is this really intended?
+      double rotation = item->GetRotation();
+      double pinx = item->GetPixelPinX(), piny = item->GetPixelPinY();
+      bool transform = (rotation != 0 || pinx != 0 || piny != 0); 
+      if (transform) {
+        canvas->PushState();
 
-    // Support rotations, masks, etc. here. Windows version supports these, 
-    // but is this really intended?
-    double rotation = item->GetRotation();
-    double pinx = item->GetPixelPinX(), piny = item->GetPixelPinY();
-    bool transform = (rotation != 0 || pinx != 0 || piny != 0); 
-    if (transform) {
-      canvas->PushState();
+        canvas->IntersectRectClipRegion(0, 0, elem_width, item_height);
+        canvas->RotateCoordinates(DegreesToRadians(rotation));
+        canvas->TranslateCoordinates(-pinx, -piny);
+      }  
 
-      canvas->IntersectRectClipRegion(0, 0, elem_width, item_height);
-      canvas->RotateCoordinates(DegreesToRadians(rotation));
-      canvas->TranslateCoordinates(-pinx, -piny);
+      const CanvasInterface *mask = item->GetMaskCanvas();
+      if (mask) {
+        canvas->DrawCanvasWithMask(0, 0, item_canvas, 0, 0, mask);
+      } else {
+        canvas->DrawCanvas(.0, .0, item_canvas);
+      }
+
+      if (transform) {
+        canvas->PopState();
+      }      
     }  
-
-    const CanvasInterface *mask = item->GetMaskCanvas();
-    if (mask) {
-      canvas->DrawCanvasWithMask(0, 0, item_canvas, 0, 0, mask);
-    } else {
-      canvas->DrawCanvas(.0, .0, item_canvas);
-    }
-
-    if (transform) {
-      canvas->PopState();
-    }      
-  }  
+  }
 
   // Draw button
-  Image *img;
-  if (impl_->button_down_) {
-    img = impl_->button_down_img_;
-  } else if (impl_->button_over_) {
-    img = impl_->button_over_img_;
-  } else {
-    img = impl_->button_up_img_;
-  }
+  Image *img = impl_->GetButtonImage();
   if (img) {
     double imgw = img->GetWidth();
     double x = elem_width - imgw;
@@ -346,38 +380,43 @@ void ComboBoxElement::SetMaxDroplistItems(int max_droplist_items) {
   if (max_droplist_items != impl_->maxitems_) {
     impl_->maxitems_ = max_droplist_items;
     QueueDraw();
-    impl_->SetListBoxHeight();
   }
 }
 
 ComboBoxElement::Type ComboBoxElement::GetType() const {
-  return impl_->type_;
+  if (impl_->edit_) {
+    return COMBO_DROPDOWN;
+  } else {
+    return COMBO_DROPLIST;
+  }
 }
 
 void ComboBoxElement::SetType(Type type) {
-  if (type != impl_->type_) {
-    impl_->type_ = type;
-    // TODO
+  if (type == COMBO_DROPDOWN) {
+    if (!impl_->edit_) {
+      impl_->CreateEdit();
+      QueueDraw();
+    }
+  } else if (impl_->edit_) {
+    delete impl_->edit_;
+    impl_->edit_ = NULL;
     QueueDraw();
   }
 }
 
 std::string ComboBoxElement::GetValue() const {
-  const ItemElement *item = impl_->listbox_->GetSelectedItem();
-  if (item) {
-    return item->GetLabelText();
-  }
-  LOG("ComboBox: No item selected");
+  if (impl_->edit_) {
+    return impl_->edit_->GetValue();
+  } 
+  // not used in droplist mode
   return std::string();
 }
 
 void ComboBoxElement::SetValue(const char *value) {
-  ItemElement *item = impl_->listbox_->GetSelectedItem();
-  if (item) {
-    item->SetLabelText(value);
-  } else {
-    LOG("ComboBox: No item selected");
-  }
+  if (impl_->edit_) {
+    impl_->edit_->SetValue(value);
+  } 
+  // not used in droplist mode
 }
 
 bool ComboBoxElement::IsAutoscroll() const {
@@ -408,18 +447,24 @@ void ComboBoxElement::SetBackground(const Variant &background) {
 
 void ComboBoxElement::Layout() {
   BasicElement::Layout();
-  impl_->listbox_->SetPixelY(impl_->listbox_->GetItemPixelHeight());
-  impl_->listbox_->SetPixelWidth(GetPixelWidth());
+  double itemheight = impl_->listbox_->GetItemPixelHeight();
+  double elem_width = GetPixelWidth();
+  impl_->listbox_->SetPixelY(itemheight);
+  impl_->listbox_->SetPixelWidth(elem_width);
   impl_->SetListBoxHeight();
   impl_->listbox_->Layout();
-  // TODO: Call layout of edit.
-}
+  if (impl_->edit_) {
+    Image *img = impl_->GetButtonImage();
+    impl_->edit_->SetPixelWidth(elem_width - (img ? img->GetWidth() : 0));
+    impl_->edit_->SetPixelHeight(itemheight);
 
-void ComboBoxElement::SelfCoordToChildCoord(const BasicElement *child,
-                                       double x, double y,
-                                       double *child_x, double *child_y) const {  
-  //TODO
-  BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);
+    if (impl_->update_edit_value_) {
+      impl_->edit_->SetValue(impl_->GetSelectedText().c_str());
+    }
+
+    impl_->edit_->Layout();
+  }
+  impl_->update_edit_value_ = false;
 }
 
 EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
@@ -428,39 +473,51 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
   BasicElement *new_fired = NULL, *new_in = NULL;
   double new_y = event.GetY() - impl_->listbox_->GetPixelY();
   Event::Type t = event.GetType();
+  bool expanded = impl_->listbox_->IsVisible();
 
-  if (impl_->listbox_->IsVisible()) {
-    EventResult r;    
+  if (!expanded && new_y >= 0 && !direct) {
+    // In listbox
+    // This combobox will need to appear to be transparent to the elements 
+    // below it if listbox is invisible.      
+    return EVENT_RESULT_UNHANDLED;  
+  }
+
+  if (impl_->edit_) {
+    EventResult r;   
     if (t == Event::EVENT_MOUSE_OUT && impl_->mouseover_child_) {
       // Case: Mouse moved out of parent and child at same time.
       // Clone mouse out event and send to child in addition to parent.
       MouseEvent new_event(event);
-      new_event.SetY(new_y);
       impl_->mouseover_child_->OnMouseEvent(new_event, true, 
                                             &new_fired, &new_in);
       impl_->mouseover_child_ = NULL;
 
       // Do not return, parent needs to handle this mouse out event too.
     } else if (impl_->grabbed_child_ &&  
-               (t == Event::EVENT_MOUSE_MOVE || t == Event::EVENT_MOUSE_UP)) { 
+               (t == Event::EVENT_MOUSE_MOVE || t == Event::EVENT_MOUSE_UP 
+                || t == Event::EVENT_MOUSE_CLICK)) { 
       // Case: Mouse is grabbed by child. Send to child regardless of position.
       // Send to child directly.
       MouseEvent new_event(event);
-      new_event.SetY(new_y);
       r = impl_->grabbed_child_->OnMouseEvent(new_event, true, 
                                               fired_element, in_element);
-      if (t == Event::EVENT_MOUSE_UP) {
+      if (t == Event::EVENT_MOUSE_CLICK) {
+        impl_->grabbed_child_->Focus();
+      }
+      if (t == Event::EVENT_MOUSE_CLICK || 
+          !(event.GetButton() & MouseEvent::BUTTON_LEFT)) {
         impl_->grabbed_child_ = NULL; 
       }
-      // Make listbox invisible to caller
-      if (*fired_element == impl_->listbox_) {
+      // Make editbox invisible to caller
+      if (*fired_element == impl_->edit_) {
         *fired_element = this;
       }
-      if (*in_element == impl_->listbox_) {
+      if (*in_element == impl_->edit_) {
         *in_element = this;
       }
       return r;
-    } else if (new_y >= 0 && !direct) { 
+    } else if (event.GetX() < impl_->edit_->GetPixelWidth() && 
+               new_y < 0 && !direct) { 
       // !direct is necessary to eliminate events grabbed when clicked on 
       // inactive parts of the combobox.
       // Case: Mouse is inside child. Dispatch event to child,
@@ -470,8 +527,8 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
         // Case: Mouse just moved inside child. Turn on mouseover bit and  
         // synthesize a mouse over event. The original event still needs to 
         // be dispatched to child.
-        impl_->mouseover_child_ = impl_->listbox_;
-        MouseEvent in(Event::EVENT_MOUSE_OVER, event.GetX(), new_y, 
+        impl_->mouseover_child_ = impl_->edit_;
+        MouseEvent in(Event::EVENT_MOUSE_OVER, event.GetX(), event.GetY(), 
                       event.GetButton(), event.GetWheelDelta(), 
                       event.GetModifier());
         impl_->mouseover_child_->OnMouseEvent(in, true, &new_fired, &new_in);
@@ -484,33 +541,29 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                             fired_element, in_element);         
         } 
       }
+
       // Send event to child.
       MouseEvent new_event(event);
-      new_event.SetY(new_y);
-      r = impl_->listbox_->OnMouseEvent(new_event, direct,
-                                        fired_element, in_element);
-      // Make listbox invisible to caller
-      if (*fired_element == impl_->listbox_) {
+      r = impl_->edit_->OnMouseEvent(new_event, direct,
+                                     fired_element, in_element);
+      // Make child invisible to caller
+      if (*fired_element == impl_->edit_) {
         // Only grab events fired on combobox, and not its children 
-        if (t == Event::EVENT_MOUSE_DOWN) {
-          impl_->grabbed_child_ = impl_->listbox_;
+        if (t == Event::EVENT_MOUSE_DOWN && 
+            (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
+          impl_->grabbed_child_ = impl_->edit_;
         }
         *fired_element = this;
       }
-      if (*in_element == impl_->listbox_) {
+      if (*in_element == impl_->edit_) {
         *in_element = this;
-      }
-      if (r == EVENT_RESULT_HANDLED && t == Event::EVENT_MOUSE_CLICK &&
-          impl_->listbox_->IsVisible()) {
-        // Close dropdown on selection.
-        impl_->listbox_->SetVisible(false);
       }
       return r;
     } else if (impl_->mouseover_child_) {
       // Case: Mouse isn't in child, but mouseover bit is on, so turn 
       // it off and send a mouse out event to child. The original event is 
       // still dispatched to parent.
-      MouseEvent new_event(Event::EVENT_MOUSE_OUT, event.GetX(), new_y, 
+      MouseEvent new_event(Event::EVENT_MOUSE_OUT, event.GetX(), event.GetY(), 
                            event.GetButton(), event.GetWheelDelta(),
                            event.GetModifier());
       impl_->mouseover_child_->OnMouseEvent(new_event, true, 
@@ -521,42 +574,46 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
     }
 
     // Else not handled, send to BasicElement::OnMouseEvent
-  } else {
-    // Visible state may change while grabbed or hovered.
-    impl_->grabbed_child_ = NULL;
-    impl_->mouseover_child_ = NULL;
-
-    if (new_y >= 0) {
-      // In listbox
-      if (!direct) {        
-        // This combobox will need to appear to be transparent to the elements 
-        // below it if listbox is invisible.      
-        return EVENT_RESULT_UNHANDLED;
-      }
-    }    
   }
 
-  return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+  if (expanded && new_y >= 0 && !direct) {        
+    MouseEvent new_event(event);
+    new_event.SetY(new_y);
+    return impl_->listbox_->OnMouseEvent(new_event, direct, 
+                                         fired_element, in_element);
+  }
+
+  return  BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
 }
 
 EventResult ComboBoxElement::OnDragEvent(const DragEvent &event, bool direct,
                                      BasicElement **fired_element) {
   double new_y = event.GetY() - impl_->listbox_->GetPixelY();
-  if (!direct && new_y >= 0) {
-    // In the listbox region.
-    if (impl_->listbox_->IsVisible()) {
-      DragEvent new_event(event);
-      new_event.SetY(new_y);
-      EventResult r = impl_->listbox_->OnDragEvent(new_event, direct, fired_element);
-      if (*fired_element == impl_->listbox_) {
+  if (!direct) { 
+    if (new_y >= 0) {
+      // In the listbox region.
+      if (impl_->listbox_->IsVisible()) {
+        DragEvent new_event(event);
+        new_event.SetY(new_y);
+        EventResult r = impl_->listbox_->OnDragEvent(new_event,
+                                                     direct, fired_element);
+        if (*fired_element == impl_->listbox_) {
+          *fired_element = this;
+        }
+        return r;
+      } else  {
+        // This combobox will need to appear to be transparent to the elements 
+        // below it if listbox is invisible.
+        return EVENT_RESULT_UNHANDLED;
+      }    
+    } else if (impl_->edit_ && event.GetX() < impl_->edit_->GetPixelWidth()) {
+      // In editbox.
+      EventResult r = impl_->edit_->OnDragEvent(event, direct, fired_element);
+      if (*fired_element == impl_->edit_) {
         *fired_element = this;
       }
       return r;
-    } else  {
-      // This combobox will need to appear to be transparent to the elements 
-      // below it if listbox is invisible.
-      return EVENT_RESULT_UNHANDLED;
-    }    
+    }
   }
 
   return BasicElement::OnDragEvent(event, direct, fired_element);
@@ -622,10 +679,14 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
     result = EVENT_RESULT_HANDLED;
     switch (event.GetKeyCode()) {
      case KeyboardEvent::KEY_UP:
+      impl_->keyboard_ = true;
       impl_->ScrollList(false);
+      impl_->keyboard_ = false;
       break;
      case KeyboardEvent::KEY_DOWN:
+      impl_->keyboard_ = true;
       impl_->ScrollList(true);
+      impl_->keyboard_ = false;
       break;
      case KeyboardEvent::KEY_RETURN:
        // Windows only allows the box to be closed with the enter key,

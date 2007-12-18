@@ -17,7 +17,9 @@
 #ifndef GGADGET_COLOR_H__
 #define GGADGET_COLOR_H__
 
+#include <cmath>
 #include <ggadget/common.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 
@@ -34,6 +36,19 @@ struct Color {
     ASSERT(g >= 0. && g <= 1.);
     ASSERT(b >= 0. && b <= 1.);
   };
+
+  Color(const Color &c) : red(c.red), green(c.green), blue(c.blue) {}
+
+  bool operator==(const Color &c) const {
+    return red == c.red && green == c.green && blue == c.blue;
+  }
+
+  std::string ToString() const {
+    return StringPrintf("#%02x%02x%02x",
+                        static_cast<int>(round(red * 255)),
+                        static_cast<int>(round(green * 255)),
+                        static_cast<int>(round(blue * 255)));
+  }
 
   /**
    * Utility function to create a Color object from 8-bit color channel values.

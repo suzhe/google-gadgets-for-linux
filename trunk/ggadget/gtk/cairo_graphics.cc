@@ -20,7 +20,7 @@
 #include "cairo_font.h"
 #include "gtk_view_host.h"
 #include "gtk_edit.h"
-#include <ggadget/edit_interface.h>
+#include <ggadget/color.h>
 
 namespace ggadget {
 namespace gtk {
@@ -38,11 +38,12 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
   cairo_t *cr = NULL;
   cairo_surface_t *surface = NULL;
 
+  if (w == 0 || h == 0) {
+    goto exit;
+  }
+
   size_t width;
   size_t height;
-
-  if (w == 0) w = 1;
-  if (h == 0) h = 1;
   if (zoom_ == 1.) {
     width = w;
     height = h;
@@ -178,7 +179,8 @@ exit:
 }
 
 CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
-                                         size_t img_bytes_count) const {
+                                         size_t img_bytes_count,
+                                         const Color *colormultiply) const {
   CairoCanvas *img = NULL;
   size_t h, w;
   cairo_surface_t *surface = NULL;
@@ -189,7 +191,6 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
     goto exit;
   }
 
-  // for all other image formats, try gdk image loader
   pixbuf = LoadPixbufFromData(img_bytes, img_bytes_count);
   if (!pixbuf) {
     LOG("Error: unable to load PixBuf from data.");
@@ -198,6 +199,31 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
 
   w = gdk_pixbuf_get_width(pixbuf);
   h = gdk_pixbuf_get_height(pixbuf);
+
+  if (colormultiply) {
+    DLOG("New image with color multiply %s", colormultiply->ToString().c_str());
+
+    int rowstride, channels;
+    guchar *pixels, *p;
+    rowstride = gdk_pixbuf_get_rowstride(pixbuf);
+    channels = gdk_pixbuf_get_n_channels(pixbuf);
+    pixels = gdk_pixbuf_get_pixels(pixbuf);
+    if (GDK_COLORSPACE_RGB != gdk_pixbuf_get_colorspace(pixbuf) ||
+        8 != gdk_pixbuf_get_bits_per_sample(pixbuf) ||
+        3 > channels) {
+      LOG("Error: unsupported PixBuf format.");
+      goto exit;
+    }
+    for (size_t x = 0; x < w; x++) {
+      for (size_t y = 0; y < h; y++) {
+        p = pixels + y * rowstride + x * channels;
+        p[0] = static_cast<guchar>(colormultiply->red * p[0]);
+        p[1] = static_cast<guchar>(colormultiply->green * p[1]);
+        p[2] = static_cast<guchar>(colormultiply->blue * p[2]);
+      }
+    }
+  }
+
   surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
   if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
     cairo_surface_destroy(surface);

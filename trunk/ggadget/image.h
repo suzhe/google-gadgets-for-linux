@@ -17,6 +17,7 @@
 #ifndef GGADGET_IMAGE_H__
 #define GGADGET_IMAGE_H__
 
+#include <ggadget/color.h>
 #include <ggadget/element_interface.h>
 #include <ggadget/scriptable_helper.h>
 
@@ -52,6 +53,9 @@ class Image {
   Image(const Image &another);
 
   ~Image();
+
+  /** Sets a color value that is multipled with every pixel in the image. */
+  void SetColorMultiply(const Color &color);
 
   /**
    * Get the canvas containing the image data.
