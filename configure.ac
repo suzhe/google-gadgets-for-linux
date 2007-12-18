@@ -342,9 +342,12 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
+		 ggadget/dbus/Makefile
+		 ggadget/dbus/tests/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
 		 ggadget/linux/Makefile
+		 ggadget/linux/tests/Makefile
 		 ggadget/smjs/Makefile
 		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile

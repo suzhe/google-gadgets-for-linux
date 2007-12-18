@@ -15,7 +15,7 @@
 #
 
 # Putting . into SBUDIRS list to force building current directory first.
-# SUBDIRS = . tests
+SUBDIRS = . tests
 
 if GGL_HOST_LINUX
 
@@ -51,8 +51,9 @@ libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 
 libggadget_linux@GGL_EPOCH@_la_CPPFLAGS =
 
-libggadget_linux@GGL_EPOCH@_la_LIBADD =
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+libggadget_linux@GGL_EPOCH@_la_LIBADD = \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 
 libggadget_linux@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

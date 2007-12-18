@@ -70,13 +70,11 @@ std::string ToUpper(const std::string &s) {
   return result;
 }
 
-std::string StringPrintf(const char* format, ...) {
-  std::string dst;
+static void StringAppendValist(std::string *dst, const char* format,
+                               va_list ap) {
   // First try with a small fixed size buffer
   char space[1024];
 
-  va_list ap;
-  va_start(ap, format);
   // It's possible for methods that use a va_list to invalidate
   // the data in it upon use.  The fix is to make a copy
   // of the structure before using it and use that copy instead.
@@ -88,7 +86,7 @@ std::string StringPrintf(const char* format, ...) {
 
   if (result >= 0 && result < static_cast<int>(sizeof(space))) {
     // It fits.
-    dst = space;
+    dst->append(space);
   } else {
     // Repeatedly increase buffer size until it fits
     int length = sizeof(space);
@@ -109,15 +107,29 @@ std::string StringPrintf(const char* format, ...) {
 
       if ((result >= 0) && (result < length)) {
         // It fits.
-        dst = buf;
+        dst->append(buf);
         delete[] buf;
         break;
       }
       delete[] buf;
     }
   }
+}
+
+std::string StringPrintf(const char* format, ...) {
+  std::string dst;
+  va_list ap;
+  va_start(ap, format);
+  StringAppendValist(&dst, format, ap);
   va_end(ap);
   return dst;
+}
+
+void StringAppendPrintf(std::string *string, const char* format, ...) {
+  va_list ap;
+  va_start(ap, format);
+  StringAppendValist(string, format, ap);
+  va_end(ap);
 }
 
 bool IsValidURLChar(unsigned char c) {

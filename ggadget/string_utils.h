@@ -106,6 +106,12 @@ std::string StringPrintf(const char *format, ...)
   // Tell the compiler to do printf format string checking.
   PRINTF_ATTRIBUTE(1,2);
 
+/**
+ * Append result to a supplied string
+ */
+void StringAppendPrintf(std::string* dst, const char* format, ...)
+  PRINTF_ATTRIBUTE(2,3);
+
 /** URL-encode the source string. */
 std::string EncodeURL(const std::string &source);
 
@@ -119,7 +125,7 @@ bool IsValidURLChar(unsigned char c);
 std::string EncodeJavaScriptString(const UTF16Char *source);
 
 /**
- * Splits a string into two parts. 
+ * Splits a string into two parts.
  * @param source the source string to split.
  * @param separator the source string will be splitted at the first occurance
  *     of the separator.
