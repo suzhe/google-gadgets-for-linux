@@ -94,6 +94,9 @@ class CairoCanvas : public CanvasInterface {
                               int text_flags, double in_width,
                               double *width, double *height);
 
+  virtual bool GetPointValue(double x, double y,
+                             Color *color, double *opacity) const;
+
   /**
    * Get the surface contained within this class for use elsewhere.
    * Will flush the surface before returning so it is ready to be read.

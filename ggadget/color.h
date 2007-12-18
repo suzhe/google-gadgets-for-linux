@@ -26,6 +26,9 @@ namespace ggadget {
  * Currently, there is no support for the alpha channel.
  */
 struct Color {
+  Color() : red(0), green(0), blue(0) {
+  }
+
   Color(double r, double g, double b) : red(r), green(g), blue(b) {
     ASSERT(r >= 0. && r <= 1.);
     ASSERT(g >= 0. && g <= 1.);

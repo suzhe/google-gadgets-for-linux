@@ -29,6 +29,7 @@ class ImgElement : public BasicElement {
   ImgElement(BasicElement *parent, View *view, const char *name);
   virtual ~ImgElement();
 
+  virtual bool IsPointIn(double x, double y);
  public:
   /**
    * Gets and sets the source of image to display.

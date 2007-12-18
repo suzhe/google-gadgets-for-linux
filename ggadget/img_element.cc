@@ -19,6 +19,7 @@
 #include "image.h"
 #include "string_utils.h"
 #include "view.h"
+#include "color.h"
 
 namespace ggadget {
 
@@ -47,6 +48,29 @@ ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
 
 ImgElement::~ImgElement() {
   delete impl_;
+}
+
+bool ImgElement::IsPointIn(double x, double y) {
+  // Return false directly if the point is outside the element boundary.
+  if (!BasicElement::IsPointIn(x, y))
+    return false;
+
+  bool changed;
+  const CanvasInterface *canvas = Draw(&changed);
+
+  // If the element is invisible then just return false.
+  if (!canvas)
+    return false;
+
+  Color color;
+  double opacity;
+
+  // If failed to get the value of the point, then just return true, assuming
+  // it's an opaque point.
+  if (!canvas->GetPointValue(x, y, &color, &opacity))
+    return true;
+
+  return opacity > 0;
 }
 
 void ImgElement::DoDraw(CanvasInterface *canvas,

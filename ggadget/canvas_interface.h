@@ -245,17 +245,30 @@ class CanvasInterface {
    * @param h Height of rectangle.
    * @return true on success, false otherwise.
    */
-  virtual bool IntersectRectClipRegion(double x, double y, 
+  virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h) = 0;
-  
-  /** 
+
+  /**
    * Gets the width and height of the specified text.
    * @c in_width <= 0 means the text should not be wrapped or trimmed.
    */
-  virtual bool GetTextExtents(const char *text, const FontInterface *f, 
+  virtual bool GetTextExtents(const char *text, const FontInterface *f,
                               int text_flags, double in_width,
                               double *width, double *height) = 0;
 
+  /**
+   * Gets the value of a point at a specified coordinate in the canvas.
+   * The specified coordinate honours the transformation of the canvas.
+   *
+   * @param x X-coordinate of the point.
+   * @param y Y-coordinate of the point.
+   * @param[out] color Color of the specified point. It can be NULL.
+   * @param[out] opacity Opacity of the specified point. It can be NULL.
+   * @return true if the point value is accessible and returned successfully.
+   *         otherwise, returns false.
+   */
+  virtual bool GetPointValue(double x, double y,
+                             Color *color, double *opacity) const = 0;
 };
 
 } // namespace ggadget
