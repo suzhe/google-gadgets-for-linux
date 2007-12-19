@@ -172,17 +172,17 @@ TEST_F(CairoCanvasTest, FillRectAndClipping) {
   EXPECT_TRUE(gfx_->DrawFilledRect(110., 40., 90., 70., Color(0., 0., 1.)));
 }
 
-TEST_F(CairoCanvasTest, GetPointValue) {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+TEST_F(CairoCanvasTest, GetPointValue) {
   Color color;
   double opacity;
 
   EXPECT_TRUE(gfx_->MultiplyOpacity(0.5));
-  EXPECT_TRUE(gfx_->DrawFilledRect(10., 50., 280., 100., Color(1., 0., 0.)));
+  EXPECT_TRUE(gfx_->DrawFilledRect(10., 50., 280., 100., Color(0.8, 0., 0.)));
 
   EXPECT_TRUE(gfx_->GetPointValue(10, 70, &color, &opacity));
-  EXPECT_DOUBLE_EQ(0.5, opacity);
-  EXPECT_DOUBLE_EQ(1.0, color.red);
+  EXPECT_NEAR(0.5, opacity, (1/256.0));
+  EXPECT_NEAR(0.8, color.red, (1/256.0));
   EXPECT_DOUBLE_EQ(0, color.green);
   EXPECT_DOUBLE_EQ(0, color.blue);
   EXPECT_TRUE(gfx_->GetPointValue(70, 10, &color, &opacity));
@@ -192,8 +192,8 @@ TEST_F(CairoCanvasTest, GetPointValue) {
   EXPECT_DOUBLE_EQ(0, color.blue);
   EXPECT_FALSE(gfx_->GetPointValue(310, 20, &color, &opacity));
   EXPECT_FALSE(gfx_->GetPointValue(20, -2, &color, &opacity));
-#endif
 }
+#endif
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);

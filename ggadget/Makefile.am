@@ -22,11 +22,11 @@ endif
 if GGL_BUILD_LIBGGADGET_SMJS
 SUBDIRS += smjs
 endif
-if GGL_HOST_LINUX
-SUBDIRS += linux
-endif
 if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS += dbus
+endif
+if GGL_HOST_LINUX
+SUBDIRS += linux
 endif
 
 INCLUDES		= -I$(top_builddir) \
