@@ -14,13 +14,20 @@
   limitations under the License.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <sys/utsname.h>
 #include <vector>
 
 #include "machine.h"
-#include <ggadget/dbus/dbus_utils.h>
 #include <ggadget/common.h>
 #include <ggadget/string_utils.h>
+
+#ifdef HAVE_DBUS_LIBRARY
+#include <ggadget/dbus/dbus_utils.h>
+#endif
 
 namespace ggadget {
 namespace framework {
@@ -37,6 +44,7 @@ static const char* kCPUInfoFile = "/proc/cpuinfo";
 Machine::Machine() {
   InitArchInfo();
   InitProcInfo();
+#ifdef HAVE_DBUS_LIBRARY
   DBusProxy *proxy = new DBusProxy(BUS_TYPE_SYSTEM,
                                    "org.freedesktop.Hal",
                                    "/org/freedesktop/Hal/devices/computer",
@@ -80,6 +88,7 @@ Machine::Machine() {
                    MESSAGE_TYPE_INVALID);
   if (str) machine_model_ = str;
   delete proxy;
+#endif
 }
 
 Machine::~Machine() {

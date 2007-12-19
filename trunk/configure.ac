@@ -167,6 +167,12 @@ if test x$ac_cv_type_size_t != xyes; then
   AC_MSG_ERROR([No type size_t, but google Gadgets for Linux needs it!])
 fi
 
+# check for bytesex stuff
+AC_C_BIGENDIAN(
+  [AC_DEFINE(GGL_BIG_ENDIAN,1,[Big endian])],
+  [AC_DEFINE(GGL_LITTLE_ENDIAN,1,[Little endian])]
+)
+
 # Check necessary libraries
 
 # Check gnu readline lib, for smjs unit tests.
@@ -206,6 +212,7 @@ if test x$has_dbus = xyes; then
   fi
   AC_DEFINE_UNQUOTED(DBUS_SYSTEM_BUS_SOCKET, ["$DBUS_SYSTEM_BUS_SOCKET"],
                      [dbus system bus socket path])
+  AC_DEFINE(HAVE_DBUS_LIBRARY,1,[Have dbus library])
 fi
 
 ###########################################################

@@ -143,7 +143,12 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
 
   // Now create the surface (eight-bit alpha channel) and Cairo context.
   // For some reason, A1 surface doesn't work (cairo bug?)
+  // Using A1 is ok at least on cairo >= 1.4.0
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,4,0)
+  surface = cairo_image_surface_create(CAIRO_FORMAT_A1, w, h);
+#else
   surface = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
+#endif
   if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
     cairo_surface_destroy(surface);
     surface = NULL;

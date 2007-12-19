@@ -51,9 +51,12 @@ libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 
 libggadget_linux@GGL_EPOCH@_la_CPPFLAGS =
 
+if GGL_BUILD_LIBGGADGET_DBUS
+  DBUS_LIB= $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+endif
 libggadget_linux@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+			  $(DBUS_LIB)
 
 libggadget_linux@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

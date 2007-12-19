@@ -14,6 +14,10 @@
   limitations under the License.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -613,7 +617,6 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
 bool CairoCanvas::GetPointValue(double x, double y,
                                 Color *color, double *opacity) const {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
-
 #define BYTE_TO_DOUBLE(x) (static_cast<double>(x)/255.0)
 
   cairo_surface_t *surface = GetSurface();
@@ -637,6 +640,7 @@ bool CairoCanvas::GetPointValue(double x, double y,
   unsigned char *data = cairo_image_surface_get_data(surface);
   int stride = cairo_image_surface_get_stride(surface);
   double red, green, blue, op;
+  red = green = blue = op = 0;
   if (format == CAIRO_FORMAT_ARGB32 || format == CAIRO_FORMAT_RGB24) {
     uint32_t *ptr = reinterpret_cast<uint32_t *>(data + (stride * yi) + xi * 4);
     uint32_t cell = *ptr;
@@ -653,14 +657,23 @@ bool CairoCanvas::GetPointValue(double x, double y,
         if (green > 1) green = 1;
         if (blue > 1) blue = 1;
       }
-    } else
+    } else {
       op = 1.0;
+    }
   } else if (format == CAIRO_FORMAT_A8) {
     unsigned char *ptr = data + (stride * xi) + yi;
     op = BYTE_TO_DOUBLE(*ptr);
-    red = 0;
-    green = 0;
-    blue = 0;
+  } else if (format == CAIRO_FORMAT_A1) {
+    uint32_t *ptr =
+        reinterpret_cast<uint32_t *>(data + (stride * yi) + (xi / 32) * 4);
+    uint32_t cell = *ptr;
+#ifdef GGL_BIG_ENDIAN
+    op = static_cast<double>((cell >> (31 - (xi % 32))) & 1);
+#else
+    op = static_cast<double>((cell >> (xi % 32)) & 1);
+#endif
+  } else {
+    return false;
   }
   if (color) {
     color->red = red;
