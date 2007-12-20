@@ -47,8 +47,7 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
   if (zoom_ == 1.) {
     width = w;
     height = h;
-  }
-  else {
+  } else {
     // compute new width and height based on zoom
     width = size_t(w * zoom_);
     height = size_t(h * zoom_);
@@ -133,8 +132,7 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
       p = pixels + y * rowstride + x * channels;
       if (0 == p[0] && 0 == p[1] && 0 == p[2] && 255 == p[3]) {
         p[0] = p[1] = p[2] = p[3] = 0;
-      }
-      else {
+      } else {
         p[0] = p[1] = p[2] = 0;
         p[3] = 255;
       }
@@ -143,12 +141,8 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
 
   // Now create the surface (eight-bit alpha channel) and Cairo context.
   // For some reason, A1 surface doesn't work (cairo bug?)
-  // Using A1 is ok at least on cairo >= 1.4.0
-#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,4,0)
-  surface = cairo_image_surface_create(CAIRO_FORMAT_A1, w, h);
-#else
+  // And according to performance benchmark, A8 is much faster than A1.
   surface = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
-#endif
   if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
     cairo_surface_destroy(surface);
     surface = NULL;

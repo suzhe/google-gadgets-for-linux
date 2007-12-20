@@ -33,8 +33,8 @@ static const char *kCropMaintainAspectNames[] = {
 
 class ImgElement::Impl {
  public:
-  Impl() 
-    : image_(NULL), src_width_(0), src_height_(0), 
+  Impl()
+    : image_(NULL), src_width_(0), src_height_(0),
       crop_(CROP_FALSE) { }
   ~Impl() {
     delete image_;
@@ -55,13 +55,13 @@ ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
                    NewSlot(this, &ImgElement::SetSrc));
   RegisterProperty("srcWidth", NewSlot(this, &ImgElement::GetSrcWidth), NULL);
   RegisterProperty("srcHeight", NewSlot(this, &ImgElement::GetSrcHeight), NULL);
-  RegisterProperty("colorMultiply", 
-                   NewSlot(this, &ImgElement::GetColorMultiply), 
+  RegisterProperty("colorMultiply",
+                   NewSlot(this, &ImgElement::GetColorMultiply),
                    NewSlot(this, &ImgElement::SetColorMultiply));
-  RegisterStringEnumProperty("cropMaintainAspect", 
-                             NewSlot(this, &ImgElement::GetCropMaintainAspect), 
+  RegisterStringEnumProperty("cropMaintainAspect",
+                             NewSlot(this, &ImgElement::GetCropMaintainAspect),
                              NewSlot(this, &ImgElement::SetCropMaintainAspect),
-                             kCropMaintainAspectNames, 
+                             kCropMaintainAspectNames,
                              arraysize(kCropMaintainAspectNames));
   RegisterMethod("setSrcSize", NewSlot(this, &ImgElement::SetSrcSize));
 }
@@ -82,12 +82,11 @@ bool ImgElement::IsPointIn(double x, double y) {
   if (!canvas)
     return false;
 
-  Color color;
   double opacity;
 
   // If failed to get the value of the point, then just return true, assuming
   // it's an opaque point.
-  if (!canvas->GetPointValue(x, y, &color, &opacity))
+  if (!canvas->GetPointValue(x, y, NULL, &opacity))
     return true;
 
   return opacity > 0;
@@ -110,7 +109,7 @@ void ImgElement::DoDraw(CanvasInterface *canvas,
         return;
       }
 
-      double scale = std::max(pxwidth / imgw, pxheight / imgh);      
+      double scale = std::max(pxwidth / imgw, pxheight / imgh);
       // Windows also caps the scale to a fixed maximum. This is probably a bug.
       w = scale * imgw;
       h = scale * imgh;
@@ -153,7 +152,7 @@ void ImgElement::SetColorMultiply(const char *color) {
     Texture texture(view->GetGraphics(), view->GetFileManager(), color);
     impl_->image_->SetColorMultiply(texture.GetColor());
     QueueDraw();
-  } 
+  }
 }
 
 ImgElement::CropMaintainAspect ImgElement::GetCropMaintainAspect() const {

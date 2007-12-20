@@ -1271,7 +1271,20 @@ EventResult BasicElement::OnOtherEvent(const Event &event) {
 }
 
 bool BasicElement::IsPointIn(double x, double y) {
-  return IsPointInElement(x, y, impl_->width_, impl_->height_);
+  if (!IsPointInElement(x, y, impl_->width_, impl_->height_))
+    return false;
+
+  const CanvasInterface *mask = GetMaskCanvas();
+  if (!mask) return true;
+
+  double opacity;
+
+  // If failed to get the value of the point, then just return false, assuming
+  // the point is out of the mask.
+  if (!mask->GetPointValue(x, y, NULL, &opacity))
+    return false;
+
+  return opacity > 0;
 }
 
 void BasicElement::SelfCoordToChildCoord(const BasicElement *child,

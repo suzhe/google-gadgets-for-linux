@@ -238,10 +238,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   /**
    * Check if the position of a position event (mouse or drag) is in the
    * element.
-   * The default implementation of BasicElement just checks if the point is
-   * inside the rectangle boundary of the element.
+   * The default implementation of BasicElement checks if the point is
+   * inside the rectangle boundary and mask of the element.
    * Derived class may override this method to do more refined check, such as
    * checking the opacity of the point as well.
+   * Derived class must call this method of its parent first, then does more
+   * check when parent method returns true.
    */
   virtual bool IsPointIn(double x, double y);
 

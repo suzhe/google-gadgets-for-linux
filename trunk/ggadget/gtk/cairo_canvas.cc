@@ -151,8 +151,7 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
     // no scaling needed
     cairo_set_source_surface(cr_, s, x, y);
     cairo_paint_with_alpha(cr_, opacity_);
-  }
-  else {
+  } else {
     // CairoGraphics supports only uniform scaling in both X, Y, but due to
     // rounding differences, we need to compute the exact scaling individually
     // for X and Y.
@@ -217,10 +216,6 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
   const CairoCanvas *cimg =  down_cast<const CairoCanvas *>(img);
   // In this implementation, only non-mask canvases may have surface dimensions
   // different from the canvas dimensions, so we only need to check img.
-  // However, this also means that the zoom for the canvas needs to be scaled
-  // independently from the mask in the zoomed scenario, which produces more
-  // work for us to do in order to resize the two surfaces to the same
-  // resolution.
   cairo_surface_t *simg = cimg->GetSurface();
   cairo_surface_t *smask = cmask->GetSurface();
   int sheight = cairo_image_surface_get_height(simg);
@@ -231,52 +226,15 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
     // no scaling needed
     cairo_set_source_surface(cr_, simg, x, y);
     cairo_mask_surface(cr_, smask, mx, my);
-  }
-  else {
-    cairo_save(cr_);
-
-    cairo_t *cr;
-    cairo_surface_t *target;
+  } else {
     double cx = double(w) / swidth;
     double cy = double(h) / sheight;
-    // enlarge the lower resolution surface
-    if (cx < 1.) { // only check cx since cx should be approx same as cy
-      // img is higher res (zoom > 1), resize mask
 
-      // this scaling is a bit off, but this type of errors are
-      // unavoidable when compositing images of different sizes
-      size_t maskw = size_t(cmask->GetWidth() / cx);
-      size_t maskh = size_t(cmask->GetHeight() / cy);
-      target = cairo_image_surface_create(CAIRO_FORMAT_A8, maskw, maskh);
-      cr = cairo_create(target);
-      cairo_scale(cr, 1. / cx, 1. / cy);
-      cairo_set_source_surface(cr, smask, 0., 0.);
-      cairo_paint(cr);
-      smask = target;
-      cairo_destroy(cr); // destroy before target is used
-      cr = NULL;
-
-      cairo_scale(cr_, cx, cy);
-      cairo_set_source_surface(cr_, simg, x / cx, y / cy);
-      cairo_mask_surface(cr_, smask, mx / cx, my / cy);
-    }
-    else {
-      // img is lower res (zoom < 1), resize img
-
-      target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-      cr = cairo_create(target);
-      cairo_scale(cr, cx, cy);
-      cairo_set_source_surface(cr, simg, 0., 0.);
-      cairo_paint(cr);
-      simg = target;
-      cairo_destroy(cr); // destroy before target is used
-      cr = NULL;
-
-      cairo_scale(cr_, 1. / cx, 1. / cy);
-      cairo_set_source_surface(cr_, simg, x * cx, y * cy);
-      cairo_mask_surface(cr_, smask, mx * cx, my * cy);
-    }
-    cairo_surface_destroy(target);
+    cairo_save(cr_);
+    cairo_scale(cr_, cx, cy);
+    cairo_set_source_surface(cr_, simg, x / cx, y / cy);
+    cairo_scale(cr_, 1 / cx, 1 / cy);
+    cairo_mask_surface(cr_, smask, mx, my);
     cairo_restore(cr_);
   }
 
@@ -323,14 +281,13 @@ bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
     double cy = sh / sheight;
     cairo_scale(cr_, cx, cy);
     cairo_set_source(cr_, pattern);
-    result =  DrawTextInternal(x / cx, y / cy, width / cx, height / cy,
-                               text, f, align, valign, trimming, text_flags);
+    cairo_scale(cr_, 1 / cx, 1 / cy);
   } else {
     cairo_set_source(cr_, pattern);
-    result =  DrawTextInternal(x, y, width, height, text, f, align,
-                               valign, trimming, text_flags);
   }
 
+  result =  DrawTextInternal(x, y, width, height, text, f, align,
+                             valign, trimming, text_flags);
   cairo_pattern_destroy(pattern);
   cairo_restore(cr_);
   return result;
@@ -661,7 +618,7 @@ bool CairoCanvas::GetPointValue(double x, double y,
       op = 1.0;
     }
   } else if (format == CAIRO_FORMAT_A8) {
-    unsigned char *ptr = data + (stride * xi) + yi;
+    unsigned char *ptr = data + (stride * yi) + xi;
     op = BYTE_TO_DOUBLE(*ptr);
   } else if (format == CAIRO_FORMAT_A1) {
     uint32_t *ptr =
