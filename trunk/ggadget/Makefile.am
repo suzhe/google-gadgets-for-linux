@@ -73,6 +73,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  item_element.h \
 			  label_element.h \
 			  listbox_element.h \
+			  main_loop_interface.h \
 			  logger.h \
 			  math_utils.h \
 			  menu_interface.h \

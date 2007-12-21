@@ -71,6 +71,15 @@ class CairoCanvas : public CanvasInterface {
   virtual bool DrawFilledRectWithCanvas(double x, double y,
                                         double w, double h,
                                         const CanvasInterface *img);
+  /**
+   * Note: This function currently doesn't support the opacity setting of
+   * target canvas. Fortunately, it won't cause problem for now. Because this
+   * function will only be called by Elements::Draw() to compose the children's
+   * canvases with their masks onto a newly created canvas, which will always
+   * have opacity=1. Then the canvas containning all children's content will be
+   * composed onto the parent's canvas by BasicElement::Draw() with its opacity
+   * setting honoured.
+   */
   virtual bool DrawCanvasWithMask(double x, double y,
                                   const CanvasInterface *img,
                                   double mx, double my,
