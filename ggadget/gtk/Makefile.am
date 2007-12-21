@@ -33,6 +33,7 @@ noinst_HEADERS		= cairo_canvas.h \
 
 gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
 gtkinclude_HEADERS	= gadget_view_widget.h \
+			  gtk_main_loop.h \
 			  gtk_gadget_host.h \
 			  gtk_view_host.h
 
@@ -44,6 +45,7 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_graphics.cc \
 			  global_file_manager.cc \
 			  gadget_view_widget.cc \
+			  gtk_main_loop.cc \
 			  gtk_edit.cc \
 			  gtk_gadget_host.cc \
 			  gtk_key_convert.cc \
