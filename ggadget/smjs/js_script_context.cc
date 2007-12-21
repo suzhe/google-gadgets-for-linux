@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include <ggadget/common.h>
+#include <ggadget/logger.h>
 #include <ggadget/slot.h>
 #include <ggadget/unicode_utils.h>
 #include "js_script_context.h"

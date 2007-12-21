@@ -17,11 +17,12 @@
 #include <string.h>
 #include <map>
 #include <vector>
-#include "string_utils.h"
 #include "scriptable_helper.h"
+#include "logger.h"
 #include "scriptable_interface.h"
 #include "signals.h"
 #include "slot.h"
+#include "string_utils.h"
 
 namespace ggadget {
 namespace internal {
@@ -100,8 +101,8 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   Slot *array_setter_;
   Slot *dynamic_property_getter_;
   Slot *dynamic_property_setter_;
-  const char *last_dynamic_property_name_;
-  Variant last_dynamic_property_value_;
+  const char *last_dynamic_or_constant_name_;
+  Variant last_dynamic_or_constant_value_;
 
   ScriptableInterface *pending_exception_;
 };
@@ -118,7 +119,7 @@ ScriptableHelperImpl::ScriptableHelperImpl()
       array_setter_(NULL),
       dynamic_property_getter_(NULL),
       dynamic_property_setter_(NULL),
-      last_dynamic_property_name_(NULL),
+      last_dynamic_or_constant_name_(NULL),
       pending_exception_(NULL) {
 }
 
@@ -168,6 +169,14 @@ void ScriptableHelperImpl::RegisterProperty(const char *name,
     ASSERT(setter);
     prototype = Variant(setter->GetArgTypes()[0]);
   }
+
+#ifdef _DEBUG
+  if (prototype.type() == Variant::TYPE_SLOT) {
+    LOG("Warning: property '%s' is of type Slot, please make sure the return"
+        " type of this Slot parameter is void, or use RegisterSignal instead.",
+        name);
+  }
+#endif
 
   slot_index_[name] = property_count_;
   slot_prototypes_.push_back(prototype);
@@ -236,9 +245,17 @@ void ScriptableHelperImpl::RegisterStringEnumProperty(
 void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
   ASSERT(!sealed_);
   ASSERT(name);
-  ASSERT(slot);
+  ASSERT(slot && slot->HasMetadata());
   ASSERT_M(slot->GetReturnType() != Variant::TYPE_CONST_SCRIPTABLE,
-           ("Don't pass const ScriptableInterface * to script"));
+           ("Can't return 'const ScriptableInterface *' to script"));
+#ifdef _DEBUG
+  for (int i = 0; i < slot->GetArgCount(); i++) {
+    if (slot->GetArgTypes()[i] == Variant::TYPE_SLOT) {
+      LOG("Warning: method '%s' has a parameter of type Slot, please make sure"
+          " the return type of this Slot parameter is void.", name);
+    }
+  }
+#endif
 
   slot_index_[name] = property_count_;
   slot_prototypes_.push_back(Variant(slot));
@@ -273,10 +290,13 @@ void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
 }
 
 void ScriptableHelperImpl::RegisterConstants(int count,
-                                             const char * const names[],
+                                             const char *const names[],
                                              const Variant values[]) {
-  for (int i = 0; i < count; i++)
+  ASSERT(names);
+  for (int i = 0; i < count; i++) {
+    ASSERT(names[i]);
     constants_[names[i]] = values ? values[i] : Variant(i);
+  }
 }
 
 void ScriptableHelperImpl::SetPrototype(ScriptableInterface *prototype) {
@@ -325,6 +345,8 @@ bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
     *id = ScriptableInterface::kConstantPropertyId;
     *prototype = constants_it->second;
     *is_method = false;
+    last_dynamic_or_constant_name_ = name;
+    last_dynamic_or_constant_value_ = *prototype;
     return true;
   }
 
@@ -343,11 +365,11 @@ bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
   // Not found in registered properties, try dynamic property getter.
   if (dynamic_property_getter_) {
     Variant param(name);
-    last_dynamic_property_value_ = dynamic_property_getter_->Call(1, &param);
-    if (last_dynamic_property_value_.type() != Variant::TYPE_VOID) {
+    last_dynamic_or_constant_value_ = dynamic_property_getter_->Call(1, &param);
+    if (last_dynamic_or_constant_value_.type() != Variant::TYPE_VOID) {
       *id = ScriptableInterface::kDynamicPropertyId;
-      last_dynamic_property_name_ = name;
-      *prototype = last_dynamic_property_value_;
+      last_dynamic_or_constant_name_ = name;
+      *prototype = last_dynamic_or_constant_value_;
       *is_method = false;
       return true;
     }
@@ -358,8 +380,14 @@ bool ScriptableHelperImpl::GetPropertyInfoByName(const char *name,
     bool result = prototype_->GetPropertyInfoByName(name, id,
                                                     prototype, is_method);
     // Make the id distinct.
-    if (result && *id != 0)  // If id == 0, the property is a constant.
-      *id -= property_count_;
+    if (result) {
+      if (*id == kConstantPropertyId || *id == kDynamicPropertyId) {
+        last_dynamic_or_constant_name_ = name;
+        last_dynamic_or_constant_value_ = *prototype;
+      } else {
+        *id -= property_count_;
+      }
+    }
     return result;
   }
 
@@ -371,6 +399,7 @@ bool ScriptableHelperImpl::GetPropertyInfoById(int id, Variant *prototype,
                                                const char **name) {
   ASSERT(prototype);
   ASSERT(is_method);
+  ASSERT(id != kDynamicPropertyId && id != kConstantPropertyId);
   sealed_ = true;
 
   if (id >= 0) {
@@ -412,12 +441,13 @@ Variant ScriptableHelperImpl::GetProperty(int id) {
     return Variant();
   }
 
-  if (id == ScriptableInterface::kDynamicPropertyId) {
+  if (id == ScriptableInterface::kConstantPropertyId ||
+      id == ScriptableInterface::kDynamicPropertyId) {
     // We require the script engine call GetProperty immediately after calling
-    // GetPropertyInfoByName() if the returned id is ID_DYNAMIC_PROPERTY.
+    // GetPropertyInfoByName() if the returned id is kDynamicPropertyId.
     // Here return the value cached in GetPropertyInfoByName().
-    ASSERT(dynamic_property_getter_);
-    return last_dynamic_property_value_;
+    // For constants, GetProperty returns the last cached constant value.
+    return last_dynamic_or_constant_value_;
   }
 
   // -1, -2, -3, ... ==> 0, 1, 2, ...
@@ -456,13 +486,16 @@ bool ScriptableHelperImpl::SetProperty(int id, Variant value) {
     return false;
   }
 
+  if (id == ScriptableInterface::kConstantPropertyId)
+    return false;
+
   if (id == ScriptableInterface::kDynamicPropertyId) {
     // We require the script engine call GetProperty immediately after calling
     // GetPropertyInfoByName() if the returned id is ID_DYNAMIC_PROPERTY.
     ASSERT(dynamic_property_getter_);
-    ASSERT(last_dynamic_property_name_);
+    ASSERT(last_dynamic_or_constant_name_);
     if (dynamic_property_setter_) {
-      Variant params[] = { Variant(last_dynamic_property_name_), value };
+      Variant params[] = { Variant(last_dynamic_or_constant_name_), value };
       Variant result = dynamic_property_setter_->Call(2, params);
       if (result.type() == Variant::TYPE_VOID)
         return true;
@@ -502,4 +535,15 @@ ScriptableInterface *ScriptableHelperImpl::GetPendingException(bool clear) {
 }
 
 } // namespace internal
+
+Variant GetPropertyByName(ScriptableInterface *scriptable, const char *name) {
+  int id;
+  Variant prototype;
+  bool is_method;
+  Variant result;
+  if (scriptable->GetPropertyInfoByName(name, &id, &prototype, &is_method))
+    result = scriptable->GetProperty(id);
+  return result;
+}
+
 } // namespace ggadget

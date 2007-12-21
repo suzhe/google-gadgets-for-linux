@@ -23,7 +23,7 @@
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 
-#include <ggadget/common.h>
+#include <ggadget/logger.h>
 #include <ggadget/texture.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"

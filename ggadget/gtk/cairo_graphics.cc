@@ -15,12 +15,13 @@
 */
 
 #include <gdk/gdkcairo.h>
+#include <ggadget/color.h>
+#include <ggadget/logger.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
 #include "gtk_view_host.h"
 #include "gtk_edit.h"
-#include <ggadget/color.h>
 
 namespace ggadget {
 namespace gtk {

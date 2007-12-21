@@ -18,9 +18,9 @@
 #include <algorithm>
 #include "elements.h"
 #include "basic_element.h"
-#include "common.h"
 #include "element_factory_interface.h"
 #include "graphics_interface.h"
+#include "logger.h"
 #include "math_utils.h"
 #include "scriptable_helper.h"
 #include "view.h"

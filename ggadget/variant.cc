@@ -14,9 +14,13 @@
   limitations under the License.
 */
 
-#include <string.h>
+#include <cmath>
+#include <cstring>
+#include "variant.h"
+#include "logger.h"
 #include "scriptable_interface.h"
 #include "slot.h"
+#include "string_utils.h"
 
 namespace ggadget {
 
@@ -125,22 +129,19 @@ bool Variant::operator==(const Variant &another) const {
 }
 
 // Used in unittests.
-std::string Variant::ToString() const {
-  char buffer[32];
+std::string Variant::Print() const {
   switch (type_) {
     case Variant::TYPE_VOID:
-      return std::string("VOID");
+      return "VOID";
     case Variant::TYPE_BOOL:
       return std::string("BOOL:") + (v_.bool_value_ ? "true" : "false");
     case Variant::TYPE_INT64:
-      snprintf(buffer, sizeof(buffer), "INT64:%jd", v_.int64_value_);
-      return std::string(buffer);
+      return "INT64:" + StringPrintf("%jd", v_.int64_value_);
     case Variant::TYPE_DOUBLE:
-      snprintf(buffer, sizeof(buffer), "DOUBLE:%lf", v_.double_value_);
-      return std::string(buffer);
+      return "DOUBLE:" + StringPrintf("%g", v_.double_value_);
     case Variant::TYPE_STRING:
       return std::string("STRING:") +
-             (v_.string_value_ ? v_.string_value_->c_str() : "(nil");
+             (v_.string_value_ ? *v_.string_value_ : "(nil)");
     case Variant::TYPE_JSON:
       return std::string("JSON:") + VariantValue<JSONString>()(*this).value;
     case Variant::TYPE_UTF16STRING:
@@ -149,29 +150,224 @@ std::string Variant::ToString() const {
         ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &utf8_string);
         return "UTF16STRING:" + utf8_string;
       }
-      return "UTF16STRING:(nil)"; 
+      return "UTF16STRING:(nil)";
     case Variant::TYPE_SCRIPTABLE:
-      snprintf(buffer, sizeof(buffer),
-               "SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
-               v_.scriptable_value_ ?
-                   v_.scriptable_value_->GetClassId() : 0);
-      return std::string(buffer);
+      return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
+                          v_.scriptable_value_ ?
+                              v_.scriptable_value_->GetClassId() : 0);
     case Variant::TYPE_CONST_SCRIPTABLE:
-      snprintf(buffer, sizeof(buffer), "CONST_SCRIPTABLE:%p(CLASS_ID=%jx):",
-               v_.const_scriptable_value_,
-               v_.const_scriptable_value_ ?
-                   v_.const_scriptable_value_->GetClassId() : 0);
-      return std::string(buffer);
+      return StringPrintf("CONST_SCRIPTABLE:%p(CLASS_ID=%jx):",
+                          v_.const_scriptable_value_,
+                          v_.const_scriptable_value_ ?
+                              v_.const_scriptable_value_->GetClassId() : 0);
     case Variant::TYPE_SLOT:
-      snprintf(buffer, sizeof(buffer), "SLOT:%p", v_.slot_value_);
-      return std::string(buffer);
+      return StringPrintf("SLOT:%p", v_.slot_value_);
     case Variant::TYPE_DATE:
-      snprintf(buffer, sizeof(buffer), "DATE:%ju", v_.int64_value_);
-      return std::string(buffer);
+      return StringPrintf("DATE:%ju", v_.int64_value_);
     case Variant::TYPE_VARIANT:
-      return std::string("VARIANT");
+      return "VARIANT";
     default:
-      return std::string("INVALID");
+      return "INVALID";
+  }
+}
+
+bool Variant::ConvertToString(std::string *result) const {
+  ASSERT(result);
+  switch (type_) {
+    case Variant::TYPE_VOID:
+      *result = "";
+      return true;
+    case Variant::TYPE_BOOL:
+      *result = v_.bool_value_ ? "true" : "false";
+      return true;
+    case Variant::TYPE_INT64:
+      *result = StringPrintf("%jd", v_.int64_value_);
+      return true;
+    case Variant::TYPE_DOUBLE:
+      *result = StringPrintf("%g", v_.double_value_);
+      return true;
+    case Variant::TYPE_STRING:
+      *result = v_.string_value_ ? *v_.string_value_ : "";
+      return true;
+    case Variant::TYPE_JSON:
+      return false;
+    case Variant::TYPE_UTF16STRING:
+      if (v_.utf16_string_value_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, result);
+      else
+        *result = "";
+      return true;
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE:
+    case Variant::TYPE_SLOT:
+    case Variant::TYPE_DATE:
+    case Variant::TYPE_VARIANT:
+    default:
+      return false;
+  }
+}
+
+static bool ParseStringToBool(const char *str_value, bool *result) {
+  if (!*str_value || GadgetStrCmp(str_value, "false") == 0) {
+    *result = false;
+    return true;
+  }
+  if (GadgetStrCmp(str_value, "true") == 0) {
+    *result = true;
+    return true;
+  }
+  return false;
+}
+
+bool Variant::ConvertToBool(bool *result) const {
+  ASSERT(result);
+  switch (type_) {
+    case Variant::TYPE_VOID:
+      *result = false;
+      return true;
+    case Variant::TYPE_BOOL:
+      *result = v_.bool_value_;
+      return true;
+    case Variant::TYPE_INT64:
+      *result = v_.int64_value_ != 0;
+      return true;
+    case Variant::TYPE_DOUBLE:
+      *result = v_.double_value_ != 0;
+      return true;
+    case Variant::TYPE_STRING:
+      return ParseStringToBool(
+          v_.string_value_ ? v_.string_value_->c_str() : "", result);
+    case Variant::TYPE_JSON:
+      return false;
+    case Variant::TYPE_UTF16STRING: {
+      std::string s;
+      if (v_.utf16_string_value_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &s);
+      return ParseStringToBool(s.c_str(), result);
+    }
+    case Variant::TYPE_SCRIPTABLE:
+      *result = v_.scriptable_value_ != NULL;
+      return true;
+    case Variant::TYPE_CONST_SCRIPTABLE:
+      *result = v_.const_scriptable_value_ != NULL;
+      return true;
+    case Variant::TYPE_SLOT:
+      *result = v_.slot_value_ != NULL;
+      return true;
+    case Variant::TYPE_DATE:
+      *result = true;
+      return true;
+    case Variant::TYPE_VARIANT:
+    default:
+      return false;
+  }
+}
+
+bool Variant::ConvertToInt(int *result) const {
+  int64_t i;
+  if (ConvertToInt64(&i)) {
+    *result = static_cast<int>(i);
+    return true;
+  }
+  return false;
+}
+
+static bool ParseStringToDouble(const char *str_value, double *result) {
+  char *end_ptr;
+  double d = strtod(str_value, &end_ptr);
+  if (*end_ptr == '\0' && !std::isnan(d) && !std::isinf(d)) {
+    *result = d;
+    return true;
+  }
+  return false;
+}
+
+static bool ParseStringToInt64(const char *str_value, int64_t *result) {
+  char *end_ptr;
+  // TODO: Check if strtoll is available 
+  int64_t i = static_cast<int64_t>(std::strtoll(str_value, &end_ptr, 10));
+  if (*end_ptr == '\0') {
+    *result = i;
+    return true;
+  }
+  // Then try to parse double.
+  double d;
+  if (ParseStringToDouble(str_value, &d)) {
+    *result = static_cast<int64_t>(round(d));
+    return true;
+  }
+  return false;
+}
+
+bool Variant::ConvertToInt64(int64_t *result) const {
+  ASSERT(result);
+  switch (type_) {
+    case Variant::TYPE_VOID:
+      return false;
+    case Variant::TYPE_BOOL:
+      *result = v_.bool_value_ ? 1 : 0;
+      return true;
+    case Variant::TYPE_INT64:
+      *result = v_.int64_value_;
+      return true;
+    case Variant::TYPE_DOUBLE:
+      if (std::isnan(v_.double_value_) || std::isinf(v_.double_value_))
+        return false;
+      *result = static_cast<int64_t>(v_.double_value_);
+      return true;
+    case Variant::TYPE_STRING:
+      return ParseStringToInt64(
+          v_.string_value_ ? v_.string_value_->c_str() : "", result);
+    case Variant::TYPE_JSON:
+      return false;
+    case Variant::TYPE_UTF16STRING: {
+      std::string s;
+      if (v_.utf16_string_value_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &s);
+      return ParseStringToInt64(s.c_str(), result);
+    }
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE:
+    case Variant::TYPE_SLOT:
+    case Variant::TYPE_DATE:
+    case Variant::TYPE_VARIANT:
+    default:
+      return false;
+  }
+}
+
+bool Variant::ConvertToDouble(double *result) const {
+  ASSERT(result);
+  switch (type_) {
+    case Variant::TYPE_VOID:
+      return false;
+    case Variant::TYPE_BOOL:
+      *result = v_.bool_value_ ? 1 : 0;
+      return true;
+    case Variant::TYPE_INT64:
+      *result = static_cast<double>(v_.int64_value_);
+      return true;
+    case Variant::TYPE_DOUBLE:
+      *result = v_.double_value_;
+      return true;
+    case Variant::TYPE_STRING:
+      return ParseStringToDouble(
+          v_.string_value_ ? v_.string_value_->c_str() : "", result);
+    case Variant::TYPE_JSON:
+      return false;
+    case Variant::TYPE_UTF16STRING: {
+      std::string s;
+      if (v_.utf16_string_value_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &s);
+      return ParseStringToDouble(s.c_str(), result);
+    }
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE:
+    case Variant::TYPE_SLOT:
+    case Variant::TYPE_DATE:
+    case Variant::TYPE_VARIANT:
+    default:
+      return false;
   }
 }
 

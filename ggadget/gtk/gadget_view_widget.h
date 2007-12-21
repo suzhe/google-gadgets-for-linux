@@ -21,8 +21,6 @@
 #include <gtk/gtk.h>
 #include <string>
 
-#include <ggadget/ggadget.h>
-
 namespace ggadget {
 namespace gtk {
 class GtkViewHost;

@@ -17,6 +17,8 @@
 #ifndef GGADGET_GADGET_INTERFACE_H__
 #define GGADGET_GADGET_INTERFACE_H__
 
+#include <string>
+
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;

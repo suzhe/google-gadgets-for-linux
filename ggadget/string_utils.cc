@@ -70,8 +70,7 @@ std::string ToUpper(const std::string &s) {
   return result;
 }
 
-static void StringAppendValist(std::string *dst, const char* format,
-                               va_list ap) {
+void StringAppendVPrintf(std::string *dst, const char* format, va_list ap) {
   // First try with a small fixed size buffer
   char space[1024];
 
@@ -120,15 +119,21 @@ std::string StringPrintf(const char* format, ...) {
   std::string dst;
   va_list ap;
   va_start(ap, format);
-  StringAppendValist(&dst, format, ap);
+  StringAppendVPrintf(&dst, format, ap);
   va_end(ap);
+  return dst;
+}
+
+std::string StringVPrintf(const char* format, va_list ap) {
+  std::string dst;
+  StringAppendVPrintf(&dst, format, ap);
   return dst;
 }
 
 void StringAppendPrintf(std::string *string, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  StringAppendValist(string, format, ap);
+  StringAppendVPrintf(string, format, ap);
   va_end(ap);
 }
 

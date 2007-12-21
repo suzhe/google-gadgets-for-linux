@@ -16,6 +16,7 @@
 #include <iostream>
 #include "basic_element.h"
 #include "common.h"
+#include "logger.h"
 #include "math_utils.h"
 #include "element_factory_interface.h"
 #include "element_interface.h"
@@ -1313,50 +1314,22 @@ BasicElement::ParsePixelOrRelativeResult
     BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
   ASSERT(output);
   *output = 0;
+  if (input.ConvertToDouble(output))
+    return std::isnan(*output) || std::isinf(*output) ?
+           PR_UNSPECIFIED : PR_PIXEL;
 
-  switch (input.type()) {
-    case Variant::TYPE_VOID:
-      return PR_UNSPECIFIED;
-    // The input is an integer pixel value.
-    case Variant::TYPE_INT64:
-      *output = VariantValue<int>()(input);
-      return PR_PIXEL;
-    // The input is a double pixel value.
-    case Variant::TYPE_DOUBLE:
-      *output = VariantValue<double>()(input);
-      if (std::isnan(*output) || std::isinf(*output)) {
-        *output = 0;
-        return PR_UNSPECIFIED;
-      }
-      return PR_PIXEL;
-    // The input is a relative percent value.
-    case Variant::TYPE_STRING: {
-      const char *str_value = VariantValue<const char *>()(input);
-      if (!str_value || !*str_value)
-        return PR_UNSPECIFIED;
+  std::string str;
+  if (!input.ConvertToString(&str) || str.empty())
+    return PR_UNSPECIFIED;
 
-      char *end_ptr;
-      *output = strtod(str_value, &end_ptr);
-      if (*end_ptr == '\0') {
-        // There is only a number without '%'.
-        if (std::isnan(*output) || std::isinf(*output)) {
-          *output = 0;
-          return PR_UNSPECIFIED;
-        }
-        return PR_PIXEL;
-      }
-      if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
-        *output /= 100.0;
-        return PR_RELATIVE;
-      }
-      *output = 0;
-      LOG("Invalid relative value: %s", input.ToString().c_str());
-      return PR_INVALID;
-    }
-    default:
-      LOG("Invalid pixel or relative value: %s", input.ToString().c_str());
-      return PR_INVALID;
+  char *end_ptr;
+  *output = strtod(str.c_str(), &end_ptr);
+  if (*end_ptr == '%' && *(end_ptr + 1) == '\0') {
+    *output /= 100.0;
+    return PR_RELATIVE;
   }
+  LOG("Invalid pixel or relative value: %s", input.Print().c_str());
+  return PR_INVALID;
 }
 
 Variant BasicElement::GetPixelOrRelative(bool is_relative,

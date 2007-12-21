@@ -33,6 +33,12 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
       wrapper_(wrapper),
       function_val_(function_val),
       finalized_(false) {
+  // Because the function may have a indirect reference to the wrapper through
+  // the closure, we can't simply add the function to root, otherwise there
+  // may be circled references if the native object's ownership is shared or
+  // transferred : native object =C++=> this slot =C++=> js function =JS=>
+  // closure =JS=> js wrapper object =C++=> native object.
+  // This circle prevents the wrapper object and the function from being GC'ed.
   if (wrapper)
     wrapper->AddJSFunctionSlot(this);
   else
@@ -68,29 +74,19 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
     for (int i = 0; i < argc; i++) {
       if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
         JS_ReportError(context_, "Failed to convert argument %d(%s) to jsval",
-                       i, argv[i].ToString().c_str());
+                       i, argv[i].Print().c_str());
         return return_value;
       }
     }
   }
 
   jsval rval;
-  JSBool result = JS_CallFunctionValue(context_, NULL, function_val_,
-                                       argc, js_args.get(), &rval);
-  if (result) {
-    if (JSVAL_IS_OBJECT(rval) &&
-        JS_IsArrayObject(context_, JSVAL_TO_OBJECT(rval))) {
-      JS_ReportError(context_,
-                     "Returning an array from JS to native is not supported");
-      result = JS_FALSE;
-    } else {
-      result = ConvertJSToNative(context_, NULL, return_value, rval,
-                                 &return_value);
-    }
-    if (!result)
-      JS_ReportError(context_,
-                     "Failed to convert JS function return value(%s) to native",
-                     PrintJSValue(context_, rval).c_str());
+  if (JS_CallFunctionValue(context_, NULL, function_val_, argc, js_args.get(),
+                           &rval) &&
+      !ConvertJSToNative(context_, NULL, return_value, rval, &return_value)) {
+    JS_ReportError(context_,
+                   "Failed to convert JS function return value(%s) to native",
+                   PrintJSValue(context_, rval).c_str());
   }
   return return_value;
 }

@@ -51,7 +51,7 @@ inline bool TestBoolFunction9(int p1, bool p2, const char *p3,
 }
 
 inline Variant TestVariant(Variant p) {
-  sprintf(result, "%s", p.ToString().c_str());
+  sprintf(result, "%s", p.Print().c_str());
   return p;
 }
 

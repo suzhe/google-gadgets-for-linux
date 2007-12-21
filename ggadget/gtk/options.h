@@ -18,7 +18,9 @@
 #define GGADGET_GTK_OPTIONS_H__
 
 #include <map>
-#include <ggadget/ggadget.h>
+#include <ggadget/common.h>
+#include <ggadget/signals.h>
+#include <ggadget/options_interface.h>
 
 namespace ggadget {
 namespace gtk {

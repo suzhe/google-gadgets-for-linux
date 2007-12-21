@@ -21,6 +21,7 @@
 #include "elements_interface.h"
 #include "event.h"
 #include "item_element.h"
+#include "logger.h"
 #include "scriptable_event.h"
 #include "string_utils.h"
 #include "texture.h"

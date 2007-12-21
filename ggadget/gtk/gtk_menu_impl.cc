@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <ggadget/logger.h>
+#include <ggadget/slot.h>
 #include "gtk_menu_impl.h"
 
 namespace ggadget {

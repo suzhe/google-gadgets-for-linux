@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include "ggadget/logger.h"
 #include "scriptables.h"
 
 using namespace ggadget;
@@ -108,7 +109,7 @@ TestPrototype::TestPrototype() {
 }
 
 TestScriptable2::TestScriptable2(bool script_owned, bool strict)
-    : script_owned_(script_owned), strict_(strict) {
+    : script_owned_(script_owned), strict_(strict), callback_(NULL) {
   RegisterMethod("TestMethod", NewSlot(this, &TestScriptable2::TestMethod));
   RegisterSignal("onlunch", &onlunch_signal_);
   RegisterSignal("onsupper", &onsupper_signal_);
@@ -127,7 +128,9 @@ TestScriptable2::TestScriptable2(bool script_owned, bool strict)
                              kDeleteObjectDefaultArgs));
   RegisterProperty("ScriptOwned",
                    NewSlot(this, &TestScriptable2::IsScriptOwned), NULL);
-  RegisterMethod("ReverseArray", NewSlot(this, &TestScriptable2::ReverseArray));
+  RegisterMethod("ConcatArray", NewSlot(this, &TestScriptable2::ConcatArray));
+  RegisterMethod("SetCallback", NewSlot(this, &TestScriptable2::SetCallback));
+  RegisterMethod("CallCallback", NewSlot(this, &TestScriptable2::CallCallback));
   SetPrototype(TestPrototype::GetInstance());
   SetArrayHandler(NewSlot(this, &TestScriptable2::GetArray),
                   NewSlot(this, &TestScriptable2::SetArray));
@@ -137,6 +140,7 @@ TestScriptable2::TestScriptable2(bool script_owned, bool strict)
 }
 
 TestScriptable2::~TestScriptable2() {
+  delete callback_;
   LOG("TestScriptable2 Destruct: this=%p", this);
 }
 
@@ -154,12 +158,38 @@ bool TestScriptable2::Detach() {
   return false;
 }
 
-ScriptableArray *TestScriptable2::ReverseArray(ScriptableArray *array) {
-  if (array == NULL)
+ScriptableArray *TestScriptable2::ConcatArray(ScriptableInterface *array1,
+                                              ScriptableInterface *array2) {
+  if (array1 == NULL || array2 == NULL)
     return NULL;
-  size_t count = array->GetCount();
-  Variant *new_array = new Variant[count];
-  for (size_t i = 0; i < count; i++)
-    new_array[count - i - 1] = array->GetItem(i);
-  return ScriptableArray::Create(new_array, count, false);
+  int id;
+  Variant prototype;
+  bool is_method;
+  array1->GetPropertyInfoByName("length", &id, &prototype, &is_method);
+  size_t count1 = VariantValue<size_t>()(array1->GetProperty(id));
+  LOG("id=%d count1=%zd", id, count1);
+  array2->GetPropertyInfoByName("length", &id, &prototype, &is_method);
+  size_t count2 = VariantValue<size_t>()(array2->GetProperty(id));
+  LOG("id=%d count2=%zd", id, count2);
+  
+  Variant *new_array = new Variant[count1 + count2];
+  for (size_t i = 0; i < count1; i++)
+    new_array[i] = array1->GetProperty(i);
+  for (size_t i = 0; i < count2; i++)
+    new_array[i + count1] = array2->GetProperty(i);
+  return ScriptableArray::Create(new_array, count1 + count2, false);
+}
+
+void TestScriptable2::SetCallback(Slot *callback) {
+  delete callback_;
+  callback_ = callback;
+}
+
+std::string TestScriptable2::CallCallback(int x) {
+  if (callback_) {
+    Variant vx(x);
+    Variant result = callback_->Call(1, &vx);
+    return result.Print();
+  }
+  return "NO CALLBACK";
 }

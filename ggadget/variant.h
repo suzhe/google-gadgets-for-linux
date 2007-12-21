@@ -251,11 +251,6 @@ class Variant {
     v_.slot_value_ = value;
   }
 
-  /** Don't use <code>const Slot *</code> because it is same as non-const. */
-  explicit Variant(const Slot *value) {
-    ASSERT_M(false, ("Don't use const Slot *"));
-  }
-
   /**
    * Construct a @c Variant with a @c Date value.
    * The type of the constructed @c Variant is @c TYPE_DATE
@@ -274,21 +269,43 @@ class Variant {
    */
   bool operator==(const Variant &another) const;
 
-  std::string ToString() const;
+  std::string Print() const;
 
-  Type type() const { return type_; }
-
- private:
-  bool CheckScriptableType(uint64_t class_id) const;
-
+  /**
+   * Value conversion functions. The conversion rule is much like the implicit
+   * conversion rule of JavaScript.
+   */
+  bool ConvertToString(std::string *result) const;
+  bool ConvertToBool(bool *result) const;
+  bool ConvertToInt(int *result) const;
+  bool ConvertToInt64(int64_t *result) const;
+  bool ConvertToDouble(double *result) const;
+  
   /**
    * Type of the <code>Variant</code>'s value.
    */
-  Type type_;
+  Type type() const { return type_; }
+
+ private:
+  /**
+   * The following private constructor can prevent pointers from being
+   * implicitly converted to bool and use the bool constructor.
+   * This causes compilation errors if unsupported types used in @c Variant.
+   */
+  explicit Variant(void *);
+  explicit Variant(const void *);
 
   /**
-   * Value of the Variant.
+   * Don't allow const Slot *, otherwise we must add a new variant type.
+   * Because Slot is immutable, Slot is the same as const Slot in semantics.
    */
+  explicit Variant(const Slot *);
+
+  bool CheckScriptableType(uint64_t class_id) const;
+
+  Type type_;
+
+  // Value of the Variant.
   union {
     bool bool_value_;
     int64_t int64_value_;
@@ -300,7 +317,6 @@ class Variant {
     Slot *slot_value_;
   } v_;
 
-  template <typename T> friend struct VariantType;
   template <typename T> friend struct VariantValue;
 };
 
@@ -308,7 +324,7 @@ class Variant {
  * Print a @c Variant into an output stream, only for debugging and testing.
  */
 inline std::ostream &operator<<(std::ostream &out, const Variant &v) {
-  return out << v.ToString();
+  return out << v.Print();
 }
 
 /**
@@ -372,6 +388,14 @@ SPECIALIZE_VARIANT_TYPE(Date, TYPE_DATE)
 SPECIALIZE_VARIANT_TYPE(const Date &, TYPE_DATE)
 SPECIALIZE_VARIANT_TYPE(Variant, TYPE_VARIANT)
 SPECIALIZE_VARIANT_TYPE(const Variant &, TYPE_VARIANT)
+
+/**
+ * Protection declarations of unsupported types.
+ * This causes compilation errors if unsupported types used in @c Variant.
+ */
+template <> struct VariantType<const Slot *>;
+template <> struct VariantType<void *>;
+template <> struct VariantType<const void *>;
 
 /**
  * Get the value of a @c Variant.
@@ -586,17 +610,6 @@ template <>
 struct VariantValue<void> {
   void operator()(const Variant &v) { }
 };
-
-/**
- * Checks if a type is supported by Variant and causes compilation error
- * if the type is not supported.
- *
- * You need not use this when using the VariantValue template, because
- * the template can automatically check the type.
- */
-#define CHECK_VARIANT_TYPE(t)  \
-    ASSERT(Variant(VariantValue<t>()(Variant(VariantType<t>::type))).type() == \
-           VariantType<t>::type)
 
 #undef SPECIALIZE_VARIANT_TYPE
 #undef SPECIALIZE_VARIANT_VALUE

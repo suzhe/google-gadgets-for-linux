@@ -19,6 +19,7 @@
 
 #include "xml_http_request.h"
 #include "gadget_host_interface.h"
+#include "logger.h"
 #include "scriptable_binary_data.h"
 #include "script_context_interface.h"
 #include "scriptable_helper.h"

@@ -22,6 +22,7 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
+#include "logger.h"
 #include "menu_interface.h"
 #include "script_context_interface.h"
 #include "scriptable_array.h"
@@ -168,14 +169,14 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
           "Please use the methods of the contentarea element instead.");
       return NULL;
     }
-    void SetContentItems(ScriptableArray *array) { GetContentItems(); }
+    void SetContentItems(ScriptableInterface *array) { GetContentItems(); }
 
     ScriptableArray *GetPinImages() {
       LOG("pluginHelper.pin_images is no longer supported. "
           "Please use the methods of contentarea element instead.");
       return NULL;
     }
-    void SetPinImages(ScriptableArray *array) { GetPinImages(); }
+    void SetPinImages(ScriptableInterface *array) { GetPinImages(); }
 
     void AddContentItem(ContentItem *item,
                         ContentAreaElement::DisplayOptions options) {

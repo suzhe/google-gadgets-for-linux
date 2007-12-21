@@ -16,8 +16,14 @@
 
 #include <sys/time.h>
 
-#include <ggadget/ggadget.h>
 #include <ggadget/content_item.h>
+#include <ggadget/details_view.h>
+#include <ggadget/file_manager_interface.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/script_context_interface.h>
+#include <ggadget/script_runtime_interface.h>
 #include <ggadget/xml_dom.h>
 #include <ggadget/xml_http_request.h>
 #include "gtk_view_host.h"

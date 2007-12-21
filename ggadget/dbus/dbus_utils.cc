@@ -20,7 +20,7 @@ limitations under the License.
 #include <dbus/dbus.h>
 
 #include "dbus_utils.h"
-#include <ggadget/common.h>
+#include <ggadget/logger.h>
 #include <ggadget/string_utils.h>
 
 namespace ggadget {

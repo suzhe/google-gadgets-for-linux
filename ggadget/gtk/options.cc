@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <ggadget/logger.h>
+#include <ggadget/string_utils.h>
 #include "options.h"
 
 namespace ggadget {

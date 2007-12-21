@@ -72,16 +72,12 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
   }
 
   size_t GetCount() const;
-  /**
-   * This method can be overriden by subclasses to customize the ownership
-   * policy of the returned item.
-   */ 
-  virtual Variant GetItem(size_t index) const;
+  Variant GetItem(size_t index) const;
 
   virtual OwnershipPolicy Attach();
   virtual bool Detach();
 
- protected:
+ private:
   ScriptableArray(Variant *array, size_t count, bool native_owned);
 
  private:

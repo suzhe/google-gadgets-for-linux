@@ -36,7 +36,6 @@ static const Color kDefaultBackground(0.98, 0.98, 0.98);
 static const Color kMouseOverBackground(0.83, 0.93, 0.98);
 static const Color kMouseDownBackground(0.73, 0.83, 0.88);
 static const Color kSelectedBackground(0.83, 0.93, 0.98);
-static const int kItemBorderWidth = 2;
 static const unsigned int kRefreshInterval = 30000; // 30 seconds.
 
 class ContentAreaElement::Impl {
@@ -118,15 +117,13 @@ class ContentAreaElement::Impl {
                 static_cast<int>(pin_images_[i]->GetHeight()));
           }
         }
-        pin_image_max_width_ += kItemBorderWidth;
       }
     } else {
       pin_image_max_width_ = pin_image_max_height_ = 0;
     }
 
-    int y = kItemBorderWidth;
-    int width = static_cast<int>(ceil(owner_->GetClientWidth())) -
-                2 * kItemBorderWidth;
+    int y = 0;
+    int width = static_cast<int>(ceil(owner_->GetClientWidth()));
     int item_width = width - pin_image_max_width_;
 
     // Add a modification checker to detect whether the set of content items
@@ -162,8 +159,8 @@ class ContentAreaElement::Impl {
           item_height = std::max(item_height, pin_image_max_height_);
           // Note: SetRect still uses the width including pin_image,
           // while Draw and GetHeight use the width excluding pin_image.
-          item->SetRect(kItemBorderWidth, y, width, item_height);
-          y += item_height + kItemBorderWidth * 2;
+          item->SetRect(0, y, width, item_height);
+          y += item_height;
         }
       }
       if (!dead)
@@ -212,10 +209,8 @@ class ContentAreaElement::Impl {
           if (mouse_over_pin) {
             const Color &color = mouse_down_ ?
                                  kMouseDownBackground : kMouseOverBackground;
-            canvas->DrawFilledRect(item_x - kItemBorderWidth,
-                                   item_y - kItemBorderWidth,
-                                   pin_image_max_width_ + kItemBorderWidth * 2,
-                                   item_height + kItemBorderWidth * 2,
+            canvas->DrawFilledRect(item_x, item_y,
+                                   pin_image_max_width_, item_height,
                                    color);
           }
           if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
@@ -233,11 +228,8 @@ class ContentAreaElement::Impl {
             !(item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
           const Color &color = mouse_down_ && !mouse_over_pin ?
                                kMouseDownBackground : kMouseOverBackground;
-          canvas->DrawFilledRect(item_x - kItemBorderWidth,
-                                 item_y - kItemBorderWidth,
-                                 item_width + kItemBorderWidth * 2,
-                                 item_height + kItemBorderWidth * 2,
-                                 color);
+          canvas->DrawFilledRect(item_x, item_y,
+                                 item_width, item_height, color);
         }
         item->Draw(target_, canvas, item_x, item_y, item_width, item_height);
       }
@@ -251,15 +243,21 @@ class ContentAreaElement::Impl {
                                    content_items_.size(), false);
   }
 
-  void ScriptSetContentItems(ScriptableArray *array) {
+  void ScriptSetContentItems(ScriptableInterface *array) {
     RemoveAllContentItems();
     if (array) {
-      for (size_t i = 0; i < array->GetCount(); i++) {
-        Variant v = array->GetItem(i);
-        if (v.type() != Variant::TYPE_SCRIPTABLE) {
-          ContentItem *item = VariantValue<ContentItem *>()(v);
-          if (item) {
-            AddContentItem(item, ITEM_DISPLAY_IN_SIDEBAR);
+      Variant length_v = GetPropertyByName(array, "length");
+      int length;
+      if (length_v.ConvertToInt(&length)) {
+        if (static_cast<size_t>(length) > max_content_items_)
+          length = max_content_items_;
+
+        for (int i = 0; i < length; i++) {
+          Variant v = array->GetProperty(i);
+          if (v.type() == Variant::TYPE_SCRIPTABLE) {
+            ContentItem *item = VariantValue<ContentItem *>()(v);
+            if (item)
+              AddContentItem(item, ITEM_DISPLAY_IN_SIDEBAR);
           }
         }
       }
@@ -290,12 +288,16 @@ class ContentAreaElement::Impl {
   }
 
   ScriptableArray *ScriptGetPinImages() {
-    return ScriptableArray::Create(pin_images_, arraysize(pin_images_), false);
+    Variant *values = new Variant[3];
+    GetPinImages(&values[0], &values[1], &values[2]);
+    return ScriptableArray::Create(values, 3, false);
   }
 
-  void ScriptSetPinImages(ScriptableArray *array) {
-    if (array && array->GetCount() == arraysize(pin_images_)) {
-      SetPinImages(array->GetItem(0), array->GetItem(1), array->GetItem(2));
+  void ScriptSetPinImages(ScriptableInterface *array) {
+    if (array) {
+      SetPinImages(array->GetProperty(0),
+                   array->GetProperty(1),
+                   array->GetProperty(2));
     }
   }
 
@@ -371,6 +373,7 @@ class ContentAreaElement::Impl {
          it != content_items_.end(); ++it) {
       (*it)->DetachContentArea(owner_);
     }
+    content_items_.clear();
     Modified();
   }
 
@@ -446,8 +449,17 @@ class ContentAreaElement::Impl {
             if (mouse_over_item_) {
               if (mouse_over_pin_) {
                 mouse_over_item_->ToggleItemPinnedState();
-              } else {
-                // TODO: mouse_over_item_->ShowDetailsView();
+              } else if (content_flags_ & CONTENT_FLAG_HAVE_DETAILS) {
+                std::string title;
+                DetailsView *details_view = NULL;
+                int flags = 0;
+                if (!mouse_over_item_->OnDetailsView(&title, &details_view,
+                                                     &flags) &&
+                    details_view) {
+                  owner_->GetView()->ShowDetailsView(
+                      details_view, title.c_str(), flags,
+                      NewSlot(this, &Impl::ProcessDetailsViewFeedback));
+                }
               }
             }
             break;
@@ -465,6 +477,15 @@ class ContentAreaElement::Impl {
     if (queue_draw)
       QueueDraw();
     return result;
+  }
+
+  void ProcessDetailsViewFeedback(int flags) {
+    if (flags & ViewHostInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
+      OnItemOpen(NULL);
+    if (flags & ViewHostInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK)
+      OnItemNegativeFeedback(NULL);
+    if (flags & ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
+      OnItemRemove(NULL);
   }
 
   // Handler of the "Open" menu item.

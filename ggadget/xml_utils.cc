@@ -23,11 +23,11 @@
 #include <libxml/tree.h>
 
 #include "xml_utils.h"
-#include "common.h"
 #include "element_interface.h"
 #include "elements_interface.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
+#include "logger.h"
 #include "script_context_interface.h"
 #include "unicode_utils.h"
 #include "view_interface.h"
@@ -240,7 +240,7 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
 
     default:
       LOG("%s:%d: Unsupported type %s when setting property %s for %s",
-          filename, row, prototype.ToString().c_str(), name, tag_name);
+          filename, row, prototype.Print().c_str(), name, tag_name);
       return;
   }
 

@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <ggadget/logger.h>
 #include "js_script_runtime.h"
 #include "js_script_context.h"
 

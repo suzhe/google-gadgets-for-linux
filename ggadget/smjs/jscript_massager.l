@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include <ggadget/common.h>
+#include <ggadget/logger.h>
 
 // These macros make the '{' and '}' paired in flex source code.
 #define BEGIN_NS(ns) namespace ns {
@@ -207,7 +207,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 
 [a-zA-Z0-9_]options ECHO;
 
-options {  // "options" is always case-sensitive.
+[Oo][Pp][Tt][Ii][Oo][Nn][Ss] {
   BEGIN(OPTIONS);
   yymore();
 }

@@ -23,8 +23,8 @@
 
 #include <third_party/unzip/unzip.h>
 #include "file_manager.h"
-#include "common.h"
 #include "gadget_consts.h"
+#include "logger.h"
 #include "windows_locales.h"
 #include "xml_utils.h"
 

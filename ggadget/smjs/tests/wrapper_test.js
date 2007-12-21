@@ -374,13 +374,19 @@ TEST("Test default args", function() {
 });
 
 TEST("Test scriptable array", function() {
-  ASSERT(NULL(scriptable2.ReverseArray(null)));
-  var arr = scriptable2.ReverseArray([1,2,3,4,5]);
-  ASSERT(EQ(5, arr.count));
-  ASSERT(EQ(5, arr.item(0)));
-  var arr1 = scriptable2.ReverseArray(arr);
-  ASSERT(EQ(5, arr1.count));
-  ASSERT(EQ(1, arr1.item(0)));
+  ASSERT(NULL(scriptable2.ConcatArray(null, null)));
+  var arr = scriptable2.ConcatArray(
+      [1,2,3,4,5],
+      [5,4,3,{a:[1,2,3],b:[2,3,4]}]);
+  ASSERT(EQ(9, arr.count));
+  ASSERT(EQ(9, arr.length));
+  ASSERT(EQ(1, arr[0]));
+  ASSERT(EQ(1, arr.item(0)));
+  ASSERT(EQ(4, arr[8].b[2]));
+  var arr1 = scriptable2.ConcatArray(arr, arr);
+  ASSERT(EQ(18, arr1.count));
+  ASSERT(EQ(1, arr1.item(9)));
+  ASSERT(EQ(4, arr1[17].b[2]));
 });
 
 // The global scriptable object has properties named 's1' and 's2'.
@@ -397,6 +403,22 @@ TEST("Test name overriding", function() {
 TEST("Test name overriding1", function() {
   var s1 = 100;
   ASSERT(EQ(100, s1));
+});
+
+TEST("Test JS callback as function parameter", function() {
+  var x0, y0;
+  scriptable2.SetCallback(function(x, y) {
+    x0 = x;
+    y0 = y;
+    return x + y;
+  });
+  var s = scriptable2.CallCallback(10);
+  ASSERT(EQ(10, x0));
+  ASSERT(UNDEFINED(y0));
+  // For now, any return values from slot properties or slot set through
+  // function parameters are ignored.  "VOID" is the Print() result of a
+  // void Variant.
+  ASSERT(EQ("VOID", s));
 });
 
 RUN_ALL_TESTS();
