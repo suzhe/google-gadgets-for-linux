@@ -174,7 +174,11 @@ class TestScriptable2 : public TestScriptable1 {
   }
   void DeleteObject(TestScriptable2 *obj) { delete obj; }
   bool IsScriptOwned() { return script_owned_; }
-  ScriptableArray *ReverseArray(ScriptableArray *input);
+  ScriptableArray *ConcatArray(ScriptableInterface *input1,
+                               ScriptableInterface *input2);
+
+  void SetCallback(Slot *callback);
+  std::string CallCallback(int x);
 
   // Place signal declarations here for testing.
   // In production code, they should be palced in private section.
@@ -184,7 +188,6 @@ class TestScriptable2 : public TestScriptable1 {
 
   OnLunchSignal onlunch_signal_;
   OnSupperSignal onsupper_signal_;
-
  private:
   bool script_owned_;
   int array_[kArraySize];
@@ -192,6 +195,7 @@ class TestScriptable2 : public TestScriptable1 {
   std::string time_;
   std::string signal_result_;
   std::map<std::string, std::string> dynamic_properties_;
+  Slot *callback_;
 };
 
 extern const Variant kNewObjectDefaultArgs[];

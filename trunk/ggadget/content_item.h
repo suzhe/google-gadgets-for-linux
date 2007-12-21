@@ -28,6 +28,7 @@ namespace ggadget {
 class CanvasInterface;
 class ContentAreaElement;
 class Connection;
+class DetailsView;
 class ScriptableCanvas;
 class View;
 
@@ -205,9 +206,10 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
             ScriptableCanvas *, int, int, int, int> *handler);
 
   /** Called before showing the details view for the given item. */
-  /*  DetailsViewInfo *OnDetailsView(ContentItem *item);
-  typedef Slot1<DetailsViewInfo *, ContentItem *> OnDetailsViewHandler;
-  Connection *ConnectOnDetailsView(OnDetailsViewHandler *handler); */
+  bool OnDetailsView(std::string *title, DetailsView **details_view,
+                     int *flags);
+  typedef Slot1<ScriptableInterface *, ContentItem *> OnDetailsViewHandler;
+  Connection *ConnectOnDetailsView(OnDetailsViewHandler *handler);
 
   /**
    * Connects to the signal which will be fired to process the user action in
@@ -222,8 +224,8 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
 
   /**
    * Called when the user removes and item from the display.
-   * @return @c true to cancel the remove and keep the item, @c false to
-   *     continue and remove the item.
+   * @return @c true or nothing to cancel the remove and keep the item,
+   *     @c false to continue and remove the item.
    */
   bool OnUserRemove();
   Connection *ConnectOnRemoveItem(Slot1<bool, ContentItem *> *handler);

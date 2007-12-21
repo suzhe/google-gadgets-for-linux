@@ -64,7 +64,7 @@ class ScriptableInterface {
    * The pseudo id for constant properties.
    * @see GetPropertyInfoByName()
    */
-  static const int kConstantPropertyId = 0;
+  static const int kConstantPropertyId = INT_MIN + 1;
 
 
   enum OwnershipPolicy {
@@ -170,10 +170,10 @@ class ScriptableInterface {
    * @param name the name of the property.
    * @param[out] id return the property's id which can be used in later
    *     @c GetProperty(), @c SetProperty() and @c InvokeMethod() calls.
-   *     If the returned id is @c ID_CONSTANT_PROPERTY, the script engine
+   *     If the returned id is @c kConstantPropertyId, the script engine
    *     will treat the property as a constant and the value is returned
    *     in @a prototype.
-   *     If the returned id is @c ID_DYNAMIC_PROPERTY, the script engine
+   *     If the returned id is @c kDynamicPropertyId, the script engine
    *     should not register the property any way, and should call
    *     @c GetProperty or @c SetProperty immediately.
    *     Otherwise, the value must be a @b negative number.

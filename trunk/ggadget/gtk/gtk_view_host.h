@@ -20,8 +20,8 @@
 #include <set>
 
 #include <gtk/gtk.h>
-#include <ggadget/ggadget.h>
 #include <ggadget/view.h>
+#include <ggadget/view_host_interface.h>
 #include <ggadget/gtk/gtk_gadget_host.h>
 #include <ggadget/gtk/gadget_view_widget.h>
 

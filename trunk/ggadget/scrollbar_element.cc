@@ -18,6 +18,7 @@
 #include "canvas_interface.h"
 #include "gadget_consts.h"
 #include "image.h"
+#include "logger.h"
 #include "math_utils.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_event.h"

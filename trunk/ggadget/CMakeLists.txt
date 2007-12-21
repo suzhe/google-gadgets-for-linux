@@ -36,6 +36,7 @@ SET(SRCS
   file_manager.cc
   gadget.cc
   image.cc
+  logger.cc
   math_utils.cc
   scriptable_array.cc
   scriptable_event.cc

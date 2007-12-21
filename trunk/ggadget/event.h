@@ -17,6 +17,7 @@
 #ifndef GGADGET_EVENT_H__
 #define GGADGET_EVENT_H__
 
+#include <string>
 #include <ggadget/common.h>
 
 namespace ggadget {

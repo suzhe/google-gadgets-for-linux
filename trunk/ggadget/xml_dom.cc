@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <vector>
 #include "xml_dom.h"
+#include "logger.h"
 #include "scriptable_helper.h"
 #include "xml_utils.h"
 

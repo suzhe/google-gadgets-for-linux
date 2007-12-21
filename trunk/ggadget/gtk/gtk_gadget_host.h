@@ -18,9 +18,9 @@
 #define GGADGET_GTK_GTK_GADGET_HOST_H__
 
 #include <set>
-
+#include <map>
 #include <gtk/gtk.h>
-#include <ggadget/ggadget.h>
+#include <ggadget/gadget_host_interface.h>
 
 namespace ggadget {
 namespace gtk {

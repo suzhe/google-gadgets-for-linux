@@ -34,11 +34,20 @@ TEST(Variant, TestVoid) {
   VariantValue<void>()(v);
   Variant v1(v);
   ASSERT_EQ(Variant::TYPE_VOID, v.type());
-  printf("%s\n", v.ToString().c_str());
+  printf("%s\n", v.Print().c_str());
+
+  std::string s;
+  ASSERT_TRUE(v.ConvertToString(&s));
+  ASSERT_STREQ("", s.c_str());
+  int i;
+  ASSERT_FALSE(v.ConvertToInt(&i));
+  bool b = true;
+  ASSERT_TRUE(v.ConvertToBool(&b));
+  ASSERT_FALSE(b);
 }
 
 template <typename T, Variant::Type Type>
-void CheckVariant(T value) {
+void CheckVariant(T value, const char *str_value) {
   CheckType<T>(Type);
   Variant v(value);
   ASSERT_EQ(Type, v.type());
@@ -50,17 +59,49 @@ void CheckVariant(T value) {
   v2 = v;
   ASSERT_EQ(Type, v2.type());
   ASSERT_TRUE(value == VariantValue<T>()(v2));
-  printf("%s\n", v.ToString().c_str());
+  printf("%s\n", v.Print().c_str());
+
+  std::string str;
+  if (str_value) {
+    ASSERT_TRUE(v.ConvertToString(&str));
+    ASSERT_STREQ(str_value, str.c_str());
+  } else {
+    ASSERT_FALSE(v.ConvertToString(&str));
+  }
+}
+
+void CheckBoolVariant(bool value, const char *str_value, int int_value) {
+  CheckVariant<bool, Variant::TYPE_BOOL>(value, str_value);
+  int i;
+  ASSERT_TRUE(Variant(value).ConvertToInt(&i));
+  ASSERT_EQ(i, int_value);
 }
 
 TEST(Variant, TestBool) {
-  CheckVariant<bool, Variant::TYPE_BOOL>(true);
-  CheckVariant<bool, Variant::TYPE_BOOL>(false);
+  CheckBoolVariant(true, "true", 1);
+  CheckBoolVariant(false, "false", 0);
+}
+
+template <typename T, Variant::Type Type>
+void CheckNumberVariant(T value, const char *str_value) {
+  CheckVariant<T, Type>(value, str_value);
+  double d;
+  ASSERT_TRUE(Variant(value).ConvertToDouble(&d));
+  ASSERT_EQ(static_cast<double>(value), d);
+  int i;
+  ASSERT_TRUE(Variant(value).ConvertToInt(&i));
+  ASSERT_EQ(static_cast<int>(value), i);
+  int64_t i64;
+  ASSERT_TRUE(Variant(value).ConvertToInt64(&i64));
+  ASSERT_EQ(static_cast<int64_t>(value), i64);
+  bool b;
+  ASSERT_TRUE(Variant(value).ConvertToBool(&b));
+  ASSERT_EQ(static_cast<bool>(value), b);
 }
 
 template <typename T>
-void CheckIntVariant(T value) {
-  CheckVariant<T, Variant::TYPE_INT64>(value);
+void CheckIntVariant(T value, const char *str_value) {
+  CheckNumberVariant<T, Variant::TYPE_INT64>(value, str_value);
 }
 
 enum {
@@ -77,22 +118,30 @@ TEST(Variant, TestInt) {
   ASSERT_EQ(Variant::TYPE_INT64, ve0.type());
   ASSERT_EQ(1, VariantValue<int>()(ve0));
 
-  CheckIntVariant<NamedEnum>(NAMED_2);
-  CheckIntVariant<int>(1234);
-  CheckIntVariant<unsigned int>(1234U);
-  CheckIntVariant<char>('a');
-  CheckIntVariant<unsigned char>(0x20);
-  CheckIntVariant<short>(2345);
-  CheckIntVariant<unsigned short>(3456);
-  CheckIntVariant<long>(-4567890);
-  CheckIntVariant<unsigned long>(5678901);
-  CheckIntVariant<int64_t>(INT64_C(0x1234567887654321));
-  CheckIntVariant<uint64_t>(UINT64_C(0x8765432112345678));
+  CheckIntVariant<NamedEnum>(NAMED_2, "1");
+  CheckIntVariant<int>(1234, "1234");
+  CheckIntVariant<unsigned int>(1234U, "1234");
+  CheckIntVariant<char>('a', "97");
+  CheckIntVariant<unsigned char>(0x20, "32");
+  CheckIntVariant<short>(2345, "2345");
+  CheckIntVariant<unsigned short>(3456, "3456");
+  CheckIntVariant<long>(-4567890, "-4567890");
+  CheckIntVariant<unsigned long>(5678901, "5678901");
+  CheckIntVariant<int64_t>(INT64_C(0x1234567887654321), "1311768467139281697");
+  // We don't support uint64_t bigger than 0x7fffffffffffffff for now.
+  CheckIntVariant<uint64_t>(UINT64_C(0x7865432112345678),
+                            "8675414066517530232");
+}
+
+template <typename T>
+void CheckDoubleVariant(T value, const char *str_value) {
+  CheckNumberVariant<T, Variant::TYPE_DOUBLE>(value, str_value);
 }
 
 TEST(Variant, TestDouble) {
-  CheckVariant<float, Variant::TYPE_DOUBLE>(12345.6789);
-  CheckVariant<double, Variant::TYPE_DOUBLE>(2930423.34932);
+  CheckDoubleVariant<float>(-12345.6789e-20, "-1.23457e-16");
+  CheckDoubleVariant<double>(30423.34932, "30423.3");
+  CheckDoubleVariant<double>(0, "0");
 }
 
 template <typename T, typename VT, Variant::Type Type>
@@ -108,7 +157,7 @@ void CheckStringVariantBase(T value) {
   v2 = v;
   ASSERT_EQ(Type, v2.type());
   ASSERT_TRUE(VT(value) == VT(VariantValue<T>()(v2)));
-  printf("%s\n", v.ToString().c_str());
+  printf("%s\n", v.Print().c_str());
   Variant v3("1234");
   v3 = v;
   ASSERT_EQ(Type, v3.type());
@@ -132,14 +181,48 @@ TEST(Variant, TestString) {
   Variant v2;
   v2 = v;
   ASSERT_TRUE(NULL == VariantValue<const char *>()(v2));
-  Variant v3("xyz");
+  Variant v3("1234");
   v3 = v;
   ASSERT_TRUE(NULL == VariantValue<const char *>()(v3));
+
+  double d;
+  ASSERT_TRUE(v3.ConvertToDouble(&d));
+  ASSERT_EQ(0, d);
+  v3 = Variant("1234.6");
+  ASSERT_TRUE(v3.ConvertToDouble(&d));
+  ASSERT_EQ(1234.6, d);
+  int i;
+  ASSERT_TRUE(v3.ConvertToInt(&i));
+  ASSERT_EQ(1235, i);
+  bool b;
+  ASSERT_FALSE(v3.ConvertToBool(&b));
+  Variant v4("1234abc");
+  ASSERT_FALSE(v4.ConvertToDouble(&d));
+  ASSERT_FALSE(v4.ConvertToInt(&i));
+  Variant v5("true");
+  ASSERT_TRUE(v5.ConvertToBool(&b));
+  ASSERT_TRUE(b);
+  Variant v6("false");
+  ASSERT_TRUE(v6.ConvertToBool(&b));
+  ASSERT_FALSE(b);
+  Variant v7("");
+  ASSERT_TRUE(v7.ConvertToBool(&b));
+  ASSERT_FALSE(b);
+  Variant v8(static_cast<const char *>(NULL));
+  ASSERT_TRUE(v8.ConvertToBool(&b));
+  ASSERT_FALSE(b);
+  std::string str;
+  ASSERT_TRUE(v8.ConvertToString(&str));
+  ASSERT_STREQ("", str.c_str());
+  ASSERT_TRUE(v6.ConvertToString(&str));
+  ASSERT_STREQ(VariantValue<const char *>()(v6), str.c_str());
 }
 
 TEST(Variant, TestJSON) {
-  CheckVariant<JSONString, Variant::TYPE_JSON>(JSONString(std::string("abc")));
-  CheckVariant<const JSONString &, Variant::TYPE_JSON>(JSONString("def"));
+  CheckVariant<JSONString, Variant::TYPE_JSON>(JSONString(std::string("abc")),
+                                               NULL);
+  CheckVariant<const JSONString &, Variant::TYPE_JSON>(JSONString("def"),
+                                                       NULL);
 }
 
 template <typename T>
@@ -157,20 +240,20 @@ TEST(Variant, TestUTF16String) {
 class Scriptable1 : public ScriptableInterface { };
 
 TEST(Variant, TestScriptableAndAny) {
-  CheckVariant<ScriptableInterface *, Variant::TYPE_SCRIPTABLE>(NULL);
+  CheckVariant<ScriptableInterface *, Variant::TYPE_SCRIPTABLE>(NULL, NULL);
   CheckVariant<const ScriptableInterface *,
-               Variant::TYPE_CONST_SCRIPTABLE>(NULL);
-  CheckVariant<Scriptable1 *, Variant::TYPE_SCRIPTABLE>(NULL);
-  CheckVariant<const Scriptable1 *, Variant::TYPE_CONST_SCRIPTABLE>(NULL);
+               Variant::TYPE_CONST_SCRIPTABLE>(NULL, NULL);
+  CheckVariant<Scriptable1 *, Variant::TYPE_SCRIPTABLE>(NULL, NULL);
+  CheckVariant<const Scriptable1 *, Variant::TYPE_CONST_SCRIPTABLE>(NULL, NULL);
 }
 
 TEST(Variant, TestDate) {
-  CheckVariant<Date, Variant::TYPE_DATE>(Date(1234));
-  CheckVariant<const Date &, Variant::TYPE_DATE>(Date(1234));
+  CheckVariant<Date, Variant::TYPE_DATE>(Date(1234), NULL);
+  CheckVariant<const Date &, Variant::TYPE_DATE>(Date(1234), NULL);
 }
 
 TEST(Variant, TestSlot) {
-  CheckVariant<Slot *, Variant::TYPE_SLOT>(NULL);
+  CheckVariant<Slot *, Variant::TYPE_SLOT>(NULL, NULL);
 }
 
 int main(int argc, char **argv) {

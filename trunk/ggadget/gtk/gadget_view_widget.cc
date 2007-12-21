@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cairo.h>
 
+#include <ggadget/logger.h>
 #include "gadget_view_widget.h"
 #include "cairo_canvas.h"
 #include "gtk_menu_impl.h"

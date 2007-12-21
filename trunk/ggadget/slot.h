@@ -96,10 +96,7 @@ template <typename R>
 class Slot0 : public Slot {
  public:
   R operator()() const { return VariantValue<R>()(Call(0, NULL)); }
-  virtual Variant::Type GetReturnType() const {
-    CHECK_VARIANT_TYPE(R);
-    return VariantType<R>::type;
-  }
+  virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
 
 /**
@@ -275,10 +272,7 @@ class Slot##n : public Slot {                                                 \
     _init_args;                                                               \
     return VariantValue<R>()(Call(n, vargs));                                 \
   }                                                                           \
-  virtual Variant::Type GetReturnType() const {                               \
-    CHECK_VARIANT_TYPE(R);                                                    \
-    return VariantType<R>::type;                                              \
-  }                                                                           \
+  virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }\
   virtual int GetArgCount() const { return n; }                               \
   virtual const Variant::Type *GetArgTypes() const {                          \
     return ArgTypesHelper<_arg_type_names>();                                 \

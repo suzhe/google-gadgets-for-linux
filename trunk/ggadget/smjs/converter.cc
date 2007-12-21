@@ -24,6 +24,7 @@
 #include <ggadget/unicode_utils.h>
 #include "converter.h"
 #include "js_function_slot.h"
+#include "js_native_wrapper.h"
 #include "js_script_context.h"
 #include "jscript_massager.h"
 #include "json.h"
@@ -179,34 +180,12 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   if (JSVAL_IS_NULL(js_val)) {
     scriptable = NULL;
   } else if (JSVAL_IS_OBJECT(js_val)) {
-    JSObject *obj = JSVAL_TO_OBJECT(js_val);
-    if (JS_IsArrayObject(cx, obj)) {
-      // Convert the JavaScript array to a temporary ScriptableArray object.
-      jsuint length = 0;
-      JS_GetArrayLength(cx, obj, &length);
-      Variant *native_array = new Variant[length];
-      for (jsuint i = 0; i < length; i++) {
-        jsval value = JSVAL_NULL;
-        JS_GetElement(cx, obj, static_cast<jsint>(i), &value);
-        if (!ConvertJSToNativeVariant(cx, value, &native_array[i])) {
-          JS_ReportError(cx, "Failed to convert array element %d(%s) to native",
-                         i, PrintJSValue(cx, value).c_str());
-          // Just a warning, continue.
-        }
-      }
-      scriptable = ScriptableArray::Create(native_array,
-                                           static_cast<size_t>(length),
-                                           // This array is owned by JS. 
-                                           false);
-      // Wrap the temporary native array into a temporary JS object, so that
-      // it can live during the scope of current AutoLocalRootScope and can be
-      // GC'ed after the scope.
-      JSScriptContext::WrapNativeObjectToJS(cx, scriptable);
-    } else {
-      // This object may be a JS wrapped native object.
-      // If it is not, NativeJSWrapper::Unwrap simply fails.
-      // We don't support wrapping JS objects into native objects.
-      result = NativeJSWrapper::Unwrap(cx, obj, &scriptable);
+    JSObject *object = JSVAL_TO_OBJECT(js_val);
+    // This object may be a JS wrapped native object.
+    // If it is not, NativeJSWrapper::Unwrap simply fails.
+    if (!NativeJSWrapper::Unwrap(cx, object, &scriptable)) {
+      // NativeJSWrapper::Unwrap failed, this object is a origin JS object.
+      scriptable = new JSNativeWrapper(cx, object);
     }
   } else {
     result = JS_FALSE;

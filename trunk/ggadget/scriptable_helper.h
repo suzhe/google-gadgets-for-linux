@@ -272,6 +272,13 @@ class ScriptableHelper : public I {
   internal::ScriptableHelperImplInterface *impl_;
 };
 
+/**
+ * Utility function to get a named property from a scriptable object.
+ * It calls <code>scriptable->GetPropertyInfoByName()</code> and then
+ * <code>scriptable->GetProperty()</code>.
+ */
+Variant GetPropertyByName(ScriptableInterface *scriptable, const char *name);
+
 // Use the following line to test if the COMPILE_ASSERT is effective:
 // class B : public ScriptableHelper<Variant> { };
 

@@ -59,17 +59,16 @@ void DetailsView::SetContent(const char *source,
 }
 
 void DetailsView::SetContentFromItem(ContentItem *item) {
-  // TODO:
-#if 0
-  ASSERT(item);
-  source_ = item->GetSource();
-  time_created_ = item->GetTimeCreated();
-  text_ = item->GetSnippet();
-  layout_ = item->GetLayout();
-  time_absolute_ = layout_ == ContentItem::CONTENT_ITEM_LAYOUT_EMAIL;
-  is_html_ = (item->GetFlags() & CONTENT_ITEM_FLAG_HTML) != 0;
-  is_view_ = false;
-#endif
+  if (item) {
+    int flags = item->GetFlags();
+    source_ = item->GetSource();
+    time_created_ = item->GetTimeCreated();
+    text_ = item->GetSnippet();
+    layout_ = item->GetLayout();
+    time_absolute_ = (flags & ContentItem::CONTENT_ITEM_FLAG_TIME_ABSOLUTE);
+    is_html_ = (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HTML);
+    is_view_ = false;
+  }
 }
 
 } // namespace ggadget

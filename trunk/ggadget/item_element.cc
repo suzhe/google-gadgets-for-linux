@@ -20,6 +20,7 @@
 #include "graphics_interface.h"
 #include "label_element.h"
 #include "listbox_element.h"
+#include "logger.h"
 #include "texture.h"
 #include "text_frame.h"
 #include "view.h"

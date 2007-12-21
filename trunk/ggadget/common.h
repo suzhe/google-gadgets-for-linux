@@ -18,12 +18,8 @@
 #define GGADGET_COMMON_H__
 
 #include <cassert>
-#include <cstdarg>
 #include <cstdio>
-#include <cstring>
-#include <stdint.h>         // Integer types and macros.
-#include <map>
-#include <string>
+#include <stdint.h>
 #include <ggadget/sysdeps.h>
 
 namespace ggadget {
@@ -73,77 +69,16 @@ namespace ggadget {
   TypeName();                                    \
   DISALLOW_EVIL_CONSTRUCTORS(TypeName)
 
-#undef LOG
 #undef ASSERT
-#undef ASSERT_M
-#undef VERIFY
-#undef VERIFY_M
-#undef DLOG
-
-struct LogHelper {
-  LogHelper(const char *file, int line) : file_(file), line_(line) { }
-  void operator()(const char *format, ...) PRINTF_ATTRIBUTE(2, 3) {
-    // TODO: Let log information go into debug console.
-    va_list ap;
-    va_start(ap, format);
-    printf("%s:%d: ", file_, line_);
-    vprintf(format, ap);
-    va_end(ap);
-    putchar('\n');
-    fflush(stdout);
-  }
-  const char *file_;
-  int line_;
-};
-
-/**
- * Print log with printf format parameters.
- * It works in both debug and release versions.
- */
-#define LOG ::ggadget::LogHelper(__FILE__, __LINE__)
-
 #ifdef NDEBUG
 #define ASSERT(x)
-#define ASSERT_M(x, y)
-#define VERIFY(x)
-#define VERIFY_M(x, y)
-#define DLOG \
-    true ? (void) 0 : LOG
-#else // NDEBUG
-
+#else
 /**
  * Assert an expression and abort if it is not true.
  * Normally it only works in debug versions.
  */
 #define ASSERT(x) assert(x)
-
-/**
- * Assert an expression with a message in printf format.
- * It only works in debug versions.
- * Sample usage: <code>ASSERT_M(a==b, ("%d==%d failed\n", a, b));</code>
- */
-#define ASSERT_M(x, y) do { if (!(x)) { DLOG y; assert(x); } } while (0)
-
-/**
- * Verify an expression and print a message if the expression is not true.
- * It only works in debug versions.
- */
-#define VERIFY(x) do { if (!(x)) DLOG("VERIFY FAILED: %s", #x); } while (0)
-
-/**
- * Verify an expression with a message in printf format.
- * It only works in debug versions.
- * Sample usage: <code>VERIFY_M(a==b, ("%d==%d failed\n", a, b));</code>
- */
-#define VERIFY_M(x, y) do { if (!(x)) { DLOG y; VERIFY(x); } } while (0)
-
-/**
- * Print debug log with printf format parameters.
- * It only works in debug versions.
- */
-#define DLOG LOG
-
-#endif // else NDEBUG
+#endif
 
 /**
  * The @c COMPILE_ASSERT macro can be used to verify that a compile time

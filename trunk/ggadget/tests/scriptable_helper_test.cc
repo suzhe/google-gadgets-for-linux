@@ -168,7 +168,7 @@ static void CheckConstant(const char *name,
   printf("CheckConstant: %s\n", name);
   ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
                                                 &prototype, &is_method));
-  ASSERT_EQ(0, id);
+  ASSERT_EQ(ScriptableInterface::kConstantPropertyId, id);
   ASSERT_FALSE(is_method);
   ASSERT_EQ(value, prototype);
 }
@@ -227,14 +227,18 @@ TEST(scriptable_helper, TestPropertyInfo2) {
           NewSlot(scriptable, &TestScriptable2::DeleteObject),
           kDeleteObjectDefaultArgs)) },
     { "ScriptOwned", -19, false, Variant(Variant::TYPE_BOOL) },
-    { "ReverseArray", -20, true,
-      Variant(NewSlot(scriptable, &TestScriptable2::ReverseArray)) },
+    { "ConcatArray", -20, true,
+      Variant(NewSlot(scriptable, &TestScriptable2::ConcatArray)) },
+    { "SetCallback", -21, true,
+      Variant(NewSlot(scriptable, &TestScriptable2::SetCallback)) },
+    { "CallCallback", -22, true,
+      Variant(NewSlot(scriptable, &TestScriptable2::CallCallback)) },
 
     // The following are defined in the prototype.
-    { "PrototypeMethod", -21, true,
+    { "PrototypeMethod", -23, true,
       Variant(NewSlot(TestPrototype::GetInstance(), &TestPrototype::Method)) },
-    { "PrototypeSelf", -22, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "ontest", -23, false,
+    { "PrototypeSelf", -24, false, Variant(Variant::TYPE_SCRIPTABLE) },
+    { "ontest", -25, false,
       Variant(new SignalSlot(&TestPrototype::GetInstance()->ontest_signal_)) },
     // Prototype's OverrideSelf is overriden by TestScriptable2's OverrideSelf.
   };

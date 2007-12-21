@@ -25,6 +25,7 @@
 #include "item_element.h"
 #include "label_element.h"
 #include "listbox_element.h"
+#include "logger.h"
 #include "scriptable_array.h"
 #include "string_utils.h"
 #include "text_frame.h"
@@ -72,7 +73,7 @@ class DisplayWindow::Impl {
       RegisterProperty("id", NewSlot(element_, &BasicElement::GetName), NULL);
       RegisterProperty("enabled",
                        NewSlot(element_, &BasicElement::IsEnabled),
-                       NewSlot(element_, &BasicElement::SetEnabled));
+                       NewSlot(this, &Control::SetEnabled));
       RegisterProperty("text",
                        NewSlot(this, &Control::GetText),
                        NewSlot(this, &Control::SetText));
@@ -106,6 +107,11 @@ class DisplayWindow::Impl {
       return ScriptableArray::Create(array, actual_count, false);
     }
 
+    void SetEnabled(bool enabled) {
+      element_->SetEnabled(enabled);
+      element_->SetOpacity(enabled ? 1.0 : 0.5);
+    }
+
     // Gets the full content of the control.
     Variant GetText() {
       if (element_->IsInstanceOf(ButtonElement::CLASS_ID)) {
@@ -136,72 +142,70 @@ class DisplayWindow::Impl {
       return Variant();
     }
 
-    void SetListBoxItems(ListBoxElement *listbox, ScriptableArray *array) {
+    static const int kMaxListItems = 512;
+    void SetListBoxItems(ListBoxElement *listbox, ScriptableInterface *array) {
       listbox->GetChildren()->RemoveAllElements();
-      for (size_t i = 0; i < array->GetCount(); i++) {
-        Variant v = array->GetItem(i);
-        if (v.type() == Variant::TYPE_STRING) {
-          listbox->AppendString(VariantValue<const char *>()(v));
-        } else {
-          LOG("Invalid type of array item(%s) for control %s",
-              v.ToString().c_str(), element_->GetName().c_str());
+      if (array) {
+        Variant length_v = GetPropertyByName(array, "length");
+        int length;
+        if (length_v.ConvertToInt(&length)) {
+          if (length > kMaxListItems)
+            length = kMaxListItems;
+          for (int i = 0; i < length; i++) {
+            Variant v = array->GetProperty(i);
+            std::string str_value;
+            if (v.ConvertToString(&str_value)) {
+              listbox->AppendString(str_value.c_str());
+            } else {
+              LOG("Invalid type of array item(%s) for control %s",
+                  v.Print().c_str(), element_->GetName().c_str());
+            }
+          }
         }
       }
     }
 
     void SetText(const Variant &text) {
-      switch (text.type()) {
-        case Variant::TYPE_BOOL:
-          SetText(Variant(VariantValue<bool>()(text) ? "true" : "false"));
-          break;
-        case Variant::TYPE_INT64:
-          SetText(Variant(StringPrintf("%jd", VariantValue<int64_t>()(text))));
-          break;
-        case Variant::TYPE_DOUBLE:
-          SetText(Variant(StringPrintf("%lf", VariantValue<double>()(text))));
-          break;
-        case Variant::TYPE_STRING: {
-          const char *text_str = VariantValue<const char *>()(text);
+      bool invalid = false;
+      if (text.type() == Variant::TYPE_SCRIPTABLE) {
+        ScriptableInterface *array =
+             VariantValue<ScriptableInterface *>()(text);
+        if (array) {
+          if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
+            SetListBoxItems(down_cast<ListBoxElement *>(element_), array);
+          } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
+            SetListBoxItems(
+                down_cast<ComboBoxElement *>(element_)->GetListBox(), array);
+          } else {
+            invalid = true;
+          }
+        }
+      } else {
+        std::string text_str;
+        if (text.ConvertToString(&text_str)) {
           if (element_->IsInstanceOf(ButtonElement::CLASS_ID)) {
             ButtonElement *button = down_cast<ButtonElement *>(element_);
-            button->GetTextFrame()->SetText(text_str);
+            button->GetTextFrame()->SetText(text_str.c_str());
           } else if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
             CheckBoxElement *checkbox = down_cast<CheckBoxElement *>(element_);
-            checkbox->GetTextFrame()->SetText(text_str);
+            checkbox->GetTextFrame()->SetText(text_str.c_str());
           } else if (element_->IsInstanceOf(LabelElement::CLASS_ID)) {
             LabelElement *label = down_cast<LabelElement *>(element_);
-            label->GetTextFrame()->SetText(text_str);
+            label->GetTextFrame()->SetText(text_str.c_str());
           } else if (element_->IsInstanceOf(EditElement::CLASS_ID)) {
             EditElement *edit = down_cast<EditElement *>(element_);
-            edit->SetValue(text_str);
+            edit->SetValue(text_str.c_str());
           } else {
-            LOG("Invalid type of text(%s) for control %s",
-                text.ToString().c_str(), element_->GetName().c_str());
+            invalid = true;
           }
-          break;
+        } else {
+          invalid = true;
         }
-        case Variant::TYPE_SCRIPTABLE: {
-          ScriptableInterface *scriptable =
-               VariantValue<ScriptableInterface *>()(text);
-          if (scriptable &&
-              scriptable->IsInstanceOf(ScriptableArray::CLASS_ID)) {
-            ScriptableArray *array = down_cast<ScriptableArray *>(scriptable);
-            if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
-              SetListBoxItems(down_cast<ListBoxElement *>(element_), array);
-            } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
-              SetListBoxItems(
-                  down_cast<ComboBoxElement *>(element_)->GetListBox(), array);
-            } else {
-              LOG("Invalid type of text(%s) for control %s",
-                  text.ToString().c_str(), element_->GetName().c_str());
-            }
-          }
-          break;
-        }
-        default:
-          LOG("Invalid type of text(%s) for control %s",
-              text.ToString().c_str(), element_->GetName().c_str());
-          break;
+      }
+
+      if (invalid) {
+        LOG("Invalid type of text(%s) for control %s",
+            text.Print().c_str(), element_->GetName().c_str());
       }
     }
 
@@ -236,38 +240,40 @@ class DisplayWindow::Impl {
     }
 
     void SetValue(const Variant &value) {
-      switch (value.type()) {
-        case Variant::TYPE_BOOL:
+      bool invalid = false;
+      std::string value_str;
+      if (value.ConvertToString(&value_str)) {
+        if (element_->IsInstanceOf(ButtonElement::CLASS_ID) ||
+            element_->IsInstanceOf(LabelElement::CLASS_ID) ||
+            element_->IsInstanceOf(EditElement::CLASS_ID)) {
+          SetText(value);
+        } else if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
+          ListBoxElement *listbox = down_cast<ListBoxElement *>(element_);
+          SetListBoxValue(listbox, VariantValue<const char *>()(value));
+        } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
+          ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
+          SetListBoxValue(combobox->GetListBox(),
+                          VariantValue<const char *>()(value));
+        } else {
+          invalid = true;
+        }
+      } else {
+        bool value_bool;
+        if (value.ConvertToBool(&value_bool)) {
           if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
             // For check box it is a boolean idicating the check state.
             CheckBoxElement *checkbox = down_cast<CheckBoxElement *>(element_);
             checkbox->SetValue(VariantValue<bool>()(value));
           } else {
-            LOG("Invalid type of value(%s) for control %s",
-                value.ToString().c_str(), element_->GetName().c_str());
+            invalid = true;
           }
-          break;
-        case Variant::TYPE_STRING:
-          if (element_->IsInstanceOf(ButtonElement::CLASS_ID) ||
-              element_->IsInstanceOf(LabelElement::CLASS_ID) ||
-              element_->IsInstanceOf(EditElement::CLASS_ID)) {
-            SetText(value);
-          } else if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
-            ListBoxElement *listbox = down_cast<ListBoxElement *>(element_);
-            SetListBoxValue(listbox, VariantValue<const char *>()(value));
-          } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
-            ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-            SetListBoxValue(combobox->GetListBox(),
-                            VariantValue<const char *>()(value));
-          } else {
-            LOG("Invalid type of value(%s) for control %s",
-                value.ToString().c_str(), element_->GetName().c_str());
-          }
-          break;
-        default:
-          LOG("Invalid type of value(%s) for control %s",
-              value.ToString().c_str(), element_->GetName().c_str());
-          break;
+        } else {
+          invalid = true;
+        } 
+      }
+      if (invalid) {
+        LOG("Invalid type of value(%s) for control %s",
+            value.Print().c_str(), element_->GetName().c_str());
       }
     }
 

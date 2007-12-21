@@ -17,6 +17,8 @@
 #ifndef GGADGET_STRING_UTILS_H__
 #define GGADGET_STRING_UTILS_H__
 
+#include <cstring>
+#include <cstdarg>
 #include <map>
 #include <string>
 #include <stdint.h>         // Integer types and macros.
@@ -105,12 +107,14 @@ std::string ToUpper(const std::string &s);
 std::string StringPrintf(const char *format, ...)
   // Tell the compiler to do printf format string checking.
   PRINTF_ATTRIBUTE(1,2);
+std::string StringVPrintf(const char *format, va_list ap);
 
 /**
  * Append result to a supplied string
  */
 void StringAppendPrintf(std::string* dst, const char* format, ...)
   PRINTF_ATTRIBUTE(2,3);
+void StringAppendVPrintf(std::string* dst, const char* format, va_list ap);
 
 /** URL-encode the source string. */
 std::string EncodeURL(const std::string &source);

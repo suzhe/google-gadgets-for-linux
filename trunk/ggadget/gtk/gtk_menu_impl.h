@@ -18,9 +18,11 @@
 #define GGADGET_GTK_GTK_MENU_IMPL_H__
 
 #include <map>
+#include <string>
 #include <vector>
 #include <gtk/gtk.h>
-#include <ggadget/ggadget.h>
+#include <ggadget/common.h>
+#include <ggadget/menu_interface.h>
 
 namespace ggadget {
 namespace gtk {

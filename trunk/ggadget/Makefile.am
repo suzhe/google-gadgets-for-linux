@@ -73,6 +73,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  item_element.h \
 			  label_element.h \
 			  listbox_element.h \
+			  logger.h \
 			  math_utils.h \
 			  menu_interface.h \
 			  options_interface.h \
@@ -134,6 +135,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  item_element.cc \
 			  label_element.cc \
 			  listbox_element.cc \
+			  logger.cc \
 			  math_utils.cc \
 			  progressbar_element.cc \
 			  scriptable_array.cc \

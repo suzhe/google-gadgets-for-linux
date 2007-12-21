@@ -26,6 +26,7 @@
 #include "gadget_interface.h"
 #include "graphics_interface.h"
 #include "image.h"
+#include "logger.h"
 #include "math_utils.h"
 #include "script_context_interface.h"
 #include "scriptable_binary_data.h"
@@ -1178,7 +1179,7 @@ Image *View::LoadImage(const Variant &src, bool is_mask) {
     }
     default:
       LOG("Unsupported type of image src.");
-      DLOG("src=%s", src.ToString().c_str());
+      DLOG("src=%s", src.Print().c_str());
       return NULL;
   }
 }
@@ -1205,7 +1206,7 @@ Texture *View::LoadTexture(const Variant &src) {
     }
     default:
       LOG("Unsupported type of texture src.");
-      DLOG("src=%s", src.ToString().c_str());
+      DLOG("src=%s", src.Print().c_str());
       return NULL;
   }
 }

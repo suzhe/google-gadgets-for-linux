@@ -23,6 +23,7 @@
 #include <cstring>
 
 #include <ggadget/gadget_consts.h>
+#include <ggadget/logger.h>
 #include "global_file_manager.h"
 
 #if 0

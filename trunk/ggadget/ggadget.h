@@ -33,6 +33,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_host_interface.h>
 #include <ggadget/gadget_interface.h>
+#include <ggadget/logger.h>
 #include <ggadget/math_utils.h>
 #include <ggadget/menu_interface.h>
 #include <ggadget/options_interface.h>

@@ -17,6 +17,7 @@
 #include <iostream>
 #include <locale.h>
 
+#include "ggadget/logger.h"
 #include "ggadget/xml_dom.h"
 #include "ggadget/xml_utils.h"
 #include "unittest/gunit.h"

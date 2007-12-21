@@ -19,10 +19,13 @@
 #include <sys/wait.h>
 #include <fontconfig/fontconfig.h>
 
-#include <ggadget/ggadget.h>
 #include <ggadget/element_factory.h>
 #include <ggadget/file_manager.h>
+#include <ggadget/framework_interface.h>
 #include <ggadget/gadget.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/logger.h>
+#include <ggadget/script_runtime_interface.h>
 
 #include <ggadget/anchor_element.h>
 #include <ggadget/button_element.h>

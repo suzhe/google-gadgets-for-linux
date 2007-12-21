@@ -15,17 +15,18 @@
 */
 
 #include <cmath>
-#include "edit_interface.h"
 #include "edit_element.h"
 #include "canvas_interface.h"
-#include "graphics_interface.h"
+#include "edit_interface.h"
 #include "event.h"
-#include "view.h"
+#include "graphics_interface.h"
+#include "logger.h"
 #include "scriptable_event.h"
+#include "scrolling_element.h"
 #include "slot.h"
 #include "string_utils.h"
 #include "texture.h"
-#include "scrolling_element.h"
+#include "view.h"
 
 namespace ggadget {
 

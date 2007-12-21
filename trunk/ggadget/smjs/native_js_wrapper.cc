@@ -135,7 +135,6 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
     }
   }
 
-  JS_ReportError(cx, "Object is not a native wrapper");
   // The JSObject is not a JS wrapped ScriptableInterface object.
   return NULL;
 }
@@ -360,7 +359,7 @@ JSBool NativeJSWrapper::CallNativeSlot(Slot *slot, uintN argc, jsval *argv,
   if (!result)
     JS_ReportError(js_context_,
                    "Failed to convert native function result(%s) to jsval",
-                   return_value.ToString().c_str());
+                   return_value.Print().c_str());
   return result;
 }
 
@@ -407,8 +406,8 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
   Variant return_value = scriptable_->GetProperty(int_id);
   if (!ConvertNativeToJS(js_context_, return_value, vp)) {
     JS_ReportError(js_context_,
-                   "Failed to convert native property value(%s) to jsval.",
-                   return_value.ToString().c_str());
+                   "Failed to convert native property(%d) value(%s) to jsval.",
+                   int_id, return_value.Print().c_str());
     return JS_FALSE;
   }
 
@@ -448,8 +447,8 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
-                   "Failed to convert JS property value(%s) to native.",
-                   PrintJSValue(js_context_, js_val).c_str());
+                   "Failed to convert JS property %s(%d) value(%s) to native.",
+                   name, int_id, PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
@@ -501,9 +500,10 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
     return JS_FALSE;
   
   if (!ConvertNativeToJS(js_context_, return_value, vp)) {
-    JS_ReportError(js_context_,
-                   "Failed to convert native property value(%s) to jsval",
-                   return_value.ToString().c_str());
+    JS_ReportError(
+        js_context_,
+        "Failed to convert native property %s(%d) value(%s) to jsval",
+        name, int_id, return_value.Print().c_str());
     return JS_FALSE;
   }
   return JS_TRUE;
@@ -544,8 +544,8 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
-                   "Failed to convert JS property value(%s) to native.",
-                   PrintJSValue(js_context_, js_val).c_str());
+                   "Failed to convert JS property %s(%d) value(%s) to native.",
+                   name, int_id, PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
@@ -623,7 +623,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   jsval js_val = JSVAL_VOID;
   if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
     JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
-                   prototype.ToString().c_str());
+                   prototype.Print().c_str());
     return JS_FALSE;
   }
 

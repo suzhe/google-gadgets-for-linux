@@ -23,6 +23,7 @@
 #include <time.h>
 #include <sys/poll.h>
 
+#include "ggadget/logger.h"
 #include "ggadget/slot.h"
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_http_request.h"

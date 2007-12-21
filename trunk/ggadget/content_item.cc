@@ -31,6 +31,7 @@ static const int kMinWidthToUseLongVersionOfTimeString = 125;
 static const int kNormalFontSize = 9;
 static const int kExtraInfoFontSize = 8;
 static const int kSnippetFontSize = 8;
+static const int kItemBorderWidth = 3;
 
 const Color ScriptableCanvas::kColorNormalBackground(0.984, 0.984, 0.984);
 const Color ScriptableCanvas::kColorNormalText(0, 0, 0);
@@ -119,14 +120,14 @@ class ContentItem::Impl {
          ScriptableCanvas *, int, int, int, int> on_draw_item_signal_;
   Signal4<int, ContentItem *, GadgetInterface::DisplayTarget,
           ScriptableCanvas *, int> on_get_height_signal_;
-  Signal1<bool, ContentItem *> on_open_item_signal_;
-  Signal1<bool, ContentItem *> on_toggle_item_pinned_state_signal_;
-  Signal7<bool, ContentItem *, GadgetInterface::DisplayTarget,
+  Signal1<Variant, ContentItem *> on_open_item_signal_;
+  Signal1<Variant, ContentItem *> on_toggle_item_pinned_state_signal_;
+  Signal7<Variant, ContentItem *, GadgetInterface::DisplayTarget,
           ScriptableCanvas *, int, int, int, int>
       on_get_is_tooltip_required_signal_;
-  Signal1<void /*TODO: DetailsViewInfo * */, ContentItem *> on_details_view_signal_;
-  Signal2<bool, ContentItem *, int> on_process_details_view_feedback_signal_;
-  Signal1<bool, ContentItem *> on_remove_item_signal_;
+  Signal1<ScriptableInterface *, ContentItem *> on_details_view_signal_;
+  Signal2<Variant, ContentItem *, int> on_process_details_view_feedback_signal_;
+  Signal1<Variant, ContentItem *> on_remove_item_signal_;
 };
 
 ContentItem::ContentItem(View *view)
@@ -335,6 +336,13 @@ void ContentItem::Draw(GadgetInterface::DisplayTarget target,
     return;
   }
 
+  x += kItemBorderWidth;
+  y += kItemBorderWidth;
+  if (width > 2 * kItemBorderWidth)
+    width -= 2 * kItemBorderWidth;
+  if (height > 2 * kItemBorderWidth)
+    height -= 2 * kItemBorderWidth;
+
   // Then the default logic.
   int heading_space_width = width;
   int heading_left = x;
@@ -404,6 +412,8 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
                                         width);
   }
 
+  if (width > 2 * kItemBorderWidth)
+    width -= 2 * kItemBorderWidth;
   int heading_space_width = width;
   int image_height = 0;
   if (impl_->image_) {
@@ -441,8 +451,8 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
   if (snippet_width > width)
     snippet_height *= 2;
   return std::max(static_cast<int>(ceil(heading_height)), image_height) +
-         extra_info_height +
-         static_cast<int>(ceil(snippet_height));
+         extra_info_height + static_cast<int>(ceil(snippet_height)) +
+         2 * kItemBorderWidth;
 }
 
 Connection *ContentItem::ConnectOnGetHeight(
@@ -451,10 +461,18 @@ Connection *ContentItem::ConnectOnGetHeight(
   return impl_->on_get_height_signal_.Connect(handler);
 }
 
+
+// ContentItem callbacks use special return value rule:
+// If false, the result is false;
+// If any other values, the result is true (which means 'cancel the action').
+static bool VariantToBool(const Variant &v) {
+  return v.type() != Variant::TYPE_BOOL || VariantValue<bool>()(v);
+}
+
 void ContentItem::OpenItem() {
   bool result = false;
   if (impl_->on_open_item_signal_.HasActiveConnections())
-    result = impl_->on_open_item_signal_(this);
+    result = VariantToBool(impl_->on_open_item_signal_(this));
 
   if (!result)
     impl_->view_->OpenURL(impl_->open_command_.c_str());
@@ -462,13 +480,13 @@ void ContentItem::OpenItem() {
 
 Connection *ContentItem::ConnectOnOpenItem(
     Slot1<bool, ContentItem *> *handler) {
-  return impl_->on_open_item_signal_.Connect(handler);
+  return impl_->on_open_item_signal_.ConnectGeneral(handler);
 }
 
 void ContentItem::ToggleItemPinnedState() {
   bool result = false;
   if (impl_->on_toggle_item_pinned_state_signal_.HasActiveConnections())
-    result = impl_->on_toggle_item_pinned_state_signal_(this);
+    result = VariantToBool(impl_->on_toggle_item_pinned_state_signal_(this));
 
   if (!result) {
     impl_->flags_ ^= CONTENT_ITEM_FLAG_PINNED;
@@ -478,7 +496,7 @@ void ContentItem::ToggleItemPinnedState() {
 
 Connection *ContentItem::ConnectOnToggleItemPinnedState(
     Slot1<bool, ContentItem *> *handler) {
-  return impl_->on_toggle_item_pinned_state_signal_.Connect(handler);
+  return impl_->on_toggle_item_pinned_state_signal_.ConnectGeneral(handler);
 }
 
 bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
@@ -486,9 +504,8 @@ bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
                                     int x, int y, int width, int height) {
   if (impl_->on_get_is_tooltip_required_signal_.HasActiveConnections()) {
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
-    return impl_->on_get_is_tooltip_required_signal_(this, target,
-                                                     &scriptable_canvas,
-                                                     x, y, width, height);
+    return VariantToBool(impl_->on_get_is_tooltip_required_signal_(
+        this, target, &scriptable_canvas, x, y, width, height));
   }
   return !impl_->tooltip_.empty();
 }
@@ -496,32 +513,77 @@ bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
 Connection *ContentItem::ConnectOnGetIsTooltipRequired(
     Slot7<bool, ContentItem *, GadgetInterface::DisplayTarget,
           ScriptableCanvas *, int, int, int, int> *handler) {
-  return impl_->on_get_is_tooltip_required_signal_.Connect(handler);
+  return impl_->on_get_is_tooltip_required_signal_.ConnectGeneral(handler);
 }
 
-/*  DetailsViewInfo *OnDetailsView(ContentItem *item);
-typedef Slot1<DetailsViewInfo *, ContentItem *> OnDetailsViewHandler;
-Connection *ConnectOnDetailsView(OnDetailsViewHandler *handler); */
+bool ContentItem::OnDetailsView(std::string *title, DetailsView **details_view,
+                                int *flags) {
+  ASSERT(title && details_view && flags);
+  bool cancel = false;
+  title->clear();
+  *details_view = NULL;
+  *flags = ViewHostInterface::DETAILS_VIEW_FLAG_NONE;
+
+  if (impl_->on_details_view_signal_.HasActiveConnections()) {
+    ScriptableInterface *details_info = impl_->on_details_view_signal_(this);
+    if (details_info) {
+      GetPropertyByName(details_info, "title").ConvertToString(title);
+      GetPropertyByName(details_info, "cancel").ConvertToBool(&cancel);
+      // The conversion rule of the flags property is the same as our default.  
+      GetPropertyByName(details_info, "flags").ConvertToInt(flags);
+      Variant v = GetPropertyByName(details_info, "details_control");
+      if (v.type() == Variant::TYPE_SCRIPTABLE)
+        *details_view = VariantValue<DetailsView *>()(v);
+    } else {
+      cancel = true;
+    }
+  }
+
+  // Default logics.
+  if (!*details_view) {
+    *details_view = new DetailsView();
+    (*details_view)->SetContentFromItem(this);
+  }
+  if (!title->empty()) {
+    *title = impl_->heading_text_.GetText();
+  }
+  if (*flags == ViewHostInterface::DETAILS_VIEW_FLAG_NONE) {
+    if (impl_->flags_ & CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK)
+      *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK;
+    if (!(impl_->flags_ & CONTENT_ITEM_FLAG_NO_REMOVE))
+      *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON;
+    if (impl_->flags_ & CONTENT_ITEM_FLAG_SHAREABLE)
+      *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON;
+    *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN;
+  }
+  return cancel;
+}
+
+Connection *ContentItem::ConnectOnDetailsView(OnDetailsViewHandler *handler) {
+  return impl_->on_details_view_signal_.Connect(handler);
+}
 
 bool ContentItem::ProcessDetailsViewFeedback(int flags) {
   if (impl_->on_process_details_view_feedback_signal_.HasActiveConnections())
-    return impl_->on_process_details_view_feedback_signal_(this, flags);
+    return VariantToBool(impl_->on_process_details_view_feedback_signal_(
+        this, flags));
   return false;
 }
 
 Connection *ContentItem::ConnectOnProcessDetailsViewFeedback(
     Slot2<bool, ContentItem *, int> *handler) {
-  return impl_->on_process_details_view_feedback_signal_.Connect(handler);
+  return impl_->on_process_details_view_feedback_signal_.ConnectGeneral(
+      handler);
 }
 
 bool ContentItem::OnUserRemove() {
   return impl_->on_remove_item_signal_.HasActiveConnections() ?
-         impl_->on_remove_item_signal_(this) : false;
+         VariantToBool(impl_->on_remove_item_signal_(this)) : false;
 }
 
 Connection *ContentItem::ConnectOnRemoveItem(
     Slot1<bool, ContentItem *> *handler) {
-  return impl_->on_remove_item_signal_.Connect(handler);
+  return impl_->on_remove_item_signal_.ConnectGeneral(handler);
 }
 
 std::string ContentItem::GetTimeDisplayString(uint64_t time,

@@ -19,6 +19,7 @@
 #include "canvas_interface.h"
 #include "graphics_interface.h"
 #include "image.h"
+#include "logger.h"
 #include "file_manager_interface.h"
 
 namespace ggadget {
