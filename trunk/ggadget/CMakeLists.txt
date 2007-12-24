@@ -38,6 +38,7 @@ SET(SRCS
   image.cc
   logger.cc
   math_utils.cc
+  native_main_loop.cc
   scriptable_array.cc
   scriptable_event.cc
   scriptable_file_system.cc

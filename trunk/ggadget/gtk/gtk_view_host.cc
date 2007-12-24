@@ -145,7 +145,7 @@ GtkViewHost::~GtkViewHost() {
 }
 
 XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
-  return CreateXMLHttpRequest(gadget_host_, script_context_);
+  return CreateXMLHttpRequest(gadget_host_->GetMainLoop(), script_context_);
 }
 
 void GtkViewHost::QueueDraw() {
@@ -226,8 +226,9 @@ void GtkViewHost::SetTooltip(const char *tooltip) {
   HideTooltip(0);
   if (tooltip && *tooltip) {
     tooltip_ = tooltip;
-    tooltip_timer_ = gadget_host_->RegisterTimer(
-        kShowTooltipDelay, NewSlot(this, &GtkViewHost::ShowTooltip));
+    tooltip_timer_ = gadget_host_->GetMainLoop()->AddTimeoutWatch(
+        kShowTooltipDelay,
+        new WatchCallbackSlot(NewSlot(this, &GtkViewHost::ShowTooltip)));
   }
 }
 
@@ -268,15 +269,16 @@ bool GtkViewHost::ShowTooltip(int timer_id) {
   gadget_host_->GetCursorPos(&x, &y);
   gtk_window_move(GTK_WINDOW(tooltip_window_), x, y + 20);
 
-  tooltip_timer_ = gadget_host_->RegisterTimer(
-      kHideTooltipDelay, NewSlot(this, &GtkViewHost::HideTooltip));
+  tooltip_timer_ = gadget_host_->GetMainLoop()->AddTimeoutWatch(
+      kHideTooltipDelay,
+      new WatchCallbackSlot(NewSlot(this, &GtkViewHost::HideTooltip)));
   return false;
 }
 
 bool GtkViewHost::HideTooltip(int timer_id) {
   // This method may be called by the timer, or directly from this class.
   if (tooltip_timer_) {
-    gadget_host_->RemoveTimer(tooltip_timer_);
+    gadget_host_->GetMainLoop()->RemoveWatch(tooltip_timer_);
     tooltip_timer_ = 0;
   }
   if (tooltip_window_) {

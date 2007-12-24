@@ -159,9 +159,9 @@ class SignalSlot : public Slot {
    * The @c SignalSlot doesn't has ownership of the signal.
    * @param signal the @c Signal to wrap.
    */
-  SignalSlot(Signal *signal) : signal_(signal) { }
+  SignalSlot(const Signal *signal) : signal_(signal) { }
 
-  Signal *signal() const { return signal_; }
+  const Signal *signal() const { return signal_; }
 
   virtual Variant Call(int argc, Variant argv[]) const {
     return signal_->Emit(argc, argv);
@@ -181,7 +181,7 @@ class SignalSlot : public Slot {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(SignalSlot);
 
-  Signal *signal_;
+  const Signal *signal_;
 };
 
 /**

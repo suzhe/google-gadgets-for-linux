@@ -18,7 +18,7 @@
 #include <curl/curl.h>
 
 #include "xml_http_request.h"
-#include "gadget_host_interface.h"
+#include "main_loop_interface.h"
 #include "logger.h"
 #include "scriptable_binary_data.h"
 #include "script_context_interface.h"
@@ -44,9 +44,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
-  XMLHttpRequest(GadgetHostInterface *host,
+  XMLHttpRequest(MainLoopInterface *main_loop,
                  ScriptContextInterface *script_context)
-      : host_(host),
+      : main_loop_(main_loop),
         script_context_(script_context),
         async_(false),
         curl_(NULL),
@@ -329,6 +329,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
+  class IOWatchCallback : public WatchCallbackInterface {
+    public:
+      IOWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
+
+      virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+        this_p_->OnIOReady(main_loop->GetWatchData(watch_id));
+        return true;
+      }
+      virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+        delete this;
+      }
+
+    private:
+      XMLHttpRequest *this_p_;
+  };
+
   static int SocketCallback(CURL *handle, curl_socket_t socket, int type,
                             void *user_p, void *sock_p) {
     DLOG("XMLHttpRequest: SocketCallback: socket: %d, type: %d", socket, type);
@@ -341,12 +357,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       ASSERT(this_p->socket_ = socket);
 
     if (!this_p->socket_read_watch_ && (type & CURL_POLL_IN)) {
-      this_p->socket_read_watch_ = this_p->host_->RegisterReadWatch(
-          socket, NewSlot(this_p, &XMLHttpRequest::OnIOReady));
+      this_p->socket_read_watch_ = this_p->main_loop_->AddIOReadWatch(
+          socket, new IOWatchCallback(this_p));
     }
     if (!this_p->socket_write_watch_ && (type & CURL_POLL_OUT)) {
-      this_p->socket_write_watch_ = this_p->host_->RegisterWriteWatch(
-          socket, NewSlot(this_p, &XMLHttpRequest::OnIOReady));
+      this_p->socket_write_watch_ = this_p->main_loop_->AddIOReadWatch(
+          socket, new IOWatchCallback(this_p));
     }
 
     if (type & CURL_POLL_REMOVE)
@@ -508,9 +524,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   void RemoveIOWatches() {
     if (socket_read_watch_)
-      host_->RemoveIOWatch(socket_read_watch_);
+      main_loop_->RemoveWatch(socket_read_watch_);
     if (socket_write_watch_)
-      host_->RemoveIOWatch(socket_write_watch_);
+      main_loop_->RemoveWatch(socket_write_watch_);
     socket_read_watch_ = 0;
     socket_write_watch_ = 0;
   }
@@ -806,7 +822,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return result;
   }
 
-  GadgetHostInterface *host_;
+  MainLoopInterface *main_loop_;
   ScriptContextInterface *script_context_;
   Signal0<void> onreadystatechange_signal_;
 
@@ -839,8 +855,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 } // anonymous namespace
 
 XMLHttpRequestInterface *CreateXMLHttpRequest(
-    GadgetHostInterface *host, ScriptContextInterface *script_context) {
-  return new XMLHttpRequest(host, script_context);
+    MainLoopInterface *main_loop, ScriptContextInterface *script_context) {
+  return new XMLHttpRequest(main_loop, script_context);
 }
 
 } // namespace ggadget

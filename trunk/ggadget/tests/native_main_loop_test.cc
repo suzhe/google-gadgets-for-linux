@@ -14,19 +14,29 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_XML_HTTP_REQUEST_H__
-#define GGADGET_XML_HTTP_REQUEST_H__
+#include <unistd.h>
+#include <cstring>
+#include <vector>
+#include <string>
 
-#include <ggadget/xml_http_request_interface.h>
+#include "ggadget/logger.h"
+#include "ggadget/native_main_loop.h"
+#include "main_loop_test.h"
+#include "unittest/gunit.h"
 
-namespace ggadget {
+using namespace ggadget;
 
-class MainLoopInterface;
-class ScriptContextInterface;
+TEST(GtkMainLoopTest, IOReadWatch) {
+  NativeMainLoop main_loop;
+  IOReadWatchTest(&main_loop);
+}
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(
-    MainLoopInterface *main_loop, ScriptContextInterface *script_context);
+TEST(GtkMainLoopTest, TimeoutWatch) {
+  NativeMainLoop main_loop;
+  TimeoutWatchTest(&main_loop);
+}
 
-} // namespace ggadget
-
-#endif // GGADGET_XML_HTTP_REQUEST_H__
+int main(int argc, char **argv) {
+  testing::ParseGUnitFlags(&argc, argv);
+  return RUN_ALL_TESTS();
+}
