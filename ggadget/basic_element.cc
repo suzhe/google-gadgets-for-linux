@@ -1310,15 +1310,19 @@ void BasicElement::GetDefaultPosition(double *x, double *y) const {
 }
 
 // Returns when input is: pixel: 0; relative: 1; 2: unspecified; invalid: -1.
-BasicElement::ParsePixelOrRelativeResult 
-    BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
+BasicElement::ParsePixelOrRelativeResult
+BasicElement::ParsePixelOrRelative(const Variant &input, double *output) {
   ASSERT(output);
   *output = 0;
+  std::string str;
+
+  if (input.ConvertToString(&str) && str.empty())
+    return PR_UNSPECIFIED;
+
   if (input.ConvertToDouble(output))
-    return std::isnan(*output) || std::isinf(*output) ?
+    return (std::isnan(*output) || std::isinf(*output)) ?
            PR_UNSPECIFIED : PR_PIXEL;
 
-  std::string str;
   if (!input.ConvertToString(&str) || str.empty())
     return PR_UNSPECIFIED;
 
