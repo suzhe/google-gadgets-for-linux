@@ -88,10 +88,11 @@ DEATH_TEST("Test string property with object", function() {
   ASSERT(DEATH());
 });
 
-DEATH_TEST("Test string property with an array", function() {
-  // The following assignment should cause an error.
-  scriptable.Buffer = [1,2,3];
-  ASSERT(DEATH());
+TEST("Test string property with an array", function() {
+  scriptable.Buffer = ["string"];
+  ASSERT(EQ("Buffer:string", scriptable.Buffer));
+  scriptable.Buffer = [[[1],2]];
+  ASSERT(EQ("Buffer:1,2", scriptable.Buffer));
 });
 
 TEST("Test constants", function() {
@@ -375,18 +376,24 @@ TEST("Test default args", function() {
 
 TEST("Test scriptable array", function() {
   ASSERT(NULL(scriptable2.ConcatArray(null, null)));
+  var x;
   var arr = scriptable2.ConcatArray(
       [1,2,3,4,5],
-      [5,4,3,{a:[1,2,3],b:[2,3,4]}]);
-  ASSERT(EQ(9, arr.count));
-  ASSERT(EQ(9, arr.length));
+      [5,4,3,{a:[1,2,3],b:[2,3,4]}, function(x1) { x = x1; }]);
+  ASSERT(EQ(10, arr.length));
   ASSERT(EQ(1, arr[0]));
-  ASSERT(EQ(1, arr.item(0)));
+  var nn = arr[8].b;
+  ASSERT(EQ(3, nn.length));
+  ASSERT(EQ(2, nn[0]));
   ASSERT(EQ(4, arr[8].b[2]));
   var arr1 = scriptable2.ConcatArray(arr, arr);
-  ASSERT(EQ(18, arr1.count));
-  ASSERT(EQ(1, arr1.item(9)));
-  ASSERT(EQ(4, arr1[17].b[2]));
+  ASSERT(EQ(20, arr1.length));
+  ASSERT(EQ(1, arr1[10]));
+  ASSERT(EQ(4, arr1[18].b[2]));
+  print(arr1[19]);
+  ASSERT(EQ("function", typeof(arr1[19])));
+  arr1[19](100);
+  ASSERT(EQ(100, x));
 });
 
 // The global scriptable object has properties named 's1' and 's2'.
@@ -410,15 +417,38 @@ TEST("Test JS callback as function parameter", function() {
   scriptable2.SetCallback(function(x, y) {
     x0 = x;
     y0 = y;
-    return x + y;
+    return x * 2;
   });
   var s = scriptable2.CallCallback(10);
   ASSERT(EQ(10, x0));
   ASSERT(UNDEFINED(y0));
-  // For now, any return values from slot properties or slot set through
-  // function parameters are ignored.  "VOID" is the Print() result of a
-  // void Variant.
-  ASSERT(EQ("VOID", s));
+  // CallCallback returns the Print() result of the input Variant.
+  ASSERT(EQ("INT64:20", s));
+});
+
+TEST("Test Enumeration", function() {
+  var expected_array = [
+    "Buffer", "BufferReadOnly", "CallCallback", "ConcatArray", "Const",
+    "DeleteObject", "DoubleProperty", "EnumSimple", "EnumString",
+    "Fixed", "ICONSTANT0", "ICONSTANT1", "ICONSTANT2", "ICONSTANT3",
+    "ICONSTANT4", "ICONSTANT5", "ICONSTANT6", "ICONSTANT7", "ICONSTANT8",
+    "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
+    "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
+    "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
+    "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
+    "TestMethodDouble2", "TestMethodVoid0", "VALUE_0", "VALUE_1", "VALUE_2",
+    "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
+    "ontest", "time",
+  ];
+  var expected_index = new Object();
+  for (var i = 0; i < expected_array.length; i++)
+    expected_index[expected_array[i]] = true;
+  var count = 0;
+  for (var i in scriptable2) {
+    ASSERT(TRUE(expected_index[i]), "Key: " + i);
+    count++;
+  }
+  ASSERT(EQ(expected_array.length, count));
 });
 
 RUN_ALL_TESTS();

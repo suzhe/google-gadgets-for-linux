@@ -51,21 +51,41 @@ void GtkMenuImpl::SetMenuItemStyle(GtkMenuItem *menu_item, int style) {
   setting_style_ = false;
 }
 
+// Windows version uses '&' as the mnemonic indicator, and this has been
+// taken as the part of the Gadget API.
+static std::string ConvertWindowsStyleMnemonics(const char *text) {
+  std::string result;
+  if (text) {
+    while (*text) {
+      switch (*text) {
+        case '&': result += '_'; break;
+        case '_': result += "__";
+        default: result += *text;
+      }
+      text++;
+    }
+  }
+  return result;
+}
+
 void GtkMenuImpl::AddItem(const char *item_text, int style,
                           ggadget::Slot1<void, const char *> *handler) {
   GtkMenuItem *item;
-  if (style & MENU_ITEM_FLAG_SEPARATOR)
+  if (style & MENU_ITEM_FLAG_SEPARATOR || !item_text || !*item_text) {
     item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
-  else
-    item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_label(item_text));
+  } else {
+    item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_mnemonic(
+        ConvertWindowsStyleMnemonics(item_text).c_str()));
 
-  SetMenuItemStyle(item, style);
-  std::string text_str(item_text);
-  MenuItemInfo menu_item_info = { text_str, item, style, handler, NULL };
-  // Here if there is already a submenu with the same name, the submenu leaks.
-  item_map_[text_str] = menu_item_info;
-  g_signal_connect(item, "activate", G_CALLBACK(OnItemActivate),
-                   &item_map_[text_str]);
+    std::string text_str(item_text);
+    SetMenuItemStyle(item, style);
+    MenuItemInfo menu_item_info = { text_str, item, style, handler, NULL };
+    ItemMap::iterator it = item_map_.insert(make_pair(text_str,
+                                                      menu_item_info));
+    g_signal_connect(item, "activate", G_CALLBACK(OnItemActivate),
+                     &(it->second));
+  }
+
   gtk_menu_shell_append(GTK_MENU_SHELL(gtk_menu_), GTK_WIDGET(item));
 }
 
@@ -76,14 +96,15 @@ void GtkMenuImpl::SetItemStyle(const char *item_text, int style) {
 }
 
 ggadget::MenuInterface *GtkMenuImpl::AddPopup(const char *popup_text) {
-  GtkMenuItem *item = GTK_MENU_ITEM(gtk_menu_item_new_with_label(popup_text));
+  std::string text_str(popup_text ? popup_text : "");
+  GtkMenuItem *item = GTK_MENU_ITEM(gtk_menu_item_new_with_label(
+      ConvertWindowsStyleMnemonics(text_str.c_str()).c_str()));
   GtkMenu *popup = GTK_MENU(gtk_menu_new());
   gtk_menu_item_set_submenu(item, GTK_WIDGET(popup));
   GtkMenuImpl *submenu = new GtkMenuImpl(popup);
 
-  std::string text_str(popup_text);
   struct MenuItemInfo menu_item_info = { text_str, item, 0, NULL, submenu };
-  item_map_[text_str] = menu_item_info;
+  item_map_.insert(make_pair(text_str, menu_item_info));
   gtk_menu_shell_append(GTK_MENU_SHELL(gtk_menu_), GTK_WIDGET(item));
   return submenu;
 }

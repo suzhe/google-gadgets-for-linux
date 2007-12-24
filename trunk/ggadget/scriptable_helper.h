@@ -55,7 +55,9 @@ ScriptableHelperImplInterface *NewScriptableHelperImpl();
 /**
  * A @c ScriptableInterface implementation helper.
  */
-template <typename I>
+template <typename I,
+          ScriptableInterface::OwnershipPolicy Policy =
+              ScriptableInterface::NATIVE_OWNED>
 class ScriptableHelper : public I {
  private:
   // Checks at compile time if the argument I is ScriptableInterface or
@@ -64,8 +66,15 @@ class ScriptableHelper : public I {
                  I_must_be_ScriptableInterface_or_derived_from_it);
 
  public:
-  ScriptableHelper() : impl_(internal::NewScriptableHelperImpl()) { }
-  virtual ~ScriptableHelper() { delete impl_; impl_ = NULL; }
+  ScriptableHelper()
+      : impl_(internal::NewScriptableHelperImpl()),
+        ref_count_(0) {
+  }
+
+  virtual ~ScriptableHelper() {
+    ASSERT(ref_count_ == 0);
+    delete impl_;
+  }
 
   /**
    * Register a scriptable property.
@@ -214,19 +223,30 @@ class ScriptableHelper : public I {
     impl_->SetPendingException(exception);
   }
 
-  /**
-   * Implementation of Attach() for default ownership policy.
-   * @see ScriptableInterface::Attach()
-   */
+  /** Gets current reference count. */
+  int GetRefCount() const { return ref_count_; }
+
+  /** @see ScriptableInterface::Attach() */
   virtual ScriptableInterface::OwnershipPolicy Attach() {
-    return ScriptableInterface::NATIVE_OWNED;
+    if (Policy == ScriptableInterface::OWNERSHIP_SHARED) {
+      ASSERT(ref_count_ >= 0);
+      ref_count_++;
+    }
+    return Policy;
   }
 
-  /**
-   * Implementation of Detach() for default ownership policy.
-   * @see ScriptableInterface::Detach()
-   */
-  virtual bool Detach() { return false; }
+  /** @see ScriptableInterface::Detach() */
+  virtual bool Detach() {
+    if (Policy == ScriptableInterface::OWNERSHIP_SHARED) {
+      ASSERT(ref_count_ > 0);
+      if (--ref_count_ == 0) {
+        delete this;
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Default strict policy.
    * @see ScriptableInterface::IsStrict()
@@ -257,7 +277,7 @@ class ScriptableHelper : public I {
   }
 
   /** @see ScriptableInterface::SetProperty() */
-  virtual bool SetProperty(int id, Variant value) {
+  virtual bool SetProperty(int id, const Variant &value) {
     return impl_->SetProperty(id, value);
   }
 
@@ -266,11 +286,26 @@ class ScriptableHelper : public I {
     return impl_->GetPendingException(clear);
   }
 
+  /** @see ScriptableInterface::EnumerateProperties() */
+  virtual bool EnumerateProperties(
+      Slot4<bool, int, const char *, const Variant &, bool> *callback) {
+    return impl_->EnumerateProperties(callback);
+  }
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
 
   internal::ScriptableHelperImplInterface *impl_;
+  int ref_count_;
 };
+
+typedef ScriptableHelper<ScriptableInterface,
+                         ScriptableInterface::NATIVE_PERMANENT>
+    ScriptableHelperNativePermanent;
+
+typedef ScriptableHelper<ScriptableInterface,
+                         ScriptableInterface::OWNERSHIP_SHARED>
+    ScriptableHelperOwnershipShared;
 
 /**
  * Utility function to get a named property from a scriptable object.

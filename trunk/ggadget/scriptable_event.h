@@ -58,6 +58,8 @@ const char *const kOnRestoreEvent       = "onrestore";
 const char *const kOnSizeEvent          = "onsize";
 const char *const kOnSizingEvent        = "onsizing";
 const char *const kOnUndockEvent        = "onundock";
+const char *const kOnChangeEvent        = "onchange";
+const char *const kOnTextChangeEvent    = "ontextchange";
 
 /**
  * Scriptable decorator for @c Event.

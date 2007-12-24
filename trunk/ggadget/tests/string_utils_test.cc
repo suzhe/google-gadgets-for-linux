@@ -15,6 +15,7 @@
 */
 
 #include <cstdio>
+#include "ggadget/color.h"
 #include "ggadget/string_utils.h"
 #include "unittest/gunit.h"
 
@@ -132,6 +133,28 @@ TEST(StringUtils, SplitString) {
   EXPECT_FALSE(SplitString("abcde", "cb", &left, &right));
   EXPECT_STREQ("abcde", left.c_str());
   EXPECT_STREQ("", right.c_str());
+}
+
+TEST(StringUtils, ParseColorName) {
+  Color color;
+  double alpha;
+  EXPECT_TRUE(ParseColorName("#123456", &color, &alpha));
+  EXPECT_TRUE(Color::ColorFromChars(0x12, 0x34, 0x56) == color);
+  EXPECT_EQ(1.0, alpha);
+  EXPECT_TRUE(ParseColorName("#12345678", &color, &alpha));
+  EXPECT_TRUE(Color::ColorFromChars(0x34, 0x56, 0x78) == color);
+  EXPECT_EQ(0x12/255.0, alpha);
+  EXPECT_TRUE(ParseColorName("#12..56", &color, &alpha));
+  EXPECT_TRUE(Color::ColorFromChars(0x12, 0, 0x56) == color);
+  EXPECT_EQ(1.0, alpha);
+  EXPECT_TRUE(ParseColorName("#123456", &color, NULL));
+  EXPECT_TRUE(Color::ColorFromChars(0x12, 0x34, 0x56) == color);
+  EXPECT_FALSE(ParseColorName("1234567", &color, &alpha));
+  EXPECT_FALSE(ParseColorName("#2345", &color, &alpha));
+  EXPECT_FALSE(ParseColorName("#12345678", &color, NULL));
+  EXPECT_FALSE(ParseColorName("#1234567", &color, &alpha));
+  EXPECT_FALSE(ParseColorName("", &color, &alpha));
+  EXPECT_FALSE(ParseColorName("#123456789", &color, &alpha));
 }
 
 int main(int argc, char **argv) {

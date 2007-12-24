@@ -41,7 +41,7 @@ class Slot {
    * @param argv argument array.  Can be @c NULL if <code>argc==0</code>.
    * @return the return value of the @c Slot target.
    */
-  virtual Variant Call(int argc, Variant argv[]) const = 0;
+  virtual Variant Call(int argc, const Variant argv[]) const = 0;
 
   /**
    * @return @c true if this @c Slot can provide metadata.
@@ -116,7 +116,7 @@ class FunctorSlot0 : public Slot0<R> {
  public:
   typedef FunctorSlot0<R, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     return Variant(functor_());
   }
@@ -136,7 +136,7 @@ class FunctorSlot0<void, F> : public Slot0<void> {
  public:
   typedef FunctorSlot0<void, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     functor_();
     return Variant();
@@ -157,7 +157,7 @@ class MethodSlot0 : public Slot0<R> {
  public:
   typedef MethodSlot0<R, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     return Variant((object_->*method_)());
   }
@@ -179,7 +179,7 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
  public:
   typedef MethodSlot0<void, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     (object_->*method_)();
     return Variant();
@@ -197,6 +197,17 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
 /**
  * A @c Slot that is targeted to another general typed slot with no parameter.
  * Useful to proxy not-typed script slot to typed slot.
+ *
+ * Note about the return type: the general slot may return value of any type
+ * any type (for example, a script function), so there are two potential
+ * problems:
+ *   - If the target return type is void, but there is actual returned value,
+ *     the value will be ignored. If the value contains allocated resources
+ *     (such as Slot), the callee must take care of the resources to prevent
+ *     leaks.
+ *   - If the actual returned value is not of type the same as expected,
+ *     runtime assetion failure will occurs. The caller/callee must avoid such
+ *     situations.
  */
 template <typename R>
 class SlotProxy0 : public Slot0<R> {
@@ -204,7 +215,7 @@ class SlotProxy0 : public Slot0<R> {
   typedef SlotProxy0<R> SelfType;
   SlotProxy0(Slot* slot) : slot_(slot) { ASSERT(slot); }
   ~SlotProxy0() { delete slot_; slot_ = NULL; }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     return slot_->Call(argc, argv);
   }
   virtual bool operator==(const Slot &another) const {
@@ -298,7 +309,7 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
  public:                                                                      \
   typedef FunctorSlot##n<R, _arg_type_names, F> SelfType;                     \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
     ASSERT(argc == n);                                                        \
     return Variant(functor_(_call_args));                                     \
   }                                                                           \
@@ -316,7 +327,7 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
  public:                                                                      \
   typedef FunctorSlot##n<void, _arg_type_names, F> SelfType;                  \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
     ASSERT(argc == n);                                                        \
     functor_(_call_args);                                                     \
     return Variant();                                                         \
@@ -334,7 +345,7 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
  public:                                                                      \
   typedef MethodSlot##n<R, _arg_type_names, T, M> SelfType;                   \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
     ASSERT(argc == n);                                                        \
     return Variant((obj_->*method_)(_call_args));                             \
   }                                                                           \
@@ -354,7 +365,7 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
  public:                                                                      \
   typedef MethodSlot##n<void, _arg_type_names, T, M> SelfType;                \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
     return Variant();                                                         \
@@ -375,7 +386,7 @@ class SlotProxy##n : public Slot##n<R, _arg_type_names> {                     \
   typedef SlotProxy##n<R, _arg_type_names> SelfType;                          \
   SlotProxy##n(Slot* slot) : slot_(slot) { }                                  \
   ~SlotProxy##n() { delete slot_; slot_ = NULL; }                             \
-  virtual Variant Call(int argc, Variant argv[]) const {                      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
     return slot_->Call(argc, argv);                                           \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
@@ -426,7 +437,7 @@ DEFINE_SLOT(1, ARG_TYPES1, ARG_TYPE_NAMES1, ARGS1, INIT_ARGS1,
 #define INIT_ARGS2      INIT_ARGS1; INIT_ARG(2)
 #define INIT_ARG_TYPES2 INIT_ARG_TYPES1, INIT_ARG_TYPE(2)
 #define CALL_ARGS2      CALL_ARGS1, GET_ARG(2)
-DEFINE_SLOT(2, ARG_TYPES2, ARG_TYPE_NAMES2, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(2, ARG_TYPES2, ARG_TYPE_NAMES2, ARGS2, INIT_ARGS2,
             INIT_ARG_TYPES2, CALL_ARGS2)
 
 #define ARG_TYPES3      ARG_TYPES2, typename P3
@@ -435,7 +446,7 @@ DEFINE_SLOT(2, ARG_TYPES2, ARG_TYPE_NAMES2, ARGS1, INIT_ARGS1,
 #define INIT_ARGS3      INIT_ARGS2; INIT_ARG(3)
 #define INIT_ARG_TYPES3 INIT_ARG_TYPES2, INIT_ARG_TYPE(3)
 #define CALL_ARGS3      CALL_ARGS2, GET_ARG(3)
-DEFINE_SLOT(3, ARG_TYPES3, ARG_TYPE_NAMES3, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(3, ARG_TYPES3, ARG_TYPE_NAMES3, ARGS3, INIT_ARGS3,
             INIT_ARG_TYPES3, CALL_ARGS3)
 
 #define ARG_TYPES4      ARG_TYPES3, typename P4
@@ -444,7 +455,7 @@ DEFINE_SLOT(3, ARG_TYPES3, ARG_TYPE_NAMES3, ARGS1, INIT_ARGS1,
 #define INIT_ARGS4      INIT_ARGS3; INIT_ARG(4)
 #define INIT_ARG_TYPES4 INIT_ARG_TYPES3, INIT_ARG_TYPE(4)
 #define CALL_ARGS4      CALL_ARGS3, GET_ARG(4)
-DEFINE_SLOT(4, ARG_TYPES4, ARG_TYPE_NAMES4, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(4, ARG_TYPES4, ARG_TYPE_NAMES4, ARGS4, INIT_ARGS4,
             INIT_ARG_TYPES4, CALL_ARGS4)
 
 #define ARG_TYPES5      ARG_TYPES4, typename P5
@@ -453,7 +464,7 @@ DEFINE_SLOT(4, ARG_TYPES4, ARG_TYPE_NAMES4, ARGS1, INIT_ARGS1,
 #define INIT_ARGS5      INIT_ARGS4; INIT_ARG(5)
 #define INIT_ARG_TYPES5 INIT_ARG_TYPES4, INIT_ARG_TYPE(5)
 #define CALL_ARGS5      CALL_ARGS4, GET_ARG(5)
-DEFINE_SLOT(5, ARG_TYPES5, ARG_TYPE_NAMES5, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(5, ARG_TYPES5, ARG_TYPE_NAMES5, ARGS5, INIT_ARGS5,
             INIT_ARG_TYPES5, CALL_ARGS5)
 
 #define ARG_TYPES6      ARG_TYPES5, typename P6
@@ -462,7 +473,7 @@ DEFINE_SLOT(5, ARG_TYPES5, ARG_TYPE_NAMES5, ARGS1, INIT_ARGS1,
 #define INIT_ARGS6      INIT_ARGS5; INIT_ARG(6)
 #define INIT_ARG_TYPES6 INIT_ARG_TYPES5, INIT_ARG_TYPE(6)
 #define CALL_ARGS6      CALL_ARGS5, GET_ARG(6)
-DEFINE_SLOT(6, ARG_TYPES6, ARG_TYPE_NAMES6, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(6, ARG_TYPES6, ARG_TYPE_NAMES6, ARGS6, INIT_ARGS6,
             INIT_ARG_TYPES6, CALL_ARGS6)
 
 #define ARG_TYPES7      ARG_TYPES6, typename P7
@@ -471,7 +482,7 @@ DEFINE_SLOT(6, ARG_TYPES6, ARG_TYPE_NAMES6, ARGS1, INIT_ARGS1,
 #define INIT_ARGS7      INIT_ARGS6; INIT_ARG(7)
 #define INIT_ARG_TYPES7 INIT_ARG_TYPES6, INIT_ARG_TYPE(7)
 #define CALL_ARGS7      CALL_ARGS6, GET_ARG(7)
-DEFINE_SLOT(7, ARG_TYPES7, ARG_TYPE_NAMES7, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(7, ARG_TYPES7, ARG_TYPE_NAMES7, ARGS7, INIT_ARGS7,
             INIT_ARG_TYPES7, CALL_ARGS7)
 
 #define ARG_TYPES8      ARG_TYPES7, typename P8
@@ -480,7 +491,7 @@ DEFINE_SLOT(7, ARG_TYPES7, ARG_TYPE_NAMES7, ARGS1, INIT_ARGS1,
 #define INIT_ARGS8      INIT_ARGS7; INIT_ARG(8)
 #define INIT_ARG_TYPES8 INIT_ARG_TYPES7, INIT_ARG_TYPE(8)
 #define CALL_ARGS8      CALL_ARGS7, GET_ARG(8)
-DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, ARGS8, INIT_ARGS8,
             INIT_ARG_TYPES8, CALL_ARGS8)
 
 #define ARG_TYPES9      ARG_TYPES8, typename P9
@@ -489,7 +500,7 @@ DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, ARGS1, INIT_ARGS1,
 #define INIT_ARGS9      INIT_ARGS8; INIT_ARG(9)
 #define INIT_ARG_TYPES9 INIT_ARG_TYPES8, INIT_ARG_TYPE(9)
 #define CALL_ARGS9      CALL_ARGS8, GET_ARG(9)
-DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS1, INIT_ARGS1,
+DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS8, INIT_ARGS8,
             INIT_ARG_TYPES9, CALL_ARGS9)
 
 // Undefine macros to avoid name polution.

@@ -40,7 +40,9 @@ static const Variant kOpenDefaultArgs[] = {
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
 
-class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
+class XMLHttpRequest
+    : public ScriptableHelper<XMLHttpRequestInterface,
+                              ScriptableInterface::OWNERSHIP_SHARED> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
@@ -95,16 +97,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     Abort();
   }
 
-  // This object is script owned, because it is created in script with
-  // new XMLHttpRequest().
-  virtual OwnershipPolicy Attach() {
-    return OWNERSHIP_TRANSFERRABLE;
-  }
-  virtual bool Detach() {
-    delete this;
-    return true;
-  }
-
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
     return onreadystatechange_signal_.Connect(handler);
   }
@@ -129,6 +121,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode Open(const char *method, const char *url, bool async,
                              const char *user, const char *password) {
+    DLOG("XMLHttpRequest: Open(%s, %s, %d, %s, %s)",
+         method, url, async, user, password);
+
     Abort();
     if (!method || !url)
       return NULL_POINTER_ERR;
@@ -605,7 +600,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void DecodeResponseText() {
     std::string encoding(response_encoding_);
     DLOG("XMLHttpRequest: content_type: %s", response_content_type_.c_str());
-#if 0
     const char *content_type = response_content_type_.c_str();
     std::string::size_type content_type_len = response_content_type_.length();
     if (content_type_len == 0 ||
@@ -613,28 +607,25 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         strcasecmp(content_type, "application/xml") == 0 ||
         (content_type_len > 4 &&
          strcasecmp(content_type + content_type_len - 4, "+xml") == 0)) {
-#endif
       // The content type is XML.
       response_dom_ = CreateDOMDocument();
       response_dom_->Attach();
-      if (!ParseXMLIntoDOM(response_body_.c_str(), url_.c_str(), response_dom_,
+      if (!ParseXMLIntoDOM(response_body_, url_.c_str(), response_dom_,
                            &encoding)) {
         response_dom_->Detach();
         response_dom_ = NULL;
       }
-#if 0
     } else if (strcasecmp(content_type, "text/html") == 0) {
-      // The content type is HTML.
-      // The spec 20071026 doesn't have this feature 
+      // The content type is HTML. The current spec 20071026 doesn't have
+      // this feature, but the Gadget API requires it. 
       response_dom_ = CreateDOMDocument();
       response_dom_->Attach();
-      if (!ParseHTMLIntoDOM(response_body_.c_str(), url_.c_str(), response_dom_,
+      if (!ParseHTMLIntoDOM(response_body_, url_.c_str(), response_dom_,
                             &encoding)) {
         response_dom_->Detach();
         response_dom_ = NULL;
       }
     }
-#endif
 
     // NOTE: Here the priority of encodings does not conform to XMLHttpRequest
     // specification (and XML, HTTP, HTML specifications), because for now
@@ -726,16 +717,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return INVALID_STATE_ERR;
   }
 
-  class XMLHttpRequestException : public ScriptableHelper<ScriptableInterface> {
+  class XMLHttpRequestException : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
 
     XMLHttpRequestException(ExceptionCode code) : code_(code) {
       RegisterSimpleProperty("code", &code_);
     }
-    // This is a script owned object.
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
    private:
     ExceptionCode code_;

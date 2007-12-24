@@ -23,10 +23,12 @@
 
 namespace ggadget {
 
+class OptionsInterface;
+
 /**
  * DetailsView data structure. It has no built-in logic.
  */
-class DetailsView : public ScriptableHelper<ScriptableInterface> {
+class DetailsView : public ScriptableHelperOwnershipShared {
  public:
   DEFINE_CLASS_ID(0xf75ad2d79331421a, ScriptableInterface);
 
@@ -57,19 +59,19 @@ class DetailsView : public ScriptableHelper<ScriptableInterface> {
    */
   void SetContentFromItem(ContentItem *item);
 
-  std::string GetSource() const { return source_; }
-  Date GetTimeCreated() const { return time_created_; }
-  std::string GetText() const { return text_; }
-  bool IsTimeAbsolute() const { return time_absolute_; }
-  ContentItem::Layout GetLayout() const { return layout_; }
+  std::string GetSource() const;
+  Date GetTimeCreated() const;
+  std::string GetText() const;
+  bool IsTimeAbsolute() const;
+  ContentItem::Layout GetLayout() const;
 
   /**
    * Gets and Sets if the content given to be displayed as HTML or plain text.
    * Use this in conjunction with the @c SetContent() or @c SetContentFromItem()
    * methods. Default is @c false.
    */
-  bool ContentIsHTML() { return is_html_; }
-  void SetContentIsHTML(bool is_html) { is_html_ = is_html; } 
+  bool ContentIsHTML();
+  void SetContentIsHTML(bool is_html); 
 
   /**
    * Gets and Sets if the content is an XML view. The plugin calls
@@ -77,28 +79,19 @@ class DetailsView : public ScriptableHelper<ScriptableInterface> {
    * file, and sets this property to @c true. If the view file has the '.xml'
    * extension, this property will be set to @c true automatically.
    */
-  bool ContentIsView() const { return is_view_; }
-  void SetContentIsView(bool is_view) { is_view_ = is_view; }
+  bool ContentIsView() const;
+  void SetContentIsView(bool is_view);
+
+  const OptionsInterface *GetDetailsViewData() const;
+  OptionsInterface *GetDetailsViewData();
 
  public:
-  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-  virtual bool Detach() { delete this; return true; }
-  // Make it possible to assign internal and detailsViewData in script.
-  virtual bool IsStrict() { return false; }
-
- public:
-  static DetailsView *CreateInstance() { return new DetailsView; }
+  static DetailsView *CreateInstance();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DetailsView);
-
-  std::string source_;
-  Date time_created_;
-  std::string text_;
-  bool time_absolute_;
-  ContentItem::Layout layout_;
-  bool is_html_;
-  bool is_view_;
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace ggadget

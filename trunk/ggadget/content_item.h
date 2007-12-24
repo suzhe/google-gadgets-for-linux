@@ -32,7 +32,7 @@ class DetailsView;
 class ScriptableCanvas;
 class View;
 
-class ContentItem : public ScriptableHelper<ScriptableInterface> {
+class ContentItem : public ScriptableHelperOwnershipShared {
  public:
   DEFINE_CLASS_ID(0x062fc66bb03640ca, ScriptableInterface);
 
@@ -106,10 +106,6 @@ class ContentItem : public ScriptableHelper<ScriptableInterface> {
 
  protected:
   virtual ~ContentItem();
-
-  /** This object is reference counted. */
-  virtual OwnershipPolicy Attach();
-  virtual bool Detach();
 
  public:
   /** Called when this content item is added into a content area. */

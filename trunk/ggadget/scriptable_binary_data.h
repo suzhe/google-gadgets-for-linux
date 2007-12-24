@@ -28,7 +28,7 @@ namespace ggadget {
  * Its ownership policy is transferrable, that is, the script engine owns
  * it when it is passed from native code to the script engine.
  */
-class ScriptableBinaryData : public ScriptableHelper<ScriptableInterface> {
+class ScriptableBinaryData : public ScriptableHelperOwnershipShared {
  public:
   DEFINE_CLASS_ID(0x381e0cd617734500, ScriptableInterface);
 
@@ -39,7 +39,7 @@ class ScriptableBinaryData : public ScriptableHelper<ScriptableInterface> {
       : data_(data) { }
 
   ScriptableBinaryData(const ScriptableBinaryData &data)
-      : ScriptableHelper<ScriptableInterface>(),
+      : ScriptableHelperOwnershipShared(),
         data_(data.data_) { }
 
   std::string data() const { return data_; }
@@ -49,9 +49,6 @@ class ScriptableBinaryData : public ScriptableHelper<ScriptableInterface> {
     data_ = data.data_;
     return *this;
   }
-
-  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-  virtual bool Detach() { delete this; return true; }
 
  private:
   std::string data_;

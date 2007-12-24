@@ -33,7 +33,6 @@ namespace ggadget {
 static const int kDefaultEditElementWidth = 60;
 static const int kDefaultEditElementHeight = 16;
 static const Color kDefaultBackgroundColor(1, 1, 1);
-static const char *const kOnChangeEvent = "onchange";
 
 class EditElement::Impl {
  public:

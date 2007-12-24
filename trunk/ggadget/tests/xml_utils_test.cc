@@ -133,24 +133,24 @@ TEST(XMLUtils, ConvertStringToUTF8) {
   std::string output;
   // ConvertStringToUTF8 returns false because it has no enough information
   // to judge the encoding.
-  ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
-  ASSERT_FALSE(ConvertStringToUTF8(std::string(src), NULL, &output));
+  ASSERT_FALSE(ConvertStringToUTF8(src, NULL, &output));
 
   src = "\xEF\xBB\xBFUTF8 String, with BOM";
-  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_TRUE(ConvertStringToUTF8(src, NULL, &output));
   ASSERT_STREQ(src, output.c_str());
   std::string encoding;
-  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), &encoding, &output));
+  ASSERT_TRUE(ConvertStringToUTF8(src, &encoding, &output));
   ASSERT_STREQ(src, output.c_str());
   ASSERT_STREQ("UTF-8", encoding.c_str());
 
   // The last '\0' omitted, because the compiler will add it for us. 
   const char utf16le[] = "\xFF\xFEU\0T\0F\0001\0006\0 \0S\0t\0r\0i\0n\0g";
   const char *dest = "\xEF\xBB\xBFUTF16 String";
-  ASSERT_TRUE(ConvertStringToUTF8(utf16le, sizeof(utf16le), NULL, &output));
+  ASSERT_TRUE(ConvertStringToUTF8(std::string(utf16le, sizeof(utf16le)),
+                                  NULL, &output));
   ASSERT_STREQ(dest, output.c_str());
   encoding.clear();
-  ASSERT_TRUE(ConvertStringToUTF8(utf16le, sizeof(utf16le),
+  ASSERT_TRUE(ConvertStringToUTF8(std::string(utf16le, sizeof(utf16le)),
                                   &encoding, &output));
   ASSERT_STREQ(dest, output.c_str());
   ASSERT_STREQ("UTF-16", encoding.c_str());
@@ -158,16 +158,16 @@ TEST(XMLUtils, ConvertStringToUTF8) {
   src = "\xBA\xBA\xD7\xD6";
   dest = "\xE6\xB1\x89\xE5\xAD\x97";
   encoding = "GB2312";
-  ASSERT_TRUE(ConvertStringToUTF8(src, strlen(src), &encoding, &output));
+  ASSERT_TRUE(ConvertStringToUTF8(src, &encoding, &output));
   ASSERT_STREQ(dest, output.c_str());
   ASSERT_STREQ("GB2312", encoding.c_str());
 
-  ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_FALSE(ConvertStringToUTF8(src, NULL, &output));
   ASSERT_STREQ("", output.c_str());
 
   src = "<?xml version=\"1.0\" encoding=\"gb2312\"?>\n"
         "<root>\xBA\xBA\xD7\xD6</root>\n";
-  ASSERT_FALSE(ConvertStringToUTF8(src, strlen(src), NULL, &output));
+  ASSERT_FALSE(ConvertStringToUTF8(src, NULL, &output));
   ASSERT_STREQ("", output.c_str());
 }
 

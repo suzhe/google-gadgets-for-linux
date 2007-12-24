@@ -32,9 +32,6 @@
 
 namespace ggadget {
 
-static const char kOnChangeEvent[] = "onchange";
-static const char kOnTextChangeEvent[] = "ontextchange";
-
 static const char *kTypeNames[] = {
   "dropdown", "droplist"
 };

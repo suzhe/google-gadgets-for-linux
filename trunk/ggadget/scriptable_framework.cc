@@ -57,12 +57,11 @@ class ScriptableFramework::Impl {
         system_(gadget_host) {
   }
 
-  class PermanentScriptable : public ScriptableHelper<ScriptableInterface> {
+  class PermanentScriptable : public ScriptableHelperNativePermanent {
     DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
-    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  class ScriptableAudioclip : public ScriptableHelper<ScriptableInterface> {
+  class ScriptableAudioclip : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0xa9f42ea54e2a4d13, ScriptableInterface);
     ScriptableAudioclip(AudioclipInterface *clip)
@@ -101,9 +100,6 @@ class ScriptableFramework::Impl {
       delete onstatechange_slot_;
       onstatechange_slot_ = NULL;
     }
-
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     void OnStateChange(AudioclipInterface::State state) {
       if (onstatechange_slot_) {
@@ -186,8 +182,7 @@ class ScriptableFramework::Impl {
     }
   };
 
-  class ScriptableWirelessAccessPoint
-      : public ScriptableHelper<ScriptableInterface> {
+  class ScriptableWirelessAccessPoint : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0xcf8c688383b54c43, ScriptableInterface);
     ScriptableWirelessAccessPoint(WirelessAccessPointInterface *ap)
@@ -216,9 +211,6 @@ class ScriptableFramework::Impl {
       ap_->Destroy();
       ap_ = NULL;
     }
-
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     void Connect(Slot *method) {
       ap_->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
@@ -415,7 +407,7 @@ class ScriptableFramework::Impl {
         WirelessAccessPointInterface *ap = wireless->GetWirelessAccessPoint(i);
         aps[i] = Variant(ap ? new ScriptableWirelessAccessPoint(ap) : NULL);
       }
-      return ScriptableArray::Create(aps, static_cast<size_t>(count), false);
+      return ScriptableArray::Create(aps, static_cast<size_t>(count));
     }
 
     WirelessAccessPointInterface *GetAPByName(const char *ap_name) {
@@ -540,7 +532,7 @@ class ScriptableFramework::Impl {
   ScriptableArray *BrowseForFiles(const char *filter) {
     std::vector<std::string> files;
     gadget_host_->BrowseForFiles(filter, true, &files);
-    return ScriptableArray::Create(files.begin(), files.size(), false);
+    return ScriptableArray::Create(files.begin(), files.size());
   }
 
   GadgetHostInterface *gadget_host_;

@@ -104,7 +104,7 @@ class DisplayWindow::Impl {
           actual_count++;
         }
       }
-      return ScriptableArray::Create(array, actual_count, false);
+      return ScriptableArray::Create(array, actual_count);
     }
 
     void SetEnabled(bool enabled) {
@@ -349,6 +349,7 @@ class DisplayWindow::Impl {
       }
       case CLASS_LIST:
         switch (ctrl_type) {
+          default:
           case TYPE_LIST_OPEN: {
             div = CreateFrameDiv(elements);
             ListBoxElement *element = down_cast<ListBoxElement *>(
@@ -363,6 +364,7 @@ class DisplayWindow::Impl {
             div = CreateFrameDiv(elements);
             ComboBoxElement *element = down_cast<ComboBoxElement *>(
                 elements->AppendElement("combobox", ctrl_id));
+            element->SetType(ComboBoxElement::COMBO_DROPLIST);
             element->GetListBox()->SetItemWidth(Variant("100%"));
             element->GetListBox()->SetItemHeight(Variant(kListItemHeight));
             element->SetBackground(Variant(kBackgroundColor));
@@ -370,13 +372,11 @@ class DisplayWindow::Impl {
             element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
             break;
           }
-          default:
-            LOG("Unknown button control type: %d", ctrl_type);
-            break;
         }
         break;
       case CLASS_BUTTON:
         switch (ctrl_type) {
+          default:
           case TYPE_BUTTON_PUSH: {
             ButtonElement *element = down_cast<ButtonElement *>(
                 elements->AppendElement("button", ctrl_id));
@@ -402,9 +402,6 @@ class DisplayWindow::Impl {
                                                   &Control::OnClicked));
             break;
           }
-          default:
-            LOG("Unknown button control type: %d", ctrl_type);
-            break;
         }
         break;
       default:

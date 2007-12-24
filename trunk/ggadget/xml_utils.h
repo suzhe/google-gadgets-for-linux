@@ -43,7 +43,7 @@ bool SetupViewFromFile(ViewInterface *view, const char *filename);
  * @return @c true if XML parsing succeeds. Errors during view/element
  *     hierarchy setup are only logged.
  */
-bool SetupViewFromXML(ViewInterface *view, const char *xml,
+bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
                       const char *filename);
 
 /**
@@ -54,7 +54,7 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
  */
 ElementInterface *AppendElementFromXML(ViewInterface *view,
                                        ElementsInterface *elements,
-                                       const char *xml);
+                                       const std::string &xml);
 
 /**
  * Creates an element according to XML definition and inserts it to elements.
@@ -65,7 +65,7 @@ ElementInterface *AppendElementFromXML(ViewInterface *view,
  */
 ElementInterface *InsertElementFromXML(ViewInterface *view,
                                        ElementsInterface *elements,
-                                       const char *xml,
+                                       const std::string &xml,
                                        const ElementInterface *before);
 
 /**
@@ -97,7 +97,7 @@ ElementInterface *InsertElementFromXML(ViewInterface *view,
  * @param table the string table to fill.
  * @return @c true if succeeds.
  */
-bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
+bool ParseXMLIntoXPathMap(const std::string &xml, const char *filename,
                           const char *root_element_name,
                           std::string *encoding,
                           GadgetStringMap *table);
@@ -120,14 +120,14 @@ bool CheckXMLName(const char *name);
  *     the detected encoding. Can be @c NULL if the caller doesn't need it.
  * @return @c true if succeeds.
  */
-bool ParseXMLIntoDOM(const char *xml, const char *filename,
+bool ParseXMLIntoDOM(const std::string &xml, const char *filename,
                      DOMDocumentInterface *domdoc,
                      std::string *encoding);
 
 /**
  * Parses HTML and build the DOM tree.
  */
-bool ParseHTMLIntoDOM(const char *html, const char *filename,
+bool ParseHTMLIntoDOM(const std::string &html, const char *filename,
                       DOMDocumentInterface *domdoc,
                       std::string *encoding);
 
@@ -144,14 +144,6 @@ bool ParseHTMLIntoDOM(const char *html, const char *filename,
  *     Can be @c NULL if the caller doesn't need it.
  * @param[out] dest result utf8 string.
  * @return @c true if it has enough information to detect the encoding.
- */
-bool ConvertStringToUTF8(const char *src, size_t src_length,
-                         std::string *encoding, std::string *dest);
-
-/**
- * Converts a string in given encoding to a utf8 string.
- *
- * Same as above function but takes a std::string object as source.
  */
 bool ConvertStringToUTF8(const std::string &src,
                          std::string *encoding, std::string *dest);

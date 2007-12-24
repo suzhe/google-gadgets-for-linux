@@ -22,17 +22,8 @@
 
 namespace ggadget {
 
-template <typename I> class ScriptableHelper;
-
 /** Create a new document. */
 DOMDocumentInterface *CreateDOMDocument();
-
-/**
- * Register global DOM scriptable objects such as DOMException and Node into
- * the given scriptable object.
- */
-void RegisterDOMGlobalScriptable(
-    ScriptableHelper<ScriptableInterface> *scriptable);
 
 } // namespace ggadget
 

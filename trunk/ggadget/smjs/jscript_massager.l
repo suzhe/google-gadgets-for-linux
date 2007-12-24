@@ -50,9 +50,12 @@ static const char *input_script_pos = NULL;
 static int ScriptInput(char *buf, int max_size) {
   int result = 0;
   while (*input_script_pos && max_size) {
-    max_size--;
-    result++;
-    *buf++ = *input_script_pos++;
+    if (*input_script_pos != '\r') {
+      max_size--;
+      result++;
+      *buf++ = *input_script_pos;
+    }
+    input_script_pos++;
   }
   return result;
 }
@@ -78,7 +81,6 @@ struct StackEntry {
 };
 static std::vector<StackEntry> stack;
 static const char *input_filename = NULL;
-static int input_lineno = 1;
 static std::string output;
 
 static StackEntry &GetStackTop() {
@@ -184,7 +186,6 @@ WS ([ \t\r\n]|{COMMENT})*
 BINARY_OP [\.<>=\*-+\^&\|%\?:]
 %x STR
 %x SSTR
-%x COMMENT
 %x OPTIONS
 %x AFTER_OPTIONS_PARAM
 %x ASSIGN_RIGHT
@@ -203,7 +204,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 <SSTR>\n ECHO; BEGIN(INITIAL); // Unterminated string.
 <SSTR>\\(.|\n) ECHO;
 
-<*>{COMMENT} ECHO;
+<INITIAL,OPTIONS,AFTER_OPTIONS_PARAM,ASSIGN_RIGHT>{COMMENT} ECHO;
 
 [a-zA-Z0-9_]options ECHO;
 
@@ -256,7 +257,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
   // Mathes ...= but not ...==.
   ECHO;
   LOG("Warning: %s:%d: Old JScript grammar: %s. Converted to %s",
-      input_filename, input_lineno + yylineno - 1, GetStackTop().buffer.c_str(),
+      input_filename, yylineno, GetStackTop().buffer.c_str(),
       GetState() == OPTIONS_DEFAULT_VALUE ? "putDefaultValue()" : "putValue()");
   ReplaceLast(")", ",");
   ReplaceLast("=", "");
@@ -295,7 +296,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 \}{WS};{WS}else({WS}|\{) {
   // JScript allows ';' between '}' and 'else', which is invalid in standard JS.
   LOG("Warning: %s:%d: Old JScript grammar: %s",
-      input_filename, input_lineno + yylineno - 1, yytext);
+      input_filename, yylineno, yytext);
   std::string text(yytext);
   text[text.find(';')] = ' ';
   ScriptOutput(text.c_str());
@@ -316,12 +317,21 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 
 std::string MassageJScript(const char *input,
                            const char *filename, int lineno) {
-  input_script_pos = input; 
+  input_script_pos = input;
   input_filename = filename;
-  input_lineno = lineno;
+  yyset_lineno(lineno);
   output.clear();
 
   while (yylex());
+
+#ifdef _DEBUG
+  FILE *debug_file = fopen("massage_result.js", "w");
+  if (debug_file) {
+    fputs(output.c_str(), debug_file);
+    fclose(debug_file);
+  }
+#endif
+
   return output;
 }
 

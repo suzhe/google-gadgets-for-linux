@@ -290,18 +290,16 @@ function Enumerator(coll) {
   last_item_ = this.item();
 }
 
-// Adapters Microsoft var date type.
+// Adapters Microsoft Vardate type.
 Date.prototype.getVarDate = function() {
   return this;
 }
 
-DetailsView.prototype.detailsViewData = {
-  getValue: function(key) {
-    return this.__details_view_data__ ?
-           this.__details_view_data__[key] : undefined;
-  },
-  putValue: function(key, value) {
-    if (!this.__details_view_data__) this.__details_view_data__ = { };
-    this.__details_view_data__[key] = value;
-  },
+function VBArray(array) {
+  this.toArray = function() { return array; };
+}
+
+// Adapters Microsoft VBArray type.
+Array.prototype.toArray = function() {
+  return this;
 };

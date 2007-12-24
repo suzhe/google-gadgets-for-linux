@@ -30,24 +30,27 @@ class NativeJSWrapper;
 /**
  * Converts a @c jsval to a @c Variant of desired type.
  * @param cx JavaScript context.
- * @param wrapper the related JavaScript object wrapper.
+ * @param owner the related JavaScript object wrapper in which the owner of
+ *     the converted value is wrapped.
  * @param prototype providing the desired target type information.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *wrapper,
+JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *owner,
                          const Variant &prototype,
                          jsval js_val, Variant *native_val);
 
 /**
  * Converts a @c jsval to a @c Variant depending source @c jsval type.
  * @param cx JavaScript context.
+ * @param owner the related JavaScript object wrapper in which the owner of
+ *     the converted value is wrapped.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertJSToNativeVariant(JSContext *cx,
+JSBool ConvertJSToNativeVariant(JSContext *cx, NativeJSWrapper *owner,
                                 jsval js_val, Variant *native_val);
 
 /**
@@ -65,7 +68,7 @@ std::string PrintJSValue(JSContext *cx, jsval js_val);
 /**
  * Converts JavaScript arguments to native for a native slot.
  */
-JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
+JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
                              Slot *slot, uintN argc, jsval *argv,
                              Variant **params, uintN *expected_argc);
 

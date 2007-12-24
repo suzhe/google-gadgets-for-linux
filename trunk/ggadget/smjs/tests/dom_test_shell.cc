@@ -25,7 +25,6 @@ class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d22, ScriptableInterface);
   GlobalObject() {
-    RegisterDOMGlobalScriptable(this);
   }
   virtual bool IsStrict() const { return false; }
 };

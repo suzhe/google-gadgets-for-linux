@@ -20,11 +20,9 @@ namespace ggadget {
 
 class ScriptableArray::Impl {
  public:
-  Impl(ScriptableArray *owner, Variant *array, size_t count, bool native_owned)
+  Impl(ScriptableArray *owner, Variant *array, size_t count)
       : owner_(owner),
-        array_(array), count_(count),
-        native_owned_(native_owned),
-        delete_from_script_(false) {
+        array_(array), count_(count) {
   }
 
   ScriptableArray *ToArray() { return owner_; }
@@ -32,13 +30,10 @@ class ScriptableArray::Impl {
   ScriptableArray *owner_;
   Variant *array_;
   size_t count_;
-  bool native_owned_;
-  bool delete_from_script_;
 };
 
-ScriptableArray::ScriptableArray(Variant *array, size_t count,
-                                 bool native_owned)
-    : impl_(new Impl(this, array, count, native_owned)) {
+ScriptableArray::ScriptableArray(Variant *array, size_t count)
+    : impl_(new Impl(this, array, count)) {
   RegisterConstant("count", count);
   RegisterMethod("item", NewSlot(this, &ScriptableArray::GetItem));
   // Simulates JavaScript array.
@@ -49,10 +44,8 @@ ScriptableArray::ScriptableArray(Variant *array, size_t count,
 }
 
 ScriptableArray::~ScriptableArray() {
-  ASSERT(impl_->native_owned_ || impl_->delete_from_script_);
   delete [] impl_->array_;
   delete impl_;
-  impl_ = NULL;
 }
 
 size_t ScriptableArray::GetCount() const {
@@ -61,19 +54,6 @@ size_t ScriptableArray::GetCount() const {
 
 Variant ScriptableArray::GetItem(size_t index) const {
   return index < impl_->count_ ? impl_->array_[index] : Variant();
-}
-
-ScriptableInterface::OwnershipPolicy ScriptableArray::Attach() {
-  return impl_->native_owned_ ? NATIVE_OWNED : OWNERSHIP_TRANSFERRABLE;
-}
-
-bool ScriptableArray::Detach() {
-  if (!impl_->native_owned_) {
-    impl_->delete_from_script_ = true;
-    delete this;
-    return true;
-  }
-  return false;
 }
 
 } // namespace ggadget

@@ -26,8 +26,6 @@
 
 namespace ggadget {
 
-static const char *const kOnChangeEvent = "onchange";
-
 static const char *kOrientationNames[] = {
   "vertical", "horizontal"
 };

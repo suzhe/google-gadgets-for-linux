@@ -18,6 +18,7 @@
 #define GGADGET_SMJS_JS_FUNCTION_SLOT_H__
 
 #include <map>
+#include <string>
 #include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
@@ -33,14 +34,14 @@ class NativeJSWrapper;
 class JSFunctionSlot : public Slot {
  public:
   JSFunctionSlot(const Slot *prototype, JSContext *context,
-                 NativeJSWrapper *wrapper, jsval function_val);
+                 NativeJSWrapper *owner, JSObject *function);
   virtual ~JSFunctionSlot();
 
-  virtual Variant Call(int argc, Variant argv[]) const;
+  virtual Variant Call(int argc, const Variant argv[]) const;
 
   virtual bool HasMetadata() const { return prototype_ != NULL; }
   virtual Variant::Type GetReturnType() const {
-    return prototype_ ? prototype_->GetReturnType() : Variant::TYPE_VOID;
+    return prototype_ ? prototype_->GetReturnType() : Variant::TYPE_VARIANT;
   }
   virtual int GetArgCount() const {
     return prototype_ ? prototype_->GetArgCount() : 0;
@@ -49,13 +50,17 @@ class JSFunctionSlot : public Slot {
     return prototype_ ? prototype_->GetArgTypes() : NULL;
   }
   virtual bool operator==(const Slot &another) const {
-    return function_val_ ==
-           down_cast<const JSFunctionSlot *>(&another)->function_val_;
+    return function_ ==
+           down_cast<const JSFunctionSlot *>(&another)->function_;
   }
 
-  /** Called by the wrapper to mark this object is reachable from GC roots. */
+  JSContext *js_context() const { return context_; }
+  JSObject *js_function() const { return function_; }
+  std::string function_info() const { return function_info_; } 
+
+  /** Called by the owner to mark this object is reachable from GC roots. */
   void Mark();
-  /** Called by the wrapper when the wrapper is about to be finalized. */ 
+  /** Called by the owner when the owner is about to be finalized. */ 
   void Finalize();
 
  private:
@@ -65,9 +70,9 @@ class JSFunctionSlot : public Slot {
 
   const Slot *prototype_;
   JSContext *context_;
-  NativeJSWrapper *wrapper_;
-  jsval function_val_;
-  bool finalized_;
+  NativeJSWrapper *owner_;
+  JSObject *function_;
+  std::string function_info_;
 };
 
 } // namespace smjs

@@ -420,6 +420,8 @@ template <typename T>
 struct VariantValue<T *> {
   T *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_SCRIPTABLE);
+    if (v.type_ != Variant::TYPE_SCRIPTABLE)
+      return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
            down_cast<T *>(v.v_.scriptable_value_) : NULL;
   }
@@ -436,6 +438,9 @@ struct VariantValue<const T *> {
   const T *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_CONST_SCRIPTABLE ||
            v.type_ == Variant::TYPE_SCRIPTABLE);
+    if (v.type_ != Variant::TYPE_CONST_SCRIPTABLE &&
+        v.type_ != Variant::TYPE_SCRIPTABLE)
+      return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
            down_cast<const T *>(v.v_.const_scriptable_value_) : NULL;
   }
@@ -458,7 +463,16 @@ SPECIALIZE_VARIANT_VALUE(char, int64_value_)
 SPECIALIZE_VARIANT_VALUE(bool, bool_value_)
 SPECIALIZE_VARIANT_VALUE(float, double_value_)
 SPECIALIZE_VARIANT_VALUE(double, double_value_)
-SPECIALIZE_VARIANT_VALUE(Slot *, slot_value_)
+
+template <>
+struct VariantValue<Slot *> {
+  Slot *operator()(const Variant &v) {
+    ASSERT(v.type_ == Variant::TYPE_SLOT);
+    if (v.type_ != Variant::TYPE_SLOT)
+      return NULL;
+    return v.v_.slot_value_;
+  }
+};
 
 /**
  * Get the value of a @c Variant.
@@ -470,6 +484,8 @@ template <>
 struct VariantValue<const char *> {
   const char *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
+    if (v.type_ != Variant::TYPE_STRING)
+      return NULL;
     return v.v_.string_value_ ? v.v_.string_value_->c_str() : NULL;
   }
 };
@@ -482,6 +498,8 @@ template <>
 struct VariantValue<std::string> {
   std::string operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
+    if (v.type_ != Variant::TYPE_STRING)
+      return "";
     return v.v_.string_value_ ? *v.v_.string_value_ : std::string();
   }
 };
@@ -494,6 +512,8 @@ template <>
 struct VariantValue<const std::string &> {
   std::string operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
+    if (v.type_ != Variant::TYPE_STRING)
+      return "";
     return v.v_.string_value_ ? *v.v_.string_value_ : std::string();
   }
 };
@@ -508,6 +528,8 @@ template <>
 struct VariantValue<const UTF16Char *> {
   const UTF16Char *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
+    if (v.type_ != Variant::TYPE_UTF16STRING)
+      return NULL;
     return v.v_.utf16_string_value_ ? v.v_.utf16_string_value_->c_str() : NULL;
   }
 };
@@ -520,6 +542,8 @@ template <>
 struct VariantValue<UTF16String> {
   UTF16String operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
+    if (v.type_ != Variant::TYPE_UTF16STRING)
+      return UTF16String();
     return v.v_.utf16_string_value_ ? *v.v_.utf16_string_value_ : UTF16String();
   }
 };
@@ -532,6 +556,8 @@ template <>
 struct VariantValue<const UTF16String &> {
   UTF16String operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
+    if (v.type_ != Variant::TYPE_UTF16STRING)
+      return UTF16String();
     return v.v_.utf16_string_value_ ? *v.v_.utf16_string_value_ : UTF16String();
   }
 };
@@ -544,6 +570,8 @@ template <>
 struct VariantValue<JSONString> {
   JSONString operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_JSON);
+    if (v.type_ != Variant::TYPE_JSON)
+      return JSONString("");
     return JSONString(v.v_.string_value_ ? *v.v_.string_value_ : std::string());
   }
 };
@@ -556,6 +584,8 @@ template <>
 struct VariantValue<const JSONString &> {
   JSONString operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_JSON);
+    if (v.type_ != Variant::TYPE_JSON)
+      return JSONString("");
     return JSONString(v.v_.string_value_ ? *v.v_.string_value_ : std::string());
   }
 };

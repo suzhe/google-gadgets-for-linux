@@ -26,6 +26,7 @@ namespace ggadget {
 /**
  * Struct for holding color information.
  * Currently, there is no support for the alpha channel.
+ * TODO: color.cc ?
  */
 struct Color {
   Color() : red(0), green(0), blue(0) {
@@ -36,6 +37,10 @@ struct Color {
     ASSERT(g >= 0. && g <= 1.);
     ASSERT(b >= 0. && b <= 1.);
   };
+
+  explicit Color(const char *name) {
+    ASSERT(name && ParseColorName(name, this, NULL));
+  }
 
   Color(const Color &c) : red(c.red), green(c.green), blue(c.blue) {}
 

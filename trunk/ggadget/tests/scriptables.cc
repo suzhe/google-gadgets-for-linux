@@ -145,7 +145,7 @@ TestScriptable2::~TestScriptable2() {
 }
 
 ScriptableInterface::OwnershipPolicy TestScriptable2::Attach() {
-  return script_owned_ ? OWNERSHIP_TRANSFERRABLE : NATIVE_OWNED;
+  return script_owned_ ? OWNERSHIP_SHARED : NATIVE_OWNED;
 }
 
 bool TestScriptable2::Detach() {
@@ -177,7 +177,7 @@ ScriptableArray *TestScriptable2::ConcatArray(ScriptableInterface *array1,
     new_array[i] = array1->GetProperty(i);
   for (size_t i = 0; i < count2; i++)
     new_array[i + count1] = array2->GetProperty(i);
-  return ScriptableArray::Create(new_array, count1 + count2, false);
+  return ScriptableArray::Create(new_array, count1 + count2);
 }
 
 void TestScriptable2::SetCallback(Slot *callback) {

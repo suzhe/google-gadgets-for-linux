@@ -21,6 +21,7 @@
 #include "image.h"
 #include "logger.h"
 #include "file_manager_interface.h"
+#include "string_utils.h"
 
 namespace ggadget {
 
@@ -29,24 +30,9 @@ class Texture::Impl {
   Impl(const GraphicsInterface *graphics,
        FileManagerInterface *file_manager,
        const char *name)
-      : image_(NULL), color_(.0, .0, .0), opacity_(1.0), name_(name) {
-    ASSERT(name);
-    size_t name_len = strlen(name);
-    if (name[0] == '#' && (name_len == 7 || name_len == 9)) {
-      int r = 0, g = 0, b = 0;
-      int alpha = 255;
-      if (name_len == 7) {
-        int result = sscanf(name + 1, "%02x%02x%02x", &r, &g, &b);
-        if (result < 3)
-          LOG("Invalid color: %s", name);
-      } else {
-        int result = sscanf(name + 1, "%02x%02x%02x%02x", &alpha, &r, &g, &b);
-        if (result < 4)
-          LOG("Invalid color: %s", name);
-      }
-      color_ = Color(r / 255.0, g / 255.0, b / 255.0);
-      opacity_ = alpha / 255.0;
-    } else {
+      : image_(NULL), color_(.0, .0, .0), opacity_(1.0),
+        name_(name ? name : "") {
+    if (!ParseColorName(name_, &color_, &opacity_)) {
       image_ = new Image(graphics, file_manager, name, false);
     }
   }

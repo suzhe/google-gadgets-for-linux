@@ -34,7 +34,7 @@ class ScriptableEvent::Impl {
   ScriptableArray *ScriptGetDragFiles() {
     ASSERT(event_->IsDragEvent());
     const DragEvent *drag_event = static_cast<const DragEvent *>(event_);
-    return ScriptableArray::Create(drag_event->GetDragFiles(), false);
+    return ScriptableArray::Create(drag_event->GetDragFiles());
   }
 
   bool ScriptGetReturnValue() {
@@ -143,6 +143,10 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_UNDOCK: return kOnUndockEvent;
     case Event::EVENT_FOCUS_IN: return kOnFocusInEvent;
     case Event::EVENT_FOCUS_OUT: return kOnFocusOutEvent;
+    case Event::EVENT_CHANGE: return kOnChangeEvent;
+    // Windows version returns "onchange" for "ontextchange" events,
+    // so we do the same. Both "onchange" and "ontextchange" are of
+    // EVENT_CHANGE type.
 
     case Event::EVENT_MOUSE_DOWN: return kOnMouseDownEvent;
     case Event::EVENT_MOUSE_UP: return kOnMouseUpEvent;

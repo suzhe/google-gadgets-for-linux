@@ -139,11 +139,11 @@ class ContentAreaElement::Impl {
       for (size_t i = 0; i < item_count && dead && !modified_; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
-        int temp_x, temp_y, temp_width, item_height;
-        item->GetRect(&temp_x, &temp_y, &temp_width, &item_height);
+        int temp_x, temp_y, temp_width, temp_height;
+        item->GetRect(&temp_x, &temp_y, &temp_width, &temp_height);
         if (dead)
           break;
-        content_height_ = std::max(content_height_, item_height);
+        content_height_ = std::max(content_height_, temp_y + temp_height);
       }
     } else {
       for (size_t i = 0; i < item_count && !dead && !modified_ ; i++) {
@@ -240,7 +240,7 @@ class ContentAreaElement::Impl {
 
   ScriptableArray *ScriptGetContentItems() {
     return ScriptableArray::Create(content_items_.begin(),
-                                   content_items_.size(), false);
+                                   content_items_.size());
   }
 
   void ScriptSetContentItems(ScriptableInterface *array) {
@@ -290,7 +290,7 @@ class ContentAreaElement::Impl {
   ScriptableArray *ScriptGetPinImages() {
     Variant *values = new Variant[3];
     GetPinImages(&values[0], &values[1], &values[2]);
-    return ScriptableArray::Create(values, 3, false);
+    return ScriptableArray::Create(values, 3);
   }
 
   void ScriptSetPinImages(ScriptableInterface *array) {
@@ -632,8 +632,10 @@ void ContentAreaElement::Layout() {
   ScrollingElement::Layout();
   impl_->Layout();
 
-  if (UpdateScrollBar(static_cast<int>(ceil(GetClientWidth())),
-                      impl_->content_height_)) {
+  int y_range = static_cast<int>(ceil(impl_->content_height_ -
+                                      GetClientHeight()));
+  if (y_range < 0) y_range = 0;
+  if (UpdateScrollBar(0, y_range)) {
     // Layout again to reflect change of the scroll bar.
     Layout();
   }

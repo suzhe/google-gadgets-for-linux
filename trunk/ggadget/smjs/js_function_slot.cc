@@ -26,40 +26,40 @@ namespace smjs {
 
 JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
                                JSContext *context,
-                               NativeJSWrapper *wrapper,
-                               jsval function_val)
+                               NativeJSWrapper *owner,
+                               JSObject *function)
     : prototype_(prototype),
       context_(context),
-      wrapper_(wrapper),
-      function_val_(function_val),
-      finalized_(false) {
-  // Because the function may have a indirect reference to the wrapper through
+      owner_(owner),
+      function_(function) {
+  ASSERT(function &&
+         JS_TypeOfValue(context, OBJECT_TO_JSVAL(function)) == JSTYPE_FUNCTION);
+  // Because the function may have a indirect reference to the owner through
   // the closure, we can't simply add the function to root, otherwise there
-  // may be circled references if the native object's ownership is shared or
-  // transferred : native object =C++=> this slot =C++=> js function =JS=>
-  // closure =JS=> js wrapper object =C++=> native object.
+  // may be circular references if the native object's ownership is shared:
+  //     native object =C++=> this slot =C++=> js function =JS=>
+  //     closure =JS=> js wrapper object(owner) =C++=> native object.
   // This circle prevents the wrapper object and the function from being GC'ed.
-  if (wrapper)
-    wrapper->AddJSFunctionSlot(this);
-  else
-    JS_AddRoot(context, &function_val_);
+  // Break the circle by letting the owner manage this object.
+  if (owner)
+    owner->AddJSFunctionSlot(this);
+
+  int lineno;
+  JSScriptContext::GetCurrentFileAndLine(context, &function_info_, &lineno);
+  function_info_ += StringPrintf(":%d", lineno);
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
-  if (!finalized_) {
-    if (wrapper_)
-      wrapper_->RemoveJSFunctionSlot(this);
-    else
-      JS_RemoveRoot(context_, &function_val_);
-  }
+  if (owner_)
+    owner_->RemoveJSFunctionSlot(this);
 }
 
-Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
+Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
   Variant return_value(GetReturnType());
   if (JS_IsExceptionPending(context_))
     return return_value;
 
-  if (finalized_) {
+  if (!function_) {
     JS_ReportError(context_, "Finalized JavaScript function still be called");
     return return_value;
   }
@@ -81,8 +81,8 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
   }
 
   jsval rval;
-  if (JS_CallFunctionValue(context_, NULL, function_val_, argc, js_args.get(),
-                           &rval) &&
+  if (JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
+                           argc, js_args.get(), &rval) &&
       !ConvertJSToNative(context_, NULL, return_value, rval, &return_value)) {
     JS_ReportError(context_,
                    "Failed to convert JS function return value(%s) to native",
@@ -92,12 +92,11 @@ Variant JSFunctionSlot::Call(int argc, Variant argv[]) const {
 }
 
 void JSFunctionSlot::Mark() {
-  JS_MarkGCThing(context_, JSVAL_TO_OBJECT(function_val_),
-                 "JSFunctionSlot", NULL);
+  JS_MarkGCThing(context_, function_, "JSFunctionSlot", NULL);
 }
 
 void JSFunctionSlot::Finalize() {
-  finalized_ = true;
+  function_ = NULL;
 }
 
 } // namespace smjs

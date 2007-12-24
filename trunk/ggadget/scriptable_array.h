@@ -27,7 +27,7 @@ namespace ggadget {
  * The script can access this object by getting "count" property and "item"
  * method, or with an Enumerator.
  */
-class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
+class ScriptableArray : public ScriptableHelperOwnershipShared {
  public:
   DEFINE_CLASS_ID(0x65cf1406985145a9, ScriptableInterface);
 
@@ -38,16 +38,13 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
    * @param start the start position of an iterator. It can also be the start
    *     address of an array. A copy of this array will be made. 
    * @param count number of elements in the array.
-   * @param native_owned if @c true, the created @c ScriptableArray is owned by
-   *     the native code and the holder of this pointer is responsible to delete
-   *     it. if @c false, the ownership will be transferred to script side.
    */
   template <typename I>
-  static ScriptableArray *Create(I start, size_t count, bool native_owned) {
+  static ScriptableArray *Create(I start, size_t count) {
     Variant *variant_array = new Variant[count];
     for (size_t i = 0; i < count; i++)
       variant_array[i] = Variant(*start++);
-    return new ScriptableArray(variant_array, count, native_owned);
+    return new ScriptableArray(variant_array, count);
   }
 
   /**
@@ -55,10 +52,10 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
    * A copy of the input array will be made. 
    */
   template <typename T>
-  static ScriptableArray *Create(T *const *array, bool native_owned) {
+  static ScriptableArray *Create(T *const *array) {
     size_t size = 0;
     for (; array[size]; size++);
-    return Create(array, size, native_owned);
+    return Create(array, size);
   }
 
   /**
@@ -66,19 +63,15 @@ class ScriptableArray : public ScriptableHelper<ScriptableInterface> {
    * The created @c ScriptableArray will take the ownership of the input
    * array.
    */
-  static ScriptableArray *Create(Variant *array, size_t count,
-                                 bool native_owned) {
-    return new ScriptableArray(array, count, native_owned);
+  static ScriptableArray *Create(Variant *array, size_t count) {
+    return new ScriptableArray(array, count);
   }
 
   size_t GetCount() const;
   Variant GetItem(size_t index) const;
 
-  virtual OwnershipPolicy Attach();
-  virtual bool Detach();
-
  private:
-  ScriptableArray(Variant *array, size_t count, bool native_owned);
+  ScriptableArray(Variant *array, size_t count);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableArray);

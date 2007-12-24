@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include <string.h>
+#include <cstring>
 #include <map>
 #include <vector>
 #include "scriptable_helper.h"
@@ -48,12 +48,12 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   // The following 5 methods declared in ScriptableInterface should never be
   // called.
   virtual uint64_t GetClassId() const { return 0; }
-  virtual OwnershipPolicy Attach() { ASSERT(false); return NATIVE_OWNED; }
-  virtual bool Detach() { ASSERT(false); return false; }
   virtual bool IsInstanceOf(uint64_t class_id) const {
     ASSERT(false); return false;
   }
   virtual bool IsStrict() const { ASSERT(false); return false; }
+  virtual OwnershipPolicy Attach() { ASSERT(false); return NATIVE_OWNED; }
+  virtual bool Detach() { ASSERT(false); return false; }
 
   virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
   virtual bool GetPropertyInfoByName(const char *name,
@@ -62,12 +62,17 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual bool GetPropertyInfoById(int id, Variant *prototype,
                                    bool *is_method, const char **name);
   virtual Variant GetProperty(int id);
-  virtual bool SetProperty(int id, Variant value);
+  virtual bool SetProperty(int id, const Variant &value);
 
   virtual void SetPendingException(ScriptableInterface *exception);
   virtual ScriptableInterface *GetPendingException(bool clear);
+  virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
 
  private:
+  class PrototypePropertiesCallback;
+  void AddPropertyInfo(const char *name, const Variant &prototype,
+                       Slot *getter, Slot *setter);
+
   typedef std::map<const char *, int, GadgetCharPtrComparator> SlotIndexMap;
   typedef std::vector<Variant> VariantVector;
   typedef std::vector<Slot *> SlotVector;
@@ -155,6 +160,33 @@ ScriptableHelperImpl::~ScriptableHelperImpl() {
   delete dynamic_property_setter_;
 }
 
+void ScriptableHelperImpl::AddPropertyInfo(const char *name,
+                                           const Variant &prototype,
+                                           Slot *getter, Slot *setter) {
+  SlotIndexMap::iterator it = slot_index_.find(name);
+  if (it != slot_index_.end()) {
+    int index = it->second;
+    DLOG("Property %s(%d) is overriden", name, index);
+    slot_prototypes_[index] = prototype;
+    delete getter_slots_[index];
+    getter_slots_[index] = getter;
+    delete setter_slots_[index];
+    setter_slots_[index] = setter;
+  } else {
+    slot_index_[name] = property_count_;
+    slot_prototypes_.push_back(prototype);
+    getter_slots_.push_back(getter);
+    setter_slots_.push_back(setter);
+    slot_names_.push_back(name);
+    property_count_++;
+  }
+  ASSERT(property_count_ == static_cast<int>(slot_index_.size()));
+  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
+  ASSERT(property_count_ == static_cast<int>(slot_names_.size()));
+  ASSERT(property_count_ == static_cast<int>(getter_slots_.size()));
+  ASSERT(property_count_ == static_cast<int>(setter_slots_.size()));
+}
+
 void ScriptableHelperImpl::RegisterProperty(const char *name,
                                             Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
@@ -163,28 +195,25 @@ void ScriptableHelperImpl::RegisterProperty(const char *name,
   ASSERT(!setter || setter->GetArgCount() == 1);
   if (getter) {
     ASSERT(getter->GetArgCount() == 0);
+    ASSERT_M(getter->GetReturnType() != Variant::TYPE_CONST_SCRIPTABLE,
+             ("Can't return 'const ScriptableInterface *' to script"));
+    ASSERT_M(getter->GetReturnType() != Variant::TYPE_SLOT,
+             ("Can't return 'Slot *' to script"));
     prototype = Variant(getter->GetReturnType());
     ASSERT(!setter || prototype.type() == setter->GetArgTypes()[0]);
   } else {
     ASSERT(setter);
     prototype = Variant(setter->GetArgTypes()[0]);
-  }
-
 #ifdef _DEBUG
-  if (prototype.type() == Variant::TYPE_SLOT) {
-    LOG("Warning: property '%s' is of type Slot, please make sure the return"
-        " type of this Slot parameter is void, or use RegisterSignal instead.",
-        name);
-  }
+    if (prototype.type() == Variant::TYPE_SLOT) {
+      LOG("Warning: property '%s' is of type Slot, please make sure the return"
+          " type of this Slot parameter is void or Variant, or use"
+          " RegisterSignal instead.", name);
+    }
 #endif
+  }
 
-  slot_index_[name] = property_count_;
-  slot_prototypes_.push_back(prototype);
-  getter_slots_.push_back(getter);
-  setter_slots_.push_back(setter);
-  slot_names_.push_back(name);
-  property_count_++;
-  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
+  AddPropertyInfo(name, prototype, getter, setter);
 }
 
 class StringEnumGetter {
@@ -248,22 +277,18 @@ void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
   ASSERT(slot && slot->HasMetadata());
   ASSERT_M(slot->GetReturnType() != Variant::TYPE_CONST_SCRIPTABLE,
            ("Can't return 'const ScriptableInterface *' to script"));
+  ASSERT_M(slot->GetReturnType() != Variant::TYPE_SLOT,
+           ("Can't return 'Slot *' to script"));
 #ifdef _DEBUG
   for (int i = 0; i < slot->GetArgCount(); i++) {
     if (slot->GetArgTypes()[i] == Variant::TYPE_SLOT) {
       LOG("Warning: method '%s' has a parameter of type Slot, please make sure"
-          " the return type of this Slot parameter is void.", name);
+          " the return type of this Slot parameter is void or Variant.", name);
     }
   }
 #endif
 
-  slot_index_[name] = property_count_;
-  slot_prototypes_.push_back(Variant(slot));
-  getter_slots_.push_back(NULL);
-  setter_slots_.push_back(NULL);
-  slot_names_.push_back(name);
-  property_count_++;
-  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
+  AddPropertyInfo(name, Variant(slot), NULL, NULL);
 }
 
 void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
@@ -271,22 +296,18 @@ void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
   ASSERT(name);
   ASSERT(signal);
 
-  slot_index_[name] = property_count_;
   // Create a SignalSlot as the value of the prototype to let others know
   // the calling convention.  It is owned by slot_prototypes.
-  slot_prototypes_.push_back(Variant(new SignalSlot(signal)));
-
+  Variant prototype = Variant(new SignalSlot(signal));
   // Allocate an initially unconnected connection.  This connection is
   // dedicated to be used by the script.
   Connection *connection = signal->ConnectGeneral(NULL);
   // The getter returns the connected slot of the connection.
-  getter_slots_.push_back(NewSlot(connection, &Connection::slot));
+  Slot *getter = NewSlot(connection, &Connection::slot);
   // The setter accepts a Slot * parameter and connect it to the signal.
-  setter_slots_.push_back(NewSlot(connection, &Connection::Reconnect));
-  slot_names_.push_back(name);
+  Slot *setter = NewSlot(connection, &Connection::Reconnect);
 
-  property_count_++;
-  ASSERT(property_count_ == static_cast<int>(slot_prototypes_.size()));
+  AddPropertyInfo(name, prototype, getter, setter);
 }
 
 void ScriptableHelperImpl::RegisterConstants(int count,
@@ -470,7 +491,7 @@ Variant ScriptableHelperImpl::GetProperty(int id) {
 }
 
 // NOTE: Must be exception-safe because the handler may throw exceptions.
-bool ScriptableHelperImpl::SetProperty(int id, Variant value) {
+bool ScriptableHelperImpl::SetProperty(int id, const Variant &value) {
   sealed_ = true;
   if (id >= 0) {
     // The id is an array index.
@@ -532,6 +553,62 @@ ScriptableInterface *ScriptableHelperImpl::GetPendingException(bool clear) {
   if (clear)
     pending_exception_ = NULL;
   return result;
+}
+
+class ScriptableHelperImpl::PrototypePropertiesCallback {
+ public:
+  PrototypePropertiesCallback(ScriptableHelperImpl *owner,
+                              EnumeratePropertiesCallback *callback)
+      : owner_(owner), callback_(callback) {
+  }
+
+  bool Callback(int id, const char *name,
+              const Variant &value, bool is_method) {
+    if (owner_->slot_index_.find(name) == owner_->slot_index_.end() &&
+        owner_->constants_.find(name) == owner_->constants_.end())
+      return (*callback_)(id, name, value, is_method);
+    return true;
+  }
+
+  ScriptableHelperImpl *owner_;
+  EnumeratePropertiesCallback *callback_;
+};
+
+bool ScriptableHelperImpl::EnumerateProperties(
+    EnumeratePropertiesCallback *callback) {
+  ASSERT(callback);
+  if (prototype_) {
+    PrototypePropertiesCallback prototype_callback(this, callback);
+    if (!prototype_->EnumerateProperties(
+        NewSlot(&prototype_callback, &PrototypePropertiesCallback::Callback))) {
+      delete callback;
+      return false;
+    }
+  }
+  for (ConstantMap::const_iterator it = constants_.begin();
+       it != constants_.end(); ++it) {
+    if (!(*callback)(kConstantPropertyId, it->first, it->second, false)) {
+      delete callback;
+      return false;
+    }
+  }
+  for (NameVector::const_iterator it = slot_names_.begin();
+       it != slot_names_.end(); ++it) {
+    if (constants_.find(*it) == constants_.end()) {
+      int id;
+      Variant prototype;
+      bool is_method;
+      if (GetPropertyInfoByName(*it, &id, &prototype, &is_method)) {
+        Variant value = GetProperty(id);
+        if (!(*callback)(id, *it, value, is_method)) {
+          delete callback;
+          return false;
+        }
+      }
+    }
+  }
+  delete callback;
+  return true;
 }
 
 } // namespace internal

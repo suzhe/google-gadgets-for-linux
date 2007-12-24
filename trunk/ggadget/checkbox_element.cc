@@ -32,8 +32,6 @@ enum CheckedState {
   STATE_COUNT
 };
 
-static const char *const kOnChangeEvent = "onchange";
-
 class CheckBoxElement::Impl {
  public:
   Impl(BasicElement *owner, View *view, bool is_checkbox)
