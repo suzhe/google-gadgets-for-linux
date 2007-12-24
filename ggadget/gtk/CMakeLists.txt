@@ -24,6 +24,7 @@ SET(SRCS
   global_file_manager.cc
   gtk_edit.cc
   gtk_gadget_host.cc
+  gtk_main_loop.cc
   gtk_view_host.cc
   gadget_view_widget.cc
   gtk_key_convert.cc

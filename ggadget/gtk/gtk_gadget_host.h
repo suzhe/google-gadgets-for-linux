@@ -21,6 +21,7 @@
 #include <map>
 #include <gtk/gtk.h>
 #include <ggadget/gadget_host_interface.h>
+#include <ggadget/gtk/gtk_main_loop.h>
 
 namespace ggadget {
 namespace gtk {
@@ -44,6 +45,7 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual FileManagerInterface *GetGlobalFileManager();
   virtual OptionsInterface *GetOptions();
   virtual FrameworkInterface *GetFramework();
+  virtual MainLoopInterface *GetMainLoop();
   virtual GadgetInterface *GetGadget();
   virtual ViewHostInterface *NewViewHost(ViewType type,
                                          ScriptableInterface *prototype);
@@ -53,11 +55,6 @@ class GtkGadgetHost : public GadgetHostInterface {
 
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual uint64_t GetCurrentTime() const;
-  virtual int RegisterTimer(unsigned ms, TimerCallback *callback);
-  virtual bool RemoveTimer(int token);
-  virtual int RegisterReadWatch(int fd, IOWatchCallback *callback);
-  virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback);
-  virtual bool RemoveIOWatch(int token);
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
@@ -101,10 +98,6 @@ class GtkGadgetHost : public GadgetHostInterface {
  private:
   void ReportScriptError(const char *message);
 
-  class CallbackData;
-  int RegisterIOWatch(bool read_or_write, int fd, IOWatchCallback *callback);
-  bool RemoveCallback(int token);
-
   static gboolean DispatchTimer(gpointer data);
   static gboolean DispatchIOWatch(GIOChannel *source,
                                   GIOCondition cond,
@@ -127,10 +120,9 @@ class GtkGadgetHost : public GadgetHostInterface {
   OptionsInterface *options_;
   FrameworkInterface *framework_;
   GadgetInterface *gadget_;
+  GtkMainLoop main_loop_;
 
   int plugin_flags_;
-  typedef std::map<int, CallbackData *> CallbackMap;
-  CallbackMap callbacks_;
 
   // Maps original font filename to temp font filename
   std::map<std::string, std::string> loaded_fonts_;

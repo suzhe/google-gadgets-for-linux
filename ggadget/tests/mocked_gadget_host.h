@@ -19,6 +19,7 @@
 
 #include "ggadget/file_manager_interface.h"
 #include "ggadget/gadget_host_interface.h"
+#include "ggadget/main_loop_interface.h"
 #include "ggadget/string_utils.h"
 
 class MockedFileManager : public ggadget::FileManagerInterface {
@@ -58,17 +59,11 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type, ggadget::ScriptableInterface *prototype) { return NULL; }
+  virtual ggadget::MainLoopInterface *GetMainLoop() { return NULL; }
   virtual void SetPluginFlags(int plugin_flags) { }
   virtual void RemoveMe(bool save_data) { }
   virtual void DebugOutput(DebugLevel level, const char *message) const { }
   virtual uint64_t GetCurrentTime() const { return 0; }
-  virtual int RegisterTimer(unsigned ms, TimerCallback *callback) { return 0; }
-  virtual bool RemoveTimer(int token) { return true; }
-  virtual int RegisterReadWatch(int fd, IOWatchCallback *callback) { return 0; }
-  virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback) {
-    return 0;
-  }
-  virtual bool RemoveIOWatch(int token) { return true; }
   virtual bool OpenURL(const char *url) const { return true; }
 
   virtual bool LoadFont(const char *filename) { return true; }

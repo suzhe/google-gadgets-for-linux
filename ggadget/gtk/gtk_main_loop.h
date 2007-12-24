@@ -26,6 +26,7 @@ class GtkMainLoop : public MainLoopInterface {
   // This function just call gtk_main_quit().
   virtual void Quit();
   virtual bool IsRunning() const;
+  virtual uint64_t GetCurrentTime() const;
 
  private:
   class Impl;

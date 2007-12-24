@@ -22,6 +22,7 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
+#include "main_loop_interface.h"
 #include "logger.h"
 #include "menu_interface.h"
 #include "script_context_interface.h"
@@ -225,7 +226,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     }
     virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
-    ScriptableFramework framework_; 
+    ScriptableFramework framework_;
   };
 
   Impl(GadgetHostInterface *host, Gadget *owner)
@@ -246,7 +247,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
 
   ~Impl() {
     if (close_details_view_timer_ != 0) {
-      host_->RemoveTimer(close_details_view_timer_);
+      host_->GetMainLoop()->RemoveWatch(close_details_view_timer_);
       close_details_view_timer_ = 0;
     }
 
@@ -255,7 +256,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
       // Keys are of the form "install/font@src" or "install/font[k]@src"
-      if (0 == key.find(kManifestInstallFont) && 
+      if (0 == key.find(kManifestInstallFont) &&
           (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
         // ignore return, error not fatal
         host_->UnloadFont(i->second.c_str());
@@ -379,18 +380,18 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     }
   }
 
-  bool CloseDetailsViewCallback(int timer_id) {
-    ASSERT(timer_id == close_details_view_timer_);
+  bool CloseDetailsViewCallback(int id) {
+    ASSERT(id == close_details_view_timer_);
     CloseDetailsView();
     close_details_view_timer_ = 0;
     return false;
-  }
+  };
 
   // Close the details view in the next event loop.
   void DelayedCloseDetailsView() {
     if (close_details_view_timer_ == 0) {
-      close_details_view_timer_ = host_->RegisterTimer(
-          0, NewSlot(this, &Impl::CloseDetailsViewCallback));
+      close_details_view_timer_ = host_->GetMainLoop()->AddTimeoutWatch(0,
+        new WatchCallbackSlot(NewSlot(this, &Impl::CloseDetailsViewCallback)));
     }
   }
 

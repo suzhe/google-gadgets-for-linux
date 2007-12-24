@@ -22,6 +22,7 @@
 #include "elements.h"
 #include "event.h"
 #include "file_manager_interface.h"
+#include "main_loop_interface.h"
 #include "gadget_host_interface.h"
 #include "gadget_interface.h"
 #include "graphics_interface.h"
@@ -53,6 +54,84 @@ class View::Impl {
     virtual bool IsStrict() const { return false; }
   };
 
+  /**
+   * Callback object for timer watches.
+   * if duration > 0 then it's a animation timer.
+   * else if duration == 0 then it's a timeout timer.
+   * else if duration < 0 then it's a interval timer.
+   */
+  class TimerWatchCallback : public WatchCallbackInterface {
+   public:
+    TimerWatchCallback(Impl *impl, Slot *slot, int start, int end,
+                       int duration, uint64_t start_time,
+                       bool is_event)
+      : impl_(impl), slot_(slot), start_(start), end_(end),
+        duration_(duration), start_time_(start_time), last_value_(start),
+        watch_id_(0), is_event_(is_event), destroy_connection_(NULL) {
+      destroy_connection_ = impl_->on_destroy_signal_.Connect(
+          NewSlot(this, &TimerWatchCallback::OnDestroy));
+    }
+
+    void SetWatchId(int watch_id) { watch_id_ = watch_id; }
+
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      bool fire = true;
+      bool ret = true;
+      int value = 0;
+      uint64_t current_time = main_loop->GetCurrentTime();
+
+      // Animation timer
+      if (duration_ > 0) {
+        double progress =
+            static_cast<double>(current_time - start_time_) / duration_;
+        progress = std::min(1.0, std::max(0.0, progress));
+        value = start_ + static_cast<int>(round(progress * (end_ - start_)));
+        fire = (value != last_value_);
+        ret = (progress < 1.0);
+        last_value_ = value;
+      } else if (duration_ == 0) {
+        ret = false;
+      }
+
+      if (fire && (duration_ == 0 ||
+                   current_time - last_finished_time_ > kMinInterval)) {
+        if (is_event_) {
+          TimerEvent event(watch_id, value);
+          ScriptableEvent scriptable_event(&event, NULL, NULL);
+          impl_->FireEventSlot(&scriptable_event, slot_);
+        } else {
+          slot_->Call(0, NULL);
+        }
+      }
+
+      last_finished_time_ = main_loop->GetCurrentTime();
+      return ret;
+    }
+
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      destroy_connection_->Disconnect();
+      delete slot_;
+      delete this;
+    }
+
+    void OnDestroy() {
+      impl_->RemoveTimer(watch_id_);
+    }
+
+   private:
+    Impl *impl_;
+    Slot *slot_;
+    int start_;
+    int end_;
+    int duration_;
+    uint64_t start_time_;
+    uint64_t last_finished_time_;
+    int last_value_;
+    int watch_id_;
+    bool is_event_;
+    Connection *destroy_connection_;
+  };
+
   Impl(ViewHostInterface *host,
        ElementFactoryInterface *element_factory,
        int debug_mode,
@@ -61,8 +140,9 @@ class View::Impl {
       host_(host),
       gadget_host_(host->GetGadgetHost()),
       script_context_(host->GetScriptContext()),
-      file_manager_(NULL),
+      file_manager_(gadget_host_->GetFileManager()),
       element_factory_(element_factory),
+      main_loop_(gadget_host_->GetMainLoop()),
       children_(element_factory, NULL, owner),
       debug_mode_(debug_mode),
       width_(0), height_(0),
@@ -79,21 +159,12 @@ class View::Impl {
       posting_event_element_(NULL),
       post_event_token_(0),
       draw_queued_(false) {
-    if (gadget_host_)
-      file_manager_ = gadget_host_->GetFileManager();
   }
 
   ~Impl() {
     ASSERT(event_stack_.empty());
     ASSERT(death_detected_elements_.empty());
-
-    TimerMap::iterator it = timer_map_.begin();
-    while (it != timer_map_.end()) {
-      TimerMap::iterator next = it;
-      ++next;
-      RemoveTimer(it->first);
-      it = next;
-    }
+    on_destroy_signal_.Emit(0, NULL);
   }
 
   template <typename T>
@@ -130,11 +201,11 @@ class View::Impl {
     // parameter in View::BeginAnimation can't be automatically reflected.
     obj->RegisterMethod("beginAnimation", NewSlot(this, &Impl::BeginAnimation));
     obj->RegisterMethod("cancelAnimation",
-                        NewSlot(this, &Impl::CancelAnimation));
+                        NewSlot(this, &Impl::RemoveTimer));
     obj->RegisterMethod("setTimeout", NewSlot(this, &Impl::SetTimeout));
-    obj->RegisterMethod("clearTimeout", NewSlot(this, &Impl::ClearTimeout));
+    obj->RegisterMethod("clearTimeout", NewSlot(this, &Impl::RemoveTimer));
     obj->RegisterMethod("setInterval", NewSlot(this, &Impl::SetInterval));
-    obj->RegisterMethod("clearInterval", NewSlot(this, &Impl::ClearInterval));
+    obj->RegisterMethod("clearInterval", NewSlot(this, &Impl::RemoveTimer));
 
     obj->RegisterMethod("alert", NewSlot(owner_, &View::Alert));
     obj->RegisterMethod("confirm", NewSlot(owner_, &View::Confirm));
@@ -555,19 +626,22 @@ class View::Impl {
     }
   }
 
+  void FireEventSlot(ScriptableEvent *event, const Slot *slot) {
+    ASSERT(event && slot);
+    event->SetReturnValue(EVENT_RESULT_HANDLED);
+    event_stack_.push_back(event);
+    slot->Call(0, NULL);
+    event_stack_.pop_back();
+  }
+
   void FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
-    ASSERT(event);
-    // Note: TimerCallback() also does the similar thing.
     if (event_signal.HasActiveConnections()) {
-      event->SetReturnValue(EVENT_RESULT_HANDLED);
-      event_stack_.push_back(event);
-      event_signal();
-      event_stack_.pop_back();
+      SignalSlot slot(&event_signal);
+      FireEventSlot(event, &slot);
     }
   }
 
-  bool FirePostedEvents(int token) {
-    ASSERT(token == post_event_token_);
+  bool FirePostedEvents() {
     post_event_token_ = 0;
 
     // Make a copy of posted_events_, because it may change during the
@@ -612,8 +686,11 @@ class View::Impl {
     posted_events_.push_back(std::make_pair(event, &event_signal));
 
     if (!post_event_token_) {
-      post_event_token_ = gadget_host_->RegisterTimer(
-          0, NewSlot(this, &Impl::FirePostedEvents));
+      TimerWatchCallback *watch =
+          new TimerWatchCallback(this, NewSlot(this, &Impl::FirePostedEvents),
+                                 0, 0, 0, 0, false);
+      post_event_token_ = main_loop_->AddTimeoutWatch(0, watch);
+      watch->SetWatchId(post_event_token_);
     }
   }
 
@@ -633,7 +710,7 @@ class View::Impl {
         ScopedDeathDetector death_detector(owner_, &old_focused_element);
         focused_element_ = element;
         if (focused_element_) {
-          // The enabled or visible state may changed, so check again. 
+          // The enabled or visible state may changed, so check again.
           if (!focused_element_->IsEnabled() ||
               !focused_element_->IsVisible() ||
               focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_IN))
@@ -698,147 +775,35 @@ class View::Impl {
     return result ? Variant(result) : Variant();
   }
 
-  enum TimerType {
-    TIMER_ANIMATION,
-    // Used to indicate the first immediate timer event of an animation.
-    TIMER_ANIMATION_FIRST,
-    TIMER_TIMEOUT,
-    TIMER_INTERVAL
-  };
-  int NewTimer(TimerType type, Slot *slot,
-               int start_value, int end_value, unsigned int duration) {
-    ASSERT(slot);
-
-    TimerInfo *info = new TimerInfo();
-    info->type = type;
-    info->slot = slot;
-    info->start_value = start_value;
-    info->last_value = start_value;
-    info->spread = end_value - start_value;
-    info->duration = duration;
-    info->start_time = gadget_host_->GetCurrentTime();
-    info->token = gadget_host_->RegisterTimer(
-        type == TIMER_ANIMATION ? kAnimationInterval : duration,
-        NewSlot(this, &Impl::TimerCallback));
-    timer_map_[info->token] = info;
-    return info->token;
-  }
-
   void RemoveTimer(int token) {
-    if (token == 0)
-      return;
-
-    TimerMap::iterator it = timer_map_.find(token);
-    if (it == timer_map_.end()) {
-      LOG("Invalid timer token to remove: %d", token);
-      return;
-    }
-
-    gadget_host_->RemoveTimer(it->second->token);
-    // TIMER_ANIMATION_FIRST and TIMER_ANIMATION share the slot.
-    if (it->second->type != TIMER_ANIMATION_FIRST)
-      delete it->second->slot;
-    delete it->second;
-    timer_map_.erase(it);
-  }
-
-  bool TimerCallback(int token) {
-    bool wants_more = true;
-    TimerMap::iterator it = timer_map_.find(token);
-    if (it == timer_map_.end()) {
-      DLOG("Timer has been removed but event still fired: %d", token);
-      return false;
-    }
-    TimerInfo *info = it->second;
-
-    if (info->type != TIMER_TIMEOUT &&
-        gadget_host_->GetCurrentTime() - info->last_finished_time <
-            kMinInterval) {
-      // To avoid some frequent interval/animation timers or slow handlers
-      // eat up all CPU resources, here automaticlly ignores some timer events.
-      DLOG("Automatically ignored a timer event");
-      return true;
-    }
-
-    TimerEvent event(token, 0);
-    ScriptableEvent scriptable_event(&event, NULL, NULL);
-    event_stack_.push_back(&scriptable_event);
-    switch (info->type) {
-      case TIMER_TIMEOUT:
-        info->slot->Call(0, NULL);
-        wants_more = false;
-        RemoveTimer(token);
-        break;
-      case TIMER_INTERVAL:
-        info->slot->Call(0, NULL);
-        break;
-      case TIMER_ANIMATION_FIRST:
-        event.SetValue(info->start_value);
-        info->slot->Call(0, NULL);
-        wants_more = false;
-        RemoveTimer(token);
-        break;
-      case TIMER_ANIMATION: {
-        double progress = 1.0;
-        if (info->duration > 0) {
-          uint64_t event_time = gadget_host_->GetCurrentTime();
-          progress = static_cast<double>(event_time - info->start_time) /
-                     info->duration;
-          progress = std::min(1.0, std::max(0.0, progress));
-        }
-
-        int value = info->start_value +
-                    static_cast<int>(round(progress * info->spread));
-        if (value != info->last_value) {
-          event.SetValue(value);
-          info->last_value = value;
-          info->slot->Call(0, NULL);
-        }
-
-        if (progress == 1.0) {
-          wants_more = false;
-          RemoveTimer(token);
-        }
-        break;
-      }
-      default:
-        ASSERT(false);
-        break;
-    }
-
-    event_stack_.pop_back();
-    // Record the time when this event is finished processing.
-    // Must check if the token is still there to ensure info pointer is valid.
-    if (timer_map_.find(token) != timer_map_.end())
-      info->last_finished_time = gadget_host_->GetCurrentTime();
-    return wants_more;
+    main_loop_->RemoveWatch(token);
   }
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
                      unsigned int duration) {
-    // Create an additional timer which fires immediately.
-    NewTimer(TIMER_ANIMATION_FIRST, slot, start_value, end_value, 0);
-    return NewTimer(TIMER_ANIMATION, slot, start_value, end_value, duration);
-  }
-
-  void CancelAnimation(int token) {
-    RemoveTimer(token);
+    uint64_t current_time = main_loop_->GetCurrentTime();
+    TimerWatchCallback *watch =
+        new TimerWatchCallback(this, slot, start_value, end_value,
+                               duration, current_time, true);
+    int id = main_loop_->AddTimeoutWatch(kAnimationInterval, watch);
+    watch->SetWatchId(id);
+    return id;
   }
 
   int SetTimeout(Slot *slot, unsigned int duration) {
-    return NewTimer(TIMER_TIMEOUT, slot, 0, 0, duration);
-  }
-
-  void ClearTimeout(int token) {
-    RemoveTimer(token);
+    TimerWatchCallback *watch =
+        new TimerWatchCallback(this, slot, 0, 0, 0, 0, true);
+    int id = main_loop_->AddTimeoutWatch(duration, watch);
+    watch->SetWatchId(id);
+    return id;
   }
 
   int SetInterval(Slot *slot, unsigned int duration) {
-    return NewTimer(TIMER_INTERVAL, slot, 0, 0, duration);
-  }
-
-  void ClearInterval(int token) {
-    RemoveTimer(token);
+    TimerWatchCallback *watch =
+        new TimerWatchCallback(this, slot, 0, 0, -1, 0, true);
+    int id = main_loop_->AddTimeoutWatch(duration, watch);
+    watch->SetWatchId(id);
+    return id;
   }
 
   void OnOptionChanged(const char *name) {
@@ -918,6 +883,8 @@ class View::Impl {
   ScriptContextInterface *script_context_;
   FileManagerInterface *file_manager_;
   ElementFactoryInterface *element_factory_;
+  MainLoopInterface *main_loop_;
+
   Elements children_;
   int debug_mode_;
   int width_, height_;
@@ -929,21 +896,7 @@ class View::Impl {
 
   static const unsigned int kAnimationInterval = 20;
   static const unsigned int kMinInterval = 5;
-  struct TimerInfo {
-    Impl *view;
-    int token;
-    TimerType type;
-    Slot *slot;
-    int start_value;
-    int last_value;
-    int spread;
-    unsigned int duration;
-    uint64_t start_time;
-    // The time when the last event was finished processing.
-    uint64_t last_finished_time;
-  };
-  typedef std::map<int, TimerInfo *> TimerMap;
-  TimerMap timer_map_;
+
   BasicElement *focused_element_;
   BasicElement *mouseover_element_;
   BasicElement *grabmouse_element_;
@@ -965,6 +918,8 @@ class View::Impl {
   BasicElement *posting_event_element_;
   int post_event_token_;
   bool draw_queued_;
+
+  Signal0<void> on_destroy_signal_;
 };
 
 View::View(ViewHostInterface *host,
@@ -1131,7 +1086,7 @@ int View::BeginAnimation(Slot0<void> *slot,
 }
 
 void View::CancelAnimation(int token) {
-  impl_->CancelAnimation(token);
+  impl_->RemoveTimer(token);
 }
 
 int View::SetTimeout(Slot0<void> *slot, unsigned int duration) {
@@ -1139,7 +1094,7 @@ int View::SetTimeout(Slot0<void> *slot, unsigned int duration) {
 }
 
 void View::ClearTimeout(int token) {
-  impl_->ClearTimeout(token);
+  impl_->RemoveTimer(token);
 }
 
 int View::SetInterval(Slot0<void> *slot, unsigned int duration) {
@@ -1147,7 +1102,7 @@ int View::SetInterval(Slot0<void> *slot, unsigned int duration) {
 }
 
 void View::ClearInterval(int token) {
-  impl_->ClearInterval(token);
+  impl_->RemoveTimer(token);
 }
 
 int View::GetDebugMode() const {
@@ -1246,7 +1201,7 @@ std::string View::Prompt(const char *message, const char *default_result) {
 }
 
 uint64_t View::GetCurrentTime() {
-  return impl_->gadget_host_->GetCurrentTime();
+  return impl_->main_loop_->GetCurrentTime();
 }
 
 ContentAreaElement *View::GetContentAreaElement() {

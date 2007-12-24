@@ -25,6 +25,7 @@
 
 #include <ggadget/logger.h>
 #include <ggadget/texture.h>
+#include <ggadget/main_loop_interface.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
@@ -104,9 +105,9 @@ GtkEdit::~GtkEdit() {
   GadgetHostInterface *host = view_host_->GetGadgetHost();
   ASSERT(host);
   if (cursor_blink_timer_)
-    host->RemoveTimer(cursor_blink_timer_);
+    host->GetMainLoop()->RemoveWatch(cursor_blink_timer_);
   if (refresh_timer_)
-    host->RemoveTimer(refresh_timer_);
+    host->GetMainLoop()->RemoveWatch(refresh_timer_);
 
   ResetPreedit();
   ResetLayout();
@@ -507,13 +508,10 @@ EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
   ASSERT(gdk_event);
 
   Event::Type type = event.GetType();
-  if (type == Event::EVENT_KEY_PRESS)
-    return EVENT_RESULT_HANDLED;
-
   // Cause the cursor to stop blinking for a while.
   cursor_blink_status_ = 4;
 
-  if (!readonly_ && im_context_ &&
+  if (!readonly_ && im_context_ && type != Event::EVENT_KEY_PRESS &&
       gtk_im_context_filter_keypress(im_context_, gdk_event)) {
     need_im_reset_ = true;
     QueueRefresh(false);
@@ -529,51 +527,57 @@ EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
 
   DLOG("GtkEdit::OnKeyEvent(%d, shift:%d ctrl:%d)", keyval, shift, ctrl);
 
-  if (keyval == GDK_Left || keyval == GDK_KP_Left) {
-    if (!ctrl) MoveCursor(VISUALLY, -1, shift);
-    else MoveCursor(WORDS, -1, shift);
-  } else if (keyval == GDK_Right || keyval == GDK_KP_Right) {
-    if (!ctrl) MoveCursor(VISUALLY, 1, shift);
-    else MoveCursor(WORDS, 1, shift);
-  } else if (keyval == GDK_Up || keyval == GDK_KP_Up) {
-    MoveCursor(DISPLAY_LINES, -1, shift);
-  } else if (keyval == GDK_Down || keyval == GDK_KP_Down) {
-    MoveCursor(DISPLAY_LINES, 1, shift);
-  } else if (keyval == GDK_Home || keyval == GDK_KP_Home) {
-    if (!ctrl) MoveCursor(DISPLAY_LINE_ENDS, -1, shift);
-    else MoveCursor(BUFFER, -1, shift);
-  } else if (keyval == GDK_End || keyval == GDK_KP_End) {
-    if (!ctrl) MoveCursor(DISPLAY_LINE_ENDS, 1, shift);
-    else MoveCursor(BUFFER, 1, shift);
-  } else if (keyval == GDK_Page_Up || keyval == GDK_KP_Page_Up) {
-    if (!ctrl) MoveCursor(PAGES, -1, shift);
-    else MoveCursor(BUFFER, -1, shift);
-  } else if (keyval == GDK_Page_Down || keyval == GDK_KP_Page_Down) {
-    if (!ctrl) MoveCursor(PAGES, 1, shift);
-    else MoveCursor(BUFFER, 1, shift);
-  } else if ((keyval == GDK_x && ctrl && !shift) ||
-             (keyval == GDK_Delete && shift && !ctrl)) {
-    CutClipboard();
-  } else if ((keyval == GDK_c && ctrl && !shift) ||
-             (keyval == GDK_Insert && ctrl && !shift)) {
-    CopyClipboard();
-  } else if ((keyval == GDK_v && ctrl && !shift) ||
-             (keyval == GDK_Insert && shift && !ctrl)) {
-    PasteClipboard();
-  } else if (keyval == GDK_BackSpace) {
-    BackSpace();
-  } else if (keyval == GDK_Delete && !shift) {
-    Delete();
-  } else if (keyval == GDK_Insert && !shift && !ctrl) {
-    ToggleOverwrite();
-  } else if (keyval == GDK_Return || keyval == GDK_KP_Enter) {
-    // If multiline_ is unset, just ignore new_line.
-    if (multiline_) EnterText("\n");
-  } else if (keyval == GDK_Tab) {
-    // The Tab key will likely be consumed by input method.
-    EnterText("\t");
-  } else {
-    return EVENT_RESULT_UNHANDLED;
+  if (type == Event::EVENT_KEY_DOWN) {
+    if (keyval == GDK_Left || keyval == GDK_KP_Left) {
+      if (!ctrl) MoveCursor(VISUALLY, -1, shift);
+      else MoveCursor(WORDS, -1, shift);
+    } else if (keyval == GDK_Right || keyval == GDK_KP_Right) {
+      if (!ctrl) MoveCursor(VISUALLY, 1, shift);
+      else MoveCursor(WORDS, 1, shift);
+    } else if (keyval == GDK_Up || keyval == GDK_KP_Up) {
+      MoveCursor(DISPLAY_LINES, -1, shift);
+    } else if (keyval == GDK_Down || keyval == GDK_KP_Down) {
+      MoveCursor(DISPLAY_LINES, 1, shift);
+    } else if (keyval == GDK_Home || keyval == GDK_KP_Home) {
+      if (!ctrl) MoveCursor(DISPLAY_LINE_ENDS, -1, shift);
+      else MoveCursor(BUFFER, -1, shift);
+    } else if (keyval == GDK_End || keyval == GDK_KP_End) {
+      if (!ctrl) MoveCursor(DISPLAY_LINE_ENDS, 1, shift);
+      else MoveCursor(BUFFER, 1, shift);
+    } else if (keyval == GDK_Page_Up || keyval == GDK_KP_Page_Up) {
+      if (!ctrl) MoveCursor(PAGES, -1, shift);
+      else MoveCursor(BUFFER, -1, shift);
+    } else if (keyval == GDK_Page_Down || keyval == GDK_KP_Page_Down) {
+      if (!ctrl) MoveCursor(PAGES, 1, shift);
+      else MoveCursor(BUFFER, 1, shift);
+    } else if ((keyval == GDK_x && ctrl && !shift) ||
+               (keyval == GDK_Delete && shift && !ctrl)) {
+      CutClipboard();
+    } else if ((keyval == GDK_c && ctrl && !shift) ||
+               (keyval == GDK_Insert && ctrl && !shift)) {
+      CopyClipboard();
+    } else if ((keyval == GDK_v && ctrl && !shift) ||
+               (keyval == GDK_Insert && shift && !ctrl)) {
+      PasteClipboard();
+    } else if (keyval == GDK_BackSpace) {
+      BackSpace();
+    } else if (keyval == GDK_Delete && !shift) {
+      Delete();
+    } else if (keyval == GDK_Insert && !shift && !ctrl) {
+      ToggleOverwrite();
+    } else {
+      return EVENT_RESULT_UNHANDLED;
+    }
+  } else { // EVENT_KEY_PRESS
+    if (keyval == GDK_Return || keyval == GDK_KP_Enter) {
+      // If multiline_ is unset, just ignore new_line.
+      if (multiline_) EnterText("\n");
+    } else if (keyval == GDK_Tab) {
+      // The Tab key will likely be consumed by input method.
+      EnterText("\t");
+    } else {
+      return EVENT_RESULT_UNHANDLED;
+    }
   }
 
   QueueRefresh(false);
@@ -779,8 +783,8 @@ void GtkEdit::QueueRefresh(bool relayout) {
   if (!refresh_timer_) {
     GadgetHostInterface *host = view_host_->GetGadgetHost();
     ASSERT(host);
-    refresh_timer_ =
-        host->RegisterTimer(0, NewSlot(this, &GtkEdit::RefreshCallback));
+    refresh_timer_ = host->GetMainLoop()->AddTimeoutWatch(0,
+      new WatchCallbackSlot(NewSlot(this, &GtkEdit::RefreshCallback)));
   }
 }
 
@@ -874,12 +878,12 @@ void GtkEdit::QueueCursorBlink() {
   ASSERT(host);
   if (IsCursorBlinking()) {
     if (!cursor_blink_timer_)
-      cursor_blink_timer_ =
-        host->RegisterTimer(kCursorBlinkTimeout,
-                            NewSlot(this, &GtkEdit::CursorBlinkCallback));
+      cursor_blink_timer_ = host->GetMainLoop()->AddTimeoutWatch(
+          kCursorBlinkTimeout,
+          new WatchCallbackSlot(NewSlot(this, &GtkEdit::CursorBlinkCallback)));
   } else {
     if (cursor_blink_timer_) {
-      host->RemoveTimer(cursor_blink_timer_);
+      host->GetMainLoop()->RemoveWatch(cursor_blink_timer_);
       cursor_blink_timer_ = 0;
     }
 

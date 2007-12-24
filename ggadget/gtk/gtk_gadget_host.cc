@@ -51,19 +51,6 @@
 namespace ggadget {
 namespace gtk {
 
-class GtkGadgetHost::CallbackData {
- public:
-  CallbackData(Slot *s, GtkGadgetHost *h)
-      : callback(s), host(h) { }
-  virtual ~CallbackData() {
-    delete callback;
-  }
-
-  int id;
-  Slot *callback;
-  GtkGadgetHost *host;
-};
-
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              FrameworkInterface *framework,
                              bool composited, bool useshapemask,
@@ -121,15 +108,6 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
 }
 
 GtkGadgetHost::~GtkGadgetHost() {
-  CallbackMap::iterator i = callbacks_.begin();
-  while (i != callbacks_.end()) {
-    CallbackMap::iterator next = i;
-    ++next;
-    RemoveCallback(i->first);
-    i = next;
-  }
-  ASSERT(callbacks_.empty());
-
   delete gadget_;
   gadget_ = NULL;
   delete options_;
@@ -173,6 +151,10 @@ FrameworkInterface *GtkGadgetHost::GetFramework() {
   return framework_;
 }
 
+MainLoopInterface *GtkGadgetHost::GetMainLoop() {
+  return &main_loop_;
+}
+
 GadgetInterface *GtkGadgetHost::GetGadget() {
   return gadget_;
 }
@@ -210,96 +192,6 @@ void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) const {
   printf("%s%s\n", str_level, message);
 }
 
-uint64_t GtkGadgetHost::GetCurrentTime() const {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
-}
-
-gboolean GtkGadgetHost::DispatchTimer(gpointer data) {
-  CallbackData *tmdata = static_cast<CallbackData *>(data);
-  // view->OnTimerEvent may call RemoveTimer, causing tmdata pointer invalid,
-  // so save the valid host pointer first.
-  GtkGadgetHost *host = tmdata->host;
-  int id = tmdata->id;
-  // DLOG("DispatchTimer id=%d", id);
-
-  Variant param(id);
-  Variant result = tmdata->callback->Call(1, &param);
-  if (!VariantValue<bool>()(result)) {
-    // Event receiver has indicated that this timer should be removed.
-    host->RemoveCallback(id);
-    return FALSE;
-  }
-  return TRUE;
-}
-
-int GtkGadgetHost::RegisterTimer(unsigned ms, TimerCallback *callback) {
-  ASSERT(callback);
-
-  CallbackData *tmdata = new CallbackData(callback, this);
-  tmdata->id = static_cast<int>(g_timeout_add(ms, DispatchTimer, tmdata));
-  callbacks_[tmdata->id] = tmdata;
-  // DLOG("RegisterTimer id=%d", tmdata->id);
-  return tmdata->id;
-}
-
-bool GtkGadgetHost::RemoveTimer(int token) {
-  // DLOG("RemoveTimer id=%d", token);
-  return RemoveCallback(token);
-}
-
-gboolean GtkGadgetHost::DispatchIOWatch(GIOChannel *source,
-                                        GIOCondition cond,
-                                        gpointer data) {
-  CallbackData *iodata = static_cast<CallbackData *>(data);
-  Variant param(g_io_channel_unix_get_fd(source));
-  iodata->callback->Call(1, &param);
-  return TRUE;
-}
-
-int GtkGadgetHost::RegisterIOWatch(bool read_or_write, int fd,
-                                  IOWatchCallback *callback) {
-  ASSERT(callback);
-
-  GIOCondition cond = read_or_write ? G_IO_IN : G_IO_OUT;
-  GIOChannel *channel = g_io_channel_unix_new(fd);
-  CallbackData *iodata = new CallbackData(callback, this);
-  iodata->id = static_cast<int>(g_io_add_watch(channel, cond,
-                                               DispatchIOWatch, iodata));
-  callbacks_[iodata->id] = iodata;
-  g_io_channel_unref(channel);
-  return iodata->id;
-}
-
-int GtkGadgetHost::RegisterReadWatch(int fd, IOWatchCallback *callback) {
-  return RegisterIOWatch(true, fd, callback);
-}
-
-int GtkGadgetHost::RegisterWriteWatch(int fd, IOWatchCallback *callback) {
-  return RegisterIOWatch(false, fd, callback);
-}
-
-bool GtkGadgetHost::RemoveIOWatch(int token) {
-  return RemoveCallback(token);
-}
-
-bool GtkGadgetHost::RemoveCallback(int token) {
-  ASSERT(token);
-
-  CallbackMap::iterator i = callbacks_.find(token);
-  if (i == callbacks_.end())
-    // This data may be a stale pointer.
-    return false;
-
-  if (!g_source_remove(token))
-    return false;
-
-  delete i->second;
-  callbacks_.erase(i);
-  return true;
-}
-
 /**
  * Taken from GDLinux.
  * May move this function elsewhere if other classes use it too.
@@ -323,6 +215,10 @@ std::string GetFullPathOfSysCommand(const std::string &command) {
     cur_colon_pos = next_colon_pos + 1;
   }
   return "";
+}
+
+uint64_t GtkGadgetHost::GetCurrentTime() const {
+  return main_loop_.GetCurrentTime();
 }
 
 bool GtkGadgetHost::OpenURL(const char *url) const {

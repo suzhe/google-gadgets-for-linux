@@ -27,73 +27,18 @@
 #include "ggadget/slot.h"
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_http_request.h"
-#include "mocked_gadget_host.h"
+#include "ggadget/native_main_loop.h"
 #include "unittest/gunit.h"
 
-using ggadget::GadgetHostInterface;
 using ggadget::XMLHttpRequestInterface;
 using ggadget::NewSlot;
 using ggadget::DOMDocumentInterface;
-
-class MockedGadgetHostWithIOWatch : public MockedGadgetHost {
- public:
-  virtual int RegisterReadWatch(int fd, IOWatchCallback *callback) {
-    callbacks_.push_back(callback);
-    fds_.push_back(fd);
-    read_or_write_.push_back(true);
-    return static_cast<int>(fds_.size());
-  }
-  virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback) {
-    callbacks_.push_back(callback);
-    fds_.push_back(fd);
-    read_or_write_.push_back(false);
-    return static_cast<int>(fds_.size());
-  }
-  virtual bool RemoveIOWatch(int token) {
-    size_type index = static_cast<size_type>(token - 1);
-    if (callbacks_[index]) {
-      delete callbacks_[index];
-      callbacks_[index] = NULL;
-      fds_[index] = 0;
-      return true;
-    }
-    return false;
-  }
-
-  void Iterate() {
-    size_type size = fds_.size();
-    pollfd *fds = new pollfd[size];
-    memset(fds, 0, size * sizeof(pollfd));
-    for (size_type i = 0; i < size; i++) {
-      if (fds_[i]) {
-        fds[i].fd = fds_[i];
-        fds[i].events = read_or_write_[i] ? POLLIN : POLLOUT;
-        fds[i].revents = 0;
-      }
-    }
-    if (poll(fds, size, 0) > 0) {
-      for (size_type i = 0; i < size; i++) {
-        if (callbacks_[i]) {
-          if (((fds[i].revents & POLLIN) && read_or_write_[i]) ||
-              ((fds[i].revents & POLLOUT) && !read_or_write_[i])) {
-            ggadget::Variant param(fds[i].fd);
-            callbacks_[i]->Call(1, &param);
-          }
-        }
-      }
-    }
-    delete [] fds;
-  }
-
-  typedef std::vector<int>::size_type size_type;
-  std::vector<int> fds_;
-  std::vector<IOWatchCallback *> callbacks_;
-  std::vector<bool> read_or_write_;
-};
+using ggadget::NativeMainLoop;
 
 TEST(XMLHttpRequest, States) {
-  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
+  NativeMainLoop main_loop;
+  XMLHttpRequestInterface *request =
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -114,7 +59,6 @@ TEST(XMLHttpRequest, States) {
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->SetRequestHeader("ccc", "ddd"));
   delete request;
-  delete host;
 }
 
 class Callback {
@@ -151,8 +95,9 @@ class Callback {
 };
 
 TEST(XMLHttpRequest, SyncLocalFile) {
-  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
+  NativeMainLoop main_loop;
+  XMLHttpRequestInterface *request =
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
 
   Callback callback(request);
 
@@ -179,12 +124,12 @@ TEST(XMLHttpRequest, SyncLocalFile) {
   ASSERT_STREQ("ABCDEFG\n", str);
   ASSERT_EQ(8u, size);
   delete request;
-  delete host;
 }
 
 TEST(XMLHttpRequest, AsyncLocalFile) {
-  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
+  NativeMainLoop main_loop;
+  XMLHttpRequestInterface *request =
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
 
   Callback callback(request);
   system("echo GFEDCBA123 >/tmp/xml_http_request_test_data");
@@ -210,7 +155,6 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
   ASSERT_STREQ("GFEDCBA123\n", str);
   ASSERT_EQ(11u, size);
   delete request;
-  delete host;
 }
 
 bool server_thread_succeeded = false;
@@ -315,8 +259,9 @@ void *ServerThread(void *arg) {
 }
 
 TEST(XMLHttpRequest, SyncNetworkFile) {
-  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
+  NativeMainLoop main_loop;
+  XMLHttpRequestInterface *request =
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
 
   pthread_t thread;
   bool async = false;
@@ -374,12 +319,12 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
   pthread_join(thread, NULL);
   ASSERT_TRUE(server_thread_succeeded);
   delete request;
-  delete host;
 }
 
 TEST(XMLHttpRequest, AsyncNetworkFile) {
-  MockedGadgetHostWithIOWatch *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
+  NativeMainLoop main_loop;
+  XMLHttpRequestInterface *request =
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
 
   pthread_t thread;
   bool async = true;
@@ -407,7 +352,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   const char *str;
   size_t size;
   semaphore = 1;
-  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
+  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(2, callback.callback_count_);
   // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state.
@@ -421,11 +366,11 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(0u, size);
 
   semaphore = 2;
-  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
+  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
 
   semaphore = 3;
-  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
+  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::LOADING, request->GetReadyState());
   ASSERT_EQ(4, callback.callback_count_);
 
@@ -458,7 +403,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_STREQ("Value2a, Value2b", str);
 
   semaphore = 4;
-  for (int i = 0; i < 10; i++) { Wait(10); host->Iterate(); }
+  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
 
@@ -477,12 +422,12 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   pthread_join(thread, NULL);
   ASSERT_TRUE(server_thread_succeeded);
   delete request;
-  delete host;
 }
 
 TEST(XMLHttpRequest, ResponseTextAndXML) {
-  GadgetHostInterface *host = new MockedGadgetHostWithIOWatch();
-  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(host, NULL);
+  NativeMainLoop main_loop;
+  XMLHttpRequestInterface *request =
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
 
   Callback callback(request);
 
@@ -505,7 +450,6 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
   ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
                dom->GetDocumentElement()->GetTextContent().c_str());
   delete request;
-  delete host;
 }
 
 int main(int argc, char **argv) {

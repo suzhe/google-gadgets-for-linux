@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <stdint.h>
 #include <glib/ghash.h>
 #include <gtk/gtk.h>
 #include <ggadget/common.h>
@@ -126,6 +127,12 @@ class GtkMainLoop::Impl {
     return gtk_main_level() > 0;
   }
 
+  uint64_t GetCurrentTime() const {
+    GTimeVal tv;
+    g_get_current_time(&tv);
+    return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+  }
+
  private:
   void RemoveWatchNode(WatchNode *node) {
     int watch_id = node->watch_id;
@@ -165,16 +172,16 @@ class GtkMainLoop::Impl {
       GtkMainLoop::Impl *impl = node->impl;
       MainLoopInterface *main_loop = impl->main_loop_;
       WatchCallbackInterface *callback = node->callback;
-      int watch_id = node->watch_id;
       //DLOG("GtkMainLoop::IOWatchCallback: id=%d fd=%d type=%d",
-      //     watch_id, node->data, node->type);
+      //     node->watch_id, node->data, node->type);
       bool ret = false;
       // Only call callback if the condition is correct.
       if ((node->type == MainLoopInterface::IO_READ_WATCH &&
           (condition & G_IO_IN)) ||
           (node->type == MainLoopInterface::IO_WRITE_WATCH &&
-          (condition & G_IO_OUT)))
-        ret = callback->Call(main_loop, watch_id);
+          (condition & G_IO_OUT))) {
+        ret = callback->Call(main_loop, node->watch_id);
+      }
 
       if (!ret)
         impl->RemoveWatchNode(node);
@@ -192,10 +199,9 @@ class GtkMainLoop::Impl {
       GtkMainLoop::Impl *impl = node->impl;
       MainLoopInterface *main_loop = impl->main_loop_;
       WatchCallbackInterface *callback = node->callback;
-      int watch_id = node->watch_id;
       //DLOG("GtkMainLoop::TimeoutCallback: id=%d interval=%d",
-      //     watch_id, node->data);
-      bool ret = callback->Call(main_loop, watch_id);
+      //     node->watch_id, node->data);
+      bool ret = callback->Call(main_loop, node->watch_id);
 
       if (!ret)
         impl->RemoveWatchNode(node);
@@ -245,6 +251,9 @@ void GtkMainLoop::Quit() {
 }
 bool GtkMainLoop::IsRunning() const {
   return impl_->IsRunning();
+}
+uint64_t GtkMainLoop::GetCurrentTime() const {
+  return impl_->GetCurrentTime();
 }
 
 } // namespace gtk

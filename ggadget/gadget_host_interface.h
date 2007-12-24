@@ -27,6 +27,7 @@ class ElementFactoryInterface;
 class FileManagerInterface;
 class FrameworkInterface;
 class GadgetInterface;
+class MainLoopInterface;
 class OptionsInterface;
 class ScriptableInterface;
 class ScriptRuntimeInterface;
@@ -40,8 +41,6 @@ class ViewHostInterface;
 class GadgetHostInterface {
  public:
   virtual ~GadgetHostInterface() { }
-
-  // TODO: Add a method to return the framework.
 
   enum ScriptRuntimeType {
     JAVASCRIPT,
@@ -64,6 +63,9 @@ class GadgetHostInterface {
 
   /** Returns the global @c FrameworkInterface instance. */
   virtual FrameworkInterface *GetFramework() = 0;
+
+  /** Returns the global @c MainLoopInterface instance. */
+  virtual MainLoopInterface *GetMainLoop() = 0;
 
   /** Returns the hosted gadget. */
   virtual GadgetInterface *GetGadget() = 0;
@@ -118,54 +120,6 @@ class GadgetHostInterface {
    * (00:00:00 UTC, January 1, 1970).
    */
   virtual uint64_t GetCurrentTime() const = 0;
-
-  typedef Slot1<bool, int> TimerCallback;
-
-  /**
-   * Registers a timer with the host. The host will call the callback with the
-   * timer token parameter when the interval hits. The first call will occur
-   * after the first interval passes. The callback function returns @c true
-   * if it wants to be called again. If not, returning @c false will unregister
-   * the timer from the host.
-   * @param ms timer interval in milliseconds.
-   * @param callback the target to callback to.
-   * @return token to timer (<code>!= 0</code>) if set, @c 0 otherwise.
-   */
-  virtual int RegisterTimer(unsigned ms, TimerCallback *callback) = 0;
-
-  /**
-   * Unregisters a timer.
-   * @param token timer token.
-   * @return @c true on success, @c false otherwise.
-   */
-  virtual bool RemoveTimer(int token) = 0;
-
-  typedef ggadget::Slot1<void, int> IOWatchCallback;
-
-  /**
-   * Registers an IO watch with the host. The host will call the callback with
-   * the fd parameter when the file descriptor have data to read.
-   * @param fd the file descriptor to watch upon.
-   * @param callback the target to callback to.
-   * @return token to the watch (<code>!= 0</code> if set, @c 0 otherwise.
-   */
-  virtual int RegisterReadWatch(int fd, IOWatchCallback *callback) = 0;
-
-  /**
-   * Registers an IO watch with the host. The host will call the callback with
-   * the fd parameter when the file descriptor have can be write non-blocking.
-   * @param fd the file descriptor to watch upon.
-   * @param callback the target to callback to.
-   * @return token to the watch (<code>!= 0</code> if set, @c 0 otherwise.
-   */
-  virtual int RegisterWriteWatch(int fd, IOWatchCallback *callback) = 0;
-
-  /**
-   * Unregisters an IO watch.
-   * @param token IO watch token.
-   * @return @c true on success, @c false otherwise.
-   */
-  virtual bool RemoveIOWatch(int token) = 0;
 
   /** Open the given URL in the user's default web brower. */
   virtual bool OpenURL(const char *url) const = 0;

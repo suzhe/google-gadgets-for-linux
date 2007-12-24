@@ -21,7 +21,8 @@ INCLUDES		= -I$(top_builddir) \
 LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-noinst_HEADERS		= mocked_element.h \
+noinst_HEADERS		= main_loop_test.h \
+			  mocked_element.h \
 			  mocked_gadget_host.h \
 			  mocked_view_host.h \
 			  scriptables.h \
@@ -36,6 +37,7 @@ check_PROGRAMS		= common_test \
 			  element_factory_test \
 			  file_manager_test \
 			  math_utils_test \
+			  native_main_loop_test \
 			  unicode_utils_test \
 			  string_utils_test \
 			  basic_element_test \
@@ -53,6 +55,7 @@ elements_test_SOURCES		= elements_test.cc
 element_factory_test_SOURCES	= element_factory_test.cc
 file_manager_test_SOURCES	= file_manager_test.cc
 math_utils_test_SOURCES		= math_utils_test.cc
+native_main_loop_test_SOURCES	= native_main_loop_test.cc
 unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
 basic_element_test_SOURCES	= basic_element_test.cc
