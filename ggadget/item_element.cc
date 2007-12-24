@@ -131,8 +131,6 @@ void ItemElement::DoDraw(CanvasInterface *canvas,
 void ItemElement::SetDrawOverlay(bool draw) {
   if (draw != impl_->drawoverlay_) {
     impl_->drawoverlay_ = draw;
-    // This method is used inside Draw() calls to temporarily disable
-    // overlays, so don't queue another draw.
     QueueDraw();
   }
 }
@@ -226,7 +224,7 @@ void ItemElement::GetDefaultSize(double *width, double *height) const {
     *height = impl_->parent_->GetItemPixelHeight();
   } else {
     *width = *height = 0;
-  }  
+  }
 }
 
 void ItemElement::GetDefaultPosition(double *x, double *y) const {

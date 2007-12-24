@@ -15,52 +15,102 @@
 */
 
 #include "js_native_wrapper.h"
-#include "js_script_context.h"
-#include "native_js_wrapper.h"
 #include "converter.h"
+#include "js_script_context.h"
 
 namespace ggadget {
 namespace smjs {
 
-static const char *kGlobalReferenceName = "[[[GlobalReference]]]";
-static const char *kWrapperReferenceName = "[[[WrapperReference]]]";
+// This JSClass is used to create the reference tracker JSObjects.
+JSClass JSNativeWrapper::js_reference_tracker_class_ = {
+  "JSReferenceTracker",
+  // Use the private slot to store the wrapper.
+  JSCLASS_HAS_PRIVATE,
+  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
+  JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, FinalizeTracker,
+  JSCLASS_NO_OPTIONAL_MEMBERS
+};
+
+static const char *kTrackerReferenceName = "[[[TrackerReference]]]";
 
 JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
-    : js_context_(js_context),
+    : ref_count_(0),
+      js_context_(js_context),
       js_object_(js_object) {
   SetDynamicPropertyHandler(NewSlot(this, &JSNativeWrapper::GetProperty),
                             NewSlot(this, &JSNativeWrapper::SetProperty));
   SetArrayHandler(NewSlot(this, &JSNativeWrapper::GetElement),
                   NewSlot(this, &JSNativeWrapper::SetElement));
 
-  // Set the object as a property of the global object to prevent it from
-  // being GC'ed. This is useful when returning the object to the native side.
-  // The native side can't hold the object, because the property may be
-  // overwrite by later such objects.
-  // For native slot parameters, because the objects are also protected by
-  // the JS stack, there is no problem of property overwriting.
-  // TODO: Use more sophisticated method (e.g. reference counting).
-  jsval js_val = OBJECT_TO_JSVAL(js_object);
-  JS_SetProperty(js_context, JS_GetGlobalObject(js_context),
-                 kGlobalReferenceName, &js_val);
-
   // Wrap this object again into a JS object, and add this object as a property
-  // of the original object, to make it possible to auto clean up this object
+  // of the original object, to make it possible to auto detach this object
   // when the original object is finalized.
-  NativeJSWrapper *wrapper = JSScriptContext::WrapNativeObjectToJS(js_context,
-                                                                   this);
-  js_val = OBJECT_TO_JSVAL(wrapper->js_object());
-  JS_SetProperty(js_context, js_object, kWrapperReferenceName, &js_val);
+  JSObject *js_reference_tracker = JS_NewObject(js_context,
+                                                &js_reference_tracker_class_,
+                                                NULL, NULL);
+  JS_DefineProperty(js_context, js_object, kTrackerReferenceName,
+                    OBJECT_TO_JSVAL(js_reference_tracker),
+                    NULL, NULL, JSPROP_READONLY | JSPROP_PERMANENT);
+  JS_SetPrivate(js_context, js_reference_tracker, this);
+  // Count the current JavaScript reference.
+  Attach();
+  ASSERT(GetRefCount() == 1);
 }
 
 JSNativeWrapper::~JSNativeWrapper() {
+  JSScriptContext::FinalizeJSNativeWrapper(js_context_, this);
+}
+
+ScriptableInterface::OwnershipPolicy JSNativeWrapper::Attach() {
+  if (GetRefCount() > 0) {
+    // There must be a new native reference, let JavaScript know it by adding
+    // the object to root.
+    JS_AddRoot(js_context_, &js_object_);
+  }
+  return ScriptableHelperOwnershipShared::Attach();
+}
+
+bool JSNativeWrapper::Detach() {
+  if (GetRefCount() == 2) {
+    // The last native reference is about to be released, let JavaScript know
+    // it by removing the root reference.
+    JS_RemoveRoot(js_context_, &js_object_);
+  }
+  return ScriptableHelperOwnershipShared::Detach();
+}
+
+bool JSNativeWrapper::EnumerateProperties(
+    EnumeratePropertiesCallback *callback) {
+  ASSERT(callback);
+  bool result = true;
+  JSIdArray *id_array = JS_Enumerate(js_context_, js_object_);
+  if (id_array) {
+    for (int i = 0; i < id_array->length; i++) {
+      jsid id = id_array->vector[i];
+      jsval key = JSVAL_VOID;
+      JS_IdToValue(js_context_, id, &key);
+      if (JSVAL_IS_STRING(key)) {
+        char *name = JS_GetStringBytes(JSVAL_TO_STRING(key));
+        if (name &&
+            !(*callback)(kDynamicPropertyId, name, GetProperty(name), false)) {
+          result = false;
+          break;
+        }
+      }
+      // TODO: Array enumeration.
+      // Otherwise, ignore the property.
+    }
+  }
+  JS_DestroyIdArray(js_context_, id_array);
+  delete callback;
+  return result;
 }
 
 Variant JSNativeWrapper::GetProperty(const char *name) {
   Variant result;
   jsval rval;
   if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
-      !ConvertJSToNativeVariant(js_context_, rval, &result)) {
+      !ConvertJSToNativeVariant(js_context_, NULL, rval, &result)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
                    name, PrintJSValue(js_context_, rval).c_str());
@@ -83,7 +133,7 @@ Variant JSNativeWrapper::GetElement(int index) {
   Variant result;
   jsval rval;
   if (JS_GetElement(js_context_, js_object_, index, &rval) &&
-      !ConvertJSToNativeVariant(js_context_, rval, &result)) {
+      !ConvertJSToNativeVariant(js_context_, NULL, rval, &result)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property %d value(%s) to native.",
                    index, PrintJSValue(js_context_, rval).c_str());
@@ -100,6 +150,22 @@ bool JSNativeWrapper::SetElement(int index, const Variant &value) {
     return false;
   }
   return JS_SetElement(js_context_, js_object_, index, &js_val);
+}
+
+void JSNativeWrapper::FinalizeTracker(JSContext *cx, JSObject *obj) {
+  if (obj) {
+    JSClass *cls = JS_GET_CLASS(cx, obj);
+    if (cls && cls->finalize == js_reference_tracker_class_.finalize) {
+      JSNativeWrapper *wrapper =
+          reinterpret_cast<JSNativeWrapper *>(JS_GetPrivate(cx, obj));
+      if (wrapper) {
+        // The JavaScript reference should be the last reference to be released,
+        // because the object is added to root if there are native references.
+        ASSERT(wrapper->GetRefCount() == 1);
+        wrapper->Detach();
+      }
+    }
+  }
 }
 
 } // namespace smjs

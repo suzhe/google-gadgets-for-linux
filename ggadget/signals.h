@@ -116,7 +116,7 @@ class Signal {
    * Emit the signal in general format.
    * Normally C++ code should use @c operator() in the templated subclasses.
    */
-  Variant Emit(int argc, Variant argv[]) const;
+  Variant Emit(int argc, const Variant argv[]) const;
 
   /**
    * Get metadata of the @c Signal.
@@ -163,7 +163,7 @@ class SignalSlot : public Slot {
 
   const Signal *signal() const { return signal_; }
 
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     return signal_->Emit(argc, argv);
   }
   virtual Variant::Type GetReturnType() const {

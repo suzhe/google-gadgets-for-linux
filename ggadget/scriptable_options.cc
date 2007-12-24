@@ -28,61 +28,90 @@ class ScriptableOptions::Impl {
     options_->Add(name, Variant(value));
   }
 
+  // If an item doesn't exist, returns a blank string "" (JSON '""').
   JSONString GetDefaultValue(const char *name) {
     Variant value = options_->GetDefaultValue(name);
     return value.type() == Variant::TYPE_JSON ?
-           VariantValue<JSONString>()(value) : JSONString("");
+           VariantValue<JSONString>()(value) : JSONString("\"\"");
   }
 
   void PutDefaultValue(const char *name, const JSONString &value) {
     options_->PutDefaultValue(name, Variant(value));
   }
 
+  // If an item doesn't exist, returns a blank string "" (JSON '""').
   JSONString GetValue(const char *name) {
     Variant value = options_->GetValue(name);
     return value.type() == Variant::TYPE_JSON ?
-           VariantValue<JSONString>()(value) : JSONString("");
+           VariantValue<JSONString>()(value) : JSONString("\"\"");
   }
 
   void PutValue(const char *name, const JSONString &value) {
     options_->PutValue(name, Variant(value));
   }
 
+  // If an item doesn't exist, returns undefined (JSON "").
+  JSONString OldGetDefaultValue(const char *name) {
+    Variant value = options_->GetDefaultValue(name);
+    return value.type() == Variant::TYPE_JSON ?
+           VariantValue<JSONString>()(value) : JSONString("");
+  }
+
+  // If an item doesn't exist, returns undefined (JSON "").
+  JSONString OldGetValue(const char *name) {
+    Variant value = options_->GetValue(name);
+    return value.type() == Variant::TYPE_JSON ?
+           VariantValue<JSONString>()(value) : JSONString("");
+  }
+
   OptionsInterface *options_;
 };
 
-ScriptableOptions::ScriptableOptions(OptionsInterface *options)
-    : impl_(new Impl(options)) {
+ScriptableOptions::ScriptableOptions(OptionsInterface *options,
+                                     bool raw_objects)
+    : impl_(NULL) {
   RegisterProperty("count",
                    NewSlot(options, &OptionsInterface::GetCount), NULL);
-  // Partly support the deprecated "item" property.
-  RegisterMethod("item", NewSlot(impl_, &Impl::GetValue));
-  // Partly support the deprecated "defaultValue" property.
-  RegisterMethod("defaultValue",
-                 NewSlot(impl_, &Impl::GetDefaultValue));
-  RegisterMethod("add", NewSlot(impl_, &Impl::Add));
   RegisterMethod("exists", NewSlot(options, &OptionsInterface::Exists));
-  RegisterMethod("getDefaultValue",
-                 NewSlot(options, &OptionsInterface::GetDefaultValue));
-  RegisterMethod("getValue", NewSlot(impl_, &Impl::GetValue));
-  RegisterMethod("putDefaultValue",
-                 NewSlot(impl_, &Impl::PutDefaultValue));
-  RegisterMethod("putValue", NewSlot(impl_, &Impl::PutValue));
   RegisterMethod("remove", NewSlot(options, &OptionsInterface::Remove));
   RegisterMethod("removeAll", NewSlot(options, &OptionsInterface::RemoveAll));
 
-  // Register the "default" method, allowing this object be called directly
-  // as a function.
-  RegisterMethod("", NewSlot(impl_, &Impl::GetValue));
+  if (raw_objects) {
+    // In raw objects mode, we don't support the deprecated properties.
+    RegisterMethod("add", NewSlot(options, &OptionsInterface::Add));
+    RegisterMethod("getDefaultValue",
+                   NewSlot(options, &OptionsInterface::GetDefaultValue));
+    RegisterMethod("getValue", NewSlot(options, &OptionsInterface::GetValue));
+    RegisterMethod("putDefaultValue",
+                   NewSlot(options, &OptionsInterface::PutDefaultValue));
+    RegisterMethod("putValue", NewSlot(options, &OptionsInterface::PutValue));
+  } else {
+    impl_ = new Impl(options);
+    // Partly support the deprecated "item" property.
+    RegisterMethod("item", NewSlot(impl_, &Impl::OldGetValue));
+    // Partly support the deprecated "defaultValue" property.
+    RegisterMethod("defaultValue",
+                   NewSlot(impl_, &Impl::OldGetDefaultValue));
+    RegisterMethod("add", NewSlot(impl_, &Impl::Add));
+    RegisterMethod("getDefaultValue",
+                   NewSlot(impl_, &Impl::GetDefaultValue));
+    RegisterMethod("getValue", NewSlot(impl_, &Impl::GetValue));
+    RegisterMethod("putDefaultValue",
+                   NewSlot(impl_, &Impl::PutDefaultValue));
+    RegisterMethod("putValue", NewSlot(impl_, &Impl::PutValue));
+  
+    // Register the "default" method, allowing this object be called directly
+    // as a function.
+    RegisterMethod("", NewSlot(impl_, &Impl::OldGetValue));
 
-  // Disable the following for now, because it's not in the public API document.
-  // SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetValue),
-  //                           NewSlot(impl_, &Impl::PutValue));
+    // Disable the following for now, because it's not in the public API.
+    // SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetValue),
+    //                           NewSlot(impl_, &Impl::PutValue));
+  }
 }
 
 ScriptableOptions::~ScriptableOptions() {
   delete impl_;
-  impl_ = NULL;
 }
 
 } // namespace ggadget

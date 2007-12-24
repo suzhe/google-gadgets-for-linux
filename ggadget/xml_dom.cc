@@ -86,7 +86,7 @@ class GlobalNode : public ScriptableHelper<ScriptableInterface> {
   }
 };
 
-class DOMException : public ScriptableHelper<ScriptableInterface> {
+class DOMException : public ScriptableHelperOwnershipShared {
  public:
   DEFINE_CLASS_ID(0x6486921444b44784, ScriptableInterface);
 
@@ -94,10 +94,6 @@ class DOMException : public ScriptableHelper<ScriptableInterface> {
     RegisterSimpleProperty("code", &code_);
     SetPrototype(GlobalException::Get());
   }
-
-  // This is a script owned object.
-  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; } 
-  virtual bool Detach() { delete this; return true; }
 
  private:
   DOMExceptionCode code_;
@@ -128,7 +124,9 @@ static DOMExceptionCode CheckCommonChildType(DOMNodeInterface *new_child) {
   return DOM_NO_ERR;
 }
 
-class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
+class DOMNodeListBase :
+    public ScriptableHelper<DOMNodeListInterface,
+                            ScriptableInterface::OWNERSHIP_SHARED> {
  public:
   using DOMNodeListInterface::GetItem;
   DOMNodeListBase() {
@@ -157,12 +155,11 @@ class ElementsByTagName : public DOMNodeListBase {
   // methods are only for the script adapter.
   virtual OwnershipPolicy Attach() {
     node_->Attach();
-    return OWNERSHIP_TRANSFERRABLE;
+    return DOMNodeListBase::Attach();
   }
   virtual bool Detach() {
     node_->Detach();
-    delete this;
-    return true;
+    return DOMNodeListBase::Detach();
   }
 
   virtual DOMNodeInterface *GetItem(size_t index) {
@@ -624,12 +621,11 @@ class DOMNodeImpl {
     // methods are only for the script adapter.
     virtual OwnershipPolicy Attach() {
       node_->Attach();
-      return OWNERSHIP_TRANSFERRABLE;
+      return DOMNodeListBase::Attach();
     }
     virtual bool Detach() {
       node_->Detach();
-      delete this;
-      return true;
+      return DOMNodeListBase::Detach();
     }
 
     DOMNodeInterface *GetItem(size_t index) {
@@ -1218,7 +1214,10 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
  private:
-  class AttrsNamedMap : public ScriptableHelper<DOMNamedNodeMapInterface> {
+  typedef ScriptableHelper<DOMNamedNodeMapInterface,
+                           ScriptableInterface::OWNERSHIP_SHARED>
+       SuperOfAttrsNamedMap;
+  class AttrsNamedMap : public SuperOfAttrsNamedMap {
    public:
     DEFINE_CLASS_ID(0xbe2998ee79754343, DOMNamedNodeMapInterface)
     AttrsNamedMap(DOMElement *element) : element_(element) {
@@ -1242,12 +1241,11 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     // methods are only for the script adapter.
     virtual OwnershipPolicy Attach() {
       element_->Attach();
-      return OWNERSHIP_TRANSFERRABLE; 
+      return SuperOfAttrsNamedMap::Attach();
     }
     virtual bool Detach() {
       element_->Detach();
-      delete this;
-      return true;
+      return SuperOfAttrsNamedMap::Detach();
     }
 
     virtual DOMNodeInterface *GetNamedItem(const char *name) {
@@ -1830,13 +1828,6 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
 DOMDocumentInterface *CreateDOMDocument() {
   return new internal::DOMDocument();
-}
-
-void RegisterDOMGlobalScriptable(
-    ScriptableHelper<ScriptableInterface> *scriptable) {
-  scriptable->RegisterConstant("DOMException",
-                               internal::GlobalException::Get());
-  scriptable->RegisterConstant("Node", internal::GlobalNode::Get());
 }
 
 } // namespace ggadget

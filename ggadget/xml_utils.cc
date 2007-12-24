@@ -55,36 +55,35 @@ static inline const xmlChar *ToXmlCharPtr(const char *char_ptr) {
 // 2. else, if there is xml encoding declaration, stop.
 // 3. else, convert to the hint encoding.
 // 4. if 4 failed, return the input.
-static void ConvertXMLEncoding(const char *xml, std::string *encoding,
+static void ConvertXMLEncoding(const std::string &xml, std::string *encoding,
                                std::string *output) {
-  size_t length = strlen(xml);
   // Step 1. and 2.
   std::string detected_encoding;
-  if (ConvertStringToUTF8(xml, length, &detected_encoding, output)) {
+  if (ConvertStringToUTF8(xml, &detected_encoding, output)) {
     if (encoding)
       encoding->assign(detected_encoding);
     return;
   }
   // Step 2.
-  if (strncmp(xml, "<?xml ", 6) == 0) {
-    // The actual encoding is to be detected.
-    output->assign(xml, length);
+  if (strncmp(xml.c_str(), "<?xml ", 6) == 0) {
+    // There is no BOF, the actual encoding is to be detected.
+    *output = xml;
     if (encoding)
       encoding->clear();
     return;
   }
   // Step 3.
   if (encoding && !encoding->empty() &&
-    ConvertStringToUTF8(xml, length, encoding, output)) {
+    ConvertStringToUTF8(xml, encoding, output)) {
     return;
   }
   // Step 4.
-  output->assign(xml, length);
+  *output = xml;
   if (encoding)
     encoding->clear();
 }
 
-static xmlDoc *ParseXML(const char *xml, const char *filename,
+static xmlDoc *ParseXML(const std::string &xml, const char *filename,
                         std::string *encoding) {
   std::string converted_xml;
   ConvertXMLEncoding(xml, encoding, &converted_xml);
@@ -116,12 +115,23 @@ static xmlDoc *ParseXML(const char *xml, const char *filename,
   return result;
 }
 
-static xmlDoc *ParseHTML(const char *html, const char *filename,
+static bool IsXMLFile(const std::string &content) {
+  // TODO: UTF-16?
+  return strncmp(content.c_str(), "<?xml ", 6) == 0 ||
+         strncmp(content.c_str(), "\xEF\xBB\xBF<?xml ", 9) == 0;
+}
+
+static xmlDoc *ParseHTML(const std::string &html, const char *filename,
                          std::string *encoding) {
+  // First check if the file is actually an XML file.
+  if (IsXMLFile(html))
+    return ParseXML(html, filename, encoding);
+
   if (encoding)
     encoding->clear();
 
-  htmlParserCtxt *ctxt = htmlCreateMemoryParserCtxt(html, strlen(html));
+  htmlParserCtxt *ctxt = htmlCreateMemoryParserCtxt(html.c_str(),
+                                                    html.length());
   if (!ctxt)
     return NULL;
 
@@ -143,31 +153,6 @@ static xmlDoc *ParseHTML(const char *html, const char *filename,
   return result;
 }
 
-static bool ParseBoolValue(const char *value, bool *result) {
-  if (strcasecmp("true", value) == 0) {
-    *result = true;
-    return true;
-  }
-  if (strcasecmp("false", value) == 0) {
-    *result = false;
-    return true;
-  }
-  return false;
-}
-
-static bool ParseDoubleValue(const char *value, double *result) {
-  char *end_ptr;
-  *result = strtod(value, &end_ptr);
-  if (*value == '\0' || *end_ptr != '\0' ||
-      // We don't allow hexidecimal numbers.
-      strchr(value, 'x') || strchr(value, 'X') ||
-      // We don't allow INFINITY or NAN.
-      strchr(value, 'n') || strchr(value, 'N')) {
-    return false;
-  }
-  return true;
-}
-
 static void SetScriptableProperty(ScriptableInterface *scriptable,
                                   ScriptContextInterface *script_context,
                                   const char *filename,
@@ -187,11 +172,12 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
     return;
   }
 
+  Variant str_value_variant(value);
   Variant property_value;
   switch (prototype.type()) {
     case Variant::TYPE_BOOL: {
       bool b;
-      if (ParseBoolValue(value, &b)) {
+      if (str_value_variant.ConvertToBool(&b)) {
         property_value = Variant(b);
       } else {
         LOG("%s:%d: Invalid bool '%s' for property %s of %s",
@@ -202,35 +188,44 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       }
       break;
     }
-    case Variant::TYPE_INT64:
+    case Variant::TYPE_INT64: {
+      int64_t i;
+      if (str_value_variant.ConvertToInt64(&i)) {
+        property_value = Variant(i);
+      } else {
+        LOG("%s:%d: Invalid Integer '%s' for property %s of %s",
+            filename, row, value, name, tag_name);
+        return;
+      }
+      break;
+    }
     case Variant::TYPE_DOUBLE: {
       double d;
-      if (ParseDoubleValue(value, &d)) {
-        property_value = prototype.type() == Variant::TYPE_INT64 ?
-                         Variant(static_cast<int64_t>(round(d))) :
-                         Variant(d);
+      if (str_value_variant.ConvertToDouble(&d)) {
+        property_value = Variant(d);
       } else {
-        LOG("%s:%d: Invalid integer '%s' for property %s of %s",
+        LOG("%s:%d: Invalid double '%s' for property %s of %s",
             filename, row, value, name, tag_name);
         return;
       }
       break;
     }
     case Variant::TYPE_STRING:
-      property_value = Variant(std::string(value));
+      property_value = str_value_variant;
       break;
 
     case Variant::TYPE_VARIANT: {
+      int64_t i;
       double d;
       bool b;
-      if (ParseDoubleValue(value, &d)) {
-        // '5.0' should be converted to a double instead of integer.
-        property_value = strchr(value, '.') || round(d) != d ?
-                         Variant(d) : Variant(static_cast<int64_t>(d));
-      } else if (ParseBoolValue(value, &b)) {
+      if (strchr(value, '.') == NULL && str_value_variant.ConvertToInt64(&i)) {
+        property_value = Variant(i);
+      } else if (str_value_variant.ConvertToDouble(&d)) {
+        property_value = Variant(d);
+      } else if (str_value_variant.ConvertToBool(&b)) {
         property_value = Variant(b);
       } else {
-        property_value = Variant(std::string(value));
+        property_value = str_value_variant;
       }
       break;
     }
@@ -395,10 +390,10 @@ bool SetupViewFromFile(ViewInterface *view, const char *filename) {
                                                   &contents, &real_path))
     return false;
 
-  return SetupViewFromXML(view, contents.c_str(), real_path.c_str());
+  return SetupViewFromXML(view, contents, real_path.c_str());
 }
 
-bool SetupViewFromXML(ViewInterface *view, const char *xml,
+bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
                       const char *filename) {
   xmlDoc *xmldoc = ParseXML(xml, filename, NULL);
   if (!xmldoc)
@@ -430,21 +425,21 @@ bool SetupViewFromXML(ViewInterface *view, const char *xml,
 
 ElementInterface *AppendElementFromXML(ViewInterface *view,
                                        ElementsInterface *elements,
-                                       const char *xml) {
+                                       const std::string &xml) {
   return InsertElementFromXML(view, elements, xml, NULL);
 }
 
 ElementInterface *InsertElementFromXML(ViewInterface *view,
                                        ElementsInterface *elements,
-                                       const char *xml,
+                                       const std::string &xml,
                                        const ElementInterface *before) {
-  xmlDoc *xmldoc = ParseXML(xml, xml, NULL);
+  xmlDoc *xmldoc = ParseXML(xml, xml.c_str(), NULL);
   if (!xmldoc)
     return NULL;
 
   xmlNode *xml_element = xmlDocGetRootElement(xmldoc);
   if (!xml_element) {
-    LOG("No root element in xml definition: %s", xml);
+    LOG("No root element in xml definition: %s", xml.c_str());
     xmlFreeDoc(xmldoc);
     return NULL;
   }
@@ -502,7 +497,7 @@ static void ConvertElementIntoXPathMap(const xmlNode *element,
   }
 }
 
-bool ParseXMLIntoXPathMap(const char *xml, const char *filename,
+bool ParseXMLIntoXPathMap(const std::string &xml, const char *filename,
                           const char *root_element_name,
                           std::string *encoding,
                           GadgetStringMap *table) {
@@ -638,7 +633,7 @@ static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
   ConvertChildrenIntoDOM(domdoc, element, xmlele);
 }
 
-bool ParseXMLIntoDOM(const char *xml, const char *filename,
+bool ParseXMLIntoDOM(const std::string &xml, const char *filename,
                      DOMDocumentInterface *domdoc,
                      std::string *encoding) {
   ASSERT(domdoc);
@@ -662,7 +657,7 @@ bool ParseXMLIntoDOM(const char *xml, const char *filename,
   return true;
 }
 
-bool ParseHTMLIntoDOM(const char *html, const char *filename,
+bool ParseHTMLIntoDOM(const std::string &html, const char *filename,
                       DOMDocumentInterface *domdoc,
                       std::string *encoding) {
   ASSERT(domdoc);
@@ -670,11 +665,13 @@ bool ParseHTMLIntoDOM(const char *html, const char *filename,
     return false;
 
   xmlDoc *xmldoc = ParseHTML(html, filename, encoding);
-  if (!xmldoc)
+  if (!xmldoc) {
+    DLOG("Failed to parse HTML file %s", filename);
     return false;
+  }
 
   if (!xmlDocGetRootElement(xmldoc)) {
-    LOG("No root element in XML file: %s", filename);
+    LOG("No root element in HTML file: %s", filename);
     xmlFreeDoc(xmldoc);
     return false;
   }
@@ -686,24 +683,24 @@ bool ParseHTMLIntoDOM(const char *html, const char *filename,
   return true;
 }
 
-bool ConvertStringToUTF8(const char *src, size_t src_length,
-                         std::string *encoding, std::string *dest) {
-  if (!src || !dest)
+bool ConvertStringToUTF8(const std::string &src, std::string *encoding,
+                         std::string *dest) {
+  if (!dest)
     return false;
 
   dest->clear();
-  if (!src_length)
+  if (!src.length())
     return true;
 
   // Check if src_length can be stored into an int variable to prevent overflow
   // in libxml2.
-  if (static_cast<int>(src_length) < 0)
+  if (static_cast<int>(src.length()) < 0)
     return false;
 
   // xmlDetectCharEncoding detects encoding by looking at the first several
   // chars or BOM.
-  xmlCharEncoding xml_encoding = xmlDetectCharEncoding(ToXmlCharPtr(src),
-                                                       src_length);
+  xmlCharEncoding xml_encoding = xmlDetectCharEncoding(
+      ToXmlCharPtr(src.c_str()), src.length());
   xmlCharEncodingHandler *encoding_handler = NULL;
 
   // We can't be confident if the detected encoding is UTF8 but there is no
@@ -728,7 +725,7 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
     if (!encoding_handler) {
       // libxml2 returns NULL in this case because it thinks the source string
       // doesn't need to be converted.
-      dest->assign(src, src_length);
+      *dest = src;
       return true;
     }
   }
@@ -736,8 +733,8 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
   if (!encoding_handler)
     return false;
 
-  xmlBuffer *input_buffer = xmlBufferCreateStatic(const_cast<char *>(src),
-                                                  src_length);
+  xmlBuffer *input_buffer = xmlBufferCreateStatic(
+      const_cast<char *>(src.c_str()), src.length());
   xmlBuffer *output_buffer = xmlBufferCreate();
   int result = xmlCharEncInFunc(encoding_handler, output_buffer, input_buffer);
   if (result > 0) {
@@ -750,11 +747,6 @@ bool ConvertStringToUTF8(const char *src, size_t src_length,
   xmlBufferFree(input_buffer);
   xmlBufferFree(output_buffer);
   return result >= 0;
-}
-
-bool ConvertStringToUTF8(const std::string &src, std::string *encoding,
-                         std::string *dest) {
-  return ConvertStringToUTF8(src.c_str(), src.length(), encoding, dest);
 }
 
 std::string EncodeXMLString(const char *src) {

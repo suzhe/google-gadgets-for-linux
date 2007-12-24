@@ -674,6 +674,10 @@ class BasicElement::Impl {
 
     *fired_element = owner_;
     EventResult result = scriptable_event.GetReturnValue();
+    // For Drag events, we only return EVENT_RESULT_UNHANDLED if this element
+    // is invisible or not a drag target. Some gadgets rely on this behavior.
+    if (result == EVENT_RESULT_UNHANDLED)
+      result = EVENT_RESULT_HANDLED;
     if (result != EVENT_RESULT_CANCELED && this_element)
       result = std::max(result, owner_->HandleDragEvent(event));
     return result;
@@ -831,9 +835,11 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterConstant("name", impl_->name_);
   RegisterConstant("tagName", impl_->tag_name_);
 
-  if (GadgetStrCmp(tag_name, "contentarea") == 0)
+  // TODO: Contentarea on Windows seems to support some of the following
+  // properties.
+  // if (GadgetStrCmp(tag_name, "contentarea") == 0)
     // The following properties and methods are not supported by contentarea.
-    return;
+  //  return;
 
   RegisterStringEnumProperty("cursor",
                              NewSlot(this, &BasicElement::GetCursor),

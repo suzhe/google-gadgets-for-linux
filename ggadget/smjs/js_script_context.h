@@ -18,6 +18,7 @@
 #define GGADGET_SMJS_JS_SCRIPT_CONTEXT_H__
 
 #include <map>
+#include <string>
 #include <vector>
 #include <jsapi.h>
 #include <ggadget/scriptable_interface.h>
@@ -29,7 +30,17 @@ namespace smjs {
 
 class JSScriptRuntime;
 class NativeJSWrapper;
+class JSNativeWrapper;
 class JSFunctionSlot;
+
+/**
+ * The name of the global object property to temporarily protect a JavaScript
+ * value from being GC'ed. Its differences from JS_AddRoot() are
+ *     - It doesn't need to clean up (like JS_RemoveRoot());
+ *     - It is overwritable, so the protection only applicable temporarily
+ *       after a JavaScript invocation from the native side.
+ */
+const char *const kGlobalReferenceName = "[[[GlobalReference]]]";
 
 /**
  * @c ScriptContext implementation for SpiderMonkey JavaScript engine.
@@ -40,11 +51,12 @@ class JSScriptContext : public ScriptContextInterface {
    * Get the current filename and line number of this @c JSScriptContext.
    */
   static void GetCurrentFileAndLine(JSContext *cx,
-                                    const char **filename,
+                                    std::string *filename,
                                     int *lineno);
 
   /**
    * Wrap a native @c ScriptableInterface object into a JavaScript object.
+   * If the object has already been wrapped, returns the existing wrapper.
    * The caller must immediately hook the object in the JS object tree to
    * prevent it from being unexpectedly GC'ed.
    * @param cx JavaScript context.
@@ -58,6 +70,22 @@ class JSScriptContext : public ScriptContextInterface {
    * Called when JavaScript engine is to finalized a JavaScript object wrapper
    */
   static void FinalizeNativeJSWrapper(JSContext *cx, NativeJSWrapper *wrapper);
+
+  /**
+   * Wrap a @c JSObject into a @c JSNativeWrapper or a JS function into a
+   * @c JSFunctionNativeWrapper.
+   * If the object has already been wrapped, returns the existing wrapper.
+   * @param cx JavaScript context.
+   * @param object the JS object or function to be wrapped.
+   * @return the wrapped native object, or @c NULL on errors.
+   */
+  static JSNativeWrapper *WrapJSToNative(JSContext *cx, JSObject *obj);
+
+  /**
+   * Called when @c JSNativeWrapper or @c JSFunctionNativeWrapper is about
+   * to be deleted.
+   */
+  static void FinalizeJSNativeWrapper(JSContext *cx, JSNativeWrapper *wrapper);
 
   /**
    * Checks if there is pending exception. If there is, handles it and throws
@@ -99,11 +127,13 @@ class JSScriptContext : public ScriptContextInterface {
   JSScriptContext(JSContext *context);
   virtual ~JSScriptContext();
 
-  void GetCurrentFileAndLineInternal(const char **filename, int *lineno);
+  void GetCurrentFileAndLineInternal(std::string *filename, int *lineno);
   NativeJSWrapper *WrapNativeObjectToJSInternal(
       JSObject *js_object, NativeJSWrapper *wrapper,
       ScriptableInterface *scriptable);
   void FinalizeNativeJSWrapperInternal(NativeJSWrapper *wrapper);
+  JSNativeWrapper *WrapJSToNativeInternal(JSObject *js_object);
+  void FinalizeJSNativeWrapperInternal(JSNativeWrapper *wrapper);
 
   const char *JSValToString(jsval js_val);
 
@@ -132,11 +162,14 @@ class JSScriptContext : public ScriptContextInterface {
 
   JSContext *context_;
   // The following two fields are only used during GetCurrentFileAndLine.
-  const char *filename_;
+  std::string filename_;
   int lineno_;
 
-  typedef std::map<ScriptableInterface *, NativeJSWrapper *> WrapperMap;
-  WrapperMap wrapper_map_;
+  typedef std::map<ScriptableInterface *, NativeJSWrapper *> NativeJSWrapperMap;
+  NativeJSWrapperMap native_js_wrapper_map_;
+
+  typedef std::map<JSObject *, JSNativeWrapper *> JSNativeWrapperMap;
+  JSNativeWrapperMap js_native_wrapper_map_;
 
   typedef std::vector<JSClassWithNativeCtor *> ClassVector;
   ClassVector registered_classes_;

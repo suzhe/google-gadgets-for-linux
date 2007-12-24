@@ -111,6 +111,8 @@ private:
                                          jsval id, jsval *vp);
   static JSBool SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                          jsval id, jsval *vp);
+  static JSBool EnumerateWrapper(JSContext *cx, JSObject *obj,
+                                 JSIterateOp enum_op, jsval *statep, jsid *idp);
   static JSBool ResolveWrapperProperty(JSContext *cx, JSObject *obj, jsval id,
                                        uintN flags, JSObject **objp);
   static void FinalizeWrapper(JSContext *cx, JSObject *obj);
@@ -126,6 +128,7 @@ private:
   JSBool SetPropertyByIndex(jsval id, jsval vp);
   JSBool GetPropertyByName(jsval id, jsval *vp);
   JSBool SetPropertyByName(jsval id, jsval vp);
+  JSBool Enumerate(JSIterateOp enum_op, jsval *statep, jsid *idp);
   JSBool ResolveProperty(jsval id, uintN flags, JSObject **objp);
   void Mark();
 

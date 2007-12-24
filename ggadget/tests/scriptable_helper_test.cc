@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
+#include <set>
 #include "unittest/gunit.h"
-
 #include "scriptables.h"
 
 using namespace ggadget;
@@ -303,6 +303,40 @@ TEST(scriptable_helper, TestDynamicProperty) {
   ASSERT_FALSE(scriptable->GetPropertyInfoByName("not_supported", &id,
                                                  &prototype, &is_method));
   delete scriptable;
+}
+
+class NameChecker {
+ public:
+  NameChecker(std::set<std::string> *names) : names_(names) { }
+  bool Check(int id, const char *name,
+             const Variant &value, bool is_method) const {
+    EXPECT_EQ(1U, names_->erase(name));
+    return true;
+  }
+  std::set<std::string> *names_;
+};
+
+TEST(scirptable_helper, TestEnumerateProperties) {
+  TestScriptable2 *scriptable = new TestScriptable2();
+  static const char *property_names[] = {
+    "Buffer", "BufferReadOnly", "CallCallback", "ConcatArray", "Const",
+    "DeleteObject", "DoubleProperty", "EnumSimple", "EnumString",
+    "Fixed", "ICONSTANT0", "ICONSTANT1", "ICONSTANT2", "ICONSTANT3",
+    "ICONSTANT4", "ICONSTANT5", "ICONSTANT6", "ICONSTANT7", "ICONSTANT8",
+    "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
+    "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
+    "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
+    "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
+    "TestMethodDouble2", "TestMethodVoid0", "VALUE_0", "VALUE_1", "VALUE_2",
+    "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
+    "ontest", "time",
+  };
+  std::set<std::string> expected;
+  for (size_t i = 0; i < arraysize(property_names); ++i)
+    expected.insert(property_names[i]);
+  NameChecker checker(&expected);
+  scriptable->EnumerateProperties(NewSlot(&checker, &NameChecker::Check));
+  ASSERT_TRUE(expected.empty());
 }
 
 int main(int argc, char **argv) {

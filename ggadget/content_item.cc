@@ -41,8 +41,7 @@ const Color ScriptableCanvas::kColorSnippet(0.4, 0.4, 0.4); // #666666
 class ContentItem::Impl {
  public:
   Impl(View *view)
-      : ref_count_(0),
-        view_(view),
+      : view_(view),
         content_area_(NULL),
         image_(NULL), notifier_image_(NULL),
         time_created_(0),
@@ -106,7 +105,6 @@ class ContentItem::Impl {
       content_area_->QueueDraw();
   }
 
-  int ref_count_;
   View *view_;
   ContentAreaElement *content_area_;
   Image *image_, *notifier_image_;
@@ -176,24 +174,7 @@ ContentItem::ContentItem(View *view)
 }
 
 ContentItem::~ContentItem() {
-  ASSERT(impl_->ref_count_ == 0);
   delete impl_;
-  impl_ = NULL;
-}
-
-ScriptableInterface::OwnershipPolicy ContentItem::Attach() {
-  ASSERT(impl_->ref_count_ >= 0);
-  impl_->ref_count_++;
-  return ScriptableInterface::OWNERSHIP_SHARED;
-}
-
-bool ContentItem::Detach() {
-  ASSERT(impl_->ref_count_ > 0);
-  if (--impl_->ref_count_ == 0) {
-    delete this;
-    return true;
-  }
-  return false;
 }
 
 void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
@@ -428,7 +409,8 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS ||
       impl_->layout_ > CONTENT_ITEM_LAYOUT_EMAIL) {
     // Only heading and icon.
-    return std::max(static_cast<int>(ceil(heading_height)), image_height);
+    return std::max(static_cast<int>(ceil(heading_height)), image_height) +
+           2 * kItemBorderWidth;
   }
 
   double source_width = 0, source_height = 0;
@@ -442,7 +424,7 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
     if (heading_width > heading_space_width)
       heading_height *= 2;
     return std::max(static_cast<int>(ceil(heading_height)), image_height) +
-           extra_info_height;
+           extra_info_height + 2 * kItemBorderWidth;
   }
 
   // Heading doesn't wrap. Show extra info. Snippet can wrap up to 2 lines.

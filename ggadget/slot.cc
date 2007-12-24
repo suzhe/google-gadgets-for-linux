@@ -43,7 +43,7 @@ class SlotWithDefaultArgs : public Slot {
     delete slot_;
     slot_ = NULL;
   }
-  virtual Variant Call(int argc, Variant argv[]) const {
+  virtual Variant Call(int argc, const Variant argv[]) const {
     return slot_->Call(argc, argv);
   }
   virtual bool HasMetadata() const {

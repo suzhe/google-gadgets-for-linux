@@ -118,7 +118,11 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
     *native_val = Variant("");
     return JS_TRUE;
   } else if (JSVAL_IS_STRING(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
-             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val)) {
+             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val) ||
+             // Sometimes a string is enclosed in an array.
+             // This array can be converted to correct string value.
+             (JSVAL_IS_OBJECT(js_val) &&
+              JS_IsArrayObject(cx, JSVAL_TO_OBJECT(js_val)))) {
     JSString *js_string = JS_ValueToString(cx, js_val);
     if (js_string) {
       jschar *chars = JS_GetStringChars(js_string);
@@ -177,7 +181,8 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
   JSBool result = JS_TRUE;
   ScriptableInterface *scriptable;
-  if (JSVAL_IS_NULL(js_val)) {
+  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val) ||
+      (JSVAL_IS_INT(js_val) && JSVAL_TO_INT(js_val) == 0)) {
     scriptable = NULL;
   } else if (JSVAL_IS_OBJECT(js_val)) {
     JSObject *object = JSVAL_TO_OBJECT(js_val);
@@ -185,7 +190,7 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
     // If it is not, NativeJSWrapper::Unwrap simply fails.
     if (!NativeJSWrapper::Unwrap(cx, object, &scriptable)) {
       // NativeJSWrapper::Unwrap failed, this object is a origin JS object.
-      scriptable = new JSNativeWrapper(cx, object);
+      scriptable = JSScriptContext::WrapJSToNative(cx, object);
     }
   } else {
     result = JS_FALSE;
@@ -196,13 +201,14 @@ static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,
   return result;
 }
 
-static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *wrapper,
+static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *owner,
                               const Variant &prototype,
                               jsval js_val, Variant *native_val) {
   JSBool result = JS_TRUE;
-  jsval function_val;
-  if (JSVAL_IS_NULL(js_val)) {
-    function_val = JSVAL_NULL;
+  JSObject *function_object;
+  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val) ||
+      (JSVAL_IS_INT(js_val) && JSVAL_TO_INT(js_val) == 0)) {
+    function_object = NULL;
   } else if (JSVAL_IS_STRING(js_val)) {
     JSString *script_source = JSVAL_TO_STRING(js_val);
     jschar *script_chars = JS_GetStringChars(script_source);
@@ -213,26 +219,27 @@ static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *wrapper,
     ConvertStringUTF16ToUTF8(script_chars, JS_GetStringLength(script_source),
                              &utf8_script);
 
-    const char *filename;
+    std::string filename;
     int lineno;
     JSScriptContext::GetCurrentFileAndLine(cx, &filename, &lineno);
     JSFunction *function = CompileFunction(cx, utf8_script.c_str(),
-                                           filename, lineno);
+                                           filename.c_str(), lineno);
     if (!function)
       result = JS_FALSE;
-    function_val = OBJECT_TO_JSVAL(JS_GetFunctionObject(function));
+    function_object = JS_GetFunctionObject(function);
   } else {
-    // If js_val is a function, JS_ValueToFunction will succeed.
+    // If js_val is a function, JS_ValueToFunction() will succeed,
+    // Otherwise, JS_ValueToFunction() will raise an error.
     if (!JS_ValueToFunction(cx, js_val))
       result = JS_FALSE;
-    function_val = js_val;
+    function_object = JSVAL_TO_OBJECT(js_val);
   }
 
   if (result) {
     JSFunctionSlot *slot = NULL;
-    if (function_val != JSVAL_NULL) {
+    if (function_object) {
       slot = new JSFunctionSlot(VariantValue<Slot *>()(prototype),
-                                cx, wrapper, function_val);
+                                cx, owner, function_object);
     }
     *native_val = Variant(slot);
   }
@@ -276,8 +283,8 @@ static JSBool ConvertJSToJSON(JSContext *cx, jsval js_val,
   return JS_TRUE;
 }
 
-JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
-                                Variant *native_val) {
+JSBool ConvertJSToNativeVariant(JSContext *cx, NativeJSWrapper *owner,
+                                jsval js_val, Variant *native_val) {
   if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val))
     return ConvertJSToNativeVoid(cx, js_val, native_val);
   if (JSVAL_IS_BOOLEAN(js_val))
@@ -293,12 +300,10 @@ JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
       return JS_TRUE;
     return ConvertJSToScriptable(cx, js_val, native_val);
   }
-  // Conversion from JS Function to native Slot is not supported in this
-  // function.
   return JS_FALSE;
 }
 
-JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *wrapper,
+JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *owner,
                          const Variant &prototype,
                          jsval js_val, Variant *native_val) {
   switch (prototype.type()) {
@@ -320,11 +325,11 @@ JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *wrapper,
     case Variant::TYPE_CONST_SCRIPTABLE:
       return ConvertJSToScriptable(cx, js_val, native_val);
     case Variant::TYPE_SLOT:
-      return ConvertJSToSlot(cx, wrapper, prototype, js_val, native_val);
+      return ConvertJSToSlot(cx, owner, prototype, js_val, native_val);
     case Variant::TYPE_DATE:
       return ConvertJSToNativeDate(cx, js_val, native_val);
     case Variant::TYPE_VARIANT:
-      return ConvertJSToNativeVariant(cx, js_val, native_val);
+      return ConvertJSToNativeVariant(cx, owner, js_val, native_val);
     default:
       return JS_FALSE;
   }
@@ -360,7 +365,7 @@ std::string PrintJSValue(JSContext *cx, jsval js_val) {
   }
 }
 
-JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
+JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
                              Slot *slot, uintN argc, jsval *argv,
                              Variant **params, uintN *expected_argc) {
   *params = NULL;
@@ -408,11 +413,11 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *wrapper,
       } else {
         JSBool result;
         if (arg_types) {
-          result = ConvertJSToNative(cx, wrapper,
+          result = ConvertJSToNative(cx, owner,
                                      Variant(arg_types[i]), argv[i],
                                      &(*params)[i]);
         } else {
-          result = ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
+          result = ConvertJSToNativeVariant(cx, owner, argv[i], &(*params)[i]);
         }
         if (!result) {
           for (uintN j = 0; j < i; j++)
@@ -513,6 +518,24 @@ static JSBool ConvertNativeUTF16ToJSString(JSContext *cx,
   return result;
 }
 
+static JSBool ConvertNativeArrayToJS(JSContext *cx, ScriptableArray *array,
+                                     jsval *js_val) {
+  JSObject *js_array = JS_NewArrayObject(cx, 0, NULL);
+  if (!js_array)
+    return JS_FALSE;
+
+  array->Attach();
+  size_t length = array->GetCount();
+  for (size_t i = 0; i < length; i++) {
+    jsval item;
+    if (ConvertNativeToJS(cx, array->GetItem(i), &item))
+      JS_SetElement(cx, js_array, static_cast<jsint>(i), &item);
+  }
+  array->Detach();
+  *js_val = OBJECT_TO_JSVAL(js_array);
+  return JS_TRUE;
+}
+
 static JSBool ConvertNativeToJSObject(JSContext *cx,
                                       const Variant &native_val,
                                       jsval *js_val) {
@@ -524,10 +547,18 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
       VariantValue<ScriptableInterface *>()(native_val);
   if (!scriptable) {
     *js_val = JSVAL_NULL;
+  } else if (scriptable->IsInstanceOf(ScriptableArray::CLASS_ID)) {
+    result = ConvertNativeArrayToJS(cx,
+                                    down_cast<ScriptableArray *>(scriptable),
+                                    js_val);
+  } else if (scriptable->IsInstanceOf(JSNativeWrapper::CLASS_ID)) {
+    // TODO: Create new wrapper or JSFunction if crossing JS runtimes.
+    *js_val = OBJECT_TO_JSVAL(
+        down_cast<JSNativeWrapper *>(scriptable)->js_object());
   } else {
     NativeJSWrapper *wrapper = JSScriptContext::WrapNativeObjectToJS(
         cx, scriptable);
-    if (wrapper) { 
+    if (wrapper) {
       JSObject *js_object = wrapper->js_object();
       if (js_object)
         *js_val = OBJECT_TO_JSVAL(js_object);

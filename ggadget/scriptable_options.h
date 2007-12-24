@@ -27,7 +27,12 @@ class ScriptableOptions : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)
 
-  explicit ScriptableOptions(OptionsInterface *options);
+  /**
+   * @param options
+   * @param raw_objects weather pass raw @c Variant objects to/from script or
+   *     encode them into JSONString.
+   */
+  ScriptableOptions(OptionsInterface *options, bool raw_objects);
   virtual ~ScriptableOptions();
 
   virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }

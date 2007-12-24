@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include <cstring>
+#include <vector>
 #include <ggadget/string_utils.h>
 #include "json.h"
 
@@ -28,17 +28,18 @@ static const char kDatePrefixReplace[] = "new Date(";
 static const char kDatePostfix[] = ")\\/\"";
 static const char kDatePostfixReplace[] = ")";
 
-static void AppendJSON(JSContext *cx, jsval js_val, std::string *json);
+static void AppendJSON(JSContext *cx, jsval js_val, std::string *json,
+                       std::vector<jsval> *stack);
 
 static void AppendArrayToJSON(JSContext *cx, JSObject *array,
-                              std::string *json) {
+                              std::string *json, std::vector<jsval> *stack) {
   (*json) += '[';
   jsuint length = 0;
   JS_GetArrayLength(cx, array, &length);
   for (jsuint i = 0; i < length; i++) {
     jsval value = JSVAL_NULL;
     JS_GetElement(cx, array, static_cast<jsint>(i), &value);
-    AppendJSON(cx, value, json);
+    AppendJSON(cx, value, json, stack);
     if (i != length - 1)
       (*json) += ',';
   }
@@ -55,7 +56,7 @@ static void AppendStringToJSON(JSContext *cx, JSString *str,
 }
 
 static void AppendObjectToJSON(JSContext *cx, JSObject *object,
-                               std::string *json) {
+                               std::string *json, std::vector<jsval> *stack) {
   (*json) += '{';
   JSIdArray *id_array = JS_Enumerate(cx, object);
   JSObject *prototype = JS_GetPrototype(cx, object);
@@ -75,6 +76,8 @@ static void AppendObjectToJSON(JSContext *cx, JSObject *object,
                            &value);
           // Don't output methods.
           if (JS_TypeOfValue(cx, value) != JSTYPE_FUNCTION &&
+              // Not an internal property.
+//              key_chars[0] != '[' &&
               // Only output properties defined not in the prototype.
               (!JS_GetUCProperty(cx, prototype,
                                  key_chars, JS_GetStringLength(key_str),
@@ -82,7 +85,7 @@ static void AppendObjectToJSON(JSContext *cx, JSObject *object,
                prototype_value != value)) {
             AppendStringToJSON(cx, key_str, json);
             (*json) += ':';
-            AppendJSON(cx, value, json);
+            AppendJSON(cx, value, json, stack);
             (*json) += ',';
           }
         }
@@ -127,18 +130,25 @@ static JSBool AppendDateToJSON(JSContext *cx, JSObject *obj,
   return JS_TRUE;
 }
 
-static void AppendJSON(JSContext *cx, jsval js_val, std::string *json) {
+static void AppendJSON(JSContext *cx, jsval js_val, std::string *json,
+                       std::vector<jsval> *stack) {
   switch (JS_TypeOfValue(cx, js_val)) {
-    case JSTYPE_OBJECT: {
-      JSObject *obj = JSVAL_TO_OBJECT(js_val);
-      if (!obj)
+    case JSTYPE_OBJECT:
+      if (find(stack->begin(), stack->end(), js_val) != stack->end()) {
+        // Break the infinite reference loops.
         (*json) += "null";
-      else if (JS_IsArrayObject(cx, obj))
-        AppendArrayToJSON(cx, obj, json);
-      else if (!AppendDateToJSON(cx, obj, json))
-        AppendObjectToJSON(cx, obj, json);
+      } else {
+        stack->push_back(js_val);
+        JSObject *obj = JSVAL_TO_OBJECT(js_val);
+        if (!obj)
+          (*json) += "null";
+        else if (JS_IsArrayObject(cx, obj))
+          AppendArrayToJSON(cx, obj, json, stack);
+        else if (!AppendDateToJSON(cx, obj, json))
+          AppendObjectToJSON(cx, obj, json, stack);
+        stack->pop_back();
+      }
       break;
-    }
     case JSTYPE_STRING:
       AppendStringToJSON(cx, JSVAL_TO_STRING(js_val), json);
       break;
@@ -156,7 +166,8 @@ static void AppendJSON(JSContext *cx, jsval js_val, std::string *json) {
 
 JSBool JSONEncode(JSContext *cx, jsval js_val, std::string *json) {
   json->clear();
-  AppendJSON(cx, js_val, json);
+  std::vector<jsval> stack;
+  AppendJSON(cx, js_val, json, &stack);
   return JS_TRUE;
 }
 

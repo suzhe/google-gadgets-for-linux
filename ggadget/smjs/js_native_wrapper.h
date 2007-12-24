@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_SCRIPTABLE_OBJECT_H__
-#define GGADGET_SCRIPTABLE_OBJECT_H__
+#ifndef GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
+#define GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
 
 #include <jsapi.h>
 #include <ggadget/common.h>
@@ -27,24 +27,31 @@ namespace smjs {
 /**
  * Wraps a JavaScript object into a native @c ScriptableInterface.
  */
-class JSNativeWrapper : public ScriptableHelper<ScriptableInterface> {
+class JSNativeWrapper : public ScriptableHelperOwnershipShared {
  public:
   DEFINE_CLASS_ID(0x65f4d888b7b749ed, ScriptableInterface);
 
   JSNativeWrapper(JSContext *js_context, JSObject *js_object);
   virtual ~JSNativeWrapper();
 
-  // TODO: More sophisticated ownership policy.
-  virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-  virtual bool Detach() { delete this; return true; }
+  virtual OwnershipPolicy Attach();
+  virtual bool Detach();
+  virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
 
   Variant GetProperty(const char *name);
   bool SetProperty(const char *name, const Variant &value);
   Variant GetElement(int index);
   bool SetElement(int index, const Variant &value);
 
+  JSContext *js_context() { return js_context_; }
+  JSObject *js_object() { return js_object_; }
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSNativeWrapper);
+  static void FinalizeTracker(JSContext *cx, JSObject *obj);
+
+  static JSClass js_reference_tracker_class_;
+  int ref_count_;
   JSContext *js_context_;
   JSObject *js_object_;
 };
@@ -52,4 +59,4 @@ class JSNativeWrapper : public ScriptableHelper<ScriptableInterface> {
 } // namespace smjs
 } // namespace ggadget
 
-#endif // GGADGET_SCRIPTABLE_OBJECT_H__
+#endif // GGADGET_SMJS_JS_NATIVE_WRAPPER_H__

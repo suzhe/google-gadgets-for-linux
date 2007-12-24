@@ -29,8 +29,6 @@
 
 namespace ggadget {
 
-static const char kOnChangeEvent[] = "onchange";
-
 static const char kErrorItemExpected[] =
   "Incorrect element type: Item/ListItem expected.";
 

@@ -25,6 +25,8 @@ namespace ggadget {
 
 class Connection;
 template <typename R> class Slot0;
+template <typename R, typename P1, typename P2, typename P3, typename P4>
+class Slot4;
 
 /**
  * Object interface that can be called from script languages.
@@ -83,17 +85,6 @@ class ScriptableInterface {
      * script adapter.
      */
     NATIVE_PERMANENT,
-    /**
-     * Transferable policy: C++ code creates a scriptable object and then
-     * transfers the ownership to the script engine, then when the wrapped
-     * object is finalized by the script engine (normally occurs during garbage
-     * collection), the object deletes itself when the script adapter calls
-     * @c Detach(). In this case, the implementation should do nothing in
-     * @c Attach() and delete itself in @c Detach(). This policy is useful
-     * when an API method returns a new created object and then only used by
-     * the script side and will never be transfered back to the C++ side.
-     */
-    OWNERSHIP_TRANSFERRABLE,
     /**
      * Shared policy: C++ code creates a scriptable object, and then the
      * ownership may be shared between the C++ and script side. The
@@ -222,7 +213,7 @@ class ScriptableInterface {
    *     prototype returned from @c GetPropertyInfoByName().
    * @return @c true if the property is supported and succeeds.
    */
-  virtual bool SetProperty(int id, Variant value) = 0;
+  virtual bool SetProperty(int id, const Variant &value) = 0;
 
   /**
    * Gets and clears the current pending exception.
@@ -233,6 +224,19 @@ class ScriptableInterface {
    * @return the pending exception.
    */
   virtual ScriptableInterface *GetPendingException(bool clear) = 0;
+
+  typedef Slot4<bool, int, const char *, const Variant &, bool>
+      EnumeratePropertiesCallback;
+  /**
+   * Enumerate all known properties.
+   * @param callback it will be called for each property. The parameters are
+   *     id, name, current value and a bool indicating if the property is a
+   *     method. The callback should return @c false if it doesn't want to
+   *     continue. The callback will be automatically deleted before this
+   *     method returns, so the caller can use @c NewSlot for the parameter. 
+   * @return @c false if the callback returns @c false.  
+   */
+  virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) = 0;
 };
 
 /**

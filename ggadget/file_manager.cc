@@ -178,7 +178,7 @@ bool FileManagerImpl::GetXMLFileContents(const char *file,
       GadgetStringMap::const_iterator iter = string_table_.find(entity_name);
       if (iter != string_table_.end()) {
         start = pos + 1;  // Reset start for next chunk.
-        data->append(iter->second);
+        data->append(EncodeXMLString(iter->second.c_str()));
       }
       // Else: not a fatal error. Just leave the original entity reference
       // text in the current text chunk and let tinyxml deal with it.
@@ -291,14 +291,14 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
     return false;
 
   std::string filename(base_path_ + kPathSeparator + iter->first);
-  bool result = ParseXMLIntoXPathMap(data.c_str(), filename.c_str(),
+  bool result = ParseXMLIntoXPathMap(data, filename.c_str(),
                                      kStringsTag, NULL, &string_table_);
 
   if (!result) {
     // For compatibility with some Windows gadget files that use ISO8859-1
     // encoding without declaration.
     std::string encoding("ISO8859-1");
-    result = ParseXMLIntoXPathMap(data.c_str(), filename.c_str(),
+    result = ParseXMLIntoXPathMap(data, filename.c_str(),
                                   kStringsTag, &encoding, &string_table_); 
   }
   return false;

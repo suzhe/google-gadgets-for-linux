@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <ggadget/logger.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
@@ -24,8 +25,8 @@
 
 #ifdef _DEBUG
 // Uncomment the following to debug wrapper memory.
-// #define DEBUG_JS_WRAPPER_MEMORY
-// #define DEBUG_FORCE_GC
+#define DEBUG_JS_WRAPPER_MEMORY
+#define DEBUG_FORCE_GC
 #endif
 
 namespace ggadget {
@@ -35,10 +36,11 @@ namespace smjs {
 JSClass NativeJSWrapper::wrapper_js_class_ = {
   "NativeJSWrapper",
   // Use the private slot to store the wrapper.
-  JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE,
+  JSCLASS_HAS_PRIVATE | JSCLASS_NEW_ENUMERATE | JSCLASS_NEW_RESOLVE,
   JS_PropertyStub, JS_PropertyStub,
   GetWrapperPropertyDefault, SetWrapperPropertyDefault,
-  JS_EnumerateStub, reinterpret_cast<JSResolveOp>(ResolveWrapperProperty),
+  reinterpret_cast<JSEnumerateOp>(EnumerateWrapper),
+  reinterpret_cast<JSResolveOp>(ResolveWrapperProperty),
   JS_ConvertStub, FinalizeWrapper,
   NULL, NULL, CallWrapperSelf, NULL,
   NULL, NULL, MarkWrapper, NULL,
@@ -73,6 +75,19 @@ NativeJSWrapper::~NativeJSWrapper() {
     deleted_ = true;
     DetachJS();
     scriptable_->Detach();
+  } else {
+    // Clean up remaining owned JSFunctionSlot's. Normally all JSFunctionSlot's
+    // should have already been deleted. However, in some cases, for example,
+    // a parameter type is Variant and the native side expects only a number
+    // or a string, but the script assigned a function, the function may leave
+    // undeleted till now.
+    while (!js_function_slots_.empty()) {
+      JSFunctionSlots::iterator it = js_function_slots_.begin();
+      DLOG("POSSIBLE FUNCTION LEAK: %s cx=%p jsobj=%p wrapper=%p",
+           (*it)->function_info().c_str(), js_context_, js_object_, this);
+      // The JSFunctionSlot will remove it from js_function_slots_ by itself.
+      delete *it;
+    }
   }
 }
 
@@ -221,6 +236,20 @@ JSBool NativeJSWrapper::SetWrapperPropertyByName(JSContext *cx, JSObject *obj,
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   return !wrapper ||
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyByName(id, *vp));
+}
+
+JSBool NativeJSWrapper::EnumerateWrapper(JSContext *cx, JSObject *obj,
+                                         JSIterateOp enum_op,
+                                         jsval *statep, jsid *idp) {
+  if (JS_IsExceptionPending(cx))
+    return JS_FALSE;
+  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
+  return !wrapper ||
+         // Don't CheckNotDeleted() when enum_op == JSENUMERATE_DESTROY
+         // because we need this to clean up the resources allocated during
+         // enumeration. NOTE: this may occur during GC.
+         ((enum_op == JSENUMERATE_DESTROY || wrapper->CheckNotDeleted()) &&
+          wrapper->Enumerate(enum_op, statep, idp));
 }
 
 JSBool NativeJSWrapper::ResolveWrapperProperty(JSContext *cx, JSObject *obj,
@@ -560,6 +589,54 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   return JSScriptContext::CheckException(js_context_, scriptable_);
 }
 
+class NameCollector {
+ public:
+  NameCollector(std::vector<std::string> *names) : names_(names) { }
+  bool Collect(int id, const char *name,
+               const Variant &value, bool is_method) {
+    names_->push_back(name);
+    return true;
+  }
+  std::vector<std::string> *names_;
+};
+
+JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
+                                  jsval *statep, jsid *idp) {
+  std::vector<std::string> *properties;
+  switch (enum_op) {
+    case JSENUMERATE_INIT: {
+      properties = new std::vector<std::string>;
+      NameCollector collector(properties);
+      scriptable_->EnumerateProperties(NewSlot(&collector,
+                                               &NameCollector::Collect));
+      *statep = PRIVATE_TO_JSVAL(properties);
+      if (idp)
+        JS_ValueToId(js_context_, INT_TO_JSVAL(properties->size()), idp);
+      break;
+    }
+    case JSENUMERATE_NEXT:
+      properties = reinterpret_cast<std::vector<std::string> *>(
+          JSVAL_TO_PRIVATE(*statep));
+      if (!properties->empty()) {
+        const char *name = properties->begin()->c_str();
+        jsval idval = STRING_TO_JSVAL(JS_NewStringCopyZ(js_context_, name));
+        JS_ValueToId(js_context_, idval, idp);
+        properties->erase(properties->begin());
+        break;
+      }
+      // Fall Through!
+    case JSENUMERATE_DESTROY:
+      properties = reinterpret_cast<std::vector<std::string> *>(
+          JSVAL_TO_PRIVATE(*statep));
+      delete properties;
+      *statep = JSVAL_NULL;
+      break;
+    default:
+      return JS_FALSE;
+  }
+  return JS_TRUE;
+}
+
 JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
                                         JSObject **objp) {
   ASSERT(scriptable_);
@@ -621,14 +698,13 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
 
   // Define a JavaScript property.
   jsval js_val = JSVAL_VOID;
-  if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
-    JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
-                   prototype.Print().c_str());
-    return JS_FALSE;
-  }
-
   *objp = js_object_;
   if (int_id == ScriptableInterface::kConstantPropertyId) {
+    if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
+      JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
+                     prototype.Print().c_str());
+      return JS_FALSE;
+    }
     // This property is a constant, register a property with initial value
     // and without a tiny ID.  Then the JavaScript engine will handle it.
     return JS_DefineProperty(js_context_, js_object_, name,

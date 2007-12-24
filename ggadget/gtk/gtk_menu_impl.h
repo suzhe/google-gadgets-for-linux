@@ -57,7 +57,7 @@ class GtkMenuImpl : public ggadget::MenuInterface {
   };
 
   GtkMenu *gtk_menu_;
-  typedef std::map<std::string, MenuItemInfo> ItemMap;
+  typedef std::multimap<std::string, MenuItemInfo> ItemMap;
   ItemMap item_map_;
   static bool setting_style_;
 };

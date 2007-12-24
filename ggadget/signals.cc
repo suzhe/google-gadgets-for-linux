@@ -87,11 +87,12 @@ bool Signal::CheckCompatibility(const Slot *slot) const {
       slot->GetReturnType() != return_type)
     return false;
 
-  // Third, argument types must equal.
+  // Third, argument types must equal except that the target type is Variant.
   const Variant::Type *slot_arg_types = slot->GetArgTypes();
   const Variant::Type *signal_arg_types = GetArgTypes();
   for (int i = 0; i < arg_count; i++)
-    if (slot_arg_types[i] != signal_arg_types[i])
+    if (slot_arg_types[i] != Variant::TYPE_VARIANT &&
+        slot_arg_types[i] != signal_arg_types[i])
       return false;
 
   return true;
@@ -108,7 +109,7 @@ bool Signal::HasActiveConnections() const {
   return false;
 }
 
-Variant Signal::Emit(int argc, Variant argv[]) const {
+Variant Signal::Emit(int argc, const Variant argv[]) const {
   Variant result(GetReturnType());
   for (ConnectionList::const_iterator it = connections_.begin();
        it != connections_.end(); ++it) {

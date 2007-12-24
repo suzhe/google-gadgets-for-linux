@@ -54,6 +54,27 @@ class View::Impl {
     virtual bool IsStrict() const { return false; }
   };
 
+  // Old "utils" global object, for backward compatibility.
+  class Utils : public ScriptableHelper<ScriptableInterface> {
+   public:
+    DEFINE_CLASS_ID(0x7b7e1dd0b91f4153, ScriptableInterface);
+    Utils(Impl *impl) {
+      RegisterMethod("loadImage", NewSlot(this, &Utils::LoadImage));
+      RegisterMethod("setTimeout", NewSlot(impl, &Impl::SetTimeout));
+      RegisterMethod("clearTimeout", NewSlot(impl, &Impl::RemoveTimer));
+      RegisterMethod("setInterval", NewSlot(impl, &Impl::SetInterval));
+      RegisterMethod("clearInterval", NewSlot(impl, &Impl::RemoveTimer));
+      RegisterMethod("alert", NewSlot(impl->owner_, &View::Alert));
+      RegisterMethod("confirm", NewSlot(impl->owner_, &View::Confirm));
+      RegisterMethod("prompt", NewSlot(impl->owner_, &View::Prompt));
+    }
+    // Just return the original image_src directly, to let the receiver
+    // actually load it.
+    Variant LoadImage(const Variant &image_src) {
+      return image_src;
+    }
+  };
+
   /**
    * Callback object for timer watches.
    * if duration > 0 then it's a animation timer.
@@ -158,7 +179,8 @@ class View::Impl {
       content_area_element_(NULL),
       posting_event_element_(NULL),
       post_event_token_(0),
-      draw_queued_(false) {
+      draw_queued_(false),
+      utils_(this) {
   }
 
   ~Impl() {
@@ -242,8 +264,10 @@ class View::Impl {
 
   bool InitFromFile(const char *filename) {
     if (SetupViewFromFile(owner_, filename)) {
-      onopen_event_();
-      return true;
+      SimpleEvent event(Event::EVENT_OPEN);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      FireEvent(&scriptable_event, onopen_event_);
+      return scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED;
     } else {
       return false;
     }
@@ -831,7 +855,7 @@ class View::Impl {
       delete slot_;
       slot_ = NULL;
     }
-    virtual Variant Call(int argc, Variant argv[]) const {
+    virtual Variant Call(int argc, const Variant argv[]) const {
       if (element_) {
         // If it is still live.
         return slot_->Call(argc, argv);
@@ -918,7 +942,7 @@ class View::Impl {
   BasicElement *posting_event_element_;
   int post_event_token_;
   bool draw_queued_;
-
+  Utils utils_;
   Signal0<void> on_destroy_signal_;
 };
 
@@ -930,6 +954,7 @@ View::View(ViewHostInterface *host,
   impl_->RegisterProperties(this);
   impl_->RegisterProperties(&impl_->global_object_);
   impl_->global_object_.RegisterConstant("view", this);
+  impl_->global_object_.RegisterConstant("utils", &impl_->utils_);
   impl_->global_object_.SetDynamicPropertyHandler(
       NewSlot(impl_, &Impl::GetElementByNameVariant), NULL);
   if (prototype)

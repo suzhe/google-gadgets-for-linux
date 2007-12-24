@@ -37,11 +37,11 @@
 
 namespace ggadget {
 
-class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
+class Gadget::Impl : public ScriptableHelperNativePermanent {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
 
-  class Debug : public ScriptableHelper<ScriptableInterface> {
+  class Debug : public ScriptableHelperNativePermanent {
    public:
     DEFINE_CLASS_ID(0xa9b59e70c74649da, ScriptableInterface);
     Debug(Gadget::Impl *owner) {
@@ -49,35 +49,31 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterMethod("trace", NewSlot(owner, &Impl::DebugTrace));
       RegisterMethod("warning", NewSlot(owner, &Impl::DebugWarning));
     }
-    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  class Storage : public ScriptableHelper<ScriptableInterface> {
+  class Storage : public ScriptableHelperNativePermanent {
    public:
     DEFINE_CLASS_ID(0xd48715e0098f43d1, ScriptableInterface);
     Storage(Gadget::Impl *owner) {
       RegisterMethod("extract", NewSlot(owner, &Impl::ExtractFile));
       RegisterMethod("openText", NewSlot(owner, &Impl::OpenTextFile));
     }
-    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  static void RegisterStrings(
-      GadgetStringMap *strings,
-      ScriptableHelper<ScriptableInterface> *scriptable) {
+  static void RegisterStrings(GadgetStringMap *strings,
+                              ScriptableHelperNativePermanent *scriptable) {
     for (GadgetStringMap::const_iterator it = strings->begin();
          it != strings->end(); ++it) {
       scriptable->RegisterConstant(it->first.c_str(), it->second);
     }
   }
 
-  class Strings : public ScriptableHelper<ScriptableInterface> {
+  class Strings : public ScriptableHelperNativePermanent {
    public:
     DEFINE_CLASS_ID(0x13679b3ef9a5490e, ScriptableInterface);
-    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
   };
 
-  class Plugin : public ScriptableHelper<ScriptableInterface> {
+  class Plugin : public ScriptableHelperNativePermanent {
    public:
     DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
     Plugin(Impl *gadget_impl) :
@@ -132,8 +128,6 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterMethod("RemoveAllContentItems",
                      NewSlot(this, &Plugin::RemoveAllContentItems));
     }
-
-    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
     void OnAddCustomMenuItems(MenuInterface *menu) {
       ScriptableMenu scriptable_menu(menu);
@@ -203,7 +197,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     Signal1<void, int> ondisplaytargetchange_signal_;
   };
 
-  class GadgetGlobalPrototype : public ScriptableHelper<ScriptableInterface> {
+  class GadgetGlobalPrototype : public ScriptableHelperNativePermanent {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
     GadgetGlobalPrototype(Gadget::Impl *owner)
@@ -224,7 +218,6 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       RegisterConstant("framework", &framework_);
       SetPrototype(&framework_);
     }
-    virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
     ScriptableFramework framework_;
   };
@@ -233,7 +226,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
       : host_(host),
         debug_(this),
         storage_(this),
-        scriptable_options_(host->GetOptions()),
+        scriptable_options_(host->GetOptions(), false),
         gadget_global_prototype_(this),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           &gadget_global_prototype_)),
@@ -267,8 +260,6 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
     delete main_view_host_;
     main_view_host_ = NULL;
   }
-
-  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
   void DebugError(const char *message) {
     host_->DebugOutput(GadgetHostInterface::DEBUG_ERROR, message);
@@ -409,7 +400,7 @@ class Gadget::Impl : public ScriptableHelper<ScriptableInterface> {
                                           &manifest_contents,
                                           &manifest_path))
       return false;
-    if (!ParseXMLIntoXPathMap(manifest_contents.c_str(),
+    if (!ParseXMLIntoXPathMap(manifest_contents,
                               manifest_path.c_str(),
                               kGadgetTag, NULL,
                               &manifest_info_map_))

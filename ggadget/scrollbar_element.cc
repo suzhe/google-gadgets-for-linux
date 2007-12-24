@@ -27,8 +27,6 @@
 
 namespace ggadget {
 
-static const char *const kOnChangeEvent = "onchange";
-
 enum DisplayState {
   STATE_NORMAL,
   STATE_DOWN,

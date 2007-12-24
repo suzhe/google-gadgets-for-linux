@@ -68,7 +68,7 @@ class ScriptableFileSystem::Impl {
       : filesystem_(filesystem), owner_(owner) {
   }
 
-  class FileSystemException : public ScriptableHelper<ScriptableInterface> {
+  class FileSystemException : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0x9c53dee0b2114ce4, ScriptableInterface);
 
@@ -77,10 +77,6 @@ class ScriptableFileSystem::Impl {
       message_ += " failed.";
       RegisterConstant("message", message_);
     }
-
-    // This is a script owned object.
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; } 
-    virtual bool Detach() { delete this; return true; }
 
    private:
     std::string message_;
@@ -95,10 +91,10 @@ class ScriptableFileSystem::Impl {
       ItemT *item = collection->GetItem(i);
       array[i] = Variant(item ? new ScriptableT(item) : NULL);
     }
-    return ScriptableArray::Create(array, static_cast<size_t>(count), false);
+    return ScriptableArray::Create(array, static_cast<size_t>(count));
   }
 
-  class ScriptableTextStream : public ScriptableHelper<ScriptableInterface> {
+  class ScriptableTextStream : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0x34828c47e6a243c5, ScriptableInterface);
     ScriptableTextStream(TextStreamInterface *stream) : stream_(stream) {
@@ -135,14 +131,12 @@ class ScriptableFileSystem::Impl {
       stream_->Destroy();
       stream_ = NULL;
     }
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     TextStreamInterface *stream_;
   };
 
   class ScriptableFolder;
-  class ScriptableDrive : public ScriptableHelper<ScriptableInterface> {
+  class ScriptableDrive : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0x0a34071a4804434b, ScriptableInterface);
     ScriptableDrive(DriveInterface *drive) : drive_(drive) {
@@ -189,8 +183,6 @@ class ScriptableFileSystem::Impl {
       drive_->Destroy();
       drive_ = NULL;
     }
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     ScriptableFolder *GetRootFolder();
 
@@ -202,7 +194,7 @@ class ScriptableFileSystem::Impl {
     DriveInterface *drive_;
   };
 
-  class ScriptableFolder : public ScriptableHelper<ScriptableInterface> {
+  class ScriptableFolder : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0xa2e7a3ef662a445c, ScriptableInterface);
     ScriptableFolder(FolderInterface *folder) : folder_(folder) {
@@ -266,8 +258,6 @@ class ScriptableFileSystem::Impl {
       folder_->Destroy();
       folder_ = NULL;
     }
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     void SetName(const char *name) {
       if (!folder_->SetName(name))
@@ -345,7 +335,7 @@ class ScriptableFileSystem::Impl {
     FolderInterface *folder_;
   };
 
-  class ScriptableFile : public ScriptableHelper<ScriptableInterface> {
+  class ScriptableFile : public ScriptableHelperOwnershipShared {
    public:
     DEFINE_CLASS_ID(0xd8071714bc0a4d2c, ScriptableInterface);
     ScriptableFile(FileInterface *file) : file_(file) {
@@ -401,8 +391,6 @@ class ScriptableFileSystem::Impl {
       file_->Destroy();
       file_ = NULL;
     }
-    virtual OwnershipPolicy Attach() { return OWNERSHIP_TRANSFERRABLE; }
-    virtual bool Detach() { delete this; return true; }
 
     void SetName(const char *name) {
       if (!file_->SetName(name))
