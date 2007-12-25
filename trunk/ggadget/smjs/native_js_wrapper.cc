@@ -25,8 +25,8 @@
 
 #ifdef _DEBUG
 // Uncomment the following to debug wrapper memory.
-#define DEBUG_JS_WRAPPER_MEMORY
-#define DEBUG_FORCE_GC
+// #define DEBUG_JS_WRAPPER_MEMORY
+// #define DEBUG_FORCE_GC
 #endif
 
 namespace ggadget {

@@ -43,6 +43,8 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
   // Break the circle by letting the owner manage this object.
   if (owner)
     owner->AddJSFunctionSlot(this);
+  else
+    JS_AddRoot(context, &function_);
 
   int lineno;
   JSScriptContext::GetCurrentFileAndLine(context, &function_info_, &lineno);
@@ -50,8 +52,12 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
-  if (owner_)
-    owner_->RemoveJSFunctionSlot(this);
+  if (function_) {
+    if (owner_)
+      owner_->RemoveJSFunctionSlot(this);
+    else
+      JS_RemoveRoot(context_, &function_);
+  }
 }
 
 Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
