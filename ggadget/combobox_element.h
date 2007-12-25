@@ -87,6 +87,8 @@ class ComboBoxElement : public BasicElement {
   virtual EventResult OnDragEvent(const DragEvent &event, bool direct,
                                   BasicElement **fired_element);
 
+  virtual void OnPopupOff();
+
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  public:

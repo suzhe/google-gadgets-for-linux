@@ -164,6 +164,13 @@ class View : public ScriptableHelper<ViewInterface> {
   void SetFocus(BasicElement *element);
 
   /**
+   * Sets and gets the element to be shown as a popup, above all 
+   * other elements on the view.
+   */
+  void SetPopupElement(BasicElement *element);
+  BasicElement *GetPopupElement(); 
+
+  /**
    * Any elements should call this method when it need to fire an event.
    * @param event the event to be fired. The caller can choose to allocate the
    *     event object on stack or heap.

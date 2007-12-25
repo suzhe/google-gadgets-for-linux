@@ -562,6 +562,7 @@ class BasicElement::Impl {
   EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                            BasicElement **fired_element,
                            BasicElement **in_element) {
+    Event::Type type = event.GetType();
     BasicElement *this_element = owner_;
     ScopedDeathDetector death_detector(view_, &this_element);
 
@@ -582,13 +583,13 @@ class BasicElement::Impl {
 
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(&event, owner_, NULL);
-    if (event.GetType() != Event::EVENT_MOUSE_MOVE)
+    if (type != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(%s|%s): %g %g %d %d", scriptable_event.GetName(),
            name_.c_str(), tag_name_.c_str(),
            event.GetX(), event.GetY(),
            event.GetButton(), event.GetWheelDelta());
 
-    switch (event.GetType()) {
+    switch (type) {
       case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
         view_->FireEvent(&scriptable_event, onmousemove_event_);
         break;
@@ -1365,6 +1366,9 @@ bool BasicElement::IsImplicit() const {
 void BasicElement::SetImplicit(bool implicit) {
   ASSERT(!implicit || impl_->parent_);
   impl_->implicit_ = implicit;
+}
+
+void BasicElement::OnPopupOff() {
 }
 
 bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {

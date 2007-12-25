@@ -21,6 +21,7 @@
 
 #include <ggadget/element_factory.h>
 #include <ggadget/file_manager.h>
+#include <ggadget/file_manager_wrapper.h>
 #include <ggadget/framework_interface.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
@@ -51,14 +52,17 @@
 namespace ggadget {
 namespace gtk {
 
+static const char kResourceZipName[] = "ggl_resources.bin";
+
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              FrameworkInterface *framework,
                              bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
       element_factory_(NULL),
+      resource_file_manager_(new FileManager()),
       global_file_manager_(new GlobalFileManager()),
-      file_manager_(new FileManager(global_file_manager_)),
+      file_manager_(NULL),
       options_(new Options()),
       framework_(framework),
       gadget_(NULL),
@@ -68,6 +72,7 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
       forward_button_(NULL), details_button_(NULL),
       menu_(NULL) {
   ElementFactory *factory = new ElementFactory();
+  element_factory_ = factory;
   factory->RegisterElementClass("a", &ggadget::AnchorElement::CreateInstance);
   factory->RegisterElementClass("button",
                                 &ggadget::ButtonElement::CreateInstance);
@@ -97,9 +102,17 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                                 &ggadget::CheckBoxElement::CreateRadioInstance);
   factory->RegisterElementClass("scrollbar",
                                 &ggadget::ScrollBarElement::CreateInstance);
-  element_factory_ = factory;
 
-  global_file_manager_->Init(NULL);
+  FileManagerWrapper *wrapper = new FileManagerWrapper();
+  file_manager_ = wrapper;
+
+  resource_file_manager_->Init(kResourceZipName);
+  wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix, 
+                               resource_file_manager_);
+
+  global_file_manager_->Init(ggadget::kPathSeparatorStr);
+  wrapper->RegisterFileManager(ggadget::kPathSeparatorStr, 
+                               global_file_manager_); 
 
   script_runtime_->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
@@ -120,6 +133,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   script_runtime_ = NULL;
   delete file_manager_;
   file_manager_ = NULL;
+  delete resource_file_manager_;
+  resource_file_manager_ = NULL;
   delete global_file_manager_;
   global_file_manager_ = NULL;
   delete menu_;
@@ -137,10 +152,6 @@ ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
 
 FileManagerInterface *GtkGadgetHost::GetFileManager() {
   return file_manager_;
-}
-
-FileManagerInterface *GtkGadgetHost::GetGlobalFileManager() {
-  return global_file_manager_;
 }
 
 OptionsInterface *GtkGadgetHost::GetOptions() {
@@ -320,8 +331,9 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
 
   SetPluginFlags(0);
   gadget_ = new Gadget(this);
-  if (!file_manager_->Init(base_path) || !gadget_->Init())
+  if (!file_manager_->Init(base_path) || !gadget_->Init()) {
     return false;
+  }
 
   return true;
 }
@@ -346,7 +358,7 @@ bool GtkGadgetHost::PopupContextMenu(bool add_default_items, guint button) {
                             GTK_WIDGET(gtk_separator_menu_item_new()));
     }
     gadget_->OnAddCustomMenuItems(menu_);
-  
+
     if (g_list_length(gtk_container_get_children(GTK_CONTAINER(menu))) >
         item_count) {
       gtk_menu_shell_append(menu_shell,
@@ -387,7 +399,7 @@ void GtkGadgetHost::PopupMenu() {
   NewContextMenu();
   PopupContextMenu(true, 0);
 }
-  
+
 void GtkGadgetHost::OnMenuClicked(GtkButton *button, gpointer user_data) {
   GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
   this_p->PopupMenu();

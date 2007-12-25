@@ -32,17 +32,16 @@ namespace ggadget {
 
 namespace internal {
 
-FileManagerImpl::FileManagerImpl(FileManagerInterface *global_file_manager)
-    : global_file_manager_(global_file_manager),
-      is_dir_(false) {
+FileManagerImpl::FileManagerImpl()
+    : is_dir_(false) {
 }
 
 FileManagerImpl::~FileManagerImpl() {
 }
 
-bool FileManagerImpl::Init(const char *base_path) {
+bool FileManagerImpl::Init(const char *base_path) { 
   int error = 0;
-  ASSERT_M(base_path_.empty(), ("Don't initialize a FileManager twice"));
+  ASSERT_M(base_path_.empty(), ("Don't initialize a FileManager twice"));  
   if (!base_path || !base_path[0]) {
     LOG("Base path is empty.");
     return false;
@@ -87,12 +86,12 @@ bool FileManagerImpl::Init(const char *base_path) {
 
   // Init locale strings before loading string table.
   if (!InitLocaleStrings()) {
-    LOG("Failed to init locale strings in dir: %s", base_path_.c_str());
+    LOG("Failed to init locale strings in base path: %s", base_path_.c_str());
     return false;
   }
   // Now Load strings.xml.
   if (!LoadStringTable(kStringsXML)) {
-    LOG("Failed to load %s in dir: %s", kStringsXML, base_path_.c_str());
+    LOG("Failed to load %s in base path: %s", kStringsXML, base_path_.c_str());
     // Only warn about this error.
   }
 
@@ -127,12 +126,6 @@ bool FileManagerImpl::GetFileContents(const char *file,
   std::string normalized_file;
   FileMap::const_iterator iter = FindFile(file, &normalized_file);
   if (iter == files_.end()) {
-    if (file[0] == kPathSeparator && global_file_manager_) {
-      // The file name is absolute, pointing to a file system file.
-      return global_file_manager_->GetFileContents(normalized_file.c_str(),
-                                                   data, path);
-    }
-
     LOG("File not found: %s in dir: %s",
         normalized_file.c_str(), base_path_.c_str());
     return false;
@@ -280,9 +273,7 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
   // resource substitution on the file, which is inappropiate here.
   FileMap::const_iterator iter = FindLocalizedFile(string_table);
   if (iter == files_.end()) {
-    LOG("Failed to get localized file: %s in dir: %s",
-        string_table, base_path_.c_str());
-    // TODO: Is this a fatal error? Is strings.xml required?
+    // Don't print error here. Caller will print error.
     return false;
   }
 
@@ -301,7 +292,8 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
     result = ParseXMLIntoXPathMap(data, filename.c_str(),
                                   kStringsTag, &encoding, &string_table_); 
   }
-  return false;
+
+  return result;
 }
 
 bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
@@ -497,8 +489,8 @@ bool FileManagerImpl::FileExists(const char *file) {
 
 } // namespace internal
 
-FileManager::FileManager(FileManagerInterface *global_file_manager)
-    : impl_(new internal::FileManagerImpl(global_file_manager)) { }
+FileManager::FileManager()
+    : impl_(new internal::FileManagerImpl()) { }
 
 FileManager::~FileManager() {
   delete impl_;

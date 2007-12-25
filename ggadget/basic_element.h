@@ -274,6 +274,12 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
 
   /**
+   * Called when this element is no longer the current popup element. 
+   * (There's no need for a popup on message right now.)
+   */
+  virtual void OnPopupOff();
+
+  /**
    * Checks to see if position of the element has changed relative to the
    * parent since the last draw. Specifically, this checks for changes in
    * x, y, pinX, pinY and rotation.

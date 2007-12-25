@@ -32,7 +32,7 @@ std::string base_gg_path = "file_manager_test_data.gg";
 std::string base_manifest_path = "file_manager_test_data.dest/gadget.gmanifest";
 
 TEST(file_manager, InitLocaleStrings) {
-  FileManagerImpl impl(NULL);
+  FileManagerImpl impl;
   ASSERT_STREQ("C", setlocale(LC_MESSAGES, "C"));
   impl.InitLocaleStrings();
   EXPECT_STREQ("C/", impl.locale_lang_prefix_.c_str());
@@ -73,7 +73,7 @@ TEST(file_manager, SplitPathFilename) {
 }
 
 TEST(file_manager, FindLocalizedFile) {
-  FileManagerImpl impl(NULL);
+  FileManagerImpl impl;
   impl.files_["en/en_file"];
   impl.files_["en_US/strings.xml"];
   impl.files_["en_US/en_US_file"];
@@ -130,7 +130,7 @@ TEST(file_manager, FindLocalizedFile) {
 
 void TestFileManagerFunctions(const std::string &base_path,
                               const std::string &actual_path) {
-  FileManagerImpl impl(NULL);
+  FileManagerImpl impl;
   ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.Init(base_path.c_str());
 
@@ -174,7 +174,7 @@ TEST(file_manager, FileManagerDirManifest) {
 }
 
 TEST(file_manager, StringTable) {
-  FileManagerImpl impl(NULL);
+  FileManagerImpl impl;
   ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.Init(base_dir_path.c_str());
 
@@ -185,7 +185,7 @@ TEST(file_manager, StringTable) {
 }
 
 TEST(file_manager, GetTranslatedFileContents) {
-  FileManagerImpl impl(NULL);
+  FileManagerImpl impl;
   ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
   impl.Init(base_dir_path.c_str());
 

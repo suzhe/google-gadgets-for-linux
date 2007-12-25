@@ -107,11 +107,9 @@ GtkViewHost::GtkViewHost(GtkGadgetHost *gadget_host,
     // adapters.
     std::string common_js_contents;
     std::string common_js_path;
-    FileManagerInterface *global_file_manager =
-        gadget_host->GetGlobalFileManager();
-    if (global_file_manager->GetFileContents(kCommonJS,
-                                             &common_js_contents,
-                                             &common_js_path)) {
+    FileManagerInterface *file_manager = gadget_host->GetFileManager();
+    if (file_manager->GetFileContents(kCommonJS, &common_js_contents,
+                                      &common_js_path)) {
       script_context_->Execute(common_js_contents.c_str(),
                                common_js_path.c_str(), 1);
     } else {
