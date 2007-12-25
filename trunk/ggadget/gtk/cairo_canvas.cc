@@ -35,9 +35,15 @@ const char *const kEllipsisText = "...";
 CairoCanvas::CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask)
   : cr_(cr), width_(w), height_(h), is_mask_(is_mask), opacity_(1.) {
   cairo_reference(cr_);
+
+  ClearSurface();
+
   // Many CairoCanvas methods assume no existing path, so clear any
   // existing paths on construction.
   cairo_new_path(cr_);
+
+  // Likewise, save state first to allow ClearCanvas to clear the state.
+  cairo_save(cr_);
 }
 
 CairoCanvas::~CairoCanvas() {
@@ -58,6 +64,10 @@ bool CairoCanvas::ClearCanvas() {
   cairo_reset_clip(cr_);
   opacity_ = 1.;
   opacity_stack_ = std::stack<double>();
+
+  cairo_restore(cr_);
+  cairo_save(cr_);
+
   return true;
 }
 
@@ -575,7 +585,6 @@ bool CairoCanvas::GetPointValue(double x, double y,
                                 Color *color, double *opacity) const {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
 #define BYTE_TO_DOUBLE(x) (static_cast<double>(x)/255.0)
-
   cairo_surface_t *surface = GetSurface();
 
   // Only support Image surface for now.

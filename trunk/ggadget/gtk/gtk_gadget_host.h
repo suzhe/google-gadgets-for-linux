@@ -42,7 +42,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type);
   virtual ElementFactoryInterface *GetElementFactory();
   virtual FileManagerInterface *GetFileManager();
-  virtual FileManagerInterface *GetGlobalFileManager();
   virtual OptionsInterface *GetOptions();
   virtual FrameworkInterface *GetFramework();
   virtual MainLoopInterface *GetMainLoop();
@@ -115,6 +114,7 @@ class GtkGadgetHost : public GadgetHostInterface {
 
   ScriptRuntimeInterface *script_runtime_;
   ElementFactoryInterface *element_factory_;
+  FileManagerInterface *resource_file_manager_;
   FileManagerInterface *global_file_manager_;
   FileManagerInterface *file_manager_;
   OptionsInterface *options_;

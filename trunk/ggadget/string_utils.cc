@@ -32,6 +32,14 @@ int GadgetStrCmp(const char *s1, const char *s2) {
 #endif
 }
 
+int GadgetStrNCmp(const char *s1, const char *s2, size_t n) {
+#ifdef GADGET_CASE_SENSITIVE
+  return strncmp(s1, s2, n);
+#else
+  return strncasecmp(s1, s2, n);
+#endif
+}
+
 bool AssignIfDiffer(
     const char *source, std::string *dest,
     int (*comparator)(const char *, const char *)) {

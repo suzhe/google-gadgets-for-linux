@@ -71,7 +71,6 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
 
   // clear canvas
   c = new CairoCanvas(cr, w, h, false);
-  c->ClearSurface();
   //DLOG("new canvas %d %d %d %d", width, height, w, h);
 
 exit:
@@ -141,7 +140,6 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
   }
 
   // Now create the surface (eight-bit alpha channel) and Cairo context.
-  // For some reason, A1 surface doesn't work (cairo bug?)
   // And according to performance benchmark, A8 is much faster than A1.
   surface = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
   if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
@@ -152,7 +150,6 @@ CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
 
   cr = cairo_create(surface);
   img = new CairoCanvas(cr, w, h, true);
-  img->ClearSurface();
 
   gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
   cairo_paint(cr);
@@ -233,7 +230,6 @@ CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
 
   cr = cairo_create(surface);
   img = new CairoCanvas(cr, w, h, false);
-  img->ClearSurface();
 
   gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
   cairo_paint(cr);

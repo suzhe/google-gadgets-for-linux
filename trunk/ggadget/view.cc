@@ -178,6 +178,8 @@ class View::Impl {
       tooltip_element_(NULL),
       content_area_element_(NULL),
       posting_event_element_(NULL),
+      popup_element_(NULL),
+      popup_canvas_(NULL),
       post_event_token_(0),
       draw_queued_(false),
       utils_(this) {
@@ -187,6 +189,11 @@ class View::Impl {
     ASSERT(event_stack_.empty());
     ASSERT(death_detected_elements_.empty());
     on_destroy_signal_.Emit(0, NULL);
+
+    if (popup_canvas_) {
+      popup_canvas_->Destroy();
+      popup_canvas_ = NULL;
+    }    
   }
 
   template <typename T>
@@ -330,8 +337,9 @@ class View::Impl {
                                                   &fired_element, &in_element);
         // Release the grabbing on EVENT_MOUSE_CLICK not EVENT_MOUSE_UP,
         // otherwise the click event may be sent to wrong element.
-        if (type == Event::EVENT_MOUSE_CLICK)
+        if (type == Event::EVENT_MOUSE_CLICK) {
           grabmouse_element_ = NULL;
+        }
         return result;
       } else {
         // Release the grabbing on any mouse event without left button down.
@@ -351,8 +359,26 @@ class View::Impl {
       return result;
     }
 
-    // Dispatch the event to children normally.
-    result = children_.OnMouseEvent(event, &fired_element, &in_element);
+    // Dispatch the event to children normally, 
+    // unless popup is active and event is inside popup element.
+    bool outside_popup = true;
+    if (popup_element_) {
+      MouseEvent new_event(event);
+      MapChildPositionEvent(event, popup_element_, &new_event);
+      if (popup_element_->IsPointIn(new_event.GetX(), new_event.GetY())) {
+        result = popup_element_->OnMouseEvent(new_event, false, // NOT direct
+                                              &fired_element, &in_element);
+        outside_popup = false;
+      } 
+    }     
+    if (outside_popup) {
+      result = children_.OnMouseEvent(event, &fired_element, &in_element);
+      // The following might hit if a grabbed element is
+      // turned invisible or disabled while under grab. 
+      if (type == Event::EVENT_MOUSE_DOWN && result != EVENT_RESULT_CANCELED) {
+        SetPopupElement(NULL);
+      }
+    }
 
     if (fired_element && type == Event::EVENT_MOUSE_DOWN &&
         (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
@@ -615,6 +641,9 @@ class View::Impl {
     }
     if (element == content_area_element_)
       content_area_element_ = NULL;
+    if (element == popup_element_) {
+      popup_element_ = NULL;
+    }
 
     for (std::vector<BasicElement **>::iterator it =
              death_detected_elements_.begin();
@@ -785,7 +814,67 @@ class View::Impl {
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
-    return children_.Draw(changed);
+
+    *changed = false;
+    const CanvasInterface *children = children_.Draw(changed);
+    if (popup_element_) { 
+      // Compose once more in the case of popup element.
+      bool c;
+      const CanvasInterface *popup = popup_element_->Draw(&c);
+      *changed = (*changed || c);
+
+      if (popup == NULL && children == NULL) {
+        return NULL;
+      }
+
+      if (!popup_canvas_ || 
+          static_cast<size_t>(width_) != popup_canvas_->GetWidth() ||
+          static_cast<size_t>(height_) != popup_canvas_->GetHeight()) {
+        if (popup_canvas_) {
+          popup_canvas_->Destroy();
+        }
+        popup_canvas_ = host_->GetGraphics()->NewCanvas(width_, height_);
+      } else {
+        popup_canvas_->ClearCanvas();
+      }
+
+      if (children) {
+        popup_canvas_->DrawCanvas(0, 0, children);
+      }
+      if (popup) {
+        std::vector<ElementInterface *> elements;
+        for (ElementInterface *e = popup_element_; e != NULL; e = e->GetParentElement()) {
+          elements.push_back(e);
+        }
+
+        for (std::vector<ElementInterface *>::reverse_iterator it = elements.rbegin();
+             it < elements.rend(); ++it) {
+          ElementInterface *element = *it; 
+          if (element->GetRotation() == .0) {
+            popup_canvas_->TranslateCoordinates(
+                element->GetPixelX() - element->GetPixelPinX(),
+                element->GetPixelY() - element->GetPixelPinY());
+          } else {
+            popup_canvas_->TranslateCoordinates(element->GetPixelX(),
+                                         element->GetPixelY());
+            popup_canvas_->RotateCoordinates(
+                DegreesToRadians(element->GetRotation()));
+            popup_canvas_->TranslateCoordinates(-element->GetPixelPinX(),
+                                         -element->GetPixelPinY());
+          }
+        }
+
+        const CanvasInterface *mask = popup_element_->GetMaskCanvas();
+        if (mask) {
+          popup_canvas_->DrawCanvasWithMask(.0, .0, popup, .0, .0, mask);
+        } else {
+          popup_canvas_->DrawCanvas(.0, .0, popup);
+        }              
+      }
+      return popup_canvas_;
+    } else {
+      return children;
+    }
   }
 
   BasicElement *GetElementByName(const char *name) {
@@ -828,6 +917,16 @@ class View::Impl {
     int id = main_loop_->AddTimeoutWatch(duration, watch);
     watch->SetWatchId(id);
     return id;
+  }
+
+  void SetPopupElement(BasicElement *element) {
+    if (popup_element_) {
+      popup_element_->OnPopupOff();
+    }
+    popup_element_ = element;
+    if (element) {
+      element->QueueDraw();
+    } 
   }
 
   void OnOptionChanged(const char *name) {
@@ -940,6 +1039,8 @@ class View::Impl {
       PostedEvents;
   PostedEvents posted_events_;
   BasicElement *posting_event_element_;
+  BasicElement *popup_element_;
+  CanvasInterface *popup_canvas_;
   int post_event_token_;
   bool draw_queued_;
   Utils utils_;
@@ -1026,6 +1127,14 @@ bool View::OnElementAdd(BasicElement *element) {
 
 void View::OnElementRemove(BasicElement *element) {
   impl_->OnElementRemove(element);
+}
+
+void View::SetPopupElement(BasicElement *element) {
+  impl_->SetPopupElement(element);
+}
+
+BasicElement *View::GetPopupElement() {
+  return impl_->popup_element_;
 }
 
 void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
@@ -1165,7 +1274,7 @@ Image *View::LoadImage(const Variant &src, bool is_mask) {
 }
 
 Image *View::LoadImageFromGlobal(const char *name, bool is_mask) {
-  return new Image(GetGraphics(), impl_->gadget_host_->GetGlobalFileManager(),
+  return new Image(GetGraphics(), impl_->file_manager_,
                    name, is_mask);
 }
 

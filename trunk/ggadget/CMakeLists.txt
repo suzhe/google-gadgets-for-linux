@@ -33,7 +33,8 @@ SET(SRCS
   dummy_framework.cc
   element_factory.cc
   elements.cc
-  file_manager.cc
+  file_manager.cc  
+  file_manager_wrapper.cc
   gadget.cc
   image.cc
   logger.cc

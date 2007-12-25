@@ -28,7 +28,7 @@
 namespace ggadget {
 
 /**
- * Use this function to compare strings in gadget library code.
+ * Use these functions to compare strings in gadget library code.
  * These strings include property names, file names, XML element and attribute
  * names, etc., but not include gadget element names.
  * Define @c GADGET_CASE_SENSITIVE to make the comparison case sensitive.
@@ -36,6 +36,7 @@ namespace ggadget {
  * version is required.
  */
 int GadgetStrCmp(const char *s1, const char *s2);
+int GadgetStrNCmp(const char *s1, const char *s2, size_t n);
 
 /**
  * A comparison functor for <code>const char *</code> parameters.

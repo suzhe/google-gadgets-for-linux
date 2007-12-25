@@ -59,6 +59,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  event.h \
 			  file_manager.h \
 			  file_manager_interface.h \
+			  file_manager_wrapper.h \
 			  file_system_interface.h \
 			  font_interface.h \
 			  framework_interface.h \
@@ -132,6 +133,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  element_factory.cc \
 			  elements.cc \
 			  file_manager.cc \
+			  file_manager_wrapper.cc \
 			  gadget.cc \
 			  image.cc \
 			  img_element.cc \

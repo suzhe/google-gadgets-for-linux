@@ -27,8 +27,7 @@ namespace ggadget {
 namespace gtk {
 
 /**
- * Handles all global file resources (i.e. resources not belonging to a
- * gadget package).
+ * Handles global file resources on disk.
  */
 class GlobalFileManager : public ggadget::FileManagerInterface {
  public:
@@ -53,14 +52,7 @@ class GlobalFileManager : public ggadget::FileManagerInterface {
   virtual bool FileExists(const char *file);
 
  private:
-  std::string res_zip_path_;
-  std::string locale_prefix_;
-  std::string locale_lang_prefix_;
-
-  bool InitLocaleStrings();
-  bool GetZipFileContents(const char *file,
-                          std::string *data, std::string *path);
-  bool SeekToFile(unzFile zip, const char *file, std::string *path);
+  std::string base_path_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GlobalFileManager);
 };

@@ -55,9 +55,6 @@ class GadgetHostInterface {
   /** Get the file manager used to load this gadget. */
   virtual FileManagerInterface *GetFileManager() = 0;
 
-  /** Returns the @c FileManagerInterface used to load global resources. */
-  virtual FileManagerInterface *GetGlobalFileManager() = 0;
-
   /** Returns the @c OptionsInterface instance for this gadget. */
   virtual OptionsInterface *GetOptions() = 0;
 

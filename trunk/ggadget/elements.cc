@@ -36,6 +36,7 @@ class Elements::Impl {
         width_(.0), height_(.0),
         canvas_(NULL),
         count_changed_(true),
+        has_popup_(false),
         scrollable_(false) {
     ASSERT(factory);
     ASSERT(view);
@@ -325,15 +326,26 @@ class Elements::Impl {
     const CanvasInterface **children_canvas =
         new const CanvasInterface*[child_count];
 
+    BasicElement *popup = view_->GetPopupElement();
     for (int i = 0; i < child_count; i++) {
       BasicElement *element = children_[i];
-      bool child_changed = false;
-      children_canvas[i] = element->Draw(&child_changed);
-      if (element->IsPositionChanged()) {
-        element->ClearPositionChanged();
-        child_changed = true;
+      bool has_popup = (element == popup);
+      if (has_popup) {        
+        children_canvas[i] = NULL; // Skip the popup element.        
+      } else {
+        bool child_changed = false;
+        children_canvas[i] = element->Draw(&child_changed);
+        if (element->IsPositionChanged()) {
+          element->ClearPositionChanged();
+          child_changed = true;
+        }
+        *changed = *changed || child_changed;  
       }
-      *changed = *changed || child_changed;
+
+      if (has_popup != has_popup_) {
+        *changed = true;
+        has_popup_ = has_popup;
+      }        
     }
 
     if (*changed) {
@@ -400,6 +412,7 @@ class Elements::Impl {
   double height_;
   CanvasInterface *canvas_;
   bool count_changed_;
+  bool has_popup_;
   bool scrollable_;
 };
 

@@ -18,6 +18,7 @@
 
 #include "combobox_element.h"
 #include "canvas_interface.h"
+#include "logger.h"
 #include "edit_element.h"
 #include "elements.h"
 #include "event.h"
@@ -109,6 +110,21 @@ class ComboBoxElement::Impl {
     return std::string();
   }
 
+  void SetDroplistVisible(bool visible) {
+    if (visible != listbox_->IsVisible()) {
+      if (visible) {
+        listbox_->ScrollToIndex(listbox_->GetSelectedIndex());
+      }
+      if (visible) {
+        listbox_->SetVisible(visible);
+        owner_->GetView()->SetPopupElement(owner_);
+      } else {
+        // popup_out handler will turn off listbox
+        owner_->GetView()->SetPopupElement(NULL);
+      }
+    }
+  }
+
   void CreateEdit() {
     edit_ = new EditElement(owner_, owner_->GetView(), "");
     update_edit_value_ = true;
@@ -123,9 +139,9 @@ class ComboBoxElement::Impl {
   }
 
   void ListBoxUpdated() {
-    if (!keyboard_ && listbox_->IsVisible()) {
+    if (!keyboard_) {
       // Close dropdown on selection.
-      listbox_->SetVisible(false);
+      SetDroplistVisible(false);
     }
 
     update_edit_value_ = true;
@@ -361,12 +377,7 @@ bool ComboBoxElement::IsDroplistVisible() const {
 }
 
 void ComboBoxElement::SetDroplistVisible(bool visible) {
-  if (visible != impl_->listbox_->IsVisible()) {
-    if (visible) {
-      impl_->listbox_->ScrollToIndex(impl_->listbox_->GetSelectedIndex());
-    }
-    impl_->listbox_->SetVisible(visible);
-  }
+  impl_->SetDroplistVisible(visible);
 }
 
 int ComboBoxElement::GetMaxDroplistItems() const {
@@ -688,10 +699,9 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
      case KeyboardEvent::KEY_RETURN:
        // Windows only allows the box to be closed with the enter key,
        // not opened. Weird.
-      if (impl_->listbox_->IsVisible()) {
-        // Close dropdown on selection.
-        impl_->listbox_->SetVisible(false);
-      }
+
+      // Close dropdown on selection.
+      SetDroplistVisible(false);
       break;
      default:
       result = EVENT_RESULT_UNHANDLED;
@@ -699,6 +709,10 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
     }
   }
   return result;
+}
+
+void ComboBoxElement::OnPopupOff() {
+  impl_->listbox_->SetVisible(false);
 }
 
 Connection *ComboBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {

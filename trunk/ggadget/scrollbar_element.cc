@@ -48,7 +48,7 @@ static const char *kOrientationNames[] = {
 
 class ScrollBarElement::Impl {
  public:
-  Impl(ScrollBarElement *owner)
+  Impl(ScrollBarElement *owner, View *view)
       : owner_(owner),
         left_state_(STATE_NORMAL), right_state_(STATE_NORMAL),
         thumb_state_(STATE_NORMAL),
@@ -58,29 +58,27 @@ class ScrollBarElement::Impl {
         // Windows default to horizontal for orientation,
         // but puzzlingly use vertical images as default.
         orientation_(ORIENTATION_VERTICAL) {
-    left_[STATE_NORMAL] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeft, false);
-    left_[STATE_DOWN] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeftDown, false);
-    left_[STATE_OVER] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultLeftOver, false);
+    left_[STATE_NORMAL] = view->LoadImageFromGlobal(kScrollDefaultLeft, false);
+    left_[STATE_DOWN] = 
+      view->LoadImageFromGlobal(kScrollDefaultLeftDown, false);
+    left_[STATE_OVER] = 
+      view->LoadImageFromGlobal(kScrollDefaultLeftOver, false);
 
-    right_[STATE_NORMAL] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultRight, false);
-    right_[STATE_DOWN] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightDown, false);
-    right_[STATE_OVER] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultRightOver, false);
+    right_[STATE_NORMAL] = 
+      view->LoadImageFromGlobal(kScrollDefaultRight, false);
+    right_[STATE_DOWN] = 
+      view->LoadImageFromGlobal(kScrollDefaultRightDown, false);
+    right_[STATE_OVER] = 
+      view->LoadImageFromGlobal(kScrollDefaultRightOver, false);
 
-    thumb_[STATE_NORMAL] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumb, false);
-    thumb_[STATE_DOWN] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbDown, false);
-    thumb_[STATE_OVER] =
-      owner->GetView()->LoadImageFromGlobal(kScrollDefaultThumbOver, false);
+    thumb_[STATE_NORMAL] = 
+      view->LoadImageFromGlobal(kScrollDefaultThumb, false);
+    thumb_[STATE_DOWN] = 
+      view->LoadImageFromGlobal(kScrollDefaultThumbDown, false);
+    thumb_[STATE_OVER] = 
+      view->LoadImageFromGlobal(kScrollDefaultThumbOver, false);
 
-    background_ = owner->GetView()->LoadImageFromGlobal(kScrollDefaultBackground,
-                                                        false);
+    background_ = view->LoadImageFromGlobal(kScrollDefaultBackground, false);
   }
   ~Impl() {
     for (int i = STATE_NORMAL; i < STATE_COUNT; i++) {
@@ -262,7 +260,7 @@ class ScrollBarElement::Impl {
 ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
                                    const char *name)
     : BasicElement(parent, view, "scrollbar", name, false),
-      impl_(new Impl(this)) {
+      impl_(new Impl(this, view)) {
   RegisterProperty("background",
                    NewSlot(this, &ScrollBarElement::GetBackground),
                    NewSlot(this, &ScrollBarElement::SetBackground));
