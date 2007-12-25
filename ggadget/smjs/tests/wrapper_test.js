@@ -176,9 +176,9 @@ TEST("Test signals", function() {
   };
 
   scriptable2.onlunch = onlunch_function;
-  ASSERT(EQ(onlunch_function, scriptable2.onlunch));
+  // Feature disabled: ASSERT(EQ(onlunch_function, scriptable2.onlunch));
   scriptable2.onsupper = onsupper_function;
-  ASSERT(EQ(onsupper_function, scriptable2.onsupper));
+  // Feature disabled: ASSERT(EQ(onsupper_function, scriptable2.onsupper));
 
   // Trigger onlunch.
   scriptable2.time = "lunch";
@@ -427,28 +427,34 @@ TEST("Test JS callback as function parameter", function() {
 });
 
 TEST("Test Enumeration", function() {
-  var expected_array = [
-    "Buffer", "BufferReadOnly", "CallCallback", "ConcatArray", "Const",
-    "DeleteObject", "DoubleProperty", "EnumSimple", "EnumString",
-    "Fixed", "ICONSTANT0", "ICONSTANT1", "ICONSTANT2", "ICONSTANT3",
-    "ICONSTANT4", "ICONSTANT5", "ICONSTANT6", "ICONSTANT7", "ICONSTANT8",
-    "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
-    "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
-    "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
-    "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
-    "TestMethodDouble2", "TestMethodVoid0", "VALUE_0", "VALUE_1", "VALUE_2",
-    "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
-    "ontest", "time",
-  ];
-  var expected_index = new Object();
-  for (var i = 0; i < expected_array.length; i++)
-    expected_index[expected_array[i]] = true;
-  var count = 0;
-  for (var i in scriptable2) {
-    ASSERT(TRUE(expected_index[i]), "Key: " + i);
-    count++;
+  if (0) { // Feature disabled.
+    var expected_array = [
+      "Buffer", "BufferReadOnly", "CallCallback", "ConcatArray", "Const",
+      "DeleteObject", "DoubleProperty", "EnumSimple", "EnumString",
+      "Fixed", "ICONSTANT0", "ICONSTANT1", "ICONSTANT2", "ICONSTANT3",
+      "ICONSTANT4", "ICONSTANT5", "ICONSTANT6", "ICONSTANT7", "ICONSTANT8",
+      "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
+      "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
+      "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
+      "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
+      "TestMethodDouble2", "TestMethodVoid0", "VALUE_0", "VALUE_1", "VALUE_2",
+      "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
+      "ontest", "time",
+    ];
+    var expected_index = new Object();
+    for (var i = 0; i < expected_array.length; i++)
+      expected_index[expected_array[i]] = true;
+    var count = 0;
+    for (var i in scriptable2) {
+      ASSERT(TRUE(expected_index[i]), "Key: " + i);
+      count++;
+    }
+    ASSERT(EQ(expected_array.length, count));
+  } else {
+    for (var i in scriptable2) {
+      ASSERT(TRUE(FALSE));
+    }
   }
-  ASSERT(EQ(expected_array.length, count));
 });
 
 RUN_ALL_TESTS();

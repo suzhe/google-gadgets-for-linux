@@ -27,14 +27,17 @@
 namespace ggadget {
 namespace smjs {
 
-JSScriptContext::JSScriptContext(JSContext *context)
-    : context_(context),
+JSScriptContext::JSScriptContext(JSScriptRuntime *runtime, JSContext *context)
+    : runtime_(runtime),
+      context_(context),
       lineno_(0) {
   JS_SetContextPrivate(context_, this);
   // JS_SetOptions(context_, JS_GetOptions(context_) | JSOPTION_STRICT);
 }
 
 JSScriptContext::~JSScriptContext() {
+  // Don't report errors during shutdown because the state may be inconsistent.
+  JS_SetErrorReporter(context_, NULL);
   // Remove the return value protection reference.
   // See comments in WrapJSObjectToNative() for details.  
   JS_DeleteProperty(context_, JS_GetGlobalObject(context_),
@@ -223,7 +226,7 @@ JSBool JSScriptContext::CheckException(JSContext *cx,
 }
 
 void JSScriptContext::Destroy() {
-  delete this;
+  runtime_->DestroyContext(this);
 }
 
 void JSScriptContext::Execute(const char *script,
@@ -281,7 +284,8 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
   NativeJSWrapper *wrapper = new NativeJSWrapper(cx, obj, NULL);
   Variant *params = NULL;
   uintN expected_argc = argc;
-  if (!ConvertJSArgsToNative(cx, wrapper, cls->constructor_, argc, argv,
+  if (!ConvertJSArgsToNative(cx, wrapper, cls->js_class_.name,
+                             cls->constructor_, argc, argv,
                              &params, &expected_argc))
     return JS_FALSE;
 
@@ -315,7 +319,8 @@ bool JSScriptContext::RegisterClass(const char *name, Slot *constructor) {
   return true;
 }
 
-void JSScriptContext::LockObject(ScriptableInterface *object) {
+void JSScriptContext::LockObject(ScriptableInterface *object,
+                                 const char *name) {
   ASSERT(object);
   NativeJSWrapperMap::const_iterator it = native_js_wrapper_map_.find(object);
   if (it == native_js_wrapper_map_.end()) {
@@ -325,7 +330,7 @@ void JSScriptContext::LockObject(ScriptableInterface *object) {
     DLOG("Lock: policy=%d jsobj=%p wrapper=%p scriptable=%p",
          it->second->ownership_policy(), it->second->js_object(),
          it->second, it->second->scriptable());
-    JS_AddRoot(context_, &(it->second->js_object()));
+    JS_AddNamedRoot(context_, &(it->second->js_object()), name);
   }
 }
 

@@ -47,6 +47,9 @@ const char *const kGlobalReferenceName = "[[[GlobalReference]]]";
  */
 class JSScriptContext : public ScriptContextInterface {
  public:
+  JSScriptContext(JSScriptRuntime *runtime, JSContext *context);
+  virtual ~JSScriptContext();
+
   /**
    * Get the current filename and line number of this @c JSScriptContext.
    */
@@ -110,7 +113,7 @@ class JSScriptContext : public ScriptContextInterface {
   /** @see ScriptContextInterface::RegisterClass() */
   virtual bool RegisterClass(const char *name, Slot *constructor);
   /** @see ScriptContextInterface::LockObject() */
-  virtual void LockObject(ScriptableInterface *object);
+  virtual void LockObject(ScriptableInterface *object, const char *name);
   /** @see ScriptContextInterface::UnlockObject() */
   virtual void UnlockObject(ScriptableInterface *object);
   /** @see ScriptContextInterface::AssignFromContext() */
@@ -123,9 +126,6 @@ class JSScriptContext : public ScriptContextInterface {
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
-  friend class ::ggadget::smjs::JSScriptRuntime;
-  JSScriptContext(JSContext *context);
-  virtual ~JSScriptContext();
 
   void GetCurrentFileAndLineInternal(std::string *filename, int *lineno);
   NativeJSWrapper *WrapNativeObjectToJSInternal(
@@ -160,6 +160,7 @@ class JSScriptContext : public ScriptContextInterface {
     DISALLOW_EVIL_CONSTRUCTORS(JSClassWithNativeCtor);
   };
 
+  JSScriptRuntime *runtime_;
   JSContext *context_;
   // The following two fields are only used during GetCurrentFileAndLine.
   std::string filename_;

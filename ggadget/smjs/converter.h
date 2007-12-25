@@ -69,7 +69,8 @@ std::string PrintJSValue(JSContext *cx, jsval js_val);
  * Converts JavaScript arguments to native for a native slot.
  */
 JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
-                             Slot *slot, uintN argc, jsval *argv,
+                             const char *name, Slot *slot,
+                             uintN argc, jsval *argv,
                              Variant **params, uintN *expected_argc);
 
 /**

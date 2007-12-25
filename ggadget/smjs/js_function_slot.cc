@@ -34,21 +34,27 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
       function_(function) {
   ASSERT(function &&
          JS_TypeOfValue(context, OBJECT_TO_JSVAL(function)) == JSTYPE_FUNCTION);
+
+  int lineno;
+  JSScriptContext::GetCurrentFileAndLine(context, &function_info_, &lineno);
+  function_info_ += StringPrintf(":%d", lineno);
+
   // Because the function may have a indirect reference to the owner through
   // the closure, we can't simply add the function to root, otherwise there
   // may be circular references if the native object's ownership is shared:
   //     native object =C++=> this slot =C++=> js function =JS=>
   //     closure =JS=> js wrapper object(owner) =C++=> native object.
   // This circle prevents the wrapper object and the function from being GC'ed.
-  // Break the circle by letting the owner manage this object.
-  if (owner)
+  // Expose the circle to the JS engine by letting the owner manage this slot.
+  if (owner &&
+      owner->ownership_policy() == ScriptableInterface::OWNERSHIP_SHARED) {
     owner->AddJSFunctionSlot(this);
-  else
-    JS_AddRoot(context, &function_);
+  } else {
+    // Otherwise, it's safe to add this function to root.
+    owner_ = NULL;
+    JS_AddNamedRoot(context, &function_, function_info_.c_str());
+  }
 
-  int lineno;
-  JSScriptContext::GetCurrentFileAndLine(context, &function_info_, &lineno);
-  function_info_ += StringPrintf(":%d", lineno);
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
@@ -79,8 +85,9 @@ Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
     js_args.reset(new jsval[argc]);
     for (int i = 0; i < argc; i++) {
       if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
-        JS_ReportError(context_, "Failed to convert argument %d(%s) to jsval",
-                       i, argv[i].Print().c_str());
+        JS_ReportError(context_,
+            "Failed to convert argument %d(%s) of function(%s) to jsval",
+            i, argv[i].Print().c_str(), function_info_.c_str());
         return return_value;
       }
     }
@@ -90,9 +97,10 @@ Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
   if (JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
                            argc, js_args.get(), &rval) &&
       !ConvertJSToNative(context_, NULL, return_value, rval, &return_value)) {
-    JS_ReportError(context_,
-                   "Failed to convert JS function return value(%s) to native",
-                   PrintJSValue(context_, rval).c_str());
+    JS_ReportError(
+        context_,
+        "Failed to convert JS function(%s) return value(%s) to native",
+        function_info_.c_str(), PrintJSValue(context_, rval).c_str());
   }
   return return_value;
 }
@@ -103,6 +111,7 @@ void JSFunctionSlot::Mark() {
 
 void JSFunctionSlot::Finalize() {
   function_ = NULL;
+  owner_ = NULL;
 }
 
 } // namespace smjs
