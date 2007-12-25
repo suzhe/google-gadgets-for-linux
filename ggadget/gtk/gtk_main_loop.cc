@@ -143,11 +143,10 @@ class GtkMainLoop::Impl {
   }
 
   void RemoveAllWatches() {
-    g_hash_table_foreach(watches_, ForeachRemoveCallback, main_loop_);
-    g_hash_table_remove_all(watches_);
+    g_hash_table_foreach_remove(watches_, ForeachRemoveCallback, main_loop_);
   }
 
-  static void ForeachRemoveCallback(gpointer key, gpointer value,
+  static gboolean ForeachRemoveCallback(gpointer key, gpointer value,
                                     gpointer data) {
     int watch_id = GPOINTER_TO_INT(key);
     WatchNode *node = static_cast<WatchNode *>(value);
@@ -157,6 +156,7 @@ class GtkMainLoop::Impl {
     g_source_remove(watch_id);
     //DLOG("GtkMainLoop::ForeachRemoveCallback: id=%d", watch_id);
     callback->OnRemove(main_loop, watch_id);
+    return TRUE;
   }
 
   // Delete WatchNode when removing it from the watches_ hash table.
