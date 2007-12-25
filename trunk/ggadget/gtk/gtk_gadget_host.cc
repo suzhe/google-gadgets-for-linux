@@ -129,8 +129,6 @@ GtkGadgetHost::~GtkGadgetHost() {
   framework_ = NULL;
   delete element_factory_;
   element_factory_ = NULL;
-  delete script_runtime_;
-  script_runtime_ = NULL;
   delete file_manager_;
   file_manager_ = NULL;
   delete resource_file_manager_;
@@ -139,6 +137,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   global_file_manager_ = NULL;
   delete menu_;
   menu_ = NULL;
+  delete script_runtime_;
+  script_runtime_ = NULL;
 }
 
 ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(

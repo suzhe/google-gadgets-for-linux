@@ -85,8 +85,10 @@ class ScriptContextInterface {
    * call this because the script adapter should do this automatically.
    * The object must has already been attached into the script engine when
    * this method is called, otherwise this method does nothing. 
+   * @param object the object to be locked.
+   * @param name the name of the object for debug purpose.
    */
-  virtual void LockObject(ScriptableInterface *object) = 0;
+  virtual void LockObject(ScriptableInterface *object, const char *name) = 0;
 
   /**
    * Unlocks an scriptable object to allow the script engine to garbage

@@ -366,7 +366,8 @@ std::string PrintJSValue(JSContext *cx, jsval js_val) {
 }
 
 JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
-                             Slot *slot, uintN argc, jsval *argv,
+                             const char *name, Slot *slot,
+                             uintN argc, jsval *argv,
                              Variant **params, uintN *expected_argc) {
   *params = NULL;
   const Variant::Type *arg_types = NULL;
@@ -389,9 +390,9 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
 
       if (argc > *expected_argc || argc < min_argc) {
         // Argc mismatch.
-        JS_ReportError(cx, "Wrong number of arguments: %u "
+        JS_ReportError(cx, "Wrong number of arguments for function(%s): %u "
                        "(expected: %u, at least: %u)",
-                       argc, *expected_argc, min_argc);
+                       name, argc, *expected_argc, min_argc);
         return JS_FALSE;
       }
     }
@@ -424,8 +425,9 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
             FreeNativeValue((*params)[j]);
           delete [] *params;
           *params = NULL;
-          JS_ReportError(cx, "Failed to convert argument %d(%s) to native",
-                         i, PrintJSValue(cx, argv[i]).c_str());
+          JS_ReportError(cx,
+               "Failed to convert argument %d(%s) of function(%s) to native",
+               name, i, PrintJSValue(cx, argv[i]).c_str());
           return JS_FALSE;
         }
       }
@@ -584,7 +586,9 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
 static JSBool ConvertNativeToJSFunction(JSContext *cx,
                                         const Variant &native_val,
                                         jsval *js_val) {
-  // Just leave the value that SpiderMonkey recorded in SetProperty.
+  // To be compatible with the Windows version, we don't support returning
+  // native Slots to JavaScript.
+  *js_val = JSVAL_VOID;
   return JS_TRUE;
 }
 

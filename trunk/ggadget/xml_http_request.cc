@@ -279,7 +279,7 @@ class XMLHttpRequest
 
       // Prevent this object from being GC'ed during handling the request.
       if (script_context_)
-        script_context_->LockObject(this);
+        script_context_->LockObject(this, "XMLHttpRequest");
     } else {
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
@@ -356,7 +356,7 @@ class XMLHttpRequest
           socket, new IOWatchCallback(this_p));
     }
     if (!this_p->socket_write_watch_ && (type & CURL_POLL_OUT)) {
-      this_p->socket_write_watch_ = this_p->main_loop_->AddIOReadWatch(
+      this_p->socket_write_watch_ = this_p->main_loop_->AddIOWriteWatch(
           socket, new IOWatchCallback(this_p));
     }
 

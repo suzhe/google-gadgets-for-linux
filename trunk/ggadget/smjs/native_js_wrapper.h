@@ -121,7 +121,8 @@ private:
   JSBool CheckNotDeleted();
   JSBool CallSelf(uintN argc, jsval *argv, jsval *rval);
   JSBool CallMethod(uintN argc, jsval *argv, jsval *rval);
-  JSBool CallNativeSlot(Slot *slot, uintN argc, jsval *argv, jsval *rval);
+  JSBool CallNativeSlot(const char *name, Slot *slot,
+                        uintN argc, jsval *argv, jsval *rval);
   JSBool GetPropertyDefault(jsval id, jsval *vp);
   JSBool SetPropertyDefault(jsval id, jsval vp);
   JSBool GetPropertyByIndex(jsval id, jsval *vp);

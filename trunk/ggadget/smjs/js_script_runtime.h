@@ -19,10 +19,11 @@
 
 #include <jsapi.h>
 #include <ggadget/script_runtime_interface.h>
-#include <ggadget/signals.h>
 
 namespace ggadget {
 namespace smjs {
+
+class JSScriptContext;
 
 /**
  * @c ScriptRuntime implementation for SpiderMonkey JavaScript engine.
@@ -36,14 +37,13 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
   virtual ScriptContextInterface *CreateContext();
   /** @see ScriptRuntimeInterface::ConnectErrorReporter() */
   virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
+
+  void DestroyContext(JSScriptContext *context);
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);
-
-  static void ReportError(JSContext *cx, const char *message,
-                          JSErrorReport *report);
-
-  Signal1<void, const char *> error_reporter_signal_;
-  JSRuntime *runtime_;
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace smjs

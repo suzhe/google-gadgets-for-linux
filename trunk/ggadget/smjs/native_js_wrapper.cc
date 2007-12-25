@@ -75,19 +75,6 @@ NativeJSWrapper::~NativeJSWrapper() {
     deleted_ = true;
     DetachJS();
     scriptable_->Detach();
-  } else {
-    // Clean up remaining owned JSFunctionSlot's. Normally all JSFunctionSlot's
-    // should have already been deleted. However, in some cases, for example,
-    // a parameter type is Variant and the native side expects only a number
-    // or a string, but the script assigned a function, the function may leave
-    // undeleted till now.
-    while (!js_function_slots_.empty()) {
-      JSFunctionSlots::iterator it = js_function_slots_.begin();
-      DLOG("POSSIBLE FUNCTION LEAK: %s cx=%p jsobj=%p wrapper=%p",
-           (*it)->function_info().c_str(), js_context_, js_object_, this);
-      // The JSFunctionSlot will remove it from js_function_slots_ by itself.
-      delete *it;
-    }
   }
 }
 
@@ -345,26 +332,29 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
     return JS_FALSE;
 
   ASSERT(is_method);
-  return CallNativeSlot(VariantValue<Slot *>()(prototype), argc, argv, rval);
+  return CallNativeSlot("DEFAULT", VariantValue<Slot *>()(prototype),
+                        argc, argv, rval);
 }
 
 JSBool NativeJSWrapper::CallMethod(uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
 
   // According to JS stack structure, argv[-2] is the current function object.
-  JSObject *func_object = JSVAL_TO_OBJECT(argv[-2]);
+  jsval func_val = argv[-2];
   // Get the method slot from the reserved slot.
   jsval val;
-  if (!JS_GetReservedSlot(js_context_, func_object, 0, &val) ||
+  if (!JS_GetReservedSlot(js_context_, JSVAL_TO_OBJECT(func_val), 0, &val) ||
       !JSVAL_IS_INT(val))
     return JS_FALSE;
 
-  return CallNativeSlot(reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val)),
+  const char *name = JS_GetFunctionName(JS_ValueToFunction(js_context_,
+                                                           func_val));
+  return CallNativeSlot(name, reinterpret_cast<Slot *>(JSVAL_TO_PRIVATE(val)),
                         argc, argv, rval);
 }
 
-JSBool NativeJSWrapper::CallNativeSlot(Slot *slot, uintN argc, jsval *argv,
-                                       jsval *rval) {
+JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
+                                       uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
 
   AutoLocalRootScope local_root_scope(js_context_);
@@ -373,7 +363,7 @@ JSBool NativeJSWrapper::CallNativeSlot(Slot *slot, uintN argc, jsval *argv,
 
   Variant *params = NULL;
   uintN expected_argc = argc;
-  if (!ConvertJSArgsToNative(js_context_, this, slot, argc, argv,
+  if (!ConvertJSArgsToNative(js_context_, this, name, slot, argc, argv,
                              &params, &expected_argc))
     return JS_FALSE;
 
@@ -602,6 +592,7 @@ class NameCollector {
 
 JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
                                   jsval *statep, jsid *idp) {
+#ifdef GGADGET_SMJS_ENUMERATE_SUPPORTED
   std::vector<std::string> *properties;
   switch (enum_op) {
     case JSENUMERATE_INIT: {
@@ -634,6 +625,11 @@ JSBool NativeJSWrapper::Enumerate(JSIterateOp enum_op,
     default:
       return JS_FALSE;
   }
+#else
+  *statep = JSVAL_NULL;
+  if (idp)
+    *idp = JS_ValueToId(js_context_, INT_TO_JSVAL(0), idp);
+#endif
   return JS_TRUE;
 }
 
