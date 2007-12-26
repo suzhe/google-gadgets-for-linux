@@ -20,7 +20,7 @@
 #include "framework_interface.h"
 #include "gadget_host_interface.h"
 #include "scriptable_array.h"
-#include "slot.h"
+#include "signals.h"
 #include "string_utils.h"
 #include "unicode_utils.h"
 
@@ -65,7 +65,7 @@ class ScriptableFramework::Impl {
    public:
     DEFINE_CLASS_ID(0xa9f42ea54e2a4d13, ScriptableInterface);
     ScriptableAudioclip(AudioclipInterface *clip)
-        : clip_(clip), onstatechange_slot_(NULL) {
+        : clip_(clip) {
       ASSERT(clip);
       RegisterProperty("balance",
                        NewSlot(clip_, &AudioclipInterface::GetBalance),
@@ -83,43 +83,31 @@ class ScriptableFramework::Impl {
                        NULL);
       RegisterProperty("volume", NewSlot(clip_, &AudioclipInterface::GetVolume),
                        NewSlot(clip_, &AudioclipInterface::SetVolume));
-      RegisterProperty("onstatechange",
-                       NewSlot(this, &ScriptableAudioclip::GetOnStateChange),
-                       NewSlot(this, &ScriptableAudioclip::SetOnStateChange));
+      RegisterSignal("onstatechange", &onstatechange_signal_);
       RegisterMethod("play", NewSlot(clip_, &AudioclipInterface::Play));
       RegisterMethod("pause", NewSlot(clip_, &AudioclipInterface::Pause));
       RegisterMethod("stop", NewSlot(clip_, &AudioclipInterface::Stop));
 
-      clip->SetOnStateChange(
+      clip->ConnectOnStateChange(
           NewSlot(this, &ScriptableAudioclip::OnStateChange));
     }
 
     ~ScriptableAudioclip() {
       clip_->Destroy();
       clip_ = NULL;
-      delete onstatechange_slot_;
-      onstatechange_slot_ = NULL;
     }
 
     void OnStateChange(AudioclipInterface::State state) {
-      if (onstatechange_slot_) {
-        Variant params[] = { Variant(this), Variant(state) };
-        onstatechange_slot_->Call(2, params);
-      }
+      onstatechange_signal_(this, state);
     }
 
-    void SetOnStateChange(Slot *handler) {
-      if (onstatechange_slot_)
-        delete onstatechange_slot_;
-      onstatechange_slot_ = handler;
-    }
-
-    Slot *GetOnStateChange() {
-      return onstatechange_slot_;
+    Connection *ConnectOnStateChange(Slot *slot) {
+      return onstatechange_signal_.ConnectGeneral(slot);
     }
 
     AudioclipInterface *clip_;
-    Slot *onstatechange_slot_;
+    Signal2<void, ScriptableAudioclip *, AudioclipInterface::State>
+        onstatechange_signal_;
   };
 
   class Audio : public PermanentScriptable {
@@ -133,11 +121,10 @@ class ScriptableFramework::Impl {
     }
 
     ScriptableAudioclip *Open(const char *src, Slot *method) {
-      AudioclipInterface *clip =
-          framework_->CreateAudioclip(src);
+      AudioclipInterface *clip = framework_->CreateAudioclip(src);
       if (clip) {
         ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
-        scriptable_clip->SetOnStateChange(method);
+        scriptable_clip->ConnectOnStateChange(method);
         return scriptable_clip;
       } else {
         delete method;
