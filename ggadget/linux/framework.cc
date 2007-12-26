@@ -15,15 +15,15 @@
 */
 
 #include "framework.h"
-#include <ggadget/linux/machine.h>
-#include <ggadget/linux/memory.h>
-#include <ggadget/linux/network.h>
-#include <ggadget/linux/perfmon.h>
-#include <ggadget/linux/power.h>
-#include <ggadget/linux/process.h>
-#include <ggadget/linux/wireless.h>
-#include <ggadget/linux/wireless_access_point.h>
-#include <ggadget/linux/file_system.h>
+#include "machine.h"
+#include "memory.h"
+#include "network.h"
+#include "perfmon.h"
+#include "power.h"
+#include "process.h"
+#include "wireless.h"
+#include "wireless_access_point.h"
+#include "file_system.h"
 
 namespace ggadget {
 

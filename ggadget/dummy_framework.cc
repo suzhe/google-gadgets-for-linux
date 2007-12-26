@@ -351,9 +351,9 @@ class DummyAudioclip : public AudioclipInterface {
   virtual void Play() { }
   virtual void Pause() { }
   virtual void Stop() { }
-  virtual OnStateChangeHandler *GetOnStateChange() const { return NULL; }
-  virtual void SetOnStateChange(OnStateChangeHandler *handler) {
+  virtual Connection *ConnectOnStateChange(OnStateChangeHandler *handler) {
     delete handler;
+    return NULL;
   }
 };
 

@@ -21,6 +21,7 @@
 
 namespace ggadget {
 
+class Connection;
 template <typename R, typename P1> class Slot1;
 
 namespace framework {
@@ -90,8 +91,7 @@ class AudioclipInterface {
 
  public:
   typedef Slot1<void, State> OnStateChangeHandler;
-  virtual OnStateChangeHandler *GetOnStateChange() const = 0;
-  virtual void SetOnStateChange(OnStateChangeHandler *handler) = 0;
+  virtual Connection *ConnectOnStateChange(OnStateChangeHandler *handler) = 0;
 };
 
 } // namespace framework
