@@ -99,7 +99,7 @@ bool GlobalFileManager::ExtractFile(const char *file,
   return false; // not implemented
 }
 
-ggadget::GadgetStringMap *GlobalFileManager::GetStringTable() {
+const ggadget::GadgetStringMap *GlobalFileManager::GetStringTable() const {
   return NULL; // not implemented
 }
 

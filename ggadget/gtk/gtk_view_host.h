@@ -27,6 +27,7 @@
 
 namespace ggadget {
 
+class DOMDocumentInterface;
 class View;
 
 namespace gtk {

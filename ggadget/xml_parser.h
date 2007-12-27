@@ -14,21 +14,15 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_XML_HTTP_REQUEST_H__
-#define GGADGET_XML_HTTP_REQUEST_H__
+#ifndef GGADGET_XML_PARSER_H__
+#define GGADGET_XML_PARSER_H__
 
-#include <ggadget/xml_http_request_interface.h>
+#include <ggadget/xml_parser_interface.h>
 
 namespace ggadget {
 
-class MainLoopInterface;
-class ScriptContextInterface;
-class XMLParserInterface;
-
-XMLHttpRequestInterface *CreateXMLHttpRequest(
-    MainLoopInterface *main_loop, ScriptContextInterface *script_context,
-    XMLParserInterface *xml_parser);
+XMLParserInterface *CreateXMLParser();
 
 } // namespace ggadget
 
-#endif // GGADGET_XML_HTTP_REQUEST_H__
+#endif // GGADGET_XML_PARSER_H__

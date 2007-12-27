@@ -59,6 +59,7 @@ SET(SRCS
   windows_locales.cc
   xml_dom.cc
   xml_http_request.cc
+  xml_parser.cc
   xml_utils.cc
 
   anchor_element.cc

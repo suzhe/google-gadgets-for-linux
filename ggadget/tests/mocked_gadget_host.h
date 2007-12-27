@@ -21,6 +21,7 @@
 #include "ggadget/gadget_host_interface.h"
 #include "ggadget/main_loop_interface.h"
 #include "ggadget/string_utils.h"
+#include "ggadget/xml_parser.h"
 
 class MockedFileManager : public ggadget::FileManagerInterface {
  public:
@@ -34,7 +35,9 @@ class MockedFileManager : public ggadget::FileManagerInterface {
   virtual bool ExtractFile(const char *file, std::string *into_file) {
     return false;
   }
-  virtual ggadget::GadgetStringMap *GetStringTable() { return &strings_; }
+  virtual const ggadget::GadgetStringMap *GetStringTable() const {
+    return &strings_;
+  }
   virtual bool FileExists(const char *file) { return false; }
  private:
   ggadget::GadgetStringMap strings_;
@@ -43,6 +46,8 @@ class MockedFileManager : public ggadget::FileManagerInterface {
 
 class MockedGadgetHost : public ggadget::GadgetHostInterface {
  public:
+  MockedGadgetHost() : xml_parser_(ggadget::CreateXMLParser()) { }
+  virtual ~MockedGadgetHost() { delete xml_parser_; }
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
       ScriptRuntimeType type) { return NULL; }
   virtual ggadget::ElementFactoryInterface *GetElementFactory() {
@@ -60,6 +65,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type, ggadget::ScriptableInterface *prototype) { return NULL; }
   virtual ggadget::MainLoopInterface *GetMainLoop() { return NULL; }
+  virtual ggadget::XMLParserInterface *GetXMLParser() { return xml_parser_; }
   virtual void SetPluginFlags(int plugin_flags) { }
   virtual void RemoveMe(bool save_data) { }
   virtual void DebugOutput(DebugLevel level, const char *message) const { }
@@ -77,6 +83,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual std::string GetFileIcon(const char *filename) const { return ""; }
  private:
   MockedFileManager file_manager_;
+  ggadget::XMLParserInterface *xml_parser_;
 };
 
 #endif // GGADGET_TESTS_MOCKED_GADGET_HOST_H__

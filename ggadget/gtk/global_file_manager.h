@@ -47,7 +47,7 @@ class GlobalFileManager : public ggadget::FileManagerInterface {
   /** @see FileManagerInterface::ExtractFile() */
   virtual bool ExtractFile(const char *file, std::string *into_file);
   /** @see FileManagerInterface::GetStringTable() */
-  virtual GadgetStringMap *GetStringTable();
+  virtual const GadgetStringMap *GetStringTable() const;
   /** @see FileManagerInterface::FileExists() */
   virtual bool FileExists(const char *file);
 

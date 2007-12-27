@@ -16,7 +16,8 @@
 
 #include "ggadget/smjs/js_script_context.h"
 #include "ggadget/scriptable_helper.h"
-#include "ggadget/xml_dom.h"
+#include "ggadget/xml_dom_interface.h"
+#include "ggadget/xml_parser.h"
 
 using namespace ggadget;
 using namespace ggadget::smjs;
@@ -24,9 +25,20 @@ using namespace ggadget::smjs;
 class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d22, ScriptableInterface);
-  GlobalObject() {
+  GlobalObject()
+      : xml_parser_(CreateXMLParser()) {
   }
+  ~GlobalObject() {
+    delete xml_parser_;
+  }
+
   virtual bool IsStrict() const { return false; }
+
+  DOMDocumentInterface *CreateDOMDocument() {
+    return xml_parser_->CreateDOMDocument();
+  }
+
+  XMLParserInterface *xml_parser_;
 };
 
 static GlobalObject *global;
@@ -36,7 +48,7 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
   context->RegisterClass("DOMDocument",
-                         NewSlot(CreateDOMDocument));
+                         NewSlot(global, &GlobalObject::CreateDOMDocument));
   return JS_TRUE;
 }
 

@@ -655,10 +655,18 @@ JSBool EvaluateScript(JSContext *cx, const char *script,
 
   std::string massaged_script = MassageJScript(script, filename, lineno);
   UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(massaged_script, &utf16_string);
-  return JS_EvaluateUCScript(cx, JS_GetGlobalObject(cx),
-                             utf16_string.c_str(), utf16_string.size(),
+  if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
+      massaged_script.size()) {
+    return JS_EvaluateUCScript(cx, JS_GetGlobalObject(cx),
+                               utf16_string.c_str(), utf16_string.size(),
+                               filename, lineno, rval);
+  } else {
+    JS_ReportError(cx, "Warning: script %s contains invalid UTF-8 sequences "
+                   "and will be treated as ISO8859-1", filename);
+    return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
+                             massaged_script.c_str(), massaged_script.size(),
                              filename, lineno, rval);
+  }
 }
 
 } // namespace smjs

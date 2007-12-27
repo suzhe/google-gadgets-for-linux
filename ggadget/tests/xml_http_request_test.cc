@@ -27,6 +27,8 @@
 #include "ggadget/slot.h"
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_http_request.h"
+#include "ggadget/xml_parser.h"
+#include "ggadget/xml_parser_interface.h"
 #include "ggadget/native_main_loop.h"
 #include "unittest/gunit.h"
 
@@ -34,11 +36,14 @@ using ggadget::XMLHttpRequestInterface;
 using ggadget::NewSlot;
 using ggadget::DOMDocumentInterface;
 using ggadget::NativeMainLoop;
+using ggadget::XMLParserInterface;
+using ggadget::CreateXMLParser;
 
 TEST(XMLHttpRequest, States) {
   NativeMainLoop main_loop;
+  XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL, xml_parser);
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -59,6 +64,7 @@ TEST(XMLHttpRequest, States) {
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->SetRequestHeader("ccc", "ddd"));
   delete request;
+  delete xml_parser;
 }
 
 class Callback {
@@ -75,8 +81,8 @@ class Callback {
         ASSERT_EQ(XMLHttpRequestInterface::OPENED, request_->GetReadyState());
         break;
       case 3:
-        // ASSERT(XMLHttpRequestInterface::SENT == request_->GetReadyState());
-        ASSERT_EQ(XMLHttpRequestInterface::HEADERS_RECEIVED, request_->GetReadyState());
+        ASSERT_EQ(XMLHttpRequestInterface::HEADERS_RECEIVED,
+                  request_->GetReadyState());
         break;
       case 4:
         ASSERT_EQ(XMLHttpRequestInterface::LOADING,
@@ -96,8 +102,9 @@ class Callback {
 
 TEST(XMLHttpRequest, SyncLocalFile) {
   NativeMainLoop main_loop;
+  XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL, xml_parser);
 
   Callback callback(request);
 
@@ -124,12 +131,14 @@ TEST(XMLHttpRequest, SyncLocalFile) {
   ASSERT_STREQ("ABCDEFG\n", str);
   ASSERT_EQ(8u, size);
   delete request;
+  delete xml_parser;
 }
 
 TEST(XMLHttpRequest, AsyncLocalFile) {
   NativeMainLoop main_loop;
+  XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL, xml_parser);
 
   Callback callback(request);
   system("echo GFEDCBA123 >/tmp/xml_http_request_test_data");
@@ -155,6 +164,7 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
   ASSERT_STREQ("GFEDCBA123\n", str);
   ASSERT_EQ(11u, size);
   delete request;
+  delete xml_parser;
 }
 
 bool server_thread_succeeded = false;
@@ -260,8 +270,9 @@ void *ServerThread(void *arg) {
 
 TEST(XMLHttpRequest, SyncNetworkFile) {
   NativeMainLoop main_loop;
+  XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL, xml_parser);
 
   pthread_t thread;
   bool async = false;
@@ -319,12 +330,14 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
   pthread_join(thread, NULL);
   ASSERT_TRUE(server_thread_succeeded);
   delete request;
+  delete xml_parser;
 }
 
 TEST(XMLHttpRequest, AsyncNetworkFile) {
   NativeMainLoop main_loop;
+  XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL, xml_parser);
 
   pthread_t thread;
   bool async = true;
@@ -422,12 +435,14 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   pthread_join(thread, NULL);
   ASSERT_TRUE(server_thread_succeeded);
   delete request;
+  delete xml_parser;
 }
 
 TEST(XMLHttpRequest, ResponseTextAndXML) {
   NativeMainLoop main_loop;
+  XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, NULL);
+      ggadget::CreateXMLHttpRequest(&main_loop, NULL, xml_parser);
 
   Callback callback(request);
 
@@ -450,6 +465,7 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
   ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
                dom->GetDocumentElement()->GetTextContent().c_str());
   delete request;
+  delete xml_parser;
 }
 
 int main(int argc, char **argv) {
