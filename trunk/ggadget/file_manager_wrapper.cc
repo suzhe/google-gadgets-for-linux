@@ -23,7 +23,8 @@ namespace ggadget {
 
 class FileManagerWrapper::Impl {
  public:
-  Impl() { 
+  Impl(XMLParserInterface *xml_parser)
+      : default_(xml_parser) { 
   }
 
   ~Impl() {
@@ -61,7 +62,8 @@ class FileManagerWrapper::Impl {
   FileManagerPrefixMap prefixmap_;
 };
 
-FileManagerWrapper::FileManagerWrapper() : impl_(new FileManagerWrapper::Impl) {
+FileManagerWrapper::FileManagerWrapper(XMLParserInterface *xml_parser)
+    : impl_(new FileManagerWrapper::Impl(xml_parser)) {
 }
 
 FileManagerWrapper::~FileManagerWrapper() {
@@ -129,7 +131,7 @@ bool FileManagerWrapper::Init(const char *base_path) {
   return impl_->default_.Init(base_path);
 }
 
-GadgetStringMap *FileManagerWrapper::GetStringTable() {
+const GadgetStringMap *FileManagerWrapper::GetStringTable() const {
   // Just return the string table for the default FM.
   return impl_->default_.GetStringTable();
 }

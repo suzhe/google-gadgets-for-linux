@@ -19,6 +19,7 @@
 #include "xml_dom.h"
 #include "logger.h"
 #include "scriptable_helper.h"
+#include "xml_parser_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -48,7 +49,7 @@ class GlobalException : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x81f363ca1c034f39, ScriptableInterface);
   static GlobalException *Get() {
-    static internal::GlobalException global_exception;
+    static GlobalException global_exception;
     return &global_exception;
   }
  private:
@@ -77,7 +78,7 @@ class GlobalNode : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x2a9d299fb51c4070, ScriptableInterface);
   static GlobalNode *Get() {
-    static internal::GlobalNode global_node;
+    static GlobalNode global_node;
     return &global_node;
   }
  private:
@@ -267,6 +268,7 @@ class DOMNodeImpl {
         name_(name ? name : ""),
         parent_(NULL),
         owner_node_(NULL),
+        row_(0), column_(0),
         ref_count_(0) {
     ASSERT(name && *name);
     if (name != kDOMDocumentName) {
@@ -652,6 +654,7 @@ class DOMNodeImpl {
   DOMNodeInterface *owner_node_;
   Children children_;
   std::string last_xml_;
+  int row_, column_;
 
   // This ref_count_ records the accumulated reference count of all descendants.
   // ref_count_ == 0 means all descendants' ref_count == 0.
@@ -847,8 +850,32 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return impl_->GetXML();
   }
 
+  virtual int GetRow() const {
+    return impl_->row_;
+  }
+
+  virtual void SetRow(int row) {
+    impl_->row_ = row;
+  }
+
+  virtual int GetColumn() const {
+    return impl_->column_;
+  }
+
+  virtual void SetColumn(int column) {
+    impl_->column_ = column;
+  }
+
   virtual bool CheckException(DOMExceptionCode code) {
     return GlobalCheckException(this, code);
+  }
+
+  bool CheckXMLName(const char *name) const {
+    return impl_->owner_document_->GetXMLParser()->CheckXMLName(name);
+  }
+
+  std::string EncodeXMLString(const char *xml) const {
+    return impl_->owner_document_->GetXMLParser()->EncodeXMLString(xml);
   }
 
  private:
@@ -1107,6 +1134,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
       DOMAttr *attr = new DOMAttr(GetOwnerDocument(), name, this);
       attrs_.push_back(attr);
       attr->SetValue(value);
+      attr->SetRow(GetRow());
+      // Don't set column, because it is inaccurate. 
     } else {
       (*it)->SetValue(value);
     }
@@ -1629,7 +1658,9 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   DEFINE_CLASS_ID(0x23dffa4b4f234226, DOMDocumentInterface);
   typedef DOMNodeBase<DOMDocumentInterface> Super;
 
-  DOMDocument() : Super(NULL, kDOMDocumentName) {
+  DOMDocument(XMLParserInterface *xml_parser)
+      : Super(NULL, kDOMDocumentName),
+        xml_parser_(xml_parser) {
     RegisterConstant("doctype", static_cast<ScriptableInterface *>(NULL));
     RegisterConstant("implementation", &implementation_);
     RegisterProperty("documentElement",
@@ -1644,8 +1675,6 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     RegisterMethod("createComment", NewSlot(this, &DOMDocument::CreateComment));
     RegisterMethod("createCDATASection",
                    NewSlot(this, &DOMDocument::CreateCDATASection));
-    RegisterMethod("createTextNode",
-                   NewSlot(this, &DOMDocument::CreateTextNode));
     RegisterMethod("createProcessingInstruction",
                    NewSlot(this,
                            &DOMDocument::ScriptCreateProcessingInstruction));
@@ -1660,7 +1689,8 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
   virtual bool LoadXML(const char *xml) {
     GetImpl()->RemoveAllChildren();
-    return ParseXMLIntoDOM(xml, "NONAME", this, NULL);
+    return xml_parser_->ParseContentIntoDOM(xml, "NONAME", NULL, NULL, this,
+                                            NULL, NULL);
   }
 
   virtual NodeType GetNodeType() const { return DOCUMENT_NODE; }
@@ -1697,7 +1727,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
                                          DOMElementInterface **result) {
     ASSERT(result);
     *result = NULL;
-    if (!CheckXMLName(tag_name))
+    if (!xml_parser_->CheckXMLName(tag_name))
       return DOM_INVALID_CHARACTER_ERR;
     *result = new DOMElement(this, tag_name);
     return DOM_NO_ERR;
@@ -1724,7 +1754,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
       DOMProcessingInstructionInterface **result) {
     ASSERT(result);
     *result = NULL;
-    if (!CheckXMLName(target))
+    if (!xml_parser_->CheckXMLName(target))
       return DOM_INVALID_CHARACTER_ERR;
     *result = new DOMProcessingInstruction(this, target, data);
     return DOM_NO_ERR;
@@ -1734,7 +1764,7 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
                                            DOMAttrInterface **result) {
     ASSERT(result);
     *result = NULL;
-    if (!CheckXMLName(name))
+    if (!xml_parser_->CheckXMLName(name))
       return DOM_INVALID_CHARACTER_ERR;
     *result = new DOMAttr(this, name, NULL);
     return DOM_NO_ERR;
@@ -1751,6 +1781,10 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     ASSERT(indent == 0);
     xml->append(kStandardXMLDecl);
     GetImpl()->AppendChildrenXML(0, xml);
+  }
+
+  virtual XMLParserInterface *GetXMLParser() const {
+    return xml_parser_;
   }
 
  protected:
@@ -1821,13 +1855,15 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     return NULL;
   }
 
+  XMLParserInterface *xml_parser_;
   DOMImplementation implementation_;
 };
 
-} // namespace internal
+} // internal namespace
 
-DOMDocumentInterface *CreateDOMDocument() {
-  return new internal::DOMDocument();
+DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser) {
+  ASSERT(xml_parser);
+  return new internal::DOMDocument(xml_parser);
 }
 
 } // namespace ggadget

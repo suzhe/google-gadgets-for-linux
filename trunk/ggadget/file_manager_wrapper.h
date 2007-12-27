@@ -24,13 +24,15 @@
 
 namespace ggadget {
 
+class XMLParserInterface;
+
 /**
  * Parses filemanager paths and dispatches commands to the appropiate 
  * filemanager.
  */
 class FileManagerWrapper : public FileManagerInterface {
  public:
-  FileManagerWrapper();
+  FileManagerWrapper(XMLParserInterface *xml_parser);
 
   virtual ~FileManagerWrapper();
 
@@ -64,7 +66,7 @@ class FileManagerWrapper : public FileManagerInterface {
 
   virtual bool ExtractFile(const char *file, std::string *into_file);
 
-  virtual GadgetStringMap *GetStringTable();
+  virtual const GadgetStringMap *GetStringTable() const;
 
   virtual bool FileExists(const char *file);
 

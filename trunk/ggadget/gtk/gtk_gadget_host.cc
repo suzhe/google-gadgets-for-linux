@@ -27,6 +27,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/script_runtime_interface.h>
+#include <ggadget/xml_parser.h>
 
 #include <ggadget/anchor_element.h>
 #include <ggadget/button_element.h>
@@ -60,7 +61,8 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
       element_factory_(NULL),
-      resource_file_manager_(new FileManager()),
+      xml_parser_(CreateXMLParser()),
+      resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
       file_manager_(NULL),
       options_(new Options()),
@@ -103,7 +105,7 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
   factory->RegisterElementClass("scrollbar",
                                 &ggadget::ScrollBarElement::CreateInstance);
 
-  FileManagerWrapper *wrapper = new FileManagerWrapper();
+  FileManagerWrapper *wrapper = new FileManagerWrapper(xml_parser_);
   file_manager_ = wrapper;
 
   resource_file_manager_->Init(kResourceZipName);
@@ -137,6 +139,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   global_file_manager_ = NULL;
   delete menu_;
   menu_ = NULL;
+  delete xml_parser_;
+  xml_parser_ = NULL;
   delete script_runtime_;
   script_runtime_ = NULL;
 }
@@ -164,6 +168,10 @@ FrameworkInterface *GtkGadgetHost::GetFramework() {
 
 MainLoopInterface *GtkGadgetHost::GetMainLoop() {
   return &main_loop_;
+}
+
+XMLParserInterface *GtkGadgetHost::GetXMLParser() {
+  return xml_parser_;
 }
 
 GadgetInterface *GtkGadgetHost::GetGadget() {

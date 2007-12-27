@@ -49,6 +49,6 @@
 #include <ggadget/view_interface.h>
 #include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_http_request_interface.h>
-#include <ggadget/xml_utils.h>
+#include <ggadget/xml_parser_interface.h>
 
 #endif // GGADGET_GADGET_CONSTS_H__

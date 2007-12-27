@@ -25,8 +25,8 @@
 #include "scriptable_helper.h"
 #include "signals.h"
 #include "string_utils.h"
-#include "xml_dom.h"
-#include "xml_utils.h"
+#include "xml_dom_interface.h"
+#include "xml_parser_interface.h"
 
 namespace ggadget {
 namespace {
@@ -47,9 +47,11 @@ class XMLHttpRequest
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
   XMLHttpRequest(MainLoopInterface *main_loop,
-                 ScriptContextInterface *script_context)
+                 ScriptContextInterface *script_context,
+                 XMLParserInterface *xml_parser)
       : main_loop_(main_loop),
         script_context_(script_context),
+        xml_parser_(xml_parser),
         async_(false),
         curl_(NULL),
         curlm_(NULL),
@@ -382,6 +384,13 @@ class XMLHttpRequest
     strncpy(reinterpret_cast<char *>(ptr), this_p->send_data_.c_str(),
             real_size);
     this_p->send_data_.erase(0, real_size);
+    if (this_p->send_data_.empty()) {
+      // Close the write watch to prevent the write events from blocking the
+      // main loop.
+      if (this_p->socket_write_watch_)
+        this_p->main_loop_->RemoveWatch(this_p->socket_write_watch_);
+      this_p->socket_write_watch_ = 0;
+    }
     return real_size;
   }
 
@@ -599,40 +608,17 @@ class XMLHttpRequest
 
   void DecodeResponseText() {
     std::string encoding(response_encoding_);
-    DLOG("XMLHttpRequest: content_type: %s", response_content_type_.c_str());
-    const char *content_type = response_content_type_.c_str();
-    std::string::size_type content_type_len = response_content_type_.length();
-    if (content_type_len == 0 ||
-        strcasecmp(content_type, "text/xml") == 0 ||
-        strcasecmp(content_type, "application/xml") == 0 ||
-        (content_type_len > 4 &&
-         strcasecmp(content_type + content_type_len - 4, "+xml") == 0)) {
-      // The content type is XML.
-      response_dom_ = CreateDOMDocument();
-      response_dom_->Attach();
-      if (!ParseXMLIntoDOM(response_body_, url_.c_str(), response_dom_,
-                           &encoding)) {
-        response_dom_->Detach();
-        response_dom_ = NULL;
-      }
-    } else if (strcasecmp(content_type, "text/html") == 0) {
-      // The content type is HTML. The current spec 20071026 doesn't have
-      // this feature, but the Gadget API requires it. 
-      response_dom_ = CreateDOMDocument();
-      response_dom_->Attach();
-      if (!ParseHTMLIntoDOM(response_body_, url_.c_str(), response_dom_,
-                            &encoding)) {
-        response_dom_->Detach();
-        response_dom_ = NULL;
-      }
+    response_dom_ = xml_parser_->CreateDOMDocument();
+    response_dom_->Attach();
+    if (!xml_parser_->ParseContentIntoDOM(response_body_,
+                                          url_.c_str(),
+                                          response_content_type_.c_str(),
+                                          response_encoding_.c_str(),
+                                          response_dom_,
+                                          NULL, &response_text_)) {
+      response_dom_->Detach();
+      response_dom_ = NULL;
     }
-
-    // NOTE: Here the priority of encodings does not conform to XMLHttpRequest
-    // specification (and XML, HTTP, HTML specifications), because for now
-    // libxml2 doesn't allow specifying external encoding.
-    if (encoding.empty())
-      encoding = response_encoding_;
-    ConvertStringToUTF8(response_body_, &encoding, &response_text_);
   }
 
   virtual ExceptionCode GetResponseText(const char **result) {
@@ -640,7 +626,7 @@ class XMLHttpRequest
 
     if (state_ == LOADING) {
       // Though the spec allows getting responseText while loading, we can't
-      // afford this because we rely on XML/HTML parser to get the encoding. 
+      // afford this because we rely on XML/HTML parser to get the encoding.
       *result = "";
       return NO_ERR;
     } else if (state_ == DONE) {
@@ -812,6 +798,7 @@ class XMLHttpRequest
 
   MainLoopInterface *main_loop_;
   ScriptContextInterface *script_context_;
+  XMLParserInterface *xml_parser_;
   Signal0<void> onreadystatechange_signal_;
 
   std::string url_;
@@ -843,8 +830,9 @@ class XMLHttpRequest
 } // anonymous namespace
 
 XMLHttpRequestInterface *CreateXMLHttpRequest(
-    MainLoopInterface *main_loop, ScriptContextInterface *script_context) {
-  return new XMLHttpRequest(main_loop, script_context);
+    MainLoopInterface *main_loop, ScriptContextInterface *script_context,
+    XMLParserInterface *xml_parser) {
+  return new XMLHttpRequest(main_loop, script_context, xml_parser);
 }
 
 } // namespace ggadget

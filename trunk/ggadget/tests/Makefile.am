@@ -43,7 +43,7 @@ check_PROGRAMS		= common_test \
 			  basic_element_test \
 			  view_test \
 			  xml_dom_test \
-			  xml_utils_test \
+			  xml_parser_test \
 			  xml_http_request_test
 
 common_test_SOURCES		= common_test.cc
@@ -61,7 +61,7 @@ string_utils_test_SOURCES	= string_utils_test.cc
 basic_element_test_SOURCES	= basic_element_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
-xml_utils_test_SOURCES		= xml_utils_test.cc
+xml_parser_test_SOURCES		= xml_parser_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc
 xml_http_request_test_LDADD	= -lpthread \

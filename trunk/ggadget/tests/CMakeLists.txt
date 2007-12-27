@@ -46,7 +46,7 @@ UNIT_TEST(string_utils_test)
 UNIT_TEST(basic_element_test)
 UNIT_TEST(view_test)
 UNIT_TEST(xml_dom_test)
-UNIT_TEST(xml_utils_test)
+UNIT_TEST(xml_parser_test)
 
 ADD_EXECUTABLE(xml_http_request_test xml_http_request_test.cc)
 TARGET_LINK_LIBRARIES(xml_http_request_test gunit ggadget pthread)

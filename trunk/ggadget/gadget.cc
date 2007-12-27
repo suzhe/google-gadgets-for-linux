@@ -33,7 +33,7 @@
 #include "scriptable_options.h"
 #include "view_host_interface.h"
 #include "view.h"
-#include "xml_utils.h"
+#include "xml_parser_interface.h"
 
 namespace ggadget {
 
@@ -60,7 +60,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     }
   };
 
-  static void RegisterStrings(GadgetStringMap *strings,
+  static void RegisterStrings(const GadgetStringMap *strings,
                               ScriptableHelperNativePermanent *scriptable) {
     for (GadgetStringMap::const_iterator it = strings->begin();
          it != strings->end(); ++it) {
@@ -390,7 +390,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
 
-    GadgetStringMap *strings = file_manager->GetStringTable();
+    const GadgetStringMap *strings = file_manager->GetStringTable();
     RegisterStrings(strings, &gadget_global_prototype_);
     RegisterStrings(strings, &strings_);
 
@@ -400,10 +400,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
                                           &manifest_contents,
                                           &manifest_path))
       return false;
-    if (!ParseXMLIntoXPathMap(manifest_contents,
-                              manifest_path.c_str(),
-                              kGadgetTag, NULL,
-                              &manifest_info_map_))
+    if (!host_->GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                                     manifest_path.c_str(),
+                                                     kGadgetTag, NULL,
+                                                     &manifest_info_map_))
       return false;
 
     // TODO: Is it necessary to check the required fields in manifest?

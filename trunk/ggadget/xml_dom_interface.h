@@ -27,6 +27,7 @@ class DOMNodeListInterface;
 class DOMNamedNodeMapInterface;
 class DOMDocumentInterface;
 class DOMElementInterface;
+class XMLParserInterface;
 
 /* TODO: DOM2
 const char *const kXMLPrefix = "xml";
@@ -197,6 +198,15 @@ class DOMNodeInterface : public ScriptableInterface {
 
   /** @c xml property is a Microsoft extension. */
   virtual std::string GetXML() const = 0;
+
+  /**
+   * Gets and sets the column and row numbers of this node where it is defined
+   * in the source XML file.
+   */  
+  virtual int GetRow() const = 0;
+  virtual void SetRow(int row) = 0;
+  virtual int GetColumn() const = 0;
+  virtual void SetColumn(int column) = 0;
 
   /* TODO: DOM2
   virtual bool IsSupported(const char *feature, const char *version) const = 0;
@@ -412,6 +422,8 @@ class DOMDocumentInterface : public DOMNodeInterface {
    * @return @c true if succeeded.
    */
   virtual bool LoadXML(const char *xml) = 0;
+
+  virtual XMLParserInterface *GetXMLParser() const = 0;
 
   /* TODO: DOM2
   virtual DOMExceptionCode ImportNode(DOMNodeInterface *imported_node,

@@ -25,16 +25,16 @@
 #include <ggadget/string_utils.h>
 #include <third_party/unzip/unzip.h>
 
-class TiXmlDocument;  // TinyXML DOM Document.
-
 namespace ggadget {
+
+class XMLParserInterface;
 
 namespace internal {
 
 /** Declared here only for unit testing. */
 class FileManagerImpl {
  public:
-  FileManagerImpl();
+  FileManagerImpl(XMLParserInterface *xml_parser);
   ~FileManagerImpl();
 
   typedef std::map<std::string, unz_file_pos, GadgetStringComparator> FileMap;
@@ -68,6 +68,7 @@ class FileManagerImpl {
   FileMap::const_iterator FindFile(const char *file,
                                    std::string *normalized_file);
 
+  XMLParserInterface *xml_parser_;
   // base path must in correct case (case sensitive),
   // but files in base path need not to be
   std::string base_path_;
@@ -93,12 +94,7 @@ class FileManagerImpl {
  */
 class FileManager : public FileManagerInterface {
  public:
-  /**
-   * @param global_file_manager the file manager used to access global files
-   *     in the file system. Can be NULL if the file manager is not allowed to
-   *     access files in the file system.
-   */
-  FileManager();
+  FileManager(XMLParserInterface *xml_parser);
   virtual ~FileManager();
 
   /** @see FileManagerInterface::Init() */
@@ -114,7 +110,7 @@ class FileManager : public FileManagerInterface {
   /** @see FileManagerInterface::ExtractFile() */
   virtual bool ExtractFile(const char *file, std::string *into_file);
   /** @see FileManagerInterface::GetStringTable() */
-  virtual GadgetStringMap *GetStringTable();
+  virtual const GadgetStringMap *GetStringTable() const;
   /** @see FileManagerInterface::FileExists() */
   virtual bool FileExists(const char *file);
 

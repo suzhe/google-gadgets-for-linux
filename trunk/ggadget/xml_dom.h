@@ -22,8 +22,10 @@
 
 namespace ggadget {
 
+class XMLParserInterface;
+
 /** Create a new document. */
-DOMDocumentInterface *CreateDOMDocument();
+DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser);
 
 } // namespace ggadget
 

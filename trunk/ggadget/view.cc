@@ -1368,6 +1368,10 @@ EditInterface *View::NewEdit(size_t w, size_t h) {
   return impl_->host_->NewEdit(w, h);
 }
 
+XMLParserInterface *View::GetXMLParser() const {
+  return impl_->gadget_host_->GetXMLParser();
+}
+
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {
   return impl_->oncancel_event_.Connect(handler);
 }

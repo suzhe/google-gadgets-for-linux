@@ -91,7 +91,7 @@ class FileManagerInterface {
   /**
    * Gets the content of strings.xml by returning a string map. 
    */
-  virtual GadgetStringMap *GetStringTable() = 0;
+  virtual const GadgetStringMap *GetStringTable() const = 0;
 
   /**
    * Check if a file with the given name exists under the base_path of this

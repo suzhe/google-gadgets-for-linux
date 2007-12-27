@@ -33,6 +33,7 @@ class ScriptableInterface;
 class ScriptRuntimeInterface;
 class Signal;
 class ViewHostInterface;
+class XMLParserInterface;
 
 /**
  * Interface for providing host services to the gadgets.
@@ -63,6 +64,9 @@ class GadgetHostInterface {
 
   /** Returns the global @c MainLoopInterface instance. */
   virtual MainLoopInterface *GetMainLoop() = 0;
+
+  /** Returns the global @c XMLParserInterface instance. */
+  virtual XMLParserInterface *GetXMLParser() = 0;
 
   /** Returns the hosted gadget. */
   virtual GadgetInterface *GetGadget() = 0;

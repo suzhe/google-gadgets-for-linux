@@ -26,14 +26,14 @@
 #include "gadget_consts.h"
 #include "logger.h"
 #include "windows_locales.h"
-#include "xml_utils.h"
+#include "xml_parser_interface.h"
 
 namespace ggadget {
 
 namespace internal {
 
-FileManagerImpl::FileManagerImpl()
-    : is_dir_(false) {
+FileManagerImpl::FileManagerImpl(XMLParserInterface *xml_parser)
+    : xml_parser_(xml_parser), is_dir_(false) {
 }
 
 FileManagerImpl::~FileManagerImpl() {
@@ -171,7 +171,7 @@ bool FileManagerImpl::GetXMLFileContents(const char *file,
       GadgetStringMap::const_iterator iter = string_table_.find(entity_name);
       if (iter != string_table_.end()) {
         start = pos + 1;  // Reset start for next chunk.
-        data->append(EncodeXMLString(iter->second.c_str()));
+        data->append(xml_parser_->EncodeXMLString(iter->second.c_str()));
       }
       // Else: not a fatal error. Just leave the original entity reference
       // text in the current text chunk and let tinyxml deal with it.
@@ -282,15 +282,16 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
     return false;
 
   std::string filename(base_path_ + kPathSeparator + iter->first);
-  bool result = ParseXMLIntoXPathMap(data, filename.c_str(),
-                                     kStringsTag, NULL, &string_table_);
+  bool result = xml_parser_->ParseXMLIntoXPathMap(data, filename.c_str(),
+                                                  kStringsTag, NULL,
+                                                  &string_table_);
 
   if (!result) {
     // For compatibility with some Windows gadget files that use ISO8859-1
     // encoding without declaration.
-    std::string encoding("ISO8859-1");
-    result = ParseXMLIntoXPathMap(data, filename.c_str(),
-                                  kStringsTag, &encoding, &string_table_); 
+    result = xml_parser_->ParseXMLIntoXPathMap(data, filename.c_str(),
+                                               kStringsTag, "ISO8859-1",
+                                               &string_table_); 
   }
 
   return result;
@@ -489,8 +490,8 @@ bool FileManagerImpl::FileExists(const char *file) {
 
 } // namespace internal
 
-FileManager::FileManager()
-    : impl_(new internal::FileManagerImpl()) { }
+FileManager::FileManager(XMLParserInterface *xml_parser)
+    : impl_(new internal::FileManagerImpl(xml_parser)) { }
 
 FileManager::~FileManager() {
   delete impl_;
@@ -516,7 +517,7 @@ bool FileManager::ExtractFile(const char *file, std::string *into_file) {
   return impl_->ExtractFile(file, into_file);
 }
 
-GadgetStringMap *FileManager::GetStringTable() {
+const GadgetStringMap *FileManager::GetStringTable() const {
   return &impl_->string_table_;
 }
 

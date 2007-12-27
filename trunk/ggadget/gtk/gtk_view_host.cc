@@ -24,11 +24,12 @@
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
-#include <ggadget/xml_dom.h>
+#include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_http_request.h>
+#include <ggadget/xml_parser_interface.h>
 #include "gtk_view_host.h"
-#include "gadget_view_widget.h"
 #include "cairo_graphics.h"
+#include "gadget_view_widget.h"
 #include "gtk_edit.h"
 
 namespace ggadget {
@@ -94,7 +95,8 @@ GtkViewHost::GtkViewHost(GtkGadgetHost *gadget_host,
 
     // Register global classes into script context.
     script_context_->RegisterClass(
-        "DOMDocument", NewSlot(CreateDOMDocument));
+        "DOMDocument", NewSlot(gadget_host_->GetXMLParser(),
+                               &XMLParserInterface::CreateDOMDocument));
     script_context_->RegisterClass(
         "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
     script_context_->RegisterClass(
@@ -143,7 +145,8 @@ GtkViewHost::~GtkViewHost() {
 }
 
 XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
-  return CreateXMLHttpRequest(gadget_host_->GetMainLoop(), script_context_);
+  return CreateXMLHttpRequest(gadget_host_->GetMainLoop(), script_context_,
+                              gadget_host_->GetXMLParser());
 }
 
 void GtkViewHost::QueueDraw() {

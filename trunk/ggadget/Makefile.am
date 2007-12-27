@@ -113,6 +113,8 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_dom_interface.h \
 			  xml_http_request.h \
 			  xml_http_request_interface.h \
+			  xml_parser.h
+			  xml_parser_interface.h \
 			  xml_utils.h
 
 lib_LTLIBRARIES		= libggadget@GGL_EPOCH@.la
@@ -165,6 +167,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  windows_locales.cc \
 			  xml_dom.cc \
 			  xml_http_request.cc \
+			  xml_parser.cc \
 			  xml_utils.cc
 
 
