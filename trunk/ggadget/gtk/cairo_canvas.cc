@@ -816,6 +816,7 @@ cairo_t *CairoCanvas::GetContext() const {
 }
 
 void CairoCanvas::MultiplyColor(const Color &color) {
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
   cairo_surface_t *surface = impl_->GetSurface();
 
   // Color multiply can only be done on ARGB32 surface.
@@ -843,6 +844,7 @@ void CairoCanvas::MultiplyColor(const Color &color) {
       }
     }
   }
+#endif
 }
 
 bool CairoCanvas::IsValid() const {

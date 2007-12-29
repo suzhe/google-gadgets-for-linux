@@ -16,6 +16,9 @@
 
 PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
 PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
+PKGCONFIG_EX(librsvg-2.0 2.14 RSVG_LIBRARIES)
+
+ADD_DEFINITIONS(-DHAVE_RSVG_LIBRARY)
 
 SET(SRCS
   cairo_canvas.cc
@@ -30,10 +33,17 @@ SET(SRCS
   gtk_key_convert.cc
   gtk_menu_impl.cc
   options.cc
+  pixbuf_image.cc
+  pixbuf_utils.cc
+  rsvg_image.cc
 )
 
 ADD_SUBDIRECTORY(tests)
 
 ADD_LIBRARY(ggadget_gtk SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_gtk ${CAIRO_LIBRARIES} ${GTK_LIBRARIES})
+TARGET_LINK_LIBRARIES(ggadget_gtk
+  ${CAIRO_LIBRARIES}
+  ${GTK_LIBRARIES}
+  ${RSVG_LIBRARIES}
+)
 OUTPUT_LIBRARY(ggadget_gtk)

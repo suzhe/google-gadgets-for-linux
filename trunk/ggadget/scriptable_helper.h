@@ -288,8 +288,14 @@ class ScriptableHelper : public I {
 
   /** @see ScriptableInterface::EnumerateProperties() */
   virtual bool EnumerateProperties(
-      Slot4<bool, int, const char *, const Variant &, bool> *callback) {
+      ScriptableInterface::EnumeratePropertiesCallback *callback) {
     return impl_->EnumerateProperties(callback);
+  }
+
+  /** @see ScriptableInterface::EnumerateElements() */
+  virtual bool EnumerateElements(
+      ScriptableInterface::EnumerateElementsCallback *callback) {
+    return impl_->EnumerateElements(callback);
   }
 
  private:

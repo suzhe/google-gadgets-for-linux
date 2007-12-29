@@ -67,6 +67,13 @@ class ScriptableArray : public ScriptableHelperOwnershipShared {
     return new ScriptableArray(array, count);
   }
 
+  /**
+   * These methods are override to make this object act like normal
+   * JavaScript arrays for C++ users.
+   */
+  virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
+  virtual bool EnumerateElements(EnumerateElementsCallback *callback);
+
   size_t GetCount() const;
   Variant GetItem(size_t index) const;
 

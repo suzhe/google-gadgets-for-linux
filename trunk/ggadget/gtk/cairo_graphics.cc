@@ -73,11 +73,13 @@ CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
   return canvas;
 }
 
+#ifdef HAVE_RSVG_LIBRARY
 static bool IsSvg(const std::string &data) {
   //TODO: better detection method?
   return data.find("<?xml") != std::string::npos &&
          data.find("<svg") != std::string::npos;
 }
+#endif
 
 ImageInterface *CairoGraphics::NewImage(const std::string &data,
                                         bool is_mask) const {
