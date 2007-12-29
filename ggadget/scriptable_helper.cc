@@ -564,7 +564,7 @@ class ScriptableHelperImpl::PrototypePropertiesCallback {
   }
 
   bool Callback(int id, const char *name,
-              const Variant &value, bool is_method) {
+                const Variant &value, bool is_method) {
     if (owner_->slot_index_.find(name) == owner_->slot_index_.end() &&
         owner_->constants_.find(name) == owner_->constants_.end())
       return (*callback_)(id, name, value, is_method);

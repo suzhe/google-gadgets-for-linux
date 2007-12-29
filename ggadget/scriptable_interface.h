@@ -225,6 +225,14 @@ class ScriptableInterface {
    */
   virtual ScriptableInterface *GetPendingException(bool clear) = 0;
 
+  /**
+   * The first param is the return value of this call back. Return false if the
+   * call back do not want to enumerate any more.
+   * The second param is the id of the property in the ScriptableInterface
+   * object.
+   * The third and fourth param is the name and the value of the property.
+   * And the last param indicate that if the property is a method.
+   */
   typedef Slot4<bool, int, const char *, const Variant &, bool>
       EnumeratePropertiesCallback;
   /**
@@ -233,8 +241,8 @@ class ScriptableInterface {
    *     id, name, current value and a bool indicating if the property is a
    *     method. The callback should return @c false if it doesn't want to
    *     continue. The callback will be automatically deleted before this
-   *     method returns, so the caller can use @c NewSlot for the parameter. 
-   * @return @c false if the callback returns @c false.  
+   *     method returns, so the caller can use @c NewSlot for the parameter.
+   * @return @c false if the callback returns @c false.
    */
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) = 0;
 };

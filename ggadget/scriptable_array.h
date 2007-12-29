@@ -36,7 +36,7 @@ class ScriptableArray : public ScriptableHelperOwnershipShared {
   /**
    * Creates a @c ScriptableArray with an iterator and count.
    * @param start the start position of an iterator. It can also be the start
-   *     address of an array. A copy of this array will be made. 
+   *     address of an array. A copy of this array will be made.
    * @param count number of elements in the array.
    */
   template <typename I>
@@ -49,7 +49,7 @@ class ScriptableArray : public ScriptableHelperOwnershipShared {
 
   /**
    * Same as above, but accepts a @c NULL terminated array of pointers.
-   * A copy of the input array will be made. 
+   * A copy of the input array will be made.
    */
   template <typename T>
   static ScriptableArray *Create(T *const *array) {
