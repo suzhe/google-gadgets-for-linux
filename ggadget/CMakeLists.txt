@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-INCLUDE(LibXml2Config)
-
 ADD_SUBDIRECTORY(dbus)
 ADD_SUBDIRECTORY(gtk)
 ADD_SUBDIRECTORY(linux)
@@ -23,7 +21,7 @@ ADD_SUBDIRECTORY(smjs)
 ADD_SUBDIRECTORY(tests)
 
 PKGCONFIG_EX(libcurl 7.16.0 LIBCURL_LIBRARIES)
-LIBXML2_CONFIG(2.6.20 LIBXML2_LIBRARIES)
+PKGCONFIG_EX(libxml-2.0 2.6.0 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
@@ -37,7 +35,6 @@ SET(SRCS
   file_manager.cc
   file_manager_wrapper.cc
   gadget.cc
-  image.cc
   logger.cc
   math_utils.cc
   memory_options.cc

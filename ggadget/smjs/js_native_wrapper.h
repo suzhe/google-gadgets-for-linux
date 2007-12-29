@@ -37,6 +37,7 @@ class JSNativeWrapper : public ScriptableHelperOwnershipShared {
   virtual OwnershipPolicy Attach();
   virtual bool Detach();
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
+  virtual bool EnumerateElements(EnumerateElementsCallback *callback);
 
   Variant GetProperty(const char *name);
   bool SetProperty(const char *name, const Variant &value);

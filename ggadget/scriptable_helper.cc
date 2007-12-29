@@ -67,9 +67,11 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual void SetPendingException(ScriptableInterface *exception);
   virtual ScriptableInterface *GetPendingException(bool clear);
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
+  virtual bool EnumerateElements(EnumerateElementsCallback *callback);
 
  private:
   class PrototypePropertiesCallback;
+  class PrototypeElementsCallback;
   void AddPropertyInfo(const char *name, const Variant &prototype,
                        Slot *getter, Slot *setter);
 
@@ -166,7 +168,7 @@ void ScriptableHelperImpl::AddPropertyInfo(const char *name,
   SlotIndexMap::iterator it = slot_index_.find(name);
   if (it != slot_index_.end()) {
     int index = it->second;
-    DLOG("Property %s(%d) is overriden", name, index);
+    // DLOG("Property %s(%d) is overriden", name, index);
     slot_prototypes_[index] = prototype;
     delete getter_slots_[index];
     getter_slots_[index] = getter;
@@ -608,6 +610,13 @@ bool ScriptableHelperImpl::EnumerateProperties(
       }
     }
   }
+  delete callback;
+  return true;
+}
+
+bool ScriptableHelperImpl::EnumerateElements(
+    EnumerateElementsCallback *callback) {
+  // This helper does nothing. 
   delete callback;
   return true;
 }

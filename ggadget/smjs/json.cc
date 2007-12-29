@@ -59,7 +59,6 @@ static void AppendObjectToJSON(JSContext *cx, JSObject *object,
                                std::string *json, std::vector<jsval> *stack) {
   (*json) += '{';
   JSIdArray *id_array = JS_Enumerate(cx, object);
-  JSObject *prototype = JS_GetPrototype(cx, object);
   if (id_array) {
     for (int i = 0; i < id_array->length; i++) {
       jsid id = id_array->vector[i];
@@ -70,19 +69,13 @@ static void AppendObjectToJSON(JSContext *cx, JSObject *object,
         jschar *key_chars = JS_GetStringChars(key_str);
         if (key_chars) {
           jsval value = JSVAL_VOID;
-          jsval prototype_value = JSVAL_VOID;
           JS_GetUCProperty(cx, object,
                            key_chars, JS_GetStringLength(key_str),
                            &value);
           // Don't output methods.
           if (JS_TypeOfValue(cx, value) != JSTYPE_FUNCTION &&
               // Not an internal property.
-//              key_chars[0] != '[' &&
-              // Only output properties defined not in the prototype.
-              (!JS_GetUCProperty(cx, prototype,
-                                 key_chars, JS_GetStringLength(key_str),
-                                 &prototype_value) ||
-               prototype_value != value)) {
+              key_chars[0] != '[') {
             AppendStringToJSON(cx, key_str, json);
             (*json) += ':';
             AppendJSON(cx, value, json, stack);
@@ -92,6 +85,7 @@ static void AppendObjectToJSON(JSContext *cx, JSObject *object,
       }
       // Otherwise, ignore the property.
     }
+    // FIXME: We don't support serializing properties of prototypes.
     // Remove the last extra ','.
     if (json->length() > 0 && *(json->end() - 1) == ',')
       json->erase(json->end() - 1);
@@ -180,7 +174,7 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
   // Valid chars in state 0.
   // Our JSON decoding is stricter than the standard, according to the
   // format we are outputing.
-  static const char *kValidChars = ",:{}[]0123456789.-+eE";
+  static const char *kValidChars = ",:{}[]0123456789.-+eE ";
   // State: 0: normal; 1: in word; 2: in string.
   int state = 0;
   const char *word_start = json;
@@ -209,6 +203,8 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
       case 2:
         if (*p == '\\')
           p++;  // Omit the next char. Also works for \x, \" and \uXXXX cases.
+        else if (*p == '\n' || *p == '\r')
+          return JS_FALSE;
         else if (*p == '"')
           state = 0;
         break;

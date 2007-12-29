@@ -48,6 +48,22 @@ ScriptableArray::~ScriptableArray() {
   delete impl_;
 }
 
+bool ScriptableArray::EnumerateProperties(
+    EnumeratePropertiesCallback *callback) {
+  // This object enumerates no properties, just like a normal JavaScript array.
+  delete callback;
+  return true;
+}
+
+bool ScriptableArray::EnumerateElements(EnumerateElementsCallback *callback) {
+  ASSERT(callback);
+  for (size_t i = 0; i < impl_->count_; i++) {
+    if (!(*callback)(i, impl_->array_[i]))
+      return false;
+  }
+  return true;
+}
+
 size_t ScriptableArray::GetCount() const {
   return impl_->count_;
 }

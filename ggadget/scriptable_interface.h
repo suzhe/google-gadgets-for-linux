@@ -25,6 +25,7 @@ namespace ggadget {
 
 class Connection;
 template <typename R> class Slot0;
+template <typename R, typename P1, typename P2> class Slot2;
 template <typename R, typename P1, typename P2, typename P3, typename P4>
 class Slot4;
 
@@ -245,6 +246,26 @@ class ScriptableInterface {
    * @return @c false if the callback returns @c false.
    */
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) = 0;
+
+  /**
+   * The first param is the return value of this call back. Return false if the
+   * call back do not want to enumerate any more.
+   * The second param is the index of the element in the ScriptableInterface
+   * object.
+   * The third param is the value of the element.
+   */
+  typedef Slot2<bool, int, const Variant &> EnumerateElementsCallback;
+  /**
+   * Enumerate all known elements (i.e. properties that can be accessed by
+   * non-negative array indexes).
+   * @param callback it will be called for each property. The parameters are
+   *     id, and current value. The callback should return @c false if it
+   *     doesn't want to continue. The callback will be automatically deleted
+   *     before this method returns, so the caller can use @c NewSlot for
+   *     the parameter. 
+   * @return @c false if the callback returns @c false.  
+   */
+  virtual bool EnumerateElements(EnumerateElementsCallback *callback) = 0;
 };
 
 /**

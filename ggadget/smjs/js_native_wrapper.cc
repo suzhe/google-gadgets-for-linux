@@ -97,7 +97,30 @@ bool JSNativeWrapper::EnumerateProperties(
           break;
         }
       }
-      // TODO: Array enumeration.
+      // Otherwise, ignore the property.
+    }
+  }
+  JS_DestroyIdArray(js_context_, id_array);
+  delete callback;
+  return result;
+}
+
+bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
+  ASSERT(callback);
+  bool result = true;
+  JSIdArray *id_array = JS_Enumerate(js_context_, js_object_);
+  if (id_array) {
+    for (int i = 0; i < id_array->length; i++) {
+      jsid id = id_array->vector[i];
+      jsval key = JSVAL_VOID;
+      JS_IdToValue(js_context_, id, &key);
+      if (JSVAL_IS_INT(key)) {
+        int index = JSVAL_TO_INT(key);
+        if (!(*callback)(index, GetElement(index))) {
+          result = false;
+          break;
+        }
+      }
       // Otherwise, ignore the property.
     }
   }
