@@ -49,15 +49,15 @@ class Slot {
   virtual bool HasMetadata() const { return true; }
 
   /**
-   * Get metadata of the @c Slot target.
+   * Get return type of the @c Slot target.
    */
   virtual Variant::Type GetReturnType() const { return Variant::TYPE_VOID; }
   /**
-   * Get metadata of the @c Slot target.
+   * Get the number of arguments of the @c Slot target.
    */
   virtual int GetArgCount() const { return 0; }
   /**
-   * Get metadata of the @c Slot target.
+   * Get the type list of the arguments of the @c Slot target.
    */
   virtual const Variant::Type *GetArgTypes() const { return NULL; }
 
