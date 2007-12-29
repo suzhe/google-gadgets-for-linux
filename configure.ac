@@ -317,6 +317,7 @@ AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
 #Check memory check command
 if test x$memcheck_command != x; then
   AC_CHECK_PROGS([MEMCHECK_COMMAND], [$memcheck_command])
+  AC_SUBST(MEMCHECK_COMMAND)
 fi
 
 ###########################################################
