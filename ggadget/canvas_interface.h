@@ -89,15 +89,11 @@ class CanvasInterface {
    * @return The width of the canvas in pixels.
    */
   virtual size_t GetWidth() const = 0;
+
   /**
    * @return The height of the canvas in pixels.
    */
   virtual size_t GetHeight() const = 0;
-
-  /**
-   * @return true if the canvas is a mask, false otherwise.
-   */
-  virtual bool IsMask() const = 0;
 
   /**
    * Saves the current graphics state in a stack, while not changing the current
@@ -207,7 +203,7 @@ class CanvasInterface {
    * @param x The X-coordinate of the image's top left corner.
    * @param y The Y-coordinate of the image's top left corner.
    * @param img The image to draw.
-   * @param mask The new mask to use. It must be a mask canvas.
+   * @param mask The new mask to use.
    * @param mx The X-coordinate of the mask's top left corner.
    * @param my The Y-coordinate of the mask's top left corner.
    */
@@ -270,6 +266,13 @@ class CanvasInterface {
   virtual bool GetPointValue(double x, double y,
                              Color *color, double *opacity) const = 0;
 };
+
+/**
+ * Handy function to destroy a canvas.
+ */
+inline void DestroyCanvas(CanvasInterface *canvas) {
+  if (canvas) canvas->Destroy();
+}
 
 } // namespace ggadget
 

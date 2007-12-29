@@ -19,7 +19,7 @@
 #include "content_item.h"
 #include "contentarea_element.h"
 #include "details_view.h"
-#include "image.h"
+#include "image_interface.h"
 #include "string_utils.h"
 #include "text_frame.h"
 #include "texture.h"
@@ -70,10 +70,8 @@ class ContentItem::Impl {
   }
 
   ~Impl() {
-    delete image_;
-    image_ = NULL;
-    delete notifier_image_;
-    notifier_image_ = NULL;
+    DestroyImage(image_);
+    DestroyImage(notifier_image_);
   }
 
   void UpdateTimeText() {
@@ -107,7 +105,7 @@ class ContentItem::Impl {
 
   View *view_;
   ContentAreaElement *content_area_;
-  Image *image_, *notifier_image_;
+  ImageInterface *image_, *notifier_image_;
   uint64_t time_created_;
   std::string open_command_, tooltip_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
@@ -175,6 +173,7 @@ ContentItem::ContentItem(View *view)
 
 ContentItem::~ContentItem() {
   delete impl_;
+  impl_ = NULL;
 }
 
 void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
@@ -190,21 +189,21 @@ void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
 }
 
 Variant ContentItem::GetImage() const {
-  return Variant(Image::GetSrc(impl_->image_)); 
+  return Variant(GetImageTag(impl_->image_));
 }
 
 void ContentItem::SetImage(const Variant &image) {
-  delete impl_->image_;
+  DestroyImage(impl_->image_);
   impl_->image_ = impl_->view_->LoadImage(image, false);
   impl_->QueueDraw();
 }
 
 Variant ContentItem::GetNotifierImage() const {
-  return Variant(Image::GetSrc(impl_->image_));
+  return Variant(GetImageTag(impl_->image_));
 }
 
 void ContentItem::SetNotifierImage(const Variant &image) {
-  delete impl_->notifier_image_;
+  DestroyImage(impl_->notifier_image_);
   impl_->notifier_image_ = impl_->view_->LoadImage(image, false);
   impl_->QueueDraw();
 }
@@ -644,14 +643,14 @@ void ScriptableCanvas::DrawRect(int x1, int y1, int x2, int y2,
 
 void ScriptableCanvas::DrawImage(int x, int y, int width, int height,
                                  const Variant &image, int alpha_percent) {
-  Image *real_image = view_->LoadImage(image, false);
+  ImageInterface *real_image = view_->LoadImage(image, false);
   if (real_image) {
     canvas_->PushState();
     canvas_->MultiplyOpacity(alpha_percent / 100.0);
     real_image->StretchDraw(canvas_, x, y, width, height);
     canvas_->PopState();
+    real_image->Destroy();
   }
-  delete real_image;
 }
 
 static void SetupTextFrame(TextFrame *text_frame,
@@ -720,15 +719,20 @@ int ScriptableCanvas::GetTextHeight(const char *text, int width,
 
 void ScriptableCanvas::DrawLineWithColorName(int x1, int y1, int x2, int y2,
                                              const char *color) {
-  DrawLine(x1, y1, x2, y2, Texture(NULL, NULL, color).GetColor());
+  Color c;
+  double op;
+  Color::FromString(color, &c, &op);
+  DrawLine(x1, y1, x2, y2, c);
 }
 
 void ScriptableCanvas::DrawRectWithColorName(int x1, int y1, int x2, int y2,
                                              const char *line_color,
                                              const char *fill_color) {
-  DrawRect(x1, y1, x2, y2,
-           Texture(NULL, NULL, line_color).GetColor(),
-           Texture(NULL, NULL, fill_color).GetColor());
+  Color lc, fc;
+  double op;
+  Color::FromString(line_color, &lc, &op);
+  Color::FromString(fill_color, &fc, &op);
+  DrawRect(x1, y1, x2, y2, lc, fc);
 }
 
 void ScriptableCanvas::DrawTextWithColorName(int x, int y,
@@ -736,8 +740,10 @@ void ScriptableCanvas::DrawTextWithColorName(int x, int y,
                                              const char *text,
                                              const char *color,
                                              int flags, FontID font) {
-  DrawText(x, y, width, height, text, Texture(NULL, NULL, color).GetColor(),
-           flags, font);
+  Color c;
+  double op;
+  Color::FromString(color, &c, &op);
+  DrawText(x, y, width, height, text, c, flags, font);
 }
 
 } // namespace ggadget

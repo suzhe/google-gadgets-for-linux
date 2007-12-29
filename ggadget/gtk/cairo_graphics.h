@@ -18,14 +18,13 @@
 #define GGADGET_GTK_CAIRO_GRAPHICS_H__
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
-
 #include <ggadget/common.h>
 #include <ggadget/graphics_interface.h>
+#include <ggadget/signals.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 namespace gtk {
-
-class GtkViewHost;
 
 /**
  * This class realizes the GraphicsInterface using the Cairo graphics library.
@@ -38,29 +37,27 @@ class CairoGraphics : public GraphicsInterface {
    * @param zoom The zoom level for all new canvases.
    */
   CairoGraphics(double zoom);
+
+  double GetZoom() const;
+
+  void SetZoom(double zoom);
+
+  Connection *ConnectOnZoom(Slot1<void, double> *slot) const;
+
+ public:
   virtual ~CairoGraphics() {};
 
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
 
-  virtual CanvasInterface *NewImage(const char *img_bytes,
-                                    size_t img_bytes_count,
-                                    const Color *colormultiply) const;
-  virtual CanvasInterface *NewMask(const char *img_bytes,
-                                   size_t img_bytes_count) const;
+  virtual ImageInterface *NewImage(const std::string &data, bool is_mask) const;
 
   virtual FontInterface *NewFont(const char *family, size_t pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 
-  /**
-   * Load a GdkPixbuf from raw image data.
-   * @return NULL on failure, GdkPixbuf otherwise.
-   */
-  static GdkPixbuf *LoadPixbufFromData(const char *img_bytes,
-                                       size_t img_bytes_count);
-
  private:
-  double zoom_;
+  class Impl;
+  Impl *impl_;
 
   DISALLOW_EVIL_CONSTRUCTORS(CairoGraphics);
 };

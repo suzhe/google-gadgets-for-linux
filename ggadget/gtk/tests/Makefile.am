@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-EXTRA_DIST		= 120day.png \
+noinst_DATA		= 120day.png \
 			  base.png \
 			  kitty419.jpg \
 			  testmask.png
@@ -46,3 +46,11 @@ gtk_main_loop_test_SOURCES	= gtk_main_loop_test.cc
 
 TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@
 TESTS 			= $(check_PROGRAMS)
+
+all-local:
+	(if test x"$(srcdir)" != x"$(builddir)"; then \
+	  for i in $(noinst_DATA); do \
+	    cp $(srcdir)/"$$i" $(builddir)/; \
+	  done; \
+	fi)
+

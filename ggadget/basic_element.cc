@@ -22,7 +22,6 @@
 #include "element_interface.h"
 #include "elements.h"
 #include "graphics_interface.h"
-#include "image.h"
 #include "math_utils.h"
 #include "menu_interface.h"
 #include "scriptable_event.h"
@@ -74,27 +73,24 @@ class BasicElement::Impl {
   }
 
   ~Impl() {
-    if (canvas_) {
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
-
-    delete mask_image_;
-    mask_image_ = NULL;
-
+    DestroyCanvas(canvas_);
+    DestroyImage(mask_image_);
     delete children_;
-    children_ = NULL;
   }
 
   void SetMask(const char *mask) {
     if (AssignIfDiffer(mask, &mask_)) {
-      delete mask_image_;
-      mask_image_ = view_->LoadImage(Variant(mask_), true);
+      DestroyImage(mask_image_);
+      mask_image_ = NULL;
+      if (!mask_.empty())
+        mask_image_ = view_->LoadImage(Variant(mask_), true);
       QueueDraw();
     }
   }
 
   const CanvasInterface *GetMaskCanvas() {
+    if (!mask_image_ && !mask_.empty())
+      mask_image_ = view_->LoadImage(Variant(mask_), true);
     return mask_image_ ? mask_image_->GetCanvas() : NULL;
   }
 
@@ -558,6 +554,12 @@ class BasicElement::Impl {
     QueueDraw();
   }
 
+  void MarkRedraw() {
+    changed_ = true;
+    if (children_)
+      children_->MarkRedraw();
+  }
+
  public:
   EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                            BasicElement **fired_element,
@@ -770,7 +772,7 @@ class BasicElement::Impl {
   bool implicit_;
 
   CanvasInterface *canvas_;
-  Image *mask_image_;
+  ImageInterface *mask_image_;
   bool visibility_changed_;
   bool changed_;
   bool position_changed_;
@@ -1257,6 +1259,10 @@ bool BasicElement::GetChildrenExtents(double *width, double *height) {
 
 void BasicElement::QueueDraw() {
   impl_->QueueDraw();
+}
+
+void BasicElement::MarkRedraw() {
+  impl_->MarkRedraw();
 }
 
 EventResult BasicElement::OnMouseEvent(const MouseEvent &event, bool direct,

@@ -150,6 +150,11 @@ void EditElement::Layout() {
   }
 }
 
+void EditElement::MarkRedraw() {
+  ScrollingElement::MarkRedraw();
+  impl_->edit_->MarkRedraw();
+}
+
 Variant EditElement::GetBackground() const {
   return Variant(Texture::GetSrc(impl_->edit_->GetBackground()));
 }
@@ -167,13 +172,11 @@ void EditElement::SetBold(bool bold) {
 }
 
 std::string EditElement::GetColor() const {
-  Texture texture(impl_->edit_->GetTextColor(), 1.0);
-  return texture.GetSrc();
+  return impl_->edit_->GetTextColor().ToString();
 }
 
 void EditElement::SetColor(const char *color) {
-  Texture texture(GetView()->GetGraphics(), GetView()->GetFileManager(), color);
-  impl_->edit_->SetTextColor(texture.GetColor());
+  impl_->edit_->SetTextColor(Color(color));
 }
 
 std::string EditElement::GetFont() const {

@@ -21,10 +21,13 @@
 #include <stack>
 
 #include <ggadget/common.h>
+#include <ggadget/logger.h>
 #include <ggadget/canvas_interface.h>
 
 namespace ggadget {
 namespace gtk {
+
+class CairoGraphics;
 
 /**
  * This class realizes the CanvasInterface using the Cairo graphics library.
@@ -35,20 +38,23 @@ namespace gtk {
  */
 class CairoCanvas : public CanvasInterface {
  public:
-  /**
-   * Constructs a CairoCanvas object from a Cairo context. CairoCanvas
-   * will retain a reference to the cairo_t so it is safe to destroy the Cairo
-   * context after constructing this object.
+  /** Creates a CairoCanvas object which uses the zoom factor of a specified
+   * CairoGraphics object.
    */
-  CairoCanvas(cairo_t *cr, size_t w, size_t h, bool is_mask);
+  CairoCanvas(const CairoGraphics *graphics, size_t w, size_t h,
+              cairo_format_t fmt);
+
+  /**
+   * Creates a CairoCanvas object which uses a fixed zoom factor.
+   */
+  CairoCanvas(double zoom, size_t w, size_t h, cairo_format_t fmt);
+
   virtual ~CairoCanvas();
 
-  virtual void Destroy() { delete this; };
+  virtual void Destroy();
 
-  virtual size_t GetWidth() const { return width_; };
-  virtual size_t GetHeight() const { return height_; };
-
-  virtual bool IsMask() const { return is_mask_; };
+  virtual size_t GetWidth() const;
+  virtual size_t GetHeight() const;
 
   virtual bool PushState();
   virtual bool PopState();
@@ -58,8 +64,6 @@ class CairoCanvas : public CanvasInterface {
   virtual void TranslateCoordinates(double dx, double dy);
   virtual void ScaleCoordinates(double cx, double cy);
 
-  /** Clears the entire surface to be empty. */
-  void ClearSurface();
   virtual bool ClearCanvas();
 
   virtual bool DrawLine(double x0, double y0, double x1, double y1,
@@ -106,37 +110,32 @@ class CairoCanvas : public CanvasInterface {
   virtual bool GetPointValue(double x, double y,
                              Color *color, double *opacity) const;
 
+
+ public:
   /**
    * Get the surface contained within this class for use elsewhere.
    * Will flush the surface before returning so it is ready to be read.
    */
-  cairo_surface_t *GetSurface() const {
-    cairo_surface_t *s = cairo_get_target(cr_);
-    cairo_surface_flush(s);
-    return s;
-  };
+  cairo_surface_t *GetSurface() const;
 
   /**
    * Get the cairo context contained within this class for use elsewhere.
    */
-  cairo_t *GetCairoContext() const {
-    return cr_;
-  }
+  cairo_t *GetContext() const;
+
+  /**
+   * Multiplies a specified color to every pixel in the canvas.
+   */
+  void MultiplyColor(const Color &color);
+
+  /** Checks if the canvas is valid */
+  bool IsValid() const;
 
  private:
-   cairo_t *cr_;
-   size_t width_, height_;
-   bool is_mask_;
-   double opacity_;
-   std::stack<double> opacity_stack_;
+  class Impl;
+  Impl *impl_;
 
-   bool DrawTextInternal(double x, double y, double width,
-                         double height, const char *text,
-                         const FontInterface *f,
-                         Alignment align, VAlignment valign,
-                         Trimming trimming, int text_flags);
-
-   DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
+  DISALLOW_EVIL_CONSTRUCTORS(CairoCanvas);
 };
 
 } // namespace gtk

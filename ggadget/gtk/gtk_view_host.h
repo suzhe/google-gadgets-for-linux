@@ -24,6 +24,7 @@
 #include <ggadget/view_host_interface.h>
 #include <ggadget/gtk/gtk_gadget_host.h>
 #include <ggadget/gtk/gadget_view_widget.h>
+#include <ggadget/gtk/cairo_graphics.h>
 
 namespace ggadget {
 
@@ -72,7 +73,7 @@ class GtkViewHost : public ViewHostInterface {
   virtual void QueueDraw();
   virtual bool GrabKeyboardFocus();
 
-  virtual void SetResizable(ResizableMode mode);
+  virtual void SetResizable(ViewInterface::ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
   virtual void SetCursor(CursorType type);
@@ -96,6 +97,8 @@ class GtkViewHost : public ViewHostInterface {
     return gadget_host_;
   }
 
+  void ChangeZoom(double zoom);
+
  private:
   static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);
 
@@ -103,7 +106,7 @@ class GtkViewHost : public ViewHostInterface {
   View *view_;
   ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;
-  GraphicsInterface *gfx_;
+  CairoGraphics *gfx_;
   Connection *onoptionchanged_connection_;
 
   static const unsigned int kShowTooltipDelay = 500;

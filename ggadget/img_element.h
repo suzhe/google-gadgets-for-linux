@@ -30,6 +30,7 @@ class ImgElement : public BasicElement {
   virtual ~ImgElement();
 
   virtual bool IsPointIn(double x, double y);
+
  public:
   enum CropMaintainAspect {
     CROP_FALSE = 0,

@@ -176,7 +176,7 @@ void GtkViewHost::SwitchWidget(GadgetViewWidget *gvw) {
 }
 #endif
 
-void GtkViewHost::SetResizable(ResizableMode mode) {
+void GtkViewHost::SetResizable(ViewInterface::ResizableMode mode) {
   // TODO:
 }
 
@@ -435,6 +435,11 @@ std::string GtkViewHost::Prompt(const char *message,
 
 EditInterface *GtkViewHost::NewEdit(size_t w, size_t h) {
   return new GtkEdit(this, w, h);
+}
+
+void GtkViewHost::ChangeZoom(double zoom) {
+  gfx_->SetZoom(zoom);
+  view_->MarkRedraw();
 }
 
 } // namespace gtk

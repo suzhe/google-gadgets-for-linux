@@ -49,6 +49,7 @@
 #include "gtk_menu_impl.h"
 #include "gtk_view_host.h"
 #include "options.h"
+#include "pixbuf_utils.h"
 
 namespace ggadget {
 namespace gtk {
@@ -502,8 +503,7 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
     std::string real_path;
     if (this_p->file_manager_->GetFileContents(icon_name.c_str(),
                                                &data, &real_path)) {
-      GdkPixbuf *pixbuf = CairoGraphics::LoadPixbufFromData(data.c_str(),
-                                                            data.size());
+      GdkPixbuf *pixbuf = LoadPixbufFromData(data);
       if (pixbuf) {
         image = gtk_image_new_from_pixbuf(pixbuf);
         g_object_unref(pixbuf);

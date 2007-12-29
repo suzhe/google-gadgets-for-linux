@@ -41,7 +41,7 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * @param factory the factory used to create the child elements.
    * @param owner the parent element. Can be @c null for top level elements
    *     owned directly by a view.
-   * @param view the containing view. 
+   * @param view the containing view.
    */
   Elements(ElementFactoryInterface *factory, BasicElement *owner, View *view);
 
@@ -114,8 +114,14 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    * If not scrollable, the returned size equals to the size of the parent
    * element (or view if no parent). If scrollable, the returned value is the
    * actual max extents of children.
-   */ 
+   */
   void GetChildrenExtents(double *width, double *height);
+
+  /**
+   * Sets a redraw mark, so that all things and children will be redrawed
+   * during the next call of Draw().
+   */
+  void MarkRedraw();
 
  private:
   class Impl;

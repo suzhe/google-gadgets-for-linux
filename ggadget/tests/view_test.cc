@@ -85,7 +85,7 @@ TEST(ViewTest, XMLConstruction) {
   MockedViewHost vh(gFactory);
   ggadget::View *view = vh.GetViewInternal();
   ASSERT_FALSE(view->GetShowCaptionAlways());
-  ASSERT_EQ(ggadget::ViewHostInterface::RESIZABLE_TRUE, view->GetResizable());
+  ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_TRUE, view->GetResizable());
   ASSERT_STREQ("", view->GetCaption().c_str());
   ASSERT_EQ(0, view->GetChildren()->GetCount());
 
@@ -99,7 +99,7 @@ TEST(ViewTest, XMLConstruction) {
     "</view>\n";
   ASSERT_TRUE(ggadget::SetupViewFromXML(view, xml, "filename"));
   ASSERT_STREQ("View-Caption", view->GetCaption().c_str());
-  ASSERT_EQ(ggadget::ViewHostInterface::RESIZABLE_ZOOM, view->GetResizable());
+  ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view->GetResizable());
   ASSERT_TRUE(view->GetShowCaptionAlways());
   ASSERT_EQ(123, view->GetWidth());
   ASSERT_EQ(456, view->GetHeight());

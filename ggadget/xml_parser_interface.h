@@ -41,7 +41,7 @@ class XMLParserInterface {
 
   /**
    * Creates a new blank @c DOMDocumentInterface instance.
-   */  
+   */
   virtual DOMDocumentInterface *CreateDOMDocument() = 0;
 
   /**

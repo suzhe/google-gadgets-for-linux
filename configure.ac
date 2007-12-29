@@ -205,6 +205,9 @@ GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 # Check D-Bus library
 PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.0, [has_dbus=yes], [has_dbus=no])
 
+# Check librsvg
+PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
+
 if test x$has_dbus = xyes; then
   if test -z "$DBUS_SYSTEM_BUS_SOCKET"; then
     # use default
@@ -213,6 +216,10 @@ if test x$has_dbus = xyes; then
   AC_DEFINE_UNQUOTED(DBUS_SYSTEM_BUS_SOCKET, ["$DBUS_SYSTEM_BUS_SOCKET"],
                      [dbus system bus socket path])
   AC_DEFINE(HAVE_DBUS_LIBRARY,1,[Have dbus library])
+fi
+
+if test x$has_rsvg = xyes; then
+  AC_DEFINE(HAVE_RSVG_LIBRARY,1,[Have rsvg library])
 fi
 
 ###########################################################
@@ -258,6 +265,7 @@ if test x$has_dbus != xyes; then
   build_libggadget_dbus=no
 fi
 
+
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_GTK],
   [test x$build_libggadget_gtk = xyes])
@@ -276,6 +284,7 @@ AM_CONDITIONAL(
 
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
+AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_rsvg = xyes])
 
 # OS Specific conditions.
 case $host_os in
@@ -373,6 +382,7 @@ Build options:
   Build static libs        $enable_static
   Enable debug             $enable_debug
   Host type                $ggl_host_type
+  SVG Support              $has_rsvg
   Build libggadget-gtk     $build_libggadget_gtk
   Build libggadget-smjs    $build_libggadget_smjs
   Build libggadget-dbus    $build_libggadget_dbus

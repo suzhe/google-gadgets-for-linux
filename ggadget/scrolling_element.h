@@ -33,6 +33,9 @@ class ScrollingElement : public BasicElement {
   virtual ~ScrollingElement();
 
  public:
+  virtual void MarkRedraw();
+
+ public:
   /**
    * Gets and sets the autoscroll property.
    * @c true if the div automatically shows scrollbars if necessary; @c false

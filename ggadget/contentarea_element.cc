@@ -22,7 +22,7 @@
 #include "event.h"
 #include "gadget_consts.h"
 #include "graphics_interface.h"
-#include "image.h"
+#include "image_interface.h"
 #include "menu_interface.h"
 #include "scriptable_array.h"
 #include "view.h"
@@ -86,11 +86,9 @@ class ContentAreaElement::Impl {
     refresh_timer_ = 0;
     RemoveAllContentItems();
     for (size_t i = 0; i < arraysize(pin_images_); i++) {
-      delete pin_images_[i];
-      pin_images_[i] = NULL;
+      DestroyImage(pin_images_[i]);
     }
     layout_canvas_->Destroy();
-    layout_canvas_ = NULL;
   }
 
   void QueueDraw() {
@@ -204,7 +202,7 @@ class ContentAreaElement::Impl {
 
         if (content_flags_ & CONTENT_FLAG_PINNABLE &&
             pin_image_max_width_ > 0 && pin_image_max_height_ > 0) {
-          Image *pin_image = pin_images_[PIN_IMAGE_UNPINNED];
+          ImageInterface *pin_image = pin_images_[PIN_IMAGE_UNPINNED];
           mouse_over_pin = mouse_over && mouse_x_ < pin_image_max_width_;
           if (mouse_over_pin) {
             const Color &color = mouse_down_ ?
@@ -267,20 +265,20 @@ class ContentAreaElement::Impl {
 
   void GetPinImages(Variant *pinned, Variant *pinned_over, Variant *unpinned) {
     ASSERT(pinned && pinned_over && unpinned);
-    *pinned = Variant(Image::GetSrc(pin_images_[PIN_IMAGE_PINNED]));
-    *pinned_over = Variant(Image::GetSrc(pin_images_[PIN_IMAGE_PINNED_OVER]));
-    *unpinned = Variant(Image::GetSrc(pin_images_[PIN_IMAGE_UNPINNED]));
+    *pinned = Variant(GetImageTag(pin_images_[PIN_IMAGE_PINNED]));
+    *pinned_over = Variant(GetImageTag(pin_images_[PIN_IMAGE_PINNED_OVER]));
+    *unpinned = Variant(GetImageTag(pin_images_[PIN_IMAGE_UNPINNED]));
   }
 
   void SetPinImages(const Variant &pinned,
                     const Variant &pinned_over,
                     const Variant &unpinned) {
-    delete pin_images_[PIN_IMAGE_PINNED];
+    DestroyImage(pin_images_[PIN_IMAGE_PINNED]);
     pin_images_[PIN_IMAGE_PINNED] = owner_->GetView()->LoadImage(pinned, false);
-    delete pin_images_[PIN_IMAGE_PINNED_OVER];
+    DestroyImage(pin_images_[PIN_IMAGE_PINNED_OVER]);
     pin_images_[PIN_IMAGE_PINNED_OVER] = owner_->GetView()->LoadImage(
         pinned_over, false);
-    delete pin_images_[PIN_IMAGE_UNPINNED];
+    DestroyImage(pin_images_[PIN_IMAGE_UNPINNED]);
     pin_images_[PIN_IMAGE_UNPINNED] = owner_->GetView()->LoadImage(unpinned,
                                                                    false);
     pin_image_max_width_ = pin_image_max_height_ = 0;
@@ -532,7 +530,7 @@ class ContentAreaElement::Impl {
   GadgetInterface::DisplayTarget target_;
   size_t max_content_items_;
   ContentItems content_items_;
-  Image *pin_images_[PIN_IMAGE_COUNT];
+  ImageInterface *pin_images_[PIN_IMAGE_COUNT];
   int pin_image_max_width_, pin_image_max_height_;
   bool mouse_down_, mouse_over_pin_;
   int mouse_x_, mouse_y_;

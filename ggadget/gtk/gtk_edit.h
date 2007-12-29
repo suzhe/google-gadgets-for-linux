@@ -86,6 +86,7 @@ class GtkEdit : public EditInterface {
   virtual void GetScrollBarInfo(int *range, int *line_step,
                                 int *page_step, int *cur_pos);
   virtual void ScrollTo(int position);
+  virtual void MarkRedraw();
   virtual Connection* ConnectOnQueueDraw(Slot0<void> *callback);
   virtual Connection* ConnectOnTextChanged(Slot0<void> *callback);
 

@@ -29,17 +29,17 @@ namespace ggadget {
 
 class ItemElement::Impl {
  public:
-  Impl(BasicElement *parent) 
-    : parent_(NULL), selected_(false), mouseover_(false), 
+  Impl(BasicElement *parent)
+    : parent_(NULL), selected_(false), mouseover_(false),
       drawoverlay_(true), background_(NULL), index_(0) {
     if (parent->IsInstanceOf(ListBoxElement::CLASS_ID)) {
       parent_ = down_cast<ListBoxElement *>(parent);
     } else {
       LOG("Item element is not contained inside a parent of the correct type.");
-    }    
+    }
   }
 
-  ~Impl() {    
+  ~Impl() {
     delete background_;
     background_ = NULL;
   }
@@ -93,12 +93,12 @@ void ItemElement::DoDraw(CanvasInterface *canvas,
 
   if (impl_->drawoverlay_ && (impl_->selected_ || impl_->mouseover_)) {
     if (impl_->parent_) {
-      const Texture *overlay; 
+      const Texture *overlay;
       if (impl_->selected_) {
         overlay = impl_->parent_->GetItemSelectedTexture();
       } else {
         overlay = impl_->parent_->GetItemOverTexture();
-      }       
+      }
       if (overlay) {
         overlay->Draw(canvas);
       }
@@ -119,13 +119,13 @@ void ItemElement::DoDraw(CanvasInterface *canvas,
         return;
       }
 
-      item_separator->Draw(separator);      
+      item_separator->Draw(separator);
       canvas->DrawCanvas(0, canvas->GetHeight() - 2, separator);
 
       separator->Destroy();
       separator = NULL;
-    }    
-  }  
+    }
+  }
 }
 
 void ItemElement::SetDrawOverlay(bool draw) {
@@ -202,9 +202,9 @@ bool ItemElement::AddLabelWithText(const char *text) {
 
     QueueDraw();
     return true;
-  } 
+  }
 
-  return false;  
+  return false;
 }
 
 BasicElement *ItemElement::CreateInstance(BasicElement *parent, View *view,
@@ -235,7 +235,7 @@ void ItemElement::GetDefaultPosition(double *x, double *y) const {
 EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {
-   case Event::EVENT_MOUSE_CLICK:   
+   case Event::EVENT_MOUSE_CLICK:
      if (impl_->parent_) {
        // Need to invoke selection through parent, since
        // parent knows about multiselect status.
@@ -246,10 +246,10 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
        } else {
          impl_->parent_->SetSelectedItem(this);
        }
-     }     
+     }
     break;
    case Event::EVENT_MOUSE_OUT:
-    impl_->mouseover_ = false;    
+    impl_->mouseover_ = false;
     QueueDraw();
     break;
    case Event::EVENT_MOUSE_OVER:

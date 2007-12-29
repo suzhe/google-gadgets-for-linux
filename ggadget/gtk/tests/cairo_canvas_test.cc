@@ -22,6 +22,7 @@
 #include "ggadget/color.h"
 #include "ggadget/canvas_interface.h"
 #include "ggadget/gtk/cairo_canvas.h"
+#include "ggadget/gtk/cairo_graphics.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
@@ -33,143 +34,132 @@ bool g_savepng = false;
 // fixture for creating the CairoCanvas object
 class CairoCanvasTest : public testing::Test {
  protected:
-  CanvasInterface *gfx_;
-  cairo_surface_t *surface_;
+  CairoGraphics gfx_;
+  CairoCanvas *canvas_;
 
-  CairoCanvasTest() {
-    surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);
-    cairo_t *cr = cairo_create(surface_);
-    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-    cairo_set_source_rgba(cr, 0., 0., 0., 0.);
-    cairo_paint(cr);
-    gfx_ = new CairoCanvas(cr, 300, 150, false);
-    cairo_destroy(cr);
-    cr = NULL;
+  CairoCanvasTest() : gfx_(1.0) {
+    canvas_ = down_cast<CairoCanvas*>(gfx_.NewCanvas(300, 150));
   }
 
   ~CairoCanvasTest() {
-    gfx_->Destroy();
-    gfx_ = NULL;
-
     if (g_savepng) {
       const testing::TestInfo *const test_info =
         testing::UnitTest::GetInstance()->current_test_info();
       char file[100];
       snprintf(file, arraysize(file), "%s.png", test_info->name());
-      cairo_surface_write_to_png(surface_, file);
+      cairo_surface_write_to_png(canvas_->GetSurface(), file);
     }
 
-    cairo_surface_destroy(surface_);
-    surface_ = NULL;
+    canvas_->Destroy();
   }
 };
 
 TEST_F(CairoCanvasTest, PushPopStateReturnValues) {
-  EXPECT_FALSE(gfx_->PopState());
+  EXPECT_FALSE(canvas_->PopState());
 
   // push 1x, pop 1x
-  EXPECT_TRUE(gfx_->PushState());
-  EXPECT_TRUE(gfx_->PopState());
-  EXPECT_FALSE(gfx_->PopState());
+  EXPECT_TRUE(canvas_->PushState());
+  EXPECT_TRUE(canvas_->PopState());
+  EXPECT_FALSE(canvas_->PopState());
 
   // push 3x, pop 3x
-  EXPECT_TRUE(gfx_->PushState());
-  EXPECT_TRUE(gfx_->PushState());
-  EXPECT_TRUE(gfx_->PushState());
-  EXPECT_TRUE(gfx_->PopState());
-  EXPECT_TRUE(gfx_->PopState());
-  EXPECT_TRUE(gfx_->PopState());
-  EXPECT_FALSE(gfx_->PopState());
+  EXPECT_TRUE(canvas_->PushState());
+  EXPECT_TRUE(canvas_->PushState());
+  EXPECT_TRUE(canvas_->PushState());
+  EXPECT_TRUE(canvas_->PopState());
+  EXPECT_TRUE(canvas_->PopState());
+  EXPECT_TRUE(canvas_->PopState());
+  EXPECT_FALSE(canvas_->PopState());
 
-  EXPECT_FALSE(gfx_->PopState());
+  EXPECT_FALSE(canvas_->PopState());
 }
 
 TEST_F(CairoCanvasTest, OpacityReturnValues) {
-  EXPECT_FALSE(gfx_->MultiplyOpacity(1.7));
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
-  EXPECT_FALSE(gfx_->MultiplyOpacity(-.7));
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.7));
-  EXPECT_FALSE(gfx_->MultiplyOpacity(1000.));
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.2));
+  EXPECT_FALSE(canvas_->MultiplyOpacity(1.7));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.5));
+  EXPECT_FALSE(canvas_->MultiplyOpacity(-.7));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.7));
+  EXPECT_FALSE(canvas_->MultiplyOpacity(1000.));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.2));
 }
 
 TEST_F(CairoCanvasTest, DrawLines) {
-  EXPECT_FALSE(gfx_->DrawLine(10., 10., 200., 20., -1., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->DrawLine(10., 10., 200., 20., 1., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->DrawLine(10., 30., 200., 30., 2., Color(0., 1., 0.)));
-  EXPECT_TRUE(gfx_->DrawLine(10., 40., 200., 40., 1.5, Color(0., 0., 1.)));
-  EXPECT_TRUE(gfx_->DrawLine(10., 50., 200., 50., 1., Color(0., 0., 0.)));
-  EXPECT_TRUE(gfx_->DrawLine(10., 60., 200., 60., 4., Color(1., 1., 1.)));
+  EXPECT_FALSE(canvas_->DrawLine(10., 10., 200., 20., -1., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 10., 200., 20., 1., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 30., 200., 30., 2., Color(0., 1., 0.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 40., 200., 40., 1.5, Color(0., 0., 1.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 50., 200., 50., 1., Color(0., 0., 0.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 60., 200., 60., 4., Color(1., 1., 1.)));
 }
 
 TEST_F(CairoCanvasTest, DrawRectReturnValues) {
-  EXPECT_FALSE(gfx_->DrawFilledRect(5., 6., -1., 5., Color(0., 0., 0.)));
-  EXPECT_TRUE(gfx_->DrawFilledRect(5., 6., 1., 5., Color(0., 0., 0.)));
-  EXPECT_FALSE(gfx_->DrawFilledRect(5., 6., 1., -5., Color(0., 0., 0.)));
+  EXPECT_FALSE(canvas_->DrawFilledRect(5., 6., -1., 5., Color(0., 0., 0.)));
+  EXPECT_TRUE(canvas_->DrawFilledRect(5., 6., 1., 5., Color(0., 0., 0.)));
+  EXPECT_FALSE(canvas_->DrawFilledRect(5., 6., 1., -5., Color(0., 0., 0.)));
 }
 
 TEST_F(CairoCanvasTest, ClipRectReturnValues) {
-  EXPECT_FALSE(gfx_->IntersectRectClipRegion(5., 6., -1., 5.));
-  EXPECT_TRUE(gfx_->IntersectRectClipRegion(5., 6., 1., 5.));
-  EXPECT_FALSE(gfx_->IntersectRectClipRegion(5., 6., 1., -5.));
+  EXPECT_FALSE(canvas_->IntersectRectClipRegion(5., 6., -1., 5.));
+  EXPECT_TRUE(canvas_->IntersectRectClipRegion(5., 6., 1., 5.));
+  EXPECT_FALSE(canvas_->IntersectRectClipRegion(5., 6., 1., -5.));
 }
 
 // this test is meaningful only with -savepng
 TEST_F(CairoCanvasTest, PushPopStateLines) {
   // should show up as 1.0
-  EXPECT_TRUE(gfx_->DrawLine(10., 10., 200., 10., 10., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->MultiplyOpacity(1.0));
+  EXPECT_TRUE(canvas_->DrawLine(10., 10., 200., 10., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(1.0));
   // should show up as 1.0
-  EXPECT_TRUE(gfx_->DrawLine(10., 30., 200., 30., 10., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->PushState());
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
+  EXPECT_TRUE(canvas_->DrawLine(10., 30., 200., 30., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->PushState());
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.5));
   // should show up as .5
-  EXPECT_TRUE(gfx_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->PopState());
+  EXPECT_TRUE(canvas_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->PopState());
   // should show up as 1.0
-  EXPECT_TRUE(gfx_->DrawLine(10., 70., 200., 70., 10., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
+  EXPECT_TRUE(canvas_->DrawLine(10., 70., 200., 70., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.5));
   // should show up as .5
-  EXPECT_TRUE(gfx_->DrawLine(10., 90., 200., 90., 10., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
+  EXPECT_TRUE(canvas_->DrawLine(10., 90., 200., 90., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.5));
   // should show up as .25
-  EXPECT_TRUE(gfx_->DrawLine(10., 110., 200., 110., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 110., 200., 110., 10., Color(1., 0., 0.)));
 }
 
 // this test is meaningful only with -savepng
 TEST_F(CairoCanvasTest, Transformations) {
   // rotation
-  EXPECT_TRUE(gfx_->DrawLine(10., 10., 200., 10., 10., Color(0., 1., 0.)));
-  EXPECT_TRUE(gfx_->PushState());
-  gfx_->RotateCoordinates(kPi/6);
-  EXPECT_TRUE(gfx_->DrawLine(10., 10., 200., 10., 10., Color(0., 1., 0.)));
-  EXPECT_TRUE(gfx_->PopState());
+  EXPECT_TRUE(canvas_->DrawLine(10., 10., 200., 10., 10., Color(0., 1., 0.)));
+  EXPECT_TRUE(canvas_->PushState());
+  canvas_->RotateCoordinates(kPi/6);
+  EXPECT_TRUE(canvas_->DrawLine(10., 10., 200., 10., 10., Color(0., 1., 0.)));
+  EXPECT_TRUE(canvas_->PopState());
 
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
-  EXPECT_TRUE(gfx_->PushState());
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.5));
+  EXPECT_TRUE(canvas_->PushState());
 
   // scale
-  EXPECT_TRUE(gfx_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
-  gfx_->ScaleCoordinates(1.3, 1.5);
-  EXPECT_TRUE(gfx_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->PopState());
+  EXPECT_TRUE(canvas_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
+  canvas_->ScaleCoordinates(1.3, 1.5);
+  EXPECT_TRUE(canvas_->DrawLine(10., 50., 200., 50., 10., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->PopState());
 
   // translation
-  EXPECT_TRUE(gfx_->DrawLine(10., 110., 200., 110., 10., Color(0., 0., 1.)));
-  gfx_->TranslateCoordinates(20., 25.);
-  EXPECT_TRUE(gfx_->DrawLine(10., 110., 200., 110., 10., Color(0., 0., 1.)));
+  EXPECT_TRUE(canvas_->DrawLine(10., 110., 200., 110., 10., Color(0., 0., 1.)));
+  canvas_->TranslateCoordinates(20., 25.);
+  EXPECT_TRUE(canvas_->DrawLine(10., 110., 200., 110., 10., Color(0., 0., 1.)));
 }
 
 // this test is meaningful only with -savepng
 TEST_F(CairoCanvasTest, FillRectAndClipping) {
-  EXPECT_TRUE(gfx_->MultiplyOpacity(.5));
-  EXPECT_TRUE(gfx_->PushState());
-  EXPECT_TRUE(gfx_->DrawFilledRect(10., 10., 280., 130., Color(1., 0., 0.)));
-  EXPECT_TRUE(gfx_->IntersectRectClipRegion(30., 30., 100., 100.));
-  EXPECT_TRUE(gfx_->IntersectRectClipRegion(70., 40., 100., 70.));
-  EXPECT_TRUE(gfx_->DrawFilledRect(20., 20., 260., 110., Color(0., 1., 0.)));
-  EXPECT_TRUE(gfx_->PopState());
-  EXPECT_TRUE(gfx_->DrawFilledRect(110., 40., 90., 70., Color(0., 0., 1.)));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(.5));
+  EXPECT_TRUE(canvas_->PushState());
+  EXPECT_TRUE(canvas_->DrawFilledRect(10., 10., 280., 130., Color(1., 0., 0.)));
+  EXPECT_TRUE(canvas_->IntersectRectClipRegion(30., 30., 100., 100.));
+  EXPECT_TRUE(canvas_->IntersectRectClipRegion(70., 40., 100., 70.));
+  EXPECT_TRUE(canvas_->DrawFilledRect(20., 20., 260., 110., Color(0., 1., 0.)));
+  EXPECT_TRUE(canvas_->PopState());
+  EXPECT_TRUE(canvas_->DrawFilledRect(110., 40., 90., 70., Color(0., 0., 1.)));
 }
 
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
@@ -177,21 +167,21 @@ TEST_F(CairoCanvasTest, GetPointValue) {
   Color color;
   double opacity;
 
-  EXPECT_TRUE(gfx_->MultiplyOpacity(0.5));
-  EXPECT_TRUE(gfx_->DrawFilledRect(10., 50., 280., 100., Color(0.8, 0., 0.)));
+  EXPECT_TRUE(canvas_->MultiplyOpacity(0.5));
+  EXPECT_TRUE(canvas_->DrawFilledRect(10., 50., 280., 100., Color(0.8, 0., 0.)));
 
-  EXPECT_TRUE(gfx_->GetPointValue(10, 70, &color, &opacity));
+  EXPECT_TRUE(canvas_->GetPointValue(10, 70, &color, &opacity));
   EXPECT_NEAR(0.5, opacity, (1/256.0));
   EXPECT_NEAR(0.8, color.red, (1/256.0));
   EXPECT_DOUBLE_EQ(0, color.green);
   EXPECT_DOUBLE_EQ(0, color.blue);
-  EXPECT_TRUE(gfx_->GetPointValue(70, 10, &color, &opacity));
+  EXPECT_TRUE(canvas_->GetPointValue(70, 10, &color, &opacity));
   EXPECT_DOUBLE_EQ(0, opacity);
   EXPECT_DOUBLE_EQ(0, color.red);
   EXPECT_DOUBLE_EQ(0, color.green);
   EXPECT_DOUBLE_EQ(0, color.blue);
-  EXPECT_FALSE(gfx_->GetPointValue(310, 20, &color, &opacity));
-  EXPECT_FALSE(gfx_->GetPointValue(20, -2, &color, &opacity));
+  EXPECT_FALSE(canvas_->GetPointValue(310, 20, &color, &opacity));
+  EXPECT_FALSE(canvas_->GetPointValue(20, -2, &color, &opacity));
 }
 #endif
 

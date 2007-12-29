@@ -17,7 +17,9 @@
 #ifndef GGADGET_GRAPHICS_INTERFACE_H__
 #define GGADGET_GRAPHICS_INTERFACE_H__
 
+#include <string>
 #include <ggadget/canvas_interface.h>
+#include <ggadget/image_interface.h>
 #include <ggadget/font_interface.h>
 
 namespace ggadget {
@@ -48,26 +50,16 @@ class GraphicsInterface {
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const = 0;
 
   /**
-   * Creates a new image canvas.
-   * @param img_bytes Array containing the raw bytes of the image.
-   * @param img_bytes_count Number of bytes of the img_bytes array.
-   * @param colormultiply a color value by which each pixel value is multiplied.
-   *   Pass in NULL if no color value should be multiplied. 
+   * Creates a new image.
+   * @param data A string containing the raw bytes of the image. The size can
+   *             be obtained from data.size().
+   * @param is_mask Indicates if the image is a mask image.
+   *        For mask image, only alpha channel will be used. And only pure
+   *        black color will be treated as fully transparent.
    * @return NULL on error, an ImageInterface object otherwise.
    */
-  virtual CanvasInterface *NewImage(const char *img_bytes,
-                                    size_t img_bytes_count,
-                                    const Color *colormultiply) const = 0;
-
-  /**
-   * Creates a new image mask canvas.
-   * Any black pixels in the mask image are considered to be transparent.
-   * @param img_bytes Array containing the raw bytes of the image.
-   * @param img_bytes_count Number of bytes of the img_bytes array.
-   * @return NULL on error, an ImageInterface object otherwise.
-   */
-  virtual CanvasInterface *NewMask(const char *img_bytes,
-                                   size_t img_bytes_count) const = 0;
+  virtual ImageInterface *NewImage(const std::string &data,
+                                   bool is_mask) const = 0;
 
   /**
    * Create a new font. This font is used when rendering text to a canvas.
@@ -75,7 +67,6 @@ class GraphicsInterface {
   virtual FontInterface *NewFont(const char *family, size_t pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
-
 };
 
 } // namespace ggadget

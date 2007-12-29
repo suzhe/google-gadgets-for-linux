@@ -59,7 +59,7 @@ class Elements::Impl {
         factory_->CreateElement(tag_name, owner_, view_, name));
     if (e == NULL)
       return NULL;
-    if (view_->OnElementAdd(e)) { 
+    if (view_->OnElementAdd(e)) {
       children_.push_back(e);
       count_changed_ = true;
     } else {
@@ -330,8 +330,8 @@ class Elements::Impl {
     for (int i = 0; i < child_count; i++) {
       BasicElement *element = children_[i];
       bool has_popup = (element == popup);
-      if (has_popup) {        
-        children_canvas[i] = NULL; // Skip the popup element.        
+      if (has_popup) {
+        children_canvas[i] = NULL; // Skip the popup element.
       } else {
         bool child_changed = false;
         children_canvas[i] = element->Draw(&child_changed);
@@ -339,13 +339,13 @@ class Elements::Impl {
           element->ClearPositionChanged();
           child_changed = true;
         }
-        *changed = *changed || child_changed;  
+        *changed = *changed || child_changed;
       }
 
       if (has_popup != has_popup_) {
         *changed = true;
         has_popup_ = has_popup;
-      }        
+      }
     }
 
     if (*changed) {
@@ -401,6 +401,12 @@ class Elements::Impl {
 
   void SetScrollable(bool scrollable) {
     scrollable_ = scrollable;
+  }
+
+  void MarkRedraw() {
+    Children::iterator it = children_.begin();
+    for (; it != children_.end(); ++it)
+      (*it)->MarkRedraw();
   }
 
   ElementFactoryInterface *factory_;
@@ -517,6 +523,10 @@ void Elements::GetChildrenExtents(double *width, double *height) {
   ASSERT(width && height);
   *width = impl_->width_;
   *height = impl_->height_;
+}
+
+void Elements::MarkRedraw() {
+  impl_->MarkRedraw();
 }
 
 } // namespace ggadget
