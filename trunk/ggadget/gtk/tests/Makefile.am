@@ -14,10 +14,12 @@
 # limitations under the License.
 #
 
-noinst_DATA		= 120day.png \
+TEST_IMAGES		= 120day.png \
 			  base.png \
 			  kitty419.jpg \
 			  testmask.png
+
+noinst_DATA		= $(TEST_IMAGES)
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -44,12 +46,12 @@ cairo_graphics_test_SOURCES	= cairo_graphics_test.cc
 basic_element_draw_test_SOURCES	= basic_element_draw_test.cc
 gtk_main_loop_test_SOURCES	= gtk_main_loop_test.cc
 
-TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@
+TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)
 
 all-local:
 	(if test x"$(srcdir)" != x"$(builddir)"; then \
-	  for i in $(noinst_DATA); do \
+	  for i in $(TEST_IMAGES); do \
 	    cp $(srcdir)/"$$i" $(builddir)/; \
 	  done; \
 	fi)

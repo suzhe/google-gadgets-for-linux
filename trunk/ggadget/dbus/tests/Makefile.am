@@ -26,5 +26,5 @@ check_PROGRAMS		= dbus_test
 
 dbus_test_SOURCES		= dbus_test.cc
 
-TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@
+TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

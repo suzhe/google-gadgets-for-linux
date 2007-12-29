@@ -79,5 +79,5 @@ file_manager_test_data.gg: file_manager_test_data.dest
 	(cd $<; find . -type f | $(ZIP) -r -u $(abs_builddir)/$@ -@)
 endif
 
-TESTS_ENVIRONMENT	= @MEMCHECK_COMMAND@
+TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

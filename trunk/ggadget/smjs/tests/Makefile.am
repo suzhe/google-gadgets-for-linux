@@ -54,25 +54,37 @@ jscript_massager_test_SOURCES = jscript_massager_test.cc
 
 massager_SOURCES	= massager.cc
 
-TESTS_ENVIRONMENT	= @SHELL@
+TESTS_ENVIRONMENT	= $(SHELL)
 TESTS			= js_shell.sh \
 			  wrapper_test_shell.sh \
 			  dom_test_shell.sh \
-			  jscript_massager_test
+			  jscript_massager_test.sh
 
-js_shell.sh: Makefile
-	echo @MEMCHECK_COMMAND@ $(abs_builddir)/js_shell \
-	     $(abs_top_srcdir)/unittest/js_unittest.js \
-	     $(abs_srcdir)/json_test.js > $@
+.PHONY: js_shell.sh \
+	wrapper_test_shell.sh \
+	dom_test_shell.sh \
+	jscript_massager_test.sh
 
-wrapper_test_shell.sh: Makefile
-	echo @MEMCHECK_COMMAND@ $(abs_builddir)/wrapper_test_shell \
-	     $(abs_top_srcdir)/unittest/js_unittest.js \
-	     $(abs_srcdir)/wrapper_test.js > $@
+js_shell.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/js_shell \
+	      $(abs_top_srcdir)/unittest/js_unittest.js \
+	      $(abs_srcdir)/json_test.js > $@)
 
-dom_test_shell.sh: Makefile
-	echo @MEMCHECK_COMMAND@ $(abs_builddir)/dom_test_shell \
-	     $(abs_top_srcdir)/unittest/js_unittest.js \
-	     $(abs_srcdir)/dom1_test.js > $@
+wrapper_test_shell.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/wrapper_test_shell \
+	      $(abs_top_srcdir)/unittest/js_unittest.js \
+	      $(abs_srcdir)/wrapper_test.js > $@)
+
+dom_test_shell.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/dom_test_shell \
+	      $(abs_top_srcdir)/unittest/js_unittest.js \
+	      $(abs_srcdir)/dom1_test.js > $@)
+
+jscript_massager_test.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/jscript_massager_test > $@)
 
 endif
