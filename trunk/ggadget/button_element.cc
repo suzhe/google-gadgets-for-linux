@@ -16,8 +16,8 @@
 
 #include "button_element.h"
 #include "canvas_interface.h"
+#include "image_interface.h"
 #include "gadget_consts.h"
-#include "image.h"
 #include "string_utils.h"
 #include "text_frame.h"
 #include "view.h"
@@ -29,28 +29,22 @@ class ButtonElement::Impl {
   Impl(BasicElement *owner, View *view) : text_(owner, view),
            mousedown_(false), mouseover_(false),
            image_(NULL), downimage_(NULL),
-           overimage_(NULL), disabledimage_(NULL) { 
+           overimage_(NULL), disabledimage_(NULL) {
     text_.SetAlign(CanvasInterface::ALIGN_CENTER);
     text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
   }
+
   ~Impl() {
-    delete image_;
-    image_ = NULL;
-
-    delete downimage_;
-    downimage_ = NULL;
-
-    delete overimage_;
-    overimage_ = NULL;
-
-    delete disabledimage_;
-    disabledimage_ = NULL;
+    DestroyImage(image_);
+    DestroyImage(downimage_);
+    DestroyImage(overimage_);
+    DestroyImage(disabledimage_);
   }
 
   TextFrame text_;
   bool mousedown_;
   bool mouseover_;
-  Image *image_, *downimage_, *overimage_, *disabledimage_;
+  ImageInterface *image_, *downimage_, *overimage_, *disabledimage_;
 };
 
 ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
@@ -76,11 +70,12 @@ ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
 
 ButtonElement::~ButtonElement() {
   delete impl_;
+  impl_ = NULL;
 }
 
 void ButtonElement::DoDraw(CanvasInterface *canvas,
                            const CanvasInterface *children_canvas) {
-  Image *img = NULL;
+  ImageInterface *img = NULL;
   if (!IsEnabled()) {
     img = impl_->disabledimage_;
   } else if (impl_->mousedown_) {
@@ -102,33 +97,33 @@ void ButtonElement::DoDraw(CanvasInterface *canvas,
 }
 
 void ButtonElement::UseDefaultImages() {
-  delete impl_->image_;
+  DestroyImage(impl_->image_);
   impl_->image_ = GetView()->LoadImageFromGlobal(kButtonImage, false);
-  delete impl_->overimage_;
+  DestroyImage(impl_->overimage_);
   impl_->overimage_ = GetView()->LoadImageFromGlobal(kButtonOverImage, false);
-  delete impl_->downimage_;
+  DestroyImage(impl_->downimage_);
   impl_->downimage_ = GetView()->LoadImageFromGlobal(kButtonDownImage, false);
   // No default disabled image.
-  delete impl_->disabledimage_;
+  DestroyImage(impl_->disabledimage_);
   impl_->disabledimage_ = NULL;
 }
 
 Variant ButtonElement::GetImage() const {
-  return Variant(Image::GetSrc(impl_->image_));
+  return Variant(GetImageTag(impl_->image_));
 }
 
 void ButtonElement::SetImage(const Variant &img) {
-  delete impl_->image_;
+  DestroyImage(impl_->image_);
   impl_->image_ = GetView()->LoadImage(img, false);
   QueueDraw();
 }
 
 Variant ButtonElement::GetDisabledImage() const {
-  return Variant(Image::GetSrc(impl_->disabledimage_));
+  return Variant(GetImageTag(impl_->disabledimage_));
 }
 
 void ButtonElement::SetDisabledImage(const Variant &img) {
-  delete impl_->disabledimage_;
+  DestroyImage(impl_->disabledimage_);
   impl_->disabledimage_ = GetView()->LoadImage(img, false);
   if (!IsEnabled()) {
     QueueDraw();
@@ -136,11 +131,11 @@ void ButtonElement::SetDisabledImage(const Variant &img) {
 }
 
 Variant ButtonElement::GetOverImage() const {
-  return Variant(Image::GetSrc(impl_->overimage_));
+  return Variant(GetImageTag(impl_->overimage_));
 }
 
 void ButtonElement::SetOverImage(const Variant &img) {
-  delete impl_->overimage_;
+  DestroyImage(impl_->overimage_);
   impl_->overimage_ = GetView()->LoadImage(img, false);
   if (impl_->mouseover_ && IsEnabled()) {
     QueueDraw();
@@ -148,11 +143,11 @@ void ButtonElement::SetOverImage(const Variant &img) {
 }
 
 Variant ButtonElement::GetDownImage() const {
-  return Variant(Image::GetSrc(impl_->downimage_));
+  return Variant(GetImageTag(impl_->downimage_));
 }
 
 void ButtonElement::SetDownImage(const Variant &img) {
-  delete impl_->downimage_;
+  DestroyImage(impl_->downimage_);
   impl_->downimage_ = GetView()->LoadImage(img, false);
   if (impl_->mousedown_ && IsEnabled()) {
     QueueDraw();
@@ -174,8 +169,8 @@ EventResult ButtonElement::HandleMouseEvent(const MouseEvent &event) {
    case Event::EVENT_MOUSE_DOWN:
     if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
       impl_->mousedown_ = true;
-      QueueDraw();   
-    }    
+      QueueDraw();
+    }
     break;
    case Event::EVENT_MOUSE_UP:
     if (impl_->mousedown_) {

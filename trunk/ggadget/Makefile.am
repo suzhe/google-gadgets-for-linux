@@ -69,7 +69,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  gadget_interface.h \
 			  ggadget.h \
 			  graphics_interface.h \
-			  image.h \
+			  image_interface.h \
 			  img_element.h \
 			  item_element.h \
 			  label_element.h \
@@ -124,6 +124,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  basic_element.cc \
 			  button_element.cc \
 			  checkbox_element.cc \
+			  color.cc \
 			  combobox_element.cc \
 			  content_item.cc \
 			  contentarea_element.cc \
@@ -137,7 +138,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  file_manager.cc \
 			  file_manager_wrapper.cc \
 			  gadget.cc \
-			  image.cc \
 			  img_element.cc \
 			  item_element.cc \
 			  label_element.cc \

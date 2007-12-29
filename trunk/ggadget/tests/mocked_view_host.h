@@ -19,21 +19,83 @@
 
 #include "ggadget/graphics_interface.h"
 #include "ggadget/view.h"
+#include "ggadget/view_interface.h"
 #include "ggadget/view_host_interface.h"
 #include "mocked_gadget_host.h"
 
+class MockedCanvas : public ggadget::CanvasInterface {
+ public:
+  MockedCanvas(size_t w, size_t h) : w_(w), h_(h) { }
+  virtual void Destroy() { delete this; }
+  virtual size_t GetWidth() const { return w_; }
+  virtual size_t GetHeight() const { return h_; }
+  virtual bool PushState() { return true; }
+  virtual bool PopState() { return true; }
+  virtual bool MultiplyOpacity(double opacity) { return true; }
+  virtual void RotateCoordinates(double radians) { }
+  virtual void TranslateCoordinates(double dx, double dy) { }
+  virtual void ScaleCoordinates(double cx, double cy) { }
+  virtual bool ClearCanvas() { return true; }
+  virtual bool DrawLine(double x0, double y0, double x1, double y1,
+                        double width, const ggadget::Color &c) {
+    return true;
+  }
+  virtual bool DrawFilledRect(double x, double y,
+                              double w, double h, const ggadget::Color &c) {
+    return true;
+  }
+  virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) {
+    return true;
+  }
+  virtual bool DrawFilledRectWithCanvas(double x, double y,
+                                        double w, double h,
+                                        const CanvasInterface *img) {
+    return true;
+  }
+  virtual bool DrawCanvasWithMask(double x, double y,
+                                  const CanvasInterface *img,
+                                  double mx, double my,
+                                  const CanvasInterface *mask) {
+    return true;
+  }
+  virtual bool DrawText(double x, double y, double width, double height,
+                        const char *text, const ggadget::FontInterface *f,
+                        const ggadget::Color &c, Alignment align,
+                        VAlignment valign, Trimming trimming, int text_flags) {
+    return true;
+  }
+  virtual bool DrawTextWithTexture(double x, double y, double width,
+                                   double height, const char *text,
+                                   const ggadget::FontInterface *f,
+                                   const CanvasInterface *texture,
+                                   Alignment align, VAlignment valign,
+                                   Trimming trimming, int text_flags) {
+    return true;
+  }
+  virtual bool IntersectRectClipRegion(double x, double y,
+                                       double w, double h) {
+    return true;
+  }
+  virtual bool GetTextExtents(const char *text, const ggadget::FontInterface *f,
+                              int text_flags, double in_width,
+                              double *width, double *height) {
+    return false;
+  }
+  virtual bool GetPointValue(double x, double y,
+                             ggadget::Color *color, double *opacity) const {
+    return false;
+  }
+ private:
+  size_t w_, h_;
+};
+
 class MockedGraphics : public ggadget::GraphicsInterface {
   virtual ggadget::CanvasInterface *NewCanvas(size_t w, size_t h) const {
-    return NULL;
+    return new MockedCanvas(w, h);
   }
-  virtual ggadget::CanvasInterface *NewImage(const char *img_bytes,
-                                   size_t img_bytes_count,
-                                   const ggadget::Color *colormultiply) const {
+  virtual ggadget::ImageInterface *NewImage(const std::string &data,
+                                            bool is_mask) const {
       return NULL;
-  }
-  virtual ggadget::CanvasInterface *NewMask(const char *img_bytes,
-                                   size_t img_bytes_count) const {
-    return NULL;
   }
   virtual ggadget::FontInterface *NewFont(
       const char *family, size_t pt_size,
@@ -66,7 +128,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   }
   virtual void QueueDraw() { draw_queued_ = true; }
   virtual bool GrabKeyboardFocus() { return false; }
-  virtual void SetResizable(ResizableMode mode) { }
+  virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
   virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
   virtual void SetCursor(CursorType type) { }

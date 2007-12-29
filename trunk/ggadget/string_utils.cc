@@ -16,7 +16,6 @@
 
 #include <cstring>
 #include "string_utils.h"
-#include "color.h"
 #include "common.h"
 
 namespace ggadget {
@@ -231,37 +230,6 @@ bool SplitString(const std::string &source, const std::string &separator,
   if (result_right)
     *result_right = source_copy.substr(pos + separator.length());
   return true;
-}
-
-bool ParseColorName(const std::string &color_name,
-                    Color *color, double *alpha) {
-  ASSERT(color);
-  size_t name_len = color_name.length();
-  if (color_name[0] == '#' && (name_len == 7 || (name_len == 9 && alpha))) {
-    std::string name_copy(color_name);
-    // Set all invalid chars to '0', which is equired for compatibility.
-    for (size_t i = 1; i < name_len; i++) {
-      char c = name_copy[i];
-      if ((c < '0' || c > '9') && (c < 'A' || c > 'F') && (c < 'a' || c > 'f'))
-        name_copy[i] = '0';
-    }
-
-    int r = 0, g = 0, b = 0;
-    int int_alpha = 255;
-    if (name_len == 7) {
-      if (sscanf(name_copy.c_str() + 1, "%02x%02x%02x", &r, &g, &b) < 3)
-        return false;
-    } else {
-      if (sscanf(name_copy.c_str() + 1, "%02x%02x%02x%02x",
-                 &int_alpha, &r, &g, &b) < 4)
-        return false;
-    }
-    *color = Color(r / 255.0, g / 255.0, b / 255.0);
-    if (alpha)
-      *alpha = int_alpha / 255.0;
-    return true;
-  }
-  return false;
 }
 
 }  // namespace ggadget

@@ -27,13 +27,14 @@ LIBXML2_CONFIG(2.6.20 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
+  color.cc
   content_item.cc
   details_view.cc
   display_window.cc
   dummy_framework.cc
   element_factory.cc
   elements.cc
-  file_manager.cc  
+  file_manager.cc
   file_manager_wrapper.cc
   gadget.cc
   image.cc

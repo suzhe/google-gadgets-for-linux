@@ -41,16 +41,16 @@ static const Color kDefaultItemSepColor(0xF7/255.0, 0xF3/255.0, 0xF7/255.0);
 
 class ListBoxElement::Impl {
  public:
-  Impl(ListBoxElement *owner, View *view) : 
+  Impl(ListBoxElement *owner, View *view) :
     owner_(owner),
     item_width_(0), item_height_(0),
     item_width_specified_(false), item_height_specified_(false),
     item_width_relative_(false), item_height_relative_(false),
     multiselect_(false), item_separator_(false),
-    selected_index_(-2), 
+    selected_index_(-2),
     item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
     item_selected_color_(new Texture(kDefaultItemSelectedColor, 1.0)),
-    item_separator_color_(new Texture(kDefaultItemSepColor, 1.0)) { 
+    item_separator_color_(new Texture(kDefaultItemSepColor, 1.0)) {
   }
 
   ~Impl() {
@@ -63,7 +63,7 @@ class ListBoxElement::Impl {
   }
 
   void SetPixelItemWidth(double width) {
-    if (width >= 0.0 && 
+    if (width >= 0.0 &&
         (width != item_width_ || item_width_relative_)) {
       item_width_ = width;
       item_width_relative_ = false;
@@ -72,7 +72,7 @@ class ListBoxElement::Impl {
   }
 
   void SetPixelItemHeight(double height) {
-    if (height >= 0.0 && 
+    if (height >= 0.0 &&
         (height != item_height_ || item_height_relative_)) {
       item_height_ = height;
       item_height_relative_ = false;
@@ -98,7 +98,7 @@ class ListBoxElement::Impl {
   }
 
   void SetPendingSelection() {
-    ElementInterface *selected = 
+    ElementInterface *selected =
       owner_->GetChildren()->GetItemByIndex(selected_index_);
     if (selected) {
       if (selected->IsInstanceOf(ItemElement::CLASS_ID)) {
@@ -113,7 +113,7 @@ class ListBoxElement::Impl {
   }
 
   // Returns true if anything was cleared.
-  bool ClearSelection(ItemElement *avoid) {   
+  bool ClearSelection(ItemElement *avoid) {
     bool result = false;
     ElementsInterface *elements = owner_->GetChildren();
     int childcount = elements->GetCount();
@@ -130,7 +130,7 @@ class ListBoxElement::Impl {
           LOG(kErrorItemExpected);
         }
       }
-    }  
+    }
     return result;
   }
 
@@ -161,7 +161,7 @@ class ListBoxElement::Impl {
   bool item_width_specified_, item_height_specified_;
   bool item_width_relative_, item_height_relative_;
   bool multiselect_, item_separator_;
-  // Only used for when the index is specified in XML. This is an index 
+  // Only used for when the index is specified in XML. This is an index
   // of an element "pending" to become selected. Initialized to -2.
   int selected_index_;
   Texture *item_over_color_, *item_selected_color_, *item_separator_color_;
@@ -172,7 +172,7 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
                                const char *tag_name, const char *name)
     : DivElement(parent, view, tag_name, name),
       impl_(new Impl(this, view)) {
-  SetEnabled(true);  
+  SetEnabled(true);
 
   RegisterProperty("background",
                    NewSlot(implicit_cast<DivElement *>(this),
@@ -180,9 +180,9 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
                    NewSlot(implicit_cast<DivElement *>(this),
                            &DivElement::SetBackground));
   RegisterProperty("autoscroll",
-                   NewSlot(implicit_cast<ScrollingElement *>(this), 
+                   NewSlot(implicit_cast<ScrollingElement *>(this),
                            &ScrollingElement::IsAutoscroll),
-                   NewSlot(implicit_cast<ScrollingElement *>(this), 
+                   NewSlot(implicit_cast<ScrollingElement *>(this),
                            &ScrollingElement::SetAutoscroll));
   RegisterProperty("itemHeight",
                    NewSlot(this, &ListBoxElement::GetItemHeight),
@@ -232,7 +232,7 @@ ListBoxElement::~ListBoxElement() {
 }
 
 void ListBoxElement::ScrollToIndex(int index) {
-  SetScrollYPosition(index * 
+  SetScrollYPosition(index *
                      static_cast<int>(GetItemPixelHeight()));
 }
 
@@ -243,17 +243,17 @@ Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
 EventResult ListBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                      BasicElement **fired_element,
                                      BasicElement **in_element) {
-  // Interecept mouse wheel events from Item elements and send to Div 
+  // Interecept mouse wheel events from Item elements and send to Div
   // directly to enable wheel scrolling.
   bool wheel = (event.GetType() == Event::EVENT_MOUSE_WHEEL);
-  return DivElement::OnMouseEvent(event, wheel ? true : direct, 
-                                  fired_element, in_element);  
+  return DivElement::OnMouseEvent(event, wheel ? true : direct,
+                                  fired_element, in_element);
 }
 
 Variant ListBoxElement::GetItemWidth() const {
-  return BasicElement::GetPixelOrRelative(impl_->item_width_relative_, 
+  return BasicElement::GetPixelOrRelative(impl_->item_width_relative_,
                                           impl_->item_width_specified_,
-                                          impl_->item_width_, 
+                                          impl_->item_width_,
                                           impl_->item_width_);
 }
 
@@ -278,9 +278,9 @@ void ListBoxElement::SetItemWidth(const Variant &width) {
 }
 
 Variant ListBoxElement::GetItemHeight() const {
-  return BasicElement::GetPixelOrRelative(impl_->item_height_relative_, 
+  return BasicElement::GetPixelOrRelative(impl_->item_height_relative_,
                                           impl_->item_height_specified_,
-                                          impl_->item_height_, 
+                                          impl_->item_height_,
                                           impl_->item_height_);
 }
 
@@ -339,7 +339,7 @@ void ListBoxElement::SetItemOverColor(const Variant &color) {
     } else {
       LOG(kErrorItemExpected);
     }
-  }  
+  }
 }
 
 Variant ListBoxElement::GetItemSelectedColor() const {
@@ -366,7 +366,7 @@ void ListBoxElement::SetItemSelectedColor(const Variant &color) {
     } else {
       LOG(kErrorItemExpected);
     }
-  }  
+  }
 }
 
 Variant ListBoxElement::GetItemSeparatorColor() const {
@@ -437,7 +437,7 @@ int ListBoxElement::GetSelectedIndex() const {
     } else {
       LOG(kErrorItemExpected);
     }
-  }  
+  }
 
   if (impl_->selected_index_ >= 0) {
     return impl_->selected_index_;
@@ -456,10 +456,10 @@ void ListBoxElement::SetSelectedIndex(int index) {
   }
 
   if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
-    SetSelectedItem(down_cast<ItemElement *>(item));  
+    SetSelectedItem(down_cast<ItemElement *>(item));
   } else {
     LOG(kErrorItemExpected);
-  }  
+  }
 }
 
 ItemElement *ListBoxElement::GetSelectedItem() {
@@ -475,9 +475,9 @@ ItemElement *ListBoxElement::GetSelectedItem() {
     } else {
       LOG(kErrorItemExpected);
     }
-  }  
+  }
 
-  return NULL;  
+  return NULL;
 }
 
 const ItemElement *ListBoxElement::GetSelectedItem() const {
@@ -493,9 +493,9 @@ const ItemElement *ListBoxElement::GetSelectedItem() const {
     } else {
       LOG(kErrorItemExpected);
     }
-  }  
+  }
 
-  return NULL;  
+  return NULL;
 }
 
 void ListBoxElement::SetSelectedItem(ItemElement *item) {
@@ -563,7 +563,7 @@ void ListBoxElement::SelectRange(ItemElement *endpoint) {
             }
             break;
           }
-        }       
+        }
 
         if (started && !item->IsSelected()) {
           item->SetSelected(true);
@@ -572,7 +572,7 @@ void ListBoxElement::SelectRange(ItemElement *endpoint) {
       } else {
         LOG(kErrorItemExpected);
       }
-    }      
+    }
   }
 
   if (changed) {
@@ -593,7 +593,7 @@ bool ListBoxElement::AppendString(const char *str) {
   if (!result) {
     // Cleanup on failure.
     elements->RemoveElement(child);
-  }    
+  }
   return result;
 }
 
@@ -608,18 +608,18 @@ bool ListBoxElement::InsertStringAt(const char *str, int index) {
     return false;
   }
 
-  ElementInterface *child = elements->InsertElement("item", before, ""); 
+  ElementInterface *child = elements->InsertElement("item", before, "");
   if (!child) {
     return false;
   }
 
   ASSERT(child->IsInstanceOf(ItemElement::CLASS_ID));
   ItemElement *item = down_cast<ItemElement *>(child);
-  bool result = item->AddLabelWithText(str);  
+  bool result = item->AddLabelWithText(str);
   if (!result) {
     // Cleanup on failure.
     elements->RemoveElement(child);
-  }    
+  }
   return result;
 }
 
@@ -630,7 +630,7 @@ void ListBoxElement::RemoveString(const char *str) {
   }
 }
 
-void ListBoxElement::Layout() { 
+void ListBoxElement::Layout() {
   impl_->SetPendingSelection();
   // This field is no longer used after the first layout.
   impl_->selected_index_ = -1;

@@ -32,6 +32,8 @@ class MenuInterface;
 class ScriptContextInterface;
 class Slot;
 class EditInterface;
+class ViewHostInterface;
+class ImageInterface;
 
 /**
  * Main View implementation.
@@ -65,12 +67,13 @@ class View : public ScriptableHelper<ViewInterface> {
 
   virtual const CanvasInterface *Draw(bool *changed);
 
-  virtual void SetResizable(ViewHostInterface::ResizableMode resizable);
-  virtual ViewHostInterface::ResizableMode GetResizable() const;
+  virtual void SetResizable(ViewInterface::ResizableMode resizable);
+  virtual ViewInterface::ResizableMode GetResizable() const;
   virtual void SetCaption(const char *caption);
   virtual std::string GetCaption() const;
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
+  virtual void MarkRedraw();
 
   virtual ElementFactoryInterface *GetElementFactory() const;
   virtual const ElementsInterface *GetChildren() const;
@@ -221,7 +224,7 @@ class View : public ScriptableHelper<ViewInterface> {
    * @param is_mask if the image is used as a mask.
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
-  Image *LoadImage(const Variant &src, bool is_mask);
+  ImageInterface *LoadImage(const Variant &src, bool is_mask);
 
   /**
    * Load an image from the global file manager.
@@ -229,12 +232,12 @@ class View : public ScriptableHelper<ViewInterface> {
    * @param is_mask if the image is used as a mask.
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
-  Image *LoadImageFromGlobal(const char *name, bool is_mask);
+  ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask);
 
   /**
    * Load a texture from image file or create a colored texture.
    * @param src the source of the texture image, can be of the following types:
-   *     - @c Variant::TYPE_STRING: the name within the gadget base path, or a 
+   *     - @c Variant::TYPE_STRING: the name within the gadget base path, or a
    *       color description with HTML-style color ("#rrggbb"), or HTML-style
    *       color with alpha ("#aarrggbb").
    *     - @c Variant::TYPE_SCRIPTABLE or @c Variant::TYPE_CONST_SCRIPTABLE and

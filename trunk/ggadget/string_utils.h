@@ -145,19 +145,6 @@ std::string EncodeJavaScriptString(const UTF16Char *source);
 bool SplitString(const std::string &source, const std::string &separator,
                  std::string *result_left, std::string *result_right);
 
-class Color;
-/**
- * Parses a color name.
- * @param name the color name in HTML-style color format ("#rrggbb"),
- *     or HTML-style with alpha ("#aarrggbb"). If @a alpha is @c NULL, only
- *     "#rrggbb" format is allowed. Any characters not in hexadecimal character
- *     range will be treated as '0'.
- * @param[out] color (required) the parsed color.
- * @param[out] alpha (optional) the parsed alpha value.
- * @return @c true if the format is valid.
- */
-bool ParseColorName(const std::string &color_name, Color *color, double *alpha);
-
 } // namespace ggadget
 
 #endif // GGADGET_STRING_UTILS_H__

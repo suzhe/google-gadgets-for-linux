@@ -20,7 +20,6 @@
 #include <ggadget/event.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
-#include <ggadget/view_host_interface.h>
 
 namespace ggadget {
 
@@ -30,7 +29,6 @@ class ElementFactoryInterface;
 class ScriptableEvent;
 class ElementsInterface;
 class GraphicsInterface;
-class Image;
 class ScriptContextInterface;
 class FileManagerInterface;
 class Texture;
@@ -43,6 +41,14 @@ class XMLParserInterface;
 class ViewInterface : public ScriptableInterface {
  public:
   CLASS_ID_DECL(0xeb376007cbe64f9f);
+
+  /** Used in @c SetResizable(). */
+  enum ResizableMode {
+    RESIZABLE_FALSE,
+    RESIZABLE_TRUE,
+    /** The user can resize the view while keeping the original aspect ratio. */
+    RESIZABLE_ZOOM,
+  };
 
   virtual ~ViewInterface() { }
 
@@ -97,11 +103,13 @@ class ViewInterface : public ScriptableInterface {
    * @return true if new size is allowed, false otherwise.
    * */
   virtual bool SetWidth(int width) = 0;
+
   /**
    * Set the height of the view.
    * @return true if new size is allowed, false otherwise.
    */
   virtual bool SetHeight(int height) = 0;
+
   /**
    * Set the size of the view. Use this when setting both height and width
    * to prevent two invocations of the sizing event.
@@ -128,8 +136,8 @@ class ViewInterface : public ScriptableInterface {
    * the window border.
    * @see ResizableMode
    */
-  virtual void SetResizable(ViewHostInterface::ResizableMode resizable) = 0;
-  virtual ViewHostInterface::ResizableMode GetResizable() const = 0;
+  virtual void SetResizable(ResizableMode resizable) = 0;
+  virtual ResizableMode GetResizable() const = 0;
 
   /**
    * Caption is the title of the view, by default shown when a gadget is in
@@ -145,6 +153,12 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual void SetShowCaptionAlways(bool show_always) = 0;
   virtual bool GetShowCaptionAlways() const = 0;
+
+  /**
+   * Sets a redraw mark, so that all things of this view will be redrawed
+   * during the next draw.
+   */
+  virtual void MarkRedraw() = 0;
 
  public:  // Element management functions.
   /**

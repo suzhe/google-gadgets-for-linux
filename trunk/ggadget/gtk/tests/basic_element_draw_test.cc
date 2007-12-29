@@ -106,41 +106,27 @@ class Pie : public BasicElement {
 
 class BasicElementTest : public testing::Test {
  protected:
-  CanvasInterface *target_;
-  cairo_surface_t *surface_;
+  CairoCanvas *target_;
   ViewHostWithGraphics *view_host_;
 
   BasicElementTest() {
-    // create a target canvas for tests
-    surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 300, 150);
-    cairo_t *cr = cairo_create(surface_);
-    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-    cairo_set_source_rgba(cr, 0, 0, 0, 0);
-    cairo_paint(cr);
-    target_ = new CairoCanvas(cr, 300, 150, false);
-    cairo_destroy(cr);
-    cr = NULL;
-
     view_host_ = new ViewHostWithGraphics();
+    target_ =
+        down_cast<CairoCanvas*>(view_host_->GetGraphics()->NewCanvas(300, 150));
   }
 
   ~BasicElementTest() {
     delete view_host_;
-    view_host_ = NULL;
-
-    target_->Destroy();
-    target_ = NULL;
 
     if (g_savepng) {
       const testing::TestInfo *const test_info =
         testing::UnitTest::GetInstance()->current_test_info();
       char file[100];
       snprintf(file, arraysize(file), "%s.png", test_info->name());
-      cairo_surface_write_to_png(surface_, file);
+      cairo_surface_write_to_png(target_->GetSurface(), file);
     }
 
-    cairo_surface_destroy(surface_);
-    surface_ = NULL;
+    target_->Destroy();
   }
 
   virtual void SetUp() {

@@ -18,8 +18,8 @@
 
 #include "img_element.h"
 #include "canvas_interface.h"
+#include "image_interface.h"
 #include "color.h"
-#include "image.h"
 #include "string_utils.h"
 #include "texture.h"
 #include "view.h"
@@ -37,11 +37,11 @@ class ImgElement::Impl {
     : image_(NULL), src_width_(0), src_height_(0),
       crop_(CROP_FALSE) { }
   ~Impl() {
-    delete image_;
+    DestroyImage(image_);
     image_ = NULL;
   }
 
-  Image *image_;
+  ImageInterface *image_;
   size_t src_width_, src_height_;
   CropMaintainAspect crop_;
   std::string colormultiply_;
@@ -68,6 +68,7 @@ ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
 
 ImgElement::~ImgElement() {
   delete impl_;
+  impl_ = NULL;
 }
 
 bool ImgElement::IsPointIn(double x, double y) {
@@ -125,11 +126,11 @@ void ImgElement::DoDraw(CanvasInterface *canvas,
 }
 
 Variant ImgElement::GetSrc() const {
-  return Variant(Image::GetSrc(impl_->image_));
+  return Variant(GetImageTag(impl_->image_));
 }
 
 void ImgElement::SetSrc(const Variant &src) {
-  delete impl_->image_;
+  DestroyImage(impl_->image_);
   impl_->image_ = GetView()->LoadImage(src, false);
   if (impl_->image_) {
     impl_->src_width_ = impl_->image_->GetWidth();
@@ -148,9 +149,13 @@ std::string ImgElement::GetColorMultiply() const {
 
 void ImgElement::SetColorMultiply(const char *color) {
   if (AssignIfDiffer(color, &impl_->colormultiply_, strcmp)) {
-    View *view = GetView();
-    Texture texture(view->GetGraphics(), view->GetFileManager(), color);
-    impl_->image_->SetColorMultiply(texture.GetColor());
+    Color c(1, 1, 1);
+    double op = 0;
+    Color::FromString(color, &c, &op);
+    if (op != 0)
+      impl_->image_->SetColorMultiply(c);
+    else
+      impl_->image_->SetColorMultiply(Color::kWhite);
     QueueDraw();
   }
 }
@@ -191,5 +196,6 @@ BasicElement *ImgElement::CreateInstance(BasicElement *parent, View *view,
                                          const char *name) {
   return new ImgElement(parent, view, name);
 }
+
 
 } // namespace ggadget

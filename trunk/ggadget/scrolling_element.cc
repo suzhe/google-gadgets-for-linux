@@ -106,6 +106,11 @@ class ScrollingElement::Impl {
     owner_->Focus();
   }
 
+  void MarkRedraw() {
+    if (scrollbar_)
+      scrollbar_->MarkRedraw();
+  }
+
   ScrollingElement *owner_;
   int scroll_pos_x_, scroll_pos_y_;
   int scroll_range_x_, scroll_range_y_;
@@ -122,6 +127,11 @@ ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
 
 ScrollingElement::~ScrollingElement() {
   delete impl_;
+}
+
+void ScrollingElement::MarkRedraw() {
+  BasicElement::MarkRedraw();
+  impl_->MarkRedraw();
 }
 
 bool ScrollingElement::IsAutoscroll() const {

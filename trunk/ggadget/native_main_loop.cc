@@ -25,36 +25,36 @@
 
 namespace ggadget {
 
-struct WatchNode {
-  MainLoopInterface::WatchType type;
-
-  // Indicates if the watch is being called, thus can't be removed.
-  bool calling;
-
-  // Indicates if the watch has been scheduled to be removed.
-  bool removing;
-
-  // For IO watch, it's fd, for timeout watch, it's interval.
-  int data;
-
-  // Only for timeout watch.
-  uint64_t next_time;
-  WatchCallbackInterface *callback;
-
-  WatchNode()
-    : type(MainLoopInterface::INVALID_WATCH),
-      calling(false),
-      removing(false),
-      data(-1),
-      next_time(0),
-      callback(NULL) {
-  }
-};
-
 // This class implements all functionalities of class NativeMainLoop.
 // By using this class, all implementation details of class NativeMainLoop can
 // be hidden from outside.
 class NativeMainLoop::Impl {
+  struct WatchNode {
+    MainLoopInterface::WatchType type;
+
+    // Indicates if the watch is being called, thus can't be removed.
+    bool calling;
+
+    // Indicates if the watch has been scheduled to be removed.
+    bool removing;
+
+    // For IO watch, it's fd, for timeout watch, it's interval.
+    int data;
+
+    // Only for timeout watch.
+    uint64_t next_time;
+    WatchCallbackInterface *callback;
+
+    WatchNode()
+      : type(MainLoopInterface::INVALID_WATCH),
+        calling(false),
+        removing(false),
+        data(-1),
+        next_time(0),
+        callback(NULL) {
+    }
+  };
+
   typedef std::map<int, WatchNode> WatchMap;
 
  public:

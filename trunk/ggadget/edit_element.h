@@ -31,6 +31,7 @@ class EditElement : public ScrollingElement {
   virtual ~EditElement();
 
   virtual void Layout();
+  virtual void MarkRedraw();
 
  public:
   /** Gets and sets the background color or texture of the text */

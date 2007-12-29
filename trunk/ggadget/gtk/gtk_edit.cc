@@ -451,6 +451,10 @@ void GtkEdit::ScrollTo(int position) {
   }
 }
 
+void GtkEdit::MarkRedraw() {
+  modified_ = true;
+}
+
 Connection* GtkEdit::ConnectOnQueueDraw(Slot0<void> *callback) {
   if (callback)
     return queue_draw_signal_.Connect(callback);
@@ -602,7 +606,7 @@ PangoLayout* GtkEdit::EnsureLayout() {
 
 PangoLayout* GtkEdit::CreateLayout() {
   CairoCanvas *canvas = EnsureCanvas();
-  PangoLayout *layout = pango_cairo_create_layout(canvas->GetCairoContext());
+  PangoLayout *layout = pango_cairo_create_layout(canvas->GetContext());
   PangoAttrList *tmp_attrs = pango_attr_list_new();
   std::string tmp_string;
 
@@ -990,15 +994,15 @@ void GtkEdit::DrawCursor(CairoCanvas *canvas) {
 void GtkEdit::DrawText(CairoCanvas *canvas) {
   PangoLayout *layout = EnsureLayout();
 
-  cairo_save(canvas->GetCairoContext());
-  cairo_set_source_rgb(canvas->GetCairoContext(),
+  cairo_save(canvas->GetContext());
+  cairo_set_source_rgb(canvas->GetContext(),
                        text_color_.red,
                        text_color_.green,
                        text_color_.blue);
-  cairo_move_to(canvas->GetCairoContext(),
+  cairo_move_to(canvas->GetContext(),
                 scroll_offset_x_ + kInnerBorderX,
                 scroll_offset_y_ + kInnerBorderY);
-  pango_cairo_show_layout(canvas->GetCairoContext(), layout);
+  pango_cairo_show_layout(canvas->GetContext(), layout);
 
   // Draw selection background.
   // Selection in a single line may be not continual, so we use pango to
@@ -1044,7 +1048,7 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
       pango_layout_index_to_pos(layout, line->start_index,  &pos);
       for(int i = 0; i < n_ranges; ++i) {
         cairo_rectangle(
-            canvas->GetCairoContext(),
+            canvas->GetContext(),
             kInnerBorderX + scroll_offset_x_ + PANGO_PIXELS(ranges[i * 2]),
             kInnerBorderY + scroll_offset_y_ + PANGO_PIXELS(pos.y),
             PANGO_PIXELS(ranges[i * 2 + 1] - ranges[i * 2]),
@@ -1052,27 +1056,27 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
       }
       g_free(ranges);
     }
-    cairo_clip(canvas->GetCairoContext());
+    cairo_clip(canvas->GetContext());
 
     Color selection_color = GetSelectionBackgroundColor();
     Color text_color = GetSelectionTextColor();
 
-    cairo_set_source_rgb(canvas->GetCairoContext(),
+    cairo_set_source_rgb(canvas->GetContext(),
                          selection_color.red,
                          selection_color.green,
                          selection_color.blue);
-    cairo_paint(canvas->GetCairoContext());
+    cairo_paint(canvas->GetContext());
 
-    cairo_move_to(canvas->GetCairoContext(),
+    cairo_move_to(canvas->GetContext(),
                   scroll_offset_x_ + kInnerBorderX,
                   scroll_offset_y_ + kInnerBorderY);
-    cairo_set_source_rgb(canvas->GetCairoContext(),
+    cairo_set_source_rgb(canvas->GetContext(),
                          text_color.red,
                          text_color.green,
                          text_color.blue);
-    pango_cairo_show_layout(canvas->GetCairoContext(), layout);
+    pango_cairo_show_layout(canvas->GetContext(), layout);
   }
-  cairo_restore(canvas->GetCairoContext());
+  cairo_restore(canvas->GetContext());
 }
 
 void GtkEdit::MoveCursor(MovementStep step, int count, bool extend_selection) {

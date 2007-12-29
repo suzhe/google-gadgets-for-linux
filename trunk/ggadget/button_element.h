@@ -33,7 +33,7 @@ class ButtonElement : public BasicElement {
   virtual ~ButtonElement();
 
  public:
-  /** Lets this button use default images. */ 
+  /** Lets this button use default images. */
   void UseDefaultImages();
 
   /** Gets and sets the file name of default button image. */

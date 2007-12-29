@@ -22,20 +22,28 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
+if GGL_HAVE_RSVG
+  RSVG_IMAGE_H=rsvg_image.h
+  RSVG_IMAGE_CC=rsvg_image.cc
+endif
+
 noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
-			  cairo_graphics.h \
 			  global_file_manager.h \
 			  gtk_edit.h \
 			  gtk_key_convert.h \
 			  gtk_menu_impl.h \
-			  options.h
+			  options.h \
+			  pixbuf_image.h \
+			  $(RSVG_IMAGE_H)
 
 gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
-gtkinclude_HEADERS	= gadget_view_widget.h \
+gtkinclude_HEADERS	= cairo_graphics.h \
+			  gadget_view_widget.h \
 			  gtk_main_loop.h \
 			  gtk_gadget_host.h \
-			  gtk_view_host.h
+			  gtk_view_host.h \
+			  pixbuf_utils.h
 
 lib_LTLIBRARIES		= libggadget-gtk@GGL_EPOCH@.la
 
@@ -51,17 +59,22 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  gtk_key_convert.cc \
 			  gtk_menu_impl.cc \
 			  gtk_view_host.cc \
-			  options.cc
+			  options.cc \
+			  pixbuf_image.cc \
+			  pixbuf_utils.cc \
+			  $(RSVG_IMAGE_CC)
 
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @CAIRO_CFLAGS@ \
 			  @PANGO_CFLAGS@ \
-			  @GTK2_CFLAGS@
+			  @GTK2_CFLAGS@ \
+			  @RSVG_CFLAGS@
 
 libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  @CAIRO_LIBS@ \
 			  @PANGO_LIBS@ \
 			  @GTK2_LIBS@ \
+			  @RSVG_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \

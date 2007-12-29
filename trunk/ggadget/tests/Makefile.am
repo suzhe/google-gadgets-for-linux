@@ -28,7 +28,8 @@ noinst_HEADERS		= main_loop_test.h \
 			  scriptables.h \
 			  slots.h
 
-check_PROGRAMS		= common_test \
+check_PROGRAMS		= color_test \
+			  common_test \
 			  variant_test \
 			  slot_test \
 			  signal_test \
@@ -46,6 +47,7 @@ check_PROGRAMS		= common_test \
 			  xml_parser_test \
 			  xml_http_request_test
 
+color_test_SOURCES		= color_test.cc
 common_test_SOURCES		= common_test.cc
 variant_test_SOURCES		= variant_test.cc
 slot_test_SOURCES		= slot_test.cc slots.cc

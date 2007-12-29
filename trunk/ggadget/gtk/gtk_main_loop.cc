@@ -26,17 +26,26 @@ namespace gtk {
 class GtkMainLoop::Impl {
   struct WatchNode {
     MainLoopInterface::WatchType type;
+
+    // Indicates if the watch is being called, thus can't be removed.
+    bool calling;
+
+    // Indicates if the watch has been scheduled to be removed.
+    bool removing;
+
     int watch_id;
     int data;      // For IO watch, it's fd, for timeout watch, it's interval.
     WatchCallbackInterface *callback;
     GtkMainLoop::Impl *impl;
 
-    WatchNode() :
-      type(MainLoopInterface::INVALID_WATCH),
-      watch_id(-1),
-      data(-1),
-      callback(NULL),
-      impl(NULL) {
+    WatchNode()
+      : type(MainLoopInterface::INVALID_WATCH),
+        calling(false),
+        removing(false),
+        watch_id(-1),
+        data(-1),
+        callback(NULL),
+        impl(NULL) {
     }
   };
 
@@ -99,12 +108,15 @@ class GtkMainLoop::Impl {
   void RemoveWatch(int watch_id) {
     WatchNode *node = static_cast<WatchNode *>(
         g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
-    if (node) {
-      g_source_remove(watch_id);
-      WatchCallbackInterface *callback = node->callback;
-      //DLOG("GtkMainLoop::RemoveWatch: id=%d", watch_id);
-      callback->OnRemove(main_loop_, watch_id);
-      g_hash_table_remove(watches_, GINT_TO_POINTER(watch_id));
+    if (node && !node->removing) {
+      node->removing = true;
+      if (!node->calling) {
+        g_source_remove(watch_id);
+        WatchCallbackInterface *callback = node->callback;
+        //DLOG("GtkMainLoop::RemoveWatch: id=%d", watch_id);
+        callback->OnRemove(main_loop_, watch_id);
+        g_hash_table_remove(watches_, GINT_TO_POINTER(watch_id));
+      }
     }
   }
 
@@ -135,6 +147,8 @@ class GtkMainLoop::Impl {
 
  private:
   void RemoveWatchNode(WatchNode *node) {
+    if (node->removing) return;
+    node->removing = true;
     int watch_id = node->watch_id;
     WatchCallbackInterface *callback = node->callback;
     //DLOG("GtkMainLoop::RemoveWatchNode: id=%d", watch_id);
@@ -150,6 +164,8 @@ class GtkMainLoop::Impl {
                                     gpointer data) {
     int watch_id = GPOINTER_TO_INT(key);
     WatchNode *node = static_cast<WatchNode *>(value);
+    if (node->removing) return TRUE;
+    node->removing = true;
     MainLoopInterface *main_loop = static_cast<MainLoopInterface *>(data);
     WatchCallbackInterface *callback = node->callback;
 
@@ -168,7 +184,7 @@ class GtkMainLoop::Impl {
   static gboolean IOWatchCallback(GIOChannel *channel, GIOCondition condition,
                                   gpointer data) {
     WatchNode *node = static_cast<WatchNode *>(data);
-    if (node) {
+    if (node && !node->calling && !node->removing) {
       GtkMainLoop::Impl *impl = node->impl;
       MainLoopInterface *main_loop = impl->main_loop_;
       WatchCallbackInterface *callback = node->callback;
@@ -180,11 +196,21 @@ class GtkMainLoop::Impl {
           (condition & G_IO_IN)) ||
           (node->type == MainLoopInterface::IO_WRITE_WATCH &&
           (condition & G_IO_OUT))) {
+        node->calling = true;
         ret = callback->Call(main_loop, node->watch_id);
+        node->calling = false;
       }
 
-      if (!ret)
+      // node->removing == true means the watch was removed during the Call.
+      // However, because node->calling is set to true before invoking Call(),
+      // if RemoveWatch() is called during Call() to remove this watch, it
+      // won't be removed, instead, removing will be set to true. In this case,
+      // the watch must be removed here.
+      if (!ret || node->removing) {
+        node->removing = false;
         impl->RemoveWatchNode(node);
+        ret = false;
+      }
 
       return ret;
     }
@@ -195,16 +221,21 @@ class GtkMainLoop::Impl {
   // watch.
   static gboolean TimeoutCallback(gpointer data) {
     WatchNode *node = static_cast<WatchNode*>(data);
-    if (node) {
+    if (node && !node->calling && !node->removing) {
       GtkMainLoop::Impl *impl = node->impl;
       MainLoopInterface *main_loop = impl->main_loop_;
       WatchCallbackInterface *callback = node->callback;
       //DLOG("GtkMainLoop::TimeoutCallback: id=%d interval=%d",
       //     node->watch_id, node->data);
+      node->calling = true;
       bool ret = callback->Call(main_loop, node->watch_id);
+      node->calling = false;
 
-      if (!ret)
+      if (!ret || node->removing) {
+        node->removing = false;
         impl->RemoveWatchNode(node);
+        ret = false;
+      }
 
       return ret;
     }

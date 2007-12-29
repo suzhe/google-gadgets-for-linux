@@ -166,6 +166,12 @@ class EditInterface {
    * returned by GetScrollBarInfo() function. */
   virtual void ScrollTo(int position) = 0;
 
+  /**
+   * Sets a redraw mark so that the edit control will be redrawed during the
+   * next draw.
+   */
+  virtual void MarkRedraw() = 0;
+
   /** Register a callback to fire the queue draw request.
    * The specified callback slot must be created by NewSlot() function.
    * the returned <code>Connection*</code> can be used to remove the callback,

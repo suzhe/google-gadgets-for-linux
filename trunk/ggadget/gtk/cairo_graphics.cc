@@ -14,281 +14,96 @@
   limitations under the License.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <gdk/gdkcairo.h>
 #include <ggadget/color.h>
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
-#include "gtk_view_host.h"
-#include "gtk_edit.h"
+#include "pixbuf_image.h"
+
+#ifdef HAVE_RSVG_LIBRARY
+#include "rsvg_image.h"
+#endif
 
 namespace ggadget {
 namespace gtk {
 
-CairoGraphics::CairoGraphics(double zoom)
-    : zoom_(zoom) {
-  if (zoom_ <= .0) {
-    zoom_ = 1.;
+class CairoGraphics::Impl {
+ public:
+  Impl(double zoom) : zoom_(zoom) {
+    if (zoom_ <= 0) zoom_ = 1;
   }
-  g_type_init();
+
+  double zoom_;
+  Signal1<void, double> on_zoom_signal_;
+};
+
+CairoGraphics::CairoGraphics(double zoom) : impl_(new Impl(zoom)) {
+}
+
+double CairoGraphics::GetZoom() const {
+  return impl_->zoom_;
+}
+
+void CairoGraphics::SetZoom(double zoom) {
+  if (impl_->zoom_ != zoom) {
+    impl_->zoom_ = (zoom > 0 ? zoom : 1);
+    impl_->on_zoom_signal_(impl_->zoom_);
+  }
+}
+
+Connection *CairoGraphics::ConnectOnZoom(Slot1<void, double> *slot) const {
+  return impl_->on_zoom_signal_.Connect(slot);
 }
 
 CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
-  CairoCanvas *c = NULL;
-  cairo_t *cr = NULL;
-  cairo_surface_t *surface = NULL;
+  if (!w || !h) return NULL;
 
-  if (w == 0 || h == 0) {
-    goto exit;
+  CairoCanvas *canvas = new CairoCanvas(this, w, h, CAIRO_FORMAT_ARGB32);
+  if (!canvas->IsValid()) {
+    delete canvas;
+    canvas = NULL;
   }
+  return canvas;
+}
 
-  size_t width;
-  size_t height;
-  if (zoom_ == 1.) {
-    width = w;
-    height = h;
+static bool IsSvg(const std::string &data) {
+  //TODO: better detection method?
+  return data.find("<?xml") != std::string::npos &&
+         data.find("<svg") != std::string::npos;
+}
+
+ImageInterface *CairoGraphics::NewImage(const std::string &data,
+                                        bool is_mask) const {
+  if (data.empty()) return NULL;
+
+  ImageInterface *img = NULL;
+
+#ifdef HAVE_RSVG_LIBRARY
+  // Only use RsvgImage for ordinary svg image.
+  if (IsSvg(data) && !is_mask) {
+    img = new RsvgImage(this, data, is_mask);
+    if (!down_cast<RsvgImage*>(img)->IsValid()) {
+      img->Destroy();
+      img = NULL;
+    }
   } else {
-    // compute new width and height based on zoom
-    width = size_t(w * zoom_);
-    height = size_t(h * zoom_);
-  }
-
-  // create surface at native resolution after adjustment by scale
-  surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-  if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
-    cairo_surface_destroy(surface);
-    surface = NULL;
-    goto exit;
-  }
-
-  cr = cairo_create(surface);
-  if (zoom_ != 1.) {
-    // divide again since x, y scale values may differ after rounding from the
-    // initial multiplication
-    cairo_scale(cr, width / (double)w, height / (double)h);
-  }
-
-  // clear canvas
-  c = new CairoCanvas(cr, w, h, false);
-  //DLOG("new canvas %d %d %d %d", width, height, w, h);
-
-exit:
-  if (cr) {
-    cairo_destroy(cr);
-    cr = NULL;
-  }
-
-  if (surface) {
-    cairo_surface_destroy(surface);
-    surface = NULL;
-  }
-
-  return c;
-}
-
-CanvasInterface *CairoGraphics::NewMask(const char *img_bytes,
-                                        size_t img_bytes_count) const {
-  CairoCanvas *img = NULL;
-  size_t h, w;
-  cairo_surface_t *surface = NULL;
-  cairo_t *cr = NULL;
-  GdkPixbuf *pixbuf = NULL;
-
-  if (!img_bytes || 0 == img_bytes_count) {
-    goto exit;
-  }
-
-  pixbuf = LoadPixbufFromData(img_bytes, img_bytes_count);
-  if (!pixbuf) {
-    LOG("Error: unable to load PixBuf from data.");
-    goto exit;
-  }
-  w = gdk_pixbuf_get_width(pixbuf);
-  h = gdk_pixbuf_get_height(pixbuf);
-
-  if (!gdk_pixbuf_get_has_alpha(pixbuf)) {
-    // clone pixbuf with alpha channel and free the old one
-    GdkPixbuf *a_pixbuf = gdk_pixbuf_add_alpha(pixbuf, false, 0, 0, 0);
-    g_object_unref(pixbuf);
-    pixbuf = a_pixbuf;
-    a_pixbuf = NULL;
-  }
-
-  // convert the pixels to mask specification as required by Cairo
-  int rowstride, channels;
-  guchar *pixels, *p;
-  rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-  channels = gdk_pixbuf_get_n_channels(pixbuf);
-  pixels = gdk_pixbuf_get_pixels(pixbuf);
-  if (GDK_COLORSPACE_RGB != gdk_pixbuf_get_colorspace(pixbuf) ||
-      8 != gdk_pixbuf_get_bits_per_sample(pixbuf) ||
-      4 != channels) {
-    LOG("Error: unsupported PixBuf format.");
-    goto exit;
-  }
-  for (size_t x = 0; x < w; x++) {
-    for (size_t y = 0; y < h; y++) {
-      p = pixels + y * rowstride + x * channels;
-      if (0 == p[0] && 0 == p[1] && 0 == p[2] && 255 == p[3]) {
-        p[0] = p[1] = p[2] = p[3] = 0;
-      } else {
-        p[0] = p[1] = p[2] = 0;
-        p[3] = 255;
-      }
+#else
+  if (1) {
+#endif
+    img = new PixbufImage(this, data, is_mask);
+    if (!down_cast<PixbufImage*>(img)->IsValid()) {
+      img->Destroy();
+      img = NULL;
     }
   }
-
-  // Now create the surface (eight-bit alpha channel) and Cairo context.
-  // And according to performance benchmark, A8 is much faster than A1.
-  surface = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
-  if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
-    cairo_surface_destroy(surface);
-    surface = NULL;
-    goto exit;
-  }
-
-  cr = cairo_create(surface);
-  img = new CairoCanvas(cr, w, h, true);
-
-  gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
-  cairo_paint(cr);
-
-  cairo_set_source_rgba(cr, 0., 0., 0., 0.);
-
-exit:
-  if (cr) {
-    cairo_destroy(cr);
-    cr = NULL;
-  }
-
-  if (surface) {
-    cairo_surface_destroy(surface);
-    surface = NULL;
-  }
-
-  if (pixbuf) {
-    g_object_unref(pixbuf);
-    pixbuf = NULL;
-  }
-
   return img;
-}
-
-CanvasInterface *CairoGraphics::NewImage(const char *img_bytes,
-                                         size_t img_bytes_count,
-                                         const Color *colormultiply) const {
-  CairoCanvas *img = NULL;
-  size_t h, w;
-  cairo_surface_t *surface = NULL;
-  cairo_t *cr = NULL;
-  GdkPixbuf *pixbuf = NULL;
-
-  if (!img_bytes || 0 == img_bytes_count) {
-    goto exit;
-  }
-
-  pixbuf = LoadPixbufFromData(img_bytes, img_bytes_count);
-  if (!pixbuf) {
-    LOG("Error: unable to load PixBuf from data.");
-    goto exit;
-  }
-
-  w = gdk_pixbuf_get_width(pixbuf);
-  h = gdk_pixbuf_get_height(pixbuf);
-
-  if (colormultiply) {
-    DLOG("New image with color multiply %s", colormultiply->ToString().c_str());
-
-    int rowstride, channels;
-    guchar *pixels, *p;
-    rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-    channels = gdk_pixbuf_get_n_channels(pixbuf);
-    pixels = gdk_pixbuf_get_pixels(pixbuf);
-    if (GDK_COLORSPACE_RGB != gdk_pixbuf_get_colorspace(pixbuf) ||
-        8 != gdk_pixbuf_get_bits_per_sample(pixbuf) ||
-        3 > channels) {
-      LOG("Error: unsupported PixBuf format.");
-      goto exit;
-    }
-    for (size_t x = 0; x < w; x++) {
-      for (size_t y = 0; y < h; y++) {
-        p = pixels + y * rowstride + x * channels;
-        p[0] = static_cast<guchar>(colormultiply->red * p[0]);
-        p[1] = static_cast<guchar>(colormultiply->green * p[1]);
-        p[2] = static_cast<guchar>(colormultiply->blue * p[2]);
-      }
-    }
-  }
-
-  surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-  if (CAIRO_STATUS_SUCCESS != cairo_surface_status(surface)) {
-    cairo_surface_destroy(surface);
-    surface = NULL;
-    goto exit;
-  }
-
-  cr = cairo_create(surface);
-  img = new CairoCanvas(cr, w, h, false);
-
-  gdk_cairo_set_source_pixbuf(cr, pixbuf, 0., 0.);
-  cairo_paint(cr);
-
-  cairo_set_source_rgba(cr, 0., 0., 0., 0.);
-
-exit:
-  if (cr) {
-    cairo_destroy(cr);
-    cr = NULL;
-  }
-
-  if (surface) {
-    cairo_surface_destroy(surface);
-    surface = NULL;
-  }
-
-  if (pixbuf) {
-    g_object_unref(pixbuf);
-    pixbuf = NULL;
-  }
-
-  return img;
-}
-
-GdkPixbuf *CairoGraphics::LoadPixbufFromData(const char *img_bytes,
-                                             size_t img_bytes_count) {
-  GdkPixbuf *pixbuf = NULL;
-  GError *error = NULL;
-  GdkPixbufLoader *loader = NULL;
-
-  loader = gdk_pixbuf_loader_new();
-  gboolean status = gdk_pixbuf_loader_write(loader, (const guchar*)img_bytes,
-                                            img_bytes_count, &error);
-  if (!status) {
-    goto exit;
-  }
-  status = gdk_pixbuf_loader_close(loader, &error);
-  if (!status) {
-    goto exit;
-  }
-
-  pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
-  if (pixbuf) {
-    g_object_ref(pixbuf);
-  }
-
-exit:
-  if (error) {
-    g_error_free(error);
-    error = NULL;
-  }
-
-  if (loader) {
-    g_object_unref(loader);
-    loader = NULL;
-  }
-
-  return pixbuf;
 }
 
 FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,

@@ -26,7 +26,7 @@
 #include "gadget_host_interface.h"
 #include "gadget_interface.h"
 #include "graphics_interface.h"
-#include "image.h"
+#include "image_interface.h"
 #include "logger.h"
 #include "math_utils.h"
 #include "script_context_interface.h"
@@ -168,7 +168,7 @@ class View::Impl {
       debug_mode_(debug_mode),
       width_(0), height_(0),
       // TODO: Make sure the default value.
-      resizable_(ViewHostInterface::RESIZABLE_TRUE),
+      resizable_(ViewInterface::RESIZABLE_TRUE),
       show_caption_always_(false),
       focused_element_(NULL),
       mouseover_element_(NULL),
@@ -179,8 +179,9 @@ class View::Impl {
       content_area_element_(NULL),
       posting_event_element_(NULL),
       popup_element_(NULL),
-      popup_canvas_(NULL),
+      view_canvas_(NULL),
       post_event_token_(0),
+      mark_redraw_token_(0),
       draw_queued_(false),
       utils_(this) {
   }
@@ -190,10 +191,10 @@ class View::Impl {
     ASSERT(death_detected_elements_.empty());
     on_destroy_signal_.Emit(0, NULL);
 
-    if (popup_canvas_) {
-      popup_canvas_->Destroy();
-      popup_canvas_ = NULL;
-    }    
+    if (view_canvas_) {
+      view_canvas_->Destroy();
+      view_canvas_ = NULL;
+    }
   }
 
   template <typename T>
@@ -359,7 +360,7 @@ class View::Impl {
       return result;
     }
 
-    // Dispatch the event to children normally, 
+    // Dispatch the event to children normally,
     // unless popup is active and event is inside popup element.
     bool outside_popup = true;
     if (popup_element_) {
@@ -369,12 +370,12 @@ class View::Impl {
         result = popup_element_->OnMouseEvent(new_event, false, // NOT direct
                                               &fired_element, &in_element);
         outside_popup = false;
-      } 
-    }     
+      }
+    }
     if (outside_popup) {
       result = children_.OnMouseEvent(event, &fired_element, &in_element);
       // The following might hit if a grabbed element is
-      // turned invisible or disabled while under grab. 
+      // turned invisible or disabled while under grab.
       if (type == Event::EVENT_MOUSE_DOWN && result != EVENT_RESULT_CANCELED) {
         SetPopupElement(NULL);
       }
@@ -792,7 +793,6 @@ class View::Impl {
 
   bool SetSize(int width, int height) {
     if (width != width_ || height != height_) {
-      // TODO check if allowed first
       width_ = width;
       height_ = height;
       host_->QueueDraw();
@@ -802,6 +802,10 @@ class View::Impl {
       FireEvent(&scriptable_event, onsize_event_);
     }
     return true;
+  }
+
+  void MarkRedraw() {
+    children_.MarkRedraw();
   }
 
   bool ResizeBy(int width, int height) {
@@ -816,32 +820,42 @@ class View::Impl {
     draw_queued_ = false;
 
     *changed = false;
-    const CanvasInterface *children = children_.Draw(changed);
-    if (popup_element_) { 
-      // Compose once more in the case of popup element.
-      bool c;
-      const CanvasInterface *popup = popup_element_->Draw(&c);
-      *changed = (*changed || c);
 
-      if (popup == NULL && children == NULL) {
-        return NULL;
+    bool children_changed = false;
+    bool popup_changed = false;
+    bool view_changed = false;
+    const CanvasInterface *children_canvas = NULL;
+    const CanvasInterface *popup_canvas = NULL;
+
+    children_canvas = children_.Draw(&children_changed);
+
+    if (popup_element_)
+      popup_canvas = popup_element_->Draw(&popup_changed);
+
+    if (!view_canvas_ ||
+        static_cast<size_t>(width_) != view_canvas_->GetWidth() ||
+        static_cast<size_t>(height_) != view_canvas_->GetHeight()) {
+      if (view_canvas_)
+        view_canvas_->Destroy();
+      view_canvas_ = host_->GetGraphics()->NewCanvas(width_, height_);
+      view_changed = true;
+    }
+
+    if (popup_canvas && popup_element_->IsPositionChanged()) {
+      popup_changed = true;
+      popup_element_->ClearPositionChanged();
+    }
+
+    *changed = children_changed || popup_changed || view_changed;
+
+    if (*changed) {
+      view_canvas_->ClearCanvas();
+
+      if (children_canvas) {
+        view_canvas_->DrawCanvas(0, 0, children_canvas);
       }
 
-      if (!popup_canvas_ || 
-          static_cast<size_t>(width_) != popup_canvas_->GetWidth() ||
-          static_cast<size_t>(height_) != popup_canvas_->GetHeight()) {
-        if (popup_canvas_) {
-          popup_canvas_->Destroy();
-        }
-        popup_canvas_ = host_->GetGraphics()->NewCanvas(width_, height_);
-      } else {
-        popup_canvas_->ClearCanvas();
-      }
-
-      if (children) {
-        popup_canvas_->DrawCanvas(0, 0, children);
-      }
-      if (popup) {
+      if (popup_canvas) {
         std::vector<ElementInterface *> elements;
         for (ElementInterface *e = popup_element_; e != NULL; e = e->GetParentElement()) {
           elements.push_back(e);
@@ -849,32 +863,31 @@ class View::Impl {
 
         for (std::vector<ElementInterface *>::reverse_iterator it = elements.rbegin();
              it < elements.rend(); ++it) {
-          ElementInterface *element = *it; 
+          ElementInterface *element = *it;
           if (element->GetRotation() == .0) {
-            popup_canvas_->TranslateCoordinates(
+            view_canvas_->TranslateCoordinates(
                 element->GetPixelX() - element->GetPixelPinX(),
                 element->GetPixelY() - element->GetPixelPinY());
           } else {
-            popup_canvas_->TranslateCoordinates(element->GetPixelX(),
+            view_canvas_->TranslateCoordinates(element->GetPixelX(),
                                          element->GetPixelY());
-            popup_canvas_->RotateCoordinates(
+            view_canvas_->RotateCoordinates(
                 DegreesToRadians(element->GetRotation()));
-            popup_canvas_->TranslateCoordinates(-element->GetPixelPinX(),
+            view_canvas_->TranslateCoordinates(-element->GetPixelPinX(),
                                          -element->GetPixelPinY());
           }
         }
 
         const CanvasInterface *mask = popup_element_->GetMaskCanvas();
         if (mask) {
-          popup_canvas_->DrawCanvasWithMask(.0, .0, popup, .0, .0, mask);
+          view_canvas_->DrawCanvasWithMask(.0, .0, popup_canvas, .0, .0, mask);
         } else {
-          popup_canvas_->DrawCanvas(.0, .0, popup);
-        }              
+          view_canvas_->DrawCanvas(.0, .0, popup_canvas);
+        }
       }
-      return popup_canvas_;
-    } else {
-      return children;
     }
+
+    return view_canvas_;
   }
 
   BasicElement *GetElementByName(const char *name) {
@@ -926,7 +939,7 @@ class View::Impl {
     popup_element_ = element;
     if (element) {
       element->QueueDraw();
-    } 
+    }
   }
 
   void OnOptionChanged(const char *name) {
@@ -1011,7 +1024,7 @@ class View::Impl {
   Elements children_;
   int debug_mode_;
   int width_, height_;
-  ViewHostInterface::ResizableMode resizable_;
+  ResizableMode resizable_;
   std::string caption_;
   bool show_caption_always_;
 
@@ -1040,8 +1053,9 @@ class View::Impl {
   PostedEvents posted_events_;
   BasicElement *posting_event_element_;
   BasicElement *popup_element_;
-  CanvasInterface *popup_canvas_;
+  CanvasInterface *view_canvas_;
   int post_event_token_;
+  int mark_redraw_token_;
   bool draw_queued_;
   Utils utils_;
   Signal0<void> on_destroy_signal_;
@@ -1165,11 +1179,11 @@ bool View::SetSize(int width, int height) {
   return impl_->SetSize(width, height);
 }
 
-ViewHostInterface::ResizableMode View::GetResizable() const {
+ViewInterface::ResizableMode View::GetResizable() const {
   return impl_->resizable_;
 }
 
-void View::SetResizable(ViewHostInterface::ResizableMode resizable) {
+void View::SetResizable(ViewInterface::ResizableMode resizable) {
   impl_->resizable_ = resizable;
   impl_->host_->SetResizable(resizable);
 }
@@ -1251,53 +1265,49 @@ void View::PopDeathDetectedElement() {
   impl_->death_detected_elements_.pop_back();
 }
 
-Image *View::LoadImage(const Variant &src, bool is_mask) {
+ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
   ASSERT(impl_->file_manager_);
-  switch (src.type()) {
-    case Variant::TYPE_STRING:
-      return new Image(GetGraphics(), impl_->file_manager_,
-                       VariantValue<const char *>()(src), is_mask);
-    case Variant::TYPE_SCRIPTABLE:
-    case Variant::TYPE_CONST_SCRIPTABLE: {
-      const ScriptableBinaryData *binary =
-          VariantValue<const ScriptableBinaryData *>()(src);
-      if (binary)
-        return new Image(GetGraphics(), binary->data().c_str(), binary->size(),
-                         is_mask);
-      // else falls through!
+  Variant::Type type = src.type();
+  if (type == Variant::TYPE_STRING) {
+    const char *filename = VariantValue<const char*>()(src);
+    if (filename && *filename) {
+      std::string real_path;
+      std::string data;
+      if (impl_->file_manager_->GetFileContents(filename, &data, &real_path)) {
+        ImageInterface *image = GetGraphics()->NewImage(data, is_mask);
+        image->SetTag(filename);
+        return image;
+      }
     }
-    default:
-      LOG("Unsupported type of image src.");
-      DLOG("src=%s", src.Print().c_str());
-      return NULL;
+  } else if (type == Variant::TYPE_SCRIPTABLE ||
+             type == Variant::TYPE_CONST_SCRIPTABLE) {
+    const ScriptableBinaryData *binary =
+        VariantValue<const ScriptableBinaryData *>()(src);
+      if (binary)
+        return GetGraphics()->NewImage(binary->data(), is_mask);
+  } else {
+    LOG("Unsupported type of image src.");
+    DLOG("src=%s", src.Print().c_str());
   }
+
+  DLOG("Failed to load image.");
+  return NULL;
 }
 
-Image *View::LoadImageFromGlobal(const char *name, bool is_mask) {
-  return new Image(GetGraphics(), impl_->file_manager_,
-                   name, is_mask);
+ImageInterface *View::LoadImageFromGlobal(const char *name, bool is_mask) {
+  return LoadImage(Variant(name), is_mask);
 }
 
 Texture *View::LoadTexture(const Variant &src) {
   ASSERT(impl_->file_manager_);
-  switch (src.type()) {
-    case Variant::TYPE_STRING:
-      return new Texture(GetGraphics(), impl_->file_manager_,
-                         VariantValue<const char *>()(src));
-    case Variant::TYPE_SCRIPTABLE:
-    case Variant::TYPE_CONST_SCRIPTABLE: {
-      const ScriptableBinaryData *binary =
-          VariantValue<const ScriptableBinaryData *>()(src);
-      if (binary)
-        return new Texture(GetGraphics(), binary->data().c_str(),
-                           binary->size());
-      // else falls through!
-    }
-    default:
-      LOG("Unsupported type of texture src.");
-      DLOG("src=%s", src.Print().c_str());
-      return NULL;
+  Color color;
+  double opacity;
+  if (src.type() == Variant::TYPE_STRING &&
+      Color::FromString(VariantValue<const char*>()(src), &color, &opacity)) {
+    return new Texture(color, opacity);
   }
+
+  return new Texture(LoadImage(src, false));
 }
 
 void View::SetFocus(BasicElement *element) {
@@ -1358,6 +1368,10 @@ bool View::OnAddContextMenuItems(MenuInterface *menu) {
   if (impl_->mouseover_element_)
     return impl_->mouseover_element_->OnAddContextMenuItems(menu);
   return true;
+}
+
+void View::MarkRedraw() {
+  impl_->MarkRedraw();
 }
 
 Slot *View::NewDeathDetectedSlot(BasicElement *element, Slot *slot) {

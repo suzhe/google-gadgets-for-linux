@@ -17,7 +17,7 @@
 #include "progressbar_element.h"
 #include "canvas_interface.h"
 #include "gadget_consts.h"
-#include "image.h"
+#include "image_interface.h"
 #include "logger.h"
 #include "math_utils.h"
 #include "scriptable_event.h"
@@ -43,41 +43,21 @@ class ProgressBarElement::Impl {
         orientation_(ORIENTATION_HORIZONTAL) {
   }
   ~Impl() {
-    delete emptyimage_;
-    emptyimage_ = NULL;
-
-    delete fullimage_;
-    fullimage_ = NULL;
-
-    delete thumbdisabledimage_;
-    thumbdisabledimage_ = NULL;
-
-    delete thumbdownimage_;
-    thumbdownimage_ = NULL;
-
-    delete thumboverimage_;
-    thumboverimage_ = NULL;
-
-    delete thumbimage_;
-    thumbimage_ = NULL;    
+    DestroyImage(emptyimage_);
+    DestroyImage(fullimage_);
+    DestroyImage(thumbdisabledimage_);
+    DestroyImage(thumbdownimage_);
+    DestroyImage(thumboverimage_);
+    DestroyImage(thumbimage_);
   }
 
-  ProgressBarElement *owner_;
-  bool thumbover_, thumbdown_;
-  Image *emptyimage_, *fullimage_, *thumbdisabledimage_,
-        *thumbdownimage_, *thumboverimage_, *thumbimage_;
-  int min_, max_, value_;
-  double drag_delta_;
-  Orientation orientation_;
-  EventSignal onchange_event_;
-
-  /** 
+  /**
    * Utility function for getting the int value from a position on the
    * progressbar. It does not check to make sure that the value is within range.
    * Assumes that thumb isn't NULL.
    */
-  int GetValueFromLocation(double ownerwidth, double ownerheight, Image *thumb,
-                           double x, double y) {
+  int GetValueFromLocation(double ownerwidth, double ownerheight,
+                           ImageInterface *thumb, double x, double y) {
     int delta = max_ - min_;
     double position, denominator;
     if (orientation_ == ORIENTATION_HORIZONTAL) {
@@ -115,22 +95,22 @@ class ProgressBarElement::Impl {
     return (value_ - min_) / static_cast<double>(max_ - min_);
   }
 
-  Image *GetThumbAndLocation(double ownerwidth, double ownerheight, 
+  ImageInterface *GetThumbAndLocation(double ownerwidth, double ownerheight,
                              double fraction, double *x, double *y) {
-    Image *thumb = GetCurrentThumbImage();
+    ImageInterface *thumb = GetCurrentThumbImage();
     if (!thumb) {
       *x = *y = 0;
       return NULL;
     }
 
     double imgw = thumb->GetWidth();
-    double imgh = thumb->GetHeight();    
+    double imgh = thumb->GetHeight();
     if (orientation_ == ORIENTATION_HORIZONTAL) {
       *x = fraction * (ownerwidth - imgw);
-      *y = (ownerheight - imgh) / 2.;      
+      *y = (ownerheight - imgh) / 2.;
     } else { // Thumb grows from bottom in vertical orientation.
       *x = (ownerwidth - imgw) / 2.;
-      *y = (1. - fraction) * (ownerheight - imgh); 
+      *y = (1. - fraction) * (ownerheight - imgh);
     }
     return thumb;
   }
@@ -152,8 +132,8 @@ class ProgressBarElement::Impl {
     }
   }
 
-  Image *GetCurrentThumbImage() {
-    Image *img = NULL;
+  ImageInterface *GetCurrentThumbImage() {
+    ImageInterface *img = NULL;
     if (!owner_->IsEnabled()) {
        img = thumbdisabledimage_;
     } else if (thumbdown_) {
@@ -167,56 +147,66 @@ class ProgressBarElement::Impl {
     }
     return img;
   }
+
+  ProgressBarElement *owner_;
+  bool thumbover_, thumbdown_;
+  ImageInterface *emptyimage_, *fullimage_, *thumbdisabledimage_,
+                 *thumbdownimage_, *thumboverimage_, *thumbimage_;
+  int min_, max_, value_;
+  double drag_delta_;
+  Orientation orientation_;
+  EventSignal onchange_event_;
 };
 
 ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
                                        const char *name)
     : BasicElement(parent, view, "progressbar", name, false),
       impl_(new Impl(this)) {
-  RegisterProperty("emptyImage", 
-                   NewSlot(this, &ProgressBarElement::GetEmptyImage), 
+  RegisterProperty("emptyImage",
+                   NewSlot(this, &ProgressBarElement::GetEmptyImage),
                    NewSlot(this, &ProgressBarElement::SetEmptyImage));
-  RegisterProperty("max", 
-                   NewSlot(this, &ProgressBarElement::GetMax), 
+  RegisterProperty("max",
+                   NewSlot(this, &ProgressBarElement::GetMax),
                    NewSlot(this, &ProgressBarElement::SetMax));
-  RegisterProperty("min", 
+  RegisterProperty("min",
                    NewSlot(this, &ProgressBarElement::GetMin),
                    NewSlot(this, &ProgressBarElement::SetMin));
-  RegisterStringEnumProperty("orientation", 
+  RegisterStringEnumProperty("orientation",
                    NewSlot(this, &ProgressBarElement::GetOrientation),
-                   NewSlot(this, &ProgressBarElement::SetOrientation), 
+                   NewSlot(this, &ProgressBarElement::SetOrientation),
                    kOrientationNames, arraysize(kOrientationNames));
   RegisterProperty("fullImage",
-                   NewSlot(this, &ProgressBarElement::GetFullImage), 
+                   NewSlot(this, &ProgressBarElement::GetFullImage),
                    NewSlot(this, &ProgressBarElement::SetFullImage));
-  RegisterProperty("thumbDisabledImage", 
+  RegisterProperty("thumbDisabledImage",
                    NewSlot(this, &ProgressBarElement::GetThumbDisabledImage),
                    NewSlot(this, &ProgressBarElement::SetThumbDisabledImage));
-  RegisterProperty("thumbDownImage", 
-                   NewSlot(this, &ProgressBarElement::GetThumbDownImage), 
+  RegisterProperty("thumbDownImage",
+                   NewSlot(this, &ProgressBarElement::GetThumbDownImage),
                    NewSlot(this, &ProgressBarElement::SetThumbDownImage));
-  RegisterProperty("thumbImage", 
-                   NewSlot(this, &ProgressBarElement::GetThumbImage), 
+  RegisterProperty("thumbImage",
+                   NewSlot(this, &ProgressBarElement::GetThumbImage),
                    NewSlot(this, &ProgressBarElement::SetThumbImage));
-  RegisterProperty("thumbOverImage", 
+  RegisterProperty("thumbOverImage",
                    NewSlot(this, &ProgressBarElement::GetThumbOverImage),
-                   NewSlot(this, &ProgressBarElement::SetThumbOverImage));  
-  RegisterProperty("value", 
-                   NewSlot(this, &ProgressBarElement::GetValue), 
+                   NewSlot(this, &ProgressBarElement::SetThumbOverImage));
+  RegisterProperty("value",
+                   NewSlot(this, &ProgressBarElement::GetValue),
                    NewSlot(this, &ProgressBarElement::SetValue));
 
-  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);  
+  RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 
 ProgressBarElement::~ProgressBarElement() {
   delete impl_;
+  impl_ = NULL;
 }
 
 void ProgressBarElement::DoDraw(CanvasInterface *canvas,
                            const CanvasInterface *children_canvas) {
   // Drawing order: empty, full, thumb.
-  // Empty and full images only stretch in one direction, and only if 
-  // element size is greater than that of the image. Otherwise the image is 
+  // Empty and full images only stretch in one direction, and only if
+  // element size is greater than that of the image. Otherwise the image is
   // cropped.
   double pxwidth = GetPixelWidth();
   double pxheight = GetPixelHeight();
@@ -224,7 +214,7 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
   bool drawfullimage = impl_->fullimage_ && fraction > 0;
 
   double x = 0, y = 0, fw = 0, fh = 0, fy = 0;
-  bool fstretch = false;  
+  bool fstretch = false;
   if (drawfullimage) {
     // Need to calculate fullimage positions first in order to determine
     // clip rectangle for emptyimage.
@@ -241,7 +231,7 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
       fw = imgw;
       fh = fraction * pxheight;
       y = pxheight - fh;
-      fstretch = (imgh < fh);       
+      fstretch = (imgh < fh);
       if (!fstretch) {
         fy = pxheight - imgh;
       }
@@ -258,7 +248,7 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
       ey = (pxheight - imgh) / 2.;
       ew = pxwidth;
       eh = imgh;
-      estretch = (imgw < ew); 
+      estretch = (imgw < ew);
       clipx = fw;
       cliph = pxheight;
     } else {
@@ -277,7 +267,7 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
     }
 
     if (estretch) {
-      impl_->emptyimage_->StretchDraw(canvas, ex, ey, ew, eh);   
+      impl_->emptyimage_->StretchDraw(canvas, ex, ey, ew, eh);
     }
     else {
       // No need to set clipping since element border is crop border here.
@@ -285,11 +275,11 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
     }
 
     if (drawfullimage) {
-      canvas->PopState(); 
+      canvas->PopState();
     }
   }
 
-  if (drawfullimage) {   
+  if (drawfullimage) {
     if (fstretch) {
       impl_->fullimage_->StretchDraw(canvas, x, y, fw, fh);
     } else {
@@ -301,8 +291,8 @@ void ProgressBarElement::DoDraw(CanvasInterface *canvas,
   }
 
   // The thumb is never resized or cropped.
-  Image *thumb = impl_->GetThumbAndLocation(pxwidth, pxheight, fraction, 
-                                            &x, &y);
+  ImageInterface *thumb = impl_->GetThumbAndLocation(pxwidth, pxheight,
+                                                     fraction, &x, &y);
   if (thumb) {
     thumb->Draw(canvas, x, y);
   }
@@ -356,21 +346,21 @@ void ProgressBarElement::SetOrientation(ProgressBarElement::Orientation o) {
 }
 
 Variant ProgressBarElement::GetEmptyImage() const {
-  return Variant(Image::GetSrc(impl_->emptyimage_));
+  return Variant(GetImageTag(impl_->emptyimage_));
 }
 
 void ProgressBarElement::SetEmptyImage(const Variant &img) {
-  delete impl_->emptyimage_;
+  DestroyImage(impl_->emptyimage_);
   impl_->emptyimage_ = GetView()->LoadImage(img, false);
   QueueDraw();
 }
 
 Variant ProgressBarElement::GetFullImage() const {
-  return Variant(Image::GetSrc(impl_->fullimage_));
+  return Variant(GetImageTag(impl_->fullimage_));
 }
 
 void ProgressBarElement::SetFullImage(const Variant &img) {
-  delete impl_->fullimage_;
+  DestroyImage(impl_->fullimage_);
   impl_->fullimage_ = GetView()->LoadImage(img, false);
   if (impl_->value_ != impl_->min_) { // not empty
     QueueDraw();
@@ -378,11 +368,11 @@ void ProgressBarElement::SetFullImage(const Variant &img) {
 }
 
 Variant ProgressBarElement::GetThumbDisabledImage() const {
-  return Variant(Image::GetSrc(impl_->thumbdisabledimage_));
+  return Variant(GetImageTag(impl_->thumbdisabledimage_));
 }
 
 void ProgressBarElement::SetThumbDisabledImage(const Variant &img) {
-  delete impl_->thumbdisabledimage_;
+  DestroyImage(impl_->thumbdisabledimage_);
   impl_->thumbdisabledimage_ = GetView()->LoadImage(img, false);
   if (!IsEnabled()) {
     QueueDraw();
@@ -390,11 +380,11 @@ void ProgressBarElement::SetThumbDisabledImage(const Variant &img) {
 }
 
 Variant ProgressBarElement::GetThumbDownImage() const {
-  return Variant(Image::GetSrc(impl_->thumbdownimage_));
+  return Variant(GetImageTag(impl_->thumbdownimage_));
 }
 
 void ProgressBarElement::SetThumbDownImage(const Variant &img) {
-  delete impl_->thumbdownimage_;
+  DestroyImage(impl_->thumbdownimage_);
   impl_->thumbdownimage_ = GetView()->LoadImage(img, false);
   if (impl_->thumbdown_ && IsEnabled()) {
     QueueDraw();
@@ -402,21 +392,21 @@ void ProgressBarElement::SetThumbDownImage(const Variant &img) {
 }
 
 Variant ProgressBarElement::GetThumbImage() const {
-  return Variant(Image::GetSrc(impl_->thumbimage_));
+  return Variant(GetImageTag(impl_->thumbimage_));
 }
 
 void ProgressBarElement::SetThumbImage(const Variant &img) {
-  delete impl_->thumbimage_;
+  DestroyImage(impl_->thumbimage_);
   impl_->thumbimage_ = GetView()->LoadImage(img, false);
   QueueDraw(); // Always queue since this is the fallback.
 }
 
 Variant ProgressBarElement::GetThumbOverImage() const {
-  return Variant(Image::GetSrc(impl_->thumboverimage_));
+  return Variant(GetImageTag(impl_->thumboverimage_));
 }
 
 void ProgressBarElement::SetThumbOverImage(const Variant &img) {
-  delete impl_->thumboverimage_;
+  DestroyImage(impl_->thumboverimage_);
   impl_->thumboverimage_ = GetView()->LoadImage(img, false);
   if (impl_->thumbover_ && IsEnabled()) {
     QueueDraw();
@@ -434,10 +424,10 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
   double fraction = impl_->GetFractionalValue();
   double tx, ty;
   bool over = false;
-  Image *thumb = impl_->GetThumbAndLocation(pxwidth, pxheight, fraction, 
-                                            &tx, &ty);
+  ImageInterface *thumb = impl_->GetThumbAndLocation(pxwidth, pxheight,
+                                                     fraction, &tx, &ty);
   if (thumb) {
-    over = IsPointInElement(event.GetX() - tx, event.GetY() - ty, 
+    over = IsPointInElement(event.GetX() - tx, event.GetY() - ty,
                             thumb->GetWidth(), thumb->GetHeight());
   }
 
@@ -455,18 +445,18 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
       if (over != impl_->thumbover_) {
         impl_->thumbover_ = over;
         QueueDraw();
-      }        
-      break;      
+      }
+      break;
     case Event::EVENT_MOUSE_DOWN:
       if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
         if (over) {
           // The drag delta setting here is tricky. If the button is held down
-          // initially over the thumb, then the pointer should always stay 
-          // on top of the same location on the thumb when dragged, thus 
+          // initially over the thumb, then the pointer should always stay
+          // on top of the same location on the thumb when dragged, thus
           // reflecting the value indicated by the bottom-left corner of the
           // thumb, not the current position of the pointer.
-          // If the mouse button is held down over any other part of the 
-          // progressbar, then the pointer should reflect the value of the 
+          // If the mouse button is held down over any other part of the
+          // progressbar, then the pointer should reflect the value of the
           // point under it.
           // This is different from scrollbar, where there's only a single
           // case for the drag delta setting. In the progressbar, the drag
@@ -479,15 +469,15 @@ EventResult ProgressBarElement::HandleMouseEvent(const MouseEvent &event) {
             impl_->drag_delta_ = event.GetY() - ty;
           }
 
-          impl_->thumbdown_ = true;          
+          impl_->thumbdown_ = true;
           QueueDraw(); // Redraw because of the thumbdown.
         } else {
           impl_->drag_delta_ = 0;
           int value = impl_->GetValueFromLocation(pxwidth, pxheight, thumb,
                                                   event.GetX(), event.GetY());
           SetValue(value); // SetValue will queue a draw.
-        }  
-      }     
+        }
+      }
       break;
     case Event::EVENT_MOUSE_UP:
       if (impl_->thumbdown_) {

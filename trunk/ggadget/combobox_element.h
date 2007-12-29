@@ -31,6 +31,8 @@ class ComboBoxElement : public BasicElement {
   ComboBoxElement(BasicElement *parent, View *view, const char *name);
   virtual ~ComboBoxElement();
 
+  virtual void MarkRedraw();
+
  public:
   enum Type {
     /** The default, editable control. */

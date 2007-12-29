@@ -336,6 +336,19 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    */
   void QueueDraw();
 
+  /**
+   * Sets a redraw mark, so that all things and children will be redrawed
+   * during the next call of Draw().
+   *
+   * Derived class must implement this function if it has private children,
+   * to make sure that its children will be marked as well.
+   * The derived implementation must call through this function of its parent.
+   *
+   * The element doesn't need to call QueueDraw() in this function, the upper
+   * level will take care of it.
+   */
+  virtual void MarkRedraw();
+
  public:
   /** Enum used by ParsePixelOrRelative() below. */
   enum ParsePixelOrRelativeResult {

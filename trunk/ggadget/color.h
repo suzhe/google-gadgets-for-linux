@@ -26,7 +26,6 @@ namespace ggadget {
 /**
  * Struct for holding color information.
  * Currently, there is no support for the alpha channel.
- * TODO: color.cc ?
  */
 struct Color {
   Color() : red(0), green(0), blue(0) {
@@ -38,8 +37,9 @@ struct Color {
     ASSERT(b >= 0. && b <= 1.);
   };
 
-  explicit Color(const char *name) {
-    ASSERT(name && ParseColorName(name, this, NULL));
+  explicit Color(const char *name) : red(0), green(0), blue(0) {
+    ASSERT(name);
+    FromString(name, this, NULL);
   }
 
   Color(const Color &c) : red(c.red), green(c.green), blue(c.blue) {}
@@ -48,20 +48,35 @@ struct Color {
     return red == c.red && green == c.green && blue == c.blue;
   }
 
-  std::string ToString() const {
-    return StringPrintf("#%02x%02x%02x",
-                        static_cast<int>(round(red * 255)),
-                        static_cast<int>(round(green * 255)),
-                        static_cast<int>(round(blue * 255)));
+  bool operator!=(const Color &c) const {
+    return red != c.red || green != c.green || blue != c.blue;
   }
+
+  /**
+   * Convert a color into a HTML-style color name string.
+   */
+  std::string ToString() const;
 
   /**
    * Utility function to create a Color object from 8-bit color channel values.
    */
-  static Color ColorFromChars(unsigned char r, unsigned char g,
-                              unsigned char b) {
-    return Color(r / 255.0, g / 255.0, b / 255.0);
-  };
+  static Color FromChars(unsigned char r, unsigned char g, unsigned char b);
+
+  /**
+   * Parses a color name.
+   * @param name the color name in HTML-style color format ("#rrggbb"),
+   *     or HTML-style with alpha ("#aarrggbb"). If @a alpha is @c NULL, only
+   *     "#rrggbb" format is allowed. Any characters not in hexadecimal character
+   *     range will be treated as '0'.
+   * @param[out] color (required) the parsed color.
+   * @param[out] alpha (optional) the parsed alpha value.
+   * @return @c true if the format is valid.
+   */
+  static bool FromString(const char *name, Color *color, double *alpha);
+
+  /** Common color constant. */
+  static const Color kWhite;
+  static const Color kBlack;
 
   double red, green, blue;
 };

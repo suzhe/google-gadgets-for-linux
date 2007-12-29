@@ -20,42 +20,24 @@
 #include <ggadget/element_interface.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/canvas_interface.h>
+#include <ggadget/image_interface.h>
 
 namespace ggadget {
 
-class GraphicsInterface;
-class FileManagerInterface;
 class FontInterface;
 
 class Texture {
  public:
   /**
-   * Creates a new texture from the gadget package or directory.
-   * The actual data may be load lazily when the image is first used.
-   * @param graphics
-   * @param file_manager
-   * @param name the name of an image file within the gadget base path, or a
-   *     color description with HTML-style color ("#rrggbb"), or HTML-style
-   *     color with alpha ("#aarrggbb").
+   * Creates a texture with an image. Ownership of the specified image will be
+   * assumed by the texture.
    */
-  Texture(const GraphicsInterface *graphics,
-          FileManagerInterface *file_manager,
-          const char *name);
+  Texture(ImageInterface *image);
 
+  /**
+   * Creates a new texture from a given color and opacity.
+   */
   Texture(const Color &color, double opacity);
-
-  /**
-   * Creates a new texture from the gadget package or directory.
-   * The image is initialized immediately.
-   */
-  Texture(const GraphicsInterface *graphics,
-          const char *data,
-          size_t data_size);
-
-  /**
-   * Duplicate the image.
-   */
-  Texture(const Texture &another);
 
   ~Texture();
 
@@ -82,19 +64,16 @@ class Texture {
    */
   std::string GetSrc() const;
 
-  /** @return the color. If this texture is an image texture, returns black. */
-  Color GetColor();
-
   /** Utility function to get the src of a texture which can be @c NULL. */
   static std::string GetSrc(const Texture *texture) {
     return texture ? texture->GetSrc() : "";
   }
 
  private:
-  // Don't allow assignment.
-  void operator=(const Texture&);
   class Impl;
   Impl *impl_;
+
+  DISALLOW_EVIL_CONSTRUCTORS(Texture);
 };
 
 } // namespace ggadget

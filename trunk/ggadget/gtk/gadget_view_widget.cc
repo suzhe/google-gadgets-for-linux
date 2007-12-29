@@ -18,6 +18,7 @@
 #include <cairo.h>
 
 #include <ggadget/logger.h>
+#include <ggadget/event.h>
 #include "gadget_view_widget.h"
 #include "cairo_canvas.h"
 #include "gtk_menu_impl.h"
@@ -105,18 +106,43 @@ static gboolean GadgetViewWidget_configure(GtkWidget *widget,
       event->height != gvw->widget_height) {
     gvw->widget_width = event->width;
     gvw->widget_height = event->height;
+    ViewInterface::ResizableMode mode = gvw->view->GetResizable();
     DLOG("configure %d %d", event->width, event->height);
-    bool success = gvw->view->SetSize(int(event->width / gvw->zoom),
-                                      int(event->height / gvw->zoom));
-    if (!success) {
-      // Gdk may not obey this size request, but there's nothing we can do.
-      // In that case, the view will still draw itself at the correct size,
-      // but the widget display may crop it or show empty spacing around it.
-      gtk_widget_queue_resize(widget);
-    }
-    // TODO: send onsize event.
-  }
 
+    if (mode == ViewInterface::RESIZABLE_TRUE) {
+      int width = static_cast<int>(event->width / gvw->zoom);
+      int height = static_cast<int>(event->height / gvw->zoom);
+      ggadget::SizingEvent onsizing_event(width, height);
+      if (gvw->view->OnOtherEvent(onsizing_event, &onsizing_event) !=
+          ggadget::EVENT_RESULT_CANCELED) {
+        width = static_cast<int>(ceil(onsizing_event.GetWidth()));
+        height = static_cast<int>(ceil(onsizing_event.GetHeight()));
+        gvw->view->SetSize(width, height);
+        gtk_widget_queue_resize(widget);
+        LOG("View resized.");
+        return FALSE;
+      }
+    } else if (mode == ViewInterface::RESIZABLE_ZOOM) {
+      int view_width = gvw->view->GetWidth();
+      int view_height = gvw->view->GetHeight();
+      if (view_width && view_height) {
+        double xzoom =
+            static_cast<double>(event->width) / gvw->view->GetWidth();
+        double yzoom =
+            static_cast<double>(event->height) / gvw->view->GetHeight();
+        double zoom = std::min(xzoom, yzoom);
+        gvw->zoom = zoom;
+        gvw->host->ChangeZoom(zoom);
+        gtk_widget_queue_resize(widget);
+        gtk_widget_queue_draw(widget);
+        LOG("View zoomed.");
+        return FALSE;
+      }
+    }
+
+    LOG("Can't resize view.");
+    // TODO: do something here.
+  }
   return FALSE;
 }
 
