@@ -59,7 +59,7 @@ AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
                    NewSlot(this, &AnchorElement::SetOverColor));
   RegisterProperty("href",
                    NewSlot(this, &AnchorElement::GetHref),
-                   NewSlot(this, &AnchorElement::SetHref));  
+                   NewSlot(this, &AnchorElement::SetHref));
   RegisterProperty("innerText",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
                    NewSlot(&impl_->text_, &TextFrame::SetText));
@@ -69,11 +69,10 @@ AnchorElement::~AnchorElement() {
   delete impl_;
 }
 
-void AnchorElement::DoDraw(CanvasInterface *canvas,
-                        const CanvasInterface *children_canvas) {  
+void AnchorElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->mouseover_) {
-    impl_->text_.DrawWithTexture(canvas, 0, 0, 
-                                 GetPixelWidth(), GetPixelHeight(), 
+    impl_->text_.DrawWithTexture(canvas, 0, 0,
+                                 GetPixelWidth(), GetPixelHeight(),
                                  impl_->overcolor_texture_);
   } else {
     impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());

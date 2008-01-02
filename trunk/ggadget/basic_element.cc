@@ -55,10 +55,10 @@ class BasicElement::Impl {
         opacity_(1.0),
         visible_(true),
         implicit_(false),
-        canvas_(NULL),
         mask_image_(NULL),
-        visibility_changed_(true), changed_(true),
-        position_changed_(true), size_changed_(true),
+        visibility_changed_(true),
+        position_changed_(true),
+        size_changed_(true),
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()) {
     if (name)
@@ -73,7 +73,6 @@ class BasicElement::Impl {
   }
 
   ~Impl() {
-    DestroyCanvas(canvas_);
     DestroyImage(mask_image_);
     delete children_;
   }
@@ -384,7 +383,7 @@ class BasicElement::Impl {
         x_ = new_x;
       }
     } else {
-      px_ = parent_width > 0.0 ? x_ / parent_width : 0.0; 
+      px_ = parent_width > 0.0 ? x_ / parent_width : 0.0;
     }
     if (width_relative_) {
       double new_width = pwidth_ * parent_width;
@@ -404,7 +403,7 @@ class BasicElement::Impl {
         y_ = new_y;
       }
     } else {
-      py_ = parent_height > 0.0 ? y_ / parent_height : 0.0; 
+      py_ = parent_height > 0.0 ? y_ / parent_height : 0.0;
     }
     if (height_relative_) {
       double new_height = pheight_ * parent_height;
@@ -433,43 +432,37 @@ class BasicElement::Impl {
       children_->Layout();
   }
 
-  const CanvasInterface *Draw(bool *changed) {
-    *changed = visibility_changed_;
-    visibility_changed_ = false;
-    if (!visible_) {
-      // If not visible, then return no matter what.
-      return NULL;
-    }
-
-    const CanvasInterface *children_canvas = NULL;
-    if (children_) {
-      bool child_changed = false;
-      children_canvas = children_->Draw(&child_changed);
-      if (child_changed)
-        *changed = true;
-    }
-
-    *changed = *changed || changed_ || size_changed_ || !canvas_;
-    if (*changed) {
-      // Need to redraw.
-      if (!SetUpCanvas()) {
-        return NULL;
+  void Draw(CanvasInterface *canvas) {
+    // Only do draw if visible
+    if (visible_ && opacity_ != 0) {
+      const CanvasInterface *mask = GetMaskCanvas();
+      CanvasInterface *target = canvas;
+      if (mask) {
+        target = view_->GetGraphics()->NewCanvas(width_, height_);
       }
-      canvas_->PushState();
-      canvas_->MultiplyOpacity(opacity_);
-      owner_->DoDraw(canvas_, children_canvas);
-
+      canvas->PushState();
+      canvas->IntersectRectClipRegion(0, 0, width_, height_);
+      canvas->MultiplyOpacity(opacity_);
+      owner_->DoDraw(target);
+      if (mask) {
+        canvas->DrawCanvasWithMask(0, 0, target, 0, 0, mask);
+        target->Destroy();
+      }
+      canvas->PopState();
       if (debug_mode_ == 1) {
         // TODO: draw box around children_canvas only.
       } else if (debug_mode_ == 2) {
-        DrawBoundingBox(canvas_, width_, height_, debug_color_index_);
+        DrawBoundingBox(canvas, width_, height_, debug_color_index_);
       }
-      canvas_->PopState();
     }
 
+    visibility_changed_ = false;
     size_changed_ = false;
-    changed_ = false;
-    return canvas_;
+  }
+
+  void DrawChildren(CanvasInterface *canvas) {
+    if (children_)
+      children_->Draw(canvas);
   }
 
   static void DrawBoundingBox(CanvasInterface *canvas,
@@ -486,36 +479,8 @@ class BasicElement::Impl {
     canvas->DrawLine(w, 0, 0, h, 1, color);
   }
 
-  CanvasInterface *SetUpCanvas() {
-    if (size_changed_ && canvas_) {
-      // Changes to size require a new canvas.
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
-    if (!canvas_) {
-      const GraphicsInterface *gfx = view_->GetGraphics();
-      ASSERT(gfx);
-      size_t w = static_cast<size_t>(ceil(width_));
-      size_t h = static_cast<size_t>(ceil(height_));
-      if (w == 0 || h == 0) {
-        return canvas_; // NULL
-      }
-      canvas_ = gfx->NewCanvas(w, h);
-      if (!canvas_) {
-        DLOG("Error: unable to create canvas.");
-      }
-    } else {
-      // If not new canvas, we must remember to clear canvas before drawing.
-      canvas_->ClearCanvas();
-    }
-    // It'll affect the performance a lot, weird.
-    //canvas_->IntersectRectClipRegion(0., 0., width_, height_);
-    return canvas_;
-  }
-
  public:
   void QueueDraw() {
-    changed_ = true;
     if (implicit_) {
       // Any change of an implicit child must be passed to its parent to ensure
       // correct redraw.
@@ -555,7 +520,6 @@ class BasicElement::Impl {
   }
 
   void MarkRedraw() {
-    changed_ = true;
     if (children_)
       children_->MarkRedraw();
   }
@@ -577,7 +541,7 @@ class BasicElement::Impl {
         return result;
     }
 
-    if (!enabled_ || !visible_)
+    if (!enabled_ || !visible_ || opacity_ == 0)
       return EVENT_RESULT_UNHANDLED;
 
     // Don't check mouse position, because the event may be out of this
@@ -648,7 +612,7 @@ class BasicElement::Impl {
         return result;
     }
 
-    if (!drop_target_ || !visible_)
+    if (!drop_target_ || !visible_ || opacity_ == 0)
       return EVENT_RESULT_UNHANDLED;
 
     // Take this event, since no children took it, and we're enabled.
@@ -771,10 +735,8 @@ class BasicElement::Impl {
   std::string mask_;
   bool implicit_;
 
-  CanvasInterface *canvas_;
   ImageInterface *mask_image_;
   bool visibility_changed_;
-  bool changed_;
   bool position_changed_;
   bool size_changed_;
 
@@ -875,7 +837,7 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterConstant("parentElement", parent);
   // Though we support relative pinX and pinY, this feature is not published
   // in the current public API, so pinX and pinY are still exposed to
-  // script in pixels. 
+  // script in pixels.
   RegisterProperty("pinX",
                    NewSlot(this, &BasicElement::GetPixelPinX),
                    NewSlot(this, &BasicElement::SetPixelPinX));
@@ -910,7 +872,7 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterSignal(kOnClickEvent, &impl_->onclick_event_);
   RegisterSignal(kOnDblClickEvent, &impl_->ondblclick_event_);
   RegisterSignal(kOnRClickEvent, &impl_->onrclick_event_);
-  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);  
+  RegisterSignal(kOnRDblClickEvent, &impl_->onrdblclick_event_);
   RegisterSignal(kOnDragDropEvent, &impl_->ondragdrop_event_);
   RegisterSignal(kOnDragOutEvent, &impl_->ondragout_event_);
   RegisterSignal(kOnDragOverEvent, &impl_->ondragover_event_);
@@ -1225,8 +1187,12 @@ void BasicElement::Layout() {
   impl_->Layout();
 }
 
-const CanvasInterface *BasicElement::Draw(bool *changed) {
-  return impl_->Draw(changed);
+void BasicElement::Draw(CanvasInterface *canvas) {
+  impl_->Draw(canvas);
+}
+
+void BasicElement::DrawChildren(CanvasInterface *canvas) {
+  impl_->DrawChildren(canvas);
 }
 
 void BasicElement::ClearPositionChanged() {

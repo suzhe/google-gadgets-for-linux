@@ -49,6 +49,12 @@ class CairoCanvas : public CanvasInterface {
    */
   CairoCanvas(double zoom, size_t w, size_t h, cairo_format_t fmt);
 
+  /**
+   * Creates a CairoCanvas object with specified cairo context and zoom factor.
+   * The zoom factor will be applied to the cairo context.
+   */
+  CairoCanvas(cairo_t *cr, double zoom, size_t w, size_t h);
+
   virtual ~CairoCanvas();
 
   virtual void Destroy();

@@ -30,6 +30,7 @@
 #include "texture.h"
 #include "scriptable_event.h"
 #include "view.h"
+#include "graphics_interface.h"
 
 namespace ggadget {
 
@@ -278,12 +279,10 @@ void ComboBoxElement::MarkRedraw() {
   impl_->MarkRedraw();
 }
 
-void ComboBoxElement::DoDraw(CanvasInterface *canvas,
-                             const CanvasInterface *children_canvas) {
+void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
   bool expanded = impl_->listbox_->IsVisible();
   double item_height = impl_->listbox_->GetItemPixelHeight();
   double elem_width = GetPixelWidth();
-  bool c; // Used for drawing.
 
   if (impl_->background_) {
     // Crop before drawing background.
@@ -296,16 +295,12 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
   }
 
   if (impl_->edit_) {
-    const CanvasInterface *editbox = impl_->edit_->Draw(&c);
-    canvas->DrawCanvas(.0, .0, editbox);
+    impl_->edit_->Draw(canvas);
   } else {
     // Draw item
     ItemElement *item = impl_->listbox_->GetSelectedItem();
     if (item) {
       item->SetDrawOverlay(false);
-      const CanvasInterface *item_canvas = item->Draw(&c);
-      item->SetDrawOverlay(true);
-
       // Support rotations, masks, etc. here. Windows version supports these,
       // but is this really intended?
       double rotation = item->GetRotation();
@@ -319,16 +314,12 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
         canvas->TranslateCoordinates(-pinx, -piny);
       }
 
-      const CanvasInterface *mask = item->GetMaskCanvas();
-      if (mask) {
-        canvas->DrawCanvasWithMask(0, 0, item_canvas, 0, 0, mask);
-      } else {
-        canvas->DrawCanvas(.0, .0, item_canvas);
-      }
+      item->Draw(canvas);
 
       if (transform) {
         canvas->PopState();
       }
+      item->SetDrawOverlay(true);
     }
   }
 
@@ -345,8 +336,8 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas,
 
   // Draw listbox
   if (expanded) {
-    const CanvasInterface *listbox = impl_->listbox_->Draw(&c);
-    canvas->DrawCanvas(0, item_height, listbox);
+    canvas->TranslateCoordinates(0, item_height);
+    impl_->listbox_->Draw(canvas);
   }
 }
 

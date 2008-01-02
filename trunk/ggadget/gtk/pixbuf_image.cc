@@ -35,8 +35,10 @@ namespace gtk {
 class PixbufImage::Impl {
  public:
   Impl(const CairoGraphics *graphics, const std::string &data, bool is_mask)
-    : is_mask_(is_mask), width_(0), height_(0), pixbuf_(NULL),
-      canvas_(NULL), color_multiply_(1, 1, 1) {
+    : zoom_(graphics->GetZoom()), is_mask_(is_mask),
+      width_(0), height_(0), pixbuf_(NULL),
+      canvas_(NULL), color_multiply_(1, 1, 1),
+      on_zoom_connection_(NULL) {
     // No zoom for PixbufImage.
     pixbuf_ = LoadPixbufFromData(data);
     if (pixbuf_) {
@@ -48,30 +50,42 @@ class PixbufImage::Impl {
         GdkPixbuf *a_pixbuf = gdk_pixbuf_add_alpha(pixbuf_, TRUE, 0, 0, 0);
         g_object_unref(pixbuf_);
         pixbuf_ = a_pixbuf;
-        // Initialize the canvas.
-        (void) GetCanvas();
-        // It's ok to free pixbuf data for a mask, because it will be
-        // readonly afterwards.
-        g_object_unref(pixbuf_);
-        pixbuf_ = NULL;
       }
+      on_zoom_connection_ =
+          graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
     }
   }
 
   ~Impl() {
-    if (pixbuf_) g_object_unref(pixbuf_);
-    if (canvas_) canvas_->Destroy();
+    if (pixbuf_)
+      g_object_unref(pixbuf_);
+    if (canvas_)
+      canvas_->Destroy();
+    if (on_zoom_connection_)
+      on_zoom_connection_->Disconnect();
   }
 
   bool IsValid() const {
     return pixbuf_ || canvas_;
   }
 
+  void OnZoom(double zoom) {
+    if (zoom_ != zoom && zoom > 0) {
+      zoom_ = zoom;
+
+      // Destroy the canvas so that it'll be recreated again with new zoom
+      // factor when calling GetCanvas().
+      if (canvas_) {
+        canvas_->Destroy();
+        canvas_ = NULL;
+      }
+    }
+  }
+
   const CanvasInterface *GetCanvas() {
     if (!canvas_ && pixbuf_) {
       cairo_format_t fmt = (is_mask_ ? CAIRO_FORMAT_A8 : CAIRO_FORMAT_ARGB32);
-      // No zoom for Image canvas.
-      canvas_ = new CairoCanvas(1, width_, height_, fmt);
+      canvas_ = new CairoCanvas(zoom_, width_, height_, fmt);
       if (canvas_) {
         // Draw the image onto the canvas.
         cairo_t *cr = canvas_->GetContext();
@@ -149,6 +163,7 @@ class PixbufImage::Impl {
     return tag_;
   }
 
+  double zoom_;
   bool is_mask_;
   size_t width_;
   size_t height_;
@@ -156,6 +171,7 @@ class PixbufImage::Impl {
   CairoCanvas *canvas_;
   Color color_multiply_;
   std::string tag_;
+  Connection *on_zoom_connection_;
 };
 
 PixbufImage::PixbufImage(const CairoGraphics *graphics,

@@ -72,14 +72,12 @@ class Elements : public ScriptableHelper<ElementsInterface> {
   void Layout();
 
   /**
-   * Draw all the elements in this object onto a canvas that has the same size
-   * as that of the parent.
-   * @param[out] changed @c false if the returned canvas is unchanged, @c true
-   *     otherwise.
-   * @return canvas with the elements drawn. @c NULL if
-   *     <code>GetCount() == 0</code>.
+   * Draw all the elements in this object onto a specified canvas.
+   * The canvas shall already be prepared to be drawn directly without any
+   * transformation, except the opacity and clip region.
+   * @param canvas A canvas on which all elements shall be drawn.
    */
-  const CanvasInterface *Draw(bool *changed);
+  void Draw(CanvasInterface *canvas);
 
   /**
    * Handler of the mouse events.

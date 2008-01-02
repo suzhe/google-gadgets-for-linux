@@ -50,9 +50,9 @@ TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)
 
 all-local:
-	(if test x"$(srcdir)" != x"$(builddir)"; then \
+	(if test x"$(abs_srcdir)" != x"$(abs_builddir)"; then \
 	  for i in $(TEST_IMAGES); do \
-	    cp $(srcdir)/"$$i" $(builddir)/; \
+	    cp $(abs_srcdir)/"$$i" $(abs_builddir)/; \
 	  done; \
 	fi)
 

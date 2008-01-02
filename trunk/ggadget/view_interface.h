@@ -123,13 +123,13 @@ class ViewInterface : public ScriptableInterface {
   virtual int GetHeight() const = 0;
 
   /**
-   * Draws the current view to a canvas. The caller does NOT own this canvas
-   * and should not free it.
-   * @param[out] changed True if the returned canvas is different from that
-   *   of the last call, false otherwise.
-   * @return A canvas suitable for drawing. This should never be NULL.
+   * Draws the current view to a canvas.
+   * The specified canvas shall already be prepared to be drawn directly
+   * without any transformation.
+   * @param canvas A canvas for the view to be drawn on. It shall have the same
+   * zooming factory as the whole gadget.
    */
-  virtual const CanvasInterface *Draw(bool *changed) = 0;
+  virtual void Draw(CanvasInterface *canvas) = 0;
 
   /**
    * Indicates what happens when the user attempts to resize the gadget using

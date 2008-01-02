@@ -79,22 +79,35 @@ class CairoCanvas::Impl {
     if (!cr_)
       DLOG("Failed to create cairo context.");
 
-    connection_ =
+    on_zoom_connection_ =
         graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
   }
 
   Impl(double zoom, size_t w, size_t h, cairo_format_t fmt)
     : cr_(NULL), width_(w), height_(h), opacity_(1),
-      zoom_(zoom), format_(fmt), connection_(NULL) {
+      zoom_(zoom), format_(fmt), on_zoom_connection_(NULL) {
     cr_ = CreateContext(w, h, zoom_, fmt);
 
     if (!cr_)
       DLOG("Failed to create cairo context.");
   }
 
+  Impl(cairo_t *cr, double zoom, size_t w, size_t h)
+    : cr_(cr), width_(w), height_(h), opacity_(1),
+      zoom_(zoom), format_(CAIRO_FORMAT_ARGB32),
+      on_zoom_connection_(NULL) {
+    ASSERT(cr_);
+    cairo_reference(cr_);
+    cairo_scale(cr_, zoom, zoom);
+    cairo_new_path(cr_);
+    cairo_save(cr_);
+  }
+
   ~Impl() {
-    if (cr_) cairo_destroy(cr_);
-    if (connection_) connection_->Disconnect();
+    if (cr_)
+      cairo_destroy(cr_);
+    if (on_zoom_connection_)
+      on_zoom_connection_->Disconnect();
   }
 
   cairo_t *CreateContext(size_t w, size_t h, double zoom, cairo_format_t fmt) {
@@ -205,6 +218,13 @@ class CairoCanvas::Impl {
     return NULL;
   }
 
+  PangoLayout *CreatePangoLayout() {
+    // Pango layout must be created with a cairo context that isn't scaled at
+    // all. Otherwise, some text layout behavior will be wrong.
+    CairoCanvas canvas(1.0, 1, 1, CAIRO_FORMAT_ARGB32);
+    return pango_cairo_create_layout(canvas.GetContext());
+  }
+
   bool DrawTextInternal(double x, double y, double width,
                         double height, const char *text,
                         const FontInterface *f,
@@ -221,7 +241,7 @@ class CairoCanvas::Impl {
     cairo_clip(cr_);
 
     const CairoFont *font = down_cast<const CairoFont*>(f);
-    PangoLayout *layout = pango_cairo_create_layout(cr_);
+    PangoLayout *layout = CreatePangoLayout();
     pango_layout_set_text(layout, text, -1);
     pango_layout_set_font_description(layout, font->GetFontDescription());
     SetPangoLayoutAttrFromTextFlags(layout, text_flags, width);
@@ -419,7 +439,7 @@ class CairoCanvas::Impl {
   double opacity_;
   double zoom_;
   cairo_format_t format_;
-  Connection *connection_;
+  Connection *on_zoom_connection_;
   std::stack<double> opacity_stack_;
 };
 
@@ -430,6 +450,10 @@ CairoCanvas::CairoCanvas(const CairoGraphics *graphics,
 
 CairoCanvas::CairoCanvas(double zoom, size_t w, size_t h, cairo_format_t fmt)
   : impl_(new Impl(zoom, w, h, fmt)) {
+}
+
+CairoCanvas::CairoCanvas(cairo_t *cr, double zoom, size_t w, size_t h)
+  : impl_(new Impl(cr, zoom, w, h)) {
 }
 
 CairoCanvas::~CairoCanvas() {
@@ -591,8 +615,8 @@ bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
     // CairoGraphics supports only uniform scaling in both X, Y, but due to
     // rounding differences, we need to compute the exact scaling individually
     // for X and Y.
-    double cx = sw / swidth;
-    double cy = sh / sheight;
+    double cx = double(sw) / swidth;
+    double cy = double(sh) / sheight;
     cairo_scale(impl_->cr_, cx, cy);
   }
 
@@ -613,29 +637,50 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
 
   const CairoCanvas *cmask =  down_cast<const CairoCanvas *>(mask);
   const CairoCanvas *cimg =  down_cast<const CairoCanvas *>(img);
-  // In this implementation, only non-mask canvases may have surface dimensions
-  // different from the canvas dimensions, so we only need to check img.
+
   cairo_surface_t *simg = cimg->GetSurface();
   cairo_surface_t *smask = cmask->GetSurface();
-  int sheight = cairo_image_surface_get_height(simg);
-  int swidth = cairo_image_surface_get_width(simg);
-  size_t w = cimg->GetWidth();
-  size_t h = cimg->GetHeight();
-  if (size_t(sheight) == h && size_t(swidth) == w) {
+  int simg_h = cairo_image_surface_get_height(simg);
+  int simg_w = cairo_image_surface_get_width(simg);
+  int smask_h = cairo_image_surface_get_height(smask);
+  int smask_w = cairo_image_surface_get_width(smask);
+  size_t img_w = cimg->GetWidth();
+  size_t img_h = cimg->GetHeight();
+  size_t mask_w = cmask->GetWidth();
+  size_t mask_h = cmask->GetHeight();
+
+  CairoCanvas *new_mask = NULL;
+  // If the target opacity is not equal to 1, then we need to adjust the mask
+  // with the opacity.
+  if (impl_->opacity_ != 1) {
+    new_mask = new CairoCanvas(cmask->impl_->zoom_, mask_w, mask_h,
+                               cmask->impl_->format_);
+    new_mask->MultiplyOpacity(impl_->opacity_);
+    new_mask->DrawCanvas(0, 0, mask);
+    smask = new_mask->GetSurface();
+  }
+
+  if (size_t(simg_h) == img_h && size_t(simg_w) == img_w &&
+      size_t(smask_h) == mask_h && size_t(smask_w) == mask_w) {
     // no scaling needed
     cairo_set_source_surface(impl_->cr_, simg, x, y);
     cairo_mask_surface(impl_->cr_, smask, mx, my);
   } else {
-    double cx = double(w) / swidth;
-    double cy = double(h) / sheight;
+    double img_cx = double(img_w) / simg_w;
+    double img_cy = double(img_h) / simg_h;
+    double mask_cx = double(mask_w) / smask_w;
+    double mask_cy = double(mask_h) / smask_h;
 
     cairo_save(impl_->cr_);
-    cairo_scale(impl_->cr_, cx, cy);
-    cairo_set_source_surface(impl_->cr_, simg, x / cx, y / cy);
-    cairo_scale(impl_->cr_, 1 / cx, 1 / cy);
-    cairo_mask_surface(impl_->cr_, smask, mx, my);
+    cairo_scale(impl_->cr_, img_cx, img_cy);
+    cairo_set_source_surface(impl_->cr_, simg, x / img_cx, y / img_cy);
+    cairo_scale(impl_->cr_, mask_cx / img_cx, mask_cy / img_cy);
+    cairo_mask_surface(impl_->cr_, smask, mx / mask_cx, my / mask_cy);
     cairo_restore(impl_->cr_);
   }
+
+  if (new_mask)
+    new_mask->Destroy();
 
   return true;
 }
@@ -676,8 +721,8 @@ bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
     // CairoGraphics supports only uniform scaling in both X, Y, but due to
     // rounding differences, we need to compute the exact scaling individually
     // for X and Y.
-    double cx = sw / swidth;
-    double cy = sh / sheight;
+    double cx = double(sw) / swidth;
+    double cy = double(sh) / sheight;
     cairo_scale(impl_->cr_, cx, cy);
     cairo_set_source(impl_->cr_, pattern);
     cairo_scale(impl_->cr_, 1 / cx, 1 / cy);
@@ -707,7 +752,7 @@ bool CairoCanvas::GetTextExtents(const char *text, const FontInterface *f,
   }
 
   const CairoFont *font = down_cast<const CairoFont*>(f);
-  PangoLayout *layout = pango_cairo_create_layout(impl_->cr_);
+  PangoLayout *layout = impl_->CreatePangoLayout();
   pango_layout_set_text(layout, text, -1);
   pango_layout_set_font_description(layout, font->GetFontDescription());
 

@@ -270,11 +270,8 @@ Connection *EditElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }
 
-void EditElement::DoDraw(CanvasInterface *canvas,
-                         const CanvasInterface *children_canvas) {
-  bool modified;
-  CanvasInterface *content = impl_->edit_->Draw(&modified);
-  canvas->DrawCanvas(0, 0, content);
+void EditElement::DoDraw(CanvasInterface *canvas) {
+  impl_->edit_->Draw(canvas);
   DrawScrollbar(canvas);
 }
 

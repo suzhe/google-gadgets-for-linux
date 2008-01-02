@@ -46,7 +46,7 @@ class GtkEdit : public EditInterface {
  public:
   GtkEdit(GtkViewHost *host, int width, int height);
   virtual void Destroy();
-  virtual CanvasInterface *Draw(bool *modified);
+  virtual void Draw(CanvasInterface *canvas);
   virtual EventResult OnMouseEvent(const MouseEvent &event);
   virtual EventResult OnKeyEvent(const KeyboardEvent &event);
   virtual void FocusIn();
@@ -318,8 +318,11 @@ class GtkEdit : public EditInterface {
   bool cursor_visible_;
   /** whether the edit control is readonly */
   bool readonly_;
-  /** Indicates if the edit control has been modified since last draw */
-  bool modified_;
+  /**
+   * Indicates if the content of the edit control has been modified
+   * since last draw
+   */
+  bool content_modified_;
 
   /** The font family of the text */
   std::string font_family_;
