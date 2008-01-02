@@ -265,11 +265,9 @@ void ScrollingElement::SelfCoordToChildCoord(const BasicElement *child,
 
 void ScrollingElement::DrawScrollbar(CanvasInterface *canvas) {
   if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
-    bool c;
-    const CanvasInterface *scrollbar = impl_->scrollbar_->Draw(&c);
-    canvas->DrawCanvas(impl_->scrollbar_->GetPixelX(),
-                       impl_->scrollbar_->GetPixelY(),
-                       scrollbar);
+    canvas->TranslateCoordinates(impl_->scrollbar_->GetPixelX(),
+                                 impl_->scrollbar_->GetPixelY());
+    impl_->scrollbar_->Draw(canvas);
   }
 }
 

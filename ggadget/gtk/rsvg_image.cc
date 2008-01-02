@@ -48,15 +48,18 @@ class RsvgImage::Impl {
       rsvg_handle_get_dimensions(rsvg_, &dim);
       width_ = dim.width;
       height_ = dim.height;
-      connection_ =
+      on_zoom_connection_ =
         graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
     }
   }
 
   ~Impl() {
-    if (rsvg_) g_object_unref(rsvg_);
-    if (canvas_) canvas_->Destroy();
-    if (connection_) connection_->Disconnect();
+    if (rsvg_)
+      g_object_unref(rsvg_);
+    if (canvas_)
+      canvas_->Destroy();
+    if (on_zoom_connection_)
+      on_zoom_connection_->Disconnect();
   }
 
   bool IsValid() const {
@@ -164,7 +167,7 @@ class RsvgImage::Impl {
   CairoCanvas *canvas_;
   Color color_multiply_;
   double zoom_;
-  Connection *connection_;
+  Connection *on_zoom_connection_;
   std::string tag_;
 };
 

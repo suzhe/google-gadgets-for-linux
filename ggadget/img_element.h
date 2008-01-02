@@ -72,8 +72,7 @@ class ImgElement : public BasicElement {
                                       const char *name);
 
  protected:
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
+  virtual void DoDraw(CanvasInterface *canvas);
   virtual void GetDefaultSize(double *width, double *height) const;
 
  private:

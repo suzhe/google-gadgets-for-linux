@@ -50,8 +50,7 @@ const TextFrame *LabelElement::GetTextFrame() const {
   return &impl_->text_;
 }
 
-void LabelElement::DoDraw(CanvasInterface *canvas,
-                        const CanvasInterface *children_canvas) {
+void LabelElement::DoDraw(CanvasInterface *canvas) {
   impl_->text_.Draw(canvas, 0, 0, GetPixelWidth(), GetPixelHeight());
 }
 

@@ -59,16 +59,16 @@ class ListBoxElement : public DivElement {
   const ItemElement *GetSelectedItem() const;
   void SetSelectedItem(ItemElement *item);
 
-  /** 
-   * AppendSelection differs from SetSelectedItem in that this method allows  
+  /**
+   * AppendSelection differs from SetSelectedItem in that this method allows
    * multiselect if it is enabled.
    * This method is not exposed to the script engine.
    */
   void AppendSelection(ItemElement *item);
 
-  /** 
+  /**
    * Selects all items in a range from the first selected item to the given
-   * parameter if multiselect is enabled. Otherwise behaves like 
+   * parameter if multiselect is enabled. Otherwise behaves like
    * SetSelectedItem.
    * This method is not exposed to the script engine.
    */
@@ -110,20 +110,20 @@ class ListBoxElement : public DivElement {
   bool IsMultiSelect() const;
   void SetMultiSelect(bool multiselect);
 
-  /** 
+  /**
    * Creates an Item element with a single Label child with the specified text.
    * @return true on success, false otherwise.
    */
   bool AppendString(const char *str);
 
-  /** 
+  /**
    * Creates an Item element with a single Label child with the specified text,
    * at the specified index.
    * @return true on success, false otherwise.
    */
   bool InsertStringAt(const char *str, int index);
 
-  /** 
+  /**
    * Searches for the lowest-indexed Item element that has one Label child
    * with the specified text, and remove the element if found.
    */

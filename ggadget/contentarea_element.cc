@@ -640,8 +640,7 @@ void ContentAreaElement::Layout() {
   --recurse_depth;
 }
 
-void ContentAreaElement::DoDraw(CanvasInterface *canvas,
-                                const CanvasInterface *children_canvas) {
+void ContentAreaElement::DoDraw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
   DrawScrollbar(canvas);
 }

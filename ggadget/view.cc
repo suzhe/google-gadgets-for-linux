@@ -168,7 +168,7 @@ class View::Impl {
       debug_mode_(debug_mode),
       width_(0), height_(0),
       // TODO: Make sure the default value.
-      resizable_(ViewInterface::RESIZABLE_TRUE),
+      resizable_(ViewInterface::RESIZABLE_ZOOM),
       show_caption_always_(false),
       focused_element_(NULL),
       mouseover_element_(NULL),
@@ -179,7 +179,6 @@ class View::Impl {
       content_area_element_(NULL),
       posting_event_element_(NULL),
       popup_element_(NULL),
-      view_canvas_(NULL),
       post_event_token_(0),
       mark_redraw_token_(0),
       draw_queued_(false),
@@ -190,11 +189,6 @@ class View::Impl {
     ASSERT(event_stack_.empty());
     ASSERT(death_detected_elements_.empty());
     on_destroy_signal_.Emit(0, NULL);
-
-    if (view_canvas_) {
-      view_canvas_->Destroy();
-      view_canvas_ = NULL;
-    }
   }
 
   template <typename T>
@@ -812,82 +806,43 @@ class View::Impl {
     return SetSize(width_ + width, height_ + height);
   }
 
-  const CanvasInterface *Draw(bool *changed) {
+  void Draw(CanvasInterface *canvas) {
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
 
-    *changed = false;
+    canvas->PushState();
+    children_.Draw(canvas);
 
-    bool children_changed = false;
-    bool popup_changed = false;
-    bool view_changed = false;
-    const CanvasInterface *children_canvas = NULL;
-    const CanvasInterface *popup_canvas = NULL;
-
-    children_canvas = children_.Draw(&children_changed);
-
-    if (popup_element_)
-      popup_canvas = popup_element_->Draw(&popup_changed);
-
-    if (!view_canvas_ ||
-        static_cast<size_t>(width_) != view_canvas_->GetWidth() ||
-        static_cast<size_t>(height_) != view_canvas_->GetHeight()) {
-      if (view_canvas_)
-        view_canvas_->Destroy();
-      view_canvas_ = host_->GetGraphics()->NewCanvas(width_, height_);
-      view_changed = true;
-    }
-
-    if (popup_canvas && popup_element_->IsPositionChanged()) {
-      popup_changed = true;
+    if (popup_element_) {
       popup_element_->ClearPositionChanged();
-    }
+      std::vector<ElementInterface *> elements;
+      ElementInterface *e = popup_element_;
+      for (; e != NULL; e = e->GetParentElement())
+        elements.push_back(e);
 
-    *changed = children_changed || popup_changed || view_changed;
-
-    if (*changed) {
-      view_canvas_->ClearCanvas();
-
-      if (children_canvas) {
-        view_canvas_->DrawCanvas(0, 0, children_canvas);
-      }
-
-      if (popup_canvas) {
-        std::vector<ElementInterface *> elements;
-        for (ElementInterface *e = popup_element_; e != NULL; e = e->GetParentElement()) {
-          elements.push_back(e);
-        }
-
-        for (std::vector<ElementInterface *>::reverse_iterator it = elements.rbegin();
-             it < elements.rend(); ++it) {
-          ElementInterface *element = *it;
-          if (element->GetRotation() == .0) {
-            view_canvas_->TranslateCoordinates(
-                element->GetPixelX() - element->GetPixelPinX(),
-                element->GetPixelY() - element->GetPixelPinY());
-          } else {
-            view_canvas_->TranslateCoordinates(element->GetPixelX(),
-                                         element->GetPixelY());
-            view_canvas_->RotateCoordinates(
-                DegreesToRadians(element->GetRotation()));
-            view_canvas_->TranslateCoordinates(-element->GetPixelPinX(),
-                                         -element->GetPixelPinY());
-          }
-        }
-
-        const CanvasInterface *mask = popup_element_->GetMaskCanvas();
-        if (mask) {
-          view_canvas_->DrawCanvasWithMask(.0, .0, popup_canvas, .0, .0, mask);
+      std::vector<ElementInterface *>::reverse_iterator it = elements.rbegin();
+      for (; it < elements.rend(); ++it) {
+        ElementInterface *element = *it;
+        if (element->GetRotation() == .0) {
+          canvas->TranslateCoordinates(
+              element->GetPixelX() - element->GetPixelPinX(),
+              element->GetPixelY() - element->GetPixelPinY());
         } else {
-          view_canvas_->DrawCanvas(.0, .0, popup_canvas);
+          canvas->TranslateCoordinates(element->GetPixelX(),
+                                       element->GetPixelY());
+          canvas->RotateCoordinates(
+              DegreesToRadians(element->GetRotation()));
+          canvas->TranslateCoordinates(-element->GetPixelPinX(),
+                                       -element->GetPixelPinY());
         }
       }
-    }
 
-    return view_canvas_;
+      popup_element_->Draw(canvas);
+    }
+    canvas->PopState();
   }
 
   BasicElement *GetElementByName(const char *name) {
@@ -1053,7 +1008,6 @@ class View::Impl {
   PostedEvents posted_events_;
   BasicElement *posting_event_element_;
   BasicElement *popup_element_;
-  CanvasInterface *view_canvas_;
   int post_event_token_;
   int mark_redraw_token_;
   bool draw_queued_;
@@ -1104,8 +1058,8 @@ int View::GetHeight() const {
   return impl_->height_;
 }
 
-const CanvasInterface *View::Draw(bool *changed) {
-  return impl_->Draw(changed);
+void View::Draw(CanvasInterface *canvas) {
+  impl_->Draw(canvas);
 }
 
 void View::QueueDraw() {

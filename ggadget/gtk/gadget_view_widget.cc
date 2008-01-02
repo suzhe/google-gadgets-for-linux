@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cairo.h>
 
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/event.h>
 #include "gadget_view_widget.h"
@@ -163,20 +164,20 @@ static gboolean GadgetViewWidget_expose(GtkWidget *widget,
     cairo_set_operator(cr, op);
   }
 
-  bool changed;
   // OK to downcast here since the canvas is created using GraphicsInterface
   // passed from SimpleHost.
-  const CairoCanvas *canvas =
-    ggadget::down_cast<const CairoCanvas *>(gvw->view->Draw(&changed));
+  CairoCanvas *canvas = ggadget::down_cast<CairoCanvas*>(
+      gvw->host->GetGraphics()->NewCanvas(gvw->view->GetWidth(),
+                                          gvw->view->GetHeight()));
 
   // view->Draw may return NULL if it's width or height is 0.
   if (canvas) {
+    gvw->view->Draw(canvas);
     cairo_surface_t *surface = canvas->GetSurface();
-
     cairo_set_source_surface(cr, surface, 0., 0.);
     cairo_paint(cr);
 
-    if (changed && gvw->useshapemask) {
+    if (gvw->useshapemask) {
       // Set the window shape to be irregular.
       int canvasw = cairo_image_surface_get_width(surface);
       int canvash = cairo_image_surface_get_height(surface);
@@ -208,6 +209,7 @@ static gboolean GadgetViewWidget_expose(GtkWidget *widget,
         DLOG("Gadget is not inside toplevel window.");
       }
     }
+    canvas->Destroy();
   }
 
   cairo_destroy(cr);

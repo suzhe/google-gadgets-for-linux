@@ -35,7 +35,7 @@ class CheckBoxElement : public BasicElement {
   virtual ~CheckBoxElement();
 
  public:
-  /** Lets this button use default images. */ 
+  /** Lets this button use default images. */
   void UseDefaultImages();
 
   /** Gets and sets the file name of default checkbox image. */
@@ -90,8 +90,7 @@ class CheckBoxElement : public BasicElement {
                                            View *view, const char *name);
 
  protected:
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
+  virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 

@@ -105,8 +105,7 @@ class ScrollBarElement : public BasicElement {
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
  protected:
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
+  virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   friend class ScrollingElement;
 

@@ -39,7 +39,7 @@ class EditInterface {
   virtual void Destroy() = 0;
 
   /** Draw the edit control */
-  virtual CanvasInterface *Draw(bool *modified) = 0;
+  virtual void Draw(CanvasInterface *canvas) = 0;
 
   /** Handler of mouse event */
   virtual EventResult OnMouseEvent(const MouseEvent &event) = 0;

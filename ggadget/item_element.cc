@@ -85,8 +85,7 @@ ItemElement::~ItemElement() {
   impl_ = NULL;
 }
 
-void ItemElement::DoDraw(CanvasInterface *canvas,
-                         const CanvasInterface *children_canvas) {
+void ItemElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->background_) {
     impl_->background_->Draw(canvas);
   }
@@ -105,9 +104,7 @@ void ItemElement::DoDraw(CanvasInterface *canvas,
     }
   }
 
-  if (children_canvas) {
-    canvas->DrawCanvas(0, 0, children_canvas);
-  }
+  DrawChildren(canvas);
 
   if (impl_->drawoverlay_ && impl_->parent_->HasItemSeparator()) {
     const Texture *item_separator = impl_->parent_->GetItemSeparatorTexture();

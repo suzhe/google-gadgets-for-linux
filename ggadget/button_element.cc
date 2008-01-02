@@ -73,8 +73,7 @@ ButtonElement::~ButtonElement() {
   impl_ = NULL;
 }
 
-void ButtonElement::DoDraw(CanvasInterface *canvas,
-                           const CanvasInterface *children_canvas) {
+void ButtonElement::DoDraw(CanvasInterface *canvas) {
   ImageInterface *img = NULL;
   if (!IsEnabled()) {
     img = impl_->disabledimage_;

@@ -202,8 +202,7 @@ ProgressBarElement::~ProgressBarElement() {
   impl_ = NULL;
 }
 
-void ProgressBarElement::DoDraw(CanvasInterface *canvas,
-                           const CanvasInterface *children_canvas) {
+void ProgressBarElement::DoDraw(CanvasInterface *canvas) {
   // Drawing order: empty, full, thumb.
   // Empty and full images only stretch in one direction, and only if
   // element size is greater than that of the image. Otherwise the image is

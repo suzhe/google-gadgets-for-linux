@@ -99,8 +99,7 @@ class ComboBoxElement : public BasicElement {
 
  protected:
   virtual void Layout();
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
+  virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 

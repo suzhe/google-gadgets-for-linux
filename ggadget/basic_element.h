@@ -194,13 +194,17 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual void Layout();
 
   /**
-   * Draws the current element to a canvas. The caller does NOT own this canvas
-   * and should not free it.
-   * @param[out] changed True if the returned canvas is different from that
-   *   of the last call, false otherwise.
-   * @return A canvas suitable for drawing. NULL if element is not visible.
+   * Draws the element to a specified canvas.
+   * The canvas should already be prepared for this element to be drawn
+   * directly without any transformation, except the opacity.
+   * This function is intent to be called by the element's parent.
+   * Derived classes shall override DoDraw() function to perform the real draw
+   * task.
+   * The element shall not clear the whole canvas, because it might be shared
+   * among all elements.
+   * @param canvas A canvas on which the content of the element shall be drawn.
    */
-  const CanvasInterface *Draw(bool *changed);
+  void Draw(CanvasInterface *canvas);
 
   /**
    * Handler of the mouse events. Normally subclasses should not override this
@@ -274,7 +278,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
 
   /**
-   * Called when this element is no longer the current popup element. 
+   * Called when this element is no longer the current popup element.
    * (There's no need for a popup on message right now.)
    */
   virtual void OnPopupOff();
@@ -394,15 +398,21 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   Connection *ConnectOnSizeEvent(Slot0<void> *handler);
 
  protected:
+  /**
+   * Draws all children elements onto the specified canvas.
+   * This function is intend to be called inside DoDraw() function of derived
+   * class to draw its children elements.
+   */
+  void DrawChildren(CanvasInterface *canvas);
 
   /**
    * Draws the element onto the canvas.
-   * To be implemented by subclasses.
+   * To be implemented by subclasses. If the element has children,
+   * DrawChildren() function shall be called inside this function to draw
+   * all children.
    * @param canvas the canvas to draw the element on.
-   * @param children_canvas the canvas containing composited children.
    */
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas) = 0;
+  virtual void DoDraw(CanvasInterface *canvas) = 0;
 
   /** To be overriden by a subclass if it need to handle mouse events. */
   virtual EventResult HandleMouseEvent(const MouseEvent &event) {

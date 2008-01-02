@@ -34,9 +34,6 @@ class Elements::Impl {
   Impl(ElementFactoryInterface *factory, BasicElement *owner, View *view)
       : factory_(factory), owner_(owner), view_(view),
         width_(.0), height_(.0),
-        canvas_(NULL),
-        count_changed_(true),
-        has_popup_(false),
         scrollable_(false) {
     ASSERT(factory);
     ASSERT(view);
@@ -44,10 +41,6 @@ class Elements::Impl {
 
   ~Impl() {
     RemoveAllElements();
-    if (canvas_) {
-      canvas_->Destroy();
-      canvas_ = NULL;
-    }
   }
 
   int GetCount() {
@@ -61,7 +54,6 @@ class Elements::Impl {
       return NULL;
     if (view_->OnElementAdd(e)) {
       children_.push_back(e);
-      count_changed_ = true;
     } else {
       delete e;
       e = NULL;
@@ -80,7 +72,6 @@ class Elements::Impl {
       Children::iterator ite = std::find(children_.begin(), children_.end(),
                                          before);
       children_.insert(ite, e);
-      count_changed_ = true;
     } else {
       delete e;
       e = NULL;
@@ -96,7 +87,6 @@ class Elements::Impl {
     view_->OnElementRemove(*ite);
     delete *ite;
     children_.erase(ite);
-    count_changed_ = true;
     return true;
   }
 
@@ -108,7 +98,6 @@ class Elements::Impl {
     }
     Children v;
     children_.swap(v);
-    count_changed_ = true;
   }
 
   ElementInterface *GetItem(const Variant &index_or_name) {
@@ -277,7 +266,7 @@ class Elements::Impl {
         }
       }
 
-      if (need_update_extents || !canvas_) {
+      if (need_update_extents) {
         width_ = height_ = 0;
         for (int i = 0; i < child_count; i++) {
           UpdateChildExtent(children_[i], &width_, &height_);
@@ -293,110 +282,47 @@ class Elements::Impl {
     }
   }
 
-  const CanvasInterface *Draw(bool *changed) {
-    *changed = count_changed_;
-    count_changed_ = false;
-
-    if (children_.empty())
-      return NULL;
-
-    size_t new_canvas_width = static_cast<size_t>(ceil(width_));
-    size_t new_canvas_height = static_cast<size_t>(ceil(height_));
-    if (!canvas_ || new_canvas_width != canvas_->GetWidth() ||
-        new_canvas_height != canvas_->GetHeight()) {
-      *changed = true;
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
-
-      if (new_canvas_width == 0 || new_canvas_height == 0)
-        return NULL;
-
-      const GraphicsInterface *gfx = view_->GetGraphics();
-      canvas_ = gfx->NewCanvas(new_canvas_width, new_canvas_height);
-      if (!canvas_) {
-        DLOG("Error: unable to create canvas.");
-        return NULL;
-      }
-    }
+  void Draw(CanvasInterface *canvas) {
+    ASSERT(canvas);
+    if (children_.empty() || !width_ || !height_)
+      return;
 
     // Draw children into temp array.
     int child_count = children_.size();
-    const CanvasInterface **children_canvas =
-        new const CanvasInterface*[child_count];
 
     BasicElement *popup = view_->GetPopupElement();
     for (int i = 0; i < child_count; i++) {
       BasicElement *element = children_[i];
-      bool has_popup = (element == popup);
-      if (has_popup) {
-        children_canvas[i] = NULL; // Skip the popup element.
+      // Doesn't draw popup element here.
+      if (element == popup) continue;
+
+      canvas->PushState();
+      if (element->GetRotation() == .0) {
+        canvas->TranslateCoordinates(
+            element->GetPixelX() - element->GetPixelPinX(),
+            element->GetPixelY() - element->GetPixelPinY());
       } else {
-        bool child_changed = false;
-        children_canvas[i] = element->Draw(&child_changed);
-        if (element->IsPositionChanged()) {
-          element->ClearPositionChanged();
-          child_changed = true;
-        }
-        *changed = *changed || child_changed;
+        canvas->TranslateCoordinates(element->GetPixelX(),
+                                      element->GetPixelY());
+        canvas->RotateCoordinates(
+            DegreesToRadians(element->GetRotation()));
+        canvas->TranslateCoordinates(-element->GetPixelPinX(),
+                                     -element->GetPixelPinY());
       }
 
-      if (has_popup != has_popup_) {
-        *changed = true;
-        has_popup_ = has_popup;
-      }
+      element->Draw(canvas);
+      canvas->PopState();
     }
 
-    if (*changed) {
-      canvas_->ClearCanvas();
-      canvas_->IntersectRectClipRegion(0., 0., width_, height_);
-      for (int i = 0; i < child_count; i++) {
-        if (children_canvas[i]) {
-          canvas_->PushState();
-
-          BasicElement *element = children_[i];
-          if (element->GetRotation() == .0) {
-            canvas_->TranslateCoordinates(
-                element->GetPixelX() - element->GetPixelPinX(),
-                element->GetPixelY() - element->GetPixelPinY());
-          } else {
-            canvas_->TranslateCoordinates(element->GetPixelX(),
-                                          element->GetPixelY());
-            canvas_->RotateCoordinates(
-                DegreesToRadians(element->GetRotation()));
-            canvas_->TranslateCoordinates(-element->GetPixelPinX(),
-                                          -element->GetPixelPinY());
-          }
-
-          const CanvasInterface *mask = element->GetMaskCanvas();
-          if (mask) {
-            canvas_->DrawCanvasWithMask(.0, .0, children_canvas[i],
-                                        .0, .0, mask);
-          } else {
-            canvas_->DrawCanvas(.0, .0, children_canvas[i]);
-          }
-
-          canvas_->PopState();
-        }
-      }
-
-      if (view_->GetDebugMode() > 0) {
-        // Draw bounding box for debug.
-        double w = canvas_->GetWidth();
-        double h = canvas_->GetHeight();
-        canvas_->DrawLine(0, 0, 0, h, 1, Color(0, 0, 0));
-        canvas_->DrawLine(0, 0, w, 0, 1, Color(0, 0, 0));
-        canvas_->DrawLine(w, h, 0, h, 1, Color(0, 0, 0));
-        canvas_->DrawLine(w, h, w, 0, 1, Color(0, 0, 0));
-        canvas_->DrawLine(0, 0, w, h, 1, Color(0, 0, 0));
-        canvas_->DrawLine(w, 0, 0, h, 1, Color(0, 0, 0));
-      }
+    if (view_->GetDebugMode() > 0) {
+      // Draw bounding box for debug.
+      canvas->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
+      canvas->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
+      canvas->DrawLine(width_, height_, 0, height_, 1, Color(0, 0, 0));
+      canvas->DrawLine(width_, height_, width_, 0, 1, Color(0, 0, 0));
+      canvas->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
+      canvas->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
     }
-
-    delete[] children_canvas;
-    children_canvas = NULL;
-    return canvas_;
   }
 
   void SetScrollable(bool scrollable) {
@@ -416,9 +342,6 @@ class Elements::Impl {
   Children children_;
   double width_;
   double height_;
-  CanvasInterface *canvas_;
-  bool count_changed_;
-  bool has_popup_;
   bool scrollable_;
 };
 
@@ -500,8 +423,8 @@ void Elements::Layout() {
   impl_->Layout();
 }
 
-const CanvasInterface *Elements::Draw(bool *changed) {
-  return impl_->Draw(changed);
+void Elements::Draw(CanvasInterface *canvas) {
+  impl_->Draw(canvas);
 }
 
 EventResult Elements::OnMouseEvent(const MouseEvent &event,

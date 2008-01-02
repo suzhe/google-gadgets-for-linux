@@ -23,6 +23,7 @@
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/texture.h>
 #include <ggadget/main_loop_interface.h>
@@ -85,7 +86,7 @@ GtkEdit::GtkEdit(GtkViewHost *view_host, int width, int height)
       wrap_(false),
       cursor_visible_(true),
       readonly_(false),
-      modified_(false),
+      content_modified_(false),
       font_family_(kDefaultFontFamily),
       font_size_(kDefaultFontSize),
       background_(NULL),
@@ -117,29 +118,25 @@ void GtkEdit::Destroy() {
   delete this;
 }
 
-CanvasInterface *GtkEdit::Draw(bool *modified) {
-  CairoCanvas *canvas = EnsureCanvas();
+void GtkEdit::Draw(CanvasInterface *canvas) {
+  CairoCanvas *edit_canvas = EnsureCanvas();
 
-  if (modified_) {
+  if (content_modified_) {
     // If no background is set, then use transparent background.
-    canvas->ClearCanvas();
-    if (background_)
-      background_->Draw(canvas);
-
-    canvas->IntersectRectClipRegion(kInnerBorderX - 1,
-                                    kInnerBorderY - 1,
-                                    width_- kInnerBorderX + 1,
-                                    height_ - kInnerBorderY + 1);
-    DrawText(canvas);
-    DrawCursor(canvas);
+    edit_canvas->ClearCanvas();
+    edit_canvas->IntersectRectClipRegion(kInnerBorderX - 1,
+                                         kInnerBorderY - 1,
+                                         width_- kInnerBorderX + 1,
+                                         height_ - kInnerBorderY + 1);
+    DrawText(down_cast<CairoCanvas*>(edit_canvas));
   }
 
-  if (modified) {
-    *modified = modified_;
-    modified_ = false;
-  }
+  if (background_)
+    background_->Draw(canvas);
+  canvas->DrawCanvas(0, 0, edit_canvas);
+  DrawCursor(down_cast<CairoCanvas*>(canvas));
 
-  return canvas;
+  content_modified_ = false;
 }
 
 
@@ -158,6 +155,7 @@ void GtkEdit::FocusIn() {
         gtk_im_context_set_cursor_location(im_context_, &cur);
       }
     }
+    content_modified_ = true;
     // Don't adjust scroll.
     QueueCursorBlink();
     QueueDraw();
@@ -171,6 +169,7 @@ void GtkEdit::FocusOut() {
       need_im_reset_ = true;
       gtk_im_context_focus_out(im_context_);
     }
+    content_modified_ = true;
     // Don't adjust scroll.
     QueueCursorBlink();
     QueueDraw();
@@ -195,7 +194,7 @@ void GtkEdit::SetHeight(int height) {
     height_ = height;
     if (height_ <= kInnerBorderY * 2)
       height_ = kInnerBorderY * 2 + 1;
-    QueueRefresh(false);
+    QueueRefresh(true);
   }
 }
 
@@ -317,7 +316,7 @@ void GtkEdit::SetText(const char* text) {
   g_utf8_validate(text, -1, &end);
 
   if (text && *text && end > text) {
-    std::string txt(text, end - text); 
+    std::string txt(text, end - text);
     if (txt == text_) {
       return; // prevent some redraws
     }
@@ -355,6 +354,7 @@ const Texture *GtkEdit::GetBackground() {
 
 void GtkEdit::SetTextColor(const Color &color) {
   text_color_ = color;
+  content_modified_ = true;
   QueueRefresh(false);
 }
 
@@ -447,12 +447,13 @@ void GtkEdit::ScrollTo(int position) {
       position = request_height - real_height - 1;
 
     scroll_offset_y_ = -position;
+    content_modified_ = true;
     QueueDraw();
   }
 }
 
 void GtkEdit::MarkRedraw() {
-  modified_ = true;
+  content_modified_ = true;
 }
 
 Connection* GtkEdit::ConnectOnQueueDraw(Slot0<void> *callback) {
@@ -594,6 +595,7 @@ void GtkEdit::ResetLayout() {
   if (cached_layout_) {
     g_object_unref(cached_layout_);
     cached_layout_ = NULL;
+    content_modified_ = true;
   }
 }
 
@@ -605,8 +607,10 @@ PangoLayout* GtkEdit::EnsureLayout() {
 }
 
 PangoLayout* GtkEdit::CreateLayout() {
-  CairoCanvas *canvas = EnsureCanvas();
+  // Creates the pango layout with a temporary canvas that is not zoomed.
+  CairoCanvas *canvas = new CairoCanvas(1.0, 1, 1, CAIRO_FORMAT_ARGB32);
   PangoLayout *layout = pango_cairo_create_layout(canvas->GetContext());
+  canvas->Destroy();
   PangoAttrList *tmp_attrs = pango_attr_list_new();
   std::string tmp_string;
 
@@ -728,6 +732,8 @@ CairoCanvas* GtkEdit::EnsureCanvas() {
 }
 
 void GtkEdit::AdjustScroll() {
+  int old_offset_x = scroll_offset_x_;
+  int old_offset_y = scroll_offset_y_;
   PangoLayout *layout = EnsureLayout();
   int display_width = width_ - kInnerBorderX * 2;
   int display_height = height_ - kInnerBorderY * 2;
@@ -778,6 +784,9 @@ void GtkEdit::AdjustScroll() {
     if (scroll_offset_y_ + strong.y < 0)
       scroll_offset_y_ = -strong.y;
   }
+
+  if (old_offset_x != scroll_offset_x_ || old_offset_y != scroll_offset_y_)
+    content_modified_ = true;
 }
 
 void GtkEdit::QueueRefresh(bool relayout) {
@@ -800,7 +809,6 @@ bool GtkEdit::RefreshCallback(int timer_id) {
 }
 
 void GtkEdit::QueueDraw() {
-  modified_ = true;
   queue_draw_signal_();
 }
 
@@ -1297,6 +1305,10 @@ int GtkEdit::MoveLineEnds(int current_pos, int count) {
 
 void GtkEdit::SetCursor(int cursor) {
   ResetImContext();
+  // If there was a selection range, then the selection range will be cleared.
+  // Then content_modified_ shall be set to true to force redrawing the text.
+  if (cursor_ != selection_bound_)
+    content_modified_ = true;
   cursor_ = cursor;
   selection_bound_ = cursor;
 }
@@ -1342,6 +1354,8 @@ bool GtkEdit::GetSelectionBounds(int *start, int *end) {
 
 void GtkEdit::SetSelectionBounds(int selection_bound, int cursor) {
   ResetImContext();
+  if (selection_bound_ != selection_bound || cursor_ != cursor)
+    content_modified_ = true;
   selection_bound_ = selection_bound;
   cursor_ = cursor;
 }
@@ -1570,6 +1584,7 @@ void GtkEdit::PreeditChangedCallback(GtkIMContext *context, void *gg) {
   g_free(str);
   edit->QueueRefresh(false);
   edit->need_im_reset_ = true;
+  edit->content_modified_ = true;
 }
 
 void GtkEdit::PreeditEndCallback(GtkIMContext *context, void *gg) {

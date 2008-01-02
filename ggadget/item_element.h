@@ -45,15 +45,15 @@ class ItemElement : public BasicElement {
 
   bool IsMouseOver() const;
 
-  /** 
+  /**
    * Hook these methods to also mark the parent as changed.
    * This is OK in all scenarios since item is only used inside ListBoxes.
    */
-  virtual void QueueDraw(); 
+  virtual void QueueDraw();
 
-  /** 
-   * Sets whether mouseover/selected overlays should be drawn. 
-   * This method is used in Draw() calls to temporarily disable overlay drawing. 
+  /**
+   * Sets whether mouseover/selected overlays should be drawn.
+   * This method is used in Draw() calls to temporarily disable overlay drawing.
    */
   void SetDrawOverlay(bool draw);
 
@@ -62,9 +62,9 @@ class ItemElement : public BasicElement {
    */
   void SetIndex(int index);
 
-  /** 
-   * Gets and sets the text of the label contained inside this element. 
-   * AddLabelWithText will create the Label, the other methods will 
+  /**
+   * Gets and sets the text of the label contained inside this element.
+   * AddLabelWithText will create the Label, the other methods will
    * assume it exists.
    */
   std::string GetLabelText() const;
@@ -80,8 +80,7 @@ class ItemElement : public BasicElement {
                                               const char *name);
 
  protected:
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
+  virtual void DoDraw(CanvasInterface *canvas);
   virtual void GetDefaultSize(double *width, double *height) const;
   virtual void GetDefaultPosition(double *x, double *y) const;
   virtual EventResult HandleMouseEvent(const MouseEvent &event);

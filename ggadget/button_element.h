@@ -60,8 +60,7 @@ class ButtonElement : public BasicElement {
                                       const char *name);
 
  protected:
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas);
+  virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 

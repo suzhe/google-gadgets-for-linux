@@ -65,7 +65,7 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual int GetWidth() const;
   virtual int GetHeight() const;
 
-  virtual const CanvasInterface *Draw(bool *changed);
+  virtual void Draw(CanvasInterface *canvas);
 
   virtual void SetResizable(ViewInterface::ResizableMode resizable);
   virtual ViewInterface::ResizableMode GetResizable() const;

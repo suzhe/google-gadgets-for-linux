@@ -79,17 +79,16 @@ void DivElement::Layout() {
   }
 }
 
-void DivElement::DoDraw(CanvasInterface *canvas,
-                        const CanvasInterface *children_canvas) {
+void DivElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->background_texture_) {
     impl_->background_texture_->Draw(canvas);
   }
 
-  if (children_canvas) {
-    canvas->DrawCanvas(-GetScrollXPosition(), -GetScrollYPosition(),
-                       children_canvas);
-  }
-
+  canvas->TranslateCoordinates(-GetScrollXPosition(),
+                               -GetScrollYPosition());
+  DrawChildren(canvas);
+  canvas->TranslateCoordinates(GetScrollXPosition(),
+                               GetScrollYPosition());
   DrawScrollbar(canvas);
 }
 

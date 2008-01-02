@@ -132,8 +132,7 @@ CheckBoxElement::~CheckBoxElement() {
   impl_ = NULL;
 }
 
-void CheckBoxElement::DoDraw(CanvasInterface *canvas,
-                             const CanvasInterface *children_canvas) {
+void CheckBoxElement::DoDraw(CanvasInterface *canvas) {
   ImageInterface *img = impl_->GetCurrentImage(this);
 
   const double h = GetPixelHeight();
@@ -311,8 +310,8 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
     case Event::EVENT_MOUSE_UP:
       if (impl_->mousedown_) {
         impl_->mousedown_ = false;
-        QueueDraw();  
-      }      
+        QueueDraw();
+      }
       break;
     case Event::EVENT_MOUSE_OUT:
       impl_->mouseover_ = false;

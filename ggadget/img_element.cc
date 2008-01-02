@@ -76,25 +76,46 @@ bool ImgElement::IsPointIn(double x, double y) {
   if (!BasicElement::IsPointIn(x, y))
     return false;
 
-  bool changed;
-  const CanvasInterface *canvas = Draw(&changed);
+  if (impl_->image_) {
+    double x0, y0, w, h;
+    double pxwidth = GetPixelWidth();
+    double pxheight = GetPixelHeight();
+    double imgw = static_cast<double>(impl_->image_->GetWidth());
+    double imgh = static_cast<double>(impl_->image_->GetHeight());
+    if (impl_->crop_ == CROP_FALSE) {
+      x0 = y0 = 0;
+      w = pxwidth;
+      h = pxheight;
+    } else {
+      double scale = std::max(pxwidth / imgw, pxheight / imgh);
+      // Windows also caps the scale to a fixed maximum. This is probably a bug.
+      w = scale * imgw;
+      h = scale * imgh;
 
-  // If the element is invisible then just return false.
-  if (!canvas)
-    return false;
+      x0 = (pxwidth - w) / 2.;
+      y0 = (pxheight - h) / 2.;
+      if (impl_->crop_ == CROP_PHOTO && y0 < 0.) {
+        y0 = 0.; // Never crop the top in photo setting.
+      }
+    }
 
-  double opacity;
+    // Stretch x and y.
+    x = (x - x0) * imgw / w;
+    y = (y - y0) * imgh / h;
 
-  // If failed to get the value of the point, then just return true, assuming
-  // it's an opaque point.
-  if (!canvas->GetPointValue(x, y, NULL, &opacity))
-    return true;
+    double opacity;
 
-  return opacity > 0;
+    // If failed to get the value of the point, then just return true, assuming
+    // it's an opaque point.
+    if (!impl_->image_->GetPointValue(x, y, NULL, &opacity))
+      return true;
+
+    return opacity > 0;
+  }
+  return false;
 }
 
-void ImgElement::DoDraw(CanvasInterface *canvas,
-                        const CanvasInterface *children_canvas) {
+void ImgElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->image_) {
     double x, y, w, h;
     double pxwidth = GetPixelWidth();

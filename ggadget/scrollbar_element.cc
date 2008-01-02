@@ -314,8 +314,7 @@ ScrollBarElement::~ScrollBarElement() {
   impl_ = NULL;
 }
 
-void ScrollBarElement::DoDraw(CanvasInterface *canvas,
-                           const CanvasInterface *children_canvas) {
+void ScrollBarElement::DoDraw(CanvasInterface *canvas) {
   double width = GetPixelWidth();
   double height = GetPixelHeight();
   double lx, ly, rx, ry, tx, ty, lw, lh, unused;
