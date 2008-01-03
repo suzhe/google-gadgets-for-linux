@@ -30,8 +30,7 @@ class Muffin : public ggadget::BasicElement {
   virtual ~Muffin() {
   }
 
-  virtual void DoDraw(ggadget::CanvasInterface *canvas,
-                      const ggadget::CanvasInterface *children_canvas) { }
+  virtual void DoDraw(ggadget::CanvasInterface *canvas) { }
 
  public:
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, ggadget::BasicElement)
@@ -53,8 +52,7 @@ class Pie : public ggadget::BasicElement {
   virtual ~Pie() {
   }
 
-  virtual void DoDraw(ggadget::CanvasInterface *canvas,
-                      const ggadget::CanvasInterface *children_canvas) { }
+  virtual void DoDraw(ggadget::CanvasInterface *canvas) { }
 
  public:
   DEFINE_CLASS_ID(0x829defac5bbe11dc, ggadget::BasicElement)
