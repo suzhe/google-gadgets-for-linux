@@ -18,8 +18,8 @@
 #include <cmath>
 
 #include "xml_utils.h"
-#include "element_interface.h"
-#include "elements_interface.h"
+#include "basic_element.h"
+#include "elements.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "logger.h"
@@ -210,16 +210,16 @@ static void HandleAllScriptElements(ViewInterface *view,
   }
 }
 
-static ElementInterface *InsertElementFromDOM(
-    ViewInterface *view, ElementsInterface *elements,
+static BasicElement *InsertElementFromDOM(
+    ViewInterface *view, Elements *elements,
     const char *filename, const DOMElementInterface *xml_element,
-    const ElementInterface *before) {
+    const BasicElement *before) {
   std::string tag_name = xml_element->GetTagName();
   if (GadgetStrCmp(tag_name.c_str(), kScriptTag) == 0)
     return NULL;
 
   std::string name = xml_element->GetAttribute(kNameAttr);
-  ElementInterface *element = elements->InsertElement(tag_name.c_str(),
+  BasicElement *element = elements->InsertElement(tag_name.c_str(),
                                                       before,
                                                       name.c_str());
   if (!element) {
@@ -230,7 +230,7 @@ static ElementInterface *InsertElementFromDOM(
 
   SetupScriptableProperties(element, view->GetScriptContext(),
                             filename, xml_element);
-  ElementsInterface *children = element->GetChildren();
+  Elements *children = element->GetChildren();
   const DOMNodeListInterface *xml_children = xml_element->GetChildNodes();
   size_t length = xml_children->GetLength();
   for (size_t i = 0; i < length; i++) {
@@ -275,7 +275,7 @@ bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
   SetupScriptableProperties(view, view->GetScriptContext(),
                             filename, view_element);
 
-  ElementsInterface *children = view->GetChildren();
+  Elements *children = view->GetChildren();
   const DOMNodeListInterface *xml_children = view_element->GetChildNodes();
   size_t length = xml_children->GetLength();
   for (size_t i = 0; i < length; i++) {
@@ -292,16 +292,16 @@ bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
   return true;
 }
 
-ElementInterface *AppendElementFromXML(ViewInterface *view,
-                                       ElementsInterface *elements,
+BasicElement *AppendElementFromXML(ViewInterface *view,
+                                       Elements *elements,
                                        const std::string &xml) {
   return InsertElementFromXML(view, elements, xml, NULL);
 }
 
-ElementInterface *InsertElementFromXML(ViewInterface *view,
-                                       ElementsInterface *elements,
+BasicElement *InsertElementFromXML(ViewInterface *view,
+                                       Elements *elements,
                                        const std::string &xml,
-                                       const ElementInterface *before) {
+                                       const BasicElement *before) {
   DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
   xmldoc->Attach();
   if (!view->GetXMLParser()->ParseContentIntoDOM(xml, xml.c_str(), NULL, NULL,
@@ -317,8 +317,8 @@ ElementInterface *InsertElementFromXML(ViewInterface *view,
     return NULL;
   }
 
-  ElementInterface *result = InsertElementFromDOM(view, elements, "",
-                                                  xml_element, before);
+  BasicElement *result = InsertElementFromDOM(view, elements, "",
+                                              xml_element, before);
   xmldoc->Detach();
   return result;
 }

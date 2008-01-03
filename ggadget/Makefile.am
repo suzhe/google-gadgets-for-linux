@@ -52,9 +52,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  edit_element.h \
 			  edit_interface.h \
 			  element_factory.h \
-			  element_factory_interface.h \
-			  element_interface.h \
-			  elements_interface.h \
 			  elements.h \
 			  event.h \
 			  file_manager.h \

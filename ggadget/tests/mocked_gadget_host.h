@@ -50,7 +50,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ~MockedGadgetHost() { delete xml_parser_; }
   virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
       ScriptRuntimeType type) { return NULL; }
-  virtual ggadget::ElementFactoryInterface *GetElementFactory() {
+  virtual ggadget::ElementFactory *GetElementFactory() {
     return NULL;
   }
   virtual ggadget::FileManagerInterface *GetFileManager() {

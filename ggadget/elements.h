@@ -19,22 +19,23 @@
 
 #include <ggadget/common.h>
 #include <ggadget/event.h>
-#include <ggadget/elements_interface.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
+class BasicElement;
+class ElementFactory;
 class BasicElement;
 class CanvasInterface;
 class View;
 
 /**
- * Elements is used for storing and managing a set of objects which
- * implement the @c ElementInterface.
+ * Elements is used for storing and managing a set of BasicElement objects.
  */
-class Elements : public ScriptableHelper<ElementsInterface> {
+class Elements : public ScriptableHelper<ScriptableInterface> {
  public:
-  DEFINE_CLASS_ID(0xe3bdb064cb794282, ElementsInterface)
+  DEFINE_CLASS_ID(0xe3bdb064cb794282, ScriptableInterface);
 
   /**
    * Create an Elements object and assign the given factory to it.
@@ -43,28 +44,96 @@ class Elements : public ScriptableHelper<ElementsInterface> {
    *     owned directly by a view.
    * @param view the containing view.
    */
-  Elements(ElementFactoryInterface *factory, BasicElement *owner, View *view);
+  Elements(ElementFactory *factory, BasicElement *owner, View *view);
 
   virtual ~Elements();
 
- public: // ElementsInterface methods.
-  virtual int GetCount() const;
-  virtual ElementInterface *GetItemByIndex(int child);
-  virtual const ElementInterface *GetItemByIndex(int child) const;
-  virtual ElementInterface *GetItemByName(const char *child);
-  virtual const ElementInterface *GetItemByName(const char *child) const;
-  virtual ElementInterface *AppendElement(const char *tag_name,
-                                          const char *name);
-  virtual ElementInterface *InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
-                                          const char *name);
-  virtual ElementInterface *AppendElementFromXML(const char *xml);
-  virtual ElementInterface *InsertElementFromXML(
-      const char *xml, const ElementInterface *before);
-  virtual bool RemoveElement(ElementInterface *element);
-  virtual void RemoveAllElements();
-
  public:
+  /**
+   * @return number of children.
+   */
+  int GetCount() const;
+
+  /**
+   * Returns the element identified by the index.
+   * @param child the index of the child.
+   * @return the pointer to the specified element. If the parameter is out of
+   *     range, @c NULL is returned.
+   */
+  BasicElement *GetItemByIndex(int child);
+  const BasicElement *GetItemByIndex(int child) const;
+
+  /**
+   * Returns the element identified by the name.
+   * @param child the name of the child.
+   * @return the pointer to the specified element. If multiple elements are
+   *     defined with the same name, returns the first one. Returns @c NULL if
+   *     no elements match.
+   */
+  BasicElement *GetItemByName(const char *child);
+  const BasicElement *GetItemByName(const char *child) const;
+
+  /**
+   * Create a new element and add it to the end of the children list.
+   * @param tag_name a string specified the element tag name.
+   * @param name the name of the newly created element.
+   * @return the pointer to the newly created element, or @c NULL when error
+   *     occured.
+   */
+  BasicElement *AppendElement(const char *tag_name,
+                                          const char *name);
+
+  /**
+   * Create a new element before the specified element.
+   * @param tag_name a string specified the element tag name.
+   * @param before the newly created element will be inserted before the given
+   *     element. If the specified element is not the direct child of the
+   *     container or this parameter is @c NULL, this method will insert the
+   *     newly created element at the end of the children list.
+   * @param name the name of the newly created element.
+   * @return the pointer to the newly created element, or @c NULL when error
+   *     occured.
+   */
+  BasicElement *InsertElement(const char *tag_name,
+                                          const BasicElement *before,
+                                          const char *name);
+
+  /**
+   * Create a new element from XML definition and add it to the end of the
+   * children list.
+   * @param xml the XML definition of the element.
+   * @return the pointer to the newly created element, or @c NULL when error
+   *     occured.
+   */
+  BasicElement *AppendElementFromXML(const char *xml);
+
+  /**
+   * Create a new element from XML definition and insert it before the
+   * specified element.
+   * @param xml the XML definition of the element.
+   * @param before the newly created element will be inserted before the given
+   *     element. If the specified element is not the direct child of the
+   *     container or this parameter is @c NULL, this method will insert the
+   *     newly created element at the end of the children list.
+   * @return the pointer to the newly created element, or @c NULL when error
+   *     occured.
+   */
+  BasicElement *InsertElementFromXML(
+      const char *xml, const BasicElement *before);
+
+  /**
+   * Remove the specified element from the container.
+   * @param element the element to remove.
+   * @return @c true if removed successfully, or @c false if the specified
+   *     element doesn't exists or not the direct child of the container.
+   */
+  bool RemoveElement(BasicElement *element);
+
+  /**
+   * Remove all elements from the container.
+   */
+  void RemoveAllElements();
+
   /**
    * Adjusts the layout (e.g. size, position, etc.) of children.
    * This method is called just before @c Draw().

@@ -17,30 +17,41 @@
 #ifndef GGADGET_ELEMENT_FACTORY_H__
 #define GGADGET_ELEMENT_FACTORY_H__
 
+#include <cstddef>
 #include <map>
-#include <ggadget/element_factory_interface.h>
 #include <ggadget/string_utils.h>
 
 namespace ggadget {
 
 class BasicElement;
+class ViewInterface;
 class View;
 
 namespace internal {
 class ElementFactoryImpl;
 } // namespace internal
 
-class ElementFactory : public ElementFactoryInterface {
+/**
+ * Factory for creating an Element in the Gadget API.
+ */
+class ElementFactory {
  public:
   ElementFactory();
   virtual ~ElementFactory();
 
  public:
-  /** @see ElementFactoryInterface::CreateElement() */
-  virtual ElementInterface *CreateElement(const char *tag_name,
-                                          ElementInterface *parent,
-                                          ViewInterface *view,
-                                          const char *name);
+  /**
+   * Creates an ElementInterface of the specified type.
+   * @param tag_name the tag name name of the object.
+   * @param parent the parent object of the newly created object.
+   * @param view the top-level view object containing the current object.
+   * @param name the name of the newly created element.
+   * @return the pointer to the newly created object or @c NULL if failed.
+   */
+  BasicElement *CreateElement(const char *tag_name,
+                              BasicElement *parent,
+                              ViewInterface *view,
+                              const char *name);
 
   /**
    * Used as the @c creator parameter in @c RegisterElementClass().
@@ -72,10 +83,10 @@ namespace internal {
  */
 class ElementFactoryImpl {
  public:
-  ElementInterface *CreateElement(const char *tag_name,
-                                  ElementInterface *parent,
-                                  ViewInterface *view,
-                                  const char *name);
+  BasicElement *CreateElement(const char *tag_name,
+                              BasicElement *parent,
+                              ViewInterface *view,
+                              const char *name);
   bool RegisterElementClass(const char *tag_name,
                             ElementFactory::ElementCreator creator);
 

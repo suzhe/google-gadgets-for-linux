@@ -19,20 +19,53 @@
 #include "basic_element.h"
 #include "view.h"
 
+#include "anchor_element.h"
+#include "button_element.h"
+#include "checkbox_element.h"
+#include "combobox_element.h"
+#include "contentarea_element.h"
+#include "div_element.h"
+#include "edit_element.h"
+#include "img_element.h"
+#include "item_element.h"
+#include "label_element.h"
+#include "listbox_element.h"
+#include "progressbar_element.h"
+#include "scrollbar_element.h"
+
 namespace ggadget {
 
 ElementFactory::ElementFactory()
     : impl_(new internal::ElementFactoryImpl) {
+  RegisterElementClass("a", &ggadget::AnchorElement::CreateInstance);
+  RegisterElementClass("button", &ggadget::ButtonElement::CreateInstance);
+  RegisterElementClass("checkbox", 
+                       &ggadget::CheckBoxElement::CreateCheckBoxInstance);
+  RegisterElementClass("combobox", &ggadget::ComboBoxElement::CreateInstance);
+  RegisterElementClass("contentarea", 
+                       &ggadget::ContentAreaElement::CreateInstance);
+  RegisterElementClass("div", &ggadget::DivElement::CreateInstance);
+  RegisterElementClass("edit", &ggadget::EditElement::CreateInstance);
+  RegisterElementClass("img", &ggadget::ImgElement::CreateInstance);
+  RegisterElementClass("item", &ggadget::ItemElement::CreateInstance);
+  RegisterElementClass("label", &ggadget::LabelElement::CreateInstance);
+  RegisterElementClass("listbox", &ggadget::ListBoxElement::CreateInstance);
+  RegisterElementClass("listitem", 
+                       &ggadget::ItemElement::CreateListItemInstance);
+  RegisterElementClass("progressbar", 
+                       &ggadget::ProgressBarElement::CreateInstance);
+  RegisterElementClass("radio", &ggadget::CheckBoxElement::CreateRadioInstance);
+  RegisterElementClass("scrollbar", &ggadget::ScrollBarElement::CreateInstance);
 }
 
 ElementFactory::~ElementFactory() {
   delete impl_;
 }
 
-ElementInterface *ElementFactory::CreateElement(const char *tag_name,
-                                                ElementInterface *parent,
-                                                ViewInterface *view,
-                                                const char *name) {
+BasicElement *ElementFactory::CreateElement(const char *tag_name,
+                                            BasicElement *parent,
+                                            ViewInterface *view,
+                                            const char *name) {
   ASSERT(impl_);
   return impl_->CreateElement(tag_name, parent, view, name);
 }
@@ -45,10 +78,10 @@ bool ElementFactory::RegisterElementClass(const char *tag_name,
 
 namespace internal {
 
-ElementInterface *ElementFactoryImpl::CreateElement(const char *tag_name,
-                                                    ElementInterface *parent,
-                                                    ViewInterface *view,
-                                                    const char *name) {
+BasicElement *ElementFactoryImpl::CreateElement(const char *tag_name,
+                                                BasicElement *parent,
+                                                ViewInterface *view,
+                                                const char *name) {
   CreatorMap::iterator ite = creators_.find(tag_name);
   if (ite == creators_.end())
     return NULL;

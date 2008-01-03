@@ -18,8 +18,7 @@
 #include "common.h"
 #include "logger.h"
 #include "math_utils.h"
-#include "element_factory_interface.h"
-#include "element_interface.h"
+#include "element_factory.h"
 #include "elements.h"
 #include "graphics_interface.h"
 #include "math_utils.h"
@@ -39,7 +38,7 @@ class BasicElement::Impl {
         owner_(owner),
         children_(NULL),
         view_(view),
-        hittest_(ElementInterface::HT_DEFAULT),
+        hittest_(BasicElement::HT_DEFAULT),
         cursor_(ViewHostInterface::CURSOR_ARROW),
         drop_target_(false),
         enabled_(false),
@@ -713,7 +712,7 @@ class BasicElement::Impl {
   BasicElement *owner_;
   Elements *children_;
   View *view_;
-  ElementInterface::HitTest hittest_;
+  BasicElement::HitTest hittest_;
   ViewHostInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
@@ -905,7 +904,7 @@ const View *BasicElement::GetView() const {
   return impl_->view_;
 }
 
-ElementInterface::HitTest BasicElement::GetHitTest() const {
+BasicElement::HitTest BasicElement::GetHitTest() const {
   return impl_->hittest_;
 }
 
@@ -913,11 +912,11 @@ void BasicElement::SetHitTest(HitTest value) {
   impl_->hittest_ = value;
 }
 
-const ElementsInterface *BasicElement::GetChildren() const {
+const Elements *BasicElement::GetChildren() const {
   return impl_->children_;
 }
 
-ElementsInterface *BasicElement::GetChildren() {
+Elements *BasicElement::GetChildren() {
   return impl_->children_;
 }
 
@@ -1155,11 +1154,11 @@ void BasicElement::SetVisible(bool visible) {
   impl_->SetVisible(visible);
 }
 
-ElementInterface *BasicElement::GetParentElement() {
+BasicElement *BasicElement::GetParentElement() {
   return impl_->parent_;
 }
 
-const ElementInterface *BasicElement::GetParentElement() const {
+const BasicElement *BasicElement::GetParentElement() const {
   return impl_->parent_;
 }
 

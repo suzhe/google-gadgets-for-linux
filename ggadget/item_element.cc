@@ -16,7 +16,7 @@
 
 #include "item_element.h"
 #include "canvas_interface.h"
-#include "elements_interface.h"
+#include "elements.h"
 #include "graphics_interface.h"
 #include "label_element.h"
 #include "listbox_element.h"
@@ -171,7 +171,7 @@ void ItemElement::SetSelected(bool selected) {
 }
 
 std::string ItemElement::GetLabelText() const {
-  const ElementInterface *e = GetChildren()->GetItemByIndex(0);
+  const BasicElement *e = GetChildren()->GetItemByIndex(0);
   if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
     const LabelElement *label = down_cast<const LabelElement *>(e);
     return label->GetTextFrame()->GetText();
@@ -181,7 +181,7 @@ std::string ItemElement::GetLabelText() const {
 }
 
 void ItemElement::SetLabelText(const char *text) {
-  ElementInterface *e = GetChildren()->GetItemByIndex(0);
+  BasicElement *e = GetChildren()->GetItemByIndex(0);
   if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
     LabelElement *label = down_cast<LabelElement *>(e);
     label->GetTextFrame()->SetText(text);
@@ -191,7 +191,7 @@ void ItemElement::SetLabelText(const char *text) {
 }
 
 bool ItemElement::AddLabelWithText(const char *text) {
-  ElementInterface *e = GetChildren()->AppendElement("label", "");
+  BasicElement *e = GetChildren()->AppendElement("label", "");
   if (e) {
     ASSERT(e->IsInstanceOf(LabelElement::CLASS_ID));
     LabelElement *label = down_cast<LabelElement *>(e);

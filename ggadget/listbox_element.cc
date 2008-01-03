@@ -18,7 +18,7 @@
 
 #include "listbox_element.h"
 #include "color.h"
-#include "elements_interface.h"
+#include "elements.h"
 #include "event.h"
 #include "item_element.h"
 #include "logger.h"
@@ -98,7 +98,7 @@ class ListBoxElement::Impl {
   }
 
   void SetPendingSelection() {
-    ElementInterface *selected =
+    BasicElement *selected =
       owner_->GetChildren()->GetItemByIndex(selected_index_);
     if (selected) {
       if (selected->IsInstanceOf(ItemElement::CLASS_ID)) {
@@ -115,10 +115,10 @@ class ListBoxElement::Impl {
   // Returns true if anything was cleared.
   bool ClearSelection(ItemElement *avoid) {
     bool result = false;
-    ElementsInterface *elements = owner_->GetChildren();
+    Elements *elements = owner_->GetChildren();
     int childcount = elements->GetCount();
     for (int i = 0; i < childcount; i++) {
-      ElementInterface *child = elements->GetItemByIndex(i);
+      BasicElement *child = elements->GetItemByIndex(i);
       if (child != avoid) {
         if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
           ItemElement *item = down_cast<ItemElement *>(child);
@@ -141,10 +141,10 @@ class ListBoxElement::Impl {
   }
 
   ItemElement *FindItemByString(const char *str) {
-    ElementsInterface *elements = owner_->GetChildren();
+    Elements *elements = owner_->GetChildren();
     int childcount = elements->GetCount();
     for (int i = 0; i < childcount; i++) {
-      ElementInterface *child = elements->GetItemByIndex(i);
+      BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
         std::string text = item->GetLabelText();
@@ -326,10 +326,10 @@ void ListBoxElement::SetItemOverColor(const Variant &color) {
   delete impl_->item_over_color_;
   impl_->item_over_color_ = GetView()->LoadTexture(color);
 
-  ElementsInterface *elements = GetChildren();
+  Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    ElementInterface *child = elements->GetItemByIndex(i);
+    BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       ItemElement *item = down_cast<ItemElement *>(child);
       if (item->IsMouseOver()) {
@@ -354,10 +354,10 @@ void ListBoxElement::SetItemSelectedColor(const Variant &color) {
   delete impl_->item_selected_color_;
   impl_->item_selected_color_ = GetView()->LoadTexture(color);
 
-  ElementsInterface *elements = GetChildren();
+  Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    ElementInterface *child = elements->GetItemByIndex(i);
+    BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       ItemElement *item = down_cast<ItemElement *>(child);
       if (item->IsSelected()) {
@@ -381,10 +381,10 @@ void ListBoxElement::SetItemSeparatorColor(const Variant &color) {
   delete impl_->item_separator_color_;
   impl_->item_separator_color_ = GetView()->LoadTexture(color);
 
-  ElementsInterface *elements = GetChildren();
+  Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    ElementInterface *child = elements->GetItemByIndex(i);
+    BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       ItemElement *item = down_cast<ItemElement *>(child);
       item->QueueDraw();
@@ -402,10 +402,10 @@ void ListBoxElement::SetItemSeparator(bool separator) {
   if (separator != impl_->item_separator_) {
     impl_->item_separator_ = separator;
 
-    ElementsInterface *elements = GetChildren();
+    Elements *elements = GetChildren();
     int childcount = elements->GetCount();
     for (int i = 0; i < childcount; i++) {
-      ElementInterface *child = elements->GetItemByIndex(i);
+      BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
         item->QueueDraw();
@@ -425,10 +425,10 @@ void ListBoxElement::SetMultiSelect(bool multiselect) {
 }
 
 int ListBoxElement::GetSelectedIndex() const {
-  const ElementsInterface *elements = GetChildren();
+  const Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    const ElementInterface *child = elements->GetItemByIndex(i);
+    const BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       const ItemElement *item = down_cast<const ItemElement *>(child);
       if (item->IsSelected()) {
@@ -447,7 +447,7 @@ int ListBoxElement::GetSelectedIndex() const {
 }
 
 void ListBoxElement::SetSelectedIndex(int index) {
-  ElementInterface *item = GetChildren()->GetItemByIndex(index);
+  BasicElement *item = GetChildren()->GetItemByIndex(index);
   if (!item) {
     if (impl_->selected_index_ == -2) { // Mark selection as pending.
       impl_->selected_index_ = index;
@@ -463,10 +463,10 @@ void ListBoxElement::SetSelectedIndex(int index) {
 }
 
 ItemElement *ListBoxElement::GetSelectedItem() {
-  ElementsInterface *elements = GetChildren();
+  Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    ElementInterface *child = elements->GetItemByIndex(i);
+    BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       ItemElement *item = down_cast<ItemElement *>(child);
       if (item->IsSelected()) {
@@ -481,10 +481,10 @@ ItemElement *ListBoxElement::GetSelectedItem() {
 }
 
 const ItemElement *ListBoxElement::GetSelectedItem() const {
-  const ElementsInterface *elements = GetChildren();
+  const Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    const ElementInterface *child = elements->GetItemByIndex(i);
+    const BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       const ItemElement *item = down_cast<const ItemElement *>(child);
       if (item->IsSelected()) {
@@ -548,10 +548,10 @@ void ListBoxElement::SelectRange(ItemElement *endpoint) {
     }
   } else {
     bool started = false;
-    ElementsInterface *elements = GetChildren();
+    Elements *elements = GetChildren();
     int childcount = elements->GetCount();
     for (int i = 0; i < childcount; i++) {
-      ElementInterface *child = elements->GetItemByIndex(i);
+      BasicElement *child = elements->GetItemByIndex(i);
       if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(child);
         if (item == endpoint || item == endpoint2) {
@@ -581,8 +581,8 @@ void ListBoxElement::SelectRange(ItemElement *endpoint) {
 }
 
 bool ListBoxElement::AppendString(const char *str) {
-  ElementsInterface *elements = GetChildren();
-  ElementInterface *child = elements->AppendElement("item", "");
+  Elements *elements = GetChildren();
+  BasicElement *child = elements->AppendElement("item", "");
   if (!child) {
     return false;
   }
@@ -598,17 +598,17 @@ bool ListBoxElement::AppendString(const char *str) {
 }
 
 bool ListBoxElement::InsertStringAt(const char *str, int index) {
-  ElementsInterface *elements = GetChildren();
+  Elements *elements = GetChildren();
   if (elements->GetCount() == index) {
     return AppendString(str);
   }
 
-  const ElementInterface *before = elements->GetItemByIndex(index);
+  const BasicElement *before = elements->GetItemByIndex(index);
   if (!before) {
     return false;
   }
 
-  ElementInterface *child = elements->InsertElement("item", before, "");
+  BasicElement *child = elements->InsertElement("item", before, "");
   if (!child) {
     return false;
   }
@@ -636,10 +636,10 @@ void ListBoxElement::Layout() {
   impl_->selected_index_ = -1;
 
   // Inform children (items) of their index.
-  ElementsInterface *elements = GetChildren();
+  Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
-    ElementInterface *child = elements->GetItemByIndex(i);
+    BasicElement *child = elements->GetItemByIndex(i);
     if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
       ItemElement *item = down_cast<ItemElement *>(child);
       item->SetIndex(i);

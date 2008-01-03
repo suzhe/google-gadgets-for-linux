@@ -53,21 +53,16 @@ class ComboBoxElement::Impl {
         button_over_img_(view->LoadImageFromGlobal(kScrollDefaultRightOver, false)),
         background_(NULL) {
     // Register container methods since combobox is really a container.
-    ElementsInterface *elements = listbox_->GetChildren();
-    ASSERT(elements->IsInstanceOf(Elements::CLASS_ID));
+    Elements *elements = listbox_->GetChildren();
     owner_->RegisterConstant("children", elements);
     owner_->RegisterMethod("appendElement",
-                           NewSlot(down_cast<Elements *>(elements),
-                                   &Elements::AppendElementFromXML));
+                           NewSlot(elements, &Elements::AppendElementFromXML));
     owner_->RegisterMethod("insertElement",
-                           NewSlot(down_cast<Elements *>(elements),
-                                   &Elements::InsertElementFromXML));
+                           NewSlot(elements, &Elements::InsertElementFromXML));
     owner_->RegisterMethod("removeElement",
-                           NewSlot(down_cast<Elements *>(elements),
-                                   &Elements::RemoveElement));
+                           NewSlot(elements, &Elements::RemoveElement));
     owner_->RegisterMethod("removeAllElements",
-                           NewSlot(down_cast<Elements *>(elements),
-                                   &Elements::RemoveAllElements));
+                           NewSlot(elements, &Elements::RemoveAllElements));
 
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
@@ -357,11 +352,11 @@ const ListBoxElement *ComboBoxElement::GetListBox() const {
   return impl_->listbox_;
 }
 
-const ElementsInterface *ComboBoxElement::GetChildren() const {
+const Elements *ComboBoxElement::GetChildren() const {
   return impl_->listbox_->GetChildren();
 }
 
-ElementsInterface *ComboBoxElement::GetChildren() {
+Elements *ComboBoxElement::GetChildren() {
   return impl_->listbox_->GetChildren();
 }
 

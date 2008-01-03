@@ -40,7 +40,7 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual ~GtkGadgetHost();
 
   virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type);
-  virtual ElementFactoryInterface *GetElementFactory();
+  virtual ElementFactory *GetElementFactory();
   virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
   virtual FrameworkInterface *GetFramework();
@@ -114,7 +114,7 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
   ScriptRuntimeInterface *script_runtime_;
-  ElementFactoryInterface *element_factory_;
+  ElementFactory *element_factory_;
   XMLParserInterface *xml_parser_;
   FileManagerInterface *resource_file_manager_;
   FileManagerInterface *global_file_manager_;
