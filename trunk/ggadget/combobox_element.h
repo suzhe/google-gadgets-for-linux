@@ -74,8 +74,8 @@ class ComboBoxElement : public BasicElement {
 
   virtual double GetPixelHeight() const;
 
-  virtual const ElementsInterface *GetChildren() const;
-  virtual ElementsInterface *GetChildren();
+  virtual const Elements *GetChildren() const;
+  virtual Elements *GetChildren();
 
   // Disabled methods.
   bool IsAutoscroll() const;

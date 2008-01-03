@@ -187,13 +187,16 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  CanvasInterface *canvas =
-      view_host_->GetGraphics()->NewCanvas(m.GetPixelWidth(),
-                                           m.GetPixelHeight());
+  CanvasInterface *canvas = 
+    view_host_->GetGraphics()->NewCanvas(static_cast<size_t>(m.GetPixelWidth()), 
+                                         static_cast<size_t>(m.GetPixelHeight()));
+  ASSERT_TRUE(canvas != NULL);
   m.Draw(canvas);
 
   EXPECT_TRUE(target_->DrawCanvas(10, 10, canvas));
+
   canvas->Destroy();
+  canvas = NULL;
 }
 
 int main(int argc, char *argv[]) {

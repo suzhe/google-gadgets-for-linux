@@ -27,7 +27,7 @@ template <typename R> class Slot0;
 class BasicElement;
 class ContentAreaElement;
 class DetailsView;
-class ElementFactoryInterface;
+class ElementFactory;
 class MenuInterface;
 class ScriptContextInterface;
 class Slot;
@@ -44,7 +44,7 @@ class View : public ScriptableHelper<ViewInterface> {
 
   View(ViewHostInterface *host,
        ScriptableInterface *prototype,
-       ElementFactoryInterface *element_factory,
+       ElementFactory *element_factory,
        int debug_mode);
   virtual ~View();
 
@@ -75,11 +75,11 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual bool GetShowCaptionAlways() const;
   virtual void MarkRedraw();
 
-  virtual ElementFactoryInterface *GetElementFactory() const;
-  virtual const ElementsInterface *GetChildren() const;
-  virtual ElementsInterface *GetChildren();
-  virtual ElementInterface *GetElementByName(const char *name);
-  virtual const ElementInterface *GetElementByName(const char *name) const;
+  virtual ElementFactory *GetElementFactory() const;
+  virtual const Elements *GetChildren() const;
+  virtual Elements *GetChildren();
+  virtual BasicElement *GetElementByName(const char *name);
+  virtual const BasicElement *GetElementByName(const char *name) const;
 
   virtual void OnOptionChanged(const char *name);
   virtual bool OnAddContextMenuItems(MenuInterface *menu);

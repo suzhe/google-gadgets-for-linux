@@ -18,7 +18,6 @@
 #define GGADGET_BASIC_ELEMENT_H__
 
 #include <ggadget/common.h>
-#include <ggadget/element_interface.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/view_host_interface.h>
 
@@ -29,66 +28,168 @@ class Elements;
 class MenuInterface;
 class View;
 
-class BasicElement : public ScriptableHelper<ElementInterface> {
+class BasicElement : public ScriptableHelper<ScriptableInterface> {
  public:
-  CLASS_ID_DECL(0xfd70820c5bbf11dc);
+  DEFINE_CLASS_ID(0xfd70820c5bbf11dc, ScriptableInterface);
 
  public:
   BasicElement(BasicElement *parent, View *view,
                const char *tag_name, const char *name, bool children);
   virtual ~BasicElement();
 
- public: // ElementInterface methods.
-  virtual std::string GetTagName() const;
-  virtual const ElementsInterface *GetChildren() const;
-  virtual ElementsInterface *GetChildren();
-  virtual std::string GetName() const;
-  virtual ElementInterface *GetParentElement();
-  virtual const ElementInterface *GetParentElement() const;
-  virtual double GetPixelWidth() const;
-  virtual double GetPixelHeight() const;
-  virtual double GetRelativeWidth() const;
-  virtual double GetRelativeHeight() const;
-  virtual void SetPixelWidth(double width);
-  virtual void SetPixelHeight(double height);
-  virtual void SetRelativeWidth(double width);
-  virtual void SetRelativeHeight(double height);
-  virtual double GetPixelX() const;
-  virtual void SetPixelX(double x);
-  virtual double GetPixelY() const;
-  virtual void SetPixelY(double y);
-  virtual double GetRelativeX() const;
-  virtual double GetRelativeY() const;
-  virtual double GetPixelPinX() const;
-  virtual void SetPixelPinX(double pin_x);
-  virtual double GetPixelPinY() const;
-  virtual void SetPixelPinY(double pin_y);
-  virtual void SetRelativeX(double x);
-  virtual void SetRelativeY(double y);
-  virtual double GetRelativePinX() const;
-  virtual void SetRelativePinX(double pin_x);
-  virtual double GetRelativePinY() const;
-  virtual void SetRelativePinY(double pin_y);
-  virtual bool XIsRelative() const;
-  virtual bool YIsRelative() const;
-  virtual bool WidthIsRelative() const;
-  virtual bool HeightIsRelative() const;
-  virtual bool PinXIsRelative() const;
-  virtual bool PinYIsRelative() const;
-  virtual bool WidthIsSpecified() const;
-  virtual void ResetWidthToDefault();
-  virtual bool HeightIsSpecified() const;
-  virtual void ResetHeightToDefault();
-  virtual bool XIsSpecified() const;
-  virtual void ResetXToDefault();
-  virtual bool YIsSpecified() const;
-  virtual void ResetYToDefault();
-  virtual double GetClientWidth() const;
-  virtual double GetClientHeight() const;
-  virtual double GetRotation() const;
-  virtual void SetRotation(double rotation);
+ public:
+  // TODO: If need this work, perhaps we should define it in ViewHostInterface. 
+  enum HitTest {
+    HT_DEFAULT,
+    HT_TRANSPARENT,
+    HT_NOWHERE,
+    HT_CLIENT,
+    HT_CAPTION,
+    HT_SYSMENU,
+    HT_SIZE,
+    HT_MENU,
+    HT_HSCROLL,
+    HT_VSCROLL,
+    HT_MINBUTTON,
+    HT_MAXBUTTON,
+    HT_LEFT,
+    HT_RIGHT,
+    HT_TOP,
+    HT_TOPLEFT,
+    HT_TOPRIGHT,
+    HT_BOTTOM,
+    HT_BOTTOMLEFT,
+    HT_BOTTOMRIGHT,
+    HT_BORDER,
+    HT_OBJECT,
+    HT_CLOSE,
+    HT_HELP
+  };
 
  public:
+  /** Get the type of the current object. */
+  virtual std::string GetTagName() const;
+
+  /** Retrieves the name of the element.  */
+  virtual std::string GetName() const;
+
+  /**
+   * Retrieves a collection that contains the immediate children of this
+   * element.
+   */
+  virtual const Elements *GetChildren() const;
+  /**
+   * Retrieves a collection that contains the immediate children of this
+   * element.
+   */
+  virtual Elements *GetChildren();
+
+  /**
+   * Retrieves the parent element.
+   * @return the pointer to the parent, or @c NULL if the parent is @c View.
+   */
+  virtual BasicElement *GetParentElement();
+  /**
+   * Retrieves the parent element.
+   * @return the pointer to the parent, or @c NULL if the parent is @c View.
+   */
+  virtual const BasicElement *GetParentElement() const;
+
+ public:
+  /** Retrieves the width in pixels. */
+  virtual double GetPixelWidth() const;
+  /** Sets the width in pixels. */
+  virtual void SetPixelWidth(double width);
+  /** Retrieves the height in pixels. */
+  virtual double GetPixelHeight() const;
+  /** Sets the height in pixels. */
+  virtual void SetPixelHeight(double height);
+
+  /** Retrieves the width in relative related to the parent. */
+  virtual double GetRelativeWidth() const;
+  /** Sets the width in relative related to the parent. */
+  virtual void SetRelativeWidth(double width);
+  /** Retrieves the height in relative related to the parent. */
+  virtual double GetRelativeHeight() const;
+  /** Sets the height in relative related to the parent. */
+  virtual void SetRelativeHeight(double height);
+
+  /** Retrieves the horizontal position in pixelds. */
+  virtual double GetPixelX() const;
+  /** Sets the horizontal position in pixels. */
+  virtual void SetPixelX(double x);
+  /** Retrieves the vertical position in pixels. */
+  virtual double GetPixelY() const;
+  /** Sets the vertical position in pixels. */
+  virtual void SetPixelY(double y);
+
+  /** Retrieves the horizontal position in relative related to the parent. */
+  virtual double GetRelativeX() const;
+  /** Sets the horizontal position in relative related to the parent. */
+  virtual void SetRelativeX(double x);
+  /** Retrieves the vertical position in relative related to the parent. */
+  virtual double GetRelativeY() const;
+  /** Sets the vertical position in relative related to the parent. */
+  virtual void SetRelativeY(double y);
+
+  /** Retrieves the horizontal pin in pixels. */
+  virtual double GetPixelPinX() const;
+  /** Sets the horizontal pin in pixels. */
+  virtual void SetPixelPinX(double pin_x);
+  /** Retrieves the vertical pin in pixels. */
+  virtual double GetPixelPinY() const;
+  /** Sets the vertical pin in pixels. */
+  virtual void SetPixelPinY(double pin_y);
+
+  /** Retrieves the horizontal pin in relative related to the child. */
+  virtual double GetRelativePinX() const;
+  /** Sets the horizontal pin in relative related to the child. */
+  virtual void SetRelativePinX(double pin_x);
+  /** Retrieves the vertical pin in relative related to the child. */
+  virtual double GetRelativePinY() const;
+  /** Sets the vertical pin in relative related to the child. */
+  virtual void SetRelativePinY(double pin_y);
+
+  /** Retrieves the rotation of the element, in degrees. */
+  virtual double GetRotation() const;
+  /** Sets the rotation of the element, in degrees. */
+  virtual void SetRotation(double rotation);
+
+  /** Retrieve whether x is relative to its parent element. */
+  virtual bool XIsRelative() const;
+  /** Retrieve whether y is relative to its parent element. */
+  virtual bool YIsRelative() const;
+  /** Retrieve whether width is relative to its parent element. */
+  virtual bool WidthIsRelative() const;
+  /** Retrieve whether height is relative to its parent element. */
+  virtual bool HeightIsRelative() const;
+  /** Retrieve whether pin x is relative to its width. */
+  virtual bool PinXIsRelative() const;
+  /** Retrieve whether pin y is relative to its height. */
+  virtual bool PinYIsRelative() const;
+
+  /** Retrieve whether width is explicitly specified. */
+  virtual bool WidthIsSpecified() const;
+  /** Clear the specified width value and use the default. */
+  virtual void ResetWidthToDefault();
+  /** Retrieve whether height is explicitly specified. */
+  virtual bool HeightIsSpecified() const;
+  /** Clear the specified height value and use the default. */
+  virtual void ResetHeightToDefault();
+  /** Retrieve whether x is explicitly specified. */
+  virtual bool XIsSpecified() const;
+  /** Clear the specified x value and use the default. */
+  virtual void ResetXToDefault();
+  /** Retrieve whether y is explicitly specified. */
+  virtual bool YIsSpecified() const;
+  /** Clear the specified y value and use the default. */
+  virtual void ResetYToDefault();
+
+  /** Gets the client width (pixel width - width of scrollbar etc. if any). */
+  virtual double GetClientWidth() const;
+  /** Gets the client height (pixel width - height of scrollbar etc. if any). */
+  virtual double GetClientHeight() const;
+
   /** Retrieves the hit-test value for this element. */
   HitTest GetHitTest() const;
   /** Sets the hit-test value for this element. */
@@ -307,7 +408,7 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
    * child element.
    *
    * The default implementation should directly call ParentCoorddToChildCoord.
-   * Element implementation should override this method if it supports
+   * BasicElement implementation should override this method if it supports
    * scrolling.
    *
    * @param child a child element of this element.
@@ -452,8 +553,6 @@ class BasicElement : public ScriptableHelper<ElementInterface> {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(BasicElement);
 };
-
-CLASS_ID_IMPL(BasicElement, ElementInterface)
 
 } // namespace ggadget
 

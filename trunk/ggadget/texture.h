@@ -17,7 +17,7 @@
 #ifndef GGADGET_TEXTURE_H__
 #define GGADGET_TEXTURE_H__
 
-#include <ggadget/element_interface.h>
+#include <ggadget/basic_element.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/image_interface.h>

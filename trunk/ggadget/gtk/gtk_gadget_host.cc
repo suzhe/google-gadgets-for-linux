@@ -29,20 +29,6 @@
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/xml_parser.h>
 
-#include <ggadget/anchor_element.h>
-#include <ggadget/button_element.h>
-#include <ggadget/checkbox_element.h>
-#include <ggadget/combobox_element.h>
-#include <ggadget/contentarea_element.h>
-#include <ggadget/div_element.h>
-#include <ggadget/edit_element.h>
-#include <ggadget/img_element.h>
-#include <ggadget/item_element.h>
-#include <ggadget/label_element.h>
-#include <ggadget/listbox_element.h>
-#include <ggadget/progressbar_element.h>
-#include <ggadget/scrollbar_element.h>
-
 #include "gtk_gadget_host.h"
 #include "cairo_graphics.h"
 #include "global_file_manager.h"
@@ -61,7 +47,7 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
-      element_factory_(NULL),
+      element_factory_(new ElementFactory()),
       xml_parser_(CreateXMLParser()),
       resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
@@ -74,38 +60,6 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
       toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
       forward_button_(NULL), details_button_(NULL),
       menu_(NULL) {
-  ElementFactory *factory = new ElementFactory();
-  element_factory_ = factory;
-  factory->RegisterElementClass("a", &ggadget::AnchorElement::CreateInstance);
-  factory->RegisterElementClass("button",
-                                &ggadget::ButtonElement::CreateInstance);
-  factory->RegisterElementClass("checkbox",
-                             &ggadget::CheckBoxElement::CreateCheckBoxInstance);
-  factory->RegisterElementClass("combobox",
-                                &ggadget::ComboBoxElement::CreateInstance);
-  factory->RegisterElementClass("contentarea",
-                                &ggadget::ContentAreaElement::CreateInstance);
-  factory->RegisterElementClass("div",
-                                &ggadget::DivElement::CreateInstance);
-  factory->RegisterElementClass("edit",
-                                &ggadget::EditElement::CreateInstance);
-  factory->RegisterElementClass("img",
-                                &ggadget::ImgElement::CreateInstance);
-  factory->RegisterElementClass("item",
-                                &ggadget::ItemElement::CreateInstance);
-  factory->RegisterElementClass("label",
-                                &ggadget::LabelElement::CreateInstance);
-  factory->RegisterElementClass("listbox",
-                                &ggadget::ListBoxElement::CreateInstance);
-  factory->RegisterElementClass("listitem",
-                                &ggadget::ItemElement::CreateListItemInstance);
-  factory->RegisterElementClass("progressbar",
-                                &ggadget::ProgressBarElement::CreateInstance);
-  factory->RegisterElementClass("radio",
-                                &ggadget::CheckBoxElement::CreateRadioInstance);
-  factory->RegisterElementClass("scrollbar",
-                                &ggadget::ScrollBarElement::CreateInstance);
-
   FileManagerWrapper *wrapper = new FileManagerWrapper(xml_parser_);
   file_manager_ = wrapper;
 
@@ -151,7 +105,7 @@ ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
   return script_runtime_;
 }
 
-ElementFactoryInterface *GtkGadgetHost::GetElementFactory() {
+ElementFactory *GtkGadgetHost::GetElementFactory() {
   return element_factory_;
 }
 

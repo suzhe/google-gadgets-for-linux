@@ -18,7 +18,7 @@
 #include <algorithm>
 #include "elements.h"
 #include "basic_element.h"
-#include "element_factory_interface.h"
+#include "element_factory.h"
 #include "graphics_interface.h"
 #include "logger.h"
 #include "math_utils.h"
@@ -31,7 +31,7 @@ namespace ggadget {
 
 class Elements::Impl {
  public:
-  Impl(ElementFactoryInterface *factory, BasicElement *owner, View *view)
+  Impl(ElementFactory *factory, BasicElement *owner, View *view)
       : factory_(factory), owner_(owner), view_(view),
         width_(.0), height_(.0),
         scrollable_(false) {
@@ -47,9 +47,8 @@ class Elements::Impl {
     return children_.size();
   }
 
-  ElementInterface *AppendElement(const char *tag_name, const char *name) {
-    BasicElement *e = down_cast<BasicElement *>(
-        factory_->CreateElement(tag_name, owner_, view_, name));
+  BasicElement *AppendElement(const char *tag_name, const char *name) {
+    BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
     if (e == NULL)
       return NULL;
     if (view_->OnElementAdd(e)) {
@@ -61,8 +60,8 @@ class Elements::Impl {
     return e;
   }
 
-  ElementInterface *InsertElement(const char *tag_name,
-                                  const ElementInterface *before,
+  BasicElement *InsertElement(const char *tag_name,
+                                  const BasicElement *before,
                                   const char *name) {
     BasicElement *e = down_cast<BasicElement *>(
         factory_->CreateElement(tag_name, owner_, view_, name));
@@ -79,7 +78,7 @@ class Elements::Impl {
     return e;
   }
 
-  bool RemoveElement(ElementInterface *element) {
+  bool RemoveElement(BasicElement *element) {
     Children::iterator ite = std::find(children_.begin(), children_.end(),
                                        down_cast<BasicElement *>(element));
     if (ite == children_.end())
@@ -100,7 +99,7 @@ class Elements::Impl {
     children_.swap(v);
   }
 
-  ElementInterface *GetItem(const Variant &index_or_name) {
+  BasicElement *GetItem(const Variant &index_or_name) {
     switch (index_or_name.type()) {
       case Variant::TYPE_INT64:
         return GetItemByIndex(VariantValue<int>()(index_or_name));
@@ -111,18 +110,18 @@ class Elements::Impl {
     }
   }
 
-  ElementInterface *GetItemByIndex(int index) {
+  BasicElement *GetItemByIndex(int index) {
     if (index >= 0 && index < static_cast<int>(children_.size()))
       return children_[index];
     return NULL;
   }
 
-  ElementInterface *GetItemByName(const char *name) {
+  BasicElement *GetItemByName(const char *name) {
     return GetItemByIndex(GetIndexByName(name));
   }
 
   Variant GetItemByNameVariant(const char *name) {
-    ElementInterface *result = GetItemByName(name);
+    BasicElement *result = GetItemByName(name);
     return result ? Variant(result) : Variant();
   }
 
@@ -335,7 +334,7 @@ class Elements::Impl {
       (*it)->MarkRedraw();
   }
 
-  ElementFactoryInterface *factory_;
+  ElementFactory *factory_;
   BasicElement *owner_;
   View *view_;
   typedef std::vector<BasicElement *> Children;
@@ -345,7 +344,7 @@ class Elements::Impl {
   bool scrollable_;
 };
 
-Elements::Elements(ElementFactoryInterface *factory,
+Elements::Elements(ElementFactory *factory,
                    BasicElement *owner, View *view)
     : impl_(new Impl(factory, owner, view)) {
   RegisterProperty("count", NewSlot(impl_, &Impl::GetCount), NULL);
@@ -369,49 +368,49 @@ int Elements::GetCount() const {
   return impl_->GetCount();
 }
 
-ElementInterface *Elements::GetItemByIndex(int child) {
+BasicElement *Elements::GetItemByIndex(int child) {
   ASSERT(impl_);
   return impl_->GetItemByIndex(child);
 }
 
-ElementInterface *Elements::GetItemByName(const char *child) {
+BasicElement *Elements::GetItemByName(const char *child) {
   ASSERT(impl_);
   return impl_->GetItemByName(child);
 }
 
-const ElementInterface *Elements::GetItemByIndex(int child) const {
+const BasicElement *Elements::GetItemByIndex(int child) const {
   ASSERT(impl_);
   return impl_->GetItemByIndex(child);
 }
 
-const ElementInterface *Elements::GetItemByName(const char *child) const {
+const BasicElement *Elements::GetItemByName(const char *child) const {
   ASSERT(impl_);
   return impl_->GetItemByName(child);
 }
 
-ElementInterface *Elements::AppendElement(const char *tag_name,
+BasicElement *Elements::AppendElement(const char *tag_name,
                                           const char *name) {
   ASSERT(impl_);
   return impl_->AppendElement(tag_name, name);
 }
 
-ElementInterface *Elements::InsertElement(const char *tag_name,
-                                          const ElementInterface *before,
+BasicElement *Elements::InsertElement(const char *tag_name,
+                                          const BasicElement *before,
                                           const char *name) {
   ASSERT(impl_);
   return impl_->InsertElement(tag_name, before, name);
 }
 
-ElementInterface *Elements::AppendElementFromXML(const char *xml) {
+BasicElement *Elements::AppendElementFromXML(const char *xml) {
   return ::ggadget::AppendElementFromXML(impl_->view_, this, xml);
 }
 
-ElementInterface *Elements::InsertElementFromXML(
-    const char *xml, const ElementInterface *before) {
+BasicElement *Elements::InsertElementFromXML(
+    const char *xml, const BasicElement *before) {
   return ::ggadget::InsertElementFromXML(impl_->view_, this, xml, before);
 }
 
-bool Elements::RemoveElement(ElementInterface *element) {
+bool Elements::RemoveElement(BasicElement *element) {
   return impl_->RemoveElement(element);
 }
 

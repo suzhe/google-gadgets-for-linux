@@ -44,9 +44,9 @@ TEST_F(BasicElementTest, TestCreate) {
 TEST_F(BasicElementTest, TestChildren) {
   MockedViewHost vh(gFactory);
   Muffin m(NULL, vh.GetViewInternal(), NULL);
-  ggadget::ElementInterface *c1 = 
+  ggadget::BasicElement *c1 = 
       m.GetChildren()->AppendElement("muffin", NULL);
-  ggadget::ElementInterface *c2 =
+  ggadget::BasicElement *c2 =
       m.GetChildren()->InsertElement("pie", c1, "First");
   ASSERT_EQ(2, m.GetChildren()->GetCount());
   ASSERT_TRUE(m.GetChildren()->GetItemByIndex(0) == c2);
@@ -96,7 +96,7 @@ TEST_F(BasicElementTest, TestPixelHeight) {
   m.SetPixelHeight(-100.0);
   ASSERT_FALSE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelHeight());
-  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelHeight(50.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   // Modifying the height of the parent will not effect the child.
@@ -108,13 +108,13 @@ TEST_F(BasicElementTest, TestPixelHeight) {
 TEST_F(BasicElementTest, TestRelativeHeight) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
-  ggadget::ElementInterface *m =
+  ggadget::BasicElement *m =
       vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeHeight(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, m->GetRelativeHeight());
   ASSERT_FLOAT_EQ(150.0, m->GetPixelHeight());
-  ggadget::ElementInterface *c = m->GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m->GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeHeight(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeHeight());
@@ -138,9 +138,9 @@ TEST_F(BasicElementTest, TestRelativeHeight) {
 TEST_F(BasicElementTest, TestHitTest) {
   MockedViewHost vh(gFactory);
   Muffin m(NULL, vh.GetViewInternal(), NULL);
-  ASSERT_TRUE(m.GetHitTest() == ggadget::ElementInterface::HT_DEFAULT);
-  m.SetHitTest(ggadget::ElementInterface::HT_CLIENT);
-  ASSERT_TRUE(m.GetHitTest() == ggadget::ElementInterface::HT_CLIENT);
+  ASSERT_TRUE(m.GetHitTest() == ggadget::BasicElement::HT_DEFAULT);
+  m.SetHitTest(ggadget::BasicElement::HT_CLIENT);
+  ASSERT_TRUE(m.GetHitTest() == ggadget::BasicElement::HT_CLIENT);
 }
 
 TEST_F(BasicElementTest, TestMask) {
@@ -162,8 +162,8 @@ TEST_F(BasicElementTest, TestName) {
 TEST_F(BasicElementTest, TestConst) {
   MockedViewHost vh(gFactory);
   Muffin m(NULL, vh.GetViewInternal(), NULL);
-  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
-  const ggadget::ElementInterface *cc = c;
+  ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
+  const ggadget::BasicElement *cc = c;
   ASSERT_TRUE(down_cast<const ggadget::BasicElement *>(cc)->GetView()
               == vh.GetViewInternal());
   ASSERT_TRUE(cc->GetParentElement() == &m);
@@ -207,7 +207,7 @@ TEST_F(BasicElementTest, TestPixelPinX) {
 TEST_F(BasicElementTest, TestRelativePinX) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
-  ggadget::ElementInterface *m =
+  ggadget::BasicElement *m =
       vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
   m->SetPixelWidth(200.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
@@ -246,7 +246,7 @@ TEST_F(BasicElementTest, TestPixelPinY) {
 TEST_F(BasicElementTest, TestRelativePinY) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
-  ggadget::ElementInterface *m =
+  ggadget::BasicElement *m =
       vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
   m->SetPixelHeight(150.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
@@ -294,7 +294,7 @@ TEST_F(BasicElementTest, TestPixelWidth) {
   m.SetPixelWidth(-100.0);
   ASSERT_FALSE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelWidth());
-  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelWidth(50.0);
   // Modifying the width of the parent will not effect the child.
   m.SetPixelWidth(200.0);
@@ -305,13 +305,13 @@ TEST_F(BasicElementTest, TestPixelWidth) {
 TEST_F(BasicElementTest, TestRelativeWidth) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
-  ggadget::ElementInterface *m =
+  ggadget::BasicElement *m =
       vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeWidth(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, m->GetRelativeWidth());
   ASSERT_FLOAT_EQ(200.0, m->GetPixelWidth());
-  ggadget::ElementInterface *c = m->GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m->GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeWidth(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, c->GetRelativeWidth());
@@ -348,7 +348,7 @@ TEST_F(BasicElementTest, TestPixelX) {
   m.SetPixelX(100.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelX());
-  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelX(50.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   // Modifying the width of the parent will not effect the child.
@@ -363,14 +363,14 @@ TEST_F(BasicElementTest, TestPixelX) {
 TEST_F(BasicElementTest, TestRelativeX) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
-  ggadget::ElementInterface *m =
+  ggadget::BasicElement *m =
       vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeWidth(0.5);
   ASSERT_TRUE(vh.GetQueuedDraw());
   m->SetRelativeX(0.5);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(200.0, m->GetPixelX());
-  ggadget::ElementInterface *c = m->GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m->GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeX(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, c->GetPixelX());
@@ -391,7 +391,7 @@ TEST_F(BasicElementTest, TestPixelY) {
   m.SetPixelY(100.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(100.0, m.GetPixelY());
-  ggadget::ElementInterface *c = m.GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
   c->SetPixelY(50.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   // Modifying the height of the parent will not effect the child.
@@ -406,14 +406,14 @@ TEST_F(BasicElementTest, TestPixelY) {
 TEST_F(BasicElementTest, TestRelativeY) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
-  ggadget::ElementInterface *m =
+  ggadget::BasicElement *m =
       vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeHeight(0.5);
   ASSERT_TRUE(vh.GetQueuedDraw());
   m->SetRelativeY(0.5);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(150.0, m->GetPixelY());
-  ggadget::ElementInterface *c = m->GetChildren()->AppendElement("pie", NULL);
+  ggadget::BasicElement *c = m->GetChildren()->AppendElement("pie", NULL);
   c->SetRelativeY(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(75.0, c->GetPixelY());
@@ -432,17 +432,17 @@ TEST_F(BasicElementTest, TestFromXML) {
   MockedViewHost vh(gFactory);
   Muffin m(NULL, vh.GetViewInternal(), NULL);
   ggadget::Elements *children = down_cast<ggadget::Elements *>(m.GetChildren());
-  ggadget::ElementInterface *e1 = children->InsertElementFromXML(
+  ggadget::BasicElement *e1 = children->InsertElementFromXML(
       "<muffin/>", NULL);
-  ggadget::ElementInterface *e2 = children->InsertElementFromXML(
+  ggadget::BasicElement *e2 = children->InsertElementFromXML(
       "<pie/>", e1);
-  ggadget::ElementInterface *e3 = children->InsertElementFromXML(
+  ggadget::BasicElement *e3 = children->InsertElementFromXML(
       "<pie name=\"a-pie\"/>", e2);
-  ggadget::ElementInterface *e4 = children->AppendElementFromXML(
+  ggadget::BasicElement *e4 = children->AppendElementFromXML(
       "<bread/>");
-  ggadget::ElementInterface *e5 = children->InsertElementFromXML(
+  ggadget::BasicElement *e5 = children->InsertElementFromXML(
       "<bread/>", e2);
-  ggadget::ElementInterface *e6 = children->AppendElementFromXML(
+  ggadget::BasicElement *e6 = children->AppendElementFromXML(
       "<pie name=\"big-pie\"/>");
   ASSERT_EQ(4, children->GetCount());
   ASSERT_TRUE(e1 == children->GetItemByIndex(2));
@@ -478,20 +478,20 @@ TEST_F(BasicElementTest, XMLConstruction) {
     "</muffin>\n";
   AppendElementFromXML(vh.GetViewInternal(), m.GetChildren(), xml);
   ASSERT_EQ(1, m.GetChildren()->GetCount());
-  ggadget::ElementInterface *e1 = m.GetChildren()->GetItemByIndex(0);
+  ggadget::BasicElement *e1 = m.GetChildren()->GetItemByIndex(0);
   ASSERT_TRUE(e1);
   ASSERT_TRUE(e1->IsInstanceOf(Muffin::CLASS_ID));
   ASSERT_FALSE(e1->IsInstanceOf(Pie::CLASS_ID));
-  ASSERT_TRUE(e1->IsInstanceOf(ggadget::ElementInterface::CLASS_ID));
+  ASSERT_TRUE(e1->IsInstanceOf(ggadget::BasicElement::CLASS_ID));
   Muffin *m1 = down_cast<Muffin *>(e1);
   ASSERT_STREQ("top", m1->GetName().c_str());
   ASSERT_STREQ("muffin", m1->GetTagName().c_str());
   ASSERT_EQ(2, m1->GetChildren()->GetCount());
-  ggadget::ElementInterface *e2 = m1->GetChildren()->GetItemByIndex(0);
+  ggadget::BasicElement *e2 = m1->GetChildren()->GetItemByIndex(0);
   ASSERT_TRUE(e2);
   ASSERT_TRUE(e2->IsInstanceOf(Pie::CLASS_ID));
   ASSERT_FALSE(e2->IsInstanceOf(Muffin::CLASS_ID));
-  ASSERT_TRUE(e2->IsInstanceOf(ggadget::ElementInterface::CLASS_ID));
+  ASSERT_TRUE(e2->IsInstanceOf(ggadget::BasicElement::CLASS_ID));
   Pie *p1 = down_cast<Pie *>(e2);
   ASSERT_STREQ("", p1->GetName().c_str());
   ASSERT_STREQ("pie", p1->GetTagName().c_str());

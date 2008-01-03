@@ -105,19 +105,19 @@ TEST(ViewTest, XMLConstruction) {
   ASSERT_EQ(456, view->GetHeight());
   ASSERT_EQ(2, view->GetChildren()->GetCount());
 
-  ggadget::ElementInterface *m = view->GetElementByName("muffin");
+  ggadget::BasicElement *m = view->GetElementByName("muffin");
   ASSERT_TRUE(m != NULL);
   ASSERT_EQ(m, view->GetChildren()->GetItemByIndex(0)->
                GetChildren()->GetItemByIndex(0));
 
-  ggadget::ElementInterface *m1 = view->GetElementByName("pie1");
+  ggadget::BasicElement *m1 = view->GetElementByName("pie1");
   ASSERT_TRUE(m1 != NULL);
   ASSERT_EQ(m1, view->GetChildren()->GetItemByIndex(1));
 
   view->GetChildren()->GetItemByIndex(0)->GetChildren()->RemoveElement(m);
   ASSERT_TRUE(view->GetElementByName("muffin") == NULL);
 
-  ggadget::ElementInterface *m2 = 
+  ggadget::BasicElement *m2 = 
       ggadget::down_cast<ggadget::Elements *>(
           view->GetChildren()->GetItemByIndex(0)->GetChildren())->
       AppendElementFromXML("<muffin name=\"new-muffin\"/>");

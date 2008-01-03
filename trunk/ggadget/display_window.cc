@@ -15,13 +15,13 @@
 */
 
 #include "display_window.h"
+#include "basic_element.h"
 #include "button_element.h"
 #include "checkbox_element.h"
 #include "combobox_element.h"
 #include "div_element.h"
 #include "edit_element.h"
-#include "element_interface.h"
-#include "elements_interface.h"
+#include "elements.h"
 #include "item_element.h"
 #include "label_element.h"
 #include "listbox_element.h"
@@ -97,7 +97,7 @@ class DisplayWindow::Impl {
       Variant *array = new Variant[count];
       size_t actual_count = 0;
       for (int i = 0; i < count; i++) {
-        ElementInterface *item = listbox->GetChildren()->GetItemByIndex(i);
+        BasicElement *item = listbox->GetChildren()->GetItemByIndex(i);
         if (item->IsInstanceOf(ItemElement::CLASS_ID)) {
           array[actual_count] =
               Variant(down_cast<ItemElement *>(item)->GetLabelText());
@@ -311,7 +311,7 @@ class DisplayWindow::Impl {
     controls_.clear();
   }
 
-  DivElement *CreateFrameDiv(ElementsInterface *elements) {
+  DivElement *CreateFrameDiv(Elements *elements) {
     DivElement *div = down_cast<DivElement *>(elements->AppendElement("div",
                                                                       NULL));
     div->SetBackground(Variant(kControlBorderColor));
@@ -322,7 +322,7 @@ class DisplayWindow::Impl {
                       const char *ctrl_id, const Variant &text,
                       int x, int y, int width, int height) {
     Control *control = NULL;
-    ElementsInterface *elements = view_->GetChildren();
+    Elements *elements = view_->GetChildren();
     DivElement *div = NULL;  // Some elements may need a frame.
 
     switch (ctrl_class) {

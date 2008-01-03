@@ -23,7 +23,7 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class ElementFactoryInterface;
+class ElementFactory;
 class FileManagerInterface;
 class FrameworkInterface;
 class GadgetInterface;
@@ -51,7 +51,7 @@ class GadgetHostInterface {
   virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type) = 0;
 
   /** Returns the global @c ElementFactoryInterface instance. */
-  virtual ElementFactoryInterface *GetElementFactory() = 0;
+  virtual ElementFactory *GetElementFactory() = 0;
 
   /** Get the file manager used to load this gadget. */
   virtual FileManagerInterface *GetFileManager() = 0;

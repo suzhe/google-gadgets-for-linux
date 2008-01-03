@@ -91,6 +91,7 @@ class MockedCanvas : public ggadget::CanvasInterface {
 };
 
 class MockedGraphics : public ggadget::GraphicsInterface {
+ public:
   virtual ggadget::CanvasInterface *NewCanvas(size_t w, size_t h) const {
     return new MockedCanvas(w, h);
   }
@@ -108,7 +109,7 @@ class MockedGraphics : public ggadget::GraphicsInterface {
 
 class MockedViewHost : public ggadget::ViewHostInterface {
  public:
-  MockedViewHost(ggadget::ElementFactoryInterface *factory)
+  MockedViewHost(ggadget::ElementFactory *factory)
       : view_(new ggadget::View(this, NULL, factory, 0)), draw_queued_(false) {
   }
   virtual ~MockedViewHost() {

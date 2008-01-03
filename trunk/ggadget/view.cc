@@ -18,7 +18,7 @@
 #include "view.h"
 #include "basic_element.h"
 #include "contentarea_element.h"
-#include "element_factory_interface.h"
+#include "element_factory.h"
 #include "elements.h"
 #include "event.h"
 #include "file_manager_interface.h"
@@ -154,7 +154,7 @@ class View::Impl {
   };
 
   Impl(ViewHostInterface *host,
-       ElementFactoryInterface *element_factory,
+      ElementFactory *element_factory,
        int debug_mode,
        View *owner)
     : owner_(owner),
@@ -280,7 +280,7 @@ class View::Impl {
                              PositionEvent *new_event) {
     ASSERT(child);
     std::vector<BasicElement *> elements;
-    for (ElementInterface *e = child; e != NULL; e = e->GetParentElement())
+    for (BasicElement *e = child; e != NULL; e = e->GetParentElement())
       elements.push_back(down_cast<BasicElement *>(e));
 
     double x, y;
@@ -818,14 +818,14 @@ class View::Impl {
 
     if (popup_element_) {
       popup_element_->ClearPositionChanged();
-      std::vector<ElementInterface *> elements;
-      ElementInterface *e = popup_element_;
+      std::vector<BasicElement *> elements;
+      BasicElement *e = popup_element_;
       for (; e != NULL; e = e->GetParentElement())
         elements.push_back(e);
 
-      std::vector<ElementInterface *>::reverse_iterator it = elements.rbegin();
+      std::vector<BasicElement *>::reverse_iterator it = elements.rbegin();
       for (; it < elements.rend(); ++it) {
-        ElementInterface *element = *it;
+        BasicElement *element = *it;
         if (element->GetRotation() == .0) {
           canvas->TranslateCoordinates(
               element->GetPixelX() - element->GetPixelPinX(),
@@ -973,7 +973,7 @@ class View::Impl {
   GadgetHostInterface *gadget_host_;
   ScriptContextInterface *script_context_;
   FileManagerInterface *file_manager_;
-  ElementFactoryInterface *element_factory_;
+  ElementFactory *element_factory_;
   MainLoopInterface *main_loop_;
 
   Elements children_;
@@ -1017,7 +1017,7 @@ class View::Impl {
 
 View::View(ViewHostInterface *host,
            ScriptableInterface *prototype,
-           ElementFactoryInterface *element_factory,
+           ElementFactory *element_factory,
            int debug_mode)
     : impl_(new Impl(host, element_factory, debug_mode, this)) {
   impl_->RegisterProperties(this);
@@ -1142,23 +1142,23 @@ void View::SetResizable(ViewInterface::ResizableMode resizable) {
   impl_->host_->SetResizable(resizable);
 }
 
-ElementFactoryInterface *View::GetElementFactory() const {
+ElementFactory *View::GetElementFactory() const {
   return impl_->element_factory_;
 }
 
-const ElementsInterface *View::GetChildren() const {
+const Elements *View::GetChildren() const {
   return &impl_->children_;
 }
 
-ElementsInterface *View::GetChildren() {
+Elements *View::GetChildren() {
   return &impl_->children_;
 }
 
-ElementInterface *View::GetElementByName(const char *name) {
+BasicElement *View::GetElementByName(const char *name) {
   return impl_->GetElementByName(name);
 }
 
-const ElementInterface *View::GetElementByName(const char *name) const {
+const BasicElement *View::GetElementByName(const char *name) const {
   return impl_->GetElementByName(name);
 }
 

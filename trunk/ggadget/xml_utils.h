@@ -22,8 +22,8 @@
 namespace ggadget {
 
 class ViewInterface;
-class ElementInterface;
-class ElementsInterface;
+class BasicElement;
+class Elements;
 class DOMDocumentInterface;
 
 /**
@@ -52,8 +52,8 @@ bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
  * @param elements the elements collection.
  * @param xml the XML definition of the element.
  */
-ElementInterface *AppendElementFromXML(ViewInterface *view,
-                                       ElementsInterface *elements,
+BasicElement *AppendElementFromXML(ViewInterface *view,
+                                       Elements *elements,
                                        const std::string &xml);
 
 /**
@@ -63,10 +63,10 @@ ElementInterface *AppendElementFromXML(ViewInterface *view,
  * @param xml the XML definition of the element.
  * @param before insert the new element before this element.
  */
-ElementInterface *InsertElementFromXML(ViewInterface *view,
-                                       ElementsInterface *elements,
+BasicElement *InsertElementFromXML(ViewInterface *view,
+                                       Elements *elements,
                                        const std::string &xml,
-                                       const ElementInterface *before);
+                                       const BasicElement *before);
 
 } // namespace ggadget
 

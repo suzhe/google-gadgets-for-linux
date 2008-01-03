@@ -24,13 +24,13 @@
 namespace ggadget {
 
 class CanvasInterface;
-class ElementInterface;
-class ElementFactoryInterface;
-class ScriptableEvent;
-class ElementsInterface;
-class GraphicsInterface;
-class ScriptContextInterface;
+class BasicElement;
+class ElementFactory;
+class Elements;
 class FileManagerInterface;
+class GraphicsInterface;
+class ScriptableEvent;
+class ScriptContextInterface;
 class Texture;
 class MenuInterface;
 class XMLParserInterface;
@@ -162,21 +162,21 @@ class ViewInterface : public ScriptableInterface {
 
  public:  // Element management functions.
   /**
-   * Retrieves the ElementFactoryInterface used to create elements in this
+   * Retrieves the ElementFactory used to create elements in this
    * view.
    */
-  virtual ElementFactoryInterface *GetElementFactory() const = 0;
+  virtual ElementFactory *GetElementFactory() const = 0;
 
   /**
    * Retrieves a collection that contains the immediate children of this
    * view.
    */
-  virtual const ElementsInterface *GetChildren() const = 0;
+  virtual const Elements *GetChildren() const = 0;
   /**
    * Retrieves a collection that contains the immediate children of this
    * view.
    */
-  virtual ElementsInterface *GetChildren() = 0;
+  virtual Elements *GetChildren() = 0;
 
   /**
    * Looks up an element from all elements directly or indirectly contained
@@ -184,12 +184,12 @@ class ViewInterface : public ScriptableInterface {
    * @param name element name.
    * @return the element pointer if found; or @c NULL if not found.
    */
-  virtual ElementInterface *GetElementByName(const char *name) = 0;
+  virtual BasicElement *GetElementByName(const char *name) = 0;
 
   /**
    * Constant version of the above GetElementByName();
    */
-  virtual const ElementInterface *GetElementByName(const char *name) const = 0;
+  virtual const BasicElement *GetElementByName(const char *name) const = 0;
 
  public:
   /**
