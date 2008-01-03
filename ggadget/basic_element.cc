@@ -438,7 +438,8 @@ class BasicElement::Impl {
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
       if (mask) {
-        target = view_->GetGraphics()->NewCanvas(width_, height_);
+        target = view_->GetGraphics()->NewCanvas(size_t(ceil(width_)),
+                                                 size_t(ceil(height_)));
       }
       canvas->PushState();
       canvas->IntersectRectClipRegion(0, 0, width_, height_);
@@ -449,9 +450,7 @@ class BasicElement::Impl {
         target->Destroy();
       }
       canvas->PopState();
-      if (debug_mode_ == 1) {
-        // TODO: draw box around children_canvas only.
-      } else if (debug_mode_ == 2) {
+      if (debug_mode_ >= 2) {
         DrawBoundingBox(canvas, width_, height_, debug_color_index_);
       }
     }

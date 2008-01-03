@@ -18,6 +18,7 @@
 #define GGADGET_TESTS_MOCKED_VIEW_HOST_H__
 
 #include "ggadget/graphics_interface.h"
+#include "ggadget/canvas_interface.h"
 #include "ggadget/view.h"
 #include "ggadget/view_interface.h"
 #include "ggadget/view_host_interface.h"
@@ -148,8 +149,9 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   bool GetQueuedDraw() {
     bool b = draw_queued_;
     draw_queued_ = false;
-    bool changed;
-    view_->Draw(&changed);
+    ggadget::CanvasInterface *canvas = new MockedCanvas(100, 100);
+    view_->Draw(canvas);
+    canvas->Destroy();
     return b;
   }
   ggadget::View *GetViewInternal() { return view_; }

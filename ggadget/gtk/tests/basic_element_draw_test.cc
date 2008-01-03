@@ -58,13 +58,10 @@ class Muffin : public BasicElement {
   virtual ~Muffin() {
   }
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas) {
+  virtual void DoDraw(CanvasInterface *canvas) {
     canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(),
                            Color(1., 0., 0.));
-    if (children_canvas) {
-      canvas->DrawCanvas(0., 0., children_canvas);
-    }
+    DrawChildren(canvas);
   }
 
   DEFINE_CLASS_ID(0x6c0dee0e5bbe11dc, BasicElement)
@@ -88,8 +85,7 @@ class Pie : public BasicElement {
     color_ = c;
   }
 
-  virtual void DoDraw(CanvasInterface *canvas,
-                      const CanvasInterface *children_canvas) {
+  virtual void DoDraw(CanvasInterface *canvas) {
     canvas->DrawFilledRect(0., 0., GetPixelWidth(), GetPixelHeight(), color_);
   }
 
@@ -191,12 +187,13 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  bool changed = false;
-  const CanvasInterface *canvas = m.Draw(&changed);
-  ASSERT_TRUE(canvas != NULL);
-  EXPECT_TRUE(changed);
+  CanvasInterface *canvas =
+      view_host_->GetGraphics()->NewCanvas(m.GetPixelWidth(),
+                                           m.GetPixelHeight());
+  m.Draw(canvas);
 
   EXPECT_TRUE(target_->DrawCanvas(10, 10, canvas));
+  canvas->Destroy();
 }
 
 int main(int argc, char *argv[]) {
