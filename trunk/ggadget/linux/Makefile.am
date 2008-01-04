@@ -23,6 +23,7 @@ INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 noinst_HEADERS		= file_system.h \
+			  audioclip.h \
 			  machine.h \
 			  memory.h \
 			  network.h \
@@ -40,6 +41,7 @@ lib_LTLIBRARIES		= libggadget-linux@GGL_EPOCH@.la
 libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 			  file_system.cc \
 			  framework.cc \
+			  audioclip.cc \
 			  machine.cc \
 			  memory.cc \
 			  network.cc \
@@ -49,14 +51,15 @@ libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 			  wireless.cc \
 			  wireless_access_point.cc
 
-libggadget_linux@GGL_EPOCH@_la_CPPFLAGS =
+libggadget_linux@GGL_EPOCH@_la_CPPFLAGS = @GSTREAMER_CFLAGS@
 
 if GGL_BUILD_LIBGGADGET_DBUS
   DBUS_LIB= $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 endif
 libggadget_linux@GGL_EPOCH@_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(DBUS_LIB)
+			  $(DBUS_LIB) \
+			  @GSTREAMER_LIBS@
 
 libggadget_linux@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

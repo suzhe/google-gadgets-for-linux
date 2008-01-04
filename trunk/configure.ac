@@ -193,6 +193,9 @@ PKG_CHECK_MODULES(GTK2, [gtk+-2.0 >= 2.8.0], [has_gtk2=yes], [has_gtk2=no])
 # Check gdk-2.0 related libraries.
 PKG_CHECK_MODULES(GDK2, [gdk-2.0 >= 2.8.0], [has_gdk2=yes], [has_gdk2=no])
 
+# Check gstreamer-0.10 related libraries.
+PKG_CHECK_MODULES(GSTREAMER, [gstreamer-0.10 >= 0.10.0], [has_gstreamer=yes], [has_gstreamer=no])
+
 # Check libcurl.
 LIBCURL_CHECK_CONFIG([yes], [7.16.0], [has_libcurl=yes], [has_libcurl=no])
 
@@ -241,6 +244,12 @@ fi
 
 if test x$has_zlib != xyes; then
   AC_MSG_ERROR([Library zlib is not available.])
+fi
+
+if test x$has_gstreamer != xyes; then
+  AC_MSG_WARN([Library gstreamer is not available.])
+else
+  AC_DEFINE(GST_AUDIOCLIP,1,[Use audioclip implementation based on gstreamer])
 fi
 
 if test x$has_cairo != xyes -o x$has_pango != xyes -o x$has_gdk2 != xyes; then

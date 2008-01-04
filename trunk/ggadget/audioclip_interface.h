@@ -46,6 +46,12 @@ class AudioclipInterface {
     SOUND_ERROR_FORMAT_NOT_SUPPORTED = 3,
   };
 
+  static const int  kMinBalance = -10000;
+  static const int  kMaxBalance = 10000;
+
+  static const int  kMinVolume = -10000;
+  static const int  kMaxVolume = 0;
+
  public:
   virtual void Destroy() = 0;
 
