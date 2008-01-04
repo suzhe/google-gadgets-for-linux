@@ -15,6 +15,7 @@
 */
 
 #include "framework.h"
+#include "audioclip.h"
 #include "machine.h"
 #include "memory.h"
 #include "network.h"
@@ -72,8 +73,12 @@ framework::FileSystemInterface *LinuxFramework::GetFileSystem() {
 }
 framework::AudioclipInterface *
 LinuxFramework::CreateAudioclip(const char *src) {
-  // TODO:
-  return NULL;
+  framework::linux_os::Audioclip *audioclip = new framework::linux_os::Audioclip(src);
+  if (audioclip->InitIsFailed()) {
+    audioclip->Destroy();
+    return NULL;
+  }
+  return audioclip;
 }
 
 } // namespace ggadget
