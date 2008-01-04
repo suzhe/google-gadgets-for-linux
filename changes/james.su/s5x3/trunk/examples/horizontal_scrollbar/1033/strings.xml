@@ -1,0 +1,17 @@
+<!-- Copyright (c) 2007 Google Inc. -->
+<!-- All rights reserved -->
+<!-- -->
+<!-- This file is part of the Google Desktop SDK and may be freely copied and used. -->
+<!-- To download the latest version of the SDK please visit -->
+<!-- http://desktop.google.com/dev/ -->
+<!-- -->
+<!-- Our developer support group is at: -->
+<!-- http://groups.google.com/group/Google-Desktop-Developer -->
+
+<strings>
+  <GADGET_NAME>Horizontal Scroll Bar Demo</GADGET_NAME>
+  <GADGET_DESCRIPTION>Demonstrates how to use a horizontal scroll bar</GADGET_DESCRIPTION>
+  <GADGET_ABOUT_TEXT>Horizontal Scroll Bar Demo
+© 2007 Google Inc. All Rights Reserved
+Demonstrates a horizontal scroll bar.</GADGET_ABOUT_TEXT>
+</strings>
