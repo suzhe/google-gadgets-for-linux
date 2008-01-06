@@ -268,7 +268,7 @@ void ContentItem::SetLayout(Layout layout) {
     impl_->QueueDraw();
   }
 }
- 
+
 int ContentItem::GetFlags() const {
   return impl_->flags_;
 }
@@ -286,7 +286,7 @@ void ContentItem::SetFlags(int flags) {
 std::string ContentItem::GetTooltip() const {
   return impl_->tooltip_;
 }
-  
+
 void ContentItem::SetTooltip(const char *tooltip) {
   impl_->tooltip_ = tooltip;
 }

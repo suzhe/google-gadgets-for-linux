@@ -63,7 +63,7 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::OptionsInterface *GetOptions() { return NULL; }
   virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
   virtual ggadget::ViewHostInterface *NewViewHost(
-      ViewType type, ggadget::ScriptableInterface *prototype) { return NULL; }
+      ViewType type, ggadget::ViewInterface *view) { return NULL; }
   virtual ggadget::MainLoopInterface *GetMainLoop() { return NULL; }
   virtual ggadget::XMLParserInterface *GetXMLParser() { return xml_parser_; }
   virtual void SetPluginFlags(int plugin_flags) { }

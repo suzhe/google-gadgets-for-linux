@@ -164,8 +164,7 @@ TEST_F(BasicElementTest, TestConst) {
   Muffin m(NULL, vh.GetViewInternal(), NULL);
   ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
   const ggadget::BasicElement *cc = c;
-  ASSERT_TRUE(down_cast<const ggadget::BasicElement *>(cc)->GetView()
-              == vh.GetViewInternal());
+  ASSERT_TRUE(cc->GetView() == vh.GetViewInternal());
   ASSERT_TRUE(cc->GetParentElement() == &m);
 }
 

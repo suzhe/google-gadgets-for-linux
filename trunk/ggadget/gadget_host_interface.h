@@ -23,7 +23,6 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class ElementFactory;
 class FileManagerInterface;
 class FrameworkInterface;
 class GadgetInterface;
@@ -33,6 +32,7 @@ class ScriptableInterface;
 class ScriptRuntimeInterface;
 class Signal;
 class ViewHostInterface;
+class ViewInterface;
 class XMLParserInterface;
 
 /**
@@ -49,9 +49,6 @@ class GadgetHostInterface {
 
   /** Returns the global @c ScriptRuntimeInterface instance. */
   virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type) = 0;
-
-  /** Returns the global @c ElementFactoryInterface instance. */
-  virtual ElementFactory *GetElementFactory() = 0;
 
   /** Get the file manager used to load this gadget. */
   virtual FileManagerInterface *GetFileManager() = 0;
@@ -80,12 +77,14 @@ class GadgetHostInterface {
   };
 
   /**
-   * Creates a new @c ViewHostInterface for a view
+   * Creates a new @c ViewHostInterface for a view.
+   * Once the ViewHost is created, the given ViewInterface is owned by that
+   * ViewHost and will be freed by that ViewHost.
    * @param type type of view.
-   * @param prototype the scriptable prototype that can be shared among views.
+   * @param view View object to attach this host to
    */
-  virtual ViewHostInterface *NewViewHost(ViewType type,
-                                         ScriptableInterface *prototype) = 0;
+  virtual ViewHostInterface *NewViewHost(ViewType type, 
+					 ViewInterface *view) = 0;
 
   enum PluginFlags {
     PLUGIN_FLAG_NONE = 0,

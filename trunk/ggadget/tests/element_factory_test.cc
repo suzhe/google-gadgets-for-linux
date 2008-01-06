@@ -44,21 +44,21 @@ TEST_F(ElementFactoryTest, TestCreate) {
 
   ggadget::BasicElement *e1 = factory.CreateElement("muffin",
                                                     NULL,
-                                                    vh.GetView(),
+                                                    vh.GetViewInternal(),
                                                     NULL);
   ASSERT_TRUE(e1 != NULL);
   ASSERT_STREQ("muffin", e1->GetTagName().c_str());
 
   ggadget::BasicElement *e2 = factory.CreateElement("pie",
                                                     e1,
-                                                    vh.GetView(),
+                                                    vh.GetViewInternal(),
                                                     NULL);
   ASSERT_TRUE(e2 != NULL);
   ASSERT_STREQ("pie", e2->GetTagName().c_str());
 
   ggadget::BasicElement *e3 = factory.CreateElement("bread",
                                                     e2,
-                                                    vh.GetView(),
+                                                    vh.GetViewInternal(),
                                                     NULL);
   ASSERT_TRUE(e3 == NULL);
   delete ggadget::down_cast<Muffin *>(e1);

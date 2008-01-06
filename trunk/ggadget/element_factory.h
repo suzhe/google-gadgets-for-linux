@@ -50,7 +50,7 @@ class ElementFactory {
    */
   BasicElement *CreateElement(const char *tag_name,
                               BasicElement *parent,
-                              ViewInterface *view,
+                              View *view,
                               const char *name);
 
   /**
@@ -85,7 +85,7 @@ class ElementFactoryImpl {
  public:
   BasicElement *CreateElement(const char *tag_name,
                               BasicElement *parent,
-                              ViewInterface *view,
+                              View *view,
                               const char *name);
   bool RegisterElementClass(const char *tag_name,
                             ElementFactory::ElementCreator creator);

@@ -18,11 +18,14 @@
 #include "view.h"
 #include "basic_element.h"
 #include "contentarea_element.h"
+#include "content_item.h"
+#include "details_view.h"
 #include "element_factory.h"
 #include "elements.h"
 #include "event.h"
 #include "file_manager_interface.h"
 #include "main_loop_interface.h"
+#include "gadget_consts.h"
 #include "gadget_host_interface.h"
 #include "gadget_interface.h"
 #include "graphics_interface.h"
@@ -36,6 +39,9 @@
 #include "slot.h"
 #include "texture.h"
 #include "view_host_interface.h"
+#include "xml_dom_interface.h"
+#include "xml_http_request.h"
+#include "xml_parser_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -153,17 +159,16 @@ class View::Impl {
     Connection *destroy_connection_;
   };
 
-  Impl(ViewHostInterface *host,
-      ElementFactory *element_factory,
+  Impl(ElementFactory *element_factory,
        int debug_mode,
        View *owner)
     : owner_(owner),
-      host_(host),
-      gadget_host_(host->GetGadgetHost()),
-      script_context_(host->GetScriptContext()),
-      file_manager_(gadget_host_->GetFileManager()),
+      host_(NULL),
+      gadget_host_(NULL),
+      script_context_(NULL),
+      file_manager_(NULL),
       element_factory_(element_factory),
-      main_loop_(gadget_host_->GetMainLoop()),
+      main_loop_(NULL),
       children_(element_factory, NULL, owner),
       debug_mode_(debug_mode),
       width_(0), height_(0),
@@ -284,7 +289,7 @@ class View::Impl {
     ASSERT(child);
     std::vector<BasicElement *> elements;
     for (BasicElement *e = child; e != NULL; e = e->GetParentElement())
-      elements.push_back(down_cast<BasicElement *>(e));
+      elements.push_back(e);
 
     double x, y;
     BasicElement *top = *(elements.end() - 1);
@@ -1018,11 +1023,10 @@ class View::Impl {
   Signal0<void> on_destroy_signal_;
 };
 
-View::View(ViewHostInterface *host,
-           ScriptableInterface *prototype,
+View::View(ScriptableInterface *prototype,
            ElementFactory *element_factory,
            int debug_mode)
-    : impl_(new Impl(host, element_factory, debug_mode, this)) {
+    : impl_(new Impl(element_factory, debug_mode, this)) {
   impl_->RegisterProperties(this);
   impl_->RegisterProperties(&impl_->global_object_);
   impl_->global_object_.RegisterConstant("view", this);
@@ -1031,9 +1035,6 @@ View::View(ViewHostInterface *host,
       NewSlot(impl_, &Impl::GetElementByNameVariant), NULL);
   if (prototype)
     impl_->global_object_.SetPrototype(prototype);
-
-  if (impl_->script_context_)
-    impl_->script_context_->SetGlobalObject(&impl_->global_object_);
 }
 
 View::~View() {
@@ -1051,6 +1052,43 @@ FileManagerInterface *View::GetFileManager() const {
 
 bool View::InitFromFile(const char *filename) {
   return impl_->InitFromFile(filename);
+}
+
+void View::AttachHost(ViewHostInterface *host) {
+  impl_->host_ = host;
+  impl_->gadget_host_ = host->GetGadgetHost();
+  impl_->file_manager_ = impl_->gadget_host_->GetFileManager();
+  impl_->main_loop_ = impl_->gadget_host_->GetMainLoop();
+  impl_->script_context_ = host->GetScriptContext();
+
+  // Register script context.
+  if (impl_->script_context_) {   
+    impl_->script_context_->SetGlobalObject(&impl_->global_object_);
+
+    // Register global classes into script context.
+    impl_->script_context_->RegisterClass("DOMDocument", 
+        NewSlot(impl_->gadget_host_->GetXMLParser(),
+                &XMLParserInterface::CreateDOMDocument)); 
+    impl_->script_context_->RegisterClass(
+        "XMLHttpRequest", NewSlot(host, &ViewHostInterface::NewXMLHttpRequest));
+    impl_->script_context_->RegisterClass(
+        "DetailsView", NewSlot(DetailsView::CreateInstance));
+    impl_->script_context_->RegisterClass(
+        "ContentItem", NewFunctorSlot<ContentItem *>(
+             ContentItem::ContentItemCreator(this)));
+
+    // Execute common.js to initialize global constants and compatibility
+    // adapters.
+    std::string common_js_contents;
+    std::string common_js_path;
+    if (impl_->file_manager_->GetFileContents(kCommonJS, &common_js_contents,
+                                              &common_js_path)) {
+      impl_->script_context_->Execute(common_js_contents.c_str(),
+                                      common_js_path.c_str(), 1);
+    } else {
+      LOG("Failed to load %s.", kCommonJS);
+    }
+  }
 }
 
 int View::GetWidth() const {

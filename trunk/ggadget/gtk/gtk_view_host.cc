@@ -16,17 +16,13 @@
 
 #include <sys/time.h>
 
-#include <ggadget/content_item.h>
-#include <ggadget/details_view.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
-#include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_http_request.h>
-#include <ggadget/xml_parser_interface.h>
 #include "gtk_view_host.h"
 #include "cairo_graphics.h"
 #include "gadget_view_widget.h"
@@ -62,11 +58,11 @@ static const CursorTypeMapping[] = {
 
 GtkViewHost::GtkViewHost(GtkGadgetHost *gadget_host,
                          GadgetHostInterface::ViewType type,
-                         ScriptableInterface *prototype,
+                         ViewInterface *view,
                          bool composited, bool useshapemask,
-                         double zoom, int debug_mode)
+                         double zoom)
     : gadget_host_(gadget_host),
-      view_(NULL),
+      view_(view),
       script_context_(NULL),
       gvw_(NULL),
       gfx_(NULL),
@@ -83,40 +79,13 @@ GtkViewHost::GtkViewHost(GtkGadgetHost *gadget_host,
     script_context_ = script_runtime->CreateContext();
   }
 
-  view_ = new View(this, prototype, gadget_host->GetElementFactory(),
-                   debug_mode);
+  view_->AttachHost(this);
 
-  OptionsInterface *options = gadget_host->GetOptions();
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
+    OptionsInterface *options = gadget_host->GetOptions();
     // Continue to initialize the script context.
     onoptionchanged_connection_ = options->ConnectOnOptionChanged(
-        NewSlot(implicit_cast<ViewInterface *>(view_),
-                &ViewInterface::OnOptionChanged));
-
-    // Register global classes into script context.
-    script_context_->RegisterClass(
-        "DOMDocument", NewSlot(gadget_host_->GetXMLParser(),
-                               &XMLParserInterface::CreateDOMDocument));
-    script_context_->RegisterClass(
-        "XMLHttpRequest", NewSlot(this, &GtkViewHost::NewXMLHttpRequest));
-    script_context_->RegisterClass(
-        "DetailsView", NewSlot(DetailsView::CreateInstance));
-    script_context_->RegisterClass(
-        "ContentItem", NewFunctorSlot<ContentItem *>(
-             ContentItem::ContentItemCreator(view_)));
-
-    // Execute common.js to initialize global constants and compatibility
-    // adapters.
-    std::string common_js_contents;
-    std::string common_js_path;
-    FileManagerInterface *file_manager = gadget_host->GetFileManager();
-    if (file_manager->GetFileContents(kCommonJS, &common_js_contents,
-                                      &common_js_path)) {
-      script_context_->Execute(common_js_contents.c_str(),
-                               common_js_path.c_str(), 1);
-    } else {
-      LOG("Failed to load %s.", kCommonJS);
-    }
+        NewSlot(view_, &ViewInterface::OnOptionChanged));
   }
 
   gvw_ = GADGETVIEWWIDGET(GadgetViewWidget_new(this, zoom,

@@ -71,7 +71,7 @@ ElementFactory::~ElementFactory() {
 
 BasicElement *ElementFactory::CreateElement(const char *tag_name,
                                             BasicElement *parent,
-                                            ViewInterface *view,
+                                            View *view,
                                             const char *name) {
   ASSERT(impl_);
   return impl_->CreateElement(tag_name, parent, view, name);
@@ -87,14 +87,12 @@ namespace internal {
 
 BasicElement *ElementFactoryImpl::CreateElement(const char *tag_name,
                                                 BasicElement *parent,
-                                                ViewInterface *view,
+                                                View *view,
                                                 const char *name) {
   CreatorMap::iterator ite = creators_.find(tag_name);
   if (ite == creators_.end())
     return NULL;
-  return ite->second(down_cast<BasicElement *>(parent),
-                     down_cast<View *>(view),
-                     name);
+  return ite->second(parent, view, name);
 }
 
 bool ElementFactoryImpl::RegisterElementClass(
