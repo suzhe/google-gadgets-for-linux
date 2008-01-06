@@ -58,6 +58,14 @@ class ViewHostInterface {
   /** Creates a new @c XMLHttpRequestInterface instance. */
   virtual XMLHttpRequestInterface *NewXMLHttpRequest() = 0;
 
+  /**
+   * Gets information about the native widget.
+   * @param[out] native_widget the native widget handle of this view host.
+   * @param[out] x the horizontal offset of this view host in the native widget.
+   * @param[out] y the vertical offset of this view host in the native widget.
+   */
+  virtual void GetNativeWidgetInfo(void **native_widget, int *x, int *y) = 0;
+
   /** Asks the host to redraw the given view. */
   virtual void QueueDraw() = 0;
 

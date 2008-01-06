@@ -149,6 +149,13 @@ XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
                               gadget_host_->GetXMLParser());
 }
 
+void GtkViewHost::GetNativeWidgetInfo(void **native_widget, int *x, int *y) {
+  ASSERT(native_widget && x && y);
+  *native_widget = gvw_;
+  *x = 0;
+  *y = 0;
+}
+
 void GtkViewHost::QueueDraw() {
   // Use GTK_IS_WIDGET instead of checking for pointer since the widget
   // might be destroyed on shutdown but the pointer is non-NULL.

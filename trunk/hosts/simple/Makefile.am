@@ -49,6 +49,12 @@ ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 noinst_DATA = ggl_resources.bin
 
 ggl_resources.bin: resources
-	(cd $<; $(ZIP) -r -u $(abs_builddir)/$@ *.png *.js)
+	(cd $<; $(ZIP) -r -u $(abs_builddir)/$@ *.png *.js *.xml)
+
+if GGL_BUILD_LIBGGADGET_GTKMOZ
+noinst_DATA += browser_child
+browser_child: $(top_builddir)/ggadget/gtkmoz/browser_child
+	cp $< $@
+endif	
 
 endif

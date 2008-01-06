@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<view width="200" height="200" resizable="true" onopen="onopen()">
+  <script>
+<!--
+function onopen() {
+  browser.contentType = detailsViewData.getValue("contentType");
+  browser.innerText = detailsViewData.getValue("content");
+
+  browser.onGetProperty = function(name) {
+    if (external[name] == undefined) return "\"undefined\"";
+    if (typeof external[name] == "function") return "\"function\"";
+    return external[name];
+  };
+  browser.onSetProperty = function(name, value) {
+    external[name] = value;
+  };
+  browser.onCallback = function(name, args) {
+    external[name].apply(null, args);
+  };
+  browser.onOpenURL = function(url) {
+    view.openURL(url);
+  };
+}
+-->
+  </script>
+  <_browser name="browser" width="100%" height="100%"/>
+</view>

@@ -38,7 +38,7 @@ using ggadget::gtk::CairoCanvas;
 using ggadget::gtk::GtkMenuImpl;
 
 struct _GadgetViewWidget {
-  GtkDrawingArea drawingarea;
+  GtkFixed fixed;
 
   ggadget::gtk::GtkViewHost *host;
   ggadget::ViewInterface *view;
@@ -56,7 +56,7 @@ struct _GadgetViewWidget {
 };
 
 struct _GadgetViewWidgetClass {
-  GtkDrawingAreaClass parent_class;
+  GtkFixedClass parent_class;
 
   void (* gadgetviewwidget)(GadgetViewWidget *gvw);
 };
@@ -655,7 +655,7 @@ static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(c);
   GtkObjectClass *object_class = GTK_OBJECT_CLASS(c);
 
-  parent_class = GTK_WIDGET_CLASS(gtk_type_class(gtk_drawing_area_get_type()));
+  parent_class = GTK_WIDGET_CLASS(gtk_type_class(GTK_TYPE_FIXED));
 
   object_class->destroy = GadgetViewWidget_destroy;
 
@@ -702,7 +702,7 @@ GType GadgetViewWidget_get_type() {
       (GInstanceInitFunc)GadgetViewWidget_init,
     };
 
-    gw_type = g_type_register_static(GTK_TYPE_DRAWING_AREA,
+    gw_type = g_type_register_static(GTK_TYPE_FIXED,
                                      "GadgetViewWidget",
                                      &gw_info,
                                      (GTypeFlags)0);
@@ -722,6 +722,8 @@ GtkWidget *GadgetViewWidget_new(ggadget::gtk::GtkViewHost *host, double zoom,
   gvw->zoom = zoom;
   gvw->composited = composited;
   gvw->useshapemask = useshapemask;
+
+  gtk_fixed_set_has_window(&gvw->fixed, TRUE);
 
   static const GtkTargetEntry kDragTargets[] = {
     { const_cast<char *>(kUriListTarget), 0, 0 },

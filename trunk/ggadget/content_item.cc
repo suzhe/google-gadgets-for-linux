@@ -224,6 +224,7 @@ std::string ContentItem::GetHeading() const {
 }
 
 void ContentItem::SetHeading(const char *heading) {
+  // TODO: Strip out HTML tags.
   if (impl_->heading_text_.SetText(heading))
     impl_->QueueDraw();
 }
@@ -233,6 +234,7 @@ std::string ContentItem::GetSource() const {
 }
 
 void ContentItem::SetSource(const char *source) {
+  // TODO: Strip out HTML tags.
   if (impl_->source_text_.SetText(source))
     impl_->QueueDraw();
 }
@@ -242,6 +244,7 @@ std::string ContentItem::GetSnippet() const {
 }
 
 void ContentItem::SetSnippet(const char *snippet) {
+  // TODO: Strip out HTML tags.
   if (impl_->snippet_text_.SetText(snippet))
     impl_->QueueDraw();
 }
@@ -272,6 +275,8 @@ int ContentItem::GetFlags() const {
 
 void ContentItem::SetFlags(int flags) {
   if (flags != impl_->flags_) {
+    if (flags & CONTENT_ITEM_FLAG_HTML)
+      flags |= CONTENT_ITEM_FLAG_DISPLAY_AS_IS;
     impl_->flags_ = flags;
     impl_->heading_text_.SetBold(flags & CONTENT_ITEM_FLAG_HIGHLIGHTED);
     impl_->QueueDraw();

@@ -32,6 +32,7 @@ class MenuInterface;
 class ScriptContextInterface;
 class Slot;
 class EditInterface;
+class MainLoopInterface;
 class ViewHostInterface;
 class ImageInterface;
 
@@ -144,6 +145,9 @@ class View : public ScriptableHelper<ViewInterface> {
   void ClearInterval(int token);
 
  public:
+  /** Get information about the native widget. */
+  void GetNativeWidgetInfo(void **native_widget, int *x, int *y);
+
   /** Asks the host to redraw the given view. */
   void QueueDraw();
 
@@ -303,6 +307,8 @@ class View : public ScriptableHelper<ViewInterface> {
    * Edit box object.
    */
   EditInterface *NewEdit(size_t w, size_t h);
+
+  MainLoopInterface *GetMainLoop() const;
 
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);

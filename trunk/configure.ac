@@ -211,6 +211,12 @@ PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.0, [has_dbus=yes], [has_dbus=no])
 # Check librsvg
 PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
 
+# Check gtkmozembed
+PKG_CHECK_MODULES(GTKMOZEMBED, xulrunner-gtkmozembed, [has_gtkmozembed=yes],
+  [PKG_CHECK_MODULES(GTKMOZEMBED, firefox2-gtkmozembed, [has_gtkmozembed=yes],
+    [PKG_CHECK_MODULES(GTKMOZEMBED, firefox-gtkmozembed, [has_gtkmozembed=yes],
+      [has_gtkmozembed=no])])])
+
 if test x$has_dbus = xyes; then
   if test -z "$DBUS_SYSTEM_BUS_SOCKET"; then
     # use default
@@ -233,6 +239,7 @@ build_libggadget_gtk=yes
 build_libggadget_smjs=yes
 build_simple_host=yes
 build_libggadget_dbus=yes
+build_libggadget_gtkmoz=yes
 
 if test x$has_libcurl != xyes; then
   AC_MSG_ERROR([Library curl is not available.])
@@ -274,6 +281,10 @@ if test x$has_dbus != xyes; then
   build_libggadget_dbus=no
 fi
 
+if test x$has_gtkmozembed != xyes; then
+  AC_MSG_WARN([Library GtkMozEmbed is not available, libggadget-gtkmoz won't be built.])
+  build_libggadget_gtkmoz=no
+fi
 
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_GTK],
@@ -290,6 +301,10 @@ AM_CONDITIONAL(
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_DBUS],
   [test x$build_libggadget_dbus = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_GTKMOZ],
+  [test x$build_libggadget_gtkmoz = xyes])
 
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
@@ -374,6 +389,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/gtk/tests/Makefile
 		 ggadget/linux/Makefile
 		 ggadget/linux/tests/Makefile
+		 ggadget/gtkmoz/Makefile
 		 ggadget/smjs/Makefile
 		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile
@@ -396,6 +412,7 @@ Build options:
   Build libggadget-gtk     $build_libggadget_gtk
   Build libggadget-smjs    $build_libggadget_smjs
   Build libggadget-dbus    $build_libggadget_dbus
+  Build libggadget-gtkmoz  $build_libggadget_gtkmoz
   Build simple host        $build_simple_host
 ])
 

@@ -16,6 +16,7 @@
 
 #include "details_view.h"
 #include "gadget_consts.h"
+#include "logger.h"
 #include "memory_options.h"
 #include "scriptable_options.h"
 #include "string_utils.h"
@@ -30,7 +31,13 @@ class DetailsView::Impl {
         layout_(ContentItem::CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
         is_html_(false),
         is_view_(false),
-        scriptable_data_(&data_, true) {
+        scriptable_data_(&data_, true),
+        external_object_(NULL) {
+  }
+
+  ~Impl() {
+    if (external_object_)
+      external_object_->Detach();
   }
 
   std::string source_;
@@ -42,6 +49,7 @@ class DetailsView::Impl {
   bool is_view_;
   MemoryOptions data_;
   ScriptableOptions scriptable_data_;
+  ScriptableInterface *external_object_;
 };
 
 DetailsView::DetailsView()
@@ -56,10 +64,13 @@ DetailsView::DetailsView()
   RegisterMethod("SetContentFromItem",
                  NewSlot(this, &DetailsView::SetContentFromItem));
   RegisterConstant("detailsViewData", &impl_->scriptable_data_);
+  RegisterProperty("external", NewSlot(this, &DetailsView::GetExternalObject),
+                   NewSlot(this, &DetailsView::SetExternalObject));
 }
 
 DetailsView::~DetailsView() {
   delete impl_;
+  impl_ = NULL;
 }
 
 void DetailsView::SetContent(const char *source,
@@ -74,11 +85,10 @@ void DetailsView::SetContent(const char *source,
   impl_->layout_ = layout;
 
   size_t ext_len = strlen(kXMLExt);
-  impl_->is_view_ = 
+  impl_->is_view_ =
       impl_->text_.length() > ext_len &&
       GadgetStrCmp(impl_->text_.c_str() + impl_->text_.length() - ext_len,
                    kXMLExt) == 0;
-  impl_->is_html_ = false;
 }
 
 void DetailsView::SetContentFromItem(ContentItem *item) {
@@ -137,6 +147,18 @@ const OptionsInterface *DetailsView::GetDetailsViewData() const {
 
 OptionsInterface *DetailsView::GetDetailsViewData() {
   return &impl_->data_;
+}
+
+ScriptableInterface *DetailsView::GetExternalObject() const {
+  return impl_->external_object_;
+}
+
+void DetailsView::SetExternalObject(ScriptableInterface *external_object) {
+  if (impl_->external_object_)
+    impl_->external_object_->Detach();
+  if (external_object)
+    external_object->Attach();
+  impl_->external_object_ = external_object;
 }
 
 DetailsView *DetailsView::CreateInstance() {

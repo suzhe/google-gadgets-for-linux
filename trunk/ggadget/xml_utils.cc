@@ -144,14 +144,8 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
                             name.c_str(), value.c_str(), tag_name.c_str());
     }
   }
-
-  // Set the "innerText" property.
-  std::string text = TrimString(xml_element->GetTextContent());
-  if (!text.empty()) {
-    SetScriptableProperty(scriptable, script_context, filename,
-                          xml_element->GetRow(), xml_element->GetColumn(),
-                          kInnerTextProperty, text.c_str(), tag_name.c_str());
-  }
+  delete attributes;
+  // "innerText" property is set in InsertElementFromDOM().
 }
 
 static void HandleScriptElement(ScriptContextInterface *script_context,
@@ -164,8 +158,10 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
   std::string real_path(filename);
 
   if (!src.empty()) {
-    if (file_manager->GetFileContents(src.c_str(), &script, &real_path))
+    if (file_manager->GetFileContents(src.c_str(), &script, &real_path)) {
+      filename = src.c_str();
       lineno = 1;
+    }
   } else {
     // Uses the Windows version convention, that inline scripts should be
     // quoted in comments.
@@ -183,6 +179,7 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
             filename, child->GetRow(), child->GetColumn());
       }
     }
+    delete children;
   }
 
   if (!script.empty())
@@ -208,6 +205,7 @@ static void HandleAllScriptElements(ViewInterface *view,
       }
     }
   }
+  delete children;
 }
 
 static BasicElement *InsertElementFromDOM(
@@ -232,15 +230,28 @@ static BasicElement *InsertElementFromDOM(
                             filename, xml_element);
   Elements *children = element->GetChildren();
   const DOMNodeListInterface *xml_children = xml_element->GetChildNodes();
+  std::string text;
   size_t length = xml_children->GetLength();
   for (size_t i = 0; i < length; i++) {
     const DOMNodeInterface *child = xml_children->GetItem(i);
-    if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
+    DOMNodeInterface::NodeType type = child->GetNodeType();
+    if (type == DOMNodeInterface::ELEMENT_NODE) {
       InsertElementFromDOM(view, children, filename,
                            down_cast<const DOMElementInterface *>(child),
                            NULL);
+    } else if (type == DOMNodeInterface::TEXT_NODE ||
+               type == DOMNodeInterface::CDATA_SECTION_NODE) {
+      text += down_cast<const DOMTextInterface *>(child)->GetTextContent();
     }
   }
+  // Set the "innerText" property.
+  text = TrimString(text);
+  if (!text.empty()) {
+    SetScriptableProperty(element, view->GetScriptContext(), filename,
+                          xml_element->GetRow(), xml_element->GetColumn(),
+                          kInnerTextProperty, text.c_str(), tag_name.c_str());
+  }
+  delete xml_children;
   return element;
 }
 
@@ -288,6 +299,7 @@ bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
   }
 
   HandleAllScriptElements(view, filename, view_element);
+  delete xml_children;
   xmldoc->Detach();
   return true;
 }

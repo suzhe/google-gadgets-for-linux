@@ -238,6 +238,9 @@ class View::Impl {
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
     obj->RegisterMethod("resizeTo", NewSlot(owner_, &View::SetSize));
 
+    // Linux extension, not in official API. 
+    obj->RegisterMethod("openURL", NewSlot(owner_, &View::OpenURL));
+
     obj->RegisterSignal(kOnCancelEvent, &oncancel_event_);
     obj->RegisterSignal(kOnClickEvent, &onclick_event_);
     obj->RegisterSignal(kOnCloseEvent, &onclose_event_);
@@ -1062,6 +1065,10 @@ void View::Draw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
 }
 
+void View::GetNativeWidgetInfo(void **native_widget, int *x, int *y) {
+  impl_->host_->GetNativeWidgetInfo(native_widget, x, y);
+}
+
 void View::QueueDraw() {
   if (!impl_->draw_queued_) {
     impl_->draw_queued_ = true;
@@ -1338,6 +1345,10 @@ EditInterface *View::NewEdit(size_t w, size_t h) {
 
 XMLParserInterface *View::GetXMLParser() const {
   return impl_->gadget_host_->GetXMLParser();
+}
+
+MainLoopInterface *View::GetMainLoop() const {
+  return impl_->gadget_host_->GetMainLoop();
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

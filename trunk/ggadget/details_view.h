@@ -82,8 +82,17 @@ class DetailsView : public ScriptableHelperOwnershipShared {
   bool ContentIsView() const;
   void SetContentIsView(bool is_view);
 
+  /**
+   * Gets the "detailsViewData" property used in XML details views.
+   */ 
   const OptionsInterface *GetDetailsViewData() const;
   OptionsInterface *GetDetailsViewData();
+
+  /**
+   * Gets and sets the "external" property used in HTML details views.
+   */ 
+  ScriptableInterface *GetExternalObject() const;
+  void SetExternalObject(ScriptableInterface *external_object);
 
  public:
   static DetailsView *CreateInstance();

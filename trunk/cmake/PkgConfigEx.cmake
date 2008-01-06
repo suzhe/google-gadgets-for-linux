@@ -27,7 +27,7 @@ ENDMACRO(REMOVE_TRAILING_NEWLINE _variable)
 #!   - Other cflags will be appended to @c CMAKE_C_FLAGS and @c CMAKE_CXX_FLAGS;
 #!   - Link directories are registered with the LINK_DIRECTORIES() macro;
 #!   - Link flags (other than -l and -L flags) will be appended to
-#!     @c CMAKE_EXTRA_LINK_FLAGS;
+#!     @c CMAKE_EXE_LINKER_FLAGS and @c CMAKE_SHARED_LINKER_FLAGS.
 #!
 #! @param _package the package name.
 #! @param _min_version minimum version required. 
@@ -84,8 +84,10 @@ MACRO(PKGCONFIG_EX _package _min_version _libraries)
       ARGS ${_package} --libs-only-other
       OUTPUT_VARIABLE PKGCONFIG_EX_libs_other)
     REMOVE_TRAILING_NEWLINE(PKGCONFIG_EX_libs_other)
-    SET(CMAKE_EXTRA_LINK_FLAGS
-      ${CMAKE_EXTRA_LINK_FLAGS} ${PKGCONFIG_EX_libs_other})
+    SET(CMAKE_EXE_LINKER_FLAGS
+      "${CMAKE_EXE_LINKER_FLAGS} ${PKGCONFIG_EX_libs_other}")
+    SET(CMAKE_SHARED_LINKER_FLAGS
+      "${CMAKE_SHARED_LINKER_FLAGS} ${PKGCONFIG_EX_libs_other}")
 
     IF(${ARGC} GREATER 3)
       SET(${ARGV3} TRUE)

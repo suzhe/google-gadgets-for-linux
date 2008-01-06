@@ -47,6 +47,11 @@ class CairoGraphics::Impl {
 CairoGraphics::CairoGraphics(double zoom) : impl_(new Impl(zoom)) {
 }
 
+CairoGraphics::~CairoGraphics() {
+  delete impl_;
+  impl_ = NULL;
+}
+
 double CairoGraphics::GetZoom() const {
   return impl_->zoom_;
 }

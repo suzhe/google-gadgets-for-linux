@@ -70,6 +70,7 @@ class GtkViewHost : public ViewHostInterface {
   virtual XMLHttpRequestInterface *NewXMLHttpRequest();
   virtual const GraphicsInterface *GetGraphics() const { return gfx_; }
 
+  virtual void GetNativeWidgetInfo(void **native_widget, int *x, int *y);
   virtual void QueueDraw();
   virtual bool GrabKeyboardFocus();
 
