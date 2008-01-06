@@ -19,6 +19,7 @@
 #include "content_item.h"
 #include "details_view.h"
 #include "display_window.h"
+#include "element_factory.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
@@ -223,18 +224,22 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     ScriptableFramework framework_;
   };
 
-  Impl(GadgetHostInterface *host, Gadget *owner)
+  Impl(GadgetHostInterface *host, Gadget *owner, int debug_mode)
       : host_(host),
         debug_(this),
         storage_(this),
         scriptable_options_(host->GetOptions(), false),
         gadget_global_prototype_(this),
+        element_factory_(new ElementFactory()),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
-                                          &gadget_global_prototype_)),
+                                          new View(&gadget_global_prototype_, 
+                                                   element_factory_,
+                                                   debug_mode))),
         plugin_(this),
         details_view_host_(NULL),
         has_options_xml_(false),
-        close_details_view_timer_(0) {
+        close_details_view_timer_(0), 
+        debug_mode_(debug_mode) {
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
   }
@@ -260,6 +265,9 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     CloseDetailsView();
     delete main_view_host_;
     main_view_host_ = NULL;
+
+    delete element_factory_;
+    element_factory_ = NULL;
   }
 
   void DebugError(const char *message) {
@@ -306,9 +314,11 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     ViewHostInterface *options_view_host = NULL;
     DisplayWindow *window = NULL;
     if (has_options_xml_) {
-      options_view_host = host_->NewViewHost(
-          GadgetHostInterface::VIEW_OPTIONS, &gadget_global_prototype_);
-      if (!options_view_host->GetView()->InitFromFile(kOptionsXML)) {
+      View *view = new View(&gadget_global_prototype_, element_factory_,
+                            debug_mode_);
+      options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS, 
+                                             view);
+      if (!view->InitFromFile(kOptionsXML)) {
         LOG("Failed to setup the options view");
         delete options_view_host;
         return false;
@@ -335,8 +345,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
     CloseDetailsView();
-    details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS,
-                                            &gadget_global_prototype_);
+    View *view = new View(&gadget_global_prototype_, element_factory_,
+                          debug_mode_);
+    details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS, 
+                                            view);
     OptionsInterface *data = details_view->GetDetailsViewData();
     // Set up the detailsViewData variable in the opened details view.
     details_view_host_->GetScriptContext()->AssignFromContext(
@@ -359,7 +371,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       xml_file = details_view->GetText();
     }
 
-    if (!details_view_host_->GetView()->InitFromFile(xml_file.c_str())) {
+    if (!view->InitFromFile(xml_file.c_str())) {
       LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_host_;
       details_view_host_ = NULL;
@@ -461,16 +473,18 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   Strings strings_;
   ScriptableOptions scriptable_options_;
   GadgetGlobalPrototype gadget_global_prototype_;
+  ElementFactory *element_factory_;
   ViewHostInterface *main_view_host_;
   Plugin plugin_;
   ViewHostInterface *details_view_host_;
   GadgetStringMap manifest_info_map_;
   bool has_options_xml_;
   int close_details_view_timer_;
+  int debug_mode_;
 };
 
-Gadget::Gadget(GadgetHostInterface *host)
-    : impl_(new Impl(host, this)) {
+Gadget::Gadget(GadgetHostInterface *host, int debug_mode)
+    : impl_(new Impl(host, this, debug_mode)) {
 }
 
 Gadget::~Gadget() {

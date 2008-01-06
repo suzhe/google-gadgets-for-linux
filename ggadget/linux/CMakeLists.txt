@@ -15,6 +15,7 @@
 #
 
 SET(SRCS
+  audioclip.cc
   file_system.cc
   framework.cc
   machine.cc

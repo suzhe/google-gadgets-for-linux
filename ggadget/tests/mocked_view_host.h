@@ -110,7 +110,9 @@ class MockedGraphics : public ggadget::GraphicsInterface {
 class MockedViewHost : public ggadget::ViewHostInterface {
  public:
   MockedViewHost(ggadget::ElementFactory *factory)
-      : view_(new ggadget::View(this, NULL, factory, 0)), draw_queued_(false) {
+      : view_(new ggadget::View(NULL, factory, 0)), 
+        draw_queued_(false) {
+    view_->AttachHost(this);
   }
   virtual ~MockedViewHost() {
     delete view_;

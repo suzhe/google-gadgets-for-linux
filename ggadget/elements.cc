@@ -63,8 +63,7 @@ class Elements::Impl {
   BasicElement *InsertElement(const char *tag_name,
                                   const BasicElement *before,
                                   const char *name) {
-    BasicElement *e = down_cast<BasicElement *>(
-        factory_->CreateElement(tag_name, owner_, view_, name));
+    BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
     if (e == NULL)
       return NULL;
     if (view_->OnElementAdd(e)) {
@@ -80,7 +79,7 @@ class Elements::Impl {
 
   bool RemoveElement(BasicElement *element) {
     Children::iterator ite = std::find(children_.begin(), children_.end(),
-                                       down_cast<BasicElement *>(element));
+                                       element);
     if (ite == children_.end())
       return false;
     view_->OnElementRemove(*ite);

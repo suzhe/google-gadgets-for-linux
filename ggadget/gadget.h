@@ -26,7 +26,7 @@ class GadgetHostInterface;
 
 class Gadget: public GadgetInterface {
  public:
-  Gadget(GadgetHostInterface *host);
+  Gadget(GadgetHostInterface *host, int debug_mode);
   virtual ~Gadget();
 
   virtual bool Init();

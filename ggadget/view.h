@@ -28,6 +28,7 @@ class BasicElement;
 class ContentAreaElement;
 class DetailsView;
 class ElementFactory;
+class GadgetHostInterface;
 class MenuInterface;
 class ScriptContextInterface;
 class Slot;
@@ -43,8 +44,7 @@ class View : public ScriptableHelper<ViewInterface> {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 
-  View(ViewHostInterface *host,
-       ScriptableInterface *prototype,
+  View(ScriptableInterface *prototype,
        ElementFactory *element_factory,
        int debug_mode);
   virtual ~View();
@@ -54,6 +54,7 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual FileManagerInterface *GetFileManager() const;
   virtual XMLParserInterface *GetXMLParser() const;
   virtual bool InitFromFile(const char *filename);
+  virtual void AttachHost(ViewHostInterface *host);
 
   virtual EventResult OnMouseEvent(const MouseEvent &event);
   virtual EventResult OnKeyEvent(const KeyboardEvent &event);

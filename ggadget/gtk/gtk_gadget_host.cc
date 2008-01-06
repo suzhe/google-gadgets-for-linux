@@ -47,7 +47,6 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
-      element_factory_(new ElementFactory()),
       xml_parser_(CreateXMLParser()),
       resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
@@ -84,8 +83,6 @@ GtkGadgetHost::~GtkGadgetHost() {
   options_ = NULL;
   delete framework_;
   framework_ = NULL;
-  delete element_factory_;
-  element_factory_ = NULL;
   delete file_manager_;
   file_manager_ = NULL;
   delete resource_file_manager_;
@@ -103,10 +100,6 @@ GtkGadgetHost::~GtkGadgetHost() {
 ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
     ScriptRuntimeType type) {
   return script_runtime_;
-}
-
-ElementFactory *GtkGadgetHost::GetElementFactory() {
-  return element_factory_;
 }
 
 FileManagerInterface *GtkGadgetHost::GetFileManager() {
@@ -133,10 +126,9 @@ GadgetInterface *GtkGadgetHost::GetGadget() {
   return gadget_;
 }
 
-ViewHostInterface *GtkGadgetHost::NewViewHost(
-    ViewType type, ScriptableInterface *prototype) {
-  return new GtkViewHost(this, type, prototype,
-                         composited_, useshapemask_, zoom_, debug_mode_);
+ViewHostInterface *GtkGadgetHost::NewViewHost(ViewType type, 
+                                              ViewInterface *view) {
+  return new GtkViewHost(this, type, view, composited_, useshapemask_, zoom_);
 }
 
 void GtkGadgetHost::SetPluginFlags(int plugin_flags) {
@@ -293,7 +285,7 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
                    G_CALLBACK(OnDetailsClicked), this);
 
   SetPluginFlags(0);
-  gadget_ = new Gadget(this);
+  gadget_ = new Gadget(this, debug_mode_);
   if (!file_manager_->Init(base_path) || !gadget_->Init()) {
     return false;
   }

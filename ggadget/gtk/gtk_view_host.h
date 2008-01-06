@@ -20,7 +20,7 @@
 #include <set>
 
 #include <gtk/gtk.h>
-#include <ggadget/view.h>
+#include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
 #include <ggadget/gtk/gtk_gadget_host.h>
 #include <ggadget/gtk/gadget_view_widget.h>
@@ -42,9 +42,9 @@ class GtkViewHost : public ViewHostInterface {
  public:
   GtkViewHost(GtkGadgetHost *gadget_host,
               GadgetHostInterface::ViewType type,
-              ScriptableInterface *prototype,
+              ViewInterface *view,
               bool composited, bool useshapemask,
-              double zoom, int debug_mode);
+              double zoom);
   virtual ~GtkViewHost();
 
 #if 0
@@ -104,7 +104,7 @@ class GtkViewHost : public ViewHostInterface {
   static void OnDetailsViewDestroy(GtkObject *object, gpointer user_data);
 
   GtkGadgetHost *gadget_host_;
-  View *view_;
+  ViewInterface *view_;
   ScriptContextInterface *script_context_;
   GadgetViewWidget *gvw_;
   CairoGraphics *gfx_;

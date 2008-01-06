@@ -33,6 +33,7 @@ class ScriptableEvent;
 class ScriptContextInterface;
 class Texture;
 class MenuInterface;
+class ViewHostInterface;
 class XMLParserInterface;
 
 /**
@@ -74,6 +75,12 @@ class ViewInterface : public ScriptableInterface {
    * @return @c true if succeedes.
    */
   virtual bool InitFromFile(const char *filename) = 0;
+
+  /** 
+   * Attaches a view host to this view.
+   * Should only be called once, before @c InitFromFile().
+   */
+  virtual void AttachHost(ViewHostInterface *host) = 0;
 
   /** Handler of the mouse events. */
   virtual EventResult OnMouseEvent(const MouseEvent &event) = 0;
