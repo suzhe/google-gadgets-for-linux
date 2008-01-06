@@ -31,6 +31,8 @@
 namespace ggadget {
 namespace {
 
+static const long kMaxRedirections = 10;
+
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
   Variant(true),
@@ -58,6 +60,8 @@ class XMLHttpRequest
         socket_(0),
         socket_read_watch_(0),
         socket_write_watch_(0),
+        io_watch_type_(0),
+        timeout_watch_(0),
         state_(UNSENT),
         send_flag_(false),
         headers_(NULL),
@@ -145,9 +149,6 @@ class XMLHttpRequest
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
     } else if (strcasecmp(method, "POST") == 0) {
       curl_easy_setopt(curl_, CURLOPT_POST, 1);
-    } else if (strcasecmp(method, "PUT") == 0) {
-      curl_easy_setopt(curl_, CURLOPT_PUT, 1);
-      curl_easy_setopt(curl_, CURLOPT_UPLOAD, 1);
     } else {
       LOG("XMLHttpRequest: Unsupported method: %s", method);
       return SYNTAX_ERR;
@@ -232,6 +233,10 @@ class XMLHttpRequest
     }
 
     send_data_.assign(data, size);
+    if (size > 0) {
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, send_data_.c_str());
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, size);
+    }
 
   #ifdef _DEBUG
     curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1);
@@ -240,6 +245,9 @@ class XMLHttpRequest
     curl_easy_setopt(curl_, CURLOPT_FRESH_CONNECT, 1);
     curl_easy_setopt(curl_, CURLOPT_FORBID_REUSE, 1);
     curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
+    curl_easy_setopt(curl_, CURLOPT_AUTOREFERER, 1);
+    curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1);
+    curl_easy_setopt(curl_, CURLOPT_MAXREDIRS, kMaxRedirections);
 
     curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
     curl_easy_setopt(curl_, CURLOPT_READDATA, this);
@@ -253,6 +261,9 @@ class XMLHttpRequest
       curlm_ = curl_multi_init();
       curl_multi_setopt(curlm_, CURLMOPT_SOCKETFUNCTION, SocketCallback);
       curl_multi_setopt(curlm_, CURLMOPT_SOCKETDATA, this);
+      curl_multi_setopt(curlm_, CURLMOPT_TIMERFUNCTION, TimerCallback);
+      curl_multi_setopt(curlm_, CURLMOPT_TIMERDATA, this);
+
       CURLMcode code = curl_multi_add_handle(curlm_, curl_);
       if (code != CURLM_OK) {
         DLOG("XMLHttpRequest: Send: curl_multi_add_handle failed: %s",
@@ -263,6 +274,11 @@ class XMLHttpRequest
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
       ChangeState(OPENED);
+
+      long timeout;
+      curl_multi_timeout(curlm_, &timeout);
+      InitTimeoutWatch(timeout);
+
       int still_running = 1;
       do {
         code = curl_multi_socket_all(curlm_, &still_running);
@@ -306,12 +322,20 @@ class XMLHttpRequest
     return Send(xml.c_str(), xml.size());
   }
 
-  void OnIOReady(int fd) {
-    // DLOG("XMLHttpRequest: OnIOReady: %d", fd);
+  void OnIOReady(int fd, int watch_type) {
+    DLOG("XMLHttpRequest: OnIOReady: %d %d %d", fd, watch_type, io_watch_type_);
+    if (fd != CURL_SOCKET_TIMEOUT) {
+      io_watch_type_ &= ~watch_type;
+      if (io_watch_type_ != 0) {
+        // Still need waiting for all events coming.
+        return;
+      }
+    }
+
     int still_running = 1;
     CURLMcode code;
     do {
-      code = curl_multi_socket(curlm_, socket_, &still_running);
+      code = curl_multi_socket(curlm_, fd, &still_running);
     } while (code == CURLM_CALL_MULTI_PERFORM);
 
     if (code != CURLM_OK) {
@@ -326,20 +350,56 @@ class XMLHttpRequest
     }
   }
 
-  class IOWatchCallback : public WatchCallbackInterface {
-    public:
-      IOWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
+  class IOReadWatchCallback : public WatchCallbackInterface {
+   public:
+    IOReadWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
 
-      virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-        this_p_->OnIOReady(main_loop->GetWatchData(watch_id));
-        return true;
-      }
-      virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-        delete this;
-      }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      this_p_->OnIOReady(main_loop->GetWatchData(watch_id), CURL_POLL_IN);
+      return true;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
 
-    private:
-      XMLHttpRequest *this_p_;
+   private:
+    XMLHttpRequest *this_p_;
+  };
+
+  class IOWriteWatchCallback : public WatchCallbackInterface {
+   public:
+    IOWriteWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
+
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      this_p_->OnIOReady(main_loop->GetWatchData(watch_id), CURL_POLL_OUT);
+      // Because a socket may be always writable, don't continuously watch
+      // for write to avoid main loop busy.
+      this_p_->socket_write_watch_ = 0;
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+
+   private:
+    XMLHttpRequest *this_p_;
+  };
+
+  class TimeoutWatchCallback : public WatchCallbackInterface {
+   public:
+    TimeoutWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
+
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      this_p_->OnIOReady(CURL_SOCKET_TIMEOUT, 0);
+      this_p_->timeout_watch_ = 0;
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+
+   private:
+    XMLHttpRequest *this_p_;
   };
 
   static int SocketCallback(CURL *handle, curl_socket_t socket, int type,
@@ -353,23 +413,47 @@ class XMLHttpRequest
     else
       ASSERT(this_p->socket_ = socket);
 
-    if (!this_p->socket_read_watch_ && (type & CURL_POLL_IN)) {
-      this_p->socket_read_watch_ = this_p->main_loop_->AddIOReadWatch(
-          socket, new IOWatchCallback(this_p));
+    if (type & CURL_POLL_REMOVE) {
+      this_p->RemoveIOWatches(); 
+    } else {
+      this_p->io_watch_type_ = type;
+      if (type & CURL_POLL_IN) {
+        if (!this_p->socket_read_watch_) {
+          this_p->socket_read_watch_ = this_p->main_loop_->AddIOReadWatch(
+              socket, new IOReadWatchCallback(this_p));
+        }
+      }
+      if (type & CURL_POLL_OUT) {
+        if (!this_p->socket_write_watch_) {
+          this_p->socket_write_watch_ = this_p->main_loop_->AddIOWriteWatch(
+              socket, new IOWriteWatchCallback(this_p));
+        }
+      }
     }
-    if (!this_p->socket_write_watch_ && (type & CURL_POLL_OUT)) {
-      this_p->socket_write_watch_ = this_p->main_loop_->AddIOWriteWatch(
-          socket, new IOWatchCallback(this_p));
-    }
+    return 0;
+  }
 
-    if (type & CURL_POLL_REMOVE)
-      this_p->RemoveIOWatches();
+  void InitTimeoutWatch(long timeout_ms) {
+    if (timeout_watch_)
+      main_loop_->RemoveWatch(timeout_watch_);
+    if (timeout_ms >= 0) {
+      timeout_watch_ = main_loop_->AddTimeoutWatch(
+          static_cast<int>(timeout_ms), new TimeoutWatchCallback(this));
+    }
+  }
+
+  static int TimerCallback(CURLM *multi, long timeout_ms, void *user_p) {
+    DLOG("XMLHTTPRequest: TimerCallback: timeout: %ld", timeout_ms);
+    XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(user_p);
+    ASSERT(this_p->curlm_ == multi);
+
+    this_p->InitTimeoutWatch(timeout_ms);
     return 0;
   }
 
   static size_t ReadCallback(void *ptr, size_t size,
                              size_t mem_block, void *data) {
-    // DLOG("XMLHttpRequest: ReadCallback: %zu*%zu", size, mem_block);
+    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu", size, mem_block);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
@@ -527,17 +611,28 @@ class XMLHttpRequest
   }
 
   void RemoveIOWatches() {
-    if (socket_read_watch_)
+    if (socket_read_watch_) {
       main_loop_->RemoveWatch(socket_read_watch_);
-    if (socket_write_watch_)
+      socket_read_watch_ = 0;
+    }
+    if (socket_write_watch_) {
       main_loop_->RemoveWatch(socket_write_watch_);
-    socket_read_watch_ = 0;
-    socket_write_watch_ = 0;
+      socket_write_watch_ = 0;
+    }
+    io_watch_type_ = 0;
+  }
+
+  void RemoveWatches() {
+    RemoveIOWatches();
+    if (timeout_watch_) {
+      main_loop_->RemoveWatch(timeout_watch_);
+      timeout_watch_ = 0;
+    }
   }
 
   void Done() {
     socket_ = 0;
-    RemoveIOWatches();
+    RemoveWatches();
     if ((state_ == OPENED && send_flag_) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
@@ -809,6 +904,8 @@ class XMLHttpRequest
   curl_socket_t socket_;
   int socket_read_watch_;
   int socket_write_watch_;
+  int io_watch_type_;
+  int timeout_watch_;
 
   State state_;
   // Required by the specification.

@@ -22,9 +22,10 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
-#include "main_loop_interface.h"
 #include "logger.h"
+#include "main_loop_interface.h"
 #include "menu_interface.h"
+#include "options_interface.h"
 #include "script_context_interface.h"
 #include "scriptable_array.h"
 #include "scriptable_framework.h"
@@ -334,18 +335,30 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
     CloseDetailsView();
-    if (!details_view->ContentIsView()) {
-      LOG("HTML/Text view is not supported for now");
-      return false;
-    }
-
     details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS,
                                             &gadget_global_prototype_);
+    OptionsInterface *data = details_view->GetDetailsViewData();
     // Set up the detailsViewData variable in the opened details view.
     details_view_host_->GetScriptContext()->AssignFromContext(
         NULL, "", "detailsViewData",
         main_view_host_->GetScriptContext(), details_view, "detailsViewData");
-    std::string xml_file = details_view->GetText();
+
+    std::string xml_file;
+    if (details_view->ContentIsHTML() || !details_view->ContentIsView()) {
+      xml_file = kDetailsView;
+      if (details_view->ContentIsHTML()) {
+        details_view_host_->GetScriptContext()->AssignFromContext(
+            NULL, "", "external",
+            main_view_host_->GetScriptContext(), details_view, "external");
+        data->PutValue("contentType", Variant("text/html"));
+      } else {
+        data->PutValue("contentType", Variant("text/plain"));
+      }
+      data->PutValue("content", Variant(details_view->GetText()));
+    } else {
+      xml_file = details_view->GetText();
+    }
+
     if (!details_view_host_->GetView()->InitFromFile(xml_file.c_str())) {
       LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_host_;

@@ -112,8 +112,6 @@ class BasicElementTest : public testing::Test {
   }
 
   ~BasicElementTest() {
-    delete view_host_;
-
     if (g_savepng) {
       const testing::TestInfo *const test_info =
         testing::UnitTest::GetInstance()->current_test_info();
@@ -123,6 +121,7 @@ class BasicElementTest : public testing::Test {
     }
 
     target_->Destroy();
+    delete view_host_;
   }
 
   virtual void SetUp() {

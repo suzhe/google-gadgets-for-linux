@@ -33,29 +33,36 @@
 #include "progressbar_element.h"
 #include "scrollbar_element.h"
 
+#if HAVE_GTKMOZ  // Temporary. Remove this when ExtensionManager is ready.
+#include <ggadget/gtkmoz/browser_element.h>
+#endif
+
 namespace ggadget {
 
 ElementFactory::ElementFactory()
     : impl_(new internal::ElementFactoryImpl) {
-  RegisterElementClass("a", &ggadget::AnchorElement::CreateInstance);
-  RegisterElementClass("button", &ggadget::ButtonElement::CreateInstance);
+  RegisterElementClass("a", &AnchorElement::CreateInstance);
+  RegisterElementClass("button", &ButtonElement::CreateInstance);
   RegisterElementClass("checkbox", 
-                       &ggadget::CheckBoxElement::CreateCheckBoxInstance);
-  RegisterElementClass("combobox", &ggadget::ComboBoxElement::CreateInstance);
+                       &CheckBoxElement::CreateCheckBoxInstance);
+  RegisterElementClass("combobox", &ComboBoxElement::CreateInstance);
   RegisterElementClass("contentarea", 
-                       &ggadget::ContentAreaElement::CreateInstance);
-  RegisterElementClass("div", &ggadget::DivElement::CreateInstance);
-  RegisterElementClass("edit", &ggadget::EditElement::CreateInstance);
-  RegisterElementClass("img", &ggadget::ImgElement::CreateInstance);
-  RegisterElementClass("item", &ggadget::ItemElement::CreateInstance);
-  RegisterElementClass("label", &ggadget::LabelElement::CreateInstance);
-  RegisterElementClass("listbox", &ggadget::ListBoxElement::CreateInstance);
+                       &ContentAreaElement::CreateInstance);
+  RegisterElementClass("div", &DivElement::CreateInstance);
+  RegisterElementClass("edit", &EditElement::CreateInstance);
+  RegisterElementClass("img", &ImgElement::CreateInstance);
+  RegisterElementClass("item", &ItemElement::CreateInstance);
+  RegisterElementClass("label", &LabelElement::CreateInstance);
+  RegisterElementClass("listbox", &ListBoxElement::CreateInstance);
   RegisterElementClass("listitem", 
-                       &ggadget::ItemElement::CreateListItemInstance);
+                       &ItemElement::CreateListItemInstance);
   RegisterElementClass("progressbar", 
-                       &ggadget::ProgressBarElement::CreateInstance);
-  RegisterElementClass("radio", &ggadget::CheckBoxElement::CreateRadioInstance);
-  RegisterElementClass("scrollbar", &ggadget::ScrollBarElement::CreateInstance);
+                       &ProgressBarElement::CreateInstance);
+  RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
+  RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);
+#if HAVE_GTKMOZ  // Temporary. Remove this when ExtensionManager is ready.
+  RegisterElementClass("_browser", &gtkmoz::BrowserElement::CreateInstance);
+#endif
 }
 
 ElementFactory::~ElementFactory() {

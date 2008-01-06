@@ -49,7 +49,7 @@ JSClass NativeJSWrapper::wrapper_js_class_ = {
 NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
                                  JSObject *js_object,
                                  ScriptableInterface *scriptable)
-    : deleted_(false),
+    : detached_(false),
       js_context_(js_context),
       js_object_(js_object),
       scriptable_(NULL),
@@ -65,16 +65,13 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
-  if (!deleted_) {
+  if (!detached_) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
     DLOG("Delete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p"
          "(CLASS_ID=%jx)", js_context_, ownership_policy_, js_object_, this,
          scriptable_, scriptable_->GetClassId());
 #endif
-
-    deleted_ = true;
     DetachJS();
-    scriptable_->Detach();
   }
 }
 
@@ -142,7 +139,7 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
 }
 
 JSBool NativeJSWrapper::CheckNotDeleted() {
-  if (deleted_) {
+  if (detached_) {
     JS_ReportError(js_context_, "Native object has been deleted");
     return JS_FALSE;
   }
@@ -256,7 +253,7 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
          cx, wrapper->ownership_policy_, obj, wrapper, wrapper->scriptable_);
 #endif
 
-    if (!wrapper->deleted_) {
+    if (!wrapper->detached_) {
       // The current context may be different from wrapper's context during
       // GC collecting. Use the wrapper's context instead.
       JSScriptContext::FinalizeNativeJSWrapper(wrapper->js_context_, wrapper);
@@ -273,7 +270,7 @@ uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
   // The current context may be different from wrapper's context during
   // GC marking.
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
-  if (wrapper && !wrapper->deleted_)
+  if (wrapper && !wrapper->detached_)
     wrapper->Mark();
   return 0;
 }
@@ -285,6 +282,9 @@ void NativeJSWrapper::DetachJS() {
 #endif
 
   ondelete_connection_->Disconnect();
+  scriptable_->Detach();
+  detached_ = true;
+
   if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
       ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
     JS_RemoveRoot(js_context_, &js_object_);
@@ -296,10 +296,8 @@ void NativeJSWrapper::OnDelete() {
        js_context_, ownership_policy_, js_object_, this, scriptable_);
 #endif
 
-  deleted_ = true;
-
   // As the native side has deleted the object, now the script side can also
-  // delete it.
+  // delete it if there is no other active references. 
   DetachJS();
 
   // Remove the wrapper mapping from the context, but leave this wrapper

@@ -128,6 +128,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual const ggadget::GraphicsInterface *GetGraphics() const {
     return const_cast<MockedGraphics *>(&graphics_);
   }
+  virtual void GetNativeWidgetInfo(void **widget, int *x, int *y) { }
   virtual void QueueDraw() { draw_queued_ = true; }
   virtual bool GrabKeyboardFocus() { return false; }
   virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }

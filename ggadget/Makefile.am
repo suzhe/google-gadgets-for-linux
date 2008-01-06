@@ -28,6 +28,9 @@ endif
 if GGL_HOST_LINUX
 SUBDIRS += linux
 endif
+if GGL_BUILD_LIBGGADGET_GTKMOZ
+SUBDIRS += gtkmoz
+endif
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -176,6 +179,12 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 			  @LIBCURL@ \
 			  @XML_LIBS@ \
 			  $(top_builddir)/third_party/unzip/libunzip.la
+
+if GGL_BUILD_LIBGGADGET_GTKMOZ
+# Temporary. Remove this when ExtensionManager is ready.
+CPPFLAGS		+= -DHAVE_GTKMOZ=1
+libggadget@GGL_EPOCH@_la_LIBADD += $(top_builddir)/ggadget/gtkmoz/libggadget-gtkmoz@GGL_EPOCH@.la
+endif
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

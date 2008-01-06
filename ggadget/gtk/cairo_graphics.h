@@ -37,6 +37,7 @@ class CairoGraphics : public GraphicsInterface {
    * @param zoom The zoom level for all new canvases.
    */
   CairoGraphics(double zoom);
+  virtual ~CairoGraphics();
 
   double GetZoom() const;
 
@@ -45,8 +46,6 @@ class CairoGraphics : public GraphicsInterface {
   Connection *ConnectOnZoom(Slot1<void, double> *slot) const;
 
  public:
-  virtual ~CairoGraphics() {};
-
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
 
   virtual ImageInterface *NewImage(const std::string &data, bool is_mask) const;

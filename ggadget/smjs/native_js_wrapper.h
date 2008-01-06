@@ -135,7 +135,7 @@ private:
 
   static JSClass wrapper_js_class_;
 
-  bool deleted_;
+  bool detached_;
   JSContext *js_context_;
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
