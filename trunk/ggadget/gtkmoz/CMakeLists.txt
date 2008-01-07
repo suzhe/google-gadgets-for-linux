@@ -28,6 +28,9 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
 PKGCONFIG_EX(firefox-gtkmozembed 1.5 GTKMOZEMBED_LIBRARIES)
 PKGCONFIG_EX(firefox-js 1.5 JS_LIBRARIES)
 
+# Bug of firefox-js package. Define the following to make JS_GET_CLASS work.
+ADD_DEFINITIONS(-DJS_THREADSAFE)
+
 SET(CHILD_SRCS
   browser_child.cc
   ../smjs/json.cc

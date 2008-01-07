@@ -23,7 +23,7 @@
 
 namespace ggadget {
 
-class OptionsInterface;
+class ScriptableOptions;
 
 /**
  * DetailsView data structure. It has no built-in logic.
@@ -85,8 +85,8 @@ class DetailsView : public ScriptableHelperOwnershipShared {
   /**
    * Gets the "detailsViewData" property used in XML details views.
    */ 
-  const OptionsInterface *GetDetailsViewData() const;
-  OptionsInterface *GetDetailsViewData();
+  const ScriptableOptions *GetDetailsViewData() const;
+  ScriptableOptions *GetDetailsViewData();
 
   /**
    * Gets and sets the "external" property used in HTML details views.

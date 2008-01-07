@@ -25,9 +25,8 @@ class MainLoopInterface;
 class ScriptContextInterface;
 class XMLParserInterface;
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(
-    MainLoopInterface *main_loop, ScriptContextInterface *script_context,
-    XMLParserInterface *xml_parser);
+XMLHttpRequestInterface *CreateXMLHttpRequest(MainLoopInterface *main_loop,
+                                              XMLParserInterface *xml_parser);
 
 } // namespace ggadget
 

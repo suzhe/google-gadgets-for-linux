@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+SUBDIRS =
+if GGL_BUILD_LIBGGADGET_GTKMOZ
+SUBDIRS += gtkmoz
+endif
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . tests
+SUBDIRS += . tests
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif
@@ -27,9 +30,6 @@ SUBDIRS += dbus
 endif
 if GGL_HOST_LINUX
 SUBDIRS += linux
-endif
-if GGL_BUILD_LIBGGADGET_GTKMOZ
-SUBDIRS += gtkmoz
 endif
 
 INCLUDES		= -I$(top_builddir) \
@@ -87,7 +87,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  script_runtime_interface.h \
 			  scriptable_array.h \
 			  scriptable_binary_data.h \
-			  scriptable_delegator.h \
 			  scriptable_event.h \
 			  scriptable_file_system.h \
 			  scriptable_framework.h \
@@ -182,7 +181,7 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 
 if GGL_BUILD_LIBGGADGET_GTKMOZ
 # Temporary. Remove this when ExtensionManager is ready.
-CPPFLAGS		+= -DHAVE_GTKMOZ=1
+libggadget@GGL_EPOCH@_la_CPPFLAGS += -DHAVE_GTKMOZ=1
 libggadget@GGL_EPOCH@_la_LIBADD += $(top_builddir)/ggadget/gtkmoz/libggadget-gtkmoz@GGL_EPOCH@.la
 endif
 

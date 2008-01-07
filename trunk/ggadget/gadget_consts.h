@@ -124,7 +124,8 @@ const char kCheckBoxCheckedDownImage[] = "resource://checkbox_checked_down.png";
 const char kCheckBoxCheckedOverImage[] = "resource://checkbox_checked_over.png";
 
 const char kCommonJS[] = "resource://common.js";
-const char kDetailsView[] = "resource://details_view.xml";
+const char kTextDetailsView[] = "resource://text_details_view.xml";
+const char kHTMLDetailsView[] = "resource://html_details_view.xml";
 
 } // namespace ggadget
 

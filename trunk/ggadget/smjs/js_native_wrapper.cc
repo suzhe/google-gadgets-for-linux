@@ -36,7 +36,8 @@ static const char *kTrackerReferenceName = "[[[TrackerReference]]]";
 JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
     : ref_count_(0),
       js_context_(js_context),
-      js_object_(js_object) {
+      js_object_(js_object),
+      name_(PrintJSValue(js_context, OBJECT_TO_JSVAL(js_object))) {
   SetDynamicPropertyHandler(NewSlot(this, &JSNativeWrapper::GetProperty),
                             NewSlot(this, &JSNativeWrapper::SetProperty));
   SetArrayHandler(NewSlot(this, &JSNativeWrapper::GetElement),
@@ -65,7 +66,7 @@ ScriptableInterface::OwnershipPolicy JSNativeWrapper::Attach() {
   if (GetRefCount() > 0) {
     // There must be a new native reference, let JavaScript know it by adding
     // the object to root.
-    JS_AddRoot(js_context_, &js_object_);
+    JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
   }
   return ScriptableHelperOwnershipShared::Attach();
 }
@@ -133,7 +134,7 @@ Variant JSNativeWrapper::GetProperty(const char *name) {
   Variant result;
   jsval rval;
   if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
-      !ConvertJSToNativeVariant(js_context_, NULL, rval, &result)) {
+      !ConvertJSToNativeVariant(js_context_, rval, &result)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
                    name, PrintJSValue(js_context_, rval).c_str());
@@ -156,7 +157,7 @@ Variant JSNativeWrapper::GetElement(int index) {
   Variant result;
   jsval rval;
   if (JS_GetElement(js_context_, js_object_, index, &rval) &&
-      !ConvertJSToNativeVariant(js_context_, NULL, rval, &result)) {
+      !ConvertJSToNativeVariant(js_context_, rval, &result)) {
     JS_ReportError(js_context_,
                    "Failed to convert JS property %d value(%s) to native.",
                    index, PrintJSValue(js_context_, rval).c_str());

@@ -46,9 +46,11 @@ class ScriptableHelperImplInterface : public ScriptableInterface {
   virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetPendingException(ScriptableInterface *exception) = 0;
+  virtual int GetRefCount() = 0;
 };
 
-ScriptableHelperImplInterface *NewScriptableHelperImpl();
+ScriptableHelperImplInterface *NewScriptableHelperImpl(
+    ScriptableInterface::OwnershipPolicy policy);
 
 } // namespace internal
 
@@ -67,12 +69,10 @@ class ScriptableHelper : public I {
 
  public:
   ScriptableHelper()
-      : impl_(internal::NewScriptableHelperImpl()),
-        ref_count_(0) {
+      : impl_(internal::NewScriptableHelperImpl(Policy)) {
   }
 
   virtual ~ScriptableHelper() {
-    ASSERT(ref_count_ == 0);
     delete impl_;
   }
 
@@ -224,25 +224,18 @@ class ScriptableHelper : public I {
   }
 
   /** Gets current reference count. */
-  int GetRefCount() const { return ref_count_; }
+  int GetRefCount() const { return impl_->GetRefCount(); }
 
   /** @see ScriptableInterface::Attach() */
   virtual ScriptableInterface::OwnershipPolicy Attach() {
-    if (Policy == ScriptableInterface::OWNERSHIP_SHARED) {
-      ASSERT(ref_count_ >= 0);
-      ref_count_++;
-    }
-    return Policy;
+    return impl_->Attach();
   }
 
   /** @see ScriptableInterface::Detach() */
   virtual bool Detach() {
-    if (Policy == ScriptableInterface::OWNERSHIP_SHARED) {
-      ASSERT(ref_count_ > 0);
-      if (--ref_count_ == 0) {
-        delete this;
-        return true;
-      }
+    if (impl_->Detach()) {
+      delete this;
+      return true;
     }
     return false;
   }
@@ -253,9 +246,9 @@ class ScriptableHelper : public I {
    */
   virtual bool IsStrict() const { return true; }
 
-  /** @see ScriptableInterface::ConnectionToOnDeleteSignal() */
-  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) {
-    return impl_->ConnectToOnDeleteSignal(slot);
+  /** @see ScriptableInterface::ConnectionOnReferenceChange() */
+  virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot) {
+    return impl_->ConnectOnReferenceChange(slot);
   }
 
   /** @see ScriptableInterface::GetPropertyInfoByName() */
@@ -302,7 +295,6 @@ class ScriptableHelper : public I {
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
 
   internal::ScriptableHelperImplInterface *impl_;
-  int ref_count_;
 };
 
 typedef ScriptableHelper<ScriptableInterface,

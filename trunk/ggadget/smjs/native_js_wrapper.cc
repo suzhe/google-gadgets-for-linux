@@ -18,6 +18,7 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
+#include <ggadget/string_utils.h>
 #include "native_js_wrapper.h"
 #include "converter.h"
 #include "js_function_slot.h"
@@ -53,7 +54,7 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
       js_context_(js_context),
       js_object_(js_object),
       scriptable_(NULL),
-      ondelete_connection_(NULL),
+      on_reference_change_connection_(NULL),
       ownership_policy_(ScriptableInterface::NATIVE_OWNED) {
   ASSERT(js_object);
 
@@ -67,9 +68,8 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
 NativeJSWrapper::~NativeJSWrapper() {
   if (!detached_) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-    DLOG("Delete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p"
-         "(CLASS_ID=%jx)", js_context_, ownership_policy_, js_object_, this,
-         scriptable_, scriptable_->GetClassId());
+    DLOG("Delete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
+         js_context_, ownership_policy_, js_object_, this, name_.c_str());
 #endif
     DetachJS();
   }
@@ -78,21 +78,23 @@ NativeJSWrapper::~NativeJSWrapper() {
 void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
   ASSERT(scriptable && !scriptable_);
   scriptable_ = scriptable;
-  // Connect the "ondelete" callback.
-  ondelete_connection_ = scriptable->ConnectToOnDeleteSignal(
-      NewSlot(this, &NativeJSWrapper::OnDelete));
+  name_ = StringPrintf("%p(CLASS_ID=%jx)",
+                       scriptable, scriptable->GetClassId());
+
+  on_reference_change_connection_ = scriptable->ConnectOnReferenceChange(
+      NewSlot(this, &NativeJSWrapper::OnReferenceChange));
   ownership_policy_ = scriptable->Attach();
   
   // If the object is native owned, the script side should not delete the
   // object unless the native side tells it to do.
   if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
-      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
-    JS_AddRoot(js_context_, &js_object_);
-  
+      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT) {
+    JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
+  }
+
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("Wrap: cx=%p policy=%d jsobj=%p wrapper=%p scr=%p(CLASS_ID=%jx)",
-       js_context_, ownership_policy_, js_object_, this,
-       scriptable_, scriptable_->GetClassId());
+  DLOG("Wrap: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
+       js_context_, ownership_policy_, js_object_, this, name_.c_str());
 #ifdef DEBUG_FORCE_GC
   // This GC forces many hidden memory allocation errors to expose.
   DLOG("ForceGC");
@@ -249,8 +251,8 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-    DLOG("Finalize: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
-         cx, wrapper->ownership_policy_, obj, wrapper, wrapper->scriptable_);
+    DLOG("Finalize: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
+         cx, wrapper->ownership_policy_, obj, wrapper, wrapper->name_.c_str());
 #endif
 
     if (!wrapper->detached_) {
@@ -277,40 +279,53 @@ uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
 
 void NativeJSWrapper::DetachJS() {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("DetachJS: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
-       js_context_, ownership_policy_, js_object_, this, scriptable_);
+  DLOG("DetachJS: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
+       js_context_, ownership_policy_, js_object_, this, name_.c_str());
 #endif
 
-  ondelete_connection_->Disconnect();
+  on_reference_change_connection_->Disconnect();
   scriptable_->Detach();
   detached_ = true;
 
-  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
-      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT)
-    JS_RemoveRoot(js_context_, &js_object_);
+  JS_RemoveRoot(js_context_, &js_object_);
 }
 
-void NativeJSWrapper::OnDelete() {
+void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("OnDelete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%p",
-       js_context_, ownership_policy_, js_object_, this, scriptable_);
+  DLOG("OnReferenceChange(%d,%d): cx=%p policy=%d jsobj=%p wrapper=%p "
+       "scriptable=%s", ref_count, change, js_context_,
+       ownership_policy_, js_object_, this, name_.c_str());
 #endif
 
-  // As the native side has deleted the object, now the script side can also
-  // delete it if there is no other active references. 
-  DetachJS();
-
-  // Remove the wrapper mapping from the context, but leave this wrapper
-  // alive to accept mistaken JavaScript calls gracefully.
-  JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
+  if (ref_count == 0 && change == 0) {
+    // As the native side has deleted the object, now the script side can also
+    // delete it if there is no other active references. 
+    DetachJS();
+  
+    // Remove the wrapper mapping from the context, but leave this wrapper
+    // alive to accept mistaken JavaScript calls gracefully.
+    JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
 
 #ifdef DEBUG_JS_WRAPPER_MEMORY
 #ifdef DEBUG_FORCE_GC
-  // This GC forces many hidden memory allocation errors to expose.
-  DLOG("ForceGC");
-  JS_GC(js_context_);
+    // This GC forces many hidden memory allocation errors to expose.
+    DLOG("ForceGC");
+    JS_GC(js_context_);
 #endif
 #endif
+  } else {
+    ASSERT(change == 1 || change == -1);
+    if (change == 1 && ref_count > 0) {
+      // There must be at least one native reference, let JavaScript know it
+      // by adding the object to root.
+      JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
+    }
+    if (change == -1 && ref_count == 2) {
+      // The last native reference is about to be released, let JavaScript know
+      // it by removing the root reference.
+      JS_RemoveRoot(js_context_, &js_object_);
+    }
+  }
 }
 
 JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {

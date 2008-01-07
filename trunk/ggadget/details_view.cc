@@ -141,12 +141,12 @@ void DetailsView::SetContentIsView(bool is_view) {
   impl_->is_view_ = is_view;
 }
 
-const OptionsInterface *DetailsView::GetDetailsViewData() const {
-  return &impl_->data_;
+const ScriptableOptions *DetailsView::GetDetailsViewData() const {
+  return &impl_->scriptable_data_;
 }
 
-OptionsInterface *DetailsView::GetDetailsViewData() {
-  return &impl_->data_;
+ScriptableOptions *DetailsView::GetDetailsViewData() {
+  return &impl_->scriptable_data_;
 }
 
 ScriptableInterface *DetailsView::GetExternalObject() const {

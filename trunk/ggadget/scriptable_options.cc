@@ -69,7 +69,7 @@ class ScriptableOptions::Impl {
 
 ScriptableOptions::ScriptableOptions(OptionsInterface *options,
                                      bool raw_objects)
-    : impl_(NULL) {
+    : impl_(new Impl(options)) {
   RegisterProperty("count",
                    NewSlot(options, &OptionsInterface::GetCount), NULL);
   RegisterMethod("exists", NewSlot(options, &OptionsInterface::Exists));
@@ -86,7 +86,6 @@ ScriptableOptions::ScriptableOptions(OptionsInterface *options,
                    NewSlot(options, &OptionsInterface::PutDefaultValue));
     RegisterMethod("putValue", NewSlot(options, &OptionsInterface::PutValue));
   } else {
-    impl_ = new Impl(options);
     // Partly support the deprecated "item" property.
     RegisterMethod("item", NewSlot(impl_, &Impl::OldGetValue));
     // Partly support the deprecated "defaultValue" property.
@@ -112,6 +111,14 @@ ScriptableOptions::ScriptableOptions(OptionsInterface *options,
 
 ScriptableOptions::~ScriptableOptions() {
   delete impl_;
+}
+
+const OptionsInterface *ScriptableOptions::GetOptions() const {
+  return impl_->options_;
+}
+
+OptionsInterface *ScriptableOptions::GetOptions() {
+  return impl_->options_;
 }
 
 } // namespace ggadget

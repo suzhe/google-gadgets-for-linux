@@ -38,6 +38,7 @@ static const int kListItemHeight = 19;
 static const double kZoomRatio = 1.1;
 static const char *kControlBorderColor = "#808080";
 static const char *kBackgroundColor = "#FFFFFF";
+static const int kMinComboBoxHeight = 80;
 static const int kMaxComboBoxHeight = 150;
 
 class DisplayWindow::Impl {
@@ -233,45 +234,40 @@ class DisplayWindow::Impl {
       return GetText();
     }
 
-    void SetListBoxValue(ListBoxElement *listbox, const char *value) {
-      ItemElement *item = listbox->FindItemByString(value);
-      if (item)
-        listbox->SetSelectedItem(item);
+    bool SetListBoxValue(ListBoxElement *listbox, const Variant &value) {
+      std::string value_str;
+      if (value.ConvertToString(&value_str)) {
+        ItemElement *item = listbox->FindItemByString(value_str.c_str());
+        if (item)
+          listbox->SetSelectedItem(item);
+        return true;
+      }
+      return false;
     }
 
     void SetValue(const Variant &value) {
-      bool invalid = false;
-      std::string value_str;
-      if (value.ConvertToString(&value_str)) {
-        if (element_->IsInstanceOf(ButtonElement::CLASS_ID) ||
-            element_->IsInstanceOf(LabelElement::CLASS_ID) ||
-            element_->IsInstanceOf(EditElement::CLASS_ID)) {
-          SetText(value);
-        } else if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
-          ListBoxElement *listbox = down_cast<ListBoxElement *>(element_);
-          SetListBoxValue(listbox, VariantValue<const char *>()(value));
-        } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
-          ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
-          SetListBoxValue(combobox->GetListBox(),
-                          VariantValue<const char *>()(value));
-        } else {
-          invalid = true;
-        }
-      } else {
+      bool valid = true;
+      if (element_->IsInstanceOf(ButtonElement::CLASS_ID) ||
+          element_->IsInstanceOf(LabelElement::CLASS_ID) ||
+          element_->IsInstanceOf(EditElement::CLASS_ID)) {
+        SetText(value);
+      } else if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
+        valid = SetListBoxValue(down_cast<ListBoxElement *>(element_), value);
+      } else if (element_->IsInstanceOf(ComboBoxElement::CLASS_ID)) {
+        ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
+        valid = SetListBoxValue(combobox->GetListBox(), value);
+      } else if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
         bool value_bool;
         if (value.ConvertToBool(&value_bool)) {
-          if (element_->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
-            // For check box it is a boolean idicating the check state.
-            CheckBoxElement *checkbox = down_cast<CheckBoxElement *>(element_);
-            checkbox->SetValue(VariantValue<bool>()(value));
-          } else {
-            invalid = true;
-          }
+          CheckBoxElement *checkbox = down_cast<CheckBoxElement *>(element_);
+          checkbox->SetValue(value_bool);
         } else {
-          invalid = true;
-        } 
+          valid = false;
+        }
+      } else {
+        valid = false;
       }
-      if (invalid) {
+      if (!valid) {
         LOG("Invalid type of value(%s) for control %s",
             value.Print().c_str(), element_->GetName().c_str());
       }
@@ -424,7 +420,9 @@ class DisplayWindow::Impl {
           div->SetPixelHeight(kListItemHeight + 2);
           // Because our combobox can't pop out of the dialog box, we must
           // limit the height of the combobox
-          if (height > kMaxComboBoxHeight)
+          if (height < kMinComboBoxHeight)
+            height = kMinComboBoxHeight;
+          else if (height > kMaxComboBoxHeight)
             height = kMaxComboBoxHeight;
         } else {
           div->SetPixelHeight(height);

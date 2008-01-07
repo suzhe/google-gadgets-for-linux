@@ -185,6 +185,13 @@ void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
 void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
   ASSERT(impl_->content_area_ == content_area);
   impl_->content_area_ = NULL;
+  // The object may still be referenced by Script after detaching from
+  // the content area. Destroy the images to prevent them from being referenced
+  // after the graphics is destroyed. 
+  DestroyImage(impl_->image_);
+  impl_->image_ = NULL;
+  DestroyImage(impl_->notifier_image_);
+  impl_->notifier_image_ = NULL;
   Detach();
 }
 

@@ -305,6 +305,7 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
 bool JSScriptContext::RegisterClass(const char *name, Slot *constructor) {
   ASSERT(constructor);
   ASSERT(constructor->GetReturnType() == Variant::TYPE_SCRIPTABLE);
+  ASSERT_M(JS_GetGlobalObject(context_), ("Global object should be set first"));
 
   JSClassWithNativeCtor *cls = new JSClassWithNativeCtor(name, constructor);
   if (!JS_InitClass(context_, JS_GetGlobalObject(context_), NULL,
@@ -319,34 +320,6 @@ bool JSScriptContext::RegisterClass(const char *name, Slot *constructor) {
   return true;
 }
 
-void JSScriptContext::LockObject(ScriptableInterface *object,
-                                 const char *name) {
-  ASSERT(object);
-  NativeJSWrapperMap::const_iterator it = native_js_wrapper_map_.find(object);
-  if (it == native_js_wrapper_map_.end()) {
-    DLOG("Can't lock %p(CLASS_ID=%jx) not attached to JavaScript",
-         object, object->GetClassId());
-  } else {
-    DLOG("Lock: policy=%d jsobj=%p wrapper=%p scriptable=%p",
-         it->second->ownership_policy(), it->second->js_object(),
-         it->second, it->second->scriptable());
-    JS_AddNamedRoot(context_, &(it->second->js_object()), name);
-  }
-}
-
-void JSScriptContext::UnlockObject(ScriptableInterface *object) {
-  ASSERT(object);
-  NativeJSWrapperMap::const_iterator it = native_js_wrapper_map_.find(object);
-  if (it == native_js_wrapper_map_.end()) {
-    DLOG("Can't unlock %p not attached to JavaScript", object);
-  } else {
-    DLOG("Unlock: policy=%d jsobj=%p wrapper=%p scriptable=%p",
-         it->second->ownership_policy(), it->second->js_object(),
-         it->second, it->second->scriptable());
-    JS_RemoveRoot(context_, &(it->second->js_object()));
-  }
-}
-
 bool JSScriptContext::AssignFromContext(ScriptableInterface *dest_object,
                                         const char *dest_object_expr,
                                         const char *dest_property,
@@ -355,65 +328,87 @@ bool JSScriptContext::AssignFromContext(ScriptableInterface *dest_object,
                                         const char *src_expr) {
   ASSERT(src_context);
   ASSERT(dest_property);
-  ASSERT(src_expr);
-  JSScriptContext *src_js_context = down_cast<JSScriptContext *>(src_context);
+  AutoLocalRootScope scope(context_);
 
-  JSObject *dest_js_object;
-  if (dest_object) {
-    NativeJSWrapperMap::const_iterator it =
-        native_js_wrapper_map_.find(dest_object);
-    if (it == native_js_wrapper_map_.end())
-      return false;
-    dest_js_object = it->second->js_object();
-  } else {
-    dest_js_object = JS_GetGlobalObject(context_);
-  }
-
-  if (dest_object_expr && *dest_object_expr) {
-    UTF16String utf16_dest_object_expr;
-    ConvertStringUTF8ToUTF16(dest_object_expr, strlen(dest_object_expr),
-                             &utf16_dest_object_expr);
-    jsval rval;
-    if (!JS_EvaluateUCScript(context_, dest_js_object,
-                             utf16_dest_object_expr.c_str(),
-                             utf16_dest_object_expr.size(),
-                             "", 1, &rval)) {
-      DLOG("Failed to evaluate dest_object_expr %s against JSObject %p",
-           dest_object_expr, dest_js_object);
-      return false;
-    }
-    if (!JSVAL_IS_OBJECT(rval) || JSVAL_IS_NULL(rval)) {
-      DLOG("Expression %s doesn't evaluate to a non-null object",
-           dest_object_expr);
-      return false;
-    }
-
-    dest_js_object = JSVAL_TO_OBJECT(rval);
-  }
-
-  JSObject *src_js_object;
-  if (src_object) {
-    NativeJSWrapperMap::const_iterator it =
-        src_js_context->native_js_wrapper_map_.find(src_object);
-    if (it == src_js_context->native_js_wrapper_map_.end())
-      return false;
-    src_js_object = it->second->js_object();
-  } else {
-    src_js_object = JS_GetGlobalObject(src_js_context->context_);
-  }
-
-  UTF16String utf16_src_expr;
-  ConvertStringUTF8ToUTF16(src_expr, strlen(src_expr), &utf16_src_expr);
-  jsval src_val;
-  if (!JS_EvaluateUCScript(src_js_context->context_, src_js_object,
-                           utf16_src_expr.c_str(), utf16_src_expr.size(),
-                           "", 1, &src_val)) {
-    DLOG("Failed to evaluate src_expr %s against JSObject %p",
-         src_expr, src_js_object);
+  jsval dest_val;
+  if (!EvaluateToJSVal(dest_object, dest_object_expr, &dest_val) ||
+      !JSVAL_IS_OBJECT(dest_val) || JSVAL_IS_NULL(dest_val)) {
+    DLOG("Expression %s doesn't evaluate to a non-null object",
+         dest_object_expr);
     return false;
   }
+  JSObject *dest_js_object = JSVAL_TO_OBJECT(dest_val);
+
+  jsval src_val;
+  JSScriptContext *src_js_context = down_cast<JSScriptContext *>(src_context);
+  AutoLocalRootScope scope1(src_js_context->context_);
+  if (!src_js_context->EvaluateToJSVal(src_object, src_expr, &src_val))
+    return false;
 
   return JS_SetProperty(context_, dest_js_object, dest_property, &src_val);
+}
+
+bool JSScriptContext::AssignFromNative(ScriptableInterface *object,
+                                       const char *object_expr,
+                                       const char *property,
+                                       const Variant &value) {
+  ASSERT(property);
+  AutoLocalRootScope scope(context_);
+
+  jsval dest_val;
+  if (!EvaluateToJSVal(object, object_expr, &dest_val) ||
+      !JSVAL_IS_OBJECT(dest_val) || JSVAL_IS_NULL(dest_val)) {
+    DLOG("Expression %s doesn't evaluate to a non-null object", object_expr);
+    return false;
+  }
+  JSObject *js_object = JSVAL_TO_OBJECT(dest_val);
+
+  jsval src_val;
+  if (!ConvertNativeToJS(context_, value, &src_val))
+    return false;
+  return JS_SetProperty(context_, js_object, property, &src_val);
+}
+
+Variant JSScriptContext::Evaluate(ScriptableInterface *object,
+                                  const char *expr) {
+  Variant result;
+  jsval js_val;
+  if (EvaluateToJSVal(object, expr, &js_val)) {
+    ConvertJSToNativeVariant(context_, js_val, &result);
+    // Just left result in void state on any error.
+  }
+  return result;
+}
+
+JSBool JSScriptContext::EvaluateToJSVal(ScriptableInterface *object,
+                                        const char *expr, jsval *result) {
+  *result = JSVAL_VOID;
+  JSObject *js_object;
+  if (object) {
+    NativeJSWrapperMap::const_iterator it = native_js_wrapper_map_.find(object);
+    if (it == native_js_wrapper_map_.end()) {
+      DLOG("Object %p hasn't a wrapper in JS", object);
+      return JS_FALSE;
+    }
+    js_object = it->second->js_object();
+  } else {
+    js_object = JS_GetGlobalObject(context_);
+  }
+
+  if (expr && *expr) {
+    UTF16String utf16_expr;
+    ConvertStringUTF8ToUTF16(expr, strlen(expr), &utf16_expr);
+    if (!JS_EvaluateUCScript(context_, js_object,
+                             utf16_expr.c_str(), utf16_expr.size(),
+                             expr, 1, result)) {
+      DLOG("Failed to evaluate dest_object_expr %s against JSObject %p",
+           expr, js_object);
+      return JS_FALSE;
+    }
+  } else {
+    *result = OBJECT_TO_JSVAL(js_object);
+  }
+  return JS_TRUE;
 }
 
 } // namespace smjs

@@ -87,7 +87,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       RegisterMethod("RemoveMe",
                      NewSlot(gadget_host_, &GadgetHostInterface::RemoveMe));
       RegisterMethod("ShowDetailsView",
-                     NewSlot(gadget_impl, &Impl::ScriptShowDetailsView));
+                     NewSlot(gadget_impl, &Impl::DelayedShowDetailsView));
       RegisterMethod("CloseDetailsView",
                      NewSlot(gadget_impl, &Impl::DelayedCloseDetailsView));
       RegisterMethod("ShowOptionsDialog",
@@ -236,9 +236,9 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
                                                    element_factory_,
                                                    debug_mode))),
         plugin_(this),
-        details_view_host_(NULL),
+        details_view_host_(NULL), details_view_(NULL),
         has_options_xml_(false),
-        close_details_view_timer_(0), 
+        close_details_view_timer_(0), show_details_view_timer_(0),
         debug_mode_(debug_mode) {
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
@@ -248,6 +248,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     if (close_details_view_timer_ != 0) {
       host_->GetMainLoop()->RemoveWatch(close_details_view_timer_);
       close_details_view_timer_ = 0;
+    }
+    if (show_details_view_timer_ != 0) {
+      host_->GetMainLoop()->RemoveWatch(show_details_view_timer_);
+      show_details_view_timer_ = 0;
     }
 
     // unload any fonts
@@ -316,7 +320,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     if (has_options_xml_) {
       View *view = new View(&gadget_global_prototype_, element_factory_,
                             debug_mode_);
-      options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS, 
+      options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS,
                                              view);
       if (!view->InitFromFile(kOptionsXML)) {
         LOG("Failed to setup the options view");
@@ -344,26 +348,30 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
 
   bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
+    details_view->Attach();
     CloseDetailsView();
+    details_view_ = details_view;
     View *view = new View(&gadget_global_prototype_, element_factory_,
                           debug_mode_);
-    details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS, 
+    details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS,
                                             view);
-    OptionsInterface *data = details_view->GetDetailsViewData();
+    ScriptContextInterface *script_context =
+        details_view_host_->GetScriptContext();
+    ScriptableOptions *scriptable_data = details_view->GetDetailsViewData();
+    OptionsInterface *data = scriptable_data->GetOptions();
     // Set up the detailsViewData variable in the opened details view.
-    details_view_host_->GetScriptContext()->AssignFromContext(
-        NULL, "", "detailsViewData",
-        main_view_host_->GetScriptContext(), details_view, "detailsViewData");
+    script_context->AssignFromNative(NULL, "", "detailsViewData",
+                                     Variant(scriptable_data));
 
     std::string xml_file;
     if (details_view->ContentIsHTML() || !details_view->ContentIsView()) {
-      xml_file = kDetailsView;
       if (details_view->ContentIsHTML()) {
-        details_view_host_->GetScriptContext()->AssignFromContext(
-            NULL, "", "external",
-            main_view_host_->GetScriptContext(), details_view, "external");
+        xml_file = kHTMLDetailsView;
+        details_view_host_->GetScriptContext()->AssignFromNative(
+            NULL, "", "external", Variant(details_view->GetExternalObject()));
         data->PutValue("contentType", Variant("text/html"));
       } else {
+        xml_file = kTextDetailsView;
         data->PutValue("contentType", Variant("text/plain"));
       }
       data->PutValue("content", Variant(details_view->GetText()));
@@ -375,17 +383,50 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_host_;
       details_view_host_ = NULL;
+      details_view->Detach();
       return false;
     }
     details_view_host_->ShowInDetailsView(title, flags, feedback_handler);
     return true;
   }
 
-  void ScriptShowDetailsView(DetailsView *details_view,
-                             const char *title, int flags,
-                             Slot *callback) {
-    ShowDetailsView(details_view, title, flags,
-                    callback ? new SlotProxy1<void, int>(callback) : NULL);
+  class ShowDetailsViewCallback : public WatchCallbackInterface {
+   public:
+    ShowDetailsViewCallback(Impl *impl, DetailsView *details_view,
+                            const char *title, int flags,
+                            Slot1<void, int> *callback)
+        : impl_(impl), details_view_(details_view),
+          title_(title), flags_(flags), callback_(callback) {
+       details_view_->Attach();
+    }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      impl_->ShowDetailsView(details_view_, title_.c_str(), flags_, callback_);
+      impl_->show_details_view_timer_ = 0;
+      callback_ = NULL;
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      details_view_->Detach();
+      delete callback_;
+    }
+   private:
+    Impl *impl_;
+    DetailsView *details_view_;
+    std::string title_;
+    int flags_;
+    Slot1<void, int> *callback_;
+  };
+
+  // Show the details view in the next event loop.
+  void DelayedShowDetailsView(DetailsView *details_view,
+                              const char *title, int flags,
+                              Slot *callback) {
+    if (show_details_view_timer_ == 0) {
+      show_details_view_timer_ = host_->GetMainLoop()->AddTimeoutWatch(0,
+          new ShowDetailsViewCallback(
+              this, details_view, title, flags,
+              callback ? new SlotProxy1<void, int>(callback) : NULL));
+    }
   }
 
   void CloseDetailsView() {
@@ -393,6 +434,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       details_view_host_->CloseDetailsView();
       delete details_view_host_;
       details_view_host_ = NULL;
+      details_view_->Detach();
     }
   }
 
@@ -477,9 +519,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   ViewHostInterface *main_view_host_;
   Plugin plugin_;
   ViewHostInterface *details_view_host_;
+  DetailsView *details_view_;
   GadgetStringMap manifest_info_map_;
   bool has_options_xml_;
-  int close_details_view_timer_;
+  int close_details_view_timer_, show_details_view_timer_;
   int debug_mode_;
 };
 
