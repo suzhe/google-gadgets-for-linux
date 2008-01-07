@@ -206,7 +206,7 @@ AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 
 # Check D-Bus library
-PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.0, [has_dbus=yes], [has_dbus=no])
+PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.2, [has_dbus=yes], [has_dbus=no])
 
 # Check librsvg
 PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])

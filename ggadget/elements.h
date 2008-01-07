@@ -26,7 +26,6 @@ namespace ggadget {
 
 class BasicElement;
 class ElementFactory;
-class BasicElement;
 class CanvasInterface;
 class View;
 

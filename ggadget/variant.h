@@ -43,7 +43,7 @@ struct JSONString {
 /**
  * Represents a date. The value is the number of milliseconds since the Epoch
  * (00:00:00 UTC, January 1, 1970).
- */ 
+ */
 struct Date {
   explicit Date(uint64_t a_value) : value(a_value) { }
   bool operator==(const Date &another) const {
@@ -280,7 +280,7 @@ class Variant {
   bool ConvertToInt(int *result) const;
   bool ConvertToInt64(int64_t *result) const;
   bool ConvertToDouble(double *result) const;
-  
+
   /**
    * Type of the <code>Variant</code>'s value.
    */

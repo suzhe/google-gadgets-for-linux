@@ -22,43 +22,59 @@
 #include <vector>
 
 #include "machine.h"
-#include <ggadget/common.h>
-#include <ggadget/string_utils.h>
+#include "ggadget/common.h"
+#include "ggadget/string_utils.h"
 
-#ifdef HAVE_DBUS_LIBRARY
-#include <ggadget/dbus/dbus_utils.h>
-#endif
+#include "ggadget/dbus/dbus_proxy.h"
 
 namespace ggadget {
 namespace framework {
 namespace linux_os {
 
-static const char* kKeysInMachineInfo[] = {
+namespace {
+
+const char* kKeysInMachineInfo[] = {
   "cpu family", "model", "stepping",
   "vendor_id", "model name", "cpu MHz"
 };
 
+const char *kHalDBusName = "org.freedesktop.Hal";
+const char *kHalDBusPath = "/org/freedesktop/Hal/devices/computer";
+const char *kHalDBusInterface = "org.freedesktop.Hal.Device";
+const char *kHalPropertyMethod = "GetPropertyString";
+
+const char *kNewUUIDProperty = "system.hardware.uuid";
+const char *kOldUUIDProperty = "smbios.system.uuid";
+
+const char *kNewVendorProperty = "system.hardware.vendor";
+const char *kOldVendorProperty = "system.vendor";
+
+const char *kMachineModelProperty = "system.product";
+
 // Represents the file names for reading CPU info.
-static const char* kCPUInfoFile = "/proc/cpuinfo";
+const char* kCPUInfoFile = "/proc/cpuinfo";
+
+}  // namespace anonymous
 
 Machine::Machine() {
   InitArchInfo();
   InitProcInfo();
-#ifdef HAVE_DBUS_LIBRARY
-  DBusProxy *proxy = new DBusProxy(BUS_TYPE_SYSTEM,
-                                   "org.freedesktop.Hal",
-                                   "/org/freedesktop/Hal/devices/computer",
-                                   "org.freedesktop.Hal.Device");
-
+  ggadget::dbus::DBusProxyFactory factory(NULL);
+  ggadget::dbus::DBusProxy *proxy = factory.NewSystemProxy(kHalDBusName,
+                                                           kHalDBusPath,
+                                                           kHalDBusInterface,
+                                                           false);
   const char* str = NULL;
-  if (!proxy->SyncCall("GetPropertyString", -1,
-                        MESSAGE_TYPE_STRING, "system.hardware.uuid",
+  using ggadget::dbus::MESSAGE_TYPE_STRING;
+  using ggadget::dbus::MESSAGE_TYPE_INVALID;
+  if (!proxy->SyncCall(kHalPropertyMethod, -1,
+                        MESSAGE_TYPE_STRING, kNewUUIDProperty,
                         MESSAGE_TYPE_INVALID,
                         MESSAGE_TYPE_STRING, &str,
                         MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->SyncCall("GetPropertyString", -1,
-                     MESSAGE_TYPE_STRING, "smbios.system.uuid",
+    proxy->SyncCall(kHalPropertyMethod, -1,
+                     MESSAGE_TYPE_STRING, kOldUUIDProperty,
                      MESSAGE_TYPE_INVALID,
                      MESSAGE_TYPE_STRING, &str,
                      MESSAGE_TYPE_INVALID);
@@ -66,14 +82,14 @@ Machine::Machine() {
   if (str) serial_number_ = str;
 
   /** get machine vendor */
-  if (!proxy->SyncCall("GetPropertyString", -1,
-                        MESSAGE_TYPE_STRING, "system.hardware.vendor",
+  if (!proxy->SyncCall(kHalPropertyMethod, -1,
+                        MESSAGE_TYPE_STRING, kNewVendorProperty,
                         MESSAGE_TYPE_INVALID,
                         MESSAGE_TYPE_STRING, &str,
                         MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->SyncCall("GetPropertyString", -1,
-                     MESSAGE_TYPE_STRING, "system.vendor",
+    proxy->SyncCall(kHalPropertyMethod, -1,
+                     MESSAGE_TYPE_STRING, kOldVendorProperty,
                      MESSAGE_TYPE_INVALID,
                      MESSAGE_TYPE_STRING, &str,
                      MESSAGE_TYPE_INVALID);
@@ -81,14 +97,13 @@ Machine::Machine() {
   if (str) machine_vendor_ = str;
 
   /** get machine model */
-  proxy->SyncCall("GetPropertyString", -1,
-                   MESSAGE_TYPE_STRING, "system.product",
+  proxy->SyncCall(kHalPropertyMethod, -1,
+                   MESSAGE_TYPE_STRING, kMachineModelProperty,
                    MESSAGE_TYPE_INVALID,
                    MESSAGE_TYPE_STRING, &str,
                    MESSAGE_TYPE_INVALID);
   if (str) machine_model_ = str;
   delete proxy;
-#endif
 }
 
 Machine::~Machine() {

@@ -84,7 +84,7 @@ class ScriptContextInterface {
    * or @c ScriptableInterface::NATIVE_PERMANENT ownership policies need NOT
    * call this because the script adapter should do this automatically.
    * The object must has already been attached into the script engine when
-   * this method is called, otherwise this method does nothing. 
+   * this method is called, otherwise this method does nothing.
    * @param object the object to be locked.
    * @param name the name of the object for debug purpose.
    */
@@ -94,7 +94,7 @@ class ScriptContextInterface {
    * Unlocks an scriptable object to allow the script engine to garbage
    * collect the object when possible.
    * The object must has already been attached into the script engine when
-   * this method is called, otherwise this method does nothing. 
+   * this method is called, otherwise this method does nothing.
    */
   virtual void UnlockObject(ScriptableInterface *object) = 0;
 

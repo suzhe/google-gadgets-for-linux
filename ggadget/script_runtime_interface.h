@@ -44,7 +44,7 @@ class ScriptRuntimeInterface {
   /**
    * An @c ErrorReporter can be connected to the error reporter signal.
    * It will receive a message string when it is called.
-   */ 
+   */
   typedef Slot1<void, const char *> ErrorReporter;
 
   /**

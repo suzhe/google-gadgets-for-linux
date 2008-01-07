@@ -18,11 +18,14 @@ limitations under the License.
 #include <stdlib.h>
 #include <dbus/dbus.h>
 
-#include "ggadget/dbus/dbus_utils.h"
+#include "ggadget/dbus/dbus_proxy.h"
+#include "ggadget/native_main_loop.h"
 #include "ggadget/logger.h"
+#include "ggadget/slot.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
+using namespace ggadget::dbus;
 
 namespace {
 
@@ -38,11 +41,13 @@ int feed = rand();
 DBusHandlerResult FilterFunction(DBusConnection *connection,
                                  DBusMessage *message,
                                  void *user_data) {
-  DLOG("Get message, type: %d, sender: %s, path: %s, interface: %s",
+  DLOG("Get message, type: %d, sender: %s, path: %s, interface: %s, member: %s",
        dbus_message_get_type(message), dbus_message_get_sender(message),
-       dbus_message_get_path(message), dbus_message_get_interface(message));
+       dbus_message_get_path(message), dbus_message_get_interface(message),
+       dbus_message_get_member(message));
   if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, kDisconnect)) {
     DLOG("server: got system disconnect signal, exit.");
+    dbus_connection_close(connection);
     exit(0);
     return DBUS_HANDLER_RESULT_HANDLED;
   } else {
@@ -162,7 +167,17 @@ DBusHandlerResult path_message_func(DBusConnection *connection,
                                          kInterface,
                                          kDisconnect)) {
     DLOG("server: received disconnected call from peer.");
+    dbus_connection_close(connection);
     exit(0);
+    return DBUS_HANDLER_RESULT_HANDLED;
+  } else if (dbus_message_is_method_call(message,
+                                         kInterface,
+                                         "Signal")) {
+    DLOG("server: received signal echo call from peer.");
+    DBusMessage *signal = dbus_message_new_signal(kPath, kInterface, "signal1");
+    dbus_connection_send(connection, signal, NULL);
+    dbus_connection_flush(connection);
+    dbus_message_unref(signal);
     return DBUS_HANDLER_RESULT_HANDLED;
   } else if (dbus_message_is_method_call(message,
                                          kInterface,
@@ -192,7 +207,7 @@ void StartDBusServer(int feed) {
   DBusError error;
   dbus_error_init(&error);
   DBusConnection *bus;
-  bus = dbus_bus_get(DBUS_BUS_SESSION, &error);
+  bus = dbus_bus_get_private(DBUS_BUS_SESSION, &error);
   if (!bus) {
     LOG("server: Failed to connect to the D-BUS daemon: %s", error.message);
     dbus_error_free(&error);
@@ -230,35 +245,16 @@ void StartDBusServer(int feed) {
   return;
 }
 
-std::string GetOwner(BusType type,
-                     const char* name) {
-  DBusConnection* connection;
+void KillServer() {
+  DBusMessage *message = dbus_message_new_method_call(kName, kPath,
+                                                      kInterface, kDisconnect);
   DBusError error;
   dbus_error_init(&error);
-
-  if (type == BUS_TYPE_SYSTEM) {
-    connection = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
-  } else if (type == BUS_TYPE_SESSION) {
-    connection = dbus_bus_get(DBUS_BUS_SESSION, &error);
-  } else {
-    LOG("The type is not supported.");
-    return "";
-  }
-  DBusMessage *message = dbus_message_new_method_call(DBUS_SERVICE_DBUS,
-                                                      DBUS_PATH_DBUS,
-                                                      DBUS_INTERFACE_DBUS,
-                                                      "GetNameOwner");
-  dbus_message_append_args(message,
-                           DBUS_TYPE_STRING, &name,
-                           DBUS_TYPE_INVALID);
-  DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection,
-                                                                 message,
-                                                                 2000,
-                                                                 &error);
-  const char* base_name;
-  dbus_message_get_args(reply, &error, DBUS_TYPE_STRING, &base_name,
-                        DBUS_TYPE_INVALID);
-  return std::string(base_name);
+  DBusConnection *bus = dbus_bus_get(DBUS_BUS_SESSION, &error);
+  dbus_connection_send(bus, message, NULL);
+  dbus_connection_flush(bus);
+  dbus_message_unref(message);
+  dbus_error_free(&error);
 }
 
 }  // anonymous namespace
@@ -268,12 +264,14 @@ TEST(DBusProxy, SyncCall) {
   if (id == 0) {
     DLOG("server start");
     StartDBusServer(feed);
+    StartDBusServer(feed * 2);
     exit(0);
   } else {
     sleep(1);  /** wait server start */
     DLOG("client start");
-    DBusProxy *proxy = new DBusProxy(BUS_TYPE_SESSION, kName,
-                                     kPath, kInterface);
+    DBusProxyFactory *factory = new DBusProxyFactory(NULL);
+    DBusProxy *proxy =
+        factory->NewSessionProxy(kName, kPath, kInterface, false);
     int read = 0;
     EXPECT_TRUE(proxy->SyncCall("Hello", -1, MESSAGE_TYPE_INVALID,
                                 MESSAGE_TYPE_INT32, &read,
@@ -281,39 +279,104 @@ TEST(DBusProxy, SyncCall) {
     DLOG("read feed: %d", read);
     EXPECT_EQ(feed, read);
     delete proxy;
+    delete factory;
   }
 }
 
-TEST(DBusProxy, SyncCall_ForOwner) {
-  std::string name = GetOwner(BUS_TYPE_SESSION, kName);
-  DLOG("client: Owner name of the server: %s", name.c_str());
-  DBusProxy *proxy = new DBusProxy(BUS_TYPE_SESSION, name.c_str(),
-                                   kPath, kInterface);
-  int read = 0;
-  proxy->SyncCall("Hello", -1, MESSAGE_TYPE_INVALID,
-                  MESSAGE_TYPE_INT32, &read,
-                  MESSAGE_TYPE_INVALID);
-  DLOG("read feed: %d", read);
-  EXPECT_EQ(feed, read);
+class Timeout : public WatchCallbackInterface {
+ public:
+  virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    main_loop->Quit();
+    return false;
+  }
+  virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+    delete this;
+  }
+};
+
+class MethodSlot {
+ public:
+  MethodSlot(DBusProxy *proxy) : proxy_(proxy) {}
+  ~MethodSlot() {}
+  int value() const { return read_; }
+  bool Callback(uint32_t id) {
+    LOG("serial: %d", id);
+    return proxy_->CollectResult(id, MESSAGE_TYPE_INT32, &read_,
+                                 MESSAGE_TYPE_INVALID);
+  }
+ private:
+  DBusProxy *proxy_;
+  int read_;
+};
+
+TEST(DBusProxy, AsyncCall) {
+  NativeMainLoop mainloop;
+  DBusProxyFactory factory(&mainloop);
+  DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, false);
+  MethodSlot slot(proxy);
+  Timeout *timeout = new Timeout;
+  mainloop.AddTimeoutWatch(1000, timeout);
+  EXPECT_TRUE(proxy->AsyncCall("Hello", NewSlot(&slot, &MethodSlot::Callback),
+                               MESSAGE_TYPE_INVALID));
+  mainloop.Run();
+  EXPECT_EQ(feed, slot.value());
+  delete proxy;
+  DLOG("here");
+}
+
+class SignalSlot {
+ public:
+  SignalSlot() : value_(0) {}
+  int value() const {return value_;}
+  void Callback() { ++value_; }
+ private:
+  int value_;
+};
+
+TEST(DBusProxy, ConnectToSignal) {
+  NativeMainLoop mainloop;
+  DBusProxyFactory factory(&mainloop);
+  DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, false);
+  ASSERT(proxy);
+  SignalSlot slot;
+  proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
+  EXPECT_TRUE(proxy->SyncCall("Signal", -1, MESSAGE_TYPE_INVALID,
+                              MESSAGE_TYPE_INVALID));
+  Timeout *timeout = new Timeout;
+  mainloop.AddTimeoutWatch(1000, timeout);
+  mainloop.Run();
+  EXPECT_NE(0, slot.value());
   delete proxy;
 }
 
-TEST(DBusProxy, SendSignal) {
-  DBusProxy *proxy = new DBusProxy(BUS_TYPE_SESSION, kName,
-                                   kPath, kInterface);
-  // close server
-  DLOG("client: sent close signal.");
-  EXPECT_TRUE(proxy->SyncCall(kDisconnect, -1,
-                              MESSAGE_TYPE_INVALID, MESSAGE_TYPE_INVALID));
-  int read = 0;
-  EXPECT_FALSE(proxy->SyncCall("Hello", -1, MESSAGE_TYPE_INVALID,
-                               MESSAGE_TYPE_INT32, &read,
-                               MESSAGE_TYPE_INVALID));
+TEST(DBusProxy, ConnectToSignalByName) {
+  NativeMainLoop mainloop;
+  DBusProxyFactory factory(&mainloop);
+  DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, true);
+  ASSERT(proxy);
+  SignalSlot slot;
+  Timeout *timeout = new Timeout;
+  mainloop.AddTimeoutWatch(2000, timeout);
+  proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
+  EXPECT_TRUE(proxy->SyncCall("Signal", -1, MESSAGE_TYPE_INVALID,
+                              MESSAGE_TYPE_INVALID));
+  mainloop.Run();
+  int old = slot.value();
+  EXPECT_NE(0, old);
+  KillServer();
+  timeout = new Timeout;
+  mainloop.AddTimeoutWatch(2000, timeout);
+  proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
+  EXPECT_TRUE(proxy->SyncCall("Signal", -1, MESSAGE_TYPE_INVALID,
+                              MESSAGE_TYPE_INVALID));
+  mainloop.Run();
+  EXPECT_EQ(old, slot.value());
   delete proxy;
 }
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   int result = RUN_ALL_TESTS();
+  KillServer();
   return result;
 }

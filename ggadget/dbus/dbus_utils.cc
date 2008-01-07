@@ -14,582 +14,1349 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <set>
-#include <map>
-
 #include <dbus/dbus.h>
 
 #include "dbus_utils.h"
+#include <ggadget/common.h>
 #include <ggadget/logger.h>
-#include <ggadget/string_utils.h>
+#include <ggadget/main_loop_interface.h>
 
 namespace ggadget {
+namespace dbus {
 
 namespace {
 
-typedef std::set<DBusProxy::DBusProxyImp*> DBusProxySet;
-typedef std::map<std::string, DBusProxySet*> DBusProxiesMap;
-
-const struct {
+const struct Type {
   MessageType type;
   int dbus_type;
-} typies[] = {
-  { MESSAGE_TYPE_INVALID, DBUS_TYPE_INVALID },
-  { MESSAGE_TYPE_BYTE,    DBUS_TYPE_BYTE    },
-  { MESSAGE_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN },
-  { MESSAGE_TYPE_INT16,   DBUS_TYPE_INT16   },
-  { MESSAGE_TYPE_UINT16,  DBUS_TYPE_UINT16  },
-  { MESSAGE_TYPE_INT32,   DBUS_TYPE_INT32   },
-  { MESSAGE_TYPE_UINT32,  DBUS_TYPE_UINT32  },
-  { MESSAGE_TYPE_INT64,   DBUS_TYPE_INT64   },
-  { MESSAGE_TYPE_UINT64,  DBUS_TYPE_UINT64  },
-  { MESSAGE_TYPE_DOUBLE,  DBUS_TYPE_DOUBLE  },
-  { MESSAGE_TYPE_STRING,  DBUS_TYPE_STRING  }
+} types[] = {
+  { MESSAGE_TYPE_INVALID, DBUS_TYPE_INVALID    },
+  { MESSAGE_TYPE_BYTE,    DBUS_TYPE_BYTE       },
+  { MESSAGE_TYPE_BOOLEAN, DBUS_TYPE_BOOLEAN    },
+  { MESSAGE_TYPE_INT16,   DBUS_TYPE_INT16      },
+  { MESSAGE_TYPE_UINT16,  DBUS_TYPE_UINT16     },
+  { MESSAGE_TYPE_INT32,   DBUS_TYPE_INT32      },
+  { MESSAGE_TYPE_UINT32,  DBUS_TYPE_UINT32     },
+  { MESSAGE_TYPE_INT64,   DBUS_TYPE_INT64      },
+  { MESSAGE_TYPE_UINT64,  DBUS_TYPE_UINT64     },
+  { MESSAGE_TYPE_DOUBLE,  DBUS_TYPE_DOUBLE     },
+  { MESSAGE_TYPE_STRING,  DBUS_TYPE_STRING     },
+  { MESSAGE_TYPE_ARRAY,   DBUS_TYPE_ARRAY      },
+  { MESSAGE_TYPE_STRUCT,  DBUS_TYPE_STRUCT     },
+  { MESSAGE_TYPE_VARIANT, DBUS_TYPE_VARIANT    },
+  { MESSAGE_TYPE_DICT,    DBUS_TYPE_DICT_ENTRY }
 };
-const int TypeMapSize = sizeof(typies) / sizeof(typies[0]);
 
 int MessageTypeToDBusType(MessageType type) {
-  /** TODO: more effient way is needed. */
-  for (int i = 0; i < TypeMapSize; ++i)
-    if (typies[i].type == type)
-      return typies[i].dbus_type;
+  // TODO: more effient way is needed.
+  for (std::size_t i = 0; i < arraysize(types); ++i)
+    if (types[i].type == type)
+      return types[i].dbus_type;
   return DBUS_TYPE_INVALID;
 }
 
-bool EncodeMessage(DBusMessage* message,
-                   MessageType first_arg_type,
-                   va_list *args) {
-  DBusMessageIter iter;
-  dbus_message_iter_init_append(message, &iter);
-  MessageType type = first_arg_type;
-  while (type != MESSAGE_TYPE_INVALID) {
-    switch (type) {
-      case MESSAGE_TYPE_BYTE:
+bool IsBasicType(int type) {
+  return dbus_type_is_basic(type);
+}
+
+bool IsBasicType(const char *s) {
+  if (!s || s[1]) return false;
+  return IsBasicType(static_cast<int>(*s));
+}
+
+std::string GetElementType(const char *signature) {
+  if (!signature) return "";
+  if (*signature == 'a')
+    return std::string("a") + GetElementType(signature + 1);
+  // don't consider such invalid cases: {is(s}.
+  // it is user's reponsibility to make them right.
+  if (*signature == '(' || *signature == '{') {
+    const char *index = signature;
+    char start = *signature;
+    char end = (start == '(') ? ')' : '}';
+    int counter = 1;
+    while (counter != 0) {
+      char ch = *++index;
+      if (!ch) return "";
+      if (ch == start)
+        counter++;
+      else if (ch == end)
+        counter--;
+    }
+    return std::string(signature, static_cast<size_t>(index - signature + 1));
+  }
+  return std::string(signature, 1);
+}
+
+/** used for container type except array. */
+bool GetSubElements(const char *signature,
+                    StringList *sig_list) {
+  if (IsBasicType(signature) || *signature == 'a') return false;
+  StringList tmp_list;
+  const char *begin = signature + 1;
+  const char *end = signature + strlen(signature);
+  while (begin < end - 1) {
+    std::string sig = GetElementType(begin);
+    if (sig.empty()) return false;
+    tmp_list.push_back(sig);
+    begin += sig.size();
+  }
+  sig_list->swap(tmp_list);
+  return sig_list->size();
+}
+
+bool CheckSignatureValidity(const char* signature, bool single) {
+  DBusError error;
+  dbus_error_init(&error);
+  bool ret = true;
+  if ((single && !dbus_signature_validate_single(signature, &error)) ||
+      !dbus_signature_validate(signature, &error)) {
+    LOG("Check Validity for signature %s failed, %s: %s",
+        signature, error.name, error.message);
+    ret = false;
+  }
+  dbus_error_free(&error);
+  return ret;
+}
+
+}  // anonymous namespace
+
+std::string GetVariantSignature(const Variant &value) {
+  switch (value.type()) {
+    case Variant::TYPE_BOOL:
+      return "b";
+    case Variant::TYPE_INT64:
+      return "i";
+    case Variant::TYPE_DOUBLE:
+      return "d";
+    case Variant::TYPE_STRING:
+    case Variant::TYPE_UTF16STRING:
+    case Variant::TYPE_JSON:
+      return "s";
+    case Variant::TYPE_SCRIPTABLE:
+    case Variant::TYPE_CONST_SCRIPTABLE:
+      {
+        ScriptableInterface *scriptable =
+            VariantValue<ScriptableInterface*>()(value);
+        Variant length = GetPropertyByName(scriptable, "length");
+        if (length.type() != Variant::TYPE_VOID) {
+          /* firstly treat as an array. */
+          ArrayIterator iterator;
+          scriptable->EnumerateElements(
+              NewSlot(&iterator, &ArrayIterator::Callback));
+          std::string sig = iterator.signature();
+          if (!sig.empty()) return sig;
+        }
+        DictIterator iterator;
+        if (!scriptable->EnumerateProperties(
+            NewSlot(&iterator, &DictIterator::Callback)))
+          return "";
+        std::string dict_signature = "a{s";
+        dict_signature += iterator.signature();
+        dict_signature += "}";
+        return dict_signature;
+      }
+      break;
+    default:
+      LOG("other meanless type: %d", value.type());
+  }
+  return "";
+}
+
+class DBusMarshaller::Impl {
+ public:
+  Impl(DBusMessage *message) : iter_(NULL), parent_iter_(NULL) {
+    iter_ = new DBusMessageIter;
+    dbus_message_iter_init_append(message, iter_);
+  }
+  Impl(DBusMessageIter *parent, int type, const char *sig) :
+      iter_(NULL), parent_iter_(parent) {
+    iter_ = new DBusMessageIter;
+    dbus_message_iter_open_container(parent, type, sig, iter_);
+  }
+  ~Impl() {
+    if (parent_iter_)
+      dbus_message_iter_close_container(parent_iter_, iter_);
+    delete iter_;
+  }
+  bool AppendArgument(const Argument &arg) {
+    if (arg.signature.empty()) {
+      std::string sig = GetVariantSignature(arg.value);
+      if (sig.empty()) return false;
+      return AppendArgument(Argument(sig.c_str(), arg.value));
+    }
+    const char* index = arg.signature.c_str();
+    if (!CheckSignatureValidity(index, true)) return false;
+    switch (*index) {
+      case 'y':
         {
-          unsigned char v = va_arg(*args, int);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_BYTE, &v);
+          int64_t i;
+          if (!arg.value.ConvertToInt64(&i)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(static_cast<unsigned char>(i));
           break;
         }
-      case MESSAGE_TYPE_BOOLEAN:
+      case 'b':
         {
-          dbus_bool_t v = va_arg(*args, dbus_bool_t);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_BOOLEAN, &v);
+          bool b;
+          if (!arg.value.ConvertToBool(&b)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(b);
           break;
         }
-      case MESSAGE_TYPE_INT16:
+      case 'n':
         {
-          dbus_int16_t v = va_arg(*args, int);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_INT16, &v);
+          int64_t i;
+          if (!arg.value.ConvertToInt64(&i)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(static_cast<int16_t>(i));
           break;
         }
-      case MESSAGE_TYPE_UINT16:
+      case 'q':
         {
-          dbus_uint16_t v = va_arg(*args, int);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT16, &v);
+          int64_t i;
+          if (!arg.value.ConvertToInt64(&i)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(static_cast<uint16_t>(i));
           break;
         }
-      case MESSAGE_TYPE_INT32:
+      case 'i':
         {
-          dbus_int32_t v = va_arg(*args, dbus_int32_t);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_INT32, &v);
+          int64_t i;
+          if (!arg.value.ConvertToInt64(&i)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(static_cast<int32_t>(i));
           break;
         }
-      case MESSAGE_TYPE_UINT32:
+      case 'u':
         {
-          dbus_uint32_t v = va_arg(*args, dbus_uint32_t);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT32, &v);
+          int64_t i;
+          if (!arg.value.ConvertToInt64(&i)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(static_cast<uint32_t>(i));
           break;
         }
-      case MESSAGE_TYPE_INT64:
+      case 'x':
         {
-          dbus_int64_t v = va_arg(*args, dbus_int64_t);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_INT64, &v);
+          int64_t v;
+          if (!arg.value.ConvertToInt64(&v)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(v);
           break;
         }
-      case MESSAGE_TYPE_UINT64:
+      case 't':
         {
-          dbus_uint64_t v = va_arg(*args, dbus_uint64_t);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT64, &v);
+          int64_t i;
+          if (!arg.value.ConvertToInt64(&i)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(static_cast<uint64_t>(i));
           break;
         }
-      case MESSAGE_TYPE_DOUBLE:
+      case 'd':
         {
-          double v = va_arg(*args, double);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_DOUBLE, &v);
+          double v;
+          if (!arg.value.ConvertToDouble(&v)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(v);
           break;
         }
-      case MESSAGE_TYPE_STRING:
+      case 's':
         {
-          const char* v = va_arg(*args, const char*);
-          dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &v);
+          std::string s;
+          if (!arg.value.ConvertToString(&s)) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          Append(s.c_str());
+          break;
+        }
+      case 'a':
+        {
+          if (arg.value.type() != Variant::TYPE_SCRIPTABLE) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          /* special handle dict case */
+          if (*(index + 1) == '{') {
+            std::string dict_sig = GetElementType(index + 1);
+            StringList sig_list;
+            if (!GetSubElements(dict_sig.c_str(), &sig_list) ||
+                sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str()))
+              return false;
+            ScriptableInterface *dict =
+                VariantValue<ScriptableInterface*>()(arg.value);
+            Impl *sub = new Impl(iter_, DBUS_TYPE_ARRAY, dict_sig.c_str());
+            DictIterator slot(sub, sig_list[0].c_str(), sig_list[1].c_str());
+            if (!dict->EnumerateProperties(
+                NewSlot(&slot, &DictIterator::Callback)))
+              return false;
+            index += dict_sig.size();
+          } else {
+            std::string signature = GetElementType(index + 1);
+            Impl *sub = new Impl(iter_, DBUS_TYPE_ARRAY, signature.c_str());
+            ScriptableInterface *array =
+                VariantValue<ScriptableInterface*>()(arg.value);
+            ArrayIterator slot(sub, signature.c_str());
+            if (!array->EnumerateElements(
+                NewSlot(&slot, &ArrayIterator::Callback)))
+              return false;
+            index += signature.size();
+          }
+          break;
+        }
+      case '(':
+      /* normally, {} should not exist without a.
+       * We add it here just for safety.
+       */
+      case '{':
+        {
+          if (arg.value.type() != Variant::TYPE_SCRIPTABLE) {
+            LOG("type dismatch. expected type: %d, actual value:%s",
+                Variant::TYPE_INT64, arg.value.Print().c_str());
+            return false;
+          }
+          StringList sig_list;
+          std::string struct_signature = GetElementType(index);
+          if (!GetSubElements(struct_signature.c_str(), &sig_list))
+            return false;
+          Impl *sub = new Impl(iter_, *index == '(' ?
+                               DBUS_TYPE_STRUCT : DBUS_TYPE_DICT_ENTRY, NULL);
+          ScriptableInterface *structure =
+              VariantValue<ScriptableInterface*>()(arg.value);
+          StructIterator slot(sub, sig_list);
+          if (!structure->EnumerateElements(
+              NewSlot(&slot, &StructIterator::Callback)))
+            return false;
+          index += struct_signature.size() - 1;
+          break;
+        }
+      case 'v':
+        {
+          std::string sig = GetVariantSignature(arg.value);
+          Impl sub(iter_, DBUS_TYPE_VARIANT, sig.c_str());
+          if (!sub.AppendArgument(Argument(sig.c_str(), arg.value)))
+            return false;
           break;
         }
       default:
-        LOG("other types has not been supported yet!");
-        ASSERT(false);
+        LOG("Unsupported type: %s", index);
         return false;
     }
-    type = static_cast<MessageType>(va_arg(*args, int));
+    if (index != arg.signature.c_str() + arg.signature.size() - 1)
+      return false;
+    return true;
   }
+  static bool ValistAdaptor(Arguments *in_args, bool copy_value,
+                            MessageType first_arg_type,
+                            va_list *va_args) {
+    Arguments tmp_args;
+    while (first_arg_type != MESSAGE_TYPE_INVALID) {
+      Argument arg;
+      if (!ValistItemAdaptor(&arg, copy_value, first_arg_type, va_args))
+        return false;
+      tmp_args.push_back(arg);
+      first_arg_type = static_cast<MessageType>(va_arg(*va_args, int));
+    }
+    in_args->swap(tmp_args);
+    return true;
+  }
+ private:
+  class ArrayIterator {
+   public:
+    ArrayIterator(Impl *impl, const char *sig) :
+      marshaller_(impl), signature_(sig) {
+    }
+    ~ArrayIterator() {
+      delete marshaller_;
+    }
+    bool Callback(int id, const Variant &value) {
+      Argument arg(signature_.c_str(), value);
+      return marshaller_->AppendArgument(arg);
+    }
+   private:
+    Impl *marshaller_;
+    std::string signature_;
+  };
+
+  class StructIterator {
+   public:
+    StructIterator(Impl *impl, const std::vector<std::string>& signatures) :
+      marshaller_(impl), signature_list_(signatures), index_(0) {}
+    ~StructIterator() {
+      delete marshaller_;
+    }
+    bool Callback(int id, const Variant &value) {
+      if (index_ >= signature_list_.size()) {
+        LOG("the signature of the variant does not match the specified "
+            "signature.");
+        return false;
+      }
+      Argument arg(signature_list_[index_].c_str(), value);
+      index_++;
+      return marshaller_->AppendArgument(arg);
+    }
+   private:
+    Impl *marshaller_;
+    const std::vector<std::string> &signature_list_;
+    std::string::size_type index_;
+  };
+
+  class DictIterator {
+   public:
+    DictIterator(Impl *impl,
+                 const char *key_signature,
+                 const char *value_signature) : marshaller_(impl) {
+      if (key_signature) key_signature_ = key_signature;
+      if (value_signature) value_signature_ = value_signature;
+    }
+    ~DictIterator() {
+      delete marshaller_;
+    }
+    bool Callback(int id, const char *name,
+                  const Variant &value, bool is_method) {
+      if (is_method) return true;  /* ignore method. */
+      Argument key_arg(key_signature_.c_str(), Variant(name));
+      Argument value_arg(value_signature_.c_str(), value);
+      Impl *sub = new Impl(marshaller_->iter_, DBUS_TYPE_DICT_ENTRY, NULL);
+      bool ret = sub->AppendArgument(key_arg) && sub->AppendArgument(value_arg);
+      delete sub;
+      return ret;
+    }
+   private:
+    Impl *marshaller_;
+    std::string key_signature_;
+    std::string value_signature_;
+  };
+
+  static bool ValistItemAdaptor(Argument *in_arg, bool copy_value,
+                                MessageType first_arg_type, va_list *va_args) {
+    ASSERT(in_arg);
+    MessageType type = first_arg_type;
+    if (type == MESSAGE_TYPE_INVALID) return false;
+    switch (type) {
+      case MESSAGE_TYPE_BYTE:
+        in_arg->signature = "y";
+        if (copy_value) {
+          int64_t v = static_cast<int64_t>(va_arg(*va_args, int));
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_BOOLEAN:
+        in_arg->signature = "b";
+        if (copy_value) {
+          bool v = va_arg(*va_args, int);
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_INT16:
+        in_arg->signature = "n";
+        if (copy_value) {
+          int64_t v = static_cast<int64_t>(va_arg(*va_args, int));
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_UINT16:
+        in_arg->signature = "q";
+        if (copy_value) {
+          int64_t v = static_cast<int64_t>(va_arg(*va_args, int));
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_INT32:
+        in_arg->signature = "i";
+        if (copy_value) {
+          int64_t v = static_cast<int64_t>(va_arg(*va_args, int32_t));
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_UINT32:
+        in_arg->signature = "u";
+        if (copy_value) {
+          int64_t v = static_cast<int64_t>(va_arg(*va_args, uint32_t));
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_INT64:
+        in_arg->signature = "x";
+        if (copy_value) {
+          int64_t v = va_arg(*va_args, int64_t);
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_UINT64:
+        in_arg->signature = "t";
+        if (copy_value) {
+          int64_t v = static_cast<int64_t>(va_arg(*va_args, uint64_t));
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_DOUBLE:
+        in_arg->signature = "d";
+        if (copy_value) {
+          double v = va_arg(*va_args, double);
+          in_arg->value = Variant(v);
+        }
+        break;
+      case MESSAGE_TYPE_STRING:
+        in_arg->signature = "s";
+        if (copy_value) {
+          const char *str = va_arg(*va_args, const char*);
+          in_arg->value = Variant(str);
+        }
+        break;
+      case MESSAGE_TYPE_ARRAY:
+        {
+          Argument arg;
+          std::string signature("a"), item_sig;
+          std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
+          Variant *vec = new Variant[size];
+          bool ret = true;
+          for (std::size_t i = 0; i < size && ret; ++i) {
+            type = static_cast<MessageType>(va_arg(*va_args, int));
+            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            if (item_sig.empty()) {
+              item_sig = arg.signature;
+            } else if (item_sig != arg.signature) {
+              LOG("types of items in the array are not the same.");
+              ret = false;
+            }
+            vec[i] = arg.value;
+          }
+          if (!ret) {
+            delete [] vec;
+            return false;
+          }
+          signature.append(item_sig);
+          ScriptableDBusContainer *array =
+              new ScriptableDBusContainer(vec, size);
+          in_arg->value = Variant(array);
+          in_arg->signature = signature;
+          break;
+        }
+      case MESSAGE_TYPE_STRUCT:
+        {
+          std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
+          Variant *vec = new Variant[size];
+          std::string signature("(");
+          Argument arg;
+          bool ret = true;
+          for (std::size_t i = 0; i < size && ret; ++i) {
+            type = static_cast<MessageType>(va_arg(*va_args, int));
+            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            signature.append(arg.signature);
+            vec[i] = arg.value;
+          }
+          if (!ret) {
+            delete [] vec;
+            return false;
+          }
+          signature.append(")");
+          ScriptableDBusContainer *array =
+              new ScriptableDBusContainer(vec, size);
+          in_arg->signature = signature;
+          in_arg->value = Variant(array);
+          break;
+        }
+      case MESSAGE_TYPE_VARIANT:
+        type = static_cast<MessageType>(va_arg(*va_args, int));
+        if (type == MESSAGE_TYPE_INVALID || type == MESSAGE_TYPE_VARIANT)
+          return false;
+        if (!ValistItemAdaptor(in_arg, copy_value, type, va_args))
+          return false;
+        in_arg->signature = "v";
+        break;
+      case MESSAGE_TYPE_DICT:
+        {
+          std::size_t size = static_cast<std::size_t>(va_arg(*va_args, int));
+          ScriptableDBusContainer *obj = new ScriptableDBusContainer;
+          std::string signature("a{"), key_sig, value_sig;
+          Argument arg;
+          bool ret = true;
+          for (std::size_t i = 0; i < size && ret; ++i) {
+            type = static_cast<MessageType>(va_arg(*va_args, int));
+            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            if (!ret) break;
+            if (key_sig.empty()) {
+              key_sig = arg.signature;
+            } else if (key_sig != arg.signature) {
+              ret = false;
+              break;
+            }
+            std::string str;
+            if (!arg.value.ConvertToString(&str)) {
+              LOG("%s can not be converted to string to be a dict key",
+                  arg.value.Print().c_str());
+              ret = false;
+              break;
+            }
+            type = static_cast<MessageType>(va_arg(*va_args, int));
+            ret = ValistItemAdaptor(&arg, copy_value, type, va_args);
+            if (!ret) break;
+            if (value_sig.empty()) {
+              value_sig = arg.signature;
+            } else if (value_sig != arg.signature) {
+              ret = false;
+              break;
+            }
+            obj->AddProperty(str.c_str(), arg.value);
+          }
+          if (!ret) {
+            delete obj;
+            return false;
+          }
+          signature.append(key_sig);
+          signature.append(value_sig);
+          signature.append("}");
+          in_arg->signature = signature;
+          in_arg->value = Variant(obj);
+          break;
+        }
+      default:
+        LOG("unsupported type: %d", type);
+        return false;
+    }
+    if (!copy_value)
+      va_arg(*va_args, void*);
+    return true;
+  }
+
+  void Append(unsigned char value) {
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_BYTE, &value);
+  }
+  void Append(bool value) {
+    dbus_bool_t v = static_cast<dbus_bool_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_BOOLEAN, &v);
+  }
+  void Append(int16_t value) {
+    dbus_int16_t v = static_cast<dbus_int16_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_INT16, &v);
+  }
+  void Append(uint16_t value) {
+    dbus_uint16_t v = static_cast<dbus_uint16_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_UINT16, &v);
+  }
+  void Append(int32_t value) {
+    dbus_int32_t v = static_cast<dbus_int32_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_INT32, &v);
+  }
+  void Append(uint32_t value) {
+    dbus_uint32_t v = static_cast<dbus_uint32_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_UINT32, &v);
+  }
+  void Append(int64_t value) {
+    dbus_int64_t v = static_cast<dbus_int64_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_INT64, &v);
+  }
+  void Append(uint64_t value) {
+    dbus_uint64_t v = static_cast<dbus_uint64_t>(value);
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_UINT64, &v);
+  }
+  void Append(double value) {
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_DOUBLE, &value);
+  }
+  void Append(const char* str) {
+    const char *v = str;
+    dbus_message_iter_append_basic(iter_, DBUS_TYPE_STRING, &v);
+  }
+ private:
+  DBusMessageIter *iter_;
+  DBusMessageIter *parent_iter_;
+};
+
+DBusMarshaller::DBusMarshaller(DBusMessage *message) : impl_(new Impl(message)) {
+}
+
+DBusMarshaller::~DBusMarshaller() {
+  delete impl_;
+}
+
+bool DBusMarshaller::AppendArguments(const Arguments &args) {
+  for (Arguments::const_iterator it = args.begin(); it != args.end(); ++it)
+    if (!AppendArgument(*it))
+      return false;
   return true;
 }
 
-bool DecodeMessage(DBusMessage *message,
-                   MessageType first_arg_type,
-                   va_list* args) {
-  DBusMessageIter iter;
-  dbus_message_iter_init(message, &iter);
-  MessageType type = first_arg_type;
-  while (type != MESSAGE_TYPE_INVALID) {
-    int arg_type = dbus_message_iter_get_arg_type(&iter);
-    if (arg_type != MessageTypeToDBusType(type)) {
-      LOG("type dismatch! the type in message is %d, "
-          " but in this function it is %d", arg_type, type);
+bool DBusMarshaller::AppendArgument(const Argument &arg) {
+  return impl_->AppendArgument(arg);
+}
+
+bool DBusMarshaller::ValistAdaptor(Arguments *in_args,
+                                   MessageType first_arg_type,
+                                   va_list *va_args) {
+  return Impl::ValistAdaptor(in_args, true, first_arg_type, va_args);
+}
+
+bool DBusMarshaller::ValistToAugrments(Arguments *out_args,
+                                       MessageType first_arg_type,
+                                       va_list *va_args) {
+  return Impl::ValistAdaptor(out_args, false, first_arg_type, va_args);
+}
+
+class DBusDemarshaller::Impl {
+ public:
+  Impl(DBusMessage *message) : iter_(NULL), parent_iter_(NULL) {
+    iter_ = new DBusMessageIter;
+    dbus_message_iter_init(message, iter_);
+  }
+  Impl(DBusMessageIter *parent) : iter_(NULL), parent_iter_(parent) {
+    iter_ = new DBusMessageIter;
+    dbus_message_iter_recurse(parent, iter_);
+  }
+  ~Impl() {
+    delete iter_;
+  }
+  bool MoveToNextItem() {
+    return dbus_message_iter_next(iter_);
+  }
+  bool GetArgument(Argument *arg) {
+    if (arg->signature.empty()) {
+      LOG("Warning! No signatrue specfied for the argument.");
+      ASSERT(false);
+      arg->signature = dbus_message_iter_get_signature(iter_);
+    }
+    const char *index = arg->signature.c_str();
+    if (!CheckSignatureValidity(index, true))
+      return false;
+    int type = dbus_message_iter_get_arg_type(iter_);
+    if (type != GetTypeBySignature(index)) {
+      LOG("Demarshal failed. Type dismatch, message type: %c, expected: %c",
+          type, GetTypeBySignature(index));
       return false;
     }
-    if (arg_type == DBUS_TYPE_INVALID) {
-      LOG("Too few arguments in reply.");
-      return false;
-    }
-    void * return_storage = va_arg(*args, void*);
-    if (return_storage) {
-      switch (type) {
-        case MESSAGE_TYPE_BOOLEAN:
-          {
-            dbus_bool_t v;
-            dbus_message_iter_get_basic(&iter, &v);
-            memcpy(return_storage, &v, sizeof(dbus_bool_t));
-            break;
+    switch (type) {
+      case DBUS_TYPE_BYTE:
+        {
+          unsigned char value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_BOOLEAN:
+        {
+          dbus_bool_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<bool>(value));
+          break;
+        }
+      case DBUS_TYPE_INT16:
+        {
+          dbus_int16_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_UINT16:
+        {
+          dbus_uint16_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_INT32:
+        {
+          dbus_int32_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_UINT32:
+        {
+          dbus_uint32_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_INT64:
+        {
+          dbus_int64_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_UINT64:
+        {
+          dbus_uint64_t value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(static_cast<int64_t>(value));
+          break;
+        }
+      case DBUS_TYPE_DOUBLE:
+        {
+          double value;
+          dbus_message_iter_get_basic(iter_, &value);
+          arg->value = Variant(value);
+          break;
+        }
+      case DBUS_TYPE_STRING:
+        {
+          const char *str;
+          dbus_message_iter_get_basic(iter_, &str);
+          arg->value = Variant(str);
+          break;
+        }
+      case DBUS_TYPE_ARRAY:
+        {
+          if (*(index + 1) == '{') {  /* it is a dict. */
+            std::string dict_sig = GetElementType(index + 1);
+            StringList sig_list;
+            if (!GetSubElements(dict_sig.c_str(), &sig_list))
+              return false;
+            if (sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str()))
+              return false;
+            Impl dict(iter_);
+            ScriptableDBusContainer *obj = new ScriptableDBusContainer;
+            bool ret;
+            do {
+              Impl sub(dict.iter_);
+              Argument key(sig_list[0].c_str());
+              Argument value(sig_list[1].c_str());
+              ret = sub.GetArgument(&key) && sub.MoveToNextItem()
+                  && sub.GetArgument(&value);
+              if (!ret) break;
+              std::string name;
+              if (!key.value.ConvertToString(&name)) {
+                ret = false;
+                break;
+              }
+              obj->AddProperty(name.c_str(), value.value);
+            } while(dict.MoveToNextItem());
+            if (!ret) {
+              delete obj;
+              return false;
+            }
+            arg->value = Variant(obj);
+            index += dict_sig.size();
+          } else {
+            std::string sub_type = GetElementType(index + 1);
+            Impl sub(iter_);
+            bool ret;
+            std::vector<Variant> var_array;
+            do {
+              Argument arg(sub_type.c_str());
+              ret = sub.GetArgument(&arg);
+              if (ret)
+                var_array.push_back(arg.value);
+            } while (ret && sub.MoveToNextItem());
+            if (!ret) {
+              DLOG("something wrong.");
+              return false;
+            }
+            ScriptableDBusContainer *obj = new ScriptableDBusContainer;
+            obj->AddArray(var_array.begin(), var_array.size());
+            arg->value = Variant(obj);
+            index += sub_type.size();
           }
+          break;
+        }
+      case DBUS_TYPE_STRUCT:
+      case DBUS_TYPE_DICT_ENTRY:
+        {
+          std::string struct_sig = GetElementType(index);
+          StringList sig_list;
+          if (!GetSubElements(struct_sig.c_str(), &sig_list))
+            return false;
+          if (type == DBUS_TYPE_DICT_ENTRY &&
+              (sig_list.size() != 2 || !IsBasicType(sig_list[0].c_str())))
+            return false;
+          Impl sub(iter_);
+          std::vector<Variant> var_array;
+          bool ret;
+          for (StringList::iterator it = sig_list.begin();
+               it != sig_list.end(); ++it) {
+            Argument arg(it->c_str());
+            ret = sub.GetArgument(&arg);
+            if (!ret) break;
+            var_array.push_back(arg.value);
+            sub.MoveToNextItem();
+          }
+          if (!ret) return false;
+          ScriptableDBusContainer *obj = new ScriptableDBusContainer;
+          obj->AddArray(var_array.begin(), var_array.size());
+          arg->value = Variant(obj);
+          index += struct_sig.size() - 1;
+          break;
+        }
+      case DBUS_TYPE_VARIANT:
+        {
+          DBusMessageIter subiter;
+          dbus_message_iter_recurse(iter_, &subiter);
+          char *sig = dbus_message_iter_get_signature(&subiter);
+          if (!sig) {
+            LOG("sub type of variant is invalid.");
+            return false;
+          }
+          Impl sub(iter_);
+          Argument variant(sig);
+          bool ret = sub.GetArgument(&variant);
+          dbus_free(sig);
+          if (!ret) return false;
+          arg->value = variant.value;
+          break;
+        }
+      default:
+        LOG("unsupported type: %d", type);
+        return false;
+    }
+    return true;
+  }
+  static bool ValistAdaptor(const Arguments &out_args,
+                            MessageType first_arg_type, va_list *va_args) {
+    MessageType type = first_arg_type;
+    Arguments::const_iterator it = out_args.begin();
+    while (type != MESSAGE_TYPE_INVALID) {
+      if (it == out_args.end()) {
+        LOG("Too few arguments in reply.");
+        return false;
+      }
+      int arg_type = GetTypeBySignature(it->signature.c_str());
+      if (arg_type != MessageTypeToDBusType(type)) {
+        LOG("type dismatch! the type in message is %d, "
+            " but in this function it is %d", arg_type, type);
+        ASSERT(false);
+        return false;
+      }
+      if (!ValistItemAdaptor(*it, type, va_args))
+        return false;
+      it++;
+      type = static_cast<MessageType>(va_arg(*va_args, int));
+    }
+    return true;
+  }
+ private:
+  static bool ValistItemAdaptor(const Argument &out_arg,
+                                MessageType first_arg_type, va_list *va_args) {
+    if (first_arg_type == MESSAGE_TYPE_INVALID)
+      return false;
+    void *return_storage = va_arg(*va_args, void*);
+    if (return_storage) {
+      switch (first_arg_type) {
         case MESSAGE_TYPE_BYTE:
           {
-            unsigned char v;
-            dbus_message_iter_get_basic(&iter, &v);
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            unsigned char v = static_cast<unsigned char>(i);
             memcpy(return_storage, &v, sizeof(unsigned char));
+            break;
+          }
+        case MESSAGE_TYPE_BOOLEAN:
+          {
+            bool v;
+            if (!out_arg.value.ConvertToBool(&v)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            memcpy(return_storage, &v, sizeof(bool));
+            break;
+          }
+        case MESSAGE_TYPE_INT16:
+          {
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            int16_t v = static_cast<int16_t>(i);
+            memcpy(return_storage, &v, sizeof(int16_t));
+            break;
+          }
+        case MESSAGE_TYPE_UINT16:
+          {
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            uint16_t v = static_cast<uint16_t>(i);
+            memcpy(return_storage, &v, sizeof(dbus_uint16_t));
             break;
           }
         case MESSAGE_TYPE_INT32:
           {
-            dbus_int32_t v;
-            dbus_message_iter_get_basic(&iter, &v);
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            int v = static_cast<int>(i);
             memcpy(return_storage, &v, sizeof(dbus_int32_t));
             break;
           }
         case MESSAGE_TYPE_UINT32:
           {
-            dbus_uint32_t v;
-            dbus_message_iter_get_basic(&iter, &v);
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            uint32_t v = static_cast<uint32_t>(i);
             memcpy(return_storage, &v, sizeof(dbus_uint32_t));
             break;
           }
         case MESSAGE_TYPE_INT64:
           {
-            dbus_int64_t v;
-            dbus_message_iter_get_basic(&iter, &v);
-            memcpy(return_storage, &v, sizeof(dbus_int64_t));
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            memcpy(return_storage, &i, sizeof(dbus_int64_t));
             break;
           }
         case MESSAGE_TYPE_UINT64:
           {
-            dbus_uint64_t v;
-            dbus_message_iter_get_basic(&iter, &v);
+            int64_t i;
+            if (!out_arg.value.ConvertToInt64(&i)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            uint64_t v = static_cast<uint64_t>(i);
             memcpy(return_storage, &v, sizeof(dbus_uint64_t));
             break;
           }
         case MESSAGE_TYPE_DOUBLE:
           {
             double v;
-            dbus_message_iter_get_basic(&iter, &v);
+            if (!out_arg.value.ConvertToDouble(&v)) {
+              LOG("type dismatch.");
+              return false;
+            }
             memcpy(return_storage, &v, sizeof(double));
-            break;
-          }
-        case MESSAGE_TYPE_INT16:
-          {
-            dbus_int16_t v;
-            dbus_message_iter_get_basic(&iter, &v);
-            memcpy(return_storage, &v, sizeof(dbus_int16_t));
-            break;
-          }
-        case MESSAGE_TYPE_UINT16:
-          {
-            dbus_uint16_t v;
-            dbus_message_iter_get_basic(&iter, &v);
-            memcpy(return_storage, &v, sizeof(dbus_uint16_t));
             break;
           }
         case MESSAGE_TYPE_STRING:
           {
-            const char* s;
-            dbus_message_iter_get_basic(&iter, &s);
+            std::string str;
+            if (!out_arg.value.ConvertToString(&str)) {
+              LOG("type dismatch.");
+              return false;
+            }
+            const char* s = str.c_str();
             memcpy(return_storage, &s, sizeof(const char*));
             break;
           }
+        // directly return the Variant for container types
+        case MESSAGE_TYPE_ARRAY:
+        case MESSAGE_TYPE_STRUCT:
+        case MESSAGE_TYPE_VARIANT:
+        case MESSAGE_TYPE_DICT:
+          memcpy(return_storage, &out_arg.value, sizeof(Variant));
         default:
-          LOG("the type %d is not supported yet!", type);
+          LOG("the type %d is not supported yet!", first_arg_type);
           return false;
       }
     }
-    dbus_message_iter_next(&iter);
-    type = static_cast<MessageType>(va_arg(*args, int));
-  }
-  if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_INVALID) {
-    LOG("Too many arguments in reply.");
-    return false;
-  }
-  return true;
-}
-
-}  // anonymous namespace
-
-/**
- * @c DBusProxyManager's is used to route signals to the proxies
- * whose signals are emitted on. It also track the owners of the names
- * that proxies are bound to.
- * Note, this class is not thread-safe.
- */
-class DBusProxyManager {
- public:
-  explicit DBusProxyManager(DBusConnection* connection) :
-      connection_(connection) {
-    DLOG("create proxy manager for connection: %p", connection);
-    dbus_connection_ref(connection_);
-    AddFilter();
-  }
-  ~DBusProxyManager() {
-    dbus_connection_unref(connection_);
-  }
-
-  void RegisterProxy(DBusProxy::DBusProxyImp* proxy);
-  void UnRegisterProxy(DBusProxy::DBusProxyImp* proxy);
-
- private:
-  static DBusHandlerResult ManagerFilter(DBusConnection *connection,
-                                         DBusMessage *message,
-                                         void *user_data);
-  void AddFilter();
- private:
-  /** The message bus with which the manager attaches. */
-  DBusConnection *connection_;
-  /** Proxy lists used to route incoming signals. */
-  DBusProxiesMap proxies_map_;
-};
-
-typedef void (*DBusProxyCallBack)(DBusProxy::DBusProxyImp* proxy,
-                                  uint32_t call_id,
-                                  void* user_data);
-struct DBusProxyPendingCall {
-  DBusProxy::DBusProxyImp* proxy;
-  uint32_t call_id;
-  DBusProxyCallBack call_back;
-  DBusPendingCall *pending_call;
-  void *user_data;
-
-  /** Default C-tor */
-  DBusProxyPendingCall(DBusProxy::DBusProxyImp* p,
-                       uint32_t id,
-                       DBusProxyCallBack cb,
-                       DBusPendingCall *pending,
-                       void* data) :
-    proxy(p), call_id(id), call_back(cb),
-    pending_call(pending), user_data(data) {}
-};
-typedef std::map<uint32_t, DBusProxyPendingCall*> DBusPendingCallsMap;
-
-class DBusProxy::DBusProxyImp {
- public:
-  DBusProxyImp(DBusConnection* connection,
-               const char* name,
-               const char* path,
-               const char* interface);
-  ~DBusProxyImp();
-
- public:
-  bool SyncCall(const char* method, int timeout,
-                MessageType first_arg_type, va_list *args);
-  uint32_t PendingCall(const char* method,
-                       int timeout,
-                       DBusProxyCallBack call_back,
-                       void* user_data,
-                       MessageType first_arg_type,
-                       va_list *args);
-  bool CollectPendingCallResult(uint32_t call_id,
-                                MessageType first_arg_type,
-                                va_list *args);
-
- public:
-  std::string signature() const { return signature_; }
-  std::string MatchRule() const;
-
- private:
-  DBusProxyManager* GetManager();
-  static void InvokeCallBack(DBusPendingCall *call, void *user_data);
-  static void RemoveCall(void *user_data);
- private:
-  std::string name_;
-  std::string path_;
-  std::string interface_;
-  /** Used to identify the proxy. */
-  std::string signature_;
-
-  uint32_t caller_counter_;
-  DBusPendingCallsMap pending_calls_;
-  DBusConnection *connection_;
-
-  static dbus_int32_t manager_slot_;
-};
-dbus_int32_t DBusProxy::DBusProxyImp::manager_slot_ = -1;
-
-void DBusProxyManager::RegisterProxy(DBusProxy::DBusProxyImp* proxy) {
-  DBusProxiesMap::iterator it = proxies_map_.find(proxy->signature());
-  if (it == proxies_map_.end()) {
-    DBusProxySet *list = new DBusProxySet;
-    proxies_map_[proxy->signature()] = list;
-    dbus_bus_add_match(connection_, proxy->MatchRule().c_str(), NULL);
-  }
-  proxies_map_[proxy->signature()]->insert(proxy);
-}
-
-void DBusProxyManager::UnRegisterProxy(DBusProxy::DBusProxyImp* proxy) {
-  DBusProxiesMap::iterator map_iter = proxies_map_.find(proxy->signature());
-  if (map_iter == proxies_map_.end()) {
-    DLOG("this kind of proxies was not registered before.");
-    return;
-  }
-
-  DBusProxySet::iterator set_iter = (*map_iter).second->find(proxy);
-  if (set_iter == (*map_iter).second->end()) {
-    DLOG("this proxy was not registered before.");
-    return;
-  }
-  (*map_iter).second->erase(set_iter);
-}
-
-void DBusProxyManager::AddFilter() {
-  dbus_connection_add_filter(connection_, ManagerFilter, this, NULL);
-}
-
-DBusHandlerResult DBusProxyManager::ManagerFilter(DBusConnection *connection,
-                                                  DBusMessage *message,
-                                                  void *user_data) {
-  DBusProxyManager *this_p = reinterpret_cast<DBusProxyManager*>(user_data);
-
-  if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
-    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-
-  if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
-    delete this_p;
-  }
-
-  /** This signal is globaly useful, do not return other value
-   * to stop other client listening this signal.
-   */
-  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-}
-
-DBusProxy::DBusProxyImp::DBusProxyImp(DBusConnection* connection,
-                                      const char* name,
-                                      const char* path,
-                                      const char* interface) :
-    caller_counter_(0), connection_(connection) {
-  if (name) name_ = name;
-  if (path) path_ = path;
-  if (interface) interface_ = interface;
-  signature_ = name;
-  signature_ += "\n";
-  signature_ += path;
-  signature_ += "\n";
-  signature_ += interface;
-  DBusProxyManager* manager = GetManager();
-  manager->RegisterProxy(this);
-}
-
-DBusProxy::DBusProxyImp::~DBusProxyImp() {
-  DBusProxyManager* manager = GetManager();
-  manager->UnRegisterProxy(this);
-}
-
-bool DBusProxy::DBusProxyImp::SyncCall(const char* method,
-                                       int timeout,
-                                       MessageType first_arg_type,
-                                       va_list *args) {
-  ASSERT(method);
-  uint32_t call_id = PendingCall(method, timeout, NULL, NULL,
-                                 first_arg_type, args);
-  first_arg_type = static_cast<MessageType>(va_arg(*args, int));
-  if (first_arg_type == MESSAGE_TYPE_INVALID) {
-    DLOG("no output argument, do not collect pending result.");
     return true;
   }
-  return CollectPendingCallResult(call_id, first_arg_type, args);
-}
-
-uint32_t DBusProxy::DBusProxyImp::PendingCall(const char* method,
-                                              int timeout,
-                                              DBusProxyCallBack call_back,
-                                              void* user_data,
-                                              MessageType first_arg_type,
-                                              va_list *args) {
-  DBusMessage *message = dbus_message_new_method_call(name_.c_str(),
-                                                      path_.c_str(),
-                                                      interface_.c_str(),
-                                                      method);
-  if (!message) {
-    LOG("create message failed.");
-    return 0;
+  static int GetTypeBySignature(const char *signature) {
+    if (*signature == '(') return static_cast<int>('r');
+    if (*signature == '{') return static_cast<int>('e');
+    return static_cast<int>(*signature);
   }
+  DBusMessageIter *iter_;
+  DBusMessageIter *parent_iter_;
+};
 
-  if (!EncodeMessage(message, first_arg_type, args)) {
-    LOG("failed to encode message.");
-    dbus_message_unref(message);
-    return 0;
-  }
+DBusDemarshaller::DBusDemarshaller(DBusMessage *message) :
+  impl_(new Impl(message)) {}
 
-  DBusPendingCall *pending;
-  dbus_connection_send_with_reply(connection_,
-                                  message,
-                                  &pending,
-                                  timeout);
-  dbus_message_unref(message);
-  ASSERT(pending);
-  uint32_t id = ++caller_counter_;
-  DBusProxyPendingCall *call = new DBusProxyPendingCall(this, id, call_back,
-                                                        pending, user_data);
-  pending_calls_[id] = call;
-  dbus_pending_call_set_notify(pending, InvokeCallBack, call, RemoveCall);
-  return id;
-}
-
-bool
-DBusProxy::DBusProxyImp::CollectPendingCallResult(uint32_t call_id,
-                                                  MessageType first_arg_type,
-                                                  va_list *args) {
-  DBusPendingCallsMap::iterator it = pending_calls_.find(call_id);
-  if (it == pending_calls_.end()) {
-    LOG("the call with id %d was not in the pending list or has been removed.",
-        call_id);
-    return false;
-  }
-  dbus_pending_call_block((*it).second->pending_call);
-  DBusMessage *reply =
-      dbus_pending_call_steal_reply((*it).second->pending_call);
-  delete (*it).second;
-  pending_calls_.erase(it);
-
-  bool result = false;
-  switch (dbus_message_get_type(reply)) {
-    case DBUS_MESSAGE_TYPE_METHOD_RETURN:
-      result = DecodeMessage(reply, first_arg_type, args);
-    case DBUS_MESSAGE_TYPE_ERROR:
-    default:
-      {
-        DBusError error;
-        dbus_error_init(&error);
-        dbus_set_error_from_message(&error, reply);
-        if (dbus_error_is_set(&error))
-          LOG("error: %s: %s", error.name, error.message);
-        dbus_error_free(&error);
-      }
-  }
-
-  if (reply) dbus_message_unref(reply);
-  return result;
-}
-
-inline std::string DBusProxy::DBusProxyImp::MatchRule() const {
-  if (name_.empty()) {
-    return StringPrintf("type='signal',path='%s',interface='%s'",
-                        path_.c_str(), interface_.c_str());
-  } else {
-    return StringPrintf("type='signal',sneder='%s',path='%s',interface='%s'",
-                        name_.c_str(), path_.c_str(), interface_.c_str());
-  }
-  return "";
-}
-
-DBusProxyManager*
-DBusProxy::DBusProxyImp::GetManager() {
-  dbus_connection_allocate_data_slot(&manager_slot_);
-  if (manager_slot_ < 0) {
-    LOG("out of memeory.");
-    return NULL;
-  }
-
-  DBusProxyManager* manager = reinterpret_cast<DBusProxyManager*>(
-      dbus_connection_get_data(connection_, manager_slot_));
-  if (!manager) {
-    manager = new DBusProxyManager(connection_);
-    dbus_connection_set_data(connection_, manager_slot_, manager, NULL);
-  } else {
-    dbus_connection_free_data_slot(&manager_slot_);
-  }
-  return manager;
-}
-
-void DBusProxy::DBusProxyImp::InvokeCallBack(DBusPendingCall *call,
-                                             void *user_data) {
-  DBusProxyPendingCall *pending =
-      reinterpret_cast<DBusProxyPendingCall*>(user_data);
-  if (pending->call_back != NULL)
-    (*pending->call_back)(pending->proxy, pending->call_id, user_data);
-}
-
-void DBusProxy::DBusProxyImp::RemoveCall(void *user_data) {
-  DBusProxyPendingCall *call =
-      reinterpret_cast<DBusProxyPendingCall*>(user_data);
-  DBusPendingCallsMap *map = &call->proxy->pending_calls_;
-  DBusPendingCallsMap::iterator it = map->find(call->call_id);
-  ASSERT(it != call->proxy->pending_calls_.end());
-  delete call;
-  map->erase(it);
-}
-
-DBusProxy::DBusProxy(BusType type,
-                     const char* name,
-                     const char* path,
-                     const char* interface) : impl_(NULL) {
-  DBusConnection* connection;
-  DBusError error;
-  dbus_error_init(&error);
-
-  if (type == BUS_TYPE_SYSTEM) {
-    connection = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
-  } else if (type == BUS_TYPE_SESSION) {
-    connection = dbus_bus_get(DBUS_BUS_SESSION, &error);
-  } else {
-    LOG("The type is not supported.");
-    return;
-  }
-  if (!connection) {
-    LOG("error: %s: %s", error.name, error.message);
-  } else {
-    impl_ = new DBusProxyImp(connection, name, path, interface);
-  }
-  dbus_error_free(&error);
-}
-
-DBusProxy::DBusProxy(DBusConnection* connection,
-                     const char* name,
-                     const char* path,
-                     const char* interface) : impl_(NULL) {
-  ASSERT(connection);
-  impl_ = new DBusProxyImp(connection, name, path, interface);
-}
-
-DBusProxy::~DBusProxy() {
+DBusDemarshaller::~DBusDemarshaller() {
   delete impl_;
 }
 
-bool DBusProxy::SyncCall(const char* method,
-                         int timeout,
-                         MessageType first_arg_type,
-                         ...) {
-  if (!impl_) return false;
-
-  va_list args;
-  va_start(args, first_arg_type);
-  bool ret = impl_->SyncCall(method, timeout, first_arg_type, &args);
-  va_end(args);
-  return ret;
+bool DBusDemarshaller::GetArguments(Arguments *args) {
+  for (Arguments::iterator it = args->begin(); it != args->end(); ++it)
+    if (!GetArgument(&(*it)))
+      return false;
+  return true;
 }
 
+bool DBusDemarshaller::GetArgument(Argument *arg) {
+  return impl_->GetArgument(arg);
+}
+
+bool DBusDemarshaller::ValistAdaptor(const Arguments &out_args,
+                                     MessageType first_arg_type,
+                                     va_list *va_args) {
+  return Impl::ValistAdaptor(out_args, first_arg_type, va_args);
+}
+
+class DBusMainLoopClosure::Impl {
+ public:
+  Impl(DBusConnection* connection,
+       MainLoopInterface* main_loop) :
+      connection_(connection), main_loop_(main_loop) {
+    Setup();
+  }
+  ~Impl() {
+    RemoveFunctions();
+  }
+ private:
+  bool Setup();
+  void RemoveFunctions();
+  class DBusWatchCallBack;
+  class DBusTimeoutCallBack;
+  static dbus_bool_t AddWatch(DBusWatch *watch, void* data);
+  static void RemoveWatch(DBusWatch* watch, void* data);
+  static void WatchToggled(DBusWatch* watch, void* data);
+  static dbus_bool_t AddTimeout(DBusTimeout *timeout, void* data);
+  static void RemoveTimeout(DBusTimeout *timeout, void* data);
+  static void TimeoutToggled(DBusTimeout *timeout, void* data);
+  static void DispatchStatusFunction(DBusConnection *connection,
+                                     DBusDispatchStatus new_status,
+                                     void *data);
+ private:
+  DBusConnection* connection_;
+  MainLoopInterface* main_loop_;
+};
+
+void DBusMainLoopClosure::Impl::DispatchStatusFunction(
+    DBusConnection *connection, DBusDispatchStatus new_status, void *data) {
+  int status;
+  while ((status = dbus_connection_dispatch(connection))
+         == DBUS_DISPATCH_DATA_REMAINS)
+    ;
+  if (status != DBUS_DISPATCH_COMPLETE)
+    LOG("dispatch failed.");
+}
+
+class DBusMainLoopClosure::Impl::DBusWatchCallBack : public
+                                                     WatchCallbackInterface {
+ public:
+  DBusWatchCallBack(DBusConnection* connection,
+                    DBusWatch* watch) : connection_(connection), watch_(watch) {
+    enabled_ = dbus_watch_get_enabled(watch_);
+  }
+  virtual ~DBusWatchCallBack() {}
+  virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    LOG("Call DBusWatchCallBack, watch id: %d", watch_id);
+    if (!enabled_) return true;
+    if (dbus_connection_get_dispatch_status(connection_) !=
+        DBUS_DISPATCH_COMPLETE) {
+      dbus_connection_dispatch(connection_);
+    }
+    int flag = dbus_watch_get_flags(watch_);
+    dbus_watch_handle(watch_, flag);
+    // alwasy return true to not remove this callback. It should be removed by
+    // dbus library by invoking RemoveWatch
+    return true;
+  }
+  virtual void OnRemove(MainLoopInterface* main_loop, int watch_id) {
+    DLOG("Remove DBusWatchCallBack.");
+    delete this;
+  }
+  void SetEnabled(bool enabled) {
+    enabled_ = enabled;
+  }
+  void AttachToMainLoop(MainLoopInterface* main_loop, int fd) {
+    watch_id_ = main_loop->AddIOReadWatch(fd, this);
+  }
+  void RemoveSelf(MainLoopInterface* main_loop) {
+    main_loop->RemoveWatch(watch_id_);
+  }
+ private:
+  DBusConnection* connection_;
+  bool            enabled_;
+  DBusWatch*      watch_;
+  int             watch_id_;
+};
+
+/** watch related methods */
+dbus_bool_t DBusMainLoopClosure::Impl::AddWatch(DBusWatch *watch,
+                                                void* data) {
+  Impl *this_p = reinterpret_cast<Impl*>(data);
+  ASSERT(this_p);
+  int fd = dbus_watch_get_fd(watch);
+  int flag = dbus_watch_get_flags(watch);
+  DLOG("add watch, fd: %d, flag: %d", fd, flag);
+  if (flag == DBUS_WATCH_READABLE) {
+    DBusWatchCallBack* callback = new DBusWatchCallBack(this_p->connection_,
+                                                        watch);
+    dbus_watch_set_data(watch, callback, NULL);
+    callback->AttachToMainLoop(this_p->main_loop_, fd);
+  } else if (flag == DBUS_WATCH_WRITABLE) {
+    /** do nothing */
+  } else {
+    LOG("invalid flag: %d", flag);
+  }
+  return TRUE;
+}
+
+void DBusMainLoopClosure::Impl::RemoveWatch(DBusWatch* watch,
+                                            void* data) {
+  DBusWatchCallBack* callback = reinterpret_cast<DBusWatchCallBack*>(
+      dbus_watch_get_data(watch));
+  if (callback) {
+    Impl *this_p = reinterpret_cast<Impl*>(data);
+    ASSERT(this_p);
+    callback->RemoveSelf(this_p->main_loop_);
+  } else {
+    DLOG("be called but the callback is NULL!");
+  }
+}
+
+void DBusMainLoopClosure::Impl::WatchToggled(DBusWatch* watch,
+                                             void* data) {
+  DBusWatchCallBack* callback = reinterpret_cast<DBusWatchCallBack*>(
+      dbus_watch_get_data(watch));
+  if (callback)
+    callback->SetEnabled(dbus_watch_get_enabled(watch));
+  else
+    DLOG("be called but the callback is NULL!");
+}
+
+class DBusMainLoopClosure::Impl::DBusTimeoutCallBack : public
+                                                       WatchCallbackInterface {
+ public:
+  DBusTimeoutCallBack(DBusConnection* connection,
+                      DBusTimeout* timeout) :
+    connection_(connection), timeout_(timeout) {
+    enabled_ = dbus_timeout_get_enabled(timeout);
+  }
+  virtual ~DBusTimeoutCallBack() {}
+  virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+    DLOG("Call DBusTimeoutCallBack, watch id: %d", watch_id);
+    if (dbus_connection_get_dispatch_status(connection_) !=
+        DBUS_DISPATCH_COMPLETE) {
+      dbus_connection_dispatch(connection_);
+    }
+    dbus_timeout_handle(timeout_);
+    return true;
+  }
+  virtual void OnRemove(MainLoopInterface* main_loop, int watch_id) {
+    DLOG("remove timeout call back.");
+    delete this;
+  }
+  void SetEnabled(bool enabled) {
+    enabled_ = enabled;
+  }
+  void AttachToMainLoop(MainLoopInterface* main_loop, int time_in_ms) {
+    watch_id_ = main_loop->AddTimeoutWatch(time_in_ms, this);
+  }
+  void RemoveSelf(MainLoopInterface* main_loop) {
+    main_loop->RemoveWatch(watch_id_);
+  }
+ private:
+  DBusConnection* connection_;
+  bool            enabled_;
+  DBusTimeout*    timeout_;
+  int             watch_id_;
+};
+
+dbus_bool_t DBusMainLoopClosure::Impl::AddTimeout(DBusTimeout *timeout,
+                                                  void* data) {
+  Impl *this_p = reinterpret_cast<Impl*>(data);
+  ASSERT(this_p);
+  int time_in_ms = dbus_timeout_get_interval(timeout);
+  if (time_in_ms > 0) {
+    DLOG("add timeout: %d ms.", time_in_ms);
+    DBusTimeoutCallBack *callback =
+        new DBusTimeoutCallBack(this_p->connection_, timeout);
+    callback->AttachToMainLoop(this_p->main_loop_, time_in_ms);
+    dbus_timeout_set_data(timeout, callback, NULL);
+  }
+  return TRUE;
+}
+
+void DBusMainLoopClosure::Impl::RemoveTimeout(DBusTimeout *timeout,
+                                              void* data) {
+  Impl *this_p = reinterpret_cast<Impl*>(data);
+  ASSERT(this_p);
+  DBusTimeoutCallBack *callback = reinterpret_cast<DBusTimeoutCallBack*>(
+      dbus_timeout_get_data(timeout));
+
+  if (callback) {
+    DLOG("remove timeout: %p", callback);
+    callback->RemoveSelf(this_p->main_loop_);
+  }
+}
+
+void DBusMainLoopClosure::Impl::TimeoutToggled(DBusTimeout *timeout,
+                                               void* data) {
+  DBusTimeoutCallBack *callback = reinterpret_cast<DBusTimeoutCallBack*>(
+      dbus_timeout_get_data(timeout));
+  if (callback)
+    callback->SetEnabled(dbus_timeout_get_enabled(timeout));
+  else
+    DLOG("be called but the callback is NULL!");
+}
+
+bool DBusMainLoopClosure::Impl::Setup() {
+  dbus_connection_set_dispatch_status_function(connection_,
+                                               DispatchStatusFunction,
+                                               NULL, NULL);
+  if (!dbus_connection_set_watch_functions(connection_,
+                                           AddWatch,
+                                           RemoveWatch,
+                                           WatchToggled,
+                                           this,
+                                           NULL)) {
+    LOG("no memory to set watch functions.");
+    return false;
+  }
+  if (!dbus_connection_set_timeout_functions(connection_,
+                                             AddTimeout,
+                                             RemoveTimeout,
+                                             TimeoutToggled,
+                                             this,
+                                             NULL)) {
+    LOG("no memory to set timeout functions.");
+    return false;
+  }
+  if (dbus_connection_get_dispatch_status(connection_) != DBUS_DISPATCH_COMPLETE)
+    dbus_connection_dispatch(connection_);
+  return true;
+}
+
+void DBusMainLoopClosure::Impl::RemoveFunctions() {
+  dbus_connection_set_dispatch_status_function(connection_, NULL, NULL, NULL);
+  dbus_connection_set_watch_functions(connection_,
+                                      NULL, NULL, NULL, NULL, NULL);
+  dbus_connection_set_timeout_functions(connection_,
+                                        NULL, NULL, NULL, NULL, NULL);
+}
+
+DBusMainLoopClosure::DBusMainLoopClosure(DBusConnection* connection,
+                                         MainLoopInterface* main_loop) :
+    impl_(NULL) {
+  impl_ = new Impl(connection, main_loop);
+}
+
+DBusMainLoopClosure::~DBusMainLoopClosure() {
+  delete impl_;
+}
+
+}  // namespace dbus
 }  // namespace ggadget

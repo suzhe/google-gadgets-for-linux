@@ -82,7 +82,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   typedef std::map<const char *, Variant, GadgetCharPtrComparator> ConstantMap;
 
   // If true, no more new RegisterXXX or SetPrototype can be called.
-  // It'll be set to true in any ScriptableInterface operation on properties. 
+  // It'll be set to true in any ScriptableInterface operation on properties.
   bool sealed_;
 
   // Index of property slots.  The keys are property names, and the values

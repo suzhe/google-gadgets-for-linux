@@ -22,9 +22,11 @@ LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 
-check_PROGRAMS		= dbus_test
+check_PROGRAMS		= dbus_test \
+			  dbus_marshaller_test
 
-dbus_test_SOURCES		= dbus_test.cc
+dbus_test_SOURCES               = dbus_test.cc
+dbus_marshaller_test_SOURCES    = dbus_marshaller_test.cc
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

@@ -89,7 +89,7 @@ class FileManagerInterface {
   virtual bool ExtractFile(const char *file, std::string *into_file) = 0;
 
   /**
-   * Gets the content of strings.xml by returning a string map. 
+   * Gets the content of strings.xml by returning a string map.
    */
   virtual const GadgetStringMap *GetStringTable() const = 0;
 

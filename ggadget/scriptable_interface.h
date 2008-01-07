@@ -262,8 +262,8 @@ class ScriptableInterface {
    *     id, and current value. The callback should return @c false if it
    *     doesn't want to continue. The callback will be automatically deleted
    *     before this method returns, so the caller can use @c NewSlot for
-   *     the parameter. 
-   * @return @c false if the callback returns @c false.  
+   *     the parameter.
+   * @return @c false if the callback returns @c false.
    */
   virtual bool EnumerateElements(EnumerateElementsCallback *callback) = 0;
 };

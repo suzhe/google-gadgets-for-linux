@@ -38,7 +38,7 @@ class BasicElement : public ScriptableHelper<ScriptableInterface> {
   virtual ~BasicElement();
 
  public:
-  // TODO: If need this work, perhaps we should define it in ViewHostInterface. 
+  // TODO: If need this work, perhaps we should define it in ViewHostInterface.
   enum HitTest {
     HT_DEFAULT,
     HT_TRANSPARENT,
