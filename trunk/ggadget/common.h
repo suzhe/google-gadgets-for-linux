@@ -20,7 +20,7 @@
 #include <cassert>
 #include <cstdio>
 #include <stdint.h>
-//#include <ggadget/sysdeps.h>
+#include <ggadget/sysdeps.h>
 
 namespace ggadget {
 
