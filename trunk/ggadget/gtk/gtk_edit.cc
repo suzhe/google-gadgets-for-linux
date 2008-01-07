@@ -43,7 +43,7 @@ namespace gtk {
 
 static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
-static const int kCursorBlinkTimeout = 500;
+static const int kCursorBlinkTimeout = 400;
 static const char *kDefaultFontFamily = "Sans";
 static const int kDefaultFontSize = 10;
 static const double kStrongCursorWidth = 1.2;
@@ -323,14 +323,12 @@ void GtkEdit::SetText(const char* text) {
 
     text_.assign(txt);
     text_length_ = g_utf8_strlen(text_.c_str(), text_.length());
-    cursor_ = text_length_;
-    selection_bound_ = text_length_;
   } else {
     text_.clear();
     text_length_ = 0;
-    cursor_ = 0;
-    selection_bound_ = 0;
   }
+  cursor_ = 0;
+  selection_bound_ = 0;
   need_im_reset_ = true;
   ResetImContext();
   QueueRefresh(true);
