@@ -71,7 +71,7 @@ class DetailsView : public ScriptableHelperOwnershipShared {
    * methods. Default is @c false.
    */
   bool ContentIsHTML();
-  void SetContentIsHTML(bool is_html); 
+  void SetContentIsHTML(bool is_html);
 
   /**
    * Gets and Sets if the content is an XML view. The plugin calls

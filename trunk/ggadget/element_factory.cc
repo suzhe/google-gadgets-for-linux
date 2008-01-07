@@ -43,10 +43,10 @@ ElementFactory::ElementFactory()
     : impl_(new internal::ElementFactoryImpl) {
   RegisterElementClass("a", &AnchorElement::CreateInstance);
   RegisterElementClass("button", &ButtonElement::CreateInstance);
-  RegisterElementClass("checkbox", 
+  RegisterElementClass("checkbox",
                        &CheckBoxElement::CreateCheckBoxInstance);
   RegisterElementClass("combobox", &ComboBoxElement::CreateInstance);
-  RegisterElementClass("contentarea", 
+  RegisterElementClass("contentarea",
                        &ContentAreaElement::CreateInstance);
   RegisterElementClass("div", &DivElement::CreateInstance);
   RegisterElementClass("edit", &EditElement::CreateInstance);
@@ -54,9 +54,9 @@ ElementFactory::ElementFactory()
   RegisterElementClass("item", &ItemElement::CreateInstance);
   RegisterElementClass("label", &LabelElement::CreateInstance);
   RegisterElementClass("listbox", &ListBoxElement::CreateInstance);
-  RegisterElementClass("listitem", 
+  RegisterElementClass("listitem",
                        &ItemElement::CreateListItemInstance);
-  RegisterElementClass("progressbar", 
+  RegisterElementClass("progressbar",
                        &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);

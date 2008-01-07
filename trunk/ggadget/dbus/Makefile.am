@@ -24,12 +24,15 @@ INCLUDES		= -I$(top_builddir) \
 noinst_HEADERS		= dbus_utils.h
 
 dbusincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/dbus
-dbusinclude_HEADERS	= dbus_utils.h
+dbusinclude_HEADERS	= dbus_proxy.h \
+			  scriptable_dbus_object.h
 
 lib_LTLIBRARIES		= libggadget-dbus@GGL_EPOCH@.la
 
 libggadget_dbus@GGL_EPOCH@_la_SOURCES = \
-			  dbus_utils.cc
+			  dbus_utils.cc \
+			  scriptable_dbus_object.cc \
+			  dbus_proxy.cc
 
 libggadget_dbus@GGL_EPOCH@_la_CPPFLAGS = \
 			  @DBUS_CFLAGS@

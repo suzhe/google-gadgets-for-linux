@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include "ggadget/linux/machine.h"
 #include "ggadget/common.h"
+#include "ggadget/logger.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;

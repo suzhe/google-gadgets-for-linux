@@ -27,7 +27,7 @@ namespace ggadget {
 class XMLParserInterface;
 
 /**
- * Parses filemanager paths and dispatches commands to the appropiate 
+ * Parses filemanager paths and dispatches commands to the appropiate
  * filemanager.
  */
 class FileManagerWrapper : public FileManagerInterface {
@@ -37,14 +37,14 @@ class FileManagerWrapper : public FileManagerInterface {
   virtual ~FileManagerWrapper();
 
   /**
-   * Registers a new file manager and an associated prefix to be handled 
+   * Registers a new file manager and an associated prefix to be handled
    * by this wrapper. The prefixes associated with this wrapper do not have to
-   * be unique. If a prefix is shared by more than one filemanager, 
+   * be unique. If a prefix is shared by more than one filemanager,
    * the filemanagers will be called in the order in which they were registered.
-   * The filemanagers must already be initialized before registration. The 
+   * The filemanagers must already be initialized before registration. The
    * filemanager wrapper will not free those filemanagers.
-   * 
-   * Note: One registered prefix must not be the prefix of another (e.g. "abc" 
+   *
+   * Note: One registered prefix must not be the prefix of another (e.g. "abc"
    * and "abcdef"). The "" prefix is reserved for use by the default gadget
    * filemanager.
    */
@@ -53,7 +53,7 @@ class FileManagerWrapper : public FileManagerInterface {
   /**
    * Init() will initialize the filemanager wrapper with a default filemanager
    * associated with a given gadget basepath and the "" prefix.
-   */ 
+   */
   virtual bool Init(const char *base_path);
 
   virtual bool GetFileContents(const char *file,
@@ -71,7 +71,7 @@ class FileManagerWrapper : public FileManagerInterface {
   virtual bool FileExists(const char *file);
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(FileManagerWrapper);   
+  DISALLOW_EVIL_CONSTRUCTORS(FileManagerWrapper);
 
   class Impl;
   Impl *impl_;

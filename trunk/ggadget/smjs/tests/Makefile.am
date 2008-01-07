@@ -37,45 +37,46 @@ LDADD			= @READLINE_LIBS@ \
 check_PROGRAMS		= js_shell \
 			  wrapper_test_shell \
 			  dom_test_shell \
+			  dbus_object_test_shell \
 			  jscript_massager_test \
 			  massager
 
+dbus_object_test_shell_SOURCES = js_shell.cc \
+				 dbus_object_test_shell.cc
+dbus_object_test_shell_LDFLAGS = $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+
+dom_test_shell_SOURCES	= js_shell.cc \
+			  dom_test_shell.cc
+
 js_shell_SOURCES	= js_shell.cc \
 			  init_custom_objects_stub.cc
+
+jscript_massager_test_SOURCES = jscript_massager_test.cc
 
 wrapper_test_shell_SOURCES = js_shell.cc \
 			     wrapper_test_shell.cc \
 			     $(top_srcdir)/ggadget/tests/scriptables.cc
 
-dom_test_shell_SOURCES	= js_shell.cc \
-			  dom_test_shell.cc
-
-jscript_massager_test_SOURCES = jscript_massager_test.cc
-
 massager_SOURCES	= massager.cc
 
 TESTS_ENVIRONMENT	= $(SHELL)
-TESTS			= js_shell.sh \
-			  wrapper_test_shell.sh \
+TESTS			= dbus_test_shell.sh \
 			  dom_test_shell.sh \
-			  jscript_massager_test.sh
+			  js_shell.sh \
+			  jscript_massager_test.sh \
+			  wrapper_test_shell.sh
 
-.PHONY: js_shell.sh \
-	wrapper_test_shell.sh \
+.PHONY: dbus_test_shell.sh \
 	dom_test_shell.sh \
-	jscript_massager_test.sh
+	js_shell.sh \
+	jscript_massager_test.sh \
+	wrapper_test_shell.sh
 
-js_shell.sh:
+dbus_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
-	      $(abs_builddir)/js_shell \
+	      $(abs_builddir)/dbus_object_test_shell \
 	      $(abs_top_srcdir)/unittest/js_unittest.js \
-	      $(abs_srcdir)/json_test.js > $@)
-
-wrapper_test_shell.sh:
-	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
-	      $(abs_builddir)/wrapper_test_shell \
-	      $(abs_top_srcdir)/unittest/js_unittest.js \
-	      $(abs_srcdir)/wrapper_test.js > $@)
+	      $(abs_srcdir)/dbus_object_test_shell.js > $@)
 
 dom_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
@@ -83,8 +84,20 @@ dom_test_shell.sh:
 	      $(abs_top_srcdir)/unittest/js_unittest.js \
 	      $(abs_srcdir)/dom1_test.js > $@)
 
+js_shell.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/js_shell \
+	      $(abs_top_srcdir)/unittest/js_unittest.js \
+	      $(abs_srcdir)/json_test.js > $@)
+
 jscript_massager_test.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/jscript_massager_test > $@)
+
+wrapper_test_shell.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/wrapper_test_shell \
+	      $(abs_top_srcdir)/unittest/js_unittest.js \
+	      $(abs_srcdir)/wrapper_test.js > $@)
 
 endif
