@@ -53,7 +53,7 @@ TestScriptable1::TestScriptable1()
   RegisterProperty("JSON",
                    NewSlot(this, &TestScriptable1::GetJSON),
                    NewSlot(this, &TestScriptable1::SetJSON));
-  // This signal is only for test, no relation to ConnectToOndeleteSignal.
+  // This signal is only for test, no relation to ConnectOnReferenceChange.
   RegisterSignal("my_ondelete", &my_ondelete_signal_);
   RegisterSimpleProperty("EnumSimple", &enum_property_);
   RegisterStringEnumProperty("EnumString",

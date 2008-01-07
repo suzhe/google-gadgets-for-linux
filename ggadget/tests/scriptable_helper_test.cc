@@ -93,8 +93,8 @@ TEST(scriptable_helper, TestPropertyInfo) {
   EXPECT_STREQ("Destruct\n", g_buffer.c_str());
 }
 
-void TestOnDelete() {
-  AppendBuffer("TestOnDelete\n");
+void TestOnRefChange(int, int) {
+  AppendBuffer("TestRefChange\n");
 }
 
 void TestOnDeleteAsEventSink() {
@@ -104,10 +104,10 @@ void TestOnDeleteAsEventSink() {
 TEST(scriptable_helper, TestOnDelete) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
-  ASSERT_TRUE(scriptable->ConnectToOnDeleteSignal(NewSlot(TestOnDelete)));
+  ASSERT_TRUE(scriptable->ConnectOnReferenceChange(NewSlot(TestOnRefChange)));
   scriptable->SetProperty(-7, Variant(NewSlot(TestOnDeleteAsEventSink)));
   delete scriptable;
-  EXPECT_STREQ("TestOnDeleteAsEventSink\nDestruct\nTestOnDelete\n",
+  EXPECT_STREQ("TestOnDeleteAsEventSink\nDestruct\nTestRefChange\n",
                g_buffer.c_str());
 }
 

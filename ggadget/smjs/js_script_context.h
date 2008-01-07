@@ -112,10 +112,6 @@ class JSScriptContext : public ScriptContextInterface {
   virtual bool SetGlobalObject(ScriptableInterface *global_object);
   /** @see ScriptContextInterface::RegisterClass() */
   virtual bool RegisterClass(const char *name, Slot *constructor);
-  /** @see ScriptContextInterface::LockObject() */
-  virtual void LockObject(ScriptableInterface *object, const char *name);
-  /** @see ScriptContextInterface::UnlockObject() */
-  virtual void UnlockObject(ScriptableInterface *object);
   /** @see ScriptContextInterface::AssignFromContext() */
   virtual bool AssignFromContext(ScriptableInterface *dest_object,
                                  const char *dest_object_expr,
@@ -123,6 +119,13 @@ class JSScriptContext : public ScriptContextInterface {
                                  ScriptContextInterface *src_context,
                                  ScriptableInterface *src_object,
                                  const char *src_expr);
+  /** @see ScriptContextInterface::AssignFromContext() */
+  virtual bool AssignFromNative(ScriptableInterface *object,
+                                const char *object_expr,
+                                const char *property,
+                                const Variant &value);
+  /** @see ScriptContextInterface::Evaluate() */
+  virtual Variant Evaluate(ScriptableInterface *object, const char *expr);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
@@ -149,6 +152,9 @@ class JSScriptContext : public ScriptContextInterface {
   /** Callback function for native classes. */
   static JSBool ConstructObject(JSContext *cx, JSObject *obj,
                                 uintN argc, jsval *argv, jsval *rval);
+
+  JSBool EvaluateToJSVal(ScriptableInterface *object, const char *expr,
+                         jsval *result);
 
   class JSClassWithNativeCtor {
    public:

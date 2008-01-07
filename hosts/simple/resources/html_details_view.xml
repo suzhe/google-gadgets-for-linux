@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<view width="200" height="200" resizable="true" onopen="onopen()">
+<view width="300" height="250" resizable="true" onopen="onopen()">
   <script>
 <!--
 function onopen() {

@@ -49,10 +49,8 @@ class XMLHttpRequest
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
   XMLHttpRequest(MainLoopInterface *main_loop,
-                 ScriptContextInterface *script_context,
                  XMLParserInterface *xml_parser)
       : main_loop_(main_loop),
-        script_context_(script_context),
         xml_parser_(xml_parser),
         async_(false),
         curl_(NULL),
@@ -257,6 +255,10 @@ class XMLHttpRequest
     curl_easy_setopt(curl_, CURLOPT_WRITEDATA, this);
 
     if (async_) {
+      // Add an internal reference when this request is working to prevent
+      // this object from being GC'ed.
+      Attach();
+
       send_flag_ = true;
       curlm_ = curl_multi_init();
       curl_multi_setopt(curlm_, CURLMOPT_SOCKETFUNCTION, SocketCallback);
@@ -294,10 +296,6 @@ class XMLHttpRequest
         DLOG("XMLHttpRequest: Send(async): DONE");
         Done();
       }
-
-      // Prevent this object from being GC'ed during handling the request.
-      if (script_context_)
-        script_context_->LockObject(this, "XMLHttpRequest");
     } else {
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
@@ -636,10 +634,13 @@ class XMLHttpRequest
     if ((state_ == OPENED && send_flag_) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
-    send_flag_ = false;
 
-    if (async_ && script_context_)
-      script_context_->UnlockObject(this);
+    if (async_ && send_flag_) {
+      // Detach the internal reference that was added when the request was
+      // started.
+      Detach();
+    }
+    send_flag_ = false;
   }
 
   virtual void Abort() {
@@ -892,7 +893,6 @@ class XMLHttpRequest
   }
 
   MainLoopInterface *main_loop_;
-  ScriptContextInterface *script_context_;
   XMLParserInterface *xml_parser_;
   Signal0<void> onreadystatechange_signal_;
 
@@ -926,10 +926,9 @@ class XMLHttpRequest
 
 } // anonymous namespace
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(
-    MainLoopInterface *main_loop, ScriptContextInterface *script_context,
-    XMLParserInterface *xml_parser) {
-  return new XMLHttpRequest(main_loop, script_context, xml_parser);
+XMLHttpRequestInterface *CreateXMLHttpRequest(MainLoopInterface *main_loop,
+                                              XMLParserInterface *xml_parser) {
+  return new XMLHttpRequest(main_loop, xml_parser);
 }
 
 } // namespace ggadget

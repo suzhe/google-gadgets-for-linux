@@ -114,7 +114,7 @@ GtkViewHost::~GtkViewHost() {
 }
 
 XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
-  return CreateXMLHttpRequest(gadget_host_->GetMainLoop(), script_context_,
+  return CreateXMLHttpRequest(gadget_host_->GetMainLoop(),
                               gadget_host_->GetXMLParser());
 }
 

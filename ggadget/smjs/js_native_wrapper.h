@@ -17,6 +17,7 @@
 #ifndef GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
 #define GGADGET_SMJS_JS_NATIVE_WRAPPER_H__
 
+#include <string>
 #include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
@@ -55,6 +56,7 @@ class JSNativeWrapper : public ScriptableHelperOwnershipShared {
   int ref_count_;
   JSContext *js_context_;
   JSObject *js_object_;
+  std::string name_;
 };
 
 } // namespace smjs

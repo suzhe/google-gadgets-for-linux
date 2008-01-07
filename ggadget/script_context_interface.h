@@ -79,41 +79,21 @@ class ScriptContextInterface {
   virtual bool RegisterClass(const char *name, Slot *constructor) = 0;
 
   /**
-   * Locks an scriptable object to prevent the script engine from garbage
-   * collecting the object. Object with @c ScriptableInterface::NATIVE_OWNED
-   * or @c ScriptableInterface::NATIVE_PERMANENT ownership policies need NOT
-   * call this because the script adapter should do this automatically.
-   * The object must has already been attached into the script engine when
-   * this method is called, otherwise this method does nothing.
-   * @param object the object to be locked.
-   * @param name the name of the object for debug purpose.
-   */
-  virtual void LockObject(ScriptableInterface *object, const char *name) = 0;
-
-  /**
-   * Unlocks an scriptable object to allow the script engine to garbage
-   * collect the object when possible.
-   * The object must has already been attached into the script engine when
-   * this method is called, otherwise this method does nothing.
-   */
-  virtual void UnlockObject(ScriptableInterface *object) = 0;
-
-  /**
    * Evaluates an expression in another context, and assigns the result to
    * a property of an object in this context.
    *
    * @param dest_object the object against which to evaluate
    *     @a dest_object_expr. If it is @c NULL, the global object of this
-   *     context will be used to evaluate @c dest_object_expr.
+   *     context will be used to evaluate @a dest_object_expr.
    * @param dest_object_expr an expression to evaluate in this context that
-   *    results an object whose property is to be assigned. If it is empty or
-   *    @c NULL, @a dest_object (or global object if @a dest_object_expr is
-   *    @c NULL) will be the destination object.
+   *     results an object whose property is to be assigned. If it is empty or
+   *     @c NULL, @a dest_object (or global object if @a dest_object_expr is
+   *     @c NULL) will be the destination object.
    * @param dest_property the name of the destination property to be assigned.
    * @param src_context source context in which to evaluate @a src_expr.
    * @param src_object the source object against which to evaluate @c src_expr.
    *    If it is @c NULL, the global object of @a src_context will be used.
-   * @param src_expr the expression to evaluate.
+   * @param src_expr the expression to evaluate in @a src_context.
    * @return @c true if succeeded.
    */
   virtual bool AssignFromContext(ScriptableInterface *dest_object,
@@ -122,6 +102,36 @@ class ScriptContextInterface {
                                  ScriptContextInterface *src_context,
                                  ScriptableInterface *src_object,
                                  const char *src_expr) = 0;
+
+  /**
+   * Assigns a native value to a property of an object in this context.
+   *
+   * @param object the object against which to evaluate @a object_expr.
+   *     If it is @c NULL, the global object of this context will be used
+   *     to evaluate @a object_expr.
+   * @param object_expr an expression to evaluate in this context that results
+   *     an object whose property is to be assigned. If it is empty or @c NULL,
+   *     @a object (or global object if @a object_expr is @c NULL) will be
+   *     the destination object.
+   * @param property the name of the destination property to be assigned.
+   * @param value the native value.
+   * @return @c true if succeeded.
+   */
+  virtual bool AssignFromNative(ScriptableInterface *object,
+                                const char *object_expr,
+                                const char *property,
+                                const Variant &value) = 0;
+
+  /**
+   * Evaluates an expression against a given object.
+   *
+   * @param object the object against which to evaluate @a expr. If it is
+   *     @c NULL, the global object of this context will be used to evaluate
+   *     @a expr.
+   * @param expr an expression to evaluate.
+   * @return @c the evaluated result value.
+   */
+  virtual Variant Evaluate(ScriptableInterface *object, const char *expr) = 0;
 
 };
 

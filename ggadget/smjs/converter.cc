@@ -283,8 +283,8 @@ static JSBool ConvertJSToJSON(JSContext *cx, jsval js_val,
   return JS_TRUE;
 }
 
-JSBool ConvertJSToNativeVariant(JSContext *cx, NativeJSWrapper *owner,
-                                jsval js_val, Variant *native_val) {
+JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
+                                Variant *native_val) {
   if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val))
     return ConvertJSToNativeVoid(cx, js_val, native_val);
   if (JSVAL_IS_BOOLEAN(js_val))
@@ -329,7 +329,7 @@ JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *owner,
     case Variant::TYPE_DATE:
       return ConvertJSToNativeDate(cx, js_val, native_val);
     case Variant::TYPE_VARIANT:
-      return ConvertJSToNativeVariant(cx, owner, js_val, native_val);
+      return ConvertJSToNativeVariant(cx, js_val, native_val);
     default:
       return JS_FALSE;
   }
@@ -418,7 +418,7 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
                                      Variant(arg_types[i]), argv[i],
                                      &(*params)[i]);
         } else {
-          result = ConvertJSToNativeVariant(cx, owner, argv[i], &(*params)[i]);
+          result = ConvertJSToNativeVariant(cx, argv[i], &(*params)[i]);
         }
         if (!result) {
           for (uintN j = 0; j < i; j++)

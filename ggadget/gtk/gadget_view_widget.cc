@@ -38,7 +38,7 @@ using ggadget::gtk::CairoCanvas;
 using ggadget::gtk::GtkMenuImpl;
 
 struct _GadgetViewWidget {
-  GtkFixed fixed;
+  GtkFixed parent_widget;
 
   ggadget::gtk::GtkViewHost *host;
   ggadget::ViewInterface *view;
@@ -61,12 +61,11 @@ struct _GadgetViewWidgetClass {
   void (* gadgetviewwidget)(GadgetViewWidget *gvw);
 };
 
-
-static GtkWidgetClass *parent_class = NULL;
+G_DEFINE_TYPE(GadgetViewWidget, GadgetViewWidget, GTK_TYPE_FIXED)
 
 static void GadgetViewWidget_destroy(GtkObject* object) {
-  if (GTK_OBJECT_CLASS(parent_class)->destroy) {
-    (*GTK_OBJECT_CLASS(parent_class)->destroy)(object);
+  if (GTK_OBJECT_CLASS(GadgetViewWidget_parent_class)->destroy) {
+    (*GTK_OBJECT_CLASS(GadgetViewWidget_parent_class)->destroy)(object);
   }
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(object);
 
@@ -77,8 +76,8 @@ static void GadgetViewWidget_destroy(GtkObject* object) {
 }
 
 static void GadgetViewWidget_realize(GtkWidget *widget) {
-  if (GTK_WIDGET_CLASS(parent_class)->realize) {
-    (*GTK_WIDGET_CLASS(parent_class)->realize)(widget);
+  if (GTK_WIDGET_CLASS(GadgetViewWidget_parent_class)->realize) {
+    (*GTK_WIDGET_CLASS(GadgetViewWidget_parent_class)->realize)(widget);
   }
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
 
@@ -87,8 +86,8 @@ static void GadgetViewWidget_realize(GtkWidget *widget) {
 }
 
 static void GadgetViewWidget_unrealize(GtkWidget *widget) {
-  if (GTK_WIDGET_CLASS(parent_class)->unrealize) {
-    (*GTK_WIDGET_CLASS(parent_class)->unrealize)(widget);
+  if (GTK_WIDGET_CLASS(GadgetViewWidget_parent_class)->unrealize) {
+    (*GTK_WIDGET_CLASS(GadgetViewWidget_parent_class)->unrealize)(widget);
   }
 }
 
@@ -99,20 +98,24 @@ static void GadgetViewWidget_size_request(GtkWidget *widget,
   requisition->height = (gint)(gvw->view->GetHeight() * gvw->zoom);
 }
 
-static gboolean GadgetViewWidget_configure(GtkWidget *widget,
-                                           GdkEventConfigure *event) {
+static void GadgetViewWidget_size_allocate(GtkWidget *widget,
+                                           GtkAllocation *allocation) {
+  if (GTK_WIDGET_CLASS(GadgetViewWidget_parent_class)->size_allocate) {
+    (*GTK_WIDGET_CLASS(GadgetViewWidget_parent_class)->size_allocate)(
+          widget, allocation);
+  }
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   // Capture only changes to width, height, and not x, y.
-  if (event->width != gvw->widget_width ||
-      event->height != gvw->widget_height) {
-    gvw->widget_width = event->width;
-    gvw->widget_height = event->height;
+  if (allocation->width != gvw->widget_width ||
+      allocation->height != gvw->widget_height) {
+    gvw->widget_width = allocation->width;
+    gvw->widget_height = allocation->height;
     ViewInterface::ResizableMode mode = gvw->view->GetResizable();
-    DLOG("configure %d %d", event->width, event->height);
+    DLOG("allocate %d %d", allocation->width, allocation->height);
 
     if (mode == ViewInterface::RESIZABLE_TRUE) {
-      int width = static_cast<int>(event->width / gvw->zoom);
-      int height = static_cast<int>(event->height / gvw->zoom);
+      int width = static_cast<int>(allocation->width / gvw->zoom);
+      int height = static_cast<int>(allocation->height / gvw->zoom);
       ggadget::SizingEvent onsizing_event(width, height);
       if (gvw->view->OnOtherEvent(onsizing_event, &onsizing_event) !=
           ggadget::EVENT_RESULT_CANCELED) {
@@ -121,30 +124,27 @@ static gboolean GadgetViewWidget_configure(GtkWidget *widget,
         gvw->view->SetSize(width, height);
         gtk_widget_queue_resize(widget);
         LOG("View resized.");
-        return FALSE;
       }
     } else if (mode == ViewInterface::RESIZABLE_ZOOM) {
       int view_width = gvw->view->GetWidth();
       int view_height = gvw->view->GetHeight();
       if (view_width && view_height) {
         double xzoom =
-            static_cast<double>(event->width) / gvw->view->GetWidth();
+            static_cast<double>(allocation->width) / gvw->view->GetWidth();
         double yzoom =
-            static_cast<double>(event->height) / gvw->view->GetHeight();
+            static_cast<double>(allocation->height) / gvw->view->GetHeight();
         double zoom = std::min(xzoom, yzoom);
         gvw->zoom = zoom;
         gvw->host->ChangeZoom(zoom);
         gtk_widget_queue_resize(widget);
         gtk_widget_queue_draw(widget);
         LOG("View zoomed.");
-        return FALSE;
       }
+    } else {
+      LOG("Can't resize view.");
+      // TODO: do something here.
     }
-
-    LOG("Can't resize view.");
-    // TODO: do something here.
   }
-  return FALSE;
 }
 
 static gboolean GadgetViewWidget_expose(GtkWidget *widget,
@@ -655,16 +655,14 @@ static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(c);
   GtkObjectClass *object_class = GTK_OBJECT_CLASS(c);
 
-  parent_class = GTK_WIDGET_CLASS(gtk_type_class(GTK_TYPE_FIXED));
-
   object_class->destroy = GadgetViewWidget_destroy;
 
   widget_class->realize = GadgetViewWidget_realize;
   widget_class->unrealize = GadgetViewWidget_unrealize;
 
-  widget_class->configure_event = GadgetViewWidget_configure;
   widget_class->expose_event = GadgetViewWidget_expose;
   widget_class->size_request = GadgetViewWidget_size_request;
+  widget_class->size_allocate = GadgetViewWidget_size_allocate;
 
   widget_class->button_press_event = GadgetViewWidget_button_press;
   widget_class->button_release_event = GadgetViewWidget_button_release;
@@ -686,31 +684,6 @@ static void GadgetViewWidget_class_init(GadgetViewWidgetClass *c) {
   widget_class->scroll_event = GadgetViewWidget_scroll;
 }
 
-GType GadgetViewWidget_get_type() {
-  static GType gw_type = 0;
-
-  if (!gw_type) {
-    static const GTypeInfo gw_info = {
-      sizeof(GadgetViewWidgetClass),
-      NULL, // base_init
-      NULL, // base_finalize
-      (GClassInitFunc)GadgetViewWidget_class_init,
-      NULL, // class_finalize
-      NULL, // class_data
-      sizeof(GadgetViewWidget),
-      0, // n_preallocs
-      (GInstanceInitFunc)GadgetViewWidget_init,
-    };
-
-    gw_type = g_type_register_static(GTK_TYPE_FIXED,
-                                     "GadgetViewWidget",
-                                     &gw_info,
-                                     (GTypeFlags)0);
-  }
-
-  return gw_type;
-}
-
 GtkWidget *GadgetViewWidget_new(ggadget::gtk::GtkViewHost *host, double zoom,
                                 bool composited, bool useshapemask) {
   GtkWidget *widget = GTK_WIDGET(g_object_new(GadgetViewWidget_get_type(),
@@ -723,7 +696,7 @@ GtkWidget *GadgetViewWidget_new(ggadget::gtk::GtkViewHost *host, double zoom,
   gvw->composited = composited;
   gvw->useshapemask = useshapemask;
 
-  gtk_fixed_set_has_window(&gvw->fixed, TRUE);
+  gtk_fixed_set_has_window(&gvw->parent_widget, TRUE);
 
   static const GtkTargetEntry kDragTargets[] = {
     { const_cast<char *>(kUriListTarget), 0, 0 },

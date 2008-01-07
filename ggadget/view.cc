@@ -34,7 +34,6 @@
 #include "math_utils.h"
 #include "script_context_interface.h"
 #include "scriptable_binary_data.h"
-#include "scriptable_delegator.h"
 #include "scriptable_event.h"
 #include "slot.h"
 #include "texture.h"

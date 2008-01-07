@@ -18,6 +18,7 @@
 #define GGADGET_SMJS_NATIVE_JS_WRAPPER_H__
 
 #include <set>
+#include <string>
 #include <jsapi.h>
 #include <ggadget/common.h>
 #include <ggadget/scriptable_interface.h>
@@ -82,7 +83,7 @@ class NativeJSWrapper {
 private:
   DISALLOW_EVIL_CONSTRUCTORS(NativeJSWrapper);
 
-  void OnDelete();
+  void OnReferenceChange(int ref_count, int change);
 
   // Callback for invocation of the object itself as a function.
   static JSBool CallWrapperSelf(JSContext *cx, JSObject *obj,
@@ -139,7 +140,8 @@ private:
   JSContext *js_context_;
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
-  Connection *ondelete_connection_;
+  std::string name_;
+  Connection *on_reference_change_connection_;
   ScriptableInterface::OwnershipPolicy ownership_policy_;
 
   typedef std::set<JSFunctionSlot *> JSFunctionSlots;

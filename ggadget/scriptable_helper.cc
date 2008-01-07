@@ -29,7 +29,7 @@ namespace internal {
 
 class ScriptableHelperImpl : public ScriptableHelperImplInterface {
  public:
-  ScriptableHelperImpl();
+  ScriptableHelperImpl(OwnershipPolicy policy);
   virtual ~ScriptableHelperImpl();
 
   virtual void RegisterProperty(const char *name, Slot *getter, Slot *setter);
@@ -44,18 +44,19 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual void SetPrototype(ScriptableInterface *prototype);
   virtual void SetArrayHandler(Slot *getter, Slot *setter);
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
+  virtual int GetRefCount() { return ref_count_; }
 
-  // The following 5 methods declared in ScriptableInterface should never be
+  // The following 3 methods declared in ScriptableInterface should never be
   // called.
   virtual uint64_t GetClassId() const { return 0; }
   virtual bool IsInstanceOf(uint64_t class_id) const {
     ASSERT(false); return false;
   }
   virtual bool IsStrict() const { ASSERT(false); return false; }
-  virtual OwnershipPolicy Attach() { ASSERT(false); return NATIVE_OWNED; }
-  virtual bool Detach() { ASSERT(false); return false; }
+  virtual OwnershipPolicy Attach();
+  virtual bool Detach();
 
-  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot);
+  virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot);
   virtual bool GetPropertyInfoByName(const char *name,
                                      int *id, Variant *prototype,
                                      bool *is_method);
@@ -81,6 +82,9 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   typedef std::vector<const char *> NameVector;
   typedef std::map<const char *, Variant, GadgetCharPtrComparator> ConstantMap;
 
+  OwnershipPolicy policy_;
+  int ref_count_;
+
   // If true, no more new RegisterXXX or SetPrototype can be called.
   // It'll be set to true in any ScriptableInterface operation on properties.
   bool sealed_;
@@ -102,7 +106,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   // values are constant values.
   ConstantMap constants_;
 
-  Signal0<void> ondelete_signal_;
+  Signal2<void, int, int> on_reference_change_signal_;
   ScriptableInterface *prototype_;
   Slot *array_getter_;
   Slot *array_setter_;
@@ -114,12 +118,15 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   ScriptableInterface *pending_exception_;
 };
 
-ScriptableHelperImplInterface *NewScriptableHelperImpl() {
-  return new ScriptableHelperImpl();
+ScriptableHelperImplInterface *NewScriptableHelperImpl(
+    ScriptableInterface::OwnershipPolicy policy) {
+  return new ScriptableHelperImpl(policy);
 }
 
-ScriptableHelperImpl::ScriptableHelperImpl()
-    : sealed_(false),
+ScriptableHelperImpl::ScriptableHelperImpl(OwnershipPolicy policy)
+    : policy_(policy),
+      ref_count_(0),
+      sealed_(false),
       property_count_(0),
       prototype_(NULL),
       array_getter_(NULL),
@@ -131,8 +138,10 @@ ScriptableHelperImpl::ScriptableHelperImpl()
 }
 
 ScriptableHelperImpl::~ScriptableHelperImpl() {
+  ASSERT(ref_count_ == 0);
   // Emit the ondelete signal, as early as possible.
-  ondelete_signal_();
+  if (policy_ != OWNERSHIP_SHARED)
+    on_reference_change_signal_(0, 0);
 
   // Free all owned slots.
   for (VariantVector::const_iterator it = slot_prototypes_.begin();
@@ -349,8 +358,32 @@ void ScriptableHelperImpl::SetDynamicPropertyHandler(
   dynamic_property_setter_ = setter;
 }
 
-Connection *ScriptableHelperImpl::ConnectToOnDeleteSignal(Slot0<void> *slot) {
-  return ondelete_signal_.ConnectGeneral(slot);
+ScriptableInterface::OwnershipPolicy ScriptableHelperImpl::Attach() {
+  // DLOG("Attach ref_count_ = %d", ref_count_);
+  if (policy_ == ScriptableInterface::OWNERSHIP_SHARED) {
+    ASSERT(ref_count_ >= 0);
+    on_reference_change_signal_(ref_count_, 1);
+    ref_count_++;
+  }
+  return policy_;
+}
+
+bool ScriptableHelperImpl::Detach() {
+  // DLOG("Detach ref_count_ = %d", ref_count_);
+  if (policy_ == ScriptableInterface::OWNERSHIP_SHARED) {
+    ASSERT(ref_count_ > 0);
+    on_reference_change_signal_(ref_count_, -1);
+    if (--ref_count_ == 0) {
+      // Don't delete this now. Let ScriptableHelper do it.
+      return true;
+    }
+  }
+  return false;
+}
+
+Connection *ScriptableHelperImpl::ConnectOnReferenceChange(
+    Slot2<void, int, int> *slot) {
+  return on_reference_change_signal_.Connect(slot);
 }
 
 // NOTE: Must be exception-safe because the handler may throw exceptions.

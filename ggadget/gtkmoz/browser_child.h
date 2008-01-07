@@ -27,7 +27,20 @@ namespace gtkmoz {
  */
 static const char kEndOfMessage[] = "\"\"\"EOM\"\"\"";
 /** End of message tag including the proceeding and succeeding line breaks. */
-static const char kEndOfMessageFull[] = "\n\"\"\"EOM\"\"\"\n";
+const char kEndOfMessageFull[] = "\n\"\"\"EOM\"\"\"\n";
+
+/**
+ * The controller tells the child to open a new browser.
+ *
+ * Message format:
+ * <code>
+ * NEW\n
+ * Browser ID\n
+ * Socket ID\n
+ * """EOM"""\n
+ * </code>
+ */
+const char kNewBrowserCommand[] = "NEW";
 
 /**
  * The controller sets the content to display by the browser child.
@@ -35,12 +48,25 @@ static const char kEndOfMessageFull[] = "\n\"\"\"EOM\"\"\"\n";
  * Message format:
  * <code>
  * CONTENT\n
+ * Browser ID\n
  * Mime type (not JSON encoded)\n
  * Contents as a string encoded in JSON\n
  * """EOM"""\n
  * </code>
  */
-static const char kSetContentCommand[] = "CONTENT";
+const char kSetContentCommand[] = "CONTENT";
+
+/**
+ * The controller wants to close a browser.
+ *
+ * Message format:
+ * <code>
+ * CLOSE\n
+ * Browser ID\n
+ * """EOM"""\n
+ * </code>
+ */
+const char kCloseBrowserCommand[] = "CLOSE";
 
 /**
  * The controller wants the child browser to quit.
@@ -51,7 +77,7 @@ static const char kSetContentCommand[] = "CONTENT";
  * """EOM"""\n
  * </code>
  */
-static const char kQuitCommand[] = "QUIT";
+const char kQuitCommand[] = "QUIT";
 
 /**
  * The browser child tells the controller that the script wants to get the
@@ -60,6 +86,7 @@ static const char kQuitCommand[] = "QUIT";
  * Messsage format:
  * <code>
  * GET\n
+ * Browser ID\n
  * Property key encoded in JSON\n
  * """EOM"""\n
  * </code>
@@ -71,7 +98,7 @@ static const char kQuitCommand[] = "QUIT";
  * is a function, or "\"undefined\"" if the value is undefined.\n
  * </code>
  */
-static const char kGetPropertyFeedback[] = "GET";
+const char kGetPropertyFeedback[] = "GET";
 
 /**
  * The browser child tells the controller that the script has set the value of
@@ -80,6 +107,7 @@ static const char kGetPropertyFeedback[] = "GET";
  * Messsage format:
  * <code>
  * SET\n
+ * Browser ID\n
  * Property key encoded in JSON\n
  * Property value encoded in JSON\n
  * """EOM"""\n
@@ -87,7 +115,7 @@ static const char kGetPropertyFeedback[] = "GET";
  *
  * The controller must immediately reply a message containing only a '\n'.
  */
-static const char kSetPropertyFeedback[] = "SET";
+const char kSetPropertyFeedback[] = "SET";
 
 /**
  * The browser child tells the controller that the script has invoked a method
@@ -96,6 +124,7 @@ static const char kSetPropertyFeedback[] = "SET";
  * Messsage format:
  * <code>
  * CALL\n
+ * Browser ID\n
  * Method name encoded in JSON\n
  * The first parameter encoded in JSON\n
  * ...
@@ -110,7 +139,7 @@ static const char kSetPropertyFeedback[] = "SET";
  * is a function, or "\"undefined\"" if the value is undefined.\n
  * </code>
  */
-static const char kCallbackFeedback[] = "CALL";
+const char kCallbackFeedback[] = "CALL";
 
 /**
  * The browser child tells the controller that the browser is about to open
@@ -119,13 +148,31 @@ static const char kCallbackFeedback[] = "CALL";
  * Messsage format:
  * <code>
  * OPEN\n
- * URL encoded in JSON\n
+ * Browser ID\n
+ * URL (not JSON encoded)\n
  * """EOM"""\n
  * </code>
  *
  * The controller must immediately reply a message containing only a '\n'.
  */
-static const char kOpenURLFeedback[] = "OPEN";
+const char kOpenURLFeedback[] = "OPEN";
+
+/**
+ * The browser child periodically pings the controller to check if the
+ * controller died.
+ *
+ * Message format:
+ * <code>
+ * PING\n
+ * """EOM"""\n
+ * </code>
+ *
+ * The controller must immediately reply a message containing "ACK\n".
+ */ 
+const char kPingFeedback[] = "PING";
+const char kPingAck[] = "ACK";
+const char kPingAckFull[] = "ACK\n";
+const int kPingInterval = 30000;  // 30 seconds.
 
 } // namespace gtkmoz
 } // namespace ggadget

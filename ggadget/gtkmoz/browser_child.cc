@@ -16,9 +16,11 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <vector>
 #include <gtk/gtk.h>
 
 #include <gtkmozembed.h>
@@ -28,12 +30,14 @@
 #include <nsCOMPtr.h>
 #include <dom/nsIScriptNameSpaceManager.h>
 #include <nsCRT.h>
+#include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
 #include <nsIGenericFactory.h>
-#include <nsICategoryManager.h>
+#include <nsIInterfaceRequestor.h>
 #include <nsServiceManagerUtils.h>
 #include <nsStringAPI.h>
 #include <nsXPCOMCID.h>
+#include <xpconnect/nsIXPConnect.h>
 #include <xpconnect/nsIXPCScriptable.h>
 
 #include <ggadget/smjs/json.h>
@@ -44,17 +48,25 @@ using ggadget::smjs::JSONEncode;
 using ggadget::smjs::JSONDecode;
 using ggadget::gtkmoz::kEndOfMessage;
 using ggadget::gtkmoz::kEndOfMessageFull;
+using ggadget::gtkmoz::kNewBrowserCommand;
 using ggadget::gtkmoz::kSetContentCommand;
+using ggadget::gtkmoz::kCloseBrowserCommand;
 using ggadget::gtkmoz::kQuitCommand;
 using ggadget::gtkmoz::kGetPropertyFeedback;
 using ggadget::gtkmoz::kSetPropertyFeedback;
 using ggadget::gtkmoz::kCallbackFeedback;
 using ggadget::gtkmoz::kOpenURLFeedback;
+using ggadget::gtkmoz::kPingFeedback;
+using ggadget::gtkmoz::kPingAck;
+using ggadget::gtkmoz::kPingInterval;
 
 // Default down and ret fds are standard input and up fd is standard output.
 // The default values are useful when browser child is tested independently.
 static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0;
-static GtkMozEmbed *g_embed = NULL;
+static std::vector<GtkMozEmbed *> g_embeds;
+static GtkMozEmbed *g_embed_for_new_window = NULL;
+static GtkMozEmbed *g_last_new_window_embed = NULL;
+static GtkWidget *g_popup_for_new_window = NULL;
 
 #define EXTOBJ_CLASSNAME  "ExternalObject"
 #define EXTOBJ_PROPERTY_NAME "external" 
@@ -62,6 +74,51 @@ static GtkMozEmbed *g_embed = NULL;
 #define EXTOBJ_CID { \
     0x224fb7b5, 0x6db0, 0x48db, \
     { 0xb8, 0x1e, 0x85, 0x15, 0xe7, 0x9f, 0x00, 0x30 } \
+}
+
+// We can't include "nsIScriptGlobalObject.h" because it requires
+// MOZILLA_INTERAL_API defined.
+static const nsIID kIScriptGlobalObjectIID = {
+    0xd326a211, 0xdc31, 0x45c6,
+    { 0x98, 0x97, 0x22, 0x11, 0xea, 0xbc, 0xd0, 0x1c }
+};
+
+static int FindBrowserId(JSContext *cx) {
+  JSObject *js_global = JS_GetGlobalObject(cx);
+  if (!js_global) {
+    fprintf(stderr, "browser_child: No global object\n");
+    return -1;
+  }
+
+  JSClass *cls = JS_GET_CLASS(cx, js_global);
+  if (!cls || ((~cls->flags) & (JSCLASS_HAS_PRIVATE |
+                                JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
+    fprintf(stderr, "browser_child: Global object is not a nsISupports");
+    return -1;
+  }
+  nsIXPConnectWrappedNative *global_wrapper =
+    reinterpret_cast<nsIXPConnectWrappedNative *>(JS_GetPrivate(cx, js_global));
+  nsISupports *global = global_wrapper->Native();
+
+  nsresult rv;
+  for (std::vector<GtkMozEmbed *>::const_iterator it = g_embeds.begin();
+       it != g_embeds.end(); ++it) {
+    if (*it) {
+      nsCOMPtr<nsIWebBrowser> browser;
+      gtk_moz_embed_get_nsIWebBrowser(*it, getter_AddRefs(browser));
+      nsCOMPtr<nsIInterfaceRequestor> req(do_QueryInterface(browser, &rv));
+      NS_ENSURE_SUCCESS(rv, -1);
+      nsISupports *global1;
+      rv = req->GetInterface(kIScriptGlobalObjectIID,
+                             reinterpret_cast<void **>(&global1));
+      NS_ENSURE_SUCCESS(rv, -1);
+      global1->Release();
+      if (global1 == global)
+        return it - g_embeds.begin();
+    }
+  }
+  fprintf(stderr, "browser_child: Can't find GtkMozEmbed from JS context");
+  return -1;
 }
 
 static std::string SendFeedbackBuffer(const std::string &buffer) {
@@ -74,12 +131,12 @@ static std::string SendFeedbackBuffer(const std::string &buffer) {
   return reply;
 }
 
-// Send a feedback with parameters to the controller through the up channel,
-// and return the reply (got in the return value channel).
-static std::string SendFeedback(const char *type, ...) {
+static std::string SendFeedbackV(const char *type, int browser_id, va_list ap) {
   std::string buffer(type);
-  va_list ap;
-  va_start(ap, type);
+  char browser_id_buf[20];
+  snprintf(browser_id_buf, sizeof(browser_id_buf), "\n%d", browser_id);
+  buffer += browser_id_buf;
+
   const char *param;
   while ((param = va_arg(ap, const char *)) != NULL) {
     buffer += '\n';
@@ -89,10 +146,40 @@ static std::string SendFeedback(const char *type, ...) {
   return SendFeedbackBuffer(buffer);
 }
 
+static std::string SendFeedbackWithBrowserId(const char *type, int browser_id,
+                                             ...) {
+  va_list ap;
+  va_start(ap, browser_id);
+  std::string result = SendFeedbackV(type, browser_id, ap);
+  va_end(ap);
+  return result;
+}
+
+// Send a feedback with parameters to the controller through the up channel,
+// and return the reply (got in the return value channel).
+static std::string SendFeedback(const char *type, JSContext *cx, ...) {
+  int browser_id = FindBrowserId(cx);
+  if (browser_id == -1)
+    return "";
+
+  va_list ap;
+  va_start(ap, cx);
+  std::string result = SendFeedbackV(type, browser_id, ap);
+  va_end(ap);
+  return result;
+}
+
 JSBool InvokeFunction(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                       jsval *rval) {
+  int browser_id = FindBrowserId(cx);
+  if (browser_id == -1)
+    return JS_FALSE;
+
   std::string buffer(kCallbackFeedback);
-  buffer += '\n';
+  char browser_id_buf[20];
+  snprintf(browser_id_buf, sizeof(browser_id_buf), "\n%d\n", browser_id);
+  buffer += browser_id_buf;
+
   // According to JS stack structure, argv[-2] is the current function object.
   jsval func_val = argv[-2];
   buffer += JS_GetFunctionName(JS_ValueToFunction(cx, func_val));
@@ -132,7 +219,8 @@ class ExternalObject : public nsIXPCScriptable {
                          jsval *vp, PRBool *ret_val) {
     std::string json;
     NS_ENSURE_TRUE(JSONEncode(cx, id, &json), NS_ERROR_FAILURE);
-    std::string result = SendFeedback(kGetPropertyFeedback, json.c_str(), NULL);
+    std::string result = SendFeedback(kGetPropertyFeedback, cx,
+                                      json.c_str(), NULL);
     if (result == "\"\\\"function\\\"\"") {
       JSFunction *function = JS_NewFunction(cx, InvokeFunction, 0, 0,
                                             obj, json.c_str());
@@ -155,8 +243,8 @@ class ExternalObject : public nsIXPCScriptable {
     std::string name_json, value_json;
     NS_ENSURE_TRUE(JSONEncode(cx, id, &name_json), NS_ERROR_FAILURE);
     NS_ENSURE_TRUE(JSONEncode(cx, *vp, &value_json), NS_ERROR_FAILURE);
-    SendFeedback(kSetPropertyFeedback, name_json.c_str(), value_json.c_str(),
-                 NULL);
+    SendFeedback(kSetPropertyFeedback, cx,
+                 name_json.c_str(), value_json.c_str(), NULL);
     *ret_val = PR_TRUE;
     return NS_OK;
   }
@@ -246,6 +334,8 @@ static const nsModuleComponentInfo kComponentInfo = {
 };
 
 nsresult InitExternalObject() {
+  g_external_object.AddRef();
+
   nsCOMPtr<nsIComponentRegistrar> registrar;
   nsresult rv = NS_GetComponentRegistrar(getter_AddRefs(registrar));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -308,33 +398,157 @@ bool DecodeJSONString(const char *json_string, nsString *result) {
   return true;
 }
 
-static void ProcessDownMessage(int param_count, const char **params) {
-  NS_ASSERTION(param_count > 0, "");
-  if (strcmp(params[0], kSetContentCommand) == 0) {
-    if (param_count == 3) {
-      // params[1]: mime type; params[2]: JSON encoded content string.
-      nsString content;
-      if (!DecodeJSONString(params[2], &content)) {
-        fprintf(stderr, "browser_child: Invalid JSON string: %s\n", params[2]);
-      } else {
-        NS_ConvertUTF16toUTF8 utf8(content);
-        gtk_moz_embed_render_data(g_embed, utf8.get(), utf8.Length(),
-                                  // Base URI and MIME type.
-                                  "file:///dev/null", params[1]);
-      }
-    } else {
-      fprintf(stderr, "browser_child: Incorrect param count for %s: "
-              "3 expected, %d given", kSetContentCommand, param_count);
-    }
-  } else if (strcmp(params[0], kQuitCommand) == 0) {
-    gtk_main_quit();
+static gint OnOpenURL(GtkMozEmbed *embed, const char *url, gpointer data) {
+  if (embed == g_embed_for_new_window) {
+    gtk_widget_destroy(g_popup_for_new_window);
+    g_popup_for_new_window = NULL;
+    g_embed_for_new_window = NULL;
+    embed = g_last_new_window_embed;
+  }
+
+  std::vector<GtkMozEmbed *>::const_iterator it =
+      std::find(g_embeds.begin(), g_embeds.end(), embed);
+  if (it != g_embeds.end()) {
+    SendFeedbackWithBrowserId(kOpenURLFeedback, it - g_embeds.begin(),
+                              url, NULL);
+  }
+  // The controller should have opened the URL, so don't let the embedded
+  // browser open it.
+  return TRUE;
+}
+
+static void OnNewWindow(GtkMozEmbed *embed, GtkMozEmbed **retval,
+                        gint chrome_mask, gpointer data) {
+  if (embed == g_embed_for_new_window) {
+    *retval = NULL;
   } else {
-    fprintf(stderr, "browser_child: Invalid command: %s\n", params[0]);
+    if (!GTK_IS_WIDGET(g_embed_for_new_window)) {
+      g_embed_for_new_window = GTK_MOZ_EMBED(gtk_moz_embed_new());
+      g_signal_connect(g_embed_for_new_window, "new_window",
+                       G_CALLBACK(OnNewWindow), NULL);
+      g_signal_connect(g_embed_for_new_window, "open_uri",
+                       G_CALLBACK(OnOpenURL), NULL);
+      g_popup_for_new_window = gtk_window_new(GTK_WINDOW_POPUP);
+      gtk_container_add(GTK_CONTAINER(g_popup_for_new_window),
+                        GTK_WIDGET(g_embed_for_new_window));
+      gtk_widget_set_size_request(GTK_WIDGET(g_embed_for_new_window), 0, 0);
+      gtk_window_resize(GTK_WINDOW(g_popup_for_new_window), 0, 0);
+      gtk_widget_show_all(g_popup_for_new_window);
+    }
+    *retval = g_embed_for_new_window;
+    g_last_new_window_embed = embed;
   }
 }
 
+static void OnBrowserDestroy(GtkObject *object, gpointer user_data) {
+  size_t id = reinterpret_cast<size_t>(user_data);
+  if (id < g_embeds.size())
+    g_embeds[id] = NULL;
+}
+
+static void RemoveBrowser(size_t id) {
+  if (id >= g_embeds.size()) {
+    fprintf(stderr, "browser_child: Invalid browser id %zd to remove\n", id);
+    return;
+  }
+  GtkMozEmbed *embed = g_embeds[id];
+  if (GTK_IS_WIDGET(embed)) {
+    GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(embed));
+    if (GTK_IS_WIDGET(parent))
+      gtk_widget_destroy(parent);
+    else
+      gtk_widget_destroy(GTK_WIDGET(embed));
+  }
+  g_embeds[id] = NULL;
+}
+
+static void NewBrowser(int param_count, const char **params, size_t id) {
+  if (param_count != 3) {
+    fprintf(stderr, "browser_child: Incorrect param count for %s: "
+            "3 expected, %d given", kSetContentCommand, param_count);
+    return;
+  }
+
+  // The new id can be less than or equals to the current size.
+  if (id > g_embeds.size()) {
+    fprintf(stderr, "browser_child: New browser id is too big: %zd\n", id);
+    return;
+  }
+  if (id == g_embeds.size()) {
+    g_embeds.push_back(NULL);
+  } else if (g_embeds[id] != NULL) {
+    fprintf(stderr, "browser_child: Warning: new browser id slot is "
+            "not empty: %zd\n", id);
+    RemoveBrowser(id);
+  }
+
+  GdkNativeWindow socket_id = static_cast<GdkNativeWindow>(strtol(params[2],
+                                                                  NULL, 0));
+  GtkWidget *window = socket_id ? gtk_plug_new(socket_id) :
+                      gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  g_signal_connect(window, "destroy", G_CALLBACK(OnBrowserDestroy),
+                   reinterpret_cast<gpointer>(id));
+  GtkMozEmbed *embed = GTK_MOZ_EMBED(gtk_moz_embed_new());
+  g_embeds[id] = embed;
+  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
+  g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
+  g_signal_connect(embed, "open_uri", G_CALLBACK(OnOpenURL), NULL);
+  gtk_widget_show_all(window);
+}
+
+static void SetContent(int param_count, const char **params, size_t id) {
+  if (param_count != 4) {
+    fprintf(stderr, "browser_child: Incorrect param count for %s: "
+            "4 expected, %d given", kSetContentCommand, param_count);
+    return;
+  }
+  if (id >= g_embeds.size()) {
+    fprintf(stderr, "browser_child: Invalid browser id %zd to remove\n", id);
+    return;
+  }
+
+  GtkMozEmbed *embed = g_embeds[id];
+  // params[2]: mime type; params[3]: JSON encoded content string.
+  nsString content;
+  if (!DecodeJSONString(params[3], &content)) {
+    fprintf(stderr, "browser_child: Invalid JSON string: %s\n", params[3]);
+    return;
+  }
+  NS_ConvertUTF16toUTF8 utf8(content);
+  gtk_moz_embed_render_data(embed, utf8.get(), utf8.Length(),
+                            // Base URI and MIME type.
+                            "file:///dev/null", params[2]);
+}
+
+static void ProcessDownMessage(int param_count, const char **params) {
+  NS_ASSERTION(param_count > 0, "");
+  if (strcmp(params[0], kQuitCommand) == 0) {
+    gtk_main_quit();
+    return;
+  }
+  if (param_count < 2) {
+    fprintf(stderr, "browser_child: No enough command parameter\n");
+    return;
+  }
+
+  size_t id = static_cast<size_t>(strtol(params[1], NULL, 0));
+  if (strcmp(params[0], kNewBrowserCommand) == 0) {
+    NewBrowser(param_count, params, id);
+    return;
+  }
+  if (strcmp(params[0], kSetContentCommand) == 0) {
+    SetContent(param_count, params, id);
+    return;
+  }
+  if (strcmp(params[0], kCloseBrowserCommand) == 0) {
+    RemoveBrowser(id);
+    return;
+  }
+  fprintf(stderr, "browser_child: Invalid command: %s\n", params[0]);
+}
+
 static void ProcessDownMessages() {
-  const int kMaxParams = 3;
+  const int kMaxParams = 4;
   size_t curr_pos = 0;
   size_t eom_pos;
   while ((eom_pos = g_down_buffer.find(kEndOfMessageFull, curr_pos)) !=
@@ -356,7 +570,7 @@ static void ProcessDownMessages() {
       curr_pos = end_of_line_pos + 1;
     }
     NS_ASSERTION(curr_pos = eom_pos + 1, "");
-    curr_pos += sizeof(kEndOfMessageFull) - 1;
+    curr_pos += sizeof(kEndOfMessageFull) - 2;
     if (param_count > 0)
       ProcessDownMessage(param_count, params);
   }
@@ -379,31 +593,32 @@ static gboolean OnDownFDReady(GIOChannel *channel, GIOCondition condition,
   return TRUE;
 }
 
-static void OnNewWindow(GtkMozEmbed *embed, GtkMozEmbed **retval,
-                        gint chrome_mask, gpointer data) {
-  // TODO:
-  *retval = NULL; 
+static void OnSigPipe(int sig) {
+  fprintf(stderr, "browser_child: SIGPIPE occured, exiting...\n");
+  gtk_main_quit();
 }
 
-static gint OnOpenURL(GtkMozEmbed *embed, const char *url, gpointer data) {
-  SendFeedback(kOpenURLFeedback, url, NULL);
-  // The controller should have opened the URL, so don't let the embedded
-  // browser open it.
-  return FALSE;
+static gboolean CheckController(gpointer data) {
+  std::string buffer(kPingFeedback);
+  buffer += kEndOfMessageFull;
+  std::string result = SendFeedbackBuffer(buffer);
+  if (result != kPingAck) {
+    fprintf(stderr, "browser_child: Ping failed, exiting...\n");
+    gtk_main_quit();
+    return FALSE;
+  }
+  return TRUE;
 }
 
 int main(int argc, char **argv) {
   gtk_init(&argc, &argv);
-
-  GdkNativeWindow socket_id = 0;
+  signal(SIGPIPE, OnSigPipe);
   if (argc >= 2)
-    socket_id = strtol(argv[1], NULL, 0);
+    g_down_fd = g_ret_fd = strtol(argv[1], NULL, 0);
   if (argc >= 3)
-    g_down_fd = g_ret_fd = strtol(argv[2], NULL, 0);
+    g_up_fd = strtol(argv[2], NULL, 0);
   if (argc >= 4)
-    g_up_fd = strtol(argv[3], NULL, 0);
-  if (argc >= 5)
-    g_ret_fd = strtol(argv[4], NULL, 0);
+    g_ret_fd = strtol(argv[3], NULL, 0);
 
   // Set the down FD to non-blocking mode to make the gtk main loop happy.
   int down_fd_flags = fcntl(g_down_fd, F_GETFL);
@@ -414,18 +629,15 @@ int main(int argc, char **argv) {
   int down_fd_watch = g_io_add_watch(channel, G_IO_IN, OnDownFDReady, NULL);
   g_io_channel_unref(channel);
 
-  GtkWidget *window = socket_id ? gtk_plug_new(socket_id) :
-                      gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  g_signal_connect(window, "destroy", gtk_main_quit, NULL);
-
-  g_embed = GTK_MOZ_EMBED(gtk_moz_embed_new());
+  gtk_moz_embed_push_startup();
   InitExternalObject();
-  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(g_embed));
-  g_signal_connect(g_embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
-  g_signal_connect(g_embed, "open_uri", G_CALLBACK(OnOpenURL), NULL);
-  // gtk_moz_embed_load_url(g_embed, "http://www.google.com");
-  gtk_widget_show_all(window);
+  if (g_ret_fd != g_down_fd) {
+    // Only start ping timer in actual environment to ease testing.
+    g_timeout_add(kPingInterval, CheckController, NULL);
+  }
+
   gtk_main();
   g_source_remove(down_fd_watch);
+  gtk_moz_embed_pop_startup();
   return 0;
 }

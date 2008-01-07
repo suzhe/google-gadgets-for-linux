@@ -74,7 +74,7 @@ class TestScriptable1 : public ScriptableHelper<ScriptableInterface> {
     g_buffer = json.value;
   }
 
-  // This signal is only for test, no relation to ConnectToOndeleteSignal.
+  // This signal is only for test, no relation to ConnectOnReferenceChange.
   // Place this signal declaration here for testing.
   Signal0<void> my_ondelete_signal_;
 

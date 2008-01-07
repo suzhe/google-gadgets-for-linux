@@ -20,14 +20,11 @@
 #include <limits.h>
 #include <stdint.h>
 #include <ggadget/variant.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 
 class Connection;
-template <typename R> class Slot0;
-template <typename R, typename P1, typename P2> class Slot2;
-template <typename R, typename P1, typename P2, typename P3, typename P4>
-class Slot4;
 
 /**
  * Object interface that can be called from script languages.
@@ -142,12 +139,18 @@ class ScriptableInterface {
   virtual bool IsStrict() const = 0;
 
   /**
-   * Connect a callback @c Slot to the "ondelete" signal.
-   * @param slot the callback @c Slot to be called when the @c Scriptable
-   *     object is to be deleted.
-   * @return the connected @c Connection or @c NULL if fails.
+   * Connect a callback which will be called when @c Attach(), @c Detach() is
+   * called or the object is about to be deleted.
+   * @param slot the callback. The parameters of the slot are:
+   *     - the reference count before change; or 0 if the object is about to be
+   *       deleted;
+   *     - 1 or -1 indicating whether the reference count is about to be
+   *       increased or decreased; or 0 if the object is about to be deleted.
+   *     For native owned object, the slot will only be called when the object
+   *     is about to be deleted, and the two parameters are always 0. 
+   * @return the connected @c Connection.
    */
-  virtual Connection *ConnectToOnDeleteSignal(Slot0<void> *slot) = 0;
+  virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot) = 0;
 
   /**
    * Get the info of a property by its name.

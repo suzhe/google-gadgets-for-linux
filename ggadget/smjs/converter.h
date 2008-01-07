@@ -44,14 +44,12 @@ JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *owner,
 /**
  * Converts a @c jsval to a @c Variant depending source @c jsval type.
  * @param cx JavaScript context.
- * @param owner the related JavaScript object wrapper in which the owner of
- *     the converted value is wrapped.
  * @param js_val source @c jsval value.
  * @param[out] native_val result @c Variant value.
  * @return @c JS_TRUE if succeeds.
  */
-JSBool ConvertJSToNativeVariant(JSContext *cx, NativeJSWrapper *owner,
-                                jsval js_val, Variant *native_val);
+JSBool ConvertJSToNativeVariant(JSContext *cx, jsval js_val,
+                                Variant *native_val);
 
 /**
  * Frees a native value that was created by @c ConvertJSToNative(),
