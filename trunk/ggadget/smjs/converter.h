@@ -91,7 +91,7 @@ JSFunction *CompileFunction(JSContext *cx, const char *script,
 /**
  * Compile and evaluate a piece of script.
  */
-JSBool EvaluateScript(JSContext *cx, const char *script,
+JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
                       const char *filename, int lineno, jsval *rval);
 
 } // namespace smjs

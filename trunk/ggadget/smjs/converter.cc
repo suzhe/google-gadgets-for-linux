@@ -427,7 +427,7 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
           *params = NULL;
           JS_ReportError(cx,
                "Failed to convert argument %d(%s) of function(%s) to native",
-               name, i, PrintJSValue(cx, argv[i]).c_str());
+               i, PrintJSValue(cx, argv[i]).c_str(), name);
           return JS_FALSE;
         }
       }
@@ -642,13 +642,21 @@ JSFunction *CompileFunction(JSContext *cx, const char *script,
 
   std::string massaged_script = MassageJScript(script, filename, lineno);
   UTF16String utf16_string;
-  ConvertStringUTF8ToUTF16(massaged_script, &utf16_string);
-  return JS_CompileUCFunction(cx, NULL, NULL, 0, NULL,
-                              utf16_string.c_str(), utf16_string.size(),
+  if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
+      massaged_script.size()) {
+    return JS_CompileUCFunction(cx, NULL, NULL, 0, NULL,
+                                utf16_string.c_str(), utf16_string.size(),
+                                filename, lineno);
+  } else {
+    JS_ReportError(cx, "Warning: script %s contains invalid UTF-8 sequences "
+                   "and will be treated as ISO8859-1", filename);
+    return JS_CompileFunction(cx, NULL, NULL, 0, NULL,
+                              massaged_script.c_str(), massaged_script.size(),
                               filename, lineno);
+  }
 }
 
-JSBool EvaluateScript(JSContext *cx, const char *script,
+JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
                       const char *filename, int lineno, jsval *rval) {
   if (!script)
     return JS_FALSE;
@@ -657,13 +665,13 @@ JSBool EvaluateScript(JSContext *cx, const char *script,
   UTF16String utf16_string;
   if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
       massaged_script.size()) {
-    return JS_EvaluateUCScript(cx, JS_GetGlobalObject(cx),
+    return JS_EvaluateUCScript(cx, object,
                                utf16_string.c_str(), utf16_string.size(),
                                filename, lineno, rval);
   } else {
     JS_ReportError(cx, "Warning: script %s contains invalid UTF-8 sequences "
                    "and will be treated as ISO8859-1", filename);
-    return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
+    return JS_EvaluateScript(cx, object,
                              massaged_script.c_str(), massaged_script.size(),
                              filename, lineno, rval);
   }

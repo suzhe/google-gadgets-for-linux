@@ -43,7 +43,7 @@ class EventHandler {
               current_scriptable_event->GetEvent()->GetType());
     ggadget::MouseEvent event(ggadget::Event::EVENT_MOUSE_CLICK, 123, 456,
                               ggadget::MouseEvent::BUTTON_LEFT, 999, 666);
-    ggadget::ScriptableEvent scriptable_event(&event, NULL, NULL);
+    ggadget::ScriptableEvent scriptable_event(&event, view_, NULL);
     view_->FireEvent(&scriptable_event, signal2_);
     // The current event should be the same as before.
     ASSERT_EQ(current_scriptable_event, view_->GetEvent());
@@ -74,7 +74,7 @@ TEST(ViewTest, FireEvent) {
   EventHandler handler(vh.GetViewInternal());
   ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN,
                                2468, 1357, NULL);
-  ggadget::ScriptableEvent scriptable_event(&event, NULL, NULL);
+  ggadget::ScriptableEvent scriptable_event(&event, vh.GetView(), NULL);
   vh.GetViewInternal()->FireEvent(&scriptable_event, handler.signal1_);
   ASSERT_TRUE(handler.fired1_);
   ASSERT_TRUE(handler.fired2_);

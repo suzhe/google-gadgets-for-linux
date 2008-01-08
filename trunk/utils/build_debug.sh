@@ -27,5 +27,5 @@ cd build/debug
 cmake -DCMAKE_BUILD_TYPE=Debug "$srcdir"
 make "$@"
 if ! ctest . ; then
-  cat Testing/Temporary/LastTest.log
+  echo "See Testing/Temporary/LastTest.log for details."
 fi

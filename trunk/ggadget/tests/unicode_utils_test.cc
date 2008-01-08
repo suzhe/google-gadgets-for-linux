@@ -161,6 +161,135 @@ TEST(UnicodeUtils, IsLegalString) {
   EXPECT_TRUE(IsLegalUTF16String(invalid_utf16_string, invalid_utf16_length));
 } 
 
+TEST(UnicodeUtils, DetectEncodingFromBOM) {
+  std::string encoding("Garbage");
+  EXPECT_FALSE(DetectEncodingFromBOM(std::string(""), &encoding));
+  EXPECT_STREQ("", encoding.c_str());
+  EXPECT_FALSE(DetectEncodingFromBOM(std::string("ABCDEF"), &encoding));
+  EXPECT_STREQ("", encoding.c_str());
+
+  std::string utf8input(kUTF8BOM, sizeof(kUTF8BOM));
+  EXPECT_TRUE(DetectEncodingFromBOM(utf8input, &encoding));
+  EXPECT_STREQ("UTF-8", encoding.c_str());
+  utf8input += "Some";
+  EXPECT_TRUE(DetectEncodingFromBOM(utf8input, &encoding));
+  EXPECT_STREQ("UTF-8", encoding.c_str());
+
+  std::string utf16le_input(kUTF16LEBOM, sizeof(kUTF16LEBOM));
+  EXPECT_TRUE(DetectEncodingFromBOM(utf16le_input, &encoding));
+  EXPECT_STREQ("UTF-16LE", encoding.c_str());
+  utf16le_input.append("S\0o\0m\0e\0", 8);
+  EXPECT_TRUE(DetectEncodingFromBOM(utf16le_input, &encoding));
+  EXPECT_STREQ("UTF-16LE", encoding.c_str());
+
+  std::string utf16be_input(kUTF16BEBOM, sizeof(kUTF16BEBOM));
+  EXPECT_TRUE(DetectEncodingFromBOM(utf16be_input, &encoding));
+  EXPECT_STREQ("UTF-16BE", encoding.c_str());
+  utf16le_input.append("\0S\0o\0m\0e", 8);
+  EXPECT_TRUE(DetectEncodingFromBOM(utf16be_input, &encoding));
+  EXPECT_STREQ("UTF-16BE", encoding.c_str());
+
+  std::string utf32le_input(kUTF32LEBOM, sizeof(kUTF32LEBOM));
+  EXPECT_TRUE(DetectEncodingFromBOM(utf32le_input, &encoding));
+  EXPECT_STREQ("UTF-32LE", encoding.c_str());
+  utf32le_input.append("S\0\0\0o\0\0\0m\0\0\0e\0\0\0", 16);
+  EXPECT_TRUE(DetectEncodingFromBOM(utf32le_input, &encoding));
+  EXPECT_STREQ("UTF-32LE", encoding.c_str());
+
+  std::string utf32be_input(kUTF32BEBOM, sizeof(kUTF32BEBOM));
+  EXPECT_TRUE(DetectEncodingFromBOM(utf32be_input, &encoding));
+  EXPECT_STREQ("UTF-32BE", encoding.c_str());
+  utf32le_input.append("\0\0\0S\0\0\0o\0\0\0m\0\0\0e", 16);
+  EXPECT_TRUE(DetectEncodingFromBOM(utf32be_input, &encoding));
+  EXPECT_STREQ("UTF-32BE", encoding.c_str());
+}
+
+TEST(UnicodeUtils, ConvertStreamToUTF8ByBOM) {
+  std::string encoding("Garbage");
+  std::string result("Garbage");
+  EXPECT_EQ(0u, ConvertStreamToUTF8ByBOM(std::string(""), &result, &encoding));
+  EXPECT_STREQ("", result.c_str());
+  EXPECT_STREQ("", encoding.c_str());
+  EXPECT_EQ(0u, ConvertStreamToUTF8ByBOM(std::string("ABCDEF"), &result, NULL));
+  EXPECT_STREQ("", result.c_str());
+
+  std::string utf8bom(kUTF8BOM, sizeof(kUTF8BOM));
+  std::string utf8input(kUTF8BOM, sizeof(kUTF8BOM));
+  EXPECT_EQ(utf8input.size(),
+            ConvertStreamToUTF8ByBOM(utf8input, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-8", encoding.c_str());
+  utf8input += "Some";
+  EXPECT_EQ(utf8input.size(),
+            ConvertStreamToUTF8ByBOM(utf8input, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-8", encoding.c_str());
+
+  std::string utf16le_input(kUTF16LEBOM, sizeof(kUTF16LEBOM));
+  EXPECT_EQ(utf16le_input.size(),
+            ConvertStreamToUTF8ByBOM(utf16le_input, &result, &encoding));
+  EXPECT_STREQ(utf8bom.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-16LE", encoding.c_str());
+  utf16le_input.append("S\0o\0m\0e\0", 8);
+  EXPECT_EQ(utf16le_input.size(),
+            ConvertStreamToUTF8ByBOM(utf16le_input, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-16LE", encoding.c_str());
+  std::string utf16le_input_extra = utf16le_input + "1";
+  EXPECT_EQ(utf16le_input.size(),
+            ConvertStreamToUTF8ByBOM(utf16le_input_extra, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-16LE", encoding.c_str());
+
+  std::string utf16be_input(kUTF16BEBOM, sizeof(kUTF16BEBOM));
+  EXPECT_EQ(utf16be_input.size(),
+            ConvertStreamToUTF8ByBOM(utf16be_input, &result, &encoding));
+  EXPECT_STREQ(utf8bom.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-16BE", encoding.c_str());
+  utf16be_input.append("\0S\0o\0m\0e", 8);
+  EXPECT_EQ(utf16be_input.size(),
+            ConvertStreamToUTF8ByBOM(utf16be_input, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-16BE", encoding.c_str());
+  std::string utf16be_input_extra = utf16be_input + "1";
+  EXPECT_EQ(utf16be_input.size(),
+            ConvertStreamToUTF8ByBOM(utf16be_input_extra, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-16BE", encoding.c_str());
+
+  std::string utf32le_input(kUTF32LEBOM, sizeof(kUTF32LEBOM));
+  EXPECT_EQ(utf32le_input.size(),
+            ConvertStreamToUTF8ByBOM(utf32le_input, &result, &encoding));
+  EXPECT_STREQ(utf8bom.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-32LE", encoding.c_str());
+  utf32le_input.append("S\0\0\0o\0\0\0m\0\0\0e\0\0\0", 16);
+  EXPECT_EQ(utf32le_input.size(),
+            ConvertStreamToUTF8ByBOM(utf32le_input, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-32LE", encoding.c_str());
+  std::string utf32le_input_extra = utf32le_input + "123";
+  EXPECT_EQ(utf32le_input.size(),
+            ConvertStreamToUTF8ByBOM(utf32le_input_extra, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-32LE", encoding.c_str());
+
+  std::string utf32be_input(kUTF32BEBOM, sizeof(kUTF32BEBOM));
+  EXPECT_EQ(utf32be_input.size(),
+            ConvertStreamToUTF8ByBOM(utf32be_input, &result, &encoding));
+  EXPECT_STREQ(utf8bom.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-32BE", encoding.c_str());
+  utf32be_input.append("\0\0\0S\0\0\0o\0\0\0m\0\0\0e", 16);
+  EXPECT_EQ(utf32be_input.size(),
+            ConvertStreamToUTF8ByBOM(utf32be_input, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-32BE", encoding.c_str());
+  std::string utf32be_input_extra = utf32be_input + "123";
+  EXPECT_EQ(utf32be_input.size(),
+            ConvertStreamToUTF8ByBOM(utf32be_input_extra, &result, &encoding));
+  EXPECT_STREQ(utf8input.c_str(), result.c_str());
+  EXPECT_STREQ("UTF-32BE", encoding.c_str());
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
 

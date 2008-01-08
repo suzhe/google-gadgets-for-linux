@@ -226,6 +226,12 @@ class ScriptableHelper : public I {
   /** Gets current reference count. */
   int GetRefCount() const { return impl_->GetRefCount(); }
 
+  /**
+   * Used to register a setter that does nothing. There is no DummyGetter()
+   * because a NULL getter acts like it.
+   */
+  static void DummySetter(const Variant &) { }
+
   /** @see ScriptableInterface::Attach() */
   virtual ScriptableInterface::OwnershipPolicy Attach() {
     return impl_->Attach();

@@ -22,7 +22,7 @@
 
 namespace ggadget {
 
-class ViewInterface;
+class View;
 
 /**
  * This class wraps a view into the old @c GoogleDesktopDisplayWindow interface
@@ -32,7 +32,7 @@ class DisplayWindow: public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x0466c36b78944d34, ScriptableInterface);
 
-  DisplayWindow(ViewInterface *view);
+  DisplayWindow(View *view);
   virtual ~DisplayWindow();
 
   /** Adjust the size of the window to proper size. */

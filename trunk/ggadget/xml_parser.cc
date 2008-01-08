@@ -67,42 +67,9 @@ static const char kXMLTagUTF32BE[] = {
   0, 0, 0, 'x', 0, 0, 0, 'm', 0, 0, 0, 'l', 0, 0, 0, ' '
 };
 
-static const char kUTF8BOM[] = { '\xEF', '\xBB', '\xBF' };
-static const char kUTF16LEBOM[] = { '\xFF', '\xFE' };
-static const char kUTF16BEBOM[] = { '\xFE', '\xFF' };
-static const char kUTF32LEBOM[] = { '\xFF', '\xFE', 0, 0 };
-static const char kUTF32BEBOM[] = { 0, 0, '\xFF', '\xFE' };
-
 #define STARTS_WITH(content_ptr, content_size, pattern) \
     ((content_size) >= sizeof(pattern) && \
      memcmp((content_ptr), (pattern), sizeof(pattern)) == 0)
-
-static bool DetectEncodingFromBOM(const std::string &content,
-                                  std::string *encoding) {
-  const char *content_ptr = content.c_str();
-  size_t content_size = content.size();
-  if (STARTS_WITH(content_ptr, content_size, kUTF8BOM)) {
-    *encoding = "UTF-8";
-    return true;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF16LEBOM)) {
-    *encoding = "UTF-16LE";
-    return true;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF16BEBOM)) {
-    *encoding = "UTF-16BE";
-    return true;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF32LEBOM)) {
-    *encoding = "UTF-32LE";
-    return true;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF32BEBOM)) {
-    *encoding = "UTF-32BE";
-    return true;
-  }
-  return false;
-}
 
 // Used in ConvertStringToUTF8 to detect errors during conversion.
 static bool g_error_occurred = false;

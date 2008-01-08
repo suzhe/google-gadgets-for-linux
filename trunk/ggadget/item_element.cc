@@ -44,9 +44,6 @@ class ItemElement::Impl {
     background_ = NULL;
   }
 
-  void DummySetter(const Variant &value) { }
-  Variant DummyGetter() const { return Variant(); }
-
   ListBoxElement *parent_;
   bool selected_, mouseover_, drawoverlay_;
   Texture *background_;
@@ -65,18 +62,10 @@ ItemElement::ItemElement(BasicElement *parent, View *view,
                    NewSlot(this, &ItemElement::IsSelected),
                    NewSlot(this, &ItemElement::SetSelected));
   if (impl_->parent_) {
-    RegisterProperty("x",
-                     NewSlot(impl_, &Impl::DummyGetter),
-                     NewSlot(impl_, &Impl::DummySetter));
-    RegisterProperty("y",
-                     NewSlot(impl_, &Impl::DummyGetter),
-                     NewSlot(impl_, &Impl::DummySetter));
-    RegisterProperty("width",
-                     NewSlot(impl_->parent_, &ListBoxElement::GetItemWidth),
-                     NewSlot(impl_, &Impl::DummySetter));
-    RegisterProperty("height",
-                     NewSlot(impl_->parent_, &ListBoxElement::GetItemHeight),
-                     NewSlot(impl_, &Impl::DummySetter));
+    RegisterProperty("x", NULL, NewSlot(DummySetter));
+    RegisterProperty("y", NULL, NewSlot(DummySetter));
+    RegisterProperty("width", NULL, NewSlot(DummySetter));
+    RegisterProperty("height", NULL, NewSlot(DummySetter));
   }
 }
 

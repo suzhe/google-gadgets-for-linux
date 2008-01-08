@@ -109,7 +109,7 @@ TEST_F(BasicElementTest, TestRelativeHeight) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
   ggadget::BasicElement *m =
-      vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
+      vh.GetViewInternal()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeHeight(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, m->GetRelativeHeight());
@@ -207,7 +207,7 @@ TEST_F(BasicElementTest, TestRelativePinX) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
   ggadget::BasicElement *m =
-      vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
+      vh.GetViewInternal()->GetChildren()->AppendElement("muffin", NULL);
   m->SetPixelWidth(200.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   m->SetRelativePinX(0.5);
@@ -246,7 +246,7 @@ TEST_F(BasicElementTest, TestRelativePinY) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
   ggadget::BasicElement *m =
-      vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
+      vh.GetViewInternal()->GetChildren()->AppendElement("muffin", NULL);
   m->SetPixelHeight(150.0);
   ASSERT_TRUE(vh.GetQueuedDraw());
   m->SetRelativePinY(0.5);
@@ -305,7 +305,7 @@ TEST_F(BasicElementTest, TestRelativeWidth) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
   ggadget::BasicElement *m =
-      vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
+      vh.GetViewInternal()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeWidth(0.50);
   ASSERT_TRUE(vh.GetQueuedDraw());
   ASSERT_FLOAT_EQ(0.50, m->GetRelativeWidth());
@@ -363,7 +363,7 @@ TEST_F(BasicElementTest, TestRelativeX) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
   ggadget::BasicElement *m =
-      vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
+      vh.GetViewInternal()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeWidth(0.5);
   ASSERT_TRUE(vh.GetQueuedDraw());
   m->SetRelativeX(0.5);
@@ -406,7 +406,7 @@ TEST_F(BasicElementTest, TestRelativeY) {
   MockedViewHost vh(gFactory);
   vh.GetView()->SetSize(400, 300);
   ggadget::BasicElement *m =
-      vh.GetView()->GetChildren()->AppendElement("muffin", NULL);
+      vh.GetViewInternal()->GetChildren()->AppendElement("muffin", NULL);
   m->SetRelativeHeight(0.5);
   ASSERT_TRUE(vh.GetQueuedDraw());
   m->SetRelativeY(0.5);

@@ -425,4 +425,130 @@ bool IsLegalUTF16String(const UTF16String &src) {
   return IsLegalUTF16String(src.c_str(), src.length());
 }
 
+#define STARTS_WITH(content_ptr, content_size, pattern) \
+    ((content_size) >= sizeof(pattern) && \
+     memcmp((content_ptr), (pattern), sizeof(pattern)) == 0)
+
+bool DetectEncodingFromBOM(const std::string &stream, std::string *encoding) {
+  ASSERT(encoding);
+  const char *content_ptr = stream.c_str();
+  size_t content_size = stream.size();
+  if (STARTS_WITH(content_ptr, content_size, kUTF8BOM)) {
+    if (encoding) *encoding = "UTF-8";
+    return true;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF32LEBOM)) {
+    if (encoding) *encoding = "UTF-32LE";
+    return true;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF32BEBOM)) {
+    if (encoding) *encoding = "UTF-32BE";
+    return true;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF16LEBOM)) {
+    if (encoding) *encoding = "UTF-16LE";
+    return true;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF16BEBOM)) {
+    if (encoding) *encoding = "UTF-16BE";
+    return true;
+  }
+  if (encoding) encoding->clear();
+  return false;
+}
+
+static void ConvertUTF16LEStreamToString(const std::string &input,
+                                         UTF16String *result) {
+  ASSERT(result);
+  result->clear();
+  size_t size = input.size();
+  if (size < 2) return;
+  result->reserve(size / 2);
+  const unsigned char *stream =
+      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  for (size_t i = 0; i < size - 1; i += 2)
+    result->push_back(stream[i] | (stream[i + 1] << 8));
+}
+
+static void ConvertUTF16BEStreamToString(const std::string &input,
+                                         UTF16String *result) {
+  ASSERT(result);
+  result->clear();
+  size_t size = input.size();
+  if (size < 2) return;
+  result->reserve(size / 2);
+  const unsigned char *stream =
+      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  for (size_t i = 0; i < size - 1; i += 2)
+    result->push_back((stream[i] << 8) | stream[i + 1]);
+}
+
+static void ConvertUTF32LEStreamToString(const std::string &input,
+                                         UTF32String *result) {
+  ASSERT(result);
+  result->clear();
+  size_t size = input.size();
+  if (size < 4) return;
+  result->reserve(size / 4);
+  const unsigned char *stream =
+      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  for (size_t i = 0; i < size - 3; i += 4)
+    result->push_back(stream[i] | (stream[i + 1] << 8) |
+                      (stream[i + 2] << 16) | (stream[i + 3] << 24));
+}
+
+static void ConvertUTF32BEStreamToString(const std::string &input,
+                                         UTF32String *result) {
+  ASSERT(result);
+  result->clear();
+  size_t size = input.size();
+  if (size < 4) return;
+  result->reserve(size / 4);
+  const unsigned char *stream =
+      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  for (size_t i = 0; i < size - 3; i += 4)
+    result->push_back((stream[i] << 24) | (stream[i + 1] << 16) |
+                      (stream[i + 2] << 8) | stream[i + 3]);
+}
+
+size_t ConvertStreamToUTF8ByBOM(const std::string &stream, std::string *result,
+                                std::string *encoding) {
+  ASSERT(result);
+  const char *content_ptr = stream.c_str();
+  size_t content_size = stream.size();
+
+  if (STARTS_WITH(content_ptr, content_size, kUTF8BOM)) {
+    if (encoding) *encoding = "UTF-8";
+    *result = stream;
+    return stream.size();
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF32LEBOM)) {
+    if (encoding) *encoding = "UTF-32LE";
+    UTF32String utf32;
+    ConvertUTF32LEStreamToString(stream, &utf32);
+    return ConvertStringUTF32ToUTF8(utf32, result) * 4;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF32BEBOM)) {
+    if (encoding) *encoding = "UTF-32BE";
+    UTF32String utf32;
+    ConvertUTF32BEStreamToString(stream, &utf32);
+    return ConvertStringUTF32ToUTF8(utf32, result) * 4;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF16LEBOM)) {
+    if (encoding) *encoding = "UTF-16LE";
+    UTF16String utf16;
+    ConvertUTF16LEStreamToString(stream, &utf16);
+    return ConvertStringUTF16ToUTF8(utf16, result) * 2;
+  }
+  if (STARTS_WITH(content_ptr, content_size, kUTF16BEBOM)) {
+    if (encoding) *encoding = "UTF-16BE";
+    UTF16String utf16;
+    ConvertUTF16BEStreamToString(stream, &utf16);
+    return ConvertStringUTF16ToUTF8(utf16, result) * 2;
+  }
+  result->clear();
+  if (encoding) encoding->clear();
+  return 0;
+}
+
 } // namespace ggadget

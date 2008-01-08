@@ -32,6 +32,8 @@ namespace ggadget {
 namespace {
 
 static const long kMaxRedirections = 10;
+static const long kTimeoutMs = 60000;
+static const long kConnectTimeoutMs = 10000;
 
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
@@ -246,6 +248,9 @@ class XMLHttpRequest
     curl_easy_setopt(curl_, CURLOPT_AUTOREFERER, 1);
     curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(curl_, CURLOPT_MAXREDIRS, kMaxRedirections);
+    curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
+    curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, kTimeoutMs);
+    curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT_MS, kConnectTimeoutMs);
 
     curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
     curl_easy_setopt(curl_, CURLOPT_READDATA, this);
@@ -478,7 +483,8 @@ class XMLHttpRequest
 
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *data) {
-    // DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu", size, mem_block);
+    // DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu: %s", size, mem_block,
+    //    std::string(reinterpret_cast<char *>(ptr), size * mem_block).c_str());
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
@@ -562,9 +568,9 @@ class XMLHttpRequest
           pos = value.find(';');
           if (pos != std::string::npos) {
             response_content_type_ = TrimString(value.substr(0, pos));
-            pos = value.find("encoding");
+            pos = value.find("charset");
             if (pos != std::string::npos) {
-              pos += 8;
+              pos += 7;
               while (pos < value.length() &&
                      (isspace(value[pos]) || value[pos] == '=')) {
                 pos++;
@@ -586,7 +592,8 @@ class XMLHttpRequest
 
   static size_t WriteBodyCallback(void *ptr, size_t size,
                                   size_t mem_block, void *data) {
-    // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu", size, mem_block);
+    // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu: %s", size, mem_block,
+    //    std::string(reinterpret_cast<char *>(ptr), size * mem_block).c_str());
     XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED || this_p->state_ == LOADING);
@@ -831,8 +838,8 @@ class XMLHttpRequest
   }
 
   void ScriptSend(const Variant &v_data) {
-    if (v_data.type() == Variant::TYPE_STRING) {
-      std::string data = VariantValue<std::string>()(v_data);
+    std::string data;
+    if (v_data.ConvertToString(&data)) {
       CheckException(Send(data.c_str(), data.length()));
     } else if (v_data.type() == Variant::TYPE_SCRIPTABLE) {
       ScriptableInterface *scriptable =

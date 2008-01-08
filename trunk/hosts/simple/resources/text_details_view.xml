@@ -7,5 +7,7 @@ function onopen() {
 }
 -->
   </script>
-  <label name="label" width="100%" height="100%" wordWrap="true"/>
+  <div width="100%" height="100%" autoscroll="true">
+    <label name="label" width="100%" wordWrap="true"/>
+  </div>
 </view>

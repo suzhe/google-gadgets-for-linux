@@ -24,14 +24,9 @@
 namespace ggadget {
 
 class CanvasInterface;
-class BasicElement;
-class ElementFactory;
-class Elements;
 class FileManagerInterface;
 class GraphicsInterface;
-class ScriptableEvent;
 class ScriptContextInterface;
-class Texture;
 class MenuInterface;
 class ViewHostInterface;
 class XMLParserInterface;
@@ -166,37 +161,6 @@ class ViewInterface : public ScriptableInterface {
    * during the next draw.
    */
   virtual void MarkRedraw() = 0;
-
- public:  // Element management functions.
-  /**
-   * Retrieves the ElementFactory used to create elements in this
-   * view.
-   */
-  virtual ElementFactory *GetElementFactory() const = 0;
-
-  /**
-   * Retrieves a collection that contains the immediate children of this
-   * view.
-   */
-  virtual const Elements *GetChildren() const = 0;
-  /**
-   * Retrieves a collection that contains the immediate children of this
-   * view.
-   */
-  virtual Elements *GetChildren() = 0;
-
-  /**
-   * Looks up an element from all elements directly or indirectly contained
-   * in this view by its name.
-   * @param name element name.
-   * @return the element pointer if found; or @c NULL if not found.
-   */
-  virtual BasicElement *GetElementByName(const char *name) = 0;
-
-  /**
-   * Constant version of the above GetElementByName();
-   */
-  virtual const BasicElement *GetElementByName(const char *name) const = 0;
 
  public:
   /**

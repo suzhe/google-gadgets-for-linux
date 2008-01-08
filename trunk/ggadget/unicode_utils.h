@@ -251,9 +251,36 @@ bool IsLegalUTF16String(const UTF16Char *src, size_t length);
  */
 bool IsLegalUTF16String(const UTF16String &src);
 
-static const UTF32Char kUnicodeReplacementChar = 0xFFFD;
-static const UTF32Char kUnicodeMaxLegalChar = 0x10FFFF;
-static const UTF32Char kUnicodeMaxBMPChar = 0xFFFF;
+const UTF32Char kUnicodeReplacementChar = 0xFFFD;
+const UTF32Char kUnicodeMaxLegalChar = 0x10FFFF;
+const UTF32Char kUnicodeMaxBMPChar = 0xFFFF;
+
+/** Various BOMs. Note: they are not zero-ended strings, but char arrays. */
+const char kUTF8BOM[] = { '\xEF', '\xBB', '\xBF' };
+const char kUTF16LEBOM[] = { '\xFF', '\xFE' };
+const char kUTF16BEBOM[] = { '\xFE', '\xFF' };
+const char kUTF32LEBOM[] = { '\xFF', '\xFE', 0, 0 };
+const char kUTF32BEBOM[] = { 0, 0, '\xFE', '\xFF' };
+
+/**
+ * Detects the encoding of a byte stream if it has BOM.
+ * @param stream the input byte stream.
+ * @param[out] encoding (optional) name of the encoding detected from BOM.
+ *     Possible values are "UTF-8", "UTF-16LE", "UTF-16BE", "UTF-32LE"
+ *     and "UTF-32BE".
+ * @return @c true if the input stream has valid BOM.
+ */
+bool DetectEncodingFromBOM(const std::string &stream, std::string *encoding);
+
+/**
+ * Converts a byte stream into UTF8 if the stream has BOM.
+ * @param stream the input byte stream.
+ * @param[out] result the converted result.
+ * @param[out] encoding (optional)the encoding detected from BOM.
+ * @return the number of bytes successfully converted.
+ */
+size_t ConvertStreamToUTF8ByBOM(const std::string &stream, std::string *result,
+                                std::string *encoding);
 
 } // namespace ggadget
 

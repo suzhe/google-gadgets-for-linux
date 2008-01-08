@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-class ViewInterface;
+class View;
 class BasicElement;
 class Elements;
 class DOMDocumentInterface;
@@ -33,7 +33,7 @@ class DOMDocumentInterface;
  * @return @c true if loading and XML parsing succeeds. Errors during
  *     view/element hierarchy setup are only logged.
  */
-bool SetupViewFromFile(ViewInterface *view, const char *filename);
+bool SetupViewFromFile(View *view, const char *filename);
 
 /**
  * Sets up a view by parsing xml content.
@@ -43,7 +43,7 @@ bool SetupViewFromFile(ViewInterface *view, const char *filename);
  * @return @c true if XML parsing succeeds. Errors during view/element
  *     hierarchy setup are only logged.
  */
-bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
+bool SetupViewFromXML(View *view, const std::string &xml,
                       const char *filename);
 
 /**
@@ -52,9 +52,8 @@ bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
  * @param elements the elements collection.
  * @param xml the XML definition of the element.
  */
-BasicElement *AppendElementFromXML(ViewInterface *view,
-                                       Elements *elements,
-                                       const std::string &xml);
+BasicElement *AppendElementFromXML(View *view, Elements *elements,
+                                   const std::string &xml);
 
 /**
  * Creates an element according to XML definition and inserts it to elements.
@@ -63,10 +62,9 @@ BasicElement *AppendElementFromXML(ViewInterface *view,
  * @param xml the XML definition of the element.
  * @param before insert the new element before this element.
  */
-BasicElement *InsertElementFromXML(ViewInterface *view,
-                                       Elements *elements,
-                                       const std::string &xml,
-                                       const BasicElement *before);
+BasicElement *InsertElementFromXML(View *view, Elements *elements,
+                                   const std::string &xml,
+                                   const BasicElement *before);
 
 } // namespace ggadget
 

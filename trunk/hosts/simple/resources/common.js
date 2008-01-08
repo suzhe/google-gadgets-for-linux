@@ -272,7 +272,7 @@ function Enumerator(coll) {
 
   this.item = function() {
     if (this.atEnd()) return null;
-    return coll.constructor == Array ? coll[pos_] : coll.item(pos_);
+    return Array.prototype.isPrototypOf(coll) ? coll[pos_] : coll.item(pos_);
   };
 
   this.moveFirst = function() {
@@ -290,16 +290,9 @@ function Enumerator(coll) {
   last_item_ = this.item();
 }
 
-// Adapters Microsoft Vardate type.
-Date.prototype.getVarDate = function() {
-  return this;
-}
-
 function VBArray(array) {
   this.toArray = function() { return array; };
 }
 
-// Adapters Microsoft VBArray type.
-Array.prototype.toArray = function() {
-  return this;
-};
+// Date.prototype.getVarDate() and Array.prototype.toArray() are defined in
+// C++ programs to avoid the methods from being enumerated.

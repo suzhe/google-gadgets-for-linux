@@ -123,7 +123,7 @@ class View::Impl {
                    current_time - last_finished_time_ > kMinInterval)) {
         if (is_event_) {
           TimerEvent event(watch_id, value);
-          ScriptableEvent scriptable_event(&event, NULL, NULL);
+          ScriptableEvent scriptable_event(&event, impl_->owner_, NULL);
           impl_->FireEventSlot(&scriptable_event, slot_);
         } else {
           slot_->Call(0, NULL);
@@ -192,6 +192,9 @@ class View::Impl {
   ~Impl() {
     ASSERT(event_stack_.empty());
     ASSERT(death_detected_elements_.empty());
+    SimpleEvent event(Event::EVENT_CLOSE);
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
+    FireEvent(&scriptable_event, onclose_event_);
     on_destroy_signal_.Emit(0, NULL);
   }
 
@@ -274,7 +277,7 @@ class View::Impl {
   bool InitFromFile(const char *filename) {
     if (SetupViewFromFile(owner_, filename)) {
       SimpleEvent event(Event::EVENT_OPEN);
-      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      ScriptableEvent scriptable_event(&event, owner_, NULL);
       FireEvent(&scriptable_event, onopen_event_);
       return scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED;
     } else {
@@ -441,7 +444,7 @@ class View::Impl {
 
   EventResult OnMouseEvent(const MouseEvent &event) {
     // Send event to view first.
-    ScriptableEvent scriptable_event(&event, NULL, NULL);
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
     if (event.GetType() != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(view): %g %g %d %d %d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
@@ -552,7 +555,7 @@ class View::Impl {
   }
 
   EventResult OnKeyEvent(const KeyboardEvent &event) {
-    ScriptableEvent scriptable_event(&event, NULL, NULL);
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
     DLOG("%s(view): %d %d", scriptable_event.GetName(),
          event.GetKeyCode(), event.GetModifier());
     switch (event.GetType()) {
@@ -583,7 +586,7 @@ class View::Impl {
   }
 
   EventResult OnOtherEvent(const Event &event, Event *output_event) {
-    ScriptableEvent scriptable_event(&event, NULL, output_event);
+    ScriptableEvent scriptable_event(&event, owner_, output_event);
     DLOG("%s(view)", scriptable_event.GetName());
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
@@ -799,7 +802,7 @@ class View::Impl {
       host_->QueueDraw();
 
       SimpleEvent event(Event::EVENT_SIZE);
-      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      ScriptableEvent scriptable_event(&event, owner_, NULL);
       FireEvent(&scriptable_event, onsize_event_);
     }
     return true;
@@ -906,7 +909,7 @@ class View::Impl {
 
   void OnOptionChanged(const char *name) {
     OptionChangedEvent event(name);
-    ScriptableEvent scriptable_event(&event, NULL, NULL);
+    ScriptableEvent scriptable_event(&event, owner_, NULL);
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
@@ -1013,7 +1016,7 @@ class View::Impl {
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedEvents;
   PostedEvents posted_events_;
-  BasicElement *posting_event_element_;
+  ScriptableInterface *posting_event_element_;
   BasicElement *popup_element_;
   int post_event_token_;
   int mark_redraw_token_;

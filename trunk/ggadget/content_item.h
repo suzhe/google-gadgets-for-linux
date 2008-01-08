@@ -163,9 +163,17 @@ class ContentItem : public ScriptableHelperOwnershipShared {
   std::string GetTooltip() const;
   void SetTooltip(const char *tooltip);
 
-  /** Sets the item's display position. */
-  void SetRect(int x, int y, int width, int height);
-  void GetRect(int *x, int *y, int *width, int *height);
+  /** Gets and sets the item's required display position. */
+  void GetRect(int *x, int *y, int *width, int *height,
+               bool *x_relative, bool *y_relative,
+               bool *width_relative, bool *height_relative);
+  void SetRect(int x, int y, int width, int height,
+               bool x_relative, bool y_relative,
+               bool width_relative, bool height_relative);
+
+  /** Gets and sets the item's actual display position. */
+  void GetLayoutRect(int *x, int *y, int *width, int *height);
+  void SetLayoutRect(int x, int y, int width, int height);
 
   /** Returns if this item can be opened by the user. */
   bool CanOpen() const;
