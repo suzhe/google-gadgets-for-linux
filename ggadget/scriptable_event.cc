@@ -23,12 +23,13 @@ namespace ggadget {
 
 class ScriptableEvent::Impl {
  public:
-  Impl(const Event *event, BasicElement *src_element,
+  Impl(const Event *event, ScriptableInterface *src_element,
        Event *output_event)
        : event_(event),
          return_value_(EVENT_RESULT_UNHANDLED),
          src_element_(src_element),
          output_event_(output_event) {
+    ASSERT(src_element);
   }
 
   ScriptableArray *ScriptGetDragFiles() {
@@ -47,12 +48,12 @@ class ScriptableEvent::Impl {
 
   const Event *event_;
   EventResult return_value_;
-  BasicElement *src_element_;
+  ScriptableInterface *src_element_;
   Event *output_event_;
 };
 
 ScriptableEvent::ScriptableEvent(const Event *event,
-                                 BasicElement *src_element,
+                                 ScriptableInterface *src_element,
                                  Event *output_event)
     : impl_(new Impl(event, src_element, output_event)) {
   RegisterProperty("returnValue",
@@ -185,13 +186,13 @@ Event *ScriptableEvent::GetOutputEvent() {
   return impl_->output_event_;
 }
 
-BasicElement *ScriptableEvent::GetSrcElement() {
+ScriptableInterface *ScriptableEvent::GetSrcElement() {
   return impl_->src_element_;
 }
-const BasicElement *ScriptableEvent::GetSrcElement() const {
+const ScriptableInterface *ScriptableEvent::GetSrcElement() const {
   return impl_->src_element_;
 }
-void ScriptableEvent::SetSrcElement(BasicElement *src_element) {
+void ScriptableEvent::SetSrcElement(ScriptableInterface *src_element) {
   impl_->src_element_ = src_element;
 }
 

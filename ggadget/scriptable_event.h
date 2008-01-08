@@ -71,14 +71,13 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
   /**
    * @param event it's not declared as a const reference because sometimes we
    *     need dynamically allocated event (e.g. @c View::PostEvent()).
-   * @param src_element the element from which is event is fired.
-   *     If the event is fired from the view, @a src_element should be @c NULL.
+   * @param src_element the element or view from which is event is fired.
    * @param output_event only used for some events (such as
    *     @c Event::EVENT_SIZING) to store the output event.
    *     Can be @c NULL if the event has no output.
    */
   ScriptableEvent(const Event *event,
-                  BasicElement *src_element,
+                  ScriptableInterface *src_element,
                   Event *output_event);
   virtual ~ScriptableEvent();
 
@@ -88,9 +87,9 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
   const Event *GetOutputEvent() const;
   Event *GetOutputEvent();
 
-  BasicElement *GetSrcElement();
-  const BasicElement *GetSrcElement() const;
-  void SetSrcElement(BasicElement *src_element);
+  ScriptableInterface *GetSrcElement();
+  const ScriptableInterface *GetSrcElement() const;
+  void SetSrcElement(ScriptableInterface *src_element);
 
   EventResult GetReturnValue() const;
   void SetReturnValue(EventResult return_value);

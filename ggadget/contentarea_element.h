@@ -23,6 +23,7 @@
 namespace ggadget {
 
 class ContentItem;
+class ScriptableArray;
 
 class ContentAreaElement : public ScrollingElement {
  public:
@@ -81,6 +82,15 @@ class ContentAreaElement : public ScrollingElement {
   void AddContentItem(ContentItem *item, DisplayOptions options);
   void RemoveContentItem(ContentItem *item);
   void RemoveAllContentItems();
+
+  /**
+   * For Gadget to register properties into plugin/pluginHelper for
+   * historical compatibility.
+   */ 
+  ScriptableArray *ScriptGetContentItems();
+  void ScriptSetContentItems(ScriptableInterface *array);
+  ScriptableArray *ScriptGetPinImages();
+  void ScriptSetPinImages(ScriptableInterface *array);
 
  public:
   virtual bool OnAddContextMenuItems(MenuInterface *menu);

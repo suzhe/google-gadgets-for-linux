@@ -137,18 +137,33 @@ class ContentAreaElement::Impl {
       for (size_t i = 0; i < item_count && dead && !modified_; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
-        int temp_x, temp_y, temp_width, temp_height;
-        item->GetRect(&temp_x, &temp_y, &temp_width, &temp_height);
+        int item_x, item_y, item_width, item_height;
+        bool x_relative, y_relative, width_relative, height_relative;
+        item->GetRect(&item_x, &item_y, &item_width, &item_height,
+                      &x_relative, &y_relative,
+                      &width_relative, &height_relative);
         if (dead)
           break;
-        content_height_ = std::max(content_height_, temp_y + temp_height);
+
+        double client_width = owner_->GetClientWidth() / 100;
+        double client_height = owner_->GetClientHeight() / 100;
+        if (x_relative)
+          item_x = static_cast<int>(round(item_x * client_width)); 
+        if (y_relative)
+          item_y = static_cast<int>(round(item_y * client_height)); 
+        if (width_relative)
+          item_width = static_cast<int>(ceil(item_width * client_width)); 
+        if (height_relative)
+          item_height = static_cast<int>(ceil(item_height * client_height));
+        item->SetLayoutRect(item_x, item_y, item_width, item_height);
+        content_height_ = std::max(content_height_, item_y + item_height);
       }
     } else {
       for (size_t i = 0; i < item_count && !dead && !modified_ ; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
         if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) {
-          item->SetRect(0, 0, 0, 0);
+          item->SetLayoutRect(0, 0, 0, 0);
         } else {
           int item_height = item->GetHeight(target_, layout_canvas_,
                                             item_width);
@@ -157,7 +172,7 @@ class ContentAreaElement::Impl {
           item_height = std::max(item_height, pin_image_max_height_);
           // Note: SetRect still uses the width including pin_image,
           // while Draw and GetHeight use the width excluding pin_image.
-          item->SetRect(0, y, width, item_height);
+          item->SetLayoutRect(0, y, width, item_height);
           y += item_height;
         }
       }
@@ -189,7 +204,7 @@ class ContentAreaElement::Impl {
         continue;
 
       int item_x = 0, item_y = 0, item_width = 0, item_height = 0;
-      item->GetRect(&item_x, &item_y, &item_width, &item_height);
+      item->GetLayoutRect(&item_x, &item_y, &item_width, &item_height);
       item_x -= owner_->GetScrollXPosition();
       item_y -= owner_->GetScrollYPosition();
       if (item_width > 0 && item_height > 0 && item_y < height) {
@@ -399,7 +414,7 @@ class ContentAreaElement::Impl {
            it != content_items_.end(); ++it) {
         if (!((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)) {
           int x, y, w, h;
-          (*it)->GetRect(&x, &y, &w, &h);
+          (*it)->GetLayoutRect(&x, &y, &w, &h);
           x -= owner_->GetScrollXPosition();
           y -= owner_->GetScrollYPosition();
           if (mouse_x_ >= x && mouse_x_ < x + w &&
@@ -684,6 +699,22 @@ bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
   }
   // To keep compatible with the Windows version, don't show default menu items.
   return false;
+}
+
+ScriptableArray *ContentAreaElement::ScriptGetContentItems() {
+  return impl_->ScriptGetContentItems();
+}
+
+void ContentAreaElement::ScriptSetContentItems(ScriptableInterface *array) {
+  impl_->ScriptSetContentItems(array);
+}
+
+ScriptableArray *ContentAreaElement::ScriptGetPinImages() {
+  return impl_->ScriptGetPinImages();
+}
+
+void ContentAreaElement::ScriptSetPinImages(ScriptableInterface *array) {
+  impl_->ScriptSetPinImages(array);
 }
 
 } // namespace ggadget

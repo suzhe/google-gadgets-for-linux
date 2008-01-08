@@ -56,7 +56,7 @@ void DeallocateContainerArugments(const Arguments &args) {
     DeallocateContainerVariant(it->value);
 }
 
-// Recursively deallocate the Variant container
+// Recursively deallocate the Variant container.
 class ContainerFreeMan {
  public:
   bool ArrayCallback(int id, const Variant &value) {
@@ -70,7 +70,7 @@ class ContainerFreeMan {
   }
 };
 
-}  /** anonymous namespace */
+}  // anonymous namespace
 
 class DBusProxyFactory::Impl {
  public:
@@ -124,6 +124,7 @@ class DBusProxyFactory::Impl {
       name = GetOwner(false, name).c_str();
     return new DBusProxy(session_bus_, name, path, interface);
   }
+
  private:
   DBusConnection* GetBus(bool system_bus) {
     DBusError error;
@@ -139,15 +140,15 @@ class DBusProxyFactory::Impl {
     dbus_error_free(&error);
     return connection;
   }
+
   DBusConnection* GetDBusBus(DBusBusType type, DBusError *error) {
-    /**
-     * if the main_loop_ is set, we should use private bus so that any
-     * main_loop-related configuration will not affect default bus.
-     */
+    // If the main_loop_ is set, we should use private bus so that any
+    // main_loop-related configuration will not affect default bus.
     if (main_loop_)
       return dbus_bus_get_private(type, error);
     return dbus_bus_get(type, error);
   }
+
   std::string GetOwner(bool system_bus,
                        const char* name) {
     DBusMessage *message = dbus_message_new_method_call(DBUS_SERVICE_DBUS,
@@ -169,6 +170,7 @@ class DBusProxyFactory::Impl {
     dbus_message_unref(reply);
     return std::string(base_name);
   }
+
  private:
   MainLoopInterface *main_loop_;
   DBusConnection *system_bus_;
@@ -221,6 +223,7 @@ class DBusProxy::Impl {
          it != method_slots_.end(); ++it)
       delete it->second;
   }
+
  public:
   bool SyncCall(const char* method, int timeout,
                 MessageType first_arg_type, va_list *args);
@@ -243,6 +246,7 @@ class DBusProxy::Impl {
   void ConnectToSignal(const char *signal, Slot0<void>* dbus_signal_slot);
   bool EnumerateMethods(Slot2<bool, const char*, Slot*> *slot) const;
   bool EnumerateSignals(Slot2<bool, const char*, Slot*> *slot) const;
+
  private:
   class MethodSlot : public Slot {
    public:
@@ -544,9 +548,8 @@ DBusHandlerResult DBusProxy::Impl::MessageFilter(DBusConnection *connection,
     default:
       DLOG("other message type: %d", dbus_message_get_type(message));
   }
-  /** This signal is globaly useful, do not return other value
-   * to stop other client listening this signal.
-   */
+  // This signal is globaly useful, do not return other value
+  // to stop other client listening this signal.
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
@@ -803,8 +806,9 @@ DBusProxy::DBusProxy(DBusConnection* connection,
                      const char* name,
                      const char* path,
                      const char* interface) : impl_(NULL) {
-  ASSERT(connection);
-  impl_ = new Impl(this, connection, name, path, interface);
+  if (connection) {
+    impl_ = new Impl(this, connection, name, path, interface);
+  }
 }
 
 DBusProxy::~DBusProxy() {

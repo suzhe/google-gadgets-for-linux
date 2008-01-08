@@ -198,6 +198,10 @@ void ScriptableHelperImpl::AddPropertyInfo(const char *name,
   ASSERT(property_count_ == static_cast<int>(setter_slots_.size()));
 }
 
+static Variant DummyGetter() {
+  return Variant();
+}
+
 void ScriptableHelperImpl::RegisterProperty(const char *name,
                                             Slot *getter, Slot *setter) {
   ASSERT(!sealed_);
@@ -214,8 +218,9 @@ void ScriptableHelperImpl::RegisterProperty(const char *name,
     prototype = Variant(getter->GetReturnType());
     ASSERT(!setter || prototype.type() == setter->GetArgTypes()[0]);
   } else {
-    ASSERT(setter);
-    prototype = Variant(setter->GetArgTypes()[0]);
+    getter = NewSlot(DummyGetter);
+    if (setter)
+      prototype = Variant(setter->GetArgTypes()[0]);
 #ifdef _DEBUG
     if (prototype.type() == Variant::TYPE_SLOT) {
       LOG("Warning: property '%s' is of type Slot, please make sure the return"

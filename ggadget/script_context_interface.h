@@ -43,7 +43,8 @@ class ScriptContextInterface {
 
   /**
    * Compiles and execute a script fragment in the context.
-   * @param script the script source code.
+   * @param script the script source code. Normally it should encoded in UTF-8,
+   *     otherwise it'll be treated as ISO8859-1.
    * @param filename the name of the file containing the @a script.
    * @param lineno the line number of the @a script in the file.
    */
@@ -53,7 +54,8 @@ class ScriptContextInterface {
 
   /**
    * Compiles a script fragment in the context.
-   * @param script the script source code.
+   * @param script the script source code. Normally it should encoded in UTF-8,
+   *     otherwise it'll be treated as ISO8859-1.
    * @param filename the name of the file containing the @a script.
    * @param lineno the line number of the @a script in the file.
    * @return a compiled @c ScriptFunction instance, or @c NULL on error.

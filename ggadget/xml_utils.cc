@@ -25,7 +25,7 @@
 #include "logger.h"
 #include "script_context_interface.h"
 #include "unicode_utils.h"
-#include "view_interface.h"
+#include "view.h"
 #include "xml_dom_interface.h"
 #include "xml_parser_interface.h"
 
@@ -161,6 +161,9 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
     if (file_manager->GetFileContents(src.c_str(), &script, &real_path)) {
       filename = src.c_str();
       lineno = 1;
+      std::string temp;
+      if (ConvertStreamToUTF8ByBOM(script, &temp, NULL) == script.length())
+        script = temp;
     }
   } else {
     // Uses the Windows version convention, that inline scripts should be
@@ -186,8 +189,7 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
     script_context->Execute(script.c_str(), filename, lineno);
 }
 
-static void HandleAllScriptElements(ViewInterface *view,
-                                    const char *filename,
+static void HandleAllScriptElements(View *view, const char *filename,
                                     const DOMElementInterface *xml_element) {
   const DOMNodeListInterface *children = xml_element->GetChildNodes();
   size_t length = children->GetLength();
@@ -209,8 +211,8 @@ static void HandleAllScriptElements(ViewInterface *view,
 }
 
 static BasicElement *InsertElementFromDOM(
-    ViewInterface *view, Elements *elements,
-    const char *filename, const DOMElementInterface *xml_element,
+    View *view, Elements *elements, const char *filename,
+    const DOMElementInterface *xml_element,
     const BasicElement *before) {
   std::string tag_name = xml_element->GetTagName();
   if (GadgetStrCmp(tag_name.c_str(), kScriptTag) == 0)
@@ -255,7 +257,7 @@ static BasicElement *InsertElementFromDOM(
   return element;
 }
 
-bool SetupViewFromFile(ViewInterface *view, const char *filename) {
+bool SetupViewFromFile(View *view, const char *filename) {
   std::string contents;
   std::string real_path;
   if (!view->GetFileManager()->GetXMLFileContents(filename,
@@ -265,7 +267,7 @@ bool SetupViewFromFile(ViewInterface *view, const char *filename) {
   return SetupViewFromXML(view, contents, real_path.c_str());
 }
 
-bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
+bool SetupViewFromXML(View *view, const std::string &xml,
                       const char *filename) {
   DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
   xmldoc->Attach();
@@ -304,16 +306,14 @@ bool SetupViewFromXML(ViewInterface *view, const std::string &xml,
   return true;
 }
 
-BasicElement *AppendElementFromXML(ViewInterface *view,
-                                       Elements *elements,
-                                       const std::string &xml) {
+BasicElement *AppendElementFromXML(View *view, Elements *elements,
+                                   const std::string &xml) {
   return InsertElementFromXML(view, elements, xml, NULL);
 }
 
-BasicElement *InsertElementFromXML(ViewInterface *view,
-                                       Elements *elements,
-                                       const std::string &xml,
-                                       const BasicElement *before) {
+BasicElement *InsertElementFromXML(View *view, Elements *elements,
+                                   const std::string &xml,
+                                   const BasicElement *before) {
   DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
   xmldoc->Attach();
   if (!view->GetXMLParser()->ParseContentIntoDOM(xml, xml.c_str(), NULL, NULL,

@@ -25,6 +25,7 @@ namespace ggadget {
 
 template <typename R> class Slot0;
 class BasicElement;
+class Elements;
 class ContentAreaElement;
 class DetailsView;
 class ElementFactory;
@@ -36,6 +37,8 @@ class EditInterface;
 class MainLoopInterface;
 class ViewHostInterface;
 class ImageInterface;
+class ScriptableEvent;
+class Texture;
 
 /**
  * Main View implementation.
@@ -76,15 +79,39 @@ class View : public ScriptableHelper<ViewInterface> {
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
   virtual void MarkRedraw();
-
-  virtual ElementFactory *GetElementFactory() const;
-  virtual const Elements *GetChildren() const;
-  virtual Elements *GetChildren();
-  virtual BasicElement *GetElementByName(const char *name);
-  virtual const BasicElement *GetElementByName(const char *name) const;
-
   virtual void OnOptionChanged(const char *name);
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
+
+ public:  // Element management functions.
+  /**
+   * Retrieves the ElementFactory used to create elements in this
+   * view.
+   */
+  ElementFactory *GetElementFactory() const;
+
+  /**
+   * Retrieves a collection that contains the immediate children of this
+   * view.
+   */
+  const Elements *GetChildren() const;
+  /**
+   * Retrieves a collection that contains the immediate children of this
+   * view.
+   */
+  Elements *GetChildren();
+
+  /**
+   * Looks up an element from all elements directly or indirectly contained
+   * in this view by its name.
+   * @param name element name.
+   * @return the element pointer if found; or @c NULL if not found.
+   */
+  BasicElement *GetElementByName(const char *name);
+
+  /**
+   * Constant version of the above GetElementByName();
+   */
+  const BasicElement *GetElementByName(const char *name) const;
 
  public: // Timer, interval and animation functions.
   /**

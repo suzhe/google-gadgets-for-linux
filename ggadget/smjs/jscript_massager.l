@@ -206,7 +206,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 
 <INITIAL,OPTIONS,AFTER_OPTIONS_PARAM,ASSIGN_RIGHT>{COMMENT} ECHO;
 
-[a-zA-Z0-9_]options ECHO;
+[a-zA-Z0-9_][Oo][Pp][Tt][Ii][Oo][Nn][Ss] ECHO;
 
 [Oo][Pp][Tt][Ii][Oo][Nn][Ss] {
   BEGIN(OPTIONS);
@@ -306,8 +306,8 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
   if (GetState() != NORMAL) {
     LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
         input_filename);
-    PopAllStates();
   }
+  PopAllStates();
   yyterminate();
 }
 
@@ -317,18 +317,27 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 
 std::string MassageJScript(const char *input,
                            const char *filename, int lineno) {
+#ifdef _DEBUG
+  FILE *input_debug_file = fopen("massage_input.js", "w");
+  if (input_debug_file) {
+    fputs(input, input_debug_file);
+    fclose(input_debug_file);
+  }
+#endif
+
   input_script_pos = input;
   input_filename = filename;
   yyset_lineno(lineno);
   output.clear();
 
+  BEGIN(INITIAL);
   while (yylex());
 
 #ifdef _DEBUG
-  FILE *debug_file = fopen("massage_result.js", "w");
-  if (debug_file) {
-    fputs(output.c_str(), debug_file);
-    fclose(debug_file);
+  FILE *output_debug_file = fopen("massage_result.js", "w");
+  if (output_debug_file) {
+    fputs(output.c_str(), output_debug_file);
+    fclose(output_debug_file);
   }
 #endif
 

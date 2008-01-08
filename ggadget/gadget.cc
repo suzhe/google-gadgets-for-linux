@@ -162,18 +162,24 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     }
 
     ScriptableArray *GetContentItems() {
-      LOG("pluginHelper.content_items is no longer supported. "
-          "Please use the methods of the contentarea element instead.");
-      return NULL;
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      return content_area ? content_area->ScriptGetContentItems() : NULL;
     }
-    void SetContentItems(ScriptableInterface *array) { GetContentItems(); }
+
+    void SetContentItems(ScriptableInterface *array) {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->ScriptSetContentItems(array);
+    }
 
     ScriptableArray *GetPinImages() {
-      LOG("pluginHelper.pin_images is no longer supported. "
-          "Please use the methods of contentarea element instead.");
-      return NULL;
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      return content_area ? content_area->ScriptGetPinImages() : NULL;
     }
-    void SetPinImages(ScriptableInterface *array) { GetPinImages(); }
+
+    void SetPinImages(ScriptableInterface *array) {
+      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+      if (content_area) content_area->ScriptSetPinImages(array);
+    }
 
     void AddContentItem(ContentItem *item,
                         ContentAreaElement::DisplayOptions options) {
@@ -317,9 +323,9 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   bool ShowOptionsDialog() {
     ViewHostInterface *options_view_host = NULL;
     DisplayWindow *window = NULL;
+    View *view = new View(&gadget_global_prototype_, element_factory_,
+                          debug_mode_);
     if (has_options_xml_) {
-      View *view = new View(&gadget_global_prototype_, element_factory_,
-                            debug_mode_);
       options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS,
                                              view);
       if (!view->InitFromFile(kOptionsXML)) {
@@ -329,8 +335,8 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       }
     } else if (onshowoptionsdlg_signal_.HasActiveConnections()) {
       options_view_host = host_->NewViewHost(
-          GadgetHostInterface::VIEW_OLD_OPTIONS, NULL);
-      window = new DisplayWindow(options_view_host->GetView());
+          GadgetHostInterface::VIEW_OLD_OPTIONS, view);
+      window = new DisplayWindow(view);
       onshowoptionsdlg_signal_(window);
       window->AdjustSize();
     } else {

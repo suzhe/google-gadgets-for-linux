@@ -27,6 +27,7 @@
 #include "listbox_element.h"
 #include "logger.h"
 #include "scriptable_array.h"
+#include "scriptable_event.h"
 #include "string_utils.h"
 #include "text_frame.h"
 #include "view.h"
@@ -36,7 +37,7 @@ namespace ggadget {
 static const int kLabelTextSize = 9;
 static const int kListItemHeight = 19;
 static const double kZoomRatio = 1.1;
-static const char *kControlBorderColor = "#808080";
+static const char *kControlBorderColor = "#A0A0A0";
 static const char *kBackgroundColor = "#FFFFFF";
 static const int kMinComboBoxHeight = 80;
 static const int kMaxComboBoxHeight = 150;
@@ -110,7 +111,7 @@ class DisplayWindow::Impl {
 
     void SetEnabled(bool enabled) {
       element_->SetEnabled(enabled);
-      element_->SetOpacity(enabled ? 1.0 : 0.5);
+      element_->SetOpacity(enabled ? 1.0 : 0.7);
     }
 
     // Gets the full content of the control.
@@ -341,6 +342,7 @@ class DisplayWindow::Impl {
           element->SetPasswordChar("*");
         control = new Control(owner_, element);
         element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
+        element->ConnectOnKeyPressEvent(NewSlot(this, &Impl::OnKeyDown));
         break;
       }
       case CLASS_LIST:
@@ -449,6 +451,40 @@ class DisplayWindow::Impl {
     return it == controls_.end() ? NULL : it->second;
   }
 
+  void OnKeyDown() {
+    ScriptableEvent *event = view_->GetEvent();
+    ASSERT(event->GetEvent()->GetType() == Event::EVENT_KEY_PRESS);
+    if (static_cast<const KeyboardEvent *>(event->GetEvent())->GetKeyCode() ==
+        '\t') {
+      ASSERT(event->GetSrcElement()->IsInstanceOf(BasicElement::CLASS_ID));
+      BasicElement *src_element =
+          down_cast<BasicElement *>(event->GetSrcElement());
+      Elements *top_elements = view_->GetChildren();
+      int count = top_elements->GetCount();
+      // Get the index of the current focused element.
+      int index = 0;
+      for (; index < count; index++) {
+        if (top_elements->GetItemByIndex(index) == src_element)
+          break;
+      }
+      if (index < count) {
+        // Give focus to the next focusable element.
+        while (true) {
+          if (++index == count) index = 0;
+          BasicElement *element = top_elements->GetItemByIndex(index);
+          if (element == src_element)
+            break;
+          // For now only EditElement is focusable in a DisplayWindow.
+          if (element->IsInstanceOf(EditElement::CLASS_ID)) {
+            view_->SetFocus(element);
+            break;
+          }
+        }
+      }
+      view_->GetEvent()->SetReturnValue(EVENT_RESULT_CANCELED);
+    }
+  }
+
   void OnOk() {
     onclose_signal_(owner_, ID_OK);
   }
@@ -466,8 +502,8 @@ class DisplayWindow::Impl {
   ControlsMap controls_;
 };
 
-DisplayWindow::DisplayWindow(ViewInterface *view)
-    : impl_(new Impl(this, down_cast<View *>(view))) {
+DisplayWindow::DisplayWindow(View *view)
+    : impl_(new Impl(this, view)) {
   ASSERT(view);
   RegisterMethod("AddControl", NewSlot(impl_, &Impl::AddControl));
   RegisterMethod("GetControl", NewSlot(impl_, &Impl::GetControl));

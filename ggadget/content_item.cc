@@ -51,7 +51,10 @@ class ContentItem::Impl {
         snippet_text_(NULL, view),
         layout_(CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
         flags_(CONTENT_ITEM_FLAG_NONE),
-        x_(0), y_(0), width_(0), height_(0) {
+        x_(0), y_(0), width_(0), height_(0),
+        x_relative_(false), y_relative_(false),
+        width_relative_(false), height_relative_(false),
+        layout_x_(0), layout_y_(0), layout_width_(0), layout_height_(0) {
     ASSERT(view);
     heading_text_.SetTrimming(CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS);
     heading_text_.SetColor(ScriptableCanvas::kColorNormalText, 1.0);
@@ -81,21 +84,33 @@ class ContentItem::Impl {
         width_ < kMinWidthToUseLongVersionOfTimeString).c_str());
   }
 
-  void ScriptSetRect(int x, int y, int width, int height) {
-    if (!content_area_ || (content_area_->GetContentFlags() &
-                           ContentAreaElement::CONTENT_FLAG_MANUAL_LAYOUT)) {
-      SetRect(x, y, width, height);
-    }
-  }
+#define PARSE_PIXEL_OR_RELATIVE(input, result, relative, default_rel) { \
+  double _d;                                                            \
+  switch (BasicElement::ParsePixelOrRelative((input), &_d)) {           \
+    case BasicElement::PR_PIXEL:                                        \
+      (result) = static_cast<int>(round(_d));                           \
+      (relative) = false;                                               \
+      break;                                                            \
+    case BasicElement::PR_RELATIVE:                                     \
+      (result) = static_cast<int>(round(_d * 100));                     \
+      (relative) = true;                                                \
+      break;                                                            \
+    case BasicElement::PR_UNSPECIFIED:                                  \
+      (result) = (default_rel);                                         \
+      (relative) = true;                                                \
+      break;                                                            \
+    default:                                                            \
+      break;                                                            \
+  }                                                                     \
+}
 
-  void SetRect(int x, int y, int width, int height) {
-    if (x_ != x || y_ != y || width_ != width || height_ != height) {
-      x_ = x;
-      y_ = y;
-      width_ = width;
-      height_ = height;
-      QueueDraw();
-    }
+  void SetRect(const Variant &x, const Variant &y,
+               const Variant &width, const Variant &height) {
+    PARSE_PIXEL_OR_RELATIVE(x, x_, x_relative_, 0);
+    PARSE_PIXEL_OR_RELATIVE(y, y_, y_relative_, 0);
+    PARSE_PIXEL_OR_RELATIVE(width, width_, width_relative_, 100);
+    PARSE_PIXEL_OR_RELATIVE(height, height_, height_relative_, 100);
+    QueueDraw();
   }
 
   void QueueDraw() {
@@ -112,6 +127,8 @@ class ContentItem::Impl {
   Layout layout_;
   int flags_;
   int x_, y_, width_, height_;
+  bool x_relative_, y_relative_, width_relative_, height_relative_;
+  int layout_x_, layout_y_, layout_width_, layout_height_;
   Signal7<void, ContentItem *, GadgetInterface::DisplayTarget,
          ScriptableCanvas *, int, int, int, int> on_draw_item_signal_;
   Signal4<int, ContentItem *, GadgetInterface::DisplayTarget,
@@ -156,7 +173,7 @@ ContentItem::ContentItem(View *view)
                    NewSlot(this, &ContentItem::SetFlags));
   RegisterProperty("tooltip", NULL, // Write only.
                    NewSlot(this, &ContentItem::SetTooltip));
-  RegisterMethod("SetRect", NewSlot(impl_, &Impl::ScriptSetRect));
+  RegisterMethod("SetRect", NewSlot(impl_, &Impl::SetRect));
 
   RegisterSignal("onDrawItem", &impl_->on_draw_item_signal_);
   RegisterSignal("onGetHeight", &impl_->on_get_height_signal_);
@@ -298,16 +315,47 @@ void ContentItem::SetTooltip(const char *tooltip) {
   impl_->tooltip_ = tooltip;
 }
 
-void ContentItem::SetRect(int x, int y, int width, int height) {
-  impl_->SetRect(x, y, width, height);
+void ContentItem::SetRect(int x, int y, int width, int height,
+                          bool x_relative, bool y_relative,
+                          bool width_relative, bool height_relative) {
+  impl_->x_ = x;
+  impl_->y_ = y;
+  impl_->width_ = width;
+  impl_->height_ = height;
+  impl_->x_relative_ = x_relative;
+  impl_->y_relative_ = y_relative;
+  impl_->width_relative_ = width_relative;
+  impl_->height_relative_ = height_relative;
 }
 
-void ContentItem::GetRect(int *x, int *y, int *width, int *height) {
-  ASSERT(x && y && width && height);
+void ContentItem::GetRect(int *x, int *y, int *width, int *height,
+                          bool *x_relative, bool *y_relative,
+                          bool *width_relative, bool *height_relative) {
+  ASSERT(x && y && width && height && x_relative && y_relative &&
+         width_relative && height_relative);
   *x = impl_->x_;
   *y = impl_->y_;
   *width = impl_->width_;
   *height = impl_->height_;
+  *x_relative = impl_->x_relative_;
+  *y_relative = impl_->y_relative_;
+  *width_relative = impl_->width_relative_;
+  *height_relative = impl_->height_relative_;
+}
+
+void ContentItem::SetLayoutRect(int x, int y, int width, int height) {
+  impl_->layout_x_ = x;
+  impl_->layout_y_ = y;
+  impl_->layout_width_ = width;
+  impl_->layout_height_ = height;
+}
+
+void ContentItem::GetLayoutRect(int *x, int *y, int *width, int *height) {
+  ASSERT(x && y && width && height);
+  *x = impl_->layout_x_;
+  *y = impl_->layout_y_;
+  *width = impl_->layout_width_;
+  *height = impl_->layout_height_;
 }
 
 bool ContentItem::CanOpen() const {

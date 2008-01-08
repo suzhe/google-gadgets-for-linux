@@ -233,7 +233,8 @@ void JSScriptContext::Execute(const char *script,
                               const char *filename,
                               int lineno) {
   jsval rval;
-  EvaluateScript(context_, script, filename, lineno, &rval);
+  EvaluateScript(context_, JS_GetGlobalObject(context_), script,
+                 filename, lineno, &rval);
 }
 
 Slot *JSScriptContext::Compile(const char *script,
@@ -247,12 +248,48 @@ Slot *JSScriptContext::Compile(const char *script,
                             JS_GetFunctionObject(function));
 }
 
+static JSBool ReturnSelf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                         jsval *rval) {
+  *rval = OBJECT_TO_JSVAL(obj);
+  return JS_TRUE;
+}
+
+static JSObject *GetClassPrototype(JSContext *cx, const char *class_name) {
+  // Add some adapters for JScript.
+  jsval ctor;
+  if (!JS_GetProperty(cx, JS_GetGlobalObject(cx), class_name, &ctor) ||
+      JSVAL_IS_NULL(ctor) || !JSVAL_IS_OBJECT(ctor))
+    return NULL;
+
+  jsval proto;
+  if (!JS_GetProperty(cx, JSVAL_TO_OBJECT(ctor), "prototype", &proto) ||
+      JSVAL_IS_NULL(proto) || !JSVAL_IS_OBJECT(proto))
+    return NULL;
+
+  return JSVAL_TO_OBJECT(proto);
+}
+
 bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
   NativeJSWrapper *wrapper = WrapNativeObjectToJS(context_, global_object);
   JSObject *js_global = wrapper->js_object();
   if (!js_global)
     return false;
-  return JS_InitStandardClasses(context_, js_global);
+  if (!JS_InitStandardClasses(context_, js_global))
+    return false;
+
+  // Add some adapters for JScript.
+  // We return JavaScript arrays where a VBArray is expected in original
+  // JScript program. JScript program calls toArray() to convert a VBArray to
+  // a JavaScript array. We just let toArray() return the array itself.
+  JSObject *array_proto = GetClassPrototype(context_, "Array");
+  JS_DefineFunction(context_, array_proto, "toArray", &ReturnSelf, 0, 0);
+  // JScript programs call Date.getVarDate() to convert a JavaScript Date to
+  // a COM VARDATE. We just use Date's where VARDATE's are expected by JScript
+  // programs.
+  JSObject *date_proto = GetClassPrototype(context_, "Date");
+  JS_DefineFunction(context_, date_proto, "getVarDate", &ReturnSelf, 0, 0);
+
+  return true;
 }
 
 JSScriptContext::JSClassWithNativeCtor::JSClassWithNativeCtor(
@@ -396,11 +433,7 @@ JSBool JSScriptContext::EvaluateToJSVal(ScriptableInterface *object,
   }
 
   if (expr && *expr) {
-    UTF16String utf16_expr;
-    ConvertStringUTF8ToUTF16(expr, strlen(expr), &utf16_expr);
-    if (!JS_EvaluateUCScript(context_, js_object,
-                             utf16_expr.c_str(), utf16_expr.size(),
-                             expr, 1, result)) {
+    if (!EvaluateScript(context_, js_object, expr, expr, 1, result)) {
       DLOG("Failed to evaluate dest_object_expr %s against JSObject %p",
            expr, js_object);
       return JS_FALSE;
