@@ -322,7 +322,6 @@ JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *owner,
     case Variant::TYPE_UTF16STRING:
       return ConvertJSToNativeUTF16String(cx, js_val, native_val);
     case Variant::TYPE_SCRIPTABLE:
-    case Variant::TYPE_CONST_SCRIPTABLE:
       return ConvertJSToScriptable(cx, js_val, native_val);
     case Variant::TYPE_SLOT:
       return ConvertJSToSlot(cx, owner, prototype, js_val, native_val);
@@ -543,9 +542,6 @@ static JSBool ConvertNativeToJSObject(JSContext *cx,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
   ScriptableInterface *scriptable =
-      native_val.type() == Variant::TYPE_CONST_SCRIPTABLE ?
-      const_cast<ScriptableInterface *>
-        (VariantValue<const ScriptableInterface *>()(native_val)) :
       VariantValue<ScriptableInterface *>()(native_val);
   if (!scriptable) {
     *js_val = JSVAL_NULL;
@@ -619,10 +615,6 @@ JSBool ConvertNativeToJS(JSContext *cx,
       return ConvertNativeUTF16ToJSString(cx, native_val, js_val);
     case Variant::TYPE_SCRIPTABLE:
       return ConvertNativeToJSObject(cx, native_val, js_val);
-    case Variant::TYPE_CONST_SCRIPTABLE:
-      JS_ReportError(cx,
-                     "Don't pass const ScriptableInterface * to JavaScript");
-      return JS_FALSE;
     case Variant::TYPE_SLOT:
       return ConvertNativeToJSFunction(cx, native_val, js_val);
     case Variant::TYPE_DATE:

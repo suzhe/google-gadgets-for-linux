@@ -32,8 +32,8 @@ namespace ggadget {
 namespace {
 
 static const long kMaxRedirections = 10;
-static const long kTimeoutMs = 60000;
-static const long kConnectTimeoutMs = 10000;
+static const long kTimeoutSec = 60;
+static const long kConnectTimeoutSec = 10;
 
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
@@ -249,8 +249,8 @@ class XMLHttpRequest
     curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(curl_, CURLOPT_MAXREDIRS, kMaxRedirections);
     curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
-    curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, kTimeoutMs);
-    curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT_MS, kConnectTimeoutMs);
+    curl_easy_setopt(curl_, CURLOPT_TIMEOUT, kTimeoutSec);
+    curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT, kConnectTimeoutSec);
 
     curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
     curl_easy_setopt(curl_, CURLOPT_READDATA, this);

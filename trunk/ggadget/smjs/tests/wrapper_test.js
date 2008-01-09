@@ -303,7 +303,7 @@ TEST("Test ownership policies", function() {
   scriptable.TestMethodVoid0();
   // Pass the ownership to the native side, and at the same time, the native
   // side deletes it.
-  scriptable2.DeleteObject(a);   
+  scriptable2.DeleteObject(a);
   a = null;
   ASSERT(EQ("Destruct\n", scriptable.Buffer));
   gc();  // Should not cause errors.

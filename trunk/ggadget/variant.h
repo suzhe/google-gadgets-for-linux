@@ -79,8 +79,6 @@ class Variant {
     TYPE_UTF16STRING,
     /** <code>ScriptableInterface *</code> type. */
     TYPE_SCRIPTABLE,
-    /** <code>const ScriptableInterface *</code> type. */
-    TYPE_CONST_SCRIPTABLE,
     /** <code>Slot *</code> type. */
     TYPE_SLOT,
     /** @c Date type. */
@@ -228,19 +226,7 @@ class Variant {
    * This @c Variant doesn't owns the @c Scriptable pointer.
    * The type of the constructed @c Variant is @c TYPE_SCRIPTABLE.
    */
-  explicit Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
-    v_.scriptable_value_ = value;
-  }
-
-  /**
-   * Construct a @c Variant with a <code>ScriptableInterface *</code> value.
-   * This @c Variant doesn't owns the @c Scriptable pointer.
-   * The type of the constructed @c Variant is @c TYPE_SCRIPTABLE.
-   */
-  explicit Variant(const ScriptableInterface *value)
-      : type_(TYPE_CONST_SCRIPTABLE) {
-    v_.const_scriptable_value_ = value;
-  }
+  explicit Variant(ScriptableInterface *value);
 
   /**
    * Construct a @c Variant with a @c Slot pointer value.
@@ -313,9 +299,10 @@ class Variant {
     std::string *string_value_;  // For both TYPE_STRING and TYPE_JSON.
     UTF16String *utf16_string_value_;
     ScriptableInterface *scriptable_value_;
-    const ScriptableInterface *const_scriptable_value_;
     Slot *slot_value_;
   } v_;
+  // temparory solution
+  int policy_;
 
   template <typename T> friend struct VariantValue;
 };
@@ -358,7 +345,7 @@ struct VariantType<T *> {
  */
 template <typename T>
 struct VariantType<const T *> {
-  static const Variant::Type type = Variant::TYPE_CONST_SCRIPTABLE;
+  static const Variant::Type type = Variant::TYPE_SCRIPTABLE;
 };
 
 /**
@@ -436,13 +423,11 @@ struct VariantValue<T *> {
 template <typename T>
 struct VariantValue<const T *> {
   const T *operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_CONST_SCRIPTABLE ||
-           v.type_ == Variant::TYPE_SCRIPTABLE);
-    if (v.type_ != Variant::TYPE_CONST_SCRIPTABLE &&
-        v.type_ != Variant::TYPE_SCRIPTABLE)
+    ASSERT(v.type_ == Variant::TYPE_SCRIPTABLE);
+    if (v.type_ != Variant::TYPE_SCRIPTABLE)
       return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
-           down_cast<const T *>(v.v_.const_scriptable_value_) : NULL;
+           down_cast<T *>(v.v_.scriptable_value_) : NULL;
   }
 };
 

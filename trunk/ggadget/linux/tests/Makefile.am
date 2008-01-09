@@ -27,5 +27,7 @@ check_PROGRAMS		= machine_test
 
 machine_test_SOURCES		= machine_test.cc
 
+network_test_SOURCES		= network_test.cc
+
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

@@ -402,7 +402,6 @@ static bool VariantIsEmpty(const Variant &img) {
     case Variant::TYPE_STRING:
       return VariantValue<std::string>()(img).empty();
     case Variant::TYPE_SCRIPTABLE:
-    case Variant::TYPE_CONST_SCRIPTABLE:
       return VariantValue<ScriptableBinaryData *>()(img) == NULL;
     default:
       // Any values or types not recognized are treated as empty.

@@ -29,18 +29,30 @@ Variant::Variant(const Variant &source) : type_(TYPE_VOID) {
   operator=(source);
 }
 
+Variant::Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
+  if (value)
+    policy_ = value->Attach();
+  v_.scriptable_value_ = value;
+}
+
 Variant::~Variant() {
   if (type_ == TYPE_STRING || type_ == TYPE_JSON)
     delete v_.string_value_;
-  if (type_ == TYPE_UTF16STRING)
+  else if (type_ == TYPE_UTF16STRING)
     delete v_.utf16_string_value_;
+  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_ &&
+           policy_ == ScriptableInterface::OWNERSHIP_SHARED)
+    v_.scriptable_value_->Detach();
 }
 
 Variant &Variant::operator=(const Variant &source) {
   if (type_ == TYPE_STRING || type_ == TYPE_JSON)
     delete v_.string_value_;
-  if (type_ == TYPE_UTF16STRING)
+  else if (type_ == TYPE_UTF16STRING)
     delete v_.utf16_string_value_;
+  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_ &&
+           policy_ == ScriptableInterface::OWNERSHIP_SHARED)
+    v_.scriptable_value_->Detach();
 
   type_ = source.type_;
   switch (type_) {
@@ -67,9 +79,8 @@ Variant &Variant::operator=(const Variant &source) {
       break;
     case TYPE_SCRIPTABLE:
       v_.scriptable_value_ = source.v_.scriptable_value_;
-      break;
-    case TYPE_CONST_SCRIPTABLE:
-      v_.const_scriptable_value_ = source.v_.const_scriptable_value_;
+      if (v_.scriptable_value_)
+        policy_ = v_.scriptable_value_->Attach();
       break;
     case TYPE_SLOT:
       v_.slot_value_ = source.v_.slot_value_;
@@ -110,8 +121,6 @@ bool Variant::operator==(const Variant &another) const {
              *v_.utf16_string_value_ == *another.v_.utf16_string_value_);
     case TYPE_SCRIPTABLE:
       return v_.scriptable_value_ == another.v_.scriptable_value_;
-    case TYPE_CONST_SCRIPTABLE:
-      return v_.const_scriptable_value_ == another.v_.const_scriptable_value_;
     case TYPE_SLOT: {
       Slot *slot1 = v_.slot_value_;
       Slot *slot2 = another.v_.slot_value_;
@@ -155,11 +164,6 @@ std::string Variant::Print() const {
       return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
                           v_.scriptable_value_ ?
                               v_.scriptable_value_->GetClassId() : 0);
-    case TYPE_CONST_SCRIPTABLE:
-      return StringPrintf("CONST_SCRIPTABLE:%p(CLASS_ID=%jx):",
-                          v_.const_scriptable_value_,
-                          v_.const_scriptable_value_ ?
-                              v_.const_scriptable_value_->GetClassId() : 0);
     case TYPE_SLOT:
       return StringPrintf("SLOT:%p", v_.slot_value_);
     case TYPE_DATE:
@@ -198,7 +202,6 @@ bool Variant::ConvertToString(std::string *result) const {
         *result = "";
       return true;
     case TYPE_SCRIPTABLE:
-    case TYPE_CONST_SCRIPTABLE:
     case TYPE_SLOT:
     case TYPE_DATE:
     case TYPE_VARIANT:
@@ -247,9 +250,6 @@ bool Variant::ConvertToBool(bool *result) const {
     }
     case TYPE_SCRIPTABLE:
       *result = v_.scriptable_value_ != NULL;
-      return true;
-    case TYPE_CONST_SCRIPTABLE:
-      *result = v_.const_scriptable_value_ != NULL;
       return true;
     case TYPE_SLOT:
       *result = v_.slot_value_ != NULL;
@@ -332,7 +332,6 @@ bool Variant::ConvertToInt64(int64_t *result) const {
       return ParseStringToInt64(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
-    case TYPE_CONST_SCRIPTABLE:
     case TYPE_SLOT:
     case TYPE_DATE:
     case TYPE_VARIANT:
@@ -367,7 +366,6 @@ bool Variant::ConvertToDouble(double *result) const {
       return ParseStringToDouble(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
-    case TYPE_CONST_SCRIPTABLE:
     case TYPE_SLOT:
     case TYPE_DATE:
     case TYPE_VARIANT:
@@ -377,9 +375,9 @@ bool Variant::ConvertToDouble(double *result) const {
 }
 
 bool Variant::CheckScriptableType(uint64_t class_id) const {
-  ASSERT(type_ == TYPE_SCRIPTABLE || type_ == TYPE_CONST_SCRIPTABLE);
-  if (v_.const_scriptable_value_ &&
-      !v_.const_scriptable_value_->IsInstanceOf(class_id)) {
+  ASSERT(type_ == TYPE_SCRIPTABLE);
+  if (v_.scriptable_value_ &&
+      !v_.scriptable_value_->IsInstanceOf(class_id)) {
     LOG("The parameter is not an instance pointer of 0x%jx", class_id);
     return false;
   }

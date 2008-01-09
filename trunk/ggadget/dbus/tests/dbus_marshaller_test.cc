@@ -149,7 +149,6 @@ void TestArrayMarshal() {
   EXPECT_STREQ("ai", sig);
   dbus_free(sig);
   dbus_message_unref(message);
-  DeallocateContainerVariant(v);
 }
 
 /* add a operator to Variant so that we can use the template function. */
@@ -190,7 +189,6 @@ void TestStructMarshal() {
   EXPECT_STREQ("(sib)", sig);
   dbus_free(sig);
   dbus_message_unref(message);
-  DeallocateContainerVariant(vs);
 }
 
 void TestDictMarshal() {
@@ -223,7 +221,6 @@ void TestDictMarshal() {
   dbus_message_unref(message);
   /* testing marshal without explicit signature. */
   message = GetMarshalledMessage("", v);
-  DeallocateContainerVariant(v);
   dbus_message_iter_init(message, &iter);
   sig = dbus_message_iter_get_signature(&iter);
   EXPECT_STREQ("a{si}", sig);
@@ -278,7 +275,6 @@ void TestVariantMarshal() {
   /* testing variant as an array container. */
   Variant array = GenerateVariantArray<uint64_t>(4, 5, 39);
   message = GetMarshalledMessage("v", array);
-  DeallocateContainerVariant(array);
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_VARIANT, dbus_message_iter_get_arg_type(&iter));
   sig = dbus_message_iter_get_signature(&iter);
@@ -304,7 +300,6 @@ void TestVariantMarshal() {
 
   /* testing variant as a structure container. */
   message = GetMarshalledMessage("v", structure);
-  DeallocateContainerVariant(structure);
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_VARIANT, dbus_message_iter_get_arg_type(&iter));
   sig = dbus_message_iter_get_signature(&iter);
@@ -332,7 +327,6 @@ void TestVariantMarshal() {
   /* testing variant as a dict container. */
   Variant dict = GenerateVariantDict(10, 123, 3, 256, 9);
   message = GetMarshalledMessage("v", dict);
-  DeallocateContainerVariant(dict);
   dbus_message_iter_init(message, &iter);
   EXPECT_EQ(DBUS_TYPE_VARIANT, dbus_message_iter_get_arg_type(&iter));
   sig = dbus_message_iter_get_signature(&iter);
@@ -420,15 +414,13 @@ bool IsEual(ScriptableInterface *s1, ScriptableInterface *s2) {
 }
 
 bool IsEual(const Variant &v1, const Variant &v2) {
-  if (v1.type() != Variant::TYPE_SCRIPTABLE &&
-      v1.type() != Variant::TYPE_CONST_SCRIPTABLE) {
+  if (v1.type() != Variant::TYPE_SCRIPTABLE) {
     bool ret = (v1 == v2);
     if (!ret) DLOG("simple type mismatch: %s, %s",
                    v1.Print().c_str(), v2.Print().c_str());
     return ret;
   }
-  if (v2.type() != Variant::TYPE_SCRIPTABLE &&
-      v2.type() != Variant::TYPE_CONST_SCRIPTABLE) {
+  if (v2.type() != Variant::TYPE_SCRIPTABLE) {
     DLOG("type mismatch. one is not scriptable but the other is.");
     return false;
   }
@@ -445,7 +437,6 @@ void TestBasicDemarshal(const char *signature,
   EXPECT_TRUE(demarshaller.GetArgument(&arg));
   EXPECT_TRUE(IsEual(value, arg.value));
   dbus_message_unref(message);
-  DeallocateContainerVariant(arg.value);
 }
 
 void TestContainerDemarshal() {
@@ -459,9 +450,6 @@ void TestContainerDemarshal() {
   Variant dict = GenerateVariantDict(10, 123, 3, 256, 9);
   TestBasicDemarshal("a{yu}", "a{yu}", dict);
   TestBasicDemarshal("v", "v", dict);
-  DeallocateContainerVariant(array);
-  DeallocateContainerVariant(structure);
-  DeallocateContainerVariant(dict);
 }
 
 template <typename T>
@@ -523,7 +511,6 @@ void TestConvertedVariant(const Variant &value, const char *signature,
   EXPECT_EQ(1u, args.size());
   EXPECT_TRUE(IsEual(value, args[0].value));
   EXPECT_STREQ(signature, args[0].signature.c_str());
-  DeallocateContainerVariant(args[0].value);
 }
 
 void TestContainerValistMarshal() {
@@ -567,9 +554,6 @@ void TestContainerValistMarshal() {
                        MESSAGE_TYPE_INT32, 126,
                        MESSAGE_TYPE_UINT32, 265,
                        MESSAGE_TYPE_INVALID);
-  DeallocateContainerVariant(array);
-  DeallocateContainerVariant(structure);
-  DeallocateContainerVariant(dict);
 }
 
 void TestValistDemarshal(MessageType first_arg_type, ...) {

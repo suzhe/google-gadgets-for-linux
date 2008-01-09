@@ -210,8 +210,6 @@ void ScriptableHelperImpl::RegisterProperty(const char *name,
   ASSERT(!setter || setter->GetArgCount() == 1);
   if (getter) {
     ASSERT(getter->GetArgCount() == 0);
-    ASSERT_M(getter->GetReturnType() != Variant::TYPE_CONST_SCRIPTABLE,
-             ("Can't return 'const ScriptableInterface *' to script"));
     //Returning Slot * should be allowed, see Audioclip::GetOnStateChange().
     //ASSERT_M(getter->GetReturnType() != Variant::TYPE_SLOT,
     //         ("Can't return 'Slot *' (name: %s) to script", name));
@@ -292,8 +290,6 @@ void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
   ASSERT(!sealed_);
   ASSERT(name);
   ASSERT(slot && slot->HasMetadata());
-  ASSERT_M(slot->GetReturnType() != Variant::TYPE_CONST_SCRIPTABLE,
-           ("Can't return 'const ScriptableInterface *' to script"));
   ASSERT_M(slot->GetReturnType() != Variant::TYPE_SLOT,
            ("Can't return 'Slot *' to script"));
 #ifdef _DEBUG

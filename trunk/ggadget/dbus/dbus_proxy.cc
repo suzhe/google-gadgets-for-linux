@@ -21,6 +21,7 @@ limitations under the License.
 #include "dbus_utils.h"
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/slot.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
@@ -43,32 +44,6 @@ void VariantListToArguments(const Variant *list_start, size_t count,
     tmp.push_back(Argument(*list_start++));
   args->swap(tmp);
 }
-
-void ArgumentsToVariantList(const Arguments &args, VariantList *list) {
-  VariantList tmp;
-  for (Arguments::const_iterator it = args.begin(); it != args.end(); ++it)
-    tmp.push_back(it->value);
-  list->swap(tmp);
-}
-
-void DeallocateContainerArugments(const Arguments &args) {
-  for (Arguments::const_iterator it = args.begin(); it != args.end(); ++it)
-    DeallocateContainerVariant(it->value);
-}
-
-// Recursively deallocate the Variant container.
-class ContainerFreeMan {
- public:
-  bool ArrayCallback(int id, const Variant &value) {
-    DeallocateContainerVariant(value);
-    return true;
-  }
-  bool PropertyCallback(int id, const char *name,
-                        const Variant &value, bool is_method) {
-    if (!is_method) DeallocateContainerVariant(value);
-    return true;
-  }
-};
 
 }  // anonymous namespace
 
@@ -107,7 +82,7 @@ class DBusProxyFactory::Impl {
     }
     if (by_owner)
       name = GetOwner(true, name).c_str();
-    return new DBusProxy(system_bus_, name, path, interface);
+    return new DBusProxy(system_bus_, main_loop_, name, path, interface);
   }
 
   DBusProxy* NewSessionProxy(const char *name,
@@ -122,7 +97,7 @@ class DBusProxyFactory::Impl {
     }
     if (by_owner)
       name = GetOwner(false, name).c_str();
-    return new DBusProxy(session_bus_, name, path, interface);
+    return new DBusProxy(session_bus_, main_loop_, name, path, interface);
   }
 
  private:
@@ -206,8 +181,9 @@ DBusProxy* DBusProxyFactory::NewSessionProxy(const char *name,
 class DBusProxy::Impl {
  public:
   Impl(DBusProxy* owner, DBusConnection* connection,
+       MainLoopInterface *mainloop,
        const char* name, const char* path, const char* interface)
-    : owner_(owner), connection_(connection) {
+    : owner_(owner), connection_(connection), main_loop_(mainloop) {
     if (name) name_ = name;
     if (path) path_ = path;
     if (interface) interface_ = interface;
@@ -222,27 +198,19 @@ class DBusProxy::Impl {
     for (MethodSlotMap::iterator it = method_slots_.begin();
          it != method_slots_.end(); ++it)
       delete it->second;
+    for (TimeoutMap::iterator it = timeouts_.begin();
+         it != timeouts_.end(); ++it)
+      main_loop_->RemoveWatch(it->first);
   }
 
  public:
-  bool SyncCall(const char* method, int timeout,
-                MessageType first_arg_type, va_list *args);
-  bool SyncCall(const char* method, int timeout,
-                bool not_wait_for_reply,
-                Arguments *in_arguments,
-                Arguments *out_arguments);
-  uint32_t AsyncCall(const char* method,
-                     Slot1<bool, uint32_t> *slot,
-                     MessageType first_arg_type,
-                     va_list *args);
-  uint32_t AsyncCall(const char* method,
-                     Slot1<bool, uint32_t> *slot,
-                     Arguments *in_arguments);
-  bool CollectResult(uint32_t call_id,
-                     MessageType first_arg_type,
-                     va_list *args);
-  bool CollectResult(uint32_t call_id,
-                     Arguments *out_arguments);
+  bool Timeout(int watch_id);
+  bool Call(const char* method, bool sync, int timeout,
+            MessageType first_arg_type, va_list *args,
+            ResultCallback *callback);
+  bool Call(const char* method, bool sync, int timeout,
+            Arguments *in_arguments,
+            ResultCallback *callback);
   void ConnectToSignal(const char *signal, Slot0<void>* dbus_signal_slot);
   bool EnumerateMethods(Slot2<bool, const char*, Slot*> *slot) const;
   bool EnumerateSignals(Slot2<bool, const char*, Slot*> *slot) const;
@@ -262,11 +230,11 @@ class DBusProxy::Impl {
       delete [] arg_types_;
     }
     virtual Variant Call(int argc, const Variant argv[]) const {
-      VariantList out;
-      bool ret = proxy_->SyncCall(prototype_.name.c_str(), -1, false,
-                                  argv, argc, &out);
+      return_values_.clear();
+      bool ret = proxy_->Call(prototype_.name.c_str(), true, -1, argv, argc,
+                              NewSlot(this, &MethodSlot::GetReturnValue));
       if (!ret) return Variant();
-      return MergeArguments(out);
+      return MergeArguments();
     }
     virtual bool HasMetadata() const {
       return true;
@@ -282,10 +250,15 @@ class DBusProxy::Impl {
           prototype_.name;
     }
    private:
-    Variant MergeArguments(const VariantList &args) const {
-      if (args.size() == 0) return Variant(true);
-      if (args.size() == 1) return args[0];
-      return Variant(ScriptableArray::Create(args.begin(), args.size()));
+    bool GetReturnValue(int id, const Variant &value) const {
+      return_values_.push_back(value);
+      return true;
+    }
+    Variant MergeArguments() const {
+      if (return_values_.size() == 0) return Variant(true);
+      if (return_values_.size() == 1) return return_values_[0];
+      return Variant(ScriptableArray::Create(return_values_.begin(),
+                                             return_values_.size()));
     }
     Variant::Type DBusTypeToVariantType(const char *s) const {
       switch (*s) {
@@ -316,6 +289,7 @@ class DBusProxy::Impl {
     DBusProxy *proxy_;
     Prototype prototype_;
     Variant::Type *arg_types_;
+    mutable std::vector<Variant> return_values_;
   };
   static DBusHandlerResult MessageFilter(DBusConnection *connection,
                                          DBusMessage *message,
@@ -332,13 +306,13 @@ class DBusProxy::Impl {
   }
 
   PrototypeVector::iterator FindMethod(const char *method_name);
+  bool InvokeMethodCallback(DBusMessage *message, ResultCallback *callback);
   bool ConvertToArguments(const char *method,
                           Arguments *in, Arguments *out,
                           MessageType first_arg_type,
                           va_list *args);
   bool CheckMethodArgsValidity(const char *name,
                                Arguments *in_args,
-                               Arguments *out_args,
                                PrototypeVector::iterator *iter,
                                bool *number_dismatch);
 
@@ -348,6 +322,7 @@ class DBusProxy::Impl {
  private:
   DBusProxy *owner_;
   DBusConnection *connection_;
+  MainLoopInterface *main_loop_;
 
   std::string name_;
   std::string path_;
@@ -358,11 +333,25 @@ class DBusProxy::Impl {
 
   typedef std::map<std::string, Slot0<void>*> SignalSlotMap;
   SignalSlotMap signal_slots_;
-  typedef std::map<uint32_t, Slot1<bool, uint32_t>*> MethodSlotMap;
+  typedef std::map<uint32_t, ResultCallback*> MethodSlotMap;
   MethodSlotMap method_slots_;
-  typedef std::map<uint32_t, DBusMessage*> ReplyMap;
-  ReplyMap replies_;
+  typedef std::map<int, uint32_t> TimeoutMap;
+  TimeoutMap timeouts_;
 };
+
+bool DBusProxy::Impl::Timeout(int watch_id) {
+  TimeoutMap::iterator it = timeouts_.find(watch_id);
+  if (it != timeouts_.end()) {
+    uint32_t id = it->second;
+    MethodSlotMap::iterator slot_iter = method_slots_.find(id);
+    if (slot_iter != method_slots_.end()) {
+      delete slot_iter->second;
+      method_slots_.erase(slot_iter);
+    }
+    timeouts_.erase(it);
+  }
+  return true;
+}
 
 PrototypeVector::iterator DBusProxy::Impl::FindMethod(const char *method_name) {
   if (!method_name) return method_calls_.end();
@@ -374,26 +363,22 @@ PrototypeVector::iterator DBusProxy::Impl::FindMethod(const char *method_name) {
 
 bool DBusProxy::Impl::CheckMethodArgsValidity(const char *name,
                                               Arguments *in_args,
-                                              Arguments *out_args,
                                               PrototypeVector::iterator *it,
                                               bool *number_dismatch) {
+  ASSERT(in_args);
   *number_dismatch = false;
   *it = FindMethod(name);
   if (*it == method_calls_.end()) return false;
   bool ret = true;
-  if (in_args && in_args->size() != (*it)->in_args.size()) {
+  if (in_args->size() != (*it)->in_args.size()) {
     *number_dismatch = true;
     return false;
   }
-  if (in_args) {
-    for (std::size_t i = 0; i < in_args->size(); ++i)
-      if (in_args->at(i) != (*it)->in_args[i]) {
-        in_args->at(i).signature = (*it)->in_args[i].signature;
-        ret = false;
-      }
-  }
-  if (out_args)
-    *out_args = (*it)->out_args;
+  for (std::size_t i = 0; i < in_args->size(); ++i)
+    if (in_args->at(i) != (*it)->in_args[i]) {
+      in_args->at(i).signature = (*it)->in_args[i].signature;
+      ret = false;
+    }
   return ret;
 }
 
@@ -516,7 +501,7 @@ DBusHandlerResult DBusProxy::Impl::MessageFilter(DBusConnection *connection,
        dbus_message_get_type(message), dbus_message_get_sender(message),
        dbus_message_get_path(message), dbus_message_get_interface(message),
        dbus_message_get_member(message));
-  DBusProxy::Impl *this_p = reinterpret_cast<DBusProxy::Impl*>(user_data);
+  Impl *this_p = reinterpret_cast<Impl*>(user_data);
   switch (dbus_message_get_type(message)) {
     case DBUS_MESSAGE_TYPE_SIGNAL:
       for (SignalSlotMap::iterator it = this_p->signal_slots_.begin();
@@ -537,11 +522,9 @@ DBusHandlerResult DBusProxy::Impl::MessageFilter(DBusConnection *connection,
         if (it == this_p->method_slots_.end()) {
           LOG("No slot registered to handle this reply.");
         } else {
-          if (this_p->replies_.find(serial) != this_p->replies_.end()) {
-            LOG("should not happen!");
-          }
-          this_p->replies_[serial] = message;
-          (*it->second)(serial);
+          this_p->InvokeMethodCallback(message, it->second);
+          delete it->second;
+          this_p->method_slots_.erase(it);
         }
         return DBUS_HANDLER_RESULT_HANDLED;
       }
@@ -553,16 +536,13 @@ DBusHandlerResult DBusProxy::Impl::MessageFilter(DBusConnection *connection,
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
-bool DBusProxy::Impl::SyncCall(const char *method,
-                               int timeout,
-                               bool not_wait_for_reply,
-                               Arguments *in_arguments,
-                               Arguments *out_arguments) {
+bool DBusProxy::Impl::Call(const char *method, bool sync, int timeout,
+                           Arguments *in_arguments,
+                           ResultCallback *callback) {
   ASSERT(method && *method != '\0');
   PrototypeVector::iterator it;
   bool number_dismatch;
-  if (!CheckMethodArgsValidity(method, in_arguments, out_arguments,
-                               &it, &number_dismatch)) {
+  if (!CheckMethodArgsValidity(method, in_arguments, &it, &number_dismatch)) {
     if (it == method_calls_.end()) {
       DLOG("no method %s registered by Introspectable interface.", method);
     } else if (number_dismatch) {
@@ -584,177 +564,74 @@ bool DBusProxy::Impl::SyncCall(const char *method,
     dbus_message_unref(message);
     return false;
   }
-  if (not_wait_for_reply) {
+  if (!callback) {
     DLOG("no output argument interested, do not collect pending result.");
     dbus_connection_send(connection_, message, NULL);
     dbus_connection_flush(connection_);
     return true;
   }
-  DBusError error;
-  dbus_error_init(&error);
-  DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection_,
-                                                                 message,
-                                                                 timeout,
-                                                                 &error);
-  bool ret = false;
-  if (!reply || dbus_error_is_set(&error)) {
-    LOG("%s: %s", error.name, error.message);
-  } else {
-    DBusDemarshaller demarshaller(reply);
-    ret = demarshaller.GetArguments(out_arguments);
-  }
-  dbus_error_free(&error);
-  if (reply) dbus_message_unref(reply);
-  return ret;
-}
 
-bool DBusProxy::Impl::ConvertToArguments(const char *method,
-                                         Arguments *in, Arguments *out,
-                                         MessageType first_arg_type,
-                                         va_list *args) {
-  PrototypeVector::iterator it = FindMethod(method);
-  if (in && !DBusMarshaller::ValistAdaptor(in, first_arg_type, args))
-    return false;
-  if (out) {
-    if (it != method_calls_.end()) {
-      *out = it->out_args;
+  /* when no main loop attached, the async call will be changed to sync one. */
+  if (sync || !main_loop_) {
+    DBusError error;
+    dbus_error_init(&error);
+    DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection_,
+                                                                   message,
+                                                                   timeout,
+                                                                   &error);
+    bool ret = false;
+    if (!reply || dbus_error_is_set(&error)) {
+      LOG("%s: %s", error.name, error.message);
     } else {
-      DLOG("not find method %s by Introspect. Marshal by the hint "
-           "of the valist.", method);
-      va_list tmp_args;
-      va_copy(tmp_args, *args);
-      if (in)
-        first_arg_type = static_cast<MessageType>(va_arg(tmp_args, int));
-      if (!DBusMarshaller::ValistToAugrments(out, first_arg_type, &tmp_args))
-        return false;
-      va_end(tmp_args);
+      ret = InvokeMethodCallback(reply, callback);
     }
+    dbus_error_free(&error);
+    dbus_message_unref(message);
+    delete callback;
+    if (reply) dbus_message_unref(reply);
+    return ret;
+  } else {
+    dbus_uint32_t serial = 0;
+    dbus_connection_send(connection_, message, &serial);
+    MethodSlotMap::iterator it = method_slots_.find(serial);
+    if (it != method_slots_.end()) {
+      delete it->second;
+      it->second = callback;
+    } else {
+      method_slots_[serial] = callback;
+      int id = main_loop_->AddTimeoutWatch(timeout, new WatchCallbackSlot(
+          NewSlot(this, &Impl::Timeout)));
+      timeouts_[id] = serial;
+    }
+    if (message) dbus_message_unref(message);
+    return true;
   }
   return true;
 }
 
-bool DBusProxy::Impl::SyncCall(const char *method,
-                               int timeout,
-                               MessageType first_arg_type,
-                               va_list *args) {
-  Arguments out, in;
-  bool return_now, result = false;
-  if (!ConvertToArguments(method, &in, &out, first_arg_type, args))
+bool DBusProxy::Impl::InvokeMethodCallback(DBusMessage *reply,
+                                           ResultCallback *callback) {
+  Arguments out;
+  DBusDemarshaller demarshaller(reply);
+  bool ret = demarshaller.GetArguments(&out);
+  if (ret) {
+    bool keep_work = true;
+    for (std::size_t i = 0; i < out.size() && keep_work; ++i)
+      keep_work = (*callback)(i, out[i].value);
+  }
+  return ret;
+}
+
+bool DBusProxy::Impl::Call(const char *method, bool sync, int timeout,
+                           MessageType first_arg_type, va_list *args,
+                           ResultCallback *callback) {
+  Arguments in;
+  bool result = false;
+  if (!DBusMarshaller::ValistAdaptor(&in, first_arg_type, args))
     goto exit;
   first_arg_type = static_cast<MessageType>(va_arg(*args, int));
-  return_now = (first_arg_type == MESSAGE_TYPE_INVALID);
-  if (!SyncCall(method, timeout, return_now, &in, &out))
-    goto exit;
-  result = DBusDemarshaller::ValistAdaptor(out, first_arg_type, args);
+  result = Call(method, sync, timeout, &in, callback);
 exit:
-  DeallocateContainerArugments(in);
-  DeallocateContainerArugments(out);
-  return result;
-}
-
-uint32_t DBusProxy::Impl::AsyncCall(const char *method,
-                                    Slot1<bool, uint32_t> *slot,
-                                    MessageType first_arg_type,
-                                    va_list *args) {
-  Arguments in;
-  bool ret = false;
-  if (!ConvertToArguments(method, &in, NULL, first_arg_type, args))
-    goto exit;
-  ret = AsyncCall(method, slot, &in);
-exit:
-  DeallocateContainerArugments(in);
-  return ret;
-}
-
-uint32_t DBusProxy::Impl::AsyncCall(const char *method,
-                                    Slot1<bool, uint32_t> *slot,
-                                    Arguments *in_arguments) {
-  ASSERT(method && *method != '\0');
-  PrototypeVector::iterator it;
-  bool number_dismatch;
-  if (!CheckMethodArgsValidity(method, in_arguments, NULL,
-                               &it, &number_dismatch)) {
-    if (it == method_calls_.end()) {
-      DLOG("no method %s registered by Introspectable interface.", method);
-    } else if (number_dismatch) {
-      LOG("arg number dismatch for method %s", method);
-      return false;
-    } else {
-      LOG("Warning: Arguments for %s dismatch with the prototyp by "
-          "Introspectable interface.", method);
-      ASSERT(false);
-    }
-  }
-  DBusMessage *message = dbus_message_new_method_call(name_.c_str(),
-                                                      path_.c_str(),
-                                                      interface_.c_str(),
-                                                      method);
-  DBusMarshaller marshaller(message);
-  if (!marshaller.AppendArguments(*in_arguments)) {
-    LOG("marshal failed.");
-    dbus_message_unref(message);
-    return false;
-  }
-  dbus_uint32_t serial = 0;
-  dbus_connection_send(connection_, message, &serial);
-  DLOG("serial of sent message: %d", serial);
-  dbus_message_unref(message);
-  if (slot) {
-    MethodSlotMap::iterator it = method_slots_.find(serial);
-    if (it != method_slots_.end()) {
-      delete it->second;
-      it->second = slot;
-    } else {
-      method_slots_[serial] = slot;
-    }
-  }
-  return serial;
-}
-
-bool DBusProxy::Impl::CollectResult(uint32_t call_id,
-                                    MessageType first_arg_type,
-                                    va_list *args) {
-  Arguments out;
-  bool ret = false;
-  if (!ConvertToArguments(NULL, NULL, &out, first_arg_type, args))
-    goto exit;
-  if (!CollectResult(call_id, &out))
-    goto exit;
-  ret = DBusDemarshaller::ValistAdaptor(out, first_arg_type, args);
-exit:
-  DeallocateContainerArugments(out);
-  return ret;
-}
-
-bool DBusProxy::Impl::CollectResult(uint32_t call_id,
-                                    Arguments *out_arguments) {
-  ReplyMap::iterator it = replies_.find(call_id);
-  if (it == replies_.end()) {
-    LOG("the reply has not been received yet.");
-    return false;
-  }
-  DBusMessage *reply = it->second;
-
-  bool result = false;
-  switch (dbus_message_get_type(reply)) {
-    case DBUS_MESSAGE_TYPE_METHOD_RETURN:
-      {
-        DBusDemarshaller demarshaller(reply);
-        Arguments out;
-        result = demarshaller.GetArguments(out_arguments);
-      }
-    case DBUS_MESSAGE_TYPE_ERROR:
-    default:
-      {
-        DBusError error;
-        dbus_error_init(&error);
-        dbus_set_error_from_message(&error, reply);
-        if (dbus_error_is_set(&error))
-          LOG("error: %s: %s", error.name, error.message);
-        dbus_error_free(&error);
-      }
-  }
-  replies_.erase(it);
   return result;
 }
 
@@ -803,11 +680,12 @@ bool DBusProxy::Impl::EnumerateSignals(Slot2<bool,
 }
 
 DBusProxy::DBusProxy(DBusConnection* connection,
+                     MainLoopInterface *mainloop,
                      const char* name,
                      const char* path,
                      const char* interface) : impl_(NULL) {
   if (connection) {
-    impl_ = new Impl(this, connection, name, path, interface);
+    impl_ = new Impl(this, connection, mainloop, name, path, interface);
   }
 }
 
@@ -815,75 +693,26 @@ DBusProxy::~DBusProxy() {
   delete impl_;
 }
 
-bool DBusProxy::SyncCall(const char* method,
-                         int timeout,
-                         MessageType first_arg_type,
+bool DBusProxy::Call(const char* method, bool sync, int timeout,
+                     ResultCallback *callback,
+                     MessageType first_arg_type,
                          ...) {
   if (!impl_) return false;
 
   va_list args;
   va_start(args, first_arg_type);
-  bool ret = impl_->SyncCall(method, timeout, first_arg_type, &args);
+  bool ret = impl_->Call(method, sync, timeout, first_arg_type, &args, callback);
   va_end(args);
   return ret;
 }
 
-bool DBusProxy::SyncCall(const char* method, int timeout,
-                         bool not_wait_for_reply,
-                         const Variant *in_arguments, size_t count,
-                         VariantList *out_arguments) {
+bool DBusProxy::Call(const char* method, bool sync, int timeout,
+                     const Variant *in_arguments, size_t count,
+                     ResultCallback *callback) {
   if (!impl_) return false;
-  Arguments in_args, out_args;
+  Arguments in_args;
   VariantListToArguments(in_arguments, count, &in_args);
-  if (!impl_->SyncCall(method, timeout, not_wait_for_reply, &in_args, &out_args))
-    return false;
-  ArgumentsToVariantList(out_args, out_arguments);
-  return true;
-}
-
-uint32_t DBusProxy::AsyncCall(const char* method,
-                              Slot1<bool, uint32_t> *slot,
-                              MessageType first_arg_type,
-                              ...) {
-  if (!impl_) return 0;
-
-  va_list args;
-  va_start(args, first_arg_type);
-  uint32_t id = impl_->AsyncCall(method, slot, first_arg_type, &args);
-  va_end(args);
-  return id;
-}
-
-uint32_t DBusProxy::AsyncCall(const char* method,
-                              Slot1<bool, uint32_t> *slot,
-                              const Variant *in_arguments, size_t count) {
-  if (!impl_) return 0;
-
-  Arguments args;
-  VariantListToArguments(in_arguments, count, &args);
-  return impl_->AsyncCall(method, slot, &args);
-}
-
-bool DBusProxy::CollectResult(uint32_t call_id,
-                              MessageType first_arg_type,
-                              ...) {
-  if (!impl_) return 0;
-
-  va_list args;
-  va_start(args, first_arg_type);
-  bool ret = impl_->CollectResult(call_id, first_arg_type, &args);
-  va_end(args);
-  return ret;
-}
-
-bool DBusProxy::CollectResult(uint32_t call_id,
-                              VariantList *out_arguments) {
-  if (!impl_) return false;
-  Arguments args;
-  if (!impl_->CollectResult(call_id, &args))
-    return false;
-  ArgumentsToVariantList(args, out_arguments);
-  return true;
+  return impl_->Call(method, sync, timeout, &in_args, callback);
 }
 
 void DBusProxy::ConnectToSignal(const char* signal,
@@ -907,21 +736,6 @@ bool DBusProxy::EnumerateSignals(Slot2<bool, const char*, Slot*> *slot) const {
     return false;
   }
   return impl_->EnumerateSignals(slot);
-}
-
-void DeallocateContainerVariant(const Variant &container) {
-  if (container.type() != Variant::TYPE_SCRIPTABLE) return;
-  ScriptableInterface *scriptable =
-      VariantValue<ScriptableInterface*>()(container);
-  // we only free the memory for DBus Container
-  if (!scriptable->IsInstanceOf(kDBusContainerID)) return;
-  ContainerFreeMan freeman;
-  scriptable->Attach();
-  scriptable->EnumerateProperties(NewSlot(
-      &freeman, &ContainerFreeMan::PropertyCallback));
-  scriptable->EnumerateElements(NewSlot(
-      &freeman, &ContainerFreeMan::ArrayCallback));
-  scriptable->Detach();
 }
 
 }  // namespace dbus
