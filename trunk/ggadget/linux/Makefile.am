@@ -31,7 +31,8 @@ noinst_HEADERS		= file_system.h \
 			  power.h \
 			  process.h \
 			  wireless.h \
-			  wireless_access_point.h
+			  wireless_access_point.h \
+			  hal_strings.h
 
 linuxincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/linux
 linuxinclude_HEADERS	= framework.h
