@@ -241,10 +241,7 @@ class Scriptable1 : public ScriptableInterface { };
 
 TEST(Variant, TestScriptableAndAny) {
   CheckVariant<ScriptableInterface *, Variant::TYPE_SCRIPTABLE>(NULL, NULL);
-  CheckVariant<const ScriptableInterface *,
-               Variant::TYPE_CONST_SCRIPTABLE>(NULL, NULL);
   CheckVariant<Scriptable1 *, Variant::TYPE_SCRIPTABLE>(NULL, NULL);
-  CheckVariant<const Scriptable1 *, Variant::TYPE_CONST_SCRIPTABLE>(NULL, NULL);
 }
 
 TEST(Variant, TestDate) {

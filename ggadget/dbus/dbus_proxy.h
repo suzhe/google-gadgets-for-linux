@@ -26,16 +26,13 @@ class DBusConnection;
 
 namespace ggadget {
 
-template <class R> class Slot0;
-template <class R, class P1> class Slot1;
-template <class R, class P1, class P2> class Slot2;
+template <typename R> class Slot0;
+template <typename R, typename P1, typename P2> class Slot2;
 class MainLoopInterface;
 
 namespace dbus {
 
 class DBusProxy;
-
-typedef std::vector<Variant> VariantList;
 
 enum MessageType {
   MESSAGE_TYPE_INVALID,
@@ -106,20 +103,35 @@ class DBusProxyFactory {
  * User should not directly new the proxy. Use DBusProxyFactory instead.
  *
  * All methods have two style: @c va_list parameters and @c Variant vector
- * parameters. The @c va_list style method is prepared for C++ user. For
- * complicated value returned, the caller has responsibility to
- * detach the Variant. For example:
+ * parameters. The @c va_list style method is prepared for C++ user.
+ * Usage exsample:
  * <code>
+ * class IntValue {
+ *  public:
+ *   IntValue() : value_(0) {
+ *   }
+ *   ~IntValue() {}
+ *   bool Callback(int id, const Variant &value) {
+ *     DLOG("expect receiving a int type.");
+ *     ASSERT(value.type() == Variant::TYPE_INT64);
+ *     int64_t v = VariantValue<int64_t>()(value);
+ *     value_ = static_cast<int>(v);
+ *     return true;
+ *   }
+ *   int value() const { return value_; }
+ *  private:
+ *   int value_;
+ * };
  * DBusProxyFactory factory(mainloop);
  * DBusProxy *proxy = factory.NewSystemProxy("org.freedesktop.DBus",
  *                                           "/org/freedesktop/DBus",
  *                                           "org.freedesktop.DBus",
  *                                           false);
- * Variant array;
- * proxy->SyncCall("ListNames", -1, MESSAGE_TYPE_INVALID,
- *                 MESSAGE_TYPE_ARRAY, &array, MESSAGE_TYPE_INVALID);
- * // doing something...
- * DeallocateContainerVariant(array);
+ * IntValue obj;
+ * proxy->Call("DummyMethod", true, -1,
+ *             NewSlot(&obj, &IntValue::Callback),
+ *             MESSAGE_TYPE_INVALID);
+ * cout << "returned int value: " << obj.value();
  * </code>
  *
  * The methods that is Variant vector parameter style should not be called by
@@ -130,103 +142,75 @@ class DBusProxy {
   /**
    * C-tor.
    * @param connection the connection to the remote bus
+   * @param mainloop the main loop to which the proxy attach
    * @param name any name on the message bus
    * @param path name of the object instance to call methods on
    * @param interface name of the interface to call methods on
    */
   DBusProxy(DBusConnection *connection,
+            MainLoopInterface *mainloop,
             const char* name,
             const char* path,
             const char* interface);
   ~DBusProxy();
 
   /**
-   * Function for synchronously calling a method and receiving reply values.
+   * Callback slot to receive values from the DBus server. The callback will
+   * return a @c bool: @true if it want to keep receiving next argument and
+   * @false otherwise. The first parameter of the callback indecate the index of
+   * current argument, and the second parameter is the value of current argument.
+   */
+  typedef Slot2<bool, int, const Variant&> ResultCallback;
+
+  /**
+   * Function for calling a method and receiving reply values.
    * All of the input arguments are specified first,
    * followed by @c MESSAGE_TYPE_INVALID.
-   * Note that this means the @c MESSAGE_TYPE_INVALID
-   * must always spcified twice. And if no output arguments are specified,
-   * this function will send the request and return instantly without waiting for
-   * the back of the reply.
    *
-   * @param method method to call
+   * @param method method name to call
+   * @param sync @c true if the caller want to block this method and wait for
+   *        reply and @c false otherwise.
    * @param timeout timeout in milisecond that the caller would
-   *        cancel waiting reply, when @c timeout is set to -1,
-   *        a sane default time out value will be set by dbus
+   *        cancel waiting reply. When @c timeout is set to -1,
+   *        for sync case, sane default time out value will be set by dbus,
+   *        and for async case, callback will always there until a reply back
+   * @param callback callback to receive the arguments returned from DBus server
+   *        Note that the @c Call will own the callback and delete it after
+   *        execute. If it is set to @c NULL, the method will not wait for the
+   *        reply.
    * @param first_arg_type type of first input argument
    * @return @c false if an error happen @c true otherwise
    */
-  bool SyncCall(const char* method,
-                int timeout,
-                MessageType first_arg_type,
-                ...);
+  bool Call(const char* method,
+            bool sync,
+            int timeout,
+            ResultCallback *callback,
+            MessageType first_arg_type,
+            ...);
+
   /**
-   * Function for synchronously calling a method and receiving reply values.
+   * Function for calling a method and receiving reply values.
    *
-   * @param method method to call
+   * @param method method name to call
+   * @param sync @c true if the caller want to block this method and wait for
+   *        reply and @c false otherwise.
    * @param timeout timeout in milisecond that the caller would
-   *        cancel waiting reply, when @c timeout is set to -1,
-   *        a sane default time out value will be set by dbus
-   * @param not_wait_for_reply set to @true if the caller not want to wait for
-   *        the reply message and return instantly
+   *        cancel waiting reply. When @c timeout is set to -1,
+   *        for sync case, sane default time out value will be set by dbus,
+   *        and for async case, callback will always there until a reply back
    * @param in_arguments arguments array handed in
    * @param count size of @c in_arguments
-   * @param out_arguments arguments received from dbus server.
+   * @param callback callback to receive the arguments returned from DBus server
+   *        Note that the @c Call will own the callback and delete it after
+   *        execute. If it is set to @c NULL, the method will not wait for the
+   *        reply.
    * @return @c false if an error happen @c true otherwise
    */
-  bool SyncCall(const char* method, int timeout,
-                bool not_wait_for_reply,
-                const Variant *in_arguments, size_t count,
-                VariantList *out_arguments);
-
-  /**
-   * Asynchronously send out a method call request and return instantly.
-   * All of the input arguments are specified first, followed by
-   * @c MESSAGE_TYPE_INVALID.
-   *
-   * @param method method name to call
-   * @param slot the call back slot. The proxy will own the slot and delete it.
-   *        So caller should new the slot and never delete it.
-   * @param first_arg_type type of first input argument
-   * @return a call ID by which @c CollectResult could get the reply
-   */
-  uint32_t AsyncCall(const char* method,
-                     Slot1<bool, uint32_t> *slot,
-                     MessageType first_arg_type,
-                     ...);
-  /**
-   * Asynchronously send out a method call request and return instantly.
-   *
-   * @param method method name to call
-   * @param slot the call back slot. The proxy will own the slot and delete it.
-   *        So caller should new the slot and never delete it.
-   * @param in_arguments arguments array handed in
-   * @param count size of @c in_arguments
-   * @return a call ID by which @c CollectResult could get the reply
-   */
-  uint32_t AsyncCall(const char* method,
-                     Slot1<bool, uint32_t> *slot,
-                     const Variant *in_arguments, size_t count);
-
-  /**
-   * Method used by collect the reply information of a async call filed by
-   * previous invoking of @c AsyncCall.
-   * @param call_id the call ID the @c AsyncCall returned
-   * @param first_arg_type type of first output argument
-   * @return @c false if an error happen @c true otherwise
-   */
-  bool CollectResult(uint32_t call_id,
-                     MessageType first_arg_type,
-                     ...);
-  /**
-   * Method used by collect the reply information of a async call filed by
-   * previous invoking of @c AsyncCall.
-   * @param call_id the call ID the @c AsyncCall returned
-   * @param out_arguments arguments handed out
-   * @return @c false if an error happen @c true otherwise
-   */
-  bool CollectResult(uint32_t call_id,
-                     VariantList *out_arguments);
+  bool Call(const char* method,
+            bool sync,
+            int timeout,
+            const Variant *in_arguments, size_t count,
+            ResultCallback *callback);
 
   /**
    * Connect a slot to a signal name that the proxy listen to. When the proxy got
@@ -261,15 +245,6 @@ class DBusProxy {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(DBusProxy);
 };
-
-/**
- * Util function.
- * We use @c Variant as a container to hold values transfer between DBus client
- * and server. For complicated values (array, structure and dict), the
- * @c DBusProxy will allocate memory to fill in the container. So the caller
- * need use this method to free them.
- */
-void DeallocateContainerVariant(const Variant &container);
 
 }  // namespace dbus
 }  // namespace ggadget

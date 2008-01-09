@@ -134,7 +134,6 @@ std::string GetVariantSignature(const Variant &value) {
     case Variant::TYPE_JSON:
       return "s";
     case Variant::TYPE_SCRIPTABLE:
-    case Variant::TYPE_CONST_SCRIPTABLE:
       {
         ScriptableInterface *scriptable =
             VariantValue<ScriptableInterface*>()(value);
@@ -740,9 +739,11 @@ class DBusDemarshaller::Impl {
   }
   bool GetArgument(Argument *arg) {
     if (arg->signature.empty()) {
-      LOG("Warning! No signatrue specfied for the argument.");
-      ASSERT(false);
-      arg->signature = dbus_message_iter_get_signature(iter_);
+      char *sig = dbus_message_iter_get_signature(iter_);
+      arg->signature = sig;
+      dbus_free(sig);
+      // no value remained in current message iterator
+      if (arg->signature.empty()) return false;
     }
     const char *index = arg->signature.c_str();
     if (!CheckSignatureValidity(index, true))
@@ -1097,14 +1098,21 @@ DBusDemarshaller::~DBusDemarshaller() {
 }
 
 bool DBusDemarshaller::GetArguments(Arguments *args) {
-  for (Arguments::iterator it = args->begin(); it != args->end(); ++it)
-    if (!GetArgument(&(*it)))
-      return false;
+  Arguments tmp;
+  bool ret = true;
+  while (ret) {
+    Argument arg;
+    ret = GetArgument(&arg);
+    if (ret) tmp.push_back(arg);
+  }
+  args->swap(tmp);
   return true;
 }
 
 bool DBusDemarshaller::GetArgument(Argument *arg) {
-  return impl_->GetArgument(arg);
+  bool ret = impl_->GetArgument(arg);
+  impl_->MoveToNextItem();
+  return ret;
 }
 
 bool DBusDemarshaller::ValistAdaptor(const Arguments &out_args,

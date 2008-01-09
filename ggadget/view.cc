@@ -1280,8 +1280,7 @@ ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
         return image;
       }
     }
-  } else if (type == Variant::TYPE_SCRIPTABLE ||
-             type == Variant::TYPE_CONST_SCRIPTABLE) {
+  } else if (type == Variant::TYPE_SCRIPTABLE) {
     const ScriptableBinaryData *binary =
         VariantValue<const ScriptableBinaryData *>()(src);
       if (binary)

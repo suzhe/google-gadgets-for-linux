@@ -22,14 +22,21 @@
 #include <vector>
 
 #include "machine.h"
-#include "ggadget/common.h"
-#include "ggadget/string_utils.h"
+#include "hal_strings.h"
+#include <ggadget/common.h>
+#include <ggadget/slot.h>
+#include <ggadget/string_utils.h>
 
-#include "ggadget/dbus/dbus_proxy.h"
+#include <ggadget/dbus/dbus_proxy.h>
 
 namespace ggadget {
 namespace framework {
 namespace linux_os {
+
+using ggadget::dbus::DBusProxy;
+using ggadget::dbus::DBusProxyFactory;
+using ggadget::dbus::MESSAGE_TYPE_INVALID;
+using ggadget::dbus::MESSAGE_TYPE_STRING;
 
 namespace {
 
@@ -38,71 +45,69 @@ const char* kKeysInMachineInfo[] = {
   "vendor_id", "model name", "cpu MHz"
 };
 
-const char *kHalDBusName = "org.freedesktop.Hal";
-const char *kHalDBusPath = "/org/freedesktop/Hal/devices/computer";
-const char *kHalDBusInterface = "org.freedesktop.Hal.Device";
-const char *kHalPropertyMethod = "GetPropertyString";
-
-const char *kNewUUIDProperty = "system.hardware.uuid";
-const char *kOldUUIDProperty = "smbios.system.uuid";
-
-const char *kNewVendorProperty = "system.hardware.vendor";
-const char *kOldVendorProperty = "system.vendor";
-
-const char *kMachineModelProperty = "system.product";
-
 // Represents the file names for reading CPU info.
 const char* kCPUInfoFile = "/proc/cpuinfo";
+
+class StringValue {
+ public:
+  StringValue() {
+  }
+  ~StringValue() {
+  }
+  std::string string() const { return str_; }
+  void Reset() { str_.clear(); }
+  bool Callback(int id, const Variant &value) {
+    value.ConvertToString(&str_);
+    return true;
+  }
+ private:
+  std::string str_;
+};
 
 }  // namespace anonymous
 
 Machine::Machine() {
   InitArchInfo();
   InitProcInfo();
-  ggadget::dbus::DBusProxyFactory factory(NULL);
-  ggadget::dbus::DBusProxy *proxy = factory.NewSystemProxy(kHalDBusName,
-                                                           kHalDBusPath,
-                                                           kHalDBusInterface,
-                                                           false);
-  const char* str = NULL;
-  using ggadget::dbus::MESSAGE_TYPE_STRING;
-  using ggadget::dbus::MESSAGE_TYPE_INVALID;
-  if (!proxy->SyncCall(kHalPropertyMethod, -1,
-                        MESSAGE_TYPE_STRING, kNewUUIDProperty,
-                        MESSAGE_TYPE_INVALID,
-                        MESSAGE_TYPE_STRING, &str,
-                        MESSAGE_TYPE_INVALID)) {
+  DBusProxyFactory factory(NULL);
+  DBusProxy *proxy = factory.NewSystemProxy(kHalDBusName,
+                                            kHalComputerPath,
+                                            kHalComputerInterface,
+                                            false);
+  StringValue obj;
+  if (!proxy->Call(kHalPropertyMethod, true, -1,
+                   NewSlot(&obj, &StringValue::Callback),
+                   MESSAGE_TYPE_STRING, kNewUUIDProperty,
+                   MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->SyncCall(kHalPropertyMethod, -1,
-                     MESSAGE_TYPE_STRING, kOldUUIDProperty,
-                     MESSAGE_TYPE_INVALID,
-                     MESSAGE_TYPE_STRING, &str,
-                     MESSAGE_TYPE_INVALID);
+    proxy->Call(kHalPropertyMethod, true, -1,
+                NewSlot(&obj, &StringValue::Callback),
+                MESSAGE_TYPE_STRING, kOldUUIDProperty,
+                MESSAGE_TYPE_INVALID);
   }
-  if (str) serial_number_ = str;
+  serial_number_ = obj.string();
+  obj.Reset();
 
   /** get machine vendor */
-  if (!proxy->SyncCall(kHalPropertyMethod, -1,
-                        MESSAGE_TYPE_STRING, kNewVendorProperty,
-                        MESSAGE_TYPE_INVALID,
-                        MESSAGE_TYPE_STRING, &str,
-                        MESSAGE_TYPE_INVALID)) {
+  if (!proxy->Call(kHalPropertyMethod, true, -1,
+                   NewSlot(&obj, &StringValue::Callback),
+                   MESSAGE_TYPE_STRING, kNewVendorProperty,
+                   MESSAGE_TYPE_INVALID)) {
     /** The Hal specification changed one time. */
-    proxy->SyncCall(kHalPropertyMethod, -1,
-                     MESSAGE_TYPE_STRING, kOldVendorProperty,
-                     MESSAGE_TYPE_INVALID,
-                     MESSAGE_TYPE_STRING, &str,
-                     MESSAGE_TYPE_INVALID);
+    proxy->Call(kHalPropertyMethod, true, -1,
+                NewSlot(&obj, &StringValue::Callback),
+                MESSAGE_TYPE_STRING, kOldVendorProperty,
+                MESSAGE_TYPE_INVALID);
   }
-  if (str) machine_vendor_ = str;
+  machine_vendor_ = obj.string();
+  obj.Reset();
 
   /** get machine model */
-  proxy->SyncCall(kHalPropertyMethod, -1,
-                   MESSAGE_TYPE_STRING, kMachineModelProperty,
-                   MESSAGE_TYPE_INVALID,
-                   MESSAGE_TYPE_STRING, &str,
-                   MESSAGE_TYPE_INVALID);
-  if (str) machine_model_ = str;
+  proxy->Call(kHalPropertyMethod, true, -1,
+              NewSlot(&obj, &StringValue::Callback),
+              MESSAGE_TYPE_STRING, kMachineModelProperty,
+              MESSAGE_TYPE_INVALID);
+  machine_model_ = obj.string();
   delete proxy;
 }
 

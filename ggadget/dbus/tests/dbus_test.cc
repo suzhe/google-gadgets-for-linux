@@ -186,6 +186,10 @@ DBusHandlerResult path_message_func(DBusConnection *connection,
     DBusMessage *reply = dbus_message_new_method_return(message);
     dbus_int32_t rand_feed = *(reinterpret_cast<dbus_int32_t*>(user_data));
     DLOG("server: feed: %d", rand_feed);
+    struct timespec tm;
+    tm.tv_sec = 0;
+    tm.tv_nsec = 100000000;
+    nanosleep(&tm, NULL);
     dbus_message_append_args(reply,
                              DBUS_TYPE_INT32, &rand_feed,
                              DBUS_TYPE_INVALID);
@@ -257,6 +261,23 @@ void KillServer() {
   dbus_error_free(&error);
 }
 
+class IntValue {
+ public:
+  IntValue() : value_(0) {
+  }
+  ~IntValue() {}
+  bool Callback(int id, const Variant &value) {
+    DLOG("id: %d, value: %s", id, value.Print().c_str());
+    ASSERT(value.type() == Variant::TYPE_INT64);
+    int64_t v = VariantValue<int64_t>()(value);
+    value_ = static_cast<int>(v);
+    return true;
+  }
+  int value() const { return value_; }
+ private:
+  int value_;
+};
+
 }  // anonymous namespace
 
 TEST(DBusProxy, SyncCall) {
@@ -272,12 +293,12 @@ TEST(DBusProxy, SyncCall) {
     DBusProxyFactory *factory = new DBusProxyFactory(NULL);
     DBusProxy *proxy =
         factory->NewSessionProxy(kName, kPath, kInterface, false);
-    int read = 0;
-    EXPECT_TRUE(proxy->SyncCall("Hello", -1, MESSAGE_TYPE_INVALID,
-                                MESSAGE_TYPE_INT32, &read,
-                                MESSAGE_TYPE_INVALID));
-    DLOG("read feed: %d", read);
-    EXPECT_EQ(feed, read);
+    IntValue obj;
+    EXPECT_TRUE(proxy->Call("Hello", true, -1,
+                            NewSlot(&obj, &IntValue::Callback),
+                            MESSAGE_TYPE_INVALID));
+    DLOG("read feed: %d", obj.value());
+    EXPECT_EQ(feed, obj.value());
     delete proxy;
     delete factory;
   }
@@ -294,34 +315,24 @@ class Timeout : public WatchCallbackInterface {
   }
 };
 
-class MethodSlot {
- public:
-  MethodSlot(DBusProxy *proxy) : proxy_(proxy) {}
-  ~MethodSlot() {}
-  int value() const { return read_; }
-  bool Callback(uint32_t id) {
-    LOG("serial: %d", id);
-    return proxy_->CollectResult(id, MESSAGE_TYPE_INT32, &read_,
-                                 MESSAGE_TYPE_INVALID);
-  }
- private:
-  DBusProxy *proxy_;
-  int read_;
-};
-
 TEST(DBusProxy, AsyncCall) {
   NativeMainLoop mainloop;
   DBusProxyFactory factory(&mainloop);
   DBusProxy *proxy = factory.NewSessionProxy(kName, kPath, kInterface, false);
-  MethodSlot slot(proxy);
-  Timeout *timeout = new Timeout;
-  mainloop.AddTimeoutWatch(1000, timeout);
-  EXPECT_TRUE(proxy->AsyncCall("Hello", NewSlot(&slot, &MethodSlot::Callback),
-                               MESSAGE_TYPE_INVALID));
+  mainloop.AddTimeoutWatch(200, new Timeout);
+  IntValue obj;
+  EXPECT_TRUE(proxy->Call("Hello", false, 50,
+                          NewSlot(&obj, &IntValue::Callback),
+                          MESSAGE_TYPE_INVALID));
   mainloop.Run();
-  EXPECT_EQ(feed, slot.value());
+  EXPECT_EQ(0, obj.value());
+  mainloop.AddTimeoutWatch(1000, new Timeout);
+  EXPECT_TRUE(proxy->Call("Hello", false, -1,
+                          NewSlot(&obj, &IntValue::Callback),
+                          MESSAGE_TYPE_INVALID));
+  mainloop.Run();
+  EXPECT_EQ(feed, obj.value());
   delete proxy;
-  DLOG("here");
 }
 
 class SignalSlot {
@@ -340,8 +351,7 @@ TEST(DBusProxy, ConnectToSignal) {
   ASSERT(proxy);
   SignalSlot slot;
   proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
-  EXPECT_TRUE(proxy->SyncCall("Signal", -1, MESSAGE_TYPE_INVALID,
-                              MESSAGE_TYPE_INVALID));
+  EXPECT_TRUE(proxy->Call("Signal", true, -1, NULL, MESSAGE_TYPE_INVALID));
   Timeout *timeout = new Timeout;
   mainloop.AddTimeoutWatch(1000, timeout);
   mainloop.Run();
@@ -358,8 +368,7 @@ TEST(DBusProxy, ConnectToSignalByName) {
   Timeout *timeout = new Timeout;
   mainloop.AddTimeoutWatch(2000, timeout);
   proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
-  EXPECT_TRUE(proxy->SyncCall("Signal", -1, MESSAGE_TYPE_INVALID,
-                              MESSAGE_TYPE_INVALID));
+  EXPECT_TRUE(proxy->Call("Signal", true, -1, NULL, MESSAGE_TYPE_INVALID));
   mainloop.Run();
   int old = slot.value();
   EXPECT_NE(0, old);
@@ -367,8 +376,7 @@ TEST(DBusProxy, ConnectToSignalByName) {
   timeout = new Timeout;
   mainloop.AddTimeoutWatch(2000, timeout);
   proxy->ConnectToSignal("signal1", NewSlot(&slot, &SignalSlot::Callback));
-  EXPECT_TRUE(proxy->SyncCall("Signal", -1, MESSAGE_TYPE_INVALID,
-                              MESSAGE_TYPE_INVALID));
+  EXPECT_TRUE(proxy->Call("Signal", true, -1, NULL, MESSAGE_TYPE_INVALID));
   mainloop.Run();
   EXPECT_EQ(old, slot.value());
   delete proxy;
