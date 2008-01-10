@@ -32,6 +32,8 @@
 namespace ggadget {
 namespace gtkmoz {
 
+static const char *kBrowserChildName = "gtkmoz_browser_child";
+
 class BrowserElement::Impl {
  public:
   Impl(BrowserElement *owner)
@@ -260,7 +262,7 @@ class BrowserElement::Impl {
         std::string ret_fd_str = StringPrintf("%d", ret_pipe_fds[0]); 
         // TODO: Deal with the situtation that the main program is not run from
         // the directory it is in.
-        execl("browser_child", "browser_child",
+        execl(kBrowserChildName, kBrowserChildName,
               down_fd_str.c_str(), up_fd_str.c_str(), ret_fd_str.c_str(), NULL);
         LOG("Failed to execute browser child");
         _exit(-1);

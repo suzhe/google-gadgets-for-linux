@@ -19,8 +19,12 @@ if GGL_BUILD_LIBGGADGET_GTK
 # Putting . into SBUDIRS list to force building current directory first.
 SUBDIRS = . tests
 
+
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
+			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
+			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
 
 if GGL_HAVE_RSVG
   RSVG_IMAGE_H=rsvg_image.h
@@ -37,7 +41,7 @@ noinst_HEADERS		= cairo_canvas.h \
 			  pixbuf_image.h \
 			  $(RSVG_IMAGE_H)
 
-gtkincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtk
+gtkincludedir		= $(GGL_INCLUDE_DIR)/ggadget/gtk
 gtkinclude_HEADERS	= cairo_graphics.h \
 			  gadget_view_widget.h \
 			  gtk_main_loop.h \
@@ -82,4 +86,6 @@ libggadget_gtk@GGL_EPOCH@_la_LDFLAGS = \
 			  -export-dynamic \
 			  -rpath $(libdir)
 
+pkgconfigdir= $(libdir)/pkgconfig
+pkgconfig_DATA= libggadget-gtk@GGL_EPOCH@.pc
 endif

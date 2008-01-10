@@ -22,6 +22,6 @@ noinst_HEADERS		= gunit-internal-inl.h \
 			  gunit_pred_impl.h \
 			  gunit_prod.h
 
-check_LTLIBRARIES	= libgunit.la
+noinst_LTLIBRARIES	= libgunit.la
 
 libgunit_la_SOURCES	= gunit.cc

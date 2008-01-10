@@ -18,7 +18,10 @@ if GGL_BUILD_LIBGGADGET_SMJS
 SUBDIRS = . tests
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
+			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
+			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
 
 noinst_HEADERS		= converter.h \
 			  js_function_slot.h \
@@ -28,7 +31,7 @@ noinst_HEADERS		= converter.h \
 			  json.h \
 			  native_js_wrapper.h
 
-smjsincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/smjs
+smjsincludedir		= $(GGL_INCLUDE_DIR)/ggadget/smjs
 smjsinclude_HEADERS	= js_script_runtime.h
 
 lib_LTLIBRARIES		= libggadget-smjs@GGL_EPOCH@.la
@@ -55,4 +58,7 @@ libggadget_smjs@GGL_EPOCH@_la_LDFLAGS = \
 			  -export-dynamic \
 			  -rpath $(libdir) \
 			  @SPIDERMONKEY_LDFLAGS@
+
+pkgconfigdir= $(libdir)/pkgconfig
+pkgconfig_DATA= libggadget-smjs@GGL_EPOCH@.pc
 endif

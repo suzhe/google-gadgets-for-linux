@@ -257,7 +257,7 @@ class DummyFileSystem : public FileSystemInterface {
   virtual DrivesInterface *GetDrives() { return new DummyDrives(); }
   virtual std::string BuildPath(const char *path, const char *name) {
     return std::string(path ? path : "") +
-           std::string(kPathSeparatorStr) +
+           std::string(kDirSeparatorStr) +
            std::string(name);
   }
   virtual std::string GetDriveName(const char *path) {

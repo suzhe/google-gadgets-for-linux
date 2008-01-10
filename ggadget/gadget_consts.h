@@ -22,9 +22,13 @@
 
 namespace ggadget {
 
-/** Path separator used in Linux platform */
-const char kPathSeparator = '/';
-const char *const kPathSeparatorStr = "/";
+/** Character to separate directories */
+const char kDirSeparator = '/';
+const char *const kDirSeparatorStr = "/";
+
+/** Character to separate search paths, eg. used in PATH environment var */
+const char kSearchPathSeparator = ':';
+const char *const kSearchPathSeparatorStr = ":";
 
 /** Filenames of required resources in each .gg package. */
 const char *const kMainXML         = "main.xml";

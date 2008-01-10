@@ -16,7 +16,16 @@
 
 ACLOCAL_AMFLAGS = -I autotools
 
-SUBDIRS = third_party unittest ggadget hosts
+if GGL_BUILD_LIBLTDL
+LIBLTDL_DIR = libltdl
+endif
+
+SUBDIRS = $(LIBLTDL_DIR) \
+	  resources \
+	  third_party \
+	  unittest \
+	  ggadget \
+	  hosts
 
 EXTRA_DIST = examples
 

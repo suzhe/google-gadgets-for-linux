@@ -14,13 +14,16 @@
 # limitations under the License.
 #
 
+if GGL_HOST_LINUX
+
 # Putting . into SBUDIRS list to force building current directory first.
 SUBDIRS = . tests
 
-if GGL_HOST_LINUX
-
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
+			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
+			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
 
 noinst_HEADERS		= file_system.h \
 			  audioclip.h \
@@ -34,7 +37,7 @@ noinst_HEADERS		= file_system.h \
 			  wireless_access_point.h \
 			  hal_strings.h
 
-linuxincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget/linux
+linuxincludedir		= $(GGL_INCLUDE_DIR)/ggadget/linux
 linuxinclude_HEADERS	= framework.h
 
 lib_LTLIBRARIES		= libggadget-linux@GGL_EPOCH@.la
@@ -67,4 +70,6 @@ libggadget_linux@GGL_EPOCH@_la_LDFLAGS = \
 			  -export-dynamic \
 			  -rpath $(libdir)
 
+pkgconfigdir= $(libdir)/pkgconfig
+pkgconfig_DATA= libggadget-linux@GGL_EPOCH@.pc
 endif

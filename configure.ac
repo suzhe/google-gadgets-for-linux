@@ -93,6 +93,9 @@ AC_DEFINE_UNQUOTED(GGL_MICRO_VERSION, $GGL_MICRO_VERSION,
 GGL_EPOCH=-1.0
 AC_SUBST(GGL_EPOCH)
 
+GGL_BASE_DIR=ggl$GGL_EPOCH
+AC_SUBST(GGL_BASE_DIR)
+
 ###########################################################
 ##                      Config options.                  ##
 ###########################################################
@@ -106,6 +109,7 @@ AC_ARG_WITH([memcheck-command],
 		[specify a memory check command for running unit tests.]),
 	    [memcheck_command=$withval],
 	    [memcheck_command=""])
+
 ###########################################################
 ##                  Start Configuration.                 ##
 ###########################################################
@@ -113,16 +117,19 @@ AC_ARG_WITH([memcheck-command],
 # Init automake stuff
 AM_INIT_AUTOMAKE
 
-# Specifies configurable header files.
-AC_CONFIG_HEADERS(config.h)
-
 # Check build and host system types
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 
 # Initializes libtool
+AC_LIBLTDL_INSTALLABLE
+AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
+AC_SUBST(LIBLTDL)
+AC_SUBST(LTDLINCL)
 AC_SUBST(LIBTOOL_DEPS)
+AC_CONFIG_SUBDIRS([libltdl])
+AM_CONDITIONAL(GGL_BUILD_LIBLTDL, [test x$enable_ltdl_install = xyes])
 
 # Initialize pkg-config
 PKG_PROG_PKG_CONFIG([0.20])
@@ -310,6 +317,10 @@ AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_rsvg = xyes])
 
+if test x$ZIP = x; then
+  AC_MSG_WARN([Can't generate resource file bundle without zip command.])
+fi
+
 # OS Specific conditions.
 case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
@@ -363,10 +374,25 @@ CPPFLAGS="$CPPFLAGS -D__STDC_CONSTANT_MACROS"
 
 # Define os specific macro for gunit.
 case $host_os in
-  *linux* )
+  *linux* | *darwin* )
   CPPFLAGS="$CPPFLAGS -DOS_LINUX"
   ;;
 esac
+
+###########################################################
+##                      Default dirs.                    ##
+###########################################################
+GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
+GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
+GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
+GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR/
+GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR/
+
+AC_SUBST(GGL_MODULE_DIR)
+AC_SUBST(GGL_INCLUDE_DIR)
+AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
+AC_SUBST(GGL_LIBEXEC_DIR)
+AC_SUBST(GGL_RESOURCE_DIR)
 
 ###########################################################
 ##                      Output files.                    ##
@@ -379,10 +405,15 @@ AC_SUBST(abs_builddir)
 AC_SUBST(abs_top_srcdir)
 AC_SUBST(abs_top_builddir)
 
+# Specifies configurable headers.
+AC_CONFIG_HEADERS([config.h])
+
+# Specifies configurable files.
 AC_CONFIG_FILES([Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
+		 ggadget/tests/test_modules/Makefile
 		 ggadget/dbus/Makefile
 		 ggadget/dbus/tests/Makefile
 		 ggadget/gtk/Makefile
@@ -394,9 +425,15 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
+		 resources/Makefile
 		 third_party/Makefile
 		 third_party/unzip/Makefile
 		 unittest/Makefile
+		 ggadget/libggadget$GGL_EPOCH.pc
+		 ggadget/dbus/libggadget-dbus$GGL_EPOCH.pc
+		 ggadget/gtk/libggadget-gtk$GGL_EPOCH.pc
+		 ggadget/linux/libggadget-linux$GGL_EPOCH.pc
+		 ggadget/smjs/libggadget-smjs$GGL_EPOCH.pc
 		 ])
 AC_OUTPUT
 
@@ -404,6 +441,7 @@ AC_MSG_RESULT([
 Build options:
   Version                  $GGL_VERSION
   Install prefix           $prefix
+  Install included libltdl $enable_ltdl_install
   Build shared libs        $enable_shared
   Build static libs        $enable_static
   Enable debug             $enable_debug
