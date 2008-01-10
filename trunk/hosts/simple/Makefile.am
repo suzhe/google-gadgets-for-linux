@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST		= resources
 if GGL_BUILD_SIMPLE_HOST
 
 INCLUDES		= -I$(top_builddir) \
@@ -44,17 +43,9 @@ ggl_simple_LDADD	= @CAIRO_LIBS@ \
 
 ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 
-
-# TODO: install it to proper directory.
-noinst_DATA = ggl_resources.bin
-
-ggl_resources.bin: resources
-	(cd $<; $(ZIP) -r -u $(abs_builddir)/$@ *.png *.js *.xml)
-
-if GGL_BUILD_LIBGGADGET_GTKMOZ
-noinst_DATA += browser_child
-browser_child: $(top_builddir)/ggadget/gtkmoz/browser_child
-	cp $< $@
-endif	
+# TODO: install these files into correct path.
+all-local:
+	[ ! -f $(top_builddir)/ggadget/gtkmoz/gtkmoz_browser_child ] || cp $(top_builddir)/ggadget/gtkmoz/gtkmoz_brower_child .
+	[ ! -f $(top_builddir)/resources/ggl_resources.bin ] || cp $(top_builddir)/resources/ggl_resources.bin .
 
 endif

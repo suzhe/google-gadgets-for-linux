@@ -33,9 +33,13 @@ SUBDIRS += linux
 endif
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
+			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
+			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
 
-gglincludedir		= $(includedir)/ggl@GGL_EPOCH@/ggadget
+gglincludedir		= $(GGL_INCLUDE_DIR)/ggadget
+gglsysdepsincludedir	= $(GGL_SYSDEPS_INCLUDE_DIR)/ggadget
 
 gglinclude_HEADERS	= anchor_element.h \
 			  audioclip_interface.h \
@@ -80,6 +84,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  math_utils.h \
 			  memory_options.h \
 			  menu_interface.h \
+			  module.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  scoped_ptr.h \
@@ -99,7 +104,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  signals.h \
 			  slot.h \
 			  string_utils.h \
-			  sysdeps.h \
 			  text_frame.h \
 			  texture.h \
 			  unicode_utils.h \
@@ -115,6 +119,9 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_parser.h
 			  xml_parser_interface.h \
 			  xml_utils.h
+
+nodist_gglsysdepsinclude_HEADERS= sysdeps.h
+BUILT_SOURCES=$(gglsysdepsinclude_HEADERS)
 
 lib_LTLIBRARIES		= libggadget@GGL_EPOCH@.la
 
@@ -144,6 +151,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  logger.cc \
 			  math_utils.cc \
 			  memory_options.cc \
+			  module.cc \
 			  native_main_loop.cc \
 			  progressbar_element.cc \
 			  scriptable_array.cc \
@@ -172,7 +180,9 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
 			  @LIBCURL_CPPFLAGS@ \
-			  @XML_CPPFLAGS@
+			  @XML_CPPFLAGS@ \
+			  @LTDLINCL@
+
 
 libggadget@GGL_EPOCH@_la_LIBADD = \
 			  @LIBCURL@ \
@@ -188,4 +198,8 @@ endif
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
 			  -export-dynamic \
+			  @LIBLTDL@ \
 			  -rpath $(libdir)
+
+pkgconfigdir= $(libdir)/pkgconfig
+pkgconfig_DATA= libggadget@GGL_EPOCH@.pc

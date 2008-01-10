@@ -15,8 +15,13 @@
 
 EXTRA_DIST		= file_manager_test_data
 
+SUBDIRS = test_modules
+
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
+			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
+			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
 
 LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
@@ -42,10 +47,14 @@ check_PROGRAMS		= color_test \
 			  unicode_utils_test \
 			  string_utils_test \
 			  basic_element_test \
+			  module_test \
 			  view_test \
 			  xml_dom_test \
 			  xml_parser_test \
 			  xml_http_request_test
+
+check_LTLIBRARIES	= foo-module.la \
+			  bar-module.la
 
 color_test_SOURCES		= color_test.cc
 common_test_SOURCES		= common_test.cc
@@ -61,6 +70,7 @@ native_main_loop_test_SOURCES	= native_main_loop_test.cc
 unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
 basic_element_test_SOURCES	= basic_element_test.cc
+module_test_SOURCES		= module_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES		= xml_parser_test.cc
@@ -69,6 +79,24 @@ xml_http_request_test_SOURCES	= xml_http_request_test.cc
 xml_http_request_test_LDADD	= -lpthread \
 				  $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+foo_module_la_SOURCES		= test_module.cc
+foo_module_la_CPPFLAGS		= -DMODULE_NAME=foo-module \
+				  -DMODULE_NAME_UNDERSCORE=foo_module
+foo_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
+				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+foo_module_la_LDFLAGS		= -avoid-version \
+				  -rpath $(libdir) \
+				  -module
+
+bar_module_la_SOURCES		= test_module.cc
+bar_module_la_CPPFLAGS		= -DMODULE_NAME=bar-module \
+				  -DMODULE_NAME_UNDERSCORE=bar_module
+bar_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
+				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+bar_module_la_LDFLAGS		= -avoid-version \
+				  -rpath $(libdir) \
+				  -module
 
 file_manager_test_data.dest: file_manager_test_data
 	(rm -fr $@; cp -R $< $@; find $@ -name '.*' -exec rm -fr {} \;) || true

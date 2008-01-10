@@ -39,9 +39,9 @@ FileManagerImpl::FileManagerImpl(XMLParserInterface *xml_parser)
 FileManagerImpl::~FileManagerImpl() {
 }
 
-bool FileManagerImpl::Init(const char *base_path) { 
+bool FileManagerImpl::Init(const char *base_path) {
   int error = 0;
-  ASSERT_M(base_path_.empty(), ("Don't initialize a FileManager twice"));  
+  ASSERT_M(base_path_.empty(), ("Don't initialize a FileManager twice"));
   if (!base_path || !base_path[0]) {
     LOG("Base path is empty.");
     return false;
@@ -58,7 +58,7 @@ bool FileManagerImpl::Init(const char *base_path) {
   }
 
   // Remove the trailing slash if any.
-  if (*(base_path_.end() - 1) == kPathSeparator)
+  if (*(base_path_.end() - 1) == kDirSeparator)
     base_path_.erase(base_path_.end() - 1);
 
   struct stat stat_value;
@@ -108,7 +108,7 @@ FileManagerImpl::FileMap::const_iterator FileManagerImpl::FindFile(
        i != normalized_file->end(); ++i) {
     // In Linux replace all \ with / for Windows compatibility.
     if ('\\' == *i)
-      *i = kPathSeparator;
+      *i = kDirSeparator;
   }
 
   // First try non-localized file.
@@ -130,7 +130,7 @@ bool FileManagerImpl::GetFileContents(const char *file,
         normalized_file.c_str(), base_path_.c_str());
     return false;
   } else {
-    *path = base_path_ + kPathSeparator + iter->first;
+    *path = base_path_ + kDirSeparator + iter->first;
     return GetFileContentsInternal(iter, data);
   }
 }
@@ -240,10 +240,10 @@ bool FileManagerImpl::InitLocaleStrings() {
   if (pos != std::string::npos)
     locale_lang_prefix_.erase(pos);
 
-  locale_lang_prefix_ += kPathSeparator;
+  locale_lang_prefix_ += kDirSeparator;
   if (GetLocaleIDString(locale_prefix_.c_str(), &locale_id_prefix_))
-    locale_id_prefix_ += kPathSeparator;
-  locale_prefix_ += kPathSeparator;
+    locale_id_prefix_ += kDirSeparator;
+  locale_prefix_ += kDirSeparator;
 
   return true;
 }
@@ -256,11 +256,11 @@ void FileManagerImpl::SplitPathFilename(const char *input_path,
   if (filename)
     *filename = "";
 
-  std::string::size_type pos = path->rfind(kPathSeparator);
+  std::string::size_type pos = path->rfind(kDirSeparator);
   if (pos != std::string::npos) {
     if (filename)
       *filename = path->substr(pos + 1);
-    // Preserve the starting '/' there is only one '/'. 
+    // Preserve the starting '/' there is only one '/'.
     path->erase(pos ? pos : 1);
   }
 }
@@ -269,7 +269,7 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
   // The strings.xml lookup order is slightly different from that of other
   // files in the gadget package, so we do a manual lookup to get the
   // exact filename, and bypass GetFileContents.
-  // Similarly, GetXMLFile is bypassed because it tries to do string 
+  // Similarly, GetXMLFile is bypassed because it tries to do string
   // resource substitution on the file, which is inappropiate here.
   FileMap::const_iterator iter = FindLocalizedFile(string_table);
   if (iter == files_.end()) {
@@ -281,7 +281,7 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
   if (!GetFileContentsInternal(iter, &data))
     return false;
 
-  std::string filename(base_path_ + kPathSeparator + iter->first);
+  std::string filename(base_path_ + kDirSeparator + iter->first);
   bool result = xml_parser_->ParseXMLIntoXPathMap(data, filename.c_str(),
                                                   kStringsTag, NULL,
                                                   &string_table_);
@@ -291,7 +291,7 @@ bool FileManagerImpl::LoadStringTable(const char *string_table) {
     // encoding without declaration.
     result = xml_parser_->ParseXMLIntoXPathMap(data, filename.c_str(),
                                                kStringsTag, "ISO8859-1",
-                                               &string_table_); 
+                                               &string_table_);
   }
 
   return result;
@@ -305,7 +305,7 @@ bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
   }
 
   struct dirent *pfile = NULL;
-  while ((pfile = readdir(pdir)) != NULL) { 
+  while ((pfile = readdir(pdir)) != NULL) {
     if (strcmp(pfile->d_name, ".") != 0 &&
         strcmp(pfile->d_name, "..") != 0) {
 
@@ -313,7 +313,7 @@ bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
       bzero(&stat_value, sizeof(stat_value));
 
       std::string abs_path = dir_path;
-      abs_path += kPathSeparator;
+      abs_path += kDirSeparator;
       abs_path += pfile->d_name;
       if (stat(abs_path.c_str(), &stat_value) != 0) {
         LOG("File not accessable: %s", abs_path.c_str());
@@ -326,7 +326,7 @@ bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
         files_[abs_path.substr(base_path_.size() + 1)] = dummy_unz_pos;
       }
     }
-  } 
+  }
 
   closedir(pdir);
   return true;
@@ -352,7 +352,7 @@ bool FileManagerImpl::ScanZipFilenames() {
                                   filename,
                                   sizeof(filename),
                                   NULL, 0, NULL, 0);
-    if (UNZ_OK == error && filename[strlen(filename) - 1] != kPathSeparator) {
+    if (UNZ_OK == error && filename[strlen(filename) - 1] != kDirSeparator) {
       unz_file_pos pos;
       error = unzGetFilePos(zip, &pos);
       if (UNZ_OK == error)
@@ -402,7 +402,7 @@ bool FileManagerImpl::GetDirFileContents(FileMap::const_iterator iter,
   ASSERT(data);
   data->clear();
   // TODO: check security?
-  std::string real_name = base_path_ + kPathSeparator + iter->first;
+  std::string real_name = base_path_ + kDirSeparator + iter->first;
   // Try to read from disk.
   // The approach below doesn't really work for large files, but files
   // in the gadget should be small so this should be OK.

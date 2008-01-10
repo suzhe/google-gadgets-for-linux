@@ -16,11 +16,15 @@
 if GGL_BUILD_LIBGGADGET_GTKMOZ
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir)
+			  -I$(top_srcdir) \
+			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
+			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
+			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
+
 
 noinst_HEADERS          = browser_child.h
 
-gtkmozincludedir	= $(includedir)/ggl@GGL_EPOCH@/ggadget/gtkmoz
+gtkmozincludedir	= $(GGL_INCLUDE_DIR)/ggadget/gtkmoz
 gtkmozinclude_HEADERS	= browser_element.h
 
 lib_LTLIBRARIES		= libggadget-gtkmoz@GGL_EPOCH@.la
@@ -39,20 +43,21 @@ libggadget_gtkmoz@GGL_EPOCH@_la_LDFLAGS = \
 			  -export-dynamic \
 			  -rpath $(libdir)
 
-bin_PROGRAMS		= browser_child
+ggllibexec_PROGRAMS	= gtkmoz_browser_child
+ggllibexecdir		= $(GGL_LIBEXEC_DIR)
 
-browser_child_SOURCES	= browser_child.cc ../smjs/json.cc
+gtkmoz_browser_child_SOURCES= browser_child.cc ../smjs/json.cc
 
 CXXFLAGS		+= -Wno-non-virtual-dtor
 
-browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
-			  @SPIDERMONKEY_CPPFLAGS@ \
-			  @GTKMOZEMBED_CFLAGS@
+gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
+				  @SPIDERMONKEY_CPPFLAGS@ \
+				  @GTKMOZEMBED_CFLAGS@
 
-browser_child_LDADD	= @GTK2_LIBS@ \
-			  @SPIDERMONKEY_LIBS@ \
-			  @GTKMOZEMBED_LIBS@
+gtkmoz_browser_child_LDADD	= @GTK2_LIBS@ \
+				  @SPIDERMONKEY_LIBS@ \
+				  @GTKMOZEMBED_LIBS@
 
-browser_child_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
+gtkmoz_browser_child_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 
 endif

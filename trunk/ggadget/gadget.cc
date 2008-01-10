@@ -80,7 +80,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
     Plugin(Impl *gadget_impl) :
         gadget_host_(gadget_impl->host_),
-        main_view_(down_cast<View *>(gadget_impl->main_view_host_->GetView())) {
+        main_view_(NULL) {
       RegisterProperty("plugin_flags", NULL, // No getter.
                        NewSlot(gadget_host_,
                                &GadgetHostInterface::SetPluginFlags));
@@ -100,14 +100,8 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       RegisterSignal("onDisplayTargetChange", &ondisplaytargetchange_signal_);
 
       // Deprecated or unofficial properties and methods.
-      RegisterProperty("title", NULL, // No getter.
-                       NewSlot(main_view_, &View::SetCaption));
       RegisterProperty("about_text", NULL, // No getter.
                        NewSlot(gadget_impl, &Impl::SetAboutText));
-      RegisterProperty("window_width",
-                       NewSlot(main_view_, &View::GetWidth), NULL);
-      RegisterProperty("window_height",
-                       NewSlot(main_view_, &View::GetHeight), NULL);
       RegisterMethod("SetFlags", NewSlot(this, &Plugin::SetFlags));
       RegisterMethod("SetIcons", NewSlot(this, &Plugin::SetIcons));
 
@@ -129,6 +123,18 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
                      NewSlot(this, &Plugin::RemoveContentItem));
       RegisterMethod("RemoveAllContentItems",
                      NewSlot(this, &Plugin::RemoveAllContentItems));
+    }
+
+    void SetMainView(View *main_view) {
+      ASSERT(main_view_ == NULL && main_view != NULL);
+      main_view_ = main_view;
+      // Deprecated or unofficial properties and methods.
+      RegisterProperty("title", NULL, // No getter.
+                       NewSlot(main_view_, &View::SetCaption));
+      RegisterProperty("window_width",
+                       NewSlot(main_view_, &View::GetWidth), NULL);
+      RegisterProperty("window_height",
+                       NewSlot(main_view_, &View::GetHeight), NULL);
     }
 
     void OnAddCustomMenuItems(MenuInterface *menu) {
@@ -235,17 +241,19 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
         debug_(this),
         storage_(this),
         scriptable_options_(host->GetOptions(), false),
+        plugin_(this),
         gadget_global_prototype_(this),
         element_factory_(new ElementFactory()),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
-                                          new View(&gadget_global_prototype_, 
+                                          new View(&gadget_global_prototype_,
                                                    element_factory_,
                                                    debug_mode))),
-        plugin_(this),
         details_view_host_(NULL), details_view_(NULL),
         has_options_xml_(false),
         close_details_view_timer_(0), show_details_view_timer_(0),
         debug_mode_(debug_mode) {
+    // Main view must be set here, to break circular dependency.
+    plugin_.SetMainView(down_cast<View *>(main_view_host_->GetView()));
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
   }
@@ -520,10 +528,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   Storage storage_;
   Strings strings_;
   ScriptableOptions scriptable_options_;
+  Plugin plugin_;
   GadgetGlobalPrototype gadget_global_prototype_;
   ElementFactory *element_factory_;
   ViewHostInterface *main_view_host_;
-  Plugin plugin_;
   ViewHostInterface *details_view_host_;
   DetailsView *details_view_;
   GadgetStringMap manifest_info_map_;

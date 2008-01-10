@@ -63,12 +63,12 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
   file_manager_ = wrapper;
 
   resource_file_manager_->Init(kResourceZipName);
-  wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix, 
+  wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
                                resource_file_manager_);
 
-  global_file_manager_->Init(ggadget::kPathSeparatorStr);
-  wrapper->RegisterFileManager(ggadget::kPathSeparatorStr, 
-                               global_file_manager_); 
+  global_file_manager_->Init(ggadget::kDirSeparatorStr);
+  wrapper->RegisterFileManager(ggadget::kDirSeparatorStr,
+                               global_file_manager_);
 
   script_runtime_->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
