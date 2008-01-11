@@ -36,7 +36,7 @@ namespace ggadget {
 
 static const int kLabelTextSize = 9;
 static const int kListItemHeight = 19;
-static const double kZoomRatio = 1.1;
+static const double kZoomRatio = 1.2;
 static const char *kControlBorderColor = "#A0A0A0";
 static const char *kBackgroundColor = "#FFFFFF";
 static const int kMinComboBoxHeight = 80;
@@ -70,7 +70,8 @@ class DisplayWindow::Impl {
     DEFINE_CLASS_ID(0x811cc6d8013643f4, ScriptableInterface);
 
     Control(DisplayWindow *window, BasicElement *element)
-        : window_(window), element_(element) {
+        : window_(window), element_(element),
+          checkbox_clicked_(false) {
       // Incompatibility: we don't allow chaning id of a control.
       RegisterProperty("id", NewSlot(element_, &BasicElement::GetName), NULL);
       RegisterProperty("enabled",
@@ -193,7 +194,16 @@ class DisplayWindow::Impl {
             checkbox->GetTextFrame()->SetText(text_str.c_str());
           } else if (element_->IsInstanceOf(LabelElement::CLASS_ID)) {
             LabelElement *label = down_cast<LabelElement *>(element_);
-            label->GetTextFrame()->SetText(text_str.c_str());
+            TextFrame *text_frame = label->GetTextFrame();
+            text_frame->SetText(text_str.c_str());
+
+            text_frame->SetSize(kLabelTextSize);
+            // Shrink the font size if the given rect can't enclose the text.
+            double text_width, text_height;
+            text_frame->GetExtents(element_->GetPixelWidth(),
+                                   &text_width, &text_height);
+            if (text_height > element_->GetPixelHeight())
+              text_frame->SetSize(kLabelTextSize - 1);
           } else if (element_->IsInstanceOf(EditElement::CLASS_ID)) {
             EditElement *edit = down_cast<EditElement *>(element_);
             edit->SetValue(text_str.c_str());
@@ -285,12 +295,24 @@ class DisplayWindow::Impl {
       onchanged_signal_(window_, this);
     }
 
-    void OnClicked() {
+    void OnClick() {
       onclicked_signal_(window_, this);
+    }
+
+    void OnCheckBoxClick() {
+      checkbox_clicked_ = true;
+    }
+
+    void OnCheckBoxChange() {
+      if (checkbox_clicked_) {
+        onclicked_signal_(window_, this);
+        checkbox_clicked_ = false;
+      }
     }
 
     DisplayWindow *window_;
     BasicElement *element_;
+    bool checkbox_clicked_;
     Signal2<void, DisplayWindow *, Control *> onchanged_signal_;
     Signal2<void, DisplayWindow *, Control *> onclicked_signal_;
   };
@@ -326,8 +348,9 @@ class DisplayWindow::Impl {
       case CLASS_LABEL: {
         LabelElement *element = down_cast<LabelElement *>(
             elements->AppendElement("label", ctrl_id));
-        element->GetTextFrame()->SetWordWrap(true);
-        element->GetTextFrame()->SetSize(kLabelTextSize);
+        TextFrame *text_frame = element->GetTextFrame();
+        text_frame->SetWordWrap(true);
+        text_frame->SetSize(kLabelTextSize);
         control = new Control(owner_, element);
         break;
       }
@@ -354,6 +377,8 @@ class DisplayWindow::Impl {
                 elements->AppendElement("listbox", ctrl_id));
             element->SetItemWidth(Variant("100%"));
             element->SetItemHeight(Variant(kListItemHeight));
+            element->SetAutoscroll(true);
+            element->SetBackground(Variant(kBackgroundColor));
             control = new Control(owner_, element);
             element->ConnectOnChangeEvent(NewSlot(control, &Control::OnChange));
             break;
@@ -381,7 +406,7 @@ class DisplayWindow::Impl {
             element->GetTextFrame()->SetSize(kLabelTextSize);
             element->UseDefaultImages();
             control = new Control(owner_, element);
-            element->ConnectOnClickEvent(NewSlot(control, &Control::OnClicked));
+            element->ConnectOnClickEvent(NewSlot(control, &Control::OnClick));
             break;
           }
           case TYPE_BUTTON_CHECK: {
@@ -392,12 +417,15 @@ class DisplayWindow::Impl {
             // Default value of gadget checkbox element is false, but here
             // the default value should be false. 
             element->SetValue(false);
-            // Note: the event name is "onchange", not "onclick", but the
-            // handler is "onclick", because of the difference between
-            // checkbox API and the old options API.
+            // The DisplayWindow expects the control has changed its value when
+            // onClicked is fired, but our CheckBoxElement changes value after
+            // "onclick", so the control must listen to the "onchange" event,
+            // and check whether the change is caused by click or the program.
             control = new Control(owner_, element);
+            element->ConnectOnClickEvent(NewSlot(control,
+                                                 &Control::OnCheckBoxClick));
             element->ConnectOnChangeEvent(NewSlot(control,
-                                                  &Control::OnClicked));
+                                                  &Control::OnCheckBoxChange));
             break;
           }
         }

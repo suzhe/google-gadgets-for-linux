@@ -333,7 +333,13 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     DisplayWindow *window = NULL;
     View *view = new View(&gadget_global_prototype_, element_factory_,
                           debug_mode_);
-    if (has_options_xml_) {
+    if (onshowoptionsdlg_signal_.HasActiveConnections()) {
+      options_view_host = host_->NewViewHost(
+          GadgetHostInterface::VIEW_OLD_OPTIONS, view);
+      window = new DisplayWindow(view);
+      onshowoptionsdlg_signal_(window);
+      window->AdjustSize();
+    } else if (has_options_xml_) {
       options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS,
                                              view);
       if (!view->InitFromFile(kOptionsXML)) {
@@ -341,12 +347,6 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
         delete options_view_host;
         return false;
       }
-    } else if (onshowoptionsdlg_signal_.HasActiveConnections()) {
-      options_view_host = host_->NewViewHost(
-          GadgetHostInterface::VIEW_OLD_OPTIONS, view);
-      window = new DisplayWindow(view);
-      onshowoptionsdlg_signal_(window);
-      window->AdjustSize();
     } else {
       LOG("Failed to show options dialog because there is neither options.xml"
           "nor OnShowOptionsDlg handler");

@@ -266,22 +266,12 @@ void FileManagerImpl::SplitPathFilename(const char *input_path,
 }
 
 bool FileManagerImpl::LoadStringTable(const char *string_table) {
-  // The strings.xml lookup order is slightly different from that of other
-  // files in the gadget package, so we do a manual lookup to get the
-  // exact filename, and bypass GetFileContents.
-  // Similarly, GetXMLFile is bypassed because it tries to do string
+  // Don't use GetXMLFileContents() because it tries to do string
   // resource substitution on the file, which is inappropiate here.
-  FileMap::const_iterator iter = FindLocalizedFile(string_table);
-  if (iter == files_.end()) {
-    // Don't print error here. Caller will print error.
-    return false;
-  }
-
-  std::string data;
-  if (!GetFileContentsInternal(iter, &data))
+  std::string data, filename;
+  if (!GetFileContents(string_table, &data, &filename))
     return false;
 
-  std::string filename(base_path_ + kDirSeparator + iter->first);
   bool result = xml_parser_->ParseXMLIntoXPathMap(data, filename.c_str(),
                                                   kStringsTag, NULL,
                                                   &string_table_);

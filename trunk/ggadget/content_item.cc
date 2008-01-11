@@ -122,7 +122,7 @@ class ContentItem::Impl {
   ContentAreaElement *content_area_;
   ImageInterface *image_, *notifier_image_;
   uint64_t time_created_;
-  std::string open_command_, tooltip_;
+  std::string open_command_, tooltip_, heading_, source_, snippet_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
   Layout layout_;
   int flags_;
@@ -244,33 +244,42 @@ void ContentItem::SetTimeCreated(const Date &time) {
 }
 
 std::string ContentItem::GetHeading() const {
-  return impl_->heading_text_.GetText();
+  return impl_->heading_;
 }
 
 void ContentItem::SetHeading(const char *heading) {
-  // TODO: Strip out HTML tags.
-  if (impl_->heading_text_.SetText(heading))
+  if (AssignIfDiffer(heading, &impl_->heading_)) {
+    // TODO: Strip HTML tags?
+    impl_->heading_text_.SetText(
+        CompressWhiteSpaces(impl_->heading_.c_str()).c_str());
     impl_->QueueDraw();
+  }
 }
 
 std::string ContentItem::GetSource() const {
-  return impl_->source_text_.GetText();
+  return impl_->source_;
 }
 
 void ContentItem::SetSource(const char *source) {
-  // TODO: Strip out HTML tags.
-  if (impl_->source_text_.SetText(source))
+  if (AssignIfDiffer(source, &impl_->source_)) {
+    // TODO: Strip HTML tags?
+    impl_->source_text_.SetText(
+        CompressWhiteSpaces(impl_->source_.c_str()).c_str());
     impl_->QueueDraw();
+  }
 }
 
 std::string ContentItem::GetSnippet() const {
-  return impl_->snippet_text_.GetText();
+  return impl_->snippet_;
 }
 
 void ContentItem::SetSnippet(const char *snippet) {
-  // TODO: Strip out HTML tags.
-  if (impl_->snippet_text_.SetText(snippet))
+  if (AssignIfDiffer(snippet, &impl_->snippet_)) {
+    // TODO: Strip HTML tags?
+    impl_->snippet_text_.SetText(
+        CompressWhiteSpaces(impl_->snippet_.c_str()).c_str());
     impl_->QueueDraw();
+  }
 }
 
 std::string ContentItem::GetOpenCommand() const {

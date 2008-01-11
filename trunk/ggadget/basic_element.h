@@ -258,6 +258,18 @@ class BasicElement : public ScriptableHelper<ScriptableInterface> {
    */
   void SetTooltip(const char *tooltip);
 
+  /**
+   * Checks whether this element is really visible considering transparency
+   * and visibility or the ancestors.
+   */
+  bool ReallyVisible() const;
+
+  /**
+   * Checks whether this element is really enabled considering visibility of
+   * itself and the ancestors.
+   */
+  bool ReallyEnabled() const;
+
  public:
   /**
    * Gives the keyboard focus to the element.

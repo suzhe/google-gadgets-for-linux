@@ -14,22 +14,18 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(tests)
+ADD_DEFINITIONS(-DUNIT_TEST)
 
-SET(SRCS
-  audioclip.cc
-  file_system.cc
-  framework.cc
-  machine.cc
-  memory.cc
-  network.cc
-  perfmon.cc
-  power.cc
-  process.cc
-  wireless_access_point.cc
-  wireless.cc
-)
+MACRO(UNIT_TEST TEST_NAME)
+  IF(${ARGC} GREATER 1)
+    SET(FILES ${ARGV})
+    LIST(REMOVE_AT FILES 0)
+    ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc ${FILES})
+  ELSE(${ARGC} GREATER 1)
+    ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  ENDIF(${ARGC} GREATER 1)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget ggadget_linux ggadget_dbus)
+  TEST_WRAPPER(${TEST_NAME} TRUE)
+ENDMACRO(UNIT_TEST TEST_NAME)
 
-ADD_LIBRARY(ggadget_linux SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_linux ggadget_dbus)
-OUTPUT_LIBRARY(ggadget_linux)
+UNIT_TEST(machine_test)

@@ -65,16 +65,19 @@ static int ScriptInput(char *buf, int max_size) {
 
 enum State {
   NORMAL,
-  OPTIONS_ONLY, // After options(...
-  OPTIONS_ITEM, // After options.item(...
-  OPTIONS_DEFAULT_VALUE, // After options.defaultValue(...
+  OPTIONS_ONLY, // After options(
+  OPTIONS_ITEM, // After options.item(
+  OPTIONS_DEFAULT_VALUE, // After options.defaultValue(
+  FUNCTION_DECL, // After function name(...) {
 };
 
 struct StackEntry {
   StackEntry(State a_state)
       : state(a_state), assigned(false), paren_count(0) {
-  } 
+  }
   std::string buffer;
+  // Buffers the functions that was declared in inner blocks.
+  std::string function_decls;
   State state;
   bool assigned;
   int paren_count;
@@ -101,6 +104,8 @@ static void ScriptOutput(const char *str) {
 
 static void PushState(State state) {
   stack.push_back(StackEntry(state));
+  if (yy_flex_debug)
+    DLOG("%d:PUSHSTATE(%zd): state=%d", yylineno, stack.size(), state);
 }
 
 static int GetParenCount() {
@@ -109,10 +114,16 @@ static int GetParenCount() {
 
 static void IncreaseParenCount() {
   GetStackTop().paren_count++;
+  if (yy_flex_debug)
+    DLOG("%d:INCPAREN(%zd): %d", yylineno, stack.size(),
+         GetStackTop().paren_count);
 }
 
 static void DecreaseParenCount() {
   GetStackTop().paren_count--;
+  if (yy_flex_debug)
+    DLOG("%d:DECPAREN(%zd): %d", yylineno, stack.size(),
+         GetStackTop().paren_count);
 }
 
 static bool IsAssigned() {
@@ -147,9 +158,10 @@ static void ReplaceFirst(const char *src, const char *dest) {
 }
 
 static void PopState() {
+  State state = GetState();
   if (IsAssigned()) {
     ScriptOutput(")");
-    switch (GetState()) {
+    switch (state) {
       case OPTIONS_ONLY:
         ReplaceFirst("(", ".putValue(");
         break;
@@ -165,8 +177,26 @@ static void PopState() {
     }
   }
   std::string buffer = GetStackTop().buffer;
+  std::string left_functions = GetStackTop().function_decls;
+  if (!left_functions.empty()) {
+    LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
+        input_filename);
+    buffer += left_functions;
+  }
+
   stack.pop_back();
-  ScriptOutput(buffer.c_str());
+  if (yy_flex_debug) {
+    DLOG("%d:POPSTATE(%zd): state=%d buf=%s", yylineno, stack.size(),
+         state, buffer.c_str());
+  }
+  if (state == FUNCTION_DECL && !stack.empty() && GetParenCount() > 1) {
+    // This function is declared in inner block of another function.
+    GetStackTop().function_decls += buffer;
+    LOG("WARNING: %s:%d: Non-standard JScript grammar (function declared in"
+        " inner blocks): %s", input_filename, yylineno, buffer.c_str());
+  } else {
+    ScriptOutput(buffer.c_str());
+  }
 }
 
 static void PopAllPairedStates() {
@@ -179,11 +209,14 @@ static void PopAllStates() {
     PopState();
 }
 
+static void CloseParen();
+
 %}
 
 COMMENT (\/\*[^*]*\*+([^*/][^*]*\*+)*\/)|(\/\/.*\n)
 WS ([ \t\r\n]|{COMMENT})*
 BINARY_OP [\.<>=\*-+\^&\|%\?:]
+
 %x STR
 %x SSTR
 %x OPTIONS
@@ -235,7 +268,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
   IncreaseParenCount();
 }
 
-<OPTIONS>(.|\n) ECHO; BEGIN(INITIAL);
+<OPTIONS>(.|\n) BEGIN(INITIAL); yymore();
 
 \(|\{|\[ {
   ECHO;
@@ -246,17 +279,13 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 \)|\}|\] {
   PopAllPairedStates();
   ECHO;
-  if (GetState() != NORMAL) {
-    DecreaseParenCount();
-    if (yytext[0] == ')' && GetParenCount() == 0 && !IsAssigned())
-      BEGIN(AFTER_OPTIONS_PARAM);
-  }
+  CloseParen();
 }
 
 <AFTER_OPTIONS_PARAM>{WS}=/[^=] {
   // Mathes ...= but not ...==.
   ECHO;
-  LOG("Warning: %s:%d: Old JScript grammar: %s. Converted to %s",
+  LOG("WARNING: %s:%d: Old JScript grammar: %s... Converted to %s",
       input_filename, yylineno, GetStackTop().buffer.c_str(),
       GetState() == OPTIONS_DEFAULT_VALUE ? "putDefaultValue()" : "putValue()");
   ReplaceLast(")", ",");
@@ -282,6 +311,15 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
   unput(yytext[0]);
 }
 
+{BINARY_OP}{WS}function ECHO;
+\/{WS}function ECHO; // BINARY_OP doesn't include '/'.
+
+{WS}function{WS}[a-zA-Z0-9_]+{WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}\{ {
+  PushState(FUNCTION_DECL);
+  ECHO;
+  IncreaseParenCount();
+}
+
 {BINARY_OP}{WS}\n ECHO; // Statement should continue.
 \/{WS}\n ECHO; // BINARY_OP doesn't include '/' which is specially treated.
 \n{WS}{BINARY_OP} ECHO; // Statement should continue.
@@ -294,16 +332,20 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 }
 
 \}{WS};{WS}else({WS}|\{) {
+  PopAllPairedStates();
+  CloseParen();
   // JScript allows ';' between '}' and 'else', which is invalid in standard JS.
-  LOG("Warning: %s:%d: Old JScript grammar: %s",
+  LOG("WARNING: %s:%d: Old JScript grammar: %s...",
       input_filename, yylineno, yytext);
   std::string text(yytext);
   text[text.find(';')] = ' ';
   ScriptOutput(text.c_str());
+  if (text[text.size() - 1] == '{' && GetState() != NORMAL)
+    IncreaseParenCount();
 }
 
 <<EOF>> {
-  if (GetState() != NORMAL) {
+  if (stack.size() > 1) {
     LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
         input_filename);
   }
@@ -314,6 +356,22 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 <*>.|\n ECHO;
 
 %%
+
+static void CloseParen() {
+  State state = GetState();
+  if (state == FUNCTION_DECL && GetParenCount() == 2) {
+    // Move all functions declared in inner blocks to here. 
+    ScriptOutput(GetStackTop().function_decls.c_str());
+    GetStackTop().function_decls.clear();
+    DecreaseParenCount();
+  } else {
+    if (state != NORMAL) {
+      DecreaseParenCount();
+      if (yytext[0] == ')' && GetParenCount() == 0 && !IsAssigned())
+        BEGIN(AFTER_OPTIONS_PARAM);
+    }
+  }
+}
 
 std::string MassageJScript(const char *input,
                            const char *filename, int lineno) {
@@ -331,6 +389,8 @@ std::string MassageJScript(const char *input,
   output.clear();
 
   BEGIN(INITIAL);
+  PushState(FUNCTION_DECL);
+  IncreaseParenCount();
   while (yylex());
 
 #ifdef _DEBUG

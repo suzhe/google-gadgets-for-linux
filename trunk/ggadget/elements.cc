@@ -61,8 +61,8 @@ class Elements::Impl {
   }
 
   BasicElement *InsertElement(const char *tag_name,
-                                  const BasicElement *before,
-                                  const char *name) {
+                              const BasicElement *before,
+                              const char *name) {
     BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
     if (e == NULL)
       return NULL;
@@ -167,11 +167,14 @@ class Elements::Impl {
     // Iterate in reverse since higher elements are listed last.
     for (Children::reverse_iterator ite = children_.rbegin();
          ite != children_.rend(); ++ite) {
-      if (!(*ite)->IsVisible())
+      BasicElement *child = *ite;
+      // Don't use child->ReallyVisible() because here we don't need to check
+      // visibility of ancestors.
+      if (!child->IsVisible() || child->GetOpacity() == 0.0)
         continue;
 
-      MapChildPositionEvent(event, *ite, &new_event);
-      if ((*ite)->IsPointIn(new_event.GetX(), new_event.GetY())) {
+      MapChildPositionEvent(event, child, &new_event);
+      if (child->IsPointIn(new_event.GetX(), new_event.GetY())) {
         BasicElement *child = (*ite);
         BasicElement *descendant_in_element = NULL;
         ScopedDeathDetector death_detector(view_, &child);
@@ -203,7 +206,7 @@ class Elements::Impl {
     for (Children::reverse_iterator ite = children_.rbegin();
          ite != children_.rend(); ++ite) {
       BasicElement *child = (*ite);
-      if (!child->IsVisible())
+      if (!child->ReallyVisible())
         continue;
 
       MapChildPositionEvent(event, child, &new_event);

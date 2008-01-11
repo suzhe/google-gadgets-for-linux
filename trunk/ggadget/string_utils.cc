@@ -232,4 +232,24 @@ bool SplitString(const std::string &source, const std::string &separator,
   return true;
 }
 
+std::string CompressWhiteSpaces(const char *source) {
+  ASSERT(source);
+  std::string result;
+  bool in_space = false;
+  while (*source) {
+    if (isspace(*source)) {
+      in_space = true;
+    } else {
+      if (in_space) {
+        if (!result.empty())
+          result += ' ';
+        in_space = false;
+      }
+      result += *source;
+    }
+    source++;
+  }
+  return result;
+}
+
 }  // namespace ggadget

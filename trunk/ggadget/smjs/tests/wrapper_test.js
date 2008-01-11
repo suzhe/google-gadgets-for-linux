@@ -82,11 +82,13 @@ DEATH_TEST("Test integer property with non-number", function() {
   ASSERT(DEATH());
 });
 
+/* For now we allow the following assignment.
 DEATH_TEST("Test string property with object", function() {
   // The following assignment should cause an error.
   scriptable.Buffer = { a: 10 };
   ASSERT(DEATH());
 });
+*/
 
 TEST("Test string property with an array", function() {
   scriptable.Buffer = ["string"];

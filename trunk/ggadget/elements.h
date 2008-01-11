@@ -80,7 +80,7 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    *     occured.
    */
   BasicElement *AppendElement(const char *tag_name,
-                                          const char *name);
+                              const char *name);
 
   /**
    * Create a new element before the specified element.
@@ -94,8 +94,8 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    *     occured.
    */
   BasicElement *InsertElement(const char *tag_name,
-                                          const BasicElement *before,
-                                          const char *name);
+                              const BasicElement *before,
+                              const char *name);
 
   /**
    * Create a new element from XML definition and add it to the end of the
@@ -117,8 +117,8 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
    * @return the pointer to the newly created element, or @c NULL when error
    *     occured.
    */
-  BasicElement *InsertElementFromXML(
-      const char *xml, const BasicElement *before);
+  BasicElement *InsertElementFromXML(const char *xml,
+                                     const BasicElement *before);
 
   /**
    * Remove the specified element from the container.

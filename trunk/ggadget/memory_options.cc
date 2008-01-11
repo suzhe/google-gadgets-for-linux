@@ -76,8 +76,11 @@ Variant MemoryOptions::GetValue(const char *name) {
 }
 
 void MemoryOptions::PutValue(const char *name, const Variant &value) {
-  impl_->values_[name] = value;
-  impl_->FireChangedEvent(name, value);
+  Variant *last_value = &impl_->values_[name];
+  if (!(*last_value == value)) {
+    *last_value = value;
+    impl_->FireChangedEvent(name, value);
+  }
 }
 
 void MemoryOptions::Remove(const char *name) {
