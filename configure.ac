@@ -35,6 +35,12 @@ AC_CONFIG_AUX_DIR([autotools])
 AC_CONFIG_MACRO_DIR([autotools])
 
 
+# Save the user defined CFLAGS and CXXFLAGS, then restore them later.
+# So that the value set by AC_PROG_CC and AC_PROG_CXX won't be used,
+# even if they are empty.
+ggl_save_CFLAGS=$CFLAGS
+ggl_save_CXXFLAGS=$CXXFLAGS
+
 ###########################################################
 ##          Some definitions of Version macros.          ##
 ###########################################################
@@ -219,9 +225,9 @@ PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.2, [has_dbus=yes], [has_dbus=no])
 PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
 
 # Check gtkmozembed
-PKG_CHECK_MODULES(GTKMOZEMBED, xulrunner-gtkmozembed, [has_gtkmozembed=yes],
-  [PKG_CHECK_MODULES(GTKMOZEMBED, firefox2-gtkmozembed, [has_gtkmozembed=yes],
-    [PKG_CHECK_MODULES(GTKMOZEMBED, firefox-gtkmozembed, [has_gtkmozembed=yes],
+PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js], [has_gtkmozembed=yes],
+  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js], [has_gtkmozembed=yes],
+    [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js], [has_gtkmozembed=yes],
       [has_gtkmozembed=no])])])
 
 if test x$has_dbus = xyes; then
@@ -356,43 +362,47 @@ if test x$memcheck_command != x; then
 fi
 
 ###########################################################
-##                 Default compiler options.             ##
-###########################################################
-if test x$enable_debug = xyes; then
-  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
-  CFLAGS="-g -O0 -Werror -Wall"
-  CXXFLAGS="-g -O0 -Werror -Wall"
-  CPPFLAGS="-D_DEBUG"
-else
-  CFLAGS="-O2 -Werror -Wall"
-  CXXFLAGS="-O2 -Werror -Wall"
-  CPPFLAGS="-DNDEBUG"
-fi
-
-# Enable stdc const macros by default, like INT64_C etc.
-CPPFLAGS="$CPPFLAGS -D__STDC_CONSTANT_MACROS"
-
-# Define os specific macro for gunit.
-case $host_os in
-  *linux* | *darwin* )
-  CPPFLAGS="$CPPFLAGS -DOS_LINUX"
-  ;;
-esac
-
-###########################################################
 ##                      Default dirs.                    ##
 ###########################################################
 GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
 GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
 GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
-GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR/
-GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR/
+GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR
+GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR
 
 AC_SUBST(GGL_MODULE_DIR)
 AC_SUBST(GGL_INCLUDE_DIR)
 AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
 AC_SUBST(GGL_LIBEXEC_DIR)
 AC_SUBST(GGL_RESOURCE_DIR)
+
+###########################################################
+##                 Default compiler options.             ##
+###########################################################
+if test x$enable_debug = xyes; then
+  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
+  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall"
+  DEBUG_MACROS="_DEBUG";
+else
+  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall"
+  DEBUG_MACROS="NDEBUG";
+fi
+
+# Enable stdc const macros by default, like INT64_C etc.
+PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
+		   -D$DEBUG_MACROS \
+		   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
+		   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
+		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
+		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
+		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
+
+AC_SUBST(PREDEFINED_MACROS)
+AC_SUBST(DEFAULT_COMPILE_FLAGS)
+
+# Clear the default CFLAGS and CXXFLAGS
+CFLAGS=$ggl_save_CFLAGS
+CXXFLAGS=$ggl_save_CXXFLAGS
 
 ###########################################################
 ##                      Output files.                    ##
@@ -429,11 +439,11 @@ AC_CONFIG_FILES([Makefile
 		 third_party/Makefile
 		 third_party/unzip/Makefile
 		 unittest/Makefile
-		 ggadget/libggadget$GGL_EPOCH.pc
-		 ggadget/dbus/libggadget-dbus$GGL_EPOCH.pc
-		 ggadget/gtk/libggadget-gtk$GGL_EPOCH.pc
-		 ggadget/linux/libggadget-linux$GGL_EPOCH.pc
-		 ggadget/smjs/libggadget-smjs$GGL_EPOCH.pc
+		 ggadget/libggadget-1.0.pc
+		 ggadget/dbus/libggadget-dbus-1.0.pc
+		 ggadget/gtk/libggadget-gtk-1.0.pc
+		 ggadget/linux/libggadget-linux-1.0.pc
+		 ggadget/smjs/libggadget-smjs-1.0.pc
 		 ])
 AC_OUTPUT
 

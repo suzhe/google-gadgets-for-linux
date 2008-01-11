@@ -34,6 +34,7 @@ libunzip_la_SOURCES	= ioapi.c \
 			  zip.c \
 			  $(WIN32_SRC)
 
-libunzip_la_CPPFLAGS	= @ZLIB_CPPFLAGS@
+libunzip_la_CPPFLAGS	= @ZLIB_CPPFLAGS@ $(PREDEFINED_MACROS)
+libunzip_la_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 libunzip_la_LDFLAGS	= @ZLIB_LDFLAGS@
 libunzip_la_LIBADD	= @ZLIB_LIBS@

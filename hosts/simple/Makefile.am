@@ -27,7 +27,10 @@ ggl_simple_SOURCES	= main.cc
 
 ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
-			  @SPIDERMONKEY_CPPFLAGS@
+			  @SPIDERMONKEY_CPPFLAGS@ \
+			  $(PREDEFINED_MACROS)
+
+ggl_simple_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
 if GGL_HOST_LINUX
 SYSDEPS_LIB=$(top_builddir)/ggadget/linux/libggadget-linux@GGL_EPOCH@.la

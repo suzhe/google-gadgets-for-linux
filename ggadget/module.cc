@@ -30,6 +30,7 @@
 #include "common.h"
 #include "gadget_consts.h"
 #include "logger.h"
+#include "system_utils.h"
 
 namespace ggadget {
 
@@ -65,7 +66,7 @@ class Module::Impl {
     std::string module_path;
     for (std::vector<std::string>::iterator it = paths.begin();
          it != paths.end(); ++it) {
-      module_path = BuildPath(it->c_str(), module_name.c_str());
+      module_path = BuildFilePath(it->c_str(), module_name.c_str(), NULL);
       new_handle = lt_dlopenext(module_path.c_str());
       if (new_handle) break;
 #ifdef _DEBUG
@@ -201,7 +202,7 @@ class Module::Impl {
         if (p != env && *env == kDirSeparator) {
           std::string path(env, p);
           if (dir && *dir)
-            path = BuildPath(path.c_str(), dir);
+            path = BuildFilePath(path.c_str(), dir, NULL);
           // Remove duplicated paths.
           if (std::find(paths->begin(), paths->end(), path) == paths->end())
             paths->push_back(path);
@@ -211,7 +212,7 @@ class Module::Impl {
     }
 
     if (dir && *dir) {
-      paths->push_back(BuildPath(GGL_MODULE_DIR, dir));
+      paths->push_back(BuildFilePath(GGL_MODULE_DIR, dir, NULL));
     } else {
       paths->push_back(GGL_MODULE_DIR);
     }
@@ -336,14 +337,6 @@ class Module::Impl {
     }
 
     return result;
-  }
-
-  static std::string BuildPath(const char *dirname, const char *filename) {
-    std::string path(dirname);
-    if (path[path.length() - 1] != kDirSeparator)
-      path += kDirSeparator;
-    path.append(filename);
-    return path;
   }
 
  private:

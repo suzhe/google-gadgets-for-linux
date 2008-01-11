@@ -18,13 +18,13 @@ EXTRA_DIST		= file_manager_test_data
 SUBDIRS = test_modules
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir) \
-			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
-			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
-			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
+			  -I$(top_srcdir)
 
 LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+AM_CPPFLAGS		= $(PREDEFINED_MACROS)
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 noinst_HEADERS		= main_loop_test.h \
 			  mocked_element.h \
@@ -48,6 +48,7 @@ check_PROGRAMS		= color_test \
 			  string_utils_test \
 			  basic_element_test \
 			  module_test \
+			  system_utils_test \
 			  view_test \
 			  xml_dom_test \
 			  xml_parser_test \
@@ -71,6 +72,7 @@ unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
 basic_element_test_SOURCES	= basic_element_test.cc
 module_test_SOURCES		= module_test.cc
+system_utils_test_SOURCES	= system_utils_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES		= xml_parser_test.cc
@@ -81,7 +83,8 @@ xml_http_request_test_LDADD	= -lpthread \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 foo_module_la_SOURCES		= test_module.cc
-foo_module_la_CPPFLAGS		= -DMODULE_NAME=foo-module \
+foo_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
+				  -DMODULE_NAME=foo-module \
 				  -DMODULE_NAME_UNDERSCORE=foo_module
 foo_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
@@ -90,7 +93,8 @@ foo_module_la_LDFLAGS		= -avoid-version \
 				  -module
 
 bar_module_la_SOURCES		= test_module.cc
-bar_module_la_CPPFLAGS		= -DMODULE_NAME=bar-module \
+bar_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
+				  -DMODULE_NAME=bar-module \
 				  -DMODULE_NAME_UNDERSCORE=bar_module
 bar_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
