@@ -95,7 +95,10 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       int64_t i;
       double d;
       bool b;
-      if (strchr(value, '.') == NULL && str_value_variant.ConvertToInt64(&i)) {
+      if (!*value) {
+        property_value = str_value_variant;
+      } else if (strchr(value, '.') == NULL &&
+                 str_value_variant.ConvertToInt64(&i)) {
         property_value = Variant(i);
       } else if (str_value_variant.ConvertToDouble(&d)) {
         property_value = Variant(d);

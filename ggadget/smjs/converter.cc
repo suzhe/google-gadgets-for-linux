@@ -109,48 +109,42 @@ static JSBool ConvertJSToNativeDouble(JSContext *cx, jsval js_val,
 
 static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
                                       Variant *native_val) {
-  JSBool result = JS_FALSE;
   if (JSVAL_IS_NULL(js_val)) {
     *native_val = Variant(static_cast<const char *>(NULL));
-    result = JS_TRUE;
-  } else if (JSVAL_IS_VOID(js_val)) {
+    return JS_TRUE;
+  }
+  if (JSVAL_IS_VOID(js_val)) {
     // Default value of a string is "";
     *native_val = Variant("");
     return JS_TRUE;
-  } else if (JSVAL_IS_STRING(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
-             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val) ||
-             // Sometimes a string is enclosed in an array.
-             // This array can be converted to correct string value.
-             (JSVAL_IS_OBJECT(js_val) &&
-              JS_IsArrayObject(cx, JSVAL_TO_OBJECT(js_val)))) {
-    JSString *js_string = JS_ValueToString(cx, js_val);
-    if (js_string) {
-      jschar *chars = JS_GetStringChars(js_string);
-      if (chars) {
-        result = JS_TRUE;
-        std::string utf8_string;
-        // Don't cast chars to UTF16Char *, to let the compiler check if they
-        // are compatible.
-        ConvertStringUTF16ToUTF8(chars, JS_GetStringLength(js_string),
-                                 &utf8_string);
-        *native_val = Variant(utf8_string);
-      }
-    }
-  } else if (JSVAL_IS_OBJECT(js_val)) {
+  }
+  if (JSVAL_IS_OBJECT(js_val)) {
     // Here allows asssigning ScriptableBinaryData to a native string, because
     // Windows version also allows it.
     ScriptableInterface *scriptable;
-    result = NativeJSWrapper::Unwrap(cx, JSVAL_TO_OBJECT(js_val), &scriptable);
-    if (result && scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
+    if (NativeJSWrapper::Unwrap(cx, JSVAL_TO_OBJECT(js_val), &scriptable) &&
+        scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
       ScriptableBinaryData *data =
           down_cast<ScriptableBinaryData *>(scriptable);
       // Any data after '0' will be truncated.
       *native_val = Variant(data->data());
-    } else {
-      result = JS_FALSE;
+      return JS_TRUE;
     }
   }
-  return result;
+  JSString *js_string = JS_ValueToString(cx, js_val);
+  if (js_string) {
+    jschar *chars = JS_GetStringChars(js_string);
+    if (chars) {
+      std::string utf8_string;
+      // Don't cast chars to UTF16Char *, to let the compiler check if they
+      // are compatible.
+      ConvertStringUTF16ToUTF8(chars, JS_GetStringLength(js_string),
+                               &utf8_string);
+      *native_val = Variant(utf8_string);
+      return JS_TRUE;
+    }
+  }
+  return JS_FALSE;
 }
 
 static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
@@ -248,29 +242,27 @@ static JSBool ConvertJSToSlot(JSContext *cx, NativeJSWrapper *owner,
 
 static JSBool ConvertJSToNativeDate(JSContext *cx, jsval js_val,
                                     Variant *native_val) {
-  if (JSVAL_IS_VOID(js_val)) {
+  if (JSVAL_IS_VOID(js_val) || JSVAL_IS_NULL(js_val)) {
     // Special rule to keep compatibile with Windows version.
     *native_val = Variant(Date(0));
     return JS_TRUE;
   }
 
-  if (!JSVAL_IS_OBJECT(js_val) || JSVAL_IS_NULL(js_val))
-    return JS_FALSE;
+  if (JSVAL_IS_OBJECT(js_val)) {
+    JSObject *obj = JSVAL_TO_OBJECT(js_val);
+    ASSERT(obj);
+    JSClass *cls = JS_GET_CLASS(cx, obj);
+    if (!cls || strcmp("Date", cls->name) != 0)
+      return JS_FALSE;
 
-  JSObject *obj = JSVAL_TO_OBJECT(js_val);
-  ASSERT(obj);
-  JSClass *cls = JS_GET_CLASS(cx, obj);
-  if (!cls || strcmp("Date", cls->name) != 0)
-    return JS_FALSE;
+    if (!JS_CallFunctionName(cx, obj, "getTime", 0, NULL, &js_val))
+      return JS_FALSE;
+    // Now js_val is the result of Date.getTime().
+  }
 
-  jsval rval;
-  if (!JS_CallFunctionName(cx, obj, "getTime", 0, NULL, &rval))
-    return JS_FALSE;
-
-  Variant int_val;
-  if (!ConvertJSToNativeInt(cx, js_val, &int_val))
-    return JS_FALSE;
-
+  Variant int_val(0);
+  // Omit the return value. TODO: Make clear the exact coversion rule.
+  ConvertJSToNativeInt(cx, js_val, &int_val);
   *native_val = Variant(Date(VariantValue<uint64_t>()(int_val)));
   return JS_TRUE;
 }

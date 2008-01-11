@@ -145,6 +145,14 @@ std::string EncodeJavaScriptString(const UTF16Char *source);
 bool SplitString(const std::string &source, const std::string &separator,
                  std::string *result_left, std::string *result_right);
 
+/**
+ * Compresses white spaces in a string using the rule like HTML formatting:
+ *     - Removing leading and trailing white spaces;
+ *     - Convert all consecutive white spaces into single spaces;
+ * Only ASCII spaces (isspace(ch) == true) are handled.
+ */ 
+std::string CompressWhiteSpaces(const char *source);
+
 } // namespace ggadget
 
 #endif // GGADGET_STRING_UTILS_H__

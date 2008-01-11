@@ -269,6 +269,12 @@ static JSObject *GetClassPrototype(JSContext *cx, const char *class_name) {
   return JSVAL_TO_OBJECT(proto);
 }
 
+static JSBool DoGC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                   jsval *rval) {
+  JS_GC(cx);
+  return JS_TRUE;
+}
+
 bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
   NativeJSWrapper *wrapper = WrapNativeObjectToJS(context_, global_object);
   JSObject *js_global = wrapper->js_object();
@@ -288,6 +294,8 @@ bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
   // programs.
   JSObject *date_proto = GetClassPrototype(context_, "Date");
   JS_DefineFunction(context_, date_proto, "getVarDate", &ReturnSelf, 0, 0);
+  // For Windows compatibility.
+  JS_DefineFunction(context_, js_global, "CollectGarbage", &DoGC, 0, 0);
 
   return true;
 }

@@ -326,7 +326,8 @@ class XMLHttpRequest
   }
 
   void OnIOReady(int fd, int watch_type) {
-    DLOG("XMLHttpRequest: OnIOReady: %d %d %d", fd, watch_type, io_watch_type_);
+    // DLOG("XMLHttpRequest: OnIOReady: %d %d %d", fd,
+    //      watch_type, io_watch_type_);
     if (fd != CURL_SOCKET_TIMEOUT) {
       io_watch_type_ &= ~watch_type;
       if (io_watch_type_ != 0) {

@@ -60,7 +60,11 @@ BasicElement *LabelElement::CreateInstance(BasicElement *parent, View *view,
 }
 
 void LabelElement::GetDefaultSize(double *width, double *height) const {
-  impl_->text_.GetSimpleExtents(width, height);
+  if (!WidthIsSpecified()) {
+    impl_->text_.GetSimpleExtents(width, height);
+  } else {
+    impl_->text_.GetExtents(GetPixelWidth(), width, height);
+  }
 }
 
 } // namespace ggadget

@@ -134,6 +134,18 @@ TEST(StringUtils, SplitString) {
   EXPECT_STREQ("", right.c_str());
 }
 
+TEST(StringUtils, CompressWhiteSpaces) {
+  EXPECT_STREQ("", CompressWhiteSpaces("").c_str());
+  EXPECT_STREQ("", CompressWhiteSpaces(" \n\r\t  ").c_str());
+  EXPECT_STREQ("A", CompressWhiteSpaces("A").c_str());
+  EXPECT_STREQ("A", CompressWhiteSpaces(" A ").c_str());
+  EXPECT_STREQ("A", CompressWhiteSpaces("   A   ").c_str());
+  EXPECT_STREQ("AB", CompressWhiteSpaces("AB").c_str());
+  EXPECT_STREQ("AB", CompressWhiteSpaces(" AB ").c_str());
+  EXPECT_STREQ("AB", CompressWhiteSpaces("  AB  ").c_str());
+  EXPECT_STREQ("A AB ABC", CompressWhiteSpaces("  A     AB     ABC ").c_str());
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();

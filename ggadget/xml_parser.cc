@@ -306,15 +306,28 @@ static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
     delete element;
     return;
   }
+  if (xmlele->ns)
+    element->SetPrefix(FromXmlCharPtr(xmlele->ns->prefix));
 
   // libxml2 doesn't support node column position for now.
   element->SetRow(xmlGetLineNo(xmlele));
-  for (xmlAttr *attribute = xmlele->properties;
-       attribute != NULL; attribute = attribute->next) {
-    const char *name = FromXmlCharPtr(attribute->name);
+  for (xmlAttr *xmlattr = xmlele->properties; xmlattr != NULL;
+       xmlattr = xmlattr->next) {
+    const char *name = FromXmlCharPtr(xmlattr->name);
+    DOMAttrInterface *attr;
+    domdoc->CreateAttribute(name, &attr);
+    if (!attr || DOM_NO_ERR != element->SetAttributeNode(attr)) {
+      // Unlikely to happen.
+      DLOG("Failed to create DOM attribute or to add it to element");
+      delete attr;
+      continue;
+    }
+
     char *value = FromXmlCharPtr(
-        xmlNodeGetContent(reinterpret_cast<xmlNode *>(attribute)));
-    element->SetAttribute(name, value);
+        xmlNodeGetContent(reinterpret_cast<xmlNode *>(xmlattr)));
+    attr->SetValue(value);
+    if (xmlattr->ns)
+      attr->SetPrefix(FromXmlCharPtr(xmlattr->ns->prefix));
     if (value)
       xmlFree(value);
   }

@@ -71,6 +71,7 @@ var _gCurrentTestFailed;
 function RUN_ALL_TESTS() {
   var count = 0;
   var passed = 0;
+  var test_result = "";
   for (var i in _gAllTestCases) {
     count++;
     print("Running " + (_gIsDeathTest[i] ? "death " : "") +
@@ -91,11 +92,15 @@ function RUN_ALL_TESTS() {
       if (e !== ASSERT_EXCEPTION_MAGIC)
         print("Exception raised in test:", e);
     }
-    if (!_gCurrentTestFailed)
+    var result = (_gIsDeathTest[i] ? "Death test" : "Test") + " case " + count +
+          ": " + i + (_gCurrentTestFailed ? " FAILED\n" : " passed\n");
+    if (_gCurrentTestFailed)
+      test_result = test_result + result;
+    else
       passed++;
-    print((_gIsDeathTest[i] ? "Death test" : "Test") + " case " + count +
-          ": " + i + (_gCurrentTestFailed ? " FAILED\n" : " passed\n"));
+    print(result);
   }
+  print(test_result);
   print("SUMMARY\n");
   print(count + " test cases ran.");
   print(passed + " passed.");

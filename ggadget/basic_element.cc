@@ -1154,6 +1154,15 @@ void BasicElement::SetVisible(bool visible) {
   impl_->SetVisible(visible);
 }
 
+bool BasicElement::ReallyVisible() const {
+  return impl_->visible_ && impl_->opacity_ != 0.0 &&
+         (!impl_->parent_ || impl_->parent_->ReallyVisible());
+}
+  
+bool BasicElement::ReallyEnabled() const {
+  return impl_->enabled_ && ReallyVisible();
+}
+  
 BasicElement *BasicElement::GetParentElement() {
   return impl_->parent_;
 }
@@ -1342,10 +1351,8 @@ void BasicElement::OnPopupOff() {
 }
 
 bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
-  // A disabled element won't handle mouse events, let the context menu shown.
-  return !IsEnabled() ||
   // If rclick event won't be handled, let the context menu shown.
-         !impl_->onrclick_event_.HasActiveConnections();
+  return !impl_->onrclick_event_.HasActiveConnections();
 }
 
 Connection *BasicElement::ConnectOnClickEvent(Slot0<void> *handler) {

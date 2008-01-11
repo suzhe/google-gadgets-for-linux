@@ -19,6 +19,7 @@
 #include "xml_dom.h"
 #include "logger.h"
 #include "scriptable_helper.h"
+#include "string_utils.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
 
@@ -265,12 +266,16 @@ class DOMNodeImpl {
       : node_(node),
         callbacks_(callbacks),
         owner_document_(owner_document),
-        name_(name ? name : ""),
         parent_(NULL),
         owner_node_(NULL),
         row_(0), column_(0),
         ref_count_(0) {
     ASSERT(name && *name);
+    if (!SplitString(name, ":", &prefix_, &local_name_)) {
+      ASSERT(local_name_.empty());
+      local_name_.swap(prefix_);
+    }
+    // Pointer comparison is intended here. 
     if (name != kDOMDocumentName) {
       ASSERT(owner_document_);
       // Any newly created node has no parent and thus is orphan. Increase the
@@ -488,6 +493,21 @@ class DOMNodeImpl {
     return result;
   }
 
+  std::string GetNodeName() {
+    return prefix_.empty() ? local_name_ : prefix_ + ":" + local_name_;
+  }
+
+  DOMExceptionCode SetPrefix(const char *prefix) {
+    if (!prefix || !*prefix) {
+      prefix_.clear();
+    } else if (owner_document_->GetXMLParser()->CheckXMLName(prefix)) {
+      prefix_ = prefix;
+    } else {
+      return DOM_INVALID_CHARACTER_ERR;
+    }
+    return DOM_NO_ERR;
+  }
+
  public:
   // The following public methods are utilities for interface implementations.
   void AppendChildrenXML(size_t indent, std::string *xml) {
@@ -647,7 +667,8 @@ class DOMNodeImpl {
   DOMNodeInterface *node_;
   DOMNodeImplCallbacks *callbacks_;
   DOMDocumentInterface *owner_document_;
-  std::string name_;
+  std::string prefix_;
+  std::string local_name_;
   DOMNodeInterface *parent_;
   // In most cases, owner_node_ == parent_, but for DOMAttr, owner_node_ is the
   // owner element.
@@ -680,7 +701,12 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   DOMNodeBase(DOMDocumentInterface *owner_document,
               const char *name)
       : impl_(new DOMNodeImpl(this, this, owner_document, name)) {
-    RegisterConstant("nodeName", impl_->name_);
+    // "baseName" is not in W3C standard. Register it to keep compatibility
+    // with the Windows DOM.
+    RegisterConstant("baseName", impl_->local_name_);
+    RegisterConstant("localName", impl_->local_name_);
+    RegisterProperty("nodeName", NewSlot(this, &DOMNodeBase::GetNodeName),
+                     NULL);
     RegisterProperty("nodeValue", NewSlot(this, &DOMNodeBase::GetNodeValue),
                      NewSlot(this, &DOMNodeBase::SetNodeValue));
     RegisterProperty("nodeType",
@@ -703,6 +729,8 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     RegisterProperty("attributes", NewSlot(this, &DOMNodeBase::GetAttributes),
                      NULL);
     RegisterConstant("ownerDocument", owner_document);
+    RegisterProperty("prefix", NewSlot(this, &DOMNodeBase::GetPrefix),
+                     NewSlot(this, &DOMNodeBase::SetPrefix));
     RegisterProperty("text", NewSlot(this, &DOMNodeBase::GetTextContent),
                      NewSlot(this, &DOMNodeBase::SetTextContent));
     RegisterMethod("insertBefore",
@@ -742,7 +770,10 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   }
   virtual void TransientDetach() { impl_->DetachMulti(1, true); }
 
-  virtual std::string GetNodeName() const { return impl_->name_; }
+  virtual std::string GetNodeName() const {
+    return impl_->GetNodeName();
+  }
+
   virtual const char *GetNodeValue() const { return NULL; }
   virtual void SetNodeValue(const char *node_value) { }
   // GetNodeType() is still abstract.
@@ -870,6 +901,18 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     return GlobalCheckException(this, code);
   }
 
+  virtual const char *GetPrefix() const {
+    return impl_->prefix_.empty() ? NULL : impl_->prefix_.c_str(); 
+  }
+
+  virtual DOMExceptionCode SetPrefix(const char *prefix) {
+    return AllowPrefix() ? impl_->SetPrefix(prefix) : DOM_NO_ERR;
+  }
+
+  virtual std::string GetLocalName() const {
+    return impl_->local_name_;
+  }
+
   bool CheckXMLName(const char *name) const {
     return impl_->owner_document_->GetXMLParser()->CheckXMLName(name);
   }
@@ -877,6 +920,9 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   std::string EncodeXMLString(const char *xml) const {
     return impl_->owner_document_->GetXMLParser()->EncodeXMLString(xml);
   }
+
+ protected:
+  virtual bool AllowPrefix() const { return false; }
 
  private:
   DOMNodeImpl *impl_;
@@ -1074,6 +1120,8 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
     return new DOMAttr(GetOwnerDocument(), GetName().c_str(), NULL);
   }
 
+  virtual bool AllowPrefix() const { return true; }
+
  private:
   DOMElement *owner_element_;
   mutable std::string last_node_value_;
@@ -1241,6 +1289,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     }
     return element;
   }
+
+  virtual bool AllowPrefix() const { return true; }
 
  private:
   typedef ScriptableHelper<DOMNamedNodeMapInterface,

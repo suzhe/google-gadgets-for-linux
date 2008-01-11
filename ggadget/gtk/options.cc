@@ -62,8 +62,11 @@ Variant Options::GetValue(const char *name) {
 }
 
 void Options::PutValue(const char *name, const Variant &value) {
-  values_[name] = value;
-  FireChangedEvent(name);
+  Variant *last_value = &values_[name];
+  if (!(*last_value == value)) {
+    *last_value = value;
+    FireChangedEvent(name);
+  }
 }
 
 void Options::Remove(const char *name) {

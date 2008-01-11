@@ -375,17 +375,17 @@ bool DecodeJSONString(const char *json_string, nsString *result) {
         case 'r': result->Append('\r'); break;
         case 't': result->Append('\t'); break;
         case 'u': {
-          ++json_string;
           PRUnichar unichar = 0;
-          for (int i = 0; i < 4; i++) {
+          for (int i = 1; i <= 4; i++) {
             char c = json_string[i];
             if (c >= '0' && c <= '9') c -= '0';
             else if (c >= 'A' && c <= 'F') c = c - 'A' + 10;
             else if (c >= 'a' && c <= 'f') c = c - 'a' + 10;
             else return false;
-            unichar = unichar << 4 + c; 
+            unichar = (unichar << 4) + c;
           }
           result->Append(unichar);
+          json_string += 4;
           break;
         }
         case '\0': return false;

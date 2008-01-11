@@ -331,8 +331,7 @@ class View::Impl {
     // an EVENT_MOUSE_CLICK received, or any mouse event received without
     // left button down.
     if (grabmouse_element_) {
-      if (grabmouse_element_->IsEnabled() &&
-          grabmouse_element_->IsVisible() &&
+      if (grabmouse_element_->ReallyEnabled() &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
           (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
            type == Event::EVENT_MOUSE_CLICK)) {
@@ -414,8 +413,7 @@ class View::Impl {
 
       if (mouseover_element_) {
         // The enabled and visible states may change during event handling.
-        if (!mouseover_element_->IsEnabled() ||
-            !mouseover_element_->IsVisible()) {
+        if (!mouseover_element_->ReallyEnabled()) {
           mouseover_element_ = NULL;
         } else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
@@ -534,7 +532,7 @@ class View::Impl {
 
       if (dragover_element_) {
         // The visible state may change during event handling.
-        if (!dragover_element_->IsVisible()) {
+        if (!dragover_element_->ReallyVisible()) {
           dragover_element_ = NULL;
         } else {
           DragEvent dragover_event(Event::EVENT_DRAG_OVER,
@@ -577,10 +575,12 @@ class View::Impl {
       return result;
 
     if (focused_element_) {
-      if (!focused_element_->IsEnabled() || !focused_element_->IsVisible())
+      if (!focused_element_->ReallyEnabled()) {
+        focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_OUT));
         focused_element_ = NULL;
-      else
+      } else {
         result = focused_element_->OnKeyEvent(event);
+      }
     }
     return result;
   }
@@ -758,7 +758,7 @@ class View::Impl {
 
   void SetFocus(BasicElement *element) {
     if (element != focused_element_ &&
-        (!element || (element->IsEnabled() && element->IsVisible()))) {
+        (!element || element->ReallyEnabled())) {
       ScopedDeathDetector death_detector(owner_, &element);
       // Remove the current focus first.
       if (!focused_element_ ||
@@ -769,8 +769,7 @@ class View::Impl {
         focused_element_ = element;
         if (focused_element_) {
           // The enabled or visible state may changed, so check again.
-          if (!focused_element_->IsEnabled() ||
-              !focused_element_->IsVisible() ||
+          if (!focused_element_->ReallyEnabled() ||
               focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_IN))
                   == EVENT_RESULT_CANCELED) {
             // If the EVENT_FOCUS_IN is canceled, set focus back to the old
@@ -1283,14 +1282,12 @@ ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
   } else if (type == Variant::TYPE_SCRIPTABLE) {
     const ScriptableBinaryData *binary =
         VariantValue<const ScriptableBinaryData *>()(src);
-      if (binary)
-        return GetGraphics()->NewImage(binary->data(), is_mask);
+    if (binary)
+      return GetGraphics()->NewImage(binary->data(), is_mask);
   } else {
     LOG("Unsupported type of image src.");
     DLOG("src=%s", src.Print().c_str());
   }
-
-  DLOG("Failed to load image.");
   return NULL;
 }
 
@@ -1365,8 +1362,12 @@ bool View::ShowDetailsView(DetailsView *details_view,
 }
 
 bool View::OnAddContextMenuItems(MenuInterface *menu) {
-  if (impl_->mouseover_element_)
-    return impl_->mouseover_element_->OnAddContextMenuItems(menu);
+  if (impl_->mouseover_element_) {
+    if (impl_->mouseover_element_->ReallyEnabled())
+      return impl_->mouseover_element_->OnAddContextMenuItems(menu);
+    else
+      impl_->mouseover_element_ = NULL;
+  }
   return true;
 }
 

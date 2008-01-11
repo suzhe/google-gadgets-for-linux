@@ -412,7 +412,9 @@ class ContentAreaElement::Impl {
       bool tooltip_required = false;
       for (ContentItems::iterator it = content_items_.begin();
            it != content_items_.end(); ++it) {
-        if (!((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)) {
+        int flags = (*it)->GetFlags();
+        if (!(flags & (ContentItem::CONTENT_ITEM_FLAG_HIDDEN |
+                       ContentItem::CONTENT_ITEM_FLAG_STATIC))) {
           int x, y, w, h;
           (*it)->GetLayoutRect(&x, &y, &w, &h);
           x -= owner_->GetScrollXPosition();

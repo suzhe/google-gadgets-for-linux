@@ -128,7 +128,7 @@ const char *output =
   "    options.putValue(k[x],  options.item(k[z]));\n"
   "  }\n"
   "})\n"
-  "if (a) {options.putValue(z,  options.item(y)}  else {options.item[k[x]) = options.item(k[z]);})\n"
+  "if (a) {options.putValue(z,  options.item(y))}  else {options.item[k[x]) = options.item(k[z]);}\n"
   "if (a) {options.putValue(z,  options.item(y))\n"
   "}  else {options.item[k[x]) = options.item(k[z]);}\n"
   "\n"
@@ -200,6 +200,78 @@ TEST(JScriptMassager, Invalid3) {
   std::string result = ggadget::smjs::MassageJScript(invalid_input3,
                                                      "filename", 1);
   ASSERT_STREQ(invalid_output3, result.c_str());
+}
+
+const char *function_input =
+  "function b() {\n"
+  "  if (true) {\n"
+  "    function c() {\n"
+  "      function d() {\n"
+  "        if (true) {\n"
+  "          options(\"a\") = function e() { }\n"
+  "        }\n"
+  "      }\n"
+  "    }\n"
+  "  }\n"
+  "}\n"
+  "\n"
+  "{\n"
+  "  function b() {\n"
+  "    if (true) {\n"
+  "      function c() {\n"
+  "        function d() {\n"
+  "          if (true) {\n"
+  "            something_else();\n"
+  "            function e() { }\n"
+  "          }\n"
+  "        }\n"
+  "      }\n"
+  "    }\n"
+  "  }\n"
+  "}\n"
+  "function normal_function() {\n"
+  "  function normal_inner() {\n"
+  "    something();\n"
+  "  }\n"
+  "}\n";
+
+const char *function_output =
+  "function b() {\n"
+  "  if (true) {\n"
+  "  }\n"
+  "    function c() {\n"
+  "      function d() {\n"
+  "        if (true) {\n"
+  "          options.putValue(\"a\",  function e() { })\n"
+  "        }\n"
+  "      }\n"
+  "    }\n"
+  "}\n"
+  "\n"
+  "{\n"
+  "}\n"
+  "  function b() {\n"
+  "    if (true) {\n"
+  "    }\n"
+  "      function c() {\n"
+  "        function d() {\n"
+  "          if (true) {\n"
+  "            something_else();\n"
+  "          }\n"
+  "            function e() { }\n"
+  "        }\n"
+  "      }\n"
+  "  }\n"
+  "function normal_function() {\n"
+  "  function normal_inner() {\n"
+  "    something();\n"
+  "  }\n"
+  "}\n";
+
+TEST(JScriptMassager, InnerFunctions) {
+  std::string result = ggadget::smjs::MassageJScript(function_input,
+                                                     "filename", 1);
+  ASSERT_STREQ(function_output, result.c_str());
 }
 
 int main(int argc, char **argv) {

@@ -208,12 +208,14 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual int GetColumn() const = 0;
   virtual void SetColumn(int column) = 0;
 
+  /** Part of DOM2 methods that are widely used in gadgets. */
+  virtual const char *GetPrefix() const = 0;
+  virtual DOMExceptionCode SetPrefix(const char *prefix) = 0;
+  virtual std::string GetLocalName() const = 0;
+
   /* TODO: DOM2
   virtual bool IsSupported(const char *feature, const char *version) const = 0;
   virtual std::string GetNamespaceURI() const = 0;
-  virtual std::string GetPrefix() const = 0;
-  virtual DOMExceptionCode SetPrefix(const char *prefix) = 0;
-  virtual std::string GetLocalName() const = 0;
   virtual bool HasAttributes() const = 0;
   // Declare these methods here for convenience.
   virtual DOMNodeListInterface *GetElementsByTagNameNS(
@@ -248,9 +250,9 @@ class DOMNamedNodeMapInterface : public ScriptableInterface {
 
   /* TODO: DOM2
   virtual DOMNodeInterface *GetNamedItemNS(const char *namespace_uri,
-                                   const char *local_name) = 0;
-  virtual const DOMNodeInterface *GetNamedItemNS(const char *namespace_uri,
-                                         const char *local_name) const = 0;
+                                           const char *local_name) = 0;
+  virtual const DOMNodeInterface *GetNamedItemNS(
+      const char *namespace_uri, const char *local_name) const = 0;
   virtual DOMExceptionCode SetNamedItemNS(DOMNodeInterface *arg) = 0;
   virtual DOMExceptionCode RemoveNamedItemNS(const char *namespace_uri,
                                              const char *local_name) = 0;

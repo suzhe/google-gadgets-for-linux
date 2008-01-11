@@ -240,11 +240,11 @@ bool GtkViewHost::ShowTooltip(int timer_id) {
   gtk_label_set_line_wrap(GTK_LABEL(tooltip_label_), TRUE);
   gtk_misc_set_alignment(GTK_MISC(tooltip_label_), 0.5, 0.5);
   gtk_container_add(GTK_CONTAINER(tooltip_window_), tooltip_label_);
-  gtk_widget_show_all(tooltip_window_);
 
   int x, y;
   gadget_host_->GetCursorPos(&x, &y);
   gtk_window_move(GTK_WINDOW(tooltip_window_), x, y + 20);
+  gtk_widget_show_all(tooltip_window_);
 
   tooltip_timer_ = gadget_host_->GetMainLoop()->AddTimeoutWatch(
       kHideTooltipDelay,
