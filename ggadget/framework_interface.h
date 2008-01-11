@@ -87,6 +87,7 @@ class NetworkInterface {
  public:
   /** The network connection type. */
   enum ConnectionType {
+    CONNECTION_TYPE_UNKNOWN = -1,
     CONNECTION_TYPE_802_3 = 0,
     CONNECTION_TYPE_802_5 = 1,
     CONNECTION_TYPE_FDDI = 2,
@@ -105,6 +106,7 @@ class NetworkInterface {
     CONNECTION_TYPE_TUNNEL = 15,
     CONNECTION_TYPE_NATIVE_802_11 = 16,
     CONNECTION_TYPE_XDSL = 17,
+    CONNECTION_TYPE_BLUETOOTH = 18,
   };
 
   /** The network connection physical media type. */

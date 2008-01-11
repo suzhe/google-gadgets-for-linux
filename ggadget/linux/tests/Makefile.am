@@ -23,7 +23,8 @@ LDADD			= $(top_builddir)/unittest/libgunit.la \
 
 noinst_HEADERS		=
 
-check_PROGRAMS		= machine_test
+check_PROGRAMS		= machine_test \
+			  network_test
 
 machine_test_SOURCES		= machine_test.cc
 

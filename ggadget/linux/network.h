@@ -20,14 +20,21 @@
 #include <ggadget/framework_interface.h>
 
 namespace ggadget {
+
 namespace framework {
 namespace linux_os {
 
 class Network : public NetworkInterface {
  public:
+  Network();
+  ~Network();
+
   virtual bool IsOnline() const;
   virtual NetworkInterface::ConnectionType GetConnectionType() const;
   virtual NetworkInterface::PhysicalMediaType GetPhysicalMediaType() const;
+ private:
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace linux_os

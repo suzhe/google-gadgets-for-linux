@@ -183,12 +183,18 @@ class DBusProxy::Impl {
   Impl(DBusProxy* owner, DBusConnection* connection,
        MainLoopInterface *mainloop,
        const char* name, const char* path, const char* interface)
-    : owner_(owner), connection_(connection), main_loop_(mainloop) {
+    : owner_(owner),
+      connection_(connection),
+      main_loop_(mainloop),
+      initialized_(false) {
     if (name) name_ = name;
     if (path) path_ = path;
     if (interface) interface_ = interface;
-    GetRemoteMethodsAndSignals();
     AddFilter();
+#ifdef _DEBUG
+    initialized_ = true;
+    GetRemoteMethodsAndSignals();
+#endif
   }
   ~Impl() {
     RemoveFilter();
@@ -212,8 +218,8 @@ class DBusProxy::Impl {
             Arguments *in_arguments,
             ResultCallback *callback);
   void ConnectToSignal(const char *signal, Slot0<void>* dbus_signal_slot);
-  bool EnumerateMethods(Slot2<bool, const char*, Slot*> *slot) const;
-  bool EnumerateSignals(Slot2<bool, const char*, Slot*> *slot) const;
+  bool EnumerateMethods(Slot2<bool, const char*, Slot*> *slot);
+  bool EnumerateSignals(Slot2<bool, const char*, Slot*> *slot);
 
  private:
   class MethodSlot : public Slot {
@@ -298,7 +304,6 @@ class DBusProxy::Impl {
   void AddFilter() {
     dbus_connection_add_filter(connection_, MessageFilter, this, NULL);
     dbus_bus_add_match(connection_, MatchRule().c_str(), NULL);
-    DLOG("add rule: %s", MatchRule().c_str());
   }
   void RemoveFilter() {
     dbus_bus_remove_match(connection_, MatchRule().c_str(), NULL);
@@ -323,6 +328,7 @@ class DBusProxy::Impl {
   DBusProxy *owner_;
   DBusConnection *connection_;
   MainLoopInterface *main_loop_;
+  bool initialized_;
 
   std::string name_;
   std::string path_;
@@ -411,6 +417,8 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
         LOG("have no node named 'node', invalid XML returned.");
         goto exit;
       }
+      method_calls_.clear();
+      signals_.clear();
       for (DOMNodeInterface *interface_node = root_node->GetFirstChild();
            interface_node; interface_node = interface_node->GetNextSibling()) {
         if (interface_node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE ||
@@ -660,8 +668,12 @@ inline std::string DBusProxy::Impl::MatchRule() const {
 }
 
 bool DBusProxy::Impl::EnumerateMethods(Slot2<bool,
-                                       const char*, Slot*> *slot) const {
+                                       const char*, Slot*> *slot) {
   ASSERT(slot);
+  if (!initialized_) {
+    GetRemoteMethodsAndSignals();
+    initialized_ = true;
+  }
   for (PrototypeVector::const_iterator it = method_calls_.begin();
        it != method_calls_.end(); ++it) {
     MethodSlot *method_slot = new MethodSlot(owner_, *it);
@@ -675,7 +687,11 @@ bool DBusProxy::Impl::EnumerateMethods(Slot2<bool,
 }
 
 bool DBusProxy::Impl::EnumerateSignals(Slot2<bool,
-                                       const char*, Slot*> *slot) const {
+                                       const char*, Slot*> *slot) {
+  if (!initialized_) {
+    GetRemoteMethodsAndSignals();
+    initialized_ = true;
+  }
   return true;
 }
 
@@ -686,6 +702,7 @@ DBusProxy::DBusProxy(DBusConnection* connection,
                      const char* interface) : impl_(NULL) {
   if (connection) {
     impl_ = new Impl(this, connection, mainloop, name, path, interface);
+    DLOG("create proxy for %s/%s/%s", name, path, interface);
   }
 }
 
