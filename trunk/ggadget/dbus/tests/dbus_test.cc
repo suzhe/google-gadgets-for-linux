@@ -278,7 +278,51 @@ class IntValue {
   int value_;
 };
 
+class BoolValue {
+ public:
+  BoolValue() : value_(false) {}
+  void Set(bool v) { value_ = v; }
+  bool value() const { return value_; }
+  bool Callback(int id, const Variant &value) {
+    ASSERT(value.type() == Variant::TYPE_BOOL);
+    value_ = VariantValue<bool>()(value);
+    return true;
+  }
+ private:
+  bool value_;
+};
+
+// if crash, we should kill testing server
+void ExitHandler(int signo) {
+  KillServer();
+}
+
+void RegisterSignalHander() {
+  signal(SIGQUIT, ExitHandler);
+  signal(SIGSEGV, ExitHandler);
+  signal(SIGTERM, ExitHandler);
+  signal(SIGSTOP, ExitHandler);
+  signal(SIGABRT, ExitHandler);
+}
+
 }  // anonymous namespace
+
+TEST(DBusProxy, SystemCall) {
+  const char *kDBusName = "org.freedesktop.DBus";
+  DBusProxyFactory *factory = new DBusProxyFactory(NULL);
+  DBusProxy *proxy =
+      factory->NewSystemProxy(kDBusName,
+                              "/org/freedeskop/DBus",
+                              kDBusName,
+                              false);
+  BoolValue obj;
+  proxy->Call("NameHasOwner", true, -1,
+              NewSlot(&obj, &BoolValue::Callback),
+              MESSAGE_TYPE_STRING, kDBusName, MESSAGE_TYPE_INVALID);
+  DLOG("result of NameHasOwner: %d", obj.value());
+  EXPECT_TRUE(obj.value());
+  delete proxy;
+}
 
 TEST(DBusProxy, SyncCall) {
   int id = fork();
@@ -288,6 +332,7 @@ TEST(DBusProxy, SyncCall) {
     StartDBusServer(feed * 2);
     exit(0);
   } else {
+    RegisterSignalHander();
     sleep(1);  /** wait server start */
     DLOG("client start");
     DBusProxyFactory *factory = new DBusProxyFactory(NULL);

@@ -26,13 +26,24 @@ const char* const kHalManagerPath    = "/org/freedesktop/Hal/Manager";
 const char* const kHalComputerInterface  = "org.freedesktop.Hal.Device";
 const char* const kHalManagerInterface   = "org.freedesktop.Hal.Manager";
 
-const char* const kHalPropertyMethod   = "GetPropertyString";
-const char* const kHalFindDeviceMethod = "FindDeviceStringMatch";
+const char* const kHalPropertyMethod        = "GetProperty";
+const char* const kHalFindDeviceMethod      = "FindDeviceByCapability";
+const char* const kHalQueryCapabilityMethod = "QueryCapability";
 
-const char* const kHalNetInterfaceProperty   = "net.interface";
+const char* const kHalNet80203Property       = "net.80203";
+const char* const kHalNet80211Property       = "net.80211";
+const char* const kHalNetBlueToothProperty   = "net.bluetooth";
+const char* const kHalNetIrdaProperty        = "net.irda";
 const char* const kHalNetInterfaceOnProperty = "net.interface_up";
+const char* const kHalNetInterfaceProperty   = "net.interface";
+const char* const kHalNetMediaProperty       = "net.media";
+const char* const kHalNetOriginalProperty    = "net.originating_device";
+
 const char* const kNewUUIDProperty           = "system.hardware.uuid";
 const char* const kOldUUIDProperty           = "smbios.system.uuid";
 const char* const kNewVendorProperty         = "system.hardware.vendor";
 const char* const kOldVendorProperty         = "system.vendor";
 const char* const kMachineModelProperty      = "system.product";
+
+const char* const kHalCapabilitiesProperty   = "info.capabilities";
+const char* const kHalCategoryProperty       = "info.category";

@@ -45,7 +45,7 @@ ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 
 # TODO: install these files into correct path.
 all-local:
-	[ ! -f $(top_builddir)/ggadget/gtkmoz/gtkmoz_browser_child ] || cp $(top_builddir)/ggadget/gtkmoz/gtkmoz_brower_child .
+	[ ! -f $(top_builddir)/ggadget/gtkmoz/gtkmoz_browser_child ] || cp $(top_builddir)/ggadget/gtkmoz/gtkmoz_browser_child .
 	[ ! -f $(top_builddir)/resources/ggl_resources.bin ] || cp $(top_builddir)/resources/ggl_resources.bin .
 
 endif
