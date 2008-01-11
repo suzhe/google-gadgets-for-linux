@@ -14,4 +14,5 @@
 # limitations under the License.
 #
 
+EXTRA_DIST=valgrind
 SUBDIRS = unzip

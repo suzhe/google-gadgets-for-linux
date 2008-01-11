@@ -19,10 +19,7 @@ if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS = . tests
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir) \
-			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
-			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
-			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
+			  -I$(top_srcdir)
 
 noinst_HEADERS		= dbus_utils.h
 
@@ -37,8 +34,12 @@ libggadget_dbus@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_dbus_object.cc \
 			  dbus_proxy.cc
 
+libggadget_dbus@GGL_EPOCH@_la_CXXFLAGS = \
+			  $(DEFAULT_COMPILE_FLAGS)
+
 libggadget_dbus@GGL_EPOCH@_la_CPPFLAGS = \
-			  @DBUS_CFLAGS@
+			  @DBUS_CFLAGS@ \
+			  $(PREDEFINED_MACROS)
 
 libggadget_dbus@GGL_EPOCH@_la_LIBADD = \
 			  @DBUS_LIBS@

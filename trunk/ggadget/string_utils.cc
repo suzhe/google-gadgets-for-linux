@@ -86,7 +86,11 @@ void StringAppendVPrintf(std::string *dst, const char* format, va_list ap) {
   // the data in it upon use.  The fix is to make a copy
   // of the structure before using it and use that copy instead.
   va_list backup_ap;
+#ifdef va_copy
   va_copy(backup_ap, ap);
+#else
+  backup_ap = ap;
+#endif
 
   int result = vsnprintf(space, sizeof(space), format, backup_ap);
   va_end(backup_ap);
@@ -108,7 +112,11 @@ void StringAppendVPrintf(std::string *dst, const char* format, va_list ap) {
       char* buf = new char[length];
 
       // Restore the va_list before we use it again
+#ifdef va_copy
       va_copy(backup_ap, ap);
+#else
+      backup_ap = ap;
+#endif
       result = vsnprintf(buf, length, format, backup_ap);
       va_end(backup_ap);
 

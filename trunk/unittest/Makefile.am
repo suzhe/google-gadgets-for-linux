@@ -25,3 +25,10 @@ noinst_HEADERS		= gunit-internal-inl.h \
 noinst_LTLIBRARIES	= libgunit.la
 
 libgunit_la_SOURCES	= gunit.cc
+
+libgunit_la_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
+libgunit_la_CPPFLAGS	= $(PREDEFINED_MACROS)
+
+if !GGL_HOST_WINDOWS
+libgunit_la_CPPFLAGS	+= -DOS_LINUX
+endif

@@ -21,6 +21,9 @@ LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/linux/libggadget-linux@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 
+AM_CPPFLAGS		= $(PREDEFINED_MACROS)
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
+
 noinst_HEADERS		=
 
 check_PROGRAMS		= machine_test \

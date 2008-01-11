@@ -891,7 +891,7 @@ class DBusDemarshaller::Impl {
             return false;
           Impl sub(iter_);
           std::vector<Variant> var_array;
-          bool ret;
+          bool ret = false;
           for (StringList::iterator it = sig_list.begin();
                it != sig_list.end(); ++it) {
             Argument arg(it->c_str());

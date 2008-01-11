@@ -16,7 +16,8 @@
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-AM_CPPFLAGS 		= @DBUS_CFLAGS@
+AM_CPPFLAGS 		= @DBUS_CFLAGS@ $(PREDEFINED_MACROS)
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \

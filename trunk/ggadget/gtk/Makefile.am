@@ -21,10 +21,7 @@ SUBDIRS = . tests
 
 
 INCLUDES		= -I$(top_builddir) \
-			  -I$(top_srcdir) \
-			  -DGGL_MODULE_DIR=\"$(GGL_MODULE_DIR)\" \
-			  -DGGL_LIBEXEC_DIR=\"$(GGL_LIBEXEC_DIR)\" \
-			  -DGGL_RESOURCE_DIR=\"$(GGL_RESOURCE_DIR)\"
+			  -I$(top_srcdir)
 
 if GGL_HAVE_RSVG
   RSVG_IMAGE_H=rsvg_image.h
@@ -68,11 +65,15 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  pixbuf_utils.cc \
 			  $(RSVG_IMAGE_CC)
 
+libggadget_gtk@GGL_EPOCH@_la_CXXFLAGS = \
+			  $(DEFAULT_COMPILE_FLAGS)
+
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @CAIRO_CFLAGS@ \
 			  @PANGO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
-			  @RSVG_CFLAGS@
+			  @RSVG_CFLAGS@ \
+			  $(PREDEFINED_MACROS)
 
 libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
 			  @CAIRO_LIBS@ \

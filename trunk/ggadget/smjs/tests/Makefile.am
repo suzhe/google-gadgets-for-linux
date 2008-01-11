@@ -23,7 +23,10 @@ INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 AM_CPPFLAGS		= @READLINE_CPPFLAGS@ \
-			  @SPIDERMONKEY_CPPFLAGS@
+			  @SPIDERMONKEY_CPPFLAGS@ \
+			  $(PREDEFINED_MACROS)
+
+AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 AM_LDFLAGS		= @READLINE_LDFLAGS@ \
 			  @SPIDERMONKEY_LDFLAGS@
@@ -43,7 +46,8 @@ check_PROGRAMS		= js_shell \
 
 dbus_object_test_shell_SOURCES = js_shell.cc \
 				 dbus_object_test_shell.cc
-dbus_object_test_shell_LDFLAGS = $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+dbus_object_test_shell_LDADD = $(LDADD) \
+			 $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 
 dom_test_shell_SOURCES	= js_shell.cc \
 			  dom_test_shell.cc
@@ -60,19 +64,19 @@ wrapper_test_shell_SOURCES = js_shell.cc \
 massager_SOURCES	= massager.cc
 
 TESTS_ENVIRONMENT	= $(SHELL)
-TESTS			= dbus_test_shell.sh \
+TESTS			= dbus_object_test_shell.sh \
 			  dom_test_shell.sh \
 			  js_shell.sh \
 			  jscript_massager_test.sh \
 			  wrapper_test_shell.sh
 
-.PHONY: dbus_test_shell.sh \
+.PHONY: dbus_object_test_shell.sh \
 	dom_test_shell.sh \
 	js_shell.sh \
 	jscript_massager_test.sh \
 	wrapper_test_shell.sh
 
-dbus_test_shell.sh:
+dbus_object_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/dbus_object_test_shell \
 	      $(abs_top_srcdir)/unittest/js_unittest.js \
