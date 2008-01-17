@@ -16,6 +16,9 @@
 
 ADD_SUBDIRECTORY(tests)
 
+PKGCONFIG_EX(gstreamer-0.10 0.10 GST_LIBRARIES)
+ADD_DEFINITIONS(-DGST_AUDIOCLIP)
+
 SET(SRCS
   audioclip.cc
   file_system.cc
@@ -31,5 +34,5 @@ SET(SRCS
 )
 
 ADD_LIBRARY(ggadget_linux SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_linux ggadget_dbus)
+TARGET_LINK_LIBRARIES(ggadget_linux ${GST_LIBRARIES} ggadget_dbus)
 OUTPUT_LIBRARY(ggadget_linux)
