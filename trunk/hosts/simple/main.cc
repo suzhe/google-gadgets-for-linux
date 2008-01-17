@@ -26,6 +26,8 @@
 #include <ggadget/gtk/gadget_view_widget.h>
 #include <ggadget/gtk/gtk_gadget_host.h>
 #include <ggadget/gtk/gtk_view_host.h>
+#include <ggadget/gtk/gtk_main_loop.h>
+#include <ggadget/extension_manager.h>
 #include <ggadget/smjs/js_script_runtime.h>
 #include <ggadget/ggadget.h>
 
@@ -42,6 +44,20 @@ static gboolean g_composited = false;
 static gboolean g_useshapemask = false;
 static gboolean g_decorated = true;
 
+static ggadget::gtk::GtkMainLoop g_main_loop;
+#ifdef GGL_HOST_LINUX
+static ggadget::LinuxFramework g_framework;
+#else
+static ggadget::DummyFramework g_framework;
+#endif
+static ggadget::smjs::JSScriptRuntime g_script_runtime;
+
+static const char *kGlobalExtensions[] = {
+  "dbus_script_class",
+  "gtkmoz_browser_element",
+  NULL
+};
+
 static gboolean DeleteEventHandler(GtkWidget *widget,
                                    GdkEvent *event,
                                    gpointer data) {
@@ -56,17 +72,10 @@ static gboolean DestroyHandler(GtkWidget *widget,
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
-  ggadget::ScriptRuntimeInterface *script_runtime =
-      new ggadget::smjs::JSScriptRuntime();
-
-#ifdef GGL_HOST_LINUX
-  ggadget::FrameworkInterface *framework = new ggadget::LinuxFramework();
-#else
-  ggadget::FrameworkInterface *framework = new ggadget::DummyFramework();
-#endif
-
-  g_gadget_host = new ggadget::gtk::GtkGadgetHost(script_runtime,
-                                                  framework, g_composited,
+  g_gadget_host = new ggadget::gtk::GtkGadgetHost(&g_script_runtime,
+                                                  &g_framework,
+                                                  &g_main_loop,
+                                                  g_composited,
                                                   g_useshapemask, g_zoom,
                                                   g_debug_mode);
   if (!g_gadget_host->LoadGadget(box, base_path)) {
@@ -178,6 +187,16 @@ int main(int argc, char* argv[]) {
     sscanf(argv[5], "%d", &decorated);
     g_decorated = (decorated != 0);
   }
+
+  // Load global extensions.
+  ggadget::ExtensionManager *ext_manager =
+      ggadget::ExtensionManager::CreateExtensionManager(&g_main_loop);
+
+  // Ignore errors when loading extensions.
+  for (size_t i = 0; kGlobalExtensions[i]; ++i)
+    ext_manager->LoadExtension(kGlobalExtensions[i], false);
+
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
 
   if (!CreateGTKUI(argv[1])) {
     LOG("Error: unable to create UI");

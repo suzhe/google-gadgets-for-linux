@@ -21,6 +21,7 @@
 #include <map>
 #include <gtk/gtk.h>
 #include <ggadget/gadget_host_interface.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/gtk/gtk_main_loop.h>
 
 namespace ggadget {
@@ -35,6 +36,7 @@ class GtkGadgetHost : public GadgetHostInterface {
  public:
   GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                 FrameworkInterface *framework,
+                MainLoopInterface *main_loop,
                 bool composited, bool useshapemask,
                 double zoom, int debug_mode);
   virtual ~GtkGadgetHost();
@@ -112,25 +114,30 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
   ScriptRuntimeInterface *script_runtime_;
+  FrameworkInterface *framework_;
+  MainLoopInterface *main_loop_;
+
   XMLParserInterface *xml_parser_;
   FileManagerInterface *resource_file_manager_;
   FileManagerInterface *global_file_manager_;
   FileManagerInterface *file_manager_;
   OptionsInterface *options_;
-  FrameworkInterface *framework_;
   GadgetInterface *gadget_;
-  GtkMainLoop main_loop_;
 
   int plugin_flags_;
 
   // Maps original font filename to temp font filename
   std::map<std::string, std::string> loaded_fonts_;
-  bool composited_, useshapemask_;
+  bool composited_;
+  bool useshapemask_;
   double zoom_;
   int debug_mode_;
 
   GtkBox *toolbox_;
-  GtkWidget *menu_button_, *back_button_, *forward_button_, *details_button_;
+  GtkWidget *menu_button_;
+  GtkWidget *back_button_;
+  GtkWidget *forward_button_;
+  GtkWidget *details_button_;
   GtkMenuImpl *menu_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkGadgetHost);

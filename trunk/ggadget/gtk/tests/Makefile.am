@@ -19,7 +19,7 @@ TEST_IMAGES		= 120day.png \
 			  kitty419.jpg \
 			  testmask.png
 
-noinst_DATA		= $(TEST_IMAGES)
+EXTRA_DIST		= $(TEST_IMAGES)
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

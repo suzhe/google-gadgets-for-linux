@@ -22,6 +22,8 @@
 
 namespace ggadget {
 
+class MainLoopInterface;
+
 /**
  * This class is used to load a dynamic module into the main process.
  * A dynamic module can provide additional components to extend the core
@@ -31,12 +33,14 @@ namespace ggadget {
  *
  * A valid module must provide two public C functions:
  *
- * - bool modulename_LTX_Initialize(void);
+ * - bool modulename_LTX_Initialize(MainLoopInterface *main_loop);
  *   A function to initialize the module. This function will be called
  *   immediately when the module is loaded successfully. This function shall
  *   return true if the module is initialized correctly, otherwise false shall
  *   be returned. If it returns false, then the module will be unloaded
  *   immediately without any further operation.
+ *   main_loop is a MainLoop instance that the module can use to hook timeout
+ *   or I/O callbacks. The module can keep the pointer if necessary.
  *
  * - void modulename_LTX_Finalize(void);
  *   A function to finalize the module. this function will be called just
@@ -56,7 +60,7 @@ namespace ggadget {
 class Module {
  public:
   /** Default constructor */
-  Module();
+  explicit Module(MainLoopInterface *main_loop);
 
   /**
    * Constructor to load a specified module directly.
@@ -64,7 +68,7 @@ class Module {
    * to check if the module is loaded successfully before using it.
    * @sa Load().
    */
-  explicit Module(const char *name);
+  Module(MainLoopInterface *main_loop, const char *name);
 
   /**
    * Destructor. If the module was loaded, then it'll be unloaded. Destroying a

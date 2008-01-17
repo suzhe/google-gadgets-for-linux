@@ -25,9 +25,43 @@
 #include <ggadget/scriptable_array.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/view.h>
+#include <ggadget/element_factory.h>
+#include <ggadget/script_context_interface.h>
 
 #include "browser_element.h"
 #include "browser_child.h"
+
+#define Initialize gtkmoz_browser_element_LTX_Initialize
+#define Finalize gtkmoz_browser_element_LTX_Finalize
+#define RegisterExtension gtkmoz_browser_element_LTX_RegisterExtension
+
+namespace ggadget {
+namespace gtkmoz {
+static MainLoopInterface *ggl_main_loop = NULL;
+}
+}
+
+extern "C" {
+  bool Initialize(ggadget::MainLoopInterface *main_loop) {
+    LOG("Initialize gtkmoz_browser_element extension.");
+    ggadget::gtkmoz::ggl_main_loop = main_loop;
+    return true;
+  }
+
+  void Finalize() {
+    LOG("Finalize gtkmoz_browser_element extension.");
+  }
+
+  bool RegisterExtension(ggadget::ElementFactory *factory,
+                         ggadget::ScriptContextInterface *context) {
+    LOG("Register gtkmoz_browser_element extension, using name \"_browser\".");
+    if (factory) {
+      factory->RegisterElementClass(
+          "_browser", &ggadget::gtkmoz::BrowserElement::CreateInstance);
+    }
+    return true;
+  }
+}
 
 namespace ggadget {
 namespace gtkmoz {
@@ -38,12 +72,11 @@ class BrowserElement::Impl {
  public:
   Impl(BrowserElement *owner)
       : owner_(owner),
-        main_loop_(owner->GetView()->GetMainLoop()),
         content_type_("text/html"),
         container_(NULL),
         container_x_(0), container_y_(0),
         socket_(NULL),
-        controller_(BrowserController::get(owner->GetView()->GetMainLoop())),
+        controller_(BrowserController::get()),
         browser_id_(controller_->AddBrowserElement(this)),
         x_(0), y_(0), width_(0), height_(0) {
   }
@@ -106,7 +139,7 @@ class BrowserElement::Impl {
       gint y = container_y_ + static_cast<gint>(round(owner_->GetPixelY()));
       gint width = static_cast<gint>(ceil(owner_->GetPixelWidth()));
       gint height = static_cast<gint>(ceil(owner_->GetPixelHeight()));
-  
+
       if (x != x_ || y != y_) {
         x_ = x;
         y_ = y;
@@ -182,12 +215,11 @@ class BrowserElement::Impl {
 
   class BrowserController {
    public:
-    BrowserController(MainLoopInterface *main_loop)
-        : main_loop_(main_loop),
-          child_pid_(0),
+    BrowserController()
+        : child_pid_(0),
           down_fd_(0), up_fd_(0), ret_fd_(0),
           up_fd_watch_(0),
-          ping_timer_watch_(main_loop->AddTimeoutWatch(
+          ping_timer_watch_(ggl_main_loop->AddTimeoutWatch(
               kPingInterval * 3 / 2,
               new WatchCallbackSlot(
                   NewSlot(this, &BrowserController::PingTimerCallback)))),
@@ -210,10 +242,9 @@ class BrowserElement::Impl {
       return true;
     }
 
-    static BrowserController *get(MainLoopInterface *main_loop) {
-      ASSERT(!instance_ || instance_->main_loop_ == main_loop);
+    static BrowserController *get() {
       if (!instance_)
-        instance_ = new BrowserController(main_loop);
+        instance_ = new BrowserController();
       return instance_;
     }
 
@@ -258,8 +289,8 @@ class BrowserElement::Impl {
         close(up_pipe_fds[0]);
         close(ret_pipe_fds[1]);
         std::string down_fd_str = StringPrintf("%d", down_pipe_fds[0]);
-        std::string up_fd_str = StringPrintf("%d", up_pipe_fds[1]); 
-        std::string ret_fd_str = StringPrintf("%d", ret_pipe_fds[0]); 
+        std::string up_fd_str = StringPrintf("%d", up_pipe_fds[1]);
+        std::string ret_fd_str = StringPrintf("%d", ret_pipe_fds[0]);
         // TODO: Deal with the situtation that the main program is not run from
         // the directory it is in.
         execl(kBrowserChildName, kBrowserChildName,
@@ -276,15 +307,15 @@ class BrowserElement::Impl {
         int up_fd_flags = fcntl(up_fd_, F_GETFL);
         up_fd_flags |= O_NONBLOCK;
         fcntl(up_fd_, F_SETFL, up_fd_flags);
-        up_fd_watch_ = main_loop_->AddIOReadWatch(up_fd_,
-                                                  new UpFdWatchCallback(this));
+        up_fd_watch_ =
+            ggl_main_loop->AddIOReadWatch(up_fd_, new UpFdWatchCallback(this));
       }
     }
 
     void StopChild(bool on_error) {
       if (!removing_watch_) {
         removing_watch_ = true;
-        main_loop_->RemoveWatch(up_fd_watch_);
+        ggl_main_loop->RemoveWatch(up_fd_watch_);
         removing_watch_ = false;
       }
       up_fd_watch_ = 0;
@@ -376,7 +407,7 @@ class BrowserElement::Impl {
           curr_pos = end_of_line_pos + 1;
         }
         ASSERT(curr_pos = eom_pos + 1);
-        curr_pos += arraysize(kEndOfMessageFull) - 2;
+        curr_pos += sizeof(kEndOfMessageFull) - 2;
 
         if (params.size() == 1 && strcmp(params[0], kPingFeedback) == 0) {
           Write(ret_fd_, kPingAckFull, arraysize(kPingAckFull) - 1);
@@ -425,7 +456,6 @@ class BrowserElement::Impl {
     }
 
     static BrowserController *instance_;
-    MainLoopInterface *main_loop_;
     int child_pid_;
     int down_fd_, up_fd_, ret_fd_;
     int up_fd_watch_;
@@ -438,7 +468,6 @@ class BrowserElement::Impl {
   };
 
   BrowserElement *owner_;
-  MainLoopInterface *main_loop_;
   std::string content_type_;
   std::string content_;
   GtkWidget *container_;

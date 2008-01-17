@@ -264,10 +264,10 @@ function Enumerator(coll) {
     throw "Enumerator's argument must have either length or count property.";
   if (coll.constructor != Array && typeof(coll.item) != "function")
     throw "Enumerator's argument must be either a JavaScript array" +
-          " or an object providing item(integer) method."; 
+          " or an object providing item(integer) method.";
 
   this.atEnd = function() {
-    return pos_ >= (coll.length == undefined ? coll.count : coll.length);  
+    return pos_ >= (coll.length == undefined ? coll.count : coll.length);
   };
 
   this.item = function() {

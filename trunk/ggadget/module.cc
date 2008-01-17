@@ -21,9 +21,6 @@
 #include <algorithm>
 #include <vector>
 #include <cstdlib>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <ltdl.h>
 #include "module.h"
@@ -31,6 +28,7 @@
 #include "gadget_consts.h"
 #include "logger.h"
 #include "system_utils.h"
+#include "main_loop_interface.h"
 
 namespace ggadget {
 
@@ -40,19 +38,35 @@ static const char *kModuleFinalizeSymbol = "Finalize";
 
 class Module::Impl {
  public:
-  Impl() : handle_(0), initialize_(0), finalize_(0) {
-    if (lt_dlinit() != 0)
-      LOG("Failed to initialize the module system: %s", lt_dlerror());
+  Impl(MainLoopInterface *main_loop)
+      : main_loop_(main_loop),
+      handle_(NULL),
+      initialize_(NULL),
+      finalize_(NULL) {
+    ASSERT(main_loop);
+
+    // Only initialize ltdl once and don't exit it anymore.
+    if (!ltdl_initialized_) {
+      if (lt_dlinit() != 0)
+        LOG("Failed to initialize the module system: %s", lt_dlerror());
+      else
+        ltdl_initialized_ = true;
+    }
   }
 
   ~Impl() {
-    Unload();
-    if (lt_dlexit() != 0)
-      LOG("Failed to finalize the module system: %s", lt_dlerror());
+    // Only unload non-resident modules.
+    if (!IsResident()) Unload();
   }
 
   bool Load(const char *name) {
     ASSERT(name && *name);
+
+    if (!ltdl_initialized_) {
+      LOG("Can not load module %s, "
+          "seems that the module system is not usable.", name);
+      return false;
+    }
 
     // If the module is already loaded and made resident, then return false.
     if (IsResident() || !name || !*name) return false;
@@ -111,8 +125,10 @@ class Module::Impl {
       name_ = module_name;
 
       // Only call Initialize() when loading the module the first time.
-      if (module_info->ref_count == 1) {
-        if (!initialize_()) {
+      // If the module is already resident, then means that it was already
+      // loaded and initialized before, so no need initializing again.
+      if (module_info->ref_count == 1 && lt_dlisresident(handle_) == 0) {
+        if (!initialize_(main_loop_)) {
           Unload();
           return false;
         }
@@ -340,22 +356,27 @@ class Module::Impl {
   }
 
  private:
-  typedef bool (*InitializeFunction)(void);
+  typedef bool (*InitializeFunction)(MainLoopInterface *);
   typedef void (*FinalizeFunction)(void);
 
+  MainLoopInterface *main_loop_;
   lt_dlhandle handle_;
   InitializeFunction initialize_;
   FinalizeFunction finalize_;
   std::string path_;
   std::string name_;
+
+  static bool ltdl_initialized_;
 };
 
-Module::Module()
-  : impl_(new Impl()) {
+bool Module::Impl::ltdl_initialized_ = false;
+
+Module::Module(MainLoopInterface *main_loop)
+  : impl_(new Impl(main_loop)) {
 }
 
-Module::Module(const char *name)
-  : impl_(new Impl()) {
+Module::Module(MainLoopInterface *main_loop, const char *name)
+  : impl_(new Impl(main_loop)) {
   Load(name);
 }
 

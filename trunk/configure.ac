@@ -250,9 +250,9 @@ fi
 
 build_libggadget_gtk=yes
 build_libggadget_smjs=yes
-build_simple_host=yes
 build_libggadget_dbus=yes
-build_libggadget_gtkmoz=yes
+build_gtkmoz_browser_element=yes
+build_simple_host=yes
 
 if test x$has_libcurl != xyes; then
   AC_MSG_ERROR([Library curl is not available.])
@@ -295,8 +295,8 @@ if test x$has_dbus != xyes; then
 fi
 
 if test x$has_gtkmozembed != xyes; then
-  AC_MSG_WARN([Library GtkMozEmbed is not available, libggadget-gtkmoz won't be built.])
-  build_libggadget_gtkmoz=no
+  AC_MSG_WARN([Library GtkMozEmbed is not available, gtkmoz_browser_element won't be built.])
+  build_gtkmoz_browser_element=no
 fi
 
 AM_CONDITIONAL(
@@ -316,8 +316,8 @@ AM_CONDITIONAL(
   [test x$build_libggadget_dbus = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_GTKMOZ],
-  [test x$build_libggadget_gtkmoz = xyes])
+  [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
+  [test x$build_gtkmoz_browser_element = xyes])
 
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
@@ -420,6 +420,9 @@ AC_CONFIG_HEADERS([config.h])
 
 # Specifies configurable files.
 AC_CONFIG_FILES([Makefile
+		 extensions/Makefile
+		 extensions/dbus_script_class/Makefile
+		 extensions/gtkmoz_browser_element/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
@@ -430,7 +433,6 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/gtk/tests/Makefile
 		 ggadget/linux/Makefile
 		 ggadget/linux/tests/Makefile
-		 ggadget/gtkmoz/Makefile
 		 ggadget/smjs/Makefile
 		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile
@@ -449,18 +451,18 @@ AC_OUTPUT
 
 AC_MSG_RESULT([
 Build options:
-  Version                  $GGL_VERSION
-  Install prefix           $prefix
-  Install included libltdl $enable_ltdl_install
-  Build shared libs        $enable_shared
-  Build static libs        $enable_static
-  Enable debug             $enable_debug
-  Host type                $ggl_host_type
-  SVG Support              $has_rsvg
-  Build libggadget-gtk     $build_libggadget_gtk
-  Build libggadget-smjs    $build_libggadget_smjs
-  Build libggadget-dbus    $build_libggadget_dbus
-  Build libggadget-gtkmoz  $build_libggadget_gtkmoz
-  Build simple host        $build_simple_host
+  Version                       $GGL_VERSION
+  Install prefix                $prefix
+  Install included libltdl      $enable_ltdl_install
+  Build shared libs             $enable_shared
+  Build static libs             $enable_static
+  Enable debug                  $enable_debug
+  Host type                     $ggl_host_type
+  SVG Support                   $has_rsvg
+  Build libggadget-gtk          $build_libggadget_gtk
+  Build libggadget-smjs         $build_libggadget_smjs
+  Build libggadget-dbus         $build_libggadget_dbus
+  Build gtkmoz_browser_element  $build_gtkmoz_browser_element
+  Build simple host             $build_simple_host
 ])
 

@@ -36,6 +36,7 @@
 #include "view_host_interface.h"
 #include "view.h"
 #include "xml_parser_interface.h"
+#include "extension_manager.h"
 
 namespace ggadget {
 
@@ -244,6 +245,8 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
         plugin_(this),
         gadget_global_prototype_(this),
         element_factory_(new ElementFactory()),
+        extension_manager_(
+            ExtensionManager::CreateExtensionManager(host->GetMainLoop())),
         main_view_(new View(&gadget_global_prototype_, element_factory_,
                             debug_mode)),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
@@ -282,10 +285,9 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
 
     CloseDetailsView();
     delete main_view_host_;
-    main_view_host_ = NULL;
-
     delete element_factory_;
-    element_factory_ = NULL;
+    if (extension_manager_)
+      extension_manager_->Destroy();
   }
 
   void DebugError(const char *message) {
@@ -498,7 +500,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     DLOG("Gadget description: %s",
          GetManifestInfo(kManifestDescription).c_str());
 
-    // load fonts
+    // load fonts and objects
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
@@ -507,11 +509,27 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
           (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
         // ignore return, error not fatal
         host_->LoadFont(i->second.c_str());
+      } else if (0 == key.find(kManifestInstallObject) &&
+          (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr) &&
+          extension_manager_) {
+        std::string temp_file;
+        file_manager->ExtractFile(i->second.c_str(), &temp_file);
+        extension_manager_->LoadExtension(temp_file.c_str(), false);
       }
     }
 
+    // Register extensions
+    ScriptContextInterface *context = main_view_host_->GetScriptContext();
+    const ExtensionManager *global_manager =
+        ExtensionManager::GetGlobalExtensionManager();
+    if (global_manager)
+      global_manager->RegisterLoadedExtensions(element_factory_, context);
+    if (extension_manager_)
+      extension_manager_->RegisterLoadedExtensions(element_factory_, context);
+
     main_view_host_->GetView()->SetCaption(
         GetManifestInfo(kManifestName).c_str());
+
     if (!main_view_host_->GetView()->InitFromFile(kMainXML)) {
       LOG("Failed to setup the main view");
       return false;
@@ -534,6 +552,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   Plugin plugin_;
   GadgetGlobalPrototype gadget_global_prototype_;
   ElementFactory *element_factory_;
+  ExtensionManager *extension_manager_;
   View *main_view_;
   ViewHostInterface *main_view_host_;
   DetailsView *details_view_;

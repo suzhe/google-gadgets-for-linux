@@ -16,7 +16,6 @@
 
 ADD_SUBDIRECTORY(dbus)
 ADD_SUBDIRECTORY(gtk)
-ADD_SUBDIRECTORY(gtkmoz)
 # Remove when ExtensionManager is ready.
 ADD_DEFINITIONS(-DHAVE_GTKMOZ)
 ADD_SUBDIRECTORY(linux)
@@ -84,8 +83,6 @@ SET(LIBS
   unzip
   ${LIBCURL_LIBRARIES}
   ${LIBXML2_LIBRARIES}
-  # Remove this when ExtensionManager is ready.
-  ggadget_gtkmoz
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

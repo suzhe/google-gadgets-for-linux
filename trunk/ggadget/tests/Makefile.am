@@ -35,6 +35,7 @@ noinst_HEADERS		= main_loop_test.h \
 
 check_PROGRAMS		= color_test \
 			  common_test \
+			  extension_manager_test \
 			  variant_test \
 			  slot_test \
 			  signal_test \
@@ -59,6 +60,7 @@ check_LTLIBRARIES	= foo-module.la \
 
 color_test_SOURCES		= color_test.cc
 common_test_SOURCES		= common_test.cc
+extension_manager_test_SOURCES	= extension_manager_test.cc
 variant_test_SOURCES		= variant_test.cc
 slot_test_SOURCES		= slot_test.cc slots.cc
 signal_test_SOURCES		= signal_test.cc slots.cc
