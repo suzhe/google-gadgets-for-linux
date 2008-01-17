@@ -14,12 +14,9 @@
   limitations under the License.
 */
 
-#include <dbus/dbus.h>
-
 #include <ggadget/logger.h>
-
+#include <ggadget/dbus/dbus_proxy.h>
 #include "scriptable_dbus_object.h"
-#include "dbus_proxy.h"
 
 namespace ggadget {
 namespace dbus {

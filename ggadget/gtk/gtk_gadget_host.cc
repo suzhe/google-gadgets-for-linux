@@ -44,20 +44,28 @@ static const char kResourceZipName[] = "ggl_resources.bin";
 
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              FrameworkInterface *framework,
+                             MainLoopInterface *main_loop,
                              bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
+      framework_(framework),
+      main_loop_(main_loop),
       xml_parser_(CreateXMLParser()),
       resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
       file_manager_(NULL),
       options_(new Options()),
-      framework_(framework),
       gadget_(NULL),
-      plugin_flags_(0), composited_(composited), useshapemask_(useshapemask),
-      zoom_(zoom), debug_mode_(debug_mode),
-      toolbox_(NULL), menu_button_(NULL), back_button_(NULL),
-      forward_button_(NULL), details_button_(NULL),
+      plugin_flags_(0),
+      composited_(composited),
+      useshapemask_(useshapemask),
+      zoom_(zoom),
+      debug_mode_(debug_mode),
+      toolbox_(NULL),
+      menu_button_(NULL),
+      back_button_(NULL),
+      forward_button_(NULL),
+      details_button_(NULL),
       menu_(NULL) {
   FileManagerWrapper *wrapper = new FileManagerWrapper(xml_parser_);
   file_manager_ = wrapper;
@@ -81,8 +89,6 @@ GtkGadgetHost::~GtkGadgetHost() {
   gadget_ = NULL;
   delete options_;
   options_ = NULL;
-  delete framework_;
-  framework_ = NULL;
   delete file_manager_;
   file_manager_ = NULL;
   delete resource_file_manager_;
@@ -93,8 +99,6 @@ GtkGadgetHost::~GtkGadgetHost() {
   menu_ = NULL;
   delete xml_parser_;
   xml_parser_ = NULL;
-  delete script_runtime_;
-  script_runtime_ = NULL;
 }
 
 ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
@@ -115,7 +119,7 @@ FrameworkInterface *GtkGadgetHost::GetFramework() {
 }
 
 MainLoopInterface *GtkGadgetHost::GetMainLoop() {
-  return &main_loop_;
+  return main_loop_;
 }
 
 XMLParserInterface *GtkGadgetHost::GetXMLParser() {
@@ -126,7 +130,7 @@ GadgetInterface *GtkGadgetHost::GetGadget() {
   return gadget_;
 }
 
-ViewHostInterface *GtkGadgetHost::NewViewHost(ViewType type, 
+ViewHostInterface *GtkGadgetHost::NewViewHost(ViewType type,
                                               ViewInterface *view) {
   return new GtkViewHost(this, type, view, composited_, useshapemask_, zoom_);
 }
@@ -184,7 +188,7 @@ std::string GetFullPathOfSysCommand(const std::string &command) {
 }
 
 uint64_t GtkGadgetHost::GetCurrentTime() const {
-  return main_loop_.GetCurrentTime();
+  return main_loop_->GetCurrentTime();
 }
 
 bool GtkGadgetHost::OpenURL(const char *url) const {

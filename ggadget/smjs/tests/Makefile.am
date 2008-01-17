@@ -77,7 +77,8 @@ TESTS			= dbus_object_test_shell.sh \
 	wrapper_test_shell.sh
 
 dbus_object_test_shell.sh:
-	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class\
+	      $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/dbus_object_test_shell \
 	      $(abs_top_srcdir)/unittest/js_unittest.js \
 	      $(abs_srcdir)/dbus_object_test_shell.js > $@)

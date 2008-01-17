@@ -13,12 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SUBDIRS =
-if GGL_BUILD_LIBGGADGET_GTKMOZ
-SUBDIRS += gtkmoz
-endif
 # Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS += . tests
+SUBDIRS = . tests
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif
@@ -58,6 +54,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  element_factory.h \
 			  elements.h \
 			  event.h \
+			  extension_manager.h \
 			  file_manager.h \
 			  file_manager_interface.h \
 			  file_manager_wrapper.h \
@@ -115,7 +112,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_dom_interface.h \
 			  xml_http_request.h \
 			  xml_http_request_interface.h \
-			  xml_parser.h
+			  xml_parser.h \
 			  xml_parser_interface.h \
 			  xml_utils.h
 
@@ -140,6 +137,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  edit_element.cc \
 			  element_factory.cc \
 			  elements.cc \
+			  extension_manager.cc \
 			  file_manager.cc \
 			  file_manager_wrapper.cc \
 			  gadget.cc \
@@ -192,12 +190,6 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 			  @LIBCURL@ \
 			  @XML_LIBS@ \
 			  $(top_builddir)/third_party/unzip/libunzip.la
-
-if GGL_BUILD_LIBGGADGET_GTKMOZ
-# Temporary. Remove this when ExtensionManager is ready.
-libggadget@GGL_EPOCH@_la_CPPFLAGS += -DHAVE_GTKMOZ=1
-libggadget@GGL_EPOCH@_la_LIBADD += $(top_builddir)/ggadget/gtkmoz/libggadget-gtkmoz@GGL_EPOCH@.la
-endif
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \

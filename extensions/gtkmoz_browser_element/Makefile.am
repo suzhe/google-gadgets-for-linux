@@ -13,41 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if GGL_BUILD_LIBGGADGET_GTKMOZ
+if GGL_BUILD_GTKMOZ_BROWSER_ELEMENT
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS          = browser_child.h
+noinst_HEADERS		= browser_child.h \
+			  browser_element.h
 
-gtkmozincludedir	= $(GGL_INCLUDE_DIR)/ggadget/gtkmoz
-gtkmozinclude_HEADERS	= browser_element.h
+extension_LTLIBRARIES	= gtkmoz_browser_element.la
+extensiondir		= $(GGL_MODULE_DIR)
 
-lib_LTLIBRARIES		= libggadget-gtkmoz@GGL_EPOCH@.la
-
-libggadget_gtkmoz@GGL_EPOCH@_la_SOURCES = \
+gtkmoz_browser_element_la_SOURCES = \
 			  browser_element.cc
 
-libggadget_gtkmoz@GGL_EPOCH@_la_CXXFLAGS = \
+gtkmoz_browser_element_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
-libggadget_gtkmoz@GGL_EPOCH@_la_CPPFLAGS = \
+gtkmoz_browser_element_la_CPPFLAGS = \
 			  @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-libggadget_gtkmoz@GGL_EPOCH@_la_LIBADD = \
-			  @GTK2_LIBS@
+gtkmoz_browser_element_la_LIBADD = \
+			  @GTK2_LIBS@ \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-libggadget_gtkmoz@GGL_EPOCH@_la_LDFLAGS = \
-			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
-			  -export-dynamic \
+gtkmoz_browser_element_la_LDFLAGS = \
+			  -avoid-version \
+			  -module \
 			  -rpath $(libdir)
 
 
 ggllibexec_PROGRAMS	= gtkmoz_browser_child
 ggllibexecdir		= $(GGL_LIBEXEC_DIR)
 
-gtkmoz_browser_child_SOURCES= browser_child.cc ../smjs/json.cc
+gtkmoz_browser_child_SOURCES= browser_child.cc \
+			      $(top_srcdir)/ggadget/smjs/json.cc
 
 gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor

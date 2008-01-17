@@ -14,56 +14,45 @@
   limitations under the License.
 */
 
-#include <ggadget/dbus/dbus_proxy.h>
-#include <ggadget/dbus/scriptable_dbus_object.h>
 #include <ggadget/logger.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/smjs/js_script_context.h>
+#include <ggadget/extension_manager.h>
+#include <ggadget/native_main_loop.h>
 
 using namespace ggadget;
 using namespace ggadget::smjs;
-using namespace ggadget::dbus;
 
 class GlobalObject : public ScriptableHelper<ScriptableInterface> {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d11, ScriptableInterface);
-  GlobalObject() : factory_(NULL) {
+  GlobalObject() {
   }
   virtual bool IsStrict() const { return false; }
-
-  ScriptableInterface *NewSystemObject(const char *name,
-                                       const char *path,
-                                       const char *interface) {
-    DBusProxy *proxy = factory_.NewSystemProxy(name, path, interface, false);
-    return new ScriptableDBusObject(proxy);
-  }
-
-  ScriptableInterface *NewSessionObject(const char *name,
-                                        const char *path,
-                                        const char *interface) {
-    DBusProxy *proxy = factory_.NewSessionProxy(name, path, interface, false);
-    return new ScriptableDBusObject(proxy);
-  }
-  DBusProxyFactory factory_;
 };
 
 static GlobalObject *global;
+static ExtensionManager *ext_manager;
+static NativeMainLoop main_loop;
 
 // Called by the initialization code in js_shell.cc.
 // Used to compile a standalone js_shell.
 JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
-  if (!context->RegisterClass("DBusSystemObject",
-                              NewSlot(global, &GlobalObject::NewSystemObject)))
-    DLOG("Register DBusSystemObject failed.");
-  if (!context->RegisterClass("DBusSessionObject",
-                              NewSlot(global, &GlobalObject::NewSessionObject)))
-    DLOG("Register DBusSessionObject failed.");
+  ext_manager = ExtensionManager::CreateExtensionManager(&main_loop);
+
+  if (!ext_manager->LoadExtension("dbus_script_class", false)) {
+    LOG("Failed to load dbus_script_class extension.");
+    return JS_FALSE;
+  }
+
+  ext_manager->RegisterLoadedExtensions(NULL, context);
   return JS_TRUE;
 }
 
 void DestroyCustomObjects(JSScriptContext *context) {
   delete global;
+  ext_manager->Destroy();
 }

@@ -16,7 +16,7 @@
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-LDADD			= $(top_builddir)/unittest/libgunit.la \
+LIBADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)

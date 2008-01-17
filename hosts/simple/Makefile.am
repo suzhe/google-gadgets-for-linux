@@ -48,7 +48,15 @@ ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 
 # TODO: install these files into correct path.
 all-local:
-	[ ! -f $(top_builddir)/ggadget/gtkmoz/gtkmoz_browser_child ] || cp $(top_builddir)/ggadget/gtkmoz/gtkmoz_browser_child .
+	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz_browser_child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz_browser_child .
 	[ ! -f $(top_builddir)/resources/ggl_resources.bin ] || cp $(top_builddir)/resources/ggl_resources.bin .
+
+noinst_SCRIPTS=ggl-simple.sh
+
+.PHONY: ggl-simple.sh
+
+ggl-simple.sh: ggl-simple
+	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class:$(abs_top_builddir)/extensions/gtkmoz_browser_element\
+	 $(LIBTOOL) --mode=execute $(abs_builddir)/ggl-simple '$$@' > $@)
 
 endif

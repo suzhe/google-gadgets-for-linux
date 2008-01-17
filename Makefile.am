@@ -25,6 +25,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  third_party \
 	  unittest \
 	  ggadget \
+	  extensions \
 	  hosts
 
 EXTRA_DIST = examples

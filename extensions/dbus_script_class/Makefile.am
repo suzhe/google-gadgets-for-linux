@@ -15,39 +15,32 @@
 
 if GGL_BUILD_LIBGGADGET_DBUS
 
-# Putting . into SBUDIRS list to force building current directory first.
-SUBDIRS = . tests
-
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= dbus_utils.h
+noinst_HEADERS		= scriptable_dbus_object.h
 
-dbusincludedir		= $(GGL_INCLUDE_DIR)/ggadget/dbus
-dbusinclude_HEADERS	= dbus_proxy.h
+extension_LTLIBRARIES	= dbus_script_class.la
+extensiondir		= $(GGL_MODULE_DIR)
 
-lib_LTLIBRARIES		= libggadget-dbus@GGL_EPOCH@.la
+dbus_script_class_la_SOURCES = \
+			  dbus_script_class.cc \
+			  scriptable_dbus_object.cc
 
-libggadget_dbus@GGL_EPOCH@_la_SOURCES = \
-			  dbus_utils.cc \
-			  dbus_proxy.cc
-
-libggadget_dbus@GGL_EPOCH@_la_CXXFLAGS = \
+dbus_script_class_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
-libggadget_dbus@GGL_EPOCH@_la_CPPFLAGS = \
+dbus_script_class_la_CPPFLAGS = \
 			  @DBUS_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-libggadget_dbus@GGL_EPOCH@_la_LIBADD = \
+dbus_script_class_la_LIBADD = \
 			  @DBUS_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
 
-libggadget_dbus@GGL_EPOCH@_la_LDFLAGS = \
-	-version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
-	-export-dynamic \
-	-rpath $(libdir)
-
-pkgconfigdir= $(libdir)/pkgconfig
-pkgconfig_DATA= libggadget-dbus@GGL_EPOCH@.pc
+dbus_script_class_la_LDFLAGS = \
+			  -avoid-version \
+			  -module \
+			  -rpath $(libdir)
 endif

@@ -23,9 +23,12 @@
 #include "ggadget/gadget_consts.h"
 #include "ggadget/module.h"
 #include "ggadget/slot.h"
+#include "ggadget/native_main_loop.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
+
+static NativeMainLoop main_loop;
 
 static const char *kTestModules[] = {
   "foo-module",
@@ -132,7 +135,7 @@ TEST_F(ModuleTest, LoadModule) {
   GetModuleNameFunc get_module_name;
   WithoutPrefixFunc without_prefix;
 
-  Module *module = new Module();
+  Module *module = new Module(&main_loop);
 
   // Test load multiple modules.
   for (size_t i = 0; kTestModules[i]; ++i) {
@@ -155,7 +158,7 @@ TEST_F(ModuleTest, LoadModule) {
 
   // Test load one module multiple times.
   ASSERT_TRUE(module->Load(kTestModules[0]));
-  Module *another = new Module();
+  Module *another = new Module(&main_loop);
   ASSERT_TRUE(another->Load(kTestModules[0]));
   ASSERT_TRUE(module->GetSymbol("GetModuleName") ==
               another->GetSymbol("GetModuleName"));
@@ -167,8 +170,8 @@ TEST_F(ModuleTest, LoadModule) {
 }
 
 TEST_F(ModuleTest, ModuleResident) {
-  Module *module = new Module();
-  Module *another = new Module();
+  Module *module = new Module(&main_loop);
+  Module *another = new Module(&main_loop);
   ASSERT_TRUE(module->Load(kTestModules[0]));
   ASSERT_TRUE(another->Load(kTestModules[0]));
   ASSERT_FALSE(module->IsResident());

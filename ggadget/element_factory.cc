@@ -33,10 +33,6 @@
 #include "progressbar_element.h"
 #include "scrollbar_element.h"
 
-#if HAVE_GTKMOZ  // Temporary. Remove this when ExtensionManager is ready.
-#include <ggadget/gtkmoz/browser_element.h>
-#endif
-
 namespace ggadget {
 
 ElementFactory::ElementFactory()
@@ -60,9 +56,6 @@ ElementFactory::ElementFactory()
                        &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);
-#if HAVE_GTKMOZ  // Temporary. Remove this when ExtensionManager is ready.
-  RegisterElementClass("_browser", &gtkmoz::BrowserElement::CreateInstance);
-#endif
 }
 
 ElementFactory::~ElementFactory() {

@@ -19,6 +19,9 @@
 #include "ggadget/module.h"
 #include "ggadget/logger.h"
 #include "ggadget/common.h"
+#include "ggadget/main_loop_interface.h"
+#include "ggadget/element_factory.h"
+#include "ggadget/script_context_interface.h"
 
 #define FUNC_NAME_INTERNAL2(a,b)  a##_LTX_##b
 #define FUNC_NAME_INTERNAL1(prefix,name)  FUNC_NAME_INTERNAL2(prefix,name)
@@ -27,8 +30,9 @@
 static int refcount = 0;
 
 extern "C" {
-  bool FUNC_NAME(Initialize)() {
-    LOG("Initialize module %s", AS_STRING(MODULE_NAME));
+  bool FUNC_NAME(Initialize)(ggadget::MainLoopInterface *main_loop) {
+    LOG("Initialize module %s, main_loop=%p",
+        AS_STRING(MODULE_NAME), main_loop);
     refcount ++;
     EXPECT_EQ(1, refcount);
     return true;
@@ -49,5 +53,12 @@ extern "C" {
     LOG("WithoutPrefix() of module %s was called.",
         AS_STRING(MODULE_NAME));
     EXPECT_STREQ(AS_STRING(MODULE_NAME), module_name);
+  }
+
+  bool RegisterExtension(ggadget::ElementFactory *factory,
+                         ggadget::ScriptContextInterface *context) {
+    LOG("Register extension %s, factory=%p, context=%p",
+        AS_STRING(MODULE_NAME), factory, context);
+    return true;
   }
 }

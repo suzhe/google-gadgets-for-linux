@@ -20,9 +20,8 @@ PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
 
 SET(SRCS
   dbus_utils.cc
-  scriptable_dbus_object.cc
   dbus_proxy.cc
 )
 ADD_LIBRARY(ggadget_dbus SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_dbus ${DBUS_LIBRARIES}) 
+TARGET_LINK_LIBRARIES(ggadget_dbus ${DBUS_LIBRARIES})
 OUTPUT_LIBRARY(ggadget_dbus)
