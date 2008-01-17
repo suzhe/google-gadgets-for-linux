@@ -35,8 +35,6 @@ class ScriptableOptions : public ScriptableHelperNativePermanent {
   ScriptableOptions(OptionsInterface *options, bool raw_objects);
   virtual ~ScriptableOptions();
 
-  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
-
   const OptionsInterface *GetOptions() const;
   OptionsInterface *GetOptions();
 

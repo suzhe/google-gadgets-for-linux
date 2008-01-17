@@ -93,6 +93,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_file_system.h \
 			  scriptable_framework.h \
 			  scriptable_helper.h \
+			  scriptable_image.h \
 			  scriptable_interface.h \
 			  scriptable_menu.h \
 			  scriptable_options.h \
@@ -157,6 +158,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_file_system.cc \
 			  scriptable_framework.cc \
 			  scriptable_helper.cc \
+			  scriptable_image.cc \
 			  scriptable_menu.cc \
 			  scriptable_options.cc \
 			  scrollbar_element.cc \

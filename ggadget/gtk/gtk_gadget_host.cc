@@ -496,17 +496,17 @@ bool GtkGadgetHost::BrowseForFiles(const char *filter, bool multiple,
       NULL);
 
   gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), multiple);
-  if (filter) {
+  if (filter && *filter) {
     std::string filter_str(filter);
     std::string filter_name, patterns, pattern;
     while (!filter_str.empty()) {
-      if (!SplitString(filter_str, "|", &filter_name, &filter_str)) {
-        LOG("Invalid filter string: %s", filter_str.c_str());
-        break;
-      }
+      if (SplitString(filter_str, "|", &filter_name, &filter_str))
+        SplitString(filter_str, "|", &patterns, &filter_str);
+      else
+        patterns = filter_name;
+
       GtkFileFilter *file_filter = gtk_file_filter_new();
       gtk_file_filter_set_name(file_filter, filter_name.c_str());
-      SplitString(filter_str, "|", &patterns, &filter_str);
       while (!patterns.empty()) {
         SplitString(patterns, ";", &pattern, &patterns);
         gtk_file_filter_add_pattern(file_filter, pattern.c_str());

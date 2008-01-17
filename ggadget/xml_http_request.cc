@@ -18,6 +18,7 @@
 #include <curl/curl.h>
 
 #include "xml_http_request.h"
+#include "gadget_consts.h"
 #include "main_loop_interface.h"
 #include "logger.h"
 #include "scriptable_binary_data.h"
@@ -133,6 +134,12 @@ class XMLHttpRequest
     Abort();
     if (!method || !url)
       return NULL_POINTER_ERR;
+
+    // TODO: Access control for local files.
+    if (0 != strncasecmp(url, kFileUrlPrefix, arraysize(kFileUrlPrefix) - 1) &&
+        0 != strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
+        0 != strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1))
+      return SYNTAX_ERR;
 
     url_ = url;
     curl_ = curl_easy_init();

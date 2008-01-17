@@ -364,7 +364,7 @@ std::string GetHTMLCharset(const char* html_content) {
     }
 
     cursor = SkipSpaces(cursor + 1);
-    if (!strncasecmp(cursor, kMetaTag, sizeof(kMetaTag) - 1)) {
+    if (!strncasecmp(cursor, kMetaTag, arraysize(kMetaTag) - 1)) {
       const char* element_end = strchr(cursor, '>');
       if (!element_end)
         break;
@@ -377,7 +377,7 @@ std::string GetHTMLCharset(const char* html_content) {
         size_t charset_pos = meta_content.find(kCharsetPrefix);
         if (charset_pos != meta_content.npos) {
           const char* charset_start = meta_content.c_str() + charset_pos +
-                                      sizeof(kCharsetPrefix) - 1;
+                                      arraysize(kCharsetPrefix) - 1;
           charset_start = SkipSpaces(charset_start);
           const char* charset_end = charset_start;
           while (isalnum(*charset_end) || *charset_end == '_' ||

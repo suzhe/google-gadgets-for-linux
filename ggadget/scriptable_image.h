@@ -14,39 +14,35 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_DISPLAY_WINDOW_H__
-#define GGADGET_DISPLAY_WINDOW_H__
+#ifndef GGADGET_SCRIPTABLE_IMAGE_H__
+#define GGADGET_SCRIPTABLE_IMAGE_H__
 
-#include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
-class View;
+class ImageInterface;
 
-/**
- * This class wraps a view into the old @c GoogleDesktopDisplayWindow interface
- * for old style options dialog. This class is only for scripting.
- */
-class DisplayWindow: public ScriptableHelper<ScriptableInterface> {
+class ScriptableImage : public ScriptableHelperOwnershipShared {
  public:
-  DEFINE_CLASS_ID(0x0466c36b78944d34, ScriptableInterface);
+  DEFINE_CLASS_ID(0x18d1431907cd4b1e, ScriptableInterface)
 
-  DisplayWindow(View *view);
-  virtual ~DisplayWindow();
+  /** This object takes the ownership of the input image. */
+  ScriptableImage(ImageInterface *image);
 
-  /**
-   * Adjust the size of the window to proper size.
-   * @return @c false if there is no control added in this object.
-   */
-  bool AdjustSize();
+ protected:
+  virtual ~ScriptableImage();
+
+ public:
+  const ImageInterface *GetImage() const;
+  void DestroyImage();
 
  private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableImage);
   class Impl;
   Impl *impl_;
-  DISALLOW_EVIL_CONSTRUCTORS(DisplayWindow);
 };
 
 } // namespace ggadget
 
-#endif // GGADGET_DISPLAY_WINDOW_H__
+#endif  // GGADGET_SCRIPTABLE_Image_H__

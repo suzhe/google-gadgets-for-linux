@@ -21,7 +21,7 @@
 namespace ggadget {
 namespace smjs {
 
-std::string MassageJScript(const char *input,
+std::string MassageJScript(const char *input, bool debug,
                            const char *filename, int lineno);
 
 } // namespace smjs

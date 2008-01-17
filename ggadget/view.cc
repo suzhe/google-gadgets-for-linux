@@ -35,6 +35,7 @@
 #include "script_context_interface.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_event.h"
+#include "scriptable_image.h"
 #include "slot.h"
 #include "texture.h"
 #include "view_host_interface.h"
@@ -44,10 +45,6 @@
 #include "xml_utils.h"
 
 namespace ggadget {
-
-static const char kFTPPrefix[] = "ftp://";
-static const char kHTTPPrefix[] = "http://";
-static const char kHTTPSPrefix[] = "https://";
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
@@ -63,7 +60,7 @@ class View::Impl {
   class Utils : public ScriptableHelper<ScriptableInterface> {
    public:
     DEFINE_CLASS_ID(0x7b7e1dd0b91f4153, ScriptableInterface);
-    Utils(Impl *impl) {
+    Utils(Impl *impl) : impl_(impl) {
       RegisterMethod("loadImage", NewSlot(this, &Utils::LoadImage));
       RegisterMethod("setTimeout", NewSlot(impl, &Impl::SetTimeout));
       RegisterMethod("clearTimeout", NewSlot(impl, &Impl::RemoveTimer));
@@ -75,9 +72,12 @@ class View::Impl {
     }
     // Just return the original image_src directly, to let the receiver
     // actually load it.
-    Variant LoadImage(const Variant &image_src) {
-      return image_src;
+    ScriptableImage *LoadImage(const Variant &image_src) {
+      ImageInterface *image = impl_->owner_->LoadImage(image_src, false);
+      return image ? new ScriptableImage(image) : NULL;
     }
+
+    Impl *impl_;
   };
 
   /**
@@ -1315,9 +1315,12 @@ bool View::OpenURL(const char *url) const {
   // Important: verify that URL is valid first.
   // Otherwise could be a security problem.
   std::string newurl = EncodeURL(url);
-  if (0 == strncmp(newurl.c_str(), kFTPPrefix, sizeof(kFTPPrefix) - 1) ||
-      0 == strncmp(newurl.c_str(), kHTTPPrefix, sizeof(kHTTPPrefix) - 1) ||
-      0 == strncmp(newurl.c_str(), kHTTPSPrefix, sizeof(kHTTPSPrefix) - 1)) {
+  if (0 == strncasecmp(newurl.c_str(), kHttpUrlPrefix,
+                       arraysize(kHttpUrlPrefix) - 1) ||
+      0 == strncasecmp(newurl.c_str(), kHttpsUrlPrefix,
+                       arraysize(kHttpsUrlPrefix) - 1) ||
+      0 == strncasecmp(newurl.c_str(), kFtpUrlPrefix,
+                       arraysize(kFtpUrlPrefix) - 1)) {
     return impl_->gadget_host_->OpenURL(newurl.c_str());
   }
 

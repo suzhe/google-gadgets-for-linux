@@ -35,10 +35,10 @@ SET(CHILD_SRCS
   browser_child.cc
   ../smjs/json.cc
 )
-ADD_EXECUTABLE(browser_child ${CHILD_SRCS})
-TARGET_LINK_LIBRARIES(browser_child
+ADD_EXECUTABLE(gtkmoz_browser_child ${CHILD_SRCS})
+TARGET_LINK_LIBRARIES(gtkmoz_browser_child
   ${GTKMOZEMBED_LIBRARIES}
   ${JS_LIBRARIES}
   ${GTK_LIBRARIES}
 )
-OUTPUT_EXECUTABLE(browser_child)
+OUTPUT_EXECUTABLE(gtkmoz_browser_child)

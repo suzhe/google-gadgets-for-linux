@@ -25,6 +25,7 @@
 #include "image_interface.h"
 #include "menu_interface.h"
 #include "scriptable_array.h"
+#include "scriptable_image.h"
 #include "view.h"
 #include "view_host_interface.h"
 
@@ -63,12 +64,15 @@ class ContentAreaElement::Impl {
         modified_(false),
         death_detector_(NULL),
         context_menu_time_(0) {
-    pin_images_[PIN_IMAGE_PINNED] = owner->GetView()->LoadImageFromGlobal(
-        kContentItemPinned, false);
-    pin_images_[PIN_IMAGE_PINNED_OVER] = owner->GetView()->LoadImageFromGlobal(
-        kContentItemPinnedOver, false);
-    pin_images_[PIN_IMAGE_UNPINNED] = owner->GetView()->LoadImageFromGlobal(
-        kContentItemUnpinned, false);
+    pin_images_[PIN_IMAGE_PINNED] = new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemPinned, false));
+    pin_images_[PIN_IMAGE_PINNED]->Attach();
+    pin_images_[PIN_IMAGE_PINNED_OVER] = new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemPinnedOver, false));
+    pin_images_[PIN_IMAGE_PINNED_OVER]->Attach();
+    pin_images_[PIN_IMAGE_UNPINNED] = new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false));
+    pin_images_[PIN_IMAGE_UNPINNED]->Attach();
 
     // Schedule a interval timer to redraw the content area periodically,
     // to refresh the relative time stamps of the items.
@@ -86,7 +90,7 @@ class ContentAreaElement::Impl {
     refresh_timer_ = 0;
     RemoveAllContentItems();
     for (size_t i = 0; i < arraysize(pin_images_); i++) {
-      DestroyImage(pin_images_[i]);
+      pin_images_[i]->Detach();
     }
     layout_canvas_->Destroy();
   }
@@ -106,13 +110,12 @@ class ContentAreaElement::Impl {
     if (content_flags_ & CONTENT_FLAG_PINNABLE) {
       if (pin_image_max_width_ == 0) {
         for (size_t i = 0; i < arraysize(pin_images_); i++) {
-          if (pin_images_[i]) {
+          const ImageInterface *image = pin_images_[i]->GetImage();
+          if (image) {
             pin_image_max_width_ = std::max(
-                pin_image_max_width_,
-                static_cast<int>(pin_images_[i]->GetWidth()));
+                pin_image_max_width_, static_cast<int>(image->GetWidth()));
             pin_image_max_height_ = std::max(
-                pin_image_max_height_,
-                static_cast<int>(pin_images_[i]->GetHeight()));
+                pin_image_max_height_, static_cast<int>(image->GetHeight()));
           }
         }
       }
@@ -217,7 +220,8 @@ class ContentAreaElement::Impl {
 
         if (content_flags_ & CONTENT_FLAG_PINNABLE &&
             pin_image_max_width_ > 0 && pin_image_max_height_ > 0) {
-          ImageInterface *pin_image = pin_images_[PIN_IMAGE_UNPINNED];
+          const ImageInterface *pin_image =
+              pin_images_[PIN_IMAGE_UNPINNED]->GetImage();
           mouse_over_pin = mouse_over && mouse_x_ < pin_image_max_width_;
           if (mouse_over_pin) {
             const Color &color = mouse_down_ ?
@@ -227,8 +231,8 @@ class ContentAreaElement::Impl {
                                    color);
           }
           if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
-            pin_image = pin_images_[mouse_over_pin ?
-                                    PIN_IMAGE_PINNED_OVER : PIN_IMAGE_PINNED];
+            pin_image = pin_images_[mouse_over_pin ? PIN_IMAGE_PINNED_OVER :
+                                    PIN_IMAGE_PINNED]->GetImage();
           }
           if (pin_image) {
             pin_image->Draw(canvas, item_x, item_y);
@@ -278,39 +282,52 @@ class ContentAreaElement::Impl {
     QueueDraw();
   }
 
-  void GetPinImages(Variant *pinned, Variant *pinned_over, Variant *unpinned) {
+  void GetPinImages(ScriptableImage **pinned,
+                    ScriptableImage **pinned_over,
+                    ScriptableImage **unpinned) {
     ASSERT(pinned && pinned_over && unpinned);
-    *pinned = Variant(GetImageTag(pin_images_[PIN_IMAGE_PINNED]));
-    *pinned_over = Variant(GetImageTag(pin_images_[PIN_IMAGE_PINNED_OVER]));
-    *unpinned = Variant(GetImageTag(pin_images_[PIN_IMAGE_UNPINNED]));
+    *pinned = pin_images_[PIN_IMAGE_PINNED];
+    *pinned_over = pin_images_[PIN_IMAGE_PINNED_OVER];
+    *unpinned = pin_images_[PIN_IMAGE_UNPINNED];
   }
 
-  void SetPinImages(const Variant &pinned,
-                    const Variant &pinned_over,
-                    const Variant &unpinned) {
-    DestroyImage(pin_images_[PIN_IMAGE_PINNED]);
-    pin_images_[PIN_IMAGE_PINNED] = owner_->GetView()->LoadImage(pinned, false);
-    DestroyImage(pin_images_[PIN_IMAGE_PINNED_OVER]);
-    pin_images_[PIN_IMAGE_PINNED_OVER] = owner_->GetView()->LoadImage(
-        pinned_over, false);
-    DestroyImage(pin_images_[PIN_IMAGE_UNPINNED]);
-    pin_images_[PIN_IMAGE_UNPINNED] = owner_->GetView()->LoadImage(unpinned,
-                                                                   false);
+  void SetPinImage(PinImageIndex index, ScriptableImage *image) {
+    if (image) {
+      pin_images_[index]->Detach();
+      image->Attach();
+      pin_images_[index] = image;
+    }
+  }
+
+  void SetPinImages(ScriptableImage *pinned,
+                    ScriptableImage *pinned_over,
+                    ScriptableImage *unpinned) {
+    SetPinImage(PIN_IMAGE_PINNED, pinned);
+    SetPinImage(PIN_IMAGE_PINNED_OVER, pinned_over);
+    SetPinImage(PIN_IMAGE_UNPINNED, unpinned);
+    // To be updated in Layout().
     pin_image_max_width_ = pin_image_max_height_ = 0;
     QueueDraw();
   }
 
   ScriptableArray *ScriptGetPinImages() {
     Variant *values = new Variant[3];
-    GetPinImages(&values[0], &values[1], &values[2]);
+    values[0] = Variant(pin_images_[PIN_IMAGE_PINNED]);
+    values[1] = Variant(pin_images_[PIN_IMAGE_PINNED_OVER]);
+    values[2] = Variant(pin_images_[PIN_IMAGE_UNPINNED]);
     return ScriptableArray::Create(values, 3);
+  }
+
+  void ScriptSetPinImage(PinImageIndex index, const Variant &v) {
+    if (v.type() == Variant::TYPE_SCRIPTABLE)
+      SetPinImage(index, VariantValue<ScriptableImage *>()(v));
   }
 
   void ScriptSetPinImages(ScriptableInterface *array) {
     if (array) {
-      SetPinImages(array->GetProperty(0),
-                   array->GetProperty(1),
-                   array->GetProperty(2));
+      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetProperty(0)); 
+      ScriptSetPinImage(PIN_IMAGE_PINNED_OVER, array->GetProperty(1)); 
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetProperty(2)); 
     }
   }
 
@@ -547,7 +564,7 @@ class ContentAreaElement::Impl {
   GadgetInterface::DisplayTarget target_;
   size_t max_content_items_;
   ContentItems content_items_;
-  ImageInterface *pin_images_[PIN_IMAGE_COUNT];
+  ScriptableImage *pin_images_[PIN_IMAGE_COUNT];
   int pin_image_max_width_, pin_image_max_height_;
   bool mouse_down_, mouse_over_pin_;
   int mouse_x_, mouse_y_;
@@ -612,15 +629,15 @@ const std::vector<ContentItem *> &ContentAreaElement::GetContentItems() {
   return impl_->content_items_;
 }
 
-void ContentAreaElement::GetPinImages(Variant *pinned,
-                                      Variant *pinned_over,
-                                      Variant *unpinned) {
+void ContentAreaElement::GetPinImages(ScriptableImage **pinned,
+                                      ScriptableImage **pinned_over,
+                                      ScriptableImage **unpinned) {
   impl_->GetPinImages(pinned, pinned_over, unpinned);
 }
 
-void ContentAreaElement::SetPinImages(const Variant &pinned,
-                                      const Variant &pinned_over,
-                                      const Variant &unpinned) {
+void ContentAreaElement::SetPinImages(ScriptableImage *pinned,
+                                      ScriptableImage *pinned_over,
+                                      ScriptableImage *unpinned) {
   impl_->SetPinImages(pinned, pinned_over, unpinned);
 }
 

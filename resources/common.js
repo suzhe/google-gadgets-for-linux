@@ -272,7 +272,7 @@ function Enumerator(coll) {
 
   this.item = function() {
     if (this.atEnd()) return null;
-    return Array.prototype.isPrototypOf(coll) ? coll[pos_] : coll.item(pos_);
+    return Array.prototype.isPrototypeOf(coll) ? coll[pos_] : coll.item(pos_);
   };
 
   this.moveFirst = function() {

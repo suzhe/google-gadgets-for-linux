@@ -1,6 +1,7 @@
 %option yylineno
 %option noyywrap
 %option warn
+%option debug
 %top{
 /*
   Copyright 2007 Google Inc.
@@ -49,13 +50,19 @@ BEGIN_NS(smjs)
 static const char *input_script_pos = NULL;
 static int ScriptInput(char *buf, int max_size) {
   int result = 0;
-  while (*input_script_pos && max_size) {
+  // "max_size > 1" to leave a space for the last '\n'.
+  while (*input_script_pos && max_size > 1) {
     if (*input_script_pos != '\r') {
       max_size--;
       result++;
       *buf++ = *input_script_pos;
     }
     input_script_pos++;
+  }
+  // Append a '\n' if the file is not ended with a '\n'.
+  if (result && !*input_script_pos && buf[-1] != '\n') {
+    result++;
+    *buf++ = '\n';
   }
   return result;
 }
@@ -69,6 +76,7 @@ enum State {
   OPTIONS_ITEM, // After options.item(
   OPTIONS_DEFAULT_VALUE, // After options.defaultValue(
   FUNCTION_DECL, // After function name(...) {
+  FUNCTION_EXPR, // After function {name}(...) { in an expression context
 };
 
 struct StackEntry {
@@ -85,6 +93,7 @@ struct StackEntry {
 static std::vector<StackEntry> stack;
 static const char *input_filename = NULL;
 static std::string output;
+static bool give_up = false;
 
 static StackEntry &GetStackTop() {
   ASSERT(!stack.empty());
@@ -113,21 +122,25 @@ static int GetParenCount() {
 }
 
 static void IncreaseParenCount() {
-  GetStackTop().paren_count++;
-  if (yy_flex_debug)
-    DLOG("%d:INCPAREN(%zd): %d", yylineno, stack.size(),
-         GetStackTop().paren_count);
+  if (!stack.empty()) {
+    GetStackTop().paren_count++;
+    if (yy_flex_debug)
+      DLOG("%d:INCPAREN(%zd): %d", yylineno, stack.size(),
+           GetStackTop().paren_count);
+  }
 }
 
 static void DecreaseParenCount() {
-  GetStackTop().paren_count--;
-  if (yy_flex_debug)
-    DLOG("%d:DECPAREN(%zd): %d", yylineno, stack.size(),
-         GetStackTop().paren_count);
+  if (!stack.empty()) {
+    GetStackTop().paren_count--;
+    if (yy_flex_debug)
+      DLOG("%d:DECPAREN(%zd): %d", yylineno, stack.size(),
+           GetStackTop().paren_count);
+  }
 }
 
 static bool IsAssigned() {
-  return GetStackTop().assigned;
+  return !stack.empty() && GetStackTop().assigned;
 }
 
 static void SetAssigned() {
@@ -216,28 +229,36 @@ static void CloseParen();
 COMMENT (\/\*[^*]*\*+([^*/][^*]*\*+)*\/)|(\/\/.*\n)
 WS ([ \t\r\n]|{COMMENT})*
 BINARY_OP [\.<>=\*-+\^&\|%\?:]
+STRING \"([^\n\\\"]|\\.)*[\"\n]
+SSTRING \'([^\n\\\']|\\.)*[\'\n]
+REGEXP \/([^\n\\\/]|\\.)+[\/\n]
+FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 
-%x STR
-%x SSTR
 %x OPTIONS
 %x AFTER_OPTIONS_PARAM
 %x ASSIGN_RIGHT
 
 %%
 
-\\\" ECHO;
-\" ECHO; BEGIN(STR);
-<STR>\" ECHO; BEGIN(INITIAL);
-<STR>\n ECHO; BEGIN(INITIAL); // Unterminated string.
-<STR>\\(.|\n) ECHO;
+\xEF\xBB\xBF ECHO;
+\xE3\x80\x80 ScriptOutput("  ");
 
-\\\' ECHO;
-\' ECHO; BEGIN(SSTR);
-<SSTR>\' ECHO; BEGIN(INITIAL);
-<SSTR>\n ECHO; BEGIN(INITIAL); // Unterminated string.
-<SSTR>\\(.|\n) ECHO;
+{STRING} ECHO;
+{SSTRING} ECHO;
+{COMMENT} ECHO;
 
-<INITIAL,OPTIONS,AFTER_OPTIONS_PARAM,ASSIGN_RIGHT>{COMMENT} ECHO;
+\/>|<\/ {
+  LOG("Can't massage JS containing E4X grammar.");
+  give_up = true;
+  PopAllStates();
+  yyterminate();
+}
+
+[\(\[\{,=]{WS}{REGEXP} {
+  ECHO;
+  if (strchr("([{", yytext[0]))
+    IncreaseParenCount();
+}
 
 [a-zA-Z0-9_][Oo][Pp][Tt][Ii][Oo][Nn][Ss] ECHO;
 
@@ -272,8 +293,7 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 
 \(|\{|\[ {
   ECHO;
-  if (GetState() != NORMAL)
-    IncreaseParenCount();
+  IncreaseParenCount();
 }
 
 \)|\}|\] {
@@ -311,10 +331,15 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
   unput(yytext[0]);
 }
 
-{BINARY_OP}{WS}function ECHO;
-\/{WS}function ECHO; // BINARY_OP doesn't include '/'.
+({BINARY_OP}|[\/,]){WS}function{WS}[a-zA-Z0-9_]*{FUNC_PARAM}\{ |
+{WS}function{WS}{FUNC_PARAM}\{ {
+  PushState(FUNCTION_EXPR);
+  ECHO;
+  IncreaseParenCount();
+}
 
-{WS}function{WS}[a-zA-Z0-9_]+{WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}\{ {
+{WS}function{WS}[a-zA-Z0-9_]+{FUNC_PARAM}\{ {
+  PopAllPairedStates();
   PushState(FUNCTION_DECL);
   ECHO;
   IncreaseParenCount();
@@ -340,12 +365,13 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
   std::string text(yytext);
   text[text.find(';')] = ' ';
   ScriptOutput(text.c_str());
-  if (text[text.size() - 1] == '{' && GetState() != NORMAL)
+  if (text[text.size() - 1] == '{')
     IncreaseParenCount();
 }
 
 <<EOF>> {
-  if (stack.size() > 1) {
+  PopAllPairedStates();
+  if (stack.size() != 1) {
     LOG("WARNING: %s: File contains unpaired '(', '[' or '{'s.",
         input_filename);
   }
@@ -359,7 +385,8 @@ BINARY_OP [\.<>=\*-+\^&\|%\?:]
 
 static void CloseParen() {
   State state = GetState();
-  if (state == FUNCTION_DECL && GetParenCount() == 2) {
+  if ((state == FUNCTION_DECL || state == FUNCTION_EXPR) &&
+      GetParenCount() == 2) {
     // Move all functions declared in inner blocks to here. 
     ScriptOutput(GetStackTop().function_decls.c_str());
     GetStackTop().function_decls.clear();
@@ -373,8 +400,10 @@ static void CloseParen() {
   }
 }
 
-std::string MassageJScript(const char *input,
-                           const char *filename, int lineno) {
+std::string MassageJScript(const char *input, bool debug,
+                           const char *filename,int lineno) {
+  give_up = false;
+  yy_flex_debug = debug;
 #ifdef _DEBUG
   FILE *input_debug_file = fopen("massage_input.js", "w");
   if (input_debug_file) {
@@ -389,6 +418,7 @@ std::string MassageJScript(const char *input,
   output.clear();
 
   BEGIN(INITIAL);
+  // Create a fake global function context.
   PushState(FUNCTION_DECL);
   IncreaseParenCount();
   while (yylex());
@@ -401,7 +431,7 @@ std::string MassageJScript(const char *input,
   }
 #endif
 
-  return output;
+  return give_up ? std::string(input) : output;
 }
 
 END_NS // namespace smjs

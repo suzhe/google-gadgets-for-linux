@@ -30,17 +30,17 @@ class DOMElementInterface;
 class XMLParserInterface;
 
 /* TODO: DOM2
-const char *const kXMLPrefix = "xml";
-const char *const kXMLNamespaceURI = "http://www.w3.org/XML/1998/namespace";
-const char *const kXMLNSPrefix = "xmlns";
-const char *const kXMLNSNamespaceURI = "http://www.w3.org/2000/xmlns/";
+const char kXMLPrefix[] = "xml";
+const char kXMLNamespaceURI[] = "http://www.w3.org/XML/1998/namespace";
+const char kXMLNSPrefix[] = "xmlns";
+const char kXMLNSNamespaceURI[] = "http://www.w3.org/2000/xmlns/";
 */
 
-const char *const kDOMCDATASectionName = "#cdata-section";
-const char *const kDOMCommentName = "#comment";
-const char *const kDOMDocumentName = "#document";
-const char *const kDOMDocumentFragmentName = "#document-fragment";
-const char *const kDOMTextName = "#text";
+const char kDOMCDATASectionName[] = "#cdata-section";
+const char kDOMCommentName[] = "#comment";
+const char kDOMDocumentName[] = "#document";
+const char kDOMDocumentFragmentName[] = "#document-fragment";
+const char kDOMTextName[] = "#text";
 
 /**
  * DOM interfaces.

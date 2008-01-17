@@ -24,6 +24,7 @@ namespace ggadget {
 
 class ContentItem;
 class ScriptableArray;
+class ScriptableImage;
 
 class ContentAreaElement : public ScrollingElement {
  public:
@@ -72,12 +73,13 @@ class ContentAreaElement : public ScrollingElement {
 
   /**
    * Gets and sets the pin images used to display the pin status of the items.
-   * @see @c View::LoadImage().
    */
-  void GetPinImages(Variant *pinned, Variant *pinned_over, Variant *unpinned);
-  void SetPinImages(const Variant &pinned,
-                    const Variant &pinned_over,
-                    const Variant &unpinned);
+  void GetPinImages(ScriptableImage **pinned,
+                    ScriptableImage **pinned_over,
+                    ScriptableImage **unpinned);
+  void SetPinImages(ScriptableImage *pinned,
+                    ScriptableImage *pinned_over,
+                    ScriptableImage *unpinned);
 
   void AddContentItem(ContentItem *item, DisplayOptions options);
   void RemoveContentItem(ContentItem *item);
