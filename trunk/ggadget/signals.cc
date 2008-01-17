@@ -74,6 +74,9 @@ Connection *Signal::ConnectGeneral(Slot *slot) {
 }
 
 bool Signal::CheckCompatibility(const Slot *slot) const {
+  if (!slot->HasMetadata())
+    return true;
+
   // Check the compatibility of the arguments and the return value.
   // First, the slot's count of argument must equal to that of this signal.
   int arg_count = GetArgCount();

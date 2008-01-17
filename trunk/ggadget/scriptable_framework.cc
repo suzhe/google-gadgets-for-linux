@@ -15,13 +15,14 @@
 */
 
 #include "scriptable_framework.h"
-#include "scriptable_file_system.h"
 #include "audioclip_interface.h"
+#include "file_manager_interface.h"
 #include "framework_interface.h"
 #include "gadget_host_interface.h"
 #include "gadget_interface.h"
 #include "image_interface.h"
 #include "scriptable_array.h"
+#include "scriptable_file_system.h"
 #include "scriptable_image.h"
 #include "signals.h"
 #include "string_utils.h"
@@ -58,7 +59,7 @@ class ScriptableFramework::Impl {
  public:
   Impl(GadgetHostInterface *gadget_host)
       : gadget_host_(gadget_host),
-        audio_(gadget_host->GetFramework()),
+        audio_(gadget_host),
         graphics_(gadget_host),
         system_(gadget_host) {
   }
@@ -118,7 +119,9 @@ class ScriptableFramework::Impl {
 
   class Audio : public PermanentScriptable {
    public:
-    Audio(FrameworkInterface *framework): framework_(framework) {
+    Audio(GadgetHostInterface *gadget_host)
+        : framework_(gadget_host->GetFramework()),
+          file_manager_(gadget_host->GetFileManager()) {
       RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Open),
                                                     kDefaultArgsForSecondSlot));
       RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Play),
@@ -127,7 +130,21 @@ class ScriptableFramework::Impl {
     }
 
     ScriptableAudioclip *Open(const char *src, Slot *method) {
-      AudioclipInterface *clip = framework_->CreateAudioclip(src);
+      if (!src || !*src)
+        return NULL;
+
+      std::string src_str;
+      if (strstr(src, "://")) {
+        src_str = src;
+      } else {
+        // src may be a relative file name under the base path of the gadget.
+        std::string extracted_file;
+        if (!file_manager_->ExtractFile(src, &extracted_file))
+          return NULL;
+        src_str = "file://" + extracted_file;
+      }
+
+      AudioclipInterface *clip = framework_->CreateAudioclip(src_str.c_str());
       if (clip) {
         ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
         scriptable_clip->ConnectOnStateChange(method);
@@ -151,6 +168,7 @@ class ScriptableFramework::Impl {
     }
 
     FrameworkInterface *framework_;
+    FileManagerInterface *file_manager_;
   };
 
   class Graphics : public PermanentScriptable {

@@ -37,6 +37,11 @@ FileManagerImpl::FileManagerImpl(XMLParserInterface *xml_parser)
 }
 
 FileManagerImpl::~FileManagerImpl() {
+  // Remove all temporary files created by this file manager.
+  for (std::vector<std::string>::iterator it = temporary_files_.begin();
+       it != temporary_files_.end(); ++it) {
+    unlink(it->c_str());
+  }
 }
 
 bool FileManagerImpl::Init(const char *base_path) {
@@ -219,7 +224,10 @@ bool FileManagerImpl::ExtractFile(const char *file, std::string *into_file) {
     LOG("Failed writing to file %s", into_file->c_str());
     succeeded = false;
     unlink(into_file->c_str()); // ignore return
+  } else {
+    temporary_files_.push_back(*into_file);
   }
+
   fclose(fp);
   return succeeded;
 }

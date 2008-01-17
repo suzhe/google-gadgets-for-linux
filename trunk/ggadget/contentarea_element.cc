@@ -137,7 +137,7 @@ class ContentAreaElement::Impl {
     content_height_ = 0;
     size_t item_count = content_items_.size();
     if (content_flags_ & CONTENT_FLAG_MANUAL_LAYOUT) {
-      for (size_t i = 0; i < item_count && dead && !modified_; i++) {
+      for (size_t i = 0; i < item_count && !dead && !modified_; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
         int item_x, item_y, item_width, item_height;

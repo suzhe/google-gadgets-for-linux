@@ -253,10 +253,11 @@ class Audioclip::Impl {
     ASSERT(msg);
     GstState old_state, new_state;
     gst_message_parse_state_changed(msg, &old_state, &new_state, NULL);
-    if (local_state_ != GstStateToLocalState(new_state)) {
-      // If we have met an error, the error state is passed to the callback.
-      if (local_state_ != SOUND_STATE_ERROR)
-        local_state_ = GstStateToLocalState(new_state);
+    State new_local_state = GstStateToLocalState(new_state);
+    if (local_state_ != new_local_state) {
+      DLOG("AudioClip OnStateChange: old=%d new=%d",
+           local_state_, new_local_state);
+      local_state_ = new_local_state;
       on_state_change_signal_(local_state_);
     }
   }
@@ -265,6 +266,8 @@ class Audioclip::Impl {
     ASSERT(msg);
     GError *gerror;
     gst_message_parse_error(msg, &gerror, NULL);
+    DLOG("AudioClip OnError: domain=%d code=%d message=%s",
+         gerror->domain, gerror->code, gerror->message);
     if (gerror->domain == GST_RESOURCE_ERROR &&
         (gerror->code == GST_RESOURCE_ERROR_NOT_FOUND ||
          gerror->code == GST_RESOURCE_ERROR_OPEN_READ ||
@@ -281,6 +284,7 @@ class Audioclip::Impl {
       local_error_ = SOUND_ERROR_UNKNOWN;
     }
     local_state_ = SOUND_STATE_ERROR;
+    on_state_change_signal_(local_state_);
 
     // Playbin doesnot change the state to "NULL" or "READY" when it
     // meets an error, we help make a state-change scene.

@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstring>
 #include <string>
+#include <vector>
 #include <ggadget/common.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/string_utils.h>
@@ -80,9 +81,9 @@ class FileManagerImpl {
   // Map filenames to data in a zip file.
   // Also used as cache for files if base_path is a dir.
   FileMap files_;
-
   // Maps resource names to string resources from strings.xml.
-  GadgetStringMap string_table_;
+  GadgetStringMap string_table_; 
+  std::vector<std::string> temporary_files_;
 };
 
 } // namespace internal
