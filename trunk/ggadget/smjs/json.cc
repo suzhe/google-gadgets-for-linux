@@ -15,6 +15,7 @@
 */
 
 #include <vector>
+#include <ggadget/common.h>
 #include "json.h"
 
 namespace ggadget {
@@ -241,16 +242,17 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
   while (pos != std::string::npos) {
     pos = json_script.find(kDatePrefix, pos);
     if (pos != std::string::npos) {
-      json_script.replace(pos, sizeof(kDatePrefix) - 1, kDatePrefixReplace);
-      pos += sizeof(kDatePrefixReplace) - 1;
+      json_script.replace(pos, arraysize(kDatePrefix) - 1, kDatePrefixReplace);
+      pos += arraysize(kDatePrefixReplace) - 1;
 
       while (json_script[pos] >= '0' && json_script[pos] <= '9')
         pos++;
       if (strncmp(kDatePostfix, json_script.c_str() + pos,
-                  sizeof(kDatePostfix) - 1) != 0)
+                  arraysize(kDatePostfix) - 1) != 0)
         return JS_FALSE;
-      json_script.replace(pos, sizeof(kDatePostfix) - 1, kDatePostfixReplace);
-      pos += sizeof(kDatePostfixReplace) - 1;
+      json_script.replace(pos, arraysize(kDatePostfix) - 1,
+                          kDatePostfixReplace);
+      pos += arraysize(kDatePostfixReplace) - 1;
     }
   }
 

@@ -28,14 +28,12 @@ static const uint32 kDefaultStackTrunkSize = 4096;
 class JSScriptRuntime::Impl {
  public:
   Impl()
-      : runtime_(JS_NewRuntime(kDefaultContextSize)),
-        first_context_(NULL) {
+      : runtime_(JS_NewRuntime(kDefaultContextSize)) {
     JS_SetRuntimePrivate(runtime_, this);
     ASSERT(runtime_);
   }
 
   ~Impl() {
-    delete first_context_;
     JS_DestroyRuntime(runtime_);
   }
 
@@ -62,7 +60,6 @@ class JSScriptRuntime::Impl {
 
   Signal1<void, const char *> error_reporter_signal_;
   JSRuntime *runtime_;
-  JSScriptContext *first_context_;
 };
 
 JSScriptRuntime::JSScriptRuntime()
@@ -80,8 +77,6 @@ ScriptContextInterface *JSScriptRuntime::CreateContext() {
     return NULL;
   JS_SetErrorReporter(context, Impl::ReportError);
   JSScriptContext *result = new JSScriptContext(this, context);
-  if (!impl_->first_context_)
-    impl_->first_context_ = result;
   return result;
 }
 
@@ -91,10 +86,7 @@ Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {
 }
 
 void JSScriptRuntime::DestroyContext(JSScriptContext *context) {
-  // Delay destroying of the first context because some permanent scriptable
-  // objects still need it.
-  if (context != impl_->first_context_)
-    delete context;
+  delete context;
 }
 
 } // namespace smjs

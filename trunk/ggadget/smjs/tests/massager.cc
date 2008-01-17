@@ -22,6 +22,9 @@ int main(int argc, char **argv) {
   char buffer[80];
   while (fgets(buffer, sizeof(buffer), stdin))
     input += buffer;
-  std::string result = ggadget::smjs::MassageJScript(input.c_str(), "", 1);
+
+  bool debug = argc > 1 && argv[1][0] == '1';
+  std::string result = ggadget::smjs::MassageJScript(input.c_str(), debug,
+                                                     "", 1);
   printf("%s", result.c_str());
 }

@@ -47,6 +47,7 @@ SET(SRCS
   scriptable_file_system.cc
   scriptable_framework.cc
   scriptable_helper.cc
+  scriptable_image.cc
   scriptable_menu.cc
   scriptable_options.cc
   signals.cc

@@ -624,7 +624,7 @@ JSFunction *CompileFunction(JSContext *cx, const char *script,
   if (!script)
     return NULL;
 
-  std::string massaged_script = MassageJScript(script, filename, lineno);
+  std::string massaged_script = MassageJScript(script, false, filename, lineno);
   UTF16String utf16_string;
   if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
       massaged_script.size()) {
@@ -645,7 +645,7 @@ JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
   if (!script)
     return JS_FALSE;
 
-  std::string massaged_script = MassageJScript(script, filename, lineno);
+  std::string massaged_script = MassageJScript(script, false, filename, lineno);
   UTF16String utf16_string;
   if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
       massaged_script.size()) {

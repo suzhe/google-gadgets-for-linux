@@ -319,7 +319,7 @@ class DisplayWindow::Impl {
 
   Impl(DisplayWindow *owner, View *view)
       : owner_(owner), view_(view),
-        min_x_(9999), min_y_(9999), max_x_(0), max_y_(0) {
+        min_x_(INT_MAX), min_y_(INT_MAX), max_x_(0), max_y_(0) {
   }
 
   ~Impl() {
@@ -545,9 +545,15 @@ DisplayWindow::~DisplayWindow() {
   impl_ = NULL;
 }
 
-void DisplayWindow::AdjustSize() {
-  impl_->view_->SetSize(impl_->max_x_ + impl_->min_x_,
-                        impl_->max_y_ + impl_->min_y_);
+bool DisplayWindow::AdjustSize() {
+  if (impl_->min_x_ != INT_MAX && impl_->min_y_ != INT_MAX) {
+    // Add min_x_ and min_y_ to max_x_ and max_y_ to leave equal blank areas
+    // along the four edges.
+    impl_->view_->SetSize(impl_->max_x_ + impl_->min_x_,
+                          impl_->max_y_ + impl_->min_y_);
+    return true;
+  }
+  return false;
 }
 
 } // namespace ggadget

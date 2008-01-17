@@ -376,10 +376,10 @@ class BrowserElement::Impl {
           curr_pos = end_of_line_pos + 1;
         }
         ASSERT(curr_pos = eom_pos + 1);
-        curr_pos += sizeof(kEndOfMessageFull) - 2;
+        curr_pos += arraysize(kEndOfMessageFull) - 2;
 
         if (params.size() == 1 && strcmp(params[0], kPingFeedback) == 0) {
-          Write(ret_fd_, kPingAckFull, sizeof(kPingAckFull) - 1);
+          Write(ret_fd_, kPingAckFull, arraysize(kPingAckFull) - 1);
           ping_flag_ = true;
         } else if (params.size() < 2) {
           LOG("No enough feedback parameters");

@@ -20,6 +20,7 @@
 #include "contentarea_element.h"
 #include "details_view.h"
 #include "image_interface.h"
+#include "scriptable_image.h"
 #include "string_utils.h"
 #include "text_frame.h"
 #include "texture.h"
@@ -73,8 +74,10 @@ class ContentItem::Impl {
   }
 
   ~Impl() {
-    DestroyImage(image_);
-    DestroyImage(notifier_image_);
+    if (image_)
+      image_->Detach();
+    if (notifier_image_)
+      notifier_image_->Detach();
   }
 
   void UpdateTimeText() {
@@ -120,7 +123,7 @@ class ContentItem::Impl {
 
   View *view_;
   ContentAreaElement *content_area_;
-  ImageInterface *image_, *notifier_image_;
+  ScriptableImage *image_, *notifier_image_;
   uint64_t time_created_;
   std::string open_command_, tooltip_, heading_, source_, snippet_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
@@ -202,33 +205,32 @@ void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
 void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
   ASSERT(impl_->content_area_ == content_area);
   impl_->content_area_ = NULL;
-  // The object may still be referenced by Script after detaching from
-  // the content area. Destroy the images to prevent them from being referenced
-  // after the graphics is destroyed. 
-  DestroyImage(impl_->image_);
-  impl_->image_ = NULL;
-  DestroyImage(impl_->notifier_image_);
-  impl_->notifier_image_ = NULL;
   Detach();
 }
 
-Variant ContentItem::GetImage() const {
-  return Variant(GetImageTag(impl_->image_));
+ScriptableImage *ContentItem::GetImage() const {
+  return impl_->image_;
 }
 
-void ContentItem::SetImage(const Variant &image) {
-  DestroyImage(impl_->image_);
-  impl_->image_ = impl_->view_->LoadImage(image, false);
+void ContentItem::SetImage(ScriptableImage *image) {
+  if (impl_->image_)
+    impl_->image_->Detach();
+  impl_->image_ = image;
+  if (image)
+    image->Attach();
   impl_->QueueDraw();
 }
 
-Variant ContentItem::GetNotifierImage() const {
-  return Variant(GetImageTag(impl_->image_));
+ScriptableImage *ContentItem::GetNotifierImage() const {
+  return impl_->notifier_image_;
 }
 
-void ContentItem::SetNotifierImage(const Variant &image) {
-  DestroyImage(impl_->notifier_image_);
-  impl_->notifier_image_ = impl_->view_->LoadImage(image, false);
+void ContentItem::SetNotifierImage(ScriptableImage *image) {
+  if (impl_->notifier_image_)
+    impl_->notifier_image_->Detach();
+  if (image)
+    image->Attach();
+  impl_->notifier_image_ = image;
   impl_->QueueDraw();
 }
 
@@ -397,14 +399,17 @@ void ContentItem::Draw(GadgetInterface::DisplayTarget target,
   int heading_left = x;
   int image_height = 0;
   if (impl_->image_) {
-    int image_width = static_cast<int>(impl_->image_->GetWidth());
-    heading_space_width -= image_width;
-    image_height = static_cast<int>(impl_->image_->GetHeight());
-    if (impl_->flags_ & CONTENT_ITEM_FLAG_LEFT_ICON) {
-      impl_->image_->Draw(canvas, x, y);
-      heading_left += image_width;
-    } else {
-      impl_->image_->Draw(canvas, x + width - image_width, y);
+    const ImageInterface *image = impl_->image_->GetImage();
+    if (image) {
+      int image_width = static_cast<int>(image->GetWidth());
+      heading_space_width -= image_width;
+      image_height = static_cast<int>(image->GetHeight());
+      if (impl_->flags_ & CONTENT_ITEM_FLAG_LEFT_ICON) {
+        image->Draw(canvas, x, y);
+        heading_left += image_width;
+      } else {
+        image->Draw(canvas, x + width - image_width, y);
+      }
     }
   }
 
@@ -466,8 +471,11 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
   int heading_space_width = width;
   int image_height = 0;
   if (impl_->image_) {
-    heading_space_width -= impl_->image_->GetWidth();
-    image_height = static_cast<int>(impl_->image_->GetHeight());
+    const ImageInterface *image = impl_->image_->GetImage();
+    if (image) {
+      heading_space_width -= image->GetWidth();
+      image_height = static_cast<int>(image->GetHeight());
+    }
   }
 
   // Then the default logic.
@@ -711,14 +719,15 @@ void ScriptableCanvas::DrawRect(int x1, int y1, int x2, int y2,
 }
 
 void ScriptableCanvas::DrawImage(int x, int y, int width, int height,
-                                 const Variant &image, int alpha_percent) {
-  ImageInterface *real_image = view_->LoadImage(image, false);
-  if (real_image) {
-    canvas_->PushState();
-    canvas_->MultiplyOpacity(alpha_percent / 100.0);
-    real_image->StretchDraw(canvas_, x, y, width, height);
-    canvas_->PopState();
-    real_image->Destroy();
+                                 ScriptableImage *image, int alpha_percent) {
+  if (image) {
+    const ImageInterface *real_image = image->GetImage();
+    if (real_image) {
+      canvas_->PushState();
+      canvas_->MultiplyOpacity(alpha_percent / 100.0);
+      real_image->StretchDraw(canvas_, x, y, width, height);
+      canvas_->PopState();
+    }
   }
 }
 

@@ -24,41 +24,41 @@ namespace ggadget {
 
 /** Character to separate directories */
 const char kDirSeparator = '/';
-const char *const kDirSeparatorStr = "/";
+const char kDirSeparatorStr[] = "/";
 
 /** Character to separate search paths, eg. used in PATH environment var */
 const char kSearchPathSeparator = ':';
-const char *const kSearchPathSeparatorStr = ":";
+const char kSearchPathSeparatorStr[] = ":";
 
 /** Filenames of required resources in each .gg package. */
-const char *const kMainXML         = "main.xml";
-const char *const kOptionsXML      = "options.xml";
-const char *const kStringsXML      = "strings.xml";
-const char *const kGadgetGManifest = "gadget.gmanifest";
-const char *const kGManifestExt    = ".gmanifest";
-const char *const kXMLExt          = ".xml";
+const char kMainXML[]         = "main.xml";
+const char kOptionsXML[]      = "options.xml";
+const char kStringsXML[]      = "strings.xml";
+const char kGadgetGManifest[] = "gadget.gmanifest";
+const char kGManifestExt[]    = ".gmanifest";
+const char kXMLExt[]          = ".xml";
 
 /** Information XPath identifiers in gadget.gmanifest file. */
-const char *const kManifestMinVersion  = "@minimumGoogleDesktopVersion";
-const char *const kManifestId          = "about/id";
-const char *const kManifestName        = "about/name";
-const char *const kManifestDescription = "about/description";
-const char *const kManifestVersion     = "about/version";
-const char *const kManifestAuthor      = "about/author";
-const char *const kManifestAuthorEmail = "about/authorEmail";
-const char *const kManifestAuthorWebsite
-                                       = "about/authorWebsite";
-const char *const kManifestCopyright   = "about/copyright";
-const char *const kManifestAboutText   = "about/aboutText";
-const char *const kManifestSmallIcon   = "about/smallIcon";
-const char *const kManifestIcon        = "about/icon";
-const char *const kManifestDisplayAPI  = "about/displayAPI";
-const char *const kManifestDisplayAPIUseNotifier
-                                       = "about/displayAPI@useNotifier";
-const char *const kManifestEventAPI    = "about/eventAPI";
-const char *const kManifestQueryAPI    = "about/queryAPI";
-const char *const kManifestQueryAPIAllowModifyIndex
-                                       = "about/queryAPI@allowModifyIndex";
+const char kManifestMinVersion[]  = "@minimumGoogleDesktopVersion";
+const char kManifestId[]          = "about/id";
+const char kManifestName[]        = "about/name";
+const char kManifestDescription[] = "about/description";
+const char kManifestVersion[]     = "about/version";
+const char kManifestAuthor[]      = "about/author";
+const char kManifestAuthorEmail[] = "about/authorEmail";
+const char kManifestAuthorWebsite[]
+                                  = "about/authorWebsite";
+const char kManifestCopyright[]   = "about/copyright";
+const char kManifestAboutText[]   = "about/aboutText";
+const char kManifestSmallIcon[]   = "about/smallIcon";
+const char kManifestIcon[]        = "about/icon";
+const char kManifestDisplayAPI[]  = "about/displayAPI";
+const char kManifestDisplayAPIUseNotifier[]
+                                  = "about/displayAPI@useNotifier";
+const char kManifestEventAPI[]    = "about/eventAPI";
+const char kManifestQueryAPI[]    = "about/queryAPI";
+const char kManifestQueryAPIAllowModifyIndex[]
+                                  = "about/queryAPI@allowModifyIndex";
 
 /**
  * To enumerate all fonts to be installed, you must try the following keys:
@@ -67,7 +67,7 @@ const char *const kManifestQueryAPIAllowModifyIndex
  *   - <code>"install/font[2]@src" (kManifestInstallFont + "[2]@src")</code>
  *   - ... until not found.
  */
-const char *const kManifestInstallFont = "install/font";
+const char kManifestInstallFont[] = "install/font";
 
 /**
  * To enumerate all objects to be installed, you must try the following keys:
@@ -78,24 +78,24 @@ const char *const kManifestInstallFont = "install/font";
  * For each of the config items found, access their attributes with keys by
  * postpending "@name", "@clsid", "@src" to the above keys.
  */
-const char *const kManifestInstallObject = "install/object";
+const char kManifestInstallObject[] = "install/object";
 
 /** The tag name of the root element in string table files. */
-const char *const kStringsTag = "strings";
+const char kStringsTag[] = "strings";
 /** The tag name of the root element in view file. */
-const char *const kViewTag = "view";
+const char kViewTag[] = "view";
 /** The tag name of the root element in gadget.gmanifest files. */
-const char *const kGadgetTag = "gadget";
+const char kGadgetTag[] = "gadget";
 /** The tag name of script elements */
-const char *const kScriptTag = "script";
+const char kScriptTag[] = "script";
 /** The name of the 'src' attribute of script elements. */
-const char *const kSrcAttr = "src";
+const char kSrcAttr[] = "src";
 /** The name of the 'name' attribute of elements. */
-const char *const kNameAttr = "name";
+const char kNameAttr[] = "name";
 /** The property name for elements to contain its text contents. */
-const char *const kInnerTextProperty = "innerText";
+const char kInnerTextProperty[] = "innerText";
 /** The tag name of the contentarea element. */
-const char *const kContentAreaTag = "contentarea";
+const char kContentAreaTag[] = "contentarea";
 
 /** Prefix for global file resources. */
 const char kGlobalResourcePrefix[] = "resource://";
@@ -130,6 +130,11 @@ const char kCheckBoxCheckedOverImage[] = "resource://checkbox_checked_over.png";
 const char kCommonJS[] = "resource://common.js";
 const char kTextDetailsView[] = "resource://text_details_view.xml";
 const char kHTMLDetailsView[] = "resource://html_details_view.xml";
+
+const char kFtpUrlPrefix[] = "ftp://";
+const char kHttpUrlPrefix[] = "http://";
+const char kHttpsUrlPrefix[] = "https://";
+const char kFileUrlPrefix[] = "file://";
 
 } // namespace ggadget
 

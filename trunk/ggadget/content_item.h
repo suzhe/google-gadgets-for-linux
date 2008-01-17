@@ -30,6 +30,7 @@ class ContentAreaElement;
 class Connection;
 class DetailsView;
 class ScriptableCanvas;
+class ScriptableImage;
 class View;
 
 class ContentItem : public ScriptableHelperOwnershipShared {
@@ -115,12 +116,12 @@ class ContentItem : public ScriptableHelperOwnershipShared {
 
  public:
   /** Gets and sets the image to show in the item. */
-  Variant GetImage() const;
-  void SetImage(const Variant &image);
+  ScriptableImage *GetImage() const;
+  void SetImage(ScriptableImage *image);
 
   /** Gets and sets the image to show in the notifier. */
-  Variant GetNotifierImage() const;
-  void SetNotifierImage(const Variant &image);
+  ScriptableImage *GetNotifierImage() const;
+  void SetNotifierImage(ScriptableImage *image);
 
   /** Gets and sets the time that this content item is created. */
   Date GetTimeCreated() const;
@@ -306,7 +307,7 @@ class ScriptableCanvas : public ScriptableHelper<ScriptableInterface> {
   void DrawRect(int x1, int y1, int x2, int y2,
                 const Color &line_color, const Color &fill_color);
   void DrawImage(int x, int y, int width, int height,
-                 const Variant &image, int alpha_percent);
+                 ScriptableImage *image, int alpha_percent);
   void DrawText(int x, int y, int width, int height, const char *text,
                 const Color &color, int flags, FontID font);
   int GetTextWidth(const char *text, int flags, FontID font);

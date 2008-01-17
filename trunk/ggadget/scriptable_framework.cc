@@ -19,10 +19,15 @@
 #include "audioclip_interface.h"
 #include "framework_interface.h"
 #include "gadget_host_interface.h"
+#include "gadget_interface.h"
+#include "image_interface.h"
 #include "scriptable_array.h"
+#include "scriptable_image.h"
 #include "signals.h"
 #include "string_utils.h"
 #include "unicode_utils.h"
+#include "view.h"
+#include "view_host_interface.h"
 
 namespace ggadget {
 
@@ -54,6 +59,7 @@ class ScriptableFramework::Impl {
   Impl(GadgetHostInterface *gadget_host)
       : gadget_host_(gadget_host),
         audio_(gadget_host->GetFramework()),
+        graphics_(gadget_host),
         system_(gadget_host) {
   }
 
@@ -150,7 +156,8 @@ class ScriptableFramework::Impl {
   class Graphics : public PermanentScriptable {
    public:
     DEFINE_CLASS_ID(0x211b114e852e4a1b, ScriptableInterface);
-    Graphics() {
+    Graphics(GadgetHostInterface *gadget_host)
+        : gadget_host_(gadget_host) {
       RegisterMethod("createPoint", NewSlot(this, &Graphics::CreatePoint));
       RegisterMethod("createSize", NewSlot(this, &Graphics::CreateSize));
       RegisterMethod("loadImage", NewSlot(this, &Graphics::LoadImage));
@@ -162,11 +169,17 @@ class ScriptableFramework::Impl {
     JSONString CreateSize() {
       return JSONString("{\"height\":0,\"width\":0}");
     }
-    // Just return the original image_src directly, to let the receiver
-    // actually load it.
-    Variant LoadImage(const Variant &image_src) {
-      return image_src;
+
+    ScriptableImage *LoadImage(const Variant &image_src) {
+      // Ugly implementation, because of not so elegent API
+      // "framework.graphics".
+      View *view = down_cast<View *>(gadget_host_->GetGadget()->
+                                     GetMainViewHost()->GetView());
+      ImageInterface *image = view->LoadImage(image_src, false);
+      return image ? new ScriptableImage(image) : NULL;
     }
+
+    GadgetHostInterface *gadget_host_;
   };
 
   class ScriptableWirelessAccessPoint : public ScriptableHelperOwnershipShared {

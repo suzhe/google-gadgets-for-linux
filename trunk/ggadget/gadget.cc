@@ -244,16 +244,16 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
         plugin_(this),
         gadget_global_prototype_(this),
         element_factory_(new ElementFactory()),
+        main_view_(new View(&gadget_global_prototype_, element_factory_,
+                            debug_mode)),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
-                                          new View(&gadget_global_prototype_,
-                                                   element_factory_,
-                                                   debug_mode))),
-        details_view_host_(NULL), details_view_(NULL),
+                                          main_view_)),
+        details_view_(NULL), details_view_host_(NULL),
         has_options_xml_(false),
         close_details_view_timer_(0), show_details_view_timer_(0),
         debug_mode_(debug_mode) {
     // Main view must be set here, to break circular dependency.
-    plugin_.SetMainView(down_cast<View *>(main_view_host_->GetView()));
+    plugin_.SetMainView(main_view_);
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
   }
@@ -337,8 +337,11 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       options_view_host = host_->NewViewHost(
           GadgetHostInterface::VIEW_OLD_OPTIONS, view);
       window = new DisplayWindow(view);
-      onshowoptionsdlg_signal_(window);
-      window->AdjustSize();
+      Variant result = onshowoptionsdlg_signal_(window);
+      if (result.type() == Variant::TYPE_BOOL && !VariantValue<bool>()(result))
+        return false;
+      if (!window->AdjustSize())
+        return false;
     } else if (has_options_xml_) {
       options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS,
                                              view);
@@ -522,7 +525,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     manifest_info_map_[kManifestAboutText] = about_text;
   }
 
-  Signal1<void, DisplayWindow *> onshowoptionsdlg_signal_;
+  Signal1<Variant, DisplayWindow *> onshowoptionsdlg_signal_;
   GadgetHostInterface *host_;
   Debug debug_;
   Storage storage_;
@@ -531,9 +534,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   Plugin plugin_;
   GadgetGlobalPrototype gadget_global_prototype_;
   ElementFactory *element_factory_;
+  View *main_view_;
   ViewHostInterface *main_view_host_;
-  ViewHostInterface *details_view_host_;
   DetailsView *details_view_;
+  ViewHostInterface *details_view_host_;
   GadgetStringMap manifest_info_map_;
   bool has_options_xml_;
   int close_details_view_timer_, show_details_view_timer_;

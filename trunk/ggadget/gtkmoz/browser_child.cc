@@ -40,6 +40,7 @@
 #include <xpconnect/nsIXPConnect.h>
 #include <xpconnect/nsIXPCScriptable.h>
 
+#include <ggadget/common.h>
 #include <ggadget/smjs/json.h>
 
 #include "browser_child.h"
@@ -570,7 +571,7 @@ static void ProcessDownMessages() {
       curr_pos = end_of_line_pos + 1;
     }
     NS_ASSERTION(curr_pos = eom_pos + 1, "");
-    curr_pos += sizeof(kEndOfMessageFull) - 2;
+    curr_pos += arraysize(kEndOfMessageFull) - 2;
     if (param_count > 0)
       ProcessDownMessage(param_count, params);
   }
