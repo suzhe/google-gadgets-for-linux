@@ -38,5 +38,10 @@ ADD_SUBDIRECTORY(unittest)
 ADD_SUBDIRECTORY(ggadget)
 ADD_SUBDIRECTORY(hosts)
 ADD_SUBDIRECTORY(third_party)
+ADD_SUBDIRECTORY(extensions)
 
 ADD_DEPENDENCIES(ggadget_smjs js)
+
+MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/resources 
+         ${CMAKE_BINARY_DIR}/output/bin/ggl_resources.bin
+)

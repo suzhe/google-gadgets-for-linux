@@ -74,6 +74,7 @@ TESTS			= dbus_object_test_shell.sh \
 	dom_test_shell.sh \
 	js_shell.sh \
 	jscript_massager_test.sh \
+	massager.sh \
 	wrapper_test_shell.sh
 
 dbus_object_test_shell.sh:
@@ -98,6 +99,10 @@ js_shell.sh:
 jscript_massager_test.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/jscript_massager_test > $@)
+
+massager.sh:
+	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
+	      $(abs_builddir)/massager > $@)
 
 wrapper_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \

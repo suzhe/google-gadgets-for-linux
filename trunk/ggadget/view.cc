@@ -654,7 +654,7 @@ class View::Impl {
              death_detected_elements_.begin();
          it != death_detected_elements_.end(); ++it) {
       if (**it == element)
-        *it = NULL;
+        **it = NULL;
     }
 
     for (std::vector<ScriptableEvent *>::iterator it = event_stack_.begin();

@@ -34,12 +34,14 @@ SET(SRCS
   dummy_framework.cc
   element_factory.cc
   elements.cc
+  extension_manager.cc
   file_manager.cc
   file_manager_wrapper.cc
   gadget.cc
   logger.cc
   math_utils.cc
   memory_options.cc
+  module.cc
   native_main_loop.cc
   scriptable_array.cc
   scriptable_event.cc
@@ -52,6 +54,7 @@ SET(SRCS
   signals.cc
   slot.cc
   string_utils.cc
+  system_utils.cc
   texture.cc
   text_frame.cc
   unicode_utils.cc
@@ -80,6 +83,7 @@ SET(SRCS
 )
 
 SET(LIBS
+  ltdl
   unzip
   ${LIBCURL_LIBRARIES}
   ${LIBXML2_LIBRARIES}

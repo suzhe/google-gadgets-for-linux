@@ -31,3 +31,8 @@ ELSE(WIN32)
     OUTPUT_TARGET(${_target_name} lib)
   ENDMACRO(OUTPUT_LIBRARY _target_name)
 ENDIF(WIN32)
+
+MACRO(OUTPUT_MODULE _target_name)
+  OUTPUT_TARGET(${_target_name} modules)
+ENDMACRO(OUTPUT_MODULE _target_name)
+

@@ -685,19 +685,52 @@ std::string ContentItem::GetTimeDisplayString(uint64_t time,
   return StringPrintf("%dm ago", static_cast<int>(time_diff / kMsPerMinute));
 }
 
+static const Variant kDrawLineDefaultArgs[] = {
+  Variant(), Variant(), Variant(), Variant(), Variant("#000000")
+};
+static const Variant kDrawRectDefaultArgs[] = {
+  Variant(), Variant(), Variant(), Variant(), Variant(), Variant("#000000")
+};
+static const Variant kDrawImageDefaultArgs[] = {
+  Variant(), Variant(), Variant(), Variant(), Variant(), Variant(100)
+};
+static const Variant kDrawTextDefaultArgs[] = {
+  Variant(), Variant(), Variant(), Variant(), Variant(),
+  Variant("#000000"), Variant(0), Variant(ScriptableCanvas::FONT_NORMAL)
+};
+static const Variant kGetTextWidthDefaultArgs[] = {
+  Variant(), Variant(0), Variant(ScriptableCanvas::FONT_NORMAL)
+};
+static const Variant kGetTextHeightDefaultArgs[] = {
+  Variant(), Variant(), Variant(0), Variant(ScriptableCanvas::FONT_NORMAL)
+};
+
 ScriptableCanvas::ScriptableCanvas(CanvasInterface *canvas, View *view)
     : canvas_(canvas), view_(view) {
   RegisterMethod("DrawLine",
-                 NewSlot(this, &ScriptableCanvas::DrawLineWithColorName));
+                 NewSlotWithDefaultArgs(
+                     NewSlot(this, &ScriptableCanvas::DrawLineWithColorName),
+                     kDrawLineDefaultArgs));
   RegisterMethod("DrawRect",
-                 NewSlot(this, &ScriptableCanvas::DrawRectWithColorName));
-  RegisterMethod("DrawImage", NewSlot(this, &ScriptableCanvas::DrawImage));
+                 NewSlotWithDefaultArgs(
+                     NewSlot(this, &ScriptableCanvas::DrawRectWithColorName),
+                     kDrawRectDefaultArgs));
+  RegisterMethod("DrawImage",
+                 NewSlotWithDefaultArgs(
+                     NewSlot(this, &ScriptableCanvas::DrawImage),
+                     kDrawImageDefaultArgs));
   RegisterMethod("DrawText",
-                 NewSlot(this, &ScriptableCanvas::DrawTextWithColorName));
+                 NewSlotWithDefaultArgs(
+                     NewSlot(this, &ScriptableCanvas::DrawTextWithColorName),
+                     kDrawTextDefaultArgs));
   RegisterMethod("GetTextWidth",
-                 NewSlot(this, &ScriptableCanvas::GetTextWidth));
+                 NewSlotWithDefaultArgs(
+                     NewSlot(this, &ScriptableCanvas::GetTextWidth),
+                     kGetTextWidthDefaultArgs));
   RegisterMethod("GetTextHeight",
-                 NewSlot(this, &ScriptableCanvas::GetTextHeight));
+                 NewSlotWithDefaultArgs(
+                     NewSlot(this, &ScriptableCanvas::GetTextHeight),
+                     kGetTextHeightDefaultArgs));
 }
 
 ScriptableCanvas::~ScriptableCanvas() {
@@ -708,10 +741,12 @@ void ScriptableCanvas::DrawLine(int x1, int y1, int x2, int y2,
   canvas_->DrawLine(x1, y1, x2, y2, 1, color);
 }
 
-void ScriptableCanvas::DrawRect(int x1, int y1, int x2, int y2,
+void ScriptableCanvas::DrawRect(int x1, int y1, int width, int height,
                                 const Color &line_color,
                                 const Color &fill_color) {
-  canvas_->DrawFilledRect(x1, y1, x2, y2, fill_color);
+  canvas_->DrawFilledRect(x1, y1, width, height, fill_color);
+  int x2 = x1 + width;
+  int y2 = y1 + height;
   canvas_->DrawLine(x1, y1, x1, y2, 1, line_color);
   canvas_->DrawLine(x1, y1, x2, y1, 1, line_color);
   canvas_->DrawLine(x2, y1, x2, y2, 1, line_color);
@@ -798,19 +833,18 @@ int ScriptableCanvas::GetTextHeight(const char *text, int width,
 void ScriptableCanvas::DrawLineWithColorName(int x1, int y1, int x2, int y2,
                                              const char *color) {
   Color c;
-  double op;
-  Color::FromString(color, &c, &op);
+  Color::FromString(color, &c, NULL);
   DrawLine(x1, y1, x2, y2, c);
 }
 
-void ScriptableCanvas::DrawRectWithColorName(int x1, int y1, int x2, int y2,
+void ScriptableCanvas::DrawRectWithColorName(int x1, int y1,
+                                             int width, int height,
                                              const char *line_color,
                                              const char *fill_color) {
   Color lc, fc;
-  double op;
-  Color::FromString(line_color, &lc, &op);
-  Color::FromString(fill_color, &fc, &op);
-  DrawRect(x1, y1, x2, y2, lc, fc);
+  Color::FromString(line_color, &lc, NULL);
+  Color::FromString(fill_color, &fc, NULL);
+  DrawRect(x1, y1, width, height, lc, fc);
 }
 
 void ScriptableCanvas::DrawTextWithColorName(int x, int y,
@@ -819,8 +853,7 @@ void ScriptableCanvas::DrawTextWithColorName(int x, int y,
                                              const char *color,
                                              int flags, FontID font) {
   Color c;
-  double op;
-  Color::FromString(color, &c, &op);
+  Color::FromString(color, &c, NULL);
   DrawText(x, y, width, height, text, c, flags, font);
 }
 

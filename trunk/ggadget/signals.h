@@ -17,7 +17,6 @@
 #ifndef GGADGET_SIGNALS_H__
 #define GGADGET_SIGNALS_H__
 
-#include <list>
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
 
@@ -145,9 +144,8 @@ class Signal {
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(Signal);
-
-  typedef std::list<Connection *> ConnectionList;
-  ConnectionList connections_;
+  class Impl;
+  Impl *impl_;
 };
 
 /**

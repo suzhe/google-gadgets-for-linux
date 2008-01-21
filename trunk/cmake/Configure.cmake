@@ -24,6 +24,7 @@ ADD_DEFINITIONS(
   -D__STDC_CONSTANT_MACROS
   # TODO: only for Linux by now
   -DGGL_HOST_LINUX
+  -DGGL_MODULE_DIR=\\\"../modules\\\"
 )
 
 IF(UNIX)

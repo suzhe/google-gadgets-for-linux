@@ -14,33 +14,13 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(tests)
-
-PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
-PKGCONFIG_EX(gtk+-2.0 2.8 GTK_LIBRARIES)
-PKGCONFIG_EX(fontconfig 2.2 FC_LIBRARIES)
-
-IF(UNIX)
-  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
-ENDIF(UNIX)
-
-INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
-LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
-ADD_DEFINITIONS(${SMJS_DEFINITIONS})
+PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
 
 SET(SRCS
-  main.cc
+  dbus_script_class.cc
+  scriptable_dbus_object.cc
 )
-
-ADD_EXECUTABLE(ggl ${SRCS})
-OUTPUT_EXECUTABLE(ggl)
-
-TARGET_LINK_LIBRARIES(ggl
-  ggadget
-  ggadget_gtk
-  ggadget_linux
-  ggadget_smjs
-  ${CAIRO_LIBRARIES}
-  ${GTK_LIBRARIES}
-  ${FC_LIBRARIES}
-)
+SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
+ADD_LIBRARY(dbus_script_class SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(dbus_script_class ggadget_dbus ${DBUS_LIBRARIES}) 
+OUTPUT_MODULE(dbus_script_class)
