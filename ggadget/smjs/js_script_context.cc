@@ -89,11 +89,18 @@ void JSScriptContext::GetCurrentFileAndLineInternal(std::string *filename,
                                                     int *lineno) {
   filename_.clear();
   lineno_ = 0;
+  jsval old_exception;
+  JSBool has_old_exception = JS_GetPendingException(context_, &old_exception);
   JSErrorReporter old_reporter = JS_SetErrorReporter(context_,
                                                      RecordFileAndLine);
   // Let the JavaScript engine call RecordFileAndLine.
   JS_ReportError(context_, "");
   JS_SetErrorReporter(context_, old_reporter);
+  if (has_old_exception)
+    JS_SetPendingException(context_, old_exception);
+  else
+    JS_ClearPendingException(context_);
+
   *filename = filename_;
   *lineno = lineno_;
 }

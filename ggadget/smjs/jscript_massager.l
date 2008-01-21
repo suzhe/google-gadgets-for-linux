@@ -48,10 +48,11 @@ BEGIN_NS(smjs)
 #define YY_INPUT(a,b,c) (b = ScriptInput(a,c))
 
 static const char *input_script_pos = NULL;
+static bool new_line_appended = false;
+
 static int ScriptInput(char *buf, int max_size) {
   int result = 0;
-  // "max_size > 1" to leave a space for the last '\n'.
-  while (*input_script_pos && max_size > 1) {
+  while (*input_script_pos && max_size > 0) {
     if (*input_script_pos != '\r') {
       max_size--;
       result++;
@@ -60,9 +61,11 @@ static int ScriptInput(char *buf, int max_size) {
     input_script_pos++;
   }
   // Append a '\n' if the file is not ended with a '\n'.
-  if (result && !*input_script_pos && buf[-1] != '\n') {
+  if (!new_line_appended && max_size > 0 &&
+      !*input_script_pos && input_script_pos[-1] != '\n') {
     result++;
     *buf++ = '\n';
+    new_line_appended = true;
   }
   return result;
 }
@@ -72,9 +75,10 @@ static int ScriptInput(char *buf, int max_size) {
 
 enum State {
   NORMAL,
-  OPTIONS_ONLY, // After options(
-  OPTIONS_ITEM, // After options.item(
-  OPTIONS_DEFAULT_VALUE, // After options.defaultValue(
+  OPTIONS_ONLY, // After options( or detailsViewData(
+  OPTIONS_ITEM, // After options.item( or detailsViewData.item(
+  OPTIONS_DEFAULT_VALUE, // After options.defaultValue( or
+                         // detailsViewData.defaultValue(
   FUNCTION_DECL, // After function name(...) {
   FUNCTION_EXPR, // After function {name}(...) { in an expression context
 };
@@ -226,12 +230,12 @@ static void CloseParen();
 
 %}
 
-COMMENT (\/\*[^*]*\*+([^*/][^*]*\*+)*\/)|(\/\/.*\n)
+COMMENT \/((\*[^*]*\*+([^*/][^*]*\*+)*\/)|(\/.*\n))
 WS ([ \t\r\n]|{COMMENT})*
 BINARY_OP [\.<>=\*-+\^&\|%\?:]
 STRING \"([^\n\\\"]|\\.)*[\"\n]
 SSTRING \'([^\n\\\']|\\.)*[\'\n]
-REGEXP \/([^\n\\\/]|\\.)+[\/\n]
+REGEXP \/([^\n\\\/\*]|\\.)([^\n\\\/]|\\.)+[\/\n]
 FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 
 %x OPTIONS
@@ -260,9 +264,10 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
     IncreaseParenCount();
 }
 
-[a-zA-Z0-9_][Oo][Pp][Tt][Ii][Oo][Nn][Ss] ECHO;
+[a-zA-Z0-9_][OoDd] ECHO;
 
-[Oo][Pp][Tt][Ii][Oo][Nn][Ss] {
+[Oo][Pp][Tt][Ii][Oo][Nn][Ss] |
+[Dd][Ee][Tt][Aa][Ii][Ll][Ss][Vv][Ii][Ee][Ww][Dd][Aa][Tt][Aa] {
   BEGIN(OPTIONS);
   yymore();
 }
@@ -289,7 +294,14 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
   IncreaseParenCount();
 }
 
-<OPTIONS>(.|\n) BEGIN(INITIAL); yymore();
+<OPTIONS>(.|\n) {
+  BEGIN(INITIAL);
+  // In <OPTIONS> state, yytext contains the last matched string because
+  // yymore() was called.
+  unput(yytext[yyleng - 1]);
+  yytext[yyleng - 1] = '\0';
+  ECHO;
+}
 
 \(|\{|\[ {
   ECHO;
@@ -346,7 +358,8 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 }
 
 {BINARY_OP}{WS}\n ECHO; // Statement should continue.
-\/{WS}\n ECHO; // BINARY_OP doesn't include '/' which is specially treated.
+\/\n ECHO; // BINARY_OP doesn't include '/' which is specially treated.
+\/[ \t]{WS}\n ECHO;  // Distinguish comments from the '/' operator.
 \n{WS}{BINARY_OP} ECHO; // Statement should continue.
 \n{WS}\//[^*/] ECHO; // Distinguish comments from the '/' operator.
 
@@ -412,8 +425,12 @@ std::string MassageJScript(const char *input, bool debug,
   }
 #endif
 
+  if (!input || !*input)
+    return std::string();
+
   input_script_pos = input;
   input_filename = filename;
+  new_line_appended = false;
   yyset_lineno(lineno);
   output.clear();
 

@@ -150,25 +150,23 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
 static JSBool ConvertJSToNativeUTF16String(JSContext *cx, jsval js_val,
                                            Variant *native_val) {
   static const UTF16Char kEmptyUTF16String[] = { 0 };
-  JSBool result = JS_FALSE;
   if (JSVAL_IS_NULL(js_val)) {
     *native_val = Variant(static_cast<const UTF16Char *>(NULL));
-    result = JS_TRUE;
-  } else if (JSVAL_IS_VOID(js_val)) {
-    *native_val = Variant(kEmptyUTF16String);
-    result = JS_TRUE;
-  } else if (JSVAL_IS_STRING(js_val) || JSVAL_IS_BOOLEAN(js_val) ||
-             JSVAL_IS_INT(js_val) || JSVAL_IS_DOUBLE(js_val)) {
-    JSString *js_string = JS_ValueToString(cx, js_val);
-    if (js_string) {
-      result = JS_TRUE;
-      jschar *chars = JS_GetStringChars(js_string);
-      // Don't cast chars to UTF16Char *, to let the compiler check if they
-      // are compatible.
-      *native_val = Variant(chars);
-    }
+    return JS_TRUE;
   }
-  return result;
+  if (JSVAL_IS_VOID(js_val)) {
+    *native_val = Variant(kEmptyUTF16String);
+    return JS_TRUE;
+  }
+  JSString *js_string = JS_ValueToString(cx, js_val);
+  if (js_string) {
+    jschar *chars = JS_GetStringChars(js_string);
+    // Don't cast chars to UTF16Char *, to let the compiler check if they
+    // are compatible.
+    *native_val = Variant(chars);
+    return JS_TRUE;
+  }
+  return JS_FALSE;
 }
 
 static JSBool ConvertJSToScriptable(JSContext *cx, jsval js_val,

@@ -489,8 +489,15 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     if (!host_->GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
                                                      manifest_path.c_str(),
                                                      kGadgetTag, NULL,
-                                                     &manifest_info_map_))
-      return false;
+                                                     &manifest_info_map_)) {
+      // For compatibility with some Windows gadget files that use ISO8859-1
+      // encoding without declaration.
+      if (!host_->GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                                       manifest_path.c_str(),
+                                                       kGadgetTag, "ISO8859-1",
+                                                       &manifest_info_map_))
+        return false;
+    }
 
     // TODO: Is it necessary to check the required fields in manifest?
     DLOG("Gadget min version: %s",

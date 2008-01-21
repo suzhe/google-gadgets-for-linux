@@ -432,8 +432,8 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
     LOG("Unknown key: 0x%x", event->keyval);
   }
 
+  guint32 key_char = 0;
   if ((event->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) == 0) {
-    guint32 key_char;
     if (key_code == KeyboardEvent::KEY_ESCAPE ||
         key_code == KeyboardEvent::KEY_RETURN ||
         key_code == KeyboardEvent::KEY_BACK ||
@@ -443,12 +443,16 @@ static gboolean GadgetViewWidget_key_press(GtkWidget *widget,
     } else {
       key_char = gdk_keyval_to_unicode(event->keyval);
     }
+  } else if ((event->state & GDK_CONTROL_MASK) &&
+             key_code >= 'A' && key_code <= 'Z') {
+    // Convert CTRL+(A to Z) to key press code for compatibility.
+    key_char = key_code - 'A' + 1;
+  }
 
-    if (key_char) {
-      // Send the char code in KEY_PRESS event.
-      KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char, mod, event);
-      handler_result2 = gvw->view->OnKeyEvent(e2);
-    }
+  if (key_char) {
+    // Send the char code in KEY_PRESS event.
+    KeyboardEvent e2(Event::EVENT_KEY_PRESS, key_char, mod, event);
+    handler_result2 = gvw->view->OnKeyEvent(e2);
   }
 
   return handler_result != ggadget::EVENT_RESULT_UNHANDLED ||

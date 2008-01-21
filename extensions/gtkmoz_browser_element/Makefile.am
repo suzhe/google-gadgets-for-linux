@@ -55,10 +55,12 @@ gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 
 gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
 				  @GTKMOZEMBED_CFLAGS@ \
+				  @SPIDERMONKEY_CPPFLAGS@ \
 				  $(PREDEFINED_MACROS)
 
 gtkmoz_browser_child_LDADD	= @GTK2_LIBS@ \
-				  @GTKMOZEMBED_LIBS@
+				  @GTKMOZEMBED_LIBS@ \
+				  @SPIDERMONKEY_LIBS@
 
 gtkmoz_browser_child_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 

@@ -15,6 +15,7 @@
 */
 
 #include "signals.h"
+#include <vector>
 
 namespace ggadget {
 
@@ -53,14 +54,25 @@ bool Connection::Reconnect(Slot *slot) {
   return true;
 }
 
-Signal::Signal() {
+class Signal::Impl {
+ public:
+  Impl() : death_flag_(NULL) { }
+  typedef std::vector<Connection *> Connections;
+  Connections connections_;
+  bool *death_flag_;
+};
+
+Signal::Signal() : impl_(new Impl) {
 }
 
 Signal::~Signal() {
-  for (ConnectionList::iterator it = connections_.begin();
-       it != connections_.end(); ++it) {
+  for (Impl::Connections::iterator it = impl_->connections_.begin();
+       it != impl_->connections_.end(); ++it) {
     delete *it;
   }
+  if (impl_->death_flag_)
+    *impl_->death_flag_ = true;
+  delete impl_;
 }
 
 Connection *Signal::ConnectGeneral(Slot *slot) {
@@ -102,10 +114,10 @@ bool Signal::CheckCompatibility(const Slot *slot) const {
 }
 
 bool Signal::HasActiveConnections() const {
-  if (connections_.empty())
+  if (impl_->connections_.empty())
     return false;
-  for (ConnectionList::const_iterator it = connections_.begin();
-       it != connections_.end(); ++it) {
+  for (Impl::Connections::const_iterator it = impl_->connections_.begin();
+       it != impl_->connections_.end(); ++it) {
     if (!(*it)->blocked())
       return true;
   }
@@ -113,20 +125,28 @@ bool Signal::HasActiveConnections() const {
 }
 
 Variant Signal::Emit(int argc, const Variant argv[]) const {
+  bool death_flag = false;
+  // If impl_->death_flag_ is not NULL, there must be some upper stack frame
+  // containing Emit() call of the same object.
+  if (!impl_->death_flag_)
+    impl_->death_flag_ = &death_flag;
   Variant result(GetReturnType());
-  for (ConnectionList::const_iterator it = connections_.begin();
-       it != connections_.end(); ++it) {
+  for (Impl::Connections::const_iterator it = impl_->connections_.begin();
+       !*impl_->death_flag_ && it != impl_->connections_.end();
+       ++it) {
     Connection *connection = *it;
     if (!connection->blocked()) {
       result = connection->slot_->Call(argc, argv);
     }
   }
+  if (impl_->death_flag_ == &death_flag)
+    impl_->death_flag_ = NULL;
   return result;
 }
 
 Connection *Signal::Connect(Slot *slot) {
   Connection *connection = new Connection(this, slot);
-  connections_.push_back(connection);
+  impl_->connections_.push_back(connection);
   return connection;
 }
 

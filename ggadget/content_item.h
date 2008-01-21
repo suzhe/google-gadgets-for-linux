@@ -304,7 +304,7 @@ class ScriptableCanvas : public ScriptableHelper<ScriptableInterface> {
   CanvasInterface *canvas() { return canvas_; }
 
   void DrawLine(int x1, int y1, int x2, int y2, const Color &color);
-  void DrawRect(int x1, int y1, int x2, int y2,
+  void DrawRect(int x1, int y1, int width, int height,
                 const Color &line_color, const Color &fill_color);
   void DrawImage(int x, int y, int width, int height,
                  ScriptableImage *image, int alpha_percent);
@@ -314,7 +314,7 @@ class ScriptableCanvas : public ScriptableHelper<ScriptableInterface> {
   int GetTextHeight(const char *text, int width, int flags, FontID font);
 
   void DrawLineWithColorName(int x1, int y1, int x2, int y2, const char *color);
-  void DrawRectWithColorName(int x1, int y1, int x2, int y2,
+  void DrawRectWithColorName(int x1, int y1, int width, int height,
                              const char *line_color, const char *fill_color);
   void DrawTextWithColorName(int x, int y, int width, int height,
                              const char *text, const char *color,

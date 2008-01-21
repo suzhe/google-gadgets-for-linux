@@ -77,6 +77,11 @@ ScriptableOptions::ScriptableOptions(OptionsInterface *options,
   RegisterMethod("removeAll", NewSlot(options, &OptionsInterface::RemoveAll));
 
   if (raw_objects) {
+    // Partly support the deprecated "item" property.
+    RegisterMethod("item", NewSlot(options, &OptionsInterface::GetValue));
+    // Partly support the deprecated "defaultValue" property.
+    RegisterMethod("defaultValue",
+                   NewSlot(options, &OptionsInterface::GetDefaultValue));
     // In raw objects mode, we don't support the deprecated properties.
     RegisterMethod("add", NewSlot(options, &OptionsInterface::Add));
     RegisterMethod("getDefaultValue",
@@ -85,6 +90,10 @@ ScriptableOptions::ScriptableOptions(OptionsInterface *options,
     RegisterMethod("putDefaultValue",
                    NewSlot(options, &OptionsInterface::PutDefaultValue));
     RegisterMethod("putValue", NewSlot(options, &OptionsInterface::PutValue));
+
+    // Register the "default" method, allowing this object be called directly
+    // as a function.
+    RegisterMethod("", NewSlot(options, &OptionsInterface::GetValue));
   } else {
     // Partly support the deprecated "item" property.
     RegisterMethod("item", NewSlot(impl_, &Impl::OldGetValue));
