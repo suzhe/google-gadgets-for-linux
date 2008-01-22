@@ -15,9 +15,8 @@
 */
 
 #include <stdio.h>
+#include <ggadget/linux/power.h>
 #include <ggadget/common.h>
-#include <ggadget/framework_interface.h>
-#include <ggadget/linux/network.h>
 #include <ggadget/logger.h>
 #include <unittest/gunit.h>
 
@@ -25,21 +24,13 @@ using namespace ggadget;
 using namespace ggadget::framework;
 using namespace ggadget::framework::linux_os;
 
-TEST(Network, GetConnectionType) {
-  Network network;
-  if (network.IsOnline())
-    EXPECT_NE(NetworkInterface::CONNECTION_TYPE_UNKNOWN,
-              network.GetConnectionType());
-  else
-    EXPECT_EQ(NetworkInterface::CONNECTION_TYPE_UNKNOWN,
-              network.GetConnectionType());
-}
-
-TEST(Network, GetPhysicalMediaType) {
-  Network network;
-  if (!network.IsOnline())
-    EXPECT_EQ(NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED,
-              network.GetPhysicalMediaType());
+TEST(Power, All) {
+  Power battery;
+  DLOG("Is Charging: %s", battery.IsCharging() ? "yes" : "no");
+  DLOG("Is PluggedIn: %s", battery.IsPluggedIn() ? "yes" : "no");
+  DLOG("Percent Remaining: %d", battery.GetPercentRemaining());
+  DLOG("Time Remaining: %d", battery.GetTimeRemaining());
+  DLOG("Time Total: %d", battery.GetTimeTotal());
 }
 
 int main(int argc, char **argv) {

@@ -47,3 +47,19 @@ const char* const kMachineModelProperty      = "system.product";
 
 const char* const kHalCapabilitiesProperty   = "info.capabilities";
 const char* const kHalCategoryProperty       = "info.category";
+
+const char* const kHalChargingProperty     = "battery.is_charging";
+const char* const kHalPercentageProperty   = "battery.charge_level.percentage";
+const char* const kHalRemainingProperty    = "battery.remaining_time";
+const char* const kHalTotalTimeProperty    = "battery.charge_level.design";
+
+const char* const kNMDBusName       = "org.freedesktop.NetworkManager";
+const char* const kNMDBusPath       = "/org/freedesktop/NetworkManager";
+const char* const kNMDBusInterface  = kNMDBusName;
+
+const char* const kNMInfoDBusName      = "org.freedesktop.NetworkManagerInfo";
+const char* const kNMInfoDBusPath      = "/org/freedesktop/NetworkManagerInfo";
+const char* const kNMInfoDBusInterface = kNMInfoDBusName;
+
+const char* const kNMGetDevicesMethod     = "getDevices";
+const char* const kNMGetPropertiesMethod  = "getProperties";

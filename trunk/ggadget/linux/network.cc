@@ -18,7 +18,6 @@
 #include "hal_strings.h"
 #include <ggadget/dbus/dbus_proxy.h>
 #include <ggadget/logger.h>
-#include <ggadget/scoped_ptr.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/slot.h>
 #include <ggadget/string_utils.h>

@@ -25,11 +25,17 @@ namespace linux_os {
 
 class Power : public PowerInterface {
  public:
+  Power();
+  ~Power();
+
   virtual bool IsCharging() const;
   virtual bool IsPluggedIn() const;
   virtual int GetPercentRemaining() const;
   virtual int GetTimeRemaining() const;
   virtual int GetTimeTotal() const;
+ private:
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace linux_os
