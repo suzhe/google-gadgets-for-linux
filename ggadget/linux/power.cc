@@ -16,33 +16,149 @@
 
 #include "power.h"
 
+#include "hal_strings.h"
+#include <ggadget/dbus/dbus_proxy.h>
+#include <ggadget/logger.h>
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/slot.h>
+
+using ggadget::dbus::DBusProxy;
+using ggadget::dbus::DBusProxyFactory;
+using ggadget::dbus::MESSAGE_TYPE_BOOLEAN;
+using ggadget::dbus::MESSAGE_TYPE_STRING;
+using ggadget::dbus::MESSAGE_TYPE_INVALID;
+
 namespace ggadget {
 namespace framework {
 namespace linux_os {
 
+class Power::Impl {
+ public:
+  Impl() : factory_(NULL), proxy_(NULL) {
+    DBusProxy *proxy = factory_.NewSystemProxy(kHalDBusName,
+                                               kHalManagerPath,
+                                               kHalManagerInterface,
+                                               false);
+    if (!proxy->Call(kHalFindDeviceMethod, true, -1,
+                     NewSlot(this, &Impl::ReceiveStringList),
+                     MESSAGE_TYPE_STRING, "battery", MESSAGE_TYPE_INVALID)) {
+      DLOG("Get battery devices failed.");
+    }
+    delete proxy;
+    if (!strlist_result_.empty()) {
+      proxy_ = factory_.NewSystemProxy(kHalDBusName,
+                                       strlist_result_[0].c_str(),
+                                       kHalManagerInterface,
+                                       false);
+    }
+  }
+  ~Impl() {
+    delete proxy_;
+  }
+  bool IsCharging() {
+    if (!proxy_) return false;
+    proxy_->Call(kHalPropertyMethod, true, -1,
+                 NewSlot(this, &Impl::ReceiveBoolValue),
+                 MESSAGE_TYPE_STRING, kHalChargingProperty,
+                 MESSAGE_TYPE_INVALID);
+    return boolean_result_;
+  }
+  bool IsPluggedIn() {
+    if (!proxy_) return true;
+    return GetPercentRemaining() == 100 || IsCharging();
+  }
+  int GetPercentRemaining() {
+    if (!proxy_) return 0;
+    int_resutl_ = 0;
+    proxy_->Call(kHalPropertyMethod, true, -1,
+                 NewSlot(this, &Impl::ReceiveIntValue),
+                 MESSAGE_TYPE_STRING, kHalPercentageProperty,
+                 MESSAGE_TYPE_INVALID);
+    return int_resutl_;
+  }
+  int GetTimeRemaining() {
+    if (!proxy_) return 0;
+    int_resutl_ = 0;
+    proxy_->Call(kHalPropertyMethod, true, -1,
+                 NewSlot(this, &Impl::ReceiveIntValue),
+                 MESSAGE_TYPE_STRING, kHalRemainingProperty,
+                 MESSAGE_TYPE_INVALID);
+    return int_resutl_;
+  }
+  int GetTimeTotal() {
+    if (!proxy_) return 0;
+    int_resutl_ = 0;
+    proxy_->Call(kHalPropertyMethod, true, -1,
+                 NewSlot(this, &Impl::ReceiveIntValue),
+                 MESSAGE_TYPE_STRING, kHalTotalTimeProperty,
+                 MESSAGE_TYPE_INVALID);
+    return int_resutl_;
+  }
+ private:
+  bool ReceiveIntValue(int id, const Variant &value) {
+    if (value.type() != Variant::TYPE_INT64) return false;
+    int_resutl_ = VariantValue<int>()(value);
+    return false;
+  }
+  bool ReceiveBoolValue(int id, const Variant &value) {
+    boolean_result_ = false;
+    if (value.type() != Variant::TYPE_BOOL) return false;
+    boolean_result_ = VariantValue<bool>()(value);
+    return false;
+  }
+  bool ReceiveStringList(int id, const Variant &value) {
+    if (id > 0 || value.type() != Variant::TYPE_SCRIPTABLE) return false;
+    strlist_result_.clear();
+    ScriptableInterface *array = VariantValue<ScriptableInterface*>()(value);
+    if (array)
+      return array->EnumerateElements(NewSlot(this,
+                                              &Impl::StringListEnumerator));
+    return false;
+  }
+  bool StringListEnumerator(int id, const Variant &value) {
+    std::string str;
+    if (!value.ConvertToString(&str)) {
+      DLOG("the element in the array is not a string, it is: %s",
+           value.Print().c_str());
+      return false;
+    }
+    strlist_result_.push_back(str);
+    return true;
+  }
+  DBusProxyFactory factory_;
+  DBusProxy *proxy_;
+
+  std::vector<std::string> strlist_result_;
+  bool boolean_result_;
+  int int_resutl_;
+};
+
+Power::Power() : impl_(new Impl) {
+}
+
+Power::~Power() {
+  delete impl_;
+  impl_ = NULL;
+}
+
 bool Power::IsCharging() const {
-  // TODO:
-  return true;
+  return impl_->IsCharging();
 }
 
 bool Power::IsPluggedIn() const {
-  // TODO:
-  return true;
+  return impl_->IsPluggedIn();
 }
 
 int Power::GetPercentRemaining() const {
-  // TODO:
-  return 79;
+  return impl_->GetPercentRemaining();
 }
 
 int Power::GetTimeRemaining() const {
-  // TODO:
-  return 5463;
+  return impl_->GetTimeRemaining();
 }
 
 int Power::GetTimeTotal() const {
-  // TODO:
-  return 9002;
+  return impl_->GetTimeTotal();
 }
 
 } // namespace linux_os

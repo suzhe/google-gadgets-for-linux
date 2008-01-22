@@ -171,7 +171,7 @@ class PowerInterface {
   /**
    * Gets the estimated time, in seconds, left before the battery will need to
    * be charged.
-   * */
+   */
   virtual int GetTimeRemaining() const = 0;
   /**
    * Gets the estimated time, in seconds, the bettery will work when fully
