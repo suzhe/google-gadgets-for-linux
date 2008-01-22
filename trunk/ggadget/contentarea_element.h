@@ -88,7 +88,7 @@ class ContentAreaElement : public ScrollingElement {
   /**
    * For Gadget to register properties into plugin/pluginHelper for
    * historical compatibility.
-   */ 
+   */
   ScriptableArray *ScriptGetContentItems();
   void ScriptSetContentItems(ScriptableInterface *array);
   ScriptableArray *ScriptGetPinImages();
