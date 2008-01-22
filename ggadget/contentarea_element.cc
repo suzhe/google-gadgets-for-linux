@@ -60,6 +60,7 @@ class ContentAreaElement::Impl {
         mouse_x_(-1), mouse_y_(-1),
         mouse_over_item_(NULL),
         content_height_(0),
+        scrolling_line_step_(0),
         refresh_timer_(0),
         modified_(false),
         death_detector_(NULL),
@@ -137,6 +138,7 @@ class ContentAreaElement::Impl {
     content_height_ = 0;
     size_t item_count = content_items_.size();
     if (content_flags_ & CONTENT_FLAG_MANUAL_LAYOUT) {
+      scrolling_line_step_ = 1;
       for (size_t i = 0; i < item_count && !dead && !modified_; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
@@ -151,17 +153,18 @@ class ContentAreaElement::Impl {
         double client_width = owner_->GetClientWidth() / 100;
         double client_height = owner_->GetClientHeight() / 100;
         if (x_relative)
-          item_x = static_cast<int>(round(item_x * client_width)); 
+          item_x = static_cast<int>(round(item_x * client_width));
         if (y_relative)
-          item_y = static_cast<int>(round(item_y * client_height)); 
+          item_y = static_cast<int>(round(item_y * client_height));
         if (width_relative)
-          item_width = static_cast<int>(ceil(item_width * client_width)); 
+          item_width = static_cast<int>(ceil(item_width * client_width));
         if (height_relative)
           item_height = static_cast<int>(ceil(item_height * client_height));
         item->SetLayoutRect(item_x, item_y, item_width, item_height);
         content_height_ = std::max(content_height_, item_y + item_height);
       }
     } else {
+      scrolling_line_step_ = 0;
       for (size_t i = 0; i < item_count && !dead && !modified_ ; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
@@ -177,6 +180,8 @@ class ContentAreaElement::Impl {
           // while Draw and GetHeight use the width excluding pin_image.
           item->SetLayoutRect(0, y, width, item_height);
           y += item_height;
+          if (!scrolling_line_step_ || scrolling_line_step_ > item_height)
+            scrolling_line_step_ = item_height;
         }
       }
       if (!dead)
@@ -570,6 +575,7 @@ class ContentAreaElement::Impl {
   int mouse_x_, mouse_y_;
   ContentItem *mouse_over_item_;
   int content_height_;
+  int scrolling_line_step_;
   int refresh_timer_;
   bool modified_; // Flags whether items were added, removed or reordered.
   bool *death_detector_;
@@ -670,7 +676,12 @@ void ContentAreaElement::Layout() {
   if (UpdateScrollBar(0, y_range)) {
     // Layout again to reflect change of the scroll bar.
     Layout();
+  } else {
+    // Set reasonable scrolling step length.
+    SetYPageStep(GetClientHeight());
+    SetYLineStep(impl_->scrolling_line_step_);
   }
+
   --recurse_depth;
 }
 

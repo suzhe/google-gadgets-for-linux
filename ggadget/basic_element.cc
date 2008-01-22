@@ -436,18 +436,34 @@ class BasicElement::Impl {
     if (visible_ && opacity_ != 0) {
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
-      if (mask) {
+      bool indirect_draw = false;
+
+      // In order to get correct result, indirect draw is required for
+      // following situations:
+      // - The element has mask
+      // - Opacity of the element is not 1.0 and it has children.
+      if (mask || (opacity_ != 1.0 && children_ && children_->GetCount()))
+        indirect_draw = true;
+
+      if (indirect_draw) {
         target = view_->GetGraphics()->NewCanvas(size_t(ceil(width_)),
                                                  size_t(ceil(height_)));
       }
+
       canvas->PushState();
       canvas->IntersectRectClipRegion(0, 0, width_, height_);
       canvas->MultiplyOpacity(opacity_);
       owner_->DoDraw(target);
-      if (mask) {
-        canvas->DrawCanvasWithMask(0, 0, target, 0, 0, mask);
+
+      if (indirect_draw) {
+        if (mask)
+          canvas->DrawCanvasWithMask(0, 0, target, 0, 0, mask);
+        else
+          canvas->DrawCanvas(0, 0, target);
+
         target->Destroy();
       }
+
       canvas->PopState();
       if (debug_mode_ >= 2) {
         DrawBoundingBox(canvas, width_, height_, debug_color_index_);
