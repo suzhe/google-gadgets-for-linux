@@ -53,8 +53,9 @@ static ggadget::DummyFramework g_framework;
 static ggadget::smjs::JSScriptRuntime g_script_runtime;
 
 static const char *kGlobalExtensions[] = {
-  "dbus_script_class",
-  "gtkmoz_browser_element",
+  "dbus-script-class",
+  "gtk-edit-element",
+  "gtkmoz-browser-element",
   NULL
 };
 

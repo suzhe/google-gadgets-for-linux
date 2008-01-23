@@ -1104,8 +1104,13 @@ void View::Draw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
 }
 
-void View::GetNativeWidgetInfo(void **native_widget, int *x, int *y) {
-  impl_->host_->GetNativeWidgetInfo(native_widget, x, y);
+void *View::GetNativeWidget() {
+  return impl_->host_->GetNativeWidget();
+}
+
+void View::ViewCoordToNativeWidgetCoord(double x, double y,
+                                        double *widget_x, double *widget_y) {
+  impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
 }
 
 void View::QueueDraw() {
@@ -1380,10 +1385,6 @@ void View::MarkRedraw() {
 
 Slot *View::NewDeathDetectedSlot(BasicElement *element, Slot *slot) {
   return new Impl::DeathDetectedSlot(impl_, element, slot);
-}
-
-EditInterface *View::NewEdit(size_t w, size_t h) {
-  return impl_->host_->NewEdit(w, h);
 }
 
 XMLParserInterface *View::GetXMLParser() const {

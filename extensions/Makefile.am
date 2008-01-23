@@ -15,4 +15,5 @@
 #
 
 SUBDIRS = dbus_script_class \
+	  gtk_edit_element \
 	  gtkmoz_browser_element

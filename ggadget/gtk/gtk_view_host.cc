@@ -26,7 +26,6 @@
 #include "gtk_view_host.h"
 #include "cairo_graphics.h"
 #include "gadget_view_widget.h"
-#include "gtk_edit.h"
 
 namespace ggadget {
 namespace gtk {
@@ -118,11 +117,17 @@ XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
                               gadget_host_->GetXMLParser());
 }
 
-void GtkViewHost::GetNativeWidgetInfo(void **native_widget, int *x, int *y) {
-  ASSERT(native_widget && x && y);
-  *native_widget = gvw_;
-  *x = 0;
-  *y = 0;
+void *GtkViewHost::GetNativeWidget() {
+  return gvw_;
+}
+
+void GtkViewHost::ViewCoordToNativeWidgetCoord(
+    double x, double y, double *widget_x, double *widget_y) {
+  double zoom = gfx_->GetZoom();
+  if (widget_x)
+    *widget_x = x * zoom;
+  if (widget_y)
+    *widget_y = y * zoom;
 }
 
 void GtkViewHost::QueueDraw() {
@@ -407,10 +412,6 @@ std::string GtkViewHost::Prompt(const char *message,
     text = gtk_entry_get_text(GTK_ENTRY(entry));
   gtk_widget_destroy(dialog);
   return text;
-}
-
-EditInterface *GtkViewHost::NewEdit(size_t w, size_t h) {
-  return new GtkEdit(this, w, h);
 }
 
 void GtkViewHost::ChangeZoom(double zoom) {

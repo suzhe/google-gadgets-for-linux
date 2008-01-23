@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef  GGADGET_GTK_GTK_EDIT_H__
-#define  GGADGET_GTK_GTK_EDIT_H__
+#ifndef  GGADGET_GTK_EDIT_IMPL_H__
+#define  GGADGET_GTK_EDIT_IMPL_H__
 
 #include <functional>
 #include <string>
@@ -25,70 +25,68 @@
 #include <cairo.h>
 
 #include <ggadget/common.h>
-#include <ggadget/edit_interface.h>
 
 namespace ggadget {
 
 class Texture;
+class MainLoopInterface;
 
 namespace gtk {
 
 class CairoCanvas;
 class CairoGraphics;
-class GtkViewHost;
-class GtkGadgetHost;
+class GtkEditElement;
 
-/** GtkEdit is the gtk implementation of EditInterface */
-class GtkEdit : public EditInterface {
- protected:
-  virtual ~GtkEdit();
+/** GtkEditImpl is the gtk implementation of EditElement */
+class GtkEditImpl {
 
  public:
-  GtkEdit(GtkViewHost *host, int width, int height);
-  virtual void Destroy();
-  virtual void Draw(CanvasInterface *canvas);
-  virtual EventResult OnMouseEvent(const MouseEvent &event);
-  virtual EventResult OnKeyEvent(const KeyboardEvent &event);
-  virtual void FocusIn();
-  virtual void FocusOut();
-  virtual void SetWidth(int width);
-  virtual int GetWidth();
-  virtual void SetHeight(int height);
-  virtual int GetHeight();
-  virtual void GetSizeRequest(int *width, int *height);
-  virtual void SetBold(bool bold);
-  virtual bool IsBold();
-  virtual void SetItalic(bool italic);
-  virtual bool IsItalic();
-  virtual void SetStrikeout(bool strikeout);
-  virtual bool IsStrikeout();
-  virtual void SetUnderline(bool underline);
-  virtual bool IsUnderline();
-  virtual void SetMultiline(bool multiline);
-  virtual bool IsMultiline();
-  virtual void SetWordWrap(bool wrap);
-  virtual bool IsWordWrap();
-  virtual void SetReadOnly(bool readonly);
-  virtual bool IsReadOnly();
-  virtual void SetText(const char *text);
-  virtual std::string GetText();
-  virtual void SetBackground(Texture *background);
-  virtual const Texture *GetBackground();
-  virtual void SetTextColor(const Color &color);
-  virtual Color GetTextColor();
-  virtual void SetFontFamily(const char *font);
-  virtual std::string GetFontFamily();
-  virtual void SetFontSize(int size);
-  virtual int GetFontSize();
-  virtual void SetPasswordChar(const char *c);
-  virtual std::string GetPasswordChar();
-  virtual bool IsScrollBarRequired();
-  virtual void GetScrollBarInfo(int *range, int *line_step,
-                                int *page_step, int *cur_pos);
-  virtual void ScrollTo(int position);
-  virtual void MarkRedraw();
-  virtual Connection* ConnectOnQueueDraw(Slot0<void> *callback);
-  virtual Connection* ConnectOnTextChanged(Slot0<void> *callback);
+  GtkEditImpl(GtkEditElement *owner,
+              MainLoopInterface *main_loop,
+              int width, int height);
+  ~GtkEditImpl();
+
+  void Draw(CanvasInterface *canvas);
+  EventResult OnMouseEvent(const MouseEvent &event);
+  EventResult OnKeyEvent(const KeyboardEvent &event);
+  void FocusIn();
+  void FocusOut();
+  void SetWidth(int width);
+  int GetWidth();
+  void SetHeight(int height);
+  int GetHeight();
+  void GetSizeRequest(int *width, int *height);
+  void SetBold(bool bold);
+  bool IsBold();
+  void SetItalic(bool italic);
+  bool IsItalic();
+  void SetStrikeout(bool strikeout);
+  bool IsStrikeout();
+  void SetUnderline(bool underline);
+  bool IsUnderline();
+  void SetMultiline(bool multiline);
+  bool IsMultiline();
+  void SetWordWrap(bool wrap);
+  bool IsWordWrap();
+  void SetReadOnly(bool readonly);
+  bool IsReadOnly();
+  void SetText(const char *text);
+  std::string GetText();
+  void SetBackground(Texture *background);
+  const Texture *GetBackground();
+  void SetTextColor(const Color &color);
+  Color GetTextColor();
+  void SetFontFamily(const char *font);
+  std::string GetFontFamily();
+  void SetFontSize(int size);
+  int GetFontSize();
+  void SetPasswordChar(const char *c);
+  std::string GetPasswordChar();
+  bool IsScrollBarRequired();
+  void GetScrollBarInfo(int *range, int *line_step,
+                        int *page_step, int *cur_pos);
+  void ScrollTo(int position);
+  void MarkRedraw();
 
  private:
   /**
@@ -205,10 +203,21 @@ class GtkEdit : public EditInterface {
   Color GetSelectionTextColor();
 
   /**
-   * Gets the cursor location for gtk im context. relative to the widget
-   * coordinate
+   * Gets the gtk widget used by the gadget host and the cursor location
+   * for gtk im context. relative to the widget coordinate.
    */
-  void GetCursorLocationForIMContext(GdkRectangle *cur);
+  GtkWidget *GetWidgetAndCursorLocation(GdkRectangle *cur);
+
+  /**
+   * Gets the cursor location in pango layout. The unit is pixel.
+   */
+  void GetCursorLocationInLayout(int *strong_x, int *strong_y, int *strong_height,
+                                 int *weak_x, int *weak_y, int *weak_height);
+
+  /**
+   * Updates the cursor location of input method context.
+   */
+  void UpdateIMCursorLocation();
 
   /** Callback function for IM "commit" signal */
   static void CommitCallback(GtkIMContext *context,
@@ -232,8 +241,13 @@ class GtkEdit : public EditInterface {
   static void PasteCallback(GtkClipboard *clipboard,
                             const gchar *str, void *gg);
 
-  /** View host of the view which contains the edit element. */
-  GtkViewHost *view_host_;
+  /** Owner of this gtk edit implementation object. */
+  GtkEditElement *owner_;
+  /** Main loop object */
+  MainLoopInterface *main_loop_;
+  /** Graphics object, must be CairoGraphics */
+  const GraphicsInterface *graphics_;
+
   /** The CairoCanvas which hold cairo_t inside */
   CairoCanvas *canvas_;
   /** Gtk InputMethod Context */
@@ -333,13 +347,10 @@ class GtkEdit : public EditInterface {
   /** The text color of the edit control */
   Color text_color_;
 
-  Signal0<void> queue_draw_signal_;
-  Signal0<void> text_changed_signal_;
-
-  DISALLOW_EVIL_CONSTRUCTORS(GtkEdit);
-};  // class GtkEdit
+  DISALLOW_EVIL_CONSTRUCTORS(GtkEditImpl);
+};  // class GtkEditImpl
 
 } // namespace gtk
 } // namespace ggadget
 
-#endif   // GGADGET_GTK_GTK_EDIT_H__
+#endif   // GGADGET_GTK_EDIT_IMPL_H__

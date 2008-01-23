@@ -1174,11 +1174,11 @@ bool BasicElement::ReallyVisible() const {
   return impl_->visible_ && impl_->opacity_ != 0.0 &&
          (!impl_->parent_ || impl_->parent_->ReallyVisible());
 }
-  
+
 bool BasicElement::ReallyEnabled() const {
   return impl_->enabled_ && ReallyVisible();
 }
-  
+
 BasicElement *BasicElement::GetParentElement() {
   return impl_->parent_;
 }
@@ -1298,6 +1298,41 @@ void BasicElement::SelfCoordToChildCoord(const BasicElement *child,
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
                           child_x, child_y);
+}
+
+void BasicElement::ChildCoordToSelfCoord(const BasicElement *child,
+                                         double x, double y,
+                                         double *self_x,
+                                         double *self_y) const {
+  ChildCoordToParentCoord(x, y, child->GetPixelX(), child->GetPixelY(),
+                          child->GetPixelPinX(), child->GetPixelPinY(),
+                          DegreesToRadians(child->GetRotation()),
+                          self_x, self_y);
+}
+
+void BasicElement::SelfCoordToParentCoord(double x, double y,
+                                          double *parent_x,
+                                          double *parent_y) const {
+  const BasicElement *parent = GetParentElement();
+  if (parent) {
+    parent->ChildCoordToSelfCoord(this, x, y, parent_x, parent_y);
+  } else {
+    ChildCoordToParentCoord(x, y, GetPixelX(), GetPixelY(),
+                            GetPixelPinX(), GetPixelPinY(),
+                            DegreesToRadians(GetRotation()),
+                            parent_x, parent_y);
+  }
+}
+
+void BasicElement::SelfCoordToViewCoord(double x, double y,
+                                        double *view_x, double *view_y) const {
+  const BasicElement *elm = this;
+  while (elm) {
+    elm->SelfCoordToParentCoord(x, y, &x, &y);
+    elm = elm->GetParentElement();
+  }
+  if (view_x) *view_x = x;
+  if (view_y) *view_y = y;
 }
 
 void BasicElement::GetDefaultSize(double *width, double *height) const {

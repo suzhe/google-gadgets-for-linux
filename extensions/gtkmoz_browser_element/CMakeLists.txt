@@ -20,9 +20,9 @@ PKGCONFIG_EX(gtk+-2.0 2.8 GTK_LIBRARIES)
 
 SET(LIB_SRCS browser_element.cc)
 
-ADD_LIBRARY(gtkmoz_browser_element SHARED ${LIB_SRCS})
-TARGET_LINK_LIBRARIES(gtkmoz_browser_element ggadget ${GTK_LIBRARIES})
-OUTPUT_MODULE(gtkmoz_browser_element)
+ADD_LIBRARY(gtkmoz-browser-element SHARED ${LIB_SRCS})
+TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget ${GTK_LIBRARIES})
+OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
 PKGCONFIG_EX(firefox-gtkmozembed 1.5 GTKMOZEMBED_LIBRARIES)
@@ -35,10 +35,10 @@ SET(CHILD_SRCS
   browser_child.cc
   ${CMAKE_SOURCE_DIR}/ggadget/smjs/json.cc
 )
-ADD_EXECUTABLE(gtkmoz_browser_child ${CHILD_SRCS})
-TARGET_LINK_LIBRARIES(gtkmoz_browser_child
+ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})
+TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ${GTKMOZEMBED_LIBRARIES}
   ${JS_LIBRARIES}
   ${GTK_LIBRARIES}
 )
-OUTPUT_EXECUTABLE(gtkmoz_browser_child)
+OUTPUT_EXECUTABLE(gtkmoz-browser-child)

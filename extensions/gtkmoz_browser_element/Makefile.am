@@ -21,7 +21,7 @@ INCLUDES		= -I$(top_builddir) \
 noinst_HEADERS		= browser_child.h \
 			  browser_element.h
 
-extension_LTLIBRARIES	= gtkmoz_browser_element.la
+extension_LTLIBRARIES	= gtkmoz-browser-element.la
 extensiondir		= $(GGL_MODULE_DIR)
 
 gtkmoz_browser_element_la_SOURCES = \
@@ -44,7 +44,7 @@ gtkmoz_browser_element_la_LDFLAGS = \
 			  -rpath $(libdir)
 
 
-ggllibexec_PROGRAMS	= gtkmoz_browser_child
+ggllibexec_PROGRAMS	= gtkmoz-browser-child
 ggllibexecdir		= $(GGL_LIBEXEC_DIR)
 
 gtkmoz_browser_child_SOURCES= browser_child.cc \

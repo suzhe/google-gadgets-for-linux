@@ -40,7 +40,7 @@
 namespace ggadget {
 namespace gtk {
 
-static const char kResourceZipName[] = "ggl_resources.bin";
+static const char kResourceZipName[] = "ggl-resources.bin";
 
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              FrameworkInterface *framework,

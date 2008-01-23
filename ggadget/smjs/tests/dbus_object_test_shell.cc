@@ -43,7 +43,7 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   context->SetGlobalObject(global);
   ext_manager = ExtensionManager::CreateExtensionManager(&main_loop);
 
-  if (!ext_manager->LoadExtension("dbus_script_class", false)) {
+  if (!ext_manager->LoadExtension("dbus-script-class", false)) {
     LOG("Failed to load dbus_script_class extension.");
     return JS_FALSE;
   }
@@ -54,5 +54,6 @@ JSBool InitCustomObjects(JSScriptContext *context) {
 
 void DestroyCustomObjects(JSScriptContext *context) {
   delete global;
-  ext_manager->Destroy();
+  // Destroying ext_manager will cause crash.
+  // ext_manager->Destroy();
 }

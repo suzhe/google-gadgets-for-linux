@@ -187,6 +187,15 @@ double DegreesToRadians(double degrees);
  */
 bool IsPointInElement(double x, double y, double width, double height);
 
+/**
+ * Returns val if low < val < high, otherwise returns low if val < low or high
+ * if val > high.
+ */
+template<typename T>
+T Clamp(T val, T low, T high) {
+  return val > high ? high : (val < low ? low : val);
+}
+
 }
 
 #endif // GGADGET_MATH_UTILS_H__

@@ -33,7 +33,6 @@ class GadgetHostInterface;
 class MenuInterface;
 class ScriptContextInterface;
 class Slot;
-class EditInterface;
 class MainLoopInterface;
 class ViewHostInterface;
 class ImageInterface;
@@ -173,8 +172,15 @@ class View : public ScriptableHelper<ViewInterface> {
   void ClearInterval(int token);
 
  public:
-  /** Get information about the native widget. */
-  void GetNativeWidgetInfo(void **native_widget, int *x, int *y);
+  /** Gets pointer to the native widget holding this view. */
+  void *GetNativeWidget();
+
+  /**
+   * Converts coordinates in the view's space to coordinates in the native
+   * widget which holds the view.
+   */
+  void ViewCoordToNativeWidgetCoord(double x, double y,
+                                    double *widget_x, double *widget_y);
 
   /** Asks the host to redraw the given view. */
   void QueueDraw();
@@ -329,12 +335,6 @@ class View : public ScriptableHelper<ViewInterface> {
    * This is useful to register menu item callbacks.
    */
   Slot *NewDeathDetectedSlot(BasicElement *element, Slot *slot);
-
-  /**
-   * Call the corresponding method of ViewHost to create an
-   * Edit box object.
-   */
-  EditInterface *NewEdit(size_t w, size_t h);
 
   MainLoopInterface *GetMainLoop() const;
 

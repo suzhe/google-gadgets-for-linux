@@ -25,7 +25,6 @@
 #include "combobox_element.h"
 #include "contentarea_element.h"
 #include "div_element.h"
-#include "edit_element.h"
 #include "img_element.h"
 #include "item_element.h"
 #include "label_element.h"
@@ -45,7 +44,6 @@ ElementFactory::ElementFactory()
   RegisterElementClass("contentarea",
                        &ContentAreaElement::CreateInstance);
   RegisterElementClass("div", &DivElement::CreateInstance);
-  RegisterElementClass("edit", &EditElement::CreateInstance);
   RegisterElementClass("img", &ImgElement::CreateInstance);
   RegisterElementClass("item", &ItemElement::CreateInstance);
   RegisterElementClass("label", &LabelElement::CreateInstance);

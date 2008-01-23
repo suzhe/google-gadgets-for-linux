@@ -26,7 +26,6 @@ class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
 class XMLHttpRequestInterface;
-class EditInterface;
 
 /**
  * Interface for providing host services to views.. Each view contains a
@@ -64,7 +63,19 @@ class ViewHostInterface {
    * @param[out] x the horizontal offset of this view host in the native widget.
    * @param[out] y the vertical offset of this view host in the native widget.
    */
-  virtual void GetNativeWidgetInfo(void **native_widget, int *x, int *y) = 0;
+  virtual void *GetNativeWidget() = 0;
+
+  /**
+   * Converts coordinates in the view's space to coordinates in the native
+   * widget which holds the view.
+   *
+   * @param x x-coordinate in the view's space to convert.
+   * @param y y-coordinate in the view's space to convert.
+   * @param[out] widget_x parameter to store the converted widget x-coordinate.
+   * @param[out] widget_y parameter to store the converted widget y-coordinate.
+   */
+  virtual void ViewCoordToNativeWidgetCoord(
+      double x, double y, double *widget_x, double *widget_y) = 0;
 
   /** Asks the host to redraw the given view. */
   virtual void QueueDraw() = 0;
@@ -165,13 +176,6 @@ class ViewHostInterface {
    */
   virtual std::string Prompt(const char *message,
                              const char *default_value) = 0;
-
-  /**
-   * Create a new edit box object for specified ViewHost.
-   * @param w Width of the new edit box.
-   * @param h Height of the new edit box.
-   */
-  virtual EditInterface *NewEdit(size_t w, size_t h) = 0;
 };
 
 } // namespace ggadget

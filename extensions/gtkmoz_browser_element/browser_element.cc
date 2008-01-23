@@ -66,7 +66,7 @@ extern "C" {
 namespace ggadget {
 namespace gtkmoz {
 
-static const char *kBrowserChildName = "gtkmoz_browser_child";
+static const char *kBrowserChildName = "gtkmoz-browser-child";
 
 class BrowserElement::Impl {
  public:
@@ -74,7 +74,6 @@ class BrowserElement::Impl {
       : owner_(owner),
         content_type_("text/html"),
         container_(NULL),
-        container_x_(0), container_y_(0),
         socket_(NULL),
         controller_(BrowserController::get()),
         browser_id_(controller_->AddBrowserElement(this)),
@@ -88,6 +87,25 @@ class BrowserElement::Impl {
     controller_->RemoveBrowserElement(browser_id_);
   }
 
+  void GetWidgetExtents(gint *x, gint *y, gint *width, gint *height) {
+    double widget_x0, widget_y0;
+    double widget_x1, widget_y1;
+    owner_->SelfCoordToViewCoord(0, 0, &widget_x0, &widget_y0);
+    owner_->SelfCoordToViewCoord(owner_->GetPixelWidth(),
+                                 owner_->GetPixelHeight(),
+                                 &widget_x1, &widget_y1);
+
+    owner_->GetView()->ViewCoordToNativeWidgetCoord(widget_x0, widget_y0,
+                                                    &widget_x0, &widget_y0);
+    owner_->GetView()->ViewCoordToNativeWidgetCoord(widget_x1, widget_y1,
+                                                    &widget_x1, &widget_y1);
+
+    *x = static_cast<gint>(round(widget_x0));
+    *y = static_cast<gint>(round(widget_y0));
+    *width = static_cast<gint>(ceil(widget_x1 - widget_x0));
+    *height = static_cast<gint>(ceil(widget_y1 - widget_y0));
+  }
+
   void CreateSocket() {
     if (socket_)
       return;
@@ -95,8 +113,7 @@ class BrowserElement::Impl {
     socket_ = gtk_socket_new();
     g_signal_connect(socket_, "realize", G_CALLBACK(OnSocketRealize), this);
 
-    owner_->GetView()->GetNativeWidgetInfo(
-        reinterpret_cast<void **>(&container_), &container_x_, &container_y_);
+    container_ = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
     if (!GTK_IS_FIXED(container_)) {
       LOG("BrowserElement needs a GTK_FIXED parent. Actual type: %s",
           G_OBJECT_TYPE_NAME(container_));
@@ -105,10 +122,7 @@ class BrowserElement::Impl {
       return;
     }
 
-    x_ = container_x_ + static_cast<gint>(round(owner_->GetPixelX()));
-    y_ = container_y_ + static_cast<gint>(round(owner_->GetPixelY()));
-    width_ = static_cast<gint>(ceil(owner_->GetPixelWidth()));
-    height_ = static_cast<gint>(ceil(owner_->GetPixelHeight()));
+    GetWidgetExtents(&x_, &y_, &width_, &height_);
     gtk_fixed_put(GTK_FIXED(container_), socket_, x_, y_);
     gtk_widget_set_size_request(socket_, width_, height_);
     gtk_widget_show(socket_);
@@ -135,10 +149,8 @@ class BrowserElement::Impl {
     if (GTK_IS_FIXED(container_) && GTK_IS_SOCKET(socket_)) {
       (DLOG("Layout: %lf %lf %lf %lf", owner_->GetPixelX(), owner_->GetPixelY(),
             owner_->GetPixelWidth(), owner_->GetPixelHeight()));
-      gint x = container_x_ + static_cast<gint>(round(owner_->GetPixelX()));
-      gint y = container_y_ + static_cast<gint>(round(owner_->GetPixelY()));
-      gint width = static_cast<gint>(ceil(owner_->GetPixelWidth()));
-      gint height = static_cast<gint>(ceil(owner_->GetPixelHeight()));
+      gint x, y, width, height;
+      GetWidgetExtents(&x, &y, &width, &height);
 
       if (x != x_ || y != y_) {
         x_ = x;
@@ -471,7 +483,6 @@ class BrowserElement::Impl {
   std::string content_type_;
   std::string content_;
   GtkWidget *container_;
-  int container_x_, container_y_;
   GtkWidget *socket_;
   BrowserController *controller_;
   size_t browser_id_;

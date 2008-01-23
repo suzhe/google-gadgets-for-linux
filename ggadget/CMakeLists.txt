@@ -72,7 +72,6 @@ SET(SRCS
   combobox_element.cc
   contentarea_element.cc
   div_element.cc
-  edit_element.cc
   img_element.cc
   item_element.cc
   label_element.cc

@@ -70,7 +70,9 @@ class GtkViewHost : public ViewHostInterface {
   virtual XMLHttpRequestInterface *NewXMLHttpRequest();
   virtual const GraphicsInterface *GetGraphics() const { return gfx_; }
 
-  virtual void GetNativeWidgetInfo(void **native_widget, int *x, int *y);
+  virtual void *GetNativeWidget();
+  virtual void ViewCoordToNativeWidgetCoord(double x, double y,
+                                            double *widget_x, double *widget_y);
   virtual void QueueDraw();
   virtual bool GrabKeyboardFocus();
 
@@ -87,7 +89,6 @@ class GtkViewHost : public ViewHostInterface {
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message, const char *default_value);
-  virtual EditInterface *NewEdit(size_t w, size_t h);
 
   GadgetViewWidget *GetWidget() { ASSERT(gvw_); return gvw_; }
 

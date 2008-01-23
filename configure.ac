@@ -422,6 +422,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
 		 extensions/Makefile
 		 extensions/dbus_script_class/Makefile
+		 extensions/gtk_edit_element/Makefile
 		 extensions/gtkmoz_browser_element/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
@@ -458,11 +459,19 @@ Build options:
   Build static libs             $enable_static
   Enable debug                  $enable_debug
   Host type                     $ggl_host_type
-  SVG Support                   $has_rsvg
+
+ Libraries:
+  GTK SVG Support               $has_rsvg
   Build libggadget-gtk          $build_libggadget_gtk
   Build libggadget-smjs         $build_libggadget_smjs
   Build libggadget-dbus         $build_libggadget_dbus
-  Build gtkmoz_browser_element  $build_gtkmoz_browser_element
+
+ Extensions:
+  Build dbus-script-class       $build_libggadget_dbus
+  Build gtk-edit-element        $build_libggadget_gtk
+  Build gtkmoz-browser-element  $build_gtkmoz_browser_element
+
+ Hosts:
   Build simple host             $build_simple_host
 ])
 

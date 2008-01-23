@@ -263,6 +263,18 @@ void ScrollingElement::SelfCoordToChildCoord(const BasicElement *child,
   BasicElement::SelfCoordToChildCoord(child, x, y, child_x, child_y);
 }
 
+void ScrollingElement::ChildCoordToSelfCoord(const BasicElement *child,
+                                             double x, double y,
+                                             double *self_x,
+                                             double *self_y) const {
+  if (child != impl_->scrollbar_ && impl_->scrollbar_) {
+    x -= impl_->scroll_pos_x_;
+    y -= impl_->scroll_pos_y_;
+  }
+
+  BasicElement::ChildCoordToSelfCoord(child, x, y, self_x, self_y);
+}
+
 void ScrollingElement::DrawScrollbar(CanvasInterface *canvas) {
   if (impl_->scrollbar_ && impl_->scrollbar_->IsVisible()) {
     canvas->TranslateCoordinates(impl_->scrollbar_->GetPixelX(),

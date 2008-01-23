@@ -88,12 +88,12 @@ class BasicElement : public ScriptableHelper<ScriptableInterface> {
    * Retrieves the parent element.
    * @return the pointer to the parent, or @c NULL if the parent is @c View.
    */
-  virtual BasicElement *GetParentElement();
+  BasicElement *GetParentElement();
   /**
    * Retrieves the parent element.
    * @return the pointer to the parent, or @c NULL if the parent is @c View.
    */
-  virtual const BasicElement *GetParentElement() const;
+  const BasicElement *GetParentElement() const;
 
  public:
   /** Retrieves the width in pixels. */
@@ -416,7 +416,7 @@ class BasicElement : public ScriptableHelper<ScriptableInterface> {
   bool IsSizeChanged() const;
 
   /**
-   * Converts coordinates in a this element's space to coordinates in a
+   * Converts coordinates in this element's space to coordinates in a
    * child element.
    *
    * The default implementation should directly call ParentCoorddToChildCoord.
@@ -432,6 +432,50 @@ class BasicElement : public ScriptableHelper<ScriptableInterface> {
   virtual void SelfCoordToChildCoord(const BasicElement *child,
                                      double x, double y,
                                      double *child_x, double *child_y) const;
+
+  /**
+   * Converts coordinates in a child's space to coordinates in this element.
+   *
+   * The default implementation should directly call ChildCoordToParentCoord.
+   * BasicElement implementation should override this method if it supports
+   * scrolling.
+   *
+   * @param child a child element of this element.
+   * @param x x-coordinate in child element's space to convert.
+   * @param y y-coordinate in child element's space to convert.
+   * @param[out] self_x parameter to store the converted self x-coordinate.
+   * @param[out] self_y parameter to store the converted self y-coordinate.
+   */
+  virtual void ChildCoordToSelfCoord(const BasicElement *child,
+                                     double x, double y,
+                                     double *self_x, double *self_y) const;
+
+  /**
+   * Converts coordinates in this element's space to coordinates in its
+   * parent element or the view if it has no parent.
+   *
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert.
+   * @param[out] parent_x parameter to store the converted parent x-coordinate.
+   * @param[out] parent_y parameter to store the converted parent y-coordinate.
+   */
+  void SelfCoordToParentCoord(double x, double y,
+                              double *parent_x, double *parent_y) const;
+
+  /**
+   * Converts coordinates in this element's space to coordinates in the top
+   * level view.
+   *
+   * This function uses SelfCoordToParentCoord() and traverses its parents upto
+   * the view to calculate the coordinates.
+   *
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert.
+   * @param[out] view_x parameter to store the converted view x-coordinate.
+   * @param[out] view_y parameter to store the converted view y-coordinate.
+   */
+  void SelfCoordToViewCoord(double x, double y,
+                            double *view_x, double *view_y) const;
 
   /**
    * Delegates to @c Elements::SetScrollable().
