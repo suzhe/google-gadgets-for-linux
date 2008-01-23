@@ -20,7 +20,7 @@
 #include "checkbox_element.h"
 #include "combobox_element.h"
 #include "div_element.h"
-#include "edit_element.h"
+#include "edit_element_base.h"
 #include "elements.h"
 #include "item_element.h"
 #include "label_element.h"
@@ -137,8 +137,8 @@ class DisplayWindow::Impl {
         ComboBoxElement *combobox = down_cast<ComboBoxElement *>(element_);
         return Variant(GetListBoxItems(combobox->GetListBox()));
       }
-      if (element_->IsInstanceOf(EditElement::CLASS_ID)) {
-        EditElement *edit = down_cast<EditElement *>(element_);
+      if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
+        EditElementBase *edit = down_cast<EditElementBase *>(element_);
         return Variant(edit->GetValue());
       }
       ASSERT(false);
@@ -204,8 +204,8 @@ class DisplayWindow::Impl {
                                    &text_width, &text_height);
             if (text_height > element_->GetPixelHeight())
               text_frame->SetSize(kLabelTextSize - 1);
-          } else if (element_->IsInstanceOf(EditElement::CLASS_ID)) {
-            EditElement *edit = down_cast<EditElement *>(element_);
+          } else if (element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
+            EditElementBase *edit = down_cast<EditElementBase *>(element_);
             edit->SetValue(text_str.c_str());
           } else {
             invalid = true;
@@ -260,7 +260,7 @@ class DisplayWindow::Impl {
       bool valid = true;
       if (element_->IsInstanceOf(ButtonElement::CLASS_ID) ||
           element_->IsInstanceOf(LabelElement::CLASS_ID) ||
-          element_->IsInstanceOf(EditElement::CLASS_ID)) {
+          element_->IsInstanceOf(EditElementBase::CLASS_ID)) {
         SetText(value);
       } else if (element_->IsInstanceOf(ListBoxElement::CLASS_ID)) {
         valid = SetListBoxValue(down_cast<ListBoxElement *>(element_), value);
@@ -359,7 +359,7 @@ class DisplayWindow::Impl {
         y += 1;
         height -= 2;
         div = CreateFrameDiv(elements);
-        EditElement *element = down_cast<EditElement *>(
+        EditElementBase *element = down_cast<EditElementBase *>(
             elements->AppendElement("edit", ctrl_id));
         if (ctrl_type == TYPE_EDIT_PASSWORD)
           element->SetPasswordChar("*");
@@ -502,8 +502,8 @@ class DisplayWindow::Impl {
           BasicElement *element = top_elements->GetItemByIndex(index);
           if (element == src_element)
             break;
-          // For now only EditElement is focusable in a DisplayWindow.
-          if (element->IsInstanceOf(EditElement::CLASS_ID)) {
+          // For now only EditElementBase is focusable in a DisplayWindow.
+          if (element->IsInstanceOf(EditElementBase::CLASS_ID)) {
             view_->SetFocus(element);
             break;
           }

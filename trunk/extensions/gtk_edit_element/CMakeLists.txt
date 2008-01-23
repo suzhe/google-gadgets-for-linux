@@ -16,33 +16,16 @@
 
 PKGCONFIG_EX(cairo 1.0 CAIRO_LIBRARIES)
 PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
-PKGCONFIG_EX(librsvg-2.0 2.14 RSVG_LIBRARIES)
-
-ADD_DEFINITIONS(-DHAVE_RSVG_LIBRARY)
 
 SET(SRCS
-  cairo_canvas.cc
-  cairo_graphics.cc
-  cairo_font.cc
-  global_file_manager.cc
-  gtk_gadget_host.cc
-  gtk_main_loop.cc
-  gtk_view_host.cc
-  gadget_view_widget.cc
-  gtk_key_convert.cc
-  gtk_menu_impl.cc
-  options.cc
-  pixbuf_image.cc
-  pixbuf_utils.cc
-  rsvg_image.cc
+  gtk_edit_element.cc
+  gtk_edit_impl.cc
 )
-
-ADD_SUBDIRECTORY(tests)
-
-ADD_LIBRARY(ggadget_gtk SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_gtk
+SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
+ADD_LIBRARY(gtk-edit-element SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(gtk-edit-element
+  ggadget_gtk
   ${CAIRO_LIBRARIES}
   ${GTK_LIBRARIES}
-  ${RSVG_LIBRARIES}
 )
-OUTPUT_LIBRARY(ggadget_gtk)
+OUTPUT_MODULE(gtk-edit-element)

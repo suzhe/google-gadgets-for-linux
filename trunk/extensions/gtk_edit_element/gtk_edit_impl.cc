@@ -24,15 +24,16 @@
 #include <gdk/gdkkeysyms.h>
 
 #include <ggadget/common.h>
+#include <ggadget/math_utils.h>
 #include <ggadget/logger.h>
 #include <ggadget/texture.h>
 #include <ggadget/main_loop_interface.h>
-#include "cairo_graphics.h"
-#include "cairo_canvas.h"
-#include "cairo_font.h"
-#include "gtk_edit.h"
-#include "gtk_view_host.h"
-#include "gtk_gadget_host.h"
+#include <ggadget/view.h>
+#include <ggadget/gtk/cairo_graphics.h>
+#include <ggadget/gtk/cairo_canvas.h>
+#include <ggadget/gtk/cairo_font.h>
+#include "gtk_edit_impl.h"
+#include "gtk_edit_element.h"
 
 #ifndef PANGO_VERSION_CHECK
 #define PANGO_VERSION_CHECK(a,b,c) 0
@@ -54,8 +55,12 @@ static const Color kDefaultTextColor(0, 0, 0);
 static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
 static const Color kDefaultSelectionTextColor(1, 1, 1);
 
-GtkEdit::GtkEdit(GtkViewHost *view_host, int width, int height)
-    : view_host_(view_host),
+GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
+                         MainLoopInterface *main_loop,
+                         int width, int height)
+    : owner_(owner),
+      main_loop_(main_loop),
+      graphics_(owner->GetView()->GetGraphics()),
       canvas_(NULL),
       im_context_(NULL),
       cached_layout_(NULL),
@@ -91,11 +96,12 @@ GtkEdit::GtkEdit(GtkViewHost *view_host, int width, int height)
       font_size_(kDefaultFontSize),
       background_(NULL),
       text_color_(kDefaultTextColor) {
-  ASSERT(view_host_);
+  ASSERT(main_loop_);
+  ASSERT(graphics_);
   InitImContext();
 }
 
-GtkEdit::~GtkEdit() {
+GtkEditImpl::~GtkEditImpl() {
   if (canvas_)
     canvas_->Destroy();
   if (im_context_)
@@ -103,22 +109,16 @@ GtkEdit::~GtkEdit() {
   if (background_)
     delete background_;
 
-  GadgetHostInterface *host = view_host_->GetGadgetHost();
-  ASSERT(host);
   if (cursor_blink_timer_)
-    host->GetMainLoop()->RemoveWatch(cursor_blink_timer_);
+    main_loop_->RemoveWatch(cursor_blink_timer_);
   if (refresh_timer_)
-    host->GetMainLoop()->RemoveWatch(refresh_timer_);
+    main_loop_->RemoveWatch(refresh_timer_);
 
   ResetPreedit();
   ResetLayout();
 }
 
-void GtkEdit::Destroy() {
-  delete this;
-}
-
-void GtkEdit::Draw(CanvasInterface *canvas) {
+void GtkEditImpl::Draw(CanvasInterface *canvas) {
   CairoCanvas *edit_canvas = EnsureCanvas();
 
   if (content_modified_) {
@@ -140,20 +140,13 @@ void GtkEdit::Draw(CanvasInterface *canvas) {
 }
 
 
-void GtkEdit::FocusIn() {
+void GtkEditImpl::FocusIn() {
   if (!focused_) {
     focused_ = true;
     if (!readonly_ && im_context_) {
       need_im_reset_ = true;
       gtk_im_context_focus_in(im_context_);
-
-      GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-      if (widget->window) {
-        gtk_im_context_set_client_window(im_context_, widget->window);
-        GdkRectangle cur;
-        GetCursorLocationForIMContext(&cur);
-        gtk_im_context_set_cursor_location(im_context_, &cur);
-      }
+      UpdateIMCursorLocation();
     }
     content_modified_ = true;
     // Don't adjust scroll.
@@ -162,7 +155,7 @@ void GtkEdit::FocusIn() {
   }
 }
 
-void GtkEdit::FocusOut() {
+void GtkEditImpl::FocusOut() {
   if (focused_) {
     focused_ = false;
     if (!readonly_ && im_context_) {
@@ -176,7 +169,7 @@ void GtkEdit::FocusOut() {
   }
 }
 
-void GtkEdit::SetWidth(int width) {
+void GtkEditImpl::SetWidth(int width) {
   if (width_ != width) {
     width_ = width;
     if (width_ <= kInnerBorderX * 2)
@@ -185,11 +178,11 @@ void GtkEdit::SetWidth(int width) {
   }
 }
 
-int GtkEdit::GetWidth() {
+int GtkEditImpl::GetWidth() {
   return width_;
 }
 
-void GtkEdit::SetHeight(int height) {
+void GtkEditImpl::SetHeight(int height) {
   if (height_ != height) {
     height_ = height;
     if (height_ <= kInnerBorderY * 2)
@@ -198,11 +191,11 @@ void GtkEdit::SetHeight(int height) {
   }
 }
 
-int GtkEdit::GetHeight() {
+int GtkEditImpl::GetHeight() {
   return height_;
 }
 
-void GtkEdit::GetSizeRequest(int *width, int *height) {
+void GtkEditImpl::GetSizeRequest(int *width, int *height) {
   int layout_width, layout_height;
   PangoLayout *layout = EnsureLayout();
 
@@ -220,73 +213,73 @@ void GtkEdit::GetSizeRequest(int *width, int *height) {
     *height = layout_height;
 }
 
-void GtkEdit::SetBold(bool bold) {
+void GtkEditImpl::SetBold(bool bold) {
   if (bold_ != bold) {
     bold_ = bold;
     QueueRefresh(true);
   }
 }
 
-bool GtkEdit::IsBold() {
+bool GtkEditImpl::IsBold() {
   return bold_;
 }
 
-void GtkEdit::SetItalic(bool italic) {
+void GtkEditImpl::SetItalic(bool italic) {
   if (italic_ != italic) {
     italic_ = italic;
     QueueRefresh(true);
   }
 }
 
-bool GtkEdit::IsItalic() {
+bool GtkEditImpl::IsItalic() {
   return italic_;
 }
 
-void GtkEdit::SetStrikeout(bool strikeout) {
+void GtkEditImpl::SetStrikeout(bool strikeout) {
   if (strikeout_ != strikeout) {
     strikeout_ = strikeout;
     QueueRefresh(true);
   }
 }
 
-bool GtkEdit::IsStrikeout() {
+bool GtkEditImpl::IsStrikeout() {
   return strikeout_;
 }
 
-void GtkEdit::SetUnderline(bool underline) {
+void GtkEditImpl::SetUnderline(bool underline) {
   if (underline_ != underline) {
     underline_ = underline;
     QueueRefresh(true);
   }
 }
 
-bool GtkEdit::IsUnderline() {
+bool GtkEditImpl::IsUnderline() {
   return underline_;
 }
 
-void GtkEdit::SetMultiline(bool multiline) {
+void GtkEditImpl::SetMultiline(bool multiline) {
   if (multiline_ != multiline) {
     multiline_ = multiline;
     QueueRefresh(true);
   }
 }
 
-bool GtkEdit::IsMultiline() {
+bool GtkEditImpl::IsMultiline() {
   return multiline_;
 }
 
-void GtkEdit::SetWordWrap(bool wrap) {
+void GtkEditImpl::SetWordWrap(bool wrap) {
   if (wrap_ != wrap) {
     wrap_ = wrap;
     QueueRefresh(true);
   }
 }
 
-bool GtkEdit::IsWordWrap() {
+bool GtkEditImpl::IsWordWrap() {
   return wrap_;
 }
 
-void GtkEdit::SetReadOnly(bool readonly) {
+void GtkEditImpl::SetReadOnly(bool readonly) {
   if (readonly_ != readonly) {
     readonly_ = readonly;
     if (readonly_) {
@@ -307,11 +300,11 @@ void GtkEdit::SetReadOnly(bool readonly) {
   QueueRefresh(false);
 }
 
-bool GtkEdit::IsReadOnly() {
+bool GtkEditImpl::IsReadOnly() {
   return readonly_;
 }
 
-void GtkEdit::SetText(const char* text) {
+void GtkEditImpl::SetText(const char* text) {
   const char *end = NULL;
   g_utf8_validate(text, -1, &end);
 
@@ -332,35 +325,35 @@ void GtkEdit::SetText(const char* text) {
   need_im_reset_ = true;
   ResetImContext();
   QueueRefresh(true);
-  text_changed_signal_();
+  owner_->FireOnChangeEvent();
 }
 
-std::string GtkEdit::GetText() {
+std::string GtkEditImpl::GetText() {
   return text_;
 }
 
-void GtkEdit::SetBackground(Texture *background) {
+void GtkEditImpl::SetBackground(Texture *background) {
   if (background_)
     delete background_;
   background_ = background;
   QueueRefresh(false);
 }
 
-const Texture *GtkEdit::GetBackground() {
+const Texture *GtkEditImpl::GetBackground() {
   return background_;
 }
 
-void GtkEdit::SetTextColor(const Color &color) {
+void GtkEditImpl::SetTextColor(const Color &color) {
   text_color_ = color;
   content_modified_ = true;
   QueueRefresh(false);
 }
 
-Color GtkEdit::GetTextColor() {
+Color GtkEditImpl::GetTextColor() {
   return text_color_;
 }
 
-void GtkEdit::SetFontFamily(const char *font) {
+void GtkEditImpl::SetFontFamily(const char *font) {
   std::string new_font((font && *font) ? font : kDefaultFontFamily);
   if (font_family_ != new_font) {
     font_family_ = new_font;
@@ -368,22 +361,22 @@ void GtkEdit::SetFontFamily(const char *font) {
   }
 }
 
-std::string GtkEdit::GetFontFamily() {
+std::string GtkEditImpl::GetFontFamily() {
   return font_family_;
 }
 
-void GtkEdit::SetFontSize(int size) {
+void GtkEditImpl::SetFontSize(int size) {
   if (font_size_ != size) {
     font_size_ = size;
     QueueRefresh(true);
   }
 }
 
-int GtkEdit::GetFontSize() {
+int GtkEditImpl::GetFontSize() {
   return font_size_;
 }
 
-void GtkEdit::SetPasswordChar(const char *c) {
+void GtkEditImpl::SetPasswordChar(const char *c) {
   if (c == NULL || *c == 0 || !IsLegalUTF8Char(c, GetUTF8CharLength(c))) {
     SetVisibility(true);
     password_char_.clear();
@@ -394,17 +387,17 @@ void GtkEdit::SetPasswordChar(const char *c) {
   QueueRefresh(true);
 }
 
-std::string GtkEdit::GetPasswordChar() {
+std::string GtkEditImpl::GetPasswordChar() {
   return password_char_;
 }
 
-bool GtkEdit::IsScrollBarRequired() {
+bool GtkEditImpl::IsScrollBarRequired() {
   int request_height;
   GetSizeRequest(NULL, &request_height);
   return height_ >= request_height;
 }
 
-void GtkEdit::GetScrollBarInfo(int *range, int *line_step,
+void GtkEditImpl::GetScrollBarInfo(int *range, int *line_step,
                                int *page_step, int *cur_pos) {
   PangoLayout *layout = EnsureLayout();
   int nlines = pango_layout_get_line_count(layout);
@@ -432,7 +425,7 @@ void GtkEdit::GetScrollBarInfo(int *range, int *line_step,
   }
 }
 
-void GtkEdit::ScrollTo(int position) {
+void GtkEditImpl::ScrollTo(int position) {
   int request_height;
   int real_height = height_ - kInnerBorderY * 2;
   PangoLayout *layout = EnsureLayout();
@@ -450,23 +443,11 @@ void GtkEdit::ScrollTo(int position) {
   }
 }
 
-void GtkEdit::MarkRedraw() {
+void GtkEditImpl::MarkRedraw() {
   content_modified_ = true;
 }
 
-Connection* GtkEdit::ConnectOnQueueDraw(Slot0<void> *callback) {
-  if (callback)
-    return queue_draw_signal_.Connect(callback);
-  return NULL;
-}
-
-Connection* GtkEdit::ConnectOnTextChanged(Slot0<void> *callback) {
-  if (callback)
-    return text_changed_signal_.Connect(callback);
-  return NULL;
-}
-
-EventResult GtkEdit::OnMouseEvent(const MouseEvent &event) {
+EventResult GtkEditImpl::OnMouseEvent(const MouseEvent &event) {
   // Only handle mouse events with left button down.
   if (event.GetButton() != MouseEvent::BUTTON_LEFT)
     return EVENT_RESULT_UNHANDLED;
@@ -506,7 +487,7 @@ EventResult GtkEdit::OnMouseEvent(const MouseEvent &event) {
   return EVENT_RESULT_HANDLED;
 }
 
-EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
+EventResult GtkEditImpl::OnKeyEvent(const KeyboardEvent &event) {
   GdkEventKey *gdk_event = static_cast<GdkEventKey *>(event.GetOriginalEvent());
   ASSERT(gdk_event);
 
@@ -528,7 +509,7 @@ EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
   bool shift = (gdk_event->state & GDK_SHIFT_MASK);
   bool ctrl = (gdk_event->state & GDK_CONTROL_MASK);
 
-  DLOG("GtkEdit::OnKeyEvent(%d, shift:%d ctrl:%d)", keyval, shift, ctrl);
+  DLOG("GtkEditImpl::OnKeyEvent(%d, shift:%d ctrl:%d)", keyval, shift, ctrl);
 
   if (type == Event::EVENT_KEY_DOWN) {
     if (keyval == GDK_Left || keyval == GDK_KP_Left) {
@@ -589,7 +570,7 @@ EventResult GtkEdit::OnKeyEvent(const KeyboardEvent &event) {
 
 //private =================================================================
 
-void GtkEdit::ResetLayout() {
+void GtkEditImpl::ResetLayout() {
   if (cached_layout_) {
     g_object_unref(cached_layout_);
     cached_layout_ = NULL;
@@ -597,14 +578,14 @@ void GtkEdit::ResetLayout() {
   }
 }
 
-PangoLayout* GtkEdit::EnsureLayout() {
+PangoLayout* GtkEditImpl::EnsureLayout() {
   if (!cached_layout_) {
     cached_layout_ = CreateLayout();
   }
   return cached_layout_;
 }
 
-PangoLayout* GtkEdit::CreateLayout() {
+PangoLayout* GtkEditImpl::CreateLayout() {
   // Creates the pango layout with a temporary canvas that is not zoomed.
   CairoCanvas *canvas = new CairoCanvas(1.0, 1, 1, CAIRO_FORMAT_ARGB32);
   PangoLayout *layout = pango_cairo_create_layout(canvas->GetContext());
@@ -676,9 +657,10 @@ PangoLayout* GtkEdit::CreateLayout() {
   {
     /* safe to down_cast here, because we know the actual implementation. */
     CairoFont *font = down_cast<CairoFont*>(
-      view_host_->GetGraphics()->NewFont(font_family_.c_str(), font_size_,
+        graphics_->NewFont(font_family_.c_str(), font_size_,
           italic_ ? FontInterface::STYLE_ITALIC : FontInterface::STYLE_NORMAL,
           bold_ ? FontInterface::WEIGHT_BOLD : FontInterface::WEIGHT_NORMAL));
+    ASSERT(font);
     attr = pango_attr_font_desc_new(font->GetFontDescription());
     attr->start_index = 0;
     attr->end_index = tmp_string.length();
@@ -699,8 +681,8 @@ PangoLayout* GtkEdit::CreateLayout() {
       dir = PANGO_DIRECTION_NEUTRAL;
 
     if (dir == PANGO_DIRECTION_NEUTRAL) {
-      GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-      if (gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL)
+      GtkWidget *widget = GetWidgetAndCursorLocation(NULL);
+      if (widget && gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL)
         dir = PANGO_DIRECTION_RTL;
       else
         dir = PANGO_DIRECTION_LTR;
@@ -712,7 +694,7 @@ PangoLayout* GtkEdit::CreateLayout() {
   return layout;
 }
 
-CairoCanvas* GtkEdit::EnsureCanvas() {
+CairoCanvas* GtkEditImpl::EnsureCanvas() {
   if (canvas_) {
     if (width_ == static_cast<int>(canvas_->GetWidth()) &&
         height_ == static_cast<int>(canvas_->GetHeight()))
@@ -723,34 +705,25 @@ CairoCanvas* GtkEdit::EnsureCanvas() {
       canvas_ = NULL;
     }
   }
-  canvas_ = down_cast<CairoCanvas*>(
-              view_host_->GetGraphics()->NewCanvas(width_, height_));
+  canvas_ = down_cast<CairoCanvas*>(graphics_->NewCanvas(width_, height_));
   ASSERT(canvas_);
   return canvas_;
 }
 
-void GtkEdit::AdjustScroll() {
+void GtkEditImpl::AdjustScroll() {
   int old_offset_x = scroll_offset_x_;
   int old_offset_y = scroll_offset_y_;
-  PangoLayout *layout = EnsureLayout();
   int display_width = width_ - kInnerBorderX * 2;
   int display_height = height_ - kInnerBorderY * 2;
-  const char *text = pango_layout_get_text(layout);
-  size_t cursor_index =
-      g_utf8_offset_to_pointer(text, cursor_ + preedit_cursor_) - text;
 
+  PangoLayout *layout = EnsureLayout();
   int text_width, text_height;
   pango_layout_get_pixel_size(layout, &text_width, &text_height);
 
-  PangoRectangle strong, weak;
-  pango_layout_get_cursor_pos(layout, cursor_index, &strong, &weak);
-
-  strong.x = PANGO_PIXELS(strong.x);
-  strong.y = PANGO_PIXELS(strong.y);
-  strong.height = PANGO_PIXELS(strong.height);
-  weak.x = PANGO_PIXELS(weak.x);
-  weak.y = PANGO_PIXELS(weak.y);
-  weak.height = PANGO_PIXELS(weak.height);
+  int strong_x, strong_y, strong_height;
+  int weak_x, weak_y, weak_height;
+  GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
+                            &weak_x, &weak_y, &weak_height);
 
   if (display_width > text_width) {
     PangoAlignment align = pango_layout_get_alignment(layout);
@@ -761,56 +734,54 @@ void GtkEdit::AdjustScroll() {
     else
       scroll_offset_x_ = (display_width - text_width) / 2;
   } else {
-    if (scroll_offset_x_ + strong.x < 0)
-      scroll_offset_x_ = -strong.x;
-    else if (scroll_offset_x_ + strong.x > display_width)
-      scroll_offset_x_ = display_width - strong.x;
+    if (scroll_offset_x_ + strong_x < 0)
+      scroll_offset_x_ = -strong_x;
+    else if (scroll_offset_x_ + strong_x > display_width)
+      scroll_offset_x_ = display_width - strong_x;
 
-    if (std::abs(weak.x - strong.x) < display_width) {
-      if (scroll_offset_x_ + weak.x < 0)
-        scroll_offset_x_ = - weak.x;
-      else if (scroll_offset_x_ + weak.x > display_width)
-        scroll_offset_x_ = display_width - weak.x;
+    if (std::abs(weak_x - strong_x) < display_width) {
+      if (scroll_offset_x_ + weak_x < 0)
+        scroll_offset_x_ = - weak_x;
+      else if (scroll_offset_x_ + weak_x > display_width)
+        scroll_offset_x_ = display_width - weak_x;
     }
   }
 
   if (display_height > text_height) {
     scroll_offset_y_ = 0;
   } else {
-    if (scroll_offset_y_ + strong.y + strong.height > display_height)
-      scroll_offset_y_ = display_height - strong.y - strong.height;
-    if (scroll_offset_y_ + strong.y < 0)
-      scroll_offset_y_ = -strong.y;
+    if (scroll_offset_y_ + strong_y + strong_height > display_height)
+      scroll_offset_y_ = display_height - strong_y - strong_height;
+    if (scroll_offset_y_ + strong_y < 0)
+      scroll_offset_y_ = -strong_y;
   }
 
   if (old_offset_x != scroll_offset_x_ || old_offset_y != scroll_offset_y_)
     content_modified_ = true;
 }
 
-void GtkEdit::QueueRefresh(bool relayout) {
+void GtkEditImpl::QueueRefresh(bool relayout) {
   if (relayout) ResetLayout();
   QueueCursorBlink();
 
   if (!refresh_timer_) {
-    GadgetHostInterface *host = view_host_->GetGadgetHost();
-    ASSERT(host);
-    refresh_timer_ = host->GetMainLoop()->AddTimeoutWatch(0,
-      new WatchCallbackSlot(NewSlot(this, &GtkEdit::RefreshCallback)));
+    main_loop_->AddTimeoutWatch(0,
+      new WatchCallbackSlot(NewSlot(this, &GtkEditImpl::RefreshCallback)));
   }
 }
 
-bool GtkEdit::RefreshCallback(int timer_id) {
+bool GtkEditImpl::RefreshCallback(int timer_id) {
   refresh_timer_ = 0;
   AdjustScroll();
   QueueDraw();
   return false;
 }
 
-void GtkEdit::QueueDraw() {
-  queue_draw_signal_();
+void GtkEditImpl::QueueDraw() {
+  owner_->QueueDraw();
 }
 
-void GtkEdit::ResetImContext() {
+void GtkEditImpl::ResetImContext() {
   if (need_im_reset_) {
     need_im_reset_ = false;
     if (im_context_)
@@ -819,7 +790,7 @@ void GtkEdit::ResetImContext() {
   }
 }
 
-void GtkEdit::ResetPreedit() {
+void GtkEditImpl::ResetPreedit() {
   // Reset layout if there were some content in preedit string
   if (preedit_.length())
     ResetLayout();
@@ -832,9 +803,7 @@ void GtkEdit::ResetPreedit() {
   }
 }
 
-void GtkEdit::InitImContext() {
-  GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-
+void GtkEditImpl::InitImContext() {
   if (im_context_)
     g_object_unref(im_context_);
 
@@ -845,7 +814,6 @@ void GtkEdit::InitImContext() {
 
   gtk_im_context_set_use_preedit(im_context_, TRUE);
 
-  gtk_im_context_set_client_window(im_context_, widget->window);
   g_signal_connect(im_context_, "commit",
       G_CALLBACK(CommitCallback), this);
   g_signal_connect(im_context_, "retrieve-surrounding",
@@ -860,7 +828,7 @@ void GtkEdit::InitImContext() {
       G_CALLBACK(PreeditEndCallback), this);
 }
 
-void GtkEdit::SetVisibility(bool visible) {
+void GtkEditImpl::SetVisibility(bool visible) {
   if (visible_ != visible) {
     visible_ = visible;
 
@@ -879,21 +847,18 @@ void GtkEdit::SetVisibility(bool visible) {
   }
 }
 
-bool GtkEdit::IsCursorBlinking() {
+bool GtkEditImpl::IsCursorBlinking() {
   return (focused_ && !readonly_ && selection_bound_ == cursor_);
 }
 
-void GtkEdit::QueueCursorBlink() {
-  GadgetHostInterface *host = view_host_->GetGadgetHost();
-  ASSERT(host);
+void GtkEditImpl::QueueCursorBlink() {
   if (IsCursorBlinking()) {
     if (!cursor_blink_timer_)
-      cursor_blink_timer_ = host->GetMainLoop()->AddTimeoutWatch(
-          kCursorBlinkTimeout,
-          new WatchCallbackSlot(NewSlot(this, &GtkEdit::CursorBlinkCallback)));
+      cursor_blink_timer_ = main_loop_->AddTimeoutWatch(kCursorBlinkTimeout,
+          new WatchCallbackSlot(NewSlot(this, &GtkEditImpl::CursorBlinkCallback)));
   } else {
     if (cursor_blink_timer_) {
-      host->GetMainLoop()->RemoveWatch(cursor_blink_timer_);
+      main_loop_->RemoveWatch(cursor_blink_timer_);
       cursor_blink_timer_ = 0;
     }
 
@@ -901,7 +866,7 @@ void GtkEdit::QueueCursorBlink() {
   }
 }
 
-bool GtkEdit::CursorBlinkCallback(int timer_id) {
+bool GtkEditImpl::CursorBlinkCallback(int timer_id) {
   -- cursor_blink_status_;
   if (cursor_blink_status_ < 0)
     cursor_blink_status_ = 2;
@@ -914,7 +879,7 @@ bool GtkEdit::CursorBlinkCallback(int timer_id) {
   return true;
 }
 
-void GtkEdit::ShowCursor() {
+void GtkEditImpl::ShowCursor() {
   if (!cursor_visible_) {
     cursor_visible_ = true;
     if (focused_ && !readonly_)
@@ -922,7 +887,7 @@ void GtkEdit::ShowCursor() {
   }
 }
 
-void GtkEdit::HideCursor() {
+void GtkEditImpl::HideCursor() {
   if (cursor_visible_) {
     cursor_visible_ = false;
     if (focused_ && !readonly_)
@@ -930,74 +895,66 @@ void GtkEdit::HideCursor() {
   }
 }
 
-void GtkEdit::DrawCursor(CairoCanvas *canvas) {
+void GtkEditImpl::DrawCursor(CairoCanvas *canvas) {
   if (!cursor_visible_ || !focused_) return;
 
-  PangoLayout *layout = EnsureLayout();
-  const char *text = pango_layout_get_text(layout);
-  int cursor_index =
-      g_utf8_offset_to_pointer(text, cursor_ + preedit_cursor_) - text;
-  PangoRectangle strong, weak;
-  pango_layout_get_cursor_pos(layout, cursor_index, &strong, &weak);
-  strong.x = PANGO_PIXELS(strong.x);
-  strong.y = PANGO_PIXELS(strong.y);
-  strong.height = PANGO_PIXELS(strong.height);
-  weak.x = PANGO_PIXELS(weak.x);
-  weak.y = PANGO_PIXELS(weak.y);
-  weak.height = PANGO_PIXELS(weak.height);
+  int strong_x, strong_y, strong_height;
+  int weak_x, weak_y, weak_height;
+  GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
+                            &weak_x, &weak_y, &weak_height);
 
   // Draw strong cursor.
   // TODO: Is the color ok?
-  canvas->DrawLine(strong.x + kInnerBorderX + scroll_offset_x_,
-                   strong.y + kInnerBorderY + scroll_offset_y_,
-                   strong.x + kInnerBorderX + scroll_offset_x_,
-                   strong.y + strong.height + kInnerBorderY + scroll_offset_y_,
+  canvas->DrawLine(strong_x + kInnerBorderX + scroll_offset_x_,
+                   strong_y + kInnerBorderY + scroll_offset_y_,
+                   strong_x + kInnerBorderX + scroll_offset_x_,
+                   strong_y + strong_height + kInnerBorderY + scroll_offset_y_,
                    kStrongCursorWidth, kStrongCursorColor);
   // Draw a small arror towards weak cursor
-  if (strong.x > weak.x) {
+  if (strong_x > weak_x) {
     canvas->DrawLine(
-        strong.x + kInnerBorderX + scroll_offset_x_ - kStrongCursorWidth * 2.5,
-        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
-        strong.x + kInnerBorderX + scroll_offset_x_,
-        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
+        strong_x + kInnerBorderX + scroll_offset_x_ - kStrongCursorWidth * 2.5,
+        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
+        strong_x + kInnerBorderX + scroll_offset_x_,
+        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
         kStrongCursorWidth, kStrongCursorColor);
-  } else if (strong.x < weak.x) {
+  } else if (strong_x < weak_x) {
     canvas->DrawLine(
-        strong.x + kInnerBorderX + scroll_offset_x_,
-        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
-        strong.x + kInnerBorderX + scroll_offset_x_ + kStrongCursorWidth * 2.5,
-        strong.y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
+        strong_x + kInnerBorderX + scroll_offset_x_,
+        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
+        strong_x + kInnerBorderX + scroll_offset_x_ + kStrongCursorWidth * 2.5,
+        strong_y + kInnerBorderY + scroll_offset_y_ + kStrongCursorWidth,
         kStrongCursorWidth, kStrongCursorColor);
   }
 
-  if (strong.x != weak.x ) {
+  if (strong_x != weak_x ) {
     // Draw weak cursor.
     // TODO: Is the color ok?
-    canvas->DrawLine(weak.x + kInnerBorderX + scroll_offset_x_,
-                     weak.y + kInnerBorderY + scroll_offset_y_,
-                     weak.x + kInnerBorderX + scroll_offset_x_,
-                     weak.y + weak.height + kInnerBorderY + scroll_offset_y_,
+    canvas->DrawLine(weak_x + kInnerBorderX + scroll_offset_x_,
+                     weak_y + kInnerBorderY + scroll_offset_y_,
+                     weak_x + kInnerBorderX + scroll_offset_x_,
+                     weak_y + weak_height + kInnerBorderY + scroll_offset_y_,
                      kWeakCursorWidth, kWeakCursorColor);
     // Draw a small arror towards strong cursor
-    if (weak.x > strong.x) {
+    if (weak_x > strong_x) {
       canvas->DrawLine(
-          weak.x + kInnerBorderX + scroll_offset_x_ - kWeakCursorWidth * 2.5,
-          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
-          weak.x + kInnerBorderX + scroll_offset_x_,
-          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
+          weak_x + kInnerBorderX + scroll_offset_x_ - kWeakCursorWidth * 2.5,
+          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
+          weak_x + kInnerBorderX + scroll_offset_x_,
+          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
           kWeakCursorWidth, kWeakCursorColor);
     } else {
       canvas->DrawLine(
-          weak.x + kInnerBorderX + scroll_offset_x_,
-          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
-          weak.x + kInnerBorderX + scroll_offset_x_ + kWeakCursorWidth * 2.5,
-          weak.y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
+          weak_x + kInnerBorderX + scroll_offset_x_,
+          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
+          weak_x + kInnerBorderX + scroll_offset_x_ + kWeakCursorWidth * 2.5,
+          weak_y + kInnerBorderY + scroll_offset_y_ + kWeakCursorWidth,
           kWeakCursorWidth, kWeakCursorColor);
     }
   }
 }
 
-void GtkEdit::DrawText(CairoCanvas *canvas) {
+void GtkEditImpl::DrawText(CairoCanvas *canvas) {
   PangoLayout *layout = EnsureLayout();
 
   cairo_save(canvas->GetContext());
@@ -1085,7 +1042,7 @@ void GtkEdit::DrawText(CairoCanvas *canvas) {
   cairo_restore(canvas->GetContext());
 }
 
-void GtkEdit::MoveCursor(MovementStep step, int count, bool extend_selection) {
+void GtkEditImpl::MoveCursor(MovementStep step, int count, bool extend_selection) {
   ResetImContext();
   int new_pos(0);
   // Clear selection first if not extend it.
@@ -1123,7 +1080,7 @@ void GtkEdit::MoveCursor(MovementStep step, int count, bool extend_selection) {
   QueueRefresh(false);
 }
 
-int GtkEdit::MoveVisually(int current_pos, int count) {
+int GtkEditImpl::MoveVisually(int current_pos, int count) {
   ASSERT(current_pos >= 0 && current_pos <= text_length_);
   ASSERT(count != 0);
   PangoLayout *layout = EnsureLayout();
@@ -1150,7 +1107,7 @@ int GtkEdit::MoveVisually(int current_pos, int count) {
   return current_pos;
 }
 
-int GtkEdit::MoveWords(int current_pos, int count) {
+int GtkEditImpl::MoveWords(int current_pos, int count) {
   ASSERT(current_pos >= 0 && current_pos <= text_length_);
   ASSERT(count != 0);
 
@@ -1201,7 +1158,7 @@ int GtkEdit::MoveWords(int current_pos, int count) {
   return current_pos;
 }
 
-int GtkEdit::MoveDisplayLines(int current_pos, int count) {
+int GtkEditImpl::MoveDisplayLines(int current_pos, int count) {
   ASSERT(current_pos >= 0 && current_pos <= text_length_);
 
   PangoLayout *layout = EnsureLayout();
@@ -1253,7 +1210,7 @@ int GtkEdit::MoveDisplayLines(int current_pos, int count) {
   }
 }
 
-int GtkEdit::MovePages(int current_pos, int count) {
+int GtkEditImpl::MovePages(int current_pos, int count) {
   ASSERT(current_pos >= 0 && current_pos <= text_length_);
   // Transfer pages to display lines.
   PangoLayout *layout = EnsureLayout();
@@ -1265,7 +1222,7 @@ int GtkEdit::MovePages(int current_pos, int count) {
   return MoveDisplayLines(current_pos, count * page_lines);
 }
 
-int GtkEdit::MoveLineEnds(int current_pos, int count) {
+int GtkEditImpl::MoveLineEnds(int current_pos, int count) {
   ASSERT(current_pos >= 0 && current_pos <= text_length_);
   ASSERT(count < 0 || count > 0);
 
@@ -1301,7 +1258,7 @@ int GtkEdit::MoveLineEnds(int current_pos, int count) {
   return g_utf8_pointer_to_offset(text, text + index);
 }
 
-void GtkEdit::SetCursor(int cursor) {
+void GtkEditImpl::SetCursor(int cursor) {
   ResetImContext();
   // If there was a selection range, then the selection range will be cleared.
   // Then content_modified_ shall be set to true to force redrawing the text.
@@ -1311,7 +1268,7 @@ void GtkEdit::SetCursor(int cursor) {
   selection_bound_ = cursor;
 }
 
-int GtkEdit::XYToOffset(int x, int y) {
+int GtkEditImpl::XYToOffset(int x, int y) {
   int width, height;
   PangoLayout *layout = EnsureLayout();
   pango_layout_get_pixel_size(layout, &width, &height);
@@ -1341,7 +1298,7 @@ int GtkEdit::XYToOffset(int x, int y) {
   }
 }
 
-bool GtkEdit::GetSelectionBounds(int *start, int *end) {
+bool GtkEditImpl::GetSelectionBounds(int *start, int *end) {
   if (start)
     *start = std::min(selection_bound_, cursor_);
   if (end)
@@ -1350,7 +1307,7 @@ bool GtkEdit::GetSelectionBounds(int *start, int *end) {
   return(selection_bound_ != cursor_);
 }
 
-void GtkEdit::SetSelectionBounds(int selection_bound, int cursor) {
+void GtkEditImpl::SetSelectionBounds(int selection_bound, int cursor) {
   ResetImContext();
   if (selection_bound_ != selection_bound || cursor_ != cursor)
     content_modified_ = true;
@@ -1358,7 +1315,7 @@ void GtkEdit::SetSelectionBounds(int selection_bound, int cursor) {
   cursor_ = cursor;
 }
 
-void GtkEdit::EnterText(const char *str) {
+void GtkEditImpl::EnterText(const char *str) {
   if (readonly_ || !str || !*str) return;
 
   if (GetSelectionBounds(NULL, NULL)) {
@@ -1379,10 +1336,10 @@ void GtkEdit::EnterText(const char *str) {
   }
 
   ResetLayout();
-  text_changed_signal_();
+  owner_->FireOnChangeEvent();
 }
 
-void GtkEdit::DeleteText(int start, int end) {
+void GtkEditImpl::DeleteText(int start, int end) {
   if (readonly_) return;
 
   if (start < 0)
@@ -1415,71 +1372,73 @@ void GtkEdit::DeleteText(int start, int end) {
   text_length_ -= (end - start);
 
   ResetLayout();
-  text_changed_signal_();
+  owner_->FireOnChangeEvent();
 }
 
-void GtkEdit::SelectWord() {
+void GtkEditImpl::SelectWord() {
   int selection_bound = MoveWords(cursor_, -1);
   int cursor = MoveWords(selection_bound, 1);
   SetSelectionBounds(selection_bound, cursor);
 }
 
-void GtkEdit::SelectLine() {
+void GtkEditImpl::SelectLine() {
   int selection_bound = MoveLineEnds(cursor_, -1);
   int cursor = MoveLineEnds(selection_bound, 1);
   SetSelectionBounds(selection_bound, cursor);
 }
 
-void GtkEdit::SelectAll() {
+void GtkEditImpl::SelectAll() {
   SetSelectionBounds(0, text_length_);
 }
 
-void GtkEdit::DeleteSelection() {
+void GtkEditImpl::DeleteSelection() {
   int start, end;
   if (GetSelectionBounds(&start, &end))
     DeleteText(start, end);
 }
 
-void GtkEdit::CopyClipboard() {
+void GtkEditImpl::CopyClipboard() {
   int start, end;
   if (GetSelectionBounds(&start, &end)) {
-    GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-    ASSERT(widget);
-    if (visible_) {
-      int start_index =
-          g_utf8_offset_to_pointer(text_.c_str(), start) - text_.c_str();
-      int end_index =
-          g_utf8_offset_to_pointer(text_.c_str(), end) - text_.c_str();
-      gtk_clipboard_set_text(
-          gtk_widget_get_clipboard(widget, GDK_SELECTION_CLIPBOARD),
-          text_.c_str() + start_index,
-          end_index - start_index);
-    } else {
-      // Don't copy real content if it's in invisible.
-      std::string content;
-      for (int i = start; i < end; ++i)
-        content.append(password_char_);
-      gtk_clipboard_set_text(
-          gtk_widget_get_clipboard(widget, GDK_SELECTION_CLIPBOARD),
-          content.c_str(), content.length());
+    GtkWidget *widget = GetWidgetAndCursorLocation(NULL);
+    if (widget) {
+      if (visible_) {
+        int start_index =
+            g_utf8_offset_to_pointer(text_.c_str(), start) - text_.c_str();
+        int end_index =
+            g_utf8_offset_to_pointer(text_.c_str(), end) - text_.c_str();
+        gtk_clipboard_set_text(
+            gtk_widget_get_clipboard(widget, GDK_SELECTION_CLIPBOARD),
+            text_.c_str() + start_index,
+            end_index - start_index);
+      } else {
+        // Don't copy real content if it's in invisible.
+        std::string content;
+        for (int i = start; i < end; ++i)
+          content.append(password_char_);
+        gtk_clipboard_set_text(
+            gtk_widget_get_clipboard(widget, GDK_SELECTION_CLIPBOARD),
+            content.c_str(), content.length());
+      }
     }
   }
 }
 
-void GtkEdit::CutClipboard() {
+void GtkEditImpl::CutClipboard() {
   CopyClipboard();
   DeleteSelection();
 }
 
-void GtkEdit::PasteClipboard() {
-  GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-  ASSERT(widget);
-  gtk_clipboard_request_text(
-      gtk_widget_get_clipboard(widget, GDK_SELECTION_CLIPBOARD),
-      PasteCallback, this);
+void GtkEditImpl::PasteClipboard() {
+  GtkWidget *widget = GetWidgetAndCursorLocation(NULL);
+  if (widget) {
+    gtk_clipboard_request_text(
+        gtk_widget_get_clipboard(widget, GDK_SELECTION_CLIPBOARD),
+        PasteCallback, this);
+  }
 }
 
-void GtkEdit::BackSpace() {
+void GtkEditImpl::BackSpace() {
   if (GetSelectionBounds(NULL, NULL)) {
     DeleteSelection();
   } else {
@@ -1488,7 +1447,7 @@ void GtkEdit::BackSpace() {
   }
 }
 
-void GtkEdit::Delete() {
+void GtkEditImpl::Delete() {
   if (GetSelectionBounds(NULL, NULL)) {
     DeleteSelection();
   } else {
@@ -1497,57 +1456,108 @@ void GtkEdit::Delete() {
   }
 }
 
-void GtkEdit::ToggleOverwrite() {
+void GtkEditImpl::ToggleOverwrite() {
   overwrite_ = !overwrite_;
 }
 
-Color GtkEdit::GetSelectionBackgroundColor() {
-  GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-  GtkStyle *style = gtk_widget_get_style(widget);
-  GdkColor *color = NULL;
-  if (style) {
-    color = &style->base[focused_ ? GTK_STATE_SELECTED : GTK_STATE_ACTIVE];
-    return Color(static_cast<double>(color->red) / 65535.0,
-                 static_cast<double>(color->green) / 65535.0,
-                 static_cast<double>(color->blue) / 65535.0);
+Color GtkEditImpl::GetSelectionBackgroundColor() {
+  GtkWidget *widget = GetWidgetAndCursorLocation(NULL);
+  if (widget) {
+    GtkStyle *style = gtk_widget_get_style(widget);
+    if (style) {
+      GdkColor *color =
+          &style->base[focused_ ? GTK_STATE_SELECTED : GTK_STATE_ACTIVE];
+      return Color(static_cast<double>(color->red) / 65535.0,
+                   static_cast<double>(color->green) / 65535.0,
+                   static_cast<double>(color->blue) / 65535.0);
+    }
   }
   return kDefaultSelectionBackgroundColor;
 }
 
-Color GtkEdit::GetSelectionTextColor() {
-  GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-  GtkStyle *style = gtk_widget_get_style(widget);
-  GdkColor *color = NULL;
-  if (style) {
-    color = &style->text[focused_ ? GTK_STATE_SELECTED : GTK_STATE_ACTIVE];
-    return Color(static_cast<double>(color->red) / 65535.0,
-                 static_cast<double>(color->green) / 65535.0,
-                 static_cast<double>(color->blue) / 65535.0);
+Color GtkEditImpl::GetSelectionTextColor() {
+  GtkWidget *widget = GetWidgetAndCursorLocation(NULL);
+  if (widget) {
+    GtkStyle *style = gtk_widget_get_style(widget);
+    if (style) {
+      GdkColor *color =
+          &style->text[focused_ ? GTK_STATE_SELECTED : GTK_STATE_ACTIVE];
+      return Color(static_cast<double>(color->red) / 65535.0,
+                   static_cast<double>(color->green) / 65535.0,
+                   static_cast<double>(color->blue) / 65535.0);
+    }
   }
   return kDefaultSelectionTextColor;
 }
 
-void GtkEdit::GetCursorLocationForIMContext(GdkRectangle *cur) {
-  // TODO: Gets the real cursor location.
-  GtkWidget *widget = GTK_WIDGET(view_host_->GetWidget());
-  if (widget->window) {
-    gdk_drawable_get_size(GDK_DRAWABLE(widget->window), &cur->x, &cur->y);
-    cur->x = 0;
-  } else {
-    cur->x = 0;
-    cur->y = 0;
+GtkWidget *GtkEditImpl::GetWidgetAndCursorLocation(GdkRectangle *cur) {
+  GtkWidget *widget = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
+  if (widget && cur) {
+    int cur_x, cur_y, cur_height;
+    int display_width = width_ - kInnerBorderX * 2;
+    int display_height = height_ - kInnerBorderY * 2;
+    GetCursorLocationInLayout(&cur_x, &cur_y, &cur_height, NULL, NULL, NULL);
+    cur_x = Clamp(cur_x + scroll_offset_x_, 0, display_width);
+    cur_y = Clamp(cur_y + scroll_offset_y_, 0, display_height);
+    double x, y, height;
+    owner_->GetView()->ViewCoordToNativeWidgetCoord(0, cur_height,
+                                                    &x, &height);
+    owner_->SelfCoordToViewCoord(cur_x, cur_y, &x, &y);
+    owner_->GetView()->ViewCoordToNativeWidgetCoord(x, y, &x, &y);
+    cur->x = int(x);
+    cur->y = int(y);
+    cur->width = 0;
+    cur->height = int(ceil(height));
   }
-  cur->width = 0;
-  cur->height = 0;
+  return widget;
 }
 
-void GtkEdit::CommitCallback(GtkIMContext *context, const char *str, void *gg) {
-  reinterpret_cast<GtkEdit*>(gg)->EnterText(str);
-  reinterpret_cast<GtkEdit*>(gg)->QueueRefresh(false);
+void GtkEditImpl::GetCursorLocationInLayout(int *strong_x, int *strong_y,
+                                            int *strong_height,
+                                            int *weak_x, int *weak_y,
+                                            int *weak_height) {
+  PangoLayout *layout = EnsureLayout();
+  const char *text = pango_layout_get_text(layout);
+  size_t cursor_index =
+      g_utf8_offset_to_pointer(text, cursor_ + preedit_cursor_) - text;
+
+  PangoRectangle strong, weak;
+  pango_layout_get_cursor_pos(layout, cursor_index, &strong, &weak);
+
+  if (strong_x)
+    *strong_x = PANGO_PIXELS(strong.x);
+  if (strong_y)
+    *strong_y = PANGO_PIXELS(strong.y);
+  if (strong_height)
+    *strong_height = PANGO_PIXELS(strong.height);
+  if (weak_x)
+    *weak_x = PANGO_PIXELS(weak.x);
+  if (weak_y)
+    *weak_y = PANGO_PIXELS(weak.y);
+  if (weak_height)
+    *weak_height = PANGO_PIXELS(weak.height);
 }
 
-gboolean GtkEdit::RetrieveSurroundingCallback(GtkIMContext *context, void *gg) {
-  GtkEdit *edit = reinterpret_cast<GtkEdit*>(gg);
+void GtkEditImpl::UpdateIMCursorLocation() {
+  if (im_context_) {
+    GdkRectangle cur;
+    GtkWidget *widget = GetWidgetAndCursorLocation(&cur);
+    if (widget && widget->window) {
+      gtk_im_context_set_client_window(im_context_, widget->window);
+      gtk_im_context_set_cursor_location(im_context_, &cur);
+      DLOG("Update IM cursor location: x=%d, y=%d, h=%d",
+           cur.x, cur.y, cur.height);
+    }
+  }
+}
+
+void GtkEditImpl::CommitCallback(GtkIMContext *context, const char *str, void *gg) {
+  reinterpret_cast<GtkEditImpl*>(gg)->EnterText(str);
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false);
+}
+
+gboolean GtkEditImpl::RetrieveSurroundingCallback(GtkIMContext *context, void *gg) {
+  GtkEditImpl *edit = reinterpret_cast<GtkEditImpl*>(gg);
   int index =
     g_utf8_offset_to_pointer(edit->text_.c_str(), edit->cursor_) -
     edit->text_.c_str();
@@ -1556,9 +1566,9 @@ gboolean GtkEdit::RetrieveSurroundingCallback(GtkIMContext *context, void *gg) {
   return TRUE;
 }
 
-gboolean GtkEdit::DeleteSurroundingCallback(GtkIMContext *context, int offset,
+gboolean GtkEditImpl::DeleteSurroundingCallback(GtkIMContext *context, int offset,
                                             int n_chars, void *gg) {
-  GtkEdit *edit = reinterpret_cast<GtkEdit*>(gg);
+  GtkEditImpl *edit = reinterpret_cast<GtkEditImpl*>(gg);
   int start = edit->cursor_ + offset;
   int end = start + n_chars;
   edit->DeleteText(start, end);
@@ -1566,13 +1576,14 @@ gboolean GtkEdit::DeleteSurroundingCallback(GtkIMContext *context, int offset,
   return TRUE;
 }
 
-void GtkEdit::PreeditStartCallback(GtkIMContext *context, void *gg) {
-  reinterpret_cast<GtkEdit*>(gg)->ResetPreedit();
-  reinterpret_cast<GtkEdit*>(gg)->QueueRefresh(false);
+void GtkEditImpl::PreeditStartCallback(GtkIMContext *context, void *gg) {
+  reinterpret_cast<GtkEditImpl*>(gg)->ResetPreedit();
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false);
+  reinterpret_cast<GtkEditImpl*>(gg)->UpdateIMCursorLocation();
 }
 
-void GtkEdit::PreeditChangedCallback(GtkIMContext *context, void *gg) {
-  GtkEdit *edit = reinterpret_cast<GtkEdit*>(gg);
+void GtkEditImpl::PreeditChangedCallback(GtkIMContext *context, void *gg) {
+  GtkEditImpl *edit = reinterpret_cast<GtkEditImpl*>(gg);
   char *str;
   edit->ResetPreedit();
   gtk_im_context_get_preedit_string(context, &str,
@@ -1585,15 +1596,15 @@ void GtkEdit::PreeditChangedCallback(GtkIMContext *context, void *gg) {
   edit->content_modified_ = true;
 }
 
-void GtkEdit::PreeditEndCallback(GtkIMContext *context, void *gg) {
-  reinterpret_cast<GtkEdit*>(gg)->ResetPreedit();
-  reinterpret_cast<GtkEdit*>(gg)->QueueRefresh(false);
+void GtkEditImpl::PreeditEndCallback(GtkIMContext *context, void *gg) {
+  reinterpret_cast<GtkEditImpl*>(gg)->ResetPreedit();
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false);
 }
 
-void GtkEdit::PasteCallback(GtkClipboard *clipboard,
+void GtkEditImpl::PasteCallback(GtkClipboard *clipboard,
                             const gchar *str, void *gg) {
-  reinterpret_cast<GtkEdit*>(gg)->EnterText(str);
-  reinterpret_cast<GtkEdit*>(gg)->QueueRefresh(false);
+  reinterpret_cast<GtkEditImpl*>(gg)->EnterText(str);
+  reinterpret_cast<GtkEditImpl*>(gg)->QueueRefresh(false);
 }
 
 } // namespace gtk

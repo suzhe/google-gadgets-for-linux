@@ -13,33 +13,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if GGL_BUILD_LIBGGADGET_DBUS
+if GGL_BUILD_LIBGGADGET_GTK
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= scriptable_dbus_object.h
+noinst_HEADERS		= gtk_edit_element.h \
+			  gtk_edit_impl.h
 
-extension_LTLIBRARIES	= dbus-script-class.la
+extension_LTLIBRARIES	= gtk-edit-element.la
 extensiondir		= $(GGL_MODULE_DIR)
 
-dbus_script_class_la_SOURCES = \
-			  dbus_script_class.cc \
-			  scriptable_dbus_object.cc
+gtk_edit_element_la_SOURCES = \
+			  gtk_edit_element.cc \
+			  gtk_edit_impl.cc
 
-dbus_script_class_la_CXXFLAGS = \
+gtk_edit_element_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
-dbus_script_class_la_CPPFLAGS = \
-			  @DBUS_CFLAGS@ \
+gtk_edit_element_la_CPPFLAGS = \
+			  @CAIRO_CFLAGS@ \
+			  @PANGO_CFLAGS@ \
+			  @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-dbus_script_class_la_LIBADD = \
-			  @DBUS_LIBS@ \
+gtk_edit_element_la_LIBADD = \
+			  @CAIRO_LIBS@ \
+			  @PANGO_LIBS@ \
+			  @GTK2_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
-dbus_script_class_la_LDFLAGS = \
+gtk_edit_element_la_LDFLAGS = \
 			  -avoid-version \
 			  -module \
 			  -rpath $(libdir)

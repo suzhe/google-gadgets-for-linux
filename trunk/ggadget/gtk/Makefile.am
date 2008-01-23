@@ -31,7 +31,6 @@ endif
 noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
 			  global_file_manager.h \
-			  gtk_edit.h \
 			  gtk_key_convert.h \
 			  gtk_menu_impl.h \
 			  options.h \
@@ -55,7 +54,6 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  global_file_manager.cc \
 			  gadget_view_widget.cc \
 			  gtk_main_loop.cc \
-			  gtk_edit.cc \
 			  gtk_gadget_host.cc \
 			  gtk_key_convert.cc \
 			  gtk_menu_impl.cc \

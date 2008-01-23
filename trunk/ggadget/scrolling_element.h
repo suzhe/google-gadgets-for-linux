@@ -78,7 +78,7 @@ class ScrollingElement : public BasicElement {
 
   /**
    * Overrides because this element supports scrolling.
-   * @see ElementInterface::SelfCoordToChildCoord()
+   * @see BasicElement::SelfCoordToChildCoord()
    *
    * Derived classes shall override this method if they have private children
    * to be handled specially.
@@ -86,6 +86,18 @@ class ScrollingElement : public BasicElement {
   virtual void SelfCoordToChildCoord(const BasicElement *child,
                                      double x, double y,
                                      double *child_x, double *child_y) const;
+
+  /**
+   * Overrides because this element supports scrolling.
+   * @see BasicElement::ChildCoordToSelfCoord()
+   *
+   * Derived classes shall override this method if they have private children
+   * to be handled specially.
+   */
+  virtual void ChildCoordToSelfCoord(const BasicElement *child,
+                                     double x, double y,
+                                     double *self_x, double *self_y) const;
+
 
   /** Register a slot to listen to on-scrolled event.
    * When the scrollbar is scrolled by user, this slot will be called.

@@ -104,7 +104,7 @@ void Memory::ReadMemInfoFromProc() {
 
     for (int i = 0; i < MEM_INFO_COUNT; ++i) {
       if (key == kKeysInMemInfo[i]) {
-        mem_info_[i] = strtoll(value.c_str(), NULL, 10);
+        mem_info_[i] = strtoll(value.c_str(), NULL, 10) * 1024;
         break;
       }
     }

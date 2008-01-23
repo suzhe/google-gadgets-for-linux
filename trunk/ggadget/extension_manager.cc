@@ -106,6 +106,7 @@ class ExtensionManager::Impl {
       }
 
       extensions_[name_str] = extension;
+      LOG("Extension %s was loaded successfully.", name);
       return extension;
     }
     return NULL;

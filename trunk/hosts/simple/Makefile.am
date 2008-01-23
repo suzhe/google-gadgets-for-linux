@@ -48,15 +48,23 @@ ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 
 # TODO: install these files into correct path.
 all-local:
-	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz_browser_child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz_browser_child .
-	[ ! -f $(top_builddir)/resources/ggl_resources.bin ] || cp $(top_builddir)/resources/ggl_resources.bin .
+	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child .
+	[ ! -f $(top_builddir)/resources/ggl-resources.bin ] || cp $(top_builddir)/resources/ggl-resources.bin .
 
 noinst_SCRIPTS=ggl-simple.sh
 
 .PHONY: ggl-simple.sh
 
 ggl-simple.sh: ggl-simple
-	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class:$(abs_top_builddir)/extensions/gtkmoz_browser_element\
-	 $(LIBTOOL) --mode=execute $(abs_builddir)/ggl-simple '$$@' > $@)
+	(echo '#!/bin/sh' > $@; \
+	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
+	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \
+	 echo '  if test -d $$i; then' >> $@; \
+	 echo '    GGL_MODULE_PATH=$$GGL_MODULE_PATH:$$i' >> $@; \
+	 echo '  fi' >> $@; \
+	 echo 'done' >> $@; \
+	 echo 'export GGL_MODULE_PATH' >> $@; \
+	 echo '$(LIBTOOL) --mode=execute $$MEMCHECK_COMMAND $(abs_builddir)/ggl-simple $$@' >> $@; \
+	 chmod 0755 $@)
 
 endif

@@ -19,7 +19,7 @@
 #include "combobox_element.h"
 #include "canvas_interface.h"
 #include "logger.h"
-#include "edit_element.h"
+#include "edit_element_base.h"
 #include "elements.h"
 #include "event.h"
 #include "listbox_element.h"
@@ -31,6 +31,7 @@
 #include "scriptable_event.h"
 #include "view.h"
 #include "graphics_interface.h"
+#include "element_factory.h"
 
 namespace ggadget {
 
@@ -108,10 +109,16 @@ class ComboBoxElement::Impl {
   }
 
   void CreateEdit() {
-    edit_ = new EditElement(owner_, owner_->GetView(), "");
+    ElementFactory *factory = owner_->GetView()->GetElementFactory();
+    edit_ = down_cast<EditElementBase*>(
+        factory->CreateElement("edit", owner_, owner_->GetView(), ""));
     update_edit_value_ = true;
-    edit_->ConnectOnChangeEvent(NewSlot(this, &Impl::TextChanged));
-    edit_->SetImplicit(true);
+    if (edit_) {
+      edit_->ConnectOnChangeEvent(NewSlot(this, &Impl::TextChanged));
+      edit_->SetImplicit(true);
+    } else {
+      LOG("Failed to create EditElement.");
+    }
   }
 
   void TextChanged() {
@@ -184,7 +191,7 @@ class ComboBoxElement::Impl {
   int maxitems_;
   bool keyboard_;
   ListBoxElement *listbox_;
-  EditElement *edit_; // is NULL if and only if COMBO_DROPLIST mode
+  EditElementBase *edit_; // is NULL if and only if COMBO_DROPLIST mode
   bool button_over_, button_down_;
   bool update_edit_value_;
   ImageInterface *button_up_img_, *button_down_img_, *button_over_img_;
@@ -336,11 +343,11 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
   }
 }
 
-EditElement *ComboBoxElement::GetEdit() {
+EditElementBase *ComboBoxElement::GetEdit() {
   return impl_->edit_;
 }
 
-const EditElement *ComboBoxElement::GetEdit() const {
+const EditElementBase *ComboBoxElement::GetEdit() const {
   return impl_->edit_;
 }
 

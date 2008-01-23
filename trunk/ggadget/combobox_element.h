@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-class EditElement;
+class EditElementBase;
 class ListBoxElement;
 
 class ComboBoxElement : public BasicElement {
@@ -67,8 +67,8 @@ class ComboBoxElement : public BasicElement {
   Variant GetBackground() const;
   void SetBackground(const Variant &background);
 
-  EditElement *GetEdit();
-  const EditElement *GetEdit() const;
+  EditElementBase *GetEdit();
+  const EditElementBase *GetEdit() const;
   ListBoxElement *GetListBox();
   const ListBoxElement *GetListBox() const;
 
