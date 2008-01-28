@@ -119,11 +119,6 @@ class Elements::Impl {
     return GetItemByIndex(GetIndexByName(name));
   }
 
-  Variant GetItemByNameVariant(const char *name) {
-    BasicElement *result = GetItemByName(name);
-    return result ? Variant(result) : Variant();
-  }
-
   int GetIndexByName(const char *name) {
     if (name == NULL || strlen(name) == 0)
       return -1;
@@ -349,16 +344,14 @@ class Elements::Impl {
 Elements::Elements(ElementFactory *factory,
                    BasicElement *owner, View *view)
     : impl_(new Impl(factory, owner, view)) {
+}
+
+void Elements::DoRegister() {
   RegisterProperty("count", NewSlot(impl_, &Impl::GetCount), NULL);
   RegisterMethod("item", NewSlot(impl_, &Impl::GetItem));
   // Register the "default" method, allowing this object be called directly
   // as a function.
   RegisterMethod("", NewSlot(impl_, &Impl::GetItem));
-  // Disable the following for now, because they are not in the public
-  // API document.
-  // SetArrayHandler(NewSlot(impl_, &Impl::GetItemByIndex), NULL);
-  // SetDynamicPropertyHandler(NewSlot(impl_, &Impl::GetItemByNameVariant),
-  //                           NULL);
 }
 
 Elements::~Elements() {
@@ -366,40 +359,33 @@ Elements::~Elements() {
 }
 
 int Elements::GetCount() const {
-  ASSERT(impl_);
   return impl_->GetCount();
 }
 
 BasicElement *Elements::GetItemByIndex(int child) {
-  ASSERT(impl_);
   return impl_->GetItemByIndex(child);
 }
 
 BasicElement *Elements::GetItemByName(const char *child) {
-  ASSERT(impl_);
   return impl_->GetItemByName(child);
 }
 
 const BasicElement *Elements::GetItemByIndex(int child) const {
-  ASSERT(impl_);
   return impl_->GetItemByIndex(child);
 }
 
 const BasicElement *Elements::GetItemByName(const char *child) const {
-  ASSERT(impl_);
   return impl_->GetItemByName(child);
 }
 
 BasicElement *Elements::AppendElement(const char *tag_name,
                                           const char *name) {
-  ASSERT(impl_);
   return impl_->AppendElement(tag_name, name);
 }
 
 BasicElement *Elements::InsertElement(const char *tag_name,
                                           const BasicElement *before,
                                           const char *name) {
-  ASSERT(impl_);
   return impl_->InsertElement(tag_name, before, name);
 }
 

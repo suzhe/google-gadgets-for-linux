@@ -64,11 +64,12 @@ class ScriptableFramework::Impl {
         system_(gadget_host) {
   }
 
-  class PermanentScriptable : public ScriptableHelperNativePermanent {
+  class PermanentScriptable : public ScriptableHelperNativeOwnedDefault {
+   public:
     DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
   };
 
-  class ScriptableAudioclip : public ScriptableHelperOwnershipShared {
+  class ScriptableAudioclip : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0xa9f42ea54e2a4d13, ScriptableInterface);
     ScriptableAudioclip(AudioclipInterface *clip)
@@ -117,8 +118,10 @@ class ScriptableFramework::Impl {
         onstatechange_signal_;
   };
 
-  class Audio : public PermanentScriptable {
+  class Audio : public ScriptableHelperNativeOwnedDefault {
    public:
+    DEFINE_CLASS_ID(0x7f460413b19241fe, ScriptableInterface);
+
     Audio(GadgetHostInterface *gadget_host)
         : framework_(gadget_host->GetFramework()),
           file_manager_(gadget_host->GetFileManager()) {
@@ -171,7 +174,7 @@ class ScriptableFramework::Impl {
     FileManagerInterface *file_manager_;
   };
 
-  class Graphics : public PermanentScriptable {
+  class Graphics : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x211b114e852e4a1b, ScriptableInterface);
     Graphics(GadgetHostInterface *gadget_host)
@@ -200,7 +203,7 @@ class ScriptableFramework::Impl {
     GadgetHostInterface *gadget_host_;
   };
 
-  class ScriptableWirelessAccessPoint : public ScriptableHelperOwnershipShared {
+  class ScriptableWirelessAccessPoint : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0xcf8c688383b54c43, ScriptableInterface);
     ScriptableWirelessAccessPoint(WirelessAccessPointInterface *ap)
@@ -241,7 +244,7 @@ class ScriptableFramework::Impl {
     WirelessAccessPointInterface *ap_;
   };
 
-  class System : public PermanentScriptable {
+  class System : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x81227fff6f63494a, ScriptableInterface);
     System(GadgetHostInterface *gadget_host) :

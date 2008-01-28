@@ -29,6 +29,9 @@ class DivElement : public ScrollingElement {
   DivElement(BasicElement *parent, View *view, const char *name);
   virtual ~DivElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   /**
    * Gets and sets the background color or image of the element. The image is

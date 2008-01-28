@@ -34,10 +34,13 @@ class ScriptableArray::Impl {
 
 ScriptableArray::ScriptableArray(Variant *array, size_t count)
     : impl_(new Impl(this, array, count)) {
-  RegisterConstant("count", count);
+}
+
+void ScriptableArray::DoRegister() {
+  RegisterConstant("count", impl_->count_);
   RegisterMethod("item", NewSlot(this, &ScriptableArray::GetItem));
   // Simulates JavaScript array.
-  RegisterConstant("length", count);
+  RegisterConstant("length", impl_->count_);
   SetArrayHandler(NewSlot(this, &ScriptableArray::GetItem), NULL);
   // Simulates VBArray.
   RegisterMethod("toArray", NewSlot(impl_, &Impl::ToArray));

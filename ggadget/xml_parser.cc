@@ -480,7 +480,7 @@ class XMLParser : public XMLParserInterface {
                                    std::string *encoding,
                                    std::string *utf8_content) {
     bool result = true;
-
+    xmlLineNumbersDefault(1);
     // Check if the content is XML according to XMLHttpRequest standard rule. 
     int content_type_len = content_type ? strlen(content_type) : 0;
     if (content_type_len == 0 ||

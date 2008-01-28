@@ -22,6 +22,9 @@ namespace ggadget {
 
 ScriptableMenu::ScriptableMenu(MenuInterface *menu)
     : menu_(menu) {
+}
+
+void ScriptableMenu::DoRegister() {
   RegisterMethod("AddItem", NewSlot(this, &ScriptableMenu::ScriptAddItem));
   RegisterMethod("SetItemStyle", NewSlot(menu_, &MenuInterface::SetItemStyle));
   RegisterMethod("AddPopup", NewSlot(this, &ScriptableMenu::ScriptAddPopup));

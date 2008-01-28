@@ -30,6 +30,11 @@
 // #define DEBUG_FORCE_GC
 #endif
 
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+#include <jscntxt.h>
+#include <jsdhash.h>
+#endif
+
 namespace ggadget {
 namespace smjs {
 
@@ -50,12 +55,10 @@ JSClass NativeJSWrapper::wrapper_js_class_ = {
 NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
                                  JSObject *js_object,
                                  ScriptableInterface *scriptable)
-    : detached_(false),
-      js_context_(js_context),
+    : js_context_(js_context),
       js_object_(js_object),
       scriptable_(NULL),
-      on_reference_change_connection_(NULL),
-      ownership_policy_(ScriptableInterface::NATIVE_OWNED) {
+      on_reference_change_connection_(NULL) {
   ASSERT(js_object);
 
   // Store this wrapper into the JSObject's private slot.
@@ -66,14 +69,36 @@ NativeJSWrapper::NativeJSWrapper(JSContext *js_context,
 }
 
 NativeJSWrapper::~NativeJSWrapper() {
-  if (!detached_) {
+  if (scriptable_) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-    DLOG("Delete: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
-         js_context_, ownership_policy_, js_object_, this, name_.c_str());
+    DLOG("Delete: cx=%p jsobj=%p wrapper=%p scriptable=%s refcount=%d",
+         js_context_, js_object_, this, name_.c_str(),
+         scriptable_->GetRefCount());
 #endif
-    DetachJS();
+    DetachJS(false);
   }
 }
+
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+JS_STATIC_DLL_CALLBACK(JSDHashOperator) PrintRoot(JSDHashTable *table,
+                                                  JSDHashEntryHdr *hdr,
+                                                  uint32 number, void *arg) {
+  JSGCRootHashEntry *rhe = reinterpret_cast<JSGCRootHashEntry *>(hdr);
+  jsval *rp = reinterpret_cast<jsval *>(rhe->root);
+  DLOG("%d: name=%s address=%p value=%p",
+       number, rhe->name, rp, JSVAL_TO_OBJECT(*rp));
+  return JS_DHASH_NEXT;
+}
+
+static void DebugRoot(JSContext *cx) {
+  DLOG("============== Roots ================");
+  JSRuntime *rt = JS_GetRuntime(cx);
+  JS_DHashTableEnumerate(&rt->gcRootsHash, PrintRoot, cx);
+  DLOG("=========== End of Roots ============");
+}
+#else
+#define DebugRoot(cx)
+#endif
 
 void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
   ASSERT(scriptable && !scriptable_);
@@ -81,20 +106,23 @@ void NativeJSWrapper::Wrap(ScriptableInterface *scriptable) {
   name_ = StringPrintf("%p(CLASS_ID=%jx)",
                        scriptable, scriptable->GetClassId());
 
+  if (scriptable->GetRefCount() > 0) {
+    // There must be at least one native reference, let JavaScript know it
+    // by adding the object to root.
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+    DLOG("AddRoot: cx=%p jsobjaddr=%p jsobj=%p wrapper=%p scriptable=%s",
+         js_context_, &js_object_, js_object_, this, name_.c_str());
+#endif
+    JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
+    DebugRoot(js_context_);
+  }
+  scriptable->Ref();
   on_reference_change_connection_ = scriptable->ConnectOnReferenceChange(
       NewSlot(this, &NativeJSWrapper::OnReferenceChange));
-  ownership_policy_ = scriptable->Attach();
-  
-  // If the object is native owned, the script side should not delete the
-  // object unless the native side tells it to do.
-  if (ownership_policy_ == ScriptableInterface::NATIVE_OWNED ||
-      ownership_policy_ == ScriptableInterface::NATIVE_PERMANENT) {
-    JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
-  }
 
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("Wrap: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
-       js_context_, ownership_policy_, js_object_, this, name_.c_str());
+  DLOG("Wrap: cx=%p jsobj=%p wrapper=%p scriptable=%s refcount=%d",
+       js_context_, js_object_, this, name_.c_str(), scriptable->GetRefCount());
 #ifdef DEBUG_FORCE_GC
   // This GC forces many hidden memory allocation errors to expose.
   DLOG("ForceGC");
@@ -141,7 +169,7 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
 }
 
 JSBool NativeJSWrapper::CheckNotDeleted() {
-  if (detached_) {
+  if (!scriptable_) {
     JS_ReportError(js_context_, "Native object has been deleted");
     return JS_FALSE;
   }
@@ -251,11 +279,11 @@ void NativeJSWrapper::FinalizeWrapper(JSContext *cx, JSObject *obj) {
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
   if (wrapper) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-    DLOG("Finalize: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
-         cx, wrapper->ownership_policy_, obj, wrapper, wrapper->name_.c_str());
+    DLOG("Finalize: cx=%p jsobj=%p wrapper=%p scriptable=%s",
+         cx, obj, wrapper, wrapper->name_.c_str());
 #endif
 
-    if (!wrapper->detached_) {
+    if (wrapper->scriptable_) {
       // The current context may be different from wrapper's context during
       // GC collecting. Use the wrapper's context instead.
       JSScriptContext::FinalizeNativeJSWrapper(wrapper->js_context_, wrapper);
@@ -272,39 +300,40 @@ uint32 NativeJSWrapper::MarkWrapper(JSContext *cx, JSObject *obj, void *arg) {
   // The current context may be different from wrapper's context during
   // GC marking.
   NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
-  if (wrapper && !wrapper->detached_)
+  if (wrapper && wrapper->scriptable_)
     wrapper->Mark();
   return 0;
 }
 
-void NativeJSWrapper::DetachJS() {
+void NativeJSWrapper::DetachJS(bool caused_by_native) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("DetachJS: cx=%p policy=%d jsobj=%p wrapper=%p scriptable=%s",
-       js_context_, ownership_policy_, js_object_, this, name_.c_str());
+  DLOG("DetachJS: cx=%p jsobj=%p wrapper=%p scriptable=%s refcount=%d",
+       js_context_, js_object_, this, name_.c_str(),
+       scriptable_->GetRefCount());
 #endif
 
   on_reference_change_connection_->Disconnect();
-  scriptable_->Detach();
-  detached_ = true;
+  scriptable_->Unref(caused_by_native);
+  scriptable_ = NULL;
 
   JS_RemoveRoot(js_context_, &js_object_);
+  DebugRoot(js_context_);
 }
 
 void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
 #ifdef DEBUG_JS_WRAPPER_MEMORY
-  DLOG("OnReferenceChange(%d,%d): cx=%p policy=%d jsobj=%p wrapper=%p "
-       "scriptable=%s", ref_count, change, js_context_,
-       ownership_policy_, js_object_, this, name_.c_str());
+  DLOG("OnReferenceChange(%d,%d): cx=%p jsobj=%p wrapper=%p scriptable=%s",
+       ref_count, change, js_context_, js_object_, this, name_.c_str());
 #endif
 
   if (ref_count == 0 && change == 0) {
-    // As the native side has deleted the object, now the script side can also
-    // delete it if there is no other active references. 
-    DetachJS();
-  
     // Remove the wrapper mapping from the context, but leave this wrapper
     // alive to accept mistaken JavaScript calls gracefully.
     JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
+
+    // As the native side is deleting the object, now the script side can also
+    // delete it if there is no other active references. 
+    DetachJS(true);
 
 #ifdef DEBUG_JS_WRAPPER_MEMORY
 #ifdef DEBUG_FORCE_GC
@@ -315,15 +344,24 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
 #endif
   } else {
     ASSERT(change == 1 || change == -1);
-    if (change == 1 && ref_count > 0) {
+    if (change == 1 && ref_count == 1) {
       // There must be at least one native reference, let JavaScript know it
       // by adding the object to root.
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+      DLOG("AddRoot: cx=%p jsobjaddr=%p jsobj=%p wrapper=%p scriptable=%s",
+           js_context_, &js_object_, js_object_, this, name_.c_str());
+#endif
       JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
-    }
-    if (change == -1 && ref_count == 2) {
+      DebugRoot(js_context_);
+    } else if (change == -1 && ref_count == 2) {
       // The last native reference is about to be released, let JavaScript know
       // it by removing the root reference.
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+      DLOG("RemoveRoot: cx=%p jsobjaddr=%p jsobj=%p wrapper=%p scriptable=%s",
+           js_context_, &js_object_, js_object_, this, name_.c_str());
+#endif
       JS_RemoveRoot(js_context_, &js_object_);
+      DebugRoot(js_context_);
     }
   }
 }
@@ -725,7 +763,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
     return JS_DefineProperty(js_context_, js_object_, name, js_val,
                              GetWrapperPropertyByName,
                              SetWrapperPropertyByName,
-                             0);
+                             JSPROP_SHARED);
   }
 
   if (int_id < 0 && int_id >= -128) {
@@ -737,7 +775,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
                                        static_cast<int8>(int_id), js_val,
                                        GetWrapperPropertyByIndex,
                                        SetWrapperPropertyByIndex,
-                                       JSPROP_PERMANENT);
+                                       JSPROP_PERMANENT | JSPROP_SHARED);
   }
 
   // Too many properties, can't register all with tiny id.  The rest are
@@ -745,7 +783,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   return JS_DefineProperty(js_context_, js_object_, name, js_val,
                            GetWrapperPropertyByName,
                            SetWrapperPropertyByName,
-                           JSPROP_PERMANENT);
+                           JSPROP_PERMANENT | JSPROP_SHARED);
 }
 
 void NativeJSWrapper::AddJSFunctionSlot(JSFunctionSlot *slot) {
@@ -757,6 +795,11 @@ void NativeJSWrapper::RemoveJSFunctionSlot(JSFunctionSlot *slot) {
 }
 
 void NativeJSWrapper::Mark() {
+#ifdef DEBUG_JS_WRAPPER_MEMORY
+  DLOG("Mark: cx=%p jsobj=%p wrapper=%p scriptable=%s refcount=%d",
+       js_context_, js_object_, this, name_.c_str(),
+       scriptable_->GetRefCount());
+#endif
   for (JSFunctionSlots::const_iterator it = js_function_slots_.begin();
        it != js_function_slots_.end(); ++it)
     (*it)->Mark();

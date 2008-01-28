@@ -53,18 +53,6 @@ class ComboBoxElement::Impl {
         button_down_img_(view->LoadImageFromGlobal(kScrollDefaultRightDown, false)),
         button_over_img_(view->LoadImageFromGlobal(kScrollDefaultRightOver, false)),
         background_(NULL) {
-    // Register container methods since combobox is really a container.
-    Elements *elements = listbox_->GetChildren();
-    owner_->RegisterConstant("children", elements);
-    owner_->RegisterMethod("appendElement",
-                           NewSlot(elements, &Elements::AppendElementFromXML));
-    owner_->RegisterMethod("insertElement",
-                           NewSlot(elements, &Elements::InsertElementFromXML));
-    owner_->RegisterMethod("removeElement",
-                           NewSlot(elements, &Elements::RemoveElement));
-    owner_->RegisterMethod("removeAllElements",
-                           NewSlot(elements, &Elements::RemoveAllElements));
-
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
     listbox_->SetAutoscroll(true);
@@ -182,8 +170,7 @@ class ComboBoxElement::Impl {
   void MarkRedraw() {
     if (edit_)
       edit_->MarkRedraw();
-    if (listbox_)
-      listbox_->MarkRedraw();
+    listbox_->MarkRedraw();
   }
 
   ComboBoxElement *owner_;
@@ -204,10 +191,26 @@ ComboBoxElement::ComboBoxElement(BasicElement *parent, View *view,
     : BasicElement(parent, view, "combobox", name, false),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
+}
 
+void ComboBoxElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("background",
                    NewSlot(this, &ComboBoxElement::GetBackground),
                    NewSlot(this, &ComboBoxElement::SetBackground));
+
+  // Register container methods since combobox is really a container.
+  Elements *elements = impl_->listbox_->GetChildren();
+  RegisterConstant("children", elements);
+  RegisterMethod("appendElement",
+                 NewSlot(elements, &Elements::AppendElementFromXML));
+  RegisterMethod("insertElement",
+                 NewSlot(elements, &Elements::InsertElementFromXML));
+  RegisterMethod("removeElement",
+                 NewSlot(elements, &Elements::RemoveElement));
+  RegisterMethod("removeAllElements",
+                 NewSlot(elements, &Elements::RemoveAllElements));
+
   RegisterProperty("itemHeight",
                    NewSlot(impl_->listbox_, &ListBoxElement::GetItemHeight),
                    NewSlot(impl_->listbox_, &ListBoxElement::SetItemHeight));

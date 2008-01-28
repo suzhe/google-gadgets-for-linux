@@ -34,14 +34,18 @@ class TextFrame {
 
   /** Gets and sets the text of the frame. */
   std::string GetText() const;
-  /** Returns @c true if the text changed. */
-  bool SetText(const char *text);
-  
+  /**
+   * Returns @c true if the text changed.
+   * Use std::string as the parameter type to allow arbitrary binary data.
+   * Some gadgets (such as gmail gadget) relies on this
+   */
+  bool SetText(const std::string &text);
+
   void DrawWithTexture(CanvasInterface *canvas, double x, double y, 
                        double width, double height, Texture *texture);
   void Draw(CanvasInterface *canvas, double x, double y, 
             double width, double height);
-  
+
   /** 
    * Returns the width and height required to display the text 
    * without wrapping or trimming.

@@ -23,7 +23,7 @@ namespace ggadget {
 
 class OptionsInterface;
 
-class ScriptableOptions : public ScriptableHelperNativePermanent {
+class ScriptableOptions : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x1a7bc9215ef74743, ScriptableInterface)
 
@@ -35,6 +35,10 @@ class ScriptableOptions : public ScriptableHelperNativePermanent {
   ScriptableOptions(OptionsInterface *options, bool raw_objects);
   virtual ~ScriptableOptions();
 
+ protected:
+  virtual void DoRegister();
+
+ public:
   const OptionsInterface *GetOptions() const;
   OptionsInterface *GetOptions();
 

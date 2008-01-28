@@ -39,7 +39,7 @@ JSScriptContext::~JSScriptContext() {
   // Don't report errors during shutdown because the state may be inconsistent.
   JS_SetErrorReporter(context_, NULL);
   // Remove the return value protection reference.
-  // See comments in WrapJSObjectToNative() for details.  
+  // See comments in WrapJSObjectToNative() for details.
   JS_DeleteProperty(context_, JS_GetGlobalObject(context_),
                     kGlobalReferenceName);
 
@@ -49,16 +49,14 @@ JSScriptContext::~JSScriptContext() {
   while (!native_js_wrapper_map_.empty()) {
     NativeJSWrapperMap::iterator it = native_js_wrapper_map_.begin();
     NativeJSWrapper *wrapper = it->second;
-    if (wrapper->ownership_policy() != ScriptableInterface::NATIVE_PERMANENT) {
-      DLOG("POSSIBLE LEAK (Use NATIVE_PERMANENT if possible and it's not a real"
-           " leak): policy=%d jsobj=%p wrapper=%p scriptable=%p(CLASS_ID=%jx)",
-           wrapper->ownership_policy(), wrapper->js_object(), wrapper,
-           wrapper->scriptable(), wrapper->scriptable()->GetClassId());
+    if (wrapper->scriptable()->GetRefCount() > 1) {
+      DLOG("Still referenced by native: jsobj=%p wrapper=%p scriptable=%s"
+           " refcount=%d", wrapper->js_object(), wrapper,
+           wrapper->name().c_str(), wrapper->scriptable()->GetRefCount());
     }
-
-    // Inform the wrapper to detach from JavaScript so that it can be GC'ed.
     native_js_wrapper_map_.erase(it);
-    wrapper->DetachJS();
+    // Inform the wrapper to detach from JavaScript so that it can be GC'ed.
+    wrapper->DetachJS(false);
   }
 
   JS_DestroyContext(context_);

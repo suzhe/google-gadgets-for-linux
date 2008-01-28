@@ -46,7 +46,7 @@ static const char *kExceptionNames[] = {
     "INUSE_ATTRIBUTE_ERR",
 };
 
-class GlobalException : public ScriptableHelper<ScriptableInterface> {
+class GlobalException : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x81f363ca1c034f39, ScriptableInterface);
   static GlobalException *Get() {
@@ -75,7 +75,7 @@ static const char *kNodeTypeNames[] = {
     "NOTATION_NODE",
 };
 
-class GlobalNode : public ScriptableHelper<ScriptableInterface> {
+class GlobalNode : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x2a9d299fb51c4070, ScriptableInterface);
   static GlobalNode *Get() {
@@ -88,13 +88,13 @@ class GlobalNode : public ScriptableHelper<ScriptableInterface> {
   }
 };
 
-class DOMException : public ScriptableHelperOwnershipShared {
+class DOMException : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x6486921444b44784, ScriptableInterface);
 
   DOMException(DOMExceptionCode code) : code_(code) {
     RegisterSimpleProperty("code", &code_);
-    SetPrototype(GlobalException::Get());
+    SetInheritsFrom(GlobalException::Get());
   }
 
  private:
@@ -126,12 +126,10 @@ static DOMExceptionCode CheckCommonChildType(DOMNodeInterface *new_child) {
   return DOM_NO_ERR;
 }
 
-class DOMNodeListBase :
-    public ScriptableHelper<DOMNodeListInterface,
-                            ScriptableInterface::OWNERSHIP_SHARED> {
+class DOMNodeListBase : public ScriptableHelper<DOMNodeListInterface> {
  public:
   using DOMNodeListInterface::GetItem;
-  DOMNodeListBase() {
+  virtual void DoRegister() {
     DOMNodeListInterface *super_ptr =
         implicit_cast<DOMNodeListInterface *>(this);
     RegisterProperty("length",
@@ -151,17 +149,10 @@ class ElementsByTagName : public DOMNodeListBase {
       : node_(node),
         name_(name ? name : ""),
         wildcard_(name && name[0] == '*' && name[1] == '\0') {
+    node->Ref();
   }
-
-  // ElementsByTagName is not reference counted. The Attach() and Detach()
-  // methods are only for the script adapter.
-  virtual OwnershipPolicy Attach() {
-    node_->Attach();
-    return DOMNodeListBase::Attach();
-  }
-  virtual bool Detach() {
-    node_->Detach();
-    return DOMNodeListBase::Detach();
+  virtual ~ElementsByTagName() {
+    node_->Unref();
   }
 
   virtual DOMNodeInterface *GetItem(size_t index) {
@@ -268,8 +259,7 @@ class DOMNodeImpl {
         owner_document_(owner_document),
         parent_(NULL),
         owner_node_(NULL),
-        row_(0), column_(0),
-        ref_count_(0) {
+        row_(0), column_(0) {
     ASSERT(name && *name);
     if (!SplitString(name, ":", &prefix_, &local_name_)) {
       ASSERT(local_name_.empty());
@@ -280,56 +270,23 @@ class DOMNodeImpl {
       ASSERT(owner_document_);
       // Any newly created node has no parent and thus is orphan. Increase the
       // document orphan count.
-      owner_document_->Attach();
+      owner_document_->Ref();
     }
   }
 
   virtual ~DOMNodeImpl() {
-    ASSERT(ref_count_ == 0);
-
     if (!owner_node_ && owner_document_) {
       // The node is still an orphan. Remove the document orphan count.
-      owner_document_->Detach();
+      owner_document_->Unref();
     }
 
     for (Children::iterator it = children_.begin();
-         it != children_.end(); ++it)
+         it != children_.end(); ++it) {
+      // At this time, the refcount of all children should have already been
+      // reached 0 but not deleted because the last ref was removed transiently.
       delete *it;
+    }
     children_.clear();
-  }
-
-  // Called when a tree is appended to this node or one of its descendants.
-  void AttachMulti(int count) {
-    ASSERT(ref_count_ >= 0 && count >= 0);
-    if (count > 0) {
-      ref_count_ += count;
-      if (owner_node_) {
-        // Increase the reference count along the path to the root.
-        owner_node_->GetImpl()->AttachMulti(count);
-      }
-    }
-  }
-
-  // Called when a tree is removed from this node or one of its descendants.
-  // If transient is true, the node will not be deleted even if the reference
-  // count reaches zero. This is useful to return nodes from methods like
-  // RemoveXXX() and ReplaceXXX().
-  bool DetachMulti(int count, bool transient) {
-    ASSERT(ref_count_ >= count && count >= 0);
-    if (count > 0) {
-      ref_count_ -= count;
-      if (owner_node_) {
-        // Decrease the reference count along the path to the root.
-        owner_node_->GetImpl()->DetachMulti(count, transient);
-      } else if (ref_count_ == 0 && !transient) {
-        // Only the root can delete the whole tree. Because the reference count
-        // are accumulated, root's ref_count_ == 0 means all decendents's
-        // ref_count_ == 0, thus the whole tree can be safely deleted.
-        delete node_;
-        return true;
-      }
-    }
-    return false;
   }
 
   DOMNodeListInterface *GetChildNodes() {
@@ -564,25 +521,23 @@ class DOMNodeImpl {
                                        DOMNodeInterface *old_child) {
     // Add a transient reference to avoid the node from being deleted.
     if (old_child)
-      old_child->Attach();
+      old_child->Ref();
     DOMExceptionCode code = ReplaceChild(new_child, old_child);
     // Remove the transient reference but still keep the node if there is no
     // error.
     if (old_child)
-      old_child->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-
+      old_child->Unref(code == DOM_NO_ERR);
     return callbacks_->CheckException(code) ? old_child : NULL;
   }
 
   DOMNodeInterface *ScriptRemoveChild(DOMNodeInterface *old_child) {
     // Add a transient reference to avoid the node from being deleted.
     if (old_child)
-      old_child->Attach();
+      old_child->Ref();
     DOMExceptionCode code = RemoveChild(old_child);
     // Remove the transient reference but still keep the node.
     if (old_child)
-      old_child->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-
+      old_child->Unref(code == DOM_NO_ERR);
     return callbacks_->CheckException(code) ? old_child : NULL;
   }
 
@@ -600,29 +555,35 @@ class DOMNodeImpl {
   // is an exception, whose owner node is the owner element.
   void SetOwnerNode(DOMNodeInterface *new_owner) {
     if (owner_node_ != new_owner) {
+      int ref_count = node_->GetRefCount();
       if (owner_node_) {
         // This node is detached from the old owner node.
-        owner_node_->GetImpl()->DetachMulti(ref_count_, false);
+        for (int i = 0; i < ref_count; i++)
+          owner_node_->Unref();
+
         if (!new_owner) {
           // This node becomes a new orphan.
-          if (ref_count_ == 0) {
+          if (node_->GetRefCount() == 0) {
             // This orphan is not referenced, delete it now.
             delete node_;
             return;
           } else {
             // This orphan is still referenced. Increase the document
             // orphan count.
-            owner_document_->Attach();
+            owner_document_->Ref();
           }
         }
       }
 
       if (new_owner) {
         // This node is attached to the new owner node.
-        new_owner->GetImpl()->AttachMulti(ref_count_);
+        for (int i = 0; i < ref_count; i++)
+          new_owner->Ref();
+
         if (!owner_node_) {
-          // The node is not orphan now, so decrease the document orphan count.
-          owner_document_->Detach();
+          // The node is no longer orphan root, so decrease the document
+          // orphan count.
+          owner_document_->Unref();
         }
       }
       owner_node_ = new_owner;
@@ -636,18 +597,11 @@ class DOMNodeImpl {
 
     ChildrenNodeList(DOMNodeInterface *node,
                      const Children &children)
-        : node_(node), children_(children) { }
-
-    // References to this object are counted to the owner node.
-    // ChildrenNodeList is not reference counted. The Attach() and Detach()
-    // methods are only for the script adapter.
-    virtual OwnershipPolicy Attach() {
-      node_->Attach();
-      return DOMNodeListBase::Attach();
+        : node_(node), children_(children) {
+      node->Ref();
     }
-    virtual bool Detach() {
-      node_->Detach();
-      return DOMNodeListBase::Detach();
+    virtual ~ChildrenNodeList() {
+      node_->Unref();
     }
 
     DOMNodeInterface *GetItem(size_t index) {
@@ -676,11 +630,6 @@ class DOMNodeImpl {
   Children children_;
   std::string last_xml_;
   int row_, column_;
-
-  // This ref_count_ records the accumulated reference count of all descendants.
-  // ref_count_ == 0 means all descendants' ref_count == 0.
-  // The references among the nodes in the DOM tree are not counted.
-  int ref_count_;
 };
 
 template <typename Interface>
@@ -694,13 +643,16 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   using Super::RegisterSimpleProperty;
   using Super::RegisterReadonlySimpleProperty;
   using Super::RegisterMethod;
-  using Super::SetPrototype;
+  using Super::SetInheritsFrom;
   using Super::SetDynamicPropertyHandler;
   using Super::SetArrayHandler;
 
   DOMNodeBase(DOMDocumentInterface *owner_document,
               const char *name)
       : impl_(new DOMNodeImpl(this, this, owner_document, name)) {
+  }
+
+  virtual void DoRegister() {
     // "baseName" is not in W3C standard. Register it to keep compatibility
     // with the Windows DOM.
     RegisterConstant("baseName", impl_->local_name_);
@@ -728,7 +680,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
                      NULL);
     RegisterProperty("attributes", NewSlot(this, &DOMNodeBase::GetAttributes),
                      NULL);
-    RegisterConstant("ownerDocument", owner_document);
+    RegisterConstant("ownerDocument", impl_->owner_document_);
     RegisterProperty("prefix", NewSlot(this, &DOMNodeBase::GetPrefix),
                      NewSlot(this, &DOMNodeBase::SetPrefix));
     RegisterProperty("text", NewSlot(this, &DOMNodeBase::GetTextContent),
@@ -747,7 +699,7 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
     RegisterMethod("cloneNode", NewSlot(this, &DOMNodeBase::CloneNode));
     RegisterMethod("normalize", NewSlot(this, &DOMNodeBase::Normalize));
 
-    SetPrototype(GlobalNode::Get());
+    SetInheritsFrom(GlobalNode::Get());
   }
 
   virtual ~DOMNodeBase() {
@@ -759,16 +711,27 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   // specific things through DOMNodeInterface pointers.
   virtual DOMNodeImpl *GetImpl() const { return impl_; }
 
-  // Implements ScriptableInterface::Attach().
-  virtual ScriptableInterface::OwnershipPolicy Attach() {
-    impl_->AttachMulti(1);
-    return ScriptableInterface::OWNERSHIP_SHARED;
+  // Overrides ScriptableHelper::Ref().
+  virtual void Ref() {
+    if (impl_->owner_node_) {
+      // Increase the reference count along the path to the root.
+      impl_->owner_node_->Ref();
+    }
+    return Super::Ref();
   }
-  // Implements ScriptableInterface::Detach().
-  virtual bool Detach() {
-    return impl_->DetachMulti(1, false);
+  // Overrides ScriptableHelper::Unref().
+  virtual void Unref(bool transient = false) {
+    if (impl_->owner_node_) {
+      Super::Unref(true);
+      // Decrease the reference count along the path to the root.
+      impl_->owner_node_->Unref(transient);
+    } else {
+      // Only the root can delete the whole tree. Because the reference count
+      // are accumulated, root's refcount == 0 means all decendents's
+      // refcount == 0, thus the whole tree can be safely deleted.
+      Super::Unref(transient);
+    }
   }
-  virtual void TransientDetach() { impl_->DetachMulti(1, true); }
 
   virtual std::string GetNodeName() const {
     return impl_->GetNodeName();
@@ -933,10 +896,15 @@ static const UTF16Char kBlankUTF16Str[] = { 0 };
 template <typename Interface1>
 class DOMCharacterData : public DOMNodeBase<Interface1> {
  public:
+  typedef DOMNodeBase<Interface1> Super;
   DOMCharacterData(DOMDocumentInterface *owner_document,
                    const char *name, const UTF16Char *data)
-      : DOMNodeBase<Interface1>(owner_document, name),
+      : Super(owner_document, name),
         data_(data ? data : kBlankUTF16Str) {
+  }
+
+  virtual void DoRegister() {
+    Super::DoRegister();
     RegisterProperty("data", NewSlot(this, &DOMCharacterData::GetData),
                      NewSlot(this, &DOMCharacterData::SetData));
     RegisterProperty("length", NewSlot(this, &DOMCharacterData::GetLength),
@@ -1061,7 +1029,10 @@ class DOMAttr : public DOMNodeBase<DOMAttrInterface> {
       : Super(owner_document, name),
         owner_element_(NULL) {
     SetOwnerElement(owner_element);
+  }
 
+  virtual void DoRegister() {
+    Super::DoRegister();
     RegisterProperty("name", NewSlot(this, &DOMAttr::GetName), NULL);
     // Our DOMAttrs are always specified, because we don't support DTD for now.
     RegisterConstant("specified", true);
@@ -1135,6 +1106,10 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
 
   DOMElement(DOMDocumentInterface *owner_document, const char *tag_name)
       : Super(owner_document, tag_name) {
+  }
+
+  virtual void DoRegister() {
+    Super::DoRegister();
     RegisterProperty("tagName", NewSlot(this, &DOMElement::GetTagName), NULL);
     RegisterMethod("getAttribute", NewSlot(this, &DOMElement::GetAttribute));
     RegisterMethod("setAttribute",
@@ -1293,13 +1268,17 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   virtual bool AllowPrefix() const { return true; }
 
  private:
-  typedef ScriptableHelper<DOMNamedNodeMapInterface,
-                           ScriptableInterface::OWNERSHIP_SHARED>
-       SuperOfAttrsNamedMap;
-  class AttrsNamedMap : public SuperOfAttrsNamedMap {
+  class AttrsNamedMap : public ScriptableHelper<DOMNamedNodeMapInterface> {
    public:
     DEFINE_CLASS_ID(0xbe2998ee79754343, DOMNamedNodeMapInterface)
     AttrsNamedMap(DOMElement *element) : element_(element) {
+      element->Ref();
+    }
+    virtual ~AttrsNamedMap() {
+      element_->Unref();
+    }
+
+    virtual void DoRegister() {
       DOMNamedNodeMapInterface *super_ptr =
           implicit_cast<DOMNamedNodeMapInterface *>(this);
       RegisterProperty("length",
@@ -1314,17 +1293,6 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
                      NewSlot(this, &AttrsNamedMap::ScriptRemoveNamedItem));
       RegisterMethod("item",
                      NewSlot(super_ptr, &DOMNamedNodeMapInterface::GetItem));
-    }
-
-    // AttrsNamedMap is not reference counted. The Attach() and Detach()
-    // methods are only for the script adapter.
-    virtual OwnershipPolicy Attach() {
-      element_->Attach();
-      return SuperOfAttrsNamedMap::Attach();
-    }
-    virtual bool Detach() {
-      element_->Detach();
-      return SuperOfAttrsNamedMap::Detach();
     }
 
     virtual DOMNodeInterface *GetNamedItem(const char *name) {
@@ -1373,14 +1341,11 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
           replaced_attr = element_->GetAttributeNode(
               new_attr->GetName().c_str());
           if (replaced_attr)
-            replaced_attr->Attach();
+            replaced_attr->Ref();
         }
         DOMExceptionCode code = element_->SetAttributeNode(new_attr);
-        if (replaced_attr) {
-          // Remove the temporary reference transiently if no error.
-          replaced_attr->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-        }
-
+        if (replaced_attr)
+          replaced_attr->Unref(code == DOM_NO_ERR);
         return GlobalCheckException(this, code) ? replaced_attr : NULL;
       }
     }
@@ -1388,11 +1353,10 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     DOMNodeInterface *ScriptRemoveNamedItem(const char *name) {
       DOMNodeInterface *removed_node = GetNamedItem(name);
       if (removed_node)
-        removed_node->Attach();
+        removed_node->Ref();
       DOMExceptionCode code = RemoveNamedItem(name);
       if (removed_node)
-        removed_node->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-
+        removed_node->Unref(code == DOM_NO_ERR);
       return GlobalCheckException(this, code) ? removed_node : NULL;
     }
 
@@ -1406,18 +1370,15 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   DOMAttrInterface *ScriptSetAttributeNode(DOMAttrInterface *new_attr) {
     DOMAttrInterface *replaced_attr = NULL;
     if (new_attr) {
+      replaced_attr = GetAttributeNode(new_attr->GetName().c_str());
       // Add a temporary reference to the replaced attr to prevent it from
       // being deleted in SetAttributeNode().
-      replaced_attr = GetAttributeNode(new_attr->GetName().c_str());
       if (replaced_attr)
-        replaced_attr->Attach();
+        replaced_attr->Ref();
     }
     DOMExceptionCode code = SetAttributeNode(new_attr);
-    if (replaced_attr) {
-      // Remove the temporary reference transiently if no error.
-      replaced_attr->GetImpl()->DetachMulti(1, code == DOM_NO_ERR);
-    }
-
+    if (replaced_attr)
+      replaced_attr->Unref(code == DOM_NO_ERR);
     return CheckException(code) ? replaced_attr : NULL;
   }
 
@@ -1509,6 +1470,10 @@ class DOMText : public DOMCharacterData<DOMTextInterface> {
 
   DOMText(DOMDocumentInterface *owner_document, const UTF16Char *data)
       : Super(owner_document, kDOMTextName, data) {
+  }
+
+  virtual void DoRegister() {
+    Super::DoRegister();
     RegisterMethod("splitText", NewSlot(this, &DOMText::ScriptSplitText));
   }
 
@@ -1645,6 +1610,10 @@ class DOMProcessingInstruction
       : Super(owner_document, target),
         target_(target ? target : ""),
         data_(data ? data : "") {
+  }
+
+  virtual void DoRegister() {
+    Super::DoRegister();
     RegisterConstant("target", target_);
     RegisterProperty("data", NewSlot(this, &DOMProcessingInstruction::GetData),
                      NewSlot(this, &DOMProcessingInstruction::SetData));
@@ -1682,11 +1651,12 @@ class DOMProcessingInstruction
   std::string data_;
 };
 
-class DOMImplementation : public ScriptableHelper<DOMImplementationInterface> {
+class DOMImplementation
+    : public ScriptableHelperNativeOwned<DOMImplementationInterface> {
  public:
   DEFINE_CLASS_ID(0xd23149a89cf24e12, DOMImplementationInterface);
 
-  DOMImplementation() {
+  virtual void DoRegister() {
     RegisterMethod("hasFeature", NewSlot(this, &DOMImplementation::HasFeature));
   }
 
@@ -1694,6 +1664,25 @@ class DOMImplementation : public ScriptableHelper<DOMImplementationInterface> {
     return feature && strcasecmp(feature, "XML") == 0 &&
           (!version || !version[0] || strcmp(version, "1.0") == 0);
   }
+};
+
+// This class is not a complete implementation, just to make some script
+// containing Microsoft-specific code run without errors.
+class ParseError : public ScriptableHelperNativeOwnedDefault {
+ public:
+  DEFINE_CLASS_ID(0xc494c55756dc46a6, ScriptableInterface);
+  ParseError() : code_(0) {
+    RegisterReadonlySimpleProperty("errorCode", &code_);
+    RegisterConstant("filepos", 0);
+    RegisterConstant("line", 0);
+    RegisterConstant("linepos", 0);
+    RegisterConstant("reason", "");
+    RegisterConstant("srcText", "");
+    RegisterConstant("url", "");
+  }
+  void SetCode(int code) { code_ = code; }
+ private:
+  int code_;
 };
 
 // Note about reference counting of DOMDocument: the reference count is the sum
@@ -1711,8 +1700,12 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   DOMDocument(XMLParserInterface *xml_parser)
       : Super(NULL, kDOMDocumentName),
         xml_parser_(xml_parser) {
+  }
+
+  virtual void DoRegister() {
+    Super::DoRegister();
     RegisterConstant("doctype", static_cast<ScriptableInterface *>(NULL));
-    RegisterConstant("implementation", &implementation_);
+    RegisterConstant("implementation", &dom_implementation_);
     RegisterProperty("documentElement",
                      NewSlot(this, &DOMDocument::GetDocumentElement), NULL);
     RegisterMethod("loadXML", NewSlot(this, &DOMDocument::LoadXML));
@@ -1735,12 +1728,17 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
     RegisterMethod("getElementsByTagName",
                    NewSlot(implicit_cast<Super *>(this),
                            &Super::GetElementsByTagName));
+    // Compatibility with Microsoft DOM. 
+    RegisterProperty("async", NULL, NewSlot(&DummySetter));
+    RegisterConstant("parseError", &parse_error_);
   }
 
   virtual bool LoadXML(const char *xml) {
     GetImpl()->RemoveAllChildren();
-    return xml_parser_->ParseContentIntoDOM(xml, "NONAME", NULL, NULL, this,
-                                            NULL, NULL);
+    bool result = xml_parser_->ParseContentIntoDOM(xml, "NONAME", NULL, NULL,
+                                                   this, NULL, NULL);
+    parse_error_.SetCode(result ? 0 : 1);
+    return result;
   }
 
   virtual NodeType GetNodeType() const { return DOCUMENT_NODE; }
@@ -1758,10 +1756,10 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   }
 
   virtual DOMImplementationInterface *GetImplementation() {
-    return &implementation_;
+    return &dom_implementation_;
   }
   virtual const DOMImplementationInterface *GetImplementation() const {
-    return &implementation_;
+    return &dom_implementation_;
   }
 
   virtual DOMElementInterface *GetDocumentElement() {
@@ -1906,7 +1904,8 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
   }
 
   XMLParserInterface *xml_parser_;
-  DOMImplementation implementation_;
+  DOMImplementation dom_implementation_;
+  ParseError parse_error_;
 };
 
 } // internal namespace

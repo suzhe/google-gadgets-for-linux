@@ -31,6 +31,9 @@ class ItemElement : public BasicElement {
               const char *tag_name, const char *name);
   virtual ~ItemElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   /** Gets and sets whether this item is currently selected. */
   bool IsSelected() const;

@@ -42,7 +42,7 @@ class Texture;
 /**
  * Main View implementation.
  */
-class View : public ScriptableHelper<ViewInterface> {
+class View : public ScriptableHelperNativeOwned<ViewInterface> {
  public:
   DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
 

@@ -28,8 +28,8 @@ class Connection;
 
 /**
  * Object interface that can be called from script languages.
- * Only objects with dynamic properties or methods need to directly
- * implement this interface.  Other objects should use @c ScriptableHelper.
+ * Normally an object need not to implement this interface directly, but
+ * inherits from @c ScriptableHelper.
  *
  * Any interface or abstract class inheriting @c ScriptableInterface should
  * include @c CLASS_ID_DECL and @c CLASS_ID_IMPL to define its @c CLASS_ID and
@@ -66,66 +66,29 @@ class ScriptableInterface {
    */
   static const int kConstantPropertyId = INT_MIN + 1;
 
-
-  enum OwnershipPolicy {
-    /**
-     * Default policy: C++ always hold the ownership of the scriptable objects,
-     * In order to prevent crash when the script invokes an object that has
-     * already been deleted by C++ code, @c ConnectToOnDeleteSignal() method
-     * is provided to let the C++ code inform the script engine when a
-     * scriptable object is deleted. Then the script engine can simply report
-     * an error when such object is invoked.
-     */
-    NATIVE_OWNED,
-    /**
-     * Same as @c NATIVE_OWNED, but indicates that this object's life time is
-     * longer than the script context. Useful to do memory leak test in the
-     * script adapter.
-     */
-    NATIVE_PERMANENT,
-    /**
-     * Shared policy: C++ code creates a scriptable object, and then the
-     * ownership may be shared between the C++ and script side. The
-     * @c ScriptableInterface implementation must track references from both
-     * the C++ side and the script side. @c Attach() and @c Detach() can be
-     * used to track the reference from the script side. If both side has
-     * released the references, the implementation should delete itself.
-     * This policy is difficult to use, so we should avoid it as much as
-     * possible. If the object is lightweight, we can convert this policy
-     * into the transferable policy by forcing C++ code to make a copy of
-     * the object when receiving it from the script side.
-     *
-     * NOTE: For now we don't support callback from native side to script side
-     * for objects of this policy.
-     */
-    OWNERSHIP_SHARED,
-  };
-
   /**
    * Gets the class id of this object. For debugging purpose only.
    */
   virtual uint64_t GetClassId() const = 0;
 
   /**
-   * Attach this object to the script engine.
-   * Normally if the object is always owned by the native side, the
-   * implementation should do nothing in this method.
-   *
-   * If the ownership can be transfered or shared between the native side
-   * and the script side, the implementation should do appropriate things,
-   * such as reference counting, etc. to manage the ownership.
-   *
-   * @return @c true if the ownership is transferred, @c false otherwise.
+   * Adds a reference to this object.
    */
-  virtual OwnershipPolicy Attach() = 0;
+  virtual void Ref() = 0;
 
   /**
-   * Detach this object from the script engine.
-   * @see Attach()
-   *
-   * @return @c true if the object is deleted during this call.
+   * Removes a reference from this object.
+   * @param transient if @c true, the reference will be removed transiently,
+   *     that is, the object will not be deleted even if reference count
+   *     reaches zero (i.e. the object is floating). This is useful before
+   *     returning an object from a function.
    */
-  virtual bool Detach() = 0;
+  virtual void Unref(bool transient = false) = 0;
+
+  /**
+   * Gets the current reference count.
+   */
+  virtual int GetRefCount() const = 0;
 
   /**
    * Judge if this instance is of a given class.
@@ -139,15 +102,12 @@ class ScriptableInterface {
   virtual bool IsStrict() const = 0;
 
   /**
-   * Connect a callback which will be called when @c Attach(), @c Detach() is
-   * called or the object is about to be deleted.
+   * Connect a callback which will be called when @c Ref() or @c Unref() is
+   * called.
    * @param slot the callback. The parameters of the slot are:
-   *     - the reference count before change; or 0 if the object is about to be
-   *       deleted;
+   *     - the reference count before change.
    *     - 1 or -1 indicating whether the reference count is about to be
    *       increased or decreased; or 0 if the object is about to be deleted.
-   *     For native owned object, the slot will only be called when the object
-   *     is about to be deleted, and the two parameters are always 0. 
    * @return the connected @c Connection.
    */
   virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot) = 0;
@@ -302,6 +262,40 @@ class ScriptableInterface {
 inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
   return class_id == CLASS_ID;
 }
+
+template <typename T>
+class ScopedScriptablePtr {
+ private:
+  // Checks at compile time if the argument T is ScriptableInterface or
+  // derived from it.
+  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
+                 T_must_be_ScriptableInterface_or_derived_from_it);
+ public:
+  explicit ScopedScriptablePtr(T* p = NULL): ptr_(p) {
+    if (p) p->Ref();
+  }
+
+  ~ScopedScriptablePtr() {
+    if (ptr_) ptr_->Unref();
+  }
+
+  void reset(T* p) {
+    if (ptr_ != p) {
+      if (ptr_) ptr_->Unref();
+      ptr_ = p;
+      if (p) p->Ref();
+    }
+  }
+
+  operator bool() { return ptr_ != NULL; }
+  T& operator*() const { ASSERT(ptr_); return *ptr_; }
+  T* operator->() const { ASSERT(ptr_); return ptr_; }
+  T* get() const { return ptr_; }
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScopedScriptablePtr);
+  T* ptr_;
+};
 
 } // namespace ggadget
 

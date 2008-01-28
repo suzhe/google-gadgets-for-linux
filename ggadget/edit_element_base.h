@@ -37,6 +37,10 @@ class EditElementBase : public ScrollingElement {
   EditElementBase(BasicElement *parent, View *view, const char *name);
   virtual ~EditElementBase();
 
+ protected:
+  virtual void DoRegister();
+
+ public:
   /**
    * Connects a specified slot to OnChange event signal.
    * The signal will be fired when FireOnChangeEvent() method is called by

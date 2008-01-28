@@ -110,7 +110,6 @@ function RUN_ALL_TESTS() {
     quit(QUIT_ASSERT);
   }
   print("\nPASS");
-  quit(0);
 }
 
 function _Message(relation, expected, actual) {

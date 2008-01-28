@@ -25,7 +25,9 @@
 namespace ggadget {
 
 class ScriptableInterface;
+template <typename T> class ScopedScriptablePtr;
 class Slot;
+class Connection;
 
 /**
  * Used as a wrapper to a string indicating this string contains a JSON
@@ -282,12 +284,21 @@ class Variant {
   explicit Variant(const void *);
 
   /**
+   * This constructor detects errors when passing a ScopedScriptablePtr
+   * directly to a @c Variant. This prevents a ScopedScriptablePtr from being
+   * automatically converted to a @c bool.
+   */
+  template <typename T>
+  explicit Variant(const ScopedScriptablePtr<T> &);
+
+  /**
    * Don't allow const Slot *, otherwise we must add a new variant type.
    * Because Slot is immutable, Slot is the same as const Slot in semantics.
    */
   explicit Variant(const Slot *);
 
   bool CheckScriptableType(uint64_t class_id) const;
+  void OnRefChange(int ref_count, int change);
 
   Type type_;
 
@@ -298,11 +309,12 @@ class Variant {
     double double_value_;
     std::string *string_value_;  // For both TYPE_STRING and TYPE_JSON.
     UTF16String *utf16_string_value_;
-    ScriptableInterface *scriptable_value_;
+    struct {
+      ScriptableInterface *value_;
+      Connection *refchange_connection_;
+    } scriptable_value_;
     Slot *slot_value_;
   } v_;
-  // temparory solution
-  int policy_;
 
   template <typename T> friend struct VariantValue;
 };
@@ -410,7 +422,7 @@ struct VariantValue<T *> {
     if (v.type_ != Variant::TYPE_SCRIPTABLE)
       return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
-           down_cast<T *>(v.v_.scriptable_value_) : NULL;
+           down_cast<T *>(v.v_.scriptable_value_.value_) : NULL;
   }
 };
 
@@ -427,7 +439,7 @@ struct VariantValue<const T *> {
     if (v.type_ != Variant::TYPE_SCRIPTABLE)
       return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
-           down_cast<T *>(v.v_.scriptable_value_) : NULL;
+           down_cast<T *>(v.v_.scriptable_value_.value_) : NULL;
   }
 };
 

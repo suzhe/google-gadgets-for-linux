@@ -28,7 +28,7 @@ class Elements;
 class MenuInterface;
 class View;
 
-class BasicElement : public ScriptableHelper<ScriptableInterface> {
+class BasicElement: public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xfd70820c5bbf11dc, ScriptableInterface);
 
@@ -36,6 +36,9 @@ class BasicElement : public ScriptableHelper<ScriptableInterface> {
   BasicElement(BasicElement *parent, View *view,
                const char *tag_name, const char *name, bool children);
   virtual ~BasicElement();
+
+ protected:
+  virtual void DoRegister();
 
  public:
   // TODO: If need this work, perhaps we should define it in ViewHostInterface.

@@ -25,14 +25,12 @@ namespace framework {
 class FileSystemInterface;
 }
 
-class ScriptableFileSystem : public ScriptableHelper<ScriptableInterface> {
+class ScriptableFileSystem : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x881b7d66c6bf4ca5, ScriptableInterface)
 
   explicit ScriptableFileSystem(framework::FileSystemInterface *filesystem);
   virtual ~ScriptableFileSystem();
-
-  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableFileSystem);

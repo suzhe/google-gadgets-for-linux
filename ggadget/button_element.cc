@@ -51,6 +51,10 @@ ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "button", name, false),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
+}
+
+void ButtonElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("image",
                    NewSlot(this, &ButtonElement::GetImage),
                    NewSlot(this, &ButtonElement::SetImage));

@@ -23,14 +23,12 @@ namespace ggadget {
 
 class GadgetHostInterface;
 
-class ScriptableFramework : public ScriptableHelper<ScriptableInterface> {
+class ScriptableFramework : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x46d1edbb5e594af9, ScriptableInterface)
 
   explicit ScriptableFramework(GadgetHostInterface *gadget_host);
   virtual ~ScriptableFramework();
-
-  virtual OwnershipPolicy Attach() { return NATIVE_PERMANENT; }
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableFramework);

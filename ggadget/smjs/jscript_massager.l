@@ -235,7 +235,7 @@ WS ([ \t\r\n]|{COMMENT})*
 BINARY_OP [\.<>=\*-+\^&\|%\?:]
 STRING \"([^\n\\\"]|\\.)*[\"\n]
 SSTRING \'([^\n\\\']|\\.)*[\'\n]
-REGEXP \/([^\n\\\/\*]|\\.)([^\n\\\/]|\\.)+[\/\n]
+REGEXP \/([^\n\\\/\*]|\\.)([^\n\\\/]|\\.)*[\/\n]
 FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 
 %x OPTIONS
@@ -251,17 +251,18 @@ FUNC_PARAM {WS}\(([a-zA-Z0-9_]+|{WS}|,)*\){WS}
 {SSTRING} ECHO;
 {COMMENT} ECHO;
 
-\/>|<\/ {
-  LOG("Can't massage JS containing E4X grammar.");
-  give_up = true;
-  PopAllStates();
-  yyterminate();
-}
-
 [\(\[\{,=]{WS}{REGEXP} {
   ECHO;
   if (strchr("([{", yytext[0]))
     IncreaseParenCount();
+}
+
+\/>|<\/ {
+  LOG("%s:%d: Can't massage JS containing E4X grammar",
+      input_filename, yylineno);
+  give_up = true;
+  PopAllStates();
+  yyterminate();
 }
 
 [a-zA-Z0-9_][OoDd] ECHO;
@@ -414,7 +415,7 @@ static void CloseParen() {
 }
 
 std::string MassageJScript(const char *input, bool debug,
-                           const char *filename,int lineno) {
+                           const char *filename, int lineno) {
   give_up = false;
   yy_flex_debug = debug;
 #ifdef _DEBUG
@@ -433,6 +434,7 @@ std::string MassageJScript(const char *input, bool debug,
   new_line_appended = false;
   yyset_lineno(lineno);
   output.clear();
+  stack.clear();
 
   BEGIN(INITIAL);
   // Create a fake global function context.

@@ -273,10 +273,10 @@ bool SetupViewFromFile(View *view, const char *filename) {
 bool SetupViewFromXML(View *view, const std::string &xml,
                       const char *filename) {
   DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
-  xmldoc->Attach();
+  xmldoc->Ref();
   if (!view->GetXMLParser()->ParseContentIntoDOM(xml, filename, NULL, NULL,
                                                  xmldoc, NULL, NULL)) {
-    xmldoc->Detach();
+    xmldoc->Unref();
     return false;
   }
 
@@ -284,7 +284,7 @@ bool SetupViewFromXML(View *view, const std::string &xml,
   if (!view_element ||
       GadgetStrCmp(view_element->GetTagName().c_str(), kViewTag) != 0) {
     LOG("No valid root element in view file: %s", filename);
-    xmldoc->Detach();
+    xmldoc->Unref();
     return false;
   }
 
@@ -305,7 +305,7 @@ bool SetupViewFromXML(View *view, const std::string &xml,
 
   HandleAllScriptElements(view, filename, view_element);
   delete xml_children;
-  xmldoc->Detach();
+  xmldoc->Unref();
   return true;
 }
 
@@ -318,23 +318,23 @@ BasicElement *InsertElementFromXML(View *view, Elements *elements,
                                    const std::string &xml,
                                    const BasicElement *before) {
   DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
-  xmldoc->Attach();
+  xmldoc->Ref();
   if (!view->GetXMLParser()->ParseContentIntoDOM(xml, xml.c_str(), NULL, NULL,
                                                  xmldoc, NULL, NULL)) {
-    xmldoc->Detach();
+    xmldoc->Unref();
     return false;
   }
 
   DOMElementInterface *xml_element = xmldoc->GetDocumentElement();
   if (!xml_element) {
     LOG("No root element in xml definition: %s", xml.c_str());
-    xmldoc->Detach();
+    xmldoc->Unref();
     return NULL;
   }
 
   BasicElement *result = InsertElementFromDOM(view, elements, "",
                                               xml_element, before);
-  xmldoc->Detach();
+  xmldoc->Unref();
   return result;
 }
 

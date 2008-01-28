@@ -50,7 +50,10 @@ EditElementBase::EditElementBase(BasicElement *parent, View *view, const char *n
       impl_(new Impl(this)) {
   SetEnabled(true);
   SetAutoscroll(true);
+}
 
+void EditElementBase::DoRegister() {
+  ScrollingElement::DoRegister();
   RegisterProperty("background",
                    NewSlot(this, &EditElementBase::GetBackground),
                    NewSlot(this, &EditElementBase::SetBackground));

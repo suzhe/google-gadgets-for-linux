@@ -41,6 +41,16 @@ class DivElement::Impl {
 DivElement::DivElement(BasicElement *parent, View *view, const char *name)
     : ScrollingElement(parent, view, "div", name, true),
       impl_(new Impl(this)) {
+}
+
+DivElement::DivElement(BasicElement *parent, View *view,
+                       const char *tag_name, const char *name)
+    : ScrollingElement(parent, view, tag_name, name, true),
+      impl_(new Impl(this)) {
+}
+
+void DivElement::DoRegister() {
+  ScrollingElement::DoRegister();
   RegisterProperty("autoscroll",
                    NewSlot(implicit_cast<ScrollingElement *>(this),
                            &ScrollingElement::IsAutoscroll),
@@ -49,12 +59,6 @@ DivElement::DivElement(BasicElement *parent, View *view, const char *name)
   RegisterProperty("background",
                    NewSlot(this, &DivElement::GetBackground),
                    NewSlot(this, &DivElement::SetBackground));
-}
-
-DivElement::DivElement(BasicElement *parent, View *view,
-                       const char *tag_name, const char *name)
-    : ScrollingElement(parent, view, tag_name, name, true),
-      impl_(new Impl(this)) {
 }
 
 DivElement::~DivElement() {

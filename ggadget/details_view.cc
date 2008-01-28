@@ -37,7 +37,7 @@ class DetailsView::Impl {
 
   ~Impl() {
     if (external_object_)
-      external_object_->Detach();
+      external_object_->Unref();
   }
 
   std::string source_;
@@ -54,6 +54,9 @@ class DetailsView::Impl {
 
 DetailsView::DetailsView()
     : impl_(new Impl()) {
+}
+
+void DetailsView::DoRegister() {
   RegisterProperty("html_content",
                    NewSlot(this, &DetailsView::ContentIsHTML),
                    NewSlot(this, &DetailsView::SetContentIsHTML));
@@ -155,9 +158,9 @@ ScriptableInterface *DetailsView::GetExternalObject() const {
 
 void DetailsView::SetExternalObject(ScriptableInterface *external_object) {
   if (impl_->external_object_)
-    impl_->external_object_->Detach();
+    impl_->external_object_->Unref();
   if (external_object)
-    external_object->Attach();
+    external_object->Ref();
   impl_->external_object_ = external_object;
 }
 

@@ -28,12 +28,14 @@ class ScriptableOptions;
 /**
  * DetailsView data structure. It has no built-in logic.
  */
-class DetailsView : public ScriptableHelperOwnershipShared {
+class DetailsView : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xf75ad2d79331421a, ScriptableInterface);
-
   DetailsView();
+
+ protected:
   virtual ~DetailsView();
+  virtual void DoRegister();
 
  public:
   /**

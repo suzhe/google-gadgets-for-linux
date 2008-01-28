@@ -24,12 +24,15 @@ namespace ggadget {
 
 class MenuInterface;
 
-class ScriptableMenu : public ScriptableHelper<ScriptableInterface> {
+class ScriptableMenu : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x95432249155845d6, ScriptableInterface)
 
   explicit ScriptableMenu(MenuInterface *menu);
   virtual ~ScriptableMenu();
+
+ protected:
+  virtual void DoRegister();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableMenu);

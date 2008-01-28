@@ -46,12 +46,10 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
   //     closure =JS=> js wrapper object(owner) =C++=> native object.
   // This circle prevents the wrapper object and the function from being GC'ed.
   // Expose the circle to the JS engine by letting the owner manage this slot.
-  if (owner &&
-      owner->ownership_policy() == ScriptableInterface::OWNERSHIP_SHARED) {
+  if (owner) {
     owner->AddJSFunctionSlot(this);
   } else {
     // Otherwise, it's safe to add this function to root.
-    owner_ = NULL;
     JS_AddNamedRoot(context, &function_, function_info_.c_str());
   }
 

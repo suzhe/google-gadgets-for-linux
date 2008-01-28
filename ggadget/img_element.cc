@@ -50,6 +50,10 @@ class ImgElement::Impl {
 ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "img", name, false),
       impl_(new Impl) {
+}
+
+void ImgElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("src",
                    NewSlot(this, &ImgElement::GetSrc),
                    NewSlot(this, &ImgElement::SetSrc));

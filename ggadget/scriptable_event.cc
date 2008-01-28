@@ -56,6 +56,9 @@ ScriptableEvent::ScriptableEvent(const Event *event,
                                  ScriptableInterface *src_element,
                                  Event *output_event)
     : impl_(new Impl(event, src_element, output_event)) {
+}
+
+void ScriptableEvent::DoRegister() {
   RegisterProperty("returnValue",
                    NewSlot(impl_, &Impl::ScriptGetReturnValue),
                    NewSlot(impl_, &Impl::ScriptSetReturnValue));
@@ -63,6 +66,7 @@ ScriptableEvent::ScriptableEvent(const Event *event,
                    NULL);
   RegisterProperty("type", NewSlot(this, &ScriptableEvent::GetName), NULL);
 
+  const Event *event = impl_->event_;
   if (event->IsMouseEvent()) {
     const MouseEvent *mouse_event = static_cast<const MouseEvent *>(event);
     const PositionEvent *position_event =
@@ -88,11 +92,12 @@ ScriptableEvent::ScriptableEvent(const Event *event,
     Event::Type type = event->GetType();
     switch (type) {
       case Event::EVENT_SIZING: {
-        ASSERT(output_event && output_event->GetType() == Event::EVENT_SIZING);
+        ASSERT(impl_->output_event_ &&
+               impl_->output_event_->GetType() == Event::EVENT_SIZING);
         const SizingEvent *sizing_event =
             static_cast<const SizingEvent *>(event);
         SizingEvent *output_sizing_event =
-            static_cast<SizingEvent *>(output_event);
+            static_cast<SizingEvent *>(impl_->output_event_);
         RegisterProperty("width",
                          NewSlot(sizing_event, &SizingEvent::GetWidth),
                          NewSlot(output_sizing_event, &SizingEvent::SetWidth));

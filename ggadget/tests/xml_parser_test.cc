@@ -94,7 +94,7 @@ TEST(XMLParser, CheckXMLName) {
 TEST(XMLParser, ParseXMLIntoDOM) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
-  domdoc->Attach();
+  domdoc->Ref();
   std::string encoding;
   ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, "TheFileName", NULL, NULL,
                                               domdoc, &encoding, NULL));
@@ -130,17 +130,19 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   EXPECT_STREQ("value", pi_node->GetNodeValue());
   delete children;
   delete sub_children;
-  domdoc->Detach();
+  ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
   delete xml_parser;
 }
 
 TEST(XMLParser, ParseXMLIntoDOM_InvalidXML) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
-  domdoc->Attach();
+  domdoc->Ref();
   ASSERT_FALSE(xml_parser->ParseContentIntoDOM("<a></b>", "Bad", NULL, NULL,
                                                domdoc, NULL, NULL));
-  domdoc->Detach();
+  ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
   delete xml_parser;
 }
 
@@ -199,7 +201,7 @@ void TestXMLEncoding(const char *xml, const char *name,
   LOG("TestXMLEncoding %s", name);
   XMLParserInterface *xml_parser = CreateXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
-  domdoc->Attach();
+  domdoc->Ref();
   std::string encoding;
   std::string output;
   ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, name, "text/xml",
@@ -207,7 +209,8 @@ void TestXMLEncoding(const char *xml, const char *name,
                                               &encoding, &output));
   ASSERT_STREQ(expected_text, output.c_str());
   ASSERT_STREQ(expected_encoding, encoding.c_str());
-  domdoc->Detach();
+  ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
   delete xml_parser;
 }
 
@@ -216,7 +219,7 @@ void TestXMLEncodingExpectFail(const char *xml, const char *name,
   LOG("TestXMLEncoding expect fail %s", name);
   XMLParserInterface *xml_parser = CreateXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
-  domdoc->Attach();
+  domdoc->Ref();
   std::string encoding;
   std::string output;
   ASSERT_FALSE(xml_parser->ParseContentIntoDOM(xml, name, "text/xml",
@@ -225,7 +228,8 @@ void TestXMLEncodingExpectFail(const char *xml, const char *name,
   ASSERT_TRUE(encoding.empty());
   ASSERT_TRUE(output.empty());
   ASSERT_FALSE(domdoc->HasChildNodes());
-  domdoc->Detach();
+  ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
   delete xml_parser;
 }
 

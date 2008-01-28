@@ -36,7 +36,9 @@ class BasicElement::Impl {
        bool children, BasicElement *owner)
       : parent_(parent),
         owner_(owner),
-        children_(NULL),
+        children_(children ?
+                  new Elements(view->GetElementFactory(), owner, view) :
+                  NULL),
         view_(view),
         hittest_(BasicElement::HT_DEFAULT),
         cursor_(ViewHostInterface::CURSOR_ARROW),
@@ -66,9 +68,6 @@ class BasicElement::Impl {
       tag_name_ = tag_name;
     if (parent)
       ASSERT(parent->GetView() == view);
-    if (children) {
-      children_ = new Elements(view->GetElementFactory(), owner, view);
-    }
   }
 
   ~Impl() {
@@ -433,7 +432,7 @@ class BasicElement::Impl {
 
   void Draw(CanvasInterface *canvas) {
     // Only do draw if visible
-    if (visible_ && opacity_ != 0) {
+    if (visible_ && opacity_ != 0 && width_ > 0 && height_ > 0) {
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
       bool indirect_draw = false;
@@ -799,6 +798,9 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
                            const char *tag_name, const char *name,
                            bool children)
     : impl_(new Impl(parent, view, tag_name, name, children, this)) {
+}
+
+void BasicElement::DoRegister() {
   RegisterProperty("x",
                    NewSlot(impl_, &Impl::GetX),
                    NewSlot(impl_, &Impl::SetX));
@@ -848,7 +850,7 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterProperty("opacity",
                    NewSlot(impl_, &Impl::GetIntOpacity),
                    NewSlot(impl_, &Impl::SetIntOpacity));
-  RegisterConstant("parentElement", parent);
+  RegisterConstant("parentElement", impl_->parent_);
   // Though we support relative pinX and pinY, this feature is not published
   // in the current public API, so pinX and pinY are still exposed to
   // script in pixels.
@@ -871,7 +873,7 @@ BasicElement::BasicElement(BasicElement *parent, View *view,
   RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
-  if (children) {
+  if (impl_->children_) {
     RegisterConstant("children", impl_->children_);
     RegisterMethod("appendElement",
                    NewSlot(impl_->children_, &Elements::AppendElementFromXML));

@@ -31,9 +31,12 @@ class ComboBoxElement : public BasicElement {
   ComboBoxElement(BasicElement *parent, View *view, const char *name);
   virtual ~ComboBoxElement();
 
-  virtual void MarkRedraw();
+ protected:
+  virtual void DoRegister();
 
  public:
+  virtual void MarkRedraw();
+
   enum Type {
     /** The default, editable control. */
     COMBO_DROPDOWN,

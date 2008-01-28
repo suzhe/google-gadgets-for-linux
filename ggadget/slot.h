@@ -19,6 +19,7 @@
 
 #include <cstring>
 #include <ggadget/common.h>
+#include <ggadget/logger.h>
 #include <ggadget/variant.h>
 
 namespace ggadget {
@@ -95,7 +96,11 @@ class Slot {
 template <typename R>
 class Slot0 : public Slot {
  public:
-  R operator()() const { return VariantValue<R>()(Call(0, NULL)); }
+  R operator()() const {
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
+             ("Use Call() when the slot returns ScriptableInterface *"));
+    return VariantValue<R>()(Call(0, NULL));
+  }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
 
@@ -279,6 +284,8 @@ template <typename R, _arg_types>                                             \
 class Slot##n : public Slot {                                                 \
  public:                                                                      \
   R operator()(_args) const {                                                 \
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,                     \
+             ("Use Call() when the slot returns ScriptableInterface *"));     \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
     return VariantValue<R>()(Call(n, vargs));                                 \

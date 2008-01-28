@@ -59,17 +59,14 @@ class NativeJSWrapper {
 
   JSObject *&js_object() { return js_object_; }
   ScriptableInterface *scriptable() { return scriptable_; }
-  ScriptableInterface::OwnershipPolicy ownership_policy() {
-    return ownership_policy_;
-  }
-
   static JSClass *GetWrapperJSClass() { return &wrapper_js_class_; }
+  std::string name() { return name_; }
 
   /** Gets the NativeJSWrapper pointer from a JS wrapped object. */
   static NativeJSWrapper *GetWrapperFromJS(JSContext *cx, JSObject *js_object);
 
   /** Detach the wrapper object from JavaScript so that the engine can GC it. */
-  void DetachJS();
+  void DetachJS(bool caused_by_native);
 
   /**
    * Registers an owned @c JSFunctionSlot.
@@ -136,13 +133,11 @@ private:
 
   static JSClass wrapper_js_class_;
 
-  bool detached_;
   JSContext *js_context_;
   JSObject *js_object_;
   ScriptableInterface *scriptable_;
   std::string name_;
   Connection *on_reference_change_connection_;
-  ScriptableInterface::OwnershipPolicy ownership_policy_;
 
   typedef std::set<JSFunctionSlot *> JSFunctionSlots;
   JSFunctionSlots js_function_slots_;

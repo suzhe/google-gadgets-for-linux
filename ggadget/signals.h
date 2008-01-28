@@ -190,7 +190,11 @@ class Signal0 : public Signal {
  public:
   Signal0() { }
   Connection *Connect(Slot0<R> *slot) { return Signal::Connect(slot); }
-  R operator()() const { return VariantValue<R>()(Emit(0, NULL)); }
+  R operator()() const {
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
+             ("Use Emit() when the signal returns ScriptableInterface *"));
+    return VariantValue<R>()(Emit(0, NULL));
+  }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
 
@@ -218,6 +222,8 @@ class Signal##n : public Signal {                                             \
     return Signal::Connect(slot);                                             \
   }                                                                           \
   R operator()(_args) const {                                                 \
+    ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,                     \
+             ("Use Emit() when the signal returns ScriptableInterface *"));   \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
     return VariantValue<R>()(Emit(n, vargs));                                 \

@@ -500,6 +500,10 @@ BrowserElement::BrowserElement(BasicElement *parent, View *view,
                                const char *name)
     : BasicElement(parent, view, "browser", name, true),
       impl_(new Impl(this)) {
+}
+
+void BrowserElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("contentType",
                    NewSlot(this, &BrowserElement::GetContentType),
                    NewSlot(this, &BrowserElement::SetContentType));

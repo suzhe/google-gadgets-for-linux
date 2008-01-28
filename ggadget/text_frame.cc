@@ -303,8 +303,9 @@ std::string TextFrame::GetText() const {
   return impl_->text_;
 }
 
-bool TextFrame::SetText(const char *text) {
-  if (AssignIfDiffer(text, &impl_->text_, strcmp)) {
+bool TextFrame::SetText(const std::string &text) {
+  if (text != impl_->text_) {
+    impl_->text_ = text;
     impl_->ResetExtents();
     return true;
   }
