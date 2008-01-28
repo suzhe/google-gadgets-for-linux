@@ -32,6 +32,9 @@ class ListBoxElement : public DivElement {
                  const char *tag_name, const char *name);
   virtual ~ListBoxElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 

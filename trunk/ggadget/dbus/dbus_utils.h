@@ -34,14 +34,12 @@ class MainLoopInterface;
 
 namespace dbus {
 
-#define kDBusContainerIDCode 0x7829c86eb35a4168
-#define ToUINT64(x) UINT64_C(x)
-const uint64_t kDBusContainerID = ToUINT64(kDBusContainerIDCode);
-
-// Container ojbect to hold value transfered between DBusProxy and the caller
-class ScriptableDBusContainer : public ScriptableHelperOwnershipShared {
+/**
+ * Container object to hold value transfered between DBusProxy and the caller.
+ */
+class ScriptableDBusContainer : public ScriptableHelperDefault {
  public:
-  DEFINE_CLASS_ID(kDBusContainerIDCode, ScriptableInterface);
+  DEFINE_CLASS_ID(0x7829c86eb35a4168, ScriptableInterface);
   ScriptableDBusContainer() : array_(NULL), count_(0) {}
   ScriptableDBusContainer(Variant *start, std::size_t size)
       : array_(start), count_(size) {
@@ -50,16 +48,20 @@ class ScriptableDBusContainer : public ScriptableHelperOwnershipShared {
   virtual ~ScriptableDBusContainer() {
     delete [] array_;
   }
-  // don't use RegisterConstant directly, since we want to register constant
-  // properties by dynamic char pointer. This case is not appliable for
-  // the map used in scriptable_helper object, which use const char*
-  // not std::string as the key.
+
+  /**
+   * Don't use @c RegisterConstant() directly, since we want to register
+   * constant properties by dynamic char pointer. This case is not applicable
+   * for the map used in scriptable_helper object, which use const char*
+   * not std::string as the key.
+   */
   void AddProperty(const char *name, const Variant &value) {
     if (!name || *name == 0) return;
     keys_.push_back(name);
     RegisterConstant((keys_.end() - 1)->c_str(), value);
   }
-  // Creates a @c ScriptableArray with an iterator and count.
+
+  /** Creates a @c ScriptableArray with an iterator and count. */
   template <typename Iterator>
   void AddArray(Iterator start, size_t count) {
     Variant *variant_array = new Variant[count];
@@ -67,8 +69,11 @@ class ScriptableDBusContainer : public ScriptableHelperOwnershipShared {
       variant_array[i] = Variant(*start++);
     AddArray(variant_array, count);
   }
-  // Add array with an iterator and count, the object will own the array, and
-  // delete it when finalized.
+
+  /**
+   * Add array with an iterator and count, the object will own the array, and
+   * delete it when finalized.
+   */
   void AddArray(Variant *start, size_t count) {
     if (!start) return;
     if (array_ && array_ != start) delete [] array_;
@@ -76,6 +81,7 @@ class ScriptableDBusContainer : public ScriptableHelperOwnershipShared {
     count_ = count;
     RegisterConstant("length", count);
   }
+
   bool EnumerateElements(EnumerateElementsCallback *callback) {
     ASSERT(callback);
     for (size_t i = 0; i < count_; i++)
@@ -86,6 +92,7 @@ class ScriptableDBusContainer : public ScriptableHelperOwnershipShared {
     delete callback;
     return true;
   }
+
  private:
   std::vector<std::string> keys_;
   Variant *array_;

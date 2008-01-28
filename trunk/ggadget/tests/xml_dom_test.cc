@@ -37,6 +37,7 @@ void TestBlankNode(DOMNodeInterface *node) {
 
   DOMNodeListInterface *children = node->GetChildNodes();
   EXPECT_EQ(0U, children->GetLength());
+  EXPECT_EQ(0, children->GetRefCount());
   delete children;
 }
 
@@ -87,6 +88,7 @@ void TestNullNodeValue(DOMNodeInterface *node) {
 
 TEST(XMLDOM, TestBlankDocument) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  doc->Ref();
   ASSERT_TRUE(doc);
   EXPECT_STREQ(kDOMDocumentName, doc->GetNodeName().c_str());
   EXPECT_EQ(DOMNodeInterface::DOCUMENT_NODE, doc->GetNodeType());
@@ -95,14 +97,23 @@ TEST(XMLDOM, TestBlankDocument) {
   TestBlankNode(doc);
   TestNullNodeValue(doc);
   EXPECT_TRUE(doc->GetDocumentElement() == NULL);
-  delete doc;
+  EXPECT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestBlankElement) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  DOMDocumentInterface* doc = CreateDOMDocument(g_xml_parser);
+  ASSERT_EQ(0, doc->GetRefCount());
+  doc->Ref();
+  ASSERT_EQ(1, doc->GetRefCount());
+
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
+  ASSERT_EQ(0, root_ele->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
+  root_ele->Ref();
+  ASSERT_EQ(2, doc->GetRefCount());
+
   EXPECT_STREQ("root", root_ele->GetNodeName().c_str());
   EXPECT_STREQ("root", root_ele->GetTagName().c_str());
   EXPECT_EQ(DOMNodeInterface::ELEMENT_NODE, root_ele->GetNodeType());
@@ -112,20 +123,41 @@ TEST(XMLDOM, TestBlankElement) {
   EXPECT_TRUE(doc->GetDocumentElement() == NULL);
   ASSERT_EQ(DOM_NO_ERR, doc->AppendChild(root_ele));
   EXPECT_TRUE(doc->GetDocumentElement() == root_ele);
+  ASSERT_EQ(1, root_ele->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
+  root_ele->Unref();
+  // The element should not be deleted now because it still belongs to the doc.
+  ASSERT_EQ(0, root_ele->GetRefCount());
+  ASSERT_EQ(1, doc->GetRefCount());
 
   DOMElementInterface *ele1 = root_ele;
   ASSERT_EQ(DOM_INVALID_CHARACTER_ERR, doc->CreateElement("&*(", &ele1));
   ASSERT_TRUE(ele1 == NULL);
   ASSERT_EQ(DOM_INVALID_CHARACTER_ERR, doc->CreateElement(NULL, &ele1));
   ASSERT_EQ(DOM_INVALID_CHARACTER_ERR, doc->CreateElement("", &ele1));
-  doc->Detach();
+
+  root_ele->Ref();
+  ASSERT_EQ(1, root_ele->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
+  root_ele->Unref();
+  // The element should not be deleted now because it still belongs to the doc.
+  ASSERT_EQ(0, root_ele->GetRefCount());
+  ASSERT_EQ(1, doc->GetRefCount());
+  ASSERT_EQ(DOM_NO_ERR, doc->RemoveChild(root_ele));
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestAttrSelf) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMAttrInterface *attr;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateAttribute("attr", &attr));
+  ASSERT_EQ(0, attr->GetRefCount());
+  attr->Ref();
+  ASSERT_EQ(1, attr->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
+
   EXPECT_STREQ("attr", attr->GetNodeName().c_str());
   EXPECT_STREQ("attr", attr->GetName().c_str());
   EXPECT_EQ(DOMNodeInterface::ATTRIBUTE_NODE, attr->GetNodeType());
@@ -155,13 +187,16 @@ TEST(XMLDOM, TestAttrSelf) {
             doc->CreateAttribute("Invalid^Name", &attr1));
   ASSERT_EQ(DOM_INVALID_CHARACTER_ERR, doc->CreateAttribute(NULL, &attr1));
   ASSERT_EQ(DOM_INVALID_CHARACTER_ERR, doc->CreateAttribute("", &attr1));
-  delete attr;
-  doc->Detach();
+
+  ASSERT_EQ(1, attr->GetRefCount());
+  attr->Unref();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestParentChild) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
   DOMNodeListInterface *children = root_ele->GetChildNodes();
@@ -211,13 +246,18 @@ TEST(XMLDOM, TestParentChild) {
   LOG("No Child");
   TestChildren(root_ele, children, 0);
 
-  delete children;
-  doc->Detach();
+  ASSERT_EQ(2, doc->GetRefCount());
+  children->Ref();
+  ASSERT_EQ(1, children->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
+  children->Unref();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestParentChildErrors) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
 
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
@@ -262,16 +302,21 @@ TEST(XMLDOM, TestParentChildErrors) {
   ASSERT_EQ(DOM_HIERARCHY_REQUEST_ERR, ele2->ReplaceChild(root_ele, ele2a));
 
   DOMDocumentInterface *doc1 = CreateDOMDocument(g_xml_parser);
-  doc1->Attach();
+  doc1->Ref();
   DOMElementInterface *ele3;
   doc1->CreateElement("ele3", &ele3);
+  ASSERT_EQ(2, doc1->GetRefCount());
+
   ASSERT_EQ(DOM_WRONG_DOCUMENT_ERR, root_ele->AppendChild(ele3));
   ASSERT_EQ(DOM_WRONG_DOCUMENT_ERR, root_ele->InsertBefore(ele3, ele1));
   ASSERT_EQ(DOM_WRONG_DOCUMENT_ERR, root_ele->ReplaceChild(ele3, ele1));
 
+  ASSERT_EQ(2, doc1->GetRefCount());
   delete ele3;
-  doc1->Detach();
-  doc->Detach();
+  ASSERT_EQ(1, doc1->GetRefCount());
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc1->Unref();
+  doc->Unref();
 }
 
 void TestAttributes(DOMElementInterface *ele, DOMNamedNodeMapInterface *attrs,
@@ -314,7 +359,7 @@ void TestAttributes(DOMElementInterface *ele, DOMNamedNodeMapInterface *attrs,
 
 TEST(XMLDOM, TestElementAttr) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMElementInterface *ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &ele));
   DOMNamedNodeMapInterface *attrs = ele->GetAttributes();
@@ -361,13 +406,21 @@ TEST(XMLDOM, TestElementAttr) {
   ele->RemoveAttribute("not-exists");
   TestAttributes(ele, attrs, 0);
 
+  ASSERT_EQ(2, doc->GetRefCount());
+  attrs->Ref();
+  ASSERT_EQ(2, doc->GetRefCount());
+  ASSERT_EQ(1, attrs->GetRefCount());
+  attrs->Unref(true);
+  ASSERT_EQ(0, attrs->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
   delete attrs;
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestElementAttributes) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMElementInterface *ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &ele));
   DOMNamedNodeMapInterface *attrs = ele->GetAttributes();
@@ -406,13 +459,21 @@ TEST(XMLDOM, TestElementAttributes) {
   TestAttributes(ele, attrs, 0);
   ASSERT_TRUE(attrs->GetNamedItem("not-exist") == NULL);
 
+  ASSERT_EQ(2, doc->GetRefCount());
+  attrs->Ref();
+  ASSERT_EQ(2, doc->GetRefCount());
+  ASSERT_EQ(1, attrs->GetRefCount());
+  attrs->Unref(true);
+  ASSERT_EQ(0, attrs->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
   delete attrs;
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestElementAttrErrors) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMElementInterface *ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &ele));
   DOMNamedNodeMapInterface *attrs = ele->GetAttributes();
@@ -460,17 +521,18 @@ TEST(XMLDOM, TestElementAttrErrors) {
   delete ele1;
 
   DOMDocumentInterface *doc1 = CreateDOMDocument(g_xml_parser);
-  doc1->Attach();
+  doc1->Ref();
   DOMAttrInterface *attr_doc1;
   ASSERT_EQ(DOM_NO_ERR, doc1->CreateAttribute("attr_doc1", &attr_doc1));
   ASSERT_EQ(DOM_WRONG_DOCUMENT_ERR, attrs->SetNamedItem(attr_doc1));
   ASSERT_EQ(DOM_WRONG_DOCUMENT_ERR, ele->SetAttributeNode(attr_doc1));
   TestAttributes(ele, attrs, 2, "attr2", "", "attr1", "value1d");
   delete attr_doc1;
-  doc1->Detach();
-
   delete attrs;
-  doc->Detach();
+  ASSERT_EQ(1, doc1->GetRefCount());
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc1->Unref();
+  doc->Unref();
 }
 
 void TestBlankNodeList(DOMNodeListInterface *list) {
@@ -482,7 +544,7 @@ void TestBlankNodeList(DOMNodeListInterface *list) {
 
 TEST(XMLDOM, TestBlankGetElementsByTagName) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
   LOG("Blank document NULL name");
   TestBlankNodeList(elements);
@@ -502,8 +564,8 @@ TEST(XMLDOM, TestBlankGetElementsByTagName) {
   LOG("Blank document non-existent name");
   TestBlankNodeList(elements);
   delete elements;
-
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestAnyGetElementsByTagName) {
@@ -516,7 +578,7 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
     "</root>";
 
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   ASSERT_TRUE(doc->LoadXML(xml));
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
   LOG("Non-blank document NULL name");
@@ -548,8 +610,8 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
   ASSERT_EQ(DOM_NO_ERR, doc->RemoveChild(doc->GetDocumentElement()));
   TestBlankNodeList(elements);
   delete elements;
-
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestGetElementsByTagName) {
@@ -562,7 +624,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
     "</root>";
 
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   ASSERT_TRUE(doc->LoadXML(xml));
   DOMNodeListInterface *elements = doc->GetElementsByTagName("s");
   LOG("Non-blank document name 's'");
@@ -587,16 +649,20 @@ TEST(XMLDOM, TestGetElementsByTagName) {
   ASSERT_EQ(DOM_NO_ERR, doc->RemoveChild(doc->GetDocumentElement()));
   TestBlankNodeList(elements);
   delete elements;
-
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestText) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
 
   static UTF16Char data[] = { 'd', 'a', 't', 'a', 0 };
   DOMTextInterface *text = doc->CreateTextNode(data);
+  ASSERT_EQ(0, text->GetRefCount());
+  text->Ref();
+  ASSERT_EQ(1, text->GetRefCount());
+  ASSERT_EQ(2, doc->GetRefCount());
 
   UTF16String blank_utf16;
   EXPECT_TRUE(UTF16String(text->GetData()) == data);
@@ -686,12 +752,17 @@ TEST(XMLDOM, TestText) {
 
   DOMTextInterface *text1 = doc->CreateTextNode(data);
   EXPECT_EQ(DOM_HIERARCHY_REQUEST_ERR, text->AppendChild(text1));
+  ASSERT_EQ(3, doc->GetRefCount());
   delete text1;
+  ASSERT_EQ(2, doc->GetRefCount());
 
   EXPECT_EQ(DOM_NO_ERR, text->SplitText(0, &text1));
   EXPECT_STREQ("", text->GetNodeValue());
   EXPECT_STREQ("data", text1->GetNodeValue());
-  delete text;
+  ASSERT_EQ(1, text->GetRefCount());
+  ASSERT_EQ(3, doc->GetRefCount());
+  text->Unref();
+  ASSERT_EQ(2, doc->GetRefCount());
 
   EXPECT_EQ(DOM_NO_ERR, text1->SplitText(4, &text));
   EXPECT_STREQ("", text->GetNodeValue());
@@ -718,6 +789,7 @@ TEST(XMLDOM, TestText) {
   EXPECT_TRUE(text1->GetPreviousSibling() == text);
   EXPECT_STREQ("ta", text->GetNodeValue());
   EXPECT_STREQ("da", text1->GetNodeValue());
+
   DOMTextInterface *text2;
   EXPECT_EQ(DOM_NO_ERR, text->SplitText(1, &text2));
   EXPECT_TRUE(text2->GetParentNode() == root_ele);
@@ -725,18 +797,19 @@ TEST(XMLDOM, TestText) {
   EXPECT_TRUE(text2->GetNextSibling() == text1);
   EXPECT_STREQ("t", text->GetNodeValue());
   EXPECT_STREQ("a", text2->GetNodeValue());
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestDocumentFragmentAndTextContent) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
   ASSERT_EQ(DOM_NO_ERR, doc->AppendChild(root_ele));
 
   DOMDocumentFragmentInterface *fragment = doc->CreateDocumentFragment();
-  fragment->Attach();
+  fragment->Ref();
   TestBlankNode(fragment);
   TestNullNodeValue(fragment);
   ASSERT_EQ(DOMNodeInterface::DOCUMENT_FRAGMENT_NODE, fragment->GetNodeType());
@@ -765,14 +838,16 @@ TEST(XMLDOM, TestDocumentFragmentAndTextContent) {
 
   root_ele->SetTextContent("NEW");
   EXPECT_STREQ("NEW", root_ele->GetTextContent().c_str());
-
-  fragment->Detach();
-  doc->Detach();
+  ASSERT_EQ(2, doc->GetRefCount());
+  ASSERT_EQ(1, fragment->GetRefCount());
+  fragment->Unref();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, Others) {
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
   ASSERT_EQ(DOM_NO_ERR, doc->AppendChild(root_ele));
@@ -784,11 +859,13 @@ TEST(XMLDOM, Others) {
   ASSERT_FALSE(impl->HasFeature("XPATH", NULL));
 
   DOMCommentInterface *comment = doc->CreateComment(NULL);
+  comment->Ref();
   TestBlankNode(comment);
   ASSERT_EQ(DOMNodeInterface::COMMENT_NODE, comment->GetNodeType());
   ASSERT_EQ(DOM_NO_ERR, doc->AppendChild(comment));
 
   DOMCDATASectionInterface *cdata = doc->CreateCDATASection(NULL);
+  cdata->Ref();
   TestBlankNode(cdata);
   ASSERT_EQ(DOMNodeInterface::CDATA_SECTION_NODE, cdata->GetNodeType());
   ASSERT_EQ(DOM_HIERARCHY_REQUEST_ERR, doc->AppendChild(cdata));
@@ -796,14 +873,22 @@ TEST(XMLDOM, Others) {
 
   DOMProcessingInstructionInterface *pi;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateProcessingInstruction("pi", "value", &pi));
+  pi->Ref();
   TestBlankNode(pi);
   ASSERT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE, pi->GetNodeType());
   ASSERT_EQ(DOM_NO_ERR, doc->AppendChild(pi));
   ASSERT_EQ(DOM_NO_ERR, root_ele->AppendChild(pi));
 
+  ASSERT_EQ(4, doc->GetRefCount());
+  comment->Unref();
+  cdata->Unref();
+  pi->Unref();
+  ASSERT_EQ(0, comment->GetRefCount());
+  ASSERT_EQ(0, cdata->GetRefCount());
+  ASSERT_EQ(0, pi->GetRefCount());
   ASSERT_TRUE(doc->CloneNode(true) == NULL);
-
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 TEST(XMLDOM, TestXMLLoadAndSerialize) {
@@ -817,7 +902,7 @@ TEST(XMLDOM, TestXMLLoadAndSerialize) {
     "</root>";
 
   DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
-  doc->Attach();
+  doc->Ref();
   doc->LoadXML(xml);
   DOMElementInterface *ele = doc->GetDocumentElement();
   for (int i = 0; i < 20; i++) {
@@ -829,7 +914,8 @@ TEST(XMLDOM, TestXMLLoadAndSerialize) {
   doc->LoadXML(xml_out.c_str());
   std::string xml_out2 = doc->GetXML();
   ASSERT_STREQ(xml_out2.c_str(), xml_out.c_str());
-  doc->Detach();
+  ASSERT_EQ(1, doc->GetRefCount());
+  doc->Unref();
 }
 
 int main(int argc, char **argv) {

@@ -33,6 +33,9 @@ class ContentAreaElement : public ScrollingElement {
   ContentAreaElement(BasicElement *parent, View *view, const char *name);
   virtual ~ContentAreaElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   enum ContentFlag {
     CONTENT_FLAG_NONE = 0,

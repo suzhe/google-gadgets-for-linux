@@ -43,5 +43,5 @@ ADD_SUBDIRECTORY(extensions)
 ADD_DEPENDENCIES(ggadget_smjs js)
 
 MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/resources 
-         ${CMAKE_BINARY_DIR}/output/bin/ggl_resources.bin
+         ${CMAKE_BINARY_DIR}/output/bin/ggl-resources.bin
 )

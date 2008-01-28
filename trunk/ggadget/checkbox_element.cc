@@ -87,7 +87,10 @@ CheckBoxElement::CheckBoxElement(BasicElement *parent, View *view,
     : BasicElement(parent, view, is_checkbox ? "checkbox" : "radio", name, false),
       impl_(new Impl(this, view, is_checkbox)) {
   SetEnabled(true);
+}
 
+void CheckBoxElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("value",
                    NewSlot(this, &CheckBoxElement::GetValue),
                    NewSlot(this, &CheckBoxElement::SetValue));

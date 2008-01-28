@@ -23,7 +23,7 @@ namespace ggadget {
 
 class ImageInterface;
 
-class ScriptableImage : public ScriptableHelperOwnershipShared {
+class ScriptableImage : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x18d1431907cd4b1e, ScriptableInterface)
 
@@ -32,6 +32,7 @@ class ScriptableImage : public ScriptableHelperOwnershipShared {
 
  protected:
   virtual ~ScriptableImage();
+  virtual void DoRegister();
 
  public:
   const ImageInterface *GetImage() const;

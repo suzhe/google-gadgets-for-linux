@@ -256,6 +256,10 @@ ScrollBarElement::ScrollBarElement(BasicElement *parent, View *view,
                                    const char *name)
     : BasicElement(parent, view, "scrollbar", name, false),
       impl_(new Impl(this, view)) {
+}
+
+void ScrollBarElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("background",
                    NewSlot(this, &ScrollBarElement::GetBackground),
                    NewSlot(this, &ScrollBarElement::SetBackground));

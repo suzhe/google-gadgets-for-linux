@@ -54,7 +54,7 @@ JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
                     NULL, NULL, JSPROP_READONLY | JSPROP_PERMANENT);
   JS_SetPrivate(js_context, js_reference_tracker, this);
   // Count the current JavaScript reference.
-  Attach();
+  Ref();
   ASSERT(GetRefCount() == 1);
 }
 
@@ -62,22 +62,22 @@ JSNativeWrapper::~JSNativeWrapper() {
   JSScriptContext::FinalizeJSNativeWrapper(js_context_, this);
 }
 
-ScriptableInterface::OwnershipPolicy JSNativeWrapper::Attach() {
-  if (GetRefCount() > 0) {
+void JSNativeWrapper::Ref() {
+  ScriptableHelperDefault::Ref();
+  if (GetRefCount() == 2) {
     // There must be a new native reference, let JavaScript know it by adding
     // the object to root.
     JS_AddNamedRoot(js_context_, &js_object_, name_.c_str());
   }
-  return ScriptableHelperOwnershipShared::Attach();
 }
 
-bool JSNativeWrapper::Detach() {
+void JSNativeWrapper::Unref(bool transient) {
   if (GetRefCount() == 2) {
     // The last native reference is about to be released, let JavaScript know
     // it by removing the root reference.
     JS_RemoveRoot(js_context_, &js_object_);
   }
-  return ScriptableHelperOwnershipShared::Detach();
+  ScriptableHelperDefault::Unref(transient);
 }
 
 bool JSNativeWrapper::EnumerateProperties(
@@ -186,7 +186,7 @@ void JSNativeWrapper::FinalizeTracker(JSContext *cx, JSObject *obj) {
         // The JavaScript reference should be the last reference to be released,
         // because the object is added to root if there are native references.
         ASSERT(wrapper->GetRefCount() == 1);
-        wrapper->Detach();
+        wrapper->Unref();
       }
     }
   }

@@ -65,7 +65,7 @@ class DisplayWindow::Impl {
     TYPE_EDIT_PASSWORD = 10,
   };
 
-  class Control : public ScriptableHelper<ScriptableInterface> {
+  class Control : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x811cc6d8013643f4, ScriptableInterface);
 

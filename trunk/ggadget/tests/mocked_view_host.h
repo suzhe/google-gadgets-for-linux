@@ -130,7 +130,9 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual const ggadget::GraphicsInterface *GetGraphics() const {
     return const_cast<MockedGraphics *>(&graphics_);
   }
-  virtual void GetNativeWidgetInfo(void **widget, int *x, int *y) { }
+  virtual void *GetNativeWidget() { return NULL; }
+  virtual void ViewCoordToNativeWidgetCoord(double, double,
+                                            double *, double *) { }
   virtual void QueueDraw() { draw_queued_ = true; }
   virtual bool GrabKeyboardFocus() { return false; }
   virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
@@ -148,7 +150,6 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual std::string Prompt(const char *message, const char *default_value) {
     return std::string();
   }
-  virtual ggadget::EditInterface* NewEdit(size_t, size_t) { return NULL; }
 
   bool GetQueuedDraw() {
     bool b = draw_queued_;

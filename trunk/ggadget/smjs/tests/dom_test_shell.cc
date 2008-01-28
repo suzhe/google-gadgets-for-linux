@@ -22,7 +22,7 @@
 using namespace ggadget;
 using namespace ggadget::smjs;
 
-class GlobalObject : public ScriptableHelper<ScriptableInterface> {
+class GlobalObject : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d22, ScriptableInterface);
   GlobalObject()

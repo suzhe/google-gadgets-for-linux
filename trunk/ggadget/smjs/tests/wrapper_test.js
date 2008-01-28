@@ -29,15 +29,15 @@ function TestScriptableBasics(scriptable) {
   ASSERT(EQ("Buffer:Infinity", scriptable.Buffer));
   scriptable.Buffer = Number.NEGATIVE_INFINITY;
   ASSERT(EQ("Buffer:-Infinity", scriptable.Buffer));
-  scriptable.TestMethodVoid0();  // It will clear the buffer.
+  scriptable.ClearBuffer();  // It will clear the buffer.
   ASSERT(STRICT_EQ("", scriptable.Buffer));
 
   ASSERT(STRICT_EQ(0, scriptable.DoubleProperty));
   ASSERT(EQ("GetDoubleProperty()=0.000\n", scriptable.Buffer));
-  scriptable.TestMethodVoid0();
+  scriptable.ClearBuffer();
   scriptable.DoubleProperty = 3.25;
   ASSERT(EQ("SetDoubleProperty(3.250)\n", scriptable.Buffer));
-  scriptable.TestMethodVoid0();
+  scriptable.ClearBuffer();
   ASSERT(STRICT_EQ(3.25, scriptable.DoubleProperty));
   ASSERT(EQ("GetDoubleProperty()=3.250\n", scriptable.Buffer));
 
@@ -81,14 +81,6 @@ DEATH_TEST("Test integer property with non-number", function() {
   scriptable.EnumSimple = "80%";
   ASSERT(DEATH());
 });
-
-/* For now we allow the following assignment.
-DEATH_TEST("Test string property with object", function() {
-  // The following assignment should cause an error.
-  scriptable.Buffer = { a: 10 };
-  ASSERT(DEATH());
-});
-*/
 
 TEST("Test string property with an array", function() {
   scriptable.Buffer = ["string"];
@@ -139,7 +131,6 @@ TEST("Test array", function() {
   ASSERT(UNDEFINED(scriptable2[scriptable2.length]));
   ASSERT(UNDEFINED(scriptable2[scriptable2.length + 1]));
 });
-
 
 TEST("Test signals", function() {
   // Defined in scriptable1.
@@ -235,12 +226,12 @@ TEST("Test scriptables", function() {
 });
 
 TEST("Test dynamic allocated objects", function() {
-  var a = scriptable2.NewObject(false);
+  var a = scriptable2.NewObject(true);
   var a_deleted = false;
   a.my_ondelete = function() {
     a_deleted = true;
   };
-  var b = scriptable2.NewObject(false);
+  var b = scriptable2.NewObject(true);
   var b_deleted = false;
   b.my_ondelete = function() {
     b_deleted = true;
@@ -252,17 +243,18 @@ TEST("Test dynamic allocated objects", function() {
   ASSERT(NE(scriptable2, b));
   TestScriptableBasics(a);
   TestScriptableBasics(b);
-  scriptable2.DeleteObject(a);
+  scriptable2.ReleaseObject(a);
   ASSERT(TRUE(a_deleted));
   ASSERT(FALSE(b_deleted));
-  scriptable2.DeleteObject(b);
+  scriptable2.ReleaseObject(b);
   ASSERT(TRUE(b_deleted));
 });
 
 DEATH_TEST("Test access after deleted", function() {
-  var a = scriptable2.NewObject(false);
-  scriptable2.DeleteObject(a);
+  var a = scriptable2.NewObject(true);
+  scriptable2.ReleaseObject(a);
   a.Buffer = "Buffer";
+  print("*************" + a.Buffer);
   ASSERT(DEATH());
 });
 
@@ -274,41 +266,28 @@ TEST("Test string callback", function() {
 });
 
 TEST("Test ownership policies", function() {
-  var a = scriptable2.NewObject(false); // native owned
-  var lunch_msg;
-  a.onlunch = function(s) {
-    lunch_msg = s;
-    return s;
-  };
   gc();
-  // They should still work after gc.
-  TestScriptableBasics(a);
-  a.time = "lunch";
-  ASSERT(EQ("Have lunch", lunch_msg));
-  ASSERT(EQ(lunch_msg, a.SignalResult));
-  scriptable2.DeleteObject(a);
-
-  a = scriptable2.NewObject(true);  // script owned
-  scriptable.TestMethodVoid0();
+  a = scriptable2.NewObject(false);  // without initial ref.
+  scriptable.ClearBuffer();
   a = null;
   gc();
   ASSERT(EQ("Destruct\n", scriptable.Buffer));
 
-  var b = scriptable2.NewObject(true);  // script owned
+  var b = scriptable2.NewObject(false);
   b = scriptable2.TestMethod(b);
   b = null;
-  scriptable.TestMethodVoid0();
+  scriptable.ClearBuffer();
   gc();
   ASSERT(EQ("Destruct\n", scriptable.Buffer));
 
-  a = scriptable2.NewObject(true);  // script owned
-  scriptable.TestMethodVoid0();
+  a = scriptable2.NewObject(true);
+  scriptable.ClearBuffer();
   // Pass the ownership to the native side, and at the same time, the native
   // side deletes it.
-  scriptable2.DeleteObject(a);
+  scriptable2.ReleaseObject(a);
   a = null;
-  ASSERT(EQ("Destruct\n", scriptable.Buffer));
   gc();  // Should not cause errors.
+  ASSERT(EQ("Destruct\n", scriptable.Buffer));
 });
 
 TEST("Test UTF8 strings", function() {
@@ -346,13 +325,13 @@ function NewAndUse() {
   gc(); // The function should not be deleted now.
   s.time = "lunch";
   ASSERT(EQ(100, s.EnumSimple));
-  scriptable.TestMethodVoid0();
+  scriptable.ClearBuffer();
 }
 
 TEST("Test global class", function() {
   var s = new TestScriptable();
   TestScriptableBasics(s);
-  scriptable.TestMethodVoid0();
+  scriptable.ClearBuffer();
   s = new TestScriptable();
   gc();
   // The previous 's' should be deleted now.
@@ -371,9 +350,9 @@ TEST("Test global class", function() {
 
 TEST("Test default args", function() {
   var s = scriptable2.NewObject();
-  ASSERT(TRUE(s.ScriptOwned));
-  scriptable2.DeleteObject();
-  scriptable2.DeleteObject(s);
+  ASSERT(TRUE(s.NativeOwned));
+  scriptable2.ReleaseObject();
+  scriptable2.ReleaseObject(s);
 });
 
 TEST("Test scriptable array", function() {
@@ -432,14 +411,14 @@ TEST("Test Enumeration", function() {
   if (0) { // Feature disabled.
     var expected_array = [
       "Buffer", "BufferReadOnly", "CallCallback", "ConcatArray", "Const",
-      "DeleteObject", "DoubleProperty", "EnumSimple", "EnumString",
+      "ReleaseObject", "DoubleProperty", "EnumSimple", "EnumString",
       "Fixed", "ICONSTANT0", "ICONSTANT1", "ICONSTANT2", "ICONSTANT3",
       "ICONSTANT4", "ICONSTANT5", "ICONSTANT6", "ICONSTANT7", "ICONSTANT8",
       "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
       "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
       "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
       "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
-      "TestMethodDouble2", "TestMethodVoid0", "VALUE_0", "VALUE_1", "VALUE_2",
+      "TestMethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1", "VALUE_2",
       "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
       "ontest", "time",
     ];

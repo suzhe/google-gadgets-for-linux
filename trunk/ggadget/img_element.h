@@ -29,6 +29,10 @@ class ImgElement : public BasicElement {
   ImgElement(BasicElement *parent, View *view, const char *name);
   virtual ~ImgElement();
 
+ protected:
+  virtual void DoRegister();
+
+ public:
   virtual bool IsPointIn(double x, double y);
 
  public:

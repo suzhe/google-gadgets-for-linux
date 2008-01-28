@@ -53,7 +53,10 @@ AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
       impl_(new Impl(this, view)) {
   SetCursor(ViewHostInterface::CURSOR_HAND);
   SetEnabled(true);
+}
 
+void AnchorElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("overColor",
                    NewSlot(this, &AnchorElement::GetOverColor),
                    NewSlot(this, &AnchorElement::SetOverColor));

@@ -126,7 +126,6 @@ static JSBool ConvertJSToNativeString(JSContext *cx, jsval js_val,
         scriptable->IsInstanceOf(ScriptableBinaryData::CLASS_ID)) {
       ScriptableBinaryData *data =
           down_cast<ScriptableBinaryData *>(scriptable);
-      // Any data after '0' will be truncated.
       *native_val = Variant(data->data());
       return JS_TRUE;
     }
@@ -473,15 +472,24 @@ static JSBool ConvertNativeToJSString(JSContext *cx,
                                       const Variant &native_val,
                                       jsval *js_val) {
   JSBool result = JS_TRUE;
-  const char *char_ptr = VariantValue<const char *>()(native_val);
-  if (!char_ptr) {
+  if (!VariantValue<const char *>()(native_val)) {
     *js_val = JSVAL_NULL;
   } else {
+    std::string source = VariantValue<std::string>()(native_val);
     UTF16String utf16_string;
-    ConvertStringUTF8ToUTF16(char_ptr, strlen(char_ptr), &utf16_string);
+    JSString *js_string;
+    if (ConvertStringUTF8ToUTF16(source, &utf16_string) != source.size()) {
+      // Failed to convert to utf16, the source may contain arbitrary binary
+      // data. This is mainly for compatibility of XMLHttpRequest.responseBody
+      // to Microsoft, that combines each two bytes into one 16 bit word.
+      for (size_t i = 0; i < source.size(); i += 2)
+        utf16_string.append(1, static_cast<unsigned char>(source[i]) |
+                            (static_cast<unsigned char>(source[i + 1]) << 8));
+    }
     // Don't cast utf16_string.c_str() to jschar *, to let the compiler check
     // if they are compatible.
-    JSString *js_string = JS_NewUCStringCopyZ(cx, utf16_string.c_str());
+    js_string = JS_NewUCStringCopyN(cx, utf16_string.c_str(),
+                                    utf16_string.size());
     if (js_string)
       *js_val = STRING_TO_JSVAL(js_string);
     else
@@ -515,14 +523,12 @@ static JSBool ConvertNativeArrayToJS(JSContext *cx, ScriptableArray *array,
   if (!js_array)
     return JS_FALSE;
 
-  array->Attach();
   size_t length = array->GetCount();
   for (size_t i = 0; i < length; i++) {
     jsval item;
     if (ConvertNativeToJS(cx, array->GetItem(i), &item))
       JS_SetElement(cx, js_array, static_cast<jsint>(i), &item);
   }
-  array->Detach();
   *js_val = OBJECT_TO_JSVAL(js_array);
   return JS_TRUE;
 }

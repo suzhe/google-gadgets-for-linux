@@ -37,14 +37,14 @@ extern std::string g_buffer;
 void AppendBuffer(const char *format, ...);
 
 // A normal scriptable class.
-class TestScriptable1 : public ScriptableHelper<ScriptableInterface> {
+class TestScriptable1 : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xdb06ba021f1b4c05, ScriptableInterface);
 
-  TestScriptable1();
+  TestScriptable1(bool native_owned = true);
   virtual ~TestScriptable1();
 
-  void TestMethodVoid0() {
+  void ClearBuffer() {
     g_buffer.clear();
   }
   double TestMethodDouble2(bool p1, long p2) {
@@ -74,6 +74,8 @@ class TestScriptable1 : public ScriptableHelper<ScriptableInterface> {
     g_buffer = json.value;
   }
 
+  bool IsNativeOwned() { return native_owned_; }
+
   // This signal is only for test, no relation to ConnectOnReferenceChange.
   // Place this signal declaration here for testing.
   Signal0<void> my_ondelete_signal_;
@@ -81,21 +83,17 @@ class TestScriptable1 : public ScriptableHelper<ScriptableInterface> {
   enum EnumType { VALUE_0, VALUE_1, VALUE_2 };
 
  private:
-
+  bool native_owned_;
   double double_property_;
   EnumType enum_property_;
   Variant variant_property_;
 };
 
-class TestPrototype : public ScriptableHelper<ScriptableInterface> {
+class TestPrototype : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xbb7f8eddc2e94353, ScriptableInterface);
   static TestPrototype *GetInstance() {
     return instance_ ? instance_ : (instance_ = new TestPrototype());
-  }
-
-  virtual OwnershipPolicy Attach() {
-    return NATIVE_PERMANENT;
   }
 
   // Place this signal declaration here for testing.
@@ -118,11 +116,9 @@ class TestPrototype : public ScriptableHelper<ScriptableInterface> {
 class TestScriptable2 : public TestScriptable1 {
  public:
   DEFINE_CLASS_ID(0xa88ea50b8b884e, TestScriptable1);
-  TestScriptable2(bool script_owned_ = false, bool strict = false);
+  TestScriptable2(bool native_owned = true, bool strict = true);
   virtual ~TestScriptable2();
 
-  virtual OwnershipPolicy Attach();
-  virtual bool Detach();
   virtual bool IsStrict() const { return strict_; }
 
   static const int kArraySize = 20;
@@ -169,11 +165,20 @@ class TestScriptable2 : public TestScriptable1 {
   TestScriptable2 *TestMethod(const TestScriptable2 *t) {
     return const_cast<TestScriptable2 *>(t);
   }
-  TestScriptable2 *NewObject(bool script_owned, bool strict = true) {
-    return new TestScriptable2(script_owned, strict);
+  TestScriptable2 *NewObject(bool native_owned, bool strict) {
+    TestScriptable2 *result = new TestScriptable2(native_owned, strict);
+    DLOG("NewObject: %p", result);
+    return result;
   }
-  void DeleteObject(TestScriptable2 *obj) { delete obj; }
-  bool IsScriptOwned() { return script_owned_; }
+  void ReleaseObject(TestScriptable2 *obj) {
+    if (obj) {
+      if (obj->IsNativeOwned())
+        delete obj;
+      else
+        obj->Unref();
+    }
+    DLOG("ReleaseObject: %p", obj);
+  }
   ScriptableArray *ConcatArray(ScriptableInterface *input1,
                                ScriptableInterface *input2);
 
@@ -189,7 +194,6 @@ class TestScriptable2 : public TestScriptable1 {
   OnLunchSignal onlunch_signal_;
   OnSupperSignal onsupper_signal_;
  private:
-  bool script_owned_;
   int array_[kArraySize];
   bool strict_;
   std::string time_;
@@ -199,7 +203,7 @@ class TestScriptable2 : public TestScriptable1 {
 };
 
 extern const Variant kNewObjectDefaultArgs[];
-extern const Variant kDeleteObjectDefaultArgs[];
+extern const Variant kReleaseObjectDefaultArgs[];
 
 #endif // GGADGET_TESTS_SCRIPTABLES_H__
 

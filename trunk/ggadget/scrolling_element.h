@@ -31,6 +31,7 @@ class ScrollingElement : public BasicElement {
                    const char *tag_name, const char *name,
                    bool children);
   virtual ~ScrollingElement();
+  virtual void DoRegister();
 
  public:
   virtual void MarkRedraw();
@@ -103,6 +104,7 @@ class ScrollingElement : public BasicElement {
    * When the scrollbar is scrolled by user, this slot will be called.
    */
   Connection *ConnectOnScrolledEvent(Slot0<void> *slot);
+
  protected:
   /**
    * Draws scrollbar on the canvas. Subclasses must call this in their

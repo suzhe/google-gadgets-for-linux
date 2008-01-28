@@ -45,9 +45,7 @@ static const Variant kOpenDefaultArgs[] = {
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
 
-class XMLHttpRequest
-    : public ScriptableHelper<XMLHttpRequestInterface,
-                              ScriptableInterface::OWNERSHIP_SHARED> {
+class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
@@ -67,6 +65,9 @@ class XMLHttpRequest
         send_flag_(false),
         headers_(NULL),
         response_dom_(NULL) {
+  }
+
+  virtual void DoRegister() {
     RegisterSignal("onreadystatechange", &onreadystatechange_signal_);
     RegisterReadonlySimpleProperty("readyState", &state_);
     RegisterMethod("open",
@@ -269,7 +270,7 @@ class XMLHttpRequest
     if (async_) {
       // Add an internal reference when this request is working to prevent
       // this object from being GC'ed.
-      Attach();
+      Ref();
 
       send_flag_ = true;
       curlm_ = curl_multi_init();
@@ -650,12 +651,14 @@ class XMLHttpRequest
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
 
-    if (async_ && send_flag_) {
-      // Detach the internal reference that was added when the request was
-      // started.
-      Detach();
+    if (send_flag_) {
+      send_flag_ = false;
+      if (async_) {
+        // Remove the internal reference that was added when the request was
+        // started.
+        Unref();
+      }
     }
-    send_flag_ = false;
   }
 
   virtual void Abort() {
@@ -679,7 +682,7 @@ class XMLHttpRequest
     send_data_.clear();
     status_text_.clear();
     if (response_dom_) {
-      response_dom_->Detach();
+      response_dom_->Unref();
       response_dom_ = NULL;
     }
 
@@ -720,7 +723,7 @@ class XMLHttpRequest
   void DecodeResponseText() {
     std::string encoding;
     response_dom_ = xml_parser_->CreateDOMDocument();
-    response_dom_->Attach();
+    response_dom_->Ref();
     if (!xml_parser_->ParseContentIntoDOM(response_body_, url_.c_str(),
                                           response_content_type_.c_str(),
                                           response_encoding_.c_str(),
@@ -732,7 +735,7 @@ class XMLHttpRequest
                                             response_content_type_.c_str(),
                                             "ISO8859-1", response_dom_,
                                             &encoding, &response_text_)) {
-        response_dom_->Detach();
+        response_dom_->Unref();
         response_dom_ = NULL;
       }
     }
@@ -820,7 +823,7 @@ class XMLHttpRequest
     return INVALID_STATE_ERR;
   }
 
-  class XMLHttpRequestException : public ScriptableHelperOwnershipShared {
+  class XMLHttpRequestException : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x277d75af73674d06, ScriptableInterface);
 

@@ -173,17 +173,10 @@ ListBoxElement::ListBoxElement(BasicElement *parent, View *view,
     : DivElement(parent, view, tag_name, name),
       impl_(new Impl(this, view)) {
   SetEnabled(true);
+}
 
-  RegisterProperty("background",
-                   NewSlot(implicit_cast<DivElement *>(this),
-                           &DivElement::GetBackground),
-                   NewSlot(implicit_cast<DivElement *>(this),
-                           &DivElement::SetBackground));
-  RegisterProperty("autoscroll",
-                   NewSlot(implicit_cast<ScrollingElement *>(this),
-                           &ScrollingElement::IsAutoscroll),
-                   NewSlot(implicit_cast<ScrollingElement *>(this),
-                           &ScrollingElement::SetAutoscroll));
+void ListBoxElement::DoRegister() {
+  DivElement::DoRegister();
   RegisterProperty("itemHeight",
                    NewSlot(this, &ListBoxElement::GetItemHeight),
                    NewSlot(this, &ListBoxElement::SetItemHeight));

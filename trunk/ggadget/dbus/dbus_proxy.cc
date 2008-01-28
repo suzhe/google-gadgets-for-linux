@@ -391,7 +391,7 @@ bool DBusProxy::Impl::CheckMethodArgsValidity(const char *name,
 bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
   XMLParserInterface *xml_parser = CreateXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
-  domdoc->Attach();
+  domdoc->Ref();
   bool result = false;
   const char* str = NULL;
   DBusMessage *message = dbus_message_new_method_call(name_.c_str(),
@@ -446,7 +446,7 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
     LOG("%s: %s", error.name, error.message);
   }
 exit:
-  domdoc->Detach();
+  domdoc->Unref();
   dbus_error_free(&error);
   delete xml_parser;
   return result;

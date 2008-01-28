@@ -108,11 +108,11 @@ class DOMNodeInterface : public ScriptableInterface {
   virtual internal::DOMNodeImpl *GetImpl() const = 0;
 
   /**
-   * Redeclare @c ScriptableInterface::Attach() and
-   * @c ScriptableInterface::Detach() here to give additional notes.
+   * Redeclare @c ScriptableInterface::Ref() and
+   * @c ScriptableInterface::Unref() here to give additional notes.
    *
    * All @c DOMNodeInterface derived objects are reference counted. Normally
-   * you should use @c Attach() and @c Detach() to add and remove references.
+   * you should use @c Ref() and @c Unref() to add and remove references.
    *
    * Reference counting is based on DOM trees. References to any node in
    * a tree are counted as the reference count of the whole tree. When the
@@ -126,19 +126,13 @@ class DOMNodeInterface : public ScriptableInterface {
    * the document through a node in an orphan tree.
    *
    * All newly created nodes returned from DOMDocumentInterface::CreateXXX(),
-   * any CloneNode() or SplitText() are initially have a zero count.
+   * any CloneNode() or SplitText(), etc. are initially have a zero count.
    * You should either use the @c delete operator to delete the node,
-   * or call @c Attach() if you need to further operate on it,
-   * but never ignore the results from such methods.
+   * or call @c Ref() (or use @c ScopedScriptablePtr) if you need to further
+   * operate on it, but never ignore the results from such methods.
    */
-  virtual OwnershipPolicy Attach() = 0;
-  virtual bool Detach() = 0;
-  /**
-   * Transiently detach a reference. The object will not be deleted even if
-   * there is no references. This is useful for returning an object from a
-   * method.
-   */
-  virtual void TransientDetach() = 0;
+  virtual void Ref() = 0;
+  virtual void Unref(bool transient = false) = 0;
 
   virtual std::string GetNodeName() const = 0;
   virtual const char *GetNodeValue() const = 0;

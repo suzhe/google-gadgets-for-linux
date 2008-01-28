@@ -40,11 +40,11 @@
 
 namespace ggadget {
 
-class Gadget::Impl : public ScriptableHelperNativePermanent {
+class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
 
-  class Debug : public ScriptableHelperNativePermanent {
+  class Debug : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0xa9b59e70c74649da, ScriptableInterface);
     Debug(Gadget::Impl *owner) {
@@ -54,7 +54,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     }
   };
 
-  class Storage : public ScriptableHelperNativePermanent {
+  class Storage : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0xd48715e0098f43d1, ScriptableInterface);
     Storage(Gadget::Impl *owner) {
@@ -63,20 +63,21 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     }
   };
 
-  static void RegisterStrings(const GadgetStringMap *strings,
-                              ScriptableHelperNativePermanent *scriptable) {
+  static void RegisterStrings(
+      const GadgetStringMap *strings,
+      ScriptableHelperNativeOwnedDefault *scriptable) {
     for (GadgetStringMap::const_iterator it = strings->begin();
          it != strings->end(); ++it) {
       scriptable->RegisterConstant(it->first.c_str(), it->second);
     }
   }
 
-  class Strings : public ScriptableHelperNativePermanent {
+  class Strings : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x13679b3ef9a5490e, ScriptableInterface);
   };
 
-  class Plugin : public ScriptableHelperNativePermanent {
+  class Plugin : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
     Plugin(Impl *gadget_impl) :
@@ -212,10 +213,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     Signal1<void, int> ondisplaytargetchange_signal_;
   };
 
-  class GadgetGlobalPrototype : public ScriptableHelperNativePermanent {
+  class GadgetGlobal : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
-    GadgetGlobalPrototype(Gadget::Impl *owner)
+    GadgetGlobal(Gadget::Impl *owner)
         : framework_(owner->host_) {
       RegisterConstant("gadget", owner);
       RegisterConstant("options", &owner->scriptable_options_);
@@ -231,7 +232,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       // Properties and methods of framework can also be accessed directly as
       // globals.
       RegisterConstant("framework", &framework_);
-      SetPrototype(&framework_);
+      SetInheritsFrom(&framework_);
     }
 
     ScriptableFramework framework_;
@@ -243,12 +244,11 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
         storage_(this),
         scriptable_options_(host->GetOptions(), false),
         plugin_(this),
-        gadget_global_prototype_(this),
+        gadget_global_(this),
         element_factory_(new ElementFactory()),
         extension_manager_(
             ExtensionManager::CreateExtensionManager(host->GetMainLoop())),
-        main_view_(new View(&gadget_global_prototype_, element_factory_,
-                            debug_mode)),
+        main_view_(new View(&gadget_global_, element_factory_, debug_mode)),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           main_view_)),
         details_view_(NULL), details_view_host_(NULL),
@@ -333,8 +333,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   bool ShowOptionsDialog() {
     ViewHostInterface *options_view_host = NULL;
     DisplayWindow *window = NULL;
-    View *view = new View(&gadget_global_prototype_, element_factory_,
-                          debug_mode_);
+    View *view = new View(&gadget_global_, element_factory_, debug_mode_);
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
       options_view_host = host_->NewViewHost(
           GadgetHostInterface::VIEW_OLD_OPTIONS, view);
@@ -367,11 +366,10 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
 
   bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
-    details_view->Attach();
+    details_view->Ref();
     CloseDetailsView();
     details_view_ = details_view;
-    View *view = new View(&gadget_global_prototype_, element_factory_,
-                          debug_mode_);
+    View *view = new View(&gadget_global_, element_factory_, debug_mode_);
     details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS,
                                             view);
     ScriptContextInterface *script_context =
@@ -402,7 +400,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_host_;
       details_view_host_ = NULL;
-      details_view->Detach();
+      details_view->Unref();
       return false;
     }
     details_view_host_->ShowInDetailsView(title, flags, feedback_handler);
@@ -416,7 +414,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
                             Slot1<void, int> *callback)
         : impl_(impl), details_view_(details_view),
           title_(title), flags_(flags), callback_(callback) {
-       details_view_->Attach();
+      details_view_->Ref();
     }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       impl_->ShowDetailsView(details_view_, title_.c_str(), flags_, callback_);
@@ -425,7 +423,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      details_view_->Detach();
+      details_view_->Unref();
       delete callback_;
     }
    private:
@@ -453,7 +451,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
       details_view_host_->CloseDetailsView();
       delete details_view_host_;
       details_view_host_ = NULL;
-      details_view_->Detach();
+      details_view_->Unref();
     }
   }
 
@@ -477,7 +475,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
     ASSERT(file_manager);
 
     const GadgetStringMap *strings = file_manager->GetStringTable();
-    RegisterStrings(strings, &gadget_global_prototype_);
+    RegisterStrings(strings, &gadget_global_);
     RegisterStrings(strings, &strings_);
 
     std::string manifest_contents;
@@ -557,7 +555,7 @@ class Gadget::Impl : public ScriptableHelperNativePermanent {
   Strings strings_;
   ScriptableOptions scriptable_options_;
   Plugin plugin_;
-  GadgetGlobalPrototype gadget_global_prototype_;
+  GadgetGlobal gadget_global_;
   ElementFactory *element_factory_;
   ExtensionManager *extension_manager_;
   View *main_view_;

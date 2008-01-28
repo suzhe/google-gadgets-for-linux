@@ -64,7 +64,7 @@ const char kOnTextChangeEvent[]    = "ontextchange";
 /**
  * Scriptable decorator for @c Event.
  */
-class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
+class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6732238aacb4468a, ScriptableInterface)
 
@@ -81,6 +81,10 @@ class ScriptableEvent : public ScriptableHelper<ScriptableInterface> {
                   Event *output_event);
   virtual ~ScriptableEvent();
 
+ protected:
+  virtual void DoRegister();
+
+ public:
   const char *GetName() const;
   const Event *GetEvent() const;
 

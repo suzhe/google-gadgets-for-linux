@@ -21,10 +21,13 @@
 using namespace ggadget;
 using namespace ggadget::smjs;
 
-class GlobalObject : public ScriptableHelper<ScriptableInterface> {
+class GlobalObject : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d11, ScriptableInterface);
-  GlobalObject() {
+  GlobalObject()
+      // "scriptable" is native owned and strict.
+      // "scriptable2" is native owned and not strict.
+      : test_scriptable2(true, false) {
     RegisterConstant("scriptable", &test_scriptable1);
     RegisterConstant("scriptable2", &test_scriptable2);
     // For testing name overriding.
@@ -34,8 +37,8 @@ class GlobalObject : public ScriptableHelper<ScriptableInterface> {
   virtual bool IsStrict() const { return false; }
 
   ScriptableInterface *ConstructScriptable() {
-    // Return script owned object.
-    return test_scriptable2.NewObject(true);
+    // Return shared ownership object.
+    return test_scriptable2.NewObject(false, true);
   }
 
   ScriptableInterface *GetS2() { return &test_scriptable2; }

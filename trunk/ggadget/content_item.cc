@@ -74,10 +74,6 @@ class ContentItem::Impl {
   }
 
   ~Impl() {
-    if (image_)
-      image_->Detach();
-    if (notifier_image_)
-      notifier_image_->Detach();
   }
 
   void UpdateTimeText() {
@@ -123,7 +119,7 @@ class ContentItem::Impl {
 
   View *view_;
   ContentAreaElement *content_area_;
-  ScriptableImage *image_, *notifier_image_;
+  ScopedScriptablePtr<ScriptableImage> image_, notifier_image_;
   uint64_t time_created_;
   std::string open_command_, tooltip_, heading_, source_, snippet_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
@@ -148,6 +144,9 @@ class ContentItem::Impl {
 
 ContentItem::ContentItem(View *view)
     : impl_(new Impl(view)) {
+}
+
+void ContentItem::DoRegister() {
   RegisterProperty("image",
                    NewSlot(this, &ContentItem::GetImage),
                    NewSlot(this, &ContentItem::SetImage));
@@ -199,38 +198,30 @@ ContentItem::~ContentItem() {
 void ContentItem::AttachContentArea(ContentAreaElement *content_area) {
   ASSERT(impl_->content_area_ == NULL);
   impl_->content_area_ = content_area;
-  Attach();
+  Ref();
 }
 
 void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
   ASSERT(impl_->content_area_ == content_area);
   impl_->content_area_ = NULL;
-  Detach();
+  Unref();
 }
 
 ScriptableImage *ContentItem::GetImage() const {
-  return impl_->image_;
+  return impl_->image_.get();
 }
 
 void ContentItem::SetImage(ScriptableImage *image) {
-  if (impl_->image_)
-    impl_->image_->Detach();
-  impl_->image_ = image;
-  if (image)
-    image->Attach();
+  impl_->image_.reset(image);
   impl_->QueueDraw();
 }
 
 ScriptableImage *ContentItem::GetNotifierImage() const {
-  return impl_->notifier_image_;
+  return impl_->notifier_image_.get();
 }
 
 void ContentItem::SetNotifierImage(ScriptableImage *image) {
-  if (impl_->notifier_image_)
-    impl_->notifier_image_->Detach();
-  if (image)
-    image->Attach();
-  impl_->notifier_image_ = image;
+  impl_->notifier_image_.reset(image);
   impl_->QueueDraw();
 }
 
@@ -583,7 +574,10 @@ bool ContentItem::OnDetailsView(std::string *title, DetailsView **details_view,
   *flags = ViewHostInterface::DETAILS_VIEW_FLAG_NONE;
 
   if (impl_->on_details_view_signal_.HasActiveConnections()) {
-    ScriptableInterface *details_info = impl_->on_details_view_signal_(this);
+    Variant param(this);
+    Variant details_info_v = impl_->on_details_view_signal_.Emit(1, &param); 
+    ScriptableInterface *details_info =
+        VariantValue<ScriptableInterface *>()(details_info_v);
     if (details_info) {
       GetPropertyByName(details_info, "title").ConvertToString(title);
       GetPropertyByName(details_info, "cancel").ConvertToBool(&cancel);
@@ -707,6 +701,9 @@ static const Variant kGetTextHeightDefaultArgs[] = {
 
 ScriptableCanvas::ScriptableCanvas(CanvasInterface *canvas, View *view)
     : canvas_(canvas), view_(view) {
+}
+
+void ScriptableCanvas::DoRegister() {
   RegisterMethod("DrawLine",
                  NewSlotWithDefaultArgs(
                      NewSlot(this, &ScriptableCanvas::DrawLineWithColorName),

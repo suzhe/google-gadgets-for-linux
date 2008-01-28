@@ -33,7 +33,7 @@ class ScriptableCanvas;
 class ScriptableImage;
 class View;
 
-class ContentItem : public ScriptableHelperOwnershipShared {
+class ContentItem : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x062fc66bb03640ca, ScriptableInterface);
 
@@ -107,6 +107,7 @@ class ContentItem : public ScriptableHelperOwnershipShared {
 
  protected:
   virtual ~ContentItem();
+  virtual void DoRegister();
 
  public:
   /** Called when this content item is added into a content area. */
@@ -255,12 +256,16 @@ class ContentItem : public ScriptableHelperOwnershipShared {
 };
 
 /** The graphics interface used to draw content items. */
-class ScriptableCanvas : public ScriptableHelper<ScriptableInterface> {
+class ScriptableCanvas : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xa4f94b8abd754d7d, ScriptableInterface);
   ScriptableCanvas(CanvasInterface *canvas, View *view);
   virtual ~ScriptableCanvas();
 
+ protected:
+  virtual void DoRegister();
+
+ public:
   enum FontID {
     /** Normal text font. */
     FONT_NORMAL = -703,

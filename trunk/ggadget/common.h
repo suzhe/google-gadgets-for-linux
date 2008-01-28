@@ -162,10 +162,10 @@ inline To down_cast(From* f) {          // so we only accept pointers
  */
 template <typename Base, typename Derived>
 struct IsDerived {
-  static char Check(Base *);
-  static int Check(void *);
+  static char Check(const Base *);
+  static int Check(const void *);
   static const bool value =
-      sizeof(Check(static_cast<Derived *>(NULL))) == sizeof(char);
+      sizeof(Check(static_cast<const Derived *>(NULL))) == sizeof(char);
 };
 
 /**

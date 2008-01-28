@@ -55,6 +55,10 @@ ItemElement::ItemElement(BasicElement *parent, View *view,
     : BasicElement(parent, view, tagname, name, true),
       impl_(new Impl(parent)) {
   SetEnabled(true);
+}
+
+void ItemElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("background",
                    NewSlot(this, &ItemElement::GetBackground),
                    NewSlot(this, &ItemElement::SetBackground));

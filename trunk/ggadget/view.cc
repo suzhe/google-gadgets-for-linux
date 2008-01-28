@@ -50,14 +50,14 @@ static const char *kResizableNames[] = { "false", "true", "zoom" };
 
 class View::Impl {
  public:
-  class GlobalObject : public ScriptableHelper<ScriptableInterface> {
+  class GlobalObject : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x23840d38ed164ab2, ScriptableInterface);
     virtual bool IsStrict() const { return false; }
   };
 
   // Old "utils" global object, for backward compatibility.
-  class Utils : public ScriptableHelper<ScriptableInterface> {
+  class Utils : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x7b7e1dd0b91f4153, ScriptableInterface);
     Utils(Impl *impl) : impl_(impl) {
@@ -202,7 +202,6 @@ class View::Impl {
   void RegisterProperties(T *obj) {
     obj->RegisterProperty("caption", NewSlot(owner_, &View::GetCaption),
                           NewSlot(owner_, &View::SetCaption));
-    obj->RegisterConstant("children", &children_);
     obj->RegisterProperty("event", NewSlot(this, &Impl::GetEvent), NULL);
     obj->RegisterProperty("height",
                           NewSlot(owner_, &View::GetHeight),
@@ -219,6 +218,7 @@ class View::Impl {
                           NewSlot(owner_, &View::GetShowCaptionAlways),
                           NewSlot(owner_, &View::SetShowCaptionAlways));
 
+    obj->RegisterConstant("children", &children_);
     obj->RegisterMethod("appendElement",
                         NewSlot(&children_, &Elements::AppendElementFromXML));
     obj->RegisterMethod("insertElement",
@@ -1010,8 +1010,6 @@ class View::Impl {
   // element has been removed during the event handler.
   std::vector<BasicElement **> death_detected_elements_;
 
-  GlobalObject global_object_;
-
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedEvents;
   PostedEvents posted_events_;
@@ -1020,11 +1018,13 @@ class View::Impl {
   int post_event_token_;
   int mark_redraw_token_;
   bool draw_queued_;
-  Utils utils_;
   Signal0<void> on_destroy_signal_;
+
+  Utils utils_;
+  GlobalObject global_object_;
 };
 
-View::View(ScriptableInterface *prototype,
+View::View(ScriptableInterface *inherits_from,
            ElementFactory *element_factory,
            int debug_mode)
     : impl_(new Impl(element_factory, debug_mode, this)) {
@@ -1034,8 +1034,8 @@ View::View(ScriptableInterface *prototype,
   impl_->global_object_.RegisterConstant("utils", &impl_->utils_);
   impl_->global_object_.SetDynamicPropertyHandler(
       NewSlot(impl_, &Impl::GetElementByNameVariant), NULL);
-  if (prototype)
-    impl_->global_object_.SetPrototype(prototype);
+  if (inherits_from)
+    impl_->global_object_.SetInheritsFrom(inherits_from);
 }
 
 View::~View() {
@@ -1280,7 +1280,8 @@ ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
       std::string data;
       if (impl_->file_manager_->GetFileContents(filename, &data, &real_path)) {
         ImageInterface *image = GetGraphics()->NewImage(data, is_mask);
-        image->SetTag(filename);
+        if (image)
+          image->SetTag(filename);
         return image;
       }
     }

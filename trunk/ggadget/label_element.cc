@@ -33,6 +33,10 @@ class LabelElement::Impl {
 LabelElement::LabelElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "label", name, false),
       impl_(new Impl(this, view)) {
+}
+
+void LabelElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("innerText",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
                    NewSlot(&impl_->text_, &TextFrame::SetText));

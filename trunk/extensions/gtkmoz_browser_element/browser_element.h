@@ -30,6 +30,9 @@ class BrowserElement : public BasicElement {
   BrowserElement(BasicElement *parent, View *view, const char *name);
   virtual ~BrowserElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   /**
    * Gets and sets the content type (in MIME format).

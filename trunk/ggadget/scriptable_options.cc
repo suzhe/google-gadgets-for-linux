@@ -21,7 +21,8 @@ namespace ggadget {
 
 class ScriptableOptions::Impl {
  public:
-  Impl(OptionsInterface *options) : options_(options) {
+  Impl(OptionsInterface *options, bool raw_objects)
+      : options_(options), raw_objects_(raw_objects) {
   }
 
   void Add(const char *name, const JSONString &value) {
@@ -65,18 +66,23 @@ class ScriptableOptions::Impl {
   }
 
   OptionsInterface *options_;
+  bool raw_objects_;
 };
 
 ScriptableOptions::ScriptableOptions(OptionsInterface *options,
                                      bool raw_objects)
-    : impl_(new Impl(options)) {
+    : impl_(new Impl(options, raw_objects)) {
+}
+
+void ScriptableOptions::DoRegister() {
+  OptionsInterface *options = impl_->options_;
   RegisterProperty("count",
                    NewSlot(options, &OptionsInterface::GetCount), NULL);
   RegisterMethod("exists", NewSlot(options, &OptionsInterface::Exists));
   RegisterMethod("remove", NewSlot(options, &OptionsInterface::Remove));
   RegisterMethod("removeAll", NewSlot(options, &OptionsInterface::RemoveAll));
 
-  if (raw_objects) {
+  if (impl_->raw_objects_) {
     // Partly support the deprecated "item" property.
     RegisterMethod("item", NewSlot(options, &OptionsInterface::GetValue));
     // Partly support the deprecated "defaultValue" property.

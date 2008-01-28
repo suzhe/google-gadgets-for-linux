@@ -19,20 +19,26 @@
 #include "variant.h"
 #include "logger.h"
 #include "scriptable_interface.h"
+#include "signals.h"
 #include "slot.h"
 #include "string_utils.h"
 
 namespace ggadget {
 
 Variant::Variant(const Variant &source) : type_(TYPE_VOID) {
-  v_.double_value_ = 0;
+  memset(&v_, 0, sizeof(v_));
   operator=(source);
 }
 
 Variant::Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
-  if (value)
-    policy_ = value->Attach();
-  v_.scriptable_value_ = value;
+  if (value) {
+    value->Ref();
+    v_.scriptable_value_.refchange_connection_ =
+        value->ConnectOnReferenceChange(NewSlot(this, &Variant::OnRefChange));
+  } else {
+    v_.scriptable_value_.refchange_connection_ = NULL;
+  }
+  v_.scriptable_value_.value_ = value;
 }
 
 Variant::~Variant() {
@@ -40,9 +46,10 @@ Variant::~Variant() {
     delete v_.string_value_;
   else if (type_ == TYPE_UTF16STRING)
     delete v_.utf16_string_value_;
-  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_ &&
-           policy_ == ScriptableInterface::OWNERSHIP_SHARED)
-    v_.scriptable_value_->Detach();
+  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
+    v_.scriptable_value_.refchange_connection_->Disconnect();
+    v_.scriptable_value_.value_->Unref();
+  }
 }
 
 Variant &Variant::operator=(const Variant &source) {
@@ -50,9 +57,10 @@ Variant &Variant::operator=(const Variant &source) {
     delete v_.string_value_;
   else if (type_ == TYPE_UTF16STRING)
     delete v_.utf16_string_value_;
-  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_ &&
-           policy_ == ScriptableInterface::OWNERSHIP_SHARED)
-    v_.scriptable_value_->Detach();
+  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
+    v_.scriptable_value_.refchange_connection_->Disconnect();
+    v_.scriptable_value_.value_->Unref();
+  }
 
   type_ = source.type_;
   switch (type_) {
@@ -78,9 +86,15 @@ Variant &Variant::operator=(const Variant &source) {
                                NULL;
       break;
     case TYPE_SCRIPTABLE:
-      v_.scriptable_value_ = source.v_.scriptable_value_;
-      if (v_.scriptable_value_)
-        policy_ = v_.scriptable_value_->Attach();
+      v_.scriptable_value_.value_ = source.v_.scriptable_value_.value_;
+      if (v_.scriptable_value_.value_) {
+        v_.scriptable_value_.value_->Ref();
+        v_.scriptable_value_.refchange_connection_ =
+            v_.scriptable_value_.value_->ConnectOnReferenceChange(
+                NewSlot(this, &Variant::OnRefChange));
+      } else {
+        v_.scriptable_value_.refchange_connection_ = NULL;
+      }
       break;
     case TYPE_SLOT:
       v_.slot_value_ = source.v_.slot_value_;
@@ -120,7 +134,7 @@ bool Variant::operator==(const Variant &another) const {
             (v_.utf16_string_value_ && another.v_.utf16_string_value_ &&
              *v_.utf16_string_value_ == *another.v_.utf16_string_value_);
     case TYPE_SCRIPTABLE:
-      return v_.scriptable_value_ == another.v_.scriptable_value_;
+      return v_.scriptable_value_.value_ == another.v_.scriptable_value_.value_;
     case TYPE_SLOT: {
       Slot *slot1 = v_.slot_value_;
       Slot *slot2 = another.v_.slot_value_;
@@ -161,9 +175,10 @@ std::string Variant::Print() const {
       }
       return "UTF16STRING:(nil)";
     case TYPE_SCRIPTABLE:
-      return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%jx)", v_.scriptable_value_,
-                          v_.scriptable_value_ ?
-                              v_.scriptable_value_->GetClassId() : 0);
+      return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%jx)",
+                          v_.scriptable_value_.value_,
+                          v_.scriptable_value_.value_ ?
+                              v_.scriptable_value_.value_->GetClassId() : 0);
     case TYPE_SLOT:
       return StringPrintf("SLOT:%p", v_.slot_value_);
     case TYPE_DATE:
@@ -249,7 +264,7 @@ bool Variant::ConvertToBool(bool *result) const {
       return ParseStringToBool(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
-      *result = v_.scriptable_value_ != NULL;
+      *result = v_.scriptable_value_.value_ != NULL;
       return true;
     case TYPE_SLOT:
       *result = v_.slot_value_ != NULL;
@@ -376,12 +391,22 @@ bool Variant::ConvertToDouble(double *result) const {
 
 bool Variant::CheckScriptableType(uint64_t class_id) const {
   ASSERT(type_ == TYPE_SCRIPTABLE);
-  if (v_.scriptable_value_ &&
-      !v_.scriptable_value_->IsInstanceOf(class_id)) {
+  if (v_.scriptable_value_.value_ &&
+      !v_.scriptable_value_.value_->IsInstanceOf(class_id)) {
     LOG("The parameter is not an instance pointer of 0x%jx", class_id);
     return false;
   }
   return true;
+}
+
+void Variant::OnRefChange(int ref_count, int change) {
+  ASSERT(type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_);
+  if (ref_count == 0 && change == 0) {
+    // The sriptable object is about to be deleted.
+    v_.scriptable_value_.refchange_connection_->Disconnect();
+    v_.scriptable_value_.value_->Unref(true);
+    v_.scriptable_value_.value_ = NULL;
+  }
 }
 
 } // namespace ggadget

@@ -32,6 +32,9 @@ class ButtonElement : public BasicElement {
   ButtonElement(BasicElement *parent, View *view, const char *name);
   virtual ~ButtonElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   /** Lets this button use default images. */
   void UseDefaultImages();

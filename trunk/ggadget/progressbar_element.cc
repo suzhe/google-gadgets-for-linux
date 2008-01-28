@@ -162,6 +162,10 @@ ProgressBarElement::ProgressBarElement(BasicElement *parent, View *view,
                                        const char *name)
     : BasicElement(parent, view, "progressbar", name, false),
       impl_(new Impl(this)) {
+}
+
+void ProgressBarElement::DoRegister() {
+  BasicElement::DoRegister();
   RegisterProperty("emptyImage",
                    NewSlot(this, &ProgressBarElement::GetEmptyImage),
                    NewSlot(this, &ProgressBarElement::SetEmptyImage));

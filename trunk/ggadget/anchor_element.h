@@ -31,6 +31,9 @@ class AnchorElement : public BasicElement {
   AnchorElement(BasicElement *parent, View *view, const char *name);
   virtual ~AnchorElement();
 
+ protected:
+  virtual void DoRegister();
+
  public:
   /**
    * Gets and sets the mouseover text color or texture image of the element.

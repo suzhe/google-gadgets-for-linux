@@ -27,12 +27,11 @@ namespace ggadget {
  * The script can access this object by getting "count" property and "item"
  * method, or with an Enumerator.
  */
-class ScriptableArray : public ScriptableHelperOwnershipShared {
+class ScriptableArray : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x65cf1406985145a9, ScriptableInterface);
 
-  virtual ~ScriptableArray();
-
+ public:
   /**
    * Creates a @c ScriptableArray with an iterator and count.
    * @param start the start position of an iterator. It can also be the start
@@ -77,8 +76,10 @@ class ScriptableArray : public ScriptableHelperOwnershipShared {
   size_t GetCount() const;
   Variant GetItem(size_t index) const;
 
- private:
+ protected:
   ScriptableArray(Variant *array, size_t count);
+  virtual void DoRegister();
+  virtual ~ScriptableArray();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableArray);

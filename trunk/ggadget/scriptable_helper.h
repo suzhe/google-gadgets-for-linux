@@ -42,24 +42,21 @@ class ScriptableHelperImplInterface : public ScriptableInterface {
   virtual void RegisterConstants(int count,
                                  const char *const names[],
                                  const Variant values[]) = 0;
-  virtual void SetPrototype(ScriptableInterface *prototype) = 0;
+  virtual void SetInheritsFrom(ScriptableInterface *inherits_from) = 0;
   virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetPendingException(ScriptableInterface *exception) = 0;
-  virtual int GetRefCount() = 0;
 };
 
 ScriptableHelperImplInterface *NewScriptableHelperImpl(
-    ScriptableInterface::OwnershipPolicy policy);
+    Slot0<void> *do_register);
 
 } // namespace internal
 
 /**
  * A @c ScriptableInterface implementation helper.
  */
-template <typename I,
-          ScriptableInterface::OwnershipPolicy Policy =
-              ScriptableInterface::NATIVE_OWNED>
+template <typename I>
 class ScriptableHelper : public I {
  private:
   // Checks at compile time if the argument I is ScriptableInterface or
@@ -69,7 +66,8 @@ class ScriptableHelper : public I {
 
  public:
   ScriptableHelper()
-      : impl_(internal::NewScriptableHelperImpl(Policy)) {
+      : impl_(internal::NewScriptableHelperImpl(
+            NewSlot(this, &ScriptableHelper::DoRegister))) {
   }
 
   virtual ~ScriptableHelper() {
@@ -175,14 +173,15 @@ class ScriptableHelper : public I {
   }
 
   /**
-   * Set a prototype object which defines common properties (including
+   * Set a object from which this object inherits common properties (including
    * methods and signals).
    * Any operations to properties not registered in current
-   * @c ScriptableHelper object are delegated to the prototype.
-   * One prototype can be shared among multiple <code>ScriptableHelper</code>s.
+   * @c ScriptableHelper object are delegated to @a inherits_from.
+   * One @a inherits_from object can be shared among multiple
+   * <code>ScriptableHelper</code>s.
    */
-  void SetPrototype(ScriptableInterface *prototype) {
-    impl_->SetPrototype(prototype);
+  void SetInheritsFrom(ScriptableInterface *inherits_from) {
+    impl_->SetInheritsFrom(inherits_from);
   }
 
   /**
@@ -223,28 +222,32 @@ class ScriptableHelper : public I {
     impl_->SetPendingException(exception);
   }
 
-  /** Gets current reference count. */
-  int GetRefCount() const { return impl_->GetRefCount(); }
-
   /**
    * Used to register a setter that does nothing. There is no DummyGetter()
    * because a NULL getter acts like it.
    */
   static void DummySetter(const Variant &) { }
 
-  /** @see ScriptableInterface::Attach() */
-  virtual ScriptableInterface::OwnershipPolicy Attach() {
-    return impl_->Attach();
+  /**
+   * @see ScriptableInterface::Ref()
+   * Normally this method is not allowed to be overriden.
+   */
+  virtual void Ref() { impl_->Ref(); }
+
+  /**
+   * @see ScriptableInterface::Unref()
+   * Normally this method is not allowed to be overriden.
+   */
+  virtual void Unref(bool transient = false) {
+    impl_->Unref(transient);
+    if (!transient && impl_->GetRefCount() == 0) delete this;
   }
 
-  /** @see ScriptableInterface::Detach() */
-  virtual bool Detach() {
-    if (impl_->Detach()) {
-      delete this;
-      return true;
-    }
-    return false;
-  }
+  /**
+   * @see ScriptableInterface::GetRefCount()
+   * Normally this method is not allowed to be overriden.
+   */
+  virtual int GetRefCount() const { return impl_->GetRefCount(); }
 
   /**
    * Default strict policy.
@@ -297,19 +300,45 @@ class ScriptableHelper : public I {
     return impl_->EnumerateElements(callback);
   }
 
+ protected:
+  /**
+   * The subclass overrides this method to register its scriptable properties
+   * (including methods and signals).
+   * A subclass can select from two methods to register scriptable properties:
+   *   - Registering properties in its constructor;
+   *   - Registering properties in this method.
+   * If an instance of a class is not used in script immediately after creation,
+   * the class should use the latter method to reduce overhead on creation.  
+   */
+  virtual void DoRegister() { }
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableHelper);
 
   internal::ScriptableHelperImplInterface *impl_;
 };
 
-typedef ScriptableHelper<ScriptableInterface,
-                         ScriptableInterface::NATIVE_PERMANENT>
-    ScriptableHelperNativePermanent;
+typedef ScriptableHelper<ScriptableInterface> ScriptableHelperDefault;
 
-typedef ScriptableHelper<ScriptableInterface,
-                         ScriptableInterface::OWNERSHIP_SHARED>
-    ScriptableHelperOwnershipShared;
+/**
+ * For objects that are owned by the native side. The native side can neglect
+ * the reference counting things and just use the objects as normal C++
+ * objects. For example, define the objects as local variables or data members,
+ * as well as pointers.
+ */
+template <typename I>
+class ScriptableHelperNativeOwned : public ScriptableHelper<I> {
+ public:
+  ScriptableHelperNativeOwned() {
+    ScriptableHelper<I>::Ref();
+  }
+  virtual ~ScriptableHelperNativeOwned() {
+    ScriptableHelper<I>::Unref(true);
+  }
+};
+
+typedef ScriptableHelperNativeOwned<ScriptableInterface>
+    ScriptableHelperNativeOwnedDefault;
 
 /**
  * Utility function to get a named property from a scriptable object.
@@ -317,9 +346,6 @@ typedef ScriptableHelper<ScriptableInterface,
  * <code>scriptable->GetProperty()</code>.
  */
 Variant GetPropertyByName(ScriptableInterface *scriptable, const char *name);
-
-// Use the following line to test if the COMPILE_ASSERT is effective:
-// class B : public ScriptableHelper<Variant> { };
 
 } // namespace ggadget
 

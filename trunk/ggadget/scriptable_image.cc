@@ -33,8 +33,15 @@ class ScriptableImage::Impl {
 
 ScriptableImage::ScriptableImage(ImageInterface *image)
     : impl_(new Impl(image)) {
-  RegisterProperty("width", NewSlot(image, &ImageInterface::GetWidth), NULL);
-  RegisterProperty("height", NewSlot(image, &ImageInterface::GetHeight), NULL);
+}
+
+void ScriptableImage::DoRegister() {
+  RegisterProperty("width",
+                   NewSlot(impl_->image_, &ImageInterface::GetWidth),
+                   NULL);
+  RegisterProperty("height",
+                   NewSlot(impl_->image_, &ImageInterface::GetHeight),
+                   NULL);
 }
 
 ScriptableImage::~ScriptableImage() {

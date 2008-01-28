@@ -68,7 +68,7 @@ class ScriptableFileSystem::Impl {
       : filesystem_(filesystem), owner_(owner) {
   }
 
-  class FileSystemException : public ScriptableHelperOwnershipShared {
+  class FileSystemException : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x9c53dee0b2114ce4, ScriptableInterface);
 
@@ -94,7 +94,7 @@ class ScriptableFileSystem::Impl {
     return ScriptableArray::Create(array, static_cast<size_t>(count));
   }
 
-  class ScriptableTextStream : public ScriptableHelperOwnershipShared {
+  class ScriptableTextStream : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x34828c47e6a243c5, ScriptableInterface);
     ScriptableTextStream(TextStreamInterface *stream) : stream_(stream) {
@@ -136,7 +136,7 @@ class ScriptableFileSystem::Impl {
   };
 
   class ScriptableFolder;
-  class ScriptableDrive : public ScriptableHelperOwnershipShared {
+  class ScriptableDrive : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0x0a34071a4804434b, ScriptableInterface);
     ScriptableDrive(DriveInterface *drive) : drive_(drive) {
@@ -194,7 +194,7 @@ class ScriptableFileSystem::Impl {
     DriveInterface *drive_;
   };
 
-  class ScriptableFolder : public ScriptableHelperOwnershipShared {
+  class ScriptableFolder : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0xa2e7a3ef662a445c, ScriptableInterface);
     ScriptableFolder(FolderInterface *folder) : folder_(folder) {
@@ -335,7 +335,7 @@ class ScriptableFileSystem::Impl {
     FolderInterface *folder_;
   };
 
-  class ScriptableFile : public ScriptableHelperOwnershipShared {
+  class ScriptableFile : public ScriptableHelperDefault {
    public:
     DEFINE_CLASS_ID(0xd8071714bc0a4d2c, ScriptableInterface);
     ScriptableFile(FileInterface *file) : file_(file) {

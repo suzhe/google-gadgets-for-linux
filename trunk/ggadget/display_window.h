@@ -28,7 +28,7 @@ class View;
  * This class wraps a view into the old @c GoogleDesktopDisplayWindow interface
  * for old style options dialog. This class is only for scripting.
  */
-class DisplayWindow: public ScriptableHelper<ScriptableInterface> {
+class DisplayWindow: public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x0466c36b78944d34, ScriptableInterface);
 

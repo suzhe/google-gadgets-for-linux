@@ -125,6 +125,10 @@ ScrollingElement::ScrollingElement(BasicElement *parent, View *view,
       impl_(new Impl(this)) {
 }
 
+void ScrollingElement::DoRegister() {
+  BasicElement::DoRegister();
+}
+
 ScrollingElement::~ScrollingElement() {
   delete impl_;
 }
@@ -143,6 +147,9 @@ void ScrollingElement::SetAutoscroll(bool autoscroll) {
     if (autoscroll) {
       impl_->CreateScrollBar();
     } else {
+      // Inform the view of this scrollbar to let the view handle mouse grabbing
+      // and mouse over/out logics of the scrollbar.
+      GetView()->OnElementRemove(impl_->scrollbar_);
       delete impl_->scrollbar_;
       impl_->scrollbar_ = NULL;
     }

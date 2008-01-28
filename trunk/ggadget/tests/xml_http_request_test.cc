@@ -105,7 +105,7 @@ TEST(XMLHttpRequest, SyncLocalFile) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
       ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
-  request->Attach();
+  request->Ref();
 
   Callback callback(request);
 
@@ -131,7 +131,8 @@ TEST(XMLHttpRequest, SyncLocalFile) {
             request->GetResponseBody(&str, &size));
   ASSERT_STREQ("ABCDEFG\n", str);
   ASSERT_EQ(8u, size);
-  request->Detach();
+  ASSERT_EQ(1, request->GetRefCount());
+  request->Unref();
   delete xml_parser;
 }
 
@@ -140,7 +141,7 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
       ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
-  request->Attach();
+  request->Ref();
 
   Callback callback(request);
   system("echo GFEDCBA123 >/tmp/xml_http_request_test_data");
@@ -165,7 +166,8 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
             request->GetResponseBody(&str, &size));
   ASSERT_STREQ("GFEDCBA123\n", str);
   ASSERT_EQ(11u, size);
-  request->Detach();
+  ASSERT_EQ(1, request->GetRefCount());
+  request->Unref();
   delete xml_parser;
 }
 
@@ -275,7 +277,7 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
       ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
-  request->Attach();
+  request->Ref();
 
   pthread_t thread;
   bool async = false;
@@ -332,7 +334,8 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
 
   pthread_join(thread, NULL);
   ASSERT_TRUE(server_thread_succeeded);
-  request->Detach();
+  ASSERT_EQ(1, request->GetRefCount());
+  request->Unref();
   delete xml_parser;
 }
 
@@ -341,7 +344,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
       ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
-  request->Attach();
+  request->Ref();
 
   pthread_t thread;
   bool async = true;
@@ -438,7 +441,8 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
 
   pthread_join(thread, NULL);
   ASSERT_TRUE(server_thread_succeeded);
-  request->Detach();
+  ASSERT_EQ(1, request->GetRefCount());
+  request->Unref();
   delete xml_parser;
 }
 
@@ -447,7 +451,7 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
   XMLParserInterface *xml_parser = CreateXMLParser();
   XMLHttpRequestInterface *request =
       ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
-  request->Attach();
+  request->Ref();
 
   Callback callback(request);
 
@@ -469,7 +473,7 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
   ASSERT_TRUE(dom);
   ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
                dom->GetDocumentElement()->GetTextContent().c_str());
-  request->Detach();
+  ASSERT_EQ(1, request->GetRefCount());
   delete xml_parser;
 }
 

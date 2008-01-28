@@ -32,7 +32,7 @@ class View;
 /**
  * Elements is used for storing and managing a set of BasicElement objects.
  */
-class Elements : public ScriptableHelper<ScriptableInterface> {
+class Elements : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0xe3bdb064cb794282, ScriptableInterface);
 
@@ -46,6 +46,9 @@ class Elements : public ScriptableHelper<ScriptableInterface> {
   Elements(ElementFactory *factory, BasicElement *owner, View *view);
 
   virtual ~Elements();
+
+ protected:
+  virtual void DoRegister();
 
  public:
   /**

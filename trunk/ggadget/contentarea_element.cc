@@ -65,15 +65,12 @@ class ContentAreaElement::Impl {
         modified_(false),
         death_detector_(NULL),
         context_menu_time_(0) {
-    pin_images_[PIN_IMAGE_PINNED] = new ScriptableImage(
-        owner->GetView()->LoadImageFromGlobal(kContentItemPinned, false));
-    pin_images_[PIN_IMAGE_PINNED]->Attach();
-    pin_images_[PIN_IMAGE_PINNED_OVER] = new ScriptableImage(
-        owner->GetView()->LoadImageFromGlobal(kContentItemPinnedOver, false));
-    pin_images_[PIN_IMAGE_PINNED_OVER]->Attach();
-    pin_images_[PIN_IMAGE_UNPINNED] = new ScriptableImage(
-        owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false));
-    pin_images_[PIN_IMAGE_UNPINNED]->Attach();
+    pin_images_[PIN_IMAGE_PINNED].reset(new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemPinned, false)));
+    pin_images_[PIN_IMAGE_PINNED_OVER].reset(new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemPinnedOver, false)));
+    pin_images_[PIN_IMAGE_UNPINNED].reset(new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false)));
 
     // Schedule a interval timer to redraw the content area periodically,
     // to refresh the relative time stamps of the items.
@@ -90,9 +87,6 @@ class ContentAreaElement::Impl {
     owner_->GetView()->ClearInterval(refresh_timer_);
     refresh_timer_ = 0;
     RemoveAllContentItems();
-    for (size_t i = 0; i < arraysize(pin_images_); i++) {
-      pin_images_[i]->Detach();
-    }
     layout_canvas_->Destroy();
   }
 
@@ -291,17 +285,14 @@ class ContentAreaElement::Impl {
                     ScriptableImage **pinned_over,
                     ScriptableImage **unpinned) {
     ASSERT(pinned && pinned_over && unpinned);
-    *pinned = pin_images_[PIN_IMAGE_PINNED];
-    *pinned_over = pin_images_[PIN_IMAGE_PINNED_OVER];
-    *unpinned = pin_images_[PIN_IMAGE_UNPINNED];
+    *pinned = pin_images_[PIN_IMAGE_PINNED].get();
+    *pinned_over = pin_images_[PIN_IMAGE_PINNED_OVER].get();
+    *unpinned = pin_images_[PIN_IMAGE_UNPINNED].get();
   }
 
   void SetPinImage(PinImageIndex index, ScriptableImage *image) {
-    if (image) {
-      pin_images_[index]->Detach();
-      image->Attach();
-      pin_images_[index] = image;
-    }
+    if (image)
+      pin_images_[index].reset(image);
   }
 
   void SetPinImages(ScriptableImage *pinned,
@@ -317,9 +308,9 @@ class ContentAreaElement::Impl {
 
   ScriptableArray *ScriptGetPinImages() {
     Variant *values = new Variant[3];
-    values[0] = Variant(pin_images_[PIN_IMAGE_PINNED]);
-    values[1] = Variant(pin_images_[PIN_IMAGE_PINNED_OVER]);
-    values[2] = Variant(pin_images_[PIN_IMAGE_UNPINNED]);
+    values[0] = Variant(pin_images_[PIN_IMAGE_PINNED].get());
+    values[1] = Variant(pin_images_[PIN_IMAGE_PINNED_OVER].get());
+    values[2] = Variant(pin_images_[PIN_IMAGE_UNPINNED].get());
     return ScriptableArray::Create(values, 3);
   }
 
@@ -569,7 +560,7 @@ class ContentAreaElement::Impl {
   GadgetInterface::DisplayTarget target_;
   size_t max_content_items_;
   ContentItems content_items_;
-  ScriptableImage *pin_images_[PIN_IMAGE_COUNT];
+  ScopedScriptablePtr<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];
   int pin_image_max_width_, pin_image_max_height_;
   bool mouse_down_, mouse_over_pin_;
   int mouse_x_, mouse_y_;
@@ -588,6 +579,10 @@ ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
       impl_(new Impl(this)) {
   SetEnabled(true);
   SetAutoscroll(true);
+}
+
+void ContentAreaElement::DoRegister() {
+  ScrollingElement::DoRegister();
   RegisterProperty("contentFlags", NULL, // Write only.
                    NewSlot(this, &ContentAreaElement::SetContentFlags));
   RegisterProperty("maxContentItems",
@@ -678,7 +673,7 @@ void ContentAreaElement::Layout() {
     Layout();
   } else {
     // Set reasonable scrolling step length.
-    SetYPageStep(GetClientHeight());
+    SetYPageStep(static_cast<int>(round(GetClientHeight())));
     SetYLineStep(impl_->scrolling_line_step_);
   }
 

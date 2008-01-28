@@ -29,7 +29,7 @@ namespace dbus {
 
 class DBusProxy;
 
-class ScriptableDBusObject : public ScriptableHelperOwnershipShared {
+class ScriptableDBusObject : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xe45aa627937b466b, ScriptableInterface);
   ScriptableDBusObject(DBusProxy *proxy);

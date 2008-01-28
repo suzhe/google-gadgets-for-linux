@@ -28,15 +28,17 @@ namespace smjs {
 /**
  * Wraps a JavaScript object into a native @c ScriptableInterface.
  */
-class JSNativeWrapper : public ScriptableHelperOwnershipShared {
+class JSNativeWrapper : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x65f4d888b7b749ed, ScriptableInterface);
-
   JSNativeWrapper(JSContext *js_context, JSObject *js_object);
+
+ protected:
   virtual ~JSNativeWrapper();
 
-  virtual OwnershipPolicy Attach();
-  virtual bool Detach();
+ public:
+  virtual void Ref();
+  virtual void Unref(bool transient = false);
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
   virtual bool EnumerateElements(EnumerateElementsCallback *callback);
 

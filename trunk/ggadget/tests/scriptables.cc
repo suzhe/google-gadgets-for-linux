@@ -33,13 +33,15 @@ void AppendBuffer(const char *format, ...) {
   printf("AppendBuffer: %s\n", buffer);
 }
 
-TestScriptable1::TestScriptable1()
-    : double_property_(0),
+TestScriptable1::TestScriptable1(bool native_owned)
+    : native_owned_(native_owned),
+      double_property_(0),
       enum_property_(VALUE_0),
       variant_property_(0) {
+  if (native_owned) Ref();
   g_buffer.clear();
-  RegisterMethod("TestMethodVoid0",
-                 NewSlot(this, &TestScriptable1::TestMethodVoid0));
+  RegisterMethod("ClearBuffer",
+                 NewSlot(this, &TestScriptable1::ClearBuffer));
   RegisterMethod("TestMethodDouble2",
                  NewSlot(this, &TestScriptable1::TestMethodDouble2));
   RegisterProperty("DoubleProperty",
@@ -88,6 +90,7 @@ TestScriptable1::~TestScriptable1() {
   my_ondelete_signal_();
   AppendBuffer("Destruct\n");
   LOG("TestScriptable1 Destruct End: this=%p", this);
+  if (native_owned_) Unref(true);
   // Then ScriptableHelper::~ScriptableHelper will be called, and in turn
   // the "official" ondelete signal will be emitted.
 }
@@ -95,7 +98,7 @@ TestScriptable1::~TestScriptable1() {
 TestPrototype *TestPrototype::instance_ = NULL;
 
 const Variant kNewObjectDefaultArgs[] = { Variant(true), Variant(true) };
-const Variant kDeleteObjectDefaultArgs[] = 
+const Variant kReleaseObjectDefaultArgs[] = 
    { Variant(static_cast<ScriptableInterface *>(NULL)) };
 
 TestPrototype::TestPrototype() {
@@ -108,8 +111,9 @@ TestPrototype::TestPrototype() {
                    NewSlot(this, &TestPrototype::GetSelf), NULL);
 }
 
-TestScriptable2::TestScriptable2(bool script_owned, bool strict)
-    : script_owned_(script_owned), strict_(strict), callback_(NULL) {
+TestScriptable2::TestScriptable2(bool native_owned, bool strict)
+    : TestScriptable1(native_owned),
+      strict_(strict), callback_(NULL) {
   RegisterMethod("TestMethod", NewSlot(this, &TestScriptable2::TestMethod));
   RegisterSignal("onlunch", &onlunch_signal_);
   RegisterSignal("onsupper", &onsupper_signal_);
@@ -123,15 +127,16 @@ TestScriptable2::TestScriptable2(bool script_owned, bool strict)
   RegisterMethod("NewObject",
       NewSlotWithDefaultArgs(NewSlot(this, &TestScriptable2::NewObject),
                              kNewObjectDefaultArgs));
-  RegisterMethod("DeleteObject",
-      NewSlotWithDefaultArgs(NewSlot(this, &TestScriptable2::DeleteObject),
-                             kDeleteObjectDefaultArgs));
-  RegisterProperty("ScriptOwned",
-                   NewSlot(this, &TestScriptable2::IsScriptOwned), NULL);
+  RegisterMethod("ReleaseObject",
+      NewSlotWithDefaultArgs(NewSlot(this, &TestScriptable2::ReleaseObject),
+                             kReleaseObjectDefaultArgs));
+  RegisterProperty("NativeOwned",
+                   NewSlot(implicit_cast<TestScriptable1 *>(this),
+                           &TestScriptable1::IsNativeOwned), NULL);
   RegisterMethod("ConcatArray", NewSlot(this, &TestScriptable2::ConcatArray));
   RegisterMethod("SetCallback", NewSlot(this, &TestScriptable2::SetCallback));
   RegisterMethod("CallCallback", NewSlot(this, &TestScriptable2::CallCallback));
-  SetPrototype(TestPrototype::GetInstance());
+  SetInheritsFrom(TestPrototype::GetInstance());
   SetArrayHandler(NewSlot(this, &TestScriptable2::GetArray),
                   NewSlot(this, &TestScriptable2::SetArray));
   SetDynamicPropertyHandler(
@@ -142,20 +147,6 @@ TestScriptable2::TestScriptable2(bool script_owned, bool strict)
 TestScriptable2::~TestScriptable2() {
   delete callback_;
   LOG("TestScriptable2 Destruct: this=%p", this);
-}
-
-ScriptableInterface::OwnershipPolicy TestScriptable2::Attach() {
-  return script_owned_ ? OWNERSHIP_SHARED : NATIVE_OWNED;
-}
-
-bool TestScriptable2::Detach() {
-  LOG("TestScriptable2 Detach: this=%p script_owned_=%d",
-      this, script_owned_);
-  if (script_owned_) {
-    delete this;
-    return true;
-  }
-  return false;
 }
 
 ScriptableArray *TestScriptable2::ConcatArray(ScriptableInterface *array1,

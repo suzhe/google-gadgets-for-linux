@@ -15,6 +15,7 @@
 */
 
 #include <set>
+#include "ggadget/string_utils.h"
 #include "unittest/gunit.h"
 #include "scriptables.h"
 
@@ -64,8 +65,8 @@ TEST(scriptable_helper, TestPropertyInfo) {
 
   // Expected property information for TestScriptable1.
   PropertyInfo property_info[] = {
-    { "TestMethodVoid0", -1, true,
-      Variant(NewSlot(scriptable, &TestScriptable1::TestMethodVoid0)) },
+    { "ClearBuffer", -1, true,
+      Variant(NewSlot(scriptable, &TestScriptable1::ClearBuffer)) },
     { "TestMethodDouble2", -2, true,
       Variant(NewSlot(scriptable, &TestScriptable1::TestMethodDouble2)) },
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
@@ -93,8 +94,8 @@ TEST(scriptable_helper, TestPropertyInfo) {
   EXPECT_STREQ("Destruct\n", g_buffer.c_str());
 }
 
-void TestOnRefChange(int, int) {
-  AppendBuffer("TestRefChange\n");
+void TestOnRefChange(int ref, int change) {
+  AppendBuffer(StringPrintf("TestRefChange(%d,%d)\n", ref, change).c_str());
 }
 
 void TestOnDeleteAsEventSink() {
@@ -107,7 +108,8 @@ TEST(scriptable_helper, TestOnDelete) {
   ASSERT_TRUE(scriptable->ConnectOnReferenceChange(NewSlot(TestOnRefChange)));
   scriptable->SetProperty(-7, Variant(NewSlot(TestOnDeleteAsEventSink)));
   delete scriptable;
-  EXPECT_STREQ("TestOnDeleteAsEventSink\nDestruct\nTestRefChange\n",
+  EXPECT_STREQ("TestOnDeleteAsEventSink\nDestruct\n"
+               "TestRefChange(1,-1)\nTestRefChange(0,0)\n",
                g_buffer.c_str());
 }
 
@@ -132,7 +134,7 @@ TEST(scriptable_helper, TestPropertyAndMethod) {
   ASSERT_EQ(Variant(3.25), scriptable->GetProperty(-3));
   ASSERT_STREQ("GetDoubleProperty()=3.250\n", g_buffer.c_str());
 
-  // -1: the "TestMethodVoid0" method.
+  // -1: the "ClearBuffer" method.
   Variant result1(scriptable->GetProperty(-1));
   ASSERT_EQ(result1.type(), Variant::TYPE_SLOT);
   ASSERT_EQ(Variant(), VariantValue<Slot *>()(result1)->Call(0, NULL));
@@ -194,8 +196,8 @@ TEST(scriptable_helper, TestPropertyInfo2) {
   // Expected property information for TestScriptable1.
   PropertyInfo property_info[] = {
     // -1 ~ -8 are inherited from TestScriptable1.
-    { "TestMethodVoid0", -1, true,
-      Variant(NewSlot(scriptable1, &TestScriptable1::TestMethodVoid0)) },
+    { "ClearBuffer", -1, true,
+      Variant(NewSlot(scriptable1, &TestScriptable1::ClearBuffer)) },
     { "TestMethodDouble2", -2, true,
       Variant(NewSlot(scriptable1, &TestScriptable1::TestMethodDouble2)) },
     { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
@@ -222,11 +224,11 @@ TEST(scriptable_helper, TestPropertyInfo2) {
       Variant(NewSlotWithDefaultArgs(
           NewSlot(scriptable, &TestScriptable2::NewObject),
           kNewObjectDefaultArgs)) },
-    { "DeleteObject", -18, true,
+    { "ReleaseObject", -18, true,
       Variant(NewSlotWithDefaultArgs(
-          NewSlot(scriptable, &TestScriptable2::DeleteObject),
-          kDeleteObjectDefaultArgs)) },
-    { "ScriptOwned", -19, false, Variant(Variant::TYPE_BOOL) },
+          NewSlot(scriptable, &TestScriptable2::ReleaseObject),
+          kReleaseObjectDefaultArgs)) },
+    { "NativeOwned", -19, false, Variant(Variant::TYPE_BOOL) },
     { "ConcatArray", -20, true,
       Variant(NewSlot(scriptable, &TestScriptable2::ConcatArray)) },
     { "SetCallback", -21, true,
@@ -320,14 +322,14 @@ TEST(scirptable_helper, TestEnumerateProperties) {
   TestScriptable2 *scriptable = new TestScriptable2();
   static const char *property_names[] = {
     "Buffer", "BufferReadOnly", "CallCallback", "ConcatArray", "Const",
-    "DeleteObject", "DoubleProperty", "EnumSimple", "EnumString",
+    "ReleaseObject", "DoubleProperty", "EnumSimple", "EnumString",
     "Fixed", "ICONSTANT0", "ICONSTANT1", "ICONSTANT2", "ICONSTANT3",
     "ICONSTANT4", "ICONSTANT5", "ICONSTANT6", "ICONSTANT7", "ICONSTANT8",
     "ICONSTANT9", "JSON", "NewObject", "OverrideSelf", "PrototypeMethod",
     "PrototypeSelf", "SCONSTANT0", "SCONSTANT1", "SCONSTANT2", "SCONSTANT3",
     "SCONSTANT4", "SCONSTANT5", "SCONSTANT6", "SCONSTANT7", "SCONSTANT8",
-    "SCONSTANT9", "ScriptOwned", "SetCallback", "SignalResult", "TestMethod",
-    "TestMethodDouble2", "TestMethodVoid0", "VALUE_0", "VALUE_1", "VALUE_2",
+    "SCONSTANT9", "SetCallback", "SignalResult", "NativeOwned", "TestMethod",
+    "TestMethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1", "VALUE_2",
     "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
     "ontest", "time",
   };
