@@ -18,6 +18,7 @@
 #include "div_element.h"
 #include "canvas_interface.h"
 #include "elements.h"
+#include "logger.h"
 #include "texture.h"
 #include "view.h"
 

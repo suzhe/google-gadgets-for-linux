@@ -234,7 +234,7 @@ class BasicElement::Impl {
                                             width_, pwidth_);
   }
 
-  void SetWidth(const Variant &width) {
+  void SetWidth(const Variant &width) {   
     double v;
     switch (ParsePixelOrRelative(width, &v)) {
       case BasicElement::PR_PIXEL:
@@ -265,7 +265,7 @@ class BasicElement::Impl {
                                             height_, pheight_);
   }
 
-  void SetHeight(const Variant &height) {
+  void SetHeight(const Variant &height) {    
     double v;
     switch (ParsePixelOrRelative(height, &v)) {
       case BasicElement::PR_PIXEL:
@@ -432,6 +432,8 @@ class BasicElement::Impl {
 
   void Draw(CanvasInterface *canvas) {
     // Only do draw if visible
+    // Check for width_, height_ == 0 since IntersectRectClipRegion fails for 
+    // those cases.
     if (visible_ && opacity_ != 0 && width_ > 0 && height_ > 0) {
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
@@ -545,7 +547,12 @@ class BasicElement::Impl {
     BasicElement *this_element = owner_;
     ScopedDeathDetector death_detector(view_, &this_element);
 
-    *fired_element = NULL;
+    *fired_element = *in_element = NULL;
+
+    if (!visible_ || opacity_ == 0) {
+      return EVENT_RESULT_UNHANDLED;
+    }    
+
     if (!direct && children_) {
       // Send to the children first.
       EventResult result = children_->OnMouseEvent(event, fired_element,
@@ -554,19 +561,21 @@ class BasicElement::Impl {
         return result;
     }
 
-    if (!enabled_ || !visible_ || opacity_ == 0)
+    if (!enabled_) {
       return EVENT_RESULT_UNHANDLED;
+    }
 
     // Don't check mouse position, because the event may be out of this
     // element when this element is grabbing mouse.
 
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(&event, owner_, NULL);
-    if (type != Event::EVENT_MOUSE_MOVE)
+    if (type != Event::EVENT_MOUSE_MOVE) {
       DLOG("%s(%s|%s): %g %g %d %d", scriptable_event.GetName(),
            name_.c_str(), tag_name_.c_str(),
            event.GetX(), event.GetY(),
            event.GetButton(), event.GetWheelDelta());
+    }
 
     switch (type) {
       case Event::EVENT_MOUSE_MOVE: // put the high volume events near top

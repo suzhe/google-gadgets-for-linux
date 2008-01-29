@@ -174,19 +174,19 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   /** Retrieve whether width is explicitly specified. */
   virtual bool WidthIsSpecified() const;
   /** Clear the specified width value and use the default. */
-  virtual void ResetWidthToDefault();
+  void ResetWidthToDefault();
   /** Retrieve whether height is explicitly specified. */
   virtual bool HeightIsSpecified() const;
   /** Clear the specified height value and use the default. */
-  virtual void ResetHeightToDefault();
+  void ResetHeightToDefault();
   /** Retrieve whether x is explicitly specified. */
   virtual bool XIsSpecified() const;
   /** Clear the specified x value and use the default. */
-  virtual void ResetXToDefault();
+  void ResetXToDefault();
   /** Retrieve whether y is explicitly specified. */
   virtual bool YIsSpecified() const;
   /** Clear the specified y value and use the default. */
-  virtual void ResetYToDefault();
+  void ResetYToDefault();
 
   /** Gets the client width (pixel width - width of scrollbar etc. if any). */
   virtual double GetClientWidth() const;

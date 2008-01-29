@@ -84,6 +84,8 @@ class CheckBoxElement : public BasicElement {
   /** Gets the text frame containing the caption of this checkbox. */
   TextFrame *GetTextFrame();
 
+  bool IsCheckBox() const;
+
   Connection *ConnectOnChangeEvent(Slot0<void> *handler);
 
  public:

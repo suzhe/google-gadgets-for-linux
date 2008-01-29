@@ -25,7 +25,7 @@
 namespace ggadget{
 
 static const Color kDefaultColor(0, 0, 0);
-static const char *const kDefaultFont = "Sans";
+static const char *const kDefaultFont = "sans-serif";
 
 static const char *kAlignNames[] = {
   "left", "center", "right"
