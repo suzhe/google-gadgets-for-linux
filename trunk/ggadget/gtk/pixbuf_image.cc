@@ -37,7 +37,7 @@ class PixbufImage::Impl {
   Impl(const CairoGraphics *graphics, const std::string &data, bool is_mask)
     : zoom_(graphics->GetZoom()), is_mask_(is_mask),
       width_(0), height_(0), pixbuf_(NULL),
-      canvas_(NULL), color_multiply_(1, 1, 1),
+      canvas_(NULL), color_multiply_(Color::kWhite),
       on_zoom_connection_(NULL) {
     // No zoom for PixbufImage.
     pixbuf_ = LoadPixbufFromData(data);

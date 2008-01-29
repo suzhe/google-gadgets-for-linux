@@ -167,7 +167,6 @@ class Elements::Impl {
       // visibility of ancestors.
       if (!child->IsVisible() || child->GetOpacity() == 0.0)
         continue;
-
       MapChildPositionEvent(event, child, &new_event);
       if (child->IsPointIn(new_event.GetX(), new_event.GetY())) {
         BasicElement *child = (*ite);

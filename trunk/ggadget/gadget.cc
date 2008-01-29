@@ -276,8 +276,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
       // Keys are of the form "install/font@src" or "install/font[k]@src"
-      if (0 == key.find(kManifestInstallFont) &&
-          (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
+      if (IsFontInstall(key)) {
         // ignore return, error not fatal
         host_->UnloadFont(i->second.c_str());
       }
@@ -470,6 +469,29 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
   }
 
+  bool IsFontInstall(const std::string &key) const {
+    // Keys are of the form "install/font@src" or "install/font[k]@src" or
+    // "install[k]/font@src" or "install[k]/font[j]@src"
+
+    // Ends in "@src".
+    size_t end = key.rfind(kManifestSrcAttr);
+    if ((key.length() - strlen(kManifestSrcAttr)) != end) {
+      return false;
+    }
+
+    // Starts with "install"
+    if (0 != key.find(kManifestInstall)) {
+      return false;
+    }
+
+    // Contains "/font"
+    if (key.find(kManifestFont, strlen(kManifestInstall)) >= end) {
+      return false;
+    }
+
+    return true;
+  }
+
   bool Init() {
     FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
@@ -509,9 +531,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
-      // Keys are of the form "install/font@src" or "install/font[k]@src"
-      if (0 == key.find(kManifestInstallFont) &&
-          (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr)) {
+      DLOG("key %s %s", key.c_str(), i->second.c_str());
+      if (IsFontInstall(key)) {
         // ignore return, error not fatal
         host_->LoadFont(i->second.c_str());
       } else if (0 == key.find(kManifestInstallObject) &&

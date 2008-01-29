@@ -840,7 +840,13 @@ bool CairoCanvas::GetPointValue(double x, double y,
   return true;
 #undef BYTE_TO_DOUBLE
 #else
-  return false;
+  if (opacity) {
+    *opacity = 1.0;    
+  }
+  if (color) {
+    *color = Color::kWhite;  
+  }  
+  return true;
 #endif
 }
 

@@ -16,9 +16,11 @@
 
 #include "checkbox_element.h"
 #include "canvas_interface.h"
+#include "elements.h"
 #include "gadget_consts.h"
 #include "graphics_interface.h"
 #include "image_interface.h"
+#include "logger.h"
 #include "scriptable_event.h"
 #include "string_utils.h"
 #include "text_frame.h"
@@ -70,6 +72,23 @@ class CheckBoxElement::Impl {
     }
     return img;
   }
+
+  void ResetPeerRadioButtons(Elements *elements, BasicElement *current) {
+    // Radio buttons under the same parent should transfer checked
+    // state automatically. This function should only be called
+    // when this radio button's value is set to true.
+    int childcount = elements->GetCount();
+    for (int i = 0; i < childcount; i++) {
+      BasicElement *child = elements->GetItemByIndex(i);
+      if (child != current && child->IsInstanceOf(CheckBoxElement::CLASS_ID)) {
+        CheckBoxElement *radio = down_cast<CheckBoxElement *>(child);
+        if (!radio->IsCheckBox()) {
+          radio->SetValue(false);
+        }
+      }
+    }
+  }
+
 
   bool is_checkbox_;
   TextFrame text_;
@@ -167,6 +186,10 @@ void CheckBoxElement::SetCheckBoxOnRight(bool right) {
   }
 }
 
+bool CheckBoxElement::IsCheckBox() const {
+  return impl_->is_checkbox_;
+}
+
 bool CheckBoxElement::GetValue() const {
   return (impl_->value_ == STATE_CHECKED);
 }
@@ -178,6 +201,10 @@ void CheckBoxElement::SetValue(bool value) {
     SimpleEvent event(Event::EVENT_CHANGE);
     ScriptableEvent s_event(&event, this, NULL);
     GetView()->FireEvent(&s_event, impl_->onchange_event_);
+  }
+
+  if (!impl_->is_checkbox_ && value) {
+    impl_->ResetPeerRadioButtons(GetParentElement()->GetChildren(), this);
   }
 }
 
@@ -334,6 +361,8 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
           break; // Radio buttons don't change state in this situation.
         }
         impl_->value_ = STATE_CHECKED;
+
+        impl_->ResetPeerRadioButtons(GetParentElement()->GetChildren(), this);
       }
       QueueDraw();
       SimpleEvent event(Event::EVENT_CHANGE);

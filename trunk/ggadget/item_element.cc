@@ -33,7 +33,7 @@ class ItemElement::Impl {
     : parent_(NULL), selected_(false), mouseover_(false),
       drawoverlay_(true), background_(NULL), index_(0) {
     if (parent->IsInstanceOf(ListBoxElement::CLASS_ID)) {
-      parent_ = down_cast<ListBoxElement *>(parent);
+      parent_ = down_cast<ListBoxElement *>(parent);      
     } else {
       LOG("Item element is not contained inside a parent of the correct type.");
     }
@@ -70,6 +70,11 @@ void ItemElement::DoRegister() {
     RegisterProperty("y", NULL, NewSlot(DummySetter));
     RegisterProperty("width", NULL, NewSlot(DummySetter));
     RegisterProperty("height", NULL, NewSlot(DummySetter));
+  }
+
+  if (impl_->parent_->IsImplicit()) { 
+    // This Item is in a combobox, so override BasicElement constant.
+    RegisterConstant("parentElement", impl_->parent_->GetParentElement());
   }
 }
 
