@@ -28,7 +28,6 @@
 #include "gadget_consts.h"
 #include "logger.h"
 #include "system_utils.h"
-#include "main_loop_interface.h"
 
 namespace ggadget {
 
@@ -38,12 +37,10 @@ static const char *kModuleFinalizeSymbol = "Finalize";
 
 class Module::Impl {
  public:
-  Impl(MainLoopInterface *main_loop)
-      : main_loop_(main_loop),
-      handle_(NULL),
+  Impl()
+    : handle_(NULL),
       initialize_(NULL),
       finalize_(NULL) {
-    ASSERT(main_loop);
 
     // Only initialize ltdl once and don't exit it anymore.
     if (!ltdl_initialized_) {
@@ -128,7 +125,7 @@ class Module::Impl {
       // If the module is already resident, then means that it was already
       // loaded and initialized before, so no need initializing again.
       if (module_info->ref_count == 1 && lt_dlisresident(handle_) == 0) {
-        if (!initialize_(main_loop_)) {
+        if (!initialize_()) {
           Unload();
           return false;
         }
@@ -356,10 +353,9 @@ class Module::Impl {
   }
 
  private:
-  typedef bool (*InitializeFunction)(MainLoopInterface *);
+  typedef bool (*InitializeFunction)(void);
   typedef void (*FinalizeFunction)(void);
 
-  MainLoopInterface *main_loop_;
   lt_dlhandle handle_;
   InitializeFunction initialize_;
   FinalizeFunction finalize_;
@@ -371,12 +367,12 @@ class Module::Impl {
 
 bool Module::Impl::ltdl_initialized_ = false;
 
-Module::Module(MainLoopInterface *main_loop)
-  : impl_(new Impl(main_loop)) {
+Module::Module()
+  : impl_(new Impl()) {
 }
 
-Module::Module(MainLoopInterface *main_loop, const char *name)
-  : impl_(new Impl(main_loop)) {
+Module::Module(const char *name)
+  : impl_(new Impl()) {
   Load(name);
 }
 

@@ -94,6 +94,12 @@ class WatchCallbackSlot : public WatchCallbackInterface {
  * For current implementation, no multiple threading support is required.
  */
 class MainLoopInterface {
+ protected:
+  /**
+   * Prevents from directly deleting the main loop instance.
+   */
+  virtual ~MainLoopInterface() { }
+
  public:
   /**
    * Possible types of main loop watch.
@@ -105,8 +111,6 @@ class MainLoopInterface {
     IO_WRITE_WATCH,
     TIMEOUT_WATCH
   };
-
-  virtual ~MainLoopInterface() { }
 
   /**
    * Adds an I/O watch to the main loop, which watches over a file descriptor
@@ -224,6 +228,21 @@ class MainLoopInterface {
    */
   virtual uint64_t GetCurrentTime() const = 0;
 };
+
+/**
+ * Sets a main loop instance as the global main loop, which can be used by any
+ * components.
+ *
+ * This function must be called in main program at very beginning, and can only
+ * be called once.
+ */
+bool SetGlobalMainLoop(MainLoopInterface *main_loop);
+
+/**
+ * Gets the global main loop instance set by calling SetGlobalMainLoop()
+ * previously.
+ */
+MainLoopInterface *GetGlobalMainLoop();
 
 } // namespace ggadget
 

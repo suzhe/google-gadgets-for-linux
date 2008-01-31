@@ -950,9 +950,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
 } // anonymous namespace
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(MainLoopInterface *main_loop,
-                                              XMLParserInterface *xml_parser) {
-  return new XMLHttpRequest(main_loop, xml_parser);
+XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *xml_parser) {
+  return new XMLHttpRequest(GetGlobalMainLoop(), xml_parser);
 }
 
 } // namespace ggadget

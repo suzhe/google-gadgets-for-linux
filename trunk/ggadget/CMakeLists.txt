@@ -39,6 +39,7 @@ SET(SRCS
   file_manager_wrapper.cc
   gadget.cc
   logger.cc
+  main_loop.cc
   math_utils.cc
   memory_options.cc
   module.cc

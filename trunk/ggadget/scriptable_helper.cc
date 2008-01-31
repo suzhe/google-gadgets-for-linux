@@ -655,7 +655,7 @@ bool ScriptableHelperImpl::EnumerateProperties(
 
 bool ScriptableHelperImpl::EnumerateElements(
     EnumerateElementsCallback *callback) {
-  // This helper does nothing. 
+  // This helper does nothing.
   delete callback;
   return true;
 }

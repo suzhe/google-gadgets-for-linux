@@ -19,7 +19,6 @@
 
 #include "ggadget/file_manager_interface.h"
 #include "ggadget/gadget_host_interface.h"
-#include "ggadget/main_loop_interface.h"
 #include "ggadget/string_utils.h"
 #include "ggadget/xml_parser.h"
 
@@ -64,7 +63,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
   virtual ggadget::ViewHostInterface *NewViewHost(
       ViewType type, ggadget::ViewInterface *view) { return NULL; }
-  virtual ggadget::MainLoopInterface *GetMainLoop() { return NULL; }
   virtual ggadget::XMLParserInterface *GetXMLParser() { return xml_parser_; }
   virtual void SetPluginFlags(int plugin_flags) { }
   virtual void RemoveMe(bool save_data) { }

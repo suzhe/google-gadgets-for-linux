@@ -71,7 +71,7 @@ class ViewInterface : public ScriptableInterface {
    */
   virtual bool InitFromFile(const char *filename) = 0;
 
-  /** 
+  /**
    * Attaches a view host to this view.
    * Should only be called once, before @c InitFromFile().
    */

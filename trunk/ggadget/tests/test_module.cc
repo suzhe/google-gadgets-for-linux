@@ -19,9 +19,9 @@
 #include "ggadget/module.h"
 #include "ggadget/logger.h"
 #include "ggadget/common.h"
-#include "ggadget/main_loop_interface.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/script_context_interface.h"
+#include "ggadget/scriptable_helper.h"
 
 #define FUNC_NAME_INTERNAL2(a,b)  a##_LTX_##b
 #define FUNC_NAME_INTERNAL1(prefix,name)  FUNC_NAME_INTERNAL2(prefix,name)
@@ -30,9 +30,8 @@
 static int refcount = 0;
 
 extern "C" {
-  bool FUNC_NAME(Initialize)(ggadget::MainLoopInterface *main_loop) {
-    LOG("Initialize module %s, main_loop=%p",
-        AS_STRING(MODULE_NAME), main_loop);
+  bool FUNC_NAME(Initialize)() {
+    LOG("Initialize module %s", AS_STRING(MODULE_NAME));
     refcount ++;
     EXPECT_EQ(1, refcount);
     return true;
@@ -55,10 +54,31 @@ extern "C" {
     EXPECT_STREQ(AS_STRING(MODULE_NAME), module_name);
   }
 
-  bool RegisterExtension(ggadget::ElementFactory *factory,
-                         ggadget::ScriptContextInterface *context) {
-    LOG("Register extension %s, factory=%p, context=%p",
-        AS_STRING(MODULE_NAME), factory, context);
+#ifdef ELEMENT_EXTENSION
+  bool FUNC_NAME(RegisterElementExtension)(
+      ggadget::ElementFactory *factory) {
+    LOG("Register Element extension %s, factory=%p",
+        AS_STRING(MODULE_NAME), factory);
     return true;
   }
+#endif
+
+#ifdef SCRIPT_EXTENSION
+  bool FUNC_NAME(RegisterScriptExtension)(
+      ggadget::ScriptContextInterface *context) {
+    LOG("Register Script extension %s, context=%p",
+        AS_STRING(MODULE_NAME), context);
+    return true;
+  }
+#endif
+
+#ifdef FRAMEWORK_EXTENSION
+  bool FUNC_NAME(RegisterFrameworkExtension)(
+      ggadget::ScriptableHelperDefault *framework_obj) {
+    LOG("Register Framework extension %s, framework_obj=%p",
+        AS_STRING(MODULE_NAME), framework_obj);
+    return true;
+  }
+#endif
+
 }

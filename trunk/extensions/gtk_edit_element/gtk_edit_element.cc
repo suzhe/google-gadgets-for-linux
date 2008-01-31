@@ -29,25 +29,19 @@
 
 #define Initialize gtk_edit_element_LTX_Initialize
 #define Finalize gtk_edit_element_LTX_Finalize
-#define RegisterExtension gtk_edit_element_LTX_RegisterExtension
-
-static ggadget::MainLoopInterface *ggl_main_loop = NULL;
+#define RegisterElementExtension gtk_edit_element_LTX_RegisterElementExtension
 
 extern "C" {
-  bool Initialize(ggadget::MainLoopInterface *main_loop) {
+  bool Initialize() {
     LOG("Initialize gtk_edit_element extension.");
-    ASSERT(main_loop);
-    ggl_main_loop = main_loop;
     return true;
   }
 
   void Finalize() {
     LOG("Finalize gtk_edit_element extension.");
-    ggl_main_loop = NULL;
   }
 
-  bool RegisterExtension(ggadget::ElementFactory *factory,
-                         ggadget::ScriptContextInterface *context) {
+  bool RegisterElementExtension(ggadget::ElementFactory *factory) {
     LOG("Register gtk_edit_element extension.");
     if (factory) {
       factory->RegisterElementClass(
@@ -66,7 +60,8 @@ static const Color kDefaultBackgroundColor(1, 1, 1);
 
 GtkEditElement::GtkEditElement(BasicElement *parent, View *view, const char *name)
     : EditElementBase(parent, view, name),
-      impl_(new GtkEditImpl(this, ggl_main_loop, kDefaultEditElementWidth,
+      impl_(new GtkEditImpl(this, ggadget::GetGlobalMainLoop(),
+                            kDefaultEditElementWidth,
                             kDefaultEditElementHeight)) {
   ConnectOnScrolledEvent(NewSlot(this, &GtkEditElement::OnScrolled));
 }

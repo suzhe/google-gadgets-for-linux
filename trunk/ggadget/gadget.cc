@@ -247,7 +247,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         gadget_global_(this),
         element_factory_(new ElementFactory()),
         extension_manager_(
-            ExtensionManager::CreateExtensionManager(host->GetMainLoop())),
+            ExtensionManager::CreateExtensionManager()),
         main_view_(new View(&gadget_global_, element_factory_, debug_mode)),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           main_view_)),
@@ -263,11 +263,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   ~Impl() {
     if (close_details_view_timer_ != 0) {
-      host_->GetMainLoop()->RemoveWatch(close_details_view_timer_);
+      GetGlobalMainLoop()->RemoveWatch(close_details_view_timer_);
       close_details_view_timer_ = 0;
     }
     if (show_details_view_timer_ != 0) {
-      host_->GetMainLoop()->RemoveWatch(show_details_view_timer_);
+      GetGlobalMainLoop()->RemoveWatch(show_details_view_timer_);
       show_details_view_timer_ = 0;
     }
 
@@ -438,7 +438,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                               const char *title, int flags,
                               Slot *callback) {
     if (show_details_view_timer_ == 0) {
-      show_details_view_timer_ = host_->GetMainLoop()->AddTimeoutWatch(0,
+      show_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(0,
           new ShowDetailsViewCallback(
               this, details_view, title, flags,
               callback ? new SlotProxy1<void, int>(callback) : NULL));
@@ -464,7 +464,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   // Close the details view in the next event loop.
   void DelayedCloseDetailsView() {
     if (close_details_view_timer_ == 0) {
-      close_details_view_timer_ = host_->GetMainLoop()->AddTimeoutWatch(0,
+      close_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(0,
         new WatchCallbackSlot(NewSlot(this, &Impl::CloseDetailsViewCallback)));
     }
   }
@@ -539,8 +539,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr) &&
           extension_manager_) {
         std::string temp_file;
-        file_manager->ExtractFile(i->second.c_str(), &temp_file);
-        extension_manager_->LoadExtension(temp_file.c_str(), false);
+        if (file_manager->ExtractFile(i->second.c_str(), &temp_file)) {
+          extension_manager_->LoadExtension(temp_file.c_str(), false);
+        }
       }
     }
 
@@ -548,10 +549,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ScriptContextInterface *context = main_view_host_->GetScriptContext();
     const ExtensionManager *global_manager =
         ExtensionManager::GetGlobalExtensionManager();
+    MultipleExtensionRegisterWrapper register_wrapper;
+    ElementExtensionRegister element_register(element_factory_);
+    ScriptExtensionRegister script_register(context);
+
+    register_wrapper.AddExtensionRegister(&element_register);
+    register_wrapper.AddExtensionRegister(&script_register);
+
     if (global_manager)
-      global_manager->RegisterLoadedExtensions(element_factory_, context);
+      global_manager->RegisterLoadedExtensions(&register_wrapper);
     if (extension_manager_)
-      extension_manager_->RegisterLoadedExtensions(element_factory_, context);
+      extension_manager_->RegisterLoadedExtensions(&register_wrapper);
 
     main_view_host_->GetView()->SetCaption(
         GetManifestInfo(kManifestName).c_str());

@@ -25,7 +25,7 @@
 
 #define Initialize dbus_script_class_LTX_Initialize
 #define Finalize dbus_script_class_LTX_Finalize
-#define RegisterExtension dbus_script_class_LTX_RegisterExtension
+#define RegisterScriptExtension dbus_script_class_LTX_RegisterScriptExtension
 
 using ggadget::dbus::ScriptableDBusObject;
 using ggadget::dbus::DBusProxyFactory;
@@ -65,10 +65,10 @@ static ScriptableDBusObject* NewSessionObject(const char *name,
 }
 
 extern "C" {
-  bool Initialize(ggadget::MainLoopInterface *main_loop) {
+  bool Initialize() {
     LOG("Initialize dbus_script_class extension.");
     if (!ggl_dbus_factory)
-      ggl_dbus_factory = new DBusProxyFactory(main_loop);
+      ggl_dbus_factory = new DBusProxyFactory(ggadget::GetGlobalMainLoop());
     return true;
   }
 
@@ -78,21 +78,23 @@ extern "C" {
     ggl_dbus_factory = NULL;
   }
 
-  bool RegisterExtension(ggadget::ElementFactory *factory,
-                         ggadget::ScriptContextInterface *context) {
+  bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
     LOG("Register dbus_script_class extension.");
     if (context) {
       if (!context->RegisterClass(
           kDBusSystemObjectName, NewSlotWithDefaultArgs(
               NewSlot(NewSystemObject), kDefaultArgs))) {
         LOG("Failed to register %s class.", kDBusSystemObjectName);
+        return false;
       }
       if (!context->RegisterClass(
           kDBusSessionObjectName, NewSlotWithDefaultArgs(
               NewSlot(NewSessionObject), kDefaultArgs))) {
         LOG("Failed to register %s class.", kDBusSessionObjectName);
+        return false;
       }
+      return true;
     }
-    return true;
+    return false;
   }
 }

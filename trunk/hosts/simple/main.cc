@@ -75,7 +75,6 @@ static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
   g_gadget_host = new ggadget::gtk::GtkGadgetHost(&g_script_runtime,
                                                   &g_framework,
-                                                  &g_main_loop,
                                                   g_composited,
                                                   g_useshapemask, g_zoom,
                                                   g_debug_mode);
@@ -189,9 +188,12 @@ int main(int argc, char* argv[]) {
     g_decorated = (decorated != 0);
   }
 
+  // Set global main loop
+  ggadget::SetGlobalMainLoop(&g_main_loop);
+
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
-      ggadget::ExtensionManager::CreateExtensionManager(&g_main_loop);
+      ggadget::ExtensionManager::CreateExtensionManager();
 
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)

@@ -28,6 +28,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/xml_parser.h>
+#include <ggadget/main_loop_interface.h>
 
 #include "gtk_gadget_host.h"
 #include "cairo_graphics.h"
@@ -44,12 +45,10 @@ static const char kResourceZipName[] = "ggl-resources.bin";
 
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                              FrameworkInterface *framework,
-                             MainLoopInterface *main_loop,
                              bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
       framework_(framework),
-      main_loop_(main_loop),
       xml_parser_(CreateXMLParser()),
       resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
@@ -118,10 +117,6 @@ FrameworkInterface *GtkGadgetHost::GetFramework() {
   return framework_;
 }
 
-MainLoopInterface *GtkGadgetHost::GetMainLoop() {
-  return main_loop_;
-}
-
 XMLParserInterface *GtkGadgetHost::GetXMLParser() {
   return xml_parser_;
 }
@@ -188,7 +183,7 @@ std::string GetFullPathOfSysCommand(const std::string &command) {
 }
 
 uint64_t GtkGadgetHost::GetCurrentTime() const {
-  return main_loop_->GetCurrentTime();
+  return GetGlobalMainLoop()->GetCurrentTime();
 }
 
 bool GtkGadgetHost::OpenURL(const char *url) const {
