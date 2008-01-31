@@ -33,7 +33,8 @@
 
 #define Initialize gtkmoz_browser_element_LTX_Initialize
 #define Finalize gtkmoz_browser_element_LTX_Finalize
-#define RegisterExtension gtkmoz_browser_element_LTX_RegisterExtension
+#define RegisterElementExtension \
+    gtkmoz_browser_element_LTX_RegisterElementExtension
 
 namespace ggadget {
 namespace gtkmoz {
@@ -42,18 +43,19 @@ static MainLoopInterface *ggl_main_loop = NULL;
 }
 
 extern "C" {
-  bool Initialize(ggadget::MainLoopInterface *main_loop) {
+  bool Initialize() {
     LOG("Initialize gtkmoz_browser_element extension.");
-    ggadget::gtkmoz::ggl_main_loop = main_loop;
+    ggadget::gtkmoz::ggl_main_loop = ggadget::GetGlobalMainLoop();
+    ASSERT(ggadget::gtkmoz::ggl_main_loop);
     return true;
   }
 
   void Finalize() {
     LOG("Finalize gtkmoz_browser_element extension.");
+    ggadget::gtkmoz::ggl_main_loop = NULL;
   }
 
-  bool RegisterExtension(ggadget::ElementFactory *factory,
-                         ggadget::ScriptContextInterface *context) {
+  bool RegisterElementExtension(ggadget::ElementFactory *factory) {
     LOG("Register gtkmoz_browser_element extension, using name \"_browser\".");
     if (factory) {
       factory->RegisterElementClass(

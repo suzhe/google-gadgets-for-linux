@@ -167,7 +167,7 @@ class View::Impl {
       script_context_(NULL),
       file_manager_(NULL),
       element_factory_(element_factory),
-      main_loop_(NULL),
+      main_loop_(GetGlobalMainLoop()),
       children_(element_factory, NULL, owner),
       debug_mode_(debug_mode),
       width_(0), height_(0),
@@ -1059,17 +1059,16 @@ void View::AttachHost(ViewHostInterface *host) {
   impl_->host_ = host;
   impl_->gadget_host_ = host->GetGadgetHost();
   impl_->file_manager_ = impl_->gadget_host_->GetFileManager();
-  impl_->main_loop_ = impl_->gadget_host_->GetMainLoop();
   impl_->script_context_ = host->GetScriptContext();
 
   // Register script context.
-  if (impl_->script_context_) {   
+  if (impl_->script_context_) {
     impl_->script_context_->SetGlobalObject(&impl_->global_object_);
 
     // Register global classes into script context.
-    impl_->script_context_->RegisterClass("DOMDocument", 
+    impl_->script_context_->RegisterClass("DOMDocument",
         NewSlot(impl_->gadget_host_->GetXMLParser(),
-                &XMLParserInterface::CreateDOMDocument)); 
+                &XMLParserInterface::CreateDOMDocument));
     impl_->script_context_->RegisterClass(
         "XMLHttpRequest", NewSlot(host, &ViewHostInterface::NewXMLHttpRequest));
     impl_->script_context_->RegisterClass(
@@ -1390,10 +1389,6 @@ Slot *View::NewDeathDetectedSlot(BasicElement *element, Slot *slot) {
 
 XMLParserInterface *View::GetXMLParser() const {
   return impl_->gadget_host_->GetXMLParser();
-}
-
-MainLoopInterface *View::GetMainLoop() const {
-  return impl_->gadget_host_->GetMainLoop();
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

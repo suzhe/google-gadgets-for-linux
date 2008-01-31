@@ -59,9 +59,6 @@ class GadgetHostInterface {
   /** Returns the global @c FrameworkInterface instance. */
   virtual FrameworkInterface *GetFramework() = 0;
 
-  /** Returns the global @c MainLoopInterface instance. */
-  virtual MainLoopInterface *GetMainLoop() = 0;
-
   /** Returns the global @c XMLParserInterface instance. */
   virtual XMLParserInterface *GetXMLParser() = 0;
 

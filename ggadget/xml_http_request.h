@@ -21,12 +21,10 @@
 
 namespace ggadget {
 
-class MainLoopInterface;
 class ScriptContextInterface;
 class XMLParserInterface;
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(MainLoopInterface *main_loop,
-                                              XMLParserInterface *xml_parser);
+XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *xml_parser);
 
 } // namespace ggadget
 

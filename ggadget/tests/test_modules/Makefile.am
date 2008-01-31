@@ -36,4 +36,6 @@ fake_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 tux_module_la_SOURCES	= ../test_module.cc
 tux_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 			  -DMODULE_NAME=tux-module \
-			  -DMODULE_NAME_UNDERSCORE=tux_module
+			  -DMODULE_NAME_UNDERSCORE=tux_module \
+			  -DFRAMEWORK_EXTENSION=1 \
+			  -DELEMENT_EXTENSION=1

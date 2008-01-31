@@ -336,8 +336,6 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    */
   Slot *NewDeathDetectedSlot(BasicElement *element, Slot *slot);
 
-  MainLoopInterface *GetMainLoop() const;
-
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);
   Connection *ConnectOnClickEvent(Slot0<void> *handler);

@@ -19,68 +19,103 @@
 #endif
 
 #include <algorithm>
+#include <vector>
 #include <map>
 #include "logger.h"
 #include "module.h"
 #include "common.h"
 #include "extension_manager.h"
-#include "main_loop_interface.h"
 
 namespace ggadget {
 
-static const char* kRegisterExtensionFuncName = "RegisterExtension";
+ElementExtensionRegister::ElementExtensionRegister(ElementFactory *factory)
+  : factory_(factory) {
+}
+
+bool ElementExtensionRegister::RegisterExtension(const Module *extension) {
+  ASSERT(extension);
+  RegisterElementExtensionFunc func =
+      reinterpret_cast<RegisterElementExtensionFunc>(
+          extension->GetSymbol(kElementExtensionSymbolName));
+
+  return func ? func(factory_) : false;
+}
+
+ScriptExtensionRegister::ScriptExtensionRegister(ScriptContextInterface *context)
+  : context_(context) {
+}
+
+bool ScriptExtensionRegister::RegisterExtension(const Module *extension) {
+  ASSERT(extension);
+  RegisterScriptExtensionFunc func =
+      reinterpret_cast<RegisterScriptExtensionFunc>(
+          extension->GetSymbol(kScriptExtensionSymbolName));
+
+  return func ? func(context_) : false;
+}
+
+FrameworkExtensionRegister::FrameworkExtensionRegister(
+    ScriptableHelperDefault *framework_object)
+  : framework_object_(framework_object) {
+}
+
+bool FrameworkExtensionRegister::RegisterExtension(const Module *extension) {
+  ASSERT(extension);
+  RegisterFrameworkExtensionFunc func =
+      reinterpret_cast<RegisterFrameworkExtensionFunc>(
+          extension->GetSymbol(kFrameworkExtensionSymbolName));
+
+  return func ? func(framework_object_) : false;
+}
+
+class MultipleExtensionRegisterWrapper::Impl {
+ public:
+  typedef std::vector<ExtensionRegisterInterface *> ExtRegisterVector;
+  ExtRegisterVector ext_registers_;
+};
+
+MultipleExtensionRegisterWrapper::MultipleExtensionRegisterWrapper()
+  : impl_(new Impl()) {
+}
+
+MultipleExtensionRegisterWrapper::~MultipleExtensionRegisterWrapper() {
+  delete impl_;
+}
+
+bool MultipleExtensionRegisterWrapper::RegisterExtension(
+    const Module *extension) {
+  ASSERT(extension);
+
+  bool result = false;
+
+  Impl::ExtRegisterVector::iterator it = impl_->ext_registers_.begin();
+  for (;it != impl_->ext_registers_.end(); ++it) {
+    if ((*it)->RegisterExtension(extension))
+      result = true;
+  }
+
+  return result;
+}
+
+void MultipleExtensionRegisterWrapper::AddExtensionRegister(
+    ExtensionRegisterInterface *ext_register) {
+  ASSERT(ext_register);
+  impl_->ext_registers_.push_back(ext_register);
+}
 
 class ExtensionManager::Impl {
-  typedef bool (*RegisterExtensionFunc)(ElementFactory *factory,
-                                        ScriptContextInterface *context);
-
-  class Extension : public Module {
-   public:
-    Extension(MainLoopInterface *main_loop, const char *name, bool resident)
-        : Module(main_loop, name) {
-      if (IsValid()) {
-        register_func_ = reinterpret_cast<RegisterExtensionFunc>(
-            GetSymbol(kRegisterExtensionFuncName));
-        if (!register_func_) {
-          DLOG("Failed to load extension %s, symbol %s() can't be resolved.",
-               name, kRegisterExtensionFuncName);
-          Unload();
-        } else if (resident) {
-          if (!MakeResident())
-            DLOG("Failed to make extension %s resident.", name);
-        }
-      }
-    }
-
-    bool RegisterExtension(ElementFactory *factory,
-                           ScriptContextInterface *context) {
-      if (register_func_)
-        return register_func_(factory, context);
-      return false;
-    }
-
-   private:
-    RegisterExtensionFunc register_func_;
-
-    DISALLOW_EVIL_CONSTRUCTORS(Extension);
-  };
-
  public:
-  Impl() : main_loop_(NULL), readonly_(false) {
+  Impl() : readonly_(false) {
   }
 
   ~Impl() {
-    for (ExtensionMap::iterator it= extensions_.begin();
+    for (ExtensionMap::iterator it = extensions_.begin();
          it != extensions_.end(); ++it) {
       delete it->second;
     }
   }
 
-  void SetMainLoop(MainLoopInterface *main_loop) {
-    main_loop_ = main_loop;
-  }
-
-  Extension *LoadExtension(const char *name, bool resident) {
+  Module *LoadExtension(const char *name, bool resident) {
     ASSERT(name && *name);
     if (readonly_) {
       LOG("Can't load extension %s, into a readonly ExtensionManager.",
@@ -99,11 +134,14 @@ class ExtensionManager::Impl {
         return it->second;
       }
 
-      Extension *extension = new Extension(main_loop_, name, resident);
+      Module *extension = new Module(name);
       if (!extension->IsValid()) {
         delete extension;
         return NULL;
       }
+
+      if (resident)
+        extension->MakeResident();
 
       extensions_[name_str] = extension;
       LOG("Extension %s was loaded successfully.", name);
@@ -151,22 +189,22 @@ class ExtensionManager::Impl {
     return result;
   }
 
-  bool RegisterExtension(const char *name, ElementFactory *factory,
-                         ScriptContextInterface *context) {
-    Extension *extension = LoadExtension(name, false);
+  bool RegisterExtension(const char *name, ExtensionRegisterInterface *reg) {
+    ASSERT(name && *name && reg);
+    Module *extension = LoadExtension(name, false);
     if (extension && extension->IsValid()) {
-      return extension->RegisterExtension(factory, context);
+      return reg->RegisterExtension(extension);
     }
     return false;
   }
 
-  bool RegisterLoadedExtensions(ElementFactory *factory,
-                                ScriptContextInterface *context) {
+  bool RegisterLoadedExtensions(ExtensionRegisterInterface *reg) {
+    ASSERT(reg);
     if (extensions_.size()) {
       bool ret = true;
       for (ExtensionMap::const_iterator it = extensions_.begin();
            it != extensions_.end(); ++it) {
-        if (!it->second->RegisterExtension(factory, context))
+        if (!reg->RegisterExtension(it->second))
           ret = false;
       }
       return ret;
@@ -200,9 +238,8 @@ class ExtensionManager::Impl {
   static ExtensionManager *global_manager_;
 
  private:
-  typedef std::map<std::string, Extension *> ExtensionMap;
+  typedef std::map<std::string, Module*> ExtensionMap;
 
-  MainLoopInterface *main_loop_;
   ExtensionMap extensions_;
   bool readonly_;
 };
@@ -243,14 +280,13 @@ bool ExtensionManager::EnumerateLoadedExtensions(
 }
 
 bool ExtensionManager::RegisterExtension(const char *name,
-                                         ElementFactory *factory,
-                                         ScriptContextInterface *context) const {
-  return impl_->RegisterExtension(name, factory, context);
+                                         ExtensionRegisterInterface *reg) const {
+  return impl_->RegisterExtension(name, reg);
 }
 
 bool ExtensionManager::RegisterLoadedExtensions(
-    ElementFactory *factory, ScriptContextInterface *context) const {
-  return impl_->RegisterLoadedExtensions(factory, context);
+    ExtensionRegisterInterface *reg) const {
+  return impl_->RegisterLoadedExtensions(reg);
 }
 
 const ExtensionManager *ExtensionManager::GetGlobalExtensionManager() {
@@ -262,9 +298,8 @@ bool ExtensionManager::SetGlobalExtensionManager(ExtensionManager *manager) {
 }
 
 ExtensionManager *
-ExtensionManager::CreateExtensionManager(MainLoopInterface *main_loop) {
+ExtensionManager::CreateExtensionManager() {
   ExtensionManager *manager = new ExtensionManager();
-  manager->impl_->SetMainLoop(main_loop);
   return manager;
 }
 

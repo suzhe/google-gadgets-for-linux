@@ -145,6 +145,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  label_element.cc \
 			  listbox_element.cc \
 			  logger.cc \
+			  main_loop.cc \
 			  math_utils.cc \
 			  memory_options.cc \
 			  module.cc \

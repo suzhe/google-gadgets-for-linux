@@ -87,7 +87,8 @@ xml_http_request_test_LDADD	= -lpthread \
 foo_module_la_SOURCES		= test_module.cc
 foo_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 				  -DMODULE_NAME=foo-module \
-				  -DMODULE_NAME_UNDERSCORE=foo_module
+				  -DMODULE_NAME_UNDERSCORE=foo_module \
+				  -DELEMENT_EXTENSION=1
 foo_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 foo_module_la_LDFLAGS		= -avoid-version \
@@ -97,7 +98,8 @@ foo_module_la_LDFLAGS		= -avoid-version \
 bar_module_la_SOURCES		= test_module.cc
 bar_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 				  -DMODULE_NAME=bar-module \
-				  -DMODULE_NAME_UNDERSCORE=bar_module
+				  -DMODULE_NAME_UNDERSCORE=bar_module \
+				  -DSCRIPT_EXTENSION=1
 bar_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 bar_module_la_LDFLAGS		= -avoid-version \

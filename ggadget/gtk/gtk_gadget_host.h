@@ -21,7 +21,6 @@
 #include <map>
 #include <gtk/gtk.h>
 #include <ggadget/gadget_host_interface.h>
-#include <ggadget/main_loop_interface.h>
 #include <ggadget/gtk/gtk_main_loop.h>
 
 namespace ggadget {
@@ -36,7 +35,6 @@ class GtkGadgetHost : public GadgetHostInterface {
  public:
   GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
                 FrameworkInterface *framework,
-                MainLoopInterface *main_loop,
                 bool composited, bool useshapemask,
                 double zoom, int debug_mode);
   virtual ~GtkGadgetHost();
@@ -45,7 +43,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
   virtual FrameworkInterface *GetFramework();
-  virtual MainLoopInterface *GetMainLoop();
   virtual XMLParserInterface *GetXMLParser();
   virtual GadgetInterface *GetGadget();
   virtual ViewHostInterface *NewViewHost(ViewType type, ViewInterface *view);
@@ -115,7 +112,6 @@ class GtkGadgetHost : public GadgetHostInterface {
 
   ScriptRuntimeInterface *script_runtime_;
   FrameworkInterface *framework_;
-  MainLoopInterface *main_loop_;
 
   XMLParserInterface *xml_parser_;
   FileManagerInterface *resource_file_manager_;
