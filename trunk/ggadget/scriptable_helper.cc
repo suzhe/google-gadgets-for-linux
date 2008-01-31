@@ -335,8 +335,7 @@ void ScriptableHelperImpl::RegisterConstants(int count,
   for (int i = 0; i < count; i++) {
     ASSERT(names[i]);
     if (values) {
-      Variant::Type type = values[i].type();
-      ASSERT_M(type != Variant::TYPE_SLOT,
+      ASSERT_M(values[i].type() != Variant::TYPE_SLOT,
                ("Don't register Slot constant. Use RegisterMethod instead."));
       constants_[names[i]] = values[i];
     } else {
