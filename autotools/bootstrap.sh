@@ -161,7 +161,7 @@ if test ! -f $acdir/pkg.m4; then
   exit 1
 fi
 
-if test ! -f $acdir/libxml.m4; then
+if test ! -f $acdir/libxml.m4 -a ! -f $acdir/libxml2.m4; then
   printerr "ERROR: Could not find libxml2 macros. (Looked in $acdir/libxml.m4)"
   printerr "       If libxml.m4 is available in another directory, please copy it"
   printerr "       into ./autotools/, so that it can be found."

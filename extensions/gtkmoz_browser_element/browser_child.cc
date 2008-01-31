@@ -109,9 +109,9 @@ static int FindBrowserId(JSContext *cx) {
       gtk_moz_embed_get_nsIWebBrowser(*it, getter_AddRefs(browser));
       nsCOMPtr<nsIInterfaceRequestor> req(do_QueryInterface(browser, &rv));
       NS_ENSURE_SUCCESS(rv, -1);
-      nsISupports *global1;
-      rv = req->GetInterface(kIScriptGlobalObjectIID,
-                             reinterpret_cast<void **>(&global1));
+      nsISupports *global1 = NULL;
+      void *temp = global1;
+      rv = req->GetInterface(kIScriptGlobalObjectIID, &temp);
       NS_ENSURE_SUCCESS(rv, -1);
       global1->Release();
       if (global1 == global)
