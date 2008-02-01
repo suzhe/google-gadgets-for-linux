@@ -35,6 +35,7 @@
 #include <ggadget/math_utils.h>
 #include <ggadget/menu_interface.h>
 #include <ggadget/options_interface.h>
+#include <ggadget/registerable_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/scriptable_interface.h>

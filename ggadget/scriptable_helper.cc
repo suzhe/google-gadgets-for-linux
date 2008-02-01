@@ -38,9 +38,7 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
                                           const char **names, int count);
   virtual void RegisterMethod(const char *name, Slot *slot);
   virtual void RegisterSignal(const char *name, Signal *signal);
-  virtual void RegisterConstants(int count,
-                                 const char * const names[],
-                                 const Variant values[]);
+  virtual void RegisterVariantConstant(const char *name, const Variant &value);
   virtual void SetInheritsFrom(ScriptableInterface *inherits_from);
   virtual void SetArrayHandler(Slot *getter, Slot *setter);
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter);
@@ -71,13 +69,14 @@ class ScriptableHelperImpl : public ScriptableHelperImplInterface {
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
   virtual bool EnumerateElements(EnumerateElementsCallback *callback);
 
+  virtual RegisterableInterface *GetRegisterable() { return this; }
+
  private:
   void EnsureRegistered();
   class InheritedPropertiesCallback;
   class InheritedElementsCallback;
   void AddPropertyInfo(const char *name, const Variant &prototype,
                        Slot *getter, Slot *setter);
-  bool Sealed() { return !do_register_; }
 
   Slot0<void> *do_register_;
   int ref_count_;
@@ -210,7 +209,6 @@ static Variant DummyGetter() {
 
 void ScriptableHelperImpl::RegisterProperty(const char *name,
                                             Slot *getter, Slot *setter) {
-  ASSERT(!Sealed());
   ASSERT(name);
   Variant prototype;
   ASSERT(!setter || setter->GetArgCount() == 1);
@@ -292,7 +290,6 @@ void ScriptableHelperImpl::RegisterStringEnumProperty(
 }
 
 void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
-  ASSERT(!Sealed());
   ASSERT(name);
   ASSERT(slot && slot->HasMetadata());
   ASSERT_M(slot->GetReturnType() != Variant::TYPE_SLOT,
@@ -310,7 +307,6 @@ void ScriptableHelperImpl::RegisterMethod(const char *name, Slot *slot) {
 }
 
 void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
-  ASSERT(!Sealed());
   ASSERT(name);
   ASSERT(signal);
 
@@ -328,29 +324,20 @@ void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
   AddPropertyInfo(name, prototype, getter, setter);
 }
 
-void ScriptableHelperImpl::RegisterConstants(int count,
-                                             const char *const names[],
-                                             const Variant values[]) {
-  ASSERT(names);
-  for (int i = 0; i < count; i++) {
-    ASSERT(names[i]);
-    if (values) {
-      ASSERT_M(values[i].type() != Variant::TYPE_SLOT,
-               ("Don't register Slot constant. Use RegisterMethod instead."));
-      constants_[names[i]] = values[i];
-    } else {
-      constants_[names[i]] = Variant(i);
-    }
-  }
+void ScriptableHelperImpl::RegisterVariantConstant(const char *name,
+                                                   const Variant &value) {
+  ASSERT(name);
+  Variant::Type type = value.type();
+  ASSERT_M(type != Variant::TYPE_SLOT,
+           ("Don't register Slot constant. Use RegisterMethod instead."));
+  constants_[name] = value;
 }
 
 void ScriptableHelperImpl::SetInheritsFrom(ScriptableInterface *inherits_from) {
-  ASSERT(!Sealed());
   inherits_from_ = inherits_from;
 }
 
 void ScriptableHelperImpl::SetArrayHandler(Slot *getter, Slot *setter) {
-  ASSERT(!Sealed());
   ASSERT(getter && getter->GetArgCount() == 1 &&
          getter->GetArgTypes()[0] == Variant::TYPE_INT64);
   ASSERT(!setter || (setter->GetArgCount() == 2 &&
@@ -361,7 +348,6 @@ void ScriptableHelperImpl::SetArrayHandler(Slot *getter, Slot *setter) {
 
 void ScriptableHelperImpl::SetDynamicPropertyHandler(
     Slot *getter, Slot *setter) {
-  ASSERT(!Sealed());
   ASSERT(getter && getter->GetArgCount() == 1 &&
          getter->GetArgTypes()[0] == Variant::TYPE_STRING);
   ASSERT(!setter || (setter->GetArgCount() == 2 &&

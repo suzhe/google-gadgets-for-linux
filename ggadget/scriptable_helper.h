@@ -18,30 +18,20 @@
 #define GGADGET_SCRIPTABLE_HELPER_H__
 
 #include <ggadget/common.h>
+#include <ggadget/registerable_interface.h>
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/signals.h>
 #include <ggadget/slot.h>
 #include <ggadget/variant.h>
-#include <ggadget/scriptable_interface.h>
 
 namespace ggadget {
 
-class Connection;
-class Signal;
-
 namespace internal {
 
-class ScriptableHelperImplInterface : public ScriptableInterface {
+class ScriptableHelperImplInterface : public ScriptableInterface,
+                                      public RegisterableInterface {
  public:
   virtual ~ScriptableHelperImplInterface() { }
-  virtual void RegisterProperty(const char *name,
-                                Slot *getter, Slot *setter) = 0;
-  virtual void RegisterStringEnumProperty(const char *name,
-                                          Slot *getter, Slot *setter,
-                                          const char **names, int count) = 0;
-  virtual void RegisterMethod(const char *name, Slot *slot) = 0;
-  virtual void RegisterSignal(const char *name, Signal *signal) = 0;
-  virtual void RegisterConstants(int count,
-                                 const char *const names[],
-                                 const Variant values[]) = 0;
   virtual void SetInheritsFrom(ScriptableInterface *inherits_from) = 0;
   virtual void SetArrayHandler(Slot *getter, Slot *setter) = 0;
   virtual void SetDynamicPropertyHandler(Slot *getter, Slot *setter) = 0;
@@ -57,7 +47,7 @@ ScriptableHelperImplInterface *NewScriptableHelperImpl(
  * A @c ScriptableInterface implementation helper.
  */
 template <typename I>
-class ScriptableHelper : public I {
+class ScriptableHelper : public I, public RegisterableInterface {
  private:
   // Checks at compile time if the argument I is ScriptableInterface or
   // derived from it.
@@ -74,15 +64,8 @@ class ScriptableHelper : public I {
     delete impl_;
   }
 
-  /**
-   * Register a scriptable property.
-   * This @c ScriptableHelper @a name owns the pointers of the
-   * @a getter and the @a setter.
-   * @param name property name.  It must point to static allocated memory.
-   * @param getter the getter slot of the property.
-   * @param setter the setter slot of the property.
-   */
-  void RegisterProperty(const char *name, Slot *getter, Slot *setter) {
+  /** @see RegisterableInterface::RegisterProperty() */
+  virtual void RegisterProperty(const char *name, Slot *getter, Slot *setter) {
     impl_->RegisterProperty(name, getter, setter);
   }
 
@@ -108,42 +91,27 @@ class ScriptableHelper : public I {
     impl_->RegisterProperty(name, NewSimpleGetterSlot<T>(valuep), NULL);
   }
 
-  /**
-   * Register a scriptable property having enumerated values that should
-   * mapped to strings.
-   * @param name property name.  It must point to static allocated memory.
-   * @param getter a getter slot returning an enum value.
-   * @param setter a setter slot accepting an enum value. @c NULL if the
-   *     property is readonly.
-   * @param names a table containing string values of every enum values.
-   * @param count number of entries in the @a names table.
-   */
-  void RegisterStringEnumProperty(const char *name,
-                                  Slot *getter, Slot *setter,
-                                  const char **names, int count) {
+  /** @see RegisterableInterface::RegisterStringEnumProperty() */
+  virtual void RegisterStringEnumProperty(const char *name,
+                                          Slot *getter, Slot *setter,
+                                          const char **names, int count) {
     impl_->RegisterStringEnumProperty(name, getter, setter, names, count);
   }
 
-  /**
-   * Register a scriptable method.
-   * This @c ScriptableHelper owns the pointer of @c slot.
-   * @param name method name.  It must point to static allocated memory.
-   * @param slot the method slot.
-   */
-  void RegisterMethod(const char *name, Slot *slot) {
+  /** @see RegisterableInterface::RegisterMethod() */
+  virtual void RegisterMethod(const char *name, Slot *slot) {
     impl_->RegisterMethod(name, slot);
   }
 
-  /**
-   * Register a @c Signal that can connect to various @c Slot callbacks.
-   * After this call, a same named property will be automatically registered
-   * that can be used to get/set the @c Slot callback.
-   * @param name the name of the @a signal.  It must point to static
-   *     allocated memory.
-   * @param signal the @c Signal to be registered.
-   */
-  void RegisterSignal(const char *name, Signal *signal) {
+  /** @see RegisterableInterface::RegisterSignal() */
+  virtual void RegisterSignal(const char *name, Signal *signal) {
     impl_->RegisterSignal(name, signal);
+  }
+
+  /** @see RegisterableInterface::RegisterVariantConstant() */
+  virtual void RegisterVariantConstant(const char *name,
+                                       const Variant &value) {
+    impl_->RegisterVariantConstant(name, value);
   }
 
   /**
@@ -158,7 +126,9 @@ class ScriptableHelper : public I {
   void RegisterConstants(int count,
                          const char *const names[],
                          const Variant values[]) {
-    impl_->RegisterConstants(count, names, values);
+    ASSERT(names);
+    for (int i = 0; i < count; i++)
+      impl_->RegisterVariantConstant(names[i], values ? values[i] : Variant(i));
   }
 
   /**
@@ -168,8 +138,7 @@ class ScriptableHelper : public I {
    */
   template <typename T>
   void RegisterConstant(const char *name, T value) {
-    Variant variant(value);
-    impl_->RegisterConstants(1, &name, &variant);
+    impl_->RegisterVariantConstant(name, Variant(value));
   }
 
   /**
@@ -299,6 +268,9 @@ class ScriptableHelper : public I {
       ScriptableInterface::EnumerateElementsCallback *callback) {
     return impl_->EnumerateElements(callback);
   }
+
+  /** @see ScriptableInterface::GetRegisterable() */
+  virtual RegisterableInterface *GetRegisterable() { return impl_; }
 
  protected:
   /**

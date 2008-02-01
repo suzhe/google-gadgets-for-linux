@@ -25,6 +25,7 @@
 namespace ggadget {
 
 class Connection;
+class RegisterableInterface;
 
 /**
  * Object interface that can be called from script languages.
@@ -229,6 +230,13 @@ class ScriptableInterface {
    * @return @c false if the callback returns @c false.
    */
   virtual bool EnumerateElements(EnumerateElementsCallback *callback) = 0;
+
+  /**
+   * Returns the @c RegisterableInterface pointer if this object supports it,
+   * otherwise returns @c NULL.
+   */
+  virtual RegisterableInterface *GetRegisterable() = 0;
+
 };
 
 /**
