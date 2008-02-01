@@ -80,6 +80,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  module.h \
 			  options_interface.h \
 			  progressbar_element.h \
+			  registerable_interface.h \
 			  scoped_ptr.h \
 			  script_context_interface.h \
 			  script_runtime_interface.h \
