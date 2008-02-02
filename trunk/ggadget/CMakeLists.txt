@@ -27,6 +27,7 @@ PKGCONFIG_EX(libxml-2.0 2.6.0 LIBXML2_LIBRARIES)
 
 SET(SRCS
   basic_element.cc
+  canvas_utils.cc
   color.cc
   content_item.cc
   details_view.cc

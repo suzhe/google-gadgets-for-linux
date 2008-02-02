@@ -128,8 +128,8 @@ class DOMNodeInterface : public ScriptableInterface {
    * All newly created nodes returned from DOMDocumentInterface::CreateXXX(),
    * any CloneNode() or SplitText(), etc. are initially have a zero count.
    * You should either use the @c delete operator to delete the node,
-   * or call @c Ref() (or use @c ScopedScriptablePtr) if you need to further
-   * operate on it, but never ignore the results from such methods.
+   * or call @c Ref() if you need to further operate on it, but never ignore
+   * the results from such methods.
    */
   virtual void Ref() = 0;
   virtual void Unref(bool transient = false) = 0;

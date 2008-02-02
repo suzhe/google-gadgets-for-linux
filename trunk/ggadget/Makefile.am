@@ -39,6 +39,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  basic_element.h \
 			  button_element.h \
 			  canvas_interface.h \
+			  canvas_utils.h \
 			  checkbox_element.h \
 			  color.h \
 			  common.h \
@@ -90,6 +91,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_file_system.h \
 			  scriptable_framework.h \
 			  scriptable_helper.h \
+			  scriptable_holder.h \
 			  scriptable_image.h \
 			  scriptable_interface.h \
 			  scriptable_menu.h \
@@ -125,6 +127,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  anchor_element.cc \
 			  basic_element.cc \
 			  button_element.cc \
+			  canvas_utils.cc \
 			  checkbox_element.cc \
 			  color.cc \
 			  combobox_element.cc \

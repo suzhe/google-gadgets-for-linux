@@ -111,9 +111,11 @@ class PixbufImage::Impl {
                    double width, double height) {
     const CanvasInterface *image = GetCanvas();
     ASSERT(canvas && image);
-    if (image && canvas) {
-      double cx = width / image->GetWidth();
-      double cy = height / image->GetHeight();
+    double image_width = image->GetWidth();
+    double image_height = image->GetHeight();
+    if (image && canvas && image_width > 0 && image_height > 0) {
+      double cx = width / image_width;
+      double cy = height / image_height;
       if (cx != 1.0 || cy != 1.0) {
         canvas->PushState();
         canvas->ScaleCoordinates(cx, cy);

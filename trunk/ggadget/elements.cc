@@ -143,6 +143,11 @@ class Elements::Impl {
                               child->GetPixelPinX(), child->GetPixelPinY(),
                               DegreesToRadians(child->GetRotation()),
                               &child_x, &child_y);
+      BasicElement::FlipMode flip = child->GetFlip();
+      if (flip & BasicElement::FLIP_HORIZONTAL)
+        child_x = child->GetPixelWidth() - child_x;
+      if (flip & BasicElement::FLIP_VERTICAL)
+        child_y = child->GetPixelHeight() - child_y;
     }
 
     new_event->SetX(child_x);
@@ -156,7 +161,7 @@ class Elements::Impl {
     ASSERT(event.GetType() != Event::EVENT_MOUSE_OVER &&
            event.GetType() != Event::EVENT_MOUSE_OUT);
 
-    *in_element = NULL;
+    ElementHolder in_element_holder;
     *fired_element = NULL;
     MouseEvent new_event(event);
     // Iterate in reverse since higher elements are listed last.
@@ -169,19 +174,20 @@ class Elements::Impl {
         continue;
       MapChildPositionEvent(event, child, &new_event);
       if (child->IsPointIn(new_event.GetX(), new_event.GetY())) {
-        BasicElement *child = (*ite);
+        BasicElement *child = *ite;
+        ElementHolder child_holder(*ite);
         BasicElement *descendant_in_element = NULL;
-        ScopedDeathDetector death_detector(view_, &child);
-        ScopedDeathDetector death_detector1(view_, &descendant_in_element);
-
         EventResult result = child->OnMouseEvent(new_event, false,
                                                  fired_element,
                                                  &descendant_in_element);
         // The child has been removed by some event handler, can't continue.
-        if (!child)
+        if (!child_holder.Get())
           return result;
-        if (!*in_element)
-          *in_element = descendant_in_element ? descendant_in_element : child;
+
+        if (!in_element_holder.Get()) {
+          in_element_holder.Reset(descendant_in_element ?
+                                  descendant_in_element : child);
+        }
         if (*fired_element)
           return result;
       }
@@ -205,11 +211,11 @@ class Elements::Impl {
 
       MapChildPositionEvent(event, child, &new_event);
       if (child->IsPointIn(new_event.GetX(), new_event.GetY())) {
-        ScopedDeathDetector death_detector(view_, &child);
+        ElementHolder child_holder(child);
         EventResult result = (*ite)->OnDragEvent(new_event, false,
                                                  fired_element);
         // The child has been removed by some event handler, can't continue.
-        if (!child || *fired_element)
+        if (!child_holder.Get() || *fired_element)
           return result;
       }
     }
@@ -298,7 +304,7 @@ class Elements::Impl {
             element->GetPixelY() - element->GetPixelPinY());
       } else {
         canvas->TranslateCoordinates(element->GetPixelX(),
-                                      element->GetPixelY());
+                                     element->GetPixelY());
         canvas->RotateCoordinates(
             DegreesToRadians(element->GetRotation()));
         canvas->TranslateCoordinates(-element->GetPixelPinX(),

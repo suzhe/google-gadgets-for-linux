@@ -143,7 +143,7 @@ TEST_F(BasicElementTest, TestHitTest) {
   ASSERT_TRUE(m.GetHitTest() == ggadget::BasicElement::HT_CLIENT);
 }
 
-TEST_F(BasicElementTest, TestMask) {
+/*TEST_F(BasicElementTest, TestMask) {
   MockedViewHost vh(gFactory);
   Muffin m(NULL, vh.GetViewInternal(), NULL);
   ASSERT_STREQ("", m.GetMask().c_str());
@@ -151,7 +151,7 @@ TEST_F(BasicElementTest, TestMask) {
   ASSERT_STREQ("mymask.png", m.GetMask().c_str());
   m.SetMask(NULL);
   ASSERT_STREQ("", m.GetMask().c_str());
-}
+}*/
 
 TEST_F(BasicElementTest, TestName) {
   MockedViewHost vh(gFactory);

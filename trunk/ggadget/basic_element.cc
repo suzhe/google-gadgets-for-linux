@@ -55,6 +55,7 @@ class BasicElement::Impl {
         rotation_(0.0),
         opacity_(1.0),
         visible_(true),
+        flip_(FLIP_NONE),
         implicit_(false),
         mask_image_(NULL),
         visibility_changed_(true),
@@ -75,19 +76,13 @@ class BasicElement::Impl {
     delete children_;
   }
 
-  void SetMask(const char *mask) {
-    if (AssignIfDiffer(mask, &mask_)) {
-      DestroyImage(mask_image_);
-      mask_image_ = NULL;
-      if (!mask_.empty())
-        mask_image_ = view_->LoadImage(Variant(mask_), true);
-      QueueDraw();
-    }
+  void SetMask(const Variant &mask) {
+    DestroyImage(mask_image_);
+    mask_image_ = view_->LoadImage(mask, true);
+    QueueDraw();
   }
 
   const CanvasInterface *GetMaskCanvas() {
-    if (!mask_image_ && !mask_.empty())
-      mask_image_ = view_->LoadImage(Variant(mask_), true);
     return mask_image_ ? mask_image_->GetCanvas() : NULL;
   }
 
@@ -351,6 +346,44 @@ class BasicElement::Impl {
     }
   }
 
+  Variant GetPinX() const {
+    return BasicElement::GetPixelOrRelative(pin_x_relative_, true,
+                                            pin_x_, ppin_x_);
+  }
+
+  void SetPinX(const Variant &pin_x) {
+    double v;
+    switch (ParsePixelOrRelative(pin_x, &v)) {
+      case BasicElement::PR_PIXEL:
+        SetPixelPinX(v);
+        break;
+      case BasicElement::PR_RELATIVE:
+        SetRelativePinX(v);
+        break;
+      default:
+        break;
+    }
+  }
+
+  Variant GetPinY() const {
+    return BasicElement::GetPixelOrRelative(pin_y_relative_, true,
+                                            pin_y_, ppin_y_);
+  }
+
+  void SetPinY(const Variant &pin_y) {
+    double v;
+    switch (ParsePixelOrRelative(pin_y, &v)) {
+      case BasicElement::PR_PIXEL:
+        SetPixelPinY(v);
+        break;
+      case BasicElement::PR_RELATIVE:
+        SetRelativePinY(v);
+        break;
+      default:
+        break;
+    }
+  }
+
   void Layout() {
     if (!width_specified_ || !height_specified_) {
       double width, height;
@@ -437,15 +470,15 @@ class BasicElement::Impl {
     if (visible_ && opacity_ != 0 && width_ > 0 && height_ > 0) {
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
-      bool indirect_draw = false;
 
       // In order to get correct result, indirect draw is required for
       // following situations:
-      // - The element has mask
+      // - The element has mask;
+      // - The element's flips in x or y;
       // - Opacity of the element is not 1.0 and it has children.
-      if (mask || (opacity_ != 1.0 && children_ && children_->GetCount()))
-        indirect_draw = true;
-
+      bool indirect_draw = mask || flip_ != FLIP_NONE ||
+                          (opacity_ != 1.0 && children_ &&
+                           children_->GetCount());
       if (indirect_draw) {
         target = view_->GetGraphics()->NewCanvas(size_t(ceil(width_)),
                                                  size_t(ceil(height_)));
@@ -457,10 +490,20 @@ class BasicElement::Impl {
       owner_->DoDraw(target);
 
       if (indirect_draw) {
+        double offset_x = 0, offset_y = 0;
+        if (flip_ & FLIP_HORIZONTAL) {
+          offset_x = -width_;
+          canvas->ScaleCoordinates(-1, 1);
+        }
+        if (flip_ & FLIP_VERTICAL) {
+          offset_y = -height_;
+          canvas->ScaleCoordinates(1, -1);
+        }
         if (mask)
-          canvas->DrawCanvasWithMask(0, 0, target, 0, 0, mask);
+          canvas->DrawCanvasWithMask(offset_x, offset_y, target,
+                                     offset_x, offset_y, mask);
         else
-          canvas->DrawCanvas(0, 0, target);
+          canvas->DrawCanvas(offset_x, offset_y, target);
 
         target->Destroy();
       }
@@ -544,8 +587,7 @@ class BasicElement::Impl {
                            BasicElement **fired_element,
                            BasicElement **in_element) {
     Event::Type type = event.GetType();
-    BasicElement *this_element = owner_;
-    ScopedDeathDetector death_detector(view_, &this_element);
+    ElementHolder this_element_holder(owner_);
 
     *fired_element = *in_element = NULL;
 
@@ -557,7 +599,7 @@ class BasicElement::Impl {
       // Send to the children first.
       EventResult result = children_->OnMouseEvent(event, fired_element,
                                                    in_element);
-      if (!this_element || *fired_element)
+      if (!this_element_holder.Get() || *fired_element)
         return result;
     }
 
@@ -577,6 +619,7 @@ class BasicElement::Impl {
            event.GetButton(), event.GetWheelDelta());
     }
 
+    ElementHolder in_element_holder(*in_element);
     switch (type) {
       case Event::EVENT_MOUSE_MOVE: // put the high volume events near top
         view_->FireEvent(&scriptable_event, onmousemove_event_);
@@ -614,23 +657,23 @@ class BasicElement::Impl {
         ASSERT(false);
     }
 
-    *fired_element = this_element;
     EventResult result = scriptable_event.GetReturnValue();
-    if (result != EVENT_RESULT_CANCELED && this_element)
+    if (result != EVENT_RESULT_CANCELED && this_element_holder.Get())
       result = std::max(result, owner_->HandleMouseEvent(event));
+    *fired_element = this_element_holder.Get();
+    *in_element = in_element_holder.Get();
     return result;
   }
 
   EventResult OnDragEvent(const DragEvent &event, bool direct,
                           BasicElement **fired_element) {
-    BasicElement *this_element = owner_;
-    ScopedDeathDetector death_detector(view_, &this_element);
+    ElementHolder this_element_holder(owner_);
 
     *fired_element = NULL;
     if (!direct && children_) {
       // Send to the children first.
       EventResult result = children_->OnDragEvent(event, fired_element);
-      if (!this_element || *fired_element)
+      if (!this_element_holder.Get() || *fired_element)
         return result;
     }
 
@@ -661,14 +704,14 @@ class BasicElement::Impl {
         ASSERT(false);
     }
 
-    *fired_element = owner_;
     EventResult result = scriptable_event.GetReturnValue();
     // For Drag events, we only return EVENT_RESULT_UNHANDLED if this element
     // is invisible or not a drag target. Some gadgets rely on this behavior.
     if (result == EVENT_RESULT_UNHANDLED)
       result = EVENT_RESULT_HANDLED;
-    if (result != EVENT_RESULT_CANCELED && this_element)
+    if (result != EVENT_RESULT_CANCELED && this_element_holder.Get())
       result = std::max(result, owner_->HandleDragEvent(event));
+    *fired_element = this_element_holder.Get();
     return result;
   }
 
@@ -676,9 +719,7 @@ class BasicElement::Impl {
     if (!enabled_)
       return EVENT_RESULT_UNHANDLED;
 
-    BasicElement *this_element = owner_;
-    ScopedDeathDetector death_detector(view_, &this_element);
-
+    ElementHolder this_element_holder(owner_);
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str(), event.GetKeyCode());
@@ -698,7 +739,7 @@ class BasicElement::Impl {
     }
 
     EventResult result = scriptable_event.GetReturnValue();
-    if (result != EVENT_RESULT_CANCELED && this_element)
+    if (result != EVENT_RESULT_CANCELED && this_element_holder.Get())
       result = std::max(result, owner_->HandleKeyEvent(event));
     return result;
   }
@@ -707,9 +748,7 @@ class BasicElement::Impl {
     if (!enabled_)
       return EVENT_RESULT_UNHANDLED;
 
-    BasicElement *this_element = owner_;
-    ScopedDeathDetector death_detector(view_, &this_element);
-
+    ElementHolder this_element_holder(owner_);
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     DLOG("%s(%s|%s)", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str());
@@ -726,7 +765,7 @@ class BasicElement::Impl {
         ASSERT(false);
     }
     EventResult result = scriptable_event.GetReturnValue();
-    if (result != EVENT_RESULT_CANCELED && this_element)
+    if (result != EVENT_RESULT_CANCELED && this_element_holder.Get())
       result = std::max(result, owner_->HandleOtherEvent(event));
     return result;
   }
@@ -754,7 +793,7 @@ class BasicElement::Impl {
   double opacity_;
   bool visible_;
   std::string tooltip_;
-  std::string mask_;
+  FlipMode flip_;
   bool implicit_;
 
   ImageInterface *mask_image_;
@@ -801,6 +840,10 @@ static const char *kHitTestNames[] = {
   "htleft", "htright", "httop", "httopleft", "httopright",
   "htbottom", "htbottomleft", "htbottomright", "htborder",
   "htobject", "htclose", "hthelp",
+};
+
+static const char *kFlipNames[] = {
+  "none", "horizontal", "vertical", "both",
 };
 
 BasicElement::BasicElement(BasicElement *parent, View *view,
@@ -864,11 +907,11 @@ void BasicElement::DoRegister() {
   // in the current public API, so pinX and pinY are still exposed to
   // script in pixels.
   RegisterProperty("pinX",
-                   NewSlot(this, &BasicElement::GetPixelPinX),
-                   NewSlot(this, &BasicElement::SetPixelPinX));
+                   NewSlot(impl_, &Impl::GetPinX),
+                   NewSlot(impl_, &Impl::SetPinX));
   RegisterProperty("pinY",
-                   NewSlot(this, &BasicElement::GetPixelPinY),
-                   NewSlot(this, &BasicElement::SetPixelPinY));
+                   NewSlot(impl_, &Impl::GetPinY),
+                   NewSlot(impl_, &Impl::SetPinY));
   RegisterProperty("rotation",
                    NewSlot(this, &BasicElement::GetRotation),
                    NewSlot(this, &BasicElement::SetRotation));
@@ -879,6 +922,10 @@ void BasicElement::DoRegister() {
   RegisterProperty("visible",
                    NewSlot(this, &BasicElement::IsVisible),
                    NewSlot(this, &BasicElement::SetVisible));
+  RegisterStringEnumProperty("flip",
+                             NewSlot(this, &BasicElement::GetFlip),
+                             NewSlot(this, &BasicElement::SetFlip),
+                             kFlipNames, arraysize(kFlipNames));
   RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
@@ -975,11 +1022,11 @@ std::string BasicElement::GetName() const {
   return impl_->name_;
 }
 
-std::string BasicElement::GetMask() const {
-  return impl_->mask_;
+Variant BasicElement::GetMask() const {
+  return Variant(GetImageTag(impl_->mask_image_));
 }
 
-void BasicElement::SetMask(const char *mask) {
+void BasicElement::SetMask(const Variant &mask) {
   impl_->SetMask(mask);
 }
 
@@ -1147,6 +1194,54 @@ void BasicElement::ResetYToDefault() {
   impl_->ResetYToDefault();
 }
 
+Variant BasicElement::GetX() const {
+  return impl_->GetX();
+}
+
+void BasicElement::SetX(const Variant &x) {
+  impl_->SetX(x);
+}
+
+Variant BasicElement::GetY() const {
+  return impl_->GetY();
+}
+
+void BasicElement::SetY(const Variant &y) {
+  impl_->SetY(y);
+}
+
+Variant BasicElement::GetWidth() const {
+  return impl_->GetWidth();
+}
+
+void BasicElement::SetWidth(const Variant &width) {
+  impl_->SetWidth(width);
+}
+
+Variant BasicElement::GetHeight() const {
+  return impl_->GetHeight();
+}
+
+void BasicElement::SetHeight(const Variant &height) {
+  impl_->SetHeight(height);
+}
+
+Variant BasicElement::GetPinX() const {
+  return impl_->GetPinX();
+}
+
+void BasicElement::SetPinX(const Variant &pin_x) {
+  impl_->SetPinX(pin_x);
+}
+
+Variant BasicElement::GetPinY() const {
+  return impl_->GetPinY();
+}
+
+void BasicElement::SetPinY(const Variant &pin_y) {
+  impl_->SetPinY(pin_y);
+}
+
 double BasicElement::GetClientWidth() const {
   return GetPixelWidth();
 }
@@ -1207,6 +1302,17 @@ void BasicElement::SetTooltip(const char *tooltip) {
     impl_->tooltip_ = tooltip;
   else
     impl_->tooltip_.clear();
+}
+
+BasicElement::FlipMode BasicElement::GetFlip() const {
+  return impl_->flip_;
+}
+
+void BasicElement::SetFlip(FlipMode flip) {
+  if (impl_->flip_ != flip) {
+    impl_->flip_ = flip;
+    QueueDraw();
+  }
 }
 
 void BasicElement::Focus() {
@@ -1309,12 +1415,22 @@ void BasicElement::SelfCoordToChildCoord(const BasicElement *child,
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
                           child_x, child_y);
+  FlipMode flip = child->GetFlip();
+  if (flip & FLIP_HORIZONTAL)
+    *child_x = child->GetPixelWidth() - *child_x;
+  if (flip & FLIP_VERTICAL)
+    *child_y = child->GetPixelHeight() - *child_y;
 }
 
 void BasicElement::ChildCoordToSelfCoord(const BasicElement *child,
                                          double x, double y,
                                          double *self_x,
                                          double *self_y) const {
+  FlipMode flip = child->GetFlip();
+  if (flip & FLIP_HORIZONTAL)
+    x = child->GetPixelWidth() - x;
+  if (flip & FLIP_VERTICAL)
+    y = child->GetPixelHeight() - y;
   ChildCoordToParentCoord(x, y, child->GetPixelX(), child->GetPixelY(),
                           child->GetPixelPinX(), child->GetPixelPinY(),
                           DegreesToRadians(child->GetRotation()),
@@ -1328,6 +1444,11 @@ void BasicElement::SelfCoordToParentCoord(double x, double y,
   if (parent) {
     parent->ChildCoordToSelfCoord(this, x, y, parent_x, parent_y);
   } else {
+    FlipMode flip = GetFlip();
+    if (flip & FLIP_HORIZONTAL)
+      x = GetPixelWidth() - x;
+    if (flip & FLIP_VERTICAL)
+      y = GetPixelHeight() - y;
     ChildCoordToParentCoord(x, y, GetPixelX(), GetPixelY(),
                             GetPixelPinX(), GetPixelPinY(),
                             DegreesToRadians(GetRotation()),

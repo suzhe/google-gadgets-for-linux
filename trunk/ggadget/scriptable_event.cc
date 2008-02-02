@@ -48,7 +48,7 @@ class ScriptableEvent::Impl {
 
   const Event *event_;
   EventResult return_value_;
-  ScriptableInterface *src_element_;
+  ScriptableHolder<ScriptableInterface> src_element_;
   Event *output_event_;
 };
 
@@ -192,13 +192,13 @@ Event *ScriptableEvent::GetOutputEvent() {
 }
 
 ScriptableInterface *ScriptableEvent::GetSrcElement() {
-  return impl_->src_element_;
+  return impl_->src_element_.Get();
 }
 const ScriptableInterface *ScriptableEvent::GetSrcElement() const {
-  return impl_->src_element_;
+  return impl_->src_element_.Get();
 }
 void ScriptableEvent::SetSrcElement(ScriptableInterface *src_element) {
-  impl_->src_element_ = src_element;
+  impl_->src_element_.Reset(src_element);
 }
 
 EventResult ScriptableEvent::GetReturnValue() const {

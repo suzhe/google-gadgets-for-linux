@@ -105,9 +105,9 @@ class RsvgImage::Impl {
     ASSERT(canvas);
     if (canvas && rsvg_) {
       // If no stretch and no color multiply,
-      // then use catched canvas to improve performance.
+      // then use cached canvas to improve performance.
       // Otherwise draw rsvg directly onto the canvas to get better effect.
-      if (size_t(round(width)) == width_ && size_t(round(height)) == height_) {
+      if (width == width_ && height == height_) {
         const CanvasInterface *image = GetCanvas();
         ASSERT(image);
         if (image)

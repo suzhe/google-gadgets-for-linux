@@ -65,11 +65,11 @@ class ContentAreaElement::Impl {
         modified_(false),
         death_detector_(NULL),
         context_menu_time_(0) {
-    pin_images_[PIN_IMAGE_PINNED].reset(new ScriptableImage(
+    pin_images_[PIN_IMAGE_PINNED].Reset(new ScriptableImage(
         owner->GetView()->LoadImageFromGlobal(kContentItemPinned, false)));
-    pin_images_[PIN_IMAGE_PINNED_OVER].reset(new ScriptableImage(
+    pin_images_[PIN_IMAGE_PINNED_OVER].Reset(new ScriptableImage(
         owner->GetView()->LoadImageFromGlobal(kContentItemPinnedOver, false)));
-    pin_images_[PIN_IMAGE_UNPINNED].reset(new ScriptableImage(
+    pin_images_[PIN_IMAGE_UNPINNED].Reset(new ScriptableImage(
         owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false)));
 
     // Schedule a interval timer to redraw the content area periodically,
@@ -105,7 +105,7 @@ class ContentAreaElement::Impl {
     if (content_flags_ & CONTENT_FLAG_PINNABLE) {
       if (pin_image_max_width_ == 0) {
         for (size_t i = 0; i < arraysize(pin_images_); i++) {
-          const ImageInterface *image = pin_images_[i]->GetImage();
+          const ImageInterface *image = pin_images_[i].Get()->GetImage();
           if (image) {
             pin_image_max_width_ = std::max(
                 pin_image_max_width_, static_cast<int>(image->GetWidth()));
@@ -220,7 +220,7 @@ class ContentAreaElement::Impl {
         if (content_flags_ & CONTENT_FLAG_PINNABLE &&
             pin_image_max_width_ > 0 && pin_image_max_height_ > 0) {
           const ImageInterface *pin_image =
-              pin_images_[PIN_IMAGE_UNPINNED]->GetImage();
+              pin_images_[PIN_IMAGE_UNPINNED].Get()->GetImage();
           mouse_over_pin = mouse_over && mouse_x_ < pin_image_max_width_;
           if (mouse_over_pin) {
             const Color &color = mouse_down_ ?
@@ -231,7 +231,7 @@ class ContentAreaElement::Impl {
           }
           if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
             pin_image = pin_images_[mouse_over_pin ? PIN_IMAGE_PINNED_OVER :
-                                    PIN_IMAGE_PINNED]->GetImage();
+                                    PIN_IMAGE_PINNED].Get()->GetImage();
           }
           if (pin_image) {
             pin_image->Draw(canvas, item_x, item_y);
@@ -285,14 +285,14 @@ class ContentAreaElement::Impl {
                     ScriptableImage **pinned_over,
                     ScriptableImage **unpinned) {
     ASSERT(pinned && pinned_over && unpinned);
-    *pinned = pin_images_[PIN_IMAGE_PINNED].get();
-    *pinned_over = pin_images_[PIN_IMAGE_PINNED_OVER].get();
-    *unpinned = pin_images_[PIN_IMAGE_UNPINNED].get();
+    *pinned = pin_images_[PIN_IMAGE_PINNED].Get();
+    *pinned_over = pin_images_[PIN_IMAGE_PINNED_OVER].Get();
+    *unpinned = pin_images_[PIN_IMAGE_UNPINNED].Get();
   }
 
   void SetPinImage(PinImageIndex index, ScriptableImage *image) {
     if (image)
-      pin_images_[index].reset(image);
+      pin_images_[index].Reset(image);
   }
 
   void SetPinImages(ScriptableImage *pinned,
@@ -308,9 +308,9 @@ class ContentAreaElement::Impl {
 
   ScriptableArray *ScriptGetPinImages() {
     Variant *values = new Variant[3];
-    values[0] = Variant(pin_images_[PIN_IMAGE_PINNED].get());
-    values[1] = Variant(pin_images_[PIN_IMAGE_PINNED_OVER].get());
-    values[2] = Variant(pin_images_[PIN_IMAGE_UNPINNED].get());
+    values[0] = Variant(pin_images_[PIN_IMAGE_PINNED].Get());
+    values[1] = Variant(pin_images_[PIN_IMAGE_PINNED_OVER].Get());
+    values[2] = Variant(pin_images_[PIN_IMAGE_UNPINNED].Get());
     return ScriptableArray::Create(values, 3);
   }
 
@@ -560,7 +560,7 @@ class ContentAreaElement::Impl {
   GadgetInterface::DisplayTarget target_;
   size_t max_content_items_;
   ContentItems content_items_;
-  ScopedScriptablePtr<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];
+  ScriptableHolder<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];
   int pin_image_max_width_, pin_image_max_height_;
   bool mouse_down_, mouse_over_pin_;
   int mouse_x_, mouse_y_;
@@ -697,29 +697,43 @@ BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,
   return new ContentAreaElement(parent, view, name);
 }
 
+class FeedbackSlot : public Slot1<void, const char *> {
+ public:
+  FeedbackSlot(ContentAreaElement *content_area,
+               Slot1<void, const char *> *slot)
+      : content_area_(content_area), slot_(slot) {
+  }
+
+  virtual Variant Call(int argc, const Variant argv[]) const {
+    // Test if the slot owner is still valid.
+    if (content_area_.Get())
+      return slot_->Call(argc, argv);
+    return Variant();
+  }
+  // Not used.
+  virtual bool operator==(const Slot &another) const { return false; }
+ private:
+  ElementHolder content_area_;
+  Slot1<void, const char *> *slot_;
+};
+
 bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
   if (impl_->mouse_over_item_) {
     impl_->context_menu_time_ = GetView()->GetCurrentTime();
     if (impl_->mouse_over_item_->CanOpen()) {
       menu->AddItem("Open", 0,
-                    new SlotProxy1<void, const char *>(
-                        GetView()->NewDeathDetectedSlot(
-                            this, NewSlot(impl_, &Impl::OnItemOpen))));
+          new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemOpen)));
     }
     if (!(impl_->mouse_over_item_->GetFlags() &
         ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
       menu->AddItem("Remove", 0,
-                    new SlotProxy1<void, const char *>(
-                        GetView()->NewDeathDetectedSlot(
-                            this, NewSlot(impl_, &Impl::OnItemRemove))));
+          new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemRemove)));
     }
     if (impl_->mouse_over_item_->GetFlags() &
         ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
       menu->AddItem("Don't show me items like this", 0,
-                    new SlotProxy1<void, const char *>(
-                        GetView()->NewDeathDetectedSlot(
-                            this,
-                            NewSlot(impl_, &Impl::OnItemNegativeFeedback))));
+          new FeedbackSlot(this,
+                           NewSlot(impl_, &Impl::OnItemNegativeFeedback)));
     }
   }
   // To keep compatible with the Windows version, don't show default menu items.

@@ -42,8 +42,7 @@ using ggadget::CreateXMLParser;
 TEST(XMLHttpRequest, States) {
   NativeMainLoop main_loop;
   XMLParserInterface *xml_parser = CreateXMLParser();
-  XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(xml_parser);
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -103,8 +102,7 @@ class Callback {
 TEST(XMLHttpRequest, SyncLocalFile) {
   NativeMainLoop main_loop;
   XMLParserInterface *xml_parser = CreateXMLParser();
-  XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   Callback callback(request);
@@ -139,8 +137,7 @@ TEST(XMLHttpRequest, SyncLocalFile) {
 TEST(XMLHttpRequest, AsyncLocalFile) {
   NativeMainLoop main_loop;
   XMLParserInterface *xml_parser = CreateXMLParser();
-  XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   Callback callback(request);
@@ -275,8 +272,7 @@ void *ServerThread(void *arg) {
 TEST(XMLHttpRequest, SyncNetworkFile) {
   NativeMainLoop main_loop;
   XMLParserInterface *xml_parser = CreateXMLParser();
-  XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   pthread_t thread;
@@ -342,8 +338,7 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
 TEST(XMLHttpRequest, AsyncNetworkFile) {
   NativeMainLoop main_loop;
   XMLParserInterface *xml_parser = CreateXMLParser();
-  XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   pthread_t thread;
@@ -449,8 +444,7 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
 TEST(XMLHttpRequest, ResponseTextAndXML) {
   NativeMainLoop main_loop;
   XMLParserInterface *xml_parser = CreateXMLParser();
-  XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(&main_loop, xml_parser);
+  XMLHttpRequestInterface *request = ggadget::CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   Callback callback(request);

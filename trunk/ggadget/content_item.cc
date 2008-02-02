@@ -119,7 +119,7 @@ class ContentItem::Impl {
 
   View *view_;
   ContentAreaElement *content_area_;
-  ScopedScriptablePtr<ScriptableImage> image_, notifier_image_;
+  ScriptableHolder<ScriptableImage> image_, notifier_image_;
   uint64_t time_created_;
   std::string open_command_, tooltip_, heading_, source_, snippet_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
@@ -208,20 +208,20 @@ void ContentItem::DetachContentArea(ContentAreaElement *content_area) {
 }
 
 ScriptableImage *ContentItem::GetImage() const {
-  return impl_->image_.get();
+  return impl_->image_.Get();
 }
 
 void ContentItem::SetImage(ScriptableImage *image) {
-  impl_->image_.reset(image);
+  impl_->image_.Reset(image);
   impl_->QueueDraw();
 }
 
 ScriptableImage *ContentItem::GetNotifierImage() const {
-  return impl_->notifier_image_.get();
+  return impl_->notifier_image_.Get();
 }
 
 void ContentItem::SetNotifierImage(ScriptableImage *image) {
-  impl_->notifier_image_.reset(image);
+  impl_->notifier_image_.Reset(image);
   impl_->QueueDraw();
 }
 
@@ -389,8 +389,8 @@ void ContentItem::Draw(GadgetInterface::DisplayTarget target,
   int heading_space_width = width;
   int heading_left = x;
   int image_height = 0;
-  if (impl_->image_) {
-    const ImageInterface *image = impl_->image_->GetImage();
+  if (impl_->image_.Get()) {
+    const ImageInterface *image = impl_->image_.Get()->GetImage();
     if (image) {
       int image_width = static_cast<int>(image->GetWidth());
       heading_space_width -= image_width;
@@ -461,8 +461,8 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
     width -= 2 * kItemBorderWidth;
   int heading_space_width = width;
   int image_height = 0;
-  if (impl_->image_) {
-    const ImageInterface *image = impl_->image_->GetImage();
+  if (impl_->image_.Get()) {
+    const ImageInterface *image = impl_->image_.Get()->GetImage();
     if (image) {
       heading_space_width -= image->GetWidth();
       image_height = static_cast<int>(image->GetHeight());

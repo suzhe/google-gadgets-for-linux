@@ -73,6 +73,11 @@ class ComboBoxElement::Impl {
     DestroyImage(button_over_img_);
   }
 
+  double GetOffsetHeight() {
+    return listbox_->IsVisible() ? owner_->GetPixelHeight() :
+           listbox_->GetItemPixelHeight();
+  }
+
   std::string GetSelectedText() {
     const ItemElement *item = listbox_->GetSelectedItem();
     if (item) {
@@ -130,8 +135,7 @@ class ComboBoxElement::Impl {
   }
 
   void SetListBoxHeight() {
-    // GetPixelHeight is overridden, so specify BasicElement::
-    double elem_height = owner_->BasicElement::GetPixelHeight();
+    double elem_height = owner_->GetPixelHeight();
     double item_height = listbox_->GetItemPixelHeight();
 
     double max_height = maxitems_ * item_height;
@@ -198,6 +202,10 @@ void ComboBoxElement::DoRegister() {
   RegisterProperty("background",
                    NewSlot(this, &ComboBoxElement::GetBackground),
                    NewSlot(this, &ComboBoxElement::SetBackground));
+
+  // Override basicElement.offsetHeight.
+  RegisterProperty("offsetHeight", NewSlot(impl_, &Impl::GetOffsetHeight),
+                   NULL);
 
   // Register container methods since combobox is really a container.
   Elements *elements = impl_->listbox_->GetChildren();
@@ -368,14 +376,6 @@ const Elements *ComboBoxElement::GetChildren() const {
 
 Elements *ComboBoxElement::GetChildren() {
   return impl_->listbox_->GetChildren();
-}
-
-double ComboBoxElement::GetPixelHeight() const {
-  if (impl_->listbox_->IsVisible()) {
-    return BasicElement::GetPixelHeight();
-  } else {
-    return impl_->listbox_->GetItemPixelHeight();
-  }
 }
 
 bool ComboBoxElement::IsDroplistVisible() const {

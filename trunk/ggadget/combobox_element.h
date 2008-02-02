@@ -75,8 +75,6 @@ class ComboBoxElement : public BasicElement {
   ListBoxElement *GetListBox();
   const ListBoxElement *GetListBox() const;
 
-  virtual double GetPixelHeight() const;
-
   virtual const Elements *GetChildren() const;
   virtual Elements *GetChildren();
 
