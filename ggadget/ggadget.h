@@ -24,6 +24,8 @@
 
 #include <ggadget/common.h>
 #include <ggadget/audioclip_interface.h>
+#include <ggadget/canvas_interface.h>
+#include <ggadget/canvas_utils.h>
 #include <ggadget/details_view.h>
 #include <ggadget/event.h>
 #include <ggadget/file_manager_interface.h>
@@ -31,6 +33,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_host_interface.h>
 #include <ggadget/gadget_interface.h>
+#include <ggadget/image_interface.h> 
 #include <ggadget/logger.h>
 #include <ggadget/math_utils.h>
 #include <ggadget/menu_interface.h>

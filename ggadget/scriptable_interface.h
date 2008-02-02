@@ -271,40 +271,6 @@ inline bool ScriptableInterface::IsInstanceOf(uint64_t class_id) const {
   return class_id == CLASS_ID;
 }
 
-template <typename T>
-class ScopedScriptablePtr {
- private:
-  // Checks at compile time if the argument T is ScriptableInterface or
-  // derived from it.
-  COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
-                 T_must_be_ScriptableInterface_or_derived_from_it);
- public:
-  explicit ScopedScriptablePtr(T* p = NULL): ptr_(p) {
-    if (p) p->Ref();
-  }
-
-  ~ScopedScriptablePtr() {
-    if (ptr_) ptr_->Unref();
-  }
-
-  void reset(T* p) {
-    if (ptr_ != p) {
-      if (ptr_) ptr_->Unref();
-      ptr_ = p;
-      if (p) p->Ref();
-    }
-  }
-
-  operator bool() { return ptr_ != NULL; }
-  T& operator*() const { ASSERT(ptr_); return *ptr_; }
-  T* operator->() const { ASSERT(ptr_); return ptr_; }
-  T* get() const { return ptr_; }
-
- private:
-  DISALLOW_EVIL_CONSTRUCTORS(ScopedScriptablePtr);
-  T* ptr_;
-};
-
 } // namespace ggadget
 
 #endif // GGADGET_SCRIPTABLE_INTERFACE_H__

@@ -243,14 +243,6 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    */
   int GetDebugMode() const;
 
-  /**
-   * Local pointers to elements should be called with these methods before
-   * any event handler is to be called. The pointer will be set to @c NULL if
-   * the element has been removed during the event handler.
-   */
-  void PushDeathDetectedElement(BasicElement **element_ptr);
-  void PopDeathDetectedElement();
-
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.
@@ -329,13 +321,6 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
                        Slot1<void, int> *feedback_handler);
 
-  /**
-   * Creates a slot based on an original slot. When this slot is called, this
-   * view calls the original slot if the element is not dead.
-   * This is useful to register menu item callbacks.
-   */
-  Slot *NewDeathDetectedSlot(BasicElement *element, Slot *slot);
-
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);
   Connection *ConnectOnClickEvent(Slot0<void> *handler);
@@ -366,22 +351,6 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   class Impl;
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(View);
-};
-
-class ScopedDeathDetector {
- public:
-  ScopedDeathDetector(View *view, BasicElement **element_ptr)
-      : view_(view) {
-    ASSERT(view);
-    ASSERT(element_ptr);
-    view->PushDeathDetectedElement(element_ptr);
-  }
-  ~ScopedDeathDetector() {
-    view_->PopDeathDetectedElement();
-  }
- private:
-  View *view_;
-  DISALLOW_EVIL_CONSTRUCTORS(ScopedDeathDetector);
 };
 
 } // namespace ggadget

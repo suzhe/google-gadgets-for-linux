@@ -174,15 +174,7 @@ class View::Impl {
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_ZOOM),
       show_caption_always_(false),
-      focused_element_(NULL),
-      mouseover_element_(NULL),
-      grabmouse_element_(NULL),
-      dragover_element_(NULL),
       dragover_result_(EVENT_RESULT_UNHANDLED),
-      tooltip_element_(NULL),
-      content_area_element_(NULL),
-      posting_event_element_(NULL),
-      popup_element_(NULL),
       post_event_token_(0),
       mark_redraw_token_(0),
       draw_queued_(false),
@@ -320,58 +312,60 @@ class View::Impl {
       return EVENT_RESULT_UNHANDLED;
     }
 
-    BasicElement *fired_element = NULL;
-    BasicElement *in_element = NULL;
-    ScopedDeathDetector death_detector(owner_, &fired_element);
-    ScopedDeathDetector death_detector1(owner_, &in_element);
-
+    BasicElement *temp, *temp1; // Used to receive unused output parameters.
     EventResult result = EVENT_RESULT_UNHANDLED;
     // If some element is grabbing mouse, send all EVENT_MOUSE_MOVE,
     // EVENT_MOUSE_UP and EVENT_MOUSE_CLICK events to it directly, until
     // an EVENT_MOUSE_CLICK received, or any mouse event received without
     // left button down.
-    if (grabmouse_element_) {
-      if (grabmouse_element_->ReallyEnabled() &&
+    if (grabmouse_element_.Get()) {
+      if (grabmouse_element_.Get()->ReallyEnabled() &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
           (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
            type == Event::EVENT_MOUSE_CLICK)) {
         MouseEvent new_event(event);
-        MapChildPositionEvent(event, grabmouse_element_, &new_event);
-        result = grabmouse_element_->OnMouseEvent(new_event, true,
-                                                  &fired_element, &in_element);
+        MapChildPositionEvent(event, grabmouse_element_.Get(), &new_event);
+        result = grabmouse_element_.Get()->OnMouseEvent(new_event, true,
+                                                        &temp, &temp1);
         // Release the grabbing on EVENT_MOUSE_CLICK not EVENT_MOUSE_UP,
         // otherwise the click event may be sent to wrong element.
         if (type == Event::EVENT_MOUSE_CLICK) {
-          grabmouse_element_ = NULL;
+          grabmouse_element_.Reset(NULL);
         }
         return result;
       } else {
         // Release the grabbing on any mouse event without left button down.
-        grabmouse_element_ = NULL;
+        grabmouse_element_.Reset(NULL);
       }
     }
 
     if (type == Event::EVENT_MOUSE_OUT) {
       // The mouse has been moved out of the view, clear the mouseover state.
-      if (mouseover_element_) {
+      if (mouseover_element_.Get()) {
         MouseEvent new_event(event);
-        MapChildPositionEvent(event, mouseover_element_, &new_event);
-        result = mouseover_element_->OnMouseEvent(new_event, true,
-                                                  &fired_element, &in_element);
-        mouseover_element_ = NULL;
+        MapChildPositionEvent(event, mouseover_element_.Get(), &new_event);
+        result = mouseover_element_.Get()->OnMouseEvent(new_event, true,
+                                                        &temp, &temp1);
+        mouseover_element_.Reset(NULL);
       }
       return result;
     }
 
+    BasicElement *fired_element = NULL;
+    BasicElement *in_element = NULL;
+    ElementHolder fired_element_holder, in_element_holder;
+
     // Dispatch the event to children normally,
     // unless popup is active and event is inside popup element.
     bool outside_popup = true;
-    if (popup_element_) {
+    if (popup_element_.Get()) {
       MouseEvent new_event(event);
-      MapChildPositionEvent(event, popup_element_, &new_event);
-      if (popup_element_->IsPointIn(new_event.GetX(), new_event.GetY())) {
-        result = popup_element_->OnMouseEvent(new_event, false, // NOT direct
-                                              &fired_element, &in_element);
+      MapChildPositionEvent(event, popup_element_.Get(), &new_event);
+      if (popup_element_.Get()->IsPointIn(new_event.GetX(), new_event.GetY())) {
+        result = popup_element_.Get()->OnMouseEvent(new_event,
+                                                    false, // NOT direct
+                                                    &fired_element,
+                                                    &in_element);
         outside_popup = false;
       }
     }
@@ -383,23 +377,21 @@ class View::Impl {
         SetPopupElement(NULL);
       }
     }
+    fired_element_holder.Reset(fired_element);
+    in_element_holder.Reset(in_element);
 
-    if (fired_element && type == Event::EVENT_MOUSE_DOWN &&
+    if (fired_element_holder.Get() && type == Event::EVENT_MOUSE_DOWN &&
         (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
       // Start grabbing.
-      grabmouse_element_ = fired_element;
+      grabmouse_element_.Reset(fired_element);
       SetFocus(fired_element);
-      // In the focusin handler, the element may be removed and fired_element
-      // points to invalid element.  However, grabmouse_element_ will still
-      // be valid or has been set to NULL.
-      fired_element = grabmouse_element_;
     }
 
-    if (fired_element != mouseover_element_) {
-      BasicElement *old_mouseover_element = mouseover_element_;
+    if (fired_element_holder.Get() != mouseover_element_.Get()) {
+      BasicElement *old_mouseover_element = mouseover_element_.Get();
       // Store it early to prevent crash if fired_element is removed in
       // the mouseout handler.
-      mouseover_element_ = fired_element;
+      mouseover_element_.Reset(fired_element_holder.Get());
 
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
@@ -408,33 +400,35 @@ class View::Impl {
                                   event.GetModifier());
         MapChildPositionEvent(event, old_mouseover_element, &mouseout_event);
         old_mouseover_element->OnMouseEvent(mouseout_event, true,
-                                            &fired_element, &in_element);
+                                            &temp, &temp1);
       }
 
-      if (mouseover_element_) {
+      if (mouseover_element_.Get()) {
         // The enabled and visible states may change during event handling.
-        if (!mouseover_element_->ReallyEnabled()) {
-          mouseover_element_ = NULL;
+        if (!mouseover_element_.Get()->ReallyEnabled()) {
+          mouseover_element_.Reset(NULL);
         } else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
                                      event.GetX(), event.GetY(),
                                      event.GetButton(), event.GetWheelDelta(),
                                      event.GetModifier());
-          MapChildPositionEvent(event, mouseover_element_, &mouseover_event);
-          mouseover_element_->OnMouseEvent(mouseover_event, true,
-                                           &fired_element, &in_element);
+          MapChildPositionEvent(event, mouseover_element_.Get(),
+                                &mouseover_event);
+          mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
+                                                 &temp, &temp1);
         }
       }
     }
 
-    if (in_element) {
+    if (in_element_holder.Get()) {
       host_->SetCursor(in_element->GetCursor());
-      if (type == Event::EVENT_MOUSE_MOVE && in_element != tooltip_element_) {
-        tooltip_element_ = in_element;
-        host_->SetTooltip(tooltip_element_->GetTooltip().c_str());
+      if (type == Event::EVENT_MOUSE_MOVE &&
+          in_element != tooltip_element_.Get()) {
+        tooltip_element_.Reset(in_element);
+        host_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
       }
     } else {
-      tooltip_element_ = NULL;
+      tooltip_element_.Reset(NULL);
     }
 
     return result;
@@ -494,17 +488,17 @@ class View::Impl {
     if (type == Event::EVENT_DRAG_OUT || type == Event::EVENT_DRAG_DROP) {
       EventResult result = EVENT_RESULT_UNHANDLED;
       // Send the event and clear the dragover state.
-      if (dragover_element_) {
+      if (dragover_element_.Get()) {
         // If the element rejects the drop, send a EVENT_DRAG_OUT
         // on EVENT_DRAG_DROP.
         if (dragover_result_ != EVENT_RESULT_HANDLED)
           type = Event::EVENT_DRAG_OUT;
         DragEvent new_event(type, event.GetX(), event.GetY(),
                             event.GetDragFiles());
-        MapChildPositionEvent(event, dragover_element_, &new_event);
+        MapChildPositionEvent(event, dragover_element_.Get(), &new_event);
         BasicElement *temp;
-        result = dragover_element_->OnDragEvent(new_event, true, &temp);
-        dragover_element_ = NULL;
+        result = dragover_element_.Get()->OnDragEvent(new_event, true, &temp);
+        dragover_element_.Reset(NULL);
         dragover_result_ = EVENT_RESULT_UNHANDLED;
       }
       return result;
@@ -514,12 +508,12 @@ class View::Impl {
     // Dispatch the event to children normally.
     BasicElement *fired_element = NULL;
     children_.OnDragEvent(event, &fired_element);
-    if (fired_element != dragover_element_) {
+    if (fired_element != dragover_element_.Get()) {
       dragover_result_ = EVENT_RESULT_UNHANDLED;
-      BasicElement *old_dragover_element = dragover_element_;
+      BasicElement *old_dragover_element = dragover_element_.Get();
       // Store it early to prevent crash if fired_element is removed in
       // the dragout handler.
-      dragover_element_ = fired_element;
+      dragover_element_.Reset(fired_element);
 
       if (old_dragover_element) {
         DragEvent dragout_event(Event::EVENT_DRAG_OUT,
@@ -530,18 +524,19 @@ class View::Impl {
         old_dragover_element->OnDragEvent(dragout_event, true, &temp);
       }
 
-      if (dragover_element_) {
+      if (dragover_element_.Get()) {
         // The visible state may change during event handling.
-        if (!dragover_element_->ReallyVisible()) {
-          dragover_element_ = NULL;
+        if (!dragover_element_.Get()->ReallyVisible()) {
+          dragover_element_.Reset(NULL);
         } else {
           DragEvent dragover_event(Event::EVENT_DRAG_OVER,
                                    event.GetX(), event.GetY(),
                                    event.GetDragFiles());
-          MapChildPositionEvent(event, dragover_element_, &dragover_event);
+          MapChildPositionEvent(event, dragover_element_.Get(),
+                                &dragover_event);
           BasicElement *temp;
-          dragover_result_ = dragover_element_->OnDragEvent(dragover_event,
-                                                            true, &temp);
+          dragover_result_ = dragover_element_.Get()->OnDragEvent(
+              dragover_event, true, &temp);
         }
       }
     }
@@ -574,12 +569,13 @@ class View::Impl {
     if (result == EVENT_RESULT_CANCELED)
       return result;
 
-    if (focused_element_) {
-      if (!focused_element_->ReallyEnabled()) {
-        focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_OUT));
-        focused_element_ = NULL;
+    if (focused_element_.Get()) {
+      if (!focused_element_.Get()->ReallyEnabled()) {
+        focused_element_.Get()->OnOtherEvent(
+            SimpleEvent(Event::EVENT_FOCUS_OUT));
+        focused_element_.Reset(NULL);
       } else {
-        result = focused_element_->OnKeyEvent(event);
+        result = focused_element_.Get()->OnKeyEvent(event);
       }
     }
     return result;
@@ -613,11 +609,11 @@ class View::Impl {
   bool OnElementAdd(BasicElement *element) {
     ASSERT(element);
     if (element->IsInstanceOf(ContentAreaElement::CLASS_ID)) {
-      if (content_area_element_) {
+      if (content_area_element_.Get()) {
         LOG("Only one contentarea element is allowed in a view");
         return false;
       }
-      content_area_element_ = down_cast<ContentAreaElement *>(element);
+      content_area_element_.Reset(down_cast<ContentAreaElement *>(element));
     }
 
     std::string name = element->GetName();
@@ -631,50 +627,8 @@ class View::Impl {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
-    if (element == focused_element_)
-      // Don't send EVENT_FOCUS_OUT because the element is being removed.
-      focused_element_ = NULL;
-    if (element == mouseover_element_)
-      mouseover_element_ = NULL;
-    if (element == grabmouse_element_)
-      grabmouse_element_ = NULL;
-    if (element == dragover_element_)
-      dragover_element_ = NULL;
-    if (element == tooltip_element_) {
+    if (element == tooltip_element_.Get())
       host_->SetTooltip(NULL);
-      tooltip_element_ = NULL;
-    }
-    if (element == content_area_element_)
-      content_area_element_ = NULL;
-    if (element == popup_element_) {
-      popup_element_ = NULL;
-    }
-
-    for (std::vector<BasicElement **>::iterator it =
-             death_detected_elements_.begin();
-         it != death_detected_elements_.end(); ++it) {
-      if (**it == element)
-        **it = NULL;
-    }
-
-    for (std::vector<ScriptableEvent *>::iterator it = event_stack_.begin();
-         it != event_stack_.end(); ++it) {
-      if ((*it)->GetSrcElement() == element)
-        (*it)->SetSrcElement(NULL);
-    }
-
-    for (PostedEvents::iterator it = posted_events_.begin();
-         it != posted_events_.end(); ++it) {
-      if (it->first && it->first->GetSrcElement() == element) {
-        // The source element of the posted event has been removed,
-        // clean up the event.
-        delete it->first->GetEvent();
-        delete it->first;
-        it->first = NULL;
-      }
-    }
-    if (posting_event_element_ == element)
-      posting_event_element_ = NULL;
 
     std::string name = element->GetName();
     if (!name.empty()) {
@@ -708,19 +662,15 @@ class View::Impl {
     std::swap(posted_events_, posted_events_copy);
     for (PostedEvents::iterator it = posted_events_copy.begin();
          it != posted_events_copy.end(); ++it) {
-      if (it->first) { // The event is still valid.
-        posting_event_element_ = it->first->GetSrcElement();
+      // Test if the event is still valid. If srcElement has been deleted,
+      // it->first->GetSrcElement() should return NULL.
+      if (it->first->GetSrcElement()) {
         FireEvent(it->first, *it->second);
-        if (posting_event_element_) {
-          // The element is still there, clean the event up.
-          delete it->first->GetEvent();
-          delete it->first;
-          it->first = NULL;
-        }
+        delete it->first->GetEvent();
+        delete it->first;
       }
     }
     posted_events_copy.clear();
-    posting_event_element_ = NULL;
     return false;
   }
 
@@ -731,8 +681,7 @@ class View::Impl {
     if (event->GetEvent()->GetType() == Event::EVENT_SIZE) {
       for (PostedEvents::const_iterator it = posted_events_.begin();
            it != posted_events_.end(); ++it) {
-        if (it->first && // The event is still valid.
-            it->first->GetEvent()->GetType() == Event::EVENT_SIZE &&
+        if (it->first->GetEvent()->GetType() == Event::EVENT_SIZE &&
             it->first->GetSrcElement() == event->GetSrcElement()) {
           delete event->GetEvent();
           delete event;
@@ -757,28 +706,27 @@ class View::Impl {
   }
 
   void SetFocus(BasicElement *element) {
-    if (element != focused_element_ &&
+    if (element != focused_element_.Get() &&
         (!element || element->ReallyEnabled())) {
-      ScopedDeathDetector death_detector(owner_, &element);
+      ElementHolder element_holder(element);
       // Remove the current focus first.
-      if (!focused_element_ ||
-          focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_OUT)) !=
-              EVENT_RESULT_CANCELED) {
-        BasicElement *old_focused_element = focused_element_;
-        ScopedDeathDetector death_detector(owner_, &old_focused_element);
-        focused_element_ = element;
-        if (focused_element_) {
+      if (!focused_element_.Get() ||
+          focused_element_.Get()->OnOtherEvent(SimpleEvent(
+              Event::EVENT_FOCUS_OUT)) != EVENT_RESULT_CANCELED) {
+        ElementHolder old_focused_element(focused_element_.Get());
+        focused_element_.Reset(element_holder.Get());
+        if (focused_element_.Get()) {
           // The enabled or visible state may changed, so check again.
-          if (!focused_element_->ReallyEnabled() ||
-              focused_element_->OnOtherEvent(SimpleEvent(Event::EVENT_FOCUS_IN))
-                  == EVENT_RESULT_CANCELED) {
+          if (!focused_element_.Get()->ReallyEnabled() ||
+              focused_element_.Get()->OnOtherEvent(SimpleEvent(
+                  Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
             // If the EVENT_FOCUS_IN is canceled, set focus back to the old
             // focused element.
-            focused_element_ = old_focused_element;
-            if (focused_element_ &&
-                focused_element_->OnOtherEvent(SimpleEvent(
+            focused_element_.Reset(old_focused_element.Get());
+            if (focused_element_.Get() &&
+                focused_element_.Get()->OnOtherEvent(SimpleEvent(
                     Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
-              focused_element_ = NULL;
+              focused_element_.Reset(NULL);
             }
           }
         }
@@ -825,10 +773,10 @@ class View::Impl {
     canvas->PushState();
     children_.Draw(canvas);
 
-    if (popup_element_) {
-      popup_element_->ClearPositionChanged();
+    if (popup_element_.Get()) {
+      popup_element_.Get()->ClearPositionChanged();
       std::vector<BasicElement *> elements;
-      BasicElement *e = popup_element_;
+      BasicElement *e = popup_element_.Get();
       for (; e != NULL; e = e->GetParentElement())
         elements.push_back(e);
 
@@ -849,7 +797,7 @@ class View::Impl {
         }
       }
 
-      popup_element_->Draw(canvas);
+      popup_element_.Get()->Draw(canvas);
     }
     canvas->PopState();
   }
@@ -897,10 +845,10 @@ class View::Impl {
   }
 
   void SetPopupElement(BasicElement *element) {
-    if (popup_element_) {
-      popup_element_->OnPopupOff();
+    if (popup_element_.Get()) {
+      popup_element_.Get()->OnPopupOff();
     }
-    popup_element_ = element;
+    popup_element_.Reset(element);
     if (element) {
       element->QueueDraw();
     }
@@ -911,39 +859,6 @@ class View::Impl {
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
-
-  class DeathDetectedSlot : public Slot {
-   public:
-    DeathDetectedSlot(Impl *impl, BasicElement *element, Slot *slot)
-        : impl_(impl), element_(element), slot_(slot) {
-      ASSERT(impl && element && slot);
-      // Insert the detector at the beginning of the vector, because the other
-      // end of the vector is used in stack manner for ScopedDeathDetector.
-      impl->death_detected_elements_.insert(
-          impl->death_detected_elements_.begin(), &element_);
-    }
-    ~DeathDetectedSlot() {
-      std::vector<BasicElement **>::iterator it = std::find(
-          impl_->death_detected_elements_.begin(),
-          impl_->death_detected_elements_.end(), &element_);
-      ASSERT(it != impl_->death_detected_elements_.end());
-      impl_->death_detected_elements_.erase(it);
-      delete slot_;
-      slot_ = NULL;
-    }
-    virtual Variant Call(int argc, const Variant argv[]) const {
-      if (element_) {
-        // If it is still live.
-        return slot_->Call(argc, argv);
-      }
-      return Variant(slot_->GetReturnType());
-    }
-    virtual bool operator==(const Slot &another) const { return false; }
-
-    Impl *impl_;
-    BasicElement *element_;
-    Slot *slot_;
-  };
 
   EventSignal oncancel_event_;
   EventSignal onclick_event_;
@@ -997,13 +912,13 @@ class View::Impl {
   static const unsigned int kAnimationInterval = 20;
   static const unsigned int kMinInterval = 5;
 
-  BasicElement *focused_element_;
-  BasicElement *mouseover_element_;
-  BasicElement *grabmouse_element_;
-  BasicElement *dragover_element_;
+  ElementHolder focused_element_;
+  ElementHolder mouseover_element_;
+  ElementHolder grabmouse_element_;
+  ElementHolder dragover_element_;
   EventResult dragover_result_;
-  BasicElement *tooltip_element_;
-  ContentAreaElement *content_area_element_;
+  ElementHolder tooltip_element_;
+  ScriptableHolder<ContentAreaElement> content_area_element_;
 
   // Local pointers to elements should be pushed into this vector before any
   // event handler be called, and the pointer will be set to NULL if the
@@ -1013,8 +928,7 @@ class View::Impl {
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedEvents;
   PostedEvents posted_events_;
-  ScriptableInterface *posting_event_element_;
-  BasicElement *popup_element_;
+  ElementHolder popup_element_;
   int post_event_token_;
   int mark_redraw_token_;
   bool draw_queued_;
@@ -1152,7 +1066,7 @@ void View::SetPopupElement(BasicElement *element) {
 }
 
 BasicElement *View::GetPopupElement() {
-  return impl_->popup_element_;
+  return impl_->popup_element_.Get();
 }
 
 void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
@@ -1261,14 +1175,6 @@ int View::GetDebugMode() const {
   return impl_->debug_mode_;
 }
 
-void View::PushDeathDetectedElement(BasicElement **element_ptr) {
-  impl_->death_detected_elements_.push_back(element_ptr);
-}
-
-void View::PopDeathDetectedElement() {
-  impl_->death_detected_elements_.pop_back();
-}
-
 ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
   ASSERT(impl_->file_manager_);
   Variant::Type type = src.type();
@@ -1354,7 +1260,7 @@ uint64_t View::GetCurrentTime() {
 }
 
 ContentAreaElement *View::GetContentAreaElement() {
-  return impl_->content_area_element_;
+  return impl_->content_area_element_.Get();
 }
 
 void View::SetTooltip(const char *tooltip) {
@@ -1370,21 +1276,17 @@ bool View::ShowDetailsView(DetailsView *details_view,
 }
 
 bool View::OnAddContextMenuItems(MenuInterface *menu) {
-  if (impl_->mouseover_element_) {
-    if (impl_->mouseover_element_->ReallyEnabled())
-      return impl_->mouseover_element_->OnAddContextMenuItems(menu);
+  if (impl_->mouseover_element_.Get()) {
+    if (impl_->mouseover_element_.Get()->ReallyEnabled())
+      return impl_->mouseover_element_.Get()->OnAddContextMenuItems(menu);
     else
-      impl_->mouseover_element_ = NULL;
+      impl_->mouseover_element_.Reset(NULL);
   }
   return true;
 }
 
 void View::MarkRedraw() {
   impl_->MarkRedraw();
-}
-
-Slot *View::NewDeathDetectedSlot(BasicElement *element, Slot *slot) {
-  return new Impl::DeathDetectedSlot(impl_, element, slot);
 }
 
 XMLParserInterface *View::GetXMLParser() const {

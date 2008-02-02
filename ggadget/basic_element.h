@@ -19,6 +19,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
+#include <ggadget/scriptable_holder.h>
 #include <ggadget/view_host_interface.h>
 
 namespace ggadget {
@@ -41,7 +42,6 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   virtual void DoRegister();
 
  public:
-  // TODO: If need this work, perhaps we should define it in ViewHostInterface.
   enum HitTest {
     HT_DEFAULT,
     HT_TRANSPARENT,
@@ -69,12 +69,19 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
     HT_HELP
   };
 
+  enum FlipMode {
+    FLIP_NONE = 0,
+    FLIP_HORIZONTAL = 1,
+    FLIP_VERTICAL = 2,
+    FLIP_BOTH = FLIP_HORIZONTAL | FLIP_VERTICAL,
+  };
+
  public:
   /** Get the type of the current object. */
-  virtual std::string GetTagName() const;
+  std::string GetTagName() const;
 
   /** Retrieves the name of the element.  */
-  virtual std::string GetName() const;
+  std::string GetName() const;
 
   /**
    * Retrieves a collection that contains the immediate children of this
@@ -100,166 +107,171 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
 
  public:
   /** Retrieves the width in pixels. */
-  virtual double GetPixelWidth() const;
+  double GetPixelWidth() const;
   /** Sets the width in pixels. */
-  virtual void SetPixelWidth(double width);
+  void SetPixelWidth(double width);
   /** Retrieves the height in pixels. */
-  virtual double GetPixelHeight() const;
+  double GetPixelHeight() const;
   /** Sets the height in pixels. */
-  virtual void SetPixelHeight(double height);
+  void SetPixelHeight(double height);
 
   /** Retrieves the width in relative related to the parent. */
-  virtual double GetRelativeWidth() const;
+  double GetRelativeWidth() const;
   /** Sets the width in relative related to the parent. */
-  virtual void SetRelativeWidth(double width);
+  void SetRelativeWidth(double width);
   /** Retrieves the height in relative related to the parent. */
-  virtual double GetRelativeHeight() const;
+  double GetRelativeHeight() const;
   /** Sets the height in relative related to the parent. */
-  virtual void SetRelativeHeight(double height);
+  void SetRelativeHeight(double height);
 
   /** Retrieves the horizontal position in pixelds. */
-  virtual double GetPixelX() const;
+  double GetPixelX() const;
   /** Sets the horizontal position in pixels. */
-  virtual void SetPixelX(double x);
+  void SetPixelX(double x);
   /** Retrieves the vertical position in pixels. */
-  virtual double GetPixelY() const;
+  double GetPixelY() const;
   /** Sets the vertical position in pixels. */
-  virtual void SetPixelY(double y);
+  void SetPixelY(double y);
 
   /** Retrieves the horizontal position in relative related to the parent. */
-  virtual double GetRelativeX() const;
+  double GetRelativeX() const;
   /** Sets the horizontal position in relative related to the parent. */
-  virtual void SetRelativeX(double x);
+  void SetRelativeX(double x);
   /** Retrieves the vertical position in relative related to the parent. */
-  virtual double GetRelativeY() const;
+  double GetRelativeY() const;
   /** Sets the vertical position in relative related to the parent. */
-  virtual void SetRelativeY(double y);
+  void SetRelativeY(double y);
 
   /** Retrieves the horizontal pin in pixels. */
-  virtual double GetPixelPinX() const;
+  double GetPixelPinX() const;
   /** Sets the horizontal pin in pixels. */
-  virtual void SetPixelPinX(double pin_x);
+  void SetPixelPinX(double pin_x);
   /** Retrieves the vertical pin in pixels. */
-  virtual double GetPixelPinY() const;
+  double GetPixelPinY() const;
   /** Sets the vertical pin in pixels. */
-  virtual void SetPixelPinY(double pin_y);
+  void SetPixelPinY(double pin_y);
 
   /** Retrieves the horizontal pin in relative related to the child. */
-  virtual double GetRelativePinX() const;
+  double GetRelativePinX() const;
   /** Sets the horizontal pin in relative related to the child. */
-  virtual void SetRelativePinX(double pin_x);
+  void SetRelativePinX(double pin_x);
   /** Retrieves the vertical pin in relative related to the child. */
-  virtual double GetRelativePinY() const;
+  double GetRelativePinY() const;
   /** Sets the vertical pin in relative related to the child. */
-  virtual void SetRelativePinY(double pin_y);
-
-  /** Retrieves the rotation of the element, in degrees. */
-  virtual double GetRotation() const;
-  /** Sets the rotation of the element, in degrees. */
-  virtual void SetRotation(double rotation);
+  void SetRelativePinY(double pin_y);
 
   /** Retrieve whether x is relative to its parent element. */
-  virtual bool XIsRelative() const;
+  bool XIsRelative() const;
   /** Retrieve whether y is relative to its parent element. */
-  virtual bool YIsRelative() const;
+  bool YIsRelative() const;
   /** Retrieve whether width is relative to its parent element. */
-  virtual bool WidthIsRelative() const;
+  bool WidthIsRelative() const;
   /** Retrieve whether height is relative to its parent element. */
-  virtual bool HeightIsRelative() const;
+  bool HeightIsRelative() const;
   /** Retrieve whether pin x is relative to its width. */
-  virtual bool PinXIsRelative() const;
+  bool PinXIsRelative() const;
   /** Retrieve whether pin y is relative to its height. */
-  virtual bool PinYIsRelative() const;
+  bool PinYIsRelative() const;
 
   /** Retrieve whether width is explicitly specified. */
-  virtual bool WidthIsSpecified() const;
+  bool WidthIsSpecified() const;
   /** Clear the specified width value and use the default. */
   void ResetWidthToDefault();
   /** Retrieve whether height is explicitly specified. */
-  virtual bool HeightIsSpecified() const;
+  bool HeightIsSpecified() const;
   /** Clear the specified height value and use the default. */
   void ResetHeightToDefault();
   /** Retrieve whether x is explicitly specified. */
-  virtual bool XIsSpecified() const;
+  bool XIsSpecified() const;
   /** Clear the specified x value and use the default. */
   void ResetXToDefault();
   /** Retrieve whether y is explicitly specified. */
-  virtual bool YIsSpecified() const;
+  bool YIsSpecified() const;
   /** Clear the specified y value and use the default. */
   void ResetYToDefault();
 
-  /** Gets the client width (pixel width - width of scrollbar etc. if any). */
-  virtual double GetClientWidth() const;
-  /** Gets the client height (pixel width - height of scrollbar etc. if any). */
-  virtual double GetClientHeight() const;
+  /**
+   * Generic @c Variant version of above x, y, width, height, pin_x, pin_y
+   * property getters and setters.
+   * @see ParsePixelOrRelative() and GetPixelOrRelative() for details of
+   * the variant values.
+   */
+  Variant GetX() const;
+  void SetX(const Variant &x);
+  Variant GetY() const;
+  void SetY(const Variant &y);
+  Variant GetWidth() const;
+  void SetWidth(const Variant &width);
+  Variant GetHeight() const;
+  void SetHeight(const Variant &height);
+  Variant GetPinX() const;
+  void SetPinX(const Variant &pin_x);
+  Variant GetPinY() const;
+  void SetPinY(const Variant &pin_y);
 
-  /** Retrieves the hit-test value for this element. */
+  /** Retrieves the rotation of the element, in degrees. */
+  double GetRotation() const;
+  /** Sets the rotation of the element, in degrees. */
+  void SetRotation(double rotation);
+
+  /** Gets and sets the hit-test value for this element. */
   HitTest GetHitTest() const;
-  /** Sets the hit-test value for this element. */
   void SetHitTest(HitTest value);
 
-  /** Retrieves the cursor to display when the mouse is over this element. */
+  /**
+   * Gets and sets the cursor to display when the mouse is over this
+   * element.
+   */
   ViewHostInterface::CursorType GetCursor() const;
-  /** Sets the cursor to display when the mouse is over this element. */
   void SetCursor(ViewHostInterface::CursorType cursor);
 
   /**
-   * Retrieves whether this element is a target for drag/drop operations.
+   * Gets and sets whether this element is a target for drag/drop operations.
+   * If it is a drop target, the ondrag* events will fire when a drag/drop
+   * operation is initiated by the user.
    */
   bool IsDropTarget() const;
-  /**
-   * Sets whether this element is a target for drag/drop operations.
-   * @param drop_target is true, the ondrag* events will fire when a drag/drop
-   *     oeration is initiated by the user.
-   */
   void SetDropTarget(bool drop_target);
 
   /**
-   * Retrieves whether or not the element is enabled.
+   * Gets and sets whether or not the element is enabled.
+   * Disabled elements do not fire any mouse or keyboard events, but still
+   * fires drag and drop events if it is a drop target.
    */
   bool IsEnabled() const;
-  /**
-   * Sets whether or not the element is enabled.
-   * Disabled elements do not fire any mouse or keyboard events.
-   */
   void SetEnabled(bool enabled);
 
   /**
-   * Retrieves the mask bitmap that defines the clipping path for this element.
+   * Gets and sets the mask bitmap that defines the clipping path for this
+   * element. If a pixel in the mask bitmap is black, the pixel is fully
+   * transparent, otherwise the alpha value of the pixel will be applied.
+   * @see View::LoadImage()  
    */
-  std::string GetMask() const;
-  /**
-   * Sets the mask bitmap that defines the clipping path for this element.
-   */
-  void SetMask(const char *mask);
+  Variant GetMask() const;
+  void SetMask(const Variant &mask);
 
-  /**
-   * Retrieves the opacity of the element.
-   */
+  /** Gets and sets opacity (valid range: 0 ~ 1) of the element. */
   double GetOpacity() const;
-  /**
-   * Sets the opacity of the element.
-   * @param opacity valid range: 0 ~ 1.
-   */
   void SetOpacity(double opacity);
 
-  /**
-   * Retrieves whether or not the element is visible.
-   */
+  /** Gets and sets whether or not the element is visible. */
   bool IsVisible() const;
-  /**
-   * Sets whether or not the element is visible.
-   */
   void SetVisible(bool visible);
 
   /**
-   * Retrieves the tooltip displayed when the mouse hovers over this element.
+   * Gets and sets the tooltip displayed when the mouse hovers over this
+   * element.
    */
   std::string GetTooltip() const;
-  /**
-   * Sets the tooltip displayed when the mouse hovers over this element.
-   */
   void SetTooltip(const char *tooltip);
+
+  /**
+   * Gets and sets the flip mode. Default flip mode is @c FLIP_NONE.
+   * If flip mode is not @c FLIP_NONE, flipping occurs within the original
+   * rectangle of this element before rotation.
+   */
+  FlipMode GetFlip() const;
+  void SetFlip(FlipMode flip);
 
   /**
    * Checks whether this element is really visible considering transparency
@@ -302,14 +314,6 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   const CanvasInterface *GetMaskCanvas();
 
   /**
-   * Adjusts the layout (e.g. size, position, etc.) of this element and its
-   * children. This method is called just before @c Draw().
-   * The implementation of this method of the derived classes must call through
-   * that of the base classes first.
-   */
-  virtual void Layout();
-
-  /**
    * Draws the element to a specified canvas.
    * The canvas should already be prepared for this element to be drawn
    * directly without any transformation, except the opacity.
@@ -322,6 +326,109 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   void Draw(CanvasInterface *canvas);
 
+  /**
+   * Sets the changed bit to true and if visible and this is not called during
+   * @c Layout(), requests the view to be redrawn.
+   * Normally don't call this inside a drawing function (i.e. drawing has
+   * already started) or there might be extra draw attempts.
+   */
+  void QueueDraw();
+
+  /**
+   * Checks to see if position of the element has changed relative to the
+   * parent since the last draw. Specifically, this checks for changes in
+   * x, y, pinX, pinY and rotation.
+   */
+  bool IsPositionChanged() const;
+
+  /**
+   * Sets the position changed state to false.
+   */
+  void ClearPositionChanged();
+
+  /**
+   * Checks to see if size of the element has changed since the last draw.
+   * Unlike @c IsPositionChanged(), this flag is cleared in Draw() because
+   * Draw() will be always called if size changed.
+   */
+  bool IsSizeChanged() const;
+
+ public: // Coordination translation methods.
+  /**
+   * Converts coordinates in this element's space to coordinates in a
+   * child element.
+   *
+   * The default implementation should directly call ParentCoordToChildCoord.
+   * BasicElement implementation should override this method if it supports
+   * scrolling.
+   *
+   * @param child a child element of this element.
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert.
+   * @param[out] child_x parameter to store the converted child x-coordinate.
+   * @param[out] child_y parameter to store the converted child y-coordinate.
+   */
+  virtual void SelfCoordToChildCoord(const BasicElement *child,
+                                     double x, double y,
+                                     double *child_x, double *child_y) const;
+
+  /**
+   * Converts coordinates in a child's space to coordinates in this element.
+   *
+   * The default implementation should directly call ChildCoordToParentCoord.
+   * BasicElement implementation should override this method if it supports
+   * scrolling.
+   *
+   * @param child a child element of this element.
+   * @param x x-coordinate in child element's space to convert.
+   * @param y y-coordinate in child element's space to convert.
+   * @param[out] self_x parameter to store the converted self x-coordinate.
+   * @param[out] self_y parameter to store the converted self y-coordinate.
+   */
+  virtual void ChildCoordToSelfCoord(const BasicElement *child,
+                                     double x, double y,
+                                     double *self_x, double *self_y) const;
+
+  /**
+   * Converts coordinates in this element's space to coordinates in its
+   * parent element or the view if it has no parent.
+   *
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert.
+   * @param[out] parent_x parameter to store the converted parent x-coordinate.
+   * @param[out] parent_y parameter to store the converted parent y-coordinate.
+   */
+  void SelfCoordToParentCoord(double x, double y,
+                              double *parent_x, double *parent_y) const;
+
+  /**
+   * Converts coordinates in this element's space to coordinates in the top
+   * level view.
+   *
+   * This function uses SelfCoordToParentCoord() and traverses its parents upto
+   * the view to calculate the coordinates.
+   *
+   * @param x x-coordinate in this element's space to convert.
+   * @param y y-coordinate in this element's space to convert.
+   * @param[out] view_x parameter to store the converted view x-coordinate.
+   * @param[out] view_y parameter to store the converted view y-coordinate.
+   */
+  void SelfCoordToViewCoord(double x, double y,
+                            double *view_x, double *view_y) const;
+
+  /**
+   * Delegates to @c Elements::SetScrollable().
+   * @return @c false if this element is not a container.
+   */
+  bool SetChildrenScrollable(bool scrollable);
+
+  /**
+   * Delegates to @c Elements::GetChildrenExtents().
+   * @return @c false if this element is not a container.
+   */
+  bool GetChildrenExtents(double *width, double *height);
+
+ public: // Event handlers and event related methods.
   /**
    * Handler of the mouse events. Normally subclasses should not override this
    * method except it needs special event handling.
@@ -399,106 +506,19 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   virtual void OnPopupOff();
 
+public: // Other overridable public methods.
+  /** Gets the client width (pixel width - width of scrollbar etc. if any). */
+  virtual double GetClientWidth() const;
+  /** Gets the client height (pixel width - height of scrollbar etc. if any). */
+  virtual double GetClientHeight() const;
+  
   /**
-   * Checks to see if position of the element has changed relative to the
-   * parent since the last draw. Specifically, this checks for changes in
-   * x, y, pinX, pinY and rotation.
+   * Adjusts the layout (e.g. size, position, etc.) of this element and its
+   * children. This method is called just before @c Draw().
+   * The implementation of this method of the derived classes must call through
+   * that of the base classes first.
    */
-  bool IsPositionChanged() const;
-
-  /**
-   * Sets the position changed state to false.
-   */
-  void ClearPositionChanged();
-
-  /**
-   * Checks to see if size of the element has changed since the last draw.
-   * Unlike @c IsPositionChanged(), this flag is cleared in Draw() because
-   * Draw() will be always called if size changed.
-   */
-  bool IsSizeChanged() const;
-
-  /**
-   * Converts coordinates in this element's space to coordinates in a
-   * child element.
-   *
-   * The default implementation should directly call ParentCoorddToChildCoord.
-   * BasicElement implementation should override this method if it supports
-   * scrolling.
-   *
-   * @param child a child element of this element.
-   * @param x x-coordinate in this element's space to convert.
-   * @param y y-coordinate in this element's space to convert.
-   * @param[out] child_x parameter to store the converted child x-coordinate.
-   * @param[out] child_y parameter to store the converted child y-coordinate.
-   */
-  virtual void SelfCoordToChildCoord(const BasicElement *child,
-                                     double x, double y,
-                                     double *child_x, double *child_y) const;
-
-  /**
-   * Converts coordinates in a child's space to coordinates in this element.
-   *
-   * The default implementation should directly call ChildCoordToParentCoord.
-   * BasicElement implementation should override this method if it supports
-   * scrolling.
-   *
-   * @param child a child element of this element.
-   * @param x x-coordinate in child element's space to convert.
-   * @param y y-coordinate in child element's space to convert.
-   * @param[out] self_x parameter to store the converted self x-coordinate.
-   * @param[out] self_y parameter to store the converted self y-coordinate.
-   */
-  virtual void ChildCoordToSelfCoord(const BasicElement *child,
-                                     double x, double y,
-                                     double *self_x, double *self_y) const;
-
-  /**
-   * Converts coordinates in this element's space to coordinates in its
-   * parent element or the view if it has no parent.
-   *
-   * @param x x-coordinate in this element's space to convert.
-   * @param y y-coordinate in this element's space to convert.
-   * @param[out] parent_x parameter to store the converted parent x-coordinate.
-   * @param[out] parent_y parameter to store the converted parent y-coordinate.
-   */
-  void SelfCoordToParentCoord(double x, double y,
-                              double *parent_x, double *parent_y) const;
-
-  /**
-   * Converts coordinates in this element's space to coordinates in the top
-   * level view.
-   *
-   * This function uses SelfCoordToParentCoord() and traverses its parents upto
-   * the view to calculate the coordinates.
-   *
-   * @param x x-coordinate in this element's space to convert.
-   * @param y y-coordinate in this element's space to convert.
-   * @param[out] view_x parameter to store the converted view x-coordinate.
-   * @param[out] view_y parameter to store the converted view y-coordinate.
-   */
-  void SelfCoordToViewCoord(double x, double y,
-                            double *view_x, double *view_y) const;
-
-  /**
-   * Delegates to @c Elements::SetScrollable().
-   * @return @c false if this element is not a container.
-   */
-  bool SetChildrenScrollable(bool scrollable);
-
-  /**
-   * Delegates to @c Elements::GetChildrenExtents().
-   * @return @c false if this element is not a container.
-   */
-  bool GetChildrenExtents(double *width, double *height);
-
-  /**
-   * Sets the changed bit to true and if visible and this is not called during
-   * @c Layout(), requests the view to be redrawn.
-   * Normally don't call this inside a drawing function (i.e. drawing has
-   * already started) or there might be extra draw attempts.
-   */
-  void QueueDraw();
+  virtual void Layout();
 
   /**
    * Sets a redraw mark, so that all things and children will be redrawed
@@ -523,8 +543,9 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   };
 
   /**
-   * Parses an Variant into either a absolute value or
-   * an relative percentage value.
+   * Parses an Variant into either a absolute value (@c Variant::TYPE_INTEGER
+   * or @c Variant::TYPE_DOUBLE) or an relative percentage value
+   * (@c Variant::TYPE_STRING).
    */
   static ParsePixelOrRelativeResult ParsePixelOrRelative(const Variant &input,
                                                          double *output);
@@ -612,6 +633,8 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(BasicElement);
 };
+
+typedef ScriptableHolder<BasicElement> ElementHolder;
 
 } // namespace ggadget
 
