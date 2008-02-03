@@ -39,7 +39,7 @@ bool SetGlobalMainLoop(MainLoopInterface *main_loop) {
 
 MainLoopInterface *GetGlobalMainLoop() {
   if (!ggl_global_main_loop_) {
-    ASSERT_M(false, ("The global main loop has not been set yet."));
+    VERIFY_M(false, ("The global main loop has not been set yet."));
   }
   return ggl_global_main_loop_;
 }
