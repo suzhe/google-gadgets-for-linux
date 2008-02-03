@@ -118,7 +118,7 @@ class GadgetHostInterface {
    */
   virtual uint64_t GetCurrentTime() const = 0;
 
-  /** Open the given URL in the user's default web brower. */
+  /** Open the given URL in the user's default web browser. */
   virtual bool OpenURL(const char *url) const = 0;
 
   /** Temporarily install a given font on the system. */
