@@ -55,8 +55,10 @@ bool ScriptExtensionRegister::RegisterExtension(const Module *extension) {
 }
 
 FrameworkExtensionRegister::FrameworkExtensionRegister(
-    ScriptableHelperDefault *framework_object)
-  : framework_object_(framework_object) {
+    ScriptableInterface *framework,
+    Gadget *gadget)
+  : framework_(framework),
+    gadget_(gadget) {
 }
 
 bool FrameworkExtensionRegister::RegisterExtension(const Module *extension) {
@@ -65,7 +67,7 @@ bool FrameworkExtensionRegister::RegisterExtension(const Module *extension) {
       reinterpret_cast<RegisterFrameworkExtensionFunc>(
           extension->GetSymbol(kFrameworkExtensionSymbolName));
 
-  return func ? func(framework_object_) : false;
+  return func ? func(framework_, gadget_) : false;
 }
 
 class MultipleExtensionRegisterWrapper::Impl {

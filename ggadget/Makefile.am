@@ -49,7 +49,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  details_view.h \
 			  display_window.h \
 			  div_element.h \
-			  dummy_framework.h \
 			  edit_element_base.h \
 			  element_factory.h \
 			  elements.h \
@@ -136,7 +135,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  details_view.cc \
 			  display_window.cc \
 			  div_element.cc \
-			  dummy_framework.cc \
 			  edit_element_base.cc \
 			  element_factory.cc \
 			  elements.cc \

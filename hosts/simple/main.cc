@@ -31,12 +31,6 @@
 #include <ggadget/smjs/js_script_runtime.h>
 #include <ggadget/ggadget.h>
 
-#ifdef GGL_HOST_LINUX
-#include <ggadget/linux/framework.h>
-#else
-#include <ggadget/dummy_framework.h>
-#endif
-
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
 static ggadget::gtk::GtkGadgetHost *g_gadget_host = NULL;
@@ -45,17 +39,19 @@ static gboolean g_useshapemask = false;
 static gboolean g_decorated = true;
 
 static ggadget::gtk::GtkMainLoop g_main_loop;
-#ifdef GGL_HOST_LINUX
-static ggadget::LinuxFramework g_framework;
-#else
-static ggadget::DummyFramework g_framework;
-#endif
 static ggadget::smjs::JSScriptRuntime g_script_runtime;
 
 static const char *kGlobalExtensions[] = {
+// default framework must be loaded first, so that the default properties can
+// be overrided.
+  "default-framework",
   "dbus-script-class",
   "gtk-edit-element",
   "gtkmoz-browser-element",
+  "gtk-system-framework",
+  "gst-audio-framework",
+#ifdef GGL_HOST_LINUX
+#endif
   NULL
 };
 
@@ -74,7 +70,6 @@ static gboolean DestroyHandler(GtkWidget *widget,
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
   g_gadget_host = new ggadget::gtk::GtkGadgetHost(&g_script_runtime,
-                                                  &g_framework,
                                                   g_composited,
                                                   g_useshapemask, g_zoom,
                                                   g_debug_mode);

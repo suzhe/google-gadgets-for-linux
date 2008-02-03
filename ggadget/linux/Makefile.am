@@ -34,14 +34,10 @@ noinst_HEADERS		= file_system.h \
 			  wireless_access_point.h \
 			  hal_strings.h
 
-linuxincludedir		= $(GGL_INCLUDE_DIR)/ggadget/linux
-linuxinclude_HEADERS	= framework.h
-
 lib_LTLIBRARIES		= libggadget-linux@GGL_EPOCH@.la
 
 libggadget_linux@GGL_EPOCH@_la_SOURCES = \
 			  file_system.cc \
-			  framework.cc \
 			  audioclip.cc \
 			  machine.cc \
 			  memory.cc \

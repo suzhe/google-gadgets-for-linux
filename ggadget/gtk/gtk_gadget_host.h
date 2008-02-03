@@ -34,7 +34,6 @@ class GtkMenuImpl;
 class GtkGadgetHost : public GadgetHostInterface {
  public:
   GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
-                FrameworkInterface *framework,
                 bool composited, bool useshapemask,
                 double zoom, int debug_mode);
   virtual ~GtkGadgetHost();
@@ -42,7 +41,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type);
   virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
-  virtual FrameworkInterface *GetFramework();
   virtual XMLParserInterface *GetXMLParser();
   virtual GadgetInterface *GetGadget();
   virtual ViewHostInterface *NewViewHost(ViewType type, ViewInterface *view);
@@ -55,11 +53,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
-  virtual bool BrowseForFiles(const char *filter, bool multiple,
-                              std::vector<std::string> *result);
-  virtual void GetCursorPos(int *x, int *y) const;
-  virtual void GetScreenSize(int *width, int *height) const;
-  virtual std::string GetFileIcon(const char *filename) const;
 
   /**
    * Loads a gadget from file system and hosts it.
@@ -111,7 +104,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
   ScriptRuntimeInterface *script_runtime_;
-  FrameworkInterface *framework_;
 
   XMLParserInterface *xml_parser_;
   FileManagerInterface *resource_file_manager_;

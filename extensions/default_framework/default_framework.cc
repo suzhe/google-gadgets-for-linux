@@ -14,18 +14,31 @@
   limitations under the License.
 */
 
-#include "common.h"
-#include "gadget_consts.h"
-#include "slot.h"
-#include "framework_interface.h"
-#include "file_system_interface.h"
-#include "audioclip_interface.h"
-#include "dummy_framework.h"
+#include <ggadget/common.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/slot.h>
+#include <ggadget/framework_interface.h>
+#include <ggadget/file_system_interface.h>
+#include <ggadget/file_manager_interface.h>
+#include <ggadget/audioclip_interface.h>
+#include <ggadget/registerable_interface.h>
+#include <ggadget/scriptable_interface.h>
+#include <ggadget/scriptable_framework.h>
+#include <ggadget/scriptable_file_system.h>
+#include <ggadget/scriptable_array.h>
+
+#define Initialize default_framework_LTX_Initialize
+#define Finalize default_framework_LTX_Finalize
+#define RegisterFrameworkExtension \
+    default_framework_LTX_RegisterFrameworkExtension
 
 namespace ggadget {
 namespace framework {
 
-class DummyMachine : public MachineInterface {
+// To avoid naming conflicts.
+namespace default_framework {
+
+class DefaultMachine : public MachineInterface {
  public:
   virtual std::string GetBiosSerialNumber() const { return "Unknown"; }
   virtual std::string GetMachineManufacturer() const { return "Unknown"; }
@@ -40,7 +53,7 @@ class DummyMachine : public MachineInterface {
   virtual std::string GetProcessorVendor() const { return "Unknown"; }
 };
 
-class DummyMemory : public MemoryInterface {
+class DefaultMemory : public MemoryInterface {
  public:
   virtual int64_t GetTotal() { return 1024*1024*1024; }
   virtual int64_t GetFree() { return 1024*1024*512; }
@@ -50,23 +63,17 @@ class DummyMemory : public MemoryInterface {
   virtual int64_t GetUsedPhysical() { return 1024*1024*512; }
 };
 
-class DummyNetwork : public NetworkInterface {
- public:
-  virtual bool IsOnline() const { return true; }
-  virtual ConnectionType GetConnectionType() const {
-    return NetworkInterface::CONNECTION_TYPE_802_3;
-  }
-  virtual PhysicalMediaType GetPhysicalMediaType() const {
-    return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
-  }
-};
-
-class DummyPerfmon : public PerfmonInterface {
+class DefaultPerfmon : public PerfmonInterface {
  public:
   virtual int64_t GetCurrentValue(const char *counter_path) { return 0; }
+  virtual int AddCounter(const char *counter_path, CallbackSlot *slot) {
+    delete slot;
+    return -1;
+  }
+  virtual void RemoveCounter(int id) { }
 };
 
-class DummyPower : public PowerInterface {
+class DefaultPower : public PowerInterface {
  public:
   virtual bool IsCharging() const { return false; }
   virtual bool IsPluggedIn() const { return true; }
@@ -75,35 +82,35 @@ class DummyPower : public PowerInterface {
   virtual int GetTimeTotal() const { return 7200; }
 };
 
-class DummyProcessInfo : public ProcessInfoInterface {
+class DefaultProcessInfo : public ProcessInfoInterface {
  public:
   virtual void Destroy() { }
   virtual int GetProcessId() const { return 1234; }
-  virtual std::string GetExecutablePath() const { return "/usr/bin/dummy"; }
+  virtual std::string GetExecutablePath() const { return "/usr/bin/default"; }
 };
 
-class DummyProcesses : public ProcessesInterface {
+class DefaultProcesses : public ProcessesInterface {
  public:
   virtual void Destroy() { }
   virtual int GetCount() const { return 100; }
-  virtual ProcessInfoInterface *GetItem(int index) { return &dummy_info_; }
+  virtual ProcessInfoInterface *GetItem(int index) { return &default_info_; }
 
  private:
-  DummyProcessInfo dummy_info_;
+  DefaultProcessInfo default_info_;
 };
 
-class DummyProcess : public ProcessInterface {
+class DefaultProcess : public ProcessInterface {
  public:
-  virtual ProcessesInterface *EnumerateProcesses() { return &dummy_processes_; }
-  virtual ProcessInfoInterface *GetForeground() { return &dummy_foreground_; }
-  virtual ProcessInfoInterface *GetInfo(int pid) { return &dummy_info_; }
+  virtual ProcessesInterface *EnumerateProcesses() { return &default_processes_; }
+  virtual ProcessInfoInterface *GetForeground() { return &default_foreground_; }
+  virtual ProcessInfoInterface *GetInfo(int pid) { return &default_info_; }
  private:
-  DummyProcesses dummy_processes_;
-  DummyProcessInfo dummy_foreground_;
-  DummyProcessInfo dummy_info_;
+  DefaultProcesses default_processes_;
+  DefaultProcessInfo default_foreground_;
+  DefaultProcessInfo default_info_;
 };
 
-class DummyWirelessAccessPoint : public WirelessAccessPointInterface {
+class DefaultWirelessAccessPoint : public WirelessAccessPointInterface {
  public:
   virtual void Destroy() { }
   virtual std::string GetName() const { return "Unknown"; }
@@ -125,7 +132,7 @@ class DummyWirelessAccessPoint : public WirelessAccessPointInterface {
   }
 };
 
-class DummyWireless : public WirelessInterface {
+class DefaultWireless : public WirelessInterface {
  public:
   virtual bool IsAvailable() const { return false; }
   virtual bool IsConnected() const { return false; }
@@ -139,14 +146,31 @@ class DummyWireless : public WirelessInterface {
   virtual int GetSignalStrength() const { return 0; }
 };
 
-class DummyDrives : public DrivesInterface {
+class DefaultNetwork : public NetworkInterface {
+ public:
+  virtual bool IsOnline() const { return true; }
+  virtual ConnectionType GetConnectionType() const {
+    return NetworkInterface::CONNECTION_TYPE_802_3;
+  }
+  virtual PhysicalMediaType GetPhysicalMediaType() const {
+    return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
+  }
+  virtual WirelessInterface *GetWireless() {
+    return &wireless_;
+  }
+
+  DefaultWireless wireless_;
+};
+
+
+class DefaultDrives : public DrivesInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetCount() const { return 0; }
   virtual DriveInterface *GetItem(int index) { return NULL; }
 };
 
-class DummyDrive : public DriveInterface {
+class DefaultDrive : public DriveInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual std::string GetPath() { return ""; }
@@ -165,14 +189,14 @@ class DummyDrive : public DriveInterface {
 };
 
 /** IFolderCollection. */
-class DummyFolders : public FoldersInterface {
+class DefaultFolders : public FoldersInterface {
  public:
   virtual void Destroy() { }
   virtual int GetCount() const { return 0; }
   virtual FolderInterface *GetItem(int index) { return NULL; }
 };
 
-class DummyFolder : public FolderInterface {
+class DefaultFolder : public FolderInterface {
  public:
   virtual void Destroy() { }
   virtual std::string GetPath() { return ""; }
@@ -201,14 +225,14 @@ class DummyFolder : public FolderInterface {
   }
 };
 
-class DummyFiles : public FilesInterface {
+class DefaultFiles : public FilesInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetCount() const { return 0; }
   virtual FileInterface *GetItem(int index) { return NULL; }
 };
 
-class DummyFile : public FileInterface {
+class DefaultFile : public FileInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual std::string GetPath() { return ""; }
@@ -234,7 +258,7 @@ class DummyFile : public FileInterface {
   }
 };
 
-class DummyTextStream : public TextStreamInterface {
+class DefaultTextStream : public TextStreamInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetLine() { return 0; }
@@ -252,9 +276,9 @@ class DummyTextStream : public TextStreamInterface {
   virtual void Close() { }
 };
 
-class DummyFileSystem : public FileSystemInterface {
+class DefaultFileSystem : public FileSystemInterface {
  public:
-  virtual DrivesInterface *GetDrives() { return new DummyDrives(); }
+  virtual DrivesInterface *GetDrives() { return new DefaultDrives(); }
   virtual std::string BuildPath(const char *path, const char *name) {
     return std::string(path ? path : "") +
            std::string(kDirSeparatorStr) +
@@ -283,16 +307,16 @@ class DummyFileSystem : public FileSystemInterface {
   virtual bool FileExists(const char *file_spec) { return false; }
   virtual bool FolderExists(const char *folder_spec) { return false; }
   virtual DriveInterface *GetDrive(const char *drive_spec) {
-    return new DummyDrive();
+    return new DefaultDrive();
   }
   virtual FileInterface *GetFile(const char *file_path) {
-    return new DummyFile();
+    return new DefaultFile();
   }
   virtual FolderInterface *GetFolder(const char *folder_path) {
-    return new DummyFolder();
+    return new DefaultFolder();
   }
   virtual FolderInterface *GetSpecialFolder(SpecialFolder special_folder) {
-    return new DummyFolder();
+    return new DefaultFolder();
   }
   virtual bool DeleteFile(const char *file_spec, bool force) { return false; }
   virtual bool DeleteFolder(const char *folder_spec, bool force) {
@@ -312,29 +336,29 @@ class DummyFileSystem : public FileSystemInterface {
   }
 
   virtual FolderInterface *CreateFolder(const char *path) {
-    return new DummyFolder();
+    return new DefaultFolder();
   }
   virtual TextStreamInterface *CreateTextFile(const char *filename,
                                               bool overwrite,
                                               bool unicode) {
-    return new DummyTextStream();
+    return new DefaultTextStream();
   }
   virtual TextStreamInterface *OpenTextFile(const char *filename,
                                             IOMode mode,
                                             bool create,
                                             Tristate format) {
-    return new DummyTextStream();
+    return new DefaultTextStream();
   }
   virtual TextStreamInterface *GetStandardStream(StandardStreamType type,
                                                  bool unicode) {
-    return new DummyTextStream();
+    return new DefaultTextStream();
   }
   virtual std::string GetFileVersion(const char *filename) {
     return "";
   }
 };
 
-class DummyAudioclip : public AudioclipInterface {
+class DefaultAudioclip : public AudioclipInterface {
  public:
   virtual void Destroy() { delete this; }
   virtual int GetBalance() const { return 0; }
@@ -357,55 +381,174 @@ class DummyAudioclip : public AudioclipInterface {
   }
 };
 
-} // namespace framework
-
-struct DummyFramework::Impl {
-  framework::DummyMachine machine_;
-  framework::DummyMemory memory_;
-  framework::DummyNetwork network_;
-  framework::DummyPerfmon perfmon_;
-  framework::DummyPower power_;
-  framework::DummyProcess process_;
-  framework::DummyWireless wireless_;
-  framework::DummyFileSystem filesystem_;
+class DefaultAudio : public AudioInterface {
+ public:
+  virtual AudioclipInterface * CreateAudioclip(const char *src)  {
+    return new DefaultAudioclip();
+  }
 };
 
-DummyFramework::DummyFramework()
-  : impl_(new Impl()) {
+class DefaultCursor : public CursorInterface {
+ public:
+  virtual void GetPosition(int *x, int *y)  {
+    if (x) *x = 0;
+    if (y) *y = 0;
+  }
+};
+
+class DefaultScreen : public ScreenInterface {
+ public:
+  virtual void GetSize(int *width, int *height) {
+    if (width) *width = 1024;
+    if (height) *height = 768;
+  }
+};
+
+static DefaultMachine g_machine_;
+static DefaultMemory g_memory_;
+static DefaultNetwork g_network_;
+static DefaultPower g_power_;
+static DefaultProcess g_process_;
+static DefaultFileSystem g_filesystem_;
+static DefaultAudio g_audio_;
+static DefaultCursor g_cursor_;
+static DefaultScreen g_screen_;
+static DefaultPerfmon g_perfmon_;
+
+static ScriptableBios g_script_bios_(&g_machine_);
+static ScriptableCursor g_script_cursor_(&g_cursor_);
+static ScriptableFileSystem g_script_filesystem_(&g_filesystem_);
+static ScriptableMachine g_script_machine_(&g_machine_);
+static ScriptableMemory g_script_memory_(&g_memory_);
+static ScriptableNetwork g_script_network_(&g_network_);
+static ScriptablePower g_script_power_(&g_power_);
+static ScriptableProcess g_script_process_(&g_process_);
+static ScriptableProcessor g_script_processor_(&g_machine_);
+static ScriptableScreen g_script_screen_(&g_screen_);
+
+static std::string DefaultLanguageCode() {
+  return ("en-US");
 }
 
-DummyFramework::~DummyFramework() {
-  delete impl_;
-  impl_ = NULL;
+static std::string DefaultGetFileIcon(const char *filename) {
+  return std::string("");
 }
 
-framework::MachineInterface *DummyFramework::GetMachine() {
-  return &impl_->machine_;
-}
-framework::MemoryInterface *DummyFramework::GetMemory() {
-  return &impl_->memory_;
-}
-framework::NetworkInterface *DummyFramework::GetNetwork() {
-  return &impl_->network_;
-}
-framework::PerfmonInterface *DummyFramework::GetPerfmon() {
-  return &impl_->perfmon_;
-}
-framework::PowerInterface *DummyFramework::GetPower() {
-  return &impl_->power_;
-}
-framework::ProcessInterface *DummyFramework::GetProcess() {
-  return &impl_->process_;
-}
-framework::WirelessInterface *DummyFramework::GetWireless() {
-  return &impl_->wireless_;
-}
-framework::FileSystemInterface *DummyFramework::GetFileSystem() {
-  return &impl_->filesystem_;
-}
-framework::AudioclipInterface *
-DummyFramework::CreateAudioclip(const char *src) {
-  return new framework::DummyAudioclip();
+static std::string DefaultBrowseForFile(const char *filter) {
+  return std::string("");
 }
 
+static ScriptableArray *DefaultBrowseForFiles(const char *filter) {
+  return new ScriptableArray();
+}
+
+static Date DefaultLocalTimeToUniversalTime(const Date &date) {
+  return date;
+}
+
+} // namespace default_framework
+} // namespace framework
 } // namespace ggadget
+
+using namespace ggadget;
+using namespace ggadget::framework;
+using namespace ggadget::framework::default_framework;
+
+extern "C" {
+  bool Initialize() {
+    LOG("Initialize default_framework extension.");
+    return true;
+  }
+
+  void Finalize() {
+    LOG("Finalize default_framework extension.");
+  }
+
+  bool RegisterFrameworkExtension(ScriptableInterface *framework,
+                                  Gadget *gadget) {
+    LOG("Register default_framework extension.");
+    ASSERT(framework && gadget);
+
+    if (!framework)
+      return false;
+
+    RegisterableInterface *reg_framework = framework->GetRegisterable();
+
+    if (!reg_framework) {
+      LOG("Specified framework is not registerable.");
+      return false;
+    }
+
+    // ScriptableAudio is per gadget, so create a new instance here.
+    ScriptableAudio *script_audio = new ScriptableAudio(&g_audio_, gadget);
+    reg_framework->RegisterVariantConstant("audio", Variant(script_audio));
+    reg_framework->RegisterMethod("BrowseForFile",
+                                  NewSlot(DefaultBrowseForFile));
+    reg_framework->RegisterMethod("BrowseForFiles",
+                                  NewSlot(DefaultBrowseForFiles));
+
+    // ScriptableGraphics is per gadget, so create a new instance here.
+    ScriptableGraphics *script_graphics = new ScriptableGraphics(gadget);
+    reg_framework->RegisterVariantConstant("graphics",
+                                           Variant(script_graphics));
+
+    ScriptableInterface *system = NULL;
+    // Gets or adds system object.
+    Variant prop = GetPropertyByName(framework, "system");
+    if (prop.type() != Variant::TYPE_SCRIPTABLE) {
+      // property "system" is not available or have wrong type, then add one
+      // with correct type.
+      // Using SharedScriptable here, so that it can be destroyed correctly
+      // when framework is destroyed.
+      system = new SharedScriptable();
+      reg_framework->RegisterVariantConstant("system", Variant(system));
+    } else {
+      system = VariantValue<ScriptableInterface *>()(prop);
+    }
+
+    if (!system) {
+      LOG("Failed to retrieve or add framework.system object.");
+      return false;
+    }
+
+    RegisterableInterface *reg_system = system->GetRegisterable();
+    if (!reg_system) {
+      LOG("framework.system object is not registerable.");
+      return false;
+    }
+
+    reg_system->RegisterVariantConstant("bios",
+                                        Variant(&g_script_bios_));
+    reg_system->RegisterVariantConstant("cursor",
+                                        Variant(&g_script_cursor_));
+    reg_system->RegisterVariantConstant("filesystem",
+                                        Variant(&g_script_filesystem_));
+    reg_system->RegisterVariantConstant("machine",
+                                        Variant(&g_script_machine_));
+    reg_system->RegisterVariantConstant("memory",
+                                        Variant(&g_script_memory_));
+    reg_system->RegisterVariantConstant("network",
+                                        Variant(&g_script_network_));
+    reg_system->RegisterVariantConstant("power",
+                                        Variant(&g_script_power_));
+    reg_system->RegisterVariantConstant("process",
+                                        Variant(&g_script_process_));
+    reg_system->RegisterVariantConstant("processor",
+                                        Variant(&g_script_processor_));
+    reg_system->RegisterVariantConstant("screen",
+                                        Variant(&g_script_screen_));
+
+    reg_system->RegisterMethod("getFileIcon", NewSlot(DefaultGetFileIcon));
+    reg_system->RegisterMethod("languageCode", NewSlot(DefaultLanguageCode));
+    reg_system->RegisterMethod("localTimeToUniversalTime",
+                               NewSlot(DefaultLocalTimeToUniversalTime));
+
+    // ScriptablePerfmon is per gadget, so create a new instance here.
+    ScriptablePerfmon *script_perfmon =
+        new ScriptablePerfmon(&g_perfmon_, gadget);
+
+    reg_system->RegisterVariantConstant("perfmon", Variant(script_perfmon));
+
+    return true;
+  }
+}

@@ -19,9 +19,12 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
 #include "ggadget/xml_utils.h"
+#include "ggadget/native_main_loop.h"
 #include "mocked_element.h"
 #include "mocked_gadget_host.h"
 #include "mocked_view_host.h"
+
+ggadget::NativeMainLoop main_loop;
 
 ggadget::ElementFactory *gFactory = NULL;
 using ggadget::down_cast;
@@ -503,6 +506,8 @@ TEST_F(BasicElementTest, XMLConstruction) {
 }
 
 int main(int argc, char *argv[]) {
+  ggadget::SetGlobalMainLoop(&main_loop);
+
   testing::ParseGUnitFlags(&argc, argv);
   gFactory = new ggadget::ElementFactory();
   gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);

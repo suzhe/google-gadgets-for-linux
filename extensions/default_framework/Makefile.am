@@ -12,11 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-SUBDIRS = dbus_script_class \
-	  gtk_edit_element \
-	  gtkmoz_browser_element \
-	  default_framework \
-	  gst_audio_framework \
-	  gtk_system_framework
+INCLUDES		= -I$(top_builddir) \
+			  -I$(top_srcdir)
+
+extension_LTLIBRARIES	= default-framework.la
+extensiondir		= $(GGL_MODULE_DIR)
+
+default_framework_la_SOURCES = default_framework.cc
+
+default_framework_la_CXXFLAGS = \
+			  $(DEFAULT_COMPILE_FLAGS)
+
+default_framework_la_CPPFLAGS = \
+			  $(PREDEFINED_MACROS)
+
+default_framework_la_LIBADD = \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+default_framework_la_LDFLAGS = \
+			  -avoid-version \
+			  -module \
+			  -rpath $(libdir)

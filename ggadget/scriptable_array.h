@@ -31,6 +31,9 @@ class ScriptableArray : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x65cf1406985145a9, ScriptableInterface);
 
+  /** Creates an empty ScriptableArray object. */
+  ScriptableArray();
+
  public:
   /**
    * Creates a @c ScriptableArray with an iterator and count.

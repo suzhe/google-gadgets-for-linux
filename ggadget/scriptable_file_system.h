@@ -23,13 +23,12 @@ namespace ggadget {
 
 namespace framework {
 class FileSystemInterface;
-}
 
 class ScriptableFileSystem : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x881b7d66c6bf4ca5, ScriptableInterface)
 
-  explicit ScriptableFileSystem(framework::FileSystemInterface *filesystem);
+  explicit ScriptableFileSystem(FileSystemInterface *filesystem);
   virtual ~ScriptableFileSystem();
 
  private:
@@ -38,6 +37,7 @@ class ScriptableFileSystem : public ScriptableHelperNativeOwnedDefault {
   Impl *impl_;
 };
 
+} // namespace framework
 } // namespace ggadget
 
 #endif  // GGADGET_SCRIPTABLE_FILE_SYSTEM_H__

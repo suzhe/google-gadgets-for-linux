@@ -19,15 +19,18 @@
 
 #include <string>
 #include <stdint.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
+class Slot;
 
 namespace framework {
 
 class FileSystemInterface;
 class AudioclipInterface;
+class WirelessInterface;
 
 /** Interface for retrieving the information of the machine. */
 class MachineInterface {
@@ -145,15 +148,50 @@ class NetworkInterface {
   virtual ConnectionType GetConnectionType() const = 0;
   /** Gets the type of the physical media. */
   virtual PhysicalMediaType GetPhysicalMediaType() const = 0;
+
+  /** Gets the Wireless object containning information about the system's
+   * wireless connection.
+   */
+  virtual WirelessInterface *GetWireless() = 0;
 };
 
+/**
+ * Interface for emulating Windows Perfmon API.
+ */
 class PerfmonInterface {
  protected:
   virtual ~PerfmonInterface() {}
 
  public:
+  /**
+   * Callback for perfmon counter.
+   *
+   * The first parameter is the counter_path, the second parameter is the new
+   * value of the counter_path.
+   */
+  typedef Slot2<void, const char *, const Variant &> CallbackSlot;
+
   /** Get the current value for the specified counter. */
   virtual int64_t GetCurrentValue(const char *counter_path) = 0;
+
+  /**
+   * Add a performance counter.
+   *
+   * @param counter_path Path of the counter to be monitored.
+   * @param slot A slot to be called when the value of the monitored
+   * counter is changed. The slot is owned by the PerfmonInterface instance,
+   * and shall be deleted when removing the counter.
+   *
+   * @return an unique id of the counter, which can be used to remove the
+   * counter. if returns -1 means failed to add counter, and the slot will be
+   * deleted immediately.
+   */
+  virtual int AddCounter(const char *counter_path, CallbackSlot *slot) = 0;
+
+  /**
+   * Remove a performance counter, previouslly added by AddCounter() function.
+   */
+  virtual void RemoveCounter(int id) = 0;
 };
 
 /** Interface for retrieving the information of the power and battery status. */
@@ -315,23 +353,34 @@ class WirelessInterface {
   virtual int GetSignalStrength() const = 0;
 };
 
-} // namespace framework
 
-class FrameworkInterface {
+/** Interface for creating an Audioclip instance. */
+class AudioInterface {
+ protected:
+  virtual ~AudioInterface() {}
+
  public:
-  virtual ~FrameworkInterface() {}
-
-  virtual framework::MachineInterface *GetMachine() = 0;
-  virtual framework::MemoryInterface *GetMemory() = 0;
-  virtual framework::NetworkInterface *GetNetwork() = 0;
-  virtual framework::PerfmonInterface *GetPerfmon() = 0;
-  virtual framework::PowerInterface *GetPower() = 0;
-  virtual framework::ProcessInterface *GetProcess() = 0;
-  virtual framework::WirelessInterface *GetWireless() = 0;
-  virtual framework::FileSystemInterface *GetFileSystem() = 0;
-  virtual framework::AudioclipInterface *CreateAudioclip(const char *src) = 0;
+  virtual AudioclipInterface * CreateAudioclip(const char *src) = 0;
 };
 
+/** Interface for querying cursor position on the screen. */
+class CursorInterface {
+ protected:
+  virtual ~CursorInterface() {}
+
+ public:
+  virtual void GetPosition(int *x, int *y) = 0;
+};
+
+class ScreenInterface {
+ protected:
+  virtual ~ScreenInterface() {}
+
+ public:
+  virtual void GetSize(int *width, int *height) = 0;
+};
+
+} // namespace framework
 } // namespace ggadget
 
 #endif // GGADGET_FRAMEWORK_INTERFACE_H__

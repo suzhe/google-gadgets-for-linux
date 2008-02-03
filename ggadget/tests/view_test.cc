@@ -22,11 +22,13 @@
 #include "ggadget/scriptable_event.h"
 #include "ggadget/slot.h"
 #include "ggadget/view.h"
+#include "ggadget/native_main_loop.h"
 #include "ggadget/xml_utils.h"
 #include "mocked_element.h"
 #include "mocked_view_host.h"
 
 ggadget::ElementFactory *gFactory = NULL;
+ggadget::NativeMainLoop main_loop;
 
 class EventHandler {
  public:
@@ -42,7 +44,7 @@ class EventHandler {
     ASSERT_EQ(ggadget::Event::EVENT_KEY_DOWN,
               current_scriptable_event->GetEvent()->GetType());
     ggadget::MouseEvent event(ggadget::Event::EVENT_MOUSE_CLICK, 123, 456,
-                              ggadget::MouseEvent::BUTTON_LEFT, 999, 666);
+                              999, 888, ggadget::MouseEvent::BUTTON_LEFT,  666);
     ggadget::ScriptableEvent scriptable_event(&event, view_, NULL);
     view_->FireEvent(&scriptable_event, signal2_);
     // The current event should be the same as before.
@@ -61,7 +63,8 @@ class EventHandler {
     ASSERT_EQ(123, mouse_event->GetX());
     ASSERT_EQ(456, mouse_event->GetY());
     ASSERT_EQ(ggadget::MouseEvent::BUTTON_LEFT, mouse_event->GetButton());
-    ASSERT_EQ(999, mouse_event->GetWheelDelta());
+    ASSERT_EQ(999, mouse_event->GetWheelDeltaX());
+    ASSERT_EQ(888, mouse_event->GetWheelDeltaY());
   }
 
   ggadget::EventSignal signal1_, signal2_;
@@ -117,7 +120,7 @@ TEST(ViewTest, XMLConstruction) {
   view->GetChildren()->GetItemByIndex(0)->GetChildren()->RemoveElement(m);
   ASSERT_TRUE(view->GetElementByName("muffin") == NULL);
 
-  ggadget::BasicElement *m2 = 
+  ggadget::BasicElement *m2 =
       ggadget::down_cast<ggadget::Elements *>(
           view->GetChildren()->GetItemByIndex(0)->GetChildren())->
       AppendElementFromXML("<muffin name=\"new-muffin\"/>");
@@ -127,6 +130,8 @@ TEST(ViewTest, XMLConstruction) {
 }
 
 int main(int argc, char *argv[]) {
+  ggadget::SetGlobalMainLoop(&main_loop);
+
   testing::ParseGUnitFlags(&argc, argv);
   gFactory = new ggadget::ElementFactory();
   gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);

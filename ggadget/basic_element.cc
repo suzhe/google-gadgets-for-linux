@@ -13,7 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#include <iostream>
+#include <vector>
 #include "basic_element.h"
 #include "common.h"
 #include "logger.h"
@@ -593,7 +593,7 @@ class BasicElement::Impl {
 
     if (!visible_ || opacity_ == 0) {
       return EVENT_RESULT_UNHANDLED;
-    }    
+    }
 
     if (!direct && children_) {
       // Send to the children first.
@@ -613,10 +613,12 @@ class BasicElement::Impl {
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     if (type != Event::EVENT_MOUSE_MOVE) {
-      DLOG("%s(%s|%s): %g %g %d %d", scriptable_event.GetName(),
+      DLOG("%s(%s|%s): x:%g y:%g dx:%d dy:%d b:%d m:%d",
+           scriptable_event.GetName(),
            name_.c_str(), tag_name_.c_str(),
            event.GetX(), event.GetY(),
-           event.GetButton(), event.GetWheelDelta());
+           event.GetWheelDeltaX(), event.GetWheelDeltaY(),
+           event.GetButton(), event.GetModifier());
     }
 
     ElementHolder in_element_holder(*in_element);
@@ -1456,6 +1458,25 @@ void BasicElement::SelfCoordToParentCoord(double x, double y,
   }
 }
 
+void BasicElement::ParentCoordToSelfCoord(double parent_x, double parent_y,
+                                          double *x, double *y) const {
+  const BasicElement *parent = GetParentElement();
+  if (parent) {
+    parent->SelfCoordToChildCoord(this, parent_x, parent_y, x, y);
+  } else {
+    ParentCoordToChildCoord(parent_x, parent_y,
+                            GetPixelX(), GetPixelY(),
+                            GetPixelPinX(), GetPixelPinY(),
+                            DegreesToRadians(GetRotation()),
+                            x, y);
+    FlipMode flip = GetFlip();
+    if (flip & FLIP_HORIZONTAL)
+      *x = GetPixelWidth() - *x;
+    if (flip & FLIP_VERTICAL)
+      *y = GetPixelHeight() - *y;
+  }
+}
+
 void BasicElement::SelfCoordToViewCoord(double x, double y,
                                         double *view_x, double *view_y) const {
   const BasicElement *elm = this;
@@ -1465,6 +1486,20 @@ void BasicElement::SelfCoordToViewCoord(double x, double y,
   }
   if (view_x) *view_x = x;
   if (view_y) *view_y = y;
+}
+
+void BasicElement::ViewCoordToSelfCoord(double view_x, double view_y,
+                                        double *self_x, double *self_y) const {
+  std::vector<const BasicElement *> elements;
+  for (const BasicElement *e = this; e != NULL; e = e->GetParentElement())
+    elements.push_back(e);
+
+  std::vector<const BasicElement *>::reverse_iterator it = elements.rbegin();
+  for (; it != elements.rend(); ++it)
+    (*it)->ParentCoordToSelfCoord(view_x, view_y, &view_x, &view_y);
+
+  if (self_x) *self_x = view_x;
+  if (self_y) *self_y = view_y;
 }
 
 void BasicElement::GetDefaultSize(double *width, double *height) const {

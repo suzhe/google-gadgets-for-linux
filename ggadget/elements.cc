@@ -134,24 +134,22 @@ class Elements::Impl {
                              BasicElement *child,
                              PositionEvent *new_event) {
     double child_x, child_y;
-    if (owner_) {
-      owner_->SelfCoordToChildCoord(child, org_event.GetX(), org_event.GetY(),
-                                    &child_x, &child_y);
-    } else {
-      ParentCoordToChildCoord(org_event.GetX(), org_event.GetY(),
-                              child->GetPixelX(), child->GetPixelY(),
-                              child->GetPixelPinX(), child->GetPixelPinY(),
-                              DegreesToRadians(child->GetRotation()),
-                              &child_x, &child_y);
-      BasicElement::FlipMode flip = child->GetFlip();
-      if (flip & BasicElement::FLIP_HORIZONTAL)
-        child_x = child->GetPixelWidth() - child_x;
-      if (flip & BasicElement::FLIP_VERTICAL)
-        child_y = child->GetPixelHeight() - child_y;
-    }
-
+    ASSERT(owner_ == child->GetParentElement());
+    child->ParentCoordToSelfCoord(org_event.GetX(), org_event.GetY(),
+                                  &child_x, &child_y);
     new_event->SetX(child_x);
     new_event->SetY(child_y);
+  }
+
+  void MapChildMouseEvent(const MouseEvent &org_event,
+                          BasicElement *child,
+                          MouseEvent *new_event) {
+    MapChildPositionEvent(org_event, child, new_event);
+    BasicElement::FlipMode flip = child->GetFlip();
+    if (flip & BasicElement::FLIP_HORIZONTAL)
+      new_event->SetWheelDeltaX(-org_event.GetWheelDeltaX());
+    if (flip & BasicElement::FLIP_VERTICAL)
+      new_event->SetWheelDeltaY(-org_event.GetWheelDeltaY());
   }
 
   EventResult OnMouseEvent(const MouseEvent &event,
@@ -172,7 +170,7 @@ class Elements::Impl {
       // visibility of ancestors.
       if (!child->IsVisible() || child->GetOpacity() == 0.0)
         continue;
-      MapChildPositionEvent(event, child, &new_event);
+      MapChildMouseEvent(event, child, &new_event);
       if (child->IsPointIn(new_event.GetX(), new_event.GetY())) {
         BasicElement *child = *ite;
         ElementHolder child_holder(*ite);

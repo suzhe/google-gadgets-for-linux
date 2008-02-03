@@ -99,7 +99,7 @@ class EnumerateExtensionCallback {
     MultipleExtensionRegisterWrapper reg_wrapper;
     ElementExtensionRegister element_reg(NULL);
     ScriptExtensionRegister script_reg(NULL);
-    FrameworkExtensionRegister framework_reg(NULL);
+    FrameworkExtensionRegister framework_reg(NULL, NULL);
     reg_wrapper.AddExtensionRegister(&element_reg);
     reg_wrapper.AddExtensionRegister(&script_reg);
     reg_wrapper.AddExtensionRegister(&framework_reg);
@@ -144,7 +144,7 @@ TEST_F(ExtensionManagerTest, RegisterLoaded) {
   MultipleExtensionRegisterWrapper reg_wrapper;
   ElementExtensionRegister element_reg(NULL);
   ScriptExtensionRegister script_reg(NULL);
-  FrameworkExtensionRegister framework_reg(NULL);
+  FrameworkExtensionRegister framework_reg(NULL, NULL);
   reg_wrapper.AddExtensionRegister(&element_reg);
   reg_wrapper.AddExtensionRegister(&script_reg);
   reg_wrapper.AddExtensionRegister(&framework_reg);
@@ -192,7 +192,7 @@ TEST_F(ExtensionManagerTest, GlobalManager) {
   MultipleExtensionRegisterWrapper reg_wrapper;
   ElementExtensionRegister element_reg(NULL);
   ScriptExtensionRegister script_reg(NULL);
-  FrameworkExtensionRegister framework_reg(NULL);
+  FrameworkExtensionRegister framework_reg(NULL, NULL);
   reg_wrapper.AddExtensionRegister(&element_reg);
   reg_wrapper.AddExtensionRegister(&script_reg);
   reg_wrapper.AddExtensionRegister(&framework_reg);

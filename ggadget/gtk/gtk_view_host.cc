@@ -245,8 +245,8 @@ bool GtkViewHost::ShowTooltip(int timer_id) {
   gtk_misc_set_alignment(GTK_MISC(tooltip_label_), 0.5, 0.5);
   gtk_container_add(GTK_CONTAINER(tooltip_window_), tooltip_label_);
 
-  int x, y;
-  gadget_host_->GetCursorPos(&x, &y);
+  gint x, y;
+  gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
   gtk_window_move(GTK_WINDOW(tooltip_window_), x, y + 20);
   gtk_widget_show_all(tooltip_window_);
 

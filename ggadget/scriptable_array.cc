@@ -21,8 +21,7 @@ namespace ggadget {
 class ScriptableArray::Impl {
  public:
   Impl(ScriptableArray *owner, Variant *array, size_t count)
-      : owner_(owner),
-        array_(array), count_(count) {
+      : owner_(owner), array_(array), count_(count) {
   }
 
   ScriptableArray *ToArray() { return owner_; }
@@ -34,6 +33,10 @@ class ScriptableArray::Impl {
 
 ScriptableArray::ScriptableArray(Variant *array, size_t count)
     : impl_(new Impl(this, array, count)) {
+}
+
+ScriptableArray::ScriptableArray()
+    : impl_(new Impl(this, NULL, 0)) {
 }
 
 void ScriptableArray::DoRegister() {

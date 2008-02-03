@@ -24,7 +24,6 @@ namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
 class FileManagerInterface;
-class FrameworkInterface;
 class GadgetInterface;
 class MainLoopInterface;
 class OptionsInterface;
@@ -55,9 +54,6 @@ class GadgetHostInterface {
 
   /** Returns the @c OptionsInterface instance for this gadget. */
   virtual OptionsInterface *GetOptions() = 0;
-
-  /** Returns the global @c FrameworkInterface instance. */
-  virtual FrameworkInterface *GetFramework() = 0;
 
   /** Returns the global @c XMLParserInterface instance. */
   virtual XMLParserInterface *GetXMLParser() = 0;
@@ -126,29 +122,6 @@ class GadgetHostInterface {
 
   /** Remove a previously installed font. */
   virtual bool UnloadFont(const char *filename) = 0;
-
-  /**
-   * Displays the standard browse for file dialog and returns a collection
-   * containing the names of the selected files.
-   * @param filter in the form "Display Name|List of Types", and multiple
-   *     entries can be added to it. For example:
-   *     "Music Files|*.mp3;*.wma|All Files|*.*".
-   * @param multiple @c true if allow selection of multiple files.
-   * @param[out] result the selected files or an empty collection if dialog is
-   *     canceled.
-   * @return @c false if the dialog is canceled.
-   */
-  virtual bool BrowseForFiles(const char *filter, bool multiple,
-                              std::vector<std::string> *result) = 0;
-
-  /** Retrieves the position of the cursor. */
-  virtual void GetCursorPos(int *x, int *y) const = 0;
-
-  /** Retrieves the screen size. */
-  virtual void GetScreenSize(int *width, int *height) const = 0;
-
-  /** Returns the path to the icon associated with the specified file. */
-  virtual std::string GetFileIcon(const char *filename) const = 0;
 };
 
 } // namespace ggadget

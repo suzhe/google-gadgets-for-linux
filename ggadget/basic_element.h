@@ -245,7 +245,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Gets and sets the mask bitmap that defines the clipping path for this
    * element. If a pixel in the mask bitmap is black, the pixel is fully
    * transparent, otherwise the alpha value of the pixel will be applied.
-   * @see View::LoadImage()  
+   * @see View::LoadImage()
    */
   Variant GetMask() const;
   void SetMask(const Variant &mask);
@@ -402,6 +402,18 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
                               double *parent_x, double *parent_y) const;
 
   /**
+   * Converts coordinates in this element's parent space (or view space if it
+   * has not parent)  to coordinates in itself.
+   *
+   * @param parent_x x-coordinate in this element's parent space to convert.
+   * @param parent_y y-coordinate in this element's parent space to convert.
+   * @param[out] x parameter to store the converted self x-coordinate.
+   * @param[out] y parameter to store the converted self y-coordinate.
+   */
+  void ParentCoordToSelfCoord(double parent_x, double parent_y,
+                              double *x, double *y) const;
+
+  /**
    * Converts coordinates in this element's space to coordinates in the top
    * level view.
    *
@@ -415,6 +427,21 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   void SelfCoordToViewCoord(double x, double y,
                             double *view_x, double *view_y) const;
+
+  /**
+   * Converts coordinates in the top level view space to coordinates in the
+   * element itself.
+   *
+   * This function uses ParentCoordToSelfCoord() and traverses its parents upto
+   * the view to calculate the coordinates.
+   *
+   * @param view_x x-coordinate in the top level view space to convert.
+   * @param view_y y-coordinate in the top level view space to convert.
+   * @param[out] view_x parameter to store the converted self x-coordinate.
+   * @param[out] view_y parameter to store the converted self y-coordinate.
+   */
+  void ViewCoordToSelfCoord(double view_x, double view_y,
+                            double *self_x, double *self_y) const;
 
   /**
    * Delegates to @c Elements::SetScrollable().

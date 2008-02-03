@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-using namespace framework;
+namespace framework {
 
 // Default args for File.Delete() and Folder.Delete().
 static const Variant kDeleteDefaultArgs[] = {
@@ -661,4 +661,5 @@ ScriptableFileSystem::~ScriptableFileSystem() {
   impl_ = NULL;
 }
 
+} // namespace framework
 } // namespace ggadget

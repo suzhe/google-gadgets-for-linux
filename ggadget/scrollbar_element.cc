@@ -635,7 +635,7 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
      }
      break;
     case Event::EVENT_MOUSE_WHEEL: {
-      impl_->accum_wheel_delta_ += event.GetWheelDelta();
+      impl_->accum_wheel_delta_ += event.GetWheelDeltaY();
       bool downleft;
       int delta = impl_->accum_wheel_delta_;
       if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
