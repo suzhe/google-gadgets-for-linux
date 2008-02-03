@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <map>
 #include "scriptable_framework.h"
 #include "audioclip_interface.h"
 #include "file_manager_interface.h"
@@ -29,21 +30,12 @@
 #include "unicode_utils.h"
 #include "view.h"
 #include "view_host_interface.h"
+#include "gadget.h"
+#include "event.h"
+#include "scriptable_event.h"
 
 namespace ggadget {
-
-using framework::MachineInterface;
-using framework::MemoryInterface;
-using framework::NetworkInterface;
-using framework::PerfmonInterface;
-using framework::PowerInterface;
-using framework::ProcessesInterface;
-using framework::ProcessInfoInterface;
-using framework::ProcessInterface;
-using framework::WirelessAccessPointInterface;
-using framework::WirelessInterface;
-using framework::FileSystemInterface;
-using framework::AudioclipInterface;
+namespace framework {
 
 // Default argument list for methods that has single optional slot argument.
 static const Variant kDefaultArgsForSingleSlot[] = {
@@ -55,525 +47,604 @@ static const Variant kDefaultArgsForSecondSlot[] = {
   Variant(), Variant(static_cast<Slot *>(NULL))
 };
 
-class ScriptableFramework::Impl {
+// Implementation of ScriptableAudio
+class ScriptableAudioclip : public ScriptableHelperDefault {
  public:
-  Impl(GadgetHostInterface *gadget_host)
-      : gadget_host_(gadget_host),
-        audio_(gadget_host),
-        graphics_(gadget_host),
-        system_(gadget_host) {
+  DEFINE_CLASS_ID(0xa9f42ea54e2a4d13, ScriptableInterface);
+  ScriptableAudioclip(AudioclipInterface *clip)
+      : clip_(clip) {
+    ASSERT(clip);
+    RegisterProperty("balance",
+                     NewSlot(clip_, &AudioclipInterface::GetBalance),
+                     NewSlot(clip_, &AudioclipInterface::SetBalance));
+    RegisterProperty("currentPosition",
+                     NewSlot(clip_, &AudioclipInterface::GetCurrentPosition),
+                     NewSlot(clip_, &AudioclipInterface::SetCurrentPosition));
+    RegisterProperty("duration",
+                     NewSlot(clip_, &AudioclipInterface::GetDuration), NULL);
+    RegisterProperty("error", NewSlot(clip_, &AudioclipInterface::GetError),
+                     NULL);
+    RegisterProperty("src", NewSlot(clip_, &AudioclipInterface::GetSrc),
+                     NewSlot(clip_, &AudioclipInterface::SetSrc));
+    RegisterProperty("state", NewSlot(clip_, &AudioclipInterface::GetState),
+                     NULL);
+    RegisterProperty("volume", NewSlot(clip_, &AudioclipInterface::GetVolume),
+                     NewSlot(clip_, &AudioclipInterface::SetVolume));
+    RegisterSignal("onstatechange", &onstatechange_signal_);
+    RegisterMethod("play", NewSlot(clip_, &AudioclipInterface::Play));
+    RegisterMethod("pause", NewSlot(clip_, &AudioclipInterface::Pause));
+    RegisterMethod("stop", NewSlot(clip_, &AudioclipInterface::Stop));
+
+    clip->ConnectOnStateChange(
+        NewSlot(this, &ScriptableAudioclip::OnStateChange));
   }
 
-  class PermanentScriptable : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
-  };
-
-  class ScriptableAudioclip : public ScriptableHelperDefault {
-   public:
-    DEFINE_CLASS_ID(0xa9f42ea54e2a4d13, ScriptableInterface);
-    ScriptableAudioclip(AudioclipInterface *clip)
-        : clip_(clip) {
-      ASSERT(clip);
-      RegisterProperty("balance",
-                       NewSlot(clip_, &AudioclipInterface::GetBalance),
-                       NewSlot(clip_, &AudioclipInterface::SetBalance));
-      RegisterProperty("currentPosition",
-                       NewSlot(clip_, &AudioclipInterface::GetCurrentPosition),
-                       NewSlot(clip_, &AudioclipInterface::SetCurrentPosition));
-      RegisterProperty("duration",
-                       NewSlot(clip_, &AudioclipInterface::GetDuration), NULL);
-      RegisterProperty("error", NewSlot(clip_, &AudioclipInterface::GetError),
-                       NULL);
-      RegisterProperty("src", NewSlot(clip_, &AudioclipInterface::GetSrc),
-                       NewSlot(clip_, &AudioclipInterface::SetSrc));
-      RegisterProperty("state", NewSlot(clip_, &AudioclipInterface::GetState),
-                       NULL);
-      RegisterProperty("volume", NewSlot(clip_, &AudioclipInterface::GetVolume),
-                       NewSlot(clip_, &AudioclipInterface::SetVolume));
-      RegisterSignal("onstatechange", &onstatechange_signal_);
-      RegisterMethod("play", NewSlot(clip_, &AudioclipInterface::Play));
-      RegisterMethod("pause", NewSlot(clip_, &AudioclipInterface::Pause));
-      RegisterMethod("stop", NewSlot(clip_, &AudioclipInterface::Stop));
-
-      clip->ConnectOnStateChange(
-          NewSlot(this, &ScriptableAudioclip::OnStateChange));
-    }
-
-    ~ScriptableAudioclip() {
-      clip_->Destroy();
-      clip_ = NULL;
-    }
-
-    void OnStateChange(AudioclipInterface::State state) {
-      onstatechange_signal_(this, state);
-    }
-
-    Connection *ConnectOnStateChange(Slot *slot) {
-      return onstatechange_signal_.ConnectGeneral(slot);
-    }
-
-    AudioclipInterface *clip_;
-    Signal2<void, ScriptableAudioclip *, AudioclipInterface::State>
-        onstatechange_signal_;
-  };
-
-  class Audio : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x7f460413b19241fe, ScriptableInterface);
-
-    Audio(GadgetHostInterface *gadget_host)
-        : framework_(gadget_host->GetFramework()),
-          file_manager_(gadget_host->GetFileManager()) {
-      RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Open),
-                                                    kDefaultArgsForSecondSlot));
-      RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(this, &Audio::Play),
-                                                    kDefaultArgsForSecondSlot));
-      RegisterMethod("stop", NewSlot(this, &Audio::Stop));
-    }
-
-    ScriptableAudioclip *Open(const char *src, Slot *method) {
-      if (!src || !*src)
-        return NULL;
-
-      std::string src_str;
-      if (strstr(src, "://")) {
-        src_str = src;
-      } else {
-        // src may be a relative file name under the base path of the gadget.
-        std::string extracted_file;
-        if (!file_manager_->ExtractFile(src, &extracted_file))
-          return NULL;
-        src_str = "file://" + extracted_file;
-      }
-
-      AudioclipInterface *clip = framework_->CreateAudioclip(src_str.c_str());
-      if (clip) {
-        ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
-        scriptable_clip->ConnectOnStateChange(method);
-        return scriptable_clip;
-      } else {
-        delete method;
-      }
-      return NULL;
-    }
-
-    ScriptableAudioclip *Play(const char *src, Slot *method) {
-      ScriptableAudioclip *clip = Open(src, method);
-      if (clip)
-        clip->clip_->Play();
-      return clip;
-    }
-
-    void Stop(ScriptableAudioclip *clip) {
-      if (clip)
-        clip->clip_->Stop();
-    }
-
-    FrameworkInterface *framework_;
-    FileManagerInterface *file_manager_;
-  };
-
-  class Graphics : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x211b114e852e4a1b, ScriptableInterface);
-    Graphics(GadgetHostInterface *gadget_host)
-        : gadget_host_(gadget_host) {
-      RegisterMethod("createPoint", NewSlot(this, &Graphics::CreatePoint));
-      RegisterMethod("createSize", NewSlot(this, &Graphics::CreateSize));
-      RegisterMethod("loadImage", NewSlot(this, &Graphics::LoadImage));
-    }
-
-    JSONString CreatePoint() {
-      return JSONString("{\"x\":0,\"y\":0}");
-    }
-    JSONString CreateSize() {
-      return JSONString("{\"height\":0,\"width\":0}");
-    }
-
-    ScriptableImage *LoadImage(const Variant &image_src) {
-      // Ugly implementation, because of not so elegent API
-      // "framework.graphics".
-      View *view = down_cast<View *>(gadget_host_->GetGadget()->
-                                     GetMainViewHost()->GetView());
-      ImageInterface *image = view->LoadImage(image_src, false);
-      return image ? new ScriptableImage(image) : NULL;
-    }
-
-    GadgetHostInterface *gadget_host_;
-  };
-
-  class ScriptableWirelessAccessPoint : public ScriptableHelperDefault {
-   public:
-    DEFINE_CLASS_ID(0xcf8c688383b54c43, ScriptableInterface);
-    ScriptableWirelessAccessPoint(WirelessAccessPointInterface *ap)
-        : ap_(ap) {
-      ASSERT(ap);
-      RegisterProperty(
-          "name",
-          NewSlot(ap_, &WirelessAccessPointInterface::GetName), NULL);
-      RegisterProperty(
-          "type",
-          NewSlot(ap_, &WirelessAccessPointInterface::GetType), NULL);
-      RegisterProperty(
-          "signalStrength",
-          NewSlot(ap_, &WirelessAccessPointInterface::GetSignalStrength), NULL);
-      RegisterMethod("connect",
-          NewSlotWithDefaultArgs(
-              NewSlot(this, &ScriptableWirelessAccessPoint::Connect),
-              kDefaultArgsForSingleSlot));
-      RegisterMethod("disconnect",
-          NewSlotWithDefaultArgs(
-              NewSlot(this, &ScriptableWirelessAccessPoint::Disconnect),
-              kDefaultArgsForSingleSlot));
-    }
-
-    virtual ~ScriptableWirelessAccessPoint() {
-      ap_->Destroy();
-      ap_ = NULL;
-    }
-
-    void Connect(Slot *method) {
-      ap_->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
-    }
-
-    void Disconnect(Slot *method) {
-      ap_->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
-    }
-
-    WirelessAccessPointInterface *ap_;
-  };
-
-  class System : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x81227fff6f63494a, ScriptableInterface);
-    System(GadgetHostInterface *gadget_host) :
-        gadget_host_(gadget_host),
-        framework_(gadget_host->GetFramework()),
-        filesystem_(gadget_host->GetFramework()->GetFileSystem()) {
-      RegisterConstant("bios", &bios_);
-      RegisterConstant("cursor", &cursor_);
-      RegisterConstant("filesystem", &filesystem_);
-      RegisterConstant("machine", &machine_);
-      RegisterConstant("memory", &memory_);
-      RegisterConstant("network", &network_);
-      RegisterConstant("perfmon", &perfmon_);
-      RegisterConstant("power", &power_);
-      RegisterConstant("process", &process_);
-      RegisterConstant("processor", &processor_);
-      RegisterConstant("screen", &screen_);
-      RegisterMethod("getFileIcon",
-                     NewSlot(gadget_host, &GadgetHostInterface::GetFileIcon));
-      // TODO: RegisterMethod("languageCode",)
-      RegisterMethod("localTimeToUniversalTime",
-                     NewSlot(&LocalTimeToUniversalTime));
-
-      MachineInterface *machine = framework_->GetMachine();
-      bios_.RegisterProperty(
-          "serialNumber",
-          NewSlot(machine, &MachineInterface::GetBiosSerialNumber), NULL);
-      cursor_.RegisterProperty(
-          "position",
-          NewSlot(this, &System::GetCursorPos), NULL);
-      machine_.RegisterProperty(
-          "manufacturer",
-          NewSlot(machine, &MachineInterface::GetMachineManufacturer), NULL);
-      machine_.RegisterProperty(
-          "model",
-          NewSlot(machine, &MachineInterface::GetMachineModel), NULL);
-
-      MemoryInterface *memory = framework_->GetMemory();
-      memory_.RegisterProperty(
-          "free", NewSlot(memory, &MemoryInterface::GetFree), NULL);
-      memory_.RegisterProperty(
-          "total", NewSlot(memory, &MemoryInterface::GetTotal), NULL);
-      memory_.RegisterProperty(
-          "used", NewSlot(memory, &MemoryInterface::GetUsed), NULL);
-      memory_.RegisterProperty(
-          "freePhysical",
-          NewSlot(memory, &MemoryInterface::GetFreePhysical), NULL);
-      memory_.RegisterProperty(
-          "totalPhysical",
-          NewSlot(memory, &MemoryInterface::GetTotalPhysical), NULL);
-      memory_.RegisterProperty(
-          "usedPhysical",
-          NewSlot(memory, &MemoryInterface::GetUsedPhysical), NULL);
-
-      NetworkInterface *network = framework_->GetNetwork();
-      network_.RegisterProperty(
-          "online", NewSlot(network, &NetworkInterface::IsOnline), NULL);
-      network_.RegisterProperty(
-          "connectionType",
-          NewSlot(network, &NetworkInterface::GetConnectionType), NULL);
-      network_.RegisterProperty(
-          "physicalMediaType",
-          NewSlot(network, &NetworkInterface::GetPhysicalMediaType), NULL);
-      network_.RegisterConstant("wireless", &wireless_);
-      // TODO: Is there framework.system.network.wirelessaccesspoint?
-
-      WirelessInterface *wireless = framework_->GetWireless();
-      wireless_.RegisterProperty(
-          "available",
-          NewSlot(wireless, &WirelessInterface::IsAvailable), NULL);
-      wireless_.RegisterProperty(
-          "connected",
-          NewSlot(wireless, &WirelessInterface::IsConnected), NULL);
-      wireless_.RegisterProperty(
-          "enumerateAvailableAccessPoints",
-          NewSlot(this, &System::EnumerateAvailableAPs), NULL);
-      wireless_.RegisterProperty(
-          "enumerationSupported",
-          NewSlot(wireless, &WirelessInterface::EnumerationSupported), NULL);
-      wireless_.RegisterProperty(
-          "name",
-          NewSlot(wireless, &WirelessInterface::GetName), NULL);
-      wireless_.RegisterProperty(
-          "networkName",
-          NewSlot(wireless, &WirelessInterface::GetNetworkName), NULL);
-      wireless_.RegisterProperty(
-          "signalStrength",
-          NewSlot(wireless, &WirelessInterface::GetSignalStrength), NULL);
-      wireless_.RegisterMethod("connect",
-          NewSlotWithDefaultArgs(NewSlot(this, &System::ConnectAP),
-                                 kDefaultArgsForSecondSlot));
-      wireless_.RegisterMethod("disconnect",
-          NewSlotWithDefaultArgs(NewSlot(this, &System::DisconnectAP),
-                                 kDefaultArgsForSecondSlot));
-
-      PerfmonInterface *perfmon = framework_->GetPerfmon();
-      perfmon_.RegisterMethod(
-          "currentValue",
-          NewSlot(perfmon, &PerfmonInterface::GetCurrentValue));
-      perfmon_.RegisterMethod("addCounter",
-                              NewSlot(this, &System::AddPerfmonCounter));
-      perfmon_.RegisterMethod("removeCounter",
-                              NewSlot(this, &System::RemovePerfmonCounter));
-
-      PowerInterface *power = framework_->GetPower();
-      power_.RegisterProperty(
-          "charing",
-          NewSlot(power, &PowerInterface::IsCharging), NULL);
-      power_.RegisterProperty(
-          "percentRemaining",
-          NewSlot(power, &PowerInterface::GetPercentRemaining), NULL);
-      power_.RegisterProperty(
-          "pluggedIn",
-          NewSlot(power, &PowerInterface::IsPluggedIn), NULL);
-      power_.RegisterProperty(
-          "timeRemaining",
-          NewSlot(power, &PowerInterface::GetTimeRemaining), NULL);
-      power_.RegisterProperty(
-          "timeTotal",
-          NewSlot(power, &framework::PowerInterface::GetTimeTotal), NULL);
-
-      process_.RegisterProperty("enumerateProcesses",
-                                NewSlot(this, &System::EnumerateProcesses),
-                                NULL);
-      process_.RegisterProperty("foreground",
-                                NewSlot(this, &System::GetForegroundProcess),
-                                NULL);
-      process_.RegisterMethod("getInfo",
-                              NewSlot(this, &System::GetProcessInfo));
-
-      processor_.RegisterProperty(
-          "architecture",
-          NewSlot(machine, &MachineInterface::GetProcessorArchitecture), NULL);
-      processor_.RegisterProperty(
-          "count",
-          NewSlot(machine, &MachineInterface::GetProcessorCount), NULL);
-      processor_.RegisterProperty(
-          "family",
-          NewSlot(machine, &MachineInterface::GetProcessorFamily), NULL);
-      processor_.RegisterProperty(
-          "model",
-          NewSlot(machine, &MachineInterface::GetProcessorModel), NULL);
-      processor_.RegisterProperty(
-          "name",
-          NewSlot(machine, &MachineInterface::GetProcessorName), NULL);
-      processor_.RegisterProperty(
-          "speed",
-          NewSlot(machine, &MachineInterface::GetProcessorSpeed), NULL);
-      processor_.RegisterProperty(
-          "stepping",
-          NewSlot(machine, &MachineInterface::GetProcessorStepping), NULL);
-      processor_.RegisterProperty(
-          "vendor",
-          NewSlot(machine, &MachineInterface::GetProcessorVendor), NULL);
-
-      screen_.RegisterProperty("size", NewSlot(this, &System::GetScreenSize),
-                               NULL);
-    }
-
-    // In standard JavaScript, the Date object supports both local time and
-    // UTC at the same time, and our Date object always use UTC, so this
-    // function always returns the input.
-    static Date LocalTimeToUniversalTime(const Date &date) {
-      return date;
-    }
-
-    JSONString GetCursorPos() {
-      int x, y;
-      gadget_host_->GetCursorPos(&x, &y);
-      return JSONString(StringPrintf("{\"x\":%d,\"y\":%d}", x, y));
-    }
-
-    ScriptableArray *EnumerateAvailableAPs() {
-      WirelessInterface *wireless = framework_->GetWireless();
-      ASSERT(wireless);
-
-      int count = wireless->GetAPCount();
-      ASSERT(count >= 0);
-      Variant *aps = new Variant[count];
-      for (int i = 0; i < count; i++) {
-        WirelessAccessPointInterface *ap = wireless->GetWirelessAccessPoint(i);
-        aps[i] = Variant(ap ? new ScriptableWirelessAccessPoint(ap) : NULL);
-      }
-      return ScriptableArray::Create(aps, static_cast<size_t>(count));
-    }
-
-    WirelessAccessPointInterface *GetAPByName(const char *ap_name) {
-      if (!ap_name) return NULL;
-
-      WirelessInterface *wireless = framework_->GetWireless();
-      ASSERT(wireless);
-
-      int count = wireless->GetAPCount();
-      ASSERT(count >= 0);
-      for (int i = 0; i < count; i++) {
-        WirelessAccessPointInterface *ap = wireless->GetWirelessAccessPoint(i);
-        if (ap) {
-          if (ap->GetName() == ap_name)
-            return ap;
-          ap->Destroy();
-        }
-      }
-      return NULL;
-    }
-
-    void ConnectAP(const char *ap_name, Slot *method) {
-      WirelessAccessPointInterface *ap = GetAPByName(ap_name);
-      if (ap) {
-        ap->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
-      } else {
-        delete method;
-      }
-    }
-
-    void DisconnectAP(const char *ap_name, Slot *method) {
-      WirelessAccessPointInterface *ap = GetAPByName(ap_name);
-      if (ap) {
-        ap->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
-      } else {
-        delete method;
-      }
-    }
-
-    void AddPerfmonCounter(const char *counter_path, Slot *script) {
-      // TODO:
-    }
-
-    void RemovePerfmonCounter(const char *counter_path) {
-      // TODO:
-    }
-
-    std::string EncodeProcessInfo(ProcessInfoInterface *proc_info) {
-      if (!proc_info)
-        return "null";
-
-      std::string path = proc_info->GetExecutablePath();
-      UTF16String utf16_path;
-      ConvertStringUTF8ToUTF16(path.c_str(), path.size(), &utf16_path);
-      return StringPrintf("{\"processId\":%d,\"executablePath\":\"%s\"}",
-                          proc_info->GetProcessId(),
-                          EncodeJavaScriptString(utf16_path.c_str()).c_str());
-    }
-
-    JSONString EnumerateProcesses() {
-      ProcessesInterface *processes =
-          framework_->GetProcess()->EnumerateProcesses();
-      if (processes) {
-        std::string json("[");
-        int count = processes->GetCount();
-        ASSERT(count >= 0);
-        for (int i = 0; i < count; i++) {
-          if (i > 0) json += ',';
-          json += EncodeProcessInfo(processes->GetItem(i));
-        }
-        processes->Destroy();
-
-        json += ']';
-        return JSONString(json);
-      } else {
-        return JSONString("null");
-      }
-    }
-
-    JSONString GetForegroundProcess() {
-      return JSONString(EncodeProcessInfo(framework_->GetProcess()->
-                                          GetForeground()));
-    }
-
-    JSONString GetProcessInfo(int pid) {
-      return JSONString(EncodeProcessInfo(framework_->GetProcess()->
-                                          GetInfo(pid)));
-    }
-
-    JSONString GetScreenSize() {
-      int width, height;
-      gadget_host_->GetScreenSize(&width, &height);
-      return JSONString(StringPrintf("{\"width\":%d,\"height\":%d}",
-                                     width, height));
-    }
-
-    GadgetHostInterface *gadget_host_;
-    FrameworkInterface *framework_;
-    PermanentScriptable bios_;
-    PermanentScriptable cursor_;
-    ScriptableFileSystem filesystem_;
-    PermanentScriptable machine_;
-    PermanentScriptable memory_;
-    PermanentScriptable network_;
-    PermanentScriptable wireless_;
-    PermanentScriptable perfmon_;
-    PermanentScriptable power_;
-    PermanentScriptable process_;
-    PermanentScriptable processor_;
-    PermanentScriptable screen_;
-  };
-
-  std::string BrowseForFile(const char *filter) {
-    std::string result;
-    std::vector<std::string> files;
-    if (gadget_host_->BrowseForFiles(filter, false, &files) &&
-        files.size() > 0)
-      result = files[0];
-    return result;
+  ~ScriptableAudioclip() {
+    clip_->Destroy();
+    clip_ = NULL;
   }
 
-  ScriptableArray *BrowseForFiles(const char *filter) {
-    std::vector<std::string> files;
-    gadget_host_->BrowseForFiles(filter, true, &files);
-    return ScriptableArray::Create(files.begin(), files.size());
+  void OnStateChange(AudioclipInterface::State state) {
+    onstatechange_signal_(this, state);
   }
 
-  GadgetHostInterface *gadget_host_;
-  Audio audio_;
-  Graphics graphics_;
-  System system_;
+  Connection *ConnectOnStateChange(Slot *slot) {
+    return onstatechange_signal_.ConnectGeneral(slot);
+  }
+
+  AudioclipInterface *clip_;
+  Signal2<void, ScriptableAudioclip *, AudioclipInterface::State>
+      onstatechange_signal_;
 };
 
-ScriptableFramework::ScriptableFramework(GadgetHostInterface *gadget_host)
-    : impl_(new Impl(gadget_host)) {
-  RegisterConstant("audio", &impl_->audio_);
-  RegisterConstant("graphics", &impl_->graphics_);
-  RegisterConstant("system", &impl_->system_);
-  RegisterMethod("BrowseForFile", NewSlot(impl_, &Impl::BrowseForFile));
-  RegisterMethod("BrowseForFiles", NewSlot(impl_, &Impl::BrowseForFiles));
+class ScriptableAudio::Impl {
+ public:
+  Impl(AudioInterface *audio, Gadget *gadget)
+    : audio_(audio), file_manager_(NULL) {
+    // FIXME: Ugly hack
+    file_manager_ =
+        gadget->GetMainViewHost()->GetGadgetHost()->GetFileManager();
+  }
+
+  ScriptableAudioclip *Open(const char *src, Slot *method) {
+    if (!src || !*src)
+      return NULL;
+
+    std::string src_str;
+    if (strstr(src, "://")) {
+      src_str = src;
+    } else {
+      // src may be a relative file name under the base path of the gadget.
+      std::string extracted_file;
+      if (!file_manager_->ExtractFile(src, &extracted_file))
+        return NULL;
+      src_str = "file://" + extracted_file;
+    }
+
+    AudioclipInterface *clip = audio_->CreateAudioclip(src_str.c_str());
+    if (clip) {
+      ScriptableAudioclip *scriptable_clip = new ScriptableAudioclip(clip);
+      scriptable_clip->ConnectOnStateChange(method);
+      return scriptable_clip;
+    } else {
+      delete method;
+    }
+    return NULL;
+  }
+
+  ScriptableAudioclip *Play(const char *src, Slot *method) {
+    ScriptableAudioclip *clip = Open(src, method);
+    if (clip)
+      clip->clip_->Play();
+    return clip;
+  }
+
+  void Stop(ScriptableAudioclip *clip) {
+    if (clip)
+      clip->clip_->Stop();
+  }
+
+  AudioInterface *audio_;
+  FileManagerInterface *file_manager_;
+};
+
+ScriptableAudio::ScriptableAudio(AudioInterface *audio,
+                                 Gadget *gadget)
+  : impl_(new Impl(audio, gadget)) {
+  RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::Open),
+                                                kDefaultArgsForSecondSlot));
+  RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::Play),
+                                                kDefaultArgsForSecondSlot));
+  RegisterMethod("stop", NewSlot(impl_, &Impl::Stop));
 }
 
-ScriptableFramework::~ScriptableFramework() {
+ScriptableAudio::~ScriptableAudio() {
   delete impl_;
   impl_ = NULL;
 }
 
+// Implementation of ScriptableNetwork
+class ScriptableWirelessAccessPoint : public ScriptableHelperDefault {
+ public:
+  DEFINE_CLASS_ID(0xcf8c688383b54c43, ScriptableInterface);
+  ScriptableWirelessAccessPoint(WirelessAccessPointInterface *ap)
+      : ap_(ap) {
+    ASSERT(ap);
+    RegisterProperty(
+        "name",
+        NewSlot(ap_, &WirelessAccessPointInterface::GetName), NULL);
+    RegisterProperty(
+        "type",
+        NewSlot(ap_, &WirelessAccessPointInterface::GetType), NULL);
+    RegisterProperty(
+        "signalStrength",
+        NewSlot(ap_, &WirelessAccessPointInterface::GetSignalStrength), NULL);
+    RegisterMethod("connect",
+        NewSlotWithDefaultArgs(
+            NewSlot(this, &ScriptableWirelessAccessPoint::Connect),
+            kDefaultArgsForSingleSlot));
+    RegisterMethod("disconnect",
+        NewSlotWithDefaultArgs(
+            NewSlot(this, &ScriptableWirelessAccessPoint::Disconnect),
+            kDefaultArgsForSingleSlot));
+  }
+
+  virtual ~ScriptableWirelessAccessPoint() {
+    ap_->Destroy();
+    ap_ = NULL;
+  }
+
+  void Connect(Slot *method) {
+    ap_->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
+  }
+
+  void Disconnect(Slot *method) {
+    ap_->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
+  }
+
+  WirelessAccessPointInterface *ap_;
+};
+
+class ScriptableWireless : public ScriptableHelperNativeOwnedDefault {
+ public:
+  DEFINE_CLASS_ID(0x1838DCFED2E146F3, ScriptableInterface);
+  explicit ScriptableWireless(WirelessInterface *wireless)
+    : wireless_(wireless) {
+    ASSERT(wireless_);
+    RegisterProperty(
+        "available",
+        NewSlot(wireless_, &WirelessInterface::IsAvailable), NULL);
+    RegisterProperty(
+        "connected",
+        NewSlot(wireless_, &WirelessInterface::IsConnected), NULL);
+    RegisterProperty(
+        "enumerateAvailableAccessPoints",
+        NewSlot(this, &ScriptableWireless::EnumerateAvailableAPs), NULL);
+    RegisterProperty(
+        "enumerationSupported",
+        NewSlot(wireless_, &WirelessInterface::EnumerationSupported), NULL);
+    RegisterProperty(
+        "name",
+        NewSlot(wireless_, &WirelessInterface::GetName), NULL);
+    RegisterProperty(
+        "networkName",
+        NewSlot(wireless_, &WirelessInterface::GetNetworkName), NULL);
+    RegisterProperty(
+        "signalStrength",
+        NewSlot(wireless_, &WirelessInterface::GetSignalStrength), NULL);
+    RegisterMethod(
+        "connect",
+        NewSlotWithDefaultArgs(NewSlot(this, &ScriptableWireless::ConnectAP),
+                               kDefaultArgsForSecondSlot));
+    RegisterMethod(
+        "disconnect",
+        NewSlotWithDefaultArgs(NewSlot(this, &ScriptableWireless::DisconnectAP),
+                               kDefaultArgsForSecondSlot));
+  }
+
+  ScriptableArray *EnumerateAvailableAPs() {
+    int count = wireless_->GetAPCount();
+    ASSERT(count >= 0);
+    Variant *aps = new Variant[count];
+    for (int i = 0; i < count; i++) {
+      WirelessAccessPointInterface *ap = wireless_->GetWirelessAccessPoint(i);
+      aps[i] = Variant(ap ? new ScriptableWirelessAccessPoint(ap) : NULL);
+    }
+    return ScriptableArray::Create(aps, static_cast<size_t>(count));
+  }
+
+  WirelessAccessPointInterface *GetAPByName(const char *ap_name) {
+    if (!ap_name) return NULL;
+
+    int count = wireless_->GetAPCount();
+    ASSERT(count >= 0);
+    for (int i = 0; i < count; i++) {
+      WirelessAccessPointInterface *ap = wireless_->GetWirelessAccessPoint(i);
+      if (ap) {
+        if (ap->GetName() == ap_name)
+          return ap;
+        ap->Destroy();
+      }
+    }
+    return NULL;
+  }
+
+  void ConnectAP(const char *ap_name, Slot *method) {
+    WirelessAccessPointInterface *ap = GetAPByName(ap_name);
+    if (ap) {
+      ap->Connect(method ? new SlotProxy1<void, bool>(method) : NULL);
+    } else {
+      delete method;
+    }
+  }
+
+  void DisconnectAP(const char *ap_name, Slot *method) {
+    WirelessAccessPointInterface *ap = GetAPByName(ap_name);
+    if (ap) {
+      ap->Disconnect(method ? new SlotProxy1<void, bool>(method) : NULL);
+    } else {
+      delete method;
+    }
+  }
+
+  WirelessInterface *wireless_;
+};
+
+class ScriptableNetwork::Impl {
+ public:
+  Impl(NetworkInterface *network)
+    : network_(network), scriptable_wireless_(network_->GetWireless()) {
+  }
+
+  NetworkInterface *network_;
+  ScriptableWireless scriptable_wireless_;
+};
+
+ScriptableNetwork::ScriptableNetwork(NetworkInterface *network)
+  : impl_(new Impl(network)) {
+  RegisterProperty(
+      "online", NewSlot(network, &NetworkInterface::IsOnline), NULL);
+  RegisterProperty(
+      "connectionType",
+      NewSlot(network, &NetworkInterface::GetConnectionType), NULL);
+  RegisterProperty(
+      "physicalMediaType",
+      NewSlot(network, &NetworkInterface::GetPhysicalMediaType), NULL);
+  RegisterConstant("wireless", &impl_->scriptable_wireless_);
+}
+
+ScriptableNetwork::~ScriptableNetwork() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+// Implementation of ScriptablePerfmon
+class ScriptablePerfmon::Impl {
+ public:
+  struct Counter {
+    int id;
+    EventSignal signal;
+  };
+
+  Impl(PerfmonInterface *perfmon, Gadget *gadget)
+    : perfmon_(perfmon), gadget_(gadget) {
+    ASSERT(perfmon_);
+    ASSERT(gadget_);
+  }
+
+  ~Impl() {
+    for (CounterMap::iterator it = counters_.begin();
+         it != counters_.end(); ++it) {
+      perfmon_->RemoveCounter(it->second->id);
+      delete it->second;
+    }
+  }
+
+  void AddCounter(const char *path, Slot *slot) {
+    ASSERT(path && *path && slot);
+
+    std::string str_path(path);
+    CounterMap::iterator it = counters_.find(str_path);
+    if (it != counters_.end()) {
+      // Remove the old one.
+      perfmon_->RemoveCounter(it->second->id);
+      delete it->second;
+      counters_.erase(it);
+    }
+
+    Counter *counter = new Counter;
+    static_cast<Signal*>(&counter->signal)->ConnectGeneral(slot);
+    counter->id = perfmon_->AddCounter(path, NewSlot(this, &Impl::Call));
+
+    if (counter->id >= 0)
+      counters_[str_path] = counter;
+    else
+      delete counter;
+  }
+
+  void RemoveCounter(const char *path) {
+    ASSERT(path && *path);
+    std::string str_path(path);
+    CounterMap::iterator it = counters_.find(str_path);
+    if (it != counters_.end()) {
+      perfmon_->RemoveCounter(it->second->id);
+      delete it->second;
+      counters_.erase(it);
+    }
+  }
+
+  void Call(const char *path, const Variant &value) {
+    ASSERT(path && *path);
+    std::string str_path(path);
+    CounterMap::iterator it = counters_.find(str_path);
+    if (it != counters_.end()) {
+      // FIXME: Ugly hack, to be changed after refactorying other parts.
+      PerfmonEvent event(value);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
+      View *view = down_cast<View*>(gadget_->GetMainViewHost()->GetView());
+      view->FireEvent(&scriptable_event, it->second->signal);
+    }
+  }
+
+  typedef std::map<std::string, Counter *> CounterMap;
+  CounterMap counters_;
+  PerfmonInterface *perfmon_;
+  Gadget *gadget_;
+};
+
+ScriptablePerfmon::ScriptablePerfmon(PerfmonInterface *perfmon,
+                                     Gadget *gadget)
+  : impl_(new Impl(perfmon, gadget)) {
+  RegisterMethod("currentValue",
+                 NewSlot(perfmon, &PerfmonInterface::GetCurrentValue));
+  RegisterMethod("addCounter",
+                 NewSlot(impl_, &Impl::AddCounter));
+  RegisterMethod("removeCounter",
+                 NewSlot(impl_, &Impl::RemoveCounter));
+}
+
+ScriptablePerfmon::~ScriptablePerfmon() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+// Implementation of ScriptableProcess
+class ScriptableProcess::Impl {
+ public:
+  Impl(ProcessInterface *process)
+    : process_(process) {
+    ASSERT(process_);
+  }
+
+  std::string EncodeProcessInfo(ProcessInfoInterface *proc_info) {
+    if (!proc_info)
+      return "null";
+
+    std::string path = proc_info->GetExecutablePath();
+    UTF16String utf16_path;
+    ConvertStringUTF8ToUTF16(path.c_str(), path.size(), &utf16_path);
+    return StringPrintf("{\"processId\":%d,\"executablePath\":\"%s\"}",
+                        proc_info->GetProcessId(),
+                        EncodeJavaScriptString(utf16_path.c_str()).c_str());
+  }
+
+  JSONString EnumerateProcesses() {
+    ProcessesInterface *processes = process_->EnumerateProcesses();
+    if (processes) {
+      std::string json("[");
+      int count = processes->GetCount();
+      ASSERT(count >= 0);
+      for (int i = 0; i < count; i++) {
+        if (i > 0) json += ',';
+        json += EncodeProcessInfo(processes->GetItem(i));
+      }
+      processes->Destroy();
+
+      json += ']';
+      return JSONString(json);
+    } else {
+      return JSONString("null");
+    }
+  }
+
+  JSONString GetForegroundProcess() {
+    return JSONString(EncodeProcessInfo(process_->GetForeground()));
+  }
+
+  JSONString GetProcessInfo(int pid) {
+    return JSONString(EncodeProcessInfo(process_->GetInfo(pid)));
+  }
+
+  ProcessInterface *process_;
+};
+
+ScriptableProcess::ScriptableProcess(ProcessInterface *process)
+  : impl_(new Impl(process)) {
+  RegisterProperty("enumerateProcesses",
+                   NewSlot(impl_, &Impl::EnumerateProcesses), NULL);
+  RegisterProperty("foreground",
+                   NewSlot(impl_, &Impl::GetForegroundProcess), NULL);
+  RegisterMethod("getInfo",
+                 NewSlot(impl_, &Impl::GetProcessInfo));
+}
+
+ScriptableProcess::~ScriptableProcess() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+// Implementation of ScriptablePower
+ScriptablePower::ScriptablePower(PowerInterface *power) {
+  ASSERT(power);
+  RegisterProperty(
+      "charing",
+      NewSlot(power, &PowerInterface::IsCharging), NULL);
+  RegisterProperty(
+      "percentRemaining",
+      NewSlot(power, &PowerInterface::GetPercentRemaining), NULL);
+  RegisterProperty(
+      "pluggedIn",
+      NewSlot(power, &PowerInterface::IsPluggedIn), NULL);
+  RegisterProperty(
+      "timeRemaining",
+      NewSlot(power, &PowerInterface::GetTimeRemaining), NULL);
+  RegisterProperty(
+      "timeTotal",
+      NewSlot(power, &PowerInterface::GetTimeTotal), NULL);
+}
+
+// Implementation of ScriptableMemory
+ScriptableMemory::ScriptableMemory(MemoryInterface *memory) {
+  ASSERT(memory);
+  RegisterProperty("free", NewSlot(memory, &MemoryInterface::GetFree), NULL);
+  RegisterProperty("total", NewSlot(memory, &MemoryInterface::GetTotal), NULL);
+  RegisterProperty("used", NewSlot(memory, &MemoryInterface::GetUsed), NULL);
+  RegisterProperty("freePhysical",
+                   NewSlot(memory, &MemoryInterface::GetFreePhysical), NULL);
+  RegisterProperty("totalPhysical",
+                   NewSlot(memory, &MemoryInterface::GetTotalPhysical), NULL);
+  RegisterProperty("usedPhysical",
+                   NewSlot(memory, &MemoryInterface::GetUsedPhysical), NULL);
+}
+
+// Implementation of ScriptableBios
+ScriptableBios::ScriptableBios(MachineInterface *machine) {
+  ASSERT(machine);
+  RegisterProperty(
+      "serialNumber",
+      NewSlot(machine, &MachineInterface::GetBiosSerialNumber), NULL);
+}
+
+// Implementation of ScriptableMachine
+ScriptableMachine::ScriptableMachine(MachineInterface *machine) {
+  ASSERT(machine);
+  RegisterProperty(
+      "manufacturer",
+      NewSlot(machine, &MachineInterface::GetMachineManufacturer), NULL);
+  RegisterProperty(
+      "model",
+      NewSlot(machine, &MachineInterface::GetMachineModel), NULL);
+}
+
+// Implementation of ScriptableProcessor
+ScriptableProcessor::ScriptableProcessor(MachineInterface *machine) {
+  ASSERT(machine);
+  RegisterProperty(
+      "architecture",
+      NewSlot(machine, &MachineInterface::GetProcessorArchitecture), NULL);
+  RegisterProperty(
+      "count",
+      NewSlot(machine, &MachineInterface::GetProcessorCount), NULL);
+  RegisterProperty(
+      "family",
+      NewSlot(machine, &MachineInterface::GetProcessorFamily), NULL);
+  RegisterProperty(
+      "model",
+      NewSlot(machine, &MachineInterface::GetProcessorModel), NULL);
+  RegisterProperty(
+      "name",
+      NewSlot(machine, &MachineInterface::GetProcessorName), NULL);
+  RegisterProperty(
+      "speed",
+      NewSlot(machine, &MachineInterface::GetProcessorSpeed), NULL);
+  RegisterProperty(
+      "stepping",
+      NewSlot(machine, &MachineInterface::GetProcessorStepping), NULL);
+  RegisterProperty(
+      "vendor",
+      NewSlot(machine, &MachineInterface::GetProcessorVendor), NULL);
+}
+
+// Implementation of ScriptableCursor
+class ScriptableCursor::Impl {
+ public:
+  Impl(CursorInterface *cursor) : cursor_(cursor) {
+    ASSERT(cursor_);
+  }
+
+  JSONString GetPosition() {
+    int x, y;
+    cursor_->GetPosition(&x, &y);
+    return JSONString(StringPrintf("{\"x\":%d,\"y\":%d}", x, y));
+  }
+
+  CursorInterface *cursor_;
+};
+
+ScriptableCursor::ScriptableCursor(CursorInterface *cursor)
+  : impl_(new Impl(cursor)) {
+  RegisterProperty("position", NewSlot(impl_, &Impl::GetPosition), NULL);
+}
+
+ScriptableCursor::~ScriptableCursor() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+// Implementation of ScriptableScreen
+class ScriptableScreen::Impl {
+ public:
+  Impl(ScreenInterface *screen) : screen_(screen) {
+    ASSERT(screen_);
+  }
+
+  JSONString GetSize() {
+    int width, height;
+    screen_->GetSize(&width, &height);
+    return JSONString(StringPrintf("{\"width\":%d,\"height\":%d}",
+                                   width, height));
+  }
+
+  ScreenInterface *screen_;
+};
+
+ScriptableScreen::ScriptableScreen(ScreenInterface *screen)
+  : impl_(new Impl(screen)) {
+  RegisterProperty("size", NewSlot(impl_, &Impl::GetSize), NULL);
+}
+
+ScriptableScreen::~ScriptableScreen() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+// Implementation of ScriptableGraphics
+class ScriptableGraphics::Impl {
+ public:
+  Impl(Gadget *gadget) : gadget_(gadget) {
+    ASSERT(gadget_);
+  }
+
+  JSONString CreatePoint() {
+    return JSONString("{\"x\":0,\"y\":0}");
+  }
+
+  JSONString CreateSize() {
+    return JSONString("{\"height\":0,\"width\":0}");
+  }
+
+  ScriptableImage *LoadImage(const Variant &image_src) {
+    //FIXME: Ugly hack
+    View *view = down_cast<View *>(gadget_->GetMainViewHost()->GetView());
+    ASSERT(view);
+    ImageInterface *image = view->LoadImage(image_src, false);
+    return image ? new ScriptableImage(image) : NULL;
+  }
+
+  Gadget *gadget_;
+};
+
+ScriptableGraphics::ScriptableGraphics(Gadget *gadget)
+  : impl_(new Impl(gadget)) {
+  RegisterMethod("createPoint", NewSlot(impl_, &Impl::CreatePoint));
+  RegisterMethod("createSize", NewSlot(impl_, &Impl::CreateSize));
+  RegisterMethod("loadImage", NewSlot(impl_, &Impl::LoadImage));
+}
+
+ScriptableGraphics::~ScriptableGraphics() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+} // namespace framework
 } // namespace ggadget

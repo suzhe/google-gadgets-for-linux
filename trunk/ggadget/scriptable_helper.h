@@ -313,6 +313,22 @@ typedef ScriptableHelperNativeOwned<ScriptableInterface>
     ScriptableHelperNativeOwnedDefault;
 
 /**
+ * A handy class that can be used as simple native owned scriptable object.
+ */
+class NativeOwnedScriptable : public ScriptableHelperNativeOwnedDefault {
+ public:
+  DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
+};
+
+/**
+ * A handy class that can be used as simple shared scriptable object.
+ */
+class SharedScriptable : public ScriptableHelperDefault {
+ public:
+  DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
+};
+
+/**
  * Utility function to get a named property from a scriptable object.
  * It calls <code>scriptable->GetPropertyInfoByName()</code> and then
  * <code>scriptable->GetProperty()</code>.

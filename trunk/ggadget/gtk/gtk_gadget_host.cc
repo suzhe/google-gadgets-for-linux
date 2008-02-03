@@ -22,7 +22,6 @@
 #include <ggadget/element_factory.h>
 #include <ggadget/file_manager.h>
 #include <ggadget/file_manager_wrapper.h>
-#include <ggadget/framework_interface.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
@@ -44,11 +43,9 @@ namespace gtk {
 static const char kResourceZipName[] = "ggl-resources.bin";
 
 GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
-                             FrameworkInterface *framework,
                              bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : script_runtime_(script_runtime),
-      framework_(framework),
       xml_parser_(CreateXMLParser()),
       resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
@@ -111,10 +108,6 @@ FileManagerInterface *GtkGadgetHost::GetFileManager() {
 
 OptionsInterface *GtkGadgetHost::GetOptions() {
   return options_;
-}
-
-FrameworkInterface *GtkGadgetHost::GetFramework() {
-  return framework_;
 }
 
 XMLParserInterface *GtkGadgetHost::GetXMLParser() {
@@ -480,69 +473,6 @@ void GtkGadgetHost::OnDockActivate(GtkMenuItem *menu_item,
                                    gpointer user_data) {
   // GtkGadgetHost *this_p = static_cast<GtkGadgetHost *>(user_data);
   DLOG("DockActivate");
-}
-
-bool GtkGadgetHost::BrowseForFiles(const char *filter, bool multiple,
-                                   std::vector<std::string> *result) {
-  ASSERT(result);
-  result->clear();
-
-  GtkWidget *dialog = gtk_file_chooser_dialog_new(
-      gadget_->GetManifestInfo(kManifestName).c_str(), NULL,
-      GTK_FILE_CHOOSER_ACTION_OPEN,
-      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-      GTK_STOCK_OK, GTK_RESPONSE_OK,
-      NULL);
-
-  gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), multiple);
-  if (filter && *filter) {
-    std::string filter_str(filter);
-    std::string filter_name, patterns, pattern;
-    while (!filter_str.empty()) {
-      if (SplitString(filter_str, "|", &filter_name, &filter_str))
-        SplitString(filter_str, "|", &patterns, &filter_str);
-      else
-        patterns = filter_name;
-
-      GtkFileFilter *file_filter = gtk_file_filter_new();
-      gtk_file_filter_set_name(file_filter, filter_name.c_str());
-      while (!patterns.empty()) {
-        SplitString(patterns, ";", &pattern, &patterns);
-        gtk_file_filter_add_pattern(file_filter, pattern.c_str());
-      }
-      gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), file_filter);
-    }
-  }
-
-  GSList *selected_files = NULL;
-  if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
-    selected_files = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
-  gtk_widget_destroy(dialog);
-
-  if (!selected_files)
-    return false;
-
-  while (selected_files) {
-    result->push_back(static_cast<const char *>(selected_files->data));
-    selected_files = g_slist_next(selected_files);
-  }
-  return true;
-}
-
-void GtkGadgetHost::GetCursorPos(int *x, int *y) const {
-  gdk_display_get_pointer(gdk_display_get_default(), NULL, x, y, NULL);
-}
-
-void GtkGadgetHost::GetScreenSize(int *width, int *height) const {
-  GdkScreen *screen;
-  gdk_display_get_pointer(gdk_display_get_default(), &screen, NULL, NULL, NULL);
-  *width = gdk_screen_get_width(screen);
-  *height = gdk_screen_get_height(screen);
-}
-
-std::string GtkGadgetHost::GetFileIcon(const char *filename) const {
-  // TODO:
-  return "/usr/share/icons/application-default-icon.png";
 }
 
 } // namespace gtk

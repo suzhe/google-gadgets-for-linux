@@ -76,7 +76,11 @@ void ScriptableEvent::DoRegister() {
     RegisterProperty("button",
                      NewSlot(mouse_event, &MouseEvent::GetButton), NULL);
     RegisterProperty("wheelDelta",
-                     NewSlot(mouse_event, &MouseEvent::GetWheelDelta), NULL);
+                     NewSlot(mouse_event, &MouseEvent::GetWheelDeltaY), NULL);
+    RegisterProperty("wheelDeltaX",
+                     NewSlot(mouse_event, &MouseEvent::GetWheelDeltaX), NULL);
+    RegisterProperty("wheelDeltaY",
+                     NewSlot(mouse_event, &MouseEvent::GetWheelDeltaY), NULL);
   } else if (event->IsKeyboardEvent()) {
     const KeyboardEvent *key_event = static_cast<const KeyboardEvent *>(event);
     RegisterProperty("keyCode",
@@ -120,6 +124,13 @@ void ScriptableEvent::DoRegister() {
         RegisterProperty("cookie", NewSlot(timer_event, &TimerEvent::GetToken),
                          NULL);
         RegisterProperty("value", NewSlot(timer_event, &TimerEvent::GetValue),
+                         NULL);
+        break;
+      }
+      case Event::EVENT_PERFMON: {
+        const PerfmonEvent *perfmon_event =
+            static_cast<const PerfmonEvent *>(event);
+        RegisterProperty("value", NewSlot(perfmon_event, &PerfmonEvent::GetValue),
                          NULL);
         break;
       }
@@ -176,6 +187,7 @@ const char *ScriptableEvent::GetName() const {
     case Event::EVENT_SIZING: return kOnSizingEvent;
     case Event::EVENT_OPTION_CHANGED: return kOnOptionChangedEvent;
     case Event::EVENT_TIMER: return "";  // Windows version does the same.
+    case Event::EVENT_PERFMON: return ""; // FIXME: Is it correct?
     default: ASSERT(false); return "";
   }
 }

@@ -210,7 +210,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * other elements on the view.
    */
   void SetPopupElement(BasicElement *element);
-  BasicElement *GetPopupElement(); 
+  BasicElement *GetPopupElement();
 
   /**
    * Any elements should call this method when it need to fire an event.

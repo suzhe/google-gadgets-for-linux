@@ -216,8 +216,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   class GadgetGlobal : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
-    GadgetGlobal(Gadget::Impl *owner)
-        : framework_(owner->host_) {
+    GadgetGlobal(Gadget::Impl *owner) {
       RegisterConstant("gadget", owner);
       RegisterConstant("options", &owner->scriptable_options_);
       RegisterConstant("strings", &owner->strings_);
@@ -231,15 +230,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
       // Properties and methods of framework can also be accessed directly as
       // globals.
-      RegisterConstant("framework", &framework_);
-      SetInheritsFrom(&framework_);
+      RegisterConstant("framework", &owner->framework_);
+      SetInheritsFrom(&owner->framework_);
     }
-
-    ScriptableFramework framework_;
   };
 
   Impl(GadgetHostInterface *host, Gadget *owner, int debug_mode)
-      : host_(host),
+      : owner_(owner),
+        host_(host),
         debug_(this),
         storage_(this),
         scriptable_options_(host->GetOptions(), false),
@@ -552,9 +550,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     MultipleExtensionRegisterWrapper register_wrapper;
     ElementExtensionRegister element_register(element_factory_);
     ScriptExtensionRegister script_register(context);
+    FrameworkExtensionRegister framework_register(&framework_,
+                                                  owner_);
 
     register_wrapper.AddExtensionRegister(&element_register);
     register_wrapper.AddExtensionRegister(&script_register);
+    register_wrapper.AddExtensionRegister(&framework_register);
 
     if (global_manager)
       global_manager->RegisterLoadedExtensions(&register_wrapper);
@@ -577,6 +578,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     manifest_info_map_[kManifestAboutText] = about_text;
   }
 
+  Gadget *owner_;
   Signal1<Variant, DisplayWindow *> onshowoptionsdlg_signal_;
   GadgetHostInterface *host_;
   Debug debug_;
@@ -584,6 +586,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   Strings strings_;
   ScriptableOptions scriptable_options_;
   Plugin plugin_;
+  NativeOwnedScriptable framework_;
   GadgetGlobal gadget_global_;
   ElementFactory *element_factory_;
   ExtensionManager *extension_manager_;

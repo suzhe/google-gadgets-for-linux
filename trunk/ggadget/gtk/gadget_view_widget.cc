@@ -234,7 +234,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
     if (event->button >= 1 && event->button <= 3) {
       MouseEvent e(Event::EVENT_MOUSE_DOWN,
                    event->x / gvw->zoom, event->y / gvw->zoom,
-                   button, 0, mod);
+                   0, 0, button, mod);
       handler_result = gvw->view->OnMouseEvent(e);
 
       if (event->button == 1) {
@@ -253,8 +253,8 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
           // by host to popup the context menu.
           MouseEvent e(
               Event::EVENT_MOUSE_UP,
-              event->x / gvw->zoom, event->y / gvw->zoom,
-              MouseEvent::BUTTON_RIGHT, 0,
+              event->x / gvw->zoom, event->y / gvw->zoom, 0, 0,
+              MouseEvent::BUTTON_RIGHT,
               ggadget::gtk::ConvertGdkModifierToModifier(event->state));
           // Ignore the result of this fake event.
           gvw->view->OnMouseEvent(e);
@@ -272,7 +272,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
                       Event::EVENT_MOUSE_DBLCLICK :
                       Event::EVENT_MOUSE_RDBLCLICK;
       MouseEvent e(t, event->x / gvw->zoom, event->y / gvw->zoom,
-                   button, 0, mod);
+                   0, 0, button, mod);
       handler_result = gvw->view->OnMouseEvent(e);
     }
   }
@@ -306,7 +306,7 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
   int mod = ggadget::gtk::ConvertGdkModifierToModifier(event->state);
   if (event->button >= 1 && event->button <= 3) {
     MouseEvent e(Event::EVENT_MOUSE_UP,
-                 event->x / gvw->zoom, event->y / gvw->zoom, button, 0, mod);
+                 event->x / gvw->zoom, event->y / gvw->zoom, 0, 0, button, mod);
     handler_result = gvw->view->OnMouseEvent(e);
   }
 
@@ -314,9 +314,9 @@ static gboolean GadgetViewWidget_button_release(GtkWidget *widget,
     if (button == MouseEvent::BUTTON_LEFT ||
         button == MouseEvent::BUTTON_RIGHT) {
       Event::Type t = button == MouseEvent::BUTTON_LEFT ?
-                      Event::EVENT_MOUSE_CLICK : Event::EVENT_MOUSE_RCLICK; 
+                      Event::EVENT_MOUSE_CLICK : Event::EVENT_MOUSE_RCLICK;
       MouseEvent e2(t, event->x / gvw->zoom, event->y / gvw->zoom,
-                    button, 0, mod);
+                    0, 0, button, mod);
       handler_result2 = gvw->view->OnMouseEvent(e2);
     }
   } else {
@@ -332,8 +332,8 @@ static gboolean GadgetViewWidget_enter_notify(GtkWidget *widget,
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_ENTER_NOTIFY);
   MouseEvent e(Event::EVENT_MOUSE_OVER,
-               event->x / gvw->zoom, event->y / gvw->zoom,
-               MouseEvent::BUTTON_NONE, 0,
+               event->x / gvw->zoom, event->y / gvw->zoom, 0, 0,
+               MouseEvent::BUTTON_NONE,
                ggadget::gtk::ConvertGdkModifierToModifier(event->state));
   return gvw->view->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED;
 }
@@ -345,8 +345,8 @@ static gboolean GadgetViewWidget_leave_notify(GtkWidget *widget,
   gvw->host->HideTooltip(0);
 
   MouseEvent e(Event::EVENT_MOUSE_OUT,
-               event->x / gvw->zoom, event->y / gvw->zoom,
-               MouseEvent::BUTTON_NONE, 0,
+               event->x / gvw->zoom, event->y / gvw->zoom, 0, 0,
+               MouseEvent::BUTTON_NONE,
                ggadget::gtk::ConvertGdkModifierToModifier(event->state));
   return gvw->view->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED;
 }
@@ -374,7 +374,7 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
   int button = ggadget::gtk::ConvertGdkModifierToButton(event->state);
   int mod = ggadget::gtk::ConvertGdkModifierToModifier(event->state);
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
-               event->x / gvw->zoom, event->y / gvw->zoom, button, 0, mod);
+               event->x / gvw->zoom, event->y / gvw->zoom, 0, 0, button, mod);
   EventResult handler_result = gvw->view->OnMouseEvent(e);
 
   if (handler_result == ggadget::EVENT_RESULT_UNHANDLED &&
@@ -385,8 +385,8 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
     // the window. Note: no mouse click event is sent in this case, to prevent
     // unwanted action after window move.
     MouseEvent e(Event::EVENT_MOUSE_UP,
-                 event->x / gvw->zoom, event->y / gvw->zoom,
-                 MouseEvent::BUTTON_LEFT, 0,
+                 event->x / gvw->zoom, event->y / gvw->zoom, 0, 0,
+                 MouseEvent::BUTTON_LEFT,
                  ggadget::gtk::ConvertGdkModifierToModifier(event->state));
     // Ignore the result of this fake event.
     gvw->view->OnMouseEvent(e);
@@ -498,17 +498,20 @@ static gboolean GadgetViewWidget_scroll(GtkWidget *widget,
                                         GdkEventScroll *event) {
   GadgetViewWidget *gvw = GADGETVIEWWIDGET(widget);
   ASSERT(event->type == GDK_SCROLL);
-  int delta;
+  int delta_x = 0, delta_y = 0;
   if (event->direction == GDK_SCROLL_UP) {
-    delta = MouseEvent::kWheelDelta;
+    delta_y = MouseEvent::kWheelDelta;
   } else if (event->direction == GDK_SCROLL_DOWN) {
-    delta = -MouseEvent::kWheelDelta;
-  } else {
-    delta = 0;
+    delta_y = -MouseEvent::kWheelDelta;
+  } else if (event->direction == GDK_SCROLL_RIGHT) {
+    delta_x = MouseEvent::kWheelDelta;
+  } else if (event->direction == GDK_SCROLL_LEFT) {
+    delta_x = -MouseEvent::kWheelDelta;
   }
+
   MouseEvent e(Event::EVENT_MOUSE_WHEEL,
-               event->x / gvw->zoom, event->y / gvw->zoom,
-               ggadget::gtk::ConvertGdkModifierToButton(event->state), delta,
+               event->x / gvw->zoom, event->y / gvw->zoom, delta_x, delta_y,
+               ggadget::gtk::ConvertGdkModifierToButton(event->state),
                ggadget::gtk::ConvertGdkModifierToModifier(event->state));
   return gvw->view->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED;
 }

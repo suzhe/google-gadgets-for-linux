@@ -22,6 +22,7 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/script_context_interface.h"
 #include "ggadget/scriptable_helper.h"
+#include "ggadget/gadget.h"
 
 #define FUNC_NAME_INTERNAL2(a,b)  a##_LTX_##b
 #define FUNC_NAME_INTERNAL1(prefix,name)  FUNC_NAME_INTERNAL2(prefix,name)
@@ -74,9 +75,9 @@ extern "C" {
 
 #ifdef FRAMEWORK_EXTENSION
   bool FUNC_NAME(RegisterFrameworkExtension)(
-      ggadget::ScriptableHelperDefault *framework_obj) {
-    LOG("Register Framework extension %s, framework_obj=%p",
-        AS_STRING(MODULE_NAME), framework_obj);
+      ggadget::ScriptableInterface *framework, ggadget::Gadget *gadget) {
+    LOG("Register Framework extension %s, framework=%p gadget=%p",
+        AS_STRING(MODULE_NAME), framework, gadget);
     return true;
   }
 #endif

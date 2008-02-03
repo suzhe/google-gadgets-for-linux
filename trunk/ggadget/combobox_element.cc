@@ -543,8 +543,8 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
         // be dispatched to child.
         impl_->mouseover_child_ = impl_->edit_;
         MouseEvent in(Event::EVENT_MOUSE_OVER, event.GetX(), event.GetY(),
-                      event.GetButton(), event.GetWheelDelta(),
-                      event.GetModifier());
+                      event.GetWheelDeltaX(), event.GetWheelDeltaY(),
+                      event.GetButton(), event.GetModifier());
         impl_->mouseover_child_->OnMouseEvent(in, true, &new_fired, &new_in);
         // Ignore return from handler and don't return to continue processing.
         if (t == Event::EVENT_MOUSE_OVER) {
@@ -578,8 +578,8 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
       // it off and send a mouse out event to child. The original event is
       // still dispatched to parent.
       MouseEvent new_event(Event::EVENT_MOUSE_OUT, event.GetX(), event.GetY(),
-                           event.GetButton(), event.GetWheelDelta(),
-                           event.GetModifier());
+                           event.GetWheelDeltaX(), event.GetWheelDeltaY(),
+                           event.GetButton(), event.GetModifier());
       impl_->mouseover_child_->OnMouseEvent(new_event, true,
                                             &new_fired, &new_in);
       impl_->mouseover_child_ = NULL;

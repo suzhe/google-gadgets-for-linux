@@ -281,27 +281,21 @@ class View::Impl {
                              BasicElement *child,
                              PositionEvent *new_event) {
     ASSERT(child);
-    std::vector<BasicElement *> elements;
-    for (BasicElement *e = child; e != NULL; e = e->GetParentElement())
-      elements.push_back(e);
-
     double x, y;
-    BasicElement *top = *(elements.end() - 1);
-    ParentCoordToChildCoord(org_event.GetX(), org_event.GetY(),
-                            top->GetPixelX(), top->GetPixelY(),
-                            top->GetPixelPinX(), top->GetPixelPinY(),
-                            DegreesToRadians(top->GetRotation()),
-                            &x, &y);
-
-    for (std::vector<BasicElement *>::reverse_iterator it = elements.rbegin();
-         // Note: Don't iterator to the last element.
-         it < elements.rend() - 1; ++it) {
-      // Make copies to prevent them from being overriden.
-      double x1 = x, y1 = y;
-      (*it)->SelfCoordToChildCoord(*(it + 1), x1, y1, &x, &y);
-    }
+    child->ViewCoordToSelfCoord(org_event.GetX(), org_event.GetY(), &x, &y);
     new_event->SetX(x);
     new_event->SetY(y);
+  }
+
+  void MapChildMouseEvent(const MouseEvent &org_event,
+                          BasicElement *child,
+                          MouseEvent *new_event) {
+    MapChildPositionEvent(org_event, child, new_event);
+    BasicElement::FlipMode flip = child->GetFlip();
+    if (flip & BasicElement::FLIP_HORIZONTAL)
+      new_event->SetWheelDeltaX(-org_event.GetWheelDeltaX());
+    if (flip & BasicElement::FLIP_VERTICAL)
+      new_event->SetWheelDeltaY(-org_event.GetWheelDeltaY());
   }
 
   EventResult SendMouseEventToChildren(const MouseEvent &event) {
@@ -324,7 +318,7 @@ class View::Impl {
           (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
            type == Event::EVENT_MOUSE_CLICK)) {
         MouseEvent new_event(event);
-        MapChildPositionEvent(event, grabmouse_element_.Get(), &new_event);
+        MapChildMouseEvent(event, grabmouse_element_.Get(), &new_event);
         result = grabmouse_element_.Get()->OnMouseEvent(new_event, true,
                                                         &temp, &temp1);
         // Release the grabbing on EVENT_MOUSE_CLICK not EVENT_MOUSE_UP,
@@ -343,7 +337,7 @@ class View::Impl {
       // The mouse has been moved out of the view, clear the mouseover state.
       if (mouseover_element_.Get()) {
         MouseEvent new_event(event);
-        MapChildPositionEvent(event, mouseover_element_.Get(), &new_event);
+        MapChildMouseEvent(event, mouseover_element_.Get(), &new_event);
         result = mouseover_element_.Get()->OnMouseEvent(new_event, true,
                                                         &temp, &temp1);
         mouseover_element_.Reset(NULL);
@@ -360,7 +354,7 @@ class View::Impl {
     bool outside_popup = true;
     if (popup_element_.Get()) {
       MouseEvent new_event(event);
-      MapChildPositionEvent(event, popup_element_.Get(), &new_event);
+      MapChildMouseEvent(event, popup_element_.Get(), &new_event);
       if (popup_element_.Get()->IsPointIn(new_event.GetX(), new_event.GetY())) {
         result = popup_element_.Get()->OnMouseEvent(new_event,
                                                     false, // NOT direct
@@ -396,9 +390,11 @@ class View::Impl {
       if (old_mouseover_element) {
         MouseEvent mouseout_event(Event::EVENT_MOUSE_OUT,
                                   event.GetX(), event.GetY(),
-                                  event.GetButton(), event.GetWheelDelta(),
+                                  event.GetWheelDeltaX(),
+                                  event.GetWheelDeltaY(),
+                                  event.GetButton(),
                                   event.GetModifier());
-        MapChildPositionEvent(event, old_mouseover_element, &mouseout_event);
+        MapChildMouseEvent(event, old_mouseover_element, &mouseout_event);
         old_mouseover_element->OnMouseEvent(mouseout_event, true,
                                             &temp, &temp1);
       }
@@ -410,9 +406,11 @@ class View::Impl {
         } else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
                                      event.GetX(), event.GetY(),
-                                     event.GetButton(), event.GetWheelDelta(),
+                                     event.GetWheelDeltaX(),
+                                     event.GetWheelDeltaY(),
+                                     event.GetButton(),
                                      event.GetModifier());
-          MapChildPositionEvent(event, mouseover_element_.Get(),
+          MapChildMouseEvent(event, mouseover_element_.Get(),
                                 &mouseover_event);
           mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
                                                  &temp, &temp1);
@@ -438,9 +436,10 @@ class View::Impl {
     // Send event to view first.
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     if (event.GetType() != Event::EVENT_MOUSE_MOVE)
-      DLOG("%s(view): %g %g %d %d %d", scriptable_event.GetName(),
+      DLOG("%s(view): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
-           event.GetButton(), event.GetWheelDelta(), event.GetModifier());
+           event.GetWheelDeltaX(), event.GetWheelDeltaY(),
+           event.GetButton(), event.GetModifier());
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_MOVE:
         // Put the high volume events near top.

@@ -16,8 +16,11 @@
 
 #include "unittest/gunit.h"
 #include "ggadget/element_factory.h"
+#include "ggadget/native_main_loop.h"
 #include "mocked_element.h"
 #include "mocked_view_host.h"
+
+ggadget::NativeMainLoop main_loop;
 
 class ElementFactoryTest : public testing::Test {
  protected:
@@ -66,6 +69,8 @@ TEST_F(ElementFactoryTest, TestCreate) {
 }
 
 int main(int argc, char *argv[]) {
+  ggadget::SetGlobalMainLoop(&main_loop);
+
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

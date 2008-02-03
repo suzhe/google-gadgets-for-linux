@@ -19,13 +19,14 @@
 
 #include <string>
 #include <ggadget/slot.h>
-#include <ggadget/scriptable_helper.h>
 
 namespace ggadget {
 
 class ElementFactory;
-class Module;
 class ScriptContextInterface;
+class ScriptableInterface;
+class Module;
+class Gadget;
 
 static const char kElementExtensionSymbolName[] = "RegisterElementExtension";
 static const char kScriptExtensionSymbolName[] = "RegisterScriptExtension";
@@ -65,11 +66,21 @@ static const char kFrameworkExtensionSymbolName[] = "RegisterFrameworkExtension"
  *    objects under framework namespace shall be provided through framework
  *    extensions.
  *    This kind of extension modules must provide following symbol:
- *    - bool RegisterFrameworkExtension(ScriptableHelperDefault *framework_obj);
- *    This function shall register all framework classes or objects provided
- *    by the module into the specified ScriptableHelperDefault instance, which
- *    will be exported to gadget as framework object.
- *
+ *    - bool RegisterFrameworkExtension(ScriptableInterface *framework,
+ *                                      Gadget *gadget);
+ *    The specified @c framework object will be exported as framework script
+ *    object. All objects and methods belong to framework namespace must be
+ *    registered to it.
+ *    The objects and methods under framework.system must be registered to the
+ *    "system" property of specified framework scriptable instance.
+ *    The specified @c gadget object is the Gadget instance which owns the
+ *    framework and system objects. All per gadget framework objects shall bind to the
+ *    @c gadget object and be destroyed upon destroying the gadget. Currently
+ *    only two objects are per gadget:
+ *    - ScriptableAudio, which needs per gadget FileManager to load audio file.
+ *    - ScriptablePerfmon, which needs gadget's main View to send event.
+ *    Please refer to extensions/default_framework/default_framework.cc for
+ *    how to implement a framework extension.
  *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.
@@ -101,7 +112,7 @@ class ExtensionRegisterInterface {
  */
 class ElementExtensionRegister : public ExtensionRegisterInterface {
  public:
-  ElementExtensionRegister(ElementFactory *factory);
+  explicit ElementExtensionRegister(ElementFactory *factory);
   virtual bool RegisterExtension(const Module *extension);
 
   typedef bool (*RegisterElementExtensionFunc)(ElementFactory *);
@@ -114,7 +125,7 @@ class ElementExtensionRegister : public ExtensionRegisterInterface {
  */
 class ScriptExtensionRegister : public ExtensionRegisterInterface {
  public:
-  ScriptExtensionRegister(ScriptContextInterface *context);
+  explicit ScriptExtensionRegister(ScriptContextInterface *context);
   virtual bool RegisterExtension(const Module *extension);
 
   typedef bool (*RegisterScriptExtensionFunc)(ScriptContextInterface *);
@@ -127,12 +138,19 @@ class ScriptExtensionRegister : public ExtensionRegisterInterface {
  */
 class FrameworkExtensionRegister : public ExtensionRegisterInterface {
  public:
-  FrameworkExtensionRegister(ScriptableHelperDefault *framework_object);
+  /**
+   * @param framework The root scriptable object for framework namespace.
+   * @param file_manager The FileManager instance used by a specified gadget.
+   */
+  FrameworkExtensionRegister(ScriptableInterface *framework,
+                             Gadget *gadget);
   virtual bool RegisterExtension(const Module *extension);
 
-  typedef bool (*RegisterFrameworkExtensionFunc)(ScriptableHelperDefault *);
+  typedef bool (*RegisterFrameworkExtensionFunc)(ScriptableInterface *,
+                                                 Gadget *);
  private:
-  ScriptableHelperDefault *framework_object_;
+  ScriptableInterface *framework_;
+  Gadget *gadget_;
 };
 
 /**

@@ -116,6 +116,12 @@ AC_ARG_WITH([memcheck-command],
 	    [memcheck_command=$withval],
 	    [memcheck_command=""])
 
+AC_ARG_WITH([gst-audio-sink],
+	    AS_HELP_STRING([--with-gst-audio-sink=audiosink],
+		[Use a specified audiosink instead of autoaudiosink.]),
+	    [default_gst_audio_sink=$withval],
+	    [default_gst_audio_sink="autoaudiosink"])
+
 ###########################################################
 ##                  Start Configuration.                 ##
 ###########################################################
@@ -248,11 +254,12 @@ fi
 ##                  Process Config options.              ##
 ###########################################################
 
+build_simple_host=yes
 build_libggadget_gtk=yes
 build_libggadget_smjs=yes
 build_libggadget_dbus=yes
 build_gtkmoz_browser_element=yes
-build_simple_host=yes
+build_gst_audio_framework=yes
 
 if test x$has_libcurl != xyes; then
   AC_MSG_ERROR([Library curl is not available.])
@@ -267,9 +274,8 @@ if test x$has_zlib != xyes; then
 fi
 
 if test x$has_gstreamer != xyes; then
-  AC_MSG_WARN([Library gstreamer is not available.])
-else
-  AC_DEFINE(GST_AUDIOCLIP,1,[Use audioclip implementation based on gstreamer])
+  AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework extension won't be built])
+  build_gst_audio_framework=no
 fi
 
 if test x$has_cairo != xyes -o x$has_pango != xyes -o x$has_gdk2 != xyes; then
@@ -319,6 +325,10 @@ AM_CONDITIONAL(
   [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
   [test x$build_gtkmoz_browser_element = xyes])
 
+AM_CONDITIONAL(
+  [GGL_BUILD_GST_AUDIO_FRAMEWORK],
+  [test x$build_gst_audio_framework = xyes])
+
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_rsvg = xyes])
@@ -359,6 +369,12 @@ AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
 if test x$memcheck_command != x; then
   AC_CHECK_PROGS([MEMCHECK_COMMAND], [$memcheck_command])
   AC_SUBST(MEMCHECK_COMMAND)
+fi
+
+#Gstreamer audiosink
+if test x$default_gst_audio_sink != x; then
+  AC_DEFINE_UNQUOTED([GGL_DEFAULT_GST_AUDIO_SINK], ["$default_gst_audio_sink"],
+		     [Default Gstreamer audio sink.])
 fi
 
 ###########################################################
@@ -424,6 +440,9 @@ AC_CONFIG_FILES([Makefile
 		 extensions/dbus_script_class/Makefile
 		 extensions/gtk_edit_element/Makefile
 		 extensions/gtkmoz_browser_element/Makefile
+		 extensions/default_framework/Makefile
+		 extensions/gst_audio_framework/Makefile
+		 extensions/gtk_system_framework/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
@@ -470,6 +489,7 @@ Build options:
   Build dbus-script-class       $build_libggadget_dbus
   Build gtk-edit-element        $build_libggadget_gtk
   Build gtkmoz-browser-element  $build_gtkmoz_browser_element
+  Build gst-audio-framework     $build_gst_audio_framework
 
  Hosts:
   Build simple host             $build_simple_host

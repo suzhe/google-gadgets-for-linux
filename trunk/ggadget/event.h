@@ -19,6 +19,7 @@
 
 #include <string>
 #include <ggadget/common.h>
+#include <ggadget/variant.h>
 
 namespace ggadget {
 
@@ -87,6 +88,7 @@ class Event {
     EVENT_SIZING,
     EVENT_OPTION_CHANGED,
     EVENT_TIMER,
+    EVENT_PERFMON,
   };
 
   enum Modifier {
@@ -151,10 +153,12 @@ class MouseEvent : public PositionEvent {
     BUTTON_ALL = BUTTON_LEFT | BUTTON_MIDDLE | BUTTON_RIGHT,
   };
 
-  MouseEvent(Type t, double x, double y, int button, int wheel_delta,
-             int modifier)
-      : PositionEvent(t, x, y), button_(button), wheel_delta_(wheel_delta),
-        modifier_(modifier) {
+  MouseEvent(Type t, double x, double y,
+             int wheel_delta_x, int wheel_delta_y,
+             int button, int modifier)
+      : PositionEvent(t, x, y),
+        wheel_delta_x_(wheel_delta_x), wheel_delta_y_(wheel_delta_y),
+        button_(button), modifier_(modifier) {
     ASSERT(IsMouseEvent());
   }
 
@@ -164,14 +168,22 @@ class MouseEvent : public PositionEvent {
   int GetModifier() const { return modifier_; }
   void SetModifier(int m) { modifier_ = m; }
 
-  int GetWheelDelta() const { return wheel_delta_; }
-  void SetWheelDelta(int wheel_delta) { wheel_delta_ = wheel_delta; }
+  int GetWheelDeltaX() const { return wheel_delta_x_; }
+  void SetWheelDeltaX(int wheel_delta_x) {
+    wheel_delta_x_ = wheel_delta_x;
+  }
+
+  int GetWheelDeltaY() const { return wheel_delta_y_; }
+  void SetWheelDeltaY(int wheel_delta_y) {
+    wheel_delta_y_ = wheel_delta_y;
+  }
 
   static const int kWheelDelta = 120;
 
  private:
+  int wheel_delta_x_;
+  int wheel_delta_y_;
   int button_;
-  int wheel_delta_;
   int modifier_;
 };
 
@@ -366,6 +378,22 @@ class TimerEvent : public Event {
  private:
   int token_;
   int value_;
+};
+
+/**
+ * Class representing a perfmon event.
+ */
+class PerfmonEvent : public Event {
+ public:
+  PerfmonEvent(const Variant &value)
+      : Event(EVENT_PERFMON), value_(value) {
+  }
+
+  Variant GetValue() const { return value_; }
+  void SetValue(const Variant &value) { value_ = value; }
+
+ private:
+  Variant value_;
 };
 
 } // namespace ggadget
