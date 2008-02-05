@@ -16,9 +16,6 @@
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-LIBADD			= $(top_builddir)/unittest/libgunit.la \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
-
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 AM_LDFLAGS		= -avoid-version \
@@ -32,6 +29,9 @@ fake_module_la_SOURCES	= ../test_module.cc
 fake_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 			  -DMODULE_NAME=fake-module \
 			  -DMODULE_NAME_UNDERSCORE=fake_module
+fake_module_la_LIBADD	= $(top_builddir)/unittest/libgunit.la \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
 
 tux_module_la_SOURCES	= ../test_module.cc
 tux_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
@@ -39,3 +39,5 @@ tux_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 			  -DMODULE_NAME_UNDERSCORE=tux_module \
 			  -DFRAMEWORK_EXTENSION=1 \
 			  -DELEMENT_EXTENSION=1
+tux_module_la_LIBADD	= $(top_builddir)/unittest/libgunit.la \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la

@@ -15,4 +15,4 @@
 #
 
 EXTRA_DIST=valgrind
-SUBDIRS = unzip
+SUBDIRS = unzip editline

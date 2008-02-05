@@ -1,0 +1,38 @@
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include "perfmon.h"
+
+namespace ggadget {
+namespace framework {
+namespace linux_system {
+
+int64_t Perfmon::GetCurrentValue(const char *counter_path) {
+  // TODO:
+  return 19;
+}
+
+int Perfmon::AddCounter(const char *counter_path, CallbackSlot *slot) {
+  delete slot;
+  return -1;
+}
+
+void Perfmon::RemoveCounter(int id) {
+}
+
+} // namespace linux_system
+} // namespace framework
+} // namespace ggadget

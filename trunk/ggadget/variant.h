@@ -403,6 +403,8 @@ template <> struct VariantType<const void *>;
  */
 template <typename T>
 struct VariantValue {
+  typedef T value_type;
+
   T operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_INT64);
     return static_cast<T>(v.v_.int64_value_);
@@ -417,6 +419,8 @@ struct VariantValue {
  */
 template <typename T>
 struct VariantValue<T *> {
+  typedef T* value_type;
+
   T *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_SCRIPTABLE);
     if (v.type_ != Variant::TYPE_SCRIPTABLE)
@@ -434,6 +438,8 @@ struct VariantValue<T *> {
  */
 template <typename T>
 struct VariantValue<const T *> {
+  typedef const T* value_type;
+
   const T *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_SCRIPTABLE);
     if (v.type_ != Variant::TYPE_SCRIPTABLE)
@@ -450,6 +456,7 @@ struct VariantValue<const T *> {
 #define SPECIALIZE_VARIANT_VALUE(c_type, variant_field) \
 template <>                                             \
 struct VariantValue<c_type> {                           \
+  typedef c_type value_type;                            \
   c_type operator()(const Variant &v) {                 \
     ASSERT(v.type_ == VariantType<c_type>::type);       \
     return static_cast<c_type>(v.v_.variant_field);     \
@@ -463,6 +470,8 @@ SPECIALIZE_VARIANT_VALUE(double, double_value_)
 
 template <>
 struct VariantValue<Slot *> {
+  typedef Slot* value_type;
+
   Slot *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_SLOT);
     if (v.type_ != Variant::TYPE_SLOT)
@@ -479,6 +488,8 @@ struct VariantValue<Slot *> {
  */
 template <>
 struct VariantValue<const char *> {
+  typedef const char* value_type;
+
   const char *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
@@ -493,6 +504,8 @@ struct VariantValue<const char *> {
  */
 template <>
 struct VariantValue<std::string> {
+  typedef std::string value_type;
+
   std::string operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
@@ -507,6 +520,8 @@ struct VariantValue<std::string> {
  */
 template <>
 struct VariantValue<const std::string &> {
+  typedef std::string value_type;
+
   std::string operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
@@ -523,6 +538,8 @@ struct VariantValue<const std::string &> {
  */
 template <>
 struct VariantValue<const UTF16Char *> {
+  typedef const UTF16Char* value_type;
+
   const UTF16Char *operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
@@ -537,6 +554,8 @@ struct VariantValue<const UTF16Char *> {
  */
 template <>
 struct VariantValue<UTF16String> {
+  typedef UTF16String value_type;
+
   UTF16String operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
@@ -551,6 +570,8 @@ struct VariantValue<UTF16String> {
  */
 template <>
 struct VariantValue<const UTF16String &> {
+  typedef UTF16String value_type;
+
   UTF16String operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
@@ -565,6 +586,8 @@ struct VariantValue<const UTF16String &> {
  */
 template <>
 struct VariantValue<JSONString> {
+  typedef JSONString value_type;
+
   JSONString operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_JSON);
     if (v.type_ != Variant::TYPE_JSON)
@@ -579,6 +602,8 @@ struct VariantValue<JSONString> {
  */
 template <>
 struct VariantValue<const JSONString &> {
+  typedef JSONString value_type;
+
   JSONString operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_JSON);
     if (v.type_ != Variant::TYPE_JSON)
@@ -593,6 +618,8 @@ struct VariantValue<const JSONString &> {
  */
 template <>
 struct VariantValue<Date> {
+  typedef Date value_type;
+
   Date operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_DATE);
     return Date(static_cast<uint64_t>(v.v_.int64_value_));
@@ -605,6 +632,8 @@ struct VariantValue<Date> {
  */
 template <>
 struct VariantValue<const Date &> {
+  typedef Date value_type;
+
   Date operator()(const Variant &v) {
     ASSERT(v.type_ == Variant::TYPE_DATE);
     return Date(static_cast<uint64_t>(v.v_.int64_value_));
@@ -617,6 +646,8 @@ struct VariantValue<const Date &> {
  */
 template <>
 struct VariantValue<Variant> {
+  typedef const Variant& value_type;
+
   const Variant& operator()(const Variant &v) {
     return v;
   }
@@ -628,6 +659,8 @@ struct VariantValue<Variant> {
  */
 template <>
 struct VariantValue<const Variant &> {
+  typedef const Variant& value_type;
+
   const Variant& operator()(const Variant &v) {
     return v;
   }
@@ -635,6 +668,8 @@ struct VariantValue<const Variant &> {
 
 template <>
 struct VariantValue<void> {
+  typedef void value_type;
+
   void operator()(const Variant &v) { }
 };
 

@@ -361,14 +361,14 @@ class ScriptableIterator {
   bool operator==(const ScriptableIterator &another) const {
     if (array_.size() != another.array_.size() ||
         properties_.size() != another.properties_.size()) {
-      DLOG("size mismatch, array: %d:%d; property: %d:%d.",
+      DLOG("size mismatch, array: %zu:%zu; property: %zu:%zu.",
            array_.size(), another.array_.size(),
            properties_.size(), another.properties_.size());
       return false;
     }
     for (std::size_t i = 0; i < array_.size(); ++i)
       if (!IsEual(array_[i], another.array_[i])) {
-        DLOG("index %u mismatch: %s, %s", i, array_[i].Print().c_str(),
+        DLOG("index %zu mismatch: %s, %s", i, array_[i].Print().c_str(),
              another.array_[i].Print().c_str());
         return false;
       }

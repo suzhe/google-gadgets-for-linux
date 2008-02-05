@@ -194,9 +194,6 @@ AC_C_BIGENDIAN(
 
 # Check necessary libraries
 
-# Check gnu readline lib, for smjs unit tests.
-GGL_CHECK_READLINE([has_readline=yes], [has_readline=no])
-
 # Check zlib
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
@@ -256,10 +253,11 @@ fi
 
 build_simple_host=yes
 build_libggadget_gtk=yes
-build_libggadget_smjs=yes
 build_libggadget_dbus=yes
 build_gtkmoz_browser_element=yes
 build_gst_audio_framework=yes
+build_gtk_system_framework=yes
+build_smjs_script_runtime=yes
 
 if test x$has_libcurl != xyes; then
   AC_MSG_ERROR([Library curl is not available.])
@@ -279,20 +277,20 @@ if test x$has_gstreamer != xyes; then
 fi
 
 if test x$has_cairo != xyes -o x$has_pango != xyes -o x$has_gdk2 != xyes; then
-  AC_MSG_WARN([Library cairo, pango or gdk-2.0 are not available, libggadget-cairo and simple host won't be built])
+  AC_MSG_WARN([Library cairo, pango or gdk-2.0 are not available, libggadget-gtk and simple host won't be built])
   build_libggadget_gtk=no
   build_simple_host=no
 fi
 
 if test x$has_gtk2 != xyes; then
-  AC_MSG_WARN([Library gtk-2.0 is not available, simple host won't be built])
+  AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and simple host won't be built])
   build_simple_host=no
+  build_gtk_system_framework=no
 fi
 
 if test x$has_spidermonkey != xyes; then
-  AC_MSG_WARN([Library SpiderMonkey is not available, libggadget-smjs and simple host won't be built.])
-  build_libggadget_smjs=no
-  build_simple_host=no
+  AC_MSG_WARN([Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.])
+  build_smjs_script_runtime=no
 fi
 
 if test x$has_dbus != xyes; then
@@ -310,14 +308,6 @@ AM_CONDITIONAL(
   [test x$build_libggadget_gtk = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_LIBGGADGET_SMJS],
-  [test x$build_libggadget_smjs = xyes])
-
-AM_CONDITIONAL(
-  [GGL_BUILD_SIMPLE_HOST],
-  [test x$build_simple_host = xyes])
-
-AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_DBUS],
   [test x$build_libggadget_dbus = xyes])
 
@@ -329,8 +319,19 @@ AM_CONDITIONAL(
   [GGL_BUILD_GST_AUDIO_FRAMEWORK],
   [test x$build_gst_audio_framework = xyes])
 
+AM_CONDITIONAL(
+  [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
+  [test x$build_gtk_system_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_SMJS_SCRIPT_RUNTIME],
+  [test x$build_smjs_script_runtime = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_SIMPLE_HOST],
+  [test x$build_simple_host = xyes])
+
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
-AM_CONDITIONAL([GGL_HAVE_READLINE], [test x$has_readline = xyes])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_rsvg = xyes])
 
 if test x$ZIP = x; then
@@ -338,6 +339,8 @@ if test x$ZIP = x; then
 fi
 
 # OS Specific conditions.
+build_linux_system_framework=no
+
 case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
     ggl_host_type=windows
@@ -350,6 +353,7 @@ case $host_os in
   *linux* )
     ggl_host_type=linux
     AC_DEFINE(GGL_HOST_LINUX,1,[Linux host])
+    build_linux_system_framework=yes
     ;;
   *solaris* )
     ggl_host_type=solaris
@@ -443,6 +447,10 @@ AC_CONFIG_FILES([Makefile
 		 extensions/default_framework/Makefile
 		 extensions/gst_audio_framework/Makefile
 		 extensions/gtk_system_framework/Makefile
+		 extensions/linux_system_framework/Makefile
+		 extensions/linux_system_framework/tests/Makefile
+		 extensions/smjs_script_runtime/Makefile
+		 extensions/smjs_script_runtime/tests/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
@@ -451,21 +459,16 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/dbus/tests/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
-		 ggadget/linux/Makefile
-		 ggadget/linux/tests/Makefile
-		 ggadget/smjs/Makefile
-		 ggadget/smjs/tests/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
 		 resources/Makefile
 		 third_party/Makefile
+		 third_party/editline/Makefile
 		 third_party/unzip/Makefile
 		 unittest/Makefile
 		 ggadget/libggadget-1.0.pc
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/libggadget-gtk-1.0.pc
-		 ggadget/linux/libggadget-linux-1.0.pc
-		 ggadget/smjs/libggadget-smjs-1.0.pc
 		 ])
 AC_OUTPUT
 
@@ -482,7 +485,6 @@ Build options:
  Libraries:
   GTK SVG Support               $has_rsvg
   Build libggadget-gtk          $build_libggadget_gtk
-  Build libggadget-smjs         $build_libggadget_smjs
   Build libggadget-dbus         $build_libggadget_dbus
 
  Extensions:
@@ -490,6 +492,9 @@ Build options:
   Build gtk-edit-element        $build_libggadget_gtk
   Build gtkmoz-browser-element  $build_gtkmoz_browser_element
   Build gst-audio-framework     $build_gst_audio_framework
+  Build gtk-system-framework    $build_gtk_system_framework
+  Build linux-system-framework  $build_linux_system_framework
+  Build smjs-script-runtime     $build_smjs_script_runtime
 
  Hosts:
   Build simple host             $build_simple_host

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if GGL_BUILD_LIBGGADGET_GTK
+if GGL_BUILD_GTK_SYSTEM_FRAMEWORK
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)

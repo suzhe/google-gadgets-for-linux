@@ -25,7 +25,7 @@
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
-#include <ggadget/script_runtime_interface.h>
+#include <ggadget/script_runtime_manager.h>
 #include <ggadget/xml_parser.h>
 #include <ggadget/main_loop_interface.h>
 
@@ -42,11 +42,9 @@ namespace gtk {
 
 static const char kResourceZipName[] = "ggl-resources.bin";
 
-GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
-                             bool composited, bool useshapemask,
+GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
                              double zoom, int debug_mode)
-    : script_runtime_(script_runtime),
-      xml_parser_(CreateXMLParser()),
+    : xml_parser_(CreateXMLParser()),
       resource_file_manager_(new FileManager(xml_parser_)),
       global_file_manager_(new GlobalFileManager()),
       file_manager_(NULL),
@@ -74,7 +72,7 @@ GtkGadgetHost::GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
   wrapper->RegisterFileManager(ggadget::kDirSeparatorStr,
                                global_file_manager_);
 
-  script_runtime_->ConnectErrorReporter(
+  ScriptRuntimeManager::get()->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
 
   FcInit(); // Just in case this hasn't been done.
@@ -95,11 +93,6 @@ GtkGadgetHost::~GtkGadgetHost() {
   menu_ = NULL;
   delete xml_parser_;
   xml_parser_ = NULL;
-}
-
-ScriptRuntimeInterface *GtkGadgetHost::GetScriptRuntime(
-    ScriptRuntimeType type) {
-  return script_runtime_;
 }
 
 FileManagerInterface *GtkGadgetHost::GetFileManager() {
@@ -173,10 +166,6 @@ std::string GetFullPathOfSysCommand(const std::string &command) {
     cur_colon_pos = next_colon_pos + 1;
   }
   return "";
-}
-
-uint64_t GtkGadgetHost::GetCurrentTime() const {
-  return GetGlobalMainLoop()->GetCurrentTime();
 }
 
 bool GtkGadgetHost::OpenURL(const char *url) const {

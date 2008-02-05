@@ -24,7 +24,8 @@ INCLUDES		= -I$(top_builddir) \
 noinst_HEADERS		= dbus_utils.h
 
 dbusincludedir		= $(GGL_INCLUDE_DIR)/ggadget/dbus
-dbusinclude_HEADERS	= dbus_proxy.h
+dbusinclude_HEADERS	= dbus_proxy.h \
+			  dbus_result_receiver.h
 
 lib_LTLIBRARIES		= libggadget-dbus@GGL_EPOCH@.la
 

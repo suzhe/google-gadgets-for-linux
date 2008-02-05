@@ -41,8 +41,7 @@
 #include <xpconnect/nsIXPCScriptable.h>
 
 #include <ggadget/common.h>
-#include <ggadget/smjs/json.h>
-
+#include "../smjs_script_runtime/json.h"
 #include "browser_child.h"
 
 using ggadget::smjs::JSONEncode;

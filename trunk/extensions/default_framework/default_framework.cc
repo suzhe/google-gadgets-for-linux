@@ -75,11 +75,11 @@ class DefaultPerfmon : public PerfmonInterface {
 
 class DefaultPower : public PowerInterface {
  public:
-  virtual bool IsCharging() const { return false; }
-  virtual bool IsPluggedIn() const { return true; }
-  virtual int GetPercentRemaining() const { return 100; }
-  virtual int GetTimeRemaining() const { return 3600; }
-  virtual int GetTimeTotal() const { return 7200; }
+  virtual bool IsCharging() { return false; }
+  virtual bool IsPluggedIn() { return true; }
+  virtual int GetPercentRemaining() { return 100; }
+  virtual int GetTimeRemaining() { return 3600; }
+  virtual int GetTimeTotal() { return 7200; }
 };
 
 class DefaultProcessInfo : public ProcessInfoInterface {
@@ -148,11 +148,11 @@ class DefaultWireless : public WirelessInterface {
 
 class DefaultNetwork : public NetworkInterface {
  public:
-  virtual bool IsOnline() const { return true; }
-  virtual ConnectionType GetConnectionType() const {
+  virtual bool IsOnline() { return true; }
+  virtual ConnectionType GetConnectionType() {
     return NetworkInterface::CONNECTION_TYPE_802_3;
   }
-  virtual PhysicalMediaType GetPhysicalMediaType() const {
+  virtual PhysicalMediaType GetPhysicalMediaType() {
     return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
   }
   virtual WirelessInterface *GetWireless() {

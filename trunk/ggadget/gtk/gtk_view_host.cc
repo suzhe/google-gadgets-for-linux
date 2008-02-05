@@ -22,6 +22,7 @@
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
+#include <ggadget/script_runtime_manager.h>
 #include <ggadget/xml_http_request.h>
 #include "gtk_view_host.h"
 #include "cairo_graphics.h"
@@ -73,9 +74,13 @@ GtkViewHost::GtkViewHost(GtkGadgetHost *gadget_host,
       details_feedback_handler_(NULL) {
   if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
     // Only xml based views have standalone script context.
-    ScriptRuntimeInterface *script_runtime =
-        gadget_host->GetScriptRuntime(GadgetHostInterface::JAVASCRIPT);
-    script_context_ = script_runtime->CreateContext();
+    // FIXME: ScriptContext instance should be created on-demand, according to
+    // the type of script files shipped in the gadget.
+    // Or maybe we should add an option in gadget.gmanifest to specify what
+    // ScriptRuntime implementation is required.
+    // We may support multiple different script languages later.
+    script_context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
+    VERIFY_M(script_context_, ("Failed to create ScriptContext instance."));
   }
 
   view_->AttachHost(this);

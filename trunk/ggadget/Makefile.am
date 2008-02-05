@@ -18,14 +18,8 @@ SUBDIRS = . tests
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif
-if GGL_BUILD_LIBGGADGET_SMJS
-SUBDIRS += smjs
-endif
 if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS += dbus
-endif
-if GGL_HOST_LINUX
-SUBDIRS += linux
 endif
 
 INCLUDES		= -I$(top_builddir) \
@@ -84,6 +78,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scoped_ptr.h \
 			  script_context_interface.h \
 			  script_runtime_interface.h \
+			  script_runtime_manager.h \
 			  scriptable_array.h \
 			  scriptable_binary_data.h \
 			  scriptable_event.h \
@@ -153,6 +148,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  module.cc \
 			  native_main_loop.cc \
 			  progressbar_element.cc \
+			  script_runtime_manager.cc \
 			  scriptable_array.cc \
 			  scriptable_event.cc \
 			  scriptable_file_system.cc \
