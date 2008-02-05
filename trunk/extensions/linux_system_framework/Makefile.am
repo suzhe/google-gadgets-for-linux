@@ -79,8 +79,7 @@ linux_system_framework_la_LIBADD = \
 
 linux_system_framework_la_LDFLAGS = \
 			  -avoid-version \
-			  -module \
-			  -rpath $(libdir)
+			  -module
 
 endif
 endif

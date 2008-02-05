@@ -76,7 +76,6 @@ smjs_script_runtime_la_LIBADD = \
 smjs_script_runtime_la_LDFLAGS = \
 			  -avoid-version \
 			  -module \
-			  -rpath $(libdir) \
 			  @SPIDERMONKEY_LDFLAGS@
 
 endif

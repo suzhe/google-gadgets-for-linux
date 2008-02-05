@@ -41,6 +41,5 @@ dbus_script_class_la_LIBADD = \
 
 dbus_script_class_la_LDFLAGS = \
 			  -avoid-version \
-			  -module \
-			  -rpath $(libdir)
+			  -module
 endif

@@ -46,6 +46,5 @@ gtk_edit_element_la_LIBADD = \
 
 gtk_edit_element_la_LDFLAGS = \
 			  -avoid-version \
-			  -module \
-			  -rpath $(libdir)
+			  -module
 endif
