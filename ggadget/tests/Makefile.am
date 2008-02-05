@@ -92,7 +92,6 @@ foo_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 foo_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 foo_module_la_LDFLAGS		= -avoid-version \
-				  -rpath $(libdir) \
 				  -module
 
 bar_module_la_SOURCES		= test_module.cc
@@ -103,7 +102,6 @@ bar_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 bar_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 bar_module_la_LDFLAGS		= -avoid-version \
-				  -rpath $(libdir) \
 				  -module
 
 file_manager_test_data.dest: file_manager_test_data

@@ -40,8 +40,7 @@ gtkmoz_browser_element_la_LIBADD = \
 
 gtkmoz_browser_element_la_LDFLAGS = \
 			  -avoid-version \
-			  -module \
-			  -rpath $(libdir)
+			  -module
 
 
 ggllibexec_PROGRAMS	= gtkmoz-browser-child

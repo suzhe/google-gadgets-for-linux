@@ -192,8 +192,7 @@ libggadget@GGL_EPOCH@_la_LIBADD = \
 libggadget@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
 			  -export-dynamic \
-			  @LIBLTDL@ \
-			  -rpath $(libdir)
+			  @LIBLTDL@
 
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget@GGL_EPOCH@.pc

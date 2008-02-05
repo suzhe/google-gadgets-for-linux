@@ -1206,7 +1206,11 @@ dbus_bool_t DBusMainLoopClosure::Impl::AddWatch(DBusWatch *watch,
                                                 void* data) {
   Impl *this_p = reinterpret_cast<Impl*>(data);
   ASSERT(this_p);
+#if defined(DBUS_VERSION) && DBUS_VERSION > ((1 << 16) | (1 << 8) | (1))
   int fd = dbus_watch_get_unix_fd(watch);
+#else
+  int fd = dbus_watch_get_fd(watch);
+#endif
   int flag = dbus_watch_get_flags(watch);
   DLOG("add watch, fd: %d, flag: %d", fd, flag);
   if (flag == DBUS_WATCH_READABLE) {

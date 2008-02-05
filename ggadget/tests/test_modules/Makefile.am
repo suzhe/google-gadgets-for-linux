@@ -19,7 +19,6 @@ INCLUDES		= -I$(top_builddir) \
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 AM_LDFLAGS		= -avoid-version \
-			  -rpath $(libdir) \
 			  -module
 
 check_LTLIBRARIES	= fake-module.la \
