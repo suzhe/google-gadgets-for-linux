@@ -24,13 +24,13 @@
 using namespace ggadget;
 using namespace ggadget::internal;
 
-std::string actual_dir_path = "file_manager_test_data.dest";
+std::string actual_dir_path = "file_manager_test_data";
 std::string actual_gg_path = "file_manager_test_data.gg";
-std::string actual_manifest_path = "file_manager_test_data.dest";
+std::string actual_manifest_path = "file_manager_test_data";
 
-std::string base_dir_path = "file_manager_test_data.dest";
+std::string base_dir_path = "file_manager_test_data";
 std::string base_gg_path = "file_manager_test_data.gg";
-std::string base_manifest_path = "file_manager_test_data.dest/gadget.gmanifest";
+std::string base_manifest_path = "file_manager_test_data/gadget.gmanifest";
 
 XMLParserInterface *xml_parser = NULL;
 
@@ -145,8 +145,8 @@ void TestFileManagerFunctions(const std::string &base_path,
   std::string data;
   std::string path;
   ASSERT_TRUE(impl.GetFileContents("global_file", &data, &path));
-  EXPECT_STREQ("global_file at top\n", data.c_str());
-  EXPECT_STREQ((actual_path + "/global_file").c_str(), path.c_str());
+  EXPECT_STREQ("global_file under zh_CN\n", data.c_str());
+  EXPECT_STREQ((actual_path + "/zh_CN/global_file").c_str(), path.c_str());
   EXPECT_FALSE(impl.GetFileContents("non-exists", &data, &path));
   ASSERT_TRUE(impl.GetFileContents("zh_CN_file", &data, &path));
   EXPECT_STREQ((actual_path + "/zh_CN/zh_CN_file").c_str(), path.c_str());
@@ -157,8 +157,8 @@ void TestFileManagerFunctions(const std::string &base_path,
   EXPECT_EQ(32616U, data.size());
 
   ASSERT_TRUE(impl.GetFileContents("gLoBaL_FiLe", &data, &path));
-  EXPECT_STREQ((actual_path + "/global_file").c_str(), path.c_str());
-  EXPECT_STREQ("global_file at top\n", data.c_str());
+  EXPECT_STREQ((actual_path + "/zh_CN/global_file").c_str(), path.c_str());
+  EXPECT_STREQ("global_file under zh_CN\n", data.c_str());
   ASSERT_TRUE(impl.GetFileContents("ZH_cn_File", &data, &path));
   EXPECT_STREQ((actual_path + "/zh_CN/zh_CN_file").c_str(), path.c_str());
   EXPECT_STREQ("zh_CN_file contents\n", data.c_str());

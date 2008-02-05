@@ -116,11 +116,11 @@ FileManagerImpl::FileMap::const_iterator FileManagerImpl::FindFile(
       *i = kDirSeparator;
   }
 
-  // First try non-localized file.
-  FileMap::const_iterator iter = files_.find(*normalized_file);
+  // First try localized file.
+  FileMap::const_iterator iter = FindLocalizedFile(normalized_file->c_str());
   if (iter == files_.end())
-    // Second try localized file.
-    iter = FindLocalizedFile(normalized_file->c_str());
+    // Then try non-localized file.
+    iter = files_.find(*normalized_file);
 
   return iter;
 }
