@@ -19,7 +19,6 @@ ADD_SUBDIRECTORY(gtk)
 # Remove when ExtensionManager is ready.
 ADD_DEFINITIONS(-DHAVE_GTKMOZ)
 ADD_SUBDIRECTORY(linux)
-ADD_SUBDIRECTORY(smjs)
 ADD_SUBDIRECTORY(tests)
 
 PKGCONFIG_EX(libcurl 7.16.2 LIBCURL_LIBRARIES)
@@ -45,6 +44,7 @@ SET(SRCS
   memory_options.cc
   module.cc
   native_main_loop.cc
+  script_runtime_manager.cc
   scriptable_array.cc
   scriptable_event.cc
   scriptable_file_system.cc

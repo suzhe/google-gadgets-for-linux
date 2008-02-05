@@ -14,5 +14,6 @@
 #  limitations under the License.
 #
 
+ADD_SUBDIRECTORY(editline)
 ADD_SUBDIRECTORY(unzip)
 ADD_SUBDIRECTORY(editline)

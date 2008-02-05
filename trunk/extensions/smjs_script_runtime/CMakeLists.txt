@@ -14,12 +14,12 @@
 #  limitations under the License.
 #
 
+#ADD_SUBDIRECTORY(tests)
+
 IF(UNIX)
   SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
 ENDIF(UNIX)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
-
-ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
   converter.cc
@@ -30,8 +30,10 @@ SET(SRCS
   jscript_massager.cc
   json.cc
   native_js_wrapper.cc
+  smjs_script_runtime.cc
 )
 
-ADD_LIBRARY(ggadget_smjs SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_smjs ${JS_LIBRARIES} ggadget)
-OUTPUT_LIBRARY(ggadget_smjs)
+SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
+ADD_LIBRARY(smjs-script-runtime SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget)
+OUTPUT_MODULE(smjs-script-runtime)
