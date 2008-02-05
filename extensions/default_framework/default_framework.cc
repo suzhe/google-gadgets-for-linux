@@ -153,7 +153,7 @@ class DefaultNetwork : public NetworkInterface {
     return NetworkInterface::CONNECTION_TYPE_802_3;
   }
   virtual PhysicalMediaType GetPhysicalMediaType() {
-    return NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED;
+    return NetworkInterface::PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
   }
   virtual WirelessInterface *GetWireless() {
     return &wireless_;

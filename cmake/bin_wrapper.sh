@@ -35,6 +35,7 @@ if [ -x "$progbase".bin ]; then
   export PREFIX=`dirname "$progdir"`
   export LD_LIBRARY_PATH="$PREFIX/lib:$LD_LIBRARY_PATH"
   export DYLD_LIBRARY_PATH="$PREFIX/lib:$DYLD_LIBRARY_PATH"
+  export GGL_MODULE_PATH="$PREFIX/modules"
   "$progdir/$progbase.bin" "$@"
   exit $?
 else

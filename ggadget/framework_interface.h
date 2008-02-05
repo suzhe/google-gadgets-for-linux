@@ -115,30 +115,30 @@ class NetworkInterface {
   /** The network connection physical media type. */
   enum PhysicalMediaType {
     /** None of the following. */
-    PHISICAL_MEDIA_TYPE_UNSPECIFIED = 0,
+    PHYSICAL_MEDIA_TYPE_UNSPECIFIED = 0,
     /**
      * A wireless LAN network through a miniport driver that conforms to the
      * 802.11 interface.
      */
-    PHISICAL_MEDIA_TYPE_WIRELESS_LAN = 1,
+    PHYSICAL_MEDIA_TYPE_WIRELESS_LAN = 1,
     /** A DOCSIS-based cable network. */
-    PHISICAL_MEDIA_TYPE_CABLE_MODEM = 2,
+    PHYSICAL_MEDIA_TYPE_CABLE_MODEM = 2,
     /** Standard phone lines. */
-    PHISICAL_MEDIA_TYPE_PHONE_LINE = 3,
+    PHYSICAL_MEDIA_TYPE_PHONE_LINE = 3,
     /** Wiring that is connected to a power distribution system. */
-    PHISICAL_MEDIA_TYPE_POWER_LINE = 4,
+    PHYSICAL_MEDIA_TYPE_POWER_LINE = 4,
     /** A Digital Subscriber line (DSL) network. */
-    PHISICAL_MEDIA_TYPE_DSL = 5,
+    PHYSICAL_MEDIA_TYPE_DSL = 5,
     /** A Fibre Channel interconnect. */
-    PHISICAL_MEDIA_TYPE_FIBRE_CHANNEL = 6,
+    PHYSICAL_MEDIA_TYPE_FIBRE_CHANNEL = 6,
     /** An IEEE 1394 (firewire) bus. */
-    PHISICAL_MEDIA_TYPE_1394 = 7,
+    PHYSICAL_MEDIA_TYPE_1394 = 7,
     /** A Wireless WAN link. */
-    PHISICAL_MEDIA_TYPE_WIRELESS_WAN = 8,
+    PHYSICAL_MEDIA_TYPE_WIRELESS_WAN = 8,
     /** 802.11. */
-    PHISICAL_MEDIA_TYPE_NATIVE_802_11 = 9,
+    PHYSICAL_MEDIA_TYPE_NATIVE_802_11 = 9,
     /** Blue tooth. */
-    PHISICAL_MEDIA_TYPE_BLUETOOTH = 10,
+    PHYSICAL_MEDIA_TYPE_BLUETOOTH = 10,
   };
 
  public:
@@ -149,7 +149,8 @@ class NetworkInterface {
   /** Gets the type of the physical media. */
   virtual PhysicalMediaType GetPhysicalMediaType() = 0;
 
-  /** Gets the Wireless object containning information about the system's
+  /** 
+   * Gets the Wireless object containing information about the system's
    * wireless connection.
    */
   virtual WirelessInterface *GetWireless() = 0;
