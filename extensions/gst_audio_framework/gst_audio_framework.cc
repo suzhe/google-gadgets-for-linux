@@ -43,7 +43,7 @@ namespace ggadget {
 namespace framework {
 
 // To avoid naming conflicts.
-namespace gst_audio_framework {
+namespace gst_audio {
 
 static const char *kGstAudioSinks[] = {
   GGL_DEFAULT_GST_AUDIO_SINK,
@@ -430,13 +430,13 @@ class GstAudio : public AudioInterface {
 
 static GstAudio g_gst_audio_;
 
-} // namespace gst_audio_framework
+} // namespace gst_audio
 } // namespace framework
 } // namespace ggadget
 
 using namespace ggadget;
 using namespace ggadget::framework;
-using namespace ggadget::framework::gst_audio_framework;
+using namespace ggadget::framework::gst_audio;
 
 extern "C" {
   bool Initialize() {

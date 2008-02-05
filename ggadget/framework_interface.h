@@ -143,11 +143,11 @@ class NetworkInterface {
 
  public:
   /** Detects whether the network connection is on. */
-  virtual bool IsOnline() const = 0;
+  virtual bool IsOnline() = 0;
   /** Gets the type of the connection. */
-  virtual ConnectionType GetConnectionType() const = 0;
+  virtual ConnectionType GetConnectionType() = 0;
   /** Gets the type of the physical media. */
-  virtual PhysicalMediaType GetPhysicalMediaType() const = 0;
+  virtual PhysicalMediaType GetPhysicalMediaType() = 0;
 
   /** Gets the Wireless object containning information about the system's
    * wireless connection.
@@ -201,21 +201,21 @@ class PowerInterface {
 
  public:
   /** Gets whether the battery is charning.  */
-  virtual bool IsCharging() const = 0;
+  virtual bool IsCharging() = 0;
   /** Gets whether the computer is plugged in. */
-  virtual bool IsPluggedIn() const = 0;
+  virtual bool IsPluggedIn() = 0;
   /** Gets the remaining battery power in percentage. */
-  virtual int GetPercentRemaining() const = 0;
+  virtual int GetPercentRemaining() = 0;
   /**
    * Gets the estimated time, in seconds, left before the battery will need to
    * be charged.
    */
-  virtual int GetTimeRemaining() const = 0;
+  virtual int GetTimeRemaining() = 0;
   /**
    * Gets the estimated time, in seconds, the bettery will work when fully
    * charged.
    */
-  virtual int GetTimeTotal() const = 0;
+  virtual int GetTimeTotal() = 0;
 };
 
 /** Interface for retrieving the process information. */

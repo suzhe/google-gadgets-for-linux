@@ -19,4 +19,6 @@ SUBDIRS = dbus_script_class \
 	  gtkmoz_browser_element \
 	  default_framework \
 	  gst_audio_framework \
-	  gtk_system_framework
+	  gtk_system_framework \
+	  linux_system_framework \
+	  smjs_script_runtime

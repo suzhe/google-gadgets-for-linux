@@ -33,12 +33,10 @@ class GtkMenuImpl;
  */
 class GtkGadgetHost : public GadgetHostInterface {
  public:
-  GtkGadgetHost(ScriptRuntimeInterface *script_runtime,
-                bool composited, bool useshapemask,
+  GtkGadgetHost(bool composited, bool useshapemask,
                 double zoom, int debug_mode);
   virtual ~GtkGadgetHost();
 
-  virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type);
   virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
   virtual XMLParserInterface *GetXMLParser();
@@ -49,7 +47,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual void RemoveMe(bool save_data);
 
   virtual void DebugOutput(DebugLevel level, const char *message) const;
-  virtual uint64_t GetCurrentTime() const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual bool UnloadFont(const char *filename);
@@ -102,8 +99,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnOptionsActivate(GtkMenuItem *menu_item, gpointer user_data);
   static void OnAboutActivate(GtkMenuItem *menu_item, gpointer user_data);
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
-
-  ScriptRuntimeInterface *script_runtime_;
 
   XMLParserInterface *xml_parser_;
   FileManagerInterface *resource_file_manager_;

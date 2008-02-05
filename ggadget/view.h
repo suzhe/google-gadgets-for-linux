@@ -304,7 +304,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
 
   /**
    * Gets the current time.
-   * Delegated to @c GadgetHostInterface::GetCurrentTime().
+   * Delegated to @c MainLoopInterface::GetCurrentTime().
    */
   uint64_t GetCurrentTime();
 

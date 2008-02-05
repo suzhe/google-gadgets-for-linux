@@ -25,12 +25,16 @@ namespace ggadget {
 class ElementFactory;
 class ScriptContextInterface;
 class ScriptableInterface;
+class ScriptRuntimeManager;
 class Module;
 class Gadget;
 
 static const char kElementExtensionSymbolName[] = "RegisterElementExtension";
 static const char kScriptExtensionSymbolName[] = "RegisterScriptExtension";
-static const char kFrameworkExtensionSymbolName[] = "RegisterFrameworkExtension";
+static const char kFrameworkExtensionSymbolName[] =
+    "RegisterFrameworkExtension";
+static const char kScriptRuntimeExtensionSymbolName[] =
+    "RegisterScriptRuntimeExtension";
 
 /**
  * Interface of real ExtensionRegister classes.
@@ -81,6 +85,16 @@ static const char kFrameworkExtensionSymbolName[] = "RegisterFrameworkExtension"
  *    - ScriptablePerfmon, which needs gadget's main View to send event.
  *    Please refer to extensions/default_framework/default_framework.cc for
  *    how to implement a framework extension.
+ *
+ * - ScriptRuntime extension module
+ *   A ScriptRuntime extension module can be used to provide specified
+ *   implementation of ScriptRuntimeInterface.
+ *   This kind of extension modules must provide following symbol:
+ *   - bool RegisterScriptRuntimeExtension(ScriptRuntimeManager *manager);
+ *   The extension module shall register its static allocated ScriptRuntime
+ *   object to the specified ScriptRuntimeManager object.
+ *   The ScriptRuntime object shall be singleton and shared by all gadgets.
+ *   So each ScriptRuntime extension shall only be registered one time.
  *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.
@@ -151,6 +165,23 @@ class FrameworkExtensionRegister : public ExtensionRegisterInterface {
  private:
   ScriptableInterface *framework_;
   Gadget *gadget_;
+};
+
+/**
+ * Register class for ScriptRuntime extension modules.
+ *
+ * This class shall only be used in main program to initialize all available
+ * ScriptRuntime extensions at the very beginning.
+ */
+class ScriptRuntimeExtensionRegister : public ExtensionRegisterInterface {
+ public:
+  ScriptRuntimeExtensionRegister(ScriptRuntimeManager *manager);
+  virtual bool RegisterExtension(const Module *extension);
+
+  typedef bool (*RegisterScriptRuntimeExtensionFunc)(ScriptRuntimeManager *);
+
+ private:
+  ScriptRuntimeManager *manager_;
 };
 
 /**

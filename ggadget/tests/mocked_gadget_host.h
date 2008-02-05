@@ -47,8 +47,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
  public:
   MockedGadgetHost() : xml_parser_(ggadget::CreateXMLParser()) { }
   virtual ~MockedGadgetHost() { delete xml_parser_; }
-  virtual ggadget::ScriptRuntimeInterface *GetScriptRuntime(
-      ScriptRuntimeType type) { return NULL; }
   virtual ggadget::ElementFactory *GetElementFactory() {
     return NULL;
   }
@@ -66,7 +64,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual void SetPluginFlags(int plugin_flags) { }
   virtual void RemoveMe(bool save_data) { }
   virtual void DebugOutput(DebugLevel level, const char *message) const { }
-  virtual uint64_t GetCurrentTime() const { return 0; }
   virtual bool OpenURL(const char *url) const { return true; }
 
   virtual bool LoadFont(const char *filename) { return true; }

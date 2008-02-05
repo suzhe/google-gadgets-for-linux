@@ -70,6 +70,21 @@ bool FrameworkExtensionRegister::RegisterExtension(const Module *extension) {
   return func ? func(framework_, gadget_) : false;
 }
 
+ScriptRuntimeExtensionRegister::ScriptRuntimeExtensionRegister(
+    ScriptRuntimeManager *manager)
+  : manager_(manager) {
+}
+
+bool
+ScriptRuntimeExtensionRegister::RegisterExtension(const Module *extension) {
+  ASSERT(extension);
+  RegisterScriptRuntimeExtensionFunc func =
+      reinterpret_cast<RegisterScriptRuntimeExtensionFunc>(
+          extension->GetSymbol(kScriptRuntimeExtensionSymbolName));
+
+  return func ? func(manager_) : false;
+}
+
 class MultipleExtensionRegisterWrapper::Impl {
  public:
   typedef std::vector<ExtensionRegisterInterface *> ExtRegisterVector;

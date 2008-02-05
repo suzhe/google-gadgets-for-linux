@@ -28,7 +28,6 @@ class GadgetInterface;
 class MainLoopInterface;
 class OptionsInterface;
 class ScriptableInterface;
-class ScriptRuntimeInterface;
 class Signal;
 class ViewHostInterface;
 class ViewInterface;
@@ -41,13 +40,6 @@ class XMLParserInterface;
 class GadgetHostInterface {
  public:
   virtual ~GadgetHostInterface() { }
-
-  enum ScriptRuntimeType {
-    JAVASCRIPT,
-  };
-
-  /** Returns the global @c ScriptRuntimeInterface instance. */
-  virtual ScriptRuntimeInterface *GetScriptRuntime(ScriptRuntimeType type) = 0;
 
   /** Get the file manager used to load this gadget. */
   virtual FileManagerInterface *GetFileManager() = 0;
@@ -107,12 +99,6 @@ class GadgetHostInterface {
 
   /** Output a debug string to the debug console or other places. */
   virtual void DebugOutput(DebugLevel level, const char *message) const = 0;
-
-  /**
-   * Returns the current time in millisecond units since the Epoch
-   * (00:00:00 UTC, January 1, 1970).
-   */
-  virtual uint64_t GetCurrentTime() const = 0;
 
   /** Open the given URL in the user's default web browser. */
   virtual bool OpenURL(const char *url) const = 0;

@@ -28,7 +28,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  extensions \
 	  hosts
 
-EXTRA_DIST = examples
+EXTRA_DIST = examples autotools
 
 dist-hook:
 	rm -rf `find $(distdir) -name '.svn'`

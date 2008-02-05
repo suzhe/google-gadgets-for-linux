@@ -20,6 +20,7 @@
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/event.h>
+#include <ggadget/main_loop_interface.h>
 #include "gadget_view_widget.h"
 #include "cairo_canvas.h"
 #include "gtk_menu_impl.h"
@@ -34,6 +35,7 @@ using ggadget::KeyboardEvent;
 using ggadget::DragEvent;
 using ggadget::Color;
 using ggadget::ViewInterface;
+using ggadget::GetGlobalMainLoop;
 using ggadget::gtk::CairoCanvas;
 using ggadget::gtk::GtkMenuImpl;
 
@@ -230,7 +232,7 @@ static gboolean GadgetViewWidget_button_press(GtkWidget *widget,
                event->button == 3 ? MouseEvent::BUTTON_RIGHT :
                                     MouseEvent::BUTTON_NONE;
   if (event->type == GDK_BUTTON_PRESS) {
-    gvw->mouse_down_time = gvw->host->GetGadgetHost()->GetCurrentTime();
+    gvw->mouse_down_time = GetGlobalMainLoop()->GetCurrentTime();
     if (event->button >= 1 && event->button <= 3) {
       MouseEvent e(Event::EVENT_MOUSE_DOWN,
                    event->x / gvw->zoom, event->y / gvw->zoom,
@@ -379,7 +381,7 @@ static gboolean GadgetViewWidget_motion_notify(GtkWidget *widget,
 
   if (handler_result == ggadget::EVENT_RESULT_UNHANDLED &&
       (event->state & GDK_BUTTON1_MASK) &&
-      gvw->host->GetGadgetHost()->GetCurrentTime() - gvw->mouse_down_time >
+      GetGlobalMainLoop()->GetCurrentTime() - gvw->mouse_down_time >
           kWindowMoveDelay) {
     // Send fake mouse up event to the view so that we can start to drag
     // the window. Note: no mouse click event is sent in this case, to prevent

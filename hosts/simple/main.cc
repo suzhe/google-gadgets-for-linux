@@ -28,7 +28,7 @@
 #include <ggadget/gtk/gtk_view_host.h>
 #include <ggadget/gtk/gtk_main_loop.h>
 #include <ggadget/extension_manager.h>
-#include <ggadget/smjs/js_script_runtime.h>
+#include <ggadget/script_runtime_manager.h>
 #include <ggadget/ggadget.h>
 
 static double g_zoom = 1.;
@@ -37,9 +37,7 @@ static ggadget::gtk::GtkGadgetHost *g_gadget_host = NULL;
 static gboolean g_composited = false;
 static gboolean g_useshapemask = false;
 static gboolean g_decorated = true;
-
 static ggadget::gtk::GtkMainLoop g_main_loop;
-static ggadget::smjs::JSScriptRuntime g_script_runtime;
 
 static const char *kGlobalExtensions[] = {
 // default framework must be loaded first, so that the default properties can
@@ -51,7 +49,9 @@ static const char *kGlobalExtensions[] = {
   "gtk-system-framework",
   "gst-audio-framework",
 #ifdef GGL_HOST_LINUX
+  "linux-system-framework",
 #endif
+  "smjs-script-runtime",
   NULL
 };
 
@@ -69,8 +69,7 @@ static gboolean DestroyHandler(GtkWidget *widget,
 
 static bool CreateGadgetUI(GtkWindow *window, GtkBox *box,
                            const char *base_path) {
-  g_gadget_host = new ggadget::gtk::GtkGadgetHost(&g_script_runtime,
-                                                  g_composited,
+  g_gadget_host = new ggadget::gtk::GtkGadgetHost(g_composited,
                                                   g_useshapemask, g_zoom,
                                                   g_debug_mode);
   if (!g_gadget_host->LoadGadget(box, base_path)) {
@@ -193,6 +192,11 @@ int main(int argc, char* argv[]) {
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)
     ext_manager->LoadExtension(kGlobalExtensions[i], false);
+
+  // Register JavaScript runtime.
+  ggadget::ScriptRuntimeManager *manager = ggadget::ScriptRuntimeManager::get();
+  ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
+  ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
 
