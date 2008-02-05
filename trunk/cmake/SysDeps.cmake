@@ -14,6 +14,14 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(dbus_script_class)
-ADD_SUBDIRECTORY(gtkmoz_browser_element)
-ADD_SUBDIRECTORY(smjs_script_runtime)
+INCLUDE(CheckTypeSize)
+
+SET(HAVE_STDDEF_H 1)
+
+CHECK_TYPE_SIZE(int GGL_SIZEOF_INT)
+CHECK_TYPE_SIZE(long GGL_SIZEOF_LONG_INT)
+CHECK_TYPE_SIZE(size_t GGL_SIZEOF_SIZE_T)
+CHECK_TYPE_SIZE(double GGL_SIZEOF_DOUBLE)
+
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/ggadget/sysdeps.h.in
+               ${CMAKE_BINARY_DIR}/ggadget/sysdeps.h)

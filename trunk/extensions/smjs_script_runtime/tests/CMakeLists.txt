@@ -18,7 +18,7 @@ SET(LIBS
   gunit
   ggadget
   ggadget_smjs
-  edit  # The editline library in SpiderMonkey.
+  editline
 )
 # For editline static library.
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)

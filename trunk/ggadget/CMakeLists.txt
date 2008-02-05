@@ -32,12 +32,12 @@ SET(SRCS
   content_item.cc
   details_view.cc
   display_window.cc
-  dummy_framework.cc
   element_factory.cc
   elements.cc
   extension_manager.cc
   file_manager.cc
   file_manager_wrapper.cc
+  script_runtime_manager.cc
   gadget.cc
   logger.cc
   main_loop.cc

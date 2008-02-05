@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(tests)
-
 PKGCONFIG_EX(gtk+-2.0 2.8 GTK_LIBRARIES)
 
 SET(LIB_SRCS browser_element.cc)
@@ -25,15 +23,29 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget ${GTK_LIBRARIES})
 OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
-PKGCONFIG_EX(firefox-gtkmozembed 1.5 GTKMOZEMBED_LIBRARIES)
-PKGCONFIG_EX(firefox-js 1.5 JS_LIBRARIES)
 
-# Bug of firefox-js package. Define the following to make JS_GET_CLASS work.
-ADD_DEFINITIONS(-DJS_THREADSAFE)
+FOREACH(GTKMOZEMBED_PACKAGE_NAME
+  firefox-gtkmozembed 
+  xulrunner-gtkmozembed 
+)
+  IF(NOT GTKMOZEMBED_FOUND)
+    PKGCONFIG_EX(${GTKMOZEMBED_PACKAGE_NAME}
+                 1.5
+                 GTKMOZEMBED_LIBRARIES
+                 GTKMOZEMBED_FOUND)
+  ENDIF(NOT GTKMOZEMBED_FOUND)
+ENDFOREACH(GTKMOZEMBED_PACKAGE_NAME
+  firefox-gtkmozembed 
+  xulrunner-gtkmozembed 
+)
+
+IF(NOT GTKMOZEMBED_FOUND)
+  MESSAGE(FATAL "gtkmozembed library not found!")
+ENDIF(NOT GTKMOZEMBED_FOUND)
 
 SET(CHILD_SRCS
   browser_child.cc
-  ${CMAKE_SOURCE_DIR}/ggadget/smjs/json.cc
+  ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/json.cc
 )
 ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})
 TARGET_LINK_LIBRARIES(gtkmoz-browser-child

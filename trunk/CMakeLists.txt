@@ -31,16 +31,40 @@ INCLUDE(GenerateOutput)
 INCLUDE(PkgConfigEx)
 INCLUDE(TestSuite)
 INCLUDE(ZipUtils)
+INCLUDE(SysDeps)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
+
+FOREACH(JS_PACKAGE_NAME
+  firefox-js 
+  xulrunner-js 
+)
+  IF(NOT JS_FOUND)
+    PKGCONFIG_EX(${JS_PACKAGE_NAME}
+                 1.5
+                 JS_LIBRARIES
+                 JS_FOUND)
+  ENDIF(NOT JS_FOUND)
+ENDFOREACH(JS_PACKAGE_NAME
+  firefox-js 
+  xulrunner-js 
+)
+
+IF(NOT JS_FOUND)
+  MESSAGE(FATAL "js library not found!")
+ENDIF(NOT JS_FOUND)
+
+# Bug of firefox-js package. Define the following to make JS_GET_CLASS work.
+# TODO: Automatically check JS_THREADSAFE.
+# TODO: Set MOZILLA_1_8_BRANCH manually-configurable.
+ADD_DEFINITIONS(-DJS_THREADSAFE -DMOZILLA_1_8_BRANCH)
 
 ADD_SUBDIRECTORY(unittest)
 ADD_SUBDIRECTORY(ggadget)
 ADD_SUBDIRECTORY(hosts)
 ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
-
-ADD_DEPENDENCIES(ggadget_smjs js)
 
 MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/resources 
          ${CMAKE_BINARY_DIR}/output/bin/ggl-resources.bin

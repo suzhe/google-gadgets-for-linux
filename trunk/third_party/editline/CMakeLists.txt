@@ -14,24 +14,15 @@
 #  limitations under the License.
 #
 
-IF(UNIX)
-  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
-ENDIF(UNIX)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
+ADD_DEFINITIONS(-DSYS_UNIX
+                -DHAVE_STDLIB
+                -DUNIQUE_HISTORY
+                -DUSE_DIRENT
+                -DHIDE
+                -DHAVE_TCGETATTR
+                -DANSI_ARROWS)
 
-ADD_SUBDIRECTORY(tests)
-
-SET(SRCS
-  converter.cc
-  js_function_slot.cc
-  js_native_wrapper.cc
-  js_script_context.cc
-  js_script_runtime.cc
-  jscript_massager.cc
-  json.cc
-  native_js_wrapper.cc
+ADD_LIBRARY(editline
+  editline.c
+  sysunix.c
 )
-
-ADD_LIBRARY(ggadget_smjs SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_smjs ${JS_LIBRARIES} ggadget)
-OUTPUT_LIBRARY(ggadget_smjs)
