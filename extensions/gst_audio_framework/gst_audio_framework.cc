@@ -201,10 +201,12 @@ class GstAudioclip : public AudioclipInterface {
   virtual void SetCurrentPosition(int position) {
     if (playbin_ && local_state_ != SOUND_STATE_ERROR) {
       gst_element_seek(playbin_, 1.0, GST_FORMAT_TIME,
-                              static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH |
-                                                        GST_SEEK_FLAG_KEY_UNIT),
-                              gint64(position) * GST_SECOND, 
-                              GST_SEEK_TYPE_NONE, 0);
+                       static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH |
+                                                 GST_SEEK_FLAG_KEY_UNIT),
+                       GST_SEEK_TYPE_CUR,
+                       static_cast<gint64>(position) * GST_SECOND, 
+                       static_cast<GstSeekType>(GST_SEEK_TYPE_NONE), 
+                       static_cast<gint64>(0));
     }
   }
 

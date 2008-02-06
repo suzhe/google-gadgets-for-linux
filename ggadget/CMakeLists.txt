@@ -18,7 +18,6 @@ ADD_SUBDIRECTORY(dbus)
 ADD_SUBDIRECTORY(gtk)
 # Remove when ExtensionManager is ready.
 ADD_DEFINITIONS(-DHAVE_GTKMOZ)
-ADD_SUBDIRECTORY(linux)
 ADD_SUBDIRECTORY(tests)
 
 PKGCONFIG_EX(libcurl 7.16.2 LIBCURL_LIBRARIES)
@@ -36,7 +35,6 @@ SET(SRCS
   extension_manager.cc
   file_manager.cc
   file_manager_wrapper.cc
-  script_runtime_manager.cc
   gadget.cc
   logger.cc
   main_loop.cc
