@@ -15,5 +15,10 @@
 #
 
 ADD_SUBDIRECTORY(dbus_script_class)
+ADD_SUBDIRECTORY(default_framework)
+ADD_SUBDIRECTORY(gst_audio_framework)
+ADD_SUBDIRECTORY(gtk_edit_element)
+ADD_SUBDIRECTORY(gtk_system_framework)
 ADD_SUBDIRECTORY(gtkmoz_browser_element)
+ADD_SUBDIRECTORY(linux_system_framework)
 ADD_SUBDIRECTORY(smjs_script_runtime)
