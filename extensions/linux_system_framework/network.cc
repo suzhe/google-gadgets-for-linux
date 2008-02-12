@@ -83,13 +83,13 @@ NetworkInterface::PhysicalMediaType Network::GetPhysicalMediaType() {
   NetworkInterface::ConnectionType type = GetConnectionType();
   switch (type) {
     case CONNECTION_TYPE_NATIVE_802_11:
-      return PHISICAL_MEDIA_TYPE_NATIVE_802_11;
+      return PHYSICAL_MEDIA_TYPE_NATIVE_802_11;
     case CONNECTION_TYPE_BLUETOOTH:
-      return PHISICAL_MEDIA_TYPE_BLUETOOTH;
+      return PHYSICAL_MEDIA_TYPE_BLUETOOTH;
     default:
-      return PHISICAL_MEDIA_TYPE_UNSPECIFIED;
+      return PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
   }
-  return PHISICAL_MEDIA_TYPE_UNSPECIFIED;
+  return PHYSICAL_MEDIA_TYPE_UNSPECIFIED;
 }
 
 WirelessInterface *Network::GetWireless() {

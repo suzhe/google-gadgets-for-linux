@@ -171,10 +171,8 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
   } else {
     // Uses the Windows version convention, that inline scripts should be
     // quoted in comments.
-    const DOMNodeListInterface *children = xml_element->GetChildNodes();
-    size_t length = children->GetLength();
-    for (size_t i = 0; i < length; i++) {
-      const DOMNodeInterface *child = children->GetItem(i);
+    for (const DOMNodeInterface *child = xml_element->GetFirstChild();
+         child; child = child->GetNextSibling()) {
       if (child->GetNodeType() == DOMNodeInterface::COMMENT_NODE) {
         script = child->GetTextContent();
         break;
@@ -185,7 +183,6 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
             filename, child->GetRow(), child->GetColumn());
       }
     }
-    delete children;
   }
 
   if (!script.empty())
@@ -194,10 +191,8 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
 
 static void HandleAllScriptElements(View *view, const char *filename,
                                     const DOMElementInterface *xml_element) {
-  const DOMNodeListInterface *children = xml_element->GetChildNodes();
-  size_t length = children->GetLength();
-  for (size_t i = 0; i < length; i++) {
-    const DOMNodeInterface *child = children->GetItem(i);
+  for (const DOMNodeInterface *child = xml_element->GetFirstChild();
+       child; child = child->GetNextSibling()) {
     if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
       const DOMElementInterface *child_ele =
           down_cast<const DOMElementInterface *>(child);
@@ -210,7 +205,6 @@ static void HandleAllScriptElements(View *view, const char *filename,
       }
     }
   }
-  delete children;
 }
 
 static BasicElement *InsertElementFromDOM(
@@ -234,11 +228,9 @@ static BasicElement *InsertElementFromDOM(
   SetupScriptableProperties(element, view->GetScriptContext(),
                             filename, xml_element);
   Elements *children = element->GetChildren();
-  const DOMNodeListInterface *xml_children = xml_element->GetChildNodes();
   std::string text;
-  size_t length = xml_children->GetLength();
-  for (size_t i = 0; i < length; i++) {
-    const DOMNodeInterface *child = xml_children->GetItem(i);
+  for (const DOMNodeInterface *child = xml_element->GetFirstChild();
+       child; child = child->GetNextSibling()) {
     DOMNodeInterface::NodeType type = child->GetNodeType();
     if (type == DOMNodeInterface::ELEMENT_NODE) {
       InsertElementFromDOM(view, children, filename,
@@ -256,7 +248,6 @@ static BasicElement *InsertElementFromDOM(
                           xml_element->GetRow(), xml_element->GetColumn(),
                           kInnerTextProperty, text.c_str(), tag_name.c_str());
   }
-  delete xml_children;
   return element;
 }
 
@@ -292,10 +283,8 @@ bool SetupViewFromXML(View *view, const std::string &xml,
                             filename, view_element);
 
   Elements *children = view->GetChildren();
-  const DOMNodeListInterface *xml_children = view_element->GetChildNodes();
-  size_t length = xml_children->GetLength();
-  for (size_t i = 0; i < length; i++) {
-    const DOMNodeInterface *child = xml_children->GetItem(i);
+  for (const DOMNodeInterface *child = view_element->GetFirstChild();
+       child; child = child->GetNextSibling()) {
     if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
       InsertElementFromDOM(view, children, filename,
                            down_cast<const DOMElementInterface *>(child),
@@ -304,7 +293,6 @@ bool SetupViewFromXML(View *view, const std::string &xml,
   }
 
   HandleAllScriptElements(view, filename, view_element);
-  delete xml_children;
   xmldoc->Unref();
   return true;
 }
