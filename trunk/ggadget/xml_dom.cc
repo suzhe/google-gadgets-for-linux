@@ -169,11 +169,9 @@ class ElementsByTagName : public DOMNodeListBase {
  private:
   const DOMNodeInterface *GetItemFromNode(const DOMNodeInterface *node,
                                           size_t *index) const {
-    const DOMNodeListInterface *children = node->GetChildNodes();
     const DOMNodeInterface *result_item = NULL;
-    size_t length = children->GetLength();
-    for (size_t i = 0; i < length; i++) {
-      const DOMNodeInterface *item = children->GetItem(i);
+    for (const DOMNodeInterface *item = node->GetFirstChild(); item;
+         item = item->GetNextSibling()) {
       if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
         // This node first and then children.
         if (wildcard_ || name_ == item->GetNodeName()) {
@@ -193,24 +191,19 @@ class ElementsByTagName : public DOMNodeListBase {
         }
       }
     }
-
-    delete children;
     return result_item;
   }
 
   size_t CountChildElements(const DOMNodeInterface *node) const {
-    const DOMNodeListInterface *children = node->GetChildNodes();
-    size_t length = children->GetLength();
     size_t count = 0;
-    for (size_t i = 0; i < length; i++) {
-      const DOMNodeInterface *item = children->GetItem(i);
+    for (const DOMNodeInterface *item = node->GetFirstChild(); item;
+         item = item->GetNextSibling()) {
       if (item->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
         if (wildcard_ || name_ == item->GetNodeName())
           count++;
         count += CountChildElements(item);
       }
     }
-    delete children;
     return count;
   }
 
@@ -246,8 +239,6 @@ class DOMNodeImplCallbacks {
 
 class DOMNodeImpl {
  public:
-  // Using vector is simple to implement. Since most elements have not
-  // many children, the performance degration is trivial.
   typedef std::vector<DOMNodeInterface *> Children;
 
   DOMNodeImpl(DOMNodeInterface *node,
@@ -259,13 +250,14 @@ class DOMNodeImpl {
         owner_document_(owner_document),
         parent_(NULL),
         owner_node_(NULL),
+        previous_sibling_(NULL), next_sibling_(NULL),
         row_(0), column_(0) {
     ASSERT(name && *name);
     if (!SplitString(name, ":", &prefix_, &local_name_)) {
       ASSERT(local_name_.empty());
       local_name_.swap(prefix_);
     }
-    // Pointer comparison is intended here. 
+    // Pointer comparison is intended here.
     if (name != kDOMDocumentName) {
       ASSERT(owner_document_);
       // Any newly created node has no parent and thus is orphan. Increase the
@@ -298,22 +290,11 @@ class DOMNodeImpl {
   DOMNodeInterface *GetLastChild() {
     return children_.empty() ? NULL : children_.back();
   }
-
   DOMNodeInterface *GetPreviousSibling() {
-    if (!parent_)
-      return NULL;
-
-    DOMNodeImpl *parent_impl = parent_->GetImpl();
-    Children::iterator it = parent_impl->FindChild(node_);
-    return it == parent_impl->children_.begin() ? NULL : *(it - 1);
+    return previous_sibling_ ? previous_sibling_->node_ : NULL;
   }
   DOMNodeInterface *GetNextSibling() {
-    if (!parent_)
-      return NULL;
-
-    DOMNodeImpl *parent_impl = parent_->GetImpl();
-    Children::iterator it = parent_impl->FindChild(node_) + 1;
-    return it == parent_impl->children_.end() ? NULL : *it;
+    return next_sibling_ ? next_sibling_->node_ : NULL;
   }
 
   DOMExceptionCode InsertBefore(DOMNodeInterface *new_child,
@@ -346,15 +327,32 @@ class DOMNodeImpl {
     // Remove the new_child from its old parent.
     DOMNodeInterface *old_parent = new_child->GetParentNode();
     if (old_parent) {
-      DOMNodeImpl *old_parent_impl = old_parent->GetImpl();
-      old_parent_impl->children_.erase(old_parent_impl->FindChild(new_child));
-      // old_parent's reference will be updated with new_child->SetParent().
+      // Add a temporary ref to prevent new_child from being deleted.
+      new_child->Ref();
+      old_parent->RemoveChild(new_child);
+      new_child->Unref(true);
     }
 
-    Children::iterator it = ref_child ? FindChild(ref_child) : children_.end();
-    children_.insert(it, new_child);
+    DOMNodeImpl *new_child_impl = new_child->GetImpl();
+    DOMNodeImpl *prev_child_impl = NULL;
+    if (ref_child) {
+      DOMNodeImpl *ref_child_impl = ref_child->GetImpl();
+      if (ref_child_impl->previous_sibling_)
+        prev_child_impl = ref_child_impl->previous_sibling_;
+      new_child_impl->next_sibling_ = ref_child_impl;
+      ref_child_impl->previous_sibling_ = new_child_impl;
+      children_.insert(FindChild(ref_child), new_child);
+    } else {
+      if (!children_.empty())
+        prev_child_impl = children_.back()->GetImpl();
+      children_.push_back(new_child);
+    }
+    if (prev_child_impl) {
+      prev_child_impl->next_sibling_ = new_child_impl;
+      new_child_impl->previous_sibling_ = prev_child_impl;
+    }
 
-    new_child->GetImpl()->SetParent(node_);
+    new_child_impl->SetParent(node_);
     return DOM_NO_ERR;
   }
 
@@ -381,6 +379,15 @@ class DOMNodeImpl {
       return DOM_NOT_FOUND_ERR;
 
     children_.erase(FindChild(old_child));
+    DOMNodeImpl *old_child_impl = old_child->GetImpl();
+    DOMNodeImpl *prev_child_impl = old_child_impl->previous_sibling_;
+    DOMNodeImpl *next_child_impl = old_child_impl->next_sibling_;
+    if (prev_child_impl)
+      prev_child_impl->next_sibling_ = next_child_impl;
+    if (next_child_impl)
+      next_child_impl->previous_sibling_ = prev_child_impl;
+    old_child_impl->previous_sibling_ = NULL;
+    old_child_impl->next_sibling_ = NULL;
     old_child->GetImpl()->SetParent(NULL);
     return DOM_NO_ERR;
   }
@@ -476,8 +483,12 @@ class DOMNodeImpl {
 
   void RemoveAllChildren() {
     for (Children::iterator it = children_.begin();
-         it != children_.end(); ++it) 
+         it != children_.end(); ++it) {
+      DOMNodeImpl *child_impl = (*it)->GetImpl();
+      child_impl->previous_sibling_ = NULL;
+      child_impl->next_sibling_ = NULL;
       (*it)->GetImpl()->SetParent(NULL);
+    }
     children_.clear();
   }
 
@@ -628,6 +639,7 @@ class DOMNodeImpl {
   // owner element.
   DOMNodeInterface *owner_node_;
   Children children_;
+  DOMNodeImpl *previous_sibling_, *next_sibling_;
   std::string last_xml_;
   int row_, column_;
 };
@@ -765,7 +777,6 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
   virtual const DOMNodeInterface *GetLastChild() const {
     return impl_->GetLastChild();
   }
-
   virtual DOMNodeInterface *GetPreviousSibling() {
     return impl_->GetPreviousSibling();
   }
@@ -1867,17 +1878,14 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
  private:
   const DOMNodeInterface *FindNodeOfType(NodeType type) const {
-    const DOMNodeListInterface *children = GetChildNodes();
     const DOMNodeInterface *result = NULL;
-    size_t length = children->GetLength();
-    for (size_t i = 0; i < length; i++) {
-      const DOMNodeInterface *item = children->GetItem(i);
+    for (const DOMNodeInterface *item = GetFirstChild(); item;
+         item = item->GetNextSibling()) {
       if (item->GetNodeType() == type) {
         result = item;
         break;
       }
     }
-    delete children;
     return result;
   }
 
