@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LINUX_MEMORY_H__
-#define GGADGET_LINUX_MEMORY_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_MEMORY_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_MEMORY_H__
 
 #include <ggadget/framework_interface.h>
 
@@ -65,4 +65,4 @@ class Memory : public MemoryInterface {
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_MEMORY_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_MEMORY_H__

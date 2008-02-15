@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LINUX_MACHINE_H__
-#define GGADGET_LINUX_MACHINE_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_MACHINE_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_MACHINE_H__
 
 #include <string>
 #include <ggadget/framework_interface.h>
@@ -78,4 +78,4 @@ class Machine : public MachineInterface {
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_MACHINE_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_MACHINE_H__

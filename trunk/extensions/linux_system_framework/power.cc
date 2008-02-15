@@ -163,7 +163,7 @@ int Power::GetTimeRemaining() {
   if (!battery_) return 0;
 
   DBusIntReceiver remaining;
-  if (battery_->Call(kHalMethodGetProperty, true, -1,
+  if (battery_->Call(kHalMethodGetPropertyInt, true, -1,
                      remaining.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryRemainingTime,
                      MESSAGE_TYPE_INVALID)) {
@@ -212,7 +212,7 @@ int Power::GetTimeTotal() {
                      rate.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryChargeLevelRate,
                      MESSAGE_TYPE_INVALID) && rate.GetValue() > 0) {
-    return design.GetValue() / rate.GetValue();
+    return design.GetValue() * 3600 / rate.GetValue();
   }
 
   DLOG("Failed to calculate total time.");

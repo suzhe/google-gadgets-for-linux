@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LINUX_POWER_H__
-#define GGADGET_LINUX_POWER_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_POWER_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_POWER_H__
 
 #include <ggadget/framework_interface.h>
 #include <ggadget/dbus/dbus_proxy.h>
@@ -47,4 +47,4 @@ class Power : public PowerInterface {
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_POWER_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_POWER_H__

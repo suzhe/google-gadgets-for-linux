@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LINUX_WIRELESS_H__
-#define GGADGET_LINUX_WIRELESS_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_WIRELESS_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_WIRELESS_H__
 
 #include <ggadget/framework_interface.h>
 
@@ -23,11 +23,13 @@ namespace ggadget {
 namespace framework {
 
 class WirelessAccessPointInterface;
-
 namespace linux_system {
 
 class Wireless : public WirelessInterface {
  public:
+  Wireless();
+  virtual ~Wireless();
+
   virtual bool IsAvailable() const;
   virtual bool IsConnected() const;
   virtual bool EnumerationSupported() const;
@@ -40,10 +42,14 @@ class Wireless : public WirelessInterface {
   virtual std::string GetName() const;
   virtual std::string GetNetworkName() const;
   virtual int GetSignalStrength() const;
+ private:
+  class Impl;
+  Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(Wireless);
 };
 
 } // namespace linux_system
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_WIRELESS_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_WIRELESS_H__

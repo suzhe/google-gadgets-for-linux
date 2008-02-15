@@ -18,8 +18,8 @@
  * Constant strings used to represent Hal properties.
  */
 
-#ifndef GGADGET_LINUX_HAL_STRINGS_H__
-#define GGADGET_LINUX_HAL_STRINGS_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_HAL_STRINGS_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_HAL_STRINGS_H__
 
 namespace ggadget {
 namespace framework {
@@ -34,6 +34,7 @@ const char kHalInterfaceDevice[]        = "org.freedesktop.Hal.Device";
 const char kHalInterfaceManager[]       = "org.freedesktop.Hal.Manager";
 
 const char kHalMethodGetProperty[]      = "GetProperty";
+const char kHalMethodGetPropertyInt[]   = "GetPropertyInteger";
 const char kHalMethodFindDeviceByCapability[] = "FindDeviceByCapability";
 const char kHalMethodQueryCapability[]  = "QueryCapability";
 
@@ -70,7 +71,7 @@ const char kHalPropBatteryChargeLevelCurrent[]  = "battery.charge_level.current"
 const char kHalPropBatteryChargeLevelLastFull[] = "battery.charge_level.last_full";
 const char kHalPropBatteryChargeLevelPercentage[] =
     "battery.charge_level.percentage";
-const char kHalPropBatteryRemainingTime[]       = "battert.remaining_time";
+const char kHalPropBatteryRemainingTime[]       = "battery.remaining_time";
 const char kHalPropACAdapterPresent[]           = "ac_adapter.present";
 
 const char kHalCapabilityACAdapter[]    = "ac_adapter";
@@ -80,6 +81,7 @@ const char kHalCapabilityNet[]          = "net";
 const char kNetworkManagerDBusName[]       = "org.freedesktop.NetworkManager";
 const char kNetworkManagerObjectPath[]     = "/org/freedesktop/NetworkManager";
 const char kNetworkManagerInterface[]      = "org.freedesktop.NetworkManager";
+const char kNetworkManagerDeviceInterface[]  = "org.freedesktop.NetworkManager.Devices";
 
 const char kNetworkManagerInfoDBusName[]   = "org.freedesktop.NetworkManagerInfo";
 const char kNetworkManagerInfoObjectPath[] = "/org/freedesktop/NetworkManagerInfo";
@@ -92,4 +94,4 @@ const char kNetworkManagerMethodGetProperties[] = "getProperties";
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_HAL_STRINGS_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_HAL_STRINGS_H__

@@ -38,7 +38,7 @@ TEST(Network, GetConnectionType) {
 TEST(Network, GetPhysicalMediaType) {
   Network network;
   if (!network.IsOnline())
-    EXPECT_EQ(NetworkInterface::PHISICAL_MEDIA_TYPE_UNSPECIFIED,
+    EXPECT_EQ(NetworkInterface::PHYSICAL_MEDIA_TYPE_UNSPECIFIED,
               network.GetPhysicalMediaType());
 }
 
