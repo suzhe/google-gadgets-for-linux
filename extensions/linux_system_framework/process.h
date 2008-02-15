@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LINUX_PROCESS_H__
-#define GGADGET_LINUX_PROCESS_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_PROCESS_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_PROCESS_H__
 
 #include <string>
 #include <vector>
@@ -68,4 +68,4 @@ class Process : public ProcessInterface {
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_PROCESS_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_PROCESS_H__

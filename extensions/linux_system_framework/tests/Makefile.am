@@ -26,13 +26,16 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 check_PROGRAMS		= machine_test \
 			  network_test \
-			  power_test
+			  power_test \
+				wireless_test
 
 machine_test_SOURCES		= machine_test.cc
 
 network_test_SOURCES		= network_test.cc
 
 power_test_SOURCES 		= power_test.cc
+
+wireless_test_SOURCES = wireless_test.cc
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

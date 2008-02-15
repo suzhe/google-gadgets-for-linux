@@ -17,6 +17,7 @@
 #ifndef GGADGET_LINUX_WIRELESS_ACCESS_POINT_H__
 #define GGADGET_LINUX_WIRELESS_ACCESS_POINT_H__
 
+#include <string>
 #include <ggadget/framework_interface.h>
 
 namespace ggadget {
@@ -26,6 +27,8 @@ namespace linux_system {
 class WirelessAccessPoint : public WirelessAccessPointInterface {
  public:
   virtual void Destroy();
+  WirelessAccessPoint(const std::string &name);
+  virtual ~WirelessAccessPoint();
 
  public:
   virtual std::string GetName() const;
@@ -33,6 +36,9 @@ class WirelessAccessPoint : public WirelessAccessPointInterface {
   virtual int GetSignalStrength() const;
   virtual void Connect(Slot1<void, bool> *callback);
   virtual void Disconnect(Slot1<void, bool> *callback);
+ private:
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace linux_system

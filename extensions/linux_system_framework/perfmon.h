@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_LINUX_PERFMON_H__
-#define GGADGET_LINUX_PERFMON_H__
+#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_PERFMON_H__
+#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_PERFMON_H__
 
 #include <ggadget/framework_interface.h>
 
@@ -34,4 +34,4 @@ class Perfmon : public PerfmonInterface {
 } // namespace framework
 } // namespace ggadget
 
-#endif // GGADGET_LINUX_PERFMON_H__
+#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_PERFMON_H__

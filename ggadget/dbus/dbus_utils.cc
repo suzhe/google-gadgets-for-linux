@@ -819,6 +819,7 @@ class DBusDemarshaller::Impl {
           break;
         }
       case DBUS_TYPE_STRING:
+      case DBUS_TYPE_OBJECT_PATH:
         {
           const char *str;
           dbus_message_iter_get_basic(iter_, &str);

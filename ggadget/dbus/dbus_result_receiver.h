@@ -38,7 +38,7 @@ namespace dbus {
  * ...
  *
  * DBusSingleResultReceiver<std::string> receiver;
- * proxy->Call("method, true, -1, receiver.NewSlot(), ...);
+ * proxy->Call(method, true, -1, receiver.NewSlot(), ...);
  *
  * return receiver.GetValue();
  */

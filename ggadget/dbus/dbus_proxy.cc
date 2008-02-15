@@ -409,7 +409,7 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
     dbus_message_iter_init(reply, &iter);
     dbus_message_iter_get_basic(&iter, &str);
     dbus_message_unref(reply);
-    DLOG("xml:\n%s", str);
+    // DLOG("xml:\n%s", str);
     if (xml_parser->ParseContentIntoDOM(str, "Introspect.xml", NULL, NULL,
                                         domdoc, NULL, NULL)) {
       DOMNodeInterface *root_node = domdoc->GetDocumentElement();
@@ -423,8 +423,8 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
            interface_node; interface_node = interface_node->GetNextSibling()) {
         if (interface_node->GetNodeType() != DOMNodeInterface::ELEMENT_NODE ||
             interface_node->GetNodeName() != "interface") {
-          DLOG("meanless xml note, name: %s",
-               interface_node->GetNodeName().c_str());
+          // DLOG("meanless xml note, name: %s",
+          //      interface_node->GetNodeName().c_str());
           continue;
         }
         DOMElementInterface *element =
@@ -702,7 +702,7 @@ DBusProxy::DBusProxy(DBusConnection* connection,
                      const char* interface) : impl_(NULL) {
   if (connection) {
     impl_ = new Impl(this, connection, mainloop, name, path, interface);
-    DLOG("create proxy for %s/%s/%s", name, path, interface);
+    DLOG("create proxy for %s|%s|%s", name, path, interface);
   }
 }
 
