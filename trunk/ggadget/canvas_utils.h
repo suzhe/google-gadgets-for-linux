@@ -17,10 +17,10 @@
 #ifndef GGADGET_CANVAS_UTILS_H__
 #define GGADGET_CANVAS_UTILS_H__
 
+namespace ggadget {
+
 class CanvasInterface;
 class ImageInterface;
-
-namespace ggadget {
 
 /**
  * Draw the specified area in the source canvas on the destination canvas.
@@ -33,13 +33,13 @@ void DrawCanvasArea(const CanvasInterface *src, double src_x, double src_y,
 
 /**
  * Draw the source canvas on the destination canvas with given width and height,
- * by stretching the middle part of the image and keeping the four corners
+ * by stretching the middle area of the image and keeping the four corners
  * unstretched and the four borders only stretched in one direction.
  *
  * If the border widths/heights are all 0, this method does nearly the same as
  * @c ImageInterface::StretchDraw().
- * If the border widths/heights are all -1, this method will automatically
- * select the middle area, for example, 1/2 size of the source.
+ * If a border width or height is negative, the middle area is calculated from
+ * the center of the image.
  */
 void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
                              double x, double y, double width, double height,

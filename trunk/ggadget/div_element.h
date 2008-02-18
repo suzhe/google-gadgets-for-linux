@@ -33,12 +33,21 @@ class DivElement : public ScrollingElement {
   virtual void DoRegister();
 
  public:
+  enum BackgroundMode {
+    BACKGROUND_MODE_TILE,
+    BACKGROUND_MODE_STRETCH,
+    BACKGROUND_MODE_STRETCH_MIDDLE,
+  };
+
   /**
    * Gets and sets the background color or image of the element. The image is
-   * repeated if necessary, not stretched.
+   * repeated (tiled) or stretched according to the current background mode.
    */
   Variant GetBackground() const;
   void SetBackground(const Variant &background);
+
+  BackgroundMode GetBackgroundMode() const;
+  void SetBackgroundMode(BackgroundMode mode);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

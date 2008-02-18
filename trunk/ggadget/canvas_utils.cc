@@ -52,8 +52,8 @@ void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
   double src_width = src->GetWidth();
   double src_height = src->GetHeight();
   if (src_width < 4 || src_height < 4 ||
-      (left_border_width <= 0 && top_border_height <= 0 &&
-       right_border_width <= 0 && bottom_border_height <= 0)) {
+      (left_border_width == 0 && top_border_height == 0 &&
+       right_border_width == 0 && bottom_border_height == 0)) {
     DrawCanvasArea(src, 0, 0, src_width, src_height, dest, x, y, width, height);
     return;
   }
@@ -62,14 +62,14 @@ void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
     if (src->GetWidth() == width && src->GetHeight() == height) {
       dest->DrawCanvas(x, y, src);
     } else {
-      if (left_border_width == -1)
-        left_border_width = src_width / 4;
-      if (right_border_width == -1)
-        right_border_width = src_width / 4;
-      if (top_border_height == -1)
-        top_border_height = src_height / 4;
-      if (bottom_border_height == -1)
-        bottom_border_height = src_height / 4;
+      if (left_border_width < 0)
+        left_border_width += src_width / 2;
+      if (right_border_width < 0)
+        right_border_width += src_width / 2;
+      if (top_border_height < 0)
+        top_border_height += src_height / 2;
+      if (bottom_border_height < 0)
+        bottom_border_height += src_height / 2;
 
       double total_border_width = left_border_width + right_border_width;
       double total_border_height = top_border_height + bottom_border_height;
@@ -77,51 +77,47 @@ void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
       double src_middle_height = src_height - total_border_height;
       if (src_middle_width <= 0) {
         src_middle_width = src_width / 2;
-        left_border_width = right_border_width = src_width / 4;
+        left_border_width = right_border_width = src_width / 2 - 1;
       }
       if (src_middle_height <= 0) {
         src_middle_height = src_width / 2;
-        top_border_height = bottom_border_height = src_height / 4;
+        top_border_height = bottom_border_height = src_height / 2 - 1;
       }
 
       double dest_middle_width = width - total_border_width;
       double dest_middle_height = height - total_border_height;
-      DrawCanvasArea(src, 0, 0,
-                     left_border_width, top_border_height,
-                     dest, x, y,
-                     left_border_width, top_border_height);
+      double sx2 = src_width - right_border_width;
+      double sy2 = src_height - bottom_border_height;
+      double dx1 = x + left_border_width;
+      double dx2 = x + width - right_border_width;
+      double dy1 = y + top_border_height;
+      double dy2 = y + height - bottom_border_height;
+
+      DrawCanvasArea(src, 0, 0, left_border_width, top_border_height,
+                     dest, x, y, left_border_width, top_border_height);
       DrawCanvasArea(src, left_border_width, 0,
                      src_middle_width, top_border_height,
-                     dest, left_border_width, 0,
-                     dest_middle_width, top_border_height);
-      DrawCanvasArea(src, src_width - right_border_width, 0,
-                     right_border_width, top_border_height,
-                     dest, width - right_border_width, 0,
-                     right_border_width, top_border_height);
+                     dest, dx1, y, dest_middle_width, top_border_height);
+      DrawCanvasArea(src, sx2, 0, right_border_width, top_border_height,
+                     dest, dx2, y, right_border_width, top_border_height);
+
       DrawCanvasArea(src, 0, top_border_height,
                      left_border_width, src_middle_height,
-                     dest, 0, top_border_height,
-                     left_border_width, dest_middle_height);
+                     dest, x, dy1, left_border_width, dest_middle_height);
       DrawCanvasArea(src, left_border_width, top_border_height,
                      src_middle_width, src_middle_height,
-                     dest, left_border_width, top_border_height,
-                     dest_middle_width, dest_middle_height);
-      DrawCanvasArea(src, src_width - right_border_width, top_border_height,
+                     dest, dx1, dy1, dest_middle_width, dest_middle_height);
+      DrawCanvasArea(src, sx2, top_border_height,
                      right_border_width, src_middle_height,
-                     dest, width - right_border_width, top_border_height,
-                     right_border_width, dest_middle_height);
-      DrawCanvasArea(src, 0, top_border_height,
-                     left_border_width, src_middle_height,
-                     dest, 0, top_border_height,
-                     left_border_width, dest_middle_height);
-      DrawCanvasArea(src, left_border_width, top_border_height,
-                     src_middle_width, src_middle_height,
-                     dest, left_border_width, top_border_height,
-                     dest_middle_width, dest_middle_height);
-      DrawCanvasArea(src, src_width - right_border_width, top_border_height,
-                     right_border_width, src_middle_height,
-                     dest, width - right_border_width, top_border_height,
-                     right_border_width, dest_middle_height);
+                     dest, dx2, dy1, right_border_width, dest_middle_height);
+
+      DrawCanvasArea(src, 0, sy2, left_border_width, bottom_border_height,
+                     dest, x, dy2, left_border_width, bottom_border_height);
+      DrawCanvasArea(src, left_border_width, sy2,
+                     src_middle_width, bottom_border_height,
+                     dest, dx1, dy2, dest_middle_width, bottom_border_height);
+      DrawCanvasArea(src, sx2, sy2, right_border_width, bottom_border_height,
+                     dest, dx2, dy2, right_border_width, bottom_border_height);
     }
   }
 }
@@ -139,8 +135,8 @@ void StretchMiddleDrawImage(const ImageInterface *src, CanvasInterface *dest,
   double src_width = src->GetWidth();
   double src_height = src->GetHeight();
   if (src_width < 4 || src_height < 4 ||
-      (left_border_width <= 0 && top_border_height <= 0 &&
-       right_border_width <= 0 && bottom_border_height <= 0)) {
+      (left_border_width == 0 && top_border_height == 0 &&
+       right_border_width == 0 && bottom_border_height == 0)) {
     src->StretchDraw(dest, x, y, width, height);
     return;
   }

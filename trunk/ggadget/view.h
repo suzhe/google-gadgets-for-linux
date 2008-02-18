@@ -243,6 +243,18 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    */
   int GetDebugMode() const;
 
+  /** Gets the element currently having the input focus. */  
+  BasicElement *GetFocusedElement();
+  /** Gets the element which the mouse is currently over. */
+  BasicElement *GetMouseOverElement();
+
+  /**
+   * Enables or disables firing events.
+   * Because onchange events should not be fired during XML setup, events
+   * should be disabled until the view is ready to run. 
+   */
+  void EnableEvents(bool enable_events);
+
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.

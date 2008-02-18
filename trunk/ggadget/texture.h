@@ -69,6 +69,8 @@ class Texture {
     return texture ? texture->GetSrc() : "";
   }
 
+  const ImageInterface *GetImage() const;
+
  private:
   class Impl;
   Impl *impl_;
