@@ -178,12 +178,12 @@ class View::Impl {
       post_event_token_(0),
       mark_redraw_token_(0),
       draw_queued_(false),
-      utils_(this) {
+      utils_(this),
+      events_enabled_(true) {
   }
 
   ~Impl() {
     ASSERT(event_stack_.empty());
-    ASSERT(death_detected_elements_.empty());
     SimpleEvent event(Event::EVENT_CLOSE);
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     FireEvent(&scriptable_event, onclose_event_);
@@ -237,7 +237,11 @@ class View::Impl {
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
     obj->RegisterMethod("resizeTo", NewSlot(owner_, &View::SetSize));
 
-    // Linux extension, not in official API. 
+    // Extended APIs. 
+    obj->RegisterProperty("focusedElement",
+                          NewSlot(owner_, &View::GetFocusedElement), NULL);
+    obj->RegisterProperty("mouseOverElement",
+                          NewSlot(owner_, &View::GetMouseOverElement), NULL);
     obj->RegisterMethod("openURL", NewSlot(owner_, &View::OpenURL));
 
     obj->RegisterSignal(kOnCancelEvent, &oncancel_event_);
@@ -410,8 +414,7 @@ class View::Impl {
                                      event.GetWheelDeltaY(),
                                      event.GetButton(),
                                      event.GetModifier());
-          MapChildMouseEvent(event, mouseover_element_.Get(),
-                                &mouseover_event);
+          MapChildMouseEvent(event, mouseover_element_.Get(), &mouseover_event);
           mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
                                                  &temp, &temp1);
         }
@@ -646,7 +649,7 @@ class View::Impl {
   }
 
   void FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
-    if (event_signal.HasActiveConnections()) {
+    if (events_enabled_ && event_signal.HasActiveConnections()) {
       SignalSlot slot(&event_signal);
       FireEventSlot(event, &slot);
     }
@@ -768,6 +771,10 @@ class View::Impl {
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
+
+    // Let posted events be processed after Layout() and before actual Draw().
+    // This can prevent some flickers, for example, onsize of labels.
+    FirePostedEvents();
 
     canvas->PushState();
     children_.Draw(canvas);
@@ -919,11 +926,6 @@ class View::Impl {
   ElementHolder tooltip_element_;
   ScriptableHolder<ContentAreaElement> content_area_element_;
 
-  // Local pointers to elements should be pushed into this vector before any
-  // event handler be called, and the pointer will be set to NULL if the
-  // element has been removed during the event handler.
-  std::vector<BasicElement **> death_detected_elements_;
-
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedEvents;
   PostedEvents posted_events_;
@@ -935,6 +937,7 @@ class View::Impl {
 
   Utils utils_;
   GlobalObject global_object_;
+  bool events_enabled_;
 };
 
 View::View(ScriptableInterface *inherits_from,
@@ -1174,6 +1177,18 @@ int View::GetDebugMode() const {
   return impl_->debug_mode_;
 }
 
+BasicElement *View::GetFocusedElement() {
+  return impl_->focused_element_.Get();
+}
+
+BasicElement *View::GetMouseOverElement() {
+  return impl_->mouseover_element_.Get();
+}
+
+void View::EnableEvents(bool enable_events) {
+  impl_->events_enabled_ = enable_events;
+}
+
 ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
   ASSERT(impl_->file_manager_);
   Variant::Type type = src.type();
@@ -1206,15 +1221,16 @@ ImageInterface *View::LoadImageFromGlobal(const char *name, bool is_mask) {
 }
 
 Texture *View::LoadTexture(const Variant &src) {
-  ASSERT(impl_->file_manager_);
   Color color;
   double opacity;
-  if (src.type() == Variant::TYPE_STRING &&
-      Color::FromString(VariantValue<const char*>()(src), &color, &opacity)) {
-    return new Texture(color, opacity);
+  if (src.type() == Variant::TYPE_STRING) {
+    const char *name = VariantValue<const char *>()(src);
+    if (name && name[0] == '#' && Color::FromString(name, &color, &opacity))
+      return new Texture(color, opacity);
   }
 
-  return new Texture(LoadImage(src, false));
+  ImageInterface *image = LoadImage(src, false);
+  return image ? new Texture(image) : NULL;
 }
 
 void View::SetFocus(BasicElement *element) {

@@ -52,6 +52,7 @@ static const double kWeakCursorWidth = 1.0;
 static const Color kStrongCursorColor(0, 0, 0);
 static const Color kWeakCursorColor(0.5, 0.5, 0.5);
 static const Color kDefaultTextColor(0, 0, 0);
+static const Color kDefaultBackgroundColor(1, 1, 1);
 static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
 static const Color kDefaultSelectionTextColor(1, 1, 1);
 
@@ -94,7 +95,7 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
       content_modified_(false),
       font_family_(kDefaultFontFamily),
       font_size_(kDefaultFontSize),
-      background_(NULL),
+      background_(new Texture(kDefaultBackgroundColor, 1)),
       text_color_(kDefaultTextColor) {
   ASSERT(main_loop_);
   ASSERT(graphics_);
@@ -106,8 +107,7 @@ GtkEditImpl::~GtkEditImpl() {
     canvas_->Destroy();
   if (im_context_)
     g_object_unref(im_context_);
-  if (background_)
-    delete background_;
+  delete background_;
 
   if (cursor_blink_timer_)
     main_loop_->RemoveWatch(cursor_blink_timer_);

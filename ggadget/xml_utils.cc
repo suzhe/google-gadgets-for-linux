@@ -279,6 +279,7 @@ bool SetupViewFromXML(View *view, const std::string &xml,
     return false;
   }
 
+  view->EnableEvents(false);
   SetupScriptableProperties(view, view->GetScriptContext(),
                             filename, view_element);
 
@@ -292,6 +293,7 @@ bool SetupViewFromXML(View *view, const std::string &xml,
     }
   }
 
+  view->EnableEvents(true);
   HandleAllScriptElements(view, filename, view_element);
   xmldoc->Unref();
   return true;

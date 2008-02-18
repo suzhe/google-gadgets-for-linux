@@ -184,7 +184,9 @@ class CanvasInterface {
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) = 0;
 
   /**
-   * Draw a rectangle filled with the given canvas.
+   * Draw a rectangle filled with the given canvas. The source canvas will be
+   * repeated if necessary.
+   *
    * @param x The X-coordinate of the rectangle's top left corner.
    * @param y The Y-coordinate of the rectangle's top left corner.
    * @param w Width of rectangle.
@@ -213,7 +215,7 @@ class CanvasInterface {
                                   const CanvasInterface *mask) = 0;
 
   /**
-   * Draws the specified text on the screen at the given (x, y).
+   * Draws the specified text on this canvas at the given (x, y).
    * text_flag is combination of zero or more TextFlag enum values.
    * @return true on success, false otherwise.
    */
@@ -223,7 +225,7 @@ class CanvasInterface {
                         Trimming trimming, int text_flags) = 0;
 
   /**
-   * Draws the specified text on the screen at the given (x, y) using the
+   * Draws the specified text on this canvas at the given (x, y) using the
    * specified texture. See @c DrawText() for details.
    */
   virtual bool DrawTextWithTexture(double x, double y, double width,

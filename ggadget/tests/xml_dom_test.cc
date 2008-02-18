@@ -15,6 +15,7 @@
 */
 
 #include <iostream>
+#include <map>
 #include <locale.h>
 
 #include "ggadget/logger.h"
@@ -321,6 +322,7 @@ TEST(XMLDOM, TestParentChildErrors) {
 
 void TestAttributes(DOMElementInterface *ele, DOMNamedNodeMapInterface *attrs,
                     size_t num_attr, ...) {
+  std::map<std::string, std::string> expected_attrs;
   std::string log = "Attrs: ";
   va_list ap;
   va_start(ap, num_attr);
@@ -331,30 +333,31 @@ void TestAttributes(DOMElementInterface *ele, DOMNamedNodeMapInterface *attrs,
     log += ':';
     log += value;
     log += ' ';
+    expected_attrs[name] = value;
   }
   LOG("%s", log.c_str());
   va_end(ap);
 
   ASSERT_EQ(num_attr, attrs->GetLength());
 
-  va_start(ap, num_attr);
   for (size_t i = 0; i < num_attr; i++) {
-    const char *name = va_arg(ap, const char *);
-    const char *value = va_arg(ap, const char *);
     DOMAttrInterface *attr = down_cast<DOMAttrInterface *>(attrs->GetItem(i));
-    EXPECT_STREQ(value, ele->GetAttribute(name).c_str());
-    EXPECT_STREQ(name, attr->GetName().c_str());
-    EXPECT_STREQ(value, attr->GetValue().c_str());
+    std::string name = attr->GetName();
+    std::map<std::string, std::string>::iterator it =
+        expected_attrs.find(name);
+    EXPECT_FALSE(it == expected_attrs.end());
+    EXPECT_EQ(it->first, name);
+    EXPECT_EQ(it->second, attr->GetValue());
     EXPECT_TRUE(attr->GetOwnerElement() == ele);
-    EXPECT_TRUE(ele->GetAttributeNode(name) == attr);
-    EXPECT_TRUE(attrs->GetNamedItem(name) == attr);
+    EXPECT_TRUE(ele->GetAttributeNode(name.c_str()) == attr);
+    EXPECT_TRUE(attrs->GetNamedItem(name.c_str()) == attr);
+    expected_attrs.erase(it);
   }
 
   ASSERT_TRUE(attrs->GetItem(num_attr) == NULL);
   ASSERT_TRUE(attrs->GetItem(num_attr * 2) ==  NULL);
   ASSERT_TRUE(attrs->GetItem(static_cast<size_t>(-1)) == NULL);
-
-  va_end(ap);
+  ASSERT_TRUE(expected_attrs.empty());
 }
 
 TEST(XMLDOM, TestElementAttr) {

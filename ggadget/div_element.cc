@@ -17,6 +17,7 @@
 #include <cmath>
 #include "div_element.h"
 #include "canvas_interface.h"
+#include "canvas_utils.h"
 #include "elements.h"
 #include "logger.h"
 #include "texture.h"
@@ -24,11 +25,14 @@
 
 namespace ggadget {
 
+static const char *kBackgroundModes[] = { "tile", "stretch", "stretchMiddle" };
+
 class DivElement::Impl {
  public:
   Impl(DivElement *owner)
       : owner_(owner),
-        background_texture_(NULL) {
+        background_texture_(NULL),
+        background_mode_(BACKGROUND_MODE_TILE) {
   }
   ~Impl() {
     delete background_texture_;
@@ -37,6 +41,7 @@ class DivElement::Impl {
 
   DivElement *owner_;
   Texture *background_texture_;
+  BackgroundMode background_mode_;
 };
 
 DivElement::DivElement(BasicElement *parent, View *view, const char *name)
@@ -60,6 +65,10 @@ void DivElement::DoRegister() {
   RegisterProperty("background",
                    NewSlot(this, &DivElement::GetBackground),
                    NewSlot(this, &DivElement::SetBackground));
+  RegisterStringEnumProperty("backgroundMode",
+                             NewSlot(this, &DivElement::GetBackgroundMode),
+                             NewSlot(this, &DivElement::SetBackgroundMode),
+                             kBackgroundModes, arraysize(kBackgroundModes));
 }
 
 DivElement::~DivElement() {
@@ -86,7 +95,18 @@ void DivElement::Layout() {
 
 void DivElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->background_texture_) {
-    impl_->background_texture_->Draw(canvas);
+    const ImageInterface *texture_image =
+        impl_->background_texture_->GetImage();
+    if (!texture_image || impl_->background_mode_ == BACKGROUND_MODE_TILE) {
+      impl_->background_texture_->Draw(canvas);
+    } else if (impl_->background_mode_ == BACKGROUND_MODE_STRETCH) {
+      texture_image->StretchDraw(canvas, 0, 0,
+                                 GetPixelWidth(), GetPixelHeight());
+    } else {
+      StretchMiddleDrawImage(texture_image, canvas, 0, 0,
+                             GetPixelWidth(), GetPixelHeight(),
+                             -1, -1, -1, -1);
+    }
   }
 
   canvas->TranslateCoordinates(-GetScrollXPosition(),
@@ -105,6 +125,17 @@ void DivElement::SetBackground(const Variant &background) {
   delete impl_->background_texture_;
   impl_->background_texture_ = GetView()->LoadTexture(background);
   QueueDraw();
+}
+
+DivElement::BackgroundMode DivElement::GetBackgroundMode() const {
+  return impl_->background_mode_;
+}
+
+void DivElement::SetBackgroundMode(BackgroundMode mode) {
+  if (mode != impl_->background_mode_) {
+    impl_->background_mode_ = mode;
+    QueueDraw();
+  }
 }
 
 BasicElement *DivElement::CreateInstance(BasicElement *parent, View *view,

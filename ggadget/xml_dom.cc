@@ -1114,6 +1114,8 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   DEFINE_CLASS_ID(0x721f40f59a3f48a9, DOMElementInterface);
   typedef DOMNodeBase<DOMElementInterface> Super;
   typedef std::vector<DOMAttr *> Attrs;
+  // Maps attribute name to the index of Attrs.
+  typedef std::map<std::string, size_t> AttrsMap;
 
   DOMElement(DOMDocumentInterface *owner_document, const char *tag_name)
       : Super(owner_document, tag_name) {
@@ -1139,9 +1141,9 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
   ~DOMElement() {
+    ASSERT(attrs_.size() == attrs_map_.size());
     for (Attrs::iterator it = attrs_.begin(); it != attrs_.end(); ++it)
       delete (*it);
-    attrs_.clear();
   }
 
   virtual NodeType GetNodeType() const { return ELEMENT_NODE; }
@@ -1154,24 +1156,27 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
   virtual std::string GetAttribute(const char *name) const {
-    Attrs::const_iterator it = FindAttr(name);
+    const DOMAttrInterface *attr = GetAttributeNode(name);
     // TODO: Default value logic.
-    return it == attrs_.end() ? "" : (*it)->GetValue();
+    return attr ? attr->GetValue() : "";
   }
 
   virtual DOMExceptionCode SetAttribute(const char *name, const char *value) {
     if (!CheckXMLName(name))
       return DOM_INVALID_CHARACTER_ERR;
 
-    Attrs::iterator it = FindAttr(name);
-    if (it == attrs_.end()) {
+    AttrsMap::iterator it = attrs_map_.find(name);
+    if (it == attrs_map_.end()) {
       DOMAttr *attr = new DOMAttr(GetOwnerDocument(), name, this);
+      attrs_map_[attr->GetName()] = attrs_.size();
       attrs_.push_back(attr);
       attr->SetValue(value);
       attr->SetRow(GetRow());
-      // Don't set column, because it is inaccurate. 
+      // Don't set column, because it is inaccurate.
+      ASSERT(attrs_map_.size() == attrs_.size());
     } else {
-      (*it)->SetValue(value);
+      ASSERT(it->second < attrs_.size());
+      attrs_[it->second]->SetValue(value);
     }
     return DOM_NO_ERR;
   }
@@ -1187,8 +1192,9 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
   }
 
   virtual const DOMAttrInterface *GetAttributeNode(const char *name) const {
-    Attrs::const_iterator it = FindAttr(name);
-    return it == attrs_.end() ? NULL : *it;
+    AttrsMap::const_iterator it = attrs_map_.find(name);
+    ASSERT(it == attrs_map_.end() || it->second < attrs_.size());
+    return it == attrs_map_.end() ? NULL : attrs_[it->second];
   }
 
   virtual DOMExceptionCode SetAttributeNode(DOMAttrInterface *new_attr) {
@@ -1201,15 +1207,19 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
              DOM_INUSE_ATTRIBUTE_ERR : DOM_NO_ERR;
     }
 
-    Attrs::iterator it = FindAttr(new_attr->GetName());
-    if (it != attrs_.end()) {
-      (*it)->SetOwnerElement(NULL);
-      attrs_.erase(it);
-    }
-
     DOMAttr *new_attr_internal = down_cast<DOMAttr *>(new_attr);
     new_attr_internal->SetOwnerElement(this);
-    attrs_.push_back(new_attr_internal);
+    AttrsMap::iterator it = attrs_map_.find(new_attr->GetName());
+    if (it != attrs_map_.end()) {
+      ASSERT(it->second < attrs_.size());
+      attrs_[it->second]->SetOwnerElement(NULL);
+      attrs_[it->second] = new_attr_internal;
+      // No need to change attr_map_.
+    } else {
+      attrs_map_[new_attr->GetName()] = attrs_.size(); 
+      attrs_.push_back(new_attr_internal);
+      ASSERT(attrs_map_.size() == attrs_.size());
+    }
     return DOM_NO_ERR;
   }
 
@@ -1219,10 +1229,9 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     if (old_attr->GetOwnerElement() != this)
       return DOM_NOT_FOUND_ERR;
 
-    Attrs::iterator it = FindAttrNode(old_attr);
-    (*it)->SetOwnerElement(NULL);
-    attrs_.erase(it);
-    return DOM_NO_ERR;
+    bool result = RemoveAttributeInternal(old_attr->GetName());
+    ASSERT(result);
+    return result ? DOM_NO_ERR : DOM_NOT_FOUND_ERR;
   }
 
   virtual DOMNamedNodeMapInterface *GetAttributes() {
@@ -1290,20 +1299,16 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     }
 
     virtual void DoRegister() {
-      DOMNamedNodeMapInterface *super_ptr =
-          implicit_cast<DOMNamedNodeMapInterface *>(this);
-      RegisterProperty("length",
-                       NewSlot(super_ptr, &DOMNamedNodeMapInterface::GetLength),
+      RegisterProperty("length", NewSlot(this, &AttrsNamedMap::GetLength),
                        NULL);
       RegisterMethod("getNamedItem",
-                     NewSlot(super_ptr,
-                             &DOMNamedNodeMapInterface::GetNamedItem));
+                     NewSlot(this, &AttrsNamedMap::GetNamedItem));
       RegisterMethod("setNamedItem",
                      NewSlot(this, &AttrsNamedMap::ScriptSetNamedItem));
       RegisterMethod("removeNamedItem",
                      NewSlot(this, &AttrsNamedMap::ScriptRemoveNamedItem));
-      RegisterMethod("item",
-                     NewSlot(super_ptr, &DOMNamedNodeMapInterface::GetItem));
+      RegisterMethod("item", NewSlot(this, &AttrsNamedMap::GetItem));
+      SetArrayHandler(NewSlot(this, &AttrsNamedMap::GetItem), NULL);
     }
 
     virtual DOMNodeInterface *GetNamedItem(const char *name) {
@@ -1397,47 +1402,29 @@ class DOMElement : public DOMNodeBase<DOMElementInterface> {
     return CheckException(RemoveAttributeNode(old_attr)) ? old_attr : NULL;
   }
 
-  bool RemoveAttributeInternal(const char *name) {
-    Attrs::iterator it = FindAttr(name);
-    if (it != attrs_.end()) {
-      (*it)->SetOwnerElement(NULL);
-      attrs_.erase(it);
+  bool RemoveAttributeInternal(const std::string &name) {
+    AttrsMap::iterator it = attrs_map_.find(name);
+    if (it != attrs_map_.end()) {
+      size_t index = it->second;
+      attrs_[index]->SetOwnerElement(NULL);
+      if (index < attrs_.size() - 1) {
+        // Move the last element to the new blank slot and update the index,
+        // ensuring that attrs_ contains no blank slot.
+        DOMAttr *last_attr = attrs_.back();
+        attrs_[index] = last_attr;
+        attrs_map_[last_attr->GetName()] = index;
+      }
+      attrs_.pop_back();
+      attrs_map_.erase(it);
       return true;
     }
     return false;
     // TODO: Deal with default values if we support DTD.
   }
 
-  Attrs::iterator FindAttr(const std::string &name) {
-    for (Attrs::iterator it = attrs_.begin(); it != attrs_.end(); ++it)
-      if ((*it)->GetName() == name)
-        return it;
-    return attrs_.end();
-  }
-
-  Attrs::iterator FindAttrNode(DOMAttrInterface *attr) {
-    ASSERT(attr && attr->GetOwnerElement() == this);
-    Attrs::iterator it = std::find(attrs_.begin(), attrs_.end(), attr);
-    ASSERT(it != attrs_.end());
-    return it;
-  }
-
-  Attrs::const_iterator FindAttr(const std::string &name) const {
-    for (Attrs::const_iterator it = attrs_.begin(); it != attrs_.end(); ++it)
-      if ((*it)->GetName() == name)
-        return it;
-    return attrs_.end();
-  }
-
-  Attrs::const_iterator FindAttrNode(DOMAttrInterface *attr) const {
-    ASSERT(attr && attr->GetOwnerElement() == this);
-    Attrs::const_iterator it = std::find(attrs_.begin(), attrs_.end(), attr);
-    ASSERT(it != attrs_.end());
-    return it;
-  }
-
   std::string tag_name_;
   Attrs attrs_;
+  AttrsMap attrs_map_;
 };
 
 DOMElementInterface *DOMAttr::GetOwnerElement() {

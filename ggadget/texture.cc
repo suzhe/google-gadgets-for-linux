@@ -129,4 +129,8 @@ std::string Texture::GetSrc() const {
   return impl_->name_;
 }
 
+const ImageInterface *Texture::GetImage() const {
+  return impl_->image_;
+}
+
 } // namespace ggadget
