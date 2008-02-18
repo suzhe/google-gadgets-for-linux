@@ -21,4 +21,6 @@ SUBDIRS = dbus_script_class \
 	  gst_audio_framework \
 	  gtk_system_framework \
 	  linux_system_framework \
-	  smjs_script_runtime
+	  smjs_script_runtime \
+	  curl_xml_http_request \
+	  libxml2_xml_parser

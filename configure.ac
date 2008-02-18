@@ -258,32 +258,36 @@ build_gtkmoz_browser_element=yes
 build_gst_audio_framework=yes
 build_gtk_system_framework=yes
 build_smjs_script_runtime=yes
-
-if test x$has_libcurl != xyes; then
-  AC_MSG_ERROR([Library curl is not available.])
-fi
-
-if test x$has_libxml2 != xyes; then
-  AC_MSG_ERROR([Library xml2 is not available.])
-fi
+build_curl_xml_http_request=yes
+build_libxml2_xml_parser=yes
 
 if test x$has_zlib != xyes; then
   AC_MSG_ERROR([Library zlib is not available.])
 fi
 
+if test x$has_libxml2 != xyes; then
+  AC_MSG_WARN([Library xml2 is not available, libxml2-xml-parser extension won't be built.])
+  build_libxml2_xml_parser=no
+fi
+
+if test x$has_libcurl != xyes; then
+  AC_MSG_WARN([Library curl is not available, curl-xml-http-request extension won't be built.])
+  build_curl_xml_http_request=no
+fi
+
 if test x$has_gstreamer != xyes; then
-  AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework extension won't be built])
+  AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework extension won't be built.])
   build_gst_audio_framework=no
 fi
 
 if test x$has_cairo != xyes -o x$has_pango != xyes -o x$has_gdk2 != xyes; then
-  AC_MSG_WARN([Library cairo, pango or gdk-2.0 are not available, libggadget-gtk and simple host won't be built])
+  AC_MSG_WARN([Library cairo, pango or gdk-2.0 are not available, libggadget-gtk and simple host won't be built.])
   build_libggadget_gtk=no
   build_simple_host=no
 fi
 
 if test x$has_gtk2 != xyes; then
-  AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and simple host won't be built])
+  AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and simple host won't be built.])
   build_simple_host=no
   build_gtk_system_framework=no
 fi
@@ -326,6 +330,14 @@ AM_CONDITIONAL(
 AM_CONDITIONAL(
   [GGL_BUILD_SMJS_SCRIPT_RUNTIME],
   [test x$build_smjs_script_runtime = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_CURL_XML_HTTP_REQUEST],
+  [test x$build_curl_xml_http_request = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBXML2_XML_PARSER],
+  [test x$build_libxml2_xml_parser = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_SIMPLE_HOST],
@@ -451,6 +463,8 @@ AC_CONFIG_FILES([Makefile
 		 extensions/linux_system_framework/tests/Makefile
 		 extensions/smjs_script_runtime/Makefile
 		 extensions/smjs_script_runtime/tests/Makefile
+		 extensions/curl_xml_http_request/Makefile
+		 extensions/libxml2_xml_parser/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
@@ -495,6 +509,8 @@ Build options:
   Build gtk-system-framework    $build_gtk_system_framework
   Build linux-system-framework  $build_linux_system_framework
   Build smjs-script-runtime     $build_smjs_script_runtime
+  Build curl-xml-http-request   $build_curl_xml_http_request
+  Build libxml2-xml-parser      $build_libxml2_xml_parser
 
  Hosts:
   Build simple host             $build_simple_host
