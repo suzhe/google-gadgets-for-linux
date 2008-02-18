@@ -25,8 +25,6 @@ class DOMDocumentInterface;
 
 class XMLParserInterface {
  public:
-  virtual ~XMLParserInterface() { }
-
   /**
    * Checks if an XML name is a valid name.
    * @param name the XML name in UTF8 encoding.
@@ -116,6 +114,8 @@ class XMLParserInterface {
    */
   virtual std::string EncodeXMLString(const char *src) = 0;
 
+ protected:
+  virtual ~XMLParserInterface() { }
 };
 
 } // namespace ggadget

@@ -35,7 +35,7 @@
 #include "scriptable_options.h"
 #include "view_host_interface.h"
 #include "view.h"
-#include "xml_parser_interface.h"
+#include "xml_parser.h"
 #include "extension_manager.h"
 
 namespace ggadget {
@@ -504,16 +504,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                                           &manifest_contents,
                                           &manifest_path))
       return false;
-    if (!host_->GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
-                                                     manifest_path.c_str(),
-                                                     kGadgetTag, NULL,
-                                                     &manifest_info_map_)) {
+    if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                              manifest_path.c_str(),
+                                              kGadgetTag, NULL,
+                                              &manifest_info_map_)) {
       // For compatibility with some Windows gadget files that use ISO8859-1
       // encoding without declaration.
-      if (!host_->GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
-                                                       manifest_path.c_str(),
-                                                       kGadgetTag, "ISO8859-1",
-                                                       &manifest_info_map_))
+      if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                                manifest_path.c_str(),
+                                                kGadgetTag, "ISO8859-1",
+                                                &manifest_info_map_))
         return false;
     }
 

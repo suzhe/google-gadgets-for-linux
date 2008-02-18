@@ -512,6 +512,11 @@ class BasicElement::Impl {
       if (debug_mode_ >= 2) {
         DrawBoundingBox(canvas, width_, height_, debug_color_index_);
       }
+
+      ++total_draw_count_;
+      if ((total_draw_count_ % 100) == 0)
+        DLOG("BasicElement: %d draws, %d queues.",
+             total_draw_count_, total_queue_draw_count_);
     }
 
     visibility_changed_ = false;
@@ -547,6 +552,7 @@ class BasicElement::Impl {
     } else if (visible_ || visibility_changed_) {
       view_->QueueDraw();
     }
+    ++total_queue_draw_count_;
   }
 
   void PostSizeEvent() {
@@ -558,6 +564,7 @@ class BasicElement::Impl {
 
   void PositionChanged() {
     position_changed_ = true;
+#if 0
     // Don't call this->QueueDraw() here, because change of position should
     // only change the parent.
     if (parent_) {
@@ -565,6 +572,8 @@ class BasicElement::Impl {
     } else {
       view_->QueueDraw();
     }
+#endif
+    QueueDraw();
   }
 
   void WidthChanged() {
@@ -807,6 +816,9 @@ class BasicElement::Impl {
   static int total_debug_color_index_;
   int debug_mode_;
 
+  static int total_draw_count_;
+  static int total_queue_draw_count_;
+
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
   EventSignal onrclick_event_;
@@ -829,6 +841,8 @@ class BasicElement::Impl {
 };
 
 int BasicElement::Impl::total_debug_color_index_ = 0;
+int BasicElement::Impl::total_draw_count_ = 0;
+int BasicElement::Impl::total_queue_draw_count_ = 0;
 
 static const char *kCursorTypeNames[] = {
   "arrow", "ibeam", "wait", "cross", "uparrow",

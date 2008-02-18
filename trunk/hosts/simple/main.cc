@@ -52,6 +52,8 @@ static const char *kGlobalExtensions[] = {
   "linux-system-framework",
 #endif
   "smjs-script-runtime",
+  "curl-xml-http-request",
+  "libxml2-xml-parser",
   NULL
 };
 

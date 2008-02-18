@@ -29,7 +29,6 @@ class GraphicsInterface;
 class ScriptContextInterface;
 class MenuInterface;
 class ViewHostInterface;
-class XMLParserInterface;
 
 /**
  * Interface for representing a View in the Gadget API.
@@ -57,12 +56,6 @@ class ViewInterface : public ScriptableInterface {
    * @return the FileManagerInterface object associated with this view's gadget.
    */
   virtual FileManagerInterface *GetFileManager() const = 0;
-
-  /**
-   * @return the XMLParserInterface object used to parse the XML source of
-   * this view.
-   */
-  virtual XMLParserInterface *GetXMLParser() const = 0;
 
   /**
    * Read XML definition from the file and init the view, and start running.

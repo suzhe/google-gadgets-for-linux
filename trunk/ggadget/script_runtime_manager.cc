@@ -72,6 +72,8 @@ ScriptRuntimeManager::ScriptRuntimeManager()
 
 ScriptRuntimeManager::~ScriptRuntimeManager() {
   DLOG("ScriptRuntimeManager singleton is destroyed, but it shouldn't.");
+  ASSERT(Impl::manager_ == this);
+  Impl::manager_ = NULL;
   delete impl_;
   impl_ = NULL;
 }
