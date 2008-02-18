@@ -327,8 +327,7 @@ void ScriptableHelperImpl::RegisterSignal(const char *name, Signal *signal) {
 void ScriptableHelperImpl::RegisterVariantConstant(const char *name,
                                                    const Variant &value) {
   ASSERT(name);
-  Variant::Type type = value.type();
-  ASSERT_M(type != Variant::TYPE_SLOT,
+  ASSERT_M(value.type() != Variant::TYPE_SLOT,
            ("Don't register Slot constant. Use RegisterMethod instead."));
   constants_[name] = value;
 }
