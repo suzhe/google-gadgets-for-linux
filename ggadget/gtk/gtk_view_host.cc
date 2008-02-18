@@ -23,7 +23,7 @@
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/xml_http_request.h>
+#include <ggadget/xml_http_request_factory.h>
 #include "gtk_view_host.h"
 #include "cairo_graphics.h"
 #include "gadget_view_widget.h"
@@ -115,10 +115,6 @@ GtkViewHost::~GtkViewHost() {
 
   delete gfx_;
   gfx_ = NULL;
-}
-
-XMLHttpRequestInterface *GtkViewHost::NewXMLHttpRequest() {
-  return CreateXMLHttpRequest(gadget_host_->GetXMLParser());
 }
 
 void *GtkViewHost::GetNativeWidget() {

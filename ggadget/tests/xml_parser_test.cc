@@ -20,6 +20,9 @@
 #include "ggadget/logger.h"
 #include "ggadget/xml_parser.h"
 #include "ggadget/xml_dom_interface.h"
+#include "ggadget/system_utils.h"
+#include "ggadget/gadget_consts.h"
+#include "ggadget/extension_manager.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
@@ -46,7 +49,7 @@ const char *xml =
 
 TEST(XMLParser, ParseXMLIntoXPathMap) {
   GadgetStringMap map;
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   ASSERT_TRUE(xml_parser->ParseXMLIntoXPathMap(xml, "TheFileName", "root",
                                                NULL, &map));
   ASSERT_EQ(19U, map.size());
@@ -59,28 +62,25 @@ TEST(XMLParser, ParseXMLIntoXPathMap) {
   EXPECT_STREQ("s content1", map.find("s[3]")->second.c_str());
   EXPECT_STREQ("vv", map.find("s[3]@aa")->second.c_str());
   EXPECT_STREQ("", map.find("s2")->second.c_str());
-  delete xml_parser;
 
 }
 
 TEST(XMLParser, ParseXMLIntoXPathMap_InvalidRoot) {
   GadgetStringMap map;
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   ASSERT_FALSE(xml_parser->ParseXMLIntoXPathMap(xml, "TheFileName", "another",
                                                 NULL, &map));
-  delete xml_parser;
 }
 
 TEST(XMLParser, ParseXMLIntoXPathMap_InvalidXML) {
   GadgetStringMap map;
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   ASSERT_FALSE(xml_parser->ParseXMLIntoXPathMap("<a></b>", "Bad", "a",
                                                 NULL, &map));
-  delete xml_parser;
 }
 
 TEST(XMLParser, CheckXMLName) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   ASSERT_TRUE(xml_parser->CheckXMLName("abcde:def_.123-456"));
   ASSERT_TRUE(xml_parser->CheckXMLName("\344\270\200-\344\270\201"));
   ASSERT_FALSE(xml_parser->CheckXMLName("&#@Q!#"));
@@ -92,7 +92,7 @@ TEST(XMLParser, CheckXMLName) {
 // This test case only tests if xml_utils can convert an XML string into DOM
 // correctly.  Test cases about DOM itself are in xml_dom_test.cc.
 TEST(XMLParser, ParseXMLIntoDOM) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
   std::string encoding;
@@ -132,22 +132,20 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   delete sub_children;
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
-  delete xml_parser;
 }
 
 TEST(XMLParser, ParseXMLIntoDOM_InvalidXML) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
   ASSERT_FALSE(xml_parser->ParseContentIntoDOM("<a></b>", "Bad", NULL, NULL,
                                                domdoc, NULL, NULL));
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
-  delete xml_parser;
 }
 
 TEST(XMLParser, ConvertStringToUTF8) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   const char *src = "ASCII string, no BOM";
   std::string output;
   std::string encoding;
@@ -191,7 +189,6 @@ TEST(XMLParser, ConvertStringToUTF8) {
                                                NULL, &encoding, &output));
   ASSERT_STREQ("", encoding.c_str());
   ASSERT_STREQ("", output.c_str());
-  delete xml_parser;
 }
 
 void TestXMLEncoding(const char *xml, const char *name,
@@ -199,7 +196,7 @@ void TestXMLEncoding(const char *xml, const char *name,
                      const char *hint_encoding,
                      const char *expected_encoding) {
   LOG("TestXMLEncoding %s", name);
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
   std::string encoding;
@@ -211,13 +208,12 @@ void TestXMLEncoding(const char *xml, const char *name,
   ASSERT_STREQ(expected_encoding, encoding.c_str());
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
-  delete xml_parser;
 }
 
 void TestXMLEncodingExpectFail(const char *xml, const char *name,
                                const char *hint_encoding) {
   LOG("TestXMLEncoding expect fail %s", name);
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
   std::string encoding;
@@ -230,7 +226,6 @@ void TestXMLEncodingExpectFail(const char *xml, const char *name,
   ASSERT_FALSE(domdoc->HasChildNodes());
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
-  delete xml_parser;
 }
 
 TEST(XMLParser, ParseXMLIntoDOM_Encoding) {
@@ -257,7 +252,7 @@ TEST(XMLParser, ParseXMLIntoDOM_Encoding) {
   src = "<?xml version=\"1.0\" encoding=\"GB2312\"?><a>\xE5\xAD\x97</a>";
   TestXMLEncoding(src, "GB2312 declaration, but UTF-8 content, and UTF-8 hint",
                   src, "UTF-8", "UTF-8");
-  src = "<?xml version=\"1.0\" encoding=\"ISO8859-1\"?><a>\xE5\xAD\x97</a>";                  
+  src = "<?xml version=\"1.0\" encoding=\"ISO8859-1\"?><a>\xE5\xAD\x97</a>";
   expected_utf8 = "<?xml version=\"1.0\" encoding=\"ISO8859-1\"?><a>"
                   "\xC3\xA5\xC2\xAD\xC2\x97</a>";
   TestXMLEncoding(src,
@@ -274,7 +269,7 @@ TEST(XMLParser, ParseXMLIntoDOM_Encoding) {
 }
 
 TEST(XMLParser, HTMLEncoding) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   const char *src =
     "<html><head>"
     "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=gb2312\">"
@@ -296,14 +291,38 @@ TEST(XMLParser, HTMLEncoding) {
 }
 
 TEST(XMLParser, EncodeXMLString) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   ASSERT_STREQ("", xml_parser->EncodeXMLString(NULL).c_str());
   ASSERT_STREQ("", xml_parser->EncodeXMLString("").c_str());
   ASSERT_STREQ("&lt;&gt;", xml_parser->EncodeXMLString("<>").c_str());
-  delete xml_parser;
 }
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
+
+  // Setup GGL_MODULE_PATH env.
+  char buf[1024];
+  getcwd(buf, 1024);
+  LOG("Current dir: %s", buf);
+
+  std::string path =
+      ggadget::BuildPath(ggadget::kSearchPathSeparatorStr, buf,
+                ggadget::BuildFilePath(buf, "../../extensions/", NULL).c_str(),
+                NULL);
+
+  LOG("Set GGL_MODULE_PATH to %s", path.c_str());
+  setenv("GGL_MODULE_PATH", path.c_str(), 1);
+
+  // Load XMLHttpRequest module.
+  ggadget::ExtensionManager *ext_manager =
+      ggadget::ExtensionManager::CreateExtensionManager();
+
+  if (argc < 2)
+    ext_manager->LoadExtension("libxml2_xml_parser/libxml2-xml-parser", false);
+  else
+    ext_manager->LoadExtension(argv[1], false);
+
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+
   return RUN_ALL_TESTS();
 }

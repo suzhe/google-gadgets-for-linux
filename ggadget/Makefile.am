@@ -104,9 +104,8 @@ gglinclude_HEADERS	= anchor_element.h \
 			  view_host_interface.h \
 			  view_interface.h \
 			  windows_locales.h \
-			  xml_dom.h \
 			  xml_dom_interface.h \
-			  xml_http_request.h \
+			  xml_http_request_factory.h \
 			  xml_http_request_interface.h \
 			  xml_parser.h \
 			  xml_parser_interface.h \
@@ -169,15 +168,12 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  variant.cc \
 			  view.cc \
 			  windows_locales.cc \
-			  xml_dom.cc \
-			  xml_http_request.cc \
+			  xml_http_request_factory.cc \
 			  xml_parser.cc \
 			  xml_utils.cc
 
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
-			  @LIBCURL_CPPFLAGS@ \
-			  @XML_CPPFLAGS@ \
 			  @LTDLINCL@ \
 			  $(PREDEFINED_MACROS)
 
@@ -185,8 +181,6 @@ libggadget@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget@GGL_EPOCH@_la_LIBADD = \
-			  @LIBCURL@ \
-			  @XML_LIBS@ \
 			  $(top_builddir)/third_party/unzip/libunzip.la
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \

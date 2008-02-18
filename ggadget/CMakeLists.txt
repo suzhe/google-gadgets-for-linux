@@ -20,9 +20,6 @@ ADD_SUBDIRECTORY(gtk)
 ADD_DEFINITIONS(-DHAVE_GTKMOZ)
 ADD_SUBDIRECTORY(tests)
 
-PKGCONFIG_EX(libcurl 7.16.2 LIBCURL_LIBRARIES)
-PKGCONFIG_EX(libxml-2.0 2.6.0 LIBXML2_LIBRARIES)
-
 SET(SRCS
   basic_element.cc
   canvas_utils.cc
@@ -61,8 +58,7 @@ SET(SRCS
   variant.cc
   view.cc
   windows_locales.cc
-  xml_dom.cc
-  xml_http_request.cc
+  xml_http_request_factory.cc
   xml_parser.cc
   xml_utils.cc
 

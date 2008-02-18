@@ -39,7 +39,6 @@ class GtkGadgetHost : public GadgetHostInterface {
 
   virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
-  virtual XMLParserInterface *GetXMLParser();
   virtual GadgetInterface *GetGadget();
   virtual ViewHostInterface *NewViewHost(ViewType type, ViewInterface *view);
 
@@ -100,7 +99,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnAboutActivate(GtkMenuItem *menu_item, gpointer user_data);
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
-  XMLParserInterface *xml_parser_;
   FileManagerInterface *resource_file_manager_;
   FileManagerInterface *global_file_manager_;
   FileManagerInterface *file_manager_;

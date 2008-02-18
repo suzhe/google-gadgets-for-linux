@@ -27,7 +27,7 @@
 #include "unicode_utils.h"
 #include "view.h"
 #include "xml_dom_interface.h"
-#include "xml_parser_interface.h"
+#include "xml_parser.h"
 
 namespace ggadget {
 
@@ -263,10 +263,10 @@ bool SetupViewFromFile(View *view, const char *filename) {
 
 bool SetupViewFromXML(View *view, const std::string &xml,
                       const char *filename) {
-  DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
+  DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
   xmldoc->Ref();
-  if (!view->GetXMLParser()->ParseContentIntoDOM(xml, filename, NULL, NULL,
-                                                 xmldoc, NULL, NULL)) {
+  if (!GetXMLParser()->ParseContentIntoDOM(xml, filename, NULL, NULL,
+                                           xmldoc, NULL, NULL)) {
     xmldoc->Unref();
     return false;
   }
@@ -307,9 +307,9 @@ BasicElement *AppendElementFromXML(View *view, Elements *elements,
 BasicElement *InsertElementFromXML(View *view, Elements *elements,
                                    const std::string &xml,
                                    const BasicElement *before) {
-  DOMDocumentInterface *xmldoc = view->GetXMLParser()->CreateDOMDocument();
+  DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
   xmldoc->Ref();
-  if (!view->GetXMLParser()->ParseContentIntoDOM(xml, xml.c_str(), NULL, NULL,
+  if (!GetXMLParser()->ParseContentIntoDOM(xml, xml.c_str(), NULL, NULL,
                                                  xmldoc, NULL, NULL)) {
     xmldoc->Unref();
     return false;

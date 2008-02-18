@@ -96,6 +96,32 @@ static const char kScriptRuntimeExtensionSymbolName[] =
  *   The ScriptRuntime object shall be singleton and shared by all gadgets.
  *   So each ScriptRuntime extension shall only be registered one time.
  *
+ * - XMLHttpRequest extension module
+ *   A XMLHttpRequest extension module can be used to provide specified
+ *   implementation of XMLHttpRequestInterface.
+ *   This kind of extension modules must provide following symbol:
+ *   - XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *);
+ *   All newly created XMLHttpRequestInterface instance shall be returned when
+ *   calling this function. The specified XMLParserInterface instance shall be
+ *   used by the returned XMLHttpRequestInterface instance to parse XML
+ *   content.
+ *   One and only one XMLHttpRequest extension module shall be loaded by the
+ *   global ExtensionManager. Then XMLHttpRequestFactory singleton will use the
+ *   loaded XMLHttpRequest extension module to create XMLHttpRequestInterface
+ *   instances.
+ *
+ * - XMLParser extension module
+ *   A XMLParser extension module can be used to provide specified
+ *   implementations of XMLParserInterface and XMLDom related interfaces.
+ *   This kind of extension modules must provide following symbol:
+ *   - XMLParserInterface *GetXMLParser();
+ *   This function shall return a pointer to the singleton instance of
+ *   the XMLParserInterface implementation.
+ *   One and only one XMLParser extension module shall be loaded by the global
+ *   ExtensionManager. Then ggadget::GetXMLParser() function will return the
+ *   XMLParser singleton instance provided by the loaded XMLParser extension
+ *   module.
+ *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.
  * A symbol prefix modulename_LTX_ shall be used to avoid possible symbol

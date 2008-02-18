@@ -24,9 +24,12 @@
 #include <sys/poll.h>
 
 #include "ggadget/logger.h"
+#include "ggadget/gadget_consts.h"
+#include "ggadget/system_utils.h"
 #include "ggadget/slot.h"
+#include "ggadget/extension_manager.h"
 #include "ggadget/xml_dom_interface.h"
-#include "ggadget/xml_http_request.h"
+#include "ggadget/xml_http_request_factory.h"
 #include "ggadget/xml_parser.h"
 #include "ggadget/xml_parser_interface.h"
 #include "ggadget/native_main_loop.h"
@@ -37,14 +40,14 @@ using ggadget::NewSlot;
 using ggadget::DOMDocumentInterface;
 using ggadget::NativeMainLoop;
 using ggadget::XMLParserInterface;
-using ggadget::CreateXMLParser;
+using ggadget::GetXMLParser;
 
 static NativeMainLoop main_loop;
 
 TEST(XMLHttpRequest, States) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(xml_parser);
+      ggadget::XMLHttpRequestFactory::get()->CreateXMLHttpRequest(xml_parser);
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -65,7 +68,6 @@ TEST(XMLHttpRequest, States) {
   ASSERT_EQ(XMLHttpRequestInterface::INVALID_STATE_ERR,
             request->SetRequestHeader("ccc", "ddd"));
   delete request;
-  delete xml_parser;
 }
 
 class Callback {
@@ -102,9 +104,9 @@ class Callback {
 };
 
 TEST(XMLHttpRequest, SyncLocalFile) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(xml_parser);
+      ggadget::XMLHttpRequestFactory::get()->CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   Callback callback(request);
@@ -133,13 +135,12 @@ TEST(XMLHttpRequest, SyncLocalFile) {
   ASSERT_EQ(8u, size);
   ASSERT_EQ(1, request->GetRefCount());
   request->Unref();
-  delete xml_parser;
 }
 
 TEST(XMLHttpRequest, AsyncLocalFile) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(xml_parser);
+      ggadget::XMLHttpRequestFactory::get()->CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   Callback callback(request);
@@ -167,7 +168,6 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
   ASSERT_EQ(11u, size);
   ASSERT_EQ(1, request->GetRefCount());
   request->Unref();
-  delete xml_parser;
 }
 
 bool server_thread_succeeded = false;
@@ -272,9 +272,9 @@ void *ServerThread(void *arg) {
 }
 
 TEST(XMLHttpRequest, SyncNetworkFile) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(xml_parser);
+      ggadget::XMLHttpRequestFactory::get()->CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   pthread_t thread;
@@ -334,13 +334,12 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
   ASSERT_TRUE(server_thread_succeeded);
   ASSERT_EQ(1, request->GetRefCount());
   request->Unref();
-  delete xml_parser;
 }
 
 TEST(XMLHttpRequest, AsyncNetworkFile) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(xml_parser);
+      ggadget::XMLHttpRequestFactory::get()->CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   pthread_t thread;
@@ -440,13 +439,12 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_TRUE(server_thread_succeeded);
   ASSERT_EQ(1, request->GetRefCount());
   request->Unref();
-  delete xml_parser;
 }
 
 TEST(XMLHttpRequest, ResponseTextAndXML) {
-  XMLParserInterface *xml_parser = CreateXMLParser();
+  XMLParserInterface *xml_parser = GetXMLParser();
   XMLHttpRequestInterface *request =
-      ggadget::CreateXMLHttpRequest(xml_parser);
+      ggadget::XMLHttpRequestFactory::get()->CreateXMLHttpRequest(xml_parser);
   request->Ref();
 
   Callback callback(request);
@@ -470,11 +468,40 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
   ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
                dom->GetDocumentElement()->GetTextContent().c_str());
   ASSERT_EQ(1, request->GetRefCount());
-  delete xml_parser;
 }
 
 int main(int argc, char **argv) {
   ggadget::SetGlobalMainLoop(&main_loop);
   testing::ParseGUnitFlags(&argc, argv);
+
+  // Setup GGL_MODULE_PATH env.
+  char buf[1024];
+  getcwd(buf, 1024);
+  LOG("Current dir: %s", buf);
+
+  std::string path =
+      ggadget::BuildPath(ggadget::kSearchPathSeparatorStr, buf,
+                ggadget::BuildFilePath(buf, "../../extensions/", NULL).c_str(),
+                NULL);
+
+  LOG("Set GGL_MODULE_PATH to %s", path.c_str());
+  setenv("GGL_MODULE_PATH", path.c_str(), 1);
+
+  // Load XMLHttpRequest module.
+  ggadget::ExtensionManager *ext_manager =
+      ggadget::ExtensionManager::CreateExtensionManager();
+
+  if (argc < 3) {
+    ext_manager->LoadExtension(
+        "curl_xml_http_request/curl-xml-http-request", false);
+    ext_manager->LoadExtension(
+        "libxml2_xml_parser/libxml2-xml-parser", false);
+  } else {
+    ext_manager->LoadExtension(argv[1], false);
+    ext_manager->LoadExtension(argv[2], false);
+  }
+
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+
   return RUN_ALL_TESTS();
 }

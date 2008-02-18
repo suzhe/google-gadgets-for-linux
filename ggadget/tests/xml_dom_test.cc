@@ -19,14 +19,17 @@
 #include <locale.h>
 
 #include "ggadget/logger.h"
-#include "ggadget/xml_dom.h"
+#include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_parser.h"
 #include "ggadget/xml_utils.h"
+#include "ggadget/system_utils.h"
+#include "ggadget/gadget_consts.h"
+#include "ggadget/extension_manager.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
 
-XMLParserInterface *g_xml_parser;
+XMLParserInterface *g_xml_parser = NULL;
 
 void TestBlankNode(DOMNodeInterface *node) {
   EXPECT_TRUE(node->GetFirstChild() == NULL);
@@ -88,7 +91,7 @@ void TestNullNodeValue(DOMNodeInterface *node) {
 }
 
 TEST(XMLDOM, TestBlankDocument) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   ASSERT_TRUE(doc);
   EXPECT_STREQ(kDOMDocumentName, doc->GetNodeName().c_str());
@@ -103,7 +106,7 @@ TEST(XMLDOM, TestBlankDocument) {
 }
 
 TEST(XMLDOM, TestBlankElement) {
-  DOMDocumentInterface* doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface* doc = g_xml_parser->CreateDOMDocument();
   ASSERT_EQ(0, doc->GetRefCount());
   doc->Ref();
   ASSERT_EQ(1, doc->GetRefCount());
@@ -150,7 +153,7 @@ TEST(XMLDOM, TestBlankElement) {
 }
 
 TEST(XMLDOM, TestAttrSelf) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMAttrInterface *attr;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateAttribute("attr", &attr));
@@ -196,7 +199,7 @@ TEST(XMLDOM, TestAttrSelf) {
 }
 
 TEST(XMLDOM, TestParentChild) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
@@ -257,7 +260,7 @@ TEST(XMLDOM, TestParentChild) {
 }
 
 TEST(XMLDOM, TestParentChildErrors) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
 
   DOMElementInterface *root_ele;
@@ -302,7 +305,7 @@ TEST(XMLDOM, TestParentChildErrors) {
   ASSERT_EQ(DOM_HIERARCHY_REQUEST_ERR, ele2->ReplaceChild(ele1, ele2a));
   ASSERT_EQ(DOM_HIERARCHY_REQUEST_ERR, ele2->ReplaceChild(root_ele, ele2a));
 
-  DOMDocumentInterface *doc1 = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc1 = g_xml_parser->CreateDOMDocument();
   doc1->Ref();
   DOMElementInterface *ele3;
   doc1->CreateElement("ele3", &ele3);
@@ -361,7 +364,7 @@ void TestAttributes(DOMElementInterface *ele, DOMNamedNodeMapInterface *attrs,
 }
 
 TEST(XMLDOM, TestElementAttr) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMElementInterface *ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &ele));
@@ -422,7 +425,7 @@ TEST(XMLDOM, TestElementAttr) {
 }
 
 TEST(XMLDOM, TestElementAttributes) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMElementInterface *ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &ele));
@@ -475,7 +478,7 @@ TEST(XMLDOM, TestElementAttributes) {
 }
 
 TEST(XMLDOM, TestElementAttrErrors) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMElementInterface *ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &ele));
@@ -523,7 +526,7 @@ TEST(XMLDOM, TestElementAttrErrors) {
   TestAttributes(ele, attrs, 2, "attr2", "", "attr1", "value1d");
   delete ele1;
 
-  DOMDocumentInterface *doc1 = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc1 = g_xml_parser->CreateDOMDocument();
   doc1->Ref();
   DOMAttrInterface *attr_doc1;
   ASSERT_EQ(DOM_NO_ERR, doc1->CreateAttribute("attr_doc1", &attr_doc1));
@@ -546,7 +549,7 @@ void TestBlankNodeList(DOMNodeListInterface *list) {
 }
 
 TEST(XMLDOM, TestBlankGetElementsByTagName) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
   LOG("Blank document NULL name");
@@ -580,7 +583,7 @@ TEST(XMLDOM, TestAnyGetElementsByTagName) {
     " <s><s1><s1/></s1></s>\n"
     "</root>";
 
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   ASSERT_TRUE(doc->LoadXML(xml));
   DOMNodeListInterface *elements = doc->GetElementsByTagName(NULL);
@@ -626,7 +629,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
     " <s><s1><s1/></s1></s>\n"
     "</root>";
 
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   ASSERT_TRUE(doc->LoadXML(xml));
   DOMNodeListInterface *elements = doc->GetElementsByTagName("s");
@@ -657,7 +660,7 @@ TEST(XMLDOM, TestGetElementsByTagName) {
 }
 
 TEST(XMLDOM, TestText) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
 
   static UTF16Char data[] = { 'd', 'a', 't', 'a', 0 };
@@ -805,7 +808,7 @@ TEST(XMLDOM, TestText) {
 }
 
 TEST(XMLDOM, TestDocumentFragmentAndTextContent) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
@@ -849,7 +852,7 @@ TEST(XMLDOM, TestDocumentFragmentAndTextContent) {
 }
 
 TEST(XMLDOM, Others) {
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   DOMElementInterface *root_ele;
   ASSERT_EQ(DOM_NO_ERR, doc->CreateElement("root", &root_ele));
@@ -904,7 +907,7 @@ TEST(XMLDOM, TestXMLLoadAndSerialize) {
     " <s><s1><s1>text</s1></s1></s>\n"
     "</root>";
 
-  DOMDocumentInterface *doc = CreateDOMDocument(g_xml_parser);
+  DOMDocumentInterface *doc = g_xml_parser->CreateDOMDocument();
   doc->Ref();
   doc->LoadXML(xml);
   DOMElementInterface *ele = doc->GetDocumentElement();
@@ -923,8 +926,32 @@ TEST(XMLDOM, TestXMLLoadAndSerialize) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
-  g_xml_parser = CreateXMLParser();
+
+  // Setup GGL_MODULE_PATH env.
+  char buf[1024];
+  getcwd(buf, 1024);
+  LOG("Current dir: %s", buf);
+
+  std::string path =
+      ggadget::BuildPath(ggadget::kSearchPathSeparatorStr, buf,
+                ggadget::BuildFilePath(buf, "../../extensions/", NULL).c_str(),
+                NULL);
+
+  LOG("Set GGL_MODULE_PATH to %s", path.c_str());
+  setenv("GGL_MODULE_PATH", path.c_str(), 1);
+
+  // Load XMLHttpRequest module.
+  ggadget::ExtensionManager *ext_manager =
+      ggadget::ExtensionManager::CreateExtensionManager();
+
+  if (argc < 2)
+    ext_manager->LoadExtension("libxml2_xml_parser/libxml2-xml-parser", false);
+  else
+    ext_manager->LoadExtension(argv[1], false);
+
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+
+  g_xml_parser = GetXMLParser();
   int result = RUN_ALL_TESTS();
-  delete g_xml_parser;
   return result;
 }

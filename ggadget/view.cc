@@ -40,8 +40,8 @@
 #include "texture.h"
 #include "view_host_interface.h"
 #include "xml_dom_interface.h"
-#include "xml_http_request.h"
-#include "xml_parser_interface.h"
+#include "xml_http_request_factory.h"
+#include "xml_parser.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -237,7 +237,7 @@ class View::Impl {
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
     obj->RegisterMethod("resizeTo", NewSlot(owner_, &View::SetSize));
 
-    // Extended APIs. 
+    // Extended APIs.
     obj->RegisterProperty("focusedElement",
                           NewSlot(owner_, &View::GetFocusedElement), NULL);
     obj->RegisterProperty("mouseOverElement",
@@ -866,6 +866,11 @@ class View::Impl {
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
+  XMLHttpRequestInterface *NewXMLHttpRequest() {
+    XMLHttpRequestFactory *factory = XMLHttpRequestFactory::get();
+    return factory->CreateXMLHttpRequest(GetXMLParser());
+  }
+
   EventSignal oncancel_event_;
   EventSignal onclick_event_;
   EventSignal onclose_event_;
@@ -983,10 +988,9 @@ void View::AttachHost(ViewHostInterface *host) {
 
     // Register global classes into script context.
     impl_->script_context_->RegisterClass("DOMDocument",
-        NewSlot(impl_->gadget_host_->GetXMLParser(),
-                &XMLParserInterface::CreateDOMDocument));
+        NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
     impl_->script_context_->RegisterClass(
-        "XMLHttpRequest", NewSlot(host, &ViewHostInterface::NewXMLHttpRequest));
+        "XMLHttpRequest", NewSlot(impl_, &Impl::NewXMLHttpRequest));
     impl_->script_context_->RegisterClass(
         "DetailsView", NewSlot(DetailsView::CreateInstance));
     impl_->script_context_->RegisterClass(
@@ -1302,10 +1306,6 @@ bool View::OnAddContextMenuItems(MenuInterface *menu) {
 
 void View::MarkRedraw() {
   impl_->MarkRedraw();
-}
-
-XMLParserInterface *View::GetXMLParser() const {
-  return impl_->gadget_host_->GetXMLParser();
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

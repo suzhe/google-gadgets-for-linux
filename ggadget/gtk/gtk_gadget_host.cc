@@ -44,8 +44,7 @@ static const char kResourceZipName[] = "ggl-resources.bin";
 
 GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
                              double zoom, int debug_mode)
-    : xml_parser_(CreateXMLParser()),
-      resource_file_manager_(new FileManager(xml_parser_)),
+    : resource_file_manager_(new FileManager(GetXMLParser())),
       global_file_manager_(new GlobalFileManager()),
       file_manager_(NULL),
       options_(new Options()),
@@ -61,7 +60,7 @@ GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
       forward_button_(NULL),
       details_button_(NULL),
       menu_(NULL) {
-  FileManagerWrapper *wrapper = new FileManagerWrapper(xml_parser_);
+  FileManagerWrapper *wrapper = new FileManagerWrapper(GetXMLParser());
   file_manager_ = wrapper;
 
   resource_file_manager_->Init(kResourceZipName);
@@ -91,8 +90,6 @@ GtkGadgetHost::~GtkGadgetHost() {
   global_file_manager_ = NULL;
   delete menu_;
   menu_ = NULL;
-  delete xml_parser_;
-  xml_parser_ = NULL;
 }
 
 FileManagerInterface *GtkGadgetHost::GetFileManager() {
@@ -101,10 +98,6 @@ FileManagerInterface *GtkGadgetHost::GetFileManager() {
 
 OptionsInterface *GtkGadgetHost::GetOptions() {
   return options_;
-}
-
-XMLParserInterface *GtkGadgetHost::GetXMLParser() {
-  return xml_parser_;
 }
 
 GadgetInterface *GtkGadgetHost::GetGadget() {

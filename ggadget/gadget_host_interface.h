@@ -31,7 +31,6 @@ class ScriptableInterface;
 class Signal;
 class ViewHostInterface;
 class ViewInterface;
-class XMLParserInterface;
 
 /**
  * Interface for providing host services to the gadgets.
@@ -46,9 +45,6 @@ class GadgetHostInterface {
 
   /** Returns the @c OptionsInterface instance for this gadget. */
   virtual OptionsInterface *GetOptions() = 0;
-
-  /** Returns the global @c XMLParserInterface instance. */
-  virtual XMLParserInterface *GetXMLParser() = 0;
 
   /** Returns the hosted gadget. */
   virtual GadgetInterface *GetGadget() = 0;
@@ -68,8 +64,8 @@ class GadgetHostInterface {
    * @param type type of view.
    * @param view View object to attach this host to
    */
-  virtual ViewHostInterface *NewViewHost(ViewType type, 
-					 ViewInterface *view) = 0;
+  virtual ViewHostInterface *NewViewHost(ViewType type,
+                                         ViewInterface *view) = 0;
 
   enum PluginFlags {
     PLUGIN_FLAG_NONE = 0,

@@ -25,7 +25,6 @@ template <typename R, typename P1> class Slot1;
 class GadgetHostInterface;
 class GraphicsInterface;
 class ScriptContextInterface;
-class XMLHttpRequestInterface;
 
 /**
  * Interface for providing host services to views.. Each view contains a
@@ -53,9 +52,6 @@ class ViewHostInterface {
 
   /** Returns the @c GraphicsInterface associated with this host. */
   virtual const GraphicsInterface *GetGraphics() const = 0;
-
-  /** Creates a new @c XMLHttpRequestInterface instance. */
-  virtual XMLHttpRequestInterface *NewXMLHttpRequest() = 0;
 
   /**
    * Gets information about the native widget.

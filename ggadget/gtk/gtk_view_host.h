@@ -67,7 +67,6 @@ class GtkViewHost : public ViewHostInterface {
   virtual ScriptContextInterface *GetScriptContext() const {
     return script_context_;
   }
-  virtual XMLHttpRequestInterface *NewXMLHttpRequest();
   virtual const GraphicsInterface *GetGraphics() const { return gfx_; }
 
   virtual void *GetNativeWidget();

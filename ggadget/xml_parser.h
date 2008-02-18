@@ -21,7 +21,14 @@
 
 namespace ggadget {
 
-XMLParserInterface *CreateXMLParser();
+/**
+ * Gets the XMLParserInterface instance.
+ *
+ * The returned instance is a singleton provided by a XMLParser
+ * extension module, which is loaded into the global ExtensionManager in
+ * advanced.
+ */
+XMLParserInterface *GetXMLParser();
 
 } // namespace ggadget
 

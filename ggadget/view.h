@@ -54,7 +54,6 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
  public: // ViewInterface methods.
   virtual ScriptContextInterface *GetScriptContext() const;
   virtual FileManagerInterface *GetFileManager() const;
-  virtual XMLParserInterface *GetXMLParser() const;
   virtual bool InitFromFile(const char *filename);
   virtual void AttachHost(ViewHostInterface *host);
 
