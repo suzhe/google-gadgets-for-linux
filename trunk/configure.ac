@@ -197,6 +197,9 @@ AC_C_BIGENDIAN(
 # Check zlib
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
+# Check qt4
+PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3], [has_qt4=yes], [has_qt4=no])
+
 # Check pango related libraries.
 PKG_CHECK_MODULES(PANGO, [pango  >= 1.10.0], [has_pango=yes], [has_pango=no])
 
@@ -253,9 +256,11 @@ fi
 
 build_simple_host=yes
 build_libggadget_gtk=yes
+build_libggadget_qt=yes
 build_libggadget_dbus=yes
 build_gtkmoz_browser_element=yes
 build_gst_audio_framework=yes
+build_qt_host=yes
 build_gtk_system_framework=yes
 build_smjs_script_runtime=yes
 build_curl_xml_http_request=yes
@@ -292,6 +297,12 @@ if test x$has_gtk2 != xyes; then
   build_gtk_system_framework=no
 fi
 
+if test x$has_qt4 != xyes; then
+  AC_MSG_WARN([Library qt-4.3 or above is not available, qt host and libggadget-qt won't be built])
+  build_qt_host=no
+  build_libggadget_qt=no
+fi
+
 if test x$has_spidermonkey != xyes; then
   AC_MSG_WARN([Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.])
   build_smjs_script_runtime=no
@@ -310,6 +321,14 @@ fi
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_GTK],
   [test x$build_libggadget_gtk = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_LIBGGADGET_QT],
+  [test x$build_libggadget_qt = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_HOST],
+  [test x$build_qt_host = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_LIBGGADGET_DBUS],
@@ -471,10 +490,12 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/tests/test_modules/Makefile
 		 ggadget/dbus/Makefile
 		 ggadget/dbus/tests/Makefile
+		 ggadget/qt/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
+		 hosts/qt/Makefile
 		 resources/Makefile
 		 third_party/Makefile
 		 third_party/editline/Makefile
@@ -483,6 +504,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/libggadget-1.0.pc
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/libggadget-gtk-1.0.pc
+		 ggadget/qt/libggadget-qt-1.0.pc
 		 ])
 AC_OUTPUT
 
@@ -499,6 +521,7 @@ Build options:
  Libraries:
   GTK SVG Support               $has_rsvg
   Build libggadget-gtk          $build_libggadget_gtk
+  Build libggadget-qt           $build_libggadget_qt
   Build libggadget-dbus         $build_libggadget_dbus
 
  Extensions:
@@ -514,5 +537,6 @@ Build options:
 
  Hosts:
   Build simple host             $build_simple_host
+  Build qt host                 $build_qt_host
 ])
 

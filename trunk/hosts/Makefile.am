@@ -16,4 +16,10 @@
 
 if GGL_BUILD_SIMPLE_HOST
 SUBDIRS = simple
+else
+SUBDIRS = 
+endif
+
+if GGL_BUILD_QT_HOST
+SUBDIRS += qt
 endif
