@@ -52,6 +52,18 @@ struct Color {
     return red != c.red || green != c.green || blue != c.blue;
   }
 
+  int RedInt() const {
+    return static_cast<int>(round(red * 255));
+  }
+
+  int GreenInt() const {
+    return static_cast<int>(round(green * 255));
+  }
+
+  int BlueInt() const {
+    return static_cast<int>(round(blue * 255));
+  }
+
   /**
    * Convert a color into a HTML-style color name string.
    */

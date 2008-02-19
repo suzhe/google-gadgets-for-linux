@@ -18,6 +18,11 @@ SUBDIRS = . tests
 if GGL_BUILD_LIBGGADGET_GTK
 SUBDIRS += gtk
 endif
+
+if GGL_BUILD_LIBGGADGET_QT
+SUBDIRS += qt
+endif
+
 if GGL_BUILD_LIBGGADGET_DBUS
 SUBDIRS += dbus
 endif
