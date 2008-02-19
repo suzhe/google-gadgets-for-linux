@@ -33,6 +33,6 @@ ELSE(WIN32)
 ENDIF(WIN32)
 
 MACRO(OUTPUT_MODULE _target_name)
-  OUTPUT_TARGET(${_target_name} modules ${_target_name}.so)
+  SET_TARGET_PROPERTIES(${_target_name} PROPERTIES PREFIX "")
+  OUTPUT_TARGET(${_target_name} modules)
 ENDMACRO(OUTPUT_MODULE _target_name)
-

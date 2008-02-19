@@ -14,13 +14,21 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gstreamer-0.10 0.10 GST_LIBRARIES)
-ADD_DEFINITIONS(-DGST_AUDIOCLIP)
+MACRO(OUTPUT_TEST_MODULE _target_name)
+  SET_TARGET_PROPERTIES(${_target_name} PROPERTIES PREFIX "")
+
+  GET_TARGET_PROPERTY(target_location ${_target_name} LOCATION)
+  GET_FILENAME_COMPONENT(target_dir ${target_location} PATH)
+  COPY_TARGET(${_target_name} ${target_dir}/..)
+ENDMACRO(OUTPUT_TEST_MODULE _target_name _output_name)
 
 SET(SRCS
-  gst_audio_framework.cc
+  ../../test_module.cc
 )
+
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gst-audio-framework MODULE ${SRCS})
-TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES})
-OUTPUT_MODULE(gst-audio-framework)
+
+ADD_SUBDIRECTORY(foo_module)
+ADD_SUBDIRECTORY(bar_module)
+ADD_SUBDIRECTORY(fake_module)
+ADD_SUBDIRECTORY(tux_module)

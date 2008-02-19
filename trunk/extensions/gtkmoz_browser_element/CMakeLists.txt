@@ -18,7 +18,7 @@ PKGCONFIG_EX(gtk+-2.0 2.8 GTK_LIBRARIES)
 
 SET(LIB_SRCS browser_element.cc)
 
-ADD_LIBRARY(gtkmoz-browser-element SHARED ${LIB_SRCS})
+ADD_LIBRARY(gtkmoz-browser-element MODULE ${LIB_SRCS})
 TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget ${GTK_LIBRARIES})
 OUTPUT_MODULE(gtkmoz-browser-element)
 

@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gstreamer-0.10 0.10 GST_LIBRARIES)
-ADD_DEFINITIONS(-DGST_AUDIOCLIP)
+PKGCONFIG_EX(libxml-2.0 2.6.0 LIBXML2_LIBRARIES)
 
 SET(SRCS
-  gst_audio_framework.cc
+  libxml2_xml_dom.cc
+  libxml2_xml_parser.cc
 )
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gst-audio-framework MODULE ${SRCS})
-TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES})
-OUTPUT_MODULE(gst-audio-framework)
+ADD_LIBRARY(libxml2-xml-parser MODULE ${SRCS})
+TARGET_LINK_LIBRARIES(libxml2-xml-parser ${LIBXML2_LIBRARIES})
+OUTPUT_MODULE(libxml2-xml-parser)

@@ -20,7 +20,7 @@ SET(SRCS
   gtk_system_framework.cc
 )
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gtk-system-framework SHARED ${SRCS})
+ADD_LIBRARY(gtk-system-framework MODULE ${SRCS})
 TARGET_LINK_LIBRARIES(gtk-system-framework
   ggadget_gtk
   ${GTK_LIBRARIES}

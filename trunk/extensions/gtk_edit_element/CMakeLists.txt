@@ -22,7 +22,7 @@ SET(SRCS
   gtk_edit_impl.cc
 )
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gtk-edit-element SHARED ${SRCS})
+ADD_LIBRARY(gtk-edit-element MODULE ${SRCS})
 TARGET_LINK_LIBRARIES(gtk-edit-element
   ggadget_gtk
   ${CAIRO_LIBRARIES}
