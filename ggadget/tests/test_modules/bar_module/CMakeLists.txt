@@ -14,13 +14,7 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gstreamer-0.10 0.10 GST_LIBRARIES)
-ADD_DEFINITIONS(-DGST_AUDIOCLIP)
-
-SET(SRCS
-  gst_audio_framework.cc
-)
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gst-audio-framework MODULE ${SRCS})
-TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES})
-OUTPUT_MODULE(gst-audio-framework)
+ADD_DEFINITIONS(-DMODULE_NAME=bar-module -DMODULE_NAME_UNDERSCORE=bar_module -DSCRIPT_EXTENSION=1)
+ADD_LIBRARY(bar-module MODULE ${SRCS})
+TARGET_LINK_LIBRARIES(bar-module)
+OUTPUT_TEST_MODULE(bar-module)

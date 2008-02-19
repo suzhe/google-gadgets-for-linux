@@ -16,8 +16,6 @@
 
 ADD_SUBDIRECTORY(dbus)
 ADD_SUBDIRECTORY(gtk)
-# Remove when ExtensionManager is ready.
-ADD_DEFINITIONS(-DHAVE_GTKMOZ)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
@@ -81,8 +79,6 @@ SET(SRCS
 SET(LIBS
   ltdl
   unzip
-  ${LIBCURL_LIBRARIES}
-  ${LIBXML2_LIBRARIES}
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})
