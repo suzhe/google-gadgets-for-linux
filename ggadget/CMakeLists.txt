@@ -27,16 +27,19 @@ SET(SRCS
   display_window.cc
   element_factory.cc
   elements.cc
+  encryptor.cc
   extension_manager.cc
   file_manager.cc
   file_manager_wrapper.cc
   gadget.cc
+  global_file_manager.cc
   logger.cc
   main_loop.cc
   math_utils.cc
   memory_options.cc
   module.cc
   native_main_loop.cc
+  options_factory.cc
   script_runtime_manager.cc
   scriptable_array.cc
   scriptable_event.cc

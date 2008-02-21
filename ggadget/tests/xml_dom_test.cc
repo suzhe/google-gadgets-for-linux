@@ -22,10 +22,8 @@
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_parser.h"
 #include "ggadget/xml_utils.h"
-#include "ggadget/system_utils.h"
-#include "ggadget/gadget_consts.h"
-#include "ggadget/extension_manager.h"
 #include "unittest/gunit.h"
+#include "init_extensions.h"
 
 using namespace ggadget;
 
@@ -927,29 +925,10 @@ TEST(XMLDOM, TestXMLLoadAndSerialize) {
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
 
-  // Setup GGL_MODULE_PATH env.
-  char buf[1024];
-  getcwd(buf, 1024);
-  LOG("Current dir: %s", buf);
-
-  std::string path =
-      ggadget::BuildPath(ggadget::kSearchPathSeparatorStr, buf,
-                ggadget::BuildFilePath(buf, "../../extensions/", NULL).c_str(),
-                NULL);
-
-  LOG("Set GGL_MODULE_PATH to %s", path.c_str());
-  setenv("GGL_MODULE_PATH", path.c_str(), 1);
-
-  // Load XMLHttpRequest module.
-  ggadget::ExtensionManager *ext_manager =
-      ggadget::ExtensionManager::CreateExtensionManager();
-
-  if (argc < 2)
-    ext_manager->LoadExtension("libxml2_xml_parser/libxml2-xml-parser", false);
-  else
-    ext_manager->LoadExtension(argv[1], false);
-
-  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+  static const char *kExtensions[] = {
+    "libxml2_xml_parser/libxml2-xml-parser",
+  };
+  INIT_EXTENSIONS(argc, argv, kExtensions);
 
   g_xml_parser = GetXMLParser();
   int result = RUN_ALL_TESTS();

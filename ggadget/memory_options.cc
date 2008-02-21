@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <set>
 #include "memory_options.h"
 #include "logger.h"
 #include "string_utils.h"
@@ -28,9 +29,11 @@ class MemoryOptions::Impl {
   }
 
   typedef std::map<std::string, Variant, GadgetStringComparator> OptionsMap;
+  typedef std::set<std::string, GadgetStringComparator> EncryptedSet;
   OptionsMap values_;
   OptionsMap defaults_;
   OptionsMap internal_values_;
+  EncryptedSet encrypted_;
   Signal1<void, const char *> onoptionchanged_signal_;
 };
 
@@ -81,6 +84,8 @@ void MemoryOptions::PutValue(const char *name, const Variant &value) {
     *last_value = value;
     impl_->FireChangedEvent(name, value);
   }
+  // Putting a value automatically removes the encrypted state.
+  impl_->encrypted_.erase(name);
 }
 
 void MemoryOptions::Remove(const char *name) {
@@ -100,6 +105,14 @@ void MemoryOptions::RemoveAll() {
   }
 }
 
+void MemoryOptions::EncryptValue(const char *name) {
+  impl_->encrypted_.insert(name);
+}
+
+bool MemoryOptions::IsEncrypted(const char *name) {
+  return impl_->encrypted_.find(name) != impl_->encrypted_.end();
+}
+
 Variant MemoryOptions::GetInternalValue(const char *name) {
   Impl::OptionsMap::const_iterator it = impl_->internal_values_.find(name);
   return it == impl_->internal_values_.end() ? Variant() : it->second;
@@ -107,6 +120,33 @@ Variant MemoryOptions::GetInternalValue(const char *name) {
 
 void MemoryOptions::PutInternalValue(const char *name, const Variant &value) {
   impl_->internal_values_[name] = value;
+}
+
+bool MemoryOptions::Flush() {
+  return true;
+}
+
+bool MemoryOptions::EnumerateItems(
+    Slot3<bool, const char *, const Variant &, bool> *callback) {
+  ASSERT(callback);
+  for (Impl::OptionsMap::const_iterator it = impl_->values_.begin();
+       it != impl_->values_.end(); ++it) {
+    const char *name = it->first.c_str();
+    if (!(*callback)(name, it->second, IsEncrypted(name)))
+      return false;
+  }
+  return true;
+}
+
+bool MemoryOptions::EnumerateInternalItems(
+    Slot2<bool, const char *, const Variant &> *callback) {
+  ASSERT(callback);
+  for (Impl::OptionsMap::const_iterator it = impl_->internal_values_.begin();
+       it != impl_->internal_values_.end(); ++it) {
+    if (!(*callback)(it->first.c_str(), it->second))
+      return false;
+  }
+  return true;
 }
 
 } // namespace ggadget

@@ -30,10 +30,8 @@ endif
 
 noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
-			  global_file_manager.h \
 			  gtk_key_convert.h \
 			  gtk_menu_impl.h \
-			  options.h \
 			  pixbuf_image.h \
 			  $(RSVG_IMAGE_H)
 
@@ -51,14 +49,12 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_canvas.cc \
 			  cairo_font.cc \
 			  cairo_graphics.cc \
-			  global_file_manager.cc \
 			  gadget_view_widget.cc \
 			  gtk_main_loop.cc \
 			  gtk_gadget_host.cc \
 			  gtk_key_convert.cc \
 			  gtk_menu_impl.cc \
 			  gtk_view_host.cc \
-			  options.cc \
 			  pixbuf_image.cc \
 			  pixbuf_utils.cc \
 			  $(RSVG_IMAGE_CC)

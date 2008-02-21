@@ -37,6 +37,7 @@ namespace ggadget {
  */
 int GadgetStrCmp(const char *s1, const char *s2);
 int GadgetStrNCmp(const char *s1, const char *s2, size_t n);
+int GadgetCharCmp(char c1, char c2);
 
 /**
  * A comparison functor for <code>const char *</code> parameters.
@@ -147,11 +148,27 @@ bool SplitString(const std::string &source, const std::string &separator,
 
 /**
  * Compresses white spaces in a string using the rule like HTML formatting:
- *     - Removing leading and trailing white spaces;
- *     - Convert all consecutive white spaces into single spaces;
+ *   - Removing leading and trailing white spaces;
+ *   - Converting all consecutive white spaces into single spaces;
  * Only ASCII spaces (isspace(ch) == true) are handled.
  */ 
 std::string CompressWhiteSpaces(const char *source);
+
+/**
+ * Matches an XPath string against an XPath pattern, and returns whether
+ * matches. This function only supports simple xpath grammar, containing only
+ * element tag name, element index (not allowed in pattern) and attribute
+ * names, no wildcard or other xpath expressions.
+ *
+ * @param xpath an xpath string returned as one of the keys in the result of
+ *     XMLParserInterface::ParseXMLIntoXPathMap().
+ * @param pattern an xpath pattern with only element tag names and (optional)
+ *     attribute names.
+ * @return true if the xpath matches the pattern. The matching rule is: first
+ *     remove all [...]s in the xpath, and test if the result equals to the
+ *     pattern. 
+ */ 
+bool SimpleMatchXPath(const char *xpath, const char *pattern);
 
 } // namespace ggadget
 

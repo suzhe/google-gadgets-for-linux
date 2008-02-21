@@ -24,14 +24,12 @@ SET(SRCS
   cairo_canvas.cc
   cairo_graphics.cc
   cairo_font.cc
-  global_file_manager.cc
   gtk_gadget_host.cc
   gtk_main_loop.cc
   gtk_view_host.cc
   gadget_view_widget.cc
   gtk_key_convert.cc
   gtk_menu_impl.cc
-  options.cc
   pixbuf_image.cc
   pixbuf_utils.cc
   rsvg_image.cc

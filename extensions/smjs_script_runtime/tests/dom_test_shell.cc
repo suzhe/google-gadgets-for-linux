@@ -17,6 +17,7 @@
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_parser.h"
+#include "ggadget/tests/init_extensions.h"
 #include "../js_script_context.h"
 
 using namespace ggadget;
@@ -26,10 +27,9 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x7067c76cc0d84d22, ScriptableInterface);
   GlobalObject()
-      : xml_parser_(CreateXMLParser()) {
+      : xml_parser_(GetXMLParser()) {
   }
   ~GlobalObject() {
-    delete xml_parser_;
   }
 
   virtual bool IsStrict() const { return false; }
@@ -45,10 +45,16 @@ static GlobalObject *global;
 
 // Called by the initialization code in js_shell.cc.
 JSBool InitCustomObjects(JSScriptContext *context) {
+  static const char *kExtensions[] = {
+    "libxml2_xml_parser/libxml2-xml-parser",
+  };
+  INIT_EXTENSIONS(0, kExtensions, kExtensions);
+
   global = new GlobalObject();
   context->SetGlobalObject(global);
   context->RegisterClass("DOMDocument",
                          NewSlot(global, &GlobalObject::CreateDOMDocument));
+
   return JS_TRUE;
 }
 

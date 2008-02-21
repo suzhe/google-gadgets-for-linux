@@ -67,6 +67,33 @@ TEST(SystemUtils, SplitFilePath) {
   EXPECT_STREQ("file", file.c_str());
 }
 
+TEST(SystemUtils, EnsureDirectories) {
+#define TEST_HOME "/tmp/TestEnsureDirectories"
+  EXPECT_FALSE(EnsureDirectories(""));
+  // NOTE: The following tests are Unix/Linux specific.
+  EXPECT_TRUE(EnsureDirectories("/etc"));
+  EXPECT_FALSE(EnsureDirectories("/etc/hosts"));
+  EXPECT_FALSE(EnsureDirectories("/etc/hosts/anything"));
+  EXPECT_TRUE(EnsureDirectories("/tmp"));
+  EXPECT_TRUE(EnsureDirectories("/tmp/"));
+  system("rm -rf " TEST_HOME);
+  EXPECT_TRUE(EnsureDirectories(TEST_HOME));
+  system("rm -rf " TEST_HOME);
+  EXPECT_TRUE(EnsureDirectories(TEST_HOME "/"));
+  EXPECT_TRUE(EnsureDirectories(TEST_HOME "/a/b/c/d/e"));
+  system("touch " TEST_HOME "/file");
+  EXPECT_FALSE(EnsureDirectories(TEST_HOME "/file"));
+  EXPECT_FALSE(EnsureDirectories(TEST_HOME "/file/"));
+  EXPECT_FALSE(EnsureDirectories(TEST_HOME "/file/a/b/c"));
+
+  char cwd[4096];
+  ASSERT_TRUE(getcwd(cwd, sizeof(cwd)));
+  chdir(TEST_HOME);
+  EXPECT_TRUE(EnsureDirectories("a/b/c/d/e"));
+  EXPECT_TRUE(EnsureDirectories("d/e"));
+  chdir(cwd);  
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();

@@ -396,13 +396,24 @@ std::string GetHTMLCharset(const char* html_content) {
 
 // Count the sequence of a child in the elements of the same tag name.
 static int CountTagSequence(const xmlNode *child, const char *tag) {
-  int count = 1;
+  static xmlNode *last_parent = NULL;
+  static int last_count = 1;
+  static std::string last_tag;
+
+  if (last_parent == child->parent &&
+      GadgetStrCmp(last_tag.c_str(), tag) == 0) {
+    return ++last_count;
+  }
+
+  last_parent = child->parent;
+  last_count = 1;
+  last_tag = tag; 
   for (const xmlNode *node = child->prev; node != NULL; node = node->prev) {
     if (node->type == XML_ELEMENT_NODE &&
         GadgetStrCmp(tag, FromXmlCharPtr(node->name)) == 0)
-      count++;
+      last_count++;
   }
-  return count;
+  return last_count;
 }
 
 static void ConvertElementIntoXPathMap(const xmlNode *element,

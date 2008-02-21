@@ -24,17 +24,17 @@
 #include <ggadget/file_manager_wrapper.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
+#include <ggadget/global_file_manager.h>
 #include <ggadget/logger.h>
+#include <ggadget/options_factory.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/xml_parser.h>
 #include <ggadget/main_loop_interface.h>
 
 #include "gtk_gadget_host.h"
 #include "cairo_graphics.h"
-#include "global_file_manager.h"
 #include "gtk_menu_impl.h"
 #include "gtk_view_host.h"
-#include "options.h"
 #include "pixbuf_utils.h"
 
 namespace ggadget {
@@ -45,9 +45,10 @@ static const char kResourceZipName[] = "ggl-resources.bin";
 GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : resource_file_manager_(new FileManager(GetXMLParser())),
+      profile_file_manager_(new FileManager(GetXMLParser())),
       global_file_manager_(new GlobalFileManager()),
       file_manager_(NULL),
-      options_(new Options()),
+      options_(ggadget::OptionsFactory::get()->CreateOptions("")),
       gadget_(NULL),
       plugin_flags_(0),
       composited_(composited),
@@ -66,6 +67,10 @@ GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
   resource_file_manager_->Init(kResourceZipName);
   wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
                                resource_file_manager_);
+
+  profile_file_manager_->Init("profile");
+  wrapper->RegisterFileManager(ggadget::kProfilePrefix,
+                               profile_file_manager_);
 
   global_file_manager_->Init(ggadget::kDirSeparatorStr);
   wrapper->RegisterFileManager(ggadget::kDirSeparatorStr,
@@ -86,6 +91,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   file_manager_ = NULL;
   delete resource_file_manager_;
   resource_file_manager_ = NULL;
+  delete profile_file_manager_;
+  profile_file_manager_ = NULL;
   delete global_file_manager_;
   global_file_manager_ = NULL;
   delete menu_;

@@ -51,6 +51,8 @@ gglinclude_HEADERS	= anchor_element.h \
 			  edit_element_base.h \
 			  element_factory.h \
 			  elements.h \
+			  encryptor.h \
+			  encryptor_interface.h \
 			  event.h \
 			  extension_manager.h \
 			  file_manager.h \
@@ -64,6 +66,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  gadget_host_interface.h \
 			  gadget_interface.h \
 			  ggadget.h \
+			  global_file_manager.h \
 			  graphics_interface.h \
 			  image_interface.h \
 			  img_element.h \
@@ -77,6 +80,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  memory_options.h \
 			  menu_interface.h \
 			  module.h \
+			  options_factory.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
@@ -137,10 +141,12 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  edit_element_base.cc \
 			  element_factory.cc \
 			  elements.cc \
+			  encryptor.cc \
 			  extension_manager.cc \
 			  file_manager.cc \
 			  file_manager_wrapper.cc \
 			  gadget.cc \
+			  global_file_manager.cc \
 			  img_element.cc \
 			  item_element.cc \
 			  label_element.cc \
@@ -151,6 +157,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  memory_options.cc \
 			  module.cc \
 			  native_main_loop.cc \
+			  options_factory.cc \
 			  progressbar_element.cc \
 			  script_runtime_manager.cc \
 			  scriptable_array.cc \

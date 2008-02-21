@@ -212,6 +212,7 @@ TEST_F(ExtensionManagerTest, GlobalManager) {
   ASSERT_TRUE(ExtensionManager::SetGlobalExtensionManager(manager));
   ASSERT_EQ(manager, ExtensionManager::GetGlobalExtensionManager());
   EXPECT_FALSE(ExtensionManager::SetGlobalExtensionManager(manager));
+  manager->SetReadonly();
 
   for (size_t i = 0; kTestModules[i]; ++i) {
     if (kTestModulesIsExtension[i])

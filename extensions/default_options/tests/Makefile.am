@@ -12,32 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
+AM_CPPFLAGS		= $(PREDEFINED_MACROS)
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-AM_LDFLAGS		= -avoid-version \
-			  -rpath ${abs_builddir} \
-			  -module
-
-check_LTLIBRARIES	= fake-module.la \
-			  tux-module.la
-
-fake_module_la_SOURCES	= ../test_module.cc
-fake_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
-			  -DMODULE_NAME=fake-module \
-			  -DMODULE_NAME_UNDERSCORE=fake_module
-fake_module_la_LIBADD	= $(top_builddir)/unittest/libgunit.la \
+LDADD			= $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
+check_PROGRAMS		= default_options_test
 
-tux_module_la_SOURCES	= ../test_module.cc
-tux_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
-			  -DMODULE_NAME=tux-module \
-			  -DMODULE_NAME_UNDERSCORE=tux_module \
-			  -DFRAMEWORK_EXTENSION=1 \
-			  -DELEMENT_EXTENSION=1
-tux_module_la_LIBADD	= $(top_builddir)/unittest/libgunit.la \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+default_options_test_SOURCES = default_options_test.cc
+
+TESTS_ENVIRONMENT	= $(SHELL)
+TESTS			= ${check_PROGRAMS}

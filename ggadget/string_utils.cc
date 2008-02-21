@@ -15,6 +15,7 @@
 */
 
 #include <cstring>
+#include <ctype.h>
 #include "string_utils.h"
 #include "common.h"
 
@@ -36,6 +37,14 @@ int GadgetStrNCmp(const char *s1, const char *s2, size_t n) {
   return strncmp(s1, s2, n);
 #else
   return strncasecmp(s1, s2, n);
+#endif
+}
+
+int GadgetCharCmp(char c1, char c2) {
+#ifdef GADGET_CASE_SENSITIVE
+  return static_cast<int>(c1) - c2;
+#else
+  return toupper(c1) - toupper(c2);
 #endif
 }
 
@@ -258,6 +267,25 @@ std::string CompressWhiteSpaces(const char *source) {
     source++;
   }
   return result;
+}
+
+bool SimpleMatchXPath(const char *xpath, const char *pattern) {
+  ASSERT(xpath && pattern);
+  while (*xpath && *pattern) {
+    // In the case of xpath[0] == '[', return false because it's invalid. 
+    if (GadgetCharCmp(*xpath, *pattern) != 0)
+      return false;
+    xpath++;
+    pattern++;
+    if (*xpath == '[') {
+      while (*xpath && *xpath != ']')
+        xpath++;
+      if (*xpath == ']')
+        xpath++;
+    }
+  }
+
+  return !*xpath && !*pattern;
 }
 
 }  // namespace ggadget

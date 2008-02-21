@@ -38,12 +38,12 @@ MACRO(MAKE_ZIP _source _zip_file)
     WORKING_DIRECTORY ${_source})
 ENDMACRO(MAKE_ZIP _source _zip_file)
 
-MACRO(OUTPUT_GG _dir_name)
+MACRO(OUTPUT_ZIP _dir_name _target_name)
   MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/${_dir_name}
-    ${CMAKE_BINARY_DIR}/output/${_dir_name}.gg)
-ENDMACRO(OUTPUT_GG _dir_name)
+    ${CMAKE_BINARY_DIR}/output/${_target_name})
+ENDMACRO(OUTPUT_ZIP _dir_name)
 
-MACRO(TEST_RESOURCE_GG _dir_name)
+MACRO(TEST_RESOURCE_ZIP _dir_name _target_name)
   MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/${_dir_name}
-    ${CMAKE_CURRENT_BINARY_DIR}/${_dir_name}.gg)
-ENDMACRO(TEST_RESOURCE_GG _dir_name)
+    ${CMAKE_CURRENT_BINARY_DIR}/${_target_name})
+ENDMACRO(TEST_RESOURCE_ZIP _dir_name)

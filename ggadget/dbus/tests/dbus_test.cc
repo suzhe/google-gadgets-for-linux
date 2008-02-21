@@ -23,6 +23,7 @@ limitations under the License.
 #include "ggadget/native_main_loop.h"
 #include "ggadget/logger.h"
 #include "ggadget/slot.h"
+#include "ggadget/tests/init_extensions.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
@@ -430,6 +431,12 @@ TEST(DBusProxy, ConnectToSignalByName) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
+
+  static const char *kExtensions[] = {
+    "libxml2_xml_parser/libxml2-xml-parser",
+  };
+  INIT_EXTENSIONS(argc, argv, kExtensions);
+
   int result = RUN_ALL_TESTS();
   KillServer();
   return result;

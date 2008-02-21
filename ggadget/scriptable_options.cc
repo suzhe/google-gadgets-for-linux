@@ -81,6 +81,8 @@ void ScriptableOptions::DoRegister() {
   RegisterMethod("exists", NewSlot(options, &OptionsInterface::Exists));
   RegisterMethod("remove", NewSlot(options, &OptionsInterface::Remove));
   RegisterMethod("removeAll", NewSlot(options, &OptionsInterface::RemoveAll));
+  RegisterMethod("encryptValue",
+                 NewSlot(options, &OptionsInterface::EncryptValue));
 
   if (impl_->raw_objects_) {
     // Partly support the deprecated "item" property.
