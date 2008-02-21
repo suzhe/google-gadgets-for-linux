@@ -54,6 +54,7 @@ static const char *kGlobalExtensions[] = {
   "smjs-script-runtime",
   "curl-xml-http-request",
   "libxml2-xml-parser",
+  "default-options",
   NULL
 };
 
@@ -190,6 +191,7 @@ int main(int argc, char* argv[]) {
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
       ggadget::ExtensionManager::CreateExtensionManager();
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
 
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)
@@ -200,7 +202,10 @@ int main(int argc, char* argv[]) {
   ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
-  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+  // Make the global extension manager readonly to avoid the potential
+  // danger that a bad gadget register local extensions into the global
+  // extension manager.
+  ext_manager->SetReadonly();
 
   if (!CreateGTKUI(argv[1])) {
     LOG("Error: unable to create UI");

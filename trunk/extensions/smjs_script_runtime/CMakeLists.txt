@@ -14,7 +14,7 @@
 #  limitations under the License.
 #
 
-#ADD_SUBDIRECTORY(tests)
+ADD_SUBDIRECTORY(tests)
 
 IF(UNIX)
   SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
@@ -37,3 +37,6 @@ SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
 ADD_LIBRARY(smjs-script-runtime MODULE ${SRCS})
 TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget)
 OUTPUT_MODULE(smjs-script-runtime)
+
+# Make a static library for unittest.
+ADD_LIBRARY(ggadget_smjs ${SRCS})

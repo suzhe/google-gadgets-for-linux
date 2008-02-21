@@ -15,10 +15,15 @@
 */
 
 #include <cstring>
+#include <errno.h>
 #include <string>
-#include "gadget_consts.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "system_utils.h"
 #include "common.h"
+#include "gadget_consts.h"
+#include "logger.h"
 
 namespace ggadget {
 
@@ -133,6 +138,81 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
     filename->assign(last_sep);
 
   return has_sep && *last_sep;
+}
+
+bool EnsureDirectories(const char *path) {
+  struct stat stat_value;
+  bzero(&stat_value, sizeof(stat_value));
+  if (stat(path, &stat_value) == 0) {
+    if (S_ISDIR(stat_value.st_mode))
+      return true;
+    LOG("Path is not a directory: '%s'", path);
+    return false;
+  }
+  if (errno != ENOENT) {
+    LOG("Failed to access directory: '%s' error: %s", path, strerror(errno));
+    return false;
+  }
+
+  std::string dir, file;
+  SplitFilePath(path, &dir, &file);
+  if (!dir.empty() && file.empty()) {
+    // Deal with the case that the path has trailing '/'.
+    std::string temp(dir);
+    SplitFilePath(temp.c_str(), &dir, &file);
+  }
+  // dir will be empty if the input path is the upmost level of a relative path.
+  if (!dir.empty() && !EnsureDirectories(dir.c_str()))
+    return false;
+
+  if (mkdir(path, 0700) == 0)
+    return true;
+
+  LOG("Failed to create directory: '%s' error: %s", path, strerror(errno));
+  return false;
+}
+
+bool ReadFileContents(const char *path, std::string *content) {
+  ASSERT(content);
+  if (!path || !*path || !content)
+    return false;
+
+  content->clear();
+
+  FILE *datafile = fopen(path, "r");
+  if (!datafile) {
+    LOG("Failed to open file: %s", path);
+    return false;
+  }
+
+  // The approach below doesn't really work for large files, so we limit the
+  // file size. A memory-mapped file scheme might be better here.
+  const size_t kMaxFileSize = 20 * 1000 * 1000;
+  const size_t kChunkSize = 8192;
+  char buffer[kChunkSize];
+  while (true) {
+    size_t read_size = fread(buffer, 1, kChunkSize, datafile);
+    content->append(buffer, read_size);
+    if (content->length() > kMaxFileSize || read_size < kChunkSize)
+      break;
+  }
+
+  if (ferror(datafile)) {
+    LOG("Error when reading file: %s", path);
+    content->clear();
+    fclose(datafile);
+    return false;
+  }
+
+  if (content->length() > kMaxFileSize) {
+    LOG("File is too big (> %zu): %s", kMaxFileSize, path);
+    content->clear();
+    fclose(datafile);
+    return false;
+  }
+
+  fclose(datafile);
+  return true;
 }
 
 }  // namespace ggadget

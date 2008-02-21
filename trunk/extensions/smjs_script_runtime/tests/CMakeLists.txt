@@ -14,14 +14,20 @@
 #  limitations under the License.
 #
 
+IF(UNIX)
+  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
+ENDIF(UNIX)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
+
 SET(LIBS
   gunit
   ggadget
-  ggadget_smjs
   editline
+  ggadget_smjs
+  ${JS_LIBRARIES}
 )
-# For editline static library.
-LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/third_party/smjs/js/src)
+
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/third_party/editline)
 
 # General js_shell without custom objects.
 ADD_EXECUTABLE(js_shell

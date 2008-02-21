@@ -19,6 +19,7 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/extension_manager.h>
 #include <ggadget/native_main_loop.h>
+#include <ggadget/tests/init_extensions.h>
 #include "../js_script_context.h"
 
 using namespace ggadget;
@@ -42,20 +43,12 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   SetGlobalMainLoop(&main_loop);
   global = new GlobalObject();
   context->SetGlobalObject(global);
-  ext_manager = ExtensionManager::CreateExtensionManager();
-  ScriptExtensionRegister ext_register(context);
 
-  if (!ext_manager->LoadExtension("dbus-script-class", false)) {
-    LOG("Failed to load dbus_script_class extension.");
-    return JS_FALSE;
-  }
-
-  ext_manager->RegisterLoadedExtensions(&ext_register);
+  static const char *kExtensions[] = { "dbus_script_class/dbus-script-class" };
+  INIT_EXTENSIONS(0, NULL, kExtensions);
   return JS_TRUE;
 }
 
 void DestroyCustomObjects(JSScriptContext *context) {
   delete global;
-  // Destroying ext_manager will cause crash.
-  // ext_manager->Destroy();
 }

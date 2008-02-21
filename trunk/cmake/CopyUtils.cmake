@@ -47,14 +47,14 @@ ENDMACRO(COPY_FILE _source _dest_dir)
 
 #! Copy the directory to the specified location.
 #! @param _source the full path of the directory.
-#! @param _dest_dir the full path of the destination directory.
-MACRO(COPY_DIR _source _dest_dir)
+#! @param _dest the full path of the destination directory.
+MACRO(COPY_DIR _source _dest)
   FILE(GLOB_RECURSE COPY_DIR_files ${_source} ${_source}/*)
   GET_FILENAME_COMPONENT(COPY_DIR_source_dir_name ${_source} NAME)
   FOREACH(COPY_DIR_filename ${COPY_DIR_files})
     FILE(RELATIVE_PATH COPY_DIR_relative_name ${_source} ${COPY_DIR_filename})
     GET_FILENAME_COMPONENT(COPY_DIR_dest_file_dir
-      ${_dest_dir}/${COPY_DIR_source_dir_name}/${COPY_DIR_relative_name} PATH)
+      ${_dest}/${COPY_DIR_relative_name} PATH)
     IF(NOT ${COPY_DIR_filename} MATCHES /\\.svn/)
       COPY_FILE(${COPY_DIR_filename} ${COPY_DIR_dest_file_dir})
     ENDIF(NOT ${COPY_DIR_filename} MATCHES /\\.svn/)

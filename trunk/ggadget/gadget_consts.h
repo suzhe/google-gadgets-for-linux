@@ -61,30 +61,24 @@ const char kManifestQueryAPIAllowModifyIndex[]
                                   = "about/queryAPI@allowModifyIndex";
 
 /**
- * To enumerate all fonts to be installed, you must try the following keys:
- *   - <code>"install/font@src"</code>
- *   - <code>"install/font[1]@src"</code>
- *   - <code>"install/font[2]@src"</code>
- *   - <code>"install[1]/font@src"</code>
- *   - <code>"install[2]/font[1]@src"</code>
- *   - ... until not found.
+ * To enumerate all fonts to be installed, you must enumerate the manifest
+ * map and use SimpleMatchXPath(key, kManifestInstallFontSrc) to test if the
+ * value is a font src attribute.
  */
-const char *const kManifestInstall = "install";
-const char *const kManifestFont    = "/font";
-const char *const kManifestSrcAttr = "@src";
+const char kManifestInstallFontSrc[] = "install/font@src";
 
 /**
- * To enumerate all objects to be installed, you must try the following keys:
- *   - <code>"install/object"</code>
- *   - <code>"install/object[1]"</code>
- *   - <code>"install/object[2]"</code>
- *   - <code>"install[1]/object@src"</code>
- *   - <code>"install[2]/object[1]@src"</code>
- *   - ... until not found.
- * For each of the config items found, access their attributes with keys by
- * postpending "@name", "@clsid", "@src" to the above keys.
+ * To enumerate all objects to be installed, you must enumerate the manifest
+ * map and use SimpleMatchXPath(key, kManifestInstallObject) and then
+ * for each of the config items found, access their attributes with keys by
+ * postpending "@name", "@clsid", "@src" to the keys.
  */
 const char kManifestInstallObject[] = "install/object";
+/**
+ * Simple way to enumerate all objects to be installed, ignoring "name" and
+ * "clsid" attributes.
+ */
+const char kManifestInstallObjectSrc[] = "install/object@src";
 
 /** The tag name of the root element in string table files. */
 const char kStringsTag[] = "strings";
@@ -102,6 +96,9 @@ const char kNameAttr[] = "name";
 const char kInnerTextProperty[] = "innerText";
 /** The tag name of the contentarea element. */
 const char kContentAreaTag[] = "contentarea";
+
+/** Prefix for user profile files. */
+const char kProfilePrefix[] = "profile://";
 
 /** Prefix for global file resources. */
 const char kGlobalResourcePrefix[] = "resource://";

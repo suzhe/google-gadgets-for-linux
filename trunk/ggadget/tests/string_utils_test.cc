@@ -146,6 +146,17 @@ TEST(StringUtils, CompressWhiteSpaces) {
   EXPECT_STREQ("A AB ABC", CompressWhiteSpaces("  A     AB     ABC ").c_str());
 }
 
+TEST(StringUtils, SimpleMatchXPath) {
+  EXPECT_TRUE(SimpleMatchXPath("", ""));
+  EXPECT_TRUE(SimpleMatchXPath("a[1]", "a"));
+  // Invalid pattern: no '[' or ']' is allowed.
+  EXPECT_FALSE(SimpleMatchXPath("a[1]", "a[1]"));
+  EXPECT_TRUE(SimpleMatchXPath("a[1]/b[9999]/c[10000]@d", "a/b/c@d"));
+  EXPECT_FALSE(SimpleMatchXPath("a[1]/b[9999]/c[10000]@d", "a/b/c@f"));
+  // Missing closing ']'.
+  EXPECT_FALSE(SimpleMatchXPath("a[1]/b[9999]/c[10000@d", "a/b/c@d"));
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
   return RUN_ALL_TESTS();

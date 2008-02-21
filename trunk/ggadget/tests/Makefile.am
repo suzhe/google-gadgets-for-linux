@@ -26,7 +26,8 @@ LDADD			= $(top_builddir)/unittest/libgunit.la \
 AM_CPPFLAGS		= $(PREDEFINED_MACROS)
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-noinst_HEADERS		= main_loop_test.h \
+noinst_HEADERS		= init_extensions.h \
+			  main_loop_test.h \
 			  mocked_element.h \
 			  mocked_gadget_host.h \
 			  mocked_view_host.h \
@@ -42,6 +43,7 @@ check_PROGRAMS		= color_test \
 			  scriptable_helper_test \
 			  elements_test \
 			  element_factory_test \
+			  encryptor_test \
 			  file_manager_test \
 			  math_utils_test \
 			  native_main_loop_test \
@@ -92,6 +94,7 @@ foo_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 foo_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 foo_module_la_LDFLAGS		= -avoid-version \
+				  -rpath ${abs_builddir} \
 				  -module
 
 bar_module_la_SOURCES		= test_module.cc
@@ -102,14 +105,15 @@ bar_module_la_CPPFLAGS		= $(PREDEFINED_MACROS) \
 bar_module_la_LIBADD		= $(top_builddir)/unittest/libgunit.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 bar_module_la_LDFLAGS		= -avoid-version \
+				  -rpath ${abs_builddir} \
 				  -module
 
-file_manager_test_data.dest: file_manager_test_data
+file_manager_test_data_dest: file_manager_test_data
 	(rm -fr $@; cp -R $< $@; find $@ -name '.*' -exec rm -fr {} \;) || true
 
 if GGL_HAVE_ZIP
-noinst_DATA = file_manager_test_data.gg
-file_manager_test_data.gg: file_manager_test_data.dest
+noinst_DATA = file_manager_test_data_dest.gg
+file_manager_test_data_dest.gg: file_manager_test_data_dest
 	(cd $<; find . -type f | $(ZIP) -r -u $(abs_builddir)/$@ -@)
 endif
 

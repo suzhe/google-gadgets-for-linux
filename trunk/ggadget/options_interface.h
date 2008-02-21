@@ -18,6 +18,7 @@
 #define GGADGET_OPTIONS_INTERFACE_H__
 
 #include <ggadget/common.h>
+#include <ggadget/slot.h>
 #include <ggadget/variant.h>
 
 namespace ggadget {
@@ -83,6 +84,20 @@ class OptionsInterface {
   virtual void RemoveAll() = 0;
 
   /**
+   * Encrypt an item's value. Once @c encryptValue() is called for an item,
+   * the value of the item is stored in encrypted form. The value is
+   * automatically decrypted when it is retrieved.
+   * Note: If you remove an item and then re-add it, the item is no longer
+   * secure.
+   */
+  virtual void EncryptValue(const char *name) = 0;
+
+  /**
+   * Returns whether the specified item is encrypted.
+   */
+  virtual bool IsEncrypted(const char *name) = 0;
+
+  /**
    * This method is only for C++ code. Internal option values are not
    * accessible from the gadget script.
    * @return the internal options value associated with the name.
@@ -96,6 +111,30 @@ class OptionsInterface {
    * doesn't already exist for the name.
    */
   virtual void PutInternalValue(const char *name, const Variant &value) = 0;
+
+  /**
+   * Flush the options data into permanent storage if the impl supports.
+   */
+  virtual bool Flush() = 0;
+
+  /**
+   * Enumerate all items.
+   * @param callback called for each item, with the following parameters:
+   *     - option item name;
+   *     - option item value;
+   *     - whether the item is encrypted.
+   *     The callback can break the enumeration by returning @c false.
+   * @return @c true if the enumeration is not broken by the callback.
+   */
+  virtual bool EnumerateItems(
+      Slot3<bool, const char *, const Variant &, bool> *callback) = 0;
+
+  /**
+   * Enumerate all internal items.
+   * @see EnumerateItems()
+   */
+  virtual bool EnumerateInternalItems(
+      Slot2<bool, const char *, const Variant &> *callback) = 0;
 
 };
 

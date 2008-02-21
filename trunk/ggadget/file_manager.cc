@@ -25,6 +25,7 @@
 #include "file_manager.h"
 #include "gadget_consts.h"
 #include "logger.h"
+#include "system_utils.h"
 #include "windows_locales.h"
 #include "xml_parser_interface.h"
 
@@ -401,36 +402,7 @@ bool FileManagerImpl::GetDirFileContents(FileMap::const_iterator iter,
   data->clear();
   // TODO: check security?
   std::string real_name = base_path_ + kDirSeparator + iter->first;
-  // Try to read from disk.
-  // The approach below doesn't really work for large files, but files
-  // in the gadget should be small so this should be OK.
-  // Also, reading from a dir is used for gadget testing/design scenarios
-  // only, which is not a common scenario.
-  // A memory-mapped file scheme might be better here.
-  FILE *datafile = fopen(real_name.c_str(), "r");
-  if (!datafile) {
-    LOG("Failed to open file: %s", real_name.c_str());
-    return false;
-  }
-
-  const size_t kChunkSize = 2048;
-  char buffer[kChunkSize];
-  while (true) {
-    size_t read_size = fread(buffer, 1, kChunkSize, datafile);
-    data->append(buffer, read_size);
-    if (read_size < kChunkSize)
-      break;
-  }
-
-  if (ferror(datafile)) {
-    LOG("Error when reading file: %s", real_name.c_str());
-    data->clear();
-    fclose(datafile);
-    return false;
-  }
-
-  fclose(datafile);
-  return true;
+  return ReadFileContents(real_name.c_str(), data);
 }
 
 bool FileManagerImpl::GetZipFileContents(FileMap::const_iterator iter,

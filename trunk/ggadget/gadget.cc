@@ -269,12 +269,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       show_details_view_timer_ = 0;
     }
 
-    // unload any fonts
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
-      const std::string &key = i->first;
-      // Keys are of the form "install/font@src" or "install/font[k]@src"
-      if (IsFontInstall(key)) {
+      const char *key = i->first.c_str();
+      if (SimpleMatchXPath(key, kManifestInstallFontSrc)) {
         // ignore return, error not fatal
         host_->UnloadFont(i->second.c_str());
       }
@@ -467,29 +465,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
   }
 
-  bool IsFontInstall(const std::string &key) const {
-    // Keys are of the form "install/font@src" or "install/font[k]@src" or
-    // "install[k]/font@src" or "install[k]/font[j]@src"
-
-    // Ends in "@src".
-    size_t end = key.rfind(kManifestSrcAttr);
-    if ((key.length() - strlen(kManifestSrcAttr)) != end) {
-      return false;
-    }
-
-    // Starts with "install"
-    if (0 != key.find(kManifestInstall)) {
-      return false;
-    }
-
-    // Contains "/font"
-    if (key.find(kManifestFont, strlen(kManifestInstall)) >= end) {
-      return false;
-    }
-
-    return true;
-  }
-
   bool Init() {
     FileManagerInterface *file_manager = host_->GetFileManager();
     ASSERT(file_manager);
@@ -528,14 +503,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     // load fonts and objects
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
-      const std::string &key = i->first;
-      DLOG("key %s %s", key.c_str(), i->second.c_str());
-      if (IsFontInstall(key)) {
+      const char *key = i->first.c_str();
+      DLOG("key %s %s", key, i->second.c_str());
+      if (SimpleMatchXPath(key, kManifestInstallFontSrc)) {
         // ignore return, error not fatal
         host_->LoadFont(i->second.c_str());
-      } else if (0 == key.find(kManifestInstallObject) &&
-          (key.length() - strlen(kSrcAttr)) == key.rfind(kSrcAttr) &&
-          extension_manager_) {
+      } else if (SimpleMatchXPath(key, kManifestInstallObjectSrc) &&
+                 extension_manager_) {
         std::string temp_file;
         if (file_manager->ExtractFile(i->second.c_str(), &temp_file)) {
           extension_manager_->LoadExtension(temp_file.c_str(), false);
@@ -550,8 +524,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     MultipleExtensionRegisterWrapper register_wrapper;
     ElementExtensionRegister element_register(element_factory_);
     ScriptExtensionRegister script_register(context);
-    FrameworkExtensionRegister framework_register(&framework_,
-                                                  owner_);
+    FrameworkExtensionRegister framework_register(&framework_, owner_);
 
     register_wrapper.AddExtensionRegister(&element_register);
     register_wrapper.AddExtensionRegister(&script_register);

@@ -23,4 +23,5 @@ SUBDIRS = dbus_script_class \
 	  linux_system_framework \
 	  smjs_script_runtime \
 	  curl_xml_http_request \
-	  libxml2_xml_parser
+	  libxml2_xml_parser \
+	  default_options

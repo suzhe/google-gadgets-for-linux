@@ -12,22 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-ADD_DEFINITIONS(-DUNIT_TEST)
+# if GGL_BUILD_DEFAULT_OPTIONS
 
-PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
+SUBDIRS = . tests
 
-SET(LIBS gunit ggadget ggadget_dbus ${DBUS_LIBRARIES})
+INCLUDES		= -I$(top_builddir) \
+			  -I$(top_srcdir)
 
-ADD_EXECUTABLE(dbus_test dbus_test.cc)
-TARGET_LINK_LIBRARIES(dbus_test ${LIBS})
-TEST_WRAPPER(dbus_test TRUE)
+extension_LTLIBRARIES	= default_options.la
+extensiondir		= $(GGL_MODULE_DIR)
 
-ADD_EXECUTABLE(dbus_marshaller_test dbus_marshaller_test.cc)
-TARGET_LINK_LIBRARIES(dbus_marshaller_test ${LIBS})
-TEST_WRAPPER(dbus_marshaller_test TRUE)
+default_options_la_SOURCES = default_options.cc
 
-ADD_EXECUTABLE(dbus_result_receiver_test dbus_result_receiver_test.cc)
-TARGET_LINK_LIBRARIES(dbus_result_receiver_test ${LIBS})
-TEST_WRAPPER(dbus_result_receiver_test TRUE)
+default_options_la_CXXFLAGS = \
+			  $(DEFAULT_COMPILE_FLAGS)
+
+default_options_la_CPPFLAGS = \
+			  $(PREDEFINED_MACROS)
+
+default_options_la_LIBADD = \
+			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
+
+default_options_la_LDFLAGS = \
+			  -avoid-version \
+			  -module
+
+# endif

@@ -40,9 +40,16 @@ class MemoryOptions : public OptionsInterface {
   virtual void PutValue(const char *name, const Variant &value);
   virtual void Remove(const char *name);
   virtual void RemoveAll();
+  virtual void EncryptValue(const char *name);
+  virtual bool IsEncrypted(const char *name);
 
   virtual Variant GetInternalValue(const char *name);
   virtual void PutInternalValue(const char *name, const Variant &value);
+  virtual bool Flush();
+  virtual bool EnumerateItems(
+      Slot3<bool, const char *, const Variant &, bool> *callback);
+  virtual bool EnumerateInternalItems(
+      Slot2<bool, const char *, const Variant &> *callback);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(MemoryOptions);

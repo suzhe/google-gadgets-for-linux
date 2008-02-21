@@ -67,6 +67,26 @@ std::string BuildFilePathV(const char *element, va_list ap);
  */
 bool SplitFilePath(const char *path, std::string *dir, std::string *filename);
 
+/**
+ * Ensure each directory in the directory path exists in the file system,
+ * or if not, create it.
+ *
+ * @param path the path of a directory. Normally it should be a absolute path,
+ *     but relative path is also supported.  
+ * @return true if success.
+ */
+bool EnsureDirectories(const char *path);
+
+/**
+ * Read the contents of a file into memory.
+ *
+ * @param path the path of a directory. Normally it should be a absolute path,
+ *     but relative path is also supported.
+ * @param[out] data returns the file contents.
+ * @return true if success.
+ */
+bool ReadFileContents(const char *path, std::string *content);
+
 } // namespace ggadget
 
 #endif // GGADGET_SYSTEM_UTILS_H__

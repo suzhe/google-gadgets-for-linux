@@ -100,6 +100,7 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
   FileManagerInterface *resource_file_manager_;
+  FileManagerInterface *profile_file_manager_;
   FileManagerInterface *global_file_manager_;
   FileManagerInterface *file_manager_;
   OptionsInterface *options_;

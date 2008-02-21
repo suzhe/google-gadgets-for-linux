@@ -14,20 +14,10 @@
 # limitations under the License.
 #
 
-ADD_DEFINITIONS(-DUNIT_TEST)
+ADD_SUBDIRECTORY(tests)
 
-PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
-
-SET(LIBS gunit ggadget ggadget_dbus ${DBUS_LIBRARIES})
-
-ADD_EXECUTABLE(dbus_test dbus_test.cc)
-TARGET_LINK_LIBRARIES(dbus_test ${LIBS})
-TEST_WRAPPER(dbus_test TRUE)
-
-ADD_EXECUTABLE(dbus_marshaller_test dbus_marshaller_test.cc)
-TARGET_LINK_LIBRARIES(dbus_marshaller_test ${LIBS})
-TEST_WRAPPER(dbus_marshaller_test TRUE)
-
-ADD_EXECUTABLE(dbus_result_receiver_test dbus_result_receiver_test.cc)
-TARGET_LINK_LIBRARIES(dbus_result_receiver_test ${LIBS})
-TEST_WRAPPER(dbus_result_receiver_test TRUE)
+SET(SRCS default_options.cc)
+SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
+ADD_LIBRARY(default-options MODULE ${SRCS})
+TARGET_LINK_LIBRARIES(default-options ggadget)
+OUTPUT_MODULE(default-options)

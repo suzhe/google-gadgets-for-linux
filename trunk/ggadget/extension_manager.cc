@@ -229,20 +229,21 @@ class ExtensionManager::Impl {
     return false;
   }
 
-  void MarkAsGlobal() {
-    // Make all loaded extensions resident.
-    for (ExtensionMap::iterator it = extensions_.begin();
-         it != extensions_.end(); ++it) {
-      it->second->MakeResident();
+  void SetReadonly() {
+    if (!readonly_) {
+      // Make all loaded extensions resident.
+      for (ExtensionMap::iterator it = extensions_.begin();
+           it != extensions_.end(); ++it) {
+        it->second->MakeResident();
+      }
+      readonly_ = true;
     }
-    readonly_ = true;
   }
 
  public:
   static bool SetGlobalExtensionManager(ExtensionManager *manager) {
     if (!global_manager_ && manager) {
       global_manager_ = manager;
-      global_manager_->impl_->MarkAsGlobal();
       return true;
     }
     return false;
@@ -304,6 +305,10 @@ bool ExtensionManager::RegisterExtension(const char *name,
 bool ExtensionManager::RegisterLoadedExtensions(
     ExtensionRegisterInterface *reg) const {
   return impl_->RegisterLoadedExtensions(reg);
+}
+
+void ExtensionManager::SetReadonly() {
+  impl_->SetReadonly();
 }
 
 const ExtensionManager *ExtensionManager::GetGlobalExtensionManager() {

@@ -122,6 +122,17 @@ static const char kScriptRuntimeExtensionSymbolName[] =
  *   XMLParser singleton instance provided by the loaded XMLParser extension
  *   module.
  *
+ * - Options extension module
+ *   An Options extension module can be used to provide specified
+ *   implementation of OptionsInterface.
+ *   This kind of extension modules must provide the following symbol:
+ *   - OptionsInterface *CreateOptions(const char *);
+ *   The function shall return a pointer to a newly created OptionsInterface
+ *   instance.
+ *   One and only one Options extension module shall be loaded by the global
+ *   ExtensionManager. The OptionsFactory singleton will use the loaded
+ *   Options extension module to create OptionsInterface instances.
+ *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.
  * A symbol prefix modulename_LTX_ shall be used to avoid possible symbol
@@ -335,6 +346,13 @@ class ExtensionManager {
    * @return true if all loaded extensions have been registered successfully.
    */
   bool RegisterLoadedExtensions(ExtensionRegisterInterface *ext_register) const;
+
+  /**
+   * Sets this extension manager readonly. After this, no more LoadExtension()
+   * or UnloadExtension() is allowed, and all loaded extension modules are made
+   * resident.
+   */
+  void SetReadonly();
 
  public:
   /**

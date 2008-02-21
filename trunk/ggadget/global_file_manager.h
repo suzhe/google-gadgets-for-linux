@@ -17,19 +17,17 @@
 #ifndef GGADGET_GTK_GLOBAL_FILE_MANAGER_H__
 #define GGADGET_GTK_GLOBAL_FILE_MANAGER_H__
 
-#include <cstddef>
 #include <string>
-#include <third_party/unzip/unzip.h>
 #include <ggadget/common.h>
 #include <ggadget/file_manager_interface.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
-namespace gtk {
 
 /**
  * Handles global file resources on disk.
  */
-class GlobalFileManager : public ggadget::FileManagerInterface {
+class GlobalFileManager : public FileManagerInterface {
  public:
   GlobalFileManager();
   ~GlobalFileManager();
@@ -57,7 +55,6 @@ class GlobalFileManager : public ggadget::FileManagerInterface {
   DISALLOW_EVIL_CONSTRUCTORS(GlobalFileManager);
 };
 
-} // namespace gtk
 } // namespace ggadget
 
 #endif  // GGADGET_GTK_GLOBAL_FILE_MANAGER_H__
