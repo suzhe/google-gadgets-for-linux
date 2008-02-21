@@ -484,6 +484,8 @@ AC_CONFIG_FILES([Makefile
 		 extensions/smjs_script_runtime/tests/Makefile
 		 extensions/curl_xml_http_request/Makefile
 		 extensions/libxml2_xml_parser/Makefile
+		 extensions/default_options/Makefile
+		 extensions/default_options/tests/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
