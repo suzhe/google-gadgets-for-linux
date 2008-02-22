@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+ADD_SUBDIRECTORY(tests)
+
 SET(SRCS
   file_system.cc
   linux_system_framework.cc
@@ -22,6 +24,7 @@ SET(SRCS
   perfmon.cc
   power.cc
   process.cc
+  network.cc
   wireless_access_point.cc
   wireless.cc
 )
@@ -29,3 +32,5 @@ SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
 ADD_LIBRARY(linux-system-framework MODULE ${SRCS})
 TARGET_LINK_LIBRARIES(linux-system-framework)
 OUTPUT_MODULE(linux-system-framework)
+
+ADD_LIBRARY(ggadget_linux_for_test ${SRCS})

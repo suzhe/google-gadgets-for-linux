@@ -15,9 +15,10 @@
 */
 
 #include <stdio.h>
-#include "ggadget/common.h"
-#include "ggadget/logger.h"
-#include "unittest/gunit.h"
+#include <ggadget/common.h>
+#include <ggadget/logger.h>
+#include <ggadget/tests/init_extensions.h>
+#include <unittest/gunit.h>
 #include "../machine.h"
 
 using namespace ggadget;
@@ -47,6 +48,11 @@ TEST(Machine, GetMachineModel) {
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
+
+  static const char *kExtensions[] = {
+    "libxml2_xml_parser/libxml2-xml-parser",
+  };
+  INIT_EXTENSIONS(argc, argv, kExtensions);
 
   return RUN_ALL_TESTS();
 }

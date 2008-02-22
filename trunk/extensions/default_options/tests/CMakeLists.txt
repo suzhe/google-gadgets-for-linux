@@ -14,8 +14,6 @@
 #  limitations under the License.
 #
 
-ADD_EXECUTABLE(default_options_test
-  default_options_test.cc
-)
+ADD_EXECUTABLE(default_options_test default_options_test.cc)
 TARGET_LINK_LIBRARIES(default_options_test ggadget gunit)
-TEST_WRAPPER(default_options_test)
+TEST_WRAPPER(default_options_test TRUE)
