@@ -39,4 +39,4 @@ TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget)
 OUTPUT_MODULE(smjs-script-runtime)
 
 # Make a static library for unittest.
-ADD_LIBRARY(ggadget_smjs ${SRCS})
+ADD_LIBRARY(ggadget_smjs_for_test ${SRCS})

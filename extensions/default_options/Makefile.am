@@ -20,7 +20,7 @@ SUBDIRS = . tests
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-extension_LTLIBRARIES	= default_options.la
+extension_LTLIBRARIES	= default-options.la
 extensiondir		= $(GGL_MODULE_DIR)
 
 default_options_la_SOURCES = default_options.cc
