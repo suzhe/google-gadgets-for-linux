@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_FILE_SYSTEM_H__
-#define EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_FILE_SYSTEM_H__
+#ifndef GGADGET_LINUX_FILE_SYSTEM_H__
+#define GGADGET_LINUX_FILE_SYSTEM_H__
 
 #include <ggadget/file_system_interface.h>
 
@@ -70,4 +70,4 @@ class FileSystem : public FileSystemInterface {
 } // namespace framework
 } // namespace ggadget
 
-#endif // EXTENSIONS_LINUX_SYSTEM_FRAMEWORK_FILE_SYSTEM_H__
+#endif // GGADGET_LINUX_FILE_SYSTEM_H__

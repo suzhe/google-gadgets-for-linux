@@ -24,18 +24,26 @@ LDADD			= $(top_builddir)/unittest/libgunit.la \
 AM_CPPFLAGS		= $(PREDEFINED_MACROS)
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
+noinst_HEADERS		=
+
 check_PROGRAMS		= machine_test \
-			  network_test \
-			  power_test \
-				wireless_test
+                    network_test \
+                    memory_test \
+                    process_test \
+                    filesystem_test \
+                    filesystem_folder_test \
+                    filesystem_file_test \
+                    filesystem_textstream_test
 
 machine_test_SOURCES		= machine_test.cc
-
+memory_test_SOURCES     = memory_test.cc
+process_test_SOURCES     = process_test.cc
+filesystem_test_SOURCES    = filesystem_test.cc
+filesystem_folder_test_SOURCES    = filesystem_folder_test.cc
+filesystem_file_test_SOURCES    = filesystem_file_test.cc
+filesystem_textstream_test_SOURCES    = filesystem_textstream_test.cc
 network_test_SOURCES		= network_test.cc
-
 power_test_SOURCES 		= power_test.cc
-
-wireless_test_SOURCES = wireless_test.cc
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)
