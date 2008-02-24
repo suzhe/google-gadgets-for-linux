@@ -1,38 +1,31 @@
 #
-#  Copyright 2008 Google Inc.
+# Copyright 2007 Google Inc.
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
-SET(LIBS
-  gunit
-  ggadget
-  ggadget_dbus
-  ggadget_linux_for_test
-)
+ADD_DEFINITIONS(-DUNIT_TEST)
 
-ADD_EXECUTABLE(machine_test machine_test.cc)
-TARGET_LINK_LIBRARIES(machine_test ${LIBS})
-TEST_WRAPPER(machine_test TRUE)
+MACRO(UNIT_TEST TEST_NAME)
+  IF(${ARGC} GREATER 1)
+    SET(FILES ${ARGV})
+    LIST(REMOVE_AT FILES 0)
+    ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc ${FILES})
+  ELSE(${ARGC} GREATER 1)
+    ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
+  ENDIF(${ARGC} GREATER 1)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget ggadget_linux ggadget_dbus)
+  TEST_WRAPPER(${TEST_NAME} TRUE)
+ENDMACRO(UNIT_TEST TEST_NAME)
 
-ADD_EXECUTABLE(network_test network_test.cc)
-TARGET_LINK_LIBRARIES(network_test ${LIBS})
-TEST_WRAPPER(network_test TRUE)
-
-ADD_EXECUTABLE(power_test power_test.cc)
-TARGET_LINK_LIBRARIES(power_test ${LIBS})
-TEST_WRAPPER(power_test TRUE)
-
-ADD_EXECUTABLE(wireless_test wireless_test.cc)
-TARGET_LINK_LIBRARIES(wireless_test ${LIBS})
-TEST_WRAPPER(wireless_test TRUE)
+UNIT_TEST(machine_test)
