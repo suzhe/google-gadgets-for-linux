@@ -89,6 +89,12 @@ class CheckBoxElement::Impl {
     }
   }
 
+  Elements *GetPeer(BasicElement *owner) {
+    BasicElement *parent = owner->GetParentElement();
+    if (parent)
+      return parent->GetChildren();
+    return owner->GetView()->GetChildren();
+  }
 
   bool is_checkbox_;
   TextFrame text_;
@@ -204,7 +210,7 @@ void CheckBoxElement::SetValue(bool value) {
   }
 
   if (!impl_->is_checkbox_ && value) {
-    impl_->ResetPeerRadioButtons(GetParentElement()->GetChildren(), this);
+    impl_->ResetPeerRadioButtons(impl_->GetPeer(this), this);
   }
 }
 
@@ -362,7 +368,7 @@ EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
         }
         impl_->value_ = STATE_CHECKED;
 
-        impl_->ResetPeerRadioButtons(GetParentElement()->GetChildren(), this);
+        impl_->ResetPeerRadioButtons(impl_->GetPeer(this), this);
       }
       QueueDraw();
       SimpleEvent event(Event::EVENT_CHANGE);

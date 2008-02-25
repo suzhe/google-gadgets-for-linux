@@ -44,6 +44,8 @@ static const char *kGlobalExtensions[] = {
 // default framework must be loaded first, so that the default properties can
 // be overrided.
   "default-framework",
+  "libxml2-xml-parser",
+  "default-options",
   "dbus-script-class",
   "gtk-edit-element",
   "gtkmoz-browser-element",
@@ -54,8 +56,6 @@ static const char *kGlobalExtensions[] = {
 #endif
   "smjs-script-runtime",
   "curl-xml-http-request",
-  "libxml2-xml-parser",
-  "default-options",
   NULL
 };
 
