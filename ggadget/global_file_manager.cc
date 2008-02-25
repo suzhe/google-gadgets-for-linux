@@ -42,7 +42,8 @@ bool GlobalFileManager::Init(const char *base_path) {
 bool GlobalFileManager::GetFileContents(const char *file,
                                         std::string *data, std::string *path) {
   std::string filename = BuildFilePath(base_path_.c_str(), file);
-  path->assign(filename);
+  if (path)
+    path->assign(filename);
   return ReadFileContents(filename.c_str(), data);
 }
 
@@ -61,8 +62,11 @@ const GadgetStringMap *GlobalFileManager::GetStringTable() const {
   return NULL; // not implemented
 }
 
-bool GlobalFileManager::FileExists(const char *file) {
-  return (access(file, F_OK) == 0);
+bool GlobalFileManager::FileExists(const char *file, std::string *path) {
+  std::string filename = BuildFilePath(base_path_.c_str(), file);
+  if (path)
+    path->assign(filename);
+  return (access(filename.c_str(), F_OK) == 0);
 }
 
 } // namespace ggadget

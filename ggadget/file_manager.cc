@@ -56,7 +56,7 @@ bool FileManagerImpl::Init(const char *base_path) {
   base_path_ = base_path;
   std::string path;
   std::string filename;
-  SplitPathFilename(base_path, &path, &filename);
+  SplitFilePath(base_path, &path, &filename);
   if (filename.size() > strlen(kGManifestExt) &&
       strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
                  kGManifestExt) == 0) {
@@ -68,7 +68,7 @@ bool FileManagerImpl::Init(const char *base_path) {
     base_path_.erase(base_path_.end() - 1);
 
   struct stat stat_value;
-  bzero(&stat_value, sizeof(stat_value));
+  memset(&stat_value, 0, sizeof(stat_value));
   error = stat(base_path_.c_str(), &stat_value);
   if (error) {
     LOG("Can't access path: %s", base_path_.c_str());
@@ -136,7 +136,8 @@ bool FileManagerImpl::GetFileContents(const char *file,
         normalized_file.c_str(), base_path_.c_str());
     return false;
   } else {
-    *path = base_path_ + kDirSeparator + iter->first;
+    if (path)
+      *path = base_path_ + kDirSeparator + iter->first;
     return GetFileContentsInternal(iter, data);
   }
 }
@@ -191,8 +192,7 @@ bool FileManagerImpl::GetXMLFileContents(const char *file,
 
 bool FileManagerImpl::ExtractFile(const char *file, std::string *into_file) {
   std::string data;
-  std::string real_path;
-  if (!GetFileContents(file, &data, &real_path))
+  if (!GetFileContents(file, &data, NULL))
     return false;
 
   // TODO: System dependent.
@@ -257,23 +257,6 @@ bool FileManagerImpl::InitLocaleStrings() {
   return true;
 }
 
-void FileManagerImpl::SplitPathFilename(const char *input_path,
-                                        std::string *path,
-                                        std::string *filename) {
-  ASSERT(path);
-  *path = input_path;
-  if (filename)
-    *filename = "";
-
-  std::string::size_type pos = path->rfind(kDirSeparator);
-  if (pos != std::string::npos) {
-    if (filename)
-      *filename = path->substr(pos + 1);
-    // Preserve the starting '/' there is only one '/'.
-    path->erase(pos ? pos : 1);
-  }
-}
-
 bool FileManagerImpl::LoadStringTable(const char *string_table) {
   // Don't use GetXMLFileContents() because it tries to do string
   // resource substitution on the file, which is inappropiate here.
@@ -309,7 +292,7 @@ bool FileManagerImpl::ScanDirFilenames(const char *dir_path) {
         strcmp(pfile->d_name, "..") != 0) {
 
       struct stat stat_value;
-      bzero(&stat_value, sizeof(stat_value));
+      memset(&stat_value, 0, sizeof(stat_value));
 
       std::string abs_path = dir_path;
       abs_path += kDirSeparator;
@@ -343,7 +326,7 @@ bool FileManagerImpl::ScanZipFilenames() {
        error == UNZ_OK;
        error = unzGoToNextFile(zip)) {
     unz_file_info file_info;
-    bzero(&file_info, sizeof(file_info));
+    memset(&file_info, 0, sizeof(file_info));
 
     char filename[PATH_MAX];
     error = unzGetCurrentFileInfo(zip,
@@ -452,9 +435,11 @@ bool FileManagerImpl::GetZipFileContents(FileMap::const_iterator iter,
   return status;
 }
 
-bool FileManagerImpl::FileExists(const char *file) {
+bool FileManagerImpl::FileExists(const char *file, std::string *path) {
   std::string normalized_file;
   FileMap::const_iterator iter = FindFile(file, &normalized_file);
+  if (path)
+    *path = base_path_ + kDirSeparator + iter->first;
   return iter != files_.end();
 }
 
@@ -491,8 +476,8 @@ const GadgetStringMap *FileManager::GetStringTable() const {
   return &impl_->string_table_;
 }
 
-bool FileManager::FileExists(const char *file) {
-  return impl_->FileExists(file);
+bool FileManager::FileExists(const char *file, std::string *path) {
+  return impl_->FileExists(file, path);
 }
 
 } // namespace ggadget

@@ -15,6 +15,6 @@
 #
 
 ADD_DEFINITIONS(-DMODULE_NAME=fake-module -DMODULE_NAME_UNDERSCORE=fake_module)
-ADD_LIBRARY(fake-module MODULE ${SRCS})
+ADD_MODULE(fake-module ${SRCS})
 TARGET_LINK_LIBRARIES(fake-module)
 OUTPUT_TEST_MODULE(fake-module)

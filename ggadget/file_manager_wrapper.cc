@@ -114,14 +114,14 @@ bool FileManagerWrapper::ExtractFile(const char *file, std::string *into_file) {
   return result;
 }
 
-bool FileManagerWrapper::FileExists(const char *file) {
+bool FileManagerWrapper::FileExists(const char *file, std::string *path) {
   size_t index = 0;
   std::string lookup_path;
   bool result = false;
   FileManagerInterface *fm = NULL;
   while ((fm = impl_->GetNextMatchingFM(file, &index, &lookup_path)) 
           && !result) {
-    result = fm->FileExists(lookup_path.c_str());
+    result = fm->FileExists(lookup_path.c_str(), path);
   }
 
   return result;

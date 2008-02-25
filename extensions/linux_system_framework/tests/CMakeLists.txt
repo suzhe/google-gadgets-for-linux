@@ -24,7 +24,7 @@ MACRO(UNIT_TEST TEST_NAME)
   ELSE(${ARGC} GREATER 1)
     ADD_EXECUTABLE(${TEST_NAME} ${TEST_NAME}.cc)
   ENDIF(${ARGC} GREATER 1)
-  TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget ggadget_linux ggadget_dbus)
+  TARGET_LINK_LIBRARIES(${TEST_NAME} gunit ggadget ggadget_linux_for_test ggadget_dbus)
   TEST_WRAPPER(${TEST_NAME} TRUE)
 ENDMACRO(UNIT_TEST TEST_NAME)
 

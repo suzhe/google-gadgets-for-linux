@@ -33,6 +33,7 @@
 #include "scriptable_helper.h"
 #include "scriptable_menu.h"
 #include "scriptable_options.h"
+#include "system_utils.h"
 #include "view_host_interface.h"
 #include "view.h"
 #include "xml_parser.h"
@@ -503,16 +504,35 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     // load fonts and objects
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
-      const char *key = i->first.c_str();
-      DLOG("key %s %s", key, i->second.c_str());
-      if (SimpleMatchXPath(key, kManifestInstallFontSrc)) {
+      const std::string &key = i->first;
+      DLOG("key %s %s", key.c_str(), i->second.c_str());
+      if (SimpleMatchXPath(key.c_str(), kManifestInstallFontSrc)) {
         // ignore return, error not fatal
         host_->LoadFont(i->second.c_str());
-      } else if (SimpleMatchXPath(key, kManifestInstallObjectSrc) &&
+      } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
+        const char *module_name = i->second.c_str();
         std::string temp_file;
-        if (file_manager->ExtractFile(i->second.c_str(), &temp_file)) {
-          extension_manager_->LoadExtension(temp_file.c_str(), false);
+        if (file_manager->ExtractFile(module_name, &temp_file)) {
+          // The extension manager requires the module file has its original
+          // name. Move the extracted file with its original name under a new
+          // subdirectory.
+          // TODO: Let FileManager::ExtractFile() do this.
+          std::string temp_dir = temp_file + ".newdir";
+          if (EnsureDirectories(temp_dir.c_str())) {
+            std::string new_temp_file = BuildFilePath(temp_dir.c_str(),
+                                                      module_name, NULL);
+            if (rename(temp_file.c_str(), new_temp_file.c_str()) == 0) {
+              extension_manager_->LoadExtension(new_temp_file.c_str(), false);
+            } else {
+              LOG("Failed to rename '%s' to '%s'",
+                  temp_file.c_str(), new_temp_file.c_str());
+            }
+            unlink(new_temp_file.c_str());
+          }
+          // Clean up.
+          unlink(temp_file.c_str());
+          unlink(temp_dir.c_str());
         }
       }
     }
@@ -543,7 +563,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
 
-    has_options_xml_ = file_manager->FileExists(kOptionsXML);
+    has_options_xml_ = file_manager->FileExists(kOptionsXML, NULL);
     return true;
   }
 

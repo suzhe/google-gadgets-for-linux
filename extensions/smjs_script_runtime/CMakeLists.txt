@@ -33,8 +33,7 @@ SET(SRCS
   smjs_script_runtime.cc
 )
 
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(smjs-script-runtime MODULE ${SRCS})
+ADD_MODULE(smjs-script-runtime ${SRCS})
 TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget)
 OUTPUT_MODULE(smjs-script-runtime)
 

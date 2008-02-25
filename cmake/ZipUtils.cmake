@@ -14,36 +14,68 @@
 # limitations under the License.
 #
 
-#! Make a zip file containing all the files in the directory.
-#! @param _source the full path of the directory.
-#! @param _zip_file the full path of the destination zip file.
-MACRO(MAKE_ZIP _source _zip_file)
-  GET_FILENAME_COMPONENT(MAKE_ZIP_name ${_zip_file} NAME)
-  ADD_CUSTOM_TARGET(${MAKE_ZIP_name}_zip ALL
-    DEPENDS ${_zip_file})
-  FILE(GLOB_RECURSE MAKE_ZIP_files ${_source}/*)
-  SET(MAKE_ZIP_relative_files)
-  SET(MAKE_ZIP_source_files)
-  FOREACH(MAKE_ZIP_filename ${MAKE_ZIP_files})
-    IF(NOT ${MAKE_ZIP_filename} MATCHES /\\.svn/)
-      FILE(RELATIVE_PATH MAKE_ZIP_relative_name ${_source} ${MAKE_ZIP_filename})
-      SET(MAKE_ZIP_source_files ${MAKE_ZIP_source_files} ${MAKE_ZIP_filename})
-      SET(MAKE_ZIP_relative_files
-        ${MAKE_ZIP_relative_files} ${MAKE_ZIP_relative_name})
-    ENDIF(NOT ${MAKE_ZIP_filename} MATCHES /\\.svn/)
-  ENDFOREACH(MAKE_ZIP_filename ${MAKE_ZIP_files})
-  ADD_CUSTOM_COMMAND(OUTPUT ${_zip_file}
-    COMMAND zip -r -u ${_zip_file} ${MAKE_ZIP_relative_files}
-    DEPENDS ${MAKE_ZIP_source_files}
+MACRO(ADD_DIR_TO_ZIP_INTERNAL _source _zip_file)
+  FILE(GLOB_RECURSE ADD_DIR_TO_ZIP_files ${_source}/*)
+  SET(ADD_DIR_TO_ZIP_relative_files)
+  SET(ADD_DIR_TO_ZIP_source_files)
+  FOREACH(ADD_DIR_TO_ZIP_filename ${ADD_DIR_TO_ZIP_files})
+    IF(NOT ${ADD_DIR_TO_ZIP_filename} MATCHES
+      /\\.svn/|/CMakeLists\\.txt|/Makefile\\.)
+      FILE(RELATIVE_PATH ADD_DIR_TO_ZIP_relative_name
+        ${_source} ${ADD_DIR_TO_ZIP_filename})
+      SET(ADD_DIR_TO_ZIP_source_files
+        ${ADD_DIR_TO_ZIP_source_files} ${ADD_DIR_TO_ZIP_filename})
+      SET(ADD_DIR_TO_ZIP_relative_files
+        ${ADD_DIR_TO_ZIP_relative_files} ${ADD_DIR_TO_ZIP_relative_name})
+    ENDIF(NOT ${ADD_DIR_TO_ZIP_filename} MATCHES
+      /\\.svn/|/CMakeLists\\.txt|/Makefile\\.)
+  ENDFOREACH(ADD_DIR_TO_ZIP_filename ${ADD_DIR_TO_ZIP_files})
+
+  STRING(REPLACE / + ADD_DIR_TO_ZIP_target ${_zip_file}_${_source}_zip)
+  ADD_CUSTOM_TARGET(${ADD_DIR_TO_ZIP_target} ALL
+    ${CMAKE_SOURCE_DIR}/utils/zip.sh -r -u ${_zip_file}
+      ${ADD_DIR_TO_ZIP_relative_files}
+    DEPENDS ${ADD_DIR_TO_ZIP_source_files}
     WORKING_DIRECTORY ${_source})
-ENDMACRO(MAKE_ZIP _source _zip_file)
+ENDMACRO(ADD_DIR_TO_ZIP_INTERNAL _source _zip_file)
 
-MACRO(OUTPUT_ZIP _dir_name _target_name)
-  MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/${_dir_name}
-    ${CMAKE_BINARY_DIR}/output/${_target_name})
-ENDMACRO(OUTPUT_ZIP _dir_name)
+#! Make a zip file containing all the files in the directory.
+#! @param _source directory relative to ${CMAKE_CURRENT_SOURCE_DIR}.
+#! @param _zip_file zip file relative to ${CMAKE_CURRENT_BINARY_DIR}.
+MACRO(ADD_DIR_TO_ZIP _source _zip_file)
+  ADD_DIR_TO_ZIP_INTERNAL(${CMAKE_CURRENT_SOURCE_DIR}/${_source}
+    ${CMAKE_CURRENT_BINARY_DIR}/${_zip_file})
+ENDMACRO(ADD_DIR_TO_ZIP _source _zip_file)
 
-MACRO(TEST_RESOURCE_ZIP _dir_name _target_name)
-  MAKE_ZIP(${CMAKE_CURRENT_SOURCE_DIR}/${_dir_name}
-    ${CMAKE_CURRENT_BINARY_DIR}/${_target_name})
-ENDMACRO(TEST_RESOURCE_ZIP _dir_name)
+MACRO(ADD_FILE_TO_ZIP_INTERNAL _file _zip_file)
+  STRING(REPLACE / + ADD_FILE_TO_ZIP_target ${_zip_file}_${_file}_zip)
+  GET_FILENAME_COMPONENT(ADD_FILE_TO_ZIP_name ${_file} NAME)
+  GET_FILENAME_COMPONENT(ADD_FILE_TO_ZIP_path ${_file} PATH)
+  ADD_CUSTOM_TARGET(${ADD_FILE_TO_ZIP_target} ALL
+    ${CMAKE_SOURCE_DIR}/utils/zip.sh -u ${_zip_file} ${ADD_FILE_TO_ZIP_name}
+    DEPENDS ${_file}
+    WORKING_DIRECTORY ${ADD_FILE_TO_ZIP_path})
+ENDMACRO(ADD_FILE_TO_ZIP_INTERNAL _file _zip_file)
+
+MACRO(ADD_FILE_TO_ZIP _file _zip_file)
+  ADD_FILE_TO_ZIP_INTERNAL(${CMAKE_CURRENT_SOURCE_DIR}/${_file}
+    ${CMAKE_CURRENT_BINARY_DIR}/${_zip_file})
+ENDMACRO(ADD_FILE_TO_ZIP _file _zip_file)
+
+MACRO(ADD_TARGET_TO_ZIP_INTERNAL _target_name _zip_file)
+  STRING(REPLACE / + ADD_TARGET_TO_ZIP_target ${_zip_file}_${target_name}_zip)
+  GET_TARGET_PROPERTY(ADD_TARGET_TO_ZIP_location ${_target_name} LOCATION)
+  GET_FILENAME_COMPONENT(ADD_TARGET_TO_ZIP_name
+    ${ADD_TARGET_TO_ZIP_location} NAME)
+  GET_FILENAME_COMPONENT(ADD_TARGET_TO_ZIP_path
+    ${ADD_TARGET_TO_ZIP_location} PATH)
+  ADD_CUSTOM_TARGET(${ADD_TARGET_TO_ZIP_target} ALL
+    ${CMAKE_SOURCE_DIR}/utils/zip.sh -u ${_zip_file} ${ADD_TARGET_TO_ZIP_name}
+    DEPENDS ${_target_name}
+    WORKING_DIRECTORY ${ADD_TARGET_TO_ZIP_path})
+ENDMACRO(ADD_TARGET_TO_ZIP_INTERNAL _target_name _zip_file)
+
+MACRO(ADD_TARGET_TO_ZIP _target_name _zip_file)
+  ADD_TARGET_TO_ZIP_INTERNAL(${_target_name}
+    ${CMAKE_CURRENT_BINARY_DIR}/${_zip_file})
+ENDMACRO(ADD_TARGET_TO_ZIP _target_name _zip_file)

@@ -17,7 +17,6 @@
 SET(SRCS
   default_framework.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(default-framework MODULE ${SRCS})
+ADD_MODULE(default-framework ${SRCS})
 TARGET_LINK_LIBRARIES(default-framework)
 OUTPUT_MODULE(default-framework)

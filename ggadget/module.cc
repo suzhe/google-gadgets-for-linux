@@ -29,6 +29,11 @@
 #include "logger.h"
 #include "system_utils.h"
 
+#ifdef _DEBUG
+// Uncomment the following line to get verbose debug logs.
+// #define DEBUG_MODULES
+#endif
+
 namespace ggadget {
 
 static const char *kModulePathEnv = "GGL_MODULE_PATH";
@@ -72,15 +77,24 @@ class Module::Impl {
     std::string module_name;
     std::vector<std::string> paths;
 
-    PrepareModuleName(name, &paths, &module_name);
-
     std::string module_path;
-    for (std::vector<std::string>::iterator it = paths.begin();
-         it != paths.end(); ++it) {
-      module_path = BuildFilePath(it->c_str(), module_name.c_str(), NULL);
-      new_handle = lt_dlopenext(module_path.c_str());
-      if (new_handle) break;
-#ifdef _DEBUG
+    if (!PrepareModuleName(name, &paths, &module_name)) {
+      // name is an absolute path.
+      new_handle = lt_dlopenext(name);
+#ifdef DEBUG_MODULES
+      const char *err = lt_dlerror();
+      if (err)
+        DLOG("Failed to load module %s: %s", name, err);
+#endif
+    } else {
+      // name is a relative path, search in module paths.
+      for (std::vector<std::string>::iterator it = paths.begin();
+           it != paths.end(); ++it) {
+        module_path = BuildFilePath(it->c_str(), module_name.c_str(), NULL);
+        new_handle = lt_dlopenext(module_path.c_str());
+        if (new_handle) break;
+      }
+#ifdef DEBUG_MODULES
       const char *err = lt_dlerror();
       if (err)
         DLOG("Failed to load module %s: %s", name, err);
@@ -267,19 +281,12 @@ class Module::Impl {
     return result;
   }
 
-  /**
-   * Gets a module name with optional directory components, returns
-   * module search path and the name without directory components.
-   */
-  static void PrepareModuleName(const char *name,
+  // Gets a module name with optional directory components. If name is an
+  // relative path, returns true and sets module search path and the name
+  // without directory components. Returns false if name is an absolute path.
+  static bool PrepareModuleName(const char *name,
                                 std::vector<std::string> *search_paths,
                                 std::string *module_name) {
-    // for name with absolute path, just return.
-    if (name && *name == kDirSeparator) {
-      *module_name = std::string(name);
-      return;
-    }
-
     std::string dirname;
     if (name && *name) {
       std::string str(name);
@@ -288,10 +295,19 @@ class Module::Impl {
         dirname = str.substr(0, pos);
         str.erase(0, pos+1);
       }
+      // Remove the file extension if any.
+      pos = str.rfind(str.rfind('.'));
+      if (pos != std::string::npos)
+        str.erase(pos);
       *module_name = str;
     }
 
+    // for name with absolute path, just return.
+    if (name && *name == kDirSeparator)
+      return false;
+
     GetModulePaths(dirname.c_str(), search_paths);
+    return true;
   }
 
   static void NormalizeNameString(std::string *name) {
@@ -319,7 +335,7 @@ class Module::Impl {
     // If symbol load failed, try to add LTX prefix and load again.
     // In case ltdl didn't strip the symbol prefix.
     if (!result) {
-#ifdef _DEBUG
+#ifdef DEBUG_MODULES
       const char *err = lt_dlerror();
       if (err)
         DLOG("Failed to get symbol %s from module %s: %s",
@@ -330,7 +346,7 @@ class Module::Impl {
 
       // Failed again? Try to prepend a under score to the symbol name.
       if (!result) {
-#ifdef _DEBUG
+#ifdef DEBUG_MODULES
         const char *err = lt_dlerror();
         if (err)
           DLOG("Failed to get symbol %s from module %s: %s",
@@ -338,7 +354,7 @@ class Module::Impl {
 #endif
         symbol.insert(symbol.begin(), '_');
         result = lt_dlsym(handle, symbol.c_str());
-#ifdef _DEBUG
+#ifdef DEBUG_MODULES
         if (!result) {
           const char *err = lt_dlerror();
           if (err)

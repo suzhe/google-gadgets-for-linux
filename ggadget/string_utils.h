@@ -131,7 +131,9 @@ bool IsValidURLChar(unsigned char c);
 std::string EncodeJavaScriptString(const UTF16Char *source);
 
 /**
- * Splits a string into two parts.
+ * Splits a string into two parts. For convenience, the impl allows
+ * @a result_left or @a result_right is the same object as @a source.
+ *
  * @param source the source string to split.
  * @param separator the source string will be splitted at the first occurance
  *     of the separator.

@@ -15,12 +15,6 @@
   limitations under the License.
 */
 
-#include <sys/time.h>
-#include <sys/select.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <time.h>
-#include <map>
 #include <ggadget/common.h>
 #include <ggadget/main_loop_interface.h>
 

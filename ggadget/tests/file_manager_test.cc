@@ -56,26 +56,6 @@ TEST(file_manager, InitLocaleStrings) {
   EXPECT_STREQ("2052/", impl.locale_id_prefix_.c_str());
 }
 
-TEST(file_manager, SplitPathFilename) {
-  std::string path;
-  std::string filename;
-  FileManagerImpl::SplitPathFilename("/", &path, &filename);
-  EXPECT_STREQ("/", path.c_str());
-  EXPECT_STREQ("", filename.c_str());
-
-  FileManagerImpl::SplitPathFilename("/etc", &path, &filename);
-  EXPECT_STREQ("/", path.c_str());
-  EXPECT_STREQ("etc", filename.c_str());
-
-  FileManagerImpl::SplitPathFilename("/etc/", &path, &filename);
-  EXPECT_STREQ("/etc", path.c_str());
-  EXPECT_STREQ("", filename.c_str());
-
-  FileManagerImpl::SplitPathFilename("/etc/xyz.conf", &path, &filename);
-  EXPECT_STREQ("/etc", path.c_str());
-  EXPECT_STREQ("xyz.conf", filename.c_str());
-}
-
 TEST(file_manager, FindLocalizedFile) {
   FileManagerImpl impl(xml_parser);
   impl.files_["en/en_file"];

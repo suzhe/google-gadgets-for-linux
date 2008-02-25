@@ -71,11 +71,13 @@ class XMLHttpRequestInterface : public ScriptableInterface {
   virtual ExceptionCode GetResponseHeader(const char *header,
                                           const char **result) = 0;
   virtual ExceptionCode GetResponseText(const char **result) = 0;
-  virtual ExceptionCode GetResponseBody(const char **result,
-                                        size_t *size) = 0;
+  virtual ExceptionCode GetResponseBody(const char **result, size_t *size) = 0;
   virtual ExceptionCode GetResponseXML(DOMDocumentInterface **result) = 0;
   virtual ExceptionCode GetStatus(unsigned short *result) = 0;
   virtual ExceptionCode GetStatusText(const char **result) = 0;
+
+  /** Convenient alternative of GetResponseBody(const char **, size_t *). */
+  virtual ExceptionCode GetResponseBody(std::string *result) = 0;
 };
 
 CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)

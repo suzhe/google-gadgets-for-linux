@@ -46,6 +46,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  content_item.h \
 			  contentarea_element.h \
 			  details_view.h \
+			  directory_provider_interface.h \
 			  display_window.h \
 			  div_element.h \
 			  edit_element_base.h \
@@ -65,6 +66,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  gadget_consts.h \
 			  gadget_host_interface.h \
 			  gadget_interface.h \
+			  gadget_metadata.h \
 			  ggadget.h \
 			  global_file_manager.h \
 			  graphics_interface.h \
@@ -97,6 +99,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_holder.h \
 			  scriptable_image.h \
 			  scriptable_interface.h \
+			  scriptable_map.h \
 			  scriptable_menu.h \
 			  scriptable_options.h \
 			  scrollbar_element.h \
@@ -136,6 +139,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  content_item.cc \
 			  contentarea_element.cc \
 			  details_view.cc \
+			  directory_provider.cc \
 			  display_window.cc \
 			  div_element.cc \
 			  edit_element_base.cc \
@@ -146,6 +150,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  file_manager.cc \
 			  file_manager_wrapper.cc \
 			  gadget.cc \
+			  gadget_metadata.cc \
 			  global_file_manager.cc \
 			  img_element.cc \
 			  item_element.cc \

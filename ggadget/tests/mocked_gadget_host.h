@@ -36,7 +36,7 @@ class MockedFileManager : public ggadget::FileManagerInterface {
   virtual const ggadget::GadgetStringMap *GetStringTable() const {
     return &strings_;
   }
-  virtual bool FileExists(const char *file) { return false; }
+  virtual bool FileExists(const char *file, std::string *path) { return false; }
  private:
   ggadget::GadgetStringMap strings_;
 };

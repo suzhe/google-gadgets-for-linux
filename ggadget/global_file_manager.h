@@ -47,7 +47,7 @@ class GlobalFileManager : public FileManagerInterface {
   /** @see FileManagerInterface::GetStringTable() */
   virtual const GadgetStringMap *GetStringTable() const;
   /** @see FileManagerInterface::FileExists() */
-  virtual bool FileExists(const char *file);
+  virtual bool FileExists(const char *file, std::string *path);
 
  private:
   std::string base_path_;

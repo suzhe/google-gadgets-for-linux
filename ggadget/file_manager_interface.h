@@ -53,7 +53,9 @@ class FileManagerInterface {
    * @param file the file name relative to the base path or an absolute
    *     filename in the file system.
    * @param[out] data returns the file contents.
-   * @param[out] path the actual path name of the file, for logging only.
+   * @param[out] path (optional) the actual path name of the file. For a file
+   *     in a zip, the value is only for logging purposes. This parameter will
+   *     be set even if reading the file fails.
    * @return @c true if succeeded.
    */
   virtual bool GetFileContents(const char *file,
@@ -67,7 +69,9 @@ class FileManagerInterface {
    *
    * @param file the file name relative to the base path.
    * @param[out] data returns the file contents.
-   * @param[out] path the actual path name of the file, for logging only.
+   * @param[out] path (optional) the actual path name of the file. For a file
+   *     in a zip, the value is only for logging purposes. This parameter will
+   *     be set even if reading the file fails.
    * @return @c true if succeeded.
    */
   virtual bool GetXMLFileContents(const char *file,
@@ -96,8 +100,13 @@ class FileManagerInterface {
   /**
    * Check if a file with the given name exists under the base_path of this
    * file manager. Returns @c false if the filename is absolute.
+   *
+   * @param file the file name relative to the base path.
+   * @param[out] path (optional) the actual path name of the file. For a file
+   *     in a zip, the value is only for logging purposes. This parameter will
+   *     be set even if the file doesn't exist.
    */
-  virtual bool FileExists(const char *file) = 0;
+  virtual bool FileExists(const char *file, std::string *path) = 0;
 
 };
 
