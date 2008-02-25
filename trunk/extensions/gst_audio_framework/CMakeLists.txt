@@ -20,7 +20,6 @@ ADD_DEFINITIONS(-DGST_AUDIOCLIP)
 SET(SRCS
   gst_audio_framework.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gst-audio-framework MODULE ${SRCS})
+ADD_MODULE(gst-audio-framework ${SRCS})
 TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES})
 OUTPUT_MODULE(gst-audio-framework)

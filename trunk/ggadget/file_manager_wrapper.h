@@ -68,7 +68,7 @@ class FileManagerWrapper : public FileManagerInterface {
 
   virtual const GadgetStringMap *GetStringTable() const;
 
-  virtual bool FileExists(const char *file);
+  virtual bool FileExists(const char *file, std::string *path);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(FileManagerWrapper);

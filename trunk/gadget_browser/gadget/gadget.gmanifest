@@ -1,0 +1,18 @@
+﻿<gadget minimumGoogleDesktopVersion="5.5.0.0">
+	<about>
+		<name>&GADGET_NAME;</name>
+		<description>&GADGET_DESCRIPTION;</description>
+		<aboutText>&GADGET_ABOUT_TEXT;</aboutText>
+		<smallIcon>icon_small.png</smallIcon>
+		<icon>icon_large.png</icon>
+		<version>1.0.0.0</version>
+		<author>GGL Team</author>
+		<authorWebsite>http://desktop.google.com/plugins.html</authorWebsite>
+		<id>FF321F87-7BA6-4E0B-95D4-333B48B7650F</id>
+		<copyright></copyright><authorEmail></authorEmail>
+	</about>
+	<install>
+	  <object name="gadget-browser-script-utils"
+	    src="gadget-browser-script-utils.so"/>
+	</install>
+</gadget>

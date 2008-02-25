@@ -19,8 +19,7 @@ PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
 SET(SRCS
   gtk_system_framework.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(gtk-system-framework MODULE ${SRCS})
+ADD_MODULE(gtk-system-framework ${SRCS})
 TARGET_LINK_LIBRARIES(gtk-system-framework
   ggadget_gtk
   ${GTK_LIBRARIES}

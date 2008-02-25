@@ -20,7 +20,6 @@ SET(SRCS
   libxml2_xml_dom.cc
   libxml2_xml_parser.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(libxml2-xml-parser MODULE ${SRCS})
+ADD_MODULE(libxml2-xml-parser ${SRCS})
 TARGET_LINK_LIBRARIES(libxml2-xml-parser ${LIBXML2_LIBRARIES})
 OUTPUT_MODULE(libxml2-xml-parser)

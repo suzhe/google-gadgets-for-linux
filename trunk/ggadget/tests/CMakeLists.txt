@@ -31,7 +31,7 @@ ENDMACRO(UNIT_TEST TEST_NAME)
 ADD_SUBDIRECTORY(test_modules)
 
 TEST_RESOURCE_DIR(file_manager_test_data file_manager_test_data_dest)
-TEST_RESOURCE_ZIP(file_manager_test_data file_manager_test_data_dest.gg)
+ADD_DIR_TO_ZIP(file_manager_test_data file_manager_test_data_dest.gg)
 
 UNIT_TEST(common_test)
 UNIT_TEST(extension_manager_test)
@@ -53,6 +53,7 @@ UNIT_TEST(view_test)
 UNIT_TEST(xml_dom_test)
 UNIT_TEST(xml_parser_test)
 UNIT_TEST(system_utils_test)
+UNIT_TEST(gadget_metadata_test)
 
 ADD_EXECUTABLE(xml_http_request_test xml_http_request_test.cc)
 TARGET_LINK_LIBRARIES(xml_http_request_test gunit ggadget pthread)

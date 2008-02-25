@@ -279,10 +279,10 @@ class ExtensionManager {
 
   /**
    * Loads a specified extension module.
-   * @param name Name of the extension module. Can be a full path to the module
-   * file.
+   * @param name Name of the extension module (may or may not include the
+   *     extension name). Can be a full path to the module file.
    * @param resident Indicates if the extension should be resident in memory.
-   *        A resident extension module can't be unloaded.
+   *     A resident extension module can't be unloaded.
    * @return true if the extension was loaded and initialized successfully.
    */
   bool LoadExtension(const char *name, bool resident);

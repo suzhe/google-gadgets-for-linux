@@ -15,6 +15,7 @@
 #
 
 ADD_SUBDIRECTORY(dbus)
+ADD_SUBDIRECTORY(gadget_browser)
 ADD_SUBDIRECTORY(gtk)
 ADD_SUBDIRECTORY(tests)
 
@@ -25,6 +26,7 @@ SET(SRCS
   content_item.cc
   details_view.cc
   display_window.cc
+  directory_provider.cc
   element_factory.cc
   elements.cc
   encryptor.cc
@@ -32,6 +34,7 @@ SET(SRCS
   file_manager.cc
   file_manager_wrapper.cc
   gadget.cc
+  gadget_metadata.cc
   global_file_manager.cc
   logger.cc
   main_loop.cc

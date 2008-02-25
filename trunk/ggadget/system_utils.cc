@@ -142,7 +142,7 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
 
 bool EnsureDirectories(const char *path) {
   struct stat stat_value;
-  bzero(&stat_value, sizeof(stat_value));
+  memset(&stat_value, 0, sizeof(stat_value));
   if (stat(path, &stat_value) == 0) {
     if (S_ISDIR(stat_value.st_mode))
       return true;

@@ -45,7 +45,7 @@ class FileManagerImpl {
   bool GetXMLFileContents(const char *file,
                           std::string *data, std::string *path);
   bool ExtractFile(const char *file, std::string *into_file);
-  bool FileExists(const char *file);
+  bool FileExists(const char *file, std::string *path);
 
   bool InitLocaleStrings();
   static void SplitPathFilename(const char *input_path,
@@ -113,7 +113,7 @@ class FileManager : public FileManagerInterface {
   /** @see FileManagerInterface::GetStringTable() */
   virtual const GadgetStringMap *GetStringTable() const;
   /** @see FileManagerInterface::FileExists() */
-  virtual bool FileExists(const char *file);
+  virtual bool FileExists(const char *file, std::string *path);
 
  private:
   internal::FileManagerImpl *impl_;

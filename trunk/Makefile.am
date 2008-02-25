@@ -25,6 +25,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  third_party \
 	  unittest \
 	  ggadget \
+	  gadget_browser \
 	  extensions \
 	  hosts
 

@@ -15,8 +15,6 @@
 #
 
 MACRO(OUTPUT_TEST_MODULE _target_name)
-  SET_TARGET_PROPERTIES(${_target_name} PROPERTIES PREFIX "")
-
   GET_TARGET_PROPERTY(target_location ${_target_name} LOCATION)
   GET_FILENAME_COMPONENT(target_dir ${target_location} PATH)
   COPY_TARGET(${_target_name} ${target_dir}/..)

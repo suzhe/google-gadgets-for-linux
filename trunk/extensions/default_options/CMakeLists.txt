@@ -17,7 +17,6 @@
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS default_options.cc)
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(default-options MODULE ${SRCS})
+ADD_MODULE(default-options ${SRCS})
 TARGET_LINK_LIBRARIES(default-options ggadget)
 OUTPUT_MODULE(default-options)

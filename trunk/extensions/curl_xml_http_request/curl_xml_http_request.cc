@@ -778,6 +778,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return INVALID_STATE_ERR;
   }
 
+  virtual ExceptionCode GetResponseBody(std::string *result) {
+    ASSERT(result);
+
+    if (state_ == LOADING || state_ == DONE) {
+      *result = response_body_;
+      return NO_ERR;
+    }
+
+    result->clear();
+    LOG("XMLHttpRequest: GetResponseBody: Invalid state: %d", state_);
+    return INVALID_STATE_ERR;
+  }
+
   virtual ExceptionCode GetResponseXML(DOMDocumentInterface **result) {
     ASSERT(result);
 
@@ -884,11 +897,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return result;
   }
 
+  // We can't return std::string here, because the response body may be binary
+  // and can't be converted from UTF-8 to UTF-16 by the script adapter.
   ScriptableBinaryData *ScriptGetResponseBody() {
     const char *result = NULL;
     size_t size = 0;
     if (CheckException(GetResponseBody(&result, &size)))
-      return new ScriptableBinaryData(result, size);
+      return result ? new ScriptableBinaryData(result, size) : NULL;
     return NULL;
   }
 

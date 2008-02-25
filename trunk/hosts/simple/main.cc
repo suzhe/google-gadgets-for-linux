@@ -27,6 +27,7 @@
 #include <ggadget/gtk/gtk_gadget_host.h>
 #include <ggadget/gtk/gtk_view_host.h>
 #include <ggadget/gtk/gtk_main_loop.h>
+#include <ggadget/directory_provider_interface.h>
 #include <ggadget/extension_manager.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/ggadget.h>
@@ -146,6 +147,13 @@ static void DestroyUI() {
   g_gadget_host = NULL;
 }
 
+class DirectoryProvider : public ggadget::DirectoryProviderInterface {
+ public:
+  virtual std::string GetProfileDirectory() { return ""; }
+  virtual std::string GetResourceDirectory() { return ""; }
+};
+static DirectoryProvider g_directory_provider;
+
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
@@ -187,6 +195,7 @@ int main(int argc, char* argv[]) {
 
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
+  ggadget::SetDirectoryProvider(&g_directory_provider);
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =

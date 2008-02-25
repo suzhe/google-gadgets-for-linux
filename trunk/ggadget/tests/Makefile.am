@@ -55,7 +55,8 @@ check_PROGRAMS		= color_test \
 			  view_test \
 			  xml_dom_test \
 			  xml_parser_test \
-			  xml_http_request_test
+			  xml_http_request_test \
+			  gadget_metadata_test
 
 check_LTLIBRARIES	= foo-module.la \
 			  bar-module.la

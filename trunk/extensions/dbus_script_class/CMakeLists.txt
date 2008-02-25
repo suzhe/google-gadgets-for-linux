@@ -20,7 +20,6 @@ SET(SRCS
   dbus_script_class.cc
   scriptable_dbus_object.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(dbus-script-class MODULE ${SRCS})
+ADD_MODULE(dbus-script-class ${SRCS})
 TARGET_LINK_LIBRARIES(dbus-script-class ggadget_dbus ${DBUS_LIBRARIES})
 OUTPUT_MODULE(dbus-script-class)

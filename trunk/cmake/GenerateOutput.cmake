@@ -32,7 +32,11 @@ ELSE(WIN32)
   ENDMACRO(OUTPUT_LIBRARY _target_name)
 ENDIF(WIN32)
 
-MACRO(OUTPUT_MODULE _target_name)
+MACRO(ADD_MODULE _target_name)
+  ADD_LIBRARY(${_target_name} MODULE ${ARGN})
   SET_TARGET_PROPERTIES(${_target_name} PROPERTIES PREFIX "")
+ENDMACRO(ADD_MODULE _target_name)
+
+MACRO(OUTPUT_MODULE _target_name)
   OUTPUT_TARGET(${_target_name} modules)
 ENDMACRO(OUTPUT_MODULE _target_name)

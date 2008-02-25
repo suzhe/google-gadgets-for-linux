@@ -19,7 +19,6 @@ PKGCONFIG_EX(libcurl 7.16.2 LIBCURL_LIBRARIES)
 SET(SRCS
   curl_xml_http_request.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(curl-xml-http-request MODULE ${SRCS})
+ADD_MODULE(curl-xml-http-request ${SRCS})
 TARGET_LINK_LIBRARIES(curl-xml-http-request ${LIBCURL_LIBRARIES})
 OUTPUT_MODULE(curl-xml-http-request)

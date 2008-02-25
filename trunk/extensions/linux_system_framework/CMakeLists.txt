@@ -28,8 +28,7 @@ SET(SRCS
   wireless_access_point.cc
   wireless.cc
 )
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -module")
-ADD_LIBRARY(linux-system-framework MODULE ${SRCS})
+ADD_MODULE(linux-system-framework ${SRCS})
 TARGET_LINK_LIBRARIES(linux-system-framework)
 OUTPUT_MODULE(linux-system-framework)
 
