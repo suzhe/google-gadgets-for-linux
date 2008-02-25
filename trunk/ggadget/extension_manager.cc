@@ -19,8 +19,8 @@
 #endif
 
 #include <algorithm>
+#include <utility>
 #include <vector>
-#include <map>
 #include "logger.h"
 #include "module.h"
 #include "common.h"
@@ -121,15 +121,26 @@ void MultipleExtensionRegisterWrapper::AddExtensionRegister(
 }
 
 class ExtensionManager::Impl {
+  typedef std::vector<std::pair<std::string, Module*> > ExtensionVector;
+
  public:
   Impl() : readonly_(false) {
   }
 
   ~Impl() {
-    for (ExtensionMap::iterator it = extensions_.begin();
+    for (ExtensionVector::iterator it = extensions_.begin();
          it != extensions_.end(); ++it) {
       delete it->second;
     }
+  }
+
+  ExtensionVector::iterator FindExtension(const std::string &name) {
+    ExtensionVector::iterator it = extensions_.begin();
+    for (; it != extensions_.end(); ++it) {
+      if (it->first == name)
+        break;
+    }
+    return it;
   }
 
   Module *LoadExtension(const char *name, bool resident) {
@@ -143,8 +154,8 @@ class ExtensionManager::Impl {
     if (name && *name) {
       std::string name_str(name);
 
-      // If the module has already been loaded, then just return true.
-      ExtensionMap::iterator it = extensions_.find(name_str);
+      // If the module has already been loaded, then just return it.
+      ExtensionVector::iterator it = FindExtension(name_str);
       if (it != extensions_.end()) {
         if (!it->second->IsResident() && resident)
           it->second->MakeResident();
@@ -160,7 +171,7 @@ class ExtensionManager::Impl {
       if (resident)
         extension->MakeResident();
 
-      extensions_[name_str] = extension;
+      extensions_.push_back(std::make_pair(name_str, extension));
       LOG("Extension %s was loaded successfully.", name);
       return extension;
     }
@@ -177,7 +188,7 @@ class ExtensionManager::Impl {
     if (name && *name) {
       std::string name_str(name);
 
-      ExtensionMap::iterator it = extensions_.find(name_str);
+      ExtensionVector::iterator it = FindExtension(name_str);
       if (it != extensions_.end()) {
         if (it->second->IsResident()) {
           LOG("Can't unload extension %s, it's resident.", name);
@@ -196,7 +207,7 @@ class ExtensionManager::Impl {
     ASSERT(callback);
 
     bool result = false;
-    for (ExtensionMap::const_iterator it = extensions_.begin();
+    for (ExtensionVector::const_iterator it = extensions_.begin();
          it != extensions_.end(); ++it) {
       result = (*callback)(it->first.c_str(), it->second->GetName().c_str());
       if (!result) break;
@@ -219,7 +230,7 @@ class ExtensionManager::Impl {
     ASSERT(reg);
     if (extensions_.size()) {
       bool ret = true;
-      for (ExtensionMap::const_iterator it = extensions_.begin();
+      for (ExtensionVector::const_iterator it = extensions_.begin();
            it != extensions_.end(); ++it) {
         if (!reg->RegisterExtension(it->second))
           ret = false;
@@ -232,7 +243,7 @@ class ExtensionManager::Impl {
   void SetReadonly() {
     if (!readonly_) {
       // Make all loaded extensions resident.
-      for (ExtensionMap::iterator it = extensions_.begin();
+      for (ExtensionVector::iterator it = extensions_.begin();
            it != extensions_.end(); ++it) {
         it->second->MakeResident();
       }
@@ -256,9 +267,7 @@ class ExtensionManager::Impl {
   static ExtensionManager *global_manager_;
 
  private:
-  typedef std::map<std::string, Module*> ExtensionMap;
-
-  ExtensionMap extensions_;
+  ExtensionVector extensions_;
   bool readonly_;
 };
 

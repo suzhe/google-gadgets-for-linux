@@ -465,7 +465,7 @@ class BasicElement::Impl {
 
   void Draw(CanvasInterface *canvas) {
     // Only do draw if visible
-    // Check for width_, height_ == 0 since IntersectRectClipRegion fails for 
+    // Check for width_, height_ == 0 since IntersectRectClipRegion fails for
     // those cases.
     if (visible_ && opacity_ != 0 && width_ > 0 && height_ > 0) {
       const CanvasInterface *mask = GetMaskCanvas();
@@ -513,10 +513,13 @@ class BasicElement::Impl {
         DrawBoundingBox(canvas, width_, height_, debug_color_index_);
       }
 
+#ifdef _DEBUG
       ++total_draw_count_;
       if ((total_draw_count_ % 100) == 0)
-        DLOG("BasicElement: %d draws, %d queues.",
-             total_draw_count_, total_queue_draw_count_);
+        DLOG("BasicElement: %d draws, %d queues, %d%% q/d",
+             total_draw_count_, total_queue_draw_count_,
+             total_queue_draw_count_ * 100 / total_draw_count_);
+#endif
     }
 
     visibility_changed_ = false;
@@ -552,7 +555,9 @@ class BasicElement::Impl {
     } else if (visible_ || visibility_changed_) {
       view_->QueueDraw();
     }
+#ifdef _DEBUG
     ++total_queue_draw_count_;
+#endif
   }
 
   void PostSizeEvent() {
@@ -816,8 +821,10 @@ class BasicElement::Impl {
   static int total_debug_color_index_;
   int debug_mode_;
 
+#ifdef _DEBUG
   static int total_draw_count_;
   static int total_queue_draw_count_;
+#endif
 
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
@@ -841,8 +848,11 @@ class BasicElement::Impl {
 };
 
 int BasicElement::Impl::total_debug_color_index_ = 0;
+
+#ifdef _DEBUG
 int BasicElement::Impl::total_draw_count_ = 0;
 int BasicElement::Impl::total_queue_draw_count_ = 0;
+#endif
 
 static const char *kCursorTypeNames[] = {
   "arrow", "ibeam", "wait", "cross", "uparrow",
