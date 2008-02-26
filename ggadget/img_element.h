@@ -64,6 +64,14 @@ class ImgElement : public BasicElement {
   void SetCropMaintainAspect(CropMaintainAspect crop);
 
   /**
+   * Gets and sets whether the image is stretched normally or stretched only
+   * the middle area. This property is only applicable if cropMaintainAspect
+   * is @c CROP_FALSE.
+   */
+  bool IsStretchMiddle() const;
+  void SetStretchMiddle(bool stretch_middle);
+
+  /**
    * Resizes the image to specified @a width and @a height via reduced
    * resolution.  If the source image is larger than the display area,
    * using this method to resize the image to the output size will save

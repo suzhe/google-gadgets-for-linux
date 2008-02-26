@@ -37,6 +37,7 @@ class GadgetMetadata {
  public:
   struct GadgetInfo {
     GadgetInfo() : updated_date(0) { }
+    std::string id;
     GadgetStringMap attributes;
     GadgetStringMap titles;
     GadgetStringMap descriptions;

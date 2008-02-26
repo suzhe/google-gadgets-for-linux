@@ -18,12 +18,12 @@
 
 #include "img_element.h"
 #include "canvas_interface.h"
-#include "image_interface.h"
+#include "canvas_utils.h"
 #include "color.h"
+#include "image_interface.h"
 #include "string_utils.h"
 #include "texture.h"
 #include "view.h"
-#include "color.h"
 
 namespace ggadget {
 
@@ -34,8 +34,10 @@ static const char *kCropMaintainAspectNames[] = {
 class ImgElement::Impl {
  public:
   Impl()
-    : image_(NULL), src_width_(0), src_height_(0),
-      crop_(CROP_FALSE) { }
+    : image_(NULL),
+      src_width_(0), src_height_(0),
+      crop_(CROP_FALSE),
+      stretch_middle_(false) { }
   ~Impl() {
     DestroyImage(image_);
     image_ = NULL;
@@ -45,6 +47,7 @@ class ImgElement::Impl {
   size_t src_width_, src_height_;
   CropMaintainAspect crop_;
   std::string colormultiply_;
+  bool stretch_middle_;
 };
 
 ImgElement::ImgElement(BasicElement *parent, View *view, const char *name)
@@ -67,6 +70,9 @@ void ImgElement::DoRegister() {
                              NewSlot(this, &ImgElement::SetCropMaintainAspect),
                              kCropMaintainAspectNames,
                              arraysize(kCropMaintainAspectNames));
+  RegisterProperty("stretchMiddle",
+                   NewSlot(this, &ImgElement::IsStretchMiddle),
+                   NewSlot(this, &ImgElement::SetStretchMiddle));
   RegisterMethod("setSrcSize", NewSlot(this, &ImgElement::SetSrcSize));
 }
 
@@ -80,35 +86,37 @@ bool ImgElement::IsPointIn(double x, double y) {
   if (!BasicElement::IsPointIn(x, y))
     return false;
 
-  if (impl_->image_) {
-    double x0, y0, w, h;
-    double pxwidth = GetPixelWidth();
-    double pxheight = GetPixelHeight();
+  double pxwidth = GetPixelWidth();
+  double pxheight = GetPixelHeight();
+  if (impl_->image_ && pxwidth > 0 && pxheight > 0) {
     double imgw = static_cast<double>(impl_->image_->GetWidth());
     double imgh = static_cast<double>(impl_->image_->GetHeight());
     if (impl_->crop_ == CROP_FALSE) {
-      x0 = y0 = 0;
-      w = pxwidth;
-      h = pxheight;
+      if (impl_->stretch_middle_) {
+        MapStretchMiddleCoordDestToSrc(x, y, imgw, imgh, pxwidth, pxheight,
+                                       -1, -1, -1, -1, &x, &y);
+      } else {
+        // Stretch x and y.
+        x = x * imgw / pxwidth;
+        y = y * imgh / pxheight;
+      }
     } else {
       double scale = std::max(pxwidth / imgw, pxheight / imgh);
       // Windows also caps the scale to a fixed maximum. This is probably a bug.
-      w = scale * imgw;
-      h = scale * imgh;
+      double w = scale * imgw;
+      double h = scale * imgh;
 
-      x0 = (pxwidth - w) / 2.;
-      y0 = (pxheight - h) / 2.;
+      double x0 = (pxwidth - w) / 2.;
+      double y0 = (pxheight - h) / 2.;
       if (impl_->crop_ == CROP_PHOTO && y0 < 0.) {
         y0 = 0.; // Never crop the top in photo setting.
       }
+      // Stretch x and y.
+      x = (x - x0) * imgw / w;
+      y = (y - y0) * imgh / h;
     }
 
-    // Stretch x and y.
-    x = (x - x0) * imgw / w;
-    y = (y - y0) * imgh / h;
-
     double opacity;
-
     // If failed to get the value of the point, then just return true, assuming
     // it's an opaque point.
     if (!impl_->image_->GetPointValue(x, y, NULL, &opacity))
@@ -121,13 +129,15 @@ bool ImgElement::IsPointIn(double x, double y) {
 
 void ImgElement::DoDraw(CanvasInterface *canvas) {
   if (impl_->image_) {
-    double x, y, w, h;
     double pxwidth = GetPixelWidth();
     double pxheight = GetPixelHeight();
     if (impl_->crop_ == CROP_FALSE) {
-      x = y = 0;
-      w = pxwidth;
-      h = pxheight;
+      if (impl_->stretch_middle_) {
+        StretchMiddleDrawImage(impl_->image_, canvas, 0, 0, pxwidth, pxheight,
+                               -1, -1, -1, -1);
+      } else {
+        impl_->image_->StretchDraw(canvas, 0, 0, pxwidth, pxheight);
+      }
     } else {
       size_t imgw = impl_->image_->GetWidth();
       size_t imgh = impl_->image_->GetHeight();
@@ -137,16 +147,16 @@ void ImgElement::DoDraw(CanvasInterface *canvas) {
 
       double scale = std::max(pxwidth / imgw, pxheight / imgh);
       // Windows also caps the scale to a fixed maximum. This is probably a bug.
-      w = scale * imgw;
-      h = scale * imgh;
+      double w = scale * imgw;
+      double h = scale * imgh;
 
-      x = (pxwidth - w) / 2.;
-      y = (pxheight - h) / 2.;
+      double x = (pxwidth - w) / 2.;
+      double y = (pxheight - h) / 2.;
       if (impl_->crop_ == CROP_PHOTO && y < 0.) {
         y = 0.; // Never crop the top in photo setting.
       }
+      impl_->image_->StretchDraw(canvas, x, y, w, h);
     }
-    impl_->image_->StretchDraw(canvas, x, y, w, h);
   }
 }
 
@@ -192,6 +202,17 @@ ImgElement::CropMaintainAspect ImgElement::GetCropMaintainAspect() const {
 void ImgElement::SetCropMaintainAspect(ImgElement::CropMaintainAspect crop) {
   if (crop != impl_->crop_) {
     impl_->crop_ = crop;
+    QueueDraw();
+  }
+}
+
+bool ImgElement::IsStretchMiddle() const {
+  return impl_->stretch_middle_;
+}
+
+void ImgElement::SetStretchMiddle(bool stretch_middle) {
+  if (stretch_middle != impl_->stretch_middle_) {
+    impl_->stretch_middle_ = stretch_middle;
     QueueDraw();
   }
 }

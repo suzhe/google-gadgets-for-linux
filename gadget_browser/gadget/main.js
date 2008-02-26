@@ -1,3 +1,19 @@
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
 function view_onOpen() {
   LoadMetadata();
 }
@@ -183,7 +199,7 @@ function UpdateLanguageBox() {
         "</label></item>");
     }
   }
-  // TODO:
+  // TODO: Default language.
   SelectLanguage("en");
 }
 
@@ -284,9 +300,9 @@ function GetPluginOtherData(plugin) {
   if (result)
     result = strings.PLUGIN_DATA_BULLET + result;
   // For debug:
-  result += "/" + attrs.uuid;
-  result += "/" + attrs.id;
-  result += "/" + attrs.rank;
+  // result += "/" + attrs.uuid;
+  // result += "/" + attrs.id;
+  // result += "/" + attrs.rank;
   return result;
 }
 
@@ -298,20 +314,24 @@ function AddPluginBox(plugin, index, row, column) {
     " onmouseover='pluginbox_onmouseover(" + index + ")' onmouseout='pluginbox_onmouseout()'>" +
     " <label x='7' y='6' width='120' align='center' color='#FFFFFF' trimming='character-ellipsis'/>" +
     " <img x='16' y='75' opacity='70' src='images/thumbnails_shadow.png'/>" +
-    " <div x='27' y='33' width='80' height='83'>" +
+    " <div x='27' y='33' width='80' height='83' background='#FFFFFF'>" +
     "  <img width='80' height='60' src='images/default_thumbnail.jpg'/>" +
     "  <img y='60' width='80' height='60' src='images/default_thumbnail.jpg' flip='vertical'/>" +
     "  <img src='images/thumbnails_default_mask.png'/>" +
     " </div>" +
-    " <div x='22' enabled='true' y='94' width='90' height='30' visible='false'" +
-    "  background='images/add_button_default.png' backgroundMode='stretchMiddle'" +
-    "  onmouseover='add_button_onmouseover(" + index + ")' onmouseout='add_button_onmouseout()'" +
-    "  onmousedown='add_button_onmousedown' onmouseup='add_button_onmouseup()'" +
-    "  onclick='AddPlugin(" + index + ")'>" +
-    "  <label width='100%' height='100%' color='#FFFFFF' align='center' valign='middle'>" +
-    strings.ADD_BUTTON_LABEL + "</label></div></div>");
+    " <button x='22' y='94' width='90' height='30' visible='false' stretchMiddle='true'" +
+    "  image='images/add_button_default.png' downImage='images/add_button_down.png'" +
+    "  overImage='images/add_button_hover.png'" +
+    "  onmouseout='add_button_onmouseout()' onclick='AddPlugin(" + index + ")'" +
+    "  color='#FFFFFF' caption='" + strings.ADD_BUTTON_LABEL + "'/>" +
+    "</div>");
+
   // Set it here to prevent problems caused by special chars in the title.
   box.children.item(0).innerText = GetPluginTitle(plugin);
+
+  var thumbnail_element1 = box.children.item(2).children.item(0);
+  var thumbnail_element2 = box.children.item(2).children.item(1);
+  AddThumbnailTask(plugin, thumbnail_element1, thumbnail_element2);
 }
 
 function AddPlugin(index) {
@@ -320,11 +340,6 @@ function AddPlugin(index) {
 
 function pluginbox_onmouseover(index) {
   MouseOverPlugin(event.srcElement, index);
-}
-
-function add_button_onmouseover(index) {
-  MouseOverPlugin(event.srcElement.parentElement, index);
-  event.srcElement.background = "images/add_button_hover.png";
 }
 
 function MouseOverPlugin(box, index) {
@@ -349,24 +364,9 @@ function pluginbox_onmouseout() {
 
 function add_button_onmouseout() {
   var box = event.srcElement.parentElement;
-  // Exclude the case that the mouse moved out of the "Add" button but still
-  // over the same plugin box.
+  // The mouse may directly moved out of the pluginbox.
   if (!view.mouseOverElement || view.mouseOverElement != box)
     MouseOutPlugin(box);
-  event.srcElement.background = "images/add_button_default.png";
-}
-
-function add_button_onmousedown() {
-  if (event.button == 1)
-    event.srcElement.background = "images/add_button_down.png";
-}
-
-function add_button_onmouseup() {
-  if (event.button == 1) {
-    event.srcElement.background = view.mouseOverElement == event.srcElement ?
-                                  "images/add_button_hover.png" :
-                                  "images/add_button_default.png";
-  }
 }
 
 function MouseOutPlugin(box) {
@@ -393,6 +393,7 @@ function SelectPage(page) {
   plugin_description.innerText = "";
   plugin_other_data.innerText = "";
 
+  ClearThumbnailTasks();
   if (!gCurrentPlugins || !gCurrentPlugins.length) {
     gCurrentPage = 0;
   } else {

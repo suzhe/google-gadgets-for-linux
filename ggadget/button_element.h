@@ -58,6 +58,13 @@ class ButtonElement : public BasicElement {
   /** Gets the text frame containing the caption of this button. */
   TextFrame *GetTextFrame();
 
+  /**
+   * Gets and sets whether the image is stretched normally or stretched only
+   * the middle area.
+   */
+  bool IsStretchMiddle() const;
+  void SetStretchMiddle(bool stretch_middle);
+
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
