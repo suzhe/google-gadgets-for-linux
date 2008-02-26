@@ -19,6 +19,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/scriptable_array.h>
+#include <ggadget/scriptable_binary_data.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_map.h>
 
@@ -30,6 +31,7 @@ class ScriptableGadgetInfo : public ScriptableHelperDefault {
   DEFINE_CLASS_ID(0x61fde0b5d5b94ab4, ScriptableInterface);
 
   ScriptableGadgetInfo(const GadgetMetadata::GadgetInfo &info) {
+    RegisterConstant("id", info.id);
     RegisterConstant("attributes", NewScriptableMap(info.attributes));
     RegisterConstant("titles", NewScriptableMap(info.titles));
     RegisterConstant("descriptions", NewScriptableMap(info.descriptions));
@@ -53,6 +55,10 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
                           "plugins.xml").c_str()) {
     RegisterProperty("gadgetMetadata",
         NewSlot(this, &GadgetBrowserScriptUtils::GetGadgetMetadata), NULL);
+    RegisterMethod("loadThumbnailFromCache",
+        NewSlot(this, &GadgetBrowserScriptUtils::LoadThumbnailFromCache));
+    RegisterMethod("saveThumbnailToCache",
+        NewSlot(this, &GadgetBrowserScriptUtils::SaveThumbnailToCache));
   }
 
   ScriptableArray *GetGadgetMetadata() {
@@ -65,6 +71,16 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
       array[i] = Variant(new ScriptableGadgetInfo(it->second));
     }
     return ScriptableArray::Create(array, map.size());
+  }
+
+  void SaveThumbnailToCache(const char *gadget_id,
+                            ScriptableBinaryData *image_data) {
+    // TODO:
+  }
+
+  ScriptableBinaryData *LoadThumbnailFromCache(const char *gadget_id) {
+    // TODO:
+    return NULL;
   }
 
   // TODO: Acquire gadget metadata from GadgetManager.

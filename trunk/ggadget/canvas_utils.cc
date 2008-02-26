@@ -151,4 +151,54 @@ void StretchMiddleDrawImage(const ImageInterface *src, CanvasInterface *dest,
                           right_border_width, bottom_border_height);
 }
 
+void MapStretchMiddleCoordDestToSrc(double dest_x, double dest_y,
+                                    double src_width, double src_height,
+                                    double dest_width, double dest_height,
+                                    double left_border_width,
+                                    double top_border_height,
+                                    double right_border_width,
+                                    double bottom_border_height,
+                                    double *src_x, double *src_y) {
+  ASSERT(src_x && src_y);
+
+  if (left_border_width < 0)
+    left_border_width += src_width / 2;
+  if (right_border_width < 0)
+    right_border_width += src_width / 2;
+  if (top_border_height < 0)
+    top_border_height += src_height / 2;
+  if (bottom_border_height < 0)
+    bottom_border_height += src_height / 2;
+
+  if (dest_x < left_border_width) {
+    *src_x = dest_x;
+  } else if (dest_x < dest_width - right_border_width) {
+    double total_border_width = left_border_width + right_border_width;
+    if (dest_width > total_border_width && src_width > total_border_width) {
+      double scale_x = (src_width - total_border_width) /
+                       (dest_width - total_border_width);
+      *src_x = (dest_x - left_border_width) * scale_x + left_border_width;
+    } else {
+      *src_x = left_border_width;
+    }
+  } else {
+    *src_x = dest_x - dest_width + src_width;
+  }
+
+  if (dest_y < top_border_height) {
+    *src_y = dest_y;
+  } else if (dest_y < dest_height - bottom_border_height) {
+    double total_border_height = top_border_height + bottom_border_height;
+    if (dest_height > total_border_height && src_height > total_border_height) {
+      double scale_y = (src_height - total_border_height) /
+                       (dest_height - total_border_height);
+      *src_y = (dest_y - top_border_height) * scale_y + top_border_height;
+    } else {
+      *src_y = top_border_height;
+    }
+  } else {
+    *src_y = dest_y - dest_height + src_height;
+  }
+}
+
 }  // namespace ggadget

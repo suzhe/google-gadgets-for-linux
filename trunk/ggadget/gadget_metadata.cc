@@ -153,6 +153,7 @@ class GadgetMetadata::Impl {
       if (!id)
         continue;
       GadgetInfo *info = &plugins_[id];
+      info->id = id;
 
       const char *creation_date_str = GetValue(new_plugins,
                                                plugin_key + "@creation_date");

@@ -1,4 +1,20 @@
-﻿<view height="555" width="714" onopen="view_onOpen()">
+﻿<!--
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<view height="555" width="714" onopen="view_onOpen()">
   <div height="100%" width="100%" background="images/background.png"
     backgroundMode="stretchMiddle">
     <label enabled="true" hitTest="htclient" name="language_label" x="10"
@@ -22,14 +38,12 @@
       onclick="DoSearch()"
      />
     <div height="400" width="145" x="6" y="83">
-      <div height="23" name="category_hover_img" opacity="55" width="100%"
-        visible="false" background="images/category_hover.png"
-        backgroundMode="stretchMiddle"/>
-      <div height="23" name="category_active_img" width="100%" visible="false"
-        background="images/category_active.png" backgroundMode="stretchMiddle"/>
+      <img height="23" name="category_hover_img" opacity="55" width="100%"
+        visible="false" src="images/category_hover.png" stretchMiddle="true"/>
+      <img height="23" name="category_active_img" width="100%" visible="false"
+        src="images/category_active.png" stretchMiddle="true"/>
     </div>
-    <div height="400" name="categories_div" width="139" x="9" y="83"
-     />
+    <div height="400" name="categories_div" width="139" x="9" y="83"/>
     <div height="372" name="plugins_div" width="536" x="162" y="62"/>
     <label name="plugin_title" width="530" x="163" y="442" color="#FFFFFF"
       size="9" trimming="character-ellipsis"/>
@@ -48,5 +62,6 @@
       downImage="images/next_down.png" image="images/next_default.png"
       overImage="images/next_hover.png"/>
   </div>
-  <script src="main.js" />
+  <script src="main.js"/>
+  <script src="thumbnail.js"/>
 </view>

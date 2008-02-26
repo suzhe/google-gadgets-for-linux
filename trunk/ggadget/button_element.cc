@@ -16,6 +16,7 @@
 
 #include "button_element.h"
 #include "canvas_interface.h"
+#include "canvas_utils.h"
 #include "image_interface.h"
 #include "gadget_consts.h"
 #include "string_utils.h"
@@ -29,7 +30,8 @@ class ButtonElement::Impl {
   Impl(BasicElement *owner, View *view) : text_(owner, view),
            mousedown_(false), mouseover_(false),
            image_(NULL), downimage_(NULL),
-           overimage_(NULL), disabledimage_(NULL) {
+           overimage_(NULL), disabledimage_(NULL),
+           stretch_middle_(false) {
     text_.SetAlign(CanvasInterface::ALIGN_CENTER);
     text_.SetVAlign(CanvasInterface::VALIGN_MIDDLE);
   }
@@ -45,6 +47,7 @@ class ButtonElement::Impl {
   bool mousedown_;
   bool mouseover_;
   ImageInterface *image_, *downimage_, *overimage_, *disabledimage_;
+  bool stretch_middle_;
 };
 
 ButtonElement::ButtonElement(BasicElement *parent, View *view, const char *name)
@@ -70,6 +73,9 @@ void ButtonElement::DoRegister() {
   RegisterProperty("caption",
                    NewSlot(&impl_->text_, &TextFrame::GetText),
                    NewSlot(&impl_->text_, &TextFrame::SetText));
+  RegisterProperty("stretchMiddle",
+                   NewSlot(this, &ButtonElement::IsStretchMiddle),
+                   NewSlot(this, &ButtonElement::SetStretchMiddle));
 }
 
 ButtonElement::~ButtonElement() {
@@ -93,8 +99,12 @@ void ButtonElement::DoDraw(CanvasInterface *canvas) {
 
   double width = GetPixelWidth();
   double height = GetPixelHeight();
-  if (img) {
-    img->StretchDraw(canvas, 0, 0, width, height);
+  if (img && width > 0 && height > 0) {
+    if (impl_->stretch_middle_) {
+      StretchMiddleDrawImage(img, canvas, 0, 0, width, height, -1, -1, -1, -1);
+    } else {
+      img->StretchDraw(canvas, 0, 0, width, height);
+    }
   }
   impl_->text_.Draw(canvas, 0, 0, width, height);
 }
@@ -203,6 +213,17 @@ void ButtonElement::GetDefaultSize(double *width, double *height) const {
   } else {
     *width = 0;
     *height = 0;
+  }
+}
+
+bool ButtonElement::IsStretchMiddle() const {
+  return impl_->stretch_middle_;
+}
+
+void ButtonElement::SetStretchMiddle(bool stretch_middle) {
+  if (stretch_middle != impl_->stretch_middle_) {
+    impl_->stretch_middle_ = stretch_middle;
+    QueueDraw();
   }
 }
 
