@@ -212,7 +212,7 @@ int Power::GetTimeTotal() {
                      rate.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryChargeLevelRate,
                      MESSAGE_TYPE_INVALID) && rate.GetValue() > 0) {
-    return design.GetValue() * 3600 / rate.GetValue();
+    return design.GetValue() / rate.GetValue();
   }
 
   DLOG("Failed to calculate total time.");

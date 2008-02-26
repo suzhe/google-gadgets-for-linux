@@ -19,6 +19,7 @@
 #include <time.h>
 
 #include <ggadget/dbus/dbus_proxy.h>
+#include <ggadget/dbus/dbus_result_receiver.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/slot.h>
 #include <ggadget/variant.h>
@@ -31,7 +32,10 @@
 
 using ggadget::dbus::DBusProxy;
 using ggadget::dbus::DBusProxyFactory;
+using ggadget::dbus::DBusBooleanReceiver;
+using ggadget::dbus::MESSAGE_TYPE_BOOLEAN;
 using ggadget::dbus::MESSAGE_TYPE_INVALID;
+using ggadget::dbus::MESSAGE_TYPE_STRING;
 
 namespace ggadget {
 namespace framework {
@@ -49,9 +53,14 @@ class WirelessAccessPoint::Impl {
                                      path_.c_str(),
                                      kNetworkManagerDeviceInterface,
                                      false);
+    connect_proxy_ = factory_.NewSystemProxy(kNetworkManagerDBusName,
+                                             kNetworkManagerObjectPath,
+                                             kNetworkManagerInterface,
+                                             false);
   }
   ~Impl() {
     delete proxy_;
+    delete connect_proxy_;
   }
   std::string GetName() {
     Refresh();
@@ -66,16 +75,34 @@ class WirelessAccessPoint::Impl {
     return strength_;
   }
   void Connect(Slot1<void, bool> *callback) {
-    // not implement this feature now since no easy way to do it currently
+    DBusBooleanReceiver receiver;
+    connect_proxy_->Call(kNetworkManagerMethodGetWireless, true, -1,
+                         receiver.NewSlot(), MESSAGE_TYPE_INVALID);
+    bool result = false;
+    if (!receiver.GetValue()) {
+      result = connect_proxy_->Call(kNetworkManagerMethodSetWireless,
+                                    true, -1, NULL,
+                                    MESSAGE_TYPE_BOOLEAN, true,
+                                    MESSAGE_TYPE_INVALID);
+    }
+    result = connect_proxy_->Call(kNetworkManagerMethodSetActive,
+                                  true, -1, NULL,
+                                  MESSAGE_TYPE_STRING, path_.c_str(),
+                                  MESSAGE_TYPE_STRING, name_.c_str(),
+                                  MESSAGE_TYPE_INVALID);
     if (callback) {
-      (*callback)(false);
+      (*callback)(result);
       delete callback;
     }
   }
   void Disconnect(Slot1<void, bool> *callback) {
-    // not implement this feature now since no easy way to do it currently
+    bool result = connect_proxy_->Call(kNetworkManagerMethodSetWireless,
+                                       true, -1, NULL,
+                                       MESSAGE_TYPE_BOOLEAN, false,
+                                       MESSAGE_TYPE_INVALID);
+    LOG("Disconnect result: %s", result ? "true" : "false");
     if (callback) {
-      (*callback)(false);
+      (*callback)(result);
       delete callback;
     }
   }
@@ -114,6 +141,7 @@ class WirelessAccessPoint::Impl {
   }
   DBusProxyFactory factory_;
   DBusProxy *proxy_;
+  DBusProxy *connect_proxy_;
   std::string path_;
 
   std::string name_;
