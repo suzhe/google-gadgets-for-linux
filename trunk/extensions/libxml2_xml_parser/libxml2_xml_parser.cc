@@ -25,12 +25,10 @@
 #include <ggadget/logger.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/xml_parser_interface.h>
-#include <ggadget/xml_dom_interface.h>
+#include <ggadget/xml_dom.h>
 
 namespace ggadget {
 namespace libxml2 {
-// forward declaration.
-DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser);
 
 static inline char *FromXmlCharPtr(xmlChar *xml_char_ptr) {
   return reinterpret_cast<char *>(xml_char_ptr);
@@ -480,7 +478,7 @@ class XMLParser : public XMLParserInterface {
   }
 
   virtual DOMDocumentInterface *CreateDOMDocument() {
-    return ::ggadget::libxml2::CreateDOMDocument(this);
+    return ::ggadget::CreateDOMDocument(this);
   }
 
   virtual bool ParseContentIntoDOM(const std::string &content,
@@ -580,22 +578,14 @@ static XMLParser g_xml_parser;
 
 #define Initialize libxml2_xml_parser_LTX_Initialize
 #define Finalize libxml2_xml_parser_LTX_Finalize
-#define GetXMLParser libxml2_xml_parser_LTX_GetXMLParser
-
-using ggadget::XMLParserInterface;
 
 extern "C" {
   bool Initialize() {
     DLOG("Initialize libxml2_xml_parser extension.");
-    return true;
+    return ggadget::SetXMLParser(&ggadget::libxml2::g_xml_parser);
   }
 
   void Finalize() {
     DLOG("Finalize libxml2_xml_parser extension.");
-  }
-
-  XMLParserInterface *GetXMLParser() {
-    DLOG("Get libxml2::XMLParser singleton.");
-    return &ggadget::libxml2::g_xml_parser;
   }
 }

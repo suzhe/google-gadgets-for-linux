@@ -36,7 +36,7 @@
 #include "system_utils.h"
 #include "view_host_interface.h"
 #include "view.h"
-#include "xml_parser.h"
+#include "xml_parser_interface.h"
 #include "extension_manager.h"
 
 namespace ggadget {

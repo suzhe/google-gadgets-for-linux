@@ -17,7 +17,6 @@
 PKGCONFIG_EX(libxml-2.0 2.6.0 LIBXML2_LIBRARIES)
 
 SET(SRCS
-  libxml2_xml_dom.cc
   libxml2_xml_parser.cc
 )
 ADD_MODULE(libxml2-xml-parser ${SRCS})

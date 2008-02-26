@@ -40,8 +40,8 @@
 #include "texture.h"
 #include "view_host_interface.h"
 #include "xml_dom_interface.h"
-#include "xml_http_request_factory.h"
-#include "xml_parser.h"
+#include "xml_http_request_interface.h"
+#include "xml_parser_interface.h"
 #include "xml_utils.h"
 
 namespace ggadget {
@@ -867,8 +867,7 @@ class View::Impl {
   }
 
   XMLHttpRequestInterface *NewXMLHttpRequest() {
-    XMLHttpRequestFactory *factory = XMLHttpRequestFactory::get();
-    return factory->CreateXMLHttpRequest(GetXMLParser());
+    return CreateXMLHttpRequest(GetXMLParser());
   }
 
   EventSignal oncancel_event_;

@@ -14,75 +14,39 @@
   limitations under the License.
 */
 
-#include "options_factory.h"
-#include "module.h"
-#include "extension_manager.h"
+#include "options_interface.h"
 
 namespace ggadget {
 
-static const char kOptionsExtensionSymbolName[] = "CreateOptions";
+static OptionsFactory g_options_factory = NULL;
+static OptionsInterface *g_global_options = NULL;
 
-class OptionsFactory::Impl : public ExtensionRegisterInterface {
- public:
-  Impl() : func_(NULL) {
+bool SetOptionsFactory(OptionsFactory options_factory) {
+  ASSERT(!g_options_factory && options_factory);
+  if (!g_options_factory && options_factory) {
+    g_options_factory = options_factory;
+    return true;
   }
-
-  virtual bool RegisterExtension(const Module *extension) {
-    ASSERT(extension);
-    CreateOptionsFunc func =
-        reinterpret_cast<CreateOptionsFunc>(
-            extension->GetSymbol(kOptionsExtensionSymbolName));
-    if (func)
-      func_ = func;
-
-    return func != NULL;
-  }
-
-  OptionsInterface *CreateOptions(const char *config_file_path) {
-    if (!func_) {
-      const ExtensionManager *manager =
-          ExtensionManager::GetGlobalExtensionManager();
-      ASSERT(manager);
-      if (manager)
-        manager->RegisterLoadedExtensions(this);
-    }
-
-    ASSERT(func_);
-    if (func_)
-      return func_(config_file_path);
-    return NULL;
-  }
-
- private:
-  typedef OptionsInterface *(*CreateOptionsFunc)(const char *);
-  CreateOptionsFunc func_;
-
- public:
-  static OptionsFactory *factory_;
-};
-
-OptionsFactory *OptionsFactory::Impl::factory_ = NULL;
-
-OptionsFactory::OptionsFactory()
-  : impl_(new Impl()) {
+  return false;
 }
 
-OptionsFactory::~OptionsFactory() {
-  DLOG("OptionsFactory singleton is destroyed, but it shouldn't.");
-  ASSERT(Impl::factory_ == this);
-  Impl::factory_ = NULL;
-  delete impl_;
-  impl_ = NULL;
+OptionsInterface *CreateOptions(const char *name) {
+  VERIFY_M(g_options_factory, ("The options factory has not been set yet."));
+  return g_options_factory ? g_options_factory(name) : NULL;
 }
 
-OptionsInterface *OptionsFactory::CreateOptions(const char *config_file_path) {
-  return impl_->CreateOptions(config_file_path);
+bool SetGlobalOptions(OptionsInterface *global_options) {
+  ASSERT(!g_global_options && global_options);
+  if (!g_global_options && global_options) {
+    g_global_options = global_options;
+    return true;
+  }
+  return false;
 }
 
-OptionsFactory *OptionsFactory::get() {
-  if (!Impl::factory_)
-    Impl::factory_ = new OptionsFactory();
-  return Impl::factory_;
+OptionsInterface *GetGlobalOptions() {
+  VERIFY_M(g_global_options, ("The global options has not been set yet."));
+  return g_global_options;
 }
 
 } // namespace ggadget

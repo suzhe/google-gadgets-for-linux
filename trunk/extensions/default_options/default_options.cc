@@ -18,7 +18,7 @@
 #include <ggadget/memory_options.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/xml_parser.h>
+#include <ggadget/xml_parser_interface.h>
 
 namespace ggadget {
 namespace {
@@ -257,25 +257,23 @@ class DefaultOptions : public MemoryOptions {
   FILE *out_file_;  // Only available during Flush().
 };
 
+OptionsInterface *DefaultOptionsFactory(const char *name) {
+  return new DefaultOptions(name);
+}
+
 } // anonymous namespace
 } // namespace ggadget
 
 #define Initialize default_options_LTX_Initialize
 #define Finalize default_options_LTX_Finalize
-#define CreateOptions default_options_LTX_CreateOptions
 
 extern "C" {
   bool Initialize() {
     DLOG("Initialize default_options extension.");
-    return true;
+    return ggadget::SetOptionsFactory(&ggadget::DefaultOptionsFactory);
   }
 
   void Finalize() {
     DLOG("Finalize default_options extension.");
-  }
-
-  ggadget::OptionsInterface *CreateOptions(const char *config_file_path) {
-    DLOG("Create DefaultOptions instance.");
-    return new ggadget::DefaultOptions(config_file_path);
   }
 }

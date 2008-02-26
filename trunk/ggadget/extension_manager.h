@@ -78,9 +78,9 @@ static const char kScriptRuntimeExtensionSymbolName[] =
  *    The objects and methods under framework.system must be registered to the
  *    "system" property of specified framework scriptable instance.
  *    The specified @c gadget object is the Gadget instance which owns the
- *    framework and system objects. All per gadget framework objects shall bind to the
- *    @c gadget object and be destroyed upon destroying the gadget. Currently
- *    only two objects are per gadget:
+ *    framework and system objects. All per gadget framework objects shall bind
+ *    to the @c gadget object and be destroyed upon destroying the gadget.
+ *    Currently only two objects are per gadget:
  *    - ScriptableAudio, which needs per gadget FileManager to load audio file.
  *    - ScriptablePerfmon, which needs gadget's main View to send event.
  *    Please refer to extensions/default_framework/default_framework.cc for
@@ -96,42 +96,13 @@ static const char kScriptRuntimeExtensionSymbolName[] =
  *   The ScriptRuntime object shall be singleton and shared by all gadgets.
  *   So each ScriptRuntime extension shall only be registered one time.
  *
- * - XMLHttpRequest extension module
- *   A XMLHttpRequest extension module can be used to provide specified
- *   implementation of XMLHttpRequestInterface.
- *   This kind of extension modules must provide following symbol:
- *   - XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *);
- *   All newly created XMLHttpRequestInterface instance shall be returned when
- *   calling this function. The specified XMLParserInterface instance shall be
- *   used by the returned XMLHttpRequestInterface instance to parse XML
- *   content.
- *   One and only one XMLHttpRequest extension module shall be loaded by the
- *   global ExtensionManager. Then XMLHttpRequestFactory singleton will use the
- *   loaded XMLHttpRequest extension module to create XMLHttpRequestInterface
- *   instances.
- *
- * - XMLParser extension module
- *   A XMLParser extension module can be used to provide specified
- *   implementations of XMLParserInterface and XMLDom related interfaces.
- *   This kind of extension modules must provide following symbol:
- *   - XMLParserInterface *GetXMLParser();
- *   This function shall return a pointer to the singleton instance of
- *   the XMLParserInterface implementation.
- *   One and only one XMLParser extension module shall be loaded by the global
- *   ExtensionManager. Then ggadget::GetXMLParser() function will return the
- *   XMLParser singleton instance provided by the loaded XMLParser extension
- *   module.
- *
- * - Options extension module
- *   An Options extension module can be used to provide specified
- *   implementation of OptionsInterface.
- *   This kind of extension modules must provide the following symbol:
- *   - OptionsInterface *CreateOptions(const char *);
- *   The function shall return a pointer to a newly created OptionsInterface
- *   instance.
- *   One and only one Options extension module shall be loaded by the global
- *   ExtensionManager. The OptionsFactory singleton will use the loaded
- *   Options extension module to create OptionsInterface instances.
+ * - Extension modules that registers global resources in Initialize()
+ *   Some extension modules don't need to provide additional symbols, but
+ *   register global resources with certain global functions provided by
+ *   the main library:
+ *   - XMLHttpRequest extension module: SetXMLHttpRequestFactory()
+ *   - XMLParser extension module: SetXMLParser()
+ *   - Options extension module: SetOptionsFactory()
  *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.

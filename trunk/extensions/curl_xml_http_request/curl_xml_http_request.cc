@@ -334,6 +334,11 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   void OnIOReady(int fd, int watch_type) {
+    if (!curlm_) {
+      LOG("OnIOReady while this request has finished or has been aborted");
+      return;
+    }
+
     // DLOG("XMLHttpRequest: OnIOReady: %d %d %d", fd,
     //      watch_type, io_watch_type_);
     if (fd != CURL_SOCKET_TIMEOUT) {
@@ -963,6 +968,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   CaseInsensitiveStringMap response_headers_map_;
 };
 
+XMLHttpRequestInterface *XMLHttpRequestFactory(XMLParserInterface *parser) {
+  return new XMLHttpRequest(GetGlobalMainLoop(), parser);
+}
+
 } // namespace curl
 } // namespace ggadget
 
@@ -970,24 +979,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 #define Finalize curl_xml_http_request_LTX_Finalize
 #define CreateXMLHttpRequest curl_xml_http_request_LTX_CreateXMLHttpRequest
 
-using ggadget::XMLHttpRequestInterface;
-using ggadget::XMLParserInterface;
-using ggadget::curl::XMLHttpRequest;
-using ggadget::GetGlobalMainLoop;
-
 extern "C" {
   bool Initialize() {
     DLOG("Initialize curl_xml_http_request extension.");
-    return true;
+    return ggadget::SetXMLHttpRequestFactory(
+        &ggadget::curl::XMLHttpRequestFactory);
   }
 
   void Finalize() {
     DLOG("Finalize curl_xml_http_request extension.");
-  }
-
-  XMLHttpRequestInterface *
-  CreateXMLHttpRequest(XMLParserInterface *xml_parser) {
-    DLOG("Create curl::XMLHttpRequest instance.");
-    return new XMLHttpRequest(GetGlobalMainLoop(), xml_parser);
   }
 }

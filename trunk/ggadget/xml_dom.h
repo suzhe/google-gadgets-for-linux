@@ -14,22 +14,22 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_XML_PARSER_H__
-#define GGADGET_XML_PARSER_H__
+#ifndef GGADGET_XML_DOM_H__
+#define GGADGET_XML_DOM_H__
 
-#include <ggadget/xml_parser_interface.h>
+#include <ggadget/xml_dom_interface.h>
 
 namespace ggadget {
 
+class XMLParserInterface;
+
 /**
- * Gets the XMLParserInterface instance.
- *
- * The returned instance is a singleton provided by a XMLParser
- * extension module, which is loaded into the global ExtensionManager in
- * advanced.
+ * Create a new document. In most cases, you should create
+ * DOMDocumentInterface instances with the global XML parser, which is
+ * provided by some extension module. 
  */
-XMLParserInterface *GetXMLParser();
+DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser);
 
 } // namespace ggadget
 
-#endif // GGADGET_XML_PARSER_H__
+#endif // GGADGET_XML_DOM_H__

@@ -82,7 +82,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  memory_options.h \
 			  menu_interface.h \
 			  module.h \
-			  options_factory.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
@@ -117,7 +116,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  view_interface.h \
 			  windows_locales.h \
 			  xml_dom_interface.h \
-			  xml_http_request_factory.h \
+			  xml_dom.h \
 			  xml_http_request_interface.h \
 			  xml_parser.h \
 			  xml_parser_interface.h \
@@ -185,6 +184,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  variant.cc \
 			  view.cc \
 			  windows_locales.cc \
+			  xml_dom.cc \
 			  xml_http_request_factory.cc \
 			  xml_parser.cc \
 			  xml_utils.cc

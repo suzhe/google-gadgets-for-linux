@@ -14,82 +14,24 @@
   limitations under the License.
 */
 
-#include "xml_http_request_factory.h"
-#include "module.h"
-#include "extension_manager.h"
+#include "xml_http_request_interface.h"
 
 namespace ggadget {
 
-static const char kXMLHttpRequestExtensionSymbolName[] = "CreateXMLHttpRequest";
+static XMLHttpRequestFactory g_factory = NULL;
 
-class XMLHttpRequestFactory::Impl : public ExtensionRegisterInterface {
- public:
-  Impl() : func_(NULL) {
+bool SetXMLHttpRequestFactory(XMLHttpRequestFactory factory) {
+  ASSERT(!g_factory && factory);
+  if (!g_factory && factory) {
+    g_factory = factory;
+    return true;
   }
-
-  virtual bool RegisterExtension(const Module *extension) {
-    ASSERT(extension);
-    CreateXMLHttpRequestFunc func =
-        reinterpret_cast<CreateXMLHttpRequestFunc>(
-            extension->GetSymbol(kXMLHttpRequestExtensionSymbolName));
-    if (func)
-      func_ = func;
-
-    return func != NULL;
-  }
-
-  XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *parser) {
-    if (!func_) {
-      const ExtensionManager *manager =
-          ExtensionManager::GetGlobalExtensionManager();
-
-      ASSERT(manager);
-
-      if (manager)
-        manager->RegisterLoadedExtensions(this);
-    }
-
-    ASSERT(func_);
-
-    if (func_)
-      return func_(parser);
-
-    return NULL;
-  }
-
- private:
-  typedef XMLHttpRequestInterface *
-      (*CreateXMLHttpRequestFunc)(XMLParserInterface *);
-
-  CreateXMLHttpRequestFunc func_;
-
- public:
-  static XMLHttpRequestFactory *factory_;
-};
-
-XMLHttpRequestFactory *XMLHttpRequestFactory::Impl::factory_ = NULL;
-
-XMLHttpRequestFactory::XMLHttpRequestFactory()
-  : impl_(new Impl()) {
+  return false;
 }
 
-XMLHttpRequestFactory::~XMLHttpRequestFactory() {
-  DLOG("XMLHttpRequestFactory singleton is destroyed, but it shouldn't.");
-  ASSERT(Impl::factory_ == this);
-  Impl::factory_ = NULL;
-  delete impl_;
-  impl_ = NULL;
-}
-
-XMLHttpRequestInterface *
-XMLHttpRequestFactory::CreateXMLHttpRequest(XMLParserInterface *parser) {
-  return impl_->CreateXMLHttpRequest(parser);
-}
-
-XMLHttpRequestFactory *XMLHttpRequestFactory::get() {
-  if (!Impl::factory_)
-    Impl::factory_ = new XMLHttpRequestFactory();
-  return Impl::factory_;
+XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *parser) {
+  VERIFY_M(g_factory, ("The XMLHttpRequest factory has not been set yet."));
+  return g_factory ? g_factory(parser) : NULL;
 }
 
 } // namespace ggadget
