@@ -15,7 +15,7 @@
 */
 
 #include "ggadget/logger.h"
-#include "ggadget/options_factory.h"
+#include "ggadget/options_interface.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/tests/init_extensions.h"
 #include "unittest/gunit.h"
@@ -26,8 +26,7 @@ using namespace ggadget;
 #define TEST_DIRECTORY "/tmp/TestDefaultOptions"
 
 TEST(DefaultOptions, Test) {
-  OptionsInterface *options =
-      OptionsFactory::get()->CreateOptions(TEST_DIRECTORY "/options1");
+  OptionsInterface *options = CreateOptions(TEST_DIRECTORY "/options1");
   ASSERT_TRUE(options);
   const char kBinaryData[] = "\x01\0\x02xyz\n\r\"\'\\\xff\x7f<>&";
   const std::string kBinaryStr(kBinaryData, sizeof(kBinaryData) - 1);
@@ -75,7 +74,7 @@ TEST(DefaultOptions, Test) {
   // NULL string become blank string when persisted and loaded.
   test_data["itemstringnull"] = Variant("");
 
-  options = OptionsFactory::get()->CreateOptions(TEST_DIRECTORY "/options1");
+  options = CreateOptions(TEST_DIRECTORY "/options1");
   ASSERT_TRUE(options);
   for (TestData::const_iterator it = test_data.begin();
        it != test_data.end(); ++it) {

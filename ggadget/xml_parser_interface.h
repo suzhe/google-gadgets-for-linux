@@ -118,6 +118,21 @@ class XMLParserInterface {
   virtual ~XMLParserInterface() { }
 };
 
+/**
+ * Sets the global XMLParserInterface instance.  An XMLParser extension module
+ * can call this function in its @c Initialize() function.
+ */
+bool SetXMLParser(XMLParserInterface *xml_parser);
+
+/**
+ * Gets the XMLParserInterface instance.
+ *
+ * The returned instance is a singleton provided by an XMLParser
+ * extension module, which is loaded into the global ExtensionManager in
+ * advanced.
+ */
+XMLParserInterface *GetXMLParser();
+
 } // namespace ggadget
 
 #endif // GGADGET_XML_PARSER_INTERFACE_H__

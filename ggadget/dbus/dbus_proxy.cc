@@ -27,7 +27,6 @@ limitations under the License.
 #include <ggadget/string_utils.h>
 #include <ggadget/xml_dom_interface.h>
 #include <ggadget/xml_parser_interface.h>
-#include <ggadget/xml_parser.h>
 
 namespace ggadget {
 namespace dbus {

@@ -18,7 +18,7 @@
 #include <locale.h>
 
 #include "ggadget/logger.h"
-#include "ggadget/xml_parser.h"
+#include "ggadget/xml_parser_interface.h"
 #include "ggadget/xml_dom_interface.h"
 #include "unittest/gunit.h"
 #include "init_extensions.h"

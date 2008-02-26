@@ -14,47 +14,24 @@
   limitations under the License.
 */
 
-#include "module.h"
-#include "extension_manager.h"
+#include "logger.h"
 #include "xml_parser_interface.h"
 
 namespace ggadget {
-namespace {
 
-static const char kXMLParserExtensionSymbolName[] = "GetXMLParser";
 static XMLParserInterface *g_xml_parser = NULL;
 
-class XMLParserExtensionRegister : public ExtensionRegisterInterface {
- public:
-  typedef XMLParserInterface *(*GetXMLParserFunc)();
-
-  virtual bool RegisterExtension(const Module *extension) {
-    ASSERT(extension);
-    GetXMLParserFunc func =
-        reinterpret_cast<GetXMLParserFunc>(
-            extension->GetSymbol(kXMLParserExtensionSymbolName));
-
-    if (func) {
-      g_xml_parser = func();
-      return true;
-    }
-    return false;
+bool SetXMLParser(XMLParserInterface *xml_parser) {
+  ASSERT(!g_xml_parser && xml_parser);
+  if (!g_xml_parser && xml_parser) {
+    g_xml_parser = xml_parser;
+    return true;
   }
-};
-
-} // anonymous namespace
+  return false;
+}
 
 XMLParserInterface *GetXMLParser() {
-  if (!g_xml_parser) {
-    const ExtensionManager *manager =
-        ExtensionManager::GetGlobalExtensionManager();
-    ASSERT(manager);
-    if (manager) {
-      XMLParserExtensionRegister reg;
-      manager->RegisterLoadedExtensions(&reg);
-    }
-  }
-  ASSERT(g_xml_parser);
+  VERIFY_M(g_xml_parser, ("The global xml parser has not been set yet."));
   return g_xml_parser;
 }
 

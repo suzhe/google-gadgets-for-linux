@@ -26,9 +26,9 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/global_file_manager.h>
 #include <ggadget/logger.h>
-#include <ggadget/options_factory.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/xml_parser.h>
+#include <ggadget/xml_parser_interface.h>
 #include <ggadget/main_loop_interface.h>
 
 #include "gtk_gadget_host.h"
@@ -48,7 +48,7 @@ GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
       profile_file_manager_(new FileManager(GetXMLParser())),
       global_file_manager_(new GlobalFileManager()),
       file_manager_(NULL),
-      options_(ggadget::OptionsFactory::get()->CreateOptions("")),
+      options_(CreateOptions("")),
       gadget_(NULL),
       plugin_flags_(0),
       composited_(composited),

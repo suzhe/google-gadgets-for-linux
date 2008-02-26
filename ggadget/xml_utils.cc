@@ -27,7 +27,7 @@
 #include "unicode_utils.h"
 #include "view.h"
 #include "xml_dom_interface.h"
-#include "xml_parser.h"
+#include "xml_parser_interface.h"
 
 namespace ggadget {
 

@@ -22,7 +22,7 @@
 #include "ggadget/signals.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/xml_http_request_interface.h"
-#include "ggadget/xml_parser.h"
+#include "ggadget/xml_parser_interface.h"
 #include "unittest/gunit.h"
 #include "init_extensions.h"
 

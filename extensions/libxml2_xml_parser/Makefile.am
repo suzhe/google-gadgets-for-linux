@@ -21,8 +21,7 @@ INCLUDES		= -I$(top_builddir) \
 extension_LTLIBRARIES	= libxml2-xml-parser.la
 extensiondir		= $(GGL_MODULE_DIR)
 
-libxml2_xml_parser_la_SOURCES = libxml2_xml_parser.cc \
-				libxml2_xml_dom.cc
+libxml2_xml_parser_la_SOURCES = libxml2_xml_parser.cc
 
 libxml2_xml_parser_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)

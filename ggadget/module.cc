@@ -31,7 +31,7 @@
 
 #ifdef _DEBUG
 // Uncomment the following line to get verbose debug logs.
-// #define DEBUG_MODULES
+#define DEBUG_MODULES
 #endif
 
 namespace ggadget {
@@ -296,7 +296,7 @@ class Module::Impl {
         str.erase(0, pos+1);
       }
       // Remove the file extension if any.
-      pos = str.rfind(str.rfind('.'));
+      pos = str.rfind('.');
       if (pos != std::string::npos)
         str.erase(pos);
       *module_name = str;

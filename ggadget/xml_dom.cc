@@ -1904,12 +1904,9 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
 } // namespace internal
 
-namespace libxml2 {
-
 DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser) {
   ASSERT(xml_parser);
   return new ::ggadget::internal::DOMDocument(xml_parser);
 }
 
-} // namespace libxml2
 } // namespace ggadget

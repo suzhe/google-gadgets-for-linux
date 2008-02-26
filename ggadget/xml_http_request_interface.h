@@ -24,6 +24,7 @@ namespace ggadget {
 template <typename R> class Slot0;
 class Connection;
 class DOMDocumentInterface;
+class XMLParserInterface;
 
 /**
  * References:
@@ -81,6 +82,22 @@ class XMLHttpRequestInterface : public ScriptableInterface {
 };
 
 CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)
+
+typedef XMLHttpRequestInterface *(*XMLHttpRequestFactory)(
+    XMLParserInterface *parser);
+
+/**
+ * Sets an @c XMLHttpRequestFactory as the global XMLHttpRequest factory.
+ * An XMLHttpRequest extension module can call this function in its
+ * @c Initailize() function.
+ */
+bool SetXMLHttpRequestFactory(XMLHttpRequestFactory factory);
+
+/**
+ * Creates an @c XMLHttpRequestInterface instance. Invocations will be
+ * delegated to the global @c XMLHttpRequestFactory.
+ */
+XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *parser);
 
 } // namespace ggadget
 

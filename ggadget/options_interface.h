@@ -135,8 +135,41 @@ class OptionsInterface {
    */
   virtual bool EnumerateInternalItems(
       Slot2<bool, const char *, const Variant &> *callback) = 0;
-
 };
+
+const char kDefaultOptionsName[] = "default-options";
+
+/**
+ * The function to create an @c OptionsInterface instance.
+ * @param name distinct name of the instance.
+ * @return the created @c OptionsInterface instance, or @c NULL on failure.
+ *     The caller then owns the returned pointer.
+ */
+typedef OptionsInterface *(*OptionsFactory)(const char *name); 
+
+/**
+ * Sets an OptionsFactory as the global options factory. An Options extension
+ * module can call this function in its @c Initailize() function.
+ */
+bool SetOptionsFactory(OptionsFactory options_factory);
+
+/**
+ * Creates an @c OptionsInterface instance. Invocations will be delegated to
+ * the global @c OptionsFactory.
+ */
+OptionsInterface *CreateOptions(const char *name);
+
+/**
+ * Set the global options instance which is used to store global config data.
+ * Normally not the Options extension modoule but the host should call
+ * this function.
+ */
+bool SetGlobalOptions(OptionsInterface *global_options);
+
+/**
+ * Gets the global options instance previously set by @c SetGlobalOptions(). 
+ */
+OptionsInterface *GetGlobalOptions();
 
 } // namespace ggadget
 

@@ -20,8 +20,8 @@
 #include "scriptable_holder.h"
 #include "slot.h"
 #include "system_utils.h"
-#include "xml_http_request_factory.h"
-#include "xml_parser.h"
+#include "xml_http_request_interface.h"
+#include "xml_parser_interface.h"
 
 namespace ggadget {
 

@@ -21,12 +21,7 @@
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_map.h>
-/*
-#define Initialize gadget_browser_script_utils_LTX_Initialize
-#define Finalize gadget_browser_script_utils_LTX_Finalize
-#define RegisterScriptExtension \
-    gadget_browser_script_utils_LTX_RegisterScriptExtension
-*/
+
 namespace ggadget {
 namespace {
 
@@ -80,6 +75,11 @@ GadgetBrowserScriptUtils *g_utils = NULL;
 
 } // anonymous namespace
 } // namespace ggadget
+
+#define Initialize gadget_browser_script_utils_LTX_Initialize
+#define Finalize gadget_browser_script_utils_LTX_Finalize
+#define RegisterScriptExtension \
+    gadget_browser_script_utils_LTX_RegisterScriptExtension
 
 extern "C" {
   bool Initialize() {

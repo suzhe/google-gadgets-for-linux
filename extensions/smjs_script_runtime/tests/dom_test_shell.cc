@@ -16,7 +16,7 @@
 
 #include "ggadget/scriptable_helper.h"
 #include "ggadget/xml_dom_interface.h"
-#include "ggadget/xml_parser.h"
+#include "ggadget/xml_parser_interface.h"
 #include "ggadget/tests/init_extensions.h"
 #include "../js_script_context.h"
 
