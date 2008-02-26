@@ -226,7 +226,7 @@ bool Wireless::IsConnected() const {
 }
 
 bool Wireless::EnumerationSupported() const {
-  return impl_->IsConnected();
+  return impl_->GetAPCount() != 0;
 }
 
 int Wireless::GetAPCount() const {

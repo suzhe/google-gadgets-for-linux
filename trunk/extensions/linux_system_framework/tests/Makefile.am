@@ -29,7 +29,7 @@ noinst_HEADERS		=
 check_PROGRAMS		= machine_test \
                     network_test \
                     memory_test \
-		    power_test \
+                    power_test \
                     process_test \
                     filesystem_test \
                     filesystem_folder_test \

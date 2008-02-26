@@ -477,7 +477,7 @@ ScriptableProcess::~ScriptableProcess() {
 ScriptablePower::ScriptablePower(PowerInterface *power) {
   ASSERT(power);
   RegisterProperty(
-      "charing",
+      "charging",
       NewSlot(power, &PowerInterface::IsCharging), NULL);
   RegisterProperty(
       "percentRemaining",

@@ -89,6 +89,9 @@ const char kNetworkManagerInfoInterface[]  = "org.freedesktop.NetworkManagerInfo
 
 const char kNetworkManagerMethodGetDevices[]    = "getDevices";
 const char kNetworkManagerMethodGetProperties[] = "getProperties";
+const char kNetworkManagerMethodSetActive[]     = "setActiveDevice";
+const char kNetworkManagerMethodSetWireless[]   = "setWirelessEnabled";
+const char kNetworkManagerMethodGetWireless[]   = "getWirelessEnabled";
 
 } // namespace linux_system
 } // namespace framework
