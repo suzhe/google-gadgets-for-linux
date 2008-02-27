@@ -118,7 +118,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_dom_interface.h \
 			  xml_dom.h \
 			  xml_http_request_interface.h \
-			  xml_parser.h \
 			  xml_parser_interface.h \
 			  xml_utils.h
 
