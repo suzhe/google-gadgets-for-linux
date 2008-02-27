@@ -16,14 +16,14 @@
 
 var kThumbnailPrefix = "http://desktop.google.com/plugins/images/";
 var kMaxWorkingTasks = 6;
-var g_pending_tasks = [];
-var g_working_tasks = [];
+var gPendingTasks = [];
+var gWorkingTasks = [];
 
 function ClearThumbnailTasks() {
-  g_pending_tasks = [];
-  for (var i in g_working_tasks)
-    g_working_tasks[i].request.abort();
-  g_working_tasks = [];
+  gPendingTasks = [];
+  for (var i in gWorkingTasks)
+    gWorkingTasks[i].request.abort();
+  gWorkingTasks = [];
 }
 
 function AddThumbnailTask(plugin, thumbnail_element1, thumbnail_element2) {
@@ -36,15 +36,14 @@ function AddThumbnailTask(plugin, thumbnail_element1, thumbnail_element2) {
       thumbnail_element1: thumbnail_element1,
       thumbnail_element2: thumbnail_element2,
     };
-    if (g_working_tasks.length < kMaxWorkingTasks)
-      StartTask(new_task);
+    if (gWorkingTasks.length < kMaxWorkingTasks)
+      StartThumbnailTask(new_task);
     else
-      g_pending_tasks.push(new_task);
+      gPendingTasks.push(new_task);
   }
 }
 
-function StartTask(task) {
-  var request = new XMLHttpRequest();
+function StartThumbnailTask(task) {
   var thumbnail_url = task.plugin.attributes.thumbnail_url;
   if (!thumbnail_url)
     return;
@@ -52,45 +51,42 @@ function StartTask(task) {
     thumbnail_url = kThumbnailPrefix + thumbnail_url;
   gadget.debug.trace("Start loading thumbnail: " + thumbnail_url);
  
+  var request = new XMLHttpRequest();
   try {
     request.open("GET", thumbnail_url);
     task.request = request;
     request.onreadystatechange = function() {
-      OnRequestStateChange(task);
+      OnRequestStateChange();
     };
     request.send();
-    g_working_tasks.push(task);
+    gWorkingTasks.push(task);
   } catch (e) {
     gadget.debug.error("Request error: " + e);
   }
-}
 
-function OnRequestStateChange(task) {
-  var request = task.request;
-  if (request.readyState == 4) {
-    if (request.status == 200) {
-      gadget.debug.trace("Finished loading a thumbnail: " + task.plugin.id);
-      var data = request.responseStream;
-      task.thumbnail_element1.src = data;
-      task.thumbnail_element2.src = data;
-      gadgetBrowserUtils.saveThumbnailToCache(task.plugin.id, data);
-    } else {
-      gadget.debug.error("Request returned status: " + request.status);
-    }
-
-    for (var i = 0; i < g_working_tasks.length; i++) {
-      if (g_working_tasks[i] == task) {
-        g_working_tasks.splice(i, 1);
-        WakeUpPendingTasks();
-        break;
+  function OnRequestStateChange() {
+    if (request.readyState == 4) {
+      if (request.status == 200) {
+        gadget.debug.trace("Finished loading a thumbnail: " + thumbnail_url);
+        var data = request.responseStream;
+        task.thumbnail_element1.src = data;
+        task.thumbnail_element2.src = data;
+        gadgetBrowserUtils.saveThumbnailToCache(task.plugin.id, data);
+      } else {
+        gadget.debug.error("Request " + thumbnail_url + " returned status: " +
+                           request.status);
+      }
+  
+      for (var i = 0; i < gWorkingTasks.length; i++) {
+        if (gWorkingTasks[i] == task) {
+          gWorkingTasks.splice(i, 1);
+          while (gWorkingTasks.length < kMaxWorkingTasks &&
+                 gPendingTasks.length > 0) {
+            StartThumbnailTask(gPendingTasks.shift());
+          }
+          break;
+        }
       }
     }
-  }
-}
-
-function WakeUpPendingTasks() {
-  while (g_working_tasks.length < kMaxWorkingTasks &&
-         g_pending_tasks.length > 0) {
-    StartTask(g_pending_tasks.shift());
   }
 }

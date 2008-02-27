@@ -59,6 +59,14 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
         NewSlot(this, &GadgetBrowserScriptUtils::LoadThumbnailFromCache));
     RegisterMethod("saveThumbnailToCache",
         NewSlot(this, &GadgetBrowserScriptUtils::SaveThumbnailToCache));
+    RegisterMethod("needDownloadGadget",
+        NewSlot(this, &GadgetBrowserScriptUtils::NeedDownloadGadget));
+    RegisterMethod("saveGadget",
+        NewSlot(this, &GadgetBrowserScriptUtils::SaveGadget));
+    RegisterMethod("addGadget",
+        NewSlot(this, &GadgetBrowserScriptUtils::AddGadget));
+    RegisterMethod("updateGadget",
+        NewSlot(this, &GadgetBrowserScriptUtils::UpdateGadget));
   }
 
   ScriptableArray *GetGadgetMetadata() {
@@ -81,6 +89,28 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
   ScriptableBinaryData *LoadThumbnailFromCache(const char *gadget_id) {
     // TODO:
     return NULL;
+  }
+
+  bool NeedDownloadGadget(const char *gadget_id) {
+    // TODO:
+    return true;
+  }
+
+  void SaveGadget(const char *gadget_id, ScriptableBinaryData *data) {
+    // TODO:
+    LOG("Save Gadget: gadget_id=%s data_length=%d", gadget_id, data->size());
+  }
+
+  int AddGadget(const char *gadget_id) {
+    // TODO:
+    LOG("Add Gadget: gadget_id=%s", gadget_id);
+    return 1;
+  }
+
+  int UpdateGadget(const char *gadget_id) {
+    // TODO:
+    LOG("Update Gadget: gadget_id=%s", gadget_id);
+    return 1;
   }
 
   // TODO: Acquire gadget metadata from GadgetManager.

@@ -14,7 +14,7 @@
   limitations under the License.
 -->
 
-<view height="555" width="714" onopen="view_onOpen()">
+<view height="555" width="714" resizable="false" onopen="view_onOpen()">
   <div height="100%" width="100%" background="images/background.png"
     backgroundMode="stretchMiddle">
     <label enabled="true" hitTest="htclient" name="language_label" x="10"
@@ -64,4 +64,5 @@
   </div>
   <script src="main.js"/>
   <script src="thumbnail.js"/>
+  <script src="plugins.js"/>
 </view>
