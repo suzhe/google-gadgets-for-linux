@@ -26,6 +26,7 @@ SUBDIRS = $(LIBLTDL_DIR) \
 	  unittest \
 	  ggadget \
 	  extensions \
+	  gadget_browser \
 	  hosts
 
 EXTRA_DIST = examples autotools

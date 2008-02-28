@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+SUBDIRS = . gadget
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-extension_LTLIBRARIES	= gadget-browser-script-utils.la
-extensiondir		= $(GGL_MODULE_DIR)
+gadget_browser_LTLIBRARIES = gadget-browser-script-utils.la
+gadget_browserdir	= $(GGL_RESOURCE_DIR)/gadget-browser
 
 gadget_browser_script_utils_la_SOURCES = gadget_browser_script_utils.cc
 
@@ -25,11 +27,9 @@ gadget_browser_script_utils_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 gadget_browser_script_utils_la_CPPFLAGS = \
-			  @LIBCURL_CPPFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 gadget_browser_script_utils_la_LIBADD = \
-			  @LIBCURL@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gadget_browser_script_utils_la_LDFLAGS = \

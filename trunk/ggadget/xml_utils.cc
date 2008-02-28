@@ -158,10 +158,9 @@ static void HandleScriptElement(ScriptContextInterface *script_context,
   int lineno = xml_element->GetRow();
   std::string script;
   std::string src = xml_element->GetAttribute(kSrcAttr);
-  std::string real_path(filename);
 
   if (!src.empty()) {
-    if (file_manager->GetFileContents(src.c_str(), &script, &real_path)) {
+    if (file_manager->ReadFile(src.c_str(), &script)) {
       filename = src.c_str();
       lineno = 1;
       std::string temp;
@@ -251,16 +250,6 @@ static BasicElement *InsertElementFromDOM(
   return element;
 }
 
-bool SetupViewFromFile(View *view, const char *filename) {
-  std::string contents;
-  std::string real_path;
-  if (!view->GetFileManager()->GetXMLFileContents(filename,
-                                                  &contents, &real_path))
-    return false;
-
-  return SetupViewFromXML(view, contents, real_path.c_str());
-}
-
 bool SetupViewFromXML(View *view, const std::string &xml,
                       const char *filename) {
   DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
@@ -326,6 +315,49 @@ BasicElement *InsertElementFromXML(View *view, Elements *elements,
                                               xml_element, before);
   xmldoc->Unref();
   return result;
+}
+
+bool ReplaceXMLEntities(const GadgetStringMap &entities, std::string *xml) {
+  ASSERT(xml);
+  std::string result;
+
+  // Process text to replace all "&..;" entities with corresponding resources.
+  std::string::size_type start = 0;
+  std::string::size_type pos = 0;
+  for (; pos < xml->size(); pos++) {
+    char c = (*xml)[pos];
+    // 1 byte at a time is OK here.
+    if ('&' == c) {
+      // Append the previous chunk.
+      result.append(*xml, start, pos - start);
+      start = pos;
+
+      std::string entity_name;
+      while (++pos < xml->size() && (c = (*xml)[pos]) != ';' && c != '\n')
+        entity_name.push_back(c);
+
+      if (c != ';') {
+        LOG("Unterminated entity reference: %s.",
+            xml->substr(start, pos - start).c_str());
+        return false;
+      }
+
+      GadgetStringMap::const_iterator iter = entities.find(entity_name);
+      if (iter != entities.end()) {
+        start = pos + 1;  // Reset start for next chunk.
+        result.append(GetXMLParser()->EncodeXMLString(iter->second.c_str()));
+      }
+      // Else: not a fatal error. Just leave the original entity reference
+      // text in the current text chunk and let tinyxml deal with it.
+    }
+  }
+
+  if (pos - start > 0)  // Append any remaining chars.
+    result.append(*xml, start, pos - start);
+
+  xml->swap(result);
+
+  return true;
 }
 
 } // namespace ggadget

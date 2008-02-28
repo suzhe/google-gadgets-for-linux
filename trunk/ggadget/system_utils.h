@@ -68,11 +68,25 @@ std::string BuildFilePathV(const char *element, va_list ap);
 bool SplitFilePath(const char *path, std::string *dir, std::string *filename);
 
 /**
+ * Normalize a file path:
+ * - Remove redundant dir separators.
+ * - Replace '\' with '/' on non-Windows platforms.
+ * - Remove all "." and ".." components.
+ *
+ * The file path to be normalized shall be an absolute path, otherwise the
+ * result might be incorrect.
+ *
+ * @param path the path to be normalized.
+ * @return the normalized result.
+ */
+std::string NormalizeFilePath(const char *path);
+
+/**
  * Ensure each directory in the directory path exists in the file system,
  * or if not, create it.
  *
  * @param path the path of a directory. Normally it should be a absolute path,
- *     but relative path is also supported.  
+ *     but relative path is also supported.
  * @return true if success.
  */
 bool EnsureDirectories(const char *path);
@@ -86,6 +100,44 @@ bool EnsureDirectories(const char *path);
  * @return true if success.
  */
 bool ReadFileContents(const char *path, std::string *content);
+
+/**
+ * Gets the current working directory.
+ *
+ * @return the absolute path of the current working directory.
+ */
+std::string GetCurrentDirectory();
+
+/**
+ * Creates an unique temporary directory that can be used to store temporary
+ * files.
+ *
+ * The created temporary directory shall be removed by caller when it's not
+ * used anymore.
+ *
+ * @param prefix A prefix used in the directory name.
+ * @param[out] path returns the path of the newly created temporary directory.
+ * @return true if the directory is created successfully.
+ */
+bool CreateTempDirectory(const char *prefix, std::string *path);
+
+/**
+ * Removes a directory tree, all files under the specified directory will be
+ * removed.
+ *
+ * @return true if succeeded.
+ */
+bool RemoveDirectory(const char *path);
+
+/**
+ * Returns the current system locale information.
+ *
+ * @param[out] language returns the system language id, such as "en", "zh".
+ * @param[out] territory returns the system territory id, such as "US", "CN",
+ *             it's in uppercase.
+ * @return true if succeeded.
+ */
+bool GetSystemLocaleInfo(std::string *language, std::string *territory);
 
 } // namespace ggadget
 

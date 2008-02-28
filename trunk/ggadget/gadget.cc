@@ -21,6 +21,9 @@
 #include "display_window.h"
 #include "element_factory.h"
 #include "file_manager_interface.h"
+#include "file_manager_factory.h"
+#include "file_manager_wrapper.h"
+#include "localized_file_manager.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
 #include "logger.h"
@@ -37,6 +40,7 @@
 #include "view_host_interface.h"
 #include "view.h"
 #include "xml_parser_interface.h"
+#include "xml_utils.h"
 #include "extension_manager.h"
 
 namespace ggadget {
@@ -236,7 +240,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
   };
 
-  Impl(GadgetHostInterface *host, Gadget *owner, int debug_mode)
+  Impl(GadgetHostInterface *host, Gadget *owner,
+       const char *base_path, int debug_mode)
       : owner_(owner),
         host_(host),
         debug_(this),
@@ -247,6 +252,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         element_factory_(new ElementFactory()),
         extension_manager_(
             ExtensionManager::CreateExtensionManager()),
+        file_manager_(new FileManagerWrapper()),
         main_view_(new View(&gadget_global_, element_factory_, debug_mode)),
         main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
                                           main_view_)),
@@ -258,6 +264,25 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     plugin_.SetMainView(main_view_);
     RegisterConstant("debug", &debug_);
     RegisterConstant("storage", &storage_);
+
+    // Create gadget FileManager
+    std::string path, filename;
+    SplitFilePath(base_path, &path, &filename);
+
+    // Uses the parent path of base_path if it refers to a manifest file.
+    if (filename.length() <= strlen(kGManifestExt) ||
+        strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
+                   kGManifestExt) != 0) {
+      path = std::string(base_path);
+    }
+
+    FileManagerInterface *fm = CreateFileManager(path.c_str());
+    if (fm)
+      file_manager_->RegisterFileManager("", new LocalizedFileManager(fm));
+
+    // Create system FileManager
+    fm = CreateFileManager(kDirSeparatorStr);
+    if (fm) file_manager_->RegisterFileManager(kDirSeparatorStr, fm);
   }
 
   ~Impl() {
@@ -265,18 +290,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       GetGlobalMainLoop()->RemoveWatch(close_details_view_timer_);
       close_details_view_timer_ = 0;
     }
+
     if (show_details_view_timer_ != 0) {
       GetGlobalMainLoop()->RemoveWatch(show_details_view_timer_);
       show_details_view_timer_ = 0;
-    }
-
-    for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
-         i != manifest_info_map_.end(); ++i) {
-      const char *key = i->first.c_str();
-      if (SimpleMatchXPath(key, kManifestInstallFontSrc)) {
-        // ignore return, error not fatal
-        host_->UnloadFont(i->second.c_str());
-      }
     }
 
     CloseDetailsView();
@@ -284,6 +301,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     delete element_factory_;
     if (extension_manager_)
       extension_manager_->Destroy();
+    delete file_manager_;
   }
 
   void DebugError(const char *message) {
@@ -299,20 +317,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   std::string ExtractFile(const char *filename) {
-    FileManagerInterface *file_manager = host_->GetFileManager();
-    ASSERT(file_manager);
     std::string extracted_file;
-    return file_manager->ExtractFile(filename, &extracted_file) ?
-           extracted_file : "";
+    return file_manager_->ExtractFile(filename, &extracted_file) ?
+        extracted_file : "";
   }
 
   std::string OpenTextFile(const char *filename) {
-    FileManagerInterface *file_manager = host_->GetFileManager();
-    ASSERT(file_manager);
     std::string data;
-    std::string real_path;
-    return file_manager->GetFileContents(filename, &data, &real_path) ?
-           data : "";
+    return file_manager_->ReadFile(filename, &data) ?  data : "";
   }
 
   std::string GetManifestInfo(const char *key) {
@@ -342,15 +354,23 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     } else if (has_options_xml_) {
       options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS,
                                              view);
-      if (!view->InitFromFile(kOptionsXML)) {
-        LOG("Failed to setup the options view");
+      std::string xml;
+      if (file_manager_->ReadFile(kOptionsXML, &xml) &&
+          ReplaceXMLEntities(strings_map_, &xml)) {
+        std::string full_path = file_manager_->GetFullPath(kOptionsXML);
+        if (!view->InitFromXML(xml, full_path.c_str())) {
+          LOG("Failed to setup the options view");
+          delete options_view_host;
+          return false;
+        }
+      } else {
+        LOG("Failed to load options.xml file from gadget package.");
         delete options_view_host;
         return false;
       }
     } else {
       LOG("Failed to show options dialog because there is neither options.xml"
           "nor OnShowOptionsDlg handler");
-      delete options_view_host;
       return false;
     }
 
@@ -376,6 +396,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     script_context->AssignFromNative(NULL, "", "detailsViewData",
                                      Variant(scriptable_data));
 
+    std::string xml;
     std::string xml_file;
     if (details_view->ContentIsHTML() || !details_view->ContentIsView()) {
       if (details_view->ContentIsHTML()) {
@@ -388,11 +409,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         data->PutValue("contentType", Variant("text/plain"));
       }
       data->PutValue("content", Variant(details_view->GetText()));
+      GetGlobalFileManager()->ReadFile(xml_file.c_str(), &xml);
     } else {
       xml_file = details_view->GetText();
+      if (file_manager_->ReadFile(xml_file.c_str(), &xml))
+        ReplaceXMLEntities(strings_map_, &xml);
     }
 
-    if (!view->InitFromFile(xml_file.c_str())) {
+    if (xml.empty() || !view->InitFromXML(xml, xml_file.c_str())) {
       LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_host_;
       details_view_host_ = NULL;
@@ -467,19 +491,31 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   bool Init() {
-    FileManagerInterface *file_manager = host_->GetFileManager();
-    ASSERT(file_manager);
+    // Load string table.
+    std::string strings_data;
+    if (file_manager_->ReadFile(kStringsXML, &strings_data)) {
+      std::string full_path = file_manager_->GetFullPath(kStringsXML);
+      // For compatibility with some Windows gadget files that use ISO8859-1
+      // encoding without declaration.
+      if (!GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
+                                                full_path.c_str(),
+                                                kStringsTag, NULL,
+                                                &strings_map_))
+        GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
+                                             full_path.c_str(),
+                                             kStringsTag, "ISO8859-1",
+                                             &strings_map_);
+    }
 
-    const GadgetStringMap *strings = file_manager->GetStringTable();
-    RegisterStrings(strings, &gadget_global_);
-    RegisterStrings(strings, &strings_);
+    RegisterStrings(&strings_map_, &gadget_global_);
+    RegisterStrings(&strings_map_, &strings_);
 
     std::string manifest_contents;
-    std::string manifest_path;
-    if (!file_manager->GetXMLFileContents(kGadgetGManifest,
-                                          &manifest_contents,
-                                          &manifest_path))
+    if (!file_manager_->ReadFile(kGadgetGManifest, &manifest_contents) ||
+        !ReplaceXMLEntities(strings_map_, &manifest_contents))
       return false;
+
+    std::string manifest_path = file_manager_->GetFullPath(kGadgetGManifest);
     if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
                                               manifest_path.c_str(),
                                               kGadgetTag, NULL,
@@ -507,33 +543,19 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       const std::string &key = i->first;
       DLOG("key %s %s", key.c_str(), i->second.c_str());
       if (SimpleMatchXPath(key.c_str(), kManifestInstallFontSrc)) {
+        const char *font_name = i->second.c_str();
+        std::string path;
         // ignore return, error not fatal
-        host_->LoadFont(i->second.c_str());
+        if (file_manager_->IsDirectlyAccessible(font_name, NULL) ||
+            file_manager_->ExtractFile(font_name, &path))
+          host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
         const char *module_name = i->second.c_str();
-        std::string temp_file;
-        if (file_manager->ExtractFile(module_name, &temp_file)) {
-          // The extension manager requires the module file has its original
-          // name. Move the extracted file with its original name under a new
-          // subdirectory.
-          // TODO: Let FileManager::ExtractFile() do this.
-          std::string temp_dir = temp_file + ".newdir";
-          if (EnsureDirectories(temp_dir.c_str())) {
-            std::string new_temp_file = BuildFilePath(temp_dir.c_str(),
-                                                      module_name, NULL);
-            if (rename(temp_file.c_str(), new_temp_file.c_str()) == 0) {
-              extension_manager_->LoadExtension(new_temp_file.c_str(), false);
-            } else {
-              LOG("Failed to rename '%s' to '%s'",
-                  temp_file.c_str(), new_temp_file.c_str());
-            }
-            unlink(new_temp_file.c_str());
-          }
-          // Clean up.
-          unlink(temp_file.c_str());
-          unlink(temp_dir.c_str());
-        }
+        std::string path;
+        if (file_manager_->IsDirectlyAccessible(module_name, NULL) ||
+            file_manager_->ExtractFile(module_name, &path))
+          extension_manager_->LoadExtension(path.c_str(), false);
       }
     }
 
@@ -558,12 +580,15 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     main_view_host_->GetView()->SetCaption(
         GetManifestInfo(kManifestName).c_str());
 
-    if (!main_view_host_->GetView()->InitFromFile(kMainXML)) {
+    std::string main_xml;
+    if (!file_manager_->ReadFile(kMainXML, &main_xml) ||
+        !ReplaceXMLEntities(strings_map_, &main_xml) ||
+        !main_view_host_->GetView()->InitFromXML(main_xml, kMainXML)) {
       LOG("Failed to setup the main view");
       return false;
     }
 
-    has_options_xml_ = file_manager->FileExists(kOptionsXML, NULL);
+    has_options_xml_ = file_manager_->FileExists(kOptionsXML, NULL);
     return true;
   }
 
@@ -583,18 +608,20 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   GadgetGlobal gadget_global_;
   ElementFactory *element_factory_;
   ExtensionManager *extension_manager_;
+  FileManagerWrapper *file_manager_;
   View *main_view_;
   ViewHostInterface *main_view_host_;
   DetailsView *details_view_;
   ViewHostInterface *details_view_host_;
   GadgetStringMap manifest_info_map_;
+  GadgetStringMap strings_map_;
   bool has_options_xml_;
   int close_details_view_timer_, show_details_view_timer_;
   int debug_mode_;
 };
 
-Gadget::Gadget(GadgetHostInterface *host, int debug_mode)
-    : impl_(new Impl(host, this, debug_mode)) {
+Gadget::Gadget(GadgetHostInterface *host, const char *base_path, int debug_mode)
+    : impl_(new Impl(host, this, base_path, debug_mode)) {
 }
 
 Gadget::~Gadget() {
@@ -608,6 +635,10 @@ bool Gadget::Init() {
 
 ViewHostInterface *Gadget::GetMainViewHost() {
   return impl_->main_view_host_;
+}
+
+FileManagerInterface *Gadget::GetFileManager() {
+  return impl_->file_manager_;
 }
 
 std::string Gadget::GetManifestInfo(const char *key) const {

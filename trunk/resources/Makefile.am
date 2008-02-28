@@ -46,9 +46,12 @@ RESOURCE_FILES= button_down.png \
 EXTRA_DIST=$(RESOURCE_FILES)
 
 if GGL_HAVE_ZIP
-nodist_resource_DATA = ggl-resources.bin
+resource_DATA = ggl-resources.gg
 resourcedir=$(GGL_RESOURCE_DIR)
 
-ggl-resources.bin: $(RESOURCE_FILES)
+ggl-resources.gg: $(RESOURCE_FILES)
 	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(RESOURCE_FILES))
+else
+nobase_resource_DATA = $(RESOURCE_FILES)
+resourcedir=$(GGL_RESOURCE_DIR)/ggl-resources
 endif

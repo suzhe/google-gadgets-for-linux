@@ -101,9 +101,7 @@ class ScriptableAudio::Impl {
  public:
   Impl(AudioInterface *audio, Gadget *gadget)
     : audio_(audio), file_manager_(NULL) {
-    // FIXME: Ugly hack
-    file_manager_ =
-        gadget->GetMainViewHost()->GetGadgetHost()->GetFileManager();
+    file_manager_ = gadget->GetFileManager();
   }
 
   ScriptableAudioclip *Open(const char *src, Slot *method) {

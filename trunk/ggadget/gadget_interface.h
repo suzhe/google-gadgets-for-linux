@@ -44,6 +44,9 @@ class GadgetInterface {
   /** @return the host of the main view */
   virtual ViewHostInterface *GetMainViewHost() = 0;
 
+  /** Gets the gadget FileManager instance */
+  virtual FileManagerInterface *GetFileManager() = 0;
+
   /**
    * Get a value configured in the gadget manifest file.
    * @param key the value key like a simple XPath expression. See

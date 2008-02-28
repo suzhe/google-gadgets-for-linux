@@ -18,57 +18,48 @@
 #define GGADGET_FILE_MANAGER_WRAPPER_H__
 
 #include <string>
-
-#include "file_manager.h"
-#include "string_utils.h"
+#include <ggadget/common.h>
+#include <ggadget/file_manager_interface.h>
 
 namespace ggadget {
 
-class XMLParserInterface;
-
 /**
- * Parses filemanager paths and dispatches commands to the appropiate
- * filemanager.
+ * A wrapper FileManager which can manage multiple FileManager instance and dispatch commands
+ * to the appropriate FileManager according to file path prefix.
  */
 class FileManagerWrapper : public FileManagerInterface {
  public:
-  FileManagerWrapper(XMLParserInterface *xml_parser);
-
+  FileManagerWrapper();
   virtual ~FileManagerWrapper();
 
   /**
    * Registers a new file manager and an associated prefix to be handled
    * by this wrapper. The prefixes associated with this wrapper do not have to
-   * be unique. If a prefix is shared by more than one filemanager,
-   * the filemanagers will be called in the order in which they were registered.
-   * The filemanagers must already be initialized before registration. The
-   * filemanager wrapper will not free those filemanagers.
+   * be unique. If a prefix is shared by more than one FileManager,
+   * the FileManagers will be called in the order in which they were registered.
+   * The FileManagers must already be initialized before registration.
+   * The registered FileManager instances will be destroyed by the wrapper.
    *
-   * Note: One registered prefix must not be the prefix of another (e.g. "abc"
-   * and "abcdef"). The "" prefix is reserved for use by the default gadget
-   * filemanager.
+   * One registered prefix must not be the prefix of another (e.g. "abc"
+   * and "abcdef").
+   *
+   * Only one FileManager instance can be associated to the special empty ("")
+   * prefix, as the default gadget FileManager.
    */
   bool RegisterFileManager(const char *prefix, FileManagerInterface *fm);
 
+  virtual bool IsValid();
   /**
-   * Init() will initialize the filemanager wrapper with a default filemanager
-   * associated with a given gadget basepath and the "" prefix.
+   * Initialize the default FileManager instance, if available.
    */
-  virtual bool Init(const char *base_path);
-
-  virtual bool GetFileContents(const char *file,
-                               std::string *data,
-                               std::string *path);
-
-  virtual bool GetXMLFileContents(const char *file,
-                                  std::string *data,
-                                  std::string *path);
-
+  virtual bool Init(const char *base_path, bool create);
+  virtual bool ReadFile(const char *file, std::string *data);
+  virtual bool WriteFile(const char *file, const std::string &data);
+  virtual bool RemoveFile(const char *file);
   virtual bool ExtractFile(const char *file, std::string *into_file);
-
-  virtual const GadgetStringMap *GetStringTable() const;
-
   virtual bool FileExists(const char *file, std::string *path);
+  virtual bool IsDirectlyAccessible(const char *file, std::string *path);
+  virtual std::string GetFullPath(const char *file);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(FileManagerWrapper);

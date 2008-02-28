@@ -23,7 +23,6 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class FileManagerInterface;
 class GadgetInterface;
 class MainLoopInterface;
 class OptionsInterface;
@@ -39,9 +38,6 @@ class ViewInterface;
 class GadgetHostInterface {
  public:
   virtual ~GadgetHostInterface() { }
-
-  /** Get the file manager used to load this gadget. */
-  virtual FileManagerInterface *GetFileManager() = 0;
 
   /** Returns the @c OptionsInterface instance for this gadget. */
   virtual OptionsInterface *GetOptions() = 0;
@@ -101,9 +97,6 @@ class GadgetHostInterface {
 
   /** Temporarily install a given font on the system. */
   virtual bool LoadFont(const char *filename) = 0;
-
-  /** Remove a previously installed font. */
-  virtual bool UnloadFont(const char *filename) = 0;
 };
 
 } // namespace ggadget

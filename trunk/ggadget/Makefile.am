@@ -46,6 +46,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  content_item.h \
 			  contentarea_element.h \
 			  details_view.h \
+			  dir_file_manager.h \
 			  directory_provider_interface.h \
 			  display_window.h \
 			  div_element.h \
@@ -56,7 +57,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  encryptor_interface.h \
 			  event.h \
 			  extension_manager.h \
-			  file_manager.h \
+			  file_manager_factory.h \
 			  file_manager_interface.h \
 			  file_manager_wrapper.h \
 			  file_system_interface.h \
@@ -68,13 +69,13 @@ gglinclude_HEADERS	= anchor_element.h \
 			  gadget_interface.h \
 			  gadget_metadata.h \
 			  ggadget.h \
-			  global_file_manager.h \
 			  graphics_interface.h \
 			  image_interface.h \
 			  img_element.h \
 			  item_element.h \
 			  label_element.h \
 			  listbox_element.h \
+			  localized_file_manager.h \
 			  main_loop_interface.h \
 			  native_main_loop.h \
 			  logger.h \
@@ -119,7 +120,8 @@ gglinclude_HEADERS	= anchor_element.h \
 			  xml_dom.h \
 			  xml_http_request_interface.h \
 			  xml_parser_interface.h \
-			  xml_utils.h
+			  xml_utils.h \
+			  zip_file_manager.h
 
 nodist_gglsysdepsinclude_HEADERS= sysdeps.h
 BUILT_SOURCES=$(gglsysdepsinclude_HEADERS)
@@ -138,6 +140,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  contentarea_element.cc \
 			  details_view.cc \
 			  directory_provider.cc \
+			  dir_file_manager.cc \
 			  display_window.cc \
 			  div_element.cc \
 			  edit_element_base.cc \
@@ -145,15 +148,15 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  elements.cc \
 			  encryptor.cc \
 			  extension_manager.cc \
-			  file_manager.cc \
+			  file_manager_factory.cc \
 			  file_manager_wrapper.cc \
 			  gadget.cc \
 			  gadget_metadata.cc \
-			  global_file_manager.cc \
 			  img_element.cc \
 			  item_element.cc \
 			  label_element.cc \
 			  listbox_element.cc \
+			  localized_file_manager.cc \
 			  logger.cc \
 			  main_loop.cc \
 			  math_utils.cc \
@@ -186,7 +189,8 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \
 			  xml_parser.cc \
-			  xml_utils.cc
+			  xml_utils.cc \
+			  zip_file_manager.cc
 
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \

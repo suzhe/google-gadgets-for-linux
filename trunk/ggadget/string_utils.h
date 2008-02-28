@@ -153,7 +153,7 @@ bool SplitString(const std::string &source, const std::string &separator,
  *   - Removing leading and trailing white spaces;
  *   - Converting all consecutive white spaces into single spaces;
  * Only ASCII spaces (isspace(ch) == true) are handled.
- */ 
+ */
 std::string CompressWhiteSpaces(const char *source);
 
 /**
@@ -168,8 +168,8 @@ std::string CompressWhiteSpaces(const char *source);
  *     attribute names.
  * @return true if the xpath matches the pattern. The matching rule is: first
  *     remove all [...]s in the xpath, and test if the result equals to the
- *     pattern. 
- */ 
+ *     pattern.
+ */
 bool SimpleMatchXPath(const char *xpath, const char *pattern);
 
 } // namespace ggadget

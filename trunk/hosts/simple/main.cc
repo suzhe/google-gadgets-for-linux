@@ -31,6 +31,10 @@
 #include <ggadget/extension_manager.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/ggadget.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_wrapper.h>
+#include <ggadget/localized_file_manager.h>
 
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
@@ -56,6 +60,14 @@ static const char *kGlobalExtensions[] = {
 #endif
   "smjs-script-runtime",
   "curl-xml-http-request",
+  NULL
+};
+
+static const char *kGlobalResourcePaths[] = {
+  GGL_RESOURCE_DIR "/ggl-resources.gg",
+  GGL_RESOURCE_DIR "/ggl-resources",
+  "ggl-resources.gg",
+  "ggl-resources",
   NULL
 };
 
@@ -196,6 +208,25 @@ int main(int argc, char* argv[]) {
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
   ggadget::SetDirectoryProvider(&g_directory_provider);
+
+  // Set global file manager.
+  ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
+  ggadget::FileManagerInterface *fm;
+
+  for (size_t i = 0; kGlobalResourcePaths[i]; ++i) {
+    fm = ggadget::CreateFileManager(kGlobalResourcePaths[i]);
+    if (fm) {
+      fm_wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
+                                      new ggadget::LocalizedFileManager(fm));
+      break;
+    }
+  }
+
+  if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL)
+    fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
+
+  // TODO: Add global profile file manager here.
+  ggadget::SetGlobalFileManager(fm_wrapper);
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =

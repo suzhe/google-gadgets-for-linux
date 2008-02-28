@@ -145,7 +145,7 @@ const char kDefaultOptionsName[] = "default-options";
  * @return the created @c OptionsInterface instance, or @c NULL on failure.
  *     The caller then owns the returned pointer.
  */
-typedef OptionsInterface *(*OptionsFactory)(const char *name); 
+typedef OptionsInterface *(*OptionsFactory)(const char *name);
 
 /**
  * Sets an OptionsFactory as the global options factory. An Options extension
@@ -167,7 +167,7 @@ OptionsInterface *CreateOptions(const char *name);
 bool SetGlobalOptions(OptionsInterface *global_options);
 
 /**
- * Gets the global options instance previously set by @c SetGlobalOptions(). 
+ * Gets the global options instance previously set by @c SetGlobalOptions().
  */
 OptionsInterface *GetGlobalOptions();
 

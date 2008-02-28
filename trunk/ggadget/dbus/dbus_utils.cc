@@ -14,8 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <dbus/dbus.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
+#include <dbus/dbus.h>
 #include "dbus_utils.h"
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
@@ -1207,7 +1210,7 @@ dbus_bool_t DBusMainLoopClosure::Impl::AddWatch(DBusWatch *watch,
                                                 void* data) {
   Impl *this_p = reinterpret_cast<Impl*>(data);
   ASSERT(this_p);
-#if defined(DBUS_VERSION) && DBUS_VERSION > ((1 << 16) | (1 << 8) | (1))
+#ifdef HAVE_DBUS_WATCH_GET_UNIX_FD
   int fd = dbus_watch_get_unix_fd(watch);
 #else
   int fd = dbus_watch_get_fd(watch);
