@@ -14,12 +14,19 @@
   limitations under the License.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <dirent.h>
 #include <cstring>
-#include <errno.h>
+#include <cstdlib>
+#include <cerrno>
 #include <string>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <locale.h>
 #include "system_utils.h"
 #include "common.h"
 #include "gadget_consts.h"
@@ -141,6 +148,11 @@ bool SplitFilePath(const char *path, std::string *dir, std::string *filename) {
 }
 
 bool EnsureDirectories(const char *path) {
+  if (!path || !*path) {
+    LOG("Can't create empty path.");
+    return false;
+  }
+
   struct stat stat_value;
   memset(&stat_value, 0, sizeof(stat_value));
   if (stat(path, &stat_value) == 0) {
@@ -212,6 +224,192 @@ bool ReadFileContents(const char *path, std::string *content) {
   }
 
   fclose(datafile);
+  return true;
+}
+
+std::string NormalizeFilePath(const char *path) {
+  if (!path || !*path)
+    return std::string("");
+
+  std::string working_path(path);
+
+  // Replace '\\' with '/' on non-Windows platforms.
+#ifndef GGL_HOST_WINDOWS
+  for (std::string::iterator it = working_path.begin();
+       it != working_path.end(); ++it)
+    if (*it == '\\') *it = kDirSeparator;
+#endif
+
+  // Remove all "." and ".." components, and consecutive '/'s.
+  std::string result;
+  size_t start = 0;
+
+  while(start < working_path.length()) {
+    size_t end = working_path.find(kDirSeparator, start);
+    bool omit_part = false;
+    if (end == std::string::npos)
+      end = working_path.length();
+
+    size_t part_length = end - start;
+    switch (part_length) {
+      case 0:
+        // Omit consecutive '/'s.
+        omit_part = true;
+        break;
+      case 1:
+        // Omit part in /./
+        omit_part = (working_path[start] == '.');
+        break;
+      case 2:
+        // Omit part in /../, and remove the last part in result.
+        if (working_path[start] == '.' && working_path[start + 1] == '.') {
+          omit_part = true;
+          size_t last_sep_pos = result.find_last_of(kDirSeparator);
+          if (last_sep_pos == std::string::npos)
+            // No separator in the result, remove all.
+            result.clear();
+          else
+            result.erase(last_sep_pos);
+        }
+        break;
+      default:
+        break;
+    }
+
+    if (!omit_part) {
+      if (result.length() || working_path[0] == kDirSeparator)
+        result += kDirSeparator;
+      result += working_path.substr(start, part_length);
+    }
+
+    start = end + 1;
+  }
+
+  // Handle special case: path is pointed to root.
+  if (result.empty() && *path == kDirSeparator)
+    result += kDirSeparator;
+
+  return result;
+}
+
+std::string GetCurrentDirectory() {
+  char buf[4096];
+  if (::getcwd(buf, 1024) == buf) {
+    // it's fit.
+    return std::string(buf);
+  } else {
+    std::string result;
+    size_t length = sizeof(buf);
+    while(true) {
+      length *= 2;
+      char *tmp = new char[length];
+      if (::getcwd(tmp, length) == tmp) {
+        // it's fit.
+        result = std::string(tmp);
+        delete[] tmp;
+        break;
+      }
+      delete[] tmp;
+      // Other error occurred, stop trying.
+      if (errno != ERANGE)
+        break;
+    }
+    return result;
+  }
+}
+
+bool CreateTempDirectory(const char *prefix, std::string *path) {
+  ASSERT(path);
+  bool result = false;
+  size_t len = (prefix ? strlen(prefix) : 0) + 20;
+  char *buf = new char[len];
+
+#ifdef HAVE_MKDTEMP
+  snprintf(buf, len, "/tmp/%s-XXXXXX", (prefix ? prefix : ""));
+
+  result = (::mkdtemp(buf) == buf);
+  if (result && path)
+    *path = std::string(buf);
+#else
+  while(true) {
+    snprintf(buf, len, "/tmp/%s-%06X", (prefix ? prefix : ""),
+             ::rand() & 0xFFFFFF);
+    if (::access(buf, F_OK) == 0)
+      continue;
+
+    if (errno == ENOENT) {
+      // The temp name is available.
+      result = (mkdir(buf, 0700) == 0);
+      if (result && path)
+        *path = std::string(buf);
+    }
+
+    break;
+  }
+#endif
+
+  delete[] buf;
+  return result;
+}
+
+bool RemoveDirectory(const char *path) {
+  if (!path || !*path)
+    return false;
+
+  std::string dir_path = NormalizeFilePath(path);
+
+  if (dir_path == kDirSeparatorStr) {
+    DLOG("Can't remove the whole root directory.");
+    return false;
+  }
+
+  DIR *pdir = opendir(dir_path.c_str());
+  if (!pdir) {
+    DLOG("Can't read directory: %s", path);
+    return false;
+  }
+
+  struct dirent *pfile = NULL;
+  while ((pfile = readdir(pdir)) != NULL) {
+    if (strcmp(pfile->d_name, ".") != 0 &&
+        strcmp(pfile->d_name, "..") != 0) {
+      std::string file_path =
+          BuildFilePath(dir_path.c_str(), pfile->d_name, NULL);
+      bool result = false;
+      if (pfile->d_type == DT_DIR)
+        result = RemoveDirectory(file_path.c_str());
+      else
+        result = (::unlink(file_path.c_str()) == 0);
+
+      if (!result)
+        return false;
+    }
+  }
+
+  return ::rmdir(dir_path.c_str()) == 0;
+}
+
+bool GetSystemLocaleInfo(std::string *language, std::string *territory) {
+  char *locale = setlocale(LC_MESSAGES, NULL);
+  if (!locale || !*locale) return false;
+
+  std::string locale_str(locale);
+
+  // Remove encoding and variant part.
+  std::string::size_type pos = locale_str.find('.');
+  if (pos != std::string::npos)
+    locale_str.erase(pos);
+
+  pos = locale_str.find('_');
+  if (language)
+    language->assign(locale_str, 0, pos);
+
+  if (territory) {
+    if (pos != std::string::npos)
+      territory->assign(locale_str, pos + 1, std::string::npos);
+    else
+      territory->clear();
+  }
   return true;
 }
 

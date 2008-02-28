@@ -56,6 +56,7 @@ check_PROGRAMS		= color_test \
 			  xml_dom_test \
 			  xml_parser_test \
 			  xml_http_request_test \
+			  xml_utils_test \
 			  gadget_metadata_test
 
 check_LTLIBRARIES	= foo-module.la \
@@ -70,6 +71,7 @@ signal_test_SOURCES		= signal_test.cc slots.cc
 scriptable_helper_test_SOURCES	= scriptable_helper_test.cc scriptables.cc
 elements_test_SOURCES		= elements_test.cc
 element_factory_test_SOURCES	= element_factory_test.cc
+encryptor_test_SOURCES		= encryptor_test.cc
 file_manager_test_SOURCES	= file_manager_test.cc
 math_utils_test_SOURCES		= math_utils_test.cc
 native_main_loop_test_SOURCES	= native_main_loop_test.cc
@@ -81,6 +83,8 @@ system_utils_test_SOURCES	= system_utils_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES		= xml_parser_test.cc
+xml_utils_test_SOURCES		= xml_utils_test.cc
+gadget_metadata_test_SOURCES	= gadget_metadata_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc
 xml_http_request_test_LDADD	= -lpthread \

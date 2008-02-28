@@ -98,7 +98,7 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
 
   void SaveGadget(const char *gadget_id, ScriptableBinaryData *data) {
     // TODO:
-    LOG("Save Gadget: gadget_id=%s data_length=%d", gadget_id, data->size());
+    LOG("Save Gadget: gadget_id=%s data_length=%zd", gadget_id, data->size());
   }
 
   int AddGadget(const char *gadget_id) {

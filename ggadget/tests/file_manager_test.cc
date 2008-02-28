@@ -17,192 +17,228 @@
 #include <iostream>
 #include <locale.h>
 
-#include "ggadget/file_manager.h"
-#include "ggadget/xml_parser_interface.h"
+#include "ggadget/file_manager_interface.h"
+#include "ggadget/file_manager_wrapper.h"
+#include "ggadget/file_manager_factory.h"
+#include "ggadget/dir_file_manager.h"
+#include "ggadget/zip_file_manager.h"
+#include "ggadget/localized_file_manager.h"
+#include "ggadget/system_utils.h"
 #include "unittest/gunit.h"
-#include "init_extensions.h"
 
 using namespace ggadget;
-using namespace ggadget::internal;
 
-std::string actual_dir_path = "file_manager_test_data_dest";
-std::string actual_gg_path = "file_manager_test_data_dest.gg";
-std::string actual_manifest_path = "file_manager_test_data_dest";
+const char *base_dir_path = "file_manager_test_data_dest";
+const char *base_gg_path  = "file_manager_test_data_dest.gg";
 
-std::string base_dir_path = "file_manager_test_data_dest";
-std::string base_gg_path = "file_manager_test_data_dest.gg";
-std::string base_manifest_path = "file_manager_test_data_dest/gadget.gmanifest";
+const char *base_new_dir_path = "file_manager_test_data_new";
+const char *base_new_gg_path  = "file_manager_test_data_new.gg";
 
-XMLParserInterface *xml_parser = NULL;
-
-TEST(file_manager, InitLocaleStrings) {
-  FileManagerImpl impl(xml_parser);
-  ASSERT_STREQ("C", setlocale(LC_MESSAGES, "C"));
-  impl.InitLocaleStrings();
-  EXPECT_STREQ("C/", impl.locale_lang_prefix_.c_str());
-  EXPECT_STREQ("C/", impl.locale_prefix_.c_str());
-  EXPECT_STREQ("", impl.locale_id_prefix_.c_str());
-
-  ASSERT_STREQ("en_US", setlocale(LC_MESSAGES, "en_US"));
-  impl.InitLocaleStrings();
-  EXPECT_STREQ("en/", impl.locale_lang_prefix_.c_str());
-  EXPECT_STREQ("en_US/", impl.locale_prefix_.c_str());
-  EXPECT_STREQ("1033/", impl.locale_id_prefix_.c_str());
-
-  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
-  impl.InitLocaleStrings();
-  EXPECT_STREQ("zh/", impl.locale_lang_prefix_.c_str());
-  EXPECT_STREQ("zh_CN/", impl.locale_prefix_.c_str());
-  EXPECT_STREQ("2052/", impl.locale_id_prefix_.c_str());
-}
-
-TEST(file_manager, FindLocalizedFile) {
-  FileManagerImpl impl(xml_parser);
-  impl.files_["en/en_file"];
-  impl.files_["en_US/strings.xml"];
-  impl.files_["en_US/en_US_file"];
-  impl.files_["1033/1033_file"];
-  impl.files_["1033/strings.xml"];
-  impl.files_["1033/en_file"];
-  impl.files_["2052/2052_file"];
-  impl.files_["zh/zh_file"];
-  impl.files_["zh/strings.xml"];
-  impl.files_["zh_CN/zh_CN_file"];
-  impl.files_["zh_CN/strings.xml"];
-  impl.files_["2052/zh_file"];
-  impl.files_["2052/2052_file"];
-  impl.files_["2052/strings.xml"];
-  impl.files_["strings.xml"];
-  impl.files_["global"];
-
-  ASSERT_STREQ("C", setlocale(LC_MESSAGES, "C"));
-  impl.InitLocaleStrings();
-  EXPECT_STREQ("en_US/strings.xml",
-               impl.FindLocalizedFile("strings.xml")->first.c_str());
-  EXPECT_STREQ("en/en_file",
-               impl.FindLocalizedFile("en_file")->first.c_str());
-  EXPECT_STREQ("1033/1033_file",
-               impl.FindLocalizedFile("1033_file")->first.c_str());
-  EXPECT_TRUE(impl.files_.end() == impl.FindLocalizedFile("zh_CN_file"));
-
-  ASSERT_STREQ("en_US", setlocale(LC_MESSAGES, "en_US"));
-  impl.InitLocaleStrings();
-  EXPECT_STREQ("en_US/strings.xml",
-               impl.FindLocalizedFile("strings.xml")->first.c_str());
-  EXPECT_STREQ("en/en_file",
-               impl.FindLocalizedFile("en_file")->first.c_str());
-  EXPECT_STREQ("1033/1033_file",
-               impl.FindLocalizedFile("1033_file")->first.c_str());
-  EXPECT_TRUE(impl.files_.end() == impl.FindLocalizedFile("zh_CN_file"));
-
-  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
-  impl.InitLocaleStrings();
-  EXPECT_STREQ("zh_CN/strings.xml",
-               impl.FindLocalizedFile("strings.xml")->first.c_str());
-  EXPECT_STREQ("zh/zh_file",
-               impl.FindLocalizedFile("zh_file")->first.c_str());
-  EXPECT_STREQ("2052/2052_file",
-               impl.FindLocalizedFile("2052_file")->first.c_str());
-  EXPECT_STREQ("en/en_file",
-               impl.FindLocalizedFile("en_file")->first.c_str());
-  EXPECT_STREQ("1033/1033_file",
-               impl.FindLocalizedFile("1033_file")->first.c_str());
-  EXPECT_STREQ("en_US/en_US_file",
-               impl.FindLocalizedFile("en_US_file")->first.c_str());
-  EXPECT_TRUE(impl.files_.end() == impl.FindLocalizedFile("global"));
-}
-
-void TestFileManagerFunctions(const std::string &base_path,
-                              const std::string &actual_path) {
-  FileManagerImpl impl(xml_parser);
-  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
-  impl.Init(base_path.c_str());
-
-  for (FileManagerImpl::FileMap::const_iterator it = impl.files_.begin();
-       it != impl.files_.end(); ++it)
-    printf("%s\n", it->first.c_str());
-
-  ASSERT_EQ(8U, impl.files_.size());
+void TestFileManagerReadFunctions(FileManagerInterface *fm, bool zip) {
+  ASSERT_TRUE(fm->IsValid());
   std::string data;
   std::string path;
-  ASSERT_TRUE(impl.GetFileContents("global_file", &data, &path));
-  EXPECT_STREQ("global_file under zh_CN\n", data.c_str());
-  EXPECT_STREQ((actual_path + "/zh_CN/global_file").c_str(), path.c_str());
-  EXPECT_FALSE(impl.GetFileContents("non-exists", &data, &path));
-  ASSERT_TRUE(impl.GetFileContents("zh_CN_file", &data, &path));
-  EXPECT_STREQ((actual_path + "/zh_CN/zh_CN_file").c_str(), path.c_str());
+  std::string base_path;
+  std::string base_filename;
+  base_path = fm->GetFullPath(NULL);
+  SplitFilePath(base_path.c_str(), &path, &base_filename);
+  ASSERT_TRUE(base_path.length());
+  ASSERT_TRUE(fm->ReadFile("global_file", &data));
+  EXPECT_STREQ("global_file at top\n", data.c_str());
+
+  ASSERT_TRUE(fm->ReadFile("zh_CN/./../global_file", &data));
+  EXPECT_STREQ("global_file at top\n", data.c_str());
+
+  EXPECT_FALSE(fm->ReadFile("non-exists", &data));
+
+  ASSERT_TRUE(fm->ReadFile("zh_CN/zh_CN_file", &data));
   EXPECT_STREQ("zh_CN_file contents\n", data.c_str());
-  ASSERT_TRUE(impl.GetFileContents("2048_file", &data, &path));
+
+  ASSERT_TRUE(fm->ReadFile("zh_CN/2048_file", &data));
   EXPECT_EQ(2048U, data.size());
-  ASSERT_TRUE(impl.GetFileContents("big_file", &data, &path));
+
+  ASSERT_TRUE(fm->ReadFile("zh_CN/big_file", &data));
   EXPECT_EQ(32616U, data.size());
 
-  ASSERT_TRUE(impl.GetFileContents("gLoBaL_FiLe", &data, &path));
-  EXPECT_STREQ((actual_path + "/zh_CN/global_file").c_str(), path.c_str());
-  EXPECT_STREQ("global_file under zh_CN\n", data.c_str());
-  ASSERT_TRUE(impl.GetFileContents("ZH_cn_File", &data, &path));
-  EXPECT_STREQ((actual_path + "/zh_CN/zh_CN_file").c_str(), path.c_str());
-  EXPECT_STREQ("zh_CN_file contents\n", data.c_str());
+  EXPECT_TRUE(fm->FileExists("global_file", &path));
+  EXPECT_STREQ((base_path + "/global_file").c_str(), path.c_str());
+  EXPECT_STREQ(fm->GetFullPath("global_file").c_str(), path.c_str());
+
+  EXPECT_FALSE(fm->FileExists("non-exists", &path));
+  EXPECT_STREQ((base_path + "/non-exists").c_str(), path.c_str());
+  EXPECT_STREQ(fm->GetFullPath("non-exists").c_str(), path.c_str());
+
+  EXPECT_FALSE(fm->FileExists(("../" + base_filename).c_str(), &path));
+  EXPECT_STREQ(base_path.c_str(), path.c_str());
+
+  if (zip) {
+    ASSERT_TRUE(fm->ReadFile("gLoBaL_FiLe", &data));
+    EXPECT_STREQ((base_path + "/gLoBaL_FiLe").c_str(),
+                 fm->GetFullPath("gLoBaL_FiLe").c_str());
+    EXPECT_STREQ("global_file at top\n", data.c_str());
+    EXPECT_TRUE(fm->FileExists("1033/1033_FiLe", &path));
+    EXPECT_STREQ((base_path + "/1033/1033_FiLe").c_str(), path.c_str());
+    EXPECT_FALSE(fm->IsDirectlyAccessible("gLoBaL_FiLe", &path));
+    EXPECT_STREQ((base_path + "/gLoBaL_FiLe").c_str(), path.c_str());
+  } else {
+    // Case sensitive may not be available on some platforms.
+    //EXPECT_FALSE(fm->FileExists("1033/1033_FiLe", &path));
+    //EXPECT_STREQ((base_path + "/1033/1033_FiLe").c_str(), path.c_str());
+    EXPECT_TRUE(fm->IsDirectlyAccessible("gLoBaL_FiLe", &path));
+    EXPECT_STREQ((base_path + "/gLoBaL_FiLe").c_str(), path.c_str());
+  }
 }
 
-TEST(file_manager, FileManagerDir) {
-  TestFileManagerFunctions(base_dir_path, actual_dir_path);
-}
-
-TEST(file_manager, FileManagerZip) {
-  TestFileManagerFunctions(base_gg_path, actual_gg_path);
-}
-
-TEST(file_manager, FileManagerDirManifest) {
-  TestFileManagerFunctions(base_manifest_path, actual_manifest_path);
-}
-
-TEST(file_manager, StringTable) {
-  FileManagerImpl impl(xml_parser);
-  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
-  impl.Init(base_dir_path.c_str());
-
-  EXPECT_EQ(3U, impl.string_table_.size());
-  EXPECT_STREQ("", impl.string_table_["blank-value"].c_str());
-  EXPECT_STREQ("根元素属性2", impl.string_table_["root-attr2"].c_str());
-  EXPECT_STREQ("第二层元素的文本内容", impl.string_table_["second-value"].c_str());
-}
-
-TEST(file_manager, GetTranslatedFileContents) {
-  FileManagerImpl impl(xml_parser);
-  ASSERT_STREQ("zh_CN.UTF-8", setlocale(LC_MESSAGES, "zh_CN.UTF-8"));
-  impl.Init(base_dir_path.c_str());
-
-  const char *kMainXMLOriginalContents =
-    "<root root-attr1=\"root-value1\" root-attr2=\"&root-attr2;\""
-    " root-attr3=\"&lt;&amp;&gt;xyz \">\n"
-    "<second>&second-value;</second>\n"
-    "<third>&blank-value;&non-existence;</third>\n"
-    "</root>\n";
-  const char *kMainXMLTranslatedContents =
-    "<root root-attr1=\"root-value1\" root-attr2=\"根元素属性2\""
-    " root-attr3=\"&lt;&amp;&gt;xyz \">\n"
-    "<second>第二层元素的文本内容</second>\n"
-    "<third>&non-existence;</third>\n"
-    "</root>\n";
-
+void TestFileManagerWriteFunctions(FileManagerInterface *fm, bool zip) {
+  ASSERT_TRUE(fm->IsValid());
   std::string data;
   std::string path;
-  ASSERT_TRUE(impl.GetFileContents("main.xml", &data, &path));
-  EXPECT_STREQ((actual_dir_path + "/main.xml").c_str(), path.c_str());
-  EXPECT_STREQ(kMainXMLOriginalContents, data.c_str());
-  ASSERT_TRUE(impl.GetXMLFileContents("main.xml", &data, &path));
-  EXPECT_STREQ(kMainXMLTranslatedContents, data.c_str());
+  std::string path2;
+  std::string base_path;
+  base_path = fm->GetFullPath(NULL);
+  ASSERT_TRUE(base_path.length());
+
+  // Test write file in top dir.
+  data = "new_file contents\n";
+  ASSERT_TRUE(fm->WriteFile("new_file", data));
+  ASSERT_TRUE(fm->FileExists("new_file", &path));
+  EXPECT_STREQ((base_path + "/new_file").c_str(), path.c_str());
+  ASSERT_TRUE(fm->ReadFile("new_file", &data));
+  EXPECT_STREQ("new_file contents\n", data.c_str());
+  path.clear();
+  ASSERT_TRUE(fm->ExtractFile("new_file", &path));
+  ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
+  EXPECT_STREQ("new_file contents\n", data.c_str());
+  ::unlink(path.c_str());
+  EXPECT_FALSE(ReadFileContents(path.c_str(), &data));
+  path2 = path;
+  ASSERT_TRUE(fm->ExtractFile("new_file", &path));
+  EXPECT_STREQ(path2.c_str(), path.c_str());
+  ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
+  EXPECT_STREQ("new_file contents\n", data.c_str());
+  ASSERT_TRUE(fm->FileExists("new_file", &path));
+
+  // Test write file in sub dir.
+  data = "en_new_file contents\n";
+  ASSERT_TRUE(fm->WriteFile("en/new_file", data));
+  ASSERT_TRUE(fm->FileExists("en/new_file", &path));
+  EXPECT_STREQ((base_path + "/en/new_file").c_str(), path.c_str());
+  ASSERT_TRUE(fm->ReadFile("en/new_file", &data));
+  EXPECT_STREQ("en_new_file contents\n", data.c_str());
+  path.clear();
+  ASSERT_TRUE(fm->ExtractFile("en/new_file", &path));
+  ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
+  EXPECT_STREQ("en_new_file contents\n", data.c_str());
+  ::unlink(path.c_str());
+  EXPECT_FALSE(ReadFileContents(path.c_str(), &data));
+  path2 = path;
+  ASSERT_TRUE(fm->ExtractFile("en/new_file", &path));
+  EXPECT_STREQ(path2.c_str(), path.c_str());
+  ASSERT_TRUE(ReadFileContents(path.c_str(), &data));
+  EXPECT_STREQ("en_new_file contents\n", data.c_str());
+  ASSERT_TRUE(fm->FileExists("en/new_file", &path));
+
+  // Test overwrite an existing file.
+  EXPECT_FALSE(fm->WriteFile("en/new_file", data));
+
+  if (zip) {
+    EXPECT_FALSE(fm->RemoveFile("new_file"));
+    EXPECT_FALSE(fm->RemoveFile("en/new_file"));
+  } else {
+    EXPECT_TRUE(fm->RemoveFile("new_file"));
+    EXPECT_TRUE(fm->RemoveFile("en/new_file"));
+    EXPECT_FALSE(fm->FileExists("new_file", &path));
+    EXPECT_FALSE(fm->FileExists("en/new_file", &path));
+  }
+}
+
+void TestFileManagerLocalized(FileManagerInterface *fm,
+                              const char *lang,
+                              const char *territory) {
+  std::string contents(" contents\n");
+  std::string locale(lang);
+  std::string data;
+  std::string filename;
+
+  filename = locale + "_file";
+  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+  EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+
+  locale.append("_");
+  locale.append(territory);
+  filename = locale + "_file";
+  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+  EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+
+  if (locale != "en_US") {
+    locale = "en";
+    filename = locale + "_file";
+    ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+    EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+
+    locale.append("_US");
+    filename = locale + "_file";
+    ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+    EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+  }
+
+  locale = "1033";
+  filename = locale + "_file";
+  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
+  EXPECT_STREQ((filename + contents).c_str(), data.c_str());
+}
+
+TEST(FileManager, DirRead) {
+  FileManagerInterface *fm = new DirFileManager();
+  ASSERT_TRUE(fm->Init(base_dir_path, false));
+  TestFileManagerReadFunctions(fm, false);
+  delete fm;
+}
+
+TEST(FileManager, ZipRead) {
+  FileManagerInterface *fm = new ZipFileManager();
+  ASSERT_TRUE(fm->Init(base_gg_path, false));
+  TestFileManagerReadFunctions(fm, true);
+  delete fm;
+}
+
+TEST(FileManager, DirWrite) {
+  FileManagerInterface *fm = new DirFileManager();
+  ASSERT_TRUE(fm->Init(base_new_dir_path, true));
+  TestFileManagerWriteFunctions(fm, false);
+  delete fm;
+  RemoveDirectory(base_new_dir_path);
+}
+
+TEST(FileManager, ZipWrite) {
+  FileManagerInterface *fm = new ZipFileManager();
+  ASSERT_TRUE(fm->Init(base_new_gg_path, true));
+  TestFileManagerWriteFunctions(fm, true);
+  delete fm;
+  ::unlink(base_new_gg_path);
+}
+
+TEST(FileManager, LocalizedFile) {
+  static const char *locales[] = { "en_US", "zh_CN", NULL };
+  std::string lang, territory;
+
+  for (size_t i = 0; locales[i]; ++i) {
+    setlocale(LC_MESSAGES, locales[i]);
+    ASSERT_TRUE(GetSystemLocaleInfo(&lang, &territory));
+
+    FileManagerInterface *fm = new LocalizedFileManager(new DirFileManager());
+    ASSERT_TRUE(fm->Init(base_dir_path, false));
+    TestFileManagerLocalized(fm, lang.c_str(), territory.c_str());
+    delete fm;
+
+    fm = new LocalizedFileManager(new ZipFileManager());
+    ASSERT_TRUE(fm->Init(base_gg_path, false));
+    TestFileManagerLocalized(fm, lang.c_str(), territory.c_str());
+    delete fm;
+  }
 }
 
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
-
-  static const char *kExtensions[] = {
-    "libxml2_xml_parser/libxml2-xml-parser",
-  };
-  INIT_EXTENSIONS(argc, argv, kExtensions);
-
-  xml_parser = GetXMLParser();
   return RUN_ALL_TESTS();
 }

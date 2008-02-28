@@ -32,11 +32,11 @@ class ElementFactoryTest : public testing::Test {
 };
 
 TEST_F(ElementFactoryTest, TestRegister) {
-  ggadget::internal::ElementFactoryImpl impl;
-  ASSERT_TRUE(impl.RegisterElementClass("muffin", Muffin::CreateInstance));
-  ASSERT_FALSE(impl.RegisterElementClass("muffin", Muffin::CreateInstance));
-  ASSERT_TRUE(impl.RegisterElementClass("pie", Pie::CreateInstance));
-  ASSERT_FALSE(impl.RegisterElementClass("pie", Pie::CreateInstance));
+  ggadget::ElementFactory factory;
+  ASSERT_TRUE(factory.RegisterElementClass("muffin", Muffin::CreateInstance));
+  ASSERT_FALSE(factory.RegisterElementClass("muffin", Muffin::CreateInstance));
+  ASSERT_TRUE(factory.RegisterElementClass("pie", Pie::CreateInstance));
+  ASSERT_FALSE(factory.RegisterElementClass("pie", Pie::CreateInstance));
 }
 
 TEST_F(ElementFactoryTest, TestCreate) {

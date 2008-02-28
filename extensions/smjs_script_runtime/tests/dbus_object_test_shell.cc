@@ -34,7 +34,6 @@ class GlobalObject : public ScriptableHelperNativeOwnedDefault {
 };
 
 static GlobalObject *global;
-static ExtensionManager *ext_manager;
 static NativeMainLoop main_loop;
 
 // Called by the initialization code in js_shell.cc.
@@ -45,7 +44,7 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   context->SetGlobalObject(global);
 
   static const char *kExtensions[] = { "dbus_script_class/dbus-script-class" };
-  INIT_EXTENSIONS(0, NULL, kExtensions);
+  INIT_EXTENSIONS(0, ((const char **)NULL), kExtensions);
   return JS_TRUE;
 }
 

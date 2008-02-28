@@ -18,6 +18,7 @@
 #include "common.h"
 #include "basic_element.h"
 #include "view.h"
+#include "string_utils.h"
 
 #include "anchor_element.h"
 #include "button_element.h"
@@ -34,8 +35,35 @@
 
 namespace ggadget {
 
+class ElementFactory::Impl {
+ public:
+  BasicElement *CreateElement(const char *tag_name,
+                              BasicElement *parent,
+                              View *view,
+                              const char *name) {
+    CreatorMap::iterator ite = creators_.find(tag_name);
+    if (ite == creators_.end())
+      return NULL;
+    return ite->second(parent, view, name);
+  }
+
+  bool RegisterElementClass(const char *tag_name,
+                            ElementFactory::ElementCreator creator) {
+    CreatorMap::iterator ite = creators_.find(tag_name);
+    if (ite != creators_.end())
+      return false;
+    creators_[tag_name] = creator;
+    return true;
+  }
+
+  typedef std::map<const char *, ElementFactory::ElementCreator,
+                   GadgetCharPtrComparator> CreatorMap;
+
+  CreatorMap creators_;
+};
+
 ElementFactory::ElementFactory()
-    : impl_(new internal::ElementFactoryImpl) {
+    : impl_(new Impl) {
   RegisterElementClass("a", &AnchorElement::CreateInstance);
   RegisterElementClass("button", &ButtonElement::CreateInstance);
   RegisterElementClass("checkbox",
@@ -73,28 +101,5 @@ bool ElementFactory::RegisterElementClass(const char *tag_name,
   ASSERT(impl_);
   return impl_->RegisterElementClass(tag_name, creator);
 }
-
-namespace internal {
-
-BasicElement *ElementFactoryImpl::CreateElement(const char *tag_name,
-                                                BasicElement *parent,
-                                                View *view,
-                                                const char *name) {
-  CreatorMap::iterator ite = creators_.find(tag_name);
-  if (ite == creators_.end())
-    return NULL;
-  return ite->second(parent, view, name);
-}
-
-bool ElementFactoryImpl::RegisterElementClass(
-    const char *tag_name, ElementFactory::ElementCreator creator) {
-  CreatorMap::iterator ite = creators_.find(tag_name);
-  if (ite != creators_.end())
-    return false;
-  creators_[tag_name] = creator;
-  return true;
-}
-
-} // namespace internal
 
 } // namespace ggadget

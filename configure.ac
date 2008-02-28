@@ -40,6 +40,7 @@ AC_CONFIG_MACRO_DIR([autotools])
 # even if they are empty.
 ggl_save_CFLAGS=$CFLAGS
 ggl_save_CXXFLAGS=$CXXFLAGS
+ggl_save_LDFLAGS=$LDFLAGS
 
 ###########################################################
 ##          Some definitions of Version macros.          ##
@@ -227,6 +228,14 @@ GGL_CHECK_SPIDERMONKEY([160], [has_spidermonkey=yes], [has_spidermonkey=no])
 # Check D-Bus library
 PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0.2, [has_dbus=yes], [has_dbus=no])
 
+if test x$has_dbus = xyes; then
+  CFLAGS="$CFLAGS $DBUS_CFLAGS"
+  LDFLAGS="$LDFLAGS $DBUS_LIBS"
+  AC_CHECK_FUNCS([dbus_watch_get_unix_fd dbus_watch_get_fd])
+  CFLAGS=$ggl_save_CFLAGS
+  LDFLAGS=$ggl_save_LDFLAGS
+fi
+
 # Check librsvg
 PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
 
@@ -249,6 +258,79 @@ fi
 if test x$has_rsvg = xyes; then
   AC_DEFINE(HAVE_RSVG_LIBRARY,1,[Have rsvg library])
 fi
+
+# Check necessary functions
+AC_CHECK_FUNCS([mkdtemp tempnam])
+
+###########################################################
+##                      Default dirs.                    ##
+###########################################################
+GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
+GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
+GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
+GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR
+GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR
+
+AC_SUBST(GGL_MODULE_DIR)
+AC_SUBST(GGL_INCLUDE_DIR)
+AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
+AC_SUBST(GGL_LIBEXEC_DIR)
+AC_SUBST(GGL_RESOURCE_DIR)
+
+###########################################################
+##                 Default compiler options.             ##
+###########################################################
+if test x$enable_debug = xyes; then
+  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
+  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall"
+  DEBUG_MACROS="_DEBUG";
+else
+  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall"
+  DEBUG_MACROS="NDEBUG";
+fi
+
+# Enable stdc const macros by default, like INT64_C etc.
+PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
+		   -D$DEBUG_MACROS \
+		   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
+		   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
+		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
+		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
+		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
+
+# OS Specific conditions.
+build_linux_system_framework=no
+
+case $host_os in
+  *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
+    ggl_host_type=windows
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
+    ;;
+  *darwin* )
+    ggl_host_type=macosx
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
+    ;;
+  *linux* )
+    ggl_host_type=linux
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
+    build_linux_system_framework=yes
+    ;;
+  *solaris* )
+    ggl_host_type=solaris
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
+    ;;
+  * )
+    ggl_host_type=unknown
+    ;;
+esac
+
+AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
+AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])
+AM_CONDITIONAL([GGL_HOST_LINUX], [test x$ggl_host_type = xlinux])
+AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
+
+AC_SUBST(PREDEFINED_MACROS)
+AC_SUBST(DEFAULT_COMPILE_FLAGS)
 
 ###########################################################
 ##                  Process Config options.              ##
@@ -369,37 +451,6 @@ if test x$ZIP = x; then
   AC_MSG_WARN([Can't generate resource file bundle without zip command.])
 fi
 
-# OS Specific conditions.
-build_linux_system_framework=no
-
-case $host_os in
-  *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
-    ggl_host_type=windows
-    AC_DEFINE(GGL_HOST_WINDOWS,1,[Windows host])
-    ;;
-  *darwin* )
-    ggl_host_type=macosx
-    AC_DEFINE(GGL_HOST_MACOSX,1,[Mac OS X host])
-    ;;
-  *linux* )
-    ggl_host_type=linux
-    AC_DEFINE(GGL_HOST_LINUX,1,[Linux host])
-    build_linux_system_framework=yes
-    ;;
-  *solaris* )
-    ggl_host_type=solaris
-    AC_DEFINE(GGL_HOST_SOLARIS,1,[Solaris host])
-    ;;
-  * )
-    ggl_host_type=unknown
-    ;;
-esac
-
-AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
-AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])
-AM_CONDITIONAL([GGL_HOST_LINUX], [test x$ggl_host_type = xlinux])
-AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
-
 #Check memory check command
 if test x$memcheck_command != x; then
   AC_CHECK_PROGS([MEMCHECK_COMMAND], [$memcheck_command])
@@ -412,48 +463,10 @@ if test x$default_gst_audio_sink != x; then
 		     [Default Gstreamer audio sink.])
 fi
 
-###########################################################
-##                      Default dirs.                    ##
-###########################################################
-GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
-GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
-GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
-GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR
-GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR
-
-AC_SUBST(GGL_MODULE_DIR)
-AC_SUBST(GGL_INCLUDE_DIR)
-AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
-AC_SUBST(GGL_LIBEXEC_DIR)
-AC_SUBST(GGL_RESOURCE_DIR)
-
-###########################################################
-##                 Default compiler options.             ##
-###########################################################
-if test x$enable_debug = xyes; then
-  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
-  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall"
-  DEBUG_MACROS="_DEBUG";
-else
-  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall"
-  DEBUG_MACROS="NDEBUG";
-fi
-
-# Enable stdc const macros by default, like INT64_C etc.
-PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
-		   -D$DEBUG_MACROS \
-		   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
-		   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
-		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
-		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
-		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
-
-AC_SUBST(PREDEFINED_MACROS)
-AC_SUBST(DEFAULT_COMPILE_FLAGS)
-
 # Clear the default CFLAGS and CXXFLAGS
 CFLAGS=$ggl_save_CFLAGS
 CXXFLAGS=$ggl_save_CXXFLAGS
+LDFLAGS=$ggl_save_LDFLAGS
 
 ###########################################################
 ##                      Output files.                    ##
@@ -495,6 +508,8 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/qt/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
+		 gadget_browser/Makefile
+		 gadget_browser/gadget/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
 		 hosts/qt/Makefile

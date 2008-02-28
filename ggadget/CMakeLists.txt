@@ -30,11 +30,8 @@ SET(SRCS
   elements.cc
   encryptor.cc
   extension_manager.cc
-  file_manager.cc
-  file_manager_wrapper.cc
   gadget.cc
   gadget_metadata.cc
-  global_file_manager.cc
   logger.cc
   main_loop.cc
   math_utils.cc
@@ -80,6 +77,12 @@ SET(SRCS
   progressbar_element.cc
   scrollbar_element.cc
   scrolling_element.cc
+
+  dir_file_manager.cc
+  file_manager_factory.cc
+  file_manager_wrapper.cc
+  localized_file_manager.cc
+  zip_file_manager.cc
 )
 
 SET(LIBS

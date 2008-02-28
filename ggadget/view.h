@@ -54,7 +54,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
  public: // ViewInterface methods.
   virtual ScriptContextInterface *GetScriptContext() const;
   virtual FileManagerInterface *GetFileManager() const;
-  virtual bool InitFromFile(const char *filename);
+  virtual bool InitFromXML(const std::string &xml, const char *filename);
   virtual void AttachHost(ViewHostInterface *host);
 
   virtual EventResult OnMouseEvent(const MouseEvent &event);

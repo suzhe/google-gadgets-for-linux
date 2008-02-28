@@ -37,7 +37,6 @@ class GtkGadgetHost : public GadgetHostInterface {
                 double zoom, int debug_mode);
   virtual ~GtkGadgetHost();
 
-  virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
   virtual GadgetInterface *GetGadget();
   virtual ViewHostInterface *NewViewHost(ViewType type, ViewInterface *view);
@@ -48,7 +47,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
-  virtual bool UnloadFont(const char *filename);
 
   /**
    * Loads a gadget from file system and hosts it.
@@ -99,10 +97,6 @@ class GtkGadgetHost : public GadgetHostInterface {
   static void OnAboutActivate(GtkMenuItem *menu_item, gpointer user_data);
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data);
 
-  FileManagerInterface *resource_file_manager_;
-  FileManagerInterface *profile_file_manager_;
-  FileManagerInterface *global_file_manager_;
-  FileManagerInterface *file_manager_;
   OptionsInterface *options_;
   GadgetInterface *gadget_;
 

@@ -31,7 +31,7 @@
 
 #ifdef _DEBUG
 // Uncomment the following line to get verbose debug logs.
-#define DEBUG_MODULES
+// #define DEBUG_MODULES
 #endif
 
 namespace ggadget {

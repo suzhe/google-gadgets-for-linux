@@ -58,15 +58,16 @@ class ViewInterface : public ScriptableInterface {
   virtual FileManagerInterface *GetFileManager() const = 0;
 
   /**
-   * Read XML definition from the file and init the view, and start running.
-   * @param filename the file name in the gadget.
+   * Init the view from specified XML definition, and start running.
+   * @param xml XML definition of the view.
+   * @param filename file name of the xml definition, for logging purpose.
    * @return @c true if succeedes.
    */
-  virtual bool InitFromFile(const char *filename) = 0;
+  virtual bool InitFromXML(const std::string &xml, const char *filename) = 0;
 
   /**
    * Attaches a view host to this view.
-   * Should only be called once, before @c InitFromFile().
+   * Should only be called once, before @c InitFromXML().
    */
   virtual void AttachHost(ViewHostInterface *host) = 0;
 

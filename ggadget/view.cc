@@ -24,6 +24,7 @@
 #include "elements.h"
 #include "event.h"
 #include "file_manager_interface.h"
+#include "file_manager_factory.h"
 #include "main_loop_interface.h"
 #include "gadget_consts.h"
 #include "gadget_host_interface.h"
@@ -165,7 +166,6 @@ class View::Impl {
       host_(NULL),
       gadget_host_(NULL),
       script_context_(NULL),
-      file_manager_(NULL),
       element_factory_(element_factory),
       main_loop_(GetGlobalMainLoop()),
       children_(element_factory, NULL, owner),
@@ -270,8 +270,8 @@ class View::Impl {
     obj->RegisterSignal(kOnUndockEvent, &onundock_event_);
   }
 
-  bool InitFromFile(const char *filename) {
-    if (SetupViewFromFile(owner_, filename)) {
+  bool InitFromXML(const std::string &xml, const char *filename) {
+    if (SetupViewFromXML(owner_, xml, filename)) {
       SimpleEvent event(Event::EVENT_OPEN);
       ScriptableEvent scriptable_event(&event, owner_, NULL);
       FireEvent(&scriptable_event, onopen_event_);
@@ -906,7 +906,6 @@ class View::Impl {
   ViewHostInterface *host_;
   GadgetHostInterface *gadget_host_;
   ScriptContextInterface *script_context_;
-  FileManagerInterface *file_manager_;
   ElementFactory *element_factory_;
   MainLoopInterface *main_loop_;
 
@@ -968,17 +967,17 @@ ScriptContextInterface *View::GetScriptContext() const {
 }
 
 FileManagerInterface *View::GetFileManager() const {
-  return impl_->file_manager_;
+  // FIXME: ugly hack.
+  return impl_->gadget_host_->GetGadget()->GetFileManager();
 }
 
-bool View::InitFromFile(const char *filename) {
-  return impl_->InitFromFile(filename);
+bool View::InitFromXML(const std::string &xml, const char *filename) {
+  return impl_->InitFromXML(xml, filename);
 }
 
 void View::AttachHost(ViewHostInterface *host) {
   impl_->host_ = host;
   impl_->gadget_host_ = host->GetGadgetHost();
-  impl_->file_manager_ = impl_->gadget_host_->GetFileManager();
   impl_->script_context_ = host->GetScriptContext();
 
   // Register script context.
@@ -999,11 +998,10 @@ void View::AttachHost(ViewHostInterface *host) {
     // Execute common.js to initialize global constants and compatibility
     // adapters.
     std::string common_js_contents;
-    std::string common_js_path;
-    if (impl_->file_manager_->GetFileContents(kCommonJS, &common_js_contents,
-                                              &common_js_path)) {
+    if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
+      std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
       impl_->script_context_->Execute(common_js_contents.c_str(),
-                                      common_js_path.c_str(), 1);
+                                      path.c_str(), 1);
     } else {
       LOG("Failed to load %s.", kCommonJS);
     }
@@ -1193,14 +1191,12 @@ void View::EnableEvents(bool enable_events) {
 }
 
 ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
-  ASSERT(impl_->file_manager_);
   Variant::Type type = src.type();
   if (type == Variant::TYPE_STRING) {
     const char *filename = VariantValue<const char*>()(src);
     if (filename && *filename) {
-      std::string real_path;
       std::string data;
-      if (impl_->file_manager_->GetFileContents(filename, &data, &real_path)) {
+      if (GetFileManager()->ReadFile(filename, &data)) {
         ImageInterface *image = GetGraphics()->NewImage(data, is_mask);
         if (image)
           image->SetTag(filename);
@@ -1220,7 +1216,15 @@ ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
 }
 
 ImageInterface *View::LoadImageFromGlobal(const char *name, bool is_mask) {
-  return LoadImage(Variant(name), is_mask);
+  if (name && *name) {
+    std::string data;
+    if (GetGlobalFileManager()->ReadFile(name, &data)) {
+      ImageInterface *image = GetGraphics()->NewImage(data, is_mask);
+      if (image) image->SetTag(name);
+      return image;
+    }
+  }
+  return NULL;
 }
 
 Texture *View::LoadTexture(const Variant &src) {

@@ -26,11 +26,12 @@ class GadgetHostInterface;
 
 class Gadget: public GadgetInterface {
  public:
-  Gadget(GadgetHostInterface *host, int debug_mode);
+  Gadget(GadgetHostInterface *host, const char *base_path, int debug_mode);
   virtual ~Gadget();
 
   virtual bool Init();
   virtual ViewHostInterface *GetMainViewHost();
+  virtual FileManagerInterface *GetFileManager();
   virtual std::string GetManifestInfo(const char *key) const;
   virtual bool HasOptionsDialog() const;
   virtual bool ShowOptionsDialog();

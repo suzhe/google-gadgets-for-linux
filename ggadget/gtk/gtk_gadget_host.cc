@@ -20,16 +20,14 @@
 #include <fontconfig/fontconfig.h>
 
 #include <ggadget/element_factory.h>
-#include <ggadget/file_manager.h>
-#include <ggadget/file_manager_wrapper.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
-#include <ggadget/global_file_manager.h>
 #include <ggadget/logger.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/xml_parser_interface.h>
 #include <ggadget/main_loop_interface.h>
+#include <ggadget/file_manager_interface.h>
 
 #include "gtk_gadget_host.h"
 #include "cairo_graphics.h"
@@ -40,15 +38,9 @@
 namespace ggadget {
 namespace gtk {
 
-static const char kResourceZipName[] = "ggl-resources.bin";
-
 GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
                              double zoom, int debug_mode)
-    : resource_file_manager_(new FileManager(GetXMLParser())),
-      profile_file_manager_(new FileManager(GetXMLParser())),
-      global_file_manager_(new GlobalFileManager()),
-      file_manager_(NULL),
-      options_(CreateOptions("")),
+    : options_(CreateOptions("")),
       gadget_(NULL),
       plugin_flags_(0),
       composited_(composited),
@@ -61,24 +53,8 @@ GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
       forward_button_(NULL),
       details_button_(NULL),
       menu_(NULL) {
-  FileManagerWrapper *wrapper = new FileManagerWrapper(GetXMLParser());
-  file_manager_ = wrapper;
-
-  resource_file_manager_->Init(kResourceZipName);
-  wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
-                               resource_file_manager_);
-
-  profile_file_manager_->Init("profile");
-  wrapper->RegisterFileManager(ggadget::kProfilePrefix,
-                               profile_file_manager_);
-
-  global_file_manager_->Init(ggadget::kDirSeparatorStr);
-  wrapper->RegisterFileManager(ggadget::kDirSeparatorStr,
-                               global_file_manager_);
-
   ScriptRuntimeManager::get()->ConnectErrorReporter(
       NewSlot(this, &GtkGadgetHost::ReportScriptError));
-
   FcInit(); // Just in case this hasn't been done.
 }
 
@@ -87,20 +63,8 @@ GtkGadgetHost::~GtkGadgetHost() {
   gadget_ = NULL;
   delete options_;
   options_ = NULL;
-  delete file_manager_;
-  file_manager_ = NULL;
-  delete resource_file_manager_;
-  resource_file_manager_ = NULL;
-  delete profile_file_manager_;
-  profile_file_manager_ = NULL;
-  delete global_file_manager_;
-  global_file_manager_ = NULL;
   delete menu_;
   menu_ = NULL;
-}
-
-FileManagerInterface *GtkGadgetHost::GetFileManager() {
-  return file_manager_;
 }
 
 OptionsInterface *GtkGadgetHost::GetOptions() {
@@ -213,32 +177,11 @@ void GtkGadgetHost::ReportScriptError(const char *message) {
 }
 
 bool GtkGadgetHost::LoadFont(const char *filename) {
-  std::string fontfile;
-  if (!file_manager_->ExtractFile(filename, &fontfile)) {
-    return false;
-  }
-
-  loaded_fonts_[filename] = fontfile;
-
   FcConfig *config = FcConfigGetCurrent();
   bool success = FcConfigAppFontAddFile(config,
-                   reinterpret_cast<const FcChar8 *>(fontfile.c_str()));
-  DLOG("LoadFont: %s %s", filename, fontfile.c_str());
+                   reinterpret_cast<const FcChar8 *>(filename));
+  DLOG("LoadFont: %s %s", filename, success ? "success" : "fail");
   return success;
-}
-
-bool GtkGadgetHost::UnloadFont(const char *filename) {
-  // FontConfig doesn't actually allow dynamic removal of App Fonts, so
-  // just remove the file.
-  std::map<std::string, std::string>::iterator i = loaded_fonts_.find(filename);
-  if (i == loaded_fonts_.end()) {
-    return false;
-  }
-
-  unlink((i->second).c_str()); // ignore return
-  loaded_fonts_.erase(i);
-
-  return true;
 }
 
 bool GtkGadgetHost::LoadGadget(GtkBox *container,
@@ -266,8 +209,8 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
                    G_CALLBACK(OnDetailsClicked), this);
 
   SetPluginFlags(0);
-  gadget_ = new Gadget(this, debug_mode_);
-  if (!file_manager_->Init(base_path) || !gadget_->Init()) {
+  gadget_ = new Gadget(this, base_path, debug_mode_);
+  if (!gadget_->Init()) {
     return false;
   }
 
@@ -391,7 +334,7 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
     std::string title_text;
     std::string copyright_text;
     if (!SplitString(about_text, "\n", &title_text, &about_text)) {
-      about_text = title_text; 
+      about_text = title_text;
       title_text = this_p->gadget_->GetManifestInfo(kManifestName);
     }
     title_text = TrimString(title_text);
@@ -427,9 +370,7 @@ void GtkGadgetHost::OnAboutActivate(GtkMenuItem *menu_item,
     GtkWidget *image = NULL;
     std::string icon_name = this_p->gadget_->GetManifestInfo(kManifestIcon);
     std::string data;
-    std::string real_path;
-    if (this_p->file_manager_->GetFileContents(icon_name.c_str(),
-                                               &data, &real_path)) {
+    if (this_p->gadget_->GetFileManager()->ReadFile(icon_name.c_str(), &data)) {
       GdkPixbuf *pixbuf = LoadPixbufFromData(data);
       if (pixbuf) {
         image = gtk_image_new_from_pixbuf(pixbuf);

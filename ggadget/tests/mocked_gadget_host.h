@@ -17,30 +17,8 @@
 #ifndef GGADGET_TESTS_MOCKED_GADGET_HOST_H__
 #define GGADGET_TESTS_MOCKED_GADGET_HOST_H__
 
-#include "ggadget/file_manager_interface.h"
 #include "ggadget/gadget_host_interface.h"
 #include "ggadget/string_utils.h"
-
-class MockedFileManager : public ggadget::FileManagerInterface {
- public:
-  virtual bool Init(const char *base_path) { return false; }
-  virtual bool GetFileContents(const char *file,
-                               std::string *data,
-                               std::string *path) { return false; }
-  virtual bool GetXMLFileContents(const char *file,
-                                  std::string *data,
-                                  std::string *path) { return false; }
-  virtual bool ExtractFile(const char *file, std::string *into_file) {
-    return false;
-  }
-  virtual const ggadget::GadgetStringMap *GetStringTable() const {
-    return &strings_;
-  }
-  virtual bool FileExists(const char *file, std::string *path) { return false; }
- private:
-  ggadget::GadgetStringMap strings_;
-};
-
 
 class MockedGadgetHost : public ggadget::GadgetHostInterface {
  public:
@@ -48,12 +26,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual ~MockedGadgetHost() { }
   virtual ggadget::ElementFactory *GetElementFactory() {
     return NULL;
-  }
-  virtual ggadget::FileManagerInterface *GetFileManager() {
-    return &file_manager_;
-  }
-  virtual ggadget::FileManagerInterface *GetGlobalFileManager() {
-    return &file_manager_;
   }
   virtual ggadget::OptionsInterface *GetOptions() { return NULL; }
   virtual ggadget::GadgetInterface *GetGadget() { return NULL; }
@@ -73,8 +45,6 @@ class MockedGadgetHost : public ggadget::GadgetHostInterface {
   virtual void GetCursorPos(int *x, int *y) const { }
   virtual void GetScreenSize(int *width, int *height) const { }
   virtual std::string GetFileIcon(const char *filename) const { return ""; }
- private:
-  MockedFileManager file_manager_;
 };
 
 #endif // GGADGET_TESTS_MOCKED_GADGET_HOST_H__

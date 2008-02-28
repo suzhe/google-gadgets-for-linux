@@ -14,6 +14,9 @@
   limitations under the License.
 */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <locale.h>
 #include <cstdio>
 #include <stdlib.h>
 #include <unistd.h>
@@ -92,6 +95,68 @@ TEST(SystemUtils, EnsureDirectories) {
   EXPECT_TRUE(EnsureDirectories("a/b/c/d/e"));
   EXPECT_TRUE(EnsureDirectories("d/e"));
   chdir(cwd);  
+}
+
+TEST(SystemUtils, GetCurrentDirectory) {
+  std::string curdir = GetCurrentDirectory();
+  ASSERT_TRUE(curdir.length() > 0);
+  ASSERT_EQ(0, chdir("/"));
+  ASSERT_STREQ("/", GetCurrentDirectory().c_str());
+  ASSERT_EQ(0, chdir(curdir.c_str()));
+}
+
+TEST(SystemUtils, CreateTempDirectory) {
+  std::string path1;
+  std::string path2;
+  ASSERT_TRUE(CreateTempDirectory("abc", &path1));
+  ASSERT_TRUE(CreateTempDirectory("abc", &path2));
+  ASSERT_STRNE(path1.c_str(), path2.c_str());
+  ASSERT_EQ(0, access(path1.c_str(), R_OK|X_OK|W_OK|F_OK));
+  ASSERT_EQ(0, access(path2.c_str(), R_OK|X_OK|W_OK|F_OK));
+
+  struct stat stat_value;
+  ASSERT_EQ(0, stat(path1.c_str(), &stat_value));
+  ASSERT_TRUE(S_ISDIR(stat_value.st_mode));
+  ASSERT_EQ(0, stat(path2.c_str(), &stat_value));
+  ASSERT_TRUE(S_ISDIR(stat_value.st_mode));
+
+  rmdir(path1.c_str());
+  rmdir(path2.c_str());
+}
+
+TEST(SystemUtils, RemoveDirectory) {
+  std::string tempdir;
+  ASSERT_TRUE(CreateTempDirectory("removeme", &tempdir));
+  std::string subdir = BuildFilePath(tempdir.c_str(), "subdir", NULL);
+  std::string file = BuildFilePath(tempdir.c_str(), "file", NULL);
+  std::string subfile = BuildFilePath(subdir.c_str(), "file", NULL);
+  ASSERT_EQ(0, system(("mkdir " + subdir).c_str()));
+  ASSERT_EQ(0, system(("touch " + file).c_str()));
+  ASSERT_EQ(0, system(("touch " + subfile).c_str()));
+  ASSERT_TRUE(RemoveDirectory(tempdir.c_str()));
+}
+
+TEST(SystemUtils, GetSystemLocaleInfo) {
+  std::string lang, terr;
+  setlocale(LC_MESSAGES, "en_US.UTF-8");
+  ASSERT_TRUE(GetSystemLocaleInfo(&lang, &terr));
+  ASSERT_STREQ("en", lang.c_str());
+  ASSERT_STREQ("US", terr.c_str());
+  setlocale(LC_MESSAGES, "en_US");
+  ASSERT_TRUE(GetSystemLocaleInfo(&lang, &terr));
+  ASSERT_STREQ("en", lang.c_str());
+  ASSERT_STREQ("US", terr.c_str());
+}
+
+TEST(SystemUtils, NormalizeFilePath) {
+  ASSERT_STREQ("/", NormalizeFilePath("/").c_str());
+  ASSERT_STREQ("/", NormalizeFilePath("//").c_str());
+  ASSERT_STREQ("/abc", NormalizeFilePath("/abc").c_str());
+  ASSERT_STREQ("/abc", NormalizeFilePath("/abc/").c_str());
+  ASSERT_STREQ("/abc", NormalizeFilePath("/abc/def/..").c_str());
+  ASSERT_STREQ("/abc", NormalizeFilePath("//abc/.///def/..").c_str());
+  ASSERT_STREQ("/abc", NormalizeFilePath("//abc/./def/../../abc/").c_str());
+  ASSERT_STREQ("/", NormalizeFilePath("//abc/./def/../../").c_str());
 }
 
 int main(int argc, char **argv) {

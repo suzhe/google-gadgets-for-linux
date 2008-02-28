@@ -18,7 +18,6 @@
 #define GGADGET_FILE_MANAGER_INTERFACE_H__
 
 #include <string>
-#include "string_utils.h"
 
 namespace ggadget {
 
@@ -30,72 +29,70 @@ class FileManagerInterface {
   virtual ~FileManagerInterface() { }
 
   /**
+   * Returns true if the FileManager instance has been initialized correctly.
+   */
+  virtual bool IsValid() = 0;
+
+  /**
    * Initialize the @c FileManagerInterface instance.
    *
    * A @c FileManager instance must be initialized before use.
    * @param base_path the base path of this @c FileManager.  All file names
    *     in subsequent operations are relative to this base path.
+   * @param create if it's true, then if the target is not available, a new one
+   *     will be created.
    * @return @c true if succeeded.
    */
-  virtual bool Init(const char *base_path) = 0;
+  virtual bool Init(const char *base_path, bool create) = 0;
 
   /**
-   * Gets the raw contents in a file without translating it.
-   * The file is searched in the paths in the following order:
-   *   - @c file (in the @c base_path),
-   *   - @c lang_TERRITORY/file (e.g. @c zh_CN/myfile),
-   *   - @c lang/file (e.g. @c zh/myfile),
-   *   - @c locale_id/file (for Windows compatibility, e.g. 2052/myfile),
-   *   - @c en_US/file,
-   *   - @c en/file,
-   *   - @c 1033/file (for Windows compatibility).
-   *
-   * @param file the file name relative to the base path or an absolute
-   *     filename in the file system.
-   * @param[out] data returns the file contents.
-   * @param[out] path (optional) the actual path name of the file. For a file
-   *     in a zip, the value is only for logging purposes. This parameter will
-   *     be set even if reading the file fails.
-   * @return @c true if succeeded.
-   */
-  virtual bool GetFileContents(const char *file,
-                               std::string *data,
-                               std::string *path) = 0;
-
-  /**
-   * Gets the contents of an XML file. The file is searched in the same
-   * sequence as in @c GetFileContents().  Entities defined in @c strings.xml
-   * are replaced with localized strings.
+   * Reads the contents of a file into a specified string buffer.
    *
    * @param file the file name relative to the base path.
    * @param[out] data returns the file contents.
-   * @param[out] path (optional) the actual path name of the file. For a file
-   *     in a zip, the value is only for logging purposes. This parameter will
-   *     be set even if reading the file fails.
    * @return @c true if succeeded.
    */
-  virtual bool GetXMLFileContents(const char *file,
-                                  std::string *data,
-                                  std::string *path) = 0;
+  virtual bool ReadFile(const char *file, std::string *data) = 0;
+
+  /**
+   * Writes the specified contents into a specified file.
+   * Not all FileManager implementations supports this method.
+   *
+   * An existing file can't be overwritten, it must be removed first.
+   *
+   * @param file the file name relative to the base path.
+   * @param data the contents to be written.
+   * @return @c true if succeeded.
+   */
+  virtual bool WriteFile(const char *file, const std::string &data) = 0;
+
+  /**
+   * Removes a specified file.
+   * Not all FileManager implementations supports this method.
+   *
+   * @param file the file name relative to the base path.
+   * @return @c true if succeeded.
+   */
+  virtual bool RemoveFile(const char *file) = 0;
 
   /**
    * Extracts the contents of a file into a given file name or into a
    * temporary file.
    *
-   * @param file the file name relative to the base path, or an absolute
-   *     filename in the file system.
+   * The temporary file will be deleted when the FileManager instance is
+   * destroyed.
+   *
+   * The temporary file will have the same file name as the orginial file, but
+   * under a temporary directory.
+   *
+   * @param file the file name relative to the base path.
    * @param[in, out] into_file if the input value is empty, the file manager
    *     generates a unique temporary file name and save the contents into
    *     that file and return the filename in this parameter on return;
-   *     Otherwise the file manager will save into the given file name.
+   *     Otherwise the file manager will save it into the given file name.
    * @return @c true if succeeded.
    */
   virtual bool ExtractFile(const char *file, std::string *into_file) = 0;
-
-  /**
-   * Gets the content of strings.xml by returning a string map.
-   */
-  virtual const GadgetStringMap *GetStringTable() const = 0;
 
   /**
    * Check if a file with the given name exists under the base_path of this
@@ -108,6 +105,35 @@ class FileManagerInterface {
    */
   virtual bool FileExists(const char *file, std::string *path) = 0;
 
+  /**
+   * Checks if a file name can be accessible directly by the full path returned
+   * by GetFullPath() method.
+   *
+   * If a file name is accessible directly, then functions like fopen can be
+   * used directly against the full path returned by GetFullPath(file), or the
+   * second parameter of this function.
+   *
+   * @param file the file name relative to the base path.
+   * @param[out] path (optional) the actual path name of the file. For a file
+   *     in a zip, the value is only for logging purposes. This parameter will
+   *     be set even if the file doesn't exist.
+   * @return @c true if the specified file can be accessed directly by the full
+   *         path returned by GetFullPath() method.
+   */
+  virtual bool IsDirectlyAccessible(const char *file, std::string *path) = 0;
+
+  /**
+   * Gets the full path of a specified file.
+   * For some FileManager implementation (such as ZipFileManager), the returned
+   * full path might not be accessible directly. In most case it's only for
+   * logging purpose.
+   *
+   * @param file the file name relative to the base path, can be empty.
+   * @return the full path of the specified file name, if the specified file
+   *         name is empty then the base path of this file manager will be
+   *         returned.
+   */
+  virtual std::string GetFullPath(const char *file) = 0;
 };
 
 } // namespace ggadget

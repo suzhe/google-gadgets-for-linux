@@ -27,15 +27,6 @@ class Elements;
 class DOMDocumentInterface;
 
 /**
- * Sets up a view by loading xml content from a file and parsing it.
- * @param view a newly created blank view.
- * @param filename the name of the XML file (relative to the gadget base path).
- * @return @c true if loading and XML parsing succeeds. Errors during
- *     view/element hierarchy setup are only logged.
- */
-bool SetupViewFromFile(View *view, const char *filename);
-
-/**
  * Sets up a view by parsing xml content.
  * @param view a newly created blank view.
  * @param xml the xml content.
@@ -65,6 +56,21 @@ BasicElement *AppendElementFromXML(View *view, Elements *elements,
 BasicElement *InsertElementFromXML(View *view, Elements *elements,
                                    const std::string &xml,
                                    const BasicElement *before);
+
+/**
+ * Replaces all entities in a specified xml content to corresponding
+ * definitions provided in a specified GadgetStringMap object.
+ *
+ * All entities that don't have definitions will not be replaced.
+ *
+ * @param entities a GadgetStringMap object containing definitions of all
+ *        entities.
+ * @param[in/out] xml the xml content in which all entities will be replaced.
+ * @return false if there is any error (eg. unterminated entity reference) in
+ *         the xml content. The original xml content won't be changed when
+ *         returning false.
+ */
+bool ReplaceXMLEntities(const GadgetStringMap &entities, std::string *xml);
 
 } // namespace ggadget
 
