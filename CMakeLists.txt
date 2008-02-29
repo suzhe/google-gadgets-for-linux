@@ -1,5 +1,5 @@
 #
-# Copyright 2007 Google Inc.
+# Copyright 2008 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,3 +67,5 @@ ADD_SUBDIRECTORY(hosts)
 ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
 ADD_SUBDIRECTORY(resources)
+
+ADD_DIR_TO_ZIP(rss_gadget output/bin/rss_gadget.gg)

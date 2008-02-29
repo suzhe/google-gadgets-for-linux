@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <ctype.h>
+#include "gadget_consts.h"
 #include "string_utils.h"
 #include "common.h"
 
@@ -170,7 +171,7 @@ bool IsValidURLChar(unsigned char c) {
           // '|'==c ||     // Technically | is unadvised, but it is valid, and some URLs use it
           // '^'==c ||     // Also technically invalid but Yahoo news use it... others too
           // '`'==c ||     // Yahoo uses this
-          kBackSlash==c || '['==c || ']'==c
+          kBackSlash==c || '['==c || ']'==c || '\n' == c || '\r' == c
           // Comparison below is always false for char:
           || c >= 128);  // Enable converting non-ascii chars
 }
@@ -202,6 +203,26 @@ std::string EncodeURL(const std::string &source) {
     }
   }
   return dest;
+}
+
+bool IsValidRSSURL(const char* url) {
+  if (!url) {
+    return false;
+  }
+
+  if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
+      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) &&
+      strncasecmp(url, kFeedUrlPrefix, arraysize(kFeedUrlPrefix) - 1)) {
+    return false;    
+  }
+
+  for (int i = 0; url[i]; i++) {
+    if (!IsValidURLChar(url[i])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 std::string EncodeJavaScriptString(const UTF16Char *source) {

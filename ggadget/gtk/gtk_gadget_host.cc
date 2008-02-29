@@ -38,6 +38,9 @@
 namespace ggadget {
 namespace gtk {
 
+static const char kRSSGadgetName[] = "rss_gadget.gg";
+static const char kRSSURLOption[] = "RSS_URL";
+
 GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
                              double zoom, int debug_mode)
     : options_(CreateOptions("")),
@@ -209,7 +212,22 @@ bool GtkGadgetHost::LoadGadget(GtkBox *container,
                    G_CALLBACK(OnDetailsClicked), this);
 
   SetPluginFlags(0);
-  gadget_ = new Gadget(this, base_path, debug_mode_);
+
+  bool is_url = IsValidRSSURL(base_path);   
+  if (is_url) {
+    // Seed options with URL.
+    std::string json_url = "\"";
+    json_url += base_path;
+    json_url += "\"";
+    Variant url = Variant(JSONString(json_url)); // raw objects
+
+    // Use putValue instead of putDefaultValue since gadget may set its own
+    // default. Gadget can check if it has been initialized by host by checking
+    // exists().
+    options_->PutValue(kRSSURLOption, url); 
+  }
+
+  gadget_ = new Gadget(this, is_url ? kRSSGadgetName : base_path, debug_mode_);
   if (!gadget_->Init()) {
     return false;
   }
