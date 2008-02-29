@@ -71,11 +71,11 @@ class Connection {
    * Connection can be only constructed and destructed by @c Signal.
    * The connection owns the slot.
    */
-  Connection(const Signal *signal, Slot *slot);
+  Connection(Signal *signal, Slot *slot);
   ~Connection();
 
   bool blocked_;
-  const Signal *signal_;
+  Signal *signal_;
   Slot *slot_;
 };
 
@@ -129,6 +129,11 @@ class Signal {
    * Get metadata of the @c Signal.
    */
   virtual const Variant::Type *GetArgTypes() const { return NULL; }
+
+  /**
+   * Disconnect a connection from this signal.
+   */
+  bool Disconnect(Connection *connection);
 
  protected:
   Signal();

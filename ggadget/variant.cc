@@ -402,7 +402,10 @@ bool Variant::CheckScriptableType(uint64_t class_id) const {
 void Variant::OnRefChange(int ref_count, int change) {
   ASSERT(type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_);
   if (ref_count == 0 && change == 0) {
-    // The sriptable object is about to be deleted.
+    // This Variant still holds a reference on this scriptable object.
+    // If the program reaches here, the object must be a native owned object,
+    // so it can be deleted before refcount reaches 0. We must remove the
+    // last reference here.
     v_.scriptable_value_.refchange_connection_->Disconnect();
     v_.scriptable_value_.value_->Unref(true);
     v_.scriptable_value_.value_ = NULL;

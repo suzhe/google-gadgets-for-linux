@@ -14,12 +14,20 @@
   limitations under the License.
 */
 
+
+#include <sys/time.h>
+#include <time.h>
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
 #include <third_party/valgrind/valgrind.h>
 #include "logger.h"
 #include "string_utils.h"
+
+#ifdef _DEBUG
+#define LOG_WITH_TIMESTAMP
+#define LOG_WITH_FILE_LINE
+#endif
 
 namespace ggadget {
 
@@ -37,7 +45,17 @@ void LogHelper::operator()(const char *format, ...) {
   } else {
     va_list ap;
     va_start(ap, format);
+#ifdef LOG_WITH_TIMESTAMP
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    printf("%02d:%02d.%03d: ",
+           static_cast<int>(tv.tv_sec / 60 % 60),
+           static_cast<int>(tv.tv_sec % 60),
+           static_cast<int>(tv.tv_usec / 1000));
+#endif
+#ifdef LOG_WITH_FILE_LINE
     printf("%s:%d: ", file_, line_);
+#endif
     vprintf(format, ap);
     va_end(ap);
     putchar('\n');
