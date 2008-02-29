@@ -541,7 +541,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
-      DLOG("key %s %s", key.c_str(), i->second.c_str());
       if (SimpleMatchXPath(key.c_str(), kManifestInstallFontSrc)) {
         const char *font_name = i->second.c_str();
         std::string path;

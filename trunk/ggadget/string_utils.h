@@ -124,6 +124,9 @@ std::string EncodeURL(const std::string &source);
 /** Returns whether the given character is valid in a URL. See RFC2396. */
 bool IsValidURLChar(unsigned char c);
 
+/** Returns whether the given string is a valid URL for a RSS feed. */
+bool IsValidRSSURL(const char* url);
+
 /**
  * Encode a string into a JavaScript string literal (without the begining and
  * ending quotes), by escaping special characters in the source string.

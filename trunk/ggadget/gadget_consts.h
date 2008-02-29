@@ -137,6 +137,7 @@ const char kHTMLDetailsView[] = "resource://html_details_view.xml";
 const char kFtpUrlPrefix[] = "ftp://";
 const char kHttpUrlPrefix[] = "http://";
 const char kHttpsUrlPrefix[] = "https://";
+const char kFeedUrlPrefix[] = "feed://";
 const char kFileUrlPrefix[] = "file://";
 
 } // namespace ggadget

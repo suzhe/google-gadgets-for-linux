@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 
-ADD_DIR_TO_ZIP_INTERNAL(${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_BINARY_DIR}/output/bin/ggl-resources.bin)
+COPY_DIR(${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_BINARY_DIR}/output/bin/ggl-resources.gg)
