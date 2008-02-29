@@ -107,7 +107,7 @@ void GtkGadgetHost::DebugOutput(DebugLevel level, const char *message) const {
     default: break;
   }
   // TODO: actual debug console.
-  printf("%s%s\n", str_level, message);
+  LOG("%s%s", str_level, message);
 }
 
 /**

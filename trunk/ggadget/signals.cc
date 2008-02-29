@@ -16,10 +16,16 @@
 
 #include "signals.h"
 #include <vector>
+#include "logger.h"
+
+#ifdef _DEBUG
+// Uncomment the following line to enable logs.
+#define DEBUG_SIGNALS
+#endif
 
 namespace ggadget {
 
-Connection::Connection(const Signal *signal, Slot *slot)
+Connection::Connection(Signal *signal, Slot *slot)
     : blocked_(slot == NULL),
       signal_(signal),
       slot_(slot) {
@@ -33,7 +39,7 @@ Connection::~Connection() {
 void Connection::Disconnect() {
   delete slot_;
   slot_ = NULL;
-  blocked_ = true;
+  signal_->Disconnect(this);
 }
 
 bool Connection::Reconnect(Slot *slot) {
@@ -56,11 +62,29 @@ bool Connection::Reconnect(Slot *slot) {
 
 class Signal::Impl {
  public:
-  Impl() : death_flag_(NULL) { }
+  Impl()
+      : death_flag_ptr_(NULL) {
+#ifdef DEBUG_SIGNALS
+    max_connection_length_ = 0;
+#endif
+  }
   typedef std::vector<Connection *> Connections;
   Connections connections_;
-  bool *death_flag_;
+
+  // During an Emit() call, this Signal object may be deleted in some slot.
+  // Emit() should let this pointer point to a local bool variable. Once
+  // *death_flag_ptr_ becomes true, Emit() should return immediately.
+  bool *death_flag_ptr_;
+#ifdef DEBUG_SIGNALS
+  size_t max_connection_length_;
+#endif
 };
+
+#ifdef DEBUG_SIGNALS
+static size_t g_max_connection_length;
+static size_t g_signals_count;
+static size_t g_sum_connection_length;
+#endif
 
 Signal::Signal() : impl_(new Impl) {
 }
@@ -70,8 +94,22 @@ Signal::~Signal() {
        it != impl_->connections_.end(); ++it) {
     delete *it;
   }
-  if (impl_->death_flag_)
-    *impl_->death_flag_ = true;
+
+  // Set *death_flag_ to true to let Emit() know this Signal is to be deleted.
+  if (impl_->death_flag_ptr_)
+    *impl_->death_flag_ptr_ = true;
+
+#ifdef DEBUG_SIGNALS
+  g_sum_connection_length += impl_->max_connection_length_;
+  if (impl_->max_connection_length_ > g_max_connection_length)
+    g_max_connection_length = impl_->max_connection_length_;
+  if (++g_signals_count % 100 == 0) {
+    DLOG("#Signals: %zu  MAX#CONNS: %zu  AVG#CONNS: %f",
+         g_signals_count, g_max_connection_length,
+         static_cast<double>(g_sum_connection_length) / g_signals_count);
+  }
+#endif
+
   delete impl_;
 }
 
@@ -118,7 +156,7 @@ bool Signal::HasActiveConnections() const {
     return false;
   for (Impl::Connections::const_iterator it = impl_->connections_.begin();
        it != impl_->connections_.end(); ++it) {
-    if (!(*it)->blocked())
+    if (*it && !(*it)->blocked())
       return true;
   }
   return false;
@@ -126,28 +164,72 @@ bool Signal::HasActiveConnections() const {
 
 Variant Signal::Emit(int argc, const Variant argv[]) const {
   bool death_flag = false;
-  // If impl_->death_flag_ is not NULL, there must be some upper stack frame
-  // containing Emit() call of the same object.
-  if (!impl_->death_flag_)
-    impl_->death_flag_ = &death_flag;
+  bool *death_flag_ptr = &death_flag;
+  if (!impl_->death_flag_ptr_) {
+    // Let the desctructor inform us when this object is to be deleted.
+    impl_->death_flag_ptr_ = death_flag_ptr;
+  } else {
+    // There must be some upper stack frame containing Emit() call of the same
+    // object. We just use the outer most death_flag_.
+    death_flag_ptr = impl_->death_flag_ptr_;
+#ifdef DEBUG_SIGNALS
+    DLOG("Signal::Emit() Re-entrance");
+#endif
+  }
+
   Variant result(GetReturnType());
   for (Impl::Connections::const_iterator it = impl_->connections_.begin();
-       !*impl_->death_flag_ && it != impl_->connections_.end();
-       ++it) {
+       !*death_flag_ptr && it != impl_->connections_.end(); ++it) {
     Connection *connection = *it;
-    if (!connection->blocked()) {
+    if (connection && !connection->blocked()) {
       result = connection->slot_->Call(argc, argv);
     }
   }
-  if (impl_->death_flag_ == &death_flag)
-    impl_->death_flag_ = NULL;
+
+  if (!*death_flag_ptr && death_flag_ptr == &death_flag) {
+    impl_->death_flag_ptr_ = NULL;
+    // The outer most Emit() should erase all NULL slots in the connection
+    // list to save memory. The NULL slots is created by Disconnect() called
+    // during this Emit() call.
+    Impl::Connections::iterator it = impl_->connections_.begin();
+    while (it != impl_->connections_.end()) {
+      if (!*it)
+        impl_->connections_.erase(it);
+      else
+        ++it;
+    }
+  }
   return result;
 }
 
 Connection *Signal::Connect(Slot *slot) {
   Connection *connection = new Connection(this, slot);
   impl_->connections_.push_back(connection);
+#ifdef DEBUG_SIGNALS
+  if (impl_->connections_.size() > impl_->max_connection_length_)
+    impl_->max_connection_length_ = impl_->connections_.size();
+#endif
   return connection;
+}
+
+bool Signal::Disconnect(Connection *connection) {
+  Impl::Connections::iterator it = std::find(impl_->connections_.begin(),
+                                             impl_->connections_.end(),
+                                             connection);
+  if (it == impl_->connections_.end())
+    return false;
+
+  if (impl_->death_flag_ptr_) {
+    // Emit() is executing, so the vector can't be changed here.
+    *it = NULL;
+#ifdef DEBUG_SIGNALS
+    DLOG("Signal::Disconnect() called indirectly by Signal::Emit()");
+#endif
+  } else {
+    impl_->connections_.erase(it);
+  }
+  delete connection;
+  return true;
 }
 
 } // namespace ggadget
