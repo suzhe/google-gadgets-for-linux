@@ -24,20 +24,17 @@ namespace ggadget {
 
 /**
  * Creates a FileManager instance using a proper FileManager implementation.
+ * It can only create a FileManager instance against an existent base path.
  *
  * Currently there are two builtin FileManager implementation:
  * 1. ZipFileManager, which can read/write file in a zip archive file.
  * 2. DirFileManager, which can read/write file in a real directory.
  *
- * @param base_path the base path of the newly created FileManager instance.
- * @param create if it's true then the target refered by base_path will be
- *        created automatically when it's not available.
- * @param create_archive if it's true then a zip archive will be created
- *        instead of a directory.
+ * @param base_path the base path of the newly created FileManager instance,
+ *        it must exists before creating the file manager.
  */
 FileManagerInterface *
-CreateFileManager(const char *base_path, bool create = false,
-                  bool create_archive = false);
+CreateFileManager(const char *base_path);
 
 /**
  * Sets a specified FileManager instance as the global singleton, so that it
