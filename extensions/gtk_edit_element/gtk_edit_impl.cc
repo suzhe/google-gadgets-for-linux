@@ -765,7 +765,7 @@ void GtkEditImpl::QueueRefresh(bool relayout) {
   QueueCursorBlink();
 
   if (!refresh_timer_) {
-    main_loop_->AddTimeoutWatch(0,
+    refresh_timer_ = main_loop_->AddTimeoutWatch(0,
       new WatchCallbackSlot(NewSlot(this, &GtkEditImpl::RefreshCallback)));
   }
 }
