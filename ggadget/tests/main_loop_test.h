@@ -72,6 +72,8 @@ class TimeoutWatchCallback : public WatchCallbackInterface {
   int quit_times_;
 };
 
+const int kTimePiece = 100;
+
 // Callback class for an IO read watch.
 // Inside this callback, a timeout watch may be added/removed according to the
 // content of input string. It's for testing the ability of adding/removing
@@ -110,7 +112,8 @@ class IOReadWatchCallback : public WatchCallbackInterface {
     if (strcmp(buf, "quit") == 0) {
       return false;
     } else if (strncmp(buf, "add ", 4) == 0) {
-      int interval = strtol(buf + 4, NULL, 10);
+      double interval_scale = strtod(buf + 4, NULL);
+      int interval = static_cast<int>(interval_scale * kTimePiece);
       EXPECT_GT(interval, 0);
       if (main_loop && interval > 0 && timeout_watch_id_ < 0) {
         timeout_watch_id_ = main_loop->AddTimeoutWatch(interval,
@@ -162,10 +165,11 @@ void IOReadWatchTest(MainLoopInterface *main_loop) {
     "blablabla",
     "A test string",
     "testing",
-    "add 490",        // A timeout watch will be added with 490ms interval.
+    "add 0.49", // A timeout watch will be added with interval of a little
+                // less than 1/2 time piece.
     "Timeout added",
     "Wait for a while",
-    "Wait 1 second more",
+    "Wait 1 time piece more",
     "let's remove the timeout",
     "remove",
     "let's remove all watches",
@@ -193,12 +197,12 @@ void IOReadWatchTest(MainLoopInterface *main_loop) {
     close(output_pipe[0]);
     // Child process to write the strings.
     for (int i = 0; test_strings[i]; ++i) {
-      // sleep for 0.5 second.
-      usleep(500000);
+      // sleep for 1/2 time piece.
+      usleep(kTimePiece / 2 * 1000);
       // Write the test strings to output_pipe one by one.
       write(output_pipe[1], test_strings[i], strlen(test_strings[i]));
-      // sleep for 0.5 second.
-      usleep(500000);
+      // sleep for 1/2 time piece.
+      usleep(kTimePiece / 2 * 1000);
     }
     exit(0);
   }
@@ -215,9 +219,10 @@ void IOReadWatchTest(MainLoopInterface *main_loop) {
             main_loop->GetWatchType(io_watch_id));
   ASSERT_EQ(output_pipe[0], main_loop->GetWatchData(io_watch_id));
 
-  // Add a timeout watch with 1 second interval.
+  // Add a timeout watch with kTimePiece interval.
+  int interval_b = static_cast<int>(kTimePiece * 1.05);
   timeout_watch_id = main_loop->AddTimeoutWatch(
-        1000, new TimeoutWatchCallback(1000, &times_b, -1));
+      interval_b, new TimeoutWatchCallback(interval_b, &times_b, -1));
 
   main_loop->Run();
 
@@ -242,7 +247,7 @@ void TimeoutWatchTest(MainLoopInterface *main_loop) {
   int times[11];
 
   for (int i = 0; i < 10; ++i) {
-    int interval = (i+1) * 100;
+    int interval = (i+1) * kTimePiece;
     times[i] = 0;
     watch_id =
         main_loop->AddTimeoutWatch(
@@ -250,22 +255,25 @@ void TimeoutWatchTest(MainLoopInterface *main_loop) {
     ASSERT_GE(watch_id, 0);
   }
 
-  // Wait for 10 seconds.
+  // Loops for kNumLoops times, each interval is 10 * kTimePiece.  
   times[10] = 0;
+  const int kNumLoops = 3;
   watch_id =
       main_loop->AddTimeoutWatch(
-          1000, new TimeoutWatchCallback(1000, times + 10, 10));
+          kTimePiece * 10,
+          new TimeoutWatchCallback(kTimePiece * 10, times + 10, kNumLoops));
   ASSERT_GE(watch_id, 0);
 
   main_loop->Run();
 
   char msg[100];
   for (int i = 0; i < 10; ++i) {
-    snprintf(msg, arraysize(msg), "i=%d interval=%d", i, (i+1) * 100);
+    snprintf(msg, arraysize(msg), "i=%d interval=%d", i, (i+1) * kTimePiece);
     // Accept one time error.
-    EXPECT_NEAR_M(times[i], 100/(i+1), 1, msg);
+    EXPECT_NEAR_M(times[i], 10 * kNumLoops/(i+1), 1, msg);
   }
-  EXPECT_EQ_M(10, times[10], "last watch, interval=1000");
+  snprintf(msg, arraysize(msg), "last watch, interval=%d", kTimePiece * 10);
+  EXPECT_EQ_M(kNumLoops, times[10], msg);
 }
 
 #endif //GGADGET_TESTS_MAIN_LOOP_TEST_H__
