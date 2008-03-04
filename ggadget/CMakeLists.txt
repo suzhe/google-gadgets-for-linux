@@ -31,7 +31,8 @@ SET(SRCS
   encryptor.cc
   extension_manager.cc
   gadget.cc
-  gadget_metadata.cc
+  gadget_manager.cc
+  gadgets_metadata.cc
   logger.cc
   main_loop.cc
   math_utils.cc

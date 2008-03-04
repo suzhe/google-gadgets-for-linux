@@ -51,8 +51,8 @@ class GtkGadgetHost : public GadgetHostInterface {
   /**
    * Loads a gadget from file system and hosts it.
    * @param container the gtk widget to contain this gadget.
-   * @param base_path the base path of this gadget. It can be a directory or
-   *     path to a .gg file.
+   * @param base_path the base path of this gadget. It can be a directory,
+   *     path to a .gg file, or path to a gadget.gmanifest file.
    * @param zoom zoom factor of this gadget.
    * @param debug_mode 0: no debug; 1: debugs container elements by drawing
    *     a bounding box for each container element; 2: debugs all elements.

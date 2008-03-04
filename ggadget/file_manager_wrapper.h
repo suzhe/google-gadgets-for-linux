@@ -54,12 +54,14 @@ class FileManagerWrapper : public FileManagerInterface {
    */
   virtual bool Init(const char *base_path, bool create);
   virtual bool ReadFile(const char *file, std::string *data);
-  virtual bool WriteFile(const char *file, const std::string &data);
+  virtual bool WriteFile(const char *file, const std::string &data,
+                         bool overwrite);
   virtual bool RemoveFile(const char *file);
   virtual bool ExtractFile(const char *file, std::string *into_file);
   virtual bool FileExists(const char *file, std::string *path);
   virtual bool IsDirectlyAccessible(const char *file, std::string *path);
   virtual std::string GetFullPath(const char *file);
+  virtual uint64_t GetLastModifiedTime(const char *file);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(FileManagerWrapper);

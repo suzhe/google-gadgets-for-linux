@@ -107,15 +107,23 @@ class DirFileManager::Impl {
     return ReadFileContents(path.c_str(), data);
   }
 
-  bool WriteFile(const char *file, const std::string &data) {
+  bool WriteFile(const char *file, const std::string &data, bool overwrite) {
     std::string path;
     if (!CheckFilePath(file, &path))
       return false;
 
     if (::access(path.c_str(), F_OK) == 0) {
-      LOG("Can't overwrite an existing file %s, remove it first.",
-          path.c_str());
-      return false;
+      if (overwrite) {
+        if (::unlink(path.c_str()) == -1) {
+          LOG("Failed to unlink file %s when trying to overwrite it: %s.",
+              path.c_str(), strerror(errno));
+          return false;
+        }
+      } else {
+        LOG("Can't overwrite an existing file %s, remove it first.",
+            path.c_str());
+        return false;
+      }
     }
 
     // Ensure the sub directories.
@@ -126,7 +134,8 @@ class DirFileManager::Impl {
 
     FILE *datafile = fopen(path.c_str(), "w");
     if (!datafile) {
-      LOG("Failed to open file %s for writing.", path.c_str());
+      LOG("Failed to open file %s for writing: %s",
+          path.c_str(), strerror(errno));
       return false;
     }
 
@@ -153,7 +162,7 @@ class DirFileManager::Impl {
     }
 
     if (!result) {
-      LOG("Failed to remove file %s.", file);
+      LOG("Failed to remove file %s: %s.", file, strerror(errno));
       return false;
     }
 
@@ -300,6 +309,16 @@ class DirFileManager::Impl {
     return false;
   }
 
+  uint64_t GetLastModifiedTime(const char *file) {
+    std::string path;
+    if (!CheckFilePath(file, &path))
+      return 0;
+    struct stat stat_value;
+    memset(&stat_value, 0, sizeof(stat_value));
+    return ::stat(path.c_str(), &stat_value) == 0 ?
+           stat_value.st_mtime * UINT64_C(1000) : 0;
+  }
+
   std::string temp_dir_;
   std::string base_path_;
 };
@@ -325,8 +344,9 @@ bool DirFileManager::ReadFile(const char *file, std::string *data) {
   return impl_->ReadFile(file, data);
 }
 
-bool DirFileManager::WriteFile(const char *file, const std::string &data) {
-  return impl_->WriteFile(file, data);
+bool DirFileManager::WriteFile(const char *file, const std::string &data,
+                               bool overwrite) {
+  return impl_->WriteFile(file, data, overwrite);
 }
 
 bool DirFileManager::RemoveFile(const char *file) {
@@ -348,6 +368,10 @@ bool DirFileManager::IsDirectlyAccessible(const char *file,
 
 std::string DirFileManager::GetFullPath(const char *file) {
   return impl_->GetFullPath(file);
+}
+
+uint64_t DirFileManager::GetLastModifiedTime(const char *file) {
+  return impl_->GetLastModifiedTime(file);
 }
 
 FileManagerInterface *DirFileManager::Create(const char *base_path,

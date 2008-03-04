@@ -15,7 +15,7 @@
 */
 
 #include <cstdio>
-#include "ggadget/encryptor.h"
+#include "ggadget/encryptor_interface.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;

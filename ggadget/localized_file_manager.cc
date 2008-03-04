@@ -114,10 +114,11 @@ bool LocalizedFileManager::ReadFile(const char *file, std::string *data) {
   return false;
 }
 
-bool LocalizedFileManager::WriteFile(const char *file, const std::string &data) {
+bool LocalizedFileManager::WriteFile(const char *file, const std::string &data,
+                                     bool overwrite) {
   // It makes no sense to support writting to localized file.
   return impl_->file_manager_ ?
-         impl_->file_manager_->WriteFile(file, data) :
+         impl_->file_manager_->WriteFile(file, data, overwrite) :
          false;
 }
 
@@ -184,15 +185,23 @@ bool LocalizedFileManager::FileExists(const char *file, std::string *path) {
 
 bool LocalizedFileManager::IsDirectlyAccessible(const char *file,
                                           std::string *path) {
+  // This file manager doesn't support localized feature of this function.
   return impl_->file_manager_ ?
          impl_->file_manager_->IsDirectlyAccessible(file, path) :
          false;
 }
 
 std::string LocalizedFileManager::GetFullPath(const char *file) {
+  // This file manager doesn't support localized feature of this function.
   if (impl_->file_manager_)
     return impl_->file_manager_->GetFullPath(file);
   return std::string("");
+}
+
+uint64_t LocalizedFileManager::GetLastModifiedTime(const char *file) {
+  // This file manager doesn't support localized feature of this function.
+  return impl_->file_manager_ ?
+         impl_->file_manager_->GetLastModifiedTime(file) : 0;
 }
 
 } // namespace ggadget

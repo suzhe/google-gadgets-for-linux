@@ -20,7 +20,7 @@
 
 #ifdef _DEBUG
 // Uncomment the following line to enable logs.
-#define DEBUG_SIGNALS
+// #define DEBUG_SIGNALS
 #endif
 
 namespace ggadget {

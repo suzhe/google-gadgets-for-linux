@@ -19,6 +19,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/gadget_interface.h>
+#include <ggadget/string_utils.h>
 
 namespace ggadget {
 
@@ -26,6 +27,13 @@ class GadgetHostInterface;
 
 class Gadget: public GadgetInterface {
  public:
+  /**
+   * @param host the host of this gadget.
+   * @param base_path the base path of this gadget. It can be a directory,
+   *     path to a .gg file, or path to a gadget.gmanifest file.
+   * @param debug_mode 0: no debug; 1: debugs container elements by drawing
+   *     a bounding box for each container element; 2: debugs all elements.
+   */
   Gadget(GadgetHostInterface *host, const char *base_path, int debug_mode);
   virtual ~Gadget();
 
@@ -43,6 +51,15 @@ class Gadget: public GadgetInterface {
   virtual void OnCommand(Command command);
   virtual void OnDisplayStateChange(DisplayState display_state);
   virtual void OnDisplayTargetChange(DisplayTarget display_target);
+
+  /**
+   * A utility to get the manifest infomation of a gadget without
+   * constructing a Gadget object.
+   * @param base_path see document for Gadget constructor.
+   * @param[out] data receive the manifest data.
+   * @return @c true if succeeds.
+   */
+  static bool GetGadgetManifest(const char *base_path, GadgetStringMap *data);
 
  private:
   class Impl;

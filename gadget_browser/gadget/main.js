@@ -256,17 +256,10 @@ function add_button_onclick(index) {
     // TODO: non-binary plugin, whose download_url is url to a webpage.
     DownloadPlugin(plugin);
   } else {
-    switch (gadgetBrowserUtils.addPlugin(plugin.id)) {
-      case -1:
-        SetDownloadStatus(plugin, kDownloadStatusError);
-        break;
-      case 1:
-        SetDownloadStatus(plugin, kDownloadStatusAdded);
-        break;
-      default:
-        SetDownloadStatus(plugin, kDownloadStatusNone);
-        break;
-    }
+    if (gadgetBrowserUtils.addGadget(plugin.id) >= 0)
+      SetDownloadStatus(plugin, kDownloadStatusAdded);
+    else
+      SetDownloadStatus(plugin, kDownloadStatusError);
   }
 }
 

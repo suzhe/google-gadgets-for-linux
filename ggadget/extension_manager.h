@@ -103,6 +103,7 @@ static const char kScriptRuntimeExtensionSymbolName[] =
  *   - XMLHttpRequest extension module: SetXMLHttpRequestFactory()
  *   - XMLParser extension module: SetXMLParser()
  *   - Options extension module: SetOptionsFactory()
+ *   - Encryptor extension module: SetEncryptor()
  *
  * The register function provided by an extension module may be called multiple
  * times for different gadgets during the life time of the extension module.

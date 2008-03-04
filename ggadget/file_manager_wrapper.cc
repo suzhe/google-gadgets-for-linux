@@ -95,7 +95,7 @@ class FileManagerWrapper::Impl {
     return false;
   }
 
-  bool WriteFile(const char *file, const std::string &data) {
+  bool WriteFile(const char *file, const std::string &data, bool overwrite) {
     size_t index = 0;
     FileManagerInterface *fm = NULL;
     std::string path;
@@ -104,12 +104,12 @@ class FileManagerWrapper::Impl {
       matched = true;
       // Only writes the file to the first matched FileManager,
       // unless it fails.
-      if (fm->WriteFile(path.c_str(), data))
+      if (fm->WriteFile(path.c_str(), data, overwrite))
         return true;
     }
 
     if (default_ && !matched)
-      return default_->WriteFile(file, data);
+      return default_->WriteFile(file, data, overwrite);
 
     return false;
   }
@@ -202,6 +202,24 @@ class FileManagerWrapper::Impl {
     return std::string("");
   }
 
+  uint64_t GetLastModifiedTime(const char *file) {
+    size_t index = 0;
+    FileManagerInterface *fm = NULL;
+    std::string lookup_path;
+    bool matched = false;
+    while ((fm = GetNextMatching(file, &index, &lookup_path)) != NULL) {
+      matched = true;
+      uint64_t result = fm->GetLastModifiedTime(lookup_path.c_str());
+      if (result > 0)
+        return result;
+    }
+
+    if (default_ && !matched)
+      return default_->GetLastModifiedTime(file);
+
+    return 0;
+  }
+
   FileManagerInterface *GetNextMatching(const char *path,
                                         size_t *index,
                                         std::string *lookup_path) {
@@ -255,8 +273,9 @@ bool FileManagerWrapper::ReadFile(const char *file, std::string *data) {
   return impl_->ReadFile(file, data);
 }
 
-bool FileManagerWrapper::WriteFile(const char *file, const std::string &data) {
-  return impl_->WriteFile(file, data);
+bool FileManagerWrapper::WriteFile(const char *file, const std::string &data,
+                                   bool overwrite) {
+  return impl_->WriteFile(file, data, overwrite);
 }
 
 bool FileManagerWrapper::RemoveFile(const char *file) {
@@ -278,6 +297,10 @@ bool FileManagerWrapper::IsDirectlyAccessible(const char *file,
 
 std::string FileManagerWrapper::GetFullPath(const char *file) {
   return impl_->GetFullPath(file);
+}
+
+uint64_t FileManagerWrapper::GetLastModifiedTime(const char *file) {
+  return impl_->GetLastModifiedTime(file);
 }
 
 } // namespace ggadget

@@ -15,9 +15,12 @@
 */
 
 #include "ggadget/logger.h"
+#include "ggadget/file_manager_factory.h"
+#include "ggadget/native_main_loop.h"
 #include "ggadget/options_interface.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/tests/init_extensions.h"
+#include "ggadget/tests/mocked_file_manager.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
@@ -25,8 +28,12 @@ using namespace ggadget;
 // TODO: system dependent.
 #define TEST_DIRECTORY "/tmp/TestDefaultOptions"
 
+MockedFileManager g_mocked_fm;
+
 TEST(DefaultOptions, Test) {
-  OptionsInterface *options = CreateOptions(TEST_DIRECTORY "/options1");
+  OptionsInterface *options = CreateOptions("options1");
+  ASSERT_EQ(std::string("profile://options/options1.xml"),
+            g_mocked_fm.requested_file_);
   ASSERT_TRUE(options);
   const char kBinaryData[] = "\x01\0\x02xyz\n\r\"\'\\\xff\x7f<>&";
   const std::string kBinaryStr(kBinaryData, sizeof(kBinaryData) - 1);
@@ -69,12 +76,16 @@ TEST(DefaultOptions, Test) {
   EXPECT_EQ(test_data.size() * 2, options->GetCount());
 
   options->Flush();
+  options->DeleteStorage();
   delete options;
 
   // NULL string become blank string when persisted and loaded.
   test_data["itemstringnull"] = Variant("");
 
-  options = CreateOptions(TEST_DIRECTORY "/options1");
+  // g_mocked_fm will serve the data saved in options1 to options2. 
+  options = CreateOptions("options2");
+  ASSERT_EQ(std::string("profile://options/options2.xml"),
+            g_mocked_fm.requested_file_);
   ASSERT_TRUE(options);
   for (TestData::const_iterator it = test_data.begin();
        it != test_data.end(); ++it) {
@@ -99,10 +110,15 @@ TEST(DefaultOptions, Test) {
   // If new value is set, encrypted state will be cleared.
   options->PutValue("itemdouble_encrypted", Variant(432.1));
   EXPECT_FALSE(options->IsEncrypted("itemdouble_encrypted"));
+  options->DeleteStorage();
   delete options;
 }
 
+static NativeMainLoop main_loop;
+
 int main(int argc, char **argv) {
+  SetGlobalMainLoop(&main_loop);
+  SetGlobalFileManager(&g_mocked_fm);
   testing::ParseGUnitFlags(&argc, argv);
 
   static const char *kExtensions[] = {
@@ -111,11 +127,5 @@ int main(int argc, char **argv) {
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
 
-  system("rm -rf " TEST_DIRECTORY);
-  EnsureDirectories(TEST_DIRECTORY);
-  int result = RUN_ALL_TESTS();
-  // TODO: system dependent.
-  // system("cat " TEST_DIRECTORY "/options1");
-  system("rm -rf " TEST_DIRECTORY);
-  return result;
+  return RUN_ALL_TESTS();
 }

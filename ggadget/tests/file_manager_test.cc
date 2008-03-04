@@ -100,7 +100,7 @@ void TestFileManagerWriteFunctions(FileManagerInterface *fm, bool zip) {
 
   // Test write file in top dir.
   data = "new_file contents\n";
-  ASSERT_TRUE(fm->WriteFile("new_file", data));
+  ASSERT_TRUE(fm->WriteFile("new_file", data, false));
   ASSERT_TRUE(fm->FileExists("new_file", &path));
   EXPECT_STREQ((base_path + "/new_file").c_str(), path.c_str());
   ASSERT_TRUE(fm->ReadFile("new_file", &data));
@@ -120,7 +120,7 @@ void TestFileManagerWriteFunctions(FileManagerInterface *fm, bool zip) {
 
   // Test write file in sub dir.
   data = "en_new_file contents\n";
-  ASSERT_TRUE(fm->WriteFile("en/new_file", data));
+  ASSERT_TRUE(fm->WriteFile("en/new_file", data, false));
   ASSERT_TRUE(fm->FileExists("en/new_file", &path));
   EXPECT_STREQ((base_path + "/en/new_file").c_str(), path.c_str());
   ASSERT_TRUE(fm->ReadFile("en/new_file", &data));
@@ -139,12 +139,13 @@ void TestFileManagerWriteFunctions(FileManagerInterface *fm, bool zip) {
   ASSERT_TRUE(fm->FileExists("en/new_file", &path));
 
   // Test overwrite an existing file.
-  EXPECT_FALSE(fm->WriteFile("en/new_file", data));
+  EXPECT_FALSE(fm->WriteFile("en/new_file", data, false));
 
   if (zip) {
     EXPECT_FALSE(fm->RemoveFile("new_file"));
     EXPECT_FALSE(fm->RemoveFile("en/new_file"));
   } else {
+    EXPECT_TRUE(fm->WriteFile("en/new_file", data, true));
     EXPECT_TRUE(fm->RemoveFile("new_file"));
     EXPECT_TRUE(fm->RemoveFile("en/new_file"));
     EXPECT_FALSE(fm->FileExists("new_file", &path));
