@@ -14,12 +14,13 @@
   limitations under the License.
 */
 
-#include "gadget_metadata.h"
+#include "gadgets_metadata.h"
 
 #include <time.h>
+#include <set>
+#include "file_manager_factory.h"
 #include "scriptable_holder.h"
 #include "slot.h"
-#include "system_utils.h"
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 
@@ -33,17 +34,18 @@ static const char *kMonthNames[] = {
   "July", "August", "September", "October", "November", "December"
 };
 
-class GadgetMetadata::Impl {
+class GadgetsMetadata::Impl {
  public:
-  Impl(const char *plugins_xml_path)
-      : plugins_xml_path_(plugins_xml_path),
-        parser_(GetXMLParser()),
+  Impl()
+      : parser_(GetXMLParser()),
+        file_manager_(GetGlobalFileManager()),
         full_download_(false) {
     ASSERT(parser_);
+    ASSERT(file_manager_);
 
     std::string contents;
-    if (ReadFileContents(plugins_xml_path, &contents))
-      ParsePluginsXML(contents);
+    if (file_manager_->ReadFile(kPluginsXMLLocation, &contents))
+      ParsePluginsXML(contents, true);
   }
 
   ~Impl() {
@@ -51,23 +53,36 @@ class GadgetMetadata::Impl {
       request_.Get()->Abort();
   }
 
-  static const char *GetValue(const GadgetStringMap &table,
+  // Get a value from a XPath map.
+  static std::string GetValue(const GadgetStringMap &table,
                               const std::string &key) {
     GadgetStringMap::const_iterator it = table.find(key);
-    return it == table.end() ? NULL : it->second.c_str();
+    return it == table.end() ? std::string() : it->second;
   }
 
-  static const char *GetPluginID(const GadgetStringMap &table,
+  static uint64_t ParsePluginUpdatedDate(const GadgetStringMap &table,
+                                         const std::string &plugin_key) {
+    std::string updated_date_str = GetValue(table,
+                                            plugin_key + "@updated_date");
+    if (updated_date_str.empty())
+      updated_date_str = GetValue(table, plugin_key + "@creation_date");
+
+    return updated_date_str.empty() ? 0 : ParseDate(updated_date_str.c_str());
+  }
+
+  // In the incremental plugins.xml, plugins are matched with the uuid for
+  // desktop gadgets, and the download_url for iGoogle gadgets.
+  static std::string GetPluginID(const GadgetStringMap &table,
                                  const std::string &plugin_key) {
-    const char *id = GetValue(table, plugin_key + "@guid");
-    if (!id)
+    std::string id = GetValue(table, plugin_key + "@guid");
+    if (id.empty())
       id = GetValue(table, plugin_key + "@download_url");
     return id;
   }
 
   // Parse date string in plugins.xml, in format like "November 10, 2007".
   // strptime() is not portable enough, so we write our own code instead.
-  static time_t ParseDate(const std::string &date_str) {
+  static uint64_t ParseDate(const std::string &date_str) {
     std::string year_str, month_str, day_str;
     if (!SplitString(date_str, " ", &month_str, &day_str) ||
         !SplitString(day_str, " ", &day_str, &year_str) ||
@@ -88,58 +103,66 @@ class GadgetMetadata::Impl {
     }
     if (time.tm_mon == -1)
       return 0;
-    return mktime(&time);
+
+    time_t local_time = mktime(&time);
+    time_t local_time_as_gm = mktime(gmtime(&local_time));
+    // Now local_time_as_gm - local_time is the time difference between gmt
+    // and local time.
+    if (local_time < local_time_as_gm - local_time)
+      return 0;
+    return (local_time - (local_time_as_gm - local_time)) * UINT64_C(1000);
   }
 
   bool SavePluginsXMLFile() {
-    FILE *out_file = fopen(plugins_xml_path_.c_str(), "w");
-    if (!out_file) {
-      LOG("Failed to write to file: %s", plugins_xml_path_.c_str());
-      return false;
-    }
-    fprintf(out_file, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-            "<plugins>\n");
-
+    std::string contents("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                         "<plugins>\n");
     for (GadgetInfoMap::const_iterator it = plugins_.begin();
          it != plugins_.end(); ++ it) {
       const GadgetInfo &info = it->second;
-      fprintf(out_file, " <plugin");
+      contents += " <plugin";
       for (GadgetStringMap::const_iterator attr_it = info.attributes.begin();
            attr_it != info.attributes.end(); ++attr_it) {
-        fprintf(out_file, " %s=\"%s\"", attr_it->first.c_str(),
-                parser_->EncodeXMLString(attr_it->second.c_str()).c_str());
+        contents += " ";
+        contents += attr_it->first;
+        contents += "=\"";
+        contents += parser_->EncodeXMLString(attr_it->second.c_str());
+        contents += "\"";
       }
       if (info.titles.empty() && info.descriptions.empty()) {
-        fprintf(out_file, "/>\n");
+        contents += "/>\n";
       } else {
-        fprintf(out_file, ">\n");
+        contents += ">\n";
         for (GadgetStringMap::const_iterator title_it = info.titles.begin();
              title_it != info.titles.end(); ++title_it) {
-          fprintf(out_file, "  <title locale=\"%s\">%s</title>\n",
-                  parser_->EncodeXMLString(title_it->first.c_str()).c_str(),
-                  parser_->EncodeXMLString(title_it->second.c_str()).c_str());
+          contents += "  <title locale=\"";
+          contents += parser_->EncodeXMLString(title_it->first.c_str());
+          contents += "\">";
+          contents += parser_->EncodeXMLString(title_it->second.c_str());
+          contents += "</title>\n";
         }
         for (GadgetStringMap::const_iterator desc_it =
                  info.descriptions.begin();
              desc_it != info.descriptions.end(); ++desc_it) {
-          fprintf(out_file, "  <description locale=\"%s\">%s</description>\n",
-                  parser_->EncodeXMLString(desc_it->first.c_str()).c_str(),
-                  parser_->EncodeXMLString(desc_it->second.c_str()).c_str());
+          contents += "  <description locale=\"";
+          contents += parser_->EncodeXMLString(desc_it->first.c_str());
+          contents += "\">";
+          contents += parser_->EncodeXMLString(desc_it->second.c_str());
+          contents += "</description>\n";
         }
-        fprintf(out_file, " </plugin>\n");
+        contents += " </plugin>\n";
       }
     }
-    fprintf(out_file, "</plugins>\n");
-    fclose(out_file);
-    return true;
+    contents += "</plugins>\n";
+    return file_manager_->WriteFile(kPluginsXMLLocation, contents, true);
   }
 
-  bool ParsePluginsXML(const std::string &contents) {
+  bool ParsePluginsXML(const std::string &contents, bool full_update) {
     GadgetStringMap new_plugins;
-    if (!parser_->ParseXMLIntoXPathMap(contents, plugins_xml_path_.c_str(),
+    if (!parser_->ParseXMLIntoXPathMap(contents, kPluginsXMLLocation,
                                        "plugins", NULL, &new_plugins))
       return false;
 
+    GadgetInfoMap temp_plugins;
     // Update the latest gadget time and plugin index.
     latest_plugin_time_ = 0;
     GadgetStringMap::const_iterator it = new_plugins.begin();
@@ -149,63 +172,86 @@ class GadgetMetadata::Impl {
       if (!SimpleMatchXPath(plugin_key.c_str(), "plugin"))
         continue;
 
-      const char *id = GetPluginID(new_plugins, plugin_key);
-      if (!id)
+      // Don't be confused about this id and the id attribute. This id is
+      // uuid for desktop gadgets and download_url for iGoogle gadgets, and
+      // is used thoughout our system to identify gadgets. The id attribute
+      // in the plugins.xml is not used by other parts of this system.
+      std::string id = GetPluginID(new_plugins, plugin_key);
+      if (id.empty())
         continue;
-      GadgetInfo *info = &plugins_[id];
-      info->id = id;
 
-      const char *creation_date_str = GetValue(new_plugins,
-                                               plugin_key + "@creation_date");
-      const char *updated_date_str = GetValue(new_plugins,
-                                              plugin_key + "@updated_date");
-      if (!updated_date_str)
-        updated_date_str = creation_date_str;
-
-      if (updated_date_str) {
-        info->updated_date = ParseDate(updated_date_str);
-        if (info->updated_date > latest_plugin_time_)
-          latest_plugin_time_ = info->updated_date;
+      // The id attribute is used only here to detect if the plugin record is
+      // a full record.
+      if (GetValue(new_plugins, plugin_key + "@id").empty()) {
+        GadgetInfoMap::iterator org_info_it = plugins_.find(id);
+        if (full_update) {
+          LOG("Partial record found during full update: %s", id.c_str());
+          return false;
+        } else if (org_info_it == plugins_.end()) {
+          LOG("Can't find orignal plugin info when updating %s", id.c_str());
+          // This may be caused by corrupted cached plugins.xml file. 
+          return false;
+        } else {
+          // This is a partial record which contains only an optional 'rank'
+          // attribute.
+          GadgetInfo *info = &temp_plugins[id];
+          *info = org_info_it->second;
+          std::string rank = GetValue(new_plugins, plugin_key + "@rank");
+          if (!rank.empty())
+            info->attributes["rank"] = rank;
+        }
+        continue;
       }
+
+      // Otherwise, this is a full record.
+      GadgetInfo *info = &temp_plugins[id];
+      info->id = id;
+      info->updated_date = ParsePluginUpdatedDate(new_plugins, plugin_key);
+      if (info->updated_date > latest_plugin_time_)
+        latest_plugin_time_ = info->updated_date;
 
       // Enumerate all attributes and sub elements of this plugin.
       while (it != new_plugins.end()) {
         const std::string &key = it->first;
         if (GadgetStrNCmp(key.c_str(), plugin_key.c_str(),
-                          plugin_key.size()) != 0)
+                          plugin_key.size()) != 0) {
+          // Finished parsing data of the current gadget.
           break;
+        }
 
         char next_char = key[plugin_key.size()];
         if (next_char == '@') {
           info->attributes[key.substr(plugin_key.size() + 1)] = it->second;
         } else if (next_char == '/') {
           if (SimpleMatchXPath(key.c_str(), "plugin/title")) {
-            const char *locale = GetValue(new_plugins, key + "@locale");
-            if (!locale) {
+            std::string locale = GetValue(new_plugins, key + "@locale");
+            if (locale.empty())
               LOG("Missing 'locale' attribute in <title>");
-              continue;
-            }
-            info->titles[locale] = it->second;
+            else
+              info->titles[locale] = it->second;
           } else if (SimpleMatchXPath(key.c_str(), "plugin/description")) {
-            const char *locale = GetValue(new_plugins, key + "@locale");
-            if (!locale) {
+            std::string locale = GetValue(new_plugins, key + "@locale");
+            if (locale.empty())
               LOG("Missing 'locale' attribute in <description>");
-              continue;
-            }
-            info->descriptions[locale] = it->second;
+            else
+              info->descriptions[locale] = it->second;
           }
         } else {
+          // Finished parsing data of the current gadget.
           break;
         }
         ++it;
       }
     }
+
+    plugins_.swap(temp_plugins);
     return true;
   }
 
   std::string GetQueryDate() {
     if (!full_download_ && latest_plugin_time_ > 0) {
-      struct tm *time = gmtime(&latest_plugin_time_);
+      time_t time0 = static_cast<time_t>(latest_plugin_time_ / 1000);
+      struct tm *time = gmtime(&time0);
       char buf[9];
       strftime(buf, sizeof(buf), kQueryDateFormat, time);
       return std::string(buf);
@@ -218,7 +264,7 @@ class GadgetMetadata::Impl {
     XMLHttpRequestInterface *request = request_.Get();
     if (request && request->GetReadyState() == XMLHttpRequestInterface::DONE) {
       unsigned short status;
-      bool success = false;
+      bool request_success = false, parsing_success = false;
       if (request->GetStatus(&status) == XMLHttpRequestInterface::NO_ERR &&
           status == 200) {
         // The request finished successfully. Use GetResponseBody() instead of
@@ -226,24 +272,17 @@ class GadgetMetadata::Impl {
         std::string response_body;
         if (request->GetResponseBody(&response_body) ==
                 XMLHttpRequestInterface::NO_ERR) {
-          // When full download, save the current plugin to avoid corrupted
-          // data overwrite current good data. 
-          GadgetInfoMap save_plugins;
-          if (full_download_)
-            plugins_.swap(save_plugins);
-          if (!ParsePluginsXML(response_body) && full_download_)
-            plugins_.swap(save_plugins);
-          else {
-            success = true;
+          request_success = true;
+          parsing_success = ParsePluginsXML(response_body, full_download_);
+          if (parsing_success)
             SavePluginsXMLFile();
-          }
         }
       }
 
-      if (on_request_done_) {
-        (*on_request_done_)(success);
-        delete on_request_done_;
-        on_request_done_ = NULL;
+      if (on_update_done_) {
+        (*on_update_done_)(request_success, parsing_success);
+        delete on_update_done_;
+        on_update_done_ = NULL;
       }
       // Release the reference.
       request_.Reset(NULL);
@@ -251,7 +290,7 @@ class GadgetMetadata::Impl {
   }
 
   void UpdateFromServer(bool full_download, XMLHttpRequestInterface *request,
-                        Slot1<void, bool> *on_done) {
+                        Slot2<void, bool, bool> *on_done) {
     ASSERT(request);
     ASSERT(request->GetReadyState() == XMLHttpRequestInterface::UNSENT);
 
@@ -259,7 +298,7 @@ class GadgetMetadata::Impl {
     if (request_.Get())
       request_.Get()->Abort();
     full_download_ = full_download;
-    on_request_done_ = on_done;
+    on_update_done_ = on_done;
 
     std::string request_url(kPluginsXMLRequestPrefix);
     request_url += "&diff_from_date=";
@@ -274,30 +313,30 @@ class GadgetMetadata::Impl {
     }
   }
 
-  std::string plugins_xml_path_;
   XMLParserInterface *parser_;
+  FileManagerInterface *file_manager_;
   ScriptableHolder<XMLHttpRequestInterface> request_;
-  time_t latest_plugin_time_;
+  uint64_t latest_plugin_time_;
   bool full_download_;
   GadgetInfoMap plugins_;
-  Slot1<void, bool> *on_request_done_;
+  Slot2<void, bool, bool> *on_update_done_;
 };
 
-GadgetMetadata::GadgetMetadata(const char *plugins_xml_path)
-    : impl_(new Impl(plugins_xml_path)) {
+GadgetsMetadata::GadgetsMetadata()
+    : impl_(new Impl()) {
 }
 
-GadgetMetadata::~GadgetMetadata() {
+GadgetsMetadata::~GadgetsMetadata() {
   delete impl_;
 }
 
-void GadgetMetadata::UpdateFromServer(bool full_download,
+void GadgetsMetadata::UpdateFromServer(bool full_download,
                                       XMLHttpRequestInterface *request,
-                                      Slot1<void, bool> *on_done) {
+                                      Slot2<void, bool, bool> *on_done) {
   impl_->UpdateFromServer(full_download, request, on_done);
 }
 
-const GadgetMetadata::GadgetInfoMap &GadgetMetadata::GetAllGadgetInfo() const {
+const GadgetInfoMap &GadgetsMetadata::GetAllGadgetInfo() const {
   return impl_->plugins_;
 }
 

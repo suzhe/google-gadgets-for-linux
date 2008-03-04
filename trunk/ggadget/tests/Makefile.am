@@ -29,7 +29,9 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 noinst_HEADERS		= init_extensions.h \
 			  main_loop_test.h \
 			  mocked_element.h \
+			  mocked_file_manager.h \
 			  mocked_gadget_host.h \
+			  mocked_timer_main_loop.h \
 			  mocked_view_host.h \
 			  scriptables.h \
 			  slots.h
@@ -57,7 +59,7 @@ check_PROGRAMS		= color_test \
 			  xml_parser_test \
 			  xml_http_request_test \
 			  xml_utils_test \
-			  gadget_metadata_test
+			  gadgets_metadata_test
 
 check_LTLIBRARIES	= foo-module.la \
 			  bar-module.la
@@ -73,7 +75,7 @@ elements_test_SOURCES		= elements_test.cc
 element_factory_test_SOURCES	= element_factory_test.cc
 encryptor_test_SOURCES		= encryptor_test.cc
 file_manager_test_SOURCES	= file_manager_test.cc
-math_utils_test_SOURCES		= math_utils_test.cc
+math_utils_test_SOURCES	= math_utils_test.cc
 native_main_loop_test_SOURCES	= native_main_loop_test.cc
 unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
@@ -82,9 +84,9 @@ module_test_SOURCES		= module_test.cc
 system_utils_test_SOURCES	= system_utils_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
-xml_parser_test_SOURCES		= xml_parser_test.cc
+xml_parser_test_SOURCES	= xml_parser_test.cc
 xml_utils_test_SOURCES		= xml_utils_test.cc
-gadget_metadata_test_SOURCES	= gadget_metadata_test.cc
+gadgets_metadata_test_SOURCES	= gadgets_metadata_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc
 xml_http_request_test_LDADD	= -lpthread \

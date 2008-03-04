@@ -15,7 +15,7 @@
 */
 
 var kThumbnailPrefix = "http://desktop.google.com/plugins/images/";
-var kMaxWorkingTasks = 6;
+var kMaxWorkingTasks = 4;
 var gPendingTasks = [];
 var gWorkingTasks = [];
 
@@ -27,34 +27,52 @@ function ClearThumbnailTasks() {
 }
 
 function AddThumbnailTask(plugin, thumbnail_element1, thumbnail_element2) {
-  var image_data = gadgetBrowserUtils.loadThumbnailFromCache(plugin.id);
+  var thumbnail_url = plugin.attributes.thumbnail_url;
+  if (!thumbnail_url)
+    return;
+
+  var image_data = gadgetBrowserUtils.loadThumbnailFromCache(thumbnail_url);
   if (image_data) {
-    thumbnail_element.src = image_data;
-  } else {
-    var new_task = {
-      plugin: plugin,
-      thumbnail_element1: thumbnail_element1,
-      thumbnail_element2: thumbnail_element2,
-    };
-    if (gWorkingTasks.length < kMaxWorkingTasks)
-      StartThumbnailTask(new_task);
-    else
-      gPendingTasks.push(new_task);
+    // Show the cached image first, and then check if it needs to be updated.
+    thumbnail_element1.src = image_data;
+    thumbnail_element2.src = image_data;
+    if (plugin.thumbnail_checked)
+      return;
   }
+
+  var full_thumbnail_url = thumbnail_url.match(/^https?:\/\//) ?
+                           thumbnail_url : kThumbnailPrefix + thumbnail_url;
+  var new_task = {
+    plugin: plugin,
+    thumbnail_url: thumbnail_url,
+    full_thumbnail_url: full_thumbnail_url,
+    thumbnail_element1: thumbnail_element1,
+    thumbnail_element2: thumbnail_element2,
+  };
+  if (gWorkingTasks.length < kMaxWorkingTasks)
+    StartThumbnailTask(new_task);
+  else
+    gPendingTasks.push(new_task);
 }
 
 function StartThumbnailTask(task) {
-  var thumbnail_url = task.plugin.attributes.thumbnail_url;
-  if (!thumbnail_url)
-    return;
-  if (!thumbnail_url.match(/^https?:\/\//))
-    thumbnail_url = kThumbnailPrefix + thumbnail_url;
-  gadget.debug.trace("Start loading thumbnail: " + thumbnail_url);
+  gadget.debug.trace("Start loading thumbnail: " + task.full_thumbnail_url);
  
   var request = new XMLHttpRequest();
   try {
-    request.open("GET", thumbnail_url);
+    request.open("GET", task.full_thumbnail_url);
     task.request = request;
+
+    var cached_date =
+        gadgetBrowserUtils.getThumbnailCachedDate(task.thumbnail_url);
+    if (cached_date && cached_date.getTime() > 0) {
+      request.setRequestHeader("If-Modified-Since",
+                               // Windows compatibility: Windows JScript engine
+                               // returns UTC string ended with "UTC", which
+                               // doesn't conform to RFC2616.
+                               cached_date.toUTCString().replace("UTC", "GMT"));
+    }
+
     request.onreadystatechange = function() {
       OnRequestStateChange();
     };
@@ -67,14 +85,20 @@ function StartThumbnailTask(task) {
   function OnRequestStateChange() {
     if (request.readyState == 4) {
       if (request.status == 200) {
-        gadget.debug.trace("Finished loading a thumbnail: " + thumbnail_url);
+        gadget.debug.trace("Finished loading a thumbnail: " +
+                           task.full_thumbnail_url);
         var data = request.responseStream;
         task.thumbnail_element1.src = data;
         task.thumbnail_element2.src = data;
-        gadgetBrowserUtils.saveThumbnailToCache(task.plugin.id, data);
+        gadgetBrowserUtils.saveThumbnailToCache(task.thumbnail_url, data);
+        task.plugin.thumbnail_checked = true;
+      } else if (request.status == 304) {
+        gadget.debug.trace("Thumbnail not modified: " +
+                           task.full_thumbnail_url);
+        task.plugin.thumbnail_checked = true;
       } else {
-        gadget.debug.error("Request " + thumbnail_url + " returned status: " +
-                           request.status);
+        gadget.debug.error("Request " + task.full_thumbnail_url +
+                           " returned status: " + request.status);
       }
   
       for (var i = 0; i < gWorkingTasks.length; i++) {

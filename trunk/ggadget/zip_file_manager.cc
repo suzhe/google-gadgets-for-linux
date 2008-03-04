@@ -168,11 +168,12 @@ class ZipFileManager::Impl {
     return result;
   }
 
-  bool WriteFile(const char *file, const std::string &data) {
+  bool WriteFile(const char *file, const std::string &data, bool overwrite) {
     std::string relative_path;
     if (!CheckFilePath(file, &relative_path, NULL))
       return false;
 
+    // The 'overwrite' parameter is ignored here. 
     if (FileExists(file, NULL)) {
       LOG("Can't overwrite an existing file %s in zip archive %s.",
           relative_path.c_str(), base_path_.c_str());
@@ -469,8 +470,9 @@ bool ZipFileManager::ReadFile(const char *file, std::string *data) {
   return impl_->ReadFile(file, data);
 }
 
-bool ZipFileManager::WriteFile(const char *file, const std::string &data) {
-  return impl_->WriteFile(file, data);
+bool ZipFileManager::WriteFile(const char *file, const std::string &data,
+                               bool overwrite) {
+  return impl_->WriteFile(file, data, overwrite);
 }
 
 bool ZipFileManager::RemoveFile(const char *file) {
@@ -492,6 +494,11 @@ bool ZipFileManager::IsDirectlyAccessible(const char *file,
 
 std::string ZipFileManager::GetFullPath(const char *file) {
   return impl_->GetFullPath(file);
+}
+
+uint64_t ZipFileManager::GetLastModifiedTime(const char *base_path) {
+  // Not implemented.
+  return 0;
 }
 
 FileManagerInterface *ZipFileManager::Create(const char *base_path,

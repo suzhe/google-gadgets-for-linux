@@ -64,8 +64,10 @@ static const char *kGlobalExtensions[] = {
 };
 
 static const char *kGlobalResourcePaths[] = {
+#ifdef GGL_RESOURCE_DIR
   GGL_RESOURCE_DIR "/ggl-resources.gg",
   GGL_RESOURCE_DIR "/ggl-resources",
+#endif
   "ggl-resources.gg",
   "ggl-resources",
   NULL
@@ -224,8 +226,10 @@ int main(int argc, char* argv[]) {
 
   if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL)
     fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
-
-  // TODO: Add global profile file manager here.
+  // TODO: Proper profile directory.
+  if ((fm = ggadget::CreateFileManager(".")) != NULL)
+    fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
+  
   ggadget::SetGlobalFileManager(fm_wrapper);
 
   // Load global extensions.

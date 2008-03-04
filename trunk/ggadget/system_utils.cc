@@ -193,7 +193,7 @@ bool ReadFileContents(const char *path, std::string *content) {
 
   FILE *datafile = fopen(path, "r");
   if (!datafile) {
-    LOG("Failed to open file: %s", path);
+    LOG("Failed to open file: %s: %s", path, strerror(errno));
     return false;
   }
 
@@ -210,7 +210,7 @@ bool ReadFileContents(const char *path, std::string *content) {
   }
 
   if (ferror(datafile)) {
-    LOG("Error when reading file: %s", path);
+    LOG("Error when reading file: %s: %s", path, strerror(errno));
     content->clear();
     fclose(datafile);
     return false;

@@ -14,8 +14,7 @@
   limitations under the License.
 */
 
-#include <ggadget/directory_provider_interface.h>
-#include <ggadget/gadget_metadata.h>
+#include <ggadget/gadget_manager.h>
 #include <ggadget/logger.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/scriptable_array.h>
@@ -30,17 +29,21 @@ class ScriptableGadgetInfo : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x61fde0b5d5b94ab4, ScriptableInterface);
 
-  ScriptableGadgetInfo(const GadgetMetadata::GadgetInfo &info) {
-    RegisterConstant("id", info.id);
-    RegisterConstant("attributes", NewScriptableMap(info.attributes));
-    RegisterConstant("titles", NewScriptableMap(info.titles));
-    RegisterConstant("descriptions", NewScriptableMap(info.descriptions));
-    RegisterConstant("updated_date", Date(info.updated_date * INT64_C(1000)));
+  ScriptableGadgetInfo(const GadgetInfo &info)
+      // Must make a copy here because the info may be unavailable when
+      // background update runs. 
+      : info_(info) {
+    RegisterConstant("id", info_.id);
+    RegisterConstant("attributes", NewScriptableMap(info_.attributes));
+    RegisterConstant("titles", NewScriptableMap(info_.titles));
+    RegisterConstant("descriptions", NewScriptableMap(info_.descriptions));
+    RegisterConstant("updated_date", Date(info_.updated_date * INT64_C(1000)));
   }
 
   // Allow the script to add new script properties to this object.
   virtual bool IsStrict() const { return false; }
 
+  GadgetInfo info_;
 };
 
 // Provides utility function for the gadget browser gadget.
@@ -49,75 +52,64 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
   DEFINE_CLASS_ID(0x0659826090ca44b0, ScriptableInterface);
 
   GadgetBrowserScriptUtils()
-      // TODO: Acquire gadget metadata from GadgetManager, where periodical
-      // updates should be scheduled.
-      : gadget_metadata_((GetDirectoryProvider()->GetProfileDirectory() +
-                          "plugins.xml").c_str()) {
+      : gadget_manager_(GadgetManager::Get()) {
+    ASSERT(gadget_manager_);
     RegisterProperty("gadgetMetadata",
         NewSlot(this, &GadgetBrowserScriptUtils::GetGadgetMetadata), NULL);
     RegisterMethod("loadThumbnailFromCache",
         NewSlot(this, &GadgetBrowserScriptUtils::LoadThumbnailFromCache));
+    RegisterMethod("getThumbnailCachedDate",
+        NewSlot(this, &GadgetBrowserScriptUtils::GetThumbnailCachedDate));
     RegisterMethod("saveThumbnailToCache",
         NewSlot(this, &GadgetBrowserScriptUtils::SaveThumbnailToCache));
     RegisterMethod("needDownloadGadget",
-        NewSlot(this, &GadgetBrowserScriptUtils::NeedDownloadGadget));
+        NewSlot(gadget_manager_, &GadgetManager::NeedDownloadGadget));
+    RegisterMethod("needUpdateGadget",
+        NewSlot(gadget_manager_, &GadgetManager::NeedUpdateGadget));
     RegisterMethod("saveGadget",
         NewSlot(this, &GadgetBrowserScriptUtils::SaveGadget));
     RegisterMethod("addGadget",
-        NewSlot(this, &GadgetBrowserScriptUtils::AddGadget));
-    RegisterMethod("updateGadget",
-        NewSlot(this, &GadgetBrowserScriptUtils::UpdateGadget));
+        NewSlot(gadget_manager_, &GadgetManager::NewGadgetInstance));
+  }
+
+  ~GadgetBrowserScriptUtils() {
   }
 
   ScriptableArray *GetGadgetMetadata() {
-    const GadgetMetadata::GadgetInfoMap &map =
-        gadget_metadata_.GetAllGadgetInfo();
+    const GadgetInfoMap &map = gadget_manager_->GetAllGadgetInfo();
     Variant *array = new Variant[map.size()];
     size_t i = 0;
-    for (GadgetMetadata::GadgetInfoMap::const_iterator it = map.begin();
+    for (GadgetInfoMap::const_iterator it = map.begin();
          it != map.end(); ++it, ++i) {
       array[i] = Variant(new ScriptableGadgetInfo(it->second));
     }
     return ScriptableArray::Create(array, map.size());
   }
 
-  void SaveThumbnailToCache(const char *gadget_id,
+  void SaveThumbnailToCache(const char *thumbnail_url,
                             ScriptableBinaryData *image_data) {
-    // TODO:
+    if (thumbnail_url && image_data)
+      gadget_manager_->SaveThumbnailToCache(thumbnail_url, image_data->data());
   }
 
-  ScriptableBinaryData *LoadThumbnailFromCache(const char *gadget_id) {
-    // TODO:
-    return NULL;
+  ScriptableBinaryData *LoadThumbnailFromCache(const char *thumbnail_url) {
+    std::string data = gadget_manager_->LoadThumbnailFromCache(thumbnail_url);
+    return data.empty() ? NULL : new ScriptableBinaryData(data);
   }
 
-  bool NeedDownloadGadget(const char *gadget_id) {
-    // TODO:
-    return true;
+  Date GetThumbnailCachedDate(const char *thumbnail_url) {
+    return Date(gadget_manager_->GetThumbnailCachedTime(thumbnail_url));
   }
 
   void SaveGadget(const char *gadget_id, ScriptableBinaryData *data) {
-    // TODO:
-    LOG("Save Gadget: gadget_id=%s data_length=%zd", gadget_id, data->size());
+    if (gadget_id && data)
+      gadget_manager_->SaveGadget(gadget_id, data->data());
   }
 
-  int AddGadget(const char *gadget_id) {
-    // TODO:
-    LOG("Add Gadget: gadget_id=%s", gadget_id);
-    return 1;
-  }
-
-  int UpdateGadget(const char *gadget_id) {
-    // TODO:
-    LOG("Update Gadget: gadget_id=%s", gadget_id);
-    return 1;
-  }
-
-  // TODO: Acquire gadget metadata from GadgetManager.
-  GadgetMetadata gadget_metadata_;
+  GadgetManager *gadget_manager_;
 };
 
-GadgetBrowserScriptUtils *g_utils = NULL;
+GadgetBrowserScriptUtils g_utils;
 
 } // anonymous namespace
 } // namespace ggadget
@@ -130,22 +122,18 @@ GadgetBrowserScriptUtils *g_utils = NULL;
 extern "C" {
   bool Initialize() {
     LOG("Initialize gadget_browser_script_utils extension.");
-    if (!ggadget::g_utils)
-      ggadget::g_utils = new ggadget::GadgetBrowserScriptUtils();
     return true;
   }
 
   void Finalize() {
     LOG("Finalize gadget_browser_script_utils extension.");
-    delete ggadget::g_utils;
-    ggadget::g_utils = NULL;
   }
 
   bool RegisterScriptExtension(ggadget::ScriptContextInterface *context) {
     LOG("Register ggadget_browser_script_utils extension.");
     if (context) {
       if (!context->AssignFromNative(NULL, NULL, "gadgetBrowserUtils",
-                                     ggadget::Variant(ggadget::g_utils))) {
+                                     ggadget::Variant(&ggadget::g_utils))) {
         LOG("Failed to register helper.");
         return false;
       }

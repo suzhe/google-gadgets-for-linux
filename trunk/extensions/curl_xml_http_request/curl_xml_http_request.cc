@@ -113,10 +113,13 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return state_;
   }
 
-  void ChangeState(State new_state) {
+  bool ChangeState(State new_state) {
     DLOG("XMLHttpRequest: ChangeState from %d to %d", state_, new_state);
     state_ = new_state;
     onreadystatechange_signal_();
+    // ChangeState may re-entered during the signal, so the current state_
+    // may be different from the input parameter.
+    return state_ == new_state;
   }
 
   // The maximum data size of this class can process.
@@ -288,7 +291,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
-      ChangeState(OPENED);
+      if (!ChangeState(OPENED))
+        return INVALID_STATE_ERR;
 
       long timeout;
       curl_multi_timeout(curlm_, &timeout);
@@ -312,7 +316,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     } else {
       // As described in the spec, here don't change the state, but send
       // an event for historical reasons.
-      ChangeState(OPENED);
+      if (!ChangeState(OPENED))
+        return INVALID_STATE_ERR;
+
       CURLcode code = curl_easy_perform(curl_);
       if (code != CURLE_OK) {
         DLOG("XMLHttpRequest: Send: curl_easy_perform failed: %s",
@@ -621,8 +627,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (this_p->state_ == OPENED) {
       this_p->SplitStatusAndHeaders();
       this_p->ParseResponseHeaders();
-      this_p->ChangeState(HEADERS_RECEIVED);
-      this_p->ChangeState(LOADING);
+      if (!this_p->ChangeState(HEADERS_RECEIVED) ||
+          !this_p->ChangeState(LOADING))
+        return 0;
     }
     size_t real_size = size * mem_block;
     this_p->response_body_.append(static_cast<char *>(ptr), real_size);
@@ -652,17 +659,19 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void Done() {
     socket_ = 0;
     RemoveWatches();
-    if ((state_ == OPENED && send_flag_) ||
+    bool save_send_flag = send_flag_;
+    bool save_async = async_;
+    // Set send_flag_ to false early, to prevent problems when Done() is
+    // re-entered.
+    send_flag_ = false;
+    if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
 
-    if (send_flag_) {
-      send_flag_ = false;
-      if (async_) {
-        // Remove the internal reference that was added when the request was
-        // started.
-        Unref();
-      }
+    if (save_send_flag && save_async) {
+      // Remove the internal reference that was added when the request was
+      // started.
+      Unref();
     }
   }
 

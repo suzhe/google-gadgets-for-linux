@@ -118,6 +118,12 @@ class OptionsInterface {
   virtual bool Flush() = 0;
 
   /**
+   * Deletes the permanent storage for this OptionsInterface instance if the
+   * impl supports.
+   */
+  virtual void DeleteStorage() = 0;
+
+  /**
    * Enumerate all items.
    * @param callback called for each item, with the following parameters:
    *     - option item name;
@@ -136,8 +142,6 @@ class OptionsInterface {
   virtual bool EnumerateInternalItems(
       Slot2<bool, const char *, const Variant &> *callback) = 0;
 };
-
-const char kDefaultOptionsName[] = "default-options";
 
 /**
  * The function to create an @c OptionsInterface instance.

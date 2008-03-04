@@ -46,6 +46,18 @@ class EncryptorInterface {
   virtual ~EncryptorInterface() { }
 };
 
+/**
+ * Sets the global EncryptorInterface instance. An Encryptor extension module
+ * can call this function in its @c Initailize() function.
+ */
+bool SetEncryptor(EncryptorInterface *encryptor);
+
+/**
+ * Gets the global EncryptorInterface instance. Different from other global
+ * instances, this instance has a default one if no SetEncryptor() is called.
+ */
+EncryptorInterface *GetEncryptor();
+
 } // namespace ggadget
 
 #endif // GGADGET_ENCRYPTOR_INTERFACE_H__

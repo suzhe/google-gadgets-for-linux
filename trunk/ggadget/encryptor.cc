@@ -17,33 +17,11 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "encryptor.h"
-#include "extension_manager.h"
-#include "module.h"
+#include "encryptor_interface.h"
+#include "common.h"
 
 namespace ggadget {
 namespace {
-
-static const char kEncryptorExtensionSymbolName[] = "GetEncryptor";
-static EncryptorInterface *g_encryptor = NULL;
-
-class EncryptorExtensionRegister : public ExtensionRegisterInterface {
- public:
-  typedef EncryptorInterface *(*GetEncryptorFunc)();
-
-  virtual bool RegisterExtension(const Module *extension) {
-    ASSERT(extension);
-    GetEncryptorFunc func =
-        reinterpret_cast<GetEncryptorFunc>(
-            extension->GetSymbol(kEncryptorExtensionSymbolName));
-
-    if (func) {
-      g_encryptor = func();
-      return true;
-    }
-    return false;
-  }
-};
 
 // A very week encryptor.
 class SimpleEncryptor : public EncryptorInterface {
@@ -93,23 +71,22 @@ class SimpleEncryptor : public EncryptorInterface {
   }
 };
 
+static EncryptorInterface *g_encryptor = NULL;
+static SimpleEncryptor g_default_encryptor;
+
 } // anonymous namespace
 
-EncryptorInterface *GetEncryptor() {
-  if (!g_encryptor) {
-    const ExtensionManager *manager =
-        ExtensionManager::GetGlobalExtensionManager();
-    if (manager) {
-      EncryptorExtensionRegister reg;
-      manager->RegisterLoadedExtensions(&reg);
-    }
-
-    // Fall back to the simple encryptor.
-    if (!g_encryptor)
-      g_encryptor = new SimpleEncryptor();
+bool SetEncryptor(EncryptorInterface *encryptor) {
+  ASSERT(!g_encryptor && encryptor);
+  if (!g_encryptor && encryptor) {
+    g_encryptor = encryptor;
+    return true;
   }
-  ASSERT(g_encryptor);
-  return g_encryptor;
+  return false;
+}
+
+EncryptorInterface *GetEncryptor() {
+  return g_encryptor ? g_encryptor : &g_default_encryptor;
 }
 
 } // namespace ggadget

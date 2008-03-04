@@ -43,7 +43,8 @@ static const char kRSSURLOption[] = "RSS_URL";
 
 GtkGadgetHost::GtkGadgetHost(bool composited, bool useshapemask,
                              double zoom, int debug_mode)
-    : options_(CreateOptions("")),
+      // TODO: Ask GadgetManager for the options name.
+    : options_(CreateOptions("XXXXX")),
       gadget_(NULL),
       plugin_flags_(0),
       composited_(composited),

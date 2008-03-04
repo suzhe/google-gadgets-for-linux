@@ -92,6 +92,7 @@ void MemoryOptions::Remove(const char *name) {
   Impl::OptionsMap::iterator it = impl_->values_.find(name);
   if (it != impl_->values_.end()) {
     impl_->values_.erase(it);
+    impl_->encrypted_.erase(name);
     impl_->FireChangedEvent(name, Variant());
   }
 }
@@ -101,6 +102,7 @@ void MemoryOptions::RemoveAll() {
     Impl::OptionsMap::iterator it = impl_->values_.begin();
     std::string name(it->first);
     impl_->values_.erase(it);
+    impl_->encrypted_.erase(name);
     impl_->FireChangedEvent(name.c_str(), Variant());
   }
 }
@@ -124,6 +126,12 @@ void MemoryOptions::PutInternalValue(const char *name, const Variant &value) {
 
 bool MemoryOptions::Flush() {
   return true;
+}
+
+void MemoryOptions::DeleteStorage() {
+  impl_->values_.clear();
+  impl_->internal_values_.clear();
+  impl_->encrypted_.clear();
 }
 
 bool MemoryOptions::EnumerateItems(

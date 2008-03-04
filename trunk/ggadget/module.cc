@@ -93,16 +93,18 @@ class Module::Impl {
         module_path = BuildFilePath(it->c_str(), module_name.c_str(), NULL);
         new_handle = lt_dlopenext(module_path.c_str());
         if (new_handle) break;
-      }
 #ifdef DEBUG_MODULES
-      const char *err = lt_dlerror();
-      if (err)
-        DLOG("Failed to load module %s: %s", name, err);
+        const char *err = lt_dlerror();
+        if (err)
+          DLOG("Failed to load module %s: %s", name, err);
 #endif
+      }
     }
 
-    if (!new_handle)
+    if (!new_handle) {
+      LOG("Failed to load module %s", name);
       return false;
+    }
 
     const lt_dlinfo *module_info = lt_dlgetinfo(new_handle);
     ASSERT(module_info);

@@ -83,16 +83,8 @@ TEST(signal, SignalBasics) {
     delete temp_slot;
   }
 
-  // Disconnect the connection.
-  connection->Disconnect();
-  ASSERT_TRUE(connection->blocked());
-  for (int i = 0; i < kNumTestData; i++) {
-    Slot *temp_slot = meta_signal(i);
-    ASSERT_TRUE(temp_slot == NULL);
-  }
-
   // A disconnected connection will be always blocked.
-  connection->Unblock();
+  connection->Block();
   ASSERT_TRUE(connection->blocked());
   for (int i = 0; i < kNumTestData; i++) {
     Slot *temp_slot = meta_signal(i);
@@ -105,6 +97,13 @@ TEST(signal, SignalBasics) {
     Slot *temp_slot = meta_signal(i);
     CheckSlot(i, temp_slot);
     delete temp_slot;
+  }
+
+  // Disconnect the connection.
+  connection->Disconnect();
+  for (int i = 0; i < kNumTestData; i++) {
+    Slot *temp_slot = meta_signal(i);
+    ASSERT_TRUE(temp_slot == NULL);
   }
 }
 

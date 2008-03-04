@@ -18,6 +18,7 @@
 #define GGADGET_FILE_MANAGER_INTERFACE_H__
 
 #include <string>
+#include <stdint.h>
 
 namespace ggadget {
 
@@ -62,9 +63,11 @@ class FileManagerInterface {
    *
    * @param file the file name relative to the base path.
    * @param data the contents to be written.
+   * @param overwrite if overwriting allowed if the file exists.
    * @return @c true if succeeded.
    */
-  virtual bool WriteFile(const char *file, const std::string &data) = 0;
+  virtual bool WriteFile(const char *file, const std::string &data,
+                         bool overwrite) = 0;
 
   /**
    * Removes a specified file.
@@ -134,6 +137,14 @@ class FileManagerInterface {
    *         returned.
    */
   virtual std::string GetFullPath(const char *file) = 0;
+
+  /**
+   * @param file the file name relative to the base path.
+   * @return the last modified time of the specified file, or 0 on any error.
+   *     The time value is number of milliseconds since EPOCH.
+   */
+  virtual uint64_t GetLastModifiedTime(const char *file) = 0;
+
 };
 
 } // namespace ggadget

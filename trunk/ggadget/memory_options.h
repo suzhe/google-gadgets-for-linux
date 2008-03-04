@@ -46,6 +46,7 @@ class MemoryOptions : public OptionsInterface {
   virtual Variant GetInternalValue(const char *name);
   virtual void PutInternalValue(const char *name, const Variant &value);
   virtual bool Flush();
+  virtual void DeleteStorage();
   virtual bool EnumerateItems(
       Slot3<bool, const char *, const Variant &, bool> *callback);
   virtual bool EnumerateInternalItems(

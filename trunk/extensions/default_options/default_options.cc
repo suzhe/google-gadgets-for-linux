@@ -14,7 +14,9 @@
   limitations under the License.
 */
 
-#include <ggadget/encryptor.h>
+#include <ggadget/encryptor_interface.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/memory_options.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/system_utils.h>
@@ -22,6 +24,12 @@
 
 namespace ggadget {
 namespace {
+
+static const std::string kOptionsFilePrefix("profile://options/");
+// Options will be automatically flushed to disk every 2 ~ 3 minutes.
+static const int kAutoFlushInterval = 120000;
+// This variant is to prevent multiple options flush in the same step.
+static const int kAutoFlushIntervalVariant = 60000;
 
 // An options file is an XML file in the following format:
 // <code>
@@ -49,52 +57,67 @@ namespace {
 
 class DefaultOptions : public MemoryOptions {
  public:
-  DefaultOptions(const char *config_file_path)
-      : config_file_path_(config_file_path),
-        out_file_(NULL) {
+  DefaultOptions(const char *name)
+      : main_loop_(GetGlobalMainLoop()),
+        file_manager_(GetGlobalFileManager()),
+        parser_(GetXMLParser()),
+        encryptor_(GetEncryptor()),
+        name_(name),
+        location_(kOptionsFilePrefix + name + ".xml"),
+        changed_(false),
+        ref_count_(0) {
+    ASSERT(name && *name);
+    ASSERT(main_loop_);
+    ASSERT(file_manager_);
+    ASSERT(parser_);
+    ASSERT(encryptor_);
+
+    if (!name || !*name)
+      return;
+
+    // Schedule the auto flush timer.
+    main_loop_->AddTimeoutWatch(
+        kAutoFlushInterval + rand() % kAutoFlushIntervalVariant,
+        new WatchCallbackSlot(NewSlot(this, &DefaultOptions::OnFlushTimer)));
+
     std::string data;
-    if (!ReadFileContents(config_file_path, &data)) {
+    if (!file_manager_->ReadFile(location_.c_str(), &data)) {
       // Not a fatal error, just leave this Options empty. 
       return;
     }
 
-    EncryptorInterface *encryptor = GetEncryptor();
-    ASSERT(encryptor);
-    XMLParserInterface *parser = GetXMLParser();    
-    ASSERT(parser);
-
     GadgetStringMap table;
-    if (parser->ParseXMLIntoXPathMap(data, config_file_path, "options",
-                                     NULL, &table)) {
+    if (parser_->ParseXMLIntoXPathMap(data, location_.c_str(), "options",
+                                      NULL, &table)) {
       for (GadgetStringMap::const_iterator it = table.begin();
            it != table.end(); ++it) {
         const std::string &key = it->first;
         if (key.find('@') != key.npos)
           continue;
 
-        const char *name = GetValue(table, key + "@name");
-        const char *type = GetValue(table, key + "@type");
+        const char *name = GetXPathValue(table, key + "@name");
+        const char *type = GetXPathValue(table, key + "@type");
         if (!name || !type) {
           LOG("Missing required name and/or type attribute in config file '%s'",
-              config_file_path);
+              location_.c_str());
           continue;
         }
 
-        const char *encrypted_attr = GetValue(table, key + "@encrypted");
+        const char *encrypted_attr = GetXPathValue(table, key + "@encrypted");
         bool encrypted = encrypted_attr && encrypted_attr[0] == '1';
         std::string value_str = UnescapeValue(it->second);
         if (encrypted) {
           std::string temp(value_str);
-          if (!encryptor->Decrypt(temp, &value_str)) {
+          if (!encryptor_->Decrypt(temp, &value_str)) {
             LOG("Failed to decript value for item '%s' in config file '%s'",
-                name, config_file_path);
+                name, location_.c_str());
             continue;
           }
         }
 
         Variant value = ParseValueStr(type, value_str);
         if (value.type() != Variant::TYPE_VOID) {
-          const char *internal_attr = GetValue(table, key + "@internal");
+          const char *internal_attr = GetXPathValue(table, key + "@internal");
           std::string unescaped_name = UnescapeValue(name);
           bool internal = internal_attr && internal_attr[0] == '1';
           if (internal) {
@@ -107,13 +130,34 @@ class DefaultOptions : public MemoryOptions {
           }
         } else {
           LOG("Failed to decode value for item '%s' in config file '%s'",
-              name, config_file_path);
+              name, location_.c_str());
         }
       }
     }
+
+    ConnectOnOptionChanged(NewSlot(this, &DefaultOptions::OnOptionChange));
   }
 
-  const char *GetValue(const GadgetStringMap &table, const std::string &key) {
+  virtual ~DefaultOptions() {
+    Flush();
+  }
+
+  bool OnFlushTimer(int timer) {
+    // DeleteStorage() sets file_manager_ to NULL.
+    if (!file_manager_)
+      return false;
+
+    if (changed_)
+      Flush();
+    return true;
+  }
+
+  void OnOptionChange(const char *option) {
+    changed_ = true;
+  }
+
+  static const char *GetXPathValue(const GadgetStringMap &table,
+                                   const std::string &key) {
     GadgetStringMap::const_iterator it = table.find(key);
     return it == table.end() ? NULL : it->second.c_str();
   }
@@ -203,12 +247,13 @@ class DefaultOptions : public MemoryOptions {
 
   void WriteItemCommon(const char *name, const Variant &value,
                        bool internal, bool encrypted) {
-    XMLParserInterface *parser = GetXMLParser();
-    fprintf(out_file_, " <item name=\"%s\" type=\"%c\"",
-            parser->EncodeXMLString(EscapeValue(name).c_str()).c_str(),
-            GetValueType(value));
+    out_data_ += " <item name=\"";
+    out_data_ += parser_->EncodeXMLString(EscapeValue(name).c_str()),
+    out_data_ += "\" type=\"";
+    out_data_ += GetValueType(value);
+    out_data_ += "\"";
     if (internal)
-      fprintf(out_file_, " internal=\"1\"");
+      out_data_ += " internal=\"1\"";
 
     std::string str_value;
     // JSON and DATE types can't be converted to string by default logic.
@@ -220,12 +265,13 @@ class DefaultOptions : public MemoryOptions {
       value.ConvertToString(&str_value); // Errors are ignored.
 
     if (encrypted) {
-      fprintf(out_file_, " encrypted=\"1\"");
+      out_data_ += " encrypted=\"1\"";
       std::string temp(str_value);
-      GetEncryptor()->Encrypt(temp, &str_value);
+      encryptor_->Encrypt(temp, &str_value);
     }
-    fprintf(out_file_, ">%s</item>\n",
-            parser->EncodeXMLString(EscapeValue(str_value).c_str()).c_str());
+    out_data_ += ">";
+    out_data_ += parser_->EncodeXMLString(EscapeValue(str_value).c_str());
+    out_data_ += "</item>\n";
   }
 
   bool WriteItem(const char *name, const Variant &value, bool encrypted) {
@@ -239,27 +285,140 @@ class DefaultOptions : public MemoryOptions {
   }
 
   virtual bool Flush() {
-    out_file_ = fopen(config_file_path_.c_str(), "w");
-    if (!out_file_) {
-      LOG("Failed to write to file: %s", config_file_path_.c_str());
+    if (!file_manager_)
       return false;
-    }
-    fprintf(out_file_,
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<options>\n");
+
+    DLOG("Flush options file: %s", location_.c_str());
+    out_data_.clear();
+    out_data_ = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<options>\n";
     EnumerateItems(NewSlot(this, &DefaultOptions::WriteItem));
     EnumerateInternalItems(NewSlot(this, &DefaultOptions::WriteInternalItem));
-    fprintf(out_file_, "</options>\n");
-    fclose(out_file_);
-    return true;
+    out_data_ += "</options>\n";
+    bool result = file_manager_->WriteFile(location_.c_str(), out_data_, true);
+    out_data_.clear();
+    if (result)
+      changed_ = false;
+    return result;
   }
 
-  std::string config_file_path_;
-  FILE *out_file_;  // Only available during Flush().
+  virtual void DeleteStorage() {
+    MemoryOptions::DeleteStorage();
+    file_manager_->RemoveFile(location_.c_str());
+    file_manager_ = NULL;
+    // Delete it from the map to prevent it from being further used.
+    options_map_.erase(name_);
+  }
+
+  // Singleton management.
+  typedef std::map<std::string, DefaultOptions *> OptionsMap;
+  static DefaultOptions *GetOptions(const char *name) {
+    DefaultOptions *options;
+    OptionsMap::const_iterator it = options_map_.find(name);
+    if (it == options_map_.end()) {
+      options = new DefaultOptions(name);
+      options_map_[name] = options;
+    }
+    return options;
+  }
+
+  static void FinalizeAllOptions() {
+    for (OptionsMap::const_iterator it = options_map_.begin();
+         it != options_map_.end(); ++it)
+      delete it->second;
+    options_map_.clear();
+  }
+
+  void Ref() {
+    ref_count_++;
+  }
+
+  void Unref() {
+    ASSERT(ref_count_ > 0);
+    ref_count_--;
+    if (ref_count_ == 0)
+      delete this;
+  }
+
+  MainLoopInterface *main_loop_;
+  FileManagerInterface *file_manager_;
+  XMLParserInterface *parser_;
+  EncryptorInterface *encryptor_;
+  std::string name_;
+  std::string location_;
+  std::string out_data_;  // Only available during Flush().
+  bool changed_; // Whether changed since last Flush().
+  int ref_count_;
+
+  static OptionsMap options_map_;
+};
+
+DefaultOptions::OptionsMap DefaultOptions::options_map_;
+
+class OptionsDelegator : public OptionsInterface {
+ public:
+  OptionsDelegator(DefaultOptions *back_options)
+      : back_options_(back_options) {
+    back_options_->Ref();
+  }
+  ~OptionsDelegator() {
+    back_options_->Unref();
+  }
+
+  virtual Connection *ConnectOnOptionChanged(
+      Slot1<void, const char *> *handler) {
+    return back_options_->ConnectOnOptionChanged(handler);
+  } 
+  virtual size_t GetCount() { return back_options_->GetCount(); }
+  virtual void Add(const char *name, const Variant &value) {
+    return back_options_->Add(name, value);
+  }
+  virtual bool Exists(const char *name) { return back_options_->Exists(name); }
+  virtual Variant GetDefaultValue(const char *name) {
+    return back_options_->GetDefaultValue(name);
+  }
+  virtual void PutDefaultValue(const char *name, const Variant &value) {
+    back_options_->PutDefaultValue(name, value);
+  }
+  virtual Variant GetValue(const char *name) {
+    return back_options_->GetValue(name);
+  }
+  virtual void PutValue(const char *name, const Variant &value) {
+    back_options_->PutValue(name, value);
+  }
+  virtual void Remove(const char *name) { back_options_->Remove(name); }
+  virtual void RemoveAll() { back_options_->RemoveAll(); }
+  virtual void EncryptValue(const char *name) {
+    back_options_->EncryptValue(name);
+  }
+  virtual bool IsEncrypted(const char *name) {
+    return back_options_->IsEncrypted(name);
+  }
+  virtual Variant GetInternalValue(const char *name) {
+    return back_options_->GetInternalValue(name);
+  }
+  virtual void PutInternalValue(const char *name, const Variant &value) {
+    back_options_->PutInternalValue(name, value);
+  }
+  virtual bool Flush() { return back_options_->Flush(); }
+  virtual void DeleteStorage() { back_options_->DeleteStorage(); }
+  virtual bool EnumerateItems(
+      Slot3<bool, const char *, const Variant &, bool> *callback) {
+    return back_options_->EnumerateItems(callback);
+  }
+  virtual bool EnumerateInternalItems(
+      Slot2<bool, const char *, const Variant &> *callback) {
+    return back_options_->EnumerateInternalItems(callback);
+  }
+
+  DefaultOptions *back_options_;
 };
 
 OptionsInterface *DefaultOptionsFactory(const char *name) {
-  return new DefaultOptions(name);
+  return new OptionsDelegator(DefaultOptions::GetOptions(name));
 }
+
+static OptionsDelegator g_global_options(
+    DefaultOptions::GetOptions("global-options"));
 
 } // anonymous namespace
 } // namespace ggadget
@@ -270,10 +429,12 @@ OptionsInterface *DefaultOptionsFactory(const char *name) {
 extern "C" {
   bool Initialize() {
     DLOG("Initialize default_options extension.");
-    return ggadget::SetOptionsFactory(&ggadget::DefaultOptionsFactory);
+    return ggadget::SetOptionsFactory(&ggadget::DefaultOptionsFactory) &&
+           ggadget::SetGlobalOptions(&ggadget::g_global_options);
   }
 
   void Finalize() {
     DLOG("Finalize default_options extension.");
+    ggadget::DefaultOptions::FinalizeAllOptions();
   }
 }

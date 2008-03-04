@@ -276,9 +276,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       path = std::string(base_path);
     }
 
-    FileManagerInterface *fm = CreateFileManager(path.c_str());
+    FileManagerInterface *fm = CreateGadgetFileManager(base_path);
     if (fm)
-      file_manager_->RegisterFileManager("", new LocalizedFileManager(fm));
+      file_manager_->RegisterFileManager("", fm);
 
     // Create system FileManager
     fm = CreateFileManager(kDirSeparatorStr);
@@ -302,6 +302,20 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (extension_manager_)
       extension_manager_->Destroy();
     delete file_manager_;
+  }
+
+  static FileManagerInterface *CreateGadgetFileManager(const char *base_path) {
+    std::string path, filename;
+    SplitFilePath(base_path, &path, &filename);
+  
+    // Uses the parent path of base_path if it refers to a manifest file.
+    if (filename.length() <= strlen(kGManifestExt) ||
+        strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
+                   kGManifestExt) != 0) {
+      path = base_path;
+    }
+    FileManagerInterface *fm = CreateFileManager(path.c_str());
+    return fm ? new LocalizedFileManager(fm) : NULL;
   }
 
   void DebugError(const char *message) {
@@ -491,43 +505,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   bool Init() {
-    // Load string table.
-    std::string strings_data;
-    if (file_manager_->ReadFile(kStringsXML, &strings_data)) {
-      std::string full_path = file_manager_->GetFullPath(kStringsXML);
-      // For compatibility with some Windows gadget files that use ISO8859-1
-      // encoding without declaration.
-      if (!GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
-                                                full_path.c_str(),
-                                                kStringsTag, NULL,
-                                                &strings_map_))
-        GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
-                                             full_path.c_str(),
-                                             kStringsTag, "ISO8859-1",
-                                             &strings_map_);
-    }
+    if (!ReadStringsAndManifest(file_manager_, &strings_map_,
+                                &manifest_info_map_))
+      return false;
 
     RegisterStrings(&strings_map_, &gadget_global_);
     RegisterStrings(&strings_map_, &strings_);
-
-    std::string manifest_contents;
-    if (!file_manager_->ReadFile(kGadgetGManifest, &manifest_contents) ||
-        !ReplaceXMLEntities(strings_map_, &manifest_contents))
-      return false;
-
-    std::string manifest_path = file_manager_->GetFullPath(kGadgetGManifest);
-    if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
-                                              manifest_path.c_str(),
-                                              kGadgetTag, NULL,
-                                              &manifest_info_map_)) {
-      // For compatibility with some Windows gadget files that use ISO8859-1
-      // encoding without declaration.
-      if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
-                                                manifest_path.c_str(),
-                                                kGadgetTag, "ISO8859-1",
-                                                &manifest_info_map_))
-        return false;
-    }
 
     // TODO: Is it necessary to check the required fields in manifest?
     DLOG("Gadget min version: %s",
@@ -588,6 +571,46 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
 
     has_options_xml_ = file_manager_->FileExists(kOptionsXML, NULL);
+    return true;
+  }
+
+  static bool ReadStringsAndManifest(FileManagerInterface *file_manager,
+                                     GadgetStringMap *strings_map,
+                                     GadgetStringMap *manifest_info_map) {
+    // Load string table.
+    std::string strings_data;
+    if (file_manager->ReadFile(kStringsXML, &strings_data)) {
+      std::string full_path = file_manager->GetFullPath(kStringsXML);
+      // For compatibility with some Windows gadget files that use ISO8859-1
+      // encoding without declaration.
+      if (!GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
+                                                full_path.c_str(),
+                                                kStringsTag, NULL,
+                                                strings_map))
+        GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
+                                             full_path.c_str(),
+                                             kStringsTag, "ISO8859-1",
+                                             strings_map);
+    }
+
+    std::string manifest_contents;
+    if (!file_manager->ReadFile(kGadgetGManifest, &manifest_contents) ||
+        !ReplaceXMLEntities(*strings_map, &manifest_contents))
+      return false;
+
+    std::string manifest_path = file_manager->GetFullPath(kGadgetGManifest);
+    if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                              manifest_path.c_str(),
+                                              kGadgetTag, NULL,
+                                              manifest_info_map)) {
+      // For compatibility with some Windows gadget files that use ISO8859-1
+      // encoding without declaration.
+      if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                                manifest_path.c_str(),
+                                                kGadgetTag, "ISO8859-1",
+                                                manifest_info_map))
+        return false;
+    }
     return true;
   }
 
@@ -676,6 +699,20 @@ bool Gadget::ShowDetailsView(DetailsView *details_view,
 
 void Gadget::CloseDetailsView() {
   return impl_->CloseDetailsView();
+}
+
+bool Gadget::GetGadgetManifest(const char *base_path, GadgetStringMap *data) {
+  ASSERT(base_path);
+  ASSERT(data);
+
+  FileManagerInterface *file_manager = Impl::CreateGadgetFileManager(base_path);
+  if (!file_manager)
+    return false;
+
+  GadgetStringMap strings_map;
+  bool result = Impl::ReadStringsAndManifest(file_manager, &strings_map, data);
+  delete file_manager;
+  return result;
 }
 
 } // namespace ggadget
