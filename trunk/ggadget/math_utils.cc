@@ -144,6 +144,10 @@ double DegreesToRadians(double degrees) {
   return degrees * M_PI / 180.;
 }
 
+double RadiansToDegrees(double radians) {
+  return radians * 180. / M_PI;
+}
+
 bool IsPointInElement(double x, double y, double width, double height) {
   return 0. <= x && 0. <= y && x < width && y < height;  
 }

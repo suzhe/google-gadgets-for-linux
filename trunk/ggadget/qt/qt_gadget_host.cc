@@ -20,53 +20,36 @@
 #include <sys/wait.h>
 #include <fontconfig/fontconfig.h>
 
-#include <ggadget/script_runtime_manager.h>
 #include <ggadget/element_factory.h>
-#include <ggadget/file_manager.h>
-#include <ggadget/file_manager_wrapper.h>
-#include <ggadget/framework_interface.h>
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
-#include <ggadget/script_runtime_interface.h>
-#include <ggadget/xml_parser.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/script_runtime_manager.h>
+#include <ggadget/xml_parser_interface.h>
+#include <ggadget/main_loop_interface.h>
+#include <ggadget/file_manager_interface.h>
 
 #include "qt_gadget_host.h"
-#include "global_file_manager.h"
 #include "qt_view_host.h"
-#include "options.h"
 
 namespace ggadget {
 namespace qt {
 
-static const char kResourceZipName[] = "ggl-resources.bin";
+static const char kRSSGadgetName[] = "rss_gadget.gg";
+static const char kRSSURLOption[] = "RSS_URL";
 
 QtGadgetHost::QtGadgetHost(bool composited, bool useshapemask,
                            double zoom, int debug_mode)
-    : resource_file_manager_(new FileManager(GetXMLParser())),
-      global_file_manager_(new GlobalFileManager()),
-      file_manager_(NULL),
-      options_(new Options()),
+    : options_(CreateOptions("")),
       gadget_(NULL),
       plugin_flags_(0),
       composited_(composited),
       useshapemask_(useshapemask),
       zoom_(zoom),
       debug_mode_(debug_mode) {
-  FileManagerWrapper *wrapper = new FileManagerWrapper(GetXMLParser());
-  file_manager_ = wrapper;
-
-  resource_file_manager_->Init(kResourceZipName);
-  wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
-                               resource_file_manager_);
-
-  global_file_manager_->Init(ggadget::kDirSeparatorStr);
-  wrapper->RegisterFileManager(ggadget::kDirSeparatorStr,
-                               global_file_manager_);
-
   ScriptRuntimeManager::get()->ConnectErrorReporter(
       NewSlot(this, &QtGadgetHost::ReportScriptError));
-
   FcInit(); // Just in case this hasn't been done.
 }
 
@@ -75,16 +58,6 @@ QtGadgetHost::~QtGadgetHost() {
   gadget_ = NULL;
   delete options_;
   options_ = NULL;
-  delete file_manager_;
-  file_manager_ = NULL;
-  delete resource_file_manager_;
-  resource_file_manager_ = NULL;
-  delete global_file_manager_;
-  global_file_manager_ = NULL;
-}
-
-FileManagerInterface *QtGadgetHost::GetFileManager() {
-  return file_manager_;
 }
 
 OptionsInterface *QtGadgetHost::GetOptions() {
@@ -188,92 +161,35 @@ void QtGadgetHost::ReportScriptError(const char *message) {
 }
 
 bool QtGadgetHost::LoadFont(const char *filename) {
-  std::string fontfile;
-  if (!file_manager_->ExtractFile(filename, &fontfile)) {
-    return false;
-  }
-
-  loaded_fonts_[filename] = fontfile;
-
   FcConfig *config = FcConfigGetCurrent();
   bool success = FcConfigAppFontAddFile(config,
-                   reinterpret_cast<const FcChar8 *>(fontfile.c_str()));
-  DLOG("LoadFont: %s %s", filename, fontfile.c_str());
+                   reinterpret_cast<const FcChar8 *>(filename));
+  DLOG("LoadFont: %s %s", filename, success ? "success" : "fail");
   return success;
 }
 
-bool QtGadgetHost::UnloadFont(const char *filename) {
-  // FontConfig doesn't actually allow dynamic removal of App Fonts, so
-  // just remove the file.
-  std::map<std::string, std::string>::iterator i = loaded_fonts_.find(filename);
-  if (i == loaded_fonts_.end()) {
-    return false;
-  }
-
-  unlink((i->second).c_str()); // ignore return
-  loaded_fonts_.erase(i);
-
-  return true;
-}
-
 bool QtGadgetHost::LoadGadget(const char *base_path) {
-  gadget_ = new Gadget(this, debug_mode_);
-  if (!file_manager_->Init(base_path) || !gadget_->Init()) {
+  bool is_url = IsValidRSSURL(base_path);   
+  if (is_url) {
+    // Seed options with URL.
+    std::string json_url = "\"";
+    json_url += base_path;
+    json_url += "\"";
+    Variant url = Variant(JSONString(json_url)); // raw objects
+
+    // Use putValue instead of putDefaultValue since gadget may set its own
+    // default. Gadget can check if it has been initialized by host by checking
+    // exists().
+    options_->PutValue(kRSSURLOption, url); 
+  }
+
+  gadget_ = new Gadget(this, is_url ? kRSSGadgetName : base_path, debug_mode_);
+  if (!gadget_->Init()) {
     return false;
   }
 
   return true;
 }
-
-/*bool QtGadgetHost::BrowseForFiles(const char *filter, bool multiple,
-                                  std::vector<std::string> *result) {
-  ASSERT(result);
-  result->clear();
-
-  QStringList filters;
-  QFileDialog dialog;
-  if (multiple) dialog.setFileMode(QFileDialog::ExistingFiles);
-  if (filter && *filter) {
-    size_t len = strlen(filter);
-    char *copy = static_cast<char*>(malloc(len + 2));
-    memcpy(copy, filter, len + 1);
-    copy[len] = '|';
-    copy[len + 1] = '\0';
-    char *str = copy;
-    int i = 0;
-    int t = 0;
-    while (str[i] != '\0') {
-      if (str[i] == '|') {
-        t++;
-        if (t == 1) str[i] = '(';
-        if (t == 2) {
-          str[i] = ')';
-          char bak = str[i + 1];
-          str[i + 1] = '\0';
-          filters << str;
-          str[i + 1] = bak;
-          str = &str[i+1];
-          i = 0;
-          t = 0;
-          continue;
-        }
-      } else if (str[i] == ';' && t == 1) {
-        str[i] = ' ';
-      }
-      i++;
-    }
-    free(copy);
-    dialog.setFilters(filters);
-  }
-  if (dialog.exec()) {
-    QStringList fnames = dialog.selectedFiles();
-    for (int i = 0; i < fnames.size(); ++i)
-      result->push_back(fnames.at(i).toStdString());
-    return true;
-  }
-  return false;
-}
-*/
 
 } // namespace qt
 } // namespace ggadget

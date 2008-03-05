@@ -199,7 +199,7 @@ AC_C_BIGENDIAN(
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
 # Check qt4
-PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3], [has_qt4=yes], [has_qt4=no])
+PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3], [has_qt4=yes], [has_qt4=no])
 
 # Check pango related libraries.
 PKG_CHECK_MODULES(PANGO, [pango  >= 1.10.0], [has_pango=yes], [has_pango=no])
@@ -343,6 +343,7 @@ build_libggadget_dbus=yes
 build_gtkmoz_browser_element=yes
 build_gst_audio_framework=yes
 build_qt_host=yes
+build_qt_system_framework=yes
 build_gtk_system_framework=yes
 build_smjs_script_runtime=yes
 build_curl_xml_http_request=yes
@@ -383,6 +384,7 @@ if test x$has_qt4 != xyes; then
   AC_MSG_WARN([Library qt-4.3 or above is not available, qt host and libggadget-qt won't be built])
   build_qt_host=no
   build_libggadget_qt=no
+  build_qt_system_framework=no
 fi
 
 if test x$has_spidermonkey != xyes; then
@@ -427,6 +429,10 @@ AM_CONDITIONAL(
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
   [test x$build_gtk_system_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QT_SYSTEM_FRAMEWORK],
+  [test x$build_qt_system_framework = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_SMJS_SCRIPT_RUNTIME],
@@ -487,10 +493,12 @@ AC_CONFIG_FILES([Makefile
 		 extensions/Makefile
 		 extensions/dbus_script_class/Makefile
 		 extensions/gtk_edit_element/Makefile
+		 extensions/qt_edit_element/Makefile
 		 extensions/gtkmoz_browser_element/Makefile
 		 extensions/default_framework/Makefile
 		 extensions/gst_audio_framework/Makefile
 		 extensions/gtk_system_framework/Makefile
+		 extensions/qt_system_framework/Makefile
 		 extensions/linux_system_framework/Makefile
 		 extensions/linux_system_framework/tests/Makefile
 		 extensions/smjs_script_runtime/Makefile
@@ -547,6 +555,7 @@ Build options:
   Build gtkmoz-browser-element  $build_gtkmoz_browser_element
   Build gst-audio-framework     $build_gst_audio_framework
   Build gtk-system-framework    $build_gtk_system_framework
+  Build qt-system-framework     $build_qt_system_framework
   Build linux-system-framework  $build_linux_system_framework
   Build smjs-script-runtime     $build_smjs_script_runtime
   Build curl-xml-http-request   $build_curl_xml_http_request

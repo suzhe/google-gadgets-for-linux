@@ -30,7 +30,7 @@ namespace qt {
 class QtFont : public FontInterface {
  public:
   QtFont(const char *family, size_t size, Style style,
-          Weight weight);
+         Weight weight);
   virtual ~QtFont();
 
   virtual Style GetStyle() const { return style_; };
@@ -41,6 +41,7 @@ class QtFont : public FontInterface {
 
   bool GetTextExtents(const char *text, double *width, double *height) const;
   QFont *GetQFont() const { return font_; }
+
  private:
   QFont *font_;
   size_t size_;
@@ -48,7 +49,7 @@ class QtFont : public FontInterface {
   Weight weight_;
 };
 
-} // namespace qt 
+} // namespace qt
 } // namespace ggadget
 
 #endif // GGADGET_QT_QT_FONT_H__

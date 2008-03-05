@@ -22,14 +22,20 @@
 #include <vector>
 #include <stack>
 #include <algorithm>
-#include <QPixmap>
+#include <QImage>
 #include <QPainter>
 #include <ggadget/scoped_ptr.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
+#include <ggadget/math_utils.h>
 #include "qt_graphics.h"
 #include "qt_canvas.h"
 #include "qt_font.h"
+
+#if 1
+#undef DLOG
+#define DLOG  true ? (void) 0 : LOG
+#endif
 
 namespace ggadget {
 namespace qt {
@@ -38,46 +44,54 @@ const char *const kEllipsisText = "...";
 static inline int D2I(double d) { return static_cast<int>(round(d)); }
 
 class QtCanvas::Impl {
-  static int seq;
  public:
   Impl(size_t w, size_t h)
-    : width_(w), height_(h), opacity_(1.), pixmap_(w, h) {
-    pixmap_.fill(Qt::transparent);
-    painter_ = new QPainter(&pixmap_);
+    : width_(w), height_(h), opacity_(1.),
+      image_(w, h, QImage::Format_ARGB32) {
+    image_.fill(Qt::transparent);
+    painter_ = new QPainter(&image_);
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    not_free_painter_ = false;
   }
+
   Impl(const std::string &data) {
-    bool ret = pixmap_.loadFromData(
-            reinterpret_cast<const uchar *>(data.c_str()),
-            data.length());
+    bool ret = image_.loadFromData(
+        reinterpret_cast<const uchar *>(data.c_str()),
+        data.length());
     if (ret) {
-      width_ = pixmap_.width();
-      height_ = pixmap_.height();
-      painter_ = new QPainter(&pixmap_);
+      width_ = image_.width();
+      height_ = image_.height();
+      painter_ = new QPainter(&image_);
       painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
     } else {
       width_ = height_ = 0;
       painter_ = NULL;
     }
-  }
-  ~Impl() {
-    if (painter_) delete painter_;
+    not_free_painter_ = false;
   }
 
-  QPixmap* GetPixmap() { return &pixmap_; }
-  size_t GetWidth() { 
-    return pixmap_.width();
+  Impl(size_t w, size_t h, QPainter *painter)
+    : width_(w), height_(h), opacity_(1.), painter_(painter) {
+    painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    not_free_painter_ = true;
   }
-  size_t GetHeight() {
-    return pixmap_.height();
+
+  ~Impl() {
+    if (painter_ && !not_free_painter_) delete painter_;
   }
+
+  QImage* GetImage() { return &image_; }
+
+  size_t GetWidth() { return width_; }
+
+  size_t GetHeight() {  return height_;  }
+
   bool PushState() {
-    LOG("Push:%p", this);
     painter_->save();
     return true;
   }
+
   bool PopState() {
-    LOG("Pop:%p", this);
     painter_->restore();
     return true;
   }
@@ -89,17 +103,27 @@ class QtCanvas::Impl {
     }
     return false;
   }
+
   void RotateCoordinates(double radians) {
-    painter_->rotate(radians*180/3.1415926);
+    painter_->rotate(RadiansToDegrees(radians));
   }
+
   void TranslateCoordinates(double dx, double dy) {
     painter_->translate(dx, dy);
   }
+
   void ScaleCoordinates(double cx, double cy) {
     painter_->scale(cx, cy);
   }
 
   bool ClearCanvas() {
+    DLOG("ClearCanvas");
+    painter_->eraseRect(0, 0, width_, height_);
+    return true;
+  }
+
+  bool DrawTextDocument(QTextDocument &doc) {
+    doc.drawContents(painter_, QRect(0, 0, GetWidth(), GetHeight()));
     return true;
   }
 
@@ -115,25 +139,27 @@ class QtCanvas::Impl {
   }
 
   bool DrawFilledRect(double x, double y, double w, double h, const Color &c) {
-    LOG("DrawFilledRect: %p", this);
+    DLOG("DrawFilledRect:%p", this);
     QPainter *p = painter_;
     QColor color(c.RedInt(), c.GreenInt(), c.BlueInt());
-    p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), color); 
+    p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), color);
     return true;
   }
 
   bool DrawCanvas(double x, double y, const CanvasInterface *img) {
+    DLOG("DrawCanvas:%p on %p", img, this);
     QPainter *p = painter_;
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
-    p->drawPixmap(D2I(x), D2I(y), *canvas->GetPixmap());
+    p->drawImage(D2I(x), D2I(y), *canvas->GetImage());
     return true;
   }
 
   bool DrawFilledRectWithCanvas(double x, double y, double w, double h,
                                 const CanvasInterface *img) {
+    DLOG("DrawFilledRectWithCanvas: %p on %p", img, this);
     QPainter *p = painter_;
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
-    p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), *canvas->GetPixmap());
+    p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), *canvas->GetImage());
     return true;
   }
 
@@ -141,37 +167,53 @@ class QtCanvas::Impl {
                           const CanvasInterface *img,
                           double mx, double my,
                           const CanvasInterface *mask) {
+    DLOG("DrawCanvasWithMask: (%p, %p) on %p", img, mask, this);
     QPainter *p = painter_;
     const QtCanvas *s = reinterpret_cast<const QtCanvas*>(img);
     const QtCanvas *m = reinterpret_cast<const QtCanvas*>(mask);
-    QPixmap simg = *s->GetPixmap();
-    simg.setAlphaChannel(*m->GetPixmap());
-    p->drawPixmap(D2I(x), D2I(y), simg);
+    QImage simg = *s->GetImage();
+    simg.setAlphaChannel(*m->GetImage());
+    p->drawImage(D2I(x), D2I(y), simg);
     return true;
   }
-  
+
   bool DrawText(double x, double y, double width, double height,
                 const char *text, const FontInterface *f,
                 const Color &c, Alignment align, VAlignment valign,
                 Trimming trimming, int text_flags) {
+    DLOG("DrawText:%s", text);
     QPainter *p = painter_;
+    QTextDocument doc(text);
 
-    int flags = 0;
-    if (align == ALIGN_RIGHT) flags |= Qt::AlignRight;
-    if (align == ALIGN_LEFT) flags |= Qt::AlignLeft;
-    if (align == ALIGN_CENTER) flags |= Qt::AlignHCenter;
+    const QtFont *qtfont = down_cast<const QtFont*>(f);
+    QFont font = *qtfont->GetQFont();
+    if (text_flags & TEXT_FLAGS_UNDERLINE)
+      font.setUnderline(true);
+    else
+      font.setUnderline(false);
+    if (text_flags & TEXT_FLAGS_STRIKEOUT)
+      font.setStrikeOut(true);
+    else
+      font.setStrikeOut(false);
+    doc.setDefaultFont(font);
 
-    if (valign == VALIGN_TOP) flags |= Qt::AlignTop;
-    if (valign == VALIGN_BOTTOM) flags |= Qt::AlignBottom;
-    if (valign == VALIGN_MIDDLE) flags |= Qt::AlignVCenter;
+    QTextOption option;
 
-    
+    if (align == ALIGN_RIGHT) option.setAlignment(Qt::AlignRight);
+    if (align == ALIGN_LEFT) option.setAlignment(Qt::AlignLeft);
+    if (align == ALIGN_CENTER) option.setAlignment(Qt::AlignHCenter);
+
+    if (valign == VALIGN_TOP) option.setAlignment(Qt::AlignTop);
+    if (valign == VALIGN_BOTTOM) option.setAlignment(Qt::AlignBottom);
+    if (valign == VALIGN_MIDDLE) option.setAlignment(Qt::AlignVCenter);
+    if (text_flags & TEXT_FLAGS_WORDWRAP)
+      option.setWrapMode(QTextOption::WordWrap);
+
+    doc.setDefaultTextOption(option);
+    doc.setTextWidth(width);
+
     p->setPen(QColor(c.RedInt(), c.GreenInt(), c.BlueInt()));
-
-    const QtFont *qt_font = reinterpret_cast<const QtFont*>(f);
-    p->setFont(*qt_font->GetQFont());
-
-    p->drawText(D2I(x), D2I(y), D2I(width), D2I(height), flags, text);
+    doc.drawContents(p, QRect(D2I(x), D2I(y), D2I(width), D2I(height)));
     return true;
   }
 
@@ -181,13 +223,12 @@ class QtCanvas::Impl {
                            const CanvasInterface *texture,
                            Alignment align, VAlignment valign,
                            Trimming trimming, int text_flags) {
-    LOG("DrawTextWithTexture: %s", text);
+    DLOG("DrawTextWithTexture: %s", text);
     return true;
   }
 
   bool IntersectRectClipRegion(double x, double y,
                                double w, double h) {
-    LOG("Clip:%p %f %f %f %f", this, x, y, w, h);
     if (w <= 0.0 || h <= 0.0) {
       return false;
     }
@@ -204,29 +245,39 @@ class QtCanvas::Impl {
   }
   bool GetPointValue(double x, double y,
                      Color *color, double *opacity) const {
-    LOG("GetPointValue");
+    // Canvas without image_ doesn't support GetPointValue
+    if (not_free_painter_) return false;
+
+    int xi = D2I(x);
+    int yi = D2I(y);
+    if (xi < 0 || xi >= width_ || yi < 0 || yi >= height_) return false;
+    QColor qcolor = image_.pixel(xi, yi);
+    if (color) {
+      color->red = qcolor.redF();
+      color->green = qcolor.greenF();
+      color->blue = qcolor.blueF();
+    }
+
+    if (opacity) *opacity = qcolor.alphaF();
+
     return true;
   }
 
-  size_t width_, height_;
+  int width_, height_;
   double opacity_;
   double zoom_;
+  bool not_free_painter_;
   QPainter *painter_;
-  QTransform matrix_;
-  std::stack<QTransform> states_;
-  std::stack<double> opacity_states_;
-  std::stack<bool> clipping_states_;
-  std::stack<double> clipping_values_;
-  QPixmap pixmap_;
-  bool clipping_;
-  double clipping_x_, clipping_y_, clipping_w_, clipping_h_;
+  QImage image_;
   Connection *on_zoom_connection_;
 };
 
 QtCanvas::QtCanvas(const QtGraphics *g, size_t w, size_t h) : impl_(new Impl(w, h)) { }
+QtCanvas::QtCanvas(const QtGraphics *g, size_t w, size_t h, QPainter *painter)
+  : impl_(new Impl(w, h, painter)) { }
 
-QtCanvas::QtCanvas(const std::string &data) : impl_(new Impl(data)) 
- { }                                                        
+QtCanvas::QtCanvas(const std::string &data) : impl_(new Impl(data))
+ { }
 
 QtCanvas::~QtCanvas() {
   delete impl_;
@@ -316,6 +367,10 @@ bool QtCanvas::DrawTextWithTexture(double x, double y, double w, double h,
                                     align, valign, trimming, text_flags);
 }
 
+bool QtCanvas::DrawTextDocument(QTextDocument &doc) {
+  return impl_->DrawTextDocument(doc);
+}
+
 bool QtCanvas::GetTextExtents(const char *text, const FontInterface *f,
                                  int text_flags, double in_width,
                                  double *width, double *height) {
@@ -339,10 +394,9 @@ bool QtCanvas::IsValid() const {
   return true;
 }
 
-QPixmap* QtCanvas::GetPixmap() const {
-  return impl_->GetPixmap();
+QImage* QtCanvas::GetImage() const {
+  return impl_->GetImage();
 }
 
-int QtCanvas::Impl::seq = 0;
 } // namespace qt
 } // namespace ggadget

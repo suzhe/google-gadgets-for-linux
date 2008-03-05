@@ -87,10 +87,12 @@ ImageInterface *QtGraphics::NewImage(const std::string &data,
   return img;
 }
 
+static inline int D2I(double d) { return static_cast<int>(round(d)); }
 FontInterface *QtGraphics::NewFont(const char *family, size_t pt_size,
-                                      FontInterface::Style style,
-                                      FontInterface::Weight weight) const {
-  return new QtFont(family, pt_size, style, weight);
+                                   FontInterface::Style style,
+                                   FontInterface::Weight weight) const {
+  double size = pt_size * 96./122.;
+  return new QtFont(family, D2I(size), style, weight);
 }
 
 } // namespace qt

@@ -33,9 +33,14 @@
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_menu.h>
 #include <ggadget/qt/qt_main_loop.h>
+#include <ggadget/directory_provider_interface.h>
 #include <ggadget/extension_manager.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/ggadget.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_wrapper.h>
+#include <ggadget/localized_file_manager.h>
 
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
@@ -47,14 +52,25 @@ static ggadget::qt::QtMainLoop main_loop;
 static const char *kGlobalExtensions[] = {
   "default-framework",
   "libxml2-xml-parser",
+  "default-options",
   "dbus-script-class",
   "gtkmoz-browser-element",
+  "qt-system-framework",
+  "qt-edit-element",
   "gst-audio-framework",
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
   "smjs-script-runtime",
   "curl-xml-http-request",
+  NULL
+};
+
+static const char *kGlobalResourcePaths[] = {
+  GGL_RESOURCE_DIR "/ggl-resources.gg",
+  GGL_RESOURCE_DIR "/ggl-resources",
+  "ggl-resources.gg",
+  "ggl-resources",
   NULL
 };
 
@@ -69,18 +85,24 @@ static QWidget* CreateGadgetUI(const char *base_path) {
     return NULL;
   }
   ggadget::qt::QtViewHost *view_host =
-        static_cast<ggadget::qt::QtViewHost*>(
-            gadget_host->GetGadget()->GetMainViewHost());
+      static_cast<ggadget::qt::QtViewHost*>(
+          gadget_host->GetGadget()->GetMainViewHost());
 
   return view_host->GetWidget();
 }
+
+class DirectoryProvider : public ggadget::DirectoryProviderInterface {
+ public:
+  virtual std::string GetProfileDirectory() { return ""; }
+  virtual std::string GetResourceDirectory() { return ""; }
+};
+static DirectoryProvider g_directory_provider;
 
 class MainWidget : public QWidget {
   Q_OBJECT
  public slots:
   void OnShowMenu() {
-    QMenu qmenu; // = new QMenu();
-//    ggadget::MenuInterface *menu = new ggadget::qt::QtMenu(qmenu);
+    QMenu qmenu;
     ggadget::qt::QtMenu menu(&qmenu);
     gadget_host->GetGadget()->OnAddCustomMenuItems(&menu);
     qmenu.addSeparator();
@@ -147,10 +169,35 @@ int main(int argc, char* argv[]) {
 
   // Set global main loop
   ggadget::SetGlobalMainLoop(&main_loop);
+  ggadget::SetDirectoryProvider(&g_directory_provider);
+
+  // Set global file manager.
+  ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
+  ggadget::FileManagerInterface *fm;
+
+  for (size_t i = 0; kGlobalResourcePaths[i]; ++i) {
+    fm = ggadget::CreateFileManager(kGlobalResourcePaths[i]);
+    if (fm) {
+      fm_wrapper->RegisterFileManager(ggadget::kGlobalResourcePrefix,
+          new ggadget::LocalizedFileManager(fm));
+      break;
+    }
+  }
+
+  if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL)
+    fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
+  // TODO: Proper profile directory.
+  if ((fm = ggadget::CreateFileManager(".")) != NULL)
+    fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
+
+  // TODO: Add global profile file manager here.
+  ggadget::SetGlobalFileManager(fm_wrapper);
 
   // Load global extensions.
   ggadget::ExtensionManager *ext_manager =
       ggadget::ExtensionManager::CreateExtensionManager();
+
+  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
 
   // Ignore errors when loading extensions.
   for (size_t i = 0; kGlobalExtensions[i]; ++i)
@@ -161,11 +208,12 @@ int main(int argc, char* argv[]) {
   ggadget::ScriptRuntimeExtensionRegister script_runtime_register(manager);
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
-  ggadget::ExtensionManager::SetGlobalExtensionManager(ext_manager);
+  ext_manager->SetReadonly();
 
   QApplication app(argc, argv);
 
   MainWidget widget(gadget_name);
+  widget.setWindowTitle(gadget_name);
   widget.show();
   return app.exec();
 }

@@ -27,9 +27,8 @@ QtFont::QtFont(const char *family, size_t size, Style style,
   bool italic = false;
   if (weight == WEIGHT_BOLD) qt_weight = QFont::Bold;
   if (style == STYLE_ITALIC) italic = true;
-
   font_ = new QFont(family, size, qt_weight, italic);
-  size_ = font_->pointSize();
+  size_ = size;
 }
 
 QtFont::~QtFont() {
@@ -44,5 +43,5 @@ bool QtFont::GetTextExtents(const char *text, double *width, double *height) con
   return true;
 }
 
-} // namespace gtk
+} // namespace qt
 } // namespace ggadget

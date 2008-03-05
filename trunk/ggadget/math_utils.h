@@ -177,6 +177,10 @@ class ParentCoordCalculator {
  * @return The radian measure of the input parameter.
  */
 double DegreesToRadians(double degrees);
+/**
+ * @return The degree measure of the input parameter.
+ */
+double RadiansToDegrees(double radians);
 
 /**
  * Checks to see if the given (x, y) is contained in an element.

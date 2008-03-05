@@ -41,7 +41,7 @@ class QtImage::Impl {
     } else {
       is_valid_ = true;
     }
-  } 
+  }
 
   ~Impl() {
   }
@@ -75,12 +75,12 @@ class QtImage::Impl {
     }
   }
 
-  size_t GetWidth() const { 
+  size_t GetWidth() const {
     return image_->GetWidth();
   }
 
   size_t GetHeight() const {
-    return image_->GetHeight(); 
+    return image_->GetHeight();
   }
 
   void SetColorMultiply(const Color &color) {
