@@ -18,6 +18,7 @@
 
 #include <time.h>
 #include <vector>
+#include "digest_utils.h"
 #include "file_manager_factory.h"
 #include "gadget.h"
 #include "gadget_consts.h"
@@ -428,8 +429,6 @@ class GadgetManager::Impl {
         return true;
       }
     }
-
-    // TODO: Check the checksum of gadget.
     return false;
   }
 
@@ -572,6 +571,27 @@ bool GadgetManager::NeedUpdateGadget(const char *gadget_id) {
 }
 
 bool GadgetManager::SaveGadget(const char *gadget_id, const std::string &data) {
+  const GadgetInfo *gadget_info = GetGadgetInfo(gadget_id);
+  if (!gadget_info) // This should not happen.
+    return false;
+
+  GadgetStringMap::const_iterator attr_it =
+      gadget_info->attributes.find("checksum");
+  if (attr_it != gadget_info->attributes.end()) {
+    std::string required_checksum;
+    std::string actual_checksum;
+    if (!WebSafeDecodeBase64(attr_it->second.c_str(), &required_checksum) ||
+        !GenerateSHA1(data, &actual_checksum) ||
+        actual_checksum != required_checksum) {
+      LOG("Checksum mismatch for %s", gadget_id);
+      // This checksum mismatch may be caused by an old version of plugins.xml,
+      // So immediately update the metadata to ensure it is the latest. 
+      UpdateGadgetsMetadata(true);
+      return false;
+    }
+    DLOG("Checksum OK %s", gadget_id);
+  }
+
   std::string path(Impl::GetDownloadedGadgetPathInternal(gadget_id));
   if (!impl_->file_manager_->WriteFile(path.c_str(), data, true))
     return false;

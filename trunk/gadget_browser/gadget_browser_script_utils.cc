@@ -101,9 +101,10 @@ class GadgetBrowserScriptUtils : public ScriptableHelperNativeOwnedDefault {
     return Date(gadget_manager_->GetThumbnailCachedTime(thumbnail_url));
   }
 
-  void SaveGadget(const char *gadget_id, ScriptableBinaryData *data) {
+  bool SaveGadget(const char *gadget_id, ScriptableBinaryData *data) {
     if (gadget_id && data)
-      gadget_manager_->SaveGadget(gadget_id, data->data());
+      return gadget_manager_->SaveGadget(gadget_id, data->data());
+    return false;
   }
 
   GadgetManager *gadget_manager_;

@@ -196,12 +196,11 @@ function DownloadPlugin(plugin, is_updating) {
         // plugin with its id.
         plugin = gPluginIdIndex[plugin.id];
         if (plugin) {
-          gadgetBrowserUtils.saveGadget(plugin.id, request.responseBody);
-          var result;
-          if (is_updating)
-            result = gadgetBrowserUtils.updateGadget(plugin.id);
-          else
-            result = gadgetBrowserUtils.addGadget(plugin.id);
+          var result = -1;
+          if (gadgetBrowserUtils.saveGadget(plugin.id, request.responseBody)) {
+            if (!is_updating)
+              result = gadgetBrowserUtils.addGadget(plugin.id);
+          }
 
           if (result >= 0)
             SetDownloadStatus(plugin, kDownloadStatusAdded);

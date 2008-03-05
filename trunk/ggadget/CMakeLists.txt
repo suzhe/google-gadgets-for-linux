@@ -24,6 +24,7 @@ SET(SRCS
   color.cc
   content_item.cc
   details_view.cc
+  digest_utils.cc
   display_window.cc
   directory_provider.cc
   element_factory.cc
