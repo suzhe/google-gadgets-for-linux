@@ -88,6 +88,9 @@ class ItemElement : public BasicElement {
   virtual void GetDefaultPosition(double *x, double *y) const;
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
+ public:
+  virtual bool HasOpaqueBackground() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ItemElement);
 

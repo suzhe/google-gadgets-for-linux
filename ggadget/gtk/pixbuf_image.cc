@@ -35,7 +35,7 @@ namespace gtk {
 class PixbufImage::Impl {
  public:
   Impl(const CairoGraphics *graphics, const std::string &data, bool is_mask)
-    : zoom_(graphics->GetZoom()), is_mask_(is_mask),
+    : zoom_(graphics->GetZoom()), is_mask_(is_mask), fully_opaque_(false),
       width_(0), height_(0), pixbuf_(NULL),
       canvas_(NULL), color_multiply_(Color::kWhite),
       on_zoom_connection_(NULL) {
@@ -50,6 +50,25 @@ class PixbufImage::Impl {
         GdkPixbuf *a_pixbuf = gdk_pixbuf_add_alpha(pixbuf_, TRUE, 0, 0, 0);
         g_object_unref(pixbuf_);
         pixbuf_ = a_pixbuf;
+      } else if (!gdk_pixbuf_get_has_alpha(pixbuf_)) {
+        fully_opaque_ = true;
+      } else if (gdk_pixbuf_get_colorspace(pixbuf_) == GDK_COLORSPACE_RGB &&
+                 gdk_pixbuf_get_bits_per_sample(pixbuf_) == 8 &&
+                 gdk_pixbuf_get_n_channels(pixbuf_) == 4) {
+        // Check each pixel for opaque.
+        int rowstride = gdk_pixbuf_get_rowstride(pixbuf_);
+        guchar *pixels = gdk_pixbuf_get_pixels(pixbuf_);
+        fully_opaque_ = true;
+        for (size_t y = 0; y < height_ && fully_opaque_; ++y) {
+          for (size_t x = 0; x < width_; ++x) {
+            // The fourth byte in each pixel cell is alpha.
+            guchar *p = pixels + y * rowstride + x * 4 + 3;
+            if (*p != 255) {
+              fully_opaque_ = false;
+              break;
+            }
+          }
+        }
       }
       on_zoom_connection_ =
           graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
@@ -167,6 +186,7 @@ class PixbufImage::Impl {
 
   double zoom_;
   bool is_mask_;
+  bool fully_opaque_;
   size_t width_;
   size_t height_;
   GdkPixbuf *pixbuf_;
@@ -231,6 +251,10 @@ void PixbufImage::SetTag(const char *tag) {
 
 std::string PixbufImage::GetTag() const {
   return impl_->GetTag();
+}
+
+bool PixbufImage::IsFullyOpaque() const {
+  return impl_->fully_opaque_;
 }
 
 } // namespace gtk

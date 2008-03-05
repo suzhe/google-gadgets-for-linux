@@ -71,6 +71,13 @@ class Texture {
 
   const ImageInterface *GetImage() const;
 
+  /**
+   * Check if the texture is fully opaque, that is:
+   *  - For color texture, the opacity equals to 1.0
+   *  - For image texture, there is no alpha channel.
+   */
+  bool IsFullyOpaque() const;
+
  private:
   class Impl;
   Impl *impl_;

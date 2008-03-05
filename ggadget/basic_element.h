@@ -277,13 +277,28 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Checks whether this element is really visible considering transparency
    * and visibility or the ancestors.
    */
-  bool ReallyVisible() const;
+  bool IsReallyVisible() const;
 
   /**
    * Checks whether this element is really enabled considering visibility of
    * itself and the ancestors.
    */
-  bool ReallyEnabled() const;
+  bool IsReallyEnabled() const;
+
+  /**
+   * Checks if an Element is fully opaque, that is:
+   * - The composited opacity upto View equals to 1.0 (255), and
+   * - Has a fully opaque background, e.g. a background color or image without
+   *   alpha channel, and
+   * - Has no mask image.
+   *
+   * This method calls the virtual method HasOpaqueBackground() to check if the
+   * element has an opaque background.
+   *
+   * The caller should not cache the result of this method, because it might be
+   * changed if related element properties are changed.
+   */
+  bool IsFullyOpaque() const;
 
  public:
   /**
@@ -538,7 +553,7 @@ public: // Other overridable public methods.
   virtual double GetClientWidth() const;
   /** Gets the client height (pixel width - height of scrollbar etc. if any). */
   virtual double GetClientHeight() const;
-  
+
   /**
    * Adjusts the layout (e.g. size, position, etc.) of this element and its
    * children. This method is called just before @c Draw().
@@ -559,6 +574,31 @@ public: // Other overridable public methods.
    * level will take care of it.
    */
   virtual void MarkRedraw();
+
+  /**
+   * Checks if a child is in its parent's visible area.
+   * The default implemetation always returns true. Derived classes shall
+   * overwrite this method to implement the correct behavior.
+   *
+   * @param child a pointer to a child element of this element.
+   * @return Returns true if the specified child is in a visible area of this
+   *         element.
+   */
+  virtual bool IsChildInVisibleArea(const BasicElement *child) const;
+
+  /**
+   * Checks if an Element has opaque background.
+   *
+   * The default implementation always returns false. Derived classes shall
+   * overwrite this method to implement the correct behavior.
+   *
+   * This function is mainly for drawing optimization, so it's safe to leave
+   * the default implementation unchanged if the derived class can't
+   * determine if its background is fully opaque or not.
+   *
+   * This function is mainly called by IsReallyOpaque().
+   */
+  virtual bool HasOpaqueBackground() const;
 
  public:
   /** Enum used by ParsePixelOrRelative() below. */

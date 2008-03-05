@@ -87,6 +87,9 @@ class ImgElement : public BasicElement {
   virtual void DoDraw(CanvasInterface *canvas);
   virtual void GetDefaultSize(double *width, double *height) const;
 
+ public:
+  virtual bool HasOpaqueBackground() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ImgElement);
 

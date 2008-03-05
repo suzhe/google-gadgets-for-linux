@@ -166,7 +166,7 @@ class Elements::Impl {
     for (Children::reverse_iterator ite = children_.rbegin();
          ite != children_.rend(); ++ite) {
       BasicElement *child = *ite;
-      // Don't use child->ReallyVisible() because here we don't need to check
+      // Don't use child->IsReallyVisible() because here we don't need to check
       // visibility of ancestors.
       if (!child->IsVisible() || child->GetOpacity() == 0.0)
         continue;
@@ -204,7 +204,7 @@ class Elements::Impl {
     for (Children::reverse_iterator ite = children_.rbegin();
          ite != children_.rend(); ++ite) {
       BasicElement *child = (*ite);
-      if (!child->ReallyVisible())
+      if (!child->IsReallyVisible())
         continue;
 
       MapChildPositionEvent(event, child, &new_event);
@@ -286,7 +286,6 @@ class Elements::Impl {
     if (children_.empty() || !width_ || !height_)
       return;
 
-    // Draw children into temp array.
     int child_count = children_.size();
 
     BasicElement *popup = view_->GetPopupElement();
@@ -294,6 +293,10 @@ class Elements::Impl {
       BasicElement *element = children_[i];
       // Doesn't draw popup element here.
       if (element == popup) continue;
+
+      // Doesn't draw elements that outside visible area.
+      if (owner_ && !owner_->IsChildInVisibleArea(element))
+        continue;
 
       canvas->PushState();
       if (element->GetRotation() == .0) {

@@ -111,6 +111,9 @@ class ScrollBarElement : public BasicElement {
   friend class ScrollingElement;
 
  public:
+  virtual bool HasOpaqueBackground() const;
+
+ public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
 

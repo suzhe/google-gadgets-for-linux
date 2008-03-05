@@ -53,7 +53,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  edit_element_base.h \
 			  element_factory.h \
 			  elements.h \
-			  encryptor.h \
 			  encryptor_interface.h \
 			  event.h \
 			  extension_manager.h \

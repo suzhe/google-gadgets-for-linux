@@ -721,6 +721,22 @@ void ComboBoxElement::OnPopupOff() {
   impl_->listbox_->SetVisible(false);
 }
 
+bool ComboBoxElement::IsChildInVisibleArea(const BasicElement *child) const {
+  ASSERT(child);
+
+  if (child == impl_->edit_)
+    return true;
+  else if (child == impl_->listbox_)
+    return impl_->listbox_->IsVisible();
+
+  return impl_->listbox_->IsVisible() &&
+         impl_->listbox_->IsChildInVisibleArea(child);
+}
+
+bool ComboBoxElement::HasOpaqueBackground() const {
+  return impl_->background_ ? impl_->background_->IsFullyOpaque() : false;
+}
+
 Connection *ComboBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }

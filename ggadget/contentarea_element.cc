@@ -756,4 +756,8 @@ void ContentAreaElement::ScriptSetPinImages(ScriptableInterface *array) {
   impl_->ScriptSetPinImages(array);
 }
 
+bool ContentAreaElement::HasOpaqueBackground() const {
+  return true;
+}
+
 } // namespace ggadget

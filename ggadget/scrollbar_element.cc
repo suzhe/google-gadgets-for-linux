@@ -663,4 +663,9 @@ Connection *ScrollBarElement::ConnectOnChangeEvent(Slot0<void> *slot) {
   return impl_->onchange_event_.Connect(slot);
 }
 
+bool ScrollBarElement::HasOpaqueBackground() const {
+  return impl_->background_ && impl_->background_->IsFullyOpaque();
+}
+
+
 } // namespace ggadget

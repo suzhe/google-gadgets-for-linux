@@ -164,5 +164,10 @@ std::string QtImage::GetTag() const {
   return impl_->GetTag();
 }
 
+bool QtImage::IsFullyOpaque() const {
+  // TODO
+  return false;
+}
+
 } // namespace gtk
 } // namespace ggadget

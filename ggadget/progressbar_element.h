@@ -86,6 +86,9 @@ class ProgressBarElement : public BasicElement {
   virtual void GetDefaultSize(double *width, double *height) const;
 
  public:
+  virtual bool HasOpaqueBackground() const;
+
+ public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);
 

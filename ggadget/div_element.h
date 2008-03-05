@@ -65,6 +65,10 @@ class DivElement : public ScrollingElement {
   virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
+ public:
+  virtual bool IsChildInVisibleArea(const BasicElement *child) const;
+  virtual bool HasOpaqueBackground() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DivElement);
 

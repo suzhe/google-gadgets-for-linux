@@ -238,6 +238,10 @@ void ImgElement::SetSrcSize(size_t width, size_t height) {
   impl_->src_height_ = height;
 }
 
+bool ImgElement::HasOpaqueBackground() const {
+  return impl_->image_ ? impl_->image_->IsFullyOpaque() : false;
+}
+
 BasicElement *ImgElement::CreateInstance(BasicElement *parent, View *view,
                                          const char *name) {
   return new ImgElement(parent, view, name);

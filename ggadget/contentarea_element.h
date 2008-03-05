@@ -109,6 +109,9 @@ class ContentAreaElement : public ScrollingElement {
   virtual void DoDraw(CanvasInterface *canvas);
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
 
+ public:
+  virtual bool HasOpaqueBackground() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ContentAreaElement);
 

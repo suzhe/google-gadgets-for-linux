@@ -102,6 +102,12 @@ class ImageInterface {
    * Returns the string tag set by SetTag() method previously.
    */
   virtual std::string GetTag() const = 0;
+
+  /**
+   * Checks if an Image is fully opaque, that is: the image has no alpha
+   * channel, or there is no pixel which has non-opaque alpha value.
+   */
+  virtual bool IsFullyOpaque() const = 0;
 };
 
 /**

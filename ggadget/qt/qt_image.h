@@ -53,6 +53,7 @@ class QtImage : public ImageInterface {
                              Color *color, double *opacity) const;
   virtual void SetTag(const char *tag);
   virtual std::string GetTag() const;
+  virtual bool IsFullyOpaque() const;
 
  private:
   class Impl;

@@ -74,6 +74,9 @@ class ButtonElement : public BasicElement {
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual void GetDefaultSize(double *width, double *height) const;
 
+ public:
+  virtual bool HasOpaqueBackground() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ButtonElement);
 
