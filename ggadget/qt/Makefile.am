@@ -34,8 +34,6 @@ libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  qt_image.cc \
 			  qt_font.cc \
 			  qt_graphics.cc \
-			  global_file_manager.cc \
-			  options.cc \
 			  qt_main_loop.cc
 
 libggadget_qt@GGL_EPOCH@_la_CXXFLAGS = \

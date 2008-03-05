@@ -20,14 +20,13 @@
 #include <set>
 #include <map>
 #include <ggadget/gadget_host_interface.h>
-#include <ggadget/main_loop_interface.h>
 #include <ggadget/qt/qt_main_loop.h>
 
 namespace ggadget {
 namespace qt {
 
 /**
- * An implementation of @c GadgetHostInterface for the simple gadget host.
+ * An implementation of @c GadgetHostInterface for the qt gadget host.
  */
 class QtGadgetHost : public GadgetHostInterface {
  public:
@@ -35,7 +34,6 @@ class QtGadgetHost : public GadgetHostInterface {
                double zoom, int debug_mode);
   virtual ~QtGadgetHost();
 
-  virtual FileManagerInterface *GetFileManager();
   virtual OptionsInterface *GetOptions();
   virtual GadgetInterface *GetGadget();
   virtual ViewHostInterface *NewViewHost(ViewType type, ViewInterface *view);
@@ -46,37 +44,8 @@ class QtGadgetHost : public GadgetHostInterface {
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
-  virtual bool UnloadFont(const char *filename);
 
-  /**
-   * Loads a gadget from file system and hosts it.
-   * @param base_path the base path of this gadget. It can be a directory or
-   *     path to a .gg file.
-   * @param zoom zoom factor of this gadget.
-   * @param debug_mode 0: no debug; 1: debugs container elements by drawing
-   *     a bounding box for each container element; 2: debugs all elements.
-   * @return the loaded gadget if succeeded, or @c NULL otherwise.
-   */
-  // TODO: store zoom (and debug_mode?) into options repository.
   bool LoadGadget(const char *base_path);
-
-  /**
-   * Returns a newly initialized context menu, so that the caller can add
-   * menu items in it.
-   */
- // GtkMenuImpl *NewContextMenu();
-
-  /**
-   * Popups the current context menu with or without default menu items.
-   * If the current context menu contains no items, the method does nothing.
-   * @param default_items whether to add the default menu items.
-   * @param button the mouse button which was pressed to initiate the popup.
-   * @return @c false if the menu contains nothing and was not popped up.
-   */
-  //bool PopupContextMenu(bool default_items, guint button);
-
-  /** Destroy the current context menu. */
- // void DestroyContextMenu();
 
  private:
   void ReportScriptError(const char *message);
@@ -96,9 +65,6 @@ class QtGadgetHost : public GadgetHostInterface {
   static void OnAboutActivate(GtkMenuItem *menu_item, gpointer user_data);
   static void OnDockActivate(GtkMenuItem *menu_item, gpointer user_data); */
 
-  FileManagerInterface *resource_file_manager_;
-  FileManagerInterface *global_file_manager_;
-  FileManagerInterface *file_manager_;
   OptionsInterface *options_;
   GadgetInterface *gadget_;
 
@@ -110,7 +76,7 @@ class QtGadgetHost : public GadgetHostInterface {
   bool useshapemask_;
   double zoom_;
   int debug_mode_;
- 
+
   DISALLOW_EVIL_CONSTRUCTORS(QtGadgetHost);
 };
 

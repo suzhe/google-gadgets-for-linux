@@ -18,8 +18,9 @@
 #define GGADGET_QT_QT_GADGET_WIDGET_H__
 
 #include <string>
-#include <QWidget>
+#include <QGLWidget>
 #include <ggadget/view_interface.h>
+#include "qt_canvas.h"
 
 namespace ggadget {
 namespace qt {
@@ -30,16 +31,19 @@ class QGadgetWidget : public QWidget {
   QGadgetWidget(QtViewHost* host, double zoom,
                 bool composited, bool useshapemask);
  protected:
-  virtual void paintEvent(QPaintEvent *event); 
+  virtual void paintEvent(QPaintEvent *event);
   virtual void mouseDoubleClickEvent(QMouseEvent *event);
   virtual void mouseMoveEvent(QMouseEvent *event);
   virtual void mousePressEvent(QMouseEvent *event);
   virtual void mouseReleaseEvent(QMouseEvent *event);
   virtual void enterEvent(QEvent *event);
+  virtual void leaveEvent(QEvent *event);
+  virtual void keyPressEvent(QKeyEvent *event);
+  virtual void keyReleaseEvent(QKeyEvent *event);
   QtViewHost *view_host_;
+  QtCanvas *canvas_;
   ViewInterface *view_;
-  int width_, height_;
-  bool mouse_just_entered_; // set within enterEvent
+  size_t width_, height_;
   uint64_t mouse_down_time_;
 };
 

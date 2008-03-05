@@ -93,8 +93,9 @@ class View::Impl {
                        int duration, uint64_t start_time,
                        bool is_event)
       : impl_(impl), slot_(slot), start_(start), end_(end),
-        duration_(duration), start_time_(start_time), last_value_(start),
-        watch_id_(0), is_event_(is_event), destroy_connection_(NULL) {
+        duration_(duration), start_time_(start_time), last_finished_time_(0),
+        last_value_(start), watch_id_(0),
+        is_event_(is_event), destroy_connection_(NULL) {
       destroy_connection_ = impl_->on_destroy_signal_.Connect(
           NewSlot(this, &TimerWatchCallback::OnDestroy));
     }

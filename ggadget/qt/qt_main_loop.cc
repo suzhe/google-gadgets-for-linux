@@ -64,7 +64,7 @@ class WatchNode : public QObject {
       }
     }
   }
-  
+
   void OnIOEvent(int fd) {
     if (!calling_ && !removing_) {
       calling_ = true;
@@ -79,7 +79,7 @@ class WatchNode : public QObject {
     }
   }
 };
-#include "qt_main_loop.moc"   
+#include "qt_main_loop.moc"
 
 class QtMainLoop::Impl {
  public:
@@ -104,7 +104,7 @@ class QtMainLoop::Impl {
       default:
         break;
     }
-    
+
     QSocketNotifier *notifier = new QSocketNotifier(fd, qtype); 
     WatchNode *node = new WatchNode();
     node->type_ = type;
@@ -178,7 +178,7 @@ class QtMainLoop::Impl {
 
  private:
   WatchNode* GetWatchNode(int watch_id) {
-    if (watches_.find(watch_id) == watches_.end()) 
+    if (watches_.find(watch_id) == watches_.end())
       return NULL;
     else
       return watches_[watch_id];
@@ -216,7 +216,7 @@ int QtMainLoop::AddIOWriteWatch(int fd, WatchCallbackInterface *callback) {
   return impl_->AddIOWatch(IO_WRITE_WATCH, fd, callback);
 }
 int QtMainLoop::AddTimeoutWatch(int interval,
-                                    WatchCallbackInterface *callback) {
+                                WatchCallbackInterface *callback) {
   return impl_->AddTimeoutWatch(interval, callback);
 }
 MainLoopInterface::WatchType QtMainLoop::GetWatchType(int watch_id) {

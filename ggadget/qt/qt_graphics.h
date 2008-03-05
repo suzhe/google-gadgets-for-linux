@@ -25,10 +25,6 @@
 namespace ggadget {
 namespace qt {
 
-/**
- * This class realizes the GraphicsInterface using the Cairo graphics library.
- * It is responsible for creating CanvasInterface objects for ggadget.
- */
 class QtGraphics : public GraphicsInterface {
  public:
   /**

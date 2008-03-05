@@ -19,7 +19,6 @@
 
 #include <QPixmap>
 #include <ggadget/common.h>
-#include <ggadget/logger.h>
 #include <ggadget/color.h>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/image_interface.h>
