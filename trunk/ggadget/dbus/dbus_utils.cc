@@ -1213,7 +1213,7 @@ dbus_bool_t DBusMainLoopClosure::Impl::AddWatch(DBusWatch *watch,
 #ifdef HAVE_DBUS_WATCH_GET_UNIX_FD
   int fd = dbus_watch_get_unix_fd(watch);
 #else
-  int fd = dbus_watch_get_unix_fd(watch);
+  int fd = dbus_watch_get_fd(watch);
 #endif
   int flag = dbus_watch_get_flags(watch);
   DLOG("add watch, fd: %d, flag: %d", fd, flag);

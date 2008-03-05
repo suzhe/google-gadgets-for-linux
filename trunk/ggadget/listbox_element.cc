@@ -648,8 +648,8 @@ void ListBoxElement::Layout() {
   double item_height = GetItemPixelHeight();
   double box_height = GetClientHeight();
   double page_step = ::floor(box_height/item_height) * item_height;
-  SetYPageStep(page_step > 0 ? page_step : box_height);
-  SetYLineStep(std::min(item_height, box_height));
+  SetYPageStep(static_cast<int>(page_step > 0 ? page_step : box_height));
+  SetYLineStep(static_cast<int>(std::min(item_height, box_height)));
 }
 
 ItemElement *ListBoxElement::FindItemByString(const char *str) {
