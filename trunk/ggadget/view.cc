@@ -317,7 +317,7 @@ class View::Impl {
     // an EVENT_MOUSE_CLICK received, or any mouse event received without
     // left button down.
     if (grabmouse_element_.Get()) {
-      if (grabmouse_element_.Get()->ReallyEnabled() &&
+      if (grabmouse_element_.Get()->IsReallyEnabled() &&
           (event.GetButton() & MouseEvent::BUTTON_LEFT) &&
           (type == Event::EVENT_MOUSE_MOVE || type == Event::EVENT_MOUSE_UP ||
            type == Event::EVENT_MOUSE_CLICK)) {
@@ -405,7 +405,7 @@ class View::Impl {
 
       if (mouseover_element_.Get()) {
         // The enabled and visible states may change during event handling.
-        if (!mouseover_element_.Get()->ReallyEnabled()) {
+        if (!mouseover_element_.Get()->IsReallyEnabled()) {
           mouseover_element_.Reset(NULL);
         } else {
           MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
@@ -528,7 +528,7 @@ class View::Impl {
 
       if (dragover_element_.Get()) {
         // The visible state may change during event handling.
-        if (!dragover_element_.Get()->ReallyVisible()) {
+        if (!dragover_element_.Get()->IsReallyVisible()) {
           dragover_element_.Reset(NULL);
         } else {
           DragEvent dragover_event(Event::EVENT_DRAG_OVER,
@@ -572,7 +572,7 @@ class View::Impl {
       return result;
 
     if (focused_element_.Get()) {
-      if (!focused_element_.Get()->ReallyEnabled()) {
+      if (!focused_element_.Get()->IsReallyEnabled()) {
         focused_element_.Get()->OnOtherEvent(
             SimpleEvent(Event::EVENT_FOCUS_OUT));
         focused_element_.Reset(NULL);
@@ -709,7 +709,7 @@ class View::Impl {
 
   void SetFocus(BasicElement *element) {
     if (element != focused_element_.Get() &&
-        (!element || element->ReallyEnabled())) {
+        (!element || element->IsReallyEnabled())) {
       ElementHolder element_holder(element);
       // Remove the current focus first.
       if (!focused_element_.Get() ||
@@ -719,7 +719,7 @@ class View::Impl {
         focused_element_.Reset(element_holder.Get());
         if (focused_element_.Get()) {
           // The enabled or visible state may changed, so check again.
-          if (!focused_element_.Get()->ReallyEnabled() ||
+          if (!focused_element_.Get()->IsReallyEnabled() ||
               focused_element_.Get()->OnOtherEvent(SimpleEvent(
                   Event::EVENT_FOCUS_IN)) == EVENT_RESULT_CANCELED) {
             // If the EVENT_FOCUS_IN is canceled, set focus back to the old
@@ -1299,7 +1299,7 @@ bool View::ShowDetailsView(DetailsView *details_view,
 
 bool View::OnAddContextMenuItems(MenuInterface *menu) {
   if (impl_->mouseover_element_.Get()) {
-    if (impl_->mouseover_element_.Get()->ReallyEnabled())
+    if (impl_->mouseover_element_.Get()->IsReallyEnabled())
       return impl_->mouseover_element_.Get()->OnAddContextMenuItems(menu);
     else
       impl_->mouseover_element_.Reset(NULL);

@@ -228,5 +228,10 @@ std::string RsvgImage::GetTag() const {
   return impl_->GetTag();
 }
 
+bool RsvgImage::IsFullyOpaque() const {
+  // Always treats that a rsvg image is not fully opaque.
+  return false;
+}
+
 } // namespace gtk
 } // namespace ggadget

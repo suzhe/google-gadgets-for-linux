@@ -17,7 +17,8 @@
 TEST_IMAGES		= 120day.png \
 			  base.png \
 			  kitty419.jpg \
-			  testmask.png
+			  testmask.png \
+			  opaque.png
 
 EXTRA_DIST		= $(TEST_IMAGES)
 

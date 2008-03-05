@@ -508,4 +508,9 @@ void ProgressBarElement::GetDefaultSize(double *width, double *height) const {
   }
 }
 
+bool ProgressBarElement::HasOpaqueBackground() const {
+  return impl_->fullimage_ && impl_->fullimage_->IsFullyOpaque() &&
+         impl_->emptyimage_ && impl_->emptyimage_->IsFullyOpaque();
+}
+
 } // namespace ggadget

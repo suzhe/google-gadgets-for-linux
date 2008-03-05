@@ -104,6 +104,10 @@ class ComboBoxElement : public BasicElement {
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
+ public:
+  virtual bool IsChildInVisibleArea(const BasicElement *child) const;
+  virtual bool HasOpaqueBackground() const;
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ComboBoxElement);
 

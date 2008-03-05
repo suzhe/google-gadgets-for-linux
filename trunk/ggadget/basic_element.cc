@@ -1302,13 +1302,27 @@ void BasicElement::SetVisible(bool visible) {
   impl_->SetVisible(visible);
 }
 
-bool BasicElement::ReallyVisible() const {
+bool BasicElement::IsReallyVisible() const {
   return impl_->visible_ && impl_->opacity_ != 0.0 &&
-         (!impl_->parent_ || impl_->parent_->ReallyVisible());
+         (!impl_->parent_ ||
+          (impl_->parent_->IsReallyVisible() &&
+           impl_->parent_->IsChildInVisibleArea(this)));
 }
 
-bool BasicElement::ReallyEnabled() const {
-  return impl_->enabled_ && ReallyVisible();
+bool BasicElement::IsReallyEnabled() const {
+  return impl_->enabled_ && IsReallyVisible();
+}
+
+bool BasicElement::IsFullyOpaque() const {
+  if (!HasOpaqueBackground() || impl_->mask_image_ != NULL)
+    return false;
+
+  double opacity = GetOpacity();
+  const BasicElement *elm = GetParentElement();
+  for (; elm != NULL; elm = elm->GetParentElement())
+    opacity *= elm->GetOpacity();
+
+  return opacity == 1.0;
 }
 
 BasicElement *BasicElement::GetParentElement() {
@@ -1595,6 +1609,14 @@ void BasicElement::OnPopupOff() {
 bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
   // If rclick event won't be handled, let the context menu shown.
   return !impl_->onrclick_event_.HasActiveConnections();
+}
+
+bool BasicElement::IsChildInVisibleArea(const BasicElement *child) const {
+  return true;
+}
+
+bool BasicElement::HasOpaqueBackground() const {
+  return false;
 }
 
 Connection *BasicElement::ConnectOnClickEvent(Slot0<void> *handler) {

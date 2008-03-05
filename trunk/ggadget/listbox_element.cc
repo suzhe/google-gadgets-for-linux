@@ -644,8 +644,12 @@ void ListBoxElement::Layout() {
   // Call parent Layout() after SetIndex().
   DivElement::Layout();
 
-  // No need to destroy items_canvas_ here, since Draw() will calculate
-  // the size required and resize it if necessary.
+  // Set appropriate scrolling step distance.
+  double item_height = GetItemPixelHeight();
+  double box_height = GetClientHeight();
+  double page_step = ::floor(box_height/item_height) * item_height;
+  SetYPageStep(page_step > 0 ? page_step : box_height);
+  SetYLineStep(std::min(item_height, box_height));
 }
 
 ItemElement *ListBoxElement::FindItemByString(const char *str) {

@@ -227,4 +227,21 @@ void ButtonElement::SetStretchMiddle(bool stretch_middle) {
   }
 }
 
+bool ButtonElement::HasOpaqueBackground() const {
+  ImageInterface *img = NULL;
+  if (!IsEnabled()) {
+    img = impl_->disabledimage_;
+  } else if (impl_->mousedown_) {
+    img = impl_->downimage_;
+  } else if (impl_->mouseover_) {
+    img = impl_->overimage_;
+  }
+
+  if (!img) { // draw image_ as last resort
+    img = impl_->image_;
+  }
+
+  return img->IsFullyOpaque();
+}
+
 } // namespace ggadget

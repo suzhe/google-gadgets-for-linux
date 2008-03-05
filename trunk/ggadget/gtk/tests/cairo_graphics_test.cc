@@ -24,6 +24,7 @@
 #include <string>
 
 #include "ggadget/common.h"
+#include "ggadget/system_utils.h"
 #include "ggadget/gtk/cairo_canvas.h"
 #include "ggadget/gtk/cairo_graphics.h"
 #include "unittest/gunit.h"
@@ -38,6 +39,7 @@ static std::string kTestFile120day("120day.png");
 static std::string kTestFileBase("base.png");
 static std::string kTestFileKitty419("kitty419.jpg");
 static std::string kTestFileTestMask("testmask.png");
+static std::string kTestFileOpaque("opaque.png");
 
 // fixture for creating the CairoCanvas object
 class CairoGfxTest : public testing::Test {
@@ -635,6 +637,29 @@ TEST_F(CairoGfxTest, ColorMultiply) {
   munmap(buffer, filelen);
 }
 
+TEST_F(CairoGfxTest, ImageOpaque) {
+  struct Images {
+    std::string filename;
+    bool opaque;
+  } images[] = {
+    { kTestFile120day, true },
+    { kTestFileBase, false },
+    { kTestFileOpaque, true },
+    { "", false }
+  };
+
+  for (size_t i = 0; images[i].filename.length(); ++i) {
+    std::string content;
+    ASSERT_TRUE(ReadFileContents(images[i].filename.c_str(), &content));
+    ImageInterface *img = gfx_.NewImage(content, false);
+    ASSERT_TRUE(img);
+    EXPECT_EQ(images[i].opaque, img->IsFullyOpaque());
+    img->Destroy();
+    img = NULL;
+  }
+}
+
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
 
@@ -646,6 +671,7 @@ int main(int argc, char **argv) {
     kTestFileBase = std::string(srcdir) + std::string("/") + kTestFileBase;
     kTestFileKitty419 = std::string(srcdir) + std::string("/") + kTestFileKitty419;
     kTestFileTestMask = std::string(srcdir) + std::string("/") + kTestFileTestMask;
+    kTestFileOpaque = std::string(srcdir) + std::string("/") + kTestFileOpaque;
   }
 
   for (int i = 0; i < argc; i++) {

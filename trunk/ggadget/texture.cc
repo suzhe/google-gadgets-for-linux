@@ -90,6 +90,12 @@ class Texture::Impl {
     }
   }
 
+  bool IsFullyOpaque() {
+    if (image_)
+      return image_->IsFullyOpaque();
+    return opacity_ == 1.0;
+  }
+
   ImageInterface *image_;
   Color color_;
   double opacity_;
@@ -131,6 +137,10 @@ std::string Texture::GetSrc() const {
 
 const ImageInterface *Texture::GetImage() const {
   return impl_->image_;
+}
+
+bool Texture::IsFullyOpaque() const {
+  return impl_->IsFullyOpaque();
 }
 
 } // namespace ggadget

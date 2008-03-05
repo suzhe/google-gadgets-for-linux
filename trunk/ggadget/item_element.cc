@@ -72,7 +72,7 @@ void ItemElement::DoRegister() {
     RegisterProperty("height", NULL, NewSlot(DummySetter));
   }
 
-  if (impl_->parent_->IsImplicit()) { 
+  if (impl_->parent_->IsImplicit()) {
     // This Item is in a combobox, so override BasicElement constant.
     RegisterConstant("parentElement", impl_->parent_->GetParentElement());
   }
@@ -126,7 +126,6 @@ void ItemElement::DoDraw(CanvasInterface *canvas) {
 void ItemElement::SetDrawOverlay(bool draw) {
   if (draw != impl_->drawoverlay_) {
     impl_->drawoverlay_ = draw;
-    QueueDraw();
   }
 }
 
@@ -256,6 +255,10 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
     break;
   }
   return result;
+}
+
+bool ItemElement::HasOpaqueBackground() const {
+  return impl_->background_ ? impl_->background_->IsFullyOpaque() : false;
 }
 
 } // namespace ggadget
