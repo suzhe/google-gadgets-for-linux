@@ -88,7 +88,18 @@ class GadgetManager {
   const GadgetInfo *GetGadgetInfoOfInstance(int instance_id);
 
   /**
-   * Enunerates all gadgets instances. The callback will receive an int
+   * Checks if the gadget has at least one active instance.
+   */
+  bool GadgetHasInstance(const char *gadget_id);
+
+  /**
+   * Get the corresponding gadget id for an gadget instance (active or
+   * inactive). Returns empty string if the instance_id is invalid.
+   */
+  std::string GetInstanceGadgetId(int instance_id);
+
+  /**
+   * Enunerates all active instances. The callback will receive an int
    * parameter which is the gadget instance id, and can return true if it
    * wants the enumeration to continue, or false to break the enumeration.
    */  
@@ -142,6 +153,9 @@ class GadgetManager {
  public:
   /** Get the singleton instance of GadgetManager. */
   static GadgetManager *Get();
+
+  /** Initialize this object. Mainly for unittest. */
+  void Init();
 
  public:
   /**

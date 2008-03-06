@@ -65,7 +65,8 @@ class DefaultOptions : public MemoryOptions {
         name_(name),
         location_(kOptionsFilePrefix + name + ".xml"),
         changed_(false),
-        ref_count_(0) {
+        ref_count_(0),
+        timer_(0) {
     ASSERT(name && *name);
     ASSERT(main_loop_);
     ASSERT(file_manager_);
@@ -76,7 +77,7 @@ class DefaultOptions : public MemoryOptions {
       return;
 
     // Schedule the auto flush timer.
-    main_loop_->AddTimeoutWatch(
+    timer_ = main_loop_->AddTimeoutWatch(
         kAutoFlushInterval + rand() % kAutoFlushIntervalVariant,
         new WatchCallbackSlot(NewSlot(this, &DefaultOptions::OnFlushTimer)));
 
@@ -140,6 +141,7 @@ class DefaultOptions : public MemoryOptions {
 
   virtual ~DefaultOptions() {
     Flush();
+    main_loop_->RemoveWatch(timer_);
   }
 
   bool OnFlushTimer(int timer) {
@@ -147,8 +149,7 @@ class DefaultOptions : public MemoryOptions {
     if (!file_manager_)
       return false;
 
-    if (changed_)
-      Flush();
+    Flush();
     return true;
   }
 
@@ -287,18 +288,29 @@ class DefaultOptions : public MemoryOptions {
   virtual bool Flush() {
     if (!file_manager_)
       return false;
+    if (!changed_)
+      return true;
 
     DLOG("Flush options file: %s", location_.c_str());
     out_data_.clear();
     out_data_ = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<options>\n";
+    size_t out_data_header_size = out_data_.size();
     EnumerateItems(NewSlot(this, &DefaultOptions::WriteItem));
     EnumerateInternalItems(NewSlot(this, &DefaultOptions::WriteInternalItem));
-    out_data_ += "</options>\n";
-    bool result = file_manager_->WriteFile(location_.c_str(), out_data_, true);
-    out_data_.clear();
-    if (result)
-      changed_ = false;
-    return result;
+
+    if (out_data_.size() == out_data_header_size) {
+      // There is no item, remove the options file.
+      file_manager_->RemoveFile(location_.c_str());
+      return true;
+    } else {
+      out_data_ += "</options>\n";
+      bool result = file_manager_->WriteFile(location_.c_str(), out_data_,
+                                             true);
+      out_data_.clear();
+      if (result)
+        changed_ = false;
+      return result;
+    }
   }
 
   virtual void DeleteStorage() {
@@ -317,6 +329,8 @@ class DefaultOptions : public MemoryOptions {
     if (it == options_map_.end()) {
       options = new DefaultOptions(name);
       options_map_[name] = options;
+    } else {
+      options = it->second;
     }
     return options;
   }
@@ -335,8 +349,10 @@ class DefaultOptions : public MemoryOptions {
   void Unref() {
     ASSERT(ref_count_ > 0);
     ref_count_--;
-    if (ref_count_ == 0)
+    if (ref_count_ == 0) {
+      options_map_.erase(name_);
       delete this;
+    }
   }
 
   MainLoopInterface *main_loop_;
@@ -348,6 +364,7 @@ class DefaultOptions : public MemoryOptions {
   std::string out_data_;  // Only available during Flush().
   bool changed_; // Whether changed since last Flush().
   int ref_count_;
+  int timer_;
 
   static OptionsMap options_map_;
 };

@@ -14,93 +14,17 @@
   limitations under the License.
 */
 
-#include <unistd.h>
 #include "ggadget/gadgets_metadata.h"
 #include "ggadget/file_manager_factory.h"
 #include "ggadget/logger.h"
-#include "ggadget/scriptable_helper.h"
-#include "ggadget/signals.h"
-#include "ggadget/system_utils.h"
-#include "ggadget/xml_http_request_interface.h"
-#include "ggadget/xml_parser_interface.h"
 #include "unittest/gunit.h"
 #include "init_extensions.h"
 #include "mocked_file_manager.h"
+#include "mocked_xml_http_request.h"
 
 using namespace ggadget;
 
 MockedFileManager g_mocked_fm;
-
-class MockedXMLHttpRequest
-    : public ScriptableHelperNativeOwned<XMLHttpRequestInterface> {
-public:
-  DEFINE_CLASS_ID(0x5868a91c86574dca, XMLHttpRequestInterface);
-  MockedXMLHttpRequest(bool should_fail, const char *return_data)
-      : state_(UNSENT),
-        should_fail_(should_fail),
-        return_data_(return_data) {
-  }
-
-  void ChangeState(State new_state) {
-    state_ = new_state;
-    statechange_signal_();
-  }
-
-  virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
-    return statechange_signal_.Connect(handler);
-  } 
-  virtual State GetReadyState() { return state_; }
-  virtual ExceptionCode Open(const char *method, const char *url, bool async,
-                             const char *user, const char *password) {
-    requested_url_ = url;
-    ChangeState(OPENED);
-    return NO_ERR;
-  }
-  virtual ExceptionCode SetRequestHeader(const char *header,
-                                         const char *value) { return NO_ERR; }
-  virtual ExceptionCode Send(const char *data, size_t size) {
-    ChangeState(HEADERS_RECEIVED);
-    ChangeState(LOADING);
-    ChangeState(DONE);
-    return NO_ERR;
-  }
-  virtual ExceptionCode Send(const DOMDocumentInterface *data) {
-    return Send(NULL, 0);
-  }
-  virtual void Abort() { ChangeState(DONE); }
-  virtual ExceptionCode GetAllResponseHeaders(const char **result) {
-    return NO_ERR;
-  }
-  virtual ExceptionCode GetResponseHeader(const char *header,
-                                          const char **result) {
-    return NO_ERR;
-  }
-  virtual ExceptionCode GetResponseText(const char **result) { return NO_ERR; }
-  virtual ExceptionCode GetResponseBody(const char **result,
-                                        size_t *size) {
-    *result = return_data_.c_str();
-    *size = return_data_.size();
-    return NO_ERR;
-  }
-  virtual ExceptionCode GetResponseXML(DOMDocumentInterface **result) {
-    return NO_ERR;
-  }
-  virtual ExceptionCode GetStatus(unsigned short *result) {
-    *result = should_fail_ ? 400 : 200;
-    return NO_ERR;
-  }
-  virtual ExceptionCode GetStatusText(const char **result) { return NO_ERR; }
-  virtual ExceptionCode GetResponseBody(std::string *result) {
-    *result = return_data_;
-    return NO_ERR;
-  }
-
-  State state_;
-  bool should_fail_;
-  std::string return_data_;
-  std::string requested_url_;
-  Signal0<void> statechange_signal_;
-};
 
 #define GADGET_ID1 "12345678-5274-4C6C-A59F-1CC60A8B778B"
 
@@ -186,7 +110,7 @@ const char *xml_from_network =
 TEST(GadgetsMetadata, InitialLoadNull) {
   g_mocked_fm.data_.clear();
   GadgetsMetadata gmd;
-  EXPECT_EQ(0U, gmd.GetAllGadgetInfo().size());
+  EXPECT_EQ(0U, gmd.GetAllGadgetInfo()->size());
   EXPECT_EQ(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
   g_mocked_fm.requested_file_.clear();
 }
@@ -194,14 +118,14 @@ TEST(GadgetsMetadata, InitialLoadNull) {
 TEST(GadgetsMetadata, InitialLoadFail) {
   g_mocked_fm.should_fail_ = true;
   GadgetsMetadata gmd;
-  EXPECT_EQ(0U, gmd.GetAllGadgetInfo().size());
+  EXPECT_EQ(0U, gmd.GetAllGadgetInfo()->size());
   g_mocked_fm.should_fail_ = false;
   EXPECT_EQ(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
   g_mocked_fm.requested_file_.clear();
 }
 
 void ExpectFileData(const GadgetsMetadata &data) {
-  const GadgetInfoMap map = data.GetAllGadgetInfo();
+  const GadgetInfoMap &map = *data.GetAllGadgetInfo();
   ASSERT_EQ(3U, map.size());
   const GadgetInfo &info = map.find(GADGET_ID1)->second;
   ASSERT_EQ(5U, info.attributes.size());
@@ -223,23 +147,24 @@ void ExpectFileData(const GadgetsMetadata &data) {
 }
 
 TEST(GadgetsMetadata, InitialLoadData) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
   ExpectFileData(data);
 }
 
 TEST(GadgetsMetadata, IncrementalUpdateNULLCallback) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
   EXPECT_EQ(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
   g_mocked_fm.requested_file_.clear();
-  MockedXMLHttpRequest request(false, plugin_xml_network);
+  MockedXMLHttpRequest request(200, plugin_xml_network);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   data.UpdateFromServer(false, &request, NULL);
   EXPECT_EQ(std::string(kPluginsXMLLocation), g_mocked_fm.requested_file_);
   g_mocked_fm.requested_file_.clear();
-  EXPECT_EQ(std::string(expected_xml_file_merge_network), g_mocked_fm.data_);
+  EXPECT_EQ(std::string(expected_xml_file_merge_network),
+            g_mocked_fm.data_[kPluginsXMLLocation]);
   EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
             request.requested_url_);
 }
@@ -254,9 +179,9 @@ void Callback(bool request_success, bool parsing_success) {
 }
 
 TEST(GadgetsMetadata, IncrementalUpdateWithCallback) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(false, plugin_xml_network);
+  MockedXMLHttpRequest request(200, plugin_xml_network);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = g_request_success = g_parsing_success = false;
@@ -264,15 +189,16 @@ TEST(GadgetsMetadata, IncrementalUpdateWithCallback) {
   EXPECT_TRUE(g_callback_called);
   EXPECT_TRUE(g_request_success);
   EXPECT_TRUE(g_parsing_success);
-  EXPECT_EQ(std::string(expected_xml_file_merge_network), g_mocked_fm.data_);
+  EXPECT_EQ(std::string(expected_xml_file_merge_network),
+            g_mocked_fm.data_[kPluginsXMLLocation]);
   EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=05102007",
             request.requested_url_);
 }
 
 TEST(GadgetsMetadata, IncrementalUpdateRequestFail) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(true, plugin_xml_network);
+  MockedXMLHttpRequest request(404, plugin_xml_network);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = false;
@@ -288,9 +214,9 @@ TEST(GadgetsMetadata, IncrementalUpdateRequestFail) {
 }
 
 TEST(GadgetsMetadata, IncrementalUpdateParsingFail1) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(false, plugin_xml_network_bad);
+  MockedXMLHttpRequest request(200, plugin_xml_network_bad);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = g_request_success = false;
@@ -306,9 +232,9 @@ TEST(GadgetsMetadata, IncrementalUpdateParsingFail1) {
 }
 
 TEST(GadgetsMetadata, IncrementalUpdateParsingFail2) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(false, plugin_xml_network_extra_plugin);
+  MockedXMLHttpRequest request(200, plugin_xml_network_extra_plugin);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = g_request_success = false;
@@ -324,9 +250,9 @@ TEST(GadgetsMetadata, IncrementalUpdateParsingFail2) {
 }
 
 TEST(GadgetsMetadata, FullDownload) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(false, xml_from_network);
+  MockedXMLHttpRequest request(200, xml_from_network);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = g_request_success = g_parsing_success = false;
@@ -336,13 +262,14 @@ TEST(GadgetsMetadata, FullDownload) {
   EXPECT_TRUE(g_parsing_success);
   EXPECT_EQ(std::string(kPluginsXMLRequestPrefix) + "&diff_from_date=01011980",
             request.requested_url_);
-  EXPECT_EQ(std::string(xml_from_network), g_mocked_fm.data_);
+  EXPECT_EQ(std::string(xml_from_network),
+            g_mocked_fm.data_[kPluginsXMLLocation]);
 }
 
 TEST(GadgetsMetadata, FullDownloadRequestFail) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(true, plugin_xml_network);
+  MockedXMLHttpRequest request(404, plugin_xml_network);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = false;
@@ -358,9 +285,9 @@ TEST(GadgetsMetadata, FullDownloadRequestFail) {
 }
 
 TEST(GadgetsMetadata, FullDownloadParsingFail) {
-  g_mocked_fm.data_ = plugin_xml_file;
+  g_mocked_fm.data_[kPluginsXMLLocation] = plugin_xml_file;
   GadgetsMetadata data;
-  MockedXMLHttpRequest request(false, plugin_xml_network);
+  MockedXMLHttpRequest request(200, plugin_xml_network);
   // Different from real impl, the following UpdateFromServer will finish
   // synchronously.
   g_callback_called = g_request_success = false;

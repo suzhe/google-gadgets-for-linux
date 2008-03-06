@@ -18,6 +18,7 @@
 
 #include <time.h>
 #include <vector>
+#include <set>
 #include "digest_utils.h"
 #include "file_manager_factory.h"
 #include "gadget.h"
@@ -42,12 +43,12 @@ static const int kGadgetsMetadataRetryInterval = 2 * 3600 * 1000;
 static const int kGadgetsMetadataRetryMaxInterval = 86400 * 1000;
 
 // Options key to record the last time of successful metadata update.
-static const char kOptionsLastUpdateTime[] = "GadgetsMetadataLastUpdateTime";
+static const char kOptionsLastUpdateTime[] = "MetadataLastUpdateTime";
 // Options key to record the last time of trying metadata update. This value
 // will be cleared when the update successfully finishes.
-static const char kOptionsLastTryTime[] = "GadgetsMetadataLastTryTime";
+static const char kOptionsLastTryTime[] = "MetadataLastTryTime";
 // Options key to record the current retry timeout value.
-static const char kOptionsRetryTimeout[] = "GadgetsMetadataRetryTimeout";
+static const char kOptionsRetryTimeout[] = "MetadataRetryTimeout";
 
 // Notes about inactive gadget instances:
 // When the last instance of a gadget is to be removed, the instance won't be
@@ -57,11 +58,11 @@ static const char kOptionsRetryTimeout[] = "GadgetsMetadataRetryTimeout";
 
 // Options key to record the current maximum instance id of gadget instances
 // including active and inavtive ones.
-static const char kOptionsMaxInstanceId[] = "GadgetMaxInstanceId";
+static const char kOptionsMaxInstanceId[] = "MaxInstance";
 
 // The prefix of options keys each of which records the status of gadget
-// instances, including both active and inactive ones. The position number
-// of the value is the instance id.
+// instances, including both active and inactive ones. The whole options key
+// is like "InstStatus.instance_id".
 // The meaning of the options value:
 //   0: An empty slot.
 //   1: An active instance.
@@ -69,15 +70,19 @@ static const char kOptionsMaxInstanceId[] = "GadgetMaxInstanceId";
 //      initially 2 when the instance is just become inactive, and will be
 //      incremented on some events. If the number reaches kExpirationThreshold,
 //      the instance will be actually removed (expire).
-static const char kOptionsInstanceStatusPrefix[] = "GadgetInstanceStatus.";
+static const char kOptionsInstanceStatusPrefix[] = "InstStatus.";
 
 static const int kInstanceStatusNone = 0;
 static const int kInstanceStatusActive = 1;
 static const int kInstanceStatusInactiveStart = 2;
 
 // The prefix of options keys to record the corresponding gadget id of
-// each instance.
-static const char kOptionsInstanceGadgetIdPrefix[] = "GadgetInstanceGadgetId.";
+// each instance. The whole options key is like "InstGadgetId.instance_id".
+static const char kOptionsInstanceGadgetIdPrefix[] = "InstGadgetId.";
+
+// The prefix of options keys to record the last added time of the gadget.
+// The whole options key is like "AddedTime.gadget_id". 
+static const char kOptionsGadgetAddedTimePrefix[] = "AddedTime.";
 
 // A hard limit of maximum number of active and inactive gadget instances.
 static const int kMaxNumGadgetInstances = 128;
@@ -88,8 +93,8 @@ static const char kDownloadedGadgetsDir[] = "profile://downloaded_gadgets/";
 static const char kThumbnailCacheDir[] = "profile://thumbnails/";
 
 // Convert a string to a valid and safe file name. Need not be inversable. 
-static std::string MakeGoodFileName(const char *gadget_id) {
-  std::string result(gadget_id);
+static std::string MakeGoodFileName(const char *uuid_or_url) {
+  std::string result(uuid_or_url);
   for (size_t i = 0; i < result.size(); i++) {
     char c = result[i];
     if (!isalnum(c) && c != '-' && c != '_' && c != '.' && c != '+')
@@ -110,15 +115,18 @@ class GadgetManager::Impl {
     ASSERT(main_loop_);
     ASSERT(global_options_);
     ASSERT(file_manager_);
+    Init();
+  }
 
-    if (metadata_.GetAllGadgetInfo().size() == 0) {
+  void Init() {
+    if (metadata_.GetAllGadgetInfo()->size() == 0) {
       // Schedule an immediate update if there is no cached metadata.
       ScheduleUpdate(0);
     } else {
       ScheduleNextUpdate();
     }
 
-    int current_max_id = 0;
+    int current_max_id = -1;
     global_options_->GetValue(kOptionsMaxInstanceId).
         ConvertToInt(&current_max_id);
     if (current_max_id >= kMaxNumGadgetInstances)
@@ -128,10 +136,13 @@ class GadgetManager::Impl {
     for (int i = 0; i <= current_max_id; i++) {
       std::string key(kOptionsInstanceStatusPrefix);
       key += StringPrintf("%d", i);
-      int status = 0;
+      int status = kInstanceStatusNone;
       global_options_->GetValue(key.c_str()).ConvertToInt(&status);
       instance_statuses_[i] = status;
+      if (status == kInstanceStatusActive)
+        active_gadgets_.insert(GetInstanceGadgetId(i));
     }
+    TrimInstanceStatuses();
   }
 
   void ScheduleNextUpdate() {
@@ -198,6 +209,7 @@ class GadgetManager::Impl {
                                   Variant(retry_timeout_));
         global_options_->PutValue(kOptionsLastUpdateTime,
                                   Variant(last_update_time_));
+        ScheduleNextUpdate();
         return;
       }
 
@@ -257,8 +269,9 @@ class GadgetManager::Impl {
       if (instance_statuses_[i] != kInstanceStatusNone) {
         if (i < size - 1) {
           instance_statuses_.resize(i + 1);
-          global_options_->PutValue(kOptionsMaxInstanceId, Variant(i));
+          global_options_->PutValue(kOptionsMaxInstanceId, Variant(i + 1));
         }
+        break;
       }
     }
   }
@@ -281,6 +294,8 @@ class GadgetManager::Impl {
           // The expriation score reaches the threshold, actually remove
           // the instance.
           ActuallyRemoveInstance(i, true);
+          global_options_->Remove((std::string(kOptionsGadgetAddedTimePrefix) +
+                                   GetInstanceGadgetId(i)).c_str());
         }
       }
     }
@@ -308,6 +323,13 @@ class GadgetManager::Impl {
   }
 
   int NewGadgetInstance(const char *gadget_id) {
+    if (!gadget_id || !*gadget_id || !GetGadgetInfo(gadget_id))
+      return -1;
+
+    global_options_->PutValue(
+        (std::string(kOptionsGadgetAddedTimePrefix) + gadget_id).c_str(),
+        Variant(main_loop_->GetCurrentTime()));
+
     // First try to find the inactive instance of of this gadget.
     int size = static_cast<int>(instance_statuses_.size());
     for (int i = 0; i < size; i++) {
@@ -316,6 +338,7 @@ class GadgetManager::Impl {
         // Re-activate an inactive gadget instance.
         SetInstanceStatus(i, kInstanceStatusActive);
         new_instance_signal_(i);
+        active_gadgets_.insert(gadget_id);
         return i;
       }
     }
@@ -327,12 +350,12 @@ class GadgetManager::Impl {
 
     SaveInstanceGadgetId(instance_id, gadget_id);
     new_instance_signal_(instance_id);
+    active_gadgets_.insert(gadget_id);
     return instance_id;
   }
 
   bool RemoveGadgetInstance(int instance_id) {
     int size = static_cast<int>(instance_statuses_.size());
-    ASSERT(instance_id >= 0 && instance_id < size);
     if (instance_id < 0 || instance_id >= size ||
         instance_statuses_[instance_id] != kInstanceStatusActive)
       return false;
@@ -353,6 +376,7 @@ class GadgetManager::Impl {
     if (is_last_instance) {
       // Only change status to inactive for the last instance of a gadget.
       SetInstanceStatus(instance_id, kInstanceStatusInactiveStart);
+      active_gadgets_.erase(gadget_id);
     } else {
       // Actually remove the instance.
       ActuallyRemoveInstance(instance_id, false);
@@ -364,6 +388,9 @@ class GadgetManager::Impl {
   }
 
   void UpdateGadgetInstances(const char *gadget_id) {
+    if (!gadget_id || !*gadget_id)
+      return;
+
     int size = static_cast<int>(instance_statuses_.size());
     for (int i = 0; i < size; i++) {
       if (instance_statuses_[i] == kInstanceStatusActive &&
@@ -378,22 +405,78 @@ class GadgetManager::Impl {
   }
 
   bool EnumerateGadgetInstances(Slot1<bool, int> *callback) {
+    ASSERT(callback);
     int size = static_cast<int>(instance_statuses_.size());
     for (int i = 0; i < size; i++) {
       if (instance_statuses_[i] == kInstanceStatusActive &&
-          !(*callback)(i))
+          !(*callback)(i)) {
+        delete callback;
         return false;
+      }
     }
+    delete callback;
     return true;
   }
 
+  class AddedTimeUpdater {
+   public:
+    AddedTimeUpdater(GadgetInfoMap *map) : map_(map) { }
+    bool Callback(const char *name, const Variant &value, bool encrypted) {
+      if (strncmp(name, kOptionsGadgetAddedTimePrefix,
+                  arraysize(kOptionsGadgetAddedTimePrefix) - 1) == 0) {
+        std::string gadget_id(name);
+        gadget_id.erase(0, arraysize(kOptionsGadgetAddedTimePrefix) - 1);
+        GadgetInfoMap::iterator it = map_->find(gadget_id);
+        if (it != map_->end()) {
+          int64_t time = 0;
+          value.ConvertToInt64(&time);
+          it->second.accessed_date = static_cast<uint64_t>(time);
+        } else {
+          // The gadget doesn't exist, so remove the options item.
+          options_to_remove_.push_back(name);
+        }
+      }
+      return true;
+    }
+    GadgetInfoMap *map_;
+    std::vector<std::string> options_to_remove_;
+  };
+
+  const GadgetInfoMap &GetAllGadgetInfo() {
+    GadgetInfoMap *map = metadata_.GetAllGadgetInfo();
+    AddedTimeUpdater updater(map);
+    global_options_->EnumerateItems(
+        NewSlot(&updater, &AddedTimeUpdater::Callback));
+
+    // Remove the options items for gadgets which no longer exist.
+    for (std::vector<std::string>::const_iterator it =
+             updater.options_to_remove_.begin();
+         it != updater.options_to_remove_.end(); ++it) {
+      global_options_->Remove(it->c_str());
+    }
+    return *map;
+  }
+
   const GadgetInfo *GetGadgetInfo(const char *gadget_id) {
-    const GadgetInfoMap &map = metadata_.GetAllGadgetInfo(); 
-    GadgetInfoMap::const_iterator it = map.find(gadget_id);
-    return it == map.end() ? NULL : &it->second;
+    if (!gadget_id || !*gadget_id)
+      return NULL;
+
+    GadgetInfoMap *map = metadata_.GetAllGadgetInfo();
+    GadgetInfoMap::const_iterator it = map->find(gadget_id);
+    return it == map->end() ? NULL : &it->second;
+  }
+
+  bool GadgetHasInstance(const char *gadget_id) {
+    if (!gadget_id || !*gadget_id)
+      return false;
+
+    return active_gadgets_.find(gadget_id) != active_gadgets_.end();
   }
 
   bool NeedDownloadOrUpdateGadget(const char *gadget_id, bool failure_result) {
+    if (!gadget_id || !*gadget_id)
+      return false;
+
     const GadgetInfo *gadget_info = GetGadgetInfo(gadget_id);
     if (!gadget_info) // This should not happen.
       return failure_result;
@@ -452,6 +535,9 @@ class GadgetManager::Impl {
   typedef std::vector<int> InstanceStatuses;
   InstanceStatuses instance_statuses_;
 
+  // Set of gadgets each of which has at least one active instance.
+  std::set<std::string> active_gadgets_;
+
   Signal1<void, int> new_instance_signal_;
   Signal1<void, int> remove_instance_signal_;
   Signal1<void, int> update_instance_signal_;
@@ -468,6 +554,10 @@ GadgetManager::GadgetManager()
 
 GadgetManager::~GadgetManager() {
   delete impl_;
+}
+
+void GadgetManager::Init() {
+  impl_->Init();
 }
 
 GadgetManager *GadgetManager::Get() {
@@ -497,7 +587,7 @@ std::string GadgetManager::GetGadgetInstanceOptionsName(int instance_id) {
 }
 
 const GadgetInfoMap &GadgetManager::GetAllGadgetInfo() {
-  return impl_->metadata_.GetAllGadgetInfo();
+  return impl_->GetAllGadgetInfo();
 }
 
 const GadgetInfo *GadgetManager::GetGadgetInfo(
@@ -509,6 +599,14 @@ const GadgetInfo *GadgetManager::GetGadgetInfoOfInstance(
     int instance_id) {
   std::string gadget_id = impl_->GetInstanceGadgetId(instance_id);
   return gadget_id.empty() ? NULL :GetGadgetInfo(gadget_id.c_str());
+}
+
+bool GadgetManager::GadgetHasInstance(const char *gadget_id) {
+  return impl_->GadgetHasInstance(gadget_id);
+}
+
+std::string GadgetManager::GetInstanceGadgetId(int instance_id) {
+  return impl_->GetInstanceGadgetId(instance_id);
 }
 
 Connection *GadgetManager::ConnectOnNewGadgetInstance(
@@ -567,7 +665,8 @@ bool GadgetManager::NeedDownloadGadget(const char *gadget_id) {
 }
 
 bool GadgetManager::NeedUpdateGadget(const char *gadget_id) {
-  return impl_->NeedDownloadOrUpdateGadget(gadget_id, false);
+  return impl_->GadgetHasInstance(gadget_id) &&
+         impl_->NeedDownloadOrUpdateGadget(gadget_id, false);
 }
 
 bool GadgetManager::SaveGadget(const char *gadget_id, const std::string &data) {
@@ -605,12 +704,18 @@ std::string GadgetManager::GetDownloadedGadgetPath(const char *gadget_id) {
       Impl::GetDownloadedGadgetPathInternal(gadget_id).c_str());
 }
 
+bool GadgetManager::EnumerateGadgetInstances(Slot1<bool, int> *callback) {
+  return impl_->EnumerateGadgetInstances(callback);
+}
+
 static const int kNumVersionParts = 4;
 
 static bool ParseVersion(const char *version,
                          int parsed_version[kNumVersionParts]) {
   char *end_ptr;
   for (int i = 0; i < kNumVersionParts; i++) {
+    if (!isdigit(version[0]))
+      return false;
     long v = strtol(version, &end_ptr, 10);
     if (v < 0 || v > SHRT_MAX)
       return false;
