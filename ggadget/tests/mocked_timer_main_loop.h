@@ -14,7 +14,10 @@
   limitations under the License.
 */
 
+#include <limits.h>
+#include <vector>
 #include "ggadget/common.h"
+#include "ggadget/logger.h"
 #include "ggadget/main_loop_interface.h"
 
 // This class can be used to test timer related functions.
@@ -23,86 +26,75 @@ class MockedTimerMainLoop : public ggadget::MainLoopInterface {
   MockedTimerMainLoop(uint64_t time_base)
       : run_depth_(0),
         running_(false),
-        current_time_(time_base),
-        timer_id_base_(1) {
+        current_time_(time_base) {
   }
 
-  enum WatchType {
-    INVALID_WATCH = 0,
-    IO_READ_WATCH,
-    IO_WRITE_WATCH,
-    TIMEOUT_WATCH
-  };
-
-  virtual int AddIOReadWatch(int fd, WatchCallbackInterface *callback) {
-    ASSERT_M(false, "IO watches is not supported by MockedTimerMainLoop");
+  virtual int AddIOReadWatch(int fd,
+                             ggadget::WatchCallbackInterface *callback) {
+    ASSERT_M(false, ("IO watches is not supported by MockedTimerMainLoop"));
     return 0;
   }
 
-  virtual int AddIOWriteWatch(int fd, WatchCallbackInterface *callback) {
-    ASSERT_M(false, "IO watches is not supported by MockedTimerMainLoop");
+  virtual int AddIOWriteWatch(int fd,
+                              ggadget::WatchCallbackInterface *callback) {
+    ASSERT_M(false, ("IO watches is not supported by MockedTimerMainLoop"));
     return 0;
   }
 
-  virtual int AddTimeoutWatch(int interval, WatchCallbackInterface *callback) {
+  virtual int AddTimeoutWatch(int interval,
+                              ggadget::WatchCallbackInterface *callback) {
     if (interval < 0 || !callback)
       return -1;
-    timers_.push_back(std::make_pair(interval, callback));
-    return static_cast<int>(timers_.size()) + timer_id_base_ - 1;
+    TimerInfo info = { interval, interval, callback };
+    timers_.push_back(info);
+    int id = static_cast<int>(timers_.size());
+    LOG("MockedTimerMainLoop::AddTimeoutWatch: %d id=%d", interval, id);
+    return id;
   }
 
   virtual WatchType GetWatchType(int watch_id) {
-    if (watch_id < timer_id_base_ ||
-        watch_id >= static_cast<int>(timers_.size()) + timer_id_base_ ||
-        timers_[watch_id - timer_id_base_].first != -1) {
+    if (watch_id < 1 || watch_id > static_cast<int>(timers_.size()) ||
+        timers_[watch_id - 1].interval != -1)
       return INVALID_WATCH;
     return TIMEOUT_WATCH;
   }
 
   virtual int GetWatchData(int watch_id) {
-    if (watch_id < timer_id_base_ ||
-        watch_id >= static_cast<int>(timers_.size()) + timer_id_base_)
+    if (watch_id < 1 || watch_id > static_cast<int>(timers_.size()))
       return -1;
-    return timers_[watch_id - timer_id_base_].first;
+    return timers_[watch_id - 1].interval;
   }
 
   virtual void RemoveWatch(int watch_id) {
-    if (watch_id >= timer_id_base_ ||
-        watch_id < static_cast<int>(timers_.size()) + timer_id_base_) {
-      TimerInfo *info = &timers_[watch_id - timer_id_base_];
-      if (info->first == -1)
+    if (watch_id >= 1 && watch_id <= static_cast<int>(timers_.size())) {
+      TimerInfo *info = &timers_[watch_id - 1];
+      if (info->interval == -1)
         return;
-      info->second->OnRemove(this, watch_id);
-      info->second = NULL;
-      info->first = -1;
+
+      LOG("MockedTimerMainLoop::RemoveTimeoutWatch: id=%d", watch_id);
+      info->interval = -1;
+      info->callback->OnRemove(this, watch_id);
+      info->callback = NULL;
     }
   }
 
   // This function provided here only to make the program compile.
-  // Unittests should use RunAutoQuit() instead.
+  // Unittests should use DoIteration() instead.
   virtual void Run() { ASSERT(false); }
 
+  // Do one iteration. Find the nearest timers to present, fire them and
+  // advance the current time.
   virtual bool DoIteration(bool may_block) {
-    int min_time = -1;
+    int min_time = INT_MAX;
     for (Timers::iterator it = timers_.begin(); it != timers_.end(); ++it) {
-      if (it->first > min_time)
-        min_time = it->first;
+      if (it->interval != -1 && it->remaining < min_time)
+        min_time = it->remaining;
     }
 
-    if (min_time == -1)
+    if (min_time == INT_MAX)
       return false;
 
-    current_time_ += min_time;
-    for (Timers::iterator it = timers_.begin(); it != timers_.end(); ++it) {
-      if (it->first != -1) {
-        it->first -= min_time;
-        if (it->first == 0) {
-          int id = static_cast<int>(it - timers_.begin()) + timer_id_base_;
-          if (!it->second->Call(this, id);
-            RemoveWatch(id);
-        }
-      }
-    }
+    AdvanceTime(min_time);
     return true;
   }
 
@@ -110,22 +102,35 @@ class MockedTimerMainLoop : public ggadget::MainLoopInterface {
   virtual bool IsRunning() const { return running_; }
   virtual uint64_t GetCurrentTime() const { return current_time_; }
 
-  // Unittests should call this method to run the main loop. This method will
-  // quit automatically if there is no more timers.
-  void RunAutoQuit() {
-    running_ = true;
-    while (running_ && DoIteration(true));
-    running_ = false;
-    // Because all timers have expired, clear the vector to save memory and CPU,
-    // and adjust the id base number.
-    timer_id_base_ += timers_.size();
-    timers_.clear();
+  // Explicitly advance the current time.
+  void AdvanceTime(int time) {
+    current_time_ += time;
+    int size = static_cast<int>(timers_.size());
+    for (int i = 0; i < size; i++) {
+      TimerInfo *info = &timers_[i];
+      if (info->interval != -1) {
+        info->remaining -= time;
+        if (info->remaining <= 0) {
+          LOG("MockedTimerMainLoop fire timer: %d id=%d", info->interval, i);
+          if (!info->callback->Call(this, i))
+            RemoveWatch(i);
+          else
+            info->remaining = info->interval;
+        }
+      }
+    }
   }
 
+  struct TimerInfo {
+    int interval;
+    int remaining;
+    ggadget::WatchCallbackInterface *callback;
+  };
+
+  int run_depth_;
+  bool running_;
   bool quit_flag_;
   uint64_t current_time_;
-  typedef std::pair<int, WatchCallbackInterface *> TimerInfo;
   typedef std::vector<TimerInfo> Timers;
   Timers timers_;
-  int timer_id_base_;
 };

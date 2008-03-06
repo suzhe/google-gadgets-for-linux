@@ -140,9 +140,12 @@ bool MemoryOptions::EnumerateItems(
   for (Impl::OptionsMap::const_iterator it = impl_->values_.begin();
        it != impl_->values_.end(); ++it) {
     const char *name = it->first.c_str();
-    if (!(*callback)(name, it->second, IsEncrypted(name)))
+    if (!(*callback)(name, it->second, IsEncrypted(name))) {
+      delete callback;
       return false;
+    }
   }
+  delete callback;
   return true;
 }
 
@@ -151,9 +154,12 @@ bool MemoryOptions::EnumerateInternalItems(
   ASSERT(callback);
   for (Impl::OptionsMap::const_iterator it = impl_->internal_values_.begin();
        it != impl_->internal_values_.end(); ++it) {
-    if (!(*callback)(it->first.c_str(), it->second))
+    if (!(*callback)(it->first.c_str(), it->second)) {
+      delete callback;
       return false;
+    }
   }
+  delete callback;
   return true;
 }
 

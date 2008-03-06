@@ -128,35 +128,12 @@ function category_onmouseout() {
   category_hover_img.visible = false;
 }
 
-function ComparePluginDate(p1, p2) {
-  var date1 = p1.updated_date.getTime();
-  var date2 = p2.updated_date.getTime();
-  return date1 == date2 ? 0 : date1 < date2 ? 1 : -1;
-}
-
-function ComparePluginRank(p1, p2) {
-  var rank1 = p1.rank;
-  var rank2 = p2.rank;
-  return rank1 == rank2 ? 0 : rank1 < rank2 ? 1 : -1;
-}
-
 function SelectCategory(category) {
   gCurrentCategory = category;
   if (category) {
     category_active_img.y = categories_div.children.item(category).offsetY;
     category_active_img.visible = true;
-    gCurrentPlugins = gPlugins[gCurrentLanguage][gCurrentCategory];
-    if (!gCurrentPlugins.sorted) {
-      debug.trace("begin sorting");
-      if (gCurrentCategory == kCategoryRecentlyUsed)
-        ; // TODO: sort by recency
-      else if (gCurrentCategory == kCategoryNew)
-        gCurrentPlugins.sort(ComparePluginDate);
-      else
-        gCurrentPlugins.sort(ComparePluginRank);
-      gCurrentPlugins.sorted = true;
-      debug.trace("end sorting");
-    }
+    gCurrentPlugins = GetPluginsOfCategory(gCurrentLanguage, gCurrentCategory);
     SelectPage(0);
     ResetSearchBox();
   } else {
@@ -188,7 +165,7 @@ function AddPluginBox(plugin, index, row, column) {
     "</div>");
 
   // Set it here to prevent problems caused by special chars in the title.
-  box.children.item(0).innerText = GetPluginTitle(plugin);
+  box.children.item(0).innerText = GetPluginTitle(plugin, gCurrentLanguage);
 
   var thumbnail_element1 = box.children.item(2).children.item(0);
   var thumbnail_element2 = box.children.item(2).children.item(1);
@@ -282,6 +259,7 @@ function add_button_onmouseover(index) {
 }
 
 function add_button_onmouseout(index) {
+  SetDownloadStatus(gCurrentPlugins[index], kDownloadStatusNone);
   var box = event.srcElement.parentElement;
   // The mouse may directly moved out of the pluginbox.
   if (!view.mouseOverElement || view.mouseOverElement != box)
@@ -295,8 +273,8 @@ function MouseOverPlugin(box, index) {
   box.children.item(3).visible = true;
 
   var plugin = gCurrentPlugins[index];
-  plugin_title.innerText = GetPluginTitle(plugin);
-  plugin_description.innerText = GetPluginDescription(plugin);
+  plugin_title.innerText = GetPluginTitle(plugin, gCurrentLanguage);
+  plugin_description.innerText = GetPluginDescription(plugin, gCurrentLanguage);
   plugin_description.height = undefined;
   plugin_other_data.innerText = GetPluginOtherData(plugin);
 }
@@ -410,7 +388,7 @@ function search_box_onchange() {
     setTimeout(function () {
       if (search_box.value && search_box.value != strings.SEARCH_GADGETS) {
         SelectCategory(null);
-        gCurrentPlugins = SearchPlugins(search_box.value);
+        gCurrentPlugins = SearchPlugins(search_box.value, gCurrentLanguage);
         SelectPage(0);
       }
     }, kSearchDelay);

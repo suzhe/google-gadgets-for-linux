@@ -37,7 +37,8 @@ class ScriptableGadgetInfo : public ScriptableHelperDefault {
     RegisterConstant("attributes", NewScriptableMap(info_.attributes));
     RegisterConstant("titles", NewScriptableMap(info_.titles));
     RegisterConstant("descriptions", NewScriptableMap(info_.descriptions));
-    RegisterConstant("updated_date", Date(info_.updated_date * INT64_C(1000)));
+    RegisterConstant("updated_date", Date(info_.updated_date));
+    RegisterConstant("accessed_date", Date(info_.accessed_date));
   }
 
   // Allow the script to add new script properties to this object.

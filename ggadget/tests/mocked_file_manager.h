@@ -27,17 +27,21 @@ class MockedFileManager : public ggadget::FileManagerInterface {
   virtual bool ReadFile(const char *file, std::string *data) {
     requested_file_ = file;
     if (should_fail_) return false;
-    *data = data_;
+    *data = data_[file];
     return true;
   }
   virtual bool WriteFile(const char *file, const std::string &data,
                          bool overwrite) {
     requested_file_ = file;
     if (should_fail_) return false;
-    data_ = data;
+    data_[file] = data;
     return true;
   }
-  virtual bool RemoveFile(const char *file) { return true; }
+  virtual bool RemoveFile(const char *file) {
+    requested_file_ = file;
+    data_.erase(file);
+    return true;
+  }
   virtual bool ExtractFile(const char *, std::string *) { return false; }
   virtual bool FileExists(const char *file, std::string *path) { return true; }
   virtual bool IsDirectlyAccessible(const char *file, std::string *path) {
@@ -47,7 +51,7 @@ class MockedFileManager : public ggadget::FileManagerInterface {
   virtual uint64_t GetLastModifiedTime(const char *file) { return 0; }
 
   bool should_fail_;
-  std::string data_;
+  std::map<std::string, std::string> data_;
   std::string requested_file_;
 };
 

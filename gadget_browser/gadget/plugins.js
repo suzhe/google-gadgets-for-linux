@@ -55,6 +55,8 @@ var kCategoryTechnology = "technology";
 var kCategoryCommunication = "communication";
 var kCategoryHoliday = "holiday";
 
+var kMaxRecentlyUsedPlugins = 24;
+
 var kTopCategories = [
   kCategoryAll, kCategoryNew, kCategoryRecommendations, kCategoryGoogle,
   kCategoryRecentlyUsed, kCategoryUpdates,
@@ -124,15 +126,15 @@ function LoadMetadata() {
   debug.trace("finished loading metadata");
 }
 
-function GetPluginTitle(plugin) {
+function GetPluginTitle(plugin, language) {
   if (!plugin) return "";
-  var result = plugin.titles[gCurrentLanguage];
+  var result = plugin.titles[language];
   return result ? result : plugin.attributes.name;
 }
 
-function GetPluginDescription(plugin) {
+function GetPluginDescription(plugin, language) {
   if (!plugin) return "";
-  var result = plugin.descriptions[gCurrentLanguage];
+  var result = plugin.descriptions[language];
   return result ? result : plugin.attributes.product_summary;
 }
 
@@ -216,10 +218,10 @@ function DownloadPlugin(plugin, is_updating) {
   }
 }
 
-function SearchPlugins(search_string) {
+function SearchPlugins(search_string, language) {
   debug.trace("search begins");
   var terms = search_string.toUpperCase().split(" ");
-  var plugins = gPlugins[gCurrentLanguage][kCategoryAll];
+  var plugins = gPlugins[language][kCategoryAll];
   var result = [];
   if (plugins && plugins.length) {
     for (var i = 0; i < plugins.length; i++) {
@@ -231,8 +233,8 @@ function SearchPlugins(search_string) {
         attrs.download_url ? attrs.download_url : "",
         attrs.info_url ? attrs.info_url : "",
         attrs.keywords ? attrs.keywords : "",
-        GetPluginTitle(plugin),
-        GetPluginDescription(plugin),
+        GetPluginTitle(plugin, language),
+        GetPluginDescription(plugin, language),
       ].join(" ").toUpperCase();
 
       var ok = true;
@@ -247,5 +249,74 @@ function SearchPlugins(search_string) {
   }
 
   debug.trace("search ends");
+  return result;
+}
+
+function ComparePluginID(p1, p2) {
+  // Ascending order. 
+  return p1.id == p2.id ? 0 : p1.id > p2.id ? 1 : -1;
+}
+
+function ComparePluginDate(p1, p2) {
+  var date1 = p1.updated_date.getTime();
+  var date2 = p2.updated_date.getTime();
+  // Descending order. 
+  return date1 == date2 ? ComparePluginID(p1, p2) : date1 < date2 ? 1 : -1;
+}
+
+function ComparePluginRank(p1, p2) {
+  var rank1 = p1.rank;
+  var rank2 = p2.rank;
+  // Descending order. 
+  return rank1 == rank2 ? ComparePluginID(p1, p2) : rank1 < rank2 ? 1 : -1;
+}
+
+function CompareRecency(p1, p2) {
+  var date1 = p1.accessed_date.getTime();
+  var date2 = p2.accessed_date.getTime();
+  // Descending order. 
+  return date1 == date2 ? ComparePluginRank(p1, p2) : date1 < date2 ? 1 : -1;
+}
+
+function GetRecentlyUsedPlugins(language, result) {
+  var all_plugins = gPlugins[language][kCategoryAll];
+  for (var i = 0; i < all_plugins.length; i++) {
+    var plugin = all_plugins[i];
+    if (plugin.accessed_date && plugin.accessed_date.getTime() > 0)
+      result.push(plugin);
+  }
+  result.sort(CompareRecency);
+  if (result.length > kMaxRecentlyUsedPlugins) {
+    result.splice(kMaxRecentlyUsedPlugins,
+                  result.length - kMaxRecentlyUsedPlugins);
+  }
+}
+
+function GetUpdatablePlugins(language, result) {
+  var all_plugins = gPlugins[language][kCategoryAll];
+  for (var i = 0; i < all_plugins.length; i++) {
+    var plugin = all_plugins[i];
+    if (gadgetBrowserUtils.needUpdateGadget(plugin.id))
+      result.push(plugin);
+  }
+  result.sort(ComparePluginDate);
+}
+
+function GetPluginsOfCategory(language, category) {
+  var result = gPlugins[language][category];
+  if (!result.sorted) {
+    debug.trace("begin sorting");
+    if (category == kCategoryRecentlyUsed) {
+      GetRecentlyUsedPlugins(language, result);
+    } else if (category == kCategoryNew) {
+      result.sort(ComparePluginDate);
+    } else if (category == kCategoryUpdates) {
+      GetUpdatablePlugins(language, result);
+    } else {
+      result.sort(ComparePluginRank);
+    }
+    result.sorted = true;
+    debug.trace("end sorting");
+  }
   return result;
 }

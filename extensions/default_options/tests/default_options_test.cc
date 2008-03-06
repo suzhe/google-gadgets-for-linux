@@ -21,6 +21,7 @@
 #include "ggadget/system_utils.h"
 #include "ggadget/tests/init_extensions.h"
 #include "ggadget/tests/mocked_file_manager.h"
+#include "ggadget/tests/mocked_timer_main_loop.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
@@ -28,12 +29,53 @@ using namespace ggadget;
 // TODO: system dependent.
 #define TEST_DIRECTORY "/tmp/TestDefaultOptions"
 
+MockedTimerMainLoop g_mocked_main_loop(0);
 MockedFileManager g_mocked_fm;
 
-TEST(DefaultOptions, Test) {
+TEST(DefaultOptions, TestAutoFlush) {
+  ASSERT_EQ(std::string("profile://options/global-options.xml"),
+            g_mocked_fm.requested_file_);
+
+  const std::string kOptions1Path("profile://options/options1.xml");
   OptionsInterface *options = CreateOptions("options1");
+  ASSERT_EQ(kOptions1Path, g_mocked_fm.requested_file_);
+  ASSERT_TRUE(options);
+  g_mocked_fm.requested_file_.clear();
+  // Test the next flush timer without actual Flush() because data not changed.
+  // There are two timer events, one is fired by the options instance being
+  // tested, the other is the global options instance.
+  g_mocked_main_loop.DoIteration(true);
+  ASSERT_GE(g_mocked_main_loop.current_time_, UINT64_C(120000));
+  ASSERT_LE(g_mocked_main_loop.current_time_, UINT64_C(180000));
+  g_mocked_main_loop.DoIteration(true);
+  ASSERT_GE(g_mocked_main_loop.current_time_, UINT64_C(120000));
+  ASSERT_LE(g_mocked_main_loop.current_time_, UINT64_C(180000));
+  // The file manager should not be called, because data not changed.
+  ASSERT_EQ(std::string(), g_mocked_fm.requested_file_);
+
+  options->PutValue("newItem", Variant("newValue"));
+  g_mocked_main_loop.DoIteration(true);
+  ASSERT_GE(g_mocked_main_loop.current_time_, UINT64_C(240000));
+  ASSERT_LE(g_mocked_main_loop.current_time_, UINT64_C(360000));
+  g_mocked_main_loop.DoIteration(true);
+  ASSERT_GE(g_mocked_main_loop.current_time_, UINT64_C(240000));
+  ASSERT_LE(g_mocked_main_loop.current_time_, UINT64_C(360000));
+  // This time Flush() should be called because data changed.
   ASSERT_EQ(std::string("profile://options/options1.xml"),
             g_mocked_fm.requested_file_);
+  options->RemoveAll();
+  delete options;
+  // Options instance should flush when it is deleted.
+  ASSERT_EQ(kOptions1Path, g_mocked_fm.requested_file_);
+  // The options file should be removed if the options contains nothing.
+  ASSERT_EQ(std::string(), g_mocked_fm.data_[kOptions1Path]);
+}
+
+TEST(DefaultOptions, TestBasics) {
+  g_mocked_fm.data_.clear();
+  OptionsInterface *options = CreateOptions("options1");
+  const std::string kOptions1Path("profile://options/options1.xml");
+  ASSERT_EQ(kOptions1Path, g_mocked_fm.requested_file_);
   ASSERT_TRUE(options);
   const char kBinaryData[] = "\x01\0\x02xyz\n\r\"\'\\\xff\x7f<>&";
   const std::string kBinaryStr(kBinaryData, sizeof(kBinaryData) - 1);
@@ -76,16 +118,15 @@ TEST(DefaultOptions, Test) {
   EXPECT_EQ(test_data.size() * 2, options->GetCount());
 
   options->Flush();
-  options->DeleteStorage();
   delete options;
 
   // NULL string become blank string when persisted and loaded.
   test_data["itemstringnull"] = Variant("");
+  const std::string kOptions2Path("profile://options/options2.xml");
+  g_mocked_fm.data_[kOptions2Path] = g_mocked_fm.data_[kOptions1Path];
 
-  // g_mocked_fm will serve the data saved in options1 to options2. 
   options = CreateOptions("options2");
-  ASSERT_EQ(std::string("profile://options/options2.xml"),
-            g_mocked_fm.requested_file_);
+  ASSERT_EQ(kOptions2Path, g_mocked_fm.requested_file_);
   ASSERT_TRUE(options);
   for (TestData::const_iterator it = test_data.begin();
        it != test_data.end(); ++it) {
@@ -114,10 +155,28 @@ TEST(DefaultOptions, Test) {
   delete options;
 }
 
-static NativeMainLoop main_loop;
+TEST(DefaultOptions, TestOptionsSharing) {
+  g_mocked_fm.data_.clear();
+  OptionsInterface *options = CreateOptions("options1");
+  ASSERT_EQ(std::string("profile://options/options1.xml"),
+            g_mocked_fm.requested_file_);
+  g_mocked_fm.requested_file_.clear();
+
+  // This new options instance should share the same backend data with the
+  // previously created one.
+  OptionsInterface *options1 = CreateOptions("options1");
+  ASSERT_EQ(std::string(), g_mocked_fm.requested_file_);
+
+  options1->PutValue("TestSharing", Variant(100));
+  ASSERT_EQ(Variant(100), options->GetValue("TestSharing"));
+
+  delete options1;
+  ASSERT_EQ(Variant(100), options->GetValue("TestSharing"));
+  delete options;
+}
 
 int main(int argc, char **argv) {
-  SetGlobalMainLoop(&main_loop);
+  SetGlobalMainLoop(&g_mocked_main_loop);
   SetGlobalFileManager(&g_mocked_fm);
   testing::ParseGUnitFlags(&argc, argv);
 

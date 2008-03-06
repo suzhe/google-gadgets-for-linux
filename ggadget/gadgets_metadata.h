@@ -36,7 +36,7 @@ const char kPluginsXMLLocation[] = "profile://plugins.xml";
 
 /** This structure contains the metadata for a single gadget. */  
 struct GadgetInfo {
-  GadgetInfo() : updated_date(0) { }
+  GadgetInfo() : updated_date(0), accessed_date(0) { }
   /**
    * This id is used throughout this system to uniquely identifies a gadget.
    * For now we use the shortname attribute in plugins.xml as this id.
@@ -63,11 +63,18 @@ struct GadgetInfo {
   GadgetStringMap descriptions;
 
   /**
-   * The last updated time of this gadget. It's value is parsed from the
+   * The last updated time of this gadget. Its value is parsed from the
    * updated_date attribute if exists or created_date attribute.
    * The value is number of milliseconds since EPOCH.
    */
   uint64_t updated_date;
+
+  /**
+   * The last accessed time, i.e. when the gadget was last added. This value
+   * is filled by GadgetManager. The value is number of milliseconds since
+   * EPOCH.
+   */
+  uint64_t accessed_date;
 };
 
 typedef std::map<std::string, GadgetInfo> GadgetInfoMap;
@@ -81,6 +88,9 @@ class GadgetsMetadata {
    */
   GadgetsMetadata();
   ~GadgetsMetadata();
+
+  /** Initialize this object. Mainly for unittest. */ 
+  void Init();
 
  public:
   /**
@@ -101,9 +111,11 @@ class GadgetsMetadata {
 
   /**
    * Returns a map from gadget id (which for now is the shortname attribute) to
-   * GadgetInfo.
+   * GadgetInfo. The returned value is not const, because we allow
+   * @c GadgetManager to update some fields of @c GadgetInfo.
    */
-  const GadgetInfoMap &GetAllGadgetInfo() const;
+  GadgetInfoMap *GetAllGadgetInfo();
+  const GadgetInfoMap *GetAllGadgetInfo() const;
 
  private:
   class Impl;

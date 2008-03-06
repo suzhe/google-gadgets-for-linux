@@ -39,10 +39,14 @@ class GadgetsMetadata::Impl {
   Impl()
       : parser_(GetXMLParser()),
         file_manager_(GetGlobalFileManager()),
+        latest_plugin_time_(0),
         full_download_(false) {
     ASSERT(parser_);
     ASSERT(file_manager_);
+    Init();
+  }
 
+  void Init() {
     std::string contents;
     if (file_manager_->ReadFile(kPluginsXMLLocation, &contents))
       ParsePluginsXML(contents, true);
@@ -330,14 +334,22 @@ GadgetsMetadata::~GadgetsMetadata() {
   delete impl_;
 }
 
+void GadgetsMetadata::Init() {
+  impl_->Init();
+}
+
 void GadgetsMetadata::UpdateFromServer(bool full_download,
                                       XMLHttpRequestInterface *request,
                                       Slot2<void, bool, bool> *on_done) {
   impl_->UpdateFromServer(full_download, request, on_done);
 }
 
-const GadgetInfoMap &GadgetsMetadata::GetAllGadgetInfo() const {
-  return impl_->plugins_;
+GadgetInfoMap *GadgetsMetadata::GetAllGadgetInfo() {
+  return &impl_->plugins_;
+}
+
+const GadgetInfoMap *GadgetsMetadata::GetAllGadgetInfo() const {
+  return &impl_->plugins_;
 }
 
 }  // namespace ggadget
