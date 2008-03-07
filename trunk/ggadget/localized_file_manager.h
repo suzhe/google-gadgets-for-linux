@@ -29,13 +29,16 @@ namespace ggadget {
  * It dispatches all requests to a real FileManager implementation, but does
  * additional file searching rules. It searches a file in the paths in the
  * following order:
- *  - @c lang_TERRITORY/file (e.g. @c zh_CN/myfile),
- *  - @c lang/file (e.g. @c zh/myfile),
- *  - @c locale_id/file (for Windows compatibility, e.g. 2052/myfile),
- *  - @c en_US/file,
- *  - @c en/file,
+ *  - @c file (in the @c base_path);
+ *  - @c lang/file (e.g. @c zh/myfile);
+ *    (Here @c lang is the short name of current user's locale got from
+ *     @c GetLocaleShortName(), or the original two-segment locale name
+ *     if the locale has no short name.  
+ *  - @c windows_locale_id/file (for Windows compatibility, e.g. 2052/myfile);
+ *    (Here @c windows_locale_id is the corresponding Windows LCID of current
+ *     user's locale got from @c GetLocaleWindowIDString().)
+ *  - @c en/file;
  *  - @c 1033/file (for Windows compatibility).
- *  - @c file (in the @c base_path),
  */
 class LocalizedFileManager : public FileManagerInterface {
  public:

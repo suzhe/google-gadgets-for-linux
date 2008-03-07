@@ -21,11 +21,13 @@
 #include <ggadget/file_system_interface.h>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/audioclip_interface.h>
+#include <ggadget/locales.h>
 #include <ggadget/registerable_interface.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/scriptable_framework.h>
 #include <ggadget/scriptable_file_system.h>
 #include <ggadget/scriptable_array.h>
+#include <ggadget/system_utils.h>
 
 #define Initialize default_framework_LTX_Initialize
 #define Finalize default_framework_LTX_Finalize
@@ -427,7 +429,21 @@ static ScriptableProcessor g_script_processor_(&g_machine_);
 static ScriptableScreen g_script_screen_(&g_screen_);
 
 static std::string DefaultLanguageCode() {
-  return ("en-US");
+  std::string language, territory;
+  if (GetSystemLocaleInfo(&language, &territory)) {
+    if (territory.length()) {
+      std::string full_locale(language);
+      full_locale.append("-");
+      full_locale.append(territory);
+      std::string short_locale;
+      // To keep compatible with the Windows version, we must return the short
+      // name for many locales.
+      return GetLocaleShortName(full_locale.c_str(), &short_locale) ?
+             short_locale : full_locale;
+    }
+    return language;
+  }
+  return "en";
 }
 
 static std::string DefaultGetFileIcon(const char *filename) {

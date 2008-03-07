@@ -200,8 +200,10 @@ void CheckInstanceId(std::vector<int> *vector, int expected) {
   vector->erase(vector->begin());
 }
 
-void OnAddInstance(int instance_id) {
+bool g_accept_add_instance = true;
+bool OnAddInstance(int instance_id) {
   g_added_instances.push_back(instance_id);
+  return g_accept_add_instance;
 }
 
 void OnRemoveInstance(int instance_id) {
@@ -227,6 +229,10 @@ TEST(GadgetsManager, GadgetAddRemove) {
   CheckInstanceId(&g_added_instances, 0);
   ASSERT_EQ(1, manager->NewGadgetInstance(GADGET_ID1));
   CheckInstanceId(&g_added_instances, 1);
+  g_accept_add_instance = false;
+  ASSERT_EQ(-1, manager->NewGadgetInstance(GADGET_ID2));
+  CheckInstanceId(&g_added_instances, 2);
+  g_accept_add_instance = true;
   ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
   ASSERT_EQ(-1, manager->NewGadgetInstance("Non-exists"));
@@ -271,6 +277,10 @@ TEST(GadgetsManager, GadgetAddRemove) {
   ASSERT_EQ(3, manager->NewGadgetInstance(GADGET_ID1));
   CheckInstanceId(&g_added_instances, 3);
 
+  g_accept_add_instance = false;
+  ASSERT_EQ(-1, manager->NewGadgetInstance(GADGET_ID2));
+  CheckInstanceId(&g_added_instances, 2);
+  g_accept_add_instance = true;
   // New instance of gadget2 reuse the inactive instance.
   ASSERT_EQ(2, manager->NewGadgetInstance(GADGET_ID2));
   CheckInstanceId(&g_added_instances, 2);
@@ -295,18 +305,24 @@ TEST(GadgetsManager, GadgetAddRemove) {
   delete options0;
 
   ASSERT_TRUE(manager->SaveGadget(GADGET_ID2, "DATA"));
-  std::string gadget2_path = manager->GetDownloadedGadgetPath(GADGET_ID2);
+  std::string gadget2_path = manager->GetGadgetPath(GADGET_ID2);
   ASSERT_EQ(gadget2_path, g_mocked_fm.requested_file_);
   ASSERT_EQ(std::string("DATA"), g_mocked_fm.data_[gadget2_path]);
   CheckInstanceId(&g_updated_instances, 2);
 
   ASSERT_TRUE(manager->SaveGadget(GADGET_ID1, "DATA1"));
-  std::string gadget1_path = manager->GetDownloadedGadgetPath(GADGET_ID1);
+  std::string gadget1_path = manager->GetGadgetPath(GADGET_ID1);
   ASSERT_EQ(gadget1_path, g_mocked_fm.requested_file_);
   ASSERT_EQ(std::string("DATA1"), g_mocked_fm.data_[gadget1_path]);
   CheckInstanceId(&g_updated_instances, 0);
   CheckInstanceId(&g_updated_instances, 1);
   CheckInstanceId(&g_updated_instances, 3);
+
+  ASSERT_EQ(gadget1_path, manager->GetGadgetPath(gadget1_path.c_str()));
+  ASSERT_EQ(4, manager->NewGadgetInstance(gadget1_path.c_str()));
+  CheckInstanceId(&g_added_instances, 4);
+  ASSERT_EQ(gadget1_path, manager->GetInstanceGadgetId(4));
+  ASSERT_TRUE(manager->GadgetHasInstance(gadget1_path.c_str()));
 }
 
 int main(int argc, char **argv) {

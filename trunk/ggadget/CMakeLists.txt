@@ -34,6 +34,7 @@ SET(SRCS
   gadget.cc
   gadget_manager.cc
   gadgets_metadata.cc
+  locales.cc
   logger.cc
   main_loop.cc
   math_utils.cc
@@ -59,7 +60,6 @@ SET(SRCS
   unicode_utils.cc
   variant.cc
   view.cc
-  windows_locales.cc
   xml_dom.cc
   xml_http_request_factory.cc
   xml_parser.cc

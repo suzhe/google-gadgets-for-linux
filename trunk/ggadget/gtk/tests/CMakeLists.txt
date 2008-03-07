@@ -27,4 +27,4 @@ UNIT_TEST(cairo_graphics_test)
 UNIT_TEST(basic_element_draw_test)
 UNIT_TEST(gtk_main_loop_test)
 
-TEST_RESOURCES(120day.png kitty419.jpg testmask.png base.png)
+TEST_RESOURCES(120day.png kitty419.jpg testmask.png base.png opaque.png)
