@@ -98,7 +98,7 @@ class QtCanvas : public CanvasInterface {
   /**
    * Multiplies a specified color to every pixel in the canvas.
    */
-  void MultiplyColor(const Color &color);
+  void MultiplyColor(QtCanvas *src, const Color &c);
 
   /** Checks if the canvas is valid */
   bool IsValid() const;

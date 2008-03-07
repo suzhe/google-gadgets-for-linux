@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <QUrl>
 #include <QPainter>
 #include <QMouseEvent>
 #include <ggadget/gadget.h>
@@ -27,9 +28,10 @@ namespace qt {
 QGadgetWidget::QGadgetWidget(QtViewHost *host, double zoom,
                              bool composited, bool useshapemask)
 //    : QGLWidget(QGLFormat(QGL::SampleBuffers)),
-     : view_host_(host), canvas_(NULL) {
+     : view_host_(host), canvas_(NULL), drag_files_(NULL) {
   view_ = host->GetView();
   setMouseTracking(true);
+  setAcceptDrops(true);
   setFixedSize(100, 100);
   setAttribute(Qt::WA_InputMethodEnabled);
 }
@@ -186,5 +188,52 @@ void QGadgetWidget::keyReleaseEvent(QKeyEvent *event) {
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
     event->accept();
 }
+
+void QGadgetWidget::dragEnterEvent(QDragEnterEvent *event) {
+  LOG("drag enter");
+  if (event->mimeData()->hasUrls()) {
+    drag_urls_.clear();
+    if (drag_files_)
+      delete [] drag_files_;
+
+    QList<QUrl> urls = event->mimeData()->urls();
+    drag_files_ = new const char *[urls.size() + 1];
+    if (!drag_files_) return;
+
+    for (int i = 0; i < urls.size(); i++) {
+      drag_urls_.push_back(urls[i].toString().toStdString());
+      drag_files_[i] = drag_urls_[i].c_str();
+    }
+    drag_files_[urls.size()] = NULL;
+    event->acceptProposedAction();
+  }
+}
+
+void QGadgetWidget::dragLeaveEvent(QDragLeaveEvent *event) {
+  LOG("drag leave");
+  DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0, drag_files_);
+  view_->OnDragEvent(drag_event);
+}
+
+void QGadgetWidget::dragMoveEvent(QDragMoveEvent *event) {
+  DragEvent drag_event(Event::EVENT_DRAG_MOTION,
+                       event->pos().x(), event->pos().y(),
+                       drag_files_);
+  if (view_->OnDragEvent(drag_event) != EVENT_RESULT_UNHANDLED)
+    event->acceptProposedAction();
+  else
+    event->ignore();
+}
+
+void QGadgetWidget::dropEvent(QDropEvent *event) {
+  LOG("drag drop");
+  DragEvent drag_event(Event::EVENT_DRAG_DROP,
+                       event->pos().x(), event->pos().y(),
+                       drag_files_);
+  if (view_->OnDragEvent(drag_event) == EVENT_RESULT_UNHANDLED) {
+    event->ignore();
+  }
+}
+
 }
 }

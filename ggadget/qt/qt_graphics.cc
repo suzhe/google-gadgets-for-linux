@@ -75,10 +75,10 @@ CanvasInterface *QtGraphics::NewCanvas(size_t w, size_t h) const {
 }
 
 ImageInterface *QtGraphics::NewImage(const std::string &data,
-                                        bool is_mask) const {
+                                     bool is_mask) const {
   if (data.empty()) return NULL;
 
-  QtImage *img = new QtImage(this, data);
+  QtImage *img = new QtImage(this, data, is_mask);
   if (!img) return NULL;
   if (!img->IsValid()) {
     img->Destroy();

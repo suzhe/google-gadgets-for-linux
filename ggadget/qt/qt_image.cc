@@ -32,18 +32,21 @@ namespace qt {
 
 class QtImage::Impl {
  public:
-  Impl(const std::string &data) {
-    image_ = new QtCanvas(data);
-    if (image_->GetWidth() == 0) {
+  Impl(const std::string &data, bool is_mask) : is_mask_(is_mask) {
+    canvas_ = new QtCanvas(data);
+    if (canvas_->GetWidth() == 0) {
       is_valid_ = false;
-      delete image_;
-      image_ = NULL;
+      delete canvas_;
+      canvas_ = NULL;
     } else {
       is_valid_ = true;
     }
+    orig_canvas_ = canvas_;
   }
 
   ~Impl() {
+    if (orig_canvas_ != canvas_) delete orig_canvas_;
+    if (canvas_) delete canvas_;
   }
 
   bool IsValid() const {
@@ -51,44 +54,58 @@ class QtImage::Impl {
   }
 
   const CanvasInterface *GetCanvas() {
-    return image_;
+    return canvas_;
   }
 
   void Draw(CanvasInterface *canvas, double x, double y) {
-    ASSERT(canvas && image_);
-    canvas->DrawCanvas(x, y, image_);
+    ASSERT(canvas && canvas_);
+    canvas->PushState();
+    canvas->DrawCanvas(x, y, canvas_);
+    canvas->PopState();
   }
 
   void StretchDraw(CanvasInterface *canvas,
                    double x, double y,
                    double width, double height) {
-    ASSERT(canvas && image_);
-    double cx = width / image_->GetWidth();
-    double cy = height / image_->GetHeight();
+    ASSERT(canvas && canvas_);
+    double cx = width / canvas_->GetWidth();
+    double cy = height / canvas_->GetHeight();
     if (cx != 1.0 || cy != 1.0) {
       canvas->PushState();
       canvas->ScaleCoordinates(cx, cy);
-      canvas->DrawCanvas(x / cx, y / cy, image_);
+      canvas->DrawCanvas(x / cx, y / cy, canvas_);
       canvas->PopState();
     } else {
-      canvas->DrawCanvas(x, y, image_);
+      Draw(canvas, x, y);
     }
   }
 
   size_t GetWidth() const {
-    return image_->GetWidth();
+    return canvas_->GetWidth();
   }
 
   size_t GetHeight() const {
-    return image_->GetHeight();
+    return canvas_->GetHeight();
   }
 
   void SetColorMultiply(const Color &color) {
+    if (!is_mask_ && color != color_multiply_) {
+      color_multiply_ = color;
+      // Try to make a copy if not have yet
+      if (canvas_ == orig_canvas_) {
+        canvas_ = new QtCanvas(NULL, GetWidth(), GetHeight());
+        if (canvas_ == NULL) {
+          canvas_ = orig_canvas_;
+          return;
+        }
+      }
+      canvas_->MultiplyColor(orig_canvas_, color);
+    }
   }
 
   bool GetPointValue(double x, double y,
                      Color *color, double *opacity) {
-    return image_ && image_->GetPointValue(x, y, color, opacity);
+    return canvas_ && canvas_->GetPointValue(x, y, color, opacity);
   }
 
   void SetTag(const char *tag) {
@@ -101,15 +118,19 @@ class QtImage::Impl {
 
   double zoom_;
   bool is_valid_;
-  QtCanvas *image_;
+  bool is_mask_;
+  // If color multiply is applied to image, we keep the original copy in
+  // orig_canvas_.
+  QtCanvas *canvas_, *orig_canvas_;
   Color color_multiply_;
   std::string tag_;
   Connection *on_zoom_connection_;
 };
 
 QtImage::QtImage(QtGraphics const *graphics,
-                 const std::string &data)
-  : impl_(new Impl(data)) {
+                 const std::string &data,
+                 bool is_mask)
+  : impl_(new Impl(data, is_mask)) {
 }
 
 QtImage::~QtImage() {

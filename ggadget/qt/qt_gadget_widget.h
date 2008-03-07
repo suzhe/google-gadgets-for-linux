@@ -18,6 +18,7 @@
 #define GGADGET_QT_QT_GADGET_WIDGET_H__
 
 #include <string>
+#include <vector>
 #include <QGLWidget>
 #include <ggadget/view_interface.h>
 #include "qt_canvas.h"
@@ -40,10 +41,16 @@ class QGadgetWidget : public QWidget {
   virtual void leaveEvent(QEvent *event);
   virtual void keyPressEvent(QKeyEvent *event);
   virtual void keyReleaseEvent(QKeyEvent *event);
+  virtual void dragEnterEvent(QDragEnterEvent *event);
+  virtual void dragLeaveEvent(QDragLeaveEvent *event);
+  virtual void dragMoveEvent(QDragMoveEvent *event);
+  virtual void dropEvent(QDropEvent *event);
   QtViewHost *view_host_;
   QtCanvas *canvas_;
   ViewInterface *view_;
   size_t width_, height_;
+  const char **drag_files_;
+  std::vector<std::string> drag_urls_;
   uint64_t mouse_down_time_;
 };
 
