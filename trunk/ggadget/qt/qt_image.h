@@ -31,7 +31,7 @@ class QtGraphics;
  */
 class QtImage : public ImageInterface {
  public:
-  QtImage(QtGraphics const *g, const std::string &data);
+  QtImage(QtGraphics const *g, const std::string &data, bool is_mask);
 
   /** Check if the QtImage object is valid. */
   bool IsValid() const;

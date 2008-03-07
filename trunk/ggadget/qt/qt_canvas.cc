@@ -104,6 +104,32 @@ class QtCanvas::Impl {
     return false;
   }
 
+  void MultiplyColor(QtCanvas::Impl *src, const Color &c) {
+    // src and this must have valid image if do this operation on them
+    ASSERT(!src->not_free_painter_);
+    ASSERT(!not_free_painter_);
+    if (c == Color::kWhite) return;
+
+    int width = GetWidth();
+    int height = GetHeight();
+    int rm = c.RedInt();
+    int gm = c.GreenInt();
+    int bm = c.BlueInt();
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        QRgb rgb = src->image_.pixel(x, y);
+        if (qAlpha(rgb) == 0) {
+          image_.setPixel(x, y, qRgba(0, 0, 0, 0));
+        } else {
+          int r = (qRed(rgb) * rm) >> 8;
+          int g = (qGreen(rgb) * gm) >> 8;
+          int b = (qBlue(rgb) * bm) >> 8;
+          image_.setPixel(x, y, qRgb(r, g, b));
+        }
+      }
+    }
+  }
+
   void RotateCoordinates(double radians) {
     painter_->rotate(RadiansToDegrees(radians));
   }
@@ -197,15 +223,17 @@ class QtCanvas::Impl {
       font.setStrikeOut(false);
     doc.setDefaultFont(font);
 
-    QTextOption option;
+    Qt::Alignment a;
 
-    if (align == ALIGN_RIGHT) option.setAlignment(Qt::AlignRight);
-    if (align == ALIGN_LEFT) option.setAlignment(Qt::AlignLeft);
-    if (align == ALIGN_CENTER) option.setAlignment(Qt::AlignHCenter);
+    if (align == ALIGN_RIGHT) a = Qt::AlignRight;
+    if (align == ALIGN_LEFT) a = Qt::AlignLeft;
+    if (align == ALIGN_CENTER) a = Qt::AlignHCenter;
 
-    if (valign == VALIGN_TOP) option.setAlignment(Qt::AlignTop);
-    if (valign == VALIGN_BOTTOM) option.setAlignment(Qt::AlignBottom);
-    if (valign == VALIGN_MIDDLE) option.setAlignment(Qt::AlignVCenter);
+    if (valign == VALIGN_TOP) a |= Qt::AlignTop;
+    if (valign == VALIGN_BOTTOM) a |= Qt::AlignBottom;
+    if (valign == VALIGN_MIDDLE) a |= Qt::AlignVCenter;
+    QTextOption option(a);
+
     if (text_flags & TEXT_FLAGS_WORDWRAP)
       option.setWrapMode(QTextOption::WordWrap);
 
@@ -388,6 +416,10 @@ size_t QtCanvas::GetWidth() const {
 
 size_t QtCanvas::GetHeight() const {
   return impl_->GetHeight();
+}
+
+void QtCanvas::MultiplyColor(QtCanvas *src, const Color &c) {
+  impl_->MultiplyColor(src->impl_, c);
 }
 
 bool QtCanvas::IsValid() const {
