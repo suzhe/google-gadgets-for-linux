@@ -50,12 +50,6 @@ static const char kOptionsLastTryTime[] = "MetadataLastTryTime";
 // Options key to record the current retry timeout value.
 static const char kOptionsRetryTimeout[] = "MetadataRetryTimeout";
 
-// Notes about inactive gadget instances:
-// When the last instance of a gadget is to be removed, the instance won't be
-// actually removed, but becomes inactive. When the user'd add a new instance
-// of the gadget, the inactive instance will be reused, so that the last
-// options data can continue to be used.
-
 // Options key to record the current maximum instance id of gadget instances
 // including active and inavtive ones.
 static const char kOptionsMaxInstanceId[] = "MaxInstance";
@@ -305,16 +299,13 @@ class GadgetManager::Impl {
   int GetNewInstanceId() {
     int size = static_cast<int>(instance_statuses_.size());
     for (int i = 0; i < size; i++) {
-      if (instance_statuses_[i] == kInstanceStatusNone) {
-        SetInstanceStatus(i, kInstanceStatusActive);
+      if (instance_statuses_[i] == kInstanceStatusNone)
         return i;
-      }
     }
 
     if (size < kMaxNumGadgetInstances) {
       instance_statuses_.resize(size + 1);
       global_options_->PutValue(kOptionsMaxInstanceId, Variant(size));
-      SetInstanceStatus(size, kInstanceStatusActive);
       return size;
     }
 
@@ -322,36 +313,55 @@ class GadgetManager::Impl {
     return -1;
   }
 
+  bool GadgetIdIsFileLocation(const char *gadget_id) {
+    return GetGadgetInfo(gadget_id) == NULL &&
+           file_manager_->FileExists(gadget_id, NULL);
+  }
+
   int NewGadgetInstance(const char *gadget_id) {
-    if (!gadget_id || !*gadget_id || !GetGadgetInfo(gadget_id))
+    if (!gadget_id || !*gadget_id)
       return -1;
 
-    global_options_->PutValue(
-        (std::string(kOptionsGadgetAddedTimePrefix) + gadget_id).c_str(),
-        Variant(main_loop_->GetCurrentTime()));
+    if (!GadgetIdIsFileLocation(gadget_id)) {
+      if (GetGadgetInfo(gadget_id) == NULL)
+        return -1;
+      global_options_->PutValue(
+          (std::string(kOptionsGadgetAddedTimePrefix) + gadget_id).c_str(),
+          Variant(main_loop_->GetCurrentTime()));
+    }
 
     // First try to find the inactive instance of of this gadget.
     int size = static_cast<int>(instance_statuses_.size());
     for (int i = 0; i < size; i++) {
       if (instance_statuses_[i] >= kInstanceStatusInactiveStart &&
           GetInstanceGadgetId(i) == gadget_id) {
-        // Re-activate an inactive gadget instance.
-        SetInstanceStatus(i, kInstanceStatusActive);
-        new_instance_signal_(i);
-        active_gadgets_.insert(gadget_id);
-        return i;
+        if (new_instance_signal_(i)) {
+          // Re-activate an inactive gadget instance.
+          SetInstanceStatus(i, kInstanceStatusActive);
+          active_gadgets_.insert(gadget_id);
+          return i;
+        } else {
+          return -1;
+        }
       }
     }
 
     // Add a pure new instance.
     int instance_id = GetNewInstanceId();
-    if (instance_id < 0)
+    if (instance_id < 0) {
+      // TODO: Show error message.
       return instance_id;
+    }
 
-    SaveInstanceGadgetId(instance_id, gadget_id);
-    new_instance_signal_(instance_id);
-    active_gadgets_.insert(gadget_id);
-    return instance_id;
+    if (new_instance_signal_(instance_id)) {
+      SetInstanceStatus(instance_id, kInstanceStatusActive);
+      SaveInstanceGadgetId(instance_id, gadget_id);
+      active_gadgets_.insert(gadget_id);
+      return instance_id;
+    }
+
+    TrimInstanceStatuses();
+    return -1;
   }
 
   bool RemoveGadgetInstance(int instance_id) {
@@ -489,7 +499,7 @@ class GadgetManager::Impl {
       return false;
     }
 
-    std::string path(GetDownloadedGadgetPathInternal(gadget_id));
+    std::string path(GetDownloadedGadgetLocation(gadget_id));
     if (file_manager_->GetLastModifiedTime(path.c_str()) <
         gadget_info->updated_date)
       return true;
@@ -515,7 +525,8 @@ class GadgetManager::Impl {
     return false;
   }
 
-  static std::string GetDownloadedGadgetPathInternal(const char *gadget_id) {
+  std::string GetDownloadedGadgetLocation(const char *gadget_id) {
+    ASSERT(!GadgetIdIsFileLocation(gadget_id));
     std::string path(kDownloadedGadgetsDir);
     path += MakeGoodFileName(gadget_id);
     path += ".gg";
@@ -538,7 +549,7 @@ class GadgetManager::Impl {
   // Set of gadgets each of which has at least one active instance.
   std::set<std::string> active_gadgets_;
 
-  Signal1<void, int> new_instance_signal_;
+  Signal1<bool, int> new_instance_signal_;
   Signal1<void, int> remove_instance_signal_;
   Signal1<void, int> update_instance_signal_;
   Signal0<void> metadata_change_signal_;
@@ -610,7 +621,7 @@ std::string GadgetManager::GetInstanceGadgetId(int instance_id) {
 }
 
 Connection *GadgetManager::ConnectOnNewGadgetInstance(
-    Slot1<void, int> *callback) {
+    Slot1<bool, int> *callback) {
   return impl_->new_instance_signal_.Connect(callback);
 }
 
@@ -691,17 +702,20 @@ bool GadgetManager::SaveGadget(const char *gadget_id, const std::string &data) {
     DLOG("Checksum OK %s", gadget_id);
   }
 
-  std::string path(Impl::GetDownloadedGadgetPathInternal(gadget_id));
-  if (!impl_->file_manager_->WriteFile(path.c_str(), data, true))
+  std::string location(impl_->GetDownloadedGadgetLocation(gadget_id));
+  if (!impl_->file_manager_->WriteFile(location.c_str(), data, true))
     return false;
 
   impl_->UpdateGadgetInstances(gadget_id);
   return true;
 }
 
-std::string GadgetManager::GetDownloadedGadgetPath(const char *gadget_id) {
+std::string GadgetManager::GetGadgetPath(const char *gadget_id) {
+  if (impl_->GadgetIdIsFileLocation(gadget_id))
+    return impl_->file_manager_->GetFullPath(gadget_id);
+
   return impl_->file_manager_->GetFullPath(
-      Impl::GetDownloadedGadgetPathInternal(gadget_id).c_str());
+      impl_->GetDownloadedGadgetLocation(gadget_id).c_str());
 }
 
 bool GadgetManager::EnumerateGadgetInstances(Slot1<bool, int> *callback) {

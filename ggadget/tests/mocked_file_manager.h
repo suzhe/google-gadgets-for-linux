@@ -43,7 +43,11 @@ class MockedFileManager : public ggadget::FileManagerInterface {
     return true;
   }
   virtual bool ExtractFile(const char *, std::string *) { return false; }
-  virtual bool FileExists(const char *file, std::string *path) { return true; }
+  virtual bool FileExists(const char *file, std::string *path) {
+    if (path)
+      *path = file;
+    return data_.find(file) != data_.end();
+  }
   virtual bool IsDirectlyAccessible(const char *file, std::string *path) {
     return true;
   }

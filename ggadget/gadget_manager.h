@@ -30,10 +30,20 @@ template <typename R> class Slot0;
 /**
  * Manages gadgets.
  * Notes about gadget id and gadget instance id:
- *   - gadget id: the string id of a gadget (now the plugin shortname is used).
+ *   - gadget id: the string id of a gadget (now the plugin uuid is used for
+ *     desktop gadgets, and download_url is used for igoogle gadgets).
  *     It's stored in @c GadgetMetadata::GadgetInfo::id at runtime.
+ *     Some methods also accept @c gadget_id containing location of a gadget
+ *     file. This location can be a full path or any location that can be
+ *     recognized by the global file manager.
  *   - gadget instance id: an integer serial number of a gadget instance. One
  *     gadget can have multiple instances.
+ * 
+ * An instance may be active or inactive. Active instances will run in the
+ * container. When the last instance of a gadget is to be removed, the instance
+ * won't be actually removed, but becomes inactive. When the user'd add a new
+ * instance of the gadget, the inactive instance will be reused, so that the
+ * last options data can continue to be used.
  */
 class GadgetManager {
  public:
@@ -46,14 +56,15 @@ class GadgetManager {
 
   /**
    * Creates an instance of a gadget.
-   * @param gadget_id
+   * @param gadget_id gadget id or location of a gadget file.
    * @return the gadget instance id (>=0) of the new instance, or -1 on error.
    */
   int NewGadgetInstance(const char *gadget_id);
 
   /**
-   * Removes a gadget instance.
-   * @param instance_id
+   * Removes a gadget instance. See comments for @c GadgetManager for details
+   * about active and inactive instances.
+   * @param instance_id id of an active instance.
    * @return @c true if succeeded.
    */
   bool RemoveGadgetInstance(int instance_id);
@@ -77,24 +88,32 @@ class GadgetManager {
 
   /**
    * Returns the current metadata for a gadget.
+   * @param gadget_id gadget id, file location not allowed.
+   * @return the corresponding gadget metadata for the gadget, or @c NULL if
+   *     not found.
    */
   const GadgetInfo *GetGadgetInfo(const char *gadget_id);
 
   /**
    * Get the corresponding gadget info for a instance.
-   * @param instance_id
+   * @param instance_id the id of a gadget instance, either active or inactive.
    * @return the gadget info, or NULL if the instance is not found.
    */
   const GadgetInfo *GetGadgetInfoOfInstance(int instance_id);
 
   /**
    * Checks if the gadget has at least one active instance.
+   * @param gadget_id gadget id, or location of a gadget file.
+   * @return @c true if the gadget has at least one active instance.
    */
   bool GadgetHasInstance(const char *gadget_id);
 
   /**
-   * Get the corresponding gadget id for an gadget instance (active or
+   * Get the corresponding gadget id for a gadget instance (active or
    * inactive). Returns empty string if the instance_id is invalid.
+   * @param instance_id id of a gadget instance, either active or inactive.
+   * @return the gadget id, or the location of the gadget file if the gadget
+   *     was added with file location.
    */
   std::string GetInstanceGadgetId(int instance_id);
 
@@ -113,35 +132,42 @@ class GadgetManager {
   std::string LoadThumbnailFromCache(const char *thumbnail_url);
 
   /**
-   * Checks if the gadget need to be downloaded.
+   * Checks if the gadget needs to be downloaded.
+   * @param gadget_id gadget id, file location not allowed.
+   * @return @c true if the gadget need to be downloaded.
    */
   bool NeedDownloadGadget(const char *gadget_id);
 
   /**
-   * Checks if the gadget need to be updated.
+   * Checks if the gadget needs to be updated.
+   * @param gadget_id gadget id, file location not allowed.
+   * @return @c true if the gadget need to be updated.
    */
   bool NeedUpdateGadget(const char *gadget_id);
 
   /**
    * Saves gadget file content to the file system.
-   * @param gadget_id
+   * @param gadget_id gadget id, file location not allowed.
    * @param data the binary gadget file content.
    * @return @c true if succeeds.
    */
   bool SaveGadget(const char *gadget_id, const std::string &data);
 
   /**
-   * Get the full path of the downloaded gadget file for a gadget.
+   * Get the full path of the file for a gadget.
+   * @param gadget_id gadget id, or location of a gadget file.
+   * @return the full path of the file for a gadget.
    */
-  std::string GetDownloadedGadgetPath(const char *gadget_id);
+  std::string GetGadgetPath(const char *gadget_id);
 
  public:
   /**
    * Connects to signals when a gadget instance is added, to be removed or
    * should be updated. The int parameter of the callback is the gadget
-   * instance id.
+   * instance id. The callback of OnNewGadgetInstance can return @c false to
+   * cancel the action.
    */
-  Connection *ConnectOnNewGadgetInstance(Slot1<void, int> *callback);
+  Connection *ConnectOnNewGadgetInstance(Slot1<bool, int> *callback);
   Connection *ConnectOnRemoveGadgetInstance(Slot1<void, int> *callback);
   Connection *ConnectOnUpdateGadgetInstance(Slot1<void, int> *callback);
 

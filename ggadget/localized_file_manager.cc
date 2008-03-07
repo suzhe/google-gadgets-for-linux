@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include "localized_file_manager.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -23,10 +25,9 @@
 #include <cstdio>
 
 #include "common.h"
-#include "logger.h"
-#include "localized_file_manager.h"
-#include "windows_locales.h"
+#include "locales.h"
 #include "gadget_consts.h"
+#include "logger.h"
 #include "system_utils.h"
 
 namespace ggadget {
@@ -37,19 +38,28 @@ class LocalizedFileManager::Impl {
     : file_manager_(file_manager) {
     std::string language, territory;
     if (GetSystemLocaleInfo(&language, &territory) && language.length()) {
-      std::string locale = language;
+      std::string full_locale = language;
       if (territory.length()) {
-        locale.append("_");
-        locale.append(territory);
-        prefixes_.push_back(locale);
+        full_locale.append("-");
+        full_locale.append(territory);
+        std::string short_locale(full_locale);
+        if (GetLocaleShortName(full_locale.c_str(), &short_locale)) {
+          // Use the short name if the locale has.
+          prefixes_.push_back(short_locale);
+        } else {
+          // Otherwise add both lang-TERRITORY and lang_TERRITORY to prefixes.
+          prefixes_.push_back(full_locale);
+          prefixes_.push_back(language + "_" + territory);
+        }
+      } else {
+        prefixes_.push_back(language);
       }
-      prefixes_.push_back(language);
 
-      std::string locale_id;
-      if (GetLocaleIDString(locale.c_str(), &locale_id))
-        prefixes_.push_back(locale_id);
+      // for windows compatibility.
+      std::string windows_locale_id;
+      if (GetLocaleWindowsIDString(full_locale.c_str(), &windows_locale_id))
+        prefixes_.push_back(windows_locale_id);
     }
-    prefixes_.push_back("en_US");
     prefixes_.push_back("en");
     prefixes_.push_back("1033"); // for windows compatibility.
   }
@@ -102,14 +112,17 @@ bool LocalizedFileManager::ReadFile(const char *file, std::string *data) {
     return false;
 
   if (impl_->file_manager_) {
-    // Try localized file first.
+    // Try non-localized file first.
+    if (impl_->file_manager_->ReadFile(file, data))
+      return true;
+ 
+    // Then try localized file.
     for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->ReadFile(path.c_str(), data))
         return true;
     }
-    return impl_->file_manager_->ReadFile(file, data);
   }
   return false;
 }
@@ -131,14 +144,15 @@ bool LocalizedFileManager::RemoveFile(const char *file) {
   bool result = false;
   if (impl_->file_manager_) {
     // Remove all localized and non-localized versions.
+    if (impl_->file_manager_->RemoveFile(file))
+      result = true;
+
     for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->RemoveFile(path.c_str()))
         result = true;
     }
-    if (impl_->file_manager_->RemoveFile(file))
-      result = true;
   }
   return result;
 }
@@ -150,14 +164,17 @@ bool LocalizedFileManager::ExtractFile(const char *file, std::string *into_file)
     return false;
 
   if (impl_->file_manager_) {
-    // Try localized file first.
+    // Try non-localized file first.
+    if (impl_->file_manager_->ExtractFile(file, into_file))
+      return true;
+
+    // Then try localized file.
     for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {
       std::string path = BuildFilePath(it->c_str(), file, NULL);
       if (impl_->file_manager_->ExtractFile(path.c_str(), into_file))
         return true;
     }
-    return impl_->file_manager_->ExtractFile(file, into_file);
   }
   return false;
 }

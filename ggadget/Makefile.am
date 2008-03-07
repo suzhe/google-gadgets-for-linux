@@ -76,6 +76,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  item_element.h \
 			  label_element.h \
 			  listbox_element.h \
+			  locales.h \
 			  localized_file_manager.h \
 			  main_loop_interface.h \
 			  native_main_loop.h \
@@ -116,7 +117,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  view.h \
 			  view_host_interface.h \
 			  view_interface.h \
-			  windows_locales.h \
 			  xml_dom_interface.h \
 			  xml_dom.h \
 			  xml_http_request_interface.h \
@@ -159,6 +159,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  item_element.cc \
 			  label_element.cc \
 			  listbox_element.cc \
+			  locales.cc \
 			  localized_file_manager.cc \
 			  logger.cc \
 			  main_loop.cc \
@@ -188,7 +189,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  unicode_utils.cc \
 			  variant.cc \
 			  view.cc \
-			  windows_locales.cc \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \
 			  xml_parser.cc \
