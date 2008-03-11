@@ -36,19 +36,25 @@ class ScriptableHolder {
   COMPILE_ASSERT((IsDerived<ScriptableInterface, T>::value),
                  T_must_be_ScriptableInterface_or_derived_from_it);
  public:
-  explicit ScriptableHolder(T* p = NULL)
+  explicit ScriptableHolder(T *p = NULL)
       : ptr_(NULL), on_refchange_connection_(NULL) { Reset(p); }
+
+  ScriptableHolder(const ScriptableHolder &another)
+      : ptr_(NULL), on_refchange_connection_(NULL) { Reset(another.Get()); }
+
   ~ScriptableHolder() { Reset(NULL); }
 
-  void Reset(T* p) {
+  ScriptableHolder &operator=(const ScriptableHolder &another) {
+    Reset(another.Get());
+  }
+
+  void Reset(T *p) {
     if (ptr_ == p) return;
     if (ptr_) {
       ASSERT(on_refchange_connection_);
       on_refchange_connection_->Disconnect();
       on_refchange_connection_ = NULL;
       ptr_->Unref();
-    } else {
-      ASSERT(!ptr_);
     }
     ptr_ = p;
     if (p) {
@@ -61,7 +67,6 @@ class ScriptableHolder {
   T *Get() const { return ptr_; }
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(ScriptableHolder);
   void OnRefChange(int ref_count, int change) {
     if (ref_count == 0 && change == 0)
       Reset(NULL);

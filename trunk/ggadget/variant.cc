@@ -102,6 +102,12 @@ Variant &Variant::operator=(const Variant &source) {
     case TYPE_DATE:
       v_.int64_value_ = source.v_.int64_value_;
       break;
+    case TYPE_ANY:
+      v_.any_value_ = source.v_.any_value_;
+      break;
+    case TYPE_CONST_ANY:
+      v_.const_any_value_ = source.v_.const_any_value_;
+      break;
     case TYPE_VARIANT:
       // A Variant of type TYPE_VARIANT is only used as a prototype.
       break;
@@ -142,6 +148,10 @@ bool Variant::operator==(const Variant &another) const {
     }
     case TYPE_DATE:
       return v_.int64_value_ == another.v_.int64_value_;
+    case TYPE_ANY:
+      return v_.any_value_ == another.v_.any_value_;
+    case TYPE_CONST_ANY:
+      return v_.const_any_value_ == another.v_.const_any_value_;
     case TYPE_VARIANT:
       // A Variant of type TYPE_VARIANT is only used as a prototype,
       // so they are all equal.
@@ -183,6 +193,10 @@ std::string Variant::Print() const {
       return StringPrintf("SLOT:%p", v_.slot_value_);
     case TYPE_DATE:
       return StringPrintf("DATE:%ju", v_.int64_value_);
+    case TYPE_ANY:
+      return StringPrintf("ANY:%p", v_.any_value_);
+    case TYPE_CONST_ANY:
+      return StringPrintf("ANY:%p", v_.const_any_value_);
     case TYPE_VARIANT:
       return "VARIANT";
     default:
@@ -219,6 +233,8 @@ bool Variant::ConvertToString(std::string *result) const {
     case TYPE_SCRIPTABLE:
     case TYPE_SLOT:
     case TYPE_DATE:
+    case TYPE_ANY:
+    case TYPE_CONST_ANY:
     case TYPE_VARIANT:
     default:
       return false;
@@ -271,6 +287,12 @@ bool Variant::ConvertToBool(bool *result) const {
       return true;
     case TYPE_DATE:
       *result = true;
+      return true;
+    case TYPE_ANY:
+      *result = v_.any_value_ != NULL;
+      return true;
+    case TYPE_CONST_ANY:
+      *result = v_.const_any_value_ != NULL;
       return true;
     case TYPE_VARIANT:
     default:
@@ -349,6 +371,8 @@ bool Variant::ConvertToInt64(int64_t *result) const {
     case TYPE_SCRIPTABLE:
     case TYPE_SLOT:
     case TYPE_DATE:
+    case TYPE_ANY:
+    case TYPE_CONST_ANY:
     case TYPE_VARIANT:
     default:
       return false;
@@ -383,6 +407,8 @@ bool Variant::ConvertToDouble(double *result) const {
     case TYPE_SCRIPTABLE:
     case TYPE_SLOT:
     case TYPE_DATE:
+    case TYPE_ANY:
+    case TYPE_CONST_ANY:
     case TYPE_VARIANT:
     default:
       return false;
