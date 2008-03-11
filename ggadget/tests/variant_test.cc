@@ -239,7 +239,7 @@ TEST(Variant, TestUTF16String) {
 
 class Scriptable1 : public ScriptableInterface { };
 
-TEST(Variant, TestScriptableAndAny) {
+TEST(Variant, TestScriptable) {
   CheckVariant<ScriptableInterface *, Variant::TYPE_SCRIPTABLE>(NULL, NULL);
   CheckVariant<Scriptable1 *, Variant::TYPE_SCRIPTABLE>(NULL, NULL);
 }
@@ -251,6 +251,11 @@ TEST(Variant, TestDate) {
 
 TEST(Variant, TestSlot) {
   CheckVariant<Slot *, Variant::TYPE_SLOT>(NULL, NULL);
+}
+
+TEST(Variant, TestAny) {
+  CheckVariant<void *, Variant::TYPE_ANY>(NULL, NULL);
+  CheckVariant<const void *, Variant::TYPE_CONST_ANY>(NULL, NULL);
 }
 
 int main(int argc, char **argv) {

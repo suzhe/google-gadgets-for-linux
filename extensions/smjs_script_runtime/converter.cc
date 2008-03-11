@@ -316,6 +316,9 @@ JSBool ConvertJSToNative(JSContext *cx, NativeJSWrapper *owner,
       return ConvertJSToSlot(cx, owner, prototype, js_val, native_val);
     case Variant::TYPE_DATE:
       return ConvertJSToNativeDate(cx, js_val, native_val);
+    case Variant::TYPE_ANY:
+    case Variant::TYPE_CONST_ANY:
+      return JS_FALSE;
     case Variant::TYPE_VARIANT:
       return ConvertJSToNativeVariant(cx, js_val, native_val);
     default:
@@ -615,6 +618,9 @@ JSBool ConvertNativeToJS(JSContext *cx,
       return ConvertNativeToJSFunction(cx, native_val, js_val);
     case Variant::TYPE_DATE:
       return ConvertNativeToJSDate(cx, native_val, js_val);
+    case Variant::TYPE_ANY:
+    case Variant::TYPE_CONST_ANY:
+      return JS_FALSE;
     case Variant::TYPE_VARIANT:
       // Normally there is no real value of this type, so convert it to void.
       return ConvertNativeToJSVoid(cx, native_val, js_val);
