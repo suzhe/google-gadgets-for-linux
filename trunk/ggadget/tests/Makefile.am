@@ -60,9 +60,7 @@ check_PROGRAMS		= color_test \
 			  xml_parser_test \
 			  xml_http_request_test \
 			  xml_utils_test \
-			  gadgets_metadata_test \
-			  digest_utils_test \
-			  gadget_manager_test
+			  digest_utils_test
 
 check_LTLIBRARIES	= foo-module.la \
 			  bar-module.la
@@ -89,9 +87,7 @@ view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES	= xml_parser_test.cc
 xml_utils_test_SOURCES		= xml_utils_test.cc
-gadgets_metadata_test_SOURCES	= gadgets_metadata_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
-gadget_manager_test_SOURCES	= gadget_manager_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc
 xml_http_request_test_LDADD	= -lpthread \

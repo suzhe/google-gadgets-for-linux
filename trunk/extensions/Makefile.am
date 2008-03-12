@@ -26,4 +26,5 @@ SUBDIRS = dbus_script_class \
 	  smjs_script_runtime \
 	  curl_xml_http_request \
 	  libxml2_xml_parser \
-	  default_options
+	  default_options \
+	  google_gadget_manager
