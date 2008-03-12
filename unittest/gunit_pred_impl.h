@@ -52,10 +52,6 @@
 // streaming to std::ostream.
 //
 // We also define the EXPECT_* variations.
-//
-// For now we only support predicates whose arity is at most 5.
-// Please email gunit-users@google.com if you need support for
-// higher arities.
 
 // GUNIT_ASSERT is the basic statement to which all of the assertions
 // in this file reduce.  Don't use this in your code.

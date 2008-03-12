@@ -26,7 +26,7 @@ namespace ggadget {
 
 /**
  * Holds a @c ScriptableInterface pointer. If the held object is about to be
- * deleted, the pointer will be automatically reset to @c NULL.  
+ * deleted, the pointer will be automatically reset to @c NULL.
  */
 template <typename T>
 class ScriptableHolder {
@@ -46,6 +46,7 @@ class ScriptableHolder {
 
   ScriptableHolder &operator=(const ScriptableHolder &another) {
     Reset(another.Get());
+    return *this;
   }
 
   void Reset(T *p) {

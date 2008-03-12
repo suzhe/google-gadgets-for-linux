@@ -17,8 +17,6 @@
 #ifndef GGADGET_MATH_UTILS_H__
 #define GGADGET_MATH_UTILS_H__
 
-#include <cmath>
-
 namespace ggadget {
 
 /**
@@ -142,8 +140,8 @@ class ParentCoordCalculator {
    * @param rotation_radians The rotation of the child element in radians.
    */
   ParentCoordCalculator(double child_x_pos, double child_y_pos,
-                       double child_pin_x, double child_pin_y,
-                       double rotation_radians);
+                        double child_pin_x, double child_pin_y,
+                        double rotation_radians);
 
   /**
    * Converts child coordinates into parent coordinations.
@@ -190,6 +188,36 @@ double RadiansToDegrees(double radians);
  * @param height Height of element.
  */
 bool IsPointInElement(double x, double y, double width, double height);
+
+/**
+ * Get the expanding vertical rectangle from a general rectangle represented by
+ * 4 vertexs.
+ * @param r coordinates of the first rectangle, order: v1_x, v1_y, v2_x, ...
+ * @param x X-coordinate of the first point of the expanding rectangle
+ * @param y Y-coordinate of the first point of the expanding rectangle
+ * @param w width of the expanding rectangle
+ * @param h height of the expanding rectangle
+ */
+void GetRectangleExtents(const double r[8],
+                         double *x, double *y, double *w, double *h);
+
+/**
+ * Given tow vertical rectangle, work out the expanding rectangle that is the
+ * union of the two ones.
+ * @param r1 the first rectangle represented as x, y, w, h
+ * @param r2 the second rectangle represented as x, y, w, h
+ * @param r3 the expanding rectangle represented as x, y, w, h
+ */
+void GetTwoRectanglesExtents(const double r1[4], const double r2[4],
+                             double r3[4]);
+
+/**
+ * Given two rectangles which are vertical, judge if they are overlapped.
+ * @param r1 the first rectangle represented as x, y, w, h
+ * @param r2 the second rectangle represented as x, y, w, h
+ * @return @true if they are overlapped and false otherwise
+ */
+bool RectanglesOverlapped(const double r1[4], const double r2[4]);
 
 /**
  * Returns val if low < val < high, otherwise returns low if val < low or high

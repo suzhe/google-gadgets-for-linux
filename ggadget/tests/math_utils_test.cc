@@ -15,6 +15,7 @@
 */
 
 #include <cstdio>
+#include <cmath>
 
 #include "ggadget/math_utils.h"
 #include "unittest/gunit.h"
@@ -258,6 +259,51 @@ TEST(MathUtilsTest, GetChildExtentInParent) {
   EXPECT_EQ(44, extent_width);
   EXPECT_EQ(54, extent_height);
   // TODO: Add more tests.
+}
+
+// Test if x is really a rectangle
+#define IS_RECT(x) \
+    do { \
+      EXPECT_EQ(0, (x[0]-x[6])*(x[3]-x[5])-(x[1]-x[7])*(x[2]-x[4])); \
+      EXPECT_EQ(0, (x[0]-x[2])*(x[7]-x[5])-(x[1]-x[3])*(x[6]-x[4])); \
+      EXPECT_EQ(0, (x[0]-x[2])*(x[0]-x[6])+(x[1]-x[3])*(x[1]-x[7])); \
+    } while (false)
+#define DEQ(x, y) (fabs((x) - (y)) < 1e-6)
+
+TEST(MathUtilsTest, GetRectangleExtents) {
+  const double r1[] = {0, 0, 0, 1, 1, 1, 1, 0}; IS_RECT(r1);
+  const double r2[] = {.4, 2, .6, 2, .6, -2, .4, -2}; IS_RECT(r2);
+  const double r3[] = {.5, 1.5, 1.5, .5, .5, -.5, -.5, .5}; IS_RECT(r3);
+  double x, y, w, h;
+  GetRectangleExtents(r1, &x, &y, &w, &h);
+  EXPECT_TRUE(DEQ(x,0) && DEQ(y,0) && DEQ(w,1) && DEQ(h,1));
+  GetRectangleExtents(r2, &x, &y, &w, &h);
+  EXPECT_TRUE(DEQ(x,.4) && DEQ(y,-2) && DEQ(w,.2) && DEQ(h,4));
+  GetRectangleExtents(r3, &x, &y, &w, &h);
+  EXPECT_TRUE(DEQ(x,-.5) && DEQ(y,-.5) && DEQ(w,2) && DEQ(h,2));
+}
+
+TEST(MathUtilsTest, GetTwoRectanglesExtents) {
+  const double r1[] = {2, 2, 2, 3};
+  const double r2[] = {0, 1, 2, 1};
+  double r[4];
+  GetTwoRectanglesExtents(r1, r2, r);
+  EXPECT_TRUE(DEQ(r[0],0) && DEQ(r[1],1) && DEQ(r[2],4) && DEQ(r[3],4));
+}
+
+TEST(MathUtilsTest, RectanglesOverlapped) {
+  const double r1[] = {2, 2, 2, 3};
+  const double r2[] = {0, 1, 2, 1};
+  const double r3[] = {1, 1, 4, 3};
+  const double r4[] = {6, 6, 1, 1};
+  EXPECT_TRUE(RectanglesOverlapped(r1, r1));
+  EXPECT_TRUE(RectanglesOverlapped(r1, r3));
+  EXPECT_TRUE(RectanglesOverlapped(r2, r3));
+  EXPECT_FALSE(RectanglesOverlapped(r1, r2));
+  EXPECT_FALSE(RectanglesOverlapped(r2, r1));
+  EXPECT_FALSE(RectanglesOverlapped(r1, r4));
+  EXPECT_FALSE(RectanglesOverlapped(r2, r4));
+  EXPECT_FALSE(RectanglesOverlapped(r3, r4));
 }
 
 int main(int argc, char **argv) {

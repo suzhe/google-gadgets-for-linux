@@ -203,6 +203,12 @@ class scoped_array {
     return tmp;
   }
 
+  // used to receive the allocated memory externally, usually used in a call
+  T*& receive_out() {
+    ASSERT(ptr == NULL);
+    return ptr;
+  }
+
  private:
 
   // no reason to use these: each scoped_array should have its own object

@@ -181,8 +181,11 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   void ViewCoordToNativeWidgetCoord(double x, double y,
                                     double *widget_x, double *widget_y);
 
-  /** Asks the host to redraw the given view. */
-  void QueueDraw();
+  /** Asks the host to redraw the given view.
+   * @param changed_element the pointer to the basic element that file this
+   * request.
+   * */
+  void QueueDraw(const BasicElement *element);
 
   /** @return the current graphics interface used for drawing elements. */
   const GraphicsInterface *GetGraphics() const;
@@ -205,7 +208,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   void SetFocus(BasicElement *element);
 
   /**
-   * Sets and gets the element to be shown as a popup, above all 
+   * Sets and gets the element to be shown as a popup, above all
    * other elements on the view.
    */
   void SetPopupElement(BasicElement *element);
@@ -242,7 +245,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    */
   int GetDebugMode() const;
 
-  /** Gets the element currently having the input focus. */  
+  /** Gets the element currently having the input focus. */
   BasicElement *GetFocusedElement();
   /** Gets the element which the mouse is currently over. */
   BasicElement *GetMouseOverElement();
@@ -250,10 +253,9 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   /**
    * Enables or disables firing events.
    * Because onchange events should not be fired during XML setup, events
-   * should be disabled until the view is ready to run. 
+   * should be disabled until the view is ready to run.
    */
   void EnableEvents(bool enable_events);
-
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.
@@ -331,6 +333,20 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   /** Delegates to GadgetInterface::ShowDetailsView(). */
   bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
                        Slot1<void, int> *feedback_handler);
+
+  /**
+   * Return if the element is in the clip region to decide if it is need to
+   * redraw.
+   */
+  bool IsElementInClipRegion(const BasicElement *element) const;
+
+  /**
+   * Add the element to the clip region when it is changed and need to redraw.
+   */
+  void AddElementToClipRegion(const BasicElement *element);
+
+  /** For performance testing. */
+  void IncreaseDrawCount();
 
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);

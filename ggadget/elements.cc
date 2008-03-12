@@ -295,8 +295,10 @@ class Elements::Impl {
       if (element == popup) continue;
 
       // Doesn't draw elements that outside visible area.
-      if (owner_ && !owner_->IsChildInVisibleArea(element))
+      if (!view_->IsElementInClipRegion(element) ||
+          (owner_ && !owner_->IsChildInVisibleArea(element))) {
         continue;
+      }
 
       canvas->PushState();
       if (element->GetRotation() == .0) {

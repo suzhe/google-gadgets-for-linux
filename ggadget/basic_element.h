@@ -115,6 +115,12 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   /** Sets the height in pixels. */
   void SetPixelHeight(double height);
 
+  /**
+   * Retrieves the old position in view's coordinates. The memory should be
+   * allocated before this call.
+   */
+  void GetOldViewRectangle(double rect[4]) const;
+
   /** Retrieves the width in relative related to the parent. */
   double GetRelativeWidth() const;
   /** Sets the width in relative related to the parent. */
@@ -702,6 +708,13 @@ public: // Other overridable public methods.
 };
 
 typedef ScriptableHolder<BasicElement> ElementHolder;
+
+/**
+ * Util function. To get the element's position in its view's coordinates.
+ * @param element the interested element
+ * @param rect the array hold the position information as x, y, w, h
+ */
+void GetViewCoord(const BasicElement *element, double rect[4]);
 
 } // namespace ggadget
 

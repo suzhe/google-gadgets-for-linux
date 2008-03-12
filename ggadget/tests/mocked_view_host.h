@@ -45,6 +45,9 @@ class MockedCanvas : public ggadget::CanvasInterface {
                               double w, double h, const ggadget::Color &c) {
     return true;
   }
+  virtual bool ClearRect(double x, double y, double w, double h) {
+    return true;
+  }
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) {
     return true;
   }
@@ -75,6 +78,9 @@ class MockedCanvas : public ggadget::CanvasInterface {
   }
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h) {
+    return true;
+  }
+  virtual bool IntersectGeneralClipRegion(int number, double *r) {
     return true;
   }
   virtual bool GetTextExtents(const char *text, const ggadget::FontInterface *f,
