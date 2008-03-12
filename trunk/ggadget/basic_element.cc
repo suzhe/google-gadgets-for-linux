@@ -63,6 +63,7 @@ class BasicElement::Impl {
         size_changed_(true),
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()) {
+    memset(old_view_rectangle_, 0, sizeof(old_view_rectangle_));
     if (name)
       name_ = name;
     if (tag_name)
@@ -229,7 +230,7 @@ class BasicElement::Impl {
                                             width_, pwidth_);
   }
 
-  void SetWidth(const Variant &width) {   
+  void SetWidth(const Variant &width) {
     double v;
     switch (ParsePixelOrRelative(width, &v)) {
       case BasicElement::PR_PIXEL:
@@ -260,7 +261,7 @@ class BasicElement::Impl {
                                             height_, pheight_);
   }
 
-  void SetHeight(const Variant &height) {    
+  void SetHeight(const Variant &height) {
     double v;
     switch (ParsePixelOrRelative(height, &v)) {
       case BasicElement::PR_PIXEL:
@@ -457,6 +458,10 @@ class BasicElement::Impl {
       ppin_y_ = height_ > 0.0 ? pin_y_ / height_ : 0.0;
     }
 
+    if ((position_changed_ || size_changed_ || visibility_changed_) &&
+        IsReallyVisible())
+      view_->AddElementToClipRegion(owner_);
+
     if (size_changed_)
       PostSizeEvent();
     if (children_)
@@ -515,15 +520,18 @@ class BasicElement::Impl {
 
 #ifdef _DEBUG
       ++total_draw_count_;
-      if ((total_draw_count_ % 100) == 0)
+      view_->IncreaseDrawCount();
+      if ((total_draw_count_ % 1000) == 0)
         DLOG("BasicElement: %d draws, %d queues, %d%% q/d",
              total_draw_count_, total_queue_draw_count_,
              total_queue_draw_count_ * 100 / total_draw_count_);
 #endif
     }
 
+    GetViewCoord(owner_, old_view_rectangle_);
     visibility_changed_ = false;
     size_changed_ = false;
+    position_changed_ = false;
   }
 
   void DrawChildren(CanvasInterface *canvas) {
@@ -547,13 +555,8 @@ class BasicElement::Impl {
 
  public:
   void QueueDraw() {
-    if (implicit_) {
-      // Any change of an implicit child must be passed to its parent to ensure
-      // correct redraw.
-      ASSERT(parent_);
-      parent_->QueueDraw();
-    } else if (visible_ || visibility_changed_) {
-      view_->QueueDraw();
+    if (visible_ || visibility_changed_) {
+      view_->QueueDraw(owner_);
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;
@@ -569,15 +572,6 @@ class BasicElement::Impl {
 
   void PositionChanged() {
     position_changed_ = true;
-#if 0
-    // Don't call this->QueueDraw() here, because change of position should
-    // only change the parent.
-    if (parent_) {
-      parent_->QueueDraw();
-    } else {
-      view_->QueueDraw();
-    }
-#endif
     QueueDraw();
   }
 
@@ -594,6 +588,12 @@ class BasicElement::Impl {
   void MarkRedraw() {
     if (children_)
       children_->MarkRedraw();
+  }
+
+  bool IsReallyVisible() const {
+    return visible_ && opacity_ != 0.0 &&
+        (!parent_ ||
+         (parent_->IsReallyVisible() && parent_->IsChildInVisibleArea(owner_)));
   }
 
  public:
@@ -806,6 +806,7 @@ class BasicElement::Impl {
   double pin_x_, pin_y_, ppin_x_, ppin_y_;
   bool pin_x_relative_, pin_y_relative_;
   double rotation_;
+  double old_view_rectangle_[4];
   double opacity_;
   bool visible_;
   std::string tooltip_;
@@ -1078,6 +1079,10 @@ void BasicElement::SetPixelHeight(double height) {
   impl_->SetPixelHeight(height);
 }
 
+void BasicElement::GetOldViewRectangle(double *rect) const {
+  memcpy(rect, impl_->old_view_rectangle_, sizeof(impl_->old_view_rectangle_));
+}
+
 double BasicElement::GetRelativeWidth() const {
   return impl_->pwidth_;
 }
@@ -1303,10 +1308,7 @@ void BasicElement::SetVisible(bool visible) {
 }
 
 bool BasicElement::IsReallyVisible() const {
-  return impl_->visible_ && impl_->opacity_ != 0.0 &&
-         (!impl_->parent_ ||
-          (impl_->parent_->IsReallyVisible() &&
-           impl_->parent_->IsChildInVisibleArea(this)));
+  return impl_->IsReallyVisible();
 }
 
 bool BasicElement::IsReallyEnabled() const {
@@ -1675,6 +1677,16 @@ Connection *BasicElement::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
 }
 Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
   return impl_->onsize_event_.Connect(handler);
+}
+
+void GetViewCoord(const BasicElement *element, double rect[4]) {
+  double r[8];
+  element->SelfCoordToViewCoord(0, 0, &r[0], &r[1]);
+  element->SelfCoordToViewCoord(0, element->GetPixelHeight(), &r[2], &r[3]);
+  element->SelfCoordToViewCoord(element->GetPixelWidth(),
+                                element->GetPixelHeight(), &r[4], &r[5]);
+  element->SelfCoordToViewCoord(element->GetPixelWidth(), 0, &r[6], &r[7]);
+  GetRectangleExtents(r, rect, rect + 1, rect + 2, rect + 3);
 }
 
 } // namespace ggadget

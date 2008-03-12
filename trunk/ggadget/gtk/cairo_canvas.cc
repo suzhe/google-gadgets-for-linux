@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <pango/pango.h>
 #include <pango/pangocairo.h>
+#include <ggadget/logger.h>
 #include <ggadget/scoped_ptr.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
@@ -484,6 +485,16 @@ bool CairoCanvas::ClearCanvas() {
   return true;
 }
 
+bool CairoCanvas::ClearRect(double x, double y, double w, double h) {
+  ASSERT(impl_->cr_);
+  cairo_rectangle(impl_->cr_, x, y, w, h);
+  cairo_operator_t op = cairo_get_operator(impl_->cr_);
+  cairo_set_operator(impl_->cr_, CAIRO_OPERATOR_CLEAR);
+  cairo_fill(impl_->cr_);
+  cairo_set_operator(impl_->cr_, op);
+  return true;
+}
+
 bool CairoCanvas::PopState() {
   ASSERT(impl_->cr_);
   if (impl_->opacity_stack_.empty()) {
@@ -563,6 +574,19 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
 
   cairo_rectangle(impl_->cr_, x, y, w, h);
   cairo_clip(impl_->cr_);
+  return true;
+}
+
+bool CairoCanvas::IntersectGeneralClipRegion(int rectangle_number,
+                                             double *region) {
+  cairo_antialias_t pre = cairo_get_antialias(impl_->cr_);
+  cairo_set_antialias(impl_->cr_, CAIRO_ANTIALIAS_NONE);
+  for (int i = 0; i < rectangle_number * 4; i += 4)
+    cairo_rectangle(impl_->cr_,
+                    region[i], region[i+1],
+                    region[i+2], region[i+3]);
+  cairo_clip(impl_->cr_);
+  cairo_set_antialias(impl_->cr_, pre);
   return true;
 }
 
@@ -841,11 +865,11 @@ bool CairoCanvas::GetPointValue(double x, double y,
 #undef BYTE_TO_DOUBLE
 #else
   if (opacity) {
-    *opacity = 1.0;    
+    *opacity = 1.0;
   }
   if (color) {
-    *color = Color::kWhite;  
-  }  
+    *color = Color::kWhite;
+  }
   return true;
 #endif
 }

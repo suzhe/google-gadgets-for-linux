@@ -14,7 +14,12 @@
   limitations under the License.
 */
 
+#include <sys/time.h>
+#include <time.h>
+#include <list>
+#include <set>
 #include <vector>
+
 #include "view.h"
 #include "basic_element.h"
 #include "contentarea_element.h"
@@ -33,6 +38,7 @@
 #include "image_interface.h"
 #include "logger.h"
 #include "math_utils.h"
+#include "scoped_ptr.h"
 #include "script_context_interface.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_event.h"
@@ -160,10 +166,127 @@ class View::Impl {
     Connection *destroy_connection_;
   };
 
+  class ViewClipRegion {
+   public:
+    class ViewRectangle {
+     public:
+      ViewRectangle(const BasicElement* element) {
+        GetViewCoord(element, coordinates);
+        area = coordinates[2] * coordinates[3];
+      }
+      ViewRectangle(double x, double y, double w, double h) : area(0) {
+        coordinates[0] = x;
+        coordinates[1] = y;
+        coordinates[2] = w;
+        coordinates[3] = h;
+        area = w * h;
+      }
+      void Integerize() {
+        double zoomed = 0.5;
+        coordinates[0] = floor(coordinates[0] - zoomed);
+        coordinates[1] = floor(coordinates[1] - zoomed);
+        coordinates[2] = ceil(coordinates[2] + zoomed * 2);
+        coordinates[3] = ceil(coordinates[3] + zoomed * 2);
+      }
+     public:
+      double coordinates[4];
+      double area;
+    };
+    ViewClipRegion(View *view) : view_(view) , region_buffer_(NULL) {
+    }
+    ~ViewClipRegion() {
+      delete region_buffer_;
+      region_buffer_ = NULL;
+    }
+    void AddElement(const BasicElement *element) {
+      ASSERT(element->GetView() == view_);
+      changed_elements_.push_back(element);
+    }
+    void MergeRectangle(ViewRectangle r) {
+      const double kMergeFactor = 0.9;
+      for (RectangleList::iterator it = rectangles_.begin();
+           it != rectangles_.end(); ++it) {
+        if (!RectanglesOverlapped(it->coordinates, r.coordinates))
+          continue;
+        double big[4];
+        GetTwoRectanglesExtents(r.coordinates, it->coordinates, big);
+        // merge the two rectangles as one. We didn't check if the merged one
+        // would be largely overlapped with other existed ones, it is not
+        // necessary.
+        if (r.area + it->area > kMergeFactor * big[2] * big[3]) {
+          memcpy(it->coordinates, big, sizeof(big));
+          it->area = big[2] * big[3];
+          return;
+        }
+      }
+      rectangles_.push_back(r);
+    }
+    void AddElementOldPosition(const BasicElement *element) {
+      ASSERT(element->GetView() == view_);
+      double r[4];
+      element->GetOldViewRectangle(r);
+      MergeRectangle(ViewRectangle(r[0], r[1], r[2], r[3]));
+    }
+    void Clear() {
+      changed_elements_.clear();
+      rectangles_.clear();
+      delete [] region_buffer_;
+      region_buffer_ = NULL;
+    }
+    void Maximize() {
+      Clear();
+      ViewRectangle r(0, 0, view_->GetWidth(), view_->GetHeight());
+      rectangles_.push_back(r);
+      region_buffer_ = new double[4];
+      memcpy(region_buffer_, r.coordinates, sizeof(double) * 4);
+    }
+    void Transfer() {
+      for (std::size_t i = 0; i < changed_elements_.size(); ++i) {
+        MergeRectangle(ViewRectangle(changed_elements_[i]));
+        if (changed_elements_[i]->IsPositionChanged() ||
+            changed_elements_[i]->IsSizeChanged()) {
+          AddElementOldPosition(changed_elements_[i]);
+        }
+      }
+      delete [] region_buffer_;
+      region_buffer_ = new double[rectangles_.size() * 4];
+      double *r = region_buffer_;
+      for (RectangleList::iterator it = rectangles_.begin();
+           it != rectangles_.end(); ++it, r += 4) {
+        it->Integerize();
+        memcpy(r, it->coordinates, sizeof(double) * 4);
+      }
+    }
+    bool IsElementIn(const BasicElement *element) const {
+      ASSERT(element->GetView() == view_);
+      for (std::size_t i = 0; i < changed_elements_.size(); ++i)
+        if (changed_elements_[i] == element) return true;
+      double rect[4];
+      GetViewCoord(element, rect);
+      for (RectangleList::const_iterator it = rectangles_.begin();
+           it != rectangles_.end(); ++it)
+        if (RectanglesOverlapped(it->coordinates, rect))
+          return true;
+      return false;
+    }
+    double *GetRectangles() const {
+      return region_buffer_;
+    }
+    int GetCount() const { return rectangles_.size(); }
+   private:
+    std::vector<const BasicElement *> changed_elements_;
+    typedef std::list<ViewRectangle> RectangleList;
+    RectangleList rectangles_;
+    View *view_;
+    double *region_buffer_;
+  };
+
   Impl(ElementFactory *element_factory,
        int debug_mode,
        View *owner)
-    : owner_(owner),
+    : clip_region_(owner),
+      canvas_cache_(NULL),
+      owner_(owner),
       host_(NULL),
       gadget_host_(NULL),
       script_context_(NULL),
@@ -177,10 +300,15 @@ class View::Impl {
       show_caption_always_(false),
       dragover_result_(EVENT_RESULT_UNHANDLED),
       post_event_token_(0),
-      mark_redraw_token_(0),
       draw_queued_(false),
       utils_(this),
-      events_enabled_(true) {
+      events_enabled_(true),
+      need_redraw_(true),
+      draw_count_(0),
+      fp_(NULL) {
+#ifdef _DEBUG
+    fp_ = fopen("/tmp/view_render", "w+");
+#endif
   }
 
   ~Impl() {
@@ -189,6 +317,10 @@ class View::Impl {
     ScriptableEvent scriptable_event(&event, owner_, NULL);
     FireEvent(&scriptable_event, onclose_event_);
     on_destroy_signal_.Emit(0, NULL);
+    if (fp_) {
+      fprintf(fp_, "\n");
+      fclose(fp_);
+    }
   }
 
   template <typename T>
@@ -624,6 +756,7 @@ class View::Impl {
         // Don't overwrite the existing element with the same name.
         all_elements_.find(name) == all_elements_.end())
       all_elements_[name] = element;
+
     return true;
   }
 
@@ -639,6 +772,8 @@ class View::Impl {
       if (it != all_elements_.end() && it->second == element)
         all_elements_.erase(it);
     }
+
+    clip_region_.AddElementOldPosition(element);
   }
 
   void FireEventSlot(ScriptableEvent *event, const Slot *slot) {
@@ -759,6 +894,7 @@ class View::Impl {
   }
 
   void MarkRedraw() {
+    need_redraw_ = true;
     children_.MarkRedraw();
   }
 
@@ -767,18 +903,32 @@ class View::Impl {
   }
 
   void Draw(CanvasInterface *canvas) {
+#ifdef _DEBUG
+    draw_count_ = 0;
+    uint64_t start = main_loop_->GetCurrentTime();
+#endif
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
+    if (!canvas_cache_) {
+      canvas_cache_ = host_->GetGraphics()->NewCanvas(width_, height_);
+    }
+    if (need_redraw_)
+      clip_region_.Maximize();
+    else
+      clip_region_.Transfer();
 
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedEvents();
 
-    canvas->PushState();
-    children_.Draw(canvas);
+    canvas_cache_->PushState();
+    canvas_cache_->IntersectGeneralClipRegion(clip_region_.GetCount(),
+                                              clip_region_.GetRectangles());
+    canvas_cache_->ClearRect(0, 0, width_, height_);
+    children_.Draw(canvas_cache_);
 
     if (popup_element_.Get()) {
       popup_element_.Get()->ClearPositionChanged();
@@ -791,22 +941,32 @@ class View::Impl {
       for (; it < elements.rend(); ++it) {
         BasicElement *element = *it;
         if (element->GetRotation() == .0) {
-          canvas->TranslateCoordinates(
+          canvas_cache_->TranslateCoordinates(
               element->GetPixelX() - element->GetPixelPinX(),
               element->GetPixelY() - element->GetPixelPinY());
         } else {
-          canvas->TranslateCoordinates(element->GetPixelX(),
-                                       element->GetPixelY());
-          canvas->RotateCoordinates(
+          canvas_cache_->TranslateCoordinates(element->GetPixelX(),
+                                              element->GetPixelY());
+          canvas_cache_->RotateCoordinates(
               DegreesToRadians(element->GetRotation()));
-          canvas->TranslateCoordinates(-element->GetPixelPinX(),
-                                       -element->GetPixelPinY());
+          canvas_cache_->TranslateCoordinates(-element->GetPixelPinX(),
+                                              -element->GetPixelPinY());
         }
       }
 
-      popup_element_.Get()->Draw(canvas);
+      popup_element_.Get()->Draw(canvas_cache_);
     }
-    canvas->PopState();
+    canvas_cache_->PopState();
+    canvas->DrawCanvas(0, 0, canvas_cache_);
+#ifdef _DEBUG
+    uint64_t end = main_loop_->GetCurrentTime();
+    if (end > 0 && start > 0 && fp_) {
+      fprintf(fp_, "%d,%d,%llu;  ", draw_count_,
+              clip_region_.GetCount(), end - start);
+    }
+#endif
+    clip_region_.Clear();
+    need_redraw_ = false;
   }
 
   BasicElement *GetElementByName(const char *name) {
@@ -903,6 +1063,10 @@ class View::Impl {
   typedef std::map<std::string, BasicElement *> ElementsMap;
   ElementsMap all_elements_;
 
+  std::vector<bool> overlap_bitmap_;
+  ViewClipRegion clip_region_;
+  CanvasInterface *canvas_cache_;
+
   View *owner_;
   ViewHostInterface *host_;
   GadgetHostInterface *gadget_host_;
@@ -935,13 +1099,16 @@ class View::Impl {
   PostedEvents posted_events_;
   ElementHolder popup_element_;
   int post_event_token_;
-  int mark_redraw_token_;
   bool draw_queued_;
   Signal0<void> on_destroy_signal_;
 
   Utils utils_;
   GlobalObject global_object_;
   bool events_enabled_;
+  bool need_redraw_;
+
+  int draw_count_;
+  FILE *fp_;
 };
 
 View::View(ScriptableInterface *inherits_from,
@@ -1030,7 +1197,8 @@ void View::ViewCoordToNativeWidgetCoord(double x, double y,
   impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
 }
 
-void View::QueueDraw() {
+void View::QueueDraw(const BasicElement *element) {
+  impl_->clip_region_.AddElement(element);
   if (!impl_->draw_queued_) {
     impl_->draw_queued_ = true;
     impl_->host_->QueueDraw();
@@ -1296,6 +1464,18 @@ bool View::ShowDetailsView(DetailsView *details_view,
   return impl_->gadget_host_->GetGadget()->ShowDetailsView(details_view, title,
                                                            flags,
                                                            feedback_handler);
+}
+
+bool View::IsElementInClipRegion(const BasicElement *element) const {
+  return impl_->clip_region_.IsElementIn(element);
+}
+
+void View::AddElementToClipRegion(const BasicElement *element) {
+  impl_->clip_region_.AddElement(element);
+}
+
+void View::IncreaseDrawCount() {
+  impl_->draw_count_++;
 }
 
 bool View::OnAddContextMenuItems(MenuInterface *menu) {

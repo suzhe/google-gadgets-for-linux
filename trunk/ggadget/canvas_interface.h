@@ -148,6 +148,17 @@ class CanvasInterface {
   virtual bool ClearCanvas() = 0;
 
   /**
+   * Clear a rectangle with top left corner at (x, y). This method will not clear
+   * the clip status of the canvas.
+   * @param x The X-coordinate of the rectangle's top left corner.
+   * @param y The Y-coordinate of the rectangle's top left corner.
+   * @param w Width of rectangle.
+   * @param h Height of rectangle.
+   * @return true on success, false otherwise.
+   */
+  virtual bool ClearRect(double x, double y, double w, double h) = 0;
+
+  /**
    * Draw a line from point (x0, y0) to (x1, y1).
    * @param x0 X-coordinate of the line starting point.
    * @param y0 Y-coordinate of the line starting point.
@@ -245,6 +256,17 @@ class CanvasInterface {
    */
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h) = 0;
+
+  /**
+   * Intersect the clipping region with a general region, which is represented
+   * by the union of a list of rectangles.
+   * @param rectangle_number the number of the rectangles
+   * @param region the general clip region. Each rectangle in the list are
+   *        represented by 4 double cosnt, that is, x, y, w, h.
+   * @return @c true on success and @c false otherwise.
+   */
+  virtual bool IntersectGeneralClipRegion(int rectangle_number,
+                                          double *region) = 0;
 
   /**
    * Gets the width and height of the specified text.

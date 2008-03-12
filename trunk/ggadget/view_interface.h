@@ -155,7 +155,6 @@ class ViewInterface : public ScriptableInterface {
    * during the next draw.
    */
   virtual void MarkRedraw() = 0;
-
  public:
   /**
    * Called by the global options object when any option changed.

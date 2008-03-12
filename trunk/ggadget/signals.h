@@ -49,7 +49,7 @@ class Connection {
   /**
    * Reconnect the connection to another @c Slot.
    * The @a slot is then owned by this connection no matter @c Reconnect
-   * succeeded or failed. 
+   * succeeded or failed.
    * The connection will be unblocked if it has been blocked or disconnected.
    * @param slot the new @c Slot to be connected.
    * @return @c true if succeeds.

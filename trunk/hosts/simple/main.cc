@@ -151,6 +151,7 @@ static bool CreateGTKUI(const char *base_path) {
 
   //gtk_widget_realize(window);
   //gtk_window_set_opacity(GTK_WINDOW(window), .0);
+  gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER_ALWAYS);
   gtk_widget_show_all(window);
 
   return true;
