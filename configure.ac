@@ -508,7 +508,7 @@ AC_CONFIG_FILES([Makefile
 		 extensions/default_options/Makefile
 		 extensions/default_options/tests/Makefile
 		 extensions/google_gadget_manager/Makefile
-		 extensions/google_gadget_manager/gadget_browser_gadget/Makefile
+		 extensions/google_gadget_manager/gadget_browser/Makefile
 		 extensions/google_gadget_manager/tests/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
