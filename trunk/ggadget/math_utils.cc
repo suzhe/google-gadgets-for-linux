@@ -194,7 +194,7 @@ bool RectanglesOverlapped(const double r1[4], const double r2[4]) {
   double minx = std::max(r1[0], r2[0]);
   double maxy = std::min(r1[1] + r1[3], r2[1] + r2[3]);
   double miny = std::max(r1[1], r2[1]);
-  if (maxx < minx || maxy < miny) return false;
+  if (maxx <= minx || maxy <= miny) return false;
   return true;
 }
 

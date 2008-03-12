@@ -198,9 +198,11 @@ class View::Impl {
       delete region_buffer_;
       region_buffer_ = NULL;
     }
-    void AddElement(const BasicElement *element) {
+    void AddElement(BasicElement *element) {
       ASSERT(element->GetView() == view_);
-      changed_elements_.push_back(element);
+      // don't add element directly to avoid redundant ref/unref operations
+      changed_elements_.push_back(ElementHolder(NULL));
+      (changed_elements_.end()-1)->Reset(element);
     }
     void MergeRectangle(ViewRectangle r) {
       const double kMergeFactor = 0.9;
@@ -242,11 +244,11 @@ class View::Impl {
     }
     void Transfer() {
       for (std::size_t i = 0; i < changed_elements_.size(); ++i) {
-        MergeRectangle(ViewRectangle(changed_elements_[i]));
-        if (changed_elements_[i]->IsPositionChanged() ||
-            changed_elements_[i]->IsSizeChanged()) {
-          AddElementOldPosition(changed_elements_[i]);
-        }
+        BasicElement *element = changed_elements_[i].Get();
+        if (!element) continue;
+        MergeRectangle(ViewRectangle(element));
+        if (element->IsPositionChanged() || element->IsSizeChanged())
+          AddElementOldPosition(element);
       }
       delete [] region_buffer_;
       region_buffer_ = new double[rectangles_.size() * 4];
@@ -260,7 +262,7 @@ class View::Impl {
     bool IsElementIn(const BasicElement *element) const {
       ASSERT(element->GetView() == view_);
       for (std::size_t i = 0; i < changed_elements_.size(); ++i)
-        if (changed_elements_[i] == element) return true;
+        if (changed_elements_[i].Get() == element) return true;
       double rect[4];
       GetViewCoord(element, rect);
       for (RectangleList::const_iterator it = rectangles_.begin();
@@ -274,7 +276,7 @@ class View::Impl {
     }
     int GetCount() const { return rectangles_.size(); }
    private:
-    std::vector<const BasicElement *> changed_elements_;
+    std::vector<ElementHolder> changed_elements_;
     typedef std::list<ViewRectangle> RectangleList;
     RectangleList rectangles_;
     View *view_;
@@ -1197,7 +1199,7 @@ void View::ViewCoordToNativeWidgetCoord(double x, double y,
   impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
 }
 
-void View::QueueDraw(const BasicElement *element) {
+void View::QueueDraw(BasicElement *element) {
   impl_->clip_region_.AddElement(element);
   if (!impl_->draw_queued_) {
     impl_->draw_queued_ = true;
@@ -1470,7 +1472,7 @@ bool View::IsElementInClipRegion(const BasicElement *element) const {
   return impl_->clip_region_.IsElementIn(element);
 }
 
-void View::AddElementToClipRegion(const BasicElement *element) {
+void View::AddElementToClipRegion(BasicElement *element) {
   impl_->clip_region_.AddElement(element);
 }
 

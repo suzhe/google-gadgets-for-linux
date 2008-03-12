@@ -69,8 +69,14 @@ class ScriptableHolder {
 
  private:
   void OnRefChange(int ref_count, int change) {
-    if (ref_count == 0 && change == 0)
-      Reset(NULL);
+    // we have a similar mechanism in variant.cc/Variant::OnRefChange,
+    // please see the comments there.
+    if (ref_count == 0 && change == 0) {
+      on_refchange_connection_->Disconnect();
+      on_refchange_connection_ = NULL;
+      ptr_->Unref(true);
+      ptr_ = NULL;
+    }
   }
 
   T *ptr_;
