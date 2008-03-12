@@ -60,6 +60,7 @@ static const char *kGlobalExtensions[] = {
 #endif
   "smjs-script-runtime",
   "curl-xml-http-request",
+  "google-gadget-manager",
   NULL
 };
 
@@ -230,7 +231,7 @@ int main(int argc, char* argv[]) {
   // TODO: Proper profile directory.
   if ((fm = ggadget::CreateFileManager(".")) != NULL)
     fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
-  
+
   ggadget::SetGlobalFileManager(fm_wrapper);
 
   // Load global extensions.

@@ -507,6 +507,9 @@ AC_CONFIG_FILES([Makefile
 		 extensions/libxml2_xml_parser/Makefile
 		 extensions/default_options/Makefile
 		 extensions/default_options/tests/Makefile
+		 extensions/google_gadget_manager/Makefile
+		 extensions/google_gadget_manager/gadget_browser_gadget/Makefile
+		 extensions/google_gadget_manager/tests/Makefile
 		 ggadget/sysdeps.h
 		 ggadget/Makefile
 		 ggadget/tests/Makefile
@@ -516,8 +519,6 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/qt/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
-		 gadget_browser/Makefile
-		 gadget_browser/gadget/Makefile
 		 hosts/Makefile
 		 hosts/simple/Makefile
 		 hosts/qt/Makefile

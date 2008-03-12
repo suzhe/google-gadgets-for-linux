@@ -33,7 +33,6 @@ SET(SRCS
   extension_manager.cc
   gadget.cc
   gadget_manager.cc
-  gadgets_metadata.cc
   locales.cc
   logger.cc
   main_loop.cc
