@@ -990,6 +990,7 @@ void BasicElement::DoRegister() {
 }
 
 BasicElement::~BasicElement() {
+  DLOG("Basic element's dtor, this: %p", this);
   delete impl_;
 }
 

@@ -185,7 +185,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * @param changed_element the pointer to the basic element that file this
    * request.
    * */
-  void QueueDraw(const BasicElement *element);
+  void QueueDraw(BasicElement *element);
 
   /** @return the current graphics interface used for drawing elements. */
   const GraphicsInterface *GetGraphics() const;
@@ -343,7 +343,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   /**
    * Add the element to the clip region when it is changed and need to redraw.
    */
-  void AddElementToClipRegion(const BasicElement *element);
+  void AddElementToClipRegion(BasicElement *element);
 
   /** For performance testing. */
   void IncreaseDrawCount();
