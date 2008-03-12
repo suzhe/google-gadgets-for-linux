@@ -55,4 +55,16 @@ ggl-qt.sh: ggl-qt
 main.moc:main.cc
 	moc $< -o $@
 
+ggl-qt.sh: ggl-qt
+	(echo '#!/bin/sh' > $@; \
+	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
+	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \
+	 echo '  if test -d $$i; then' >> $@; \
+	 echo '    GGL_MODULE_PATH=$$GGL_MODULE_PATH:$$i' >> $@; \
+	 echo '  fi' >> $@; \
+	 echo 'done' >> $@; \
+	 echo 'export GGL_MODULE_PATH' >> $@; \
+	 echo '$(LIBTOOL) --mode=execute $$MEMCHECK_COMMAND $(abs_builddir)/ggl-qt $$@' >> $@; \
+	 chmod 0755 $@)
+
 endif

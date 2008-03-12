@@ -16,6 +16,8 @@
 
 #include <cmath>
 #include <QPainter>
+#include <QClipboard>
+#include <QApplication>
 #include <QKeyEvent>
 #include <QAbstractTextDocumentLayout>
 #include <QTextLine>
@@ -61,25 +63,82 @@ namespace qt {
 
 static const int kDefaultEditElementWidth = 60;
 static const int kDefaultEditElementHeight = 16;
-static const Color kDefaultBackgroundColor(1, 1, 1);
+
+static const int kInnerBorderX = 2;
+static const int kInnerBorderY = 1;
+
 static const int kDefaultFontSize = 10;
+static const char *kDefaultFontFamily = "Sans";
+
+static const Color kDefaultTextColor(0, 0, 0);
+static const Color kDefaultBackgroundColor(1, 1, 1);
+static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
+static const Color kDefaultSelectionTextColor(1, 1, 1);
+
 
 QtEditElement::QtEditElement(BasicElement *parent, View *view, const char *name)
-    : EditElementBase(parent, view, name) {
+    : EditElementBase(parent, view, name),
+      cursor_(NULL),
+      multiline_(false),
+      bold_(false),
+      italic_(false),
+      strikeout_(false),
+      underline_(false),
+      overwrite_(false),
+      wrap_(false),
+      readonly_(false),
+      focused_(false),
+      page_line_(0),
+      width_(kDefaultEditElementWidth),
+      height_(kDefaultEditElementHeight),
+      scroll_offset_x_(0),
+      scroll_offset_y_(0),
+      background_(NULL),
+      font_size_(kDefaultFontSize) {
   ConnectOnScrolledEvent(NewSlot(this, &QtEditElement::OnScrolled));
   cursor_ = new QTextCursor(&doc_);
-  multiline_ = overwrite_ = readonly_ = false;
+  SetFont(kDefaultFontFamily);
+  SetSize(kDefaultFontSize);
 }
 
 QtEditElement::~QtEditElement() {
 }
 
-void QtEditElement::Layout() {
-  //int range, line_step, page_step, cur_pos;
-  ScrollingElement::Layout();
-  /*SetWidth(static_cast<int>(ceil(GetClientWidth())));
+void QtEditElement::GetScrollBarInfo(int *x_range, int *y_range,
+                                     int *line_step, int *page_step,
+                                     int *cur_pos) {
+  SetWidth(static_cast<int>(ceil(GetClientWidth())));
   SetHeight(static_cast<int>(ceil(GetClientHeight())));
-  GetScrollBarInfo(&range, &line_step, &page_step, &cur_pos);*/
+
+  if (RequestHeight() > height_ && multiline_) {
+    *y_range = RequestHeight() - height_;
+    *x_range = 0;
+    *line_step = 10;
+    *page_step = height_;
+    *cur_pos = - scroll_offset_y_;
+  } else {
+    *y_range = 0;
+    *x_range = 0;
+    *line_step = 0;
+    *page_step = 0;
+    *cur_pos = 0;
+  }
+}
+
+void QtEditElement::Layout() {
+  ScrollingElement::Layout();
+
+  int x_range, y_range, line_step, page_step, cur_pos;
+  GetScrollBarInfo(&x_range, &y_range, &line_step, &page_step, &cur_pos);
+  // If the scrollbar display state was changed, then call Layout() recursively
+  // to redo Layout.
+  if (UpdateScrollBar(x_range, y_range)) {
+    Layout();
+  } else {
+    SetScrollYPosition(cur_pos);
+    SetYLineStep(line_step);
+    SetYPageStep(page_step);
+  }
 }
 
 void QtEditElement::MarkRedraw() {
@@ -95,10 +154,17 @@ void QtEditElement::SetBackground(const Variant &background) {
 }
 
 bool QtEditElement::IsBold() const {
-  return false;
+  return bold_;
 }
 
 void QtEditElement::SetBold(bool bold) {
+  if (bold_ != bold) {
+    bold_ = bold;
+    QFont f = doc_.defaultFont();
+    f.setBold(bold);
+    doc_.setDefaultFont(f);
+    QueueDraw();
+  }
 }
 
 std::string QtEditElement::GetColor() const {
@@ -106,6 +172,11 @@ std::string QtEditElement::GetColor() const {
 }
 
 void QtEditElement::SetColor(const char *color) {
+  Color::FromString(color, &text_color_, NULL);
+  QColor c(text_color_.RedInt(),
+           text_color_.GreenInt(),
+           text_color_.BlueInt());
+  paint_ctx_.palette.setBrush(QPalette::Text, c);
 }
 
 std::string QtEditElement::GetFont() const {
@@ -113,48 +184,91 @@ std::string QtEditElement::GetFont() const {
 }
 
 void QtEditElement::SetFont(const char *font) {
+  std::string new_font((font && *font) ? font : kDefaultFontFamily);
+  if (font_family_ != new_font) {
+    font_family_ = new_font;
+    QFont font(font_family_.c_str(), font_size_);
+    doc_.setDefaultFont(font);
+    QueueDraw();
+  }
 }
 
 bool QtEditElement::IsItalic() const {
-  return false;
+  return italic_;
 }
 
 void QtEditElement::SetItalic(bool italic) {
+  if (italic_ != italic) {
+    italic_ = italic;
+    QFont f = doc_.defaultFont();
+    f.setItalic(italic);
+    doc_.setDefaultFont(f);
+    QueueDraw();
+  }
 }
 
 bool QtEditElement::IsMultiline() const {
-  return false;
+  return multiline_;
 }
 
 void QtEditElement::SetMultiline(bool multiline) {
+  if (multiline_ != multiline) {
+    multiline_ = multiline;
+    QueueDraw();
+  }
 }
 
 std::string QtEditElement::GetPasswordChar() const {
-  return "hello, world";
+  return GetValue();
 }
 
-void QtEditElement::SetPasswordChar(const char *passwordChar) {
+void QtEditElement::SetPasswordChar(const char *c) {
+  if (c == NULL || *c == 0 || !IsLegalUTF8Char(c, GetUTF8CharLength(c))) {
+    password_char_ = "*";
+  } else {
+    password_char_.assign(c, GetUTF8CharLength(c));
+  }
 }
 
 int QtEditElement::GetSize() const {
-  return kDefaultFontSize;
+  return font_size_;
 }
 
 void QtEditElement::SetSize(int size) {
+  if (font_size_ != size) {
+    font_size_ = size;
+    QFont font = doc_.defaultFont();
+    font.setPixelSize(size);
+    doc_.setDefaultFont(font);
+  }
 }
 
 bool QtEditElement::IsStrikeout() const {
-  return false;
+  return strikeout_;
 }
 
 void QtEditElement::SetStrikeout(bool strikeout) {
+  if (strikeout_ != strikeout) {
+    strikeout_ = strikeout;
+    QFont f = doc_.defaultFont();
+    f.setStrikeOut(strikeout);
+    doc_.setDefaultFont(f);
+    QueueDraw();
+  }
 }
 
 bool QtEditElement::IsUnderline() const {
-  return false;
+  return underline_;
 }
 
 void QtEditElement::SetUnderline(bool underline) {
+  if (underline_ != underline) {
+    underline_ = underline;
+    QFont f = doc_.defaultFont();
+    f.setUnderline(underline);
+    doc_.setDefaultFont(f);
+    QueueDraw();
+  }
 }
 
 std::string QtEditElement::GetValue() const {
@@ -166,10 +280,20 @@ void QtEditElement::SetValue(const char *value) {
 }
 
 bool QtEditElement::IsWordWrap() const {
-  return false;
+  return wrap_;
 }
 
 void QtEditElement::SetWordWrap(bool wrap) {
+  if (wrap_ != wrap) {
+    wrap_ = wrap;
+    QTextOption opt = doc_.defaultTextOption();
+    if (wrap)
+      opt.setWrapMode(QTextOption::WordWrap);
+    else
+      opt.setWrapMode(QTextOption::NoWrap);
+    doc_.setDefaultTextOption(opt);
+    QueueDraw();
+  }
 }
 
 bool QtEditElement::IsReadOnly() const {
@@ -221,29 +345,94 @@ static QRectF GetRectForPosition(QTextDocument *doc, int position) {
   return r;
 }
 
-static const int kInnerBorderX = 2;
-static const int kInnerBorderY = 1;
 void QtEditElement::DoDraw(CanvasInterface *canvas) {
-/*  canvas->IntersectRectClipRegion(kInnerBorderX - 1,
-                                  kInnerBorderY - 1,
-                                  width_*/
+  canvas->PushState();
   QtCanvas *c = down_cast<QtCanvas*>(canvas);
-  c->DrawTextDocument(doc_);
-  QRectF r = GetRectForPosition(&doc_, cursor_->position());
-  double x = (r.left() + r.right())/2;
-  c->DrawLine(x, r.top(), x, r.bottom(), 1, Color::kBlack);
+  if (background_) {
+    background_->Draw(canvas);
+  } else {
+    canvas->DrawFilledRect(0, 0, c->GetWidth(), c->GetHeight(),
+                           kDefaultBackgroundColor);
+  }
+  QPainter *p = c->GetQPainter();
+
+
+  QTextDocument *doc = &doc_;
+  QTextCursor *cursor = cursor_;
+
+  // These document and cursor are used to draw when password_ is set
+  QTextDocument tmp_doc;
+  QTextCursor tmp_cursor(&tmp_doc);
+  if (!password_char_.empty()) {
+    std::string shadow;
+    size_t len = GetValue().length();
+    for (size_t i = 0; i < len; i++)
+      shadow.append(password_char_);
+    tmp_doc.setPlainText(shadow.c_str());
+
+    // Setup cursor's position and selection
+    int start = cursor_->selectionStart();
+    int end = cursor_->selectionEnd();
+    int pos = cursor_->position();
+    tmp_cursor.setPosition(pos);
+    if (end > start) {
+      if (pos == start) {
+        tmp_cursor.movePosition(QTextCursor::NextCharacter,
+                                QTextCursor::KeepAnchor,
+                                end - start);
+      } else {
+        tmp_cursor.movePosition(QTextCursor::PreviousCharacter,
+                                QTextCursor::KeepAnchor,
+                                end - start);
+      }
+    }
+
+    doc = &tmp_doc;
+    cursor = &tmp_cursor;
+    DLOG("passwd is: %s", GetValue().c_str());
+    DLOG("Selection is from %d to %d", start, end);
+  }
+
+  QAbstractTextDocumentLayout::Selection selection;
+  selection.cursor = *cursor;
+  selection.format.setForeground(QColor(0xff, 0xff, 0xff));
+  selection.format.setBackground(QColor(0x00, 0x00, 0xff));
+  paint_ctx_.selections.clear();
+  paint_ctx_.selections.append(selection);
+
+  QRectF rect(0, scroll_offset_y_, c->GetWidth(),
+              c->GetHeight());
+  paint_ctx_.clip = rect;
+
+  canvas->TranslateCoordinates(0, -scroll_offset_y_);
+  doc->documentLayout()->draw(p, paint_ctx_);
+  paint_ctx_.selections.clear();
+
+  // Draw the cursor
+  if (focused_) {
+    QRectF r = GetRectForPosition(doc, cursor->position());
+    double x = (r.left() + r.right())/2;
+    c->DrawLine(x, r.top(), x, r.bottom(), 1, Color::kBlack);
+  }
+  canvas->PopState();
   DrawScrollbar(canvas);
 }
 
 EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
   if (ScrollingElement::HandleMouseEvent(event) == EVENT_RESULT_HANDLED)
     return EVENT_RESULT_HANDLED;
+  if (event.GetButton() != MouseEvent::BUTTON_LEFT)
+    return EVENT_RESULT_UNHANDLED;
+
   return EVENT_RESULT_HANDLED;
 }
 
 EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
   QKeyEvent *qevent = static_cast<QKeyEvent*>(event.GetOriginalEvent());
   Event::Type type = event.GetType();
+  if (type == Event::EVENT_KEY_UP)
+    return EVENT_RESULT_UNHANDLED;
+
   int mod = event.GetModifier();
   bool shift = (mod & Event::MOD_SHIFT);
   bool ctrl = (mod & Event::MOD_CONTROL);
@@ -270,13 +459,13 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
       if (!ctrl) MoveCursor(QTextCursor::Up, page_line_, shift);
     } else if (keyval == Qt::Key_PageDown) {
       if (!ctrl) MoveCursor(QTextCursor::Down, page_line_, shift);
-    } else if ((keyval == 'x' && ctrl && !shift) ||
+    } else if ((keyval == Qt::Key_X && ctrl && !shift) ||
                (keyval == Qt::Key_Delete && shift && !ctrl)) {
       CutClipboard();
-    } else if ((keyval == 'c' && ctrl && !shift) ||
+    } else if ((keyval == Qt::Key_C && ctrl && !shift) ||
                (keyval == Qt::Key_Insert && ctrl && !shift)) {
       CopyClipboard();
-    } else if ((keyval == 'v' && ctrl && !shift) ||
+    } else if ((keyval == Qt::Key_V && ctrl && !shift) ||
                (keyval == Qt::Key_Insert && shift && !ctrl)) {
       PasteClipboard();
     } else if (keyval == Qt::Key_Backspace) {
@@ -285,19 +474,36 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
       cursor_->deleteChar();
     } else if (keyval == Qt::Key_Insert && !shift && !ctrl) {
       overwrite_ = !overwrite_;
-    } else if (keyval == Qt::Key_Return) {
+    } else if (!qevent->text().isEmpty()
+               && keyval != Qt::Key_Return
+               && keyval != Qt::Key_Tab) {
+      EnterText(qevent->text());
+    } else {
+      return EVENT_RESULT_UNHANDLED;
+    }
+  } else { // EVENT_KEY_PRESS
+    if (keyval == Qt::Key_Return) {
       // If multiline_ is unset, just ignore new_line.
       if (multiline_) EnterText("\n");
     } else if (keyval == Qt::Key_Tab) {
       // The Tab key will likely be consumed by input method.
       EnterText("\t");
-    } else if (!qevent->text().isEmpty()){
-      EnterText(qevent->text());
+    } else {
+      return EVENT_RESULT_UNHANDLED;
     }
   }
   QueueDraw();
   return EVENT_RESULT_HANDLED;
-} 
+}
+
+void QtEditElement::ScrollToCursor() {
+  QRectF r = GetRectForPosition(&doc_, cursor_->position());
+  if (r.top() < scroll_offset_y_) {
+    scroll_offset_y_ = static_cast<int>(r.top());
+  } else if (r.bottom() > scroll_offset_y_ + RealHeight()) {
+    scroll_offset_y_ = static_cast<int>(r.bottom() - RealHeight());
+  }
+}
 
 void QtEditElement::EnterText(QString str) {
   if (readonly_) return;
@@ -305,16 +511,37 @@ void QtEditElement::EnterText(QString str) {
   if (cursor_->hasSelection() || overwrite_) {
     cursor_->deleteChar();
   }
-  
+
   cursor_->insertText(str);
+
+  // Scroll to the position of cursor_ if necessary
+  ScrollToCursor();
 
   FireOnChangeEvent();
 }
 
+void QtEditElement::SetWidth(int width) {
+  if (width_ != width) {
+    width_ = width;
+    if (width_ <= kInnerBorderX * 2)
+      width_ = kInnerBorderX * 2 + 1;
+  }
+}
+
+void QtEditElement::SetHeight(int height) {
+  if (height_ != height) {
+    height_ = height;
+    if (height_ <= kInnerBorderY * 2)
+      height_ = kInnerBorderY * 2 + 1;
+  }
+}
+
 EventResult QtEditElement::HandleOtherEvent(const Event &event) {
   if (event.GetType() == Event::EVENT_FOCUS_IN) {
+    FocusIn();
     return EVENT_RESULT_HANDLED;
   } else if(event.GetType() == Event::EVENT_FOCUS_OUT) {
+    FocusOut();
     return EVENT_RESULT_HANDLED;
   }
   return EVENT_RESULT_UNHANDLED;
@@ -329,6 +556,17 @@ void QtEditElement::GetDefaultSize(double *width, double *height) const {
 
 void QtEditElement::OnScrolled() {
   DLOG("QtEditElement::OnScrolled(%d)", GetScrollYPosition());
+  int position = GetScrollYPosition();
+
+  if ( RequestHeight() > RealHeight()) {
+    if (position < 0)
+      position = 0;
+    else if (position >= RequestHeight() - RealHeight())
+      position = RequestHeight() - RealHeight() - 1;
+
+    scroll_offset_y_ = -position;
+    QueueDraw();
+  }
 }
 
 BasicElement *QtEditElement::CreateInstance(BasicElement *parent,
@@ -340,8 +578,59 @@ BasicElement *QtEditElement::CreateInstance(BasicElement *parent,
 void QtEditElement::MoveCursor(QTextCursor::MoveOperation op, int count,
                                bool extend_selection) {
   QTextCursor::MoveMode mode =
-      extend_selection ? QTextCursor::MoveAnchor:QTextCursor::KeepAnchor;
+      extend_selection ? QTextCursor::KeepAnchor : QTextCursor::MoveAnchor;
   cursor_->movePosition(op, mode, count);
+  ScrollToCursor();
+}
+
+void QtEditElement::FocusIn() {
+  if (!focused_) {
+    focused_ = true;
+    QueueDraw();
+  }
+}
+
+void QtEditElement::FocusOut() {
+  if (focused_) {
+    focused_ = false;
+    QueueDraw();
+  }
+}
+
+void QtEditElement::PasteClipboard() {
+   QClipboard *clipboard = QApplication::clipboard();
+   EnterText(clipboard->text());
+}
+
+void QtEditElement::CopyClipboard() {
+  if (cursor_->hasSelection() && password_char_.empty()) {
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(cursor_->selectedText());
+  }
+}
+
+void QtEditElement::CutClipboard() {
+  if (cursor_->hasSelection() && password_char_.empty()) {
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(cursor_->selectedText());
+    cursor_->deleteChar();
+  }
+}
+
+int QtEditElement::RealHeight() {
+  return height_ - kInnerBorderY * 2;
+}
+
+int QtEditElement::RealWidth() {
+  return width_ - kInnerBorderX * 2;
+}
+
+int QtEditElement::RequestHeight() {
+  return static_cast<int>(ceil(doc_.documentLayout()->documentSize().height()));
+}
+
+int QtEditElement::RequestWidth() {
+  return static_cast<int>(ceil(doc_.documentLayout()->documentSize().width()));
 }
 
 } // namespace qt
