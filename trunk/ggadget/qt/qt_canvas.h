@@ -104,7 +104,7 @@ class QtCanvas : public CanvasInterface {
   bool IsValid() const;
 
   QImage* GetImage() const;
-  bool DrawTextDocument(QTextDocument &doc);
+  QPainter *GetQPainter();
 
  private:
   class Impl;

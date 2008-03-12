@@ -158,8 +158,12 @@ static unsigned int GetKeyCode(int qt_key) {
 }
 
 void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
+  // For key down event
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
+  // For key press event
+  EventResult handler_result2 = ggadget::EVENT_RESULT_UNHANDLED;
 
+  // Key down event
   int mod = GetModifier(event->modifiers());
   unsigned int key_code = GetKeyCode(event->key());
   if (key_code) {
@@ -169,7 +173,15 @@ void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
     LOG("Unknown key: 0x%x", event->key());
   }
 
- if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
+  // Key press event
+  QString text = event->text();
+  if (!text.isEmpty() && !text.isNull()) {
+    KeyboardEvent e2(Event::EVENT_KEY_PRESS, text[0].unicode(), mod, event);
+    handler_result2 = view_->OnKeyEvent(e2);
+  }
+
+  if (handler_result != ggadget::EVENT_RESULT_UNHANDLED ||
+      handler_result2 != ggadget::EVENT_RESULT_UNHANDLED)
     event->accept();
 }
 

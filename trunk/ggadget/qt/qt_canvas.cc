@@ -24,6 +24,9 @@
 #include <algorithm>
 #include <QImage>
 #include <QPainter>
+#include <QTextDocument>
+#include <QAbstractTextDocumentLayout>
+
 #include <ggadget/scoped_ptr.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
@@ -81,6 +84,8 @@ class QtCanvas::Impl {
   }
 
   QImage* GetImage() { return &image_; }
+
+  QPainter* GetQPainter() { return painter_; }
 
   size_t GetWidth() { return width_; }
 
@@ -145,11 +150,6 @@ class QtCanvas::Impl {
   bool ClearCanvas() {
     DLOG("ClearCanvas");
     painter_->eraseRect(0, 0, width_, height_);
-    return true;
-  }
-
-  bool DrawTextDocument(QTextDocument &doc) {
-    doc.drawContents(painter_, QRect(0, 0, GetWidth(), GetHeight()));
     return true;
   }
 
@@ -229,10 +229,9 @@ class QtCanvas::Impl {
     if (align == ALIGN_LEFT) a = Qt::AlignLeft;
     if (align == ALIGN_CENTER) a = Qt::AlignHCenter;
 
-    if (valign == VALIGN_TOP) a |= Qt::AlignTop;
-    if (valign == VALIGN_BOTTOM) a |= Qt::AlignBottom;
-    if (valign == VALIGN_MIDDLE) a |= Qt::AlignVCenter;
     QTextOption option(a);
+
+    if (valign == VALIGN_MIDDLE) a |= Qt::AlignVCenter;
 
     if (text_flags & TEXT_FLAGS_WORDWRAP)
       option.setWrapMode(QTextOption::WordWrap);
@@ -240,8 +239,27 @@ class QtCanvas::Impl {
     doc.setDefaultTextOption(option);
     doc.setTextWidth(width);
 
-    p->setPen(QColor(c.RedInt(), c.GreenInt(), c.BlueInt()));
-    doc.drawContents(p, QRect(D2I(x), D2I(y), D2I(width), D2I(height)));
+    // taking care valign
+    double text_height = doc.documentLayout()->documentSize().height();
+    if (text_height < height) {
+      if (valign == VALIGN_MIDDLE) {
+        y += (height - text_height)/2;
+        height -= (height - text_height)/2;
+      } else if (valign == VALIGN_BOTTOM) {
+        y += (height - text_height);
+        height = text_height;
+      }
+    }
+    QRectF rect(0, 0, width, height);
+
+    QAbstractTextDocumentLayout::PaintContext ctx;
+    p->save();
+    ctx.clip = rect;
+    p->translate(x, y);
+    QColor color(c.RedInt(), c.GreenInt(), c.BlueInt());
+    ctx.palette.setBrush(QPalette::Text, color);
+    doc.documentLayout()->draw(p, ctx);
+    p->restore();
     return true;
   }
 
@@ -395,10 +413,6 @@ bool QtCanvas::DrawTextWithTexture(double x, double y, double w, double h,
                                     align, valign, trimming, text_flags);
 }
 
-bool QtCanvas::DrawTextDocument(QTextDocument &doc) {
-  return impl_->DrawTextDocument(doc);
-}
-
 bool QtCanvas::GetTextExtents(const char *text, const FontInterface *f,
                                  int text_flags, double in_width,
                                  double *width, double *height) {
@@ -428,6 +442,10 @@ bool QtCanvas::IsValid() const {
 
 QImage* QtCanvas::GetImage() const {
   return impl_->GetImage();
+}
+
+QPainter* QtCanvas::GetQPainter() {
+  return impl_->GetQPainter();
 }
 
 } // namespace qt

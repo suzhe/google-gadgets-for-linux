@@ -80,28 +80,53 @@ class QtEditElement : public EditElementBase {
   virtual void GetDefaultSize(double *width, double *height) const;
 
  private:
+  void GetScrollBarInfo(int *x_range, int *y_range,
+                        int *line_step, int *page_step,
+                        int *cur_pos);
   void OnScrolled();
   void MoveCursor(QTextCursor::MoveOperation, int count,
                   bool extend_selection);
-  void CutClipboard() {}
-  void CopyClipboard() {}
-  void PasteClipboard() {}
+  void CutClipboard();
+  void CopyClipboard();
+  void PasteClipboard();
   void BackSpace() {}
   void Delete() {}
   void ToggleOverwrite() {}
   void EnterText(QString str);
+  void SetWidth(int width);
+  void SetHeight(int height);
+  void FocusIn();
+  void FocusOut();
+  int RealHeight();
+  int RequestWidth();
+  int RequestHeight();
+  int RealWidth();
+  void ScrollToCursor();
   QTextDocument doc_;
   QTextCursor *cursor_;
   bool multiline_;
+  bool bold_;
+  bool italic_;
+  bool strikeout_;
+  bool underline_;
   bool overwrite_;
+  bool wrap_;
   bool readonly_;
+  bool focused_;
   int page_line_;
+  int width_, height_;
+  int scroll_offset_x_;
+  int scroll_offset_y_;
   Texture *background_;
   Color text_color_;
+  std::string font_family_;
+  int font_size_;
+  std::string password_char_;
+  QAbstractTextDocumentLayout::PaintContext paint_ctx_;
   DISALLOW_EVIL_CONSTRUCTORS(QtEditElement);
 };
 
-} // namespace qt 
+} // namespace qt
 } // namespace ggadget
 
 #endif // GGADGET_QT_EDIT_ELEMENT_H__
