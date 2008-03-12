@@ -58,6 +58,7 @@ class QtCanvas : public CanvasInterface {
   virtual void ScaleCoordinates(double cx, double cy);
 
   virtual bool ClearCanvas();
+  virtual bool ClearRect(double x, double y, double w, double h);
 
   virtual bool DrawLine(double x0, double y0, double x1, double y1,
                         double width, const Color &c);
@@ -86,6 +87,9 @@ class QtCanvas : public CanvasInterface {
 
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h);
+
+  virtual bool IntersectGeneralClipRegion(int rectangle_number,
+                                          double *region);
 
   virtual bool GetTextExtents(const char *text, const FontInterface *f,
                               int text_flags, double in_width,

@@ -153,6 +153,11 @@ class QtCanvas::Impl {
     return true;
   }
 
+  bool ClearRect(double x, double y, double w, double h) {
+    painter_->eraseRect(D2I(x), D2I(y), D2I(w), D2I(h));
+    return true;
+  }
+
   bool DrawLine(double x0, double y0, double x1, double y1,
                 double width, const Color &c) {
     QPainter *p = painter_;
@@ -283,6 +288,18 @@ class QtCanvas::Impl {
     return true;
   }
 
+  bool IntersectGeneralClipRegion(int rectangle_number,
+                                  double *region) {
+    QPainterPath path;
+    for (int i = 0; i < rectangle_number * 4; i += 4) {
+      QRectF rect(region[0], region[1], region[2], region[3]);
+      path.addRect(rect);
+    }
+    painter_->setClipping(true);
+    painter_->setClipPath(path);
+    return true;
+  }
+
   bool GetTextExtents(const char *text, const FontInterface *f,
                       int text_flags, double in_width,
                       double *width, double *height) const {
@@ -338,6 +355,10 @@ bool QtCanvas::ClearCanvas() {
   return impl_->ClearCanvas();
 }
 
+bool QtCanvas::ClearRect(double x, double y, double w, double h) {
+  return impl_->ClearRect(x, y, w, h);
+}
+
 bool QtCanvas::PopState() {
   return impl_->PopState();
 }
@@ -375,6 +396,10 @@ bool QtCanvas::DrawFilledRect(double x, double y,
 bool QtCanvas::IntersectRectClipRegion(double x, double y,
                                           double w, double h) {
   return impl_->IntersectRectClipRegion(x, y, w, h);
+}
+
+bool QtCanvas::IntersectGeneralClipRegion(int rect_number, double* region) {
+  return impl_->IntersectGeneralClipRegion(rect_number, region);
 }
 
 bool QtCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
