@@ -51,14 +51,18 @@ class GraphicsInterface {
 
   /**
    * Creates a new image.
+   * @param tag A string tag to the image. It can be anything, for example,
+   *     the file name of the image. Images with the same tag will be treated
+   *     as the same image.
    * @param data A string containing the raw bytes of the image. The size can
-   *             be obtained from data.size().
+   *     be obtained from data.size().
    * @param is_mask Indicates if the image is a mask image.
-   *        For mask image, only alpha channel will be used. And only pure
-   *        black color will be treated as fully transparent.
+   *     For mask image, only alpha channel will be used. And only pure
+   *     black color will be treated as fully transparent.
    * @return NULL on error, an ImageInterface object otherwise.
    */
-  virtual ImageInterface *NewImage(const std::string &data,
+  virtual ImageInterface *NewImage(const char *tag,
+                                   const std::string &data,
                                    bool is_mask) const = 0;
 
   /**

@@ -19,7 +19,6 @@ if GGL_BUILD_LIBGGADGET_GTK
 # Putting . into SBUDIRS list to force building current directory first.
 SUBDIRS = . tests
 
-
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
@@ -30,6 +29,7 @@ endif
 
 noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
+			  cairo_image_base.h \
 			  gtk_key_convert.h \
 			  gtk_menu_impl.h \
 			  pixbuf_image.h \
@@ -49,6 +49,7 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_canvas.cc \
 			  cairo_font.cc \
 			  cairo_graphics.cc \
+			  cairo_image_base.cc \
 			  gadget_view_widget.cc \
 			  gtk_main_loop.cc \
 			  gtk_gadget_host.cc \

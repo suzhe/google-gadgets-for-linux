@@ -17,46 +17,28 @@
 #ifndef GGADGET_GTK_RSVG_IMAGE_H__
 #define GGADGET_GTK_RSVG_IMAGE_H__
 
-#include <cairo.h>
-
-#include <ggadget/common.h>
-#include <ggadget/logger.h>
-#include <ggadget/color.h>
-#include <ggadget/canvas_interface.h>
-#include <ggadget/image_interface.h>
+#include <ggadget/gtk/cairo_image_base.h>
 
 namespace ggadget {
 namespace gtk {
 
-class CairoGraphics;
-
 /**
  * This class realizes the ImageInterface using the gdk-pixbuf library.
  */
-class RsvgImage : public ImageInterface {
+class RsvgImage : public CairoImageBase {
  public:
-  RsvgImage(const CairoGraphics *graphics, const std::string &data,
-            bool is_mask);
-
-  /** Check if the RsvgImage object is valid. */
-  bool IsValid() const;
-
- public:
+  RsvgImage(const CairoGraphics *graphics, const std::string &tag,
+            const std::string &data, bool is_mask);
   virtual ~RsvgImage();
+  virtual bool IsValid() const;
 
-  virtual void Destroy();
-  virtual const CanvasInterface *GetCanvas() const;
-  virtual void Draw(CanvasInterface *canvas, double x, double y) const;
+ public:
+  virtual CanvasInterface *GetCanvas() const;
   virtual void StretchDraw(CanvasInterface *canvas,
                            double x, double y,
                            double width, double height) const;
   virtual size_t GetWidth() const;
   virtual size_t GetHeight() const;
-  virtual void SetColorMultiply(const Color &color);
-  virtual bool GetPointValue(double x, double y,
-                             Color *color, double *opacity) const;
-  virtual void SetTag(const char *tag);
-  virtual std::string GetTag() const;
   virtual bool IsFullyOpaque() const;
 
  private:

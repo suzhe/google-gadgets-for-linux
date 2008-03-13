@@ -22,8 +22,9 @@
 #include <string>
 #include <librsvg/rsvg.h>
 #include <librsvg/rsvg-cairo.h>
-#include <ggadget/logger.h>
 #include <ggadget/color.h>
+#include <ggadget/logger.h>
+#include <ggadget/signals.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "rsvg_image.h"
@@ -33,11 +34,9 @@ namespace gtk {
 
 class RsvgImage::Impl {
  public:
-  Impl(const CairoGraphics *graphics, const std::string &data, bool is_mask)
-    : width_(0), height_(0), rsvg_(NULL), canvas_(NULL),
-      color_multiply_(1, 1, 1), zoom_(graphics->GetZoom()) {
-    // RsvgImage doesn't support mask for now.
-    ASSERT(!is_mask);
+  Impl(const CairoGraphics *graphics, const std::string &data)
+      : width_(0), height_(0), rsvg_(NULL), canvas_(NULL),
+        zoom_(graphics->GetZoom()), on_zoom_connection_(NULL) {
     GError *error = NULL;
     const guint8 *ptr = reinterpret_cast<const guint8*>(data.c_str());
     rsvg_ = rsvg_handle_new_from_data(ptr, data.size(), &error);
@@ -62,10 +61,6 @@ class RsvgImage::Impl {
       on_zoom_connection_->Disconnect();
   }
 
-  bool IsValid() const {
-    return rsvg_;
-  }
-
   void OnZoom(double zoom) {
     if (zoom_ != zoom && zoom > 0) {
       zoom_ = zoom;
@@ -79,101 +74,20 @@ class RsvgImage::Impl {
     }
   }
 
-  const CanvasInterface *GetCanvas() {
-    if (!canvas_ && rsvg_) {
-      canvas_ = new CairoCanvas(zoom_, width_, height_, CAIRO_FORMAT_ARGB32);
-      if (canvas_) {
-        // Draw the image onto the canvas.
-        cairo_t *cr = canvas_->GetContext();
-        rsvg_handle_render_cairo(rsvg_, cr);
-        canvas_->MultiplyColor(color_multiply_);
-      }
-    }
-    return canvas_;
-  }
-
-  void Draw(CanvasInterface *canvas, double x, double y) {
-    const CanvasInterface *image = GetCanvas();
-    ASSERT(canvas && image);
-    if (image && canvas)
-      canvas->DrawCanvas(x, y, image);
-  }
-
-  void StretchDraw(CanvasInterface *canvas,
-                   double x, double y,
-                   double width, double height) {
-    ASSERT(canvas);
-    if (canvas && rsvg_) {
-      // If no stretch and no color multiply,
-      // then use cached canvas to improve performance.
-      // Otherwise draw rsvg directly onto the canvas to get better effect.
-      if (width == width_ && height == height_) {
-        const CanvasInterface *image = GetCanvas();
-        ASSERT(image);
-        if (image)
-          canvas->DrawCanvas(x, y, image);
-      } else {
-        double cx = width / width_;
-        double cy = height / height_;
-        canvas->PushState();
-        canvas->IntersectRectClipRegion(x, y, width, height);
-        canvas->TranslateCoordinates(x, y);
-        canvas->ScaleCoordinates(cx, cy);
-        CairoCanvas *cc = down_cast<CairoCanvas*>(canvas);
-        if (color_multiply_ == Color::kWhite && cc) {
-          rsvg_handle_render_cairo(rsvg_, cc->GetContext());
-        } else {
-          canvas->DrawCanvas(0, 0, GetCanvas());
-        }
-        canvas->PopState();
-      }
-    }
-  }
-
-  size_t GetWidth() const { return width_; }
-
-  size_t GetHeight() const { return height_; }
-
-  void SetColorMultiply(const Color &color) {
-    if (color != color_multiply_) {
-      color_multiply_ = color;
-
-      // Destroy the canvas so that it'll be recreated again with
-      // new color multiply when calling GetCanvas().
-      if (canvas_) {
-        canvas_->Destroy();
-        canvas_ = NULL;
-      }
-    }
-  }
-
-  bool GetPointValue(double x, double y,
-                     Color *color, double *opacity) {
-    const CanvasInterface *canvas = GetCanvas();
-    return canvas && canvas->GetPointValue(x, y, color, opacity);
-  }
-
-  void SetTag(const char *tag) {
-    tag_ = std::string(tag ? tag : "");
-  }
-
-  std::string GetTag() const {
-    return tag_;
-  }
-
   size_t width_;
   size_t height_;
   RsvgHandle *rsvg_;
   CairoCanvas *canvas_;
-  Color color_multiply_;
   double zoom_;
   Connection *on_zoom_connection_;
-  std::string tag_;
 };
 
-RsvgImage::RsvgImage(const CairoGraphics *graphics,
+RsvgImage::RsvgImage(const CairoGraphics *graphics, const std::string &tag,
                      const std::string &data, bool is_mask)
-  : impl_(new Impl(graphics, data, is_mask)) {
+    : CairoImageBase(graphics, tag, is_mask),
+      impl_(new Impl(graphics, data)) {
+  // RsvgImage doesn't support mask for now.
+  ASSERT(!is_mask);
 }
 
 RsvgImage::~RsvgImage() {
@@ -182,50 +96,53 @@ RsvgImage::~RsvgImage() {
 }
 
 bool RsvgImage::IsValid() const {
-  return impl_->IsValid();
+  return impl_->rsvg_ != NULL;
 }
 
-void RsvgImage::Destroy() {
-  delete this;
-}
-
-const CanvasInterface *RsvgImage::GetCanvas() const {
-  return impl_->GetCanvas();
-}
-
-void RsvgImage::Draw(CanvasInterface *canvas, double x, double y) const {
-  impl_->Draw(canvas, x, y);
+CanvasInterface *RsvgImage::GetCanvas() const {
+  if (!impl_->canvas_ && impl_->rsvg_) {
+    impl_->canvas_ = new CairoCanvas(impl_->zoom_,
+                                     impl_->width_, impl_->height_,
+                                     CAIRO_FORMAT_ARGB32);
+    // Draw the image onto the canvas.
+    cairo_t *cr = impl_->canvas_->GetContext();
+    rsvg_handle_render_cairo(impl_->rsvg_, cr);
+  }
+  return impl_->canvas_;
 }
 
 void RsvgImage::StretchDraw(CanvasInterface *canvas,
                             double x, double y,
                             double width, double height) const {
-  impl_->StretchDraw(canvas, x, y, width, height);
+  ASSERT(canvas);
+  if (canvas && impl_->rsvg_) {
+    // If no stretch, use cached canvas to improve performance.
+    // Otherwise draw rsvg directly onto the canvas to get better effect.
+    if (width == impl_->width_ && height == impl_->height_) {
+      const CanvasInterface *image = GetCanvas();
+      ASSERT(image);
+      if (image)
+        canvas->DrawCanvas(x, y, image);
+    } else {
+      double cx = width / impl_->width_;
+      double cy = height / impl_->height_;
+      canvas->PushState();
+      canvas->IntersectRectClipRegion(x, y, width, height);
+      canvas->TranslateCoordinates(x, y);
+      canvas->ScaleCoordinates(cx, cy);
+      CairoCanvas *cc = down_cast<CairoCanvas*>(canvas);
+      rsvg_handle_render_cairo(impl_->rsvg_, cc->GetContext());
+      canvas->PopState();
+    }
+  }
 }
 
 size_t RsvgImage::GetWidth() const {
-  return impl_->GetWidth();
+  return impl_->width_;
 }
 
 size_t RsvgImage::GetHeight() const {
-  return impl_->GetHeight();
-}
-
-void RsvgImage::SetColorMultiply(const Color &color) {
-  impl_->SetColorMultiply(color);
-}
-
-bool RsvgImage::GetPointValue(double x, double y,
-                              Color *color, double *opacity) const {
-  return impl_->GetPointValue(x, y, color, opacity);
-}
-
-void RsvgImage::SetTag(const char *tag) {
-  impl_->SetTag(tag);
-}
-
-std::string RsvgImage::GetTag() const {
-  return impl_->GetTag();
+  return impl_->height_;
 }
 
 bool RsvgImage::IsFullyOpaque() const {

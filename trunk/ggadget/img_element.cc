@@ -34,19 +34,42 @@ static const char *kCropMaintainAspectNames[] = {
 class ImgElement::Impl {
  public:
   Impl()
-    : image_(NULL),
+    : image_(NULL), color_multiplied_image_(NULL),
       src_width_(0), src_height_(0),
       crop_(CROP_FALSE),
-      stretch_middle_(false) { }
+      stretch_middle_(false) {
+  }
+
   ~Impl() {
     DestroyImage(image_);
     image_ = NULL;
+    DestroyImage(color_multiplied_image_);
+    color_multiplied_image_ = NULL;
   }
 
-  ImageInterface *image_;
+  void ApplyColorMultiply() {
+    DestroyImage(color_multiplied_image_);
+    color_multiplied_image_ = NULL;
+
+    if (image_) {
+      Color c(Color::kWhite);
+      double op = 0;
+      Color::FromString(color_multiply_.c_str(), &c, &op);
+      // For now, the opacity value of colorMultiply only acts like a switch:
+      // if zero, colorMultiply will be disabled; otherwise enabled.
+      if (op != 0 && c != Color::kWhite)
+        color_multiplied_image_ = image_->MultiplyColor(c);
+    }
+  }
+
+  ImageInterface *GetImage() {
+    return color_multiplied_image_ ? color_multiplied_image_ : image_;
+  }
+
+  ImageInterface *image_, *color_multiplied_image_;
   size_t src_width_, src_height_;
   CropMaintainAspect crop_;
-  std::string colormultiply_;
+  std::string color_multiply_;
   bool stretch_middle_;
 };
 
@@ -88,9 +111,10 @@ bool ImgElement::IsPointIn(double x, double y) {
 
   double pxwidth = GetPixelWidth();
   double pxheight = GetPixelHeight();
-  if (impl_->image_ && pxwidth > 0 && pxheight > 0) {
-    double imgw = static_cast<double>(impl_->image_->GetWidth());
-    double imgh = static_cast<double>(impl_->image_->GetHeight());
+  ImageInterface *image = impl_->GetImage();
+  if (image && pxwidth > 0 && pxheight > 0) {
+    double imgw = static_cast<double>(image->GetWidth());
+    double imgh = static_cast<double>(image->GetHeight());
     if (impl_->crop_ == CROP_FALSE) {
       if (impl_->stretch_middle_) {
         MapStretchMiddleCoordDestToSrc(x, y, imgw, imgh, pxwidth, pxheight,
@@ -119,7 +143,7 @@ bool ImgElement::IsPointIn(double x, double y) {
     double opacity;
     // If failed to get the value of the point, then just return true, assuming
     // it's an opaque point.
-    if (!impl_->image_->GetPointValue(x, y, NULL, &opacity))
+    if (!image->GetPointValue(x, y, NULL, &opacity))
       return true;
 
     return opacity > 0;
@@ -128,19 +152,20 @@ bool ImgElement::IsPointIn(double x, double y) {
 }
 
 void ImgElement::DoDraw(CanvasInterface *canvas) {
-  if (impl_->image_) {
+  ImageInterface *image = impl_->GetImage();
+  if (image) {
     double pxwidth = GetPixelWidth();
     double pxheight = GetPixelHeight();
     if (impl_->crop_ == CROP_FALSE) {
       if (impl_->stretch_middle_) {
-        StretchMiddleDrawImage(impl_->image_, canvas, 0, 0, pxwidth, pxheight,
+        StretchMiddleDrawImage(image, canvas, 0, 0, pxwidth, pxheight,
                                -1, -1, -1, -1);
       } else {
-        impl_->image_->StretchDraw(canvas, 0, 0, pxwidth, pxheight);
+        image->StretchDraw(canvas, 0, 0, pxwidth, pxheight);
       }
     } else {
-      size_t imgw = impl_->image_->GetWidth();
-      size_t imgh = impl_->image_->GetHeight();
+      size_t imgw = image->GetWidth();
+      size_t imgh = image->GetHeight();
       if (imgw == 0 || imgh == 0) {
         return;
       }
@@ -155,7 +180,7 @@ void ImgElement::DoDraw(CanvasInterface *canvas) {
       if (impl_->crop_ == CROP_PHOTO && y < 0.) {
         y = 0.; // Never crop the top in photo setting.
       }
-      impl_->image_->StretchDraw(canvas, x, y, w, h);
+      image->StretchDraw(canvas, x, y, w, h);
     }
   }
 }
@@ -175,22 +200,17 @@ void ImgElement::SetSrc(const Variant &src) {
     impl_->src_height_ = 0;
   }
 
+  impl_->ApplyColorMultiply();
   QueueDraw();
 }
 
 std::string ImgElement::GetColorMultiply() const {
-  return impl_->colormultiply_;
+  return impl_->color_multiply_;
 }
 
 void ImgElement::SetColorMultiply(const char *color) {
-  if (AssignIfDiffer(color, &impl_->colormultiply_, strcmp)) {
-    Color c(1, 1, 1);
-    double op = 0;
-    Color::FromString(color, &c, &op);
-    if (op != 0)
-      impl_->image_->SetColorMultiply(c);
-    else
-      impl_->image_->SetColorMultiply(Color::kWhite);
+  if (AssignIfDiffer(color, &impl_->color_multiply_, strcmp)) {
+    impl_->ApplyColorMultiply();
     QueueDraw();
   }
 }
@@ -239,7 +259,8 @@ void ImgElement::SetSrcSize(size_t width, size_t height) {
 }
 
 bool ImgElement::HasOpaqueBackground() const {
-  return impl_->image_ ? impl_->image_->IsFullyOpaque() : false;
+  ImageInterface *image = impl_->GetImage();
+  return image ? image->IsFullyOpaque() : false;
 }
 
 BasicElement *ImgElement::CreateInstance(BasicElement *parent, View *view,

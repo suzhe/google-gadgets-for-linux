@@ -24,6 +24,7 @@ SET(SRCS
   cairo_canvas.cc
   cairo_graphics.cc
   cairo_font.cc
+  cairo_image_base.cc
   gtk_gadget_host.cc
   gtk_main_loop.cc
   gtk_view_host.cc

@@ -60,7 +60,8 @@ class NativeMainLoop::Impl {
  public:
   Impl(MainLoopInterface *main_loop)
     : main_loop_(main_loop),
-      serial_(0),
+      // serial_ starts from 1, because 0 is an invalid watch id.
+      serial_(1),
       depth_(0) {
   }
 
@@ -301,10 +302,12 @@ class NativeMainLoop::Impl {
   // It's almost impossible that 2 ** 31 space are all occupied, so the while
   // won't be a dead loop.
   void IncreaseSerial() {
-    if (serial_ == INT_MAX)
-      serial_ = 0;
-    else
+    if (serial_ == INT_MAX) {
+      // serial_ starts from 1, because 0 is an invalid watch id.
+      serial_ = 1;
+    } else {
       ++serial_;
+    }
     while (watches_.find(serial_) != watches_.end())
       ++serial_;
   }

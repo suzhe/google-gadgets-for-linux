@@ -64,6 +64,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         state_(UNSENT),
         send_flag_(false),
         headers_(NULL),
+        status_(0),
         response_dom_(NULL) {
   }
 
@@ -542,6 +543,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         if (space_pos != std::string::npos)
           status_text_.erase(0, space_pos + 1);
       }
+
+      long curl_status = 0;
+      if (curl_)
+        curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &curl_status);
+      status_ = static_cast<unsigned short>(curl_status);
+
       // Otherwise, just leave the whole status line in status.
       return true;
     }
@@ -668,16 +675,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
 
-    if (save_send_flag && save_async) {
-      // Remove the internal reference that was added when the request was
-      // started.
-      Unref();
-    }
-  }
-
-  virtual void Abort() {
-    Done();
-
     if (curl_) {
       curl_easy_cleanup(curl_);
       curl_ = NULL;
@@ -689,11 +686,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     curl_slist_free_all(headers_);
     headers_ = NULL;
 
+    if (save_send_flag && save_async) {
+      // Remove the internal reference that was added when the request was
+      // started.
+      Unref();
+    }
+  }
+
+  virtual void Abort() {
+    Done();
+
     response_headers_.clear();
     response_headers_map_.clear();
     response_body_.clear();
     response_text_.clear();
     send_data_.clear();
+    status_ = 0;
     status_text_.clear();
     if (response_dom_) {
       response_dom_->Unref();
@@ -825,10 +833,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     ASSERT(result);
 
     if (state_ == LOADING || state_ == DONE) {
-      long curl_status = 0;
-      if (curl_)
-        curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &curl_status);
-      *result = static_cast<unsigned short>(curl_status);
+      *result = status_;
       return NO_ERR;
     }
 
@@ -970,6 +975,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_headers_;
   std::string response_content_type_;
   std::string response_encoding_;
+  unsigned short status_;
   std::string status_text_;
   std::string response_body_;
   std::string response_text_;

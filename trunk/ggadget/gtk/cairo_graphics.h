@@ -17,10 +17,8 @@
 #ifndef GGADGET_GTK_CAIRO_GRAPHICS_H__
 #define GGADGET_GTK_CAIRO_GRAPHICS_H__
 
-#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <ggadget/common.h>
 #include <ggadget/graphics_interface.h>
-#include <ggadget/signals.h>
 #include <ggadget/slot.h>
 
 namespace ggadget {
@@ -40,15 +38,16 @@ class CairoGraphics : public GraphicsInterface {
   virtual ~CairoGraphics();
 
   double GetZoom() const;
-
   void SetZoom(double zoom);
-
   Connection *ConnectOnZoom(Slot1<void, double> *slot) const;
+
+  void OnImageDelete(const std::string &tag, bool is_mask) const;
 
  public:
   virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
 
-  virtual ImageInterface *NewImage(const std::string &data, bool is_mask) const;
+  virtual ImageInterface *NewImage(const char *tag, const std::string &data,
+                                   bool is_mask) const;
 
   virtual FontInterface *NewFont(const char *family, size_t pt_size,
                                  FontInterface::Style style,

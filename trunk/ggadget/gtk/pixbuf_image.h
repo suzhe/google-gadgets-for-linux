@@ -17,46 +17,26 @@
 #ifndef GGADGET_GTK_PIXBUF_IMAGE_H__
 #define GGADGET_GTK_PIXBUF_IMAGE_H__
 
-#include <cairo.h>
-
-#include <ggadget/common.h>
-#include <ggadget/logger.h>
-#include <ggadget/color.h>
-#include <ggadget/canvas_interface.h>
-#include <ggadget/image_interface.h>
+#include <ggadget/gtk/cairo_image_base.h>
 
 namespace ggadget {
 namespace gtk {
 
-class CairoGraphics;
-
 /**
  * This class realizes the ImageInterface using the gdk-pixbuf library.
  */
-class PixbufImage : public ImageInterface {
+class PixbufImage : public CairoImageBase {
  public:
-  PixbufImage(const CairoGraphics *graphics, const std::string &data,
-              bool is_mask);
-
-  /** Check if the PixbufImage object is valid. */
-  bool IsValid() const;
-
- public:
+  PixbufImage(const CairoGraphics *graphics, const std::string &tag,
+              const std::string &data, bool is_mask);
   virtual ~PixbufImage();
 
-  virtual void Destroy();
-  virtual const CanvasInterface *GetCanvas() const;
-  virtual void Draw(CanvasInterface *canvas, double x, double y) const;
-  virtual void StretchDraw(CanvasInterface *canvas,
-                           double x, double y,
-                           double width, double height) const;
+  virtual bool IsValid() const;
+
+ public:
+  virtual CanvasInterface *GetCanvas() const;
   virtual size_t GetWidth() const;
   virtual size_t GetHeight() const;
-  virtual void SetColorMultiply(const Color &color);
-  virtual bool GetPointValue(double x, double y,
-                             Color *color, double *opacity) const;
-  virtual void SetTag(const char *tag);
-  virtual std::string GetTag() const;
   virtual bool IsFullyOpaque() const;
 
  private:

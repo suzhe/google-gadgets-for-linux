@@ -18,10 +18,10 @@
 #include <config.h>
 #endif
 
+#include <map>
 #include <gdk/gdkcairo.h>
-#include <ggadget/color.h>
-#include <ggadget/common.h>
 #include <ggadget/logger.h>
+#include <ggadget/signals.h>
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "cairo_font.h"
@@ -38,10 +38,29 @@ class CairoGraphics::Impl {
  public:
   Impl(double zoom) : zoom_(zoom) {
     if (zoom_ <= 0) zoom_ = 1;
+#ifdef _DEBUG
+    num_new_images_ = num_shared_images_ = 0;
+#endif
+  }
+
+  ~Impl() {
+    ASSERT(image_map_.empty());
+    ASSERT(mask_image_map_.empty());
+#ifdef _DEBUG
+    DLOG("CairoGraphics image statistics: new: %d/shared: %d",
+         num_new_images_, num_shared_images_);
+#endif
   }
 
   double zoom_;
   Signal1<void, double> on_zoom_signal_;
+  typedef std::map<std::string, CairoImageBase *> ImageMap;
+  ImageMap image_map_, mask_image_map_;
+
+#ifdef _DEBUG
+  int num_new_images_;
+  int num_shared_images_;
+#endif
 };
 
 CairoGraphics::CairoGraphics(double zoom) : impl_(new Impl(zoom)) {
@@ -86,17 +105,34 @@ static bool IsSvg(const std::string &data) {
 }
 #endif
 
-ImageInterface *CairoGraphics::NewImage(const std::string &data,
+ImageInterface *CairoGraphics::NewImage(const char *tag,
+                                        const std::string &data,
                                         bool is_mask) const {
-  if (data.empty()) return NULL;
+  if (data.empty())
+    return NULL;
 
-  ImageInterface *img = NULL;
+  std::string tag_str(tag ? tag : "");
+  if (!tag_str.empty()) {
+    Impl::ImageMap *image_map = is_mask ?
+                                &impl_->mask_image_map_ : &impl_->image_map_;
+    // Image with blank tag should not be cached, because it may not come
+    // from a file.
+    Impl::ImageMap::const_iterator it = image_map->find(tag_str);
+    if (it != image_map->end()) {
+#ifdef _DEBUG
+      impl_->num_shared_images_++;
+#endif
+      it->second->Ref();
+      return it->second;
+    }
+  }
 
+  CairoImageBase *img = NULL;
 #ifdef HAVE_RSVG_LIBRARY
   // Only use RsvgImage for ordinary svg image.
   if (IsSvg(data) && !is_mask) {
-    img = new RsvgImage(this, data, is_mask);
-    if (!down_cast<RsvgImage*>(img)->IsValid()) {
+    img = new RsvgImage(this, tag, data, is_mask);
+    if (!img->IsValid()) {
       img->Destroy();
       img = NULL;
     }
@@ -104,13 +140,28 @@ ImageInterface *CairoGraphics::NewImage(const std::string &data,
 #else
   if (1) {
 #endif
-    img = new PixbufImage(this, data, is_mask);
-    if (!down_cast<PixbufImage*>(img)->IsValid()) {
+    img = new PixbufImage(this, tag, data, is_mask);
+    if (!img->IsValid()) {
       img->Destroy();
       img = NULL;
     }
   }
+#ifdef _DEBUG
+  impl_->num_new_images_++;
+#endif
+
+  if (img && !tag_str.empty()) {
+    Impl::ImageMap *image_map = is_mask ?
+                                &impl_->mask_image_map_ : &impl_->image_map_;
+    (*image_map)[tag_str] = img;
+  }
   return img;
+}
+
+void CairoGraphics::OnImageDelete(const std::string &tag, bool is_mask) const {
+  Impl::ImageMap *image_map = is_mask ?
+                              &impl_->mask_image_map_ : &impl_->image_map_;
+  image_map->erase(tag);
 }
 
 FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,
