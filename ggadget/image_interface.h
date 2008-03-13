@@ -71,11 +71,10 @@ class ImageInterface {
   virtual size_t GetHeight() const = 0;
 
   /**
-   * Sets a color value that is multipled with every pixel in the image.
-   * If the color is pure white (ie. red, green and blue are all equal to 1),
-   * then no multiply will be applied.
+   * Creates a new image in which each pixel equals the color multiplied
+   * with corresponding pixel in the current image.
    */
-  virtual void SetColorMultiply(const Color &color) = 0;
+  virtual ImageInterface *MultiplyColor(const Color &color) const = 0;
 
   /**
    * Gets the value of a point at a specified coordinate in the image.
@@ -89,14 +88,6 @@ class ImageInterface {
    */
   virtual bool GetPointValue(double x, double y,
                              Color *color, double *opacity) const = 0;
-
-  /**
-   * Sets a string tag to the image. It can be anything, for example, the file
-   * name of the image.
-   * It's a convenient function for caller, so that an arbitrary string can be
-   * attached to the image.
-   */
-  virtual void SetTag(const char *tag) = 0;
 
   /**
    * Returns the string tag set by SetTag() method previously.

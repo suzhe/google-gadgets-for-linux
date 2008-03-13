@@ -1368,17 +1368,14 @@ ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
     if (filename && *filename) {
       std::string data;
       if (GetFileManager()->ReadFile(filename, &data)) {
-        ImageInterface *image = GetGraphics()->NewImage(data, is_mask);
-        if (image)
-          image->SetTag(filename);
-        return image;
+        return GetGraphics()->NewImage(filename, data, is_mask);
       }
     }
   } else if (type == Variant::TYPE_SCRIPTABLE) {
     const ScriptableBinaryData *binary =
         VariantValue<const ScriptableBinaryData *>()(src);
     if (binary)
-      return GetGraphics()->NewImage(binary->data(), is_mask);
+      return GetGraphics()->NewImage("", binary->data(), is_mask);
   } else {
     LOG("Unsupported type of image src.");
     DLOG("src=%s", src.Print().c_str());
@@ -1390,9 +1387,7 @@ ImageInterface *View::LoadImageFromGlobal(const char *name, bool is_mask) {
   if (name && *name) {
     std::string data;
     if (GetGlobalFileManager()->ReadFile(name, &data)) {
-      ImageInterface *image = GetGraphics()->NewImage(data, is_mask);
-      if (image) image->SetTag(name);
-      return image;
+      return GetGraphics()->NewImage(name, data, is_mask);
     }
   }
   return NULL;

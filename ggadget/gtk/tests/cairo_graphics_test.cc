@@ -16,6 +16,7 @@
 
 #include <cstdio>
 #include <cairo.h>
+#include <glib-object.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -107,15 +108,30 @@ TEST_F(CairoGfxTest, LoadImage) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  ImageInterface *img = gfx_.NewImage(std::string(buffer, filelen), false);
+  ImageInterface *img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
+  ImageInterface *img1 = gfx_.NewImage("", std::string(buffer, filelen), false);
+  ASSERT_FALSE(NULL == img1);
+  // Images without tags should not be shared.
+  ASSERT_TRUE(img != img1);
+  img->Destroy();
+  img1->Destroy();
 
-  EXPECT_TRUE(NULL == gfx_.NewImage(std::string(), false));
+  img = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), false);
+  ASSERT_FALSE(NULL == img);
+  img1 = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), false);
+  ASSERT_FALSE(NULL == img1);
+  ASSERT_TRUE(img == img1);
+  img->Destroy();
+  img1 = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), true);
+  ASSERT_TRUE(img != img1);
+  img1->Destroy();
+
+  EXPECT_TRUE(NULL == gfx_.NewImage("", std::string(), false));
 
   EXPECT_EQ((size_t)450, img->GetWidth());
   EXPECT_EQ((size_t)310, img->GetHeight());
 
-  img->SetTag(kTestFile120day.c_str());
   EXPECT_EQ(kTestFile120day, img->GetTag());
 
   img->Destroy();
@@ -143,7 +159,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_.NewImage(std::string(buffer, filelen), false);
+  img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
@@ -173,7 +189,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_.NewImage(std::string(buffer, filelen), false);
+  img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
@@ -205,9 +221,9 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  mask = gfx_.NewImage(std::string(buffer, filelen), true);
+  mask = gfx_.NewImage("", std::string(buffer, filelen), true);
   ASSERT_FALSE(NULL == mask);
-  img = gfx_.NewImage(std::string(buffer, filelen), false);
+  img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
   EXPECT_EQ((size_t)450, mask->GetWidth());
@@ -314,7 +330,7 @@ TEST_F(CairoGfxTest, DrawTextWithTexture) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_.NewImage(std::string(buffer, filelen), false);
+  img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
   FontInterface *font = gfx_.NewFont("Sans Serif", 20,
@@ -593,21 +609,23 @@ TEST_F(CairoGfxTest, ColorMultiply) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_.NewImage(std::string(buffer, filelen), false);
+  img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
   scale = 150. / h;
 
-  img->SetColorMultiply(Color(0, 0.5, 1));
+  ImageInterface *img1 = img->MultiplyColor(Color(0, 0.5, 1));
   EXPECT_TRUE(target_->PushState());
   target_->ScaleCoordinates(scale, scale);
   EXPECT_TRUE(target_->MultiplyOpacity(.5));
-  EXPECT_TRUE(target_->DrawCanvas(150., 0., img->GetCanvas()));
+  EXPECT_TRUE(target_->DrawCanvas(150., 0., img1->GetCanvas()));
   EXPECT_TRUE(target_->PopState());
 
   img->Destroy();
   img = NULL;
+  img1->Destroy();
+  img1 = NULL;
 
   munmap(buffer, filelen);
 
@@ -622,15 +640,17 @@ TEST_F(CairoGfxTest, ColorMultiply) {
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
 
-  img = gfx_.NewImage(std::string(buffer, filelen), false);
+  img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
   h = img->GetHeight();
   scale = 150. / h;
-  img->SetColorMultiply(Color(0.5, 0, 0.8));
+  img1 = img->MultiplyColor(Color(0.5, 0, 0.8));
   target_->ScaleCoordinates(scale, scale);
-  EXPECT_TRUE(target_->DrawCanvas(0., 0., img->GetCanvas()));
+  EXPECT_TRUE(target_->DrawCanvas(0., 0., img1->GetCanvas()));
 
+  img1->Destroy();
+  img1 = NULL;
   img->Destroy();
   img = NULL;
 
@@ -651,7 +671,7 @@ TEST_F(CairoGfxTest, ImageOpaque) {
   for (size_t i = 0; images[i].filename.length(); ++i) {
     std::string content;
     ASSERT_TRUE(ReadFileContents(images[i].filename.c_str(), &content));
-    ImageInterface *img = gfx_.NewImage(content, false);
+    ImageInterface *img = gfx_.NewImage("", content, false);
     ASSERT_TRUE(img);
     EXPECT_EQ(images[i].opaque, img->IsFullyOpaque());
     img->Destroy();

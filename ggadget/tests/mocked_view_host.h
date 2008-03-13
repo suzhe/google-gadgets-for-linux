@@ -101,7 +101,8 @@ class MockedGraphics : public ggadget::GraphicsInterface {
   virtual ggadget::CanvasInterface *NewCanvas(size_t w, size_t h) const {
     return new MockedCanvas(w, h);
   }
-  virtual ggadget::ImageInterface *NewImage(const std::string &data,
+  virtual ggadget::ImageInterface *NewImage(const char *tag,
+                                            const std::string &data,
                                             bool is_mask) const {
       return NULL;
   }
