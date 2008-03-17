@@ -21,6 +21,8 @@
 
 namespace ggadget {
 
+class HostInterface;
+
 class Connection;
 template <typename R, typename P1> class Slot1;
 
@@ -66,7 +68,7 @@ class GadgetManagerInterface {
    * Enunerates all active gadget instances. The callback will receive an int
    * parameter which is the gadget instance id, and can return true if it
    * wants the enumeration to continue, or false to break the enumeration.
-   */  
+   */
   virtual bool EnumerateGadgetInstances(Slot1<bool, int> *callback) = 0;
 
   /**
@@ -81,7 +83,7 @@ class GadgetManagerInterface {
    * Shows the gadget browser dialog.
    * TODO: parameters and return values.
    */
-  virtual void ShowGadgetBrowserDialog() = 0;
+  virtual void ShowGadgetBrowserDialog(HostInterface *host) = 0;
 
  public:
   /**

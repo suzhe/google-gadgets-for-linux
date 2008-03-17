@@ -22,9 +22,7 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class GadgetHostInterface;
 class GraphicsInterface;
-class ScriptContextInterface;
 
 /**
  * Interface for providing host services to views.. Each view contains a
@@ -35,20 +33,30 @@ class ScriptContextInterface;
  * to the view's event handler methods.
  */
 class ViewHostInterface {
- public:
+ protected:
+  /**
+   * Disallow direct deletion.
+   */
   virtual ~ViewHostInterface() { }
 
-  /** Get the @c GadgetHostInterface which owns this view host. */
-  virtual GadgetHostInterface *GetGadgetHost() const = 0;
+ public:
+  /**
+   * Destroys this ViewHost instance.
+   *
+   * When this method get called, the resource of associated View instance may
+   * already be unavailable, so in this method, ViewHost shall not access the
+   * View instance.
+   */
+  virtual void Destroy() = 0;
 
-  /** Get the associated view. */
-  virtual ViewInterface *GetView() = 0;
+  /**
+   * Sets a View instance to the ViewHost instance. The ViewHost instance
+   * doesn't own the View instance.
+   */
+  virtual void SetView(ViewInterface *view) = 0;
 
-  /** Get the associated view. */
-  virtual const ViewInterface *GetView() const = 0;
-
-  /** Get the associated @c ScriptContextInterface instance. */
-  virtual ScriptContextInterface *GetScriptContext() const = 0;
+  /** Gets the associated view. */
+  virtual ViewInterface *GetView() const = 0;
 
   /** Returns the @c GraphicsInterface associated with this host. */
   virtual const GraphicsInterface *GetGraphics() const = 0;
@@ -59,7 +67,7 @@ class ViewHostInterface {
    * @param[out] x the horizontal offset of this view host in the native widget.
    * @param[out] y the vertical offset of this view host in the native widget.
    */
-  virtual void *GetNativeWidget() = 0;
+  virtual void *GetNativeWidget() const = 0;
 
   /**
    * Converts coordinates in the view's space to coordinates in the native
@@ -71,13 +79,17 @@ class ViewHostInterface {
    * @param[out] widget_y parameter to store the converted widget y-coordinate.
    */
   virtual void ViewCoordToNativeWidgetCoord(
-      double x, double y, double *widget_x, double *widget_y) = 0;
+      double x, double y, double *widget_x, double *widget_y) const = 0;
 
-  /** Asks the host to redraw the given view. */
+  /**
+   * Asks the view host to redraw the given view.
+   *
+   * The host shall check if the view size is changed, and adjust the window
+   * size accordingly when necessary.
+   */
   virtual void QueueDraw() = 0;
 
-  /** Asks the host to deliver keyboard events to the view. */
-  virtual bool GrabKeyboardFocus() = 0;
+  virtual void QueueResize() = 0;
 
   /**
    * When the resizable field on the view is updated, the host needs to be
@@ -94,26 +106,13 @@ class ViewHostInterface {
   /** Sets whether to always show the caption for this view. */
   virtual void SetShowCaptionAlways(bool always) = 0;
 
-  enum CursorType {
-    CURSOR_ARROW,
-    CURSOR_IBEAM,
-    CURSOR_WAIT,
-    CURSOR_CROSS,
-    CURSOR_UPARROW,
-    CURSOR_SIZE,
-    CURSOR_SIZENWSE,
-    CURSOR_SIZENESW,
-    CURSOR_SIZEWE,
-    CURSOR_SIZENS,
-    CURSOR_SIZEALL,
-    CURSOR_NO,
-    CURSOR_HAND,
-    CURSOR_BUSY,
-    CURSOR_HELP,
-  };
-
-  /** Sets the current mouse cursor. */
-  virtual void SetCursor(CursorType type) = 0;
+  /**
+   * Sets the current mouse cursor.
+   *
+   * @param type the cursor type, see @c ViewInterface::CursorType.
+   *        -1 means the default type.
+   */
+  virtual void SetCursor(int type) = 0;
 
   /**
    * Shows a tooltip popup after certain initial delay at the current mouse
@@ -123,35 +122,60 @@ class ViewHostInterface {
    */
   virtual void SetTooltip(const char *tooltip) = 0;
 
-  /** Run the view in a dialog with OK and Cancel buttons. */
-  virtual void RunDialog() = 0;
-
-  enum DetailsViewFlags {
-    DETAILS_VIEW_FLAG_NONE = 0,
-    /** Makes the details view title clickable like a button. */
-    DETAILS_VIEW_FLAG_TOOLBAR_OPEN = 1,
-    /** Adds a negative feedback button in the details view. */
-    DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK = 2,
-    /** Adds a "Remove" button in the details view. */
-    DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
-    /** Adds a button to display the friends list. */
-    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
-  };
+  /**
+   * Shows the associated View by proper method according to type of the View.
+   *
+   * The behavior of this function will be different for different types of
+   * view:
+   * - For main view, all parameters will be ignored. The feedback_handler will
+   *   just be deleted if it's not NULL.
+   * - For options view, the flags is combination of @c OptionsViewFlags,
+   *   feedback_handler will be called when closing the options view, with one
+   *   of OptionsViewFlags as the parameter.
+   * - For details view, the flags is combination of DetailsViewFlags,
+   *   feedback_handler will be called when closing the details view, with one
+   *   of DetailsViewFlags as the parameter.
+   *
+   * The ViewHost shall fire EVENT_OPEN event by calling
+   * ViewInterface::OnOtherEvent() method as soon as the View is shown.
+   *
+   * @param modal if it's true then the view will be displayed in modal mode,
+   *        and this function won't return until the view is closed.
+   * @param flags for options view, it's combination of OptionsViewFlags,
+   *        for details view, it's combination of DetailsViewFlags.
+   * @param feedback_handler a callback that will be called when the view is
+   *        closed. It has no effect for main view.
+   * @return true if the View is shown correctly. Otherwise returns false.
+   */
+  virtual bool ShowView(bool modal, int flags,
+                        Slot1<void, int> *feedback_handler) = 0;
 
   /**
-   * Show the view in a details view.
-   * @param title the title of the details view.
-   * @param flags combination of @c DetailsViewFlags.
-   * @param feedback_handler called when user clicks on feedback buttons. The
-   *     handler has one parameter, which specifies @c DetailsViewFlags.
+   * Closes the view if it's opened by calling ShowView().
+   *
+   * The ViewHost shall fire EVENT_CLOSE event by calling
+   * ViewInterface::OnOtherEvent() method just before the View is closed.
    */
-  virtual void ShowInDetailsView(const char *title, int flags,
-                                 Slot1<void, int> *feedback_handler) = 0;
+  virtual void CloseView() = 0;
 
   /**
-   * Close the details view if it is opened.
+   * Shows the context menu for the view.
+   * For main view, some default menu items shall be implemented by the view
+   * host, such as:
+   * - Collapse
+   * - Undock from Sidebar
+   *
+   * This method shall call OnAddContextMenuItems() method of the view, so that
+   * the view can add its customized context menu items. If
+   * OnAddContextMenuItems() method of the view returns false, then above
+   * default menu items shall not be added.
+   *
+   * @param button The mouse button which triggers the context menu, it should
+   *        be one of @c MouseEvent::Button enums.
+   *
+   * @return true if the context menu is shown.
    */
-  virtual void CloseDetailsView() = 0;
+  virtual bool ShowContextMenu(int button) = 0;
 
   /** Displays a message box containing the message string. */
   virtual void Alert(const char *message) = 0;
@@ -172,6 +196,9 @@ class ViewHostInterface {
    */
   virtual std::string Prompt(const char *message,
                              const char *default_value) = 0;
+
+  /** Gets the debug mode for drawing view. */
+  virtual ViewInterface::DebugMode GetDebugMode() const = 0;
 };
 
 } // namespace ggadget

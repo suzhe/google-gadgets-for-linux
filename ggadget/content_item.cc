@@ -18,7 +18,7 @@
 #include <ctime>
 #include "content_item.h"
 #include "contentarea_element.h"
-#include "details_view.h"
+#include "details_view_data.h"
 #include "image_interface.h"
 #include "scriptable_image.h"
 #include "string_utils.h"
@@ -128,13 +128,13 @@ class ContentItem::Impl {
   int x_, y_, width_, height_;
   bool x_relative_, y_relative_, width_relative_, height_relative_;
   int layout_x_, layout_y_, layout_width_, layout_height_;
-  Signal7<void, ContentItem *, GadgetInterface::DisplayTarget,
+  Signal7<void, ContentItem *, Gadget::DisplayTarget,
          ScriptableCanvas *, int, int, int, int> on_draw_item_signal_;
-  Signal4<int, ContentItem *, GadgetInterface::DisplayTarget,
+  Signal4<int, ContentItem *, Gadget::DisplayTarget,
           ScriptableCanvas *, int> on_get_height_signal_;
   Signal1<Variant, ContentItem *> on_open_item_signal_;
   Signal1<Variant, ContentItem *> on_toggle_item_pinned_state_signal_;
-  Signal7<Variant, ContentItem *, GadgetInterface::DisplayTarget,
+  Signal7<Variant, ContentItem *, Gadget::DisplayTarget,
           ScriptableCanvas *, int, int, int, int>
       on_get_is_tooltip_required_signal_;
   Signal1<ScriptableInterface *, ContentItem *> on_details_view_signal_;
@@ -367,7 +367,7 @@ bool ContentItem::CanOpen() const {
           impl_->on_open_item_signal_.HasActiveConnections());
 }
 
-void ContentItem::Draw(GadgetInterface::DisplayTarget target,
+void ContentItem::Draw(Gadget::DisplayTarget target,
                        CanvasInterface *canvas,
                        int x, int y, int width, int height) {
   // Try script handler first.
@@ -443,12 +443,12 @@ void ContentItem::Draw(GadgetInterface::DisplayTarget target,
 }
 
 Connection *ContentItem::ConnectOnDrawItem(
-    Slot7<void, ContentItem *, GadgetInterface::DisplayTarget,
+    Slot7<void, ContentItem *, Gadget::DisplayTarget,
           ScriptableCanvas *, int, int, int, int> *handler) {
   return impl_->on_draw_item_signal_.Connect(handler);
 }
 
-int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
+int ContentItem::GetHeight(Gadget::DisplayTarget target,
                            CanvasInterface *canvas, int width) {
   // Try script handler first.
   if (impl_->on_get_height_signal_.HasActiveConnections()) {
@@ -505,7 +505,7 @@ int ContentItem::GetHeight(GadgetInterface::DisplayTarget target,
 }
 
 Connection *ContentItem::ConnectOnGetHeight(
-    Slot4<int, ContentItem *, GadgetInterface::DisplayTarget,
+    Slot4<int, ContentItem *, Gadget::DisplayTarget,
           ScriptableCanvas *, int> *handler) {
   return impl_->on_get_height_signal_.Connect(handler);
 }
@@ -548,7 +548,7 @@ Connection *ContentItem::ConnectOnToggleItemPinnedState(
   return impl_->on_toggle_item_pinned_state_signal_.ConnectGeneral(handler);
 }
 
-bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
+bool ContentItem::IsTooltipRequired(Gadget::DisplayTarget target,
                                     CanvasInterface *canvas,
                                     int x, int y, int width, int height) {
   if (impl_->on_get_is_tooltip_required_signal_.HasActiveConnections()) {
@@ -560,53 +560,54 @@ bool ContentItem::IsTooltipRequired(GadgetInterface::DisplayTarget target,
 }
 
 Connection *ContentItem::ConnectOnGetIsTooltipRequired(
-    Slot7<bool, ContentItem *, GadgetInterface::DisplayTarget,
+    Slot7<bool, ContentItem *, Gadget::DisplayTarget,
           ScriptableCanvas *, int, int, int, int> *handler) {
   return impl_->on_get_is_tooltip_required_signal_.ConnectGeneral(handler);
 }
 
-bool ContentItem::OnDetailsView(std::string *title, DetailsView **details_view,
+bool ContentItem::OnDetailsView(std::string *title,
+                                DetailsViewData **details_view_data,
                                 int *flags) {
-  ASSERT(title && details_view && flags);
+  ASSERT(title && details_view_data && flags);
   bool cancel = false;
   title->clear();
-  *details_view = NULL;
-  *flags = ViewHostInterface::DETAILS_VIEW_FLAG_NONE;
+  *details_view_data = NULL;
+  *flags = ViewInterface::DETAILS_VIEW_FLAG_NONE;
 
   if (impl_->on_details_view_signal_.HasActiveConnections()) {
     Variant param(this);
-    Variant details_info_v = impl_->on_details_view_signal_.Emit(1, &param); 
+    Variant details_info_v = impl_->on_details_view_signal_.Emit(1, &param);
     ScriptableInterface *details_info =
         VariantValue<ScriptableInterface *>()(details_info_v);
     if (details_info) {
       GetPropertyByName(details_info, "title").ConvertToString(title);
       GetPropertyByName(details_info, "cancel").ConvertToBool(&cancel);
-      // The conversion rule of the flags property is the same as our default.  
+      // The conversion rule of the flags property is the same as our default.
       GetPropertyByName(details_info, "flags").ConvertToInt(flags);
       Variant v = GetPropertyByName(details_info, "details_control");
       if (v.type() == Variant::TYPE_SCRIPTABLE)
-        *details_view = VariantValue<DetailsView *>()(v);
+        *details_view_data = VariantValue<DetailsViewData *>()(v);
     } else {
       cancel = true;
     }
   }
 
   // Default logics.
-  if (!*details_view) {
-    *details_view = new DetailsView();
-    (*details_view)->SetContentFromItem(this);
+  if (!*details_view_data) {
+    *details_view_data = new DetailsViewData();
+    (*details_view_data)->SetContentFromItem(this);
   }
   if (!title->empty()) {
     *title = impl_->heading_text_.GetText();
   }
-  if (*flags == ViewHostInterface::DETAILS_VIEW_FLAG_NONE) {
+  if (*flags == ViewInterface::DETAILS_VIEW_FLAG_NONE) {
     if (impl_->flags_ & CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK)
-      *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK;
+      *flags |= ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK;
     if (!(impl_->flags_ & CONTENT_ITEM_FLAG_NO_REMOVE))
-      *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON;
+      *flags |= ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON;
     if (impl_->flags_ & CONTENT_ITEM_FLAG_SHAREABLE)
-      *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON;
-    *flags |= ViewHostInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN;
+      *flags |= ViewInterface::DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON;
+    *flags |= ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN;
   }
   return cancel;
 }

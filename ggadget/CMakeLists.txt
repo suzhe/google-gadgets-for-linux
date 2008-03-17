@@ -23,7 +23,7 @@ SET(SRCS
   canvas_utils.cc
   color.cc
   content_item.cc
-  details_view.cc
+  details_view_data.cc
   digest_utils.cc
   display_window.cc
   directory_provider.cc

@@ -28,8 +28,10 @@
 #include "mocked_view_host.h"
 #include "init_extensions.h"
 
-ggadget::ElementFactory *gFactory = NULL;
+ggadget::ElementFactory *g_factory = NULL;
 ggadget::NativeMainLoop main_loop;
+using ggadget::View;
+using ggadget::ViewInterface;
 
 class EventHandler {
  public:
@@ -46,7 +48,8 @@ class EventHandler {
               current_scriptable_event->GetEvent()->GetType());
     ggadget::MouseEvent event(ggadget::Event::EVENT_MOUSE_CLICK, 123, 456,
                               999, 888, ggadget::MouseEvent::BUTTON_LEFT,  666);
-    ggadget::ScriptableEvent scriptable_event(&event, view_, NULL);
+    ggadget::ScriptableEvent scriptable_event(&event, view_->GetScriptable(),
+                                              NULL);
     view_->FireEvent(&scriptable_event, signal2_);
     // The current event should be the same as before.
     ASSERT_EQ(current_scriptable_event, view_->GetEvent());
@@ -74,24 +77,27 @@ class EventHandler {
 };
 
 TEST(ViewTest, FireEvent) {
-  MockedViewHost vh(gFactory);
-  EventHandler handler(vh.GetViewInternal());
+  MockedViewHost *host = new MockedViewHost();
+  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+
+  EventHandler handler(&view);
   ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN,
                                2468, 1357, NULL);
-  ggadget::ScriptableEvent scriptable_event(&event, vh.GetView(), NULL);
-  vh.GetViewInternal()->FireEvent(&scriptable_event, handler.signal1_);
+  ggadget::ScriptableEvent scriptable_event(&event, view.GetScriptable(), NULL);
+  view.FireEvent(&scriptable_event, handler.signal1_);
   ASSERT_TRUE(handler.fired1_);
   ASSERT_TRUE(handler.fired2_);
 }
 
 // This test is not merely for View, but mixed test for xml_utils and Elements.
 TEST(ViewTest, XMLConstruction) {
-  MockedViewHost vh(gFactory);
-  ggadget::View *view = vh.GetViewInternal();
-  ASSERT_FALSE(view->GetShowCaptionAlways());
-  ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view->GetResizable());
-  ASSERT_STREQ("", view->GetCaption().c_str());
-  ASSERT_EQ(0, view->GetChildren()->GetCount());
+  MockedViewHost *host = new MockedViewHost();
+  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+
+  ASSERT_FALSE(view.GetShowCaptionAlways());
+  ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view.GetResizable());
+  ASSERT_STREQ("", view.GetCaption().c_str());
+  ASSERT_EQ(0, view.GetChildren()->GetCount());
 
   const char *xml =
     "<view width=\"123\" height=\"456\" caption=\"View-Caption\"\n"
@@ -101,32 +107,32 @@ TEST(ViewTest, XMLConstruction) {
     "  </pie>\n"
     "  <pie name=\"pie1\"/>\n"
     "</view>\n";
-  ASSERT_TRUE(ggadget::SetupViewFromXML(view, xml, "filename"));
-  ASSERT_STREQ("View-Caption", view->GetCaption().c_str());
-  ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view->GetResizable());
-  ASSERT_TRUE(view->GetShowCaptionAlways());
-  ASSERT_EQ(123, view->GetWidth());
-  ASSERT_EQ(456, view->GetHeight());
-  ASSERT_EQ(2, view->GetChildren()->GetCount());
+  ASSERT_TRUE(ggadget::SetupViewFromXML(&view, xml, "filename"));
+  ASSERT_STREQ("View-Caption", view.GetCaption().c_str());
+  ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view.GetResizable());
+  ASSERT_TRUE(view.GetShowCaptionAlways());
+  ASSERT_EQ(123, view.GetWidth());
+  ASSERT_EQ(456, view.GetHeight());
+  ASSERT_EQ(2, view.GetChildren()->GetCount());
 
-  ggadget::BasicElement *m = view->GetElementByName("muffin");
+  ggadget::BasicElement *m = view.GetElementByName("muffin");
   ASSERT_TRUE(m != NULL);
-  ASSERT_EQ(m, view->GetChildren()->GetItemByIndex(0)->
+  ASSERT_EQ(m, view.GetChildren()->GetItemByIndex(0)->
                GetChildren()->GetItemByIndex(0));
 
-  ggadget::BasicElement *m1 = view->GetElementByName("pie1");
+  ggadget::BasicElement *m1 = view.GetElementByName("pie1");
   ASSERT_TRUE(m1 != NULL);
-  ASSERT_EQ(m1, view->GetChildren()->GetItemByIndex(1));
+  ASSERT_EQ(m1, view.GetChildren()->GetItemByIndex(1));
 
-  view->GetChildren()->GetItemByIndex(0)->GetChildren()->RemoveElement(m);
-  ASSERT_TRUE(view->GetElementByName("muffin") == NULL);
+  view.GetChildren()->GetItemByIndex(0)->GetChildren()->RemoveElement(m);
+  ASSERT_TRUE(view.GetElementByName("muffin") == NULL);
 
   ggadget::BasicElement *m2 =
       ggadget::down_cast<ggadget::Elements *>(
-          view->GetChildren()->GetItemByIndex(0)->GetChildren())->
+          view.GetChildren()->GetItemByIndex(0)->GetChildren())->
       AppendElementFromXML("<muffin name=\"new-muffin\"/>");
   ASSERT_TRUE(m2 != NULL);
-  ASSERT_EQ(m2, view->GetChildren()->GetItemByIndex(0)->
+  ASSERT_EQ(m2, view.GetChildren()->GetItemByIndex(0)->
                 GetChildren()->GetItemByIndex(0));
 }
 
@@ -139,10 +145,10 @@ int main(int argc, char *argv[]) {
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
 
-  gFactory = new ggadget::ElementFactory();
-  gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);
-  gFactory->RegisterElementClass("pie", Pie::CreateInstance);
+  g_factory = new ggadget::ElementFactory();
+  g_factory->RegisterElementClass("muffin", Muffin::CreateInstance);
+  g_factory->RegisterElementClass("pie", Pie::CreateInstance);
   int result = RUN_ALL_TESTS();
-  delete gFactory;
+  delete g_factory;
   return result;
 }

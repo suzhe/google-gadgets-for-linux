@@ -21,15 +21,14 @@
 
 #include <gtk/gtk.h>
 #include "ggadget/logger.h"
-#include "ggadget/gtk/gtk_main_loop.h"
+#include "ggadget/gtk/main_loop.h"
 #include "ggadget/tests/main_loop_test.h"
 #include "unittest/gunit.h"
 
 using namespace ggadget;
-using namespace ggadget::gtk;
 
 TEST(GtkMainLoopTest, IOReadWatch) {
-  GtkMainLoop main_loop;
+  ggadget::gtk::MainLoop main_loop;
   IOReadWatchTest(&main_loop);
 }
 
@@ -37,7 +36,7 @@ TEST(GtkMainLoopTest, IOReadWatch) {
 // many timeout watches and check if they are called for expected times in a
 // certain period.
 TEST(GtkMainLoopTest, TimeoutWatch) {
-  GtkMainLoop main_loop;
+  ggadget::gtk::MainLoop main_loop;
   TimeoutWatchTest(&main_loop);
 }
 

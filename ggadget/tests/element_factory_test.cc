@@ -41,27 +41,28 @@ TEST_F(ElementFactoryTest, TestRegister) {
 
 TEST_F(ElementFactoryTest, TestCreate) {
   ggadget::ElementFactory factory;
-  MockedViewHost vh(&factory);
+  ggadget::View view(ggadget::ViewInterface::VIEW_MAIN, new MockedViewHost(),
+            NULL, NULL, &factory);
   factory.RegisterElementClass("muffin", Muffin::CreateInstance);
   factory.RegisterElementClass("pie", Pie::CreateInstance);
 
   ggadget::BasicElement *e1 = factory.CreateElement("muffin",
                                                     NULL,
-                                                    vh.GetViewInternal(),
+                                                    &view,
                                                     NULL);
   ASSERT_TRUE(e1 != NULL);
   ASSERT_STREQ("muffin", e1->GetTagName().c_str());
 
   ggadget::BasicElement *e2 = factory.CreateElement("pie",
                                                     e1,
-                                                    vh.GetViewInternal(),
+                                                    &view,
                                                     NULL);
   ASSERT_TRUE(e2 != NULL);
   ASSERT_STREQ("pie", e2->GetTagName().c_str());
 
   ggadget::BasicElement *e3 = factory.CreateElement("bread",
                                                     e2,
-                                                    vh.GetViewInternal(),
+                                                    &view,
                                                     NULL);
   ASSERT_TRUE(e3 == NULL);
   delete ggadget::down_cast<Muffin *>(e1);

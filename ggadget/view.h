@@ -18,7 +18,6 @@
 #define GGADGET_VIEW_H__
 
 #include <ggadget/common.h>
-#include <ggadget/scriptable_helper.h>
 #include <ggadget/view_interface.h>
 
 namespace ggadget {
@@ -29,8 +28,8 @@ class Elements;
 class ContentAreaElement;
 class DetailsView;
 class ElementFactory;
-class GadgetHostInterface;
 class MenuInterface;
+class ScriptableInterface;
 class ScriptContextInterface;
 class Slot;
 class MainLoopInterface;
@@ -38,47 +37,122 @@ class ViewHostInterface;
 class ImageInterface;
 class ScriptableEvent;
 class Texture;
+class Gadget;
 
 /**
- * Main View implementation.
+ * The default View implementation.
  */
-class View : public ScriptableHelperNativeOwned<ViewInterface> {
+class View : public ViewInterface {
  public:
-  DEFINE_CLASS_ID(0xc4ee4a622fbc4b7a, ViewInterface)
+  /**
+   * Constructor.
+   *
+   * @param type type of this view.
+   * @param host the ViewHost instance that is associated with the View
+   *        instance. It'll be destroyed by the View instance.
+   * @param gadget the Gadget instance that owns this view. For debug purpose,
+   *        it could be NULL.
+   * @param prototype a scriptable object that shall be used as the prototype
+   *        of the global object of this view's script context. It won't be
+   *        destroyed by the view.
+   * @param element_factory the ElementFactory instance that shall be used by
+   *        this view. It won't be destroyed by the view.
+   */
+  View(ViewType type,
+       ViewHostInterface *host,
+       Gadget *gadget,
+       ScriptableInterface *prototype,
+       ElementFactory *element_factory);
 
-  View(ScriptableInterface *prototype,
-       ElementFactory *element_factory,
-       int debug_mode);
+  /** Destructor. */
   virtual ~View();
 
+  /**
+   * Returns the scriptable instance of the view, which will be registered into
+   * the script context of the view as global object "view".
+   */
+  ScriptableInterface *GetScriptable() const;
+
+  /**
+   * @return the ScriptContextInterface object associated with this view.
+   */
+  ScriptContextInterface *GetScriptContext() const;
+
+  /**
+   * @return the FileManagerInterface object associated with this view's gadget.
+   */
+  FileManagerInterface *GetFileManager() const;
+
+  /** @return the current graphics interface used for drawing elements. */
+  const GraphicsInterface *GetGraphics() const;
+
+  /**
+   * Init the view from specified XML definition.
+   * @param xml XML definition of the view.
+   * @param filename file name of the xml definition, for logging purpose.
+   * @return @c true if succeedes.
+   */
+  bool InitFromXML(const std::string &xml, const char *filename);
+
  public: // ViewInterface methods.
-  virtual ScriptContextInterface *GetScriptContext() const;
-  virtual FileManagerInterface *GetFileManager() const;
-  virtual bool InitFromXML(const std::string &xml, const char *filename);
-  virtual void AttachHost(ViewHostInterface *host);
+  virtual ViewType GetType() const;
 
-  virtual EventResult OnMouseEvent(const MouseEvent &event);
-  virtual EventResult OnKeyEvent(const KeyboardEvent &event);
-  virtual EventResult OnDragEvent(const DragEvent &event);
-  virtual EventResult OnOtherEvent(const Event &event, Event *output_event);
-
-  virtual bool SetWidth(int width);
-  virtual bool SetHeight(int height);
-  virtual bool SetSize(int width, int height);
+  virtual Gadget *GetGadget() const;
+  virtual void SetWidth(int width);
+  virtual void SetHeight(int height);
+  virtual void SetSize(int width, int height);
   virtual int GetWidth() const;
   virtual int GetHeight() const;
 
-  virtual void Draw(CanvasInterface *canvas);
-
-  virtual void SetResizable(ViewInterface::ResizableMode resizable);
-  virtual ViewInterface::ResizableMode GetResizable() const;
+  virtual void SetResizable(ResizableMode resizable);
+  virtual ResizableMode GetResizable() const;
   virtual void SetCaption(const char *caption);
   virtual std::string GetCaption() const;
   virtual void SetShowCaptionAlways(bool show_always);
   virtual bool GetShowCaptionAlways() const;
   virtual void MarkRedraw();
-  virtual void OnOptionChanged(const char *name);
+
+  virtual void Draw(CanvasInterface *canvas);
+
+  virtual EventResult OnMouseEvent(const MouseEvent &event);
+  virtual EventResult OnKeyEvent(const KeyboardEvent &event);
+  virtual EventResult OnDragEvent(const DragEvent &event);
+  virtual EventResult OnOtherEvent(const Event &event);
+
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
+  virtual bool OnSizing(int *width, int *height);
+
+ public: // Additional event handling methods
+  /**
+   * Any elements should call this method when it need to fire an event.
+   * @param event the event to be fired. The caller can choose to allocate the
+   *     event object on stack or heap.
+   * @param event_signal
+   */
+  void FireEvent(ScriptableEvent *event, const EventSignal &event_signal);
+
+  /**
+   * Post an event into the event queue.  The event will be fired in the next
+   * event loop.
+   * @param event the event to be fired. The caller must allocate the
+   *     @c ScriptableEvent and the @c Event objects on heap. They will be
+   *     deleted by this view.
+   * @param event_signal
+   */
+  void PostEvent(ScriptableEvent *event, const EventSignal &event_signal);
+
+  /**
+   * This method is provided to the event handlers of native gadgets to
+   * retrieve the current fired event.
+   */
+  ScriptableEvent *GetEvent() const;
+
+  /**
+   * Enables or disables firing events.
+   * Because onchange events should not be fired during XML setup, events
+   * should be disabled until the view is ready to run.
+   */
+  void EnableEvents(bool enable_events);
 
  public:  // Element management functions.
   /**
@@ -91,12 +165,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * Retrieves a collection that contains the immediate children of this
    * view.
    */
-  const Elements *GetChildren() const;
-  /**
-   * Retrieves a collection that contains the immediate children of this
-   * view.
-   */
-  Elements *GetChildren();
+  Elements *GetChildren() const;
 
   /**
    * Looks up an element from all elements directly or indirectly contained
@@ -104,12 +173,54 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * @param name element name.
    * @return the element pointer if found; or @c NULL if not found.
    */
-  BasicElement *GetElementByName(const char *name);
+  BasicElement *GetElementByName(const char *name) const;
 
   /**
-   * Constant version of the above GetElementByName();
+   * Called when any element is about to be added into the view hierarchy.
+   * @return @c true if the element is allowed to be added into the view.
    */
-  const BasicElement *GetElementByName(const char *name) const;
+  bool OnElementAdd(BasicElement *element);
+
+  /** Called when any element in the view hierarchy is about to be removed. */
+  void OnElementRemove(BasicElement *element);
+
+  /**
+   * Sets current input focus to the @a element. If some element has the focus,
+   * removes the focus first.
+   * @param element the element to put focus on. If it is @c NULL, only remove
+   *     the focus from the current focused element and thus no element has
+   *     the focus.
+   */
+  void SetFocus(BasicElement *element);
+
+  /**
+   * Sets the element to be shown as a popup, above all other elements on
+   * the view.
+   */
+  void SetPopupElement(BasicElement *element);
+
+  /** Gets the element to be shown ad a popup. */
+  BasicElement *GetPopupElement() const;
+
+  /** Gets the element currently having the input focus. */
+  BasicElement *GetFocusedElement() const;
+
+  /** Gets the element which the mouse is currently over. */
+  BasicElement *GetMouseOverElement() const;
+
+  /** Returns the content area element if there is one, or @c NULL. */
+  ContentAreaElement *GetContentAreaElement() const;
+
+  /**
+   * Return if the element is in the clip region to decide if it is need to
+   * redraw.
+   */
+  bool IsElementInClipRegion(const BasicElement *element) const;
+
+  /**
+   * Add the element to the clip region when it is changed and need to redraw.
+   */
+  void AddElementToClipRegion(BasicElement *element);
 
  public: // Timer, interval and animation functions.
   /**
@@ -131,8 +242,8 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * @param duration the duration of the whole animation in milliseconds.
    * @return the animation token that can be used in @c CancelAnimation().
    */
-  int BeginAnimation(Slot0<void> *slot,
-                     int start_value, int end_value, unsigned int duration);
+  int BeginAnimation(Slot0<void> *slot, int start_value, int end_value,
+                     unsigned int duration);
 
   /**
    * Cancels a currently running animation.
@@ -170,92 +281,6 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    */
   void ClearInterval(int token);
 
- public:
-  /** Gets pointer to the native widget holding this view. */
-  void *GetNativeWidget();
-
-  /**
-   * Converts coordinates in the view's space to coordinates in the native
-   * widget which holds the view.
-   */
-  void ViewCoordToNativeWidgetCoord(double x, double y,
-                                    double *widget_x, double *widget_y);
-
-  /** Asks the host to redraw the given view.
-   * @param changed_element the pointer to the basic element that file this
-   * request.
-   * */
-  void QueueDraw(BasicElement *element);
-
-  /** @return the current graphics interface used for drawing elements. */
-  const GraphicsInterface *GetGraphics() const;
-
-  /**
-   * Called when any element is about to be added into the view hierarchy.
-   * @return @c true if the element is allowed to be added into the view.
-   */
-  bool OnElementAdd(BasicElement *element);
-  /** Called when any element in the view hierarchy is about to be removed. */
-  void OnElementRemove(BasicElement *element);
-
-  /**
-   * Sets current input focus to the @a element. If some element has the focus,
-   * removes the focus first.
-   * @param element the element to put focus on. If it is @c NULL, only remove
-   *     the focus from the current focused element and thus no element has
-   *     the focus.
-   */
-  void SetFocus(BasicElement *element);
-
-  /**
-   * Sets and gets the element to be shown as a popup, above all
-   * other elements on the view.
-   */
-  void SetPopupElement(BasicElement *element);
-  BasicElement *GetPopupElement();
-
-  /**
-   * Any elements should call this method when it need to fire an event.
-   * @param event the event to be fired. The caller can choose to allocate the
-   *     event object on stack or heap.
-   * @param event_signal
-   */
-  void FireEvent(ScriptableEvent *event, const EventSignal &event_signal);
-
-  /**
-   * Post an event into the event queue.  The event will be fired in the next
-   * event loop.
-   * @param event the event to be fired. The caller must allocate the
-   *     @c ScriptableEvent and the @c Event objects on heap. They will be
-   *     deleted by this view.
-   * @param event_signal
-   */
-  void PostEvent(ScriptableEvent *event, const EventSignal &event_signal);
-
-  /**
-   * These methods are provided to the event handlers of native gadgets to
-   * retrieve the current fired event.
-   */
-  ScriptableEvent *GetEvent();
-  const ScriptableEvent *GetEvent() const;
-
-  /**
-   * Gets the current debug mode.
-   * 0: no debug; 1: debug container elements only; 2: debug all elements.
-   */
-  int GetDebugMode() const;
-
-  /** Gets the element currently having the input focus. */
-  BasicElement *GetFocusedElement();
-  /** Gets the element which the mouse is currently over. */
-  BasicElement *GetMouseOverElement();
-
-  /**
-   * Enables or disables firing events.
-   * Because onchange events should not be fired during XML setup, events
-   * should be disabled until the view is ready to run.
-   */
-  void EnableEvents(bool enable_events);
  public:  // Other utilities.
   /**
    * Load an image from the gadget file.
@@ -267,7 +292,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * @param is_mask if the image is used as a mask.
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
-  ImageInterface *LoadImage(const Variant &src, bool is_mask);
+  ImageInterface *LoadImage(const Variant &src, bool is_mask) const;
 
   /**
    * Load an image from the global file manager.
@@ -275,7 +300,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * @param is_mask if the image is used as a mask.
    * @return the loaded image (may lazy initialized) if succeeds, or @c NULL.
    */
-  ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask);
+  ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) const;
 
   /**
    * Load a texture from image file or create a colored texture.
@@ -288,7 +313,31 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    *       data of the image.
    * @return the created texture ifsucceeds, or @c NULL.
    */
-  Texture *LoadTexture(const Variant &src);
+  Texture *LoadTexture(const Variant &src) const;
+
+ public: // Delegate to Gadget or ViewHost.
+  /** Gets pointer to the native widget holding this view. */
+  void *GetNativeWidget() const;
+
+  /**
+   * Converts coordinates in the view's space to coordinates in the native
+   * widget which holds the view.
+   */
+  void ViewCoordToNativeWidgetCoord(double x, double y,
+                                    double *widget_x, double *widget_y) const;
+
+  /**
+   * Asks the host to redraw the given view.
+   * @param changed_element the pointer to the basic element that file this
+   * request.
+   */
+  void QueueDraw(BasicElement *element);
+
+  /**
+   * Gets the current debug mode.
+   * 0: no debug; 1: debug container elements only; 2: debug all elements.
+   */
+  DebugMode GetDebugMode() const;
 
   /**
    * Open the given URL in the user's default web brower.
@@ -297,14 +346,14 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   bool OpenURL(const char *url) const;
 
   /** Displays a message box containing the message string. */
-  void Alert(const char *message);
+  void Alert(const char *message) const;
 
   /**
    * Displays a dialog containing the message string and Yes and No buttons.
    * @param message the message string.
    * @return @c true if Yes button is pressed, @c false if not.
    */
-  bool Confirm(const char *message);
+  bool Confirm(const char *message) const;
 
   /**
    * Displays a dialog asking the user to enter text.
@@ -313,16 +362,13 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    * @return the user inputted text, or an empty string if user canceled the
    *     dialog.
    */
-  std::string Prompt(const char *message, const char *default_value);
+  std::string Prompt(const char *message, const char *default_value) const;
 
   /**
    * Gets the current time.
    * Delegated to @c MainLoopInterface::GetCurrentTime().
    */
-  uint64_t GetCurrentTime();
-
-  /** Returns the content area element if there is one, or @c NULL. */
-  ContentAreaElement *GetContentAreaElement();
+  uint64_t GetCurrentTime() const;
 
   /**
    * Display tooltip at the current cursor position. The tooltip will be
@@ -330,23 +376,34 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
    */
   void SetTooltip(const char *tooltip);
 
-  /** Delegates to GadgetInterface::ShowDetailsView(). */
-  bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
-                       Slot1<void, int> *feedback_handler);
+  /**
+   * Shows the associated View by proper method according to type of the View.
+   *
+   * The behavior of this function will be different for different types of
+   * view:
+   * - For main view, all parameters will be ignored. The feedback_handler will
+   *   just be deleted if it's not NULL.
+   * - For options view, the flags is combination of @c OptionsViewFlags,
+   *   feedback_handler will be called when closing the options view, with one
+   *   of OptionsViewFlags as the parameter.
+   * - For details view, the flags is combination of DetailsViewFlags,
+   *   feedback_handler will be called when closing the details view, with one
+   *   of DetailsViewFlags as the parameter.
+   *
+   * @param modal if it's true then the view will be displayed in modal mode,
+   *        and this function won't return until the view is closed.
+   * @param flags for options view, it's combination of OptionsViewFlags,
+   *        for details view, it's combination of DetailsViewFlags.
+   * @param feedback_handler a callback that will be called when the view is
+   *        closed. It has no effect for main view.
+   * @return true if the View is shown correctly. Otherwise returns false.
+   */
+  bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler);
 
   /**
-   * Return if the element is in the clip region to decide if it is need to
-   * redraw.
+   * Closes the view if it's opened by calling ShowView().
    */
-  bool IsElementInClipRegion(const BasicElement *element) const;
-
-  /**
-   * Add the element to the clip region when it is changed and need to redraw.
-   */
-  void AddElementToClipRegion(BasicElement *element);
-
-  /** For performance testing. */
-  void IncreaseDrawCount();
+  void CloseView();
 
  public: // Event connection methods.
   Connection *ConnectOnCancelEvent(Slot0<void> *handler);
@@ -374,6 +431,10 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   Connection *ConnectOnSizeEvent(Slot0<void> *handler);
   Connection *ConnectOnSizingEvent(Slot0<void> *handler);
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
+
+ public:
+  /** For performance testing. */
+  void IncreaseDrawCount();
 
  private:
   class Impl;

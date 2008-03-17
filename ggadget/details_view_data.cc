@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "details_view.h"
+#include "details_view_data.h"
 #include "gadget_consts.h"
 #include "logger.h"
 #include "memory_options.h"
@@ -23,7 +23,7 @@
 
 namespace ggadget {
 
-class DetailsView::Impl {
+class DetailsViewData::Impl {
  public:
   Impl()
       : time_created_(0),
@@ -52,35 +52,36 @@ class DetailsView::Impl {
   ScriptableInterface *external_object_;
 };
 
-DetailsView::DetailsView()
+DetailsViewData::DetailsViewData()
     : impl_(new Impl()) {
 }
 
-void DetailsView::DoRegister() {
+void DetailsViewData::DoRegister() {
   RegisterProperty("html_content",
-                   NewSlot(this, &DetailsView::ContentIsHTML),
-                   NewSlot(this, &DetailsView::SetContentIsHTML));
+                   NewSlot(this, &DetailsViewData::GetContentIsHTML),
+                   NewSlot(this, &DetailsViewData::SetContentIsHTML));
   RegisterProperty("contentIsView",
-                   NewSlot(this, &DetailsView::ContentIsView),
-                   NewSlot(this, &DetailsView::SetContentIsView));
-  RegisterMethod("SetContent", NewSlot(this, &DetailsView::SetContent));
+                   NewSlot(this, &DetailsViewData::GetContentIsView),
+                   NewSlot(this, &DetailsViewData::SetContentIsView));
+  RegisterMethod("SetContent", NewSlot(this, &DetailsViewData::SetContent));
   RegisterMethod("SetContentFromItem",
-                 NewSlot(this, &DetailsView::SetContentFromItem));
+                 NewSlot(this, &DetailsViewData::SetContentFromItem));
   RegisterConstant("detailsViewData", &impl_->scriptable_data_);
-  RegisterProperty("external", NewSlot(this, &DetailsView::GetExternalObject),
-                   NewSlot(this, &DetailsView::SetExternalObject));
+  RegisterProperty("external",
+                   NewSlot(this, &DetailsViewData::GetExternalObject),
+                   NewSlot(this, &DetailsViewData::SetExternalObject));
 }
 
-DetailsView::~DetailsView() {
+DetailsViewData::~DetailsViewData() {
   delete impl_;
   impl_ = NULL;
 }
 
-void DetailsView::SetContent(const char *source,
-                             Date time_created,
-                             const char *text,
-                             bool time_absolute,
-                             ContentItem::Layout layout) {
+void DetailsViewData::SetContent(const char *source,
+                                 Date time_created,
+                                 const char *text,
+                                 bool time_absolute,
+                                 ContentItem::Layout layout) {
   impl_->source_ = source ? source : "";
   impl_->time_created_ = time_created;
   impl_->text_ = text ? text : "";
@@ -94,7 +95,7 @@ void DetailsView::SetContent(const char *source,
                    kXMLExt) == 0;
 }
 
-void DetailsView::SetContentFromItem(ContentItem *item) {
+void DetailsViewData::SetContentFromItem(ContentItem *item) {
   if (item) {
     int flags = item->GetFlags();
     impl_->source_ = item->GetSource();
@@ -108,55 +109,51 @@ void DetailsView::SetContentFromItem(ContentItem *item) {
   }
 }
 
-std::string DetailsView::GetSource() const {
+std::string DetailsViewData::GetSource() const {
   return impl_->source_;
 }
 
-Date DetailsView::GetTimeCreated() const {
+Date DetailsViewData::GetTimeCreated() const {
   return impl_->time_created_;
 }
 
-std::string DetailsView::GetText() const {
+std::string DetailsViewData::GetText() const {
   return impl_->text_;
 }
 
-bool DetailsView::IsTimeAbsolute() const {
+bool DetailsViewData::IsTimeAbsolute() const {
   return impl_->time_absolute_;
 }
 
-ContentItem::Layout DetailsView::GetLayout() const {
+ContentItem::Layout DetailsViewData::GetLayout() const {
   return impl_->layout_;
 }
 
-bool DetailsView::ContentIsHTML() {
+bool DetailsViewData::GetContentIsHTML() const {
   return impl_->is_html_;
 }
 
-void DetailsView::SetContentIsHTML(bool is_html) {
+void DetailsViewData::SetContentIsHTML(bool is_html) {
   impl_->is_html_ = is_html;
 }
 
-bool DetailsView::ContentIsView() const {
+bool DetailsViewData::GetContentIsView() const {
   return impl_->is_view_;
 }
 
-void DetailsView::SetContentIsView(bool is_view) {
+void DetailsViewData::SetContentIsView(bool is_view) {
   impl_->is_view_ = is_view;
 }
 
-const ScriptableOptions *DetailsView::GetDetailsViewData() const {
+ScriptableOptions *DetailsViewData::GetData() const {
   return &impl_->scriptable_data_;
 }
 
-ScriptableOptions *DetailsView::GetDetailsViewData() {
-  return &impl_->scriptable_data_;
-}
-
-ScriptableInterface *DetailsView::GetExternalObject() const {
+ScriptableInterface *DetailsViewData::GetExternalObject() const {
   return impl_->external_object_;
 }
 
-void DetailsView::SetExternalObject(ScriptableInterface *external_object) {
+void DetailsViewData::SetExternalObject(ScriptableInterface *external_object) {
   if (impl_->external_object_)
     impl_->external_object_->Unref();
   if (external_object)
@@ -164,8 +161,8 @@ void DetailsView::SetExternalObject(ScriptableInterface *external_object) {
   impl_->external_object_ = external_object;
 }
 
-DetailsView *DetailsView::CreateInstance() {
-  return new DetailsView();
+DetailsViewData *DetailsViewData::CreateInstance() {
+  return new DetailsViewData();
 }
 
 } // namespace ggadget

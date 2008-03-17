@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GTK_GTK_MENU_IMPL_H__
-#define GGADGET_GTK_GTK_MENU_IMPL_H__
+#ifndef GGADGET_GTK_MENU_BUILDER_H__
+#define GGADGET_GTK_MENU_BUILDER_H__
 
 #include <map>
 #include <string>
@@ -28,38 +28,32 @@ namespace ggadget {
 namespace gtk {
 
 /**
- * An implementation of @c MenuInterface for the simple gadget host.
+ * An implementation of @c MenuInterface for gtk based host.
  */
-class GtkMenuImpl : public ggadget::MenuInterface {
+class MenuBuilder : public ggadget::MenuInterface {
  public:
-  GtkMenuImpl(GtkMenu *gtk_menu);
-  virtual ~GtkMenuImpl();
+  /**
+   * Constructor.
+   *
+   * @param gtk_menu a GtkMenuShell instance, MenuBuilder doesn't own it.
+   */
+  MenuBuilder(GtkMenuShell *gtk_menu);
+  virtual ~MenuBuilder();
 
   virtual void AddItem(const char *item_text, int style,
                        ggadget::Slot1<void, const char *> *handler);
   virtual void SetItemStyle(const char *item_text, int style);
   virtual MenuInterface *AddPopup(const char *popup_text);
 
-  GtkMenu *gtk_menu() { return gtk_menu_; }
+  GtkMenuShell *GetGtkMenuShell() const;
+
+  /** Checks if any item was added. */
+  bool ItemAdded() const;
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(GtkMenuImpl);
-
-  static void OnItemActivate(GtkMenuItem *menu_item, gpointer user_data);
-  static void SetMenuItemStyle(GtkMenuItem *menu_item, int style);
-
-  struct MenuItemInfo {
-    std::string item_text;
-    GtkMenuItem *gtk_menu_item;
-    int style;
-    ggadget::Slot1<void, const char *> *handler;
-    GtkMenuImpl *submenu;
-  };
-
-  GtkMenu *gtk_menu_;
-  typedef std::multimap<std::string, MenuItemInfo> ItemMap;
-  ItemMap item_map_;
-  static bool setting_style_;
+  DISALLOW_EVIL_CONSTRUCTORS(MenuBuilder);
+  class Impl;
+  Impl *impl_;
 };
 
 } // namesapce gtk

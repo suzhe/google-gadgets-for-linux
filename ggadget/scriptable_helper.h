@@ -280,7 +280,7 @@ class ScriptableHelper : public I, public RegisterableInterface {
    *   - Registering properties in its constructor;
    *   - Registering properties in this method.
    * If an instance of a class is not used in script immediately after creation,
-   * the class should use the latter method to reduce overhead on creation.  
+   * the class should use the latter method to reduce overhead on creation.
    */
   virtual void DoRegister() { }
 

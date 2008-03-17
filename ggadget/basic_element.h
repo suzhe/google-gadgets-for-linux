@@ -228,8 +228,8 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Gets and sets the cursor to display when the mouse is over this
    * element.
    */
-  ViewHostInterface::CursorType GetCursor() const;
-  void SetCursor(ViewHostInterface::CursorType cursor);
+  ViewInterface::CursorType GetCursor() const;
+  void SetCursor(ViewInterface::CursorType cursor);
 
   /**
    * Gets and sets whether this element is a target for drag/drop operations.

@@ -283,7 +283,8 @@ class DirFileManager::Impl {
     // Check if the normalized path is starting from base_path.
     if (path.length() <= base_path_.length() ||
         strncmp(base_path_.c_str(), path.c_str(), base_path_.length()) != 0 ||
-        path[base_path_.length()] != kDirSeparator) {
+        (path[base_path_.length()] != kDirSeparator &&
+         path[base_path_.length() - 1] != kDirSeparator)) {
       LOG("Invalid file path: %s", file);
       return false;
     }

@@ -51,7 +51,7 @@ class AnchorElement::Impl {
 AnchorElement::AnchorElement(BasicElement *parent, View *view, const char *name)
     : BasicElement(parent, view, "a", name, false),
       impl_(new Impl(this, view)) {
-  SetCursor(ViewHostInterface::CURSOR_HAND);
+  SetCursor(ViewInterface::CURSOR_HAND);
   SetEnabled(true);
 }
 

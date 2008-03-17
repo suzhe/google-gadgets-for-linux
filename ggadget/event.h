@@ -40,6 +40,7 @@ enum EventResult {
 class Event {
  public:
   enum Type {
+    EVENT_INVALID = 0,
     EVENT_SIMPLE_RANGE_START = 0,
     EVENT_CANCEL,
     EVENT_CLOSE,

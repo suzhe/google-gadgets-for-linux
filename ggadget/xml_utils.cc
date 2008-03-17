@@ -269,7 +269,7 @@ bool SetupViewFromXML(View *view, const std::string &xml,
   }
 
   view->EnableEvents(false);
-  SetupScriptableProperties(view, view->GetScriptContext(),
+  SetupScriptableProperties(view->GetScriptable(), view->GetScriptContext(),
                             filename, view_element);
 
   Elements *children = view->GetChildren();

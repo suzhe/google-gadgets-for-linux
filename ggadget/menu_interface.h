@@ -29,6 +29,7 @@ class MenuInterface {
   enum MenuItemFlag {
     MENU_ITEM_FLAG_GRAYED = 1,
     MENU_ITEM_FLAG_CHECKED = 8,
+    MENU_ITEM_FLAG_CHECKABLE = 0x80,   // Not an official feature.
     MENU_ITEM_FLAG_SEPARATOR = 0x800,  // Not an official feature.
   };
 

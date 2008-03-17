@@ -24,7 +24,7 @@
 #include "basic_element.h"
 #include "contentarea_element.h"
 #include "content_item.h"
-#include "details_view.h"
+#include "details_view_data.h"
 #include "element_factory.h"
 #include "elements.h"
 #include "event.h"
@@ -32,14 +32,15 @@
 #include "file_manager_factory.h"
 #include "main_loop_interface.h"
 #include "gadget_consts.h"
-#include "gadget_host_interface.h"
-#include "gadget_interface.h"
+#include "host_interface.h"
+#include "gadget.h"
 #include "graphics_interface.h"
 #include "image_interface.h"
 #include "logger.h"
 #include "math_utils.h"
-#include "scoped_ptr.h"
+#include "options_interface.h"
 #include "script_context_interface.h"
+#include "script_runtime_manager.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_event.h"
 #include "scriptable_image.h"
@@ -55,36 +56,14 @@ namespace ggadget {
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
-class View::Impl {
+class View::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
+  DEFINE_CLASS_ID(0xc042d683ed384a0c, ScriptableInterface);
+
   class GlobalObject : public ScriptableHelperNativeOwnedDefault {
    public:
     DEFINE_CLASS_ID(0x23840d38ed164ab2, ScriptableInterface);
     virtual bool IsStrict() const { return false; }
-  };
-
-  // Old "utils" global object, for backward compatibility.
-  class Utils : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x7b7e1dd0b91f4153, ScriptableInterface);
-    Utils(Impl *impl) : impl_(impl) {
-      RegisterMethod("loadImage", NewSlot(this, &Utils::LoadImage));
-      RegisterMethod("setTimeout", NewSlot(impl, &Impl::SetTimeout));
-      RegisterMethod("clearTimeout", NewSlot(impl, &Impl::RemoveTimer));
-      RegisterMethod("setInterval", NewSlot(impl, &Impl::SetInterval));
-      RegisterMethod("clearInterval", NewSlot(impl, &Impl::RemoveTimer));
-      RegisterMethod("alert", NewSlot(impl->owner_, &View::Alert));
-      RegisterMethod("confirm", NewSlot(impl->owner_, &View::Confirm));
-      RegisterMethod("prompt", NewSlot(impl->owner_, &View::Prompt));
-    }
-    // Just return the original image_src directly, to let the receiver
-    // actually load it.
-    ScriptableImage *LoadImage(const Variant &image_src) {
-      ImageInterface *image = impl_->owner_->LoadImage(image_src, false);
-      return image ? new ScriptableImage(image) : NULL;
-    }
-
-    Impl *impl_;
   };
 
   /**
@@ -131,7 +110,7 @@ class View::Impl {
                    current_time - last_finished_time_ > kMinInterval)) {
         if (is_event_) {
           TimerEvent event(watch_id, value);
-          ScriptableEvent scriptable_event(&event, impl_->owner_, NULL);
+          ScriptableEvent scriptable_event(&event, impl_, NULL);
           impl_->FireEventSlot(&scriptable_event, slot_);
         } else {
           slot_->Call(0, NULL);
@@ -283,27 +262,31 @@ class View::Impl {
     double *region_buffer_;
   };
 
-  Impl(ElementFactory *element_factory,
-       int debug_mode,
-       View *owner)
+  Impl(ViewType type,
+       View *owner,
+       ViewHostInterface *host,
+       Gadget *gadget,
+       ScriptableInterface *prototype,
+       ElementFactory *element_factory)
     : clip_region_(owner),
-      canvas_cache_(NULL),
+      type_(type),
       owner_(owner),
-      host_(NULL),
-      gadget_host_(NULL),
-      script_context_(NULL),
+      gadget_(gadget),
       element_factory_(element_factory),
       main_loop_(GetGlobalMainLoop()),
+      host_(host),
+      script_context_(NULL),
+      onoptionchanged_connection_(NULL),
+      canvas_cache_(NULL),
       children_(element_factory, NULL, owner),
-      debug_mode_(debug_mode),
-      width_(0), height_(0),
+      dragover_result_(EVENT_RESULT_UNHANDLED),
+      width_(0),
+      height_(0),
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_ZOOM),
       show_caption_always_(false),
-      dragover_result_(EVENT_RESULT_UNHANDLED),
       post_event_token_(0),
       draw_queued_(false),
-      utils_(this),
       events_enabled_(true),
       need_redraw_(true),
       draw_count_(0),
@@ -311,36 +294,130 @@ class View::Impl {
 #ifdef _DEBUG
     fp_ = fopen("/tmp/view_render", "w+");
 #endif
+    ASSERT(host_);
+    ASSERT(element_factory_);
+    ASSERT(main_loop_);
+
+    if (prototype)
+      global_object_.SetInheritsFrom(prototype);
+
+    // No script context for old options view.
+    if (type != VIEW_OLD_OPTIONS) {
+      // Only xml based views have standalone script context.
+      // FIXME: ScriptContext instance should be created on-demand, according to
+      // the type of script files shipped in the gadget.
+      // Or maybe we should add an option in gadget.gmanifest to specify what
+      // ScriptRuntime implementation is required.
+      // We may support multiple different script languages later.
+      script_context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
+      if (!script_context_)
+        LOG("ERROR: JavaScript support is not available.");
+    }
+
+    if (script_context_) {
+      script_context_->SetGlobalObject(&global_object_);
+      script_context_->RegisterClass("DOMDocument",
+          NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
+      script_context_->RegisterClass("XMLHttpRequest",
+          NewSlot(this, &Impl::NewXMLHttpRequest));
+      script_context_->RegisterClass("DetailsView",
+          NewSlot(DetailsViewData::CreateInstance));
+      script_context_->RegisterClass("ContentItem",
+          NewFunctorSlot<ContentItem *>(ContentItem::Creator(owner)));
+
+      // Execute common.js to initialize global constants and compatibility
+      // adapters.
+      std::string common_js_contents;
+      if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
+        std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
+        script_context_->Execute(common_js_contents.c_str(), path.c_str(), 1);
+      } else {
+        LOG("Failed to load %s.", kCommonJS);
+      }
+
+    }
+
+    if (gadget_) {
+      onoptionchanged_connection_ =
+          gadget_->GetOptions()->ConnectOnOptionChanged(
+              NewSlot(this, &Impl::OnOptionChanged));
+    }
   }
 
   ~Impl() {
     ASSERT(event_stack_.empty());
-    SimpleEvent event(Event::EVENT_CLOSE);
-    ScriptableEvent scriptable_event(&event, owner_, NULL);
-    FireEvent(&scriptable_event, onclose_event_);
+
+    host_->CloseView();
+    host_->SetView(NULL);
+
     on_destroy_signal_.Emit(0, NULL);
+
+    if (onoptionchanged_connection_) {
+      onoptionchanged_connection_->Disconnect();
+      onoptionchanged_connection_ = NULL;
+    }
+
     if (fp_) {
       fprintf(fp_, "\n");
       fclose(fp_);
     }
+
+    if (canvas_cache_) {
+      canvas_cache_->Destroy();
+      canvas_cache_ = NULL;
+    }
+
+    main_loop_ = NULL;
+    element_factory_ = NULL;
+    gadget_ = NULL;
   }
 
-  template <typename T>
-  void RegisterProperties(T *obj) {
-    obj->RegisterProperty("caption", NewSlot(owner_, &View::GetCaption),
+  virtual void DoRegister() {
+    DLOG("Register view properties.");
+
+    RegisterProperties(this);
+    RegisterProperties(&global_object_);
+
+    // Old "utils" global object, for backward compatibility.
+    utils_.RegisterMethod("loadImage",
+                           NewSlot(this, &Impl::LoadScriptableImage));
+    utils_.RegisterMethod("setTimeout",
+                           NewSlot(this, &Impl::SetTimeout));
+    utils_.RegisterMethod("clearTimeout",
+                           NewSlot(this, &Impl::RemoveTimer));
+    utils_.RegisterMethod("setInterval",
+                           NewSlot(this, &Impl::SetInterval));
+    utils_.RegisterMethod("clearInterval",
+                           NewSlot(this, &Impl::RemoveTimer));
+    utils_.RegisterMethod("alert",
+                           NewSlot(owner_, &View::Alert));
+    utils_.RegisterMethod("confirm",
+                           NewSlot(owner_, &View::Confirm));
+    utils_.RegisterMethod("prompt",
+                           NewSlot(owner_, &View::Prompt));
+
+    global_object_.RegisterConstant("view", this);
+    global_object_.RegisterConstant("utils", &utils_);
+    global_object_.SetDynamicPropertyHandler(
+        NewSlot(this, &Impl::GetElementByNameVariant), NULL);
+  }
+
+  void RegisterProperties(ScriptableHelperDefault *obj) {
+    obj->RegisterProperty("caption",
+                          NewSlot(owner_, &View::GetCaption),
                           NewSlot(owner_, &View::SetCaption));
     obj->RegisterProperty("event", NewSlot(this, &Impl::GetEvent), NULL);
-    obj->RegisterProperty("height",
-                          NewSlot(owner_, &View::GetHeight),
-                          NewSlot(owner_, &View::SetHeight));
     obj->RegisterProperty("width",
                           NewSlot(owner_, &View::GetWidth),
                           NewSlot(owner_, &View::SetWidth));
+    obj->RegisterProperty("height",
+                          NewSlot(owner_, &View::GetHeight),
+                          NewSlot(owner_, &View::SetHeight));
     obj->RegisterStringEnumProperty("resizable",
-                                    NewSlot(owner_, &View::GetResizable),
-                                    NewSlot(owner_, &View::SetResizable),
-                                    kResizableNames,
-                                    arraysize(kResizableNames));
+                          NewSlot(owner_, &View::GetResizable),
+                          NewSlot(owner_, &View::SetResizable),
+                          kResizableNames,
+                          arraysize(kResizableNames));
     obj->RegisterProperty("showCaptionAlways",
                           NewSlot(owner_, &View::GetShowCaptionAlways),
                           NewSlot(owner_, &View::SetShowCaptionAlways));
@@ -358,8 +435,7 @@ class View::Impl {
     // Here register ViewImpl::BeginAnimation because the Slot1<void, int> *
     // parameter in View::BeginAnimation can't be automatically reflected.
     obj->RegisterMethod("beginAnimation", NewSlot(this, &Impl::BeginAnimation));
-    obj->RegisterMethod("cancelAnimation",
-                        NewSlot(this, &Impl::RemoveTimer));
+    obj->RegisterMethod("cancelAnimation", NewSlot(this, &Impl::RemoveTimer));
     obj->RegisterMethod("setTimeout", NewSlot(this, &Impl::SetTimeout));
     obj->RegisterMethod("clearTimeout", NewSlot(this, &Impl::RemoveTimer));
     obj->RegisterMethod("setInterval", NewSlot(this, &Impl::SetInterval));
@@ -370,7 +446,7 @@ class View::Impl {
     obj->RegisterMethod("prompt", NewSlot(owner_, &View::Prompt));
 
     obj->RegisterMethod("resizeBy", NewSlot(this, &Impl::ResizeBy));
-    obj->RegisterMethod("resizeTo", NewSlot(owner_, &View::SetSize));
+    obj->RegisterMethod("resizeTo", NewSlot(this, &Impl::SetSize));
 
     // Extended APIs.
     obj->RegisterProperty("focusedElement",
@@ -404,17 +480,6 @@ class View::Impl {
     obj->RegisterSignal(kOnSizeEvent, &onsize_event_);
     obj->RegisterSignal(kOnSizingEvent, &onsizing_event_);
     obj->RegisterSignal(kOnUndockEvent, &onundock_event_);
-  }
-
-  bool InitFromXML(const std::string &xml, const char *filename) {
-    if (SetupViewFromXML(owner_, xml, filename)) {
-      SimpleEvent event(Event::EVENT_OPEN);
-      ScriptableEvent scriptable_event(&event, owner_, NULL);
-      FireEvent(&scriptable_event, onopen_event_);
-      return scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED;
-    } else {
-      return false;
-    }
   }
 
   void MapChildPositionEvent(const PositionEvent &org_event,
@@ -565,6 +630,7 @@ class View::Impl {
         host_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
       }
     } else {
+      host_->SetCursor(-1);
       tooltip_element_.Reset(NULL);
     }
 
@@ -573,7 +639,7 @@ class View::Impl {
 
   EventResult OnMouseEvent(const MouseEvent &event) {
     // Send event to view first.
-    ScriptableEvent scriptable_event(&event, owner_, NULL);
+    ScriptableEvent scriptable_event(&event, this, NULL);
     if (event.GetType() != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(view): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
@@ -618,6 +684,52 @@ class View::Impl {
     EventResult result = scriptable_event.GetReturnValue();
     if (result != EVENT_RESULT_CANCELED)
       result = SendMouseEventToChildren(event);
+
+    // Child handled or cancelled the event, just return.
+    if (result != EVENT_RESULT_UNHANDLED)
+      return result;
+
+    if(event.GetType() == Event::EVENT_MOUSE_DOWN &&
+       event.GetButton() == MouseEvent::BUTTON_RIGHT) {
+      // Handle ShowContextMenu event.
+      if (host_->ShowContextMenu(MouseEvent::BUTTON_RIGHT))
+        result = EVENT_RESULT_HANDLED;
+    }
+
+    return result;
+  }
+
+  EventResult OnKeyEvent(const KeyboardEvent &event) {
+    ScriptableEvent scriptable_event(&event, this, NULL);
+    DLOG("%s(view): %d %d", scriptable_event.GetName(),
+         event.GetKeyCode(), event.GetModifier());
+    switch (event.GetType()) {
+      case Event::EVENT_KEY_DOWN:
+        FireEvent(&scriptable_event, onkeydown_event_);
+        break;
+      case Event::EVENT_KEY_UP:
+        FireEvent(&scriptable_event, onkeyup_event_);
+        break;
+      case Event::EVENT_KEY_PRESS:
+        FireEvent(&scriptable_event, onkeypress_event_);
+        break;
+      default:
+        ASSERT(false);
+    }
+
+    EventResult result = scriptable_event.GetReturnValue();
+    if (result == EVENT_RESULT_CANCELED)
+      return result;
+
+    if (focused_element_.Get()) {
+      if (!focused_element_.Get()->IsReallyEnabled()) {
+        focused_element_.Get()->OnOtherEvent(
+            SimpleEvent(Event::EVENT_FOCUS_OUT));
+        focused_element_.Reset(NULL);
+      } else {
+        result = focused_element_.Get()->OnKeyEvent(event);
+      }
+    }
     return result;
   }
 
@@ -685,42 +797,8 @@ class View::Impl {
     return dragover_result_;
   }
 
-  EventResult OnKeyEvent(const KeyboardEvent &event) {
-    ScriptableEvent scriptable_event(&event, owner_, NULL);
-    DLOG("%s(view): %d %d", scriptable_event.GetName(),
-         event.GetKeyCode(), event.GetModifier());
-    switch (event.GetType()) {
-      case Event::EVENT_KEY_DOWN:
-        FireEvent(&scriptable_event, onkeydown_event_);
-        break;
-      case Event::EVENT_KEY_UP:
-        FireEvent(&scriptable_event, onkeyup_event_);
-        break;
-      case Event::EVENT_KEY_PRESS:
-        FireEvent(&scriptable_event, onkeypress_event_);
-        break;
-      default:
-        ASSERT(false);
-    }
-
-    EventResult result = scriptable_event.GetReturnValue();
-    if (result == EVENT_RESULT_CANCELED)
-      return result;
-
-    if (focused_element_.Get()) {
-      if (!focused_element_.Get()->IsReallyEnabled()) {
-        focused_element_.Get()->OnOtherEvent(
-            SimpleEvent(Event::EVENT_FOCUS_OUT));
-        focused_element_.Reset(NULL);
-      } else {
-        result = focused_element_.Get()->OnKeyEvent(event);
-      }
-    }
-    return result;
-  }
-
-  EventResult OnOtherEvent(const Event &event, Event *output_event) {
-    ScriptableEvent scriptable_event(&event, owner_, output_event);
+  EventResult OnOtherEvent(const Event &event) {
+    ScriptableEvent scriptable_event(&event, this, NULL);
     DLOG("%s(view)", scriptable_event.GetName());
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
@@ -729,14 +807,38 @@ class View::Impl {
       case Event::EVENT_FOCUS_OUT:
         SetFocus(NULL);
         break;
-      case Event::EVENT_OK:
-        FireEvent(&scriptable_event, onok_event_);
-        break;
       case Event::EVENT_CANCEL:
         FireEvent(&scriptable_event, oncancel_event_);
         break;
+      case Event::EVENT_CLOSE:
+        FireEvent(&scriptable_event, onclose_event_);
+        break;
+      case Event::EVENT_DOCK:
+        FireEvent(&scriptable_event, ondock_event_);
+        break;
+      case Event::EVENT_MINIMIZE:
+        FireEvent(&scriptable_event, onminimize_event_);
+        break;
+      case Event::EVENT_OK:
+        FireEvent(&scriptable_event, onok_event_);
+        break;
+      case Event::EVENT_OPEN:
+        FireEvent(&scriptable_event, onopen_event_);
+        break;
+      case Event::EVENT_POPIN:
+        FireEvent(&scriptable_event, onpopin_event_);
+        break;
+      case Event::EVENT_POPOUT:
+        FireEvent(&scriptable_event, onpopout_event_);
+        break;
+      case Event::EVENT_RESTORE:
+        FireEvent(&scriptable_event, onrestore_event_);
+        break;
       case Event::EVENT_SIZING:
         FireEvent(&scriptable_event, onsizing_event_);
+        break;
+      case Event::EVENT_UNDOCK:
+        FireEvent(&scriptable_event, onundock_event_);
         break;
       default:
         ASSERT(false);
@@ -744,39 +846,151 @@ class View::Impl {
     return scriptable_event.GetReturnValue();
   }
 
-  bool OnElementAdd(BasicElement *element) {
-    ASSERT(element);
-    if (element->IsInstanceOf(ContentAreaElement::CLASS_ID)) {
-      if (content_area_element_.Get()) {
-        LOG("Only one contentarea element is allowed in a view");
-        return false;
+  void SetSize(int width, int height) {
+    if (width != width_ || height != height_) {
+      // Invalidate the canvas cache.
+      if (canvas_cache_) {
+        canvas_cache_->Destroy();
+        canvas_cache_ = NULL;
       }
-      content_area_element_.Reset(down_cast<ContentAreaElement *>(element));
+
+      width_ = width;
+      height_ = height;
+      host_->QueueResize();
+
+      SimpleEvent event(Event::EVENT_SIZE);
+      ScriptableEvent scriptable_event(&event, this, NULL);
+      FireEvent(&scriptable_event, onsize_event_);
     }
-
-    std::string name = element->GetName();
-    if (!name.empty() &&
-        // Don't overwrite the existing element with the same name.
-        all_elements_.find(name) == all_elements_.end())
-      all_elements_[name] = element;
-
-    return true;
   }
 
-  // All references to this element should be cleared here.
-  void OnElementRemove(BasicElement *element) {
-    ASSERT(element);
-    if (element == tooltip_element_.Get())
-      host_->SetTooltip(NULL);
+  void ResizeBy(int width, int height) {
+    SetSize(width_ + width, height_ + height);
+  }
 
-    std::string name = element->GetName();
-    if (!name.empty()) {
-      ElementsMap::iterator it = all_elements_.find(name);
-      if (it != all_elements_.end() && it->second == element)
-        all_elements_.erase(it);
+  int GetWidth() {
+    return width_;
+  }
+
+  int GetHeight() {
+    return height_;
+  }
+
+  void MarkRedraw() {
+    need_redraw_ = true;
+    children_.MarkRedraw();
+  }
+
+  void Draw(CanvasInterface *canvas) {
+#ifdef _DEBUG
+    draw_count_ = 0;
+    uint64_t start = main_loop_->GetCurrentTime();
+#endif
+    // Any QueueDraw() called during Layout() will be ignored, because
+    // draw_queued_ is true.
+    draw_queued_ = true;
+    children_.Layout();
+    draw_queued_ = false;
+
+    if (!canvas_cache_) {
+      canvas_cache_ = host_->GetGraphics()->NewCanvas(width_, height_);
+      need_redraw_ = true;
     }
 
-    clip_region_.AddElementOldPosition(element);
+    if (need_redraw_)
+      clip_region_.Maximize();
+    else
+      clip_region_.Transfer();
+
+    // Let posted events be processed after Layout() and before actual Draw().
+    // This can prevent some flickers, for example, onsize of labels.
+    FirePostedEvents();
+
+    canvas_cache_->PushState();
+    canvas_cache_->IntersectGeneralClipRegion(clip_region_.GetCount(),
+                                              clip_region_.GetRectangles());
+    canvas_cache_->ClearRect(0, 0, width_, height_);
+    children_.Draw(canvas_cache_);
+
+    if (popup_element_.Get()) {
+      popup_element_.Get()->ClearPositionChanged();
+      std::vector<BasicElement *> elements;
+      BasicElement *e = popup_element_.Get();
+      for (; e != NULL; e = e->GetParentElement())
+        elements.push_back(e);
+
+      std::vector<BasicElement *>::reverse_iterator it = elements.rbegin();
+      for (; it < elements.rend(); ++it) {
+        BasicElement *element = *it;
+        if (element->GetRotation() == .0) {
+          canvas_cache_->TranslateCoordinates(
+              element->GetPixelX() - element->GetPixelPinX(),
+              element->GetPixelY() - element->GetPixelPinY());
+        } else {
+          canvas_cache_->TranslateCoordinates(element->GetPixelX(),
+                                              element->GetPixelY());
+          canvas_cache_->RotateCoordinates(
+              DegreesToRadians(element->GetRotation()));
+          canvas_cache_->TranslateCoordinates(-element->GetPixelPinX(),
+                                              -element->GetPixelPinY());
+        }
+      }
+
+      popup_element_.Get()->Draw(canvas_cache_);
+    }
+    canvas_cache_->PopState();
+    canvas->DrawCanvas(0, 0, canvas_cache_);
+#ifdef _DEBUG
+    uint64_t end = main_loop_->GetCurrentTime();
+    if (end > 0 && start > 0 && fp_) {
+      fprintf(fp_, "%d,%d,%llu;  ", draw_count_,
+              clip_region_.GetCount(), end - start);
+    }
+#endif
+    clip_region_.Clear();
+    need_redraw_ = false;
+  }
+
+  bool OnAddContextMenuItems(MenuInterface *menu) {
+    bool result = true;
+    if (mouseover_element_.Get()) {
+      if (mouseover_element_.Get()->IsReallyEnabled())
+        result = mouseover_element_.Get()->OnAddContextMenuItems(menu);
+      else
+        mouseover_element_.Reset(NULL);
+    }
+
+    // If the view is main and the mouse over element doesn't have special menu
+    // items, then add gadget's menu items.
+    if (result && type_ == VIEW_MAIN && gadget_)
+      gadget_->OnAddCustomMenuItems(menu);
+
+    return result;
+  }
+
+  bool OnSizing(int *width, int *height) {
+    ASSERT(width);
+    ASSERT(height);
+
+    double dw = *width;
+    double dh = *height;
+
+    SizingEvent event(dw, dh);
+    ScriptableEvent scriptable_event(&event, this, &event);
+
+    FireEvent(&scriptable_event, onsizing_event_);
+    bool result = (scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED);
+
+    DLOG("onsizing view %s, request: %d x %d, actual: %lf x %lf",
+         (result ? "accepted" : "cancelled"),
+         *width, *height, event.GetWidth(), event.GetHeight());
+
+    if (result) {
+      *width = static_cast<int>(ceil(event.GetWidth()));
+      *height = static_cast<int>(ceil(event.GetHeight()));
+    }
+
+    return result;
   }
 
   void FireEventSlot(ScriptableEvent *event, const Slot *slot) {
@@ -842,8 +1056,53 @@ class View::Impl {
     }
   }
 
-  ScriptableEvent *GetEvent() const {
+  ScriptableEvent *GetEvent() {
     return event_stack_.empty() ? NULL : *(event_stack_.end() - 1);
+  }
+
+  BasicElement *GetElementByName(const char *name) {
+    ElementsMap::iterator it = all_elements_.find(name);
+    return it == all_elements_.end() ? NULL : it->second;
+  }
+
+  // For script.
+  Variant GetElementByNameVariant(const char *name) {
+    BasicElement *result = GetElementByName(name);
+    return result ? Variant(result) : Variant();
+  }
+
+  bool OnElementAdd(BasicElement *element) {
+    ASSERT(element);
+    if (element->IsInstanceOf(ContentAreaElement::CLASS_ID)) {
+      if (content_area_element_.Get()) {
+        LOG("Only one contentarea element is allowed in a view");
+        return false;
+      }
+      content_area_element_.Reset(down_cast<ContentAreaElement *>(element));
+    }
+
+    std::string name = element->GetName();
+    if (!name.empty() &&
+        // Don't overwrite the existing element with the same name.
+        all_elements_.find(name) == all_elements_.end())
+      all_elements_[name] = element;
+    return true;
+  }
+
+  // All references to this element should be cleared here.
+  void OnElementRemove(BasicElement *element) {
+    ASSERT(element);
+    if (element == tooltip_element_.Get())
+      host_->SetTooltip(NULL);
+
+    std::string name = element->GetName();
+    if (!name.empty()) {
+      ElementsMap::iterator it = all_elements_.find(name);
+      if (it != all_elements_.end() && it->second == element)
+        all_elements_.erase(it);
+    }
+
+    clip_region_.AddElementOldPosition(element);
   }
 
   void SetFocus(BasicElement *element) {
@@ -875,116 +1134,14 @@ class View::Impl {
     }
   }
 
-  bool SetWidth(int width) {
-    return SetSize(width, height_);
-  }
-
-  bool SetHeight(int height) {
-    return SetSize(width_, height);
-  }
-
-  bool SetSize(int width, int height) {
-    if (width != width_ || height != height_) {
-      width_ = width;
-      height_ = height;
-      host_->QueueDraw();
-
-      SimpleEvent event(Event::EVENT_SIZE);
-      ScriptableEvent scriptable_event(&event, owner_, NULL);
-      FireEvent(&scriptable_event, onsize_event_);
-    }
-    return true;
-  }
-
-  void MarkRedraw() {
-    need_redraw_ = true;
-    children_.MarkRedraw();
-  }
-
-  bool ResizeBy(int width, int height) {
-    return SetSize(width_ + width, height_ + height);
-  }
-
-  void Draw(CanvasInterface *canvas) {
-#ifdef _DEBUG
-    draw_count_ = 0;
-    uint64_t start = main_loop_->GetCurrentTime();
-#endif
-    // Any QueueDraw() called during Layout() will be ignored, because
-    // draw_queued_ is true.
-    draw_queued_ = true;
-    children_.Layout();
-    draw_queued_ = false;
-    if (!canvas_cache_) {
-      canvas_cache_ = host_->GetGraphics()->NewCanvas(width_, height_);
-    }
-    if (need_redraw_)
-      clip_region_.Maximize();
-    else
-      clip_region_.Transfer();
-
-    // Let posted events be processed after Layout() and before actual Draw().
-    // This can prevent some flickers, for example, onsize of labels.
-    FirePostedEvents();
-
-    canvas_cache_->PushState();
-    canvas_cache_->IntersectGeneralClipRegion(clip_region_.GetCount(),
-                                              clip_region_.GetRectangles());
-    canvas_cache_->ClearRect(0, 0, width_, height_);
-    children_.Draw(canvas_cache_);
-
+  void SetPopupElement(BasicElement *element) {
     if (popup_element_.Get()) {
-      popup_element_.Get()->ClearPositionChanged();
-      std::vector<BasicElement *> elements;
-      BasicElement *e = popup_element_.Get();
-      for (; e != NULL; e = e->GetParentElement())
-        elements.push_back(e);
-
-      std::vector<BasicElement *>::reverse_iterator it = elements.rbegin();
-      for (; it < elements.rend(); ++it) {
-        BasicElement *element = *it;
-        if (element->GetRotation() == .0) {
-          canvas_cache_->TranslateCoordinates(
-              element->GetPixelX() - element->GetPixelPinX(),
-              element->GetPixelY() - element->GetPixelPinY());
-        } else {
-          canvas_cache_->TranslateCoordinates(element->GetPixelX(),
-                                              element->GetPixelY());
-          canvas_cache_->RotateCoordinates(
-              DegreesToRadians(element->GetRotation()));
-          canvas_cache_->TranslateCoordinates(-element->GetPixelPinX(),
-                                              -element->GetPixelPinY());
-        }
-      }
-
-      popup_element_.Get()->Draw(canvas_cache_);
+      popup_element_.Get()->OnPopupOff();
     }
-    canvas_cache_->PopState();
-    canvas->DrawCanvas(0, 0, canvas_cache_);
-#ifdef _DEBUG
-    uint64_t end = main_loop_->GetCurrentTime();
-    if (end > 0 && start > 0 && fp_) {
-      fprintf(fp_, "%d,%d,%llu;  ", draw_count_,
-              clip_region_.GetCount(), end - start);
+    popup_element_.Reset(element);
+    if (element) {
+      element->QueueDraw();
     }
-#endif
-    clip_region_.Clear();
-    need_redraw_ = false;
-  }
-
-  BasicElement *GetElementByName(const char *name) {
-    ElementsMap::iterator it = all_elements_.find(name);
-    return it == all_elements_.end() ? NULL : it->second;
-  }
-
-  // For script.
-  Variant GetElementByNameVariant(const char *name) {
-    BasicElement *result = GetElementByName(name);
-    return result ? Variant(result) : Variant();
-  }
-
-  void RemoveTimer(int token) {
-    main_loop_->RemoveWatch(token);
   }
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
@@ -1014,19 +1171,74 @@ class View::Impl {
     return id;
   }
 
-  void SetPopupElement(BasicElement *element) {
-    if (popup_element_.Get()) {
-      popup_element_.Get()->OnPopupOff();
+  void RemoveTimer(int token) {
+    main_loop_->RemoveWatch(token);
+  }
+
+  ScriptableImage *LoadScriptableImage(const Variant &image_src) {
+    ImageInterface *image = LoadImage(image_src, false);
+    return image ? new ScriptableImage(image) : NULL;
+  }
+
+  ImageInterface *LoadImage(const Variant &src, bool is_mask) {
+    if (!gadget_) return NULL;
+
+    Variant::Type type = src.type();
+    if (type == Variant::TYPE_STRING) {
+      const char *filename = VariantValue<const char*>()(src);
+      if (filename && *filename) {
+        std::string data;
+        if (gadget_->GetFileManager()->ReadFile(filename, &data)) {
+          return host_->GetGraphics()->NewImage(filename, data, is_mask);
+        }
+      }
+    } else if (type == Variant::TYPE_SCRIPTABLE) {
+      const ScriptableBinaryData *binary =
+          VariantValue<const ScriptableBinaryData *>()(src);
+      if (binary)
+        return host_->GetGraphics()->NewImage("", binary->data(), is_mask);
+    } else {
+      LOG("Unsupported type of image src.");
+      DLOG("src=%s", src.Print().c_str());
     }
-    popup_element_.Reset(element);
-    if (element) {
-      element->QueueDraw();
+    return NULL;
+  }
+
+  ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {
+    if (name && *name) {
+      std::string data;
+      if (GetGlobalFileManager()->ReadFile(name, &data)) {
+        return host_->GetGraphics()->NewImage(name, data, is_mask);
+      }
     }
+    return NULL;
+  }
+
+  Texture *LoadTexture(const Variant &src) {
+    Color color;
+    double opacity;
+    if (src.type() == Variant::TYPE_STRING) {
+      const char *name = VariantValue<const char *>()(src);
+      if (name && name[0] == '#' && Color::FromString(name, &color, &opacity))
+        return new Texture(color, opacity);
+    }
+
+    ImageInterface *image = LoadImage(src, false);
+    return image ? new Texture(image) : NULL;
+  }
+
+  void *GetNativeWidget() {
+    return host_->GetNativeWidget();
+  }
+
+  void ViewCoordToNativeWidgetCoord(double x, double y,
+                                    double *widget_x, double *widget_y) {
+    host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
   }
 
   void OnOptionChanged(const char *name) {
     OptionChangedEvent event(name);
-    ScriptableEvent scriptable_event(&event, owner_, NULL);
+    ScriptableEvent scriptable_event(&event, this, NULL);
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
@@ -1034,6 +1246,26 @@ class View::Impl {
     return CreateXMLHttpRequest(GetXMLParser());
   }
 
+  bool OpenURL(const char *url) {
+    if (!gadget_) return false;
+
+    // Important: verify that URL is valid first.
+    // Otherwise could be a security problem.
+    std::string newurl = EncodeURL(url);
+    if (0 == strncasecmp(newurl.c_str(), kHttpUrlPrefix,
+                         arraysize(kHttpUrlPrefix) - 1) ||
+        0 == strncasecmp(newurl.c_str(), kHttpsUrlPrefix,
+                         arraysize(kHttpsUrlPrefix) - 1) ||
+        0 == strncasecmp(newurl.c_str(), kFtpUrlPrefix,
+                         arraysize(kFtpUrlPrefix) - 1)) {
+      return gadget_->GetHost()->OpenURL(newurl.c_str());
+    }
+
+    DLOG("Malformed URL: %s", newurl.c_str());
+    return false;
+  }
+
+ public: // member variables
   EventSignal oncancel_event_;
   EventSignal onclick_event_;
   EventSignal onclose_event_;
@@ -1060,78 +1292,97 @@ class View::Impl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
 
-  // Put all_elements_ here to make it the alst member to be destructed,
-  // because destruction of children_ needs it.
   // Note: though other things are case-insenstive, this map is case-sensitive,
   // to keep compatible with the Windows version.
   typedef std::map<std::string, BasicElement *> ElementsMap;
+  // Put all_elements_ here to make it the last member to be destructed,
+  // because destruction of children_ needs it.
   ElementsMap all_elements_;
 
-  std::vector<bool> overlap_bitmap_;
   ViewClipRegion clip_region_;
-  CanvasInterface *canvas_cache_;
 
+  ViewType type_;
   View *owner_;
-  ViewHostInterface *host_;
-  GadgetHostInterface *gadget_host_;
-  ScriptContextInterface *script_context_;
+  Gadget *gadget_;
   ElementFactory *element_factory_;
   MainLoopInterface *main_loop_;
+  ViewHostInterface *host_;
+  ScriptContextInterface *script_context_;
+  Connection *onoptionchanged_connection_;
+  CanvasInterface *canvas_cache_;
 
   Elements children_;
-  int debug_mode_;
-  int width_, height_;
-  ResizableMode resizable_;
-  std::string caption_;
-  bool show_caption_always_;
-
-  std::vector<ScriptableEvent *> event_stack_;
-
-  static const unsigned int kAnimationInterval = 20;
-  static const unsigned int kMinInterval = 5;
+  NativeOwnedScriptable utils_;
+  GlobalObject global_object_;
 
   ElementHolder focused_element_;
   ElementHolder mouseover_element_;
   ElementHolder grabmouse_element_;
   ElementHolder dragover_element_;
-  EventResult dragover_result_;
   ElementHolder tooltip_element_;
+  ElementHolder popup_element_;
   ScriptableHolder<ContentAreaElement> content_area_element_;
 
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
       PostedEvents;
   PostedEvents posted_events_;
-  ElementHolder popup_element_;
+
+  std::vector<ScriptableEvent *> event_stack_;
+
+  EventResult dragover_result_;
+  int width_;
+  int height_;
+  ResizableMode resizable_;
+  std::string caption_;
+  bool show_caption_always_;
+
   int post_event_token_;
   bool draw_queued_;
-  Signal0<void> on_destroy_signal_;
-
-  Utils utils_;
-  GlobalObject global_object_;
   bool events_enabled_;
   bool need_redraw_;
-
   int draw_count_;
   FILE *fp_;
+
+  Signal0<void> on_destroy_signal_;
+
+  static const unsigned int kAnimationInterval = 20;
+  static const unsigned int kMinInterval = 5;
 };
 
-View::View(ScriptableInterface *inherits_from,
-           ElementFactory *element_factory,
-           int debug_mode)
-    : impl_(new Impl(element_factory, debug_mode, this)) {
-  impl_->RegisterProperties(this);
-  impl_->RegisterProperties(&impl_->global_object_);
-  impl_->global_object_.RegisterConstant("view", this);
-  impl_->global_object_.RegisterConstant("utils", &impl_->utils_);
-  impl_->global_object_.SetDynamicPropertyHandler(
-      NewSlot(impl_, &Impl::GetElementByNameVariant), NULL);
-  if (inherits_from)
-    impl_->global_object_.SetInheritsFrom(inherits_from);
+View::View(ViewType type,
+           ViewHostInterface *host,
+           Gadget *gadget,
+           ScriptableInterface *prototype,
+           ElementFactory *element_factory)
+    : impl_(new Impl(type, this, host, gadget, prototype, element_factory)) {
+  // Make sure that the view is initialized when attaching to the ViewHost.
+  impl_->host_->SetView(this);
 }
 
 View::~View() {
+  ScriptContextInterface *script_context = impl_->script_context_;
+  ViewHostInterface *host = impl_->host_;
+
   delete impl_;
   impl_ = NULL;
+
+  // script context must be destroyed after deleting impl_, because impl_ is a
+  // ScriptableObject hooked in script_context.
+  if (script_context)
+    script_context->Destroy();
+
+  // host must be deleted after deleting impl_, because Graphics instance,
+  // which is owned by host, must be available when deleting impl_.
+  if (host)
+    host->Destroy();
+}
+
+Gadget *View::GetGadget() const {
+  return impl_->gadget_;
+}
+
+ScriptableInterface *View::GetScriptable() const {
+  return impl_;
 }
 
 ScriptContextInterface *View::GetScriptContext() const {
@@ -1139,45 +1390,31 @@ ScriptContextInterface *View::GetScriptContext() const {
 }
 
 FileManagerInterface *View::GetFileManager() const {
-  // FIXME: ugly hack.
-  return impl_->gadget_host_->GetGadget()->GetFileManager();
+  return impl_->gadget_->GetFileManager();
+}
+
+const GraphicsInterface *View::GetGraphics() const {
+  return impl_->host_->GetGraphics();
 }
 
 bool View::InitFromXML(const std::string &xml, const char *filename) {
-  return impl_->InitFromXML(xml, filename);
+  return SetupViewFromXML(this, xml, filename);
 }
 
-void View::AttachHost(ViewHostInterface *host) {
-  impl_->host_ = host;
-  impl_->gadget_host_ = host->GetGadgetHost();
-  impl_->script_context_ = host->GetScriptContext();
+ViewInterface::ViewType View::GetType() const {
+  return impl_->type_;
+}
 
-  // Register script context.
-  if (impl_->script_context_) {
-    impl_->script_context_->SetGlobalObject(&impl_->global_object_);
+void View::SetWidth(int width) {
+  impl_->SetSize(width, impl_->height_);
+}
 
-    // Register global classes into script context.
-    impl_->script_context_->RegisterClass("DOMDocument",
-        NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
-    impl_->script_context_->RegisterClass(
-        "XMLHttpRequest", NewSlot(impl_, &Impl::NewXMLHttpRequest));
-    impl_->script_context_->RegisterClass(
-        "DetailsView", NewSlot(DetailsView::CreateInstance));
-    impl_->script_context_->RegisterClass(
-        "ContentItem", NewFunctorSlot<ContentItem *>(
-             ContentItem::ContentItemCreator(this)));
+void View::SetHeight(int height) {
+  impl_->SetSize(impl_->width_, height);
+}
 
-    // Execute common.js to initialize global constants and compatibility
-    // adapters.
-    std::string common_js_contents;
-    if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
-      std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
-      impl_->script_context_->Execute(common_js_contents.c_str(),
-                                      path.c_str(), 1);
-    } else {
-      LOG("Failed to load %s.", kCommonJS);
-    }
-  }
+void View::SetSize(int width, int height) {
+  impl_->SetSize(width, height);
 }
 
 int View::GetWidth() const {
@@ -1188,122 +1425,17 @@ int View::GetHeight() const {
   return impl_->height_;
 }
 
-void View::Draw(CanvasInterface *canvas) {
-  impl_->Draw(canvas);
-}
-
-void *View::GetNativeWidget() {
-  return impl_->host_->GetNativeWidget();
-}
-
-void View::ViewCoordToNativeWidgetCoord(double x, double y,
-                                        double *widget_x, double *widget_y) {
-  impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
-}
-
-void View::QueueDraw(BasicElement *element) {
-  impl_->clip_region_.AddElement(element);
-  if (!impl_->draw_queued_) {
-    impl_->draw_queued_ = true;
-    impl_->host_->QueueDraw();
-  }
-}
-
-const GraphicsInterface *View::GetGraphics() const {
-  return impl_->host_->GetGraphics();
-}
-
-EventResult View::OnMouseEvent(const MouseEvent &event) {
-  return impl_->OnMouseEvent(event);
-}
-
-EventResult View::OnKeyEvent(const KeyboardEvent &event) {
-  return impl_->OnKeyEvent(event);
-}
-
-EventResult View::OnDragEvent(const DragEvent &event) {
-  return impl_->OnDragEvent(event);
-}
-
-EventResult View::OnOtherEvent(const Event &event, Event *output_event) {
-  return impl_->OnOtherEvent(event, output_event);
-}
-
-bool View::OnElementAdd(BasicElement *element) {
-  return impl_->OnElementAdd(element);
-}
-
-void View::OnElementRemove(BasicElement *element) {
-  impl_->OnElementRemove(element);
-}
-
-void View::SetPopupElement(BasicElement *element) {
-  impl_->SetPopupElement(element);
-}
-
-BasicElement *View::GetPopupElement() {
-  return impl_->popup_element_.Get();
-}
-
-void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
-  impl_->FireEvent(event, event_signal);
-}
-
-void View::PostEvent(ScriptableEvent *event, const EventSignal &event_signal) {
-  impl_->PostEvent(event, event_signal);
-}
-
-ScriptableEvent *View::GetEvent() {
-  return impl_->GetEvent();
-}
-
-const ScriptableEvent *View::GetEvent() const {
-  return impl_->GetEvent();
-}
-
-bool View::SetWidth(int width) {
-  return impl_->SetWidth(width);
-}
-
-bool View::SetHeight(int height) {
-  return impl_->SetHeight(height);
-}
-
-bool View::SetSize(int width, int height) {
-  return impl_->SetSize(width, height);
+void View::SetResizable(ViewInterface::ResizableMode resizable) {
+  impl_->resizable_ = resizable;
+  impl_->host_->SetResizable(resizable);
 }
 
 ViewInterface::ResizableMode View::GetResizable() const {
   return impl_->resizable_;
 }
 
-void View::SetResizable(ViewInterface::ResizableMode resizable) {
-  impl_->resizable_ = resizable;
-  impl_->host_->SetResizable(resizable);
-}
-
-ElementFactory *View::GetElementFactory() const {
-  return impl_->element_factory_;
-}
-
-const Elements *View::GetChildren() const {
-  return &impl_->children_;
-}
-
-Elements *View::GetChildren() {
-  return &impl_->children_;
-}
-
-BasicElement *View::GetElementByName(const char *name) {
-  return impl_->GetElementByName(name);
-}
-
-const BasicElement *View::GetElementByName(const char *name) const {
-  return impl_->GetElementByName(name);
-}
-
 void View::SetCaption(const char *caption) {
-  impl_->caption_ = caption ? caption : NULL;
+  impl_->caption_ = caption ? caption : "";
   impl_->host_->SetCaption(caption);
 }
 
@@ -1318,6 +1450,110 @@ void View::SetShowCaptionAlways(bool show_always) {
 
 bool View::GetShowCaptionAlways() const {
   return impl_->show_caption_always_;
+}
+
+void View::MarkRedraw() {
+  impl_->MarkRedraw();
+}
+
+void View::Draw(CanvasInterface *canvas) {
+  impl_->Draw(canvas);
+}
+
+EventResult View::OnMouseEvent(const MouseEvent &event) {
+  return impl_->OnMouseEvent(event);
+}
+
+EventResult View::OnKeyEvent(const KeyboardEvent &event) {
+  return impl_->OnKeyEvent(event);
+}
+
+EventResult View::OnDragEvent(const DragEvent &event) {
+  return impl_->OnDragEvent(event);
+}
+
+EventResult View::OnOtherEvent(const Event &event) {
+  return impl_->OnOtherEvent(event);
+}
+
+bool View::OnAddContextMenuItems(MenuInterface *menu) {
+  return impl_->OnAddContextMenuItems(menu);
+}
+
+bool View::OnSizing(int *width, int *height) {
+  return impl_->OnSizing(width, height);
+}
+
+void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
+  impl_->FireEvent(event, event_signal);
+}
+
+void View::PostEvent(ScriptableEvent *event, const EventSignal &event_signal) {
+  impl_->PostEvent(event, event_signal);
+}
+
+ScriptableEvent *View::GetEvent() const {
+  return impl_->GetEvent();
+}
+
+void View::EnableEvents(bool enable_events) {
+  impl_->events_enabled_ = enable_events;
+}
+
+ElementFactory *View::GetElementFactory() const {
+  return impl_->element_factory_;
+}
+
+Elements *View::GetChildren() const {
+  return &impl_->children_;
+}
+
+BasicElement *View::GetElementByName(const char *name) const {
+  return impl_->GetElementByName(name);
+}
+
+bool View::OnElementAdd(BasicElement *element) {
+  return impl_->OnElementAdd(element);
+}
+
+void View::OnElementRemove(BasicElement *element) {
+  impl_->OnElementRemove(element);
+}
+
+void View::SetFocus(BasicElement *element) {
+  impl_->SetFocus(element);
+}
+
+void View::SetPopupElement(BasicElement *element) {
+  impl_->SetPopupElement(element);
+}
+
+BasicElement *View::GetPopupElement() const {
+  return impl_->popup_element_.Get();
+}
+
+BasicElement *View::GetFocusedElement() const {
+  return impl_->focused_element_.Get();
+}
+
+BasicElement *View::GetMouseOverElement() const {
+  return impl_->mouseover_element_.Get();
+}
+
+ContentAreaElement *View::GetContentAreaElement() const {
+  return impl_->content_area_element_.Get();
+}
+
+bool View::IsElementInClipRegion(const BasicElement *element) const {
+  return impl_->clip_region_.IsElementIn(element);
+}
+
+void View::AddElementToClipRegion(BasicElement *element) {
+  impl_->clip_region_.AddElement(element);
+}
+
+void View::IncreaseDrawCount() {
+  impl_->draw_count_++;
 }
 
 int View::BeginAnimation(Slot0<void> *slot,
@@ -1347,148 +1583,71 @@ void View::ClearInterval(int token) {
   impl_->RemoveTimer(token);
 }
 
-int View::GetDebugMode() const {
-  return impl_->debug_mode_;
+ImageInterface *View::LoadImage(const Variant &src, bool is_mask) const {
+  return impl_->LoadImage(src, is_mask);
 }
 
-BasicElement *View::GetFocusedElement() {
-  return impl_->focused_element_.Get();
+ImageInterface *
+View::LoadImageFromGlobal(const char *name, bool is_mask) const {
+  return impl_->LoadImageFromGlobal(name, is_mask);
 }
 
-BasicElement *View::GetMouseOverElement() {
-  return impl_->mouseover_element_.Get();
+Texture *View::LoadTexture(const Variant &src) const {
+  return impl_->LoadTexture(src);
 }
 
-void View::EnableEvents(bool enable_events) {
-  impl_->events_enabled_ = enable_events;
+void *View::GetNativeWidget() const {
+  return impl_->host_->GetNativeWidget();
 }
 
-ImageInterface *View::LoadImage(const Variant &src, bool is_mask) {
-  Variant::Type type = src.type();
-  if (type == Variant::TYPE_STRING) {
-    const char *filename = VariantValue<const char*>()(src);
-    if (filename && *filename) {
-      std::string data;
-      if (GetFileManager()->ReadFile(filename, &data)) {
-        return GetGraphics()->NewImage(filename, data, is_mask);
-      }
-    }
-  } else if (type == Variant::TYPE_SCRIPTABLE) {
-    const ScriptableBinaryData *binary =
-        VariantValue<const ScriptableBinaryData *>()(src);
-    if (binary)
-      return GetGraphics()->NewImage("", binary->data(), is_mask);
-  } else {
-    LOG("Unsupported type of image src.");
-    DLOG("src=%s", src.Print().c_str());
+void View::ViewCoordToNativeWidgetCoord(
+    double x, double y, double *widget_x, double *widget_y) const {
+  impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
+}
+
+void View::QueueDraw(BasicElement *element) {
+  impl_->clip_region_.AddElement(element);
+  if (!impl_->draw_queued_) {
+    impl_->draw_queued_ = true;
+    impl_->host_->QueueDraw();
   }
-  return NULL;
 }
 
-ImageInterface *View::LoadImageFromGlobal(const char *name, bool is_mask) {
-  if (name && *name) {
-    std::string data;
-    if (GetGlobalFileManager()->ReadFile(name, &data)) {
-      return GetGraphics()->NewImage(name, data, is_mask);
-    }
-  }
-  return NULL;
-}
-
-Texture *View::LoadTexture(const Variant &src) {
-  Color color;
-  double opacity;
-  if (src.type() == Variant::TYPE_STRING) {
-    const char *name = VariantValue<const char *>()(src);
-    if (name && name[0] == '#' && Color::FromString(name, &color, &opacity))
-      return new Texture(color, opacity);
-  }
-
-  ImageInterface *image = LoadImage(src, false);
-  return image ? new Texture(image) : NULL;
-}
-
-void View::SetFocus(BasicElement *element) {
-  impl_->SetFocus(element);
+ViewInterface::DebugMode View::GetDebugMode() const {
+  return impl_->host_->GetDebugMode();
 }
 
 bool View::OpenURL(const char *url) const {
-  // Important: verify that URL is valid first.
-  // Otherwise could be a security problem.
-  std::string newurl = EncodeURL(url);
-  if (0 == strncasecmp(newurl.c_str(), kHttpUrlPrefix,
-                       arraysize(kHttpUrlPrefix) - 1) ||
-      0 == strncasecmp(newurl.c_str(), kHttpsUrlPrefix,
-                       arraysize(kHttpsUrlPrefix) - 1) ||
-      0 == strncasecmp(newurl.c_str(), kFtpUrlPrefix,
-                       arraysize(kFtpUrlPrefix) - 1)) {
-    return impl_->gadget_host_->OpenURL(newurl.c_str());
-  }
-
-  DLOG("Malformed URL: %s", newurl.c_str());
-  return false;
+  return impl_->OpenURL(url);
 }
 
-void View::OnOptionChanged(const char *name) {
-  impl_->OnOptionChanged(name);
-}
-
-void View::Alert(const char *message) {
+void View::Alert(const char *message) const {
   impl_->host_->Alert(message);
 }
 
-bool View::Confirm(const char *message) {
+bool View::Confirm(const char *message) const {
   return impl_->host_->Confirm(message);
 }
 
-std::string View::Prompt(const char *message, const char *default_result) {
+std::string
+View::Prompt(const char *message, const char *default_result) const {
   return impl_->host_->Prompt(message, default_result);
 }
 
-uint64_t View::GetCurrentTime() {
+uint64_t View::GetCurrentTime() const {
   return impl_->main_loop_->GetCurrentTime();
-}
-
-ContentAreaElement *View::GetContentAreaElement() {
-  return impl_->content_area_element_.Get();
 }
 
 void View::SetTooltip(const char *tooltip) {
   impl_->host_->SetTooltip(tooltip);
 }
 
-bool View::ShowDetailsView(DetailsView *details_view,
-                           const char *title, int flags,
-                           Slot1<void, int> *feedback_handler) {
-  return impl_->gadget_host_->GetGadget()->ShowDetailsView(details_view, title,
-                                                           flags,
-                                                           feedback_handler);
+bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
+  return impl_->host_->ShowView(modal, flags, feedback_handler);
 }
 
-bool View::IsElementInClipRegion(const BasicElement *element) const {
-  return impl_->clip_region_.IsElementIn(element);
-}
-
-void View::AddElementToClipRegion(BasicElement *element) {
-  impl_->clip_region_.AddElement(element);
-}
-
-void View::IncreaseDrawCount() {
-  impl_->draw_count_++;
-}
-
-bool View::OnAddContextMenuItems(MenuInterface *menu) {
-  if (impl_->mouseover_element_.Get()) {
-    if (impl_->mouseover_element_.Get()->IsReallyEnabled())
-      return impl_->mouseover_element_.Get()->OnAddContextMenuItems(menu);
-    else
-      impl_->mouseover_element_.Reset(NULL);
-  }
-  return true;
-}
-
-void View::MarkRedraw() {
-  impl_->MarkRedraw();
+void View::CloseView() {
+  impl_->host_->CloseView();
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

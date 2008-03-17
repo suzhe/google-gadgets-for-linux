@@ -14,7 +14,8 @@
   limitations under the License.
 -->
 
-<view width="200" height="300" resizable="true" showCaptionAlways="true" 
+<view width="200" height="300" resizable="true" showCaptionAlways="true"
+      onopen="Refresh()"
       caption="&GADGET_NAME;">
   <contentArea name="contents" width="100%" height="100%"/>
   <script src="main.js"/>

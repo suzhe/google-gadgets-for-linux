@@ -37,7 +37,6 @@ contents.contentFlags = gddContentFlagHaveDetails;
 plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
 
 view.setInterval("Refresh()", kRefreshInterval);
-Refresh();
 
 function OnAddCustomMenuItems(menu) { 
   menu.AddItem(strings.GADGET_REFRESH, 0, RefreshMenuHandler);

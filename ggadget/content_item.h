@@ -18,7 +18,7 @@
 #define GGADGET_CONTENT_ITEM_H__
 
 #include <ggadget/color.h>
-#include <ggadget/gadget_interface.h>
+#include <ggadget/gadget.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/slot.h>
 #include <ggadget/variant.h>
@@ -28,7 +28,7 @@ namespace ggadget {
 class CanvasInterface;
 class ContentAreaElement;
 class Connection;
-class DetailsView;
+class DetailsViewData;
 class ScriptableCanvas;
 class ScriptableImage;
 class View;
@@ -94,11 +94,11 @@ class ContentItem : public ScriptableHelperDefault {
   ContentItem(View *view);
 
   /** Used to register the global script class constructor of ContentItem. */
-  class ContentItemCreator {
+  class Creator {
    public:
-    ContentItemCreator(View *view) : view_(view) { }
+    Creator(View *view) : view_(view) { }
     ContentItem *operator()() const { return new ContentItem(view_); }
-    bool operator==(const ContentItemCreator &another) const {
+    bool operator==(const Creator &another) const {
       return another.view_ == view_;
     }
    private:
@@ -181,38 +181,38 @@ class ContentItem : public ScriptableHelperDefault {
   bool CanOpen() const;
 
   /** Draws the item. */
-  void Draw(GadgetInterface::DisplayTarget target, CanvasInterface *canvas,
+  void Draw(Gadget::DisplayTarget target, CanvasInterface *canvas,
             int x, int y, int width, int height);
   Connection *ConnectOnDrawItem(
-      Slot7<void, ContentItem *, GadgetInterface::DisplayTarget,
+      Slot7<void, ContentItem *, Gadget::DisplayTarget,
             ScriptableCanvas *, int, int, int, int> *handler);
 
   /** Gets the height in pixels of the item for the given width. */
-  int GetHeight(GadgetInterface::DisplayTarget target,
+  int GetHeight(Gadget::DisplayTarget target,
                 CanvasInterface *canvas, int width);
   Connection *ConnectOnGetHeight(
-      Slot4<int, ContentItem *, GadgetInterface::DisplayTarget,
+      Slot4<int, ContentItem *, Gadget::DisplayTarget,
             ScriptableCanvas *, int> *handler);
 
   /** Called when the user opens/double clicks the item. */
   void OpenItem();
   Connection *ConnectOnOpenItem(Slot1<bool, ContentItem *> *handler);
 
-  /** Called when the user clicks the 'pin' button of an item. */ 
+  /** Called when the user clicks the 'pin' button of an item. */
   void ToggleItemPinnedState();
   Connection *ConnectOnToggleItemPinnedState(
       Slot1<bool, ContentItem *> *handler);
 
   /** Called to check if a tooltip is required for the item. */
-  bool IsTooltipRequired(GadgetInterface::DisplayTarget target,
+  bool IsTooltipRequired(Gadget::DisplayTarget target,
                          CanvasInterface *canvas,
                          int x, int y, int width, int height);
   Connection *ConnectOnGetIsTooltipRequired(
-      Slot7<bool, ContentItem *, GadgetInterface::DisplayTarget,
+      Slot7<bool, ContentItem *, Gadget::DisplayTarget,
             ScriptableCanvas *, int, int, int, int> *handler);
 
   /** Called before showing the details view for the given item. */
-  bool OnDetailsView(std::string *title, DetailsView **details_view,
+  bool OnDetailsView(std::string *title, DetailsViewData **details_view_data,
                      int *flags);
   typedef Slot1<ScriptableInterface *, ContentItem *> OnDetailsViewHandler;
   Connection *ConnectOnDetailsView(OnDetailsViewHandler *handler);

@@ -42,22 +42,22 @@ class ElementsTest : public testing::Test {
  protected:
   virtual void SetUp() {
     factory_ = new MockedElementFactory();
-    view_host_ = new MockedViewHost(factory_);
-    muffin_ = new Muffin(NULL, view_host_->GetViewInternal(), NULL);
-    elements_ = new ggadget::Elements(factory_, muffin_,
-                                      view_host_->GetViewInternal());
+    view_ = new ggadget::View(ggadget::ViewInterface::VIEW_MAIN,
+                              new MockedViewHost(), NULL, NULL, factory_);
+    muffin_ = new Muffin(NULL, view_, NULL);
+    elements_ = new ggadget::Elements(factory_, muffin_, view_);
   }
 
   virtual void TearDown() {
     delete elements_;
     delete muffin_;
     delete factory_;
-    delete view_host_;
+    delete view_;
     ASSERT_EQ(0, count);
   }
 
-  MockedViewHost *view_host_;
   MockedElementFactory *factory_;
+  ggadget::View *view_;
   ggadget::Elements *elements_;
   Muffin *muffin_;
 };
