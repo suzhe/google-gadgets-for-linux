@@ -79,6 +79,8 @@ class ViewWidgetBinder::Impl {
     else
       gtk_widget_set_events(widget_, gtk_widget_get_events(widget_) | events);
 
+    GTK_WIDGET_SET_FLAGS(widget_, GTK_CAN_FOCUS);
+
     static const GtkTargetEntry kDragTargets[] = {
       { const_cast<char *>(kUriListTarget), 0, 0 },
     };
