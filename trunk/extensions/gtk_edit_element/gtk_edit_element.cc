@@ -63,6 +63,7 @@ GtkEditElement::GtkEditElement(BasicElement *parent, View *view, const char *nam
       impl_(new GtkEditImpl(this, ggadget::GetGlobalMainLoop(),
                             kDefaultEditElementWidth,
                             kDefaultEditElementHeight)) {
+  impl_->SetBackground(new Texture(kDefaultBackgroundColor, 1.0));
   ConnectOnScrolledEvent(NewSlot(this, &GtkEditElement::OnScrolled));
 }
 

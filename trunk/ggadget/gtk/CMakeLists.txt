@@ -25,15 +25,15 @@ SET(SRCS
   cairo_graphics.cc
   cairo_font.cc
   cairo_image_base.cc
-  gtk_gadget_host.cc
-  gtk_main_loop.cc
-  gtk_view_host.cc
-  gadget_view_widget.cc
-  gtk_key_convert.cc
-  gtk_menu_impl.cc
+  main_loop.cc
+  single_view_host.cc
+  view_widget_binder.cc
+  key_convert.cc
+  menu_builder.cc
   pixbuf_image.cc
-  pixbuf_utils.cc
   rsvg_image.cc
+  utilities.cc
+  tooltip.cc
 )
 
 ADD_SUBDIRECTORY(tests)

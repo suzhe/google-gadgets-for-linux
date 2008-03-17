@@ -30,6 +30,7 @@ ADD_DEFINITIONS(${SMJS_DEFINITIONS})
 
 SET(SRCS
   main.cc
+  simple_gtk_host.cc
 )
 
 ADD_EXECUTABLE(ggl ${SRCS})
