@@ -520,18 +520,46 @@ static JSBool ConvertNativeUTF16ToJSString(JSContext *cx,
   return result;
 }
 
+static JSBool ReturnSelf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                         jsval *rval) {
+  *rval = OBJECT_TO_JSVAL(obj);
+  return JS_TRUE;
+}
+
+static JSBool GetCollectionItem(JSContext *cx, JSObject *obj,
+                                uintN argc, jsval *argv, jsval *rval) {
+  if (argc >= 1 && JSVAL_IS_INT(argv[0]))
+    return JS_GetElement(cx, obj, JSVAL_TO_INT(argv[0]), rval);
+  return JSVAL_VOID;
+}
+
 static JSBool ConvertNativeArrayToJS(JSContext *cx, ScriptableArray *array,
                                      jsval *js_val) {
+  size_t length = array->GetCount();
+  if (length > JSVAL_INT_MAX)
+    return JS_FALSE;
+
   JSObject *js_array = JS_NewArrayObject(cx, 0, NULL);
   if (!js_array)
     return JS_FALSE;
 
-  size_t length = array->GetCount();
   for (size_t i = 0; i < length; i++) {
     jsval item;
     if (ConvertNativeToJS(cx, array->GetItem(i), &item))
       JS_SetElement(cx, js_array, static_cast<jsint>(i), &item);
   }
+
+  // We return a JavaScript array where a VBArray is expected in original
+  // JScript program. JScript program calls toArray() to convert a VBArray to
+  // a JavaScript array. We just let toArray() return the array itself.
+  JS_DefineFunction(cx, js_array, "toArray", &ReturnSelf, 0, 0);
+
+  // We also return a JavaScript array where a JScript Collection is expected.
+  // We should add count and item() properties for it.
+  JS_DefineProperty(cx, js_array, "count", INT_TO_JSVAL(length), NULL, NULL,
+                    JSPROP_READONLY | JSPROP_PERMANENT);
+  JS_DefineFunction(cx, js_array, "item", &GetCollectionItem, 1, 0);
+
   *js_val = OBJECT_TO_JSVAL(js_array);
   return JS_TRUE;
 }

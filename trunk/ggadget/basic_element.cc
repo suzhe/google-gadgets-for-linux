@@ -641,6 +641,7 @@ class BasicElement::Impl {
         view_->FireEvent(&scriptable_event, onmousemove_event_);
         break;
       case Event::EVENT_MOUSE_DOWN:
+        view_->SetFocus(owner_);
         view_->FireEvent(&scriptable_event, onmousedown_event_);
         break;
       case Event::EVENT_MOUSE_UP:

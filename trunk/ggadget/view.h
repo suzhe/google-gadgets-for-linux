@@ -361,6 +361,7 @@ class View : public ScriptableHelperNativeOwned<ViewInterface> {
   Connection *ConnectOnKeyUpEvent(Slot0<void> *handler);
   Connection *ConnectOnMinimizeEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseDownEvent(Slot0<void> *handler);
+  Connection *ConnectOnMouseMoveEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseOverEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseOutEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseUpEvent(Slot0<void> *handler);

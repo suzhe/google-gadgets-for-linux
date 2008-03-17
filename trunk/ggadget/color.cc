@@ -24,7 +24,7 @@ const Color Color::kWhite(1, 1, 1);
 const Color Color::kBlack(0, 0, 0);
 
 std::string Color::ToString() const {
-  return StringPrintf("#%02x%02x%02x",
+  return StringPrintf("#%02X%02X%02X",
                       static_cast<int>(round(red * 255)),
                       static_cast<int>(round(green * 255)),
                       static_cast<int>(round(blue * 255)));

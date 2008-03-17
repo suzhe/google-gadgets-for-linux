@@ -289,11 +289,6 @@ bool JSScriptContext::SetGlobalObject(ScriptableInterface *global_object) {
     return false;
 
   // Add some adapters for JScript.
-  // We return JavaScript arrays where a VBArray is expected in original
-  // JScript program. JScript program calls toArray() to convert a VBArray to
-  // a JavaScript array. We just let toArray() return the array itself.
-  JSObject *array_proto = GetClassPrototype(context_, "Array");
-  JS_DefineFunction(context_, array_proto, "toArray", &ReturnSelf, 0, 0);
   // JScript programs call Date.getVarDate() to convert a JavaScript Date to
   // a COM VARDATE. We just use Date's where VARDATE's are expected by JScript
   // programs.

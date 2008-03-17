@@ -426,23 +426,26 @@ class ScriptableProcess::Impl {
                         EncodeJavaScriptString(utf16_path.c_str()).c_str());
   }
 
-  JSONString EnumerateProcesses() {
+  ScriptableArray *EnumerateProcesses() {
     ProcessesInterface *processes = process_->EnumerateProcesses();
+    ScriptableArray *result = NULL;
     if (processes) {
-      std::string json("[");
       int count = processes->GetCount();
-      ASSERT(count >= 0);
-      for (int i = 0; i < count; i++) {
-        if (i > 0) json += ',';
-        json += EncodeProcessInfo(processes->GetItem(i));
+      if (count > 0) {
+        Variant *data = new Variant[count];
+        if (data) {
+          for (int i = 0; i < count; i++) {
+            ProcessInfoInterface *proc_info = processes->GetItem(i);
+            if (proc_info)
+              data[i] = Variant(proc_info->GetProcessId());
+          }
+          result = ScriptableArray::Create(data, count);
+        }
       }
       processes->Destroy();
-
-      json += ']';
-      return JSONString(json);
-    } else {
-      return JSONString("null");
     }
+    return result ? result :
+           ScriptableArray::Create(static_cast<int *>(NULL), 0);
   }
 
   JSONString GetForegroundProcess() {
