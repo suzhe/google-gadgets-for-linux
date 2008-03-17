@@ -19,8 +19,7 @@
 #include "audioclip_interface.h"
 #include "file_manager_interface.h"
 #include "framework_interface.h"
-#include "gadget_host_interface.h"
-#include "gadget_interface.h"
+#include "gadget.h"
 #include "image_interface.h"
 #include "scriptable_array.h"
 #include "scriptable_file_system.h"
@@ -29,8 +28,6 @@
 #include "string_utils.h"
 #include "unicode_utils.h"
 #include "view.h"
-#include "view_host_interface.h"
-#include "gadget.h"
 #include "event.h"
 #include "scriptable_event.h"
 
@@ -376,10 +373,10 @@ class ScriptablePerfmon::Impl {
     std::string str_path(path);
     CounterMap::iterator it = counters_.find(str_path);
     if (it != counters_.end()) {
-      // FIXME: Ugly hack, to be changed after refactorying other parts.
       PerfmonEvent event(value);
       ScriptableEvent scriptable_event(&event, NULL, NULL);
-      View *view = down_cast<View*>(gadget_->GetMainViewHost()->GetView());
+      View *view = gadget_->GetMainView();
+      ASSERT(view);
       view->FireEvent(&scriptable_event, it->second->signal);
     }
   }
@@ -625,8 +622,7 @@ class ScriptableGraphics::Impl {
   }
 
   ScriptableImage *LoadImage(const Variant &image_src) {
-    //FIXME: Ugly hack
-    View *view = down_cast<View *>(gadget_->GetMainViewHost()->GetView());
+    View *view = gadget_->GetMainView();
     ASSERT(view);
     ImageInterface *image = view->LoadImage(image_src, false);
     return image ? new ScriptableImage(image) : NULL;

@@ -27,7 +27,7 @@
 #include "cairo_graphics.h"
 #include "cairo_canvas.h"
 #include "pixbuf_image.h"
-#include "pixbuf_utils.h"
+#include "utilities.h"
 
 namespace ggadget {
 namespace gtk {

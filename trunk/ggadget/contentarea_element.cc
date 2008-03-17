@@ -53,7 +53,7 @@ class ContentAreaElement::Impl {
       : owner_(owner),
         layout_canvas_(owner->GetView()->GetGraphics()->NewCanvas(5, 5)),
         content_flags_(CONTENT_FLAG_NONE),
-        target_(GadgetInterface::TARGET_SIDEBAR),
+        target_(Gadget::TARGET_SIDEBAR),
         max_content_items_(kDefaultMaxContentItems),
         pin_image_max_width_(0), pin_image_max_height_(0),
         mouse_down_(false), mouse_over_pin_(false),
@@ -479,13 +479,13 @@ class ContentAreaElement::Impl {
                 mouse_over_item_->ToggleItemPinnedState();
               } else if (content_flags_ & CONTENT_FLAG_HAVE_DETAILS) {
                 std::string title;
-                DetailsView *details_view = NULL;
+                DetailsViewData *details_view_data = NULL;
                 int flags = 0;
-                if (!mouse_over_item_->OnDetailsView(&title, &details_view,
-                                                     &flags) &&
-                    details_view) {
-                  owner_->GetView()->ShowDetailsView(
-                      details_view, title.c_str(), flags,
+                if (!mouse_over_item_->OnDetailsView(
+                       &title, &details_view_data, &flags) &&
+                    details_view_data) {
+                  owner_->GetView()->GetGadget()->ShowDetailsView(
+                      details_view_data, title.c_str(), flags,
                       NewSlot(this, &Impl::ProcessDetailsViewFeedback));
                 }
               }
@@ -508,11 +508,11 @@ class ContentAreaElement::Impl {
   }
 
   void ProcessDetailsViewFeedback(int flags) {
-    if (flags & ViewHostInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
+    if (flags & ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
       OnItemOpen(NULL);
-    if (flags & ViewHostInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK)
+    if (flags & ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK)
       OnItemNegativeFeedback(NULL);
-    if (flags & ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
+    if (flags & ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
       OnItemRemove(NULL);
   }
 
@@ -528,7 +528,7 @@ class ContentAreaElement::Impl {
       bool dead = false;
       death_detector_ = &dead;
       if (!mouse_over_item_->ProcessDetailsViewFeedback(
-              ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
+              ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
           !dead && mouse_over_item_ &&
           !mouse_over_item_->OnUserRemove() &&
           !dead && mouse_over_item_) {
@@ -545,7 +545,7 @@ class ContentAreaElement::Impl {
       bool dead = false;
       death_detector_ = &dead;
       if (!mouse_over_item_->ProcessDetailsViewFeedback(
-              ViewHostInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
+              ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
           !dead && mouse_over_item_) {
         RemoveContentItem(mouse_over_item_);
       }
@@ -557,7 +557,7 @@ class ContentAreaElement::Impl {
   ContentAreaElement *owner_;
   CanvasInterface *layout_canvas_; // Only used during Layout().
   int content_flags_;
-  GadgetInterface::DisplayTarget target_;
+  Gadget::DisplayTarget target_;
   size_t max_content_items_;
   ContentItems content_items_;
   ScriptableHolder<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];

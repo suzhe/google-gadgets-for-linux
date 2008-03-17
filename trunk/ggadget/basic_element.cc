@@ -41,7 +41,7 @@ class BasicElement::Impl {
                   NULL),
         view_(view),
         hittest_(BasicElement::HT_DEFAULT),
-        cursor_(ViewHostInterface::CURSOR_ARROW),
+        cursor_(ViewInterface::CURSOR_ARROW),
         drop_target_(false),
         enabled_(false),
         width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),
@@ -793,7 +793,7 @@ class BasicElement::Impl {
   Elements *children_;
   View *view_;
   BasicElement::HitTest hittest_;
-  ViewHostInterface::CursorType cursor_;
+  ViewInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
   std::string tag_name_;
@@ -1023,11 +1023,11 @@ Elements *BasicElement::GetChildren() {
   return impl_->children_;
 }
 
-ViewHostInterface::CursorType BasicElement::GetCursor() const {
+ViewInterface::CursorType BasicElement::GetCursor() const {
   return impl_->cursor_;
 }
 
-void BasicElement::SetCursor(ViewHostInterface::CursorType cursor) {
+void BasicElement::SetCursor(ViewInterface::CursorType cursor) {
   impl_->cursor_ = cursor;
 }
 
@@ -1611,8 +1611,8 @@ void BasicElement::OnPopupOff() {
 }
 
 bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
-  // If rclick event won't be handled, let the context menu shown.
-  return !impl_->onrclick_event_.HasActiveConnections();
+  // Let the default menu items shown by default.
+  return true;
 }
 
 bool BasicElement::IsChildInVisibleArea(const BasicElement *child) const {

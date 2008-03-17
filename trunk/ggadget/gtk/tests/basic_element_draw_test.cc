@@ -19,22 +19,24 @@
 #include "ggadget/basic_element.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
+#include "ggadget/view.h"
 #include "ggadget/xml_utils.h"
 #include "ggadget/gtk/cairo_graphics.h"
 #include "ggadget/gtk/cairo_canvas.h"
-#include "ggadget/tests/mocked_gadget_host.h"
+#include "ggadget/gtk/main_loop.h"
 #include "ggadget/tests/mocked_view_host.h"
 
 using namespace ggadget;
 using namespace ggadget::gtk;
 
-ElementFactory *gFactory = NULL;
+ElementFactory *g_factory = NULL;
 bool g_savepng = false;
+ggadget::gtk::MainLoop g_main_loop;
 
 class ViewHostWithGraphics : public MockedViewHost {
  public:
   ViewHostWithGraphics()
-      : MockedViewHost(gFactory), gfx_(new CairoGraphics(1.0)) {
+      : MockedViewHost(), gfx_(new CairoGraphics(1.0)) {
   }
 
   virtual ~ViewHostWithGraphics() {
@@ -133,7 +135,8 @@ class BasicElementTest : public testing::Test {
 
 // This test is meaningful only with -savepng
 TEST_F(BasicElementTest, ElementsDraw) {
-  Muffin m(NULL, view_host_->GetViewInternal(), NULL);
+  View view(ViewInterface::VIEW_MAIN, view_host_, NULL, NULL, g_factory);
+  Muffin m(NULL, &view, NULL);
   Pie *p = NULL;
 
   m.SetPixelWidth(200.);
@@ -186,9 +189,10 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  CanvasInterface *canvas = 
-    view_host_->GetGraphics()->NewCanvas(static_cast<size_t>(m.GetPixelWidth()), 
-                                         static_cast<size_t>(m.GetPixelHeight()));
+  CanvasInterface *canvas =
+    view_host_->GetGraphics()->NewCanvas(
+        static_cast<size_t>(m.GetPixelWidth()),
+        static_cast<size_t>(m.GetPixelHeight()));
   ASSERT_TRUE(canvas != NULL);
   m.Draw(canvas);
 
@@ -207,10 +211,12 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  gFactory = new ElementFactory();
-  gFactory->RegisterElementClass("muffin", Muffin::CreateInstance);
-  gFactory->RegisterElementClass("pie", Pie::CreateInstance);
+  SetGlobalMainLoop(&g_main_loop);
+
+  g_factory = new ElementFactory();
+  g_factory->RegisterElementClass("muffin", Muffin::CreateInstance);
+  g_factory->RegisterElementClass("pie", Pie::CreateInstance);
   int result = RUN_ALL_TESTS();
-  delete gFactory;
+  delete g_factory;
   return result;
 }

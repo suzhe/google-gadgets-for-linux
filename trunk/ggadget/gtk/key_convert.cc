@@ -16,7 +16,7 @@
 
 #include <gdk/gdkkeysyms.h>
 #include <ggadget/event.h>
-#include "gtk_key_convert.h"
+#include "key_convert.h"
 
 using ggadget::KeyboardEvent;
 

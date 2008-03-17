@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GTK_GTK_KEY_CONVERT_H__
-#define GGADGET_GTK_GTK_KEY_CONVERT_H__
+#ifndef GGADGET_GTK_KEY_CONVERT_H__
+#define GGADGET_GTK_KEY_CONVERT_H__
 
 #include <gdk/gdk.h>
 
@@ -44,4 +44,4 @@ int ConvertGdkModifierToButton(guint state);
 } // namespace gtk
 } // namespace ggadget
 
-#endif  // GGADGET_GTK_GTK_KEY_CONVERT_H__
+#endif  // GGADGET_GTK_KEY_CONVERT_H__

@@ -18,12 +18,12 @@
 #include <glib/ghash.h>
 #include <gtk/gtk.h>
 #include <ggadget/common.h>
-#include "gtk_main_loop.h"
+#include "main_loop.h"
 
 namespace ggadget {
 namespace gtk {
 
-class GtkMainLoop::Impl {
+class MainLoop::Impl {
   struct WatchNode {
     MainLoopInterface::WatchType type;
 
@@ -36,7 +36,7 @@ class GtkMainLoop::Impl {
     int watch_id;
     int data;      // For IO watch, it's fd, for timeout watch, it's interval.
     WatchCallbackInterface *callback;
-    GtkMainLoop::Impl *impl;
+    MainLoop::Impl *impl;
 
     WatchNode()
       : type(MainLoopInterface::INVALID_WATCH),
@@ -115,7 +115,7 @@ class GtkMainLoop::Impl {
       if (!node->calling) {
         g_source_remove(watch_id);
         WatchCallbackInterface *callback = node->callback;
-        //DLOG("GtkMainLoop::RemoveWatch: id=%d", watch_id);
+        //DLOG("MainLoop::RemoveWatch: id=%d", watch_id);
         callback->OnRemove(main_loop_, watch_id);
         g_hash_table_remove(watches_, GINT_TO_POINTER(watch_id));
       }
@@ -153,7 +153,7 @@ class GtkMainLoop::Impl {
     node->removing = true;
     int watch_id = node->watch_id;
     WatchCallbackInterface *callback = node->callback;
-    //DLOG("GtkMainLoop::RemoveWatchNode: id=%d", watch_id);
+    //DLOG("MainLoop::RemoveWatchNode: id=%d", watch_id);
     callback->OnRemove(main_loop_, watch_id);
     g_hash_table_remove(watches_, GINT_TO_POINTER(watch_id));
   }
@@ -172,7 +172,7 @@ class GtkMainLoop::Impl {
     WatchCallbackInterface *callback = node->callback;
 
     g_source_remove(watch_id);
-    //DLOG("GtkMainLoop::ForeachRemoveCallback: id=%d", watch_id);
+    //DLOG("MainLoop::ForeachRemoveCallback: id=%d", watch_id);
     callback->OnRemove(main_loop, watch_id);
     return TRUE;
   }
@@ -187,10 +187,10 @@ class GtkMainLoop::Impl {
                                   gpointer data) {
     WatchNode *node = static_cast<WatchNode *>(data);
     if (node && !node->calling && !node->removing) {
-      GtkMainLoop::Impl *impl = node->impl;
+      MainLoop::Impl *impl = node->impl;
       MainLoopInterface *main_loop = impl->main_loop_;
       WatchCallbackInterface *callback = node->callback;
-      //DLOG("GtkMainLoop::IOWatchCallback: id=%d fd=%d type=%d",
+      //DLOG("MainLoop::IOWatchCallback: id=%d fd=%d type=%d",
       //     node->watch_id, node->data, node->type);
       bool ret = false;
       // Only call callback if the condition is correct.
@@ -224,10 +224,10 @@ class GtkMainLoop::Impl {
   static gboolean TimeoutCallback(gpointer data) {
     WatchNode *node = static_cast<WatchNode*>(data);
     if (node && !node->calling && !node->removing) {
-      GtkMainLoop::Impl *impl = node->impl;
+      MainLoop::Impl *impl = node->impl;
       MainLoopInterface *main_loop = impl->main_loop_;
       WatchCallbackInterface *callback = node->callback;
-      //DLOG("GtkMainLoop::TimeoutCallback: id=%d interval=%d",
+      //DLOG("MainLoop::TimeoutCallback: id=%d interval=%d",
       //     node->watch_id, node->data);
       node->calling = true;
       bool ret = callback->Call(main_loop, node->watch_id);
@@ -248,44 +248,44 @@ class GtkMainLoop::Impl {
   GHashTable *watches_;
 };
 
-GtkMainLoop::GtkMainLoop()
+MainLoop::MainLoop()
   : impl_(new Impl(this)) {
 }
-GtkMainLoop::~GtkMainLoop() {
+MainLoop::~MainLoop() {
   delete impl_;
 }
-int GtkMainLoop::AddIOReadWatch(int fd, WatchCallbackInterface *callback) {
+int MainLoop::AddIOReadWatch(int fd, WatchCallbackInterface *callback) {
   return impl_->AddIOWatch(IO_READ_WATCH, fd, callback);
 }
-int GtkMainLoop::AddIOWriteWatch(int fd, WatchCallbackInterface *callback) {
+int MainLoop::AddIOWriteWatch(int fd, WatchCallbackInterface *callback) {
   return impl_->AddIOWatch(IO_WRITE_WATCH, fd, callback);
 }
-int GtkMainLoop::AddTimeoutWatch(int interval,
+int MainLoop::AddTimeoutWatch(int interval,
                                     WatchCallbackInterface *callback) {
   return impl_->AddTimeoutWatch(interval, callback);
 }
-MainLoopInterface::WatchType GtkMainLoop::GetWatchType(int watch_id) {
+MainLoopInterface::WatchType MainLoop::GetWatchType(int watch_id) {
   return impl_->GetWatchType(watch_id);
 }
-int GtkMainLoop::GetWatchData(int watch_id) {
+int MainLoop::GetWatchData(int watch_id) {
   return impl_->GetWatchData(watch_id);
 }
-void GtkMainLoop::RemoveWatch(int watch_id) {
+void MainLoop::RemoveWatch(int watch_id) {
   impl_->RemoveWatch(watch_id);
 }
-void GtkMainLoop::Run() {
+void MainLoop::Run() {
   impl_->Run();
 }
-bool GtkMainLoop::DoIteration(bool may_block) {
+bool MainLoop::DoIteration(bool may_block) {
   return impl_->DoIteration(may_block);
 }
-void GtkMainLoop::Quit() {
+void MainLoop::Quit() {
   impl_->Quit();
 }
-bool GtkMainLoop::IsRunning() const {
+bool MainLoop::IsRunning() const {
   return impl_->IsRunning();
 }
-uint64_t GtkMainLoop::GetCurrentTime() const {
+uint64_t MainLoop::GetCurrentTime() const {
   return impl_->GetCurrentTime();
 }
 

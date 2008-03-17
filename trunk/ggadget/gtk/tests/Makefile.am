@@ -43,12 +43,12 @@ LDADD			= @CAIRO_LIBS@ \
 check_PROGRAMS		= cairo_canvas_test \
 			  cairo_graphics_test \
 			  basic_element_draw_test \
-			  gtk_main_loop_test
+			  main_loop_test
 
 cairo_canvas_test_SOURCES	= cairo_canvas_test.cc
 cairo_graphics_test_SOURCES	= cairo_graphics_test.cc
 basic_element_draw_test_SOURCES	= basic_element_draw_test.cc
-gtk_main_loop_test_SOURCES	= gtk_main_loop_test.cc
+main_loop_test_SOURCES		= main_loop_test.cc
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)

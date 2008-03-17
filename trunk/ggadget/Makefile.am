@@ -45,7 +45,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  combobox_element.h \
 			  content_item.h \
 			  contentarea_element.h \
-			  details_view.h \
+			  details_view_data.h \
 			  digest_utils.h \
 			  dir_file_manager.h \
 			  directory_provider_interface.h \
@@ -65,11 +65,10 @@ gglinclude_HEADERS	= anchor_element.h \
 			  framework_interface.h \
 			  gadget.h \
 			  gadget_consts.h \
-			  gadget_host_interface.h \
-			  gadget_interface.h \
 			  gadget_manager_interface.h \
 			  ggadget.h \
 			  graphics_interface.h \
+			  host_interface.h \
 			  image_interface.h \
 			  img_element.h \
 			  item_element.h \
@@ -138,7 +137,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  combobox_element.cc \
 			  content_item.cc \
 			  contentarea_element.cc \
-			  details_view.cc \
+			  details_view_data.cc \
 			  digest_utils.cc \
 			  directory_provider.cc \
 			  dir_file_manager.cc \

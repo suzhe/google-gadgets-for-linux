@@ -40,7 +40,8 @@ ScriptableMenu::~ScriptableMenu() {
 
 void ScriptableMenu::ScriptAddItem(const char *item_text, int style,
                                    Slot *handler) {
-  menu_->AddItem(item_text, style,
+  // All menu items added by gadget shall be checkable.
+  menu_->AddItem(item_text, style | MenuInterface::MENU_ITEM_FLAG_CHECKABLE,
                  handler ? new SlotProxy1<void, const char *>(handler) : NULL);
 }
 

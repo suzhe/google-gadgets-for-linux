@@ -30,18 +30,18 @@ endif
 noinst_HEADERS		= cairo_canvas.h \
 			  cairo_font.h \
 			  cairo_image_base.h \
-			  gtk_key_convert.h \
-			  gtk_menu_impl.h \
 			  pixbuf_image.h \
 			  $(RSVG_IMAGE_H)
 
 gtkincludedir		= $(GGL_INCLUDE_DIR)/ggadget/gtk
 gtkinclude_HEADERS	= cairo_graphics.h \
-			  gadget_view_widget.h \
-			  gtk_main_loop.h \
-			  gtk_gadget_host.h \
-			  gtk_view_host.h \
-			  pixbuf_utils.h
+			  key_convert.h \
+			  main_loop.h \
+			  menu_builder.h \
+			  single_view_host.h \
+			  tooltip.h \
+			  utilities.h \
+			  view_widget_binder.h
 
 lib_LTLIBRARIES		= libggadget-gtk@GGL_EPOCH@.la
 
@@ -50,14 +50,14 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  cairo_font.cc \
 			  cairo_graphics.cc \
 			  cairo_image_base.cc \
-			  gadget_view_widget.cc \
-			  gtk_main_loop.cc \
-			  gtk_gadget_host.cc \
-			  gtk_key_convert.cc \
-			  gtk_menu_impl.cc \
-			  gtk_view_host.cc \
+			  key_convert.cc \
+			  main_loop.cc \
+			  menu_builder.cc \
 			  pixbuf_image.cc \
-			  pixbuf_utils.cc \
+			  single_view_host.cc \
+			  tooltip.cc \
+			  utilities.cc \
+			  view_widget_binder.cc \
 			  $(RSVG_IMAGE_CC)
 
 libggadget_gtk@GGL_EPOCH@_la_CXXFLAGS = \

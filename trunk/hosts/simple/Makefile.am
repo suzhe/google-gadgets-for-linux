@@ -19,11 +19,11 @@ if GGL_BUILD_SIMPLE_HOST
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		=
+noinst_HEADERS		= simple_gtk_host.h
 
 bin_PROGRAMS		= ggl-simple
 
-ggl_simple_SOURCES	= main.cc
+ggl_simple_SOURCES	= main.cc simple_gtk_host.cc
 
 ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
@@ -43,7 +43,7 @@ ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 # TODO: install these files into correct path.
 all-local:
 	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child .
-	[ ! -f $(top_builddir)/resources/ggl-resources.bin ] || cp $(top_builddir)/resources/ggl-resources.bin .
+	[ ! -f $(top_builddir)/resources/ggl-resources.gg ] || cp $(top_builddir)/resources/ggl-resources.gg .
 
 noinst_SCRIPTS=ggl-simple.sh
 

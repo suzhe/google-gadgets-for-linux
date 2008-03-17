@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_DETAILS_VIEW_INFO_H__
-#define GGADGET_DETAILS_VIEW_INFO_H__
+#ifndef GGADGET_DETAILS_VIEW_DATA_H__
+#define GGADGET_DETAILS_VIEW_DATA_H__
 
 #include <ggadget/common.h>
 #include <ggadget/content_item.h>
@@ -26,15 +26,17 @@ namespace ggadget {
 class ScriptableOptions;
 
 /**
- * DetailsView data structure. It has no built-in logic.
+ * DetailsViewData data structure. It has no built-in logic.
+ * This class will be registered into gadget's script context as "DetailsView"
+ * class.
  */
-class DetailsView : public ScriptableHelperDefault {
+class DetailsViewData : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0xf75ad2d79331421a, ScriptableInterface);
-  DetailsView();
+  DetailsViewData();
 
  protected:
-  virtual ~DetailsView();
+  virtual ~DetailsViewData();
   virtual void DoRegister();
 
  public:
@@ -72,7 +74,7 @@ class DetailsView : public ScriptableHelperDefault {
    * Use this in conjunction with the @c SetContent() or @c SetContentFromItem()
    * methods. Default is @c false.
    */
-  bool ContentIsHTML();
+  bool GetContentIsHTML() const;
   void SetContentIsHTML(bool is_html);
 
   /**
@@ -81,30 +83,29 @@ class DetailsView : public ScriptableHelperDefault {
    * file, and sets this property to @c true. If the view file has the '.xml'
    * extension, this property will be set to @c true automatically.
    */
-  bool ContentIsView() const;
+  bool GetContentIsView() const;
   void SetContentIsView(bool is_view);
 
   /**
    * Gets the "detailsViewData" property used in XML details views.
-   */ 
-  const ScriptableOptions *GetDetailsViewData() const;
-  ScriptableOptions *GetDetailsViewData();
+   */
+  ScriptableOptions *GetData() const;
 
   /**
    * Gets and sets the "external" property used in HTML details views.
-   */ 
+   */
   ScriptableInterface *GetExternalObject() const;
   void SetExternalObject(ScriptableInterface *external_object);
 
  public:
-  static DetailsView *CreateInstance();
+  static DetailsViewData *CreateInstance();
 
  private:
-  DISALLOW_EVIL_CONSTRUCTORS(DetailsView);
+  DISALLOW_EVIL_CONSTRUCTORS(DetailsViewData);
   class Impl;
   Impl *impl_;
 };
 
 } // namespace ggadget
 
-#endif  // GGADGET_DETAILS_VIEW_INFO_H__
+#endif  // GGADGET_DETAILS_VIEW_DATA_H__

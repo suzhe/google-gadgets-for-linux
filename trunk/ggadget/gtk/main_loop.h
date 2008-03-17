@@ -14,19 +14,19 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_GTK_GTK_MAIN_LOOP_H__
-#define GGADGET_GTK_GTK_MAIN_LOOP_H__
+#ifndef GGADGET_GTK_MAIN_LOOP_H__
+#define GGADGET_GTK_MAIN_LOOP_H__
 #include <ggadget/main_loop_interface.h>
 
 namespace ggadget {
 namespace gtk {
 
-// GtkMainLoop is a wrapper around gtk's main loop functions to realize
+// gtk::MainLoop is a wrapper around gtk's main loop functions to realize
 // MainLoopInterface interface.
-class GtkMainLoop : public MainLoopInterface {
+class MainLoop : public MainLoopInterface {
  public:
-  GtkMainLoop();
-  virtual ~GtkMainLoop();
+  MainLoop();
+  virtual ~MainLoop();
   virtual int AddIOReadWatch(int fd, WatchCallbackInterface *callback);
   virtual int AddIOWriteWatch(int fd, WatchCallbackInterface *callback);
   virtual int AddTimeoutWatch(int interval, WatchCallbackInterface *callback);
@@ -51,4 +51,4 @@ class GtkMainLoop : public MainLoopInterface {
 
 } // namespace gtk
 } // namespace ggadget
-#endif  // GGADGET_GTK_GTK_MAIN_LOOP_H__
+#endif  // GGADGET_GTK_MAIN_LOOP_H__

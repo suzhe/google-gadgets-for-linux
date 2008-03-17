@@ -28,7 +28,7 @@ class View;
 class ElementFactory {
  public:
   ElementFactory();
-  virtual ~ElementFactory();
+  ~ElementFactory();
 
  public:
   /**

@@ -17,7 +17,7 @@
 #include "gadget.h"
 #include "contentarea_element.h"
 #include "content_item.h"
-#include "details_view.h"
+#include "details_view_data.h"
 #include "display_window.h"
 #include "element_factory.h"
 #include "file_manager_interface.h"
@@ -25,10 +25,10 @@
 #include "file_manager_wrapper.h"
 #include "localized_file_manager.h"
 #include "gadget_consts.h"
-#include "gadget_host_interface.h"
 #include "logger.h"
 #include "main_loop_interface.h"
 #include "menu_interface.h"
+#include "host_interface.h"
 #include "options_interface.h"
 #include "script_context_interface.h"
 #include "scriptable_array.h"
@@ -49,285 +49,371 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
 
-  class Debug : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0xa9b59e70c74649da, ScriptableInterface);
-    Debug(Gadget::Impl *owner) {
-      RegisterMethod("error", NewSlot(owner, &Impl::DebugError));
-      RegisterMethod("trace", NewSlot(owner, &Impl::DebugTrace));
-      RegisterMethod("warning", NewSlot(owner, &Impl::DebugWarning));
-    }
-  };
-
-  class Storage : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0xd48715e0098f43d1, ScriptableInterface);
-    Storage(Gadget::Impl *owner) {
-      RegisterMethod("extract", NewSlot(owner, &Impl::ExtractFile));
-      RegisterMethod("openText", NewSlot(owner, &Impl::OpenTextFile));
-    }
-  };
-
-  static void RegisterStrings(
-      const GadgetStringMap *strings,
-      ScriptableHelperNativeOwnedDefault *scriptable) {
-    for (GadgetStringMap::const_iterator it = strings->begin();
-         it != strings->end(); ++it) {
-      scriptable->RegisterConstant(it->first.c_str(), it->second);
-    }
-  }
-
-  class Strings : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x13679b3ef9a5490e, ScriptableInterface);
-  };
-
-  class Plugin : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x05c3f291057c4c9c, ScriptableInterface);
-    Plugin(Impl *gadget_impl) :
-        gadget_host_(gadget_impl->host_),
-        main_view_(NULL) {
-      RegisterProperty("plugin_flags", NULL, // No getter.
-                       NewSlot(gadget_host_,
-                               &GadgetHostInterface::SetPluginFlags));
-      RegisterMethod("RemoveMe",
-                     NewSlot(gadget_host_, &GadgetHostInterface::RemoveMe));
-      RegisterMethod("ShowDetailsView",
-                     NewSlot(gadget_impl, &Impl::DelayedShowDetailsView));
-      RegisterMethod("CloseDetailsView",
-                     NewSlot(gadget_impl, &Impl::DelayedCloseDetailsView));
-      RegisterMethod("ShowOptionsDialog",
-                     NewSlot(gadget_impl, &Impl::ShowOptionsDialog));
-      RegisterSignal("onShowOptionsDlg",
-                     &gadget_impl->onshowoptionsdlg_signal_);
-      RegisterSignal("onAddCustomMenuItems", &onaddcustommenuitems_signal_);
-      RegisterSignal("onCommand", &oncommand_signal_);
-      RegisterSignal("onDisplayStateChange", &ondisplaystatechange_signal_);
-      RegisterSignal("onDisplayTargetChange", &ondisplaytargetchange_signal_);
-
-      // Deprecated or unofficial properties and methods.
-      RegisterProperty("about_text", NULL, // No getter.
-                       NewSlot(gadget_impl, &Impl::SetAboutText));
-      RegisterMethod("SetFlags", NewSlot(this, &Plugin::SetFlags));
-      RegisterMethod("SetIcons", NewSlot(this, &Plugin::SetIcons));
-
-      // Register properties and methods for content area.
-      RegisterProperty("contant_flags", NULL, // Write only.
-                       NewSlot(this, &Plugin::SetContentFlags));
-      RegisterProperty("max_content_items",
-                       NewSlot(this, &Plugin::GetMaxContentItems),
-                       NewSlot(this, &Plugin::SetMaxContentItems));
-      RegisterProperty("content_items",
-                       NewSlot(this, &Plugin::GetContentItems),
-                       NewSlot(this, &Plugin::SetContentItems));
-      RegisterProperty("pin_images",
-                       NewSlot(this, &Plugin::GetPinImages),
-                       NewSlot(this, &Plugin::SetPinImages));
-      RegisterMethod("AddContentItem",
-                     NewSlot(this, &Plugin::AddContentItem));
-      RegisterMethod("RemoveContentItem",
-                     NewSlot(this, &Plugin::RemoveContentItem));
-      RegisterMethod("RemoveAllContentItems",
-                     NewSlot(this, &Plugin::RemoveAllContentItems));
-    }
-
-    void SetMainView(View *main_view) {
-      ASSERT(main_view_ == NULL && main_view != NULL);
-      main_view_ = main_view;
-      // Deprecated or unofficial properties and methods.
-      RegisterProperty("title", NULL, // No getter.
-                       NewSlot(main_view_, &View::SetCaption));
-      RegisterProperty("window_width",
-                       NewSlot(main_view_, &View::GetWidth), NULL);
-      RegisterProperty("window_height",
-                       NewSlot(main_view_, &View::GetHeight), NULL);
-    }
-
-    void OnAddCustomMenuItems(MenuInterface *menu) {
-      ScriptableMenu scriptable_menu(menu);
-      onaddcustommenuitems_signal_(&scriptable_menu);
-    }
-
-    void SetFlags(int plugin_flags, int content_flags) {
-      gadget_host_->SetPluginFlags(plugin_flags);
-      SetContentFlags(content_flags);
-    }
-
-    void SetIcons(const Variant &param1, const Variant &param2) {
-      LOG("pluginHelper.SetIcons is no longer supported. "
-          "Please specify icons in the manifest file.");
-    }
-
-    void SetContentFlags(int flags) {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->SetContentFlags(flags);
-    }
-
-    size_t GetMaxContentItems() {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      return content_area ? content_area->GetMaxContentItems() : 0;
-    }
-
-    void SetMaxContentItems(size_t max_content_items) {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->SetMaxContentItems(max_content_items);
-    }
-
-    ScriptableArray *GetContentItems() {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      return content_area ? content_area->ScriptGetContentItems() : NULL;
-    }
-
-    void SetContentItems(ScriptableInterface *array) {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->ScriptSetContentItems(array);
-    }
-
-    ScriptableArray *GetPinImages() {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      return content_area ? content_area->ScriptGetPinImages() : NULL;
-    }
-
-    void SetPinImages(ScriptableInterface *array) {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->ScriptSetPinImages(array);
-    }
-
-    void AddContentItem(ContentItem *item,
-                        ContentAreaElement::DisplayOptions options) {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->AddContentItem(item, options);
-    }
-
-    void RemoveContentItem(ContentItem *item) {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->RemoveContentItem(item);
-    }
-
-    void RemoveAllContentItems() {
-      ContentAreaElement *content_area = main_view_->GetContentAreaElement();
-      if (content_area) content_area->RemoveAllContentItems();
-    }
-
-    GadgetHostInterface *gadget_host_;
-    View *main_view_;
-    Signal1<void, ScriptableMenu *> onaddcustommenuitems_signal_;
-    Signal1<void, int> oncommand_signal_;
-    Signal1<void, int> ondisplaystatechange_signal_;
-    Signal1<void, int> ondisplaytargetchange_signal_;
-  };
-
-  class GadgetGlobal : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x2c8d4292025f4397, ScriptableInterface);
-    GadgetGlobal(Gadget::Impl *owner) {
-      RegisterConstant("gadget", owner);
-      RegisterConstant("options", &owner->scriptable_options_);
-      RegisterConstant("strings", &owner->strings_);
-      RegisterConstant("plugin", &owner->plugin_);
-      RegisterConstant("pluginHelper", &owner->plugin_);
-
-      // As an unofficial feature, "gadget.debug" and "gadget.storage" can also
-      // be accessed as "debug" and "storage" global objects.
-      RegisterConstant("debug", &owner->debug_);
-      RegisterConstant("storage", &owner->storage_);
-
-      // Properties and methods of framework can also be accessed directly as
-      // globals.
-      RegisterConstant("framework", &owner->framework_);
-      SetInheritsFrom(&owner->framework_);
-    }
-  };
-
-  Impl(GadgetHostInterface *host, Gadget *owner,
-       const char *base_path, int debug_mode)
+  Impl(Gadget *owner,
+       HostInterface *host,
+       const char *base_path,
+       const char *options_name,
+       int instance_id)
       : owner_(owner),
         host_(host),
-        debug_(this),
-        storage_(this),
-        scriptable_options_(host->GetOptions(), false),
-        plugin_(this),
-        gadget_global_(this),
         element_factory_(new ElementFactory()),
-        extension_manager_(
-            ExtensionManager::CreateExtensionManager()),
+        extension_manager_(ExtensionManager::CreateExtensionManager()),
         file_manager_(new FileManagerWrapper()),
-        main_view_(new View(&gadget_global_, element_factory_, debug_mode)),
-        main_view_host_(host->NewViewHost(GadgetHostInterface::VIEW_MAIN,
-                                          main_view_)),
-        details_view_(NULL), details_view_host_(NULL),
+        options_(CreateOptions(options_name)),
+        scriptable_options_(new ScriptableOptions(options_, false)),
+        main_view_(NULL),
+        details_view_data_(NULL),
+        details_view_(NULL),
+        old_details_view_data_(NULL),
+        old_details_view_(NULL),
+        base_path_(base_path),
+        instance_id_(instance_id),
+        initialized_(false),
         has_options_xml_(false),
-        close_details_view_timer_(0), show_details_view_timer_(0),
-        debug_mode_(debug_mode) {
-    // Main view must be set here, to break circular dependency.
-    plugin_.SetMainView(main_view_);
-    RegisterConstant("debug", &debug_);
-    RegisterConstant("storage", &storage_);
+        plugin_flags_(0) {
+    // Checks if necessary objects are created successfully.
+    ASSERT(host_);
+    ASSERT(element_factory_);
+    ASSERT(extension_manager_);
+    ASSERT(file_manager_);
+    ASSERT(options_);
+    ASSERT(scriptable_options_);
+  }
+
+  ~Impl() {
+    delete old_details_view_;
+    old_details_view_ = NULL;
+    if (old_details_view_data_) {
+      old_details_view_data_->Unref();
+      old_details_view_data_ = NULL;
+    }
+    delete details_view_;
+    details_view_ = NULL;
+    if (details_view_data_) {
+      details_view_data_->Unref();
+      details_view_data_ = NULL;
+    }
+    delete main_view_;
+    main_view_ = NULL;
+    delete scriptable_options_;
+    scriptable_options_ = NULL;
+    delete options_;
+    options_ = NULL;
+    delete file_manager_;
+    file_manager_ = NULL;
+    if (extension_manager_) {
+      extension_manager_->Destroy();
+      extension_manager_ = NULL;
+    }
+    delete element_factory_;
+    element_factory_ = NULL;
+  }
+
+  // Do real initialize.
+  bool Initialize() {
+    if (!host_ || !element_factory_ || !file_manager_ || !options_ ||
+        !scriptable_options_)
+      return false;
 
     // Create gadget FileManager
-    std::string path, filename;
-    SplitFilePath(base_path, &path, &filename);
-
-    // Uses the parent path of base_path if it refers to a manifest file.
-    if (filename.length() <= strlen(kGManifestExt) ||
-        strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
-                   kGManifestExt) != 0) {
-      path = std::string(base_path);
-    }
-
-    FileManagerInterface *fm = CreateGadgetFileManager(base_path);
-    if (fm)
-      file_manager_->RegisterFileManager("", fm);
+    FileManagerInterface *fm = CreateGadgetFileManager(base_path_.c_str());
+    if (fm == NULL) return false;
+    file_manager_->RegisterFileManager("", fm);
 
     // Create system FileManager
     fm = CreateFileManager(kDirSeparatorStr);
     if (fm) file_manager_->RegisterFileManager(kDirSeparatorStr, fm);
-  }
 
-  ~Impl() {
-    if (close_details_view_timer_ != 0) {
-      GetGlobalMainLoop()->RemoveWatch(close_details_view_timer_);
-      close_details_view_timer_ = 0;
+    // Load strings and manifest.
+    if (!ReadStringsAndManifest(file_manager_, &strings_map_,
+                                &manifest_info_map_))
+      return false;
+
+    // TODO: Is it necessary to check the required fields in manifest?
+    DLOG("Gadget min version: %s",
+         GetManifestInfo(kManifestMinVersion).c_str());
+    DLOG("Gadget id: %s", GetManifestInfo(kManifestId).c_str());
+    DLOG("Gadget name: %s", GetManifestInfo(kManifestName).c_str());
+    DLOG("Gadget description: %s",
+         GetManifestInfo(kManifestDescription).c_str());
+
+    // main view must be created before calling RegisterProperties();
+    main_view_ = new View(ViewInterface::VIEW_MAIN,
+                          host_->NewViewHost(ViewInterface::VIEW_MAIN),
+                          owner_, &global_, element_factory_);
+    ASSERT(main_view_);
+
+    // Register scriptable properties.
+    RegisterProperties();
+    RegisterStrings(&strings_map_, &global_);
+    RegisterStrings(&strings_map_, &strings_);
+
+    // load fonts and objects
+    for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
+         i != manifest_info_map_.end(); ++i) {
+      const std::string &key = i->first;
+      if (SimpleMatchXPath(key.c_str(), kManifestInstallFontSrc)) {
+        const char *font_name = i->second.c_str();
+        std::string path;
+        // ignore return, error not fatal
+        if (file_manager_->IsDirectlyAccessible(font_name, NULL) ||
+            file_manager_->ExtractFile(font_name, &path))
+          host_->LoadFont(path.c_str());
+      } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
+                 extension_manager_) {
+        const char *module_name = i->second.c_str();
+        std::string path;
+        if (file_manager_->IsDirectlyAccessible(module_name, NULL) ||
+            file_manager_->ExtractFile(module_name, &path))
+          extension_manager_->LoadExtension(path.c_str(), false);
+      }
     }
 
-    if (show_details_view_timer_ != 0) {
-      GetGlobalMainLoop()->RemoveWatch(show_details_view_timer_);
-      show_details_view_timer_ = 0;
-    }
+    // Register extensions
+    const ExtensionManager *global_manager =
+        ExtensionManager::GetGlobalExtensionManager();
+    MultipleExtensionRegisterWrapper register_wrapper;
+    ElementExtensionRegister element_register(element_factory_);
+    FrameworkExtensionRegister framework_register(&framework_, owner_);
 
-    CloseDetailsView();
-    delete main_view_host_;
-    delete element_factory_;
+    register_wrapper.AddExtensionRegister(&element_register);
+    register_wrapper.AddExtensionRegister(&framework_register);
+
+    if (global_manager)
+      global_manager->RegisterLoadedExtensions(&register_wrapper);
     if (extension_manager_)
-      extension_manager_->Destroy();
-    delete file_manager_;
+      extension_manager_->RegisterLoadedExtensions(&register_wrapper);
+
+    // Initialize main view.
+    std::string main_xml;
+    if (!file_manager_->ReadFile(kMainXML, &main_xml) ||
+        !ReplaceXMLEntities(strings_map_, &main_xml)) {
+      LOG("Failed to load main.xml.");
+      return false;
+    }
+
+    main_view_->SetCaption(GetManifestInfo(kManifestName).c_str());
+    RegisterScriptExtensions(main_view_->GetScriptContext());
+
+    if (!main_view_->InitFromXML(main_xml, kMainXML)) {
+      LOG("Failed to setup the main view");
+      return false;
+    }
+
+    has_options_xml_ = file_manager_->FileExists(kOptionsXML, NULL);
+
+    return true;
   }
 
-  static FileManagerInterface *CreateGadgetFileManager(const char *base_path) {
-    std::string path, filename;
-    SplitFilePath(base_path, &path, &filename);
-  
-    // Uses the parent path of base_path if it refers to a manifest file.
-    if (filename.length() <= strlen(kGManifestExt) ||
-        strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
-                   kGManifestExt) != 0) {
-      path = base_path;
-    }
-    FileManagerInterface *fm = CreateFileManager(path.c_str());
-    return fm ? new LocalizedFileManager(fm) : NULL;
+  // Register script extensions for a specified script context.
+  // This method shall be called for all views' script contexts.
+  void RegisterScriptExtensions(ScriptContextInterface *context) {
+    ASSERT(context);
+    const ExtensionManager *global_manager =
+        ExtensionManager::GetGlobalExtensionManager();
+    ScriptExtensionRegister script_register(context);
+
+    if (global_manager)
+      global_manager->RegisterLoadedExtensions(&script_register);
+    if (extension_manager_)
+      extension_manager_->RegisterLoadedExtensions(&script_register);
   }
+
+  // Register all scriptable properties.
+  void RegisterProperties() {
+    RegisterConstant("debug", &debug_);
+    RegisterConstant("storage", &storage_);
+
+    // Register properties of gadget.debug.
+    debug_.RegisterMethod("error", NewSlot(this, &Impl::DebugError));
+    debug_.RegisterMethod("trace", NewSlot(this, &Impl::DebugTrace));
+    debug_.RegisterMethod("warning", NewSlot(this, &Impl::DebugWarning));
+
+    // Register properties of gadget.storage.
+    storage_.RegisterMethod("extract", NewSlot(this, &Impl::ExtractFile));
+    storage_.RegisterMethod("openText", NewSlot(this, &Impl::OpenTextFile));
+
+    // Register properties of plugin.
+    plugin_.RegisterProperty("plugin_flags", NULL, // No getter.
+                NewSlot(this, &Impl::SetPluginFlags));
+    plugin_.RegisterProperty("title", NULL, // No getter.
+                NewSlot(main_view_, &View::SetCaption));
+    plugin_.RegisterProperty("window_width",
+                NewSlot(main_view_, &View::GetWidth), NULL);
+    plugin_.RegisterProperty("window_height",
+                NewSlot(main_view_, &View::GetHeight), NULL);
+
+    plugin_.RegisterMethod("RemoveMe",
+                NewSlot(this, &Impl::RemoveMe));
+    plugin_.RegisterMethod("ShowDetailsView",
+                NewSlot(this, &Impl::ShowDetailsViewProxy));
+    plugin_.RegisterMethod("CloseDetailsView",
+                NewSlot(this, &Impl::CloseDetailsView));
+    plugin_.RegisterMethod("ShowOptionsDialog",
+                NewSlot(this, &Impl::ShowOptionsDialog));
+
+    plugin_.RegisterSignal("onShowOptionsDlg",
+                           &onshowoptionsdlg_signal_);
+    plugin_.RegisterSignal("onAddCustomMenuItems",
+                           &onaddcustommenuitems_signal_);
+    plugin_.RegisterSignal("onCommand",
+                           &oncommand_signal_);
+    plugin_.RegisterSignal("onDisplayStateChange",
+                           &ondisplaystatechange_signal_);
+    plugin_.RegisterSignal("onDisplayTargetChange",
+                           &ondisplaytargetchange_signal_);
+
+    // Deprecated or unofficial properties and methods.
+    plugin_.RegisterProperty("about_text", NULL, // No getter.
+                             NewSlot(this, &Impl::SetAboutText));
+    plugin_.RegisterMethod("SetFlags", NewSlot(this, &Impl::SetFlags));
+    plugin_.RegisterMethod("SetIcons", NewSlot(this, &Impl::SetIcons));
+
+    // Register properties and methods for content area.
+    plugin_.RegisterProperty("contant_flags", NULL, // Write only.
+                             NewSlot(this, &Impl::SetContentFlags));
+    plugin_.RegisterProperty("max_content_items",
+                             NewSlot(this, &Impl::GetMaxContentItems),
+                             NewSlot(this, &Impl::SetMaxContentItems));
+    plugin_.RegisterProperty("content_items",
+                             NewSlot(this, &Impl::GetContentItems),
+                             NewSlot(this, &Impl::SetContentItems));
+    plugin_.RegisterProperty("pin_images",
+                             NewSlot(this, &Impl::GetPinImages),
+                             NewSlot(this, &Impl::SetPinImages));
+    plugin_.RegisterMethod("AddContentItem",
+                           NewSlot(this, &Impl::AddContentItem));
+    plugin_.RegisterMethod("RemoveContentItem",
+                           NewSlot(this, &Impl::RemoveContentItem));
+    plugin_.RegisterMethod("RemoveAllContentItems",
+                           NewSlot(this, &Impl::RemoveAllContentItems));
+
+    // Register global properties.
+    global_.RegisterConstant("gadget", this);
+    global_.RegisterConstant("options", scriptable_options_);
+    global_.RegisterConstant("strings", &strings_);
+    global_.RegisterConstant("plugin", &plugin_);
+    global_.RegisterConstant("pluginHelper", &plugin_);
+
+    // As an unofficial feature, "gadget.debug" and "gadget.storage" can also
+    // be accessed as "debug" and "storage" global objects.
+    global_.RegisterConstant("debug", &debug_);
+    global_.RegisterConstant("storage", &storage_);
+
+    // Properties and methods of framework can also be accessed directly as
+    // globals.
+    global_.RegisterConstant("framework", &framework_);
+    global_.SetInheritsFrom(&framework_);
+  }
+
+  void RemoveMe(bool save_data) {
+    host_->RemoveGadget(instance_id_, save_data);
+  }
+
+  void RemoveMeMenuCallback(const char *) {
+    RemoveMe(true);
+  }
+
+  void AboutMenuCallback(const char *) {
+    host_->ShowGadgetAboutDialog(owner_);
+  }
+
+  void OptionsMenuCallback(const char *) {
+    ShowOptionsDialog();
+  }
+
+  void OnAddCustomMenuItems(MenuInterface *menu) {
+    ScriptableMenu scriptable_menu(menu);
+    onaddcustommenuitems_signal_(&scriptable_menu);
+    if (HasOptionsDialog())
+      menu->AddItem("Options...", 0, NewSlot(this, &Impl::OptionsMenuCallback));
+    menu->AddItem("Remove Me", 0, NewSlot(this, &Impl::RemoveMeMenuCallback));
+    menu->AddItem("About...", 0, NewSlot(this, &Impl::AboutMenuCallback));
+  }
+
+  void SetPluginFlags(int flags) {
+    bool changed = (flags != plugin_flags_);
+    plugin_flags_ = flags;
+    if (changed)
+      onpluginflagschanged_signal_(flags);
+  }
+
+  void SetFlags(int plugin_flags, int content_flags) {
+    SetPluginFlags(plugin_flags);
+    SetContentFlags(content_flags);
+  }
+
+  void SetIcons(const Variant &param1, const Variant &param2) {
+    LOG("pluginHelper.SetIcons is no longer supported. "
+        "Please specify icons in the manifest file.");
+  }
+
+  void SetContentFlags(int flags) {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->SetContentFlags(flags);
+  }
+
+  size_t GetMaxContentItems() {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    return content_area ? content_area->GetMaxContentItems() : 0;
+  }
+
+  void SetMaxContentItems(size_t max_content_items) {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->SetMaxContentItems(max_content_items);
+  }
+
+  ScriptableArray *GetContentItems() {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    return content_area ? content_area->ScriptGetContentItems() : NULL;
+  }
+
+  void SetContentItems(ScriptableInterface *array) {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->ScriptSetContentItems(array);
+  }
+
+  ScriptableArray *GetPinImages() {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    return content_area ? content_area->ScriptGetPinImages() : NULL;
+  }
+
+  void SetPinImages(ScriptableInterface *array) {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->ScriptSetPinImages(array);
+  }
+
+  void AddContentItem(ContentItem *item,
+                      ContentAreaElement::DisplayOptions options) {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->AddContentItem(item, options);
+  }
+
+  void RemoveContentItem(ContentItem *item) {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->RemoveContentItem(item);
+  }
+
+  void RemoveAllContentItems() {
+    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    if (content_area) content_area->RemoveAllContentItems();
+  }
+
+  void SetAboutText(const char *about_text) {
+    manifest_info_map_[kManifestAboutText] = about_text;
+  }
+
 
   void DebugError(const char *message) {
-    host_->DebugOutput(GadgetHostInterface::DEBUG_ERROR, message);
+    host_->DebugOutput(HostInterface::DEBUG_ERROR, message);
   }
 
   void DebugTrace(const char *message) {
-    host_->DebugOutput(GadgetHostInterface::DEBUG_TRACE, message);
+    host_->DebugOutput(HostInterface::DEBUG_TRACE, message);
   }
 
   void DebugWarning(const char *message) {
-    host_->DebugOutput(GadgetHostInterface::DEBUG_WARNING, message);
+    host_->DebugOutput(HostInterface::DEBUG_WARNING, message);
   }
 
   std::string ExtractFile(const char *filename) {
@@ -352,226 +438,163 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return has_options_xml_ || onshowoptionsdlg_signal_.HasActiveConnections();
   }
 
+  void OptionsDialogCallback(int flag) {
+    if (options_view_) {
+      SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
+                        Event::EVENT_OK : Event::EVENT_CANCEL);
+      options_view_->OnOtherEvent(event);
+    }
+  }
+
   bool ShowOptionsDialog() {
-    ViewHostInterface *options_view_host = NULL;
-    DisplayWindow *window = NULL;
-    View *view = new View(&gadget_global_, element_factory_, debug_mode_);
+    bool ret = false;
+    int flag = ViewInterface::OPTIONS_VIEW_FLAG_OK |
+               ViewInterface::OPTIONS_VIEW_FLAG_CANCEL;
+
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
-      options_view_host = host_->NewViewHost(
-          GadgetHostInterface::VIEW_OLD_OPTIONS, view);
-      window = new DisplayWindow(view);
+      options_view_ =
+          new View(ViewInterface::VIEW_OLD_OPTIONS,
+                   host_->NewViewHost(ViewInterface::VIEW_OLD_OPTIONS),
+                   owner_, &global_, element_factory_);
+      DisplayWindow *window = new DisplayWindow(options_view_);
       Variant result = onshowoptionsdlg_signal_(window);
-      if (result.type() == Variant::TYPE_BOOL && !VariantValue<bool>()(result))
-        return false;
-      if (!window->AdjustSize())
-        return false;
+      if ((result.type() != Variant::TYPE_BOOL ||
+           VariantValue<bool>()(result)) && window->AdjustSize()) {
+        options_view_->SetResizable(ViewInterface::RESIZABLE_FALSE);
+        ret = options_view_->ShowView(
+            true, flag, NewSlot(this, &Impl::OptionsDialogCallback));
+      } else {
+        LOG("gadget cancelled the options dialog.");
+      }
+      delete window;
+      delete options_view_;
+      options_view_ = NULL;
     } else if (has_options_xml_) {
-      options_view_host = host_->NewViewHost(GadgetHostInterface::VIEW_OPTIONS,
-                                             view);
       std::string xml;
       if (file_manager_->ReadFile(kOptionsXML, &xml) &&
           ReplaceXMLEntities(strings_map_, &xml)) {
+        options_view_ =
+            new View(ViewInterface::VIEW_OPTIONS,
+                     host_->NewViewHost(ViewInterface::VIEW_OPTIONS),
+                     owner_, &global_, element_factory_);
+        RegisterScriptExtensions(options_view_->GetScriptContext());
         std::string full_path = file_manager_->GetFullPath(kOptionsXML);
-        if (!view->InitFromXML(xml, full_path.c_str())) {
+        if (options_view_->InitFromXML(xml, full_path.c_str())) {
+          options_view_->SetResizable(ViewInterface::RESIZABLE_FALSE);
+          ret = options_view_->ShowView(
+              true, flag, NewSlot(this, &Impl::OptionsDialogCallback));
+        } else {
           LOG("Failed to setup the options view");
-          delete options_view_host;
-          return false;
         }
+        delete options_view_;
+        options_view_ = NULL;
       } else {
         LOG("Failed to load options.xml file from gadget package.");
-        delete options_view_host;
-        return false;
       }
     } else {
       LOG("Failed to show options dialog because there is neither options.xml"
           "nor OnShowOptionsDlg handler");
-      return false;
     }
-
-    options_view_host->RunDialog();
-    delete window;
-    delete options_view_host;
-    return true;
+    return ret;
   }
 
-  bool ShowDetailsView(DetailsView *details_view, const char *title, int flags,
+  bool ShowDetailsViewProxy(DetailsViewData *details_view_data,
+                            const char *title, int flags,
+                            Slot *callback) {
+    Slot1<void, int> *feedback_handler =
+        callback ? new SlotProxy1<void, int>(callback) : NULL;
+    return ShowDetailsView(details_view_data, title, flags, feedback_handler);
+  }
+
+  bool ShowDetailsView(DetailsViewData *details_view_data,
+                       const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
-    details_view->Ref();
     CloseDetailsView();
-    details_view_ = details_view;
-    View *view = new View(&gadget_global_, element_factory_, debug_mode_);
-    details_view_host_ = host_->NewViewHost(GadgetHostInterface::VIEW_DETAILS,
-                                            view);
-    ScriptContextInterface *script_context =
-        details_view_host_->GetScriptContext();
-    ScriptableOptions *scriptable_data = details_view->GetDetailsViewData();
+    details_view_data->Ref();
+    details_view_data_ = details_view_data;
+
+    details_view_ =
+        new View(ViewInterface::VIEW_DETAILS,
+                 host_->NewViewHost(ViewInterface::VIEW_DETAILS),
+                 owner_, &global_, element_factory_);
+    ScriptContextInterface *context = details_view_->GetScriptContext();
+    ScriptableOptions *scriptable_data = details_view_data_->GetData();
     OptionsInterface *data = scriptable_data->GetOptions();
+
+    // Register script extensions.
+    RegisterScriptExtensions(context);
+
     // Set up the detailsViewData variable in the opened details view.
-    script_context->AssignFromNative(NULL, "", "detailsViewData",
-                                     Variant(scriptable_data));
+    context->AssignFromNative(NULL, "", "detailsViewData",
+                              Variant(scriptable_data));
 
     std::string xml;
     std::string xml_file;
-    if (details_view->ContentIsHTML() || !details_view->ContentIsView()) {
-      if (details_view->ContentIsHTML()) {
+    if (details_view_data_->GetContentIsHTML() ||
+        !details_view_data_->GetContentIsView()) {
+      if (details_view_data_->GetContentIsHTML()) {
         xml_file = kHTMLDetailsView;
-        details_view_host_->GetScriptContext()->AssignFromNative(
-            NULL, "", "external", Variant(details_view->GetExternalObject()));
+        ScriptableInterface *ext_obj = details_view_data_->GetExternalObject();
+        context->AssignFromNative(NULL, "", "external", Variant(ext_obj));
         data->PutValue("contentType", Variant("text/html"));
       } else {
         xml_file = kTextDetailsView;
         data->PutValue("contentType", Variant("text/plain"));
       }
-      data->PutValue("content", Variant(details_view->GetText()));
+      data->PutValue("content", Variant(details_view_data_->GetText()));
       GetGlobalFileManager()->ReadFile(xml_file.c_str(), &xml);
     } else {
-      xml_file = details_view->GetText();
+      xml_file = details_view_data_->GetText();
       if (file_manager_->ReadFile(xml_file.c_str(), &xml))
         ReplaceXMLEntities(strings_map_, &xml);
     }
 
-    if (xml.empty() || !view->InitFromXML(xml, xml_file.c_str())) {
+    if (xml.empty() || !details_view_->InitFromXML(xml, xml_file.c_str())) {
       LOG("Failed to load details view from %s", xml_file.c_str());
-      delete details_view_host_;
-      details_view_host_ = NULL;
-      details_view->Unref();
+      delete details_view_;
+      details_view_ = NULL;
+      details_view_data_->Unref();
+      details_view_data_ = NULL;
       return false;
     }
-    details_view_host_->ShowInDetailsView(title, flags, feedback_handler);
+
+    // For details view, the caption set in xml file will be discarded.
+    if (title && *title)
+      details_view_->SetCaption(title);
+
+    details_view_->ShowView(title, flags, feedback_handler);
     return true;
-  }
-
-  class ShowDetailsViewCallback : public WatchCallbackInterface {
-   public:
-    ShowDetailsViewCallback(Impl *impl, DetailsView *details_view,
-                            const char *title, int flags,
-                            Slot1<void, int> *callback)
-        : impl_(impl), details_view_(details_view),
-          title_(title), flags_(flags), callback_(callback) {
-      details_view_->Ref();
-    }
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      impl_->ShowDetailsView(details_view_, title_.c_str(), flags_, callback_);
-      impl_->show_details_view_timer_ = 0;
-      callback_ = NULL;
-      return false;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      details_view_->Unref();
-      delete callback_;
-    }
-   private:
-    Impl *impl_;
-    DetailsView *details_view_;
-    std::string title_;
-    int flags_;
-    Slot1<void, int> *callback_;
-  };
-
-  // Show the details view in the next event loop.
-  void DelayedShowDetailsView(DetailsView *details_view,
-                              const char *title, int flags,
-                              Slot *callback) {
-    if (show_details_view_timer_ == 0) {
-      show_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(0,
-          new ShowDetailsViewCallback(
-              this, details_view, title, flags,
-              callback ? new SlotProxy1<void, int>(callback) : NULL));
-    }
   }
 
   void CloseDetailsView() {
-    if (details_view_host_) {
-      details_view_host_->CloseDetailsView();
-      delete details_view_host_;
-      details_view_host_ = NULL;
-      details_view_->Unref();
+    if (old_details_view_data_) {
+      old_details_view_data_->Unref();
+      old_details_view_data_ = NULL;
     }
+    if (old_details_view_) {
+      delete old_details_view_;
+      old_details_view_ = NULL;
+    }
+
+    if (details_view_)
+      details_view_->CloseView();
+
+    old_details_view_ = details_view_;
+    old_details_view_data_ = details_view_data_;
+    details_view_ = NULL;
+    details_view_data_ = NULL;
   }
 
-  bool CloseDetailsViewCallback(int id) {
-    ASSERT(id == close_details_view_timer_);
-    CloseDetailsView();
-    close_details_view_timer_ = 0;
-    return false;
-  };
-
-  // Close the details view in the next event loop.
-  void DelayedCloseDetailsView() {
-    if (close_details_view_timer_ == 0) {
-      close_details_view_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(0,
-        new WatchCallbackSlot(NewSlot(this, &Impl::CloseDetailsViewCallback)));
-    }
+  Connection* ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
+    return onpluginflagschanged_signal_.Connect(handler);
   }
 
-  bool Init() {
-    if (!ReadStringsAndManifest(file_manager_, &strings_map_,
-                                &manifest_info_map_))
-      return false;
-
-    RegisterStrings(&strings_map_, &gadget_global_);
-    RegisterStrings(&strings_map_, &strings_);
-
-    // TODO: Is it necessary to check the required fields in manifest?
-    DLOG("Gadget min version: %s",
-         GetManifestInfo(kManifestMinVersion).c_str());
-    DLOG("Gadget id: %s", GetManifestInfo(kManifestId).c_str());
-    DLOG("Gadget name: %s", GetManifestInfo(kManifestName).c_str());
-    DLOG("Gadget description: %s",
-         GetManifestInfo(kManifestDescription).c_str());
-
-    // load fonts and objects
-    for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
-         i != manifest_info_map_.end(); ++i) {
-      const std::string &key = i->first;
-      if (SimpleMatchXPath(key.c_str(), kManifestInstallFontSrc)) {
-        const char *font_name = i->second.c_str();
-        std::string path;
-        // ignore return, error not fatal
-        if (file_manager_->IsDirectlyAccessible(font_name, NULL) ||
-            file_manager_->ExtractFile(font_name, &path))
-          host_->LoadFont(path.c_str());
-      } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
-                 extension_manager_) {
-        const char *module_name = i->second.c_str();
-        std::string path;
-        if (file_manager_->IsDirectlyAccessible(module_name, NULL) ||
-            file_manager_->ExtractFile(module_name, &path))
-          extension_manager_->LoadExtension(path.c_str(), false);
-      }
+  static void RegisterStrings(const GadgetStringMap *strings,
+                              ScriptableHelperNativeOwnedDefault *scriptable) {
+    for (GadgetStringMap::const_iterator it = strings->begin();
+         it != strings->end(); ++it) {
+      scriptable->RegisterConstant(it->first.c_str(), it->second);
     }
-
-    // Register extensions
-    ScriptContextInterface *context = main_view_host_->GetScriptContext();
-    const ExtensionManager *global_manager =
-        ExtensionManager::GetGlobalExtensionManager();
-    MultipleExtensionRegisterWrapper register_wrapper;
-    ElementExtensionRegister element_register(element_factory_);
-    ScriptExtensionRegister script_register(context);
-    FrameworkExtensionRegister framework_register(&framework_, owner_);
-
-    register_wrapper.AddExtensionRegister(&element_register);
-    register_wrapper.AddExtensionRegister(&script_register);
-    register_wrapper.AddExtensionRegister(&framework_register);
-
-    if (global_manager)
-      global_manager->RegisterLoadedExtensions(&register_wrapper);
-    if (extension_manager_)
-      extension_manager_->RegisterLoadedExtensions(&register_wrapper);
-
-    main_view_host_->GetView()->SetCaption(
-        GetManifestInfo(kManifestName).c_str());
-
-    std::string main_xml;
-    if (!file_manager_->ReadFile(kMainXML, &main_xml) ||
-        !ReplaceXMLEntities(strings_map_, &main_xml) ||
-        !main_view_host_->GetView()->InitFromXML(main_xml, kMainXML)) {
-      LOG("Failed to setup the main view");
-      return false;
-    }
-
-    has_options_xml_ = file_manager_->FileExists(kOptionsXML, NULL);
-    return true;
   }
 
   static bool ReadStringsAndManifest(FileManagerInterface *file_manager,
@@ -614,36 +637,69 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return true;
   }
 
-  void SetAboutText(const char *about_text) {
-    manifest_info_map_[kManifestAboutText] = about_text;
+  static FileManagerInterface *CreateGadgetFileManager(const char *base_path) {
+    std::string path, filename;
+    SplitFilePath(base_path, &path, &filename);
+
+    // Uses the parent path of base_path if it refers to a manifest file.
+    if (filename.length() <= strlen(kGManifestExt) ||
+        strcasecmp(filename.c_str() + filename.size() - strlen(kGManifestExt),
+                   kGManifestExt) != 0) {
+      path = base_path;
+    }
+
+    FileManagerInterface *fm = CreateFileManager(path.c_str());
+    return fm ? new LocalizedFileManager(fm) : NULL;
   }
 
-  Gadget *owner_;
-  Signal1<Variant, DisplayWindow *> onshowoptionsdlg_signal_;
-  GadgetHostInterface *host_;
-  Debug debug_;
-  Storage storage_;
-  Strings strings_;
-  ScriptableOptions scriptable_options_;
-  Plugin plugin_;
+  NativeOwnedScriptable global_;
+  NativeOwnedScriptable debug_;
+  NativeOwnedScriptable storage_;
+  NativeOwnedScriptable plugin_;
   NativeOwnedScriptable framework_;
-  GadgetGlobal gadget_global_;
+  NativeOwnedScriptable strings_;
+
+  Signal1<Variant, DisplayWindow *> onshowoptionsdlg_signal_;
+  Signal1<void, ScriptableMenu *> onaddcustommenuitems_signal_;
+  Signal1<void, int> oncommand_signal_;
+  Signal1<void, int> ondisplaystatechange_signal_;
+  Signal1<void, int> ondisplaytargetchange_signal_;
+
+  Signal1<void, int> onpluginflagschanged_signal_;
+
+  GadgetStringMap manifest_info_map_;
+  GadgetStringMap strings_map_;
+
+  Gadget *owner_;
+  HostInterface *host_;
   ElementFactory *element_factory_;
   ExtensionManager *extension_manager_;
   FileManagerWrapper *file_manager_;
+  OptionsInterface *options_;
+  ScriptableOptions *scriptable_options_;
+
   View *main_view_;
-  ViewHostInterface *main_view_host_;
-  DetailsView *details_view_;
-  ViewHostInterface *details_view_host_;
-  GadgetStringMap manifest_info_map_;
-  GadgetStringMap strings_map_;
+  View *options_view_;
+  DetailsViewData *details_view_data_;
+  View *details_view_;
+  DetailsViewData *old_details_view_data_;
+  View *old_details_view_;
+
+  std::string base_path_;
+  int instance_id_;
+  bool initialized_;
   bool has_options_xml_;
-  int close_details_view_timer_, show_details_view_timer_;
-  int debug_mode_;
+  int close_details_view_timer_;
+  int show_details_view_timer_;
+  int plugin_flags_;
 };
 
-Gadget::Gadget(GadgetHostInterface *host, const char *base_path, int debug_mode)
-    : impl_(new Impl(host, this, base_path, debug_mode)) {
+Gadget::Gadget(HostInterface *host,
+               const char *base_path,
+               const char *options_name,
+               int instance_id)
+    : impl_(new Impl(this, host, base_path, options_name, instance_id)) {
+  impl_->initialized_ = impl_->Initialize();
 }
 
 Gadget::~Gadget() {
@@ -651,20 +707,45 @@ Gadget::~Gadget() {
   impl_ = NULL;
 }
 
-bool Gadget::Init() {
-  return impl_->Init();
+HostInterface *Gadget::GetHost() const {
+  return impl_->host_;
 }
 
-ViewHostInterface *Gadget::GetMainViewHost() {
-  return impl_->main_view_host_;
+bool Gadget::IsValid() const {
+  return impl_->initialized_;
 }
 
-FileManagerInterface *Gadget::GetFileManager() {
+int Gadget::GetInstanceID() const {
+  return impl_->instance_id_;
+}
+
+int Gadget::GetPluginFlags() const {
+  return impl_->plugin_flags_;
+}
+
+FileManagerInterface *Gadget::GetFileManager() const {
   return impl_->file_manager_;
+}
+
+OptionsInterface *Gadget::GetOptions() const {
+  return impl_->options_;
+}
+
+View *Gadget::GetMainView() const {
+  return impl_->main_view_;
 }
 
 std::string Gadget::GetManifestInfo(const char *key) const {
   return impl_->GetManifestInfo(key);
+}
+
+bool Gadget::ShowMainView() {
+  ASSERT(IsValid());
+  return impl_->main_view_->ShowView(false, 0, NULL);
+}
+
+void Gadget::CloseMainView() {
+  impl_->main_view_->CloseView();
 }
 
 bool Gadget::HasOptionsDialog() const {
@@ -675,32 +756,38 @@ bool Gadget::ShowOptionsDialog() {
   return impl_->ShowOptionsDialog();
 }
 
-void Gadget::OnAddCustomMenuItems(MenuInterface *menu) {
-  impl_->plugin_.OnAddCustomMenuItems(menu);
-}
-
-void Gadget::OnCommand(Command command) {
-  impl_->plugin_.oncommand_signal_(command);
-}
-
-void Gadget::OnDisplayStateChange(DisplayState display_state) {
-  impl_->plugin_.ondisplaystatechange_signal_(display_state);
-}
-
-void Gadget::OnDisplayTargetChange(DisplayTarget display_target) {
-  impl_->plugin_.ondisplaytargetchange_signal_(display_target);
-}
-
-bool Gadget::ShowDetailsView(DetailsView *details_view,
+bool Gadget::ShowDetailsView(DetailsViewData *details_view_data,
                              const char *title, int flags,
                              Slot1<void, int> *feedback_handler) {
-  return impl_->ShowDetailsView(details_view, title, flags, feedback_handler);
+  return impl_->ShowDetailsView(details_view_data, title, flags,
+                                feedback_handler);
 }
 
 void Gadget::CloseDetailsView() {
   return impl_->CloseDetailsView();
 }
 
+void Gadget::OnAddCustomMenuItems(MenuInterface *menu) {
+  impl_->OnAddCustomMenuItems(menu);
+}
+
+void Gadget::OnCommand(Command command) {
+  impl_->oncommand_signal_(command);
+}
+
+void Gadget::OnDisplayStateChange(DisplayState display_state) {
+  impl_->ondisplaystatechange_signal_(display_state);
+}
+
+void Gadget::OnDisplayTargetChange(DisplayTarget display_target) {
+  impl_->ondisplaytargetchange_signal_(display_target);
+}
+
+Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
+  return impl_->ConnectOnPluginFlagsChanged(handler);
+}
+
+// static methods
 bool Gadget::GetGadgetManifest(const char *base_path, GadgetStringMap *data) {
   ASSERT(base_path);
   ASSERT(data);

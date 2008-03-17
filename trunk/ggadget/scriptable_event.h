@@ -71,7 +71,7 @@ class ScriptableEvent : public ScriptableHelperNativeOwnedDefault {
   /**
    * @param event it's not declared as a const reference because sometimes we
    *     need dynamically allocated event (e.g. @c View::PostEvent()).
-   * @param src_element the element or view from which is event is fired.
+   * @param src_element the element or view from which the event is fired.
    * @param output_event only used for some events (such as
    *     @c Event::EVENT_SIZING) to store the output event.
    *     Can be @c NULL if the event has no output.

@@ -18,7 +18,6 @@
 #define GGADGET_VIEW_INTERFACE_H__
 
 #include <ggadget/event.h>
-#include <ggadget/scriptable_interface.h>
 #include <ggadget/signals.h>
 
 namespace ggadget {
@@ -29,13 +28,20 @@ class GraphicsInterface;
 class ScriptContextInterface;
 class MenuInterface;
 class ViewHostInterface;
+class Gadget;
 
 /**
  * Interface for representing a View in the Gadget API.
  */
-class ViewInterface : public ScriptableInterface {
+class ViewInterface {
  public:
-  CLASS_ID_DECL(0xeb376007cbe64f9f);
+  enum ViewType {
+    VIEW_MAIN,
+    VIEW_OPTIONS,
+    /** Old style options dialog that uses @c ggadget::DisplayWindow. */
+    VIEW_OLD_OPTIONS,
+    VIEW_DETAILS,
+  };
 
   /** Used in @c SetResizable(). */
   enum ResizableMode {
@@ -45,87 +51,87 @@ class ViewInterface : public ScriptableInterface {
     RESIZABLE_ZOOM,
   };
 
+  /** Flags used in detail view. */
+  enum DetailsViewFlags {
+    DETAILS_VIEW_FLAG_NONE = 0,
+    /** Makes the details view title clickable like a button. */
+    DETAILS_VIEW_FLAG_TOOLBAR_OPEN = 1,
+    /** Adds a negative feedback button in the details view. */
+    DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK = 2,
+    /** Adds a "Remove" button in the details view. */
+    DETAILS_VIEW_FLAG_REMOVE_BUTTON = 4,
+    /** Adds a button to display the friends list. */
+    DETAILS_VIEW_FLAG_SHARE_WITH_BUTTON = 8,
+  };
+
+  /** Flags used in options view. */
+  enum OptionsViewFlags {
+    OPTIONS_VIEW_FLAG_NONE = 0,
+    /** Adds an OK button in the options view. */
+    OPTIONS_VIEW_FLAG_OK = 1,
+    /** Adds an Cancel button in the options view. */
+    OPTIONS_VIEW_FLAG_CANCEL = 2,
+  };
+
+  /** Cursor types that can be used by elements. */
+  enum CursorType {
+    CURSOR_ARROW,
+    CURSOR_IBEAM,
+    CURSOR_WAIT,
+    CURSOR_CROSS,
+    CURSOR_UPARROW,
+    CURSOR_SIZE,
+    CURSOR_SIZENWSE,
+    CURSOR_SIZENESW,
+    CURSOR_SIZEWE,
+    CURSOR_SIZENS,
+    CURSOR_SIZEALL,
+    CURSOR_NO,
+    CURSOR_HAND,
+    CURSOR_BUSY,
+    CURSOR_HELP,
+  };
+
+  /** The supported debug mode for drawing view. */
+  enum DebugMode {
+    DEBUG_DISABLED = 0, // No debug at all.
+    DEBUG_CONTAINER,    // Draw bounding boxes around container elements.
+    DEBUG_ALL,          // Draw bounding boxes around all elements.
+  };
+
   virtual ~ViewInterface() { }
 
   /**
-   * @return the ScriptContextInterface object associated with this view.
+   * @return the type of the view.
    */
-  virtual ScriptContextInterface *GetScriptContext() const = 0;
+  virtual ViewType GetType() const = 0;
 
   /**
-   * @return the FileManagerInterface object associated with this view's gadget.
+   * @return the Gadget instance which owns this view.
    */
-  virtual FileManagerInterface *GetFileManager() const = 0;
-
-  /**
-   * Init the view from specified XML definition, and start running.
-   * @param xml XML definition of the view.
-   * @param filename file name of the xml definition, for logging purpose.
-   * @return @c true if succeedes.
-   */
-  virtual bool InitFromXML(const std::string &xml, const char *filename) = 0;
-
-  /**
-   * Attaches a view host to this view.
-   * Should only be called once, before @c InitFromXML().
-   */
-  virtual void AttachHost(ViewHostInterface *host) = 0;
-
-  /** Handler of the mouse events. */
-  virtual EventResult OnMouseEvent(const MouseEvent &event) = 0;
-
-  /** Handler of the keyboard events. */
-  virtual EventResult OnKeyEvent(const KeyboardEvent &event) = 0;
-
-  /**
-   * Handler of the drag and drop events.
-   * @param event the drag and drop event.
-   * @return @c EVENT_RESULT_HANDLED if the dragged contents are accepted by
-   *     an element.
-   */
-  virtual EventResult OnDragEvent(const DragEvent &event) = 0;
-
-  /**
-   * Handler of the sizing event.
-   * @param event the input event.
-   * @param[out] output_event the output event. For @c Event::EVENT_SIZING,
-   *     this parameter contains the overriding size set by the handler.
-   * @return the result of event handling.
-   */
-  virtual EventResult OnOtherEvent(const Event &event, Event *output_event) = 0;
+  virtual Gadget* GetGadget() const = 0;
 
   /**
    * Set the width of the view.
-   * @return true if new size is allowed, false otherwise.
    * */
-  virtual bool SetWidth(int width) = 0;
+  virtual void SetWidth(int width) = 0;
 
   /**
    * Set the height of the view.
-   * @return true if new size is allowed, false otherwise.
    */
-  virtual bool SetHeight(int height) = 0;
+  virtual void SetHeight(int height) = 0;
 
   /**
    * Set the size of the view. Use this when setting both height and width
    * to prevent two invocations of the sizing event.
-   * @return true if new size is allowed, false otherwise.
    * */
-  virtual bool SetSize(int width, int height) = 0;
+  virtual void SetSize(int width, int height) = 0;
 
   /** Retrieves the width of the view in pixels. */
   virtual int GetWidth() const = 0;
+
   /** Retrieves the height of view in pixels. */
   virtual int GetHeight() const = 0;
-
-  /**
-   * Draws the current view to a canvas.
-   * The specified canvas shall already be prepared to be drawn directly
-   * without any transformation.
-   * @param canvas A canvas for the view to be drawn on. It shall have the same
-   * zooming factory as the whole gadget.
-   */
-  virtual void Draw(CanvasInterface *canvas) = 0;
 
   /**
    * Indicates what happens when the user attempts to resize the gadget using
@@ -155,11 +161,36 @@ class ViewInterface : public ScriptableInterface {
    * during the next draw.
    */
   virtual void MarkRedraw() = 0;
- public:
   /**
-   * Called by the global options object when any option changed.
+   * Draws the current view to a canvas.
+   * The specified canvas shall already be prepared to be drawn directly
+   * without any transformation.
+   * @param canvas A canvas for the view to be drawn on. It shall have the same
+   * zooming factory as the whole gadget.
    */
-  virtual void OnOptionChanged(const char *name) = 0;
+  virtual void Draw(CanvasInterface *canvas) = 0;
+
+ public: // Event handlers.
+  /** Handler of the mouse events. */
+  virtual EventResult OnMouseEvent(const MouseEvent &event) = 0;
+
+  /** Handler of the keyboard events. */
+  virtual EventResult OnKeyEvent(const KeyboardEvent &event) = 0;
+
+  /**
+   * Handler of the drag and drop events.
+   * @param event the drag and drop event.
+   * @return @c EVENT_RESULT_HANDLED if the dragged contents are accepted by
+   *     an element.
+   */
+  virtual EventResult OnDragEvent(const DragEvent &event) = 0;
+
+  /**
+   * Handler of other simple events, except the onsizing event.
+   * @param event the input event.
+   * @return the result of event handling.
+   */
+  virtual EventResult OnOtherEvent(const Event &event) = 0;
 
   /**
    * Called by the host to let the view add customized context menu items, and
@@ -169,9 +200,19 @@ class ViewInterface : public ScriptableInterface {
    *     the host won't show the whole context menu.
    */
   virtual bool OnAddContextMenuItems(MenuInterface *menu) = 0;
-};
 
-CLASS_ID_IMPL(ViewInterface, ScriptableInterface)
+  /**
+   * Called by the host to negotiate the sizing operation.
+   * @param[in/out] width The new width of the View that host wants. The view
+   *                can adjust the value.
+   * @param[in/out] height The new height of the View that host wants. The view
+   *                can adjust the value.
+   * @return true if the sizing request is accepted, then the host shall set the
+   *         size of the View to the new value stored in width and height.
+   *         Otherwise returns false.
+   */
+  virtual bool OnSizing(int *width, int *height) = 0;
+};
 
 } // namespace ggadget
 
