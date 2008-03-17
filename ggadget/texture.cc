@@ -35,7 +35,12 @@ class Texture::Impl {
 
   Impl(const Color &color, double opacity)
       : image_(NULL), color_(color), opacity_(opacity),
-        name_(StringPrintf("#%02x%02x%02x%02x",
+        name_(opacity == 1.0 ?
+              StringPrintf("#%02X%02X%02X",
+                           static_cast<int>(round(color.red * 255)),
+                           static_cast<int>(round(color.green * 255)),
+                           static_cast<int>(round(color.blue * 255))) :
+              StringPrintf("#%02X%02X%02X%02X",
                            static_cast<int>(round(opacity * 255)),
                            static_cast<int>(round(color.red * 255)),
                            static_cast<int>(round(color.green * 255)),

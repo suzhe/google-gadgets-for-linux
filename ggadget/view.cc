@@ -391,6 +391,7 @@ class View::Impl {
     obj->RegisterSignal(kOnKeyUpEvent, &onkeyup_event_);
     obj->RegisterSignal(kOnMinimizeEvent, &onminimize_event_);
     obj->RegisterSignal(kOnMouseDownEvent, &onmousedown_event_);
+    obj->RegisterSignal(kOnMouseMoveEvent, &onmousemove_event_);
     obj->RegisterSignal(kOnMouseOutEvent, &onmouseout_event_);
     obj->RegisterSignal(kOnMouseOverEvent, &onmouseover_event_);
     obj->RegisterSignal(kOnMouseUpEvent, &onmouseup_event_);
@@ -517,7 +518,7 @@ class View::Impl {
         (event.GetButton() & MouseEvent::BUTTON_LEFT)) {
       // Start grabbing.
       grabmouse_element_.Reset(fired_element);
-      SetFocus(fired_element);
+      // Focus is handled in BasicElement.
     }
 
     if (fired_element_holder.Get() != mouseover_element_.Get()) {
@@ -581,7 +582,7 @@ class View::Impl {
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_MOVE:
         // Put the high volume events near top.
-        // View itself doesn't have onmousemove handler.
+        FireEvent(&scriptable_event, onmousemove_event_);
         break;
       case Event::EVENT_MOUSE_DOWN:
         FireEvent(&scriptable_event, onmousedown_event_);
@@ -1045,6 +1046,7 @@ class View::Impl {
   EventSignal onkeyup_event_;
   EventSignal onminimize_event_;
   EventSignal onmousedown_event_;
+  EventSignal onmousemove_event_;
   EventSignal onmouseout_event_;
   EventSignal onmouseover_event_;
   EventSignal onmouseup_event_;
@@ -1524,6 +1526,9 @@ Connection *View::ConnectOnMinimizeEvent(Slot0<void> *handler) {
 }
 Connection *View::ConnectOnMouseDownEvent(Slot0<void> *handler) {
   return impl_->onmousedown_event_.Connect(handler);
+}
+Connection *View::ConnectOnMouseMoveEvent(Slot0<void> *handler) {
+  return impl_->onmousemove_event_.Connect(handler);
 }
 Connection *View::ConnectOnMouseOverEvent(Slot0<void> *handler) {
   return impl_->onmouseover_event_.Connect(handler);
