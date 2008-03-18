@@ -100,12 +100,25 @@ AC_DEFINE_UNQUOTED(GGL_MICRO_VERSION, $GGL_MICRO_VERSION,
 GGL_EPOCH=-1.0
 AC_SUBST(GGL_EPOCH)
 
-GGL_BASE_DIR=ggl$GGL_EPOCH
+GGL_BASE_DIR=google-gadgets
 AC_SUBST(GGL_BASE_DIR)
 
 ###########################################################
 ##                      Config options.                  ##
 ###########################################################
+build_simple_host=yes
+build_qt_host=yes
+build_libggadget_dbus=yes
+build_libggadget_gtk=yes
+build_libggadget_qt=yes
+build_gtkmoz_browser_element=yes
+build_gst_audio_framework=yes
+build_qt_system_framework=yes
+build_gtk_system_framework=yes
+build_smjs_script_runtime=yes
+build_curl_xml_http_request=yes
+build_libxml2_xml_parser=yes
+
 AC_ARG_ENABLE([debug],
 	      AS_HELP_STRING([--enable-debug],[enable debug]),
 	      [enable_debug=$enableval],
@@ -122,6 +135,86 @@ AC_ARG_WITH([gst-audio-sink],
 		[Use a specified audiosink instead of autoaudiosink.]),
 	    [default_gst_audio_sink=$withval],
 	    [default_gst_audio_sink="autoaudiosink"])
+
+AC_ARG_ENABLE([simple-host],
+	      AS_HELP_STRING([--disable-simple-host],
+			     [don't build simple host]),
+	      [build_simple_host=$enableval],
+	      [build_simple_host=yes])
+
+AC_ARG_ENABLE([qt-host],
+	      AS_HELP_STRING([--disable-qt-host],
+			     [don't build qt host]),
+	      [build_qt_host=$enableval],
+	      [build_qt_host=yes])
+
+AC_ARG_ENABLE([libggadget-dbus],
+	      AS_HELP_STRING([--disable-libggadget-dbus],
+			     [don't build libggadget-dbus]),
+	      [build_libggadget_dbus=$enableval],
+	      [build_libggadget_dbus=yes])
+
+AC_ARG_ENABLE([libggadget-gtk],
+	      AS_HELP_STRING([--disable-libggadget-gtk],
+			     [don't build libggadget-gtk]),
+	      [build_libggadget_gtk=$enableval],
+	      [build_libggadget_gtk=yes])
+
+AC_ARG_ENABLE([libggadget-qt],
+	      AS_HELP_STRING([--disable-libggadget-qt],
+			     [don't build libggadget-qt]),
+	      [build_libggadget_qt=$enableval],
+	      [build_libggadget_qt=yes])
+
+AC_ARG_ENABLE([gtkmoz-browser-element],
+	      AS_HELP_STRING([--disable-gtkmoz-browser-element],
+			     [don't build gtkmoz-browser-element]),
+	      [build_gtkmoz_browser_element=$enableval],
+	      [build_gtkmoz_browser_element=yes])
+
+AC_ARG_ENABLE([gst-audio-framework],
+	      AS_HELP_STRING([--disable-gst-audio-framework],
+			     [don't build gst-audio-framework]),
+	      [build_gst_audio_framework=$enableval],
+	      [build_gst_audio_framework=yes])
+
+AC_ARG_ENABLE([qt-system-framework],
+	      AS_HELP_STRING([--disable-qt-system-framework],
+			     [don't build qt-system-framework]),
+	      [build_qt_system_framework=$enableval],
+	      [build_qt_system_framework=yes])
+
+AC_ARG_ENABLE([gtk-system-framework],
+	      AS_HELP_STRING([--disable-gtk-system-framework],
+			     [don't build gtk-system-framework]),
+	      [build_gtk_system_framework=$enableval],
+	      [build_gtk_system_framework=yes])
+
+AC_ARG_ENABLE([smjs-script-runtime],
+	      AS_HELP_STRING([--disable-smjs-script-runtime],
+			     [don't build smjs-script-runtime]),
+	      [build_smjs_script_runtime=$enableval],
+	      [build_smjs_script_runtime=yes])
+
+AC_ARG_ENABLE([curl-xml-http-request],
+	      AS_HELP_STRING([--disable-curl-xml-http-request],
+			     [don't build curl-xml-http-request]),
+	      [build_curl_xml_http_request=$enableval],
+	      [build_curl_xml_http_request=yes])
+
+AC_ARG_ENABLE([libxml2-xml-parser],
+	      AS_HELP_STRING([--disable-libxml2-xml-parser],
+			     [don't build libxml2-xml-parser]),
+	      [build_libxml2_xml_parser=$enableval],
+	      [build_libxml2_xml_parser=yes])
+
+if test x$build_libggadget_gtk != xyes; then
+  build_simple_host=no
+fi
+
+if test x$build_libggadget_qt != xyes; then
+  build_qt_host=no
+fi
 
 ###########################################################
 ##                  Start Configuration.                 ##
@@ -336,34 +429,21 @@ AC_SUBST(DEFAULT_COMPILE_FLAGS)
 ##                  Process Config options.              ##
 ###########################################################
 
-build_simple_host=yes
-build_libggadget_gtk=yes
-build_libggadget_qt=yes
-build_libggadget_dbus=yes
-build_gtkmoz_browser_element=yes
-build_gst_audio_framework=yes
-build_qt_host=yes
-build_qt_system_framework=yes
-build_gtk_system_framework=yes
-build_smjs_script_runtime=yes
-build_curl_xml_http_request=yes
-build_libxml2_xml_parser=yes
-
 if test x$has_zlib != xyes; then
   AC_MSG_ERROR([Library zlib is not available.])
 fi
 
-if test x$has_libxml2 != xyes; then
+if test x$has_libxml2 != xyes -a x$build_libxml2_xml_parser = xyes; then
   AC_MSG_WARN([Library xml2 is not available, libxml2-xml-parser extension won't be built.])
   build_libxml2_xml_parser=no
 fi
 
-if test x$has_libcurl != xyes; then
+if test x$has_libcurl != xyes -a x$build_curl_xml_http_request = xyes; then
   AC_MSG_WARN([Library curl is not available, curl-xml-http-request extension won't be built.])
   build_curl_xml_http_request=no
 fi
 
-if test x$has_gstreamer != xyes; then
+if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then
   AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework extension won't be built.])
   build_gst_audio_framework=no
 fi
@@ -387,17 +467,17 @@ if test x$has_qt4 != xyes; then
   build_qt_system_framework=no
 fi
 
-if test x$has_spidermonkey != xyes; then
+if test x$has_spidermonkey != xyes -a x$build_smjs_script_runtime = xyes; then
   AC_MSG_WARN([Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.])
   build_smjs_script_runtime=no
 fi
 
-if test x$has_dbus != xyes; then
+if test x$has_dbus != xyes -a x$build_libggadget_dbus = xyes; then
   AC_MSG_WARN([Library D-Bus is not available, libggadget-dbus won't be built.])
   build_libggadget_dbus=no
 fi
 
-if test x$has_gtkmozembed != xyes; then
+if test x$has_gtkmozembed != xyes -a x$build_gtkmoz_browser_element = xyes; then
   AC_MSG_WARN([Library GtkMozEmbed is not available, gtkmoz_browser_element won't be built.])
   build_gtkmoz_browser_element=no
 fi
