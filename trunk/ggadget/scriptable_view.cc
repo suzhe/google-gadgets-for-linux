@@ -1,0 +1,274 @@
+/*
+  Copyright 2007 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#include <string>
+#include "gadget_consts.h"
+#include "common.h"
+#include "logger.h"
+#include "content_item.h"
+#include "details_view_data.h"
+#include "elements.h"
+#include "basic_element.h"
+#include "scriptable_view.h"
+#include "scriptable_image.h"
+#include "scriptable_event.h"
+#include "image_interface.h"
+#include "file_manager_interface.h"
+#include "file_manager_factory.h"
+#include "script_context_interface.h"
+#include "unicode_utils.h"
+#include "xml_dom_interface.h"
+#include "xml_parser_interface.h"
+#include "xml_http_request_interface.h"
+#include "xml_utils.h"
+#include "string_utils.h"
+
+namespace ggadget {
+
+class ScriptableView::Impl {
+ public:
+  class GlobalObject : public ScriptableHelperNativeOwnedDefault {
+   public:
+    DEFINE_CLASS_ID(0x23840d38ed164ab2, ScriptableInterface);
+    virtual bool IsStrict() const { return false; }
+  };
+
+  Impl(ScriptableView *owner, View *view, ScriptableInterface *prototype,
+       ScriptContextInterface *script_context)
+    : owner_(owner),
+      view_(view),
+      script_context_(script_context) {
+    ASSERT(view_);
+
+    if (prototype)
+      global_object_.SetInheritsFrom(prototype);
+
+    if (script_context_) {
+      script_context_->SetGlobalObject(&global_object_);
+      script_context_->RegisterClass("DOMDocument",
+          NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
+      script_context_->RegisterClass("XMLHttpRequest",
+          NewSlot(this, &Impl::NewXMLHttpRequest));
+      script_context_->RegisterClass("DetailsView",
+          NewSlot(DetailsViewData::CreateInstance));
+      script_context_->RegisterClass("ContentItem",
+          NewFunctorSlot<ContentItem *>(ContentItem::Creator(view_)));
+
+      // Execute common.js to initialize global constants and compatibility
+      // adapters.
+      std::string common_js_contents;
+      if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
+        std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
+        script_context_->Execute(common_js_contents.c_str(), path.c_str(), 1);
+      } else {
+        LOG("Failed to load %s.", kCommonJS);
+      }
+    }
+  }
+
+  ~Impl() {
+    SimpleEvent e(Event::EVENT_CLOSE);
+    view_->OnOtherEvent(e);
+  }
+
+  void DoRegister() {
+    DLOG("Register ScriptableView properties.");
+
+    view_->RegisterProperties(owner_->GetRegisterable());
+    view_->RegisterProperties(global_object_.GetRegisterable());
+
+    // Register view.event property here, because we need set owner_ into
+    // ScriptableEvent if its SrcElement is NULL.
+    owner_->RegisterProperty("event", NewSlot(this, &Impl::GetEvent), NULL);
+    global_object_.RegisterProperty("event", NewSlot(this, &Impl::GetEvent),
+                                    NULL);
+
+    // Old "utils" global object, for backward compatibility.
+    utils_.RegisterMethod("loadImage",
+                          NewSlot(this, &Impl::LoadScriptableImage));
+    utils_.RegisterMethod("setTimeout",
+                          NewSlot(this, &Impl::SetTimeout));
+    utils_.RegisterMethod("clearTimeout",
+                          NewSlot(view_, &View::ClearTimeout));
+    utils_.RegisterMethod("setInterval",
+                          NewSlot(this, &Impl::SetInterval));
+    utils_.RegisterMethod("clearInterval",
+                          NewSlot(view_, &View::ClearInterval));
+    utils_.RegisterMethod("alert",
+                          NewSlot(view_, &View::Alert));
+    utils_.RegisterMethod("confirm",
+                          NewSlot(view_, &View::Confirm));
+    utils_.RegisterMethod("prompt",
+                          NewSlot(view_, &View::Prompt));
+
+    global_object_.RegisterConstant("view", owner_);
+    global_object_.RegisterConstant("utils", &utils_);
+    global_object_.SetDynamicPropertyHandler(
+        NewSlot(this, &Impl::GetElementByNameVariant), NULL);
+  }
+
+  ScriptableEvent *GetEvent() {
+    ScriptableEvent *event = view_->GetEvent();
+    if (event && event->GetSrcElement() == NULL)
+      event->SetSrcElement(owner_);
+    return event;
+  }
+
+  int SetTimeout(Slot *slot, unsigned int duration) {
+    Slot0<void> *callback = slot ? new SlotProxy0<void>(slot) : NULL;
+    return view_->SetTimeout(callback, duration);
+  }
+
+  int SetInterval(Slot *slot, unsigned int duration) {
+    Slot0<void> *callback = slot ? new SlotProxy0<void>(slot) : NULL;
+    return view_->SetInterval(callback, duration);
+  }
+
+  ScriptableImage *LoadScriptableImage(const Variant &image_src) {
+    ImageInterface *image = view_->LoadImage(image_src, false);
+    return image ? new ScriptableImage(image) : NULL;
+  }
+
+  Variant GetElementByNameVariant(const char *name) {
+    BasicElement *result = view_->GetElementByName(name);
+    return result ? Variant(result) : Variant();
+  }
+
+  XMLHttpRequestInterface *NewXMLHttpRequest() {
+    return CreateXMLHttpRequest(GetXMLParser());
+  }
+
+  bool InitFromXML(const std::string &xml, const char *filename) {
+    DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
+    xmldoc->Ref();
+    if (!GetXMLParser()->ParseContentIntoDOM(xml, filename, NULL, NULL,
+                                             xmldoc, NULL, NULL)) {
+      xmldoc->Unref();
+      return false;
+    }
+
+    DOMElementInterface *view_element = xmldoc->GetDocumentElement();
+    if (!view_element ||
+        GadgetStrCmp(view_element->GetTagName().c_str(), kViewTag) != 0) {
+      LOG("No valid root element in view file: %s", filename);
+      xmldoc->Unref();
+      return false;
+    }
+
+    view_->EnableEvents(false);
+    SetupScriptableProperties(owner_, script_context_, view_element, filename);
+
+    Elements *children = view_->GetChildren();
+    for (const DOMNodeInterface *child = view_element->GetFirstChild();
+         child; child = child->GetNextSibling()) {
+      if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
+        InsertElementFromDOM(children, script_context_,
+                             down_cast<const DOMElementInterface *>(child),
+                             NULL, filename);
+      }
+    }
+
+    view_->EnableEvents(true);
+
+    if (script_context_)
+      HandleAllScriptElements(view_element, filename);
+
+    xmldoc->Unref();
+
+    // Fire "onopen" event here, to make sure that it's only fired once.
+    SimpleEvent e(Event::EVENT_OPEN);
+    view_->OnOtherEvent(e);
+    return true;
+  }
+
+  void HandleScriptElement(const DOMElementInterface *xml_element,
+                           const char *filename) {
+    int lineno = xml_element->GetRow();
+    std::string script;
+    std::string src = xml_element->GetAttribute(kSrcAttr);
+
+    if (!src.empty()) {
+      if (view_->GetFileManager()->ReadFile(src.c_str(), &script)) {
+        filename = src.c_str();
+        lineno = 1;
+        std::string temp;
+        if (ConvertStreamToUTF8ByBOM(script, &temp, NULL) == script.length())
+          script = temp;
+      }
+    } else {
+      // Uses the Windows version convention, that inline scripts should be
+      // quoted in comments.
+      for (const DOMNodeInterface *child = xml_element->GetFirstChild();
+           child; child = child->GetNextSibling()) {
+        if (child->GetNodeType() == DOMNodeInterface::COMMENT_NODE) {
+          script = child->GetTextContent();
+          break;
+        } else if (child->GetNodeType() != DOMNodeInterface::TEXT_NODE ||
+                   !TrimString(child->GetTextContent()).empty()) {
+          // Other contents are not allowed under <script></script>.
+          LOG("%s:%d:%d: This content is not allowed in script element",
+              filename, child->GetRow(), child->GetColumn());
+        }
+      }
+    }
+
+    if (!script.empty())
+      script_context_->Execute(script.c_str(), filename, lineno);
+  }
+
+  void HandleAllScriptElements(const DOMElementInterface *xml_element,
+                               const char *filename) {
+    for (const DOMNodeInterface *child = xml_element->GetFirstChild();
+         child; child = child->GetNextSibling()) {
+      if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
+        const DOMElementInterface *child_ele =
+            down_cast<const DOMElementInterface *>(child);
+        if (GadgetStrCmp(child_ele->GetTagName().c_str(), kScriptTag) == 0) {
+          HandleScriptElement(child_ele, filename);
+        } else {
+          HandleAllScriptElements(child_ele, filename);
+        }
+      }
+    }
+  }
+
+  ScriptableView *owner_;
+  View *view_;
+  ScriptContextInterface *script_context_;
+
+  NativeOwnedScriptable utils_;
+  GlobalObject global_object_;
+};
+
+ScriptableView::ScriptableView(View *view, ScriptableInterface *prototype,
+                               ScriptContextInterface *script_context)
+  : impl_(new Impl(this, view, prototype, script_context)) {
+}
+
+ScriptableView::~ScriptableView() {
+  delete impl_;
+  impl_ = NULL;
+}
+
+bool ScriptableView::InitFromXML(const std::string &xml, const char *filename) {
+  return impl_->InitFromXML(xml, filename);
+}
+
+void ScriptableView::DoRegister() {
+  impl_->DoRegister();
+}
+
+} // namespace ggadget

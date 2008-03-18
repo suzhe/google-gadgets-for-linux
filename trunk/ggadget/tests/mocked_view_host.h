@@ -114,13 +114,15 @@ class MockedGraphics : public ggadget::GraphicsInterface {
 
 class MockedViewHost : public ggadget::ViewHostInterface {
  public:
-  MockedViewHost()
-      : view_(NULL),
+  MockedViewHost(ViewHostInterface::Type type)
+      : type_(type),
+        view_(NULL),
         draw_queued_(false),
         resize_queued_(false) {
   }
   virtual ~MockedViewHost() {
   }
+  virtual Type GetType() const { return type_; }
   virtual void Destroy() { delete this; }
   virtual void SetView(ggadget::ViewInterface *view) { view_ = view; }
   virtual ggadget::ViewInterface *GetView() const { return view_; }
@@ -167,6 +169,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   }
 
  private:
+  Type type_;
   MockedGraphics graphics_;
   ggadget::ViewInterface *view_;
   bool draw_queued_;

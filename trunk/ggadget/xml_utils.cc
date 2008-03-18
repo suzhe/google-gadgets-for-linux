@@ -23,6 +23,7 @@
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
 #include "logger.h"
+#include "scriptable_interface.h"
 #include "script_context_interface.h"
 #include "unicode_utils.h"
 #include "view.h"
@@ -109,9 +110,17 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       }
       break;
     }
-    case Variant::TYPE_SLOT:
-      property_value = Variant(script_context->Compile(value, filename, row));
-      break;
+    case Variant::TYPE_SLOT: {
+      if (script_context) {
+        property_value = Variant(script_context->Compile(value, filename, row));
+        break;
+      } else {
+        LOG("%s:%d:%d: Can't set script '%s' for property %s of %s: "
+            "ScriptContext is not available.",
+            filename, row, column, value, name, tag_name);
+        return;
+      }
+    }
 
     default:
       LOG("%s:%d:%d: Unsupported type %s when setting property %s for %s",
@@ -124,10 +133,10 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
         filename, row, column, name, tag_name);
 }
 
-static void SetupScriptableProperties(ScriptableInterface *scriptable,
-                                      ScriptContextInterface *script_context,
-                                      const char *filename,
-                                      const DOMElementInterface *xml_element) {
+void SetupScriptableProperties(ScriptableInterface *scriptable,
+                               ScriptContextInterface *script_context,
+                               const DOMElementInterface *xml_element,
+                               const char *filename) {
   std::string tag_name = xml_element->GetTagName();
   const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
   size_t length = attributes->GetLength();
@@ -151,90 +160,34 @@ static void SetupScriptableProperties(ScriptableInterface *scriptable,
   // "innerText" property is set in InsertElementFromDOM().
 }
 
-static void HandleScriptElement(ScriptContextInterface *script_context,
-                                FileManagerInterface *file_manager,
-                                const char *filename,
-                                const DOMElementInterface *xml_element) {
-  int lineno = xml_element->GetRow();
-  std::string script;
-  std::string src = xml_element->GetAttribute(kSrcAttr);
-
-  if (!src.empty()) {
-    if (file_manager->ReadFile(src.c_str(), &script)) {
-      filename = src.c_str();
-      lineno = 1;
-      std::string temp;
-      if (ConvertStreamToUTF8ByBOM(script, &temp, NULL) == script.length())
-        script = temp;
-    }
-  } else {
-    // Uses the Windows version convention, that inline scripts should be
-    // quoted in comments.
-    for (const DOMNodeInterface *child = xml_element->GetFirstChild();
-         child; child = child->GetNextSibling()) {
-      if (child->GetNodeType() == DOMNodeInterface::COMMENT_NODE) {
-        script = child->GetTextContent();
-        break;
-      } else if (child->GetNodeType() != DOMNodeInterface::TEXT_NODE ||
-                 !TrimString(child->GetTextContent()).empty()) {
-        // Other contents are not allowed under <script></script>.
-        LOG("%s:%d:%d: This content is not allowed in script element",
-            filename, child->GetRow(), child->GetColumn());
-      }
-    }
-  }
-
-  if (!script.empty())
-    script_context->Execute(script.c_str(), filename, lineno);
-}
-
-static void HandleAllScriptElements(View *view, const char *filename,
-                                    const DOMElementInterface *xml_element) {
-  for (const DOMNodeInterface *child = xml_element->GetFirstChild();
-       child; child = child->GetNextSibling()) {
-    if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
-      const DOMElementInterface *child_ele =
-          down_cast<const DOMElementInterface *>(child);
-      if (GadgetStrCmp(child_ele->GetTagName().c_str(), kScriptTag) == 0) {
-        HandleScriptElement(view->GetScriptContext(),
-                            view->GetFileManager(),
-                            filename, child_ele);
-      } else {
-        HandleAllScriptElements(view, filename, child_ele);
-      }
-    }
-  }
-}
-
-static BasicElement *InsertElementFromDOM(
-    View *view, Elements *elements, const char *filename,
-    const DOMElementInterface *xml_element,
-    const BasicElement *before) {
+BasicElement *InsertElementFromDOM(Elements *elements,
+                                   ScriptContextInterface *script_context,
+                                   const DOMElementInterface *xml_element,
+                                   const BasicElement *before,
+                                   const char *filename) {
   std::string tag_name = xml_element->GetTagName();
   if (GadgetStrCmp(tag_name.c_str(), kScriptTag) == 0)
     return NULL;
 
   std::string name = xml_element->GetAttribute(kNameAttr);
-  BasicElement *element = elements->InsertElement(tag_name.c_str(),
-                                                      before,
-                                                      name.c_str());
+  BasicElement *element = elements->InsertElement(tag_name.c_str(), before,
+                                                  name.c_str());
   if (!element) {
     LOG("%s:%d:%d: Failed to create element %s", filename,
         xml_element->GetRow(), xml_element->GetColumn(), tag_name.c_str());
     return element;
   }
 
-  SetupScriptableProperties(element, view->GetScriptContext(),
-                            filename, xml_element);
+  SetupScriptableProperties(element, script_context, xml_element, filename);
   Elements *children = element->GetChildren();
   std::string text;
   for (const DOMNodeInterface *child = xml_element->GetFirstChild();
        child; child = child->GetNextSibling()) {
     DOMNodeInterface::NodeType type = child->GetNodeType();
-    if (type == DOMNodeInterface::ELEMENT_NODE) {
-      InsertElementFromDOM(view, children, filename,
+    if (type == DOMNodeInterface::ELEMENT_NODE && children) {
+      InsertElementFromDOM(children, script_context,
                            down_cast<const DOMElementInterface *>(child),
-                           NULL);
+                           NULL, filename);
     } else if (type == DOMNodeInterface::TEXT_NODE ||
                type == DOMNodeInterface::CDATA_SECTION_NODE) {
       text += down_cast<const DOMTextInterface *>(child)->GetTextContent();
@@ -243,57 +196,15 @@ static BasicElement *InsertElementFromDOM(
   // Set the "innerText" property.
   text = TrimString(text);
   if (!text.empty()) {
-    SetScriptableProperty(element, view->GetScriptContext(), filename,
+    SetScriptableProperty(element, script_context, filename,
                           xml_element->GetRow(), xml_element->GetColumn(),
                           kInnerTextProperty, text.c_str(), tag_name.c_str());
   }
   return element;
 }
 
-bool SetupViewFromXML(View *view, const std::string &xml,
-                      const char *filename) {
-  DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
-  xmldoc->Ref();
-  if (!GetXMLParser()->ParseContentIntoDOM(xml, filename, NULL, NULL,
-                                           xmldoc, NULL, NULL)) {
-    xmldoc->Unref();
-    return false;
-  }
-
-  DOMElementInterface *view_element = xmldoc->GetDocumentElement();
-  if (!view_element ||
-      GadgetStrCmp(view_element->GetTagName().c_str(), kViewTag) != 0) {
-    LOG("No valid root element in view file: %s", filename);
-    xmldoc->Unref();
-    return false;
-  }
-
-  view->EnableEvents(false);
-  SetupScriptableProperties(view->GetScriptable(), view->GetScriptContext(),
-                            filename, view_element);
-
-  Elements *children = view->GetChildren();
-  for (const DOMNodeInterface *child = view_element->GetFirstChild();
-       child; child = child->GetNextSibling()) {
-    if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
-      InsertElementFromDOM(view, children, filename,
-                           down_cast<const DOMElementInterface *>(child),
-                           NULL);
-    }
-  }
-
-  view->EnableEvents(true);
-  HandleAllScriptElements(view, filename, view_element);
-  xmldoc->Unref();
-  return true;
-}
-
-BasicElement *AppendElementFromXML(View *view, Elements *elements,
-                                   const std::string &xml) {
-  return InsertElementFromXML(view, elements, xml, NULL);
-}
-
-BasicElement *InsertElementFromXML(View *view, Elements *elements,
+BasicElement *InsertElementFromXML(Elements *elements,
+                                   ScriptContextInterface *script_context,
                                    const std::string &xml,
                                    const BasicElement *before) {
   DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
@@ -311,8 +222,8 @@ BasicElement *InsertElementFromXML(View *view, Elements *elements,
     return NULL;
   }
 
-  BasicElement *result = InsertElementFromDOM(view, elements, "",
-                                              xml_element, before);
+  BasicElement *result = InsertElementFromDOM(elements, script_context,
+                                              xml_element, before, "");
   xmldoc->Unref();
   return result;
 }

@@ -35,8 +35,8 @@ ggadget::gtk::MainLoop g_main_loop;
 
 class ViewHostWithGraphics : public MockedViewHost {
  public:
-  ViewHostWithGraphics()
-      : MockedViewHost(), gfx_(new CairoGraphics(1.0)) {
+  ViewHostWithGraphics(ViewHostInterface::Type type)
+      : MockedViewHost(type), gfx_(new CairoGraphics(1.0)) {
   }
 
   virtual ~ViewHostWithGraphics() {
@@ -108,7 +108,7 @@ class BasicElementTest : public testing::Test {
   ViewHostWithGraphics *view_host_;
 
   BasicElementTest() {
-    view_host_ = new ViewHostWithGraphics();
+    view_host_ = new ViewHostWithGraphics(ViewHostInterface::VIEW_HOST_MAIN);
     target_ =
         down_cast<CairoCanvas*>(view_host_->GetGraphics()->NewCanvas(300, 150));
   }
@@ -135,7 +135,7 @@ class BasicElementTest : public testing::Test {
 
 // This test is meaningful only with -savepng
 TEST_F(BasicElementTest, ElementsDraw) {
-  View view(ViewInterface::VIEW_MAIN, view_host_, NULL, NULL, g_factory);
+  View view(view_host_, NULL, g_factory, NULL);
   Muffin m(NULL, &view, NULL);
   Pie *p = NULL;
 

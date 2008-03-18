@@ -398,12 +398,13 @@ BasicElement *Elements::InsertElement(const char *tag_name,
 }
 
 BasicElement *Elements::AppendElementFromXML(const char *xml) {
-  return ::ggadget::AppendElementFromXML(impl_->view_, this, xml);
+  return InsertElementFromXML(xml, NULL);
 }
 
 BasicElement *Elements::InsertElementFromXML(
     const char *xml, const BasicElement *before) {
-  return ::ggadget::InsertElementFromXML(impl_->view_, this, xml, before);
+  return ::ggadget::InsertElementFromXML(this, impl_->view_->GetScriptContext(),
+                                         xml, before);
 }
 
 bool Elements::RemoveElement(BasicElement *element) {

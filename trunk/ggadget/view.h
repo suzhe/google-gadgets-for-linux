@@ -31,6 +31,7 @@ class ElementFactory;
 class MenuInterface;
 class ScriptableInterface;
 class ScriptContextInterface;
+class RegisterableInterface;
 class Slot;
 class MainLoopInterface;
 class ViewHostInterface;
@@ -47,31 +48,25 @@ class View : public ViewInterface {
   /**
    * Constructor.
    *
-   * @param type type of this view.
    * @param host the ViewHost instance that is associated with the View
-   *        instance. It'll be destroyed by the View instance.
+   *        instance. It's not owned by the View, and shall be destroyed after
+   *        destroying the View.
    * @param gadget the Gadget instance that owns this view. For debug purpose,
    *        it could be NULL.
-   * @param prototype a scriptable object that shall be used as the prototype
-   *        of the global object of this view's script context. It won't be
-   *        destroyed by the view.
    * @param element_factory the ElementFactory instance that shall be used by
    *        this view. It won't be destroyed by the view.
+   * @param script_context the ScriptContext instance that is used when
+   *        creating new elements. (Only used in Elements::InsertElementFromXML)
+   *        It's not owned by the View and shall be destroyed after destroying
+   *        the View.
    */
-  View(ViewType type,
-       ViewHostInterface *host,
+  View(ViewHostInterface *host,
        Gadget *gadget,
-       ScriptableInterface *prototype,
-       ElementFactory *element_factory);
+       ElementFactory *element_factory,
+       ScriptContextInterface *script_context);
 
   /** Destructor. */
   virtual ~View();
-
-  /**
-   * Returns the scriptable instance of the view, which will be registered into
-   * the script context of the view as global object "view".
-   */
-  ScriptableInterface *GetScriptable() const;
 
   /**
    * @return the ScriptContextInterface object associated with this view.
@@ -87,16 +82,12 @@ class View : public ViewInterface {
   const GraphicsInterface *GetGraphics() const;
 
   /**
-   * Init the view from specified XML definition.
-   * @param xml XML definition of the view.
-   * @param filename file name of the xml definition, for logging purpose.
-   * @return @c true if succeedes.
+   * Registers all properties of the View instance to specified Scriptable
+   * instance./
    */
-  bool InitFromXML(const std::string &xml, const char *filename);
+  virtual void RegisterProperties(RegisterableInterface *obj) const;
 
  public: // ViewInterface methods.
-  virtual ViewType GetType() const;
-
   virtual Gadget *GetGadget() const;
   virtual void SetWidth(int width);
   virtual void SetHeight(int height);

@@ -32,6 +32,7 @@ ggadget::ElementFactory *g_factory = NULL;
 using ggadget::down_cast;
 using ggadget::View;
 using ggadget::ViewInterface;
+using ggadget::ViewHostInterface;
 
 class BasicElementTest : public testing::Test {
  protected:
@@ -43,16 +44,16 @@ class BasicElementTest : public testing::Test {
 };
 
 TEST_F(BasicElementTest, TestCreate) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   Pie p(NULL, &view, NULL);
 }
 
 TEST_F(BasicElementTest, TestChildren) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ggadget::BasicElement *c1 =
@@ -71,8 +72,8 @@ TEST_F(BasicElementTest, TestChildren) {
 }
 
 TEST_F(BasicElementTest, TestCursor) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_TRUE(m.GetCursor() == ViewInterface::CURSOR_ARROW);
@@ -81,8 +82,8 @@ TEST_F(BasicElementTest, TestCursor) {
 }
 
 TEST_F(BasicElementTest, TestDropTarget) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_FALSE(m.IsDropTarget());
@@ -91,8 +92,8 @@ TEST_F(BasicElementTest, TestDropTarget) {
 }
 
 TEST_F(BasicElementTest, TestEnabled) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_FALSE(m.IsEnabled());
@@ -101,8 +102,8 @@ TEST_F(BasicElementTest, TestEnabled) {
 }
 
 TEST_F(BasicElementTest, TestPixelHeight) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   ASSERT_FALSE(host->GetQueuedDraw());
   Muffin m(NULL, &view, NULL);
@@ -125,8 +126,8 @@ TEST_F(BasicElementTest, TestPixelHeight) {
 }
 
 TEST_F(BasicElementTest, TestRelativeHeight) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   ggadget::BasicElement *m = view.GetChildren()->AppendElement("muffin", NULL);
@@ -156,8 +157,8 @@ TEST_F(BasicElementTest, TestRelativeHeight) {
 }
 
 TEST_F(BasicElementTest, TestHitTest) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_TRUE(m.GetHitTest() == ggadget::BasicElement::HT_DEFAULT);
@@ -166,8 +167,8 @@ TEST_F(BasicElementTest, TestHitTest) {
 }
 
 /*TEST_F(BasicElementTest, TestMask) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_STREQ("", m.GetMask().c_str());
@@ -178,16 +179,16 @@ TEST_F(BasicElementTest, TestHitTest) {
 }*/
 
 TEST_F(BasicElementTest, TestName) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, "mymuffin");
   ASSERT_STREQ("mymuffin", m.GetName().c_str());
 }
 
 TEST_F(BasicElementTest, TestConst) {
-  View view(ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, g_factory);
+  View view(new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+            NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ggadget::BasicElement *c = m.GetChildren()->AppendElement("pie", NULL);
@@ -197,8 +198,8 @@ TEST_F(BasicElementTest, TestConst) {
 }
 
 TEST_F(BasicElementTest, TestOpacity) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(1.0, m.GetOpacity());
@@ -216,8 +217,8 @@ TEST_F(BasicElementTest, TestOpacity) {
 }
 
 TEST_F(BasicElementTest, TestPixelPinX) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   Muffin m(NULL, &view, NULL);
@@ -236,8 +237,8 @@ TEST_F(BasicElementTest, TestPixelPinX) {
 }
 
 TEST_F(BasicElementTest, TestRelativePinX) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   ggadget::BasicElement *m = view.GetChildren()->AppendElement("muffin", NULL);
@@ -257,8 +258,8 @@ TEST_F(BasicElementTest, TestRelativePinX) {
 }
 
 TEST_F(BasicElementTest, TestPixelPinY) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   Muffin m(NULL, &view, NULL);
@@ -278,8 +279,8 @@ TEST_F(BasicElementTest, TestPixelPinY) {
 }
 
 TEST_F(BasicElementTest, TestRelativePinY) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   ggadget::BasicElement *m = view.GetChildren()->AppendElement("muffin", NULL);
@@ -299,8 +300,8 @@ TEST_F(BasicElementTest, TestRelativePinY) {
 }
 
 TEST_F(BasicElementTest, TestRotation) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_FLOAT_EQ(0.0, m.GetRotation());
@@ -310,8 +311,8 @@ TEST_F(BasicElementTest, TestRotation) {
 }
 
 TEST_F(BasicElementTest, TestTooltip) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_STREQ("", m.GetTooltip().c_str());
@@ -322,8 +323,8 @@ TEST_F(BasicElementTest, TestTooltip) {
 }
 
 TEST_F(BasicElementTest, TestPixelWidth) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   Muffin m(NULL, &view, NULL);
@@ -344,8 +345,8 @@ TEST_F(BasicElementTest, TestPixelWidth) {
 }
 
 TEST_F(BasicElementTest, TestRelativeWidth) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   ggadget::BasicElement *m = view.GetChildren()->AppendElement("muffin", NULL);
@@ -375,8 +376,8 @@ TEST_F(BasicElementTest, TestRelativeWidth) {
 }
 
 TEST_F(BasicElementTest, TestVisible) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ASSERT_TRUE(m.IsVisible());
@@ -385,8 +386,8 @@ TEST_F(BasicElementTest, TestVisible) {
 }
 
 TEST_F(BasicElementTest, TestPixelX) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   Muffin m(NULL, &view, NULL);
@@ -407,8 +408,8 @@ TEST_F(BasicElementTest, TestPixelX) {
 }
 
 TEST_F(BasicElementTest, TestRelativeX) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   ggadget::BasicElement *m = view.GetChildren()->AppendElement("muffin", NULL);
@@ -431,8 +432,8 @@ TEST_F(BasicElementTest, TestRelativeX) {
 }
 
 TEST_F(BasicElementTest, TestPixelY) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   Muffin m(NULL, &view, NULL);
@@ -453,8 +454,8 @@ TEST_F(BasicElementTest, TestPixelY) {
 }
 
 TEST_F(BasicElementTest, TestRelativeY) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   view.SetSize(400, 300);
   ggadget::BasicElement *m =
@@ -480,8 +481,8 @@ TEST_F(BasicElementTest, TestRelativeY) {
 // This test is not merely for BasicElement, but mixed test for xml_utils
 // and Elements.
 TEST_F(BasicElementTest, TestFromXML) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
   ggadget::Elements *children = down_cast<ggadget::Elements *>(m.GetChildren());
@@ -519,8 +520,8 @@ TEST_F(BasicElementTest, TestFromXML) {
 // This test is not merely for BasicElement, but mixed test for xml_utils
 // and Elements.
 TEST_F(BasicElementTest, XMLConstruction) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
 
@@ -531,7 +532,7 @@ TEST_F(BasicElementTest, XMLConstruction) {
     "  </pie>\n"
     "  <pie name=\"pie1\"/>\n"
     "</muffin>\n";
-  AppendElementFromXML(&view, m.GetChildren(), xml);
+  InsertElementFromXML(m.GetChildren(), NULL, xml, NULL);
   ASSERT_EQ(1, m.GetChildren()->GetCount());
   ggadget::BasicElement *e1 = m.GetChildren()->GetItemByIndex(0);
   ASSERT_TRUE(e1);

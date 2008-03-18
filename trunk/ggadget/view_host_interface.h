@@ -40,6 +40,15 @@ class ViewHostInterface {
   virtual ~ViewHostInterface() { }
 
  public:
+  enum Type {
+    VIEW_HOST_MAIN,     /**< ViewHost to hold a main view. */
+    VIEW_HOST_OPTIONS,  /**< ViewHost to hold an options view. */
+    VIEW_HOST_DETAILS,  /**< ViewHost to hold a details view. */
+  };
+
+  /** Gets the type of the Viewhost. */
+  virtual Type GetType() const = 0;
+
   /**
    * Destroys this ViewHost instance.
    *

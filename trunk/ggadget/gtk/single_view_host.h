@@ -45,10 +45,12 @@ class SingleViewHost : public ViewHostInterface {
    * @param zoom Zoom factor used by the Graphics object.
    * @param debug_mode DebugMode when drawing elements.
    */
-  SingleViewHost(double zoom, bool decorated,
+  SingleViewHost(ViewHostInterface::Type type,
+                 double zoom, bool decorated,
                  ViewInterface::DebugMode debug_mode);
   virtual ~SingleViewHost();
 
+  virtual Type GetType() const;
   virtual void Destroy();
   virtual void SetView(ViewInterface *view);
   virtual ViewInterface *GetView() const;

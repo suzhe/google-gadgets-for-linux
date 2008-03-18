@@ -35,14 +35,6 @@ class Gadget;
  */
 class ViewInterface {
  public:
-  enum ViewType {
-    VIEW_MAIN,
-    VIEW_OPTIONS,
-    /** Old style options dialog that uses @c ggadget::DisplayWindow. */
-    VIEW_OLD_OPTIONS,
-    VIEW_DETAILS,
-  };
-
   /** Used in @c SetResizable(). */
   enum ResizableMode {
     RESIZABLE_FALSE,
@@ -100,11 +92,6 @@ class ViewInterface {
   };
 
   virtual ~ViewInterface() { }
-
-  /**
-   * @return the type of the view.
-   */
-  virtual ViewType GetType() const = 0;
 
   /**
    * @return the Gadget instance which owns this view.

@@ -50,6 +50,7 @@ SET(SRCS
   scriptable_image.cc
   scriptable_menu.cc
   scriptable_options.cc
+  scriptable_view.cc
   signals.cc
   slot.cc
   string_utils.cc

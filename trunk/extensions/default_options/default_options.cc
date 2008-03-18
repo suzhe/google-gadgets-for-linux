@@ -285,6 +285,11 @@ class DefaultOptions : public MemoryOptions {
     return true;
   }
 
+  virtual void PutInternalValue(const char *name, const Variant &value) {
+    MemoryOptions::PutInternalValue(name, value);
+    changed_ = true;
+  }
+
   virtual bool Flush() {
     if (!file_manager_)
       return false;

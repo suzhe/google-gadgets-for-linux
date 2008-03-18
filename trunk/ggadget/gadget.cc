@@ -31,11 +31,13 @@
 #include "host_interface.h"
 #include "options_interface.h"
 #include "script_context_interface.h"
+#include "script_runtime_manager.h"
 #include "scriptable_array.h"
 #include "scriptable_framework.h"
 #include "scriptable_helper.h"
 #include "scriptable_menu.h"
 #include "scriptable_options.h"
+#include "scriptable_view.h"
 #include "system_utils.h"
 #include "view_host_interface.h"
 #include "view.h"
@@ -48,6 +50,74 @@ namespace ggadget {
 class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x6a3c396b3a544148, ScriptableInterface);
+
+  /**
+   * A class to bundles View, ScriptableView, ScriptContext, and
+   * DetailsViewData together.
+   */
+  class ViewBundle {
+   public:
+    ViewBundle(ViewHostInterface *host,
+               Gadget *gadget,
+               ElementFactory *element_factory,
+               ScriptableInterface *prototype,
+               DetailsViewData *details,
+               bool support_script)
+      : host_(host),
+        context_(NULL),
+        view_(NULL),
+        scriptable_(NULL),
+        details_(details) {
+      ASSERT(host_);
+      if (support_script) {
+        // Only xml based views have standalone script context.
+        // FIXME: ScriptContext instance should be created on-demand, according
+        // to the type of script files shipped in the gadget.
+        // Or maybe we should add an option in gadget.gmanifest to specify what
+        // ScriptRuntime implementation is required.
+        // We may support multiple different script languages later.
+        context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
+      }
+
+      view_ = new View(host_, gadget, element_factory, context_);
+
+      if (details_)
+        details_->Ref();
+      if (context_)
+        scriptable_ = new ScriptableView(view_, prototype, context_);
+    }
+
+    ~ViewBundle() {
+      if (details_) {
+        details_->Unref();
+        details_ = NULL;
+      }
+      delete scriptable_;
+      scriptable_ = NULL;
+      delete view_;
+      view_ = NULL;
+      if (context_) {
+        context_->Destroy();
+        context_ = NULL;
+      }
+      if (host_) {
+        host_->Destroy();
+        host_ = NULL;
+      }
+    }
+
+    ScriptContextInterface *context() { return context_; }
+    View *view() { return view_; }
+    ScriptableView *scriptable() { return scriptable_; }
+    DetailsViewData *details() { return details_; }
+
+   private:
+    ViewHostInterface *host_;
+    ScriptContextInterface *context_;
+    View *view_;
+    ScriptableView *scriptable_;
+    DetailsViewData *details_;
+  };
 
   Impl(Gadget *owner,
        HostInterface *host,
@@ -62,9 +132,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         options_(CreateOptions(options_name)),
         scriptable_options_(new ScriptableOptions(options_, false)),
         main_view_(NULL),
-        details_view_data_(NULL),
+        options_view_(NULL),
         details_view_(NULL),
-        old_details_view_data_(NULL),
         old_details_view_(NULL),
         base_path_(base_path),
         instance_id_(instance_id),
@@ -83,16 +152,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   ~Impl() {
     delete old_details_view_;
     old_details_view_ = NULL;
-    if (old_details_view_data_) {
-      old_details_view_data_->Unref();
-      old_details_view_data_ = NULL;
-    }
     delete details_view_;
     details_view_ = NULL;
-    if (details_view_data_) {
-      details_view_data_->Unref();
-      details_view_data_ = NULL;
-    }
+    delete options_view_;
+    options_view_ = NULL;
     delete main_view_;
     main_view_ = NULL;
     delete scriptable_options_;
@@ -138,9 +201,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
          GetManifestInfo(kManifestDescription).c_str());
 
     // main view must be created before calling RegisterProperties();
-    main_view_ = new View(ViewInterface::VIEW_MAIN,
-                          host_->NewViewHost(ViewInterface::VIEW_MAIN),
-                          owner_, &global_, element_factory_);
+    main_view_ = new ViewBundle(
+        host_->NewViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+        owner_, element_factory_, &global_, NULL, true);
     ASSERT(main_view_);
 
     // Register scriptable properties.
@@ -192,10 +255,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       return false;
     }
 
-    main_view_->SetCaption(GetManifestInfo(kManifestName).c_str());
-    RegisterScriptExtensions(main_view_->GetScriptContext());
+    main_view_->view()->SetCaption(GetManifestInfo(kManifestName).c_str());
+    RegisterScriptExtensions(main_view_->context());
 
-    if (!main_view_->InitFromXML(main_xml, kMainXML)) {
+    if (!main_view_->scriptable()->InitFromXML(main_xml, kMainXML)) {
       LOG("Failed to setup the main view");
       return false;
     }
@@ -237,11 +300,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     plugin_.RegisterProperty("plugin_flags", NULL, // No getter.
                 NewSlot(this, &Impl::SetPluginFlags));
     plugin_.RegisterProperty("title", NULL, // No getter.
-                NewSlot(main_view_, &View::SetCaption));
+                NewSlot(main_view_->view(), &View::SetCaption));
     plugin_.RegisterProperty("window_width",
-                NewSlot(main_view_, &View::GetWidth), NULL);
+                NewSlot(main_view_->view(), &View::GetWidth), NULL);
     plugin_.RegisterProperty("window_height",
-                NewSlot(main_view_, &View::GetHeight), NULL);
+                NewSlot(main_view_->view(), &View::GetHeight), NULL);
 
     plugin_.RegisterMethod("RemoveMe",
                 NewSlot(this, &Impl::RemoveMe));
@@ -349,53 +412,63 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   void SetContentFlags(int flags) {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->SetContentFlags(flags);
   }
 
   size_t GetMaxContentItems() {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     return content_area ? content_area->GetMaxContentItems() : 0;
   }
 
   void SetMaxContentItems(size_t max_content_items) {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->SetMaxContentItems(max_content_items);
   }
 
   ScriptableArray *GetContentItems() {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     return content_area ? content_area->ScriptGetContentItems() : NULL;
   }
 
   void SetContentItems(ScriptableInterface *array) {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->ScriptSetContentItems(array);
   }
 
   ScriptableArray *GetPinImages() {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     return content_area ? content_area->ScriptGetPinImages() : NULL;
   }
 
   void SetPinImages(ScriptableInterface *array) {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->ScriptSetPinImages(array);
   }
 
   void AddContentItem(ContentItem *item,
                       ContentAreaElement::DisplayOptions options) {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->AddContentItem(item, options);
   }
 
   void RemoveContentItem(ContentItem *item) {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->RemoveContentItem(item);
   }
 
   void RemoveAllContentItems() {
-    ContentAreaElement *content_area = main_view_->GetContentAreaElement();
+    ContentAreaElement *content_area =
+        main_view_->view()->GetContentAreaElement();
     if (content_area) content_area->RemoveAllContentItems();
   }
 
@@ -442,7 +515,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     if (options_view_) {
       SimpleEvent event((flag == ViewInterface::OPTIONS_VIEW_FLAG_OK) ?
                         Event::EVENT_OK : Event::EVENT_CANCEL);
-      options_view_->OnOtherEvent(event);
+      options_view_->view()->OnOtherEvent(event);
     }
   }
 
@@ -452,16 +525,15 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                ViewInterface::OPTIONS_VIEW_FLAG_CANCEL;
 
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
-      options_view_ =
-          new View(ViewInterface::VIEW_OLD_OPTIONS,
-                   host_->NewViewHost(ViewInterface::VIEW_OLD_OPTIONS),
-                   owner_, &global_, element_factory_);
-      DisplayWindow *window = new DisplayWindow(options_view_);
+      options_view_ = new ViewBundle(
+          host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
+          owner_, element_factory_, NULL, NULL, false);
+      DisplayWindow *window = new DisplayWindow(options_view_->view());
       Variant result = onshowoptionsdlg_signal_(window);
       if ((result.type() != Variant::TYPE_BOOL ||
            VariantValue<bool>()(result)) && window->AdjustSize()) {
-        options_view_->SetResizable(ViewInterface::RESIZABLE_FALSE);
-        ret = options_view_->ShowView(
+        options_view_->view()->SetResizable(ViewInterface::RESIZABLE_FALSE);
+        ret = options_view_->view()->ShowView(
             true, flag, NewSlot(this, &Impl::OptionsDialogCallback));
       } else {
         LOG("gadget cancelled the options dialog.");
@@ -473,15 +545,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       std::string xml;
       if (file_manager_->ReadFile(kOptionsXML, &xml) &&
           ReplaceXMLEntities(strings_map_, &xml)) {
-        options_view_ =
-            new View(ViewInterface::VIEW_OPTIONS,
-                     host_->NewViewHost(ViewInterface::VIEW_OPTIONS),
-                     owner_, &global_, element_factory_);
-        RegisterScriptExtensions(options_view_->GetScriptContext());
+        options_view_ = new ViewBundle(
+            host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
+            owner_, element_factory_, &global_, NULL, true);
+        RegisterScriptExtensions(options_view_->context());
         std::string full_path = file_manager_->GetFullPath(kOptionsXML);
-        if (options_view_->InitFromXML(xml, full_path.c_str())) {
-          options_view_->SetResizable(ViewInterface::RESIZABLE_FALSE);
-          ret = options_view_->ShowView(
+        if (options_view_->scriptable()->InitFromXML(xml, full_path.c_str())) {
+          options_view_->view()->SetResizable(ViewInterface::RESIZABLE_FALSE);
+          ret = options_view_->view()->ShowView(
               true, flag, NewSlot(this, &Impl::OptionsDialogCallback));
         } else {
           LOG("Failed to setup the options view");
@@ -510,15 +581,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                        const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
     CloseDetailsView();
-    details_view_data->Ref();
-    details_view_data_ = details_view_data;
-
-    details_view_ =
-        new View(ViewInterface::VIEW_DETAILS,
-                 host_->NewViewHost(ViewInterface::VIEW_DETAILS),
-                 owner_, &global_, element_factory_);
-    ScriptContextInterface *context = details_view_->GetScriptContext();
-    ScriptableOptions *scriptable_data = details_view_data_->GetData();
+    details_view_ = new ViewBundle(
+        host_->NewViewHost(ViewHostInterface::VIEW_HOST_DETAILS),
+        owner_, element_factory_, &global_, details_view_data, true);
+    ScriptContextInterface *context = details_view_->context();
+    ScriptableOptions *scriptable_data = details_view_->details()->GetData();
     OptionsInterface *data = scriptable_data->GetOptions();
 
     // Register script extensions.
@@ -530,59 +597,49 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     std::string xml;
     std::string xml_file;
-    if (details_view_data_->GetContentIsHTML() ||
-        !details_view_data_->GetContentIsView()) {
-      if (details_view_data_->GetContentIsHTML()) {
+    if (details_view_data->GetContentIsHTML() ||
+        !details_view_data->GetContentIsView()) {
+      if (details_view_data->GetContentIsHTML()) {
         xml_file = kHTMLDetailsView;
-        ScriptableInterface *ext_obj = details_view_data_->GetExternalObject();
+        ScriptableInterface *ext_obj = details_view_data->GetExternalObject();
         context->AssignFromNative(NULL, "", "external", Variant(ext_obj));
         data->PutValue("contentType", Variant("text/html"));
       } else {
         xml_file = kTextDetailsView;
         data->PutValue("contentType", Variant("text/plain"));
       }
-      data->PutValue("content", Variant(details_view_data_->GetText()));
+      data->PutValue("content", Variant(details_view_data->GetText()));
       GetGlobalFileManager()->ReadFile(xml_file.c_str(), &xml);
     } else {
-      xml_file = details_view_data_->GetText();
+      xml_file = details_view_data->GetText();
       if (file_manager_->ReadFile(xml_file.c_str(), &xml))
         ReplaceXMLEntities(strings_map_, &xml);
     }
 
-    if (xml.empty() || !details_view_->InitFromXML(xml, xml_file.c_str())) {
+    if (xml.empty() ||
+        !details_view_->scriptable()->InitFromXML(xml, xml_file.c_str())) {
       LOG("Failed to load details view from %s", xml_file.c_str());
       delete details_view_;
       details_view_ = NULL;
-      details_view_data_->Unref();
-      details_view_data_ = NULL;
       return false;
     }
 
     // For details view, the caption set in xml file will be discarded.
     if (title && *title)
-      details_view_->SetCaption(title);
+      details_view_->view()->SetCaption(title);
 
-    details_view_->ShowView(title, flags, feedback_handler);
+    details_view_->view()->ShowView(title, flags, feedback_handler);
     return true;
   }
 
   void CloseDetailsView() {
-    if (old_details_view_data_) {
-      old_details_view_data_->Unref();
-      old_details_view_data_ = NULL;
-    }
-    if (old_details_view_) {
-      delete old_details_view_;
-      old_details_view_ = NULL;
-    }
+    delete old_details_view_;
 
     if (details_view_)
-      details_view_->CloseView();
+      details_view_->view()->CloseView();
 
     old_details_view_ = details_view_;
-    old_details_view_data_ = details_view_data_;
     details_view_ = NULL;
-    details_view_data_ = NULL;
   }
 
   Connection* ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
@@ -678,19 +735,15 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   OptionsInterface *options_;
   ScriptableOptions *scriptable_options_;
 
-  View *main_view_;
-  View *options_view_;
-  DetailsViewData *details_view_data_;
-  View *details_view_;
-  DetailsViewData *old_details_view_data_;
-  View *old_details_view_;
+  ViewBundle *main_view_;
+  ViewBundle *options_view_;
+  ViewBundle *details_view_;
+  ViewBundle *old_details_view_;
 
   std::string base_path_;
   int instance_id_;
   bool initialized_;
   bool has_options_xml_;
-  int close_details_view_timer_;
-  int show_details_view_timer_;
   int plugin_flags_;
 };
 
@@ -732,7 +785,7 @@ OptionsInterface *Gadget::GetOptions() const {
 }
 
 View *Gadget::GetMainView() const {
-  return impl_->main_view_;
+  return impl_->main_view_->view();
 }
 
 std::string Gadget::GetManifestInfo(const char *key) const {
@@ -741,11 +794,11 @@ std::string Gadget::GetManifestInfo(const char *key) const {
 
 bool Gadget::ShowMainView() {
   ASSERT(IsValid());
-  return impl_->main_view_->ShowView(false, 0, NULL);
+  return impl_->main_view_->view()->ShowView(false, 0, NULL);
 }
 
 void Gadget::CloseMainView() {
-  impl_->main_view_->CloseView();
+  impl_->main_view_->view()->CloseView();
 }
 
 bool Gadget::HasOptionsDialog() const {

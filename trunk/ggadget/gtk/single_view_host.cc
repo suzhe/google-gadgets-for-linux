@@ -33,9 +33,11 @@ namespace gtk {
 
 class SingleViewHost::Impl {
  public:
-  Impl(SingleViewHost *owner, double zoom, bool decorated,
+  Impl(ViewHostInterface::Type type,
+       SingleViewHost *owner, double zoom, bool decorated,
        ViewInterface::DebugMode debug_mode)
-    : owner_(owner),
+    : type_(type),
+      owner_(owner),
       view_(NULL),
       gfx_(new CairoGraphics(zoom)),
       window_(NULL),
@@ -47,9 +49,6 @@ class SingleViewHost::Impl {
       binder_(NULL),
       debug_mode_(debug_mode),
       feedback_handler_(NULL),
-      current_view_width_(0),
-      current_view_height_(0),
-      current_zoom_(0),
       adjust_window_size_source_(0),
       decorated_(decorated) {
     ASSERT(owner);
@@ -66,6 +65,9 @@ class SingleViewHost::Impl {
   }
 
   void Detach() {
+    if (window_)
+      CloseView();
+
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
 
@@ -86,10 +88,6 @@ class SingleViewHost::Impl {
     context_menu_ = NULL;
     ok_button_ = NULL;
     cancel_button_ = NULL;
-
-    current_view_width_ = 0;
-    current_view_height_ = 0;
-    current_zoom_ = 1.0;
   }
 
   void SetView(ViewInterface *view) {
@@ -97,12 +95,9 @@ class SingleViewHost::Impl {
     if (view == NULL) return;
 
     view_ = view;
-    ViewInterface::ViewType type = view_->GetType();
-
     bool no_background = false;
     // Initialize window and widget.
-    if (type == ViewInterface::VIEW_OPTIONS ||
-        type == ViewInterface::VIEW_OLD_OPTIONS) {
+    if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       window_ = gtk_dialog_new();
       widget_ = gtk_fixed_new();
       gtk_fixed_set_has_window(GTK_FIXED(widget_), TRUE);
@@ -118,7 +113,7 @@ class SingleViewHost::Impl {
                        G_CALLBACK(DialogResponseHandler), this);
       gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
       gtk_widget_show(widget_);
-    } else if (type == ViewInterface::VIEW_DETAILS) {
+    } else if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
       // For details view, we need a GtkFixed widget because Gecko browse
       // element requires it.
       // TODO: buttons of details view shall be provided by view decorator.
@@ -134,6 +129,7 @@ class SingleViewHost::Impl {
       widget_ = window_;
       // Only main view may have transparent background.
       no_background = true;
+      gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), FALSE);
     }
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
@@ -247,8 +243,6 @@ class SingleViewHost::Impl {
       delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
-    ViewInterface::ViewType type = view_->GetType();
-
     // Adjust the window size just before showing the view, to make sure that
     // the window size has correct default size when showing.
     AdjustWindowSize();
@@ -259,8 +253,7 @@ class SingleViewHost::Impl {
     gtk_widget_show(window_);
 
     // Main view and details view doesn't support modal.
-    if (type == ViewInterface::VIEW_OPTIONS ||
-        type == ViewInterface::VIEW_OLD_OPTIONS) {
+    if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       if (flags & ViewInterface::OPTIONS_VIEW_FLAG_OK)
         gtk_widget_show(ok_button_);
       else
@@ -286,13 +279,12 @@ class SingleViewHost::Impl {
   }
 
   std::string GetViewPositionOptionPrefix() {
-    switch (view_->GetType()) {
-      case ViewInterface::VIEW_MAIN:
+    switch (type_) {
+      case ViewHostInterface::VIEW_HOST_MAIN:
         return "main_view";
-      case ViewInterface::VIEW_OPTIONS:
-      case ViewInterface::VIEW_OLD_OPTIONS:
+      case ViewHostInterface::VIEW_HOST_OPTIONS:
         return "options_view";
-      case ViewInterface::VIEW_DETAILS:
+      case ViewHostInterface::VIEW_HOST_DETAILS:
         return "details_view";
       default:
         return "view";
@@ -359,11 +351,6 @@ class SingleViewHost::Impl {
 
   static void WindowShowHandler(GtkWidget *widget, gpointer user_data) {
     DLOG("View window is shown.");
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->view_) {
-      SimpleEvent e(Event::EVENT_OPEN);
-      impl->view_->OnOtherEvent(e);
-    }
   }
 
   static void WindowHideHandler(GtkWidget *widget, gpointer user_data) {
@@ -372,13 +359,11 @@ class SingleViewHost::Impl {
 
     if (impl->view_) {
       if (impl->feedback_handler_ &&
-          impl->view_->GetType() == ViewInterface::VIEW_DETAILS) {
+          impl->type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
         (*impl->feedback_handler_)(ViewInterface::DETAILS_VIEW_FLAG_NONE);
         delete impl->feedback_handler_;
         impl->feedback_handler_ = NULL;
       }
-      SimpleEvent e(Event::EVENT_CLOSE);
-      impl->view_->OnOtherEvent(e);
     }
   }
 
@@ -399,6 +384,7 @@ class SingleViewHost::Impl {
     impl->CloseView();
   }
 
+  ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
   CairoGraphics *gfx_;
@@ -417,9 +403,6 @@ class SingleViewHost::Impl {
   ViewInterface::DebugMode debug_mode_;
   Slot1<void, int> *feedback_handler_;
 
-  int current_view_width_;
-  int current_view_height_;
-  double current_zoom_;
   int adjust_window_size_source_;
   bool decorated_;
 
@@ -427,14 +410,19 @@ class SingleViewHost::Impl {
   static const unsigned int kHideTooltipDelay = 4000;
 };
 
-SingleViewHost::SingleViewHost(double zoom, bool decorated,
+SingleViewHost::SingleViewHost(ViewHostInterface::Type type,
+                               double zoom, bool decorated,
                                ViewInterface::DebugMode debug_mode)
-  : impl_(new Impl(this, zoom, decorated, debug_mode)) {
+  : impl_(new Impl(type, this, zoom, decorated, debug_mode)) {
 }
 
 SingleViewHost::~SingleViewHost() {
   delete impl_;
   impl_ = NULL;
+}
+
+ViewHostInterface::Type SingleViewHost::GetType() const {
+  return impl_->type_;
 }
 
 void SingleViewHost::Destroy() {
