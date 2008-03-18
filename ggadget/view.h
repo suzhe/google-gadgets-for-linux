@@ -110,6 +110,8 @@ class View : public ViewInterface {
   virtual EventResult OnDragEvent(const DragEvent &event);
   virtual EventResult OnOtherEvent(const Event &event);
 
+  virtual HitTest GetHitTest() const;
+
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual bool OnSizing(int *width, int *height);
 

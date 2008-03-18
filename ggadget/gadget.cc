@@ -219,14 +219,14 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         const char *font_name = i->second.c_str();
         std::string path;
         // ignore return, error not fatal
-        if (file_manager_->IsDirectlyAccessible(font_name, NULL) ||
+        if (file_manager_->IsDirectlyAccessible(font_name, &path) ||
             file_manager_->ExtractFile(font_name, &path))
           host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
         const char *module_name = i->second.c_str();
         std::string path;
-        if (file_manager_->IsDirectlyAccessible(module_name, NULL) ||
+        if (file_manager_->IsDirectlyAccessible(module_name, &path) ||
             file_manager_->ExtractFile(module_name, &path))
           extension_manager_->LoadExtension(path.c_str(), false);
       }

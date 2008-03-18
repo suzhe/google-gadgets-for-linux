@@ -35,8 +35,9 @@ namespace gtk {
 
 class SimpleGtkHost::Impl {
  public:
-  Impl(SimpleGtkHost *owner, int view_debug_mode)
+  Impl(SimpleGtkHost *owner, double zoom, int view_debug_mode)
     : owner_(owner),
+      zoom_(zoom),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
       gadget_manager_(GetGadgetManager()) {
@@ -131,10 +132,15 @@ class SimpleGtkHost::Impl {
   void InitGadgets() {
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::AddGadgetInstanceCallback));
-    g_idle_add(DelayedLoadGadget, this);
+    g_idle_add(DelayedLoadGadgets, this);
   }
 
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
+    if (gadgets_.find(instance_id) != gadgets_.end()) {
+      // Gadget is already loaded.
+      return true;
+    }
+
     Gadget *gadget =
         new Gadget(owner_, path, options_name, instance_id);
 
@@ -156,7 +162,7 @@ class SimpleGtkHost::Impl {
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
     bool decorated = (type != ViewHostInterface::VIEW_HOST_MAIN);
-    SingleViewHost *host = new SingleViewHost(type, 1.0, decorated,
+    SingleViewHost *host = new SingleViewHost(type, zoom_, decorated,
                   static_cast<ViewInterface::DebugMode>(view_debug_mode_));
     return host;
   }
@@ -191,7 +197,7 @@ class SimpleGtkHost::Impl {
                 (std::string("Script error: " ) + message).c_str());
   }
 
-  static gboolean DelayedLoadGadget(gpointer user_data) {
+  static gboolean DelayedLoadGadgets(gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->gadget_manager_->EnumerateGadgetInstances(
         NewSlot(impl, &Impl::AddGadgetInstanceCallback));
@@ -256,6 +262,7 @@ class SimpleGtkHost::Impl {
   GadgetsMap gadgets_;
   SimpleGtkHost *owner_;
 
+  double zoom_;
   int view_debug_mode_;
   bool gadgets_shown_;
 
@@ -269,8 +276,8 @@ class SimpleGtkHost::Impl {
   GtkWidget *host_menu_;
 };
 
-SimpleGtkHost::SimpleGtkHost(int view_debug_mode)
-  : impl_(new Impl(this, view_debug_mode)) {
+SimpleGtkHost::SimpleGtkHost(double zoom, int view_debug_mode)
+  : impl_(new Impl(this, zoom, view_debug_mode)) {
   impl_->SetupUI();
   impl_->InitGadgets();
 }

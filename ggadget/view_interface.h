@@ -91,6 +91,33 @@ class ViewInterface {
     DEBUG_ALL,          // Draw bounding boxes around all elements.
   };
 
+  /** Hit test enumerates for both View and BasicElement */
+  enum HitTest {
+    HT_TRANSPARENT,
+    HT_NOWHERE,
+    HT_CLIENT,
+    HT_CAPTION,
+    HT_SYSMENU,
+    HT_SIZE,
+    HT_MENU,
+    HT_HSCROLL,
+    HT_VSCROLL,
+    HT_MINBUTTON,
+    HT_MAXBUTTON,
+    HT_LEFT,
+    HT_RIGHT,
+    HT_TOP,
+    HT_TOPLEFT,
+    HT_TOPRIGHT,
+    HT_BOTTOM,
+    HT_BOTTOMLEFT,
+    HT_BOTTOMRIGHT,
+    HT_BORDER,
+    HT_OBJECT,
+    HT_CLOSE,
+    HT_HELP
+  };
+
   virtual ~ViewInterface() { }
 
   /**
@@ -178,6 +205,15 @@ class ViewInterface {
    * @return the result of event handling.
    */
   virtual EventResult OnOtherEvent(const Event &event) = 0;
+
+  /**
+   * Gets the hit test value for this view.
+   *
+   * This method will be called immediately after calling OnMouseEvent().
+   * The default implementation returns the hit test value of the element
+   * currently pointed by the moust pointer.
+   */
+  virtual HitTest GetHitTest() const = 0;
 
   /**
    * Called by the host to let the view add customized context menu items, and
