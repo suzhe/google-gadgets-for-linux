@@ -232,8 +232,9 @@ void IOReadWatchTest(MainLoopInterface *main_loop) {
             main_loop->GetWatchType(timeout_watch_id));
   EXPECT_EQ(MainLoopInterface::INVALID_WATCH,
             main_loop->GetWatchType(io_watch_id));
-  EXPECT_EQ(10, times_a);
-  EXPECT_EQ(12, times_b);
+  // This test is not very accurate on different machines.
+  EXPECT_TRUE(times_a >= 9 && times_a <= 11);
+  EXPECT_TRUE(times_b >= 11 && times_b <= 13);
   for (int i = 0; test_strings[i]; ++i)
     EXPECT_STREQ(test_strings[i], strings[i].c_str());
   close(output_pipe[0]);

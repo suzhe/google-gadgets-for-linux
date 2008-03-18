@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <string>
-#include <ggadget/view_interface.h>
+#include <ggadget/view_host_interface.h>
 
 namespace ggadget {
 
@@ -29,7 +29,6 @@ class MainLoopInterface;
 class OptionsInterface;
 class ScriptableInterface;
 class Signal;
-class ViewHostInterface;
 
 /**
  * Interface for providing host services to the gadgets.
@@ -54,7 +53,7 @@ class HostInterface {
    *
    * @return a new Viewhost instance.
    */
-  virtual ViewHostInterface *NewViewHost(ViewInterface::ViewType type) = 0;
+  virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) = 0;
 
   /**
    * Requests that the gadget be removed from the container (e.g. sidebar).

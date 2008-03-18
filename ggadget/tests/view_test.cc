@@ -20,6 +20,7 @@
 #include "ggadget/elements.h"
 #include "ggadget/event.h"
 #include "ggadget/scriptable_event.h"
+#include "ggadget/scriptable_view.h"
 #include "ggadget/slot.h"
 #include "ggadget/view.h"
 #include "ggadget/native_main_loop.h"
@@ -32,6 +33,8 @@ ggadget::ElementFactory *g_factory = NULL;
 ggadget::NativeMainLoop main_loop;
 using ggadget::View;
 using ggadget::ViewInterface;
+using ggadget::ViewHostInterface;
+using ggadget::ScriptableView;
 
 class EventHandler {
  public:
@@ -48,8 +51,7 @@ class EventHandler {
               current_scriptable_event->GetEvent()->GetType());
     ggadget::MouseEvent event(ggadget::Event::EVENT_MOUSE_CLICK, 123, 456,
                               999, 888, ggadget::MouseEvent::BUTTON_LEFT,  666);
-    ggadget::ScriptableEvent scriptable_event(&event, view_->GetScriptable(),
-                                              NULL);
+    ggadget::ScriptableEvent scriptable_event(&event, NULL, NULL);
     view_->FireEvent(&scriptable_event, signal2_);
     // The current event should be the same as before.
     ASSERT_EQ(current_scriptable_event, view_->GetEvent());
@@ -77,13 +79,13 @@ class EventHandler {
 };
 
 TEST(ViewTest, FireEvent) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
 
   EventHandler handler(&view);
   ggadget::KeyboardEvent event(ggadget::Event::EVENT_KEY_DOWN,
                                2468, 1357, NULL);
-  ggadget::ScriptableEvent scriptable_event(&event, view.GetScriptable(), NULL);
+  ggadget::ScriptableEvent scriptable_event(&event, NULL, NULL);
   view.FireEvent(&scriptable_event, handler.signal1_);
   ASSERT_TRUE(handler.fired1_);
   ASSERT_TRUE(handler.fired2_);
@@ -91,8 +93,9 @@ TEST(ViewTest, FireEvent) {
 
 // This test is not merely for View, but mixed test for xml_utils and Elements.
 TEST(ViewTest, XMLConstruction) {
-  MockedViewHost *host = new MockedViewHost();
-  View view(ViewInterface::VIEW_MAIN, host, NULL, NULL, g_factory);
+  MockedViewHost *host = new MockedViewHost(ViewHostInterface::VIEW_HOST_MAIN);
+  View view(host, NULL, g_factory, NULL);
+  ScriptableView scriptable_view(&view, NULL, NULL);
 
   ASSERT_FALSE(view.GetShowCaptionAlways());
   ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view.GetResizable());
@@ -107,7 +110,7 @@ TEST(ViewTest, XMLConstruction) {
     "  </pie>\n"
     "  <pie name=\"pie1\"/>\n"
     "</view>\n";
-  ASSERT_TRUE(ggadget::SetupViewFromXML(&view, xml, "filename"));
+  ASSERT_TRUE(scriptable_view.InitFromXML(xml, "filename"));
   ASSERT_STREQ("View-Caption", view.GetCaption().c_str());
   ASSERT_EQ(ggadget::ViewInterface::RESIZABLE_ZOOM, view.GetResizable());
   ASSERT_TRUE(view.GetShowCaptionAlways());

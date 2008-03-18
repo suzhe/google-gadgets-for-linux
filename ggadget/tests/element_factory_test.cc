@@ -41,8 +41,9 @@ TEST_F(ElementFactoryTest, TestRegister) {
 
 TEST_F(ElementFactoryTest, TestCreate) {
   ggadget::ElementFactory factory;
-  ggadget::View view(ggadget::ViewInterface::VIEW_MAIN, new MockedViewHost(),
-            NULL, NULL, &factory);
+  ggadget::View view(
+      new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
+      NULL, &factory, NULL);
   factory.RegisterElementClass("muffin", Muffin::CreateInstance);
   factory.RegisterElementClass("pie", Pie::CreateInstance);
 

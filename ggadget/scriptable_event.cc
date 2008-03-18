@@ -29,7 +29,6 @@ class ScriptableEvent::Impl {
          return_value_(EVENT_RESULT_UNHANDLED),
          src_element_(src_element),
          output_event_(output_event) {
-    ASSERT(src_element);
   }
 
   ScriptableArray *ScriptGetDragFiles() {

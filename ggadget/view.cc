@@ -40,10 +40,11 @@
 #include "math_utils.h"
 #include "options_interface.h"
 #include "script_context_interface.h"
-#include "script_runtime_manager.h"
 #include "scriptable_binary_data.h"
 #include "scriptable_event.h"
 #include "scriptable_image.h"
+#include "scriptable_interface.h"
+#include "scriptable_helper.h"
 #include "slot.h"
 #include "texture.h"
 #include "view_host_interface.h"
@@ -56,16 +57,8 @@ namespace ggadget {
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
-class View::Impl : public ScriptableHelperNativeOwnedDefault {
+class View::Impl {
  public:
-  DEFINE_CLASS_ID(0xc042d683ed384a0c, ScriptableInterface);
-
-  class GlobalObject : public ScriptableHelperNativeOwnedDefault {
-   public:
-    DEFINE_CLASS_ID(0x23840d38ed164ab2, ScriptableInterface);
-    virtual bool IsStrict() const { return false; }
-  };
-
   /**
    * Callback object for timer watches.
    * if duration > 0 then it's a animation timer.
@@ -110,7 +103,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
                    current_time - last_finished_time_ > kMinInterval)) {
         if (is_event_) {
           TimerEvent event(watch_id, value);
-          ScriptableEvent scriptable_event(&event, impl_, NULL);
+          ScriptableEvent scriptable_event(&event, NULL, NULL);
           impl_->FireEventSlot(&scriptable_event, slot_);
         } else {
           slot_->Call(0, NULL);
@@ -262,20 +255,18 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
     double *region_buffer_;
   };
 
-  Impl(ViewType type,
-       View *owner,
+  Impl(View *owner,
        ViewHostInterface *host,
        Gadget *gadget,
-       ScriptableInterface *prototype,
-       ElementFactory *element_factory)
+       ElementFactory *element_factory,
+       ScriptContextInterface *script_context)
     : clip_region_(owner),
-      type_(type),
       owner_(owner),
       gadget_(gadget),
       element_factory_(element_factory),
       main_loop_(GetGlobalMainLoop()),
       host_(host),
-      script_context_(NULL),
+      script_context_(script_context),
       onoptionchanged_connection_(NULL),
       canvas_cache_(NULL),
       children_(element_factory, NULL, owner),
@@ -297,45 +288,6 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
     ASSERT(host_);
     ASSERT(element_factory_);
     ASSERT(main_loop_);
-
-    if (prototype)
-      global_object_.SetInheritsFrom(prototype);
-
-    // No script context for old options view.
-    if (type != VIEW_OLD_OPTIONS) {
-      // Only xml based views have standalone script context.
-      // FIXME: ScriptContext instance should be created on-demand, according to
-      // the type of script files shipped in the gadget.
-      // Or maybe we should add an option in gadget.gmanifest to specify what
-      // ScriptRuntime implementation is required.
-      // We may support multiple different script languages later.
-      script_context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
-      if (!script_context_)
-        LOG("ERROR: JavaScript support is not available.");
-    }
-
-    if (script_context_) {
-      script_context_->SetGlobalObject(&global_object_);
-      script_context_->RegisterClass("DOMDocument",
-          NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
-      script_context_->RegisterClass("XMLHttpRequest",
-          NewSlot(this, &Impl::NewXMLHttpRequest));
-      script_context_->RegisterClass("DetailsView",
-          NewSlot(DetailsViewData::CreateInstance));
-      script_context_->RegisterClass("ContentItem",
-          NewFunctorSlot<ContentItem *>(ContentItem::Creator(owner)));
-
-      // Execute common.js to initialize global constants and compatibility
-      // adapters.
-      std::string common_js_contents;
-      if (GetGlobalFileManager()->ReadFile(kCommonJS, &common_js_contents)) {
-        std::string path = GetGlobalFileManager()->GetFullPath(kCommonJS);
-        script_context_->Execute(common_js_contents.c_str(), path.c_str(), 1);
-      } else {
-        LOG("Failed to load %s.", kCommonJS);
-      }
-
-    }
 
     if (gadget_) {
       onoptionchanged_connection_ =
@@ -372,40 +324,12 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
     gadget_ = NULL;
   }
 
-  virtual void DoRegister() {
-    DLOG("Register view properties.");
-
-    RegisterProperties(this);
-    RegisterProperties(&global_object_);
-
-    // Old "utils" global object, for backward compatibility.
-    utils_.RegisterMethod("loadImage",
-                           NewSlot(this, &Impl::LoadScriptableImage));
-    utils_.RegisterMethod("setTimeout",
-                           NewSlot(this, &Impl::SetTimeout));
-    utils_.RegisterMethod("clearTimeout",
-                           NewSlot(this, &Impl::RemoveTimer));
-    utils_.RegisterMethod("setInterval",
-                           NewSlot(this, &Impl::SetInterval));
-    utils_.RegisterMethod("clearInterval",
-                           NewSlot(this, &Impl::RemoveTimer));
-    utils_.RegisterMethod("alert",
-                           NewSlot(owner_, &View::Alert));
-    utils_.RegisterMethod("confirm",
-                           NewSlot(owner_, &View::Confirm));
-    utils_.RegisterMethod("prompt",
-                           NewSlot(owner_, &View::Prompt));
-
-    global_object_.RegisterConstant("view", this);
-    global_object_.RegisterConstant("utils", &utils_);
-    global_object_.SetDynamicPropertyHandler(
-        NewSlot(this, &Impl::GetElementByNameVariant), NULL);
-  }
-
-  void RegisterProperties(ScriptableHelperDefault *obj) {
+  void RegisterProperties(RegisterableInterface *obj) {
     obj->RegisterProperty("caption",
                           NewSlot(owner_, &View::GetCaption),
                           NewSlot(owner_, &View::SetCaption));
+    // Note: "event" property will be overrided in ScriptableView,
+    // because ScriptableView will set itself to ScriptableEvent as SrcElement.
     obj->RegisterProperty("event", NewSlot(this, &Impl::GetEvent), NULL);
     obj->RegisterProperty("width",
                           NewSlot(owner_, &View::GetWidth),
@@ -422,7 +346,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
                           NewSlot(owner_, &View::GetShowCaptionAlways),
                           NewSlot(owner_, &View::SetShowCaptionAlways));
 
-    obj->RegisterConstant("children", &children_);
+    obj->RegisterVariantConstant("children", Variant(&children_));
     obj->RegisterMethod("appendElement",
                         NewSlot(&children_, &Elements::AppendElementFromXML));
     obj->RegisterMethod("insertElement",
@@ -639,7 +563,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
 
   EventResult OnMouseEvent(const MouseEvent &event) {
     // Send event to view first.
-    ScriptableEvent scriptable_event(&event, this, NULL);
+    ScriptableEvent scriptable_event(&event, NULL, NULL);
     if (event.GetType() != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(view): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
@@ -700,7 +624,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   EventResult OnKeyEvent(const KeyboardEvent &event) {
-    ScriptableEvent scriptable_event(&event, this, NULL);
+    ScriptableEvent scriptable_event(&event, NULL, NULL);
     DLOG("%s(view): %d %d", scriptable_event.GetName(),
          event.GetKeyCode(), event.GetModifier());
     switch (event.GetType()) {
@@ -798,7 +722,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   EventResult OnOtherEvent(const Event &event) {
-    ScriptableEvent scriptable_event(&event, this, NULL);
+    ScriptableEvent scriptable_event(&event, NULL, NULL);
     DLOG("%s(view)", scriptable_event.GetName());
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
@@ -859,7 +783,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
       host_->QueueResize();
 
       SimpleEvent event(Event::EVENT_SIZE);
-      ScriptableEvent scriptable_event(&event, this, NULL);
+      ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
     }
   }
@@ -943,7 +867,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
 #ifdef _DEBUG
     uint64_t end = main_loop_->GetCurrentTime();
     if (end > 0 && start > 0 && fp_) {
-      fprintf(fp_, "%d,%d,%llu;  ", draw_count_,
+      fprintf(fp_, "%d,%d,%ju;  ", draw_count_,
               clip_region_.GetCount(), end - start);
     }
 #endif
@@ -962,7 +886,8 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
 
     // If the view is main and the mouse over element doesn't have special menu
     // items, then add gadget's menu items.
-    if (result && type_ == VIEW_MAIN && gadget_)
+    if (result && gadget_ &&
+        host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN)
       gadget_->OnAddCustomMenuItems(menu);
 
     return result;
@@ -976,7 +901,7 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
     double dh = *height;
 
     SizingEvent event(dw, dh);
-    ScriptableEvent scriptable_event(&event, this, &event);
+    ScriptableEvent scriptable_event(&event, NULL, &event);
 
     FireEvent(&scriptable_event, onsizing_event_);
     bool result = (scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED);
@@ -1063,12 +988,6 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
   BasicElement *GetElementByName(const char *name) {
     ElementsMap::iterator it = all_elements_.find(name);
     return it == all_elements_.end() ? NULL : it->second;
-  }
-
-  // For script.
-  Variant GetElementByNameVariant(const char *name) {
-    BasicElement *result = GetElementByName(name);
-    return result ? Variant(result) : Variant();
   }
 
   bool OnElementAdd(BasicElement *element) {
@@ -1175,11 +1094,6 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
     main_loop_->RemoveWatch(token);
   }
 
-  ScriptableImage *LoadScriptableImage(const Variant &image_src) {
-    ImageInterface *image = LoadImage(image_src, false);
-    return image ? new ScriptableImage(image) : NULL;
-  }
-
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
     if (!gadget_) return NULL;
 
@@ -1238,12 +1152,8 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
 
   void OnOptionChanged(const char *name) {
     OptionChangedEvent event(name);
-    ScriptableEvent scriptable_event(&event, this, NULL);
+    ScriptableEvent scriptable_event(&event, NULL, NULL);
     FireEvent(&scriptable_event, onoptionchanged_event_);
-  }
-
-  XMLHttpRequestInterface *NewXMLHttpRequest() {
-    return CreateXMLHttpRequest(GetXMLParser());
   }
 
   bool OpenURL(const char *url) {
@@ -1301,7 +1211,6 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
 
   ViewClipRegion clip_region_;
 
-  ViewType type_;
   View *owner_;
   Gadget *gadget_;
   ElementFactory *element_factory_;
@@ -1312,8 +1221,6 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
   CanvasInterface *canvas_cache_;
 
   Elements children_;
-  NativeOwnedScriptable utils_;
-  GlobalObject global_object_;
 
   ElementHolder focused_element_;
   ElementHolder mouseover_element_;
@@ -1349,40 +1256,22 @@ class View::Impl : public ScriptableHelperNativeOwnedDefault {
   static const unsigned int kMinInterval = 5;
 };
 
-View::View(ViewType type,
-           ViewHostInterface *host,
+View::View(ViewHostInterface *host,
            Gadget *gadget,
-           ScriptableInterface *prototype,
-           ElementFactory *element_factory)
-    : impl_(new Impl(type, this, host, gadget, prototype, element_factory)) {
+           ElementFactory *element_factory,
+           ScriptContextInterface *script_context)
+    : impl_(new Impl(this, host, gadget, element_factory, script_context)) {
   // Make sure that the view is initialized when attaching to the ViewHost.
   impl_->host_->SetView(this);
 }
 
 View::~View() {
-  ScriptContextInterface *script_context = impl_->script_context_;
-  ViewHostInterface *host = impl_->host_;
-
   delete impl_;
   impl_ = NULL;
-
-  // script context must be destroyed after deleting impl_, because impl_ is a
-  // ScriptableObject hooked in script_context.
-  if (script_context)
-    script_context->Destroy();
-
-  // host must be deleted after deleting impl_, because Graphics instance,
-  // which is owned by host, must be available when deleting impl_.
-  if (host)
-    host->Destroy();
 }
 
 Gadget *View::GetGadget() const {
   return impl_->gadget_;
-}
-
-ScriptableInterface *View::GetScriptable() const {
-  return impl_;
 }
 
 ScriptContextInterface *View::GetScriptContext() const {
@@ -1397,12 +1286,8 @@ const GraphicsInterface *View::GetGraphics() const {
   return impl_->host_->GetGraphics();
 }
 
-bool View::InitFromXML(const std::string &xml, const char *filename) {
-  return SetupViewFromXML(this, xml, filename);
-}
-
-ViewInterface::ViewType View::GetType() const {
-  return impl_->type_;
+void View::RegisterProperties(RegisterableInterface *obj) const {
+  impl_->RegisterProperties(obj);
 }
 
 void View::SetWidth(int width) {

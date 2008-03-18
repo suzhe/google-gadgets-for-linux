@@ -41,7 +41,6 @@
 #include <ggadget/gadget_manager_interface.h>
 #include "simple_gtk_host.h"
 
-//static double g_zoom = 1.;
 static int g_debug_mode = 0;
 static ggadget::gtk::MainLoop g_main_loop;
 
@@ -85,6 +84,25 @@ static DirectoryProvider g_directory_provider;
 
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
+
+  // Parse command line.
+  std::vector<std::string> gadget_paths;
+  int i = 0;
+  while (i<argc) {
+    if (++i >= argc) break;
+
+    if (std::string("-d") == argv[i] || std::string("--debug") == argv[i]) {
+      if (++i < argc) {
+        g_debug_mode = atoi(argv[i]);
+      } else {
+        g_debug_mode = 1;
+      }
+      continue;
+    }
+
+    gadget_paths.push_back(argv[i]);
+  };
+
 
   // set locale according to env vars
   setlocale(LC_ALL, "");
@@ -136,11 +154,11 @@ int main(int argc, char* argv[]) {
   hosts::gtk::SimpleGtkHost host(g_debug_mode);
 
   // Load gadget files.
-  if (argc >= 2) {
+  if (gadget_paths.size()) {
     ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
 
-    for (int i = 1; i < argc; ++i)
-      manager->NewGadgetInstanceFromFile(argv[i]);
+    for (size_t i = 0; i < gadget_paths.size(); ++i)
+      manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
   }
 
   host.Run();

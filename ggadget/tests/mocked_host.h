@@ -18,6 +18,7 @@
 #define GGADGET_TESTS_MOCKED_HOST_H__
 
 #include "ggadget/host_interface.h"
+#include "ggadget/view_host_interface.h"
 #include "mocked_view_host.h"
 
 class MockedHost : public ggadget::HostInterface {
@@ -25,8 +26,8 @@ class MockedHost : public ggadget::HostInterface {
   MockedHost() { }
   virtual ~MockedHost() { }
   virtual ggadget::ViewHostInterface *
-      NewViewHost(ggadget::ViewInterface::ViewType type)
-  { return new MockedViewHost(); }
+      NewViewHost(ggadget::ViewHostInterface::Type type)
+  { return new MockedViewHost(type); }
   virtual void RemoveGadget(int id, bool save_data) { }
   virtual void DebugOutput(DebugLevel level, const char *message) const { }
   virtual bool OpenURL(const char *url) const { return true; }

@@ -26,13 +26,12 @@ namespace gtk {
 using ggadget::Gadget;
 using ggadget::HostInterface;
 using ggadget::ViewHostInterface;;
-using ggadget::ViewInterface;
 
 class SimpleGtkHost : public ggadget::HostInterface {
  public:
   SimpleGtkHost(int view_debug_mode);
   virtual ~SimpleGtkHost();
-  virtual ViewHostInterface *NewViewHost(ViewInterface::ViewType type);
+  virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
   virtual void RemoveGadget(int instance_id, bool save_data);
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;

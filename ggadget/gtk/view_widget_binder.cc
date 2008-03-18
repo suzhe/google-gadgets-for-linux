@@ -321,6 +321,7 @@ class ViewWidgetBinder::Impl {
     cairo_set_source_surface(cr, surface, 0., 0.);
     cairo_paint(cr);
 
+#if GTK_CHECK_VERSION(2,10,0)
     // We need set input shape mask if there is no background.
     if (impl->no_background_ && impl->composited_) {
       int canvasw = cairo_image_surface_get_width(surface);
@@ -344,6 +345,7 @@ class ViewWidgetBinder::Impl {
       gtk_widget_input_shape_combine_mask(widget, bitmap, 0, 0);
       gdk_bitmap_unref(bitmap);
     }
+#endif
 
     canvas->Destroy();
     cairo_destroy(cr);

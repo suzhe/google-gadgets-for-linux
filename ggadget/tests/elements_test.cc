@@ -42,8 +42,9 @@ class ElementsTest : public testing::Test {
  protected:
   virtual void SetUp() {
     factory_ = new MockedElementFactory();
-    view_ = new ggadget::View(ggadget::ViewInterface::VIEW_MAIN,
-                              new MockedViewHost(), NULL, NULL, factory_);
+    view_ = new ggadget::View(
+        new MockedViewHost(ggadget::ViewHostInterface::VIEW_HOST_MAIN),
+        NULL, factory_, NULL);
     muffin_ = new Muffin(NULL, view_, NULL);
     elements_ = new ggadget::Elements(factory_, muffin_, view_);
   }

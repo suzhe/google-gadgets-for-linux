@@ -129,10 +129,9 @@ class SimpleGtkHost::Impl {
   }
 
   void InitGadgets() {
-    gadget_manager_->EnumerateGadgetInstances(
-        NewSlot(this, &Impl::AddGadgetInstanceCallback));
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::AddGadgetInstanceCallback));
+    g_idle_add(DelayedLoadGadget, this);
   }
 
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
@@ -155,9 +154,9 @@ class SimpleGtkHost::Impl {
     return true;
   }
 
-  ViewHostInterface *NewViewHost(ViewInterface::ViewType type) {
-    // Always show decorator for now.
-    SingleViewHost *host = new SingleViewHost(1.0, true,
+  ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
+    bool decorated = (type != ViewHostInterface::VIEW_HOST_MAIN);
+    SingleViewHost *host = new SingleViewHost(type, 1.0, decorated,
                   static_cast<ViewInterface::DebugMode>(view_debug_mode_));
     return host;
   }
@@ -190,6 +189,13 @@ class SimpleGtkHost::Impl {
   void ReportScriptError(const char *message) {
     DebugOutput(DEBUG_ERROR,
                 (std::string("Script error: " ) + message).c_str());
+  }
+
+  static gboolean DelayedLoadGadget(gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    impl->gadget_manager_->EnumerateGadgetInstances(
+        NewSlot(impl, &Impl::AddGadgetInstanceCallback));
+    return FALSE;
   }
 
   static void ShowAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
@@ -274,7 +280,7 @@ SimpleGtkHost::~SimpleGtkHost() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SimpleGtkHost::NewViewHost(ViewInterface::ViewType type) {
+ViewHostInterface *SimpleGtkHost::NewViewHost(ViewHostInterface::Type type) {
   return impl_->NewViewHost(type);
 }
 

@@ -31,7 +31,9 @@ class Tooltip::Impl {
       hide_timeout_(hide_timeout),
       show_timer_(0),
       hide_timer_(0) {
+#if GTK_CHECK_VERSION(2,10,0)
     gtk_window_set_type_hint(GTK_WINDOW(window_), GDK_WINDOW_TYPE_HINT_TOOLTIP);
+#endif
     gtk_widget_set_app_paintable(window_, TRUE);
     gtk_window_set_resizable(GTK_WINDOW(window_), FALSE);
     gtk_container_set_border_width(GTK_CONTAINER(window_), 4);

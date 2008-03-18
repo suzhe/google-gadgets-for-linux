@@ -21,39 +21,60 @@
 
 namespace ggadget {
 
-class View;
 class BasicElement;
 class Elements;
 class DOMDocumentInterface;
+class DOMElementInterface;
+class ScriptableInterface;
+class ScriptContextInterface;
 
 /**
- * Sets up a view by parsing xml content.
- * @param view a newly created blank view.
- * @param xml the xml content.
- * @param filename the name of the XML file (only for logging).
- * @return @c true if XML parsing succeeds. Errors during view/element
- *     hierarchy setup are only logged.
+ * Sets up properties of a Scriptable instance from a specified DOMElement.
+ *
+ * @param scriptable the Scriptable instance to be setup.
+ * @param script_context the ScriptContext instance to be used to execute
+ *        script codes. Could be NULL, then all script properties won't be set.
+ * @param xml_element DOMElement instance that contains descriptions of all
+ *        properties.
+ * @param filename file name from which the xml content was loaded, for logging
+ *        purpose.
  */
-bool SetupViewFromXML(View *view, const std::string &xml,
-                      const char *filename);
+void SetupScriptableProperties(ScriptableInterface *scriptable,
+                               ScriptContextInterface *script_context,
+                               const DOMElementInterface *xml_element,
+                               const char *filename);
 
 /**
- * Creates an element according to XML definition and appends it to elements.
- * @param view
+ * Creates an element according to a DOMElement instance and inserts it to
+ * elements.
+ *
  * @param elements the elements collection.
- * @param xml the XML definition of the element.
+ * @param script_context the ScriptContext instance to be used to execute
+ *        script codes. Could be NULL, then all script properties won't be set.
+ * @param xml_element the DOMElement that contains definition of the element.
+ * @param before insert the new element before this element. If it's NULL, then
+ *        append the new element to the end of elements.
+ * @param filename file name from which the xml content was loaded, for logging
+ *        purpose.
  */
-BasicElement *AppendElementFromXML(View *view, Elements *elements,
-                                   const std::string &xml);
+BasicElement *InsertElementFromDOM(Elements *elements,
+                                   ScriptContextInterface *script_context,
+                                   const DOMElementInterface *xml_element,
+                                   const BasicElement *before,
+                                   const char *filename);
 
 /**
  * Creates an element according to XML definition and inserts it to elements.
- * @param view
+ *
  * @param elements the elements collection.
+ * @param script_context the ScriptContext instance to be used to execute
+ *        script codes. Could be NULL, then all script properties won't be set.
  * @param xml the XML definition of the element.
- * @param before insert the new element before this element.
+ * @param before insert the new element before this element. If it's NULL, then
+ *        append the new element to the end of elements.
  */
-BasicElement *InsertElementFromXML(View *view, Elements *elements,
+BasicElement *InsertElementFromXML(Elements *elements,
+                                   ScriptContextInterface *script_context,
                                    const std::string &xml,
                                    const BasicElement *before);
 
