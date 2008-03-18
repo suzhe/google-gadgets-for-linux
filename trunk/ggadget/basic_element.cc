@@ -40,7 +40,7 @@ class BasicElement::Impl {
                   new Elements(view->GetElementFactory(), owner, view) :
                   NULL),
         view_(view),
-        hittest_(BasicElement::HT_DEFAULT),
+        hittest_(ViewInterface::HT_CLIENT),
         cursor_(ViewInterface::CURSOR_ARROW),
         drop_target_(false),
         enabled_(false),
@@ -792,7 +792,7 @@ class BasicElement::Impl {
   BasicElement *owner_;
   Elements *children_;
   View *view_;
-  BasicElement::HitTest hittest_;
+  ViewInterface::HitTest hittest_;
   ViewInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
@@ -856,12 +856,16 @@ int BasicElement::Impl::total_draw_count_ = 0;
 int BasicElement::Impl::total_queue_draw_count_ = 0;
 #endif
 
+// Must sync with ViewInterface::CursorType enumerates
+// defined in view_interface.h
 static const char *kCursorTypeNames[] = {
   "arrow", "ibeam", "wait", "cross", "uparrow",
   "size", "sizenwse", "sizenesw", "sizewe", "sizens", "sizeall",
   "no", "hand", "busy", "help",
 };
 
+// Must sync with ViewInterface::HitTest enumerates
+// defined in view_interface.h
 static const char *kHitTestNames[] = {
   "httransparent", "htnowhere", "htclient", "htcaption", " htsysmenu",
   "htsize", "htmenu", "hthscroll", "htvscroll", "htminbutton", "htmaxbutton",
@@ -1007,11 +1011,11 @@ const View *BasicElement::GetView() const {
   return impl_->view_;
 }
 
-BasicElement::HitTest BasicElement::GetHitTest() const {
+ViewInterface::HitTest BasicElement::GetHitTest() const {
   return impl_->hittest_;
 }
 
-void BasicElement::SetHitTest(HitTest value) {
+void BasicElement::SetHitTest(ViewInterface::HitTest value) {
   impl_->hittest_ = value;
 }
 

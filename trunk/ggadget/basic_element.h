@@ -20,7 +20,7 @@
 #include <ggadget/common.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_holder.h>
-#include <ggadget/view_host_interface.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
@@ -42,33 +42,6 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   virtual void DoRegister();
 
  public:
-  enum HitTest {
-    HT_DEFAULT,
-    HT_TRANSPARENT,
-    HT_NOWHERE,
-    HT_CLIENT,
-    HT_CAPTION,
-    HT_SYSMENU,
-    HT_SIZE,
-    HT_MENU,
-    HT_HSCROLL,
-    HT_VSCROLL,
-    HT_MINBUTTON,
-    HT_MAXBUTTON,
-    HT_LEFT,
-    HT_RIGHT,
-    HT_TOP,
-    HT_TOPLEFT,
-    HT_TOPRIGHT,
-    HT_BOTTOM,
-    HT_BOTTOMLEFT,
-    HT_BOTTOMRIGHT,
-    HT_BORDER,
-    HT_OBJECT,
-    HT_CLOSE,
-    HT_HELP
-  };
-
   enum FlipMode {
     FLIP_NONE = 0,
     FLIP_HORIZONTAL = 1,
@@ -221,8 +194,8 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   void SetRotation(double rotation);
 
   /** Gets and sets the hit-test value for this element. */
-  HitTest GetHitTest() const;
-  void SetHitTest(HitTest value);
+  ViewInterface::HitTest GetHitTest() const;
+  void SetHitTest(ViewInterface::HitTest value);
 
   /**
    * Gets and sets the cursor to display when the mouse is over this

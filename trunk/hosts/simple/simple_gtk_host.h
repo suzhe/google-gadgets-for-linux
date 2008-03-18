@@ -29,7 +29,7 @@ using ggadget::ViewHostInterface;;
 
 class SimpleGtkHost : public ggadget::HostInterface {
  public:
-  SimpleGtkHost(int view_debug_mode);
+  SimpleGtkHost(double zoom, int view_debug_mode);
   virtual ~SimpleGtkHost();
   virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
   virtual void RemoveGadget(int instance_id, bool save_data);

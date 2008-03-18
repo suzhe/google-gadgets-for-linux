@@ -281,7 +281,8 @@ class View::Impl {
       events_enabled_(true),
       need_redraw_(true),
       draw_count_(0),
-      fp_(NULL) {
+      fp_(NULL),
+      hittest_(ViewInterface::HT_CLIENT) {
 #ifdef _DEBUG
     fp_ = fopen("/tmp/view_render", "w+");
 #endif
@@ -553,9 +554,13 @@ class View::Impl {
         tooltip_element_.Reset(in_element);
         host_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
       }
+      // Gets the hit test value of the element currently pointed by mouse.
+      // It'll be used as the hit test value of the View.
+      hittest_ = in_element->GetHitTest();
     } else {
       host_->SetCursor(-1);
       tooltip_element_.Reset(NULL);
+      hittest_ = ViewInterface::HT_CLIENT;
     }
 
     return result;
@@ -1250,6 +1255,8 @@ class View::Impl {
   int draw_count_;
   FILE *fp_;
 
+  ViewInterface::HitTest hittest_;
+
   Signal0<void> on_destroy_signal_;
 
   static const unsigned int kAnimationInterval = 20;
@@ -1359,6 +1366,10 @@ EventResult View::OnDragEvent(const DragEvent &event) {
 
 EventResult View::OnOtherEvent(const Event &event) {
   return impl_->OnOtherEvent(event);
+}
+
+ViewInterface::HitTest View::GetHitTest() const {
+  return impl_->hittest_;
 }
 
 bool View::OnAddContextMenuItems(MenuInterface *menu) {

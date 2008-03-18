@@ -41,6 +41,7 @@
 #include <ggadget/gadget_manager_interface.h>
 #include "simple_gtk_host.h"
 
+static double g_zoom = 1.0;
 static int g_debug_mode = 0;
 static ggadget::gtk::MainLoop g_main_loop;
 
@@ -82,6 +83,19 @@ class DirectoryProvider : public ggadget::DirectoryProviderInterface {
 
 static DirectoryProvider g_directory_provider;
 
+static const char *g_help_string =
+  "Usage: %s [Options] [Gadgets]\n"
+  "Options:\n"
+  "  -d mode    Specify debug mode for drawing View:\n"
+  "             0 - No debug.\n"
+  "             1 - Draw bounding boxes around container elements.\n"
+  "             2 - Draw bounding boxes around all elements.\n"
+  "  -z zoom    Specify initial zoom fector for View.\n"
+  "\n"
+  "Gadgets:\n"
+  "  Can specify one or more Desktop Gadget paths. If any gadgets are specified,\n"
+  "  they will be installed by using GadgetManager.\n";
+
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
@@ -90,6 +104,11 @@ int main(int argc, char* argv[]) {
   int i = 0;
   while (i<argc) {
     if (++i >= argc) break;
+
+    if (std::string("-h") == argv[i] || std::string("--help") == argv[i]) {
+      printf(g_help_string, argv[0]);
+      return 0;
+    }
 
     if (std::string("-d") == argv[i] || std::string("--debug") == argv[i]) {
       if (++i < argc) {
@@ -100,9 +119,17 @@ int main(int argc, char* argv[]) {
       continue;
     }
 
+    if (std::string("-z") == argv[i] || std::string("--zoom") == argv[i]) {
+      if (++i < argc) {
+        g_zoom = strtod(argv[i], NULL);
+        if (g_zoom <= 0)
+          g_zoom = 1.0;
+      }
+      continue;
+    }
+
     gadget_paths.push_back(argv[i]);
   };
-
 
   // set locale according to env vars
   setlocale(LC_ALL, "");
@@ -151,7 +178,7 @@ int main(int argc, char* argv[]) {
   // extension manager.
   ext_manager->SetReadonly();
 
-  hosts::gtk::SimpleGtkHost host(g_debug_mode);
+  hosts::gtk::SimpleGtkHost host(g_zoom, g_debug_mode);
 
   // Load gadget files.
   if (gadget_paths.size()) {
