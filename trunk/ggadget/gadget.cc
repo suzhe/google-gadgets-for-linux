@@ -172,6 +172,20 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     element_factory_ = NULL;
   }
 
+  static bool ExtractFileFromFileManager(FileManagerInterface *fm,
+                                         const char *file,
+                                         std::string *path) {
+    path->clear();
+    if (fm->IsDirectlyAccessible(file, path))
+      return true;
+
+    path->clear();
+    if (fm->ExtractFile(file, path))
+      return true;
+
+    return false;
+  }
+
   // Do real initialize.
   bool Initialize() {
     if (!host_ || !element_factory_ || !file_manager_ || !options_ ||
@@ -219,15 +233,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         const char *font_name = i->second.c_str();
         std::string path;
         // ignore return, error not fatal
-        if (file_manager_->IsDirectlyAccessible(font_name, &path) ||
-            file_manager_->ExtractFile(font_name, &path))
+        if (ExtractFileFromFileManager(file_manager_, font_name, &path))
           host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
         const char *module_name = i->second.c_str();
         std::string path;
-        if (file_manager_->IsDirectlyAccessible(module_name, &path) ||
-            file_manager_->ExtractFile(module_name, &path))
+        if (ExtractFileFromFileManager(file_manager_, module_name, &path))
           extension_manager_->LoadExtension(path.c_str(), false);
       }
     }
