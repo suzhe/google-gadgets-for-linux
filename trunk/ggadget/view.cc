@@ -901,6 +901,7 @@ class View::Impl {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
+    owner_->AddElementToClipRegion(element);
     if (element == tooltip_element_.Get())
       host_->SetTooltip(NULL);
 
