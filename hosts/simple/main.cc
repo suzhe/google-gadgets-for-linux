@@ -62,6 +62,7 @@ static const char *kGlobalExtensions[] = {
   "smjs-script-runtime",
   "curl-xml-http-request",
   "google-gadget-manager",
+  "gadget-browser-script-utils",
   NULL
 };
 

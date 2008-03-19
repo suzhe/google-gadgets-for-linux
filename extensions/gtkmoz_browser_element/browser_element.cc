@@ -204,6 +204,7 @@ class BrowserElement::Impl {
             kOpenURLFeedback, params.size());
       }
       open_url_signal_(params[2]);
+      result += open_url_signal_.HasActiveConnections() ? '1' : '0';
     } else {
       LOG("Unknown feedback: %s", type);
     }

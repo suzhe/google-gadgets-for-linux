@@ -108,7 +108,6 @@ class SimpleGtkHost::Impl {
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), host_menu_);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu_bar), item);
     main_widget_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_widget_show(main_widget_);
     gtk_window_set_title(GTK_WINDOW(main_widget_), "Google Gadgets");
     gtk_window_set_resizable(GTK_WINDOW(main_widget_), FALSE);
     gtk_container_add(GTK_CONTAINER(main_widget_), menu_bar);

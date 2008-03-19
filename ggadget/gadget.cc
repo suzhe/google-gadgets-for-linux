@@ -518,7 +518,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   std::string GetManifestInfo(const char *key) {
     GadgetStringMap::const_iterator it = manifest_info_map_.find(key);
     if (it == manifest_info_map_.end())
-      return NULL;
+      return std::string();
     return it->second;
   }
 

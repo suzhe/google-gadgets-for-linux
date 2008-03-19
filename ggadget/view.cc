@@ -1048,12 +1048,7 @@ class View::Impl {
     // Important: verify that URL is valid first.
     // Otherwise could be a security problem.
     std::string newurl = EncodeURL(url);
-    if (0 == strncasecmp(newurl.c_str(), kHttpUrlPrefix,
-                         arraysize(kHttpUrlPrefix) - 1) ||
-        0 == strncasecmp(newurl.c_str(), kHttpsUrlPrefix,
-                         arraysize(kHttpsUrlPrefix) - 1) ||
-        0 == strncasecmp(newurl.c_str(), kFtpUrlPrefix,
-                         arraysize(kFtpUrlPrefix) - 1)) {
+    if (IsValidURL(url)) {
       return gadget_->GetHost()->OpenURL(newurl.c_str());
     }
 

@@ -225,6 +225,26 @@ bool IsValidRSSURL(const char* url) {
   return true;
 }
 
+bool IsValidURL(const char* url) {
+  if (!url) {
+    return false;
+  }
+
+  if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
+      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) &&
+      strncasecmp(url, kFtpUrlPrefix, arraysize(kHttpsUrlPrefix) - 1)) {
+    return false;    
+  }
+
+  for (int i = 0; url[i]; i++) {
+    if (!IsValidURLChar(url[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 std::string EncodeJavaScriptString(const UTF16Char *source) {
   ASSERT(source);
 
