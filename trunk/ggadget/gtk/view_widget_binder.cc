@@ -180,6 +180,20 @@ class ViewWidgetBinder::Impl {
                    0, 0, button, mod);
 
       result = impl->view_->OnMouseEvent(e);
+
+      // If the View's hittest represents a special button, then handle it
+      // here.
+      if (result == EVENT_RESULT_UNHANDLED &&
+          button == MouseEvent::BUTTON_LEFT &&
+          type == Event::EVENT_MOUSE_DOWN) {
+        ViewInterface::HitTest hittest = impl->view_->GetHitTest();
+        if (hittest == ViewInterface::HT_MENU) {
+          impl->host_->ShowContextMenu(button);
+        } else if (hittest == ViewInterface::HT_CLOSE) {
+          impl->host_->CloseView();
+        }
+        result = EVENT_RESULT_HANDLED;
+      }
     }
 
     return result != EVENT_RESULT_UNHANDLED;
@@ -375,6 +389,8 @@ class ViewWidgetBinder::Impl {
 
     if (result == EVENT_RESULT_UNHANDLED && button != MouseEvent::BUTTON_NONE &&
         event->time - impl->mouse_down_time_ > kWindowMoveResizeDelay) {
+      ViewInterface::HitTest hittest = impl->view_->GetHitTest();
+
       // Send fake mouse up event to the view so that we can start to drag
       // the window. Note: no mouse click event is sent in this case, to prevent
       // unwanted action after window move.
@@ -387,15 +403,30 @@ class ViewWidgetBinder::Impl {
 
       GtkWidget *window = gtk_widget_get_toplevel(widget);
       if (GTK_IS_WINDOW(window)) {
-        int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
-                          button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
-        gint x_root = static_cast<int>(event->x_root);
-        gint y_root = static_cast<int>(event->y_root);
-        if (mod == 0) {
-          gtk_window_begin_move_drag(GTK_WINDOW(window), gtk_button,
-                                     x_root, y_root, event->time);
-        } else if ((mod & Event::MOD_CONTROL) &&
-                   gtk_window_get_resizable(GTK_WINDOW(window))) {
+        bool resize_drag = true;
+        GdkWindowEdge edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+
+        // Determine the resize drag edge.
+        if (hittest == ViewInterface::HT_LEFT) {
+          edge = GDK_WINDOW_EDGE_WEST;
+        } else if (hittest == ViewInterface::HT_RIGHT) {
+          edge = GDK_WINDOW_EDGE_EAST;
+        } else if (hittest == ViewInterface::HT_TOP) {
+          edge = GDK_WINDOW_EDGE_NORTH;
+        } else if (hittest == ViewInterface::HT_BOTTOM) {
+          edge = GDK_WINDOW_EDGE_SOUTH;
+        } else if (hittest == ViewInterface::HT_TOPLEFT) {
+          edge = GDK_WINDOW_EDGE_NORTH_WEST;
+        } else if (hittest == ViewInterface::HT_TOPRIGHT) {
+          edge = GDK_WINDOW_EDGE_NORTH_EAST;
+        } else if (hittest == ViewInterface::HT_BOTTOMLEFT) {
+          edge = GDK_WINDOW_EDGE_SOUTH_WEST;
+        } else if (hittest == ViewInterface::HT_BOTTOMRIGHT) {
+          edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+        } else {
+          resize_drag = false;
+          // If ctrl is holding, then emulate resize draging.
+          // Only for testing purpose. Shall be removed later.
           gint x = static_cast<int>(event->x);
           gint y = static_cast<int>(event->y);
           gint mid_x = impl->current_widget_width_ / 2;
@@ -408,6 +439,17 @@ class ViewWidgetBinder::Impl {
           else if (x < mid_x && y > mid_y)
             edge = GDK_WINDOW_EDGE_SOUTH_WEST;
 
+        }
+
+        int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
+                          button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
+        gint x_root = static_cast<int>(event->x_root);
+        gint y_root = static_cast<int>(event->y_root);
+        if (mod == 0 && !resize_drag) {
+          gtk_window_begin_move_drag(GTK_WINDOW(window), gtk_button,
+                                     x_root, y_root, event->time);
+        } else if (((mod & Event::MOD_CONTROL) | resize_drag) &&
+                   gtk_window_get_resizable(GTK_WINDOW(window))) {
           gtk_window_begin_resize_drag(GTK_WINDOW(window), edge, gtk_button,
                                        x_root, y_root, event->time);
         }
@@ -633,6 +675,7 @@ class ViewWidgetBinder::Impl {
           impl->gfx_->SetZoom(zoom);
           impl->view_->MarkRedraw();
         }
+        impl->host_->QueueResize();
       }
     } else {
       DLOG("The size of view widget was changed, "

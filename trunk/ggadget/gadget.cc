@@ -769,6 +769,10 @@ HostInterface *Gadget::GetHost() const {
   return impl_->host_;
 }
 
+void Gadget::RemoveMe(bool save_data) {
+  impl_->RemoveMe(save_data);
+}
+
 bool Gadget::IsValid() const {
   return impl_->initialized_;
 }

@@ -441,6 +441,8 @@ class View::Impl {
       // Gets the hit test value of the element currently pointed by mouse.
       // It'll be used as the hit test value of the View.
       hittest_ = in_element->GetHitTest();
+      //DLOG("In element: %s type %s, hitTest:%d", in_element->GetName().c_str(),
+      //     in_element->GetTagName().c_str(), hittest_);
     } else {
       host_->SetCursor(-1);
       tooltip_element_.Reset(NULL);

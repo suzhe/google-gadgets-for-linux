@@ -38,6 +38,7 @@
 #include <ggadget/host_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/gadget_manager_interface.h>
 #include "simple_gtk_host.h"
 
@@ -190,6 +191,9 @@ int main(int argc, char* argv[]) {
   }
 
   host.Run();
+
+  //FIXME: An ugly hack to flush the global options explicitly.
+  ggadget::GetGlobalOptions()->Flush();
 
   return 0;
 }

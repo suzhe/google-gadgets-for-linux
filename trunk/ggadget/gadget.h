@@ -106,6 +106,16 @@ class Gadget {
   /** Destructor */
   ~Gadget();
 
+  /**
+   * Asks the Host to remove the Gadget instance.
+   *
+   * Unlike just delete the Gadget instance, this method will remove the Gadget
+   * instance from GadgetManager, so that it won't be displayed anymore.
+   *
+   * @param save_data if save the options data of this Gadget instance.
+   */
+  void RemoveMe(bool save_data);
+
   /** Returns the HostInterface instance used by this gadget. */
   HostInterface *GetHost() const;
 

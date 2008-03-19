@@ -35,8 +35,35 @@ namespace gtk {
 
 class SimpleGtkHost::Impl {
  public:
+  // A special Host for Gadget browser to show browser in a decorated window.
+  class GadgetBrowserHost : public HostInterface {
+   public:
+    GadgetBrowserHost(HostInterface *owner) : owner_(owner) { }
+    virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
+      return new SingleViewHost(type, 1.0, true, ViewInterface::DEBUG_DISABLED);
+    }
+    virtual void RemoveGadget(int instance_id, bool save_data) {
+      GetGadgetManager()->RemoveGadgetInstance(instance_id);
+    }
+    virtual void DebugOutput(DebugLevel level, const char *message) const {
+      owner_->DebugOutput(level, message);
+    }
+    virtual bool OpenURL(const char *url) const {
+      return owner_->OpenURL(url);
+    }
+    virtual bool LoadFont(const char *filename) {
+      return owner_->LoadFont(filename);
+    }
+    virtual void ShowGadgetAboutDialog(Gadget *gadget) {
+      owner_->ShowGadgetAboutDialog(gadget);
+    }
+   private:
+    HostInterface *owner_;
+  };
+
   Impl(SimpleGtkHost *owner, double zoom, int view_debug_mode)
-    : owner_(owner),
+    : gadget_browser_host_(owner),
+      owner_(owner),
       zoom_(zoom),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
@@ -227,7 +254,7 @@ class SimpleGtkHost::Impl {
 
   static void AddGadgetHandler(GtkMenuItem *item, gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->gadget_manager_->ShowGadgetBrowserDialog(impl->owner_);
+    impl->gadget_manager_->ShowGadgetBrowserDialog(&impl->gadget_browser_host_);
   }
 
   static void ToggleAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
@@ -256,6 +283,8 @@ class SimpleGtkHost::Impl {
     gtk_main_quit();
     return TRUE;
   }
+
+  GadgetBrowserHost gadget_browser_host_;
 
   typedef std::map<int, Gadget *> GadgetsMap;
   GadgetsMap gadgets_;
