@@ -63,7 +63,6 @@ class BasicElement::Impl {
         size_changed_(true),
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()) {
-    memset(old_view_rectangle_, 0, sizeof(old_view_rectangle_));
     if (name)
       name_ = name;
     if (tag_name)
@@ -89,6 +88,7 @@ class BasicElement::Impl {
 
   void SetPixelWidth(double width) {
     if (width >= 0.0 && (width != width_ || width_relative_)) {
+      view_->AddElementToClipRegion(owner_);
       width_ = width;
       width_relative_ = false;
       WidthChanged();
@@ -97,6 +97,7 @@ class BasicElement::Impl {
 
   void SetPixelHeight(double height) {
     if (height >= 0.0 && (height != height_ || height_relative_)) {
+      view_->AddElementToClipRegion(owner_);
       height_ = height;
       height_relative_ = false;
       HeightChanged();
@@ -105,6 +106,7 @@ class BasicElement::Impl {
 
   void SetRelativeWidth(double width) {
     if (width >= 0.0 && (width != pwidth_ || !width_relative_)) {
+      view_->AddElementToClipRegion(owner_);
       pwidth_ = width;
       width_relative_ = true;
       WidthChanged();
@@ -113,6 +115,7 @@ class BasicElement::Impl {
 
   void SetRelativeHeight(double height) {
     if (height >= 0.0 && (height != pheight_ || !height_relative_)) {
+      view_->AddElementToClipRegion(owner_);
       pheight_ = height;
       height_relative_ = true;
       HeightChanged();
@@ -121,6 +124,7 @@ class BasicElement::Impl {
 
   void SetPixelX(double x) {
     if (x != x_ || x_relative_) {
+      view_->AddElementToClipRegion(owner_);
       x_ = x;
       x_relative_ = false;
       PositionChanged();
@@ -129,6 +133,7 @@ class BasicElement::Impl {
 
   void SetPixelY(double y) {
     if (y != y_ || y_relative_) {
+      view_->AddElementToClipRegion(owner_);
       y_ = y;
       y_relative_ = false;
       PositionChanged();
@@ -137,6 +142,7 @@ class BasicElement::Impl {
 
   void SetRelativeX(double x) {
     if (x != px_ || !x_relative_) {
+      view_->AddElementToClipRegion(owner_);
       px_ = x;
       x_relative_ = true;
       PositionChanged();
@@ -145,6 +151,7 @@ class BasicElement::Impl {
 
   void SetRelativeY(double y) {
     if (y != py_ || !y_relative_) {
+      view_->AddElementToClipRegion(owner_);
       py_ = y;
       y_relative_ = true;
       PositionChanged();
@@ -153,6 +160,7 @@ class BasicElement::Impl {
 
   void SetPixelPinX(double pin_x) {
     if (pin_x != pin_x_ || pin_x_relative_) {
+      view_->AddElementToClipRegion(owner_);
       pin_x_ = pin_x;
       pin_x_relative_ = false;
       PositionChanged();
@@ -161,6 +169,7 @@ class BasicElement::Impl {
 
   void SetPixelPinY(double pin_y) {
     if (pin_y != pin_y_ || pin_y_relative_) {
+      view_->AddElementToClipRegion(owner_);
       pin_y_ = pin_y;
       pin_y_relative_ = false;
       PositionChanged();
@@ -169,6 +178,7 @@ class BasicElement::Impl {
 
   void SetRelativePinX(double pin_x) {
     if (pin_x != ppin_x_ || !pin_x_relative_) {
+      view_->AddElementToClipRegion(owner_);
       ppin_x_ = pin_x;
       pin_x_relative_ = true;
       PositionChanged();
@@ -177,6 +187,7 @@ class BasicElement::Impl {
 
   void SetRelativePinY(double pin_y) {
     if (pin_y != ppin_y_ || !pin_y_relative_) {
+      view_->AddElementToClipRegion(owner_);
       ppin_y_ = pin_y;
       pin_y_relative_ = true;
       PositionChanged();
@@ -185,6 +196,7 @@ class BasicElement::Impl {
 
   void SetRotation(double rotation) {
     if (rotation != rotation_) {
+      view_->AddElementToClipRegion(owner_);
       rotation_ = rotation;
       PositionChanged();
     }
@@ -528,7 +540,6 @@ class BasicElement::Impl {
 #endif
     }
 
-    GetViewCoord(owner_, old_view_rectangle_);
     visibility_changed_ = false;
     size_changed_ = false;
     position_changed_ = false;
@@ -556,7 +567,10 @@ class BasicElement::Impl {
  public:
   void QueueDraw() {
     if (visible_ || visibility_changed_) {
-      view_->QueueDraw(owner_);
+      if (parent_ && implicit_)
+        parent_->QueueDraw();
+      else
+        view_->QueueDraw(owner_);
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;
@@ -807,7 +821,6 @@ class BasicElement::Impl {
   double pin_x_, pin_y_, ppin_x_, ppin_y_;
   bool pin_x_relative_, pin_y_relative_;
   double rotation_;
-  double old_view_rectangle_[4];
   double opacity_;
   bool visible_;
   std::string tooltip_;
@@ -995,7 +1008,7 @@ void BasicElement::DoRegister() {
 }
 
 BasicElement::~BasicElement() {
-  DLOG("Basic element's dtor, this: %p", this);
+  GetView()->AddElementToClipRegion(this);
   delete impl_;
 }
 
@@ -1083,10 +1096,6 @@ double BasicElement::GetPixelHeight() const {
 void BasicElement::SetPixelHeight(double height) {
   impl_->height_specified_ = true;
   impl_->SetPixelHeight(height);
-}
-
-void BasicElement::GetOldViewRectangle(double *rect) const {
-  memcpy(rect, impl_->old_view_rectangle_, sizeof(impl_->old_view_rectangle_));
 }
 
 double BasicElement::GetRelativeWidth() const {
@@ -1685,14 +1694,15 @@ Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
   return impl_->onsize_event_.Connect(handler);
 }
 
-void GetViewCoord(const BasicElement *element, double rect[4]) {
+void GetViewCoord(const BasicElement *element, Rectangle *rectangle) {
   double r[8];
   element->SelfCoordToViewCoord(0, 0, &r[0], &r[1]);
   element->SelfCoordToViewCoord(0, element->GetPixelHeight(), &r[2], &r[3]);
   element->SelfCoordToViewCoord(element->GetPixelWidth(),
                                 element->GetPixelHeight(), &r[4], &r[5]);
   element->SelfCoordToViewCoord(element->GetPixelWidth(), 0, &r[6], &r[7]);
-  GetRectangleExtents(r, rect, rect + 1, rect + 2, rect + 3);
+
+  rectangle->ExtentsFromTaperedRect(r);
 }
 
 } // namespace ggadget

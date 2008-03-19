@@ -166,36 +166,54 @@ static inline void GetMaxMin(double x, double y, double *max, double *min) {
   }
 }
 
+Rectangle::Rectangle(double x, double y, double w, double h)
+  : x_(x), y_(y), w_(w), h_(h) {
+}
+
+Rectangle::Rectangle() : x_(0), y_(0), w_(0), h_(0) {
+}
+
+Rectangle::~Rectangle() {
+}
+
 // Get extension rectangle for a deflective rectangle
-void GetRectangleExtents(const double r[8],
-                         double *x, double *y,
-                         double *w, double *h) {
+void Rectangle::ExtentsFromTaperedRect(const double r[8]) {
   double max1, max2, min1, min2;
   GetMaxMin(r[0], r[2], &max1, &min1);
   GetMaxMin(r[4], r[6], &max2, &min2);
-  *x = std::min(min1, min2);
-  *w = std::max(max1, max2) - *x;
+  x_ = std::min(min1, min2);
+  w_ = std::max(max1, max2) - x_;
   GetMaxMin(r[1], r[3], &max1, &min1);
   GetMaxMin(r[5], r[7], &max2, &min2);
-  *y = std::min(min1, min2);
-  *h = std::max(max1, max2) - *y;
+  y_ = std::min(min1, min2);
+  h_ = std::max(max1, max2) - y_;
 }
 
-void GetTwoRectanglesExtents(const double r1[4], const double r2[4],
-                             double r3[4]) {
-  r3[0] = std::min(r1[0], r2[0]);
-  r3[1] = std::min(r1[1], r2[1]);
-  r3[2] = std::max(r1[0] + r1[2], r2[0] + r2[2]) - r3[0];
-  r3[3] = std::max(r1[1] + r1[3], r2[1] + r2[3]) - r3[1];
+void Rectangle::ExtentsFromTwoRects(const Rectangle &r1, const Rectangle &r2) {
+  x_ = std::min(r1.x_, r2.x_);
+  y_ = std::min(r1.y_, r2.y_);
+  w_ = std::max(r1.x_ + r1.w_, r2.x_ + r2.w_) - x_;
+  h_ = std::max(r1.y_ + r1.h_, r2.y_ + r2.h_) - y_;
 }
 
-bool RectanglesOverlapped(const double r1[4], const double r2[4]) {
-  double maxx = std::min(r1[0] + r1[2], r2[0] + r2[2]);
-  double minx = std::max(r1[0], r2[0]);
-  double maxy = std::min(r1[1] + r1[3], r2[1] + r2[3]);
-  double miny = std::max(r1[1], r2[1]);
+bool Rectangle::Overlaps(const Rectangle &another) const {
+  double maxx = std::min(x_ + w_, another.x_ + another.w_);
+  double minx = std::max(x_, another.x_);
+  double maxy = std::min(y_ + h_, another.y_ + another.h_);
+  double miny = std::max(y_, another.y_);
   if (maxx <= minx || maxy <= miny) return false;
   return true;
+}
+
+bool Rectangle::IsPointIn(double x, double y) const {
+  return x >= x_ && y >= y_ && x <= x_ + w_ && y <= y;
+}
+
+void Rectangle::Integerize(double extent_width) {
+  x_ = floor(x_ - extent_width);
+  y_ = floor(y_ - extent_width);
+  w_ = ceil(w_ + extent_width * 2);
+  h_ = ceil(h_ + extent_width * 2);
 }
 
 } // namespace ggadget

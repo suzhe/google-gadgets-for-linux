@@ -19,8 +19,11 @@
 
 #include "ggadget/graphics_interface.h"
 #include "ggadget/canvas_interface.h"
+#include "ggadget/clip_region.h"
 #include "ggadget/view_interface.h"
 #include "ggadget/view_host_interface.h"
+
+using namespace ggadget;
 
 class MockedCanvas : public ggadget::CanvasInterface {
  public:
@@ -78,7 +81,7 @@ class MockedCanvas : public ggadget::CanvasInterface {
                                        double w, double h) {
     return true;
   }
-  virtual bool IntersectGeneralClipRegion(int number, double *r) {
+  virtual bool IntersectGeneralClipRegion(const ClipRegion &region) {
     return true;
   }
   virtual bool GetTextExtents(const char *text, const ggadget::FontInterface *f,

@@ -40,6 +40,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  canvas_interface.h \
 			  canvas_utils.h \
 			  checkbox_element.h \
+			  clip_region.h \
 			  color.h \
 			  common.h \
 			  combobox_element.h \
@@ -134,6 +135,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  button_element.cc \
 			  canvas_utils.cc \
 			  checkbox_element.cc \
+			  clip_region.cc \
 			  color.cc \
 			  combobox_element.cc \
 			  content_item.cc \

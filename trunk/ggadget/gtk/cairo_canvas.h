@@ -25,6 +25,9 @@
 #include <ggadget/canvas_interface.h>
 
 namespace ggadget {
+
+class ClipRegion;
+
 namespace gtk {
 
 class CairoGraphics;
@@ -109,7 +112,7 @@ class CairoCanvas : public CanvasInterface {
 
   virtual bool IntersectRectClipRegion(double x, double y, double w, double h);
 
-  virtual bool IntersectGeneralClipRegion(int rectangle_number, double *region);
+  virtual bool IntersectGeneralClipRegion(const ClipRegion &region);
 
   virtual bool GetTextExtents(const char *text, const FontInterface *f,
                               int text_flags, double in_width,

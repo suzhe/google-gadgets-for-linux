@@ -21,6 +21,7 @@ ADD_SUBDIRECTORY(tests)
 SET(SRCS
   basic_element.cc
   canvas_utils.cc
+  clip_region.cc
   color.cc
   content_item.cc
   details_view_data.cc
