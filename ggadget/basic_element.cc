@@ -631,6 +631,9 @@ class BasicElement::Impl {
         return result;
     }
 
+    if (!*in_element)
+      *in_element = owner_;
+
     if (!enabled_) {
       return EVENT_RESULT_UNHANDLED;
     }

@@ -160,7 +160,7 @@ class Elements::Impl {
     ASSERT(event.GetType() != Event::EVENT_MOUSE_OVER &&
            event.GetType() != Event::EVENT_MOUSE_OUT);
 
-    ElementHolder in_element_holder;
+    ElementHolder in_element_holder(*in_element);
     *fired_element = NULL;
     MouseEvent new_event(event);
     // Iterate in reverse since higher elements are listed last.
@@ -180,17 +180,21 @@ class Elements::Impl {
                                                  fired_element,
                                                  &descendant_in_element);
         // The child has been removed by some event handler, can't continue.
-        if (!child_holder.Get())
+        if (!child_holder.Get()) {
+          *in_element = in_element_holder.Get();
           return result;
-
+        }
         if (!in_element_holder.Get()) {
           in_element_holder.Reset(descendant_in_element ?
                                   descendant_in_element : child);
         }
-        if (*fired_element)
+        if (*fired_element) {
+          *in_element = in_element_holder.Get();
           return result;
+        }
       }
     }
+    *in_element = in_element_holder.Get();
     return EVENT_RESULT_UNHANDLED;
   }
 
