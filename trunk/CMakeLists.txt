@@ -37,8 +37,8 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 
 FOREACH(JS_PACKAGE_NAME
-  firefox-js 
-  xulrunner-js 
+  xulrunner-js
+  firefox-js
 )
   IF(NOT JS_FOUND)
     PKGCONFIG_EX(${JS_PACKAGE_NAME}
@@ -47,7 +47,7 @@ FOREACH(JS_PACKAGE_NAME
                  JS_FOUND)
   ENDIF(NOT JS_FOUND)
 ENDFOREACH(JS_PACKAGE_NAME
-  firefox-js 
+  firefox-js
   xulrunner-js 
 )
 

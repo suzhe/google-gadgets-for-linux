@@ -161,9 +161,9 @@ TEST_F(BasicElementTest, TestHitTest) {
             NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
-  ASSERT_TRUE(m.GetHitTest() == ggadget::BasicElement::HT_DEFAULT);
-  m.SetHitTest(ggadget::BasicElement::HT_CLIENT);
-  ASSERT_TRUE(m.GetHitTest() == ggadget::BasicElement::HT_CLIENT);
+  ASSERT_TRUE(m.GetHitTest() == ggadget::ViewInterface::HT_CLIENT);
+  m.SetHitTest(ggadget::ViewInterface::HT_CAPTION);
+  ASSERT_TRUE(m.GetHitTest() == ggadget::ViewInterface::HT_CAPTION);
 }
 
 /*TEST_F(BasicElementTest, TestMask) {
