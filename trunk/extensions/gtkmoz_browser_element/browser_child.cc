@@ -41,6 +41,7 @@
 #include <xpconnect/nsIXPCScriptable.h>
 
 #include <ggadget/common.h>
+#include <ggadget/digest_utils.h>
 #include "../smjs_script_runtime/json.h"
 #include "browser_child.h"
 
@@ -76,6 +77,8 @@ static GtkWidget *g_popup_for_new_window = NULL;
     { 0xb8, 0x1e, 0x85, 0x15, 0xe7, 0x9f, 0x00, 0x30 } \
 }
 
+static const char kDataURLPrefix[] = "data:";
+
 // We can't include "nsIScriptGlobalObject.h" because it requires
 // MOZILLA_INTERAL_API defined.
 static const nsIID kIScriptGlobalObjectIID = {
@@ -93,7 +96,7 @@ static int FindBrowserId(JSContext *cx) {
   JSClass *cls = JS_GET_CLASS(cx, js_global);
   if (!cls || ((~cls->flags) & (JSCLASS_HAS_PRIVATE |
                                 JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
-    fprintf(stderr, "browser_child: Global object is not a nsISupports");
+    fprintf(stderr, "browser_child: Global object is not a nsISupports\n");
     return -1;
   }
   nsIXPConnectWrappedNative *global_wrapper =
@@ -111,13 +114,14 @@ static int FindBrowserId(JSContext *cx) {
       nsISupports *global1 = NULL;
       void *temp = global1;
       rv = req->GetInterface(kIScriptGlobalObjectIID, &temp);
+      global1 = static_cast<nsISupports *>(temp);
       NS_ENSURE_SUCCESS(rv, -1);
       global1->Release();
       if (global1 == global)
         return it - g_embeds.begin();
     }
   }
-  fprintf(stderr, "browser_child: Can't find GtkMozEmbed from JS context");
+  fprintf(stderr, "browser_child: Can't find GtkMozEmbed from JS context\n");
   return -1;
 }
 
@@ -236,7 +240,7 @@ class ExternalObject : public nsIXPCScriptable {
     *ret_val = PR_TRUE;
     return NS_OK;
   }
-  
+
   NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper,
                          JSContext *cx, JSObject *obj, jsval id,
                          jsval *vp, PRBool *ret_val) {
@@ -399,22 +403,33 @@ bool DecodeJSONString(const char *json_string, nsString *result) {
 }
 
 static gint OnOpenURL(GtkMozEmbed *embed, const char *url, gpointer data) {
-  if (embed == g_embed_for_new_window) {
-    gtk_widget_destroy(g_popup_for_new_window);
-    g_popup_for_new_window = NULL;
-    g_embed_for_new_window = NULL;
-    embed = g_last_new_window_embed;
+  gboolean result = FALSE;
+
+  // "data:" URLs are the result of SetContent calls.
+  // Do not generate down message in this case.
+  if (strncmp(kDataURLPrefix, url, arraysize(kDataURLPrefix) - 1)) {
+    if (embed == g_embed_for_new_window) {
+      gtk_widget_destroy(g_popup_for_new_window);
+      g_popup_for_new_window = NULL;
+      g_embed_for_new_window = NULL;
+      embed = g_last_new_window_embed;
+    }
+
+    std::vector<GtkMozEmbed *>::const_iterator it =
+        std::find(g_embeds.begin(), g_embeds.end(), embed);
+    if (it != g_embeds.end()) {
+      std::string r = SendFeedbackWithBrowserId(kOpenURLFeedback, 
+                                                it - g_embeds.begin(),
+                                                url, NULL);
+      // The controller should have opened the URL, so don't let the embedded
+      // browser open it.
+      if (r[0] != '0') {
+        result = TRUE;
+      }
+    }
   }
 
-  std::vector<GtkMozEmbed *>::const_iterator it =
-      std::find(g_embeds.begin(), g_embeds.end(), embed);
-  if (it != g_embeds.end()) {
-    SendFeedbackWithBrowserId(kOpenURLFeedback, it - g_embeds.begin(),
-                              url, NULL);
-  }
-  // The controller should have opened the URL, so don't let the embedded
-  // browser open it.
-  return TRUE;
+  return result;
 }
 
 static void OnNewWindow(GtkMozEmbed *embed, GtkMozEmbed **retval,
@@ -499,11 +514,11 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
 static void SetContent(int param_count, const char **params, size_t id) {
   if (param_count != 4) {
     fprintf(stderr, "browser_child: Incorrect param count for %s: "
-            "4 expected, %d given", kSetContentCommand, param_count);
+            "4 expected, %d given\n", kSetContentCommand, param_count);
     return;
   }
   if (id >= g_embeds.size()) {
-    fprintf(stderr, "browser_child: Invalid browser id %zd to remove\n", id);
+    fprintf(stderr, "browser_child: Invalid browser id %zd given to SetContent\n", id);
     return;
   }
 
@@ -514,10 +529,18 @@ static void SetContent(int param_count, const char **params, size_t id) {
     fprintf(stderr, "browser_child: Invalid JSON string: %s\n", params[3]);
     return;
   }
-  NS_ConvertUTF16toUTF8 utf8(content);
-  gtk_moz_embed_render_data(embed, utf8.get(), utf8.Length(),
-                            // Base URI and MIME type.
-                            "file:///dev/null", params[2]);
+
+  NS_ConvertUTF16toUTF8 utf8(content);  
+  std::string url(utf8.get(), utf8.Length());
+  std::string data;
+  if (!ggadget::EncodeBase64(url, false, &data)) {
+    fprintf(stderr, "browser_child: Unable to convert to base64: %s\n", url.c_str());
+    return;    
+  }
+
+  url = (std::string(kDataURLPrefix) + params[2]) + ";base64," + data;
+  //fprintf(stderr, "browser_child: URL: (%d) %s\n", url.size(), url.c_str());
+  gtk_moz_embed_load_url(embed, url.c_str());
 }
 
 static void ProcessDownMessage(int param_count, const char **params) {

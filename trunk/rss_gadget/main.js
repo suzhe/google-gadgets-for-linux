@@ -17,14 +17,6 @@
 var kURLOption = "RSS_URL";
 var kRefreshInterval = 600000; // every 10 minutes
 
-var kItemTitle = 0;
-var kItemURL = 1;
-var kItemDesc = 2;
-var kItemDate = 3;
-var kItemNew = 4;
-var kItemRead = 5;
-var kItemHide = 6;
-
 var g_xml_request = null;
 
 var g_feed_title = null;
@@ -48,6 +40,8 @@ function RefreshMenuHandler(item_text) {
 
 function Refresh() {
   gadget.debug.trace("Refreshing page.");
+
+  UpdateCaption(strings.GADGET_LOADING);
 
   var url = options.getValue(kURLOption);
   url = NormalizeURL(url);
@@ -79,19 +73,14 @@ function LoadDocument(url) {
 
 function ProcessRequest() {
   var readystate = g_xml_request.readyState;
-  if (null == readystate) {
-    UpdateCaption(strings.GADGET_ERROR);
-    return;
-  }
-
   if (4 == readystate) { // complete
     if (200 == g_xml_request.status) {
       ParseDocument();
     } else {
       UpdateCaption(strings.GADGET_ERROR + ": " + g_xml_request.status);
     }
-  } else { // still loading
-    UpdateCaption(strings.GADGET_LOADING);
+
+    g_xml_request = null;
   }
 }
 
@@ -135,17 +124,17 @@ function BuildAtomDoc(xml) {
     var len  = items.length;
     for (var i = 0; i < len; i++) {
       var item_elem = items[i];
-      var item = new Array();
+      var item = {};
 
-      item[kItemTitle] = GetElementText("title", item_elem);
-      item[kItemURL] = GetElementAttrib("link", item_elem, "href");
+      item.title = GetElementText("title", item_elem);
+      item.url = GetElementAttrib("link", item_elem, "href");
 
       // description
       var desc = GetElementText("summary", item_elem);
       if (0 == desc.length) {
 	desc = GetElementText("content", item_elem);
       }
-      item[kItemDesc] = desc;
+      item.description = desc;
 
       var date = GetElementText("modified", item_elem);
       if (0 == date.length) {
@@ -157,7 +146,7 @@ function BuildAtomDoc(xml) {
       if (0 == date.length) {
 	date = GetElementText("published", item_elem);
       }
-      item[kItemDate] = ParseISO8601Date(date); 
+      item.date = ParseISO8601Date(date); 
 
       feed_items[i] = item;
     }
@@ -213,12 +202,12 @@ function BuildRSSDoc(xml) {
     var len  = items.length;
     for (var i = 0; i < len; i++) {
       var item_elem = items[i];
-      var item = new Array();
+      var item = {};
 
-      item[kItemTitle] = GetElementText("title", item_elem);
-      item[kItemURL] = GetElementText("link", item_elem);
-      item[kItemDesc] = GetElementText("description", item_elem);
-      item[kItemDate] = ParseDate(GetElementText("pubDate", item_elem));
+      item.title = GetElementText("title", item_elem);
+      item.url = GetElementText("link", item_elem);
+      item.description = GetElementText("description", item_elem);
+      item.date = ParseDate(GetElementText("pubDate", item_elem));
 
       feed_items[i] = item;
     }
@@ -235,14 +224,14 @@ function UpdateGlobalItems(items) {
   gadget.debug.trace("Read " + len + " items.");
   for (var i = 0; i < len; i++) {
     var item = items[i];
-    var olditem = FindFeedItem(item[kItemURL]);
+    var olditem = FindFeedItem(item.url);
     if (olditem == null) {
-      item[kItemNew] = true;
-      item[kItemRead] = item[kItemHide] = false;
+      item.is_new = true;
+      item.is_read = item.is_hidden = false;
     } else {
-      item[kItemNew] = false;
-      item[kItemRead] = olditem[kItemRead];
-      item[kItemHide] = olditem[kItemHide];
+      item.is_new = false;
+      item.is_read = olditem.is_read;
+      item.is_hidden = olditem.is_hidden;
     }   
   }
 
@@ -280,10 +269,6 @@ function GetElementAttrib(elem_name, parent, attrib_name) {
   }
 
   var attrib = child.getAttribute(attrib_name);
-  if (null == attrib) {
-    return "";
-  }
-
   return TrimString(attrib);
 }
 
@@ -301,7 +286,7 @@ function NormalizeURL(url) {
 }
 
 function UpdateCaption(text) {
-  if (null == text || "" == text) {
+  if (!text) {
     view.caption = strings.GADGET_NAME;
   } else {
     view.caption = text + " - " + strings.GADGET_NAME;
@@ -319,20 +304,21 @@ function DisplayFeedItems() {
     for (var i = len - 1; i >= 0; i--) {
       var item = g_feed_items[i];
 
-      if (item[kItemHide]) {
+      if (item.is_hidden) {
 	continue;
       }
 
       var c_item = new ContentItem();
-      c_item.heading = c_item.tooltip = item[kItemTitle];
-      c_item.snippet = item[kItemDesc];
-      c_item.open_command = item[kItemURL];
+      c_item.heading = c_item.tooltip = item.title;
+      c_item.snippet = item.description;
+      c_item.source = g_feed_title;
+      c_item.open_command = item.url;
 
-      if (!item[kItemRead]) {
+      if (!item.is_read) {
 	c_item.flags |= gddContentItemFlagHighlighted;
       }
 
-      c_item.time_created = item[kItemDate];// getvardate?
+      c_item.time_created = item.date;// getvardate?
       gadget.debug.trace("print time " + c_item.time_created.toString());
 
       c_item.onDetailsView = OnDetailsView;
@@ -341,7 +327,7 @@ function DisplayFeedItems() {
       c_item.layout = gddContentItemLayoutNews;
 
       var options = gddItemDisplayInSidebar;
-      if (item[kItemNew]) {
+      if (item.is_new) {
 	options |= gddItemDisplayAsNotification;
 	c_item.flags = gddContentItemFlagHighlighted;
       }
@@ -355,7 +341,7 @@ function MarkItemAsRead(c_item) {
 
   var item = FindFeedItem(c_item.open_command);
   if (item != null) {
-    item[kItemRead] = true;
+    item.is_read = true;
   }
 }
 
@@ -382,7 +368,7 @@ function OnDetailsView(item) {
 function OnRemoveItem(c_item) {
   var item = FindFeedItem(c_item.open_command);
   if (item != null) {
-    item[kItemHide] = true;
+    item.is_hidden = true;
   }
 
   return false;
@@ -392,7 +378,7 @@ function FindFeedItem(url) {
   if (null != g_feed_items) {
     for (var j = 0; j < g_feed_items.length; j++) {
       var item = g_feed_items[j];
-      if (url == item[kItemURL]) {
+      if (url == item.url) {
 	return item;
       }      
     }

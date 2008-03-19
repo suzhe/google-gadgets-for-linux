@@ -300,14 +300,14 @@ TEST(MathUtilsTest, IsOverlapped) {
   Rectangle r2(0, 1, 2, 1);
   Rectangle r3(1, 1, 4, 3);
   Rectangle r4(6, 6, 1, 1);
-  EXPECT_TRUE(r1.IsOverlapped(r1));
-  EXPECT_TRUE(r1.IsOverlapped(r3));
-  EXPECT_FALSE(r1.IsOverlapped(r2));
-  EXPECT_FALSE(r1.IsOverlapped(r4));
-  EXPECT_TRUE(r2.IsOverlapped(r3));
-  EXPECT_FALSE(r2.IsOverlapped(r1));
-  EXPECT_FALSE(r2.IsOverlapped(r4));
-  EXPECT_FALSE(r3.IsOverlapped(r4));
+  EXPECT_TRUE(r1.Overlaps(r1));
+  EXPECT_TRUE(r1.Overlaps(r3));
+  EXPECT_FALSE(r1.Overlaps(r2));
+  EXPECT_FALSE(r1.Overlaps(r4));
+  EXPECT_TRUE(r2.Overlaps(r3));
+  EXPECT_FALSE(r2.Overlaps(r1));
+  EXPECT_FALSE(r2.Overlaps(r4));
+  EXPECT_FALSE(r3.Overlaps(r4));
 }
 
 int main(int argc, char **argv) {

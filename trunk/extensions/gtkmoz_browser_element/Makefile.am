@@ -20,6 +20,9 @@ INCLUDES		= -I$(top_builddir) \
 
 noinst_HEADERS		= browser_child.h \
 			  browser_element.h
+			  ../../ggadget/digest_utils.h \
+			  ../../ggadget/logger.h \
+			  ../../ggadget/string_utils.h
 
 extension_LTLIBRARIES	= gtkmoz-browser-element.la
 extensiondir		= $(GGL_MODULE_DIR)
@@ -47,7 +50,10 @@ ggllibexec_PROGRAMS	= gtkmoz-browser-child
 ggllibexecdir		= $(GGL_LIBEXEC_DIR)
 
 gtkmoz_browser_child_SOURCES= browser_child.cc \
-			      ../smjs_script_runtime/json.cc
+			      ../smjs_script_runtime/json.cc \
+			      ../../ggadget/digest_utils.cc \
+			      ../../ggadget/logger.cc \
+			      ../../ggadget/string_utils.cc
 
 gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor \

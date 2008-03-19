@@ -34,6 +34,7 @@ class GadgetManagerInterface {
   virtual ~GadgetManagerInterface() { }
 
  public:
+
   /**
    * Returns impl-specific data. Because a @c GadgetManagerInterface impl can
    * only be got from @c GetGadgetManager(), some impl-specific caller can

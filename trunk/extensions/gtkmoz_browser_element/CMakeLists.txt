@@ -45,6 +45,9 @@ ENDIF(NOT GTKMOZEMBED_FOUND)
 
 SET(CHILD_SRCS
   browser_child.cc
+  ${CMAKE_SOURCE_DIR}/ggadget/digest_utils.cc
+  ${CMAKE_SOURCE_DIR}/ggadget/logger.cc
+  ${CMAKE_SOURCE_DIR}/ggadget/string_utils.cc
   ${CMAKE_SOURCE_DIR}/extensions/smjs_script_runtime/json.cc
 )
 ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})

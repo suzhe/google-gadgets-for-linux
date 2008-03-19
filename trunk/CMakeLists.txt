@@ -67,4 +67,5 @@ ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
 ADD_SUBDIRECTORY(resources)
 
+ADD_DIR_TO_ZIP(igoogle_gadget output/bin/igoogle_gadget.gg)
 ADD_DIR_TO_ZIP(rss_gadget output/bin/rss_gadget.gg)

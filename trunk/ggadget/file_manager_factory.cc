@@ -32,7 +32,6 @@ static FileManagerFactory g_factories_[] = {
 
 static FileManagerInterface *g_global_file_manager = NULL;
 
-
 FileManagerInterface *
 CreateFileManager(const char *base_path) {
   ASSERT(base_path && *base_path);

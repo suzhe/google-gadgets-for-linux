@@ -79,13 +79,15 @@ class SingleViewHost::Impl {
     feedback_handler_ = NULL;
     delete binder_;
     binder_ = NULL;
-    if (window_)
+    if (window_) {
       gtk_widget_destroy(window_);
-    if (context_menu_)
+      window_ = NULL;
+    }
+    if (context_menu_) {
       gtk_widget_destroy(context_menu_);
-    window_ = NULL;
+      context_menu_ = NULL;
+    }
     widget_ = NULL;
-    context_menu_ = NULL;
     ok_button_ = NULL;
     cancel_button_ = NULL;
   }
@@ -97,10 +99,12 @@ class SingleViewHost::Impl {
     view_ = view;
     bool no_background = false;
     // Initialize window and widget.
+    // All views must be held inside GTKFixed widgets in order to support the
+    // browser element.
+    widget_ = gtk_fixed_new();
+    gtk_fixed_set_has_window(GTK_FIXED(widget_), TRUE);
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       window_ = gtk_dialog_new();
-      widget_ = gtk_fixed_new();
-      gtk_fixed_set_has_window(GTK_FIXED(widget_), TRUE);
       gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window_)->vbox), widget_);
       cancel_button_ = gtk_dialog_add_button(GTK_DIALOG(window_),
                                              GTK_STOCK_CANCEL,
@@ -112,25 +116,19 @@ class SingleViewHost::Impl {
       g_signal_connect(G_OBJECT(window_), "response",
                        G_CALLBACK(DialogResponseHandler), this);
       gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
-      gtk_widget_show(widget_);
     } else if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
-      // For details view, we need a GtkFixed widget because Gecko browse
-      // element requires it.
       // TODO: buttons of details view shall be provided by view decorator.
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-      widget_ = gtk_fixed_new();
-      gtk_fixed_set_has_window(GTK_FIXED(widget_), TRUE);
       gtk_container_add(GTK_CONTAINER(window_), widget_);
       gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
-      gtk_widget_show(widget_);
     } else {
-      // For main view, we use a GtkWindow directly, without any child widget.
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-      widget_ = window_;
+      gtk_container_add(GTK_CONTAINER(window_), widget_);
       // Only main view may have transparent background.
       no_background = true;
       gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), FALSE);
     }
+    gtk_widget_show(widget_);
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
 
