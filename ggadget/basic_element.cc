@@ -1011,7 +1011,6 @@ void BasicElement::DoRegister() {
 }
 
 BasicElement::~BasicElement() {
-  GetView()->AddElementToClipRegion(this);
   delete impl_;
 }
 

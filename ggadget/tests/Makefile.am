@@ -59,7 +59,6 @@ check_PROGRAMS		= color_test \
 			  xml_dom_test \
 			  xml_parser_test \
 			  xml_http_request_test \
-			  xml_utils_test \
 			  digest_utils_test
 
 check_LTLIBRARIES	= foo-module.la \
