@@ -295,7 +295,7 @@ TEST(MathUtilsTest, ExtentsFromTwoRects) {
               DEQ(rect.w_,4) && DEQ(rect.h_,4));
 }
 
-TEST(MathUtilsTest, IsOverlapped) {
+TEST(MathUtilsTest, Overlaps) {
   Rectangle r1(2, 2, 2, 3);
   Rectangle r2(0, 1, 2, 1);
   Rectangle r3(1, 1, 4, 3);
