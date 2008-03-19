@@ -51,10 +51,16 @@ static const char kXMLTagUTF8[] = {
   '\xEF', '\xBB', '\xBF', '<', '?', 'x', 'm', 'l', ' '
 };
 static const char kXMLTagUTF16LE[] = {
-  '\xFE', '\xFF', 0, '<', 0, '?', 0, 'x', 0, 'm', 0, 'l', 0, ' '
+  '\xFF', '\xFE', '<', 0, '?', 0, 'x', 0, 'm', 0, 'l', 0, ' ', 0
 };
 static const char kXMLTagUTF16BE[] = {
-  '\xFF', '\xFE', '<', 0, '?', 0, 'x', 0, 'm', 0, 'l', 0, ' ', 0
+  '\xFE', '\xFF', 0, '<', 0, '?', 0, 'x', 0, 'm', 0, 'l', 0, ' '
+};
+static const char kXMLTagBOMLessUTF16LE[] = {
+  '<', 0, '?', 0, 'x', 0, 'm', 0, 'l', 0, ' ', 0
+};
+static const char kXMLTagBOMLessUTF16BE[] = {
+  0, '<', 0, '?', 0, 'x', 0, 'm', 0, 'l', 0, ' '
 };
 static const char kXMLTagUTF32LE[] = {
   '\xFF', '\xFE', 0, 0, '<', 0, 0, 0, '?', 0, 0, 0,
@@ -64,6 +70,7 @@ static const char kXMLTagUTF32BE[] = {
   0, 0, '\xFE', '\xFF', 0, 0, 0, '<', 0, 0, 0, '?',
   0, 0, 0, 'x', 0, 0, 0, 'm', 0, 0, 0, 'l', 0, 0, 0, ' '
 };
+// BOM-less UTF32 is seldom used, so we won't check.
 
 #define STARTS_WITH(content_ptr, content_size, pattern) \
     ((content_size) >= sizeof(pattern) && \
@@ -141,8 +148,36 @@ static void ReplaceXMLEncodingDecl(std::string *xml) {
                " encoding=\"UTF-8\"");
 }
 
-static xmlDoc *ParseXML(const std::string &xml, const char *filename,
+struct ContextData {
+  const StringMap *extra_entities;
+  getEntitySAXFunc original_handler;
+};
+
+xmlEntity *GetEntityHandler(void *ctx, const xmlChar *name) {
+  xmlParserCtxt *ctxt = static_cast<xmlParserCtxt *>(ctx);
+  ASSERT(ctxt && ctxt->_private);
+  ContextData *data = static_cast<ContextData *>(ctxt->_private);
+  xmlEntity *result = data->original_handler(ctx, name);
+  if (!result && ctxt->myDoc) {
+    if (!ctxt->myDoc->intSubset) {
+      ctxt->myDoc->intSubset =
+          xmlCreateIntSubset(ctxt->myDoc, NULL, NULL, NULL);
+    }
+    StringMap::const_iterator it =
+        data->extra_entities->find(FromXmlCharPtr(name));
+    if (it != data->extra_entities->end()) {
+      result = xmlAddDocEntity(ctxt->myDoc, name, XML_INTERNAL_GENERAL_ENTITY,
+                               NULL, NULL, ToXmlCharPtr(it->second.c_str()));
+    }
+  }
+  return result;
+}
+
+static xmlDoc *ParseXML(const std::string &xml,
+                        const StringMap *extra_entities,
+                        const char *filename,
                         const char *encoding_hint,
+                        const char *encoding_fallback,
                         std::string *encoding,
                         std::string *utf8_content) {
   std::string converted_xml;
@@ -150,64 +185,87 @@ static xmlDoc *ParseXML(const std::string &xml, const char *filename,
   // Indicates whether the encoding is successfully converted before libxml2
   // parsing, or is detected by libxml2.
   bool converted = false;
+  if (encoding) encoding->clear();
 
   // Although libxml2 will do almost the same things, we must do it ourselves
   // to make encoding_hint have higher priority than the encoding declaration
   // with xml file, according to the XML standard.
-  if (!DetectEncodingFromBOM(xml, &use_encoding) &&
+  if (!DetectUTFEncoding(xml, &use_encoding) &&
       encoding_hint && *encoding_hint) {
     use_encoding = encoding_hint;
   }
-  if (!use_encoding.empty()) {
-    if (ConvertStringToUTF8(xml, use_encoding.c_str(), &converted_xml)) {
-      converted = true;
-      if (utf8_content)
-        *utf8_content = converted_xml;
-      // We have successfully converted the encoding to UTF8, insert a BOM and
-      // remove the original encoding declaration to prevent libxml2 from
-      // converting again.
-      ReplaceXMLEncodingDecl(&converted_xml);
-    } else {
-      // Encoding conversion failed, can't continue.
-      if (encoding)
-        encoding->clear();
-      return false;
-    }
-  } else {
-    converted_xml = xml;
-  }
 
-  xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(converted_xml.c_str(),
-                                                  converted_xml.length());
-  if (!ctxt)
-    return NULL;
-
-  // Let the built-in libxml2 error reporter print the correct filename.
-  ctxt->input->filename = xmlMemStrdup(filename);
-
-  xmlParseDocument(ctxt);
   xmlDoc *result = NULL;
-  if (ctxt->wellFormed) {
-    result = ctxt->myDoc;
-    if (!converted) {
-      if (ctxt->input && ctxt->input->encoding)
-        use_encoding = FromXmlCharPtr(ctxt->input->encoding);
-      else
-        use_encoding = "UTF-8";
-      if (utf8_content)
-        ConvertStringToUTF8(xml, use_encoding.c_str(), utf8_content);
+  bool retry; 
+  do {
+    retry = false;
+    if (!use_encoding.empty()) {
+      if (ConvertStringToUTF8(xml, use_encoding.c_str(), &converted_xml)) {
+        converted = true;
+        if (utf8_content)
+          *utf8_content = converted_xml;
+        // We have successfully converted the encoding to UTF8, insert a BOM and
+        // remove the original encoding declaration to prevent libxml2 from
+        // converting again.
+        ReplaceXMLEncodingDecl(&converted_xml);
+      } else if (encoding_fallback && use_encoding != encoding_fallback) {
+        // Encoding conversion failed, try fallback_encoding if it has not
+        // been tried.
+        use_encoding = encoding_fallback;
+        retry = true;
+        continue;
+      }
+    } else {
+      converted_xml = xml;
     }
-  } else {
-    xmlFreeDoc(ctxt->myDoc);
-    ctxt->myDoc = NULL;
 
-    if (!converted) {
-      use_encoding.clear();
-      if (utf8_content)
-        utf8_content->clear();
+    xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(converted_xml.c_str(),
+                                                    converted_xml.length());
+    if (!ctxt)
+      return NULL;
+
+    ASSERT(ctxt->sax);
+    ContextData data;
+    if (extra_entities && !extra_entities->empty()) {
+      data.extra_entities = extra_entities;
+      data.original_handler = ctxt->sax->getEntity;
+      ctxt->_private = &data;
+      ctxt->sax->getEntity = GetEntityHandler;
     }
-  }
-  xmlFreeParserCtxt(ctxt);
+    // Let the built-in libxml2 error reporter print the correct filename.
+    ctxt->input->filename = xmlMemStrdup(filename);
+  
+    xmlParseDocument(ctxt);
+    if (ctxt->wellFormed) {
+      result = ctxt->myDoc;
+      if (!converted) {
+        if (ctxt->input && ctxt->input->encoding)
+          use_encoding = FromXmlCharPtr(ctxt->input->encoding);
+        else
+          use_encoding = "UTF-8";
+        if (utf8_content)
+          ConvertStringToUTF8(xml, use_encoding.c_str(), utf8_content);
+      }
+    } else if ((ctxt->errNo == XML_ERR_INVALID_CHAR ||
+                ctxt->errNo == XML_ERR_UNKNOWN_ENCODING ||
+                ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) &&
+               encoding_fallback && use_encoding != encoding_fallback) { 
+      // libxml2 encoding conversion failed, try fallback_encoding if it has
+      // not been tried.
+      use_encoding = encoding_fallback;
+      retry = true;
+    } else {
+      xmlFreeDoc(ctxt->myDoc);
+      ctxt->myDoc = NULL;
+
+      if (!converted) {
+        use_encoding.clear();
+        if (utf8_content)
+          utf8_content->clear();
+      }
+    }
+    xmlFreeParserCtxt(ctxt);
+  } while (retry);
 
   if (encoding)
     *encoding = use_encoding;
@@ -416,7 +474,7 @@ static int CountTagSequence(const xmlNode *child, const char *tag) {
 
 static void ConvertElementIntoXPathMap(const xmlNode *element,
                                        const std::string &prefix,
-                                       GadgetStringMap *table) {
+                                       StringMap *table) {
   for (xmlAttr *attribute = element->properties;
        attribute != NULL; attribute = attribute->next) {
     const char *name = FromXmlCharPtr(attribute->name);
@@ -473,6 +531,8 @@ class XMLParser : public XMLParserInterface {
            STARTS_WITH(content_ptr, content_size, kXMLTagUTF8) ||
            STARTS_WITH(content_ptr, content_size, kXMLTagUTF16LE) ||
            STARTS_WITH(content_ptr, content_size, kXMLTagUTF16BE) ||
+           STARTS_WITH(content_ptr, content_size, kXMLTagBOMLessUTF16LE) ||
+           STARTS_WITH(content_ptr, content_size, kXMLTagBOMLessUTF16BE) ||
            STARTS_WITH(content_ptr, content_size, kXMLTagUTF32LE) ||
            STARTS_WITH(content_ptr, content_size, kXMLTagUTF32BE);
   }
@@ -482,9 +542,11 @@ class XMLParser : public XMLParserInterface {
   }
 
   virtual bool ParseContentIntoDOM(const std::string &content,
+                                   const StringMap *extra_entities,
                                    const char *filename,
                                    const char *content_type,
                                    const char *encoding_hint,
+                                   const char *encoding_fallback,
                                    DOMDocumentInterface *domdoc,
                                    std::string *encoding,
                                    std::string *utf8_content) {
@@ -501,7 +563,8 @@ class XMLParser : public XMLParserInterface {
          // text/html or others, so detect from the contents.
         HasXMLDecl(content)) {
       ASSERT(!domdoc || !domdoc->HasChildNodes());
-      xmlDoc *xmldoc = ParseXML(content, filename, encoding_hint,
+      xmlDoc *xmldoc = ParseXML(content, extra_entities, filename,
+                                encoding_hint, encoding_fallback,
                                 encoding, utf8_content);
       if (!xmldoc) {
         result = false;
@@ -519,7 +582,7 @@ class XMLParser : public XMLParserInterface {
     } else if (utf8_content) {
       // This is not an XML content, only do encoding conversion.
       std::string encoding_to_use;
-      if (!DetectEncodingFromBOM(content, &encoding_to_use)) {
+      if (!DetectUTFEncoding(content, &encoding_to_use)) {
         if (encoding_hint && *encoding_hint)
           encoding_to_use = encoding_hint;
         else if (strcasecmp(content_type, "text/html") == 0)
@@ -529,6 +592,10 @@ class XMLParser : public XMLParserInterface {
       }
       result = ConvertStringToUTF8(content, encoding_to_use.c_str(),
                                    utf8_content);
+      if (!result && encoding_fallback && *encoding_fallback) {
+        encoding_to_use = encoding_fallback;
+        result = ConvertStringToUTF8(content, encoding_fallback, utf8_content);
+      }
       if (encoding)
         *encoding = result ? encoding_to_use : "";
     }
@@ -536,11 +603,14 @@ class XMLParser : public XMLParserInterface {
   }
 
   virtual bool ParseXMLIntoXPathMap(const std::string &xml,
+                                    const StringMap *extra_entities,
                                     const char *filename,
                                     const char *root_element_name,
                                     const char *encoding_hint,
-                                    GadgetStringMap *table) {
-    xmlDoc *xmldoc = ParseXML(xml, filename, encoding_hint, NULL, NULL);
+                                    const char *encoding_fallback,
+                                    StringMap *table) {
+    xmlDoc *xmldoc = ParseXML(xml, extra_entities, filename, encoding_hint,
+                              encoding_fallback, NULL, NULL);
     if (!xmldoc)
       return false;
 

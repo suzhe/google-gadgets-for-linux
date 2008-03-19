@@ -20,6 +20,7 @@ limitations under the License.
 #include "dbus_proxy.h"
 #include "dbus_utils.h"
 #include <ggadget/common.h>
+#include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/slot.h>
@@ -409,7 +410,8 @@ bool DBusProxy::Impl::GetRemoteMethodsAndSignals() {
     dbus_message_iter_get_basic(&iter, &str);
     dbus_message_unref(reply);
     // DLOG("xml:\n%s", str);
-    if (xml_parser->ParseContentIntoDOM(str, "Introspect.xml", NULL, NULL,
+    if (xml_parser->ParseContentIntoDOM(str, NULL, "Introspect.xml", NULL,
+                                        NULL, kEncodingFallback,
                                         domdoc, NULL, NULL)) {
       DOMNodeInterface *root_node = domdoc->GetDocumentElement();
       if (!root_node || root_node->GetNodeName() != "node") {

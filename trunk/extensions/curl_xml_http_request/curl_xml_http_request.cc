@@ -746,20 +746,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     std::string encoding;
     response_dom_ = xml_parser_->CreateDOMDocument();
     response_dom_->Ref();
-    if (!xml_parser_->ParseContentIntoDOM(response_body_, url_.c_str(),
+    if (!xml_parser_->ParseContentIntoDOM(response_body_, NULL, url_.c_str(),
                                           response_content_type_.c_str(),
                                           response_encoding_.c_str(),
+                                          kEncodingFallback,
                                           response_dom_,
                                           &encoding, &response_text_)) {
-      if (!encoding.empty() ||
-          // Encoding conversion failed, try again using ISO8859-1.
-          !xml_parser_->ParseContentIntoDOM(response_body_, url_.c_str(),
-                                            response_content_type_.c_str(),
-                                            "ISO8859-1", response_dom_,
-                                            &encoding, &response_text_)) {
-        response_dom_->Unref();
-        response_dom_ = NULL;
-      }
+      response_dom_->Unref();
+      response_dom_ = NULL;
     }
   }
 

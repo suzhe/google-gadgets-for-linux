@@ -192,10 +192,12 @@ size_t ConvertCharUTF32ToUTF16(UTF32Char src, UTF16Char *dest,
 
 size_t ConvertStringUTF8ToUTF32(const char *src, size_t src_length,
                                 UTF32String *dest) {
-  if (!src || !src_length || !dest)
+  if (!dest)
+    return 0;
+  dest->clear();
+  if (!src || !src_length)
     return 0;
 
-  dest->clear();
   size_t used_length = 0;
   size_t utf8_len;
   UTF32Char utf32;
@@ -217,10 +219,12 @@ size_t ConvertStringUTF8ToUTF32(const std::string &src, UTF32String *dest) {
 
 size_t ConvertStringUTF32ToUTF8(const UTF32Char *src, size_t src_length,
                                 std::string *dest) {
-  if (!src || !src_length || !dest)
+  if (!dest)
+    return 0;
+  dest->clear();
+  if (!src || !src_length)
     return 0;
 
-  dest->clear();
   size_t used_length = 0;
   size_t utf8_len;
   char utf8[6];
@@ -241,10 +245,12 @@ size_t ConvertStringUTF32ToUTF8(const UTF32String &src, std::string *dest) {
 
 size_t ConvertStringUTF8ToUTF16(const char *src, size_t src_length,
                                 UTF16String *dest) {
-  if (!src || !src_length || !dest)
+  if (!dest)
+    return 0;
+  dest->clear();
+  if (!src || !src_length)
     return 0;
 
-  dest->clear();
   size_t used_length = 0;
   size_t utf8_len;
   size_t utf16_len;
@@ -270,10 +276,12 @@ size_t ConvertStringUTF8ToUTF16(const std::string &src, UTF16String *dest) {
 
 size_t ConvertStringUTF16ToUTF8(const UTF16Char *src, size_t src_length,
                                 std::string *dest) {
-  if (!src || !src_length || !dest)
+  if (!dest)
+    return 0;
+  dest->clear();
+  if (!src || !src_length)
     return 0;
 
-  dest->clear();
   size_t used_length = 0;
   size_t utf8_len;
   size_t utf16_len;
@@ -298,10 +306,12 @@ size_t ConvertStringUTF16ToUTF8(const UTF16String &src, std::string *dest) {
 
 size_t ConvertStringUTF16ToUTF32(const UTF16Char *src, size_t src_length,
                                  UTF32String *dest) {
-  if (!src || !src_length || !dest)
+  if (!dest)
+    return 0;
+  dest->clear();
+  if (!src || !src_length)
     return 0;
 
-  dest->clear();
   size_t used_length = 0;
   size_t utf16_len;
   UTF32Char utf32;
@@ -322,10 +332,12 @@ size_t ConvertStringUTF16ToUTF32(const UTF16String &src, UTF32String *dest) {
 
 size_t ConvertStringUTF32ToUTF16(const UTF32Char *src, size_t src_length,
                                  UTF16String *dest) {
-  if (!src || !src_length || !dest)
+  if (!dest)
+    return 0;
+  dest->clear();
+  if (!src || !src_length)
     return 0;
 
-  dest->clear();
   size_t used_length = 0;
   size_t utf16_len;
   UTF16Char utf16[2];
@@ -429,7 +441,34 @@ bool IsLegalUTF16String(const UTF16String &src) {
     ((content_size) >= sizeof(pattern) && \
      memcmp((content_ptr), (pattern), sizeof(pattern)) == 0)
 
-bool DetectEncodingFromBOM(const std::string &stream, std::string *encoding) {
+// A simple algorithm to detect BOM-less UTF-16 streams. It only applies to
+// western languages that all UTF16 characters < 256.
+// Returns 0 if stream is not UTF16, 1 if UTF16-LE, 2 if UTF16-BE.
+static int DetectUTF16Encoding(const std::string &stream) {
+  size_t content_size = stream.size();
+  if (content_size == 0 || content_size % 2 != 0)
+    return 0;
+
+  int result = 0;
+  for (size_t i = 0; i < content_size; i += 2) {
+    char even = stream[i];
+    char odd = stream[i + 1];
+    if (!even) {
+      if (!odd || result == 1)
+        return 0;
+      result = 2;
+    } else if (!odd) {
+      if (result == 2)
+        return 0;
+      result = 1;
+    } else {
+      return 0;
+    }
+  }
+  return result;
+}
+
+bool DetectUTFEncoding(const std::string &stream, std::string *encoding) {
   ASSERT(encoding);
   const char *content_ptr = stream.c_str();
   size_t content_size = stream.size();
@@ -453,102 +492,153 @@ bool DetectEncodingFromBOM(const std::string &stream, std::string *encoding) {
     if (encoding) *encoding = "UTF-16BE";
     return true;
   }
-  if (encoding) encoding->clear();
-  return false;
+
+  // We don't check BOM-less UTF-8, because there is ambiguity among UTF-8 and
+  // some CJK encodings. This function returns true only if the detection is
+  // confidental. 
+
+  switch (DetectUTF16Encoding(stream)) {
+    case 1:
+      if (encoding) *encoding = "UTF-16LE";
+      return true;
+    case 2:
+      if (encoding) *encoding = "UTF-16BE";
+      return true;
+    default:
+      if (encoding) encoding->clear();
+      return false;
+  }
 }
 
-static void ConvertUTF16LEStreamToString(const std::string &input,
+static void ConvertUTF16LEStreamToString(const char *input, size_t size,
                                          UTF16String *result) {
   ASSERT(result);
   result->clear();
-  size_t size = input.size();
   if (size < 2) return;
   result->reserve(size / 2);
-  const unsigned char *stream =
-      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
   for (size_t i = 0; i < size - 1; i += 2)
     result->push_back(stream[i] | (stream[i + 1] << 8));
 }
 
-static void ConvertUTF16BEStreamToString(const std::string &input,
+static void ConvertUTF16BEStreamToString(const char *input, size_t size,
                                          UTF16String *result) {
   ASSERT(result);
   result->clear();
-  size_t size = input.size();
   if (size < 2) return;
   result->reserve(size / 2);
-  const unsigned char *stream =
-      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
   for (size_t i = 0; i < size - 1; i += 2)
     result->push_back((stream[i] << 8) | stream[i + 1]);
 }
 
-static void ConvertUTF32LEStreamToString(const std::string &input,
+static void ConvertUTF32LEStreamToString(const char *input, size_t size,
                                          UTF32String *result) {
   ASSERT(result);
   result->clear();
-  size_t size = input.size();
   if (size < 4) return;
   result->reserve(size / 4);
-  const unsigned char *stream =
-      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
   for (size_t i = 0; i < size - 3; i += 4)
     result->push_back(stream[i] | (stream[i + 1] << 8) |
                       (stream[i + 2] << 16) | (stream[i + 3] << 24));
 }
 
-static void ConvertUTF32BEStreamToString(const std::string &input,
+static void ConvertUTF32BEStreamToString(const char *input, size_t size,
                                          UTF32String *result) {
   ASSERT(result);
   result->clear();
-  size_t size = input.size();
   if (size < 4) return;
   result->reserve(size / 4);
-  const unsigned char *stream =
-      reinterpret_cast<const unsigned char *>(input.c_str()); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
   for (size_t i = 0; i < size - 3; i += 4)
     result->push_back((stream[i] << 24) | (stream[i + 1] << 16) |
                       (stream[i + 2] << 8) | stream[i + 3]);
 }
 
-size_t ConvertStreamToUTF8ByBOM(const std::string &stream, std::string *result,
-                                std::string *encoding) {
+bool DetectAndConvertStreamToUTF8(const std::string &stream,
+                                  std::string *result, std::string *encoding) {
   ASSERT(result);
   const char *content_ptr = stream.c_str();
   size_t content_size = stream.size();
+  bool valid = false;
 
   if (STARTS_WITH(content_ptr, content_size, kUTF8BOM)) {
     if (encoding) *encoding = "UTF-8";
-    *result = stream;
-    return stream.size();
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF32LEBOM)) {
+    valid = IsLegalUTF8String(stream);
+    if (valid) *result = stream.substr(sizeof(kUTF8BOM));
+  } else if (STARTS_WITH(content_ptr, content_size, kUTF32LEBOM) &&
+             content_size % 4 == 0) {
     if (encoding) *encoding = "UTF-32LE";
     UTF32String utf32;
-    ConvertUTF32LEStreamToString(stream, &utf32);
-    return ConvertStringUTF32ToUTF8(utf32, result) * 4;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF32BEBOM)) {
+    ConvertUTF32LEStreamToString(stream.c_str() + sizeof(kUTF32LEBOM),
+                                 content_size - sizeof(kUTF32LEBOM), &utf32);
+    valid = (ConvertStringUTF32ToUTF8(utf32, result) == utf32.size());
+  } else if (STARTS_WITH(content_ptr, content_size, kUTF32BEBOM) &&
+             content_size % 4 == 0) {
     if (encoding) *encoding = "UTF-32BE";
     UTF32String utf32;
-    ConvertUTF32BEStreamToString(stream, &utf32);
-    return ConvertStringUTF32ToUTF8(utf32, result) * 4;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF16LEBOM)) {
+    ConvertUTF32BEStreamToString(stream.c_str() + sizeof(kUTF32BEBOM),
+                                 content_size - sizeof(kUTF32BEBOM), &utf32);
+    valid = (ConvertStringUTF32ToUTF8(utf32, result) == utf32.size());
+  } else if (STARTS_WITH(content_ptr, content_size, kUTF16LEBOM) &&
+             content_size % 2 == 0) {
     if (encoding) *encoding = "UTF-16LE";
     UTF16String utf16;
-    ConvertUTF16LEStreamToString(stream, &utf16);
-    return ConvertStringUTF16ToUTF8(utf16, result) * 2;
-  }
-  if (STARTS_WITH(content_ptr, content_size, kUTF16BEBOM)) {
+    ConvertUTF16LEStreamToString(stream.c_str() + sizeof(kUTF16LEBOM),
+                                 content_size - sizeof(kUTF16LEBOM), &utf16);
+    valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+  } else if (STARTS_WITH(content_ptr, content_size, kUTF16BEBOM) &&
+             content_size % 2 == 0) {
     if (encoding) *encoding = "UTF-16BE";
     UTF16String utf16;
-    ConvertUTF16BEStreamToString(stream, &utf16);
-    return ConvertStringUTF16ToUTF8(utf16, result) * 2;
+    ConvertUTF16BEStreamToString(stream.c_str() + sizeof(kUTF16BEBOM),
+                                 content_size - sizeof(kUTF16BEBOM), &utf16);
+    valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+  } else {
+    // No BOM, try UTF-8.
+    valid = IsLegalUTF8String(stream);
+    if (valid) {
+      if (encoding) *encoding = "UTF-8";
+      *result = stream;
+    } else {
+      // The try BOM-less UTF-16.
+      switch (DetectUTF16Encoding(stream)) {
+        case 1: {
+          UTF16String utf16;
+          ConvertUTF16LEStreamToString(stream.c_str(), content_size, &utf16);
+          if (encoding) *encoding = "UTF-16LE";
+          valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+          break;
+        }
+        case 2: {
+          UTF16String utf16;
+          ConvertUTF16LEStreamToString(stream.c_str(), content_size, &utf16);
+          if (encoding) *encoding = "UTF-16LE";
+          valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+          break;
+        }
+        default:
+          break;
+      }
+    }
   }
-  result->clear();
-  if (encoding) encoding->clear();
-  return 0;
+
+  if (!valid) {
+    if (encoding) *encoding = "ISO8859-1";
+    // Not valid UTF-8, treat it as ISO8859-1.
+    UTF16String utf16;
+    utf16.reserve(content_size);
+    for (size_t i = 0; i < content_size; i++)
+      utf16 += static_cast<unsigned char>(content_ptr[i]);
+    valid = (ConvertStringUTF16ToUTF8(utf16, result) == utf16.size());
+  }
+
+  if (!valid) {
+    result->clear();
+    if (encoding) encoding->clear();
+  }
+  return valid;
 }
 
 } // namespace ggadget

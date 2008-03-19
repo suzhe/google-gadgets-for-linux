@@ -154,7 +154,11 @@ class ScriptableView::Impl {
   bool InitFromXML(const std::string &xml, const char *filename) {
     DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
     xmldoc->Ref();
-    if (!GetXMLParser()->ParseContentIntoDOM(xml, filename, NULL, NULL,
+    const StringMap *strings = NULL;
+    if (view_->GetGadget())
+      strings = &view_->GetGadget()->GetStrings();
+    if (!GetXMLParser()->ParseContentIntoDOM(xml, strings, filename, NULL,
+                                             NULL, kEncodingFallback,
                                              xmldoc, NULL, NULL)) {
       xmldoc->Unref();
       return false;
@@ -205,7 +209,7 @@ class ScriptableView::Impl {
         filename = src.c_str();
         lineno = 1;
         std::string temp;
-        if (ConvertStreamToUTF8ByBOM(script, &temp, NULL) == script.length())
+        if (DetectAndConvertStreamToUTF8(script, &temp, NULL))
           script = temp;
       }
     } else {

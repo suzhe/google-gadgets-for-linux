@@ -140,6 +140,9 @@ const char kHttpsUrlPrefix[] = "https://";
 const char kFeedUrlPrefix[] = "feed://";
 const char kFileUrlPrefix[] = "file://";
 
+/** The fallback encoding used to parse text files. */
+const char kEncodingFallback[] = "ISO8859-1";
+
 } // namespace ggadget
 
 #endif // GGADGET_GADGET_CONSTS_H__

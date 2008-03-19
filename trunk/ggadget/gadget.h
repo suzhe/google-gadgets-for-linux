@@ -144,6 +144,11 @@ class Gadget {
    */
   std::string GetManifestInfo(const char *key) const;
 
+  /**
+   * Get the strings defined in strings.xml.
+   */
+  const StringMap &GetStrings() const;
+
   /** Checks whether this gadget has options dialog. */
   bool HasOptionsDialog() const;
 
@@ -220,7 +225,7 @@ class Gadget {
    * @param[out] data receive the manifest data.
    * @return @c true if succeeds.
    */
-  static bool GetGadgetManifest(const char *base_path, GadgetStringMap *data);
+  static bool GetGadgetManifest(const char *base_path, StringMap *data);
 
  private:
   class Impl;
