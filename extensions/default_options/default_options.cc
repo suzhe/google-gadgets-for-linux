@@ -87,9 +87,9 @@ class DefaultOptions : public MemoryOptions {
       return;
     }
 
-    GadgetStringMap table;
-    if (parser_->ParseXMLIntoXPathMap(data, location_.c_str(), "options",
-                                      NULL, &table)) {
+    StringMap table;
+    if (parser_->ParseXMLIntoXPathMap(data, NULL, location_.c_str(),
+                                      "options", NULL, NULL, &table)) {
       for (GadgetStringMap::const_iterator it = table.begin();
            it != table.end(); ++it) {
         const std::string &key = it->first;
@@ -157,9 +157,9 @@ class DefaultOptions : public MemoryOptions {
     changed_ = true;
   }
 
-  static const char *GetXPathValue(const GadgetStringMap &table,
+  static const char *GetXPathValue(const StringMap &table,
                                    const std::string &key) {
-    GadgetStringMap::const_iterator it = table.find(key);
+    StringMap::const_iterator it = table.find(key);
     return it == table.end() ? NULL : it->second.c_str();
   }
 

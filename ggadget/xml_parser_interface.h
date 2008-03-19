@@ -48,16 +48,20 @@ class XMLParserInterface {
    * specification (http://www.w3.org/TR/2007/WD-XMLHttpRequest-20071026/).
    *
    * @param xml the content of an XML file.
+   * @param extra_entities extra entites defined in other places that this
+   *     XML file may reference.
    * @param filename the name of the XML file (only for logging).
    * @param content_type the MIME content type of the input. Can be @c NULL or
    *     blank if the caller can ensure the content is XML.
    * @param encoding_hint the hint of encoding if the input xml has no
    *     Unicode BOF.  If @c NULL or blank, the parser will detect the
    *     encoding.
+   * @param encoding_fallback the last fallback encoding if the hint or
+   *     the declared encoding fails.
    * @param domdoc the DOM document. It must be blank before calling this
    *     function, and will be filled with DOM data if this function succeeds.
-   * @param[out] encoding On output, it contains the detected encoding.
-   *     Can be @c NULL if the caller doesn't need it.
+   * @param[out] encoding contains the encoding actually used. Can be @c NULL
+   *     if the caller doesn't need it.
    * @param[out] utf8_content converted content into utf8, if encoding
    *     conversion is successful, otherwise blank.
    *     Can be @c NULL if the caller doesn't need it.
@@ -67,9 +71,11 @@ class XMLParserInterface {
    *     successful.
    */
   virtual bool ParseContentIntoDOM(const std::string &content,
+                                   const StringMap *extra_entities,
                                    const char *filename,
                                    const char *content_type,
                                    const char *encoding_hint,
+                                   const char *encoding_fallback,
                                    DOMDocumentInterface *domdoc,
                                    std::string *encoding,
                                    std::string *utf8_content) = 0;
@@ -95,19 +101,25 @@ class XMLParserInterface {
    * (count from 1).
    *
    * @param xml the content of an XML file.
+   * @param extra_entities extra entites defined in other places that this
+   *     XML file may reference.
    * @param filename the name of the XML file (only for logging).
    * @param root_element_name expected name of the root element.
    * @param encoding_hint hints the parser of the encoding if the input xml
    *     has no Unicode BOF. If @c NULL or blank, the parser will detect the
    *     encoding.
+   * @param encoding_fallback the last fallback encoding if the hint or
+   *     the declared encoding fails.
    * @param table the string table to fill.
    * @return @c true if succeeds.
    */
   virtual bool ParseXMLIntoXPathMap(const std::string &xml,
+                                    const StringMap *extra_entities,
                                     const char *filename,
                                     const char *root_element_name,
                                     const char *encoding_hint,
-                                    GadgetStringMap *table) = 0;
+                                    const char *encoding_fallback,
+                                    StringMap *table) = 0;
 
   /**
    * Encode a string into XML text by escaping special chars.

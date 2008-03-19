@@ -255,6 +255,10 @@ const UTF32Char kUnicodeReplacementChar = 0xFFFD;
 const UTF32Char kUnicodeMaxLegalChar = 0x10FFFF;
 const UTF32Char kUnicodeMaxBMPChar = 0xFFFF;
 
+// The Unicode char Zero-Width-Non-Breakable-Space (ZWNBSP) used as the
+// byte order mark (BOM).
+const UTF32Char kUnicodeZeroWidthNBSP = 0xFEFF;
+
 /** Various BOMs. Note: they are not zero-ended strings, but char arrays. */
 const char kUTF8BOM[] = { '\xEF', '\xBB', '\xBF' };
 const char kUTF16LEBOM[] = { '\xFF', '\xFE' };
@@ -263,24 +267,33 @@ const char kUTF32LEBOM[] = { '\xFF', '\xFE', 0, 0 };
 const char kUTF32BEBOM[] = { 0, 0, '\xFE', '\xFF' };
 
 /**
- * Detects the encoding of a byte stream if it has BOM.
+ * Detects the UTF encoding of a byte stream if it has BOM, or from the
+ * stream contents if we can confidentally determine its UTF encoding.
+ * We don't check BOM-less UTF-8, because there is ambiguity among UTF-8 and
+ * some CJK encodings.
+ *
  * @param stream the input byte stream.
  * @param[out] encoding (optional) name of the encoding detected from BOM.
  *     Possible values are "UTF-8", "UTF-16LE", "UTF-16BE", "UTF-32LE"
  *     and "UTF-32BE".
- * @return @c true if the input stream has valid BOM.
+ * @return @c true if the input stream has valid BOM or from the stream
+ *     contents we can confidentally determine its UTF encoding.
  */
-bool DetectEncodingFromBOM(const std::string &stream, std::string *encoding);
+bool DetectUTFEncoding(const std::string &stream, std::string *encoding);
 
 /**
- * Converts a byte stream into UTF8 if the stream has BOM.
+ * Detects the encoding of a byte stream based on both BOM and contents,
+ * and converts a byte stream into UTF8. If there is no BOM, but the stream
+ * is a valid UTF8 stream, return the stream directly. Otherwise, the stream
+ * will be converted to UTF8 as if the stream's encoding is ISO8859-1. 
+ *
  * @param stream the input byte stream.
  * @param[out] result the converted result.
  * @param[out] encoding (optional)the encoding detected from BOM.
- * @return the number of bytes successfully converted.
+ * @return @c true if succeeds.
  */
-size_t ConvertStreamToUTF8ByBOM(const std::string &stream, std::string *result,
-                                std::string *encoding);
+bool DetectAndConvertStreamToUTF8(const std::string &stream,
+                                  std::string *result, std::string *encoding);
 
 } // namespace ggadget
 

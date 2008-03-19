@@ -55,8 +55,17 @@ struct GadgetStringComparator {
   }
 };
 
+/**
+ * Default gadget string map, case sensitivity controled by
+ * @c GADGET_CASE_SENSITIVE.
+ */ 
 typedef std::map<std::string, std::string,
                  GadgetStringComparator> GadgetStringMap;
+
+/**
+ * Case sensitive string map.
+ */
+typedef std::map<std::string, std::string> StringMap;
 
 struct CaseInsensitiveCharPtrComparator {
   bool operator()(const char* s1, const char* s2) const {

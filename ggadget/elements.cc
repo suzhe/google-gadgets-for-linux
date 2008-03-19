@@ -19,6 +19,7 @@
 #include "elements.h"
 #include "basic_element.h"
 #include "element_factory.h"
+#include "gadget.h"
 #include "graphics_interface.h"
 #include "logger.h"
 #include "math_utils.h"
@@ -403,7 +404,11 @@ BasicElement *Elements::AppendElementFromXML(const char *xml) {
 
 BasicElement *Elements::InsertElementFromXML(
     const char *xml, const BasicElement *before) {
-  return ::ggadget::InsertElementFromXML(this, impl_->view_->GetScriptContext(),
+  const StringMap *strings = NULL;
+  if (impl_->view_->GetGadget())
+    strings = &impl_->view_->GetGadget()->GetStrings();
+  return ::ggadget::InsertElementFromXML(this, strings,
+                                         impl_->view_->GetScriptContext(),
                                          xml, before);
 }
 

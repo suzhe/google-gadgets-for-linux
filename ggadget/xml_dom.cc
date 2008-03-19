@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/string_utils.h>
@@ -1732,7 +1733,8 @@ class DOMDocument : public DOMNodeBase<DOMDocumentInterface> {
 
   virtual bool LoadXML(const char *xml) {
     GetImpl()->RemoveAllChildren();
-    bool result = xml_parser_->ParseContentIntoDOM(xml, "NONAME", NULL, NULL,
+    bool result = xml_parser_->ParseContentIntoDOM(xml, NULL, "NONAME", NULL,
+                                                   NULL, kEncodingFallback,
                                                    this, NULL, NULL);
     parse_error_.SetCode(result ? 0 : 1);
     return result;

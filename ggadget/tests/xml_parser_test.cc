@@ -32,24 +32,27 @@ const char *xml =
   "  <!ENTITY test \"Test Entity\">\n"
   "]>"
   "<root a=\"v\" a1=\"v1\">\n"
-  " <s aa=\"vv\" aa1=\"vv1\">s content</s>\n"
+  " <s aa=\"&VV;\" aa1=\"vv1\">s &CONTENT;</s>\n"
   " <s b=\"bv\" b1=\"bv1\"/>\n"
-  " <s1 c=\"cv\" c1=\"cv1\">s1 content</s1>\n"
-  " <s aa=\"vv\" aa1=\"vv1\">s content1</s>\n"
+  " <s1 c=\"cv\" c1=\"cv1\">s1 &CONTENT;</s1>\n"
+  " <s aa=\"&VV;\" aa1=\"&VV;1\">s &CONTENT1;</s>\n"
   " <s1 c=\"cv\" c1=\"cv1\">\n"
-  "   s1 content1 &test;\n"
-  "   <!-- comments -->\n"
-  "   <s11>s11 content</s11>\n"
-  "   <![CDATA[ cdata ]]>\n"
+  "   s1 &CONTENT1; &test;\n"
+  "   <!-- &COMMENTS; -->\n"
+  "   <s11>s11 &CONTENT;</s11>\n"
+  "   <![CDATA[ cdata &cdata; ]]>\n"
   " </s1>\n"
   " <s2/>\n"
   "</root>";
 
+StringMap g_strings;
+
 TEST(XMLParser, ParseXMLIntoXPathMap) {
-  GadgetStringMap map;
+  StringMap map;
   XMLParserInterface *xml_parser = GetXMLParser();
-  ASSERT_TRUE(xml_parser->ParseXMLIntoXPathMap(xml, "TheFileName", "root",
-                                               NULL, &map));
+  ASSERT_TRUE(xml_parser->ParseXMLIntoXPathMap(xml, &g_strings,
+                                               "TheFileName", "root",
+                                               NULL, NULL, &map));
   ASSERT_EQ(19U, map.size());
   EXPECT_STREQ("v", map.find("@a")->second.c_str());
   EXPECT_STREQ("v1", map.find("@a1")->second.c_str());
@@ -64,17 +67,18 @@ TEST(XMLParser, ParseXMLIntoXPathMap) {
 }
 
 TEST(XMLParser, ParseXMLIntoXPathMap_InvalidRoot) {
-  GadgetStringMap map;
+  StringMap map;
   XMLParserInterface *xml_parser = GetXMLParser();
-  ASSERT_FALSE(xml_parser->ParseXMLIntoXPathMap(xml, "TheFileName", "another",
-                                                NULL, &map));
+  ASSERT_FALSE(xml_parser->ParseXMLIntoXPathMap(xml, &g_strings,
+                                                "TheFileName", "another",
+                                                NULL, NULL, &map));
 }
 
 TEST(XMLParser, ParseXMLIntoXPathMap_InvalidXML) {
-  GadgetStringMap map;
+  StringMap map;
   XMLParserInterface *xml_parser = GetXMLParser();
-  ASSERT_FALSE(xml_parser->ParseXMLIntoXPathMap("<a></b>", "Bad", "a",
-                                                NULL, &map));
+  ASSERT_FALSE(xml_parser->ParseXMLIntoXPathMap("<a></b>", NULL, "Bad", "a",
+                                                NULL, NULL, &map));
 }
 
 TEST(XMLParser, CheckXMLName) {
@@ -94,7 +98,8 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
   std::string encoding;
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, "TheFileName", NULL, NULL,
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, &g_strings, "TheFileName",
+                                              NULL, NULL, NULL,
                                               domdoc, &encoding, NULL));
   ASSERT_STREQ("iso8859-1", encoding.c_str());
   DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
@@ -116,10 +121,12 @@ TEST(XMLParser, ParseXMLIntoDOM) {
                sub_children->GetItem(0)->GetNodeValue());
   EXPECT_EQ(DOMNodeInterface::COMMENT_NODE,
             sub_children->GetItem(1)->GetNodeType());
-  EXPECT_STREQ(" comments ", sub_children->GetItem(1)->GetNodeValue());
+  // Entities in comments should not be replaced.
+  EXPECT_STREQ(" &COMMENTS; ", sub_children->GetItem(1)->GetNodeValue());
   EXPECT_EQ(DOMNodeInterface::CDATA_SECTION_NODE,
             sub_children->GetItem(5)->GetNodeType());
-  EXPECT_STREQ(" cdata ", sub_children->GetItem(5)->GetNodeValue());
+  // Entities in cdata should not be replaced.
+  EXPECT_STREQ(" cdata &cdata; ", sub_children->GetItem(5)->GetNodeValue());
 
   DOMNodeInterface *pi_node = domdoc->GetFirstChild();
   EXPECT_EQ(DOMNodeInterface::PROCESSING_INSTRUCTION_NODE,
@@ -136,8 +143,8 @@ TEST(XMLParser, ParseXMLIntoDOM_InvalidXML) {
   XMLParserInterface *xml_parser = GetXMLParser();
   DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
   domdoc->Ref();
-  ASSERT_FALSE(xml_parser->ParseContentIntoDOM("<a></b>", "Bad", NULL, NULL,
-                                               domdoc, NULL, NULL));
+  ASSERT_FALSE(xml_parser->ParseContentIntoDOM("<a></b>", NULL, "Bad", NULL,
+                                               NULL, NULL, domdoc, NULL, NULL));
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
 }
@@ -148,20 +155,22 @@ TEST(XMLParser, ConvertStringToUTF8) {
   std::string output;
   std::string encoding;
   // No enough information to do encoding conversion.
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, "Test", "text/plain", NULL,
-                                              NULL, &encoding, &output));
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
+                                              NULL, NULL, NULL,
+                                              &encoding, &output));
   ASSERT_STREQ("UTF-8", encoding.c_str());
   ASSERT_STREQ(src, output.c_str());
 
   src = "\xEF\xBB\xBFUTF8 String, with BOM";
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, "Test", "text/plain", NULL,
-                                              NULL, &encoding, &output));
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
+                                              NULL, NULL, NULL,
+                                              &encoding, &output));
   ASSERT_STREQ(src, output.c_str());
   ASSERT_STREQ("UTF-8", encoding.c_str());
 
   // If there is BOM, use it to detect encoding even if encoding_hint is given.
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, "Test", "text/plain",
-                                              "ISO8859-1", NULL,
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
+                                              "ISO8859-1", NULL, NULL,
                                               &encoding, &output));
   ASSERT_STREQ("UTF-8", encoding.c_str());
   ASSERT_STREQ(src, output.c_str());
@@ -170,21 +179,22 @@ TEST(XMLParser, ConvertStringToUTF8) {
   const char utf16le[] = "\xFF\xFEU\0T\0F\0001\0006\0 \0S\0t\0r\0i\0n\0g";
   const char *dest = "\xEF\xBB\xBFUTF16 String";
   ASSERT_TRUE(xml_parser->ParseContentIntoDOM(
-      std::string(utf16le, sizeof(utf16le)), "Test", "text/plain", NULL,
-      NULL, &encoding, &output));
+      std::string(utf16le, sizeof(utf16le)), NULL, "Test", "text/plain",
+      NULL, NULL, NULL, &encoding, &output));
   ASSERT_STREQ(dest, output.c_str());
   ASSERT_STREQ("UTF-16LE", encoding.c_str());
 
   src = "\xBA\xBA\xD7\xD6";
   dest = "\xE6\xB1\x89\xE5\xAD\x97";
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, "Test", "text/plain",
-                                              "GB2312", NULL,
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
+                                              "GB2312", NULL, NULL,
                                               &encoding, &output));
   ASSERT_STREQ(dest, output.c_str());
   ASSERT_STREQ("GB2312", encoding.c_str());
 
-  ASSERT_FALSE(xml_parser->ParseContentIntoDOM(src, "Test", "text/plain", NULL,
-                                               NULL, &encoding, &output));
+  ASSERT_FALSE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/plain",
+                                               NULL, NULL, NULL,
+                                               &encoding, &output));
   ASSERT_STREQ("", encoding.c_str());
   ASSERT_STREQ("", output.c_str());
 }
@@ -199,8 +209,8 @@ void TestXMLEncoding(const char *xml, const char *name,
   domdoc->Ref();
   std::string encoding;
   std::string output;
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, name, "text/xml",
-                                              hint_encoding, domdoc,
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, &g_strings, name, "text/xml",
+                                              hint_encoding, NULL, domdoc,
                                               &encoding, &output));
   ASSERT_STREQ(expected_text, output.c_str());
   ASSERT_STREQ(expected_encoding, encoding.c_str());
@@ -216,12 +226,24 @@ void TestXMLEncodingExpectFail(const char *xml, const char *name,
   domdoc->Ref();
   std::string encoding;
   std::string output;
-  ASSERT_FALSE(xml_parser->ParseContentIntoDOM(xml, name, "text/xml",
-                                               hint_encoding, domdoc,
-                                               &encoding, &output));
+  ASSERT_FALSE(xml_parser->ParseContentIntoDOM(xml, &g_strings,
+                                               name, "text/xml",
+                                               hint_encoding, NULL,
+                                               domdoc, &encoding, &output));
   ASSERT_TRUE(encoding.empty());
   ASSERT_TRUE(output.empty());
   ASSERT_FALSE(domdoc->HasChildNodes());
+  ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
+
+  domdoc = xml_parser->CreateDOMDocument();
+  domdoc->Ref();
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(xml, &g_strings,
+                                              name, "text/xml",
+                                              hint_encoding, "ISO8859-1",
+                                              domdoc, &encoding, &output));
+  ASSERT_STREQ("ISO8859-1", encoding.c_str());
+  ASSERT_TRUE(domdoc->HasChildNodes());
   ASSERT_EQ(1, domdoc->GetRefCount());
   domdoc->Unref();
 }
@@ -275,15 +297,17 @@ TEST(XMLParser, HTMLEncoding) {
   std::string output;
   std::string encoding;
   // No enough information to do encoding conversion.
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, "Test", "text/html", NULL,
-                                              NULL, &encoding, &output));
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/html",
+                                              NULL, NULL, NULL,
+                                              &encoding, &output));
   ASSERT_STREQ("gb2312", encoding.c_str());
   ASSERT_STREQ(src, output.c_str());
   src = "<html><head><!--"
     "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=gb2312\">"
     "--></head></html>";
-  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, "Test", "text/html", NULL,
-                                              NULL, &encoding, &output));
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(src, NULL, "Test", "text/html",
+                                              NULL, NULL, NULL,
+                                              &encoding, &output));
   ASSERT_STREQ("UTF-8", encoding.c_str());
   ASSERT_STREQ(src, output.c_str());
 }
@@ -302,6 +326,11 @@ int main(int argc, char **argv) {
     "libxml2_xml_parser/libxml2-xml-parser",
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
+
+  g_strings["CONTENT"] = "content";
+  g_strings["CONTENT1"] = "content1";
+  g_strings["VV"] = "vv";
+  g_strings["COMMENTS"] = "comments";
 
   return RUN_ALL_TESTS();
 }

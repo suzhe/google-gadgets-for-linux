@@ -67,6 +67,7 @@ BasicElement *InsertElementFromDOM(Elements *elements,
  * Creates an element according to XML definition and inserts it to elements.
  *
  * @param elements the elements collection.
+ * @param strings the strings defined in strings.xml.
  * @param script_context the ScriptContext instance to be used to execute
  *        script codes. Could be NULL, then all script properties won't be set.
  * @param xml the XML definition of the element.
@@ -74,24 +75,10 @@ BasicElement *InsertElementFromDOM(Elements *elements,
  *        append the new element to the end of elements.
  */
 BasicElement *InsertElementFromXML(Elements *elements,
+                                   const StringMap *strings,
                                    ScriptContextInterface *script_context,
                                    const std::string &xml,
                                    const BasicElement *before);
-
-/**
- * Replaces all entities in a specified xml content to corresponding
- * definitions provided in a specified GadgetStringMap object.
- *
- * All entities that don't have definitions will not be replaced.
- *
- * @param entities a GadgetStringMap object containing definitions of all
- *        entities.
- * @param[in/out] xml the xml content in which all entities will be replaced.
- * @return false if there is any error (eg. unterminated entity reference) in
- *         the xml content. The original xml content won't be changed when
- *         returning false.
- */
-bool ReplaceXMLEntities(const GadgetStringMap &entities, std::string *xml);
 
 } // namespace ggadget
 

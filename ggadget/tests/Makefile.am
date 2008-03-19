@@ -86,7 +86,6 @@ system_utils_test_SOURCES	= system_utils_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES	= xml_parser_test.cc
-xml_utils_test_SOURCES		= xml_utils_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc

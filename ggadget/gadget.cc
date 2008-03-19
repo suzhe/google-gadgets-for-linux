@@ -226,7 +226,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     RegisterStrings(&strings_map_, &strings_);
 
     // load fonts and objects
-    for (GadgetStringMap::const_iterator i = manifest_info_map_.begin();
+    for (StringMap::const_iterator i = manifest_info_map_.begin();
          i != manifest_info_map_.end(); ++i) {
       const std::string &key = i->first;
       if (SimpleMatchXPath(key.c_str(), kManifestInstallFontSrc)) {
@@ -261,8 +261,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     // Initialize main view.
     std::string main_xml;
-    if (!file_manager_->ReadFile(kMainXML, &main_xml) ||
-        !ReplaceXMLEntities(strings_map_, &main_xml)) {
+    if (!file_manager_->ReadFile(kMainXML, &main_xml)) {
       LOG("Failed to load main.xml.");
       return false;
     }
@@ -509,7 +508,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   std::string OpenTextFile(const char *filename) {
     std::string data;
-    return file_manager_->ReadFile(filename, &data) ?  data : "";
+    std::string result;
+    if (file_manager_->ReadFile(filename, &data) &&
+        !DetectAndConvertStreamToUTF8(data, &result, NULL))
+      LOG("gadget.storage.openText() failed to read text file: %s", filename);
+    return result;
   }
 
   std::string GetManifestInfo(const char *key) {
@@ -555,8 +558,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       options_view_ = NULL;
     } else if (has_options_xml_) {
       std::string xml;
-      if (file_manager_->ReadFile(kOptionsXML, &xml) &&
-          ReplaceXMLEntities(strings_map_, &xml)) {
+      if (file_manager_->ReadFile(kOptionsXML, &xml)) {
         options_view_ = new ViewBundle(
             host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
             owner_, element_factory_, &global_, NULL, true);
@@ -624,8 +626,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       GetGlobalFileManager()->ReadFile(xml_file.c_str(), &xml);
     } else {
       xml_file = details_view_data->GetText();
-      if (file_manager_->ReadFile(xml_file.c_str(), &xml))
-        ReplaceXMLEntities(strings_map_, &xml);
+      file_manager_->ReadFile(xml_file.c_str(), &xml);
     }
 
     if (xml.empty() ||
@@ -658,50 +659,42 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return onpluginflagschanged_signal_.Connect(handler);
   }
 
-  static void RegisterStrings(const GadgetStringMap *strings,
+  static void RegisterStrings(const StringMap *strings,
                               ScriptableHelperNativeOwnedDefault *scriptable) {
-    for (GadgetStringMap::const_iterator it = strings->begin();
+    for (StringMap::const_iterator it = strings->begin();
          it != strings->end(); ++it) {
       scriptable->RegisterConstant(it->first.c_str(), it->second);
     }
   }
 
   static bool ReadStringsAndManifest(FileManagerInterface *file_manager,
-                                     GadgetStringMap *strings_map,
-                                     GadgetStringMap *manifest_info_map) {
+                                     StringMap *strings_map,
+                                     StringMap *manifest_info_map) {
     // Load string table.
     std::string strings_data;
     if (file_manager->ReadFile(kStringsXML, &strings_data)) {
       std::string full_path = file_manager->GetFullPath(kStringsXML);
-      // For compatibility with some Windows gadget files that use ISO8859-1
-      // encoding without declaration.
-      if (!GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
+      if (!GetXMLParser()->ParseXMLIntoXPathMap(strings_data, NULL,
                                                 full_path.c_str(),
-                                                kStringsTag, NULL,
-                                                strings_map))
-        GetXMLParser()->ParseXMLIntoXPathMap(strings_data,
-                                             full_path.c_str(),
-                                             kStringsTag, "ISO8859-1",
-                                             strings_map);
+                                                kStringsTag,
+                                                NULL, kEncodingFallback,
+                                                strings_map)) {
+        return false;
+      }
     }
 
     std::string manifest_contents;
-    if (!file_manager->ReadFile(kGadgetGManifest, &manifest_contents) ||
-        !ReplaceXMLEntities(*strings_map, &manifest_contents))
+    if (!file_manager->ReadFile(kGadgetGManifest, &manifest_contents))
       return false;
 
     std::string manifest_path = file_manager->GetFullPath(kGadgetGManifest);
     if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
+                                              strings_map,
                                               manifest_path.c_str(),
-                                              kGadgetTag, NULL,
+                                              kGadgetTag,
+                                              NULL, kEncodingFallback,
                                               manifest_info_map)) {
-      // For compatibility with some Windows gadget files that use ISO8859-1
-      // encoding without declaration.
-      if (!GetXMLParser()->ParseXMLIntoXPathMap(manifest_contents,
-                                                manifest_path.c_str(),
-                                                kGadgetTag, "ISO8859-1",
-                                                manifest_info_map))
-        return false;
+      return false;
     }
     return true;
   }
@@ -736,8 +729,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
   Signal1<void, int> onpluginflagschanged_signal_;
 
-  GadgetStringMap manifest_info_map_;
-  GadgetStringMap strings_map_;
+  StringMap manifest_info_map_;
+  StringMap strings_map_;
 
   Gadget *owner_;
   HostInterface *host_;
@@ -804,6 +797,10 @@ std::string Gadget::GetManifestInfo(const char *key) const {
   return impl_->GetManifestInfo(key);
 }
 
+const StringMap &Gadget::GetStrings() const {
+  return impl_->strings_map_;
+}
+
 bool Gadget::ShowMainView() {
   ASSERT(IsValid());
   return impl_->main_view_->view()->ShowView(false, 0, NULL);
@@ -853,7 +850,7 @@ Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
 }
 
 // static methods
-bool Gadget::GetGadgetManifest(const char *base_path, GadgetStringMap *data) {
+bool Gadget::GetGadgetManifest(const char *base_path, StringMap *data) {
   ASSERT(base_path);
   ASSERT(data);
 
@@ -861,7 +858,7 @@ bool Gadget::GetGadgetManifest(const char *base_path, GadgetStringMap *data) {
   if (!file_manager)
     return false;
 
-  GadgetStringMap strings_map;
+  StringMap strings_map;
   bool result = Impl::ReadStringsAndManifest(file_manager, &strings_map, data);
   delete file_manager;
   return result;

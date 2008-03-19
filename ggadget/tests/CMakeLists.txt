@@ -52,7 +52,6 @@ UNIT_TEST(basic_element_test)
 UNIT_TEST(view_test)
 UNIT_TEST(xml_dom_test)
 UNIT_TEST(xml_parser_test)
-UNIT_TEST(xml_utils_test)
 UNIT_TEST(system_utils_test)
 UNIT_TEST(digest_utils_test)
 
