@@ -27,6 +27,7 @@ namespace ggadget {
 class CanvasInterface;
 class Elements;
 class MenuInterface;
+class Rectangle;
 class View;
 
 class BasicElement: public ScriptableHelperNativeOwnedDefault {
@@ -685,9 +686,9 @@ typedef ScriptableHolder<BasicElement> ElementHolder;
 /**
  * Util function. To get the element's position in its view's coordinates.
  * @param element the interested element
- * @param rect the array hold the position information as x, y, w, h
+ * @param rect the rectangle used to hold position information of the element
  */
-void GetViewCoord(const BasicElement *element, double rect[4]);
+void GetViewCoord(const BasicElement *element, Rectangle *rectangle);
 
 } // namespace ggadget
 

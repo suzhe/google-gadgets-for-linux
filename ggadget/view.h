@@ -147,6 +147,12 @@ class View : public ViewInterface {
    */
   void EnableEvents(bool enable_events);
 
+  /**
+   * Enables or disables the canvas cache in the view object.
+   * The cache is enabled by default.
+   */
+  void EnableCanvasCache(bool enable_cache);
+
  public:  // Element management functions.
   /**
    * Retrieves the ElementFactory used to create elements in this

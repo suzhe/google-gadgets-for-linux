@@ -642,7 +642,7 @@ exit:
 }
 
 void DBusProxy::Impl::ConnectToSignal(const char *signal,
-                                              Slot0<void> *dbus_signal_slot) {
+                                      Slot0<void> *dbus_signal_slot) {
   ASSERT(signal);
   if (!signal || !dbus_signal_slot) return;
   SignalSlotMap::iterator iter = signal_slots_.find(signal);

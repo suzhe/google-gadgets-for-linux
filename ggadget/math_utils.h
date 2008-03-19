@@ -189,35 +189,50 @@ double RadiansToDegrees(double radians);
  */
 bool IsPointInElement(double x, double y, double width, double height);
 
-/**
- * Get the expanding vertical rectangle from a general rectangle represented by
- * 4 vertexs.
- * @param r coordinates of the first rectangle, order: v1_x, v1_y, v2_x, ...
- * @param x X-coordinate of the first point of the expanding rectangle
- * @param y Y-coordinate of the first point of the expanding rectangle
- * @param w width of the expanding rectangle
- * @param h height of the expanding rectangle
- */
-void GetRectangleExtents(const double r[8],
-                         double *x, double *y, double *w, double *h);
+class Rectangle {
+ public:
+  Rectangle(double x, double y, double w, double h);
+  Rectangle();
+  ~Rectangle();
 
-/**
- * Given tow vertical rectangle, work out the expanding rectangle that is the
- * union of the two ones.
- * @param r1 the first rectangle represented as x, y, w, h
- * @param r2 the second rectangle represented as x, y, w, h
- * @param r3 the expanding rectangle represented as x, y, w, h
- */
-void GetTwoRectanglesExtents(const double r1[4], const double r2[4],
-                             double r3[4]);
+  /**
+   * Get the expanding vertical rectangle from a general rectangle represented by
+   * 4 vertexs.
+   * @param r coordinates of the first rectangle, order: v1_x, v1_y, v2_x, ...
+   */
+  void ExtentsFromTaperedRect(const double r[8]);
+  /**
+   * Given tow vertical rectangle, work out the expanding rectangle that is the
+   * union of the two ones.
+   * @param r1 the first rectangle
+   * @param r2 the second rectangle
+   */
+  void ExtentsFromTwoRects(const Rectangle &r1, const Rectangle &r2);
 
-/**
- * Given two rectangles which are vertical, judge if they are overlapped.
- * @param r1 the first rectangle represented as x, y, w, h
- * @param r2 the second rectangle represented as x, y, w, h
- * @return @true if they are overlapped and false otherwise
- */
-bool RectanglesOverlapped(const double r1[4], const double r2[4]);
+  /**
+   * Judge if two rectangles are overlapped.
+   * @param another the other rectangle we are interested in.
+   * @return @true if they are overlapped and false otherwise
+   */
+  bool Overlaps(const Rectangle &another) const;
+  /**
+   * Judge if a point is in the rectangle.
+   * @param x X-coordinate of the point
+   * @param y Y-coordinate of the point
+   * @return @true if the point is in and false otherwise
+   */
+  bool IsPointIn(double x, double y) const;
+
+  /**
+   * Integerize the rectangle region. That means to make the coordinates of the
+   * vertexs be integer. This is useful since clip operation may time wasted if
+   * the region is not integer.
+   * @param extent_width the distance we want to extent the region.
+   */
+  void Integerize(double extent_width);
+ public:
+  double x_, y_, w_, h_;
+};
 
 /**
  * Returns val if low < val < high, otherwise returns low if val < low or high

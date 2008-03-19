@@ -22,6 +22,8 @@
 
 namespace ggadget {
 
+class ClipRegion;
+
 /**
  * This class is the interface abstracting all of ggadget's drawing
  * functionality. It is designed to be independent from the rendering
@@ -260,13 +262,10 @@ class CanvasInterface {
   /**
    * Intersect the clipping region with a general region, which is represented
    * by the union of a list of rectangles.
-   * @param rectangle_number the number of the rectangles
-   * @param region the general clip region. Each rectangle in the list are
-   *        represented by 4 double cosnt, that is, x, y, w, h.
+   * @param region the general clip region.
    * @return @c true on success and @c false otherwise.
    */
-  virtual bool IntersectGeneralClipRegion(int rectangle_number,
-                                          double *region) = 0;
+  virtual bool IntersectGeneralClipRegion(const ClipRegion &region) = 0;
 
   /**
    * Gets the width and height of the specified text.
