@@ -33,8 +33,8 @@ namespace gtk {
 
 class SingleViewHost::Impl {
  public:
-  Impl(ViewHostInterface::Type type,
-       SingleViewHost *owner, double zoom, bool decorated,
+  Impl(ViewHostInterface::Type type, SingleViewHost *owner, double zoom,
+       bool decorated, bool remove_on_close,
        ViewInterface::DebugMode debug_mode)
     : type_(type),
       owner_(owner),
@@ -50,7 +50,12 @@ class SingleViewHost::Impl {
       debug_mode_(debug_mode),
       feedback_handler_(NULL),
       adjust_window_size_source_(0),
-      decorated_(decorated) {
+      decorated_(decorated),
+      remove_on_close_(remove_on_close),
+      win_x_(0),
+      win_y_(0),
+      win_width_(0),
+      win_height_(0) {
     ASSERT(owner);
     ASSERT(gfx_);
   }
@@ -65,11 +70,11 @@ class SingleViewHost::Impl {
   }
 
   void Detach() {
-    if (window_)
-      CloseView();
-
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
+
+    if (window_)
+      CloseView();
 
     if (adjust_window_size_source_)
       g_source_remove(adjust_window_size_source_);
@@ -138,6 +143,8 @@ class SingleViewHost::Impl {
                            G_CALLBACK(WindowShowHandler), this);
     g_signal_connect(G_OBJECT(window_), "hide",
                      G_CALLBACK(WindowHideHandler), this);
+    g_signal_connect(G_OBJECT(window_), "configure-event",
+                     G_CALLBACK(ConfigureHandler), this);
 
     binder_ = new ViewWidgetBinder(gfx_, view_, owner_, widget_, no_background);
   }
@@ -244,11 +251,9 @@ class SingleViewHost::Impl {
     // Adjust the window size just before showing the view, to make sure that
     // the window size has correct default size when showing.
     AdjustWindowSize();
-    // FIXME: Needs find a way to get the best screen position for showing the
-    // view, especially for options and details view.
-    //gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_MOUSE);
-    LoadViewPosition();
+    LoadWindowPosition();
     gtk_widget_show(window_);
+    LoadWindowSize();
 
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
@@ -270,9 +275,6 @@ class SingleViewHost::Impl {
   }
 
   void CloseView() {
-    if (GTK_WIDGET_MAPPED(window_))
-      SaveViewPosition();
-
     gtk_widget_hide(window_);
   }
 
@@ -290,27 +292,51 @@ class SingleViewHost::Impl {
     return "";
   }
 
-  void SaveViewPosition() {
-    gint x, y;
-    gtk_window_get_position(GTK_WINDOW(window_), &x, &y);
-    OptionsInterface *options = view_->GetGadget()->GetOptions();
-    std::string option_prefix = GetViewPositionOptionPrefix();
-    options->PutInternalValue((option_prefix + "_pos_x").c_str(), Variant(x));
-    options->PutInternalValue((option_prefix + "_pos_y").c_str(), Variant(y));
-    DLOG("Save %s's position: %d %d", option_prefix.c_str(), x, y);
+  void SaveWindowPositionAndSize() {
+    if (view_) {
+      OptionsInterface *opt = view_->GetGadget()->GetOptions();
+      std::string opt_prefix = GetViewPositionOptionPrefix();
+      opt->PutInternalValue((opt_prefix + "_x").c_str(),
+                            Variant(win_x_));
+      opt->PutInternalValue((opt_prefix + "_y").c_str(),
+                            Variant(win_y_));
+      opt->PutInternalValue((opt_prefix + "_width").c_str(),
+                            Variant(win_width_));
+      opt->PutInternalValue((opt_prefix + "_height").c_str(),
+                            Variant(win_height_));
+      DLOG("Save %s's position and size: %d %d %d %d", opt_prefix.c_str(),
+           win_x_, win_y_, win_width_, win_height_);
+    }
   }
 
-  void LoadViewPosition() {
+  void LoadWindowPosition() {
     Variant vx, vy;
-    int x = 0, y = 0;
-    OptionsInterface *options = view_->GetGadget()->GetOptions();
-    std::string option_prefix = GetViewPositionOptionPrefix();
-    vx = options->GetInternalValue((option_prefix + "_pos_x").c_str());
-    vy = options->GetInternalValue((option_prefix + "_pos_y").c_str());
+    int x, y;
+
+    OptionsInterface *opt = view_->GetGadget()->GetOptions();
+    std::string opt_prefix = GetViewPositionOptionPrefix();
+    vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
+    vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
 
     if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
-      DLOG("Load %s's position: %d %d", option_prefix.c_str(), x, y);
+      DLOG("Load %s's position: %d %d", opt_prefix.c_str(), x, y);
       gtk_window_move(GTK_WINDOW(window_), x, y);
+    }
+  }
+
+  void LoadWindowSize() {
+    Variant vwidth, vheight;
+    int width, height;
+
+    OptionsInterface *opt = view_->GetGadget()->GetOptions();
+    std::string opt_prefix = GetViewPositionOptionPrefix();
+    vwidth = opt->GetInternalValue((opt_prefix + "_width").c_str());
+    vheight = opt->GetInternalValue((opt_prefix + "_height").c_str());
+
+    if (vwidth.ConvertToInt(&width) && vheight.ConvertToInt(&height)) {
+      DLOG("Load %s's size: %d %d", opt_prefix.c_str(), width, height);
+      if (width && height)
+        gtk_window_resize(GTK_WINDOW(window_), width, height);
     }
   }
 
@@ -356,13 +382,27 @@ class SingleViewHost::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
 
     if (impl->view_) {
+      impl->SaveWindowPositionAndSize();
       if (impl->feedback_handler_ &&
           impl->type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
         (*impl->feedback_handler_)(ViewInterface::DETAILS_VIEW_FLAG_NONE);
         delete impl->feedback_handler_;
         impl->feedback_handler_ = NULL;
+      } else if (impl->type_ == ViewHostInterface::VIEW_HOST_MAIN &&
+                 impl->remove_on_close_) {
+        impl->view_->GetGadget()->RemoveMe(true);
       }
     }
+  }
+
+  static gboolean ConfigureHandler(GtkWidget *widget, GdkEventConfigure *event,
+                                   gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    impl->win_x_ = event->x;
+    impl->win_y_ = event->y;
+    impl->win_width_ = event->width;
+    impl->win_height_ = event->height;
+    return FALSE;
   }
 
   static void DialogResponseHandler(GtkDialog *dialog, gint response,
@@ -403,15 +443,20 @@ class SingleViewHost::Impl {
 
   int adjust_window_size_source_;
   bool decorated_;
+  bool remove_on_close_;
+  int win_x_;
+  int win_y_;
+  int win_width_;
+  int win_height_;
 
   static const unsigned int kShowTooltipDelay = 500;
   static const unsigned int kHideTooltipDelay = 4000;
 };
 
-SingleViewHost::SingleViewHost(ViewHostInterface::Type type,
-                               double zoom, bool decorated,
+SingleViewHost::SingleViewHost(ViewHostInterface::Type type, double zoom,
+                               bool decorated, bool remove_on_close,
                                ViewInterface::DebugMode debug_mode)
-  : impl_(new Impl(type, this, zoom, decorated, debug_mode)) {
+  : impl_(new Impl(type, this, zoom, decorated, remove_on_close, debug_mode)) {
 }
 
 SingleViewHost::~SingleViewHost() {

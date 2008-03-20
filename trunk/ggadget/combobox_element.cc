@@ -314,6 +314,9 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
     ItemElement *item = impl_->listbox_->GetSelectedItem();
     if (item) {
       item->SetDrawOverlay(false);
+      // Set the item's implicit flag, to prevent it from checking View's clip
+      // region when drawing.
+      item->SetImplicit(true);
       // Support rotations, masks, etc. here. Windows version supports these,
       // but is this really intended?
       double rotation = item->GetRotation();
@@ -321,7 +324,6 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
       bool transform = (rotation != 0 || pinx != 0 || piny != 0);
       if (transform) {
         canvas->PushState();
-
         canvas->IntersectRectClipRegion(0, 0, elem_width, item_height);
         canvas->RotateCoordinates(DegreesToRadians(rotation));
         canvas->TranslateCoordinates(-pinx, -piny);
@@ -333,6 +335,7 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
         canvas->PopState();
       }
       item->SetDrawOverlay(true);
+      item->SetImplicit(false);
     }
   }
 

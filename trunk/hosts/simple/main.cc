@@ -93,6 +93,7 @@ static const char *g_help_string =
   "             1 - Draw bounding boxes around container elements.\n"
   "             2 - Draw bounding boxes around all elements.\n"
   "  -z zoom    Specify initial zoom fector for View.\n"
+  "  -n         Don't install the gadgets specified in command line.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths. If any gadgets are specified,\n"
@@ -101,6 +102,7 @@ static const char *g_help_string =
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
+  bool install_gadgets = true;
   // Parse command line.
   std::vector<std::string> gadget_paths;
   int i = 0;
@@ -110,6 +112,11 @@ int main(int argc, char* argv[]) {
     if (std::string("-h") == argv[i] || std::string("--help") == argv[i]) {
       printf(g_help_string, argv[0]);
       return 0;
+    }
+
+    if (std::string("-n") == argv[i] || std::string("--no-inst") == argv[i]) {
+      install_gadgets = false;
+      continue;
     }
 
     if (std::string("-d") == argv[i] || std::string("--debug") == argv[i]) {
@@ -182,18 +189,37 @@ int main(int argc, char* argv[]) {
 
   hosts::gtk::SimpleGtkHost host(g_zoom, g_debug_mode);
 
+  std::vector<ggadget::Gadget *> temp_gadgets;
+
   // Load gadget files.
   if (gadget_paths.size()) {
-    ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
-
-    for (size_t i = 0; i < gadget_paths.size(); ++i)
-      manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+    if (install_gadgets) {
+      ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
+      for (size_t i = 0; i < gadget_paths.size(); ++i) {
+        manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
+      }
+    } else {
+      // Only runs the gadgets temporarily. For debug purpose.
+      for (size_t i = 0; i < gadget_paths.size(); ++i) {
+        std::string opt_name = ggadget::StringPrintf("temp-gadget-%zu", i);
+        ggadget::Gadget *gadget =
+            new ggadget::Gadget(&host, gadget_paths[i].c_str(),
+                                opt_name.c_str(), i + 1000);
+        if (gadget->IsValid()) {
+          temp_gadgets.push_back(gadget);
+          gadget->ShowMainView();
+        } else {
+          DLOG("Failed to load gadget %s", gadget_paths[i].c_str());
+          delete gadget;
+        }
+      }
+    }
   }
 
   host.Run();
 
-  //FIXME: An ugly hack to flush the global options explicitly.
-  ggadget::GetGlobalOptions()->Flush();
+  for (size_t i = 0; i < temp_gadgets.size(); ++i)
+    delete temp_gadgets[i];
 
   return 0;
 }
