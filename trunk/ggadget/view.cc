@@ -186,6 +186,7 @@ class View::Impl {
 
     host_->CloseView();
     host_->SetView(NULL);
+    host_ = NULL;
 
     on_destroy_signal_.Emit(0, NULL);
 
@@ -203,10 +204,6 @@ class View::Impl {
       canvas_cache_->Destroy();
       canvas_cache_ = NULL;
     }
-
-    main_loop_ = NULL;
-    element_factory_ = NULL;
-    gadget_ = NULL;
   }
 
   void RegisterProperties(RegisterableInterface *obj) {
@@ -455,12 +452,13 @@ class View::Impl {
   EventResult OnMouseEvent(const MouseEvent &event) {
     // Send event to view first.
     ScriptableEvent scriptable_event(&event, NULL, NULL);
-    if (event.GetType() != Event::EVENT_MOUSE_MOVE)
+    Event::Type type = event.GetType();
+    if (type != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(view): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
            event.GetWheelDeltaX(), event.GetWheelDeltaY(),
            event.GetButton(), event.GetModifier());
-    switch (event.GetType()) {
+    switch (type) {
       case Event::EVENT_MOUSE_MOVE:
         // Put the high volume events near top.
         FireEvent(&scriptable_event, onmousemove_event_);
@@ -497,8 +495,18 @@ class View::Impl {
     }
 
     EventResult result = scriptable_event.GetReturnValue();
-    if (result != EVENT_RESULT_CANCELED)
-      result = SendMouseEventToChildren(event);
+    if (result != EVENT_RESULT_CANCELED) {
+      if (type == Event::EVENT_MOUSE_OVER) {
+        // Translate the mouse over event to a mouse move event, to make sure
+        // that the correct mouseover element will be set.
+        MouseEvent new_event(Event::EVENT_MOUSE_MOVE,
+                             event.GetX(), event.GetY(), 0, 0,
+                             MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
+        result = SendMouseEventToChildren(new_event);
+      } else {
+        result = SendMouseEventToChildren(event);
+      }
+    }
 
     // Child handled or cancelled the event, just return.
     if (result != EVENT_RESULT_UNHANDLED)
@@ -671,7 +679,9 @@ class View::Impl {
 
       width_ = width;
       height_ = height;
-      host_->QueueResize();
+
+      if (host_)
+        host_->QueueResize();
 
       SimpleEvent event(Event::EVENT_SIZE);
       ScriptableEvent scriptable_event(&event, NULL, NULL);
@@ -902,7 +912,7 @@ class View::Impl {
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
     owner_->AddElementToClipRegion(element);
-    if (element == tooltip_element_.Get())
+    if (element == tooltip_element_.Get() && host_)
       host_->SetTooltip(NULL);
 
     std::string name = element->GetName();
@@ -984,7 +994,7 @@ class View::Impl {
   }
 
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
-    if (!gadget_) return NULL;
+    if (!gadget_ || !host_) return NULL;
 
     Variant::Type type = src.type();
     if (type == Variant::TYPE_STRING) {
@@ -1008,7 +1018,7 @@ class View::Impl {
   }
 
   ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {
-    if (name && *name) {
+    if (name && *name && host_) {
       std::string data;
       if (GetGlobalFileManager()->ReadFile(name, &data)) {
         return host_->GetGraphics()->NewImage(name, data, is_mask);
@@ -1028,15 +1038,6 @@ class View::Impl {
 
     ImageInterface *image = LoadImage(src, false);
     return image ? new Texture(image) : NULL;
-  }
-
-  void *GetNativeWidget() {
-    return host_->GetNativeWidget();
-  }
-
-  void ViewCoordToNativeWidgetCoord(double x, double y,
-                                    double *widget_x, double *widget_y) {
-    host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
   }
 
   void OnOptionChanged(const char *name) {
@@ -1170,7 +1171,7 @@ FileManagerInterface *View::GetFileManager() const {
 }
 
 const GraphicsInterface *View::GetGraphics() const {
-  return impl_->host_->GetGraphics();
+  return impl_->host_ ? impl_->host_->GetGraphics() : NULL;
 }
 
 void View::RegisterProperties(RegisterableInterface *obj) const {
@@ -1199,7 +1200,8 @@ int View::GetHeight() const {
 
 void View::SetResizable(ViewInterface::ResizableMode resizable) {
   impl_->resizable_ = resizable;
-  impl_->host_->SetResizable(resizable);
+  if (impl_->host_)
+    impl_->host_->SetResizable(resizable);
 }
 
 ViewInterface::ResizableMode View::GetResizable() const {
@@ -1208,7 +1210,8 @@ ViewInterface::ResizableMode View::GetResizable() const {
 
 void View::SetCaption(const char *caption) {
   impl_->caption_ = caption ? caption : "";
-  impl_->host_->SetCaption(caption);
+  if (impl_->host_)
+    impl_->host_->SetCaption(caption);
 }
 
 std::string View::GetCaption() const {
@@ -1217,7 +1220,8 @@ std::string View::GetCaption() const {
 
 void View::SetShowCaptionAlways(bool show_always) {
   impl_->show_caption_always_ = show_always;
-  impl_->host_->SetShowCaptionAlways(show_always);
+  if (impl_->host_)
+    impl_->host_->SetShowCaptionAlways(show_always);
 }
 
 bool View::GetShowCaptionAlways() const {
@@ -1379,24 +1383,26 @@ Texture *View::LoadTexture(const Variant &src) const {
 }
 
 void *View::GetNativeWidget() const {
-  return impl_->host_->GetNativeWidget();
+  return impl_->host_ ? impl_->host_->GetNativeWidget() : NULL;
 }
 
 void View::ViewCoordToNativeWidgetCoord(
     double x, double y, double *widget_x, double *widget_y) const {
-  impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
+  if (impl_->host_)
+    impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
 }
 
 void View::QueueDraw(BasicElement *element) {
   AddElementToClipRegion(element);
-  if (!impl_->draw_queued_) {
+  if (!impl_->draw_queued_ && impl_->host_) {
     impl_->draw_queued_ = true;
     impl_->host_->QueueDraw();
   }
 }
 
 ViewInterface::DebugMode View::GetDebugMode() const {
-  return impl_->host_->GetDebugMode();
+  return impl_->host_ ? impl_->host_->GetDebugMode() :
+         ViewInterface::DEBUG_DISABLED;
 }
 
 bool View::OpenURL(const char *url) const {
@@ -1404,16 +1410,17 @@ bool View::OpenURL(const char *url) const {
 }
 
 void View::Alert(const char *message) const {
-  impl_->host_->Alert(message);
+  if (impl_->host_)
+    impl_->host_->Alert(message);
 }
 
 bool View::Confirm(const char *message) const {
-  return impl_->host_->Confirm(message);
+  return impl_->host_ ? impl_->host_->Confirm(message) : false;
 }
 
 std::string
 View::Prompt(const char *message, const char *default_result) const {
-  return impl_->host_->Prompt(message, default_result);
+  return impl_->host_ ? impl_->host_->Prompt(message, default_result) : "";
 }
 
 uint64_t View::GetCurrentTime() const {
@@ -1421,15 +1428,18 @@ uint64_t View::GetCurrentTime() const {
 }
 
 void View::SetTooltip(const char *tooltip) {
-  impl_->host_->SetTooltip(tooltip);
+  if (impl_->host_)
+    impl_->host_->SetTooltip(tooltip);
 }
 
 bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
-  return impl_->host_->ShowView(modal, flags, feedback_handler);
+  return impl_->host_ ? impl_->host_->ShowView(modal, flags, feedback_handler) :
+         false;
 }
 
 void View::CloseView() {
-  impl_->host_->CloseView();
+  if (impl_->host_)
+    impl_->host_->CloseView();
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

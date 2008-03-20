@@ -607,6 +607,8 @@ AC_CONFIG_FILES([Makefile
 		 third_party/editline/Makefile
 		 third_party/unzip/Makefile
 		 unittest/Makefile
+		 rss_gadget/Makefile
+		 igoogle_gadget/Makefile
 		 ggadget/libggadget-1.0.pc
 		 ggadget/dbus/libggadget-dbus-1.0.pc
 		 ggadget/gtk/libggadget-gtk-1.0.pc

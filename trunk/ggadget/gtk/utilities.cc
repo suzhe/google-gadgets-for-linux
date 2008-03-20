@@ -303,7 +303,7 @@ struct CursorTypeMapping {
 // Ordering in this array must match the declaration in
 // ViewInterface::CursorType.
 static const CursorTypeMapping kCursorTypeMappings[] = {
-  { ViewInterface::CURSOR_ARROW, GDK_ARROW },
+  { ViewInterface::CURSOR_ARROW, GDK_LEFT_PTR}, // FIXME
   { ViewInterface::CURSOR_IBEAM, GDK_XTERM },
   { ViewInterface::CURSOR_WAIT, GDK_WATCH },
   { ViewInterface::CURSOR_CROSS, GDK_CROSS },
