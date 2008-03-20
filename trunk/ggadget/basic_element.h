@@ -450,6 +450,12 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   bool GetChildrenExtents(double *width, double *height);
 
+  /**
+   * Get the element's extents information in its view's coordinates.
+   * @param rect the rectangle used to hold the information.
+   */
+  bool GetExtentsInView(Rectangle *rectangle) const;
+
  public: // Event handlers and event related methods.
   /**
    * Handler of the mouse events. Normally subclasses should not override this
@@ -683,11 +689,6 @@ public: // Other overridable public methods.
 
 typedef ScriptableHolder<BasicElement> ElementHolder;
 
-/**
- * Util function. To get the element's position in its view's coordinates.
- * @param element the interested element
- * @param rect the rectangle used to hold position information of the element
- */
 void GetViewCoord(const BasicElement *element, Rectangle *rectangle);
 
 } // namespace ggadget

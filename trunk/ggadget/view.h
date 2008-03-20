@@ -330,7 +330,7 @@ class View : public ViewInterface {
    * @param changed_element the pointer to the basic element that file this
    * request.
    */
-  void QueueDraw(BasicElement *element);
+  void QueueDraw();
 
   /**
    * Gets the current debug mode.

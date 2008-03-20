@@ -39,12 +39,6 @@ class ClipRegion {
    */
   void Clear();
   /**
-   * Set if the regions is maximized. A clip region is maximized means that the
-   * region is filled in the canvas which own the region.
-   */
-  void SetMaximized(bool maximized);
-
-  /**
    * Judge if a point is in the region.
    */
   bool IsPointIn(double x, double y) const;

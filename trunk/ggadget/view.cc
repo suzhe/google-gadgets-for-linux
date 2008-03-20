@@ -722,8 +722,11 @@ class View::Impl {
       need_redraw_ = true;
     }
 
-    if (need_redraw_)
-      clip_region_.SetMaximized(true);
+    if (need_redraw_) {
+      clip_region_.Clear();
+      Rectangle view_rect(0, 0, ceil(width_), ceil(height_));
+      clip_region_.AddRectangle(view_rect);
+    }
 
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
@@ -1326,14 +1329,14 @@ ContentAreaElement *View::GetContentAreaElement() const {
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
   Rectangle rect;
-  GetViewCoord(element, &rect);
+  element->GetExtentsInView(&rect);
   return impl_->clip_region_.IsRectangleOverlapped(rect);
 }
 
 void View::AddElementToClipRegion(BasicElement *element) {
   const double extent = 0.5;
   Rectangle rect;
-  GetViewCoord(element, &rect);
+  element->GetExtentsInView(&rect);
   rect.Integerize(extent);
   impl_->clip_region_.AddRectangle(rect);
 }
@@ -1392,8 +1395,7 @@ void View::ViewCoordToNativeWidgetCoord(
     impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
 }
 
-void View::QueueDraw(BasicElement *element) {
-  AddElementToClipRegion(element);
+void View::QueueDraw() {
   if (!impl_->draw_queued_ && impl_->host_) {
     impl_->draw_queued_ = true;
     impl_->host_->QueueDraw();
