@@ -30,6 +30,9 @@ const char kDirSeparatorStr[] = "/";
 const char kSearchPathSeparator = ':';
 const char kSearchPathSeparatorStr[] = ":";
 
+/** Standard suffix of gadget file. */
+const char kGadgetFileSuffix[] = ".gg";
+
 /** Filenames of required resources in each .gg package. */
 const char kMainXML[]         = "main.xml";
 const char kOptionsXML[]      = "options.xml";

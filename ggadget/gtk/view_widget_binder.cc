@@ -33,9 +33,9 @@ namespace gtk {
 
 static const char *kUriListTarget = "text/uri-list";
 
-// A small delay to prevent a click with tiny mouse move from being treated as
-// window move.
-static const guint32 kWindowMoveResizeDelay = 100;
+// A small motion threshold to prevent a click with tiny mouse move from being
+// treated as window move or resize.
+static const double kWindowMoveResizeThreshold = 2;
 
 class ViewWidgetBinder::Impl {
  public:
@@ -54,8 +54,11 @@ class ViewWidgetBinder::Impl {
       dbl_click_(false),
       composited_(false),
       no_background_(no_background),
+      focused_(false),
       zoom_(gfx_->GetZoom()),
-      mouse_down_time_(0) {
+      mouse_down_x_(-1),
+      mouse_down_y_(-1),
+      mouse_down_hittest_(ViewInterface::HT_CLIENT) {
     ASSERT(gfx);
     ASSERT(view);
     ASSERT(host);
@@ -155,7 +158,15 @@ class ViewWidgetBinder::Impl {
     EventResult result = EVENT_RESULT_UNHANDLED;
 
     impl->host_->SetTooltip(NULL);
-    gtk_widget_grab_focus(widget);
+
+    if (!impl->focused_) {
+      impl->focused_ = true;
+      SimpleEvent e(Event::EVENT_FOCUS_IN);
+      // Ignore the result.
+      impl->view_->OnOtherEvent(e);
+      if (!gtk_widget_is_focus(widget))
+        gtk_widget_grab_focus(widget);
+    }
 
     int mod = ConvertGdkModifierToModifier(event->state);
     int button = event->button == 1 ? MouseEvent::BUTTON_LEFT :
@@ -166,7 +177,8 @@ class ViewWidgetBinder::Impl {
     Event::Type type = Event::EVENT_INVALID;
     if (event->type == GDK_BUTTON_PRESS) {
       type = Event::EVENT_MOUSE_DOWN;
-      impl->mouse_down_time_ = event->time;
+      impl->mouse_down_x_ = event->x;
+      impl->mouse_down_y_ = event->y;
     } else if (event->type == GDK_2BUTTON_PRESS) {
       impl->dbl_click_ = true;
       if (button == MouseEvent::BUTTON_LEFT)
@@ -181,15 +193,15 @@ class ViewWidgetBinder::Impl {
 
       result = impl->view_->OnMouseEvent(e);
 
+      impl->mouse_down_hittest_ = impl->view_->GetHitTest();
       // If the View's hittest represents a special button, then handle it
       // here.
       if (result == EVENT_RESULT_UNHANDLED &&
           button == MouseEvent::BUTTON_LEFT &&
           type == Event::EVENT_MOUSE_DOWN) {
-        ViewInterface::HitTest hittest = impl->view_->GetHitTest();
-        if (hittest == ViewInterface::HT_MENU) {
+        if (impl->mouse_down_hittest_ == ViewInterface::HT_MENU) {
           impl->host_->ShowContextMenu(button);
-        } else if (hittest == ViewInterface::HT_CLOSE) {
+        } else if (impl->mouse_down_hittest_ == ViewInterface::HT_CLOSE) {
           impl->host_->CloseView();
         }
         result = EVENT_RESULT_HANDLED;
@@ -230,6 +242,10 @@ class ViewWidgetBinder::Impl {
         impl->dbl_click_ = false;
       }
     }
+
+    impl->mouse_down_x_ = -1;
+    impl->mouse_down_y_ = -1;
+    impl->mouse_down_hittest_ = ViewInterface::HT_CLIENT;
 
     return result != EVENT_RESULT_UNHANDLED ||
            result2 != EVENT_RESULT_UNHANDLED;
@@ -388,9 +404,9 @@ class ViewWidgetBinder::Impl {
     EventResult result = impl->view_->OnMouseEvent(e);
 
     if (result == EVENT_RESULT_UNHANDLED && button != MouseEvent::BUTTON_NONE &&
-        event->time - impl->mouse_down_time_ > kWindowMoveResizeDelay) {
-      ViewInterface::HitTest hittest = impl->view_->GetHitTest();
-
+        impl->mouse_down_x_ >= 0 && impl->mouse_down_y_ >= 0 &&
+        (abs(int(event->x - impl->mouse_down_x_)) >= kWindowMoveResizeThreshold ||
+         abs(int(event->y - impl->mouse_down_y_)) >= kWindowMoveResizeThreshold)) {
       // Send fake mouse up event to the view so that we can start to drag
       // the window. Note: no mouse click event is sent in this case, to prevent
       // unwanted action after window move.
@@ -402,6 +418,7 @@ class ViewWidgetBinder::Impl {
       impl->view_->OnMouseEvent(e);
 
       GtkWidget *window = gtk_widget_get_toplevel(widget);
+      ViewInterface::HitTest hittest = impl->mouse_down_hittest_;
       if (GTK_IS_WINDOW(window)) {
         bool resize_drag = true;
         GdkWindowEdge edge = GDK_WINDOW_EDGE_SOUTH_EAST;
@@ -456,6 +473,10 @@ class ViewWidgetBinder::Impl {
       } else {
         DLOG("Gadget is not inside toplevel window.");
       }
+
+      impl->mouse_down_x_ = -1;
+      impl->mouse_down_y_ = -1;
+      impl->mouse_down_hittest_ = ViewInterface::HT_CLIENT;
     }
 
     // Since motion hint is enabled, we must notify GTK that we're ready to
@@ -495,6 +516,12 @@ class ViewWidgetBinder::Impl {
 
   static gboolean LeaveNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
                                      gpointer user_data) {
+    if (event->mode != GDK_CROSSING_NORMAL ||
+        event->detail == GDK_NOTIFY_INFERIOR) {
+      DLOG("Ignores the leave notify: %d %d", event->mode, event->detail);
+      return FALSE;
+    }
+
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->host_->SetTooltip(NULL);
 
@@ -507,6 +534,12 @@ class ViewWidgetBinder::Impl {
 
   static gboolean EnterNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
                                      gpointer user_data) {
+    if (event->mode != GDK_CROSSING_NORMAL ||
+        event->detail == GDK_NOTIFY_INFERIOR) {
+      DLOG("Ignores the enter notify: %d %d", event->mode, event->detail);
+      return FALSE;
+    }
+
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->host_->SetTooltip(NULL);
 
@@ -520,17 +553,25 @@ class ViewWidgetBinder::Impl {
   static gboolean FocusInHandler(GtkWidget *widget, GdkEventFocus *event,
                                  gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    SimpleEvent e(Event::EVENT_FOCUS_IN);
-    return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
+    if (!impl->focused_) {
+      impl->focused_ = true;
+      SimpleEvent e(Event::EVENT_FOCUS_IN);
+      return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
+    }
+    return FALSE;
   }
 
   static gboolean FocusOutHandler(GtkWidget *widget, GdkEventFocus *event,
                                   gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    SimpleEvent e(Event::EVENT_FOCUS_OUT);
-    // Ungrab the pointer if the focus is lost.
-    gdk_pointer_ungrab(gtk_get_current_event_time());
-    return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
+    if (impl->focused_) {
+      impl->focused_ = false;
+      SimpleEvent e(Event::EVENT_FOCUS_OUT);
+      // Ungrab the pointer if the focus is lost.
+      gdk_pointer_ungrab(gtk_get_current_event_time());
+      return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
+    }
+    return FALSE;
   }
 
   static gboolean DragMotionHandler(GtkWidget *widget, GdkDragContext *context,
@@ -644,8 +685,6 @@ class ViewWidgetBinder::Impl {
     impl->current_widget_width_ = widget_width;
     impl->current_widget_height_ = widget_height;
 
-    DLOG("New widget size: %d %d", widget_width, widget_height);
-
     ViewInterface::ResizableMode mode = impl->view_->GetResizable();
     if (mode == ViewInterface::RESIZABLE_TRUE) {
       int width = static_cast<int>(ceil(widget_width / impl->zoom_));
@@ -671,7 +710,7 @@ class ViewWidgetBinder::Impl {
             static_cast<double>(widget_height) / height;
         double zoom = std::min(xzoom, yzoom);
         if (zoom != impl->gfx_->GetZoom()) {
-          DLOG("Zoom View to: %1.2lf", zoom);
+          DLOG("Zoom View to: %lf", zoom);
           impl->gfx_->SetZoom(zoom);
           impl->view_->MarkRedraw();
         }
@@ -737,8 +776,11 @@ class ViewWidgetBinder::Impl {
   bool dbl_click_;
   bool composited_;
   bool no_background_;
+  bool focused_;
   double zoom_;
-  guint32 mouse_down_time_;
+  double mouse_down_x_;
+  double mouse_down_y_;
+  ViewInterface::HitTest mouse_down_hittest_;
 
   struct EventHandlerInfo {
     const char *event;

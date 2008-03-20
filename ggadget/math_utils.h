@@ -243,6 +243,6 @@ T Clamp(T val, T low, T high) {
   return val > high ? high : (val < low ? low : val);
 }
 
-}
+} // namespace ggadget
 
 #endif // GGADGET_MATH_UTILS_H__

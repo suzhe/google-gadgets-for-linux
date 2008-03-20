@@ -12,25 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-ACLOCAL_AMFLAGS = -I autotools
+RSS_GADGET_FILES= en/strings.xml \
+		  gadget.gmanifest \
+		  main.js \
+		  main.xml \
+		  small_rss_icon.png
 
-if GGL_BUILD_LIBLTDL
-LIBLTDL_DIR = libltdl
+EXTRA_DIST = $(RSS_GADGET_FILES)
+
+if GGL_HAVE_ZIP
+rss_gadget_DATA = rss-gadget.gg
+rss_gadgetdir=$(GGL_RESOURCE_DIR)
+
+rss-gadget.gg: $(RSS_GADGET_FILES)
+	(cd $(abs_srcdir); $(ZIP) -r -u $(abs_builddir)/$@ $(RSS_GADGET_FILES))
+else
+nobase_rss_gadget_DATA = $(RSS_GADGET_FILES)
+rss_gadgetdir = $(GGL_RESOURCE_DIR)/rss-gadget
 endif
-
-SUBDIRS = $(LIBLTDL_DIR) \
-	  resources \
-	  rss_gadget \
-	  igoogle_gadget \
-	  third_party \
-	  unittest \
-	  ggadget \
-	  extensions \
-	  hosts
-
-EXTRA_DIST = examples autotools
-
-dist-hook:
-	rm -rf `find $(distdir) -name '.svn'`

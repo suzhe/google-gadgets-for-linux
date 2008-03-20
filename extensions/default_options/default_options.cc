@@ -81,9 +81,12 @@ class DefaultOptions : public MemoryOptions {
         kAutoFlushInterval + rand() % kAutoFlushIntervalVariant,
         new WatchCallbackSlot(NewSlot(this, &DefaultOptions::OnFlushTimer)));
 
+    // Monitor options change.
+    ConnectOnOptionChanged(NewSlot(this, &DefaultOptions::OnOptionChange));
+
     std::string data;
     if (!file_manager_->ReadFile(location_.c_str(), &data)) {
-      // Not a fatal error, just leave this Options empty. 
+      // Not a fatal error, just leave this Options empty.
       return;
     }
 
@@ -135,8 +138,6 @@ class DefaultOptions : public MemoryOptions {
         }
       }
     }
-
-    ConnectOnOptionChanged(NewSlot(this, &DefaultOptions::OnOptionChange));
   }
 
   virtual ~DefaultOptions() {
