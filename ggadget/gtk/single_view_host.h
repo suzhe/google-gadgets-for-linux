@@ -43,11 +43,11 @@ class SingleViewHost : public ViewHostInterface {
   /**
    * @param view The View instance associated to this host.
    * @param zoom Zoom factor used by the Graphics object.
+   * @param remove_on_close remove the gadget when the main view is closed.
    * @param debug_mode DebugMode when drawing elements.
    */
-  SingleViewHost(ViewHostInterface::Type type,
-                 double zoom, bool decorated,
-                 ViewInterface::DebugMode debug_mode);
+  SingleViewHost(ViewHostInterface::Type type, double zoom, bool decorated,
+                 bool remove_on_close, ViewInterface::DebugMode debug_mode);
   virtual ~SingleViewHost();
 
   virtual Type GetType() const;

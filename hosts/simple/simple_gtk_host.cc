@@ -40,7 +40,8 @@ class SimpleGtkHost::Impl {
    public:
     GadgetBrowserHost(HostInterface *owner) : owner_(owner) { }
     virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-      return new SingleViewHost(type, 1.0, true, ViewInterface::DEBUG_DISABLED);
+      return new SingleViewHost(type, 1.0, true, true,
+                                ViewInterface::DEBUG_DISABLED);
     }
     virtual void RemoveGadget(int instance_id, bool save_data) {
       GetGadgetManager()->RemoveGadgetInstance(instance_id);
@@ -188,7 +189,7 @@ class SimpleGtkHost::Impl {
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
     bool decorated = (type != ViewHostInterface::VIEW_HOST_MAIN);
-    SingleViewHost *host = new SingleViewHost(type, zoom_, decorated,
+    SingleViewHost *host = new SingleViewHost(type, zoom_, decorated, false,
                   static_cast<ViewInterface::DebugMode>(view_debug_mode_));
     return host;
   }
