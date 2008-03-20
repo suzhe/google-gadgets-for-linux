@@ -567,10 +567,12 @@ class BasicElement::Impl {
  public:
   void QueueDraw() {
     if (visible_ || visibility_changed_) {
-      if (parent_ && implicit_)
+      if (parent_ && implicit_) {
         parent_->QueueDraw();
-      else
-        view_->QueueDraw(owner_);
+      } else {
+        view_->AddElementToClipRegion(owner_);
+        view_->QueueDraw();
+      }
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;
@@ -1422,6 +1424,16 @@ bool BasicElement::GetChildrenExtents(double *width, double *height) {
   return false;
 }
 
+bool BasicElement::GetExtentsInView(Rectangle *rectangle) const {
+  double r[8];
+  SelfCoordToViewCoord(0, 0, &r[0], &r[1]);
+  SelfCoordToViewCoord(0, GetPixelHeight(), &r[2], &r[3]);
+  SelfCoordToViewCoord(GetPixelWidth(), GetPixelHeight(), &r[4], &r[5]);
+  SelfCoordToViewCoord(GetPixelWidth(), 0, &r[6], &r[7]);
+  rectangle->ExtentsFromTaperedRect(r);
+  return true;
+}
+
 void BasicElement::QueueDraw() {
   impl_->QueueDraw();
 }
@@ -1694,17 +1706,6 @@ Connection *BasicElement::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
 }
 Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
   return impl_->onsize_event_.Connect(handler);
-}
-
-void GetViewCoord(const BasicElement *element, Rectangle *rectangle) {
-  double r[8];
-  element->SelfCoordToViewCoord(0, 0, &r[0], &r[1]);
-  element->SelfCoordToViewCoord(0, element->GetPixelHeight(), &r[2], &r[3]);
-  element->SelfCoordToViewCoord(element->GetPixelWidth(),
-                                element->GetPixelHeight(), &r[4], &r[5]);
-  element->SelfCoordToViewCoord(element->GetPixelWidth(), 0, &r[6], &r[7]);
-
-  rectangle->ExtentsFromTaperedRect(r);
 }
 
 } // namespace ggadget

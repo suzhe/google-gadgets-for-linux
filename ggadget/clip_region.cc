@@ -25,10 +25,8 @@ typedef std::vector<Rectangle> RectangleList;
 
 class ClipRegion::Impl {
  public:
-  Impl() : maximized_(false) {
-  }
-  ~Impl() {
-  }
+  Impl() {}
+  ~Impl() {}
   void MergeRectangle(const Rectangle &r) {
     const double kMergeFactor = 0.9;
     for (RectangleList::iterator it = rectangles_.begin();
@@ -49,7 +47,6 @@ class ClipRegion::Impl {
     rectangles_.push_back(r);
   }
  public:
-  bool maximized_;
   RectangleList rectangles_;
 };
 
@@ -62,22 +59,14 @@ ClipRegion::~ClipRegion() {
 }
 
 void ClipRegion::AddRectangle(const Rectangle &rectangle) {
-  if (impl_->maximized_) return;
   impl_->MergeRectangle(rectangle);
 }
 
 void ClipRegion::Clear() {
-  impl_->maximized_ = false;
   impl_->rectangles_.clear();
 }
 
-void ClipRegion::SetMaximized(bool maximized) {
-  impl_->maximized_ = maximized;
-}
-
 bool ClipRegion::IsPointIn(double x, double y) const {
-  if (impl_->maximized_) return true;
-
   for (RectangleList::const_iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it)
     if (it->IsPointIn(x, y)) return true;
@@ -85,8 +74,6 @@ bool ClipRegion::IsPointIn(double x, double y) const {
 }
 
 bool ClipRegion::IsRectangleOverlapped(const Rectangle &rectangle) const {
-  if (impl_->maximized_) return true;
-
   for (RectangleList::const_iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it)
     if (it->Overlaps(rectangle)) return true;
