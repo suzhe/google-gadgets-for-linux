@@ -44,8 +44,14 @@ bool GetLocaleWindowsIDString(const char *name, std::string *windows_id);
  * some full locale names, for example, "pt" is not the shortname for either
  * "pt-PT" or "pt-BR".
  *
+ * If a short name with only lang part is specified, then this function will
+ * verify if the given short name is valid. If it's valid then the output
+ * parameter short_name will be set to the specified short name and true will
+ * be returned.
+ *
  * @param name two-segment locale name in format of "lang-TERRITORY", such as
- *     "zh-CN".
+ *        "zh-CN". Or a short name with only lang part, if you want to verify
+ *        the short name.
  * @param[out] short_name the corresponding short name for the locale.
  * @return @c true if @a short_name found.
  */

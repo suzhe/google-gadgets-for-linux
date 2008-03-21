@@ -393,6 +393,12 @@ bool GetSystemLocaleInfo(std::string *language, std::string *territory) {
   char *locale = setlocale(LC_MESSAGES, NULL);
   if (!locale || !*locale) return false;
 
+  // We don't want to support these standard locales.
+  if (strcmp(locale, "C") == 0 || strcmp(locale, "POSIX") == 0) {
+    DLOG("Probably setlocale() was not called at beginning of the program.");
+    return false;
+  }
+
   std::string locale_str(locale);
 
   // Remove encoding and variant part.

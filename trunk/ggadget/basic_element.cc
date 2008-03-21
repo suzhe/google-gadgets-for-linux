@@ -567,12 +567,8 @@ class BasicElement::Impl {
  public:
   void QueueDraw() {
     if (visible_ || visibility_changed_) {
-      if (parent_ && implicit_) {
-        parent_->QueueDraw();
-      } else {
-        view_->AddElementToClipRegion(owner_);
-        view_->QueueDraw();
-      }
+      view_->AddElementToClipRegion(owner_);
+      view_->QueueDraw();
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;

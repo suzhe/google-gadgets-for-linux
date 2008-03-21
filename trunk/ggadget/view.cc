@@ -184,7 +184,6 @@ class View::Impl {
   ~Impl() {
     ASSERT(event_stack_.empty());
 
-    host_->CloseView();
     host_->SetView(NULL);
     host_ = NULL;
 

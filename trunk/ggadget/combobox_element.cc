@@ -90,8 +90,6 @@ class ComboBoxElement::Impl {
     if (visible != listbox_->IsVisible()) {
       if (visible) {
         listbox_->ScrollToIndex(listbox_->GetSelectedIndex());
-      }
-      if (visible) {
         listbox_->SetVisible(visible);
         owner_->GetView()->SetPopupElement(owner_);
       } else {

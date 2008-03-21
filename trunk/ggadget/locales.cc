@@ -294,13 +294,22 @@ bool GetLocaleShortName(const char *name, std::string *short_name) {
       LocaleNameCompare);
 
   ASSERT(pos);
-  if (strcmp(name, pos->name) == 0) {
-    if (pos->short_name) {
-      *short_name = pos->short_name;
-      return true;
-    }
+  if (strcmp(name, pos->name) == 0 && pos->short_name) {
+    *short_name = pos->short_name;
+    return true;
   }
 
+  size_t len = strlen(name);
+  for (; pos < kLocaleNames + arraysize(kLocaleNames); ++pos) {
+    if (strncmp(name, pos->name, len) == 0) {
+      if (pos->short_name && strcmp(name, pos->short_name) == 0) {
+        *short_name = name;
+        return true;
+      }
+    } else {
+      break;
+    }
+  }
   return false;
 }
 

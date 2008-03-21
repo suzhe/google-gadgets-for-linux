@@ -76,13 +76,14 @@ gglinclude_HEADERS	= anchor_element.h \
 			  listbox_element.h \
 			  locales.h \
 			  localized_file_manager.h \
-			  main_loop_interface.h \
-			  native_main_loop.h \
 			  logger.h \
+			  main_loop_interface.h \
+			  messages.h \
 			  math_utils.h \
 			  memory_options.h \
 			  menu_interface.h \
 			  module.h \
+			  native_main_loop.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
@@ -163,6 +164,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  main_loop.cc \
 			  math_utils.cc \
 			  memory_options.cc \
+			  messages.cc \
 			  module.cc \
 			  native_main_loop.cc \
 			  options_factory.cc \
