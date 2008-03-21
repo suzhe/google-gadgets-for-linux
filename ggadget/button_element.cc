@@ -119,6 +119,7 @@ void ButtonElement::UseDefaultImages() {
   // No default disabled image.
   DestroyImage(impl_->disabledimage_);
   impl_->disabledimage_ = NULL;
+  SetStretchMiddle(true);
 }
 
 Variant ButtonElement::GetImage() const {

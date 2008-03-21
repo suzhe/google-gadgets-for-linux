@@ -49,7 +49,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  details_view_data.h \
 			  digest_utils.h \
 			  dir_file_manager.h \
-			  directory_provider_interface.h \
 			  display_window.h \
 			  div_element.h \
 			  edit_element_base.h \
@@ -142,7 +141,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  contentarea_element.cc \
 			  details_view_data.cc \
 			  digest_utils.cc \
-			  directory_provider.cc \
 			  dir_file_manager.cc \
 			  display_window.cc \
 			  div_element.cc \

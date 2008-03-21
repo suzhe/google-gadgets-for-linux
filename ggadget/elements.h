@@ -107,7 +107,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    * @return the pointer to the newly created element, or @c NULL when error
    *     occured.
    */
-  BasicElement *AppendElementFromXML(const char *xml);
+  BasicElement *AppendElementFromXML(const std::string &xml);
 
   /**
    * Create a new element from XML definition and insert it before the
@@ -120,7 +120,7 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
    * @return the pointer to the newly created element, or @c NULL when error
    *     occured.
    */
-  BasicElement *InsertElementFromXML(const char *xml,
+  BasicElement *InsertElementFromXML(const std::string &xml,
                                      const BasicElement *before);
 
   /**

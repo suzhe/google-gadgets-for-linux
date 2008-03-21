@@ -63,23 +63,6 @@ BasicElement *InsertElementFromDOM(Elements *elements,
                                    const BasicElement *before,
                                    const char *filename);
 
-/**
- * Creates an element according to XML definition and inserts it to elements.
- *
- * @param elements the elements collection.
- * @param strings the strings defined in strings.xml.
- * @param script_context the ScriptContext instance to be used to execute
- *        script codes. Could be NULL, then all script properties won't be set.
- * @param xml the XML definition of the element.
- * @param before insert the new element before this element. If it's NULL, then
- *        append the new element to the end of elements.
- */
-BasicElement *InsertElementFromXML(Elements *elements,
-                                   const StringMap *strings,
-                                   ScriptContextInterface *script_context,
-                                   const std::string &xml,
-                                   const BasicElement *before);
-
 } // namespace ggadget
 
 #endif // GGADGET_XML_UTILS_H__

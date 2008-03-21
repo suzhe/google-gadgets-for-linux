@@ -63,7 +63,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         timeout_watch_(0),
         state_(UNSENT),
         send_flag_(false),
-        headers_(NULL),
+        request_headers_(NULL),
         status_(0),
         response_dom_(NULL) {
   }
@@ -115,7 +115,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   bool ChangeState(State new_state) {
-    DLOG("XMLHttpRequest: ChangeState from %d to %d", state_, new_state);
+    DLOG("XMLHttpRequest: ChangeState from %d to %d this=%p",
+         state_, new_state, this);
     state_ = new_state;
     onreadystatechange_signal_();
     // ChangeState may re-entered during the signal, so the current state_
@@ -133,8 +134,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode Open(const char *method, const char *url, bool async,
                              const char *user, const char *password) {
-    DLOG("XMLHttpRequest: Open(%s, %s, %d, %s, %s)",
-         method, url, async, user, password);
+    DLOG("XMLHttpRequest: Open(%s, %s, %d, %s, %s) this=%p",
+         method, url, async, user, password, this);
 
     Abort();
     if (!method || !url)
@@ -229,7 +230,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (value)
       whole_header += value;
     // TODO: Check what does curl do when set a header for multiple times.
-    headers_ = curl_slist_append(headers_, whole_header.c_str());
+    request_headers_ = curl_slist_append(request_headers_,
+                                         whole_header.c_str());
     return NO_ERR;
   }
 
@@ -253,7 +255,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   #ifdef _DEBUG
     curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1);
   #endif
-    curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers_);
+    curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, request_headers_);
     curl_easy_setopt(curl_, CURLOPT_FRESH_CONNECT, 1);
     curl_easy_setopt(curl_, CURLOPT_FORBID_REUSE, 1);
     curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
@@ -311,8 +313,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       }
 
       if (!still_running) {
-        DLOG("XMLHttpRequest: Send(async): DONE");
-        Done();
+        DLOG("XMLHttpRequest: Send(async): DONE this=%p", this);
+        Done(false);
       }
     } else {
       // As described in the spec, here don't change the state, but send
@@ -326,8 +328,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
              curl_easy_strerror(code));
         return NETWORK_ERR;
       }
-      DLOG("XMLHttpRequest: Send(sync): DONE");
-      Done();
+      DLOG("XMLHttpRequest: Send(sync): DONE this=%p", this);
+      Done(false);
     }
     return NO_ERR;
   }
@@ -343,11 +345,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   void OnIOReady(int fd, int watch_type) {
     if (!curlm_) {
       LOG("OnIOReady while this request has finished or has been aborted");
+      DLOG("this=%p", this);
       return;
     }
 
-    // DLOG("XMLHttpRequest: OnIOReady: %d %d %d", fd,
-    //      watch_type, io_watch_type_);
+    // DLOG("XMLHttpRequest: OnIOReady: %d %d %d this=%p", fd,
+    //      watch_type, io_watch_type_, this);
     if (fd != CURL_SOCKET_TIMEOUT) {
       io_watch_type_ &= ~watch_type;
       if (io_watch_type_ != 0) {
@@ -365,12 +368,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (code != CURLM_OK) {
       DLOG("XMLHttpRequest: OnIOReady: curl_multi_socket failed: %s",
            curl_multi_strerror(code));
-      return;
+      Done(true);
     }
 
     if (!still_running) {
-      DLOG("XMLHttpRequest: OnIOReady: DONE");
-      Done();
+      DLOG("XMLHttpRequest: OnIOReady: DONE this=%p", this);
+      Done(false);
     }
   }
 
@@ -428,7 +431,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static int SocketCallback(CURL *handle, curl_socket_t socket, int type,
                             void *user_p, void *sock_p) {
-    DLOG("XMLHttpRequest: SocketCallback: socket: %d, type: %d", socket, type);
+    DLOG("XMLHttpRequest: SocketCallback: socket: %d, type: %d this=%p",
+         socket, type, user_p);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(user_p);
     ASSERT(this_p->curl_ == handle);
 
@@ -467,7 +471,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   static int TimerCallback(CURLM *multi, long timeout_ms, void *user_p) {
-    DLOG("XMLHTTPRequest: TimerCallback: timeout: %ld", timeout_ms);
+    DLOG("XMLHTTPRequest: TimerCallback: timeout: %ld this=%p",
+         timeout_ms, user_p);
     XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(user_p);
     ASSERT(this_p->curlm_ == multi);
 
@@ -477,7 +482,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   static size_t ReadCallback(void *ptr, size_t size,
                              size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu", size, mem_block);
+    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu this=%p",
+         size, mem_block, data);
     XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
@@ -503,10 +509,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   static size_t WriteHeaderCallback(void *ptr, size_t size,
-                                    size_t mem_block, void *data) {
-    // DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu: %s", size, mem_block,
-    //    std::string(reinterpret_cast<char *>(ptr), size * mem_block).c_str());
-    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
+                                    size_t mem_block, void *user_p) {
+    // DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu this=%p",
+    //      size, mem_block, user_p);
+    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(user_p);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED);
     ASSERT(!this_p->async_ || this_p->send_flag_);
@@ -618,10 +624,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   static size_t WriteBodyCallback(void *ptr, size_t size,
-                                  size_t mem_block, void *data) {
-    // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu: %s", size, mem_block,
-    //    std::string(reinterpret_cast<char *>(ptr), size * mem_block).c_str());
-    XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(data);
+                                  size_t mem_block, void *user_p) {
+    // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu this=%p",
+    //      size, mem_block, user_p);
+    XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(user_p);
     ASSERT(this_p);
     ASSERT(this_p->state_ == OPENED || this_p->state_ == LOADING);
     ASSERT(!this_p->async_ || this_p->send_flag_);
@@ -663,9 +669,30 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  void Done() {
+  void Done(bool aborting) {
+    if (state_ == OPENED && !aborting) {
+      // The response has only headers without body. 
+      SplitStatusAndHeaders();
+      ParseResponseHeaders();
+      ChangeState(HEADERS_RECEIVED);
+    }
+
     socket_ = 0;
     RemoveWatches();
+    if (curl_) {
+      if (curlm_) curl_multi_remove_handle(curlm_, curl_);
+      curl_easy_cleanup(curl_);
+      curl_ = NULL;
+    }
+    if (curlm_) {
+      curl_multi_cleanup(curlm_);
+      curlm_ = NULL;
+    }
+    if (request_headers_) {
+      curl_slist_free_all(request_headers_);
+      request_headers_ = NULL;
+    }
+
     bool save_send_flag = send_flag_;
     bool save_async = async_;
     // Set send_flag_ to false early, to prevent problems when Done() is
@@ -675,16 +702,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         state_ == HEADERS_RECEIVED || state_ == LOADING)
       ChangeState(DONE);
 
-    if (curl_) {
-      curl_easy_cleanup(curl_);
-      curl_ = NULL;
+    if (aborting) {
+      // Don't dispatch this state change event, according to the specification.
+      state_ = UNSENT;
     }
-    if (curlm_) {
-      curl_multi_cleanup(curlm_);
-      curlm_ = NULL;
-    }
-    curl_slist_free_all(headers_);
-    headers_ = NULL;
 
     if (save_send_flag && save_async) {
       // Remove the internal reference that was added when the request was
@@ -694,8 +715,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual void Abort() {
-    Done();
-
+    DLOG("XMLHttpRequest: Abort this=%p", this);
     response_headers_.clear();
     response_headers_map_.clear();
     response_body_.clear();
@@ -708,8 +728,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       response_dom_ = NULL;
     }
 
-    // Don't dispatch this state change event, according to the specification.
-    state_ = UNSENT;
+    Done(true);
   }
 
   virtual ExceptionCode GetAllResponseHeaders(const char **result) {
@@ -855,6 +874,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
     XMLHttpRequestException(ExceptionCode code) : code_(code) {
       RegisterSimpleProperty("code", &code_);
+      RegisterMethod("toString",
+                     NewSlot(this, &XMLHttpRequestException::ToString));
+    }
+
+    std::string ToString() const {
+      return StringPrintf("XMLHttpRequestException: %d", code_);
     }
 
    private:
@@ -864,7 +889,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // Used in the methods for script to throw an script exception on errors.
   bool CheckException(ExceptionCode code) {
     if (code != NO_ERR) {
-      DLOG("XMLHttpRequest: Set pending exception: %d", code);
+      DLOG("XMLHttpRequest: Set pending exception: %d this=%p", code, this);
       SetPendingException(new XMLHttpRequestException(code));
       return false;
     }
@@ -964,7 +989,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // It will be true after send() is called in async mode.
   bool send_flag_;
 
-  curl_slist *headers_;
+  curl_slist *request_headers_;
   std::string send_data_;
   std::string response_headers_;
   std::string response_content_type_;

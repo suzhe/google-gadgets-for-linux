@@ -46,7 +46,7 @@ ScriptableHelperImplInterface *NewScriptableHelperImpl(
 /**
  * A @c ScriptableInterface implementation helper.
  */
-template <typename I>
+template <typename I, bool TrackRefs = false>
 class ScriptableHelper : public I, public RegisterableInterface {
  private:
   // Checks at compile time if the argument I is ScriptableInterface or
@@ -201,13 +201,22 @@ class ScriptableHelper : public I, public RegisterableInterface {
    * @see ScriptableInterface::Ref()
    * Normally this method is not allowed to be overriden.
    */
-  virtual void Ref() { impl_->Ref(); }
+  virtual void Ref() {
+    impl_->Ref();
+    if (TrackRefs)
+      DLOG("Ref: classid=%jx this=%p ref=%d",
+           GetClassId(), this, GetRefCount()); 
+  }
 
   /**
    * @see ScriptableInterface::Unref()
    * Normally this method is not allowed to be overriden.
    */
   virtual void Unref(bool transient = false) {
+    if (TrackRefs) {
+      DLOG("Unref: classid=%jx this=%p ref=%d transient=%d",
+           GetClassId(), this, GetRefCount() - 1, transient);
+    }
     impl_->Unref(transient);
     if (!transient && impl_->GetRefCount() == 0) delete this;
   }
@@ -272,6 +281,9 @@ class ScriptableHelper : public I, public RegisterableInterface {
   /** @see ScriptableInterface::GetRegisterable() */
   virtual RegisterableInterface *GetRegisterable() { return impl_; }
 
+  // Declare it here to make it accessible from this template.
+  virtual uint64_t GetClassId() const = 0;
+
  protected:
   /**
    * The subclass overrides this method to register its scriptable properties
@@ -298,8 +310,8 @@ typedef ScriptableHelper<ScriptableInterface> ScriptableHelperDefault;
  * objects. For example, define the objects as local variables or data members,
  * as well as pointers.
  */
-template <typename I>
-class ScriptableHelperNativeOwned : public ScriptableHelper<I> {
+template <typename I, bool TrackRefs = false>
+class ScriptableHelperNativeOwned : public ScriptableHelper<I, TrackRefs> {
  public:
   ScriptableHelperNativeOwned() {
     ScriptableHelper<I>::Ref();

@@ -23,21 +23,21 @@ RESOURCE_FILES= button_down.png \
 		checkbox_down.png \
 		checkbox_over.png \
 		checkbox_up.png \
+		combo_arrow_up.png \
+		combo_arrow_down.png \
+		combo_arrow_over.png \
 		common.js \
 		html_details_view.xml \
 		pinned.png \
 		pinned_over.png \
 		scroll_background.png \
 		scrollbar_d.png \
-		scrollbar_dis.png \
 		scrollbar_o.png \
 		scrollbar_u.png \
 		scrollleft_d.png \
-		scrollleft_dis.png \
 		scrollleft_o.png \
 		scrollleft_u.png \
 		scrollright_d.png \
-		scrollright_dis.png \
 		scrollright_o.png \
 		scrollright_u.png \
 		text_details_view.xml \

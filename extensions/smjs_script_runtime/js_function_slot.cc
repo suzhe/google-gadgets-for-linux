@@ -52,7 +52,6 @@ JSFunctionSlot::JSFunctionSlot(const Slot *prototype,
     // Otherwise, it's safe to add this function to root.
     JS_AddNamedRoot(context, &function_, function_info_.c_str());
   }
-
 }
 
 JSFunctionSlot::~JSFunctionSlot() {
@@ -70,7 +69,9 @@ Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
     return return_value;
 
   if (!function_) {
-    JS_ReportError(context_, "Finalized JavaScript function still be called");
+    // Don't use JS_ReportError(context_, ...) because the context_ may be
+    // invalid now.
+    LOG("Finalized JavaScript function still be called");
     return return_value;
   }
 

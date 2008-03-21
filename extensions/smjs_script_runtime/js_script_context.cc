@@ -49,11 +49,16 @@ JSScriptContext::~JSScriptContext() {
   while (!native_js_wrapper_map_.empty()) {
     NativeJSWrapperMap::iterator it = native_js_wrapper_map_.begin();
     NativeJSWrapper *wrapper = it->second;
+#if 0
+    // This leak check is not reliable. The remaining objects may be leaks,
+    // but can be also native owned objects or constants of native owned
+    // objects. 
     if (wrapper->scriptable()->GetRefCount() > 1) {
       DLOG("Still referenced by native: jsobj=%p wrapper=%p scriptable=%s"
            " refcount=%d", wrapper->js_object(), wrapper,
            wrapper->name().c_str(), wrapper->scriptable()->GetRefCount());
     }
+#endif
     native_js_wrapper_map_.erase(it);
     // Inform the wrapper to detach from JavaScript so that it can be GC'ed.
     wrapper->DetachJS(false);

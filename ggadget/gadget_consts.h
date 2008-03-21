@@ -117,6 +117,10 @@ const char kScrollDefaultRight[] = "resource://scrollright_u.png";
 const char kScrollDefaultRightDown[] = "resource://scrollright_d.png";
 const char kScrollDefaultRightOver[] = "resource://scrollright_o.png";
 
+const char kComboArrow[] = "resource://combo_arrow_up.png";
+const char kComboArrowDown[] = "resource://combo_arrow_down.png";
+const char kComboArrowOver[] = "resource://combo_arrow_over.png";
+
 const char kContentItemPinned[] = "resource://pinned.png";
 const char kContentItemUnpinned[] = "resource://unpinned.png";
 const char kContentItemPinnedOver[] = "resource://pinned_over.png";

@@ -36,9 +36,10 @@ INCLUDE(SysDeps)
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 
+# TODO: See bug 46.
 FOREACH(JS_PACKAGE_NAME
-  xulrunner-js
   firefox-js
+  xulrunner-js
 )
   IF(NOT JS_FOUND)
     PKGCONFIG_EX(${JS_PACKAGE_NAME}
@@ -48,7 +49,7 @@ FOREACH(JS_PACKAGE_NAME
   ENDIF(NOT JS_FOUND)
 ENDFOREACH(JS_PACKAGE_NAME
   firefox-js
-  xulrunner-js 
+  xulrunner-js
 )
 
 IF(NOT JS_FOUND)
@@ -65,7 +66,7 @@ ADD_SUBDIRECTORY(ggadget)
 ADD_SUBDIRECTORY(hosts)
 ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
-ADD_SUBDIRECTORY(resources)
 
+ADD_DIR_TO_ZIP(resources output/bin/resources.gg)
 ADD_DIR_TO_ZIP(igoogle_gadget output/bin/igoogle_gadget.gg)
 ADD_DIR_TO_ZIP(rss_gadget output/bin/rss_gadget.gg)

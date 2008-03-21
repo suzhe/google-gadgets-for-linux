@@ -801,8 +801,13 @@ std::string Gadget::GetManifestInfo(const char *key) const {
   return impl_->GetManifestInfo(key);
 }
 
-const StringMap &Gadget::GetStrings() const {
-  return impl_->strings_map_;
+bool Gadget::ParseLocalizedXML(const std::string &xml,
+                               const char *filename,
+                               DOMDocumentInterface *xmldoc) const {
+  return GetXMLParser()->ParseContentIntoDOM(xml, &impl_->strings_map_,
+                                             filename, NULL,
+                                             NULL, kEncodingFallback,
+                                             xmldoc, NULL, NULL);
 }
 
 bool Gadget::ShowMainView() {
