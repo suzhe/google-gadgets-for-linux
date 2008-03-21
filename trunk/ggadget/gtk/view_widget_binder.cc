@@ -27,6 +27,7 @@
 #include "cairo_canvas.h"
 #include "cairo_graphics.h"
 #include "key_convert.h"
+#include "utilities.h"
 
 namespace ggadget {
 namespace gtk {
@@ -134,21 +135,7 @@ class ViewWidgetBinder::Impl {
   void SetupBackgroundMode() {
     // Only try to disable background if explicitly required.
     if (no_background_) {
-      GdkScreen *screen = gtk_widget_get_screen(widget_);
-      GdkColormap *colormap = gdk_screen_get_rgba_colormap(screen);
-      if (!colormap) {
-        colormap = gdk_screen_get_rgb_colormap(screen);
-        composited_ = false;
-      } else {
-        composited_ = true;
-      }
-
-      if (GTK_WIDGET_REALIZED(widget_))
-        gtk_widget_unrealize(widget_);
-      gtk_widget_set_colormap(widget_, colormap);
-
-      gtk_widget_realize(widget_);
-      gdk_window_set_back_pixmap (widget_->window, NULL, FALSE);
+      composited_ = DisableWidgetBackground(widget_);
     }
   }
 
@@ -677,13 +664,13 @@ class ViewWidgetBinder::Impl {
         widget_height == impl->current_widget_height_)
       return;
 
+    impl->current_widget_width_ = widget_width;
+    impl->current_widget_height_ = widget_height;
+
     if (!GTK_WIDGET_MAPPED(widget)) {
       DLOG("The widget is not mapped yet, don't adjust view size.");
       return;
     }
-
-    impl->current_widget_width_ = widget_width;
-    impl->current_widget_height_ = widget_height;
 
     ViewInterface::ResizableMode mode = impl->view_->GetResizable();
     if (mode == ViewInterface::RESIZABLE_TRUE) {
