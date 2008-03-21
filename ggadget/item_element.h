@@ -49,12 +49,6 @@ class ItemElement : public BasicElement {
   bool IsMouseOver() const;
 
   /**
-   * Hook these methods to also mark the parent as changed.
-   * This is OK in all scenarios since item is only used inside ListBoxes.
-   */
-  virtual void QueueDraw();
-
-  /**
    * Sets whether mouseover/selected overlays should be drawn.
    * This method is used in Draw() calls to temporarily disable overlay drawing.
    */

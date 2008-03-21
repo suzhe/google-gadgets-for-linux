@@ -107,8 +107,12 @@ class ViewWidgetBinder::Impl {
   ~Impl() {
     view_ = NULL;
 
-    for (size_t i = 0; i < kEventHandlersNum; ++i)
-      g_signal_handler_disconnect(G_OBJECT(widget_), handlers_[i]);
+    for (size_t i = 0; i < kEventHandlersNum; ++i) {
+      if (handlers_[i] > 0)
+        g_signal_handler_disconnect(G_OBJECT(widget_), handlers_[i]);
+      else
+        DLOG("Handler %s was not connected.", kEventHandlers[i].event);
+    }
 
     delete[] handlers_;
     handlers_ = NULL;

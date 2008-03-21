@@ -33,7 +33,7 @@ namespace ggadget {
  *  - @c lang/file (e.g. @c zh/myfile);
  *    (Here @c lang is the short name of current user's locale got from
  *     @c GetLocaleShortName(), or the original two-segment locale name
- *     if the locale has no short name.  
+ *     if the locale has no short name.
  *  - @c windows_locale_id/file (for Windows compatibility, e.g. 2052/myfile);
  *    (Here @c windows_locale_id is the corresponding Windows LCID of current
  *     user's locale got from @c GetLocaleWindowIDString().)

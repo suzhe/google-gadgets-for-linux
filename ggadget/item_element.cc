@@ -133,13 +133,6 @@ bool ItemElement::IsMouseOver() const {
   return impl_->mouseover_;
 }
 
-void ItemElement::QueueDraw() {
-  if (impl_->parent_) {
-    impl_->parent_->QueueDraw();
-  }
-  BasicElement::QueueDraw();
-}
-
 void ItemElement::SetIndex(int index) {
   if (impl_->index_ != index) {
     impl_->index_ = index;

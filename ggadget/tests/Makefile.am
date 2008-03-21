@@ -49,6 +49,7 @@ check_PROGRAMS		= color_test \
 			  encryptor_test \
 			  file_manager_test \
 			  math_utils_test \
+			  messages_test \
 			  native_main_loop_test \
 			  unicode_utils_test \
 			  string_utils_test \
@@ -75,7 +76,8 @@ elements_test_SOURCES		= elements_test.cc
 element_factory_test_SOURCES	= element_factory_test.cc
 encryptor_test_SOURCES		= encryptor_test.cc
 file_manager_test_SOURCES	= file_manager_test.cc
-math_utils_test_SOURCES	= math_utils_test.cc
+math_utils_test_SOURCES		= math_utils_test.cc
+messages_test_SOURCES		= messages_test.cc
 native_main_loop_test_SOURCES	= native_main_loop_test.cc
 unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
@@ -84,7 +86,7 @@ module_test_SOURCES		= module_test.cc
 system_utils_test_SOURCES	= system_utils_test.cc
 view_test_SOURCES		= view_test.cc
 xml_dom_test_SOURCES		= xml_dom_test.cc
-xml_parser_test_SOURCES	= xml_parser_test.cc
+xml_parser_test_SOURCES		= xml_parser_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc

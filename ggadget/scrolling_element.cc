@@ -62,6 +62,7 @@ class ScrollingElement::Impl {
     }
   }
 
+  // UpdateScrollBar is called in Layout(), no need to call QueueDraw().
   void UpdateScrollBar(int x_range, int y_range) {
     ASSERT(scrollbar_);
     int old_range_y = scroll_range_y_;
@@ -92,13 +93,14 @@ class ScrollingElement::Impl {
     scroll_pos_y_ += distance;
     scroll_pos_y_ = std::min(scroll_range_y_, std::max(0, scroll_pos_y_));
     if (old_pos != scroll_pos_y_) {
-      scrollbar_->SetValue(scroll_pos_y_); // SetValue calls QueueDraw
+      scrollbar_->SetValue(scroll_pos_y_); // Will trigger OnScrollBarChange()
     }
   }
 
   void OnScrollBarChange() {
     scroll_pos_y_ = scrollbar_->GetValue();
     on_scrolled_event_();
+    owner_->QueueDraw();
   }
 
   void OnScrollBarFocusIn() {
@@ -159,9 +161,7 @@ void ScrollingElement::SetAutoscroll(bool autoscroll) {
 }
 
 void ScrollingElement::ScrollX(int distance) {
-  if (impl_->scrollbar_) {
-    impl_->ScrollX(distance);
-  }
+  impl_->ScrollX(distance);
 }
 
 void ScrollingElement::ScrollY(int distance) {
@@ -179,9 +179,7 @@ int ScrollingElement::GetScrollYPosition() const {
 }
 
 void ScrollingElement::SetScrollXPosition(int pos) {
-  if (impl_->scrollbar_) {
-    impl_->ScrollX(pos - impl_->scroll_pos_x_);
-  }
+  impl_->ScrollX(pos - impl_->scroll_pos_x_);
 }
 
 void ScrollingElement::SetScrollYPosition(int pos) {
