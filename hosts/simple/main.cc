@@ -42,8 +42,6 @@
 #include <ggadget/gadget_manager_interface.h>
 #include "simple_gtk_host.h"
 
-static double g_zoom = 1.0;
-static int g_debug_mode = 0;
 static ggadget::gtk::MainLoop g_main_loop;
 
 static const char *kGlobalExtensions[] = {
@@ -94,6 +92,7 @@ static const char *g_help_string =
   "             2 - Draw bounding boxes around all elements.\n"
   "  -z zoom    Specify initial zoom fector for View.\n"
   "  -n         Don't install the gadgets specified in command line.\n"
+  "  -b         Draw window border for Main View.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths. If any gadgets are specified,\n"
@@ -102,7 +101,10 @@ static const char *g_help_string =
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
+  double zoom = 1.0;
+  int debug_mode = 0;
   bool install_gadgets = true;
+  bool decorated = false;
   // Parse command line.
   std::vector<std::string> gadget_paths;
   int i = 0;
@@ -119,20 +121,25 @@ int main(int argc, char* argv[]) {
       continue;
     }
 
+    if (std::string("-b") == argv[i] || std::string("--border") == argv[i]) {
+      decorated = true;
+      continue;
+    }
+
     if (std::string("-d") == argv[i] || std::string("--debug") == argv[i]) {
       if (++i < argc) {
-        g_debug_mode = atoi(argv[i]);
+        debug_mode = atoi(argv[i]);
       } else {
-        g_debug_mode = 1;
+        debug_mode = 1;
       }
       continue;
     }
 
     if (std::string("-z") == argv[i] || std::string("--zoom") == argv[i]) {
       if (++i < argc) {
-        g_zoom = strtod(argv[i], NULL);
-        if (g_zoom <= 0)
-          g_zoom = 1.0;
+        zoom = strtod(argv[i], NULL);
+        if (zoom <= 0)
+          zoom = 1.0;
       }
       continue;
     }
@@ -187,7 +194,7 @@ int main(int argc, char* argv[]) {
   // extension manager.
   ext_manager->SetReadonly();
 
-  hosts::gtk::SimpleGtkHost host(g_zoom, g_debug_mode);
+  hosts::gtk::SimpleGtkHost host(zoom, decorated, debug_mode);
 
   std::vector<ggadget::Gadget *> temp_gadgets;
 

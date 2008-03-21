@@ -330,5 +330,23 @@ GdkCursor *CreateCursor(int type) {
   return NULL;
 }
 
+bool DisableWidgetBackground(GtkWidget *widget) {
+  bool result = false;
+  if (GTK_IS_WIDGET(widget)) {
+    GdkScreen *screen = gtk_widget_get_screen(widget);
+    GdkColormap *colormap = gdk_screen_get_rgba_colormap(screen);
+
+    if (colormap) {
+      if (GTK_WIDGET_REALIZED(widget))
+        gtk_widget_unrealize(widget);
+      gtk_widget_set_colormap(widget, colormap);
+      gtk_widget_realize(widget);
+      gdk_window_set_back_pixmap (widget->window, NULL, FALSE);
+      result = true;
+    }
+  }
+  return result;
+}
+
 } // namespace gtk
 } // namespace ggadget

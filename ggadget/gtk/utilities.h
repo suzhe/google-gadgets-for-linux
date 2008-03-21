@@ -19,6 +19,7 @@
 
 #include <string>
 #include <gdk/gdk.h>
+#include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
 namespace ggadget {
@@ -80,6 +81,18 @@ GdkPixbuf *LoadPixbufFromData(const std::string &data);
  * @return a new  GdkCursor instance when succeeded, otherwize NULL.
  */
 GdkCursor *CreateCursor(int type);
+
+/**
+ * Disables the background of a widget.
+ *
+ * This function can only take effect when the Window system supports RGBA
+ * visual. In another word, a window manager that supports composition must be
+ * available.
+ *
+ * @param widget the GtkWidget of which the background to be disabled.
+ * @return true if succeeded.
+ */
+bool DisableWidgetBackground(GtkWidget *widget);
 
 } // namespace gtk
 } // namespace ggadget

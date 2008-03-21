@@ -53,9 +53,7 @@ class SingleViewHost::Impl {
       decorated_(decorated),
       remove_on_close_(remove_on_close),
       win_x_(0),
-      win_y_(0),
-      win_width_(0),
-      win_height_(0) {
+      win_y_(0) {
     ASSERT(owner);
     ASSERT(gfx_);
   }
@@ -129,8 +127,11 @@ class SingleViewHost::Impl {
     } else {
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
       gtk_container_add(GTK_CONTAINER(window_), widget_);
+      gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
       // Only main view may have transparent background.
       no_background = true;
+      DisableWidgetBackground(window_);
+      gtk_widget_set_double_buffered(window_, FALSE);
       gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), FALSE);
     }
     gtk_widget_show(widget_);
@@ -250,10 +251,9 @@ class SingleViewHost::Impl {
 
     // Adjust the window size just before showing the view, to make sure that
     // the window size has correct default size when showing.
+    LoadViewGeometricInfo();
     AdjustWindowSize();
-    LoadWindowPosition();
     gtk_widget_show(window_);
-    LoadWindowSize();
 
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
@@ -292,7 +292,7 @@ class SingleViewHost::Impl {
     return "";
   }
 
-  void SaveWindowPositionAndSize() {
+  void SaveViewGeometricInfo() {
     if (view_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
@@ -300,43 +300,49 @@ class SingleViewHost::Impl {
                             Variant(win_x_));
       opt->PutInternalValue((opt_prefix + "_y").c_str(),
                             Variant(win_y_));
-      opt->PutInternalValue((opt_prefix + "_width").c_str(),
-                            Variant(win_width_));
-      opt->PutInternalValue((opt_prefix + "_height").c_str(),
-                            Variant(win_height_));
-      DLOG("Save %s's position and size: %d %d %d %d", opt_prefix.c_str(),
-           win_x_, win_y_, win_width_, win_height_);
+
+      ViewInterface::ResizableMode mode = view_->GetResizable();
+      if (mode == ViewInterface::RESIZABLE_TRUE) {
+        opt->PutInternalValue((opt_prefix + "_width").c_str(),
+                              Variant(view_->GetWidth()));
+        opt->PutInternalValue((opt_prefix + "_height").c_str(),
+                              Variant(view_->GetHeight()));
+      }
+
+      if (mode != ViewInterface::RESIZABLE_FALSE) {
+        opt->PutInternalValue((opt_prefix + "_zoom").c_str(),
+                              Variant(gfx_->GetZoom()));
+      }
     }
   }
 
-  void LoadWindowPosition() {
-    Variant vx, vy;
-    int x, y;
-
+  void LoadViewGeometricInfo() {
     OptionsInterface *opt = view_->GetGadget()->GetOptions();
     std::string opt_prefix = GetViewPositionOptionPrefix();
-    vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
-    vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
-
+    Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
+    Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
+    int x, y;
     if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
-      DLOG("Load %s's position: %d %d", opt_prefix.c_str(), x, y);
       gtk_window_move(GTK_WINDOW(window_), x, y);
     }
-  }
 
-  void LoadWindowSize() {
-    Variant vwidth, vheight;
-    int width, height;
+    ViewInterface::ResizableMode mode = view_->GetResizable();
+    if (mode == ViewInterface::RESIZABLE_TRUE) {
+      int w, h;
+      Variant vw = opt->GetInternalValue((opt_prefix + "_width").c_str());
+      Variant vh = opt->GetInternalValue((opt_prefix + "_height").c_str());
+      if (vw.ConvertToInt(&w) && vh.ConvertToInt(&h) &&
+          view_->OnSizing(&w, &h)) {
+        view_->SetSize(w, h);
+      }
+    }
 
-    OptionsInterface *opt = view_->GetGadget()->GetOptions();
-    std::string opt_prefix = GetViewPositionOptionPrefix();
-    vwidth = opt->GetInternalValue((opt_prefix + "_width").c_str());
-    vheight = opt->GetInternalValue((opt_prefix + "_height").c_str());
-
-    if (vwidth.ConvertToInt(&width) && vheight.ConvertToInt(&height)) {
-      DLOG("Load %s's size: %d %d", opt_prefix.c_str(), width, height);
-      if (width && height)
-        gtk_window_resize(GTK_WINDOW(window_), width, height);
+    if (mode != ViewInterface::RESIZABLE_FALSE) {
+      double zoom;
+      Variant vzoom = opt->GetInternalValue((opt_prefix + "_zoom").c_str());
+      if (vzoom.ConvertToDouble(&zoom) && gfx_->GetZoom() != zoom) {
+        gfx_->SetZoom(zoom);
+      }
     }
   }
 
@@ -382,7 +388,7 @@ class SingleViewHost::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
 
     if (impl->view_) {
-      impl->SaveWindowPositionAndSize();
+      impl->SaveViewGeometricInfo();
       if (impl->feedback_handler_ &&
           impl->type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
         (*impl->feedback_handler_)(ViewInterface::DETAILS_VIEW_FLAG_NONE);
@@ -400,8 +406,6 @@ class SingleViewHost::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->win_x_ = event->x;
     impl->win_y_ = event->y;
-    impl->win_width_ = event->width;
-    impl->win_height_ = event->height;
     return FALSE;
   }
 

@@ -62,10 +62,11 @@ class SimpleGtkHost::Impl {
     HostInterface *owner_;
   };
 
-  Impl(SimpleGtkHost *owner, double zoom, int view_debug_mode)
+  Impl(SimpleGtkHost *owner, double zoom, bool decorated, int view_debug_mode)
     : gadget_browser_host_(owner),
       owner_(owner),
       zoom_(zoom),
+      decorated_(decorated),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
       gadget_manager_(GetGadgetManager()) {
@@ -188,7 +189,7 @@ class SimpleGtkHost::Impl {
   }
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-    bool decorated = (type != ViewHostInterface::VIEW_HOST_MAIN);
+    bool decorated = (decorated_ || type != ViewHostInterface::VIEW_HOST_MAIN);
     SingleViewHost *host = new SingleViewHost(type, zoom_, decorated, false,
                   static_cast<ViewInterface::DebugMode>(view_debug_mode_));
     return host;
@@ -292,6 +293,7 @@ class SimpleGtkHost::Impl {
   SimpleGtkHost *owner_;
 
   double zoom_;
+  bool decorated_;
   int view_debug_mode_;
   bool gadgets_shown_;
 
@@ -305,8 +307,8 @@ class SimpleGtkHost::Impl {
   GtkWidget *host_menu_;
 };
 
-SimpleGtkHost::SimpleGtkHost(double zoom, int view_debug_mode)
-  : impl_(new Impl(this, zoom, view_debug_mode)) {
+SimpleGtkHost::SimpleGtkHost(double zoom, bool decorated, int view_debug_mode)
+  : impl_(new Impl(this, zoom, decorated, view_debug_mode)) {
   impl_->SetupUI();
   impl_->InitGadgets();
 }
