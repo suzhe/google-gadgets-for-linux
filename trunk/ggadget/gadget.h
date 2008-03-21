@@ -31,6 +31,7 @@ class MenuInterface;
 class View;
 class Connection;
 class OptionsInterface;
+class DOMDocumentInterface;
 
 /**
  * A class to hold a gadget instance.
@@ -155,9 +156,11 @@ class Gadget {
   std::string GetManifestInfo(const char *key) const;
 
   /**
-   * Get the strings defined in strings.xml.
+   * Parse XML into DOM, using the entities defined in strings.xml.
    */
-  const StringMap &GetStrings() const;
+  bool ParseLocalizedXML(const std::string &xml,
+                         const char *filename,
+                         DOMDocumentInterface *xmldoc) const;
 
   /** Checks whether this gadget has options dialog. */
   bool HasOptionsDialog() const;

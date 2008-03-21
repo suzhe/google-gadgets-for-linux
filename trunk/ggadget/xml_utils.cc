@@ -203,31 +203,4 @@ BasicElement *InsertElementFromDOM(Elements *elements,
   return element;
 }
 
-BasicElement *InsertElementFromXML(Elements *elements,
-                                   const StringMap *strings,
-                                   ScriptContextInterface *script_context,
-                                   const std::string &xml,
-                                   const BasicElement *before) {
-  DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
-  xmldoc->Ref();
-  if (!GetXMLParser()->ParseContentIntoDOM(xml, strings, xml.c_str(),
-                                           NULL, NULL, kEncodingFallback,
-                                           xmldoc, NULL, NULL)) {
-    xmldoc->Unref();
-    return false;
-  }
-
-  DOMElementInterface *xml_element = xmldoc->GetDocumentElement();
-  if (!xml_element) {
-    LOG("No root element in xml definition: %s", xml.c_str());
-    xmldoc->Unref();
-    return NULL;
-  }
-
-  BasicElement *result = InsertElementFromDOM(elements, script_context,
-                                              xml_element, before, "");
-  xmldoc->Unref();
-  return result;
-}
-
 } // namespace ggadget

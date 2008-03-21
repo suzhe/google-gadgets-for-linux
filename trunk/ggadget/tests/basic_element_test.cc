@@ -528,13 +528,11 @@ TEST_F(BasicElementTest, XMLConstruction) {
   const char *xml =
     "<muffin n1=\"yy\" name=\"top\">\n"
     "  <pie tooltip=\"pie-tooltip\" x=\"50%\" y=\"100\">\n"
-    "    <muffin tagName=\"haha\" name=\"&MUFFIN;\"/>\n"
+    "    <muffin tagName=\"haha\" name=\"muffin\"/>\n"
     "  </pie>\n"
     "  <pie name=\"pie1\"/>\n"
     "</muffin>\n";
-  ggadget::StringMap strings;
-  strings["MUFFIN"] = "muffin";
-  InsertElementFromXML(m.GetChildren(), &strings, NULL, xml, NULL);
+  m.GetChildren()->InsertElementFromXML(xml, NULL);
   ASSERT_EQ(1, m.GetChildren()->GetCount());
   ggadget::BasicElement *e1 = m.GetChildren()->GetItemByIndex(0);
   ASSERT_TRUE(e1);

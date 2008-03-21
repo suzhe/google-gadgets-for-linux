@@ -49,9 +49,9 @@ class ComboBoxElement::Impl {
         listbox_(new ListBoxElement(owner, view, "listbox", "")),
         edit_(NULL),
         button_over_(false), button_down_(false), update_edit_value_(true),
-        button_up_img_(view->LoadImageFromGlobal(kScrollDefaultRight, false)),
-        button_down_img_(view->LoadImageFromGlobal(kScrollDefaultRightDown, false)),
-        button_over_img_(view->LoadImageFromGlobal(kScrollDefaultRightOver, false)),
+        button_up_img_(view->LoadImageFromGlobal(kComboArrow, false)),
+        button_down_img_(view->LoadImageFromGlobal(kComboArrowDown, false)),
+        button_over_img_(view->LoadImageFromGlobal(kComboArrowOver, false)),
         background_(NULL) {
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
@@ -642,8 +642,10 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
   // exception of mouse wheel events.
   EventResult r = EVENT_RESULT_HANDLED;
   bool oldvalue;
+  size_t button_width =
+      impl_->button_up_img_ ? impl_->button_up_img_->GetWidth() : 0;
   bool in_button = event.GetY() < impl_->listbox_->GetPixelY() &&
-        event.GetX() >= (GetPixelWidth() - impl_->button_up_img_->GetWidth());
+        event.GetX() >= (GetPixelWidth() - button_width);
   switch (event.GetType()) {
     case Event::EVENT_MOUSE_MOVE:
       r = EVENT_RESULT_UNHANDLED;

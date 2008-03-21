@@ -27,7 +27,6 @@ SET(SRCS
   details_view_data.cc
   digest_utils.cc
   display_window.cc
-  directory_provider.cc
   element_factory.cc
   elements.cc
   encryptor.cc

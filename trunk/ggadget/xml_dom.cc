@@ -94,7 +94,15 @@ class DOMException : public ScriptableHelperDefault {
 
   DOMException(DOMExceptionCode code) : code_(code) {
     RegisterSimpleProperty("code", &code_);
+    RegisterMethod("toString", NewSlot(this, &DOMException::ToString));
     SetInheritsFrom(GlobalException::Get());
+  }
+
+  std::string ToString() const {
+    const char *exception_name = code_ >= 0 &&
+        static_cast<size_t>(code_) < arraysize(kExceptionNames) ?
+            kExceptionNames[code_] : "unknown";
+    return StringPrintf("DOMException: %d(%s)", code_, exception_name);
   }
 
  private:

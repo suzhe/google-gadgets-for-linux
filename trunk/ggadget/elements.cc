@@ -18,6 +18,7 @@
 #include <algorithm>
 #include "elements.h"
 #include "basic_element.h"
+#include "event.h"
 #include "element_factory.h"
 #include "gadget.h"
 #include "graphics_interface.h"
@@ -25,8 +26,9 @@
 #include "math_utils.h"
 #include "scriptable_helper.h"
 #include "view.h"
+#include "xml_dom_interface.h"
+#include "xml_parser_interface.h"
 #include "xml_utils.h"
-#include "event.h"
 
 namespace ggadget {
 
@@ -406,18 +408,37 @@ BasicElement *Elements::InsertElement(const char *tag_name,
   return impl_->InsertElement(tag_name, before, name);
 }
 
-BasicElement *Elements::AppendElementFromXML(const char *xml) {
+BasicElement *Elements::AppendElementFromXML(const std::string &xml) {
   return InsertElementFromXML(xml, NULL);
 }
 
-BasicElement *Elements::InsertElementFromXML(
-    const char *xml, const BasicElement *before) {
-  const StringMap *strings = NULL;
-  if (impl_->view_->GetGadget())
-    strings = &impl_->view_->GetGadget()->GetStrings();
-  return ::ggadget::InsertElementFromXML(this, strings,
-                                         impl_->view_->GetScriptContext(),
-                                         xml, before);
+BasicElement *Elements::InsertElementFromXML(const std::string &xml,
+                                             const BasicElement *before) {
+  DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
+  xmldoc->Ref();
+  Gadget *gadget = impl_->view_->GetGadget();
+  bool success = false;
+  if (gadget) {
+    success = gadget->ParseLocalizedXML(xml, xml.c_str(), xmldoc);
+  } else {
+    // For unittest. Parse without encoding fallback and localization.
+    success = GetXMLParser()->ParseContentIntoDOM(xml, NULL, xml.c_str(),
+                                                  NULL, NULL, NULL,
+                                                  xmldoc, NULL, NULL);
+  }
+
+  BasicElement *result = NULL;
+  if (success) {
+    DOMElementInterface *xml_element = xmldoc->GetDocumentElement();
+    if (!xml_element) {
+      LOG("No root element in xml definition: %s", xml.c_str());
+    } else {
+     result = InsertElementFromDOM(this, impl_->view_->GetScriptContext(),
+                                   xml_element, before, "");
+    }
+  }
+  xmldoc->Unref();
+  return result;
 }
 
 bool Elements::RemoveElement(BasicElement *element) {

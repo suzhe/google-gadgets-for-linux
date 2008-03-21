@@ -14,15 +14,16 @@
   limitations under the License.
 */
 
+#include "scriptable_view.h"
+
 #include <string>
-#include "gadget_consts.h"
 #include "common.h"
+#include "gadget_consts.h"
 #include "logger.h"
 #include "content_item.h"
 #include "details_view_data.h"
 #include "elements.h"
 #include "basic_element.h"
-#include "scriptable_view.h"
 #include "scriptable_image.h"
 #include "scriptable_event.h"
 #include "image_interface.h"
@@ -154,12 +155,17 @@ class ScriptableView::Impl {
   bool InitFromXML(const std::string &xml, const char *filename) {
     DOMDocumentInterface *xmldoc = GetXMLParser()->CreateDOMDocument();
     xmldoc->Ref();
-    const StringMap *strings = NULL;
-    if (view_->GetGadget())
-      strings = &view_->GetGadget()->GetStrings();
-    if (!GetXMLParser()->ParseContentIntoDOM(xml, strings, filename, NULL,
-                                             NULL, kEncodingFallback,
-                                             xmldoc, NULL, NULL)) {
+    Gadget *gadget = view_->GetGadget();
+    bool success = false;
+    if (gadget) {
+      success = gadget->ParseLocalizedXML(xml, filename, xmldoc);
+    } else {
+      // For unittest. Parse without encoding fallback and localization.
+      success = GetXMLParser()->ParseContentIntoDOM(xml, NULL, filename,
+                                                    NULL, NULL, NULL,
+                                                    xmldoc, NULL, NULL);
+    }
+    if (!success) {
       xmldoc->Unref();
       return false;
     }
