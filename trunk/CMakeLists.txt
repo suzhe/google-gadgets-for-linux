@@ -59,7 +59,7 @@ ENDIF(NOT JS_FOUND)
 # Bug of firefox-js package. Define the following to make JS_GET_CLASS work.
 # TODO: Automatically check JS_THREADSAFE.
 # TODO: Set MOZILLA_1_8_BRANCH manually-configurable.
-ADD_DEFINITIONS(-DJS_THREADSAFE -DMOZILLA_1_8_BRANCH)
+ADD_DEFINITIONS(-DJS_THREADSAFE -DMOZILLA_1_8_BRANCH -DGGL_RESOURCE_DIR=\\\".\\\")
 
 ADD_SUBDIRECTORY(unittest)
 ADD_SUBDIRECTORY(ggadget)
@@ -68,5 +68,5 @@ ADD_SUBDIRECTORY(third_party)
 ADD_SUBDIRECTORY(extensions)
 
 ADD_DIR_TO_ZIP(resources output/bin/resources.gg)
-ADD_DIR_TO_ZIP(igoogle_gadget output/bin/igoogle_gadget.gg)
-ADD_DIR_TO_ZIP(rss_gadget output/bin/rss_gadget.gg)
+ADD_DIR_TO_ZIP(igoogle_gadget output/bin/igoogle-gadget.gg)
+ADD_DIR_TO_ZIP(rss_gadget output/bin/rss-gadget.gg)
