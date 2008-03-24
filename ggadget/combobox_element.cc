@@ -44,15 +44,19 @@ class ComboBoxElement::Impl {
   Impl(ComboBoxElement *owner, View *view)
       : owner_(owner),
         mouseover_child_(NULL), grabbed_child_(NULL),
-        maxitems_(10),
+        max_items_(10),
         keyboard_(false),
         listbox_(new ListBoxElement(owner, view, "listbox", "")),
         edit_(NULL),
-        button_over_(false), button_down_(false), update_edit_value_(true),
+        button_over_(false),
+        button_down_(false),
+        update_edit_value_(true),
+        item_pixel_height_(0),
         button_up_img_(view->LoadImageFromGlobal(kComboArrow, false)),
         button_down_img_(view->LoadImageFromGlobal(kComboArrowDown, false)),
         button_over_img_(view->LoadImageFromGlobal(kComboArrowOver, false)),
-        background_(NULL) {
+        background_(NULL),
+        item_cache_(NULL) {
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
     listbox_->SetAutoscroll(true);
@@ -64,6 +68,9 @@ class ComboBoxElement::Impl {
   }
 
   ~Impl() {
+    // Close listbox before destroying it to prevent
+    // ComboBoxElement::GetPixelHeight() from calling listbox methods.
+    listbox_->SetVisible(false);
     owner_->GetView()->OnElementRemove(listbox_);
     delete listbox_;
     delete edit_;
@@ -71,11 +78,6 @@ class ComboBoxElement::Impl {
     DestroyImage(button_up_img_);
     DestroyImage(button_down_img_);
     DestroyImage(button_over_img_);
-  }
-
-  double GetOffsetHeight() {
-    return listbox_->IsVisible() ? owner_->GetPixelHeight() :
-           listbox_->GetItemPixelHeight();
   }
 
   std::string GetSelectedText() {
@@ -119,6 +121,8 @@ class ComboBoxElement::Impl {
   }
 
   void ListBoxUpdated() {
+    owner_->QueueDraw();
+
     if (!keyboard_) {
       // Close dropdown on selection.
       SetDroplistVisible(false);
@@ -134,10 +138,8 @@ class ComboBoxElement::Impl {
 
   void SetListBoxHeight() {
     double elem_height = owner_->GetPixelHeight();
-    double item_height = listbox_->GetItemPixelHeight();
-
-    double max_height = maxitems_ * item_height;
-    double height = std::min(max_height, elem_height - item_height);
+    double max_height = max_items_ * item_pixel_height_;
+    double height = std::min(max_height, elem_height - item_pixel_height_);
     if (height < 0) {
       height = 0;
     }
@@ -177,14 +179,16 @@ class ComboBoxElement::Impl {
 
   ComboBoxElement *owner_;
   BasicElement *mouseover_child_, *grabbed_child_;
-  int maxitems_;
+  int max_items_;
   bool keyboard_;
   ListBoxElement *listbox_;
   EditElementBase *edit_; // is NULL if and only if COMBO_DROPLIST mode
   bool button_over_, button_down_;
   bool update_edit_value_;
+  double item_pixel_height_;
   ImageInterface *button_up_img_, *button_down_img_, *button_over_img_;
   Texture *background_;
+  CanvasInterface *item_cache_;
   EventSignal onchange_event_, ontextchange_event_;
 };
 
@@ -200,10 +204,6 @@ void ComboBoxElement::DoRegister() {
   RegisterProperty("background",
                    NewSlot(this, &ComboBoxElement::GetBackground),
                    NewSlot(this, &ComboBoxElement::SetBackground));
-
-  // Override basicElement.offsetHeight.
-  RegisterProperty("offsetHeight", NewSlot(impl_, &Impl::GetOffsetHeight),
-                   NULL);
 
   // Register container methods since combobox is really a container.
   Elements *elements = impl_->listbox_->GetChildren();
@@ -292,12 +292,11 @@ void ComboBoxElement::MarkRedraw() {
 
 void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
   bool expanded = impl_->listbox_->IsVisible();
-  double item_height = impl_->listbox_->GetItemPixelHeight();
   double elem_width = GetPixelWidth();
 
   if (impl_->background_) {
     // Crop before drawing background.
-    double crop_height = item_height;
+    double crop_height = impl_->item_pixel_height_;
     if (expanded) {
       crop_height += impl_->listbox_->GetPixelHeight();
     }
@@ -310,31 +309,44 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
   } else {
     // Draw item
     ItemElement *item = impl_->listbox_->GetSelectedItem();
-    if (item) {
+    // If the selected item is outside the View's clip region, it won't be
+    // drawn correctly. In this case the stored canvas cache of this item will
+    // be used.
+    if (item && GetView()->IsElementInClipRegion(item)) {
+      if (!impl_->item_cache_ ||
+          impl_->item_cache_->GetWidth() != elem_width ||
+          impl_->item_cache_->GetHeight() != impl_->item_pixel_height_) {
+        if (impl_->item_cache_)
+          impl_->item_cache_->Destroy();
+        impl_->item_cache_ =
+            GetView()->GetGraphics()->NewCanvas(elem_width,
+                                                impl_->item_pixel_height_);
+      } else {
+        impl_->item_cache_->ClearCanvas();
+      }
+
       item->SetDrawOverlay(false);
-      // Set the item's implicit flag, to prevent it from checking View's clip
-      // region when drawing.
-      item->SetImplicit(true);
       // Support rotations, masks, etc. here. Windows version supports these,
       // but is this really intended?
       double rotation = item->GetRotation();
       double pinx = item->GetPixelPinX(), piny = item->GetPixelPinY();
       bool transform = (rotation != 0 || pinx != 0 || piny != 0);
       if (transform) {
-        canvas->PushState();
-        canvas->IntersectRectClipRegion(0, 0, elem_width, item_height);
-        canvas->RotateCoordinates(DegreesToRadians(rotation));
-        canvas->TranslateCoordinates(-pinx, -piny);
+        impl_->item_cache_->PushState();
+        impl_->item_cache_->RotateCoordinates(DegreesToRadians(rotation));
+        impl_->item_cache_->TranslateCoordinates(-pinx, -piny);
       }
 
-      item->Draw(canvas);
+      item->Draw(impl_->item_cache_);
 
       if (transform) {
-        canvas->PopState();
+        impl_->item_cache_->PopState();
       }
       item->SetDrawOverlay(true);
-      item->SetImplicit(false);
     }
+
+    if (impl_->item_cache_)
+      canvas->DrawCanvas(0, 0, impl_->item_cache_);
   }
 
   // Draw button
@@ -343,14 +355,14 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
     double imgw = img->GetWidth();
     double x = elem_width - imgw;
     // Windows default color is 206 203 206 and leaves a 1px margin.
-    canvas->DrawFilledRect(x, 1, imgw - 1, item_height - 2,
+    canvas->DrawFilledRect(x, 1, imgw - 1, impl_->item_pixel_height_ - 2,
                            Color::FromChars(206, 203, 206));
-    img->Draw(canvas, x, (item_height - img->GetHeight()) / 2);
+    img->Draw(canvas, x, (impl_->item_pixel_height_ - img->GetHeight()) / 2);
   }
 
   // Draw listbox
   if (expanded) {
-    canvas->TranslateCoordinates(0, item_height);
+    canvas->TranslateCoordinates(0, impl_->item_pixel_height_);
     impl_->listbox_->Draw(canvas);
   }
 }
@@ -388,12 +400,12 @@ void ComboBoxElement::SetDroplistVisible(bool visible) {
 }
 
 int ComboBoxElement::GetMaxDroplistItems() const {
-  return impl_->maxitems_;
+  return impl_->max_items_;
 }
 
 void ComboBoxElement::SetMaxDroplistItems(int max_droplist_items) {
-  if (max_droplist_items != impl_->maxitems_) {
-    impl_->maxitems_ = max_droplist_items;
+  if (max_droplist_items != impl_->max_items_) {
+    impl_->max_items_ = max_droplist_items;
     QueueDraw();
   }
 }
@@ -411,6 +423,11 @@ void ComboBoxElement::SetType(Type type) {
     if (!impl_->edit_) {
       impl_->CreateEdit();
       QueueDraw();
+    }
+    // It's not necessary to cache selected item in dropdown mode.
+    if (impl_->item_cache_) {
+      impl_->item_cache_->Destroy();
+      impl_->item_cache_ = NULL;
     }
   } else if (impl_->edit_) {
     delete impl_->edit_;
@@ -462,16 +479,16 @@ void ComboBoxElement::SetBackground(const Variant &background) {
 
 void ComboBoxElement::Layout() {
   BasicElement::Layout();
-  double itemheight = impl_->listbox_->GetItemPixelHeight();
+  impl_->item_pixel_height_ = impl_->listbox_->GetItemPixelHeight();
   double elem_width = GetPixelWidth();
-  impl_->listbox_->SetPixelY(itemheight);
+  impl_->listbox_->SetPixelY(impl_->item_pixel_height_);
   impl_->listbox_->SetPixelWidth(elem_width);
   impl_->SetListBoxHeight();
   impl_->listbox_->Layout();
   if (impl_->edit_) {
     ImageInterface *img = impl_->GetButtonImage();
     impl_->edit_->SetPixelWidth(elem_width - (img ? img->GetWidth() : 0));
-    impl_->edit_->SetPixelHeight(itemheight);
+    impl_->edit_->SetPixelHeight(impl_->item_pixel_height_);
 
     if (impl_->update_edit_value_) {
       impl_->edit_->SetValue(impl_->GetSelectedText().c_str());
@@ -722,6 +739,11 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
 
 void ComboBoxElement::OnPopupOff() {
   impl_->listbox_->SetVisible(false);
+}
+
+double ComboBoxElement::GetPixelHeight() const {
+  return impl_->listbox_->IsVisible() ? BasicElement::GetPixelHeight() :
+         impl_->item_pixel_height_;
 }
 
 bool ComboBoxElement::IsChildInVisibleArea(const BasicElement *child) const {

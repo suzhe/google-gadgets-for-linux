@@ -16,41 +16,60 @@
 
 #include <vector>
 #include "clip_region.h"
-#include <ggadget/math_utils.h>
-#include <ggadget/slot.h>
+#include "math_utils.h"
+#include "slot.h"
 
 namespace ggadget {
 
-typedef std::vector<Rectangle> RectangleList;
+typedef std::vector<Rectangle> RectangleVector;
 
 class ClipRegion::Impl {
  public:
-  Impl() {}
-  ~Impl() {}
-  void MergeRectangle(const Rectangle &r) {
-    const double kMergeFactor = 0.9;
-    for (RectangleList::iterator it = rectangles_.begin();
-         it != rectangles_.end(); ++it) {
-      if (!it->Overlaps(r)) continue;
+  Impl(double fuzzy_ratio)
+    : fuzzy_ratio_(Clamp(fuzzy_ratio, 0.5, 1.0)) {
+  }
 
-      Rectangle big_rect;
-      big_rect.ExtentsFromTwoRects(*it, r);
-      // merge the two rectangles as one. We didn't check if the merged one
-      // would be largely overlapped with other existed ones, it is not
-      // necessary.
-      if (r.x_ * r.y_ + it->x_ * it->y_ >
-          kMergeFactor * big_rect.x_ * big_rect.y_) {
-        *it = big_rect;
-        return;
+  /**
+   * This method merges two overlapped rectangles a and b into one rectangle,
+   * and stores the result into out.
+   *
+   * @return 0 means the overlap ratio of a and b is less than fuzzy_ratio,
+   *         thus can't merge them.
+   *         1 means the overlap ratio is large enough and a is larger than b,
+   *         so b is merged into a.
+   *         -1 means a is merged into b.
+   */
+  int MergeRectangles(const Rectangle &a, const Rectangle &b, Rectangle *out) {
+    if (a.Overlaps(b)) {
+      Rectangle rect(a);
+      rect.Union(b);
+      double fuzzy_area = rect.w * rect.h * fuzzy_ratio_;
+      double a_area = a.w * a.h;
+      double b_area = b.w * b.h;
+      if (a_area >= fuzzy_area || b_area >= fuzzy_area) {
+        *out = rect;
+        return a_area >= b_area ? 1 : -1;
       }
     }
-    rectangles_.push_back(r);
+    return 0;
   }
+
  public:
-  RectangleList rectangles_;
+  double fuzzy_ratio_;
+  RectangleVector rectangles_;
 };
 
-ClipRegion::ClipRegion() : impl_(new Impl()) {
+ClipRegion::ClipRegion()
+  : impl_(new Impl(1.0)) {
+}
+
+ClipRegion::ClipRegion(double fuzzy_ratio)
+  : impl_(new Impl(fuzzy_ratio)) {
+}
+
+ClipRegion::ClipRegion(const ClipRegion &region)
+  : impl_(new Impl(region.impl_->fuzzy_ratio_)) {
+  impl_->rectangles_ = region.impl_->rectangles_;
 }
 
 ClipRegion::~ClipRegion() {
@@ -58,8 +77,36 @@ ClipRegion::~ClipRegion() {
   impl_ = NULL;
 }
 
-void ClipRegion::AddRectangle(const Rectangle &rectangle) {
-  impl_->MergeRectangle(rectangle);
+const ClipRegion& ClipRegion::operator = (const ClipRegion &region) {
+  impl_->fuzzy_ratio_ = region.impl_->fuzzy_ratio_;
+  impl_->rectangles_ = region.impl_->rectangles_;
+  return *this;
+}
+
+double ClipRegion::GetFuzzyRatio() const {
+  return impl_->fuzzy_ratio_;
+}
+
+void ClipRegion::SetFuzzyRatio(double fuzzy_ratio) {
+  impl_->fuzzy_ratio_ = Clamp(fuzzy_ratio, 0.5, 1.0);
+}
+
+void ClipRegion::AddRectangle(const Rectangle &rect) {
+  if (!rect.w || !rect.h) return;
+
+  RectangleVector new_rectangles;
+  Rectangle big_rect(rect);
+  for (RectangleVector::iterator it = impl_->rectangles_.begin();
+       it != impl_->rectangles_.end(); ++it) {
+    if (impl_->MergeRectangles(big_rect, *it, &big_rect) == 0)
+      new_rectangles.push_back(*it);
+  }
+  new_rectangles.push_back(big_rect);
+  impl_->rectangles_.swap(new_rectangles);
+}
+
+bool ClipRegion::IsEmpty() const {
+  return impl_->rectangles_.size() == 0;
 }
 
 void ClipRegion::Clear() {
@@ -67,38 +114,63 @@ void ClipRegion::Clear() {
 }
 
 bool ClipRegion::IsPointIn(double x, double y) const {
-  for (RectangleList::const_iterator it = impl_->rectangles_.begin();
+  for (RectangleVector::const_iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it)
     if (it->IsPointIn(x, y)) return true;
   return false;
 }
 
-bool ClipRegion::IsRectangleOverlapped(const Rectangle &rectangle) const {
-  for (RectangleList::const_iterator it = impl_->rectangles_.begin();
+bool ClipRegion::Overlaps(const Rectangle &rect) const {
+  for (RectangleVector::const_iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it)
-    if (it->Overlaps(rectangle)) return true;
+    if (it->Overlaps(rect)) return true;
   return false;
 }
 
-bool ClipRegion::EnumerateRectangles(Slot1<bool, const void*> *slot) const {
+bool ClipRegion::IsInside(const Rectangle &rect) const {
+  for (RectangleVector::const_iterator it = impl_->rectangles_.begin();
+       it != impl_->rectangles_.end(); ++it)
+    if (!it->IsInside(rect)) return false;
+  // If the clip region is empty then return false.
+  return impl_->rectangles_.size() != 0;
+}
+
+Rectangle ClipRegion::GetExtents() const {
+  RectangleVector::const_iterator it = impl_->rectangles_.begin();
+  Rectangle rect(*it);
+  for (++it; it != impl_->rectangles_.end(); ++it)
+    rect.Union(*it);
+  return rect;
+}
+
+void ClipRegion::Integerize() {
+  for (RectangleVector::iterator it = impl_->rectangles_.begin();
+       it != impl_->rectangles_.end(); ++it)
+    it->Integerize();
+}
+
+bool ClipRegion::EnumerateRectangles(RectangleSlot *slot) const {
+  bool result = false;
   if (slot) {
-    for (RectangleList::const_iterator it = impl_->rectangles_.begin();
+    for (RectangleVector::const_iterator it = impl_->rectangles_.begin();
          it != impl_->rectangles_.end(); ++it) {
-      if (!(*slot)(reinterpret_cast<const void*>(&(*it)))) {
-        delete slot;
-        return false;
-      }
+      if (!(result = (*slot)(it->x, it->y, it->w, it->h)))
+        break;
     }
     delete slot;
-    return true;
   }
-  return false;
+  return result;
 }
 
+void ClipRegion::PrintLog() const {
 #ifdef _DEBUG
-int ClipRegion::GetCount() const {
-  return impl_->rectangles_.size();
-}
+  DLOG("%zu Clip Regions:", impl_->rectangles_.size());
+  for (RectangleVector::const_iterator it = impl_->rectangles_.begin();
+       it != impl_->rectangles_.end(); ++it) {
+    DLOG("%.1lf %.1lf - %.1lf %.1lf, w: %.1lf h: %.1lf",
+         it->x, it->y, it->x + it->w, it->y + it->h, it->w, it->h);
+  }
 #endif
+}
 
 }  // namespace ggadget

@@ -80,12 +80,19 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   const BasicElement *GetParentElement() const;
 
  public:
-  /** Retrieves the width in pixels. */
-  double GetPixelWidth() const;
+  /**
+   * Retrieves the width in pixels.
+   * Might be overrided by derived classes to provide fake pixel width.
+   */
+  virtual double GetPixelWidth() const;
   /** Sets the width in pixels. */
   void SetPixelWidth(double width);
-  /** Retrieves the height in pixels. */
-  double GetPixelHeight() const;
+  /**
+   * Retrieves the height in pixels.
+   * Might be overrided by derived classes to provide fake pixel height,
+   * eg. ComboBoxElement.
+   */
+  virtual double GetPixelHeight() const;
   /** Sets the height in pixels. */
   void SetPixelHeight(double height);
 
@@ -454,7 +461,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Get the element's extents information in its view's coordinates.
    * @param rect the rectangle used to hold the information.
    */
-  bool GetExtentsInView(Rectangle *rectangle) const;
+  Rectangle GetExtentsInView() const;
 
  public: // Event handlers and event related methods.
   /**
@@ -688,8 +695,6 @@ public: // Other overridable public methods.
 };
 
 typedef ScriptableHolder<BasicElement> ElementHolder;
-
-void GetViewCoord(const BasicElement *element, Rectangle *rectangle);
 
 } // namespace ggadget
 
