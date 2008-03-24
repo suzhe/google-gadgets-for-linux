@@ -156,8 +156,17 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL)
+  if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL) {
     fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
+  }
+#ifdef _DEBUG
+  std::string dot_slash(".");
+  dot_slash += ggadget::kDirSeparatorStr;
+  if ((fm = ggadget::CreateFileManager(dot_slash.c_str())) != NULL) {
+    fm_wrapper->RegisterFileManager(dot_slash.c_str(), fm);
+  }
+#endif
+
   // TODO: Proper profile directory.
   if ((fm = ggadget::CreateFileManager(".")) != NULL)
     fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);

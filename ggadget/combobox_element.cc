@@ -313,14 +313,15 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
     // drawn correctly. In this case the stored canvas cache of this item will
     // be used.
     if (item && GetView()->IsElementInClipRegion(item)) {
+      unsigned px_height = static_cast<unsigned>(ceil(impl_->item_pixel_height_));
+      unsigned px_width = static_cast<unsigned>(ceil(elem_width));
       if (!impl_->item_cache_ ||
-          impl_->item_cache_->GetWidth() != elem_width ||
-          impl_->item_cache_->GetHeight() != impl_->item_pixel_height_) {
+          impl_->item_cache_->GetWidth() != px_width ||
+          impl_->item_cache_->GetHeight() != px_height) {
         if (impl_->item_cache_)
           impl_->item_cache_->Destroy();
         impl_->item_cache_ =
-            GetView()->GetGraphics()->NewCanvas(elem_width,
-                                                impl_->item_pixel_height_);
+            GetView()->GetGraphics()->NewCanvas(px_width, px_height);
       } else {
         impl_->item_cache_->ClearCanvas();
       }

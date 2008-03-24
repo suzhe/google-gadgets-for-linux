@@ -115,6 +115,8 @@ gglinclude_HEADERS	= anchor_element.h \
 			  unicode_utils.h \
 			  variant.h \
 			  view.h \
+			  #view_decorator.h \
+			  view_element.h \
 			  view_host_interface.h \
 			  view_interface.h \
 			  xml_dom_interface.h \
@@ -190,6 +192,8 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  unicode_utils.cc \
 			  variant.cc \
 			  view.cc \
+			  #view_decorator.cc \
+			  view_element.cc \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \
 			  xml_parser.cc \

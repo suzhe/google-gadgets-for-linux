@@ -61,6 +61,7 @@ SET(SRCS
   unicode_utils.cc
   variant.cc
   view.cc
+  #view_decorator.cc
   xml_dom.cc
   xml_http_request_factory.cc
   xml_parser.cc
@@ -80,6 +81,7 @@ SET(SRCS
   progressbar_element.cc
   scrollbar_element.cc
   scrolling_element.cc
+  view_element.cc
 
   dir_file_manager.cc
   file_manager_factory.cc
