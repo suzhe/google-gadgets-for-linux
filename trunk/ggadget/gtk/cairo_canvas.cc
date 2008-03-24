@@ -436,9 +436,8 @@ class CairoCanvas::Impl {
     return true;
   }
 
-  bool IntersectRectangle(const void *rect) {
-    const Rectangle *r = reinterpret_cast<const Rectangle*>(rect);
-    cairo_rectangle(cr_, r->x_, r->y_, r->w_, r->h_);
+  bool IntersectRectangle(double x, double y, double w, double h) {
+    cairo_rectangle(cr_, x, y, w, h);
     return true;
   }
 
@@ -587,8 +586,8 @@ bool CairoCanvas::IntersectRectClipRegion(double x, double y,
 bool CairoCanvas::IntersectGeneralClipRegion(const ClipRegion &region) {
   cairo_antialias_t pre = cairo_get_antialias(impl_->cr_);
   cairo_set_antialias(impl_->cr_, CAIRO_ANTIALIAS_NONE);
-  region.EnumerateRectangles(NewSlot(impl_, &Impl::IntersectRectangle));
-  cairo_clip(impl_->cr_);
+  if (region.EnumerateRectangles(NewSlot(impl_, &Impl::IntersectRectangle)))
+    cairo_clip(impl_->cr_);
   cairo_set_antialias(impl_->cr_, pre);
   return true;
 }

@@ -189,32 +189,44 @@ double RadiansToDegrees(double radians);
  */
 bool IsPointInElement(double x, double y, double width, double height);
 
+
+/** A class represents a rectangle. */
 class Rectangle {
  public:
-  Rectangle(double x, double y, double w, double h);
   Rectangle();
-  ~Rectangle();
+  Rectangle(double x, double y, double w, double h);
+
+  bool operator==(const Rectangle &rect) const;
 
   /**
-   * Get the expanding vertical rectangle from a general rectangle represented by
-   * 4 vertexs.
-   * @param r coordinates of the first rectangle, order: v1_x, v1_y, v2_x, ...
+   * Calculates the union of two rectangles, and stores the result into this
+   * rectangle.
    */
-  void ExtentsFromTaperedRect(const double r[8]);
-  /**
-   * Given tow vertical rectangle, work out the expanding rectangle that is the
-   * union of the two ones.
-   * @param r1 the first rectangle
-   * @param r2 the second rectangle
-   */
-  void ExtentsFromTwoRects(const Rectangle &r1, const Rectangle &r2);
+  void Union(const Rectangle &rect);
 
   /**
-   * Judge if two rectangles are overlapped.
-   * @param another the other rectangle we are interested in.
+   * Calculates the intersection of two rectangles, and stores the result into
+   * this rectangle.
+   *
+   * If they do not intersect with each other, false will be returned and this
+   * rectangle will not change.
+   */
+  bool Intersect(const Rectangle &rect);
+
+  /**
+   * Checks if two rectangles are overlapped.
+   * @param other the other rectangle we are interested in.
    * @return @true if they are overlapped and false otherwise
    */
   bool Overlaps(const Rectangle &another) const;
+
+  /**
+   * Checks if this rectangle is inside the other one.
+   * @param other the other rectangle we are interested in.
+   * @return @true if this rectangle is inside the other one.
+   */
+  bool IsInside(const Rectangle &another) const;
+
   /**
    * Judge if a point is in the rectangle.
    * @param x X-coordinate of the point
@@ -226,12 +238,24 @@ class Rectangle {
   /**
    * Integerize the rectangle region. That means to make the coordinates of the
    * vertexs be integer. This is useful since clip operation may time wasted if
-   * the region is not integer.
-   * @param extent_width the distance we want to extent the region.
+   * the region is not integer. The result rectangle will be larger or equal to
+   * the original one.
    */
-  void Integerize(double extent_width);
+  void Integerize();
+
  public:
-  double x_, y_, w_, h_;
+  /**
+   * Gets the extents of a polygon represented by a set of vertexes.
+   *
+   * @param n number of vertexes.
+   * @param vertexes coordinates of the vertexes, format: x0, y0, x1, y1, ...
+   *        it must have 2 * n elements.
+   * @return the extents rectangle of the polygon.
+   */
+  static Rectangle GetPolygonExtents(size_t n, const double *vertexes);
+
+ public:
+  double x, y, w, h;
 };
 
 /**

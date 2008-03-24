@@ -94,6 +94,8 @@ class ComboBoxElement : public BasicElement {
 
   Connection *ConnectOnChangeEvent(Slot0<void> *slot);
 
+  virtual double GetPixelHeight() const;
+
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
                                       const char *name);

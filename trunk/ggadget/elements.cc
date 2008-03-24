@@ -303,10 +303,9 @@ class Elements::Impl {
 
       // Doesn't draw elements that outside visible area.
       // Conditions to determine if an element is outside visible area:
-      // 1. If its parent is not implicit and it's outside view's clip region
+      // 1. If it's outside view's clip region
       // 2. If it's outside parent's visible area.
-      if (((!owner_ || !owner_->IsImplicit()) &&
-           !view_->IsElementInClipRegion(element)) ||
+      if (!view_->IsElementInClipRegion(element) ||
           (owner_ && !owner_->IsChildInVisibleArea(element))) {
         continue;
       }

@@ -144,7 +144,8 @@ class View::Impl {
        Gadget *gadget,
        ElementFactory *element_factory,
        ScriptContextInterface *script_context)
-    : owner_(owner),
+    : clip_region_(0.9),
+      owner_(owner),
       gadget_(gadget),
       element_factory_(element_factory),
       main_loop_(GetGlobalMainLoop()),
@@ -165,11 +166,7 @@ class View::Impl {
       events_enabled_(true),
       need_redraw_(true),
       draw_count_(0),
-      fp_(NULL),
       hittest_(ViewInterface::HT_CLIENT) {
-#ifdef _DEBUG
-    fp_ = fopen("/tmp/view_render", "w+");
-#endif
     ASSERT(host_);
     ASSERT(element_factory_);
     ASSERT(main_loop_);
@@ -192,11 +189,6 @@ class View::Impl {
     if (onoptionchanged_connection_) {
       onoptionchanged_connection_->Disconnect();
       onoptionchanged_connection_ = NULL;
-    }
-
-    if (fp_) {
-      fprintf(fp_, "\n");
-      fclose(fp_);
     }
 
     if (canvas_cache_) {
@@ -710,32 +702,50 @@ class View::Impl {
     draw_count_ = 0;
     uint64_t start = main_loop_->GetCurrentTime();
 #endif
+    // no draw queued, so the draw request is initiated from host.
+    // And because the canvas cache_ is valid, just need to paint the canvas
+    // cache to the dest canvas.
+    if (!draw_queued_ && canvas_cache_ && !need_redraw_) {
+      DLOG("Draw from canvas cache.");
+      canvas->DrawCanvas(0, 0, canvas_cache_);
+      return;
+    }
+
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
 
+#ifdef _DEBUG
+    clip_region_.PrintLog();
+#endif
+
     if (enable_cache_ && !canvas_cache_) {
       canvas_cache_ = host_->GetGraphics()->NewCanvas(width_, height_);
       need_redraw_ = true;
-    }
-
-    if (need_redraw_) {
-      clip_region_.Clear();
-      Rectangle view_rect(0, 0, ceil(width_), ceil(height_));
-      clip_region_.AddRectangle(view_rect);
     }
 
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedEvents();
 
+    if (need_redraw_)
+      clip_region_.Clear();
+    else
+      clip_region_.Integerize();
+
     CanvasInterface *target = enable_cache_ ? canvas_cache_ : canvas;
+
     target->PushState();
     target->IntersectGeneralClipRegion(clip_region_);
     target->ClearRect(0, 0, width_, height_);
-    children_.Draw(target);
+
+    // No need to draw children if there is a popup element and it's fully
+    // opaque and the clip region is inside its extents.
+    if (!popup_element_.Get() || !popup_element_.Get()->IsFullyOpaque() ||
+        !clip_region_.IsInside(popup_element_.Get()->GetExtentsInView()))
+      children_.Draw(target);
 
     if (popup_element_.Get()) {
       popup_element_.Get()->ClearPositionChanged();
@@ -766,15 +776,14 @@ class View::Impl {
     target->PopState();
     if (enable_cache_)
       canvas->DrawCanvas(0, 0, canvas_cache_);
-#ifdef _DEBUG
-    uint64_t end = main_loop_->GetCurrentTime();
-    if (end > 0 && start > 0 && fp_) {
-      fprintf(fp_, "%d,%d,%ju;  ", draw_count_,
-              clip_region_.GetCount(), end - start);
-    }
-#endif
     clip_region_.Clear();
     need_redraw_ = false;
+
+#ifdef _DEBUG
+    uint64_t end = main_loop_->GetCurrentTime();
+    if (end > 0 && start > 0)
+      DLOG("Draw count: %d, time: %ju", draw_count_, end - start);
+#endif
   }
 
   bool OnAddContextMenuItems(MenuInterface *menu) {
@@ -1136,7 +1145,6 @@ class View::Impl {
   bool events_enabled_;
   bool need_redraw_;
   int draw_count_;
-  FILE *fp_;
 
   ViewInterface::HitTest hittest_;
 
@@ -1327,17 +1335,12 @@ ContentAreaElement *View::GetContentAreaElement() const {
 }
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
-  Rectangle rect;
-  element->GetExtentsInView(&rect);
-  return impl_->clip_region_.IsRectangleOverlapped(rect);
+  return impl_->clip_region_.IsEmpty() ||
+         impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
 void View::AddElementToClipRegion(BasicElement *element) {
-  const double extent = 0.5;
-  Rectangle rect;
-  element->GetExtentsInView(&rect);
-  rect.Integerize(extent);
-  impl_->clip_region_.AddRectangle(rect);
+  impl_->clip_region_.AddRectangle(element->GetExtentsInView());
 }
 
 void View::IncreaseDrawCount() {

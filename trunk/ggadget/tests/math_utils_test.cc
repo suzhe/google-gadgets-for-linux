@@ -261,41 +261,40 @@ TEST(MathUtilsTest, GetChildExtentInParent) {
   // TODO: Add more tests.
 }
 
-// Test if x is really a rectangle
-#define IS_RECT(x) \
-    do { \
-      EXPECT_EQ(0, (x[0]-x[6])*(x[3]-x[5])-(x[1]-x[7])*(x[2]-x[4])); \
-      EXPECT_EQ(0, (x[0]-x[2])*(x[7]-x[5])-(x[1]-x[3])*(x[6]-x[4])); \
-      EXPECT_EQ(0, (x[0]-x[2])*(x[0]-x[6])+(x[1]-x[3])*(x[1]-x[7])); \
-    } while (false)
-#define DEQ(x, y) (fabs((x) - (y)) < 1e-6)
+TEST(MathUtilsTest, RectangleGetPolygonExtents) {
+  const double p1[] = {0, 0, 0, 1, 1, 1, 1, 0};
+  const double p2[] = {0.4, 2, 0.6, 2, 0.6, -2, 0.4, -2};
+  const double p3[] = {0.5, 1.5, 1.5, 0.5, 0.5, -0.5, -0.5, 0.5};
 
-TEST(MathUtilsTest, ExtentsFromTaperedRect) {
-  const double r1[] = {0, 0, 0, 1, 1, 1, 1, 0}; IS_RECT(r1);
-  const double r2[] = {.4, 2, .6, 2, .6, -2, .4, -2}; IS_RECT(r2);
-  const double r3[] = {.5, 1.5, 1.5, .5, .5, -.5, -.5, .5}; IS_RECT(r3);
   Rectangle rect;
-  rect.ExtentsFromTaperedRect(r1);
-  EXPECT_TRUE(DEQ(rect.x_,0) && DEQ(rect.y_,0) &&
-              DEQ(rect.w_,1) && DEQ(rect.h_,1));
-  rect.ExtentsFromTaperedRect(r2);
-  EXPECT_TRUE(DEQ(rect.x_,.4) && DEQ(rect.y_,-2) &&
-              DEQ(rect.w_,.2) && DEQ(rect.h_,4));
-  rect.ExtentsFromTaperedRect(r3);
-  EXPECT_TRUE(DEQ(rect.x_,-.5) && DEQ(rect.y_,-.5) &&
-              DEQ(rect.w_,2) && DEQ(rect.h_,2));
+  rect = Rectangle::GetPolygonExtents(4, p1);
+  EXPECT_DOUBLE_EQ(0, rect.x);
+  EXPECT_DOUBLE_EQ(0, rect.y);
+  EXPECT_DOUBLE_EQ(1, rect.w);
+  EXPECT_DOUBLE_EQ(1, rect.h);
+  rect = Rectangle::GetPolygonExtents(4, p2);
+  EXPECT_DOUBLE_EQ(0.4, rect.x);
+  EXPECT_DOUBLE_EQ(-2, rect.y);
+  EXPECT_DOUBLE_EQ(0.2, rect.w);
+  EXPECT_DOUBLE_EQ(4, rect.h);
+  rect = Rectangle::GetPolygonExtents(4, p3);
+  EXPECT_DOUBLE_EQ(-0.5, rect.x);
+  EXPECT_DOUBLE_EQ(-0.5, rect.y);
+  EXPECT_DOUBLE_EQ(2, rect.w);
+  EXPECT_DOUBLE_EQ(2, rect.h);
 }
 
-TEST(MathUtilsTest, ExtentsFromTwoRects) {
+TEST(MathUtilsTest, RectangleUnion) {
   Rectangle r1(2, 2, 2, 3);
   Rectangle r2(0, 1, 2, 1);
-  Rectangle rect;
-  rect.ExtentsFromTwoRects(r1, r2);
-  EXPECT_TRUE(DEQ(rect.x_,0) && DEQ(rect.y_,1) &&
-              DEQ(rect.w_,4) && DEQ(rect.h_,4));
+  r1.Union(r2);
+  EXPECT_DOUBLE_EQ(0, r1.x);
+  EXPECT_DOUBLE_EQ(1, r1.y);
+  EXPECT_DOUBLE_EQ(4, r1.w);
+  EXPECT_DOUBLE_EQ(4, r1.h);
 }
 
-TEST(MathUtilsTest, Overlaps) {
+TEST(MathUtilsTest, RectangleOverlaps) {
   Rectangle r1(2, 2, 2, 3);
   Rectangle r2(0, 1, 2, 1);
   Rectangle r3(1, 1, 4, 3);
@@ -308,6 +307,36 @@ TEST(MathUtilsTest, Overlaps) {
   EXPECT_FALSE(r2.Overlaps(r1));
   EXPECT_FALSE(r2.Overlaps(r4));
   EXPECT_FALSE(r3.Overlaps(r4));
+}
+
+TEST(MathUtilsTest, RectangleIntersect) {
+  Rectangle r1(2, 2, 2, 3);
+  Rectangle r2(0, 1, 2, 1);
+  Rectangle r3(1, 1, 4, 3);
+  Rectangle r4 = r1;
+  EXPECT_FALSE(r1.Intersect(r2));
+  EXPECT_TRUE(r4 == r1);
+  EXPECT_TRUE(r1.Intersect(r1));
+  EXPECT_TRUE(r4 == r1);
+  EXPECT_TRUE(r1.Intersect(r3));
+  EXPECT_DOUBLE_EQ(2, r1.x);
+  EXPECT_DOUBLE_EQ(2, r1.y);
+  EXPECT_DOUBLE_EQ(2, r1.w);
+  EXPECT_DOUBLE_EQ(2, r1.h);
+}
+
+TEST(MathUtilsTest, RectangleIsInside) {
+  Rectangle r1(1, 1, 4, 4);
+  Rectangle r2(1, 1, 4, 4);
+  Rectangle r3(1.5, 1.5, 3, 3);
+  Rectangle r4(1, 2, 4, 3);
+  Rectangle r5(0.5, 1, 3, 2);
+
+  EXPECT_FALSE(r1.IsInside(r3));
+  EXPECT_TRUE(r1.IsInside(r1));
+  EXPECT_TRUE(r3.IsInside(r1));
+  EXPECT_TRUE(r4.IsInside(r1));
+  EXPECT_FALSE(r5.IsInside(r1));
 }
 
 int main(int argc, char **argv) {

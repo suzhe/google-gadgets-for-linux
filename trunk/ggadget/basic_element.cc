@@ -481,10 +481,13 @@ class BasicElement::Impl {
   }
 
   void Draw(CanvasInterface *canvas) {
+    // GetPixelWidth() and GetPixelHeight might be overrided.
+    double width = owner_->GetPixelWidth();
+    double height = owner_->GetPixelHeight();
     // Only do draw if visible
-    // Check for width_, height_ == 0 since IntersectRectClipRegion fails for
+    // Check for width, height == 0 since IntersectRectClipRegion fails for
     // those cases.
-    if (visible_ && opacity_ != 0 && width_ > 0 && height_ > 0) {
+    if (visible_ && opacity_ != 0 && width > 0 && height > 0) {
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
 
@@ -497,23 +500,23 @@ class BasicElement::Impl {
                           (opacity_ != 1.0 && children_ &&
                            children_->GetCount());
       if (indirect_draw) {
-        target = view_->GetGraphics()->NewCanvas(size_t(ceil(width_)),
-                                                 size_t(ceil(height_)));
+        target = view_->GetGraphics()->NewCanvas(size_t(ceil(width)),
+                                                 size_t(ceil(height)));
       }
 
       canvas->PushState();
-      canvas->IntersectRectClipRegion(0, 0, width_, height_);
+      canvas->IntersectRectClipRegion(0, 0, width, height);
       canvas->MultiplyOpacity(opacity_);
       owner_->DoDraw(target);
 
       if (indirect_draw) {
         double offset_x = 0, offset_y = 0;
         if (flip_ & FLIP_HORIZONTAL) {
-          offset_x = -width_;
+          offset_x = -width;
           canvas->ScaleCoordinates(-1, 1);
         }
         if (flip_ & FLIP_VERTICAL) {
-          offset_y = -height_;
+          offset_y = -height;
           canvas->ScaleCoordinates(1, -1);
         }
         if (mask)
@@ -527,7 +530,7 @@ class BasicElement::Impl {
 
       canvas->PopState();
       if (debug_mode_ >= 2) {
-        DrawBoundingBox(canvas, width_, height_, debug_color_index_);
+        DrawBoundingBox(canvas, width, height, debug_color_index_);
       }
 
 #ifdef _DEBUG
@@ -1420,14 +1423,13 @@ bool BasicElement::GetChildrenExtents(double *width, double *height) {
   return false;
 }
 
-bool BasicElement::GetExtentsInView(Rectangle *rectangle) const {
+Rectangle BasicElement::GetExtentsInView() const {
   double r[8];
   SelfCoordToViewCoord(0, 0, &r[0], &r[1]);
   SelfCoordToViewCoord(0, GetPixelHeight(), &r[2], &r[3]);
   SelfCoordToViewCoord(GetPixelWidth(), GetPixelHeight(), &r[4], &r[5]);
   SelfCoordToViewCoord(GetPixelWidth(), 0, &r[6], &r[7]);
-  rectangle->ExtentsFromTaperedRect(r);
-  return true;
+  return Rectangle::GetPolygonExtents(4, r);
 }
 
 void BasicElement::QueueDraw() {
