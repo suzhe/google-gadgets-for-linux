@@ -28,8 +28,8 @@ RESOURCE_FILES= button_down.png \
 		combo_arrow_over.png \
 		common.js \
 		html_details_view.xml \
+		messages-catalog.xml \
 		pinned.png \
-		pinned_over.png \
 		scroll_background.png \
 		scrollbar_d.png \
 		scrollbar_o.png \
@@ -41,7 +41,10 @@ RESOURCE_FILES= button_down.png \
 		scrollright_o.png \
 		scrollright_u.png \
 		text_details_view.xml \
-		unpinned.png
+		unpinned.png \
+		unpinned_over.png \
+		en/strings.xml \
+		zh-CN/strings.xml
 
 EXTRA_DIST=$(RESOURCE_FILES)
 

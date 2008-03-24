@@ -121,9 +121,9 @@ const char kComboArrow[] = "resource://combo_arrow_up.png";
 const char kComboArrowDown[] = "resource://combo_arrow_down.png";
 const char kComboArrowOver[] = "resource://combo_arrow_over.png";
 
-const char kContentItemPinned[] = "resource://pinned.png";
 const char kContentItemUnpinned[] = "resource://unpinned.png";
-const char kContentItemPinnedOver[] = "resource://pinned_over.png";
+const char kContentItemUnpinnedOver[] = "resource://unpinned_over.png";
+const char kContentItemPinned[] = "resource://pinned.png";
 
 // The following kButtonXXX and kCheckBoxXXX images are not for element
 // defaults, but for convenience of native gadgets.

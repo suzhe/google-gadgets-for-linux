@@ -55,6 +55,12 @@ class Tooltip::Impl {
   }
 
   bool DelayedShow(int watch_id) {
+    GdkScreen *screen;
+    gint x, y;
+    gdk_display_get_pointer(gdk_display_get_default(), &screen, &x, &y, NULL);
+    y += 20;
+    gtk_window_set_screen(GTK_WINDOW(window_), screen);
+    gtk_window_move(GTK_WINDOW(window_), x, y);
     gtk_widget_show_all(window_);
     show_timer_ = 0;
     return false;
@@ -77,18 +83,16 @@ class Tooltip::Impl {
     }
   }
 
-  void Show(const char *tooltip, GdkScreen *screen, int x, int y) {
+  void Show(const char *tooltip) {
     Hide();
     if (tooltip && *tooltip) {
       gtk_label_set_text(GTK_LABEL(label_), tooltip);
-      gtk_window_set_screen(GTK_WINDOW(window_), screen);
-      gtk_window_move(GTK_WINDOW(window_), x, y);
       if (show_timeout_ > 0) {
         show_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
             show_timeout_,
             new WatchCallbackSlot(NewSlot(this, &Impl::DelayedShow)));
       } else {
-        gtk_widget_show_all(window_);
+        DelayedShow(0);
       }
 
       if (hide_timeout_ > 0) {
@@ -132,8 +136,8 @@ Tooltip::~Tooltip() {
   impl_ = NULL;
 }
 
-void Tooltip::Show(const char *tooltip, GdkScreen *screen, int x, int y) {
-  impl_->Show(tooltip, screen, x, y);
+void Tooltip::Show(const char *tooltip) {
+  impl_->Show(tooltip);
 }
 
 void Tooltip::Hide() {

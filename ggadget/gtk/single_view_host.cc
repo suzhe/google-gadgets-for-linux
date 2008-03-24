@@ -237,10 +237,7 @@ class SingleViewHost::Impl {
   }
 
   void SetTooltip(const char *tooltip) {
-    GdkScreen *screen;
-    gint x, y;
-    gdk_display_get_pointer(gdk_display_get_default(), &screen, &x, &y, NULL);
-    tooltip_->Show(tooltip, screen, x, y + 20);
+    tooltip_->Show(tooltip);
   }
 
   bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {

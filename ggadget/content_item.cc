@@ -20,6 +20,7 @@
 #include "contentarea_element.h"
 #include "details_view_data.h"
 #include "image_interface.h"
+#include "messages.h"
 #include "scriptable_image.h"
 #include "string_utils.h"
 #include "text_frame.h"
@@ -76,11 +77,11 @@ class ContentItem::Impl {
   ~Impl() {
   }
 
-  void UpdateTimeText() {
+  void UpdateTimeText(int width) {
     time_text_.SetText(GetTimeDisplayString(
         time_created_,
         flags_ & CONTENT_ITEM_FLAG_TIME_ABSOLUTE ? 0 : view_->GetCurrentTime(),
-        width_ < kMinWidthToUseLongVersionOfTimeString).c_str());
+        width < kMinWidthToUseLongVersionOfTimeString));
   }
 
 #define PARSE_PIXEL_OR_RELATIVE(input, result, relative, default_rel) { \
@@ -243,8 +244,7 @@ std::string ContentItem::GetHeading() const {
 void ContentItem::SetHeading(const char *heading) {
   if (AssignIfDiffer(heading, &impl_->heading_)) {
     // TODO: Strip HTML tags?
-    impl_->heading_text_.SetText(
-        CompressWhiteSpaces(impl_->heading_.c_str()).c_str());
+    impl_->heading_text_.SetText(CompressWhiteSpaces(impl_->heading_.c_str()));
     impl_->QueueDraw();
   }
 }
@@ -256,8 +256,7 @@ std::string ContentItem::GetSource() const {
 void ContentItem::SetSource(const char *source) {
   if (AssignIfDiffer(source, &impl_->source_)) {
     // TODO: Strip HTML tags?
-    impl_->source_text_.SetText(
-        CompressWhiteSpaces(impl_->source_.c_str()).c_str());
+    impl_->source_text_.SetText(CompressWhiteSpaces(impl_->source_.c_str()));
     impl_->QueueDraw();
   }
 }
@@ -269,8 +268,7 @@ std::string ContentItem::GetSnippet() const {
 void ContentItem::SetSnippet(const char *snippet) {
   if (AssignIfDiffer(snippet, &impl_->snippet_)) {
     // TODO: Strip HTML tags?
-    impl_->snippet_text_.SetText(
-        CompressWhiteSpaces(impl_->snippet_.c_str()).c_str());
+    impl_->snippet_text_.SetText(CompressWhiteSpaces(impl_->snippet_.c_str()));
     impl_->QueueDraw();
   }
 }
@@ -389,22 +387,6 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
   int heading_space_width = width;
   int heading_left = x;
   int image_height = 0;
-  if (impl_->image_.Get()) {
-    const ImageInterface *image = impl_->image_.Get()->GetImage();
-    if (image) {
-      int image_width = static_cast<int>(image->GetWidth());
-      heading_space_width -= image_width;
-      image_height = static_cast<int>(image->GetHeight());
-      if (impl_->flags_ & CONTENT_ITEM_FLAG_LEFT_ICON) {
-        image->Draw(canvas, x, y);
-        heading_left += image_width;
-      } else {
-        image->Draw(canvas, x + width - image_width, y);
-      }
-    }
-  }
-
-  impl_->UpdateTimeText();
   double heading_width = 0, heading_height = 0;
   impl_->heading_text_.GetSimpleExtents(&heading_width, &heading_height);
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NEWS &&
@@ -412,6 +394,25 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
     // Heading can wrap up to 2 lines under news layout mode.
     heading_height *= 2;
   }
+
+  if (impl_->image_.Get()) {
+    const ImageInterface *image = impl_->image_.Get()->GetImage();
+    if (image) {
+      int image_width = static_cast<int>(image->GetWidth());
+      heading_space_width -= image_width;
+      image_height = static_cast<int>(image->GetHeight());
+      int image_y = y;
+      if (heading_height > image_height)
+        image_y += static_cast<int>(heading_height - image_height) / 2; 
+      if (impl_->flags_ & CONTENT_ITEM_FLAG_LEFT_ICON) {
+        image->Draw(canvas, x, image_y);
+        heading_left += image_width;
+      } else {
+        image->Draw(canvas, x + width - image_width, image_y);
+      }
+    }
+  }
+
   impl_->heading_text_.Draw(canvas, heading_left, y,
                             heading_space_width, heading_height);
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS ||
@@ -419,6 +420,7 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
     return;
   }
 
+  impl_->UpdateTimeText(width);
   y += std::max(static_cast<int>(ceil(heading_height)), image_height);
   double source_width = 0, source_height = 0;
   impl_->source_text_.GetSimpleExtents(&source_width, &source_height);
@@ -470,7 +472,6 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
   }
 
   // Then the default logic.
-  impl_->UpdateTimeText();
   double heading_width = 0, heading_height = 0;
   impl_->heading_text_.GetSimpleExtents(&heading_width, &heading_height);
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS ||
@@ -480,6 +481,7 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
            2 * kItemBorderWidth;
   }
 
+  impl_->UpdateTimeText(width);
   double source_width = 0, source_height = 0;
   impl_->source_text_.GetSimpleExtents(&source_width, &source_height);
   double time_width = 0, time_height = 0;
@@ -651,10 +653,9 @@ std::string ContentItem::GetTimeDisplayString(uint64_t time,
 
   if (current_time == 0) {
     // Show absolute time as HH:MMam/pm.
-    // TODO: Localization.
     char buffer[20];
     time_t t = time / 1000;
-    strftime(buffer, sizeof(buffer), "%I:%M%p", localtime(&t));
+    strftime(buffer, sizeof(buffer), GM_("TIME_FORMAT_SHORT"), localtime(&t));
     return buffer;
   }
 
@@ -664,20 +665,31 @@ std::string ContentItem::GetTimeDisplayString(uint64_t time,
 
   if (time_diff >= 4 * kMsPerDay) {
     // > 4 days, show like 'Mar 20'.
-    // TODO: Localization.
     char buffer[20];
     time_t t = static_cast<time_t>(time / 1000);
-    strftime(buffer, sizeof(buffer), "%b %d", localtime(&t));
+    strftime(buffer, sizeof(buffer), GM_("DATE_FORMAT_SHORT"), localtime(&t));
     return buffer;
   }
+
   if (time_diff >= kMsPerDay) {
-    // TODO: long format, plural/singular.
-    return StringPrintf("%dd ago", static_cast<int>(time_diff / kMsPerDay));
+    int days = static_cast<int>(time_diff / kMsPerDay);
+    return StringPrintf(GM_(short_form ?
+                           (days > 1 ? "DAYS_AGO_SHORT" : "DAY_AGO_SHORT") :
+                           (days > 1 ? "DAYS_AGO_LONG" : "DAY_AGO_LONG")),
+                        days);
   }
   if (time_diff >= kMsPerHour) {
-    return StringPrintf("%dh ago", static_cast<int>(time_diff / kMsPerHour));
+    int hours = static_cast<int>(time_diff / kMsPerHour);
+    return StringPrintf(GM_(short_form ?
+                           (hours > 1 ? "HOURS_AGO_SHORT" : "HOUR_AGO_SHORT") :
+                           (hours > 1 ? "HOURS_AGO_LONG" : "HOUR_AGO_LONG")),
+                        hours);
   }
-  return StringPrintf("%dm ago", static_cast<int>(time_diff / kMsPerMinute));
+  int mins = static_cast<int>(time_diff / kMsPerMinute);
+  return StringPrintf(GM_(short_form ?
+                         (mins > 1 ? "MINUTES_AGO_SHORT" : "MINUTE_AGO_SHORT") :
+                         (mins > 1 ? "MINUTES_AGO_LONG" : "MINUTE_AGO_LONG")),
+                      mins);
 }
 
 static const Variant kDrawLineDefaultArgs[] = {

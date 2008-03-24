@@ -24,6 +24,7 @@
 #include "graphics_interface.h"
 #include "image_interface.h"
 #include "menu_interface.h"
+#include "messages.h"
 #include "scriptable_array.h"
 #include "scriptable_image.h"
 #include "view.h"
@@ -43,9 +44,9 @@ class ContentAreaElement::Impl {
  public:
   typedef std::vector<ContentItem *> ContentItems;
   enum PinImageIndex {
-    PIN_IMAGE_PINNED,
-    PIN_IMAGE_PINNED_OVER,
     PIN_IMAGE_UNPINNED,
+    PIN_IMAGE_UNPINNED_OVER,
+    PIN_IMAGE_PINNED,
     PIN_IMAGE_COUNT,
   };
 
@@ -65,12 +66,12 @@ class ContentAreaElement::Impl {
         modified_(false),
         death_detector_(NULL),
         context_menu_time_(0) {
-    pin_images_[PIN_IMAGE_PINNED].Reset(new ScriptableImage(
-        owner->GetView()->LoadImageFromGlobal(kContentItemPinned, false)));
-    pin_images_[PIN_IMAGE_PINNED_OVER].Reset(new ScriptableImage(
-        owner->GetView()->LoadImageFromGlobal(kContentItemPinnedOver, false)));
     pin_images_[PIN_IMAGE_UNPINNED].Reset(new ScriptableImage(
         owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false)));
+    pin_images_[PIN_IMAGE_UNPINNED_OVER].Reset(new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemUnpinnedOver, false)));
+    pin_images_[PIN_IMAGE_PINNED].Reset(new ScriptableImage(
+        owner->GetView()->LoadImageFromGlobal(kContentItemPinned, false)));
 
     // Schedule a interval timer to redraw the content area periodically,
     // to refresh the relative time stamps of the items.
@@ -159,12 +160,37 @@ class ContentAreaElement::Impl {
       }
     } else {
       scrolling_line_step_ = 0;
+      // Pinned items first.
+      if (content_flags_ & CONTENT_FLAG_PINNABLE) {
+        for (size_t i = 0; i < item_count && !dead && !modified_ ; i++) {
+          ContentItem *item = content_items_[i];
+          ASSERT(item);
+          int item_flags = item->GetFlags();
+          if (item_flags & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) {
+            item->SetLayoutRect(0, 0, 0, 0);
+          } else if (item_flags & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
+            int item_height = item->GetHeight(target_, layout_canvas_,
+                                              item_width);
+            if (dead)
+              break;
+            item_height = std::max(item_height, pin_image_max_height_);
+            // Note: SetRect still uses the width including pin_image,
+            // while Draw and GetHeight use the width excluding pin_image.
+            item->SetLayoutRect(0, y, width, item_height);
+            y += item_height;
+            if (!scrolling_line_step_ || scrolling_line_step_ > item_height)
+              scrolling_line_step_ = item_height;
+          }
+        }
+      }
+      // Then unpinned items.
       for (size_t i = 0; i < item_count && !dead && !modified_ ; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
-        if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) {
-          item->SetLayoutRect(0, 0, 0, 0);
-        } else {
+        int item_flags = item->GetFlags();
+        if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) &&
+            (!(content_flags_ & CONTENT_FLAG_PINNABLE) ||
+             !(item_flags & ContentItem::CONTENT_ITEM_FLAG_PINNED))) {
           int item_height = item->GetHeight(target_, layout_canvas_,
                                             item_width);
           if (dead)
@@ -217,10 +243,8 @@ class ContentAreaElement::Impl {
                           mouse_y_ < item_y + item_height;
         bool mouse_over_pin = false;
 
-        if (content_flags_ & CONTENT_FLAG_PINNABLE &&
+        if ((content_flags_ & CONTENT_FLAG_PINNABLE) &&
             pin_image_max_width_ > 0 && pin_image_max_height_ > 0) {
-          const ImageInterface *pin_image =
-              pin_images_[PIN_IMAGE_UNPINNED].Get()->GetImage();
           mouse_over_pin = mouse_over && mouse_x_ < pin_image_max_width_;
           if (mouse_over_pin) {
             const Color &color = mouse_down_ ?
@@ -229,12 +253,20 @@ class ContentAreaElement::Impl {
                                    pin_image_max_width_, item_height,
                                    color);
           }
+
+          const ImageInterface *pin_image = NULL;
           if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
-            pin_image = pin_images_[mouse_over_pin ? PIN_IMAGE_PINNED_OVER :
-                                    PIN_IMAGE_PINNED].Get()->GetImage();
+            pin_image = pin_images_[PIN_IMAGE_PINNED].Get()->GetImage();
+          } else {
+            pin_image = pin_images_[mouse_over_pin ? PIN_IMAGE_UNPINNED_OVER :
+                                    PIN_IMAGE_UNPINNED].Get()->GetImage();
           }
           if (pin_image) {
-            pin_image->Draw(canvas, item_x, item_y);
+            int image_width = static_cast<int>(pin_image->GetWidth());
+            int image_height = static_cast<int>(pin_image->GetHeight());
+            pin_image->Draw(canvas,
+                            item_x + (pin_image_max_width_ - image_width) / 2,
+                            item_y + (item_height - image_height) / 2);
           }
           item_x += pin_image_max_width_;
           item_width -= pin_image_max_width_;
@@ -281,13 +313,13 @@ class ContentAreaElement::Impl {
     QueueDraw();
   }
 
-  void GetPinImages(ScriptableImage **pinned,
-                    ScriptableImage **pinned_over,
-                    ScriptableImage **unpinned) {
-    ASSERT(pinned && pinned_over && unpinned);
-    *pinned = pin_images_[PIN_IMAGE_PINNED].Get();
-    *pinned_over = pin_images_[PIN_IMAGE_PINNED_OVER].Get();
+  void GetPinImages(ScriptableImage **unpinned,
+                    ScriptableImage **unpinned_over,
+                    ScriptableImage **pinned) {
+    ASSERT(unpinned && unpinned_over && pinned);
     *unpinned = pin_images_[PIN_IMAGE_UNPINNED].Get();
+    *unpinned_over = pin_images_[PIN_IMAGE_UNPINNED_OVER].Get();
+    *pinned = pin_images_[PIN_IMAGE_PINNED].Get();
   }
 
   void SetPinImage(PinImageIndex index, ScriptableImage *image) {
@@ -295,12 +327,12 @@ class ContentAreaElement::Impl {
       pin_images_[index].Reset(image);
   }
 
-  void SetPinImages(ScriptableImage *pinned,
-                    ScriptableImage *pinned_over,
-                    ScriptableImage *unpinned) {
-    SetPinImage(PIN_IMAGE_PINNED, pinned);
-    SetPinImage(PIN_IMAGE_PINNED_OVER, pinned_over);
+  void SetPinImages(ScriptableImage *unpinned,
+                    ScriptableImage *unpinned_over,
+                    ScriptableImage *pinned) {
     SetPinImage(PIN_IMAGE_UNPINNED, unpinned);
+    SetPinImage(PIN_IMAGE_UNPINNED_OVER, unpinned_over);
+    SetPinImage(PIN_IMAGE_PINNED, pinned);
     // To be updated in Layout().
     pin_image_max_width_ = pin_image_max_height_ = 0;
     QueueDraw();
@@ -308,9 +340,9 @@ class ContentAreaElement::Impl {
 
   ScriptableArray *ScriptGetPinImages() {
     Variant *values = new Variant[3];
-    values[0] = Variant(pin_images_[PIN_IMAGE_PINNED].Get());
-    values[1] = Variant(pin_images_[PIN_IMAGE_PINNED_OVER].Get());
-    values[2] = Variant(pin_images_[PIN_IMAGE_UNPINNED].Get());
+    values[0] = Variant(pin_images_[PIN_IMAGE_UNPINNED].Get());
+    values[1] = Variant(pin_images_[PIN_IMAGE_UNPINNED_OVER].Get());
+    values[2] = Variant(pin_images_[PIN_IMAGE_PINNED].Get());
     return ScriptableArray::Create(values, 3);
   }
 
@@ -321,9 +353,9 @@ class ContentAreaElement::Impl {
 
   void ScriptSetPinImages(ScriptableInterface *array) {
     if (array) {
-      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetProperty(0)); 
-      ScriptSetPinImage(PIN_IMAGE_PINNED_OVER, array->GetProperty(1)); 
-      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetProperty(2)); 
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetProperty(0)); 
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED_OVER, array->GetProperty(1)); 
+      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetProperty(2)); 
     }
   }
 
@@ -425,9 +457,7 @@ class ContentAreaElement::Impl {
       bool tooltip_required = false;
       for (ContentItems::iterator it = content_items_.begin();
            it != content_items_.end(); ++it) {
-        int flags = (*it)->GetFlags();
-        if (!(flags & (ContentItem::CONTENT_ITEM_FLAG_HIDDEN |
-                       ContentItem::CONTENT_ITEM_FLAG_STATIC))) {
+        if (!((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)) {
           int x, y, w, h;
           (*it)->GetLayoutRect(&x, &y, &w, &h);
           x -= owner_->GetScrollXPosition();
@@ -477,7 +507,9 @@ class ContentAreaElement::Impl {
             if (mouse_over_item_) {
               if (mouse_over_pin_) {
                 mouse_over_item_->ToggleItemPinnedState();
-              } else if (content_flags_ & CONTENT_FLAG_HAVE_DETAILS) {
+              } else if ((content_flags_ & CONTENT_FLAG_HAVE_DETAILS) &&
+                         !(mouse_over_item_->GetFlags() &
+                           ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
                 std::string title;
                 DetailsViewData *details_view_data = NULL;
                 int flags = 0;
@@ -492,7 +524,9 @@ class ContentAreaElement::Impl {
             }
             break;
           case Event::EVENT_MOUSE_DBLCLICK:
-            if (mouse_over_item_ && !mouse_over_pin_)
+            if (mouse_over_item_ && !mouse_over_pin_ &&
+                !(mouse_over_item_->GetFlags() &
+                  ContentItem::CONTENT_ITEM_FLAG_STATIC))
               mouse_over_item_->OpenItem();
             break;
           default:
@@ -630,16 +664,16 @@ const std::vector<ContentItem *> &ContentAreaElement::GetContentItems() {
   return impl_->content_items_;
 }
 
-void ContentAreaElement::GetPinImages(ScriptableImage **pinned,
-                                      ScriptableImage **pinned_over,
-                                      ScriptableImage **unpinned) {
-  impl_->GetPinImages(pinned, pinned_over, unpinned);
+void ContentAreaElement::GetPinImages(ScriptableImage **unpinned,
+                                      ScriptableImage **unpinned_over,
+                                      ScriptableImage **pinned) {
+  impl_->GetPinImages(unpinned, unpinned_over, pinned);
 }
 
-void ContentAreaElement::SetPinImages(ScriptableImage *pinned,
-                                      ScriptableImage *pinned_over,
-                                      ScriptableImage *unpinned) {
-  impl_->SetPinImages(pinned, pinned_over, unpinned);
+void ContentAreaElement::SetPinImages(ScriptableImage *unpinned,
+                                      ScriptableImage *unpinned_over,
+                                      ScriptableImage *pinned) {
+  impl_->SetPinImages(unpinned, unpinned_over, pinned);
 }
 
 void ContentAreaElement::AddContentItem(ContentItem *item,
@@ -721,19 +755,18 @@ bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
   if (impl_->mouse_over_item_) {
     impl_->context_menu_time_ = GetView()->GetCurrentTime();
     if (impl_->mouse_over_item_->CanOpen()) {
-      menu->AddItem("Open", 0,
+      menu->AddItem(GM_("OPEN_CONTENT_ITEM"), 0,
           new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemOpen)));
     }
     if (!(impl_->mouse_over_item_->GetFlags() &
         ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
-      menu->AddItem("Remove", 0,
+      menu->AddItem(GM_("REMOVE_CONTENT_ITEM"), 0,
           new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemRemove)));
     }
     if (impl_->mouse_over_item_->GetFlags() &
         ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
-      menu->AddItem("Don't show me items like this", 0,
-          new FeedbackSlot(this,
-                           NewSlot(impl_, &Impl::OnItemNegativeFeedback)));
+      menu->AddItem(GM_("DONT_SHOW_CONTENT_ITEM"), 0,
+          new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemNegativeFeedback)));
     }
   }
   // To keep compatible with the Windows version, don't show default menu items.

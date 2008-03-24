@@ -38,6 +38,7 @@ SET(SRCS
   main_loop.cc
   math_utils.cc
   memory_options.cc
+  messages.cc
   module.cc
   native_main_loop.cc
   options_factory.cc
