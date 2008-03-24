@@ -37,9 +37,10 @@ class Tooltip {
   ~Tooltip();
 
   /**
-   * Shows a tooltip at specified screen and position.
+   * Shows a tooltip. The tooltip will be actually shown after @c show_timeout,
+   * near the position of the mouse cursor. 
    */
-  void Show(const char *tooltip, GdkScreen *screen, int x, int y);
+  void Show(const char *tooltip);
 
   /**
    * Hide tooltip window immediately.

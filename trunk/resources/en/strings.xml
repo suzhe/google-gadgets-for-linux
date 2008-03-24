@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strings>
+<!-- Short absolute time format (strftime() format) like '10:24am'.
+ Can be the same as TIME_FORMAT_LONG in most cases. -->
+<TIME_FORMAT_SHORT>%I:%M%P</TIME_FORMAT_SHORT>
+<!-- Short absolute date format (strftime() format) like 'Mar 20'. -->
+<DATE_FORMAT_SHORT>%b %d</DATE_FORMAT_SHORT>
+<!-- 1 day ago, short format. -->
+<DAY_AGO_SHORT>%dd ago</DAY_AGO_SHORT>
+<!-- More than 1 days ago, short format. -->
+<DAYS_AGO_SHORT>%dd ago</DAYS_AGO_SHORT>
+<!-- 1 day ago, long format. -->
+<DAY_AGO_LONG>%d day ago</DAY_AGO_LONG>
+<!-- More than 1 days ago, long format. -->
+<DAYS_AGO_LONG>%d days ago</DAYS_AGO_LONG>
+<!-- 1 hour ago, short format. -->
+<HOUR_AGO_SHORT>%dh ago</HOUR_AGO_SHORT>
+<!-- More than 1 hours ago, short format. -->
+<HOURS_AGO_SHORT>%dh ago</HOURS_AGO_SHORT>
+<!-- 1 hour ago, long format. -->
+<HOUR_AGO_LONG>%d hr ago</HOUR_AGO_LONG>
+<!-- More than 1 hours ago, long format. -->
+<HOURS_AGO_LONG>%d hrs ago</HOURS_AGO_LONG>
+<!-- 1 minute ago, short format. -->
+<MINUTE_AGO_SHORT>%dm ago</MINUTE_AGO_SHORT>
+<!-- More than 1 minutes ago, short format. -->
+<MINUTES_AGO_SHORT>%dm ago</MINUTES_AGO_SHORT>
+<!-- 1 minute ago, long format. -->
+<MINUTE_AGO_LONG>%d min ago</MINUTE_AGO_LONG>
+<!-- More than 1 minutes ago, long format. -->
+<MINUTES_AGO_LONG>%d mins ago</MINUTES_AGO_LONG>
+<!-- Text for a button or a menu item for opening an item. -->
+<OPEN_CONTENT_ITEM>Open</OPEN_CONTENT_ITEM>
+<!-- Text for a button or a menu item for removing an item. -->
+<REMOVE_CONTENT_ITEM>Remove</REMOVE_CONTENT_ITEM>
+<!-- String for the negative feedback in details view. Needs to be quite short. -->
+<DONT_SHOW_CONTENT_ITEM>Don't show me items like this</DONT_SHOW_CONTENT_ITEM>
+</strings>

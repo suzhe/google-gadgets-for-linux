@@ -76,23 +76,23 @@ static const char *kMessageIDs[] = {
 };
 
 TEST(Messages, GetMessage) {
-  ASSERT_STREQ("English message 1.", GM_("MSG1").c_str());
-  ASSERT_STREQ("English message 2.", GM_("MSG2").c_str());
-  ASSERT_STREQ("English message 3.", GM_("MSG3").c_str());
-  ASSERT_STREQ("MSG4", GM_("MSG4").c_str());
+  ASSERT_STREQ("English message 1.", GM_("MSG1"));
+  ASSERT_STREQ("English message 2.", GM_("MSG2"));
+  ASSERT_STREQ("English message 3.", GM_("MSG3"));
+  ASSERT_STREQ("MSG4", GM_("MSG4"));
 }
 
 TEST(Messages, GetMessageForLocale) {
-  ASSERT_STREQ("English message 1.", GML_("MSG1", "en").c_str());
-  ASSERT_STREQ("English message 1.", GML_("MSG1", "en-US").c_str());
-  ASSERT_STREQ("Chinese message 1.", GML_("MSG1", "zh-CN").c_str());
-  ASSERT_STREQ("Italian message 1.", GML_("MSG1", "it").c_str());
-  ASSERT_STREQ("Italian message 1.", GML_("MSG1", "it-IT").c_str());
-  ASSERT_STREQ("English message 3.", GML_("MSG3", "it-IT").c_str());
-  ASSERT_STREQ("MSG4", GML_("MSG4", "it-IT").c_str());
-  ASSERT_STREQ("English message 1.", GML_("MSG1", "pt-PT").c_str());
-  ASSERT_STREQ("Portuguese message 1.", GML_("MSG1", "pt-BR").c_str());
-  ASSERT_STREQ("English message 1.", GML_("MSG1", "pt").c_str());
+  ASSERT_STREQ("English message 1.", GML_("MSG1", "en"));
+  ASSERT_STREQ("English message 1.", GML_("MSG1", "en-US"));
+  ASSERT_STREQ("Chinese message 1.", GML_("MSG1", "zh-CN"));
+  ASSERT_STREQ("Italian message 1.", GML_("MSG1", "it"));
+  ASSERT_STREQ("Italian message 1.", GML_("MSG1", "it-IT"));
+  ASSERT_STREQ("English message 3.", GML_("MSG3", "it-IT"));
+  ASSERT_STREQ("MSG4", GML_("MSG4", "it-IT"));
+  ASSERT_STREQ("English message 1.", GML_("MSG1", "pt-PT"));
+  ASSERT_STREQ("Portuguese message 1.", GML_("MSG1", "pt-BR"));
+  ASSERT_STREQ("English message 1.", GML_("MSG1", "pt"));
 }
 
 bool EnumerateLocale(const char *locale) {
