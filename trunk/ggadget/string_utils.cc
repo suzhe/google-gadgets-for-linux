@@ -310,6 +310,146 @@ std::string CompressWhiteSpaces(const char *source) {
   return result;
 }
 
+struct StringPair {
+  const char *source;
+  size_t source_size;
+  const char *target;
+  size_t target_size;
+};
+
+static const StringPair kTagsToRemove[] = {
+  { "<script", 7, "</script>",  9 },
+  { "<style", 6, "</style>", 8 },
+  { "<!--", 4, "-->", 3 },
+};
+
+// Only well-known and widely-used entities are supported.
+static const StringPair kEntities[] = {
+  { "&lt", 3, "<", 1 },
+  { "&gt", 3, ">", 1 },
+  { "&amp", 4, "&", 1 },
+  { "&reg", 4, "\xC2\xAE", 2 },
+  { "&quot", 5, "\"", 1 },
+  { "&apos", 5, "\'", 1 },
+  { "&nbsp", 5, " ", 1 },
+  { "&copy", 5, "\xC2\xA9", 2 },
+};
+
+// This function is rather simple and doesn't handle all cases.
+std::string ExtractTextFromHTML(const char *source) {
+  ASSERT(source);
+  std::string result;
+  bool in_space = false;
+  bool in_tag = false;
+  char in_quote = 0;
+  const char *end_tag_to_remove = NULL;
+  size_t end_tag_size = 0;
+
+  while (*source) {
+    char c = *source;
+    const char *to_append = source;
+    size_t append_size = 0;
+    char utf8_buf[6]; // Used to parse numeric entities.
+
+    if (in_quote) {
+      if (c == in_quote)
+        in_quote = 0;
+    } else if (end_tag_to_remove) {
+      if (strncasecmp(source, end_tag_to_remove, end_tag_size) == 0) {
+        source += end_tag_size - 1;
+        end_tag_to_remove = NULL;
+      }
+    } else {
+      switch (c) {
+        case '<':
+          for (size_t i = 0; i < arraysize(kTagsToRemove); i++) {
+            if (strncasecmp(source, kTagsToRemove[i].source,
+                            kTagsToRemove[i].source_size) == 0) {
+              source += kTagsToRemove[i].source_size + 1;
+              end_tag_to_remove = kTagsToRemove[i].target;
+              end_tag_size = kTagsToRemove[i].target_size;
+              break;
+            }
+          }
+          if (!end_tag_to_remove)
+            in_tag = true;
+          break;
+        case '>':
+          if (in_tag) {
+            // Remove the tag and treat it as a space.
+            in_space = true;
+            in_tag = false;
+          } else {
+            append_size = 1;
+          }
+          break;
+        case '"':
+        case '\'':
+          // Quotes outside of tags are treated as normal text.
+          if (in_tag)
+            in_quote = c;
+          break;
+        case '&':
+          for (size_t i = 0; i < arraysize(kEntities); i++) {
+            if (strncmp(source, kEntities[i].source,
+                        kEntities[i].source_size) == 0 &&
+                !isalnum(source[kEntities[i].source_size])) {
+              source += kEntities[i].source_size;
+              if (*source != ';') source--;
+              to_append = kEntities[i].target;
+              append_size = kEntities[i].target_size;
+            }
+          }
+          if (!append_size) {
+            if (source[1] == '#') {
+              // This is a numeric entity.
+              source++;
+              int base = 10;
+              if (source[1] == 'x' || source[1] == 'X') {
+                source++;
+                base = 16;
+              }
+              char *endptr;
+              UTF32Char utf32_char =
+                  static_cast<UTF32Char>(strtol(source + 1, &endptr, base));
+              if (utf32_char) {
+                source = endptr;
+                if (*source != ';') source--;
+                append_size = ConvertCharUTF32ToUTF8(utf32_char, utf8_buf,
+                                                     sizeof(utf8_buf));
+                to_append = utf8_buf;
+              }
+            } else {
+              // Unsupported entity, just leave it in the result.
+              append_size = 1;
+            }
+          }
+          break;
+        default:
+          if (!in_tag)
+            append_size = 1;
+          break;
+      }
+    }
+
+    if (append_size) {
+      ASSERT(to_append);
+      if (append_size == 1 && isspace(*to_append)) {
+        in_space = true;
+      } else {
+        if (in_space) {
+          if (!result.empty())
+            result += ' ';
+          in_space = false;
+        }
+        result.append(to_append, append_size);
+      }
+    }
+    source++;
+  }
+  return result;
+}
+
 bool SimpleMatchXPath(const char *xpath, const char *pattern) {
   ASSERT(xpath && pattern);
   while (*xpath && *pattern) {

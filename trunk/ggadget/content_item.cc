@@ -51,6 +51,7 @@ class ContentItem::Impl {
         source_text_(NULL, view),
         time_text_(NULL, view),
         snippet_text_(NULL, view),
+        display_text_changed_(false),
         layout_(CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS),
         flags_(CONTENT_ITEM_FLAG_NONE),
         x_(0), y_(0), width_(0), height_(0),
@@ -118,12 +119,33 @@ class ContentItem::Impl {
       content_area_->QueueDraw();
   }
 
+  void DisplayTextChanged() {
+    display_text_changed_ = true;
+    QueueDraw();
+  }
+
+  void UpdateDisplayText() {
+    if (display_text_changed_) {
+      if (flags_ & CONTENT_ITEM_FLAG_DISPLAY_AS_IS) {
+        heading_text_.SetText(heading_);
+        source_text_.SetText(source_);
+        snippet_text_.SetText(snippet_);
+      } else {
+        heading_text_.SetText(ExtractTextFromHTML(heading_.c_str()));
+        source_text_.SetText(ExtractTextFromHTML(source_.c_str()));
+        snippet_text_.SetText(ExtractTextFromHTML(snippet_.c_str()));
+      }
+      display_text_changed_ = false;
+    }
+  }
+
   View *view_;
   ContentAreaElement *content_area_;
   ScriptableHolder<ScriptableImage> image_, notifier_image_;
   uint64_t time_created_;
   std::string open_command_, tooltip_, heading_, source_, snippet_;
   TextFrame heading_text_, source_text_, time_text_, snippet_text_;
+  bool display_text_changed_;
   Layout layout_;
   int flags_;
   int x_, y_, width_, height_;
@@ -242,11 +264,8 @@ std::string ContentItem::GetHeading() const {
 }
 
 void ContentItem::SetHeading(const char *heading) {
-  if (AssignIfDiffer(heading, &impl_->heading_)) {
-    // TODO: Strip HTML tags?
-    impl_->heading_text_.SetText(CompressWhiteSpaces(impl_->heading_.c_str()));
-    impl_->QueueDraw();
-  }
+  if (AssignIfDiffer(heading, &impl_->heading_))
+    impl_->DisplayTextChanged();
 }
 
 std::string ContentItem::GetSource() const {
@@ -254,11 +273,8 @@ std::string ContentItem::GetSource() const {
 }
 
 void ContentItem::SetSource(const char *source) {
-  if (AssignIfDiffer(source, &impl_->source_)) {
-    // TODO: Strip HTML tags?
-    impl_->source_text_.SetText(CompressWhiteSpaces(impl_->source_.c_str()));
-    impl_->QueueDraw();
-  }
+  if (AssignIfDiffer(source, &impl_->source_))
+    impl_->DisplayTextChanged();
 }
 
 std::string ContentItem::GetSnippet() const {
@@ -266,11 +282,23 @@ std::string ContentItem::GetSnippet() const {
 }
 
 void ContentItem::SetSnippet(const char *snippet) {
-  if (AssignIfDiffer(snippet, &impl_->snippet_)) {
-    // TODO: Strip HTML tags?
-    impl_->snippet_text_.SetText(CompressWhiteSpaces(impl_->snippet_.c_str()));
-    impl_->QueueDraw();
-  }
+  if (AssignIfDiffer(snippet, &impl_->snippet_))
+    impl_->DisplayTextChanged();
+}
+
+std::string ContentItem::GetDisplayHeading() const {
+  impl_->UpdateDisplayText();
+  return impl_->heading_text_.GetText();
+}
+
+std::string ContentItem::GetDisplaySource() const {
+  impl_->UpdateDisplayText();
+  return impl_->source_text_.GetText();
+}
+
+std::string ContentItem::GetDisplaySnippet() const {
+  impl_->UpdateDisplayText();
+  return impl_->snippet_text_.GetText();
 }
 
 std::string ContentItem::GetOpenCommand() const {
@@ -299,11 +327,13 @@ int ContentItem::GetFlags() const {
 
 void ContentItem::SetFlags(int flags) {
   if (flags != impl_->flags_) {
-    if (flags & CONTENT_ITEM_FLAG_HTML)
-      flags |= CONTENT_ITEM_FLAG_DISPLAY_AS_IS;
+    // We don't think this is necessary to auto set AS_IS flag for HTML.
+    // Sometimes the user may want HTML but not AS_IS.
+    // if (flags & CONTENT_ITEM_FLAG_HTML)
+    //   flags |= CONTENT_ITEM_FLAG_DISPLAY_AS_IS;
     impl_->flags_ = flags;
     impl_->heading_text_.SetBold(flags & CONTENT_ITEM_FLAG_HIGHLIGHTED);
-    impl_->QueueDraw();
+    impl_->DisplayTextChanged();
   }
 }
 
@@ -452,6 +482,8 @@ Connection *ContentItem::ConnectOnDrawItem(
 
 int ContentItem::GetHeight(Gadget::DisplayTarget target,
                            CanvasInterface *canvas, int width) {
+  impl_->UpdateDisplayText();
+
   // Try script handler first.
   if (impl_->on_get_height_signal_.HasActiveConnections()) {
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
@@ -599,8 +631,8 @@ bool ContentItem::OnDetailsView(std::string *title,
     *details_view_data = new DetailsViewData();
     (*details_view_data)->SetContentFromItem(this);
   }
-  if (!title->empty()) {
-    *title = impl_->heading_text_.GetText();
+  if (title->empty()) {
+    *title = GetDisplayHeading();
   }
   if (*flags == ViewInterface::DETAILS_VIEW_FLAG_NONE) {
     if (impl_->flags_ & CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK)

@@ -753,20 +753,22 @@ class FeedbackSlot : public Slot1<void, const char *> {
 
 bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
   if (impl_->mouse_over_item_) {
-    impl_->context_menu_time_ = GetView()->GetCurrentTime();
-    if (impl_->mouse_over_item_->CanOpen()) {
-      menu->AddItem(GM_("OPEN_CONTENT_ITEM"), 0,
-          new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemOpen)));
-    }
-    if (!(impl_->mouse_over_item_->GetFlags() &
-        ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
-      menu->AddItem(GM_("REMOVE_CONTENT_ITEM"), 0,
-          new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemRemove)));
-    }
-    if (impl_->mouse_over_item_->GetFlags() &
-        ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
-      menu->AddItem(GM_("DONT_SHOW_CONTENT_ITEM"), 0,
-          new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemNegativeFeedback)));
+    int item_flags = impl_->mouse_over_item_->GetFlags();
+    if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
+      impl_->context_menu_time_ = GetView()->GetCurrentTime();
+      if (impl_->mouse_over_item_->CanOpen()) {
+        menu->AddItem(GM_("OPEN_CONTENT_ITEM"), 0,
+            new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemOpen)));
+      }
+      if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
+        menu->AddItem(GM_("REMOVE_CONTENT_ITEM"), 0,
+            new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemRemove)));
+      }
+      if (item_flags & ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
+        menu->AddItem(GM_("DONT_SHOW_CONTENT_ITEM"), 0,
+            new FeedbackSlot(this,
+                             NewSlot(impl_, &Impl::OnItemNegativeFeedback)));
+      }
     }
   }
   // To keep compatible with the Windows version, don't show default menu items.

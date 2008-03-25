@@ -146,6 +146,19 @@ TEST(StringUtils, CompressWhiteSpaces) {
   EXPECT_STREQ("A AB ABC", CompressWhiteSpaces("  A     AB     ABC ").c_str());
 }
 
+TEST(StringUtils, ExtractTextFromHTML) {
+  EXPECT_STREQ("", ExtractTextFromHTML("").c_str());
+  EXPECT_STREQ("< > &' \" \xc2\xa9 \xc2\xae<< &unknown;0\xf4\x81\x84\x91\xe2\x80\x89 Text",
+    ExtractTextFromHTML(
+      " <script language=\"javascript\"> some script and may be <tags>\n"
+      " </script>\n"
+      " <!-- some comments <tags> <script> -->\n"
+      " <style>style</style>\n"
+      " <input type='button' value='<tag>'>\n"
+      " &lt; &gt &amp&apos; &nbsp; &nbsp; &quot;<b>&copy;</b>&reg;&lt&lt\n"
+      " &#32;&#x&#&unknown;&#x30;&#x101111;&#x2009;\n\r\t Text ").c_str());
+}
+
 TEST(StringUtils, SimpleMatchXPath) {
   EXPECT_TRUE(SimpleMatchXPath("", ""));
   EXPECT_TRUE(SimpleMatchXPath("a[1]", "a"));
