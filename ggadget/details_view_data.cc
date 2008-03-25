@@ -98,13 +98,14 @@ void DetailsViewData::SetContent(const char *source,
 void DetailsViewData::SetContentFromItem(ContentItem *item) {
   if (item) {
     int flags = item->GetFlags();
-    impl_->source_ = item->GetSource();
+    impl_->source_ = item->GetDisplaySource();
     impl_->time_created_ = item->GetTimeCreated();
-    impl_->text_ = item->GetSnippet();
     impl_->layout_ = item->GetLayout();
     impl_->time_absolute_ =
         (flags & ContentItem::CONTENT_ITEM_FLAG_TIME_ABSOLUTE);
     impl_->is_html_ = (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HTML);
+    impl_->text_ = impl_->is_html_ ?
+                   item->GetSnippet() : item->GetDisplaySnippet();
     impl_->is_view_ = false;
   }
 }

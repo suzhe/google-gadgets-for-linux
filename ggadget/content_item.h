@@ -82,8 +82,8 @@ class ContentItem : public ScriptableHelperDefault {
     /**
      * The @c snippet property of the content item contains HTML text that
      * should be interpreted. Use this flag to make the content in the details
-     * view be formatted as HTML. Setting this flag implicitly sets the
-     * @c CONTENT_ITEM_FLAG_DISPLAY_AS_IS flag.
+     * view be formatted as HTML. (GDWin: Setting this flag implicitly sets
+     * the @c CONTENT_ITEM_FLAG_DISPLAY_AS_IS flag.)
      */
     CONTENT_ITEM_FLAG_HTML              = 0x0800,
     /* Hide content items while still having them in the data structures. */
@@ -144,6 +144,15 @@ class ContentItem : public ScriptableHelperDefault {
   void SetSnippet(const char *snippet);
 
   /**
+   * Gets the displayed heading, source and snippet. The displayed text
+   * may be different from the original text when the
+   * @c CONTENT_ITEM_FLAG_DISPLAY_AS_IS flag is not set.
+   */
+  std::string GetDisplayHeading() const;
+  std::string GetDisplaySource() const;
+  std::string GetDisplaySnippet() const;
+
+  /**
    * Gets and sets the URL/file path opened when the user opens/double clicks
    * the item.
    */
@@ -161,7 +170,7 @@ class ContentItem : public ScriptableHelperDefault {
   int GetFlags() const;
   void SetFlags(int flags);
 
-  /** Gets and sets the tooltip text, such as full path, full headlines, etc. */
+  /** Gets and sets the tooltip text, such as full headlines, etc. */
   std::string GetTooltip() const;
   void SetTooltip(const char *tooltip);
 

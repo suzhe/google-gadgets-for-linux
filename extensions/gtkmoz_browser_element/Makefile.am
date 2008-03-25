@@ -53,7 +53,8 @@ gtkmoz_browser_child_SOURCES= browser_child.cc \
 			      ../smjs_script_runtime/json.cc \
 			      ../../ggadget/digest_utils.cc \
 			      ../../ggadget/logger.cc \
-			      ../../ggadget/string_utils.cc
+			      ../../ggadget/string_utils.cc \
+			      ../../ggadget/unicode_utils.cc
 
 gtkmoz_browser_child_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
 				  -Wno-non-virtual-dtor \

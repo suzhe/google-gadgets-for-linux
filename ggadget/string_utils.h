@@ -175,6 +175,13 @@ bool SplitString(const std::string &source, const std::string &separator,
 std::string CompressWhiteSpaces(const char *source);
 
 /**
+ * Removes tags and converts entities to their utf8 representation.
+ * If everything is removed, this will return an empty string.
+ * Whitespaces are compressed as in @c CompressWhiteSpaces().
+ */
+std::string ExtractTextFromHTML(const char *source);
+
+/**
  * Matches an XPath string against an XPath pattern, and returns whether
  * matches. This function only supports simple xpath grammar, containing only
  * element tag name, element index (not allowed in pattern) and attribute
