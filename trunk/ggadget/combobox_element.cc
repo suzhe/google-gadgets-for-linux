@@ -313,8 +313,8 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
     // drawn correctly. In this case the stored canvas cache of this item will
     // be used.
     if (item && GetView()->IsElementInClipRegion(item)) {
-      unsigned px_height = static_cast<unsigned>(ceil(impl_->item_pixel_height_));
-      unsigned px_width = static_cast<unsigned>(ceil(elem_width));
+      size_t px_height = static_cast<size_t>(ceil(impl_->item_pixel_height_));
+      size_t px_width = static_cast<size_t>(ceil(elem_width));
       if (!impl_->item_cache_ ||
           impl_->item_cache_->GetWidth() != px_width ||
           impl_->item_cache_->GetHeight() != px_height) {
@@ -739,6 +739,7 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
 }
 
 void ComboBoxElement::OnPopupOff() {
+  QueueDraw();
   impl_->listbox_->SetVisible(false);
 }
 
