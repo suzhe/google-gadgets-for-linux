@@ -85,8 +85,8 @@ class EditElementBase : public ScrollingElement {
   virtual void SetPasswordChar(const char *passwordChar) = 0;
 
   /** Gets and sets the text size in points. */
-  virtual int GetSize() const = 0;
-  virtual void SetSize(int size) = 0;
+  virtual double GetSize() const = 0;
+  virtual void SetSize(double size) = 0;
 
   /** Gets and sets whether the text is struke-out. */
   virtual bool IsStrikeout() const = 0;

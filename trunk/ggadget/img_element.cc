@@ -67,7 +67,8 @@ class ImgElement::Impl {
   }
 
   ImageInterface *image_, *color_multiplied_image_;
-  size_t src_width_, src_height_;
+  double src_width_;
+  double src_height_;
   CropMaintainAspect crop_;
   std::string color_multiply_;
   bool stretch_middle_;
@@ -164,9 +165,9 @@ void ImgElement::DoDraw(CanvasInterface *canvas) {
         image->StretchDraw(canvas, 0, 0, pxwidth, pxheight);
       }
     } else {
-      size_t imgw = image->GetWidth();
-      size_t imgh = image->GetHeight();
-      if (imgw == 0 || imgh == 0) {
+      double imgw = image->GetWidth();
+      double imgh = image->GetHeight();
+      if (imgw <= 0 || imgh <= 0) {
         return;
       }
 
@@ -237,11 +238,11 @@ void ImgElement::SetStretchMiddle(bool stretch_middle) {
   }
 }
 
-size_t ImgElement::GetSrcWidth() const {
+double ImgElement::GetSrcWidth() const {
   return impl_->src_width_;
 }
 
-size_t ImgElement::GetSrcHeight() const {
+double ImgElement::GetSrcHeight() const {
   return impl_->src_height_;
 }
 
@@ -250,7 +251,7 @@ void ImgElement::GetDefaultSize(double *width, double *height) const {
   *height = impl_->src_height_;
 }
 
-void ImgElement::SetSrcSize(size_t width, size_t height) {
+void ImgElement::SetSrcSize(double width, double height) {
   // Because image data may shared among elements, we don't think this method
   // is useful, because we may require more memory to store the new resized
   // canvas.

@@ -280,8 +280,8 @@ class Elements::Impl {
       }
     } else if (owner_) {
       // If not scrollable, the canvas size is the same as the parent.
-      width_ = static_cast<size_t>(ceil(owner_->GetPixelWidth()));
-      height_ = static_cast<size_t>(ceil(owner_->GetPixelHeight()));
+      width_ = owner_->GetPixelWidth();
+      height_ = owner_->GetPixelHeight();
     } else {
       width_ = view_->GetWidth();
       height_ = view_->GetHeight();

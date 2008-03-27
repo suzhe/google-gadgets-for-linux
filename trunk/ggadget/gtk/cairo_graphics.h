@@ -44,12 +44,12 @@ class CairoGraphics : public GraphicsInterface {
   void OnImageDelete(const std::string &tag, bool is_mask) const;
 
  public:
-  virtual CanvasInterface *NewCanvas(size_t w, size_t h) const;
+  virtual CanvasInterface *NewCanvas(double w, double h) const;
 
   virtual ImageInterface *NewImage(const char *tag, const std::string &data,
                                    bool is_mask) const;
 
-  virtual FontInterface *NewFont(const char *family, size_t pt_size,
+  virtual FontInterface *NewFont(const char *family, double pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 

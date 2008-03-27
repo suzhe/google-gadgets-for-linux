@@ -24,7 +24,7 @@ class ImageInterface;
 
 /**
  * Draw the specified area in the source canvas on the destination canvas.
- * The source will be zoomed if necessary. 
+ * The source will be zoomed if necessary.
  */
 void DrawCanvasArea(const CanvasInterface *src, double src_x, double src_y,
                     double src_width, double src_height,

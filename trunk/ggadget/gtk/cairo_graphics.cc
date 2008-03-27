@@ -86,8 +86,8 @@ Connection *CairoGraphics::ConnectOnZoom(Slot1<void, double> *slot) const {
   return impl_->on_zoom_signal_.Connect(slot);
 }
 
-CanvasInterface *CairoGraphics::NewCanvas(size_t w, size_t h) const {
-  if (!w || !h) return NULL;
+CanvasInterface *CairoGraphics::NewCanvas(double w, double h) const {
+  if (w <= 0 || h <= 0) return NULL;
 
   CairoCanvas *canvas = new CairoCanvas(this, w, h, CAIRO_FORMAT_ARGB32);
   if (!canvas->IsValid()) {
@@ -164,7 +164,7 @@ void CairoGraphics::OnImageDelete(const std::string &tag, bool is_mask) const {
   image_map->erase(tag);
 }
 
-FontInterface *CairoGraphics::NewFont(const char *family, size_t pt_size,
+FontInterface *CairoGraphics::NewFont(const char *family, double pt_size,
                                       FontInterface::Style style,
                                       FontInterface::Weight weight) const {
   PangoFontDescription *font = pango_font_description_new();

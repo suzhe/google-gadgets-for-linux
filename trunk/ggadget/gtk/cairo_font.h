@@ -34,13 +34,13 @@ class CairoFont : public FontInterface {
    * Constructor for CairoFont. Takes a PangoFontDescription object and its
    * ownership. Will free the PangoFontDescription object on destruction.
    */
-  CairoFont(PangoFontDescription *font, size_t size, Style style,
+  CairoFont(PangoFontDescription *font, double size, Style style,
             Weight weight);
   virtual ~CairoFont();
 
   virtual Style GetStyle() const { return style_; };
   virtual Weight GetWeight() const { return weight_; };
-  virtual size_t GetPointSize() const { return size_; };
+  virtual double GetPointSize() const { return size_; };
 
   virtual void Destroy() { delete this; };
 
@@ -48,7 +48,7 @@ class CairoFont : public FontInterface {
 
  private:
   PangoFontDescription *font_;
-  size_t size_;
+  double size_;
   Style style_;
   Weight weight_;
 };

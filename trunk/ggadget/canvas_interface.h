@@ -90,12 +90,12 @@ class CanvasInterface {
   /**
    * @return The width of the canvas in pixels.
    */
-  virtual size_t GetWidth() const = 0;
+  virtual double GetWidth() const = 0;
 
   /**
    * @return The height of the canvas in pixels.
    */
-  virtual size_t GetHeight() const = 0;
+  virtual double GetHeight() const = 0;
 
   /**
    * Saves the current graphics state in a stack, while not changing the current

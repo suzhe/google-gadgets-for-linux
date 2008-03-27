@@ -130,6 +130,7 @@ int main(int argc, char* argv[]) {
         zoom = strtod(argv[i], NULL);
         if (zoom <= 0)
           zoom = 1.0;
+        DLOG("Use zoom factor %lf", zoom);
       }
       continue;
     }

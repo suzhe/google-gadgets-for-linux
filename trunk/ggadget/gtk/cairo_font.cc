@@ -19,7 +19,7 @@
 namespace ggadget {
 namespace gtk {
 
-CairoFont::CairoFont(PangoFontDescription *font, size_t size, Style style,
+CairoFont::CairoFont(PangoFontDescription *font, double size, Style style,
                      Weight weight)
   : font_(font), size_(size), style_(style), weight_(weight) {
 }

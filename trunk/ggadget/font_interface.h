@@ -61,7 +61,7 @@ class FontInterface {
   /**
    * @return The size of the font, in points.
    */
-  virtual size_t GetPointSize() const = 0;
+  virtual double GetPointSize() const = 0;
 
   /**
    * Frees the FontInterface object.

@@ -259,8 +259,8 @@ class Rectangle {
 };
 
 /**
- * Returns val if low < val < high, otherwise returns low if val < low or high
- * if val > high.
+ * Returns val if low < val < high, otherwise returns low if val <= low or high
+ * if val >= high.
  */
 template<typename T>
 T Clamp(T val, T low, T high) {

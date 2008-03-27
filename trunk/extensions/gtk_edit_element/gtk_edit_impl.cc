@@ -46,7 +46,7 @@ static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
 static const int kCursorBlinkTimeout = 400;
 static const char *kDefaultFontFamily = "Sans";
-static const int kDefaultFontSize = 10;
+static const double kDefaultFontSize = 10;
 static const double kStrongCursorWidth = 1.2;
 static const double kWeakCursorWidth = 1.0;
 static const Color kStrongCursorColor(0, 0, 0);
@@ -365,14 +365,14 @@ std::string GtkEditImpl::GetFontFamily() {
   return font_family_;
 }
 
-void GtkEditImpl::SetFontSize(int size) {
+void GtkEditImpl::SetFontSize(double size) {
   if (font_size_ != size) {
     font_size_ = size;
     QueueRefresh(true);
   }
 }
 
-int GtkEditImpl::GetFontSize() {
+double GtkEditImpl::GetFontSize() {
   return font_size_;
 }
 

@@ -50,10 +50,10 @@ class ImgElement : public BasicElement {
   void SetSrc(const Variant &src);
 
   /** Gets the original width of the image being displayed. */
-  size_t GetSrcWidth() const;
+  double GetSrcWidth() const;
 
   /** Gets the original height of the image being displayed. */
-  size_t GetSrcHeight() const;
+  double GetSrcHeight() const;
 
   /** Gets and sets the colorMultiply property of the image. */
   std::string GetColorMultiply() const;
@@ -77,7 +77,7 @@ class ImgElement : public BasicElement {
    * using this method to resize the image to the output size will save
    * memory and improve rendering performance.
    */
-  void SetSrcSize(size_t width, size_t height);
+  void SetSrcSize(double width, double height);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

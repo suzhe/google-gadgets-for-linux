@@ -74,8 +74,8 @@ class RsvgImage::Impl {
     }
   }
 
-  size_t width_;
-  size_t height_;
+  double width_;
+  double height_;
   RsvgHandle *rsvg_;
   CairoCanvas *canvas_;
   double zoom_;
@@ -137,11 +137,11 @@ void RsvgImage::StretchDraw(CanvasInterface *canvas,
   }
 }
 
-size_t RsvgImage::GetWidth() const {
+double RsvgImage::GetWidth() const {
   return impl_->width_;
 }
 
-size_t RsvgImage::GetHeight() const {
+double RsvgImage::GetHeight() const {
   return impl_->height_;
 }
 

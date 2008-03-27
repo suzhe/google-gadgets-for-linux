@@ -224,9 +224,8 @@ class BasicElement::Impl {
 
   // Sets the opacity of the element.
   void SetIntOpacity(int opacity) {
-    if (0 <= opacity && 255 >= opacity) {
-      SetOpacity(opacity / 255.);
-    }
+    opacity = Clamp(opacity, 0, 255);
+    SetOpacity(opacity / 255.0);
   }
 
   double GetParentWidth() const {
@@ -500,8 +499,7 @@ class BasicElement::Impl {
                           (opacity_ != 1.0 && children_ &&
                            children_->GetCount());
       if (indirect_draw) {
-        target = view_->GetGraphics()->NewCanvas(size_t(ceil(width)),
-                                                 size_t(ceil(height)));
+        target = view_->GetGraphics()->NewCanvas(width, height);
       }
 
       canvas->PushState();
@@ -1619,6 +1617,7 @@ Variant BasicElement::GetPixelOrRelative(bool is_relative,
     snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(relative * 100));
     return Variant(std::string(buf));
   } else {
+    // FIXME: Is it necessary to do round here?
     return Variant(static_cast<int>(round(pixel)));
   }
 }

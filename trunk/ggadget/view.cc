@@ -660,7 +660,7 @@ class View::Impl {
     return scriptable_event.GetReturnValue();
   }
 
-  void SetSize(int width, int height) {
+  void SetSize(double width, double height) {
     if (width != width_ || height != height_) {
       // Invalidate the canvas cache.
       if (enable_cache_ && canvas_cache_) {
@@ -680,15 +680,15 @@ class View::Impl {
     }
   }
 
-  void ResizeBy(int width, int height) {
+  void ResizeBy(double width, double height) {
     SetSize(width_ + width, height_ + height);
   }
 
-  int GetWidth() {
+  double GetWidth() {
     return width_;
   }
 
-  int GetHeight() {
+  double GetHeight() {
     return height_;
   }
 
@@ -743,8 +743,25 @@ class View::Impl {
 
     // No need to draw children if there is a popup element and it's fully
     // opaque and the clip region is inside its extents.
-    if (!popup_element_.Get() || !popup_element_.Get()->IsFullyOpaque() ||
-        !clip_region_.IsInside(popup_element_.Get()->GetExtentsInView()))
+    // If the popup element has non-horizontal/vertical orientation,
+    // then the region of the popup element may not cover the whole clip
+    // region. In this case it's not safe to skip drawing other children.
+    bool skip_children = false;
+    if (popup_element_.Get() && popup_element_.Get()->IsFullyOpaque() &&
+        clip_region_.IsInside(popup_element_.Get()->GetExtentsInView())) {
+      double rotation = 0;
+      BasicElement *e = popup_element_.Get();
+      for (; e != NULL; e = e->GetParentElement()) {
+        rotation += e->GetRotation();
+      }
+      if (fmod(rotation, 90) == 0) {
+        skip_children = true;
+      } else {
+        DLOG("The popup element has non-horizontal/vertical orientation.");
+      }
+    }
+
+    if (!skip_children)
       children_.Draw(target);
 
     if (popup_element_.Get()) {
@@ -804,33 +821,31 @@ class View::Impl {
     return result;
   }
 
-  bool OnSizing(int *width, int *height) {
+  bool OnSizing(double *width, double *height) {
     ASSERT(width);
     ASSERT(height);
 
-    double dw = *width;
-    double dh = *height;
-
-    SizingEvent event(dw, dh);
+    SizingEvent event(*width, *height);
     ScriptableEvent scriptable_event(&event, NULL, &event);
 
     FireEvent(&scriptable_event, onsizing_event_);
     bool result = (scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED);
 
-    DLOG("onsizing view %s, request: %d x %d, actual: %lf x %lf",
+    DLOG("onsizing view %s, request: %lf x %lf, actual: %lf x %lf",
          (result ? "accepted" : "cancelled"),
          *width, *height, event.GetWidth(), event.GetHeight());
 
     if (result) {
-      *width = static_cast<int>(ceil(event.GetWidth()));
-      *height = static_cast<int>(ceil(event.GetHeight()));
+      *width = event.GetWidth();
+      *height = event.GetHeight();
     }
 
     return result;
   }
 
   void FireEventSlot(ScriptableEvent *event, const Slot *slot) {
-    ASSERT(event && slot);
+    ASSERT(event);
+    ASSERT(slot);
     event->SetReturnValue(EVENT_RESULT_HANDLED);
     event_stack_.push_back(event);
     slot->Call(0, NULL);
@@ -975,6 +990,11 @@ class View::Impl {
 
   int BeginAnimation(Slot *slot, int start_value, int end_value,
                      unsigned int duration) {
+    if (!slot) {
+      LOG("Invalid slot for animation.");
+      return 0;
+    }
+
     uint64_t current_time = main_loop_->GetCurrentTime();
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, start_value, end_value,
@@ -985,6 +1005,11 @@ class View::Impl {
   }
 
   int SetTimeout(Slot *slot, unsigned int duration) {
+    if (!slot) {
+      LOG("Invalid slot for timeout.");
+      return 0;
+    }
+
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, 0, 0, 0, 0, true);
     int id = main_loop_->AddTimeoutWatch(duration, watch);
@@ -993,6 +1018,11 @@ class View::Impl {
   }
 
   int SetInterval(Slot *slot, unsigned int duration) {
+    if (!slot) {
+      LOG("Invalid slot for interval.");
+      return 0;
+    }
+
     TimerWatchCallback *watch =
         new TimerWatchCallback(this, slot, 0, 0, -1, 0, true);
     int id = main_loop_->AddTimeoutWatch(duration, watch);
@@ -1001,7 +1031,8 @@ class View::Impl {
   }
 
   void RemoveTimer(int token) {
-    main_loop_->RemoveWatch(token);
+    if (token > 0)
+      main_loop_->RemoveWatch(token);
   }
 
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
@@ -1134,8 +1165,8 @@ class View::Impl {
   std::vector<ScriptableEvent *> event_stack_;
 
   EventResult dragover_result_;
-  int width_;
-  int height_;
+  double width_;
+  double height_;
   ResizableMode resizable_;
   std::string caption_;
   bool show_caption_always_;
@@ -1188,23 +1219,23 @@ void View::RegisterProperties(RegisterableInterface *obj) const {
   impl_->RegisterProperties(obj);
 }
 
-void View::SetWidth(int width) {
+void View::SetWidth(double width) {
   impl_->SetSize(width, impl_->height_);
 }
 
-void View::SetHeight(int height) {
+void View::SetHeight(double height) {
   impl_->SetSize(impl_->width_, height);
 }
 
-void View::SetSize(int width, int height) {
+void View::SetSize(double width, double height) {
   impl_->SetSize(width, height);
 }
 
-int View::GetWidth() const {
+double View::GetWidth() const {
   return impl_->width_;
 }
 
-int View::GetHeight() const {
+double View::GetHeight() const {
   return impl_->height_;
 }
 
@@ -1270,7 +1301,7 @@ bool View::OnAddContextMenuItems(MenuInterface *menu) {
   return impl_->OnAddContextMenuItems(menu);
 }
 
-bool View::OnSizing(int *width, int *height) {
+bool View::OnSizing(double *width, double *height) {
   return impl_->OnSizing(width, height);
 }
 
