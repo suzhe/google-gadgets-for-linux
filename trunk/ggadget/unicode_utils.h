@@ -295,6 +295,57 @@ bool DetectUTFEncoding(const std::string &stream, std::string *encoding);
 bool DetectAndConvertStreamToUTF8(const std::string &stream,
                                   std::string *result, std::string *encoding);
 
+/**
+ * Converts a locale string to a UTF16 string, depending on the LC_CTYPE
+ * category of the current locale.
+ *
+ * @param input a NULL-terminated locale string.
+ * @param[out] result the converted result.
+ * @return @c true if succeeds.
+ */
+bool ConvertLocaleStringToUTF16(const char *input, UTF16String *result);
+
+/**
+ * Converts a UTF16 string to a locale string, depending on the LC_CTYPE
+ * category of the current locale.
+ *
+ * @param input a NULL-terminated UTF16 string.
+ * @param[out] result the converted result.
+ * @return @c true if succeeds.
+ */
+bool ConvertUTF16ToLocaleString(const UTF16Char *input, std::string *result);
+
+/**
+ * Converts a locale string to a UTF8 string, depending on the LC_CTYPE
+ * category of the current locale.
+ *
+ * @param input a NULL-terminated locale string.
+ * @param[out] result the converted result.
+ * @return @c true if succeeds.
+ */
+bool ConvertLocaleStringToUTF8(const char *input, std::string *result);
+
+/**
+ * Converts a UTF8 string to a locale string, depending on the LC_CTYPE
+ * category of the current locale.
+ *
+ * @param input a NULL-terminated UTF16 string.
+ * @param[out] result the converted result.
+ * @return @c true if succeeds.
+ */
+bool ConvertUTF8ToLocaleString(const char *input, std::string *result);
+
+/**
+ * Compares two locale strings, depending on the LC_COLLATE category of the
+ * current locale.
+ *
+ * @param s1 the first input locale string.
+ * @param s2 the second input locale string.
+ * @return an integer less than, equal to, or greater than zero if @a s1 is
+ *     less than, equals, or is greater than @a s2.
+ */
+int CompareLocaleStrings(const char *s1, const char *s2);
+
 } // namespace ggadget
 
 #endif // GGADGET_UNICODE_UTILS_H__

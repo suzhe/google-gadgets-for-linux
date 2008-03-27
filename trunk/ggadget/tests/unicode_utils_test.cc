@@ -319,6 +319,55 @@ TEST(UnicodeUtils, DetectAndConvertStreamToUTF8) {
   EXPECT_STREQ("ISO8859-1", encoding.c_str());
 }
 
+TEST(UnicodeUtils, ConvertLocaleStringToUTF16) {
+  UTF16String result;
+  EXPECT_TRUE(ConvertLocaleStringToUTF16("", &result));
+  EXPECT_TRUE(UTF16String() == result);
+  UTF16Char expected[] = { 'a', 'b', 'c', 'd', 0 };
+  EXPECT_TRUE(ConvertLocaleStringToUTF16("abcd", &result));
+  EXPECT_TRUE(UTF16String(expected) == result);
+  // TODO: Test locale-specific features.
+}
+
+TEST(UnicodeUtils, ConvertLocaleStringToUTF8) {
+  std::string result;
+  EXPECT_TRUE(ConvertLocaleStringToUTF8("", &result));
+  EXPECT_EQ(std::string(), result);
+  EXPECT_TRUE(ConvertLocaleStringToUTF8("abcd", &result));
+  EXPECT_EQ(std::string("abcd"), result);
+  // TODO: Test locale-specific features.
+}
+
+TEST(UnicodeUtils, ConvertUTF16ToLocaleString) {
+  UTF16Char input[] = { 0 };
+  std::string result;
+  EXPECT_TRUE(ConvertUTF16ToLocaleString(input, &result));
+  EXPECT_EQ(std::string(), result);
+  UTF16Char input1[] = { 'a', 'b', 'c', 'd', 0 };
+  EXPECT_TRUE(ConvertUTF16ToLocaleString(input1, &result));
+  EXPECT_EQ("abcd", result);
+  // TODO: Test locale-specific features.
+}
+
+TEST(UnicodeUtils, ConvertUTF8ToLocaleString) {
+  std::string result;
+  EXPECT_TRUE(ConvertUTF8ToLocaleString("", &result));
+  EXPECT_EQ(std::string(), result);
+  EXPECT_TRUE(ConvertUTF8ToLocaleString("abcd", &result));
+  EXPECT_EQ("abcd", result);
+  // TODO: Test locale-specific features.
+}
+
+TEST(UnicodeUtils, CompareLocaleStrings) {
+  EXPECT_EQ(0, CompareLocaleStrings("", ""));
+  EXPECT_GT(0, CompareLocaleStrings("", "a"));
+  EXPECT_LT(0, CompareLocaleStrings("a", ""));
+  EXPECT_EQ(0, CompareLocaleStrings("abc", "abc"));
+  EXPECT_GT(0, CompareLocaleStrings("abc", "def"));
+  EXPECT_LT(0, CompareLocaleStrings("def", "abc"));
+  // TODO: Test locale-specific features.
+}
+
 int main(int argc, char **argv) {
   testing::ParseGUnitFlags(&argc, argv);
 
