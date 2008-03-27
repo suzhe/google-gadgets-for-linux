@@ -15,6 +15,7 @@
 */
 
 // This file was written using SpiderMonkey's js.c as a sample.
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -304,6 +305,7 @@ JSBool InitCustomObjects(JSScriptContext *context);
 void DestroyCustomObjects(JSScriptContext *context);
 
 int main(int argc, char *argv[]) {
+  setlocale(LC_ALL, "");
   JSScriptRuntime *runtime = new JSScriptRuntime();
   JSScriptContext *context = ggadget::down_cast<JSScriptContext *>(
       runtime->CreateContext());

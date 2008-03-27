@@ -688,7 +688,9 @@ std::string ContentItem::GetTimeDisplayString(uint64_t time,
     char buffer[20];
     time_t t = time / 1000;
     strftime(buffer, sizeof(buffer), GM_("TIME_FORMAT_SHORT"), localtime(&t));
-    return buffer;
+    std::string utf8;
+    ConvertLocaleStringToUTF8(buffer, &utf8);
+    return utf8;
   }
 
   uint64_t time_diff = 0;
@@ -700,7 +702,9 @@ std::string ContentItem::GetTimeDisplayString(uint64_t time,
     char buffer[20];
     time_t t = static_cast<time_t>(time / 1000);
     strftime(buffer, sizeof(buffer), GM_("DATE_FORMAT_SHORT"), localtime(&t));
-    return buffer;
+    std::string utf8;
+    ConvertLocaleStringToUTF8(buffer, &utf8);
+    return utf8;
   }
 
   if (time_diff >= kMsPerDay) {

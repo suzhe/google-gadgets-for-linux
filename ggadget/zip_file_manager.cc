@@ -107,6 +107,7 @@ class ZipFileManager::Impl {
       }
       AddReadMeFileInZip(zip_handle);
     } else {
+      LOG("Failed to open zip file %s: %s", path.c_str(), strerror(errno));
       return false;
     }
 

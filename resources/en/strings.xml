@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <strings>
-<!-- Short absolute time format (strftime() format) like '10:24am'.
- Can be the same as TIME_FORMAT_LONG in most cases. -->
+<!-- Short absolute time format (strftime() format) like '10:24am'. -->
 <TIME_FORMAT_SHORT>%I:%M%P</TIME_FORMAT_SHORT>
 <!-- Short absolute date format (strftime() format) like 'Mar 20'. -->
 <DATE_FORMAT_SHORT>%b %d</DATE_FORMAT_SHORT>

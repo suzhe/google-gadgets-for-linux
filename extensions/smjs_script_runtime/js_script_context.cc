@@ -27,11 +27,53 @@
 namespace ggadget {
 namespace smjs {
 
+static JSBool LocaleCompare(JSContext *cx, JSString *s1, JSString *s2,
+                            jsval *rval) {
+  if (!s1 || !s2)
+    return JS_FALSE;
+
+  jschar *chars1 = JS_GetStringChars(s1);
+  jschar *chars2 = JS_GetStringChars(s2);
+  if (!chars1 || !chars2)
+    return JS_FALSE;
+
+  std::string locale_s1, locale_s2;
+  if (!ConvertUTF16ToLocaleString(chars1, &locale_s1) ||
+      !ConvertUTF16ToLocaleString(chars2, &locale_s2)) {
+    JS_ReportError(cx, "Failed to convert strings to locale strings");
+    return JS_FALSE;
+  }
+
+  *rval = INT_TO_JSVAL(CompareLocaleStrings(locale_s1.c_str(),
+                                            locale_s2.c_str()));
+  return JS_TRUE;
+}
+
+static JSBool LocaleToUnicode(JSContext *cx, char *src, jsval *rval) {
+  UTF16String utf16;
+  if (ConvertLocaleStringToUTF16(src, &utf16)) {
+    JSString *js_str = JS_NewUCStringCopyN(cx, utf16.c_str(), utf16.size());
+    if (js_str) {
+      *rval = STRING_TO_JSVAL(js_str);
+      return JS_TRUE;
+    }
+  }
+  JS_ReportError(cx, "Failed to convert locale string '%s' to unicode", src);
+  return JS_FALSE;
+}
+
+static JSLocaleCallbacks gLocaleCallbacks = {
+  // SpiderMonkey's upper/lower convertions conform to the Unicode standard.
+  NULL, NULL,
+  LocaleCompare, LocaleToUnicode,
+};
+
 JSScriptContext::JSScriptContext(JSScriptRuntime *runtime, JSContext *context)
     : runtime_(runtime),
       context_(context),
       lineno_(0) {
   JS_SetContextPrivate(context_, this);
+  JS_SetLocaleCallbacks(context_, &gLocaleCallbacks);
   // JS_SetOptions(context_, JS_GetOptions(context_) | JSOPTION_STRICT);
 }
 
