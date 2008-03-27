@@ -145,6 +145,8 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ButtonPressHandler(GtkWidget *widget, GdkEventButton *event,
                                      gpointer user_data) {
+    DLOG("Button press %d", event->button);
+
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
 
@@ -204,6 +206,8 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ButtonReleaseHandler(GtkWidget *widget, GdkEventButton *event,
                                        gpointer user_data) {
+    DLOG("Button release %d", event->button);
+
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
@@ -408,61 +412,40 @@ class ViewWidgetBinder::Impl {
       // Ignore the result of this fake event.
       impl->view_->OnMouseEvent(e);
 
-      GtkWidget *window = gtk_widget_get_toplevel(widget);
       ViewInterface::HitTest hittest = impl->mouse_down_hittest_;
-      if (GTK_IS_WINDOW(window)) {
-        bool resize_drag = true;
-        GdkWindowEdge edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+      bool resize_drag = false;
+      // Determine the resize drag edge.
+      if (hittest == ViewInterface::HT_LEFT ||
+          hittest == ViewInterface::HT_RIGHT ||
+          hittest == ViewInterface::HT_TOP ||
+          hittest == ViewInterface::HT_BOTTOM ||
+          hittest == ViewInterface::HT_TOPLEFT ||
+          hittest == ViewInterface::HT_TOPRIGHT ||
+          hittest == ViewInterface::HT_BOTTOMLEFT ||
+          hittest == ViewInterface::HT_BOTTOMRIGHT) {
+        resize_drag = true;
+      } else if (mod & Event::MOD_CONTROL) {
+        // If ctrl is holding, then emulate resize draging.
+        // Only for testing purpose. Shall be removed later.
+        resize_drag = true;
+        gint x = static_cast<int>(event->x);
+        gint y = static_cast<int>(event->y);
+        gint mid_x = impl->current_widget_width_ / 2;
+        gint mid_y = impl->current_widget_height_ / 2;
+        if (x < mid_x && y < mid_y)
+          hittest = ViewInterface::HT_TOPLEFT;
+        else if (x > mid_x && y < mid_y)
+          hittest = ViewInterface::HT_TOPRIGHT;
+        else if (x < mid_x && y > mid_y)
+          hittest = ViewInterface::HT_BOTTOMLEFT;
+        else
+          hittest = ViewInterface::HT_BOTTOMRIGHT;
+      }
 
-        // Determine the resize drag edge.
-        if (hittest == ViewInterface::HT_LEFT) {
-          edge = GDK_WINDOW_EDGE_WEST;
-        } else if (hittest == ViewInterface::HT_RIGHT) {
-          edge = GDK_WINDOW_EDGE_EAST;
-        } else if (hittest == ViewInterface::HT_TOP) {
-          edge = GDK_WINDOW_EDGE_NORTH;
-        } else if (hittest == ViewInterface::HT_BOTTOM) {
-          edge = GDK_WINDOW_EDGE_SOUTH;
-        } else if (hittest == ViewInterface::HT_TOPLEFT) {
-          edge = GDK_WINDOW_EDGE_NORTH_WEST;
-        } else if (hittest == ViewInterface::HT_TOPRIGHT) {
-          edge = GDK_WINDOW_EDGE_NORTH_EAST;
-        } else if (hittest == ViewInterface::HT_BOTTOMLEFT) {
-          edge = GDK_WINDOW_EDGE_SOUTH_WEST;
-        } else if (hittest == ViewInterface::HT_BOTTOMRIGHT) {
-          edge = GDK_WINDOW_EDGE_SOUTH_EAST;
-        } else {
-          resize_drag = false;
-          // If ctrl is holding, then emulate resize draging.
-          // Only for testing purpose. Shall be removed later.
-          gint x = static_cast<int>(event->x);
-          gint y = static_cast<int>(event->y);
-          gint mid_x = impl->current_widget_width_ / 2;
-          gint mid_y = impl->current_widget_height_ / 2;
-          GdkWindowEdge edge = GDK_WINDOW_EDGE_SOUTH_EAST;
-          if (x < mid_x && y < mid_y)
-            edge = GDK_WINDOW_EDGE_NORTH_WEST;
-          else if (x > mid_x && y < mid_y)
-            edge = GDK_WINDOW_EDGE_NORTH_EAST;
-          else if (x < mid_x && y > mid_y)
-            edge = GDK_WINDOW_EDGE_SOUTH_WEST;
-
-        }
-
-        int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
-                          button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
-        gint x_root = static_cast<int>(event->x_root);
-        gint y_root = static_cast<int>(event->y_root);
-        if (mod == 0 && !resize_drag) {
-          gtk_window_begin_move_drag(GTK_WINDOW(window), gtk_button,
-                                     x_root, y_root, event->time);
-        } else if (((mod & Event::MOD_CONTROL) | resize_drag) &&
-                   gtk_window_get_resizable(GTK_WINDOW(window))) {
-          gtk_window_begin_resize_drag(GTK_WINDOW(window), edge, gtk_button,
-                                       x_root, y_root, event->time);
-        }
+      if (resize_drag) {
+        impl->host_->BeginResizeDrag(button, hittest);
       } else {
-        DLOG("Gadget is not inside toplevel window.");
+        impl->host_->BeginMoveDrag(button);
       }
 
       impl->mouse_down_x_ = -1;
@@ -678,12 +661,12 @@ class ViewWidgetBinder::Impl {
 
     ViewInterface::ResizableMode mode = impl->view_->GetResizable();
     if (mode == ViewInterface::RESIZABLE_TRUE) {
-      int width = static_cast<int>(ceil(widget_width / impl->zoom_));
-      int height = static_cast<int>(ceil(widget_height / impl->zoom_));
+      double width = ceil(widget_width / impl->zoom_);
+      double height = ceil(widget_height / impl->zoom_);
       if (width != impl->view_->GetWidth() ||
           height != impl->view_->GetHeight()) {
         if (impl->view_->OnSizing(&width, &height)) {
-          DLOG("Resize View to: %d %d", width, height);
+          DLOG("Resize View to: %lf %lf", width, height);
           impl->view_->SetSize(width, height);
         } else {
           // If failed to resize the view, then send a window resize request to
@@ -692,13 +675,11 @@ class ViewWidgetBinder::Impl {
         }
       }
     } else if (mode == ViewInterface::RESIZABLE_ZOOM) {
-      int width = impl->view_->GetWidth();
-      int height = impl->view_->GetHeight();
+      double width = impl->view_->GetWidth();
+      double height = impl->view_->GetHeight();
       if (width && height) {
-        double xzoom =
-            static_cast<double>(widget_width) / width;
-        double yzoom =
-            static_cast<double>(widget_height) / height;
+        double xzoom = widget_width / width;
+        double yzoom = widget_height / height;
         double zoom = std::min(xzoom, yzoom);
         if (zoom != impl->gfx_->GetZoom()) {
           DLOG("Zoom View to: %lf", zoom);

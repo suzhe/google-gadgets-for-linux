@@ -313,15 +313,14 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
     // drawn correctly. In this case the stored canvas cache of this item will
     // be used.
     if (item && GetView()->IsElementInClipRegion(item)) {
-      size_t px_height = static_cast<size_t>(ceil(impl_->item_pixel_height_));
-      size_t px_width = static_cast<size_t>(ceil(elem_width));
       if (!impl_->item_cache_ ||
-          impl_->item_cache_->GetWidth() != px_width ||
-          impl_->item_cache_->GetHeight() != px_height) {
+          impl_->item_cache_->GetHeight() != impl_->item_pixel_height_ ||
+          impl_->item_cache_->GetWidth() != elem_width) {
         if (impl_->item_cache_)
           impl_->item_cache_->Destroy();
         impl_->item_cache_ =
-            GetView()->GetGraphics()->NewCanvas(px_width, px_height);
+            GetView()->GetGraphics()->NewCanvas(elem_width,
+                                                impl_->item_pixel_height_);
       } else {
         impl_->item_cache_->ClearCanvas();
       }
@@ -658,7 +657,7 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
   // exception of mouse wheel events.
   EventResult r = EVENT_RESULT_HANDLED;
   bool oldvalue;
-  size_t button_width =
+  double button_width =
       impl_->button_up_img_ ? impl_->button_up_img_->GetWidth() : 0;
   bool in_button = event.GetY() < impl_->listbox_->GetPixelY() &&
         event.GetX() >= (GetPixelWidth() - button_width);

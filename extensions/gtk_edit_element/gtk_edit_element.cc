@@ -151,11 +151,11 @@ void GtkEditElement::SetPasswordChar(const char *passwordChar) {
   impl_->SetPasswordChar(passwordChar);
 }
 
-int GtkEditElement::GetSize() const {
+double GtkEditElement::GetSize() const {
   return impl_->GetFontSize();
 }
 
-void GtkEditElement::SetSize(int size) {
+void GtkEditElement::SetSize(double size) {
   impl_->SetFontSize(size);
 }
 

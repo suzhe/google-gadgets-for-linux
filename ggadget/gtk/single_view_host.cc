@@ -132,7 +132,7 @@ class SingleViewHost::Impl {
       no_background = true;
       DisableWidgetBackground(window_);
       gtk_widget_set_double_buffered(window_, FALSE);
-      gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), FALSE);
+      gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
     }
     gtk_widget_show(widget_);
 
@@ -325,10 +325,10 @@ class SingleViewHost::Impl {
 
     ViewInterface::ResizableMode mode = view_->GetResizable();
     if (mode == ViewInterface::RESIZABLE_TRUE) {
-      int w, h;
+      double w, h;
       Variant vw = opt->GetInternalValue((opt_prefix + "_width").c_str());
       Variant vh = opt->GetInternalValue((opt_prefix + "_height").c_str());
-      if (vw.ConvertToInt(&w) && vh.ConvertToInt(&h) &&
+      if (vw.ConvertToDouble(&w) && vh.ConvertToDouble(&h) &&
           view_->OnSizing(&w, &h)) {
         view_->SetSize(w, h);
       }
@@ -376,6 +376,60 @@ class SingleViewHost::Impl {
     return false;
   }
 
+  void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {
+    if (!gtk_window_get_resizable(GTK_WINDOW(window_)) ||
+        !GTK_WIDGET_MAPPED(window_))
+      return;
+
+    if (on_resize_drag_signal_(button, hittest))
+      return;
+
+    GdkWindowEdge edge;
+    // Determine the resize drag edge.
+    if (hittest == ViewInterface::HT_LEFT) {
+      edge = GDK_WINDOW_EDGE_WEST;
+    } else if (hittest == ViewInterface::HT_RIGHT) {
+      edge = GDK_WINDOW_EDGE_EAST;
+    } else if (hittest == ViewInterface::HT_TOP) {
+      edge = GDK_WINDOW_EDGE_NORTH;
+    } else if (hittest == ViewInterface::HT_BOTTOM) {
+      edge = GDK_WINDOW_EDGE_SOUTH;
+    } else if (hittest == ViewInterface::HT_TOPLEFT) {
+      edge = GDK_WINDOW_EDGE_NORTH_WEST;
+    } else if (hittest == ViewInterface::HT_TOPRIGHT) {
+      edge = GDK_WINDOW_EDGE_NORTH_EAST;
+    } else if (hittest == ViewInterface::HT_BOTTOMLEFT) {
+      edge = GDK_WINDOW_EDGE_SOUTH_WEST;
+    } else if (hittest == ViewInterface::HT_BOTTOMRIGHT) {
+      edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+    } else {
+      // Unsupported hittest;
+      return;
+    }
+
+    int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
+                      button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
+    gint x, y;
+    gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
+    gtk_window_begin_resize_drag(GTK_WINDOW(window_), edge, gtk_button,
+                                 x, y, gtk_get_current_event_time());
+  }
+
+  void BeginMoveDrag(int button) {
+    if (!GTK_WIDGET_MAPPED(window_))
+      return;
+
+    if (on_move_drag_signal_(button))
+      return;
+
+    int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
+                      button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
+    gint x, y;
+    gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
+    gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
+                               x, y, gtk_get_current_event_time());
+  }
+
   static void WindowShowHandler(GtkWidget *widget, gpointer user_data) {
     DLOG("View window is shown.");
   }
@@ -401,8 +455,7 @@ class SingleViewHost::Impl {
   static gboolean ConfigureHandler(GtkWidget *widget, GdkEventConfigure *event,
                                    gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->win_x_ = event->x;
-    impl->win_y_ = event->y;
+    gtk_window_get_position(GTK_WINDOW(widget), &impl->win_x_, &impl->win_y_);
     return FALSE;
   }
 
@@ -447,8 +500,9 @@ class SingleViewHost::Impl {
   bool remove_on_close_;
   int win_x_;
   int win_y_;
-  int win_width_;
-  int win_height_;
+
+  Signal2<bool, int, int> on_resize_drag_signal_;
+  Signal1<bool, int> on_move_drag_signal_;
 
   static const unsigned int kShowTooltipDelay = 500;
   static const unsigned int kHideTooltipDelay = 4000;
@@ -535,6 +589,15 @@ bool SingleViewHost::ShowContextMenu(int button) {
   return impl_->ShowContextMenu(button);
 }
 
+void SingleViewHost::BeginResizeDrag(int button,
+                                     ViewInterface::HitTest hittest) {
+  impl_->BeginResizeDrag(button, hittest);
+}
+
+void SingleViewHost::BeginMoveDrag(int button) {
+  impl_->BeginMoveDrag(button);
+}
+
 void SingleViewHost::Alert(const char *message) {
   ShowAlertDialog(impl_->view_->GetCaption().c_str(), message);
 }
@@ -555,6 +618,14 @@ ViewInterface::DebugMode SingleViewHost::GetDebugMode() const {
 
 GtkWidget *SingleViewHost::GetToplevelWindow() const {
   return impl_->window_;
+}
+
+Connection *SingleViewHost::ConnectOnResizeDrag(Slot2<bool, int, int> *slot) {
+  return impl_->on_resize_drag_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnMoveDrag(Slot1<bool, int> *slot) {
+  return impl_->on_move_drag_signal_.Connect(slot);
 }
 
 } // namespace gtk

@@ -51,8 +51,8 @@ class GtkEditElement : public EditElementBase {
   virtual void SetMultiline(bool multiline);
   virtual std::string GetPasswordChar() const;
   virtual void SetPasswordChar(const char *passwordChar);
-  virtual int GetSize() const;
-  virtual void SetSize(int size);
+  virtual double GetSize() const;
+  virtual void SetSize(double size);
   virtual bool IsStrikeout() const;
   virtual void SetStrikeout(bool strikeout);
   virtual bool IsUnderline() const;

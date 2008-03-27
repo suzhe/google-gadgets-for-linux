@@ -44,26 +44,26 @@ class CairoCanvas : public CanvasInterface {
   /** Creates a CairoCanvas object which uses the zoom factor of a specified
    * CairoGraphics object.
    */
-  CairoCanvas(const CairoGraphics *graphics, size_t w, size_t h,
+  CairoCanvas(const CairoGraphics *graphics, double w, double h,
               cairo_format_t fmt);
 
   /**
    * Creates a CairoCanvas object which uses a fixed zoom factor.
    */
-  CairoCanvas(double zoom, size_t w, size_t h, cairo_format_t fmt);
+  CairoCanvas(double zoom, double w, double h, cairo_format_t fmt);
 
   /**
    * Creates a CairoCanvas object with specified cairo context and zoom factor.
    * The zoom factor will be applied to the cairo context.
    */
-  CairoCanvas(cairo_t *cr, double zoom, size_t w, size_t h);
+  CairoCanvas(cairo_t *cr, double zoom, double w, double h);
 
   virtual ~CairoCanvas();
 
   virtual void Destroy();
 
-  virtual size_t GetWidth() const;
-  virtual size_t GetHeight() const;
+  virtual double GetWidth() const;
+  virtual double GetHeight() const;
 
   virtual bool PushState();
   virtual bool PopState();
@@ -141,6 +141,9 @@ class CairoCanvas : public CanvasInterface {
 
   /** Checks if the canvas is valid */
   bool IsValid() const;
+
+  /** Get the zoom factor. */
+  double GetZoom() const;
 
  private:
   class Impl;

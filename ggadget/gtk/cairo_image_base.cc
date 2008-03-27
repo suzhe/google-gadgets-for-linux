@@ -121,13 +121,14 @@ class ColorMultipliedImage : public CairoImageBase {
     }
   }
 
-  virtual size_t GetWidth() const { return width_; }
-  virtual size_t GetHeight() const { return height_; }
+  virtual double GetWidth() const { return width_; }
+  virtual double GetHeight() const { return height_; }
   virtual bool IsFullyOpaque() const { return fully_opaque_; }
   virtual bool IsValid() const { return canvas_ != NULL; }
   virtual CanvasInterface *GetCanvas() const { return canvas_; }
 
-  size_t width_, height_;
+  double width_;
+  double height_;
   bool fully_opaque_;
   Color color_multiply_;
   CairoCanvas *canvas_;

@@ -20,9 +20,6 @@ INCLUDES		= -I$(top_builddir) \
 
 noinst_HEADERS		= browser_child.h \
 			  browser_element.h
-			  ../../ggadget/digest_utils.h \
-			  ../../ggadget/logger.h \
-			  ../../ggadget/string_utils.h
 
 extension_LTLIBRARIES	= gtkmoz-browser-element.la
 extensiondir		= $(GGL_MODULE_DIR)

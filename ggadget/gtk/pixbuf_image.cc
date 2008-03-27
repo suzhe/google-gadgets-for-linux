@@ -39,8 +39,10 @@ class PixbufImage::Impl {
     // No zoom for PixbufImage.
     GdkPixbuf *pixbuf = LoadPixbufFromData(data);
     if (pixbuf) {
-      width_ = gdk_pixbuf_get_width(pixbuf);
-      height_ = gdk_pixbuf_get_height(pixbuf);
+      int w = gdk_pixbuf_get_width(pixbuf);
+      int h = gdk_pixbuf_get_height(pixbuf);
+      width_ = w;
+      height_ = h;
       if (is_mask) {
         // clone pixbuf with alpha channel and free the old one.
         // black color will be set to fully transparent.
@@ -56,8 +58,8 @@ class PixbufImage::Impl {
         int rowstride = gdk_pixbuf_get_rowstride(pixbuf);
         guchar *pixels = gdk_pixbuf_get_pixels(pixbuf);
         fully_opaque_ = true;
-        for (size_t y = 0; y < height_ && fully_opaque_; ++y) {
-          for (size_t x = 0; x < width_; ++x) {
+        for (int y = 0; y < h && fully_opaque_; ++y) {
+          for (int x = 0; x < w; ++x) {
             // The fourth byte in each pixel cell is alpha.
             guchar *p = pixels + y * rowstride + x * 4 + 3;
             if (*p != 255) {
@@ -86,8 +88,8 @@ class PixbufImage::Impl {
   }
 
   bool fully_opaque_;
-  size_t width_;
-  size_t height_;
+  double width_;
+  double height_;
   CairoCanvas *canvas_;
 };
 
@@ -110,11 +112,11 @@ CanvasInterface *PixbufImage::GetCanvas() const {
   return impl_->canvas_;
 }
 
-size_t PixbufImage::GetWidth() const {
+double PixbufImage::GetWidth() const {
   return impl_->width_;
 }
 
-size_t PixbufImage::GetHeight() const {
+double PixbufImage::GetHeight() const {
   return impl_->height_;
 }
 

@@ -63,12 +63,12 @@ class ImageInterface {
   /**
    * Get the width of the image, in pixel.
    */
-  virtual size_t GetWidth() const = 0;
+  virtual double GetWidth() const = 0;
 
   /**
    * Get the height of the image, in pixel.
    */
-  virtual size_t GetHeight() const = 0;
+  virtual double GetHeight() const = 0;
 
   /**
    * Creates a new image in which each pixel equals the color multiplied

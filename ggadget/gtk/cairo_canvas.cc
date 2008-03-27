@@ -74,7 +74,7 @@ static void SetPangoLayoutAttrFromTextFlags(PangoLayout *layout,
 
 class CairoCanvas::Impl {
  public:
-  Impl(const CairoGraphics *graphics, size_t w, size_t h, cairo_format_t fmt)
+  Impl(const CairoGraphics *graphics, double w, double h, cairo_format_t fmt)
     : cr_(NULL), width_(w), height_(h), opacity_(1),
       zoom_(graphics->GetZoom()), format_(fmt) {
     cr_ = CreateContext(w, h, zoom_, fmt);
@@ -86,7 +86,7 @@ class CairoCanvas::Impl {
         graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
   }
 
-  Impl(double zoom, size_t w, size_t h, cairo_format_t fmt)
+  Impl(double zoom, double w, double h, cairo_format_t fmt)
     : cr_(NULL), width_(w), height_(h), opacity_(1),
       zoom_(zoom), format_(fmt), on_zoom_connection_(NULL) {
     cr_ = CreateContext(w, h, zoom_, fmt);
@@ -95,7 +95,7 @@ class CairoCanvas::Impl {
       DLOG("Failed to create cairo context.");
   }
 
-  Impl(cairo_t *cr, double zoom, size_t w, size_t h)
+  Impl(cairo_t *cr, double zoom, double w, double h)
     : cr_(cr), width_(w), height_(h), opacity_(1),
       zoom_(zoom), format_(CAIRO_FORMAT_ARGB32),
       on_zoom_connection_(NULL) {
@@ -113,36 +113,38 @@ class CairoCanvas::Impl {
       on_zoom_connection_->Disconnect();
   }
 
-  cairo_t *CreateContext(size_t w, size_t h, double zoom, cairo_format_t fmt) {
+  cairo_t *CreateContext(double w, double h, double zoom, cairo_format_t fmt) {
+    ASSERT(w > 0);
+    ASSERT(h > 0);
+    ASSERT(zoom > 0);
+    ASSERT(fmt == CAIRO_FORMAT_ARGB32 || fmt == CAIRO_FORMAT_A8);
+
     // Only support ARGB32 and A8 format.
     if (fmt != CAIRO_FORMAT_ARGB32 && fmt != CAIRO_FORMAT_A8)
       return NULL;
 
+    // It should be impossible. Just for double check.
+    if (w <= 0 || h <= 0 || zoom <= 0)
+      return NULL;
+
     cairo_t *cr = NULL;
 
-    size_t width = w;
-    size_t height = h;
+    int width = static_cast<int>(ceil(w * zoom));
+    int height = static_cast<int>(ceil(h * zoom));
 
-    if (zoom != 1) {
-      width = static_cast<size_t>(round(w * zoom));
-      height = static_cast<size_t>(round(h * zoom));
-      if (!width) w = 1;
-      if (!height) h = 1;
-    }
+    if (width <= 0) width = 1;
+    if (height <= 0) height = 1;
 
     // create surface at native resolution after adjustment by scale
     cairo_surface_t *surface = cairo_image_surface_create(fmt, width, height);
 
-    //DLOG("CreateContext(%zu,%zu) bytes=%zu", width, height,
-    //     size_t(cairo_image_surface_get_stride(surface) * height));
+    //DLOG("CreateContext(%d,%d) bytes=%d", width, height,
+    //     cairo_image_surface_get_stride(surface) * height);
 
     if (cairo_surface_status(surface) == CAIRO_STATUS_SUCCESS) {
       cr = cairo_create(surface);
-      if (zoom != 1) {
-        // divide again since x, y scale values may differ after
-        // rounding from the initial multiplication
-        cairo_scale(cr, width / (double)w, height / (double)h);
-      }
+      if (zoom != 1)
+        cairo_scale(cr, zoom, zoom);
 
       // Many CairoCanvas methods assume no existing path, so clear any
       // existing paths on construction.
@@ -184,22 +186,14 @@ class CairoCanvas::Impl {
     cairo_surface_t *old = GetSurface();
 
     if (old) {
-      int sw = cairo_image_surface_get_width(old);
-      int sh = cairo_image_surface_get_height(old);
-
-      if (size_t(sw) == width_ && size_t(sh) == height_) {
+      if (zoom_ == 1.0) {
         // no scaling needed
         cairo_set_source_surface(new_cr, old, 0, 0);
         cairo_paint(new_cr);
       } else {
-        // CairoGraphics supports only uniform scaling in both X, Y,
-        // but due to rounding differences, we need to compute the exact
-        // scaling individually for X and Y.
-        double cx = double(width_) / sw;
-        double cy = double(height_) / sh;
-
+        double inv_zoom = 1.0 / zoom;
         cairo_save(new_cr);
-        cairo_scale(new_cr, cx, cy);
+        cairo_scale(new_cr, inv_zoom, inv_zoom);
         cairo_set_source_surface(new_cr, old, 0, 0);
         cairo_paint(new_cr);
         cairo_restore(new_cr);
@@ -442,7 +436,8 @@ class CairoCanvas::Impl {
   }
 
   cairo_t *cr_;
-  size_t width_, height_;
+  double width_;
+  double height_;
   double opacity_;
   double zoom_;
   cairo_format_t format_;
@@ -451,15 +446,15 @@ class CairoCanvas::Impl {
 };
 
 CairoCanvas::CairoCanvas(const CairoGraphics *graphics,
-                         size_t w, size_t h, cairo_format_t fmt)
+                         double w, double h, cairo_format_t fmt)
   : impl_(new Impl(graphics, w, h, fmt)) {
 }
 
-CairoCanvas::CairoCanvas(double zoom, size_t w, size_t h, cairo_format_t fmt)
+CairoCanvas::CairoCanvas(double zoom, double w, double h, cairo_format_t fmt)
   : impl_(new Impl(zoom, w, h, fmt)) {
 }
 
-CairoCanvas::CairoCanvas(cairo_t *cr, double zoom, size_t w, size_t h)
+CairoCanvas::CairoCanvas(cairo_t *cr, double zoom, double w, double h)
   : impl_(new Impl(cr, zoom, w, h)) {
 }
 
@@ -597,24 +592,16 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
 
   const CairoCanvas *cimg = down_cast<const CairoCanvas *>(img);
   cairo_surface_t *s = cimg->GetSurface();
-  int sheight = cairo_image_surface_get_height(s);
-  int swidth = cairo_image_surface_get_width(s);
-  size_t w = cimg->GetWidth();
-  size_t h = cimg->GetHeight();
-  if (size_t(sheight) == h && size_t(swidth) == w) {
+  double src_zoom = cimg->GetZoom();
+  if (src_zoom == 1.0) {
     // no scaling needed
     cairo_set_source_surface(impl_->cr_, s, x, y);
     cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
   } else {
-    // CairoGraphics supports only uniform scaling in both X, Y, but due to
-    // rounding differences, we need to compute the exact scaling individually
-    // for X and Y.
-    double cx = double(w) / swidth;
-    double cy = double(h) / sheight;
-
+    double inv_zoom = 1.0 / src_zoom;
     cairo_save(impl_->cr_);
-    cairo_scale(impl_->cr_, cx, cy);
-    cairo_set_source_surface(impl_->cr_, s, x / cx, y / cy);
+    cairo_scale(impl_->cr_, inv_zoom, inv_zoom);
+    cairo_set_source_surface(impl_->cr_, s, x * src_zoom, y * src_zoom);
     cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
     cairo_restore(impl_->cr_);
   }
@@ -633,17 +620,10 @@ bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
   cairo_rectangle(impl_->cr_, x, y, w, h);
   cairo_clip(impl_->cr_);
 
-  int sheight = cairo_image_surface_get_height(s);
-  int swidth = cairo_image_surface_get_width(s);
-  size_t sw = cimg->GetWidth();
-  size_t sh = cimg->GetHeight();
-  if (static_cast<size_t>(sheight) != sh || static_cast<size_t>(swidth) != sw) {
-    // CairoGraphics supports only uniform scaling in both X, Y, but due to
-    // rounding differences, we need to compute the exact scaling individually
-    // for X and Y.
-    double cx = double(sw) / swidth;
-    double cy = double(sh) / sheight;
-    cairo_scale(impl_->cr_, cx, cy);
+  double src_zoom  = cimg->GetZoom();
+  if (src_zoom != 1.0) {
+    double inv_zoom = 1.0 / src_zoom;
+    cairo_scale(impl_->cr_, inv_zoom, inv_zoom);
   }
 
   cairo_pattern_t *pattern = cairo_pattern_create_for_surface(s);
@@ -666,42 +646,33 @@ bool CairoCanvas::DrawCanvasWithMask(double x, double y,
 
   cairo_surface_t *simg = cimg->GetSurface();
   cairo_surface_t *smask = cmask->GetSurface();
-  int simg_h = cairo_image_surface_get_height(simg);
-  int simg_w = cairo_image_surface_get_width(simg);
-  int smask_h = cairo_image_surface_get_height(smask);
-  int smask_w = cairo_image_surface_get_width(smask);
-  size_t img_w = cimg->GetWidth();
-  size_t img_h = cimg->GetHeight();
-  size_t mask_w = cmask->GetWidth();
-  size_t mask_h = cmask->GetHeight();
+  double src_zoom = cimg->GetZoom();
+  double mask_zoom = cmask->GetZoom();
 
   CairoCanvas *new_mask = NULL;
   // If the target opacity is not equal to 1, then we need to adjust the mask
   // with the opacity.
   if (impl_->opacity_ != 1) {
-    new_mask = new CairoCanvas(cmask->impl_->zoom_, mask_w, mask_h,
+    new_mask = new CairoCanvas(mask_zoom,
+                               cmask->GetWidth(), cmask->GetHeight(),
                                cmask->impl_->format_);
     new_mask->MultiplyOpacity(impl_->opacity_);
     new_mask->DrawCanvas(0, 0, mask);
     smask = new_mask->GetSurface();
   }
 
-  if (size_t(simg_h) == img_h && size_t(simg_w) == img_w &&
-      size_t(smask_h) == mask_h && size_t(smask_w) == mask_w) {
+  if (src_zoom == 1.0 && mask_zoom == 1.0) {
     // no scaling needed
     cairo_set_source_surface(impl_->cr_, simg, x, y);
     cairo_mask_surface(impl_->cr_, smask, mx, my);
   } else {
-    double img_cx = double(img_w) / simg_w;
-    double img_cy = double(img_h) / simg_h;
-    double mask_cx = double(mask_w) / smask_w;
-    double mask_cy = double(mask_h) / smask_h;
-
+    double inv_src_zoom = 1.0 / src_zoom;
+    double combine_zoom = src_zoom / mask_zoom;
     cairo_save(impl_->cr_);
-    cairo_scale(impl_->cr_, img_cx, img_cy);
-    cairo_set_source_surface(impl_->cr_, simg, x / img_cx, y / img_cy);
-    cairo_scale(impl_->cr_, mask_cx / img_cx, mask_cy / img_cy);
-    cairo_mask_surface(impl_->cr_, smask, mx / mask_cx, my / mask_cy);
+    cairo_scale(impl_->cr_, inv_src_zoom, inv_src_zoom);
+    cairo_set_source_surface(impl_->cr_, simg, x * src_zoom, y * src_zoom);
+    cairo_scale(impl_->cr_, combine_zoom, combine_zoom);
+    cairo_mask_surface(impl_->cr_, smask, mx * mask_zoom, my * mask_zoom);
     cairo_restore(impl_->cr_);
   }
 
@@ -738,20 +709,13 @@ bool CairoCanvas::DrawTextWithTexture(double x, double y, double width,
   cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
 
   bool result;
-  int sheight = cairo_image_surface_get_height(s);
-  int swidth = cairo_image_surface_get_width(s);
-  size_t sw = cimg->GetWidth();
-  size_t sh = cimg->GetHeight();
+  double src_zoom = cimg->GetZoom();
   cairo_save(impl_->cr_);
-  if (static_cast<size_t>(sheight) != sh || static_cast<size_t>(swidth) != sw) {
-    // CairoGraphics supports only uniform scaling in both X, Y, but due to
-    // rounding differences, we need to compute the exact scaling individually
-    // for X and Y.
-    double cx = double(sw) / swidth;
-    double cy = double(sh) / sheight;
-    cairo_scale(impl_->cr_, cx, cy);
+  if (src_zoom != 1.0) {
+    double inv_zoom = 1.0 / src_zoom;
+    cairo_scale(impl_->cr_, inv_zoom, inv_zoom);
     cairo_set_source(impl_->cr_, pattern);
-    cairo_scale(impl_->cr_, 1 / cx, 1 / cy);
+    cairo_scale(impl_->cr_, src_zoom, src_zoom);
   } else {
     cairo_set_source(impl_->cr_, pattern);
   }
@@ -880,11 +844,11 @@ cairo_surface_t *CairoCanvas::GetSurface() const {
   return impl_->GetSurface();
 }
 
-size_t CairoCanvas::GetWidth() const {
+double CairoCanvas::GetWidth() const {
   return impl_->width_;
 }
 
-size_t CairoCanvas::GetHeight() const {
+double CairoCanvas::GetHeight() const {
   return impl_->height_;
 }
 
@@ -926,6 +890,10 @@ void CairoCanvas::MultiplyColor(const Color &color) {
 
 bool CairoCanvas::IsValid() const {
   return impl_->cr_ != NULL;
+}
+
+double CairoCanvas::GetZoom() const {
+  return impl_->zoom_;
 }
 
 } // namespace gtk

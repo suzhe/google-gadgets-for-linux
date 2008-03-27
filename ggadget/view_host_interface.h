@@ -186,6 +186,38 @@ class ViewHostInterface {
    */
   virtual bool ShowContextMenu(int button) = 0;
 
+  /**
+   * Starts resizing the View.
+   *
+   * This method call might not be honoured due to different ViewHost
+   * implementation, or if the View is not resizable or zoomable.
+   *
+   * During resize drag, @View::OnSizing() method will be called for each
+   * resize request, if the request is accepted by View, then @View::SetSize()
+   * method will be called to perform the resize action.
+   *
+   * @param button The mouse button which initiates the drag, see
+   *        @MouseEvent::Button.
+   * @param hittest Represents the border or corner to be dragged, only
+   *        accepts: HT_LEFT, HT_RIGHT, HT_TOP, HT_TOPLEFT, HT_TOPRIGHT,
+   *        HT_BOTTOM, HT_BOTTOMLEFT, HT_BOTTOMRIGHT.
+   */
+  virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) = 0;
+
+  /**
+   * Starts moving the View.
+   *
+   * This method call might not be honoured due to different ViewHost
+   * implementation.
+   *
+   * The move drag is fully transparent to the View, so the View won't be
+   * notified during move drag.
+   *
+   * @param button The mouse button which initiates the drag, see
+   *        @MouseEvent::Button.
+   */
+  virtual void BeginMoveDrag(int button) = 0;
+
   /** Displays a message box containing the message string. */
   virtual void Alert(const char *message) = 0;
 

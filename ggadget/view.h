@@ -89,11 +89,11 @@ class View : public ViewInterface {
 
  public: // ViewInterface methods.
   virtual Gadget *GetGadget() const;
-  virtual void SetWidth(int width);
-  virtual void SetHeight(int height);
-  virtual void SetSize(int width, int height);
-  virtual int GetWidth() const;
-  virtual int GetHeight() const;
+  virtual void SetWidth(double width);
+  virtual void SetHeight(double height);
+  virtual void SetSize(double width, double height);
+  virtual double GetWidth() const;
+  virtual double GetHeight() const;
 
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;
@@ -113,7 +113,7 @@ class View : public ViewInterface {
   virtual HitTest GetHitTest() const;
 
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
-  virtual bool OnSizing(int *width, int *height);
+  virtual bool OnSizing(double *width, double *height);
 
  public: // Additional event handling methods
   /**

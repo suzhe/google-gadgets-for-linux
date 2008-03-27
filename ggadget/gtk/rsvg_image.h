@@ -37,8 +37,8 @@ class RsvgImage : public CairoImageBase {
   virtual void StretchDraw(CanvasInterface *canvas,
                            double x, double y,
                            double width, double height) const;
-  virtual size_t GetWidth() const;
-  virtual size_t GetHeight() const;
+  virtual double GetWidth() const;
+  virtual double GetHeight() const;
   virtual bool IsFullyOpaque() const;
 
  private:

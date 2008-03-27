@@ -128,24 +128,24 @@ class ViewInterface {
   /**
    * Set the width of the view.
    * */
-  virtual void SetWidth(int width) = 0;
+  virtual void SetWidth(double width) = 0;
 
   /**
    * Set the height of the view.
    */
-  virtual void SetHeight(int height) = 0;
+  virtual void SetHeight(double height) = 0;
 
   /**
    * Set the size of the view. Use this when setting both height and width
    * to prevent two invocations of the sizing event.
    * */
-  virtual void SetSize(int width, int height) = 0;
+  virtual void SetSize(double width, double height) = 0;
 
   /** Retrieves the width of the view in pixels. */
-  virtual int GetWidth() const = 0;
+  virtual double GetWidth() const = 0;
 
   /** Retrieves the height of view in pixels. */
-  virtual int GetHeight() const = 0;
+  virtual double GetHeight() const = 0;
 
   /**
    * Indicates what happens when the user attempts to resize the gadget using
@@ -234,7 +234,7 @@ class ViewInterface {
    *         size of the View to the new value stored in width and height.
    *         Otherwise returns false.
    */
-  virtual bool OnSizing(int *width, int *height) = 0;
+  virtual bool OnSizing(double *width, double *height) = 0;
 };
 
 } // namespace ggadget

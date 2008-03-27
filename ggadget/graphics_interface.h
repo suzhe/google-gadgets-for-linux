@@ -47,7 +47,7 @@ class GraphicsInterface {
    * @param w Width of the new canvas.
    * @param h Height of the new canvas.
    */
-  virtual CanvasInterface *NewCanvas(size_t w, size_t h) const = 0;
+  virtual CanvasInterface *NewCanvas(double w, double h) const = 0;
 
   /**
    * Creates a new image.
@@ -68,7 +68,7 @@ class GraphicsInterface {
   /**
    * Create a new font. This font is used when rendering text to a canvas.
    */
-  virtual FontInterface *NewFont(const char *family, size_t pt_size,
+  virtual FontInterface *NewFont(const char *family, double pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
 };
