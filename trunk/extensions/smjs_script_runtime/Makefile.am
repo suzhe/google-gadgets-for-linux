@@ -29,9 +29,9 @@ noinst_HEADERS		= converter.h \
 			  json.h \
 			  native_js_wrapper.h
 
-noinst_LTLIBRARIES	= libggadget-smjs-for-test.la
+noinst_LTLIBRARIES	= libggadget-smjs.la
 
-libggadget_smjs_for_test_la_SOURCES = \
+libggadget_smjs_la_SOURCES = \
 			  converter.cc \
 			  js_function_slot.cc \
 			  js_native_wrapper.cc \
@@ -41,18 +41,18 @@ libggadget_smjs_for_test_la_SOURCES = \
 			  json.cc \
 			  native_js_wrapper.cc
 
-libggadget_smjs_for_test_la_CXXFLAGS = \
+libggadget_smjs_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
-libggadget_smjs_for_test_la_CPPFLAGS = \
+libggadget_smjs_la_CPPFLAGS = \
 			  @SPIDERMONKEY_CPPFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-libggadget_smjs_for_test_la_LIBADD = \
+libggadget_smjs_la_LIBADD = \
 			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
-libggadget_smjs_for_test_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@
+libggadget_smjs_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@
 
 
 extension_LTLIBRARIES	= smjs-script-runtime.la
