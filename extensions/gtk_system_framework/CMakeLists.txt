@@ -21,7 +21,7 @@ SET(SRCS
 )
 ADD_MODULE(gtk-system-framework ${SRCS})
 TARGET_LINK_LIBRARIES(gtk-system-framework
-  ggadget_gtk
+  ggadget-gtk
   ${GTK_LIBRARIES}
 )
 OUTPUT_MODULE(gtk-system-framework)

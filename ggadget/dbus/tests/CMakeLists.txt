@@ -18,7 +18,7 @@ ADD_DEFINITIONS(-DUNIT_TEST)
 
 PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
 
-SET(LIBS gunit ggadget ggadget_dbus ${DBUS_LIBRARIES})
+SET(LIBS gunit ggadget ggadget-dbus ${DBUS_LIBRARIES})
 
 ADD_EXECUTABLE(dbus_test dbus_test.cc)
 TARGET_LINK_LIBRARIES(dbus_test ${LIBS})

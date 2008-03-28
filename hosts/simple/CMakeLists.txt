@@ -38,7 +38,7 @@ OUTPUT_EXECUTABLE(ggl)
 
 TARGET_LINK_LIBRARIES(ggl
   ggadget
-  ggadget_gtk
+  ggadget-gtk
   ${CAIRO_LIBRARIES}
   ${GTK_LIBRARIES}
   ${FC_LIBRARIES}

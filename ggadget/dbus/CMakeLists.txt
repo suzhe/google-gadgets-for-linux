@@ -22,6 +22,6 @@ SET(SRCS
   dbus_utils.cc
   dbus_proxy.cc
 )
-ADD_LIBRARY(ggadget_dbus SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget_dbus ${DBUS_LIBRARIES})
-OUTPUT_LIBRARY(ggadget_dbus)
+ADD_LIBRARY(ggadget-dbus SHARED ${SRCS})
+TARGET_LINK_LIBRARIES(ggadget-dbus ${DBUS_LIBRARIES})
+OUTPUT_LIBRARY(ggadget-dbus)

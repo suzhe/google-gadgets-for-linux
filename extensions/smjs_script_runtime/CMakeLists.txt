@@ -30,13 +30,10 @@ SET(SRCS
   jscript_massager.cc
   json.cc
   native_js_wrapper.cc
-  smjs_script_runtime.cc
 )
 
-ADD_MODULE(smjs-script-runtime ${SRCS})
-TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget)
-OUTPUT_MODULE(smjs-script-runtime)
+ADD_LIBRARY(ggadget-smjs ${SRCS})
 
-# Make a static library for unittest.
-ADD_LIBRARY(ggadget-smjs-for-test ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget-smjs-for-test ggadget)
+ADD_MODULE(smjs-script-runtime smjs_script_runtime.cc)
+TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget ggadget-smjs)
+OUTPUT_MODULE(smjs-script-runtime)

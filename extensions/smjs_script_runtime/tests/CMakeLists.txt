@@ -23,7 +23,7 @@ SET(LIBS
   gunit
   ggadget
   editline
-  ggadget-smjs-for-test
+  ggadget-smjs
   ${JS_LIBRARIES}
 )
 
