@@ -66,10 +66,10 @@ ViewElement::~ViewElement() {
 }
 
 void ViewElement::Layout() {
-  int vw = impl_->child_view_->GetWidth();
-  int vh = impl_->child_view_->GetHeight();
-  int pw = static_cast<int>(GetPixelWidth());
-  int ph = static_cast<int>(GetPixelHeight());
+  double vw = impl_->child_view_->GetWidth();
+  double vh = impl_->child_view_->GetHeight();
+  double pw = GetPixelWidth();
+  double ph = GetPixelHeight();
   if (vw != pw || vh != ph) {
     // No need to perform layout on View manually, just update size.
     impl_->child_view_->SetSize(pw, ph);    

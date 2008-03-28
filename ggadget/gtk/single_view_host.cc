@@ -163,12 +163,9 @@ class SingleViewHost::Impl {
     ASSERT(view_);
 
     DLOG("Start adjusting window size.");
-    int width = view_->GetWidth();
-    int height = view_->GetHeight();
     double zoom = gfx_->GetZoom();
-
-    width = static_cast<int>(ceil(width * zoom));
-    height = static_cast<int>(ceil(height * zoom));
+    int width = static_cast<int>(ceil(view_->GetWidth() * zoom));
+    int height = static_cast<int>(ceil(view_->GetHeight() * zoom));
 
     DLOG("New view size: %d %d", width, height);
 

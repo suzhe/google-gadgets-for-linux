@@ -910,7 +910,7 @@ class TextStream : public TextStreamInterface {
     if (IsAtEndOfStream())
       return true;
 
-    bool result = (int)'\n' == fgetc(fp_);
+    bool result = '\n' == fgetc(fp_);
     if (!fseek(fp_, -1, SEEK_CUR))
       return result;
     return false;

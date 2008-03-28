@@ -190,9 +190,8 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinY(25.);
 
   CanvasInterface *canvas =
-    view_host_->GetGraphics()->NewCanvas(
-        static_cast<size_t>(m.GetPixelWidth()),
-        static_cast<size_t>(m.GetPixelHeight()));
+    view_host_->GetGraphics()->NewCanvas(m.GetPixelWidth(),
+                                         m.GetPixelHeight());
   ASSERT_TRUE(canvas != NULL);
   m.Draw(canvas);
 

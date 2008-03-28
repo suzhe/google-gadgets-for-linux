@@ -360,7 +360,7 @@ class ContentAreaElement::Impl {
   }
 
   bool SetMaxContentItems(size_t max_content_items) {
-    max_content_items = std::min(std::max((size_t)1, max_content_items),
+    max_content_items = std::min(std::max(1U, max_content_items),
                                  kMaxContentItemsUpperLimit);
     if (max_content_items_ != max_content_items) {
       max_content_items_ = max_content_items;

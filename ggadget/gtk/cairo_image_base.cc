@@ -103,22 +103,24 @@ void CairoImageBase::StretchDraw(CanvasInterface *canvas,
 class ColorMultipliedImage : public CairoImageBase {
  public:
   ColorMultipliedImage(const CairoGraphics *graphics,
-                       const CairoImageBase *image, const Color &color_multiply)
+                       const CairoImageBase *image,
+                       const Color &color_multiply)
       : CairoImageBase(graphics, "", false),
         width_(0), height_(0), fully_opaque_(false),
         color_multiply_(color_multiply), canvas_(NULL) {
     if (image) {
-      const CanvasInterface *image_canvas = image->GetCanvas();
-      if (image_canvas) {
-        width_ = image->GetWidth();
-        height_ = image->GetHeight();
-        fully_opaque_ = image->IsFullyOpaque();
-
-        canvas_ = new CairoCanvas(1, width_, height_, CAIRO_FORMAT_ARGB32);
-        canvas_->DrawCanvas(0, 0, image_canvas);
-        canvas_->MultiplyColor(color_multiply_);
-      }
+      width_ = image->GetWidth();
+      height_ = image->GetHeight();
+      fully_opaque_ = image->IsFullyOpaque();
+      canvas_ = new CairoCanvas(1, width_, height_, CAIRO_FORMAT_ARGB32);
+      image->Draw(canvas_, 0, 0);
+      canvas_->MultiplyColor(color_multiply_);
     }
+  }
+
+  virtual ~ColorMultipliedImage() {
+    if (canvas_)
+      canvas_->Destroy();
   }
 
   virtual double GetWidth() const { return width_; }

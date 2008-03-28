@@ -375,10 +375,10 @@ AC_SUBST(GGL_RESOURCE_DIR)
 ###########################################################
 if test x$enable_debug = xyes; then
   AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
-  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall"
+  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall -Wconversion"
   DEBUG_MACROS="_DEBUG";
 else
-  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall"
+  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall -Wconversion"
   DEBUG_MACROS="NDEBUG";
 fi
 

@@ -498,7 +498,7 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
   if (impl_->image_.Get()) {
     const ImageInterface *image = impl_->image_.Get()->GetImage();
     if (image) {
-      heading_space_width -= image->GetWidth();
+      heading_space_width -= static_cast<int>(image->GetWidth());
       image_height = static_cast<int>(image->GetHeight());
     }
   }

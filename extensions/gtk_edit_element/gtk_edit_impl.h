@@ -341,7 +341,7 @@ class GtkEditImpl {
   /** The font family of the text */
   std::string font_family_;
   /** The font size of the text */
-  int font_size_;
+  double font_size_;
   /** The background texture of the edit control */
   Texture *background_;
   /** The text color of the edit control */

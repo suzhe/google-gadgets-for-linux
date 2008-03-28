@@ -53,8 +53,8 @@ class Texture::Impl {
   }
 
   void Draw(CanvasInterface *canvas) const {
-    size_t canvas_width = canvas->GetWidth();
-    size_t canvas_height = canvas->GetHeight();
+    double canvas_width = canvas->GetWidth();
+    double canvas_height = canvas->GetHeight();
 
     if (image_) {
       // Don't apply opacity_ here because it is only applicable with color_.

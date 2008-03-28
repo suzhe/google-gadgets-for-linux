@@ -407,7 +407,7 @@ TEST(FileSystem, GetTempName) {
 
   std::string temp = filesystem.GetTempName();
 
-  EXPECT_GT(temp.size(), (size_t) 0);
+  EXPECT_GT(temp.size(), 0U);
   LOG("Temp file name: %s", temp.c_str());
 }
 
