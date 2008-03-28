@@ -30,7 +30,7 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 AM_LDFLAGS		= @SPIDERMONKEY_LDFLAGS@
 
 LDADD			= @SPIDERMONKEY_LIBS@ \
-			  ../libggadget-smjs-for-test.la \
+			  ../libggadget-smjs.la \
 			  $(top_builddir)/unittest/libgunit.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/third_party/editline/libeditline.la

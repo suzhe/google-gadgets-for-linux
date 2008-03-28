@@ -353,14 +353,14 @@ class ContentAreaElement::Impl {
 
   void ScriptSetPinImages(ScriptableInterface *array) {
     if (array) {
-      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetProperty(0)); 
-      ScriptSetPinImage(PIN_IMAGE_UNPINNED_OVER, array->GetProperty(1)); 
-      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetProperty(2)); 
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetProperty(0));
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED_OVER, array->GetProperty(1));
+      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetProperty(2));
     }
   }
 
   bool SetMaxContentItems(size_t max_content_items) {
-    max_content_items = std::min(std::max(1U, max_content_items),
+    max_content_items = std::min(std::max(size_t(1), max_content_items),
                                  kMaxContentItemsUpperLimit);
     if (max_content_items_ != max_content_items) {
       max_content_items_ = max_content_items;

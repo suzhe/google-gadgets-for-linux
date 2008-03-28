@@ -14,6 +14,9 @@
   limitations under the License.
 */
 
+// Enable it to print verbose debug info
+//#define VIEW_VERBOSE_DEBUG
+
 #include <sys/time.h>
 #include <time.h>
 #include <list>
@@ -698,7 +701,7 @@ class View::Impl {
   }
 
   void Draw(CanvasInterface *canvas) {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     draw_count_ = 0;
     uint64_t start = main_loop_->GetCurrentTime();
 #endif
@@ -717,7 +720,7 @@ class View::Impl {
     children_.Layout();
     draw_queued_ = false;
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     clip_region_.PrintLog();
 #endif
 
@@ -796,7 +799,7 @@ class View::Impl {
     clip_region_.Clear();
     need_redraw_ = false;
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     uint64_t end = main_loop_->GetCurrentTime();
     if (end > 0 && start > 0)
       DLOG("Draw count: %d, time: %ju", draw_count_, end - start);
