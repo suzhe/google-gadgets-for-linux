@@ -18,7 +18,6 @@ ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
   file_system.cc
-  linux_system_framework.cc
   machine.cc
   memory.cc
   perfmon.cc
@@ -28,8 +27,9 @@ SET(SRCS
   wireless_access_point.cc
   wireless.cc
 )
-ADD_MODULE(linux-system-framework ${SRCS})
-TARGET_LINK_LIBRARIES(linux-system-framework)
-OUTPUT_MODULE(linux-system-framework)
 
-ADD_LIBRARY(ggadget_linux_for_test ${SRCS})
+ADD_LIBRARY(ggadget-linux ${SRCS})
+
+ADD_MODULE(linux-system-framework linux_system_framework.cc)
+TARGET_LINK_LIBRARIES(linux-system-framework ggadget-linux)
+OUTPUT_MODULE(linux-system-framework)

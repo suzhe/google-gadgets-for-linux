@@ -23,7 +23,7 @@ SET(SRCS
 )
 ADD_MODULE(gtk-edit-element ${SRCS})
 TARGET_LINK_LIBRARIES(gtk-edit-element
-  ggadget_gtk
+  ggadget-gtk
   ${CAIRO_LIBRARIES}
   ${GTK_LIBRARIES}
 )
