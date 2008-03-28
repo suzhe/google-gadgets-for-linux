@@ -27,10 +27,10 @@ using namespace ggadget;
 
 class MockedCanvas : public ggadget::CanvasInterface {
  public:
-  MockedCanvas(size_t w, size_t h) : w_(w), h_(h) { }
+  MockedCanvas(double w, double h) : w_(w), h_(h) { }
   virtual void Destroy() { delete this; }
-  virtual size_t GetWidth() const { return w_; }
-  virtual size_t GetHeight() const { return h_; }
+  virtual double GetWidth() const { return w_; }
+  virtual double GetHeight() const { return h_; }
   virtual bool PushState() { return true; }
   virtual bool PopState() { return true; }
   virtual bool MultiplyOpacity(double opacity) { return true; }
@@ -94,12 +94,12 @@ class MockedCanvas : public ggadget::CanvasInterface {
     return false;
   }
  private:
-  size_t w_, h_;
+  double w_, h_;
 };
 
 class MockedGraphics : public ggadget::GraphicsInterface {
  public:
-  virtual ggadget::CanvasInterface *NewCanvas(size_t w, size_t h) const {
+  virtual ggadget::CanvasInterface *NewCanvas(double w, double h) const {
     return new MockedCanvas(w, h);
   }
   virtual ggadget::ImageInterface *NewImage(const char *tag,
@@ -108,7 +108,7 @@ class MockedGraphics : public ggadget::GraphicsInterface {
       return NULL;
   }
   virtual ggadget::FontInterface *NewFont(
-      const char *family, size_t pt_size,
+      const char *family, double pt_size,
       ggadget::FontInterface::Style style,
       ggadget::FontInterface::Weight weight) const {
     return NULL;
@@ -155,7 +155,10 @@ class MockedViewHost : public ggadget::ViewHostInterface {
     return std::string();
   }
   virtual ggadget::ViewInterface::DebugMode GetDebugMode() const {
-    return ggadget::ViewInterface::DEBUG_DISABLED; }
+    return ggadget::ViewInterface::DEBUG_DISABLED;
+  }
+  virtual void BeginResizeDrag(int, ggadget::ViewInterface::HitTest) { }
+  virtual void BeginMoveDrag(int) { }
 
   bool GetQueuedDraw() {
     bool b = draw_queued_;

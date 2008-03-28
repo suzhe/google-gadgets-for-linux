@@ -73,8 +73,8 @@ TEST_F(CairoGfxTest, Zoom) {
   gfx_.SetZoom(0);
   EXPECT_DOUBLE_EQ(1.0, gfx_.GetZoom());
 
-  EXPECT_EQ(size_t(300), target_->GetWidth());
-  EXPECT_EQ(size_t(150), target_->GetHeight());
+  EXPECT_DOUBLE_EQ(300.0, target_->GetWidth());
+  EXPECT_DOUBLE_EQ(150.0, target_->GetHeight());
   EXPECT_EQ(300, cairo_image_surface_get_width(target_->GetSurface()));
   EXPECT_EQ(150, cairo_image_surface_get_height(target_->GetSurface()));
 }
@@ -103,7 +103,7 @@ TEST_F(CairoGfxTest, LoadImage) {
   ASSERT_EQ(0, fstat(fd, &statvalue));
 
   size_t filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
@@ -129,8 +129,8 @@ TEST_F(CairoGfxTest, LoadImage) {
 
   EXPECT_TRUE(NULL == gfx_.NewImage("", std::string(), false));
 
-  EXPECT_EQ((size_t)450, img->GetWidth());
-  EXPECT_EQ((size_t)310, img->GetHeight());
+  EXPECT_DOUBLE_EQ(450.0, img->GetWidth());
+  EXPECT_DOUBLE_EQ(310.0, img->GetHeight());
 
   EXPECT_EQ(kTestFile120day, img->GetTag());
 
@@ -154,7 +154,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
 
   ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
@@ -184,7 +184,7 @@ TEST_F(CairoGfxTest, DrawCanvas) {
 
   ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
@@ -216,7 +216,7 @@ TEST_F(CairoGfxTest, DrawImageMask) {
 
   ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
@@ -226,8 +226,8 @@ TEST_F(CairoGfxTest, DrawImageMask) {
   img = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img);
 
-  EXPECT_EQ((size_t)450, mask->GetWidth());
-  EXPECT_EQ((size_t)310, mask->GetHeight());
+  EXPECT_DOUBLE_EQ(450.0, mask->GetWidth());
+  EXPECT_DOUBLE_EQ(310.0, mask->GetHeight());
 
   h = mask->GetHeight();
   scale = 150. / h;
@@ -259,7 +259,7 @@ TEST_F(CairoGfxTest, NewFontAndDrawText) {
       FontInterface::STYLE_ITALIC, FontInterface::WEIGHT_BOLD);
   EXPECT_EQ(FontInterface::STYLE_ITALIC, font1->GetStyle());
   EXPECT_EQ(FontInterface::WEIGHT_BOLD, font1->GetWeight());
-  EXPECT_EQ((size_t)14, font1->GetPointSize());
+  EXPECT_DOUBLE_EQ(14.0, font1->GetPointSize());
 
   EXPECT_FALSE(target_->DrawText(0, 0, 100, 30, NULL, font1, Color(1, 0, 0),
               CanvasInterface::ALIGN_LEFT, CanvasInterface::VALIGN_TOP,
@@ -325,7 +325,7 @@ TEST_F(CairoGfxTest, DrawTextWithTexture) {
 
   ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
@@ -604,7 +604,7 @@ TEST_F(CairoGfxTest, ColorMultiply) {
 
   ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);
@@ -635,7 +635,7 @@ TEST_F(CairoGfxTest, ColorMultiply) {
 
   ASSERT_EQ(0, fstat(fd, &statvalue));
   filelen = statvalue.st_size;
-  ASSERT_NE((size_t)0, filelen);
+  ASSERT_NE(0U, filelen);
 
   buffer = (char*)mmap(NULL, filelen, PROT_READ, MAP_PRIVATE, fd, 0);
   ASSERT_NE(MAP_FAILED, buffer);

@@ -25,9 +25,17 @@
 
 namespace ggadget {
 
+Variant::Variant() : type_(TYPE_VOID) {
+  memset(&v_, 0, sizeof(v_));
+}
+
 Variant::Variant(const Variant &source) : type_(TYPE_VOID) {
   memset(&v_, 0, sizeof(v_));
   operator=(source);
+}
+
+Variant::Variant(Type type) : type_(type) {
+  memset(&v_, 0, sizeof(v_));
 }
 
 Variant::Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {

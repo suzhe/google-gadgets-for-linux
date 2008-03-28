@@ -101,18 +101,14 @@ class Variant {
    * Construct a @c Variant without a value.
    * The type of the constructed @c Variant is @c TYPE_VOID.
    */
-  Variant() : type_(TYPE_VOID) {
-    v_.double_value_ = 0;  // Also sets other unions to 0.
-  }
+  Variant();
 
   Variant(const Variant &source);
 
   /**
    * Construct a @c Variant by type with default value (zero).
    */
-  explicit Variant(Type a_type) : type_(a_type) {
-    v_.double_value_ = 0;  // Also sets other unions to 0.
-  }
+  explicit Variant(Type a_type);
 
   /**
    * Construct a @c Variant with a @c bool value.

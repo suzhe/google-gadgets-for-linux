@@ -98,6 +98,7 @@ class ComboBoxElement::Impl {
         // popup_out handler will turn off listbox
         owner_->GetView()->SetPopupElement(NULL);
       }
+      owner_->PostSizeEvent();
     }
   }
 
@@ -740,6 +741,7 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
 void ComboBoxElement::OnPopupOff() {
   QueueDraw();
   impl_->listbox_->SetVisible(false);
+  PostSizeEvent();
 }
 
 double ComboBoxElement::GetPixelHeight() const {

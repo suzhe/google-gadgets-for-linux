@@ -1647,6 +1647,10 @@ bool BasicElement::HasOpaqueBackground() const {
   return false;
 }
 
+void BasicElement::PostSizeEvent() {
+  impl_->PostSizeEvent();
+}
+
 Connection *BasicElement::ConnectOnClickEvent(Slot0<void> *handler) {
   return impl_->onclick_event_.Connect(handler);
 }

@@ -741,8 +741,7 @@ bool ConvertUTF8ToLocaleString(const char *input, std::string *result) {
     return false;
 
   result->clear();
-  size_t input_size = 0;
-  for (; input[input_size]; input_size++);
+  size_t input_size = strlen(input);
   if (!input_size)
     return true;
 

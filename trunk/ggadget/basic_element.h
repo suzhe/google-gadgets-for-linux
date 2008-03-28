@@ -640,6 +640,11 @@ public: // Other overridable public methods.
 
  protected:
   /**
+   * Called by the descendant classes when the onsize event should be fired.
+   */
+  void PostSizeEvent();
+
+  /**
    * Draws all children elements onto the specified canvas.
    * This function is intend to be called inside DoDraw() function of derived
    * class to draw its children elements.
