@@ -30,6 +30,7 @@
 #include <ggadget/scoped_ptr.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
+#include <ggadget/clip_region.h>
 #include <ggadget/math_utils.h>
 #include "qt_graphics.h"
 #include "qt_canvas.h"
@@ -44,118 +45,61 @@ namespace ggadget {
 namespace qt {
 
 const char *const kEllipsisText = "...";
-static inline int D2I(double d) { return static_cast<int>(round(d)); }
 
 class QtCanvas::Impl {
  public:
-  Impl(size_t w, size_t h)
-    : width_(w), height_(h), opacity_(1.),
-      image_(w, h, QImage::Format_ARGB32) {
-    image_.fill(Qt::transparent);
-    painter_ = new QPainter(&image_);
+  Impl(const QtGraphics *g, double w, double h)
+    : width_(w), height_(h), opacity_(1.), zoom_(1.),
+      on_zoom_connection_(NULL),
+      image_(NULL), painter_(NULL), path_(NULL) {
+    if (g){
+      zoom_ = g->GetZoom();
+      on_zoom_connection_ =
+        g->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
+    }
+    image_ = new QImage(D2I(w*zoom_), D2I(h*zoom_), QImage::Format_ARGB32);
+    if (image_ == NULL) return;
+    image_->fill(Qt::transparent);
+    painter_ = new QPainter(image_);
+    painter_->scale(zoom_, zoom_);
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
-    not_free_painter_ = false;
   }
 
-  Impl(const std::string &data) {
-    bool ret = image_.loadFromData(
+  Impl(const std::string &data)
+    : width_(0), height_(0),
+      opacity_(1.), zoom_(1.),
+      on_zoom_connection_(NULL),
+      image_(NULL), painter_(NULL), path_(NULL) {
+    image_ = new QImage();
+    if (!image_) return;
+
+    bool ret = image_->loadFromData(
         reinterpret_cast<const uchar *>(data.c_str()),
         data.length());
+
     if (ret) {
-      width_ = image_.width();
-      height_ = image_.height();
-      painter_ = new QPainter(&image_);
+      width_ = image_->width();
+      height_ = image_->height();
+      painter_ = new QPainter(image_);
       painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
     } else {
-      width_ = height_ = 0;
-      painter_ = NULL;
+      delete image_;
+      image_ = NULL;
     }
-    not_free_painter_ = false;
   }
 
-  Impl(size_t w, size_t h, QPainter *painter)
-    : width_(w), height_(h), opacity_(1.), painter_(painter) {
+  Impl(double w, double h, QPainter *painter)
+    : width_(w), height_(h), opacity_(1.), zoom_(1.),
+      on_zoom_connection_(NULL), image_(NULL),
+      painter_(painter), path_(NULL) {
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
-    not_free_painter_ = true;
   }
 
   ~Impl() {
-    if (painter_ && !not_free_painter_) delete painter_;
-  }
-
-  QImage* GetImage() { return &image_; }
-
-  QPainter* GetQPainter() { return painter_; }
-
-  size_t GetWidth() { return width_; }
-
-  size_t GetHeight() {  return height_;  }
-
-  bool PushState() {
-    painter_->save();
-    return true;
-  }
-
-  bool PopState() {
-    painter_->restore();
-    return true;
-  }
-
-  bool MultiplyOpacity(double opacity) {
-    if (opacity >= 0.0 && opacity <= 1.0) {
-      painter_->setOpacity(painter_->opacity()*opacity);
-      return true;
-    }
-    return false;
-  }
-
-  void MultiplyColor(QtCanvas::Impl *src, const Color &c) {
-    // src and this must have valid image if do this operation on them
-    ASSERT(!src->not_free_painter_);
-    ASSERT(!not_free_painter_);
-    if (c == Color::kWhite) return;
-
-    int width = GetWidth();
-    int height = GetHeight();
-    int rm = c.RedInt();
-    int gm = c.GreenInt();
-    int bm = c.BlueInt();
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < height; y++) {
-        QRgb rgb = src->image_.pixel(x, y);
-        if (qAlpha(rgb) == 0) {
-          image_.setPixel(x, y, qRgba(0, 0, 0, 0));
-        } else {
-          int r = (qRed(rgb) * rm) >> 8;
-          int g = (qGreen(rgb) * gm) >> 8;
-          int b = (qBlue(rgb) * bm) >> 8;
-          image_.setPixel(x, y, qRgb(r, g, b));
-        }
-      }
-    }
-  }
-
-  void RotateCoordinates(double radians) {
-    painter_->rotate(RadiansToDegrees(radians));
-  }
-
-  void TranslateCoordinates(double dx, double dy) {
-    painter_->translate(dx, dy);
-  }
-
-  void ScaleCoordinates(double cx, double cy) {
-    painter_->scale(cx, cy);
-  }
-
-  bool ClearCanvas() {
-    DLOG("ClearCanvas");
-    painter_->eraseRect(0, 0, width_, height_);
-    return true;
-  }
-
-  bool ClearRect(double x, double y, double w, double h) {
-    painter_->eraseRect(D2I(x), D2I(y), D2I(w), D2I(h));
-    return true;
+    if (painter_ && image_) delete painter_;
+    if (image_) delete image_;
+    if (on_zoom_connection_)
+      on_zoom_connection_->Disconnect();
   }
 
   bool DrawLine(double x0, double y0, double x1, double y1,
@@ -181,7 +125,16 @@ class QtCanvas::Impl {
     DLOG("DrawCanvas:%p on %p", img, this);
     QPainter *p = painter_;
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
-    p->drawImage(D2I(x), D2I(y), *canvas->GetImage());
+    Impl *impl = canvas->impl_;
+    double sx, sy;
+    if (impl->GetScale(&sx, &sy) && image_) {
+      p->save();
+      p->scale(sx, sy);
+      p->drawImage(D2I(x / sx), D2I(y / sy), *canvas->GetImage());
+      p->restore();
+    } else {
+      p->drawImage(D2I(x), D2I(y), *canvas->GetImage());
+    }
     return true;
   }
 
@@ -203,46 +156,68 @@ class QtCanvas::Impl {
     const QtCanvas *s = reinterpret_cast<const QtCanvas*>(img);
     const QtCanvas *m = reinterpret_cast<const QtCanvas*>(mask);
     QImage simg = *s->GetImage();
+    // TODO: setAlphaChannel is not recommended to use for performance issue.
     simg.setAlphaChannel(*m->GetImage());
-    p->drawImage(D2I(x), D2I(y), simg);
+    Impl *impl = s->impl_;
+    double sx, sy;
+    if (impl->GetScale(&sx, &sy) && image_) {
+      p->save();
+      p->scale(sx, sy);
+      p->drawImage(D2I(x / sx), D2I(y / sy), simg);
+      p->restore();
+    } else {
+      p->drawImage(D2I(x), D2I(y), simg);
+    }
     return true;
+  }
+
+  static void SetupQTextDocument(QTextDocument *doc,
+                                 const FontInterface *f,
+                                 int text_flags,
+                                 Alignment align,
+                                 double in_width) {
+    // Setup font
+    const QtFont *qtfont = down_cast<const QtFont*>(f);
+    QFont font = *qtfont->GetQFont();
+
+    if (text_flags & TEXT_FLAGS_UNDERLINE)
+      font.setUnderline(true);
+    else
+      font.setUnderline(false);
+
+    if (text_flags & TEXT_FLAGS_STRIKEOUT)
+      font.setStrikeOut(true);
+    else
+      font.setStrikeOut(false);
+
+    doc->setDefaultFont(font);
+
+    // Setup align
+    Qt::Alignment a;
+    if (align == ALIGN_RIGHT) a = Qt::AlignRight;
+    if (align == ALIGN_LEFT) a = Qt::AlignLeft;
+    if (align == ALIGN_CENTER) a = Qt::AlignHCenter;
+    QTextOption option(a);
+    if (text_flags & TEXT_FLAGS_WORDWRAP) {
+      option.setWrapMode(QTextOption::WordWrap);
+    } else {
+      option.setWrapMode(QTextOption::NoWrap);
+    }
+
+    if (in_width > 0)
+      doc->setTextWidth(in_width);
+    doc->setDefaultTextOption(option);
   }
 
   bool DrawText(double x, double y, double width, double height,
                 const char *text, const FontInterface *f,
                 const Color &c, Alignment align, VAlignment valign,
                 Trimming trimming, int text_flags) {
-    DLOG("DrawText:%s", text);
+    DLOG("DrawText:%s, %f, %f, %f, %f", text, x, y, width, height);
     QPainter *p = painter_;
-    QTextDocument doc(text);
-
-    const QtFont *qtfont = down_cast<const QtFont*>(f);
-    QFont font = *qtfont->GetQFont();
-    if (text_flags & TEXT_FLAGS_UNDERLINE)
-      font.setUnderline(true);
-    else
-      font.setUnderline(false);
-    if (text_flags & TEXT_FLAGS_STRIKEOUT)
-      font.setStrikeOut(true);
-    else
-      font.setStrikeOut(false);
-    doc.setDefaultFont(font);
-
-    Qt::Alignment a;
-
-    if (align == ALIGN_RIGHT) a = Qt::AlignRight;
-    if (align == ALIGN_LEFT) a = Qt::AlignLeft;
-    if (align == ALIGN_CENTER) a = Qt::AlignHCenter;
-
-    QTextOption option(a);
-
-    if (valign == VALIGN_MIDDLE) a |= Qt::AlignVCenter;
-
-    if (text_flags & TEXT_FLAGS_WORDWRAP)
-      option.setWrapMode(QTextOption::WordWrap);
-
-    doc.setDefaultTextOption(option);
-    doc.setTextWidth(width);
+    QString qt_text = QString::fromUtf8(text);
+    QTextDocument doc(qt_text);
+    SetupQTextDocument(&doc, f, text_flags, align, width);
 
     // taking care valign
     double text_height = doc.documentLayout()->documentSize().height();
@@ -255,6 +230,22 @@ class QtCanvas::Impl {
         height = text_height;
       }
     }
+    // Handle trimming
+    double text_width = doc.documentLayout()->documentSize().width();
+    if (trimming != TRIMMING_NONE
+        && (text_height > height || text_width > width)) {
+      double ypos = height - 8;
+      if ((text_flags & TEXT_FLAGS_WORDWRAP) == 0)
+        ypos = 8;
+      int pos = doc.documentLayout()->hitTest(
+          QPointF(width, ypos), Qt::FuzzyHit);
+      if (pos >= 4 && pos < qt_text.length()) {
+        qt_text.chop(qt_text.length() - pos + 3);
+        qt_text.append("...");
+        doc.setPlainText(qt_text);
+      }
+    }
+
     QRectF rect(0, 0, width, height);
 
     QAbstractTextDocumentLayout::PaintContext ctx;
@@ -288,33 +279,30 @@ class QtCanvas::Impl {
     return true;
   }
 
-  bool IntersectGeneralClipRegion(int rectangle_number,
-                                  double *region) {
-    QPainterPath path;
-    for (int i = 0; i < rectangle_number * 4; i += 4) {
-      QRectF rect(region[0], region[1], region[2], region[3]);
-      path.addRect(rect);
-    }
-    painter_->setClipping(true);
-    painter_->setClipPath(path);
+  bool IntersectRectangle(double x, double y, double w, double h) {
+    QRectF qrect(x, y, w, h);
+    path_->addRect(qrect);
     return true;
   }
 
-  bool GetTextExtents(const char *text, const FontInterface *f,
-                      int text_flags, double in_width,
-                      double *width, double *height) const {
-    const QtFont *qt_font = reinterpret_cast<const QtFont*>(f);
-    return qt_font->GetTextExtents(text, width, height);
+  bool IntersectGeneralClipRegion(const ClipRegion &region) {
+    QPainterPath path;
+    path_ = &path;
+    if (region.EnumerateRectangles(NewSlot(this, &Impl::IntersectRectangle))) {
+      painter_->setClipping(true);
+      painter_->setClipPath(path);
+    }
+    return true;
   }
+
   bool GetPointValue(double x, double y,
                      Color *color, double *opacity) const {
     // Canvas without image_ doesn't support GetPointValue
-    if (not_free_painter_) return false;
+    if (!image_) return false;
 
-    int xi = D2I(x);
-    int yi = D2I(y);
-    if (xi < 0 || xi >= width_ || yi < 0 || yi >= height_) return false;
-    QColor qcolor = image_.pixel(xi, yi);
+    if (x < 0 || x >= width_ || y < 0 || y >= height_) return false;
+
+    QColor qcolor = image_->pixel(D2I(x), D2I(y));
     if (color) {
       color->red = qcolor.redF();
       color->green = qcolor.greenF();
@@ -326,21 +314,53 @@ class QtCanvas::Impl {
     return true;
   }
 
-  int width_, height_;
+  void OnZoom(double zoom) {
+    LOG("zoom:%f", zoom);
+    if (zoom == zoom_) return;
+    if (!image_) return; // Not support zoom
+    QImage* new_image = new QImage(D2I(width_*zoom), D2I(height_*zoom),
+                                   QImage::Format_ARGB32);
+    if (!new_image) return;
+    delete painter_;
+    delete image_;
+    image_ = new_image;
+    image_->fill(Qt::transparent);
+    painter_ = new QPainter(image_);
+    painter_->scale(zoom, zoom);
+    zoom_ = zoom;
+    painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+  }
+
+  // Return false if no scale at all
+  bool GetScale(double *sx, double *sy) {
+    if (image_->height() == height_ && image_->width() == width_) {
+      if (sx) *sx = 1.0;
+      if (sy) *sy = 1.0;
+      return false;
+    }
+
+    if (sx) *sx = width_ / image_->width();
+    if (sy) *sy = height_ / image_->height();
+    return true;
+  }
+
+  double width_, height_;
   double opacity_;
   double zoom_;
-  bool not_free_painter_;
-  QPainter *painter_;
-  QImage image_;
   Connection *on_zoom_connection_;
+  QImage *image_;
+  QPainter *painter_;
+  QPainterPath *path_;
 };
 
-QtCanvas::QtCanvas(const QtGraphics *g, size_t w, size_t h) : impl_(new Impl(w, h)) { }
-QtCanvas::QtCanvas(const QtGraphics *g, size_t w, size_t h, QPainter *painter)
+QtCanvas::QtCanvas(const QtGraphics *g, double w, double h)
+  : impl_(new Impl(g, w, h)) { }
+
+QtCanvas::QtCanvas(const QtGraphics *g, double w, double h, QPainter *painter)
   : impl_(new Impl(w, h, painter)) { }
 
-QtCanvas::QtCanvas(const std::string &data) : impl_(new Impl(data))
- { }
+QtCanvas::QtCanvas(const std::string &data) :
+  impl_(new Impl(data)) { }
 
 QtCanvas::~QtCanvas() {
   delete impl_;
@@ -352,23 +372,32 @@ void QtCanvas::Destroy() {
 }
 
 bool QtCanvas::ClearCanvas() {
-  return impl_->ClearCanvas();
+  ClearRect(0, 0, impl_->width_, impl_->height_);
+  return true;
 }
 
 bool QtCanvas::ClearRect(double x, double y, double w, double h) {
-  return impl_->ClearRect(x, y, w, h);
+  impl_->painter_->eraseRect(QRectF(x, y, w, h));
+  return true;
 }
 
 bool QtCanvas::PopState() {
-  return impl_->PopState();
+  impl_->painter_->restore();
+  return true;
 }
 
 bool QtCanvas::PushState() {
-  return impl_->PushState();
+  impl_->painter_->save();
+  return true;
 }
 
 bool QtCanvas::MultiplyOpacity(double opacity) {
-  return impl_->MultiplyOpacity(opacity);
+  if (opacity >= 0.0 && opacity <= 1.0) {
+    // TODO: setOpacity is not recommended to use for performance issue.
+    impl_->painter_->setOpacity(impl_->painter_->opacity()*opacity);
+    return true;
+  }
+  return false;
 }
 
 bool QtCanvas::DrawLine(double x0, double y0, double x1, double y1,
@@ -377,15 +406,15 @@ bool QtCanvas::DrawLine(double x0, double y0, double x1, double y1,
 }
 
 void QtCanvas::RotateCoordinates(double radians) {
-   return impl_->RotateCoordinates(radians);
+  impl_->painter_->rotate(RadiansToDegrees(radians));
 }
 
 void QtCanvas::TranslateCoordinates(double dx, double dy) {
-  return impl_->TranslateCoordinates(dx, dy);
+  impl_->painter_->translate(dx, dy);
 }
 
 void QtCanvas::ScaleCoordinates(double cx, double cy) {
-  return impl_->ScaleCoordinates(cx, cy);
+  impl_->painter_->scale(cx, cy);
 }
 
 bool QtCanvas::DrawFilledRect(double x, double y,
@@ -398,8 +427,8 @@ bool QtCanvas::IntersectRectClipRegion(double x, double y,
   return impl_->IntersectRectClipRegion(x, y, w, h);
 }
 
-bool QtCanvas::IntersectGeneralClipRegion(int rect_number, double* region) {
-  return impl_->IntersectGeneralClipRegion(rect_number, region);
+bool QtCanvas::IntersectGeneralClipRegion(const ClipRegion &region) {
+  return impl_->IntersectGeneralClipRegion(region);
 }
 
 bool QtCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
@@ -439,9 +468,18 @@ bool QtCanvas::DrawTextWithTexture(double x, double y, double w, double h,
 }
 
 bool QtCanvas::GetTextExtents(const char *text, const FontInterface *f,
-                                 int text_flags, double in_width,
-                                 double *width, double *height) {
-  return impl_->GetTextExtents(text, f, text_flags, in_width, width, height);
+                              int text_flags, double in_width,
+                              double *width, double *height) {
+  QTextDocument doc(QString::fromUtf8(text));
+  if (in_width <= 0) {
+    text_flags &= ~TEXT_FLAGS_WORDWRAP;
+  }
+  Impl::SetupQTextDocument(&doc, f, text_flags, ALIGN_LEFT, in_width);
+  if (width)
+    *width = doc.documentLayout()->documentSize().width();
+  if (height)
+    *height = doc.documentLayout()->documentSize().height();
+  return true;
 }
 
 bool QtCanvas::GetPointValue(double x, double y,
@@ -449,28 +487,27 @@ bool QtCanvas::GetPointValue(double x, double y,
   return impl_->GetPointValue(x, y, color, opacity);
 }
 
-size_t QtCanvas::GetWidth() const {
-  return impl_->GetWidth();
+double QtCanvas::GetWidth() const {
+  return impl_->width_;
 }
 
-size_t QtCanvas::GetHeight() const {
-  return impl_->GetHeight();
-}
-
-void QtCanvas::MultiplyColor(QtCanvas *src, const Color &c) {
-  impl_->MultiplyColor(src->impl_, c);
+double QtCanvas::GetHeight() const {
+  return impl_->height_;
 }
 
 bool QtCanvas::IsValid() const {
-  return true;
+  if (impl_->painter_ != NULL)
+    return true;
+  else
+    return false;
 }
 
 QImage* QtCanvas::GetImage() const {
-  return impl_->GetImage();
+  return impl_->image_;
 }
 
 QPainter* QtCanvas::GetQPainter() {
-  return impl_->GetQPainter();
+  return impl_->painter_;
 }
 
 } // namespace qt

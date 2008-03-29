@@ -20,25 +20,6 @@
 
 namespace ggadget {
 namespace qt {
-class MenuItemInfo : public QObject {
-  Q_OBJECT
- public:
-  MenuItemInfo(const char *text,
-               ggadget::Slot1<void, const char *> *handler,
-               QAction *action)
-    : item_text_(text), handler_(handler), action_(action) {
-      connect(action, SIGNAL(triggered()), this, SLOT(OnTriggered()));
-  }
-
-  std::string item_text_;
-  ggadget::Slot1<void, const char *> *handler_;
-  QAction *action_;
-  
- public slots:
-  void OnTriggered() {
-    if (handler_) (*handler_)(item_text_.c_str());
-  }
-};
 #include "qt_menu.moc"
 
 class QtMenu::Impl {
@@ -54,12 +35,12 @@ class QtMenu::Impl {
       MenuItemInfo *info = new MenuItemInfo(item_text, handler, action);
       if (item_text) menu_items_[item_text] = info;
     }
-    
+
     if (style & MENU_ITEM_FLAG_GRAYED)
       action->setDisabled(true);
     else
       action->setDisabled(false);
-    
+
     if (style & MENU_ITEM_FLAG_CHECKED) {
       action->setCheckable(true);
       action->setChecked(true);

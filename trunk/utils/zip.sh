@@ -17,7 +17,7 @@
 
 zip "$@"
 STATUS=$?
-if [ $STATUS == 12 ]; then
+if [ $STATUS = 12 ]; then
   # zip returns 12 when it has nothing to do, which should be treated as
   # success.
   exit 0

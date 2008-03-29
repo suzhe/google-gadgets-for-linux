@@ -54,8 +54,8 @@ class QtEditElement : public EditElementBase {
   virtual void SetMultiline(bool multiline);
   virtual std::string GetPasswordChar() const;
   virtual void SetPasswordChar(const char *passwordChar);
-  virtual int GetSize() const;
-  virtual void SetSize(int size);
+  virtual double GetSize() const;
+  virtual void SetSize(double size);
   virtual bool IsStrikeout() const;
   virtual void SetStrikeout(bool strikeout);
   virtual bool IsUnderline() const;
@@ -120,8 +120,8 @@ class QtEditElement : public EditElementBase {
   Texture *background_;
   Color text_color_;
   std::string font_family_;
-  int font_size_;
-  std::string password_char_;
+  double font_size_;
+  QString password_char_;
   QAbstractTextDocumentLayout::PaintContext paint_ctx_;
   DISALLOW_EVIL_CONSTRUCTORS(QtEditElement);
 };

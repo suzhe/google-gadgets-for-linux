@@ -198,6 +198,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  xml_utils.cc \
 			  zip_file_manager.cc
 
+#view_decorator.cc 
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
 			  @LTDLINCL@ \

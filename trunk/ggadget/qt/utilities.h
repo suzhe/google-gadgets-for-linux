@@ -14,27 +14,28 @@
   limitations under the License.
 */
 
-#include <QFontMetrics>
-#include "qt_canvas.h"
-#include "qt_font.h"
+#ifndef GGADGET_QT_UTILITIES_H__
+#define GGADGET_QT_UTILITIES_H__
+
+#include <string>
 
 namespace ggadget {
+
+class Gadget;
 namespace qt {
 
-QtFont::QtFont(const char *family, double size, Style style,
-                     Weight weight)
-    : style_(style), weight_(weight) {
-  int qt_weight = QFont::Normal;
-  bool italic = false;
-  if (weight == WEIGHT_BOLD) qt_weight = QFont::Bold;
-  if (style == STYLE_ITALIC) italic = true;
-  font_ = new QFont(family, D2I(size), qt_weight, italic);
-  size_ = size;
-}
+/**
+ * Shows an about dialog for a specified gadget.
+ */
+void ShowGadgetAboutDialog(Gadget *gadget);
 
-QtFont::~QtFont() {
-  if (font_) delete font_;
-}
+/** Open the given URL in the user's default web browser. */
+bool OpenURL(const char *url);
+
+/** Load a given font into the application. */
+bool LoadFont(const char *filename);
 
 } // namespace qt
 } // namespace ggadget
+
+#endif // GGADGET_QT_UTILITIES_H__

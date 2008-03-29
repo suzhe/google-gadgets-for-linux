@@ -31,5 +31,5 @@ SET(SRCS
 ADD_LIBRARY(ggadget-linux ${SRCS})
 
 ADD_MODULE(linux-system-framework linux_system_framework.cc)
-TARGET_LINK_LIBRARIES(linux-system-framework ggadget-linux)
+TARGET_LINK_LIBRARIES(linux-system-framework ggadget ggadget-linux)
 OUTPUT_MODULE(linux-system-framework)

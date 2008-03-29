@@ -20,5 +20,5 @@ SET(SRCS
   curl_xml_http_request.cc
 )
 ADD_MODULE(curl-xml-http-request ${SRCS})
-TARGET_LINK_LIBRARIES(curl-xml-http-request ${LIBCURL_LIBRARIES})
+TARGET_LINK_LIBRARIES(curl-xml-http-request ${LIBCURL_LIBRARIES} ggadget)
 OUTPUT_MODULE(curl-xml-http-request)

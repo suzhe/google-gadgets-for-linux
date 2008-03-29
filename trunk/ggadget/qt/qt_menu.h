@@ -63,6 +63,26 @@ class QtMenu : public ggadget::MenuInterface {
   Impl *impl_;
 };
 
+class MenuItemInfo : public QObject {
+  Q_OBJECT
+ public:
+  MenuItemInfo(const char *text,
+               ggadget::Slot1<void, const char *> *handler,
+               QAction *action)
+    : item_text_(text), handler_(handler), action_(action) {
+      connect(action, SIGNAL(triggered()), this, SLOT(OnTriggered()));
+  }
+
+  std::string item_text_;
+  ggadget::Slot1<void, const char *> *handler_;
+  QAction *action_;
+
+ public slots:
+  void OnTriggered() {
+    if (handler_) (*handler_)(item_text_.c_str());
+  }
+};
+
 } // namesapce qt
 } // namespace ggadget
 

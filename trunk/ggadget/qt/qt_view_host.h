@@ -19,91 +19,56 @@
 
 #include <set>
 
+#include <QWidget>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
 #include <ggadget/qt/qt_gadget_widget.h>
 #include <ggadget/qt/qt_graphics.h>
-#include <ggadget/qt/qt_gadget_host.h>
 
 namespace ggadget {
-
-class DOMDocumentInterface;
-class View;
-
 namespace qt {
 
-/**
- * An implementation of @c ViewHostInterface for the simple gadget host.
- * In this implementation, there is one instance of @c GtkViewHost per view,
- * and one instance of GraphicsInterface per @c GtkViewHost.
- */
 class QtViewHost : public ViewHostInterface {
  public:
-  QtViewHost(QtGadgetHost *gadget_host,
-             GadgetHostInterface::ViewType type,
-             ViewInterface *view,
-             bool composited, bool useshapemask,
-             double zoom);
+  QtViewHost(ViewHostInterface::Type type,
+             double zoom, bool decorated,
+             ViewInterface::DebugMode debug_mode);
   virtual ~QtViewHost();
 
-#if 0
-  // TODO: This host should encapsulate all widget creating/switching jobs
-  // inside of it, so the interface of this method should be revised.
-  /**
-   * Switches the GadgetViewWidget associated with this host.
-   * When this is done, the original GadgetViewWidget will no longer have a
-   * valid GtkCairoHost object. The new GadgetViewWidget is responsible for
-   * freeing this host.
-   */
-  void SwitchWidget(GadgetViewWidget *new_gvw);
-#endif
-
-  virtual GadgetHostInterface *GetGadgetHost() const {
-    return gadget_host_;
-  }
-  virtual ViewInterface *GetView() { return view_; }
-  virtual const ViewInterface *GetView() const { return view_; }
-  virtual ScriptContextInterface *GetScriptContext() const {
-    return script_context_;
-  }
+  virtual Type GetType() const { return type_; }
+  virtual void Destroy();
+  virtual void SetView(ViewInterface *view);
+  virtual ViewInterface *GetView() const { return view_; }
   virtual const GraphicsInterface *GetGraphics() const { return graphics_; }
-
-  virtual void GetNativeWidgetInfo(void **native_widget, int *x, int *y);
+  virtual void *GetNativeWidget() const { return widget_; }
+  virtual void ViewCoordToNativeWidgetCoord(
+      double x, double y, double *widget_x, double *widget_y) const;
   virtual void QueueDraw();
-  virtual bool GrabKeyboardFocus();
-
+  virtual void QueueResize();
   virtual void SetResizable(ViewInterface::ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
-  virtual void SetCursor(CursorType type);
+  virtual void SetCursor(int type);
   virtual void SetTooltip(const char *tooltip);
-  virtual void RunDialog();
-  virtual void ShowInDetailsView(const char *title, int flags,
-                                 Slot1<void, int> *feedback_handler);
-  virtual void CloseDetailsView();
-
+  virtual bool ShowView(bool modal, int flags,
+                        Slot1<void, int> *feedback_handler);
+  virtual void CloseView();
+  virtual bool ShowContextMenu(int button);
+  virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
+  virtual void BeginMoveDrag(int button) {}
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
-  virtual std::string Prompt(const char *message, const char *default_value);
-  virtual void *GetNativeWidget() {  return widget_;  }
-  virtual void ViewCoordToNativeWidgetCoord(double x, double y,
-                                            double *widget_x, double *widget_y) {
-  }
-
-  QGadgetWidget *GetWidget() { return widget_; }
-
-  QtGadgetHost *GetQtGadgetHost() const {
-    return gadget_host_;
-  }
-
-  void ChangeZoom(double zoom);
+  virtual std::string Prompt(const char *message,
+                             const char *default_value);
+  virtual ViewInterface::DebugMode GetDebugMode() const { return debug_mode_; }
 
  private:
-  QtGadgetHost *gadget_host_;
   ViewInterface *view_;
-  ScriptContextInterface *script_context_;
+  ViewHostInterface::Type type_;
   QGadgetWidget *widget_;
   QtGraphics *graphics_;
+  QWidget *window_;     // Top level window of the view
+  ViewInterface::DebugMode debug_mode_;
   Connection *onoptionchanged_connection_;
 
   static const unsigned int kShowTooltipDelay = 500;
@@ -111,7 +76,9 @@ class QtViewHost : public ViewHostInterface {
   std::string tooltip_;
   int tooltip_timer_;
 
-  Slot1<void, int> *details_feedback_handler_;
+  Slot1<void, int> *feedback_handler_;
+
+  void Detach();
 
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
 };

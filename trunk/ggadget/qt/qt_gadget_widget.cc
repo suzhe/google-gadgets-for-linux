@@ -25,27 +25,40 @@
 namespace ggadget {
 namespace qt {
 
-QGadgetWidget::QGadgetWidget(QtViewHost *host, double zoom,
-                             bool composited, bool useshapemask)
+QGadgetWidget::QGadgetWidget(ViewInterface *view,
+                             ViewHostInterface *host,
+                             QtGraphics *g)
 //    : QGLWidget(QGLFormat(QGL::SampleBuffers)),
-     : view_host_(host), canvas_(NULL), drag_files_(NULL) {
-  view_ = host->GetView();
+     : canvas_(NULL), graphics_(g), view_(view), view_host_(host),
+       width_(0), height_(0),
+       drag_files_(NULL),
+       zoom_(g->GetZoom()) {
   setMouseTracking(true);
   setAcceptDrops(true);
-  setFixedSize(100, 100);
   setAttribute(Qt::WA_InputMethodEnabled);
 }
 
 void QGadgetWidget::paintEvent(QPaintEvent *event) {
   QPainter p(this);
-  size_t old_width = width_, old_height = height_;
+  p.setRenderHint(QPainter::Antialiasing);
+  //p.setClipRect(event->rect());
+
+  p.save();
+  p.setCompositionMode(QPainter::CompositionMode_Source);
+  p.fillRect(rect(), Qt::transparent);
+  p.restore();
+
+  double old_width = width_, old_height = height_;
   width_ = view_->GetWidth();
   height_ = view_->GetHeight();
 
-  if (old_width != width_ || old_height != height_)
-    setFixedSize(width_, height_);
+  if (old_width != width_ || old_height != height_) {
+    setFixedSize(D2I(width_ * zoom_), D2I(height_ * zoom_));
+    setMinimumSize(0, 0);
+    setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+  }
 
-  QtCanvas canvas(NULL, width_, height_, &p);
+  QtCanvas canvas(NULL, D2I(width_ * zoom_), D2I(height_ * zoom_), &p);
   canvas.ClearCanvas();
   view_->Draw(&canvas);
 }
@@ -71,26 +84,26 @@ static int GetMouseButton(const Qt::MouseButton button) {
 
 void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
   int buttons = GetMouseButtons(event->buttons());
-  MouseEvent e(Event::EVENT_MOUSE_MOVE, event->x(), event->y(), 0, 0,
-      buttons, 0);
+  MouseEvent e(Event::EVENT_MOUSE_MOVE,
+               event->x() / zoom_, event->y() / zoom_, 0, 0,
+               buttons, 0);
   if (view_->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED)
     event->accept();
 }
 
 void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
   setFocus(Qt::MouseFocusReason);
-  EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
+  EventResult handler_result = EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
-  mouse_down_time_ = GetGlobalMainLoop()->GetCurrentTime();
 
   MouseEvent e(Event::EVENT_MOUSE_DOWN,
-               event->x(), event->y(), 0, 0, button, 0);
+               event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
   handler_result = view_->OnMouseEvent(e);
 
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED) {
     event->accept();
-    return;
   }
+#if 0 // TODO: this code is refactored out
   if (event->button() == Qt::RightButton) {
     // Handle context menu
     QMenu qmenu;
@@ -101,6 +114,7 @@ void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
       qmenu.exec(event->globalPos());
     }
   }
+#endif
 }
 static const unsigned int kWindowMoveDelay = 100;
 
@@ -115,14 +129,14 @@ void QGadgetWidget::mouseReleaseEvent(QMouseEvent * event ) {
     button = MouseEvent::BUTTON_MIDDLE;
   }
   MouseEvent e(Event::EVENT_MOUSE_UP,
-               event->x(), event->y(), 0, 0, button, 0);
+               event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
   handler_result = view_->OnMouseEvent(e);
 
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
     event->accept();
 
   MouseEvent e1(Event::EVENT_MOUSE_CLICK,
-               event->x(), event->y(), 0, 0, button, 0);
+               event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
   handler_result = view_->OnMouseEvent(e1);
 
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
@@ -244,6 +258,35 @@ void QGadgetWidget::dropEvent(QDropEvent *event) {
                        drag_files_);
   if (view_->OnDragEvent(drag_event) == EVENT_RESULT_UNHANDLED) {
     event->ignore();
+  }
+}
+
+void QGadgetWidget::resizeEvent(QResizeEvent *event) {
+  if (width_ == 0) return;
+  ViewInterface::ResizableMode mode = view_->GetResizable();
+  if (mode == ViewInterface::RESIZABLE_ZOOM) {
+    double x_ratio =
+        static_cast<double>(event->size().width()) /
+        static_cast<double>(width_);
+    double y_ratio =
+        static_cast<double>(event->size().height()) /
+        static_cast<double>(height_);
+    zoom_ = x_ratio > y_ratio ? y_ratio : x_ratio;
+    graphics_->SetZoom(zoom_);
+    view_->MarkRedraw();
+    repaint();
+  } else if (mode == ViewInterface::RESIZABLE_TRUE) {
+    double width = event->size().width() / zoom_;
+    double height = event->size().height() / zoom_;
+    if (width != view_->GetWidth() || height != view_->GetHeight()) {
+      if (view_->OnSizing(&width, &height)) {
+        view_->SetSize(width, height);
+      } else {
+        view_host_->QueueResize();
+      }
+    }
+  } else {
+    view_host_->QueueResize();
   }
 }
 

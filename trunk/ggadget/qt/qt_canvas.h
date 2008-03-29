@@ -22,7 +22,7 @@
 #include <QImage>
 #include <QTextDocument>
 #include <QTextCursor>
-#include <QGLFramebufferObject>
+// #include <QGLFramebufferObject>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/canvas_interface.h>
@@ -38,16 +38,16 @@ class QtCanvas : public CanvasInterface {
   /**
    * Creates a QtCanvas object which uses a fixed zoom factor.
    */
-  QtCanvas(const QtGraphics *g, size_t w, size_t h);
+  QtCanvas(const QtGraphics *g, double w, double h);
   QtCanvas(const std::string &data);
-  QtCanvas(const QtGraphics *g, size_t w, size_t h, QPainter *painter);
+  QtCanvas(const QtGraphics *g, double w, double h, QPainter *painter);
 
   virtual ~QtCanvas();
 
   virtual void Destroy();
 
-  virtual size_t GetWidth() const;
-  virtual size_t GetHeight() const;
+  virtual double GetWidth() const;
+  virtual double GetHeight() const;
 
   virtual bool PushState();
   virtual bool PopState();
@@ -88,8 +88,7 @@ class QtCanvas : public CanvasInterface {
   virtual bool IntersectRectClipRegion(double x, double y,
                                        double w, double h);
 
-  virtual bool IntersectGeneralClipRegion(int rectangle_number,
-                                          double *region);
+  virtual bool IntersectGeneralClipRegion(const ClipRegion &region);
 
   virtual bool GetTextExtents(const char *text, const FontInterface *f,
                               int text_flags, double in_width,
@@ -99,11 +98,6 @@ class QtCanvas : public CanvasInterface {
                              Color *color, double *opacity) const;
 
  public:
-  /**
-   * Multiplies a specified color to every pixel in the canvas.
-   */
-  void MultiplyColor(QtCanvas *src, const Color &c);
-
   /** Checks if the canvas is valid */
   bool IsValid() const;
 
@@ -117,7 +111,9 @@ class QtCanvas : public CanvasInterface {
 
   DISALLOW_EVIL_CONSTRUCTORS(QtCanvas);
 };
-
+inline int D2I(double d) {
+  return static_cast<int>(round(d));
+}
 } // namespace qt
 } // namespace ggadget
 

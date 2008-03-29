@@ -19,18 +19,18 @@
 
 #include <string>
 #include <vector>
-#include <QGLWidget>
+// #include <QGLWidget>
+#include <QWidget>
 #include <ggadget/view_interface.h>
+#include <ggadget/view_host_interface.h>
 #include "qt_canvas.h"
 
 namespace ggadget {
 namespace qt {
-class QtViewHost;
 
 class QGadgetWidget : public QWidget {
  public:
-  QGadgetWidget(QtViewHost* host, double zoom,
-                bool composited, bool useshapemask);
+  QGadgetWidget(ViewInterface* view, ViewHostInterface *host, QtGraphics *g);
  protected:
   virtual void paintEvent(QPaintEvent *event);
   virtual void mouseDoubleClickEvent(QMouseEvent *event);
@@ -45,13 +45,16 @@ class QGadgetWidget : public QWidget {
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
-  QtViewHost *view_host_;
+  virtual void resizeEvent(QResizeEvent *event);
   QtCanvas *canvas_;
+  QtGraphics *graphics_;
   ViewInterface *view_;
-  size_t width_, height_;
+  ViewHostInterface *view_host_;
+  double width_, height_;  // The view size
   const char **drag_files_;
   std::vector<std::string> drag_urls_;
   uint64_t mouse_down_time_;
+  double zoom_;
 };
 
 

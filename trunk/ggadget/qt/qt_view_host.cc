@@ -16,6 +16,10 @@
 
 #include <sys/time.h>
 
+#include <QMessageBox>
+#include <QDialogButtonBox>
+#include <QVBoxLayout>
+#include <QInputDialog>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
@@ -30,35 +34,18 @@
 namespace ggadget {
 namespace qt {
 
-QtViewHost::QtViewHost(QtGadgetHost *gadget_host,
-                       GadgetHostInterface::ViewType type,
-                       ViewInterface *view,
-                       bool composited, bool useshapemask,
-                       double zoom)
-    : gadget_host_(gadget_host),
-      view_(view),
-      script_context_(NULL),
+QtViewHost::QtViewHost(ViewHostInterface::Type type,
+                       double zoom, bool decorated,
+                       ViewInterface::DebugMode debug_mode)
+    : view_(NULL),
+      type_(type),
       widget_(NULL),
-      graphics_(NULL),
+      graphics_(new QtGraphics(zoom)),
+      window_(NULL),
+      debug_mode_(debug_mode),
       onoptionchanged_connection_(NULL),
-      details_feedback_handler_(NULL) {
-  if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
-    // Only xml based views have standalone script context.
-    script_context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
-    VERIFY_M(script_context_, ("Failed to create ScriptContext instance."));
-  }
-
-  view_->AttachHost(this);
-
-  if (type != GadgetHostInterface::VIEW_OLD_OPTIONS) {
-    OptionsInterface *options = gadget_host->GetOptions();
-    // Continue to initialize the script context.
-    onoptionchanged_connection_ = options->ConnectOnOptionChanged(
-        NewSlot(view_, &ViewInterface::OnOptionChanged));
-  }
-
-  widget_ = new QGadgetWidget(this, zoom, composited, useshapemask);
-  graphics_ = new QtGraphics(zoom);
+      feedback_handler_(NULL) {
+//  debug_mode_ = ViewInterface::DEBUG_ALL;
 }
 
 QtViewHost::~QtViewHost() {
@@ -68,28 +55,56 @@ QtViewHost::~QtViewHost() {
   delete view_;
   view_ = NULL;
 
-  if (script_context_) {
-    script_context_->Destroy();
-    script_context_ = NULL;
-  }
-
   delete graphics_;
   graphics_ = NULL;
 }
 
-void QtViewHost::GetNativeWidgetInfo(void **native_widget, int *x, int *y) {
-  ASSERT(native_widget && x && y);
-  *native_widget = widget_;
-  *x = 0;
-  *y = 0;
+void QtViewHost::Destroy() {
+  delete this;
+}
+
+void QtViewHost::SetView(ViewInterface *view) {
+  Detach();
+  if (view == NULL) return;
+
+  view_ = view;
+  bool no_background = false;
+  widget_ = new QGadgetWidget(view_, this, graphics_);
+  // Initialize window and widget.
+  if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
+    window_ = new QDialog();
+    QVBoxLayout layout;
+
+    QDialogButtonBox buttons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    window_->connect(&buttons, SIGNAL(accepted()), window_, SLOT(accept()));
+    window_->connect(&buttons, SIGNAL(rejected()), window_, SLOT(reject()));
+
+    layout.addWidget(widget_);
+    layout.addWidget(&buttons);
+    window_->setLayout(&layout);
+ /*   int ret = dlg.exec();
+    if (ret == QDialog::Accepted) {
+      SimpleEvent event(Event::EVENT_OK);
+      view_->OnOtherEvent(event, NULL);
+    } */
+  } else {
+    window_ = widget_;
+    // Only main view may have transparent background.
+    no_background = true;
+  }
+}
+
+void QtViewHost::ViewCoordToNativeWidgetCoord(
+    double x, double y, double *widget_x, double *widget_y) const {
+  // TODO
 }
 
 void QtViewHost::QueueDraw() {
   widget_->update();
 }
 
-bool QtViewHost::GrabKeyboardFocus() {
-  return false;
+void QtViewHost::QueueResize() {
+  // TODO
 }
 
 void QtViewHost::SetResizable(ViewInterface::ResizableMode mode) {
@@ -104,37 +119,62 @@ void QtViewHost::SetShowCaptionAlways(bool always) {
   // TODO:
 }
 
-void QtViewHost::SetCursor(CursorType type) {
-}
-
-void QtViewHost::RunDialog() {
-}
-
-void QtViewHost::ShowInDetailsView(const char *title, int flags,
-                                    Slot1<void, int> *feedback_handler) {
-}
-
-void QtViewHost::CloseDetailsView() {
-}
-
-void QtViewHost::Alert(const char *message) {
-}
-
-bool QtViewHost::Confirm(const char *message) {
-  return false;
-}
-
-std::string QtViewHost::Prompt(const char *message,
-                                const char *default_value) {
-  return "nothing";
+void QtViewHost::SetCursor(int type) {
 }
 
 void QtViewHost::SetTooltip(const char *tooltip) {
 }
 
-void QtViewHost::ChangeZoom(double zoom) {
-  graphics_->SetZoom(zoom);
-  view_->MarkRedraw();
+bool QtViewHost::ShowView(bool modal, int flags,
+                          Slot1<void, int> *feedback_handler) {
+  window_->show();
+  SimpleEvent e(Event::EVENT_OPEN);
+  view_->OnOtherEvent(e);
+
+  return true;
+}
+
+void QtViewHost::CloseView() {
+  if (window_->isVisible()) {
+    // TODO: SaveViewPosition
+  }
+  window_->hide();
+}
+
+bool QtViewHost::ShowContextMenu(int button) {
+  return true;
+}
+
+void QtViewHost::Alert(const char *message) {
+  QMessageBox::information(NULL,
+                           view_->GetCaption().c_str(),
+                           message);
+}
+
+bool QtViewHost::Confirm(const char *message) {
+  int ret = QMessageBox::question(NULL,
+                                  view_->GetCaption().c_str(),
+                                  message,
+                                  QMessageBox::Yes| QMessageBox::No,
+                                  QMessageBox::Yes);
+  return ret == QMessageBox::Yes;
+}
+
+std::string QtViewHost::Prompt(const char *message,
+                                const char *default_value) {
+  QString s= QInputDialog::getText(NULL,
+                                   view_->GetCaption().c_str(),
+                                   message,
+                                   QLineEdit::Normal);
+//                                   QMessageBox::Ok| QMessageBox::Cancel);
+  return s.toStdString();
+}
+
+void QtViewHost::Detach() {
+  view_ = NULL;
+  if (window_)
+    delete window_;
+  window_ = widget_ = NULL;
 }
 
 } // namespace qt
