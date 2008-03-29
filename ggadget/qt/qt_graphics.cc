@@ -17,6 +17,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <map>
 
 #include <ggadget/color.h>
 #include <ggadget/common.h>
@@ -29,6 +30,8 @@
 namespace ggadget {
 namespace qt {
 
+typedef std::map<std::string, QtImage*> ImageMap;
+
 class QtGraphics::Impl {
  public:
   Impl(double zoom) : zoom_(zoom) {
@@ -37,6 +40,7 @@ class QtGraphics::Impl {
 
   double zoom_;
   Signal1<void, double> on_zoom_signal_;
+  ImageMap image_map_, mask_image_map_;
 };
 
 QtGraphics::QtGraphics(double zoom) : impl_(new Impl(zoom)) {
@@ -62,7 +66,7 @@ Connection *QtGraphics::ConnectOnZoom(Slot1<void, double> *slot) const {
   return impl_->on_zoom_signal_.Connect(slot);
 }
 
-CanvasInterface *QtGraphics::NewCanvas(size_t w, size_t h) const {
+CanvasInterface *QtGraphics::NewCanvas(double w, double h) const {
   if (!w || !h) return NULL;
 
   QtCanvas *canvas = new QtCanvas(this, w, h);
@@ -74,25 +78,52 @@ CanvasInterface *QtGraphics::NewCanvas(size_t w, size_t h) const {
   return canvas;
 }
 
-ImageInterface *QtGraphics::NewImage(const std::string &data,
+ImageInterface *QtGraphics::NewImage(const char *tag,
+                                     const std::string &data,
                                      bool is_mask) const {
   if (data.empty()) return NULL;
 
-  QtImage *img = new QtImage(this, data, is_mask);
+  std::string tag_str(tag ? tag : "");
+ /* ImageMap *map = is_mask ?
+      &impl_->mask_image_map_ : &impl_->image_map_;
+  if (!tag_str.empty()) {
+    // Image with blank tag should not be cached, because it may not come
+    // from a file.
+    ImageMap::const_iterator it = map->find(tag_str);
+    if (it != map->end()) {
+      it->second->Ref();
+      return it->second;
+    }
+  }*/
+
+  QtImage *img = new QtImage(NULL, tag, data, is_mask);
   if (!img) return NULL;
   if (!img->IsValid()) {
     img->Destroy();
     img = NULL;
   }
+
+/*  if (img && !tag_str.empty()) {
+    (*map)[tag_str] = img;
+  }*/
   return img;
 }
 
-static inline int D2I(double d) { return static_cast<int>(round(d)); }
-FontInterface *QtGraphics::NewFont(const char *family, size_t pt_size,
+void QtGraphics::RemoveImageTag(const char *tag, bool is_mask) {
+  std::string tag_str(tag ? tag : "");
+  ImageMap *map = is_mask ?
+      &impl_->mask_image_map_ : &impl_->image_map_;
+  if (!tag_str.empty()) {
+    map->erase(tag_str);
+  }
+}
+
+FontInterface *QtGraphics::NewFont(const char *family, double pt_size,
                                    FontInterface::Style style,
                                    FontInterface::Weight weight) const {
+  // TODO:How to get the most proper size
   double size = pt_size * 96./122.;
-  return new QtFont(family, D2I(size), style, weight);
+  return new QtFont(family, size, style, weight);
 }
 
 } // namespace qt

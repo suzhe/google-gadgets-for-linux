@@ -29,39 +29,70 @@
 
 namespace ggadget {
 namespace qt {
+static void QImageMultiplyColor(QImage* dest,
+                                const QImage *src,
+                                const Color &c) {
+  if (c == Color::kWhite) return;
+
+  int width = src->width();
+  int height = src->height();
+  int rm = c.RedInt();
+  int gm = c.GreenInt();
+  int bm = c.BlueInt();
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
+      QRgb rgb = src->pixel(x, y);
+      if (qAlpha(rgb) == 0) {
+        dest->setPixel(x, y, qRgba(0, 0, 0, 0));
+      } else {
+        int r = (qRed(rgb) * rm) >> 8;
+        int g = (qGreen(rgb) * gm) >> 8;
+        int b = (qBlue(rgb) * bm) >> 8;
+        dest->setPixel(x, y, qRgb(r, g, b));
+      }
+    }
+  }
+}
 
 class QtImage::Impl {
  public:
-  Impl(const std::string &data, bool is_mask) : is_mask_(is_mask) {
+  Impl(QtGraphics *g, const char *tag,
+       const std::string &data, bool is_mask)
+    : is_mask_(is_mask),
+      canvas_(NULL),
+      tag_(tag),
+      graphics_(g),
+      ref_count_(1) {
     canvas_ = new QtCanvas(data);
+    if (!canvas_) return;
     if (canvas_->GetWidth() == 0) {
-      is_valid_ = false;
       delete canvas_;
       canvas_ = NULL;
-    } else {
-      is_valid_ = true;
     }
-    orig_canvas_ = canvas_;
+  }
+
+  Impl(size_t width, size_t height)
+    : is_mask_(false),
+      canvas_(NULL),
+      graphics_(NULL),
+      ref_count_(1) {
+    canvas_ = new QtCanvas(NULL, width, height);
+    if (!canvas_) return;
+    if (canvas_->GetWidth() == 0) {
+      delete canvas_;
+      canvas_ = NULL;
+    }
   }
 
   ~Impl() {
-    if (orig_canvas_ != canvas_) delete orig_canvas_;
     if (canvas_) delete canvas_;
-  }
-
-  bool IsValid() const {
-    return is_valid_;
-  }
-
-  const CanvasInterface *GetCanvas() {
-    return canvas_;
+    if (graphics_)
+      graphics_->RemoveImageTag(tag_.c_str(), is_mask_);
   }
 
   void Draw(CanvasInterface *canvas, double x, double y) {
     ASSERT(canvas && canvas_);
-    canvas->PushState();
     canvas->DrawCanvas(x, y, canvas_);
-    canvas->PopState();
   }
 
   void StretchDraw(CanvasInterface *canvas,
@@ -80,57 +111,22 @@ class QtImage::Impl {
     }
   }
 
-  size_t GetWidth() const {
-    return canvas_->GetWidth();
-  }
-
-  size_t GetHeight() const {
-    return canvas_->GetHeight();
-  }
-
-  void SetColorMultiply(const Color &color) {
-    if (!is_mask_ && color != color_multiply_) {
-      color_multiply_ = color;
-      // Try to make a copy if not have yet
-      if (canvas_ == orig_canvas_) {
-        canvas_ = new QtCanvas(NULL, GetWidth(), GetHeight());
-        if (canvas_ == NULL) {
-          canvas_ = orig_canvas_;
-          return;
-        }
-      }
-      canvas_->MultiplyColor(orig_canvas_, color);
-    }
-  }
-
-  bool GetPointValue(double x, double y,
-                     Color *color, double *opacity) {
-    return canvas_ && canvas_->GetPointValue(x, y, color, opacity);
-  }
-
-  void SetTag(const char *tag) {
-    tag_ = std::string(tag ? tag : "");
-  }
-
-  std::string GetTag() const {
-    return tag_;
-  }
-
-  double zoom_;
-  bool is_valid_;
   bool is_mask_;
-  // If color multiply is applied to image, we keep the original copy in
-  // orig_canvas_.
-  QtCanvas *canvas_, *orig_canvas_;
-  Color color_multiply_;
+  QtCanvas *canvas_;
   std::string tag_;
-  Connection *on_zoom_connection_;
+  QtGraphics *graphics_;
+  int ref_count_;
 };
 
-QtImage::QtImage(QtGraphics const *graphics,
+QtImage::QtImage(QtGraphics *graphics,
+                 const char *tag,
                  const std::string &data,
                  bool is_mask)
-  : impl_(new Impl(data, is_mask)) {
+  : impl_(new Impl(graphics, tag, data, is_mask)) {
+}
+
+QtImage::QtImage(size_t width, size_t height)
+  : impl_(new Impl(width, height)) {
 }
 
 QtImage::~QtImage() {
@@ -139,15 +135,16 @@ QtImage::~QtImage() {
 }
 
 bool QtImage::IsValid() const {
-  return impl_->IsValid();
+  return impl_->canvas_ != NULL;
 }
 
 void QtImage::Destroy() {
   delete this;
+//  Unref();
 }
 
 const CanvasInterface *QtImage::GetCanvas() const {
-  return impl_->GetCanvas();
+  return impl_->canvas_;
 }
 
 void QtImage::Draw(CanvasInterface *canvas, double x, double y) const {
@@ -160,29 +157,36 @@ void QtImage::StretchDraw(CanvasInterface *canvas,
   impl_->StretchDraw(canvas, x, y, width, height);
 }
 
-size_t QtImage::GetWidth() const {
-  return impl_->GetWidth();
+double QtImage::GetWidth() const {
+  return impl_->canvas_->GetWidth();
 }
 
-size_t QtImage::GetHeight() const {
-  return impl_->GetHeight();
+double QtImage::GetHeight() const {
+  return impl_->canvas_->GetHeight();
 }
 
-void QtImage::SetColorMultiply(const Color &color) {
-  impl_->SetColorMultiply(color);
+ImageInterface* QtImage::MultiplyColor(const Color &color) const {
+
+  QtImage *new_image = new QtImage(D2I(GetWidth()), D2I(GetHeight()));
+  if (!new_image) return NULL;
+  if (!new_image->IsValid()) {
+    delete new_image;
+    return NULL;
+  }
+  // Draw(new_image->GetCanvas(), 0, 0);
+  QImageMultiplyColor(new_image->impl_->canvas_->GetImage(),
+                      impl_->canvas_->GetImage(),
+                      color);
+  return new_image;
 }
 
 bool QtImage::GetPointValue(double x, double y,
                                 Color *color, double *opacity) const {
-  return impl_->GetPointValue(x, y, color, opacity);
-}
-
-void QtImage::SetTag(const char *tag) {
-  impl_->SetTag(tag);
+  return impl_->canvas_ && impl_->canvas_->GetPointValue(x, y, color, opacity);
 }
 
 std::string QtImage::GetTag() const {
-  return impl_->GetTag();
+  return impl_->tag_;
 }
 
 bool QtImage::IsFullyOpaque() const {
@@ -190,5 +194,15 @@ bool QtImage::IsFullyOpaque() const {
   return false;
 }
 
-} // namespace gtk
+void QtImage::Ref() {
+  impl_->ref_count_++;
+}
+
+void QtImage::Unref() {
+  if (--impl_->ref_count_ == 0)
+    delete this;
+}
+
+
+} // namespace qt
 } // namespace ggadget

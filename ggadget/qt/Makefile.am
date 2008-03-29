@@ -26,9 +26,8 @@ INCLUDES		= -I$(top_builddir) \
 lib_LTLIBRARIES		= libggadget-qt@GGL_EPOCH@.la
 
 libggadget_qt@GGL_EPOCH@_la_SOURCES = \
-				qt_menu.cc \
+			  qt_menu.cc \
 			  qt_gadget_widget.cc \
-			  qt_gadget_host.cc \
 			  qt_view_host.cc \
 			  qt_canvas.cc \
 			  qt_image.cc \

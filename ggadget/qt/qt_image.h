@@ -31,10 +31,12 @@ class QtGraphics;
  */
 class QtImage : public ImageInterface {
  public:
-  QtImage(QtGraphics const *g, const std::string &data, bool is_mask);
-
+  QtImage(QtGraphics *g, const char* tag,
+          const std::string &data, bool is_mask);
   /** Check if the QtImage object is valid. */
   bool IsValid() const;
+  void Ref();
+  void Unref();
 
  public:
   virtual ~QtImage();
@@ -45,16 +47,16 @@ class QtImage : public ImageInterface {
   virtual void StretchDraw(CanvasInterface *canvas,
                            double x, double y,
                            double width, double height) const;
-  virtual size_t GetWidth() const;
-  virtual size_t GetHeight() const;
-  virtual void SetColorMultiply(const Color &color);
+  virtual double GetWidth() const;
+  virtual double GetHeight() const;
+  virtual ImageInterface* MultiplyColor(const Color &color) const;
   virtual bool GetPointValue(double x, double y,
                              Color *color, double *opacity) const;
-  virtual void SetTag(const char *tag);
   virtual std::string GetTag() const;
   virtual bool IsFullyOpaque() const;
 
  private:
+  QtImage(size_t width, size_t height);
   class Impl;
   Impl *impl_;
 

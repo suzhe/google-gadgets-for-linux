@@ -67,7 +67,7 @@ static const int kDefaultEditElementHeight = 16;
 static const int kInnerBorderX = 2;
 static const int kInnerBorderY = 1;
 
-static const int kDefaultFontSize = 10;
+static const double kDefaultFontSize = 10;
 static const char *kDefaultFontFamily = "Sans";
 
 static const Color kDefaultTextColor(0, 0, 0);
@@ -75,6 +75,10 @@ static const Color kDefaultBackgroundColor(1, 1, 1);
 static const Color kDefaultSelectionBackgroundColor(0.5, 0.5, 0.5);
 static const Color kDefaultSelectionTextColor(1, 1, 1);
 
+static void SetCursorSelection(QTextCursor *cur, int start, int end) {
+  cur->setPosition(start);
+  cur->setPosition(end, QTextCursor::KeepAnchor);
+}
 
 QtEditElement::QtEditElement(BasicElement *parent, View *view, const char *name)
     : EditElementBase(parent, view, name),
@@ -115,7 +119,7 @@ void QtEditElement::GetScrollBarInfo(int *x_range, int *y_range,
     *x_range = 0;
     *line_step = 10;
     *page_step = height_;
-    *cur_pos = - scroll_offset_y_;
+    *cur_pos = scroll_offset_y_;
   } else {
     *y_range = 0;
     *x_range = 0;
@@ -177,6 +181,7 @@ void QtEditElement::SetColor(const char *color) {
            text_color_.GreenInt(),
            text_color_.BlueInt());
   paint_ctx_.palette.setBrush(QPalette::Text, c);
+  QueueDraw();
 }
 
 std::string QtEditElement::GetFont() const {
@@ -187,7 +192,7 @@ void QtEditElement::SetFont(const char *font) {
   std::string new_font((font && *font) ? font : kDefaultFontFamily);
   if (font_family_ != new_font) {
     font_family_ = new_font;
-    QFont font(font_family_.c_str(), font_size_);
+    QFont font(font_family_.c_str(), D2I(font_size_));
     doc_.setDefaultFont(font);
     QueueDraw();
   }
@@ -226,19 +231,19 @@ void QtEditElement::SetPasswordChar(const char *c) {
   if (c == NULL || *c == 0 || !IsLegalUTF8Char(c, GetUTF8CharLength(c))) {
     password_char_ = "*";
   } else {
-    password_char_.assign(c, GetUTF8CharLength(c));
+    password_char_ = QString::fromUtf8(c);
   }
 }
 
-int QtEditElement::GetSize() const {
+double QtEditElement::GetSize() const {
   return font_size_;
 }
 
-void QtEditElement::SetSize(int size) {
+void QtEditElement::SetSize(double size) {
   if (font_size_ != size) {
     font_size_ = size;
     QFont font = doc_.defaultFont();
-    font.setPixelSize(size);
+    font.setPixelSize(D2I(size));
     doc_.setDefaultFont(font);
   }
 }
@@ -276,7 +281,7 @@ std::string QtEditElement::GetValue() const {
 }
 
 void QtEditElement::SetValue(const char *value) {
-  doc_.setPlainText(value);
+  doc_.setPlainText(QString::fromUtf8(value));
 }
 
 bool QtEditElement::IsWordWrap() const {
@@ -297,10 +302,14 @@ void QtEditElement::SetWordWrap(bool wrap) {
 }
 
 bool QtEditElement::IsReadOnly() const {
-  return false;
+  return readonly_;
 }
 
 void QtEditElement::SetReadOnly(bool readonly) {
+  if (readonly != readonly_) {
+    readonly_ = readonly;
+    QueueDraw();
+  }
 }
 
 void QtEditElement::GetIdealBoundingRect(int *width, int *height) {
@@ -356,19 +365,18 @@ void QtEditElement::DoDraw(CanvasInterface *canvas) {
   }
   QPainter *p = c->GetQPainter();
 
-
   QTextDocument *doc = &doc_;
   QTextCursor *cursor = cursor_;
 
   // These document and cursor are used to draw when password_ is set
   QTextDocument tmp_doc;
   QTextCursor tmp_cursor(&tmp_doc);
-  if (!password_char_.empty()) {
-    std::string shadow;
+  if (!password_char_.isEmpty()) {
+    QString shadow;
     size_t len = GetValue().length();
     for (size_t i = 0; i < len; i++)
       shadow.append(password_char_);
-    tmp_doc.setPlainText(shadow.c_str());
+    tmp_doc.setPlainText(shadow);
 
     // Setup cursor's position and selection
     int start = cursor_->selectionStart();
@@ -424,6 +432,36 @@ EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
   if (event.GetButton() != MouseEvent::BUTTON_LEFT)
     return EVENT_RESULT_UNHANDLED;
 
+  Event::Type type = event.GetType();
+  float x = event.GetX() - kInnerBorderX - scroll_offset_x_;
+  float y = event.GetY() - kInnerBorderY - scroll_offset_y_;
+  int offset = doc_.documentLayout()->hitTest(QPointF(x, y), Qt::FuzzyHit);
+  int sel_start = cursor_->selectionStart();
+  int sel_end = cursor_->selectionEnd();
+
+  if (type == Event::EVENT_MOUSE_DOWN) {
+    if (event.GetModifier() & Event::MOD_SHIFT) {
+      // If current click position is inside the selection range, then just
+      // cancel the selection.
+      if (offset > sel_start && offset < sel_end)
+        cursor_->setPosition(offset);
+      else if (offset <= sel_start)
+        SetCursorSelection(cursor_, sel_end, offset);
+      else if (offset >= sel_end)
+        SetCursorSelection(cursor_, sel_start, offset);
+    } else {
+      cursor_->setPosition(offset);
+    }
+  } else if (type == Event::EVENT_MOUSE_DBLCLICK) {
+    if (event.GetModifier() & Event::MOD_SHIFT)
+      cursor_->select(QTextCursor::LineUnderCursor);
+    else
+      cursor_->select(QTextCursor::WordUnderCursor);
+  } else if (type == Event::EVENT_MOUSE_MOVE) {
+    cursor_->setPosition(offset, QTextCursor::KeepAnchor);
+  }
+
+  QueueDraw();
   return EVENT_RESULT_HANDLED;
 }
 
@@ -497,6 +535,7 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
 }
 
 void QtEditElement::ScrollToCursor() {
+  if (!multiline_) return;
   QRectF r = GetRectForPosition(&doc_, cursor_->position());
   if (r.top() < scroll_offset_y_) {
     scroll_offset_y_ = static_cast<int>(r.top());
@@ -564,7 +603,7 @@ void QtEditElement::OnScrolled() {
     else if (position >= RequestHeight() - RealHeight())
       position = RequestHeight() - RealHeight() - 1;
 
-    scroll_offset_y_ = -position;
+    scroll_offset_y_ = position;
     QueueDraw();
   }
 }
@@ -603,14 +642,14 @@ void QtEditElement::PasteClipboard() {
 }
 
 void QtEditElement::CopyClipboard() {
-  if (cursor_->hasSelection() && password_char_.empty()) {
+  if (cursor_->hasSelection() && password_char_.isEmpty()) {
     QClipboard *clipboard = QApplication::clipboard();
     clipboard->setText(cursor_->selectedText());
   }
 }
 
 void QtEditElement::CutClipboard() {
-  if (cursor_->hasSelection() && password_char_.empty()) {
+  if (cursor_->hasSelection() && password_char_.isEmpty()) {
     QClipboard *clipboard = QApplication::clipboard();
     clipboard->setText(cursor_->selectedText());
     cursor_->deleteChar();

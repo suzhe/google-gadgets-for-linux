@@ -19,11 +19,11 @@ if GGL_BUILD_QT_HOST
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		=
+noinst_HEADERS		= qt_host.h
 
 bin_PROGRAMS		= ggl-qt
 
-ggl_qt_SOURCES	= main.cc
+ggl_qt_SOURCES	= main.cc qt_host.cc
 
 ggl_qt_CPPFLAGS 	= @QT4_CFLAGS@ \
 			  @SPIDERMONKEY_CPPFLAGS@ \
@@ -52,7 +52,7 @@ ggl-qt.sh: ggl-qt
 	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class:$(abs_top_builddir)/extensions/gtkmoz_browser_element\
 	 $(LIBTOOL) --mode=execute $(abs_builddir)/ggl-qt '$$@' > $@)
 
-main.moc:main.cc
+qt_host.moc:qt_host.cc
 	moc $< -o $@
 
 ggl-qt.sh: ggl-qt

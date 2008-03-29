@@ -29,22 +29,21 @@ namespace qt {
  */
 class QtFont : public FontInterface {
  public:
-  QtFont(const char *family, size_t size, Style style,
+  QtFont(const char *family, double size, Style style,
          Weight weight);
   virtual ~QtFont();
 
   virtual Style GetStyle() const { return style_; };
   virtual Weight GetWeight() const { return weight_; };
-  virtual size_t GetPointSize() const { return size_; };
+  virtual double GetPointSize() const { return size_; };
 
   virtual void Destroy() { delete this; };
 
-  bool GetTextExtents(const char *text, double *width, double *height) const;
   QFont *GetQFont() const { return font_; }
 
  private:
   QFont *font_;
-  size_t size_;
+  double size_;
   Style style_;
   Weight weight_;
 };

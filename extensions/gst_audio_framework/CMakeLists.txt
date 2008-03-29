@@ -21,5 +21,5 @@ SET(SRCS
   gst_audio_framework.cc
 )
 ADD_MODULE(gst-audio-framework ${SRCS})
-TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES})
+TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES} ggadget)
 OUTPUT_MODULE(gst-audio-framework)

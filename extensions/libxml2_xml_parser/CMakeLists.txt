@@ -20,5 +20,5 @@ SET(SRCS
   libxml2_xml_parser.cc
 )
 ADD_MODULE(libxml2-xml-parser ${SRCS})
-TARGET_LINK_LIBRARIES(libxml2-xml-parser ${LIBXML2_LIBRARIES})
+TARGET_LINK_LIBRARIES(libxml2-xml-parser ${LIBXML2_LIBRARIES} ggadget)
 OUTPUT_MODULE(libxml2-xml-parser)

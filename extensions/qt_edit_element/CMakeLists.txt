@@ -14,12 +14,17 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
+PKGCONFIG_EX(QtCore 4.3 QTCORE_LIBRARIES)
+PKGCONFIG_EX(QtGui 4.3 QTGUI_LIBRARIES)
 
 SET(SRCS
-  dbus_script_class.cc
-  scriptable_dbus_object.cc
+  qt_edit_element.cc
 )
-ADD_MODULE(dbus-script-class ${SRCS})
-TARGET_LINK_LIBRARIES(dbus-script-class ggadget-dbus ${DBUS_LIBRARIES} ggadget)
-OUTPUT_MODULE(dbus-script-class)
+ADD_MODULE(qt-edit-element ${SRCS})
+TARGET_LINK_LIBRARIES(qt-edit-element
+  ggadget
+  ggadget-qt
+  ${QTCORE_LIBRARIES}
+  ${QTGUI_LIBRARIES}
+)
+OUTPUT_MODULE(qt-edit-element)

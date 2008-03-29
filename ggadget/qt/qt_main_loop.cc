@@ -22,9 +22,7 @@
 
 #include <stdint.h>
 #include <map>
-#include <QTimer>
 #include <QApplication>
-#include <QSocketNotifier>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include "qt_main_loop.h"
@@ -32,53 +30,6 @@
 namespace ggadget {
 namespace qt {
 
-class WatchNode : public QObject {
-  Q_OBJECT
- public:
-  MainLoopInterface::WatchType type_;
-  bool calling_, removing_;
-  MainLoopInterface *main_loop_;
-  WatchCallbackInterface *callback_;
-  QObject *object_;   // pointer to QSocketNotifier or QTimer
-  int watch_id_;
-  int data_;      // For IO watch, it's fd, for timeout watch, it's interval.
-
-  WatchNode() {
-    calling_ = removing_ = false;
-    main_loop_ = NULL;
-    callback_ = NULL;
-    object_ = NULL;
-    watch_id_ = -1;
-  }
-
- public slots:
-  void OnTimeout() {
-    if (!calling_ && !removing_) {
-      calling_ = true;
-      bool ret = callback_->Call(main_loop_, watch_id_);
-      calling_ = false;
-      if (!ret || removing_) {
-        main_loop_->RemoveWatch(watch_id_);
-        QTimer* timer = reinterpret_cast<QTimer *>(object_);
-        timer->stop();
-      }
-    }
-  }
-
-  void OnIOEvent(int fd) {
-    if (!calling_ && !removing_) {
-      calling_ = true;
-      bool ret = callback_->Call(main_loop_, watch_id_);
-      calling_ = false;
-      if (!ret || removing_) {
-        main_loop_->RemoveWatch(watch_id_);
-        QSocketNotifier *notifier =
-            reinterpret_cast<QSocketNotifier*>(object_);
-        notifier->setEnabled(false);
-      }
-    }
-  }
-};
 #include "qt_main_loop.moc"
 
 class QtMainLoop::Impl {
@@ -105,7 +56,7 @@ class QtMainLoop::Impl {
         break;
     }
 
-    QSocketNotifier *notifier = new QSocketNotifier(fd, qtype); 
+    QSocketNotifier *notifier = new QSocketNotifier(fd, qtype);
     WatchNode *node = new WatchNode();
     node->type_ = type;
     node->data_ = fd;
