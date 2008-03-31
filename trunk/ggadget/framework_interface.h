@@ -173,7 +173,7 @@ class PerfmonInterface {
   typedef Slot2<void, const char *, const Variant &> CallbackSlot;
 
   /** Get the current value for the specified counter. */
-  virtual int64_t GetCurrentValue(const char *counter_path) = 0;
+  virtual Variant GetCurrentValue(const char *counter_path) = 0;
 
   /**
    * Add a performance counter.

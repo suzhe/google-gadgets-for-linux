@@ -27,7 +27,7 @@ namespace ggadget {
 /**
  * A @c Slot is a calling target.
  * The real targets are implemented in subclasses.
- * The instances are immutable, becuase all methods are @c const.
+ * The instances are immutable, because all methods are @c const.
  */
 class Slot {
  public:
