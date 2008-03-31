@@ -67,7 +67,7 @@ class DefaultMemory : public MemoryInterface {
 
 class DefaultPerfmon : public PerfmonInterface {
  public:
-  virtual int64_t GetCurrentValue(const char *counter_path) { return 0; }
+  virtual Variant GetCurrentValue(const char *counter_path) { return Variant(0); }
   virtual int AddCounter(const char *counter_path, CallbackSlot *slot) {
     delete slot;
     return -1;

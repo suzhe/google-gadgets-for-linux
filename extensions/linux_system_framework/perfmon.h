@@ -23,12 +23,14 @@ namespace ggadget {
 namespace framework {
 namespace linux_system {
 
+
 class Perfmon : public PerfmonInterface {
  public:
-  virtual int64_t GetCurrentValue(const char *counter_path);
+  virtual Variant GetCurrentValue(const char *counter_path);
   virtual int AddCounter(const char *counter_path, CallbackSlot *slot);
   virtual void RemoveCounter(int id);
 };
+
 
 } // namespace linux_system
 } // namespace framework

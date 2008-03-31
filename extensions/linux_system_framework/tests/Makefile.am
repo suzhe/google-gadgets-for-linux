@@ -26,7 +26,8 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 noinst_HEADERS		=
 
-check_PROGRAMS		= machine_test \
+check_PROGRAMS		= perfmon_test \
+                    machine_test \
                     network_test \
                     memory_test \
                     power_test \
@@ -45,6 +46,7 @@ filesystem_file_test_SOURCES    = filesystem_file_test.cc
 filesystem_textstream_test_SOURCES    = filesystem_textstream_test.cc
 network_test_SOURCES		= network_test.cc
 power_test_SOURCES 		= power_test.cc
+perfmon_test_SOURCES   = perfmon_test.cc
 
 TESTS_ENVIRONMENT	= $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND)
 TESTS 			= $(check_PROGRAMS)
