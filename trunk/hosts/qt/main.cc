@@ -70,11 +70,11 @@ static const char *kGlobalExtensions[] = {
 
 static const char *kGlobalResourcePaths[] = {
 #ifdef GGL_RESOURCE_DIR
-  GGL_RESOURCE_DIR "/ggl-resources.gg",
-  GGL_RESOURCE_DIR "/ggl-resources",
+  GGL_RESOURCE_DIR "/resources.gg",
+  GGL_RESOURCE_DIR "/resources",
 #endif
-  "ggl-resources.gg",
-  "ggl-resources",
+  "resources.gg",
+  "resources",
   NULL
 };
 

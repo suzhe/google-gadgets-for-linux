@@ -85,34 +85,6 @@ QtMenu::QtMenu(QMenu *qmenu)
 QtMenu::~QtMenu() {
 }
 
-/*void QtMenu::SetMenuItemStyle(GtkMenuItem *menu_item, int style) {
-  setting_style_ = true;
-  gtk_widget_set_sensitive(GTK_WIDGET(menu_item),
-      (style & ggadget::MenuInterface::MENU_ITEM_FLAG_GRAYED) == 0);
-  if (GTK_IS_CHECK_MENU_ITEM(menu_item)) {
-    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_item),
-        (style & ggadget::MenuInterface::MENU_ITEM_FLAG_CHECKED) != 0);
-  }
-  setting_style_ = false; 
-} */
-
-// Windows version uses '&' as the mnemonic indicator, and this has been
-// taken as the part of the Gadget API.
-/* static std::string ConvertWindowsStyleMnemonics(const char *text) {
-  std::string result;
-  if (text) {
-    while (*text) {
-      switch (*text) {
-        case '&': result += '_'; break;
-        case '_': result += "__";
-        default: result += *text;
-      }
-      text++;
-    }
-  }
-  return result;
-}*/
-
 void QtMenu::AddItem(const char *item_text, int style,
                           ggadget::Slot1<void, const char *> *handler) {
   impl_->AddItem(item_text, style, handler);

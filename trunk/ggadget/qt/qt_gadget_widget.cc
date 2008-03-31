@@ -58,7 +58,7 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
     setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
   }
 
-  QtCanvas canvas(NULL, D2I(width_ * zoom_), D2I(height_ * zoom_), &p);
+  QtCanvas canvas(D2I(width_ * zoom_), D2I(height_ * zoom_), &p);
   canvas.ClearCanvas();
   view_->Draw(&canvas);
 }

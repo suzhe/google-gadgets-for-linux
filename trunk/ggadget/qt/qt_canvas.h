@@ -40,7 +40,7 @@ class QtCanvas : public CanvasInterface {
    */
   QtCanvas(const QtGraphics *g, double w, double h);
   QtCanvas(const std::string &data);
-  QtCanvas(const QtGraphics *g, double w, double h, QPainter *painter);
+  QtCanvas(double w, double h, QPainter *painter);
 
   virtual ~QtCanvas();
 

@@ -96,7 +96,11 @@ void QtViewHost::SetView(ViewInterface *view) {
 
 void QtViewHost::ViewCoordToNativeWidgetCoord(
     double x, double y, double *widget_x, double *widget_y) const {
-  // TODO
+  double zoom = graphics_->GetZoom();
+  if (widget_x)
+    *widget_x = x * zoom;
+  if (widget_y)
+    *widget_y = y * zoom;
 }
 
 void QtViewHost::QueueDraw() {

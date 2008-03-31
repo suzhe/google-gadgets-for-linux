@@ -17,6 +17,7 @@
 #include <string>
 #include <map>
 #include <QIcon>
+#include <QFontDatabase>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/qt/qt_view_host.h>
@@ -89,7 +90,7 @@ bool QtHost::OpenURL(const char *url) const {
 }
 
 bool QtHost::LoadFont(const char *filename) {
- // return ggadget::qt::LoadFont(filename);
+  QFontDatabase::addApplicationFont(filename);
  return true;
 }
 

@@ -32,15 +32,13 @@ namespace qt {
 static void QImageMultiplyColor(QImage* dest,
                                 const QImage *src,
                                 const Color &c) {
-  if (c == Color::kWhite) return;
-
   int width = src->width();
   int height = src->height();
   int rm = c.RedInt();
   int gm = c.GreenInt();
   int bm = c.BlueInt();
-  for (int x = 0; x < width; x++) {
-    for (int y = 0; y < height; y++) {
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
       QRgb rgb = src->pixel(x, y);
       if (qAlpha(rgb) == 0) {
         dest->setPixel(x, y, qRgba(0, 0, 0, 0));
@@ -62,12 +60,32 @@ class QtImage::Impl {
       canvas_(NULL),
       tag_(tag),
       graphics_(g),
+      fully_opaque_(false),
       ref_count_(1) {
     canvas_ = new QtCanvas(data);
     if (!canvas_) return;
     if (canvas_->GetWidth() == 0) {
       delete canvas_;
       canvas_ = NULL;
+      return;
+    }
+    QImage *img = canvas_->GetImage();
+    if (is_mask) {
+      // Setup alpha channel and black color will be set to fully transparent
+      QImage mask = img->createMaskFromColor(qRgb(0, 0, 0), Qt::MaskOutColor);
+      img->setAlphaChannel(mask);
+    } else if (!canvas_->GetImage()->hasAlphaChannel()) {
+      fully_opaque_ = true;
+    } else {
+      for (int y = 0; y < img->height() && fully_opaque_; y++) {
+        for (int x = 0; x < img->width(); x++) {
+          QRgb rgb = img->pixel(x, y);
+          if (qAlpha(rgb) != 255) {
+            fully_opaque_ = false;
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -115,6 +133,7 @@ class QtImage::Impl {
   QtCanvas *canvas_;
   std::string tag_;
   QtGraphics *graphics_;
+  bool fully_opaque_;
   int ref_count_;
 };
 
@@ -173,7 +192,7 @@ ImageInterface* QtImage::MultiplyColor(const Color &color) const {
     delete new_image;
     return NULL;
   }
-  // Draw(new_image->GetCanvas(), 0, 0);
+  new_image->impl_->fully_opaque_ = impl_->fully_opaque_;
   QImageMultiplyColor(new_image->impl_->canvas_->GetImage(),
                       impl_->canvas_->GetImage(),
                       color);
@@ -190,8 +209,7 @@ std::string QtImage::GetTag() const {
 }
 
 bool QtImage::IsFullyOpaque() const {
-  // TODO
-  return false;
+  return impl_->fully_opaque_;
 }
 
 void QtImage::Ref() {

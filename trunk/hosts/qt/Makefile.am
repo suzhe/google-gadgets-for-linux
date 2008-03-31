@@ -52,7 +52,7 @@ ggl-qt.sh: ggl-qt
 	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class:$(abs_top_builddir)/extensions/gtkmoz_browser_element\
 	 $(LIBTOOL) --mode=execute $(abs_builddir)/ggl-qt '$$@' > $@)
 
-qt_host.moc:qt_host.cc
+qt_host.moc:qt_host.h
 	moc $< -o $@
 
 ggl-qt.sh: ggl-qt
