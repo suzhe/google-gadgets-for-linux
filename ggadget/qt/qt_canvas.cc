@@ -51,7 +51,7 @@ class QtCanvas::Impl {
   Impl(const QtGraphics *g, double w, double h)
     : width_(w), height_(h), opacity_(1.), zoom_(1.),
       on_zoom_connection_(NULL),
-      image_(NULL), painter_(NULL), path_(NULL) {
+      image_(NULL), painter_(NULL), region_(NULL) {
     if (g){
       zoom_ = g->GetZoom();
       on_zoom_connection_ =
@@ -69,7 +69,7 @@ class QtCanvas::Impl {
     : width_(0), height_(0),
       opacity_(1.), zoom_(1.),
       on_zoom_connection_(NULL),
-      image_(NULL), painter_(NULL), path_(NULL) {
+      image_(NULL), painter_(NULL), region_(NULL) {
     image_ = new QImage();
     if (!image_) return;
 
@@ -91,7 +91,7 @@ class QtCanvas::Impl {
   Impl(double w, double h, QPainter *painter)
     : width_(w), height_(h), opacity_(1.), zoom_(1.),
       on_zoom_connection_(NULL), image_(NULL),
-      painter_(painter), path_(NULL) {
+      painter_(painter), region_(NULL) {
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
   }
 
@@ -280,17 +280,19 @@ class QtCanvas::Impl {
   }
 
   bool IntersectRectangle(double x, double y, double w, double h) {
-    QRectF qrect(x, y, w, h);
-    path_->addRect(qrect);
+    QRect qrect(D2I(x), D2I(y), D2I(w), D2I(h));
+    *region_ = region_->united(QRegion(qrect));
     return true;
   }
 
   bool IntersectGeneralClipRegion(const ClipRegion &region) {
-    QPainterPath path;
-    path_ = &path;
+    QRegion qregion;
+    region_ = &qregion;
     if (region.EnumerateRectangles(NewSlot(this, &Impl::IntersectRectangle))) {
       painter_->setClipping(true);
-      painter_->setClipPath(path);
+      painter_->setClipRegion(qregion);
+    } else {
+      painter_->setClipping(false);
     }
     return true;
   }
@@ -350,13 +352,13 @@ class QtCanvas::Impl {
   Connection *on_zoom_connection_;
   QImage *image_;
   QPainter *painter_;
-  QPainterPath *path_;
+  QRegion *region_;
 };
 
 QtCanvas::QtCanvas(const QtGraphics *g, double w, double h)
   : impl_(new Impl(g, w, h)) { }
 
-QtCanvas::QtCanvas(const QtGraphics *g, double w, double h, QPainter *painter)
+QtCanvas::QtCanvas(double w, double h, QPainter *painter)
   : impl_(new Impl(w, h, painter)) { }
 
 QtCanvas::QtCanvas(const std::string &data) :

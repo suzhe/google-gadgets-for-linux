@@ -54,9 +54,9 @@ libggadget_qt@GGL_EPOCH@_la_LDFLAGS = \
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget-qt@GGL_EPOCH@.pc
 
-qt_main_loop.moc:qt_main_loop.cc
+qt_main_loop.moc:qt_main_loop.h
 	moc $< -o $@
-qt_menu.moc:qt_menu.cc
+qt_menu.moc:qt_menu.h
 	moc $< -o $@
 
 endif
