@@ -23,7 +23,7 @@
 #include "ggadget/canvas_interface.h"
 #include "ggadget/gtk/cairo_canvas.h"
 #include "ggadget/gtk/cairo_graphics.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -186,7 +186,7 @@ TEST_F(CairoCanvasTest, GetPointValue) {
 #endif
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   for (int i = 0; i < argc; i++) {
     if (0 == strcasecmp(argv[i], "-savepng")) {

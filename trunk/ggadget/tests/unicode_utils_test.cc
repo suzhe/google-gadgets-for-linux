@@ -16,7 +16,7 @@
 
 #include <cstdio>
 #include "ggadget/unicode_utils.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -369,7 +369,7 @@ TEST(UnicodeUtils, CompareLocaleStrings) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   return RUN_ALL_TESTS();
 }

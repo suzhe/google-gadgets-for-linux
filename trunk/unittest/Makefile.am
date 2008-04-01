@@ -16,19 +16,26 @@
 
 EXTRA_DIST		= js_unittest.js
 
-noinst_HEADERS		= gunit-internal-inl.h \
-			  gunit-internal.h \
-			  gunit.h \
-			  gunit_pred_impl.h \
-			  gunit_prod.h
+noinst_HEADERS		= gtest_internal_inl.h \
+			  gtest_internal.h \
+			  gtest.h \
+			  gtest_pred_impl.h \
+			  gtest_prod.h \
+			  gtest_spi.h
 
-noinst_LTLIBRARIES	= libgunit.la
+noinst_LTLIBRARIES	= libgtest.la
 
-libgunit_la_SOURCES	= gunit.cc
+libgtest_la_SOURCES	= gtest.cc
 
-libgunit_la_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
-libgunit_la_CPPFLAGS	= $(PREDEFINED_MACROS)
+libgtest_la_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
+libgtest_la_CPPFLAGS	= $(PREDEFINED_MACROS)
 
-if !GGL_HOST_WINDOWS
-libgunit_la_CPPFLAGS	+= -DOS_LINUX
+if GGL_HOST_WINDOWS
+  libgtest_la_CPPFLAGS	+= -D_MSC_VER
+else
+if GGL_HOST_MACOSX
+  libgtest_la_CPPFLAGS += -D__APPLE__
+else
+  libgtest_la_CPPFLAGS += -DOS_LINUX
+endif
 endif

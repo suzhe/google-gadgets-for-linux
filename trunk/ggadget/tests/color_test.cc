@@ -16,7 +16,7 @@
 
 #include <cstdio>
 #include "ggadget/color.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -43,6 +43,6 @@ TEST(Color, FromString) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

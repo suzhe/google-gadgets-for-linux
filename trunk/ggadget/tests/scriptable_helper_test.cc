@@ -16,7 +16,7 @@
 
 #include <set>
 #include "ggadget/string_utils.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "scriptables.h"
 
 using namespace ggadget;
@@ -288,7 +288,7 @@ TEST(scriptable_helper, TestDynamicProperty) {
     snprintf(value, sizeof(value), "v%dv", i * 2);
     ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
                                                   &prototype, &is_method));
-    ASSERT_EQ(id, ScriptableInterface::kDynamicPropertyId);
+    ASSERT_EQ(ScriptableInterface::kDynamicPropertyId, id);
     ASSERT_FALSE(is_method);
     ASSERT_TRUE(scriptable->SetProperty(id, Variant(value)));
   }
@@ -297,7 +297,7 @@ TEST(scriptable_helper, TestDynamicProperty) {
     snprintf(value, sizeof(value), "Value:v%dv", i * 2);
     ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
                                                   &prototype, &is_method));
-    ASSERT_EQ(id, ScriptableInterface::kDynamicPropertyId);
+    ASSERT_EQ(ScriptableInterface::kDynamicPropertyId, id);
     ASSERT_FALSE(is_method);
     ASSERT_EQ(Variant(value), scriptable->GetProperty(id));
   }
@@ -342,6 +342,6 @@ TEST(scirptable_helper, TestEnumerateProperties) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

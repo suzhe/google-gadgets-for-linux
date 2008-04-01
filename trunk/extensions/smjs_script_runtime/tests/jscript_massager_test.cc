@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "../jscript_massager.h"
 
 const char *input =
@@ -284,6 +284,6 @@ TEST(JScriptMassager, InnerFunctions) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

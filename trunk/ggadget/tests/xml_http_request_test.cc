@@ -30,7 +30,7 @@
 #include "ggadget/xml_http_request_interface.h"
 #include "ggadget/xml_parser_interface.h"
 #include "ggadget/native_main_loop.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "init_extensions.h"
 
 using ggadget::XMLHttpRequestInterface;
@@ -464,7 +464,7 @@ TEST(XMLHttpRequest, ResponseTextAndXML) {
 
 int main(int argc, char **argv) {
   ggadget::SetGlobalMainLoop(&main_loop);
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   static const char *kExtensions[] = {
     "curl_xml_http_request/curl-xml-http-request",

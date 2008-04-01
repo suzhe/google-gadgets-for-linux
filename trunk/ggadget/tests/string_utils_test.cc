@@ -16,7 +16,7 @@
 
 #include <cstdio>
 #include "ggadget/string_utils.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -171,6 +171,6 @@ TEST(StringUtils, SimpleMatchXPath) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

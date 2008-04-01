@@ -20,7 +20,7 @@ INCLUDES		= -I$(top_builddir) \
 AM_CPPFLAGS		= $(PREDEFINED_MACROS)
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-LDADD			= $(top_builddir)/unittest/libgunit.la \
+LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 check_PROGRAMS		= default_options_test

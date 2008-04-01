@@ -27,7 +27,7 @@
 #include "ggadget/messages.h"
 #include "ggadget/string_utils.h"
 #include "ggadget/slot.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "init_extensions.h"
 
 using namespace ggadget;
@@ -155,7 +155,7 @@ bool PrepareResource() {
 
 int main(int argc, char **argv) {
   setlocale(LC_MESSAGES, "en_US.UTF-8");
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };

@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
-#include <unittest/gunit.h>
+#include <unittest/gtest.h>
 #include <../framework.h>
 
 using namespace ggadget;
@@ -31,7 +31,7 @@ TEST(FileSystem, GetMachine) {
 
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   return RUN_ALL_TESTS();
 }

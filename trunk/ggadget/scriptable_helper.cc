@@ -25,6 +25,12 @@
 #include "string_utils.h"
 
 namespace ggadget {
+
+// Because we don't have a scriptable_interface.cc, just put declaration
+// of these two public const int variable here to make them addressable.
+const int ScriptableInterface::kDynamicPropertyId;
+const int ScriptableInterface::kConstantPropertyId;
+
 namespace internal {
 
 class ScriptableHelperImpl : public ScriptableHelperImplInterface {

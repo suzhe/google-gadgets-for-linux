@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/native_main_loop.h"
 #include "mocked_element.h"
@@ -73,6 +73,6 @@ TEST_F(ElementFactoryTest, TestCreate) {
 int main(int argc, char *argv[]) {
   ggadget::SetGlobalMainLoop(&main_loop);
 
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

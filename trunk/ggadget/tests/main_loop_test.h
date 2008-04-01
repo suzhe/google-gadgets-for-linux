@@ -22,7 +22,7 @@
 #include <string>
 
 #include "ggadget/logger.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "ggadget/main_loop_interface.h"
 
 using namespace ggadget;

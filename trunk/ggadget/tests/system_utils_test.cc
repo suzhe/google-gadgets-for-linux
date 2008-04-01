@@ -24,7 +24,7 @@
 #include "ggadget/logger.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/gadget_consts.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -160,6 +160,6 @@ TEST(SystemUtils, NormalizeFilePath) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

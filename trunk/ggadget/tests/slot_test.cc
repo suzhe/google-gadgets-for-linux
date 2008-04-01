@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 #include "ggadget/slot.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 #include "slots.h"
 
@@ -47,6 +47,6 @@ TEST(slot, Slot) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -24,7 +24,7 @@
 #include "ggadget/zip_file_manager.h"
 #include "ggadget/localized_file_manager.h"
 #include "ggadget/system_utils.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -161,10 +161,6 @@ void TestFileManagerLocalized(FileManagerInterface *fm,
   std::string data;
   std::string filename;
 
-  filename = locale + "_file";
-  ASSERT_TRUE(fm->ReadFile(filename.c_str(), &data));
-  EXPECT_STREQ((filename + contents).c_str(), data.c_str());
-
   locale.append("_");
   locale.append(territory);
   filename = locale + "_file";
@@ -240,6 +236,6 @@ TEST(FileManager, LocalizedFile) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "ggadget/basic_element.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
@@ -141,7 +141,7 @@ TEST(ViewTest, XMLConstruction) {
 
 int main(int argc, char *argv[]) {
   ggadget::SetGlobalMainLoop(&main_loop);
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",

@@ -28,7 +28,7 @@
 #include "ggadget/system_utils.h"
 #include "ggadget/gtk/cairo_canvas.h"
 #include "ggadget/gtk/cairo_graphics.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -681,7 +681,7 @@ TEST_F(CairoGfxTest, ImageOpaque) {
 
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   g_type_init();
   // Hack for autoconf out-of-tree build.

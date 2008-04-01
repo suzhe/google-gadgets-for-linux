@@ -16,7 +16,7 @@
 
 #include "ggadget/digest_utils.h"
 #include "ggadget/string_utils.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -226,6 +226,6 @@ TEST(DigestUtils, DecodeBase64Failure) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

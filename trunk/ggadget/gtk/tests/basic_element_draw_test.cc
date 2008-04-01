@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "ggadget/common.h"
 #include "ggadget/basic_element.h"
 #include "ggadget/element_factory.h"
@@ -202,7 +202,7 @@ TEST_F(BasicElementTest, ElementsDraw) {
 }
 
 int main(int argc, char *argv[]) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   for (int i = 0; i < argc; i++) {
     if (0 == strcasecmp(argv[i], "-savepng")) {
       g_savepng = true;

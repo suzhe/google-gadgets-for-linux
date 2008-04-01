@@ -17,7 +17,7 @@
 #include <cstdio>
 #include "ggadget/common.h"
 #include "ggadget/logger.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -102,6 +102,6 @@ TEST(Common, IsDerived_COMPILE_ASSERT) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

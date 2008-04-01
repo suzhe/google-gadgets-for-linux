@@ -20,7 +20,7 @@
 #include "ggadget/logger.h"
 #include "ggadget/xml_parser_interface.h"
 #include "ggadget/xml_dom_interface.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "init_extensions.h"
 
 using namespace ggadget;
@@ -320,7 +320,7 @@ TEST(XMLParser, EncodeXMLString) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",

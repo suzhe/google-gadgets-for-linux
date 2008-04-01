@@ -31,21 +31,23 @@ AM_LDFLAGS		= @SPIDERMONKEY_LDFLAGS@
 
 LDADD			= @SPIDERMONKEY_LIBS@ \
 			  ../libggadget-smjs.la \
-			  $(top_builddir)/unittest/libgunit.la \
+			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/third_party/editline/libeditline.la
 
 check_PROGRAMS		= js_shell \
 			  wrapper_test_shell \
 			  dom_test_shell \
-			  dbus_object_test_shell \
 			  jscript_massager_test \
 			  massager
 
+if GGL_BUILD_LIBGGADGET_DBUS
+check_PROGRAMS += dbus_object_test_shell
 dbus_object_test_shell_SOURCES = js_shell.cc \
 				 dbus_object_test_shell.cc
 dbus_object_test_shell_LDADD = $(LDADD) \
 			 $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+endif
 
 dom_test_shell_SOURCES	= js_shell.cc \
 			  dom_test_shell.cc
@@ -62,8 +64,7 @@ wrapper_test_shell_SOURCES = js_shell.cc \
 massager_SOURCES	= massager.cc
 
 TESTS_ENVIRONMENT	= $(SHELL)
-TESTS			= dbus_object_test_shell.sh \
-			  dom_test_shell.sh \
+TESTS			= dom_test_shell.sh \
 			  js_shell.sh \
 			  jscript_massager_test.sh \
 			  wrapper_test_shell.sh
@@ -75,12 +76,15 @@ TESTS			= dbus_object_test_shell.sh \
 	massager.sh \
 	wrapper_test_shell.sh
 
+if GGL_BUILD_LIBGGADGET_DBUS
+TESTS += dbus_object_test_shell.sh
 dbus_object_test_shell.sh:
 	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class\
 	      $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \
 	      $(abs_builddir)/dbus_object_test_shell \
 	      $(abs_top_srcdir)/unittest/js_unittest.js \
 	      $(abs_srcdir)/dbus_object_test_shell.js > $@)
+endif
 
 dom_test_shell.sh:
 	(echo $(LIBTOOL) --mode=execute $(MEMCHECK_COMMAND) \

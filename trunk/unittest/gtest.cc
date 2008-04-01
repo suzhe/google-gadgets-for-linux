@@ -1,18 +1,38 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008, Google Inc.
+  All rights reserved.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
 
-       http://www.apache.org/licenses/LICENSE-2.0
+      * Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the following disclaimer
+  in the documentation and/or other materials provided with the
+  distribution.
+      * Neither the name of Google Inc. nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+// gTest -- the Google C++ Unit Testing Framework
+
+#include "gtest.h"
+#include "gtest_spi.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -21,33 +41,46 @@
 #include <string.h>
 
 #ifdef OS_LINUX
+
 #include <fcntl.h>
 #include <limits.h>
+#include <sched.h>
 // Declares vsnprintf().  This header is not available on Windows.
 #include <strings.h>
+#include <sys/mman.h>
 #include <sys/time.h>
 #include <unistd.h>
-#endif  // OS_LINUX
-
-// _MSC_VER is defined iff the code is compiled by MSVC.
-#ifdef _MSC_VER
-#include <sys/timeb.h>
-#include <windows.h>
-#endif  // _MSC_VER
-
+#include <string>
 #include <vector>
 
-// Indicates that this translation unit is part of gUnit's
-// implementation.  It must come before gunit-internal-inl.h is
+#elif defined(_WIN32_WCE)  // We are on Windows CE.
+
+#include <windows.h>
+
+#elif defined(_MSC_VER)  // We are on Windows proper.
+
+#include <sys/timeb.h>
+// cpplint thinks that the header is already included, so we want to
+// silence it.
+#include <windows.h>  // NOLINT
+
+#elif defined(__APPLE__)  // We are on Mac OS X.
+
+// cpplint thinks that the header is already included, so we want to
+// silence it.
+#include <sys/time.h>  // NOLINT
+
+#endif
+
+// Indicates that this translation unit is part of gTest's
+// implementation.  It must come before gtest_internal_inl.h is
 // included, or there will be a compiler error.  This trick is to
-// prevent a user from accidentally including gunit-internal-inl.h in
+// prevent a user from accidentally including gtest_internal_inl.h in
 // his code.
-#define GUNIT_IMPLEMENTATION
+#define GTEST_IMPLEMENTATION
+#include "gtest_internal_inl.h"
+#undef GTEST_IMPLEMENTATION
 
-#include "gunit-internal-inl.h"
-#include "gunit.h"
-
-// _MSC_VER is defined iff the code is compiled by MSVC.
 #ifdef _MSC_VER
 #define vsnprintf _vsnprintf
 #endif  // _MSC_VER
@@ -58,17 +91,17 @@ namespace testing {
 
 // The environment variable that controls whether a failed assertion
 // should cause the debugger to break.
-static const char kBreakOnFailureEnvVar[] = "GUNIT_BREAK_ON_FAILURE";
+static const char kBreakOnFailureEnvVar[] = "GTEST_BREAK_ON_FAILURE";
 
-// The environment variable that controls whether gUnit should catch
+// The environment variable that controls whether gTest should catch
 // exceptions thrown by the tests.
-static const char kCatchExceptionsEnvVar[] = "GUNIT_CATCH_EXCEPTIONS";
+static const char kCatchExceptionsEnvVar[] = "GTEST_CATCH_EXCEPTIONS";
 
 // The environment variable for specifying the test filter.
-static const char kFilterEnvVar[] = "GUNIT_FILTER";
+static const char kFilterEnvVar[] = "GTEST_FILTER";
 
 // The environment variable for specifying the death test style.
-static const char kDeathTestStyleEnvVar[] = "GUNIT_DEATH_TEST_STYLE";
+static const char kDeathTestStyleEnvVar[] = "GTEST_DEATH_TEST_STYLE";
 
 // A test that matches this pattern is disabled and not run.
 static const char kDisableTestPattern[] = "DISABLED_*";
@@ -77,37 +110,44 @@ static const char kDisableTestPattern[] = "DISABLED_*";
 static const char kUniversalFilter[] = "*";
 
 // The default death test style.
-static const char kDefaultDeathTestStyle[] = "noexec";
+static const char kDefaultDeathTestStyle[] = "fast";
 
 // The environment variable for specifying alternative output.
-static const char kOutputEnvVar[] = "GUNIT_OUTPUT";
+static const char kOutputEnvVar[] = "GTEST_OUTPUT";
+
+// The environment variable for specifying how many times to repeat each test.
+static const char kRepeatEnvVar[] = "GTEST_REPEAT";
 
 // The environment variable for specifying the number of stack frames
 // to be included in failure messages.
-static const char kStacktraceDepthEnvVar[] = "GUNIT_STACK_TRACE_DEPTH";
+static const char kStacktraceDepthEnvVar[] = "GTEST_STACK_TRACE_DEPTH";
 
 // The default output file for XML output.
 static const char kDefaultOutputFile[] = "test_detail.xml";
 
-// Defines the --gunit_break_on_failure flag.
-const char kGUnitBreakOnFailureFlag[] = "gunit_break_on_failure";
-bool FLAGS_gunit_break_on_failure = false;
+// Defines the --gtest_break_on_failure flag.
+const char kGTestBreakOnFailureFlag[] = "gtest_break_on_failure";
+bool FLAGS_gtest_break_on_failure = false;
 
-// Defines the --gunit_catch_exceptions flag.
-const char kGUnitCatchExceptionsFlag[] = "gunit_catch_exceptions";
-bool FLAGS_gunit_catch_exceptions = false;
+// Defines the --gtest_catch_exceptions flag.
+const char kGTestCatchExceptionsFlag[] = "gtest_catch_exceptions";
+bool FLAGS_gtest_catch_exceptions = false;
 
-// Defines the --gunit_filter flag.
-const char kGUnitFilterFlag[] = "gunit_filter";
-String FLAGS_gunit_filter(kUniversalFilter);
+// Defines the --gtest_filter flag.
+const char kGTestFilterFlag[] = "gtest_filter";
+String FLAGS_gtest_filter(kUniversalFilter);
 
-// Defines the --gunit_list_tests flag.
-const char kGUnitListTestsFlag[] = "gunit_list_tests";
-bool FLAGS_gunit_list_tests = false;
+// Defines the --gtest_list_tests flag.
+const char kGTestListTestsFlag[] = "gtest_list_tests";
+bool FLAGS_gtest_list_tests = false;
 
-// Defines the --gunit_output flag.
-const char kGUnitOutputFlag[] = "gunit_output";
-String FLAGS_gunit_output("");
+// Defines the --gtest_output flag.
+const char kGTestOutputFlag[] = "gtest_output";
+String FLAGS_gtest_output("");
+
+// Defines the --gtest_repeat flag.
+const char kGTestRepeatFlag[] = "gtest_repeat";
+Int32 FLAGS_gtest_repeat = 1;
 
 // Iterates over a list of TestCases, keeping a running sum of the
 // results of calling a given int-returning method on each.
@@ -147,17 +187,30 @@ static inline UnitTestImpl* GetUnitTestImpl() {
 
 // A wrapper for getenv() that works on Linux, Windows, and Mac OS.
 static inline const char* GetEnv(const char* name) {
+#ifdef _WIN32_WCE  // We are on Windows CE.
+  // CE has no environment variables.
+  return NULL;
+#elif defined(_MSC_VER)  // We are on Windows proper.
   // MSVC 8 deprecates getenv(), so we want to suppress warning 4996
   // (deprecated function) there.
-#ifdef _MSC_VER  // We are on Windows
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4996)  // Temporarily disables warning 4996.
+#pragma warning(push)          // Saves the current warning state.
+#pragma warning(disable:4996)  // Temporarily disables warning 4996.
   return getenv(name);
-# pragma warning(pop)           // Restores the warning state.
+#pragma warning(pop)           // Restores the warning state.
 #else  // We are on Linux or Mac OS.
   return getenv(name);
-#endif  // _MSC_VER
+#endif
 }
+
+#ifdef _WIN32_WCE
+// Windows CE has no C library. The abort() function is used in
+// several places in gTest. This implementation provides a reasonable
+// imitation of standard behaviour.
+static void abort() {
+  DebugBreak();
+  TerminateProcess(GetCurrentProcess(), 1);
+}
+#endif  // _WIN32_WCE
 
 // AssertHelper constructor.
 AssertHelper::AssertHelper(TestPartResultType type, const char* file,
@@ -168,12 +221,12 @@ AssertHelper::AssertHelper(TestPartResultType type, const char* file,
 // Message assignment, for assertion streaming support.
 void AssertHelper::operator=(const Message& message) const {
   UnitTest::GetInstance()->
-    AddTestPartResult(type_, String(file_), line_,
+    AddTestPartResult(type_, file_, line_,
                       AppendUserMessage(message_, message),
                       UnitTest::GetInstance()->impl()
                       ->CurrentOsStackTraceExceptTop(1)
                       // Skips the stack frame for this function itself.
-                      );
+                      );  // NOLINT
 }
 
 // Class UnitTestOptions.
@@ -196,31 +249,25 @@ bool UnitTestOptions::ReadBoolEnvVar(const char* env_var, bool default_value) {
       default_value : strcmp(string_value, "0") != 0;
 }
 
-// Reads and returns a 32-bit integer stored in an environment
-// variable; if it isn't set or doesn't represent a valid 32-bit
-// integer, returns default_value.
-Int32 UnitTestOptions::ReadInt32EnvVar(const char* env_var,
-                                       Int32 default_value) {
-  const char* const string_value = GetEnv(env_var);
-  if (string_value == NULL) {
-    // The environment variable is not set.
-    return default_value;
-  }
-
+// Parses 'str' for a 32-bit signed integer.  If successful, writes
+// the result to *value and returns true; otherwise leaves *value
+// unchanged and returns false.
+static bool ParseInt32(const Message& src_text, const char* str, Int32* value) {
   // Parses the environment variable as a decimal integer.
-  char* end;
-  const long long_value = strtol(string_value, &end, 10);
+  char* end = NULL;
+  // We cannot use strto32() as the code needs to work outside of google3.
+  const long long_value = strtol(str, &end, 10);  // NOLINT
 
   // Has strtol() consumed all characters in the string?
   if (*end != '\0') {
     // No - an invalid character was encountered.
     Message msg;
-    msg << "WARNING: Environment variable " << env_var
+    msg << "WARNING: " << src_text
         << " is expected to be a 32-bit integer, but actually"
-        << " has value \"" << string_value << "\".  The default value "
-        << default_value << " is used.\n";
+        << " has value \"" << str << "\".\n";
     printf("%s", msg.GetString().c_str());
-    return default_value;
+    fflush(stdout);
+    return false;
   }
 
   // Is the parsed value in the range of an Int32?
@@ -232,18 +279,42 @@ Int32 UnitTestOptions::ReadInt32EnvVar(const char* env_var,
       // The parsed value overflows as an Int32.
       ) {
     Message msg;
-    msg << "WARNING: Environment variable " << env_var
+    msg << "WARNING: " << src_text
         << " is expected to be a 32-bit integer, but actually"
-        << " has value " << string_value << ", which overflows.  "
-        << "The default value " << default_value << " is used.\n";
+        << " has value " << str << ", which overflows.\n";
     printf("%s", msg.GetString().c_str());
+    fflush(stdout);
+    return false;
+  }
+
+  *value = result;
+  return true;
+}
+
+// Reads and returns a 32-bit integer stored in an environment
+// variable; if it isn't set or doesn't represent a valid 32-bit
+// integer, returns default_value.
+Int32 UnitTestOptions::ReadInt32EnvVar(const char* env_var,
+                                       Int32 default_value) {
+  const char* const string_value = GetEnv(env_var);
+  if (string_value == NULL) {
+    // The environment variable is not set.
+    return default_value;
+  }
+
+  Int32 result = default_value;
+  if (!ParseInt32(Message() << "Environment variable " << env_var,
+                  string_value, &result)) {
+    printf("The default value %s is used.\n",
+           (Message() << default_value).GetString().c_str());
+    fflush(stdout);
     return default_value;
   }
 
   return result;
 }
 
-// Copies the values of the gUnit environment variables to the flag
+// Copies the values of the gTest environment variables to the flag
 // variables.
 //
 // This function must be called before the command line is parsed in
@@ -252,35 +323,36 @@ Int32 UnitTestOptions::ReadInt32EnvVar(const char* env_var,
 // UnitTestImpl, which is a singleton created when the first test is
 // defined, before main() is reached.
 void UnitTestOptions::SetFlagVarsFromEnvVars() {
-  FLAGS_gunit_break_on_failure =
+  FLAGS_gtest_break_on_failure =
       ReadBoolEnvVar(kBreakOnFailureEnvVar, false);
-  FLAGS_gunit_filter = ReadStringEnvVar(kFilterEnvVar, kUniversalFilter);
-  FLAGS_gunit_list_tests = false;
-  FLAGS_gunit_output = ReadStringEnvVar(kOutputEnvVar, "");
-  FLAGS_gunit_catch_exceptions =
+  FLAGS_gtest_filter = ReadStringEnvVar(kFilterEnvVar, kUniversalFilter);
+  FLAGS_gtest_list_tests = false;
+  FLAGS_gtest_output = ReadStringEnvVar(kOutputEnvVar, "");
+  FLAGS_gtest_repeat = ReadInt32EnvVar(kRepeatEnvVar, 1);
+  FLAGS_gtest_catch_exceptions =
       ReadBoolEnvVar(kCatchExceptionsEnvVar, false);
 }
 
-// Functions for processing the gunit_output flag.
+// Functions for processing the gtest_output flag.
 
 // Returns the output format, or "" for normal printed output.
 String UnitTestOptions::GetOutputFormat() {
-  const char* const gunit_output_flag = FLAGS_gunit_output.c_str();
-  if (gunit_output_flag == NULL) return String("");
+  const char* const gtest_output_flag = FLAGS_gtest_output.c_str();
+  if (gtest_output_flag == NULL) return String("");
 
-  const char* const colon = strchr(gunit_output_flag, ':');
+  const char* const colon = strchr(gtest_output_flag, ':');
   return (colon == NULL) ?
-      String(gunit_output_flag) :
-      String(gunit_output_flag, colon - gunit_output_flag);
+      String(gtest_output_flag) :
+      String(gtest_output_flag, colon - gtest_output_flag);
 }
 
 // Returns the name of the requested output file, or the default if none
 // was explicitly specified.
 String UnitTestOptions::GetOutputFile() {
-  const char* const gunit_output_flag = FLAGS_gunit_output.c_str();
-  if (gunit_output_flag == NULL) return String("");
+  const char* const gtest_output_flag = FLAGS_gtest_output.c_str();
+  if (gtest_output_flag == NULL) return String("");
 
-  const char* const colon = strchr(gunit_output_flag, ':');
+  const char* const colon = strchr(gtest_output_flag, ':');
   return (colon == NULL) ?
       String(kDefaultOutputFile) :
       String(colon + 1);
@@ -336,14 +408,14 @@ bool UnitTestOptions::FilterMatchesTest(const String &test_case_name,
                                            test_case_name.c_str(),
                                            test_name.c_str());
 
-  // Split --gunit_filter at '-', if there is one, to separate into
+  // Split --gtest_filter at '-', if there is one, to separate into
   // positive filter and negative filter portions
-  const char* const p = FLAGS_gunit_filter.c_str();
+  const char* const p = FLAGS_gtest_filter.c_str();
   const char* const dash = strchr(p, '-');
   String positive;
   String negative;
   if (dash == NULL) {
-    positive = FLAGS_gunit_filter.c_str(); // Whole string is a positive filter
+    positive = FLAGS_gtest_filter.c_str();  // Whole string is a positive filter
     negative = String("");
   } else {
     positive.Set(p, dash - p);       // Everything up to the dash
@@ -360,15 +432,15 @@ bool UnitTestOptions::FilterMatchesTest(const String &test_case_name,
           !MatchesFilter(full_name, negative.c_str()));
 }
 
-#ifdef _MSC_VER  // We are on Windows.
-// Returns EXCEPTION_EXECUTE_HANDLER if gUnit should handle the
+#ifdef _MSC_VER
+// Returns EXCEPTION_EXECUTE_HANDLER if gTest should handle the
 // given SEH exception, or EXCEPTION_CONTINUE_SEARCH otherwise.
 // This function is useful as an __except condition.
-int UnitTestOptions::GUnitShouldProcessSEH(DWORD exception_code) {
-  // gUnit should handle an exception if:
+int UnitTestOptions::GTestShouldProcessSEH(DWORD exception_code) {
+  // gTest should handle an exception if:
   //   1. the user wants it to, AND
   //   2. this is not a breakpoint exception.
-  return (FLAGS_gunit_catch_exceptions &&
+  return (FLAGS_gtest_catch_exceptions &&
           exception_code != EXCEPTION_BREAKPOINT) ?
       EXCEPTION_EXECUTE_HANDLER :
       EXCEPTION_CONTINUE_SEARCH;
@@ -382,26 +454,179 @@ class UnitTestEventListenerInterface {
   virtual ~UnitTestEventListenerInterface() = 0;
 
   // Called before the unit test starts.
-  virtual void OnUnitTestStart(const UnitTest * unit_test) {}
+  virtual void OnUnitTestStart(const UnitTest*) {}
 
   // Called after the unit test ends.
-  virtual void OnUnitTestEnd(const UnitTest * unit_test) {}
+  virtual void OnUnitTestEnd(const UnitTest*) {}
 
   // Called before the test case starts.
-  virtual void OnTestCaseStart(const TestCase * test_case) {}
+  virtual void OnTestCaseStart(const TestCase*) {}
 
   // Called after the test case ends.
-  virtual void OnTestCaseEnd(const TestCase * test_case) {}
+  virtual void OnTestCaseEnd(const TestCase*) {}
+
+  // Called before the global set-up starts.
+  virtual void OnGlobalSetUpStart(const UnitTest*) {}
+
+  // Called after the global set-up ends.
+  virtual void OnGlobalSetUpEnd(const UnitTest*) {}
+
+  // Called before the global tear-down starts.
+  virtual void OnGlobalTearDownStart(const UnitTest*) {}
+
+  // Called after the global tear-down ends.
+  virtual void OnGlobalTearDownEnd(const UnitTest*) {}
 
   // Called before the test starts.
-  virtual void OnTestStart(const TestInfo * test_info) {}
+  virtual void OnTestStart(const TestInfo*) {}
 
   // Called after the test ends.
-  virtual void OnTestEnd(const TestInfo * test_info) {}
+  virtual void OnTestEnd(const TestInfo*) {}
 
   // Called after an assertion.
-  virtual void OnNewTestPartResult(const TestPartResult * result) {}
+  virtual void OnNewTestPartResult(const TestPartResult*) {}
 };
+
+// Constructs an empty TestPartResultArray.
+TestPartResultArray::TestPartResultArray() : list_(new List<TestPartResult>) {
+}
+
+// Destructs a TestPartResultArray.
+TestPartResultArray::~TestPartResultArray() {
+  delete list_;
+}
+
+// Appends a TestPartResult to the array.
+void TestPartResultArray::Append(const TestPartResult& result) {
+  list_->PushBack(result);
+}
+
+// Returns the TestPartResult at the given index (0-based).
+const TestPartResult& TestPartResultArray::GetTestPartResult(int index) const {
+  if (index < 0 || index >= size()) {
+    printf("\nInvalid index (%d) into TestPartResultArray.\n", index);
+    abort();
+  }
+
+  const ListNode<TestPartResult>* p = list_->Head();
+  for (int i = 0; i < index; i++) {
+    p = p->next();
+  }
+
+  return p->element();
+}
+
+// Returns the number of TestPartResult objects in the array.
+int TestPartResultArray::size() const {
+  return list_->size();
+}
+
+// The c'tor sets this object as the test part result reporter used by
+// gTest.  The 'result' parameter specifies where to report the
+// results.
+ScopedFakeTestPartResultReporter::ScopedFakeTestPartResultReporter(
+    TestPartResultArray* result)
+    : old_reporter_(UnitTest::GetInstance()->impl()->
+                    test_part_result_reporter()),
+      result_(result) {
+  UnitTestImpl* const impl = UnitTest::GetInstance()->impl();
+  impl->set_test_part_result_reporter(this);
+}
+
+// The d'tor restores the test part result reporter used by gTest
+// before.
+ScopedFakeTestPartResultReporter::~ScopedFakeTestPartResultReporter() {
+  UnitTest::GetInstance()->impl()->
+      set_test_part_result_reporter(old_reporter_);
+}
+
+// Increments the test part result count and remembers the result.
+// This method is from the TestPartResultReporterInterface interface.
+void ScopedFakeTestPartResultReporter::ReportTestPartResult(
+    const TestPartResult& result) {
+  result_->Append(result);
+}
+
+namespace internal {
+
+// This predicate-formatter checks that 'results' contains a test part
+// failure of the given type and that the failure message contains the
+// given substring.
+AssertionResult HasOneFailure(const char* /* results_expr */,
+                              const char* /* type_expr */,
+                              const char* /* substr_expr */,
+                              const TestPartResultArray& results,
+                              TestPartResultType type,
+                              const char* substr) {
+  const String expected(
+      type == TPRT_FATAL_FAILURE ? "1 fatal failure" :
+      "1 non-fatal failure");
+  Message msg;
+  if (results.size() != 1) {
+    msg << "Expected: " << expected << "\n"
+        << "  Actual: " << results.size() << " failures";
+    for (int i = 0; i < results.size(); i++) {
+      msg << "\n" << results.GetTestPartResult(i);
+    }
+    return AssertionFailure(msg);
+  }
+
+  const TestPartResult& r = results.GetTestPartResult(0);
+  if (r.type() != type) {
+    msg << "Expected: " << expected << "\n"
+        << "  Actual:\n"
+        << r;
+    return AssertionFailure(msg);
+  }
+
+  if (strstr(r.message(), substr) == NULL) {
+    msg << "Expected: " << expected << " containing \""
+        << substr << "\"\n"
+        << "  Actual:\n"
+        << r;
+    return AssertionFailure(msg);
+  }
+
+  return AssertionSuccess();
+}
+
+// The constructor of SingleFailureChecker remembers where to look up
+// test part results, what type of failure we expect, and what
+// substring the failure message should contain.
+SingleFailureChecker:: SingleFailureChecker(
+    const TestPartResultArray* results,
+    TestPartResultType type,
+    const char* substr)
+    : results_(results),
+      type_(type),
+      substr_(substr) {}
+
+// The destructor of SingleFailureChecker verifies that the given
+// TestPartResultArray contains exactly one failure that has the given
+// type and contains the given substring.  If that's not the case, a
+// non-fatal failure will be generated.
+SingleFailureChecker::~SingleFailureChecker() {
+  EXPECT_PRED_FORMAT3(HasOneFailure, *results_, type_, substr_.c_str());
+}
+
+}  // namespace internal
+
+// Reports a test part result.
+void UnitTestImpl::ReportTestPartResult(const TestPartResult& result) {
+  current_test_result()->AddTestPartResult(result);
+  result_printer()->OnNewTestPartResult(&result);
+}
+
+// Returns the current test part result reporter.
+TestPartResultReporterInterface* UnitTestImpl::test_part_result_reporter() {
+  return test_part_result_reporter_;
+}
+
+// Sets the current test part result reporter.
+void UnitTestImpl::set_test_part_result_reporter(
+    TestPartResultReporterInterface* reporter) {
+  test_part_result_reporter_ = reporter;
+}
 
 // Gets the number of successful test cases.
 int UnitTestImpl::successful_test_case_count() const {
@@ -452,7 +677,7 @@ int UnitTestImpl::test_to_run_count() const {
 // Returns the current OS stack trace as a String.
 //
 // The maximum number of stack frames to be included is specified by
-// the gunit_stack_trace_depth flag.  The skip_count parameter
+// the gtest_stack_trace_depth flag.  The skip_count parameter
 // specifies the number of top frames to be skipped, which doesn't
 // count against the number of frames to be included.
 //
@@ -460,34 +685,43 @@ int UnitTestImpl::test_to_run_count() const {
 // CurrentOsStackTraceExceptTop(1), Foo() will be included in the
 // trace but Bar() and CurrentOsStackTraceExceptTop() won't.
 String UnitTestImpl::CurrentOsStackTraceExceptTop(int skip_count) {
-#ifdef GUNIT_LINUX_GOOGLE3_MODE
-  return os_stack_trace_getter()->CurrentStackTrace(
-      static_cast<int>(FLAGS_gunit_stack_trace_depth),
-      skip_count + 1
-      // Skips the user-specified number of frames plus this function
-      // itself.
-      );
-#else
+  (void)skip_count;  // We use skip_count only in google3.
   return String("");
-#endif  // GUNIT_LINUX_GOOGLE3_MODE
 }
 
-
 static TimeInMillis GetTimeInMillis() {
-#ifdef _MSC_VER  // We are on Windows.
+#ifdef _WIN32_WCE  // We are on Windows CE
+  // Difference between 1970-01-01 and 1601-01-01 in miliseconds.
+  // http://analogous.blogspot.com/2005/04/epoch.html
+  const TimeInMillis kJavaEpochToWinFileTimeDelta = 11644473600000UL;
+  const DWORD kTenthMicrosInMilliSecond = 10000;
+
+  SYSTEMTIME now_systime;
+  FILETIME now_filetime;
+  ULARGE_INTEGER now_int64;
+  GetSystemTime(&now_systime);
+  if (SystemTimeToFileTime(&now_systime, &now_filetime)) {
+    now_int64.LowPart = now_filetime.dwLowDateTime;
+    now_int64.HighPart = now_filetime.dwHighDateTime;
+    now_int64.QuadPart = (now_int64.QuadPart / kTenthMicrosInMilliSecond) -
+      kJavaEpochToWinFileTimeDelta;
+    return now_int64.QuadPart;
+  }
+  return 0;
+#elif defined(_MSC_VER)  // We are on Windows proper.
   __timeb64 now;
   // MSVC 8 deprecates _ftime64(), so we want to suppress warning 4996
   // (deprecated function) there.
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4996)  // Temporarily disables warning 4996.
+#pragma warning(push)          // Saves the current warning state.
+#pragma warning(disable:4996)  // Temporarily disables warning 4996.
   _ftime64(&now);
-# pragma warning(pop)           // Restores the warning state.
+#pragma warning(pop)           // Restores the warning state.
   return static_cast<TimeInMillis>(now.time) * 1000 + now.millitm;
 #else  // We are on Linux or Mac OS.
   struct timeval now;
   gettimeofday(&now, NULL);
   return static_cast<TimeInMillis>(now.tv_sec) * 1000 + now.tv_usec / 1000;
-#endif  // _MSC_VER
+#endif
 }
 
 
@@ -519,10 +753,10 @@ static char* CloneString(const char* str, size_t length) {
     // MSVC 8 deprecates strncpy(), so we want to suppress warning
     // 4996 (deprecated function) there.
 #ifdef _MSC_VER  // We are on Windows.
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4996)  // Temporarily disables warning 4996.
+#pragma warning(push)          // Saves the current warning state.
+#pragma warning(disable:4996)  // Temporarily disables warning 4996.
     strncpy(clone, str, length);
-# pragma warning(pop)           // Restores the warning state.
+#pragma warning(pop)           // Restores the warning state.
 #else  // We are on Linux or Mac OS.
     strncpy(clone, str, length);
 #endif  // _MSC_VER
@@ -570,23 +804,23 @@ static void StreamWideCharsToMessage(const wchar_t* wstr, size_t len,
   }
 }
 
-#if GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
 // Converts the given wide string to a narrow string using the UTF-8
 // encoding, and streams the result to this Message object.
 Message& Message::operator <<(const ::std::wstring& wstr) {
   StreamWideCharsToMessage(wstr.c_str(), wstr.length(), this);
   return *this;
 }
-#endif  // GUNIT_HAS_STD_STRING
+#endif  // GTEST_HAS_STD_STRING
 
-#if GUNIT_HAS_GLOBAL_STRING
+#if GTEST_HAS_GLOBAL_STRING
 // Converts the given wide string to a narrow string using the UTF-8
 // encoding, and streams the result to this Message object.
 Message& Message::operator <<(const ::wstring& wstr) {
   StreamWideCharsToMessage(wstr.c_str(), wstr.length(), this);
   return *this;
 }
-#endif  // GUNIT_HAS_GLOBAL_STRING
+#endif  // GTEST_HAS_GLOBAL_STRING
 
 // Formats a value to be used in a failure message.
 
@@ -754,12 +988,14 @@ AssertionResult DoubleLE(const char* expr1, const char* expr2,
   return FloatingPointLE<double>(expr1, expr2, val1, val2);
 }
 
+namespace internal {
+
 // The helper function for {ASSERT|EXPECT}_EQ with int or enum
 // arguments.
 AssertionResult CmpHelperEQ(const char* expected_expression,
                             const char* actual_expression,
-                            int expected,
-                            int actual) {
+                            BiggestInt expected,
+                            BiggestInt actual) {
   if (expected == actual) {
     return AssertionSuccess();
   }
@@ -771,13 +1007,12 @@ AssertionResult CmpHelperEQ(const char* expected_expression,
                    false);
 }
 
-
 // A macro for implementing the helper functions needed to implement
-// ASSERT_?? and EXPECT_?? with int or enum arguments.  It is here
+// ASSERT_?? and EXPECT_?? with integer or enum arguments.  It is here
 // just to avoid copy-and-paste of similar code.
-#define GUNIT_IMPL_CMP_HELPER(op_name, op)\
+#define GTEST_IMPL_CMP_HELPER(op_name, op)\
 AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
-                                   int val1, int val2) {\
+                                   BiggestInt val1, BiggestInt val2) {\
   if (val1 op val2) {\
     return AssertionSuccess();\
   } else {\
@@ -791,21 +1026,23 @@ AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
 
 // Implements the helper function for {ASSERT|EXPECT}_NE with int or
 // enum arguments.
-GUNIT_IMPL_CMP_HELPER(NE, !=)
+GTEST_IMPL_CMP_HELPER(NE, !=)
 // Implements the helper function for {ASSERT|EXPECT}_LE with int or
 // enum arguments.
-GUNIT_IMPL_CMP_HELPER(LE, <=)
+GTEST_IMPL_CMP_HELPER(LE, <=)
 // Implements the helper function for {ASSERT|EXPECT}_LT with int or
 // enum arguments.
-GUNIT_IMPL_CMP_HELPER(LT, < )
+GTEST_IMPL_CMP_HELPER(LT, < )
 // Implements the helper function for {ASSERT|EXPECT}_GE with int or
 // enum arguments.
-GUNIT_IMPL_CMP_HELPER(GE, >=)
+GTEST_IMPL_CMP_HELPER(GE, >=)
 // Implements the helper function for {ASSERT|EXPECT}_GT with int or
 // enum arguments.
-GUNIT_IMPL_CMP_HELPER(GT, > )
+GTEST_IMPL_CMP_HELPER(GT, > )
 
-#undef GUNIT_IMPL_CMP_HELPER
+}  // namespace internal
+
+#undef GTEST_IMPL_CMP_HELPER
 
 
 // The helper function for {ASSERT|EXPECT}_STREQ.
@@ -954,7 +1191,7 @@ AssertionResult IsNotSubstring(
   return IsSubstringImpl(false, needle_expr, haystack_expr, needle, haystack);
 }
 
-#if GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
 AssertionResult IsSubstring(
     const char* needle_expr, const char* haystack_expr,
     const ::std::string& needle, const ::std::string& haystack) {
@@ -978,7 +1215,71 @@ AssertionResult IsNotSubstring(
     const ::std::wstring& needle, const ::std::wstring& haystack) {
   return IsSubstringImpl(false, needle_expr, haystack_expr, needle, haystack);
 }
-#endif  // GUNIT_HAS_STD_STRING
+#endif  // GTEST_HAS_STD_STRING
+
+#ifdef _MSC_VER
+
+namespace {
+
+// Helper function for IsHRESULT{SuccessFailure} predicates
+AssertionResult HRESULTFailureHelper(const char* expr,
+                                     const char* expected,
+                                     long hr) {
+#ifdef _WIN32_WCE
+  // Windows CE doesn't support FormatMessage.
+  const char error_text[] = "";
+#else
+  // Looks up the human-readable system message for the HRESULT code
+  // and since we're not passing any params to FormatMessage, we don't
+  // want inserts expanded.
+  const DWORD kFlags = FORMAT_MESSAGE_FROM_SYSTEM |
+                       FORMAT_MESSAGE_IGNORE_INSERTS;
+  const DWORD kBufSize = 4096;  // String::Format can't exceed this length.
+  // Gets the system's human readable message string for this HRESULT.
+  char error_text[kBufSize] = { '\0' };
+  DWORD message_length = ::FormatMessageA(kFlags,
+                                          0,  // no source, we're asking system
+                                          hr,  // the error
+                                          0,  // no line width restrictions
+                                          error_text,  // output buffer
+                                          kBufSize,  // buf size
+                                          NULL);  // no arguments for inserts
+  // Trims tailing white space (FormatMessage leaves a trailing cr-lf)
+  for (; message_length && isspace(error_text[message_length - 1]);
+          --message_length) {
+    error_text[message_length - 1] = '\0';
+  }
+#endif  // _WIN32_WCE
+
+  const String error_hex(String::Format("0x%08X ", hr));
+  Message msg;
+  msg << "Expected: " << expr << " " << expected << ".\n"
+      << "  Actual: " << error_hex << error_text << "\n";
+
+  return ::testing::AssertionFailure(msg);
+}
+
+}  // namespace
+
+namespace internal {
+
+AssertionResult IsHRESULTSuccess(const char* expr, long hr) {
+  if (SUCCEEDED(hr)) {
+    return AssertionSuccess();
+  }
+  return HRESULTFailureHelper(expr, "succeeds", hr);
+}
+
+AssertionResult IsHRESULTFailure(const char* expr, long hr) {
+  if (FAILED(hr)) {
+    return AssertionSuccess();
+  }
+  return HRESULTFailureHelper(expr, "fails", hr);
+}
+
+}  // namespace internal
+
+#endif  // _MSC_VER
 
 // Utility functions for encoding Unicode text (wide strings) in
 // UTF-8.
@@ -1019,19 +1320,19 @@ String ToUtf8String(wchar_t wchar) {
 
   UInt32 code = static_cast<UInt32>(wchar);
   if (code <= kMaxCodePoint1) {
-    str[0] = code;                          // 0xxxxxxx
+    str[0] = static_cast<char>(code);                          // 0xxxxxxx
   } else if (code <= kMaxCodePoint2) {
-    str[1] = 0x80 | ChopLowBits(&code, 6);  // 10xxxxxx
-    str[0] = 0xC0 | code;                   // 110xxxxx
+    str[1] = static_cast<char>(0x80 | ChopLowBits(&code, 6));  // 10xxxxxx
+    str[0] = static_cast<char>(0xC0 | code);                   // 110xxxxx
   } else if (code <= kMaxCodePoint3) {
-    str[2] = 0x80 | ChopLowBits(&code, 6);  // 10xxxxxx
-    str[1] = 0x80 | ChopLowBits(&code, 6);  // 10xxxxxx
-    str[0] = 0xE0 | code;                   // 1110xxxx
+    str[2] = static_cast<char>(0x80 | ChopLowBits(&code, 6));  // 10xxxxxx
+    str[1] = static_cast<char>(0x80 | ChopLowBits(&code, 6));  // 10xxxxxx
+    str[0] = static_cast<char>(0xE0 | code);                   // 1110xxxx
   } else if (code <= kMaxCodePoint4) {
-    str[3] = 0x80 | ChopLowBits(&code, 6);  // 10xxxxxx
-    str[2] = 0x80 | ChopLowBits(&code, 6);  // 10xxxxxx
-    str[1] = 0x80 | ChopLowBits(&code, 6);  // 10xxxxxx
-    str[0] = 0xF0 | code;                   // 11110xxx
+    str[3] = static_cast<char>(0x80 | ChopLowBits(&code, 6));  // 10xxxxxx
+    str[2] = static_cast<char>(0x80 | ChopLowBits(&code, 6));  // 10xxxxxx
+    str[1] = static_cast<char>(0x80 | ChopLowBits(&code, 6));  // 10xxxxxx
+    str[0] = static_cast<char>(0xF0 | code);                   // 11110xxx
   } else {
     return String::Format("(Invalid Unicode 0x%llX)",
                           static_cast<UInt64>(wchar));
@@ -1202,11 +1503,11 @@ String String::Format(const char * format, ...) {
   // MSVC 8 deprecates vsnprintf(), so we want to suppress warning
   // 4996 (deprecated function) there.
 #ifdef _MSC_VER  // We are on Windows.
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4996)  // Temporarily disables warning 4996.
+#pragma warning(push)          // Saves the current warning state.
+#pragma warning(disable:4996)  // Temporarily disables warning 4996.
   const int size =
     vsnprintf(buffer, sizeof(buffer)/sizeof(buffer[0]) - 1, format, args);
-# pragma warning(pop)           // Restores the warning state.
+#pragma warning(pop)           // Restores the warning state.
 #else  // We are on Linux or Mac OS.
   const int size =
     vsnprintf(buffer, sizeof(buffer)/sizeof(buffer[0]) - 1, format, args);
@@ -1249,26 +1550,37 @@ String StrStreamToString(StrStream* ss) {
 #endif  // _MSC_VER
 }
 
-// Appends the user-supplied message to the gUnit-generated message.
-String AppendUserMessage(const String& gunit_msg,
+// Appends the user-supplied message to the gTest-generated message.
+String AppendUserMessage(const String& gtest_msg,
                          const Message& user_msg) {
   // Appends the user message if it's non-empty.
   const String user_msg_string = user_msg.GetString();
   if (user_msg_string.is_empty()) {
-    return gunit_msg;
+    return gtest_msg;
   }
 
   Message msg;
-  msg << gunit_msg << "\n" << user_msg_string;
+  msg << gtest_msg << "\n" << user_msg_string;
 
   return msg.GetString();
 }
 
+// Prints a TestPartResult object.
+std::ostream& operator<<(std::ostream& os, const TestPartResult& result) {
+  return os << result.file_name() << ":"
+            << result.line_number() << ": "
+            << (result.type() == TPRT_SUCCESS ? "Success" :
+                result.type() == TPRT_FATAL_FAILURE ? "Fatal failure" :
+                "Non-fatal failure") << ":\n"
+            << result.message() << std::endl;
+}
 
 // class TestResult
 
 // Creates an empty TestResult.
-TestResult::TestResult() : test_part_results_(), elapsed_time_(0) {
+TestResult::TestResult()
+    : death_test_count_(0),
+      elapsed_time_(0) {
 }
 
 // D'tor.
@@ -1280,14 +1592,52 @@ void TestResult::AddTestPartResult(const TestPartResult& test_part_result) {
   test_part_results_.PushBack(test_part_result);
 }
 
+// Adds a test property to the list. If a property with the same key as the
+// supplied property is already represented, the value of this test_property
+// replaces the old value for that key.
+void TestResult::RecordProperty(const TestProperty& test_property) {
+  if (!ValidateTestProperty(test_property)) {
+    return;
+  }
+  GTEST_SCOPED_LOCK(&test_properites_mutex_);
+  ListNode<TestProperty>* const node_with_matching_key =
+      test_properties_.FindIf(TestPropertyKeyIs(test_property.key()));
+  if (node_with_matching_key == NULL) {
+    test_properties_.PushBack(test_property);
+    return;
+  }
+  TestProperty& property_with_matching_key = node_with_matching_key->element();
+  property_with_matching_key.SetValue(test_property.value());
+}
+
+// Adds a failure if the key is a reserved attribute of gTest testcase tags.
+// Returns true if the property is valid.
+bool TestResult::ValidateTestProperty(const TestProperty& test_property) {
+  String key(test_property.key());
+  if (key.Equals("name") ||
+      key.Equals("status") ||
+      key.Equals("time") ||
+      key.Equals("classname")) {
+    ADD_FAILURE()
+        << "Reserved key used in RecordProperty(): "
+        << key
+        << " ('name', 'status', 'time', and 'classname' are reserved by gTest)";
+    return false;
+  }
+  return true;
+}
+
 // Clears the object.
 void TestResult::Clear() {
   test_part_results_.Clear();
+  test_properties_.Clear();
+  death_test_count_ = 0;
+  elapsed_time_ = 0;
 }
 
 // Returns true iff the test part passed.
 static bool TestPartPassed(const TestPartResult & result) {
-  return result.Passed();
+  return result.passed();
 }
 
 // Gets the number of successful test parts.
@@ -1297,7 +1647,7 @@ int TestResult::successful_part_count() const {
 
 // Returns true iff the test part failed.
 static bool TestPartFailed(const TestPartResult & result) {
-  return result.Failed();
+  return result.failed();
 }
 
 // Gets the number of failed test parts.
@@ -1307,7 +1657,7 @@ int TestResult::failed_part_count() const {
 
 // Returns true iff the test part fatally failed.
 static bool TestPartFatallyFailed(const TestPartResult & result) {
-  return result.FatallyFailed();
+  return result.fatally_failed();
 }
 
 // Returns true iff the test fatally failed.
@@ -1326,14 +1676,14 @@ int TestResult::total_part_count() const {
 
 // Creates a Test object.
 
-// The c'tor saves the values of all gUnit flags.
+// The c'tor saves the values of all gTest flags.
 Test::Test()
-    : gunit_flag_saver_(new GUnitFlagSaver) {
+    : gtest_flag_saver_(new GTestFlagSaver) {
 }
 
-// The d'tor restores the values of all gUnit flags.
+// The d'tor restores the values of all gTest flags.
 Test::~Test() {
-  delete gunit_flag_saver_;
+  delete gtest_flag_saver_;
 }
 
 // Sets up the test fixture.
@@ -1348,7 +1698,20 @@ void Test::SetUp() {
 void Test::TearDown() {
 }
 
-#ifdef _MSC_VER  // We are on Windows.
+// Allows user supplied key value pairs to be recorded for later output.
+void Test::RecordProperty(const char* key, const char* value) {
+  UnitTest::GetInstance()->RecordPropertyForCurrentTest(key, value);
+}
+
+// Allows user supplied key value pairs to be recorded for later output.
+void Test::RecordProperty(const char* key, int value) {
+  Message value_message;
+  value_message << value;
+  RecordProperty(key, value_message.GetString().c_str());
+}
+
+#ifdef _MSC_VER
+// We are on Windows.
 
 // Adds an "exception thrown" fatal failure to the current test.
 static void AddExceptionThrownFailure(DWORD exception_code,
@@ -1360,7 +1723,7 @@ static void AddExceptionThrownFailure(DWORD exception_code,
   UnitTest* const unit_test = UnitTest::GetInstance();
   unit_test->AddTestPartResult(
       TPRT_FATAL_FAILURE,
-      String(static_cast<const char *>(NULL)),
+      static_cast<const char *>(NULL),
            // We have no info about the source file where the exception
            // occurred.
       -1,  // We have no info on which line caused the exception.
@@ -1370,12 +1733,12 @@ static void AddExceptionThrownFailure(DWORD exception_code,
 
 #endif  // _MSC_VER
 
-// gUnit requires all tests in the same test case to use the same test
+// gTest requires all tests in the same test case to use the same test
 // fixture class.  This function checks if the current test has the
 // same fixture class as the first test in the current test case.  If
-// yes, it returns true; otherwise it generates a gUnit failure and
+// yes, it returns true; otherwise it generates a gTest failure and
 // returns false.
-static bool HasSameFixtureClass() {
+bool Test::HasSameFixtureClass() {
   UnitTestImpl* const impl = GetUnitTestImpl();
   const TestCase* const test_case = impl->current_test_case();
 
@@ -1442,20 +1805,21 @@ void Test::Run() {
   if (!HasSameFixtureClass()) return;
 
   UnitTestImpl* const impl = GetUnitTestImpl();
-#ifdef _MSC_VER  // We are on Windows.
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+#ifdef _MSC_VER
+  // We are on Windows.
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   __try {
     SetUp();
-  } __except(UnitTestOptions::GUnitShouldProcessSEH(GetExceptionCode())) {
+  } __except(UnitTestOptions::GTestShouldProcessSEH(GetExceptionCode())) {
     AddExceptionThrownFailure(GetExceptionCode(), "SetUp()");
   }
 
   // We will run the test only if SetUp() had no fatal failure.
   if (!HasFatalFailure()) {
-    impl->os_stack_trace_getter()->UponLeavingGUnit();
+    impl->os_stack_trace_getter()->UponLeavingGTest();
     __try {
       TestBody();
-    } __except(UnitTestOptions::GUnitShouldProcessSEH(GetExceptionCode())) {
+    } __except(UnitTestOptions::GTestShouldProcessSEH(GetExceptionCode())) {
       AddExceptionThrownFailure(GetExceptionCode(), "the test body");
     }
   }
@@ -1463,27 +1827,27 @@ void Test::Run() {
   // However, we want to clean up as much as possible.  Hence we will
   // always call TearDown(), even if SetUp() or the test body has
   // failed.
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   __try {
     TearDown();
-  } __except(UnitTestOptions::GUnitShouldProcessSEH(GetExceptionCode())) {
+  } __except(UnitTestOptions::GTestShouldProcessSEH(GetExceptionCode())) {
     AddExceptionThrownFailure(GetExceptionCode(), "TearDown()");
   }
 
 #else  // We are on Linux or Mac - exceptions are disabled.
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   SetUp();
 
   // We will run the test only if SetUp() was successful.
   if (!HasFatalFailure()) {
-    impl->os_stack_trace_getter()->UponLeavingGUnit();
+    impl->os_stack_trace_getter()->UponLeavingGTest();
     TestBody();
   }
 
   // However, we want to clean up as much as possible.  Hence we will
   // always call TearDown(), even if SetUp() or the test body has
   // failed.
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   TearDown();
 #endif  // _MSC_VER
 }
@@ -1544,6 +1908,17 @@ const char* TestInfo::name() const {
   return impl_->name();
 }
 
+// Returns true if this test should run.
+bool TestInfo::should_run() const { return impl_->should_run(); }
+
+// Returns the result of the test.
+const TestResult* TestInfo::result() const { return impl_->result(); }
+
+// Increments the number of death tests encountered in this test so
+// far.
+int TestInfo::increment_death_test_count() {
+  return impl_->result()->increment_death_test_count();
+}
 
 namespace {
 
@@ -1556,9 +1931,6 @@ namespace {
 //
 // TestNameIs is copyable.
 class TestNameIs {
- private:
-  String name_;
-
  public:
   // Constructor.
   //
@@ -1570,9 +1942,12 @@ class TestNameIs {
   bool operator()(const TestInfo * test_info) const {
     return test_info && String(test_info->name()).Compare(name_) == 0;
   }
+
+ private:
+  String name_;
 };
 
-} // namespace
+}  // namespace
 
 // Finds and returns a TestInfo with the given name.  If one doesn't
 // exist, returns NULL.
@@ -1603,14 +1978,15 @@ void TestInfoImpl::Run() {
 
   const TimeInMillis start = GetTimeInMillis();
 
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
-#ifdef _MSC_VER  // We are on Windows.
+  impl->os_stack_trace_getter()->UponLeavingGTest();
+#ifdef _MSC_VER
+  // We are on Windows.
   Test* test = NULL;
 
   __try {
     // Creates the test object.
     test = (*maker_)();
-  } __except(UnitTestOptions::GUnitShouldProcessSEH(GetExceptionCode())) {
+  } __except(UnitTestOptions::GTestShouldProcessSEH(GetExceptionCode())) {
     AddExceptionThrownFailure(GetExceptionCode(),
                               "the test fixture's constructor");
     return;
@@ -1633,7 +2009,7 @@ void TestInfoImpl::Run() {
   }
 
   // Deletes the test object.
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   delete test;
   test = NULL;
 
@@ -1719,14 +2095,14 @@ void TestCase::Run() {
       impl->result_printer();
 
   result_printer->OnTestCaseStart(this);
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   set_up_tc_();
 
   const TimeInMillis start = GetTimeInMillis();
   test_info_list_->ForEach(TestInfoImpl::RunTest);
   elapsed_time_ = GetTimeInMillis() - start;
 
-  impl->os_stack_trace_getter()->UponLeavingGUnit();
+  impl->os_stack_trace_getter()->UponLeavingGTest();
   tear_down_tc_();
   result_printer->OnTestCaseEnd(this);
   impl->set_current_test_case(NULL);
@@ -1803,6 +2179,18 @@ class PlainTextUnitTestResultPrinter : public UnitTestEventListenerInterface {
   // Called after the unit test ends.
   virtual void OnUnitTestEnd(const UnitTest * unit_test);
 
+  // Called before the global set-up starts.
+  virtual void OnGlobalSetUpStart(const UnitTest*);
+
+  // Called after the global set-up ends.
+  virtual void OnGlobalSetUpEnd(const UnitTest*);
+
+  // Called before the global tear-down starts.
+  virtual void OnGlobalTearDownStart(const UnitTest*);
+
+  // Called after the global tear-down ends.
+  virtual void OnGlobalTearDownEnd(const UnitTest*);
+
   // Called before the test case starts.
   virtual void OnTestCaseStart(const TestCase * test_case);
 
@@ -1842,15 +2230,14 @@ static const char * TestPartResultTypeToString(TestPartResultType type) {
 // Prints a TestPartResult.
 void PlainTextUnitTestResultPrinter::PrintTestPartResult(
     const TestPartResult & test_part_result) {
-  const char * const file_name =
-    test_part_result.file_name().c_str();
+  const char * const file_name = test_part_result.file_name();
 
   printf("%s", file_name == NULL ? "unknown file" : file_name);
   if (test_part_result.line_number() >= 0) {
     printf(":%d", test_part_result.line_number());
   }
   printf(": %s\n", TestPartResultTypeToString(test_part_result.type()));
-  printf("%s\n", test_part_result.message().c_str());
+  printf("%s\n", test_part_result.message());
   fflush(stdout);
 }
 
@@ -1869,18 +2256,19 @@ const char * PlainTextUnitTestResultPrinter::FormatResultSummary(
 // Called before the unit test starts.
 void PlainTextUnitTestResultPrinter::OnUnitTestStart(
     const UnitTest * unit_test) {
-  const char * const filter = FLAGS_gunit_filter.c_str();
+  const char * const filter = FLAGS_gtest_filter.c_str();
 
   // Prints the filter if it's not *.  This reminds the user that some
   // tests may be skipped.
   if (!String::CStringEquals(filter, kUniversalFilter)) {
-    printf("gUnit filter = %s\n", filter);
+    printf("gTest filter = %s\n", filter);
   }
 
   const UnitTestImpl* const impl = unit_test->impl();
   printf("\nRunning %s from %s . . .\n",
          FormatTestCount(impl->test_to_run_count()).c_str(),
          FormatTestCaseCount(impl->test_case_to_run_count()).c_str());
+  fflush(stdout);
 }
 
 String Repeat(int n, char ch) {
@@ -1923,6 +2311,32 @@ String DisabledTestBanner(int disabled_count, int padding_length) {
   return banner.GetString();
 }
 
+// Internal helper for printing the list of failed tests.
+static void PrintFailedTests(const UnitTestImpl* impl) {
+  const int failed_test_count = impl->failed_test_count();
+  if (failed_test_count == 0) {
+    printf("0 failed.\n");
+    return;
+  }
+
+  printf("%d failed:\n", failed_test_count);
+  for (const ListNode<TestCase*>* node = impl->test_cases()->Head();
+       node != NULL; node = node->next()) {
+    const TestCase* const tc = node->element();
+    if (!tc->should_run() || (tc->failed_test_count() == 0)) {
+      continue;
+    }
+    for (const ListNode<TestInfo*>* tinode = tc->test_info_list().Head();
+         tinode != NULL; tinode = tinode->next()) {
+      const TestInfo* const ti = tinode->element();
+      if (!tc->ShouldRunTest(ti) || tc->TestPassed(ti)) {
+        continue;
+      }
+      printf("  %s.%s failed.\n", ti->test_case_name(), ti->name());
+    }
+  }
+}
+
 // Called after the unit test ends.
 void PlainTextUnitTestResultPrinter::OnUnitTestEnd(
     const UnitTest * unit_test) {
@@ -1935,7 +2349,7 @@ void PlainTextUnitTestResultPrinter::OnUnitTestEnd(
          FormatTestCount(impl->test_to_run_count()).c_str(),
          FormatTestCaseCount(impl->test_case_to_run_count()).c_str());
   printf("%d passed.\n", impl->successful_test_count());
-  printf("%d failed.\n", impl->failed_test_count());
+  PrintFailedTests(impl);
   printf("%s",
          DisabledTestBanner(impl->disabled_test_count(), 8).c_str());
 
@@ -1947,7 +2361,31 @@ void PlainTextUnitTestResultPrinter::OnUnitTestEnd(
 
   printf("\n%s\n", impl->Passed() ? "PASS" : "FAIL");
 
-  // Ensure that gUnit output is printed before, e.g., heapchecker output.
+  // Ensure that gTest output is printed before, e.g., heapchecker output.
+  fflush(stdout);
+}
+
+// Called before the global set-up starts.
+void PlainTextUnitTestResultPrinter::OnGlobalSetUpStart(const UnitTest*) {
+  printf("\nSetting up global test environment . . .\n");
+  fflush(stdout);
+}
+
+// Called after the global set-up ends.
+void PlainTextUnitTestResultPrinter::OnGlobalSetUpEnd(const UnitTest*) {
+  printf("Global test environment set-up finished.\n");
+  fflush(stdout);
+}
+
+// Called before the global tear-down starts.
+void PlainTextUnitTestResultPrinter::OnGlobalTearDownStart(const UnitTest*) {
+  printf("\nTearing down global test environment . . .\n");
+  fflush(stdout);
+}
+
+// Called after the global tear-down ends.
+void PlainTextUnitTestResultPrinter::OnGlobalTearDownEnd(const UnitTest*) {
+  printf("Global test environment tear-down finished.\n");
   fflush(stdout);
 }
 
@@ -1957,6 +2395,7 @@ void PlainTextUnitTestResultPrinter::OnTestCaseStart(
   printf("\nRunning %s from test case %s . . .\n",
          FormatTestCount(test_case->test_to_run_count()).c_str(),
          test_case->name().c_str());
+  fflush(stdout);
 }
 
 // Called after the test case ends.
@@ -1965,6 +2404,7 @@ void PlainTextUnitTestResultPrinter::OnTestCaseEnd(
   printf("Test case %s %s.\n",
          test_case->name().c_str(),
          FormatResultSummary(*test_case));
+  fflush(stdout);
 }
 
 // Called before the test starts.
@@ -1974,14 +2414,16 @@ void PlainTextUnitTestResultPrinter::OnTestStart(const TestInfo * test_info) {
 
   // Prints the test name s.t. if something goes wrong, the user can
   // tell which test it is in.
-  printf("  Running test %s . . .\n", test_info->name());
+  printf("  Test %s running . . .\n", test_info->name());
+  fflush(stdout);
 }
 
 // Called after the test ends.
 void PlainTextUnitTestResultPrinter::OnTestEnd(const TestInfo * test_info) {
   // Prints the test result.
   printf("  Test %s %s.\n", test_info->name(),
-         test_info->impl()->result()->Passed() ? "passed" : "failed");
+         test_info->result()->Passed() ? "passed" : "failed");
+  fflush(stdout);
 
   // Resets the test status.
   test_running_ = false;
@@ -1996,6 +2438,7 @@ void PlainTextUnitTestResultPrinter::OnNewTestPartResult(
   // Prints the failure message.
   PrintTestPartResult(*result);
   printf("\n");
+  fflush(stdout);
 }
 
 
@@ -2007,6 +2450,10 @@ class XmlUnitTestResultPrinter : public UnitTestEventListenerInterface {
 
   virtual void OnUnitTestStart(const UnitTest* unit_test);
   virtual void OnUnitTestEnd(const UnitTest* unit_test);
+  virtual void OnGlobalSetUpStart(const UnitTest* unit_test);
+  virtual void OnGlobalSetUpEnd(const UnitTest* unit_test);
+  virtual void OnGlobalTearDownStart(const UnitTest* unit_test);
+  virtual void OnGlobalTearDownEnd(const UnitTest* unit_test);
   virtual void OnTestCaseStart(const TestCase* test_case);
   virtual void OnTestCaseEnd(const TestCase* test_case);
   virtual void OnTestStart(const TestInfo* test_info);
@@ -2052,10 +2499,18 @@ class XmlUnitTestResultPrinter : public UnitTestEventListenerInterface {
   // Prints an XML summary of unit_test to output stream out.
   static void PrintXmlUnitTest(FILE* out, const UnitTest* unit_test);
 
+  // Produces a string representing the test properties in a result as space
+  // delimited XML attributes based on the property key="value" pairs.
+  // When the String is not empty, it includes a space at the beginning,
+  // to delimit this attribute from prior attributes.
+  static String TestPropertiesAsXmlAttributes(const TestResult* result);
+
   // The output file.
   const String output_file_;
   // The plain-printer this class forwards all events to.
   PlainTextUnitTestResultPrinter plain_printer_;
+
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(XmlUnitTestResultPrinter);
 };
 
 // Creates a new XmlUnitTestResultPrinter.
@@ -2063,6 +2518,7 @@ XmlUnitTestResultPrinter::XmlUnitTestResultPrinter(const char* output_file)
     : output_file_(output_file) {
   if (output_file_.c_str() == NULL || output_file_.is_empty()) {
     fprintf(stderr, "XML output file may not be null\n");
+    fflush(stderr);
     exit(EXIT_FAILURE);
   }
 }
@@ -2078,11 +2534,12 @@ void XmlUnitTestResultPrinter::OnUnitTestEnd(const UnitTest* unit_test) {
 
   // MSVC 8 deprecates fopen(), so we want to suppress warning 4996
   // (deprecated function) there.
-#ifdef _MSC_VER  // We are on Windows.
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4996)  // Temporarily disables warning 4996.
+#ifdef _MSC_VER
+  // We are on Windows.
+#pragma warning(push)          // Saves the current warning state.
+#pragma warning(disable:4996)  // Temporarily disables warning 4996.
   FILE* const xmlout = fopen(output_file_.c_str(), "w");
-# pragma warning(pop)           // Restores the warning state.
+#pragma warning(pop)           // Restores the warning state.
 #else  // We are on Linux or Mac OS.
   FILE* const xmlout = fopen(output_file_.c_str(), "w");
 #endif  // _MSC_VER
@@ -2100,10 +2557,32 @@ void XmlUnitTestResultPrinter::OnUnitTestEnd(const UnitTest* unit_test) {
     fprintf(stderr,
             "Unable to open file \"%s\"\n",
             output_file_.c_str());
+    fflush(stderr);
     exit(EXIT_FAILURE);
   }
   PrintXmlUnitTest(xmlout, unit_test);
   fclose(xmlout);
+}
+
+// Called before the global set-up starts.
+void XmlUnitTestResultPrinter::OnGlobalSetUpStart(const UnitTest* unit_test) {
+  plain_printer_.OnGlobalSetUpStart(unit_test);
+}
+
+// Called after the global set-up ends.
+void XmlUnitTestResultPrinter::OnGlobalSetUpEnd(const UnitTest* unit_test) {
+  plain_printer_.OnGlobalSetUpEnd(unit_test);
+}
+
+// Called before the global tear-down starts.
+void XmlUnitTestResultPrinter::OnGlobalTearDownStart(
+    const UnitTest* unit_test) {
+  plain_printer_.OnGlobalTearDownStart(unit_test);
+}
+
+// Called after the global tear-down ends.
+void XmlUnitTestResultPrinter::OnGlobalTearDownEnd(const UnitTest* unit_test) {
+  plain_printer_.OnGlobalTearDownEnd(unit_test);
 }
 
 // Called before the test case starts.
@@ -2189,32 +2668,47 @@ String XmlUnitTestResultPrinter::EscapeXml(const String &str,
 
 
 // The following routines generate an XML representation of a UnitTest
-// object.
+// object.  The DTD is here:
+// https://www.corp.google.com/eng/designdocs/qa/google3_java_unit_tests.html
+//
+// This is how gTest concepts map to the DTD:
+//
+// <testsuite name="">                 <-- corresponds to a UnitTest object
+//   <testsuite name="testcase-name">  <-- corresponds to a TestCase object
+//     <testcase name="test-name">     <-- corresponds to a TestInfo object
+//       <failure message="..." />
+//       <failure message="..." />     <-- individual assertion failures
+//       <failure message="..." />
+//     </testcase>
+//   </testsuite>
+// </testsuite>
+
 // Prints an XML representation of a TestInfo object.
+// TODO(wan): There is also value in printing properties with the plain printer.
 void XmlUnitTestResultPrinter::PrintXmlTestInfo(FILE* out,
                                                 const String& test_case_name,
                                                 const TestInfo* test_info) {
-  const TestInfoImpl* const impl = test_info->impl();
-  const TestResult * const result = impl->result();
+  const TestResult * const result = test_info->result();
   const List<TestPartResult> &results = result->test_part_results();
   fprintf(out,
           "    <testcase name=\"%s\" status=\"%s\" time=\"%s\" "
-          "classname=\"%s\"",
+          "classname=\"%s\"%s",
           EscapeXmlAttribute(String(test_info->name())).c_str(),
-          impl->should_run() ? "run" : "notrun",
+          test_info->should_run() ? "run" : "notrun",
           StreamableToString(result->elapsed_time()).c_str(),
-          EscapeXmlAttribute(test_case_name).c_str());
+          EscapeXmlAttribute(test_case_name).c_str(),
+          TestPropertiesAsXmlAttributes(result).c_str());
 
   int failures = 0;
   for (const ListNode<TestPartResult>* part_node = results.Head();
        part_node != NULL;
        part_node = part_node->next()) {
     const TestPartResult& part = part_node->element();
-    if (part.Failed()) {
+    if (part.failed()) {
       const String message = String::Format("%s:%d\n%s",
-                                            part.file_name().c_str(),
+                                            part.file_name(),
                                             part.line_number(),
-                                            part.message().c_str());
+                                            part.message());
       if (++failures == 1)
         fprintf(out, ">\n");
       fprintf(out,
@@ -2272,31 +2766,40 @@ void XmlUnitTestResultPrinter::PrintXmlUnitTest(FILE* out,
   fprintf(out, "</testsuite>\n");
 }
 
-
-// Information about a trace point.
-struct TraceInfo {
-  const char* file;
-  int line;
-  String message;
-};
-
+// Produces a string representing the test properties in a result as space
+// delimited XML attributes based on the property key="value" pairs.
+String XmlUnitTestResultPrinter::TestPropertiesAsXmlAttributes(
+    const TestResult* result) {
+  Message attributes;
+  const List<TestProperty>& properties = result->test_properties();
+  for (const ListNode<TestProperty>* property_node = properties.Head();
+       property_node != NULL;
+       property_node = property_node->next()) {
+    const TestProperty& property = property_node->element();
+    attributes << " " << property.key() << "="
+        << "\"" << EscapeXmlAttribute(String(property.value())) << "\"";
+  }
+  return attributes.GetString();
+}
 
 // Class ScopedTrace
 
-// Pushes the given source file location and message onto a trace
-// stack maintained by gUnit.
+// Pushes the given source file location and message onto a per-thread
+// trace stack maintained by gTest.
+// L < UnitTest::mutex_
 ScopedTrace::ScopedTrace(const char* file, int line, const Message& message) {
   TraceInfo trace;
   trace.file = file;
   trace.line = line;
   trace.message = message.GetString();
 
-  GetUnitTestImpl()->gunit_trace_stack()->PushFront(trace);
+  UnitTest::GetInstance()->PushGTestTrace(trace);
 }
 
 // Pops the info pushed by the c'tor.
+// L < UnitTest::mutex_
 ScopedTrace::~ScopedTrace() {
-  GetUnitTestImpl()->gunit_trace_stack()->PopFront(NULL);
+  UnitTest::GetInstance()->PopGTestTrace();
 }
 
 
@@ -2308,68 +2811,15 @@ ScopedTrace::~ScopedTrace() {
 //                in the trace.
 //   skip_count - the number of top frames to be skipped; doesn't count
 //                against max_depth.
-//
-// L < mutex_
-String OsStackTraceGetter::CurrentStackTrace(int max_depth, int skip_count) {
-#ifdef GUNIT_LINUX_GOOGLE3_MODE
-  if (max_depth == 0) {
-    return String("");
-  }
-
-  if (max_depth < 0 || max_depth > kMaxStackTraceDepth) {
-    max_depth = kMaxStackTraceDepth;
-  }
-
-  std::vector<string> stack;
-  // Skips whatever number of frames the caller requested, plus this
-  // function and GetSymbolizedStackTrace().
-  util::GetSymbolizedStackTrace(&stack, max_depth, skip_count + 2);
-
-  scoped_array<void*> raw_stack(new void*[max_depth]);
-  // Skips the frames requested by the caller, plus this function.
-  const int raw_stack_size = GetStackTrace(raw_stack.get(),
-                                           max_depth,
-                                           skip_count + 1);
-
-  mutex_.Lock();
-  void* const caller_frame = caller_frame_;
-  mutex_.Unlock();
-
-  string result;
-  for (int i = 0; i < stack.size() && i < raw_stack_size; i++) {
-    if (raw_stack[i] == caller_frame &&
-        !FLAGS_gunit_show_internal_stack_frames) {
-      // Add a marker to the trace and stop adding frames.
-      result += OsStackTraceGetter::kElidedFramesMarker;
-      result += "\n";
-      break;
-    }
-
-    result += stack[i] + "\n";
-  }
-
-  return String(result.c_str());
-#else
+String OsStackTraceGetter::CurrentStackTrace(int, int) {
   return String("");
-#endif  // GUNIT_LINUX_GOOGLE3_MODE
 }
 
-// L < mutex_
-void OsStackTraceGetter::UponLeavingGUnit() {
-#ifdef GUNIT_LINUX_GOOGLE3_MODE
-  // Skips UponLeavingGUnit, GetSymbolizedStackTrace, and the calling
-  // frame, since only the address below the caller stays constant.
-  void* caller_frame;
-  if (GetStackTrace(&caller_frame, 1, 3) <= 0)
-    caller_frame = NULL;
-
-  MutexLock l(&mutex_);
-  caller_frame_ = caller_frame;
-#endif  // GUNIT_LINUX_GOOGLE3_MODE
+void OsStackTraceGetter::UponLeavingGTest() {
 }
 
 const char* const
-OsStackTraceGetter::kElidedFramesMarker = "... gUnit internal frames ...";
+OsStackTraceGetter::kElidedFramesMarker = "... gTest internal frames ...";
 
 
 // class UnitTest
@@ -2377,24 +2827,53 @@ OsStackTraceGetter::kElidedFramesMarker = "... gUnit internal frames ...";
 // Gets the singleton UnitTest object.  The first time this method is
 // called, a UnitTest object is constructed and returned.  Consecutive
 // calls will return the same object.
+//
+// We don't protect this under mutex_ as a user is not supposed to
+// call this before main() starts, from which point on the return
+// value will never change.
 UnitTest * UnitTest::GetInstance() {
   static UnitTest * instance = new UnitTest();
   return instance;
 }
 
-// Adds a TestPartResult to the test result.
+// Registers and returns a global test environment.  When a test
+// program is run, all global test environments will be set-up in the
+// order they were registered.  After all tests in the program have
+// finished, all global test environments will be torn-down in the
+// *reverse* order they were registered.
+//
+// The UnitTest object takes ownership of the given environment.
+//
+// We don't protect this under mutex_, as we only support calling it
+// from the main thread.
+Environment* UnitTest::AddEnvironment(Environment* env) {
+  if (env == NULL) {
+    return NULL;
+  }
+
+  impl_->environments()->PushBack(env);
+  impl_->environments_in_reverse_order()->PushFront(env);
+  return env;
+}
+
+// Adds a TestPartResult to the current TestResult object.  All gTest
+// assertion macros (e.g. ASSERT_TRUE, EXPECT_EQ, etc) eventually call
+// this to report their results.  The user code should use the
+// assertion macros instead of calling this directly.
+// L < mutex_
 void UnitTest::AddTestPartResult(TestPartResultType result_type,
-                                 const String& file_name,
+                                 const char* file_name,
                                  int line_number,
                                  const String& message,
                                  const String& os_stack_trace) {
   Message msg;
   msg << message;
 
-  if (impl_->gunit_trace_stack()->size() > 0) {
-    msg << "\ngUnit trace:";
+  GTEST_SCOPED_LOCK(&mutex_);
+  if (impl_->gtest_trace_stack()->size() > 0) {
+    msg << "\ngTest trace:";
 
-    for (ListNode<TraceInfo>* node = impl_->gunit_trace_stack()->Head();
+    for (ListNode<TraceInfo>* node = impl_->gtest_trace_stack()->Head();
          node != NULL;
          node = node->next()) {
       const TraceInfo& trace = node->element();
@@ -2407,35 +2886,50 @@ void UnitTest::AddTestPartResult(TestPartResultType result_type,
   }
 
   const TestPartResult result =
-    TestPartResult(result_type, file_name, line_number, msg.GetString());
-  impl_->current_test_result()->AddTestPartResult(result);
-  impl_->result_printer()->OnNewTestPartResult(&result);
+    TestPartResult(result_type, file_name, line_number,
+                   msg.GetString().c_str());
+  impl_->test_part_result_reporter()->ReportTestPartResult(result);
 
   // If this is a failure and the user wants the debugger to break on
   // failures ...
-  if (result_type != TPRT_SUCCESS && FLAGS_gunit_break_on_failure) {
+  if (result_type != TPRT_SUCCESS && FLAGS_gtest_break_on_failure) {
     // ... then we generate a seg fault.
     *static_cast<int*>(NULL) = 1;
   }
 }
 
+// Creates and adds a property to the current TestResult. If a property matching
+// the supplied value already exists, updates its value instead.
+void UnitTest::RecordPropertyForCurrentTest(const char* key,
+                                            const char* value) {
+  const TestProperty test_property(key, value);
+  impl_->current_test_result()->RecordProperty(test_property);
+}
+
 // Runs all tests in this UnitTest object and prints the result.
 // Returns 0 if successful, or 1 otherwise.
+//
+// We don't protect this under mutex_, as we only support calling it
+// from the main thread.
 int UnitTest::Run() {
-#if _MSC_VER  // We are on Windows.
+#ifdef _MSC_VER
 
-  if (FLAGS_gunit_catch_exceptions) {
-    // The user wants gUnit to catch exceptions thrown by the tests.
+#if !defined(_WIN32_WCE)
+  // SetErrorMode doesn't exist on CE.
+  if (FLAGS_gtest_catch_exceptions) {
+    // The user wants gTest to catch exceptions thrown by the tests.
 
     // This lets fatal errors be handled by us, instead of causing pop-ups.
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOALIGNMENTFAULTEXCEPT |
                  SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
   }
+#endif  // _WIN32_WCE
 
   __try {
     return impl_->RunAllTests();
-  } __except(UnitTestOptions::GUnitShouldProcessSEH(GetExceptionCode())) {
+  } __except(UnitTestOptions::GTestShouldProcessSEH(GetExceptionCode())) {
     printf("Exception thrown with code 0x%x.\nFAIL\n", GetExceptionCode());
+    fflush(stdout);
     return 1;
   }
 
@@ -2446,11 +2940,19 @@ int UnitTest::Run() {
 #endif  // _MSC_VER
 }
 
+// Returns the TestCase object for the test that's currently running,
+// or NULL if no test is running.
+// L < mutex_
 const TestCase* UnitTest::current_test_case() const {
+  GTEST_SCOPED_LOCK(&mutex_);
   return impl_->current_test_case();
 }
 
+// Returns the TestInfo object for the test that's currently running,
+// or NULL if no test is running.
+// L < mutex_
 const TestInfo* UnitTest::current_test_info() const {
+  GTEST_SCOPED_LOCK(&mutex_);
   return impl_->current_test_info();
 }
 
@@ -2464,6 +2966,21 @@ UnitTest::~UnitTest() {
   delete impl_;
 }
 
+// Pushes a trace defined by SCOPED_TRACE() on to the per-thread
+// gTest trace stack.
+// L < mutex_
+void UnitTest::PushGTestTrace(const TraceInfo& trace) {
+  GTEST_SCOPED_LOCK(&mutex_);
+  impl_->gtest_trace_stack()->PushFront(trace);
+}
+
+// Pops a trace from the per-thread gTest trace stack.
+// L < mutex_
+void UnitTest::PopGTestTrace() {
+  GTEST_SCOPED_LOCK(&mutex_);
+  impl_->gtest_trace_stack()->PopFront(NULL);
+}
+
 UnitTestImpl::UnitTestImpl(UnitTest* parent)
     : parent_(parent),
       test_cases_(),
@@ -2473,8 +2990,11 @@ UnitTestImpl::UnitTestImpl(UnitTest* parent)
       ad_hoc_test_result_(),
       result_printer_(NULL),
       os_stack_trace_getter_(NULL),
-      elapsed_time_(0),
-      gunit_trace_stack_(new List<TraceInfo>) {
+      elapsed_time_(0) {
+  // We do the assignment here instead of in the initializer list, as
+  // doing that latter causes MSVC to issue a warning about using
+  // 'this' in initializers.
+  test_part_result_reporter_ = this;
   UnitTestOptions::SetFlagVarsFromEnvVars();
 }
 
@@ -2482,13 +3002,13 @@ UnitTestImpl::~UnitTestImpl() {
   // Deletes every TestCase.
   test_cases_.ForEach(Delete<TestCase>);
 
+  // Deletes every Environment.
+  environments_.ForEach(Delete<Environment>);
+
   // Deletes the current test result printer.
   delete result_printer_;
 
   delete os_stack_trace_getter_;
-
-  // Deletes the gUnit trace stack.
-  delete gunit_trace_stack_;
 }
 
 namespace {
@@ -2518,7 +3038,7 @@ class TestCaseNameIs {
   }
 };
 
-} // namespace
+}  // namespace
 
 // Finds and returns a TestCase with the given name.  If one doesn't
 // exist, creates one and returns it.
@@ -2557,6 +3077,13 @@ TestCase* UnitTestImpl::GetTestCase(const String& test_case_name,
   return node->element();
 }
 
+namespace {
+// Helpers for setting up / tearing down the given environment.  They
+// are for use in the List::ForEach() method.
+void SetUpEnvironment(Environment* env) { env->SetUp(); }
+void TearDownEnvironment(Environment* env) { env->TearDown(); }
+}
+
 // Runs all tests in this UnitTest object, prints the result, and
 // returns 0 if all tests are successful, or 1 otherwise.  If any
 // exception is thrown during a test on Windows, this test is
@@ -2564,46 +3091,83 @@ TestCase* UnitTestImpl::GetTestCase(const String& test_case_name,
 // run.  (We disable exceptions on Linux and Mac OS X, so the issue
 // doesn't apply there.)
 int UnitTestImpl::RunAllTests() {
-  // Lists all the tests and exits if the --gunit_list_tests
+  // Lists all the tests and exits if the --gtest_list_tests
   // flag was specified.
-  if (FLAGS_gunit_list_tests) {
+  if (FLAGS_gtest_list_tests) {
     ListAllTests();
     return 0;
   }
+
+  // True iff we are in a subprocess for running a thread-safe-style
+  // death test.
+  bool in_subprocess_for_death_test = false;
 
   UnitTestEventListenerInterface * const printer = result_printer();
 
   // Compares the full test names with the filter to decide which
   // tests to run.
-  FilterTests();
+  const bool has_tests_to_run = FilterTests() > 0;
+  // True iff at least one test has failed.
+  bool failed = false;
 
-  // Tells the unit test event listener that the tests are about to
-  // start.
-  printer->OnUnitTestStart(parent_);
+  // How many times to repeat the tests?  We don't want to repeat them
+  // when we are inside the subprocess of a death test.
+  const int repeat = in_subprocess_for_death_test ? 1 : FLAGS_gtest_repeat;
+  // Repeats forever if the repeat count is negative.
+  const bool forever = repeat < 0;
+  for (int i = 0; forever || i != repeat; i++) {
+    if (repeat != 1) {
+      printf("\nRepeating all tests (iteration %d) . . .\n\n", i + 1);
+    }
 
-  const TimeInMillis start = GetTimeInMillis();
+    // Tells the unit test event listener that the tests are about to
+    // start.
+    printer->OnUnitTestStart(parent_);
 
-  // Runs each test case.
-  test_cases_.ForEach(TestCase::RunTestCase);
+    const TimeInMillis start = GetTimeInMillis();
 
-  elapsed_time_ = GetTimeInMillis() - start;
+    // Runs each test case if there is at least one test to run.
+    if (has_tests_to_run) {
+      // Sets up all environments beforehand.
+      printer->OnGlobalSetUpStart(parent_);
+      environments_.ForEach(SetUpEnvironment);
+      printer->OnGlobalSetUpEnd(parent_);
 
-  // Tells the unit test event listener that the tests have just
-  // finished.
-  printer->OnUnitTestEnd(parent_);
+      // Runs the tests only if there was no fatal failure during global
+      // set-up.
+      if (!Test::HasFatalFailure()) {
+        test_cases_.ForEach(TestCase::RunTestCase);
+      }
 
-  // Gets the result and clears it.
-  const bool passed = Passed();
-  ClearResult();
+      // Tears down all environments in reverse order afterwards.
+      printer->OnGlobalTearDownStart(parent_);
+      environments_in_reverse_order_.ForEach(TearDownEnvironment);
+      printer->OnGlobalTearDownEnd(parent_);
+    }
+
+    elapsed_time_ = GetTimeInMillis() - start;
+
+    // Tells the unit test event listener that the tests have just
+    // finished.
+    printer->OnUnitTestEnd(parent_);
+
+    // Gets the result and clears it.
+    if (!Passed()) {
+      failed = true;
+    }
+    ClearResult();
+  }
 
   // Returns 0 if all tests passed, or 1 other wise.
-  return passed ? 0 : 1;
+  return failed ? 1 : 0;
 }
 
 // Compares the name of each test with the user-specified filter to
 // decide whether the test should be run, then records the result in
 // each TestCase and TestInfo object.
-void UnitTestImpl::FilterTests() {
+// Returns the number of tests that should run.
+int UnitTestImpl::FilterTests() {
+  int num_runnable_tests = 0;
   for (const ListNode<TestCase *> *test_case_node = test_cases_.Head();
        test_case_node != NULL;
        test_case_node = test_case_node->next()) {
@@ -2631,8 +3195,12 @@ void UnitTestImpl::FilterTests() {
                                                            test_name);
       test_info->impl()->set_should_run(should_run);
       test_case->set_should_run(test_case->should_run() || should_run);
+      if (should_run) {
+        num_runnable_tests++;
+      }
     }
   }
+  return num_runnable_tests;
 }
 
 // Lists all tests by name.
@@ -2654,6 +3222,7 @@ void UnitTestImpl::ListAllTests() {
       printf("  %s\n", test_info->name());
     }
   }
+  fflush(stdout);
 }
 
 // Sets the unit test result printer.
@@ -2682,6 +3251,7 @@ UnitTestEventListenerInterface* UnitTestImpl::result_printer() {
       if (!output_format.Equals("")) {
         printf("WARNING: unrecognized output format \"%s\" ignored.\n",
                output_format.c_str());
+        fflush(stdout);
       }
       result_printer_ = new PlainTextUnitTestResultPrinter();
     }
@@ -2730,21 +3300,21 @@ TestInfoImpl::TestInfoImpl(TestInfo* parent,
                            const char* test_case_name,
                            const char* name,
                            TypeId fixture_class_id,
-                           TestMaker maker)
-    : parent_(parent),
-      test_case_name_(String(test_case_name)),
-      name_(String(name)),
-      fixture_class_id_(fixture_class_id),
-      should_run_(false),
-      is_disabled_(false),
-      maker_(maker) {
+                           TestMaker maker) :
+    parent_(parent),
+    test_case_name_(String(test_case_name)),
+    name_(String(name)),
+    fixture_class_id_(fixture_class_id),
+    should_run_(false),
+    is_disabled_(false),
+    maker_(maker) {
 }
 
 // TestInfoImpl destructor.
 TestInfoImpl::~TestInfoImpl() {
 }
 
-namespace {
+namespace internal {
 
 // Parses a string as a command line flag.  The string should have
 // the format "--flag=value".  When def_optional is true, the "=value"
@@ -2806,6 +3376,23 @@ bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
   return true;
 }
 
+// Parses a string for an Int32 flag, in the form of
+// "--flag=value".
+//
+// On success, stores the value of the flag in *value, and returns
+// true.  On failure, returns false without changing *value.
+bool ParseInt32Flag(const char* str, const char* flag, Int32* value) {
+  // Gets the value of the flag as a string.
+  const char* const value_str = ParseFlagValue(str, flag, false);
+
+  // Aborts if the parsing failed.
+  if (value_str == NULL) return false;
+
+  // Sets *value to the value of the flag.
+  return ParseInt32(Message() << "The value of flag --" << flag,
+                    value_str, value);
+}
+
 // Parses a string for a string flag, in the form of
 // "--flag=value".
 //
@@ -2823,36 +3410,34 @@ bool ParseStringFlag(const char* str, const char* flag, String* value) {
   return true;
 }
 
-}  // Unnamed namespace.
+}  // namespace internal.
 
-// The internal implementation of ParseGUnitFlags().
+// The internal implementation of ParseGTestFlags().
 //
 // The type parameter CharType can be instantiated to either char or
 // wchar_t.
 template <typename CharType>
-void ParseGUnitFlagsImpl(int* argc, CharType** argv) {
+void ParseGTestFlagsImpl(int* argc, CharType** argv) {
   if (*argc <= 0) return;
 
   for (int i = 1; i != *argc; i++) {
     const String arg_string = StreamableToString(argv[i]);
     const char* const arg = arg_string.c_str();
 
-    // Do we see a gUnit flag?
-    if (ParseBoolFlag(arg,
-                      kGUnitBreakOnFailureFlag,
-                      &FLAGS_gunit_break_on_failure) ||
-        ParseBoolFlag(arg,
-                      kGUnitCatchExceptionsFlag,
-                      &FLAGS_gunit_catch_exceptions) ||
-        ParseStringFlag(arg,
-                        kGUnitFilterFlag,
-                        &FLAGS_gunit_filter) ||
-        ParseBoolFlag(arg,
-                      kGUnitListTestsFlag,
-                      &FLAGS_gunit_list_tests) ||
-        ParseStringFlag(arg,
-                        kGUnitOutputFlag,
-                        &FLAGS_gunit_output)) {
+    using internal::ParseBoolFlag;
+    using internal::ParseInt32Flag;
+    using internal::ParseStringFlag;
+
+    // Do we see a gTest flag?
+    if (ParseBoolFlag(arg, kGTestBreakOnFailureFlag,
+                      &FLAGS_gtest_break_on_failure) ||
+        ParseBoolFlag(arg, kGTestCatchExceptionsFlag,
+                      &FLAGS_gtest_catch_exceptions) ||
+        ParseStringFlag(arg, kGTestFilterFlag, &FLAGS_gtest_filter) ||
+        ParseBoolFlag(arg, kGTestListTestsFlag, &FLAGS_gtest_list_tests) ||
+        ParseStringFlag(arg, kGTestOutputFlag, &FLAGS_gtest_output) ||
+        ParseInt32Flag(arg, kGTestRepeatFlag, &FLAGS_gtest_repeat)
+        ) {
       // Yes.  Shift the remainder of the argv list left by one.  Note
       // that argv has (*argc + 1) elements, the last one always being
       // NULL.  The following loop moves the trailing NULL element as
@@ -2871,22 +3456,22 @@ void ParseGUnitFlagsImpl(int* argc, CharType** argv) {
   }
 }
 
-// Parses a command line for the flags that gUnit recognizes.
-// Whenever a gUnit flag is seen, it is removed from argv, and *argc
+// Parses a command line for the flags that gTest recognizes.
+// Whenever a gTest flag is seen, it is removed from argv, and *argc
 // is decremented.
 //
-// No value is returned.  Instead, the FLAGS_gunit_* variables are
+// No value is returned.  Instead, the FLAGS_gtest_* variables are
 // updated.
-void ParseGUnitFlags(int* argc, char** argv) {
-  return ParseGUnitFlagsImpl(argc, argv);
+void ParseGTestFlags(int* argc, char** argv) {
+  return ParseGTestFlagsImpl(argc, argv);
 }
 
 // This overloaded version can be used in Windows programs compiled in
 // UNICODE mode.
-#ifdef  _MSC_VER
-void ParseGUnitFlags(int* argc, wchar_t** argv) {
-  return ParseGUnitFlagsImpl(argc, argv);
+#ifdef _MSC_VER
+void ParseGTestFlags(int* argc, wchar_t** argv) {
+  return ParseGTestFlagsImpl(argc, argv);
 }
 #endif  // _MSC_VER
 
-} // namespace testing
+}  // namespace testing
