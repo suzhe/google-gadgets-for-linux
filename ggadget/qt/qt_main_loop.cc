@@ -44,8 +44,6 @@ class QtMainLoop::Impl {
 
     QSocketNotifier::Type qtype;
     switch (type) {
-      case MainLoopInterface::INVALID_WATCH:
-        return -1;
       case MainLoopInterface::IO_READ_WATCH:
         qtype = QSocketNotifier::Read;
         break;
@@ -53,7 +51,7 @@ class QtMainLoop::Impl {
         qtype = QSocketNotifier::Write;
         break;
       default:
-        break;
+        return -1;
     }
 
     QSocketNotifier *notifier = new QSocketNotifier(fd, qtype);
