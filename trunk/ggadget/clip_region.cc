@@ -146,7 +146,7 @@ Rectangle ClipRegion::GetExtents() const {
 void ClipRegion::Integerize() {
   for (RectangleVector::iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it)
-    it->Integerize();
+    it->Integerize(true);
 }
 
 bool ClipRegion::EnumerateRectangles(RectangleSlot *slot) const {

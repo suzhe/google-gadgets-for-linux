@@ -42,6 +42,13 @@ class ScrollBarElement : public BasicElement {
   Variant GetBackground() const;
   void SetBackground(const Variant &img);
 
+  /**
+   * Gets and sets the file name of the thumb grippy image.
+   * If grippy image is set, the thumb will be displayed proportionally.
+   */
+  Variant GetGrippyImage() const;
+  void SetGrippyImage(const Variant &img);
+
   /** Gets and sets the file name of the left/up button down image. */
   Variant GetLeftDownImage() const;
   void SetLeftDownImage(const Variant &img);
@@ -111,6 +118,7 @@ class ScrollBarElement : public BasicElement {
   friend class ScrollingElement;
 
  public:
+  virtual void Layout();
   virtual bool HasOpaqueBackground() const;
 
  public:

@@ -17,6 +17,7 @@
 #include "canvas_utils.h"
 #include "canvas_interface.h"
 #include "image_interface.h"
+#include "math_utils.h"
 
 namespace ggadget {
 
@@ -25,11 +26,16 @@ void DrawCanvasArea(const CanvasInterface *src, double src_x, double src_y,
                     CanvasInterface *dest, double dest_x, double dest_y,
                     double dest_width, double dest_height) {
   if (src_width > 0 && src_height > 0 &&
-      dest_width != 0 && dest_height != 0) {
+      dest_width > 0 && dest_height > 0) {
     double cx = dest_width / src_width;
     double cy = dest_height / src_height;
     dest->PushState();
-    dest->IntersectRectClipRegion(dest_x, dest_y, dest_width, dest_height);
+    Rectangle dest_rect(dest_x, dest_y, dest_width, dest_height);
+    // Integerize to avoid gap between the areas drawn by
+    // StretchMiddleDrawCanvas().  
+    dest_rect.Integerize(true);
+    dest->IntersectRectClipRegion(dest_rect.x, dest_rect.y,
+                                  dest_rect.w, dest_rect.h);
     dest->ScaleCoordinates(cx, cy);
 
     double draw_x = dest_x / cx - src_x;
@@ -63,13 +69,13 @@ void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
       dest->DrawCanvas(x, y, src);
     } else {
       if (left_border_width < 0)
-        left_border_width += src_width / 2;
+        left_border_width += floor(src_width / 2);
       if (right_border_width < 0)
-        right_border_width += src_width / 2;
+        right_border_width += floor(src_width / 2);
       if (top_border_height < 0)
-        top_border_height += src_height / 2;
+        top_border_height += floor(src_height / 2);
       if (bottom_border_height < 0)
-        bottom_border_height += src_height / 2;
+        bottom_border_height += floor(src_height / 2);
 
       double total_border_width = left_border_width + right_border_width;
       double total_border_height = top_border_height + bottom_border_height;
@@ -86,12 +92,25 @@ void StretchMiddleDrawCanvas(const CanvasInterface *src, CanvasInterface *dest,
 
       double dest_middle_width = width - total_border_width;
       double dest_middle_height = height - total_border_height;
+      double dx1, dx2, dy1, dy2;
+      if (dest_middle_width <= 0) {
+        left_border_width = right_border_width = width / 2;
+        dx1 = dx2 = x + width / 2;
+        dest_middle_width = 0;
+      } else {
+        dx1 = x + left_border_width;
+        dx2 = x + width - right_border_width;
+      }
+      if (dest_middle_height <= 0) {
+        top_border_height = bottom_border_height = height / 2;
+        dy1 = dy2 = y + height / 2;
+        dest_middle_height = 0;
+      } else {
+        dy1 = y + top_border_height;
+        dy2 = y + height - bottom_border_height;
+      }
       double sx2 = src_width - right_border_width;
       double sy2 = src_height - bottom_border_height;
-      double dx1 = x + left_border_width;
-      double dx2 = x + width - right_border_width;
-      double dy1 = y + top_border_height;
-      double dy2 = y + height - bottom_border_height;
 
       DrawCanvasArea(src, 0, 0, left_border_width, top_border_height,
                      dest, x, y, left_border_width, top_border_height);
