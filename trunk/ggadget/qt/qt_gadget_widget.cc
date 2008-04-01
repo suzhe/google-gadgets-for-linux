@@ -290,5 +290,10 @@ void QGadgetWidget::resizeEvent(QResizeEvent *event) {
   }
 }
 
+void QGadgetWidget::closeEvent(QCloseEvent *event) {
+  event->accept();
+  emit closed();
+}
+#include "qt_gadget_widget.moc"
 }
 }

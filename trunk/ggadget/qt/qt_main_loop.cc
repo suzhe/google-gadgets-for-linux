@@ -103,7 +103,7 @@ class QtMainLoop::Impl {
         WatchCallbackInterface *callback = node->callback_;
         //DLOG("QtMainLoop::RemoveWatch: id=%d", watch_id);
         callback->OnRemove(main_loop_, watch_id);
-        RemoveWatchNode(watch_id);
+        watches_.erase(watch_id);
         delete node;
       }
     }
@@ -133,10 +133,6 @@ class QtMainLoop::Impl {
       return NULL;
     else
       return watches_[watch_id];
-  }
-
-  void RemoveWatchNode(int watch_id) {
-    watches_.erase(watch_id);
   }
 
   int AddWatchNode(WatchNode *node) {

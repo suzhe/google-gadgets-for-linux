@@ -29,8 +29,13 @@ namespace ggadget {
 namespace qt {
 
 class QGadgetWidget : public QWidget {
+  Q_OBJECT
  public:
   QGadgetWidget(ViewInterface* view, ViewHostInterface *host, QtGraphics *g);
+
+ signals:
+  void closed();
+
  protected:
   virtual void paintEvent(QPaintEvent *event);
   virtual void mouseDoubleClickEvent(QMouseEvent *event);
@@ -46,6 +51,7 @@ class QGadgetWidget : public QWidget {
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
   virtual void resizeEvent(QResizeEvent *event);
+  virtual void closeEvent(QCloseEvent *event);
   QtCanvas *canvas_;
   QtGraphics *graphics_;
   ViewInterface *view_;
