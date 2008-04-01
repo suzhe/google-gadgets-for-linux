@@ -237,11 +237,19 @@ class Rectangle {
 
   /**
    * Integerize the rectangle region. That means to make the coordinates of the
-   * vertexs be integer. This is useful since clip operation may time wasted if
-   * the region is not integer. The result rectangle will be larger or equal to
-   * the original one.
+   * vertexes be integer. This is useful since clip operation may time wasted
+   * if the region is not integer.
+   *
+   * @param expand if @c true, the method ensures the result rectangle contains
+   *     the original one; otherwise the coordinates are simply rounded.  
    */
-  void Integerize();
+  void Integerize(bool expand);
+
+  /** Set the rectangle parameters. */
+  void Set(double a_x, double a_y, double a_w, double a_h);
+
+  /** Reset the rectangle to all zero state. */
+  void Reset();
 
  public:
   /**

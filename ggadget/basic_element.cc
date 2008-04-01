@@ -618,7 +618,9 @@ class BasicElement::Impl {
 
     *fired_element = *in_element = NULL;
 
-    if (!visible_ || opacity_ == 0) {
+    // Always process direct messages because the sender wants this element
+    // to process.
+    if (!direct && (!visible_ || opacity_ == 0)) {
       return EVENT_RESULT_UNHANDLED;
     }
 

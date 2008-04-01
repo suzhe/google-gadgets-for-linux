@@ -249,10 +249,12 @@ class View::Impl {
     obj->RegisterMethod("resizeTo", NewSlot(this, &Impl::SetSize));
 
     // Extended APIs.
+#if 0
     obj->RegisterProperty("focusedElement",
                           NewSlot(owner_, &View::GetFocusedElement), NULL);
     obj->RegisterProperty("mouseOverElement",
                           NewSlot(owner_, &View::GetMouseOverElement), NULL);
+#endif
     obj->RegisterMethod("openURL", NewSlot(owner_, &View::OpenURL));
 
     obj->RegisterSignal(kOnCancelEvent, &oncancel_event_);
@@ -405,20 +407,18 @@ class View::Impl {
       }
 
       if (mouseover_element_.Get()) {
-        // The enabled and visible states may change during event handling.
-        if (!mouseover_element_.Get()->IsReallyEnabled()) {
-          mouseover_element_.Reset(NULL);
-        } else {
-          MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
-                                     event.GetX(), event.GetY(),
-                                     event.GetWheelDeltaX(),
-                                     event.GetWheelDeltaY(),
-                                     event.GetButton(),
-                                     event.GetModifier());
-          MapChildMouseEvent(event, mouseover_element_.Get(), &mouseover_event);
-          mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
-                                                 &temp, &temp1);
-        }
+        // Always fire the mouse over event even if the element's visibility
+        // and enabled state changed during the above mouse out, to keep the
+        // same behaviour as the Windows version.
+        MouseEvent mouseover_event(Event::EVENT_MOUSE_OVER,
+                                   event.GetX(), event.GetY(),
+                                   event.GetWheelDeltaX(),
+                                   event.GetWheelDeltaY(),
+                                   event.GetButton(),
+                                   event.GetModifier());
+        MapChildMouseEvent(event, mouseover_element_.Get(), &mouseover_event);
+        mouseover_element_.Get()->OnMouseEvent(mouseover_event, true,
+                                               &temp, &temp1);
       }
     }
 

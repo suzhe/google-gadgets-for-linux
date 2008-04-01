@@ -106,16 +106,29 @@ const char kProfilePrefix[] = "profile://";
 /** Prefix for global file resources. */
 const char kGlobalResourcePrefix[] = "resource://";
 
-const char kScrollDefaultBackground[] = "resource://scroll_background.png";
-const char kScrollDefaultThumb[] = "resource://scrollbar_u.png";
-const char kScrollDefaultThumbDown[] = "resource://scrollbar_d.png";
-const char kScrollDefaultThumbOver[] = "resource://scrollbar_o.png";
+const char kScrollDefaultBackgroundH[] = "resource://scroll_background_h.png";
+const char kScrollDefaultGrippyH[] = "resource://scrollbar_grippy_h.png";
+const char kScrollDefaultThumbH[] = "resource://scrollbar_u_h.png";
+const char kScrollDefaultThumbDownH[] = "resource://scrollbar_d_h.png";
+const char kScrollDefaultThumbOverH[] = "resource://scrollbar_o_h.png";
 const char kScrollDefaultLeft[] = "resource://scrollleft_u.png";
 const char kScrollDefaultLeftDown[] = "resource://scrollleft_d.png";
 const char kScrollDefaultLeftOver[] = "resource://scrollleft_o.png";
 const char kScrollDefaultRight[] = "resource://scrollright_u.png";
 const char kScrollDefaultRightDown[] = "resource://scrollright_d.png";
 const char kScrollDefaultRightOver[] = "resource://scrollright_o.png";
+
+const char kScrollDefaultBackgroundV[] = "resource://scroll_background.png";
+const char kScrollDefaultGrippyV[] = "resource://scrollbar_grippy.png";
+const char kScrollDefaultThumbV[] = "resource://scrollbar_u.png";
+const char kScrollDefaultThumbDownV[] = "resource://scrollbar_d.png";
+const char kScrollDefaultThumbOverV[] = "resource://scrollbar_o.png";
+const char kScrollDefaultUp[] = "resource://scrollup_u.png";
+const char kScrollDefaultUpDown[] = "resource://scrollup_d.png";
+const char kScrollDefaultUpOver[] = "resource://scrollup_o.png";
+const char kScrollDefaultDown[] = "resource://scrolldown_u.png";
+const char kScrollDefaultDownDown[] = "resource://scrolldown_d.png";
+const char kScrollDefaultDownOver[] = "resource://scrolldown_o.png";
 
 const char kComboArrow[] = "resource://combo_arrow_up.png";
 const char kComboArrowDown[] = "resource://combo_arrow_down.png";

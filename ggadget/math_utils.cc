@@ -235,12 +235,25 @@ bool Rectangle::IsPointIn(double px, double py) const {
   return px >= x && py >= y && px < x + w && py < y + h;
 }
 
-void Rectangle::Integerize() {
-  double nx = floor(x);
-  double ny = floor(y);
-  double nw = ceil(w + x - nx);
-  double nh = ceil(h + y - ny);
-  *this = Rectangle(nx, ny, nw, nh);
+void Rectangle::Integerize(bool expand) {
+  if (expand) {
+    double nx = floor(x);
+    double ny = floor(y);
+    Set(nx, ny, ceil(w + x - nx), ceil(h + y - ny));
+  } else {
+    Set(round(x), round(y), round(w), round(h));
+  }
+}
+
+void Rectangle::Set(double a_x, double a_y, double a_w, double a_h) {
+  x = a_x;
+  y = a_y;
+  w = a_w;
+  h = a_h;
+}
+
+void Rectangle::Reset() {
+  x = y = w = h = 0;
 }
 
 bool Rectangle::operator==(const Rectangle &rect) const {

@@ -87,12 +87,12 @@ void DivElement::Layout() {
   if (x_range < 0) x_range = 0;
   if (y_range < 0) y_range = 0;
 
+  SetYPageStep(static_cast<int>(round(GetClientHeight())));
+  SetXPageStep(static_cast<int>(round(GetClientWidth())));
+
   if (UpdateScrollBar(x_range, y_range)) {
-    // Layout again to reflect change of the scroll bar.
+    // Layout again to reflect visibility change of the scroll bars.
     Layout();
-  } else {
-    SetYPageStep(static_cast<int>(round(GetClientHeight())));
-    SetXPageStep(static_cast<int>(round(GetClientWidth())));
   }
 }
 

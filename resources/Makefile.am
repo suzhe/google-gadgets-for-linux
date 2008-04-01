@@ -30,16 +30,28 @@ RESOURCE_FILES= button_down.png \
 		html_details_view.xml \
 		messages-catalog.xml \
 		pinned.png \
-		scroll_background.png \
-		scrollbar_d.png \
-		scrollbar_o.png \
-		scrollbar_u.png \
+		scroll_background_h.png \
+		scrollbar_d_h.png \
+		scrollbar_grippy_h.png \
+		scrollbar_o_h.png \
+		scrollbar_u_h.png \
 		scrollleft_d.png \
 		scrollleft_o.png \
 		scrollleft_u.png \
 		scrollright_d.png \
 		scrollright_o.png \
 		scrollright_u.png \
+		scroll_background.png \
+		scrollbar_d.png \
+		scrollbar_grippy.png \
+		scrollbar_o.png \
+		scrollbar_u.png \
+		scrollup_d.png \
+		scrollup_o.png \
+		scrollup_u.png \
+		scrolldown_d.png \
+		scrolldown_o.png \
+		scrolldown_u.png \
 		text_details_view.xml \
 		unpinned.png \
 		unpinned_over.png \

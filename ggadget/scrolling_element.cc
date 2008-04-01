@@ -56,8 +56,8 @@ class ScrollingElement::Impl {
       scrollbar_->ConnectOnChangeEvent(NewSlot(this, &Impl::OnScrollBarChange));
       scrollbar_->ConnectOnFocusInEvent(NewSlot(this,
                                                 &Impl::OnScrollBarFocusIn));
-      // Inform the view of this scrollbar to let the view handle mouse grabbing
-      // and mouse over/out logics of the scrollbar.
+      // Inform the view of this scrollbar to let the view handle mouse
+      // grabbing and mouse over/out logics of the scrollbar.
       owner_->GetView()->OnElementAdd(scrollbar_);
     }
   }
@@ -74,6 +74,8 @@ class ScrollingElement::Impl {
       scrollbar_->SetValue(scroll_pos_y_);
     }
     scrollbar_->SetVisible(show_scrollbar);
+    if (show_scrollbar)
+      scrollbar_->Layout();
 
     scroll_range_x_ = std::max(0, x_range);
     scroll_pos_x_ = std::min(scroll_pos_x_, scroll_range_x_);
