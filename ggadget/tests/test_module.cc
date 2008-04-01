@@ -15,7 +15,7 @@
 */
 
 #include <string>
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "ggadget/module.h"
 #include "ggadget/logger.h"
 #include "ggadget/common.h"

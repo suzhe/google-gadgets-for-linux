@@ -18,7 +18,7 @@
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/tests/init_extensions.h>
-#include <unittest/gunit.h>
+#include <unittest/gtest.h>
 #include "../wireless.h"
 #include "../wireless_access_point.h"
 
@@ -51,7 +51,7 @@ TEST(WirelessAndWirelessAcessPoint, All) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };

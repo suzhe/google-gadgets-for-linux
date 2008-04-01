@@ -17,7 +17,7 @@
 #include <cstdio>
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/variant.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -259,6 +259,6 @@ TEST(Variant, TestAny) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

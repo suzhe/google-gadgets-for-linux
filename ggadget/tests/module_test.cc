@@ -23,7 +23,7 @@
 #include "ggadget/gadget_consts.h"
 #include "ggadget/module.h"
 #include "ggadget/slot.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -186,6 +186,6 @@ TEST_F(ModuleTest, ModuleResident) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

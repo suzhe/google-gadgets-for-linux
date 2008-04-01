@@ -1,34 +1,49 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008, Google Inc.
+  All rights reserved.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
 
-       http://www.apache.org/licenses/LICENSE-2.0
+      * Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the following disclaimer
+  in the documentation and/or other materials provided with the
+  distribution.
+      * Neither the name of Google Inc. nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// Utility functions and classes used by the gUnit testing framework.
+// Utility functions and classes used by the gTest testing framework.
 //
-// This file contains purely gUnit's internal implementation.  Please
+// This file contains purely gTest's internal implementation.  Please
 // DO NOT INCLUDE IT IN A USER PROGRAM.
 
-#ifndef TESTING_GUNIT_INTERNAL_INL_H__
-#define TESTING_GUNIT_INTERNAL_INL_H__
+#ifndef UNITTEST_GTEST_INTERNAL_INL_H__
+#define UNITTEST_GTEST_INTERNAL_INL_H__
 
-// GUNIT_IMPLEMENTATION is defined iff the current translation unit is
-// part of gUnit's implementation.
-#ifndef GUNIT_IMPLEMENTATION
+// GTEST_IMPLEMENTATION is defined if the current translation unit is
+// part of gTest's implementation.
+#ifndef GTEST_IMPLEMENTATION
 // A user is trying to include this from his code - just say no.
-#error "gunit-internal-inl.h is part of gUnit's internal implementation."
-#error "It must not be included except by gUnit itself."
-#endif  // GUNIT_IMPLEMENTATION
+#error "gtest_internal_inl.h is part of gTest's internal implementation."
+#error "It must not be included except by gTest itself."
+#endif  // GTEST_IMPLEMENTATION
 
 #include <stddef.h>
 
@@ -36,7 +51,9 @@
 #include <windows.h>
 #endif  // _MSC_VER
 
-#include "gunit.h"
+#include <ostream>  // NOLINT
+#include "gtest.h"
+#include "gtest_spi.h"
 
 namespace testing {
 
@@ -51,34 +68,37 @@ String ToUtf8String(wchar_t wchar);
 // Declares the flag variables.
 //
 // We don't want the users to modify these flags in the code, but want
-// gUnit's own unit tests to be able to access them.  Therefore we
-// declare them here as opposed to in gunit.h.
-extern bool FLAGS_gunit_break_on_failure;
-extern bool FLAGS_gunit_catch_exceptions;
-extern String FLAGS_gunit_filter;
-extern bool FLAGS_gunit_list_tests;
-extern String FLAGS_gunit_output;
+// gTest's own unit tests to be able to access them.  Therefore we
+// declare them here as opposed to in gtest.h.
+extern bool FLAGS_gtest_break_on_failure;
+extern bool FLAGS_gtest_catch_exceptions;
+extern String FLAGS_gtest_filter;
+extern bool FLAGS_gtest_list_tests;
+extern String FLAGS_gtest_output;
+extern Int32 FLAGS_gtest_repeat;
 
-// This class saves the values of all gUnit flags in its c'tor, and
+// This class saves the values of all gTest flags in its c'tor, and
 // restores them in its d'tor.
-class GUnitFlagSaver {
+class GTestFlagSaver {
  public:
   // The c'tor.
-  GUnitFlagSaver() {
-    break_on_failure_ = FLAGS_gunit_break_on_failure;
-    catch_exceptions_ = FLAGS_gunit_catch_exceptions;
-    filter_ = FLAGS_gunit_filter;
-    list_tests_ = FLAGS_gunit_list_tests;
-    output_ = FLAGS_gunit_output;
+  GTestFlagSaver() {
+    break_on_failure_ = FLAGS_gtest_break_on_failure;
+    catch_exceptions_ = FLAGS_gtest_catch_exceptions;
+    filter_ = FLAGS_gtest_filter;
+    list_tests_ = FLAGS_gtest_list_tests;
+    output_ = FLAGS_gtest_output;
+    repeat_ = FLAGS_gtest_repeat;
   }
 
   // The d'tor is not virtual.  DO NOT INHERIT FROM THIS CLASS.
-  ~GUnitFlagSaver() {
-    FLAGS_gunit_break_on_failure = break_on_failure_;
-    FLAGS_gunit_catch_exceptions = catch_exceptions_;
-    FLAGS_gunit_filter = filter_;
-    FLAGS_gunit_list_tests = list_tests_;
-    FLAGS_gunit_output = output_;
+  ~GTestFlagSaver() {
+    FLAGS_gtest_break_on_failure = break_on_failure_;
+    FLAGS_gtest_catch_exceptions = catch_exceptions_;
+    FLAGS_gtest_filter = filter_;
+    FLAGS_gtest_list_tests = list_tests_;
+    FLAGS_gtest_output = output_;
+    FLAGS_gtest_repeat = repeat_;
   }
 
  private:
@@ -88,7 +108,8 @@ class GUnitFlagSaver {
   String filter_;
   bool list_tests_;
   String output_;
-} GUNIT_ATTRIBUTE_UNUSED;
+  Int32 repeat_;
+} GTEST_ATTRIBUTE_UNUSED;
 
 // List is a simple singly-linked list container.
 //
@@ -96,7 +117,7 @@ class GUnitFlagSaver {
 // problems when exception is disabled.  There is a hack to work
 // around this, but we've seen cases where the hack fails to work.
 //
-// TODO(wan): switch to std::list when we have a reliable fix for the
+// TODO: switch to std::list when we have a reliable fix for the
 // STL problem, e.g. when we upgrade to the next version of Visual
 // C++, or (more likely) switch to STLport.
 //
@@ -129,11 +150,12 @@ class ListNode {
   explicit ListNode(const E & element) : element_(element), next_(NULL) {}
 
   // We disallow copying ListNode
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(ListNode);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(ListNode);
 
  public:
 
   // Gets the element in this node.
+  E & element() { return element_; }
   const E & element() const { return element_; }
 
   // Gets the next node in the list.
@@ -174,6 +196,9 @@ class List {
 
   // Gets the number of elements.
   int size() const { return size_; }
+
+  // Returns true if the list is empty.
+  bool IsEmpty() const { return size() == 0; }
 
   // Gets the first element of the list, or NULL if the list is empty.
   ListNode<E> * Head() { return head_; }
@@ -324,7 +349,7 @@ class List {
   int size_;           // The number of elements in the list.
 
   // We disallow copying List.
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(List);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(List);
 };
 
 // The virtual destructor of List.
@@ -340,69 +365,65 @@ static void Delete(T * x) {
   delete x;
 }
 
-
-// An immutable object representing the result of a test part.
+// A copyable object representing a user specified test property which can be
+// output as a key/value string pair.
 //
-// TestPartResult is copyable.
-//
-// Don't inherit from TestPartResult as its destructor is not virtual.
-class TestPartResult {
- private:
-
-  TestPartResultType type_;
-  String file_name_;  // The name of the source file where the test
-                      // part took place, or NULL if the source file
-                      // is unknown.
-  int line_number_;   // The line in the source file where the test
-                      // part took place, or -1 if the line number is
-                      // unknown.
-  String message_;
-
+// Don't inherit from TestProperty as its destructor is not virtual.
+class TestProperty {
  public:
-
-  // C'tor.  TestPartResult does NOT have a default constructor.
+  // C'tor.  TestProperty does NOT have a default constructor.
   // Always use this constructor (with parameters) to create a
-  // TestPartResult object.
-  TestPartResult(TestPartResultType type,
-                 const String & file_name,
-                 int line_number,
-                 const String & message)
-      : type_(type),
-        file_name_(file_name),
-        line_number_(line_number),
-        message_(message) {
+  // TestProperty object.
+  TestProperty(const char* key, const char* value) :
+    key_(key), value_(value) {
   }
 
-  // TestPartResult doesn't have a user-defined destructor --
-  // the default one works fine.
+  // Gets the user supplied key.
+  const char* key() const {
+    return key_.c_str();
+  }
 
-  // Gets the outcome of the test part.
-  TestPartResultType type() const  { return type_; }
+  // Gets the user supplied value.
+  const char* value() const {
+    return value_.c_str();
+  }
 
-  // Gets the name of the source file where the test part took place, or
-  // NULL if it's unknown.
-  const String & file_name() const { return file_name_; }
+  // Sets a new value, overriding the one supplied in the constructor.
+  void SetValue(const char* new_value) {
+    value_ = new_value;
+  }
 
-  // Gets the line in the source file where the test part took place,
-  // or -1 if it's unknown.
-  int line_number() const { return line_number_; }
-
-  // Gets the message associated with the test part.
-  const String & message() const { return message_; }
-
-  // Returns true iff the test part passed.
-  bool Passed() const { return type_ == TPRT_SUCCESS; }
-
-  // Returns true iff the test part failed.
-  bool Failed() const { return type_ != TPRT_SUCCESS; }
-
-  // Returns true iff the test part fatally failed.
-  bool FatallyFailed() const { return type_ == TPRT_FATAL_FAILURE; }
+ private:
+  // The key supplied by the user.
+  String key_;
+  // The value supplied by the user.
+  String value_;
 };
 
+// A predicate that checks the key of a TestProperty against a known key.
+//
+// TestPropertyKeyIs is copyable.
+class TestPropertyKeyIs {
+ public:
+  // Constructor.
+  //
+  // TestPropertyKeyIs has NO default constructor.
+  explicit TestPropertyKeyIs(const char* key)
+      : key_(key) {}
 
-// The result of a single Test.  This is essentially a list of
-// TestPartResults.
+  // Returns true iff the test name of test property matches on key_.
+  bool operator()(const TestProperty& test_property) const {
+    return String(test_property.key()).Compare(key_) == 0;
+  }
+
+ private:
+  String key_;
+};
+
+// The result of a single Test.  This includes a list of
+// TestPartResults, a list of TestProperties, a count of how many
+// death tests there are in the Test, and how much time it took to run
+// the Test.
 //
 // TestResult is not copyable.
 class TestResult {
@@ -416,6 +437,11 @@ class TestResult {
   // Gets the list of TestPartResults.
   const List<TestPartResult> & test_part_results() const {
     return test_part_results_;
+  }
+
+  // Gets the list of TestProperties.
+  const List<TestProperty> & test_properties() const {
+    return test_properties_;
   }
 
   // Gets the number of successful test parts.
@@ -446,19 +472,39 @@ class TestResult {
   // Adds a test part result to the list.
   void AddTestPartResult(const TestPartResult& test_part_result);
 
+  // Adds a test property to the list. The property is validated and may add
+  // a non-fatal failure if invalid (e.g., if it conflicts with reserved
+  // key names). If a property is already recorded for the same key, the
+  // value will be updated, rather than storing multiple values for the same
+  // key.
+  void RecordProperty(const TestProperty& test_property);
+
+  // Adds a failure if the key is a reserved attribute of gTest testcase tags.
+  // Returns true if the property is valid.
+  // TODO(russr): Validate attribute names are legal and human readable.
+  static bool ValidateTestProperty(const TestProperty& test_property);
+
+  // Returns the death test count.
+  int death_test_count() const { return death_test_count_; }
+
+  // Increments the death test count, returning the new count.
+  int increment_death_test_count() { return ++death_test_count_; }
+
   // Clears the object.
   void Clear();
-
  private:
   // The list of TestPartResults
   List<TestPartResult> test_part_results_;
-
+  // The list of TestProperties
+  List<TestProperty> test_properties_;
+  // Running count of death tests.
+  int death_test_count_;
   // The elapsed time, in milliseconds.
   TimeInMillis elapsed_time_;
 
   // We disallow copying TestResult.
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(TestResult);
-};
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(TestResult);
+};  // class TestResult
 
 
 class TestInfoImpl {
@@ -511,6 +557,7 @@ class TestInfoImpl {
   }
 
  private:
+  // These fields are immutable properties of the test.
   TestInfo* const parent_;         // The owner of this object
   const String test_case_name_;    // Test case name
   const String name_;              // Test name
@@ -518,9 +565,12 @@ class TestInfoImpl {
   bool should_run_;                // True iff this test should run
   bool is_disabled_;               // True iff this test is disabled
   const TestMaker maker_;          // The function that creates the test object
-  TestResult result_;              // Test result
 
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(TestInfoImpl);
+  // This field is mutable and needs to be reset before running the
+  // test for the second time.
+  TestResult result_;
+
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(TestInfoImpl);
 };
 
 // A test case, which consists of a list of TestInfos.
@@ -644,7 +694,7 @@ class TestCase {
   TimeInMillis elapsed_time_;
 
   // We disallow copying TestCases.
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(TestCase);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(TestCase);
 };
 
 // Class UnitTestOptions.
@@ -654,7 +704,7 @@ class TestCase {
 //
 // In most cases, the user can specify an option using either an
 // environment variable or a command line flag.  E.g. you can set the
-// test filter using either GUNIT_FILTER or --gunit_filter.  If both
+// test filter using either GTEST_FILTER or --gtest_filter.  If both
 // the variable and the flag are present, the latter overrides the
 // former.
 class UnitTestOptions {
@@ -677,7 +727,7 @@ class UnitTestOptions {
   // integer, returns default_value.
   static Int32 ReadInt32EnvVar(const char* env_var, Int32 default_value);
 
-  // Copies the values of the gUnit environment variables to the flag
+  // Copies the values of the gTest environment variables to the flag
   // variables.
   //
   // This function must be called before the command line is parsed in
@@ -687,7 +737,7 @@ class UnitTestOptions {
   // defined, before main() is reached.
   static void SetFlagVarsFromEnvVars();
 
-  // Functions for processing the gunit_output flag.
+  // Functions for processing the gtest_output flag.
 
   // Returns the output format, or "" for normal printed output.
   static String GetOutputFormat();
@@ -696,7 +746,7 @@ class UnitTestOptions {
   // was explicitly specified.
   static String GetOutputFile();
 
-  // Functions for processing the gunit_filter flag.
+  // Functions for processing the gtest_filter flag.
 
   // Returns true iff the wildcard pattern matches the string.  The
   // first ':' or '\0' character in pattern marks the end of it.
@@ -711,18 +761,17 @@ class UnitTestOptions {
                                 const String &test_name);
 
 #ifdef _MSC_VER  // We are on Windows.
-  // Function for supporting the gunit_catch_exception flag.
+  // Function for supporting the gtest_catch_exception flag.
 
-  // Returns EXCEPTION_EXECUTE_HANDLER if gUnit should handle the
+  // Returns EXCEPTION_EXECUTE_HANDLER if gTest should handle the
   // given SEH exception, or EXCEPTION_CONTINUE_SEARCH otherwise.
   // This function is useful as an __except condition.
-  static int GUnitShouldProcessSEH(DWORD exception_code);
+  static int GTestShouldProcessSEH(DWORD exception_code);
 #endif  // _MSC_VER
  private:
   // Returns true if "name" matches the ':' separated list of glob-style
   // filters in "filter".
   static bool MatchesFilter(const String& name, const char* filter);
-
 };
 
 class UnitTestEventListenerInterface;
@@ -741,13 +790,13 @@ class OsStackTraceGetterInterface {
   //                against max_depth.
   virtual String CurrentStackTrace(int max_depth, int skip_count) = 0;
 
-  // UponLeavingGUnit() should be called immediately before gUnit calls
+  // UponLeavingGTest() should be called immediately before gTest calls
   // user code. It saves some information about the current stack that
-  // CurrentStackTrace() will use to find and hide gUnit stack frames.
-  virtual void UponLeavingGUnit() = 0;
+  // CurrentStackTrace() will use to find and hide gTest stack frames.
+  virtual void UponLeavingGTest() = 0;
 
  private:
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(OsStackTraceGetterInterface);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(OsStackTraceGetterInterface);
 };
 
 // A working implemenation of the OsStackTraceGetterInterface interface.
@@ -755,21 +804,42 @@ class OsStackTraceGetter : public OsStackTraceGetterInterface {
  public:
   OsStackTraceGetter() {}
   virtual String CurrentStackTrace(int max_depth, int skip_count);
-  virtual void UponLeavingGUnit();
+  virtual void UponLeavingGTest();
 
   // This string is inserted in place of stack frames that are part of
-  // gUnit's implementation.
+  // gTest's implementation.
   static const char* const kElidedFramesMarker;
 
  private:
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(OsStackTraceGetter);
+
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(OsStackTraceGetter);
 };
 
-// The private implementation of the UnitTest class.
-class UnitTestImpl {
+// Information about a gTest trace point.
+struct TraceInfo {
+  const char* file;
+  int line;
+  String message;
+};
+
+// The private implementation of the UnitTest class.  We don't protect
+// the methods under a mutex, as this class is not accessible by a
+// user and the UnitTest class that delegates work to this class does
+// proper locking.
+class UnitTestImpl : public TestPartResultReporterInterface {
  public:
   explicit UnitTestImpl(UnitTest* parent);
-  ~UnitTestImpl();
+  virtual ~UnitTestImpl();
+
+  // Reports a test part result.  This method is from the
+  // TestPartResultReporterInterface interface.
+  virtual void ReportTestPartResult(const TestPartResult& result);
+
+  // Returns the current test part result reporter.
+  TestPartResultReporterInterface* test_part_result_reporter();
+
+  // Sets the current test part result reporter.
+  void set_test_part_result_reporter(TestPartResultReporterInterface* reporter);
 
   // Gets the number of successful test cases.
   int successful_test_case_count() const;
@@ -845,7 +915,7 @@ class UnitTestImpl {
   // Returns the current OS stack trace as a String.
   //
   // The maximum number of stack frames to be included is specified by
-  // the gunit_stack_trace_depth flag.  The skip_count parameter
+  // the gtest_stack_trace_depth flag.  The skip_count parameter
   // specifies the number of top frames to be skipped, which doesn't
   // count against the number of frames to be included.
   //
@@ -910,7 +980,8 @@ class UnitTestImpl {
   // Matches the full name of each test against the user-specified
   // filter to decide whether the test should run, then records the
   // result in each TestCase and TestInfo object.
-  void FilterTests();
+  // Returns the number of tests that should run.
+  int FilterTests();
 
   // Lists all the tests by name.
   void ListAllTests();
@@ -919,17 +990,34 @@ class UnitTestImpl {
   TestInfo* current_test_info() { return current_test_info_; }
   const TestInfo* current_test_info() const { return current_test_info_; }
 
+  // Returns the list of environments that need to be set-up/torn-down
+  // before/after the tests are run.
+  List<Environment*>* environments() { return &environments_; }
+  List<Environment*>* environments_in_reverse_order() {
+    return &environments_in_reverse_order_;
+  }
+
   List<TestCase*>* test_cases() { return &test_cases_; }
   const List<TestCase*>* test_cases() const { return &test_cases_; }
 
-  List<TraceInfo>* gunit_trace_stack() { return gunit_trace_stack_; }
-  const List<TraceInfo>* gunit_trace_stack() const {
-    return gunit_trace_stack_;
+  // Getters for the per-thread gTest trace stack.
+  List<TraceInfo>* gtest_trace_stack() { return &gtest_trace_stack_; }
+  const List<TraceInfo>* gtest_trace_stack() const {
+    return &gtest_trace_stack_;
   }
 
  private:
   // The UnitTest object that owns this implementation object.
   UnitTest* const parent_;
+
+  // Points to (but doesn't own) the test part result reporter.
+  TestPartResultReporterInterface* test_part_result_reporter_;
+
+  // The list of environments that need to be set-up/torn-down
+  // before/after the tests are run.  environments_in_reverse_order_
+  // simply mirrors environments_ in reverse order.
+  List<Environment*> environments_;
+  List<Environment*> environments_in_reverse_order_;
 
   List<TestCase*> test_cases_;  // The list of TestCases.
 
@@ -937,24 +1025,24 @@ class UnitTestImpl {
   ListNode<TestCase*>* last_death_test_case_;
 
   // This points to the TestCase for the currently running test.  It
-  // changes as gUnit goes through one test case after another.  When
-  // no test is running, this is set to NULL and gUnit stores
+  // changes as gTest goes through one test case after another.  When
+  // no test is running, this is set to NULL and gTest stores
   // assertion results in ad_hoc_test_result_.  Initally NULL.
   TestCase* current_test_case_;
 
   // This points to the TestInfo for the currently running test.  It
-  // changes as gUnit goes through one test after another.  When no test
-  // is running, this is set to NULL and gUnit stores assertion results
+  // changes as gTest goes through one test after another.  When no test
+  // is running, this is set to NULL and gTest stores assertion results
   // in ad_hoc_test_result_.  Initally NULL.
   TestInfo* current_test_info_;
 
   // Normally, a user only writes assertions inside a TEST or TEST_F,
-  // or inside a function called by a TEST or TEST_F.  Since gUnit
+  // or inside a function called by a TEST or TEST_F.  Since gTest
   // keeps track of which test is current running, it can associate
   // such an assertion with the test it belongs to.
   //
   // If an assertion is encountered when no TEST or TEST_F is running,
-  // gUnit attributes the assertion result to an imaginary "ad hoc"
+  // gTest attributes the assertion result to an imaginary "ad hoc"
   // test, and records the result in ad_hoc_test_result_.
   TestResult ad_hoc_test_result_;
 
@@ -973,11 +1061,11 @@ class UnitTestImpl {
   // How long the test took to run, in milliseconds.
   TimeInMillis elapsed_time_;
 
-  // A stack of traces created by the SCOPED_TRACE() macro.
-  List<TraceInfo>* const gunit_trace_stack_;
+  // A per-thread stack of traces created by the SCOPED_TRACE() macro.
+  List<TraceInfo> gtest_trace_stack_;
 
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(UnitTestImpl);
-};
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(UnitTestImpl);
+};  // class UnitTestImpl
 
 // Returns string with character 'ch' repeated 'n' times.
 String Repeat(int n, char ch);
@@ -987,6 +1075,6 @@ String Repeat(int n, char ch);
 // box.
 String DisabledTestBanner(int disabled_count, int padding_length);
 
-} // namespace testing
+}  // namespace testing
 
-#endif  // TESTING_GUNIT_INTERNAL_INL_H__
+#endif  // UNITTEST_GTEST_INTERNAL_INL_H__

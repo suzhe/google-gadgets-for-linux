@@ -23,7 +23,7 @@
 #include "ggadget/logger.h"
 #include "ggadget/gtk/main_loop.h"
 #include "ggadget/tests/main_loop_test.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -42,7 +42,7 @@ TEST(GtkMainLoopTest, TimeoutWatch) {
 
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   gtk_init(&argc, &argv);
   return RUN_ALL_TESTS();
 }

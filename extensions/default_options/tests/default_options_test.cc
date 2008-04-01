@@ -22,7 +22,7 @@
 #include "ggadget/tests/init_extensions.h"
 #include "ggadget/tests/mocked_file_manager.h"
 #include "ggadget/tests/mocked_timer_main_loop.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 
@@ -178,7 +178,7 @@ TEST(DefaultOptions, TestOptionsSharing) {
 int main(int argc, char **argv) {
   SetGlobalMainLoop(&g_mocked_main_loop);
   SetGlobalFileManager(&g_mocked_fm);
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",

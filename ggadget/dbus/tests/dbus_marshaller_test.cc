@@ -23,7 +23,7 @@ limitations under the License.
 #include "ggadget/dbus/dbus_utils.h"
 #include "ggadget/scriptable_array.h"
 #include "ggadget/logger.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 using namespace ggadget::dbus;
@@ -717,7 +717,7 @@ TEST(DBusDemarshaller, ValistAdaptor) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   int result = RUN_ALL_TESTS();
   return result;
 }

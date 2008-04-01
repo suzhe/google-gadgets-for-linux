@@ -16,7 +16,7 @@
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-LDADD			= $(top_builddir)/unittest/libgunit.la \
+LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
 			  ../libggadget-linux.la

@@ -35,7 +35,7 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 LDADD			= @CAIRO_LIBS@ \
 			  @PANGO_LIBS@ \
 			  @GTK2_LIBS@ \
-			  $(top_builddir)/unittest/libgunit.la \
+			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 

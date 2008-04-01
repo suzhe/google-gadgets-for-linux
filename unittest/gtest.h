@@ -1,23 +1,38 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008, Google Inc.
+  All rights reserved.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
 
-       http://www.apache.org/licenses/LICENSE-2.0
+      * Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the following disclaimer
+  in the documentation and/or other materials provided with the
+  distribution.
+      * Neither the name of Google Inc. nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// gUnit -- the Google C++ Unit Testing Framework
+// gTest -- the Google C++ Unit Testing Framework
 //
-// This header file defines the public API for gUnit.  It should be
-// included by any test program that uses gUnit.
+// This header file defines the public API for gTest.  It should be
+// included by any test program that uses gTest.
 //
 // IMPORTANT NOTE: Due to limitation of the C++ language, we have to
 // leave some internal implementation details in this header file.
@@ -29,15 +44,29 @@
 // to CHANGE WITHOUT NOTICE.  Therefore DO NOT DEPEND ON IT in a user
 // program!
 //
-// Acknowledgment: gUnit borrowed the idea of automatic test
+// Acknowledgment: gTest borrowed the idea of automatic test
 // registration from Barthelemy Dagenais' (barthelemy@prologique.com)
 // easyUnit framework.
 
-#ifndef TESTING_GUNIT_H__
-#define TESTING_GUNIT_H__
+#ifndef UNITTEST_GTEST_H__
+#define UNITTEST_GTEST_H__
 
-#include "gunit-internal.h"
-#include "gunit_prod.h"
+// The following platform macros are used throughout gTest:
+//   OS_LINUX        Linux          (set by our build tools)
+//   __APPLE__       OS X           (set by Xcode)
+//   _MSC_VER        Any Windows    (set by MSVC)
+//   _WIN32_WCE      Windows CE     (set in project files)
+//   __SYMBIAN32__   Symbian        (set by Symbian tool chain)
+//
+// Note that even though _MSC_VER and _WIN32_WCE really indicate a compiler
+// and a Win32 implementation, respectively, we use them to indicate the
+// combination of compiler - Win 32 API - C library, since the code currently
+// only supports:
+// Windows proper with Visual C++ and MS C library (_MSC_VER && !_WIN32_WCE) and
+// Windows Mobile with Visual C++ and no C library (_WIN32_WCE).
+
+#include "gtest_internal.h"  // NOLINT
+#include "gtest_prod.h"  // NOLINT
 
 // Depending on the platform, different string classes are available.
 // On Windows, ::std::string compiles only when exceptions are
@@ -46,20 +75,28 @@
 // ::std::string, but has a different implementation.
 //
 // The user can tell us whether ::std::string is available in his
-// environment by defining the macro GUNIT_HAS_STD_STRING to either 1
+// environment by defining the macro GTEST_HAS_STD_STRING to either 1
 // or 0 on the compiler command line.  He can also define
-// GUNIT_HAS_GLOBAL_STRING to 1 to indicate that ::string is available
+// GTEST_HAS_GLOBAL_STRING to 1 to indicate that ::string is available
 // AND is a distinct type to ::std::string, or define it to 0 to
 // indicate otherwise.
 //
 // If the user's ::std::string and ::string are the same class due to
-// aliasing, he should define GUNIT_HAS_STD_STRING to 1 and
-// GUNIT_HAS_GLOBAL_STRING to 0.
+// aliasing, he should define GTEST_HAS_STD_STRING to 1 and
+// GTEST_HAS_GLOBAL_STRING to 0.
 //
-// If the user doesn't define GUNIT_HAS_STD_STRING and/or
-// GUNIT_HAS_GLOBAL_STRING, they are defined heuristically.
+// If the user doesn't define GTEST_HAS_STD_STRING and/or
+// GTEST_HAS_GLOBAL_STRING, they are defined heuristically.
 
 namespace testing {
+
+// The possible outcomes of a test part (i.e. an assertion or an
+// explicit SUCCEED(), FAIL(), or ADD_FAILURE()).
+enum TestPartResultType {
+  TPRT_SUCCESS,           // Succeeded.
+  TPRT_NONFATAL_FAILURE,  // Failed but the test can continue.
+  TPRT_FATAL_FAILURE,     // Failed and the test should be terminated.
+};
 
 // The Message class works like an ostream repeater.
 //
@@ -85,7 +122,7 @@ namespace testing {
 // class hides this difference by treating a NULL char pointer as
 // "(null)".
 //
-// In gUnit, we mainly use Message in *_M macros to allow
+// In gTest, we mainly use Message in *_M macros to allow
 // easy construction of failure message, e.g.
 //
 //    FAIL_M(testing::Message() << "We shouldn't see " << foo << " here.");
@@ -99,28 +136,53 @@ class Message {
   typedef std::ostream& (*BasicNarrowIoManip)(std::ostream&);
 
   // Constructs an empty Message.
-  Message() {}
+  // We allocate the StrStream separately because it otherwise each use of
+  // ASSERT/EXPECT in a procedure adds over 200 bytes to the procedure's
+  // stack frame leading to huge stack frames in some cases; gcc does not reuse
+  // the stack space.
+  Message() : ss_(new StrStream) {}
 
   // Copy constructor.
-  Message(const Message& msg) {
-    ss_ << msg.GetString();
+  Message(const Message& msg) : ss_(new StrStream) { *ss_ << msg.GetString(); }
+
+  // Constructs a Message from a C-string.
+  explicit Message(const char* str) : ss_(new StrStream) { *ss_ << str; }
+
+  ~Message() { delete ss_; }
+
+#ifdef __SYMBIAN32__
+// These are needed as the Nokia Symbian Compiler cannot decide between
+// const T& and const T* in a function template. The Nokia compiler _can_
+// decide between class template specializations for T and T*, so a 
+// tr1::type_traits-like is_pointer works, and we can overload on that.
+
+  template <typename T>
+  inline void StreamHelper(internal::true_type dummy, T* pointer) {
+    if (pointer == NULL) {
+      *ss_ << "(null)";
+    } else {
+      ::GTestStreamToHelper(ss_, pointer);
+    }
+  }
+
+  template <typename T>
+  inline void StreamHelper(internal::false_type dummy, const T& value) {
+    ::GTestStreamToHelper(ss_, value);
   }
 
   // Streams a non-pointer value to this object.
   template <typename T>
-  inline Message& operator <<(const T& val) {
-    ::GUnitStreamToHelper(&ss_, val);
+  inline Message& operator <<(const T& value) {
+    StreamHelper(typename internal::is_pointer<T>::type(), value);
     return *this;
   }
 
-  // Since the basic IO manipulators are overloaded for both narrow
-  // and wide streams, we have to provide this specialized definition
-  // of operator <<, even though its body is the same as the
-  // templatized version above.  Without this definition, streaming
-  // endl or other basic IO manipulators to Message will confuse the
-  // compiler.
-  Message& operator <<(const BasicNarrowIoManip& val) {
-    ss_ << val;
+#else
+
+  // Streams a non-pointer value to this object.
+  template <typename T>
+  inline Message& operator <<(const T& val) {
+    ::GTestStreamToHelper(ss_, val);
     return *this;
   }
 
@@ -140,10 +202,23 @@ class Message {
   template <typename T>
   inline Message& operator <<(T* const & pointer) {
     if (pointer == NULL) {
-      ss_ << "(null)";
+      *ss_ << "(null)";
     } else {
-      ::GUnitStreamToHelper(&ss_, pointer);
+      ::GTestStreamToHelper(ss_, pointer);
     }
+    return *this;
+  }
+
+#endif  // __SYMBIAN32__
+
+  // Since the basic IO manipulators are overloaded for both narrow
+  // and wide streams, we have to provide this specialized definition
+  // of operator <<, even though its body is the same as the
+  // templatized version above.  Without this definition, streaming
+  // endl or other basic IO manipulators to Message will confuse the
+  // compiler.
+  Message& operator <<(BasicNarrowIoManip val) {
+    *ss_ << val;
     return *this;
   }
 
@@ -161,29 +236,32 @@ class Message {
     return *this << String::ShowWideCString(wide_c_str);
   }
 
-#if GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
   // Converts the given wide string to a narrow string using the UTF-8
   // encoding, and streams the result to this Message object.
   Message& operator <<(const ::std::wstring& wstr);
-#endif  // GUNIT_HAS_STD_STRING
+#endif  // GTEST_HAS_STD_STRING
 
-#if GUNIT_HAS_GLOBAL_STRING
+#if GTEST_HAS_GLOBAL_STRING
   // Converts the given wide string to a narrow string using the UTF-8
   // encoding, and streams the result to this Message object.
   Message& operator <<(const ::wstring& wstr);
-#endif  // GUNIT_HAS_GLOBAL_STRING
+#endif  // GTEST_HAS_GLOBAL_STRING
 
   // Gets the text streamed to this object so far as a String.
   // Each '\0' character in the buffer is replaced with "\\0".
   //
   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
   String GetString() const {
-    return StrStreamToString(&ss_);
+    return StrStreamToString(ss_);
   }
 
  private:
-  mutable StrStream ss_;  // We'll hold the text streamed to this
-                          // object here.
+  StrStream* const ss_;  // We'll hold the text streamed to this object here.
+
+  // We declare (but don't implement) this to prevent the compiler
+  // from implementing the assignment operator.
+  void operator=(const Message&);
 };
 
 // Streams a Message to an ostream.
@@ -191,6 +269,17 @@ inline std::ostream& operator <<(std::ostream& os, const Message& sb) {
   return os << sb.GetString();
 }
 
+// Converts a streamable value to a String.  A NULL pointer is
+// converted to "(null)".  When the input value is a ::string,
+// ::std::string, ::wstring, or ::std::wstring object, each NUL
+// character in it is replaced with "\\0".
+// Declared in gtest-internal.h but defined here, so that it has access
+// to the definition of the Message class, required by the ARM
+// compiler.
+template <typename T>
+String StreamableToString(const T& streamable) {
+  return (Message() << streamable).GetString();
+}
 
 // A class for indicating whether an assertion was successful.  When
 // the assertion wasn't successful, the AssertionResult object
@@ -231,7 +320,7 @@ class AssertionResult {
   friend AssertionResult AssertionFailure(const Message&);
 
   // Returns true iff the assertion succeeded.
-  operator bool() const { return failure_message_.c_str() == NULL; }
+  operator bool() const { return failure_message_.c_str() == NULL; }  // NOLINT
 
   // Returns the assertion's failure message.
   const char* failure_message() const { return failure_message_.c_str(); }
@@ -255,7 +344,7 @@ AssertionResult AssertionFailure(const Message& msg);
 
 // The abstract class that all tests inherit from.
 //
-// In gUnit, a unit test program contains one or many TestCases, and
+// In gTest, a unit test program contains one or many TestCases, and
 // each TestCase contains one or many Tests.
 //
 // When you define a test using the TEST macro, you don't need to
@@ -291,13 +380,28 @@ class Test {
   // Returns true iff the current test has a fatal failure.
   static bool HasFatalFailure();
 
+  // Logs a property for the current test.  Only the last value for a given
+  // key is remembered.
+  // These are public static so they can be called from utility functions
+  // that are not members of the test fixture.
+  // The arguments are const char* instead strings, as gTest is used
+  // on platforms where string doesn't compile.
+  //
+  // Note that a driving consideration for these RecordProperty methods
+  // was to produce xml output suited to the Greenspan charting utility,
+  // which at present will only chart values that fit in a 32-bit int. It
+  // is the user's responsibility to restrict their values to 32-bit ints
+  // if they intend them to be used with Greenspan.
+  static void RecordProperty(const char* key, const char* value);
+  static void RecordProperty(const char* key, int value);
+
  protected:
   // Creates a Test object.
   Test();
 
   // Sets up the stuff shared by all tests in this test case.
   //
-  // gUnit will call Foo::SetUpTestCase() before running the first
+  // gTest will call Foo::SetUpTestCase() before running the first
   // test in test case Foo.  Hence a sub-class can define its own
   // SetUpTestCase() method to shadow the one defined in the super
   // class.
@@ -305,7 +409,7 @@ class Test {
 
   // Tears down the stuff shared by all tests in this test case.
   //
-  // gUnit will call Foo::TearDownTestCase() after running the last
+  // gTest will call Foo::TearDownTestCase() after running the last
   // test in test case Foo.  Hence a sub-class can define its own
   // TearDownTestCase() method to shadow the one defined in the super
   // class.
@@ -318,6 +422,10 @@ class Test {
   virtual void TearDown();
 
  private:
+  // Returns true iff the current test has the same fixture class as
+  // the first test in the current test case.
+  static bool HasSameFixtureClass();
+
   // Runs the test after the test fixture has been set up.
   //
   // A sub-class must implement this to define the test logic.
@@ -329,12 +437,12 @@ class Test {
   // Sets up, executes, and tears down the test.
   void Run();
 
-  // Otherwise, uses GUnitFlagSaver, which knows how to save and
-  // restore all gUnit flags.
-  const class GUnitFlagSaver* const gunit_flag_saver_;
+  // Uses GTestFlagSaver, which knows how to save and
+  // restore all gTest flags.
+  const class GTestFlagSaver* const gtest_flag_saver_;
 
   // Often a user mis-spells SetUp() as Setup() and spends a long time
-  // wondering why it is never called by gUnit.  The declaration of
+  // wondering why it is never called by gTest.  The declaration of
   // the following method is solely for catching such an error at
   // compile time:
   //
@@ -353,7 +461,7 @@ class Test {
   virtual Setup_should_be_spelled_SetUp* Setup() { return NULL; }
 
   // We disallow copying Tests.
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(Test);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(Test);
 };
 
 
@@ -391,6 +499,7 @@ class TestInfo {
   //   tear_down_tc:     pointer to the function that tears down the test case
   //   maker:            pointer to the function that creates a test object
   //
+  // This is public only because it's needed by the TEST and TEST_F macros.
   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
   static TestInfo* MakeAndRegisterInstance(
       const char* test_case_name,
@@ -406,32 +515,39 @@ class TestInfo {
   // Returns the test name.
   const char* name() const;
 
-  // gUnit allows the user to filter the tests by their full names
-  // (test case name + test name).  Only the tests that match the
-  // filter will run.
+  // Returns true if this test should run.
   //
-  // A filter is a colon-separated list of patterns, where each
-  // pattern is a text string that may contain two kinds of wildcard
-  // characters: * (matches any string of characters) and ? (matches
-  // any single character).
+  // gTest allows the user to filter the tests by their full names.
+  // The full name of a test Bar in test case Foo is defined as
+  // "Foo.Bar".  Only the tests that match the filter will run.
+  //
+  // A filter is a colon-separated list of glob (not regex) patterns,
+  // optionally followed by a '-' and a colon-separated list of
+  // negative patterns (tests to exclude).  A test is run if it
+  // matches one of the positive patterns and does not match any of
+  // the negative patterns.
   //
   // For example, *A*:Foo.* is a filter that matches any string that
   // contains the character 'A' or starts with "Foo.".
-  //
-  // The full name of a test Bar in test case Foo is defined as
-  // "Foo.Bar".
+  bool should_run() const;
+
+  // Returns the result of the test.
+  const TestResult* result() const;
+ private:
+  friend class DefaultDeathTestFactory;
+  friend class Test;
+  friend class TestCase;
+  friend class TestInfoImpl;
+  friend class UnitTestImpl;
+
+  // Increments the number of death tests encountered in this test so
+  // far.
+  int increment_death_test_count();
 
   // Accessors for the implementation object.
   TestInfoImpl* impl() { return impl_; }
   const TestInfoImpl* impl() const { return impl_; }
 
- protected:
-  // This constructor does not have a definition; it is declared only to
-  // silence a gcc 2.95 warning that "Class TestInfo only defines private
-  // constructors and has no friends."
-  TestInfo();
-
- private:
   // Constructs a TestInfo object.
   TestInfo(const char* test_case_name, const char* name,
            TypeId fixture_class_id, TestMaker maker);
@@ -439,16 +555,50 @@ class TestInfo {
   // An opaque implementation object.
   TestInfoImpl* impl_;
 
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(TestInfo);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(TestInfo);
+};
+
+// An Environment object is capable of setting up and tearing down an
+// environment.  The user should subclass this to define his own
+// environment(s).
+//
+// An Environment object does the set-up and tear-down in virtual
+// methods SetUp() and TearDown() instead of the constructor and the
+// destructor, as:
+//
+//   1. You cannot safely throw from a destructor.  This is a problem
+//      as in some cases gTest is used where exceptions are enabled, and
+//      we may want to implement ASSERT_* using exceptions where they are
+//      available.
+//   2. You cannot use ASSERT_* directly in a constructor or
+//      destructor.
+class Environment {
+ public:
+  // The d'tor is virtual as we need to subclass Environment.
+  virtual ~Environment() {}
+
+  // Override this to define how to set up the environment.
+  virtual void SetUp() {}
+
+  // Override this to define how to tear down the environment.
+  virtual void TearDown() {}
+ private:
+  // If you see an error about overriding the following function or
+  // about it being private, you have mis-spelled SetUp() as Setup().
+  struct Setup_should_be_spelled_SetUp {};
+  virtual Setup_should_be_spelled_SetUp* Setup() { return NULL; }
 };
 
 // A UnitTest consists of a list of TestCases.
 //
 // This is a singleton class.  The only instance of UnitTest is
-// created when UnitTest::GetInstance() is first called.  When the
-// program terminates, this instance is automatically deleted.
+// created when UnitTest::GetInstance() is first called.  This
+// instance is never deleted.
 //
 // UnitTest is not copyable.
+//
+// This class is thread-safe as long as the methods are called
+// according to their specification.
 class UnitTest {
  public:
   // Gets the singleton UnitTest object.  The first time this method
@@ -456,22 +606,40 @@ class UnitTest {
   // Consecutive calls will return the same object.
   static UnitTest* GetInstance();
 
-  // Adds a TestPartResult to the current TestResult object.  The user
-  // code shouldn't call this directly.  Instead, it should use the
-  // assertion macros (e.g. ASSERT_TRUE, ASSERT_EQ, etc).
+  // Registers and returns a global test environment.  When a test
+  // program is run, all global test environments will be set-up in
+  // the order they were registered.  After all tests in the program
+  // have finished, all global test environments will be torn-down in
+  // the *reverse* order they were registered.
+  //
+  // The UnitTest object takes ownership of the given environment.
+  //
+  // This method can only be called from the main thread.
+  Environment* AddEnvironment(Environment* env);
+
+  // Adds a TestPartResult to the current TestResult object.  All
+  // gTest assertion macros (e.g. ASSERT_TRUE, EXPECT_EQ, etc)
+  // eventually call this to report their results.  The user code
+  // should use the assertion macros instead of calling this directly.
   //
   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
   void AddTestPartResult(TestPartResultType result_type,
-                         const String& file_name,
+                         const char* file_name,
                          int line_number,
                          const String& message,
                          const String& os_stack_trace);
 
+  // Adds a TestProperty to the current TestResult object. If the result already
+  // contains a property with the same key, the value will be updated.
+  void RecordPropertyForCurrentTest(const char* key, const char* value);
+
   // Runs all tests in this UnitTest object and prints the result.
   // Returns 0 if successful, or 1 otherwise.
   //
+  // This method can only be called from the main thread.
+  //
   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
-  int Run() GUNIT_MUST_USE_RESULT;
+  int Run() GTEST_MUST_USE_RESULT;
 
   // Returns the TestCase object for the test that's currently running,
   // or NULL if no test is running.
@@ -481,58 +649,92 @@ class UnitTest {
   // or NULL if no test is running.
   const TestInfo* current_test_info() const;
 
-  // Accessor for the implementation object.
+  // Accessors for the implementation object.
   UnitTestImpl* impl() { return impl_; }
   const UnitTestImpl* impl() const { return impl_; }
-
  private:
+  // ScopedTrace is a friend as it needs to modify the per-thread
+  // trace stack, which is a private member of UnitTest.
+  friend class ScopedTrace;
+
   // Creates an empty UnitTest.
   UnitTest();
 
   // D'tor
   virtual ~UnitTest();
 
-  // Opaque implementation object.
+  // Pushes a trace defined by SCOPED_TRACE() on to the per-thread
+  // gTest trace stack.
+  void PushGTestTrace(const TraceInfo& trace);
+
+  // Pops a trace from the per-thread gTest trace stack.
+  void PopGTestTrace();
+
+  // Opaque implementation object.  This field is never changed once
+  // the object is constructed.  We don't mark it as const here, as
+  // doing so will cause a warning in the constructor of UnitTest.
+  // Mutable state in *impl_ is protected by mutex_.
   UnitTestImpl* impl_;
 
   // We disallow copying UnitTest.
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(UnitTest);
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(UnitTest);
 };
 
+// A convenient wrapper for adding an environment for the test
+// program.
+//
+// You should call this before RUN_ALL_TESTS() is called, probably in
+// main().  If you use gtest_main, you need to call this before main()
+// starts for it to take effect.  For example, you can define a global
+// variable like this:
+//
+//   testing::Environment* const foo_env =
+//       testing::AddGlobalTestEnvironment(new FooEnvironment);
+//
+// However, we strongly recommend you to write your own main() and
+// call AddGlobalTestEnvironment() there, as relying on initialization
+// of global variables makes the code harder to read and may cause
+// problems when you register multiple environments from different
+// translation units and the environments have dependencies among them
+// (remember that the compiler doesn't guarantee the order in which
+// global variables from different translation units are initialized).
+inline Environment* AddGlobalTestEnvironment(Environment* env) {
+  return UnitTest::GetInstance()->AddEnvironment(env);
+}
 
-// Parses a command line for the flags that gUnit recognizes.
-// Whenever a gUnit flag is seen, it is removed from argv, and *argc
+// Parses a command line for the flags that gTest recognizes.
+// Whenever a gTest flag is seen, it is removed from argv, and *argc
 // is decremented.
 //
-// No value is returned.  Instead, the FLAGS_gunit_* variables are
+// No value is returned.  Instead, the FLAGS_gtest_* variables are
 // updated.
-void ParseGUnitFlags(int* argc, char** argv);
+void ParseGTestFlags(int* argc, char** argv);
 
 // This overloaded version can be used in Windows programs compiled in
 // UNICODE mode.
 #ifdef _MSC_VER
-void ParseGUnitFlags(int* argc, wchar_t** argv);
+void ParseGTestFlags(int* argc, wchar_t** argv);
 #endif  // _MSC_VER
 
 // These overloaded versions handle ::std::string and ::std::wstring.
-#if GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
 inline String FormatForFailureMessage(const ::std::string& str) {
   return (Message() << '"' << str << '"').GetString();
 }
 inline String FormatForFailureMessage(const ::std::wstring& wstr) {
   return (Message() << "L\"" << wstr << '"').GetString();
 }
-#endif  // GUNIT_HAS_STD_STRING
+#endif  // GTEST_HAS_STD_STRING
 
 // These overloaded versions handle ::string and ::wstring.
-#if GUNIT_HAS_GLOBAL_STRING
+#if GTEST_HAS_GLOBAL_STRING
 inline String FormatForFailureMessage(const ::string& str) {
   return (Message() << '"' << str << '"').GetString();
 }
 inline String FormatForFailureMessage(const ::wstring& wstr) {
   return (Message() << "L\"" << wstr << '"').GetString();
 }
-#endif  // GUNIT_HAS_GLOBAL_STRING
+#endif  // GTEST_HAS_GLOBAL_STRING
 
 // Formats a comparison assertion (e.g. ASSERT_EQ, EXPECT_LT, and etc)
 // operand to be used in a failure message.  The type (but not value)
@@ -548,23 +750,14 @@ inline String FormatForFailureMessage(const ::wstring& wstr) {
 // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
 template <typename T1, typename T2>
 String FormatForComparisonFailureMessage(const T1& value,
-                                         const T2& other_operand) {
+                                         const T2& /* other_operand */) {
   return FormatForFailureMessage(value);
 }
 
-// With this specialized version, we allow anonymous enums to be used
-// in {ASSERT|EXPECT}_EQ when compiled with gcc 4, as anonymous enums
-// can be implicitly cast to int.
-//
-// INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
-AssertionResult CmpHelperEQ(const char* expected_expression,
-                            const char* actual_expression,
-                            int expected,
-                            int actual);
+// TODO: move more implementation details into namespace internal.
+namespace internal {
 
 // The helper function for {ASSERT|EXPECT}_EQ.
-//
-// INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
 template <typename T1, typename T2>
 AssertionResult CmpHelperEQ(const char* expected_expression,
                             const char* actual_expression,
@@ -581,16 +774,88 @@ AssertionResult CmpHelperEQ(const char* expected_expression,
                    false);
 }
 
+// With this overloaded version, we allow anonymous enums to be used
+// in {ASSERT|EXPECT}_EQ when compiled with gcc 4, as anonymous enums
+// can be implicitly cast to BiggestInt.
+AssertionResult CmpHelperEQ(const char* expected_expression,
+                            const char* actual_expression,
+                            BiggestInt expected,
+                            BiggestInt actual);
+
+// The helper class for {ASSERT|EXPECT}_EQ.  The template argument
+// lhs_is_null_literal is true iff the first argument to ASSERT_EQ()
+// is a null pointer literal.  The following default implementation is
+// for lhs_is_null_literal being false.
+template <bool lhs_is_null_literal>
+class EqHelper {
+ public:
+  // This templatized version is for the general case.
+  template <typename T1, typename T2>
+  static AssertionResult Compare(const char* expected_expression,
+                                 const char* actual_expression,
+                                 const T1& expected,
+                                 const T2& actual) {
+    return CmpHelperEQ(expected_expression, actual_expression, expected,
+                       actual);
+  }
+
+  // With this overloaded version, we allow anonymous enums to be used
+  // in {ASSERT|EXPECT}_EQ when compiled with gcc 4, as anonymous
+  // enums can be implicitly cast to BiggestInt.
+  //
+  // Even though its body looks the same as the above version, we
+  // cannot merge the two, as it will make anonymous enums unhappy.
+  static AssertionResult Compare(const char* expected_expression,
+                                 const char* actual_expression,
+                                 BiggestInt expected,
+                                 BiggestInt actual) {
+    return CmpHelperEQ(expected_expression, actual_expression, expected,
+                       actual);
+  }
+};
+
+// This specialization is used when the first argument to ASSERT_EQ()
+// is a null pointer literal.
+template <>
+class EqHelper<true> {
+ public:
+  // We define two overloaded versions of Compare().  The first
+  // version will be picked when the second argument to ASSERT_EQ() is
+  // NOT a pointer, e.g. ASSERT_EQ(0, AnIntFunction()) or
+  // EXPECT_EQ(false, a_bool).
+  template <typename T1, typename T2>
+  static AssertionResult Compare(const char* expected_expression,
+                                 const char* actual_expression,
+                                 const T1& expected,
+                                 const T2& actual) {
+    return CmpHelperEQ(expected_expression, actual_expression, expected,
+                       actual);
+  }
+
+  // This version will be picked when the second argument to
+  // ASSERT_EQ() is a pointer, e.g. ASSERT_EQ(NULL, a_pointer).
+  template <typename T1, typename T2>
+  static AssertionResult Compare(const char* expected_expression,
+                                 const char* actual_expression,
+                                 const T1& expected,
+                                 T2* actual) {
+    // We already know that 'expected' is a null pointer.
+    return CmpHelperEQ(expected_expression, actual_expression,
+                       static_cast<T2*>(NULL), actual);
+  }
+};
+
 // A macro for implementing the helper functions needed to implement
 // ASSERT_?? and EXPECT_??.  It is here just to avoid copy-and-paste
 // of similar code.
 //
-// For each templatized helper function, we also define a specialized
-// version for int in order to reduce code bloat and allow anonymous
-// enums to be used with {ASSERT|EXPECT}_?? when compiled with gcc 4.
+// For each templatized helper function, we also define an overloaded
+// version for BiggestInt in order to reduce code bloat and allow
+// anonymous enums to be used with {ASSERT|EXPECT}_?? when compiled
+// with gcc 4.
 //
 // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
-#define GUNIT_IMPL_CMP_HELPER(op_name, op)\
+#define GTEST_IMPL_CMP_HELPER(op_name, op)\
 template <typename T1, typename T2>\
 AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
                                    const T1& val1, const T2& val2) {\
@@ -605,22 +870,24 @@ AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
   }\
 }\
 AssertionResult CmpHelper##op_name(const char* expr1, const char* expr2, \
-                                   int val1, int val2);
+                                   BiggestInt val1, BiggestInt val2);
 
 // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
 
 // Implements the helper function for {ASSERT|EXPECT}_NE
-GUNIT_IMPL_CMP_HELPER(NE, !=)
+GTEST_IMPL_CMP_HELPER(NE, !=)
 // Implements the helper function for {ASSERT|EXPECT}_LE
-GUNIT_IMPL_CMP_HELPER(LE, <=)
+GTEST_IMPL_CMP_HELPER(LE, <=)
 // Implements the helper function for {ASSERT|EXPECT}_LT
-GUNIT_IMPL_CMP_HELPER(LT, < )
+GTEST_IMPL_CMP_HELPER(LT, < )
 // Implements the helper function for {ASSERT|EXPECT}_GE
-GUNIT_IMPL_CMP_HELPER(GE, >=)
+GTEST_IMPL_CMP_HELPER(GE, >=)
 // Implements the helper function for {ASSERT|EXPECT}_GT
-GUNIT_IMPL_CMP_HELPER(GT, > )
+GTEST_IMPL_CMP_HELPER(GT, > )
 
-#undef GUNIT_IMPL_CMP_HELPER
+#undef GTEST_IMPL_CMP_HELPER
+
+}  // namespace internal
 
 // The helper function for {ASSERT|EXPECT}_STREQ.
 //
@@ -675,7 +942,8 @@ AssertionResult CmpHelperSTRNE(const char* s1_expression,
 // first argument to {EXPECT,ASSERT}_PRED_FORMAT2(), not by
 // themselves.  They check whether needle is a substring of haystack
 // (NULL is considered a substring of itself only), and return an
-// appropriate error message when they fail.
+// appropriate error message when they fail. See
+// http://wiki/Main/GTestAdvanced#Predicate_Assertions for details.
 //
 // The {needle,haystack}_expr arguments are the stringified
 // expressions that generated the two real arguments.
@@ -691,7 +959,7 @@ AssertionResult IsNotSubstring(
 AssertionResult IsNotSubstring(
     const char* needle_expr, const char* haystack_expr,
     const wchar_t* needle, const wchar_t* haystack);
-#if GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
 AssertionResult IsSubstring(
     const char* needle_expr, const char* haystack_expr,
     const ::std::string& needle, const ::std::string& haystack);
@@ -704,7 +972,7 @@ AssertionResult IsNotSubstring(
 AssertionResult IsNotSubstring(
     const char* needle_expr, const char* haystack_expr,
     const ::std::wstring& needle, const ::std::wstring& haystack);
-#endif  // GUNIT_HAS_STD_STRING
+#endif  // GTEST_HAS_STD_STRING
 
 // Helper template function for comparing floating-points.
 //
@@ -749,6 +1017,25 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
                                      double val2,
                                      double abs_error);
 
+// INTERNAL IMPLEMENTATION - DO NOT USE IN USER CODE.
+// A class that enables one to stream messages to assertion macros
+class AssertHelper {
+ public:
+  // Constructor.
+  AssertHelper(TestPartResultType type, const char* file, int line,
+               const char* message);
+  // Message assignment is a semantic trick to enable assertion
+  // streaming; see the GTEST_MESSAGE macro below.
+  void operator=(const Message& message) const;
+ private:
+  TestPartResultType const type_;
+  const char*        const file_;
+  int                const line_;
+  String             const message_;
+
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(AssertHelper);
+};
+
 // Macros for indicating success/failure in test code.
 
 // ADD_FAILURE unconditionally adds a failure to the current test.
@@ -780,27 +1067,27 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 //                                     << "on port " << port);
 
 // Generates a nonfatal failure with a generic message.
-#define ADD_FAILURE() GUNIT_NONFATAL_FAILURE("Failed")
+#define ADD_FAILURE() GTEST_NONFATAL_FAILURE("Failed")
 
 // Generates a fatal failure with a generic message.
-#define FAIL() GUNIT_FATAL_FAILURE("Failed")
+#define FAIL() GTEST_FATAL_FAILURE("Failed")
 
 // Generates a success with a generic message.
-#define SUCCEED() GUNIT_SUCCESS("Succeeded")
+#define SUCCEED() GTEST_SUCCESS("Succeeded")
 
 // Boolean assertions.
 #define EXPECT_TRUE(condition) \
-  GUNIT_TEST_BOOLEAN(condition, #condition, false, true, \
-                     GUNIT_NONFATAL_FAILURE)
+  GTEST_TEST_BOOLEAN(condition, #condition, false, true, \
+                     GTEST_NONFATAL_FAILURE)
 #define EXPECT_FALSE(condition) \
-  GUNIT_TEST_BOOLEAN(!(condition), #condition, true, false, \
-                     GUNIT_NONFATAL_FAILURE)
+  GTEST_TEST_BOOLEAN(!(condition), #condition, true, false, \
+                     GTEST_NONFATAL_FAILURE)
 #define ASSERT_TRUE(condition) \
-  GUNIT_TEST_BOOLEAN(condition, #condition, false, true, \
-                     GUNIT_FATAL_FAILURE)
+  GTEST_TEST_BOOLEAN(condition, #condition, false, true, \
+                     GTEST_FATAL_FAILURE)
 #define ASSERT_FALSE(condition) \
-  GUNIT_TEST_BOOLEAN(!(condition), #condition, true, false, \
-                     GUNIT_FATAL_FAILURE)
+  GTEST_TEST_BOOLEAN(!(condition), #condition, true, false, \
+                     GTEST_FATAL_FAILURE)
 
 // Defines the variations with _M for backward compatibility.
 
@@ -814,9 +1101,21 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 #define ASSERT_FALSE_M(condition, message) ASSERT_FALSE(condition) << (message)
 
 
+
 // Includes the auto-generated header that implements a family of
 // generic predicate assertion macros.
-#include "gunit_pred_impl.h"
+#if defined(__APPLE__) && !defined(GTEST_NOT_MAC_FRAMEWORK_MODE)
+// When using gTest on the Mac as a framework, all the includes will be
+// in the framework headers folder along with gtest.h.
+// Define GTEST_NOT_MAC_FRAMEWORK_MODE if you are building gtest on the Mac and
+// are not using it as a framework.
+// More info on frameworks available here:
+// http://developer.apple.com/documentation/MacOSX/Conceptual/BPFrameworks/
+// Concepts/WhatAreFrameworks.html.
+#include "gtest_pred_impl.h"  // NOLINT
+#else
+#include "testing/base/public/gtest_pred_impl.h"
+#endif  // defined(__APPLE__) && !defined(GTEST_NOT_MAC_FRAMEWORK_MODE)
 
 // Macros for testing equalities and inequalities.
 //
@@ -827,7 +1126,7 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 //    * {ASSERT|EXPECT}_GT(v1, v2):           Tests that v1 > v2
 //    * {ASSERT|EXPECT}_GE(v1, v2):           Tests that v1 >= v2
 //
-// When they are not, gUnit prints both the tested expressions and
+// When they are not, gTest prints both the tested expressions and
 // their actual values.  The values must be compatible built-in types,
 // or you will get a compiler error.  By "compatible" we mean that the
 // values can be compared by the respective operator.
@@ -839,8 +1138,7 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 //   comparison operators and is thus discouraged by the Google C++
 //   Usage Guide.  Therefore, you are advised to use the
 //   {ASSERT|EXPECT}_TRUE() macro to assert that two objects are
-//   equal. Use {ASSERT|EXPECT}_TRUE_M() to print the values of the
-//   expressions.
+//   equal.
 //
 //   2. The {ASSERT|EXPECT}_??() macros do pointer comparisons on
 //   pointers (in particular, C strings).  Therefore, if you use it
@@ -848,54 +1146,52 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 //   are related, not how their content is related.  To compare two C
 //   strings by content, use {ASSERT|EXPECT}_STR*().
 //
-//   3. If you assert a pointer is NULL by {ASSERT|EXPECT}_EQ(NULL,
-//   pointer), gcc will issue a warning as it isn't sure whether NULL
-//   (#defined to be 0) is a pointer or an integer.  To solve this
-//   problem, just write {ASSERT|EXPECT}_TRUE(pointer != NULL).  Or,
-//   if you really need to see the value of the pointer, write
-//   {ASSERT|EXPECT}_EQ(static_cast<MyType*>(NULL), pointer).
-//
-//   4. {ASSERT|EXPECT}_EQ(expected, actual) is preferred to
+//   3. {ASSERT|EXPECT}_EQ(expected, actual) is preferred to
 //   {ASSERT|EXPECT}_TRUE(expected == actual), as the former tells you
 //   what the actual value is when it fails, and similarly for the
 //   other comparisons.
 //
-//   5. Do not depend on the order in which {ASSERT|EXPECT}_??()
+//   4. Do not depend on the order in which {ASSERT|EXPECT}_??()
 //   evaluate their arguments, which is undefined.
 //
-//   6. These macros evaluate their arguments exactly once.
+//   5. These macros evaluate their arguments exactly once.
 //
 // Examples:
 //
-//   EXPECT_EQ(5, Foo());
+//   EXPECT_NE(5, Foo());
+//   EXPECT_EQ(NULL, a_pointer);
 //   ASSERT_LT(i, array_size);
-//   ASSERT_GT_M(records.size(), 0, "There is no record left.");
+//   ASSERT_GT(records.size(), 0) << "There is no record left.";
 
 #define EXPECT_EQ(expected, actual) \
-  EXPECT_PRED_FORMAT2(::testing::CmpHelperEQ, expected, actual)
+  EXPECT_PRED_FORMAT2(::testing::internal:: \
+                      EqHelper<GTEST_IS_NULL_LITERAL(expected)>::Compare, \
+                      expected, actual)
 #define EXPECT_NE(expected, actual) \
-  EXPECT_PRED_FORMAT2(::testing::CmpHelperNE, expected, actual)
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperNE, expected, actual)
 #define EXPECT_LE(val1, val2) \
-  EXPECT_PRED_FORMAT2(::testing::CmpHelperLE, val1, val2)
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperLE, val1, val2)
 #define EXPECT_LT(val1, val2) \
-  EXPECT_PRED_FORMAT2(::testing::CmpHelperLT, val1, val2)
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperLT, val1, val2)
 #define EXPECT_GE(val1, val2) \
-  EXPECT_PRED_FORMAT2(::testing::CmpHelperGE, val1, val2)
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperGE, val1, val2)
 #define EXPECT_GT(val1, val2) \
-  EXPECT_PRED_FORMAT2(::testing::CmpHelperGT, val1, val2)
+  EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperGT, val1, val2)
 
 #define ASSERT_EQ(expected, actual) \
-  ASSERT_PRED_FORMAT2(::testing::CmpHelperEQ, expected, actual)
+  ASSERT_PRED_FORMAT2(::testing::internal:: \
+                      EqHelper<GTEST_IS_NULL_LITERAL(expected)>::Compare, \
+                      expected, actual)
 #define ASSERT_NE(val1, val2) \
-  ASSERT_PRED_FORMAT2(::testing::CmpHelperNE, val1, val2)
+  ASSERT_PRED_FORMAT2(::testing::internal::CmpHelperNE, val1, val2)
 #define ASSERT_LE(val1, val2) \
-  ASSERT_PRED_FORMAT2(::testing::CmpHelperLE, val1, val2)
+  ASSERT_PRED_FORMAT2(::testing::internal::CmpHelperLE, val1, val2)
 #define ASSERT_LT(val1, val2) \
-  ASSERT_PRED_FORMAT2(::testing::CmpHelperLT, val1, val2)
+  ASSERT_PRED_FORMAT2(::testing::internal::CmpHelperLT, val1, val2)
 #define ASSERT_GE(val1, val2) \
-  ASSERT_PRED_FORMAT2(::testing::CmpHelperGE, val1, val2)
+  ASSERT_PRED_FORMAT2(::testing::internal::CmpHelperGE, val1, val2)
 #define ASSERT_GT(val1, val2) \
-  ASSERT_PRED_FORMAT2(::testing::CmpHelperGT, val1, val2)
+  ASSERT_PRED_FORMAT2(::testing::internal::CmpHelperGT, val1, val2)
 
 // Defines the variations with _M for backward compatibility.
 
@@ -975,9 +1271,9 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 //    * {ASSERT|EXPECT}_NEAR(v1, v2, abs_error):
 //         Tests that v1 and v2 are within the given distance to each other.
 //
-// gUnit uses ULP-based comparison to automatically pick a default
+// gTest uses ULP-based comparison to automatically pick a default
 // error bound that is appropriate for the operands.  See the
-// FloatingPoint template class in gunit-internal.h if you are
+// FloatingPoint template class in gtest-internal.h if you are
 // interested in the implementation details.
 
 #define EXPECT_FLOAT_EQ(expected, actual)\
@@ -1029,7 +1325,7 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
 // These predicate format functions work on floating-point values, and
 // can be used in {ASSERT|EXPECT}_PRED_FORMAT2*(), e.g.
 //
-//   EXPECT_PRED_FORMAT2(testing::DoubleLE(Foo(), 5.0));
+//   EXPECT_PRED_FORMAT2(testing::DoubleLE, Foo(), 5.0);
 
 // Asserts that val1 is less than, or almost equal to, val2.  Fails
 // otherwise.  In particular, it fails if either val1 or val2 is NaN.
@@ -1037,6 +1333,31 @@ AssertionResult FloatLE(const char* expr1, const char* expr2,
                         float val1, float val2);
 AssertionResult DoubleLE(const char* expr1, const char* expr2,
                          double val1, double val2);
+
+
+#ifdef _MSC_VER
+
+// Macros that test for HRESULT failure and success, these are only useful
+// on Windows, and rely on Windows SDK macros and APIs to compile.
+//
+//    * {ASSERT|EXPECT}_HRESULT_{SUCCEEDED|FAILED}(expr)
+//
+// When expr unexpectedly fails or succeeds, gTest prints the expected result
+// and the actual result with both a human-readable string representation of
+// the error, if available, as well as the hex result code.
+#define EXPECT_HRESULT_SUCCEEDED(expr) \
+    EXPECT_PRED_FORMAT1(::testing::internal::IsHRESULTSuccess, (expr))
+
+#define ASSERT_HRESULT_SUCCEEDED(expr) \
+    ASSERT_PRED_FORMAT1(::testing::internal::IsHRESULTSuccess, (expr))
+
+#define EXPECT_HRESULT_FAILED(expr) \
+    EXPECT_PRED_FORMAT1(::testing::internal::IsHRESULTFailure, (expr))
+
+#define ASSERT_HRESULT_FAILED(expr) \
+    ASSERT_PRED_FORMAT1(::testing::internal::IsHRESULTFailure, (expr))
+
+#endif  // _MSC_VER
 
 
 // Causes a trace (including the source file path, the current line
@@ -1050,8 +1371,12 @@ AssertionResult DoubleLE(const char* expr1, const char* expr2,
 // of the dummy variable name, thus allowing multiple SCOPED_TRACE()s
 // to appear in the same block - as long as they are on different
 // lines.
+//
+// In google3, each thread maintains its own stack of traces.
+// Therefore, a SCOPED_TRACE() would (correctly) only affect the
+// assertions in its own thread.
 #define SCOPED_TRACE(message) \
-  ::testing::ScopedTrace GUNIT_CONCAT_TOKEN(gunit_trace_, __LINE__)(\
+  ::testing::ScopedTrace GTEST_CONCAT_TOKEN(gtest_trace_, __LINE__)(\
     __FILE__, __LINE__, ::testing::Message() << (message))
 
 
@@ -1072,7 +1397,7 @@ AssertionResult DoubleLE(const char* expr1, const char* expr2,
 //   }
 
 #define TEST(test_case_name, test_name)\
-  GUNIT_TEST(test_case_name, test_name, ::testing::Test)
+  GTEST_TEST(test_case_name, test_name, ::testing::Test)
 
 
 // Defines a test that uses a test fixture.
@@ -1102,18 +1427,18 @@ AssertionResult DoubleLE(const char* expr1, const char* expr2,
 //   }
 
 #define TEST_F(test_fixture, test_name)\
-  GUNIT_TEST(test_fixture, test_name, test_fixture)
+  GTEST_TEST(test_fixture, test_name, test_fixture)
 
 // Use this macro in main() to run all tests.  It returns 0 if all
 // tests are successful, or 1 otherwise.
 //
 // RUN_ALL_TESTS() should be invoked after the command line has been
 // parsed (on Linux, it's done by InitGoogle().  On other platforms,
-// it's done by ParseGUnitFlags().)
+// it's done by ParseGTestFlags().)
 
 #define RUN_ALL_TESTS()\
   (::testing::UnitTest::GetInstance()->Run())
 
-} // namespace testing
+}  // namespace testing
 
-#endif  // TESTING_GUNIT_H__
+#endif  // UNITTEST_GTEST_H__

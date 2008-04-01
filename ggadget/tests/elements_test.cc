@@ -15,7 +15,7 @@
 */
 
 #include <cstdio>
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 #include "ggadget/basic_element.h"
 #include "ggadget/elements.h"
 #include "ggadget/view.h"
@@ -135,6 +135,6 @@ TEST_F(ElementsTest, TestRemoveAll) {
 
 int main(int argc, char *argv[]) {
   ggadget::SetGlobalMainLoop(&main_loop);
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();
 }

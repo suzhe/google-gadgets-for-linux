@@ -20,7 +20,7 @@
 #include <ggadget/framework_interface.h>
 #include <ggadget/variant.h>
 #include "ggadget/native_main_loop.h"
-#include <unittest/gunit.h>
+#include <unittest/gtest.h>
 #include "../perfmon.cc"
 
 using namespace ggadget;
@@ -120,7 +120,7 @@ TEST(Perfmon, GetCurrentValue_Failure_InvalidCounterPath) {
 }
 
 int main() {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
   SetGlobalMainLoop(&g_main_loop);
   return RUN_ALL_TESTS();
 }

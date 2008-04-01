@@ -16,4 +16,4 @@
 IF(UNIX)
   ADD_DEFINITIONS(-DOS_LINUX)
 ENDIF(UNIX)
-ADD_LIBRARY(gunit gunit.cc)
+ADD_LIBRARY(gtest gtest.cc)

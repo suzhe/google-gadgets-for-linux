@@ -1,26 +1,43 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008, Google Inc.
+  All rights reserved.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
 
-       http://www.apache.org/licenses/LICENSE-2.0
+      * Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the following disclaimer
+  in the documentation and/or other materials provided with the
+  distribution.
+      * Neither the name of Google Inc. nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// gUnit -- the Google C++ Unit Testing Framework
+// gTest -- the Google C++ Unit Testing Framework
 //
 // This header file declares functions and macros used internally by
-// gUnit.  They are subject to change without notice.
+// gTest.  They are subject to change without notice.
 
-#ifndef TESTING_GUNIT_INTERNAL_H__
-#define TESTING_GUNIT_INTERNAL_H__
+#ifndef UNITTEST_GTEST_INTERNAL_H__
+#define UNITTEST_GTEST_INTERNAL_H__
+
+#define GTEST_SCOPED_LOCK(mutex_ptr)
 
 #ifdef OS_LINUX
 #include <stdlib.h>
@@ -29,7 +46,7 @@
 #include <unistd.h>
 #endif  // OS_LINUX
 
-#ifndef GUNIT_HAS_STD_STRING
+#ifndef GTEST_HAS_STD_STRING
 // The user didn't tell us whether ::std::string is available, so we
 // need to figure it out.
 
@@ -38,36 +55,44 @@
 #ifndef _HAS_EXCEPTIONS
 #define _HAS_EXCEPTIONS 1
 #endif  // _HAS_EXCEPTIONS
+// GTEST_HAS_EXCEPTIONS is non-zero iff exceptions are enabled.  It is
+// always defined, while _HAS_EXCEPTIONS is defined only on Windows.
+#define GTEST_HAS_EXCEPTIONS _HAS_EXCEPTIONS
 // On Windows, we can use ::std::string only if exceptions are
 // enabled.
-#define GUNIT_HAS_STD_STRING _HAS_EXCEPTIONS
+#define GTEST_HAS_STD_STRING GTEST_HAS_EXCEPTIONS
 #else  // We are on Linux or Mac OS.
-#define GUNIT_HAS_STD_STRING 1
+#define GTEST_HAS_EXCEPTIONS 0
+#define GTEST_HAS_STD_STRING 1
 #endif  // _MSC_VER
 
-#endif  // GUNIT_HAS_STD_STRING
+#endif  // GTEST_HAS_STD_STRING
 
-#if GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
 #include <string>
 #endif
 
-#ifndef GUNIT_HAS_GLOBAL_STRING
+#ifndef GTEST_HAS_GLOBAL_STRING
 // The user didn't tell us whether ::string is available, so we need
 // to figure it out.
 
+// Google uses its own version of <string> in directory
+// //depot/google3/third_party/stl/gcc3/, which defines
+// HAS_GLOBAL_STRING iff ::string is defined and distinct to
+// ::std::string.
 #ifdef HAS_GLOBAL_STRING
-#define GUNIT_HAS_GLOBAL_STRING 1
+#define GTEST_HAS_GLOBAL_STRING 1
 #else
-#define GUNIT_HAS_GLOBAL_STRING 0
+#define GTEST_HAS_GLOBAL_STRING 0
 #endif  // HAS_GLOBAL_STRING
 
-#endif  // GUNIT_HAS_GLOBAL_STRING
+#endif  // GTEST_HAS_GLOBAL_STRING
 
 #include <iomanip>
 #include <limits>
 
 #ifdef _MSC_VER
-#include <strstream>
+#include <strstream>  // NOLINT
 #else
 #include <sstream>
 #endif  // _MSC_VER
@@ -82,6 +107,20 @@ typedef std::strstream StrStream;
 typedef std::stringstream StrStream;
 #endif  // _MSC_VER
 
+// The GNU compiler emits a warning if nested "if" statements are followed by
+// an "else" statement and braces are not used to explicitly disambiguate the
+// "else" binding.  This leads to problems with code like:
+//
+//   if (gate)
+//     ASSERT_*(condition) << "Some message";
+//
+// The "switch (0) case 0:" idiom is used to suppress this.
+#ifdef __INTEL_COMPILER
+#define GTEST_AMBIGUOUS_ELSE_BLOCKER
+#else
+#define GTEST_AMBIGUOUS_ELSE_BLOCKER switch (0) case 0:  // NOLINT
+#endif
+
 // Due to C++ preprocessor weirdness, we need double indirection to
 // concatenate two tokens when one of them is __LINE__.  Writing
 //
@@ -90,22 +129,27 @@ typedef std::stringstream StrStream;
 // will result in the token foo__LINE__, instead of foo followed by
 // the current line number.  For more details, see
 // http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.6
-#define GUNIT_CONCAT_TOKEN(foo, bar) GUNIT_CONCAT_TOKEN_IMPL(foo, bar)
-#define GUNIT_CONCAT_TOKEN_IMPL(foo, bar) foo ## bar
+#define GTEST_CONCAT_TOKEN(foo, bar) GTEST_CONCAT_TOKEN_IMPL(foo, bar)
+#define GTEST_CONCAT_TOKEN_IMPL(foo, bar) foo ## bar
 
-// gUnit defines the testing::Message class to allow construction of
+// gTest defines the testing::Message class to allow construction of
 // test messages via the << operator.  The idea is that anything
 // streamable to std::ostream can be streamed to a testing::Message.
-// This allows a user to use his own types in gUnit assertions by
+// This allows a user to use his own types in gTest assertions by
 // overloading the << operator.
+//
+// util/gtl/stl_logging-inl.h overloads << for STL containers.  These
+// overloads cannot be defined in the std namespace, as that will be
+// undefined behavior.  Therefore, they are defined in the global
+// namespace instead.
 //
 // C++'s symbol lookup rule (i.e. Koenig lookup) says that these
 // overloads are visible in either the std namespace or the global
 // namespace, but not other namespaces, including the testing
-// namespace which gUnit's Message class is in.
+// namespace which gTest's Message class is in.
 //
 // To allow STL containers (and other types that has a << operator
-// defined in the global namespace) to be used in gUnit assertions,
+// defined in the global namespace) to be used in gTest assertions,
 // testing::Message must access the custom << operator from the global
 // namespace.  Hence this helper function.
 //
@@ -114,7 +158,7 @@ typedef std::stringstream StrStream;
 // doesn't require a helper function, but unfortunately doesn't
 // compile with MSVC.
 template <typename T>
-inline void GUnitStreamToHelper(std::ostream* os, const T& val) {
+inline void GTestStreamToHelper(std::ostream* os, const T& val) {
   *os << val;
 }
 
@@ -125,28 +169,33 @@ inline void GUnitStreamToHelper(std::ostream* os, const T& val) {
 //
 //   struct Foo {
 //     Foo() { ... }
-//   } GUNIT_ATTRIBUTE_UNUSED;
+//   } GTEST_ATTRIBUTE_UNUSED;
 #if defined(_MSC_VER) || (defined(OS_LINUX) && defined(SWIG))
-#define GUNIT_ATTRIBUTE_UNUSED
+#define GTEST_ATTRIBUTE_UNUSED
 #else
-#define GUNIT_ATTRIBUTE_UNUSED __attribute__ ((unused))
+#define GTEST_ATTRIBUTE_UNUSED __attribute__ ((unused))
 #endif
 
 // Tell the compiler to warn about unused return values for functions declared
 // with this macro.  The macro should be used on function declarations
 // following the argument list:
 //
-//   Sprocket* AllocateSprocket() GUNIT_MUST_USE_RESULT;
-#if (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) \
+//   Sprocket* AllocateSprocket() GTEST_MUST_USE_RESULT;
+#if defined(__GNUC__) \
+  && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) \
   && !defined(COMPILER_ICC)
-#define GUNIT_MUST_USE_RESULT __attribute__ ((warn_unused_result))
+#define GTEST_MUST_USE_RESULT __attribute__ ((warn_unused_result))
 #else
-#define GUNIT_MUST_USE_RESULT
+#define GTEST_MUST_USE_RESULT
 #endif  // (__GNUC__ > 3 || __GNUC__ == 3 && __GNUC_MINOR__ >= 4)
 
 // A macro to disallow the evil copy constructor and operator= functions
 // This should be used in the private: declarations for a class.
-#define GUNIT_DISALLOW_EVIL_CONSTRUCTORS(type)\
+//
+// We cannot use DISALLOW_EVIL_CONSTRUCTORS in
+// //depot/google3/base/basictypes.h, as gTest needs to work in
+// environments where basictypes.h isn't available or doesn't compile.
+#define GTEST_DISALLOW_EVIL_CONSTRUCTORS(type)\
   type(const type &);\
   void operator=(const type &)
 
@@ -167,6 +216,87 @@ class UnitTest;                        // A collection of test cases.
 class UnitTestImpl;                    // Opaque implementation of UnitTest
 class AssertionResult;                 // Result of an assertion.
 
+namespace internal {
+
+#ifdef __SYMBIAN32__
+// Symbian does not have tr1::type_traits, so we define our own is_pointer
+// These are needed as the Nokia Symbian Compiler cannot decide between
+// const T& and const T* in a function template.
+
+template <bool bool_value>
+struct bool_constant {
+  typedef bool_constant<bool_value> type;
+  static const bool value = bool_value;
+};
+template <bool bool_value> const bool bool_constant<bool_value>::value;
+
+typedef bool_constant<false> false_type;
+typedef bool_constant<true> true_type;
+
+template <typename T>
+struct is_pointer : public false_type {};
+
+template <typename T>
+struct is_pointer<T*> : public true_type {};
+
+#endif  // __SYMBIAN32__
+
+// Defines BiggestInt as the biggest signed integer type the compiler
+// supports.
+#ifdef _MSC_VER
+typedef __int64 BiggestInt;
+#else
+typedef long long BiggestInt;  // NOLINT
+#endif
+
+// The maximum number a BiggestInt can represent.  This definition
+// works no matter BiggestInt is represented in one's complement or
+// two's complement.
+//
+// We cannot rely on numeric_limits in STL, as __int64 and long long
+// are not part of standard C++ and numeric_limits doesn't need to be
+// defined for them.
+const BiggestInt kMaxBiggestInt =
+    ~(static_cast<BiggestInt>(1) << (8*sizeof(BiggestInt) - 1));
+
+// A secret type that gTest users don't know about.  It has no
+// definition on purpose.  Therefore it's impossible to create a
+// Secret object, which is what we want.
+class Secret;
+
+// Two overloaded helpers for checking at compile time whether an
+// expression is a null pointer literal (i.e. NULL or any 0-valued
+// compile-time integral constant).  Their return values have
+// different sizes, so we can use sizeof() to test which version is
+// picked by the compiler.  These helpers have no implementations, as
+// we only need their signatures.
+//
+// Given IsNullLiteralHelper(x), the compiler will pick the first
+// version if x can be implicitly converted to Secret*, and pick the
+// second version otherwise.  Since Secret is a secret and incomplete
+// type, the only expression a user can write that has type Secret* is
+// a null pointer literal.  Therefore, we know that x is a null
+// pointer literal if and only if the first version is picked by the
+// compiler.
+char IsNullLiteralHelper(Secret* p);
+char (&IsNullLiteralHelper(...))[2];  // NOLINT
+
+// A compile-time bool constant that is true if and only if x is a
+// null pointer literal (i.e. NULL or any 0-valued compile-time
+// integral constant).
+#ifdef __SYMBIAN32__  // Symbian
+// Passing non-POD classes through ellipsis (...) crashes the ARM compiler.
+// The Nokia Symbian compiler tries to instantiate a copy constructor for
+// objects passed through ellipsis (...), failing for uncopyable objects.
+// Hence we define this to false (and lose support for NULL detection).
+#define GTEST_IS_NULL_LITERAL(x) false
+#else  // ! __SYMBIAN32__
+#define GTEST_IS_NULL_LITERAL(x) \
+    (sizeof(::testing::internal::IsNullLiteralHelper(x)) == 1)
+#endif  // __SYMBIAN32__
+
+}  // namespace internal
+
 // String - a UTF-8 string class.
 //
 // We cannot use std::string as Microsoft's STL implementation in
@@ -182,7 +312,7 @@ class AssertionResult;                 // Result of an assertion.
 // than anything (including the empty string) except itself.
 //
 // This class only provides minimum functionality necessary for
-// implementing gUnit.  We do not intend to implement a full-fledged
+// implementing gTest.  We do not intend to implement a full-fledged
 // string class here.
 //
 // Since the purpose of this class is to provide a substitute for
@@ -318,7 +448,9 @@ class String {
 
   // Returns the length of the encapsulated string, or -1 if the
   // string is NULL.
-  int Length() const { return c_str_ ? static_cast<int>(strlen(c_str_)) : -1; }
+  int GetLength() const {
+    return c_str_ ? static_cast<int>(strlen(c_str_)) : -1;
+  }
 
   // Gets the 0-terminated C string this String object represents.
   // The String object still owns the string.  Therefore the caller
@@ -359,22 +491,15 @@ inline std::ostream& operator <<(std::ostream& os, const String& str) {
 // character in the buffer is replaced with "\\0".
 String StrStreamToString(StrStream *);
 
-// Appends the user-supplied message to the gUnit-generated message.
-String AppendUserMessage(const String& gunit_msg,
+// Appends the user-supplied message to the gTest-generated message.
+String AppendUserMessage(const String& gtest_msg,
                          const Message& user_msg);
-
-// The possible outcomes of a test part.
-enum TestPartResultType {
-  TPRT_SUCCESS,           // Succeeded.
-  TPRT_NONFATAL_FAILURE,  // Failed but the test can continue.
-  TPRT_FATAL_FAILURE,     // Failed and the test should be terminated.
-};
 
 // A helper class for creating scoped traces in user programs.
 class ScopedTrace {
  public:
   // The c'tor pushes the given source file location and message onto
-  // a trace stack maintained by gUnit.
+  // a trace stack maintained by gTest.
   ScopedTrace(const char* file, int line, const Message& message);
 
   // The d'tor pops the info pushed by the c'tor.
@@ -384,8 +509,8 @@ class ScopedTrace {
   ~ScopedTrace();
 
  private:
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(ScopedTrace);
-} GUNIT_ATTRIBUTE_UNUSED;  // A ScopedTrace object does its job in its
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(ScopedTrace);
+} GTEST_ATTRIBUTE_UNUSED;  // A ScopedTrace object does its job in its
                            // c'tor and d'tor.  Therefore it doesn't
                            // need to be used otherwise.
 
@@ -401,10 +526,10 @@ class ScopedTrace {
 // Such functionality should belong to STL, but I cannot find it
 // there.
 //
-// gUnit uses this class in the implementation of floating-point
+// gTest uses this class in the implementation of floating-point
 // comparison.
 //
-// For now it only handles UInt (unsigned int) as that's all gUnit
+// For now it only handles UInt (unsigned int) as that's all gTest
 // needs.  Other types can be easily added in the future if need
 // arises.
 template <size_t size>
@@ -431,58 +556,72 @@ class TypeWithSize<4> {
 template <>
 class TypeWithSize<8> {
  public:
-#ifdef _MSV_VER  // On Windows?
+#ifdef _MSC_VER  // On Windows?
   typedef __int64 Int;
   typedef unsigned __int64 UInt;
 #else
-  typedef long long Int;
-  typedef unsigned long long UInt;
+  typedef long long Int;  // NOLINT
+  typedef unsigned long long UInt;  // NOLINT
 #endif  // _MSC_VER
 };
 
 // A type that represents a number of elapsed milliseconds.
 typedef TypeWithSize<8>::Int TimeInMillis;
 
-// A class that enables one to stream messages to assertion macros
-class AssertHelper {
- public:
-  // Constructor.
-  AssertHelper(TestPartResultType type, const char* file, int line,
-               const char* message);
-  // Message assignment is a semantic trick to enable assertion
-  // streaming; see the GUNIT_MESSAGE macro below.
-  void operator=(const Message& message) const;
- private:
-  TestPartResultType const type_;
-  const char*        const file_;
-  int                const line_;
-  String             const message_;
-};
-
 // Converts a streamable value to a String.  A NULL pointer is
 // converted to "(null)".  When the input value is a ::string,
 // ::std::string, ::wstring, or ::std::wstring object, each NUL
 // character in it is replaced with "\\0".
+// Declared here but defined in gtest.h, so that it has access
+// to the definition of the Message class, required by the ARM
+// compiler.
 template <typename T>
-inline String StreamableToString(const T& streamable) {
-  return (Message() << streamable).GetString();
-}
+String StreamableToString(const T& streamable);
 
 // Formats a value to be used in a failure message.
-//
-// The default implementation is to print the value using the
-// streaming (<<) operator.
+
+#ifdef __SYMBIAN32__
+
+// These are needed as the Nokia Symbian Compiler cannot decide between
+// const T& and const T* in a function template. The Nokia compiler _can_
+// decide between class template specializations for T and T*, so a 
+// tr1::type_traits-like is_pointer works, and we can overload on that.
+
+// This overload makes sure that all pointers (including
+// those to char or wchar_t) are printed as raw pointers.
+template <typename T>
+inline String FormatValueForFailureMessage(internal::true_type dummy, 
+                                           T* pointer) {
+  return StreamableToString(static_cast<const void*>(pointer));
+}
+
+template <typename T>
+inline String FormatValueForFailureMessage(internal::false_type dummy, 
+                                           const T& value) {
+  return StreamableToString(value);
+}
+
+template <typename T>
+inline String FormatForFailureMessage(const T& value) {
+  return FormatValueForFailureMessage(
+      typename internal::is_pointer<T>::type(), value);
+}
+
+#else
+
 template <typename T>
 inline String FormatForFailureMessage(const T& value) {
   return StreamableToString(value);
 }
 
-// This partial specialization makes sure that all pointers (including
+// This overload makes sure that all pointers (including
 // those to char or wchar_t) are printed as raw pointers.
 template <typename T>
 inline String FormatForFailureMessage(T* pointer) {
   return StreamableToString(static_cast<const void*>(pointer));
 }
+
+#endif  // __SYMBIAN32__
 
 // These overloaded versions handle narrow and wide characters.
 String FormatForFailureMessage(char ch);
@@ -493,7 +632,7 @@ String FormatForFailureMessage(wchar_t wchar);
 // rather than a pointer.  We do the same for wide strings.
 
 // This internal macro is used to avoid duplicated code.
-#define GUNIT_FORMAT_IMPL(operand2_type, operand1_printer)\
+#define GTEST_FORMAT_IMPL(operand2_type, operand1_printer)\
 inline String FormatForComparisonFailureMessage(\
     operand2_type::value_type* str, const operand2_type& operand2) {\
   return operand1_printer(str);\
@@ -503,17 +642,17 @@ inline String FormatForComparisonFailureMessage(\
   return operand1_printer(str);\
 }
 
-#if GUNIT_HAS_STD_STRING
-GUNIT_FORMAT_IMPL(::std::string, String::ShowCStringQuoted)
-GUNIT_FORMAT_IMPL(::std::wstring, String::ShowWideCStringQuoted)
-#endif  // GUNIT_HAS_STD_STRING
+#if GTEST_HAS_STD_STRING
+GTEST_FORMAT_IMPL(::std::string, String::ShowCStringQuoted)
+GTEST_FORMAT_IMPL(::std::wstring, String::ShowWideCStringQuoted)
+#endif  // GTEST_HAS_STD_STRING
 
-#if GUNIT_HAS_GLOBAL_STRING
-GUNIT_FORMAT_IMPL(::string, String::ShowCStringQuoted)
-GUNIT_FORMAT_IMPL(::wstring, String::ShowWideCStringQuoted)
-#endif  // GUNIT_HAS_GLOBAL_STRING
+#if GTEST_HAS_GLOBAL_STRING
+GTEST_FORMAT_IMPL(::string, String::ShowCStringQuoted)
+GTEST_FORMAT_IMPL(::wstring, String::ShowWideCStringQuoted)
+#endif  // GTEST_HAS_GLOBAL_STRING
 
-#undef GUNIT_FORMAT_IMPL
+#undef GTEST_FORMAT_IMPL
 
 // Constructs and returns the message for an equality assertion
 // (e.g. ASSERT_EQ, EXPECT_STREQ, etc) failure.
@@ -727,6 +866,11 @@ typedef void* TypeId;
 // GetTypeId<T>() returns the ID of type T.  Different values will be
 // returned for different types.  Calling the function twice with the
 // same type argument is guaranteed to return the same ID.
+//
+// We don't use a similar utility in util/gtl/typeid.h, as that
+// doesn't work outside google3.  The version defined here doesn't
+// have some of the properties of the one in util/gtl/typeid.h, but is
+// adequate for gTest's need.
 template <typename T>
 inline TypeId GetTypeId() {
   static bool dummy = false;
@@ -736,37 +880,46 @@ inline TypeId GetTypeId() {
   return &dummy;
 }
 
+#ifdef _MSC_VER
+
+namespace internal {
+
+// Predicate-formatters for implementing the HRESULT checking macros
+// {ASSERT|EXPECT}_HRESULT_{SUCCEEDED|FAILED}
+// We pass a long instead of HRESULT to avoid causing an
+// include dependency for the HRESULT type.
+AssertionResult IsHRESULTSuccess(const char* expr, long hr);
+AssertionResult IsHRESULTFailure(const char* expr, long hr);
+
+}  // namespace internal
+
+#endif  // _MSC_VER
+
 }  // namespace testing
 
-#define GUNIT_MESSAGE(message, result_type) \
+#define GTEST_MESSAGE(message, result_type) \
   ::testing::AssertHelper(result_type, __FILE__, __LINE__, message) = \
     ::testing::Message()
 
-#define GUNIT_FATAL_FAILURE(message) \
-  return GUNIT_MESSAGE(message, ::testing::TPRT_FATAL_FAILURE)
+#define GTEST_FATAL_FAILURE(message) \
+  return GTEST_MESSAGE(message, ::testing::TPRT_FATAL_FAILURE)
 
-#define GUNIT_NONFATAL_FAILURE(message) \
-  GUNIT_MESSAGE(message, ::testing::TPRT_NONFATAL_FAILURE)
+#define GTEST_NONFATAL_FAILURE(message) \
+  GTEST_MESSAGE(message, ::testing::TPRT_NONFATAL_FAILURE)
 
-#define GUNIT_SUCCESS(message) \
-  GUNIT_MESSAGE(message, ::testing::TPRT_SUCCESS)
+#define GTEST_SUCCESS(message) \
+  GTEST_MESSAGE(message, ::testing::TPRT_SUCCESS)
 
-#define GUNIT_TEST_BOOLEAN(boolexpr, booltext, actual, expected, fail) \
+#define GTEST_TEST_BOOLEAN(boolexpr, booltext, actual, expected, fail) \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER \
   if (boolexpr) \
     ; \
   else \
     fail("Value of: " booltext "\n  Actual: " #actual "\nExpected: " #expected)
 
-#define GUNIT_EXPECT_BOOLEAN(boolexpr, booltext, actual, expected) \
-  GUNIT_TEST_BOOLEAN(boolexpr, booltext, actual, expected, \
-                     GUNIT_NONFATAL_FAILURE)
-
-#define GUNIT_ASSERT_BOOLEAN(boolexpr, booltext, actual, expected) \
-  GUNIT_TEST_BOOLEAN(boolexpr, booltext, actual, expected, \
-                     GUNIT_FATAL_FAILURE)
 
 // Helper macro for defining tests.
-#define GUNIT_TEST(test_case_name, test_name, parent_class)\
+#define GTEST_TEST(test_case_name, test_name, parent_class)\
 class test_case_name##_##test_name##_Test : public parent_class {\
  public:\
   test_case_name##_##test_name##_Test() {}\
@@ -776,18 +929,18 @@ class test_case_name##_##test_name##_Test : public parent_class {\
  private:\
   virtual void TestBody();\
   static ::testing::TestInfo* const test_info_;\
-  GUNIT_DISALLOW_EVIL_CONSTRUCTORS(test_case_name##_##test_name##_Test);\
+  GTEST_DISALLOW_EVIL_CONSTRUCTORS(test_case_name##_##test_name##_Test);\
 };\
 \
 ::testing::TestInfo* const test_case_name##_##test_name##_Test::test_info_ =\
   ::testing::TestInfo::MakeAndRegisterInstance(\
     #test_case_name, \
     #test_name, \
-    ::testing::GetTypeId<parent_class>(), \
+    ::testing::GetTypeId< parent_class >(), \
     parent_class::SetUpTestCase, \
     parent_class::TearDownTestCase, \
     test_case_name##_##test_name##_Test::NewTest);\
 void test_case_name##_##test_name##_Test::TestBody()
 
 
-#endif  // TESTING_BASE_GUNIT_INTERNAL_H__
+#endif  // UNITTEST_GTEST_INTERNAL_H__

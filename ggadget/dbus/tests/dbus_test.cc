@@ -24,7 +24,7 @@ limitations under the License.
 #include "ggadget/logger.h"
 #include "ggadget/slot.h"
 #include "ggadget/tests/init_extensions.h"
-#include "unittest/gunit.h"
+#include "unittest/gtest.h"
 
 using namespace ggadget;
 using namespace ggadget::dbus;
@@ -430,7 +430,7 @@ TEST(DBusProxy, ConnectToSignalByName) {
 }
 
 int main(int argc, char **argv) {
-  testing::ParseGUnitFlags(&argc, argv);
+  testing::ParseGTestFlags(&argc, argv);
 
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",

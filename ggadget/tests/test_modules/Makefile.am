@@ -29,7 +29,7 @@ fake_module_la_SOURCES	= ../test_module.cc
 fake_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 			  -DMODULE_NAME=fake-module \
 			  -DMODULE_NAME_UNDERSCORE=fake_module
-fake_module_la_LIBADD	= $(top_builddir)/unittest/libgunit.la \
+fake_module_la_LIBADD	= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 
@@ -39,5 +39,5 @@ tux_module_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 			  -DMODULE_NAME_UNDERSCORE=tux_module \
 			  -DFRAMEWORK_EXTENSION=1 \
 			  -DELEMENT_EXTENSION=1
-tux_module_la_LIBADD	= $(top_builddir)/unittest/libgunit.la \
+tux_module_la_LIBADD	= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la

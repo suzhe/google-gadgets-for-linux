@@ -23,7 +23,7 @@
 namespace ggadget {
 namespace {
 
-// A very week encryptor.
+// A very weak encryptor.
 class SimpleEncryptor : public EncryptorInterface {
  public:
   virtual void Encrypt(const std::string &input, std::string *output) {
