@@ -294,7 +294,7 @@ AC_SUBST(DEFAULT_COMPILE_FLAGS)
 ###########################################################
 
 # Init automake stuff
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([tar-ustar])
 
 # Initializes libtool
 AC_LIBLTDL_INSTALLABLE

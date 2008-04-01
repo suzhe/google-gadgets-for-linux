@@ -50,6 +50,16 @@ class ClipRegion::Impl {
         *out = rect;
         return a_area >= b_area ? 1 : -1;
       }
+    } else if ((a.y == b.y && a.h == b.h &&
+                ((a.x + a.w >= b.x - 1 && a.x < b.x) ||
+                 (b.x + b.w >= a.x - 1 && b.x < a.x))) ||
+               (a.x == b.x && a.w == b.w &&
+                ((a.y + a.h >= b.h - 1 && a.y < b.y) ||
+                 (b.y + b.h >= a.h - 1 && b.y < a.y)))) {
+      // Merge neighbor rectangles.
+      *out = a;
+      out->Union(b);
+      return 1;
     }
     return 0;
   }
