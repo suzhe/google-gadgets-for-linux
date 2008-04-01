@@ -35,6 +35,36 @@ namespace qt {
 void ShowGadgetAboutDialog(Gadget *gadget) {
 }
 
+struct CursorTypeMapping {
+  int type;
+  Qt::CursorShape qt_type;
+};
+
+static const CursorTypeMapping kCursorTypeMappings[] = {
+  { ViewInterface::CURSOR_ARROW, Qt::ArrowCursor }, // FIXME
+  { ViewInterface::CURSOR_IBEAM, Qt::IBeamCursor },
+  { ViewInterface::CURSOR_WAIT, Qt::WaitCursor },
+  { ViewInterface::CURSOR_CROSS, Qt::CrossCursor },
+  { ViewInterface::CURSOR_UPARROW, Qt::UpArrowCursor },
+  { ViewInterface::CURSOR_SIZE, Qt::SizeAllCursor },
+  { ViewInterface::CURSOR_SIZENWSE, Qt::SizeFDiagCursor },
+  { ViewInterface::CURSOR_SIZENESW, Qt::SizeBDiagCursor },
+  { ViewInterface::CURSOR_SIZEWE, Qt::SizeHorCursor },
+  { ViewInterface::CURSOR_SIZENS, Qt::SizeVerCursor },
+  { ViewInterface::CURSOR_SIZEALL, Qt::SizeAllCursor },
+  { ViewInterface::CURSOR_NO, Qt::ForbiddenCursor },
+  { ViewInterface::CURSOR_HAND, Qt::OpenHandCursor },
+  { ViewInterface::CURSOR_BUSY, Qt::BusyCursor }, // FIXME
+  { ViewInterface::CURSOR_HELP, Qt::WhatsThisCursor }
+};
+
+Qt::CursorShape GetQtCursorShape(int type) {
+  for (size_t i = 0; i < arraysize(kCursorTypeMappings); ++i) {
+    if (kCursorTypeMappings[i].type == type)
+      return kCursorTypeMappings[i].qt_type;
+  }
+  return Qt::ArrowCursor;
+}
 /**
  * Taken from GDLinux.
  * May move this function elsewhere if other classes use it too.
@@ -98,14 +128,6 @@ bool OpenURL(const char *url) {
   LOG("Don't know how to open an url.");
   return false;
 #endif
-}
-
-bool LoadFont(const char *filename) {
-  FcConfig *config = FcConfigGetCurrent();
-  bool success = FcConfigAppFontAddFile(config,
-                   reinterpret_cast<const FcChar8 *>(filename));
-  DLOG("LoadFont: %s %s", filename, success ? "success" : "fail");
-  return success;
 }
 
 } // namespace qt

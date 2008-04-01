@@ -48,6 +48,10 @@ class WatchNode : public QObject {
     watch_id_ = -1;
   }
 
+  virtual ~WatchNode() {
+      if (object_) delete object_;
+  }
+
  public slots:
   void OnTimeout() {
     if (!calling_ && !removing_) {

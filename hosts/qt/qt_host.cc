@@ -90,8 +90,10 @@ bool QtHost::OpenURL(const char *url) const {
 }
 
 bool QtHost::LoadFont(const char *filename) {
-  QFontDatabase::addApplicationFont(filename);
- return true;
+ if (QFontDatabase::addApplicationFont(filename) != -1)
+   return true;
+ else
+   return false;
 }
 
 void QtHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {

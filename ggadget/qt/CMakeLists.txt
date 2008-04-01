@@ -32,7 +32,7 @@ SET(SRCS
   utilities.cc
 )
 
-qt4_automoc(qt_menu.cc qt_main_loop.cc)
+qt4_automoc(qt_menu.cc qt_main_loop.cc qt_gadget_widget.cc qt_view_host.cc)
 #ADD_SUBDIRECTORY(tests)
 
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})

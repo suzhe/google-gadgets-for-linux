@@ -20,7 +20,9 @@ if GGL_BUILD_LIBGGADGET_QT
 #SUBDIRS = . tests
 
 MOC_FILES		= qt_main_loop.moc \
-			  qt_menu.moc
+			  qt_menu.moc \
+			  qt_gadget_widget.moc \
+			  qt_view_host.moc
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -47,7 +49,8 @@ libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  qt_image.cc \
 			  qt_font.cc \
 			  qt_graphics.cc \
-			  qt_main_loop.cc
+			  qt_main_loop.cc \
+			  utilities.cc
 
 nodist_libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  $(MOC_FILES)
@@ -78,5 +81,8 @@ qt_main_loop.moc:qt_main_loop.h
 	$(MOC) $< -o $@
 qt_menu.moc:qt_menu.h
 	$(MOC) $< -o $@
-
+qt_gadget_widget.moc:qt_gadget_widget.h
+	$(MOC) $< -o $@
+qt_view_host.moc:qt_view_host.h
+	$(MOC) $< -o $@
 endif

@@ -28,7 +28,8 @@
 namespace ggadget {
 namespace qt {
 
-class QtViewHost : public ViewHostInterface {
+class QtViewHostObject;
+class QtViewHost : public QObject, public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
              double zoom, bool decorated,
@@ -61,6 +62,8 @@ class QtViewHost : public ViewHostInterface {
   virtual std::string Prompt(const char *message,
                              const char *default_value);
   virtual ViewInterface::DebugMode GetDebugMode() const { return debug_mode_; }
+  void HandleOptionViewResponse(ViewInterface::OptionsViewFlags flag);
+  void HandleDetailsViewClose();
 
  private:
   ViewInterface *view_;
@@ -68,6 +71,7 @@ class QtViewHost : public ViewHostInterface {
   QGadgetWidget *widget_;
   QtGraphics *graphics_;
   QWidget *window_;     // Top level window of the view
+  QDialog *dialog_;     // Top level window of the view
   ViewInterface::DebugMode debug_mode_;
   Connection *onoptionchanged_connection_;
 
@@ -78,9 +82,30 @@ class QtViewHost : public ViewHostInterface {
 
   Slot1<void, int> *feedback_handler_;
 
+  QtViewHostObject *qt_obj_;    // used for handling qt signal
+
   void Detach();
 
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
+};
+
+class QtViewHostObject : public QObject {
+  Q_OBJECT
+ public:
+  QtViewHostObject(QtViewHost* owner) : owner_(owner) {}
+
+ public slots:
+  void OnOptionViewOK() {
+    owner_->HandleOptionViewResponse(ViewInterface::OPTIONS_VIEW_FLAG_OK);
+  }
+  void OnOptionViewCancel() {
+    owner_->HandleOptionViewResponse(ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
+  }
+  void OnDetailsViewClose() {
+    owner_->HandleDetailsViewClose();
+  }
+ private:
+  QtViewHost* owner_;
 };
 
 } // namespace qt

@@ -18,6 +18,7 @@
 #define GGADGET_QT_UTILITIES_H__
 
 #include <string>
+#include <QCursor>
 
 namespace ggadget {
 
@@ -32,8 +33,7 @@ void ShowGadgetAboutDialog(Gadget *gadget);
 /** Open the given URL in the user's default web browser. */
 bool OpenURL(const char *url);
 
-/** Load a given font into the application. */
-bool LoadFont(const char *filename);
+Qt::CursorShape GetQtCursorShape(int type);
 
 } // namespace qt
 } // namespace ggadget
