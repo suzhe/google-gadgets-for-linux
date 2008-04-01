@@ -16,6 +16,8 @@
 
 if GGL_BUILD_QT_HOST
 
+MOC_FILES		= qt_host.moc
+
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
@@ -23,37 +25,33 @@ noinst_HEADERS		= qt_host.h
 
 bin_PROGRAMS		= ggl-qt
 
-ggl_qt_SOURCES	= main.cc qt_host.cc
+ggl_qt_SOURCES		= main.cc \
+			  qt_host.cc
+
+nodist_ggl_qt_SOURCES	= $(MOC_FILES)
 
 ggl_qt_CPPFLAGS 	= @QT4_CFLAGS@ \
-			  @SPIDERMONKEY_CPPFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-ggl_qt_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
+ggl_qt_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-ggl_qt_LDADD	= @QT4_LIBS@ \
-			  @SPIDERMONKEY_LIBS@ \
+ggl_qt_LDADD		= @QT4_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la \
-			  $(SYSDEPS_LIB)
+			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
-ggl_qt_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
+BUILT_SOURCES		= $(MOC_FILES)
+CLEANFILES 		= $(MOC_FILES)
+qt_host.moc:qt_host.h
+	$(MOC) $< -o $@
 
 # TODO: install these files into correct path.
-#all-local:
+all-local:
+	[ ! -f $(top_builddir)/resources/resources.gg ] || cp $(top_builddir)/resources/resources.gg .
 #	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz_browser_child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz_browser_child .
-#	[ ! -f $(top_builddir)/resources/ggl_resources.bin ] || cp $(top_builddir)/resources/ggl_resources.bin .
 
 noinst_SCRIPTS=ggl-qt.sh
 
 .PHONY: ggl-qt.sh
-
-ggl-qt.sh: ggl-qt
-	(echo GGL_MODULE_PATH=$(abs_top_builddir)/extensions/dbus_script_class:$(abs_top_builddir)/extensions/gtkmoz_browser_element\
-	 $(LIBTOOL) --mode=execute $(abs_builddir)/ggl-qt '$$@' > $@)
-
-qt_host.moc:qt_host.h
-	moc $< -o $@
 
 ggl-qt.sh: ggl-qt
 	(echo '#!/bin/sh' > $@; \

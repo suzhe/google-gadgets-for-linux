@@ -16,12 +16,12 @@
 
 #include <cstdlib>
 #include <locale.h>
-#include <QApplication>
-#include <QCursor>
-#include <QMenu>
-#include <QWidget>
-#include <QVBoxLayout>
-#include <QPushButton>
+#include <QtGui/QApplication>
+#include <QtGui/QCursor>
+#include <QtGui/QMenu>
+#include <QtGui/QWidget>
+#include <QtGui/QVBoxLayout>
+#include <QtGui/QPushButton>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -54,10 +54,12 @@ static const char *kGlobalExtensions[] = {
   "libxml2-xml-parser",
   "default-options",
   "dbus-script-class",
-  "gtkmoz-browser-element",
+// gtkmoz browser element doesn't support qt.
+//  "gtkmoz-browser-element",
   "qt-system-framework",
   "qt-edit-element",
-  "gst-audio-framework",
+// gst and Qt may not work together.
+//  "gst-audio-framework",
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
@@ -132,6 +134,14 @@ int main(int argc, char* argv[]) {
 
   if ((fm = ggadget::CreateFileManager(ggadget::kDirSeparatorStr)) != NULL)
     fm_wrapper->RegisterFileManager(ggadget::kDirSeparatorStr, fm);
+#ifdef _DEBUG
+  std::string dot_slash(".");
+  dot_slash += ggadget::kDirSeparatorStr;
+  if ((fm = ggadget::CreateFileManager(dot_slash.c_str())) != NULL) {
+    fm_wrapper->RegisterFileManager(dot_slash.c_str(), fm);
+  }
+#endif
+
   // TODO: Proper profile directory.
   if ((fm = ggadget::CreateFileManager(".")) != NULL)
     fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);

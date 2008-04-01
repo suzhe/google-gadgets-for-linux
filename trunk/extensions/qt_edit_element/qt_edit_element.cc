@@ -15,13 +15,13 @@
 */
 
 #include <cmath>
-#include <QPainter>
-#include <QClipboard>
-#include <QApplication>
-#include <QKeyEvent>
-#include <QAbstractTextDocumentLayout>
-#include <QTextLine>
-#include <QTextBlock>
+#include <QtGui/QPainter>
+#include <QtGui/QClipboard>
+#include <QtGui/QApplication>
+#include <QtGui/QKeyEvent>
+#include <QtGui/QAbstractTextDocumentLayout>
+#include <QtGui/QTextLine>
+#include <QtGui/QTextBlock>
 #include <ggadget/canvas_interface.h>
 #include <ggadget/event.h>
 #include <ggadget/logger.h>

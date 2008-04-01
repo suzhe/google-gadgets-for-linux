@@ -15,9 +15,9 @@
 */
 
 #include <vector>
-#include <QCursor>
-#include <QFileDialog>
-#include <QDesktopWidget>
+#include <QtGui/QCursor>
+#include <QtGui/QFileDialog>
+#include <QtGui/QDesktopWidget>
 #include <ggadget/common.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/framework_interface.h>

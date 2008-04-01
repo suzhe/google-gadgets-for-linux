@@ -17,8 +17,8 @@
 #ifndef GGADGET_QT_QT_FONT_H__
 #define GGADGET_QT_QT_FONT_H__
 
-#include <QFont>
-#include <QString>
+#include <QtGui/QFont>
+#include <QtCore/QString>
 #include <ggadget/font_interface.h>
 
 namespace ggadget {

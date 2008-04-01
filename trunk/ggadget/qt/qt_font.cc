@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include <QFontMetrics>
+#include <QtGui/QFontMetrics>
 #include "qt_canvas.h"
 #include "qt_font.h"
 

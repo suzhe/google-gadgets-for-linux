@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <gtk/gtk.h>
 #include <locale.h>
+#include <unistd.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -90,6 +91,7 @@ static const char *g_help_string =
 
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
+
 
   double zoom = 1.0;
   int debug_mode = 0;

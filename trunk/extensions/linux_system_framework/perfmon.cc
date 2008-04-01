@@ -79,21 +79,21 @@ static double GetCurrentCpuUsage() {
   FILE* fp = fopen(kProcStatFile, "rt");
   if (!fp)
     return 0.0;
-  
+
   char line[kMaxLength];
 
   if (!fgets(line, kMaxLength, fp)) {
     fclose(fp);
-    return 0.0;  
+    return 0.0;
   }
 
   fclose(fp);
 
   size_t head_length = strlen(kCpuHeader);
 
-  if (!line || strlen(line) <= head_length)
+  if (strlen(line) <= head_length)
     return 0.0;
-  
+
   if (!GadgetStrNCmp(line, kCpuHeader, head_length)) {
     sscanf(line + head_length + 1,
            "%jd %jd %jd %jd %jd %jd %jd",
@@ -104,7 +104,7 @@ static double GetCurrentCpuUsage() {
            &current_cpu_status.iowait,
            &current_cpu_status.hardirq,
            &current_cpu_status.softirq);
-    
+
     // calculates the cpu total time
     current_cpu_status.uptime =
       current_cpu_status.user + current_cpu_status.nice +
@@ -121,7 +121,7 @@ static double GetCurrentCpuUsage() {
     // calculates percentage of cpu usage
     int64_t current_work_time = current_cpu_status.worktime
                                 - last_cpu_status.worktime;
-    
+
     int64_t current_total_time = current_cpu_status.uptime
                                  - last_cpu_status.uptime;
 

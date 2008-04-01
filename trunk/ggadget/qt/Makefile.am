@@ -19,11 +19,25 @@ if GGL_BUILD_LIBGGADGET_QT
 # Putting . into SBUDIRS list to force building current directory first.
 #SUBDIRS = . tests
 
+MOC_FILES		= qt_main_loop.moc \
+			  qt_menu.moc
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 lib_LTLIBRARIES		= libggadget-qt@GGL_EPOCH@.la
+
+noinst_HEADERS		= qt_canvas.h \
+			  qt_font.h \
+			  qt_image.h
+
+qtincludedir		= $(GGL_INCLUDE_DIR)/ggadget/qt
+qtinclude_HEADERS	= qt_gadget_widget.h \
+			  qt_graphics.h \
+			  qt_main_loop.h \
+			  qt_menu.h \
+			  qt_view_host.h \
+			  utilities.h
 
 libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  qt_menu.cc \
@@ -34,6 +48,9 @@ libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  qt_font.cc \
 			  qt_graphics.cc \
 			  qt_main_loop.cc
+
+nodist_libggadget_qt@GGL_EPOCH@_la_SOURCES = \
+			  $(MOC_FILES)
 
 libggadget_qt@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
@@ -54,9 +71,12 @@ libggadget_qt@GGL_EPOCH@_la_LDFLAGS = \
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget-qt@GGL_EPOCH@.pc
 
+BUILT_SOURCES		= $(MOC_FILES)
+CLEANFILES		= $(MOC_FILES)
+
 qt_main_loop.moc:qt_main_loop.h
-	moc $< -o $@
+	$(MOC) $< -o $@
 qt_menu.moc:qt_menu.h
-	moc $< -o $@
+	$(MOC) $< -o $@
 
 endif

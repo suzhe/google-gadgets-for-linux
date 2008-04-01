@@ -18,9 +18,9 @@
 #define GGADGET_QT_EDIT_ELEMENT_H__
 
 #include <string>
-#include <QString>
-#include <QTextDocument>
-#include <QTextCursor>
+#include <QtCore/QString>
+#include <QtGui/QTextDocument>
+#include <QtGui/QTextCursor>
 #include <ggadget/basic_element.h>
 #include <ggadget/edit_element_base.h>
 

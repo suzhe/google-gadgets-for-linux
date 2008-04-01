@@ -22,10 +22,10 @@
 #include <vector>
 #include <stack>
 #include <algorithm>
-#include <QImage>
-#include <QPainter>
-#include <QTextDocument>
-#include <QAbstractTextDocumentLayout>
+#include <QtGui/QImage>
+#include <QtGui/QPainter>
+#include <QtGui/QTextDocument>
+#include <QtGui/QAbstractTextDocumentLayout>
 
 #include <ggadget/scoped_ptr.h>
 #include <ggadget/signals.h>
