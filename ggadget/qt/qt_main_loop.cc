@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 #include <map>
-#include <QApplication>
+#include <QtGui/QApplication>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include "qt_main_loop.h"

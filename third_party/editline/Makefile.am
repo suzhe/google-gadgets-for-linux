@@ -31,4 +31,7 @@ libeditline_la_CPPFLAGS	= $(PREDEFINED_MACROS) \
 			  -DHAVE_TCGETATTR \
 			  -DANSI_ARROWS
 
-libeditline_la_CFLAGS	= $(DEFAULT_COMPILE_FLAGS) -Wno-implicit -Wno-pointer-sign
+libeditline_la_CFLAGS	= $(DEFAULT_COMPILE_FLAGS) \
+			  -Wno-implicit \
+			  -Wno-pointer-sign \
+			  -Wno-conversion

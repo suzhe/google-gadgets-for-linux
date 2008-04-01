@@ -45,7 +45,7 @@ TEST(DigestUtils, GenerateSHA1) {
 
   // FIPS 180-1 Appendix A example
   const std::string digest2("84983e441c3bd26ebaae4aa1f95129e5e54670f1");
-  char *to_hash = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+  const char *to_hash = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
   ASSERT_TRUE(GenerateSHA1(std::string(to_hash), &result));
   ASSERT_EQ(digest2, ToHexString(result));
 

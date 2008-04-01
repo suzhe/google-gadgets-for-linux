@@ -26,7 +26,6 @@ template <typename R> class Slot0;
 class BasicElement;
 class Elements;
 class ContentAreaElement;
-class DetailsView;
 class ElementFactory;
 class MenuInterface;
 class ScriptableInterface;

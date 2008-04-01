@@ -19,10 +19,10 @@
 
 #include <stack>
 
-#include <QImage>
-#include <QTextDocument>
-#include <QTextCursor>
-// #include <QGLFramebufferObject>
+#include <QtGui/QImage>
+#include <QtGui/QTextDocument>
+#include <QtGui/QTextCursor>
+// #include <QtOpenGL/QGLFramebufferObject>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/canvas_interface.h>

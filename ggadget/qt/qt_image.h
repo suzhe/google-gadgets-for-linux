@@ -17,7 +17,7 @@
 #ifndef GGADGET_QT_QT_IMAGE_H__
 #define GGADGET_QT_QT_IMAGE_H__
 
-#include <QPixmap>
+#include <QtGui/QPixmap>
 #include <ggadget/common.h>
 #include <ggadget/color.h>
 #include <ggadget/canvas_interface.h>

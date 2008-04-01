@@ -16,8 +16,8 @@
 
 #include <string>
 #include <map>
-#include <QIcon>
-#include <QFontDatabase>
+#include <QtGui/QIcon>
+#include <QtGui/QFontDatabase>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/qt/qt_view_host.h>

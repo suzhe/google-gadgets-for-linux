@@ -20,7 +20,7 @@
 
 #include <cmath>
 #include <string>
-#include <QPixmap>
+#include <QtGui/QPixmap>
 #include <ggadget/logger.h>
 #include <ggadget/color.h>
 #include "qt_graphics.h"

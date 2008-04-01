@@ -256,7 +256,7 @@ void TimeoutWatchTest(MainLoopInterface *main_loop) {
     ASSERT_GE(watch_id, 0);
   }
 
-  // Loops for kNumLoops times, each interval is 10 * kTimePiece.  
+  // Loops for kNumLoops times, each interval is 10 * kTimePiece.
   times[10] = 0;
   const int kNumLoops = 3;
   watch_id =

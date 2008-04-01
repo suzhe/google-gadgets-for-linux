@@ -16,10 +16,10 @@
 
 #include <sys/time.h>
 
-#include <QMessageBox>
-#include <QDialogButtonBox>
-#include <QVBoxLayout>
-#include <QInputDialog>
+#include <QtGui/QMessageBox>
+#include <QtGui/QDialogButtonBox>
+#include <QtGui/QVBoxLayout>
+#include <QtGui/QInputDialog>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>

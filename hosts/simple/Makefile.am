@@ -27,18 +27,14 @@ ggl_simple_SOURCES	= main.cc simple_gtk_host.cc
 
 ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
-			  @SPIDERMONKEY_CPPFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 ggl_simple_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
 ggl_simple_LDADD	= @CAIRO_LIBS@ \
 			  @GTK2_LIBS@ \
-			  @SPIDERMONKEY_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
-
-ggl_simple_LDFLAGS	= @SPIDERMONKEY_LDFLAGS@
 
 # TODO: install these files into correct path.
 all-local:

@@ -1,7 +1,7 @@
 #ifndef GGADGET_QT_QT_MAIN_LOOP_H__
 #define GGADGET_QT_QT_MAIN_LOOP_H__
-#include <QSocketNotifier>
-#include <QTimer>
+#include <QtCore/QSocketNotifier>
+#include <QtCore/QTimer>
 #include <ggadget/main_loop_interface.h>
 
 namespace ggadget {

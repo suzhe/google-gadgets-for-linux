@@ -19,6 +19,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/framework_interface.h>
 #include <ggadget/variant.h>
+#include "ggadget/native_main_loop.h"
 #include <unittest/gunit.h>
 #include "../perfmon.cc"
 
@@ -29,6 +30,8 @@ using namespace ggadget::framework::linux_system;
 static const int kInvalidWatchId = -1;
 
 static const Variant kInvalidCpuUsage(0.0);
+
+static NativeMainLoop g_main_loop;
 
 // the dummy function call lost for test
 static void MockFunctionCallSlot(const char *name, const Variant &id) {
@@ -43,6 +46,14 @@ TEST(ProcessorUsageCallBackSlot, Contructor) {
   delete slot_ptr;
 }
 
+
+// Normal test.
+TEST(Perfmon, AddCounter_Success) {
+  Perfmon perfmon;
+  int watch_id = perfmon.AddCounter(kPerfmonCpuTime,
+                                    NewSlot(MockFunctionCallSlot));
+  EXPECT_TRUE(watch_id > 0);
+}
 
 // Failure test for AddCounter when the input count path is NULL
 TEST(Perfmon, AddCounter_Failure_NullCounterPath) {
@@ -109,6 +120,7 @@ TEST(Perfmon, GetCurrentValue_Failure_InvalidCounterPath) {
 }
 
 int main() {
+  testing::ParseGUnitFlags(&argc, argv);
+  SetGlobalMainLoop(&g_main_loop);
   return RUN_ALL_TESTS();
 }
-

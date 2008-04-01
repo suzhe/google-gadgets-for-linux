@@ -103,6 +103,10 @@ AC_SUBST(GGL_EPOCH)
 GGL_BASE_DIR=google-gadgets
 AC_SUBST(GGL_BASE_DIR)
 
+# Check build and host system types
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+
 ###########################################################
 ##                      Config options.                  ##
 ###########################################################
@@ -118,6 +122,8 @@ build_gtk_system_framework=yes
 build_smjs_script_runtime=yes
 build_curl_xml_http_request=yes
 build_libxml2_xml_parser=yes
+# OS Specific conditions.
+build_linux_system_framework=no
 
 AC_ARG_ENABLE([debug],
 	      AS_HELP_STRING([--enable-debug],[enable debug]),
@@ -217,15 +223,78 @@ if test x$build_libggadget_qt != xyes; then
 fi
 
 ###########################################################
+##                      Default dirs.                    ##
+###########################################################
+GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
+GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
+GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
+GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR
+GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR
+
+AC_SUBST(GGL_MODULE_DIR)
+AC_SUBST(GGL_INCLUDE_DIR)
+AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
+AC_SUBST(GGL_LIBEXEC_DIR)
+AC_SUBST(GGL_RESOURCE_DIR)
+
+###########################################################
+##                 Default compiler options.             ##
+###########################################################
+if test x$enable_debug = xyes; then
+  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
+  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall -Wconversion"
+  DEBUG_MACROS="_DEBUG";
+else
+  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall -Wconversion"
+  DEBUG_MACROS="NDEBUG";
+fi
+
+# Enable stdc const macros by default, like INT64_C etc.
+PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
+		   -D$DEBUG_MACROS \
+		   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
+		   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
+		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
+		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
+		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
+
+case $host_os in
+  *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
+    ggl_host_type=windows
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
+    ;;
+  *darwin* )
+    ggl_host_type=macosx
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
+    ;;
+  *linux* )
+    ggl_host_type=linux
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
+    build_linux_system_framework=yes
+    ;;
+  *solaris* )
+    ggl_host_type=solaris
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
+    ;;
+  * )
+    ggl_host_type=unknown
+    ;;
+esac
+
+AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
+AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])
+AM_CONDITIONAL([GGL_HOST_LINUX], [test x$ggl_host_type = xlinux])
+AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
+
+AC_SUBST(PREDEFINED_MACROS)
+AC_SUBST(DEFAULT_COMPILE_FLAGS)
+
+###########################################################
 ##                  Start Configuration.                 ##
 ###########################################################
 
 # Init automake stuff
 AM_INIT_AUTOMAKE
-
-# Check build and host system types
-AC_CANONICAL_BUILD
-AC_CANONICAL_HOST
 
 # Initializes libtool
 AC_LIBLTDL_INSTALLABLE
@@ -292,7 +361,25 @@ AC_C_BIGENDIAN(
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
 # Check qt4
-PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3], [has_qt4=yes], [has_qt4=no])
+if test x$ggl_host_type = xlinux; then
+  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3],
+		    [has_qt4=yes
+		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
+		     [has_qt4=no])
+elif test x$ggl_host_type = xmacosx; then
+  # There is no pkgconfig for Qt on MacOSX, just do header check.
+  AC_CHECK_HEADERS([QtCore/QObject QtGui/QApplication QtOpenGL/QGLWidget],
+		   [has_qt4=yes], [has_qt4=no])
+  if test x$has_qt4 = xyes; then
+    QT4_LIBS="-framework OpenGL -framework AGL -framework QtGui \
+              -framework Carbon -framework AppKit -framework QtCore \
+              -framework ApplicationServices -lz -lm"
+    AC_PATH_PROG([MOC], [moc])
+  fi
+else
+  AC_MSG_WARN([Qt support is not available for $ggl_host_type])
+fi
+AC_SUBST(MOC)
 
 # Check pango related libraries.
 PKG_CHECK_MODULES(PANGO, [pango  >= 1.10.0], [has_pango=yes], [has_pango=no])
@@ -354,76 +441,6 @@ fi
 
 # Check necessary functions
 AC_CHECK_FUNCS([mkdtemp tempnam])
-
-###########################################################
-##                      Default dirs.                    ##
-###########################################################
-GGL_MODULE_DIR=$libdir/$GGL_BASE_DIR/modules
-GGL_INCLUDE_DIR=$includedir/$GGL_BASE_DIR
-GGL_SYSDEPS_INCLUDE_DIR=$libdir/$GGL_BASE_DIR/include
-GGL_LIBEXEC_DIR=$libdir/$GGL_BASE_DIR
-GGL_RESOURCE_DIR=$datadir/$GGL_BASE_DIR
-
-AC_SUBST(GGL_MODULE_DIR)
-AC_SUBST(GGL_INCLUDE_DIR)
-AC_SUBST(GGL_SYSDEPS_INCLUDE_DIR)
-AC_SUBST(GGL_LIBEXEC_DIR)
-AC_SUBST(GGL_RESOURCE_DIR)
-
-###########################################################
-##                 Default compiler options.             ##
-###########################################################
-if test x$enable_debug = xyes; then
-  AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
-  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall -Wconversion"
-  DEBUG_MACROS="_DEBUG";
-else
-  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall -Wconversion"
-  DEBUG_MACROS="NDEBUG";
-fi
-
-# Enable stdc const macros by default, like INT64_C etc.
-PREDEFINED_MACROS="-D__STDC_CONSTANT_MACROS \
-		   -D$DEBUG_MACROS \
-		   -DGGL_MODULE_DIR=\\\"$GGL_MODULE_DIR\\\" \
-		   -DGGL_INCLUDE_DIR=\\\"$GGL_INCLUDE_DIR\\\" \
-		   -DGGL_SYSDEPS_INCLUDE_DIR=\\\"$GGL_SYSDEPS_INCLUDE_DIR\\\" \
-		   -DGGL_LIBEXEC_DIR=\\\"$GGL_LIBEXEC_DIR\\\" \
-		   -DGGL_RESOURCE_DIR=\\\"$GGL_RESOURCE_DIR\\\""
-
-# OS Specific conditions.
-build_linux_system_framework=no
-
-case $host_os in
-  *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
-    ggl_host_type=windows
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
-    ;;
-  *darwin* )
-    ggl_host_type=macosx
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
-    ;;
-  *linux* )
-    ggl_host_type=linux
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
-    build_linux_system_framework=yes
-    ;;
-  *solaris* )
-    ggl_host_type=solaris
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
-    ;;
-  * )
-    ggl_host_type=unknown
-    ;;
-esac
-
-AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
-AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])
-AM_CONDITIONAL([GGL_HOST_LINUX], [test x$ggl_host_type = xlinux])
-AM_CONDITIONAL([GGL_HOST_SOLARIS], [test x$ggl_host_type = xsolaris])
-
-AC_SUBST(PREDEFINED_MACROS)
-AC_SUBST(DEFAULT_COMPILE_FLAGS)
 
 ###########################################################
 ##                  Process Config options.              ##

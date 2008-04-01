@@ -18,9 +18,9 @@
 #define HOSTS_QT_HOST_H__
 
 #include <string>
-#include <QApplication>
-#include <QMenu>
-#include <QSystemTrayIcon>
+#include <QtGui/QApplication>
+#include <QtGui/QMenu>
+#include <QtGui/QSystemTrayIcon>
 #include <ggadget/host_interface.h>
 #include <ggadget/gadget_manager_interface.h>
 

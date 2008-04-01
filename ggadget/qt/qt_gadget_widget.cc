@@ -14,9 +14,9 @@
   limitations under the License.
 */
 
-#include <QUrl>
-#include <QPainter>
-#include <QMouseEvent>
+#include <QtCore/QUrl>
+#include <QtGui/QPainter>
+#include <QtGui/QMouseEvent>
 #include <ggadget/gadget.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_canvas.h>

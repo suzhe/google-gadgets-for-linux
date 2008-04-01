@@ -17,7 +17,7 @@
 #ifndef GGADGET_QT_QT_MENU_H__
 #define GGADGET_QT_QT_MENU_H__
 
-#include <QMenu>
+#include <QtGui/QMenu>
 #include <map>
 #include <string>
 #include <vector>

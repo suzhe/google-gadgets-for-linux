@@ -19,8 +19,8 @@
 
 #include <string>
 #include <vector>
-// #include <QGLWidget>
-#include <QWidget>
+// #include <QtOpenGL/QGLWidget>
+#include <QtGui/QWidget>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
 #include "qt_canvas.h"
