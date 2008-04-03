@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   ext_manager->SetReadonly();
-  hosts::qt::QtHost host(g_debug_mode, argc, argv);
+  hosts::qt::QtHost host(g_debug_mode);
 
   // Load gadget files.
   if (argc >= 2) {
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i)
       manager->NewGadgetInstanceFromFile(argv[i]);
   }
-  host.Run();
+  app.exec();
 
   return 0;
 }

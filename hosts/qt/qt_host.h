@@ -35,7 +35,7 @@ using ggadget::ViewInterface;
 
 class QtHost : public ggadget::HostInterface {
  public:
-  QtHost(int view_debug_mode, int argc, char **argv);
+  QtHost(int view_debug_mode);
   virtual ~QtHost();
   virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
   virtual void RemoveGadget(int instance_id, bool save_data);
@@ -43,10 +43,6 @@ class QtHost : public ggadget::HostInterface {
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
-
- public:
-  /** Runs the host. */
-  void Run();
 
  private:
   void SetupUI();

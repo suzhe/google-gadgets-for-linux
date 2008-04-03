@@ -34,7 +34,7 @@ using namespace ggadget::qt;
 namespace hosts {
 namespace qt {
 
-QtHost::QtHost(int view_debug_mode, int argc, char **argv)
+QtHost::QtHost(int view_debug_mode)
   : gadget_manager_(GetGadgetManager()),
     view_debug_mode_(view_debug_mode),
     gadgets_shown_(true),
@@ -59,6 +59,7 @@ ViewHostInterface *QtHost::NewViewHost(ViewHostInterface::Type type) {
       static_cast<ViewInterface::DebugMode>(view_debug_mode_));
   return host;
 }
+
 void QtHost::RemoveGadget(int instance_id, bool save_data) {
   GadgetsMap::iterator it = gadgets_.find (instance_id);
 
@@ -98,10 +99,6 @@ bool QtHost::LoadFont(const char *filename) {
 
 void QtHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
 //  ggadget::qt::ShowGadgetAboutDialog(gadget);
-}
-
-void QtHost::Run() {
-  qApp->exec();
 }
 
 void QtHost::SetupUI() {
