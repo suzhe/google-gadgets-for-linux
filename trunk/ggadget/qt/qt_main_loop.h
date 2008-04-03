@@ -7,6 +7,7 @@
 namespace ggadget {
 namespace qt {
 
+class WatchNode;
 // QtMainLoop is a qt4 implementation of MainLoopInterface interface.
 class QtMainLoop : public MainLoopInterface {
  public:
@@ -24,6 +25,8 @@ class QtMainLoop : public MainLoopInterface {
   virtual bool IsRunning() const;
   virtual uint64_t GetCurrentTime() const;
 
+  void MarkUnusedWatchNode(WatchNode *watch_node);
+
  private:
   class Impl;
   Impl *impl_;
@@ -34,7 +37,7 @@ class WatchNode : public QObject {
  public:
   MainLoopInterface::WatchType type_;
   bool calling_, removing_;
-  MainLoopInterface *main_loop_;
+  QtMainLoop *main_loop_;
   WatchCallbackInterface *callback_;
   QObject *object_;   // pointer to QSocketNotifier or QTimer
   int watch_id_;
@@ -49,7 +52,7 @@ class WatchNode : public QObject {
   }
 
   virtual ~WatchNode() {
-      if (object_) delete object_;
+    if (object_) delete object_;
   }
 
  public slots:
@@ -59,9 +62,9 @@ class WatchNode : public QObject {
       bool ret = callback_->Call(main_loop_, watch_id_);
       calling_ = false;
       if (!ret || removing_) {
-        main_loop_->RemoveWatch(watch_id_);
         QTimer* timer = reinterpret_cast<QTimer *>(object_);
         timer->stop();
+        main_loop_->MarkUnusedWatchNode(this);
       }
     }
   }
@@ -72,10 +75,10 @@ class WatchNode : public QObject {
       bool ret = callback_->Call(main_loop_, watch_id_);
       calling_ = false;
       if (!ret || removing_) {
-        main_loop_->RemoveWatch(watch_id_);
         QSocketNotifier *notifier =
             reinterpret_cast<QSocketNotifier*>(object_);
         notifier->setEnabled(false);
+        main_loop_->MarkUnusedWatchNode(this);
       }
     }
   }

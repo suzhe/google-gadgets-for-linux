@@ -34,12 +34,24 @@ namespace qt {
 
 class QtMainLoop::Impl {
  public:
-  Impl(MainLoopInterface *main_loop)
+  Impl(QtMainLoop *main_loop)
     : main_loop_(main_loop) {
+  }
+
+  virtual ~Impl() {
+    FreeUnusedWatches();
+    std::map<int, WatchNode *>::iterator iter;
+    for (iter = watches_.begin();
+         iter != watches_.end();
+         iter++) {
+      delete (*iter).second;
+    }
+    watches_.clear();
   }
 
   int AddIOWatch(MainLoopInterface::WatchType type, int fd,
                  WatchCallbackInterface *callback) {
+    FreeUnusedWatches();
     if (fd < 0 || !callback) return -1;
 
     QSocketNotifier::Type qtype;
@@ -68,6 +80,7 @@ class QtMainLoop::Impl {
   }
 
   int AddTimeoutWatch(int interval, WatchCallbackInterface *callback) {
+    FreeUnusedWatches();
     if (interval < 0 || !callback) return -1;
     QTimer *timer = new QTimer();
     timer->setInterval(interval);
@@ -94,6 +107,7 @@ class QtMainLoop::Impl {
   }
 
   void RemoveWatch(int watch_id) {
+    FreeUnusedWatches();
     WatchNode *node = GetWatchNode(watch_id);
     if (node && !node->removing_) {
       node->removing_ = true;
@@ -107,23 +121,7 @@ class QtMainLoop::Impl {
     }
   }
 
-  void Run() { }
-
-  bool DoIteration(bool may_block) { return true; }
-
-  void Quit() {
-    QApplication::exit();
-  }
-
-  bool IsRunning() {
-    return true;
-  }
-
-  uint64_t GetCurrentTime() const {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
-  }
+  std::list<WatchNode *> unused_watches_;
 
  private:
   WatchNode* GetWatchNode(int watch_id) {
@@ -144,8 +142,19 @@ class QtMainLoop::Impl {
     return i;
   }
 
+  void FreeUnusedWatches() {
+    std::list<WatchNode *>::iterator iter;
+    for (iter = unused_watches_.begin();
+         iter != unused_watches_.end();
+         iter++) {
+      watches_.erase((*iter)->watch_id_);
+      delete (*iter);
+    }
+    unused_watches_.clear();
+  }
+
   std::map<int, WatchNode*> watches_;
-  MainLoopInterface *main_loop_;
+  QtMainLoop *main_loop_;
 };
 
 QtMainLoop::QtMainLoop()
@@ -173,20 +182,30 @@ int QtMainLoop::GetWatchData(int watch_id) {
 void QtMainLoop::RemoveWatch(int watch_id) {
   impl_->RemoveWatch(watch_id);
 }
+
 void QtMainLoop::Run() {
-  impl_->Run();
 }
+
 bool QtMainLoop::DoIteration(bool may_block) {
-  return impl_->DoIteration(may_block);
+  return true;
 }
+
 void QtMainLoop::Quit() {
-  impl_->Quit();
+  QApplication::exit();
 }
+
 bool QtMainLoop::IsRunning() const {
-  return impl_->IsRunning();
+  return true;
 }
+
 uint64_t QtMainLoop::GetCurrentTime() const {
-  return impl_->GetCurrentTime();
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+}
+
+void QtMainLoop::MarkUnusedWatchNode(WatchNode *node) {
+  impl_->unused_watches_.push_back(node);
 }
 
 } // namespace qt
