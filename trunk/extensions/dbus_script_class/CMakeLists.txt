@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(dbus-1 1.0 DBUS_LIBRARIES)
+IF(GGL_BUILD_LIBGGADGET_DBUS)
+
+APPLY_CONFIG(DBUS)
 
 SET(SRCS
   dbus_script_class.cc
@@ -23,3 +25,5 @@ SET(SRCS
 ADD_MODULE(dbus-script-class ${SRCS})
 TARGET_LINK_LIBRARIES(dbus-script-class ggadget-dbus ${DBUS_LIBRARIES} ggadget)
 OUTPUT_MODULE(dbus-script-class)
+
+ENDIF(GGL_BUILD_LIBGGADGET_DBUS)

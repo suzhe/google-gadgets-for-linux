@@ -14,52 +14,8 @@
 # limitations under the License.
 #
 
-PROJECT(google_gadgets_for_linux)
-
-IF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"
-    AND EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
-  INCLUDE(Dart)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-ENDIF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"
-    AND EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
-
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 INCLUDE(Configure)
-INCLUDE(CopyUtils)
-INCLUDE(GenerateOutput)
-INCLUDE(PkgConfigEx)
-INCLUDE(TestSuite)
-INCLUDE(ZipUtils)
-INCLUDE(SysDeps)
-
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
-
-# TODO: See bug 46.
-FOREACH(JS_PACKAGE_NAME
-  firefox-js
-  xulrunner-js
-)
-  IF(NOT JS_FOUND)
-    PKGCONFIG_EX(${JS_PACKAGE_NAME}
-                 1.5
-                 JS_LIBRARIES
-                 JS_FOUND)
-  ENDIF(NOT JS_FOUND)
-ENDFOREACH(JS_PACKAGE_NAME
-  firefox-js
-  xulrunner-js
-)
-
-IF(NOT JS_FOUND)
-  MESSAGE(FATAL "js library not found!")
-ENDIF(NOT JS_FOUND)
-
-# Bug of firefox-js package. Define the following to make JS_GET_CLASS work.
-# TODO: Automatically check JS_THREADSAFE.
-# TODO: Set MOZILLA_1_8_BRANCH manually-configurable.
-ADD_DEFINITIONS(-DJS_THREADSAFE -DMOZILLA_1_8_BRANCH -DGGL_RESOURCE_DIR=\\\".\\\")
 
 ADD_SUBDIRECTORY(unittest)
 ADD_SUBDIRECTORY(ggadget)

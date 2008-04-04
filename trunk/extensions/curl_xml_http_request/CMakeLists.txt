@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(libcurl 7.16.2 LIBCURL_LIBRARIES)
+IF(GGL_BUILD_CURL_XML_HTTP_REQUEST)
 
-SET(SRCS
-  curl_xml_http_request.cc
-)
-ADD_MODULE(curl-xml-http-request ${SRCS})
+APPLY_CONFIG(LIBCURL)
+ADD_MODULE(curl-xml-http-request curl_xml_http_request.cc)
 TARGET_LINK_LIBRARIES(curl-xml-http-request ${LIBCURL_LIBRARIES} ggadget)
 OUTPUT_MODULE(curl-xml-http-request)
+
+ENDIF(GGL_BUILD_CURL_XML_HTTP_REQUEST)

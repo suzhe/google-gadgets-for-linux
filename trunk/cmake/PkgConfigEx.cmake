@@ -15,27 +15,28 @@
 #
 
 MACRO(REMOVE_TRAILING_NEWLINE _variable)
-  STRING(REPLACE "\n" "" ${_variable} ${${_variable}})
+  STRING(REPLACE "\n" "" ${_variable} "${${_variable}}")
 ENDMACRO(REMOVE_TRAILING_NEWLINE _variable)
 
 #! Use pkg-config to get information of a library package and update current
 #! cmake environment.
 #!
-#! If succeeds,
-#!   - Include directories of that package will be appended to
-#!     @c INCLUDE_DIRECTORIES;
-#!   - Other cflags will be appended to @c CMAKE_C_FLAGS and @c CMAKE_CXX_FLAGS;
-#!   - Link directories are registered with the LINK_DIRECTORIES() macro;
-#!   - Link flags (other than -l and -L flags) will be appended to
-#!     @c CMAKE_EXE_LINKER_FLAGS and @c CMAKE_SHARED_LINKER_FLAGS.
-#!
 #! @param _package the package name.
-#! @param _min_version minimum version required. 
-#! @param[out] _libraries return the list of library names.
+#! @param _min_version minimum version required.
+#! @param[out] _inc_dirs return the include directories, can be used in
+#!     @c INCLUDE_DIRECTORIES.
+#! @param[out] _definitions return the C/C++ definitions, can be used in
+#!     @c ADD_DEFINITIONS.
+#! @param[out] _link_dirs return the link directories, can be used in
+#!     @c LINK_DIRECTORIES.
+#! @param[out] _linker_flags return the link flags, can be appended to
+#!     @c CMAKE_EXE_LINKER_FLAGS or @c CMAKE_SHARED_LINKER_FLAGS variable.
+#! @param[out] _libraries return the list of library names, can be used in
+#!     @c TARGET_LINK_LIBRARIES.
 #! @paramoptional[out] _found return if the required library is found.  If this
 #!     parameter is not provided, an error message will shown and cmake quits.
-MACRO(PKGCONFIG_EX _package _min_version _libraries)
-  SET(${_libraries})
+MACRO(PKGCONFIG_EX _package _min_version
+      _inc_dirs _definitions _link_dirs _linker_flags _libraries)
   FIND_PROGRAM(PKGCONFIG_EX_executable NAMES pkg-config PATHS /usr/local/bin)
   EXEC_PROGRAM(${PKGCONFIG_EX_executable}
     ARGS ${_package} --atleast-version=${_min_version}
@@ -44,58 +45,79 @@ MACRO(PKGCONFIG_EX _package _min_version _libraries)
     # Get include directories.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
       ARGS ${_package} --cflags-only-I
-      OUTPUT_VARIABLE PKGCONFIG_EX_include_dir)
-    REMOVE_TRAILING_NEWLINE(PKGCONFIG_EX_include_dir)
-    STRING(REGEX REPLACE "^-I" ""
-      PKGCONFIG_EX_include_dir ${PKGCONFIG_EX_include_dir})
-    STRING(REGEX REPLACE " -I" ";"
-      PKGCONFIG_EX_include_dir ${PKGCONFIG_EX_include_dir})
-    INCLUDE_DIRECTORIES(${PKGCONFIG_EX_include_dir})
+      OUTPUT_VARIABLE ${_inc_dirs})
+    REMOVE_TRAILING_NEWLINE(${_inc_dirs})
+    STRING(REGEX REPLACE "^-I" "" ${_inc_dirs} "${${_inc_dirs}}")
+    STRING(REGEX REPLACE " -I" ";" ${_inc_dirs} "${${_inc_dirs}}")
 
     # Get other cflags other than -I include directories.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
       ARGS ${_package} --cflags-only-other
-      OUTPUT_VARIABLE PKGCONFIG_EX_cflags)
-    REMOVE_TRAILING_NEWLINE(PKGCONFIG_EX_cflags)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${PKGCONFIG_EX_cflags}")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PKGCONFIG_EX_cflags}")
+      OUTPUT_VARIABLE PKGCONFIG_EX_definitions)
+    REMOVE_TRAILING_NEWLINE(${_definitions})
 
     # Get library names.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
       ARGS ${_package} --libs-only-l
       OUTPUT_VARIABLE ${_libraries})
     REMOVE_TRAILING_NEWLINE(${_libraries})
-    STRING(REGEX REPLACE "^-l" "" ${_libraries} ${${_libraries}})
-    STRING(REGEX REPLACE " -l" ";" ${_libraries} ${${_libraries}})
+    STRING(REGEX REPLACE "^-l" "" ${_libraries} "${${_libraries}}")
+    STRING(REGEX REPLACE " -l" ";" ${_libraries} "${${_libraries}}")
 
     # Get -L link flags.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
       ARGS ${_package} --libs-only-L
-      OUTPUT_VARIABLE PKGCONFIG_EX_Lflags)
-    REMOVE_TRAILING_NEWLINE(PKGCONFIG_EX_Lflags)
-    STRING(REGEX REPLACE "^-L" ""
-      PKGCONFIG_EX_Lflags ${PKGCONFIG_EX_Lflags})
-    STRING(REGEX REPLACE " -L" ";"
-      PKGCONFIG_EX_Lflags ${PKGCONFIG_EX_Lflags})
-    LINK_DIRECTORIES(${PKGCONFIG_EX_Lflags})
+      OUTPUT_VARIABLE ${_link_dirs})
+    REMOVE_TRAILING_NEWLINE(${_link_dirs})
+    STRING(REGEX REPLACE "^-L" "" ${_link_dirs} "${${_link_dirs}}")
+    STRING(REGEX REPLACE " -L" ";" ${_link_dirs} "${${_link_dirs}}")
 
     # Get other link flags.
     EXEC_PROGRAM(${PKGCONFIG_EX_executable}
       ARGS ${_package} --libs-only-other
-      OUTPUT_VARIABLE PKGCONFIG_EX_libs_other)
-    REMOVE_TRAILING_NEWLINE(PKGCONFIG_EX_libs_other)
-    SET(CMAKE_EXE_LINKER_FLAGS
-      "${CMAKE_EXE_LINKER_FLAGS} ${PKGCONFIG_EX_libs_other}")
-    SET(CMAKE_SHARED_LINKER_FLAGS
-      "${CMAKE_SHARED_LINKER_FLAGS} ${PKGCONFIG_EX_libs_other}")
+      OUTPUT_VARIABLE ${_linker_flags})
+    REMOVE_TRAILING_NEWLINE(${_linker_flags})
 
-    IF(${ARGC} GREATER 3)
-      SET(${ARGV3} TRUE)
-    ENDIF(${ARGC} GREATER 3)
-  ELSEIF(${ARGC} GREATER 3)
-    SET(${ARGV3} FALSE)
-  ELSE(${ARGC} GREATER 3)
+    IF(${ARGC} GREATER 7)
+      SET(${ARGV7} TRUE)
+    ENDIF(${ARGC} GREATER 7)
+  ELSEIF(${ARGC} GREATER 7)
+    SET(${ARGV7} FALSE)
+  ELSE(${ARGC} GREATER 7)
     MESSAGE(FATAL_ERROR
       "Required package ${_package} version>=${_min_version} not found")
   ENDIF(${PKGCONFIG_EX_return_value} EQUAL 0)
-ENDMACRO(PKGCONFIG_EX _package _min_version _libraries)
+ENDMACRO(PKGCONFIG_EX _package _min_version
+         _inc_dirs _definitions _link_dirs _linker_flags _libraries)
+
+#! Convenient wrapper of @c PKGCONFIG_EX that can assign to a set of variables
+#! using the following naming conventions:
+#!   - prefix_INCLUDE_DIR
+#!   - prefix_DEFINITIONS
+#!   - prefix_LINK_DIR
+#!   - prefix_LINKER_FLAGS
+#!   - prefix_LIBRARIES
+#! @param _package the package name.
+#! @param _min_version minimum version required.
+#! @param _prefix the prefix of the output variable names.
+#! @paramoptional[out] _found return if the required library is found.  If this
+#!     parameter is not provided, an error message will shown and cmake quits.
+MACRO(GET_CONFIG _package _min_version _prefix)
+  PKGCONFIG_EX(${_package} ${_min_version}
+    ${_prefix}_INCLUDE_DIR ${_prefix}_DEFINITIONS
+    ${_prefix}_LINK_DIR ${_prefix}_LINKER_FLAGS ${_prefix}_LIBRARIES
+    ${ARGV3})
+ENDMACRO(GET_CONFIG _package _min_version _prefix)
+
+#! Apply configurations found by @c GET_CONFIG to the current environment
+#! for a package. Libraries are not applied. It should be applied to specific
+#! target using the @c TARGET_LINK_LIBRARIES macro.
+MACRO(APPLY_CONFIG _prefix)
+  INCLUDE_DIRECTORIES(${${_prefix}_INCLUDE_DIR})
+  ADD_DEFINITIONS(${${_prefix}_DEFINITIONS})
+  LINK_DIRECTORIES(${${_prefix}_LINK_DIR})
+  SET(CMAKE_EXE_LINKER_FLAGS
+    "${CMAKE_EXE_LINKER_FLAGS} ${${_prefix}_LINKER_FLAGS}")
+  SET(CMAKE_SHARED_LINKER_FLAGS
+    "${CMAKE_SHARED_LINKER_FLAGS} ${${_prefix}_LINKER_FLAGS}")
+ENDMACRO(APPLY_CONFIG _prefix)

@@ -14,14 +14,14 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gtk+-2.0 2.6 GTK_LIBRARIES)
+IF(GGL_BUILD_GTK_SYSTEM_FRAMEWORK)
 
-SET(SRCS
-  gtk_system_framework.cc
-)
-ADD_MODULE(gtk-system-framework ${SRCS})
+APPLY_CONFIG(GTK2)
+ADD_MODULE(gtk-system-framework gtk_system_framework.cc)
 TARGET_LINK_LIBRARIES(gtk-system-framework
   ggadget-gtk
   ${GTK_LIBRARIES}
 )
 OUTPUT_MODULE(gtk-system-framework)
+
+ENDIF(GGL_BUILD_GTK_SYSTEM_FRAMEWORK)

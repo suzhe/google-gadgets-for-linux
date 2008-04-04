@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+IF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)
+
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
@@ -33,3 +35,5 @@ ADD_LIBRARY(ggadget-linux ${SRCS})
 ADD_MODULE(linux-system-framework linux_system_framework.cc)
 TARGET_LINK_LIBRARIES(linux-system-framework ggadget ggadget-linux)
 OUTPUT_MODULE(linux-system-framework)
+
+ENDIF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)

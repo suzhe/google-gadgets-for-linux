@@ -14,12 +14,11 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(QtCore 4.3 QTCORE_LIBRARIES)
-PKGCONFIG_EX(QtGui 4.3 QTGUI_LIBRARIES)
+IF(GGL_BUILD_LIBGGADGET_QT)
+
+APPLY_CONFIG(QT)
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
-find_package(Qt4 REQUIRED)
-include(${QT_USE_FILE})
 SET(SRCS
   qt_canvas.cc
   qt_font.cc
@@ -32,12 +31,10 @@ SET(SRCS
   utilities.cc
 )
 
-qt4_automoc(qt_menu.cc qt_main_loop.cc qt_gadget_widget.cc qt_view_host.cc)
-#ADD_SUBDIRECTORY(tests)
+QT4_AUTOMOC(qt_menu.cc qt_main_loop.cc qt_gadget_widget.cc qt_view_host.cc)
 
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
-TARGET_LINK_LIBRARIES(ggadget-qt
-  ${QTCORE_LIBRARIES}
-  ${QTGUI_LIBRARIES}
-)
+TARGET_LINK_LIBRARIES(ggadget-qt ${QT_LIBRARIES})
 OUTPUT_LIBRARY(ggadget-qt)
+
+ENDIF(GGL_BUILD_LIBGGADGET_QT)

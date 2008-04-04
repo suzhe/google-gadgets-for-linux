@@ -398,10 +398,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     IOWriteWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      this_p_->OnIOReady(main_loop->GetWatchData(watch_id), CURL_POLL_OUT);
       // Because a socket may be always writable, don't continuously watch
       // for write to avoid main loop busy.
       this_p_->socket_write_watch_ = 0;
+      this_p_->OnIOReady(main_loop->GetWatchData(watch_id), CURL_POLL_OUT);
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
@@ -417,8 +417,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     TimeoutWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      this_p_->OnIOReady(CURL_SOCKET_TIMEOUT, 0);
       this_p_->timeout_watch_ = 0;
+      this_p_->OnIOReady(CURL_SOCKET_TIMEOUT, 0);
       return false;
     }
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
