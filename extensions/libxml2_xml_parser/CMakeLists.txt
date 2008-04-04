@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(libxml-2.0 2.6.0 LIBXML2_LIBRARIES)
+IF(GGL_BUILD_LIBXML2_XML_PARSER)
 
-SET(SRCS
-  libxml2_xml_parser.cc
-)
-ADD_MODULE(libxml2-xml-parser ${SRCS})
+APPLY_CONFIG(LIBXML2)
+ADD_MODULE(libxml2-xml-parser libxml2_xml_parser.cc)
 TARGET_LINK_LIBRARIES(libxml2-xml-parser ${LIBXML2_LIBRARIES} ggadget)
 OUTPUT_MODULE(libxml2-xml-parser)
+
+ENDIF(GGL_BUILD_LIBXML2_XML_PARSER)

@@ -14,7 +14,11 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gtk+-2.0 2.8 GTK_LIBRARIES)
+IF(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT)
+
+APPLY_CONFIG(GTK2)
+APPLY_CONFIG(SMJS)
+APPLY_CONFIG(GTKMOZEMBED)
 
 SET(LIB_SRCS browser_element.cc)
 
@@ -23,21 +27,6 @@ TARGET_LINK_LIBRARIES(gtkmoz-browser-element ggadget ${GTK_LIBRARIES})
 OUTPUT_MODULE(gtkmoz-browser-element)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
-
-FOREACH(GTKMOZEMBED_PACKAGE_NAME
-  firefox-gtkmozembed 
-  xulrunner-gtkmozembed 
-)
-  IF(NOT GTKMOZEMBED_FOUND)
-    PKGCONFIG_EX(${GTKMOZEMBED_PACKAGE_NAME}
-                 1.5
-                 GTKMOZEMBED_LIBRARIES
-                 GTKMOZEMBED_FOUND)
-  ENDIF(NOT GTKMOZEMBED_FOUND)
-ENDFOREACH(GTKMOZEMBED_PACKAGE_NAME
-  firefox-gtkmozembed 
-  xulrunner-gtkmozembed 
-)
 
 IF(NOT GTKMOZEMBED_FOUND)
   MESSAGE(FATAL "gtkmozembed library not found!")
@@ -54,7 +43,9 @@ SET(CHILD_SRCS
 ADD_EXECUTABLE(gtkmoz-browser-child ${CHILD_SRCS})
 TARGET_LINK_LIBRARIES(gtkmoz-browser-child
   ${GTKMOZEMBED_LIBRARIES}
-  ${JS_LIBRARIES}
+  ${SMJS_LIBRARIES}
   ${GTK_LIBRARIES}
 )
 OUTPUT_EXECUTABLE(gtkmoz-browser-child)
+
+ENDIF(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT)

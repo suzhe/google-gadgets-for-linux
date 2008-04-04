@@ -14,12 +14,11 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(gstreamer-0.10 0.10 GST_LIBRARIES)
-ADD_DEFINITIONS(-DGST_AUDIOCLIP)
+IF(GGL_BUILD_GST_AUDIO_FRAMEWORK)
 
-SET(SRCS
-  gst_audio_framework.cc
-)
-ADD_MODULE(gst-audio-framework ${SRCS})
-TARGET_LINK_LIBRARIES(gst-audio-framework ${GST_LIBRARIES} ggadget)
+APPLY_CONFIG(GSTREAMER)
+ADD_MODULE(gst-audio-framework gst_audio_framework.cc)
+TARGET_LINK_LIBRARIES(gst-audio-framework ${GSTREAMER_LIBRARIES} ggadget)
 OUTPUT_MODULE(gst-audio-framework)
+
+ENDIF(GGL_BUILD_GST_AUDIO_FRAMEWORK)

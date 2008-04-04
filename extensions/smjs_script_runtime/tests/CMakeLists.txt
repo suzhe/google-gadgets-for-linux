@@ -14,17 +14,14 @@
 #  limitations under the License.
 #
 
-IF(UNIX)
-  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
-ENDIF(UNIX)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
 
 SET(LIBS
-  gunit
+  gtest
   ggadget
   editline
   ggadget-smjs
-  ${JS_LIBRARIES}
+  ${SMJS_LIBRARIES}
 )
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/third_party/editline)

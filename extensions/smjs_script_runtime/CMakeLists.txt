@@ -14,11 +14,12 @@
 #  limitations under the License.
 #
 
+IF(GGL_BUILD_SMJS_SCRIPT_RUNTIME)
+
+APPLY_CONFIG(SMJS)
+
 ADD_SUBDIRECTORY(tests)
 
-IF(UNIX)
-  SET(SMJS_DEFINITIONS ${SMJS_DEFINITIONS} -DXP_UNIX)
-ENDIF(UNIX)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcheck-new")
 
 SET(SRCS
@@ -35,5 +36,10 @@ SET(SRCS
 ADD_LIBRARY(ggadget-smjs ${SRCS})
 
 ADD_MODULE(smjs-script-runtime smjs_script_runtime.cc)
-TARGET_LINK_LIBRARIES(smjs-script-runtime ${JS_LIBRARIES} ggadget ggadget-smjs)
+TARGET_LINK_LIBRARIES(smjs-script-runtime
+  ${SMJS_LIBRARIES}
+  ggadget
+  ggadget-smjs)
 OUTPUT_MODULE(smjs-script-runtime)
+
+ENDIF(GGL_BUILD_SMJS_SCRIPT_RUNTIME)

@@ -14,17 +14,15 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(QtCore 4.3 QTCORE_LIBRARIES)
-PKGCONFIG_EX(QtGui 4.3 QTGUI_LIBRARIES)
+IF(GGL_BUILD_QT_EDIT_ELEMENT)
 
-SET(SRCS
-  qt_edit_element.cc
-)
-ADD_MODULE(qt-edit-element ${SRCS})
+APPLY_CONFIG(QT)
+ADD_MODULE(qt-edit-element qt_edit_element.cc)
 TARGET_LINK_LIBRARIES(qt-edit-element
   ggadget
   ggadget-qt
-  ${QTCORE_LIBRARIES}
-  ${QTGUI_LIBRARIES}
+  ${QT_LIBRARIES}
 )
 OUTPUT_MODULE(qt-edit-element)
+
+ENDIF(GGL_BUILD_QT_EDIT_ELEMENT)

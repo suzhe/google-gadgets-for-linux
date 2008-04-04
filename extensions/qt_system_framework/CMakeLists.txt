@@ -14,17 +14,15 @@
 # limitations under the License.
 #
 
-PKGCONFIG_EX(QtCore 4.3 QTCORE_LIBRARIES)
-PKGCONFIG_EX(QtGui 4.3 QTGUI_LIBRARIES)
+IF(GGL_BUILD_QT_SYSTEM_FRAMEWORK)
 
-SET(SRCS
-  qt_system_framework.cc
-)
-ADD_MODULE(qt-system-framework ${SRCS})
+APPLY_CONFIG(QT)
+ADD_MODULE(qt-system-framework qt_system_framework.cc)
 TARGET_LINK_LIBRARIES(qt-system-framework
   ggadget
   ggadget-qt
-  ${QTCORE_LIBRARIES}
-  ${QTGUI_LIBRARIES}
+  ${QT_LIBRARIES}
 )
 OUTPUT_MODULE(qt-system-framework)
+
+ENDIF(GGL_BUILD_QT_SYSTEM_FRAMEWORK)

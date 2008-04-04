@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-# TODO: Configure zlib include dir and lib dirs.
-
+APPLY_CONFIG(ZLIB)
 LIST(REMOVE_ITEM CMAKE_C_FLAGS -Wall -Werror)
 
 SET(SRCS
