@@ -107,6 +107,12 @@ function OnOptionChanged() {
 
 /// Main view
 
+function OnOpenURL(url) {
+  // The frame containing the gadget URL will also trigger onOpenURL signal,
+  // so return false to let it be opened in place.
+  return url != GetGadgetURL();
+}
+
 function RefreshGadget() {
   if (HasUnsetUserPrefs()) {
     // Must show options dialog before showing gadget.
@@ -124,6 +130,7 @@ function RefreshGadget() {
       + GetGadgetURL() + "\" marginheight=\"0\" marginwidth=\"0\"/>"
       + "</frameset></html>";
     browser.innerText = html;
+    browser.onOpenURL = OnOpenURL;
   }
 }
 
@@ -178,10 +185,10 @@ function HasUnsetUserPrefs() {
       result = true; 
     } else { // pref is set, add to prefix
       if (preset != "") {
-	preset += "else ";
+        preset += "else ";
       }
       preset += "if(obj.name=='m_" + EncodeJSString(pref) + "'){"
-	+ "obj.value='" + EncodeJSString(value) + "';}";
+          + "obj.value='" + EncodeJSString(value) + "';}";
     }
   }
 
@@ -261,11 +268,11 @@ function ParseRawXML() {
     for (var i = 0; i < len; i++) {
       var pref = prefs[i];
       var name = g_user_pref_names[i] = 
-	kUserPrefPrefix + GetElementAttrib(pref, "name");
+          kUserPrefPrefix + GetElementAttrib(pref, "name");
       // var required = GetElementAttrib(pref, "required");      
       var def = GetElementAttrib(pref, "default_value");
       if (def != "") {
-	options.putDefaultValue(name, def);
+        options.putDefaultValue(name, def);
       }
     }
   }
