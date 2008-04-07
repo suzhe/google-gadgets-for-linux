@@ -334,38 +334,29 @@ class ViewWidgetBinder::Impl {
       cairo_set_operator(cr, op);
     }
 
-    // OK to downcast here since the canvas is created using CairoGraphics.
-    CairoCanvas *canvas = ggadget::down_cast<CairoCanvas*>(
-      impl->gfx_->NewCanvas(impl->view_->GetWidth(), impl->view_->GetHeight()));
-
+    // Let View draw on the gdk window directly.
+    // It's ok, because the View has canvas cache internally.
+    CairoCanvas *canvas = new CairoCanvas(cr, impl->gfx_->GetZoom(),
+                                          impl->view_->GetWidth(),
+                                          impl->view_->GetHeight());
     ASSERT(canvas);
 
     impl->view_->Draw(canvas);
 
-    cairo_surface_t *surface = canvas->GetSurface();
-    cairo_set_source_surface(cr, surface, 0., 0.);
-    cairo_paint(cr);
-
 #if GTK_CHECK_VERSION(2,10,0)
     // We need set input shape mask if there is no background.
     if (impl->no_background_ && impl->composited_) {
-      int canvasw = cairo_image_surface_get_width(surface);
-      int canvash = cairo_image_surface_get_height(surface);
-
       // create an identical bitmap to use as shape mask
       GdkBitmap *bitmap =
-        static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, std::min(canvasw, width),
-                                                std::min(canvash, height), 1));
+        static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, width, height, 1));
       cairo_t *mask = gdk_cairo_create(bitmap);
-      // Note: Don't set clipping here, since we're resetting shape mask
-      // for the entire widget, including areas outside the exposed region.
-      cairo_set_operator(mask, CAIRO_OPERATOR_CLEAR);
-      cairo_paint(mask);
-      cairo_set_operator(mask, CAIRO_OPERATOR_OVER);
-      cairo_set_source_surface(mask, surface, 0., 0.);
-      cairo_paint(mask);
+      CairoCanvas *mask_canvas = new CairoCanvas(mask, impl->gfx_->GetZoom(),
+                                                 impl->view_->GetWidth(),
+                                                 impl->view_->GetHeight());
+      mask_canvas->ClearCanvas();
+      impl->view_->Draw(mask_canvas);
+      mask_canvas->Destroy();
       cairo_destroy(mask);
-      mask = NULL;
 
       gtk_widget_input_shape_combine_mask(widget, bitmap, 0, 0);
       gdk_bitmap_unref(bitmap);

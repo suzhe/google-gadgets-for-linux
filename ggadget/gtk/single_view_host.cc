@@ -42,6 +42,7 @@ class SingleViewHost::Impl {
       gfx_(new CairoGraphics(zoom)),
       window_(NULL),
       widget_(NULL),
+      fixed_(NULL),
       context_menu_(NULL),
       ok_button_(NULL),
       cancel_button_(NULL),
@@ -91,6 +92,7 @@ class SingleViewHost::Impl {
       context_menu_ = NULL;
     }
     widget_ = NULL;
+    fixed_ = NULL;
     ok_button_ = NULL;
     cancel_button_ = NULL;
   }
@@ -104,11 +106,12 @@ class SingleViewHost::Impl {
     // Initialize window and widget.
     // All views must be held inside GTKFixed widgets in order to support the
     // browser element.
-    widget_ = gtk_fixed_new();
-    gtk_fixed_set_has_window(GTK_FIXED(widget_), TRUE);
+    fixed_ = gtk_fixed_new();
+    gtk_widget_show(fixed_);
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
+      // Options view needs run in a dialog with ok and cancel buttion.
       window_ = gtk_dialog_new();
-      gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window_)->vbox), widget_);
+      gtk_container_add(GTK_CONTAINER(GTK_DIALOG(window_)->vbox), fixed_);
       cancel_button_ = gtk_dialog_add_button(GTK_DIALOG(window_),
                                              GTK_STOCK_CANCEL,
                                              GTK_RESPONSE_CANCEL);
@@ -118,23 +121,22 @@ class SingleViewHost::Impl {
       gtk_dialog_set_default_response(GTK_DIALOG(window_), GTK_RESPONSE_OK);
       g_signal_connect(G_OBJECT(window_), "response",
                        G_CALLBACK(DialogResponseHandler), this);
-      gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
-    } else if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
+      gtk_fixed_set_has_window(GTK_FIXED(fixed_), TRUE);
+      widget_ = fixed_;
+    } else {
+      // details and main view only need a toplevel window.
       // TODO: buttons of details view shall be provided by view decorator.
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-      gtk_container_add(GTK_CONTAINER(window_), widget_);
-      gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
-    } else {
-      window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-      gtk_container_add(GTK_CONTAINER(window_), widget_);
-      gtk_container_set_border_width(GTK_CONTAINER(window_), 0);
-      // Only main view may have transparent background.
-      no_background = true;
-      DisableWidgetBackground(window_);
-      gtk_widget_set_double_buffered(window_, FALSE);
-      gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
+      gtk_container_add(GTK_CONTAINER(window_), fixed_);
+      if (type_ == ViewHostInterface::VIEW_HOST_MAIN) {
+        // Only main view may have transparent background.
+        no_background = true;
+        DisableWidgetBackground(window_);
+        if (!decorated_)
+          gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
+      }
+      widget_ = window_;
     }
-    gtk_widget_show(widget_);
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
 
@@ -146,7 +148,12 @@ class SingleViewHost::Impl {
                      G_CALLBACK(WindowHideHandler), this);
     g_signal_connect(G_OBJECT(window_), "configure-event",
                      G_CALLBACK(ConfigureHandler), this);
+    g_signal_connect(G_OBJECT(fixed_), "size-request",
+                     G_CALLBACK(FixedSizeRequestHandler), this);
 
+    // For details and main view, the view is bound to the toplevel window
+    // instead of the GtkFixed widget, to get better performance and make the
+    // input event mask effective.
     binder_ = new ViewWidgetBinder(gfx_, view_, owner_, widget_, no_background);
   }
 
@@ -190,7 +197,6 @@ class SingleViewHost::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->AdjustWindowSize();
     impl->adjust_window_size_source_ = 0;
-    gtk_widget_queue_draw(impl->widget_);
     return FALSE;
   }
 
@@ -363,11 +369,9 @@ class SingleViewHost::Impl {
         default: gtk_button = 3;
       }
 
-      // FIXME: Don't know why using the real button number doesn't work for
-      // submenu items.
       gtk_menu_popup(GTK_MENU(context_menu_),
                      NULL, NULL, NULL, NULL,
-                     /*gtk_button*/ 0, gtk_get_current_event_time());
+                     gtk_button, gtk_get_current_event_time());
       return true;
     }
     return false;
@@ -473,6 +477,14 @@ class SingleViewHost::Impl {
     impl->CloseView();
   }
 
+  static void FixedSizeRequestHandler(GtkWidget *widget,
+                                      GtkRequisition *requisition,
+                                      gpointer user_data) {
+    // To make sure that user can resize the toplevel window freely.
+    requisition->width = 1;
+    requisition->height = 1;
+  }
+
   ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
@@ -480,6 +492,7 @@ class SingleViewHost::Impl {
 
   GtkWidget *window_;
   GtkWidget *widget_;
+  GtkWidget *fixed_;
   GtkWidget *context_menu_;
 
   // For options view.
@@ -537,7 +550,7 @@ const GraphicsInterface *SingleViewHost::GetGraphics() const {
 }
 
 void *SingleViewHost::GetNativeWidget() const {
-  return impl_->widget_;
+  return impl_->fixed_;
 }
 
 void SingleViewHost::ViewCoordToNativeWidgetCoord(

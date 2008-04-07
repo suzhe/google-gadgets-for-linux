@@ -18,7 +18,7 @@
 #define GGADGET_QT_UTILITIES_H__
 
 #include <string>
-#include <QCursor>
+#include <QtGui/QCursor>
 
 namespace ggadget {
 
