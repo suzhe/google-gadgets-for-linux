@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<view width="300" height="250" resizable="true" onopen="onopen()">
+<view width="300" height="250" resizable="true" onopen="onopen()"
+  onsize="onsize()">
   <script>
 <!--
 function onopen() {
@@ -18,7 +19,13 @@ function onopen() {
     external[name].apply(null, args);
   };
 }
+function onsize() {
+  browser.width = view.width - 2;
+  browser.height = view.height - 2;
+}
 -->
   </script>
-  <_browser name="browser" width="100%" height="100%"/>
+  <!-- a background acts as input shape mask. -->
+  <div width="100%" height="100%" background="#FFFFFF"/>
+  <_browser name="browser" x="1" y="1" width="298" height="248"/>
 </view>

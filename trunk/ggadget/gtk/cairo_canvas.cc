@@ -104,6 +104,12 @@ class CairoCanvas::Impl {
     cairo_scale(cr_, zoom, zoom);
     cairo_new_path(cr_);
     cairo_save(cr_);
+
+    // Verify the surface format.
+    // For non-image surfaces, always assume ARGB32 format.
+    cairo_surface_t *surface = GetSurface();
+    if (cairo_surface_get_type(surface) == CAIRO_SURFACE_TYPE_IMAGE)
+      format_ = cairo_image_surface_get_format(surface);
   }
 
   ~Impl() {
@@ -858,11 +864,19 @@ cairo_t *CairoCanvas::GetContext() const {
 
 void CairoCanvas::MultiplyColor(const Color &color) {
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
+  // Do nothing for white color.
+  if (color == Color::kWhite)
+    return;
+
   cairo_surface_t *surface = impl_->GetSurface();
 
-  // Color multiply can only be done on ARGB32 surface.
-  if (color != Color::kWhite && surface &&
-      impl_->format_ == CAIRO_FORMAT_ARGB32) {
+  // Only support Image surface for now.
+  if (!surface || cairo_surface_get_type(surface) != CAIRO_SURFACE_TYPE_IMAGE)
+    return;
+
+  cairo_format_t format = cairo_image_surface_get_format(surface);
+  // Color multiply can only be done on ARGB32 or RGB24 surface.
+  if (format == CAIRO_FORMAT_ARGB32 || format == CAIRO_FORMAT_RGB24) {
     int width = cairo_image_surface_get_width(surface);
     int height = cairo_image_surface_get_height(surface);
     int stride = cairo_image_surface_get_stride(surface);
@@ -871,7 +885,7 @@ void CairoCanvas::MultiplyColor(const Color &color) {
     uint32_t gm = static_cast<uint32_t>(color.green * 256);
     uint32_t bm = static_cast<uint32_t>(color.blue * 256);
 
-    // We are sure that the surface format is CAIRO_FORMAT_ARGB32.
+    // We are sure that the surface format is CAIRO_FORMAT_ARGB32 or RGB24.
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
         uint32_t *ptr =

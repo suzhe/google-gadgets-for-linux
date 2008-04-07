@@ -47,11 +47,11 @@ LoadGadget();
 
 /// Functions Start
 
-function OnAddCustomMenuItems(menu) { 
+function OnAddCustomMenuItems(menu) {
   // Grayed if gadget hasn't been loaded yet.
   var flags = (g_user_pref_names == null) ? gddMenuItemFlagGrayed : 0;
 
-  menu.AddItem(strings.GADGET_REFRESH, flags, RefreshMenuHandler);    
+  menu.AddItem(strings.GADGET_REFRESH, flags, RefreshMenuHandler);
   menu.AddItem(strings.GADGET_ABOUTMENU, flags, AboutMenuHandler);
 }
 
@@ -64,7 +64,7 @@ function AboutMenuHandler(item_text) {
     + "p {font-size: 12px;}</style></head>"
     + kHTMLMeta
     + "<body><h5>" + g_gadget_attribs.title + "</h5><p>"
-    + g_gadget_attribs.author + "<br>" 
+    + g_gadget_attribs.author + "<br>"
     + g_gadget_attribs.author_email + "</p><p>"
     + g_gadget_attribs.description
     + "</p></body></html>";
@@ -78,7 +78,7 @@ function AboutMenuHandler(item_text) {
 // Options view
 
 function LoadOptions() {
-  // Cannot use a frame to load the content here because of security 
+  // Cannot use a frame to load the content here because of security
   // restrictions involving scripts on pages from different domains.
   g_xml_request_options = new XMLHttpRequest();
   g_xml_request_options.onreadystatechange = ProcessOptions;
@@ -90,7 +90,7 @@ function LoadOptions() {
 function ProcessOptions() {
   var readystate = g_xml_request_options.readyState;
   if (4 == readystate) { // complete
-    if (200 == g_xml_request_options.status) {     
+    if (200 == g_xml_request_options.status) {
       options.putValue(kOptionsHTML, g_xml_request_options.responseText);
     } else {
       gadget.debug.error("Error loading options HTML for gadget.");
@@ -126,7 +126,7 @@ function RefreshGadget() {
     var html = "<html>"
       + kHTMLMeta
       + "<frameset border=\"0\" cols=\"100%\" frameborder=\"no\">"
-      + "<frame height=\"100%\" width=\"100%\" scrolling=\"no\" src=\"" 
+      + "<frame height=\"100%\" width=\"100%\" scrolling=\"no\" src=\""
       + GetGadgetURL() + "\" marginheight=\"0\" marginwidth=\"0\"/>"
       + "</frameset></html>";
     browser.innerText = html;
@@ -166,7 +166,7 @@ function ProcessXML() {
       DisplayMessage(g_xml_request_gadget.status + ": " + strings.GADGET_ERROR);
     }
     g_xml_request_gadget = null;
-  } 
+  }
 }
 
 function HasUnsetUserPrefs() {
@@ -182,7 +182,7 @@ function HasUnsetUserPrefs() {
     if (!value) {
       gadget.debug.trace("Unset pref: " + pref);
       // Do not break to continue generating script fragment.
-      result = true; 
+      result = true;
     } else { // pref is set, add to prefix
       if (preset != "") {
         preset += "else ";
@@ -210,6 +210,11 @@ function ViewOnSizing() {
     }
     gadget.debug.trace("OnSizing: " + event.width + ", " + event.height);
   }
+}
+
+function ViewOnSize() {
+  browser.width = view.width - 4;
+  browser.height = view.height - 4;
 }
 
 function ShowGadget() {
@@ -250,7 +255,7 @@ function ParseRawXML() {
   g_gadget_attribs.title = GetElementAttrib(attribs, "title");
   g_gadget_attribs.description = GetElementAttrib(attribs, "description");
   g_gadget_attribs.author = GetElementAttrib(attribs, "author");
-  g_gadget_attribs.author_email 
+  g_gadget_attribs.author_email
     = GetElementAttrib(attribs, "author_email");
 
   var param = GetElementAttrib(attribs, "width");
@@ -267,9 +272,9 @@ function ParseRawXML() {
     var len  = prefs.length;
     for (var i = 0; i < len; i++) {
       var pref = prefs[i];
-      var name = g_user_pref_names[i] = 
+      var name = g_user_pref_names[i] =
           kUserPrefPrefix + GetElementAttrib(pref, "name");
-      // var required = GetElementAttrib(pref, "required");      
+      // var required = GetElementAttrib(pref, "required");
       var def = GetElementAttrib(pref, "default_value");
       if (def != "") {
         options.putDefaultValue(name, def);
@@ -306,13 +311,13 @@ function DisplayMessage(msg) {
   // Assume these messages are properly escaped.
   browser.innerText = "<html>"
     + kHTMLMeta
-    + "<body><center><h6>" 
-    + msg 
+    + "<body><center><h6>"
+    + msg
     + "</h6></center></body></html>";
 }
 
 function SetUpCommonParams() {
-  var locale = options.getValue(kLocaleOption).split('-', 2); 
+  var locale = options.getValue(kLocaleOption).split('-', 2);
   g_commonparams = "&.lang=" + locale[0] + "&.country=" + locale[1]
     + "&synd=open";
 }

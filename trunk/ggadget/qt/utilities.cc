@@ -18,7 +18,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <string>
-#include <fontconfig/fontconfig.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>

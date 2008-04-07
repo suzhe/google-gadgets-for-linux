@@ -674,6 +674,10 @@ class View::Impl {
       width_ = width;
       height_ = height;
 
+      // In some case, QueueResize() may not cause redraw,
+      // so do layout here to make sure the layout is correct.
+      children_.Layout();
+
       if (host_)
         host_->QueueResize();
 
@@ -1322,6 +1326,15 @@ ScriptableEvent *View::GetEvent() const {
 
 void View::EnableEvents(bool enable_events) {
   impl_->events_enabled_ = enable_events;
+}
+
+void View::EnableCanvasCache(bool enable_cache) {
+  impl_->enable_cache_ = enable_cache;
+  if (impl_->canvas_cache_ && !enable_cache) {
+    impl_->canvas_cache_->Destroy();
+    impl_->canvas_cache_ = NULL;
+    QueueDraw();
+  }
 }
 
 ElementFactory *View::GetElementFactory() const {
