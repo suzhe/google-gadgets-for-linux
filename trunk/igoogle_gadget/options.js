@@ -48,8 +48,8 @@ function OnOK() {
     for (var i = 0; i < g_user_prefs.length; i += 2) {
       var name = g_user_prefs[i];
       if (name) {
-	var value = g_user_prefs[i + 1];
-	options.putValue(name, value);
+        var value = g_user_prefs[i + 1];
+        options.putValue(name, value);
       }
     }
 

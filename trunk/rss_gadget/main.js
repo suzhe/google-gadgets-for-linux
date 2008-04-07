@@ -132,19 +132,19 @@ function BuildAtomDoc(xml) {
       // description
       var desc = GetElementText("summary", item_elem);
       if (0 == desc.length) {
-	desc = GetElementText("content", item_elem);
+        desc = GetElementText("content", item_elem);
       }
       item.description = desc;
 
       var date = GetElementText("modified", item_elem);
       if (0 == date.length) {
-	date = GetElementText("updated", item_elem);
+        date = GetElementText("updated", item_elem);
       }
       if (0 == date.length) {
-	date = GetElementText("created", item_elem);
+        date = GetElementText("created", item_elem);
       }
       if (0 == date.length) {
-	date = GetElementText("published", item_elem);
+        date = GetElementText("published", item_elem);
       }
       item.date = ParseISO8601Date(date); 
 
@@ -315,7 +315,7 @@ function DisplayFeedItems() {
       c_item.open_command = item.url;
 
       if (!item.is_read) {
-	c_item.flags |= gddContentItemFlagHighlighted;
+        c_item.flags |= gddContentItemFlagHighlighted;
       }
 
       c_item.time_created = item.date;// getvardate?
@@ -328,8 +328,8 @@ function DisplayFeedItems() {
 
       var options = gddItemDisplayInSidebar;
       if (item.is_new) {
-	options |= gddItemDisplayAsNotification;
-	c_item.flags = gddContentItemFlagHighlighted;
+        options |= gddItemDisplayAsNotification;
+        c_item.flags = gddContentItemFlagHighlighted;
       }
       contents.addContentItem(c_item, options);
     }

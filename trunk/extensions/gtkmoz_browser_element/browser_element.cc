@@ -202,9 +202,15 @@ class BrowserElement::Impl {
       if (params.size() != 3) {
         LOG("%s feedback needs 3 parameters, but %zd is given",
             kOpenURLFeedback, params.size());
+      } else {
+        if (!open_url_signal_.HasActiveConnections() ||
+            open_url_signal_(params[2])) {
+          owner_->GetView()->OpenURL(params[2]);
+          result = '1';
+        } else {
+          result = '0';
+        }
       }
-      open_url_signal_(params[2]);
-      result += open_url_signal_.HasActiveConnections() ? '1' : '0';
     } else {
       LOG("Unknown feedback: %s", type);
     }
@@ -493,7 +499,7 @@ class BrowserElement::Impl {
   Signal1<JSONString, JSONString> get_property_signal_;
   Signal2<void, JSONString, JSONString> set_property_signal_;
   Signal2<JSONString, JSONString, ScriptableArray *> callback_signal_;
-  Signal1<void, const std::string &> open_url_signal_;
+  Signal1<bool, const std::string &> open_url_signal_;
 };
 
 BrowserElement::Impl::BrowserController *

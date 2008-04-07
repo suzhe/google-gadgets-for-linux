@@ -17,9 +17,6 @@ function onopen() {
   browser.onCallback = function(name, args) {
     external[name].apply(null, args);
   };
-  browser.onOpenURL = function(url) {
-    view.openURL(url);
-  };
 }
 -->
   </script>
