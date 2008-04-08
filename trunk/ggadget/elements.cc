@@ -80,6 +80,26 @@ class Elements::Impl {
     return e;
   }
 
+  bool InsertElementAtIndex(BasicElement *elem, int index) {
+    ASSERT(elem);
+
+    if (index < -1 || index > static_cast<int>(children_.size())) {
+      return false;
+    }
+
+    if (view_->OnElementAdd(elem)) {
+      if (index == -1) {
+        children_.push_back(elem);
+      } else {
+        children_.insert(children_.begin() + index, elem);
+      }  
+    } else {
+      return false;
+    }
+
+    return true;
+  }
+
   bool RemoveElement(BasicElement *element) {
     Children::iterator ite = std::find(children_.begin(), children_.end(),
                                        element);
@@ -405,6 +425,10 @@ BasicElement *Elements::InsertElement(const char *tag_name,
                                           const BasicElement *before,
                                           const char *name) {
   return impl_->InsertElement(tag_name, before, name);
+}
+
+bool Elements::InsertElementAtIndex(BasicElement *elem, int index) {
+  return impl_->InsertElementAtIndex(elem, index);
 }
 
 BasicElement *Elements::AppendElementFromXML(const std::string &xml) {

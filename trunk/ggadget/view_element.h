@@ -29,16 +29,23 @@ class ViewElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x3be02fb3f45b405b, BasicElement);
 
-  ViewElement(BasicElement *parent, View *child_view, View *parent_view);
+  ViewElement(BasicElement *parent, View *parent_view,
+              ViewHostInterface *child_view_host,
+              View *child_view);
   virtual ~ViewElement();
 
  public:
+  void SetChildView(ViewHostInterface *child_view_host, View *child_view);
+
+  void SetScale(double scale);
+
   virtual void Layout();
   virtual void MarkRedraw();
 
+  virtual void GetDefaultSize(double *width, double *height) const;
+
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
-  virtual void GetDefaultSize(double *width, double *height) const;
   virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleDragEvent(const DragEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);

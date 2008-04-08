@@ -19,6 +19,7 @@
 #include <map>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
+#include <ggadget/decorated_view_host.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
 #include <ggadget/gadget_manager_interface.h>
@@ -189,9 +190,16 @@ class SimpleGtkHost::Impl {
   }
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
+    ViewHostInterface *host = NULL;
     bool decorated = (decorated_ || type != ViewHostInterface::VIEW_HOST_MAIN);
-    SingleViewHost *host = new SingleViewHost(type, zoom_, decorated, false,
+
+    SingleViewHost *svh = new SingleViewHost(type, zoom_, decorated, false,
                   static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+
+    DecoratedViewHost *dvh  = new DecoratedViewHost(svh, true);
+    host = dvh;
+    //host = svh;
+
     return host;
   }
 

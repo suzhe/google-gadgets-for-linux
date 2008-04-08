@@ -101,6 +101,15 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                               const char *name);
 
   /**
+   * Inserts a BasicElement at the specified index. If -1 is given as index, 
+   * then the element is inserted at the end.
+   * @param elem The element to insert.
+   * @param index The index of the element after insertion. 
+   * @return true on success, false on failure.
+   */
+  bool InsertElementAtIndex(BasicElement *elem, int index);
+
+  /**
    * Create a new element from XML definition and add it to the end of the
    * children list.
    * @param xml the XML definition of the element.

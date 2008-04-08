@@ -150,6 +150,31 @@ const char kCheckBoxCheckedImage[] = "resource://checkbox_checked_up.png";
 const char kCheckBoxCheckedDownImage[] = "resource://checkbox_checked_down.png";
 const char kCheckBoxCheckedOverImage[] = "resource://checkbox_checked_over.png";
 
+// The following are used by the view decorator.
+const char kVDButtonBackground[] = "resource://vd_button_background.png";
+const char kVDButtonCloseNormal[] = "resource://vd_close_normal.png";
+const char kVDButtonCloseOver[] = "resource://vd_close_over.png";
+const char kVDButtonCloseDown[] = "resource://vd_close_down.png";
+const char kVDButtonMenuNormal[] = "resource://vd_menu_normal.png";
+const char kVDButtonMenuOver[] = "resource://vd_menu_over.png";
+const char kVDButtonMenuDown[] = "resource://vd_menu_down.png";
+const char kVDButtonBackNormal[] = "resource://vd_back_normal.png";
+const char kVDButtonBackOver[] = "resource://vd_back_over.png";
+const char kVDButtonBackDown[] = "resource://vd_back_down.png";
+const char kVDButtonForwardNormal[] = "resource://vd_forward_normal.png";
+const char kVDButtonForwardOver[] = "resource://vd_forward_over.png";
+const char kVDButtonForwardDown[] = "resource://vd_forward_down.png";
+const char kVDButtonExpandNormal[] = "resource://vd_expand_normal.png";
+const char kVDButtonExpandOver[] = "resource://vd_expand_over.png";
+const char kVDButtonExpandDown[] = "resource://vd_expand_down.png";
+const char kVDButtonUnexpandNormal[] = "resource://vd_unexpand_normal.png";
+const char kVDButtonUnexpandOver[] = "resource://vd_unexpand_over.png";
+const char kVDButtonUnexpandDown[] = "resource://vd_unexpand_down.png";
+
+const char kVDBorderH[] = "resource://vd_border_h.png";
+const char kVDBorderV[] = "resource://vd_border_v.png";
+const char kVDMainBackground[] = "resource://vd_main_background.png";
+
 const char kCommonJS[] = "resource://common.js";
 const char kTextDetailsView[] = "resource://text_details_view.xml";
 const char kHTMLDetailsView[] = "resource://html_details_view.xml";

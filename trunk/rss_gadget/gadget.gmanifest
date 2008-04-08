@@ -26,6 +26,6 @@
     <name>&GADGET_NAME;</name>
     <aboutText>&GADGET_ABOUT;</aboutText>
     <smallIcon>small_rss_icon.png</smallIcon>
-    <icon>small_rss_icon.png</icon>
+    <icon>large_rss_icon.png</icon>
   </about>
 </gadget>

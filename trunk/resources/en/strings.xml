@@ -36,4 +36,14 @@
 <REMOVE_CONTENT_ITEM>Remove</REMOVE_CONTENT_ITEM>
 <!-- String for the negative feedback in details view. Needs to be quite short. -->
 <DONT_SHOW_CONTENT_ITEM>Don't show me items like this</DONT_SHOW_CONTENT_ITEM>
+<!-- Decorated View toolbar back button tooltip. -->
+<VD_BACK_BUTTON_TOOLTIP>Previous</VD_BACK_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar forward button tooltip. -->
+<VD_FORWARD_BUTTON_TOOLTIP>Next</VD_FORWARD_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar toggle expanded view button tooltip. -->
+<VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP>Toggle Expanded View</VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar menu button tooltip. -->
+<VD_MENU_BUTTON_TOOLTIP>Menu</VD_MENU_BUTTON_TOOLTIP>
+<!-- Decorated View toolbar remove gadget button tooltip. -->
+<VD_CLOSE_BUTTON_TOOLTIP>Remove</VD_CLOSE_BUTTON_TOOLTIP>
 </strings>

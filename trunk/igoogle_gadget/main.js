@@ -202,11 +202,11 @@ function ViewOnSizing() {
     var w = g_gadget_attribs.width;
     var h = g_gadget_attribs.height;
     // Disallow resizing to larger than specified w, h values.
-    if (null != w && event.width > w) {
-      event.width = w;
+    if (null != w && event.width > w + 4) {
+      event.width = w + 4;
     }
-    if (null != h && event.height > h) {
-      event.height = h;
+    if (null != h && event.height > h + 4) {
+      event.height = h + 4;
     }
     gadget.debug.trace("OnSizing: " + event.width + ", " + event.height);
   }

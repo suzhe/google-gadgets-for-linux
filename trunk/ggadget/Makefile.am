@@ -46,6 +46,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  combobox_element.h \
 			  content_item.h \
 			  contentarea_element.h \
+			  decorated_view_host.h \
 			  details_view_data.h \
 			  digest_utils.h \
 			  dir_file_manager.h \
@@ -141,6 +142,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  combobox_element.cc \
 			  content_item.cc \
 			  contentarea_element.cc \
+			  decorated_view_host.cc \
 			  details_view_data.cc \
 			  digest_utils.cc \
 			  dir_file_manager.cc \
