@@ -25,6 +25,7 @@ SET(SRCS
   clip_region.cc
   color.cc
   content_item.cc
+  decorated_view_host.cc
   details_view_data.cc
   digest_utils.cc
   display_window.cc
@@ -62,7 +63,6 @@ SET(SRCS
   unicode_utils.cc
   variant.cc
   view.cc
-  #view_decorator.cc
   xml_dom.cc
   xml_http_request_factory.cc
   xml_parser.cc

@@ -105,11 +105,13 @@ class CairoCanvas::Impl {
     cairo_new_path(cr_);
     cairo_save(cr_);
 
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1,2,0)
     // Verify the surface format.
     // For non-image surfaces, always assume ARGB32 format.
     cairo_surface_t *surface = GetSurface();
     if (cairo_surface_get_type(surface) == CAIRO_SURFACE_TYPE_IMAGE)
       format_ = cairo_image_surface_get_format(surface);
+#endif
   }
 
   ~Impl() {

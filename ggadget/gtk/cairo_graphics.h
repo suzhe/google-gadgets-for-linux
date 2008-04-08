@@ -37,8 +37,6 @@ class CairoGraphics : public GraphicsInterface {
   CairoGraphics(double zoom);
   virtual ~CairoGraphics();
 
-  double GetZoom() const;
-  void SetZoom(double zoom);
   Connection *ConnectOnZoom(Slot1<void, double> *slot) const;
 
   void OnImageDelete(const std::string &tag, bool is_mask) const;
@@ -52,6 +50,11 @@ class CairoGraphics : public GraphicsInterface {
   virtual FontInterface *NewFont(const char *family, double pt_size,
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
+
+  virtual GraphicsInterface *Clone() const;
+
+  virtual void SetZoom(double zoom);
+  virtual double GetZoom() const;
 
  private:
   class Impl;
