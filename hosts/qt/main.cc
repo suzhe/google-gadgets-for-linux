@@ -42,6 +42,9 @@
 #include <ggadget/host_interface.h>
 #include <ggadget/gadget_manager_interface.h>
 #include "qt_host.h"
+#ifdef GGL_USE_X11
+#include <X11/extensions/Xrender.h>
+#endif
 
 static double g_zoom = 1.;
 static int g_debug_mode = 0;
@@ -80,6 +83,44 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
+#ifdef GGL_USE_X11
+static Display *dpy;
+static Colormap colormap = 0;
+static Visual *visual = 0;
+static void init_argb() {
+  dpy = XOpenDisplay(0); // open default display
+  if (!dpy) {
+    qWarning("Cannot connect to the X server");
+    exit(1);
+  }
+
+  int screen = DefaultScreen(dpy);
+  int eventBase, errorBase;
+
+  if (XRenderQueryExtension(dpy, &eventBase, &errorBase)) {
+    int nvi;
+    XVisualInfo templ;
+    templ.screen  = screen;
+    templ.depth   = 32;
+    templ.c_class = TrueColor;
+    XVisualInfo *xvi = XGetVisualInfo(dpy, VisualScreenMask |
+                                      VisualDepthMask |
+                                      VisualClassMask, &templ, &nvi);
+
+    for (int i = 0; i < nvi; ++i) {
+      XRenderPictFormat *format = XRenderFindVisualFormat(dpy,
+                                                          xvi[i].visual);
+      if (format->type == PictTypeDirect && format->direct.alphaMask) {
+        visual = xvi[i].visual;
+        colormap = XCreateColormap(dpy, RootWindow(dpy, screen),
+                                   visual, AllocNone);
+        break;
+      }
+    }
+  }
+}
+#endif
+
 int main(int argc, char* argv[]) {
   // set locale according to env vars
   setlocale(LC_ALL, "");
@@ -114,8 +155,13 @@ int main(int argc, char* argv[]) {
     sscanf(argv[5], "%d", &decorated);
     g_decorated = (decorated != 0);
   }
-
+#ifdef GGL_USE_X11
+  init_argb();
+  QApplication app(dpy, argc, argv,
+                   Qt::HANDLE(visual), Qt::HANDLE(colormap));
+#else
   QApplication app(argc, argv);
+#endif
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
 

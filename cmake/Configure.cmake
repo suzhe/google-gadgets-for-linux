@@ -46,6 +46,7 @@ ADD_DEFINITIONS(
   -D__STDC_CONSTANT_MACROS
   # TODO: only for Linux by now
   -DGGL_HOST_LINUX
+  -DGGL_USE_X11
   -DGGL_MODULE_DIR=\\\"../modules\\\"
   -DGGL_RESOURCE_DIR=\\\".\\\")
 
@@ -76,8 +77,6 @@ SET(GGL_BUILD_LIBGGADGET_GTK TRUE)
 SET(GGL_BUILD_LIBGGADGET_QT TRUE)
 SET(GGL_BUILD_GTKMOZ_BROWSER_ELEMENT TRUE)
 SET(GGL_BUILD_GST_AUDIO_FRAMEWORK TRUE)
-SET(GGL_BUILD_QT_SYSTEM_FRAMEWORK TRUE)
-SET(GGL_BUILD_GTK_SYSTEM_FRAMEWORK TRUE)
 SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME TRUE)
 SET(GGL_BUILD_CURL_XML_HTTP_REQUEST TRUE)
 SET(GGL_BUILD_LIBXML2_XML_PARSER TRUE)
@@ -112,7 +111,6 @@ GET_CONFIG(gtk+-2.0 2.8.0 GTK2 GTK2_FOUND)
 IF(NOT PANGO_FOUND OR NOT CAIRO_FOUND OR NOT GDK2_FOUND OR NOT GTK2_FOUND)
   SET(GGL_BUILD_LIBGGADGET_GTK FALSE)
   SET(GGL_BUILD_SIMPLE_HOST FALSE)
-  SET(GGL_BUILD_GTK_SYSTEM_FRAMEWORK FALSE)
   MESSAGE("Library cairo, pando or gtk-2.0 are not available, gtk-system-framework extension, libggadget-gtk, gtk-and simple host won't be built.")
 ENDIF(NOT PANGO_FOUND OR NOT CAIRO_FOUND OR NOT GDK2_FOUND OR NOT GTK2_FOUND)
 
@@ -123,12 +121,11 @@ FIND_PACKAGE(Qt4)
 IF(QT4_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND)
   INCLUDE(${QT_USE_FILE})
   SET(QT_LINK_DIR ${QT_LIBRARY_DIR})
-  SET(QT_LIBRARIES "${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY}")
+  SET(QT_LIBRARIES ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
 ELSE(QT4_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND)
   SET(GGL_BUILD_LIBGGADGET_QT FALSE)
   SET(GGL_BUILD_QT_HOST FALSE)
-  SET(GGL_BUILD_QT_SYSTEM_FRAMEWORK FALSE)
-  MESSAGE("Library qt-4.3 or above is not available, qt-system-framework extension, libggadget-qt and qt host won't be built.")
+  MESSAGE("Library qt-4.3 or above is not available, libggadget-qt, qt host and qt related extensions won't be built.")
 ENDIF(QT4_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND)
 
 GET_CONFIG(dbus-1 1.0 DBUS DBUS_FOUND)
@@ -173,15 +170,16 @@ Build options:
 
  Extensions:
   Build dbus-script-class       ${GGL_BUILD_LIBGGADGET_DBUS}
-  Build gtk-edit-element        ${GGL_BUILD_LIBGGADGET_GTK}
   Build gtkmoz-browser-element  ${GGL_BUILD_GTKMOZ_BROWSER_ELEMENT}
   Build gst-audio-framework     ${GGL_BUILD_GST_AUDIO_FRAMEWORK}
-  Build gtk-system-framework    ${GGL_BUILD_GTK_SYSTEM_FRAMEWORK}
-  Build qt-system-framework     ${GGL_BUILD_QT_SYSTEM_FRAMEWORK}
   Build linux-system-framework  ${GGL_BUILD_LINUX_SYSTEM_FRAMEWORK}
   Build smjs-script-runtime     ${GGL_BUILD_SMJS_SCRIPT_RUNTIME}
   Build curl-xml-http-request   ${GGL_BUILD_CURL_XML_HTTP_REQUEST}
   Build libxml2-xml-parser      ${GGL_BUILD_LIBXML2_XML_PARSER}
+  Build gtk-edit-element        ${GGL_BUILD_LIBGGADGET_GTK}
+  Build gtk-system-framework    ${GGL_BUILD_LIBGGADGET_GTK}
+  Build qt-edit-element         ${GGL_BUILD_LIBGGADGET_QT}
+  Build qt-system-framework     ${GGL_BUILD_LIBGGADGET_QT}
 
  Hosts:
   Build simple host             ${GGL_BUILD_SIMPLE_HOST}

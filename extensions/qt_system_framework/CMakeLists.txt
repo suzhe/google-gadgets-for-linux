@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-IF(GGL_BUILD_QT_SYSTEM_FRAMEWORK)
+IF(GGL_BUILD_LIBGGADGET_QT)
 
 APPLY_CONFIG(QT)
 ADD_MODULE(qt-system-framework qt_system_framework.cc)
@@ -25,4 +25,4 @@ TARGET_LINK_LIBRARIES(qt-system-framework
 )
 OUTPUT_MODULE(qt-system-framework)
 
-ENDIF(GGL_BUILD_QT_SYSTEM_FRAMEWORK)
+ENDIF(GGL_BUILD_LIBGGADGET_QT)

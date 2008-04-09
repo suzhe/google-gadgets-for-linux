@@ -63,6 +63,7 @@ class QtCanvas::Impl {
     painter_ = new QPainter(image_);
     painter_->scale(zoom_, zoom_);
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter_->setBackground(Qt::transparent);
   }
 
   Impl(const std::string &data)
@@ -82,6 +83,7 @@ class QtCanvas::Impl {
       height_ = image_->height();
       painter_ = new QPainter(image_);
       painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+      painter_->setBackground(Qt::transparent);
     } else {
       delete image_;
       image_ = NULL;
@@ -114,7 +116,7 @@ class QtCanvas::Impl {
   }
 
   bool DrawFilledRect(double x, double y, double w, double h, const Color &c) {
-    DLOG("DrawFilledRect:%p", this);
+    DLOG("DrawFilledRect:%p", owner_);
     QPainter *p = painter_;
     QColor color(c.RedInt(), c.GreenInt(), c.BlueInt());
     p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), color);
@@ -122,7 +124,7 @@ class QtCanvas::Impl {
   }
 
   bool DrawCanvas(double x, double y, const CanvasInterface *img) {
-    DLOG("DrawCanvas:%p on %p", img, this);
+    DLOG("DrawCanvas:%p on %p", img, owner_);
     QPainter *p = painter_;
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
     Impl *impl = canvas->impl_;
@@ -140,7 +142,7 @@ class QtCanvas::Impl {
 
   bool DrawFilledRectWithCanvas(double x, double y, double w, double h,
                                 const CanvasInterface *img) {
-    DLOG("DrawFilledRectWithCanvas: %p on %p", img, this);
+    DLOG("DrawFilledRectWithCanvas: %p on %p", img, owner_);
     QPainter *p = painter_;
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
     p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), *canvas->GetImage());
@@ -151,7 +153,7 @@ class QtCanvas::Impl {
                           const CanvasInterface *img,
                           double mx, double my,
                           const CanvasInterface *mask) {
-    DLOG("DrawCanvasWithMask: (%p, %p) on %p", img, mask, this);
+    DLOG("DrawCanvasWithMask: (%p, %p) on %p", img, mask, owner_);
     QPainter *p = painter_;
     const QtCanvas *s = reinterpret_cast<const QtCanvas*>(img);
     const QtCanvas *m = reinterpret_cast<const QtCanvas*>(mask);
@@ -353,16 +355,17 @@ class QtCanvas::Impl {
   QImage *image_;
   QPainter *painter_;
   QRegion *region_;
+  QtCanvas *owner_;
 };
 
 QtCanvas::QtCanvas(const QtGraphics *g, double w, double h)
-  : impl_(new Impl(g, w, h)) { }
+  : impl_(new Impl(g, w, h)) { impl_->owner_ = this; }
 
 QtCanvas::QtCanvas(double w, double h, QPainter *painter)
-  : impl_(new Impl(w, h, painter)) { }
+  : impl_(new Impl(w, h, painter)) { impl_->owner_ = this; }
 
 QtCanvas::QtCanvas(const std::string &data) :
-  impl_(new Impl(data)) { }
+  impl_(new Impl(data)) { impl_->owner_ = this; }
 
 QtCanvas::~QtCanvas() {
   delete impl_;
@@ -379,7 +382,12 @@ bool QtCanvas::ClearCanvas() {
 }
 
 bool QtCanvas::ClearRect(double x, double y, double w, double h) {
-  impl_->painter_->eraseRect(QRectF(x, y, w, h));
+  QPainter *p = impl_->painter_;
+  p->save();
+  p->setCompositionMode(QPainter::CompositionMode_Source);
+  p->eraseRect(QRectF(x, y, w, h));
+  p->restore();
+
   return true;
 }
 

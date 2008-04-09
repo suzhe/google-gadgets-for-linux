@@ -35,6 +35,7 @@ QT4_AUTOMOC(qt_menu.cc qt_main_loop.cc qt_gadget_widget.cc qt_view_host.cc)
 
 ADD_LIBRARY(ggadget-qt SHARED ${SRCS})
 TARGET_LINK_LIBRARIES(ggadget-qt ${QT_LIBRARIES})
+
 OUTPUT_LIBRARY(ggadget-qt)
 
 ENDIF(GGL_BUILD_LIBGGADGET_QT)

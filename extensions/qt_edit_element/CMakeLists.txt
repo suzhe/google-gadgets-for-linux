@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-IF(GGL_BUILD_QT_EDIT_ELEMENT)
+IF(GGL_BUILD_LIBGGADGET_QT)
 
 APPLY_CONFIG(QT)
 ADD_MODULE(qt-edit-element qt_edit_element.cc)
@@ -25,4 +25,4 @@ TARGET_LINK_LIBRARIES(qt-edit-element
 )
 OUTPUT_MODULE(qt-edit-element)
 
-ENDIF(GGL_BUILD_QT_EDIT_ELEMENT)
+ENDIF(GGL_BUILD_LIBGGADGET_QT)

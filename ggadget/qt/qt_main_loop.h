@@ -43,45 +43,14 @@ class WatchNode : public QObject {
   int watch_id_;
   int data_;      // For IO watch, it's fd, for timeout watch, it's interval.
 
-  WatchNode() {
-    calling_ = removing_ = false;
-    main_loop_ = NULL;
-    callback_ = NULL;
-    object_ = NULL;
-    watch_id_ = -1;
-  }
+  WatchNode(QtMainLoop *main_loop, MainLoopInterface::WatchType type,
+            WatchCallbackInterface *callback);
 
-  virtual ~WatchNode() {
-    if (object_) delete object_;
-  }
+  virtual ~WatchNode();
 
  public slots:
-  void OnTimeout() {
-    if (!calling_ && !removing_) {
-      calling_ = true;
-      bool ret = callback_->Call(main_loop_, watch_id_);
-      calling_ = false;
-      if (!ret || removing_) {
-        QTimer* timer = reinterpret_cast<QTimer *>(object_);
-        timer->stop();
-        main_loop_->MarkUnusedWatchNode(this);
-      }
-    }
-  }
-
-  void OnIOEvent(int fd) {
-    if (!calling_ && !removing_) {
-      calling_ = true;
-      bool ret = callback_->Call(main_loop_, watch_id_);
-      calling_ = false;
-      if (!ret || removing_) {
-        QSocketNotifier *notifier =
-            reinterpret_cast<QSocketNotifier*>(object_);
-        notifier->setEnabled(false);
-        main_loop_->MarkUnusedWatchNode(this);
-      }
-    }
-  }
+  void OnTimeout();
+  void OnIOEvent(int fd);
 };
 
 } // namespace qt

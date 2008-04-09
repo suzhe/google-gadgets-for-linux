@@ -265,16 +265,16 @@ case $host_os in
     ;;
   *darwin* )
     ggl_host_type=macosx
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1 -DGGL_USE_X11"
     ;;
   *linux* )
     ggl_host_type=linux
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1 -DGGL_USE_X11"
     build_linux_system_framework=yes
     ;;
   *solaris* )
     ggl_host_type=solaris
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1 -DGGL_USE_X11"
     ;;
   * )
     ggl_host_type=unknown
