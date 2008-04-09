@@ -17,6 +17,7 @@
 #include <sys/time.h>
 
 #include <QtGui/QCursor>
+#include <QtGui/QToolTip>
 #include <QtGui/QMessageBox>
 #include <QtGui/QDialogButtonBox>
 #include <QtGui/QVBoxLayout>
@@ -49,7 +50,10 @@ QtViewHost::QtViewHost(ViewHostInterface::Type type,
       debug_mode_(debug_mode),
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
+      composite_(false),
       qt_obj_(new QtViewHostObject(this)) {
+  if (type_ == ViewHostInterface::VIEW_HOST_MAIN)
+    composite_ = true;
 //  debug_mode_ = ViewInterface::DEBUG_ALL;
 }
 
@@ -76,7 +80,7 @@ void QtViewHost::SetView(ViewInterface *view) {
   Detach();
   if (view == NULL) return;
   view_ = view;
-  widget_ = new QGadgetWidget(view_, this, graphics_);
+  widget_ = new QGadgetWidget(view_, this, graphics_, composite_);
 }
 
 void QtViewHost::ViewCoordToNativeWidgetCoord(
@@ -113,6 +117,7 @@ void QtViewHost::SetCursor(int type) {
 }
 
 void QtViewHost::SetTooltip(const char *tooltip) {
+  QToolTip::showText(QCursor::pos(), QString::fromUtf8(tooltip));
 }
 
 bool QtViewHost::ShowView(bool modal, int flags,

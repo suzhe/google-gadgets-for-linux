@@ -27,27 +27,19 @@ namespace qt {
 
 QGadgetWidget::QGadgetWidget(ViewInterface *view,
                              ViewHostInterface *host,
-                             QtGraphics *g)
-//    : QGLWidget(QGLFormat(QGL::SampleBuffers)),
+                             QtGraphics *g,
+                             bool composite)
      : canvas_(NULL), graphics_(g), view_(view), view_host_(host),
        width_(0), height_(0),
        drag_files_(NULL),
-       zoom_(g->GetZoom()) {
+       zoom_(g->GetZoom()),
+       composite_(composite) {
   setMouseTracking(true);
   setAcceptDrops(true);
   setAttribute(Qt::WA_InputMethodEnabled);
 }
 
 void QGadgetWidget::paintEvent(QPaintEvent *event) {
-  QPainter p(this);
-  p.setRenderHint(QPainter::Antialiasing);
-  //p.setClipRect(event->rect());
-
-  p.save();
-  p.setCompositionMode(QPainter::CompositionMode_Source);
-  p.fillRect(rect(), Qt::transparent);
-  p.restore();
-
   double old_width = width_, old_height = height_;
   width_ = view_->GetWidth();
   height_ = view_->GetHeight();
@@ -58,8 +50,18 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
     setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
   }
 
+  QPainter p(this);
+  p.setRenderHint(QPainter::Antialiasing);
+  p.setClipRect(event->rect());
+
+  if (composite_) {
+    p.save();
+    p.setCompositionMode(QPainter::CompositionMode_Source);
+    p.fillRect(rect(), Qt::transparent);
+    p.restore();
+  }
+//  p.setBackground(Qt::transparent);
   QtCanvas canvas(D2I(width_ * zoom_), D2I(height_ * zoom_), &p);
-  canvas.ClearCanvas();
   view_->Draw(&canvas);
 }
 

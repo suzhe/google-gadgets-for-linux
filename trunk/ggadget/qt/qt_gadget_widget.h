@@ -31,7 +31,8 @@ namespace qt {
 class QGadgetWidget : public QWidget {
   Q_OBJECT
  public:
-  QGadgetWidget(ViewInterface* view, ViewHostInterface *host, QtGraphics *g);
+  QGadgetWidget(ViewInterface* view, ViewHostInterface *host,
+                QtGraphics *g, bool composite);
 
  signals:
   void closed();
@@ -61,6 +62,7 @@ class QGadgetWidget : public QWidget {
   std::vector<std::string> drag_urls_;
   uint64_t mouse_down_time_;
   double zoom_;
+  bool composite_;
 };
 
 

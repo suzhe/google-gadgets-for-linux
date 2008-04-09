@@ -67,12 +67,9 @@ class QtMainLoop::Impl {
     }
 
     QSocketNotifier *notifier = new QSocketNotifier(fd, qtype);
-    WatchNode *node = new WatchNode();
-    node->type_ = type;
+    WatchNode *node = new WatchNode(main_loop_, type, callback);
     node->data_ = fd;
-    node->callback_ = callback;
     node->object_ = notifier;
-    node->main_loop_ = main_loop_;
     QObject::connect(notifier, SIGNAL(activated(int)),
                      node, SLOT(OnIOEvent(int)));
     int ret = AddWatchNode(node);
@@ -84,12 +81,11 @@ class QtMainLoop::Impl {
     if (interval < 0 || !callback) return -1;
     QTimer *timer = new QTimer();
     timer->setInterval(interval);
-    WatchNode *node = new WatchNode();
-    node->type_ = MainLoopInterface::TIMEOUT_WATCH;
+    WatchNode *node = new WatchNode(main_loop_,
+                                    MainLoopInterface::TIMEOUT_WATCH,
+                                    callback);
     node->data_ = interval;
-    node->callback_ = callback;
     node->object_ = timer;
-    node->main_loop_ = main_loop_;
     QObject::connect(timer, SIGNAL(timeout(void)),
                      node, SLOT(OnTimeout(void)));
     timer->start();
@@ -206,6 +202,48 @@ uint64_t QtMainLoop::GetCurrentTime() const {
 
 void QtMainLoop::MarkUnusedWatchNode(WatchNode *node) {
   impl_->unused_watches_.push_back(node);
+}
+
+WatchNode::WatchNode(QtMainLoop *main_loop, MainLoopInterface::WatchType type,
+                     WatchCallbackInterface *callback)
+  : type_(type),
+    calling_(false),
+    removing_(false),
+    main_loop_(main_loop),
+    callback_(callback),
+    object_(NULL),
+    watch_id_(-1) {
+}
+
+WatchNode::~WatchNode() {
+    if (object_) delete object_;
+}
+
+void WatchNode::OnTimeout() {
+  if (!calling_ && !removing_) {
+    calling_ = true;
+    bool ret = callback_->Call(main_loop_, watch_id_);
+    calling_ = false;
+    if (!ret || removing_) {
+      QTimer* timer = reinterpret_cast<QTimer *>(object_);
+      timer->stop();
+      main_loop_->MarkUnusedWatchNode(this);
+    }
+  }
+}
+
+void WatchNode::OnIOEvent(int fd) {
+  if (!calling_ && !removing_) {
+    calling_ = true;
+    bool ret = callback_->Call(main_loop_, watch_id_);
+    calling_ = false;
+    if (!ret || removing_) {
+      QSocketNotifier *notifier =
+          reinterpret_cast<QSocketNotifier*>(object_);
+      notifier->setEnabled(false);
+      main_loop_->MarkUnusedWatchNode(this);
+    }
+  }
 }
 
 } // namespace qt

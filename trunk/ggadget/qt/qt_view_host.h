@@ -20,6 +20,7 @@
 #include <set>
 
 #include <QtGui/QWidget>
+#include <QtCore/QTimer>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
 #include <ggadget/qt/qt_gadget_widget.h>
@@ -29,7 +30,7 @@ namespace ggadget {
 namespace qt {
 
 class QtViewHostObject;
-class QtViewHost : public QObject, public ViewHostInterface {
+class QtViewHost : public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
              double zoom, bool decorated,
@@ -77,11 +78,10 @@ class QtViewHost : public QObject, public ViewHostInterface {
 
   static const unsigned int kShowTooltipDelay = 500;
   static const unsigned int kHideTooltipDelay = 4000;
-  std::string tooltip_;
-  int tooltip_timer_;
 
   Slot1<void, int> *feedback_handler_;
 
+  bool composite_;
   QtViewHostObject *qt_obj_;    // used for handling qt signal
 
   void Detach();

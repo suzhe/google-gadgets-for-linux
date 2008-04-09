@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-IF(GGL_BUILD_GTK_SYSTEM_FRAMEWORK)
+IF(GGL_BUILD_LIBGGADGET_GTK)
 
 APPLY_CONFIG(GTK2)
 ADD_MODULE(gtk-system-framework gtk_system_framework.cc)
@@ -24,4 +24,4 @@ TARGET_LINK_LIBRARIES(gtk-system-framework
 )
 OUTPUT_MODULE(gtk-system-framework)
 
-ENDIF(GGL_BUILD_GTK_SYSTEM_FRAMEWORK)
+ENDIF(GGL_BUILD_LIBGGADGET_GTK)
