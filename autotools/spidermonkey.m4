@@ -221,8 +221,8 @@ int main() {
   JSContext *cx;
   JSObject *obj;
   JSFunctionSpec funcs[] = {
-    { "a", f, 0, 0, 0 },
-    { "b", f, 0, 0, 0 },
+    { "a", f, 5, JSFUN_HEAVYWEIGHT, 0 },
+    { "b", f, 5, JSFUN_HEAVYWEIGHT, 0 },
     { NULL, NULL, 0, 0, 0 },
   };
 
@@ -235,7 +235,9 @@ int main() {
   // sizes of the nargs and flags fields.
   JS_DefineFunctions(cx, obj, funcs);
   jsval v;
-  if (!JS_GetProperty(cx, obj, "b", &v) || !JSVAL_IS_OBJECT(v))
+  if (!JS_GetProperty(cx, obj, "b", &v) || !JSVAL_IS_OBJECT(v) ||
+      !JS_ObjectIsFunction(cx, JSVAL_TO_OBJECT(v)) ||
+      JS_GetFunctionFlags(JS_ValueToFunction(cx, v)) != JSFUN_HEAVYWEIGHT)
     return 1;
 
   JS_DestroyContext(cx);
