@@ -44,7 +44,7 @@ MACRO(TRY_COMPILE_SMJS _test_program _definitions _link_flags)
 ENDMACRO(TRY_COMPILE_SMJS _test_program _definitions _link_flags)
 
 MACRO(TRY_RUN_SMJS _test_program _definitions _link_flags)
-  TRY_RUN(TRY_RUN_SMJS_RESULT TRY_RUN_SMJS_COMPILE_RESULT 
+  TRY_RUN(TRY_RUN_SMJS_RESULT TRY_RUN_SMJS_COMPILE_RESULT
     ${CMAKE_BINARY_DIR}/configure
     ${CMAKE_SOURCE_DIR}/cmake/${_test_program}
     CMAKE_FLAGS
