@@ -265,16 +265,16 @@ case $host_os in
     ;;
   *darwin* )
     ggl_host_type=macosx
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1 -DGGL_USE_X11"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
     ;;
   *linux* )
     ggl_host_type=linux
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1 -DGGL_USE_X11"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1 -DGGL_USE_X11=1"
     build_linux_system_framework=yes
     ;;
   *solaris* )
     ggl_host_type=solaris
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1 -DGGL_USE_X11"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1 -DGGL_USE_X11=1"
     ;;
   * )
     ggl_host_type=unknown
@@ -360,6 +360,9 @@ AC_C_BIGENDIAN(
 # Check zlib
 GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
+# Check pthread lib
+AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
+
 # Check qt4
 if test x$ggl_host_type = xlinux; then
   PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3],
@@ -381,17 +384,14 @@ else
 fi
 AC_SUBST(MOC)
 
-# Check pango related libraries.
-PKG_CHECK_MODULES(PANGO, [pango  >= 1.10.0], [has_pango=yes], [has_pango=no])
-
-# Check cairo.
-PKG_CHECK_MODULES(CAIRO, [cairo >= 1.0.0], [has_cairo=yes], [has_cairo=no])
-
-# Check gtk+-2.0 related libraries.
-PKG_CHECK_MODULES(GTK2, [gtk+-2.0 >= 2.8.0], [has_gtk2=yes], [has_gtk2=no])
-
-# Check gdk-2.0 related libraries.
-PKG_CHECK_MODULES(GDK2, [gdk-2.0 >= 2.8.0], [has_gdk2=yes], [has_gdk2=no])
+# Check gtk2 related libraries.
+PKG_CHECK_MODULES(GTK2,
+		  [cairo >= 1.0.0
+		   pango  >= 1.10.0
+		   gtk+-2.0 >= 2.8.0
+		   gdk-2.0 >= 2.8.0
+		   gthread-2.0 >= 2.8.0],
+		   [has_gtk2=yes], [has_gtk2=no])
 
 # Check gstreamer-0.10 related libraries.
 PKG_CHECK_MODULES(GSTREAMER, [gstreamer-0.10 >= 0.10.0], [has_gstreamer=yes], [has_gstreamer=no])
@@ -465,16 +465,11 @@ if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then
   build_gst_audio_framework=no
 fi
 
-if test x$has_cairo != xyes -o x$has_pango != xyes -o x$has_gdk2 != xyes; then
-  AC_MSG_WARN([Library cairo, pango or gdk-2.0 are not available, libggadget-gtk and simple host won't be built.])
-  build_libggadget_gtk=no
-  build_simple_host=no
-fi
-
 if test x$has_gtk2 != xyes; then
   AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and simple host won't be built.])
   build_simple_host=no
   build_gtk_system_framework=no
+  build_libggadget_gtk=no
 fi
 
 if test x$has_qt4 != xyes; then
@@ -564,6 +559,14 @@ fi
 if test x$default_gst_audio_sink != x; then
   AC_DEFINE_UNQUOTED([GGL_DEFAULT_GST_AUDIO_SINK], ["$default_gst_audio_sink"],
 		     [Default Gstreamer audio sink.])
+fi
+
+#pthread lib
+if test x$has_pthread = xyes; then
+  PTHREAD_LIBS="-lpthread"
+  AC_SUBST(PTHREAD_LIBS)
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_PTHREAD=1"
+  AC_SUBST(PREDEFINED_MACROS)
 fi
 
 # Clear the default CFLAGS and CXXFLAGS

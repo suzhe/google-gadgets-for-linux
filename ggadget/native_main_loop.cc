@@ -23,6 +23,10 @@
 #include <ggadget/common.h>
 #include <ggadget/native_main_loop.h>
 
+#ifdef HAVE_PTHREAD
+#include <pthread.h>
+#endif
+
 namespace ggadget {
 
 // This class implements all functionalities of class NativeMainLoop.
@@ -55,18 +59,64 @@ class NativeMainLoop::Impl {
     }
   };
 
+#ifdef HAVE_PTHREAD
+  class WakeUpWatchCallback : public WatchCallbackInterface {
+   public:
+    WakeUpWatchCallback(int fd) : fd_(fd) {}
+    virtual ~WakeUpWatchCallback() {}
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      char buf[10];
+      // Just read the data out, should be only one byte.
+      // The Call function will only be called by main loop when something
+      // has been occurred on the fd_, so read() won't be blocked. As we
+      // just want to clear the incoming buffer of fd_ here, we don't
+      // need to care about the return value.
+      read(fd_, buf, 10);
+      return true;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+
+   private:
+    int fd_;
+  };
+#endif
+
   typedef std::map<int, WatchNode> WatchMap;
 
  public:
   Impl(MainLoopInterface *main_loop)
     : main_loop_(main_loop),
+#ifdef HAVE_PTHREAD
+      main_loop_thread_(0),
+#endif
       // serial_ starts from 1, because 0 is an invalid watch id.
       serial_(1),
       depth_(0) {
+#ifdef HAVE_PTHREAD
+    VERIFY(pthread_mutex_init(&mutex_, NULL) == 0);
+    wakeup_pipe_[0] = wakeup_pipe_[1] = -1;
+    // Add watch for waking up the main loop. Only useful in multi threads
+    // environment.
+    // pipe() seldom fails. But if it fails because of too many open
+    // files, then we can't add a wake up pipe. In this case, the main loop can
+    // still work in single thread environment. So it's safe to just ignore the
+    // failure of pipe().
+    if (pipe(wakeup_pipe_) == 0) {
+      WakeUpWatchCallback *callback = new WakeUpWatchCallback(wakeup_pipe_[0]);
+      AddIOWatch(IO_READ_WATCH, wakeup_pipe_[0], callback);
+    }
+#endif
   }
 
   ~Impl() {
     RemoveAllWatches();
+#ifdef HAVE_PTHREAD
+    if (wakeup_pipe_[0] >= 0) close(wakeup_pipe_[0]);
+    if (wakeup_pipe_[1] >= 0) close(wakeup_pipe_[1]);
+    VERIFY(pthread_mutex_destroy(&mutex_) == 0);
+#endif
   }
 
   // Add an IO read or write watch for a specified file descriptor into main
@@ -80,6 +130,9 @@ class NativeMainLoop::Impl {
   int AddIOWatch(MainLoopInterface::WatchType type, int fd,
                  WatchCallbackInterface *callback) {
     if (fd < 0 || fd >= FD_SETSIZE || !callback) return -1;
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     WatchNode node;
     int watch_id = serial_;
     node.type = type;
@@ -87,6 +140,10 @@ class NativeMainLoop::Impl {
     node.callback = callback;
     watches_[watch_id] = node;
     IncreaseSerial();
+#ifdef HAVE_PTHREAD
+    WakeUpUnLocked();
+    pthread_mutex_unlock(&mutex_);
+#endif
     return watch_id;
   }
 
@@ -95,6 +152,9 @@ class NativeMainLoop::Impl {
   // This function returns an unique id of the new watch.
   int AddTimeoutWatch(int interval, WatchCallbackInterface *callback) {
     if (interval < 0 || !callback) return -1;
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     WatchNode node;
     int watch_id = serial_;
     node.type = TIMEOUT_WATCH;
@@ -103,6 +163,10 @@ class NativeMainLoop::Impl {
     node.callback = callback;
     watches_[watch_id] = node;
     IncreaseSerial();
+#ifdef HAVE_PTHREAD
+    WakeUpUnLocked();
+    pthread_mutex_unlock(&mutex_);
+#endif
     return watch_id;
   }
 
@@ -111,10 +175,16 @@ class NativeMainLoop::Impl {
   // If it returns INVALID_WATCH, then means there is no watch
   // associated to specified watch_id.
   MainLoopInterface::WatchType GetWatchType(int watch_id) {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     MainLoopInterface::WatchType type = INVALID_WATCH;
     WatchMap::iterator iter = watches_.find(watch_id);
     if (iter != watches_.end())
       type = iter->second.type;
+#ifdef HAVE_PTHREAD
+    pthread_mutex_unlock(&mutex_);
+#endif
     return type;
   }
 
@@ -123,16 +193,26 @@ class NativeMainLoop::Impl {
   // For timeout watch, it returns the interval.
   // If the watch_id is invalid, then returns -1.
   int GetWatchData(int watch_id) {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
+    int data = -1;
     WatchMap::iterator iter = watches_.find(watch_id);
     if (iter != watches_.end())
-      return iter->second.data;
-    return -1;
+      data = iter->second.data;
+#ifdef HAVE_PTHREAD
+    pthread_mutex_unlock(&mutex_);
+#endif
+    return data;
   }
 
   // Remove a watch by a specified watch_id.
   // OnRemove() method of associated watch callback object will be called
   // before removing the watch.
   void RemoveWatch(int watch_id) {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     WatchMap::iterator iter = watches_.find(watch_id);
     if (iter != watches_.end() && !iter->second.removing) {
       iter->second.removing = true;
@@ -141,15 +221,27 @@ class NativeMainLoop::Impl {
       // by DoIteration method.
       if (!iter->second.calling) {
         WatchCallbackInterface *callback = iter->second.callback;
+#ifdef HAVE_PTHREAD
+        pthread_mutex_unlock(&mutex_);
+#endif
         callback->OnRemove(main_loop_, watch_id);
+#ifdef HAVE_PTHREAD
+        pthread_mutex_lock(&mutex_);
+#endif
         // It's safe to erase the watch node here. Because the removing flag
         // has been set to true, then this callback won't be called anymore
         // in DoIteration method and it won't be removed again.
         watches_.erase(watch_id);
         // Increase serial_ here to indicate that watches_ has been changed.
         IncreaseSerial();
+#ifdef HAVE_PTHREAD
+        WakeUpUnLocked();
+#endif
       }
     }
+#ifdef HAVE_PTHREAD
+    pthread_mutex_unlock(&mutex_);
+#endif
   }
 
   // Runs a single iteration of the main loop.
@@ -164,6 +256,11 @@ class NativeMainLoop::Impl {
   // Return true if one or more watch has been dispatched during this
   // iteration.
   bool DoIteration(bool may_block) {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+    main_loop_thread_ = pthread_self();
+#endif
+
     // Record some states.
     int original_depth = depth_;
     int original_serial = serial_;
@@ -199,9 +296,18 @@ class NativeMainLoop::Impl {
       wait_tv.tv_usec = (timeout % 1000) * 1000;
     }
 
+#ifdef HAVE_PTHREAD
+    // Unlock mutex_ before selecting, so that others can call main loop
+    // methods during selecting.
+    pthread_mutex_unlock(&mutex_);
+#endif
     int result = select(max_fd + 1, &read_fds, &write_fds, NULL,
                         (timeout >= 0 ? &wait_tv : NULL));
     if (result < 0) return false;
+
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
 
     // Check and call callbacks of available events.
     now = GetCurrentTime();
@@ -229,7 +335,13 @@ class NativeMainLoop::Impl {
         // Set calling flag to prevent the watch from being removed during the
         // call.
         iter->second.calling = true;
+#ifdef HAVE_PTHREAD
+        pthread_mutex_unlock(&mutex_);
+#endif
         bool keep = callback->Call(main_loop_, watch_id);
+#ifdef HAVE_PTHREAD
+        pthread_mutex_lock(&mutex_);
+#endif
         WatchMap::iterator tmp_iter = watches_.find(watch_id);
         // The watch shouldn't be removed. Otherwise something wrong must be
         // happened.
@@ -240,7 +352,13 @@ class NativeMainLoop::Impl {
           if (!keep || tmp_iter->second.removing) {
             tmp_iter->second.removing = true;
             callback = tmp_iter->second.callback;
+#ifdef HAVE_PTHREAD
+            pthread_mutex_unlock(&mutex_);
+#endif
             callback->OnRemove(main_loop_, watch_id);
+#ifdef HAVE_PTHREAD
+            pthread_mutex_lock(&mutex_);
+#endif
             watches_.erase(watch_id);
             IncreaseSerial();
           }
@@ -253,25 +371,60 @@ class NativeMainLoop::Impl {
           break;
       }
     }
+#ifdef HAVE_PTHREAD
+        pthread_mutex_unlock(&mutex_);
+#endif
     return ret;
   }
 
   void Run() {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     ASSERT(depth_ >= 0);
+
+    // If the main loop is already running in another thread,
+    // then just return.
+    if (depth_ > 0 && pthread_equal(pthread_self(), main_loop_thread_) == 0) {
+      ASSERT_M(false, ("Main loop can't be run in more than one threads!"));
+#ifdef HAVE_PTHREAD
+      pthread_mutex_unlock(&mutex_);
+#endif
+      return;
+    }
 
     int exit_depth = depth_;
     depth_++;
+    main_loop_thread_ = pthread_self();
 
     while (depth_ != exit_depth) {
+#ifdef HAVE_PTHREAD
+      pthread_mutex_unlock(&mutex_);
+#endif
       DoIteration(true);
+#ifdef HAVE_PTHREAD
+      pthread_mutex_lock(&mutex_);
+#endif
     }
+#ifdef HAVE_PTHREAD
+    pthread_mutex_unlock(&mutex_);
+#endif
   }
 
   void Quit() {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     ASSERT(depth_ >= 0);
     if (depth_ > 0) {
+#ifdef HAVE_PTHREAD
+      WakeUpUnLocked();
+#endif
       --depth_;
     }
+#ifdef HAVE_PTHREAD
+    pthread_mutex_unlock(&mutex_);
+#endif
   }
 
   // check whether the main loop is running or not.
@@ -286,16 +439,38 @@ class NativeMainLoop::Impl {
   }
 
  private:
+  void WakeUpUnLocked() {
+    if (!IsRunning()) return;
+    // Wakeup the main loop by writing something into wakeup pipe.
+    // This function can only be called in another thread.
+    if (wakeup_pipe_[1] >= 0 &&
+        pthread_equal(pthread_self(), main_loop_thread_) == 0) {
+      write(wakeup_pipe_[1], "a", 1);
+    }
+  }
+
   void RemoveAllWatches() {
+#ifdef HAVE_PTHREAD
+    pthread_mutex_lock(&mutex_);
+#endif
     WatchMap::iterator iter = watches_.begin();
     while (iter != watches_.end()) {
       int watch_id = iter->first;
       WatchCallbackInterface *callback = iter->second.callback;
       iter->second.removing = true;
+#ifdef HAVE_PTHREAD
+      pthread_mutex_unlock(&mutex_);
+#endif
       callback->OnRemove(main_loop_, watch_id);
+#ifdef HAVE_PTHREAD
+      pthread_mutex_lock(&mutex_);
+#endif
       watches_.erase(watch_id);
       iter = watches_.begin();
     }
+#ifdef HAVE_PTHREAD
+    pthread_mutex_unlock(&mutex_);
+#endif
   }
 
   // Increase serial_ by one, taking care of overflow and overlap issue.
@@ -313,6 +488,15 @@ class NativeMainLoop::Impl {
   }
 
   MainLoopInterface *main_loop_;
+
+#ifdef HAVE_PTHREAD
+  pthread_t main_loop_thread_;
+  pthread_mutex_t mutex_;
+  // pipe fds for waking up main loop.
+  // wakeup_pipe_[0] (for reading) will be added into main loop.
+  // wakeup_pipe_[1] (for writing) will be used by WakeUp() method.
+  int wakeup_pipe_[2];
+#endif
 
   WatchMap watches_;
   int serial_;

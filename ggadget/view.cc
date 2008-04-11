@@ -713,7 +713,7 @@ class View::Impl {
     // And because the canvas cache_ is valid, just need to paint the canvas
     // cache to the dest canvas.
     if (!draw_queued_ && canvas_cache_ && !need_redraw_) {
-      DLOG("Draw from canvas cache.");
+      //DLOG("Draw from canvas cache.");
       canvas->DrawCanvas(0, 0, canvas_cache_);
       return;
     }

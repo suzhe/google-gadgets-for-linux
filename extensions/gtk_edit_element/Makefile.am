@@ -32,14 +32,10 @@ gtk_edit_element_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 gtk_edit_element_la_CPPFLAGS = \
-			  @CAIRO_CFLAGS@ \
-			  @PANGO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 gtk_edit_element_la_LIBADD = \
-			  @CAIRO_LIBS@ \
-			  @PANGO_LIBS@ \
 			  @GTK2_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
