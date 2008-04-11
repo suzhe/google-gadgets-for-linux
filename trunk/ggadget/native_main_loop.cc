@@ -383,19 +383,19 @@ class NativeMainLoop::Impl {
 #endif
     ASSERT(depth_ >= 0);
 
+#ifdef HAVE_PTHREAD
     // If the main loop is already running in another thread,
     // then just return.
     if (depth_ > 0 && pthread_equal(pthread_self(), main_loop_thread_) == 0) {
       ASSERT_M(false, ("Main loop can't be run in more than one threads!"));
-#ifdef HAVE_PTHREAD
       pthread_mutex_unlock(&mutex_);
-#endif
       return;
     }
+    main_loop_thread_ = pthread_self();
+#endif
 
     int exit_depth = depth_;
     depth_++;
-    main_loop_thread_ = pthread_self();
 
     while (depth_ != exit_depth) {
 #ifdef HAVE_PTHREAD
@@ -439,6 +439,7 @@ class NativeMainLoop::Impl {
   }
 
  private:
+#ifdef HAVE_PTHREAD
   void WakeUpUnLocked() {
     if (!IsRunning()) return;
     // Wakeup the main loop by writing something into wakeup pipe.
@@ -448,6 +449,7 @@ class NativeMainLoop::Impl {
       write(wakeup_pipe_[1], "a", 1);
     }
   }
+#endif
 
   void RemoveAllWatches() {
 #ifdef HAVE_PTHREAD

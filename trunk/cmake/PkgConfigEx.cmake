@@ -79,10 +79,10 @@ MACRO(PKGCONFIG_EX _package _min_version
     REMOVE_TRAILING_NEWLINE(${_linker_flags})
 
     IF(${ARGC} GREATER 7)
-      SET(${ARGV7} TRUE)
+      SET(${ARGV7} 1)
     ENDIF(${ARGC} GREATER 7)
   ELSEIF(${ARGC} GREATER 7)
-    SET(${ARGV7} FALSE)
+    SET(${ARGV7} 0)
   ELSE(${ARGC} GREATER 7)
     MESSAGE(FATAL_ERROR
       "Required package ${_package} version>=${_min_version} not found")

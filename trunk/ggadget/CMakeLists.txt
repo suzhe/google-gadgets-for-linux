@@ -91,9 +91,12 @@ SET(SRCS
   zip_file_manager.cc
 )
 
+APPLY_CONFIG(PTHREAD)
+
 SET(LIBS
   ltdl
   unzip
+  ${PTHREAD_LIBS}
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})
