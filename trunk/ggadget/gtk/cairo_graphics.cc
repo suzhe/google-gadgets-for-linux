@@ -73,7 +73,7 @@ CairoGraphics::~CairoGraphics() {
 
 GraphicsInterface *CairoGraphics::Clone() const {
   // Signals and ImageMaps are not cloned but zoom level is.
-  CairoGraphics *gfx = new CairoGraphics(impl_->zoom_); 
+  CairoGraphics *gfx = new CairoGraphics(impl_->zoom_);
   return gfx;
 }
 

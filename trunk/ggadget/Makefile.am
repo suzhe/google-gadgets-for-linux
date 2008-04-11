@@ -200,8 +200,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  xml_utils.cc \
 			  zip_file_manager.cc
 
-#view_decorator.cc 
-
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
 			  @LTDLINCL@ \
 			  $(PREDEFINED_MACROS)
@@ -210,6 +208,7 @@ libggadget@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget@GGL_EPOCH@_la_LIBADD = \
+			  $(PTHREAD_LIBS) \
 			  $(top_builddir)/third_party/unzip/libunzip.la
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \

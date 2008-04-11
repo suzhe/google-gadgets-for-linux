@@ -64,15 +64,11 @@ libggadget_gtk@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
-			  @CAIRO_CFLAGS@ \
-			  @PANGO_CFLAGS@ \
 			  @GTK2_CFLAGS@ \
 			  @RSVG_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 libggadget_gtk@GGL_EPOCH@_la_LIBADD = \
-			  @CAIRO_LIBS@ \
-			  @PANGO_LIBS@ \
 			  @GTK2_LIBS@ \
 			  @RSVG_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la

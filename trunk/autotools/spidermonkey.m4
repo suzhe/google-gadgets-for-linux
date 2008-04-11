@@ -192,9 +192,72 @@ AC_LINK_IFELSE([[
 
 if test "x$ggl_try_smjs_threadsafe" = "xyes"; then
   ggl_extra_smjs_cppflags="-DJS_THREADSAFE"
-  ifelse([$2], , :, [$2])
+  ggl_has_smjs=yes
 elif test "x$ggl_try_smjs_normal" = "xyes"; then
   ggl_extra_smjs_cppflags=""
+  ggl_has_smjs=yes
+else
+  ggl_has_smjs=no
+fi
+
+# test if MOZILLA_1_8_BRANCH macro is necessary.
+if test "x$ggl_has_smjs" = "xyes"; then
+CPPFLAGS="$ggl_try_smjs_save_CPPFLAGS $ggl_extra_smjs_cppflags"
+CPPFLAGS="$CPPFLAGS -DMOZILLA_1_8_BRANCH"
+AC_RUN_IFELSE([[
+// This file is used to test if MOZILLA_1_8_BRANCH should be defined to use
+// the SpiderMonkey library.
+// It will fail to execute (crash or return error code) if MOZILLA_1_8_BRANCH
+// macro is not defined but the library was compiled with the flag.
+
+#include <jsapi.h>
+
+static JSBool f(JSContext *c, JSObject *o, uintN ac, jsval *av, jsval *r) {
+  return JS_TRUE;
+}
+
+int main() {
+  JSRuntime *rt;
+  JSContext *cx;
+  JSObject *obj;
+  JSFunctionSpec funcs[] = {
+    { "a", f, 0, 0, 0 },
+    { "b", f, 0, 0, 0 },
+    { NULL, NULL, 0, 0, 0 },
+  };
+
+  rt = JS_NewRuntime(1048576);
+  cx = JS_NewContext(rt, 8192);
+  obj = JS_NewObject(cx, 0, 0, 0);
+  JS_SetGlobalObject(cx, obj);
+  // If MOZILLA_1_8_BRANCH is not properly defined, this JS_DefineFunctions
+  // may crash or define only the first function because of the different
+  // sizes of the nargs and flags fields.
+  JS_DefineFunctions(cx, obj, funcs);
+  jsval v;
+  if (!JS_GetProperty(cx, obj, "b", &v) || !JSVAL_IS_OBJECT(v))
+    return 1;
+
+  JS_DestroyContext(cx);
+  JS_DestroyRuntime(rt);
+  JS_ShutDown();
+  return 0;
+}
+]],
+[ggl_try_smjs_18_branch=yes],
+[ggl_try_smjs_18_branch=no],
+[
+  AC_MSG_WARN([Can't determine the status of MOZILLA_1_8_BRANCH
+               macro in cross compile mode.])
+  ggl_try_smjs_18_branch=no
+])
+fi
+
+if test "x$ggl_try_smjs_18_branch" = "xyes"; then
+  ggl_extra_smjs_cppflags="$ggl_extra_smjs_cppflags -DMOZILLA_1_8_BRANCH"
+fi
+
+if test "x$ggl_has_smjs" = "xyes"; then
   ifelse([$2], , :, [$2])
 else
   ifelse([$3], , :, [$3])

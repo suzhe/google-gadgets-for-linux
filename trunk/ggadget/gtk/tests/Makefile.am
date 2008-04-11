@@ -25,16 +25,12 @@ EXTRA_DIST		= $(TEST_IMAGES)
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-AM_CPPFLAGS		= @CAIRO_CFLAGS@ \
-			  @PANGO_CFLAGS@ \
-			  @GTK2_CFLAGS@ \
+AM_CPPFLAGS		= @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
-LDADD			= @CAIRO_LIBS@ \
-			  @PANGO_LIBS@ \
-			  @GTK2_LIBS@ \
+LDADD			= @GTK2_LIBS@ \
 			  $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la

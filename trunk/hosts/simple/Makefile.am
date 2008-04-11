@@ -25,14 +25,12 @@ bin_PROGRAMS		= ggl-simple
 
 ggl_simple_SOURCES	= main.cc simple_gtk_host.cc
 
-ggl_simple_CPPFLAGS 	= @CAIRO_CFLAGS@ \
-			  @GTK2_CFLAGS@ \
+ggl_simple_CPPFLAGS 	= @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
 ggl_simple_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
-ggl_simple_LDADD	= @CAIRO_LIBS@ \
-			  @GTK2_LIBS@ \
+ggl_simple_LDADD	= @GTK2_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 

@@ -30,31 +30,53 @@ RESOURCE_FILES= button_down.png \
 		html_details_view.xml \
 		messages-catalog.xml \
 		pinned.png \
+		scroll_background.png \
 		scroll_background_h.png \
+		scrollbar_d.png \
 		scrollbar_d_h.png \
+		scrollbar_grippy.png \
 		scrollbar_grippy_h.png \
+		scrollbar_o.png \
 		scrollbar_o_h.png \
+		scrollbar_u.png \
 		scrollbar_u_h.png \
+		scrolldown_d.png \
+		scrolldown_o.png \
+		scrolldown_u.png \
 		scrollleft_d.png \
 		scrollleft_o.png \
 		scrollleft_u.png \
 		scrollright_d.png \
 		scrollright_o.png \
 		scrollright_u.png \
-		scroll_background.png \
-		scrollbar_d.png \
-		scrollbar_grippy.png \
-		scrollbar_o.png \
-		scrollbar_u.png \
 		scrollup_d.png \
 		scrollup_o.png \
 		scrollup_u.png \
-		scrolldown_d.png \
-		scrolldown_o.png \
-		scrolldown_u.png \
 		text_details_view.xml \
 		unpinned.png \
 		unpinned_over.png \
+		vd_back_down.png \
+		vd_back_normal.png \
+		vd_back_over.png \
+		vd_border_h.png \
+		vd_border_v.png \
+		vd_button_background.png \
+		vd_close_down.png \
+		vd_close_normal.png \
+		vd_close_over.png \
+		vd_expand_down.png \
+		vd_expand_normal.png \
+		vd_expand_over.png \
+		vd_forward_down.png \
+		vd_forward_normal.png \
+		vd_forward_over.png \
+		vd_main_background.png \
+		vd_menu_down.png \
+		vd_menu_normal.png \
+		vd_menu_over.png \
+		vd_unexpand_down.png \
+		vd_unexpand_normal.png \
+		vd_unexpand_over.png \
 		en/strings.xml \
 		zh-CN/strings.xml
 
