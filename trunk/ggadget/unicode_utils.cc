@@ -39,11 +39,13 @@
  */
 
 #include "unicode_utils.h"
+namespace std {
+template class std::basic_string<UTF16Char>;
+template class std::basic_string<UTF32Char>;
+}
 
 namespace ggadget {
-
 typedef unsigned char UTF8Char;
-
 static const int kHalfShift = 10;
 static const UTF32Char kHalfBase = 0x0010000UL;
 static const UTF32Char kHalfMask = 0x3FFUL;
