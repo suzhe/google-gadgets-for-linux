@@ -77,7 +77,7 @@ class DBusProxyFactory::Impl {
                             bool by_owner) {
     if (!system_bus_) {
       system_bus_ = GetBus(true);
-      if (main_loop_)
+      if (main_loop_ && system_bus_)
         system_bus_closure_ = new DBusMainLoopClosure(system_bus_, main_loop_);
     }
     if (by_owner)
@@ -91,7 +91,7 @@ class DBusProxyFactory::Impl {
                              bool by_owner) {
     if (!session_bus_) {
       session_bus_ = GetBus(false);
-      if (main_loop_)
+      if (main_loop_ && session_bus_)
         session_bus_closure_ =
             new DBusMainLoopClosure(session_bus_, main_loop_);
     }
@@ -133,6 +133,7 @@ class DBusProxyFactory::Impl {
     dbus_message_append_args(message, DBUS_TYPE_STRING,
                              &name, DBUS_TYPE_INVALID);
     DBusConnection *bus = system_bus ? system_bus_ : session_bus_;
+    if (!bus) return "";
     DBusError error;
     dbus_error_init(&error);
     DBusMessage *reply = dbus_connection_send_with_reply_and_block(bus,

@@ -82,6 +82,9 @@ class CairoCanvas : public CanvasInterface {
                               double w, double h, const Color &c);
 
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img);
+  virtual bool DrawRawImage(double x, double y,
+                            const char *data, RawImageFormat format,
+                            int width, int height, int stride);
   virtual bool DrawFilledRectWithCanvas(double x, double y,
                                         double w, double h,
                                         const CanvasInterface *img);

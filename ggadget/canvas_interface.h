@@ -83,6 +83,23 @@ class CanvasInterface {
   };
 
   /**
+   * Enum used to specify pixel buffer format.
+   * RAWIMAGE_FORMAT_ARGB32:
+   * 32bit value corresponding to pixels color and transparency value(alpha
+   * channel) in ARGB colorspace. It is encoded as follows (native-endian):
+   * Lowermost 8 bits - Blue channel
+   * bits 8 to 15     - Green channel
+   * bits 16 to 23    - Red Channel
+   * bits 24 to 31    - Alpha Channel
+   * RAWIMAGE_FORMAT_RGB24:
+   * also 32bit value, same as ARGB32 except that bits 24-31 are not used.
+   */
+  enum RawImageFormat {
+    RAWIMAGE_FORMAT_ARGB32,
+    RAWIMAGE_FORMAT_RGB24,
+  };
+
+  /**
    * Frees this CanvasInterface object.
    */
   virtual void Destroy() = 0;
@@ -195,6 +212,20 @@ class CanvasInterface {
    * @param img Canvas to draw.
    */
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) = 0;
+
+  /**
+   * Draw a raw image.
+   * @param x The X-coordinate of the image's top left corner.
+   * @param y The Y-coordinate of the image's top left corner.
+   * @parma data Pixel buffer of the image.
+   * @param format The format of @a data.
+   * @param width The width of the image.
+   * @param height The height of the image.
+   * @param stride Bytes per line of the image.
+   */
+  virtual bool DrawRawImage(double x, double y,
+                            const char *data, RawImageFormat format,
+                            int width, int height, int stride) = 0;
 
   /**
    * Draw a rectangle filled with the given canvas. The source canvas will be

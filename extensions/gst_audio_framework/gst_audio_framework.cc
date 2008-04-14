@@ -85,7 +85,7 @@ class GstAudioclip : public AudioclipInterface {
 
     if (!videosink) {
       LOG("Failed to create gstreamer fakesink element.");
-      if (playbin_) gst_object_unref(GST_OBJECT(playbin_));
+      gst_object_unref(GST_OBJECT(playbin_));
       playbin_ = NULL;
       return;
     }
@@ -108,8 +108,8 @@ class GstAudioclip : public AudioclipInterface {
       return;
     }
 
-    GstElement *panorama_ = gst_element_factory_make("audiopanorama",
-                                                     "panorama");
+    panorama_ = gst_element_factory_make("audiopanorama", "panorama");
+
     // If panorama is available then construct a new compound audiosink with
     // panorama support.
     if (panorama_) {
@@ -204,8 +204,8 @@ class GstAudioclip : public AudioclipInterface {
                        static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH |
                                                  GST_SEEK_FLAG_KEY_UNIT),
                        GST_SEEK_TYPE_CUR,
-                       static_cast<gint64>(position) * GST_SECOND, 
-                       static_cast<GstSeekType>(GST_SEEK_TYPE_NONE), 
+                       static_cast<gint64>(position) * GST_SECOND,
+                       static_cast<GstSeekType>(GST_SEEK_TYPE_NONE),
                        static_cast<gint64>(0));
     }
   }
@@ -305,12 +305,20 @@ class GstAudioclip : public AudioclipInterface {
   }
 
   virtual void Stop() {
-    if (playbin_ && local_state_ != SOUND_STATE_STOPPED &&
-        local_state_ != SOUND_STATE_ERROR) {
+    if (playbin_ && local_state_ != SOUND_STATE_STOPPED) {
       // If set "NULL" state here, playbin won't produce "STATE CHANGED" message.
-      if (gst_element_set_state(playbin_, GST_STATE_READY) ==
+      if (gst_element_set_state(playbin_, GST_STATE_NULL) ==
           GST_STATE_CHANGE_FAILURE) {
         LOG("Failed to stop the audio.");
+      } else if (local_state_ != SOUND_STATE_ERROR) {
+        // If an error has ever happened, the state of gstreamer is "PAUSED",
+        // so we set it to "NULL" state above. But we don't clear the ERROR
+        // sign, let it be there until gstreamer itself changes its state.
+
+        // Playbin won't post "STATE CHANGED" message when being set to
+        // "NULL" state. We make a state-change scene manually.
+        local_state_ = SOUND_STATE_STOPPED;
+        on_state_change_signal_(local_state_);
       }
     }
   }
@@ -361,10 +369,6 @@ class GstAudioclip : public AudioclipInterface {
 
     g_error_free(gerror);
     g_free(debug);
-
-    // Playbin doesnot change the state to "NULL" or "READY" when it
-    // meets an error, we help make a state-change scene.
-    Stop();
   }
 
   void OnEnd() {

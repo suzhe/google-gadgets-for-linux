@@ -117,6 +117,7 @@ build_libggadget_gtk=yes
 build_libggadget_qt=yes
 build_gtkmoz_browser_element=yes
 build_gst_audio_framework=yes
+build_gst_mediaplayer_element=yes
 build_qt_system_framework=yes
 build_gtk_system_framework=yes
 build_smjs_script_runtime=yes
@@ -183,6 +184,12 @@ AC_ARG_ENABLE([gst-audio-framework],
 			     [don't build gst-audio-framework]),
 	      [build_gst_audio_framework=$enableval],
 	      [build_gst_audio_framework=yes])
+
+AC_ARG_ENABLE([gst-mediaplayer-element],
+	      AS_HELP_STRING([--disable-gst-mediaplayer-element],
+			     [don't build gst-mediaplayer-element]),
+	      [build_gst_mediaplayer_element=$enableval],
+	      [build_gst_mediaplayer_element=yes])
 
 AC_ARG_ENABLE([qt-system-framework],
 	      AS_HELP_STRING([--disable-qt-system-framework],
@@ -395,6 +402,7 @@ PKG_CHECK_MODULES(GTK2,
 
 # Check gstreamer-0.10 related libraries.
 PKG_CHECK_MODULES(GSTREAMER, [gstreamer-0.10 >= 0.10.0], [has_gstreamer=yes], [has_gstreamer=no])
+PKG_CHECK_MODULES(GSTREAMER_PLUGINS_BASE, [gstreamer-plugins-base-0.10 > 0.10.0], [has_gstreamer_plugins_base=yes], [has_gstreamer_plugins_base=no])
 
 # Check libcurl.
 LIBCURL_CHECK_CONFIG([yes], [7.16.0], [has_libcurl=yes], [has_libcurl=no])
@@ -461,8 +469,13 @@ if test x$has_libcurl != xyes -a x$build_curl_xml_http_request = xyes; then
 fi
 
 if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then
-  AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework extension won't be built.])
+  AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework will not be built.])
   build_gst_audio_framework=no
+fi
+
+if test x$has_gstreamer_plugins_base != xyes -a x$build_gst_mediaplayer_element = xyes; then
+  AC_MSG_WARN([Library gstreamer-plugins-base is not available, gst-audio-framework will not be built.])
+  build_gst_mediaplayer_element = no
 fi
 
 if test x$has_gtk2 != xyes; then
@@ -517,6 +530,10 @@ AM_CONDITIONAL(
 AM_CONDITIONAL(
   [GGL_BUILD_GST_AUDIO_FRAMEWORK],
   [test x$build_gst_audio_framework = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_GST_MEDIAPLAYER_ELEMENT],
+  [test x$build_gst_mediaplayer_element = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_GTK_SYSTEM_FRAMEWORK],
@@ -595,6 +612,7 @@ AC_CONFIG_FILES([Makefile
 		 extensions/gtk_edit_element/Makefile
 		 extensions/qt_edit_element/Makefile
 		 extensions/gtkmoz_browser_element/Makefile
+		 extensions/gst_mediaplayer_element/Makefile
 		 extensions/default_framework/Makefile
 		 extensions/gst_audio_framework/Makefile
 		 extensions/gtk_system_framework/Makefile
@@ -657,6 +675,7 @@ Build options:
   Build gtk-edit-element        $build_libggadget_gtk
   Build gtkmoz-browser-element  $build_gtkmoz_browser_element
   Build gst-audio-framework     $build_gst_audio_framework
+  Build gst-mediaplayer-element $build_gst_mediaplayer_element
   Build gtk-system-framework    $build_gtk_system_framework
   Build qt-system-framework     $build_qt_system_framework
   Build linux-system-framework  $build_linux_system_framework

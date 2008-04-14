@@ -14,18 +14,19 @@
 # limitations under the License.
 #
 
-SUBDIRS = dbus_script_class \
-	  gtk_edit_element \
-	  qt_edit_element \
-	  gst_mediaplayer_element \
-	  gtkmoz_browser_element \
-	  default_framework \
-	  gst_audio_framework \
-	  gtk_system_framework \
-	  qt_system_framework \
-	  linux_system_framework \
-	  smjs_script_runtime \
-	  curl_xml_http_request \
-	  libxml2_xml_parser \
-	  default_options \
-	  google_gadget_manager
+IF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)
+
+APPLY_CONFIG(GSTREAMER)
+APPLY_CONFIG(GSTREAMER_PLUGINS_BASE)
+ADD_MODULE(gst-mediaplayer-element gadget_videosink.cc
+  gst_mediaplayer_element.cc)
+
+TARGET_LINK_LIBRARIES(gst-mediaplayer-element
+  ${GSTREAMER_LIBRARIES}
+  ${GSTREAMER_PLUGINS_BASE_LIBRARIES}
+  -lgstvideo-0.10
+)
+
+OUTPUT_MODULE(gst-mediaplayer-element)
+
+ENDIF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)

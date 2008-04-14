@@ -79,12 +79,14 @@ gglinclude_HEADERS	= anchor_element.h \
 			  localized_file_manager.h \
 			  logger.h \
 			  main_loop_interface.h \
+			  mediaplayer_element_base.h \
 			  messages.h \
 			  math_utils.h \
 			  memory_options.h \
 			  menu_interface.h \
 			  module.h \
 			  native_main_loop.h \
+			  object_element.h \
 			  options_interface.h \
 			  progressbar_element.h \
 			  registerable_interface.h \
@@ -166,10 +168,12 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  logger.cc \
 			  main_loop.cc \
 			  math_utils.cc \
+			  mediaplayer_element_base.cc \
 			  memory_options.cc \
 			  messages.cc \
 			  module.cc \
 			  native_main_loop.cc \
+			  object_element.cc \
 			  options_factory.cc \
 			  progressbar_element.cc \
 			  script_runtime_manager.cc \
