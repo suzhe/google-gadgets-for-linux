@@ -53,6 +53,7 @@ static const char *kGlobalExtensions[] = {
   "dbus-script-class",
   "gtk-edit-element",
   "gtkmoz-browser-element",
+  "gst-mediaplayer-element",
   "gtk-system-framework",
   "gst-audio-framework",
 #ifdef GGL_HOST_LINUX

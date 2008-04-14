@@ -79,6 +79,8 @@ SET(SRCS
   item_element.cc
   label_element.cc
   listbox_element.cc
+  mediaplayer_element_base.cc
+  object_element.cc
   progressbar_element.cc
   scrollbar_element.cc
   scrolling_element.cc

@@ -121,6 +121,23 @@ class CairoCanvas::Impl {
       on_zoom_connection_->Disconnect();
   }
 
+  static bool ConvertFormat(RawImageFormat format,
+                            cairo_format_t *cairo_format) {
+    if (!cairo_format)
+      return false;
+    switch (format) {
+      case RAWIMAGE_FORMAT_ARGB32:
+        *cairo_format = CAIRO_FORMAT_ARGB32;
+        break;
+      case RAWIMAGE_FORMAT_RGB24:
+        *cairo_format = CAIRO_FORMAT_RGB24;
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
   cairo_t *CreateContext(double w, double h, double zoom, cairo_format_t fmt) {
     ASSERT(w > 0);
     ASSERT(h > 0);
@@ -615,6 +632,27 @@ bool CairoCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   }
 
   return true;
+}
+
+bool CairoCanvas::DrawRawImage(double x, double y,
+                               const char *data, RawImageFormat format,
+                               int w, int h, int stride) {
+  if (!data || w <= 0 || h <= 0) return false;
+
+  cairo_format_t cairo_format;
+  if (!Impl::ConvertFormat(format, &cairo_format))
+    return false;
+
+  cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)const_cast<char*>(data),
+                                                                 cairo_format,
+                                                                 w, h, stride);
+  if (surface) {
+    cairo_set_source_surface(impl_->cr_, surface, x, y);
+    cairo_paint_with_alpha(impl_->cr_, impl_->opacity_);
+    cairo_surface_destroy(surface);
+  }
+
+  return false;
 }
 
 bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,

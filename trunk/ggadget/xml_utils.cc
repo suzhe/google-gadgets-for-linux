@@ -19,6 +19,7 @@
 
 #include "xml_utils.h"
 #include "basic_element.h"
+#include "object_element.h"     // Special process for object element.
 #include "elements.h"
 #include "file_manager_interface.h"
 #include "gadget_consts.h"
@@ -139,10 +140,28 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
                                const char *filename) {
   std::string tag_name = xml_element->GetTagName();
   const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
+
+  // Special process for the "classid" attribute if it's an object element.
+  if (scriptable->IsInstanceOf(ObjectElement::CLASS_ID)) {
+    const DOMAttrInterface *attr = down_cast<const DOMAttrInterface *>(
+        attributes->GetNamedItem("classid"));
+    if (attr) {
+      std::string class_id = attr->GetValue();
+      SetScriptableProperty(scriptable, script_context, filename,
+                            attr->GetRow(), attr->GetColumn(),
+                            "classid", class_id.c_str(), tag_name.c_str());
+      const_cast<DOMNamedNodeMapInterface*>(attributes) ->
+          RemoveNamedItem("classid");
+    } else {
+      LOG("%s:%d:%d: No classid is specified for the object element",
+          filename, xml_element->GetRow(), xml_element->GetColumn());
+    }
+  }
+
   size_t length = attributes->GetLength();
   for (size_t i = 0; i < length; i++) {
-    const DOMAttrInterface *attr = down_cast<const DOMAttrInterface *>(
-        attributes->GetItem(i));
+    const DOMAttrInterface *attr =
+        down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
     std::string name = attr->GetName();
     std::string value = attr->GetValue();
     if (GadgetStrCmp(kInnerTextProperty, name.c_str()) == 0) {
@@ -184,10 +203,48 @@ BasicElement *InsertElementFromDOM(Elements *elements,
   for (const DOMNodeInterface *child = xml_element->GetFirstChild();
        child; child = child->GetNextSibling()) {
     DOMNodeInterface::NodeType type = child->GetNodeType();
-    if (type == DOMNodeInterface::ELEMENT_NODE && children) {
-      InsertElementFromDOM(children, script_context,
-                           down_cast<const DOMElementInterface *>(child),
-                           NULL, filename);
+    if (type == DOMNodeInterface::ELEMENT_NODE) {
+      const DOMElementInterface *child_element =
+          down_cast<const DOMElementInterface*>(child);
+      std::string child_tag = child_element->GetTagName();
+
+      // Special process for the child element (i.e. param element) of object
+      // element. This is for the compatability with GDWin.
+      // We set each param as a property of the real object wrapped in the
+      // object element.
+      if (element->IsInstanceOf(ObjectElement::CLASS_ID) &&
+          GadgetStrCmp(child_tag.c_str(), "param") == 0) {
+        BasicElement *object = down_cast<ObjectElement*>(element)->GetObject();
+        if (object) {
+          const DOMNamedNodeMapInterface *attributes =
+              child_element->GetAttributes();
+          const DOMAttrInterface *name = down_cast<const DOMAttrInterface *>(
+              attributes->GetNamedItem(kNameAttr));
+          const DOMAttrInterface *value = down_cast<const DOMAttrInterface *>(
+              attributes->GetNamedItem("value"));
+
+          std::string param_name = name->GetValue();
+          std::string param_value = value->GetValue();
+
+          if (param_name.empty() || param_value.empty()) {
+            LOG("%s:%d:%d: No name or value specified for param",
+                filename, name->GetRow(), name->GetColumn());
+          } else {
+            SetScriptableProperty(object, script_context, filename,
+                                  name->GetRow(), name->GetColumn(),
+                                  param_name.c_str(), param_value.c_str(),
+                                  "param");
+          }
+          delete attributes;
+        } else {
+          LOG("%s:%d:%d: No object has been created for the object element",
+              filename, xml_element->GetRow(), xml_element->GetColumn());
+        }
+      } else if (children) {
+        InsertElementFromDOM(children, script_context,
+                             child_element,
+                             NULL, filename);
+      }
     } else if (type == DOMNodeInterface::TEXT_NODE ||
                type == DOMNodeInterface::CDATA_SECTION_NODE) {
       text += down_cast<const DOMTextInterface *>(child)->GetTextContent();

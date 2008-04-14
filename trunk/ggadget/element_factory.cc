@@ -30,6 +30,7 @@
 #include "item_element.h"
 #include "label_element.h"
 #include "listbox_element.h"
+#include "object_element.h"
 #include "progressbar_element.h"
 #include "scrollbar_element.h"
 
@@ -69,17 +70,15 @@ ElementFactory::ElementFactory()
   RegisterElementClass("checkbox",
                        &CheckBoxElement::CreateCheckBoxInstance);
   RegisterElementClass("combobox", &ComboBoxElement::CreateInstance);
-  RegisterElementClass("contentarea",
-                       &ContentAreaElement::CreateInstance);
+  RegisterElementClass("contentarea", &ContentAreaElement::CreateInstance);
   RegisterElementClass("div", &DivElement::CreateInstance);
   RegisterElementClass("img", &ImgElement::CreateInstance);
   RegisterElementClass("item", &ItemElement::CreateInstance);
   RegisterElementClass("label", &LabelElement::CreateInstance);
   RegisterElementClass("listbox", &ListBoxElement::CreateInstance);
-  RegisterElementClass("listitem",
-                       &ItemElement::CreateListItemInstance);
-  RegisterElementClass("progressbar",
-                       &ProgressBarElement::CreateInstance);
+  RegisterElementClass("listitem", &ItemElement::CreateListItemInstance);
+  RegisterElementClass("object", &ObjectElement::CreateInstance);
+  RegisterElementClass("progressbar", &ProgressBarElement::CreateInstance);
   RegisterElementClass("radio", &CheckBoxElement::CreateRadioInstance);
   RegisterElementClass("scrollbar", &ScrollBarElement::CreateInstance);
 }

@@ -52,6 +52,11 @@ class MockedCanvas : public ggadget::CanvasInterface {
   virtual bool DrawCanvas(double x, double y, const CanvasInterface *img) {
     return true;
   }
+  virtual bool DrawRawImage(double x, double y,
+                            const char *data, RawImageFormat format,
+                            int width, int height, int stride) {
+    return true;
+  }
   virtual bool DrawFilledRectWithCanvas(double x, double y,
                                         double w, double h,
                                         const CanvasInterface *img) {
