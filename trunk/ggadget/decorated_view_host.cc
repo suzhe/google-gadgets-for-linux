@@ -260,8 +260,9 @@ class DecoratedViewHost::Impl {
           DLOG("Set inner view scale to: %lf", zoom);
           owner_->inner_view_gfx_->SetZoom(zoom * 
               owner_->outer_view_host_->GetGraphics()->GetZoom());
-          view_element_->SetScale(zoom); // This will queue draw.
+          view_element_->SetScale(zoom);
           Layout();
+          view_element_->MarkRedraw();
         }
       }
     }
@@ -318,7 +319,7 @@ class DecoratedViewHost::Impl {
       if (t == ViewHostInterface::VIEW_HOST_MAIN) {
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	button->SetTooltip(GM_("VD_BACK_BUTTON_TOOLTIP"));
+	    button->SetTooltip(GM_("VD_BACK_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonBackNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonBackOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonBackDown));
@@ -327,7 +328,7 @@ class DecoratedViewHost::Impl {
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	button->SetTooltip(GM_("VD_FORWARD_BUTTON_TOOLTIP"));
+	    button->SetTooltip(GM_("VD_FORWARD_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonForwardNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonForwardOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonForwardDown));
@@ -336,14 +337,14 @@ class DecoratedViewHost::Impl {
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	button->SetTooltip(GM_("VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP"));
+	    button->SetTooltip(GM_("VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP"));
         SetToggleExpandedButtons(); // Call to set button images.
         c = button->ConnectOnClickEvent(NewSlot(this, &DecoratedView::ToggleExpandedButtonClicked));
         connections_.push_back(c);
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	button->SetTooltip(GM_("VD_MENU_BUTTON_TOOLTIP"));
+	    button->SetTooltip(GM_("VD_MENU_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonMenuNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonMenuOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonMenuDown));
@@ -352,7 +353,7 @@ class DecoratedViewHost::Impl {
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	button->SetTooltip(GM_("VD_CLOSE_BUTTON_TOOLTIP"));
+	    button->SetTooltip(GM_("VD_CLOSE_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonCloseNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonCloseOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonCloseDown));      

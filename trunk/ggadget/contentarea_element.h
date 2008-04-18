@@ -71,6 +71,27 @@ class ContentAreaElement : public ScrollingElement {
   size_t GetMaxContentItems() const;
   void SetMaxContentItems(size_t max_content_items);
 
+  /** 
+   * The background color of the content area, 
+   * in "#AARRGGBB" or "#RRGGBB"format.
+   */
+  std::string GetBackgroundColor() const;
+  void SetBackgroundColor(const char *color);
+  
+  /** 
+   * The background color of on mouse down, 
+   * in "#AARRGGBB" or "#RRGGBB"format.
+   */
+  std::string GetDownColor() const;
+  void SetDownColor(const char *color);
+  
+  /** 
+   * The background color of on mouse over, 
+   * in "#AARRGGBB" or "#RRGGBB"format.
+   */
+  std::string GetOverColor() const;
+  void SetOverColor(const char *color);
+  
   /** The area's content items. */
   const std::vector<ContentItem *> &GetContentItems();
 

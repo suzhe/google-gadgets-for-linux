@@ -188,6 +188,18 @@ void ContentItem::DoRegister() {
   RegisterProperty("snippet",
                    NewSlot(this, &ContentItem::GetSnippet),
                    NewSlot(this, &ContentItem::SetSnippet));
+  RegisterProperty("headingColor",
+                   NewSlot(&impl_->heading_text_, &TextFrame::GetColor),
+                   NewSlot<void, const Variant &>(
+                           &impl_->heading_text_, &TextFrame::SetColor));
+  RegisterProperty("sourceColor",
+                   NewSlot(&impl_->source_text_, &TextFrame::GetColor),
+                   NewSlot<void, const Variant &>(
+                           &impl_->source_text_, &TextFrame::SetColor));
+  RegisterProperty("timeColor",
+                   NewSlot(&impl_->time_text_, &TextFrame::GetColor),
+                   NewSlot<void, const Variant &>(
+                           &impl_->time_text_, &TextFrame::SetColor));
   RegisterProperty("open_command",
                    NewSlot(this, &ContentItem::GetOpenCommand),
                    NewSlot(this, &ContentItem::SetOpenCommand));

@@ -65,7 +65,16 @@ class ContentAreaElement::Impl {
         refresh_timer_(0),
         modified_(false),
         death_detector_(NULL),
-        context_menu_time_(0) {
+        context_menu_time_(0), 
+        background_color_src_(kDefaultBackground.ToString()), 
+        mouseover_color_src_(kMouseOverBackground.ToString()), 
+        mousedown_color_src_(kMouseDownBackground.ToString()), 
+        background_opacity_(1.),
+        mouseover_opacity_(1.),
+        mousedown_opacity_(1.),
+        background_color_(kDefaultBackground),
+        mouseover_color_(kMouseOverBackground),
+        mousedown_color_(kMouseDownBackground) {
     pin_images_[PIN_IMAGE_UNPINNED].Reset(new ScriptableImage(
         owner->GetView()->LoadImageFromGlobal(kContentItemUnpinned, false)));
     pin_images_[PIN_IMAGE_UNPINNED_OVER].Reset(new ScriptableImage(
@@ -212,11 +221,20 @@ class ContentAreaElement::Impl {
       death_detector_ = NULL;
   }
 
-  void Draw(CanvasInterface *canvas) {
-    int width = static_cast<int>(ceil(owner_->GetClientWidth()));
+  void Draw(CanvasInterface *canvas) {    
     int height = static_cast<int>(ceil(owner_->GetClientHeight()));
-    canvas->DrawFilledRect(0, 0, width, height, kDefaultBackground);
-
+    if (background_opacity_ > 0.) {
+      if (background_opacity_ != 1.) {
+        canvas->PushState();
+        canvas->MultiplyOpacity(background_opacity_);
+      }
+      int width = static_cast<int>(ceil(owner_->GetClientWidth()));
+      canvas->DrawFilledRect(0, 0, width, height, background_color_);
+      if (background_opacity_ != 1.) {
+        canvas->PopState(); 
+      }
+    }
+    
     // Add a modification checker to detect whether the set of content items
     // or this object itself is modified during the following loop. If such
     // things happen, break the loop and return to ensure safety.
@@ -248,7 +266,7 @@ class ContentAreaElement::Impl {
           mouse_over_pin = mouse_over && mouse_x_ < pin_image_max_width_;
           if (mouse_over_pin) {
             const Color &color = mouse_down_ ?
-                                 kMouseDownBackground : kMouseOverBackground;
+                                  mousedown_color_ : mouseover_color_;
             canvas->DrawFilledRect(item_x, item_y,
                                    pin_image_max_width_, item_height,
                                    color);
@@ -275,7 +293,7 @@ class ContentAreaElement::Impl {
         if (mouse_over &&
             !(item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
           const Color &color = mouse_down_ && !mouse_over_pin ?
-                               kMouseDownBackground : kMouseOverBackground;
+                                mousedown_color_ : mouseover_color_;
           canvas->DrawFilledRect(item_x, item_y,
                                  item_width, item_height, color);
         }
@@ -605,6 +623,9 @@ class ContentAreaElement::Impl {
   bool modified_; // Flags whether items were added, removed or reordered.
   bool *death_detector_;
   uint64_t context_menu_time_;
+  std::string background_color_src_, mouseover_color_src_, mousedown_color_src_;
+  double background_opacity_, mouseover_opacity_, mousedown_opacity_;
+  Color background_color_, mouseover_color_, mousedown_color_;
 };
 
 ContentAreaElement::ContentAreaElement(BasicElement *parent, View *view,
@@ -622,6 +643,15 @@ void ContentAreaElement::DoRegister() {
   RegisterProperty("maxContentItems",
                    NewSlot(this, &ContentAreaElement::GetMaxContentItems),
                    NewSlot(this, &ContentAreaElement::SetMaxContentItems));
+  RegisterProperty("backgroundColor",
+                   NewSlot(this, &ContentAreaElement::GetBackgroundColor),
+                   NewSlot(this, &ContentAreaElement::SetBackgroundColor));
+  RegisterProperty("overColor",
+                   NewSlot(this, &ContentAreaElement::GetOverColor),
+                   NewSlot(this, &ContentAreaElement::SetOverColor));
+  RegisterProperty("downColor",
+                   NewSlot(this, &ContentAreaElement::GetDownColor),
+                   NewSlot(this, &ContentAreaElement::SetDownColor));
   RegisterProperty("contentItems",
                    NewSlot(impl_, &Impl::ScriptGetContentItems),
                    NewSlot(impl_, &Impl::ScriptSetContentItems));
@@ -639,6 +669,51 @@ void ContentAreaElement::DoRegister() {
 ContentAreaElement::~ContentAreaElement() {
   delete impl_;
   impl_ = NULL;
+}
+
+std::string ContentAreaElement::GetBackgroundColor() const {
+  return impl_->background_color_src_;
+}
+
+void ContentAreaElement::SetBackgroundColor(const char *color) {
+  if (impl_->background_color_src_ != color) {
+    if (Color::FromString(color, &impl_->background_color_, 
+                          &impl_->background_opacity_)) {
+      impl_->background_color_src_ = color;
+      
+      QueueDraw();
+    }    
+  }  
+}
+
+std::string ContentAreaElement::GetDownColor() const {
+  return impl_->mousedown_color_src_;
+}
+
+void ContentAreaElement::SetDownColor(const char *color) {
+  if (impl_->mousedown_color_src_ != color) {
+    if (Color::FromString(color, &impl_->mousedown_color_, 
+                          &impl_->mousedown_opacity_)) {
+      impl_->mousedown_color_src_ = color;
+      
+      QueueDraw();
+    }    
+  }  
+}
+
+std::string ContentAreaElement::GetOverColor() const {
+  return impl_->mouseover_color_src_;
+}
+
+void ContentAreaElement::SetOverColor(const char *color) {
+  if (impl_->mouseover_color_src_ != color) {
+    if (Color::FromString(color, &impl_->mouseover_color_, 
+                          &impl_->mouseover_opacity_)) {
+      impl_->mouseover_color_src_ = color;
+      
+      QueueDraw();
+    }    
+  }  
 }
 
 int ContentAreaElement::GetContentFlags() const {
