@@ -17,6 +17,12 @@
 var kURLOption = "RSS_URL";
 var kRefreshInterval = 600000; // every 10 minutes
 
+var kItemHeadingColor = "#ffffff";
+var kItemSourceColor = "#00ffff";
+var kItemTimeColor = "#00ffff";
+var kWidthOffset = 12;
+var kHeightOffset = 23;
+
 var g_xml_request = null;
 
 var g_feed_title = null;
@@ -36,6 +42,11 @@ function OnAddCustomMenuItems(menu) {
 
 function RefreshMenuHandler(item_text) {
   Refresh();
+}
+
+function OnSize() {
+  contents.width = view.width - kWidthOffset;
+  contents.height = view.height - kHeightOffset;
 }
 
 function Refresh() {
@@ -313,6 +324,9 @@ function DisplayFeedItems() {
       c_item.snippet = item.description;
       c_item.source = g_feed_title;
       c_item.open_command = item.url;
+      c_item.headingColor = kItemHeadingColor;
+      c_item.sourceColor = kItemSourceColor;
+      c_item.timeColor = kItemTimeColor;
 
       if (!item.is_read) {
         c_item.flags |= gddContentItemFlagHighlighted;

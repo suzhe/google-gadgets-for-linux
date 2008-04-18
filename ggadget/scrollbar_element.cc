@@ -704,10 +704,10 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
       int delta = impl_->accum_wheel_delta_;
       if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
         impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
-        downleft = true;
+        downleft = false;
       } else if (delta < 0 && -delta >= MouseEvent::kWheelDelta) {
         impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
-        downleft = false;
+        downleft = true;
       }
       else {
         break; // don't scroll in this case
