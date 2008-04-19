@@ -642,6 +642,7 @@ AC_CONFIG_FILES([Makefile
 		 hosts/qt/Makefile
 		 resources/Makefile
 		 third_party/Makefile
+		 third_party/codesighs/Makefile
 		 third_party/editline/Makefile
 		 third_party/unzip/Makefile
 		 unittest/Makefile

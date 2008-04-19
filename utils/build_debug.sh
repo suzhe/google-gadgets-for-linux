@@ -19,13 +19,14 @@ set -e
 here=`pwd`
 cd `dirname $0`/..
 srcdir=`pwd`
-if [ ! -x cmake/build_spidermonkey.sh ]; then
-  chmod +x cmake/build_spidermonkey.sh
-fi
 mkdir -p build/debug
 cd build/debug
 cmake -DCMAKE_BUILD_TYPE=Debug "$srcdir"
 make "$@"
+cd output
+$srcdir/utils/codesize.sh
+cd ..
 if ! ctest . ; then
   echo "See Testing/Temporary/LastTest.log for details."
 fi
+

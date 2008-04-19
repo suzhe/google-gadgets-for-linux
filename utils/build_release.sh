@@ -26,6 +26,9 @@ mkdir -p build/release
 cd build/release
 cmake -DCMAKE_BUILD_TYPE=Release "$srcdir"
 make "$@"
+cd output
+$srcdir/utils/codesize.sh
+cd ..
 if ! ctest . ; then
   cat Testing/Temporary/LastTest.log
 fi

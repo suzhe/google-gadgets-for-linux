@@ -14,5 +14,6 @@
 #  limitations under the License.
 #
 
+ADD_SUBDIRECTORY(codesighs)
 ADD_SUBDIRECTORY(editline)
 ADD_SUBDIRECTORY(unzip)
