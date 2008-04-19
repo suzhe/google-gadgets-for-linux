@@ -14,5 +14,6 @@
 # limitations under the License.
 #
 
-EXTRA_DIST=valgrind
-SUBDIRS = codesighs editline unzip
+ADD_EXECUTABLE(codesighs codesighs.c)
+ADD_EXECUTABLE(nm2tsv nm2tsv.c)
+ADD_EXECUTABLE(maptsvdifftool maptsvdifftool.c)

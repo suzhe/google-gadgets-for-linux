@@ -1,4 +1,3 @@
-#!/bin/sh
 #
 # Copyright 2007 Google Inc.
 #
@@ -15,14 +14,13 @@
 # limitations under the License.
 #
 
-set -e
+# TODO: install and dist
 
-if [ "$1" = "Release" ]; then
-  BUILD_OPT=1
-fi
+bin_PROGRAMS		= codesighs nm2tsv maptsvdifftool
 
-cd "$2/js/src"
-make -f Makefile.ref
-find -name '*.so' -exec cp {} "$3" \;
-find -name 'libedit.a' -exec cp {} . \;
-find -name 'jsautocfg.h' -exec cp -f {} . \;
+codesighs_SOURCES	= codesighs.c
+
+nm2tsv_SOURCES		= nm2tsv.c
+
+maptsvdifftool_SOURCES	= maptsvdifftool.c
+
