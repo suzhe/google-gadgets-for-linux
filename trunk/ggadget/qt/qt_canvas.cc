@@ -445,6 +445,19 @@ bool QtCanvas::DrawCanvas(double x, double y, const CanvasInterface *img) {
   return impl_->DrawCanvas(x, y, img);
 }
 
+bool QtCanvas::DrawRawImage(double x, double y,
+                            const char *data, RawImageFormat format,
+                            int width, int height, int stride) {
+  QImage::Format qt_format;
+  if (format == RAWIMAGE_FORMAT_RGB24)
+    qt_format = QImage::Format_RGB32;
+  else
+    qt_format = QImage::Format_ARGB32;
+  QImage img(reinterpret_cast<const uchar*>(data), width, height, qt_format);
+  impl_->painter_->drawImage(D2I(x), D2I(y), img);
+  return true;
+}
+
 bool QtCanvas::DrawFilledRectWithCanvas(double x, double y,
                                            double w, double h,
                                            const CanvasInterface *img) {
