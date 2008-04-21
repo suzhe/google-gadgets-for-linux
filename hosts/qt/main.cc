@@ -38,8 +38,11 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/file_manager_wrapper.h>
+#include <ggadget/dir_file_manager.h>
 #include <ggadget/localized_file_manager.h>
 #include <ggadget/host_interface.h>
+#include <ggadget/system_utils.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/gadget_manager_interface.h>
 #include "qt_host.h"
 #ifdef GGL_USE_X11
@@ -63,6 +66,7 @@ static const char *kGlobalExtensions[] = {
   "qt-edit-element",
 // gst and Qt may not work together.
 //  "gst-audio-framework",
+  "gst-mediaplayer-element",
 #ifdef GGL_HOST_LINUX
   "linux-system-framework",
 #endif
