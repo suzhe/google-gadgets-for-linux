@@ -62,7 +62,7 @@ class ScriptableView::Impl {
       script_context_->RegisterClass("DOMDocument",
           NewSlot(GetXMLParser(), &XMLParserInterface::CreateDOMDocument));
       script_context_->RegisterClass("XMLHttpRequest",
-          NewSlot(this, &Impl::NewXMLHttpRequest));
+          NewSlot(view->GetGadget(), &Gadget::CreateXMLHttpRequest));
       script_context_->RegisterClass("DetailsView",
           NewSlot(DetailsViewData::CreateInstance));
       script_context_->RegisterClass("ContentItem",
@@ -146,10 +146,6 @@ class ScriptableView::Impl {
   Variant GetElementByNameVariant(const char *name) {
     BasicElement *result = view_->GetElementByName(name);
     return result ? Variant(result) : Variant();
-  }
-
-  XMLHttpRequestInterface *NewXMLHttpRequest() {
-    return CreateXMLHttpRequest(GetXMLParser());
   }
 
   bool InitFromXML(const std::string &xml, const char *filename) {

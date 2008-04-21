@@ -83,21 +83,50 @@ class XMLHttpRequestInterface : public ScriptableInterface {
 
 CLASS_ID_IMPL(XMLHttpRequestInterface, ScriptableInterface)
 
-typedef XMLHttpRequestInterface *(*XMLHttpRequestFactory)(
-    XMLParserInterface *parser);
+/**
+ * The factory interface used to create @c XMLHttpRequestInterface instances.
+ */
+class XMLHttpRequestFactoryInterface {
+ public:
+  virtual ~XMLHttpRequestFactoryInterface() { }
+
+  /**
+   * Creates a new @c XMLHttpRequestInterface session.
+   * @return the session id, or -1 on failure. This method should never
+   *     return 0.
+   */
+  virtual int CreateSession() = 0;
+
+  /**
+   * Destroys a session. All @c XMLHttpRequestInterface instance created in
+   * this session must have been deleted before this method is called.
+   * @param session_id the session id.
+   */
+  virtual void DestroySession(int session_id) = 0;
+
+  /**
+   * Creates a @c XMLHttpRequestInterface instance in a session.
+   * @param session_id the session id. All @c XMLHttpRequest instances created
+   *     in the same session share the same set of cookies.
+   *     If session_id is 0, no cookie will be shared for the returned instance.
+   * @param parser the XML parser for this instance.
+   * @return @c XMLHttpRequestInterface instance, or @c NULL on failure.
+   */
+  virtual XMLHttpRequestInterface *CreateXMLHttpRequest(
+      int session_id, XMLParserInterface *parser) = 0;
+};
 
 /**
  * Sets an @c XMLHttpRequestFactory as the global XMLHttpRequest factory.
  * An XMLHttpRequest extension module can call this function in its
  * @c Initailize() function.
  */
-bool SetXMLHttpRequestFactory(XMLHttpRequestFactory factory);
+bool SetXMLHttpRequestFactory(XMLHttpRequestFactoryInterface *factory);
 
 /**
- * Creates an @c XMLHttpRequestInterface instance. Invocations will be
- * delegated to the global @c XMLHttpRequestFactory.
+ * Gets the global XMLHttpRequest factory.
  */
-XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *parser);
+XMLHttpRequestFactoryInterface *GetXMLHttpRequestFactory();
 
 } // namespace ggadget
 

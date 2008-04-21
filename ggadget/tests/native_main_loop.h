@@ -14,8 +14,9 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_NATIVE_MAIN_LOOP_H__
-#define GGADGET_NATIVE_MAIN_LOOP_H__
+#ifndef GGADGET_TESTS_NATIVE_MAIN_LOOP_H__
+#define GGADGET_TESTS_NATIVE_MAIN_LOOP_H__
+\
 #include <stdint.h>
 #include <ggadget/main_loop_interface.h>
 
@@ -46,4 +47,4 @@ class NativeMainLoop : public MainLoopInterface {
 
 } // namespace ggadget
 
-#endif  // GGADGET_NATIVE_MAIN_LOOP_H__
+#endif  // GGADGET_TESTS_NATIVE_MAIN_LOOP_H__

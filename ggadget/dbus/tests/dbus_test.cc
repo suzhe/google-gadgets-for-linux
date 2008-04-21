@@ -20,7 +20,7 @@ limitations under the License.
 #include <dbus/dbus.h>
 
 #include "ggadget/dbus/dbus_proxy.h"
-#include "ggadget/native_main_loop.h"
+#include "ggadget/tests/native_main_loop.h"
 #include "ggadget/logger.h"
 #include "ggadget/slot.h"
 #include "ggadget/tests/init_extensions.h"

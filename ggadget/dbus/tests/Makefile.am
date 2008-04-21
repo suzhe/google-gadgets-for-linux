@@ -21,13 +21,14 @@ AM_CXXFLAGS		= $(DEFAULT_COMPILE_FLAGS)
 
 LDADD			= $(top_builddir)/unittest/libgtest.la \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la
+			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
+			  $(PTHREAD_LIBS)
 
 check_PROGRAMS		= dbus_test \
 			  dbus_marshaller_test \
 			  dbus_result_receiver_test
 
-dbus_test_SOURCES               = dbus_test.cc
+dbus_test_SOURCES               = dbus_test.cc ../../tests/native_main_loop.cc
 dbus_marshaller_test_SOURCES    = dbus_marshaller_test.cc
 dbus_result_receiver_test_SOURCES = dbus_result_receiver_test.cc
 

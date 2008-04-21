@@ -34,6 +34,7 @@ noinst_HEADERS		= init_extensions.h \
 			  mocked_timer_main_loop.h \
 			  mocked_view_host.h \
 			  mocked_xml_http_request.h \
+			  native_main_loop.h \
 			  scriptables.h \
 			  slots.h
 
@@ -78,7 +79,7 @@ encryptor_test_SOURCES		= encryptor_test.cc
 file_manager_test_SOURCES	= file_manager_test.cc
 math_utils_test_SOURCES		= math_utils_test.cc
 messages_test_SOURCES		= messages_test.cc
-native_main_loop_test_SOURCES	= native_main_loop_test.cc
+native_main_loop_test_SOURCES	= native_main_loop.cc native_main_loop_test.cc
 unicode_utils_test_SOURCES	= unicode_utils_test.cc
 string_utils_test_SOURCES	= string_utils_test.cc
 basic_element_test_SOURCES	= basic_element_test.cc
@@ -90,7 +91,7 @@ xml_parser_test_SOURCES		= xml_parser_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
 
 xml_http_request_test_SOURCES	= xml_http_request_test.cc
-xml_http_request_test_LDADD	= -lpthread \
+xml_http_request_test_LDADD	= $(PTHREAD_LIBS) \
 				  $(top_builddir)/unittest/libgtest.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 

@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <curl/curl.h>
+#include <pthread.h>
 
 #include <ggadget/gadget_consts.h>
 #include <ggadget/main_loop_interface.h>
@@ -49,23 +50,20 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
   DEFINE_CLASS_ID(0xda25f528f28a4319, XMLHttpRequestInterface);
 
-  XMLHttpRequest(MainLoopInterface *main_loop,
+  XMLHttpRequest(CURLSH *share, MainLoopInterface *main_loop,
                  XMLParserInterface *xml_parser)
-      : main_loop_(main_loop),
+      : curl_(NULL),
+        share_(share),
+        main_loop_(main_loop),
         xml_parser_(xml_parser),
         async_(false),
-        curl_(NULL),
-        curlm_(NULL),
-        socket_(0),
-        socket_read_watch_(0),
-        socket_write_watch_(0),
-        io_watch_type_(0),
-        timeout_watch_(0),
         state_(UNSENT),
         send_flag_(false),
         request_headers_(NULL),
         status_(0),
         response_dom_(NULL) {
+    pthread_attr_init(&thread_attr_);
+    pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_DETACHED);
   }
 
   virtual void DoRegister() {
@@ -104,6 +102,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   ~XMLHttpRequest() {
     Abort();
+    pthread_attr_destroy(&thread_attr_);
   }
 
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
@@ -142,8 +141,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NULL_POINTER_ERR;
 
     // TODO: Access control for local files.
-    if (0 != strncasecmp(url, kFileUrlPrefix, arraysize(kFileUrlPrefix) - 1) &&
-        0 != strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
+    if (0 != strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
         0 != strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1))
       return SYNTAX_ERR;
 
@@ -155,13 +153,22 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return OTHER_ERR;
     }
 
+    // Disable curl using signals because we use curl in multiple threads. 
+    curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
+    if (share_)
+      curl_easy_setopt(curl_, CURLOPT_SHARE, share_);
+    // Enable cookies, but don't write them into any file.
+    curl_easy_setopt(curl_, CURLOPT_COOKIEFILE, "");
+    
     if (strcasecmp(method, "HEAD") == 0) {
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
       curl_easy_setopt(curl_, CURLOPT_NOBODY, 1);
     } else if (strcasecmp(method, "GET") == 0) {
       curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1);
     } else if (strcasecmp(method, "POST") == 0) {
-      curl_easy_setopt(curl_, CURLOPT_POST, 1);
+      // Don't set CURLOPT_POST here. If the data parameter of Send()
+      // is not blank, POST method will be set automatically.
+      // curl_easy_setopt(curl_, CURLOPT_POST, 1);
     } else {
       LOG("XMLHttpRequest: Unsupported method: %s", method);
       return SYNTAX_ERR;
@@ -224,16 +231,25 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NO_ERR;
     }
 
-    // TODO: Filter headers according to the specification.
     std::string whole_header(header);
     whole_header += ": ";
     if (value)
       whole_header += value;
-    // TODO: Check what does curl do when set a header for multiple times.
     request_headers_ = curl_slist_append(request_headers_,
                                          whole_header.c_str());
     return NO_ERR;
   }
+ 
+  struct WorkerContext {
+    WorkerContext(XMLHttpRequest *a_this_p, CURL *a_curl, bool a_async,
+                  curl_slist *a_request_headers)
+        : this_p(a_this_p), curl(a_curl), async(a_async),
+          request_headers(a_request_headers) { }
+    XMLHttpRequest *this_p;
+    CURL *curl;
+    bool async;
+    curl_slist *request_headers;
+  };
 
   virtual ExceptionCode Send(const char *data, size_t size) {
     if (state_ != OPENED || send_flag_) {
@@ -246,10 +262,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return SYNTAX_ERR;
     }
 
-    send_data_.assign(data, size);
     if (size > 0) {
-      curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, send_data_.c_str());
       curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, size);
+      curl_easy_setopt(curl_, CURLOPT_COPYPOSTFIELDS, data);
     }
 
   #ifdef _DEBUG
@@ -258,78 +273,43 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, request_headers_);
     curl_easy_setopt(curl_, CURLOPT_FRESH_CONNECT, 1);
     curl_easy_setopt(curl_, CURLOPT_FORBID_REUSE, 1);
-    curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
     curl_easy_setopt(curl_, CURLOPT_AUTOREFERER, 1);
     curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(curl_, CURLOPT_MAXREDIRS, kMaxRedirections);
-    curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
     curl_easy_setopt(curl_, CURLOPT_TIMEOUT, kTimeoutSec);
     curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT, kConnectTimeoutSec);
 
-    curl_easy_setopt(curl_, CURLOPT_READFUNCTION, ReadCallback);
-    curl_easy_setopt(curl_, CURLOPT_READDATA, this);
-    curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, WriteHeaderCallback);
-    curl_easy_setopt(curl_, CURLOPT_HEADERDATA, this);
-    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteBodyCallback);
-    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, this);
+    // As described in the spec, here don't change the state, but send
+    // an event for historical reasons.
+    if (!ChangeState(OPENED))
+      return INVALID_STATE_ERR;
 
+    WorkerContext *context = new WorkerContext(this, curl_, async_,
+                                               request_headers_);
+    request_headers_ = NULL;
+    curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, WriteHeaderCallback);
+    curl_easy_setopt(curl_, CURLOPT_HEADERDATA, context);
+    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteBodyCallback);
+    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, context);
+
+    send_flag_ = true;
     if (async_) {
       // Add an internal reference when this request is working to prevent
       // this object from being GC'ed.
       Ref();
-
-      send_flag_ = true;
-      curlm_ = curl_multi_init();
-      curl_multi_setopt(curlm_, CURLMOPT_SOCKETFUNCTION, SocketCallback);
-      curl_multi_setopt(curlm_, CURLMOPT_SOCKETDATA, this);
-      curl_multi_setopt(curlm_, CURLMOPT_TIMERFUNCTION, TimerCallback);
-      curl_multi_setopt(curlm_, CURLMOPT_TIMERDATA, this);
-
-      CURLMcode code = curl_multi_add_handle(curlm_, curl_);
-      if (code != CURLM_OK) {
-        DLOG("XMLHttpRequest: Send: curl_multi_add_handle failed: %s",
-             curl_multi_strerror(code));
-        return NETWORK_ERR;
-      }
-
-      // As described in the spec, here don't change the state, but send
-      // an event for historical reasons.
-      if (!ChangeState(OPENED))
-        return INVALID_STATE_ERR;
-
-      long timeout;
-      curl_multi_timeout(curlm_, &timeout);
-      InitTimeoutWatch(timeout);
-
-      int still_running = 1;
-      do {
-        code = curl_multi_socket_all(curlm_, &still_running);
-      } while (code == CURLM_CALL_MULTI_PERFORM);
-
-      if (code != CURLM_OK) {
-        DLOG("XMLHttpRequest: Send: curl_multi_perform failed: %s",
-             curl_multi_strerror(code));
-        return NETWORK_ERR;
-      }
-
-      if (!still_running) {
-        DLOG("XMLHttpRequest: Send(async): DONE this=%p", this);
-        Done(false);
+      pthread_t thread;
+      if (pthread_create(&thread, &thread_attr_, Worker, context) != 0) {
+        DLOG("Failed to create worker thread");
+        Abort();
+        return ABORT_ERR;
       }
     } else {
-      // As described in the spec, here don't change the state, but send
-      // an event for historical reasons.
-      if (!ChangeState(OPENED))
-        return INVALID_STATE_ERR;
-
-      CURLcode code = curl_easy_perform(curl_);
-      if (code != CURLE_OK) {
-        DLOG("XMLHttpRequest: Send: curl_easy_perform failed: %s",
-             curl_easy_strerror(code));
+      // Run the worker directly in this thread.
+      void *result = Worker(context);
+      CURLcode code = *reinterpret_cast<CURLcode *>(&result);
+      send_flag_ = false;
+      if (code != CURLE_OK)
         return NETWORK_ERR;
-      }
-      DLOG("XMLHttpRequest: Send(sync): DONE this=%p", this);
-      Done(false);
     }
     return NO_ERR;
   }
@@ -342,189 +322,140 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return Send(xml.c_str(), xml.size());
   }
 
-  void OnIOReady(int fd, int watch_type) {
-    if (!curlm_) {
-      LOG("OnIOReady while this request has finished or has been aborted");
-      DLOG("this=%p", this);
-      return;
+  // If async, this method runs in a separate thread.
+  static void *Worker(void *arg) {
+    WorkerContext *context = static_cast<WorkerContext *>(arg);
+
+    CURLcode code = curl_easy_perform(context->curl);
+    long curl_status = 0;
+    curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
+    unsigned short status = static_cast<unsigned short>(curl_status);
+    curl_easy_cleanup(context->curl);
+
+    if (context->request_headers) {
+      curl_slist_free_all(context->request_headers);
+      context->request_headers = NULL;
     }
 
-    // DLOG("XMLHttpRequest: OnIOReady: %d %d %d this=%p", fd,
-    //      watch_type, io_watch_type_, this);
-    if (fd != CURL_SOCKET_TIMEOUT) {
-      io_watch_type_ &= ~watch_type;
-      if (io_watch_type_ != 0) {
-        // Still need waiting for all events coming.
-        return;
-      }
-    }
-
-    int still_running = 1;
-    CURLMcode code;
-    do {
-      code = curl_multi_socket(curlm_, fd, &still_running);
-    } while (code == CURLM_CALL_MULTI_PERFORM);
-
-    if (code != CURLM_OK) {
-      DLOG("XMLHttpRequest: OnIOReady: curl_multi_socket failed: %s",
-           curl_multi_strerror(code));
-      Done(true);
-    }
-
-    if (!still_running) {
-      DLOG("XMLHttpRequest: OnIOReady: DONE this=%p", this);
-      Done(false);
-    }
-  }
-
-  class IOReadWatchCallback : public WatchCallbackInterface {
-   public:
-    IOReadWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
-
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      this_p_->OnIOReady(main_loop->GetWatchData(watch_id), CURL_POLL_IN);
-      return true;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-
-   private:
-    XMLHttpRequest *this_p_;
-  };
-
-  class IOWriteWatchCallback : public WatchCallbackInterface {
-   public:
-    IOWriteWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
-
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      // Because a socket may be always writable, don't continuously watch
-      // for write to avoid main loop busy.
-      this_p_->socket_write_watch_ = 0;
-      this_p_->OnIOReady(main_loop->GetWatchData(watch_id), CURL_POLL_OUT);
-      return false;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-
-   private:
-    XMLHttpRequest *this_p_;
-  };
-
-  class TimeoutWatchCallback : public WatchCallbackInterface {
-   public:
-    TimeoutWatchCallback(XMLHttpRequest *this_p) : this_p_(this_p) { }
-
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      this_p_->timeout_watch_ = 0;
-      this_p_->OnIOReady(CURL_SOCKET_TIMEOUT, 0);
-      return false;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-
-   private:
-    XMLHttpRequest *this_p_;
-  };
-
-  static int SocketCallback(CURL *handle, curl_socket_t socket, int type,
-                            void *user_p, void *sock_p) {
-    DLOG("XMLHttpRequest: SocketCallback: socket: %d, type: %d this=%p",
-         socket, type, user_p);
-    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(user_p);
-    ASSERT(this_p->curl_ == handle);
-
-    if (this_p->socket_ == 0)
-      this_p->socket_ = socket;
-    else
-      ASSERT(this_p->socket_ = socket);
-
-    if (type & CURL_POLL_REMOVE) {
-      this_p->RemoveIOWatches(); 
+    if (code != CURLE_OK) {
+      DLOG("XMLHttpRequest: Send: curl_easy_perform failed: %s",
+           curl_easy_strerror(code));
+      WorkerDone(true, status, context);
     } else {
-      this_p->io_watch_type_ = type;
-      if (type & CURL_POLL_IN) {
-        if (!this_p->socket_read_watch_) {
-          this_p->socket_read_watch_ = this_p->main_loop_->AddIOReadWatch(
-              socket, new IOReadWatchCallback(this_p));
-        }
+      WorkerDone(false, status, context);
+    }
+
+    delete context;
+    return reinterpret_cast<void *>(code);
+  }
+
+  // Passes the WriteHeader() request from worker thread to the main thread.
+  class WriteHeaderTask : public WatchCallbackInterface {
+   public:
+    WriteHeaderTask(const void *ptr, size_t size,
+                    const WorkerContext *worker_context)
+        : data_(static_cast<const char *>(ptr), size),
+          worker_context_(*worker_context) {
+    }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      if (worker_context_.this_p->curl_ == worker_context_.curl)
+        worker_context_.this_p->WriteHeader(data_);
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+
+    std::string data_;
+    WorkerContext worker_context_;
+  };
+
+  // Passes the WriteBody() request from worker thread to the main thread.
+  class WriteBodyTask : public WriteHeaderTask {
+   public:
+    WriteBodyTask(const void *ptr, size_t size, unsigned short status,
+                  const WorkerContext *worker_context)
+        : WriteHeaderTask(ptr, size, worker_context),
+          status_(status) {
+    }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      if (worker_context_.this_p->curl_ == worker_context_.curl)
+        worker_context_.this_p->WriteBody(data_, status_);
+      return false;
+    }
+
+    unsigned short status_;
+  };
+
+  // Passes the Done() request from worker thread to the main thread.
+  class DoneTask : public WriteBodyTask {
+   public:
+    DoneTask(bool aborted, unsigned short status,
+             const WorkerContext *worker_context)
+          // Write blank data to ensure the header is parsed.
+        : WriteBodyTask("", 0, status, worker_context), aborted_(aborted) { }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      // This cleanup of share handle will only succeed if this request is the
+      // final request that was active when the belonging session has been
+      // destroyed before this request finishes.
+      if (curl_share_cleanup(worker_context_.this_p->share_) == CURLSHE_OK) {
+        worker_context_.this_p->share_ = NULL;
+        DLOG("Hangover share handle successfully cleaned up");
       }
-      if (type & CURL_POLL_OUT) {
-        if (!this_p->socket_write_watch_) {
-          this_p->socket_write_watch_ = this_p->main_loop_->AddIOWriteWatch(
-              socket, new IOWriteWatchCallback(this_p));
-        }
-      }
+
+      WriteBodyTask::Call(main_loop, watch_id);
+      if (worker_context_.this_p->curl_ == worker_context_.curl)
+        worker_context_.this_p->Done(aborted_);
+      return false;
     }
-    return 0;
-  }
+    bool aborted_;
+  };
 
-  void InitTimeoutWatch(long timeout_ms) {
-    if (timeout_watch_)
-      main_loop_->RemoveWatch(timeout_watch_);
-    if (timeout_ms >= 0) {
-      timeout_watch_ = main_loop_->AddTimeoutWatch(
-          static_cast<int>(timeout_ms), new TimeoutWatchCallback(this));
+  static void WorkerDone(bool aborted, unsigned short status,
+                         WorkerContext *context) {
+    if (context->async) {
+      // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
+      context->this_p->main_loop_->AddTimeoutWatch(
+          0, new DoneTask(aborted, status, context));
+    } else {
+      context->this_p->Done(aborted);
     }
-  }
-
-  static int TimerCallback(CURLM *multi, long timeout_ms, void *user_p) {
-    DLOG("XMLHTTPRequest: TimerCallback: timeout: %ld this=%p",
-         timeout_ms, user_p);
-    XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(user_p);
-    ASSERT(this_p->curlm_ == multi);
-
-    this_p->InitTimeoutWatch(timeout_ms);
-    return 0;
-  }
-
-  static size_t ReadCallback(void *ptr, size_t size,
-                             size_t mem_block, void *data) {
-    DLOG("XMLHttpRequest: ReadCallback: %zu*%zu this=%p",
-         size, mem_block, data);
-    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(data);
-    ASSERT(this_p);
-    ASSERT(this_p->state_ == OPENED);
-    ASSERT(!this_p->async_ || this_p->send_flag_);
-
-    if (!CheckSize(this_p->send_data_.length(), size, mem_block)) {
-      this_p->Abort();
-      return 0;
-    }
-
-    size_t real_size = std::min(this_p->send_data_.length(), size * mem_block);
-    strncpy(reinterpret_cast<char *>(ptr), this_p->send_data_.c_str(),
-            real_size);
-    this_p->send_data_.erase(0, real_size);
-    if (this_p->send_data_.empty()) {
-      // Close the write watch to prevent the write events from blocking the
-      // main loop.
-      if (this_p->socket_write_watch_)
-        this_p->main_loop_->RemoveWatch(this_p->socket_write_watch_);
-      this_p->socket_write_watch_ = 0;
-    }
-    return real_size;
   }
 
   static size_t WriteHeaderCallback(void *ptr, size_t size,
                                     size_t mem_block, void *user_p) {
+    if (!CheckSize(0, size, mem_block))
+      return CURLE_WRITE_ERROR;
+
+    size_t data_size = size * mem_block;
+    WorkerContext *context = static_cast<WorkerContext *>(user_p);
     // DLOG("XMLHttpRequest: WriteHeaderCallback: %zu*%zu this=%p",
-    //      size, mem_block, user_p);
-    XMLHttpRequest* this_p = static_cast<XMLHttpRequest *>(user_p);
-    ASSERT(this_p);
-    ASSERT(this_p->state_ == OPENED);
-    ASSERT(!this_p->async_ || this_p->send_flag_);
+    //      size, mem_block, context->this_p);
+    if (context->async) {
+      if (context->this_p->curl_ != context->curl) {
+        // The current XMLHttpRequest has been aborted, so abort the
+        // curl request.
+        return CURLE_WRITE_ERROR;
+      }
 
-    if (!CheckSize(this_p->response_headers_.length(), size, mem_block)) {
-      this_p->Abort();
-      return 0;
+      // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
+      context->this_p->main_loop_->AddTimeoutWatch(
+          0, new WriteHeaderTask(ptr, data_size, context));
+      return size * mem_block;
+    } else {
+      return context->this_p->WriteHeader(
+          std::string(static_cast<char *>(ptr), data_size));
     }
+  }
 
-    size_t real_size = size * mem_block;
-    this_p->response_headers_.append(reinterpret_cast<char *>(ptr), real_size);
-    return real_size;
+  size_t WriteHeader(const std::string &data) {
+    ASSERT(state_ == OPENED && send_flag_);
+    size_t size = data.length();
+    if (CheckSize(response_headers_.length(), size, 1))
+      response_headers_ += data;
+    else
+      size = CURLE_WRITE_ERROR;
+    return size;
   }
 
   bool SplitStatusAndHeaders() {
@@ -549,11 +480,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         if (space_pos != std::string::npos)
           status_text_.erase(0, space_pos + 1);
       }
-
-      long curl_status = 0;
-      if (curl_)
-        curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &curl_status);
-      status_ = static_cast<unsigned short>(curl_status);
 
       // Otherwise, just leave the whole status line in status.
       return true;
@@ -623,71 +549,66 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
   }
 
-  static size_t WriteBodyCallback(void *ptr, size_t size,
-                                  size_t mem_block, void *user_p) {
+  static size_t WriteBodyCallback(void *ptr, size_t size, size_t mem_block,
+                                  void *user_p) {
+    if (!CheckSize(0, size, mem_block))
+      return CURLE_WRITE_ERROR;
+
+    size_t data_size = size * mem_block;
+    WorkerContext *context = static_cast<WorkerContext *>(user_p);
     // DLOG("XMLHttpRequest: WriteBodyCallback: %zu*%zu this=%p",
-    //      size, mem_block, user_p);
-    XMLHttpRequest *this_p = static_cast<XMLHttpRequest *>(user_p);
-    ASSERT(this_p);
-    ASSERT(this_p->state_ == OPENED || this_p->state_ == LOADING);
-    ASSERT(!this_p->async_ || this_p->send_flag_);
+    //      size, mem_block, context->this_p);
 
-    if (!CheckSize(this_p->response_body_.length(), size, mem_block)) {
-      this_p->Abort();
-      return 0;
+    long curl_status = 0;
+    curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
+    unsigned short status = static_cast<unsigned short>(curl_status);
+
+    if (context->async) {
+      if (context->this_p->curl_ != context->curl) {
+        // The current XMLHttpRequest has been aborted, so abort the
+        // curl request.
+        return CURLE_WRITE_ERROR;
+      }
+
+      // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
+      context->this_p->main_loop_->AddTimeoutWatch(
+          0, new WriteBodyTask(ptr, data_size, status, context));
+      return data_size;
+    } else {
+      return context->this_p->WriteBody(
+          std::string(static_cast<char *>(ptr), data_size), status);
     }
+  }
 
-    if (this_p->state_ == OPENED) {
-      this_p->SplitStatusAndHeaders();
-      this_p->ParseResponseHeaders();
-      if (!this_p->ChangeState(HEADERS_RECEIVED) ||
-          !this_p->ChangeState(LOADING))
+  size_t WriteBody(const std::string &data, unsigned short status) {
+    if (state_ == OPENED) {
+      status_ = status;
+      SplitStatusAndHeaders();
+      ParseResponseHeaders();
+      if (!ChangeState(HEADERS_RECEIVED) || !ChangeState(LOADING))
         return 0;
     }
-    size_t real_size = size * mem_block;
-    this_p->response_body_.append(static_cast<char *>(ptr), real_size);
-    return real_size;
-  }
 
-  void RemoveIOWatches() {
-    if (socket_read_watch_) {
-      main_loop_->RemoveWatch(socket_read_watch_);
-      socket_read_watch_ = 0;
-    }
-    if (socket_write_watch_) {
-      main_loop_->RemoveWatch(socket_write_watch_);
-      socket_write_watch_ = 0;
-    }
-    io_watch_type_ = 0;
-  }
-
-  void RemoveWatches() {
-    RemoveIOWatches();
-    if (timeout_watch_) {
-      main_loop_->RemoveWatch(timeout_watch_);
-      timeout_watch_ = 0;
-    }
+    ASSERT(state_ == LOADING && send_flag_);
+    size_t size = data.length();
+    if (CheckSize(response_body_.length(), size, 1))
+      response_body_ += data;
+    else
+      size = CURLE_WRITE_ERROR;
+    return size;
   }
 
   void Done(bool aborting) {
-    if (state_ == OPENED && !aborting) {
-      // The response has only headers without body. 
-      SplitStatusAndHeaders();
-      ParseResponseHeaders();
-      ChangeState(HEADERS_RECEIVED);
-    }
-
-    socket_ = 0;
-    RemoveWatches();
     if (curl_) {
-      if (curlm_) curl_multi_remove_handle(curlm_, curl_);
-      curl_easy_cleanup(curl_);
+      if (!send_flag_) {
+        // This cleanup only happens if an XMLHttpRequest is opened but
+        // no send() is called. For an active request, the curl handle will
+        // be cleaned up when the request finishes.
+        curl_easy_cleanup(curl_);
+      }
       curl_ = NULL;
     }
-    if (curlm_) {
-      curl_multi_cleanup(curlm_);
-      curlm_ = NULL;
-    }
+
     if (request_headers_) {
       curl_slist_free_all(request_headers_);
       request_headers_ = NULL;
@@ -720,7 +641,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     response_headers_map_.clear();
     response_body_.clear();
     response_text_.clear();
-    send_data_.clear();
     status_ = 0;
     status_text_.clear();
     if (response_dom_) {
@@ -969,6 +889,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     return result;
   }
 
+  CURL *curl_;
+  CURLSH *share_;
   MainLoopInterface *main_loop_;
   XMLParserInterface *xml_parser_;
   Signal0<void> onreadystatechange_signal_;
@@ -976,21 +898,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string url_;
   bool async_;
 
-  CURL *curl_;
-  CURLM *curlm_;
-  curl_socket_t socket_;
-  int socket_read_watch_;
-  int socket_write_watch_;
-  int io_watch_type_;
-  int timeout_watch_;
-
   State state_;
   // Required by the specification.
   // It will be true after send() is called in async mode.
   bool send_flag_;
 
   curl_slist *request_headers_;
-  std::string send_data_;
   std::string response_headers_;
   std::string response_content_type_;
   std::string response_encoding_;
@@ -1000,11 +913,88 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   std::string response_text_;
   DOMDocumentInterface *response_dom_;
   CaseInsensitiveStringMap response_headers_map_;
+  pthread_attr_t thread_attr_;
 };
 
-XMLHttpRequestInterface *XMLHttpRequestFactory(XMLParserInterface *parser) {
-  return new XMLHttpRequest(GetGlobalMainLoop(), parser);
-}
+class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
+ public:
+  XMLHttpRequestFactory() : next_session_id_(1) {
+  }
+
+  virtual int CreateSession() {
+    CURLSH *share = curl_share_init();
+    if (share) {
+      curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
+      curl_share_setopt(share, CURLSHOPT_LOCKFUNC, Lock);
+      curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, Unlock);
+      int result = next_session_id_++;
+      Session *session = &sessions_[result];
+      session->share = share;
+      session->share_ref = curl_easy_init();
+      // Add a reference from "share_ref" to "share" to prevent "share" be
+      // cleaned up by XMLHttpRequest instances.
+      curl_easy_setopt(session->share_ref, CURLOPT_SHARE, share);
+      return result;
+    }
+    return -1;
+  }
+
+  virtual void DestroySession(int session_id) {
+    Sessions::iterator it = sessions_.find(session_id);
+    if (it != sessions_.end()) {
+      Session *session = &it->second;
+      curl_easy_setopt(session->share_ref, CURLOPT_SHARE, NULL);
+      // This cleanup will fail if there is still active requests. It'll be
+      // actually cleaned up when the requests finish.
+      CURLSHcode code = curl_share_cleanup(session->share);
+      if (code != CURLSHE_OK) {
+        DLOG("XMLHttpRequestFactory: Failed to DestroySession(): %s",
+             curl_share_strerror(code));
+      }
+      sessions_.erase(it);
+    } else {
+      DLOG("XMLHttpRequestFactory::DestroySession Invalid session: %d",
+           session_id);
+    }
+  }
+
+  virtual XMLHttpRequestInterface *CreateXMLHttpRequest(
+      int session_id, XMLParserInterface *parser) {
+    if (session_id == 0)
+      return new XMLHttpRequest(NULL, GetGlobalMainLoop(), parser);
+
+    Sessions::iterator it = sessions_.find(session_id);
+    if (it != sessions_.end())
+      return new XMLHttpRequest(it->second.share, GetGlobalMainLoop(), parser);
+
+    DLOG("XMLHttpRequestFactory::CreateXMLHttpRequest: "
+         "Invalid session: %d", session_id);
+    return NULL;
+  }
+
+  static void Lock(CURL *handle, curl_lock_data data,
+                   curl_lock_access access, void *userptr) {
+    // This synchronization scope is bigger than optimal, but is much simpler.
+    pthread_mutex_lock(&mutex_);
+  }
+
+  static void Unlock(CURL *handle, curl_lock_data data, void *userptr) {
+    pthread_mutex_unlock(&mutex_);
+  }
+
+ private:
+  struct Session {
+    CURLSH *share;
+    CURL *share_ref;
+  };
+
+  typedef std::map<int, Session> Sessions;
+  Sessions sessions_;
+  int next_session_id_;
+  static pthread_mutex_t mutex_;
+};
+
+pthread_mutex_t XMLHttpRequestFactory::mutex_ = PTHREAD_MUTEX_INITIALIZER;
 
 } // namespace curl
 } // namespace ggadget
@@ -1013,11 +1003,12 @@ XMLHttpRequestInterface *XMLHttpRequestFactory(XMLParserInterface *parser) {
 #define Finalize curl_xml_http_request_LTX_Finalize
 #define CreateXMLHttpRequest curl_xml_http_request_LTX_CreateXMLHttpRequest
 
+static ggadget::curl::XMLHttpRequestFactory gFactory;
+
 extern "C" {
   bool Initialize() {
     DLOG("Initialize curl_xml_http_request extension.");
-    return ggadget::SetXMLHttpRequestFactory(
-        &ggadget::curl::XMLHttpRequestFactory);
+    return ggadget::SetXMLHttpRequestFactory(&gFactory);
   }
 
   void Finalize() {

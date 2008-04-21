@@ -32,7 +32,7 @@ std::string g_mocked_xml_http_request_return_data;
 // Records the last requested URL.
 std::string g_mocked_xml_http_request_requested_url;
 
-class MockedXMLHttpRequest : public ggadget::ScriptableHelperNativeOwned<
+class MockedXMLHttpRequest: public ggadget::ScriptableHelperNativeOwned<
     ggadget::XMLHttpRequestInterface> {
 public:
   DEFINE_CLASS_ID(0x5868a91c86574dca, ggadget::XMLHttpRequestInterface);
@@ -108,10 +108,16 @@ public:
 
 // Set the above global variables before an XMLHttpRequestInstance instance
 // is to be created, to make the instance do the desired things.
-inline ggadget::XMLHttpRequestInterface *MockedXMLHttpRequestFactory(
-    ggadget::XMLParserInterface *parser) {
-  return new MockedXMLHttpRequest(g_mocked_xml_http_request_return_status,
-                                  g_mocked_xml_http_request_return_data);
-}
+class MockedXMLHttpRequestFactory
+    : public ggadget::XMLHttpRequestFactoryInterface {
+ public:
+  virtual int CreateSession() { return 1; }
+  virtual void DestroySession(int session_id) { }
+  virtual ggadget::XMLHttpRequestInterface *CreateXMLHttpRequest(
+      int session_id, ggadget::XMLParserInterface *parser) {
+    return new MockedXMLHttpRequest(g_mocked_xml_http_request_return_status,
+                                    g_mocked_xml_http_request_return_data);
+  }
+};
 
 #endif // GGADGET_TESTS_MOCKED_XML_HTTP_REQUEST_H__

@@ -42,7 +42,6 @@ SET(SRCS
   memory_options.cc
   messages.cc
   module.cc
-  native_main_loop.cc
   options_factory.cc
   script_runtime_manager.cc
   scriptable_array.cc
@@ -93,12 +92,9 @@ SET(SRCS
   zip_file_manager.cc
 )
 
-APPLY_CONFIG(PTHREAD)
-
 SET(LIBS
   ltdl
   unzip
-  ${PTHREAD_LIBS}
 )
 
 ADD_LIBRARY(ggadget SHARED ${SRCS})

@@ -20,7 +20,7 @@
 #include <string>
 
 #include "ggadget/logger.h"
-#include "ggadget/native_main_loop.h"
+#include "native_main_loop.h"
 #include "main_loop_test.h"
 #include "unittest/gtest.h"
 

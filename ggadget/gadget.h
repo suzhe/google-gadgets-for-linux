@@ -32,6 +32,7 @@ class View;
 class Connection;
 class OptionsInterface;
 class DOMDocumentInterface;
+class XMLHttpRequestInterface;
 
 /**
  * A class to hold a gadget instance.
@@ -229,6 +230,12 @@ class Gadget {
    * The slot accepts one int parameter which is the new plugin flags value.
    */
   Connection *ConnectOnPluginFlagsChanged(Slot1<void, int> *handler);
+
+  /**
+   * Creates a new @c XMLHttpRequestInterface instance.
+   * All instances created by this gadget share the same set of cookies.
+   */
+  XMLHttpRequestInterface *CreateXMLHttpRequest();
 
  public:
   /**
