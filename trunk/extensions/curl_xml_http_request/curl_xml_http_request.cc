@@ -242,13 +242,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  
   struct WorkerContext {
     WorkerContext(XMLHttpRequest *a_this_p, CURL *a_curl, bool a_async,
-                  curl_slist *a_request_headers)
+                  curl_slist *a_request_headers,
+                  const char *a_request_data, size_t a_request_size)
         : this_p(a_this_p), curl(a_curl), async(a_async),
-          request_headers(a_request_headers) { }
+          request_headers(a_request_headers) {
+      if (a_request_data && a_request_size > 0)
+        request_data.assign(a_request_data, a_request_size);
+    }
     XMLHttpRequest *this_p;
     CURL *curl;
     bool async;
     curl_slist *request_headers;
+    std::string request_data;
   };
 
   virtual ExceptionCode Send(const char *data, size_t size) {
@@ -262,15 +267,28 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return SYNTAX_ERR;
     }
 
-    if (size > 0) {
-      curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, size);
-      curl_easy_setopt(curl_, CURLOPT_COPYPOSTFIELDS, data);
+    // As described in the spec, here don't change the state, but send
+    // an event for historical reasons.
+    if (!ChangeState(OPENED))
+      return INVALID_STATE_ERR;
+
+    WorkerContext *context = new WorkerContext(this, curl_, async_,
+                                               request_headers_,
+                                               data, size);
+    request_headers_ = NULL;
+
+    if (data && size > 0) {
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+                       context->request_data.size());
+      // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.  
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+                       context->request_data.c_str());
     }
 
   #ifdef _DEBUG
     curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1);
   #endif
-    curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, request_headers_);
+    curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, context->request_headers);
     curl_easy_setopt(curl_, CURLOPT_FRESH_CONNECT, 1);
     curl_easy_setopt(curl_, CURLOPT_FORBID_REUSE, 1);
     curl_easy_setopt(curl_, CURLOPT_AUTOREFERER, 1);
@@ -279,14 +297,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     curl_easy_setopt(curl_, CURLOPT_TIMEOUT, kTimeoutSec);
     curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT, kConnectTimeoutSec);
 
-    // As described in the spec, here don't change the state, but send
-    // an event for historical reasons.
-    if (!ChangeState(OPENED))
-      return INVALID_STATE_ERR;
-
-    WorkerContext *context = new WorkerContext(this, curl_, async_,
-                                               request_headers_);
-    request_headers_ = NULL;
     curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, WriteHeaderCallback);
     curl_easy_setopt(curl_, CURLOPT_HEADERDATA, context);
     curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteBodyCallback);
