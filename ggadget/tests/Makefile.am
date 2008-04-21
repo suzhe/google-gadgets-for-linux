@@ -90,7 +90,7 @@ xml_dom_test_SOURCES		= xml_dom_test.cc
 xml_parser_test_SOURCES		= xml_parser_test.cc
 digest_utils_test_SOURCES	= digest_utils_test.cc
 
-xml_http_request_test_SOURCES	= xml_http_request_test.cc
+xml_http_request_test_SOURCES	= xml_http_request_test.cc native_main_loop.cc
 xml_http_request_test_LDADD	= $(PTHREAD_LIBS) \
 				  $(top_builddir)/unittest/libgtest.la \
 				  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la

@@ -26,7 +26,7 @@ if [ ! -d $CODESIGHS ]; then
   echo Error: no third_party/codesighs directory found.
 fi
 
-ALLFILES=`find . -type f -perm /u+x | grep -v /tests/ | grep -v /codesighs/`
+ALLFILES=`find . -type f -perm -0700 | grep -v /tests/ | grep -v /codesighs/`
 TSVFILE=/tmp/tsv.$$
 LASTTSVFILE=last_obj.tsv
 NMRESULTS=/tmp/nmresults.$$

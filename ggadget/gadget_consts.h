@@ -106,6 +106,9 @@ const char kProfilePrefix[] = "profile://";
 /** Prefix for global file resources. */
 const char kGlobalResourcePrefix[] = "resource://";
 
+/** Default directory to store profiles. */
+const char kDefaultProfileDirectory[] = ".google/gadgets";
+
 const char kScrollDefaultBackgroundH[] = "resource://scroll_background_h.png";
 const char kScrollDefaultGrippyH[] = "resource://scrollbar_grippy_h.png";
 const char kScrollDefaultThumbH[] = "resource://scrollbar_u_h.png";

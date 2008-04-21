@@ -171,7 +171,6 @@ class View::Impl {
       draw_count_(0),
       hittest_(ViewInterface::HT_CLIENT) {
     ASSERT(host_);
-    ASSERT(element_factory_);
     ASSERT(main_loop_);
 
     if (gadget_) {

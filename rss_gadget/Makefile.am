@@ -15,8 +15,10 @@
 
 RSS_GADGET_FILES= en/strings.xml \
 		  gadget.gmanifest \
+		  large_rss_icon.png \
 		  main.js \
 		  main.xml \
+		  rss_bkgnd.png \
 		  small_rss_icon.png
 
 EXTRA_DIST = $(RSS_GADGET_FILES)
