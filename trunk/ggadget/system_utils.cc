@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <locale.h>
+#include <pwd.h>
 #include "system_utils.h"
 #include "common.h"
 #include "gadget_consts.h"
@@ -316,6 +317,24 @@ std::string GetCurrentDirectory() {
     }
     return result;
   }
+}
+
+std::string GetHomeDirectory() {
+  const char * home = 0;
+  struct passwd *pw;
+
+  setpwent ();
+  pw = getpwuid(getuid());
+  endpwent ();
+
+  if (pw)
+    home = pw->pw_dir;
+
+  if (!home)
+    home = getenv("HOME");
+
+  // If failed to get home directory, then use current directory.
+  return home ? std::string(home) : GetCurrentDirectory();
 }
 
 bool CreateTempDirectory(const char *prefix, std::string *path) {

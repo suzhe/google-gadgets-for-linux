@@ -16,7 +16,7 @@
 
 #ifndef GGADGET_TESTS_NATIVE_MAIN_LOOP_H__
 #define GGADGET_TESTS_NATIVE_MAIN_LOOP_H__
-\
+
 #include <stdint.h>
 #include <ggadget/main_loop_interface.h>
 

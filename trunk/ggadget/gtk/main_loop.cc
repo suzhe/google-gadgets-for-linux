@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <fcntl.h>
 #include <stdint.h>
 #include <glib/ghash.h>
 #include <gtk/gtk.h>
@@ -89,6 +90,8 @@ class MainLoop::Impl {
     // still work in single thread environment. So it's safe to just ignore the
     // failure of pipe().
     if (pipe(wakeup_pipe_) == 0) {
+      fcntl(wakeup_pipe_[0], F_SETFL, O_NONBLOCK);
+      fcntl(wakeup_pipe_[1], F_SETFL, O_NONBLOCK);
       WakeUpWatchCallback *callback = new WakeUpWatchCallback(wakeup_pipe_[0]);
       AddIOWatch(IO_READ_WATCH, wakeup_pipe_[0], callback);
     }

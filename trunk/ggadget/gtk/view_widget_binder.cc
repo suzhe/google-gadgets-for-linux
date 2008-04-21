@@ -659,11 +659,8 @@ class ViewWidgetBinder::Impl {
         if (impl->view_->OnSizing(&width, &height)) {
           DLOG("Resize View to: %lf %lf", width, height);
           impl->view_->SetSize(width, height);
-        } else {
-          // If failed to resize the view, then send a window resize request to
-          // host, to change the window size back to the original size.
-          impl->host_->QueueResize();
         }
+        impl->host_->QueueResize();
       }
     } else if (mode == ViewInterface::RESIZABLE_ZOOM) {
       double width = impl->view_->GetWidth();

@@ -38,7 +38,6 @@ class Elements::Impl {
       : factory_(factory), owner_(owner), view_(view),
         width_(.0), height_(.0),
         scrollable_(false) {
-    ASSERT(factory);
     ASSERT(view);
   }
 
@@ -51,6 +50,8 @@ class Elements::Impl {
   }
 
   BasicElement *AppendElement(const char *tag_name, const char *name) {
+    if (!factory_) return NULL;
+
     BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
     if (e == NULL)
       return NULL;
@@ -66,6 +67,8 @@ class Elements::Impl {
   BasicElement *InsertElement(const char *tag_name,
                               const BasicElement *before,
                               const char *name) {
+    if (!factory_) return NULL;
+
     BasicElement *e = factory_->CreateElement(tag_name, owner_, view_, name);
     if (e == NULL)
       return NULL;

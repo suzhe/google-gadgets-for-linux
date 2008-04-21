@@ -78,8 +78,10 @@ static const char *kGlobalResourcePaths[] = {
   GGL_RESOURCE_DIR "/resources.gg",
   GGL_RESOURCE_DIR "/resources",
 #endif
+#ifdef _DEBUG
   "resources.gg",
   "resources",
+#endif
   NULL
 };
 
@@ -188,9 +190,15 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  // TODO: Proper profile directory.
-  if ((fm = ggadget::CreateFileManager(".")) != NULL)
+  std::string profile_dir =
+      ggadget::BuildFilePath(ggadget::GetHomeDirectory().c_str(),
+                             ggadget::kDefaultProfileDirectory, NULL);
+  fm = ggadget::DirFileManager::Create(profile_dir.c_str(), true);
+  if (fm != NULL) {
     fm_wrapper->RegisterFileManager(ggadget::kProfilePrefix, fm);
+  } else {
+    LOG("Failed to initialize profile directory.");
+  }
 
   ggadget::SetGlobalFileManager(fm_wrapper);
 

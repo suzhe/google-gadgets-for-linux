@@ -109,6 +109,13 @@ bool ReadFileContents(const char *path, std::string *content);
 std::string GetCurrentDirectory();
 
 /**
+ * Gets current user's home directory.
+ *
+ * @return the absolute path of the current user's home directory.
+ */
+std::string GetHomeDirectory();
+
+/**
  * Creates an unique temporary directory that can be used to store temporary
  * files.
  *

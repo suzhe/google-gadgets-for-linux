@@ -30,7 +30,7 @@ namespace ggadget {
 
 const char kOnPlayStateChangeEvent[] = "PlayStateChange";
 const char kOnPositionChangeEvent[]  = "PositionChange";
-const char kOnMediaChangeEvent[]  = "OnMediaChange";
+const char kOnMediaChangeEvent[]  = "MediaChange";
 const char kOnPlaylistChangeEvent[]  = "PlaylistChange";
 const char kOnPlayerDockedStateChangeEvent[]  = "PlayerDockedStateChange";
 

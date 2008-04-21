@@ -165,10 +165,15 @@ xmlEntity *GetEntityHandler(void *ctx, const xmlChar *name) {
     }
     StringMap::const_iterator it =
         data->extra_entities->find(FromXmlCharPtr(name));
+    const xmlChar *value = name;
     if (it != data->extra_entities->end()) {
-      result = xmlAddDocEntity(ctxt->myDoc, name, XML_INTERNAL_GENERAL_ENTITY,
-                               NULL, NULL, ToXmlCharPtr(it->second.c_str()));
+      value = ToXmlCharPtr(it->second.c_str());
+    } else {
+      LOG("Entity '%s' not defined.", name);
     }
+    // If the entity is not defined, just use it's name.
+    result = xmlAddDocEntity(ctxt->myDoc, name, XML_INTERNAL_GENERAL_ENTITY,
+                             NULL, NULL, value);
   }
   return result;
 }
