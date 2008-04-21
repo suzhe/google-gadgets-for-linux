@@ -21,11 +21,11 @@
 #include "ggadget/view.h"
 #include "ggadget/element_factory.h"
 #include "ggadget/slot.h"
-#include "ggadget/native_main_loop.h"
 #include "mocked_element.h"
+#include "mocked_timer_main_loop.h"
 #include "mocked_view_host.h"
 
-ggadget::NativeMainLoop main_loop;
+MockedTimerMainLoop main_loop(0);
 
 // The total count of elements_.
 int count = 0;

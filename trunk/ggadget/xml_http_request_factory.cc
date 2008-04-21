@@ -18,9 +18,9 @@
 
 namespace ggadget {
 
-static XMLHttpRequestFactory g_factory = NULL;
+static XMLHttpRequestFactoryInterface *g_factory = NULL;
 
-bool SetXMLHttpRequestFactory(XMLHttpRequestFactory factory) {
+bool SetXMLHttpRequestFactory(XMLHttpRequestFactoryInterface *factory) {
   ASSERT(!g_factory && factory);
   if (!g_factory && factory) {
     g_factory = factory;
@@ -29,9 +29,9 @@ bool SetXMLHttpRequestFactory(XMLHttpRequestFactory factory) {
   return false;
 }
 
-XMLHttpRequestInterface *CreateXMLHttpRequest(XMLParserInterface *parser) {
+XMLHttpRequestFactoryInterface *GetXMLHttpRequestFactory() {
   VERIFY_M(g_factory, ("The XMLHttpRequest factory has not been set yet."));
-  return g_factory ? g_factory(parser) : NULL;
+  return g_factory;
 }
 
 } // namespace ggadget

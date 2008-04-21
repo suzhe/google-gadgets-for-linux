@@ -16,7 +16,6 @@
 
 #include "ggadget/logger.h"
 #include "ggadget/file_manager_factory.h"
-#include "ggadget/native_main_loop.h"
 #include "ggadget/options_interface.h"
 #include "ggadget/system_utils.h"
 #include "ggadget/tests/init_extensions.h"

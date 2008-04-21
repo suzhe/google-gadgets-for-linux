@@ -85,7 +85,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  memory_options.h \
 			  menu_interface.h \
 			  module.h \
-			  native_main_loop.h \
 			  object_element.h \
 			  options_interface.h \
 			  progressbar_element.h \
@@ -172,7 +171,6 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  memory_options.cc \
 			  messages.cc \
 			  module.cc \
-			  native_main_loop.cc \
 			  object_element.cc \
 			  options_factory.cc \
 			  progressbar_element.cc \
@@ -212,7 +210,6 @@ libggadget@GGL_EPOCH@_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)
 
 libggadget@GGL_EPOCH@_la_LIBADD = \
-			  $(PTHREAD_LIBS) \
 			  $(top_builddir)/third_party/unzip/libunzip.la
 
 libggadget@GGL_EPOCH@_la_LDFLAGS = \

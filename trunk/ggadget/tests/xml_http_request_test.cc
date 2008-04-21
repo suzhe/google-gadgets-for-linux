@@ -14,14 +14,13 @@
   limitations under the License.
 */
 
-#include <vector>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <time.h>
 #include <sys/poll.h>
+#include <signal.h>
 
 #include "ggadget/logger.h"
 #include "ggadget/gadget_consts.h"
@@ -29,7 +28,7 @@
 #include "ggadget/xml_dom_interface.h"
 #include "ggadget/xml_http_request_interface.h"
 #include "ggadget/xml_parser_interface.h"
-#include "ggadget/native_main_loop.h"
+#include "native_main_loop.h"
 #include "unittest/gtest.h"
 #include "init_extensions.h"
 
@@ -40,11 +39,15 @@ using ggadget::NativeMainLoop;
 using ggadget::XMLParserInterface;
 using ggadget::GetXMLParser;
 
-static NativeMainLoop main_loop;
+static NativeMainLoop g_main_loop;
+
+XMLHttpRequestInterface *CreateXMLHttpRequest(int session_id) {
+  return ggadget::GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
+      session_id, GetXMLParser());
+}
 
 TEST(XMLHttpRequest, States) {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(xml_parser);
+  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   ASSERT_EQ(XMLHttpRequestInterface::UNSENT, request->GetReadyState());
   // Invalid request method.
   ASSERT_EQ(XMLHttpRequestInterface::SYNTAX_ERR,
@@ -100,9 +103,9 @@ class Callback {
   XMLHttpRequestInterface *request_;
 };
 
+#if 0 // Local file is no longer supported.
 TEST(XMLHttpRequest, SyncLocalFile) {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(xml_parser);
+  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   request->Ref();
 
   Callback callback(request);
@@ -134,8 +137,7 @@ TEST(XMLHttpRequest, SyncLocalFile) {
 }
 
 TEST(XMLHttpRequest, AsyncLocalFile) {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(xml_parser);
+  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   request->Ref();
 
   Callback callback(request);
@@ -164,124 +166,141 @@ TEST(XMLHttpRequest, AsyncLocalFile) {
   ASSERT_EQ(1, request->GetRefCount());
   request->Unref();
 }
-
-bool server_thread_succeeded = false;
-class SocketCloser {
- public:
-  SocketCloser(int socket) : socket_(socket) { }
-  ~SocketCloser() { close(socket_); }
-  int socket_;
-};
+#endif
 
 const char *kResponse0 = "HTTP/1.1 200 OK\r\n";
-const char *kResponse1 = "Connection: Close\r\nTestHeader1: Value1\r\n";
-const char *kResponse2 = "TestHeader2: Value2a\r\ntestheader2: Value2b\r\n\r\n";
-const char *kResponse3 = "Some contents\r\n";
-const char *kResponse4 = "More contents\r\n";
-
-int semaphore = 0;
+const char *kResponse1 = "Connection: Close\r\n"
+                         "Set-Cookie: COOKIE1=Value1; Path=/\r\n"
+                         "TestHeader1: Value1\r\n";
+const char *kResponse2 = "TestHeader2: Value2a\r\n"
+                         "testheader2: Value2b\r\n\r\n";
+const char *kResponse3 = "<?xml version=\"1.0\" encoding=\"gb2312\"?>\r\n";
+const char *kResponse4 = "<root>\xBA\xBA\xD7\xD6</root>\r\n";
+const char *kResponseText = "<?xml version=\"1.0\" encoding=\"gb2312\"?>\r\n"
+                            "<root>\xE6\xB1\x89\xE5\xAD\x97</root>\r\n";
 
 void Wait(int ms) {
   static timespec tm = { 0, ms * 1000000 }; // Sleep for 100ms.
   nanosleep(&tm, NULL);
 }
 
-void WaitFor(int value) {
-  while (semaphore != value)
-    Wait(2);
-}
-
-int port = 0;
-
-void ServerThreadInner(bool async) {
-  int s = socket(PF_INET, SOCK_STREAM, 0);
-  LOG("Server created socket: %d", s);
-  ASSERT_GT(s, 0);
-  SocketCloser closer1(s);
-
-  sockaddr_in sin;
-  memset(&sin, 0, sizeof(sin));
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = htonl(INADDR_ANY);
-  socklen_t socklen = sizeof(sin);
-  ASSERT_EQ(0, bind(s, reinterpret_cast<sockaddr *>(&sin), socklen));
-  ASSERT_EQ(0, listen(s, 5));
-  ASSERT_EQ(0, getsockname(s, reinterpret_cast<sockaddr *>(&sin), &socklen));
-  port = ntohs(sin.sin_port);
-  LOG("Server bound to port: %d", port);
-
-  sockaddr_in cin;
-  LOG("Server is waiting for connection");
-  int s1 = accept(s, reinterpret_cast<sockaddr *>(&cin), &socklen);
-  ASSERT_GT(s1, 0);
-  SocketCloser closer2(s1);
-  LOG("Server accepted a connection: %d", s1);
-
-  std::string line;
-  int lineno = 0;
-  char last_b = 0;
-  bool test_header_met = false;
-  while (true) {
-    char b;
-    read(s1, &b, 1);
-    if (b == '\n' && last_b == '\r') {
-      lineno++;
-      if (lineno == 0)
-        ASSERT_STREQ("GET /test HTTP/1.1", line.c_str());
-      if (line == "TestHeader: TestHeaderValue")
-        test_header_met = true;
-      last_b = 0;
-      // End of request.
-      if (line.empty())
-        break;
-      line.clear();
-    } else {
-      last_b = b;
-      if (b != '\r')
-        line += b;
-    }
+class Server {
+ public:
+  // If instructed is true, the server thread will wait for the client to
+  // instruct its next step; otherwise the server thread will run automatically.
+  Server(bool instructed)
+      : instructed_(instructed), succeeded_(false), instruction_(0), port_(0) {
+    pthread_create(&thread_, NULL, Thread, this);
+    while (port_ == 0) Wait(100);
+    Wait(50);
   }
-  LOG("Server got the whole request");
 
-  ASSERT_TRUE(test_header_met);
-  if (async) WaitFor(1); else Wait(100);
-  LOG("Server write response0");
-  write(s1, kResponse0, strlen(kResponse0));
-  LOG("Server write response1");
-  write(s1, kResponse1, strlen(kResponse1));
-  if (async) WaitFor(2); else Wait(100);
-  LOG("Server write response2");
-  write(s1, kResponse2, strlen(kResponse2));
-  if (async) WaitFor(3); else Wait(100);
-  LOG("Server write response3");
-  write(s1, kResponse3, strlen(kResponse3));
-  if (async) WaitFor(4); else Wait(100);
-  LOG("Server write response4");
-  write(s1, kResponse4, strlen(kResponse4));
-  server_thread_succeeded = true;
-}
+  class SocketCloser {
+   public:
+    SocketCloser(int socket) : socket_(socket) { }
+    ~SocketCloser() { close(socket_); }
+    int socket_;
+  };
 
-void *ServerThread(void *arg) {
-  ServerThreadInner(*static_cast<bool *>(arg));
-  return arg;
-}
+  void WaitFor(int value) {
+    while (instruction_ != value)
+      Wait(2);
+  }
+
+  static void *Thread(void *arg) {
+    static_cast<Server *>(arg)->ThreadInner();
+    return arg;
+  }
+
+  void ThreadInner() {
+    int s = socket(PF_INET, SOCK_STREAM, 0);
+    LOG("Server created socket: %d", s);
+    ASSERT_GT(s, 0);
+    SocketCloser closer1(s);
+
+    sockaddr_in sin;
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
+    socklen_t socklen = sizeof(sin);
+    ASSERT_EQ(0, bind(s, reinterpret_cast<sockaddr *>(&sin), socklen));
+    ASSERT_EQ(0, listen(s, 5));
+    ASSERT_EQ(0, getsockname(s, reinterpret_cast<sockaddr *>(&sin), &socklen));
+    port_ = ntohs(sin.sin_port);
+    LOG("Server bound to port: %d", port_);
+
+    sockaddr_in cin;
+    LOG("Server is waiting for connection");
+    int s1 = accept(s, reinterpret_cast<sockaddr *>(&cin), &socklen);
+    ASSERT_GT(s1, 0);
+    SocketCloser closer2(s1);
+    LOG("Server accepted a connection: %d", s1);
+
+    int request_type = -1;  // 0: GET, 1: POST, 2: HEAD.
+    while (true) {
+      char b;
+      read(s1, &b, 1);
+      request_ += b;
+      if (request_.size() > 4) {
+        if (request_type == -1) {
+          if (strncmp(request_.c_str(), "GET ", 4) == 0)
+            request_type = 0;
+          else if (strncmp(request_.c_str(), "POST", 4) == 0)
+            request_type = 1;
+          else if (strncmp(request_.c_str(), "HEAD", 4) == 0)
+            request_type = 2;
+        }
+
+        const char *end_tag = request_.c_str() + request_.size() - 4;
+        if ((request_type == 1 && strcmp(end_tag, "##\r\n") == 0) ||
+            (request_type != 1 && strcmp(end_tag, "\r\n\r\n") == 0)) {
+          // End of request.
+          break;
+        }
+      }
+    }
+    LOG("Server got the whole request: %s", request_.c_str());
+
+    if (instructed_) WaitFor(1); else Wait(100);
+    LOG("Server write response0");
+    write(s1, kResponse0, strlen(kResponse0));
+    LOG("Server write response1");
+    write(s1, kResponse1, strlen(kResponse1));
+    if (instructed_) WaitFor(2); else Wait(100);
+    LOG("Server write response2");
+    write(s1, kResponse2, strlen(kResponse2));
+    if (instructed_) WaitFor(3); else Wait(100);
+    if (request_type != 2) {
+      LOG("Server write response3");
+      write(s1, kResponse3, strlen(kResponse3));
+    }
+    if (instructed_) WaitFor(4); else Wait(100);
+    if (request_type != 2) {
+      LOG("Server write response4");
+      write(s1, kResponse4, strlen(kResponse4));
+    }
+    LOG("Server succeeded");
+    succeeded_ = true;
+  }
+
+  bool instructed_;
+  bool succeeded_;
+  int instruction_;
+  int port_;
+  pthread_t thread_;
+  std::string request_;
+};
 
 TEST(XMLHttpRequest, SyncNetworkFile) {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(xml_parser);
+  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   request->Ref();
 
-  pthread_t thread;
-  bool async = false;
-  ASSERT_EQ(0, pthread_create(&thread, NULL, ServerThread, &async));
-  while (port == 0) Wait(100);
-  Wait(50);
-
+  Server server(false);
   Callback callback(request);
   ASSERT_EQ(0, callback.callback_count_);
   request->ConnectOnReadyStateChange(NewSlot(&callback, &Callback::Call));
   char url[256];
-  snprintf(url, sizeof(url), "http://localhost:%d/test", port);
+  snprintf(url, sizeof(url), "http://localhost:%d/test", server.port_);
   LOG("URL=%s", url);
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->Open("GET", url, false, NULL, NULL));
@@ -293,6 +312,11 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
             request->Send(static_cast<const char *>(NULL), 0));
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
+
+  ASSERT_EQ(0U, server.request_.find("GET /test HTTP/"));
+  ASSERT_NE(std::string::npos,
+            server.request_.find("TestHeader: TestHeaderValue\r\n"));
+  ASSERT_EQ(std::string::npos, server.request_.find("Cookie:"));
 
   const char *str;
   size_t size;
@@ -324,28 +348,32 @@ TEST(XMLHttpRequest, SyncNetworkFile) {
             request->GetResponseHeader("TestHeader2", &str));
   ASSERT_STREQ("Value2a, Value2b", str);
 
-  pthread_join(thread, NULL);
-  ASSERT_TRUE(server_thread_succeeded);
+  pthread_join(server.thread_, NULL);
+  ASSERT_TRUE(server.succeeded_);
+
+  const char *text;
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseText(&text));
+  ASSERT_STREQ(kResponseText, text);
+  DOMDocumentInterface *dom = NULL;
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseXML(&dom));
+  ASSERT_TRUE(dom);
+  ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
+               dom->GetDocumentElement()->GetTextContent().c_str());
+
   ASSERT_EQ(1, request->GetRefCount());
   request->Unref();
 }
 
 TEST(XMLHttpRequest, AsyncNetworkFile) {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(xml_parser);
+  XMLHttpRequestInterface *request = CreateXMLHttpRequest(0);
   request->Ref();
 
-  pthread_t thread;
-  bool async = true;
-  ASSERT_EQ(0, pthread_create(&thread, NULL, ServerThread, &async));
-  while (port == 0) Wait(100);
-  Wait(50);
-
+  Server server(true);
   Callback callback(request);
   ASSERT_EQ(0, callback.callback_count_);
   request->ConnectOnReadyStateChange(NewSlot(&callback, &Callback::Call));
   char url[256];
-  snprintf(url, sizeof(url), "http://localhost:%d/test", port);
+  snprintf(url, sizeof(url), "http://localhost:%d/test", server.port_);
   LOG("URL=%s", url);
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
             request->Open("GET", url, true, NULL, NULL));
@@ -360,8 +388,13 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
 
   const char *str;
   size_t size;
-  semaphore = 1;
-  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
+  server.instruction_ = 1;
+  for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
+  ASSERT_EQ(0U, server.request_.find("GET /test HTTP/1."));
+  ASSERT_NE(std::string::npos,
+            server.request_.find("TestHeader: TestHeaderValue\r\n"));
+  ASSERT_EQ(std::string::npos, server.request_.find("Cookie:"));
+
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
   ASSERT_EQ(2, callback.callback_count_);
   // GetAllResponseHeaders and GetResponseBody return NULL in OPEN state.
@@ -374,12 +407,12 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
             request->GetStatusText(&str));
   ASSERT_EQ(0u, size);
 
-  semaphore = 2;
-  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
+  server.instruction_ = 2;
+  for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::OPENED, request->GetReadyState());
 
-  semaphore = 3;
-  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
+  server.instruction_ = 3;
+  for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::LOADING, request->GetReadyState());
   ASSERT_EQ(4, callback.callback_count_);
 
@@ -411,8 +444,8 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
             request->GetResponseHeader("TestHeader2", &str));
   ASSERT_STREQ("Value2a, Value2b", str);
 
-  semaphore = 4;
-  for (int i = 0; i < 10; i++) { Wait(10); main_loop.DoIteration(false); }
+  server.instruction_ = 4;
+  for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
   ASSERT_EQ(XMLHttpRequestInterface::DONE, request->GetReadyState());
   ASSERT_EQ(5, callback.callback_count_);
 
@@ -428,43 +461,124 @@ TEST(XMLHttpRequest, AsyncNetworkFile) {
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetStatusText(&str));
   ASSERT_STREQ("OK", str);
 
-  pthread_join(thread, NULL);
-  ASSERT_TRUE(server_thread_succeeded);
-  ASSERT_EQ(1, request->GetRefCount());
-  request->Unref();
-}
+  pthread_join(server.thread_, NULL);
+  ASSERT_TRUE(server.succeeded_);
 
-TEST(XMLHttpRequest, ResponseTextAndXML) {
-  XMLParserInterface *xml_parser = GetXMLParser();
-  XMLHttpRequestInterface *request = CreateXMLHttpRequest(xml_parser);
-  request->Ref();
-
-  Callback callback(request);
-
-  system("echo '<?xml version=\"1.0\" encoding=\"gb2312\"?>\n"
-         "<root>\xBA\xBA\xD7\xD6</root>' >/tmp/xml_http_request_test_data");
-  // Valid request.
-  request->ConnectOnReadyStateChange(NewSlot(&callback, &Callback::Call));
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Open("GET", "file:///tmp/xml_http_request_test_data",
-                          false, NULL, NULL));
-  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
-            request->Send(static_cast<const char *>(NULL), 0));
   const char *text;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseText(&text));
-  ASSERT_STREQ("<?xml version=\"1.0\" encoding=\"gb2312\"?>\n"
-               "<root>\xE6\xB1\x89\xE5\xAD\x97</root>\n", text);
+  ASSERT_STREQ(kResponseText, text);
   DOMDocumentInterface *dom = NULL;
   ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request->GetResponseXML(&dom));
   ASSERT_TRUE(dom);
   ASSERT_STREQ("\xE6\xB1\x89\xE5\xAD\x97",
                dom->GetDocumentElement()->GetTextContent().c_str());
+
   ASSERT_EQ(1, request->GetRefCount());
+  request->Unref();
+}
+
+TEST(XMLHttpRequest, ConcurrentHEADandPOSTandCookie) {
+  int session = ggadget::GetXMLHttpRequestFactory()->CreateSession();
+  ASSERT_GT(session, 0);
+
+  XMLHttpRequestInterface *request1 = CreateXMLHttpRequest(session);
+  XMLHttpRequestInterface *request2 = CreateXMLHttpRequest(session);
+  request1->Ref();
+  request2->Ref();
+
+  // Start 2 server threads.
+  Server server1(false), server2(false);
+  char url1[256], url2[256];
+  snprintf(url1, sizeof(url1), "http://localhost:%d/test1", server1.port_);
+  snprintf(url2, sizeof(url2), "http://localhost:%d/test2", server2.port_);
+
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request1->Open("HEAD", url1, true, NULL, NULL));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request1->Send(static_cast<const char *>(NULL), 0));
+  ASSERT_EQ(XMLHttpRequestInterface::OPENED, request1->GetReadyState());
+
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request2->Open("POST", url2, true, NULL, NULL));
+  const char *post_data = "Some Data To Post.##\r\n";
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request2->Send(post_data, strlen(post_data)));
+  ASSERT_EQ(XMLHttpRequestInterface::OPENED, request2->GetReadyState());
+
+  for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
+  pthread_join(server1.thread_, NULL);
+  pthread_join(server2.thread_, NULL);
+  ASSERT_TRUE(server1.succeeded_);
+  ASSERT_TRUE(server2.succeeded_);
+
+  for (int i = 0; i < 30; i++) { Wait(10); g_main_loop.DoIteration(false); }
+  unsigned short status;
+  const char *str;
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request1->GetStatus(&status));
+  ASSERT_EQ(200, status);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request1->GetStatusText(&str));
+  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::DONE, request1->GetReadyState());
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request2->GetStatus(&status));
+  ASSERT_EQ(200, status);
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR, request2->GetStatusText(&str));
+  ASSERT_STREQ("OK", str);
+  ASSERT_EQ(XMLHttpRequestInterface::DONE, request2->GetReadyState());
+
+  ASSERT_EQ(0U, server1.request_.find("HEAD /test1 HTTP/"));
+  ASSERT_EQ(0U, server2.request_.find("POST /test2 HTTP/"));
+  ASSERT_NE(std::string::npos, server2.request_.find("Content-Type: "
+      "application/x-www-form-urlencoded"));
+
+  ASSERT_EQ(1, request1->GetRefCount());
+  ASSERT_EQ(1, request2->GetRefCount());
+  request1->Unref();
+  request2->Unref();
+
+  XMLHttpRequestInterface *request3 = CreateXMLHttpRequest(session);
+  request3->Ref();
+  Server server3(false);
+  char url3[256];
+  snprintf(url3, sizeof(url3), "http://localhost:%d/test3", server3.port_);
+
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request3->Open("GET", url3, true, NULL, NULL));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request3->Send(static_cast<const char *>(NULL), 0));
+  Wait(100);
+  request3->Abort();
+
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request3->Open("GET", url3, true, NULL, NULL));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request3->Send(static_cast<const char *>(NULL), 0));
+  Wait(100);
+  request3->Abort();
+
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request3->Open("GET", url3, true, NULL, NULL));
+  ASSERT_EQ(XMLHttpRequestInterface::NO_ERR,
+            request3->Send(static_cast<const char *>(NULL), 0));
+
+  for (int i = 0; i < 10; i++) { Wait(10); g_main_loop.DoIteration(false); }
+  pthread_join(server3.thread_, NULL);
+  ASSERT_TRUE(server3.succeeded_);
+  for (int i = 0; i < 30; i++) { Wait(10); g_main_loop.DoIteration(false); }
+  ASSERT_NE(std::string::npos,
+            server3.request_.find("Cookie: COOKIE1=Value1"));
+
+  ASSERT_EQ(1, request3->GetRefCount());
+  request3->Unref();
+
+  ggadget::GetXMLHttpRequestFactory()->DestroySession(session);
 }
 
 int main(int argc, char **argv) {
-  ggadget::SetGlobalMainLoop(&main_loop);
+  ggadget::SetGlobalMainLoop(&g_main_loop);
   testing::ParseGTestFlags(&argc, argv);
+
+  // To prevent the server from calling exit when meet SIGPIPE.
+  signal(SIGPIPE, SIG_IGN);
 
   static const char *kExtensions[] = {
     "curl_xml_http_request/curl-xml-http-request",

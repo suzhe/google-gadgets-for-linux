@@ -21,7 +21,7 @@
 #include <time.h>
 #include <map>
 #include <ggadget/common.h>
-#include <ggadget/native_main_loop.h>
+#include "native_main_loop.h"
 
 #ifdef HAVE_PTHREAD
 #include <pthread.h>

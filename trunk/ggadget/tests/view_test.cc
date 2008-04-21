@@ -23,14 +23,14 @@
 #include "ggadget/scriptable_view.h"
 #include "ggadget/slot.h"
 #include "ggadget/view.h"
-#include "ggadget/native_main_loop.h"
 #include "ggadget/xml_utils.h"
 #include "mocked_element.h"
+#include "mocked_timer_main_loop.h"
 #include "mocked_view_host.h"
 #include "init_extensions.h"
 
 ggadget::ElementFactory *g_factory = NULL;
-ggadget::NativeMainLoop main_loop;
+MockedTimerMainLoop main_loop(0);
 using ggadget::View;
 using ggadget::ViewInterface;
 using ggadget::ViewHostInterface;

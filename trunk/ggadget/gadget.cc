@@ -20,6 +20,7 @@
 #include "details_view_data.h"
 #include "display_window.h"
 #include "element_factory.h"
+#include "extension_manager.h"
 #include "file_manager_interface.h"
 #include "file_manager_factory.h"
 #include "file_manager_wrapper.h"
@@ -41,9 +42,9 @@
 #include "system_utils.h"
 #include "view_host_interface.h"
 #include "view.h"
+#include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
-#include "extension_manager.h"
 
 namespace ggadget {
 
@@ -139,7 +140,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         instance_id_(instance_id),
         initialized_(false),
         has_options_xml_(false),
-        plugin_flags_(0) {
+        plugin_flags_(0),
+        xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -170,6 +172,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
     delete element_factory_;
     element_factory_ = NULL;
+    GetXMLHttpRequestFactory()->DestroySession(xml_http_request_session_);
+    xml_http_request_session_ = 0;
   }
 
   static bool ExtractFileFromFileManager(FileManagerInterface *fm,
@@ -750,6 +754,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool initialized_;
   bool has_options_xml_;
   int plugin_flags_;
+  int xml_http_request_session_;
 };
 
 Gadget::Gadget(HostInterface *host,
@@ -856,6 +861,11 @@ void Gadget::OnDisplayTargetChange(DisplayTarget display_target) {
 
 Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
   return impl_->ConnectOnPluginFlagsChanged(handler);
+}
+
+XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {
+  return GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
+      impl_->xml_http_request_session_, GetXMLParser());
 }
 
 // static methods

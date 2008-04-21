@@ -19,14 +19,14 @@
 #include "ggadget/element_factory.h"
 #include "ggadget/elements.h"
 #include "ggadget/xml_utils.h"
-#include "ggadget/native_main_loop.h"
 #include "ggadget/view.h"
 #include "mocked_element.h"
 #include "mocked_host.h"
+#include "mocked_timer_main_loop.h"
 #include "mocked_view_host.h"
 #include "init_extensions.h"
 
-ggadget::NativeMainLoop main_loop;
+MockedTimerMainLoop main_loop(0);
 
 ggadget::ElementFactory *g_factory = NULL;
 using ggadget::down_cast;
