@@ -613,7 +613,7 @@ ViewInterface *SingleViewHost::GetView() const {
 }
 
 void *SingleViewHost::GetNativeWidget() const {
-  return impl_->widget_;
+  return impl_->fixed_;
 }
 
 void SingleViewHost::ViewCoordToNativeWidgetCoord(

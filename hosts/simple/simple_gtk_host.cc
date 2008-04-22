@@ -173,8 +173,7 @@ class SimpleGtkHost::Impl {
       return true;
     }
 
-    Gadget *gadget =
-        new Gadget(owner_, path, options_name, instance_id);
+    Gadget *gadget = new Gadget(owner_, path, options_name, instance_id);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);

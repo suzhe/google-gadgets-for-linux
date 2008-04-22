@@ -77,8 +77,8 @@ class SidebarGtkHost::Impl {
           view_(view),
           sidebar_(NULL),
           height_(height) {
-      sidebar_ = reinterpret_cast<GtkWidget *>(down_cast<SingleViewHost *>(
-            owner->side_bar_->GetViewHost())->GetNativeWidget());
+      sidebar_ = gtk_widget_get_toplevel(GTK_WIDGET(down_cast<SingleViewHost *>(
+            owner->side_bar_->GetViewHost())->GetNativeWidget()));
       AddConnection(view_host->ConnectOnMoveDrag(
             NewSlot(this, &GadgetMoveClosure::HandleMove)));
       AddConnection(view_host->ConnectOnEndMoveDrag(
@@ -119,8 +119,8 @@ class SidebarGtkHost::Impl {
    private:
     bool IsOverlapWithSideBar(int *height) {
       int x, y, w, h;
-      GtkWidget *floating = reinterpret_cast<GtkWidget *>(
-          view_host_->GetNativeWidget());
+      GtkWidget *floating = gtk_widget_get_toplevel(GTK_WIDGET(
+          view_host_->GetNativeWidget()));
       gtk_window_get_position(GTK_WINDOW(floating), &x, &y);
       gtk_window_get_size(GTK_WINDOW(floating), &w, &h);
       int sx, sy, sw, sh;
@@ -171,20 +171,21 @@ class SidebarGtkHost::Impl {
   }
 
   ~Impl() {
+    for (size_t i = 0; i < connections_.size(); ++i)
+      connections_[i]->Disconnect();
+
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
       delete it->second;
 
     gtk_widget_destroy(main_widget_);
     delete side_bar_;
-
-    for (size_t i = 0; i < connections_.size(); ++i)
-      connections_[i]->Disconnect();
   }
 
   void SetupUI() {
     // add the menu into the main widget
-    main_widget_ = reinterpret_cast<GtkWidget *>(view_host_->GetNativeWidget());
+    main_widget_ = gtk_widget_get_toplevel(GTK_WIDGET(
+        view_host_->GetNativeWidget()));
 #ifdef _DEBUG
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(main_widget_), FALSE);
 #endif
