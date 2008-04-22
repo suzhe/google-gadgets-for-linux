@@ -23,6 +23,7 @@ LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/output/lib)
 
 SET(SRCS
   main.cc
+  sidebar_gtk_host.cc
   simple_gtk_host.cc
 )
 

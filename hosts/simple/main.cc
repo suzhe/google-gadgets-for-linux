@@ -231,12 +231,14 @@ int main(int argc, char* argv[]) {
         manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
       }
     } else {
+#ifdef _DEBUG
       // Only runs the gadgets temporarily. For debug purpose.
       for (size_t i = 0; i < gadget_paths.size(); ++i) {
         std::string opt_name = ggadget::StringPrintf("temp-gadget-%zu", i);
         ggadget::Gadget *gadget =
             new ggadget::Gadget(host, gadget_paths[i].c_str(),
-                                opt_name.c_str(), i + 1000);
+                                // Note: gadget will run in trusted mode.
+                                opt_name.c_str(), i + 1000, true);
         if (gadget->IsValid()) {
           temp_gadgets.push_back(gadget);
           gadget->ShowMainView();
@@ -245,6 +247,7 @@ int main(int argc, char* argv[]) {
           delete gadget;
         }
       }
+#endif
     }
   }
 

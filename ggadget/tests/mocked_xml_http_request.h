@@ -43,6 +43,8 @@ public:
         return_data_(return_data) {
   }
 
+  virtual void AddAcceptedCertDomain(const char *domain) { }
+
   void ChangeState(State new_state) {
     state_ = new_state;
     statechange_signal_();
@@ -51,7 +53,7 @@ public:
   virtual ggadget::Connection *ConnectOnReadyStateChange(
       ggadget::Slot0<void> *handler) {
     return statechange_signal_.Connect(handler);
-  } 
+  }
   virtual State GetReadyState() { return state_; }
   virtual ExceptionCode Open(const char *method, const char *url, bool async,
                              const char *user, const char *password) {

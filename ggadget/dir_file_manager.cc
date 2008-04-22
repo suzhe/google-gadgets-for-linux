@@ -132,7 +132,10 @@ class DirFileManager::Impl {
     if (!EnsureDirectories(dir.c_str()))
       return false;
 
+    // Only the current user can read and write the file.
+    mode_t org_umask = umask(0177);
     FILE *datafile = fopen(path.c_str(), "w");
+    umask(org_umask);
     if (!datafile) {
       LOG("Failed to open file %s for writing: %s",
           path.c_str(), strerror(errno));

@@ -26,18 +26,18 @@ ENDIF(RSVG_FOUND)
 
 SET(SRCS
   cairo_canvas.cc
-  cairo_graphics.cc
   cairo_font.cc
+  cairo_graphics.cc
   cairo_image_base.cc
-  main_loop.cc
-  single_view_host.cc
-  view_widget_binder.cc
   key_convert.cc
+  main_loop.cc
   menu_builder.cc
   pixbuf_image.cc
   rsvg_image.cc
-  utilities.cc
+  single_view_host.cc
   tooltip.cc
+  utilities.cc
+  view_widget_binder.cc
 )
 
 ADD_SUBDIRECTORY(tests)

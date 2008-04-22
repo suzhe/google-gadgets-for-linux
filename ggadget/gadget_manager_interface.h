@@ -86,6 +86,13 @@ class GadgetManagerInterface {
    */
   virtual void ShowGadgetBrowserDialog(HostInterface *host) = 0;
 
+  /**
+   * Checks if a gadget instance can be safely trusted.
+   */
+  virtual bool IsGadgetInstanceTrusted(int instance_id) = 0;
+
+  virtual std::string GetGadgetInstanceDownloadURL(int instance_id) = 0;
+
  public:
   /**
    * Connects to signals when a gadget instance is added, to be removed or

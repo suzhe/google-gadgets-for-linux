@@ -53,6 +53,7 @@ SET(SRCS
   scriptable_menu.cc
   scriptable_options.cc
   scriptable_view.cc
+  sidebar.cc
   signals.cc
   slot.cc
   string_utils.cc

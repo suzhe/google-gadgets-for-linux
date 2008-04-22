@@ -36,6 +36,7 @@
 <REMOVE_CONTENT_ITEM>Remove</REMOVE_CONTENT_ITEM>
 <!-- String for the negative feedback in details view. Needs to be quite short. -->
 <DONT_SHOW_CONTENT_ITEM>Don't show me items like this</DONT_SHOW_CONTENT_ITEM>
+
 <!-- Decorated View toolbar back button tooltip. -->
 <VD_BACK_BUTTON_TOOLTIP>Previous</VD_BACK_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar forward button tooltip. -->
@@ -46,4 +47,11 @@
 <VD_MENU_BUTTON_TOOLTIP>Menu</VD_MENU_BUTTON_TOOLTIP>
 <!-- Decorated View toolbar remove gadget button tooltip. -->
 <VD_CLOSE_BUTTON_TOOLTIP>Remove</VD_CLOSE_BUTTON_TOOLTIP>
+
+<!-- Title of the confirm dialog of third party gadget installation. -->
+<GADGET_CONFIRM_TITLE>Third Party Gadget Installation</GADGET_CONFIRM_TITLE>
+<!-- The first sentence in the confirm dialog of third party gadget installation. -->
+<GADGET_CONFIRM_MESSAGE>Google has not tested or verified the features or security of this third party Gadget. Please confirm that you want to install:</GADGET_CONFIRM_MESSAGE>
+<!-- The label displayed before the gadget description. -->
+<GADGET_DESCRIPTION>Description: </GADGET_DESCRIPTION>
 </strings>

@@ -123,8 +123,10 @@ extern "C" {
 
     reg_system->RegisterVariantConstant("bios",
                                         Variant(&g_script_bios_));
-    reg_system->RegisterVariantConstant("filesystem",
-                                        Variant(&g_script_filesystem_));
+    // TODO: Filesystem feature is disabled for now to ensure gadget security.
+    // Maybe we can enable it when we have better access control mechanism.
+    // reg_system->RegisterVariantConstant("filesystem",
+    //                                     Variant(&g_script_filesystem_));
     reg_system->RegisterVariantConstant("machine",
                                         Variant(&g_script_machine_));
     reg_system->RegisterVariantConstant("memory",

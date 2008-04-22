@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-var kRefreshOption = "REFRESH_GADGET"
-var kBGColorOption = "BG_COLOR";
-var kOptionsHTML = "OPTIONS_HTML";
-var kPresetOptions = "PRESET_OPTIONS";
+var kRefreshOption = "refresh_gadget";
+var kBGColorOption = "bg_color";
+var kOptionsHTML = "options_html";
+var kPresetOptions = "preset_options";
 var kSetPrefs = "SetPrefs";
 
 var kHTMLMeta = "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">";
