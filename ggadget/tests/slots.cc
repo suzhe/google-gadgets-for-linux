@@ -40,14 +40,16 @@ Slot *TestClass::TestSlotMethod(int i) {
     case 12: return NewFunctorSlot<void,
                                    int, bool, const char *,
                                    const std::string &, std::string, char,
-                                   unsigned char, short, unsigned short>
+                                   unsigned char, short,
+                                   std::vector<int> *>
                                   (TestVoidFunctor9());
     case 13: return NewFunctorSlot<bool>
                                   (TestBoolFunctor0());
     case 14: return NewFunctorSlot<bool,
                                    int, bool, const char *,
                                    const std::string &, std::string, char,
-                                   unsigned char, short, unsigned short>
+                                   unsigned char, short,
+                                   const std::vector<int> *>
                                   (TestBoolFunctor9());
     case 15: return NewSlot(&TestVariant);
     default: return NULL;
@@ -59,6 +61,17 @@ std::string str_c("ccc");
 std::string str_e("eee");
 std::string str_f("fff");
 
+class VectorHolder {
+ public:
+  VectorHolder(int i) {
+    v.push_back(i);
+  }
+  std::vector<int> v;
+};
+
+VectorHolder vector_holder1(999);
+VectorHolder vector_holder2(888);
+
 TestData testdata[] = {
   { 0, Variant::TYPE_VOID, { }, { }, Variant(), "TestVoidFunction0" },
   { 9, Variant::TYPE_VOID, { Variant::TYPE_INT64,
@@ -69,7 +82,7 @@ TestData testdata[] = {
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
-                             Variant::TYPE_INT64,
+                             Variant::TYPE_ANY,
                            },
                            { Variant(1),
                              Variant(true),
@@ -79,9 +92,9 @@ TestData testdata[] = {
                              Variant('x'),
                              Variant('y'),
                              Variant(100),
-                             Variant(200),
+                             Variant(&vector_holder1.v),
                            },
-    Variant(), "TestVoidFunction9: 1 1 a bbb ccc x y 100 200" },
+    Variant(), "TestVoidFunction9: 1 1 a bbb ccc x y 100 999" },
   { 0, Variant::TYPE_BOOL, { }, { }, Variant(false), "TestBoolFunction0" },
   { 9, Variant::TYPE_BOOL, { Variant::TYPE_INT64,
                              Variant::TYPE_BOOL,
@@ -91,7 +104,7 @@ TestData testdata[] = {
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
-                             Variant::TYPE_INT64,
+                             Variant::TYPE_CONST_ANY,
                            },
                            { Variant(100),
                              Variant(false),
@@ -101,9 +114,9 @@ TestData testdata[] = {
                              Variant('X'),
                              Variant('Y'),
                              Variant(-222),
-                             Variant(111),
+                             Variant(&vector_holder2.v),
                            },
-    Variant(true), "TestBoolFunction9: 100 0 d eee fff X Y -222 111" },
+    Variant(true), "TestBoolFunction9: 100 0 d eee fff X Y -222 888" },
   { 0, Variant::TYPE_VOID, { }, { }, Variant(), "TestVoidMethod0" },
   { 0, Variant::TYPE_BOOL, { }, { }, Variant(true), "TestBoolMethod0" },
   { 2, Variant::TYPE_VOID, { Variant::TYPE_INT64, Variant::TYPE_INT64 },
@@ -120,7 +133,7 @@ TestData testdata[] = {
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
-                             Variant::TYPE_INT64,
+                             Variant::TYPE_ANY,
                            },
                            { Variant(100),
                              Variant(false),
@@ -130,9 +143,9 @@ TestData testdata[] = {
                              Variant('x'),
                              Variant('y'),
                              Variant(999),
-                             Variant(888),
+                             Variant(&vector_holder1.v),
                            },
-    Variant(), "TestVoidMethod9: 100 0 a bbb ccc x y 999 888" },
+    Variant(), "TestVoidMethod9: 100 0 a bbb ccc x y 999 999" },
   { 9, Variant::TYPE_BOOL, { Variant::TYPE_INT64,
                              Variant::TYPE_BOOL,
                              Variant::TYPE_STRING,
@@ -141,7 +154,7 @@ TestData testdata[] = {
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
-                             Variant::TYPE_INT64,
+                             Variant::TYPE_CONST_ANY,
                            },
                            { Variant(100),
                              Variant(false),
@@ -151,9 +164,9 @@ TestData testdata[] = {
                              Variant('X'),
                              Variant('Y'),
                              Variant(222),
-                             Variant(333),
+                             Variant(&vector_holder2.v),
                            },
-    Variant(false), "TestBoolMethod9: 100 0 d eee fff X Y 222 333" },
+    Variant(false), "TestBoolMethod9: 100 0 d eee fff X Y 222 888" },
   { 2, Variant::TYPE_VOID, { Variant::TYPE_INT64, Variant::TYPE_INT64 },
                            { Variant('a'), Variant(0xffffffffUL) },
     Variant(), "TestVoidMethod2: a ffffffff" },
@@ -166,7 +179,7 @@ TestData testdata[] = {
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
-                             Variant::TYPE_INT64,
+                             Variant::TYPE_ANY,
                            },
                            { Variant(1),
                              Variant(true),
@@ -176,9 +189,9 @@ TestData testdata[] = {
                              Variant('x'),
                              Variant('y'),
                              Variant(100),
-                             Variant(200),
+                             Variant(&vector_holder1.v),
                            },
-    Variant(), "TestVoidFunctor9: 1 1 a bbb ccc x y 100 200" },
+    Variant(), "TestVoidFunctor9: 1 1 a bbb ccc x y 100 999" },
   { 0, Variant::TYPE_BOOL, { }, { }, Variant(false), "TestBoolFunctor0" },
   { 9, Variant::TYPE_BOOL, { Variant::TYPE_INT64,
                              Variant::TYPE_BOOL,
@@ -188,7 +201,7 @@ TestData testdata[] = {
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
                              Variant::TYPE_INT64,
-                             Variant::TYPE_INT64,
+                             Variant::TYPE_CONST_ANY,
                            },
                            { Variant(100),
                              Variant(false),
@@ -198,9 +211,9 @@ TestData testdata[] = {
                              Variant('X'),
                              Variant('Y'),
                              Variant(-222),
-                             Variant(111),
+                             Variant(&vector_holder2.v),
                            },
-    Variant(true), "TestBoolFunctor9: 100 0 d eee fff X Y -222 111" },
+    Variant(true), "TestBoolFunctor9: 100 0 d eee fff X Y -222 888" },
   { 1, Variant::TYPE_VARIANT, { Variant::TYPE_VARIANT },
     { Variant(Variant::TYPE_VARIANT) }, Variant(Variant::TYPE_VARIANT),
     "VARIANT" }

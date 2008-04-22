@@ -141,7 +141,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void Destroy() { delete this; }
   virtual void SetView(ggadget::ViewInterface *view) { view_ = view; }
   virtual ggadget::ViewInterface *GetView() const { return view_; }
-  virtual const ggadget::GraphicsInterface *GetGraphics() const {
+  virtual ggadget::GraphicsInterface *NewGraphics() const {
     return const_cast<MockedGraphics *>(&graphics_);
   }
   virtual void *GetNativeWidget() const { return NULL; }
@@ -171,6 +171,10 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   }
   virtual void BeginResizeDrag(int, ggadget::ViewInterface::HitTest) { }
   virtual void BeginMoveDrag(int) { }
+  virtual void Dock() { }
+  virtual void Undock() { }
+  virtual void Expand() { }
+  virtual void Unexpand() { }
 
   bool GetQueuedDraw() {
     bool b = draw_queued_;
