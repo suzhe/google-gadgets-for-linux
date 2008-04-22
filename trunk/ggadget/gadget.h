@@ -96,14 +96,17 @@ class Gadget {
    * @param host the host of this gadget.
    * @param base_path the base path of this gadget. It can be a directory,
    *     path to a .gg file, or path to a gadget.gmanifest file.
+   * @param options_name the name of the options instance for this instance.
    * @param instance_id An unique id to identify this Gadget instance. It can
    *        be used to remove this Gadget instance by calling
    *        HostInteface::RemoveGadget() method.
+   * @param trusted whether this gadget instance can be safely trusted. 
    */
   Gadget(HostInterface *host,
          const char *base_path,
          const char *options_name,
-         int instance_id);
+         int instance_id,
+         bool trusted);
 
   /** Destructor */
   ~Gadget();

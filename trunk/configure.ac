@@ -407,6 +407,9 @@ PKG_CHECK_MODULES(GSTREAMER_PLUGINS_BASE, [gstreamer-plugins-base-0.10 > 0.10.0]
 # Check libcurl.
 LIBCURL_CHECK_CONFIG([yes], [7.16.0], [has_libcurl=yes], [has_libcurl=no])
 
+# Check openssl.
+PKG_CHECK_MODULES(OPENSSL, [openssl >= 0.9.8a], [has_openssl=yes], [has_openssl=no])
+
 # Check libxml2.
 AM_PATH_XML2([2.4.0], [has_libxml2=yes], [has_libxml2=no])
 
@@ -463,9 +466,11 @@ if test x$has_libxml2 != xyes -a x$build_libxml2_xml_parser = xyes; then
   build_libxml2_xml_parser=no
 fi
 
-if test x$has_libcurl != xyes -a x$build_curl_xml_http_request = xyes; then
-  AC_MSG_WARN([Library curl is not available, curl-xml-http-request extension won't be built.])
-  build_curl_xml_http_request=no
+if test x$has_libcurl != xyes -o x$has_openssl != xyes; then
+  if x$build_curl_xml_http_request = xyes; then
+    AC_MSG_WARN([Library curl or openssl is not available, curl-xml-http-request extension won't be built.])
+    build_curl_xml_http_request=no
+  fi
 fi
 
 if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then

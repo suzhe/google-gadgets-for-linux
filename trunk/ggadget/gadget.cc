@@ -117,7 +117,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
        HostInterface *host,
        const char *base_path,
        const char *options_name,
-       int instance_id)
+       int instance_id,
+       bool trusted)
       : owner_(owner),
         host_(host),
         element_factory_(new ElementFactory()),
@@ -135,7 +136,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         has_options_xml_(false),
         plugin_flags_(0),
         display_target_(TARGET_FLOATING_VIEW),
-        xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()) {
+        xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
+        trusted_(trusted) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -235,10 +237,15 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
           host_->LoadFont(path.c_str());
       } else if (SimpleMatchXPath(key.c_str(), kManifestInstallObjectSrc) &&
                  extension_manager_) {
-        const char *module_name = i->second.c_str();
-        std::string path;
-        if (ExtractFileFromFileManager(file_manager_, module_name, &path))
-          extension_manager_->LoadExtension(path.c_str(), false);
+        if (trusted_) {
+          // Only trusted gadget can load local extensions.
+          const char *module_name = i->second.c_str();
+          std::string path;
+          if (ExtractFileFromFileManager(file_manager_, module_name, &path))
+            extension_manager_->LoadExtension(path.c_str(), false);
+        } else {
+          DLOG("Local extension module is forbidden for untrusted gadgets.");
+        }
       }
     }
 
@@ -507,18 +514,27 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     host_->DebugOutput(HostInterface::DEBUG_WARNING, message);
   }
 
+  // ExtractFile and OpenTextFile only allow accessing gadget local files.
+  static bool FileNameIsLocal(const char *filename) {
+    return filename && filename[0] != '/' && filename[0] != '\\' &&
+           strchr(filename, ':') == NULL;
+  }
+
   std::string ExtractFile(const char *filename) {
     std::string extracted_file;
-    return file_manager_->ExtractFile(filename, &extracted_file) ?
+    return FileNameIsLocal(filename) &&
+           file_manager_->ExtractFile(filename, &extracted_file) ?
         extracted_file : "";
   }
 
   std::string OpenTextFile(const char *filename) {
     std::string data;
     std::string result;
-    if (file_manager_->ReadFile(filename, &data) &&
-        !DetectAndConvertStreamToUTF8(data, &result, NULL))
+    if (FileNameIsLocal(filename) &&
+        file_manager_->ReadFile(filename, &data) &&
+        !DetectAndConvertStreamToUTF8(data, &result, NULL)) {
       LOG("gadget.storage.openText() failed to read text file: %s", filename);
+    }
     return result;
   }
 
@@ -759,13 +775,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   int plugin_flags_;
   DisplayTarget display_target_;
   int xml_http_request_session_;
+  bool trusted_;
 };
 
 Gadget::Gadget(HostInterface *host,
                const char *base_path,
                const char *options_name,
-               int instance_id)
-    : impl_(new Impl(this, host, base_path, options_name, instance_id)) {
+               int instance_id,
+               bool trusted)
+    : impl_(new Impl(this, host, base_path, options_name, instance_id,
+                     trusted)) {
   impl_->initialized_ = impl_->Initialize();
 }
 

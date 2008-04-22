@@ -14,21 +14,23 @@
   limitations under the License.
 */
 
+#include "sidebar_gtk_host.h"
+
 #include <gtk/gtk.h>
 #include <string>
 #include <map>
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
-#include <ggadget/logger.h>
+#include <ggadget/gadget.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/gadget_manager_interface.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
-#include <ggadget/gadget_manager_interface.h>
+#include <ggadget/messages.h>
+#include <ggadget/logger.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/ggadget.h>
-#include <ggadget/gadget_consts.h>
 #include <ggadget/sidebar.h>
 #include <ggadget/view.h>
-#include "sidebar_gtk_host.h"
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -194,6 +196,38 @@ class SidebarGtkHost::Impl {
     g_assert(GTK_WIDGET_REALIZED(main_widget_));
   }
 
+  bool ConfirmGadget(int id) {
+    std::string path = gadget_manager_->GetGadgetInstancePath(id);
+    StringMap data;
+    if (!Gadget::GetGadgetManifest(path.c_str(), &data))
+      return false;
+
+    GtkWidget *dialog = gtk_message_dialog_new(
+        NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+        "%s\n\n%s\n%s\n\n%s%s",
+        GM_("GADGET_CONFIRM_MESSAGE"), data[kManifestName].c_str(),
+        gadget_manager_->GetGadgetInstanceDownloadURL(id).c_str(),
+        GM_("GADGET_DESCRIPTION"), data[kManifestDescription].c_str());
+    
+    GdkScreen *screen;
+    gdk_display_get_pointer(gdk_display_get_default(), &screen,
+                            NULL, NULL, NULL);
+    gtk_window_set_screen(GTK_WINDOW(dialog), screen);
+    gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
+    gtk_window_set_title(GTK_WINDOW(dialog), GM_("GADGET_CONFIRM_TITLE"));
+    gint result = gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+    return result == GTK_RESPONSE_YES;
+  }
+
+  bool NewGadgetInstanceCallback(int id) {
+    if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
+        ConfirmGadget(id)) {
+      return AddGadgetInstanceCallback(id);
+    }
+    return false;
+  }
+
   bool AddGadgetInstanceCallback(int id) {
     std::string options = gadget_manager_->GetGadgetInstanceOptionsName(id);
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
@@ -259,7 +293,7 @@ class SidebarGtkHost::Impl {
 
   void InitGadgets() {
     gadget_manager_->ConnectOnNewGadgetInstance(
-        NewSlot(this, &Impl::AddGadgetInstanceCallback));
+        NewSlot(this, &Impl::NewGadgetInstanceCallback));
     g_idle_add(DelayedLoadGadgets, this);
   }
 
@@ -269,7 +303,10 @@ class SidebarGtkHost::Impl {
       return true;
     }
 
-    Gadget *gadget = new Gadget(owner_, path, options_name, instance_id);
+    Gadget *gadget = new Gadget(
+        owner_, path, options_name, instance_id,
+        gadget_manager_->IsGadgetInstanceTrusted(instance_id));
+
     DLOG("Gadget %p with view %p", gadget, gadget->GetMainView());
 
     if (!gadget->IsValid()) {
