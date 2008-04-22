@@ -17,7 +17,6 @@
 SUBDIRS = dbus_script_class \
 	  gtk_edit_element \
 	  qt_edit_element \
-	  gst_mediaplayer_element \
 	  gtkmoz_browser_element \
 	  default_framework \
 	  gst_audio_framework \

@@ -178,6 +178,17 @@ const char kVDBorderH[] = "resource://vd_border_h.png";
 const char kVDBorderV[] = "resource://vd_border_v.png";
 const char kVDMainBackground[] = "resource://vd_main_background.png";
 
+const char kSideBarIcon[] = "resource://sidebar_google.png";
+const char kSBButtonAddDown[] = "resource://sidebar_add_down.png";
+const char kSBButtonAddUp[] = "resource://sidebar_add_up.png";
+const char kSBButtonAddOver[] = "resource://sidebar_add_over.png";
+const char kSBButtonConfigDown[] = "resource://sidebar_config_down.png";
+const char kSBButtonConfigUp[] = "resource://sidebar_config_up.png";
+const char kSBButtonConfigOver[] = "resource://sidebar_config_over.png";
+const char kSBButtonCloseDown[] = "resource://sidebar_close_down.png";
+const char kSBButtonCloseUp[] = "resource://sidebar_close_up.png";
+const char kSBButtonCloseOver[] = "resource://sidebar_close_over.png";
+
 const char kCommonJS[] = "resource://common.js";
 const char kTextDetailsView[] = "resource://text_details_view.xml";
 const char kHTMLDetailsView[] = "resource://html_details_view.xml";

@@ -58,18 +58,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
    */
   class ViewBundle {
    public:
-    ViewBundle(ViewHostInterface *host,
+    ViewBundle(ViewHostInterface *view_host,
                Gadget *gadget,
                ElementFactory *element_factory,
                ScriptableInterface *prototype,
                DetailsViewData *details,
                bool support_script)
-      : host_(host),
-        context_(NULL),
+      : context_(NULL),
         view_(NULL),
         scriptable_(NULL),
         details_(details) {
-      ASSERT(host_);
       if (support_script) {
         // Only xml based views have standalone script context.
         // FIXME: ScriptContext instance should be created on-demand, according
@@ -80,7 +78,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
       }
 
-      view_ = new View(host_, gadget, element_factory, context_);
+      view_ = new View(view_host, gadget, element_factory, context_);
 
       if (details_)
         details_->Ref();
@@ -101,10 +99,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         context_->Destroy();
         context_ = NULL;
       }
-      if (host_) {
-        host_->Destroy();
-        host_ = NULL;
-      }
     }
 
     ScriptContextInterface *context() { return context_; }
@@ -113,7 +107,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     DetailsViewData *details() { return details_; }
 
    private:
-    ViewHostInterface *host_;
     ScriptContextInterface *context_;
     View *view_;
     ScriptableView *scriptable_;
@@ -141,6 +134,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         initialized_(false),
         has_options_xml_(false),
         plugin_flags_(0),
+        display_target_(TARGET_FLOATING_VIEW),
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
@@ -279,6 +273,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
 
     has_options_xml_ = file_manager_->FileExists(kOptionsXML, NULL);
+    DLOG("Initialized View(%p) size: %f x %f", main_view_->view(),
+         main_view_->view()->GetWidth(), main_view_->view()->GetHeight());
 
     return true;
   }
@@ -385,7 +381,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
   void RemoveMe(bool save_data) {
-    host_->RemoveGadget(instance_id_, save_data);
+    host_->RemoveGadget(owner_, save_data);
   }
 
   void RemoveMeMenuCallback(const char *) {
@@ -407,6 +403,13 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       menu->AddItem("Options...", 0, NewSlot(this, &Impl::OptionsMenuCallback));
     menu->AddItem("Remove Me", 0, NewSlot(this, &Impl::RemoveMeMenuCallback));
     menu->AddItem("About...", 0, NewSlot(this, &Impl::AboutMenuCallback));
+  }
+
+  void SetDisplayTarget(DisplayTarget target) {
+    bool changed = (target != display_target_);
+    display_target_ = target;
+    if (changed)
+      ondisplaystatechange_signal_(target);
   }
 
   void SetPluginFlags(int flags) {
@@ -754,6 +757,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool initialized_;
   bool has_options_xml_;
   int plugin_flags_;
+  DisplayTarget display_target_;
   int xml_http_request_session_;
 };
 
@@ -788,6 +792,14 @@ int Gadget::GetInstanceID() const {
 
 int Gadget::GetPluginFlags() const {
   return impl_->plugin_flags_;
+}
+
+int Gadget::GetDisplayTarget() const {
+  return impl_->display_target_;
+}
+
+void Gadget::SetDisplayTarget(DisplayTarget target) {
+  impl_->SetDisplayTarget(target);
 }
 
 FileManagerInterface *Gadget::GetFileManager() const {

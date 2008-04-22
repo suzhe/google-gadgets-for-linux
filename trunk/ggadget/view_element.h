@@ -21,7 +21,7 @@
 
 namespace ggadget {
 
-/** 
+/**
  * Internally used element used to allow a View to be a child of another View.
  * This element is not exposed in the API.
  */
@@ -29,27 +29,28 @@ class ViewElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x3be02fb3f45b405b, BasicElement);
 
-  ViewElement(BasicElement *parent, View *parent_view,
-              ViewHostInterface *child_view_host,
-              View *child_view);
+  ViewElement(BasicElement *parent, View *parent_view, View *child_view);
   virtual ~ViewElement();
 
+  View *GetChildView() const;
+  bool OnSizing(double *width, double *height);
+  void SetSize(double width, double height);
  public:
-  void SetChildView(ViewHostInterface *child_view_host, View *child_view);
+  void SetChildView(View *child_view);
 
   void SetScale(double scale);
 
   virtual void Layout();
   virtual void MarkRedraw();
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleOtherEvent(const Event &event);
 
   virtual void GetDefaultSize(double *width, double *height) const;
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
   virtual EventResult HandleDragEvent(const DragEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
-  virtual EventResult HandleOtherEvent(const Event &event);
 
   // No CreateInstance() method since this class is internal.
 

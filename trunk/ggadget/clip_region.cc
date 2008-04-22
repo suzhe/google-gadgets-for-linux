@@ -177,7 +177,7 @@ void ClipRegion::PrintLog() const {
   DLOG("%zu Clip Regions:", impl_->rectangles_.size());
   for (RectangleVector::const_iterator it = impl_->rectangles_.begin();
        it != impl_->rectangles_.end(); ++it) {
-    DLOG("%.1lf %.1lf - %.1lf %.1lf, w: %.1lf h: %.1lf",
+    DLOG("(%.1lf,%.1lf) - (%.1lf,%.1lf); w: %.1lf h: %.1lf",
          it->x, it->y, it->x + it->w, it->y + it->h, it->w, it->h);
   }
 #endif

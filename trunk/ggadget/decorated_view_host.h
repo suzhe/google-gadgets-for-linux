@@ -36,7 +36,7 @@ class DecoratedViewHost : public ViewHostInterface {
   virtual void Destroy();
   virtual void SetView(ViewInterface *view);
   virtual ViewInterface *GetView() const;
-  virtual const GraphicsInterface *GetGraphics() const;
+  virtual GraphicsInterface *NewGraphics() const;
   virtual void *GetNativeWidget() const;
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const;
@@ -59,6 +59,10 @@ class DecoratedViewHost : public ViewHostInterface {
 
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest);
   virtual void BeginMoveDrag(int button);
+  virtual void Dock();
+  virtual void Undock();
+  virtual void Expand();
+  virtual void Unexpand();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DecoratedViewHost);
@@ -68,4 +72,4 @@ class DecoratedViewHost : public ViewHostInterface {
 
 } // namespace ggadget
 
-#endif // GGADGET_DECORATED_VIEW_HOST_H__
+#endif  // GGADGET_DECORATED_VIEW_HOST_H__

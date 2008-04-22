@@ -18,6 +18,7 @@
 #define GGADGET_GTK_VIEW_WIDGET_BINDER_H__
 
 #include <gtk/gtk.h>
+#include <ggadget/common.h>
 
 namespace ggadget {
 
@@ -25,8 +26,6 @@ class ViewHostInterface;
 class ViewInterface;
 
 namespace gtk {
-
-class CairoGraphics;
 
 /**
  * A class to bind a View with a GtkWidget.
@@ -45,7 +44,7 @@ class ViewWidgetBinder {
   /**
    * @param no_background if it's true then doesn't draw widget's background.
    */
-  ViewWidgetBinder(CairoGraphics *gfx, ViewInterface *view,
+  ViewWidgetBinder(ViewInterface *view,
                    ViewHostInterface *host, GtkWidget *widget,
                    bool no_background);
   ~ViewWidgetBinder();

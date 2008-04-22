@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <third_party/valgrind/valgrind.h>
 #include "logger.h"
 #include "string_utils.h"
@@ -54,7 +55,13 @@ void LogHelper::operator()(const char *format, ...) {
            static_cast<int>(tv.tv_usec / 1000));
 #endif
 #ifdef LOG_WITH_FILE_LINE
-    printf("%s:%d: ", file_, line_);
+    static const char *short_log = getenv(("GGL_SHORT_LOG"));
+    if (short_log) {
+      const char *name = strrchr(file_, '/');
+      printf("%s:%d: ", name ? name+1 : file_, line_);
+    } else {
+      printf("%s:%d: ", file_, line_);
+    }
 #endif
     vprintf(format, ap);
     va_end(ap);

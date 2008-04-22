@@ -28,6 +28,7 @@ class Elements;
 class ContentAreaElement;
 class ElementFactory;
 class MenuInterface;
+class GraphicsInterface;
 class ScriptableInterface;
 class ScriptContextInterface;
 class RegisterableInterface;
@@ -78,7 +79,7 @@ class View : public ViewInterface {
   FileManagerInterface *GetFileManager() const;
 
   /** @return the current graphics interface used for drawing elements. */
-  const GraphicsInterface *GetGraphics() const;
+  virtual GraphicsInterface *GetGraphics() const;
 
   /**
    * Registers all properties of the View instance to specified Scriptable
@@ -316,6 +317,10 @@ class View : public ViewInterface {
  public: // Delegate to Gadget or ViewHost.
   /** Gets pointer to the native widget holding this view. */
   void *GetNativeWidget() const;
+
+  ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host);
+
+  ViewHostInterface *GetViewHost() const;
 
   /**
    * Converts coordinates in the view's space to coordinates in the native

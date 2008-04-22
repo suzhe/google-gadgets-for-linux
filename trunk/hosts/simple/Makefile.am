@@ -19,11 +19,13 @@ if GGL_BUILD_SIMPLE_HOST
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= simple_gtk_host.h
+noinst_HEADERS		= simple_gtk_host.h sidebar_gtk_host.h
 
 bin_PROGRAMS		= ggl-simple
 
-ggl_simple_SOURCES	= main.cc simple_gtk_host.cc
+ggl_simple_SOURCES	= main.cc \
+											sidebar_gtk_host.cc \
+											simple_gtk_host.cc
 
 ggl_simple_CPPFLAGS 	= @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)

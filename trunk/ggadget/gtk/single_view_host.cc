@@ -33,13 +33,16 @@ namespace gtk {
 
 class SingleViewHost::Impl {
  public:
-  Impl(ViewHostInterface::Type type, SingleViewHost *owner, double zoom,
-       bool decorated, bool remove_on_close,
+  Impl(ViewHostInterface::Type type,
+       SingleViewHost *owner,
+       double zoom,
+       bool decorated,
+       bool remove_on_close,
+       bool native_drag_mode,
        ViewInterface::DebugMode debug_mode)
     : type_(type),
       owner_(owner),
       view_(NULL),
-      gfx_(new CairoGraphics(zoom)),
       window_(NULL),
       widget_(NULL),
       fixed_(NULL),
@@ -53,10 +56,13 @@ class SingleViewHost::Impl {
       adjust_window_size_source_(0),
       decorated_(decorated),
       remove_on_close_(remove_on_close),
+      native_drag_mode_(native_drag_mode),
+      zoom_(zoom),
       win_x_(0),
-      win_y_(0) {
+      win_y_(0),
+      cursor_offset_x_(-1),
+      cursor_offset_y_(-1) {
     ASSERT(owner);
-    ASSERT(gfx_);
   }
 
   ~Impl() {
@@ -64,8 +70,6 @@ class SingleViewHost::Impl {
 
     delete tooltip_;
     tooltip_ = NULL;
-    delete gfx_;
-    gfx_ = NULL;
   }
 
   void Detach() {
@@ -150,16 +154,22 @@ class SingleViewHost::Impl {
                      G_CALLBACK(ConfigureHandler), this);
     g_signal_connect(G_OBJECT(fixed_), "size-request",
                      G_CALLBACK(FixedSizeRequestHandler), this);
+    if (!native_drag_mode_) {
+      g_signal_connect(G_OBJECT(window_), "motion-notify-event",
+          G_CALLBACK(MotionHandler), this);
+      g_signal_connect(G_OBJECT(window_), "button-release-event",
+          G_CALLBACK(ButtonHandler), this);
+    }
 
     // For details and main view, the view is bound to the toplevel window
     // instead of the GtkFixed widget, to get better performance and make the
     // input event mask effective.
-    binder_ = new ViewWidgetBinder(gfx_, view_, owner_, widget_, no_background);
+    binder_ = new ViewWidgetBinder(view_, owner_, widget_, no_background);
   }
 
   void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) {
-    double zoom = gfx_->GetZoom();
+    double zoom = view_->GetGraphics()->GetZoom();
     if (widget_x)
       *widget_x = x * zoom;
     if (widget_y)
@@ -169,8 +179,7 @@ class SingleViewHost::Impl {
   void AdjustWindowSize() {
     ASSERT(view_);
 
-    DLOG("Start adjusting window size.");
-    double zoom = gfx_->GetZoom();
+    double zoom = view_->GetGraphics()->GetZoom();
     int width = static_cast<int>(ceil(view_->GetWidth() * zoom));
     int height = static_cast<int>(ceil(view_->GetHeight() * zoom));
 
@@ -253,7 +262,7 @@ class SingleViewHost::Impl {
     // the window size has correct default size when showing.
     LoadViewGeometricInfo();
     AdjustWindowSize();
-    gtk_widget_show(window_);
+    gtk_window_present(GTK_WINDOW(window_));
 
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
@@ -293,7 +302,7 @@ class SingleViewHost::Impl {
   }
 
   void SaveViewGeometricInfo() {
-    if (view_) {
+    if (view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
       opt->PutInternalValue((opt_prefix + "_x").c_str(),
@@ -311,7 +320,7 @@ class SingleViewHost::Impl {
 
       if (mode != ViewInterface::RESIZABLE_FALSE) {
         opt->PutInternalValue((opt_prefix + "_zoom").c_str(),
-                              Variant(gfx_->GetZoom()));
+                              Variant(view_->GetGraphics()->GetZoom()));
       }
     }
   }
@@ -340,8 +349,9 @@ class SingleViewHost::Impl {
     if (mode != ViewInterface::RESIZABLE_FALSE) {
       double zoom;
       Variant vzoom = opt->GetInternalValue((opt_prefix + "_zoom").c_str());
-      if (vzoom.ConvertToDouble(&zoom) && gfx_->GetZoom() != zoom) {
-        gfx_->SetZoom(zoom);
+      if (vzoom.ConvertToDouble(&zoom) &&
+          view_->GetGraphics()->GetZoom() != zoom) {
+        view_->GetGraphics()->SetZoom(zoom);
       }
     }
   }
@@ -366,7 +376,7 @@ class SingleViewHost::Impl {
         case MouseEvent::BUTTON_LEFT: gtk_button = 1; break;
         case MouseEvent::BUTTON_MIDDLE: gtk_button = 2; break;
         case MouseEvent::BUTTON_RIGHT: gtk_button = 3; break;
-        default: gtk_button = 3;
+        default: gtk_button = 3; break;
       }
 
       gtk_menu_popup(GTK_MENU(context_menu_),
@@ -420,15 +430,32 @@ class SingleViewHost::Impl {
     if (!GTK_WIDGET_MAPPED(window_))
       return;
 
-    if (on_move_drag_signal_(button))
+    if (on_begin_move_drag_signal_(button))
       return;
 
-    int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
-                      button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
     gint x, y;
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
-    gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
-                               x, y, gtk_get_current_event_time());
+    if (native_drag_mode_) {
+      int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
+                        button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
+      gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
+                                 x, y, gtk_get_current_event_time());
+    } else {
+      cursor_offset_x_ = x - win_x_;
+      cursor_offset_y_ = y - win_y_;
+      DLOG("handle move by the window(%p), cursor: %dx%d",
+          window_, cursor_offset_x_, cursor_offset_y_);
+    }
+  }
+
+  void MoveDrag(int button) {
+    on_move_drag_signal_(button);
+  }
+
+  void EndMoveDrag(int button) {
+    if (!GTK_WIDGET_MAPPED(window_))
+      return;
+    on_end_move_drag_signal_(button);
   }
 
   static void WindowShowHandler(GtkWidget *widget, gpointer user_data) {
@@ -451,6 +478,31 @@ class SingleViewHost::Impl {
         impl->view_->GetGadget()->RemoveMe(true);
       }
     }
+  }
+
+  static gboolean MotionHandler(GtkWidget *widget, GdkEventButton *event,
+                                gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->cursor_offset_x_ < 0 || impl->cursor_offset_y_ < 0)
+      return FALSE;
+    int x = static_cast<int>(event->x_root) - impl->cursor_offset_x_;
+    int y = static_cast<int>(event->y_root) - impl->cursor_offset_y_;
+    gtk_window_move(GTK_WINDOW(widget), x, y);
+    impl->MoveDrag(event->button);
+    return TRUE;
+  }
+
+  static gboolean ButtonHandler(GtkWidget *widget, GdkEventButton *event,
+                                gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->cursor_offset_x_ < 0 || impl->cursor_offset_y_ < 0)
+      return FALSE;
+    DLOG("Handle button release event.");
+    impl->EndMoveDrag(event->button);
+    impl->cursor_offset_x_ = -1;
+    impl->cursor_offset_y_ = -1;
+    gdk_pointer_ungrab(event->time);
+    return TRUE;
   }
 
   static gboolean ConfigureHandler(GtkWidget *widget, GdkEventConfigure *event,
@@ -488,7 +540,6 @@ class SingleViewHost::Impl {
   ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
-  CairoGraphics *gfx_;
 
   GtkWidget *window_;
   GtkWidget *widget_;
@@ -508,23 +559,39 @@ class SingleViewHost::Impl {
   int adjust_window_size_source_;
   bool decorated_;
   bool remove_on_close_;
+  bool native_drag_mode_;
+  double zoom_;
   int win_x_;
   int win_y_;
+  int cursor_offset_x_;
+  int cursor_offset_y_;
 
   Signal2<bool, int, int> on_resize_drag_signal_;
-  Signal1<bool, int> on_move_drag_signal_;
+
+  Signal1<bool, int> on_begin_move_drag_signal_;
+  Signal1<void, int> on_end_move_drag_signal_;
+  Signal1<void, int> on_move_drag_signal_;
+  Signal0<void> on_dock_signal_;
+  Signal0<void> on_undock_signal_;
+  Signal0<void> on_expand_signal_;
+  Signal0<void> on_unexpand_signal_;
 
   static const unsigned int kShowTooltipDelay = 500;
   static const unsigned int kHideTooltipDelay = 4000;
 };
 
-SingleViewHost::SingleViewHost(ViewHostInterface::Type type, double zoom,
-                               bool decorated, bool remove_on_close,
+SingleViewHost::SingleViewHost(ViewHostInterface::Type type,
+                               double zoom,
+                               bool decorated,
+                               bool remove_on_close,
+                               bool native_drag_mode,
                                ViewInterface::DebugMode debug_mode)
-  : impl_(new Impl(type, this, zoom, decorated, remove_on_close, debug_mode)) {
+    : impl_(new Impl(type, this, zoom, decorated, remove_on_close,
+                   native_drag_mode, debug_mode)) {
 }
 
 SingleViewHost::~SingleViewHost() {
+  DLOG("SingleViewHost Dtor: %p", this);
   delete impl_;
   impl_ = NULL;
 }
@@ -545,12 +612,8 @@ ViewInterface *SingleViewHost::GetView() const {
   return impl_->view_;
 }
 
-const GraphicsInterface *SingleViewHost::GetGraphics() const {
-  return impl_->gfx_;
-}
-
 void *SingleViewHost::GetNativeWidget() const {
-  return impl_->fixed_;
+  return impl_->widget_;
 }
 
 void SingleViewHost::ViewCoordToNativeWidgetCoord(
@@ -608,6 +671,39 @@ void SingleViewHost::BeginMoveDrag(int button) {
   impl_->BeginMoveDrag(button);
 }
 
+void SingleViewHost::MoveDrag(int button) {
+  impl_->MoveDrag(button);
+}
+
+void SingleViewHost::EndMoveDrag(int button) {
+  impl_->EndMoveDrag(button);
+}
+
+void SingleViewHost::Dock() {
+  SimpleEvent e(Event::EVENT_DOCK);
+  impl_->view_->OnOtherEvent(e);
+  impl_->on_dock_signal_();
+}
+
+void SingleViewHost::Undock() {
+  DLOG("host %p fire undock signal to view %p", this, impl_->view_);
+  SimpleEvent e(Event::EVENT_UNDOCK);
+  impl_->view_->OnOtherEvent(e);
+  impl_->on_undock_signal_();
+}
+
+void SingleViewHost::Expand() {
+  SimpleEvent e(Event::EVENT_POPOUT);
+  impl_->view_->OnOtherEvent(e);
+  impl_->on_expand_signal_();
+}
+
+void SingleViewHost::Unexpand() {
+  SimpleEvent e(Event::EVENT_POPIN);
+  impl_->view_->OnOtherEvent(e);
+  impl_->on_unexpand_signal_();
+}
+
 void SingleViewHost::Alert(const char *message) {
   ShowAlertDialog(impl_->view_->GetCaption().c_str(), message);
 }
@@ -626,16 +722,40 @@ ViewInterface::DebugMode SingleViewHost::GetDebugMode() const {
   return impl_->debug_mode_;
 }
 
-GtkWidget *SingleViewHost::GetToplevelWindow() const {
-  return impl_->window_;
+GraphicsInterface *SingleViewHost::NewGraphics() const {
+  return new CairoGraphics(impl_->zoom_);
 }
 
 Connection *SingleViewHost::ConnectOnResizeDrag(Slot2<bool, int, int> *slot) {
   return impl_->on_resize_drag_signal_.Connect(slot);
 }
 
-Connection *SingleViewHost::ConnectOnMoveDrag(Slot1<bool, int> *slot) {
+Connection *SingleViewHost::ConnectOnBeginMoveDrag(Slot1<bool, int> *slot) {
+  return impl_->on_begin_move_drag_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnEndMoveDrag(Slot1<void, int> *slot) {
+  return impl_->on_end_move_drag_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnMoveDrag(Slot1<void, int> *slot) {
   return impl_->on_move_drag_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnDock(Slot0<void> *slot) {
+  return impl_->on_dock_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnUndock(Slot0<void> *slot) {
+  return impl_->on_undock_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnExpand(Slot0<void> *slot) {
+  return impl_->on_expand_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnUnexpand(Slot0<void> *slot) {
+  return impl_->on_unexpand_signal_.Connect(slot);
 }
 
 } // namespace gtk

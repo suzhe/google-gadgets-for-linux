@@ -52,6 +52,16 @@ RESOURCE_FILES= button_down.png \
 		scrollup_d.png \
 		scrollup_o.png \
 		scrollup_u.png \
+		sidebar_google.png \
+		sidebar_add_up.png \
+		sidebar_add_down.png \
+		sidebar_add_over.png \
+		sidebar_config_up.png \
+		sidebar_config_down.png \
+		sidebar_config_over.png \
+		sidebar_close_up.png \
+		sidebar_close_down.png \
+		sidebar_close_over.png \
 		text_details_view.xml \
 		unpinned.png \
 		unpinned_over.png \

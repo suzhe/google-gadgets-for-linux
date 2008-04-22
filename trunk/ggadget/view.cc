@@ -15,7 +15,8 @@
 */
 
 // Enable it to print verbose debug info
-//#define VIEW_VERBOSE_DEBUG
+// #define VIEW_VERBOSE_DEBUG
+// #define EVENT_VERBOSE_DEBUG
 
 #include <sys/time.h>
 #include <time.h>
@@ -143,7 +144,7 @@ class View::Impl {
   };
 
   Impl(View *owner,
-       ViewHostInterface *host,
+       ViewHostInterface *view_host,
        Gadget *gadget,
        ElementFactory *element_factory,
        ScriptContextInterface *script_context)
@@ -152,10 +153,11 @@ class View::Impl {
       gadget_(gadget),
       element_factory_(element_factory),
       main_loop_(GetGlobalMainLoop()),
-      host_(host),
+      view_host_(view_host),
       script_context_(script_context),
       onoptionchanged_connection_(NULL),
       canvas_cache_(NULL),
+      graphics_(NULL),
       enable_cache_(true),
       children_(element_factory, NULL, owner),
       dragover_result_(EVENT_RESULT_UNHANDLED),
@@ -170,7 +172,6 @@ class View::Impl {
       need_redraw_(true),
       draw_count_(0),
       hittest_(ViewInterface::HT_CLIENT) {
-    ASSERT(host_);
     ASSERT(main_loop_);
 
     if (gadget_) {
@@ -183,9 +184,6 @@ class View::Impl {
   ~Impl() {
     ASSERT(event_stack_.empty());
 
-    host_->SetView(NULL);
-    host_ = NULL;
-
     on_destroy_signal_.Emit(0, NULL);
 
     if (onoptionchanged_connection_) {
@@ -196,6 +194,12 @@ class View::Impl {
     if (canvas_cache_) {
       canvas_cache_->Destroy();
       canvas_cache_ = NULL;
+    }
+
+    if (view_host_) {
+      view_host_->SetView(NULL);
+      view_host_->Destroy();
+      view_host_ = NULL;
     }
   }
 
@@ -422,19 +426,21 @@ class View::Impl {
     }
 
     if (in_element_holder.Get()) {
-      host_->SetCursor(in_element->GetCursor());
+      view_host_->SetCursor(in_element->GetCursor());
       if (type == Event::EVENT_MOUSE_MOVE &&
           in_element != tooltip_element_.Get()) {
         tooltip_element_.Reset(in_element);
-        host_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
+        view_host_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
       }
       // Gets the hit test value of the element currently pointed by mouse.
       // It'll be used as the hit test value of the View.
       hittest_ = in_element->GetHitTest();
-      //DLOG("In element: %s type %s, hitTest:%d", in_element->GetName().c_str(),
-      //     in_element->GetTagName().c_str(), hittest_);
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
+      DLOG("In element: %s type %s, hitTest:%d", in_element->GetName().c_str(),
+           in_element->GetTagName().c_str(), hittest_);
+#endif
     } else {
-      host_->SetCursor(-1);
+      view_host_->SetCursor(-1);
       tooltip_element_.Reset(NULL);
       hittest_ = ViewInterface::HT_CLIENT;
     }
@@ -446,11 +452,13 @@ class View::Impl {
     // Send event to view first.
     ScriptableEvent scriptable_event(&event, NULL, NULL);
     Event::Type type = event.GetType();
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (type != Event::EVENT_MOUSE_MOVE)
-      DLOG("%s(view): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
+      DLOG("%s(View): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
            event.GetX(), event.GetY(),
            event.GetWheelDeltaX(), event.GetWheelDeltaY(),
            event.GetButton(), event.GetModifier());
+#endif
     switch (type) {
       case Event::EVENT_MOUSE_MOVE:
         // Put the high volume events near top.
@@ -508,7 +516,7 @@ class View::Impl {
     if(event.GetType() == Event::EVENT_MOUSE_DOWN &&
        event.GetButton() == MouseEvent::BUTTON_RIGHT) {
       // Handle ShowContextMenu event.
-      if (host_->ShowContextMenu(MouseEvent::BUTTON_RIGHT))
+      if (view_host_->ShowContextMenu(MouseEvent::BUTTON_RIGHT))
         result = EVENT_RESULT_HANDLED;
     }
 
@@ -517,8 +525,10 @@ class View::Impl {
 
   EventResult OnKeyEvent(const KeyboardEvent &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
-    DLOG("%s(view): %d %d", scriptable_event.GetName(),
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
+    DLOG("%s(View): %d %d", scriptable_event.GetName(),
          event.GetKeyCode(), event.GetModifier());
+#endif
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
         FireEvent(&scriptable_event, onkeydown_event_);
@@ -615,7 +625,9 @@ class View::Impl {
 
   EventResult OnOtherEvent(const Event &event) {
     ScriptableEvent scriptable_event(&event, NULL, NULL);
-    DLOG("%s(view)", scriptable_event.GetName());
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
+    DLOG("%s(View)", scriptable_event.GetName());
+#endif
     switch (event.GetType()) {
       case Event::EVENT_FOCUS_IN:
         // For now we don't automatically set focus to some element.
@@ -665,7 +677,7 @@ class View::Impl {
   void SetSize(double width, double height) {
     if (width != width_ || height != height_) {
       // Invalidate the canvas cache.
-      if (enable_cache_ && canvas_cache_) {
+      if (canvas_cache_) {
         canvas_cache_->Destroy();
         canvas_cache_ = NULL;
       }
@@ -677,8 +689,7 @@ class View::Impl {
       // so do layout here to make sure the layout is correct.
       children_.Layout();
 
-      if (host_)
-        host_->QueueResize();
+      if (view_host_) view_host_->QueueResize();
 
       SimpleEvent event(Event::EVENT_SIZE);
       ScriptableEvent scriptable_event(&event, NULL, NULL);
@@ -705,6 +716,8 @@ class View::Impl {
 
   void Draw(CanvasInterface *canvas) {
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+    DLOG("host(%p) draw view(%p) on canvas %p with size: %f x %f",
+         view_host_, owner_, canvas, canvas->GetWidth(), canvas->GetHeight());
     draw_count_ = 0;
     uint64_t start = main_loop_->GetCurrentTime();
 #endif
@@ -712,7 +725,9 @@ class View::Impl {
     // And because the canvas cache_ is valid, just need to paint the canvas
     // cache to the dest canvas.
     if (!draw_queued_ && canvas_cache_ && !need_redraw_) {
-      //DLOG("Draw from canvas cache.");
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+      DLOG("Draw from canvas cache.");
+#endif
       canvas->DrawCanvas(0, 0, canvas_cache_);
       return;
     }
@@ -727,8 +742,8 @@ class View::Impl {
     clip_region_.PrintLog();
 #endif
 
-    if (enable_cache_ && !canvas_cache_) {
-      canvas_cache_ = host_->GetGraphics()->NewCanvas(width_, height_);
+    if (enable_cache_ && !canvas_cache_ && view_host_) {
+      canvas_cache_ = graphics_->NewCanvas(width_, height_);
       need_redraw_ = true;
     }
 
@@ -736,16 +751,20 @@ class View::Impl {
     // This can prevent some flickers, for example, onsize of labels.
     FirePostedEvents();
 
-    if (need_redraw_)
-      clip_region_.Clear();
-    else
-      clip_region_.Integerize();
+    CanvasInterface *target;
 
-    CanvasInterface *target = enable_cache_ ? canvas_cache_ : canvas;
-
-    target->PushState();
-    target->IntersectGeneralClipRegion(clip_region_);
-    target->ClearRect(0, 0, width_, height_);
+    if (enable_cache_) {
+      if (need_redraw_)
+        clip_region_.Clear();
+      else
+        clip_region_.Integerize();
+      target = canvas_cache_ ? canvas_cache_ : canvas;
+      target->PushState();
+      target->IntersectGeneralClipRegion(clip_region_);
+      target->ClearRect(0, 0, width_, height_);
+    } else {
+      target = canvas;
+    }
 
     // No need to draw children if there is a popup element and it's fully
     // opaque and the clip region is inside its extents.
@@ -753,7 +772,9 @@ class View::Impl {
     // then the region of the popup element may not cover the whole clip
     // region. In this case it's not safe to skip drawing other children.
     bool skip_children = false;
-    if (popup_element_.Get() && popup_element_.Get()->IsFullyOpaque() &&
+    if (enable_cache_ &&
+        popup_element_.Get() &&
+        popup_element_.Get()->IsFullyOpaque() &&
         clip_region_.IsInside(popup_element_.Get()->GetExtentsInView())) {
       double rotation = 0;
       BasicElement *e = popup_element_.Get();
@@ -797,7 +818,7 @@ class View::Impl {
       popup_element_.Get()->Draw(target);
     }
     target->PopState();
-    if (enable_cache_)
+    if (target == canvas_cache_)
       canvas->DrawCanvas(0, 0, canvas_cache_);
     clip_region_.Clear();
     need_redraw_ = false;
@@ -810,6 +831,7 @@ class View::Impl {
   }
 
   bool OnAddContextMenuItems(MenuInterface *menu) {
+    if (!view_host_) return false;
     bool result = true;
     if (mouseover_element_.Get()) {
       if (mouseover_element_.Get()->IsReallyEnabled())
@@ -821,7 +843,7 @@ class View::Impl {
     // If the view is main and the mouse over element doesn't have special menu
     // items, then add gadget's menu items.
     if (result && gadget_ &&
-        host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN)
+        view_host_->GetType() == ViewHostInterface::VIEW_HOST_MAIN)
       gadget_->OnAddCustomMenuItems(menu);
 
     return result;
@@ -837,9 +859,11 @@ class View::Impl {
     FireEvent(&scriptable_event, onsizing_event_);
     bool result = (scriptable_event.GetReturnValue() != EVENT_RESULT_CANCELED);
 
-    DLOG("onsizing view %s, request: %lf x %lf, actual: %lf x %lf",
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
+    DLOG("onsizing View %s, request: %lf x %lf, actual: %lf x %lf",
          (result ? "accepted" : "cancelled"),
          *width, *height, event.GetWidth(), event.GetHeight());
+#endif
 
     if (result) {
       *width = event.GetWidth();
@@ -944,8 +968,8 @@ class View::Impl {
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
     owner_->AddElementToClipRegion(element);
-    if (element == tooltip_element_.Get() && host_)
-      host_->SetTooltip(NULL);
+    if (element == tooltip_element_.Get() && view_host_)
+      view_host_->SetTooltip(NULL);
 
     std::string name = element->GetName();
     if (!name.empty()) {
@@ -1042,22 +1066,22 @@ class View::Impl {
   }
 
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
-    if (!gadget_ || !host_) return NULL;
+    // if (!gadget_ || !view_host_) return NULL;
 
     Variant::Type type = src.type();
     if (type == Variant::TYPE_STRING) {
       const char *filename = VariantValue<const char*>()(src);
       if (filename && *filename) {
         std::string data;
-        if (gadget_->GetFileManager()->ReadFile(filename, &data)) {
-          return host_->GetGraphics()->NewImage(filename, data, is_mask);
+        if (gadget_ && gadget_->GetFileManager()->ReadFile(filename, &data)) {
+          return graphics_->NewImage(filename, data, is_mask);
         }
       }
     } else if (type == Variant::TYPE_SCRIPTABLE) {
       const ScriptableBinaryData *binary =
           VariantValue<const ScriptableBinaryData *>()(src);
       if (binary)
-        return host_->GetGraphics()->NewImage("", binary->data(), is_mask);
+        return graphics_->NewImage("", binary->data(), is_mask);
     } else {
       LOG("Unsupported type of image src.");
       DLOG("src=%s", src.Print().c_str());
@@ -1066,10 +1090,10 @@ class View::Impl {
   }
 
   ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {
-    if (name && *name && host_) {
+    if (name && *name && view_host_) {
       std::string data;
       if (GetGlobalFileManager()->ReadFile(name, &data)) {
-        return host_->GetGraphics()->NewImage(name, data, is_mask);
+        return graphics_->NewImage(name, data, is_mask);
       }
     }
     return NULL;
@@ -1148,10 +1172,11 @@ class View::Impl {
   Gadget *gadget_;
   ElementFactory *element_factory_;
   MainLoopInterface *main_loop_;
-  ViewHostInterface *host_;
+  ViewHostInterface *view_host_;
   ScriptContextInterface *script_context_;
   Connection *onoptionchanged_connection_;
   CanvasInterface *canvas_cache_;
+  GraphicsInterface *graphics_;
   bool enable_cache_;
 
   Elements children_;
@@ -1191,17 +1216,23 @@ class View::Impl {
   static const unsigned int kMinInterval = 5;
 };
 
-View::View(ViewHostInterface *host,
+View::View(ViewHostInterface *view_host,
            Gadget *gadget,
            ElementFactory *element_factory,
            ScriptContextInterface *script_context)
-    : impl_(new Impl(this, host, gadget, element_factory, script_context)) {
+    : impl_(new Impl(this, view_host, gadget, element_factory, script_context)) {
   // Make sure that the view is initialized when attaching to the ViewHost.
-  impl_->host_->SetView(this);
+  if (view_host) {
+    if (!impl_->graphics_)
+      impl_->graphics_ = view_host->NewGraphics();
+    view_host->SetView(this);
+  }
 }
 
 View::~View() {
+  GraphicsInterface *tmp = impl_->graphics_;
   delete impl_;
+  delete tmp;
   impl_ = NULL;
 }
 
@@ -1217,8 +1248,8 @@ FileManagerInterface *View::GetFileManager() const {
   return impl_->gadget_->GetFileManager();
 }
 
-const GraphicsInterface *View::GetGraphics() const {
-  return impl_->host_ ? impl_->host_->GetGraphics() : NULL;
+GraphicsInterface *View::GetGraphics() const {
+  return impl_->graphics_;
 }
 
 void View::RegisterProperties(RegisterableInterface *obj) const {
@@ -1247,8 +1278,8 @@ double View::GetHeight() const {
 
 void View::SetResizable(ViewInterface::ResizableMode resizable) {
   impl_->resizable_ = resizable;
-  if (impl_->host_)
-    impl_->host_->SetResizable(resizable);
+  if (impl_->view_host_)
+    impl_->view_host_->SetResizable(resizable);
 }
 
 ViewInterface::ResizableMode View::GetResizable() const {
@@ -1257,8 +1288,8 @@ ViewInterface::ResizableMode View::GetResizable() const {
 
 void View::SetCaption(const char *caption) {
   impl_->caption_ = caption ? caption : "";
-  if (impl_->host_)
-    impl_->host_->SetCaption(caption);
+  if (impl_->view_host_)
+    impl_->view_host_->SetCaption(caption);
 }
 
 std::string View::GetCaption() const {
@@ -1267,8 +1298,8 @@ std::string View::GetCaption() const {
 
 void View::SetShowCaptionAlways(bool show_always) {
   impl_->show_caption_always_ = show_always;
-  if (impl_->host_)
-    impl_->host_->SetShowCaptionAlways(show_always);
+  if (impl_->view_host_)
+    impl_->view_host_->SetShowCaptionAlways(show_always);
 }
 
 bool View::GetShowCaptionAlways() const {
@@ -1381,12 +1412,14 @@ ContentAreaElement *View::GetContentAreaElement() const {
 }
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
-  return impl_->clip_region_.IsEmpty() ||
-         impl_->clip_region_.Overlaps(element->GetExtentsInView());
+  return !impl_->enable_cache_ ||
+      impl_->clip_region_.IsEmpty() ||
+      impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
 void View::AddElementToClipRegion(BasicElement *element) {
-  impl_->clip_region_.AddRectangle(element->GetExtentsInView());
+  if (impl_->enable_cache_)
+    impl_->clip_region_.AddRectangle(element->GetExtentsInView());
 }
 
 void View::IncreaseDrawCount() {
@@ -1434,24 +1467,45 @@ Texture *View::LoadTexture(const Variant &src) const {
 }
 
 void *View::GetNativeWidget() const {
-  return impl_->host_ ? impl_->host_->GetNativeWidget() : NULL;
+  return impl_->view_host_ ? impl_->view_host_->GetNativeWidget() : NULL;
+}
+
+// Note! view should not change between different kinds of view hosts,
+// since the graphics compatibility issue
+ViewHostInterface *View::SwitchViewHost(ViewHostInterface *new_host) {
+  ViewHostInterface *old_host = impl_->view_host_;
+  if (impl_->canvas_cache_) {
+    impl_->canvas_cache_->Destroy();
+    impl_->canvas_cache_ = NULL;
+  }
+  impl_->view_host_ = new_host;
+  if (new_host) {
+    if (!impl_->graphics_)
+      impl_->graphics_ = new_host->NewGraphics();
+    new_host->SetView(this);
+  }
+  return old_host;
+}
+
+ViewHostInterface *View::GetViewHost() const {
+  return impl_->view_host_;
 }
 
 void View::ViewCoordToNativeWidgetCoord(
     double x, double y, double *widget_x, double *widget_y) const {
-  if (impl_->host_)
-    impl_->host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
+  if (impl_->view_host_)
+    impl_->view_host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
 }
 
 void View::QueueDraw() {
-  if (!impl_->draw_queued_ && impl_->host_) {
+  if (!impl_->draw_queued_ && impl_->view_host_) {
     impl_->draw_queued_ = true;
-    impl_->host_->QueueDraw();
+    impl_->view_host_->QueueDraw();
   }
 }
 
 ViewInterface::DebugMode View::GetDebugMode() const {
-  return impl_->host_ ? impl_->host_->GetDebugMode() :
+  return impl_->view_host_ ? impl_->view_host_->GetDebugMode() :
          ViewInterface::DEBUG_DISABLED;
 }
 
@@ -1460,17 +1514,17 @@ bool View::OpenURL(const char *url) const {
 }
 
 void View::Alert(const char *message) const {
-  if (impl_->host_)
-    impl_->host_->Alert(message);
+  if (impl_->view_host_)
+    impl_->view_host_->Alert(message);
 }
 
 bool View::Confirm(const char *message) const {
-  return impl_->host_ ? impl_->host_->Confirm(message) : false;
+  return impl_->view_host_ ? impl_->view_host_->Confirm(message) : false;
 }
 
 std::string
 View::Prompt(const char *message, const char *default_result) const {
-  return impl_->host_ ? impl_->host_->Prompt(message, default_result) : "";
+  return impl_->view_host_ ? impl_->view_host_->Prompt(message, default_result) : "";
 }
 
 uint64_t View::GetCurrentTime() const {
@@ -1478,18 +1532,18 @@ uint64_t View::GetCurrentTime() const {
 }
 
 void View::SetTooltip(const char *tooltip) {
-  if (impl_->host_)
-    impl_->host_->SetTooltip(tooltip);
+  if (impl_->view_host_)
+    impl_->view_host_->SetTooltip(tooltip);
 }
 
 bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
-  return impl_->host_ ? impl_->host_->ShowView(modal, flags, feedback_handler) :
+  return impl_->view_host_ ? impl_->view_host_->ShowView(modal, flags, feedback_handler) :
          false;
 }
 
 void View::CloseView() {
-  if (impl_->host_)
-    impl_->host_->CloseView();
+  if (impl_->view_host_)
+    impl_->view_host_->CloseView();
 }
 
 Connection *View::ConnectOnCancelEvent(Slot0<void> *handler) {

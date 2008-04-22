@@ -13,6 +13,10 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+
+// Enable it to print verbose debug info
+// #define EVENT_VERBOSE_DEBUG
+
 #include <vector>
 #include "basic_element.h"
 #include "common.h"
@@ -397,6 +401,7 @@ class BasicElement::Impl {
   }
 
   void Layout() {
+    // DLOG("Layout for element: %p", owner_);
     if (!width_specified_ || !height_specified_) {
       double width, height;
       owner_->GetDefaultSize(&width, &height);
@@ -422,6 +427,7 @@ class BasicElement::Impl {
     if (x_relative_) {
       double new_x = px_ * parent_width;
       if (new_x != x_) {
+        view_->AddElementToClipRegion(owner_);
         position_changed_ = true;
         x_ = new_x;
       }
@@ -431,6 +437,7 @@ class BasicElement::Impl {
     if (width_relative_) {
       double new_width = pwidth_ * parent_width;
       if (new_width != width_) {
+        view_->AddElementToClipRegion(owner_);
         size_changed_ = true;
         width_ = new_width;
       }
@@ -442,6 +449,7 @@ class BasicElement::Impl {
     if (y_relative_) {
       double new_y = py_ * parent_height;
       if (new_y != y_) {
+        view_->AddElementToClipRegion(owner_);
         position_changed_ = true;
         y_ = new_y;
       }
@@ -451,6 +459,7 @@ class BasicElement::Impl {
     if (height_relative_) {
       double new_height = pheight_ * parent_height;
       if (new_height != height_) {
+        view_->AddElementToClipRegion(owner_);
         size_changed_ = true;
         height_ = new_height;
       }
@@ -480,6 +489,8 @@ class BasicElement::Impl {
   }
 
   void Draw(CanvasInterface *canvas) {
+    // DLOG("Draw %s(%p) on cavase(%p) with size: %fx%f", name_.c_str(), owner_,
+         // canvas, canvas->GetWidth(), canvas->GetHeight());
     // GetPixelWidth() and GetPixelHeight might be overrided.
     double width = owner_->GetPixelWidth();
     double height = owner_->GetPixelHeight();
@@ -644,6 +655,7 @@ class BasicElement::Impl {
 
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(&event, owner_, NULL);
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (type != Event::EVENT_MOUSE_MOVE) {
       DLOG("%s(%s|%s): x:%g y:%g dx:%d dy:%d b:%d m:%d",
            scriptable_event.GetName(),
@@ -652,6 +664,7 @@ class BasicElement::Impl {
            event.GetWheelDeltaX(), event.GetWheelDeltaY(),
            event.GetButton(), event.GetModifier());
     }
+#endif
 
     ElementHolder in_element_holder(*in_element);
     switch (type) {
@@ -717,10 +730,12 @@ class BasicElement::Impl {
 
     // Take this event, since no children took it, and we're enabled.
     ScriptableEvent scriptable_event(&event, owner_, NULL);
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (event.GetType() != Event::EVENT_DRAG_MOTION)
       DLOG("%s(%s|%s): %g %g file0=%s", scriptable_event.GetName(),
            name_.c_str(), tag_name_.c_str(),
            event.GetX(), event.GetY(), event.GetDragFiles()[0]);
+#endif
 
     switch (event.GetType()) {
       case Event::EVENT_DRAG_MOTION: // put the high volume events near top
@@ -756,8 +771,10 @@ class BasicElement::Impl {
 
     ElementHolder this_element_holder(owner_);
     ScriptableEvent scriptable_event(&event, owner_, NULL);
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str(), event.GetKeyCode());
+#endif
 
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
@@ -785,8 +802,10 @@ class BasicElement::Impl {
 
     ElementHolder this_element_holder(owner_);
     ScriptableEvent scriptable_event(&event, owner_, NULL);
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     DLOG("%s(%s|%s)", scriptable_event.GetName(),
          name_.c_str(), tag_name_.c_str());
+#endif
 
     // TODO: focus logic.
     switch (event.GetType()) {
