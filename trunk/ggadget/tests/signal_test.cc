@@ -25,15 +25,17 @@ using namespace ggadget;
 typedef Signal0<void> Signal0Void;
 typedef Signal0<bool> Signal0Bool;
 typedef Signal9<void, int, bool, const char *, const char *, std::string,
-                char, unsigned char, short, unsigned short> Signal9Void;
+    char, unsigned char, short, std::vector<int> *> Signal9Void;
 typedef Signal9<bool, int, bool, const char *, const char *, std::string,
-                char, unsigned char, short, unsigned short> Signal9Bool;
+    char, unsigned char, short, const std::vector<int> *> Signal9Bool;
 typedef Signal2<void, char, unsigned long> Signal2Void;
 typedef Signal2<double, int, double> Signal2Double;
 typedef Signal1<Slot *, int> MetaSignal;
 
 typedef Signal9<void, long, bool, std::string, std::string, const char *,
-                int, unsigned short, int, unsigned long> Signal9VoidCompatible;
+    int, unsigned short, int, std::vector<int> *> Signal9VoidCompatible1;
+typedef Signal9<void, long, bool, std::string, std::string, const char *,
+    int, unsigned short, int, const std::vector<int> *> Signal9VoidCompatible2;
 typedef Signal1<Variant, Variant> SignalVariant;
 
 static void CheckSlot(int i, Slot *slot) {
@@ -130,7 +132,8 @@ TEST(signal, SignalSlotCompatibility) {
   Signal9Bool signal3, signal9, signal14;
   Signal2Void signal6, signal10;
   Signal2Double signal7;
-  Signal9VoidCompatible signal9_compatible;
+  Signal9VoidCompatible1 signal9_compatible1;
+  Signal9VoidCompatible2 signal9_compatible2;
   SignalVariant signal15;
 
   Signal *signals[] = { &signal0, &signal1, &signal2, &signal3, &signal4,
@@ -147,20 +150,24 @@ TEST(signal, SignalSlotCompatibility) {
   // Signal returning void is compatible with slot returning any type.
   ASSERT_TRUE(signal0.ConnectGeneral(meta_signal(2)) != NULL);
   // Special compatible by variant type automatic conversion.
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(1)) != NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(8)) != NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(3)) != NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(9)) != NULL);
+  ASSERT_TRUE(signal9_compatible1.ConnectGeneral(meta_signal(1)) != NULL);
+  ASSERT_TRUE(signal9_compatible1.ConnectGeneral(meta_signal(8)) != NULL);
+  ASSERT_TRUE(signal9_compatible2.ConnectGeneral(meta_signal(3)) != NULL);
+  ASSERT_TRUE(signal9_compatible2.ConnectGeneral(meta_signal(9)) != NULL);
 
   // Incompatible.
   ASSERT_TRUE(signal0.ConnectGeneral(meta_signal(1)) == NULL);
   ASSERT_TRUE(signal0.ConnectGeneral(meta_signal(7)) == NULL);
   ASSERT_TRUE(signal0.ConnectGeneral(meta_signal(9)) == NULL);
   ASSERT_TRUE(signal2.ConnectGeneral(meta_signal(0)) == NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(0)) == NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(2)) == NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(6)) == NULL);
-  ASSERT_TRUE(signal9_compatible.ConnectGeneral(meta_signal(7)) == NULL);
+  ASSERT_TRUE(signal9_compatible1.ConnectGeneral(meta_signal(0)) == NULL);
+  ASSERT_TRUE(signal9_compatible1.ConnectGeneral(meta_signal(2)) == NULL);
+  ASSERT_TRUE(signal9_compatible1.ConnectGeneral(meta_signal(6)) == NULL);
+  ASSERT_TRUE(signal9_compatible1.ConnectGeneral(meta_signal(7)) == NULL);
+  ASSERT_TRUE(signal9_compatible2.ConnectGeneral(meta_signal(0)) == NULL);
+  ASSERT_TRUE(signal9_compatible2.ConnectGeneral(meta_signal(2)) == NULL);
+  ASSERT_TRUE(signal9_compatible2.ConnectGeneral(meta_signal(6)) == NULL);
+  ASSERT_TRUE(signal9_compatible2.ConnectGeneral(meta_signal(7)) == NULL);
   ASSERT_TRUE(signal9.ConnectGeneral(meta_signal(8)) == NULL);
 }
 

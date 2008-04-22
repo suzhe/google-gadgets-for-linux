@@ -638,7 +638,7 @@ struct VariantValue<Date> {
 
 /**
  * Get the value of a @c Variant.
- * Speccialized for <code>const Date &</code> type.
+ * Specialized for <code>const Date &</code> type.
  */
 template <>
 struct VariantValue<const Date &> {
@@ -652,7 +652,7 @@ struct VariantValue<const Date &> {
 
 /**
  * Get the value of a @c Variant.
- * Speccialized for <code>const void *</code> type.
+ * Specialized for <code>const void *</code> type.
  */
 template <>
 struct VariantValue<const void *> {
@@ -695,6 +695,37 @@ struct VariantValue<void> {
   typedef void value_type;
 
   value_type operator()(const Variant &v) { }
+};
+
+/**
+ * Declare a pointer type that can be passed in a @c Variant.
+ * This macro can only be used within ggadget namespace.
+ */
+#define DECLARE_VARIANT_PTR_TYPE(T)                             \
+template <>                                                     \
+struct VariantType<T *> {                                       \
+  static const Variant::Type type = Variant::TYPE_ANY;          \
+};                                                              \
+template <>                                                     \
+struct VariantValue<T *> {                                      \
+  typedef T *value_type;                                        \
+  value_type operator()(const Variant &v) {                     \
+    ASSERT(v.type_ == Variant::TYPE_ANY);                       \
+    return reinterpret_cast<value_type>(v.v_.any_value_);       \
+  }                                                             \
+};                                                              \
+template <>                                                     \
+struct VariantType<const T *> {                                 \
+  static const Variant::Type type = Variant::TYPE_CONST_ANY;    \
+};                                                              \
+template <>                                                     \
+struct VariantValue<const T *> {                                \
+  typedef const T *value_type;                                  \
+  value_type operator()(const Variant &v) {                     \
+    ASSERT(v.type_ == Variant::TYPE_ANY ||                      \
+           v.type_ == Variant::TYPE_CONST_ANY);                 \
+    return reinterpret_cast<value_type>(v.v_.const_any_value_); \
+  }                                                             \
 };
 
 #undef SPECIALIZE_VARIANT_TYPE
