@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-var kURLOption = "RSS_URL";
+var kURLOption = "rss_url";
 var kRefreshInterval = 600000; // every 10 minutes
 
 var kItemHeadingColor = "#ffffff";

@@ -14,9 +14,9 @@
   limitations under the License.
 */
 
-var kDownloadURLOption = "DOWNLOAD_URL";
-var kModuleURLOption = "MODULE_URL_PREFIX";
-var kLocaleOption = "LOCALE";
+var kDownloadURLOption = "download_url";
+var kModuleURLOption = "module_url_prefix";
+var kLocaleOption = "locale";
 
 var g_user_pref_names = null;
 var g_gadget_attribs = null;
