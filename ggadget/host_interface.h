@@ -64,7 +64,7 @@ class HostInterface {
    * @param save_data if @c true, the gadget's state is saved before the gadget
    *     is removed.
    */
-  virtual void RemoveGadget(int instance_id, bool save_data) = 0;
+  virtual void RemoveGadget(Gadget *gadget, bool save_data) = 0;
 
   /** Output a debug string to the debug console or other places. */
   virtual void DebugOutput(DebugLevel level, const char *message) const = 0;
@@ -74,6 +74,9 @@ class HostInterface {
 
   /** Temporarily install a given font on the system. */
   virtual bool LoadFont(const char *filename) = 0;
+
+  /** Runs the host, start the main loop, etc. */
+  virtual void Run() = 0;
 
   /**
    * Shows an about dialog for a specified gadget.

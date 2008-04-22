@@ -26,6 +26,7 @@
 #include "math_utils.h"
 #include "scriptable_helper.h"
 #include "view.h"
+#include "view_element.h"
 #include "xml_dom_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
@@ -64,6 +65,28 @@ class Elements::Impl {
     return e;
   }
 
+  bool InsertElement(BasicElement *element, const BasicElement *before) {
+    // firstly erase the element from children, then insert to proper position
+    Children::iterator first = std::find(children_.begin(), children_.end(),
+                                         element);
+    Children::iterator second = std::find(children_.begin(), children_.end(),
+                                          before);
+    if (first != children_.end()) {
+      children_.erase(first);
+      second = std::find(children_.begin(), children_.end(), before);
+    }
+    if (view_->OnElementAdd(element)) {
+      if (!before || second == children_.end()) {
+        children_.push_back(element);
+        return true;
+      }
+      children_.insert(second, element);
+    } else {
+      return false;
+    }
+    return true;
+  }
+
   BasicElement *InsertElement(const char *tag_name,
                               const BasicElement *before,
                               const char *name) {
@@ -81,26 +104,6 @@ class Elements::Impl {
       e = NULL;
     }
     return e;
-  }
-
-  bool InsertElementAtIndex(BasicElement *elem, int index) {
-    ASSERT(elem);
-
-    if (index < -1 || index > static_cast<int>(children_.size())) {
-      return false;
-    }
-
-    if (view_->OnElementAdd(elem)) {
-      if (index == -1) {
-        children_.push_back(elem);
-      } else {
-        children_.insert(children_.begin() + index, elem);
-      }  
-    } else {
-      return false;
-    }
-
-    return true;
   }
 
   bool RemoveElement(BasicElement *element) {
@@ -330,6 +333,7 @@ class Elements::Impl {
       // 2. If it's outside parent's visible area.
       if (!view_->IsElementInClipRegion(element) ||
           (owner_ && !owner_->IsChildInVisibleArea(element))) {
+        // DLOG("pass child: %p(%s)", element, element->GetName().c_str());
         continue;
       }
 
@@ -425,13 +429,14 @@ BasicElement *Elements::AppendElement(const char *tag_name,
 }
 
 BasicElement *Elements::InsertElement(const char *tag_name,
-                                          const BasicElement *before,
-                                          const char *name) {
+                                      const BasicElement *before,
+                                      const char *name) {
   return impl_->InsertElement(tag_name, before, name);
 }
 
-bool Elements::InsertElementAtIndex(BasicElement *elem, int index) {
-  return impl_->InsertElementAtIndex(elem, index);
+bool Elements::InsertElement(BasicElement *element,
+                             const BasicElement *before) {
+  return impl_->InsertElement(element, before);
 }
 
 BasicElement *Elements::AppendElementFromXML(const std::string &xml) {

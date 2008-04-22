@@ -298,7 +298,7 @@ class Variant {
   explicit Variant(const Slot *);
 
   /**
-   * Don't support <code>const ScriptableInterface *</code>. 
+   * Don't support <code>const ScriptableInterface *</code>.
    */
   explicit Variant(const ScriptableInterface *);
 

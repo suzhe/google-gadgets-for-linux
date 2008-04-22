@@ -125,6 +125,9 @@ class ViewInterface {
    */
   virtual Gadget* GetGadget() const = 0;
 
+  /** Returns the @c GraphicsInterface associated with this host. */
+  virtual GraphicsInterface *GetGraphics() const = 0;
+
   /**
    * Set the width of the view.
    * */

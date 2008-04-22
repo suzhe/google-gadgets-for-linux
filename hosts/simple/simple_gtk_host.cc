@@ -17,16 +17,18 @@
 #include <gtk/gtk.h>
 #include <string>
 #include <map>
+
+#include "simple_gtk_host.h"
 #include <ggadget/common.h>
-#include <ggadget/logger.h>
 #include <ggadget/decorated_view_host.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/gadget_manager_interface.h>
+#include <ggadget/ggadget.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
-#include <ggadget/gadget_manager_interface.h>
+#include <ggadget/logger.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/ggadget.h>
-#include <ggadget/gadget_consts.h>
-#include "simple_gtk_host.h"
+#include <ggadget/view.h>
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -41,11 +43,11 @@ class SimpleGtkHost::Impl {
    public:
     GadgetBrowserHost(HostInterface *owner) : owner_(owner) { }
     virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-      return new SingleViewHost(type, 1.0, true, true,
+      return new SingleViewHost(type, 1.0, true, true, true,
                                 ViewInterface::DEBUG_DISABLED);
     }
-    virtual void RemoveGadget(int instance_id, bool save_data) {
-      GetGadgetManager()->RemoveGadgetInstance(instance_id);
+    virtual void RemoveGadget(Gadget *gadget, bool save_data) {
+      GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
     }
     virtual void DebugOutput(DebugLevel level, const char *message) const {
       owner_->DebugOutput(level, message);
@@ -59,6 +61,7 @@ class SimpleGtkHost::Impl {
     virtual void ShowGadgetAboutDialog(Gadget *gadget) {
       owner_->ShowGadgetAboutDialog(gadget);
     }
+    virtual void Run() {}
    private:
     HostInterface *owner_;
   };
@@ -152,7 +155,7 @@ class SimpleGtkHost::Impl {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
     if (options.length() && path.length()) {
       bool result = LoadGadget(path.c_str(), options.c_str(), id);
-      LOG("Load gadget %s, with option %s, %s",
+      LOG("SimpleGtkHost: Load gadget %s, with option %s, %s",
           path.c_str(), options.c_str(), result ? "succeeded" : "failed");
     }
     return true;
@@ -194,20 +197,20 @@ class SimpleGtkHost::Impl {
     bool decorated = (decorated_ || type != ViewHostInterface::VIEW_HOST_MAIN);
 
     SingleViewHost *svh = new SingleViewHost(type, zoom_, decorated, false,
-                  static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+        true, static_cast<ViewInterface::DebugMode>(view_debug_mode_));
 
     DecoratedViewHost *dvh  = new DecoratedViewHost(svh, true);
     host = dvh;
-    //host = svh;
 
     return host;
   }
 
-  void RemoveGadget(int instance_id, bool save_data) {
-    GadgetsMap::iterator it = gadgets_.find (instance_id);
+  void RemoveGadget(Gadget *gadget, bool save_data) {
+    int instance_id = gadget->GetInstanceID();
+    GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
-      delete it->second;
+      delete gadget;
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
@@ -330,8 +333,8 @@ ViewHostInterface *SimpleGtkHost::NewViewHost(ViewHostInterface::Type type) {
   return impl_->NewViewHost(type);
 }
 
-void SimpleGtkHost::RemoveGadget(int instance_id, bool save_data) {
-  return impl_->RemoveGadget(instance_id, save_data);
+void SimpleGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {
+  return impl_->RemoveGadget(gadget, save_data);
 }
 
 void SimpleGtkHost::DebugOutput(DebugLevel level, const char *message) const {

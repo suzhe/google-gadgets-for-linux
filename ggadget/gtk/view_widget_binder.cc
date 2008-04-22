@@ -17,13 +17,13 @@
 #include <algorithm>
 #include <cairo.h>
 
+#include "view_widget_binder.h"
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/event.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
-#include "view_widget_binder.h"
 #include "cairo_canvas.h"
 #include "cairo_graphics.h"
 #include "key_convert.h"
@@ -40,11 +40,10 @@ static const double kWindowMoveResizeThreshold = 2;
 
 class ViewWidgetBinder::Impl {
  public:
-  Impl(CairoGraphics *gfx, ViewInterface *view,
+  Impl(ViewInterface *view,
        ViewHostInterface *host, GtkWidget *widget,
        bool no_background)
-    : gfx_(gfx),
-      view_(view),
+    : view_(view),
       host_(host),
       widget_(widget),
       handlers_(new gulong[kEventHandlersNum]),
@@ -56,11 +55,10 @@ class ViewWidgetBinder::Impl {
       composited_(false),
       no_background_(no_background),
       focused_(false),
-      zoom_(gfx_->GetZoom()),
+      zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
       mouse_down_hittest_(ViewInterface::HT_CLIENT) {
-    ASSERT(gfx);
     ASSERT(view);
     ASSERT(host);
     ASSERT(GTK_IS_WIDGET(widget));
@@ -100,8 +98,8 @@ class ViewWidgetBinder::Impl {
                                       kEventHandlers[i].handler,
                                       this);
     }
-
-    on_zoom_connection_ = gfx_->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
+    on_zoom_connection_ = down_cast<CairoGraphics *>(
+        view_->GetGraphics())->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
   }
 
   ~Impl() {
@@ -317,6 +315,7 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
                                 gpointer user_data) {
+    // DLOG("Expose for widget: %p", widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     gint width, height;
     gdk_drawable_get_size(widget->window, &width, &height);
@@ -336,7 +335,8 @@ class ViewWidgetBinder::Impl {
 
     // Let View draw on the gdk window directly.
     // It's ok, because the View has canvas cache internally.
-    CairoCanvas *canvas = new CairoCanvas(cr, impl->gfx_->GetZoom(),
+    CairoCanvas *canvas = new CairoCanvas(cr,
+                                          impl->view_->GetGraphics()->GetZoom(),
                                           impl->view_->GetWidth(),
                                           impl->view_->GetHeight());
     ASSERT(canvas);
@@ -350,7 +350,8 @@ class ViewWidgetBinder::Impl {
       GdkBitmap *bitmap =
         static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, width, height, 1));
       cairo_t *mask = gdk_cairo_create(bitmap);
-      CairoCanvas *mask_canvas = new CairoCanvas(mask, impl->gfx_->GetZoom(),
+      CairoCanvas *mask_canvas = new CairoCanvas(mask,
+                                                 impl->view_->GetGraphics()->GetZoom(),
                                                  impl->view_->GetWidth(),
                                                  impl->view_->GetHeight());
       mask_canvas->ClearCanvas();
@@ -416,7 +417,7 @@ class ViewWidgetBinder::Impl {
           hittest == ViewInterface::HT_BOTTOMRIGHT) {
         resize_drag = true;
       } else if (mod & Event::MOD_CONTROL) {
-        // If ctrl is holding, then emulate resize draging.
+        // FIXME: If ctrl is holding, then emulate resize draging.
         // Only for testing purpose. Shall be removed later.
         resize_drag = true;
         gint x = static_cast<int>(event->x);
@@ -669,9 +670,9 @@ class ViewWidgetBinder::Impl {
         double xzoom = widget_width / width;
         double yzoom = widget_height / height;
         double zoom = std::min(xzoom, yzoom);
-        if (zoom != impl->gfx_->GetZoom()) {
+        if (zoom != impl->view_->GetGraphics()->GetZoom()) {
           DLOG("Zoom View to: %lf", zoom);
-          impl->gfx_->SetZoom(zoom);
+          impl->view_->GetGraphics()->SetZoom(zoom);
           impl->view_->MarkRedraw();
         }
         impl->host_->QueueResize();
@@ -724,7 +725,6 @@ class ViewWidgetBinder::Impl {
     }
   }
 
-  CairoGraphics *gfx_;
   ViewInterface *view_;
   ViewHostInterface *host_;
   GtkWidget *widget_;
@@ -796,10 +796,10 @@ ViewWidgetBinder::Impl::kEventHandlers[] = {
 const size_t ViewWidgetBinder::Impl::kEventHandlersNum =
   arraysize(ViewWidgetBinder::Impl::kEventHandlers);
 
-ViewWidgetBinder::ViewWidgetBinder(CairoGraphics *gfx, ViewInterface *view,
+ViewWidgetBinder::ViewWidgetBinder(ViewInterface *view,
                                    ViewHostInterface *host, GtkWidget *widget,
                                    bool no_background)
-  : impl_(new Impl(gfx, view, host, widget, no_background)) {
+  : impl_(new Impl(view, host, widget, no_background)) {
 }
 
 ViewWidgetBinder::~ViewWidgetBinder() {

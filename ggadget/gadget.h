@@ -132,6 +132,10 @@ class Gadget {
   /** Returns current plugin flags of the gadget. */
   int GetPluginFlags() const;
 
+  int GetDisplayTarget() const;
+
+  void SetDisplayTarget(DisplayTarget target);
+
   /**
    * Gets the FileManager instance used by this gadget.
    * Caller shall not destroy the returned FileManager instance.

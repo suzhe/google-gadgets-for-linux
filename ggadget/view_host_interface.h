@@ -22,7 +22,6 @@
 namespace ggadget {
 
 template <typename R, typename P1> class Slot1;
-class GraphicsInterface;
 
 /**
  * Interface for providing host services to views.. Each view contains a
@@ -68,13 +67,11 @@ class ViewHostInterface {
   virtual ViewInterface *GetView() const = 0;
 
   /** Returns the @c GraphicsInterface associated with this host. */
-  virtual const GraphicsInterface *GetGraphics() const = 0;
+  virtual GraphicsInterface *NewGraphics() const = 0;
 
   /**
    * Gets information about the native widget.
-   * @param[out] native_widget the native widget handle of this view host.
-   * @param[out] x the horizontal offset of this view host in the native widget.
-   * @param[out] y the vertical offset of this view host in the native widget.
+   * @return the pointer point to native widget.
    */
   virtual void *GetNativeWidget() const = 0;
 
@@ -217,6 +214,14 @@ class ViewHostInterface {
    *        @MouseEvent::Button.
    */
   virtual void BeginMoveDrag(int button) = 0;
+
+  virtual void Dock() = 0;
+
+  virtual void Undock() = 0;
+
+  virtual void Expand() = 0;
+
+  virtual void Unexpand() = 0;
 
   /** Displays a message box containing the message string. */
   virtual void Alert(const char *message) = 0;

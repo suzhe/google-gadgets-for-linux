@@ -48,15 +48,19 @@ class SingleViewHost : public ViewHostInterface {
    * @param remove_on_close remove the gadget when the main view is closed.
    * @param debug_mode DebugMode when drawing elements.
    */
-  SingleViewHost(ViewHostInterface::Type type, double zoom, bool decorated,
-                 bool remove_on_close, ViewInterface::DebugMode debug_mode);
+  SingleViewHost(ViewHostInterface::Type type,
+                 double zoom,
+                 bool decorated,
+                 bool remove_on_close,
+                 bool native_drag_mode,
+                 ViewInterface::DebugMode debug_mode);
   virtual ~SingleViewHost();
 
   virtual Type GetType() const;
   virtual void Destroy();
   virtual void SetView(ViewInterface *view);
   virtual ViewInterface *GetView() const;
-  virtual const GraphicsInterface *GetGraphics() const;
+  virtual GraphicsInterface *NewGraphics() const;
   virtual void *GetNativeWidget() const;
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const;
@@ -72,7 +76,16 @@ class SingleViewHost : public ViewHostInterface {
   virtual void CloseView();
   virtual bool ShowContextMenu(int button);
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest);
+
   virtual void BeginMoveDrag(int button);
+  virtual void MoveDrag(int button);
+  virtual void EndMoveDrag(int button);
+
+  virtual void Dock();
+  virtual void Undock();
+  virtual void Expand();
+  virtual void Unexpand();
+
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
@@ -80,9 +93,6 @@ class SingleViewHost : public ViewHostInterface {
   virtual ViewInterface::DebugMode GetDebugMode() const;
 
  public:
-  /** Returns the toplevel GtkWindow that contains the View. */
-  GtkWidget *GetToplevelWindow() const;
-
   /**
    * Connects a slot to OnResizeDrag signal.
    *
@@ -108,8 +118,19 @@ class SingleViewHost : public ViewHostInterface {
    * performed for the topleve GtkWindow, otherwise no other action will be
    * performed.
    */
-  Connection *ConnectOnMoveDrag(Slot1<bool, int> *slot);
+  Connection *ConnectOnBeginMoveDrag(Slot1<bool, int> *slot);
 
+  Connection *ConnectOnEndMoveDrag(Slot1<void, int> *slot);
+
+  Connection *ConnectOnMoveDrag(Slot1<void, int> *slot);
+
+  Connection *ConnectOnDock(Slot0<void> *slot);
+
+  Connection *ConnectOnUndock(Slot0<void> *slot);
+
+  Connection *ConnectOnExpand(Slot0<void> *slot);
+
+  Connection *ConnectOnUnexpand(Slot0<void> *slot);
  private:
   DISALLOW_EVIL_CONSTRUCTORS(SingleViewHost);
   class Impl;

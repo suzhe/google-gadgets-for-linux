@@ -28,6 +28,7 @@ class BasicElement;
 class ElementFactory;
 class CanvasInterface;
 class View;
+class ViewElement;
 
 /**
  * Elements is used for storing and managing a set of BasicElement objects.
@@ -101,13 +102,17 @@ class Elements : public ScriptableHelperNativeOwnedDefault {
                               const char *name);
 
   /**
-   * Inserts a BasicElement at the specified index. If -1 is given as index, 
-   * then the element is inserted at the end.
+   * Inserts a BasicElement before the specified element.
    * @param elem The element to insert.
-   * @param index The index of the element after insertion. 
+   * @param before the element will be inserted before the given element.
+   *     If the specified element is not the direct child of the
+   *     container or this parameter is @c NULL, this method will insert the
+   *     newly created element at the end of the children list.
+   *     If the specified element is already a child of this element,
+   *     only the order is changed so that it would be put before @c before
    * @return true on success, false on failure.
    */
-  bool InsertElementAtIndex(BasicElement *elem, int index);
+  bool InsertElement(BasicElement *element, const BasicElement *before);
 
   /**
    * Create a new element from XML definition and add it to the end of the

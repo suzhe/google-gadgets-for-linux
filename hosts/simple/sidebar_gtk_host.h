@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_SIMPLE_GTK_HOST_H__
-#define HOSTS_SIMPLE_SIMPLE_GTK_HOST_H__
+#ifndef HOSTS_SIMPLE_SIDEBAR_GTK_HOST_H__
+#define HOSTS_SIMPLE_SIDEBAR_GTK_HOST_H__
 
 #include <string>
 #include <ggadget/host_interface.h>
@@ -27,10 +27,10 @@ using ggadget::Gadget;
 using ggadget::HostInterface;
 using ggadget::ViewHostInterface;;
 
-class SimpleGtkHost : public ggadget::HostInterface {
+class SidebarGtkHost : public ggadget::HostInterface {
  public:
-  SimpleGtkHost(double zoom, bool decorated, int view_debug_mode);
-  virtual ~SimpleGtkHost();
+  SidebarGtkHost(bool decorated, int view_debug_mode);
+  virtual ~SidebarGtkHost();
   virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
   virtual void DebugOutput(DebugLevel level, const char *message) const;
@@ -47,4 +47,4 @@ class SimpleGtkHost : public ggadget::HostInterface {
 } // namespace gtk
 } // namespace hosts
 
-#endif // HOSTS_SIMPLE_SIMPLE_GTK_HOST_H__
+#endif // HOSTS_SIMPLE_SIDEBAR_GTK_HOST_H__

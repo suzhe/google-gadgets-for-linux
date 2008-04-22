@@ -42,6 +42,7 @@
 #include <ggadget/system_utils.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/gadget_manager_interface.h>
+#include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
 
 static ggadget::gtk::MainLoop g_main_loop;
@@ -86,9 +87,10 @@ static const char *g_help_string =
   "             0 - No debug.\n"
   "             1 - Draw bounding boxes around container elements.\n"
   "             2 - Draw bounding boxes around all elements.\n"
-  "  -z zoom    Specify initial zoom fector for View.\n"
+  "  -z zoom    Specify initial zoom factor for View, not work for sidebar.\n"
   "  -n         Don't install the gadgets specified in command line.\n"
   "  -b         Draw window border for Main View.\n"
+  "  -s         User sidebar mode.\n"
   "\n"
   "Gadgets:\n"
   "  Can specify one or more Desktop Gadget paths. If any gadgets are specified,\n"
@@ -102,6 +104,7 @@ int main(int argc, char* argv[]) {
   int debug_mode = 0;
   bool install_gadgets = true;
   bool decorated = false;
+  bool sidebar = false;
   // Parse command line.
   std::vector<std::string> gadget_paths;
   int i = 0;
@@ -120,6 +123,11 @@ int main(int argc, char* argv[]) {
 
     if (std::string("-b") == argv[i] || std::string("--border") == argv[i]) {
       decorated = true;
+      continue;
+    }
+
+    if (std::string("-s") == argv[i] || std::string("--sidebar") == argv[i]) {
+      sidebar = true;
       continue;
     }
 
@@ -207,7 +215,11 @@ int main(int argc, char* argv[]) {
   // extension manager.
   ext_manager->SetReadonly();
 
-  hosts::gtk::SimpleGtkHost host(zoom, decorated, debug_mode);
+  ggadget::HostInterface *host;
+  if (sidebar)
+    host = new hosts::gtk::SidebarGtkHost(decorated, debug_mode);
+  else
+    host = new hosts::gtk::SimpleGtkHost(zoom, decorated, debug_mode);
 
   std::vector<ggadget::Gadget *> temp_gadgets;
 
@@ -223,7 +235,7 @@ int main(int argc, char* argv[]) {
       for (size_t i = 0; i < gadget_paths.size(); ++i) {
         std::string opt_name = ggadget::StringPrintf("temp-gadget-%zu", i);
         ggadget::Gadget *gadget =
-            new ggadget::Gadget(&host, gadget_paths[i].c_str(),
+            new ggadget::Gadget(host, gadget_paths[i].c_str(),
                                 opt_name.c_str(), i + 1000);
         if (gadget->IsValid()) {
           temp_gadgets.push_back(gadget);
@@ -236,10 +248,12 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  host.Run();
+  host->Run();
 
   for (size_t i = 0; i < temp_gadgets.size(); ++i)
     delete temp_gadgets[i];
+
+  delete host;
 
   return 0;
 }

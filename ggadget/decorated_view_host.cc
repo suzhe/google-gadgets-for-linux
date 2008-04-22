@@ -20,14 +20,15 @@
 
 #include "button_element.h"
 #include "div_element.h"
+#include "elements.h"
 #include "event.h"
 #include "file_manager_factory.h"
-#include "gadget.h"
 #include "gadget_consts.h"
+#include "gadget.h"
+#include "graphics_interface.h"
+#include "host_interface.h"
 #include "image_interface.h"
 #include "img_element.h"
-#include "elements.h"
-#include "graphics_interface.h"
 #include "main_loop_interface.h"
 #include "messages.h"
 #include "scriptable_binary_data.h"
@@ -92,15 +93,13 @@ class DecoratedViewHost::Impl {
 
       if (owner_->background_) {
         background_ = new DivElement(NULL, this, NULL);
-        GetChildren()->InsertElementAtIndex(background_, -1);
+        GetChildren()->InsertElement(background_, NULL);
         background_->SetBackgroundMode(DivElement::BACKGROUND_MODE_STRETCH_MIDDLE);
         background_->SetBackground(LoadGlobalImageAsVariant(kVDMainBackground));
       }
 
-      view_element_ = new ViewElement(NULL, this, 
-                                      owner_->inner_view_host_, 
-                                      owner_->inner_view_);      
-      GetChildren()->InsertElementAtIndex(view_element_, -1);      
+      view_element_ = new ViewElement(NULL, this, owner_->inner_view_);      
+      GetChildren()->InsertElement(view_element_, NULL);
       view_element_->SetPixelX(kInnerViewLeftOffset[t]);
       view_element_->SetPixelY(kInnerViewTopOffset[t]);
 
@@ -120,6 +119,10 @@ class DecoratedViewHost::Impl {
       DisconnectSlots();
     }
 
+    virtual void Draw(CanvasInterface *canvas) {
+      View::Draw(canvas);
+    }
+
     // Overridden methods.
 
     virtual bool OnAddContextMenuItems(MenuInterface *menu) {
@@ -129,7 +132,8 @@ class DecoratedViewHost::Impl {
 
     virtual EventResult OnMouseEvent(const MouseEvent &event) {
       Event::Type t = event.GetType();
-      if (t == Event::EVENT_MOUSE_OVER || t == Event::EVENT_MOUSE_OUT) {
+      if ((t == Event::EVENT_MOUSE_OVER || t == Event::EVENT_MOUSE_OUT) &&
+          owner_->inner_view_) {
         mouseover_ = (t == Event::EVENT_MOUSE_OVER);
         button_array_div_->SetVisible(mouseover_);
         SetBorderVisibility(owner_->inner_view_->GetResizable());
@@ -142,14 +146,16 @@ class DecoratedViewHost::Impl {
       Event::Type t = event.GetType();
       EventResult r = View::OnOtherEvent(event);
       switch (t) {
+       case Event::EVENT_POPIN:
+       case Event::EVENT_POPOUT:
+         expanded_ = !expanded_;
+         SetToggleExpandedButtons();
        case Event::EVENT_CANCEL:
        case Event::EVENT_CLOSE:
        case Event::EVENT_DOCK:
        case Event::EVENT_MINIMIZE:
        case Event::EVENT_OK:
        case Event::EVENT_OPEN:
-       case Event::EVENT_POPIN:
-       case Event::EVENT_POPOUT:
        case Event::EVENT_RESTORE:
        case Event::EVENT_UNDOCK:
         r = owner_->inner_view_->OnOtherEvent(event);
@@ -259,7 +265,7 @@ class DecoratedViewHost::Impl {
         if (zoom != owner_->inner_view_gfx_->GetZoom()) {
           DLOG("Set inner view scale to: %lf", zoom);
           owner_->inner_view_gfx_->SetZoom(zoom * 
-              owner_->outer_view_host_->GetGraphics()->GetZoom());
+              owner_->outer_view_->GetGraphics()->GetZoom());
           view_element_->SetScale(zoom);
           Layout();
           view_element_->MarkRedraw();
@@ -307,7 +313,7 @@ class DecoratedViewHost::Impl {
       ButtonElement *button = NULL;
       Connection *c = NULL;
       button_array_div_ = new DivElement(NULL, this, NULL);
-      GetChildren()->InsertElementAtIndex(button_array_div_, -1);
+      GetChildren()->InsertElement(button_array_div_, NULL);
       // X, Width is set on Layout instead.
       button_array_div_->SetPixelY(kInnerViewTopOffset[t]);
       button_array_div_->SetPixelHeight(kMainButtonBackgroundHeight);
@@ -319,52 +325,57 @@ class DecoratedViewHost::Impl {
       if (t == ViewHostInterface::VIEW_HOST_MAIN) {
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	    button->SetTooltip(GM_("VD_BACK_BUTTON_TOOLTIP"));
+        button->SetTooltip(GM_("VD_BACK_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonBackNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonBackOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonBackDown));
-        c = button->ConnectOnClickEvent(NewSlot(this, &DecoratedView::BackButtonClicked));
+        c = button->ConnectOnClickEvent(NewSlot(this,
+              &DecoratedView::BackButtonClicked));
         connections_.push_back(c);
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	    button->SetTooltip(GM_("VD_FORWARD_BUTTON_TOOLTIP"));
+        button->SetTooltip(GM_("VD_FORWARD_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonForwardNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonForwardOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonForwardDown));
-        c = button->ConnectOnClickEvent(NewSlot(this, &DecoratedView::ForwardButtonClicked));
+        c = button->ConnectOnClickEvent(NewSlot(this,
+              &DecoratedView::ForwardButtonClicked));
         connections_.push_back(c);
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	    button->SetTooltip(GM_("VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP"));
+        button->SetTooltip(GM_("VD_TOGGLE_EXPANDED_BUTTON_TOOLTIP"));
         SetToggleExpandedButtons(); // Call to set button images.
-        c = button->ConnectOnClickEvent(NewSlot(this, &DecoratedView::ToggleExpandedButtonClicked));
+        c = button->ConnectOnClickEvent(NewSlot(this,
+              &DecoratedView::ToggleExpandedButtonClicked));
         connections_.push_back(c);
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	    button->SetTooltip(GM_("VD_MENU_BUTTON_TOOLTIP"));
+        button->SetTooltip(GM_("VD_MENU_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonMenuNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonMenuOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonMenuDown));
-        c = button->ConnectOnClickEvent(NewSlot(this, &DecoratedView::MenuButtonClicked));
+        c = button->ConnectOnClickEvent(NewSlot(this,
+              &DecoratedView::MenuButtonClicked));
         connections_.push_back(c);
 
         button = new ButtonElement(button_array_div_, this, NULL);
         button_array_.push_back(button);
-	    button->SetTooltip(GM_("VD_CLOSE_BUTTON_TOOLTIP"));
+        button->SetTooltip(GM_("VD_CLOSE_BUTTON_TOOLTIP"));
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonCloseNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonCloseOver));
         button->SetDownImage(LoadGlobalImageAsVariant(kVDButtonCloseDown));      
-        c = button->ConnectOnClickEvent(NewSlot(this, &DecoratedView::CloseButtonClicked));
+        c = button->ConnectOnClickEvent(NewSlot(this,
+              &DecoratedView::CloseButtonClicked));
         connections_.push_back(c);
       }
 
       Elements *elements = button_array_div_->GetChildren();
       for (std::vector<ButtonElement *>::iterator i = button_array_.begin();
            i != button_array_.end(); ++i) {
-        elements->InsertElementAtIndex(*i, -1);
+        elements->InsertElement(*i, NULL);
       }              
     }
 
@@ -372,9 +383,10 @@ class DecoratedViewHost::Impl {
       ASSERT(button_array_div_);
       ViewHostInterface::Type t = owner_->outer_view_host_->GetType();
 
-      if (t == ViewHostInterface::VIEW_HOST_MAIN) {
+      Gadget *gadget = owner_->inner_view_->GetGadget();
+      if (t == ViewHostInterface::VIEW_HOST_MAIN && gadget) {
         // Index 0, 1 are back and forward buttons, respectively.
-        int plugin_flags = owner_->inner_view_->GetGadget()->GetPluginFlags();
+        int plugin_flags = gadget->GetPluginFlags();
         button_array_[0]->SetVisible(plugin_flags & Gadget::PLUGIN_FLAG_TOOLBAR_BACK);
         button_array_[1]->SetVisible(plugin_flags & Gadget::PLUGIN_FLAG_TOOLBAR_FORWARD);
       }
@@ -399,7 +411,7 @@ class DecoratedViewHost::Impl {
       for (int i = 0; i < BORDER_COUNT; ++i) {
         img = new ImgElement(NULL, this, NULL);
         border_array_[i] = img;
-        elements->InsertElementAtIndex(img, -1);
+        elements->InsertElement(img, NULL);
       }     
 
       Variant border_h = LoadGlobalImageAsVariant(kVDBorderH);
@@ -426,6 +438,8 @@ class DecoratedViewHost::Impl {
       border_array_[BORDER_RIGHT]->SetHitTest(HT_RIGHT);
       border_array_[BORDER_BOTTOM]->SetHitTest(HT_BOTTOM);
       border_array_[BORDER_LEFT]->SetHitTest(HT_LEFT);
+
+      border_array_[BORDER_BOTTOM]->SetCursor(ViewInterface::CURSOR_UPARROW);
 
       SetBorderVisibility(owner_->inner_view_->GetResizable());
     }
@@ -490,6 +504,7 @@ class DecoratedViewHost::Impl {
     void SetToggleExpandedButtons() {
       // Index 2 is the "toggle expanded" button.
       ButtonElement *button = button_array_[2];
+      DLOG("SetToggleExpandedButtons, current state: %d", expanded_);
       if (expanded_) {
         button->SetImage(LoadGlobalImageAsVariant(kVDButtonUnexpandNormal));
         button->SetOverImage(LoadGlobalImageAsVariant(kVDButtonUnexpandOver));
@@ -502,10 +517,10 @@ class DecoratedViewHost::Impl {
     }
 
     void ToggleExpandedButtonClicked() {
-      // TODO
-
-      expanded_ = !expanded_;
-      SetToggleExpandedButtons();
+      if (!expanded_)
+        owner_->outer_view_host_->Expand();
+      else
+        owner_->outer_view_host_->Unexpand();
     }
 
     void DisconnectSlots() {
@@ -547,11 +562,6 @@ class DecoratedViewHost::Impl {
     delete outer_view_;
     outer_view_ = NULL;    
 
-    if (outer_view_host_) {
-      outer_view_host_->Destroy();
-      outer_view_host_ = NULL;
-    }
-
     delete inner_view_gfx_;
     inner_view_gfx_ = NULL;
   }
@@ -571,10 +581,10 @@ class DecoratedViewHost::Impl {
     }
 
     // View element will queue the redraw.
-    outer_view_->view_element_->SetChildView(inner_view_host_, inner_view_);
+    outer_view_->view_element_->SetChildView(inner_view_);
     if (inner_view_) {     
       delete inner_view_gfx_;
-      inner_view_gfx_ = outer_view_host_->GetGraphics()->Clone();
+      inner_view_gfx_ = outer_view_->GetGraphics()->Clone();
 
       outer_view_->Layout();
     }
@@ -616,11 +626,11 @@ void DecoratedViewHost::SetView(ViewInterface *view) {
 }
 
 ViewInterface *DecoratedViewHost::GetView() const {
-  return impl_->inner_view_;
+  return impl_->outer_view_;
 }
 
-const GraphicsInterface *DecoratedViewHost::GetGraphics() const {
-  return impl_->inner_view_gfx_;
+GraphicsInterface *DecoratedViewHost::NewGraphics() const {
+  return impl_->outer_view_host_->NewGraphics();
 }
 
 void *DecoratedViewHost::GetNativeWidget() const {
@@ -708,6 +718,20 @@ void DecoratedViewHost::BeginResizeDrag(int button, ViewInterface::HitTest hitte
 
 void DecoratedViewHost::BeginMoveDrag(int button) {
   impl_->outer_view_host_->BeginMoveDrag(button);
+}
+
+void DecoratedViewHost::Dock() {}
+
+void DecoratedViewHost::Undock() {}
+
+void DecoratedViewHost::Expand() {
+  impl_->outer_view_->expanded_ = true;
+  impl_->outer_view_->SetToggleExpandedButtons();
+}
+
+void DecoratedViewHost::Unexpand() {
+  impl_->outer_view_->expanded_ = false;
+  impl_->outer_view_->SetToggleExpandedButtons();
 }
 
 } // namespace ggadget
