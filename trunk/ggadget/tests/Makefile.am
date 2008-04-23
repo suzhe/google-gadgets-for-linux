@@ -49,6 +49,7 @@ check_PROGRAMS		= color_test \
 			  element_factory_test \
 			  encryptor_test \
 			  file_manager_test \
+			  locales_test \
 			  math_utils_test \
 			  messages_test \
 			  native_main_loop_test \
@@ -77,6 +78,7 @@ elements_test_SOURCES		= elements_test.cc
 element_factory_test_SOURCES	= element_factory_test.cc
 encryptor_test_SOURCES		= encryptor_test.cc
 file_manager_test_SOURCES	= file_manager_test.cc
+locales_test_SOURCES		= locales_test.cc
 math_utils_test_SOURCES		= math_utils_test.cc
 messages_test_SOURCES		= messages_test.cc
 native_main_loop_test_SOURCES	= native_main_loop.cc native_main_loop_test.cc

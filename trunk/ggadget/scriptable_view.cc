@@ -189,8 +189,11 @@ class ScriptableView::Impl {
 
     view_->EnableEvents(true);
 
-    if (script_context_)
-      HandleAllScriptElements(view_element, filename);
+    if (script_context_ && !HandleAllScriptElements(view_element, filename)) {
+      // Don't load the gadget if any script file can't be loaded.
+      xmldoc->Unref();
+      return false;
+    }
 
     xmldoc->Unref();
 
@@ -200,7 +203,7 @@ class ScriptableView::Impl {
     return true;
   }
 
-  void HandleScriptElement(const DOMElementInterface *xml_element,
+  bool HandleScriptElement(const DOMElementInterface *xml_element,
                            const char *filename) {
     int lineno = xml_element->GetRow();
     std::string script;
@@ -213,6 +216,8 @@ class ScriptableView::Impl {
         std::string temp;
         if (DetectAndConvertStreamToUTF8(script, &temp, NULL))
           script = temp;
+      } else {
+        return false;
       }
     } else {
       // Uses the Windows version convention, that inline scripts should be
@@ -233,22 +238,27 @@ class ScriptableView::Impl {
 
     if (!script.empty())
       script_context_->Execute(script.c_str(), filename, lineno);
+    return true;
   }
 
-  void HandleAllScriptElements(const DOMElementInterface *xml_element,
+  bool HandleAllScriptElements(const DOMElementInterface *xml_element,
                                const char *filename) {
     for (const DOMNodeInterface *child = xml_element->GetFirstChild();
          child; child = child->GetNextSibling()) {
       if (child->GetNodeType() == DOMNodeInterface::ELEMENT_NODE) {
         const DOMElementInterface *child_ele =
             down_cast<const DOMElementInterface *>(child);
+        bool result;
         if (GadgetStrCmp(child_ele->GetTagName().c_str(), kScriptTag) == 0) {
-          HandleScriptElement(child_ele, filename);
+          result = HandleScriptElement(child_ele, filename);
         } else {
-          HandleAllScriptElements(child_ele, filename);
+          result = HandleAllScriptElements(child_ele, filename);
         }
+        if (!result)
+          return false;
       }
     }
+    return true;
   }
 
   ScriptableView *owner_;

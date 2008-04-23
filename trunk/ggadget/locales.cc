@@ -14,11 +14,14 @@
   limitations under the License.
 */
 
+#include "locales.h"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include "common.h"
-#include "locales.h"
+#include "logger.h"
+#include "system_utils.h"
 
 namespace ggadget {
 
@@ -265,6 +268,17 @@ static inline bool LocaleNameCompare(const LocaleNameAndId &v1,
   return strcmp(v1.name, v2.name) < 0;
 }
 
+static bool WindowsLocaleIDToString(short windows_locale_id,
+                                    std::string *result) {
+  char buffer[12];
+  if (windows_locale_id > 0) {
+    snprintf(buffer, sizeof(buffer), "%d", windows_locale_id);
+    result->assign(buffer);
+    return true;
+  }
+  return false;
+}
+
 bool GetLocaleWindowsIDString(const char *name, std::string *windows_id) {
   ASSERT(windows_id);
   LocaleNameAndId key = { name, NULL, 0 };
@@ -273,16 +287,17 @@ bool GetLocaleWindowsIDString(const char *name, std::string *windows_id) {
       LocaleNameCompare);
 
   ASSERT(pos);
-  if (strcmp(name, pos->name) == 0) {
-    char buffer[12];
-    int identifier = pos->windows_locale_id;
-    if (identifier > 0) {
-      snprintf(buffer, sizeof(buffer), "%d", identifier);
-      *windows_id = std::string(buffer);
-      return true;
+  if (strcmp(name, pos->name) == 0)
+    return WindowsLocaleIDToString(pos->windows_locale_id, windows_id);
+
+  // The given name may be in short form.
+  size_t len = strlen(name);
+  for (; pos < kLocaleNames + arraysize(kLocaleNames); ++pos) {
+    if (strncmp(name, pos->name, len) == 0) {
+      if (pos->short_name && strcmp(name, pos->short_name) == 0)
+        return WindowsLocaleIDToString(pos->windows_locale_id, windows_id);
     }
   }
-
   return false;
 }
 
@@ -311,6 +326,24 @@ bool GetLocaleShortName(const char *name, std::string *short_name) {
     }
   }
   return false;
+}
+
+std::string GetSystemLocaleName() {
+  std::string language, territory;
+  if (GetSystemLocaleInfo(&language, &territory)) {
+    if (territory.length()) {
+      std::string full_locale(language);
+      full_locale.append("-");
+      full_locale.append(territory);
+      std::string short_locale;
+      // To keep compatible with the Windows version, we must return the short
+      // name for many locales.
+      return GetLocaleShortName(full_locale.c_str(), &short_locale) ?
+             short_locale : full_locale;
+    }
+    return language;
+  }
+  return "en";
 }
 
 } // namespace ggadget

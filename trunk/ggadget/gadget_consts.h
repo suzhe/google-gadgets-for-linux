@@ -19,6 +19,7 @@
 
 #include <map>
 #include <string>
+#include <ggadget/sysdeps.h>
 
 namespace ggadget {
 
@@ -62,6 +63,12 @@ const char kManifestEventAPI[]    = "about/eventAPI";
 const char kManifestQueryAPI[]    = "about/queryAPI";
 const char kManifestQueryAPIAllowModifyIndex[]
                                   = "about/queryAPI@allowModifyIndex";
+
+// TODO: make the "linux" part a configurable parameter.
+const char kManifestPlatformSupported[] =
+    "platform/" GGL_PLATFORM "@supported";
+const char kManifestPlatformMinVersion[] =
+    "platform/" GGL_PLATFORM "@minimumGadgetHostVersion";
 
 /**
  * To enumerate all fonts to be installed, you must enumerate the manifest

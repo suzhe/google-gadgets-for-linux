@@ -137,7 +137,8 @@ bool CreateTempDirectory(const char *prefix, std::string *path);
 bool RemoveDirectory(const char *path);
 
 /**
- * Returns the current system locale information.
+ * Returns the current system locale information. In most cases,
+ * GetSystemLocaleName() defined in locales.h is more useful than this.
  *
  * @param[out] language returns the system language id, such as "en", "zh".
  * @param[out] territory returns the system territory id, such as "US", "CN",

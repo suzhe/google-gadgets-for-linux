@@ -66,16 +66,9 @@ static const char kMessagesTag[] = "messages";
 
 class Messages::Impl {
  public:
-  Impl() : default_locale_(kDefaultLocale) {
-    std::string language;
-    std::string territory;
-    if (GetSystemLocaleInfo(&language, &territory)) {
-      std::string locale = language + "-" + territory;
-      if (!GetLocaleShortName(locale.c_str(), &system_locale_))
-        system_locale_ = locale;
-    } else {
-      system_locale_ = default_locale_;
-    }
+  Impl()
+      : system_locale_(GetSystemLocaleName()),
+        default_locale_(kDefaultLocale) {
     if (!LoadMessages()) {
       LOG("Failed to load messages.");
     }

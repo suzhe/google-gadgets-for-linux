@@ -428,24 +428,6 @@ static ScriptableProcess g_script_process_(&g_process_);
 static ScriptableProcessor g_script_processor_(&g_machine_);
 static ScriptableScreen g_script_screen_(&g_screen_);
 
-static std::string DefaultLanguageCode() {
-  std::string language, territory;
-  if (GetSystemLocaleInfo(&language, &territory)) {
-    if (territory.length()) {
-      std::string full_locale(language);
-      full_locale.append("-");
-      full_locale.append(territory);
-      std::string short_locale;
-      // To keep compatible with the Windows version, we must return the short
-      // name for many locales.
-      return GetLocaleShortName(full_locale.c_str(), &short_locale) ?
-             short_locale : full_locale;
-    }
-    return language;
-  }
-  return "en";
-}
-
 static std::string DefaultGetFileIcon(const char *filename) {
   return std::string("");
 }
@@ -555,7 +537,7 @@ extern "C" {
                                         Variant(&g_script_screen_));
 
     reg_system->RegisterMethod("getFileIcon", NewSlot(DefaultGetFileIcon));
-    reg_system->RegisterMethod("languageCode", NewSlot(DefaultLanguageCode));
+    reg_system->RegisterMethod("languageCode", NewSlot(GetSystemLocaleName));
     reg_system->RegisterMethod("localTimeToUniversalTime",
                                NewSlot(DefaultLocalTimeToUniversalTime));
 

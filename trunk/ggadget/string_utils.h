@@ -197,6 +197,17 @@ std::string ExtractTextFromHTML(const char *source);
  */
 bool SimpleMatchXPath(const char *xpath, const char *pattern);
 
+/**
+ * Compares two versions.
+ * @param version1 version string in "x.x.x.x" format where 'x' is an integer.
+ * @param version2
+ * @param[out] result on success: -1 if version1 < version2, 0 if
+ *     version1 == version2, or 1 if version1 > version2.
+ * @return @c false if @a version1 or @a version2 is invalid version string,
+ *     or @c true on success.
+ */
+bool CompareVersion(const char *version1, const char *version2, int *result);
+
 } // namespace ggadget
 
 #endif // GGADGET_STRING_UTILS_H__
