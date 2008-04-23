@@ -22,6 +22,7 @@
 #include "ggadget/file_manager_factory.h"
 #include "ggadget/dir_file_manager.h"
 #include "ggadget/zip_file_manager.h"
+#include "ggadget/locales.h"
 #include "ggadget/localized_file_manager.h"
 #include "ggadget/system_utils.h"
 #include "unittest/gtest.h"

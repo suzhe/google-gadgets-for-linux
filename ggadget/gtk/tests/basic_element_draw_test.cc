@@ -36,19 +36,11 @@ ggadget::gtk::MainLoop g_main_loop;
 class ViewHostWithGraphics : public MockedViewHost {
  public:
   ViewHostWithGraphics(ViewHostInterface::Type type)
-      : MockedViewHost(type), gfx_(new CairoGraphics(1.0)) {
+      : MockedViewHost(type) {
   }
-
-  virtual ~ViewHostWithGraphics() {
-    delete gfx_;
+  virtual GraphicsInterface *NewGraphics() const {
+    return new CairoGraphics(1.0);
   }
-
-  virtual const GraphicsInterface *GetGraphics() const {
-    return gfx_;
-  }
-
- private:
-  GraphicsInterface *gfx_;
 };
 
 class Muffin : public BasicElement {
@@ -102,39 +94,10 @@ class Pie : public BasicElement {
   Color color_;
 };
 
-class BasicElementTest : public testing::Test {
- protected:
-  CairoCanvas *target_;
-  ViewHostWithGraphics *view_host_;
-
-  BasicElementTest() {
-    view_host_ = new ViewHostWithGraphics(ViewHostInterface::VIEW_HOST_MAIN);
-    target_ =
-        down_cast<CairoCanvas*>(view_host_->GetGraphics()->NewCanvas(300, 150));
-  }
-
-  ~BasicElementTest() {
-    if (g_savepng) {
-      const testing::TestInfo *const test_info =
-        testing::UnitTest::GetInstance()->current_test_info();
-      char file[100];
-      snprintf(file, arraysize(file), "%s.png", test_info->name());
-      cairo_surface_write_to_png(target_->GetSurface(), file);
-    }
-
-    target_->Destroy();
-    delete view_host_;
-  }
-
-  virtual void SetUp() {
-  }
-
-  virtual void TearDown() {
-  }
-};
-
 // This test is meaningful only with -savepng
-TEST_F(BasicElementTest, ElementsDraw) {
+TEST(BasicElementTest, ElementsDraw) {
+  ViewHostWithGraphics *view_host_ =
+      new ViewHostWithGraphics(ViewHostInterface::VIEW_HOST_MAIN);
   View view(view_host_, NULL, g_factory, NULL);
   Muffin m(NULL, &view, NULL);
   Pie *p = NULL;
@@ -189,13 +152,19 @@ TEST_F(BasicElementTest, ElementsDraw) {
   p->SetPixelPinX(50.);
   p->SetPixelPinY(25.);
 
-  CanvasInterface *canvas =
-    view_host_->GetGraphics()->NewCanvas(m.GetPixelWidth(),
-                                         m.GetPixelHeight());
+  CanvasInterface *canvas = view.GetGraphics()->NewCanvas(m.GetPixelWidth(),
+                                                          m.GetPixelHeight());
   ASSERT_TRUE(canvas != NULL);
   m.Draw(canvas);
 
-  EXPECT_TRUE(target_->DrawCanvas(10, 10, canvas));
+  if (g_savepng) {
+    const testing::TestInfo *const test_info =
+      testing::UnitTest::GetInstance()->current_test_info();
+    char file[100];
+    snprintf(file, arraysize(file), "%s.png", test_info->name());
+    cairo_surface_write_to_png(down_cast<CairoCanvas *>(canvas)->GetSurface(),
+                               file);
+  }
 
   canvas->Destroy();
   canvas = NULL;

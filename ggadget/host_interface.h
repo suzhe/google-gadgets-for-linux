@@ -39,7 +39,8 @@ class HostInterface {
  public:
   /** The supported debug message output level */
   enum DebugLevel {
-    DEBUG_TRACE,    // For verbose trace messages
+    DEBUG_TRACE,    // For verbose trace messages.
+    DEBUG_INFO,     // For normal information.
     DEBUG_WARNING,  // For non-fatal errors.
     DEBUG_ERROR,    // For errors.
   };

@@ -22,22 +22,24 @@
 namespace ggadget {
 
 /**
- * Gets the corresponding Windows locale identifier for a given two-segment
- * locale name.
+ * Gets the corresponding Windows locale identifier for a given short or
+ * two-segment locale name.
  *
  * This function is only for historical compatibility. Google desktop gadget
  * library for Windows uses Windows locale identifiers as the names of
  * subdirectories containing localized resources.
  *
- * @param name two-segment locale name in format of "lang-TERRITORY", such as
- *     "zh-CN".
+ * @param name two-segment locale name in format of "lang" or "lang-TERRITORY",
+ *     such as "en" or "zh-CN".
  * @param[out] windows_id the corresponding Windows locale identifer.
  * @return @c true if @a windows_id found.
  */
 bool GetLocaleWindowsIDString(const char *name, std::string *windows_id);
 
 /**
- * Gets the short name equivalent to the given two-segment locale name.
+ * Gets the short name equivalent to the given short or two-segment
+ * locale name.
+ *
  * "Equivalent" means that the short name is widely used and accepted as the
  * alias of the given locale name, for example, "it-IT"'s short name is "it",
  * but "it-CH" has no short name. Not all language names can be short names of
@@ -56,6 +58,12 @@ bool GetLocaleWindowsIDString(const char *name, std::string *windows_id);
  * @return @c true if @a short_name found.
  */
 bool GetLocaleShortName(const char *name, std::string *short_name);
+
+/**
+ * Returns the system locale name. The returned value is in short form if the
+ * locale has short form, otherwise in two-segment form.
+ */
+std::string GetSystemLocaleName();
 
 } // namespace ggadget
 

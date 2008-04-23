@@ -206,13 +206,21 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                                 &manifest_info_map_))
       return false;
 
-    // TODO: Is it necessary to check the required fields in manifest?
-    DLOG("Gadget min version: %s",
-         GetManifestInfo(kManifestMinVersion).c_str());
+    std::string min_version = GetManifestInfo(kManifestMinVersion);
+    DLOG("Gadget min version: %s", min_version.c_str());
     DLOG("Gadget id: %s", GetManifestInfo(kManifestId).c_str());
     DLOG("Gadget name: %s", GetManifestInfo(kManifestName).c_str());
     DLOG("Gadget description: %s",
          GetManifestInfo(kManifestDescription).c_str());
+
+    int compare_result = 0;
+    if (!CompareVersion(min_version.c_str(), GGL_API_VERSION,
+                        &compare_result) ||
+        compare_result > 0) {
+      LOG("Gadget required version %s higher than supported version %s",
+          min_version.c_str(), GGL_API_VERSION);
+      return false;
+    }
 
     // main view must be created before calling RegisterProperties();
     main_view_ = new ViewBundle(
@@ -245,6 +253,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
             extension_manager_->LoadExtension(path.c_str(), false);
         } else {
           DLOG("Local extension module is forbidden for untrusted gadgets.");
+        }
+      } else if (SimpleMatchXPath(key.c_str(), kManifestPlatformSupported)) {
+        if (i->second == "no") {
+          LOG("Gadget doesn't support platform %s", GGL_PLATFORM);
+          return false;
         }
       }
     }
@@ -306,9 +319,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     RegisterConstant("storage", &storage_);
 
     // Register properties of gadget.debug.
-    debug_.RegisterMethod("error", NewSlot(this, &Impl::DebugError));
     debug_.RegisterMethod("trace", NewSlot(this, &Impl::DebugTrace));
+    debug_.RegisterMethod("info", NewSlot(this, &Impl::DebugInfo));
     debug_.RegisterMethod("warning", NewSlot(this, &Impl::DebugWarning));
+    debug_.RegisterMethod("error", NewSlot(this, &Impl::DebugError));
 
     // Register properties of gadget.storage.
     storage_.RegisterMethod("extract", NewSlot(this, &Impl::ExtractFile));
@@ -502,16 +516,20 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   }
 
 
-  void DebugError(const char *message) {
-    host_->DebugOutput(HostInterface::DEBUG_ERROR, message);
-  }
-
   void DebugTrace(const char *message) {
     host_->DebugOutput(HostInterface::DEBUG_TRACE, message);
   }
 
+  void DebugInfo(const char *message) {
+    host_->DebugOutput(HostInterface::DEBUG_INFO, message);
+  }
+
   void DebugWarning(const char *message) {
     host_->DebugOutput(HostInterface::DEBUG_WARNING, message);
+  }
+
+  void DebugError(const char *message) {
+    host_->DebugOutput(HostInterface::DEBUG_ERROR, message);
   }
 
   // ExtractFile and OpenTextFile only allow accessing gadget local files.

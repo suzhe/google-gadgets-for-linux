@@ -20,6 +20,7 @@
 
 #include <map>
 #include <gdk/gdkcairo.h>
+#include <ggadget/gadget_consts.h>
 #include <ggadget/logger.h>
 #include <ggadget/signals.h>
 #include "cairo_graphics.h"
@@ -44,11 +45,21 @@ class CairoGraphics::Impl {
   }
 
   ~Impl() {
+#ifdef _DEBUG
+    DLOG("CairoGraphics image statistics(new/shared): local %d/%d;"
+         " global %d/%d remain local %zd global %zd",
+         num_new_images_, num_shared_images_,
+         global_num_new_images_, global_num_shared_images_,
+         image_map_.size() + mask_image_map_.size(),
+         global_image_map_.size() + global_mask_image_map_.size());
+    for (ImageMap::const_iterator it = image_map_.begin();
+         it != image_map_.end(); ++it)
+      LOG("!!! Image leak: %s", it->first.c_str());
+    for (ImageMap::const_iterator it = mask_image_map_.begin();
+         it != mask_image_map_.end(); ++it)
+      LOG("!!! Mask image leak: %s", it->first.c_str());
     ASSERT(image_map_.empty());
     ASSERT(mask_image_map_.empty());
-#ifdef _DEBUG
-    DLOG("CairoGraphics image statistics: new: %d/shared: %d",
-         num_new_images_, num_shared_images_);
 #endif
   }
 
@@ -56,12 +67,20 @@ class CairoGraphics::Impl {
   Signal1<void, double> on_zoom_signal_;
   typedef std::map<std::string, CairoImageBase *> ImageMap;
   ImageMap image_map_, mask_image_map_;
+  static ImageMap global_image_map_, global_mask_image_map_;
 
 #ifdef _DEBUG
-  int num_new_images_;
-  int num_shared_images_;
+  int num_new_images_, num_shared_images_;
+  static int global_num_new_images_, global_num_shared_images_;
 #endif
 };
+
+CairoGraphics::Impl::ImageMap CairoGraphics::Impl::global_image_map_;
+CairoGraphics::Impl::ImageMap CairoGraphics::Impl::global_mask_image_map_;
+#ifdef _DEBUG
+int CairoGraphics::Impl::global_num_new_images_ = 0;
+int CairoGraphics::Impl::global_num_shared_images_ = 0;
+#endif
 
 CairoGraphics::CairoGraphics(double zoom) : impl_(new Impl(zoom)) {
 }
@@ -130,10 +149,23 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
 #endif
       it->second->Ref();
       return it->second;
+    } else {
+      image_map = is_mask ?
+                  &Impl::global_mask_image_map_ : &Impl::global_image_map_;
+      it = image_map->find(tag_str);
+      if (it != image_map->end()) {
+#ifdef _DEBUG
+        Impl::global_num_shared_images_++;
+#endif
+        it->second->Ref();
+        return it->second;
+      }
     }
   }
 
   CairoImageBase *img = NULL;
+  bool use_global_cache = strncmp(tag_str.c_str(), kGlobalResourcePrefix,
+                                  arraysize(kGlobalResourcePrefix) - 1) == 0;
 #ifdef HAVE_RSVG_LIBRARY
   // Only use RsvgImage for ordinary svg image.
   if (IsSvg(data) && !is_mask) {
@@ -142,6 +174,9 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
       img->Destroy();
       img = NULL;
     }
+    // Because RSVG images may have pre-zoomed canvas, they are not globally
+    // cached because different zoom factor of different graphics.
+    use_global_cache = false;
   } else {
 #else
   if (1) {
@@ -153,12 +188,13 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
     }
   }
 #ifdef _DEBUG
-  impl_->num_new_images_++;
+  use_global_cache ? Impl::global_num_new_images_++ : impl_->num_new_images_++;
 #endif
 
   if (img && !tag_str.empty()) {
-    Impl::ImageMap *image_map = is_mask ?
-                                &impl_->mask_image_map_ : &impl_->image_map_;
+    Impl::ImageMap *image_map = use_global_cache ?
+        (is_mask ? &Impl::global_mask_image_map_ : &Impl::global_image_map_) :
+        (is_mask ? &impl_->mask_image_map_ : &impl_->image_map_);
     (*image_map)[tag_str] = img;
   }
   return img;
@@ -167,7 +203,12 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
 void CairoGraphics::OnImageDelete(const std::string &tag, bool is_mask) const {
   Impl::ImageMap *image_map = is_mask ?
                               &impl_->mask_image_map_ : &impl_->image_map_;
-  image_map->erase(tag);
+  if (image_map->erase(tag) == 0) {
+    // Try global image map if the image is not in the local image map.
+    image_map = is_mask ?
+                &Impl::global_mask_image_map_ : &Impl::global_image_map_;
+    image_map->erase(tag);
+  }
 }
 
 FontInterface *CairoGraphics::NewFont(const char *family, double pt_size,

@@ -21,7 +21,29 @@ PROJECT(google_gadgets_for_linux)
 SET(GGL_MAJOR_VERSION 0)
 SET(GGL_MINOR_VERSION 0)
 SET(GGL_MICRO_VERSION 1)
-SET(GGL_VERSION ${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION})
+SET(GGL_VERSION \"${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION}\")
+
+# This string is used in auto update request. It should be updated to the
+# time of a release build is made. Its format is yymmdd-HHMMSS.
+SET(GGL_VERSION_TIMESTAMP \"080422-000000\")
+
+# Define the version of Google Desktop Gadget API that this release supports.
+SET(GGL_API_MAJOR_VERSION 5)
+SET(GGL_API_MINOR_VERSION 7)
+SET(GGL_API_VERSION \"${GGL_API_MAJOR_VERSION}.${GGL_API_MINOR_VERSION}.0.0\")
+
+SET(GGL_PLATFORM_SHORT \"linux\")
+SET(GGL_PLATFORM \"linux\")
+
+INCLUDE(CheckTypeSize)
+SET(HAVE_STDDEF_H 1)
+CHECK_TYPE_SIZE(int GGL_SIZEOF_INT)
+CHECK_TYPE_SIZE(long GGL_SIZEOF_LONG_INT)
+CHECK_TYPE_SIZE(size_t GGL_SIZEOF_SIZE_T)
+CHECK_TYPE_SIZE(double GGL_SIZEOF_DOUBLE)
+
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/ggadget/sysdeps.h.in
+               ${CMAKE_BINARY_DIR}/ggadget/sysdeps.h)
 
 IF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"
     AND EXISTS ${CMAKE_SOURCE_DIR}/CTestConfig.cmake)
@@ -36,7 +58,6 @@ INCLUDE(GenerateOutput)
 INCLUDE(PkgConfigEx)
 INCLUDE(TestSuite)
 INCLUDE(ZipUtils)
-INCLUDE(SysDeps)
 
 ADD_DEFINITIONS(
   -DUNIX

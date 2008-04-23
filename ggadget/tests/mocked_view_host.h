@@ -142,7 +142,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void SetView(ggadget::ViewInterface *view) { view_ = view; }
   virtual ggadget::ViewInterface *GetView() const { return view_; }
   virtual ggadget::GraphicsInterface *NewGraphics() const {
-    return const_cast<MockedGraphics *>(&graphics_);
+    return new MockedGraphics;
   }
   virtual void *GetNativeWidget() const { return NULL; }
   virtual void ViewCoordToNativeWidgetCoord(double, double,
@@ -192,7 +192,6 @@ class MockedViewHost : public ggadget::ViewHostInterface {
 
  private:
   Type type_;
-  MockedGraphics graphics_;
   ggadget::ViewInterface *view_;
   bool draw_queued_;
   bool resize_queued_;

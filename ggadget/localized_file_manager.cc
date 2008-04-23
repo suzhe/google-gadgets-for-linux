@@ -36,32 +36,25 @@ class LocalizedFileManager::Impl {
  public:
   Impl(FileManagerInterface *file_manager)
     : file_manager_(file_manager) {
-    std::string language, territory;
-    if (GetSystemLocaleInfo(&language, &territory) && language.length()) {
-      std::string full_locale = language;
-      if (territory.length()) {
-        full_locale.append("-");
-        full_locale.append(territory);
-        std::string short_locale(full_locale);
-        if (GetLocaleShortName(full_locale.c_str(), &short_locale)) {
-          // Use the short name if the locale has.
-          prefixes_.push_back(short_locale);
-        } else {
-          // Otherwise add both lang-TERRITORY and lang_TERRITORY to prefixes.
-          prefixes_.push_back(full_locale);
-          prefixes_.push_back(language + "_" + territory);
-        }
-      } else {
-        prefixes_.push_back(language);
-      }
+    std::string locale_name = GetSystemLocaleName();
+    prefixes_.push_back(locale_name);
 
-      // for windows compatibility.
-      std::string windows_locale_id;
-      if (GetLocaleWindowsIDString(full_locale.c_str(), &windows_locale_id))
-        prefixes_.push_back(windows_locale_id);
+    std::string locale_name_temp(locale_name);
+    size_t pos = locale_name_temp.find('-');
+    if (pos != locale_name_temp.npos) {
+      locale_name_temp.replace(pos, 1, 1, '_');
+      prefixes_.push_back(locale_name_temp);
     }
-    prefixes_.push_back("en");
-    prefixes_.push_back("1033"); // for windows compatibility.
+
+    // for windows compatibility.
+    std::string windows_locale_id;
+    if (GetLocaleWindowsIDString(locale_name.c_str(), &windows_locale_id))
+      prefixes_.push_back(windows_locale_id);
+
+    if (locale_name != "en") {
+      prefixes_.push_back("en");
+      prefixes_.push_back("1033"); // for windows compatibility.
+    }
   }
 
   ~Impl() {

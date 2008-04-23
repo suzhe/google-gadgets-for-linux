@@ -136,18 +136,6 @@ TEST(SystemUtils, RemoveDirectory) {
   ASSERT_TRUE(RemoveDirectory(tempdir.c_str()));
 }
 
-TEST(SystemUtils, GetSystemLocaleInfo) {
-  std::string lang, terr;
-  setlocale(LC_MESSAGES, "en_US.UTF-8");
-  ASSERT_TRUE(GetSystemLocaleInfo(&lang, &terr));
-  ASSERT_STREQ("en", lang.c_str());
-  ASSERT_STREQ("US", terr.c_str());
-  setlocale(LC_MESSAGES, "en_US");
-  ASSERT_TRUE(GetSystemLocaleInfo(&lang, &terr));
-  ASSERT_STREQ("en", lang.c_str());
-  ASSERT_STREQ("US", terr.c_str());
-}
-
 TEST(SystemUtils, NormalizeFilePath) {
   ASSERT_STREQ("/", NormalizeFilePath("/").c_str());
   ASSERT_STREQ("/", NormalizeFilePath("//").c_str());
@@ -157,6 +145,18 @@ TEST(SystemUtils, NormalizeFilePath) {
   ASSERT_STREQ("/abc", NormalizeFilePath("//abc/.///def/..").c_str());
   ASSERT_STREQ("/abc", NormalizeFilePath("//abc/./def/../../abc/").c_str());
   ASSERT_STREQ("/", NormalizeFilePath("//abc/./def/../../").c_str());
+}
+
+TEST(Locales, GetSystemLocaleInfo) {
+  std::string lang, terr;
+  setlocale(LC_MESSAGES, "en_US.UTF-8");
+  ASSERT_TRUE(GetSystemLocaleInfo(&lang, &terr));
+  ASSERT_STREQ("en", lang.c_str());
+  ASSERT_STREQ("US", terr.c_str());
+  setlocale(LC_MESSAGES, "en_US");
+  ASSERT_TRUE(GetSystemLocaleInfo(&lang, &terr));
+  ASSERT_STREQ("en", lang.c_str());
+  ASSERT_STREQ("US", terr.c_str());
 }
 
 int main(int argc, char **argv) {

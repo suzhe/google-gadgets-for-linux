@@ -83,6 +83,19 @@ AC_SUBST(LIBGGADGET_AGE)
 LIBGGADGET_BINARY_VERSION=1.0.0
 AC_SUBST(LIBGGADGET_BINARY_VERSION)
 
+# This string is used in auto update request. It should be updated to the
+# time of a release build is made. Its format is yymmdd-HHMMSS.
+GGL_VERSION_TIMESTAMP=\"080422-000000\"
+AC_SUBST(GGL_VERSION_TIMESTAMP)
+
+# Define the version of Google Desktop Gadget API that this release supports.
+GGL_API_MAJOR_VERSION=5
+GGL_API_MINOR_VERSION=7
+GGL_API_VERSION=\"$GGL_API_MAJOR_VERSION.$GGL_API_VERSION_MINOR.0.0\"
+AC_SUBST(GGL_API_MAJOR_VERSION)
+AC_SUBST(GGL_API_MINOR_VERSION)
+AC_SUBST(GGL_API_VERSION)
+
 AC_DEFINE_UNQUOTED(LIBGGADGET_BINARY_VERSION, "$LIBGGADGET_BINARY_VERSION",
 		   [The binary version of Gadgets runtime library.])
 AC_DEFINE_UNQUOTED(GGL_VERSION, "$GGL_VERSION",
@@ -269,15 +282,21 @@ case $host_os in
   *interix* | *mks* | *winnt* | *cygwin* | *mingw* )
     ggl_host_type=windows
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_WINDOWS=1"
+    GGL_PLATFORM_SHORT=\"win\"
+    GGL_PLATFORM=\"windows\"
     ;;
   *darwin* )
     ggl_host_type=macosx
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_MACOSX=1"
+    GGL_PLATFORM_SHORT=\"mac\"
+    GGL_PLATFORM=\"mac\"
     ;;
   *linux* )
     ggl_host_type=linux
     PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1 -DGGL_USE_X11=1"
     build_linux_system_framework=yes
+    GGL_PLATFORM_SHORT=\"linux\"
+    GGL_PLATFORM=\"linux\"
     ;;
   *solaris* )
     ggl_host_type=solaris
@@ -287,6 +306,9 @@ case $host_os in
     ggl_host_type=unknown
     ;;
 esac
+
+AC_SUBST(GGL_PLATFORM_SHORT)
+AC_SUBST(GGL_PLATFORM)
 
 AM_CONDITIONAL([GGL_HOST_WINDOWS], [test x$ggl_host_type = xwindows])
 AM_CONDITIONAL([GGL_HOST_MACOSX], [test x$ggl_host_type = xmacosx])

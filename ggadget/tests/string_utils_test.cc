@@ -170,6 +170,29 @@ TEST(StringUtils, SimpleMatchXPath) {
   EXPECT_FALSE(SimpleMatchXPath("a[1]/b[9999]/c[10000@d", "a/b/c@d"));
 }
 
+TEST(StringUtils, CompareVersion) {
+  int result = 0;
+  ASSERT_FALSE(CompareVersion("1234", "5678", &result));
+  ASSERT_FALSE(CompareVersion("1.2.3.4", "5678", &result));
+  ASSERT_FALSE(CompareVersion("5678", "1.2.3.4", &result));
+  ASSERT_FALSE(CompareVersion("1.2.3.4", "abcd", &result));
+  ASSERT_FALSE(CompareVersion("1.2.3.4", "1.2.3.4.5", &result));
+  ASSERT_FALSE(CompareVersion("1.2.3.4", "1.2.3.4.", &result));
+  ASSERT_FALSE(CompareVersion("1.2.3.4", "-1.2.3.4", &result));
+  ASSERT_TRUE(CompareVersion("1.2.3.4", "5.6.7.8", &result));
+  ASSERT_EQ(-1, result);
+  ASSERT_TRUE(CompareVersion("1.2.3.4", "1.2.3.4", &result));
+  ASSERT_EQ(0, result);
+  ASSERT_TRUE(CompareVersion("1.2.3.4", "1.2.3.15", &result));
+  ASSERT_EQ(-1, result);
+  ASSERT_TRUE(CompareVersion("1.2.3.4", "14.3.2.1", &result));
+  ASSERT_EQ(-1, result);
+  ASSERT_TRUE(CompareVersion("1.2.3.15", "1.2.3.4", &result));
+  ASSERT_EQ(1, result);
+  ASSERT_TRUE(CompareVersion("14.3.2.1", "1.2.3.4", &result));
+  ASSERT_EQ(1, result);
+}
+
 int main(int argc, char **argv) {
   testing::ParseGTestFlags(&argc, argv);
   return RUN_ALL_TESTS();

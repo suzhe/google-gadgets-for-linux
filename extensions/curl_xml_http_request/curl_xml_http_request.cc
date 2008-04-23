@@ -720,7 +720,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual void Abort() {
-    DLOG("XMLHttpRequest: Abort this=%p", this);
+    // DLOG("XMLHttpRequest: Abort this=%p", this);
     response_headers_.clear();
     response_headers_map_.clear();
     response_body_.clear();

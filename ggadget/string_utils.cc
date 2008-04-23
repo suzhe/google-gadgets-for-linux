@@ -469,4 +469,48 @@ bool SimpleMatchXPath(const char *xpath, const char *pattern) {
   return !*xpath && !*pattern;
 }
 
+static const int kNumVersionParts = 4;
+
+static bool ParseVersion(const char *version,
+                         int parsed_version[kNumVersionParts]) {
+  char *end_ptr;
+  for (int i = 0; i < kNumVersionParts; i++) {
+    if (!isdigit(version[0]))
+      return false;
+    long v = strtol(version, &end_ptr, 10);
+    if (v < 0 || v > SHRT_MAX)
+      return false;
+    parsed_version[i] = static_cast<int>(v);
+
+    if (i < kNumVersionParts - 1) {
+      if (*end_ptr != '.')
+        return false;
+      version = end_ptr + 1;
+    }
+  }
+  return *end_ptr == '\0';
+}
+
+bool CompareVersion(const char *version1, const char *version2, int *result) {
+  ASSERT(result);
+  int parsed_version1[kNumVersionParts], parsed_version2[kNumVersionParts];
+  if (ParseVersion(version1, parsed_version1) &&
+      ParseVersion(version2, parsed_version2)) {
+    for (int i = 0; i < kNumVersionParts; i++) {
+      if (parsed_version1[i] < parsed_version2[i]) {
+        *result = -1;
+        return true;
+      }
+      if (parsed_version1[i] > parsed_version2[i]) {
+        *result = 1;
+        return true;
+      }
+    }
+
+    *result = 0;
+    return true;
+  }
+  return false;
+}
+
 }  // namespace ggadget
