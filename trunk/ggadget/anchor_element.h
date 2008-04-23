@@ -48,6 +48,7 @@ class AnchorElement : public BasicElement {
 
   /** Gets the text frame containing the text content of this anchor. */
   TextFrame *GetTextFrame();
+  const TextFrame *GetTextFrame() const;
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

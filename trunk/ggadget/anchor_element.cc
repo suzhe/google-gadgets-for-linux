@@ -106,6 +106,10 @@ TextFrame *AnchorElement::GetTextFrame() {
   return &impl_->text_;
 }
 
+const TextFrame *AnchorElement::GetTextFrame() const {
+  return &impl_->text_;
+}
+
 EventResult AnchorElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {

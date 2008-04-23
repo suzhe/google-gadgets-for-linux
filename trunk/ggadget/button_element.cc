@@ -172,6 +172,10 @@ TextFrame *ButtonElement::GetTextFrame() {
   return &impl_->text_;
 }
 
+const TextFrame *ButtonElement::GetTextFrame() const {
+  return &impl_->text_;
+}
+
 BasicElement *ButtonElement::CreateInstance(BasicElement *parent, View *view,
                                             const char *name) {
   return new ButtonElement(parent, view, name);

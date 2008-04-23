@@ -43,9 +43,9 @@ class ListBoxElement::Impl {
  public:
   Impl(ListBoxElement *owner, View *view) :
     owner_(owner),
-    item_width_(0), item_height_(0),
+    item_width_(1.), item_height_(0),
     item_width_specified_(false), item_height_specified_(false),
-    item_width_relative_(false), item_height_relative_(false),
+    item_width_relative_(true), item_height_relative_(false),
     multiselect_(false), item_separator_(false),
     selected_index_(-2),
     item_over_color_(new Texture(kDefaultItemOverColor, 1.0)),
@@ -103,12 +103,16 @@ class ListBoxElement::Impl {
     if (selected) {
       if (selected->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(selected);
+
+        // ClearSelection() is called to work around a bug in a sample 
+        // test gadget. The selectedItem property of listbox/combobox takes 
+        // precedence over the selected property of individual items.
+        ClearSelection(item); // ignore return
+
         item->SetSelected(true);
       } else {
         LOG(kErrorItemExpected);
       }
-
-      selected_index_ = -1;
     }
   }
 
