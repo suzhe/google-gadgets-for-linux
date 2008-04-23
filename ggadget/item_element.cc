@@ -160,24 +160,34 @@ void ItemElement::SetSelected(bool selected) {
   }
 }
 
-std::string ItemElement::GetLabelText() const {
-  const BasicElement *e = GetChildren()->GetItemByIndex(0);
-  if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
-    const LabelElement *label = down_cast<const LabelElement *>(e);
-    return label->GetTextFrame()->GetText();
+std::string ItemElement::GetLabelText() const {  
+  const Elements *elements = GetChildren();
+  int childcount = elements->GetCount();
+  for (int i = 0; i < childcount; i++) {
+    const BasicElement *e = elements->GetItemByIndex(i);
+    if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
+      const LabelElement *label = down_cast<const LabelElement *>(e);
+      return label->GetTextFrame()->GetText();
+    }
   }
+
   LOG("Label element not found inside Item element %s", GetName().c_str());
   return std::string();
 }
 
 void ItemElement::SetLabelText(const char *text) {
-  BasicElement *e = GetChildren()->GetItemByIndex(0);
-  if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
-    LabelElement *label = down_cast<LabelElement *>(e);
-    label->GetTextFrame()->SetText(text);
-  } else {
-    LOG("Label element not found inside Item element %s", GetName().c_str());
+  Elements *elements = GetChildren();
+  int childcount = elements->GetCount();
+  for (int i = 0; i < childcount; i++) {
+    BasicElement *e = elements->GetItemByIndex(i);
+    if (e && e->IsInstanceOf(LabelElement::CLASS_ID)) {
+      LabelElement *label = down_cast<LabelElement *>(e);
+      label->GetTextFrame()->SetText(text);
+      return;
+    }
   }
+
+  LOG("Label element not found inside Item element %s", GetName().c_str());
 }
 
 bool ItemElement::AddLabelWithText(const char *text) {
@@ -232,6 +242,12 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
          impl_->parent_->AppendSelection(this);
        } else {
          impl_->parent_->SetSelectedItem(this);
+       }
+
+       // If inside combobox, turn off droplist on click.
+       if (impl_->parent_->IsImplicit() && 
+           impl_->parent_->GetParentElement() == GetView()->GetPopupElement()) {
+         GetView()->SetPopupElement(NULL);
        }
      }
     break;

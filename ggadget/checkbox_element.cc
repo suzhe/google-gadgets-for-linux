@@ -334,6 +334,10 @@ TextFrame *CheckBoxElement::GetTextFrame() {
   return &impl_->text_;
 }
 
+const TextFrame *CheckBoxElement::GetTextFrame() const {
+  return &impl_->text_;
+}
+
 EventResult CheckBoxElement::HandleMouseEvent(const MouseEvent &event) {
   EventResult result = EVENT_RESULT_HANDLED;
   switch (event.GetType()) {

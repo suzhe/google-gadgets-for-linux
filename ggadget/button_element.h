@@ -57,6 +57,7 @@ class ButtonElement : public BasicElement {
 
   /** Gets the text frame containing the caption of this button. */
   TextFrame *GetTextFrame();
+  const TextFrame *GetTextFrame() const;
 
   /**
    * Gets and sets whether the image is stretched normally or stretched only

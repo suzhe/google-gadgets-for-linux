@@ -45,7 +45,6 @@ class ComboBoxElement::Impl {
       : owner_(owner),
         mouseover_child_(NULL), grabbed_child_(NULL),
         max_items_(10),
-        keyboard_(false),
         listbox_(new ListBoxElement(owner, view, "listbox", "")),
         edit_(NULL),
         button_over_(false),
@@ -124,11 +123,6 @@ class ComboBoxElement::Impl {
   void ListBoxUpdated() {
     owner_->QueueDraw();
 
-    if (!keyboard_) {
-      // Close dropdown on selection.
-      SetDroplistVisible(false);
-    }
-
     update_edit_value_ = true;
 
     // Relay this event to combobox's listeners.
@@ -181,7 +175,6 @@ class ComboBoxElement::Impl {
   ComboBoxElement *owner_;
   BasicElement *mouseover_child_, *grabbed_child_;
   int max_items_;
-  bool keyboard_;
   ListBoxElement *listbox_;
   EditElementBase *edit_; // is NULL if and only if COMBO_DROPLIST mode
   bool button_over_, button_down_;
@@ -440,16 +433,19 @@ void ComboBoxElement::SetType(Type type) {
 std::string ComboBoxElement::GetValue() const {
   if (impl_->edit_) {
     return impl_->edit_->GetValue();
+  } else {
+    // The release notes are wrong here: the value property can be read 
+    // but not modified in droplist mode. 
+    return impl_->GetSelectedText();
   }
-  // not used in droplist mode
-  return std::string();
 }
 
 void ComboBoxElement::SetValue(const char *value) {
   if (impl_->edit_) {
     impl_->edit_->SetValue(value);
   }
-  // not used in droplist mode
+  // The release notes are wrong here: the value property can be read 
+  // but not modified in droplist mode. 
 }
 
 bool ComboBoxElement::IsAutoscroll() const {
@@ -714,14 +710,10 @@ EventResult ComboBoxElement::HandleKeyEvent(const KeyboardEvent &event) {
     result = EVENT_RESULT_HANDLED;
     switch (event.GetKeyCode()) {
      case KeyboardEvent::KEY_UP:
-      impl_->keyboard_ = true;
       impl_->ScrollList(false);
-      impl_->keyboard_ = false;
       break;
      case KeyboardEvent::KEY_DOWN:
-      impl_->keyboard_ = true;
       impl_->ScrollList(true);
-      impl_->keyboard_ = false;
       break;
      case KeyboardEvent::KEY_RETURN:
        // Windows only allows the box to be closed with the enter key,
