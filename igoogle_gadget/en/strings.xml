@@ -20,6 +20,7 @@
 <GADGET_COPYRIGHT>Copyright 2008 Google Inc.</GADGET_COPYRIGHT>
 <GADGET_ABOUT>Google Gadgets for Linux</GADGET_ABOUT>
 <GADGET_REQUIRED>Sorry! Gadget cannot be displayed until all required settings are provided.</GADGET_REQUIRED>
+<GADGET_SHOWOPTIONS>Options...</GADGET_SHOWOPTIONS>
 <GADGET_REFRESH>Refresh</GADGET_REFRESH>
 <GADGET_LOADING>Loading...</GADGET_LOADING>
 <GADGET_ERROR>Error loading gadget.</GADGET_ERROR>

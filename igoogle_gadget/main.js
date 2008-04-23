@@ -19,10 +19,13 @@ var kModuleURLOption = "module_url_prefix";
 var kLocaleOption = "locale";
 
 var g_user_pref_names = null;
+var g_user_pref_optional = null;
 var g_gadget_attribs = null;
 
 var kUserPrefPrefix = "up_";
 var kUserAgent = "Mozilla/5.0 (compatible; Google Desktop)";
+
+var kShowOptions = "ShowOptions";
 
 var kDefaultLocale = "en-US";
 var kDefaultModuleURLPrefix = "http://gmodules.com/ig/ifr?url=";
@@ -35,11 +38,10 @@ var g_commonparams = null;
 var g_xml_request_gadget = null;
 var g_xml_request_options = null;
 
-// FOR TESTING
-//g_download_url= "http://orawiz.googlepages.com/hangman.xml";
-//g_download_url= "http://www.google.com/ig/modules/datetime.xml";
-
 /// Gadget init code.
+
+browser.onGetProperty = OnGetProperty;
+browser.onCallback = OnCallback;
 
 plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
 SetUpCommonParams();
@@ -76,6 +78,23 @@ function AboutMenuHandler(item_text) {
 }
 
 // Options view
+
+function OnGetProperty(p) {
+  if (p == kShowOptions) {
+    return "\"function\"";
+  }
+}
+
+function ShowOptions() {
+  plugin.ShowOptionsDialog();
+}
+
+function OnCallback(f) {
+  if (f == kShowOptions) {
+    // Dispatch this asynchronously.
+    setTimeout(ShowOptions, 0);
+  }
+}
 
 function LoadOptions() {
   // Cannot use a frame to load the content here because of security
@@ -116,9 +135,11 @@ function OnOpenURL(url) {
 function RefreshGadget() {
   if (HasUnsetUserPrefs()) {
     // Must show options dialog before showing gadget.
-    DisplayMessage(GADGET_REQUIRED);
-
-    plugin.ShowOptionsDialog();
+    var msg = strings.GADGET_REQUIRED 
+      + "<br><br><button onclick=\"window.external.ShowOptions()\">"
+      + strings.GADGET_SHOWOPTIONS
+      + "</button>";
+    DisplayMessage(msg);
   } else {
     gadget.debug.trace("Showing gadget.");
 
@@ -179,10 +200,13 @@ function HasUnsetUserPrefs() {
   for (var i = 0; i < len; i++) {
     var pref = g_user_pref_names[i];
     var value = options.getValue(pref);
-    if (!value) {
-      gadget.debug.trace("Unset pref: " + pref);
+    if (value == null) {
+      gadget.debug.trace("Unset pref: " + pref + 
+			 " Required: " + g_user_pref_required[i]);
       // Do not break to continue generating script fragment.
-      result = true;
+      if (g_user_pref_required[i]) {
+	result = true;
+      }
     } else { // pref is set, add to prefix
       if (preset != "") {
         preset += "else ";
@@ -268,16 +292,23 @@ function ParseRawXML() {
   // instance. Thus only the default value is set here.
   var prefs = xml.getElementsByTagName("UserPref");
   g_user_pref_names = new Array();
+  g_user_pref_required = new Array();
   if (null != prefs) {
     var len  = prefs.length;
     for (var i = 0; i < len; i++) {
       var pref = prefs[i];
       var name = g_user_pref_names[i] =
           kUserPrefPrefix + GetElementAttrib(pref, "name");
-      // var required = GetElementAttrib(pref, "required");
-      var def = GetElementAttrib(pref, "default_value");
-      if (def != "") {
-        options.putDefaultValue(name, def);
+      var required = GetElementAttrib(pref, "required");
+      // Assume required if not set explicitly to false.
+      g_user_pref_required[i] = 
+	(required != "false" && required != "FALSE" && required != "0");
+      var def_node = pref.getAttributeNode("default_value");
+      if (def_node == null) {
+	options.putDefaultValue(name, null);
+      } else {
+	var def = pref.getAttribute("default_value");
+	options.putDefaultValue(name, def);
       }
     }
   }
@@ -333,6 +364,9 @@ function GetGadgetURL() {
   for (var i = 0; i < len; i++) {
     var pref = g_user_pref_names[i];
     var value = options.getValue(pref);
+    if (value == null) {
+      continue;
+    }
     params += "&" + encodeURIComponent(pref) + "=" + encodeURIComponent(value);
   }
 
