@@ -128,6 +128,10 @@ class ViewInterface {
   /** Returns the @c GraphicsInterface associated with this host. */
   virtual GraphicsInterface *GetGraphics() const = 0;
 
+  virtual ViewHostInterface *GetViewHost() const = 0;
+
+  virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host) = 0;
+
   /**
    * Set the width of the view.
    * */

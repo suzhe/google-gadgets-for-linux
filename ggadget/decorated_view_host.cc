@@ -198,20 +198,26 @@ class DecoratedViewHost::Impl {
 
       if (resizable == RESIZABLE_ZOOM) {
         // All zooming is done inside the outer view using the inner view's
-        // private GraphicsInterface. So in order to support zooming on the 
+        // private GraphicsInterface. So in order to support zooming on the
         // inner view, the outer view must be resizable and set the inner view's
-        // zoom factor on resize. 
+        // zoom factor on resize.
         resizable = RESIZABLE_TRUE;
       }
       View::SetResizable(resizable);
+    }
+
+    virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host) {
+      ViewHostInterface *old = View::SwitchViewHost(new_host);
+      owner_->outer_view_host_ = new_host;
+      return old;
     }
 
     virtual void SetWidth(double width) {
       ASSERT(owner_->inner_view_);
       ViewHostInterface::Type t = owner_->outer_view_host_->GetType();
 
-      double w = width - INNERVIEW_WIDTH_OFFSET(t);    
-      if (owner_->inner_view_->GetResizable() 
+      double w = width - INNERVIEW_WIDTH_OFFSET(t);
+      if (owner_->inner_view_->GetResizable()
           == ViewInterface::RESIZABLE_ZOOM) {
         double h = GetHeight() - INNERVIEW_HEIGHT_OFFSET(t);
         SetZoom(w, h);
@@ -606,9 +612,11 @@ class DecoratedViewHost::Impl {
 DecoratedViewHost::DecoratedViewHost(ViewHostInterface *outer_view_host, 
                                      bool background)
   : impl_(new Impl(this, outer_view_host, background)) {
+  DLOG("MEMORY: DecoratedViewHost Ctor %p", this);
 }
 
 DecoratedViewHost::~DecoratedViewHost() {
+  DLOG("MEMORY: DecoratedViewHost Dtor %p", this);
   delete impl_;
   impl_ = NULL;
 }

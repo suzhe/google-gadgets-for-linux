@@ -114,6 +114,9 @@ class View : public ViewInterface {
 
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual bool OnSizing(double *width, double *height);
+  virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host);
+  virtual ViewHostInterface *GetViewHost() const;
+
 
  public: // Additional event handling methods
   /**
@@ -317,10 +320,6 @@ class View : public ViewInterface {
  public: // Delegate to Gadget or ViewHost.
   /** Gets pointer to the native widget holding this view. */
   void *GetNativeWidget() const;
-
-  ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host);
-
-  ViewHostInterface *GetViewHost() const;
 
   /**
    * Converts coordinates in the view's space to coordinates in the native

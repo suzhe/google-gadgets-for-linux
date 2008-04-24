@@ -1066,7 +1066,7 @@ class View::Impl {
   }
 
   ImageInterface *LoadImage(const Variant &src, bool is_mask) {
-    // if (!gadget_ || !view_host_) return NULL;
+    if (!graphics_) return NULL;
 
     Variant::Type type = src.type();
     if (type == Variant::TYPE_STRING) {
@@ -1090,7 +1090,7 @@ class View::Impl {
   }
 
   ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {
-    if (name && *name && view_host_) {
+    if (name && *name && graphics_) {
       std::string data;
       if (GetGlobalFileManager()->ReadFile(name, &data)) {
         return graphics_->NewImage(name, data, is_mask);
@@ -1474,6 +1474,7 @@ void *View::GetNativeWidget() const {
 // since the graphics compatibility issue
 ViewHostInterface *View::SwitchViewHost(ViewHostInterface *new_host) {
   ViewHostInterface *old_host = impl_->view_host_;
+  old_host->SetView(NULL);
   if (impl_->canvas_cache_) {
     impl_->canvas_cache_->Destroy();
     impl_->canvas_cache_ = NULL;

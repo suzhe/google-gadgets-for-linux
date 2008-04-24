@@ -142,6 +142,8 @@ class SingleViewHost::Impl {
       widget_ = window_;
     }
 
+    gtk_widget_realize(GTK_WIDGET(window_));
+
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
 
     g_signal_connect(G_OBJECT(window_), "delete-event",
@@ -441,6 +443,8 @@ class SingleViewHost::Impl {
       gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
                                  x, y, gtk_get_current_event_time());
     } else {
+      if (win_x_ == 0 && win_y_ == 0)
+        gtk_window_get_position(GTK_WINDOW(window_), &win_x_, &win_y_);
       cursor_offset_x_ = x - win_x_;
       cursor_offset_y_ = y - win_y_;
       DLOG("handle move by the window(%p), cursor: %dx%d",
@@ -485,6 +489,11 @@ class SingleViewHost::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->cursor_offset_x_ < 0 || impl->cursor_offset_y_ < 0)
       return FALSE;
+    gdk_pointer_grab(impl->widget_->window, FALSE,
+                     (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                    GDK_POINTER_MOTION_MASK |
+                                    GDK_POINTER_MOTION_HINT_MASK),
+                     NULL, NULL, event->time);
     int x = static_cast<int>(event->x_root) - impl->cursor_offset_x_;
     int y = static_cast<int>(event->y_root) - impl->cursor_offset_y_;
     gtk_window_move(GTK_WINDOW(widget), x, y);
@@ -689,6 +698,7 @@ void SingleViewHost::Undock() {
   DLOG("host %p fire undock signal to view %p", this, impl_->view_);
   SimpleEvent e(Event::EVENT_UNDOCK);
   impl_->view_->OnOtherEvent(e);
+  gdk_pointer_ungrab(GDK_CURRENT_TIME);
   impl_->on_undock_signal_();
 }
 
