@@ -130,8 +130,6 @@ class SideBar::Impl : public View {
       ASSERT(false);  // should not be called
     }
     virtual void Undock() {
-      SimpleEvent e(Event::EVENT_UNDOCK);
-      private_view_->OnOtherEvent(e);
       real_viewhost_->Undock();
     }
     virtual void Expand() {
@@ -206,13 +204,7 @@ class SideBar::Impl : public View {
       mouse_move_event_y_ = event.GetY();
     } else if (event.GetType() == Event::EVENT_MOUSE_UP) {
       DLOG("Mouse up at (%f,%f)", event.GetX(), event.GetY());
-      if (GetPopupElement()) {
-        GetPopupElement()->SetOpacity(1);
-        SetPopupElement(NULL);
-        Layout();
-      }
-      mouse_move_event_x_ = -1;
-      mouse_move_event_y_ = -1;
+      ResetState();
     }
     if (result != EVENT_RESULT_UNHANDLED ||
         event.GetButton() != MouseEvent::BUTTON_LEFT ||
@@ -262,9 +254,11 @@ class SideBar::Impl : public View {
       // check if an undock event happens
       if (event.GetX() - mouse_move_event_x_ < -GetWidth() ||
           event.GetX() - mouse_move_event_x_ > GetWidth()) {
+        is_drag_event_ = false;
         down_cast<ViewElement *>(GetMouseOverElement())->
           GetChildView()->GetViewHost()->Undock();
-        return EVENT_RESULT_CANCELED;
+        ResetState();
+        return EVENT_RESULT_HANDLED;
       } else {
         // check if need re-layout the order the gadgets
         BasicElement *previous, *next;
@@ -321,6 +315,15 @@ class SideBar::Impl : public View {
     border_array_[3]->SetPixelHeight(height - 2 * kBoderWidth);
     Layout();
   }
+  void ResetState() {
+    if (GetPopupElement()) {
+      GetPopupElement()->SetOpacity(1);
+      SetPopupElement(NULL);
+      Layout();
+    }
+    mouse_move_event_x_ = -1;
+    mouse_move_event_y_ = -1;
+  }
   //TODO: refactor this method
   void SetupDecorator() {
     background_ = new DivElement(NULL, this, NULL);
@@ -334,7 +337,7 @@ class SideBar::Impl : public View {
       ImgElement *img = new ImgElement(NULL, this, NULL);
       border_array_[i] = img;
       GetChildren()->InsertElement(img, NULL);
-    }     
+    }
     border_array_[0]->SetSrc(border_h);
     border_array_[1]->SetSrc(border_h);
     border_array_[2]->SetSrc(border_v);
@@ -401,13 +404,13 @@ class SideBar::Impl : public View {
   Variant LoadGlobalImageAsVariant(const char *img) {
     std::string data;
     if (GetGlobalFileManager()->ReadFile(img, &data)) {
-      ScriptableBinaryData *binary = 
+      ScriptableBinaryData *binary =
         new ScriptableBinaryData(data.c_str(), data.size());
       if (binary) {
         DLOG("Load image %s success.", img);
         return Variant(binary);
       }
-    } 
+    }
     LOG("Load image %s failed. Return NULL", img);
     return Variant();
   }
@@ -426,7 +429,7 @@ class SideBar::Impl : public View {
       e = main_div_->GetChildren()->GetItemByIndex(i);
       if (insertee == e) continue;
       double middle = e->GetPixelY() + e->GetPixelHeight() / 2;
-      if (y < middle) {
+      if (y - main_div_->GetPixelY() < middle) {
         if (next) *next = e;
         return;
       }
@@ -454,7 +457,7 @@ class SideBar::Impl : public View {
     }
     QueueDraw();
   }
-  BasicElement *FindViewElementByView(View *view) {
+  ViewElement *FindViewElementByView(View *view) {
     for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
       ViewElement *element = down_cast<ViewElement *>(
           main_div_->GetChildren()->GetItemByIndex(i));
@@ -498,7 +501,7 @@ class SideBar::Impl : public View {
         host_->NewViewHost(ViewHostInterface::VIEW_HOST_MAIN);
     ViewHostInterface *old = view->SwitchViewHost(view_host);
     if (old) old->Destroy();
-    ViewElement *ele = new ViewElement(main_div_, this, 
+    ViewElement *ele = new ViewElement(main_div_, this,
         down_cast<View *>(view_host->GetView()));
     ele->SetPixelHeight(ele->GetChildView()->GetHeight());
     BasicElement *element;
@@ -506,12 +509,12 @@ class SideBar::Impl : public View {
     main_div_->GetChildren()->InsertElement(ele, element);
     DLOG("Sidebar: Docked view(%p)", view);
     Layout();
-    SimpleEvent e(Event::EVENT_UNDOCK);
+    SimpleEvent e(Event::EVENT_DOCK);
     ele->HandleOtherEvent(e);
     return true;
   }
   bool Undock(View *view) {
-    ViewElement *element = down_cast<ViewElement *>(FindViewElementByView(view));
+    ViewElement *element = FindViewElementByView(view);
     DLOG("Sidebar: Undock view(%p) in element(%p)", view, element);
     if (!element) return false;
     SimpleEvent e(Event::EVENT_UNDOCK);
@@ -523,7 +526,7 @@ class SideBar::Impl : public View {
   }
   void Expand(View *view) {
     if (expand_element_) expand_element_->SetEnabled(true);
-    expand_element_ = down_cast<ViewElement *>(FindViewElementByView(view));
+    expand_element_ = FindViewElementByView(view);
     expand_element_->SetEnabled(false);
   }
   void Unexpand() {
@@ -665,14 +668,18 @@ void SideBar::Unexpand(View *view) {
   impl_->Unexpand();
 }
 
-Gadget *SideBar::GetMouseOverGadget() const {
-  return impl_->GetMouseOverElement() ?  down_cast<ViewElement *>(
-      impl_->GetMouseOverElement())->GetChildView()->GetGadget() : NULL;
+ViewElement *SideBar::GetMouseOverElement() const {
+  BasicElement *element = impl_->GetMouseOverElement();
+  if (element && element->IsInstanceOf(ViewElement::CLASS_ID))
+    return down_cast<ViewElement *>(element);
+  return NULL;
 }
 
-double SideBar::GetGadgetHeight(const Gadget *gadget) const {
-  BasicElement *element = impl_->FindViewElementByView(gadget->GetMainView());
-  return element ? element->GetPixelX() : 0;
+void SideBar::GetPointerPosition(double *x, double *y) const {
+  if (impl_->mouse_move_event_x_ > 0 || impl_->mouse_move_event_y_ > 0) {
+    *x = impl_->mouse_move_event_x_;
+    *y = impl_->mouse_move_event_y_;
+  }
 }
 
 void SideBar::SetAddGadgetSlot(Slot0<void> *slot) {

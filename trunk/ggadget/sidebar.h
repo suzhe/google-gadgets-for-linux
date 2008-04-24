@@ -41,8 +41,8 @@ class SideBar {
   void Expand(View *view);
   void Unexpand(View *view);
 
-  Gadget *GetMouseOverGadget() const;
-  double GetGadgetHeight(const Gadget *gadget) const;
+  ViewElement *GetMouseOverElement() const;
+  void GetPointerPosition(double *x, double *y) const;
 
   void SetAddGadgetSlot(Slot0<void> *slot);
   void SetMenuSlot(Slot0<void> *slot);

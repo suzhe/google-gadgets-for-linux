@@ -77,25 +77,27 @@ class ViewElement::Impl {
   static const double kZoomFactor = 1.0 / 0.141421;
 };
 
-ViewElement::ViewElement(BasicElement *parent, View *parent_view, 
+ViewElement::ViewElement(BasicElement *parent, View *parent_view,
                          View *child_view)
     // Only 1 child so no need to involve Elements here.
     : BasicElement(parent, parent_view, "", NULL, false),
       impl_(new Impl(this, child_view)) {
+  DLOG("MEMORY: ViewElement Ctor %p", this);
   SetEnabled(true);
 }
 
 ViewElement::~ViewElement() {
+  DLOG("MEMORY: ViewElement Dtor %p", this);
   delete impl_;
   impl_ = NULL;
 }
 
-void ViewElement::SetChildView(View *child_view) {  
-  impl_->DisconnectSlots(); 
+void ViewElement::SetChildView(View *child_view) {
+  impl_->DisconnectSlots();
   impl_->child_view_ = child_view;
   if (child_view) {
     impl_->ConnectSlots();
-    QueueDraw();  
+    QueueDraw();
     impl_->child_view_->GetChildren()->Layout();
   }
 }

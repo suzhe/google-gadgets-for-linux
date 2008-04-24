@@ -31,6 +31,7 @@
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/sidebar.h>
 #include <ggadget/view.h>
+#include <ggadget/view_element.h>
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -109,11 +110,12 @@ class SidebarGtkHost::Impl {
       owner_->side_bar_->ClearNullElement();
       if (IsOverlapWithSideBar(&h)) {
         view_->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
+        height_ = h;
         view_host_->Dock();
       }
     }
     void HandleDock() {
-      owner_->Dock(view_->GetGadget(), height_, true);
+      owner_->Dock(view_, height_, true);
     }
     void HandleUnexpand() {
       owner_->Unexpand(NULL);
@@ -130,9 +132,8 @@ class SidebarGtkHost::Impl {
       gtk_window_get_size(GTK_WINDOW(sidebar_), &sw, &sh);
       if ((x < sx && x + w > sx) || (x > sx && sx + sw > x)) {
         if (height) {
-          int px, py;
-          gtk_widget_get_pointer(floating, &px, &py);
-          *height = y + py - sy;
+          int dummy;
+          gtk_widget_get_pointer(sidebar_, &dummy, height);
         }
         return true;
       }
@@ -180,7 +181,6 @@ class SidebarGtkHost::Impl {
          it != gadgets_.end(); ++it)
       delete it->second;
 
-    gtk_widget_destroy(main_widget_);
     delete side_bar_;
   }
 
@@ -239,29 +239,46 @@ class SidebarGtkHost::Impl {
     return true;
   }
 
-  bool Dock(Gadget *gadget, int height, bool force_insert) {
-    ASSERT(gadget);
-    gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
-    ViewInterface *view = gadget->GetMainView();
-    DLOG("Dock in SidebarGtkHost, view: %p, decorate view: %p",
-        gadget->GetMainView(), view);
-    return side_bar_->Dock(height, down_cast<View *>(view), force_insert);
+  bool Dock(View *view, int height, bool force_insert) {
+    view->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
+    DLOG("Dock in SidebarGtkHost, view: %p", view);
+    return side_bar_->Dock(height, view, force_insert);
   }
 
-  bool Undock(Gadget *gadget) {
-    ASSERT(gadget);
-    side_bar_->Undock(gadget->GetMainView());
-    gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    ViewHostInterface *new_host = NewSingleViewHost(gadget->GetMainView(), true);
-    ViewHostInterface *old = gadget->GetMainView()->SwitchViewHost(new_host);
+  bool Undock(View *view, bool move_to_cursor) {
+    side_bar_->Undock(view);
+    view->GetGadget()->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
+    ViewHostInterface *new_host = NewSingleViewHost(view, true);
+    ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
-    return gadget->ShowMainView();
+    bool r = view->ShowView(false, 0, NULL);
+    if (move_to_cursor) {
+      // move new gadget to a proper place
+      double x, y;
+      side_bar_->GetPointerPosition(&x, &y);
+      int px, py;
+      gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
+      GtkWidget *window =
+          gtk_widget_get_toplevel(GTK_WIDGET(new_host->GetNativeWidget()));
+      gtk_window_move(GTK_WINDOW(window),
+                      px - static_cast<int>(x), py - static_cast<int>(y));
+      DLOG("move window, x: %f y: %f px: %d py: %d", x, y, px, py);
+      gdk_pointer_grab(window->window, FALSE,
+                       (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                      GDK_POINTER_MOTION_MASK |
+                                      GDK_POINTER_MOTION_HINT_MASK),
+                       NULL, NULL, gtk_get_current_event_time());
+      new_host->BeginMoveDrag(MouseEvent::BUTTON_LEFT);
+    }
+    return r;
   }
 
   void HandleUndock() {
-    Gadget *gadget = side_bar_->GetMouseOverGadget();
-    if (gadget)
-      Undock(gadget);
+    ViewElement *element = side_bar_->GetMouseOverElement();
+    if (element) {
+      Gadget *gadget = element->GetChildView()->GetGadget();
+      Undock(gadget->GetMainView(), true);
+    }
   }
 
   void Expand(Gadget *gadget) {
@@ -282,9 +299,9 @@ class SidebarGtkHost::Impl {
   }
 
   void HandleExpand() {
-    Gadget *gadget = side_bar_->GetMouseOverGadget();
-    if (gadget)
-      Expand(gadget);
+    ViewElement *element = side_bar_->GetMouseOverElement();
+    if (element)
+      Expand(element->GetChildView()->GetGadget());
   }
 
   void HandleUnexpand() {
@@ -315,9 +332,9 @@ class SidebarGtkHost::Impl {
       return false;
     }
 
-    if (!Dock(gadget, 0, false)) {
+    if (!Dock(gadget->GetMainView(), 0, false)) {
       DLOG("Dock view(%p) failed.", gadget->GetMainView());
-      Undock(gadget);
+      Undock(gadget->GetMainView(), false);
     }
 
     if (!gadget->ShowMainView()) {
