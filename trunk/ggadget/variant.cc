@@ -169,6 +169,10 @@ bool Variant::operator==(const Variant &another) const {
   }
 }
 
+static std::string FitString(const std::string &input) {
+  return input.size() > 70 ? input.substr(0, 70) + "..." : input;
+}
+
 // Used in unittests.
 std::string Variant::Print() const {
   switch (type_) {
@@ -182,14 +186,15 @@ std::string Variant::Print() const {
       return "DOUBLE:" + StringPrintf("%g", v_.double_value_);
     case TYPE_STRING:
       return std::string("STRING:") +
-             (v_.string_value_ ? *v_.string_value_ : "(nil)");
+             (v_.string_value_ ? FitString(*v_.string_value_) : "(nil)");
     case TYPE_JSON:
-      return std::string("JSON:") + VariantValue<JSONString>()(*this).value;
+      return std::string("JSON:") +
+             FitString(VariantValue<JSONString>()(*this).value);
     case TYPE_UTF16STRING:
       if (v_.utf16_string_value_) {
         std::string utf8_string;
         ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &utf8_string);
-        return "UTF16STRING:" + utf8_string;
+        return "UTF16STRING:" + FitString(utf8_string);
       }
       return "UTF16STRING:(nil)";
     case TYPE_SCRIPTABLE:

@@ -94,7 +94,14 @@ class MenuBuilder::Impl {
     GtkMenuItem *item = NULL;
 
     if (style & MENU_ITEM_FLAG_SEPARATOR || !text || !*text) {
-      item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
+      // Only add a separator if the menu is not empty and the last item is
+      // not another separator.
+      GList *children = gtk_container_get_children(GTK_CONTAINER(gtk_menu_));
+      if (children) {
+        if (!GTK_IS_SEPARATOR_MENU_ITEM(g_list_last(children)->data))
+          item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
+        g_list_free(children);
+      }
     } else if (style & (MENU_ITEM_FLAG_CHECKABLE | MENU_ITEM_FLAG_CHECKED)) {
       item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_mnemonic(
         ConvertWindowsStyleMnemonics(text).c_str()));
@@ -103,19 +110,21 @@ class MenuBuilder::Impl {
         ConvertWindowsStyleMnemonics(text).c_str()));
     }
 
-    gtk_widget_show(GTK_WIDGET(item));
-    SetMenuItemStyle(item, style);
-
-    if (text && *text)
-      g_object_set_data_full(G_OBJECT(item), kMenuItemTextTag,
-                             g_strdup(text), g_free);
-    if (handler)
-      g_object_set_data_full(G_OBJECT(item), kMenuItemCallbackTag,
-                             handler, DestroyHandlerCallback);
-
-    g_signal_connect(item, "activate", G_CALLBACK(OnItemActivate), NULL);
-    gtk_menu_shell_append(GTK_MENU_SHELL(gtk_menu_), GTK_WIDGET(item));
-    item_added_ = true;
+    if (item) {
+      gtk_widget_show(GTK_WIDGET(item));
+      SetMenuItemStyle(item, style);
+  
+      if (text && *text)
+        g_object_set_data_full(G_OBJECT(item), kMenuItemTextTag,
+                               g_strdup(text), g_free);
+      if (handler)
+        g_object_set_data_full(G_OBJECT(item), kMenuItemCallbackTag,
+                               handler, DestroyHandlerCallback);
+  
+      g_signal_connect(item, "activate", G_CALLBACK(OnItemActivate), NULL);
+      gtk_menu_shell_append(gtk_menu_, GTK_WIDGET(item));
+      item_added_ = true;
+    }
   }
 
   struct FindItemData {
@@ -166,7 +175,7 @@ class MenuBuilder::Impl {
       g_object_set_data_full(G_OBJECT(item), kMenuItemTextTag,
                              g_strdup(text), g_free);
 
-    gtk_menu_shell_append(GTK_MENU_SHELL(gtk_menu_), GTK_WIDGET(item));
+    gtk_menu_shell_append(gtk_menu_, GTK_WIDGET(item));
     item_added_ = true;
     return submenu;
   }

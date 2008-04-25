@@ -29,6 +29,7 @@
 #include "logger.h"
 #include "main_loop_interface.h"
 #include "menu_interface.h"
+#include "messages.h"
 #include "host_interface.h"
 #include "options_interface.h"
 #include "script_context_interface.h"
@@ -137,7 +138,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         plugin_flags_(0),
         display_target_(TARGET_FLOATING_VIEW),
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
-        trusted_(trusted) {
+        trusted_(trusted),
+        in_user_interaction_(false) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -261,6 +263,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         }
       }
     }
+
+    framework_.GetRegisterable()->RegisterMethod(
+        "openUrl", NewSlot(this, &Impl::OpenURL));
 
     // Register extensions
     const ExtensionManager *global_manager =
@@ -420,10 +425,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   void OnAddCustomMenuItems(MenuInterface *menu) {
     ScriptableMenu scriptable_menu(menu);
     onaddcustommenuitems_signal_(&scriptable_menu);
-    if (HasOptionsDialog())
-      menu->AddItem("Options...", 0, NewSlot(this, &Impl::OptionsMenuCallback));
-    menu->AddItem("Remove Me", 0, NewSlot(this, &Impl::RemoveMeMenuCallback));
-    menu->AddItem("About...", 0, NewSlot(this, &Impl::AboutMenuCallback));
+    menu->AddItem(NULL, MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+    if (HasOptionsDialog()) {
+      menu->AddItem(GM_("GADGET_MENU_OPTIONS"), 0,
+                    NewSlot(this, &Impl::OptionsMenuCallback));
+    }
+    menu->AddItem(NULL, MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+    menu->AddItem(GM_("GADGET_MENU_REMOVE"), 0,
+                  NewSlot(this, &Impl::RemoveMeMenuCallback));
+    menu->AddItem(GM_("GADGET_MENU_ABOUT"), 0,
+                  NewSlot(this, &Impl::AboutMenuCallback));
   }
 
   void SetDisplayTarget(DisplayTarget target) {
@@ -700,6 +711,28 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     return onpluginflagschanged_signal_.Connect(handler);
   }
 
+  bool SetInUserInteraction(bool in_user_interaction) {
+    bool old_value = in_user_interaction_;
+    in_user_interaction_ = in_user_interaction;
+    return old_value;
+  }
+
+  bool OpenURL(const char *url) {
+    // Important: verify that URL is valid first.
+    // Otherwise could be a security problem.
+    if (in_user_interaction_) {
+      std::string newurl = EncodeURL(url);
+      if (IsValidURL(url))
+        return host_->OpenURL(newurl.c_str());
+
+      DLOG("Malformed URL: %s", newurl.c_str());
+      return false;
+    }
+
+    DLOG("OpenURL called not in user interaction is forbidden.");
+    return false;
+  }
+
   static void RegisterStrings(const StringMap *strings,
                               ScriptableHelperNativeOwnedDefault *scriptable) {
     for (StringMap::const_iterator it = strings->begin();
@@ -794,6 +827,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   DisplayTarget display_target_;
   int xml_http_request_session_;
   bool trusted_;
+  bool in_user_interaction_;
 };
 
 Gadget::Gadget(HostInterface *host,
@@ -915,6 +949,18 @@ Connection *Gadget::ConnectOnPluginFlagsChanged(Slot1<void, int> *handler) {
 XMLHttpRequestInterface *Gadget::CreateXMLHttpRequest() {
   return GetXMLHttpRequestFactory()->CreateXMLHttpRequest(
       impl_->xml_http_request_session_, GetXMLParser());
+}
+
+bool Gadget::SetInUserInteraction(bool in_user_interaction) {
+  return impl_->SetInUserInteraction(in_user_interaction);
+}
+
+bool Gadget::IsInUserInteraction() const {
+  return impl_->in_user_interaction_;
+}
+
+bool Gadget::OpenURL(const char *url) const {
+  return impl_->OpenURL(url);
 }
 
 // static methods

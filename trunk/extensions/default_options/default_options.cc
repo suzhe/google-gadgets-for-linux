@@ -31,6 +31,9 @@ static const int kAutoFlushInterval = 120000;
 // This variant is to prevent multiple options flush in the same step.
 static const int kAutoFlushIntervalVariant = 60000;
 
+static const size_t kDefaultOptionsSizeLimit = 0x100000; // 1MB.
+static const size_t kGlobalOptionsSizeLimit = 0x1000000; // 16MB.
+
 // An options file is an XML file in the following format:
 // <code>
 // <options>
@@ -57,8 +60,9 @@ static const int kAutoFlushIntervalVariant = 60000;
 
 class DefaultOptions : public MemoryOptions {
  public:
-  DefaultOptions(const char *name)
-      : main_loop_(GetGlobalMainLoop()),
+  DefaultOptions(const char *name, size_t size_limit)
+      : MemoryOptions(size_limit),
+        main_loop_(GetGlobalMainLoop()),
         file_manager_(GetGlobalFileManager()),
         parser_(GetXMLParser()),
         encryptor_(GetEncryptor()),
@@ -329,11 +333,11 @@ class DefaultOptions : public MemoryOptions {
 
   // Singleton management.
   typedef std::map<std::string, DefaultOptions *> OptionsMap;
-  static DefaultOptions *GetOptions(const char *name) {
+  static DefaultOptions *GetOptions(const char *name, size_t size_limit) {
     DefaultOptions *options;
     OptionsMap::const_iterator it = options_map_.find(name);
     if (it == options_map_.end()) {
-      options = new DefaultOptions(name);
+      options = new DefaultOptions(name, size_limit);
       options_map_[name] = options;
     } else {
       options = it->second;
@@ -437,11 +441,13 @@ class OptionsDelegator : public OptionsInterface {
 };
 
 OptionsInterface *DefaultOptionsFactory(const char *name) {
-  return new OptionsDelegator(DefaultOptions::GetOptions(name));
+  return new OptionsDelegator(
+      DefaultOptions::GetOptions(name, kDefaultOptionsSizeLimit));
 }
 
+// The default options file has much bigger size limit than normal options.
 static OptionsDelegator g_global_options(
-    DefaultOptions::GetOptions("global-options"));
+    DefaultOptions::GetOptions("global-options", kGlobalOptionsSizeLimit));
 
 } // anonymous namespace
 } // namespace ggadget

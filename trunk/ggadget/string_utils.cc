@@ -231,9 +231,9 @@ bool IsValidURL(const char* url) {
   }
 
   if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
-      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) &&
-      strncasecmp(url, kFtpUrlPrefix, arraysize(kHttpsUrlPrefix) - 1)) {
-    return false;    
+      strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1)) {
+    // Don't allow ftp://.
+    return false;
   }
 
   for (int i = 0; url[i]; i++) {

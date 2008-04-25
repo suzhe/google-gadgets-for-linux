@@ -77,6 +77,7 @@ void QtHost::DebugOutput(DebugLevel level, const char *message) const {
   const char *str_level = "";
   switch (level) {
     case DEBUG_TRACE: str_level = "TRACE: "; break;
+    case DEBUG_INFO: str_level = "INFO: "; break;
     case DEBUG_WARNING: str_level = "WARNING: "; break;
     case DEBUG_ERROR: str_level = "ERROR: "; break;
     default: break;

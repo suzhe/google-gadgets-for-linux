@@ -244,6 +244,27 @@ class Gadget {
    */
   XMLHttpRequestInterface *CreateXMLHttpRequest();
 
+  /**
+   * Sets whether the gadget is currently in user interaction.
+   * The state should only applicable within one event loop.
+   * @param in_user_interaction whether the current event loop is in user
+   *     interaction.
+   * @return the old in_user_interaction value.
+   */
+  bool SetInUserInteraction(bool in_user_interaction);
+
+  /**
+   * Returns the current value of in_user_interaction.
+   */
+  bool IsInUserInteraction() const;
+
+  /**
+   * Open the given URL in the user's default web brower.
+   * Only HTTP, HTTPS URLs are supported.
+   * Only called during user interaction is allowed.
+   */
+  bool OpenURL(const char *url) const;
+
  public:
   /**
    * A utility to get the manifest infomation of a gadget without

@@ -54,4 +54,16 @@
 <GADGET_CONFIRM_MESSAGE>Google has not tested or verified the features or security of this third party Gadget. Please confirm that you want to install:</GADGET_CONFIRM_MESSAGE>
 <!-- The label displayed before the gadget description. -->
 <GADGET_DESCRIPTION>Description: </GADGET_DESCRIPTION>
+
+<GADGET_MENU_HIDE>Hide</GADGET_MENU_HIDE>
+<GADGET_MENU_EXPAND>Expand</GADGET_MENU_EXPAND>
+<GADGET_MENU_COLLAPSE>Collapse</GADGET_MENU_COLLAPSE>
+<GADGET_MENU_ZOOM>Zoom</GADGET_MENU_ZOOM>
+<GADGET_MENU_UNDOCK>Undock from Sidebar</GADGET_MENU_UNDOCK>
+<GADGET_MENU_DOCK>Dock to Sidebar</GADGET_MENU_DOCK>
+<GADGET_MENU_ALWAYS_ON_TOP>Always on Top</GADGET_MENU_ALWAYS_ON_TOP>
+<GADGET_MENU_OPTIONS>Options...</GADGET_MENU_OPTIONS>
+<GADGET_MENU_ABOUT>About...</GADGET_MENU_ABOUT>
+<GADGET_MENU_REMOVE>Remove</GADGET_MENU_REMOVE>
+
 </strings>
