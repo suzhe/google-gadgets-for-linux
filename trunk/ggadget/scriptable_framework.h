@@ -71,7 +71,7 @@ class ScriptableAudio : public ScriptableHelperDefault {
 };
 
 /** Scriptable counterpart of RuntimeInterface. */
-class ScriptableRuntime : public ScriptableHelperDefault {
+class ScriptableRuntime : public ScriptableHelperNativeOwnedDefault {
  public:
   DEFINE_CLASS_ID(0x83df98ced129f243, ScriptableInterface);
 
