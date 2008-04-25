@@ -343,7 +343,7 @@ class View : public ViewInterface {
 
   /**
    * Open the given URL in the user's default web brower.
-   * Only HTTP, HTTPS, and FTP URLs are supported.
+   * Only HTTP and HTTPS are supported.
    */
   bool OpenURL(const char *url) const;
 

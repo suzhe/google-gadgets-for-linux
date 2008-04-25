@@ -23,6 +23,10 @@ namespace ggadget {
 
 class MemoryOptions::Impl {
  public:
+  Impl(size_t size_limit)
+      : size_limit_(size_limit), total_size_(0) {
+  }
+
   void FireChangedEvent(const char *name, const Variant &value) {
     DLOG("option %s changed to %s", name, value.Print().c_str());
     onoptionchanged_signal_(name);
@@ -35,13 +39,40 @@ class MemoryOptions::Impl {
   OptionsMap internal_values_;
   EncryptedSet encrypted_;
   Signal1<void, const char *> onoptionchanged_signal_;
+  size_t size_limit_, total_size_;
 };
 
-MemoryOptions::MemoryOptions() : impl_(new Impl()) {
+MemoryOptions::MemoryOptions()
+    // Though INT_MAX is much smaller than the maximum value of size_t on
+    // some platform, it is still enough to be treated as "unlimited".
+    : impl_(new Impl(INT_MAX)) {
+}
+
+MemoryOptions::MemoryOptions(size_t size_limit)
+    : impl_(new Impl(size_limit)) {
 }
 
 MemoryOptions::~MemoryOptions() {
   delete impl_;
+}
+
+// Returns the approximate size of a variant.
+static size_t GetVariantSize(const Variant& v) {
+  switch (v.type()) {
+    case Variant::TYPE_VOID:
+      // It's important to return 0 for TYPE_VOID because sometimes
+      // non-existance values are treated as void.
+      return 0;
+    case Variant::TYPE_STRING:
+      return VariantValue<std::string>()(v).size();
+    case Variant::TYPE_JSON:
+      return VariantValue<JSONString>()(v).value.size();
+    case Variant::TYPE_UTF16STRING:
+      return VariantValue<UTF16String>()(v).size() * 2;
+    default:
+      // Value of other types only counted approximately.
+      return sizeof(Variant);
+  }
 }
 
 Connection *MemoryOptions::ConnectOnOptionChanged(
@@ -54,9 +85,17 @@ size_t MemoryOptions::GetCount() {
 }
 
 void MemoryOptions::Add(const char *name, const Variant &value) {
-  if (impl_->values_.find(name) == impl_->values_.end()) {
-    impl_->values_[name] = value;
-    impl_->FireChangedEvent(name, value);
+  std::string name_str(name); // Avoid multiple std::string() construction. 
+  if (impl_->values_.find(name_str) == impl_->values_.end()) {
+    size_t new_total_size = impl_->total_size_ + name_str.size() +
+                            GetVariantSize(value);
+    if (new_total_size > impl_->size_limit_) {
+      LOG("Options exceeds 1MB size limit");
+    } else {
+      impl_->total_size_ = new_total_size;
+      impl_->values_[name_str] = value;
+      impl_->FireChangedEvent(name, value);
+    }
   }
 }
 
@@ -79,20 +118,32 @@ Variant MemoryOptions::GetValue(const char *name) {
 }
 
 void MemoryOptions::PutValue(const char *name, const Variant &value) {
-  Variant *last_value = &impl_->values_[name];
+  std::string name_str(name); // Avoid multiple std::string construction.
+  Variant *last_value = &impl_->values_[name_str];
   if (!(*last_value == value)) {
-    *last_value = value;
-    impl_->FireChangedEvent(name, value);
+    ASSERT(impl_->total_size_ >= GetVariantSize(*last_value));
+    size_t new_total_size = impl_->total_size_ + GetVariantSize(value) -
+                            GetVariantSize(*last_value);
+    if (new_total_size > impl_->size_limit_) {
+      LOG("Options exceeds 1MB size limit");
+    } else {
+      impl_->total_size_ = new_total_size;
+      *last_value = value;
+      impl_->FireChangedEvent(name, value);
+    }
   }
   // Putting a value automatically removes the encrypted state.
-  impl_->encrypted_.erase(name);
+  impl_->encrypted_.erase(name_str);
 }
 
 void MemoryOptions::Remove(const char *name) {
-  Impl::OptionsMap::iterator it = impl_->values_.find(name);
+  std::string name_str(name); // Avoid multiple std::string construction.
+  Impl::OptionsMap::iterator it = impl_->values_.find(name_str);
   if (it != impl_->values_.end()) {
+    ASSERT(impl_->total_size_ >= name_str.size() + GetVariantSize(it->second));
+    impl_->total_size_ -= name_str.size() + GetVariantSize(it->second);
     impl_->values_.erase(it);
-    impl_->encrypted_.erase(name);
+    impl_->encrypted_.erase(name_str);
     impl_->FireChangedEvent(name, Variant());
   }
 }
@@ -105,6 +156,7 @@ void MemoryOptions::RemoveAll() {
     impl_->encrypted_.erase(name);
     impl_->FireChangedEvent(name.c_str(), Variant());
   }
+  impl_->total_size_ = 0;
 }
 
 void MemoryOptions::EncryptValue(const char *name) {
@@ -121,6 +173,7 @@ Variant MemoryOptions::GetInternalValue(const char *name) {
 }
 
 void MemoryOptions::PutInternalValue(const char *name, const Variant &value) {
+  // Internal values are not counted in total_size_.
   impl_->internal_values_[name] = value;
 }
 
@@ -132,6 +185,7 @@ void MemoryOptions::DeleteStorage() {
   impl_->values_.clear();
   impl_->internal_values_.clear();
   impl_->encrypted_.clear();
+  impl_->total_size_ = 0;
 }
 
 bool MemoryOptions::EnumerateItems(

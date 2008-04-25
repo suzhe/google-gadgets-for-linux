@@ -20,6 +20,7 @@
 #include <vector>
 #include <cmath>
 #include <gtk/gtk.h>
+#include <ggadget/gadget.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/scriptable_array.h>
@@ -205,8 +206,15 @@ class BrowserElement::Impl {
       } else {
         if (!open_url_signal_.HasActiveConnections() ||
             open_url_signal_(params[2])) {
-          owner_->GetView()->OpenURL(params[2]);
-          result = '1';
+          Gadget *gadget = owner_->GetView()->GetGadget();
+          if (gadget) {
+            // Let the gadget allow this OpenURL gracefully.
+            bool old_interaction = gadget->SetInUserInteraction(true);
+            result = gadget->OpenURL(params[2]) ? '1' : '0';
+            gadget->SetInUserInteraction(old_interaction);
+          } else {
+            result = '0';
+          }
         } else {
           result = '0';
         }

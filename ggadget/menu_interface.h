@@ -34,8 +34,13 @@ class MenuInterface {
   };
 
   /**
-   * Adds a single menu item.
-   * @param item_text
+   * Adds a single menu item. If @a item_text is blank or NULL, or @a style
+   * is @c MENU_ITEM_FLAG_SEPARATOR, and the menu is not blank and the last
+   * menu item is not a separator, a menu separator will be added.
+   *
+   * @param item_text the text displayed in the menu item. '&'s act as hotkey
+   *     indicator. If it's blank or NULL, style is automatically treated as
+   *     @c MENU_ITEM_FLAG_SEPARATOR.
    * @param style combination of <code>MenuItemFlag</code>s.
    * @param handler handles menu command.
    */

@@ -26,7 +26,15 @@ namespace ggadget {
 
 class MemoryOptions : public OptionsInterface {
  public:
+  /** Constructs a @c MemoryOptions instance without size limit. */
   MemoryOptions();
+
+  /**
+   * Constructs a @c MemoryOptions instance with size limit.
+   * If new added value causes the total size of names and values execeeds
+   * the size limit, the value will be rejected.
+   */   
+  MemoryOptions(size_t size_limit);
   virtual ~MemoryOptions();
 
   virtual Connection *ConnectOnOptionChanged(

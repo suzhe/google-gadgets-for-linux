@@ -107,9 +107,17 @@ class View::Impl {
       if (fire && (duration_ == 0 ||
                    current_time - last_finished_time_ > kMinInterval)) {
         if (is_event_) {
+          // Because timer events are still fired during modal dialog opened
+          // in key/mouse event handlers, switch off the user interaction
+          // flag when the timer event is handled, to prevent unexpected
+          // openUrl() etc.
+          bool old_interaction = impl_->gadget_ ?
+              impl_->gadget_->SetInUserInteraction(false) : false; 
           TimerEvent event(watch_id, value);
           ScriptableEvent scriptable_event(&event, NULL, NULL);
           impl_->FireEventSlot(&scriptable_event, slot_);
+          if (impl_->gadget_)
+            impl_->gadget_->SetInUserInteraction(old_interaction);
         } else {
           slot_->Call(0, NULL);
         }
@@ -258,7 +266,6 @@ class View::Impl {
     obj->RegisterProperty("mouseOverElement",
                           NewSlot(owner_, &View::GetMouseOverElement), NULL);
 #endif
-    obj->RegisterMethod("openURL", NewSlot(owner_, &View::OpenURL));
 
     obj->RegisterSignal(kOnCancelEvent, &oncancel_event_);
     obj->RegisterSignal(kOnClickEvent, &onclick_event_);
@@ -452,6 +459,12 @@ class View::Impl {
     // Send event to view first.
     ScriptableEvent scriptable_event(&event, NULL, NULL);
     Event::Type type = event.GetType();
+
+    bool old_interactive = false;
+    if (gadget_ && type != Event::EVENT_MOUSE_MOVE &&
+        type != Event::EVENT_MOUSE_OVER && type != Event::EVENT_MOUSE_OUT)
+      gadget_->SetInUserInteraction(true);
+
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (type != Event::EVENT_MOUSE_MOVE)
       DLOG("%s(View): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
@@ -509,17 +522,16 @@ class View::Impl {
       }
     }
 
-    // Child handled or cancelled the event, just return.
-    if (result != EVENT_RESULT_UNHANDLED)
-      return result;
-
-    if(event.GetType() == Event::EVENT_MOUSE_DOWN &&
-       event.GetButton() == MouseEvent::BUTTON_RIGHT) {
+    if (result == EVENT_RESULT_UNHANDLED &&
+        event.GetType() == Event::EVENT_MOUSE_DOWN &&
+        event.GetButton() == MouseEvent::BUTTON_RIGHT) {
       // Handle ShowContextMenu event.
       if (view_host_->ShowContextMenu(MouseEvent::BUTTON_RIGHT))
         result = EVENT_RESULT_HANDLED;
     }
 
+    if (gadget_)
+      gadget_->SetInUserInteraction(old_interactive);
     return result;
   }
 
@@ -529,6 +541,10 @@ class View::Impl {
     DLOG("%s(View): %d %d", scriptable_event.GetName(),
          event.GetKeyCode(), event.GetModifier());
 #endif
+
+    bool old_interactive =
+        gadget_ ? gadget_->SetInUserInteraction(true) : false;
+
     switch (event.GetType()) {
       case Event::EVENT_KEY_DOWN:
         FireEvent(&scriptable_event, onkeydown_event_);
@@ -544,10 +560,8 @@ class View::Impl {
     }
 
     EventResult result = scriptable_event.GetReturnValue();
-    if (result == EVENT_RESULT_CANCELED)
-      return result;
-
-    if (focused_element_.Get()) {
+    if (result != EVENT_RESULT_CANCELED &&
+        focused_element_.Get()) {
       if (!focused_element_.Get()->IsReallyEnabled()) {
         focused_element_.Get()->OnOtherEvent(
             SimpleEvent(Event::EVENT_FOCUS_OUT));
@@ -556,12 +570,19 @@ class View::Impl {
         result = focused_element_.Get()->OnKeyEvent(event);
       }
     }
+
+    if (gadget_)
+      gadget_->SetInUserInteraction(old_interactive);
     return result;
   }
 
   EventResult OnDragEvent(const DragEvent &event) {
     Event::Type type = event.GetType();
     if (type == Event::EVENT_DRAG_OUT || type == Event::EVENT_DRAG_DROP) {
+      bool old_interactive = false;
+      if (gadget_ && type == Event::EVENT_DRAG_DROP)
+        old_interactive = gadget_->SetInUserInteraction(old_interactive);
+      
       EventResult result = EVENT_RESULT_UNHANDLED;
       // Send the event and clear the dragover state.
       if (dragover_element_.Get()) {
@@ -577,6 +598,9 @@ class View::Impl {
         dragover_element_.Reset(NULL);
         dragover_result_ = EVENT_RESULT_UNHANDLED;
       }
+
+      if (gadget_ && type == Event::EVENT_DRAG_DROP)
+        gadget_->SetInUserInteraction(old_interactive);
       return result;
     }
 
@@ -1118,20 +1142,6 @@ class View::Impl {
     FireEvent(&scriptable_event, onoptionchanged_event_);
   }
 
-  bool OpenURL(const char *url) {
-    if (!gadget_) return false;
-
-    // Important: verify that URL is valid first.
-    // Otherwise could be a security problem.
-    std::string newurl = EncodeURL(url);
-    if (IsValidURL(url)) {
-      return gadget_->GetHost()->OpenURL(newurl.c_str());
-    }
-
-    DLOG("Malformed URL: %s", newurl.c_str());
-    return false;
-  }
-
  public: // member variables
   EventSignal oncancel_event_;
   EventSignal onclick_event_;
@@ -1511,7 +1521,7 @@ ViewInterface::DebugMode View::GetDebugMode() const {
 }
 
 bool View::OpenURL(const char *url) const {
-  return impl_->OpenURL(url);
+  return impl_->gadget_ ? impl_->gadget_->OpenURL(url) : false;
 }
 
 void View::Alert(const char *message) const {

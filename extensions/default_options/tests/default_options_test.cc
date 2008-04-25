@@ -154,6 +154,29 @@ TEST(DefaultOptions, TestBasics) {
   delete options;
 }
 
+TEST(DefaultOptions, TestSizeLimit) {
+  OptionsInterface *options = CreateOptions("options1");
+  std::string big_string1(400000, 'a');
+  std::string big_string2(600000, 'b');
+  options->RemoveAll();
+  options->Add("a", Variant(big_string1));
+  ASSERT_EQ(Variant(big_string1), options->GetValue("a"));
+  options->Add("b", Variant(big_string1));
+  ASSERT_EQ(Variant(big_string1), options->GetValue("b"));
+  // Exceed size limit.
+  options->Add("c", Variant(big_string1));
+  ASSERT_EQ(Variant(), options->GetValue("c"));
+  options->PutValue("a", Variant(big_string2));
+  ASSERT_EQ(Variant(big_string2), options->GetValue("a"));
+  // Exceed size limit.
+  options->PutValue("b", Variant(big_string2));
+  ASSERT_EQ(Variant(big_string1), options->GetValue("b"));
+
+  options->Remove("b");
+  options->Add("c", Variant(big_string1));
+  ASSERT_EQ(Variant(big_string1), options->GetValue("c"));
+}
+
 TEST(DefaultOptions, TestOptionsSharing) {
   g_mocked_fm.data_.clear();
   OptionsInterface *options = CreateOptions("options1");

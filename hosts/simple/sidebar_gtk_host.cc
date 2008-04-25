@@ -311,7 +311,6 @@ class SidebarGtkHost::Impl {
   void InitGadgets() {
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::NewGadgetInstanceCallback));
-    g_idle_add(DelayedLoadGadgets, this);
   }
 
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
@@ -382,18 +381,18 @@ class SidebarGtkHost::Impl {
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
-    int instance_id = gadget->GetInstanceID();
+    gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
+  }
+
+  void RemoveGadgetInstanceCallback(int instance_id) {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
-      side_bar_->Undock(gadget->GetMainView());
-      delete gadget;
+      delete it->second;
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
     }
-
-    gadget_manager_->RemoveGadgetInstance(instance_id);
   }
 
   void AddGadgetHandler() {
@@ -409,6 +408,7 @@ class SidebarGtkHost::Impl {
     const char *str_level = "";
     switch (level) {
       case DEBUG_TRACE: str_level = "TRACE: "; break;
+      case DEBUG_INFO: str_level = "INFO: "; break;
       case DEBUG_WARNING: str_level = "WARNING: "; break;
       case DEBUG_ERROR: str_level = "ERROR: "; break;
       default: break;
@@ -421,11 +421,9 @@ class SidebarGtkHost::Impl {
                 (std::string("Script error: " ) + message).c_str());
   }
 
-  static gboolean DelayedLoadGadgets(gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->gadget_manager_->EnumerateGadgetInstances(
-        NewSlot(impl, &Impl::AddGadgetInstanceCallback));
-    return FALSE;
+  void LoadGadgets() {
+    gadget_manager_->EnumerateGadgetInstances(
+        NewSlot(this, &Impl::AddGadgetInstanceCallback));
   }
 
   GadgetBrowserHost gadget_browser_host_;
@@ -486,6 +484,7 @@ void SidebarGtkHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
 }
 
 void SidebarGtkHost::Run() {
+  impl_->LoadGadgets();
   gtk_main();
 }
 
