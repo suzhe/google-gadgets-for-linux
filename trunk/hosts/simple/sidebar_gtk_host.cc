@@ -208,7 +208,7 @@ class SidebarGtkHost::Impl {
         GM_("GADGET_CONFIRM_MESSAGE"), data[kManifestName].c_str(),
         gadget_manager_->GetGadgetInstanceDownloadURL(id).c_str(),
         GM_("GADGET_DESCRIPTION"), data[kManifestDescription].c_str());
-    
+
     GdkScreen *screen;
     gdk_display_get_pointer(gdk_display_get_default(), &screen,
                             NULL, NULL, NULL);
