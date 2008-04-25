@@ -390,6 +390,22 @@ class DefaultAudio : public AudioInterface {
   }
 };
 
+class DefaultRuntime : public RuntimeInterface {
+ public:
+  virtual std::string GetAppName() const {
+    return "Google Desktop";
+  }
+  virtual std::string GetAppVersion() const {
+    return GGL_API_VERSION;
+  }
+  virtual std::string GetOSName() const {
+    return "";
+  }
+  virtual std::string GetOSVersion() const {
+    return "";
+  }
+};
+
 class DefaultCursor : public CursorInterface {
  public:
   virtual void GetPosition(int *x, int *y)  {
@@ -406,6 +422,18 @@ class DefaultScreen : public ScreenInterface {
   }
 };
 
+class DefaultUser : public UserInterface {
+ public:
+  virtual bool IsUserIdle() {
+    return false;
+  }
+  virtual void SetIdlePeriod(time_t period) {
+  }
+  virtual time_t GetIdlePeriod() const {
+    return 0;
+  }
+};
+
 static DefaultMachine g_machine_;
 static DefaultMemory g_memory_;
 static DefaultNetwork g_network_;
@@ -413,9 +441,11 @@ static DefaultPower g_power_;
 static DefaultProcess g_process_;
 static DefaultFileSystem g_filesystem_;
 static DefaultAudio g_audio_;
+static DefaultRuntime g_runtime_;
 static DefaultCursor g_cursor_;
 static DefaultScreen g_screen_;
 static DefaultPerfmon g_perfmon_;
+static DefaultUser g_user_;
 
 static ScriptableBios g_script_bios_(&g_machine_);
 static ScriptableCursor g_script_cursor_(&g_cursor_);
@@ -427,6 +457,7 @@ static ScriptablePower g_script_power_(&g_power_);
 static ScriptableProcess g_script_process_(&g_process_);
 static ScriptableProcessor g_script_processor_(&g_machine_);
 static ScriptableScreen g_script_screen_(&g_screen_);
+static ScriptableUser g_script_user_(&g_user_);
 
 static std::string DefaultGetFileIcon(const char *filename) {
   return std::string("");
@@ -490,6 +521,8 @@ extern "C" {
     reg_framework->RegisterVariantConstant("graphics",
                                            Variant(script_graphics));
 
+    reg_framework->RegisterVariantConstant("runtime", Variant(&g_runtime_));
+
     ScriptableInterface *system = NULL;
     // Gets or adds system object.
     Variant prop = GetPropertyByName(framework, "system");
@@ -535,6 +568,8 @@ extern "C" {
                                         Variant(&g_script_processor_));
     reg_system->RegisterVariantConstant("screen",
                                         Variant(&g_script_screen_));
+    reg_system->RegisterVariantConstant("user",
+                                        Variant(&g_script_user_));
 
     reg_system->RegisterMethod("getFileIcon", NewSlot(DefaultGetFileIcon));
     reg_system->RegisterMethod("languageCode", NewSlot(GetSystemLocaleName));

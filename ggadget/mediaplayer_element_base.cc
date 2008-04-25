@@ -205,7 +205,10 @@ class MediaPlayerElementBase::Impl {
   }
 
   ~Impl() {
-    Close();
+    if (current_media_)
+      current_media_->Unref();
+    if (current_playlist_)
+      current_playlist_->Unref();
   }
 
   Media *NewMedia(const char *uri) {

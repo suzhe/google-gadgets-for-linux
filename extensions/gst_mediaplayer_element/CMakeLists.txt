@@ -18,14 +18,14 @@ IF(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT)
 
 APPLY_CONFIG(GSTREAMER)
 APPLY_CONFIG(GSTREAMER_PLUGINS_BASE)
-ADD_MODULE(gst-mediaplayer-element gadget_videosink.cc
-  gst_mediaplayer_element.cc)
 
-TARGET_LINK_LIBRARIES(gst-mediaplayer-element
-  ${GSTREAMER_LIBRARIES}
-  ${GSTREAMER_PLUGINS_BASE_LIBRARIES}
-  -lgstvideo-0.10
+SET(SRCS
+  gadget_videosink.cc
+  gst_mediaplayer_element.cc
 )
+ADD_MODULE(gst-mediaplayer-element ${SRCS})
+TARGET_LINK_LIBRARIES(gst-mediaplayer-element
+  ${GSTREAMER_MEDIAPLAYER_LIBRARIES} ggadget)
 
 OUTPUT_MODULE(gst-mediaplayer-element)
 

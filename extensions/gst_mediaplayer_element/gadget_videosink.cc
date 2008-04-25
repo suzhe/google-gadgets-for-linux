@@ -63,8 +63,6 @@ class GadgetVideoSink::ImageBuffer {
   static void ImageBufferClassInit(gpointer g_class, gpointer class_data)
   {
     GstMiniObjectClass *mini_object_class = GST_MINI_OBJECT_CLASS(g_class);
-    image_buffer_parent_class_ =
-        static_cast<GstBufferClass*>(g_type_class_peek_parent(g_class));
     mini_object_class->finalize =
         (GstMiniObjectFinalizeFunction)Finalize;
   }
@@ -72,14 +70,17 @@ class GadgetVideoSink::ImageBuffer {
   static void Finalize(ImageBuffer *image) {
     g_return_if_fail(image != NULL);
 
+    if (!image->videosink_) {
+      GST_WARNING_OBJECT(image->videosink_, "no sink found");
+      return;
+    }
+
     // For those that are already recycled or to be recycled, just return.
     if (image->recycle_flag_ != BUFFER_NOT_RECYCLED)
       return;
 
     if (image->width_ != GST_VIDEO_SINK_WIDTH(image->videosink_) ||
         image->height_ != GST_VIDEO_SINK_HEIGHT(image->videosink_)) {
-      GST_MINI_OBJECT_CLASS(image_buffer_parent_class_)->
-          finalize(GST_MINI_OBJECT(image));
       // The data buffer is allocated by us, we free it ourselves.
       g_free(GST_BUFFER_DATA(image));
     } else {
@@ -131,8 +132,6 @@ class GadgetVideoSink::ImageBuffer {
       image->videosink_ = NULL;
     }
 
-    GST_MINI_OBJECT_CLASS(image_buffer_parent_class_)->
-        finalize(GST_MINI_OBJECT(image));
     g_free(GST_BUFFER_DATA(image));
     gst_buffer_unref(GST_BUFFER_CAST(image));
   }
@@ -164,8 +163,6 @@ class GadgetVideoSink::ImageBuffer {
     }
   }
 #endif
-
-  static GstBufferClass *image_buffer_parent_class_;
 
   // Must be the first non-static property.
   GstBuffer buffer_;
@@ -211,6 +208,17 @@ class GadgetVideoSink::ImageQueue {
     for (int i = 0; i < kMaxLength; i++)
       if (images_[i])
         ImageBuffer::FreeInstance(images_[i]);
+  }
+
+  // Only provided to producer. It can help avoid passing in duplicated image
+  // buffer pointer. Since consumer never changes the image queue, it's ok with
+  // no using lock here for the sole producer.
+  bool DupImage(ImageBuffer *image) {
+    for (int i = 0; i < kMaxLength; i++) {
+      if (image && images_[i] == image)
+        return true;
+    }
+    return false;
   }
 
   // Store @a image to the queue, return one that won't be used and can
@@ -261,8 +269,6 @@ class GadgetVideoSink::ImageQueue {
   pthread_mutex_t mutex_;
 };
 
-GstBufferClass *GadgetVideoSink::ImageBuffer::image_buffer_parent_class_ = NULL;
-
 bool GadgetVideoSink::registered_ = false;
 GstVideoSinkClass *GadgetVideoSink::parent_class_ = NULL;
 GstStaticPadTemplate GadgetVideoSink::gadget_videosink_template_factory_ =
@@ -311,9 +317,9 @@ GType GadgetVideoSink::GadgetVideoSinkGetType(void) {
     };
 
     videosink_type = g_type_register_static(GST_TYPE_VIDEO_SINK,
-                                             "GadgetVideoSink",
-                                             &videosink_info,
-                                             static_cast<GTypeFlags>(0));
+                                            "GadgetVideoSink",
+                                            &videosink_info,
+                                            static_cast<GTypeFlags>(0));
 
     g_type_class_ref(ImageBuffer::ImageBufferGetType());
   }
@@ -723,7 +729,7 @@ GstFlowReturn GadgetVideoSink::BufferAlloc(GstBaseSink * bsink,
     image = ImageBuffer::CreateInstance(videosink, alloc_caps);
   }
 
-  // Now we should have a image, set appropriate caps on it.
+  // Now we should have an image, set appropriate caps on it.
   g_return_val_if_fail(image != NULL, GST_FLOW_ERROR);
   gst_buffer_set_caps(GST_BUFFER_CAST(image), alloc_caps);
 
@@ -810,9 +816,9 @@ void GadgetVideoSink::SetProperty(GObject * object,
                            "Could not transform string to aspect ratio");
         g_free(tmp);
       } else {
-        GST_DEBUG_OBJECT (videosink, "set PAR to %d/%d",
-                          gst_value_get_fraction_numerator(tmp),
-                          gst_value_get_fraction_denominator(tmp));
+        GST_DEBUG_OBJECT(videosink, "set PAR to %d/%d",
+                         gst_value_get_fraction_numerator(tmp),
+                         gst_value_get_fraction_denominator(tmp));
         g_free(videosink->par_);
         videosink->par_ = tmp;
       }
@@ -834,8 +840,8 @@ void GadgetVideoSink::GetProperty(GObject * object,
                                   guint prop_id,
                                   GValue * value,
                                   GParamSpec * pspec) {
-  g_return_if_fail (IS_GADGET_VIDEOSINK (object));
-  GadgetVideoSink *videosink = GADGET_VIDEOSINK (object);
+  g_return_if_fail(IS_GADGET_VIDEOSINK (object));
+  GadgetVideoSink *videosink = GADGET_VIDEOSINK(object);
 
   switch (prop_id) {
     case PROP_FORCE_ASPECT_RATIO:
@@ -849,7 +855,7 @@ void GadgetVideoSink::GetProperty(GObject * object,
       g_value_set_pointer(value, reinterpret_cast<void*>(&ReceiveImageHandler));
       break;
     default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
       break;
   }
 }
@@ -888,6 +894,18 @@ void GadgetVideoSink::InitCaps() {
 gboolean GadgetVideoSink::PutImage(ImageBuffer *image) {
   if (!image)
     return TRUE;
+
+  // The upstream may pass in the same image buffer twice. For example, before
+  // upstream finalizes an image buffer, a seeking operation occurs, and under
+  // some condition, the upstream may reuse the image buffer instead of
+  // finalizing and freeing it. Since we may store image buffers in
+  // image queue or buffer pool during putting images, the image passed in
+  // this time may already be stored in image queue or buffer pool during
+  // the last call of this function. So, first check whether the buffer is
+  // duplicated, and simply discuss it and return if it's.
+  if (g_slist_find(buffer_pool_, image) || image_queue_->DupImage(image)) {
+    return TRUE;
+  }
 
 #ifdef GGL_BIG_ENDIAN
   image->RGB24Convert();
@@ -951,7 +969,6 @@ void GadgetVideoSink::Reset() {
     gst_caps_unref(caps_);
     caps_ = NULL;
   }
-
   if (image_) {
     delete image_;
     image_ = NULL;

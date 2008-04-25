@@ -97,7 +97,10 @@ WirelessInterface *Network::GetWireless() {
 }
 
 DBusProxy *Network::GetInterfaceProxy(int i) {
-  ASSERT(i >= 0 && size_t(i) < proxies_.size());
+  ASSERT(i >= 0);
+  // Size of proxies may be zero, if now no network device is available.
+  if (static_cast<size_t>(i) >= proxies_.size())
+    return NULL;
   if (proxies_[i] == NULL) {
     proxies_[i] = factory_.NewSystemProxy(kHalDBusName,
                                           interfaces_[i].c_str(),

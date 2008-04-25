@@ -25,6 +25,7 @@ INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 noinst_HEADERS		= file_system.h \
+			  runtime.h \
 			  machine.h \
 			  memory.h \
 			  network.h \
@@ -33,12 +34,14 @@ noinst_HEADERS		= file_system.h \
 			  process.h \
 			  wireless.h \
 			  wireless_access_point.h \
+			  user.h \
 			  hal_strings.h
 
 noinst_LTLIBRARIES	= libggadget-linux.la
 
 libggadget_linux_la_SOURCES = \
 			  file_system.cc \
+			  runtime.cc \
 			  machine.cc \
 			  memory.cc \
 			  network.cc \
@@ -46,7 +49,8 @@ libggadget_linux_la_SOURCES = \
 			  power.cc \
 			  process.cc \
 			  wireless.cc \
-			  wireless_access_point.cc
+			  wireless_access_point.cc \
+			  user.cc
 
 libggadget_linux_la_CXXFLAGS = \
 			  $(DEFAULT_COMPILE_FLAGS)

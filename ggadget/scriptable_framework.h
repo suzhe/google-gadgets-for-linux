@@ -26,6 +26,7 @@ class Gadget;
 namespace framework {
 
 class AudioInterface;
+class RuntimeInterface;
 class MachineInterface;
 class MemoryInterface;
 class NetworkInterface;
@@ -35,6 +36,7 @@ class ProcessInterface;
 class WirelessInterface;
 class CursorInterface;
 class ScreenInterface;
+class UserInterface;
 
 /**
  * Scriptable counterpart of AudioInterface.
@@ -66,6 +68,18 @@ class ScriptableAudio : public ScriptableHelperDefault {
 
   class Impl;
   Impl *impl_;
+};
+
+/** Scriptable counterpart of RuntimeInterface. */
+class ScriptableRuntime : public ScriptableHelperDefault {
+ public:
+  DEFINE_CLASS_ID(0x83df98ced129f243, ScriptableInterface);
+
+  ScriptableRuntime(RuntimeInterface *runtime);
+  virtual ~ScriptableRuntime();
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableRuntime);
 };
 
 /**
@@ -212,6 +226,18 @@ class ScriptableScreen : public ScriptableHelperNativeOwnedDefault {
   DISALLOW_EVIL_CONSTRUCTORS(ScriptableScreen);
   class Impl;
   Impl *impl_;
+};
+
+/** Scriptable counterpart of UserInterface */
+class ScriptableUser : public ScriptableHelperNativeOwnedDefault {
+ public:
+  DEFINE_CLASS_ID(0x458D248CFD23117B, ScriptableInterface);
+
+  explicit ScriptableUser(UserInterface *user);
+  virtual ~ScriptableUser();
+
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(ScriptableUser);
 };
 
 /**
