@@ -145,7 +145,7 @@ class ScriptableAudio::Impl {
 
 ScriptableAudio::ScriptableAudio(AudioInterface *audio,
                                  Gadget *gadget)
-  : impl_(new Impl(audio, gadget)) {
+    : impl_(new Impl(audio, gadget)) {
   RegisterMethod("open", NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::Open),
                                                 kDefaultArgsForSecondSlot));
   RegisterMethod("play", NewSlotWithDefaultArgs(NewSlot(impl_, &Impl::Play),
@@ -156,6 +156,21 @@ ScriptableAudio::ScriptableAudio(AudioInterface *audio,
 ScriptableAudio::~ScriptableAudio() {
   delete impl_;
   impl_ = NULL;
+}
+
+// Implementation of ScriptableRuntime
+ScriptableRuntime::ScriptableRuntime(RuntimeInterface *runtime) {
+  RegisterProperty("appName",
+                   NewSlot(runtime, &RuntimeInterface::GetAppName), NULL);
+  RegisterProperty("appVersion",
+                   NewSlot(runtime, &RuntimeInterface::GetAppVersion), NULL);
+  RegisterProperty("osName",
+                   NewSlot(runtime, &RuntimeInterface::GetOSName), NULL);
+  RegisterProperty("osVersion",
+                   NewSlot(runtime, &RuntimeInterface::GetOSVersion), NULL);
+}
+
+ScriptableRuntime::~ScriptableRuntime() {
 }
 
 // Implementation of ScriptableNetwork
@@ -604,6 +619,18 @@ ScriptableScreen::ScriptableScreen(ScreenInterface *screen)
 ScriptableScreen::~ScriptableScreen() {
   delete impl_;
   impl_ = NULL;
+}
+
+// Implementation of ScriptableUser
+ScriptableUser::ScriptableUser(UserInterface *user) {
+  RegisterProperty("idle",
+                   NewSlot(user, &UserInterface::IsUserIdle), NULL);
+  RegisterProperty("idle_period",
+                   NewSlot(user, &UserInterface::GetIdlePeriod),
+                   NewSlot(user, &UserInterface::SetIdlePeriod));
+}
+
+ScriptableUser::~ScriptableUser() {
 }
 
 // Implementation of ScriptableGraphics

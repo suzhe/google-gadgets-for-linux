@@ -423,8 +423,22 @@ PKG_CHECK_MODULES(GTK2,
 		   [has_gtk2=yes], [has_gtk2=no])
 
 # Check gstreamer-0.10 related libraries.
-PKG_CHECK_MODULES(GSTREAMER, [gstreamer-0.10 >= 0.10.0], [has_gstreamer=yes], [has_gstreamer=no])
-PKG_CHECK_MODULES(GSTREAMER_PLUGINS_BASE, [gstreamer-plugins-base-0.10 > 0.10.0], [has_gstreamer_plugins_base=yes], [has_gstreamer_plugins_base=no])
+PKG_CHECK_MODULES(GSTREAMER,
+		  [gstreamer-0.10 >= 0.10.0, gstreamer-plugins-base-0.10 >= 0.10.0],
+		  [has_gstreamer_plugins_base=yes], [has_gstreamer_plugins_base=no])
+if test x$has_gstreamer_plugins_base = xyes; then
+  CFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
+  CXXFLAGS="$CFLAGS $GSTREAMER_CFLAGS"
+  LDFLAGS="$LDFLAGS $GSTREAMER_LIBS -L/usr/lib/gstreamer-0.10 -L/usr/local/lib/gstreamer-0.10"
+  AC_CHECK_HEADERS([gst/video/gstvideosink.h], [has_gstreamer_video=yes], [has_gstreamer_video=no])
+  if test x$has_gstreamer_video = xyes; then
+    GSTVIDEOSINK_LIBRARIES="-lgstvideo-0.10"
+    AC_SUBST(GSTVIDEOSINK_LIBRARIES)
+  fi
+  CFLAGS=$ggl_save_CFLAGS
+  CXXFLAGS=$ggl_save_CXXFLAGS
+  LDFLAGS=$ggl_save_LDFLAGS
+fi
 
 # Check libcurl.
 LIBCURL_CHECK_CONFIG([yes], [7.16.0], [has_libcurl=yes], [has_libcurl=no])
@@ -495,14 +509,22 @@ if test x$has_libcurl != xyes -o x$has_openssl != xyes; then
   fi
 fi
 
-if test x$has_gstreamer != xyes -a x$build_gst_audio_framework = xyes; then
-  AC_MSG_WARN([Library gstreamer is not available, gst-audio-framework will not be built.])
+if test x$has_gstreamer_plugins_base != xyes -a x$build_gst_audio_framework = xyes; then
+  AC_MSG_WARN([Library gstreamer_plugins_base(>=0.10.0) is not available, gst-audio-framework extension will not be built.])
   build_gst_audio_framework=no
 fi
 
-if test x$has_gstreamer_plugins_base != xyes -a x$build_gst_mediaplayer_element = xyes; then
-  AC_MSG_WARN([Library gstreamer-plugins-base is not available, gst-audio-framework will not be built.])
-  build_gst_mediaplayer_element = no
+if test x$build_gst_mediaplayer_element = xyes; then
+  build_gst_mediaplayer_element=no
+  if test x$has_gstreamer_plugins_base = xyes; then
+    if test x$has_gstreamer_video = xyes; then
+      build_gst_mediaplayer_element=yes
+    else
+      AC_MSG_WARN([Libgstreamer-plugins-base-dev is not available, gst-mediaplayer-element extension will not be built.])
+    fi
+  else
+    AC_MSG_WARN([Library gstreamer_plugins_base(>=0.10.0) is not available, gst-mediaplayer-element extension will not be built.])
+  fi
 fi
 
 if test x$has_gtk2 != xyes; then

@@ -85,7 +85,7 @@ static const char *kGstAudioSinks[] = {
   NULL,
 };
 
-static double kMaxGstVolume = 10.0;
+static double kMaxGstVolume = 4.0;
 
 static const char *tag_strings[] = {
   GST_TAG_ARTIST,  // TAG_AUTHOR
@@ -336,7 +336,6 @@ void GstMediaPlayerElement::SetCurrentPosition(int position) {
                                                  GST_SEEK_FLAG_KEY_UNIT),
                        GST_SEEK_TYPE_SET, (gint64)position * GST_SECOND,
                        GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE) == TRUE) {
-    gst_element_get_state(playbin_, NULL, NULL, 100 * GST_MSECOND);
     position_changed_ = true;
   }
 }

@@ -60,7 +60,7 @@ static const char *kGstAudioSinks[] = {
   NULL,
 };
 
-static double kMaxGstVolume = 10.0;
+static double kMaxGstVolume = 4.0;
 
 /**
  * Gstreamer based implementation of @c Audioclip for playing back audio files.

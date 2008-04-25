@@ -30,12 +30,10 @@ gst_mediaplayer_element_la_SOURCES = gadget_videosink.cc \
 gst_mediaplayer_element_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS)
 
 gst_mediaplayer_element_la_CPPFLAGS = @GSTREAMER_CFLAGS@ \
-				      @GSTREAMER_PLUGINS_BASE_CFLAGS@ \
 				      $(PREDEFINED_MACROS)
 
 gst_mediaplayer_element_la_LIBADD = @GSTREAMER_LIBS@ \
-				    @GSTREAMER_PLUGINS_BASE_LIBS@ \
-				    -lgstvideo-0.10 \
+				    $(GSTVIDEOSINK_LIBRARIES) \
 				    $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 gst_mediaplayer_element_la_LDFLAGS = -avoid-version \

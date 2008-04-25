@@ -38,9 +38,14 @@ const char kHalMethodGetPropertyInt[]   = "GetPropertyInteger";
 const char kHalMethodFindDeviceByCapability[] = "FindDeviceByCapability";
 const char kHalMethodQueryCapability[]  = "QueryCapability";
 
+const char kHalPropInfoParent[]         = "info.parent";
+const char kHalPropInfoSubsystem[]      = "info.subsystem";
+const char kHalPropInfoSubsystemOld[]   = "info.bus";
 const char kHalPropInfoCapabilities[]   = "info.capabilities";
 const char kHalPropInfoCategory[]       = "info.category";
 
+const char kHalPropSystemKernelName[]   = "system.kernel.name";
+const char kHalPropSystemKernelVersion[]= "system.kernel.version";
 const char kHalPropSystemUUID[]         = "system.hardware.uuid";
 const char kHalPropSystemUUIDOld[]      = "smbios.system.uuid";
 const char kHalPropSystemVendor[]       = "system.hardware.vendor";
@@ -74,9 +79,12 @@ const char kHalPropBatteryChargeLevelPercentage[] =
 const char kHalPropBatteryRemainingTime[]       = "battery.remaining_time";
 const char kHalPropACAdapterPresent[]           = "ac_adapter.present";
 
-const char kHalCapabilityACAdapter[]    = "ac_adapter";
-const char kHalCapabilityBattery[]      = "battery";
-const char kHalCapabilityNet[]          = "net";
+const char kHalCapabilityACAdapter[]            = "ac_adapter";
+const char kHalCapabilityBattery[]              = "battery";
+const char kHalCapabilityNet[]                  = "net";
+const char kHalCapabilityInputKeyboard[]        = "input.keyboard";
+const char kHalCapabilityInputMouse[]           = "input.mouse";
+
 
 const char kNetworkManagerDBusName[]       = "org.freedesktop.NetworkManager";
 const char kNetworkManagerObjectPath[]     = "/org/freedesktop/NetworkManager";

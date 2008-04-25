@@ -171,9 +171,6 @@ class GadgetVideoSink {
   void Reset();
 
  private:
-  typedef Signal2<void, int, int> OnGeometryUpdateSignal;
-  typedef Slot2<void, int, int> OnGeometryUpdateHandler;
-
   /** This videosink is based on the GstVideoSink. */
   static GstVideoSinkClass *parent_class_;
 

@@ -364,6 +364,29 @@ class AudioInterface {
   virtual AudioclipInterface * CreateAudioclip(const char *src) = 0;
 };
 
+/** Interface for quering information about gadget's runtime environment. */
+class RuntimeInterface {
+ protected:
+  virtual ~RuntimeInterface() {}
+
+ public:
+  /** Get the name of this application, i.e. "Google Desktop". */
+  virtual std::string GetAppName() const = 0;
+
+  /**
+   * Get the version of the running version of Google Desktop.
+   * Example: "1.2.0.1". In future releases, this property may be useful
+   * for conditionally using new API while still supporting older versions.
+   * */
+  virtual std::string GetAppVersion() const = 0;
+
+  /** Get the name of the computer's operating system (OS). */
+  virtual std::string GetOSName() const = 0;
+
+  /** Get the operating system version. */
+  virtual std::string GetOSVersion() const = 0;
+};
+
 /** Interface for querying cursor position on the screen. */
 class CursorInterface {
  protected:
@@ -379,6 +402,25 @@ class ScreenInterface {
 
  public:
   virtual void GetSize(int *width, int *height) = 0;
+};
+
+class UserInterface {
+ protected:
+  virtual ~UserInterface() {}
+
+ public:
+  /**
+   * Check whether user is idle.
+   * @return @c true if the user is idle.
+   */
+  virtual bool IsUserIdle() = 0;
+
+  /**
+   * Set a value so that  if user does nothing during the last @a period
+   * seconds, the user is considered to be idle.
+   */
+  virtual void SetIdlePeriod(time_t period) = 0;
+  virtual time_t GetIdlePeriod() const = 0;
 };
 
 } // namespace framework
