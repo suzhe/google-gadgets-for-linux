@@ -848,7 +848,7 @@ OptionsInterface *Gadget::GetOptions() const {
 }
 
 View *Gadget::GetMainView() const {
-  return impl_->main_view_->view();
+  return impl_->main_view_ ? impl_->main_view_->view() : NULL;
 }
 
 std::string Gadget::GetManifestInfo(const char *key) const {
