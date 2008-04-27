@@ -234,9 +234,9 @@ class ScrollBarElement::Impl {
     }
   }
 
-  void Scroll(bool downleft, bool line) {
+  void Scroll(bool upleft, bool line) {
     int delta = line ? linestep_ : pagestep_;
-    int v = value_ + (downleft ? -delta : delta);
+    int v = value_ + (upleft ? -delta : delta);
     SetValue(v);
   }
 
@@ -650,7 +650,7 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
 
     case Event::EVENT_MOUSE_DOWN:
      if (event.GetButton() & MouseEvent::BUTTON_LEFT) {
-       bool downleft = true, line = true;
+       bool upleft = true, line = true;
        impl_->ClearDisplayStates();
        if (c == COMPONENT_THUMB_BUTTON) {
          impl_->thumb_state_ = STATE_DOWN;
@@ -665,16 +665,16 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
          break; // don't scroll, early exit
        } else if (c == COMPONENT_RIGHT_BUTTON) {
          impl_->right_state_ = STATE_DOWN;
-         downleft = false; line = true;
+         upleft = false; line = true;
        } else if (c == COMPONENT_RIGHT_BAR) {
-         downleft = line = false;
+         upleft = line = false;
        } else if (c == COMPONENT_LEFT_BUTTON) {
          impl_->left_state_ = STATE_DOWN;
-         downleft = line = true;
+         upleft = line = true;
        } else if (c == COMPONENT_LEFT_BAR) {
-         downleft = true; line = false;
+         upleft = true; line = false;
        }
-       impl_->Scroll(downleft, line);
+       impl_->Scroll(upleft, line);
      }
      break;
     case Event::EVENT_MOUSE_UP:
@@ -700,19 +700,17 @@ EventResult ScrollBarElement::HandleMouseEvent(const MouseEvent &event) {
      break;
     case Event::EVENT_MOUSE_WHEEL: {
       impl_->accum_wheel_delta_ += event.GetWheelDeltaY();
-      bool downleft;
-      int delta = impl_->accum_wheel_delta_;
-      if (delta > 0 && delta >= MouseEvent::kWheelDelta) {
+      bool upleft;
+      if (impl_->accum_wheel_delta_ >= MouseEvent::kWheelDelta) {
         impl_->accum_wheel_delta_ -= MouseEvent::kWheelDelta;
-        downleft = false;
-      } else if (delta < 0 && -delta >= MouseEvent::kWheelDelta) {
+        upleft = false;
+      } else if (impl_->accum_wheel_delta_ <= -MouseEvent::kWheelDelta) {
         impl_->accum_wheel_delta_ += MouseEvent::kWheelDelta;
-        downleft = true;
-      }
-      else {
+        upleft = true;
+      } else {
         break; // don't scroll in this case
       }
-      impl_->Scroll(downleft, true);
+      impl_->Scroll(upleft, true);
       break;
     }
 

@@ -176,17 +176,23 @@ View *ViewElement::GetChildView() const {
 }
 
 EventResult ViewElement::HandleMouseEvent(const MouseEvent &event) {
-  EventResult result;
-  if (impl_->scale_ != 1.) {
-    MouseEvent new_event(event);
-    new_event.SetX(event.GetX() / impl_->scale_);
-    new_event.SetY(event.GetY() / impl_->scale_);
-    result = impl_->child_view_->OnMouseEvent(new_event);
-  } else {
-    result = impl_->child_view_->OnMouseEvent(event);
+  EventResult result = EVENT_RESULT_UNHANDLED;
+  // The view containing this ViewElement translates EVENT_MOUSE_OVER as
+  // EVENT_MOUSE_MOVE, and then send EVENT_MOUSE_OVER to this ViewElement,
+  // so don't pass this EVENT_MOUSE_OVER to the child_view because it has
+  // already processed mouse over logic on the last EVENT_MOUSE_MOVE.
+  if (event.GetType() != Event::EVENT_MOUSE_OVER) {
+    if (impl_->scale_ != 1.) {
+      MouseEvent new_event(event);
+      new_event.SetX(event.GetX() / impl_->scale_);
+      new_event.SetY(event.GetY() / impl_->scale_);
+      result = impl_->child_view_->OnMouseEvent(new_event);
+    } else {
+      result = impl_->child_view_->OnMouseEvent(event);
+    }
+    // set hittest
+    SetHitTest(impl_->child_view_->GetHitTest());
   }
-  // set hittest
-  SetHitTest(impl_->child_view_->GetHitTest());
   return result;
 }
 

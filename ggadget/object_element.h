@@ -47,11 +47,6 @@ class ObjectElement : public BasicElement {
    */
   BasicElement *GetObject();
 
- protected:
-  virtual void DoRegister();
-  virtual void DoDraw(CanvasInterface *canvas);
-
- private:
   /**
    * Gets and sets the class id of this object.
    * Each class id indicates a specific kind of object, such as mediaplayer.
@@ -60,9 +55,12 @@ class ObjectElement : public BasicElement {
   const std::string& GetObjectClassId() const;
   void SetObjectClassId(const std::string& classId);
 
+ protected:
+  virtual void DoRegister();
+  virtual void DoDraw(CanvasInterface *canvas);
 
+ private:
   DISALLOW_EVIL_CONSTRUCTORS(ObjectElement);
-
   class Impl;
   Impl *impl_;
 };

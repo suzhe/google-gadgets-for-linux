@@ -35,12 +35,16 @@ class ObjectElement::Impl {
   }
 
   void SetObjectClassId(const std::string& classid) {
-    delete object_;
-    object_ = view_->GetElementFactory()->CreateElement(
-        classid.c_str(), owner_, view_, owner_->GetName().c_str());
-    if (!object_)
-      return;
-    classid_ = classid;
+    ASSERT(!object_);
+    if (object_) {
+      LOG("Object already had a classId: %s", classid_.c_str());
+    } else {
+      object_ = view_->GetElementFactory()->CreateElement(
+          classid.c_str(), owner_, view_, owner_->GetName().c_str());
+      if (!object_)
+        return;
+      classid_ = classid;
+    }
   }
 
   ObjectElement *owner_;

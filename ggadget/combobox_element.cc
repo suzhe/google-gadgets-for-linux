@@ -497,8 +497,8 @@ void ComboBoxElement::Layout() {
 }
 
 EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
-                                     BasicElement **fired_element,
-                                     BasicElement **in_element) {
+                                          BasicElement **fired_element,
+                                          BasicElement **in_element) {
   BasicElement *new_fired = NULL, *new_in = NULL;
   double new_y = event.GetY() - impl_->listbox_->GetPixelY();
   Event::Type t = event.GetType();
@@ -612,7 +612,7 @@ EventResult ComboBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
                                          fired_element, in_element);
   }
 
-  return  BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
+  return BasicElement::OnMouseEvent(event, direct, fired_element, in_element);
 }
 
 EventResult ComboBoxElement::OnDragEvent(const DragEvent &event, bool direct,
