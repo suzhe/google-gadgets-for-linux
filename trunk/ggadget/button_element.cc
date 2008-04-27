@@ -87,10 +87,8 @@ void ButtonElement::DoDraw(CanvasInterface *canvas) {
   ImageInterface *img = NULL;
   if (!IsEnabled()) {
     img = impl_->disabledimage_;
-  } else if (impl_->mousedown_) {
-    img = impl_->downimage_;
   } else if (impl_->mouseover_) {
-    img = impl_->overimage_;
+    img = impl_->mousedown_ ? impl_->downimage_ : impl_->overimage_;
   }
 
   if (!img) { // draw image_ as last resort

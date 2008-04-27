@@ -140,25 +140,31 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
                                const char *filename) {
   std::string tag_name = xml_element->GetTagName();
   const DOMNamedNodeMapInterface *attributes = xml_element->GetAttributes();
+  size_t length = attributes->GetLength();
 
-  // Special process for the "classid" attribute if it's an object element.
   if (scriptable->IsInstanceOf(ObjectElement::CLASS_ID)) {
-    const DOMAttrInterface *attr = down_cast<const DOMAttrInterface *>(
-        attributes->GetNamedItem("classid"));
-    if (attr) {
-      std::string class_id = attr->GetValue();
-      SetScriptableProperty(scriptable, script_context, filename,
-                            attr->GetRow(), attr->GetColumn(),
-                            "classid", class_id.c_str(), tag_name.c_str());
-      const_cast<DOMNamedNodeMapInterface*>(attributes) ->
-          RemoveNamedItem("classid");
-    } else {
+    // Special process for the "classId" attribute if it's an object element.
+    // ClassId must be set before all other properties, because the existence
+    // of other properties depends on classId.
+    bool has_classid = false;
+    // Must use a loop because the classid property may be in different cases,
+    // such as "classid" and "classId", etc.
+    for (size_t i = 0; i < length; i++) {
+      const DOMAttrInterface *attr =
+          down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
+      std::string name = attr->GetName();
+      std::string value = attr->GetValue();
+      if (GadgetStrCmp(kClassIdAttr, name.c_str()) == 0) {
+        has_classid = true;
+        down_cast<ObjectElement *>(scriptable)->SetObjectClassId(value);
+      }
+    }
+    if (!has_classid) {
       LOG("%s:%d:%d: No classid is specified for the object element",
           filename, xml_element->GetRow(), xml_element->GetColumn());
     }
   }
 
-  size_t length = attributes->GetLength();
   for (size_t i = 0; i < length; i++) {
     const DOMAttrInterface *attr =
         down_cast<const DOMAttrInterface *>(attributes->GetItem(i));
@@ -175,6 +181,7 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
                             name.c_str(), value.c_str(), tag_name.c_str());
     }
   }
+
   delete attributes;
   // "innerText" property is set in InsertElementFromDOM().
 }
@@ -188,6 +195,8 @@ BasicElement *InsertElementFromDOM(Elements *elements,
   if (GadgetStrCmp(tag_name.c_str(), kScriptTag) == 0)
     return NULL;
 
+  // Here doesn't comform to gadget case-sensitivity, but we believe nobody
+  // will use "name" as other lower/upper char combinations.
   std::string name = xml_element->GetAttribute(kNameAttr);
   BasicElement *element = elements->InsertElement(tag_name.c_str(), before,
                                                   name.c_str());
@@ -213,32 +222,29 @@ BasicElement *InsertElementFromDOM(Elements *elements,
       // We set each param as a property of the real object wrapped in the
       // object element.
       if (element->IsInstanceOf(ObjectElement::CLASS_ID) &&
-          GadgetStrCmp(child_tag.c_str(), "param") == 0) {
+          GadgetStrCmp(child_tag.c_str(), kParamTag) == 0) {
         BasicElement *object = down_cast<ObjectElement*>(element)->GetObject();
         if (object) {
-          const DOMNamedNodeMapInterface *attributes =
-              child_element->GetAttributes();
-          const DOMAttrInterface *name = down_cast<const DOMAttrInterface *>(
-              attributes->GetNamedItem(kNameAttr));
-          const DOMAttrInterface *value = down_cast<const DOMAttrInterface *>(
-              attributes->GetNamedItem("value"));
-
-          std::string param_name = name->GetValue();
-          std::string param_value = value->GetValue();
-
+          // Here doesn't comform to gadget case-sensitivity, but we believe
+          // nobody will use "name" or "value" as other lower/upper char
+          // combinations.
+          std::string param_name = child_element->GetAttribute(kNameAttr);
+          std::string param_value = child_element->GetAttribute(kValueAttr);
           if (param_name.empty() || param_value.empty()) {
             LOG("%s:%d:%d: No name or value specified for param",
-                filename, name->GetRow(), name->GetColumn());
+                filename, child_element->GetRow(), child_element->GetColumn());
           } else {
             SetScriptableProperty(object, script_context, filename,
-                                  name->GetRow(), name->GetColumn(),
+                                  child_element->GetRow(),
+                                  child_element->GetColumn(),
                                   param_name.c_str(), param_value.c_str(),
-                                  "param");
+                                  kParamTag);
           }
-          delete attributes;
         } else {
-          LOG("%s:%d:%d: No object has been created for the object element",
-              filename, xml_element->GetRow(), xml_element->GetColumn());
+          // DLOG instead of LOG, because this must be caused by missing
+          // classId, which has been LOG'ed.
+          DLOG("%s:%d:%d: No object has been created for the object element",
+               filename, xml_element->GetRow(), xml_element->GetColumn());
         }
       } else if (children) {
         InsertElementFromDOM(children, script_context,

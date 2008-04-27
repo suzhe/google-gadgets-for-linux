@@ -44,7 +44,7 @@ class MemoryOptions::Impl {
 
 MemoryOptions::MemoryOptions()
     // Though INT_MAX is much smaller than the maximum value of size_t on
-    // some platform, it is still enough to be treated as "unlimited".
+    // some platforms, it is still big enough to be treated as "unlimited".
     : impl_(new Impl(INT_MAX)) {
 }
 
@@ -90,7 +90,7 @@ void MemoryOptions::Add(const char *name, const Variant &value) {
     size_t new_total_size = impl_->total_size_ + name_str.size() +
                             GetVariantSize(value);
     if (new_total_size > impl_->size_limit_) {
-      LOG("Options exceeds 1MB size limit");
+      LOG("Options exceeds size limit %zu.", impl_->size_limit_);
     } else {
       impl_->total_size_ = new_total_size;
       impl_->values_[name_str] = value;
@@ -125,7 +125,7 @@ void MemoryOptions::PutValue(const char *name, const Variant &value) {
     size_t new_total_size = impl_->total_size_ + GetVariantSize(value) -
                             GetVariantSize(*last_value);
     if (new_total_size > impl_->size_limit_) {
-      LOG("Options exceeds 1MB size limit");
+      LOG("Options exceeds size limit %zu.", impl_->size_limit_);
     } else {
       impl_->total_size_ = new_total_size;
       *last_value = value;

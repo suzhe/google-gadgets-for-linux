@@ -370,14 +370,19 @@ class View::Impl {
     // unless popup is active and event is inside popup element.
     bool outside_popup = true;
     if (popup_element_.Get()) {
-      MouseEvent new_event(event);
-      MapChildMouseEvent(event, popup_element_.Get(), &new_event);
-      if (popup_element_.Get()->IsPointIn(new_event.GetX(), new_event.GetY())) {
-        result = popup_element_.Get()->OnMouseEvent(new_event,
-                                                    false, // NOT direct
-                                                    &fired_element,
-                                                    &in_element);
-        outside_popup = false;
+      if (popup_element_.Get()->IsReallyVisible()) {
+        MouseEvent new_event(event);
+        MapChildMouseEvent(event, popup_element_.Get(), &new_event);
+        if (popup_element_.Get()->IsPointIn(new_event.GetX(),
+                                            new_event.GetY())) {
+          result = popup_element_.Get()->OnMouseEvent(new_event,
+                                                      false, // NOT direct
+                                                      &fired_element,
+                                                      &in_element);
+          outside_popup = false;
+        }
+      } else {
+        SetPopupElement(NULL);
       }
     }
     if (outside_popup) {
@@ -467,8 +472,8 @@ class View::Impl {
 
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (type != Event::EVENT_MOUSE_MOVE)
-      DLOG("%s(View): x:%g y:%g dx:%d dy:%d b:%d m:%d", scriptable_event.GetName(),
-           event.GetX(), event.GetY(),
+      DLOG("%s(View): x:%g y:%g dx:%d dy:%d b:%d m:%d",
+           scriptable_event.GetName(), event.GetX(), event.GetY(),
            event.GetWheelDeltaX(), event.GetWheelDeltaY(),
            event.GetButton(), event.GetModifier());
 #endif
@@ -761,6 +766,9 @@ class View::Impl {
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
+
+    if (popup_element_.Get() && !popup_element_.Get()->IsReallyVisible())
+      SetPopupElement(NULL);
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     clip_region_.PrintLog();

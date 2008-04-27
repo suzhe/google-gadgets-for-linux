@@ -51,13 +51,16 @@ extern "C" {
     LOG("Register gst_mediaplayer_element extension.");
     if (factory) {
       // Used when the mediaplayer element is hosted by an object element.
-      factory->RegisterElementClass("clsid:6BF52A52-394A-11d3-B153-00C04F79FAA6",
-                                    &ggadget::gst::GstMediaPlayerElement::CreateInstance);
-      factory->RegisterElementClass("progid:WMPlayer.OCX.7",
-                                    &ggadget::gst::GstMediaPlayerElement::CreateInstance);
+      factory->RegisterElementClass(
+          "clsid:6BF52A52-394A-11d3-B153-00C04F79FAA6",
+          &ggadget::gst::GstMediaPlayerElement::CreateInstance);
+      factory->RegisterElementClass(
+          "progid:WMPlayer.OCX.7",
+          &ggadget::gst::GstMediaPlayerElement::CreateInstance);
+      // Disable this for now. 
       // Used when the mediaplayer element acts as a normal element.
-      factory->RegisterElementClass("_mediaplayer",
-                                    &ggadget::gst::GstMediaPlayerElement::CreateInstance);
+      // factory->RegisterElementClass("_mediaplayer",
+      //     &ggadget::gst::GstMediaPlayerElement::CreateInstance);
     }
     return true;
   }
