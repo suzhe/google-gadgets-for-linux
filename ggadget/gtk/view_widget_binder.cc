@@ -54,6 +54,7 @@ class ViewWidgetBinder::Impl {
       dbl_click_(false),
       composited_(false),
       no_background_(no_background),
+      enable_input_shape_mask_(true),
       focused_(false),
       zoom_(1.0),
       mouse_down_x_(-1),
@@ -98,8 +99,12 @@ class ViewWidgetBinder::Impl {
                                       kEventHandlers[i].handler,
                                       this);
     }
-    on_zoom_connection_ = down_cast<CairoGraphics *>(
-        view_->GetGraphics())->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
+
+    CairoGraphics *gfx= down_cast<CairoGraphics *>(view_->GetGraphics());
+    ASSERT(gfx);
+
+    zoom_ = gfx->GetZoom();
+    on_zoom_connection_ = gfx->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
   }
 
   ~Impl() {
@@ -345,7 +350,8 @@ class ViewWidgetBinder::Impl {
 
 #if GTK_CHECK_VERSION(2,10,0)
     // We need set input shape mask if there is no background.
-    if (impl->no_background_ && impl->composited_) {
+    if (impl->no_background_ && impl->composited_ &&
+        impl->enable_input_shape_mask_) {
       // create an identical bitmap to use as shape mask
       GdkBitmap *bitmap =
         static_cast<GdkBitmap *>(gdk_pixmap_new(NULL, width, height, 1));
@@ -416,22 +422,36 @@ class ViewWidgetBinder::Impl {
           hittest == ViewInterface::HT_BOTTOMLEFT ||
           hittest == ViewInterface::HT_BOTTOMRIGHT) {
         resize_drag = true;
+#ifdef _DEBUG
       } else if (mod & Event::MOD_CONTROL) {
         // FIXME: If ctrl is holding, then emulate resize draging.
         // Only for testing purpose. Shall be removed later.
         resize_drag = true;
         gint x = static_cast<int>(event->x);
         gint y = static_cast<int>(event->y);
-        gint mid_x = impl->current_widget_width_ / 2;
-        gint mid_y = impl->current_widget_height_ / 2;
-        if (x < mid_x && y < mid_y)
+        gint mid_x1 = impl->current_widget_width_ / 3;
+        gint mid_x2 = impl->current_widget_width_ * 2 / 3;
+        gint mid_y1 = impl->current_widget_height_ / 3;
+        gint mid_y2 = impl->current_widget_height_ * 2 / 3;
+        if (x < mid_x1 && y < mid_y1)
           hittest = ViewInterface::HT_TOPLEFT;
-        else if (x > mid_x && y < mid_y)
+        else if (x > mid_x1 && x < mid_x2 && y < mid_y1)
+          hittest = ViewInterface::HT_TOP;
+        else if (x > mid_x2 && y < mid_y1)
           hittest = ViewInterface::HT_TOPRIGHT;
-        else if (x < mid_x && y > mid_y)
+        else if (x < mid_x1 && y > mid_y1 && y < mid_y2)
+          hittest = ViewInterface::HT_LEFT;
+        else if (x > mid_x2 && y > mid_y1 && y < mid_y2)
+          hittest = ViewInterface::HT_RIGHT;
+        else if (x < mid_x1 && y > mid_y2)
           hittest = ViewInterface::HT_BOTTOMLEFT;
-        else
+        else if (x > mid_x1 && x < mid_x2 && y > mid_y2)
+          hittest = ViewInterface::HT_BOTTOM;
+        else if (x > mid_x2 && y > mid_y2)
           hittest = ViewInterface::HT_BOTTOMRIGHT;
+        else
+          resize_drag = false;
+#endif
       }
 
       if (resize_drag) {
@@ -736,6 +756,7 @@ class ViewWidgetBinder::Impl {
   bool dbl_click_;
   bool composited_;
   bool no_background_;
+  bool enable_input_shape_mask_;
   bool focused_;
   double zoom_;
   double mouse_down_x_;
@@ -800,6 +821,13 @@ ViewWidgetBinder::ViewWidgetBinder(ViewInterface *view,
                                    ViewHostInterface *host, GtkWidget *widget,
                                    bool no_background)
   : impl_(new Impl(view, host, widget, no_background)) {
+}
+
+void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
+  impl_->enable_input_shape_mask_ = enable;
+
+  if (impl_->widget_ && impl_->no_background_ && impl_->composited_ && !enable)
+    gtk_widget_input_shape_combine_mask(impl_->widget_, NULL, 0, 0);
 }
 
 ViewWidgetBinder::~ViewWidgetBinder() {

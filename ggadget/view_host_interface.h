@@ -87,15 +87,24 @@ class ViewHostInterface {
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const = 0;
 
-  /**
-   * Asks the view host to redraw the given view.
-   *
-   * The host shall check if the view size is changed, and adjust the window
-   * size accordingly when necessary.
-   */
+  /** Asks the view host to redraw the given view. */
   virtual void QueueDraw() = 0;
 
+  /**
+   * Asks the view host to resize the host window size according to the view
+   * size.
+   */
   virtual void QueueResize() = 0;
+
+  /**
+   * Asks the view host to enable or disable input shape mask.
+   *
+   * When input shape mask is enabled, the window pixels with opacity < 0.5
+   * will not be able to receive mouse events.
+   *
+   * It may not be supported on all platforms.
+   */
+  virtual void EnableInputShapeMask(bool enable) = 0;
 
   /**
    * When the resizable field on the view is updated, the host needs to be
@@ -214,14 +223,6 @@ class ViewHostInterface {
    *        @MouseEvent::Button.
    */
   virtual void BeginMoveDrag(int button) = 0;
-
-  virtual void Dock() = 0;
-
-  virtual void Undock() = 0;
-
-  virtual void Expand() = 0;
-
-  virtual void Unexpand() = 0;
 
   /** Displays a message box containing the message string. */
   virtual void Alert(const char *message) = 0;

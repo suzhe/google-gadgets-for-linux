@@ -157,6 +157,7 @@ class View::Impl {
        ElementFactory *element_factory,
        ScriptContextInterface *script_context)
     : clip_region_(0.9),
+      clip_region_enabled_(true),
       owner_(owner),
       gadget_(gadget),
       element_factory_(element_factory),
@@ -178,7 +179,11 @@ class View::Impl {
       draw_queued_(false),
       events_enabled_(true),
       need_redraw_(true),
+#ifdef _DEBUG
       draw_count_(0),
+      view_draw_count_(0),
+      accum_draw_time_(0),
+#endif
       hittest_(ViewInterface::HT_CLIENT) {
     ASSERT(main_loop_);
 
@@ -447,10 +452,10 @@ class View::Impl {
       // Gets the hit test value of the element currently pointed by mouse.
       // It'll be used as the hit test value of the View.
       hittest_ = in_element->GetHitTest();
-#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
+//#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
       DLOG("In element: %s type %s, hitTest:%d", in_element->GetName().c_str(),
            in_element->GetTagName().c_str(), hittest_);
-#endif
+//#endif
     } else {
       view_host_->SetCursor(-1);
       tooltip_element_.Reset(NULL);
@@ -755,7 +760,7 @@ class View::Impl {
     // cache to the dest canvas.
     if (!draw_queued_ && canvas_cache_ && !need_redraw_) {
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
-      DLOG("Draw from canvas cache.");
+      //DLOG("Draw from canvas cache.");
 #endif
       canvas->DrawCanvas(0, 0, canvas_cache_);
       return;
@@ -771,7 +776,7 @@ class View::Impl {
       SetPopupElement(NULL);
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
-    clip_region_.PrintLog();
+    //clip_region_.PrintLog();
 #endif
 
     if (enable_cache_ && !canvas_cache_ && view_host_) {
@@ -785,12 +790,12 @@ class View::Impl {
 
     CanvasInterface *target;
 
-    if (enable_cache_) {
-      if (need_redraw_)
+    if (canvas_cache_) {
+      if (need_redraw_ || !clip_region_enabled_)
         clip_region_.Clear();
       else
         clip_region_.Integerize();
-      target = canvas_cache_ ? canvas_cache_ : canvas;
+      target = canvas_cache_;
       target->PushState();
       target->IntersectGeneralClipRegion(clip_region_);
       target->ClearRect(0, 0, width_, height_);
@@ -804,9 +809,8 @@ class View::Impl {
     // then the region of the popup element may not cover the whole clip
     // region. In this case it's not safe to skip drawing other children.
     bool skip_children = false;
-    if (enable_cache_ &&
-        popup_element_.Get() &&
-        popup_element_.Get()->IsFullyOpaque() &&
+    if (canvas_cache_ && clip_region_enabled_ &&
+        popup_element_.Get() && popup_element_.Get()->IsFullyOpaque() &&
         clip_region_.IsInside(popup_element_.Get()->GetExtentsInView())) {
       double rotation = 0;
       BasicElement *e = popup_element_.Get();
@@ -857,8 +861,13 @@ class View::Impl {
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
     uint64_t end = main_loop_->GetCurrentTime();
-    if (end > 0 && start > 0)
-      DLOG("Draw count: %d, time: %ju", draw_count_, end - start);
+    if (end > 0 && start > 0) {
+      accum_draw_time_ += (end - start);
+      ++view_draw_count_;
+      DLOG("Draw count: %d, time: %ju, average %lf",
+           draw_count_, end - start,
+           double(accum_draw_time_)/double(view_draw_count_));
+    }
 #endif
   }
 
@@ -1105,7 +1114,10 @@ class View::Impl {
       const char *filename = VariantValue<const char*>()(src);
       if (filename && *filename) {
         std::string data;
-        if (gadget_ && gadget_->GetFileManager()->ReadFile(filename, &data)) {
+        FileManagerInterface *fm = owner_->GetFileManager();
+        if (fm && fm->ReadFile(filename, &data)) {
+          return graphics_->NewImage(filename, data, is_mask);
+        } else if (GetGlobalFileManager()->ReadFile(filename, &data)) {
           return graphics_->NewImage(filename, data, is_mask);
         }
       }
@@ -1185,6 +1197,7 @@ class View::Impl {
   ElementsMap all_elements_;
 
   ClipRegion clip_region_;
+  bool clip_region_enabled_;
 
   View *owner_;
   Gadget *gadget_;
@@ -1224,7 +1237,12 @@ class View::Impl {
   bool draw_queued_;
   bool events_enabled_;
   bool need_redraw_;
+
+#ifdef _DEBUG
   int draw_count_;
+  int view_draw_count_;
+  uint64_t accum_draw_time_;
+#endif
 
   ViewInterface::HitTest hittest_;
 
@@ -1263,7 +1281,8 @@ ScriptContextInterface *View::GetScriptContext() const {
 }
 
 FileManagerInterface *View::GetFileManager() const {
-  return impl_->gadget_->GetFileManager();
+  Gadget *gadget = GetGadget();
+  return gadget ? gadget->GetFileManager() : NULL;
 }
 
 GraphicsInterface *View::GetGraphics() const {
@@ -1430,18 +1449,24 @@ ContentAreaElement *View::GetContentAreaElement() const {
 }
 
 bool View::IsElementInClipRegion(const BasicElement *element) const {
-  return !impl_->enable_cache_ ||
+  return !impl_->clip_region_enabled_ || !impl_->enable_cache_ ||
       impl_->clip_region_.IsEmpty() ||
       impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
 void View::AddElementToClipRegion(BasicElement *element) {
-  if (impl_->enable_cache_)
+  if (impl_->clip_region_enabled_ && impl_->enable_cache_)
     impl_->clip_region_.AddRectangle(element->GetExtentsInView());
 }
 
+void View::EnableClipRegion(bool enable) {
+  impl_->clip_region_enabled_ = enable;
+}
+
 void View::IncreaseDrawCount() {
+#ifdef _DEBUG
   impl_->draw_count_++;
+#endif
 }
 
 int View::BeginAnimation(Slot0<void> *slot,
@@ -1502,6 +1527,7 @@ ViewHostInterface *View::SwitchViewHost(ViewHostInterface *new_host) {
     if (!impl_->graphics_)
       impl_->graphics_ = new_host->NewGraphics();
     new_host->SetView(this);
+    MarkRedraw();
   }
   return old_host;
 }

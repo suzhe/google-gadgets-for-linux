@@ -105,8 +105,7 @@ void QtHost::SetupUI() {
   menu_.addAction("Exit", qApp, SLOT(quit()));
   tray_.setContextMenu(&menu_);
   std::string icon_data;
-  if (GetGlobalFileManager()->ReadFile("resource://google_gadget.png",
-                                       &icon_data)) {
+  if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
     QPixmap pixmap;
     pixmap.loadFromData(reinterpret_cast<const uchar *>(icon_data.c_str()),
                         icon_data.length());

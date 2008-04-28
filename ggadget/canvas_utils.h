@@ -59,7 +59,7 @@ void StretchMiddleDrawImage(const ImageInterface *src, CanvasInterface *dest,
  * Maps the destination coordinates to the source coordinates if the source
  * is drawn by StretchMiddleDrawCanvas() or StretchMiddleDrawImage() with
  * the same border width and height parameters.
- */ 
+ */
 void MapStretchMiddleCoordDestToSrc(double dest_x, double dest_y,
                                     double src_width, double src_height,
                                     double dest_width, double dest_height,

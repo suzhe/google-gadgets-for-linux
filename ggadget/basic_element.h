@@ -79,6 +79,15 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    */
   const BasicElement *GetParentElement() const;
 
+  /**
+   * Enables or disables canvas cache of this element. It can make rendering
+   * faster for complex elements but need more memory.
+   */
+  void EnableCanvasCache(bool enable);
+
+  /** Checks if the canvas cache is enabled. */
+  bool IsCanvasCacheEnabled() const;
+
  public:
   /**
    * Retrieves the width in pixels.
@@ -95,12 +104,6 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   virtual double GetPixelHeight() const;
   /** Sets the height in pixels. */
   void SetPixelHeight(double height);
-
-  /**
-   * Retrieves the old position in view's coordinates. The memory should be
-   * allocated before this call.
-   */
-  void GetOldViewRectangle(double rect[4]) const;
 
   /** Retrieves the width in relative related to the parent. */
   double GetRelativeWidth() const;
@@ -638,9 +641,18 @@ public: // Other overridable public methods.
   Connection *ConnectOnMouseWheelEvent(Slot0<void> *handler);
   Connection *ConnectOnSizeEvent(Slot0<void> *handler);
 
+  /**
+   * Special signal which will be emitted when this element or any of its
+   * children is changed.
+   */
+  Connection *ConnectOnContentChanged(Slot0<void> *handler);
+
  protected:
   /**
    * Called by the descendant classes when the onsize event should be fired.
+   *
+   * This method posts the onsize event to main loop, so that it'll be fired
+   * in the next main loop iteration.
    */
   void PostSizeEvent();
 
@@ -660,22 +672,26 @@ public: // Other overridable public methods.
    */
   virtual void DoDraw(CanvasInterface *canvas) = 0;
 
-  /** To be overriden by a subclass if it need to handle mouse events. */
-  virtual EventResult HandleMouseEvent(const MouseEvent &event) {
-    return EVENT_RESULT_UNHANDLED;
-  }
-  /** To be overriden by a subclass if it need to handle dragging events. */
-  virtual EventResult HandleDragEvent(const DragEvent &event) {
-    return EVENT_RESULT_UNHANDLED;
-  }
-  /** To be overriden by a subclass if it need to handle keyboard events. */
-  virtual EventResult HandleKeyEvent(const KeyboardEvent &event) {
-    return EVENT_RESULT_UNHANDLED;
-  }
-  /** To be overriden by a subclass if it need to handle other events. */
-  virtual EventResult HandleOtherEvent(const Event &event) {
-    return EVENT_RESULT_UNHANDLED;
-  }
+  /**
+   * To be overriden by a subclass if it need to handle mouse events.
+   * @return EVENT_RESULT_UNHANDLED by default.
+   */
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  /**
+   * To be overriden by a subclass if it need to handle dragging events.
+   * @return EVENT_RESULT_UNHANDLED by default.
+   */
+  virtual EventResult HandleDragEvent(const DragEvent &event);
+  /**
+   * To be overriden by a subclass if it need to handle keyboard events.
+   * @return EVENT_RESULT_UNHANDLED by default.
+   */
+  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+  /**
+   * To be overriden by a subclass if it need to handle other events.
+   * @return EVENT_RESULT_UNHANDLED by default.
+   */
+  virtual EventResult HandleOtherEvent(const Event &event);
 
   /**
    * Return the default size of the element in pixels.

@@ -216,6 +216,7 @@ int main(int argc, char* argv[]) {
   ext_manager->SetReadonly();
 
   ggadget::HostInterface *host;
+
   if (sidebar)
     host = new hosts::gtk::SidebarGtkHost(decorated, debug_mode);
   else

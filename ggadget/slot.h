@@ -423,7 +423,7 @@ NewSlot(const T *obj, R (T::*method)(_arg_type_names) const) {                \
 template <typename R, _arg_types, typename F>                                 \
 inline Slot##n<R, _arg_type_names> * NewFunctorSlot(F f) {                    \
   return new FunctorSlot##n<R, _arg_type_names, F>(f);                        \
-}                                                                             \
+}
 
 #define INIT_ARG_TYPE(n) VariantType<P##n>::type
 #define GET_ARG(n)       VariantValue<P##n>()(argv[n-1])

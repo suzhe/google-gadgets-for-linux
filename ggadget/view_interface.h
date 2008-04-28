@@ -125,12 +125,27 @@ class ViewInterface {
    */
   virtual Gadget* GetGadget() const = 0;
 
-  /** Returns the @c GraphicsInterface associated with this host. */
+  /**
+   * Returns the @c GraphicsInterface associated with this view.
+   *
+   * The returned @c GraphicsInterface instance is owned by this View, the
+   * caller shall not delete it.
+   */
   virtual GraphicsInterface *GetGraphics() const = 0;
 
-  virtual ViewHostInterface *GetViewHost() const = 0;
-
+  /**
+   * Switches the view to another view host. The old view host will be
+   * returned.
+   *
+   * The caller has responsibility to destroy the returned old view host.
+   */
   virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host) = 0;
+
+  /**
+   * Gets the view host currently used by the view. The caller shall not
+   * destroy it.
+   */
+  virtual ViewHostInterface *GetViewHost() const = 0;
 
   /**
    * Set the width of the view.

@@ -54,8 +54,7 @@ class ComboBoxElement::Impl {
         button_up_img_(view->LoadImageFromGlobal(kComboArrow, false)),
         button_down_img_(view->LoadImageFromGlobal(kComboArrowDown, false)),
         button_over_img_(view->LoadImageFromGlobal(kComboArrowOver, false)),
-        background_(NULL),
-        item_cache_(NULL) {
+        background_(NULL) {
     listbox_->SetPixelX(0);
     listbox_->SetVisible(false);
     listbox_->SetAutoscroll(true);
@@ -88,16 +87,16 @@ class ComboBoxElement::Impl {
   }
 
   void SetDroplistVisible(bool visible) {
-    if (visible != listbox_->IsVisible()) {
+    if (listbox_->IsVisible() != visible) {
       if (visible) {
         listbox_->ScrollToIndex(listbox_->GetSelectedIndex());
-        listbox_->SetVisible(visible);
+        listbox_->SetVisible(true);
         owner_->GetView()->SetPopupElement(owner_);
+        owner_->PostSizeEvent();
       } else {
         // popup_out handler will turn off listbox
         owner_->GetView()->SetPopupElement(NULL);
       }
-      owner_->PostSizeEvent();
     }
   }
 
@@ -182,7 +181,6 @@ class ComboBoxElement::Impl {
   double item_pixel_height_;
   ImageInterface *button_up_img_, *button_down_img_, *button_over_img_;
   Texture *background_;
-  CanvasInterface *item_cache_;
   EventSignal onchange_event_, ontextchange_event_;
 };
 
@@ -303,44 +301,28 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
   } else {
     // Draw item
     ItemElement *item = impl_->listbox_->GetSelectedItem();
-    // If the selected item is outside the View's clip region, it won't be
-    // drawn correctly. In this case the stored canvas cache of this item will
-    // be used.
-    if (item && GetView()->IsElementInClipRegion(item)) {
-      if (!impl_->item_cache_ ||
-          impl_->item_cache_->GetHeight() != impl_->item_pixel_height_ ||
-          impl_->item_cache_->GetWidth() != elem_width) {
-        if (impl_->item_cache_)
-          impl_->item_cache_->Destroy();
-        impl_->item_cache_ =
-            GetView()->GetGraphics()->NewCanvas(elem_width,
-                                                impl_->item_pixel_height_);
-      } else {
-        impl_->item_cache_->ClearCanvas();
-      }
-
+    if (item) {
       item->SetDrawOverlay(false);
       // Support rotations, masks, etc. here. Windows version supports these,
       // but is this really intended?
       double rotation = item->GetRotation();
       double pinx = item->GetPixelPinX(), piny = item->GetPixelPinY();
       bool transform = (rotation != 0 || pinx != 0 || piny != 0);
+      canvas->PushState();
+      canvas->IntersectRectClipRegion(0, 0, elem_width,
+                                      impl_->item_pixel_height_);
       if (transform) {
-        impl_->item_cache_->PushState();
-        impl_->item_cache_->RotateCoordinates(DegreesToRadians(rotation));
-        impl_->item_cache_->TranslateCoordinates(-pinx, -piny);
+        canvas->RotateCoordinates(DegreesToRadians(rotation));
+        canvas->TranslateCoordinates(-pinx, -piny);
       }
 
-      item->Draw(impl_->item_cache_);
+      GetView()->EnableClipRegion(false);
+      item->Draw(canvas);
+      GetView()->EnableClipRegion(true);
 
-      if (transform) {
-        impl_->item_cache_->PopState();
-      }
+      canvas->PopState();
       item->SetDrawOverlay(true);
     }
-
-    if (impl_->item_cache_)
-      canvas->DrawCanvas(0, 0, impl_->item_cache_);
   }
 
   // Draw button
@@ -417,11 +399,6 @@ void ComboBoxElement::SetType(Type type) {
     if (!impl_->edit_) {
       impl_->CreateEdit();
       QueueDraw();
-    }
-    // It's not necessary to cache selected item in dropdown mode.
-    if (impl_->item_cache_) {
-      impl_->item_cache_->Destroy();
-      impl_->item_cache_ = NULL;
     }
   } else if (impl_->edit_) {
     delete impl_->edit_;

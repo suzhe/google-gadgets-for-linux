@@ -187,9 +187,34 @@ const char kVDButtonUnexpandNormal[] = "resource://vd_unexpand_normal.png";
 const char kVDButtonUnexpandOver[] = "resource://vd_unexpand_over.png";
 const char kVDButtonUnexpandDown[] = "resource://vd_unexpand_down.png";
 
-const char kVDBorderH[] = "resource://vd_border_h.png";
-const char kVDBorderV[] = "resource://vd_border_v.png";
 const char kVDMainBackground[] = "resource://vd_main_background.png";
+const char kVDMainBackgroundMinimized[] =
+    "resource://vd_main_background_minimized.png";
+const char kVDMainBackgroundTransparent[] =
+    "resource://vd_main_background_transparent.png";
+const char kVDMainSidebarBottom[] = "resource://vd_main_sidebar_bottom.png";
+const char kVDPopOutBackground[] = "resource://vd_popout_background.png";
+const char kVDPopOutBackgroundTitle[] =
+    "resource://vd_popout_background_title.png";
+const char kVDPopOutCloseDown[] = "resource://vd_popout_close_down.png";
+const char kVDPopOutCloseNormal[] = "resource://vd_popout_close_normal.png";
+const char kVDPopOutCloseOver[] = "resource://vd_popout_close_over.png";
+
+const char kVDDetailsBottom[] = "resource://vd_details_bottom.png";
+const char kVDDetailsButtonBkgndClick[] =
+    "resource://vd_details_button_bkgnd_click.png";
+const char kVDDetailsButtonBkgndNormal[] =
+    "resource://vd_details_button_bkgnd_normal.png";
+const char kVDDetailsButtonBkgndOver[] =
+    "resource://vd_details_button_bkgnd_over.png";
+const char kVDDetailsButtonNegfbNormal[] =
+    "resource://vd_details_button_negfb_normal.png";
+const char kVDDetailsButtonNegfbOver[] =
+    "resource://vd_details_button_negfb_over.png";
+const char kVDDetailsMiddle[] = "resource://vd_details_middle.png";
+const char kVDDetailsTop[] = "resource://vd_details_top.png";
+
+const char kVDBottomRightCorner[] = "resource://vd_bottom_right_corner.png";
 
 const char kSideBarIcon[] = "resource://sidebar_google.png";
 const char kSBButtonAddDown[] = "resource://sidebar_add_down.png";
@@ -205,6 +230,8 @@ const char kSBButtonCloseOver[] = "resource://sidebar_close_over.png";
 const char kCommonJS[] = "resource://common.js";
 const char kTextDetailsView[] = "resource://text_details_view.xml";
 const char kHTMLDetailsView[] = "resource://html_details_view.xml";
+
+const char kGadgetsIcon[] = "resource://gadgets.png";
 
 const char kFtpUrlPrefix[] = "ftp://";
 const char kHttpUrlPrefix[] = "http://";

@@ -658,12 +658,12 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
 		 extensions/Makefile
 		 extensions/dbus_script_class/Makefile
+		 extensions/default_framework/Makefile
 		 extensions/gtk_edit_element/Makefile
 		 extensions/qt_edit_element/Makefile
 		 extensions/gtkmoz_browser_element/Makefile
-		 extensions/gst_mediaplayer_element/Makefile
-		 extensions/default_framework/Makefile
 		 extensions/gst_audio_framework/Makefile
+		 extensions/gst_mediaplayer_element/Makefile
 		 extensions/gtk_system_framework/Makefile
 		 extensions/qt_system_framework/Makefile
 		 extensions/linux_system_framework/Makefile

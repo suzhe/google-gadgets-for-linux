@@ -78,9 +78,6 @@ class View : public ViewInterface {
    */
   FileManagerInterface *GetFileManager() const;
 
-  /** @return the current graphics interface used for drawing elements. */
-  virtual GraphicsInterface *GetGraphics() const;
-
   /**
    * Registers all properties of the View instance to specified Scriptable
    * instance./
@@ -89,6 +86,9 @@ class View : public ViewInterface {
 
  public: // ViewInterface methods.
   virtual Gadget *GetGadget() const;
+  virtual GraphicsInterface *GetGraphics() const;
+  virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host);
+  virtual ViewHostInterface *GetViewHost() const;
   virtual void SetWidth(double width);
   virtual void SetHeight(double height);
   virtual void SetSize(double width, double height);
@@ -114,9 +114,6 @@ class View : public ViewInterface {
 
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
   virtual bool OnSizing(double *width, double *height);
-  virtual ViewHostInterface *SwitchViewHost(ViewHostInterface *new_host);
-  virtual ViewHostInterface *GetViewHost() const;
-
 
  public: // Additional event handling methods
   /**
@@ -223,6 +220,15 @@ class View : public ViewInterface {
    * Add the element to the clip region when it is changed and need to redraw.
    */
   void AddElementToClipRegion(BasicElement *element);
+
+  /**
+   * Enables or disables current clip regions.
+   * When clip region is disabled then IsElementInClipRegion() will always
+   * return true and all elements will be drawn when drawing View.
+   *
+   * It's useful when draw an element into off-screen buffer.
+   */
+  void EnableClipRegion(bool enable);
 
  public: // Timer, interval and animation functions.
   /**

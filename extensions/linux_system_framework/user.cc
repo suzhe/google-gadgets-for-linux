@@ -123,7 +123,7 @@ void User::GetDeviceName(const char *device_udi) {
                              (subsystem.GetValue() + ".bus_number").c_str(),
                              MESSAGE_TYPE_INVALID)) {
         char buf[21];
-        sprintf(buf, "%lld", bus_number.GetValue());
+        sprintf(buf, "%jd", bus_number.GetValue());
         device_name += buf;
         input_devices_.push_back(device_name);
       } else {

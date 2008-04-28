@@ -41,13 +41,13 @@ class TextFrame {
    */
   bool SetText(const std::string &text);
 
-  void DrawWithTexture(CanvasInterface *canvas, double x, double y, 
+  void DrawWithTexture(CanvasInterface *canvas, double x, double y,
                        double width, double height, Texture *texture);
-  void Draw(CanvasInterface *canvas, double x, double y, 
+  void Draw(CanvasInterface *canvas, double x, double y,
             double width, double height);
 
-  /** 
-   * Returns the width and height required to display the text 
+  /**
+   * Returns the width and height required to display the text
    * without wrapping or trimming.
    */
   void GetSimpleExtents(double *width, double *height);
@@ -58,11 +58,11 @@ class TextFrame {
    */
   void GetExtents(double in_width, double *width, double *height);
 
- public: // registered properties  
+ public: // registered properties
   /** Gets and sets the text horizontal alignment. */
   CanvasInterface::Alignment GetAlign() const;
   void SetAlign(CanvasInterface::Alignment align);
-  
+
   /** Gets and sets whether the text is bold. */
   bool IsBold() const;
   void SetBold(bool bold);
@@ -90,7 +90,7 @@ class TextFrame {
   /** Gets and sets whether the text is struke-out. */
   bool IsStrikeout() const;
   void SetStrikeout(bool strikeout);
- 
+
   /** Gets and sets the trimming mode when the text is too large to display. */
   CanvasInterface::Trimming GetTrimming() const;
   void SetTrimming(CanvasInterface::Trimming trimming);
@@ -105,8 +105,8 @@ class TextFrame {
 
   /** Gets and sets whether to wrap the text when it's too large to display. */
   bool IsWordWrap() const;
-  void SetWordWrap(bool wrap); 
- 
+  void SetWordWrap(bool wrap);
+
  private:
   DISALLOW_EVIL_CONSTRUCTORS(TextFrame);
   class Impl;

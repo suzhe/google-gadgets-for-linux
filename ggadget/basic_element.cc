@@ -65,6 +65,10 @@ class BasicElement::Impl {
         visibility_changed_(true),
         position_changed_(true),
         size_changed_(true),
+        cache_(NULL),
+        cache_enabled_(false),
+        content_changed_(false),
+        draw_queued_(false),
         debug_color_index_(++total_debug_color_index_),
         debug_mode_(view->GetDebugMode()) {
     if (name)
@@ -78,6 +82,7 @@ class BasicElement::Impl {
   ~Impl() {
     DestroyImage(mask_image_);
     delete children_;
+    DestroyCanvas(cache_);
   }
 
   void SetMask(const Variant &mask) {
@@ -218,6 +223,12 @@ class BasicElement::Impl {
       visible_ = visible;
       visibility_changed_ = true;
       QueueDraw();
+
+      // Frees canvas cache when the element becomes invisible to save memory.
+      if (!visible && cache_) {
+        DestroyCanvas(cache_);
+        cache_ = NULL;
+      }
     }
   }
 
@@ -486,18 +497,49 @@ class BasicElement::Impl {
       PostSizeEvent();
     if (children_)
       children_->Layout();
+
+    if (content_changed_) {
+      if (cache_enabled_) {
+        // Add it into clip region, so that the canvas cache can be updated
+        // correctly.
+        view_->AddElementToClipRegion(owner_);
+      }
+      // To let all associated copy elements to update their content.
+      FireOnContentChangedSignal();
+    }
   }
 
   void Draw(CanvasInterface *canvas) {
     // DLOG("Draw %s(%p) on cavase(%p) with size: %fx%f", name_.c_str(), owner_,
-         // canvas, canvas->GetWidth(), canvas->GetHeight());
-    // GetPixelWidth() and GetPixelHeight might be overrided.
+    //      canvas, canvas->GetWidth(), canvas->GetHeight());
+
+    // GetPixelWidth() and GetPixelHeight might be overrode.
     double width = owner_->GetPixelWidth();
     double height = owner_->GetPixelHeight();
+    bool force_draw = false;
+
+    // Invalidates the canvas cache if the element size has changed.
+    if (cache_ &&
+        (cache_->GetWidth() != width || cache_->GetHeight() != height)) {
+      DestroyCanvas(cache_);
+      cache_ = NULL;
+      force_draw = true;
+    }
+
     // Only do draw if visible
     // Check for width, height == 0 since IntersectRectClipRegion fails for
     // those cases.
     if (visible_ && opacity_ != 0 && width > 0 && height > 0) {
+      // Creates the canvas cache only when necessary.
+      if (cache_enabled_) {
+        if (!cache_) {
+          cache_ = view_->GetGraphics()->NewCanvas(width, height);
+          force_draw = true;
+        } else if (content_changed_) {
+          cache_->ClearCanvas();
+        }
+      }
+
       const CanvasInterface *mask = GetMaskCanvas();
       CanvasInterface *target = canvas;
 
@@ -506,17 +548,34 @@ class BasicElement::Impl {
       // - The element has mask;
       // - The element's flips in x or y;
       // - Opacity of the element is not 1.0 and it has children.
-      bool indirect_draw = mask || flip_ != FLIP_NONE ||
+      // - Canvas cache is enabled.
+      bool indirect_draw = cache_enabled_ || mask || flip_ != FLIP_NONE ||
                           (opacity_ != 1.0 && children_ &&
                            children_->GetCount());
       if (indirect_draw) {
-        target = view_->GetGraphics()->NewCanvas(width, height);
+        if (cache_) {
+          target = cache_;
+        } else {
+          target = view_->GetGraphics()->NewCanvas(width, height);
+          force_draw = true;
+        }
       }
 
       canvas->PushState();
       canvas->IntersectRectClipRegion(0, 0, width, height);
       canvas->MultiplyOpacity(opacity_);
-      owner_->DoDraw(target);
+
+      // Only do draw when it's direct draw or the content has been changed.
+      if (!indirect_draw || content_changed_ || force_draw) {
+        // Disable clip region, so that all children can be drawn correctly.
+        if (cache_enabled_)
+          view_->EnableClipRegion(false);
+
+        owner_->DoDraw(target);
+
+        if (cache_enabled_)
+          view_->EnableClipRegion(true);
+      }
 
       if (indirect_draw) {
         double offset_x = 0, offset_y = 0;
@@ -534,7 +593,9 @@ class BasicElement::Impl {
         else
           canvas->DrawCanvas(offset_x, offset_y, target);
 
-        target->Destroy();
+        // Don't destroy canvas cache.
+        if (cache_ != target)
+          target->Destroy();
       }
 
       canvas->PopState();
@@ -555,6 +616,8 @@ class BasicElement::Impl {
     visibility_changed_ = false;
     size_changed_ = false;
     position_changed_ = false;
+    content_changed_ = false;
+    draw_queued_ = false;
   }
 
   void DrawChildren(CanvasInterface *canvas) {
@@ -578,13 +641,31 @@ class BasicElement::Impl {
 
  public:
   void QueueDraw() {
-    if (visible_ || visibility_changed_) {
+    if ((visible_ || visibility_changed_) && !draw_queued_) {
+      draw_queued_ = true;
       view_->AddElementToClipRegion(owner_);
       view_->QueueDraw();
+
+      content_changed_ = true;
+      BasicElement *elm = owner_->GetParentElement();
+      for (; elm; elm = elm->GetParentElement())
+        elm->impl_->content_changed_ = true;
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;
 #endif
+  }
+
+  void FireOnContentChangedSignal() {
+    if (on_content_changed_signal_.HasActiveConnections())
+      on_content_changed_signal_();
+
+    // Fire content changed signal of its parents.
+    BasicElement *elm = owner_->GetParentElement();
+    for (; elm; elm = elm->GetParentElement()) {
+      if (elm->impl_->on_content_changed_signal_.HasActiveConnections())
+        elm->impl_->on_content_changed_signal_();
+    }
   }
 
   void PostSizeEvent() {
@@ -612,6 +693,12 @@ class BasicElement::Impl {
   void MarkRedraw() {
     if (children_)
       children_->MarkRedraw();
+
+    // Invalidates canvas cache, since the zoom factory might be changed.
+    if (cache_) {
+      DestroyCanvas(cache_);
+      cache_ = NULL;
+    }
   }
 
   bool IsReallyVisible() const {
@@ -855,6 +942,11 @@ class BasicElement::Impl {
   bool position_changed_;
   bool size_changed_;
 
+  CanvasInterface *cache_;
+  bool cache_enabled_;
+  bool content_changed_;
+  bool draw_queued_;
+
   int debug_color_index_;
   static int total_debug_color_index_;
   int debug_mode_;
@@ -883,6 +975,8 @@ class BasicElement::Impl {
   EventSignal onmouseup_event_;
   EventSignal onmousewheel_event_;
   EventSignal onsize_event_;
+
+  EventSignal on_content_changed_signal_;
 };
 
 int BasicElement::Impl::total_debug_color_index_ = 0;
@@ -1372,6 +1466,18 @@ const BasicElement *BasicElement::GetParentElement() const {
   return impl_->parent_;
 }
 
+void BasicElement::EnableCanvasCache(bool enable) {
+  impl_->cache_enabled_ = enable;
+  if (!enable && impl_->cache_) {
+    DestroyCanvas(impl_->cache_);
+    impl_->cache_ = NULL;
+  }
+}
+
+bool BasicElement::IsCanvasCacheEnabled() const {
+  return impl_->cache_enabled_;
+}
+
 std::string BasicElement::GetTooltip() const {
   return impl_->tooltip_;
 }
@@ -1728,6 +1834,22 @@ Connection *BasicElement::ConnectOnMouseWheelEvent(Slot0<void> *handler) {
 }
 Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
   return impl_->onsize_event_.Connect(handler);
+}
+Connection *BasicElement::ConnectOnContentChanged(Slot0<void> *handler) {
+  return impl_->on_content_changed_signal_.Connect(handler);
+}
+
+EventResult BasicElement::HandleMouseEvent(const MouseEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
+}
+EventResult BasicElement::HandleDragEvent(const DragEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
+}
+EventResult BasicElement::HandleKeyEvent(const KeyboardEvent &event) {
+  return EVENT_RESULT_UNHANDLED;
+}
+EventResult BasicElement::HandleOtherEvent(const Event &event) {
+  return EVENT_RESULT_UNHANDLED;
 }
 
 } // namespace ggadget

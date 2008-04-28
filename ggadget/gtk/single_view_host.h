@@ -66,6 +66,7 @@ class SingleViewHost : public ViewHostInterface {
       double x, double y, double *widget_x, double *widget_y) const;
   virtual void QueueDraw();
   virtual void QueueResize();
+  virtual void EnableInputShapeMask(bool enable);
   virtual void SetResizable(ViewInterface::ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);

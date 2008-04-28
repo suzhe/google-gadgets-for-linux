@@ -287,12 +287,12 @@ class SidebarGtkHost::Impl {
     }
     expand_view_host_->SetView(gadget->GetMainView());
     expand_view_host_->ShowView(true, 0, NULL);
-    expand_view_host_->Expand();
+    //TODO: expand_view_host_->Expand();
     side_bar_->Expand(gadget->GetMainView());
   }
 
   void Unexpand(Gadget *gadget) {
-    expand_view_host_->Unexpand();
+    //TODO: expand_view_host_->Unexpand();
     expand_view_host_->SetView(NULL);
     expand_view_host_->CloseView();
     side_bar_->Unexpand(NULL);
@@ -351,7 +351,9 @@ class SidebarGtkHost::Impl {
       new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
           decorated_, remove_on_close, false, view_debug_mode_);
     DLOG("New decorator for vh %p", view_host);
-    DecoratedViewHost *decorator = new DecoratedViewHost(view_host, true);
+    DecoratedViewHost *decorator =
+        new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_STANDALONE,
+                              true);
     GadgetMoveClosure *closure = new GadgetMoveClosure(this, view_host, view, 0);
     move_slots_[view->GetGadget()] = closure;
     DLOG("New decorator %p with vh %p", decorator, view_host);
@@ -360,21 +362,25 @@ class SidebarGtkHost::Impl {
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
     ViewHostInterface *inner;
-    DecoratedViewHost *decorator;
+    ViewHostInterface *decorator;
     switch (type) {
       case ViewHostInterface::VIEW_HOST_MAIN:
         inner = side_bar_->NewViewHost(type);
-        decorator = new DecoratedViewHost(inner, false);
+        decorator = new DecoratedViewHost(inner,
+                                          DecoratedViewHost::MAIN_DOCKED,
+                                          false);
         break;
       case ViewHostInterface::VIEW_HOST_OPTIONS:
         inner = new SingleViewHost(type, 1.0, true, true, true,
                                    view_debug_mode_);
-        decorator = new DecoratedViewHost(inner, false);
+        // No decorator for options view.
+        decorator = inner;
         break;
       default:
         inner = new SingleViewHost(type, 1.0, decorated_, true, true,
                                    view_debug_mode_);
-        decorator = new DecoratedViewHost(inner, true);
+        decorator = new DecoratedViewHost(inner, DecoratedViewHost::DETAILS,
+                                          true);
         break;
     }
     return decorator;
