@@ -100,7 +100,7 @@ class Gadget {
    * @param instance_id An unique id to identify this Gadget instance. It can
    *        be used to remove this Gadget instance by calling
    *        HostInteface::RemoveGadget() method.
-   * @param trusted whether this gadget instance can be safely trusted. 
+   * @param trusted whether this gadget instance can be safely trusted.
    */
   Gadget(HostInterface *host,
          const char *base_path,

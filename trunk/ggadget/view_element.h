@@ -73,6 +73,7 @@ class ViewElement : public BasicElement {
   virtual double GetPixelHeight() const;
 
   virtual void MarkRedraw();
+  virtual bool OnAddContextMenuItems(MenuInterface *menu);
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);

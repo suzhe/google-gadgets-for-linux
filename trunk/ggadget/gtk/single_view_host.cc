@@ -701,32 +701,6 @@ void SingleViewHost::EndMoveDrag(int button) {
   impl_->EndMoveDrag(button);
 }
 
-void SingleViewHost::Dock() {
-  SimpleEvent e(Event::EVENT_DOCK);
-  impl_->view_->OnOtherEvent(e);
-  impl_->on_dock_signal_();
-}
-
-void SingleViewHost::Undock() {
-  DLOG("host %p fire undock signal to view %p", this, impl_->view_);
-  SimpleEvent e(Event::EVENT_UNDOCK);
-  impl_->view_->OnOtherEvent(e);
-  gdk_pointer_ungrab(GDK_CURRENT_TIME);
-  impl_->on_undock_signal_();
-}
-
-void SingleViewHost::Expand() {
-  SimpleEvent e(Event::EVENT_POPOUT);
-  impl_->view_->OnOtherEvent(e);
-  impl_->on_expand_signal_();
-}
-
-void SingleViewHost::Unexpand() {
-  SimpleEvent e(Event::EVENT_POPIN);
-  impl_->view_->OnOtherEvent(e);
-  impl_->on_unexpand_signal_();
-}
-
 void SingleViewHost::Alert(const char *message) {
   ShowAlertDialog(impl_->view_->GetCaption().c_str(), message);
 }
@@ -763,22 +737,6 @@ Connection *SingleViewHost::ConnectOnEndMoveDrag(Slot1<void, int> *slot) {
 
 Connection *SingleViewHost::ConnectOnMoveDrag(Slot1<void, int> *slot) {
   return impl_->on_move_drag_signal_.Connect(slot);
-}
-
-Connection *SingleViewHost::ConnectOnDock(Slot0<void> *slot) {
-  return impl_->on_dock_signal_.Connect(slot);
-}
-
-Connection *SingleViewHost::ConnectOnUndock(Slot0<void> *slot) {
-  return impl_->on_undock_signal_.Connect(slot);
-}
-
-Connection *SingleViewHost::ConnectOnExpand(Slot0<void> *slot) {
-  return impl_->on_expand_signal_.Connect(slot);
-}
-
-Connection *SingleViewHost::ConnectOnUnexpand(Slot0<void> *slot) {
-  return impl_->on_unexpand_signal_.Connect(slot);
 }
 
 } // namespace gtk

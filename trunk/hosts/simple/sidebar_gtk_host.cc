@@ -72,23 +72,25 @@ class SidebarGtkHost::Impl {
   class GadgetMoveClosure {
    public:
     GadgetMoveClosure(SidebarGtkHost::Impl *owner,
-                      SingleViewHost *view_host,
+                      SingleViewHost *outer_view_host,
+                      DecoratedViewHost *decorator_view_host,
                       View *view,
                       int height)
         : owner_(owner),
-          view_host_(view_host),
+          outer_view_host_(outer_view_host),
+          decorator_view_host_(decorator_view_host),
           view_(view),
           sidebar_(NULL),
           height_(height) {
       sidebar_ = gtk_widget_get_toplevel(GTK_WIDGET(down_cast<SingleViewHost *>(
             owner->side_bar_->GetViewHost())->GetNativeWidget()));
-      AddConnection(view_host->ConnectOnMoveDrag(
+      AddConnection(outer_view_host_->ConnectOnMoveDrag(
             NewSlot(this, &GadgetMoveClosure::HandleMove)));
-      AddConnection(view_host->ConnectOnEndMoveDrag(
+      AddConnection(outer_view_host_->ConnectOnEndMoveDrag(
             NewSlot(this, &GadgetMoveClosure::HandleMoveEnd)));
-      AddConnection(view_host->ConnectOnDock(
+      AddConnection(decorator_view_host_->ConnectOnDock(
             NewSlot(this, &GadgetMoveClosure::HandleDock)));
-      AddConnection(view_host->ConnectOnUnexpand(
+      AddConnection(decorator_view_host_->ConnectOnPopIn(
             NewSlot(this, &GadgetMoveClosure::HandleUnexpand)));
     }
     ~GadgetMoveClosure() {
@@ -111,7 +113,7 @@ class SidebarGtkHost::Impl {
       if (IsOverlapWithSideBar(&h)) {
         view_->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
         height_ = h;
-        view_host_->Dock();
+        HandleDock();
       }
     }
     void HandleDock() {
@@ -124,7 +126,7 @@ class SidebarGtkHost::Impl {
     bool IsOverlapWithSideBar(int *height) {
       int x, y, w, h;
       GtkWidget *floating = gtk_widget_get_toplevel(GTK_WIDGET(
-          view_host_->GetNativeWidget()));
+          outer_view_host_->GetNativeWidget()));
       gtk_window_get_position(GTK_WINDOW(floating), &x, &y);
       gtk_window_get_size(GTK_WINDOW(floating), &w, &h);
       int sx, sy, sw, sh;
@@ -140,7 +142,8 @@ class SidebarGtkHost::Impl {
       return false;
     }
     SidebarGtkHost::Impl *owner_;
-    SingleViewHost *view_host_;
+    SingleViewHost *outer_view_host_;
+    DecoratedViewHost *decorator_view_host_;
     View *view_;
     GtkWidget *sidebar_;
     int height_;
@@ -163,20 +166,14 @@ class SidebarGtkHost::Impl {
                                     decorated, false, true, view_debug_mode_);
     side_bar_ = new SideBar(owner_, view_host_);
     side_bar_->SetAddGadgetSlot(NewSlot(this, &Impl::AddGadgetHandler));
+    side_bar_->SetMenuSlot(NewSlot(this, &Impl::MenuGenerator));
     side_bar_->SetCloseSlot(NewSlot(this, &Impl::ExitHandler));
 
-    connections_.push_back(view_host_->ConnectOnUndock(
-          NewSlot(this, &Impl::HandleUndock)));
-    connections_.push_back(view_host_->ConnectOnExpand(
-          NewSlot(this, &Impl::HandleExpand)));
-    connections_.push_back(view_host_->ConnectOnUnexpand(
-          NewSlot(this, &Impl::HandleUnexpand)));
+    side_bar_->ConnectOnUndock(NewSlot(this, &Impl::HandleUndock));
+    // side_bar_->ConnectOnUnexpand(NewSlot(this, &Impl::HandleUnexpand));
   }
 
   ~Impl() {
-    for (size_t i = 0; i < connections_.size(); ++i)
-      connections_[i]->Disconnect();
-
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
       delete it->second;
@@ -354,7 +351,8 @@ class SidebarGtkHost::Impl {
     DecoratedViewHost *decorator =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_STANDALONE,
                               true);
-    GadgetMoveClosure *closure = new GadgetMoveClosure(this, view_host, view, 0);
+    GadgetMoveClosure *closure =
+        new GadgetMoveClosure(this, view_host, decorator, view, 0);
     move_slots_[view->GetGadget()] = closure;
     DLOG("New decorator %p with vh %p", decorator, view_host);
     return decorator;
@@ -406,6 +404,9 @@ class SidebarGtkHost::Impl {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
+  void MenuGenerator() {
+  }
+
   void ExitHandler() {
     gtk_main_quit();
   }
@@ -450,8 +451,6 @@ class SidebarGtkHost::Impl {
 
   GadgetManagerInterface *gadget_manager_;
   GtkWidget *main_widget_;
-
-  std::vector<Connection *> connections_;
 };
 
 SidebarGtkHost::SidebarGtkHost(bool decorated, int view_debug_mode)

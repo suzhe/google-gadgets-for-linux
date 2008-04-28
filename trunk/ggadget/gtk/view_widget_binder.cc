@@ -826,8 +826,10 @@ ViewWidgetBinder::ViewWidgetBinder(ViewInterface *view,
 void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
   impl_->enable_input_shape_mask_ = enable;
 
+#if GTK_CHECK_VERSION(2,10,0)
   if (impl_->widget_ && impl_->no_background_ && impl_->composited_ && !enable)
     gtk_widget_input_shape_combine_mask(impl_->widget_, NULL, 0, 0);
+#endif
 }
 
 ViewWidgetBinder::~ViewWidgetBinder() {
