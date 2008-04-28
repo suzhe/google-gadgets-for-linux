@@ -53,7 +53,7 @@ static double g_zoom = 1.;
 static int g_debug_mode = 0;
 static bool g_useshapemask = false;
 static bool g_decorated = true;
-static ggadget::qt::QtMainLoop g_main_loop;
+static ggadget::qt::QtMainLoop *g_main_loop;
 
 static const char *kGlobalExtensions[] = {
   "default-framework",
@@ -169,7 +169,8 @@ int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
 #endif
   // Set global main loop
-  ggadget::SetGlobalMainLoop(&g_main_loop);
+  g_main_loop = new ggadget::qt::QtMainLoop();
+  ggadget::SetGlobalMainLoop(g_main_loop);
 
   // Set global file manager.
   ggadget::FileManagerWrapper *fm_wrapper = new ggadget::FileManagerWrapper();
@@ -230,7 +231,7 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i)
       manager->NewGadgetInstanceFromFile(argv[i]);
   }
-  app.exec();
+  g_main_loop->Run();
 
   return 0;
 }

@@ -18,6 +18,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <string>
+#include <QtGui/QMessageBox>
+#include <QtGui/QPixmap>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
@@ -29,10 +31,6 @@
 
 namespace ggadget {
 namespace qt {
-
-
-void ShowGadgetAboutDialog(Gadget *gadget) {
-}
 
 struct CursorTypeMapping {
   int type;
@@ -127,6 +125,88 @@ bool OpenURL(const char *url) {
   LOG("Don't know how to open an url.");
   return false;
 #endif
+}
+
+// Check out qt document to get more information about MouseButtons and
+// MouseButton
+int GetMouseButtons(const Qt::MouseButtons buttons){
+  int ret = 0;
+  if (buttons & Qt::LeftButton) ret |= MouseEvent::BUTTON_LEFT;
+  if (buttons & Qt::RightButton) ret |= MouseEvent::BUTTON_RIGHT;
+  if (buttons & Qt::MidButton) ret |= MouseEvent::BUTTON_MIDDLE;
+  return ret;
+}
+
+int GetMouseButton(const Qt::MouseButton button) {
+  if (button == Qt::LeftButton) return MouseEvent::BUTTON_LEFT;
+  if (button == Qt::RightButton) return MouseEvent::BUTTON_RIGHT;
+  if (button == Qt::MidButton) return MouseEvent::BUTTON_MIDDLE;
+  return 0;
+}
+
+int GetModifiers(Qt::KeyboardModifiers state) {
+  int mod = Event::MOD_NONE;
+  if (state & Qt::ShiftModifier) mod |= Event::MOD_SHIFT;
+  if (state & Qt::ControlModifier)  mod |= Event::MOD_CONTROL;
+  if (state & Qt::AltModifier) mod |= Event::MOD_ALT;
+  return mod;
+}
+
+unsigned int GetKeyCode(int qt_key) {
+  return qt_key;
+}
+
+void ShowGadgetAboutDialog(Gadget *gadget) {
+  ASSERT(gadget);
+
+  // About text
+  std::string about_text =
+      TrimString(gadget->GetManifestInfo(kManifestAboutText));
+
+  if (about_text.empty()) {
+    gadget->OnCommand(Gadget::CMD_ABOUT_DIALOG);
+    return;
+  }
+
+  // Title and Copyright
+  std::string title_text;
+  std::string copyright_text;
+  if (!SplitString(about_text, "\n", &title_text, &about_text)) {
+    about_text = title_text;
+    title_text = gadget->GetManifestInfo(kManifestName);
+  }
+  title_text = TrimString(title_text);
+  about_text = TrimString(about_text);
+
+  if (!SplitString(about_text, "\n", &copyright_text, &about_text)) {
+    about_text = copyright_text;
+    copyright_text = gadget->GetManifestInfo(kManifestCopyright);
+  }
+  copyright_text = TrimString(copyright_text);
+  about_text = TrimString(about_text);
+
+  std::string title_copyright = "<b>";
+  title_copyright.append(title_text);
+  title_copyright.append("</b><br>");
+  title_copyright.append(copyright_text);
+
+  // Load icon
+  std::string icon_name = gadget->GetManifestInfo(kManifestIcon);
+  std::string data;
+  QPixmap icon;
+  if (gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data)) {
+    icon.loadFromData(reinterpret_cast<const uchar *>(data.c_str()),
+                      data.length());
+  }
+
+  QMessageBox box(QMessageBox::NoIcon,
+                   title_text.c_str(),
+                   title_copyright.c_str(),
+                   QMessageBox::Ok);
+  box.setInformativeText(about_text.c_str());
+
+  box.setIconPixmap(icon);
+  box.exec();
 }
 
 } // namespace qt

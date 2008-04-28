@@ -17,7 +17,7 @@
 if GGL_BUILD_LIBGGADGET_QT
 
 # Putting . into SBUDIRS list to force building current directory first.
-#SUBDIRS = . tests
+SUBDIRS = . tests
 
 MOC_FILES		= qt_main_loop.moc \
 			  qt_menu.moc \

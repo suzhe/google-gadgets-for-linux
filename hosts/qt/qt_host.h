@@ -38,23 +38,23 @@ class QtHost : public ggadget::HostInterface {
   QtHost(int view_debug_mode);
   virtual ~QtHost();
   virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
-  virtual void RemoveGadget(int instance_id, bool save_data);
+  virtual void RemoveGadget(Gadget *gadget, bool save_data);
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;
   virtual bool LoadFont(const char *filename);
+  virtual void Run();
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
 
  private:
   void SetupUI();
   void InitGadgets();
+  bool ConfirmGadget(int id);
+  bool NewGadgetInstanceCallback(int id);
   bool AddGadgetInstanceCallback(int id);
   void ReportScriptError(const char *message);
   bool LoadGadget(const char *path, const char *options_name, int instance_id);
 
-  typedef std::map<int, Gadget *> GadgetsMap;
-  GadgetsMap gadgets_;
   GadgetManagerInterface *gadget_manager_;
-
   int view_debug_mode_;
   bool gadgets_shown_;
 
