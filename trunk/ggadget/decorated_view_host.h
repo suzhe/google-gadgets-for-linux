@@ -26,15 +26,87 @@ namespace ggadget {
 /**
  * DecoratedViewHost shows a view with the appropiate decorations. Internally,
  * it creates another view that draws the decorations along with the given view.
+ *
+ * Only main and details view can have decorator.
  */
 class DecoratedViewHost : public ViewHostInterface {
- public:
-  DecoratedViewHost(ViewHostInterface *outer_view_host, bool background);
+ protected:
   virtual ~DecoratedViewHost();
 
+ public:
+  enum DecoratorType {
+    MAIN_DOCKED,     /**< For main view in the Sidebar. */
+    MAIN_STANDALONE, /**< For main view in standalone window. */
+    MAIN_EXPANDED,   /**< For main view in expanded window. */
+    DETAILS,         /**< For details view. */
+  };
+
+  /**
+   * Constructor.
+   *
+   * @param view_host The ViewHost to contain the decorator view.
+   * @param decorator_type Type of the decorator, must match the type of
+   *        outer view host.
+   * @param transparent If it's true then transparent background will be used.
+   */
+  DecoratedViewHost(ViewHostInterface *view_host,
+                    DecoratorType decorator_type,
+                    bool transparent);
+
+  /** Gets the decorator type. */
+  DecoratorType GetDecoratorType() const;
+
+  /**
+   * Gets the view which contains the decoration and the child view.
+   * The caller shall not destroy the returned view.
+   */
+  ViewInterface *GetDecoratedView() const;
+
+  /**
+   * Connects a handler to OnDock signal.
+   * This signal will be emitted when dock menu item is activated by user.
+   * Host shall connect to this signal and perform the real dock action.
+   */
+  Connection *ConnectOnDock(Slot0<void> *slot);
+
+  /**
+   * Connects a handler to OnUndock signal.
+   * This signal will be emitted when undock menu item is activated by user.
+   * Host shall connect to this signal and perform the real dock action.
+   */
+  Connection *ConnectOnUndock(Slot0<void> *slot);
+
+  /**
+   * Connects a handler to OnPopOut signal.
+   * This signal will be emitted when popout button is clicked by user.
+   * Host shall connect to this signal and perform the real popout action.
+   */
+  Connection *ConnectOnPopOut(Slot0<void> *slot);
+
+  /**
+   * Connects a handler to OnPopIn signal.
+   * This signal will be emitted when popin or close button is clicked by user.
+   * Host shall connect to this signal and perform the real popin action.
+   */
+  Connection *ConnectOnPopIn(Slot0<void> *slot);
+
+  /**
+   * Connects a handler to OnClose signal.
+   * This signal will be emitted when close button is clicked by user.
+   * Host shall connect to this signal and perform the real close action.
+   */
+  Connection *ConnectOnClose(Slot0<void> *slot);
+
+ public:
+
+  /** Returns the ViewHost type. */
   virtual Type GetType() const;
   virtual void Destroy();
+
+  /** Sets the inner view which will be hosted in the decorator. */
   virtual void SetView(ViewInterface *view);
+
+  /** Gets the inner view hosted in the decorator. */
   virtual ViewInterface *GetView() const;
   virtual GraphicsInterface *NewGraphics() const;
   virtual void *GetNativeWidget() const;
@@ -42,6 +114,7 @@ class DecoratedViewHost : public ViewHostInterface {
       double x, double y, double *widget_x, double *widget_y) const;
   virtual void QueueDraw();
   virtual void QueueResize();
+  virtual void EnableInputShapeMask(bool enable);
   virtual void SetResizable(ViewInterface::ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
@@ -59,10 +132,6 @@ class DecoratedViewHost : public ViewHostInterface {
 
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest);
   virtual void BeginMoveDrag(int button);
-  virtual void Dock();
-  virtual void Undock();
-  virtual void Expand();
-  virtual void Unexpand();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(DecoratedViewHost);

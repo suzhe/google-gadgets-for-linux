@@ -234,6 +234,7 @@ bool ImgElement::IsStretchMiddle() const {
 void ImgElement::SetStretchMiddle(bool stretch_middle) {
   if (stretch_middle != impl_->stretch_middle_) {
     impl_->stretch_middle_ = stretch_middle;
+    //EnableCanvasCache(stretch_middle);
     QueueDraw();
   }
 }

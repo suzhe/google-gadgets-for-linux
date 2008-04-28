@@ -29,28 +29,59 @@ class ViewElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x3be02fb3f45b405b, BasicElement);
 
-  ViewElement(BasicElement *parent, View *parent_view, View *child_view);
+  ViewElement(BasicElement *parent, View *parent_view,
+              View *child_view);
   virtual ~ViewElement();
 
-  View *GetChildView() const;
-  bool OnSizing(double *width, double *height);
-  void SetSize(double width, double height);
- public:
   void SetChildView(View *child_view);
+  View *GetChildView() const;
 
+  /**
+   * Delegates to child view's OnSizing() method, but does some extra things if
+   * child view is not resizable.
+   *
+   * @param[in/out] width The desired width, and the actual allowed width will
+   *                be returned.
+   * @param[in/out] height The desired height, and the actual allowed height
+   *                will be returned.
+   * @return true if the resize request is allowed.
+   */
+  bool OnSizing(double *width, double *height);
+
+  /**
+   * Delegates to child view's SetSize() method.
+   */
+  void SetSize(double width, double height);
+
+  /**
+   * Sets the scale level of child view, which is relative to the zoom level of
+   * parent view.
+   */
   void SetScale(double scale);
 
-  virtual void Layout();
-  virtual void MarkRedraw();
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
-  virtual EventResult HandleOtherEvent(const Event &event);
+  /**
+   * Gets the scale level of child view, which is relative to the zoom level of
+   * parent view.
+   */
+  double GetScale() const;
 
-  virtual void GetDefaultSize(double *width, double *height) const;
+ public:
+  /**
+   * The size of ViewElement will always be synced with the size of child view.
+   */
+  virtual double GetPixelWidth() const;
+  virtual double GetPixelHeight() const;
+
+  virtual void MarkRedraw();
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
+  virtual EventResult HandleMouseEvent(const MouseEvent &event);
+  virtual EventResult HandleOtherEvent(const Event &event);
   virtual EventResult HandleDragEvent(const DragEvent &event);
   virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
+
+  virtual void GetDefaultSize(double *width, double *height) const;
 
   // No CreateInstance() method since this class is internal.
 

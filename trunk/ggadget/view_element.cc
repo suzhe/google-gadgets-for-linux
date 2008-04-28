@@ -29,61 +29,54 @@ namespace ggadget {
 
 class ViewElement::Impl {
  public:
-  Impl(ViewElement *owner, View *child_view)
-    : owner_(owner), child_view_(child_view), scale_(1.), offset_x_(0) {
-    ConnectSlots();
-    DLOG("ViewElement Ctor: %p, size: %f x %f", child_view,
-         child_view->GetWidth(), child_view->GetHeight());
+  Impl(ViewElement *owner)
+    : owner_(owner),
+      child_view_(NULL),
+      scale_(1),
+      onsize_connection_(NULL),
+      onopen_connection_(NULL) {
   }
 
   ~Impl() {
-    DisconnectSlots();
+    if (onsize_connection_)
+      onsize_connection_->Disconnect();
+    if (onopen_connection_)
+      onopen_connection_->Disconnect();
   }
 
-  void ConnectSlots() {
-    ASSERT(child_view_);
-  }
-
-  void DisconnectSlots() {
-    // Clear all connections in View on destruction.
-    for (std::vector<Connection *>::iterator iter = connections_.begin();
-         connections_.end() != iter; iter++) {
-      (*iter)->Disconnect();
+  void UpdateScaleAndSize() {
+    if (child_view_) {
+      scale_ = child_view_->GetGraphics()->GetZoom() /
+               owner_->GetView()->GetGraphics()->GetZoom();
+    } else {
+      scale_ = 1.0;
     }
-    connections_.clear();
-  }
 
-  void Scale(double width, double height) {
-    double vw = child_view_->GetWidth();
-    double vh = child_view_->GetHeight();
-    if (!vw || !vh) return; //FIXME: a good solution is needed
-    double min = std::min(width / vw, height / vh);
-    if (scale_ < 1 && width / vw > scale_)
-      scale_ = std::min(1.0, width / vw);
-    else
-      scale_ = min;
-    double pw = vw * scale_;
-    double ph = vh * scale_;
-    offset_x_ = pw < width ? (width - pw) / 2 : 0;
-    owner_->SetPixelWidth(width);
-    owner_->SetPixelHeight(ph);
+    double width = owner_->GetPixelWidth();
+    double height = owner_->GetPixelHeight();
+
+    owner_->BasicElement::SetPixelWidth(width);
+    owner_->BasicElement::SetPixelHeight(height);
+
+    DLOG("ViewElement new scale: %lf, new size: %lf, %lf",
+         scale_, width, height);
   }
 
   ViewElement *owner_;
   View *child_view_; // This view is not owned by the element.
   double scale_;
-  double offset_x_;
-  std::vector<Connection *> connections_;
-  static const double kZoomFactor = 1.0 / 0.141421;
+  Connection *onsize_connection_;
+  Connection *onopen_connection_;
 };
 
 ViewElement::ViewElement(BasicElement *parent, View *parent_view,
                          View *child_view)
     // Only 1 child so no need to involve Elements here.
     : BasicElement(parent, parent_view, "", NULL, false),
-      impl_(new Impl(this, child_view)) {
+      impl_(new Impl(this)) {
   DLOG("MEMORY: ViewElement Ctor %p", this);
   SetEnabled(true);
+  SetChildView(child_view);
 }
 
 ViewElement::~ViewElement() {
@@ -93,86 +86,157 @@ ViewElement::~ViewElement() {
 }
 
 void ViewElement::SetChildView(View *child_view) {
-  impl_->DisconnectSlots();
-  impl_->child_view_ = child_view;
-  if (child_view) {
-    impl_->ConnectSlots();
-    QueueDraw();
-    impl_->child_view_->GetChildren()->Layout();
-  }
-}
-
-void ViewElement::Layout() {
-  BasicElement::Layout();
-}
-
-void ViewElement::MarkRedraw() {
-  if (impl_->child_view_) {
-    impl_->child_view_->MarkRedraw();
-  }
-}
-
-void ViewElement::DoDraw(CanvasInterface *canvas) {
-  // DLOG("DoDraw ViewElement: %p on canvas %p", this, canvas);
-  if (impl_->child_view_) {
-    if (impl_->offset_x_ != 0.) {
-      canvas->PushState();
-      canvas->TranslateCoordinates(impl_->offset_x_, 0);
-    }
-    if (impl_->scale_ != 1.) {
-      canvas->ScaleCoordinates(impl_->scale_, impl_->scale_);      
-    }
-    impl_->child_view_->Draw(canvas);
-    if (impl_->offset_x_ != 0.)
-      canvas->PopState();
-  }
-}
-
-void ViewElement::SetScale(double scale) {
-  if (scale != impl_->scale_) {
-    impl_->scale_ = scale;
-    QueueDraw();
-  }
-}
-
-bool ViewElement::OnSizing(double *width, double *height) {
-  ASSERT(width && height);
-  ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
-  if (mode == ViewInterface::RESIZABLE_TRUE &&
-      impl_->child_view_->OnSizing(width, height))
-    return true;
-  if (*width == 0 || *height == 0) return false;
-  double zoom_x = impl_->child_view_->GetWidth() / *width;
-  double zoom_y = impl_->child_view_->GetHeight() / *height;
-  return zoom_x < Impl::kZoomFactor && zoom_y < Impl::kZoomFactor;
-}
-
-void ViewElement::SetSize(double width, double height) {
-  double vw = impl_->child_view_->GetWidth();
-  double vh = impl_->child_view_->GetHeight();
-  if (width == 0 || height == 0 ||  // ignore zeroize request
-      (width == vw && height == vh))
+  if (child_view == impl_->child_view_)
     return;
-  double w = width, h = height;
-  ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
-  if (mode == ViewInterface::RESIZABLE_TRUE) {
-    if (impl_->child_view_->OnSizing(&w, &h)) {
-      DLOG("resizable, request: %.1lfx%.1lf, allowed: %.1lfx%.1lf",
-          width, height, w, h);
-      impl_->child_view_->SetSize(w, h);
-    }
-  } else {
-    impl_->Scale(width, height);
-  }
-}
 
-void ViewElement::GetDefaultSize(double *width, double *height) const {  
-  *width  = impl_->child_view_->GetWidth() * impl_->scale_;
-  *height = impl_->child_view_->GetHeight() * impl_->scale_;
+  if (impl_->onsize_connection_) {
+    impl_->onsize_connection_->Disconnect();
+    impl_->onsize_connection_ = NULL;
+  }
+
+  if (impl_->onopen_connection_) {
+    impl_->onopen_connection_->Disconnect();
+    impl_->onopen_connection_ = NULL;
+  }
+
+  // Hook onopen event to do the first time initialization.
+  // Because when View is initialized from XML, the event is disabled, so the
+  // onsize event can't be received.
+  if (child_view) {
+    impl_->onsize_connection_ = child_view->ConnectOnSizeEvent(
+        NewSlot(impl_, &Impl::UpdateScaleAndSize));
+    impl_->onopen_connection_ = child_view->ConnectOnOpenEvent(
+        NewSlot(impl_, &Impl::UpdateScaleAndSize));
+  }
+
+  impl_->child_view_ = child_view;
+  impl_->UpdateScaleAndSize();
+  QueueDraw();
 }
 
 View *ViewElement::GetChildView() const {
   return impl_->child_view_;
+}
+
+bool ViewElement::OnSizing(double *width, double *height) {
+  ASSERT(width && height);
+  DLOG("ViewElement::OnSizing(%lf, %lf)", *width, *height);
+
+  if (*width <= 0 || *height <= 0)
+    return false;
+
+  // Any size is allowed if there is no child view.
+  if (!impl_->child_view_)
+    return true;
+
+  ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
+  double child_width;
+  double child_height;
+
+  // If child view is resizable then just delegate OnSizing request to child
+  // view.
+  // The resizable view might also be zoomed, so count the scale factor in.
+  if (mode == ViewInterface::RESIZABLE_TRUE) {
+    child_width = *width / impl_->scale_;
+    child_height = *height / impl_->scale_;
+    bool ret = impl_->child_view_->OnSizing(&child_width, &child_height);
+    *width = child_width * impl_->scale_;
+    *height = child_height * impl_->scale_;
+    return ret;
+  }
+
+  // Otherwise adjust the width or height to maintain the aspect ratio of child
+  // view.
+  child_width = impl_->child_view_->GetWidth();
+  child_height = impl_->child_view_->GetHeight();
+  double aspect_ratio = child_width / child_height;
+
+  // Keep the shorter edge unchanged.
+  if (*width / *height < aspect_ratio) {
+    *height = *width / aspect_ratio;
+  } else {
+    *width = *height * aspect_ratio;
+  }
+
+  return true;
+}
+
+void ViewElement::SetSize(double width, double height) {
+  DLOG("ViewElement::SetSize(%lf, %lf)", width, height);
+  double old_width = GetPixelWidth();
+  double old_height = GetPixelHeight();
+
+  if (width <= 0 || height <= 0) return;
+  if (width == old_width && height == old_height) return;
+
+  // If there is no child view, then just adjust BasicElement's size.
+  if (!impl_->child_view_) {
+    BasicElement::SetPixelWidth(width);
+    BasicElement::SetPixelHeight(height);
+    return;
+  }
+
+  ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
+  if (mode == ViewInterface::RESIZABLE_TRUE) {
+    // The resizable view might also be zoomed, so count the scale factor in.
+    impl_->child_view_->SetSize(width / impl_->scale_, height / impl_->scale_);
+    impl_->UpdateScaleAndSize();
+  } else {
+    double child_width = impl_->child_view_->GetWidth();
+    double child_height = impl_->child_view_->GetHeight();
+    double aspect_ratio = child_width / child_height;
+
+    // Calculate the scale factor according to the shorter edge.
+    if (width / height < aspect_ratio)
+      SetScale(width / child_width);
+    else
+      SetScale(height / child_height);
+  }
+
+  QueueDraw();
+}
+
+void ViewElement::SetScale(double scale) {
+  // Only set scale if child view is available.
+  if (impl_->child_view_ && scale > 0 && scale != impl_->scale_) {
+    double new_zoom = GetView()->GetGraphics()->GetZoom() * scale;
+    impl_->child_view_->GetGraphics()->SetZoom(new_zoom);
+    impl_->child_view_->MarkRedraw();
+    impl_->UpdateScaleAndSize();
+    QueueDraw();
+  }
+}
+
+double ViewElement::GetScale() const {
+  return impl_->scale_;
+}
+
+double ViewElement::GetPixelWidth() const {
+  if (impl_->child_view_)
+    return impl_->child_view_->GetWidth() * impl_->scale_;
+
+  return BasicElement::GetPixelWidth();
+}
+
+double ViewElement::GetPixelHeight() const {
+  if (impl_->child_view_)
+    return impl_->child_view_->GetHeight() * impl_->scale_;
+
+  return BasicElement::GetPixelHeight();
+}
+
+void ViewElement::MarkRedraw() {
+  BasicElement::MarkRedraw();
+  if (impl_->child_view_)
+    impl_->child_view_->MarkRedraw();
+}
+
+void ViewElement::DoDraw(CanvasInterface *canvas) {
+  if (impl_->child_view_) {
+    if (impl_->scale_ != 1)
+      canvas->ScaleCoordinates(impl_->scale_, impl_->scale_);
+    impl_->child_view_->Draw(canvas);
+  }
 }
 
 EventResult ViewElement::HandleMouseEvent(const MouseEvent &event) {
@@ -213,6 +277,15 @@ EventResult ViewElement::HandleKeyEvent(const KeyboardEvent &event) {
 
 EventResult ViewElement::HandleOtherEvent(const Event &event) {
   return impl_->child_view_->OnOtherEvent(event);
+}
+
+void ViewElement::GetDefaultSize(double *width, double *height) const {
+  if (impl_->child_view_) {
+    *width  = impl_->child_view_->GetWidth() * impl_->scale_;
+    *height = impl_->child_view_->GetHeight() * impl_->scale_;
+  } else {
+    BasicElement::GetDefaultSize(width, height);
+  }
 }
 
 } // namespace ggadget

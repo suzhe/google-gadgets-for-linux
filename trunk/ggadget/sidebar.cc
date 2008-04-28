@@ -93,6 +93,9 @@ class SideBar::Impl : public View {
     virtual void QueueResize() {
       real_viewhost_->QueueResize();
     }
+    virtual void EnableInputShapeMask(bool /* enable */) {
+      // Do nothing.
+    }
     virtual void SetResizable(ViewInterface::ResizableMode mode) {}
     virtual void SetCaption(const char *caption) {}
     virtual void SetShowCaptionAlways(bool always) {}
@@ -130,12 +133,12 @@ class SideBar::Impl : public View {
       ASSERT(false);  // should not be called
     }
     virtual void Undock() {
-      real_viewhost_->Undock();
+      //TODO: real_viewhost_->Undock();
     }
     virtual void Expand() {
       SimpleEvent e(Event::EVENT_POPOUT);
       private_view_->OnOtherEvent(e);
-      real_viewhost_->Expand();
+      //TODO: real_viewhost_->Expand();
     }
     virtual void Unexpand() {
       SimpleEvent e(Event::EVENT_POPIN);
@@ -193,7 +196,7 @@ class SideBar::Impl : public View {
     }
     // the mouse down event after expand event should file unexpand event
     if (event.GetType() == Event::EVENT_MOUSE_DOWN && expand_element_) {
-      view_host_->Unexpand();
+      //TODO: view_host_->Unexpand();
       return EVENT_RESULT_HANDLED;
     }
     EventResult result = View::OnMouseEvent(event);
@@ -245,7 +248,7 @@ class SideBar::Impl : public View {
         MouseEvent e(Event::EVENT_MOUSE_UP,
             mouse_move_event_x_, mouse_move_event_y_, 0, 0,
             MouseEvent::BUTTON_LEFT, event.GetModifier());
-        element->HandleMouseEvent(e);
+        //TODO: element->HandleMouseEvent(e);
         is_drag_event_ = true;
         element->SetOpacity(kOpacityFactor);
         SetPopupElement(element);
@@ -255,8 +258,8 @@ class SideBar::Impl : public View {
       if (event.GetX() - mouse_move_event_x_ < -GetWidth() ||
           event.GetX() - mouse_move_event_x_ > GetWidth()) {
         is_drag_event_ = false;
-        down_cast<ViewElement *>(GetMouseOverElement())->
-          GetChildView()->GetViewHost()->Undock();
+        // TODO: down_cast<ViewElement *>(GetMouseOverElement())->
+        // TODO: GetChildView()->GetViewHost()->Undock();
         ResetState();
         return EVENT_RESULT_HANDLED;
       } else {
@@ -331,17 +334,18 @@ class SideBar::Impl : public View {
     background_->SetBackgroundMode(DivElement::BACKGROUND_MODE_STRETCH_MIDDLE);
     background_->SetBackground(LoadGlobalImageAsVariant(kVDMainBackground));
 
-    Variant border_h = LoadGlobalImageAsVariant(kVDBorderH);
-    Variant border_v = LoadGlobalImageAsVariant(kVDBorderV);
+    // Just use DrawLine to draw border.
+    //TODO: Variant border_h = LoadGlobalImageAsVariant(kVDBorderH);
+    //TODO: Variant border_v = LoadGlobalImageAsVariant(kVDBorderV);
     for (int i = 0; i < 4; ++i) {
       ImgElement *img = new ImgElement(NULL, this, NULL);
       border_array_[i] = img;
       GetChildren()->InsertElement(img, NULL);
     }
-    border_array_[0]->SetSrc(border_h);
-    border_array_[1]->SetSrc(border_h);
-    border_array_[2]->SetSrc(border_v);
-    border_array_[3]->SetSrc(border_v);
+    //TODO: border_array_[0]->SetSrc(border_h);
+    //TODO: border_array_[1]->SetSrc(border_h);
+    //TODO: border_array_[2]->SetSrc(border_v);
+    //TODO: border_array_[3]->SetSrc(border_v);
 
     border_array_[0]->SetPixelHeight(kBoderWidth);
     border_array_[1]->SetPixelHeight(kBoderWidth);
@@ -510,7 +514,7 @@ class SideBar::Impl : public View {
     DLOG("Sidebar: Docked view(%p)", view);
     Layout();
     SimpleEvent e(Event::EVENT_DOCK);
-    ele->HandleOtherEvent(e);
+    //TODO: ele->HandleOtherEvent(e);
     return true;
   }
   bool Undock(View *view) {
@@ -518,7 +522,7 @@ class SideBar::Impl : public View {
     DLOG("Sidebar: Undock view(%p) in element(%p)", view, element);
     if (!element) return false;
     SimpleEvent e(Event::EVENT_UNDOCK);
-    element->HandleOtherEvent(e);
+    //TODO: element->HandleOtherEvent(e);
     if (!main_div_->GetChildren()->RemoveElement(element))
       delete element;
     Layout();
@@ -532,7 +536,7 @@ class SideBar::Impl : public View {
   void Unexpand() {
     ASSERT(expand_element_);
     if (!expand_element_) return;
-    expand_element_->GetChildView()->GetViewHost()->Unexpand();
+    //TODO: expand_element_->GetChildView()->GetViewHost()->Unexpand();
     expand_element_->SetEnabled(true);
     expand_element_ = NULL;
   }
@@ -624,6 +628,15 @@ class SideBar::Impl : public View {
   static const double kButtonWidth = 18;
   static const double kIconHeight = 22;
 };
+
+const int SideBar::Impl::kSperator;
+const int SideBar::Impl::kMouseMoveThreshold;
+const double SideBar::Impl::kOpacityFactor;
+const double SideBar::Impl::kSideBarMinWidth;
+const double SideBar::Impl::kSideBarMaxWidth;
+const double SideBar::Impl::kBoderWidth;
+const double SideBar::Impl::kButtonWidth;
+const double SideBar::Impl::kIconHeight;
 
 SideBar::SideBar(HostInterface *host, ViewHostInterface *view_host)
   : impl_(new Impl(host, this, view_host)) {

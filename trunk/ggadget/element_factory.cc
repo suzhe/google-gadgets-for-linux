@@ -25,6 +25,7 @@
 #include "checkbox_element.h"
 #include "combobox_element.h"
 #include "contentarea_element.h"
+#include "copy_element.h"
 #include "div_element.h"
 #include "img_element.h"
 #include "item_element.h"
@@ -71,6 +72,8 @@ ElementFactory::ElementFactory()
                        &CheckBoxElement::CreateCheckBoxInstance);
   RegisterElementClass("combobox", &ComboBoxElement::CreateInstance);
   RegisterElementClass("contentarea", &ContentAreaElement::CreateInstance);
+  // Internal element. Don't add it for now.
+  // RegisterElementClass("_copy", &CopyElement::CreateInstance);
   RegisterElementClass("div", &DivElement::CreateInstance);
   RegisterElementClass("img", &ImgElement::CreateInstance);
   RegisterElementClass("item", &ItemElement::CreateInstance);

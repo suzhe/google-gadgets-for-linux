@@ -46,6 +46,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  combobox_element.h \
 			  content_item.h \
 			  contentarea_element.h \
+			  copy_element.h \
 			  decorated_view_host.h \
 			  details_view_data.h \
 			  digest_utils.h \
@@ -108,6 +109,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  scriptable_view.h \
 			  scrollbar_element.h \
 			  scrolling_element.h \
+			  sidebar.h \
 			  signals.h \
 			  slot.h \
 			  string_utils.h \
@@ -118,7 +120,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  variant.h \
 			  view.h \
 			  view_element.h \
-			  sidebar.h \
 			  view_host_interface.h \
 			  view_interface.h \
 			  xml_dom_interface.h \
@@ -144,6 +145,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  combobox_element.cc \
 			  content_item.cc \
 			  contentarea_element.cc \
+			  copy_element.cc \
 			  decorated_view_host.cc \
 			  details_view_data.cc \
 			  digest_utils.cc \
@@ -187,6 +189,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  scriptable_view.cc \
 			  scrollbar_element.cc \
 			  scrolling_element.cc \
+			  sidebar.cc \
 			  signals.cc \
 			  slot.cc \
 			  string_utils.cc \
@@ -197,12 +200,12 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  variant.cc \
 			  view.cc \
 			  view_element.cc \
-			  sidebar.cc \
 			  xml_dom.cc \
 			  xml_http_request_factory.cc \
 			  xml_parser.cc \
 			  xml_utils.cc \
 			  zip_file_manager.cc
+
 
 libggadget@GGL_EPOCH@_la_CPPFLAGS = \
 			  @LTDLINCL@ \

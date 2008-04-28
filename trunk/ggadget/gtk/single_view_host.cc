@@ -222,6 +222,15 @@ class SingleViewHost::Impl {
                         AdjustWindowSizeHandler, this, NULL);
   }
 
+  void EnableInputShapeMask(bool enable) {
+    if (binder_) {
+      DLOG("SingleViewHost::EnableInputShapeMask(%s)",
+           enable ? "true" : "false");
+      binder_->EnableInputShapeMask(enable);
+      QueueDraw();
+    }
+  }
+
   void QueueDraw() {
     ASSERT(GTK_IS_WIDGET(widget_));
     gtk_widget_queue_draw(widget_);
@@ -636,6 +645,10 @@ void SingleViewHost::QueueDraw() {
 
 void SingleViewHost::QueueResize() {
   impl_->QueueResize();
+}
+
+void SingleViewHost::EnableInputShapeMask(bool enable) {
+  impl_->EnableInputShapeMask(enable);
 }
 
 void SingleViewHost::SetResizable(ViewInterface::ResizableMode mode) {

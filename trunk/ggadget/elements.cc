@@ -333,7 +333,7 @@ class Elements::Impl {
       // 2. If it's outside parent's visible area.
       if (!view_->IsElementInClipRegion(element) ||
           (owner_ && !owner_->IsChildInVisibleArea(element))) {
-        // DLOG("pass child: %p(%s)", element, element->GetName().c_str());
+        //DLOG("pass child: %p(%s)", element, element->GetName().c_str());
         continue;
       }
 

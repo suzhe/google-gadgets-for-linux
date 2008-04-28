@@ -27,6 +27,7 @@ RESOURCE_FILES= button_down.png \
 		combo_arrow_down.png \
 		combo_arrow_over.png \
 		common.js \
+		gadgets.png \
 		html_details_view.xml \
 		messages-catalog.xml \
 		pinned.png \
@@ -68,12 +69,19 @@ RESOURCE_FILES= button_down.png \
 		vd_back_down.png \
 		vd_back_normal.png \
 		vd_back_over.png \
-		vd_border_h.png \
-		vd_border_v.png \
+		vd_bottom_right_corner.png \
 		vd_button_background.png \
 		vd_close_down.png \
 		vd_close_normal.png \
 		vd_close_over.png \
+		vd_details_bottom.png \
+		vd_details_button_bkgnd_click.png \
+		vd_details_button_bkgnd_normal.png \
+		vd_details_button_bkgnd_over.png \
+		vd_details_button_negfb_normal.png \
+		vd_details_button_negfb_over.png \
+		vd_details_middle.png \
+		vd_details_top.png \
 		vd_expand_down.png \
 		vd_expand_normal.png \
 		vd_expand_over.png \
@@ -81,13 +89,20 @@ RESOURCE_FILES= button_down.png \
 		vd_forward_normal.png \
 		vd_forward_over.png \
 		vd_main_background.png \
+		vd_main_background_minimized.png \
+		vd_main_background_transparent.png \
+		vd_main_sidebar_bottom.png \
 		vd_menu_down.png \
 		vd_menu_normal.png \
 		vd_menu_over.png \
+		vd_popout_background.png \
+		vd_popout_background_title.png \
+		vd_popout_close_down.png \
+		vd_popout_close_normal.png \
+		vd_popout_close_over.png \
 		vd_unexpand_down.png \
 		vd_unexpand_normal.png \
 		vd_unexpand_over.png \
-		google_gadget.png \
 		en/strings.xml \
 		zh-CN/strings.xml
 

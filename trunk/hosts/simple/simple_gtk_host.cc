@@ -30,6 +30,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/view.h>
+#include <ggadget/main_loop_interface.h>
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -163,7 +164,7 @@ class SimpleGtkHost::Impl {
         GM_("GADGET_CONFIRM_MESSAGE"), data[kManifestName].c_str(),
         gadget_manager_->GetGadgetInstanceDownloadURL(id).c_str(),
         GM_("GADGET_DESCRIPTION"), data[kManifestDescription].c_str());
-    
+
     GdkScreen *screen;
     gdk_display_get_pointer(gdk_display_get_default(), &screen,
                             NULL, NULL, NULL);
@@ -227,17 +228,79 @@ class SimpleGtkHost::Impl {
     return true;
   }
 
+  class RemoveGadgetCallback :  public WatchCallbackInterface {
+   public:
+    RemoveGadgetCallback(Gadget *gadget) : gadget_(gadget) {}
+
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      gadget_->RemoveMe(true);
+      return false;
+    }
+
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+
+    Gadget *gadget_;
+  };
+
+  class DecoratorOnCloseHandler {
+   public:
+    DecoratorOnCloseHandler(DecoratedViewHost *decorator)
+      : decorator_(decorator) {
+    }
+
+    void operator()() const {
+      ViewInterface *child = decorator_->GetView();
+      Gadget *gadget = child ? child->GetGadget() : NULL;
+
+      if (!gadget) return;
+
+      switch (decorator_->GetDecoratorType()) {
+        case DecoratedViewHost::MAIN_STANDALONE:
+        case DecoratedViewHost::MAIN_DOCKED:
+          // Cannot remove the gadget inside the event handler.
+          GetGlobalMainLoop()->AddTimeoutWatch(
+              0, new RemoveGadgetCallback(gadget));
+          break;
+        case DecoratedViewHost::MAIN_EXPANDED:
+          // TODO
+          break;
+        case DecoratedViewHost::DETAILS:
+          gadget->CloseDetailsView();
+          break;
+        default:
+          ASSERT("Invalid decorator type.");
+      }
+    }
+
+    bool operator==(const DecoratorOnCloseHandler &another) const {
+      return decorator_ == another.decorator_;
+    }
+
+   private:
+    DecoratedViewHost *decorator_;
+  };
+
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-    ViewHostInterface *host = NULL;
-    bool decorated = (decorated_ || type != ViewHostInterface::VIEW_HOST_MAIN);
+    bool decorated =
+        (decorated_ || type == ViewHostInterface::VIEW_HOST_OPTIONS);
 
     SingleViewHost *svh = new SingleViewHost(type, zoom_, decorated, false,
-        true, static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+                true, static_cast<ViewInterface::DebugMode>(view_debug_mode_));
 
-    DecoratedViewHost *dvh  = new DecoratedViewHost(svh, true);
-    host = dvh;
+    if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
+      return svh;
 
-    return host;
+    DecoratedViewHost *dvh;
+    if (type == ViewHostInterface::VIEW_HOST_MAIN)
+      dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
+                                  true);
+    else
+      dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
+                                  true);
+    dvh->ConnectOnClose(NewFunctorSlot<void>(DecoratorOnCloseHandler(dvh)));
+    return dvh;
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {

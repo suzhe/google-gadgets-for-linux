@@ -35,6 +35,7 @@ class GtkEditElement : public EditElementBase {
 
   virtual void Layout();
   virtual void MarkRedraw();
+  virtual bool HasOpaqueBackground() const;
 
  public:
   virtual Variant GetBackground() const;

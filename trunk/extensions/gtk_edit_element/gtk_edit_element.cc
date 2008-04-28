@@ -95,6 +95,11 @@ void GtkEditElement::MarkRedraw() {
   impl_->MarkRedraw();
 }
 
+bool GtkEditElement::HasOpaqueBackground() const {
+  const Texture *background = impl_->GetBackground();
+  return background && background->IsFullyOpaque();
+}
+
 Variant GtkEditElement::GetBackground() const {
   return Variant(Texture::GetSrc(impl_->GetBackground()));
 }

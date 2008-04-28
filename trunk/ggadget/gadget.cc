@@ -46,6 +46,7 @@
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
+#include "messages.h"
 
 namespace ggadget {
 
@@ -410,10 +411,6 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     host_->RemoveGadget(owner_, save_data);
   }
 
-  void RemoveMeMenuCallback(const char *) {
-    RemoveMe(true);
-  }
-
   void AboutMenuCallback(const char *) {
     host_->ShowGadgetAboutDialog(owner_);
   }
@@ -425,15 +422,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   void OnAddCustomMenuItems(MenuInterface *menu) {
     ScriptableMenu scriptable_menu(menu);
     onaddcustommenuitems_signal_(&scriptable_menu);
-    menu->AddItem(NULL, MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
-    if (HasOptionsDialog()) {
-      menu->AddItem(GM_("GADGET_MENU_OPTIONS"), 0,
+    if (HasOptionsDialog())
+      menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
                     NewSlot(this, &Impl::OptionsMenuCallback));
-    }
-    menu->AddItem(NULL, MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
-    menu->AddItem(GM_("GADGET_MENU_REMOVE"), 0,
-                  NewSlot(this, &Impl::RemoveMeMenuCallback));
-    menu->AddItem(GM_("GADGET_MENU_ABOUT"), 0,
+    menu->AddItem(GM_("MENU_ITEM_ABOUT"), 0,
                   NewSlot(this, &Impl::AboutMenuCallback));
   }
 

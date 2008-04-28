@@ -40,7 +40,6 @@ namespace gtk {
  */
 class ViewWidgetBinder {
  public:
-  // TODO: Add support of background image.
   /**
    * @param no_background if it's true then doesn't draw widget's background.
    */
@@ -48,6 +47,12 @@ class ViewWidgetBinder {
                    ViewHostInterface *host, GtkWidget *widget,
                    bool no_background);
   ~ViewWidgetBinder();
+
+
+  /**
+   * @see @c ViewHostInterface::EnableInputShapeMask()
+   */
+  void EnableInputShapeMask(bool enable);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ViewWidgetBinder);
