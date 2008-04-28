@@ -20,6 +20,7 @@
 #include <ggadget/gadget.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_canvas.h>
+#include <ggadget/qt/utilities.h>
 #include <ggadget/qt/qt_menu.h>
 #include "qt_gadget_widget.h"
 namespace ggadget {
@@ -27,16 +28,21 @@ namespace qt {
 
 QGadgetWidget::QGadgetWidget(ViewInterface *view,
                              ViewHostInterface *host,
-                             QtGraphics *g,
                              bool composite)
-     : canvas_(NULL), graphics_(g), view_(view), view_host_(host),
+     : canvas_(NULL), graphics_(NULL), view_(view), view_host_(host),
        width_(0), height_(0),
        drag_files_(NULL),
-       zoom_(g->GetZoom()),
        composite_(composite) {
+  graphics_ = host->NewGraphics();
+  zoom_ = graphics_->GetZoom();
   setMouseTracking(true);
   setAcceptDrops(true);
+  setWindowFlags(Qt::FramelessWindowHint);
   setAttribute(Qt::WA_InputMethodEnabled);
+}
+
+QGadgetWidget::~QGadgetWidget() {
+  if (graphics_) delete graphics_;
 }
 
 void QGadgetWidget::paintEvent(QPaintEvent *event) {
@@ -60,28 +66,11 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
     p.fillRect(rect(), Qt::transparent);
     p.restore();
   }
-//  p.setBackground(Qt::transparent);
   QtCanvas canvas(D2I(width_ * zoom_), D2I(height_ * zoom_), &p);
   view_->Draw(&canvas);
 }
 
 void QGadgetWidget::mouseDoubleClickEvent(QMouseEvent * event) {
-}
-// Check out qt document to get more information about MouseButtons and
-// MouseButton
-static int GetMouseButtons(const Qt::MouseButtons buttons){
-  int ret = 0;
-  if (buttons & Qt::LeftButton) ret |= MouseEvent::BUTTON_LEFT;
-  if (buttons & Qt::RightButton) ret |= MouseEvent::BUTTON_RIGHT;
-  if (buttons & Qt::MidButton) ret |= MouseEvent::BUTTON_MIDDLE;
-  return ret;
-}
-
-static int GetMouseButton(const Qt::MouseButton button) {
-  if (button == Qt::LeftButton) return MouseEvent::BUTTON_LEFT;
-  if (button == Qt::RightButton) return MouseEvent::BUTTON_RIGHT;
-  if (button == Qt::MidButton) return MouseEvent::BUTTON_MIDDLE;
-  return 0;
 }
 
 void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
@@ -105,31 +94,14 @@ void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED) {
     event->accept();
   }
-#if 0 // TODO: this code is refactored out
-  if (event->button() == Qt::RightButton) {
-    // Handle context menu
-    QMenu qmenu;
-    QtMenu menu(&qmenu);
-    GadgetInterface *gadget = view_host_->GetGadgetHost()->GetGadget();
-    gadget->OnAddCustomMenuItems(&menu);
-    if (!qmenu.isEmpty()) {
-      qmenu.exec(event->globalPos());
-    }
-  }
-#endif
 }
+
 static const unsigned int kWindowMoveDelay = 100;
 
 void QGadgetWidget::mouseReleaseEvent(QMouseEvent * event ) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
-  int button;
-  if (event->button() == Qt::LeftButton) {
-    button = MouseEvent::BUTTON_LEFT;
-  } else if (event->button() == Qt::RightButton) {
-    button = MouseEvent::BUTTON_RIGHT;
-  } else {
-    button = MouseEvent::BUTTON_MIDDLE;
-  }
+  int button = GetMouseButton(event->button());
+
   MouseEvent e(Event::EVENT_MOUSE_UP,
                event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
   handler_result = view_->OnMouseEvent(e);
@@ -161,18 +133,6 @@ void QGadgetWidget::leaveEvent(QEvent *event) {
     event->accept();
 }
 
-static int GetModifier(Qt::KeyboardModifiers state) {
-  int mod = Event::MOD_NONE;
-  if (state & Qt::ShiftModifier) mod |= Event::MOD_SHIFT;
-  if (state & Qt::ControlModifier)  mod |= Event::MOD_CONTROL;
-  if (state & Qt::AltModifier) mod |= Event::MOD_ALT;
-  return mod;
-}
-
-static unsigned int GetKeyCode(int qt_key) {
-  return qt_key;
-}
-
 void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
   // For key down event
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
@@ -180,7 +140,7 @@ void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
   EventResult handler_result2 = ggadget::EVENT_RESULT_UNHANDLED;
 
   // Key down event
-  int mod = GetModifier(event->modifiers());
+  int mod = GetModifiers(event->modifiers());
   unsigned int key_code = GetKeyCode(event->key());
   if (key_code) {
     KeyboardEvent e(Event::EVENT_KEY_DOWN, key_code, mod, event);
@@ -204,7 +164,7 @@ void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
 void QGadgetWidget::keyReleaseEvent(QKeyEvent *event) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
 
-  int mod = GetModifier(event->modifiers());
+  int mod = GetModifiers(event->modifiers());
   unsigned int key_code = GetKeyCode(event->key());
   if (key_code) {
     KeyboardEvent e(Event::EVENT_KEY_UP, key_code, mod, event);

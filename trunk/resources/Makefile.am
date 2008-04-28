@@ -87,6 +87,7 @@ RESOURCE_FILES= button_down.png \
 		vd_unexpand_down.png \
 		vd_unexpand_normal.png \
 		vd_unexpand_over.png \
+		google_gadget.png \
 		en/strings.xml \
 		zh-CN/strings.xml
 

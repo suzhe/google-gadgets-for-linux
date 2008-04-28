@@ -17,13 +17,17 @@
 #include <string>
 #include <map>
 #include <QtGui/QIcon>
+#include <QtGui/QMessageBox>
 #include <QtGui/QFontDatabase>
 #include <ggadget/common.h>
+#include <ggadget/messages.h>
 #include <ggadget/logger.h>
+#include <ggadget/file_manager_factory.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/script_runtime_manager.h>
+#include <ggadget/decorated_view_host.h>
 #include <ggadget/ggadget.h>
 #include <ggadget/gadget_consts.h>
 #include "qt_host.h"
@@ -48,28 +52,20 @@ QtHost::QtHost(int view_debug_mode)
 }
 
 QtHost::~QtHost() {
-  for (GadgetsMap::iterator it = gadgets_.begin();
-       it != gadgets_.end(); ++it)
-    delete it->second;
+  delete obj_;
 }
 
 ViewHostInterface *QtHost::NewViewHost(ViewHostInterface::Type type) {
-  QtViewHost *host = new QtViewHost(
+  ViewHostInterface *host = new QtViewHost(
       type, 1.0, true,
       static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+//  DecoratedViewHost *dvh  = new DecoratedViewHost(host, true);
   return host;
 }
 
-void QtHost::RemoveGadget(int instance_id, bool save_data) {
-  GadgetsMap::iterator it = gadgets_.find (instance_id);
-
-  if (it != gadgets_.end()) {
-    delete it->second;
-    gadgets_.erase(it);
-  } else {
-    LOG("Can't find gadget instance %d", instance_id);
-  }
-
+void QtHost::RemoveGadget(Gadget *gadget, bool save_data) {
+  int instance_id = gadget->GetInstanceID();
+  delete gadget;
   gadget_manager_->RemoveGadgetInstance(instance_id);
 }
 
@@ -87,8 +83,7 @@ void QtHost::DebugOutput(DebugLevel level, const char *message) const {
 }
 
 bool QtHost::OpenURL(const char *url) const {
-  return false;
-//  return ggadget::qt::OpenURL(url);
+  return ggadget::qt::OpenURL(url);
 }
 
 bool QtHost::LoadFont(const char *filename) {
@@ -98,17 +93,25 @@ bool QtHost::LoadFont(const char *filename) {
    return false;
 }
 
+void QtHost::Run() {
+}
+
 void QtHost::ShowGadgetAboutDialog(ggadget::Gadget *gadget) {
-//  ggadget::qt::ShowGadgetAboutDialog(gadget);
+  ggadget::qt::ShowGadgetAboutDialog(gadget);
 }
 
 void QtHost::SetupUI() {
   menu_.addAction("Add gadget", obj_, SLOT(OnAddGadget()));
   menu_.addAction("Exit", qApp, SLOT(quit()));
   tray_.setContextMenu(&menu_);
-  QIcon icon;
-  icon.addFile("/usr/share/pixmaps/firefox.png");
-  tray_.setIcon(icon);
+  std::string icon_data;
+  if (GetGlobalFileManager()->ReadFile("resource://google_gadget.png",
+                                       &icon_data)) {
+    QPixmap pixmap;
+    pixmap.loadFromData(reinterpret_cast<const uchar *>(icon_data.c_str()),
+                        icon_data.length());
+    tray_.setIcon(pixmap);
+  }
   tray_.show();
 }
 
@@ -116,7 +119,35 @@ void QtHost::InitGadgets() {
   gadget_manager_->EnumerateGadgetInstances(
       NewSlot(this, &QtHost::AddGadgetInstanceCallback));
   gadget_manager_->ConnectOnNewGadgetInstance(
-      NewSlot(this, &QtHost::AddGadgetInstanceCallback));
+      NewSlot(this, &QtHost::NewGadgetInstanceCallback));
+}
+
+bool QtHost::ConfirmGadget(int id) {
+  std::string path = gadget_manager_->GetGadgetInstancePath(id);
+  StringMap data;
+  if (!Gadget::GetGadgetManifest(path.c_str(), &data))
+    return false;
+
+  std::string message = GM_("GADGET_CONFIRM_MESSAGE");
+  message.append("\n\n")
+      .append(data[kManifestName] + "\n")
+      .append(gadget_manager_->GetGadgetInstanceDownloadURL(id) + "\n\n")
+      .append(GM_("GADGET_DESCRIPTION"))
+      .append(data[kManifestDescription]);
+  int ret = QMessageBox::question(NULL,
+                                  GM_("GADGET_CONFIRM_TITLE"),
+                                  message.c_str(),
+                                  QMessageBox::Yes| QMessageBox::No,
+                                  QMessageBox::Yes);
+  return ret == QMessageBox::Yes;
+}
+
+bool QtHost::NewGadgetInstanceCallback(int id) {
+  if (gadget_manager_->IsGadgetInstanceTrusted(id) ||
+      ConfirmGadget(id)) {
+    return AddGadgetInstanceCallback(id);
+  }
+  return false;
 }
 
 bool QtHost::AddGadgetInstanceCallback(int id) {
@@ -138,7 +169,8 @@ void QtHost::ReportScriptError(const char *message) {
 bool QtHost::LoadGadget(const char *path, const char *options_name,
                         int instance_id) {
   Gadget *gadget =
-      new Gadget(this, path, options_name, instance_id);
+      new Gadget(this, path, options_name, instance_id,
+                 gadget_manager_->IsGadgetInstanceTrusted(instance_id));
 
   if (!gadget->IsValid()) {
     LOG("Failed to load gadget %s", path);
@@ -151,8 +183,6 @@ bool QtHost::LoadGadget(const char *path, const char *options_name,
     delete gadget;
     return false;
   }
-
-  gadgets_[instance_id] = gadget;
   return true;
 }
 

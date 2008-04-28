@@ -41,7 +41,7 @@ class QtViewHost : public ViewHostInterface {
   virtual void Destroy();
   virtual void SetView(ViewInterface *view);
   virtual ViewInterface *GetView() const { return view_; }
-  virtual const GraphicsInterface *GetGraphics() const { return graphics_; }
+  virtual GraphicsInterface *NewGraphics() const { return new QtGraphics(zoom_); }
   virtual void *GetNativeWidget() const { return widget_; }
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const;
@@ -58,6 +58,11 @@ class QtViewHost : public ViewHostInterface {
   virtual bool ShowContextMenu(int button);
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
   virtual void BeginMoveDrag(int button) {}
+  virtual void Dock() {}
+  virtual void Undock() {}
+  virtual void Expand() {};
+  virtual void Unexpand() {};
+
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
@@ -70,10 +75,10 @@ class QtViewHost : public ViewHostInterface {
   ViewInterface *view_;
   ViewHostInterface::Type type_;
   QGadgetWidget *widget_;
-  QtGraphics *graphics_;
   QWidget *window_;     // Top level window of the view
   QDialog *dialog_;     // Top level window of the view
   ViewInterface::DebugMode debug_mode_;
+  double zoom_;
   Connection *onoptionchanged_connection_;
 
   static const unsigned int kShowTooltipDelay = 500;

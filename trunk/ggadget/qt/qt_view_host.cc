@@ -44,10 +44,10 @@ QtViewHost::QtViewHost(ViewHostInterface::Type type,
     : view_(NULL),
       type_(type),
       widget_(NULL),
-      graphics_(new QtGraphics(zoom)),
       window_(NULL),
       dialog_(NULL),
       debug_mode_(debug_mode),
+      zoom_(zoom),
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
       composite_(false),
@@ -66,9 +66,6 @@ QtViewHost::~QtViewHost() {
     view_ = NULL;
   }
 
-  delete graphics_;
-  graphics_ = NULL;
-
   delete qt_obj_;
 }
 
@@ -80,12 +77,12 @@ void QtViewHost::SetView(ViewInterface *view) {
   Detach();
   if (view == NULL) return;
   view_ = view;
-  widget_ = new QGadgetWidget(view_, this, graphics_, composite_);
+  widget_ = new QGadgetWidget(view_, this, composite_);
 }
 
 void QtViewHost::ViewCoordToNativeWidgetCoord(
     double x, double y, double *widget_x, double *widget_y) const {
-  double zoom = graphics_->GetZoom();
+  double zoom = view_->GetGraphics()->GetZoom();
   if (widget_x)
     *widget_x = x * zoom;
   if (widget_y)
@@ -109,7 +106,7 @@ void QtViewHost::SetCaption(const char *caption) {
 }
 
 void QtViewHost::SetShowCaptionAlways(bool always) {
-  }
+}
 
 void QtViewHost::SetCursor(int type) {
   QCursor cursor(GetQtCursorShape(type));
@@ -174,9 +171,6 @@ bool QtViewHost::ShowView(bool modal, int flags,
 }
 
 void QtViewHost::CloseView() {
-  if (window_ && window_->isVisible()) {
-    // TODO: SaveViewPosition
-  }
   // DetailsView will be only hiden here since it may be reused later.
   // window_ will be freed when SetView is called
   if (window_) {
@@ -218,7 +212,6 @@ std::string QtViewHost::Prompt(const char *message,
                                    view_->GetCaption().c_str(),
                                    message,
                                    QLineEdit::Normal);
-//                                   QMessageBox::Ok| QMessageBox::Cancel);
   return s.toStdString();
 }
 

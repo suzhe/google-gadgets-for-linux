@@ -35,6 +35,14 @@ bool OpenURL(const char *url);
 
 Qt::CursorShape GetQtCursorShape(int type);
 
+int GetMouseButtons(const Qt::MouseButtons buttons);
+
+int GetMouseButton(const Qt::MouseButton button);
+
+int GetModifiers(Qt::KeyboardModifiers state);
+
+unsigned int GetKeyCode(int qt_key);
+
 } // namespace qt
 } // namespace ggadget
 

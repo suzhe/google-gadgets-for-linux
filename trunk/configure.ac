@@ -684,6 +684,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/dbus/Makefile
 		 ggadget/dbus/tests/Makefile
 		 ggadget/qt/Makefile
+		 ggadget/qt/tests/Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
 		 hosts/Makefile

@@ -31,8 +31,8 @@ namespace qt {
 class QGadgetWidget : public QWidget {
   Q_OBJECT
  public:
-  QGadgetWidget(ViewInterface* view, ViewHostInterface *host,
-                QtGraphics *g, bool composite);
+  QGadgetWidget(ViewInterface* view, ViewHostInterface *host, bool composite);
+  ~QGadgetWidget();
 
  signals:
   void closed();
@@ -54,7 +54,7 @@ class QGadgetWidget : public QWidget {
   virtual void resizeEvent(QResizeEvent *event);
   virtual void closeEvent(QCloseEvent *event);
   QtCanvas *canvas_;
-  QtGraphics *graphics_;
+  GraphicsInterface *graphics_;
   ViewInterface *view_;
   ViewHostInterface *view_host_;
   double width_, height_;  // The view size
