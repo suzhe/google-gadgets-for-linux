@@ -58,10 +58,6 @@ class QtViewHost : public ViewHostInterface {
   virtual bool ShowContextMenu(int button);
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
   virtual void BeginMoveDrag(int button) {}
-  virtual void Dock() {}
-  virtual void Undock() {}
-  virtual void Expand() {};
-  virtual void Unexpand() {};
 
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);

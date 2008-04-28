@@ -82,11 +82,6 @@ class SingleViewHost : public ViewHostInterface {
   virtual void MoveDrag(int button);
   virtual void EndMoveDrag(int button);
 
-  virtual void Dock();
-  virtual void Undock();
-  virtual void Expand();
-  virtual void Unexpand();
-
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
@@ -125,13 +120,6 @@ class SingleViewHost : public ViewHostInterface {
 
   Connection *ConnectOnMoveDrag(Slot1<void, int> *slot);
 
-  Connection *ConnectOnDock(Slot0<void> *slot);
-
-  Connection *ConnectOnUndock(Slot0<void> *slot);
-
-  Connection *ConnectOnExpand(Slot0<void> *slot);
-
-  Connection *ConnectOnUnexpand(Slot0<void> *slot);
  private:
   DISALLOW_EVIL_CONSTRUCTORS(SingleViewHost);
   class Impl;

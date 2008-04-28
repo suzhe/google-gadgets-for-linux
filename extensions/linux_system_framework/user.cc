@@ -160,7 +160,7 @@ bool User::CheckInputEvents(int watch_id) {
         ASSERT(port < 256);
         last_irq_ = time(NULL);
         irq_count_[port] = count;
-        DLOG("User input: %s", input_devices_[i].c_str());
+        // DLOG("User input: %s", input_devices_[i].c_str());
       }
     }
   }

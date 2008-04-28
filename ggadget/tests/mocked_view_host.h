@@ -171,10 +171,6 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   }
   virtual void BeginResizeDrag(int, ggadget::ViewInterface::HitTest) { }
   virtual void BeginMoveDrag(int) { }
-  virtual void Dock() { }
-  virtual void Undock() { }
-  virtual void Expand() { }
-  virtual void Unexpand() { }
 
   bool GetQueuedDraw() {
     bool b = draw_queued_;

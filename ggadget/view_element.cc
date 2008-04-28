@@ -20,6 +20,7 @@
 #include "canvas_interface.h"
 #include "elements.h"
 #include "graphics_interface.h"
+#include "gadget.h"
 #include "logger.h"
 #include "signals.h"
 #include "view.h"
@@ -269,6 +270,10 @@ EventResult ViewElement::HandleDragEvent(const DragEvent &event) {
   } else {
     return impl_->child_view_->OnDragEvent(event);
   }
+}
+
+bool ViewElement::OnAddContextMenuItems(MenuInterface *menu) {
+  return impl_->child_view_->OnAddContextMenuItems(menu);
 }
 
 EventResult ViewElement::HandleKeyEvent(const KeyboardEvent &event) {

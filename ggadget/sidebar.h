@@ -47,6 +47,9 @@ class SideBar {
   void SetAddGadgetSlot(Slot0<void> *slot);
   void SetMenuSlot(Slot0<void> *slot);
   void SetCloseSlot(Slot0<void> *slot);
+
+  Connection *ConnectOnUndock(Slot0<void> *slot);
+  Connection *ConnectOnUnexpand(Slot0<void> *slot);
  private:
   class Impl;
   Impl *impl_;

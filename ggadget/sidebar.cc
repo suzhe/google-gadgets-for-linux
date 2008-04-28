@@ -129,21 +129,6 @@ class SideBar::Impl : public View {
     }
     virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
     virtual void BeginMoveDrag(int button) {}
-    virtual void Dock() {
-      ASSERT(false);  // should not be called
-    }
-    virtual void Undock() {
-      //TODO: real_viewhost_->Undock();
-    }
-    virtual void Expand() {
-      SimpleEvent e(Event::EVENT_POPOUT);
-      private_view_->OnOtherEvent(e);
-      //TODO: real_viewhost_->Expand();
-    }
-    virtual void Unexpand() {
-      SimpleEvent e(Event::EVENT_POPIN);
-      private_view_->OnOtherEvent(e);
-    }
     virtual void Alert(const char *message) {
       real_viewhost_->Alert(message);
     }
@@ -177,7 +162,8 @@ class SideBar::Impl : public View {
         background_(NULL),
         icon_(NULL),
         main_div_(NULL),
-        close_slot_(NULL) {
+        close_slot_(NULL),
+        system_menu_slot_(NULL) {
     ASSERT(host);
     SetResizable(ViewInterface::RESIZABLE_TRUE);
     EnableCanvasCache(false);
@@ -258,8 +244,7 @@ class SideBar::Impl : public View {
       if (event.GetX() - mouse_move_event_x_ < -GetWidth() ||
           event.GetX() - mouse_move_event_x_ > GetWidth()) {
         is_drag_event_ = false;
-        // TODO: down_cast<ViewElement *>(GetMouseOverElement())->
-        // TODO: GetChildView()->GetViewHost()->Undock();
+        undock_event_();
         ResetState();
         return EVENT_RESULT_HANDLED;
       } else {
@@ -288,8 +273,9 @@ class SideBar::Impl : public View {
         GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
       ViewElement *ele = down_cast<ViewElement *>(GetMouseOverElement());
       ele->GetChildView()->GetGadget()->OnAddCustomMenuItems(menu);
+    } else {
+      View::OnAddContextMenuItems(menu);
     }
-    View::OnAddContextMenuItems(menu);
     return true;
   }
   virtual bool OnSizing(double *width, double *height) {
@@ -618,6 +604,10 @@ class SideBar::Impl : public View {
   ImgElement *border_array_[4];
 
   Slot0<void> *close_slot_;
+  Slot0<void> *system_menu_slot_;
+
+  EventSignal undock_event_;
+  EventSignal unexpand_event_;
 
   static const int kSperator = 2;
   static const int kMouseMoveThreshold = 2;
@@ -695,12 +685,21 @@ void SideBar::GetPointerPosition(double *x, double *y) const {
   }
 }
 
+Connection *SideBar::ConnectOnUndock(Slot0<void> *slot) {
+  return impl_->undock_event_.Connect(slot);
+}
+
+Connection *SideBar::ConnectOnUnexpand(Slot0<void> *slot) {
+  return impl_->unexpand_event_.Connect(slot);
+}
+
 void SideBar::SetAddGadgetSlot(Slot0<void> *slot) {
   impl_->connections_.push_back(
       impl_->button_array_[0]->ConnectOnClickEvent(slot));
 }
 
 void SideBar::SetMenuSlot(Slot0<void> *slot) {
+  impl_->system_menu_slot_ = slot;
   impl_->connections_.push_back(
       impl_->button_array_[1]->ConnectOnClickEvent(slot));
 }
