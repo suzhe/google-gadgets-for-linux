@@ -81,6 +81,7 @@ class DecoratedViewHost::Impl {
       View::SetResizable(RESIZABLE_TRUE);
       //View::EnableCanvasCache(false);
     }
+    virtual ~ViewDecoratorBase() {}
 
     ViewElement *GetViewElement() {
       return view_element_;
@@ -1424,11 +1425,9 @@ DecoratedViewHost::DecoratedViewHost(ViewHostInterface *view_host,
                                      DecoratorType decorator_type,
                                      bool transparent)
   : impl_(new Impl(this, view_host, decorator_type,  transparent)) {
-  DLOG("MEMORY: DecoratedViewHost Ctor %p", this);
 }
 
 DecoratedViewHost::~DecoratedViewHost() {
-  DLOG("MEMORY: DecoratedViewHost Dtor %p", this);
   delete impl_;
   impl_ = NULL;
 }

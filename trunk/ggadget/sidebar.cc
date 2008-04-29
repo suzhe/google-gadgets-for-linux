@@ -42,14 +42,19 @@ class SideBar::Impl : public View {
    public:
     SideBarViewHost(SideBar::Impl *owner,
                     ViewHostInterface::Type type,
-                    ViewHostInterface *real_viewhost)
+                    ViewHostInterface *real_viewhost,
+                    int height)
         : owner_(owner),
           private_view_(NULL),
           view_element_(NULL),
-          real_viewhost_(real_viewhost) {
+          real_viewhost_(real_viewhost),
+          height_(height) {
     }
     virtual ~SideBarViewHost() {
-      delete view_element_;
+      if (view_element_ && !owner_->RemoveViewElement(view_element_)) {
+        delete view_element_;
+      }
+      view_element_ = NULL;
       DLOG("SideBarViewHost Dtor: %p", this);
     }
     virtual ViewHostInterface::Type GetType() const {
@@ -58,14 +63,16 @@ class SideBar::Impl : public View {
     virtual void Destroy() { delete this; }
     virtual void SetView(ViewInterface *view) {
       if (view_element_) {
-        if (!owner_->GetChildren()->RemoveElement(view_element_))
+        if (!owner_->RemoveViewElement(view_element_))
           delete view_element_;
         view_element_ = NULL;
         private_view_ = NULL;
       }
       if (!view) return;
       view_element_ =
-          new ViewElement(NULL, owner_, down_cast<View *>(view));
+          new ViewElement(owner_->main_div_, owner_, down_cast<View *>(view));
+      // insert the view element in proper place
+      owner_->InsertViewElement(height_, view_element_);
       private_view_ = view_element_->GetChildView();
       QueueDraw();
     }
@@ -91,7 +98,7 @@ class SideBar::Impl : public View {
       real_viewhost_->QueueDraw();
     }
     virtual void QueueResize() {
-      real_viewhost_->QueueResize();
+      resize_event_();
     }
     virtual void EnableInputShapeMask(bool /* enable */) {
       // Do nothing.
@@ -142,11 +149,16 @@ class SideBar::Impl : public View {
     virtual ViewInterface::DebugMode GetDebugMode() const {
       return real_viewhost_->GetDebugMode();
     }
-
+    Connection *ConnectOnResize(Slot0<void> *slot) {
+      return resize_event_.Connect(slot);
+    }
+   private:
     SideBar::Impl *owner_;
     View *private_view_;
     ViewElement *view_element_;
     ViewHostInterface *real_viewhost_;
+    EventSignal resize_event_;
+    int height_;
   };
 
   Impl(HostInterface *host, SideBar *owner, ViewHostInterface *view_host)
@@ -249,30 +261,17 @@ class SideBar::Impl : public View {
         return EVENT_RESULT_HANDLED;
       } else {
         // check if need re-layout the order the gadgets
-        BasicElement *previous, *next;
-        GetInsertPoint(static_cast<int>(event.GetY()),
-            GetPopupElement(), &previous, &next);
-        if (previous != GetPopupElement() && next != GetPopupElement()) {
-          DLOG("Insert %p previous %p next %p, event: %.1lfx%.1lf",
-              GetPopupElement(), previous, next, event.GetX(), event.GetY());
-          main_div_->GetChildren()->InsertElement(GetPopupElement(), next);
-          Layout();
-        }
+        InsertViewElement(static_cast<int>(event.GetY()), GetPopupElement());
         GetPopupElement()->SetPixelY(event.GetY() - mouse_move_event_y_);
-        // GetPopupElement()->SetPixelX(event.GetX() - mouse_move_event_x_);
       }
       QueueDraw();
     }
     return EVENT_RESULT_HANDLED;
   }
-  virtual void Draw(CanvasInterface *canvas) {
-    View::Draw(canvas);
-  }
   virtual bool OnAddContextMenuItems(MenuInterface *menu) {
     if (GetMouseOverElement() &&
         GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
-      ViewElement *ele = down_cast<ViewElement *>(GetMouseOverElement());
-      ele->GetChildView()->GetGadget()->OnAddCustomMenuItems(menu);
+      GetMouseOverElement()->OnAddContextMenuItems(menu);
     } else {
       View::OnAddContextMenuItems(menu);
     }
@@ -426,14 +425,30 @@ class SideBar::Impl : public View {
     }
     if (previous) *previous = e;
   }
+  void InsertViewElement(int height, BasicElement *element) {
+    ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
+    BasicElement *pre, *next;
+    GetInsertPoint(height, element, &pre, &next);
+    if (pre != element && next != element) {
+      main_div_->GetChildren()->InsertElement(element, next);
+      Layout();
+    }
+  }
+  bool RemoveViewElement(BasicElement *element) {
+    ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
+    bool r = main_div_->GetChildren()->RemoveElement(element);
+    if (r) Layout();
+    return r;
+  }
   void Layout() {
-    DLOG("Layout in Sidebar, element number: %d", main_div_->GetChildren()->GetCount());
+    DLOG("Layout in Sidebar, element number: %d",
+         main_div_->GetChildren()->GetCount());
     double height = kSperator;
     for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
       ViewElement *element =
         down_cast<ViewElement *>(main_div_->GetChildren()->GetItemByIndex(i));
       if (!element->IsEnabled() && element != expand_element_) continue;
-      double x = GetWidth(), y = element->GetPixelHeight();
+      double x = main_div_->GetPixelWidth(), y = element->GetPixelHeight();
       if (element->IsVisible() && element->OnSizing(&x, &y)) {
         element->SetSize(x, y);
       }
@@ -447,7 +462,7 @@ class SideBar::Impl : public View {
     }
     QueueDraw();
   }
-  ViewElement *FindViewElementByView(View *view) {
+  ViewElement *FindViewElementByView(ViewInterface *view) const {
     for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
       ViewElement *element = down_cast<ViewElement *>(
           main_div_->GetChildren()->GetItemByIndex(i));
@@ -464,17 +479,12 @@ class SideBar::Impl : public View {
       // only one null element is allowed
       main_div_->GetChildren()->RemoveElement(null_element_);
     }
-    BasicElement *pre, *next;
     if (!null_element_) {
       null_element_ = new ViewElement(main_div_, this, view);
       null_element_->SetPixelHeight(view->GetHeight());
       null_element_->SetVisible(false);
     }
-    GetInsertPoint(y, null_element_, &pre, &next);
-    if (pre != null_element_ && next != null_element_) {
-      main_div_->GetChildren()->InsertElement(null_element_, next);
-      Layout();
-    }
+    InsertViewElement(y, null_element_);
   }
   void ClearNullElement() {
     if (null_element_) {
@@ -482,37 +492,6 @@ class SideBar::Impl : public View {
       null_element_ = NULL;
       Layout();
     }
-  }
-  bool Dock(int insert_point, View *view, bool force_insert) {
-    ASSERT(!FindViewElementByView(view));
-    // This is the behavior in GDWin, we may change it here
-    if (!force_insert && GetBlankHeight() < view->GetHeight()) return false;
-    ViewHostInterface *view_host =
-        host_->NewViewHost(ViewHostInterface::VIEW_HOST_MAIN);
-    ViewHostInterface *old = view->SwitchViewHost(view_host);
-    if (old) old->Destroy();
-    ViewElement *ele = new ViewElement(main_div_, this,
-        down_cast<View *>(view_host->GetView()));
-    ele->SetPixelHeight(ele->GetChildView()->GetHeight());
-    BasicElement *element;
-    GetInsertPoint(insert_point, ele, NULL, &element);
-    main_div_->GetChildren()->InsertElement(ele, element);
-    DLOG("Sidebar: Docked view(%p)", view);
-    Layout();
-    SimpleEvent e(Event::EVENT_DOCK);
-    //TODO: ele->HandleOtherEvent(e);
-    return true;
-  }
-  bool Undock(View *view) {
-    ViewElement *element = FindViewElementByView(view);
-    DLOG("Sidebar: Undock view(%p) in element(%p)", view, element);
-    if (!element) return false;
-    SimpleEvent e(Event::EVENT_UNDOCK);
-    //TODO: element->HandleOtherEvent(e);
-    if (!main_div_->GetChildren()->RemoveElement(element))
-      delete element;
-    Layout();
-    return true;
   }
   void Expand(View *view) {
     if (expand_element_) expand_element_->SetEnabled(true);
@@ -638,9 +617,13 @@ SideBar::~SideBar() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SideBar::NewViewHost(ViewHostInterface::Type type) {
+ViewHostInterface *SideBar::NewViewHost(ViewHostInterface::Type type,
+                                        int height) {
   ASSERT(type == ViewHostInterface::VIEW_HOST_MAIN);
-  return new Impl::SideBarViewHost(impl_, type, impl_->view_host_);
+  Impl::SideBarViewHost *vh =
+      new Impl::SideBarViewHost(impl_, type, impl_->view_host_, height);
+  vh->ConnectOnResize(NewSlot(impl_, &Impl::Layout));
+  return vh;
 }
 
 ViewHostInterface *SideBar::GetViewHost() const {
@@ -653,14 +636,6 @@ void SideBar::InsertNullElement(int y, View *view) {
 
 void SideBar::ClearNullElement() {
   impl_->ClearNullElement();
-}
-
-bool SideBar::Dock(int insert_point, View *view, bool force_insert) {
-  return impl_->Dock(insert_point, view, force_insert);
-}
-
-bool SideBar::Undock(View *view) {
-  return impl_->Undock(view);
 }
 
 void SideBar::Expand(View *view) {
@@ -678,11 +653,19 @@ ViewElement *SideBar::GetMouseOverElement() const {
   return NULL;
 }
 
+ViewElement *SideBar::FindViewElementByView(ViewInterface *view) const {
+  return impl_->FindViewElementByView(view);
+}
+
 void SideBar::GetPointerPosition(double *x, double *y) const {
   if (impl_->mouse_move_event_x_ > 0 || impl_->mouse_move_event_y_ > 0) {
     *x = impl_->mouse_move_event_x_;
     *y = impl_->mouse_move_event_y_;
   }
+}
+
+void SideBar::Layout() {
+  impl_->Layout();
 }
 
 Connection *SideBar::ConnectOnUndock(Slot0<void> *slot) {
