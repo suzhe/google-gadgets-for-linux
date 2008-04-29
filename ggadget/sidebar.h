@@ -32,16 +32,16 @@ class SideBar {
   SideBar(HostInterface *host, ViewHostInterface *view_host);
   virtual ~SideBar();
  public:
-  ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
+  ViewHostInterface *NewViewHost(ViewHostInterface::Type type, int height);
   ViewHostInterface *GetViewHost() const;
   void InsertNullElement(int y, View *view);
   void ClearNullElement();
-  bool Dock(int insert_point, View *view, bool force_insert);
-  bool Undock(View *view);
   void Expand(View *view);
   void Unexpand(View *view);
+  void Layout();
 
   ViewElement *GetMouseOverElement() const;
+  ViewElement *FindViewElementByView(ViewInterface *view) const;
   void GetPointerPosition(double *x, double *y) const;
 
   void SetAddGadgetSlot(Slot0<void> *slot);

@@ -102,10 +102,12 @@ class SidebarGtkHost::Impl {
     }
     void HandleMove(int button) {
       int h;
-      if (IsOverlapWithSideBar(&h))
+      if (IsOverlapWithSideBar(&h)) {
         owner_->side_bar_->InsertNullElement(h, view_);
-      else
+        height_ = h;
+      } else {
         owner_->side_bar_->ClearNullElement();
+      }
     }
     void HandleMoveEnd(int button) {
       int h;
@@ -239,13 +241,22 @@ class SidebarGtkHost::Impl {
   bool Dock(View *view, int height, bool force_insert) {
     view->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     DLOG("Dock in SidebarGtkHost, view: %p", view);
-    return side_bar_->Dock(height, view, force_insert);
+    ViewHostInterface *view_host =
+        side_bar_->NewViewHost(ViewHostInterface::VIEW_HOST_MAIN, height);
+    DecoratedViewHost *decorator =
+        new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED, false);
+    decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
+    ViewHostInterface *old = view->SwitchViewHost(decorator);
+    if (old) old->Destroy();
+    side_bar_->Layout();
+    return true;
   }
 
   bool Undock(View *view, bool move_to_cursor) {
-    side_bar_->Undock(view);
     view->GetGadget()->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    ViewHostInterface *new_host = NewSingleViewHost(view, true);
+    ViewElement *ele = side_bar_->FindViewElementByView(view);
+    int h = ele ? static_cast<int>(ele->GetPixelY()) : 0;
+    ViewHostInterface *new_host = NewSingleViewHost(view, true, h);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
     bool r = view->ShowView(false, 0, NULL);
@@ -278,10 +289,20 @@ class SidebarGtkHost::Impl {
     }
   }
 
-  void Expand(Gadget *gadget) {
-    if (!expand_view_host_) {
-      expand_view_host_ = NewSingleViewHost(gadget->GetMainView(), false);
+  // handle undock event triggered by click menu, the undocked gadget should
+  // not move with cursor
+  void HandleFloatingUndock() {
+    ViewElement *element = side_bar_->GetMouseOverElement();
+    if (element) {
+      Gadget *gadget = element->GetChildView()->GetGadget();
+      Undock(gadget->GetMainView(), false);
     }
+  }
+
+  void Expand(Gadget *gadget) {
+   //TODO if (!expand_view_host_) {
+   //TODO   expand_view_host_ = NewSingleViewHost(gadget->GetMainView(), false);
+   //TODO }
     expand_view_host_->SetView(gadget->GetMainView());
     expand_view_host_->ShowView(true, 0, NULL);
     //TODO: expand_view_host_->Expand();
@@ -343,7 +364,8 @@ class SidebarGtkHost::Impl {
     return true;
   }
 
-  ViewHostInterface *NewSingleViewHost(View *view, bool remove_on_close) {
+  ViewHostInterface *NewSingleViewHost(View *view,
+                                       bool remove_on_close, int height) {
     SingleViewHost *view_host =
       new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
           decorated_, remove_on_close, false, view_debug_mode_);
@@ -352,7 +374,7 @@ class SidebarGtkHost::Impl {
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_STANDALONE,
                               true);
     GadgetMoveClosure *closure =
-        new GadgetMoveClosure(this, view_host, decorator, view, 0);
+        new GadgetMoveClosure(this, view_host, decorator, view, height);
     move_slots_[view->GetGadget()] = closure;
     DLOG("New decorator %p with vh %p", decorator, view_host);
     return decorator;
@@ -363,10 +385,12 @@ class SidebarGtkHost::Impl {
     ViewHostInterface *decorator;
     switch (type) {
       case ViewHostInterface::VIEW_HOST_MAIN:
-        inner = side_bar_->NewViewHost(type);
+        inner = side_bar_->NewViewHost(type, 0);
         decorator = new DecoratedViewHost(inner,
                                           DecoratedViewHost::MAIN_DOCKED,
                                           false);
+        down_cast<DecoratedViewHost *>(decorator)->ConnectOnUndock(
+            NewSlot(this, &Impl::HandleFloatingUndock));
         break;
       case ViewHostInterface::VIEW_HOST_OPTIONS:
         inner = new SingleViewHost(type, 1.0, true, true, true,
