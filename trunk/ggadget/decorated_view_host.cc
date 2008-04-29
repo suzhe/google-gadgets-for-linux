@@ -42,10 +42,10 @@
 
 namespace ggadget {
 
-static const double kVDMainBorderWidth = 4;
+static const double kVDMainBorderWidth = 6;
 static const double kVDMainToolbarHeight = 19;
 static const double kVDMainButtonWidth = 19;
-static const double kVDMainCornerSize = 8;
+static const double kVDMainCornerSize = 16;
 static const double kVDMainMinimizedHeight = 26;
 static const double kVDMainIconHeight = 32;
 static const double kVDMainIconWidth = 32;
@@ -133,18 +133,12 @@ class DecoratedViewHost::Impl {
     void UpdateViewSize() {
       DLOG("DecoratedView::UpdateViewSize()");
       double left, right, top, bottom;
-      double cw, ch;
       GetMargins(&left, &right, &top, &bottom);
-      GetMinimumClientExtents(&cw, &ch);
-
-      if (IsChildViewVisible()) {
-        cw = std::max(view_element_->GetPixelWidth(), cw);
-        ch = std::max(view_element_->GetPixelHeight(), ch);
-      } else {
-        cw = std::max(GetWidth() - left - right, cw);
-        ch = std::max(GetHeight() - top - bottom, ch);
-        OnClientSizing(&cw, &ch);
-      }
+      double width = GetWidth();
+      double height = GetHeight();
+      double cw = width - left - right;
+      double ch = height - top - bottom;
+      GetClientExtents(&cw, &ch);
 
       cw += (left + right);
       ch += (top + bottom);
@@ -170,6 +164,24 @@ class DecoratedViewHost::Impl {
         view_element_->SetPixelY(ch);
       }
       DoLayout();
+    }
+
+    class SignalPostCallback : public WatchCallbackInterface {
+     public:
+      SignalPostCallback(const Signal0<void> *signal) : signal_(signal) {}
+      virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+        (*signal_)();
+        return false;
+      }
+      virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+        delete this;
+      }
+      const Signal0<void> *signal_;
+    };
+
+    // Helper function to post a signal to main loop.
+    void PostSignal(const Signal0<void> *signal) {
+      GetGlobalMainLoop()->AddTimeoutWatch(0, new SignalPostCallback(signal));
     }
 
    public:
@@ -306,6 +318,13 @@ class DecoratedViewHost::Impl {
       *height = 0;
     }
 
+    // Derived classes shall override this method to return current client
+    // size.
+    virtual void GetClientExtents(double *width, double *height) {
+      *width = view_element_->GetPixelWidth();
+      *height = view_element_->GetPixelHeight();
+    }
+
    private:
     // Returns true if the view size was changed.
     bool SetViewSize(double req_w, double req_h, double min_w, double min_h) {
@@ -328,6 +347,7 @@ class DecoratedViewHost::Impl {
     View *child_view_;
     ViewElement *view_element_;
   };
+  // End of ViewDecoratorBase.
 
   // Decorator for main view in sidebar or standalone mode.
   class NormalMainViewDecorator : public ViewDecoratorBase {
@@ -372,7 +392,8 @@ class DecoratedViewHost::Impl {
         icon_(NULL),
         caption_(NULL),
         snapshot_(NULL),
-        plugin_flags_connection_(NULL) {
+        plugin_flags_connection_(NULL),
+        original_child_view_(NULL) {
       // The initialization sequence of following elements must not be changed.
       // Sidebar mode doesn't have background.
       if (!sidebar_) {
@@ -417,6 +438,9 @@ class DecoratedViewHost::Impl {
         minimized_bkgnd_->SetPixelY(sidebar_ ? kVDMainBorderWidth :
                                     kVDMainToolbarHeight + kVDMainBorderWidth);
         minimized_bkgnd_->SetVisible(false);
+        minimized_bkgnd_->SetEnabled(true);
+        minimized_bkgnd_->ConnectOnClickEvent(
+          NewSlot(this, &NormalMainViewDecorator::OnToggleExpandedButtonClicked));
         GetChildren()->InsertElement(minimized_bkgnd_, NULL);
       }
 
@@ -428,15 +452,12 @@ class DecoratedViewHost::Impl {
                         kVDMainToolbarHeight + kVDMainBorderWidth) +
                        kVDMainMinimizedHeight * 0.5);
       icon_->SetVisible(false);
-      icon_->ConnectOnClickEvent(
-          NewSlot(this, &NormalMainViewDecorator::OnToggleExpandedButtonClicked));
       GetChildren()->InsertElement(icon_, NULL);
 
       caption_ = new LabelElement(NULL, this, NULL);
       caption_->GetTextFrame()->SetSize(10);
       caption_->GetTextFrame()->SetColor(Color::kWhite, 1);
       caption_->GetTextFrame()->SetWordWrap(false);
-      //caption_->GetTextFrame()->SetVAlign(CanvasInterface::VALIGN_MIDDLE);
       caption_->GetTextFrame()->SetTrimming(
           CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS);
       caption_->SetPixelHeight(kVDMainMinimizedHeight -
@@ -445,12 +466,11 @@ class DecoratedViewHost::Impl {
                           kVDMainToolbarHeight + kVDMainBorderWidth) +
                           kVDMainCaptionMarginV);
       caption_->SetVisible(false);
-      caption_->ConnectOnClickEvent(
-          NewSlot(this, &NormalMainViewDecorator::OnToggleExpandedButtonClicked));
       GetChildren()->InsertElement(caption_, NULL);
 
       snapshot_ = new CopyElement(NULL, this, NULL);
       snapshot_->SetVisible(false);
+      snapshot_->SetOpacity(0.5);
       GetChildren()->InsertElement(snapshot_, NULL);
 
       buttons_div_ = new DivElement(NULL, this, NULL);
@@ -534,20 +554,20 @@ class DecoratedViewHost::Impl {
               bottom_->SetVisible(true);
             else
               bottom_->SetVisible(false);
-          } else if (x >= w - kVDMainBorderWidth &&
-                     y >= h - kVDMainBorderWidth) {
+          } else if (x >= w - kVDMainBorderWidth * 2 &&
+                     y >= h - kVDMainBorderWidth * 2) {
             hittest_ = HT_BOTTOMRIGHT;
             GetViewHost()->SetCursor(CURSOR_SIZENWSE);
-          } else if (x >= w - kVDMainBorderWidth &&
-                     y >= top && y <= top + kVDMainBorderWidth) {
+          } else if (x >= w - kVDMainBorderWidth * 2 &&
+                     y >= top && y <= top + kVDMainBorderWidth * 2) {
             hittest_ = HT_TOPRIGHT;
             GetViewHost()->SetCursor(CURSOR_SIZENESW);
-          } else if (x <= kVDMainBorderWidth &&
-                     y >= top && y <= top + kVDMainBorderWidth) {
+          } else if (x <= kVDMainBorderWidth * 2 &&
+                     y >= top && y <= top + kVDMainBorderWidth * 2) {
             hittest_ = HT_TOPLEFT;
             GetViewHost()->SetCursor(CURSOR_SIZENWSE);
-          } else if (x <= kVDMainBorderWidth &&
-                     y >= h - kVDMainBorderWidth) {
+          } else if (x <= kVDMainBorderWidth  * 2 &&
+                     y >= h - kVDMainBorderWidth * 2) {
             hittest_ = HT_BOTTOMLEFT;
             GetViewHost()->SetCursor(CURSOR_SIZENESW);
           } else if (x >= w - kVDMainBorderWidth && h_resizable) {
@@ -596,7 +616,7 @@ class DecoratedViewHost::Impl {
                   &NormalMainViewDecorator::UndockMenuCallback :
                   &NormalMainViewDecorator::DockMenuCallback));
 
-      if (!sidebar_) {
+      if (!sidebar_ && !minimized_ && !popped_out_) {
         MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"));
         zoom->AddItem(GM_("MENU_ITEM_AUTO_FIT"), 0,
               NewFunctorSlot<void, const char *>(ZoomFunctor(this, 1.0)));
@@ -616,27 +636,38 @@ class DecoratedViewHost::Impl {
               NewFunctorSlot<void, const char *>(ZoomFunctor(this, 2.0)));
       }
 
-      menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
-      return ViewDecoratorBase::OnAddContextMenuItems(menu);
+      View *child = GetChildView();
+      if (child || original_child_view_) {
+        menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+        if (child)
+          return child->OnAddContextMenuItems(menu);
+        else
+          return original_child_view_->OnAddContextMenuItems(menu);
+      }
+      return true;
     }
 
     virtual EventResult OnOtherEvent(const Event &event) {
       Event::Type t = event.GetType();
       if (t == Event::EVENT_POPOUT && !popped_out_) {
+        original_child_view_ = GetChildView();
         popped_out_ = true;
         // Take a snapshot for the child view.
         snapshot_->SetFrozen(false);
+        if (minimized_)
+          SetChildViewVisible(true);
         snapshot_->SetSrc(Variant(GetViewElement()));
         snapshot_->SetFrozen(true);
         snapshot_->SetSrc(Variant());
-        snapshot_->SetVisible(true);
+        snapshot_->SetVisible(!minimized_);
         SetChildViewVisible(false);
         UpdateToggleExpandedButton();
         UpdateViewSize();
       } else if (t == Event::EVENT_POPIN && popped_out_) {
+        original_child_view_ = NULL;
         popped_out_ = false;
         snapshot_->SetVisible(false);
-        SetChildViewVisible(true);
+        SetChildViewVisible(!minimized_);
         UpdateToggleExpandedButton();
         UpdateViewSize();
       }
@@ -663,10 +694,18 @@ class DecoratedViewHost::Impl {
       ViewDecoratorBase::SetCaption(caption);
     }
 
+   public:
+    virtual void CloseDecoratedView() {
+      if (popped_out_)
+        owner_->on_popin_signal_();
+      ViewDecoratorBase::CloseDecoratedView();
+    }
+
    protected:
     virtual bool OnClientSizing(double *width, double *height) {
       if (minimized_)
         *height = kVDMainMinimizedHeight;
+
       return true;
     }
 
@@ -696,6 +735,10 @@ class DecoratedViewHost::Impl {
       if (child) {
         SetResizable(child->GetResizable());
         caption_->GetTextFrame()->SetText(child->GetCaption());
+        if (minimized_) {
+          SimpleEvent event(Event::EVENT_MINIMIZE);
+          child->OnOtherEvent(event);
+        }
       }
 
       DoLayout();
@@ -772,6 +815,17 @@ class DecoratedViewHost::Impl {
       } else {
         *width = 0;
         *height = 0;
+      }
+    }
+
+    virtual void GetClientExtents(double *width, double *height) {
+      if (minimized_) {
+        *height = kVDMainMinimizedHeight;
+      } else if (popped_out_) {
+        *width = snapshot_->GetSrcWidth();
+        *height = snapshot_->GetSrcHeight();
+      } else {
+        ViewDecoratorBase::GetClientExtents(width, height);
       }
     }
 
@@ -866,7 +920,7 @@ class DecoratedViewHost::Impl {
     void OnCloseButtonClicked() {
       if (popped_out_)
         owner_->on_popin_signal_();
-      owner_->on_close_signal_();
+      PostSignal(&owner_->on_close_signal_);
     }
 
     void OnPluginFlagsChanged(int flags) {
@@ -954,7 +1008,10 @@ class DecoratedViewHost::Impl {
     CopyElement *snapshot_;
 
     Connection *plugin_flags_connection_;
+
+    View *original_child_view_;
   };
+  // End of NormalMainViewDecorator
 
   // Decorator for expanded main view.
   class ExpandedMainViewDecorator : public ViewDecoratorBase {
@@ -964,9 +1021,9 @@ class DecoratedViewHost::Impl {
       : ViewDecoratorBase(view_host, false, false),
         owner_(owner),
         hittest_(HT_CLIENT),
-        background_(NULL),
         close_button_(NULL),
-        caption_(NULL) {
+        caption_(NULL),
+        top_margin_(0) {
       ImgElement *top = new ImgElement(NULL, this, NULL);
       top->SetSrc(Variant(kVDPopOutBackgroundTitle));
       top->SetStretchMiddle(true);
@@ -974,21 +1031,22 @@ class DecoratedViewHost::Impl {
       top->SetPixelY(0);
       top->SetRelativeWidth(1);
       GetChildren()->InsertElement(top, GetViewElement());
+      top_margin_ = top->GetSrcHeight() + kVDExpandedBorderWidth;
 
-      background_ = new ImgElement(NULL, this, NULL);
-      background_->SetSrc(Variant(kVDPopOutBackground));
-      background_->SetStretchMiddle(true);
-      background_->SetPixelX(0);
-      background_->SetPixelY(top->GetSrcHeight());
-      background_->SetRelativeWidth(1);
-      background_->EnableCanvasCache(true);
-      GetChildren()->InsertElement(background_, GetViewElement());
+      ImgElement *bkgnd = new ImgElement(NULL, this, NULL);
+      bkgnd->SetSrc(Variant(kVDPopOutBackground));
+      bkgnd->SetStretchMiddle(true);
+      bkgnd->SetPixelX(0);
+      bkgnd->SetPixelY(0);
+      bkgnd->SetRelativeWidth(1);
+      bkgnd->SetRelativeHeight(1);
+      bkgnd->EnableCanvasCache(true);
+      GetChildren()->InsertElement(bkgnd, GetViewElement());
 
       caption_ = new LabelElement(NULL, this, NULL);
       caption_->GetTextFrame()->SetSize(10);
-      caption_->GetTextFrame()->SetColor(Color::kWhite, 1);
+      caption_->GetTextFrame()->SetColor(Color::kBlack, 1);
       caption_->GetTextFrame()->SetWordWrap(false);
-      //caption_->GetTextFrame()->SetVAlign(CanvasInterface::VALIGN_MIDDLE);
       caption_->GetTextFrame()->SetTrimming(
           CanvasInterface::TRIMMING_CHARACTER);
       caption_->SetPixelX(kVDExpandedBorderWidth);
@@ -1079,23 +1137,23 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void DoLayout() {
-      background_->SetPixelHeight(GetHeight() - background_->GetPixelY());
       close_button_->SetPixelX(GetWidth() - close_button_->GetPixelWidth() -
                                kVDExpandedBorderWidth);
-      caption_->SetPixelWidth(GetWidth() - close_button_->GetPixelX() - 1);
+      caption_->SetPixelWidth(close_button_->GetPixelX() -
+                              caption_->GetPixelX() - 1);
     }
 
     virtual void GetMargins(double *left, double *right,
                             double *top, double *bottom) {
       *left = kVDExpandedBorderWidth;
       *right = kVDExpandedBorderWidth;
-      *top = background_->GetPixelY();
+      *top = top_margin_;
       *bottom = kVDExpandedBorderWidth;
     }
 
    private:
     void OnCloseButtonClicked() {
-      owner_->on_close_signal_();
+      PostSignal(&owner_->on_close_signal_);
     }
 
    private:
@@ -1108,7 +1166,9 @@ class DecoratedViewHost::Impl {
     // Close button.
     ButtonElement *close_button_;
     LabelElement *caption_;
+    double top_margin_;
   };
+  // End of ExpandedMainViewDecorator
 
   // Decorator for details view.
   class DetailsViewDecorator : public ViewDecoratorBase {
@@ -1170,8 +1230,6 @@ class DecoratedViewHost::Impl {
       close_button_->ConnectOnClickEvent(
           NewSlot(this, &DetailsViewDecorator::OnCloseButtonClicked));
       GetChildren()->InsertElement(close_button_, NULL);
-
-      // TODO: remove and negative buttons.
 
       view_host->EnableInputShapeMask(false);
     }
@@ -1259,6 +1317,38 @@ class DecoratedViewHost::Impl {
         caption_->SetEnabled(true);
         caption_->SetCursor(CURSOR_HAND);
       }
+      if (flags & ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) {
+        remove_button_ = new ButtonElement(NULL, this, NULL);
+        remove_button_->SetImage(Variant(kVDDetailsButtonBkgndNormal));
+        remove_button_->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
+        remove_button_->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
+        remove_button_->SetStretchMiddle(true);
+        remove_button_->GetTextFrame()->SetText(GMS_("REMOVE_CONTENT_ITEM"));
+        remove_button_->SetPixelHeight(kVDDetailsButtonHeight);
+        double tw, th;
+        remove_button_->GetTextFrame()->GetSimpleExtents(&tw, &th);
+        remove_button_->SetPixelWidth(tw + kVDDetailsButtonMargin * 2);
+        remove_button_->ConnectOnClickEvent(
+            NewSlot(this, &DetailsViewDecorator::OnRemoveButtonClicked));
+        GetChildren()->InsertElement(remove_button_, NULL);
+      }
+      if (flags & ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK) {
+        negative_button_ = new ButtonElement(NULL, this, NULL);
+        negative_button_->SetImage(Variant(kVDDetailsButtonBkgndNormal));
+        negative_button_->SetOverImage(Variant(kVDDetailsButtonBkgndOver));
+        negative_button_->SetDownImage(Variant(kVDDetailsButtonBkgndClick));
+        negative_button_->SetStretchMiddle(true);
+        negative_button_->GetTextFrame()->SetText(
+            GMS_("DONT_SHOW_CONTENT_ITEM"));
+        negative_button_->SetPixelHeight(kVDDetailsButtonHeight);
+        double tw, th;
+        negative_button_->GetTextFrame()->GetSimpleExtents(&tw, &th);
+        negative_button_->SetPixelWidth(tw + kVDDetailsButtonMargin * 2);
+        negative_button_->ConnectOnClickEvent(
+            NewSlot(this, &DetailsViewDecorator::OnNegativeButtonClicked));
+        GetChildren()->InsertElement(negative_button_, NULL);
+      }
+      DoLayout();
       return ShowView(modal, 0, NULL);
     }
 
@@ -1279,12 +1369,27 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void DoLayout() {
-      background_->SetPixelHeight(GetHeight() - background_->GetPixelY() -
+      double width = GetWidth();
+      double height = GetHeight();
+      background_->SetPixelHeight(height - background_->GetPixelY() -
                                   bottom_->GetPixelHeight());
-      close_button_->SetPixelX(GetWidth() - close_button_->GetPixelWidth() -
-                         kVDDetailsBorderWidth);
+      close_button_->SetPixelX(width - close_button_->GetPixelWidth() -
+                               kVDDetailsBorderWidth);
       caption_->SetPixelWidth(close_button_->GetPixelX() -
                               caption_->GetPixelX() - 1);
+
+      if (remove_button_) {
+        width -= (kVDDetailsBorderWidth + remove_button_->GetPixelWidth());
+        remove_button_->SetPixelX(width);
+        remove_button_->SetPixelY(height - kVDDetailsBorderWidth -
+                                  remove_button_->GetPixelHeight());
+      }
+      if (negative_button_) {
+        width -= (kVDDetailsBorderWidth + negative_button_->GetPixelWidth());
+        negative_button_->SetPixelX(width);
+        negative_button_->SetPixelY(height - kVDDetailsBorderWidth -
+                                    negative_button_->GetPixelHeight());
+      }
     }
 
     virtual void GetMargins(double *left, double *right,
@@ -1295,24 +1400,35 @@ class DecoratedViewHost::Impl {
       *bottom = bottom_->GetPixelHeight();
     }
 
+    virtual void GetMinimumClientExtents(double *width, double *height) {
+      *width = 0;
+      *height = 0;
+      if (remove_button_)
+        *width += remove_button_->GetPixelWidth();
+      if (negative_button_)
+        *width += negative_button_->GetPixelWidth();
+      if (remove_button_ && negative_button_);
+        *width += kVDDetailsBorderWidth;
+    }
+
    private:
     void OnCloseButtonClicked() {
-      owner_->on_close_signal_();
+      PostSignal(&owner_->on_close_signal_);
     }
 
     void OnCaptionClicked() {
       flags_ = ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN;
-      owner_->on_close_signal_();
+      PostSignal(&owner_->on_close_signal_);
     }
 
-    void OnRemoveClicked() {
+    void OnRemoveButtonClicked() {
       flags_ = ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON;
-      owner_->on_close_signal_();
+      PostSignal(&owner_->on_close_signal_);
     }
 
-    void OnNegativeClicked() {
+    void OnNegativeButtonClicked() {
       flags_ = ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK;
-      owner_->on_close_signal_();
+      PostSignal(&owner_->on_close_signal_);
     }
 
    private:
@@ -1334,6 +1450,7 @@ class DecoratedViewHost::Impl {
     int flags_;
     Slot1<void, int> *feedback_handler_;
   };
+  // End of DetailsViewDecorator
 
  public:
   Impl(DecoratedViewHost *owner,
@@ -1488,9 +1605,11 @@ void *DecoratedViewHost::GetNativeWidget() const {
 
 void DecoratedViewHost::ViewCoordToNativeWidgetCoord(
     double x, double y, double *widget_x, double *widget_y) const {
-  impl_->view_decorator_->ViewCoordToNativeWidgetCoord(x, y,
+  double px, py;
+  impl_->view_decorator_->GetViewElement()->ChildViewCoordToViewCoord(
+      x, y, &px, &py);
+  impl_->view_decorator_->ViewCoordToNativeWidgetCoord(px, py,
                                                        widget_x, widget_y);
-  // TODO
 }
 
 void DecoratedViewHost::QueueDraw() {

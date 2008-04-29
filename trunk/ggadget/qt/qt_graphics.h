@@ -52,8 +52,6 @@ class QtGraphics : public GraphicsInterface {
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const;
 
-  virtual GraphicsInterface *Clone() const;
-
  private:
   class Impl;
   Impl *impl_;

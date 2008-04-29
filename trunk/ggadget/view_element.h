@@ -65,6 +65,12 @@ class ViewElement : public BasicElement {
    */
   double GetScale() const;
 
+  /**
+   * Converts coordinates in the child view's space to coordinates in the
+   * parent view's space.
+   */
+  void ChildViewCoordToViewCoord(double child_x, double child_y,
+                                 double *parent_x, double *parent_y) const;
  public:
   /**
    * The size of ViewElement will always be synced with the size of child view.

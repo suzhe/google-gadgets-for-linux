@@ -36,7 +36,8 @@ class RsvgImage::Impl {
  public:
   Impl(const CairoGraphics *graphics, const std::string &data)
       : width_(0), height_(0), rsvg_(NULL), canvas_(NULL),
-        zoom_(graphics->GetZoom()), on_zoom_connection_(NULL) {
+        zoom_(graphics->GetZoom()), on_zoom_connection_(NULL),
+        on_gfx_destroy_connection_(NULL) {
     GError *error = NULL;
     const guint8 *ptr = reinterpret_cast<const guint8*>(data.c_str());
     rsvg_ = rsvg_handle_new_from_data(ptr, data.size(), &error);
@@ -49,6 +50,8 @@ class RsvgImage::Impl {
       height_ = dim.height;
       on_zoom_connection_ =
         graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
+      on_gfx_destroy_connection_ =
+        graphics->ConnectOnDestroy(NewSlot(this, &Impl::OnGfxDestroy));
     }
   }
 
@@ -74,12 +77,18 @@ class RsvgImage::Impl {
     }
   }
 
+  void OnGfxDestroy() {
+    on_zoom_connection_ = NULL;
+    on_gfx_destroy_connection_ = NULL;
+  }
+
   double width_;
   double height_;
   RsvgHandle *rsvg_;
   CairoCanvas *canvas_;
   double zoom_;
   Connection *on_zoom_connection_;
+  Connection *on_gfx_destroy_connection_;
 };
 
 RsvgImage::RsvgImage(const CairoGraphics *graphics, const std::string &tag,

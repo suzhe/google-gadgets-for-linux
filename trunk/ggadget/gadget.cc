@@ -419,14 +419,22 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     ShowOptionsDialog();
   }
 
+  void RemoveMenuCallback(const char *) {
+    RemoveMe(true);
+  }
+
   void OnAddCustomMenuItems(MenuInterface *menu) {
     ScriptableMenu scriptable_menu(menu);
     onaddcustommenuitems_signal_(&scriptable_menu);
-    if (HasOptionsDialog())
+    if (HasOptionsDialog()) {
       menu->AddItem(GM_("MENU_ITEM_OPTIONS"), 0,
                     NewSlot(this, &Impl::OptionsMenuCallback));
+      menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+    }
     menu->AddItem(GM_("MENU_ITEM_ABOUT"), 0,
                   NewSlot(this, &Impl::AboutMenuCallback));
+    menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,
+                  NewSlot(this, &Impl::RemoveMenuCallback));
   }
 
   void SetDisplayTarget(DisplayTarget target) {

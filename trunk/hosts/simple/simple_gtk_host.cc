@@ -31,6 +31,7 @@
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/view.h>
 #include <ggadget/main_loop_interface.h>
+#include <ggadget/file_manager_factory.h>
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -75,7 +76,9 @@ class SimpleGtkHost::Impl {
       decorated_(decorated),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
-      gadget_manager_(GetGadgetManager()) {
+      gadget_manager_(GetGadgetManager()),
+      expanded_original_(NULL),
+      expanded_popout_(NULL) {
     ASSERT(gadget_manager_);
     ScriptRuntimeManager::get()->ConnectErrorReporter(
         NewSlot(this, &Impl::ReportScriptError));
@@ -130,7 +133,15 @@ class SimpleGtkHost::Impl {
 //#if GTK_CHECK_VERSION(2,10,0)
 #if 0
     // FIXME:
-    status_icon_ = gtk_status_icon_new_from_stock(GTK_STOCK_ABOUT);
+    std::string icon_data;
+    if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
+      GdkPixbuf *icon_pixbuf = LoadPixbufFromData(icon_data);
+      status_icon_ = gtk_status_icon_new_from_pixbuf(icon_pixbuf);
+      g_object_unref(icon_pixbuf);
+    } else {
+      DLOG("Failed to load Gadgets icon.");
+      status_icon_ = gtk_status_icon_new_from_stock(GTK_STOCK_ABOUT);
+    }
     g_signal_connect(G_OBJECT(status_icon_), "activate",
                      G_CALLBACK(ToggleAllGadgetsHandler), this);
     g_signal_connect(G_OBJECT(status_icon_), "popup-menu",
@@ -228,58 +239,22 @@ class SimpleGtkHost::Impl {
     return true;
   }
 
-  class RemoveGadgetCallback :  public WatchCallbackInterface {
+  class DecoratorSignalHandler {
    public:
-    RemoveGadgetCallback(Gadget *gadget) : gadget_(gadget) {}
-
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      gadget_->RemoveMe(true);
-      return false;
+    DecoratorSignalHandler(DecoratedViewHost *decorator, Impl *impl,
+                           void (Impl::*handler)(DecoratedViewHost *))
+      : decorator_(decorator), impl_(impl), handler_(handler) {
     }
-
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-
-    Gadget *gadget_;
-  };
-
-  class DecoratorOnCloseHandler {
-   public:
-    DecoratorOnCloseHandler(DecoratedViewHost *decorator)
-      : decorator_(decorator) {
-    }
-
     void operator()() const {
-      ViewInterface *child = decorator_->GetView();
-      Gadget *gadget = child ? child->GetGadget() : NULL;
-
-      if (!gadget) return;
-
-      switch (decorator_->GetDecoratorType()) {
-        case DecoratedViewHost::MAIN_STANDALONE:
-        case DecoratedViewHost::MAIN_DOCKED:
-          // Cannot remove the gadget inside the event handler.
-          GetGlobalMainLoop()->AddTimeoutWatch(
-              0, new RemoveGadgetCallback(gadget));
-          break;
-        case DecoratedViewHost::MAIN_EXPANDED:
-          // TODO
-          break;
-        case DecoratedViewHost::DETAILS:
-          gadget->CloseDetailsView();
-          break;
-        default:
-          ASSERT("Invalid decorator type.");
-      }
+      (impl_->*handler_)(decorator_);
     }
-
-    bool operator==(const DecoratorOnCloseHandler &another) const {
-      return decorator_ == another.decorator_;
-    }
+    // No use.
+    bool operator==(const DecoratorSignalHandler &) const { return false; }
 
    private:
     DecoratedViewHost *decorator_;
+    Impl *impl_;
+    void (Impl::*handler_)(DecoratedViewHost *);
   };
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
@@ -299,11 +274,26 @@ class SimpleGtkHost::Impl {
     else
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
                                   true);
-    dvh->ConnectOnClose(NewFunctorSlot<void>(DecoratorOnCloseHandler(dvh)));
+
+    dvh->ConnectOnClose(NewFunctorSlot<void>(
+        DecoratorSignalHandler(dvh, this, &Impl::OnCloseHandler)));
+    dvh->ConnectOnPopOut(NewFunctorSlot<void>(
+        DecoratorSignalHandler(dvh, this, &Impl::OnPopOutHandler)));
+    dvh->ConnectOnPopIn(NewFunctorSlot<void>(
+        DecoratorSignalHandler(dvh, this, &Impl::OnPopInHandler)));
+
     return dvh;
   }
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    ASSERT(gadget);
+    ViewInterface *main_view = gadget->GetMainView();
+
+    // If this gadget is popped out, popin it first.
+    if (main_view->GetViewHost() == expanded_popout_) {
+      OnPopInHandler(expanded_original_);
+    }
+
     gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
   }
 
@@ -376,6 +366,73 @@ class SimpleGtkHost::Impl {
       ShowAllGadgetsHandler(widget, user_data);
   }
 
+  void OnCloseHandler(DecoratedViewHost *decorated) {
+    ViewInterface *child = decorated->GetView();
+    Gadget *gadget = child ? child->GetGadget() : NULL;
+
+    ASSERT(gadget);
+    if (!gadget) return;
+
+    switch (decorated->GetDecoratorType()) {
+      case DecoratedViewHost::MAIN_STANDALONE:
+      case DecoratedViewHost::MAIN_DOCKED:
+        gadget->RemoveMe(true);
+        break;
+      case DecoratedViewHost::MAIN_EXPANDED:
+        if (expanded_original_ &&
+            expanded_popout_ == decorated)
+          OnPopInHandler(expanded_original_);
+        break;
+      case DecoratedViewHost::DETAILS:
+        gadget->CloseDetailsView();
+        break;
+      default:
+        ASSERT("Invalid decorator type.");
+    }
+  }
+
+  void OnPopOutHandler(DecoratedViewHost *decorated) {
+    if (expanded_original_) {
+      OnPopInHandler(expanded_original_);
+    }
+
+    ViewInterface *child = decorated->GetView();
+    ASSERT(child);
+    if (child) {
+      expanded_original_ = decorated;
+      ViewHostInterface *svh = new SingleViewHost(
+          ViewHostInterface::VIEW_HOST_MAIN, zoom_, false, false, true,
+          static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+      expanded_popout_ =
+          new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED, true);
+      expanded_popout_->ConnectOnClose(NewFunctorSlot<void>(
+        DecoratorSignalHandler(expanded_popout_, this, &Impl::OnCloseHandler)));
+
+      // Send popout event to decorator first.
+      SimpleEvent event(Event::EVENT_POPOUT);
+      expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+
+      child->SwitchViewHost(expanded_popout_);
+      expanded_popout_->ShowView(false, 0, NULL);
+    }
+  }
+
+  void OnPopInHandler(DecoratedViewHost *decorated) {
+    if (expanded_original_ == decorated && expanded_popout_) {
+      ViewInterface *child = expanded_popout_->GetView();
+      ASSERT(child);
+      if (child) {
+        ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
+        SimpleEvent event(Event::EVENT_POPIN);
+        expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+        // The old host must be destroyed after sending onpopin event.
+        old_host->Destroy();
+        expanded_original_ = NULL;
+        expanded_popout_ = NULL;
+      }
+    }
+  }
+
 //#if GTK_CHECK_VERSION(2,10,0)
 #if 0
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,
@@ -414,6 +471,9 @@ class SimpleGtkHost::Impl {
   GtkWidget *main_widget_;
 #endif
   GtkWidget *host_menu_;
+
+  DecoratedViewHost *expanded_original_;
+  DecoratedViewHost *expanded_popout_;
 };
 
 SimpleGtkHost::SimpleGtkHost(double zoom, bool decorated, int view_debug_mode)

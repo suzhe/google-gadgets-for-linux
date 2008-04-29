@@ -72,11 +72,6 @@ class GraphicsInterface {
                                  FontInterface::Style style,
                                  FontInterface::Weight weight) const = 0;
 
-  /**
-   * Create a new copy of this GraphicsInterface with identical zoom.
-   */
-  virtual GraphicsInterface *Clone() const = 0;
-
   /** Gets and sets the current zoom level. */
   virtual void SetZoom(double zoom) = 0;
   virtual double GetZoom() const = 0;
