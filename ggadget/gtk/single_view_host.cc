@@ -321,6 +321,9 @@ class SingleViewHost::Impl {
       opt->PutInternalValue((opt_prefix + "_y").c_str(),
                             Variant(win_y_));
 
+      // Don't save size and zoom information, it's conflict with view
+      // decorator.
+      /*
       ViewInterface::ResizableMode mode = view_->GetResizable();
       if (mode == ViewInterface::RESIZABLE_TRUE) {
         opt->PutInternalValue((opt_prefix + "_width").c_str(),
@@ -333,6 +336,7 @@ class SingleViewHost::Impl {
         opt->PutInternalValue((opt_prefix + "_zoom").c_str(),
                               Variant(view_->GetGraphics()->GetZoom()));
       }
+      */
     }
   }
 
@@ -346,6 +350,9 @@ class SingleViewHost::Impl {
       gtk_window_move(GTK_WINDOW(window_), x, y);
     }
 
+    // Don't load size and zoom information, it's conflict with view
+    // decorator.
+    /*
     ViewInterface::ResizableMode mode = view_->GetResizable();
     if (mode == ViewInterface::RESIZABLE_TRUE) {
       double w, h;
@@ -365,6 +372,7 @@ class SingleViewHost::Impl {
         view_->GetGraphics()->SetZoom(zoom);
       }
     }
+    */
   }
 
   bool ShowContextMenu(int button) {

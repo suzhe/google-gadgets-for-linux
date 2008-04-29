@@ -112,7 +112,7 @@ class View::Impl {
           // flag when the timer event is handled, to prevent unexpected
           // openUrl() etc.
           bool old_interaction = impl_->gadget_ ?
-              impl_->gadget_->SetInUserInteraction(false) : false; 
+              impl_->gadget_->SetInUserInteraction(false) : false;
           TimerEvent event(watch_id, value);
           ScriptableEvent scriptable_event(&event, NULL, NULL);
           impl_->FireEventSlot(&scriptable_event, slot_);

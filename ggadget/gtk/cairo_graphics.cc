@@ -45,6 +45,7 @@ class CairoGraphics::Impl {
   }
 
   ~Impl() {
+    on_destroy_signal_();
 #ifdef _DEBUG
     DLOG("CairoGraphics image statistics(new/shared): local %d/%d;"
          " global %d/%d remain local %zd global %zd",
@@ -65,6 +66,7 @@ class CairoGraphics::Impl {
 
   double zoom_;
   Signal1<void, double> on_zoom_signal_;
+  Signal0<void> on_destroy_signal_;
   typedef std::map<std::string, CairoImageBase *> ImageMap;
   ImageMap image_map_, mask_image_map_;
   static ImageMap global_image_map_, global_mask_image_map_;
@@ -83,17 +85,13 @@ int CairoGraphics::Impl::global_num_shared_images_ = 0;
 #endif
 
 CairoGraphics::CairoGraphics(double zoom) : impl_(new Impl(zoom)) {
+  DLOG("New CairoGraphics: %p", this);
 }
 
 CairoGraphics::~CairoGraphics() {
+  DLOG("Delete CairoGraphics: %p", this);
   delete impl_;
   impl_ = NULL;
-}
-
-GraphicsInterface *CairoGraphics::Clone() const {
-  // Signals and ImageMaps are not cloned but zoom level is.
-  CairoGraphics *gfx = new CairoGraphics(impl_->zoom_);
-  return gfx;
 }
 
 double CairoGraphics::GetZoom() const {
@@ -109,6 +107,10 @@ void CairoGraphics::SetZoom(double zoom) {
 
 Connection *CairoGraphics::ConnectOnZoom(Slot1<void, double> *slot) const {
   return impl_->on_zoom_signal_.Connect(slot);
+}
+
+Connection *CairoGraphics::ConnectOnDestroy(Slot0<void> *slot) const {
+  return impl_->on_destroy_signal_.Connect(slot);
 }
 
 CanvasInterface *CairoGraphics::NewCanvas(double w, double h) const {
@@ -135,6 +137,8 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
                                         bool is_mask) const {
   if (data.empty())
     return NULL;
+
+  DLOG("CairoGraphics %p: new image %s", this, tag);
 
   std::string tag_str(tag ? tag : "");
   if (!tag_str.empty()) {
@@ -200,15 +204,21 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
   return img;
 }
 
-void CairoGraphics::OnImageDelete(const std::string &tag, bool is_mask) const {
-  Impl::ImageMap *image_map = is_mask ?
-                              &impl_->mask_image_map_ : &impl_->image_map_;
-  if (image_map->erase(tag) == 0) {
-    // Try global image map if the image is not in the local image map.
-    image_map = is_mask ?
-                &Impl::global_mask_image_map_ : &Impl::global_image_map_;
-    image_map->erase(tag);
+void CairoGraphics::OnImageDelete(const CairoGraphics *gfx,
+                                  const std::string &tag, bool is_mask) {
+  DLOG("CairoGraphics %p, delete image %s", gfx, tag.c_str());
+  Impl::ImageMap *image_map;
+  if (gfx) {
+    image_map =
+        is_mask ?  &gfx->impl_->mask_image_map_ : &gfx->impl_->image_map_;
+    if (image_map->erase(tag) != 0)
+      return;
   }
+
+  // Try global image map if the image is not in the local image map.
+  image_map = is_mask ?
+              &Impl::global_mask_image_map_ : &Impl::global_image_map_;
+  image_map->erase(tag);
 }
 
 FontInterface *CairoGraphics::NewFont(const char *family, double pt_size,

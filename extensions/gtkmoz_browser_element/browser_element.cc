@@ -69,7 +69,13 @@ extern "C" {
 namespace ggadget {
 namespace gtkmoz {
 
-static const char *kBrowserChildName = "gtkmoz-browser-child";
+static const char *kBrowserChildNames[] = {
+#if _DEBUG
+  "gtkmoz-browser-child",
+#endif
+  GGL_LIBEXEC_DIR "gtkmoz-browser-child",
+  NULL
+};
 
 class BrowserElement::Impl {
  public:
@@ -80,7 +86,16 @@ class BrowserElement::Impl {
         socket_(NULL),
         controller_(BrowserController::get()),
         browser_id_(controller_->AddBrowserElement(this)),
-        x_(0), y_(0), width_(0), height_(0) {
+        x_(0), y_(0), width_(0), height_(0),
+        minimized_(false), popped_out_(false) {
+    owner_->GetView()->ConnectOnMinimizeEvent(
+        NewSlot(this, &Impl::OnViewMinimized));
+    owner_->GetView()->ConnectOnRestoreEvent(
+        NewSlot(this, &Impl::OnViewRestored));
+    owner_->GetView()->ConnectOnPopOutEvent(
+        NewSlot(this, &Impl::OnViewPoppedOut));
+    owner_->GetView()->ConnectOnPopInEvent(
+        NewSlot(this, &Impl::OnViewPoppedIn));
   }
 
   ~Impl() {
@@ -149,22 +164,34 @@ class BrowserElement::Impl {
   }
 
   void Layout() {
-    if (GTK_IS_FIXED(container_) && GTK_IS_SOCKET(socket_)) {
+    GtkWidget *container = GTK_WIDGET(owner_->GetView()->GetNativeWidget());
+    if (GTK_IS_FIXED(container) && GTK_IS_SOCKET(socket_)) {
       (DLOG("Layout: %lf %lf %lf %lf", owner_->GetPixelX(), owner_->GetPixelY(),
             owner_->GetPixelWidth(), owner_->GetPixelHeight()));
+      bool force_layout = false;
+      // check if the contain has changed.
+      if (gtk_widget_get_parent(socket_) != container) {
+        gtk_widget_reparent(socket_, container);
+        force_layout = true;
+      }
+
       gint x, y, width, height;
       GetWidgetExtents(&x, &y, &width, &height);
 
-      if (x != x_ || y != y_) {
+      if (x != x_ || y != y_ || force_layout) {
         x_ = x;
         y_ = y;
-        gtk_fixed_move(GTK_FIXED(container_), socket_, x, y);
+        gtk_fixed_move(GTK_FIXED(container), socket_, x, y);
       }
-      if (width != width_ || height != height_) {
+      if (width != width_ || height != height_ || force_layout) {
         width_ = width;
         height_ = height;
         gtk_widget_set_size_request(socket_, width, height);
       }
+      if (owner_->IsReallyVisible() && (!minimized_ || popped_out_))
+        gtk_widget_show(socket_);
+      else
+        gtk_widget_hide(socket_);
     }
   }
 
@@ -240,6 +267,30 @@ class BrowserElement::Impl {
     } else {
       SetChildContent();
     }
+  }
+
+  void OnViewMinimized() {
+    // The browser widget must be hidden when the view is minimized.
+    if (GTK_IS_SOCKET(socket_) && !popped_out_) {
+      gtk_widget_hide(socket_);
+    }
+    minimized_ = true;
+  }
+
+  void OnViewRestored() {
+    if (GTK_IS_SOCKET(socket_) && owner_->IsReallyVisible() && !popped_out_) {
+      gtk_widget_show(socket_);
+    }
+    minimized_ = false;
+  }
+
+  void OnViewPoppedOut() {
+    popped_out_ = true;
+  }
+
+  void OnViewPoppedIn() {
+    popped_out_ = false;
+    Layout();
   }
 
   class BrowserController {
@@ -320,10 +371,11 @@ class BrowserElement::Impl {
         std::string down_fd_str = StringPrintf("%d", down_pipe_fds[0]);
         std::string up_fd_str = StringPrintf("%d", up_pipe_fds[1]);
         std::string ret_fd_str = StringPrintf("%d", ret_pipe_fds[0]);
-        // TODO: Deal with the situtation that the main program is not run from
-        // the directory it is in.
-        execl(kBrowserChildName, kBrowserChildName,
-              down_fd_str.c_str(), up_fd_str.c_str(), ret_fd_str.c_str(), NULL);
+        for (size_t i = 0; kBrowserChildNames[i]; ++i) {
+          execl(kBrowserChildNames[i], kBrowserChildNames[i],
+                down_fd_str.c_str(), up_fd_str.c_str(),
+                ret_fd_str.c_str(), NULL);
+        }
         LOG("Failed to execute browser child");
         _exit(-1);
       } else {
@@ -508,6 +560,8 @@ class BrowserElement::Impl {
   Signal2<void, JSONString, JSONString> set_property_signal_;
   Signal2<JSONString, JSONString, ScriptableArray *> callback_signal_;
   Signal1<bool, const std::string &> open_url_signal_;
+  bool minimized_;
+  bool popped_out_;
 };
 
 BrowserElement::Impl::BrowserController *

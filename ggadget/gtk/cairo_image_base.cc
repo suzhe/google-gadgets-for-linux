@@ -36,12 +36,22 @@ class CairoImageBase::Impl {
     : graphics_(graphics),
       tag_(tag), is_mask_(is_mask),
       ref_count_(1) {
+    on_gfx_destroy_connection_ =
+        graphics_->ConnectOnDestroy(NewSlot(this, &Impl::OnGfxDestroy));
   }
 
   ~Impl() {
     ASSERT(ref_count_ == 0);
+    if (on_gfx_destroy_connection_)
+      on_gfx_destroy_connection_->Disconnect();
   }
 
+  void OnGfxDestroy() {
+    graphics_ = NULL;
+    on_gfx_destroy_connection_ = NULL;
+  }
+
+  Connection *on_gfx_destroy_connection_;
   const CairoGraphics *graphics_;
   std::string tag_;
   bool is_mask_;
@@ -54,7 +64,7 @@ CairoImageBase::CairoImageBase(const CairoGraphics *graphics,
 }
 
 CairoImageBase::~CairoImageBase() {
-  impl_->graphics_->OnImageDelete(impl_->tag_, impl_->is_mask_);
+  CairoGraphics::OnImageDelete(impl_->graphics_, impl_->tag_, impl_->is_mask_);
   delete impl_;
   impl_ = NULL;
 }

@@ -126,9 +126,5 @@ FontInterface *QtGraphics::NewFont(const char *family, double pt_size,
   return new QtFont(family, size, style, weight);
 }
 
-GraphicsInterface *QtGraphics::Clone() const {
-  return new QtGraphics(impl_->zoom_);
-}
-
 } // namespace qt
 } // namespace ggadget
