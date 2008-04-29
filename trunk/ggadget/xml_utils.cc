@@ -157,6 +157,12 @@ void SetupScriptableProperties(ScriptableInterface *scriptable,
       if (GadgetStrCmp(kClassIdAttr, name.c_str()) == 0) {
         has_classid = true;
         down_cast<ObjectElement *>(scriptable)->SetObjectClassId(value);
+        // Remove this attribute from list since it has been handled, otherwise
+        // it'll be handled at least twice and cause problem.
+        const_cast<DOMNamedNodeMapInterface*>(attributes)->
+            RemoveNamedItem(name.c_str());
+        length--;
+        break;
       }
     }
     if (!has_classid) {
