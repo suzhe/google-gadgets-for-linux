@@ -112,6 +112,21 @@ class EditElementBase : public ScrollingElement {
    * for displaying the content without scrolling. */
   virtual void GetIdealBoundingRect(int *width, int *height) = 0;
 
+  /**
+   * Selects the specified characters in the edit box. The first character has
+   * index 0. Use -1 to indicate the last character.
+   *
+   * Added in 5.5 out-of-beta
+   */
+  virtual void Select(int start, int end) = 0;
+
+  /**
+   * Selects all characters in the edit box.
+   *
+   * Added in 5.5 out-of-beta
+   */
+  virtual void SelectAll() = 0;
+
  public:
   /**
    * Derived class shall call this method if the value is changed.

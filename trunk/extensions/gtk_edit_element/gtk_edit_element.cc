@@ -211,6 +211,22 @@ void GtkEditElement::GetIdealBoundingRect(int *width, int *height) {
   if (height) *height = h;
 }
 
+void GtkEditElement::Select(int start, int end) {
+  impl_->Select(start, end);
+  // If the edit box has no focus, then the selection will be reset when it
+  // gains the focus by clicking on it. Then the selection will be useless.
+  // FIXME: Is it the correct behaviour?
+  GetView()->SetFocus(this);
+}
+
+void GtkEditElement::SelectAll() {
+  impl_->SelectAll();
+  // If the edit box has no focus, then the selection will be reset when it
+  // gains the focus by clicking on it. Then the selection will be useless.
+  // FIXME: Is it the correct behaviour?
+  GetView()->SetFocus(this);
+}
+
 void GtkEditElement::DoDraw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
   DrawScrollbar(canvas);

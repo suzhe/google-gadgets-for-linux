@@ -319,6 +319,14 @@ void QtEditElement::GetIdealBoundingRect(int *width, int *height) {
   if (height) *height = s.height();
 }
 
+void QtEditElement::Select(int start, int end) {
+  // TODO.
+}
+
+void QtEditElement::SelectAll() {
+  // TODO.
+}
+
 static QRectF GetRectForPosition(QTextDocument *doc, int position) {
   const QTextBlock block = doc->findBlock(position);
   if (!block.isValid()) return QRectF();

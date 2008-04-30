@@ -97,6 +97,9 @@ void EditElementBase::DoRegister() {
                    NewSlot(impl_, &Impl::GetIdealBoundingRect),
                    NULL);
 
+  RegisterMethod("select", NewSlot(this, &EditElementBase::Select));
+  RegisterMethod("selectAll", NewSlot(this, &EditElementBase::SelectAll));
+
   RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
 }
 

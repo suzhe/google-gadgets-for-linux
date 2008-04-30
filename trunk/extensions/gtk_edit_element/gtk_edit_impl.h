@@ -87,6 +87,10 @@ class GtkEditImpl {
                         int *page_step, int *cur_pos);
   void ScrollTo(int position);
   void MarkRedraw();
+  /** Select text between start and end. */
+  void Select(int start, int end);
+  /** Select all text */
+  void SelectAll();
 
  private:
   /**
@@ -179,8 +183,6 @@ class GtkEditImpl {
   void SelectWord();
   /** Select the current display line under cursor */
   void SelectLine();
-  /** Select all text */
-  void SelectAll();
   /** Delete the text that is currently selected */
   void DeleteSelection();
 
