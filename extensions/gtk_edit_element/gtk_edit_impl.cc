@@ -1387,8 +1387,21 @@ void GtkEditImpl::SelectLine() {
   SetSelectionBounds(selection_bound, cursor);
 }
 
+void GtkEditImpl::Select(int start, int end) {
+  if (start == -1)
+    start = text_length_;
+  if (end == -1)
+    end = text_length_;
+
+  start = Clamp(start, 0, text_length_);
+  end = Clamp(end, 0, text_length_);
+  SetSelectionBounds(start, end);
+  QueueRefresh(false);
+}
+
 void GtkEditImpl::SelectAll() {
   SetSelectionBounds(0, text_length_);
+  QueueRefresh(false);
 }
 
 void GtkEditImpl::DeleteSelection() {

@@ -65,6 +65,8 @@ class GtkEditElement : public EditElementBase {
   virtual bool IsReadOnly() const;
   virtual void SetReadOnly(bool readonly);
   virtual void GetIdealBoundingRect(int *width, int *height);
+  virtual void Select(int start, int end);
+  virtual void SelectAll();
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
