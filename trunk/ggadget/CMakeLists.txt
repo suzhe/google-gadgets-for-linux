@@ -73,6 +73,7 @@ SET(SRCS
   checkbox_element.cc
   combobox_element.cc
   contentarea_element.cc
+  copy_element.cc
   div_element.cc
   edit_element_base.cc
   img_element.cc

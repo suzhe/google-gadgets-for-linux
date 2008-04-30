@@ -149,6 +149,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
                                             double *, double *) const { }
   virtual void QueueDraw() { draw_queued_ = true; }
   virtual void QueueResize() { resize_queued_ = true; }
+  virtual void EnableInputShapeMask(bool enable) { };
   virtual void SetResizable(ggadget::ViewInterface::ResizableMode mode) { }
   virtual void SetCaption(const char *caption) { }
   virtual void SetShowCaptionAlways(bool always) { }
