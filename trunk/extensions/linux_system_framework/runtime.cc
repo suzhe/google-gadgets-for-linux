@@ -15,6 +15,7 @@
 */
 
 #include "runtime.h"
+#include <ggadget/sysdeps.h>
 #include <ggadget/logger.h>
 #include <ggadget/dbus/dbus_result_receiver.h>
 #include "hal_strings.h"
@@ -36,6 +37,7 @@ Runtime::Runtime() {
                    MESSAGE_TYPE_STRING, kHalPropSystemKernelName,
                    MESSAGE_TYPE_INVALID)) {
     DLOG("Failed to get kernel name.");
+    os_name_ = GGL_PLATFORM;
   } else {
     os_name_ = name_receiver.GetValue();
   }
