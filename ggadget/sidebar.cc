@@ -167,10 +167,9 @@ class SideBar::Impl : public View {
         owner_(owner),
         view_host_(view_host),
         null_element_(NULL),
-        expand_element_(NULL),
+        popout_element_(NULL),
         mouse_move_event_x_(-1),
         mouse_move_event_y_(-1),
-        is_drag_event_(false),
         background_(NULL),
         icon_(NULL),
         main_div_(NULL),
@@ -185,16 +184,10 @@ class SideBar::Impl : public View {
   }
 
  public:
-  //FIXME: this method is too big
   virtual EventResult OnMouseEvent(const MouseEvent &event) {
-    if (is_drag_event_ && event.GetType() == Event::EVENT_MOUSE_CLICK) {
-      DLOG("ignore the click event after drag.");
-      is_drag_event_ = false;
-      return EVENT_RESULT_UNHANDLED;
-    }
     // the mouse down event after expand event should file unexpand event
-    if (event.GetType() == Event::EVENT_MOUSE_DOWN && expand_element_) {
-      //TODO: view_host_->Unexpand();
+    if (ShouldFirePopInEvent(event)) {
+      popin_event_();
       return EVENT_RESULT_HANDLED;
     }
     EventResult result = View::OnMouseEvent(event);
@@ -213,58 +206,28 @@ class SideBar::Impl : public View {
         !GetMouseOverElement() ||
         !GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID))
       return result;
-    if (!GetPopupElement()) {
-      if (GetHitTest() == ViewInterface::HT_BOTTOM) {
-        double old_height = mouse_move_event_y_ -
-                            GetMouseOverElement()->GetPixelY();
-        double new_height = event.GetY() - GetMouseOverElement()->GetPixelY();
-        double offset = std::abs(new_height - old_height);
-        DLOG("old height: %.1lf, new: %.1lf", old_height, new_height);
-        int index = GetIndex(GetMouseOverElement());
-        if (new_height > old_height && DownResize(index + 1, &offset)) {
-          mouse_move_event_y_ = event.GetY();
-          ViewElement *element = down_cast<ViewElement *>(GetMouseOverElement());
-          element->SetSize(element->GetPixelWidth(),
-              element->GetPixelHeight() + offset);
-          QueueDraw();
-        }
-        if (new_height < old_height && UpResize(index, &offset)) {
-          mouse_move_event_y_ = event.GetY();
-          Layout();
-          QueueDraw();
-        }
-      } else {
+    if (GetHitTest() == ViewInterface::HT_BOTTOM) {
+      double old_height = mouse_move_event_y_ -
+          GetMouseOverElement()->GetPixelY();
+      double new_height = event.GetY() - GetMouseOverElement()->GetPixelY();
+      double offset = std::abs(new_height - old_height);
+      DLOG("old height: %.1lf, new: %.1lf", old_height, new_height);
+      int index = GetIndex(GetMouseOverElement());
+      if (new_height > old_height && DownResize(index + 1, &offset)) {
+        mouse_move_event_y_ = event.GetY();
         ViewElement *element = down_cast<ViewElement *>(GetMouseOverElement());
-        mouse_move_event_x_ = event.GetX() - element->GetPixelX();
-        mouse_move_event_y_ = event.GetY() - element->GetPixelY();
-        DLOG("position in hanged_element: %fx%f",
-            mouse_move_event_x_, mouse_move_event_y_);
-        // Send fake mouse up event to the view element so that we
-        // can start to drag the element. Note: no mouse click event
-        // is sent in this case, to prevent unwanted action after
-        // window move.
-        MouseEvent e(Event::EVENT_MOUSE_UP,
-            mouse_move_event_x_, mouse_move_event_y_, 0, 0,
-            MouseEvent::BUTTON_LEFT, event.GetModifier());
-        //TODO: element->HandleMouseEvent(e);
-        is_drag_event_ = true;
-        element->SetOpacity(kOpacityFactor);
-        SetPopupElement(element);
+        element->SetSize(element->GetPixelWidth(),
+                         element->GetPixelHeight() + offset);
+        QueueDraw();
+      }
+      if (new_height < old_height && UpResize(index, &offset)) {
+        mouse_move_event_y_ = event.GetY();
+        Layout();
+        QueueDraw();
       }
     } else {
-      // check if an undock event happens
-      if (event.GetX() - mouse_move_event_x_ < -GetWidth() ||
-          event.GetX() - mouse_move_event_x_ > GetWidth()) {
-        is_drag_event_ = false;
-        undock_event_();
-        ResetState();
-        return EVENT_RESULT_HANDLED;
-      } else {
-        // check if need re-layout the order the gadgets
-        InsertViewElement(static_cast<int>(event.GetY()), GetPopupElement());
-        GetPopupElement()->SetPixelY(event.GetY() - mouse_move_event_y_);
-      }
-      QueueDraw();
+      undock_event_();
+      ResetState();
     }
     return EVENT_RESULT_HANDLED;
   }
@@ -273,7 +236,7 @@ class SideBar::Impl : public View {
         GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
       GetMouseOverElement()->OnAddContextMenuItems(menu);
     } else {
-      View::OnAddContextMenuItems(menu);
+      return (*system_menu_slot_)(menu);
     }
     return true;
   }
@@ -380,6 +343,8 @@ class SideBar::Impl : public View {
     button_array_[1]->SetDownImage(LoadGlobalImageAsVariant(kSBButtonConfigDown));
     button_array_[1]->SetOverImage(LoadGlobalImageAsVariant(kSBButtonConfigOver));
     button_array_[1]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
+    button_array_[1]->ConnectOnClickEvent(NewSlot(
+        this, &Impl::HandleConfigureButtonClick));
     GetChildren()->InsertElement(button_array_[1], NULL);
 
     button_array_[2] = new ButtonElement(NULL, this, NULL);
@@ -388,6 +353,16 @@ class SideBar::Impl : public View {
     button_array_[2]->SetOverImage(LoadGlobalImageAsVariant(kSBButtonCloseOver));
     button_array_[2]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
     GetChildren()->InsertElement(button_array_[2], NULL);
+  }
+  bool ShouldFirePopInEvent(const MouseEvent &event) {
+    if (!popout_element_ ||
+        event.GetType() != MouseEvent::EVENT_MOUSE_DOWN ||
+        GetMouseOverElement() == popout_element_)
+      return false;
+    return true;
+  }
+  void HandleConfigureButtonClick() {
+    view_host_->ShowContextMenu(MouseEvent::BUTTON_LEFT);
   }
   // TODO: refactor the duplicate method in decorated_view_host.cc
   Variant LoadGlobalImageAsVariant(const char *img) {
@@ -441,13 +416,10 @@ class SideBar::Impl : public View {
     return r;
   }
   void Layout() {
-    DLOG("Layout in Sidebar, element number: %d",
-         main_div_->GetChildren()->GetCount());
     double height = kSperator;
     for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
       ViewElement *element =
         down_cast<ViewElement *>(main_div_->GetChildren()->GetItemByIndex(i));
-      if (!element->IsEnabled() && element != expand_element_) continue;
       double x = main_div_->GetPixelWidth(), y = element->GetPixelHeight();
       if (element->IsVisible() && element->OnSizing(&x, &y)) {
         element->SetSize(x, y);
@@ -455,10 +427,6 @@ class SideBar::Impl : public View {
       element->SetPixelX(0);
       element->SetPixelY(height);
       height += element->GetPixelHeight() + kSperator;
-      DLOG("Element(%p,view:%p)'s pos: (%.1lf,%.1lf) size: %.1lfx%.1lf:",
-           element, element->GetChildView(),
-           element->GetPixelX(), element->GetPixelY(),
-           element->GetPixelWidth(), element->GetPixelHeight());
     }
     QueueDraw();
   }
@@ -473,14 +441,14 @@ class SideBar::Impl : public View {
     }
     return NULL;
   }
-  void InsertNullElement(int y, View *view) {
+  void InsertNullElement(int y, ViewInterface *view) {
     ASSERT(view);
     if (null_element_ && null_element_->GetChildView() != view) {
       // only one null element is allowed
       main_div_->GetChildren()->RemoveElement(null_element_);
     }
     if (!null_element_) {
-      null_element_ = new ViewElement(main_div_, this, view);
+      null_element_ = new ViewElement(main_div_, this, down_cast<View *>(view));
       null_element_->SetPixelHeight(view->GetHeight());
       null_element_->SetVisible(false);
     }
@@ -492,18 +460,6 @@ class SideBar::Impl : public View {
       null_element_ = NULL;
       Layout();
     }
-  }
-  void Expand(View *view) {
-    if (expand_element_) expand_element_->SetEnabled(true);
-    expand_element_ = FindViewElementByView(view);
-    expand_element_->SetEnabled(false);
-  }
-  void Unexpand() {
-    ASSERT(expand_element_);
-    if (!expand_element_) return;
-    //TODO: expand_element_->GetChildView()->GetViewHost()->Unexpand();
-    expand_element_->SetEnabled(true);
-    expand_element_ = NULL;
   }
   bool UpResize(int index, double *offset) {
     double count = 0;
@@ -567,11 +523,10 @@ class SideBar::Impl : public View {
   ViewHostInterface *view_host_;
 
   ViewElement *null_element_;
-  ViewElement *expand_element_;
+  ViewElement *popout_element_;
 
   double mouse_move_event_x_;
   double mouse_move_event_y_;
-  double is_drag_event_;
 
   std::vector<Connection *> connections_;
 
@@ -583,10 +538,10 @@ class SideBar::Impl : public View {
   ImgElement *border_array_[4];
 
   Slot0<void> *close_slot_;
-  Slot0<void> *system_menu_slot_;
+  Slot1<bool, MenuInterface *> *system_menu_slot_;
 
   EventSignal undock_event_;
-  EventSignal unexpand_event_;
+  EventSignal popin_event_;
 
   static const int kSperator = 2;
   static const int kMouseMoveThreshold = 2;
@@ -630,7 +585,7 @@ ViewHostInterface *SideBar::GetViewHost() const {
   return impl_->GetViewHost();
 }
 
-void SideBar::InsertNullElement(int y, View *view) {
+void SideBar::InsertNullElement(int y, ViewInterface *view) {
   return impl_->InsertNullElement(y, view);
 }
 
@@ -638,12 +593,8 @@ void SideBar::ClearNullElement() {
   impl_->ClearNullElement();
 }
 
-void SideBar::Expand(View *view) {
-  impl_->Expand(view);
-}
-
-void SideBar::Unexpand(View *view) {
-  impl_->Unexpand();
+void SideBar::Layout() {
+  impl_->Layout();
 }
 
 ViewElement *SideBar::GetMouseOverElement() const {
@@ -657,6 +608,14 @@ ViewElement *SideBar::FindViewElementByView(ViewInterface *view) const {
   return impl_->FindViewElementByView(view);
 }
 
+ViewElement *SideBar::SetPopoutedView(ViewInterface *view) {
+  if (view)
+    impl_->popout_element_ = impl_->FindViewElementByView(view);
+  else
+    impl_->popout_element_ = NULL;
+  return impl_->popout_element_;
+}
+
 void SideBar::GetPointerPosition(double *x, double *y) const {
   if (impl_->mouse_move_event_x_ > 0 || impl_->mouse_move_event_y_ > 0) {
     *x = impl_->mouse_move_event_x_;
@@ -664,16 +623,12 @@ void SideBar::GetPointerPosition(double *x, double *y) const {
   }
 }
 
-void SideBar::Layout() {
-  impl_->Layout();
-}
-
 Connection *SideBar::ConnectOnUndock(Slot0<void> *slot) {
   return impl_->undock_event_.Connect(slot);
 }
 
-Connection *SideBar::ConnectOnUnexpand(Slot0<void> *slot) {
-  return impl_->unexpand_event_.Connect(slot);
+Connection *SideBar::ConnectOnPopIn(Slot0<void> *slot) {
+  return impl_->popin_event_.Connect(slot);
 }
 
 void SideBar::SetAddGadgetSlot(Slot0<void> *slot) {
@@ -681,10 +636,8 @@ void SideBar::SetAddGadgetSlot(Slot0<void> *slot) {
       impl_->button_array_[0]->ConnectOnClickEvent(slot));
 }
 
-void SideBar::SetMenuSlot(Slot0<void> *slot) {
+void SideBar::SetMenuSlot(Slot1<bool, MenuInterface *> *slot) {
   impl_->system_menu_slot_ = slot;
-  impl_->connections_.push_back(
-      impl_->button_array_[1]->ConnectOnClickEvent(slot));
 }
 
 void SideBar::SetCloseSlot(Slot0<void> *slot) {

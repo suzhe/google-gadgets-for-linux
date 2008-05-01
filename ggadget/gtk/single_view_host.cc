@@ -185,13 +185,13 @@ class SingleViewHost::Impl {
     int width = static_cast<int>(ceil(view_->GetWidth() * zoom));
     int height = static_cast<int>(ceil(view_->GetHeight() * zoom));
 
-    DLOG("New view size: %d %d", width, height);
+    // DLOG("New view size: %d %d", width, height);
 
     GtkRequisition req;
     gtk_widget_set_size_request(widget_, width, height);
     gtk_widget_size_request(window_, &req);
 
-    DLOG("Required window size: %d %d", req.width, req.height);
+    // DLOG("Required window size: %d %d", req.width, req.height);
 
     if (gtk_window_get_resizable(GTK_WINDOW(window_))) {
       gtk_widget_set_size_request(widget_, -1, -1);
@@ -201,7 +201,7 @@ class SingleViewHost::Impl {
       gtk_widget_set_size_request(window_, req.width, req.height);
     }
 
-    DLOG("End adjusting window size.");
+    // DLOG("End adjusting window size.");
   }
 
   static gboolean AdjustWindowSizeHandler(gpointer user_data) {
@@ -460,12 +460,11 @@ class SingleViewHost::Impl {
       gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
                                  x, y, gtk_get_current_event_time());
     } else {
-      if (win_x_ == 0 && win_y_ == 0)
-        gtk_window_get_position(GTK_WINDOW(window_), &win_x_, &win_y_);
+      gtk_window_get_position(GTK_WINDOW(window_), &win_x_, &win_y_);
       cursor_offset_x_ = x - win_x_;
       cursor_offset_y_ = y - win_y_;
-      DLOG("handle move by the window(%p), cursor: %dx%d",
-          window_, cursor_offset_x_, cursor_offset_y_);
+      DLOG("handle move by the window(%p), cursor: %dx%d, window org: %dx%d",
+          window_, cursor_offset_x_, cursor_offset_y_, win_x_, win_y_);
     }
   }
 

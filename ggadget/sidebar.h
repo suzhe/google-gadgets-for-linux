@@ -17,15 +17,19 @@
 #ifndef GGADGET_SIDEBAR_H__
 #define GGADGET_SIDEBAR_H__
 
-#include <ggadget/basic_element.h>
+#include <ggadget/variant.h>
 #include <ggadget/view_host_interface.h>
 
 namespace ggadget {
 
 template <typename R> class Slot0;
-class HostInterface;
-class ViewElement;
 class CanvasInterface;
+class HostInterface;
+class MenuInterface;
+class ViewElement;
+class ViewInterface;
+
+DECLARE_VARIANT_PTR_TYPE(MenuInterface);
 
 class SideBar {
  public:
@@ -34,22 +38,21 @@ class SideBar {
  public:
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type, int height);
   ViewHostInterface *GetViewHost() const;
-  void InsertNullElement(int y, View *view);
+  void InsertNullElement(int y, ViewInterface *view);
   void ClearNullElement();
-  void Expand(View *view);
-  void Unexpand(View *view);
   void Layout();
 
   ViewElement *GetMouseOverElement() const;
   ViewElement *FindViewElementByView(ViewInterface *view) const;
+  ViewElement *SetPopoutedView(ViewInterface *view);
   void GetPointerPosition(double *x, double *y) const;
 
   void SetAddGadgetSlot(Slot0<void> *slot);
-  void SetMenuSlot(Slot0<void> *slot);
+  void SetMenuSlot(Slot1<bool, MenuInterface *> *slot);
   void SetCloseSlot(Slot0<void> *slot);
 
   Connection *ConnectOnUndock(Slot0<void> *slot);
-  Connection *ConnectOnUnexpand(Slot0<void> *slot);
+  Connection *ConnectOnPopIn(Slot0<void> *slot);
  private:
   class Impl;
   Impl *impl_;
