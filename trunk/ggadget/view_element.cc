@@ -58,9 +58,6 @@ class ViewElement::Impl {
 
     owner_->BasicElement::SetPixelWidth(width);
     owner_->BasicElement::SetPixelHeight(height);
-
-    DLOG("ViewElement new scale: %lf, new size: %lf, %lf",
-         scale_, width, height);
   }
 
   ViewElement *owner_;
@@ -75,13 +72,11 @@ ViewElement::ViewElement(BasicElement *parent, View *parent_view,
     // Only 1 child so no need to involve Elements here.
     : BasicElement(parent, parent_view, "", NULL, false),
       impl_(new Impl(this)) {
-  DLOG("MEMORY: ViewElement Ctor %p", this);
   SetEnabled(true);
   SetChildView(child_view);
 }
 
 ViewElement::~ViewElement() {
-  DLOG("MEMORY: ViewElement Dtor %p", this);
   delete impl_;
   impl_ = NULL;
 }
@@ -121,8 +116,6 @@ View *ViewElement::GetChildView() const {
 
 bool ViewElement::OnSizing(double *width, double *height) {
   ASSERT(width && height);
-  DLOG("ViewElement::OnSizing(%lf, %lf)", *width, *height);
-
   if (*width <= 0 || *height <= 0)
     return false;
 
@@ -163,7 +156,6 @@ bool ViewElement::OnSizing(double *width, double *height) {
 }
 
 void ViewElement::SetSize(double width, double height) {
-  DLOG("ViewElement::SetSize(%lf, %lf)", width, height);
   double old_width = GetPixelWidth();
   double old_height = GetPixelHeight();
 

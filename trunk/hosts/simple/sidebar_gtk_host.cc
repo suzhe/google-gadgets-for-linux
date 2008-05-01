@@ -26,7 +26,9 @@
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
+#include <ggadget/main_loop_interface.h>
 #include <ggadget/messages.h>
+#include <ggadget/menu_interface.h>
 #include <ggadget/logger.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/sidebar.h>
@@ -90,8 +92,6 @@ class SidebarGtkHost::Impl {
             NewSlot(this, &GadgetMoveClosure::HandleMoveEnd)));
       AddConnection(decorator_view_host_->ConnectOnDock(
             NewSlot(this, &GadgetMoveClosure::HandleDock)));
-      AddConnection(decorator_view_host_->ConnectOnPopIn(
-            NewSlot(this, &GadgetMoveClosure::HandleUnexpand)));
     }
     ~GadgetMoveClosure() {
       for (size_t i = 0; i < connections_.size(); ++i)
@@ -121,9 +121,6 @@ class SidebarGtkHost::Impl {
     void HandleDock() {
       owner_->Dock(view_, height_, true);
     }
-    void HandleUnexpand() {
-      owner_->Unexpand(NULL);
-    }
    private:
     bool IsOverlapWithSideBar(int *height) {
       int x, y, w, h;
@@ -134,7 +131,7 @@ class SidebarGtkHost::Impl {
       int sx, sy, sw, sh;
       gtk_window_get_position(GTK_WINDOW(sidebar_), &sx, &sy);
       gtk_window_get_size(GTK_WINDOW(sidebar_), &sw, &sh);
-      if ((x < sx && x + w > sx) || (x > sx && sx + sw > x)) {
+      if ((x + w >= sx) && (sx + sw >= x)) {
         if (height) {
           int dummy;
           gtk_widget_get_pointer(sidebar_, &dummy, height);
@@ -158,7 +155,8 @@ class SidebarGtkHost::Impl {
       decorated_(decorated),
       view_debug_mode_(static_cast<ViewInterface::DebugMode>(view_debug_mode)),
       view_host_(NULL),
-      expand_view_host_(NULL),
+      expanded_original_(NULL),
+      expanded_popout_(NULL),
       side_bar_(NULL),
       gadget_manager_(GetGadgetManager()) {
     ASSERT(gadget_manager_);
@@ -172,7 +170,7 @@ class SidebarGtkHost::Impl {
     side_bar_->SetCloseSlot(NewSlot(this, &Impl::ExitHandler));
 
     side_bar_->ConnectOnUndock(NewSlot(this, &Impl::HandleUndock));
-    // side_bar_->ConnectOnUnexpand(NewSlot(this, &Impl::HandleUnexpand));
+    side_bar_->ConnectOnPopIn(NewSlot(this, &Impl::HandleGeneralPopIn));
   }
 
   ~Impl() {
@@ -246,37 +244,70 @@ class SidebarGtkHost::Impl {
     DecoratedViewHost *decorator =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED, false);
     decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
+    decorator->ConnectOnClose(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnCloseHandler)));
+    decorator->ConnectOnPopOut(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnPopOutHandler)));
+    decorator->ConnectOnPopIn(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnPopInHandler)));
     ViewHostInterface *old = view->SwitchViewHost(decorator);
     if (old) old->Destroy();
     side_bar_->Layout();
     return true;
   }
 
+  class SlotPostCallback : public WatchCallbackInterface {
+   public:
+    SlotPostCallback(Slot1<void, int> *slot) : slot_(slot) {}
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      DLOG("call the slot now");
+      (*slot_)(MouseEvent::BUTTON_LEFT);
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete slot_;
+      delete this;
+    }
+    Slot1<void, int> *slot_;
+  };
+
   bool Undock(View *view, bool move_to_cursor) {
     view->GetGadget()->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     ViewElement *ele = side_bar_->FindViewElementByView(view);
-    int h = ele ? static_cast<int>(ele->GetPixelY()) : 0;
-    ViewHostInterface *new_host = NewSingleViewHost(view, true, h);
+    int wx = ele ? static_cast<int>(ele->GetPixelX()) : 0;
+    int wy = ele ? static_cast<int>(ele->GetPixelY()) : 0;
+    ViewHostInterface *new_host = NewSingleViewHost(view, true, wy);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
     bool r = view->ShowView(false, 0, NULL);
     if (move_to_cursor) {
+      side_bar_->InsertNullElement(wy, view);
       // move new gadget to a proper place
       double x, y;
       side_bar_->GetPointerPosition(&x, &y);
+      gdk_pointer_ungrab(gtk_get_current_event_time());
       int px, py;
       gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
       GtkWidget *window =
           gtk_widget_get_toplevel(GTK_WIDGET(new_host->GetNativeWidget()));
       gtk_window_move(GTK_WINDOW(window),
-                      px - static_cast<int>(x), py - static_cast<int>(y));
-      DLOG("move window, x: %f y: %f px: %d py: %d", x, y, px, py);
+                      px - static_cast<int>(x) + wx,
+                      py - static_cast<int>(y) + wy);
+      DLOG("move window, x: %f y: %f px: %d py: %d, wx: %d, wy: %d",
+           x, y, px, py, wx, wy);
       gdk_pointer_grab(window->window, FALSE,
                        (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
                                       GDK_POINTER_MOTION_MASK |
                                       GDK_POINTER_MOTION_HINT_MASK),
                        NULL, NULL, gtk_get_current_event_time());
-      new_host->BeginMoveDrag(MouseEvent::BUTTON_LEFT);
+      gtk_window_deiconify(GTK_WINDOW(window));
+      gdk_window_focus(window->window, gtk_get_current_event_time());
+      gtk_window_set_transient_for(GTK_WINDOW(window),
+                                   GTK_WINDOW(main_widget_));
+      // posted the slot in to main loop, to avoid it is run before the window is
+      // moved
+      GetGlobalMainLoop()->AddTimeoutWatch(0, new SlotPostCallback(NewSlot(
+          new_host, &ViewHostInterface::BeginMoveDrag)));
     }
     return r;
   }
@@ -299,31 +330,8 @@ class SidebarGtkHost::Impl {
     }
   }
 
-  void Expand(Gadget *gadget) {
-   //TODO if (!expand_view_host_) {
-   //TODO   expand_view_host_ = NewSingleViewHost(gadget->GetMainView(), false);
-   //TODO }
-    expand_view_host_->SetView(gadget->GetMainView());
-    expand_view_host_->ShowView(true, 0, NULL);
-    //TODO: expand_view_host_->Expand();
-    side_bar_->Expand(gadget->GetMainView());
-  }
-
-  void Unexpand(Gadget *gadget) {
-    //TODO: expand_view_host_->Unexpand();
-    expand_view_host_->SetView(NULL);
-    expand_view_host_->CloseView();
-    side_bar_->Unexpand(NULL);
-  }
-
-  void HandleExpand() {
-    ViewElement *element = side_bar_->GetMouseOverElement();
-    if (element)
-      Expand(element->GetChildView()->GetGadget());
-  }
-
-  void HandleUnexpand() {
-    Unexpand(NULL);
+  void HandleGeneralPopIn() {
+    OnPopInHandler(expanded_original_);
   }
 
   void InitGadgets() {
@@ -373,6 +381,10 @@ class SidebarGtkHost::Impl {
     DecoratedViewHost *decorator =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_STANDALONE,
                               true);
+    decorator->ConnectOnClose(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnCloseHandler)));
+    decorator->ConnectOnPopIn(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnPopInHandler)));
     GadgetMoveClosure *closure =
         new GadgetMoveClosure(this, view_host, decorator, view, height);
     move_slots_[view->GetGadget()] = closure;
@@ -381,35 +393,155 @@ class SidebarGtkHost::Impl {
   }
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-    ViewHostInterface *inner;
-    ViewHostInterface *decorator;
+    ViewHostInterface *view_host;
+    DecoratedViewHost *decorator;
     switch (type) {
       case ViewHostInterface::VIEW_HOST_MAIN:
-        inner = side_bar_->NewViewHost(type, 0);
-        decorator = new DecoratedViewHost(inner,
+        view_host = side_bar_->NewViewHost(type, 0);
+        decorator = new DecoratedViewHost(view_host,
                                           DecoratedViewHost::MAIN_DOCKED,
                                           false);
-        down_cast<DecoratedViewHost *>(decorator)->ConnectOnUndock(
-            NewSlot(this, &Impl::HandleFloatingUndock));
+        decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
         break;
       case ViewHostInterface::VIEW_HOST_OPTIONS:
-        inner = new SingleViewHost(type, 1.0, true, true, true,
-                                   view_debug_mode_);
         // No decorator for options view.
-        decorator = inner;
-        break;
+        view_host = new SingleViewHost(type, 1.0, true, true, true,
+                                       view_debug_mode_);
+        return view_host;
       default:
-        inner = new SingleViewHost(type, 1.0, decorated_, true, true,
-                                   view_debug_mode_);
-        decorator = new DecoratedViewHost(inner, DecoratedViewHost::DETAILS,
+        view_host = new SingleViewHost(type, 1.0, decorated_, true, true,
+                                       view_debug_mode_);
+        decorator = new DecoratedViewHost(view_host, DecoratedViewHost::DETAILS,
                                           true);
         break;
     }
-    return decorator;
+    decorator->ConnectOnClose(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnCloseHandler)));
+    decorator->ConnectOnPopIn(NewFunctorSlot<void>(
+        DecoratorSignalHandler(decorator, this, &Impl::OnPopInHandler)));
+    return view_host;
   }
 
+  //TODO: refactor these methods/subclass which are the same w/ simple_gtk_host
+  class DecoratorSignalHandler {
+   public:
+    DecoratorSignalHandler(DecoratedViewHost *decorator, Impl *impl,
+                           void (Impl::*handler)(DecoratedViewHost *))
+      : decorator_(decorator), impl_(impl), handler_(handler) {
+    }
+    void operator()() const {
+      (impl_->*handler_)(decorator_);
+    }
+    // No use.
+    bool operator==(const DecoratorSignalHandler &) const { return false; }
+
+   private:
+    DecoratedViewHost *decorator_;
+    Impl *impl_;
+    void (Impl::*handler_)(DecoratedViewHost *);
+  };
+
   void RemoveGadget(Gadget *gadget, bool save_data) {
+    ASSERT(gadget);
+    ViewInterface *main_view = gadget->GetMainView();
+
+    // If this gadget is popped out, popin it first.
+    if (main_view->GetViewHost() == expanded_popout_) {
+      OnPopInHandler(expanded_original_);
+    }
+
     gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
+  }
+  void OnCloseHandler(DecoratedViewHost *decorated) {
+    ViewInterface *child = decorated->GetView();
+    Gadget *gadget = child ? child->GetGadget() : NULL;
+
+    ASSERT(gadget);
+    if (!gadget) return;
+
+    switch (decorated->GetDecoratorType()) {
+      case DecoratedViewHost::MAIN_STANDALONE:
+      case DecoratedViewHost::MAIN_DOCKED:
+        gadget->RemoveMe(true);
+        break;
+      case DecoratedViewHost::MAIN_EXPANDED:
+        if (expanded_original_ &&
+            expanded_popout_ == decorated)
+          OnPopInHandler(expanded_original_);
+        break;
+      case DecoratedViewHost::DETAILS:
+        gadget->CloseDetailsView();
+        break;
+      default:
+        ASSERT("Invalid decorator type.");
+    }
+  }
+
+  void OnPopOutHandler(DecoratedViewHost *decorated) {
+    if (expanded_original_) {
+      OnPopInHandler(expanded_original_);
+    }
+
+    ViewInterface *child = decorated->GetView();
+    ASSERT(child);
+    if (child) {
+      ViewElement *ele = side_bar_->SetPopoutedView(child);
+      expanded_original_ = decorated;
+      SingleViewHost *svh = new SingleViewHost(
+          ViewHostInterface::VIEW_HOST_MAIN, 1.0, false, false, false,
+          static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+      svh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
+      expanded_popout_ =
+          new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED, true);
+      expanded_popout_->ConnectOnClose(NewFunctorSlot<void>(
+        DecoratorSignalHandler(expanded_popout_, this, &Impl::OnCloseHandler)));
+
+      // Send popout event to decorator first.
+      SimpleEvent event(Event::EVENT_POPOUT);
+      expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+
+      child->SwitchViewHost(expanded_popout_);
+      expanded_popout_->ShowView(false, 0, NULL);
+      SetProperPopoutPosition(ele, expanded_popout_);
+    }
+  }
+
+  void OnPopInHandler(DecoratedViewHost *decorated) {
+    if (expanded_original_ == decorated && expanded_popout_) {
+      ViewInterface *child = expanded_popout_->GetView();
+      ASSERT(child);
+      if (child) {
+        ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
+        SimpleEvent event(Event::EVENT_POPIN);
+        expanded_original_->GetDecoratedView()->OnOtherEvent(event);
+        // The old host must be destroyed after sending onpopin event.
+        old_host->Destroy();
+        expanded_original_ = NULL;
+        expanded_popout_ = NULL;
+        side_bar_->SetPopoutedView(NULL);
+      }
+    }
+  }
+  //Refactor To here
+
+  void SetProperPopoutPosition(const BasicElement *element_in_sidebar,
+                               const DecoratedViewHost *popout_view_host) {
+    double ex, ey;
+    element_in_sidebar->SelfCoordToViewCoord(0, 0, &ex, &ey);
+    int sx, sy;
+    //FIXME: should use Decorator View's width, but now it is 0...
+    int pw = static_cast<int>(popout_view_host->GetView()->GetWidth());
+    gtk_window_get_position(GTK_WINDOW(main_widget_), &sx, &sy);
+    GtkWidget *win = gtk_widget_get_toplevel(GTK_WIDGET(
+        popout_view_host->GetNativeWidget()));
+    DLOG("Popout, sx: %d, sy: %d, pw: %d, ey: %f", sx, sy, pw, ey);
+    if (sx > pw) {
+      gtk_window_move(GTK_WINDOW(win), sx - pw, sy + static_cast<int>(ey));
+    } else {
+      int sw, sh;
+      gtk_window_get_size(GTK_WINDOW(main_widget_), &sw, &sh);
+      gtk_window_move(GTK_WINDOW(win), sx + pw, sy + static_cast<int>(ey));
+    }
   }
 
   void RemoveGadgetInstanceCallback(int instance_id) {
@@ -428,7 +560,68 @@ class SidebarGtkHost::Impl {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
-  void MenuGenerator() {
+  bool HandlePopoutViewMove(int button) {
+    // popout view is not allowed to move, just return true
+    return true;
+  }
+
+  void AddGadgetHandlerWithOneArg(const char *str) {
+    DLOG("Add Gadget now, str: %s", str);
+    gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
+  }
+
+  void HandleMenuAutoHide(const char *str) {
+    //TODO;
+  }
+
+  void HandleMenuAlwaysOnTop(const char *str) {
+    //TODO;
+  }
+
+  void HandleMenuReplaceSidebar(const char *str) {
+  }
+
+  void HandleMenuFontSizeChange(const char *str) {
+    //TODO;
+  }
+
+  void HandleMenuClose(const char *str) {
+    ExitHandler();
+  }
+
+  bool MenuGenerator(MenuInterface *menu) {
+    menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
+                  NewSlot(this, &Impl::AddGadgetHandlerWithOneArg));
+    menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+    menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
+                  MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                  NewSlot(this, &Impl::HandleMenuAutoHide));
+    menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"),
+                  MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                  NewSlot(this, &Impl::HandleMenuAlwaysOnTop));
+    {
+      MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_ADD_SIDEBAR"));
+      sub->AddItem(GM_("MENU_ITEM_LEFT"), MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                  NewSlot(this, &Impl::HandleMenuReplaceSidebar));
+      sub->AddItem(GM_("MENU_ITEM_RIGHT"), MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                  NewSlot(this, &Impl::HandleMenuReplaceSidebar));
+    }
+    {
+      MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"));
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGE"),
+                   MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                   NewSlot(this, &Impl::HandleMenuFontSizeChange));
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"),
+                   MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                   NewSlot(this, &Impl::HandleMenuFontSizeChange));
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALL"),
+                   MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                   NewSlot(this, &Impl::HandleMenuFontSizeChange));
+    }
+    menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+    menu->AddItem(GM_("MENU_ITEM_CLOSE"), 0,
+                  NewSlot(this, &Impl::HandleMenuClose));
+    return true;
   }
 
   void ExitHandler() {
@@ -470,7 +663,8 @@ class SidebarGtkHost::Impl {
   ViewInterface::DebugMode view_debug_mode_;
 
   SingleViewHost *view_host_;
-  ViewHostInterface *expand_view_host_;
+  DecoratedViewHost *expanded_original_;
+  DecoratedViewHost *expanded_popout_;
   SideBar *side_bar_;
 
   GadgetManagerInterface *gadget_manager_;
