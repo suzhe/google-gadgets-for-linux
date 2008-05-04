@@ -355,7 +355,8 @@ class Elements::Impl {
       canvas->PopState();
     }
 
-    if (view_->GetDebugMode() > 0) {
+#ifdef _DEBUG
+    if (view_->GetDebugMode() & ViewInterface::DEBUG_CONTAINER) {
       // Draw bounding box for debug.
       canvas->DrawLine(0, 0, 0, height_, 1, Color(0, 0, 0));
       canvas->DrawLine(0, 0, width_, 0, 1, Color(0, 0, 0));
@@ -364,6 +365,7 @@ class Elements::Impl {
       canvas->DrawLine(0, 0, width_, height_, 1, Color(0, 0, 0));
       canvas->DrawLine(width_, 0, 0, height_, 1, Color(0, 0, 0));
     }
+#endif
   }
 
   void SetScrollable(bool scrollable) {

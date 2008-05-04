@@ -37,6 +37,8 @@ typedef Signal9<void, long, bool, std::string, std::string, const char *,
 typedef Signal9<void, long, bool, std::string, std::string, const char *,
     int, unsigned short, int, const std::vector<int> *> Signal9VoidCompatible2;
 typedef Signal1<Variant, Variant> SignalVariant;
+typedef Signal1<double, int> Signal1Double;
+typedef Signal1<void, char> Signal1Void;
 
 static void CheckSlot(int i, Slot *slot) {
   ASSERT_TRUE(slot->HasMetadata());
@@ -135,11 +137,13 @@ TEST(signal, SignalSlotCompatibility) {
   Signal9VoidCompatible1 signal9_compatible1;
   Signal9VoidCompatible2 signal9_compatible2;
   SignalVariant signal15;
+  Signal1Double signal16;
+  Signal1Void signal17;
 
   Signal *signals[] = { &signal0, &signal1, &signal2, &signal3, &signal4,
                         &signal5, &signal6, &signal7, &signal8, &signal9,
                         &signal10, &signal11, &signal12, &signal13, &signal14,
-                        &signal15 };
+                        &signal15, &signal16, &signal17 };
 
   for (int i = 0; i < kNumTestData; i++)
     ASSERT_TRUE(signals[i]->ConnectGeneral(meta_signal(i)) != NULL);

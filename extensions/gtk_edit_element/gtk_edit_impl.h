@@ -25,6 +25,8 @@
 #include <cairo.h>
 
 #include <ggadget/common.h>
+#include <ggadget/math_utils.h>
+#include <ggadget/clip_region.h>
 
 namespace ggadget {
 
@@ -105,6 +107,7 @@ class GtkEditImpl {
     BUFFER
   };
 
+  void QueueDraw();
   /** Remove the cached layout. */
   void ResetLayout();
   /**
@@ -123,11 +126,7 @@ class GtkEditImpl {
    * and queue a draw request.
    * If @c relayout is true then the layout will be regenerated.
    * */
-  void QueueRefresh(bool relayout);
-  /** Callback to do real refresh task */
-  bool RefreshCallback(int timer_id);
-  /** Send a request to redraw the edit control */
-  void QueueDraw();
+  void QueueRefresh(bool relayout, bool adjust_scroll);
   /** Reset the input method context */
   void ResetImContext();
   /** Reset preedit text */
@@ -150,6 +149,12 @@ class GtkEditImpl {
   void DrawCursor(CairoCanvas *canvas);
   /** Draw the text to the canvas */
   void DrawText(CairoCanvas *canvas);
+
+  void GetCursorRects(Rectangle *strong, Rectangle *weak);
+
+  void UpdateCursorRegion();
+
+  void UpdateSelectionRegion();
 
   /** Move cursor */
   void MoveCursor(MovementStep step, int count, bool extend_selection);
@@ -243,6 +248,7 @@ class GtkEditImpl {
   static void PasteCallback(GtkClipboard *clipboard,
                             const gchar *str, void *gg);
 
+ private:
   /** Owner of this gtk edit implementation object. */
   GtkEditElement *owner_;
   /** Main loop object */
@@ -291,8 +297,6 @@ class GtkEditImpl {
   int scroll_offset_x_;
   /** Y offset of current scroll, in pixels */
   int scroll_offset_y_;
-  /** Timer id of refresh callback */
-    int refresh_timer_;
   /** Timer id of cursor blink callback */
   int cursor_blink_timer_;
   /**
@@ -340,6 +344,15 @@ class GtkEditImpl {
    */
   bool content_modified_;
 
+  /** Indicates if the selection region has been changed since last draw. */
+  bool selection_changed_;
+
+  /** Indicates if the cursor position has been moved since last draw. */
+  bool cursor_moved_;
+
+  /** Indicates if the canvas cache needs updating. */
+  bool update_canvas_;
+
   /** The font family of the text */
   std::string font_family_;
   /** The font size of the text */
@@ -348,6 +361,11 @@ class GtkEditImpl {
   Texture *background_;
   /** The text color of the edit control */
   Color text_color_;
+
+  ClipRegion last_selection_region_;
+  ClipRegion selection_region_;
+  ClipRegion last_cursor_region_;
+  ClipRegion cursor_region_;
 
   DISALLOW_EVIL_CONSTRUCTORS(GtkEditImpl);
 };  // class GtkEditImpl

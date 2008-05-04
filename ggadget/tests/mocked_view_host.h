@@ -167,7 +167,7 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual std::string Prompt(const char *message, const char *default_value) {
     return std::string();
   }
-  virtual ggadget::ViewInterface::DebugMode GetDebugMode() const {
+  virtual int GetDebugMode() const {
     return ggadget::ViewInterface::DEBUG_DISABLED;
   }
   virtual void BeginResizeDrag(int, ggadget::ViewInterface::HitTest) { }

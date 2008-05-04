@@ -29,6 +29,13 @@ class ButtonElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0xb6fb01fd48134377, BasicElement);
 
+  enum IconPosition {
+    ICON_LEFT = 0,
+    ICON_RIGHT,
+    ICON_TOP,
+    ICON_BOTTOM
+  };
+
   ButtonElement(BasicElement *parent, View *view, const char *name);
   virtual ~ButtonElement();
 
@@ -55,6 +62,14 @@ class ButtonElement : public BasicElement {
   Variant GetDownImage() const;
   void SetDownImage(const Variant &img);
 
+  /** Gets and sets the file name of icon image. */
+  Variant GetIconImage() const;
+  void SetIconImage(const Variant &img);
+
+  /** Gets and sets the file name of icon image for disabled button. */
+  Variant GetIconDisabledImage() const;
+  void SetIconDisabledImage(const Variant &img);
+
   /** Gets the text frame containing the caption of this button. */
   TextFrame *GetTextFrame();
   const TextFrame *GetTextFrame() const;
@@ -65,6 +80,10 @@ class ButtonElement : public BasicElement {
    */
   bool IsStretchMiddle() const;
   void SetStretchMiddle(bool stretch_middle);
+
+  /** Gets and sets the icon position. */
+  IconPosition GetIconPosition() const;
+  void SetIconPosition(IconPosition position);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,

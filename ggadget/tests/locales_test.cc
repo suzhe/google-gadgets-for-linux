@@ -47,7 +47,7 @@ TEST(Locales, GetSystemLocaleName) {
   ASSERT_EQ(std::string("en"), GetSystemLocaleName());
   setlocale(LC_MESSAGES, "en_US");
   ASSERT_EQ(std::string("en"), GetSystemLocaleName());
-  setlocale(LC_MESSAGES, "zh_CN.UTF8");
+  setlocale(LC_MESSAGES, "zh_CN.UTF-8");
   ASSERT_EQ(std::string("zh-CN"), GetSystemLocaleName());
   setlocale(LC_MESSAGES, "C");
   ASSERT_EQ(std::string("en"), GetSystemLocaleName());

@@ -83,10 +83,11 @@ static const char *kGlobalResourcePaths[] = {
 static const char *g_help_string =
   "Usage: %s [Options] [Gadgets]\n"
   "Options:\n"
-  "  -d mode    Specify debug mode for drawing View:\n"
+  "  -d mode    Specify debug modes for drawing View:\n"
   "             0 - No debug.\n"
   "             1 - Draw bounding boxes around container elements.\n"
   "             2 - Draw bounding boxes around all elements.\n"
+  "             4 - Draw bounding boxes around clip region.\n"
   "  -z zoom    Specify initial zoom factor for View, not work for sidebar.\n"
   "  -n         Don't install the gadgets specified in command line.\n"
   "  -b         Draw window border for Main View.\n"

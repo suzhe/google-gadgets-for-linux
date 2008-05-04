@@ -126,7 +126,8 @@ class FunctorSlot0 : public Slot0<R> {
     return Variant(functor_());
   }
   virtual bool operator==(const Slot &another) const {
-    return functor_ == down_cast<const SelfType *>(&another)->functor_;
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && functor_ == a->functor_;
   }
  private:
   DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot0);
@@ -147,7 +148,8 @@ class FunctorSlot0<void, F> : public Slot0<void> {
     return Variant();
   }
   virtual bool operator==(const Slot &another) const {
-    return functor_ == down_cast<const SelfType *>(&another)->functor_;
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && functor_ == a->functor_;
   }
  private:
   DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot0);
@@ -167,8 +169,8 @@ class MethodSlot0 : public Slot0<R> {
     return Variant((object_->*method_)());
   }
   virtual bool operator==(const Slot &another) const {
-    return object_ == down_cast<const SelfType *>(&another)->object_ &&
-           method_ == down_cast<const SelfType *>(&another)->method_;
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && object_ == a->object_ && method_ == a->method_;
   }
  private:
   DISALLOW_EVIL_CONSTRUCTORS(MethodSlot0);
@@ -190,14 +192,15 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
     return Variant();
   }
   virtual bool operator==(const Slot &another) const {
-    return object_ == down_cast<const SelfType *>(&another)->object_ &&
-           method_ == down_cast<const SelfType *>(&another)->method_;
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && object_ == a->object_ && method_ == a->method_;
   }
  private:
   DISALLOW_EVIL_CONSTRUCTORS(MethodSlot0);
   T *object_;
   M method_;
 };
+
 
 /**
  * A @c Slot that is targeted to another general typed slot with no parameter.
@@ -221,14 +224,138 @@ class SlotProxy0 : public Slot0<R> {
   SlotProxy0(Slot* slot) : slot_(slot) { ASSERT(slot); }
   ~SlotProxy0() { delete slot_; slot_ = NULL; }
   virtual Variant Call(int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
     return slot_->Call(argc, argv);
   }
   virtual bool operator==(const Slot &another) const {
-    return slot_ == down_cast<const SelfType *>(&another)->slot_;
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && *slot_ == *a->slot_;
   }
  private:
   DISALLOW_EVIL_CONSTRUCTORS(SlotProxy0);
   Slot *slot_;
+};
+
+/**
+ * A special functor slot that converts a functor taking one argument into a slot
+ * taking no argument.
+ */
+template <typename R, typename F, typename PA>
+class BoundFunctorSlot0 : public Slot0<R> {
+ public:
+  typedef BoundFunctorSlot0<R, F, PA> SelfType;
+  BoundFunctorSlot0(F functor, PA pa) : functor_(functor), pa_(pa) { }
+  virtual Variant Call(int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    return Variant(functor_(pa_));
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && functor_ == a->functor_ && pa_ == a->pa_;
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot0);
+  F functor_;
+  PA pa_;
+};
+
+/**
+ * Partial specialized @c BoundFunctorSlot0 that returns @c void.
+ */
+template <typename F, typename PA>
+class BoundFunctorSlot0<void, F, PA> : public Slot0<void> {
+ public:
+  typedef BoundFunctorSlot0<void, F, PA> SelfType;
+  BoundFunctorSlot0(F functor, PA pa) : functor_(functor), pa_(pa) { }
+  virtual Variant Call(int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    functor_(pa_);
+    return Variant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && functor_ == a->functor_ && pa_ == a->pa_;
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot0);
+  F functor_;
+  PA pa_;
+};
+
+/**
+ * A special method slot that converts an object method taking one argument
+ * into a slot taking no argument.
+ */
+template <typename R, typename T, typename M, typename PA>
+class BoundMethodSlot0 : public Slot0<R> {
+ public:
+  typedef BoundMethodSlot0<R, T, M, PA> SelfType;
+  BoundMethodSlot0(T *obj, M method, PA pa)
+    : obj_(obj), method_(method), pa_(pa) { }
+  virtual Variant Call(int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    return Variant((obj_->*method_)(pa_));
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot0);
+  T *obj_;
+  M method_;
+  PA pa_;
+};
+
+/**
+ * Partial specialized @c BoundMethodSlot0 that returns @c void.
+ */
+template <typename T, typename M, typename PA>
+class BoundMethodSlot0<void, T, M, PA> : public Slot0<void> {
+ public:
+  typedef BoundMethodSlot0<void, T, M, PA> SelfType;
+  BoundMethodSlot0(T *obj, M method, PA pa)
+    : obj_(obj), method_(method), pa_(pa) { }
+  virtual Variant Call(int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    (obj_->*method_)(pa_);
+    return Variant();
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot0);
+  T *obj_;
+  M method_;
+  PA pa_;
+};
+
+/**
+ * A special slot proxy that converts a slot taking one argument into a slot
+ * taking no argument.
+ */
+template <typename R, typename PA>
+class BoundSlotProxy0 : public Slot0<R> {
+ public:
+  typedef BoundSlotProxy0<R, PA> SelfType;
+  BoundSlotProxy0(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }
+  ~BoundSlotProxy0() { delete slot_; slot_ = NULL; }
+  virtual Variant Call(int argc, const Variant argv[]) const {
+    ASSERT(argc == 0);
+    Variant vargs[1];
+    vargs[1] = Variant(pa_);
+    return slot_->Call(1, vargs);
+  }
+  virtual bool operator==(const Slot &another) const {
+    const SelfType *a = down_cast<const SelfType *>(&another);
+    return a && *slot_ == *a->slot_ && pa_ == a->pa_;
+  }
+ private:
+  DISALLOW_EVIL_CONSTRUCTORS(BoundSlotProxy0);
+  Slot *slot_;
+  PA pa_;
 };
 
 /**
@@ -239,6 +366,11 @@ class SlotProxy0 : public Slot0<R> {
 template <typename R>
 inline Slot0<R> *NewSlot(R (*functor)()) {
   return new FunctorSlot0<R, R (*)()>(functor);
+}
+
+template <typename R, typename PA>
+inline Slot0<R> *NewSlot(R (*functor)(PA), PA pa) {
+  return new BoundFunctorSlot0<R, R (*)(PA), PA>(functor, pa);
 }
 
 /**
@@ -256,6 +388,16 @@ inline Slot0<R> *NewSlot(const T *object, R (T::*method)() const) {
   return new MethodSlot0<R, const T, R (T::*)() const>(object, method);
 }
 
+template <typename R, typename T, typename PA>
+inline Slot0<R> *NewSlot(T *object, R (T::*method)(PA), PA pa) {
+  return new BoundMethodSlot0<R, T, R (T::*)(PA), PA>(object, method, pa);
+}
+template <typename R, typename T, typename PA>
+inline Slot0<R> *NewSlot(const T *object, R (T::*method)(PA) const, PA pa) {
+  return new BoundMethodSlot0<R, const T,
+                              R (T::*)(PA) const, PA>(object, method, pa);
+}
+
 /**
  * Helper functor to create a @c FunctorSlot0 instance with a functor object.
  * The caller should delete the instance after use.
@@ -268,6 +410,12 @@ template <typename R, typename F>
 inline Slot0<R> *NewFunctorSlot(F functor) {
   return new FunctorSlot0<R, F>(functor);
 }
+
+template <typename R, typename F, typename PA>
+inline Slot0<R> *NewFunctorSlot(F functor, PA pa) {
+  return new BoundFunctorSlot0<R, F, PA>(functor, pa);
+}
+
 
 /**
  * <code>Slot</code>s with 1 or more parameters are defined by this macro.
@@ -321,7 +469,8 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
     return Variant(functor_(_call_args));                                     \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return functor_ == down_cast<const SelfType *>(&another)->functor_;       \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && functor_ == a->functor_;                                      \
   }                                                                           \
  private:                                                                     \
   DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot##n);                                 \
@@ -340,7 +489,8 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
     return Variant();                                                         \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return functor_ == down_cast<const SelfType *>(&another)->functor_;       \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && functor_ == a->functor_;                                      \
   }                                                                           \
  private:                                                                     \
   DISALLOW_EVIL_CONSTRUCTORS(FunctorSlot##n);                                 \
@@ -357,8 +507,8 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
     return Variant((obj_->*method_)(_call_args));                             \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return obj_ == down_cast<const SelfType *>(&another)->obj_ &&             \
-           method_ == down_cast<const SelfType *>(&another)->method_;         \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && obj_ == a->obj_ && method_ == a->method_;                     \
   }                                                                           \
  private:                                                                     \
   DISALLOW_EVIL_CONSTRUCTORS(MethodSlot##n);                                  \
@@ -378,8 +528,8 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
     return Variant();                                                         \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return obj_ == down_cast<const SelfType *>(&another)->obj_ &&             \
-           method_ == down_cast<const SelfType *>(&another)->method_;         \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && obj_ == a->obj_ && method_ == a->method_;                     \
   }                                                                           \
  private:                                                                     \
   DISALLOW_EVIL_CONSTRUCTORS(MethodSlot##n);                                  \
@@ -394,18 +544,128 @@ class SlotProxy##n : public Slot##n<R, _arg_type_names> {                     \
   SlotProxy##n(Slot* slot) : slot_(slot) { }                                  \
   ~SlotProxy##n() { delete slot_; slot_ = NULL; }                             \
   virtual Variant Call(int argc, const Variant argv[]) const {                \
+    ASSERT(argc == n);                                                        \
     return slot_->Call(argc, argv);                                           \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
-    return slot_ == down_cast<const SelfType *>(&another)->slot_;             \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && *slot_ == *a->slot_;                                          \
   }                                                                           \
  private:                                                                     \
   DISALLOW_EVIL_CONSTRUCTORS(SlotProxy##n);                                   \
   Slot *slot_;                                                                \
 };                                                                            \
                                                                               \
+template <typename R, _arg_types, typename F, typename PA>                    \
+class BoundFunctorSlot##n : public Slot##n<R, _arg_type_names> {              \
+ public:                                                                      \
+  typedef BoundFunctorSlot##n<R, _arg_type_names, F, PA> SelfType;            \
+  BoundFunctorSlot##n(F functor, PA pa) : functor_(functor), pa_(pa) { }      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
+    ASSERT(argc == n);                                                        \
+    return Variant(functor_(_call_args, pa_));                                \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && functor_ == a->functor_ && pa_ == a->pa_;                     \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot##n);                            \
+  F functor_;                                                                 \
+  PA pa_;                                                                     \
+};                                                                            \
+                                                                              \
+template <_arg_types, typename F, typename PA>                                \
+class BoundFunctorSlot##n<void, _arg_type_names, F, PA> :                     \
+    public Slot##n<void, _arg_type_names> {                                   \
+ public:                                                                      \
+  typedef BoundFunctorSlot##n<void, _arg_type_names, F, PA> SelfType;         \
+  BoundFunctorSlot##n(F functor, PA pa) : functor_(functor), pa_(pa) { }      \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
+    ASSERT(argc == n);                                                        \
+    functor_(_call_args, pa_);                                                \
+    return Variant();                                                         \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && functor_ == a->functor_ && pa_ == a->pa_;                     \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(BoundFunctorSlot##n);                            \
+  F functor_;                                                                 \
+  PA pa_;                                                                     \
+};                                                                            \
+                                                                              \
+template <typename R, _arg_types, typename T, typename M, typename PA>        \
+class BoundMethodSlot##n : public Slot##n<R, _arg_type_names> {               \
+ public:                                                                      \
+  typedef BoundMethodSlot##n<R, _arg_type_names, T, M, PA> SelfType;          \
+  BoundMethodSlot##n(T *obj, M method, PA pa)                                 \
+    : obj_(obj), method_(method), pa_(pa) { }                                 \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
+    ASSERT(argc == n);                                                        \
+    return Variant((obj_->*method_)(_call_args, pa_));                        \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;    \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot##n);                             \
+  T *obj_;                                                                    \
+  M method_;                                                                  \
+  PA pa_;                                                                     \
+};                                                                            \
+                                                                              \
+template <_arg_types, typename T, typename M, typename PA>                    \
+class BoundMethodSlot##n<void, _arg_type_names, T, M, PA> :                   \
+    public Slot##n<void, _arg_type_names> {                                   \
+ public:                                                                      \
+  typedef BoundMethodSlot##n<void, _arg_type_names, T, M, PA> SelfType;       \
+  BoundMethodSlot##n(T *obj, M method, PA pa)                                 \
+    : obj_(obj), method_(method), pa_(pa) { }                                 \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
+    ASSERT(argc == n);                                                        \
+    (obj_->*method_)(_call_args, pa_);                                        \
+    return Variant();                                                         \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && obj_ == a->obj_ && method_ == a->method_ && pa_ == a->pa_;    \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(BoundMethodSlot##n);                             \
+  T *obj_;                                                                    \
+  M method_;                                                                  \
+  PA pa_;                                                                     \
+};                                                                            \
+                                                                              \
+template <typename R, _arg_types, typename PA>                                \
+class BoundSlotProxy##n : public Slot##n<R, _arg_type_names> {                \
+ public:                                                                      \
+  typedef BoundSlotProxy##n<R, _arg_type_names, PA> SelfType;                 \
+  BoundSlotProxy##n(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }             \
+  ~BoundSlotProxy##n() { delete slot_; slot_ = NULL; }                        \
+  virtual Variant Call(int argc, const Variant argv[]) const {                \
+    ASSERT(argc == n);                                                        \
+    Variant vargs[n + 1];                                                     \
+    for(size_t i = 0; i < n; ++i) vargs[i] = argv[i];                         \
+    vargs[n] = Variant(pa_);                                                  \
+    return slot_->Call(n + 1, vargs);                                         \
+  }                                                                           \
+  virtual bool operator==(const Slot &another) const {                        \
+    const SelfType *a = down_cast<const SelfType *>(&another);                \
+    return a && *slot_ == *a->slot_ && pa_ == a->pa_;                         \
+  }                                                                           \
+ private:                                                                     \
+  DISALLOW_EVIL_CONSTRUCTORS(BoundSlotProxy##n);                              \
+  Slot *slot_;                                                                \
+  PA pa_;                                                                     \
+};                                                                            \
+                                                                              \
 template <typename R, _arg_types>                                             \
-inline Slot##n<R, _arg_type_names> *NewSlot(R (*f)(_arg_type_names)) {        \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (*f)(_arg_type_names)) {                                            \
   return new FunctorSlot##n<R, _arg_type_names, R (*)(_arg_type_names)>(f);   \
 }                                                                             \
 template <typename R, _arg_types, typename T>                                 \
@@ -423,6 +683,30 @@ NewSlot(const T *obj, R (T::*method)(_arg_type_names) const) {                \
 template <typename R, _arg_types, typename F>                                 \
 inline Slot##n<R, _arg_type_names> * NewFunctorSlot(F f) {                    \
   return new FunctorSlot##n<R, _arg_type_names, F>(f);                        \
+}                                                                             \
+                                                                              \
+template <typename R, _arg_types, typename PA>                                \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(R (*f)(_arg_type_names, PA), PA pa) {                                 \
+  return new BoundFunctorSlot##n<R, _arg_type_names,                          \
+                                 R (*)(_arg_type_names, PA), PA>(f, pa);      \
+}                                                                             \
+template <typename R, _arg_types, typename T, typename PA>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(T *obj, R (T::*method)(_arg_type_names, PA), PA pa) {                 \
+  return new BoundMethodSlot##n<R, _arg_type_names, T,                        \
+                          R (T::*)(_arg_type_names, PA), PA>(obj, method, pa);\
+}                                                                             \
+template <typename R, _arg_types, typename T, typename PA>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewSlot(const T *obj, R (T::*method)(_arg_type_names, PA) const, PA pa) {     \
+  return new BoundMethodSlot##n<R, _arg_type_names, const T,                  \
+                   R (T::*)(_arg_type_names, PA) const, PA>(obj, method, pa); \
+}                                                                             \
+template <typename R, _arg_types, typename F, typename PA>                    \
+inline Slot##n<R, _arg_type_names> *                                          \
+NewFunctorSlot(F f, PA pa) {                                                  \
+  return new BoundFunctorSlot##n<R, _arg_type_names, F, PA>(f, pa);           \
 }
 
 #define INIT_ARG_TYPE(n) VariantType<P##n>::type
@@ -507,7 +791,7 @@ DEFINE_SLOT(8, ARG_TYPES8, ARG_TYPE_NAMES8, ARGS8, INIT_ARGS8,
 #define INIT_ARGS9      INIT_ARGS8; INIT_ARG(9)
 #define INIT_ARG_TYPES9 INIT_ARG_TYPES8, INIT_ARG_TYPE(9)
 #define CALL_ARGS9      CALL_ARGS8, GET_ARG(9)
-DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS8, INIT_ARGS8,
+DEFINE_SLOT(9, ARG_TYPES9, ARG_TYPE_NAMES9, ARGS9, INIT_ARGS9,
             INIT_ARG_TYPES9, CALL_ARGS9)
 
 // Undefine macros to avoid name polution.
@@ -643,7 +927,7 @@ inline Slot1<void, T> *NewSimpleSetterSlot(T *value_ptr) {
  * @param default_args an array of default argument values. The pointer must be
  *     statically allocated, or automatically allocated but life longer than
  *     that of the returned slot.
- * @return a new slot with default arguments. 
+ * @return a new slot with default arguments.
  * @see Variant::GetDefaultArgs()
  */
 Slot *NewSlotWithDefaultArgs(Slot *slot, const Variant *default_args);

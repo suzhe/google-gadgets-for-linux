@@ -39,6 +39,7 @@ class ImageInterface;
 class ScriptableEvent;
 class Texture;
 class Gadget;
+class Rectangle;
 
 /**
  * The default View implementation.
@@ -217,9 +218,15 @@ class View : public ViewInterface {
   bool IsElementInClipRegion(const BasicElement *element) const;
 
   /**
-   * Add the element to the clip region when it is changed and need to redraw.
+   * Add an element (part or whole) to the clip region when it is changed and
+   * need to redraw.
+   *
+   * @param element The element to be added into clip region.
+   * @param rect If it's not NULL then only add this rectangle, which is in
+   *        element's coordinates. If it's NULL then add the whole element to
+   *        the clip region.
    */
-  void AddElementToClipRegion(BasicElement *element);
+  void AddElementToClipRegion(BasicElement *element, const Rectangle *rect);
 
   /**
    * Enables or disables current clip regions.
@@ -343,9 +350,8 @@ class View : public ViewInterface {
 
   /**
    * Gets the current debug mode.
-   * 0: no debug; 1: debug container elements only; 2: debug all elements.
    */
-  DebugMode GetDebugMode() const;
+  int GetDebugMode() const;
 
   /**
    * Open the given URL in the user's default web brower.

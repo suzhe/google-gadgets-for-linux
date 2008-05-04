@@ -153,7 +153,7 @@ class SidebarGtkHost::Impl {
     : gadget_browser_host_(owner),
       owner_(owner),
       decorated_(decorated),
-      view_debug_mode_(static_cast<ViewInterface::DebugMode>(view_debug_mode)),
+      view_debug_mode_(view_debug_mode),
       view_host_(NULL),
       expanded_original_(NULL),
       expanded_popout_(NULL),
@@ -660,7 +660,7 @@ class SidebarGtkHost::Impl {
   SidebarGtkHost *owner_;
 
   bool decorated_;
-  ViewInterface::DebugMode view_debug_mode_;
+  int view_debug_mode_;
 
   SingleViewHost *view_host_;
   DecoratedViewHost *expanded_original_;

@@ -94,16 +94,7 @@ class ContentItem : public ScriptableHelperDefault {
   ContentItem(View *view);
 
   /** Used to register the global script class constructor of ContentItem. */
-  class Creator {
-   public:
-    Creator(View *view) : view_(view) { }
-    ContentItem *operator()() const { return new ContentItem(view_); }
-    bool operator==(const Creator &another) const {
-      return another.view_ == view_;
-    }
-   private:
-    View *view_;
-  };
+  static ContentItem *CreateInstance(View *view);
 
  protected:
   virtual ~ContentItem();

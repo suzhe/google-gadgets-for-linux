@@ -241,7 +241,7 @@ class Rectangle {
    * if the region is not integer.
    *
    * @param expand if @c true, the method ensures the result rectangle contains
-   *     the original one; otherwise the coordinates are simply rounded.  
+   *     the original one; otherwise the coordinates are simply rounded.
    */
   void Integerize(bool expand);
 

@@ -52,6 +52,8 @@ Slot *TestClass::TestSlotMethod(int i) {
                                    const std::vector<int> *>
                                   (TestBoolFunctor9());
     case 15: return NewSlot(&TestVariant);
+    case 16: return NewSlot(this, &TestClass::TestDoubleMethod2, 1.234);
+    case 17: return NewSlot(this, &TestClass::TestVoidMethod2, 0x1234UL);
     default: return NULL;
   }
 }
@@ -216,7 +218,11 @@ TestData testdata[] = {
     Variant(true), "TestBoolFunctor9: 100 0 d eee fff X Y -222 888" },
   { 1, Variant::TYPE_VARIANT, { Variant::TYPE_VARIANT },
     { Variant(Variant::TYPE_VARIANT) }, Variant(Variant::TYPE_VARIANT),
-    "VARIANT" }
+    "VARIANT" },
+  { 1, Variant::TYPE_DOUBLE, { Variant::TYPE_INT64 }, { Variant(-999) },
+    Variant(2.0), "TestDoubleMethod2: -999 1.234" },
+  { 1, Variant::TYPE_VOID, { Variant::TYPE_INT64 }, { Variant('a') },
+    Variant(), "TestVoidMethod2: a 1234" }
 };
 
 const int kNumTestData = arraysize(testdata);

@@ -36,6 +36,10 @@
 using namespace ggadget;
 using namespace ggadget::gtk;
 
+namespace ggadget {
+DECLARE_VARIANT_PTR_TYPE(DecoratedViewHost);
+}
+
 namespace hosts {
 namespace gtk {
 
@@ -44,10 +48,11 @@ class SimpleGtkHost::Impl {
   // A special Host for Gadget browser to show browser in a decorated window.
   class GadgetBrowserHost : public HostInterface {
    public:
-    GadgetBrowserHost(HostInterface *owner) : owner_(owner) { }
+    GadgetBrowserHost(HostInterface *owner, int view_debug_mode)
+      : owner_(owner), view_debug_mode_(view_debug_mode) {
+    }
     virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-      return new SingleViewHost(type, 1.0, true, true, true,
-                                ViewInterface::DEBUG_DISABLED);
+      return new SingleViewHost(type, 1.0, true, true, true, view_debug_mode_);
     }
     virtual void RemoveGadget(Gadget *gadget, bool save_data) {
       GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
@@ -67,10 +72,11 @@ class SimpleGtkHost::Impl {
     virtual void Run() {}
    private:
     HostInterface *owner_;
+    int view_debug_mode_;
   };
 
   Impl(SimpleGtkHost *owner, double zoom, bool decorated, int view_debug_mode)
-    : gadget_browser_host_(owner),
+    : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       zoom_(zoom),
       decorated_(decorated),
@@ -239,30 +245,12 @@ class SimpleGtkHost::Impl {
     return true;
   }
 
-  class DecoratorSignalHandler {
-   public:
-    DecoratorSignalHandler(DecoratedViewHost *decorator, Impl *impl,
-                           void (Impl::*handler)(DecoratedViewHost *))
-      : decorator_(decorator), impl_(impl), handler_(handler) {
-    }
-    void operator()() const {
-      (impl_->*handler_)(decorator_);
-    }
-    // No use.
-    bool operator==(const DecoratorSignalHandler &) const { return false; }
-
-   private:
-    DecoratedViewHost *decorator_;
-    Impl *impl_;
-    void (Impl::*handler_)(DecoratedViewHost *);
-  };
-
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
     bool decorated =
         (decorated_ || type == ViewHostInterface::VIEW_HOST_OPTIONS);
 
     SingleViewHost *svh = new SingleViewHost(type, zoom_, decorated, false,
-                true, static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+                                             true, view_debug_mode_);
 
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
       return svh;
@@ -275,12 +263,9 @@ class SimpleGtkHost::Impl {
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
                                   true);
 
-    dvh->ConnectOnClose(NewFunctorSlot<void>(
-        DecoratorSignalHandler(dvh, this, &Impl::OnCloseHandler)));
-    dvh->ConnectOnPopOut(NewFunctorSlot<void>(
-        DecoratorSignalHandler(dvh, this, &Impl::OnPopOutHandler)));
-    dvh->ConnectOnPopIn(NewFunctorSlot<void>(
-        DecoratorSignalHandler(dvh, this, &Impl::OnPopInHandler)));
+    dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
+    dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
+    dvh->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, dvh));
 
     return dvh;
   }
@@ -400,13 +385,13 @@ class SimpleGtkHost::Impl {
     ASSERT(child);
     if (child) {
       expanded_original_ = decorated;
-      ViewHostInterface *svh = new SingleViewHost(
-          ViewHostInterface::VIEW_HOST_MAIN, zoom_, false, false, true,
-          static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+      ViewHostInterface *svh =
+          new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, zoom_,
+                             false, false, true, view_debug_mode_);
       expanded_popout_ =
           new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED, true);
-      expanded_popout_->ConnectOnClose(NewFunctorSlot<void>(
-        DecoratorSignalHandler(expanded_popout_, this, &Impl::OnCloseHandler)));
+      expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
+                                               expanded_popout_));
 
       // Send popout event to decorator first.
       SimpleEvent event(Event::EVENT_POPOUT);

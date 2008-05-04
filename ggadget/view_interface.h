@@ -84,11 +84,16 @@ class ViewInterface {
     CURSOR_HELP,
   };
 
-  /** The supported debug mode for drawing view. */
+  /**
+   * The supported debug modes for drawing view.
+   * They can be used together as bit masks.
+   * Only take effect when compiling with _DEBUG defined.
+   */
   enum DebugMode {
-    DEBUG_DISABLED = 0, // No debug at all.
-    DEBUG_CONTAINER,    // Draw bounding boxes around container elements.
-    DEBUG_ALL,          // Draw bounding boxes around all elements.
+    DEBUG_DISABLED = 0,    // No debug at all.
+    DEBUG_CONTAINER = 1,   // Draw bounding boxes around container elements.
+    DEBUG_ALL = 2,         // Draw bounding boxes around all elements.
+    DEBUG_CLIP_REGION = 4, // Draw bounding boxes around clip region.
   };
 
   /** Hit test enumerates for both View and BasicElement */
