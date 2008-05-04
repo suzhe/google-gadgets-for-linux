@@ -29,6 +29,7 @@ class Elements;
 class MenuInterface;
 class Rectangle;
 class View;
+class ClipRegion;
 
 class BasicElement: public ScriptableHelperNativeOwnedDefault {
  public:
@@ -340,6 +341,18 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   void QueueDraw();
 
   /**
+   * Like QueueDraw, but only request to redraw part of the element.
+   * @param rect The rect region to be redrew, in element's coordinates.
+   */
+  void QueueDrawRect(const Rectangle &rect);
+
+  /**
+   * Like QueueDraw, but only request to redraw part of the element.
+   * @param region The region to be redrew, in element's coordinates.
+   */
+  void QueueDrawRegion(const ClipRegion &region);
+
+  /**
    * Checks to see if position of the element has changed relative to the
    * parent since the last draw. Specifically, this checks for changes in
    * x, y, pinX, pinY and rotation.
@@ -462,9 +475,16 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
 
   /**
    * Get the element's extents information in its view's coordinates.
-   * @param rect the rectangle used to hold the information.
+   * @return the rectangle containing the information.
    */
   Rectangle GetExtentsInView() const;
+
+  /**
+   * Get a rectangle's extents information in the view's coordinates.
+   * @param rect The rectangle in element's coordinates.
+   * @return the rectangle containing the information.
+   */
+  Rectangle GetRectExtentsInView(const Rectangle &rect) const;
 
  public: // Event handlers and event related methods.
   /**

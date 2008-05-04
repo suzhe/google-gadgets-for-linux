@@ -39,7 +39,7 @@ class SingleViewHost::Impl {
        bool decorated,
        bool remove_on_close,
        bool native_drag_mode,
-       ViewInterface::DebugMode debug_mode)
+       int debug_mode)
     : type_(type),
       owner_(owner),
       view_(NULL),
@@ -578,7 +578,7 @@ class SingleViewHost::Impl {
   Tooltip *tooltip_;
   ViewWidgetBinder *binder_;
 
-  ViewInterface::DebugMode debug_mode_;
+  int debug_mode_;
   Slot1<void, int> *feedback_handler_;
 
   int adjust_window_size_source_;
@@ -610,7 +610,7 @@ SingleViewHost::SingleViewHost(ViewHostInterface::Type type,
                                bool decorated,
                                bool remove_on_close,
                                bool native_drag_mode,
-                               ViewInterface::DebugMode debug_mode)
+                               int debug_mode)
     : impl_(new Impl(type, this, zoom, decorated, remove_on_close,
                    native_drag_mode, debug_mode)) {
 }
@@ -722,7 +722,7 @@ std::string SingleViewHost::Prompt(const char *message,
                           message, default_value);
 }
 
-ViewInterface::DebugMode SingleViewHost::GetDebugMode() const {
+int SingleViewHost::GetDebugMode() const {
   return impl_->debug_mode_;
 }
 

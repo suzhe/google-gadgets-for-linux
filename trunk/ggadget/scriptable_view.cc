@@ -39,6 +39,8 @@
 
 namespace ggadget {
 
+DECLARE_VARIANT_PTR_TYPE(View);
+
 class ScriptableView::Impl {
  public:
   class GlobalObject : public ScriptableHelperNativeOwnedDefault {
@@ -66,7 +68,7 @@ class ScriptableView::Impl {
       script_context_->RegisterClass("DetailsView",
           NewSlot(DetailsViewData::CreateInstance));
       script_context_->RegisterClass("ContentItem",
-          NewFunctorSlot<ContentItem *>(ContentItem::Creator(view_)));
+          NewSlot(ContentItem::CreateInstance, view_));
 
       // Execute common.js to initialize global constants and compatibility
       // adapters.

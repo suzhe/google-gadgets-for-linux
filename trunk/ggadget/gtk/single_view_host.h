@@ -53,7 +53,7 @@ class SingleViewHost : public ViewHostInterface {
                  bool decorated,
                  bool remove_on_close,
                  bool native_drag_mode,
-                 ViewInterface::DebugMode debug_mode);
+                 int debug_mode);
   virtual ~SingleViewHost();
 
   virtual Type GetType() const;
@@ -86,7 +86,7 @@ class SingleViewHost : public ViewHostInterface {
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
                              const char *default_value);
-  virtual ViewInterface::DebugMode GetDebugMode() const;
+  virtual int GetDebugMode() const;
 
  public:
   /**

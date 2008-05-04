@@ -128,7 +128,7 @@ class DecoratedViewHost : public ViewHostInterface {
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
                              const char *default_value);
-  virtual ViewInterface::DebugMode GetDebugMode() const;
+  virtual int GetDebugMode() const;
 
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest);
   virtual void BeginMoveDrag(int button);

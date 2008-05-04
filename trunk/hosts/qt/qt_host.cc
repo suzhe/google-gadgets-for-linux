@@ -56,9 +56,7 @@ QtHost::~QtHost() {
 }
 
 ViewHostInterface *QtHost::NewViewHost(ViewHostInterface::Type type) {
-  ViewHostInterface *host = new QtViewHost(
-      type, 1.0, true,
-      static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+  ViewHostInterface *host = new QtViewHost(type, 1.0, true, view_debug_mode_);
 //  DecoratedViewHost *dvh  = new DecoratedViewHost(host, true);
   return host;
 }

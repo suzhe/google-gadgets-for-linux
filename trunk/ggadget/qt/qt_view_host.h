@@ -34,7 +34,7 @@ class QtViewHost : public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
              double zoom, bool decorated,
-             ViewInterface::DebugMode debug_mode);
+             int debug_mode);
   virtual ~QtViewHost();
 
   virtual Type GetType() const { return type_; }
@@ -63,7 +63,7 @@ class QtViewHost : public ViewHostInterface {
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
                              const char *default_value);
-  virtual ViewInterface::DebugMode GetDebugMode() const { return debug_mode_; }
+  virtual int GetDebugMode() const { return debug_mode_; }
   void HandleOptionViewResponse(ViewInterface::OptionsViewFlags flag);
   void HandleDetailsViewClose();
 
@@ -73,7 +73,7 @@ class QtViewHost : public ViewHostInterface {
   QGadgetWidget *widget_;
   QWidget *window_;     // Top level window of the view
   QDialog *dialog_;     // Top level window of the view
-  ViewInterface::DebugMode debug_mode_;
+  int debug_mode_;
   double zoom_;
   Connection *onoptionchanged_connection_;
 

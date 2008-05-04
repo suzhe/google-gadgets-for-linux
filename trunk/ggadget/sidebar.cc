@@ -146,7 +146,7 @@ class SideBar::Impl : public View {
                                const char *default_value) {
       return real_viewhost_->Prompt(message, default_value);
     }
-    virtual ViewInterface::DebugMode GetDebugMode() const {
+    virtual int GetDebugMode() const {
       return real_viewhost_->GetDebugMode();
     }
     Connection *ConnectOnResize(Slot0<void> *slot) {

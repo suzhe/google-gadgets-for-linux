@@ -40,7 +40,7 @@ namespace qt {
 
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
                        double zoom, bool decorated,
-                       ViewInterface::DebugMode debug_mode)
+                       int debug_mode)
     : view_(NULL),
       type_(type),
       widget_(NULL),
@@ -54,7 +54,6 @@ QtViewHost::QtViewHost(ViewHostInterface::Type type,
       qt_obj_(new QtViewHostObject(this)) {
   if (type_ == ViewHostInterface::VIEW_HOST_MAIN)
     composite_ = true;
-//  debug_mode_ = ViewInterface::DEBUG_ALL;
 }
 
 QtViewHost::~QtViewHost() {

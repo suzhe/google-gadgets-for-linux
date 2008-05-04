@@ -55,7 +55,6 @@ static const double kVDMainCaptionMarginH = 4;
 static const double kVDExpandedBorderWidth = 6;
 static const double kVDDetailsBorderWidth = 6;
 static const double kVDDetailsButtonHeight = 22;
-static const double kVDDetailsButtonMargin = 2;
 
 static const unsigned int kVDShowTimeout = 200;
 static const unsigned int kVDHideTimeout = 500;
@@ -592,19 +591,6 @@ class DecoratedViewHost::Impl {
       return result;
     }
 
-    struct ZoomFunctor {
-      ZoomFunctor(NormalMainViewDecorator *owner, double zoom)
-        : owner_(owner), zoom_(zoom) { }
-
-      void operator()(const char *) const { owner_->OnZoom(zoom_); }
-      bool operator==(const ZoomFunctor &another) const {
-        return owner_ == another.owner_ && zoom_ == another.zoom_;
-      }
-
-      NormalMainViewDecorator *owner_;
-      double zoom_;
-    };
-
     virtual bool OnAddContextMenuItems(MenuInterface *menu) {
       menu->AddItem(
           GM_(minimized_ ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0,
@@ -619,21 +605,21 @@ class DecoratedViewHost::Impl {
       if (!sidebar_ && !minimized_ && !popped_out_) {
         MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"));
         zoom->AddItem(GM_("MENU_ITEM_AUTO_FIT"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 1.0)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0));
         zoom->AddItem(GM_("MENU_ITEM_50P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 0.5)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.5));
         zoom->AddItem(GM_("MENU_ITEM_75P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 0.75)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.75));
         zoom->AddItem(GM_("MENU_ITEM_100P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 1.0)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0));
         zoom->AddItem(GM_("MENU_ITEM_125P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 1.25)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.25));
         zoom->AddItem(GM_("MENU_ITEM_150P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 1.50)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.5));
         zoom->AddItem(GM_("MENU_ITEM_175P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 1.75)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.75));
         zoom->AddItem(GM_("MENU_ITEM_200P"), 0,
-              NewFunctorSlot<void, const char *>(ZoomFunctor(this, 2.0)));
+          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 2.0));
       }
 
       View *child = GetChildView();
@@ -964,7 +950,7 @@ class DecoratedViewHost::Impl {
       owner_->on_undock_signal_();
     }
 
-    void OnZoom(double zoom) {
+    void OnZoomMenuCallback(const char *, double zoom) {
       SetChildViewScale(zoom);
     }
 
@@ -1325,11 +1311,16 @@ class DecoratedViewHost::Impl {
         remove_button_->SetStretchMiddle(true);
         remove_button_->GetTextFrame()->SetText(GMS_("REMOVE_CONTENT_ITEM"));
         remove_button_->SetPixelHeight(kVDDetailsButtonHeight);
+        remove_button_->SetIconImage(Variant(kVDDetailsButtonNegfbNormal));
+        remove_button_->SetIconPosition(ButtonElement::ICON_RIGHT);
         double tw, th;
         remove_button_->GetTextFrame()->GetSimpleExtents(&tw, &th);
-        remove_button_->SetPixelWidth(tw + kVDDetailsButtonMargin * 2);
         remove_button_->ConnectOnClickEvent(
             NewSlot(this, &DetailsViewDecorator::OnRemoveButtonClicked));
+        remove_button_->ConnectOnMouseOverEvent(
+            NewSlot(this, &DetailsViewDecorator::OnRemoveButtonMouseOver));
+        remove_button_->ConnectOnMouseOutEvent(
+            NewSlot(this, &DetailsViewDecorator::OnRemoveButtonMouseOut));
         GetChildren()->InsertElement(remove_button_, NULL);
       }
       if (flags & ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK) {
@@ -1343,7 +1334,6 @@ class DecoratedViewHost::Impl {
         negative_button_->SetPixelHeight(kVDDetailsButtonHeight);
         double tw, th;
         negative_button_->GetTextFrame()->GetSimpleExtents(&tw, &th);
-        negative_button_->SetPixelWidth(tw + kVDDetailsButtonMargin * 2);
         negative_button_->ConnectOnClickEvent(
             NewSlot(this, &DetailsViewDecorator::OnNegativeButtonClicked));
         GetChildren()->InsertElement(negative_button_, NULL);
@@ -1373,18 +1363,21 @@ class DecoratedViewHost::Impl {
       double height = GetHeight();
       background_->SetPixelHeight(height - background_->GetPixelY() -
                                   bottom_->GetPixelHeight());
+      close_button_->Layout();
       close_button_->SetPixelX(width - close_button_->GetPixelWidth() -
                                kVDDetailsBorderWidth);
       caption_->SetPixelWidth(close_button_->GetPixelX() -
                               caption_->GetPixelX() - 1);
 
       if (remove_button_) {
+        remove_button_->Layout();
         width -= (kVDDetailsBorderWidth + remove_button_->GetPixelWidth());
         remove_button_->SetPixelX(width);
         remove_button_->SetPixelY(height - kVDDetailsBorderWidth -
                                   remove_button_->GetPixelHeight());
       }
       if (negative_button_) {
+        negative_button_->Layout();
         width -= (kVDDetailsBorderWidth + negative_button_->GetPixelWidth());
         negative_button_->SetPixelX(width);
         negative_button_->SetPixelY(height - kVDDetailsBorderWidth -
@@ -1424,6 +1417,14 @@ class DecoratedViewHost::Impl {
     void OnRemoveButtonClicked() {
       flags_ = ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON;
       PostSignal(&owner_->on_close_signal_);
+    }
+
+    void OnRemoveButtonMouseOver() {
+      remove_button_->SetIconImage(Variant(kVDDetailsButtonNegfbOver));
+    }
+
+    void OnRemoveButtonMouseOut() {
+      remove_button_->SetIconImage(Variant(kVDDetailsButtonNegfbNormal));
     }
 
     void OnNegativeButtonClicked() {
@@ -1674,7 +1675,7 @@ std::string DecoratedViewHost::Prompt(const char *message,
   return impl_->view_decorator_->Prompt(message, default_value);
 }
 
-ViewInterface::DebugMode DecoratedViewHost::GetDebugMode() const {
+int DecoratedViewHost::GetDebugMode() const {
   return impl_->view_decorator_->GetDebugMode();
 }
 

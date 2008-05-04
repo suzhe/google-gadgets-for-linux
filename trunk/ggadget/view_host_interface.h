@@ -245,7 +245,7 @@ class ViewHostInterface {
                              const char *default_value) = 0;
 
   /** Gets the debug mode for drawing view. */
-  virtual ViewInterface::DebugMode GetDebugMode() const = 0;
+  virtual int GetDebugMode() const = 0;
 };
 
 } // namespace ggadget

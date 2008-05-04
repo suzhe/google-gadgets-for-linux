@@ -165,6 +165,18 @@ class ComboBoxElement::Impl {
     }
   }
 
+  Rectangle GetButtonRect() {
+    Rectangle rect;
+    ImageInterface *img = GetButtonImage();
+    if (img) {
+      rect.w = img->GetWidth();
+      rect.x = owner_->GetPixelWidth() - rect.w - 1;
+      rect.h = item_pixel_height_ - 2;
+      rect.y = 1;
+    }
+    return rect;
+  }
+
   void MarkRedraw() {
     if (edit_)
       edit_->MarkRedraw();
@@ -328,12 +340,12 @@ void ComboBoxElement::DoDraw(CanvasInterface *canvas) {
   // Draw button
   ImageInterface *img = impl_->GetButtonImage();
   if (img) {
-    double imgw = img->GetWidth();
-    double x = elem_width - imgw;
+    Rectangle rect = impl_->GetButtonRect();
     // Windows default color is 206 203 206 and leaves a 1px margin.
-    canvas->DrawFilledRect(x, 1, imgw - 1, impl_->item_pixel_height_ - 2,
+    canvas->DrawFilledRect(rect.x, rect.y, rect.w, rect.h,
                            Color::FromChars(206, 203, 206));
-    img->Draw(canvas, x, (impl_->item_pixel_height_ - img->GetHeight()) / 2);
+    img->Draw(canvas, rect.x,
+              rect.y + (rect.h - img->GetHeight()) / 2);
   }
 
   // Draw listbox
@@ -630,7 +642,6 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
   // So it's save to assume that these events are not for the listbox, with the
   // exception of mouse wheel events.
   EventResult r = EVENT_RESULT_HANDLED;
-  bool oldvalue;
   double button_width =
       impl_->button_up_img_ ? impl_->button_up_img_->GetWidth() : 0;
   bool in_button = event.GetY() < impl_->listbox_->GetPixelY() &&
@@ -640,22 +651,21 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
       r = EVENT_RESULT_UNHANDLED;
       // Fall through.
     case Event::EVENT_MOUSE_OVER:
-      oldvalue = impl_->button_over_;
-      impl_->button_over_ = in_button;
-      if (oldvalue != impl_->button_over_) {
-        QueueDraw();
+      if (impl_->button_over_ != in_button) {
+        impl_->button_over_ = in_button;
+        QueueDrawRect(impl_->GetButtonRect());
       }
      break;
     case Event::EVENT_MOUSE_UP:
      if (impl_->button_down_) {
        impl_->button_down_ = false;
-       QueueDraw();
+       QueueDrawRect(impl_->GetButtonRect());
      }
      break;
     case Event::EVENT_MOUSE_DOWN:
      if (in_button && event.GetButton() & MouseEvent::BUTTON_LEFT) {
        impl_->button_down_ = true;
-       QueueDraw();
+       QueueDrawRect(impl_->GetButtonRect());
      }
      break;
     case Event::EVENT_MOUSE_CLICK:
@@ -665,7 +675,7 @@ EventResult ComboBoxElement::HandleMouseEvent(const MouseEvent &event) {
     case Event::EVENT_MOUSE_OUT:
      if (impl_->button_over_) {
        impl_->button_over_ = false;
-       QueueDraw();
+       QueueDrawRect(impl_->GetButtonRect());
      }
      break;
     case Event::EVENT_MOUSE_WHEEL:

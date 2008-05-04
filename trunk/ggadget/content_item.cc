@@ -915,4 +915,8 @@ void ScriptableCanvas::DrawTextWithColorName(int x, int y,
   DrawText(x, y, width, height, text, c, flags, font);
 }
 
+ContentItem *ContentItem::CreateInstance(View *view) {
+  return new ContentItem(view);
+}
+
 } // namespace ggadget

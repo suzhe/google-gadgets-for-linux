@@ -31,6 +31,7 @@
 #include "string_utils.h"
 #include "view.h"
 #include "event.h"
+#include "clip_region.h"
 
 namespace ggadget {
 
@@ -61,6 +62,10 @@ class BasicElement::Impl {
         visible_(true),
         flip_(FLIP_NONE),
         implicit_(false),
+#ifdef _DEBUG
+        debug_color_index_(++total_debug_color_index_),
+        debug_mode_(view->GetDebugMode()),
+#endif
         mask_image_(NULL),
         visibility_changed_(true),
         position_changed_(true),
@@ -68,9 +73,7 @@ class BasicElement::Impl {
         cache_(NULL),
         cache_enabled_(false),
         content_changed_(false),
-        draw_queued_(false),
-        debug_color_index_(++total_debug_color_index_),
-        debug_mode_(view->GetDebugMode()) {
+        draw_queued_(false) {
     if (name)
       name_ = name;
     if (tag_name)
@@ -97,7 +100,7 @@ class BasicElement::Impl {
 
   void SetPixelWidth(double width) {
     if (width >= 0.0 && (width != width_ || width_relative_)) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       width_ = width;
       width_relative_ = false;
       WidthChanged();
@@ -106,7 +109,7 @@ class BasicElement::Impl {
 
   void SetPixelHeight(double height) {
     if (height >= 0.0 && (height != height_ || height_relative_)) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       height_ = height;
       height_relative_ = false;
       HeightChanged();
@@ -115,7 +118,7 @@ class BasicElement::Impl {
 
   void SetRelativeWidth(double width) {
     if (width >= 0.0 && (width != pwidth_ || !width_relative_)) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       pwidth_ = width;
       width_relative_ = true;
       WidthChanged();
@@ -124,7 +127,7 @@ class BasicElement::Impl {
 
   void SetRelativeHeight(double height) {
     if (height >= 0.0 && (height != pheight_ || !height_relative_)) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       pheight_ = height;
       height_relative_ = true;
       HeightChanged();
@@ -133,7 +136,7 @@ class BasicElement::Impl {
 
   void SetPixelX(double x) {
     if (x != x_ || x_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       x_ = x;
       x_relative_ = false;
       PositionChanged();
@@ -142,7 +145,7 @@ class BasicElement::Impl {
 
   void SetPixelY(double y) {
     if (y != y_ || y_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       y_ = y;
       y_relative_ = false;
       PositionChanged();
@@ -151,7 +154,7 @@ class BasicElement::Impl {
 
   void SetRelativeX(double x) {
     if (x != px_ || !x_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       px_ = x;
       x_relative_ = true;
       PositionChanged();
@@ -160,7 +163,7 @@ class BasicElement::Impl {
 
   void SetRelativeY(double y) {
     if (y != py_ || !y_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       py_ = y;
       y_relative_ = true;
       PositionChanged();
@@ -169,7 +172,7 @@ class BasicElement::Impl {
 
   void SetPixelPinX(double pin_x) {
     if (pin_x != pin_x_ || pin_x_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       pin_x_ = pin_x;
       pin_x_relative_ = false;
       PositionChanged();
@@ -178,7 +181,7 @@ class BasicElement::Impl {
 
   void SetPixelPinY(double pin_y) {
     if (pin_y != pin_y_ || pin_y_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       pin_y_ = pin_y;
       pin_y_relative_ = false;
       PositionChanged();
@@ -187,7 +190,7 @@ class BasicElement::Impl {
 
   void SetRelativePinX(double pin_x) {
     if (pin_x != ppin_x_ || !pin_x_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       ppin_x_ = pin_x;
       pin_x_relative_ = true;
       PositionChanged();
@@ -196,7 +199,7 @@ class BasicElement::Impl {
 
   void SetRelativePinY(double pin_y) {
     if (pin_y != ppin_y_ || !pin_y_relative_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       ppin_y_ = pin_y;
       pin_y_relative_ = true;
       PositionChanged();
@@ -205,7 +208,7 @@ class BasicElement::Impl {
 
   void SetRotation(double rotation) {
     if (rotation != rotation_) {
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       rotation_ = rotation;
       PositionChanged();
     }
@@ -438,7 +441,7 @@ class BasicElement::Impl {
     if (x_relative_) {
       double new_x = px_ * parent_width;
       if (new_x != x_) {
-        view_->AddElementToClipRegion(owner_);
+        view_->AddElementToClipRegion(owner_, NULL);
         position_changed_ = true;
         x_ = new_x;
       }
@@ -448,7 +451,7 @@ class BasicElement::Impl {
     if (width_relative_) {
       double new_width = pwidth_ * parent_width;
       if (new_width != width_) {
-        view_->AddElementToClipRegion(owner_);
+        view_->AddElementToClipRegion(owner_, NULL);
         size_changed_ = true;
         width_ = new_width;
       }
@@ -460,7 +463,7 @@ class BasicElement::Impl {
     if (y_relative_) {
       double new_y = py_ * parent_height;
       if (new_y != y_) {
-        view_->AddElementToClipRegion(owner_);
+        view_->AddElementToClipRegion(owner_, NULL);
         position_changed_ = true;
         y_ = new_y;
       }
@@ -470,7 +473,7 @@ class BasicElement::Impl {
     if (height_relative_) {
       double new_height = pheight_ * parent_height;
       if (new_height != height_) {
-        view_->AddElementToClipRegion(owner_);
+        view_->AddElementToClipRegion(owner_, NULL);
         size_changed_ = true;
         height_ = new_height;
       }
@@ -491,7 +494,7 @@ class BasicElement::Impl {
 
     if ((position_changed_ || size_changed_ || visibility_changed_) &&
         IsReallyVisible())
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
 
     if (size_changed_)
       PostSizeEvent();
@@ -502,7 +505,7 @@ class BasicElement::Impl {
       if (cache_enabled_) {
         // Add it into clip region, so that the canvas cache can be updated
         // correctly.
-        view_->AddElementToClipRegion(owner_);
+        view_->AddElementToClipRegion(owner_, NULL);
       }
       // To let all associated copy elements to update their content.
       FireOnContentChangedSignal();
@@ -599,11 +602,12 @@ class BasicElement::Impl {
       }
 
       canvas->PopState();
-      if (debug_mode_ >= 2) {
+
+#ifdef _DEBUG
+      if (debug_mode_ & ViewInterface::DEBUG_ALL) {
         DrawBoundingBox(canvas, width, height, debug_color_index_);
       }
 
-#ifdef _DEBUG
       ++total_draw_count_;
       view_->IncreaseDrawCount();
       if ((total_draw_count_ % 1000) == 0)
@@ -625,6 +629,7 @@ class BasicElement::Impl {
       children_->Draw(canvas);
   }
 
+#ifdef _DEBUG
   static void DrawBoundingBox(CanvasInterface *canvas,
                               double w, double h,
                               int color_index) {
@@ -638,22 +643,63 @@ class BasicElement::Impl {
     canvas->DrawLine(0, 0, w, h, 1, color);
     canvas->DrawLine(w, 0, 0, h, 1, color);
   }
+#endif
 
  public:
   void QueueDraw() {
     if ((visible_ || visibility_changed_) && !draw_queued_) {
       draw_queued_ = true;
-      view_->AddElementToClipRegion(owner_);
+      view_->AddElementToClipRegion(owner_, NULL);
       view_->QueueDraw();
-
-      content_changed_ = true;
-      BasicElement *elm = owner_->GetParentElement();
-      for (; elm; elm = elm->GetParentElement())
-        elm->impl_->content_changed_ = true;
+      if (!content_changed_)
+        MarkContentChanged();
     }
 #ifdef _DEBUG
     ++total_queue_draw_count_;
 #endif
+  }
+
+  void QueueDrawRect(const Rectangle &rect) {
+    if ((visible_ || visibility_changed_) && !draw_queued_) {
+      // Don't set draw_queued_, because it's only queued part of the element.
+      // Other part might be queued later.
+      view_->AddElementToClipRegion(owner_, &rect);
+      view_->QueueDraw();
+      if (!content_changed_)
+        MarkContentChanged();
+    }
+#ifdef _DEBUG
+    ++total_queue_draw_count_;
+#endif
+  }
+
+  bool QueueClipRectCallback(double x, double y, double w, double h) {
+    Rectangle rect(x, y, w, h);
+    view_->AddElementToClipRegion(owner_, &rect);
+    return true;
+  }
+
+  void QueueDrawRegion(const ClipRegion &region) {
+    if ((visible_ || visibility_changed_) && !draw_queued_) {
+      // Don't set draw_queued_, because it's only queued part of the element.
+      // Other part might be queued later.
+      if (region.EnumerateRectangles(
+          NewSlot(this, &Impl::QueueClipRectCallback))) {
+        view_->QueueDraw();
+        if (!content_changed_)
+          MarkContentChanged();
+      }
+    }
+#ifdef _DEBUG
+    ++total_queue_draw_count_;
+#endif
+  }
+
+  void MarkContentChanged() {
+    content_changed_ = true;
+    BasicElement *elm = owner_->GetParentElement();
+    for (; elm; elm = elm->GetParentElement())
+      elm->impl_->content_changed_ = true;
   }
 
   void FireOnContentChangedSignal() {
@@ -937,6 +983,15 @@ class BasicElement::Impl {
   FlipMode flip_;
   bool implicit_;
 
+#ifdef _DEBUG
+  int debug_color_index_;
+  static int total_debug_color_index_;
+  int debug_mode_;
+
+  static int total_draw_count_;
+  static int total_queue_draw_count_;
+#endif
+
   ImageInterface *mask_image_;
   bool visibility_changed_;
   bool position_changed_;
@@ -946,15 +1001,6 @@ class BasicElement::Impl {
   bool cache_enabled_;
   bool content_changed_;
   bool draw_queued_;
-
-  int debug_color_index_;
-  static int total_debug_color_index_;
-  int debug_mode_;
-
-#ifdef _DEBUG
-  static int total_draw_count_;
-  static int total_queue_draw_count_;
-#endif
 
   EventSignal onclick_event_;
   EventSignal ondblclick_event_;
@@ -979,9 +1025,8 @@ class BasicElement::Impl {
   EventSignal on_content_changed_signal_;
 };
 
-int BasicElement::Impl::total_debug_color_index_ = 0;
-
 #ifdef _DEBUG
+int BasicElement::Impl::total_debug_color_index_ = 0;
 int BasicElement::Impl::total_draw_count_ = 0;
 int BasicElement::Impl::total_queue_draw_count_ = 0;
 #endif
@@ -1557,8 +1602,32 @@ Rectangle BasicElement::GetExtentsInView() const {
   return Rectangle::GetPolygonExtents(4, r);
 }
 
+Rectangle BasicElement::GetRectExtentsInView(const Rectangle &rect) const {
+  Rectangle tmp(0, 0, GetPixelWidth(), GetPixelHeight());
+
+  // If the rect is not intersected with the element's region, then just clear
+  // the result rectangle.
+  if (!tmp.Intersect(rect))
+    tmp.w = tmp.h = 0;
+
+  double r[8];
+  SelfCoordToViewCoord(tmp.x, tmp.y, &r[0], &r[1]);
+  SelfCoordToViewCoord(tmp.x, tmp.y + tmp.h, &r[2], &r[3]);
+  SelfCoordToViewCoord(tmp.x + tmp.w, tmp.y + tmp.h, &r[4], &r[5]);
+  SelfCoordToViewCoord(tmp.x + tmp.w, tmp.y, &r[6], &r[7]);
+  return Rectangle::GetPolygonExtents(4, r);
+}
+
 void BasicElement::QueueDraw() {
   impl_->QueueDraw();
+}
+
+void BasicElement::QueueDrawRect(const Rectangle &rect) {
+  impl_->QueueDrawRect(rect);
+}
+
+void BasicElement::QueueDrawRegion(const ClipRegion &region) {
+  impl_->QueueDrawRegion(region);
 }
 
 void BasicElement::MarkRedraw() {

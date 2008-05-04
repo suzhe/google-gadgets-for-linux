@@ -40,8 +40,11 @@ class ClipRegion::Impl {
    *         -1 means a is merged into b.
    */
   int MergeRectangles(const Rectangle &a, const Rectangle &b, Rectangle *out) {
-    if (a.Overlaps(b)) {
-      Rectangle rect(a);
+    Rectangle rect(a);
+    if (a == b) {
+      *out = rect;
+      return 1;
+    } else if (a.Overlaps(b)) {
       rect.Union(b);
       double fuzzy_area = rect.w * rect.h * fuzzy_ratio_;
       double a_area = a.w * a.h;
@@ -51,14 +54,14 @@ class ClipRegion::Impl {
         return a_area >= b_area ? 1 : -1;
       }
     } else if ((a.y == b.y && a.h == b.h &&
-                ((a.x + a.w >= b.x - 1 && a.x < b.x) ||
-                 (b.x + b.w >= a.x - 1 && b.x < a.x))) ||
+                ((a.x + a.w >= b.x && a.x <= b.x) ||
+                 (b.x + b.w >= a.x && b.x <= a.x))) ||
                (a.x == b.x && a.w == b.w &&
-                ((a.y + a.h >= b.h - 1 && a.y < b.y) ||
-                 (b.y + b.h >= a.h - 1 && b.y < a.y)))) {
+                ((a.y + a.h >= b.y && a.y <= b.y) ||
+                 (b.y + b.h >= a.y && b.y <= a.y)))) {
       // Merge neighbor rectangles.
-      *out = a;
-      out->Union(b);
+      rect.Union(b);
+      *out = rect;
       return 1;
     }
     return 0;

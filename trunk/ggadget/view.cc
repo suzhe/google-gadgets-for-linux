@@ -15,7 +15,7 @@
 */
 
 // Enable it to print verbose debug info
-// #define VIEW_VERBOSE_DEBUG
+ #define VIEW_VERBOSE_DEBUG
 // #define EVENT_VERBOSE_DEBUG
 
 #include <sys/time.h>
@@ -59,6 +59,8 @@
 #include "xml_utils.h"
 
 namespace ggadget {
+
+DECLARE_VARIANT_PTR_TYPE(CanvasInterface);
 
 static const char *kResizableNames[] = { "false", "true", "zoom" };
 
@@ -856,6 +858,12 @@ class View::Impl {
     target->PopState();
     if (target == canvas_cache_)
       canvas->DrawCanvas(0, 0, canvas_cache_);
+
+#ifdef _DEBUG
+    if (owner_->GetDebugMode() & DEBUG_CLIP_REGION)
+      DrawClipRegionBox(clip_region_, canvas);
+#endif
+
     clip_region_.Clear();
     need_redraw_ = false;
 
@@ -870,6 +878,22 @@ class View::Impl {
     }
 #endif
   }
+
+#ifdef _DEBUG
+  static bool DrawRectOnCanvasCallback(double x, double y, double w, double h,
+                                       CanvasInterface *canvas) {
+    Color c(1, 0, 0);
+    canvas->DrawLine(x, y, x + w, y, 1, c);
+    canvas->DrawLine(x + w, y, x + w, y + h, 1, c);
+    canvas->DrawLine(x + w, y + h, x, y + h, 1, c);
+    canvas->DrawLine(x, y + h, x, y, 1, c);
+    return true;
+  }
+
+  void DrawClipRegionBox(const ClipRegion &region, CanvasInterface *canvas) {
+    region.EnumerateRectangles(NewSlot(DrawRectOnCanvasCallback, canvas));
+  }
+#endif
 
   bool OnAddContextMenuItems(MenuInterface *menu) {
     if (!view_host_) return false;
@@ -1008,7 +1032,7 @@ class View::Impl {
   // All references to this element should be cleared here.
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
-    owner_->AddElementToClipRegion(element);
+    owner_->AddElementToClipRegion(element, NULL);
     if (element == tooltip_element_.Get() && view_host_)
       view_host_->SetTooltip(NULL);
 
@@ -1454,9 +1478,13 @@ bool View::IsElementInClipRegion(const BasicElement *element) const {
       impl_->clip_region_.Overlaps(element->GetExtentsInView());
 }
 
-void View::AddElementToClipRegion(BasicElement *element) {
-  if (impl_->clip_region_enabled_ && impl_->enable_cache_)
-    impl_->clip_region_.AddRectangle(element->GetExtentsInView());
+void View::AddElementToClipRegion(BasicElement *element,
+                                  const Rectangle *rect) {
+  if (impl_->clip_region_enabled_ && impl_->enable_cache_) {
+    impl_->clip_region_.AddRectangle(rect ?
+                                     element->GetRectExtentsInView(*rect) :
+                                     element->GetExtentsInView());
+  }
 }
 
 void View::EnableClipRegion(bool enable) {
@@ -1549,7 +1577,7 @@ void View::QueueDraw() {
   }
 }
 
-ViewInterface::DebugMode View::GetDebugMode() const {
+int View::GetDebugMode() const {
   return impl_->view_host_ ? impl_->view_host_->GetDebugMode() :
          ViewInterface::DEBUG_DISABLED;
 }
