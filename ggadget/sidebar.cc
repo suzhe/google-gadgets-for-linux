@@ -172,9 +172,7 @@ class SideBar::Impl : public View {
         mouse_move_event_y_(-1),
         background_(NULL),
         icon_(NULL),
-        main_div_(NULL),
-        close_slot_(NULL),
-        system_menu_slot_(NULL) {
+        main_div_(NULL) {
     ASSERT(host);
     SetResizable(ViewInterface::RESIZABLE_TRUE);
     EnableCanvasCache(false);
@@ -225,7 +223,7 @@ class SideBar::Impl : public View {
         Layout();
         QueueDraw();
       }
-    } else {
+    } else if (GetMouseOverElement() != popout_element_) {
       undock_event_();
       ResetState();
     }
@@ -236,7 +234,7 @@ class SideBar::Impl : public View {
         GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
       GetMouseOverElement()->OnAddContextMenuItems(menu);
     } else {
-      return (*system_menu_slot_)(menu);
+      return system_menu_event_(menu);
     }
     return true;
   }
@@ -245,10 +243,6 @@ class SideBar::Impl : public View {
   }
   virtual void SetSize(double width, double height) {
     View::SetSize(width, height);
-
-    background_->SetPixelWidth(width);
-    background_->SetPixelHeight(height);
-    background_->SetOpacity(kOpacityFactor);
 
     main_div_->SetPixelWidth(width - 2 * kBoderWidth);
     main_div_->SetPixelHeight(height - 2 * kBoderWidth - kIconHeight);
@@ -277,10 +271,16 @@ class SideBar::Impl : public View {
   }
   //TODO: refactor this method
   void SetupDecorator() {
-    background_ = new DivElement(NULL, this, NULL);
+    background_ = new ImgElement(NULL, this, NULL);
+    background_->SetSrc(Variant(kVDMainBackground));
+    background_->SetStretchMiddle(true);
+    background_->SetOpacity(kOpacityFactor);
+    background_->SetPixelX(0);
+    background_->SetPixelY(0);
+    background_->SetRelativeWidth(1);
+    background_->SetRelativeHeight(1);
+    background_->EnableCanvasCache(true);
     GetChildren()->InsertElement(background_, NULL);
-    background_->SetBackgroundMode(DivElement::BACKGROUND_MODE_STRETCH_MIDDLE);
-    background_->SetBackground(LoadGlobalImageAsVariant(kVDMainBackground));
 
     // Just use DrawLine to draw border.
     //TODO: Variant border_h = LoadGlobalImageAsVariant(kVDBorderH);
@@ -327,30 +327,31 @@ class SideBar::Impl : public View {
   void SetupButtons() {
     icon_ = new ImgElement(NULL, this, NULL);
     GetChildren()->InsertElement(icon_, NULL);
-    icon_->SetSrc(LoadGlobalImageAsVariant(kSideBarIcon));
+    icon_->SetSrc(Variant(kSideBarIcon));
+    icon_->EnableCanvasCache(true);
     icon_->SetPixelX(kBoderWidth);
     icon_->SetPixelY(kBoderWidth);
 
     button_array_[0] = new ButtonElement(NULL, this, NULL);
-    button_array_[0]->SetImage(LoadGlobalImageAsVariant(kSBButtonAddUp));
-    button_array_[0]->SetDownImage(LoadGlobalImageAsVariant(kSBButtonAddDown));
-    button_array_[0]->SetOverImage(LoadGlobalImageAsVariant(kSBButtonAddOver));
+    button_array_[0]->SetImage(Variant(kSBButtonAddUp));
+    button_array_[0]->SetDownImage(Variant(kSBButtonAddDown));
+    button_array_[0]->SetOverImage(Variant(kSBButtonAddOver));
     button_array_[0]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
     GetChildren()->InsertElement(button_array_[0], NULL);
 
     button_array_[1] = new ButtonElement(NULL, this, NULL);
-    button_array_[1]->SetImage(LoadGlobalImageAsVariant(kSBButtonConfigUp));
-    button_array_[1]->SetDownImage(LoadGlobalImageAsVariant(kSBButtonConfigDown));
-    button_array_[1]->SetOverImage(LoadGlobalImageAsVariant(kSBButtonConfigOver));
+    button_array_[1]->SetImage(Variant(kSBButtonConfigUp));
+    button_array_[1]->SetDownImage(Variant(kSBButtonConfigDown));
+    button_array_[1]->SetOverImage(Variant(kSBButtonConfigOver));
     button_array_[1]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
     button_array_[1]->ConnectOnClickEvent(NewSlot(
         this, &Impl::HandleConfigureButtonClick));
     GetChildren()->InsertElement(button_array_[1], NULL);
 
     button_array_[2] = new ButtonElement(NULL, this, NULL);
-    button_array_[2]->SetImage(LoadGlobalImageAsVariant(kSBButtonCloseUp));
-    button_array_[2]->SetDownImage(LoadGlobalImageAsVariant(kSBButtonCloseDown));
-    button_array_[2]->SetOverImage(LoadGlobalImageAsVariant(kSBButtonCloseOver));
+    button_array_[2]->SetImage(Variant(kSBButtonCloseUp));
+    button_array_[2]->SetDownImage(Variant(kSBButtonCloseDown));
+    button_array_[2]->SetOverImage(Variant(kSBButtonCloseOver));
     button_array_[2]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
     GetChildren()->InsertElement(button_array_[2], NULL);
   }
@@ -363,20 +364,6 @@ class SideBar::Impl : public View {
   }
   void HandleConfigureButtonClick() {
     view_host_->ShowContextMenu(MouseEvent::BUTTON_LEFT);
-  }
-  // TODO: refactor the duplicate method in decorated_view_host.cc
-  Variant LoadGlobalImageAsVariant(const char *img) {
-    std::string data;
-    if (GetGlobalFileManager()->ReadFile(img, &data)) {
-      ScriptableBinaryData *binary =
-        new ScriptableBinaryData(data.c_str(), data.size());
-      if (binary) {
-        DLOG("Load image %s success.", img);
-        return Variant(binary);
-      }
-    }
-    LOG("Load image %s failed. Return NULL", img);
-    return Variant();
   }
   int GetIndex(const BasicElement *element) const {
     ASSERT(element->IsInstanceOf(ViewElement::CLASS_ID));
@@ -528,18 +515,14 @@ class SideBar::Impl : public View {
   double mouse_move_event_x_;
   double mouse_move_event_y_;
 
-  std::vector<Connection *> connections_;
-
   // elements of sidebar decorator
-  DivElement *background_;
+  ImgElement *background_;
   ImgElement *icon_;
   DivElement *main_div_;
   ButtonElement *button_array_[3];
   ImgElement *border_array_[4];
 
-  Slot0<void> *close_slot_;
-  Slot1<bool, MenuInterface *> *system_menu_slot_;
-
+  Signal1<bool, MenuInterface *> system_menu_event_;
   EventSignal undock_event_;
   EventSignal popin_event_;
 
@@ -572,11 +555,10 @@ SideBar::~SideBar() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SideBar::NewViewHost(ViewHostInterface::Type type,
-                                        int height) {
-  ASSERT(type == ViewHostInterface::VIEW_HOST_MAIN);
+ViewHostInterface *SideBar::NewViewHost(int height) {
   Impl::SideBarViewHost *vh =
-      new Impl::SideBarViewHost(impl_, type, impl_->view_host_, height);
+      new Impl::SideBarViewHost(impl_, ViewHostInterface::VIEW_HOST_MAIN,
+                                impl_->view_host_, height);
   vh->ConnectOnResize(NewSlot(impl_, &Impl::Layout));
   return vh;
 }
@@ -585,8 +567,8 @@ ViewHostInterface *SideBar::GetViewHost() const {
   return impl_->GetViewHost();
 }
 
-void SideBar::InsertNullElement(int y, ViewInterface *view) {
-  return impl_->InsertNullElement(y, view);
+void SideBar::InsertNullElement(int height, ViewInterface *view) {
+  return impl_->InsertNullElement(height, view);
 }
 
 void SideBar::ClearNullElement() {
@@ -616,13 +598,6 @@ ViewElement *SideBar::SetPopoutedView(ViewInterface *view) {
   return impl_->popout_element_;
 }
 
-void SideBar::GetPointerPosition(double *x, double *y) const {
-  if (impl_->mouse_move_event_x_ > 0 || impl_->mouse_move_event_y_ > 0) {
-    *x = impl_->mouse_move_event_x_;
-    *y = impl_->mouse_move_event_y_;
-  }
-}
-
 Connection *SideBar::ConnectOnUndock(Slot0<void> *slot) {
   return impl_->undock_event_.Connect(slot);
 }
@@ -631,18 +606,16 @@ Connection *SideBar::ConnectOnPopIn(Slot0<void> *slot) {
   return impl_->popin_event_.Connect(slot);
 }
 
-void SideBar::SetAddGadgetSlot(Slot0<void> *slot) {
-  impl_->connections_.push_back(
-      impl_->button_array_[0]->ConnectOnClickEvent(slot));
+Connection *SideBar::ConnectOnAddGadget(Slot0<void> *slot) {
+  return impl_->button_array_[0]->ConnectOnClickEvent(slot);
 }
 
-void SideBar::SetMenuSlot(Slot1<bool, MenuInterface *> *slot) {
-  impl_->system_menu_slot_ = slot;
+Connection *SideBar::ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot) {
+  return impl_->system_menu_event_.Connect(slot);
 }
 
-void SideBar::SetCloseSlot(Slot0<void> *slot) {
-  impl_->connections_.push_back(
-      impl_->button_array_[2]->ConnectOnClickEvent(slot));
+Connection *SideBar::ConnectOnClose(Slot0<void> *slot) {
+  return impl_->button_array_[2]->ConnectOnClickEvent(slot);
 }
 
 }  // namespace ggadget
