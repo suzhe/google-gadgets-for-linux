@@ -46,6 +46,12 @@ namespace qt {
 
 const char *const kEllipsisText = "...";
 
+static void MakeImageTransparent(QImage *img) {
+  QPainter p(img);
+  p.setCompositionMode(QPainter::CompositionMode_Source);
+  p.fillRect(img->rect(), Qt::transparent);
+}
+
 class QtCanvas::Impl {
  public:
   Impl(const QtGraphics *g, double w, double h)
@@ -59,7 +65,7 @@ class QtCanvas::Impl {
     }
     image_ = new QImage(D2I(w*zoom_), D2I(h*zoom_), QImage::Format_ARGB32);
     if (image_ == NULL) return;
-    image_->fill(Qt::transparent);
+    MakeImageTransparent(image_);
     painter_ = new QPainter(image_);
     painter_->scale(zoom_, zoom_);
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
@@ -321,15 +327,16 @@ class QtCanvas::Impl {
   void OnZoom(double zoom) {
     LOG("zoom:%f", zoom);
     if (zoom == zoom_) return;
-    if (!image_) return; // Not support zoom
+    ASSERT(image_); // Not support zoom
     QImage* new_image = new QImage(D2I(width_*zoom), D2I(height_*zoom),
                                    QImage::Format_ARGB32);
     if (!new_image) return;
     delete painter_;
     delete image_;
     image_ = new_image;
-    image_->fill(Qt::transparent);
+    MakeImageTransparent(image_);
     painter_ = new QPainter(image_);
+    painter_->setBackground(Qt::transparent);
     painter_->scale(zoom, zoom);
     zoom_ = zoom;
     painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);

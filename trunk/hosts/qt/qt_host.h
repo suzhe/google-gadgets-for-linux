@@ -23,6 +23,7 @@
 #include <QtGui/QSystemTrayIcon>
 #include <ggadget/host_interface.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/decorated_view_host.h>
 
 namespace hosts {
 namespace qt {
@@ -46,37 +47,8 @@ class QtHost : public ggadget::HostInterface {
   virtual void ShowGadgetAboutDialog(Gadget *gadget);
 
  private:
-  void SetupUI();
-  void InitGadgets();
-  bool ConfirmGadget(int id);
-  bool NewGadgetInstanceCallback(int id);
-  bool AddGadgetInstanceCallback(int id);
-  void ReportScriptError(const char *message);
-  bool LoadGadget(const char *path, const char *options_name, int instance_id);
-
-  GadgetManagerInterface *gadget_manager_;
-  int view_debug_mode_;
-  bool gadgets_shown_;
-
-  QMenu menu_;
-  QSystemTrayIcon tray_;
-  class QtObject;
-  friend class QtObject;
-  QtObject *obj_;        // provides slots for qt
-};
-
-class QtHost::QtObject : public QObject {
-  Q_OBJECT
- public:
-  QtObject(QtHost *owner) : owner_(owner) {}
-
- public slots:
-  void OnAddGadget() {
-    owner_->gadget_manager_->ShowGadgetBrowserDialog(owner_);
-  }
-
- private:
-  QtHost *owner_;
+  class Impl;
+  Impl *impl_;
 };
 
 } // namespace qt

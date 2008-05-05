@@ -23,6 +23,13 @@
 #include <ggadget/qt/utilities.h>
 #include <ggadget/qt/qt_menu.h>
 #include "qt_gadget_widget.h"
+
+#ifdef GGL_USE_X11
+#include <QtGui/QX11Info>
+#include <QtGui/QBitmap>
+#include <X11/extensions/shape.h>
+#endif
+
 namespace ggadget {
 namespace qt {
 
@@ -32,7 +39,9 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
      : canvas_(NULL), graphics_(NULL), view_(view), view_host_(host),
        width_(0), height_(0),
        drag_files_(NULL),
-       composite_(composite) {
+       composite_(composite),
+       enable_input_mask_(true),
+       mouse_move_drag_(false) {
   graphics_ = host->NewGraphics();
   zoom_ = graphics_->GetZoom();
   setMouseTracking(true);
@@ -49,9 +58,13 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
   double old_width = width_, old_height = height_;
   width_ = view_->GetWidth();
   height_ = view_->GetHeight();
+  int int_width = D2I(width_ * zoom_);
+  int int_height = D2I(height_ * zoom_);
 
   if (old_width != width_ || old_height != height_) {
-    setFixedSize(D2I(width_ * zoom_), D2I(height_ * zoom_));
+    setFixedSize(int_width, int_height);
+    QPixmap pixmap(int_width, int_height);
+    offscreen_pixmap_ = pixmap;
     setMinimumSize(0, 0);
     setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
   }
@@ -66,8 +79,19 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
     p.fillRect(rect(), Qt::transparent);
     p.restore();
   }
-  QtCanvas canvas(D2I(width_ * zoom_), D2I(height_ * zoom_), &p);
-  view_->Draw(&canvas);
+
+  {
+    QPainter p(&offscreen_pixmap_);
+    p.setCompositionMode(QPainter::CompositionMode_Source);
+    p.fillRect(offscreen_pixmap_.rect(), Qt::transparent);
+    QtCanvas canvas(int_width, int_height, &p);
+    view_->Draw(&canvas);
+  }
+
+  if (enable_input_mask_ && composite_) {
+    SetInputMask(&offscreen_pixmap_);
+  }
+  p.drawPixmap(0, 0, offscreen_pixmap_);
 }
 
 void QGadgetWidget::mouseDoubleClickEvent(QMouseEvent * event) {
@@ -78,12 +102,29 @@ void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
                event->x() / zoom_, event->y() / zoom_, 0, 0,
                buttons, 0);
+
   if (view_->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED)
     event->accept();
+  else if (buttons != MouseEvent::BUTTON_NONE) {
+    // Send fake mouse up event to the view so that we can start to drag
+    // the window. Note: no mouse click event is sent in this case, to prevent
+    // unwanted action after window move.
+    MouseEvent e(Event::EVENT_MOUSE_UP,
+                 event->x() / zoom_, event->y() / zoom_,
+                 0, 0, buttons, 0);
+    // Ignore the result of this fake event.
+    view_->OnMouseEvent(e);
+
+    if (mouse_move_drag_) {
+      move(pos() + QCursor::pos() - mouse_pos_);
+      mouse_pos_ = QCursor::pos();
+    }
+  }
 }
 
 void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
   setFocus(Qt::MouseFocusReason);
+  grabMouse();
   EventResult handler_result = EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 
@@ -93,12 +134,18 @@ void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
 
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED) {
     event->accept();
+  } else {
+    // Remember the position of mouse, it may be used to move the gadget
+    mouse_pos_ = QCursor::pos();
+    mouse_move_drag_ = true;
   }
 }
 
 static const unsigned int kWindowMoveDelay = 100;
 
 void QGadgetWidget::mouseReleaseEvent(QMouseEvent * event ) {
+  releaseMouse();
+  mouse_move_drag_ = false;
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 
@@ -255,6 +302,34 @@ void QGadgetWidget::resizeEvent(QResizeEvent *event) {
 void QGadgetWidget::closeEvent(QCloseEvent *event) {
   event->accept();
   emit closed();
+}
+
+void QGadgetWidget::EnableInputShapeMask(bool enable) {
+  if (enable_input_mask_ != enable) {
+    enable_input_mask_ = enable;
+    if (!enable) SetInputMask(NULL);
+  }
+}
+
+void QGadgetWidget::SetInputMask(QPixmap *pixmap) {
+#ifdef GGL_USE_X11
+  if (!pixmap) {
+    XShapeCombineMask(QX11Info::display(),
+                      winId(),
+                      ShapeInput,
+                      0, 0,
+                      None,
+                      ShapeSet);
+    return;
+  }
+  QBitmap bm = pixmap->createMaskFromColor(QColor(0, 0, 0, 0), Qt::MaskInColor);
+  XShapeCombineMask(QX11Info::display(),
+                    winId(),
+                    ShapeInput,
+                    0, 0,
+                    bm.handle(),
+                    ShapeSet);
+#endif
 }
 #include "qt_gadget_widget.moc"
 }
