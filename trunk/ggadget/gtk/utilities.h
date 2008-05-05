@@ -21,6 +21,7 @@
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#include <ggadget/view_interface.h>
 
 namespace ggadget {
 
@@ -78,9 +79,11 @@ GdkPixbuf *LoadPixbufFromData(const std::string &data);
  * Creates a GdkCursor for a specified cursor type.
  *
  * @param type the cursor type, see @c ViewInterface::CursorType.
+ * @param hittest Current hit test value, used to match the cursor when there
+ *        is no suitable cursor for the specified type.
  * @return a new  GdkCursor instance when succeeded, otherwize NULL.
  */
-GdkCursor *CreateCursor(int type);
+GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest);
 
 /**
  * Disables the background of a widget.

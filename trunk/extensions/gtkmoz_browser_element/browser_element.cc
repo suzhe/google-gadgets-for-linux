@@ -73,7 +73,7 @@ static const char *kBrowserChildNames[] = {
 #if _DEBUG
   "gtkmoz-browser-child",
 #endif
-  GGL_LIBEXEC_DIR "gtkmoz-browser-child",
+  GGL_LIBEXEC_DIR "/gtkmoz-browser-child",
   NULL
 };
 

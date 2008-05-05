@@ -36,7 +36,7 @@ plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
 
 view.setInterval("Refresh()", kRefreshInterval);
 
-function OnAddCustomMenuItems(menu) { 
+function OnAddCustomMenuItems(menu) {
   menu.AddItem(strings.GADGET_REFRESH, 0, RefreshMenuHandler);
 }
 
@@ -67,7 +67,7 @@ function LoadDocument(url) {
   gadget.debug.trace("Loading " + url);
   if ("" == url) { // Not an error, the URL could be unset.
     return;
-  }  
+  }
 
   g_xml_request = new XMLHttpRequest();
   g_xml_request.onreadystatechange = ProcessRequest;
@@ -75,7 +75,7 @@ function LoadDocument(url) {
 
   // disable caching
   g_xml_request.setRequestHeader("Cache-Control", "no-cache");
-  g_xml_request.setRequestHeader("Cache-Control", "must-revalidate");  
+  g_xml_request.setRequestHeader("Cache-Control", "must-revalidate");
   g_xml_request.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 1978 00:00:00 GMT");
   g_xml_request.setRequestHeader("Pragma", "no-cache");
 
@@ -157,7 +157,7 @@ function BuildAtomDoc(xml) {
       if (0 == date.length) {
         date = GetElementText("published", item_elem);
       }
-      item.date = ParseISO8601Date(date); 
+      item.date = ParseISO8601Date(date);
 
       feed_items[i] = item;
     }
@@ -182,7 +182,7 @@ function BuildRSSDoc(xml) {
       rss_elem = rss[0];
     }
 
-    if (null == rss_elem) { 
+    if (null == rss_elem) {
       return false;
     } else {
       gadget.debug.trace("RDF document found");
@@ -204,9 +204,9 @@ function BuildRSSDoc(xml) {
   g_feed_title = GetElementText("title", chan_elem);
   feed_items = new Array();
 
-  // In older feeds, the "item" elements are under "rdf". 
+  // In older feeds, the "item" elements are under "rdf".
   // Newer ones have them under "channel," but fortunately
-  // getElementsByTagName will search all nodes under rss/rdf tree 
+  // getElementsByTagName will search all nodes under rss/rdf tree
   // regardless of the item parent.
   var items = rss_elem.getElementsByTagName("item");
   if (null != items) {
@@ -243,7 +243,7 @@ function UpdateGlobalItems(items) {
       item.is_new = false;
       item.is_read = olditem.is_read;
       item.is_hidden = olditem.is_hidden;
-    }   
+    }
   }
 
   g_feed_items = items;
@@ -284,9 +284,7 @@ function GetElementAttrib(elem_name, parent, attrib_name) {
 }
 
 function TrimString(s) {
-  s.replace(/\s+$/, "");
-  s.replace(/^\s+/, "");
-  return s;
+  return s.replace(/\s+$/gm, "").replace(/^\s+/gm, "");
 }
 
 function NormalizeURL(url) {
@@ -300,13 +298,13 @@ function UpdateCaption(text) {
   if (!text) {
     view.caption = strings.GADGET_NAME;
   } else {
-    view.caption = text + " - " + strings.GADGET_NAME;
+    view.caption = text;
   }
   gadget.debug.trace("new caption: " + view.caption);
 }
 
 function DisplayFeedItems() {
-  UpdateCaption(g_feed_title); 
+  UpdateCaption(g_feed_title);
   contents.removeAllContentItems();
 
   if (g_feed_items) {
@@ -316,7 +314,7 @@ function DisplayFeedItems() {
       var item = g_feed_items[i];
 
       if (item.is_hidden) {
-	continue;
+        continue;
       }
 
       var c_item = new ContentItem();
@@ -393,8 +391,8 @@ function FindFeedItem(url) {
     for (var j = 0; j < g_feed_items.length; j++) {
       var item = g_feed_items[j];
       if (url == item.url) {
-	return item;
-      }      
+        return item;
+      }
     }
   }
 
@@ -427,23 +425,23 @@ function ParseISO8601Date(date) {
   var offset = 0;
   var d = new Date(arr[1], 0, 1);
 
-  if (arr[3]) { 
-    d.setMonth(arr[3] - 1); 
+  if (arr[3]) {
+    d.setMonth(arr[3] - 1);
   }
-  if (arr[5]) { 
-    d.setDate(arr[5]); 
+  if (arr[5]) {
+    d.setDate(arr[5]);
   }
-  if (arr[7]) { 
+  if (arr[7]) {
     d.setHours(arr[7]);
   }
-  if (arr[8]) { 
-    d.setMinutes(arr[8]); 
+  if (arr[8]) {
+    d.setMinutes(arr[8]);
   }
-  if (arr[10]) { 
+  if (arr[10]) {
     d.setSeconds(arr[10]);
   }
-  if (arr[12]) { 
-    d.setMilliseconds(Number(arr[12]) / 1000); 
+  if (arr[12]) {
+    d.setMilliseconds(Number(arr[12]) / 1000);
   }
   if (arr[14]) {
     offset = (Number(arr[16]) * 60) + Number(arr[17]);
