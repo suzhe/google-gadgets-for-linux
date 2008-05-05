@@ -33,6 +33,7 @@ class QGadgetWidget : public QWidget {
  public:
   QGadgetWidget(ViewInterface* view, ViewHostInterface *host, bool composite);
   ~QGadgetWidget();
+  void EnableInputShapeMask(bool enable);
 
  signals:
   void closed();
@@ -53,6 +54,8 @@ class QGadgetWidget : public QWidget {
   virtual void dropEvent(QDropEvent *event);
   virtual void resizeEvent(QResizeEvent *event);
   virtual void closeEvent(QCloseEvent *event);
+
+  void SetInputMask(QPixmap *pixmap);
   QtCanvas *canvas_;
   GraphicsInterface *graphics_;
   ViewInterface *view_;
@@ -63,6 +66,10 @@ class QGadgetWidget : public QWidget {
   uint64_t mouse_down_time_;
   double zoom_;
   bool composite_;
+  bool enable_input_mask_;
+  QPixmap offscreen_pixmap_;
+  QPoint mouse_pos_;
+  bool mouse_move_drag_;
 };
 
 

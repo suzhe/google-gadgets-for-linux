@@ -16,7 +16,7 @@
 
 if GGL_BUILD_QT_HOST
 
-MOC_FILES		= qt_host.moc
+MOC_FILES		= qt_host_internal.moc
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -41,7 +41,7 @@ ggl_qt_LDADD		= @QT4_LIBS@ \
 
 BUILT_SOURCES		= $(MOC_FILES)
 CLEANFILES 		= $(MOC_FILES)
-qt_host.moc:qt_host.h
+qt_host_internal.moc:qt_host_internal.h
 	$(MOC) $< -o $@
 
 # TODO: install these files into correct path.

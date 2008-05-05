@@ -29,7 +29,6 @@
 namespace ggadget {
 namespace qt {
 
-class QtViewHostObject;
 class QtViewHost : public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
@@ -37,16 +36,17 @@ class QtViewHost : public ViewHostInterface {
              int debug_mode);
   virtual ~QtViewHost();
 
-  virtual Type GetType() const { return type_; }
+  virtual Type GetType() const;
   virtual void Destroy();
   virtual void SetView(ViewInterface *view);
-  virtual ViewInterface *GetView() const { return view_; }
-  virtual GraphicsInterface *NewGraphics() const { return new QtGraphics(zoom_); }
-  virtual void *GetNativeWidget() const { return widget_; }
+  virtual ViewInterface *GetView() const;
+  virtual GraphicsInterface *NewGraphics() const;
+  virtual void *GetNativeWidget() const;
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const;
   virtual void QueueDraw();
   virtual void QueueResize();
+  virtual void EnableInputShapeMask(bool enable);
   virtual void SetResizable(ViewInterface::ResizableMode mode);
   virtual void SetCaption(const char *caption);
   virtual void SetShowCaptionAlways(bool always);
@@ -57,56 +57,35 @@ class QtViewHost : public ViewHostInterface {
   virtual void CloseView();
   virtual bool ShowContextMenu(int button);
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {}
-  virtual void BeginMoveDrag(int button) {}
+  virtual void BeginMoveDrag(int button);
 
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
   virtual std::string Prompt(const char *message,
                              const char *default_value);
-  virtual int GetDebugMode() const { return debug_mode_; }
+  virtual int GetDebugMode() const;
   void HandleOptionViewResponse(ViewInterface::OptionsViewFlags flag);
   void HandleDetailsViewClose();
 
  private:
-  ViewInterface *view_;
-  ViewHostInterface::Type type_;
-  QGadgetWidget *widget_;
-  QWidget *window_;     // Top level window of the view
-  QDialog *dialog_;     // Top level window of the view
-  int debug_mode_;
-  double zoom_;
-  Connection *onoptionchanged_connection_;
-
-  static const unsigned int kShowTooltipDelay = 500;
-  static const unsigned int kHideTooltipDelay = 4000;
-
-  Slot1<void, int> *feedback_handler_;
-
-  bool composite_;
-  QtViewHostObject *qt_obj_;    // used for handling qt signal
-
-  void Detach();
-
+  class Impl;
+  friend class QtViewHostObject;
+  Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
 };
 
 class QtViewHostObject : public QObject {
   Q_OBJECT
  public:
-  QtViewHostObject(QtViewHost* owner) : owner_(owner) {}
+  QtViewHostObject(QtViewHost::Impl* owner) : owner_(owner) {}
 
  public slots:
-  void OnOptionViewOK() {
-    owner_->HandleOptionViewResponse(ViewInterface::OPTIONS_VIEW_FLAG_OK);
-  }
-  void OnOptionViewCancel() {
-    owner_->HandleOptionViewResponse(ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
-  }
-  void OnDetailsViewClose() {
-    owner_->HandleDetailsViewClose();
-  }
+  void OnOptionViewOK();
+  void OnOptionViewCancel();
+  void OnDetailsViewClose();
+
  private:
-  QtViewHost* owner_;
+  QtViewHost::Impl* owner_;
 };
 
 } // namespace qt
