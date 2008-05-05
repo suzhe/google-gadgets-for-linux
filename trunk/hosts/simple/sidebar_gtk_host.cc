@@ -30,6 +30,7 @@
 #include <ggadget/messages.h>
 #include <ggadget/menu_interface.h>
 #include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/sidebar.h>
 #include <ggadget/view.h>
@@ -40,6 +41,20 @@ using namespace ggadget::gtk;
 
 namespace hosts {
 namespace gtk {
+
+const char *kOptionName         = "sidebar-gtk-host";
+const char *kOptionAutoHide     = "auto-hide";
+const char *kOptionAlwaysOnTop  = "always-on-top";
+const char *kOptionPosition     = "position";
+const char *kOptionFontSize     = "font-size";
+
+const int kDefaultFontSize = 14;
+
+enum SideBarPosition {
+  SIDEBAR_POSITION_NONE,
+  SIDEBAR_POSITION_LEFT,
+  SIDEBAR_POSITION_RIGHT,
+};
 
 class SidebarGtkHost::Impl {
  public:
@@ -111,12 +126,12 @@ class SidebarGtkHost::Impl {
     }
     void HandleMoveEnd(int button) {
       int h;
-      owner_->side_bar_->ClearNullElement();
       if (IsOverlapWithSideBar(&h)) {
         view_->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
         height_ = h;
         HandleDock();
       }
+      owner_->side_bar_->ClearNullElement();
     }
     void HandleDock() {
       owner_->Dock(view_, height_, true);
@@ -158,6 +173,11 @@ class SidebarGtkHost::Impl {
       expanded_original_(NULL),
       expanded_popout_(NULL),
       side_bar_(NULL),
+      options_(GetGlobalOptions()),
+      option_auto_hide_(false),
+      option_always_on_top_(false),
+      option_sidebar_position_(SIDEBAR_POSITION_RIGHT),
+      option_font_size_(kDefaultFontSize),
       gadget_manager_(GetGadgetManager()) {
     ASSERT(gadget_manager_);
     ScriptRuntimeManager::get()->ConnectErrorReporter(
@@ -165,20 +185,57 @@ class SidebarGtkHost::Impl {
     view_host_ = new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
                                     decorated, false, true, view_debug_mode_);
     side_bar_ = new SideBar(owner_, view_host_);
-    side_bar_->SetAddGadgetSlot(NewSlot(this, &Impl::AddGadgetHandler));
-    side_bar_->SetMenuSlot(NewSlot(this, &Impl::MenuGenerator));
-    side_bar_->SetCloseSlot(NewSlot(this, &Impl::ExitHandler));
+    side_bar_->ConnectOnAddGadget(NewSlot(this, &Impl::AddGadgetHandler));
+    side_bar_->ConnectOnMenuOpen(NewSlot(this, &Impl::MenuGenerator));
+    side_bar_->ConnectOnClose(NewSlot(this, &Impl::ExitHandler));
 
     side_bar_->ConnectOnUndock(NewSlot(this, &Impl::HandleUndock));
     side_bar_->ConnectOnPopIn(NewSlot(this, &Impl::HandleGeneralPopIn));
+
+    LoadGlobalOptions();
   }
 
   ~Impl() {
+    FlushGlobalOptions();
+
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
       delete it->second;
 
     delete side_bar_;
+  }
+
+  void LoadGlobalOptions() {
+    // in first time only save default valus
+    if (!options_->GetCount() ||
+        !options_->Exists(kOptionAutoHide) ||
+        !options_->Exists(kOptionAlwaysOnTop) ||
+        !options_->Exists(kOptionPosition) ||
+        !options_->Exists(kOptionFontSize)) {
+      FlushGlobalOptions();
+      return;
+    }
+
+    bool corrupt_data = false;
+    Variant value;
+    value = options_->GetValue(kOptionAutoHide);
+    if (!value.ConvertToBool(&option_auto_hide_)) corrupt_data = true;
+    value = options_->GetValue(kOptionAlwaysOnTop);
+    if (!value.ConvertToBool(&option_always_on_top_)) corrupt_data = true;
+    value = options_->GetValue(kOptionPosition);
+    if (!value.ConvertToInt(&option_sidebar_position_)) corrupt_data = true;
+    value = options_->GetValue(kOptionFontSize);
+    if (!value.ConvertToInt(&option_font_size_)) corrupt_data = true;
+
+    if (corrupt_data) FlushGlobalOptions();
+  }
+
+  void FlushGlobalOptions() {
+    options_->PutValue(kOptionAutoHide, Variant(option_auto_hide_));
+    options_->PutValue(kOptionAlwaysOnTop, Variant(option_always_on_top_));
+    options_->PutValue(kOptionPosition, Variant(option_sidebar_position_));
+    options_->PutValue(kOptionFontSize, Variant(option_font_size_));
+    options_->Flush();
   }
 
   void SetupUI() {
@@ -240,7 +297,7 @@ class SidebarGtkHost::Impl {
     view->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
     DLOG("Dock in SidebarGtkHost, view: %p", view);
     ViewHostInterface *view_host =
-        side_bar_->NewViewHost(ViewHostInterface::VIEW_HOST_MAIN, height);
+        side_bar_->NewViewHost(height);
     DecoratedViewHost *decorator =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED, false);
     decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
@@ -272,38 +329,43 @@ class SidebarGtkHost::Impl {
   };
 
   bool Undock(View *view, bool move_to_cursor) {
+    //FIXME: sometimes the sidebar will not give up mouse event focus
     view->GetGadget()->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
     ViewElement *ele = side_bar_->FindViewElementByView(view);
-    int wx = ele ? static_cast<int>(ele->GetPixelX()) : 0;
-    int wy = ele ? static_cast<int>(ele->GetPixelY()) : 0;
-    ViewHostInterface *new_host = NewSingleViewHost(view, true, wy);
+    double wx = 0, wy = 0, wpx, wpy;
+    int px, py, sx, sy;
+    if (ele) ele->SelfCoordToViewCoord(0, 0, &wx, &wy);
+    if (move_to_cursor) {
+      // calculate the cursor coordinate in the view element
+      ASSERT(ele);
+      gtk_window_get_position(GTK_WINDOW(main_widget_), &sx, &sy);
+      gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
+      ele->ViewCoordToSelfCoord(px - sx, py - sy, &wpx, &wpy);
+    }
+    ViewHostInterface *new_host =
+        NewSingleViewHost(view, true, static_cast<int>(wy));
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
     bool r = view->ShowView(false, 0, NULL);
     if (move_to_cursor) {
-      side_bar_->InsertNullElement(wy, view);
+      side_bar_->InsertNullElement(static_cast<int>(wy), view);
       // move new gadget to a proper place
-      double x, y;
-      side_bar_->GetPointerPosition(&x, &y);
-      gdk_pointer_ungrab(gtk_get_current_event_time());
-      int px, py;
-      gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
       GtkWidget *window =
           gtk_widget_get_toplevel(GTK_WIDGET(new_host->GetNativeWidget()));
       gtk_window_move(GTK_WINDOW(window),
-                      px - static_cast<int>(x) + wx,
-                      py - static_cast<int>(y) + wy);
-      DLOG("move window, x: %f y: %f px: %d py: %d, wx: %d, wy: %d",
-           x, y, px, py, wx, wy);
+                      px - static_cast<int>(wpx),
+                      py - static_cast<int>(wpy));
+      DLOG("move window, sx: %d sy: %d px: %d py: %d, wpx: %f, wpy: %f",
+           sx, sy, px, py, wpx, wpy);
+      gtk_window_deiconify(GTK_WINDOW(window));
+      gdk_window_focus(window->window, gtk_get_current_event_time());
+      gtk_window_set_transient_for(GTK_WINDOW(window),
+                                   GTK_WINDOW(main_widget_));
       gdk_pointer_grab(window->window, FALSE,
                        (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
                                       GDK_POINTER_MOTION_MASK |
                                       GDK_POINTER_MOTION_HINT_MASK),
                        NULL, NULL, gtk_get_current_event_time());
-      gtk_window_deiconify(GTK_WINDOW(window));
-      gdk_window_focus(window->window, gtk_get_current_event_time());
-      gtk_window_set_transient_for(GTK_WINDOW(window),
-                                   GTK_WINDOW(main_widget_));
       // posted the slot in to main loop, to avoid it is run before the window is
       // moved
       GetGlobalMainLoop()->AddTimeoutWatch(0, new SlotPostCallback(NewSlot(
@@ -337,6 +399,8 @@ class SidebarGtkHost::Impl {
   void InitGadgets() {
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::NewGadgetInstanceCallback));
+    gadget_manager_->ConnectOnRemoveGadgetInstance(
+        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
   }
 
   bool LoadGadget(const char *path, const char *options_name, int instance_id) {
@@ -397,7 +461,7 @@ class SidebarGtkHost::Impl {
     DecoratedViewHost *decorator;
     switch (type) {
       case ViewHostInterface::VIEW_HOST_MAIN:
-        view_host = side_bar_->NewViewHost(type, 0);
+        view_host = side_bar_->NewViewHost(0);
         decorator = new DecoratedViewHost(view_host,
                                           DecoratedViewHost::MAIN_DOCKED,
                                           false);
@@ -540,7 +604,7 @@ class SidebarGtkHost::Impl {
     } else {
       int sw, sh;
       gtk_window_get_size(GTK_WINDOW(main_widget_), &sw, &sh);
-      gtk_window_move(GTK_WINDOW(win), sx + pw, sy + static_cast<int>(ey));
+      gtk_window_move(GTK_WINDOW(win), sx + sw, sy + static_cast<int>(ey));
     }
   }
 
@@ -571,18 +635,31 @@ class SidebarGtkHost::Impl {
   }
 
   void HandleMenuAutoHide(const char *str) {
-    //TODO;
+    option_auto_hide_ = !option_auto_hide_;
+    options_->PutValue(kOptionAutoHide, Variant(option_auto_hide_));
   }
 
   void HandleMenuAlwaysOnTop(const char *str) {
-    //TODO;
+    option_always_on_top_ = !option_always_on_top_;
+    options_->PutValue(kOptionAlwaysOnTop, Variant(option_always_on_top_));
   }
 
   void HandleMenuReplaceSidebar(const char *str) {
+    if (!strcmp(GM_("MENU_ITEM_LEFT"), str))
+      option_sidebar_position_ = SIDEBAR_POSITION_LEFT;
+    else
+      option_sidebar_position_ = SIDEBAR_POSITION_RIGHT;
+    options_->PutValue(kOptionPosition, Variant(option_sidebar_position_));
   }
 
   void HandleMenuFontSizeChange(const char *str) {
-    //TODO;
+    if (!strcmp(GM_("MENU_ITEM_FONT_SIZE_LARGE"), str))
+      option_font_size_ += 2;
+    else if (!strcmp(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), str))
+      option_font_size_ = kDefaultFontSize;
+    else
+      option_font_size_ -= 2;
+    options_->PutValue(kOptionFontSize, Variant(option_font_size_));
   }
 
   void HandleMenuClose(const char *str) {
@@ -594,28 +671,29 @@ class SidebarGtkHost::Impl {
                   NewSlot(this, &Impl::AddGadgetHandlerWithOneArg));
     menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
     menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
-                  MenuInterface::MENU_ITEM_FLAG_CHECKED,
+                  option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
                   NewSlot(this, &Impl::HandleMenuAutoHide));
-    menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"),
-                  MenuInterface::MENU_ITEM_FLAG_CHECKED,
+    menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"), option_always_on_top_ ?
+                  MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
                   NewSlot(this, &Impl::HandleMenuAlwaysOnTop));
     {
       MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_ADD_SIDEBAR"));
-      sub->AddItem(GM_("MENU_ITEM_LEFT"), MenuInterface::MENU_ITEM_FLAG_CHECKED,
-                  NewSlot(this, &Impl::HandleMenuReplaceSidebar));
-      sub->AddItem(GM_("MENU_ITEM_RIGHT"), MenuInterface::MENU_ITEM_FLAG_CHECKED,
-                  NewSlot(this, &Impl::HandleMenuReplaceSidebar));
+      sub->AddItem(GM_("MENU_ITEM_LEFT"),
+                   option_sidebar_position_ == SIDEBAR_POSITION_LEFT ?
+                   MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                   NewSlot(this, &Impl::HandleMenuReplaceSidebar));
+      sub->AddItem(GM_("MENU_ITEM_RIGHT"),
+                   option_sidebar_position_ == SIDEBAR_POSITION_RIGHT ?
+                   MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+                   NewSlot(this, &Impl::HandleMenuReplaceSidebar));
     }
     {
       MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"));
-      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGE"),
-                   MenuInterface::MENU_ITEM_FLAG_CHECKED,
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGE"), 0,
                    NewSlot(this, &Impl::HandleMenuFontSizeChange));
-      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"),
-                   MenuInterface::MENU_ITEM_FLAG_CHECKED,
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), 0,
                    NewSlot(this, &Impl::HandleMenuFontSizeChange));
-      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALL"),
-                   MenuInterface::MENU_ITEM_FLAG_CHECKED,
+      sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALL"), 0,
                    NewSlot(this, &Impl::HandleMenuFontSizeChange));
     }
     menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
@@ -666,6 +744,12 @@ class SidebarGtkHost::Impl {
   DecoratedViewHost *expanded_original_;
   DecoratedViewHost *expanded_popout_;
   SideBar *side_bar_;
+
+  OptionsInterface *options_;
+  bool option_auto_hide_;
+  bool option_always_on_top_;
+  int  option_sidebar_position_;
+  int  option_font_size_;
 
   GadgetManagerInterface *gadget_manager_;
   GtkWidget *main_widget_;

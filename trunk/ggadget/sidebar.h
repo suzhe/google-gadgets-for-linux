@@ -17,6 +17,7 @@
 #ifndef GGADGET_SIDEBAR_H__
 #define GGADGET_SIDEBAR_H__
 
+#include <ggadget/common.h>
 #include <ggadget/variant.h>
 #include <ggadget/view_host_interface.h>
 
@@ -31,31 +32,99 @@ class ViewInterface;
 
 DECLARE_VARIANT_PTR_TYPE(MenuInterface);
 
+/*
+ * Object that represent the side bar.
+ * SideBar is a container of view element, each view element is combined with a
+ * ViewHost.
+ */
 class SideBar {
  public:
+  /*
+   * Constructor.
+   * @param host Host Interface for the side bar, not owned by the @SideBar.
+   *        Should be destroyed after the object.
+   * @param view_host @c SideBar acts as @c View, @c view_host is the ViewHost
+   *        instance that is associated with the @c SideBar instance.
+   *        It's not owned by the object, and shall be destroyed after
+   *        destroying the object.
+   */
   SideBar(HostInterface *host, ViewHostInterface *view_host);
+
+  /* Destructor. */
   virtual ~SideBar();
+
  public:
-  ViewHostInterface *NewViewHost(ViewHostInterface::Type type, int height);
+  /**
+   * Creates a new ViewHost instance and of curse a new view element
+   * hold in the side bar.
+   *
+   * @param height The initial height of the new ViewHost instance. Note this is
+   *        only a hint, @SideBar will choose the proper height for the instance
+   *        based on the @c height
+   * @return a new Viewhost instance.
+   */
+  ViewHostInterface *NewViewHost(int height);
+
+  /**
+   * @return the ViewHost instance associated with this instance.
+   */
   ViewHostInterface *GetViewHost() const;
-  void InsertNullElement(int y, ViewInterface *view);
+
+  /**
+   * Insert a null element in the side bar.
+   *
+   * @param height The initial height of the null element. Note this is
+   *        only a hint, @SideBar will choose the proper height.
+   * @param view The side bar will talk with the instance to decide the size
+   *        of the null element.
+   */
+  void InsertNullElement(int height, ViewInterface *view);
+
+  /**
+   * Clear null element(s).
+   */
   void ClearNullElement();
+
+  /**
+   * Explicitly let side bar reorganize the layout.
+   */
   void Layout();
 
+  /**
+   * @return Return the element that is moused over. Return @c NULL if no
+   * element is moused over.
+   */
   ViewElement *GetMouseOverElement() const;
+
+  /**
+   * Find if any view element in the side bar is the container of the @c view.
+   * @param view the queried view.
+   * @return @c NULL if no such view element is found.
+   */
   ViewElement *FindViewElementByView(ViewInterface *view) const;
+
+  /**
+   * Set pop out view.
+   * When a element is poped out, the @c host associated with
+   * the sidebar should let sidebar know it.
+   * @param view the view that was poped out
+   * @return the view element that contains the @c view.
+   */
   ViewElement *SetPopoutedView(ViewInterface *view);
-  void GetPointerPosition(double *x, double *y) const;
 
-  void SetAddGadgetSlot(Slot0<void> *slot);
-  void SetMenuSlot(Slot1<bool, MenuInterface *> *slot);
-  void SetCloseSlot(Slot0<void> *slot);
-
+  /**
+   * Event connection methods.
+   */
   Connection *ConnectOnUndock(Slot0<void> *slot);
   Connection *ConnectOnPopIn(Slot0<void> *slot);
+  Connection *ConnectOnAddGadget(Slot0<void> *slot);
+  Connection *ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot);
+  Connection *ConnectOnClose(Slot0<void> *slot);
+
  private:
   class Impl;
   Impl *impl_;
+  DISALLOW_EVIL_CONSTRUCTORS(SideBar);
 };
 
 }  // namespace ggadget
