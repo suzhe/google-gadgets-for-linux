@@ -135,7 +135,7 @@ function OnOpenURL(url) {
 function RefreshGadget() {
   if (HasUnsetUserPrefs()) {
     // Must show options dialog before showing gadget.
-    var msg = strings.GADGET_REQUIRED 
+    var msg = strings.GADGET_REQUIRED
       + "<br><br><button onclick=\"window.external.ShowOptions()\">"
       + strings.GADGET_SHOWOPTIONS
       + "</button>";
@@ -201,11 +201,11 @@ function HasUnsetUserPrefs() {
     var pref = g_user_pref_names[i];
     var value = options.getValue(pref);
     if (value == null) {
-      gadget.debug.trace("Unset pref: " + pref + 
-			 " Required: " + g_user_pref_required[i]);
+      gadget.debug.trace("Unset pref: " + pref +
+                         " Required: " + g_user_pref_required[i]);
       // Do not break to continue generating script fragment.
       if (g_user_pref_required[i]) {
-	result = true;
+        result = true;
       }
     } else { // pref is set, add to prefix
       if (preset != "") {
@@ -301,14 +301,14 @@ function ParseRawXML() {
           kUserPrefPrefix + GetElementAttrib(pref, "name");
       var required = GetElementAttrib(pref, "required");
       // Assume required if not set explicitly to false.
-      g_user_pref_required[i] = 
-	(required != "false" && required != "FALSE" && required != "0");
+      g_user_pref_required[i] =
+        (required != "false" && required != "FALSE" && required != "0");
       var def_node = pref.getAttributeNode("default_value");
       if (def_node == null) {
-	options.putDefaultValue(name, null);
+        options.putDefaultValue(name, null);
       } else {
-	var def = pref.getAttribute("default_value");
-	options.putDefaultValue(name, def);
+        var def = pref.getAttribute("default_value");
+        options.putDefaultValue(name, def);
       }
     }
   }
@@ -324,16 +324,14 @@ function GetElementAttrib(elem, attrib_name) {
 }
 
 function TrimString(s) {
-  s.replace(/\s+$/, "");
-  s.replace(/^\s+/, "");
-  return s;
+  return s.replace(/\s+$/gm, "").replace(/^\s+/gm, "");
 }
 
 function EncodeJSString(s) {
-  s.replace(/\"/g, "\\\"");
-  s.replace(/\\/g, "\\\\");
-  s.replace(/\n/g, "\\n");
-  s.replace(/\r/g, "\\r");
+  s = s.replace(/\"/g, "\\\"");
+  s = s.replace(/\\/g, "\\\\");
+  s = s.replace(/\n/g, "\\n");
+  s = s.replace(/\r/g, "\\r");
 
   return s;
 }

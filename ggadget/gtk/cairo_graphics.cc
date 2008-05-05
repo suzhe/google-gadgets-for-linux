@@ -138,7 +138,7 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
   if (data.empty())
     return NULL;
 
-  DLOG("CairoGraphics %p: new image %s", this, tag);
+  //DLOG("CairoGraphics %p: new image %s", this, tag);
 
   std::string tag_str(tag ? tag : "");
   if (!tag_str.empty()) {
@@ -206,7 +206,7 @@ ImageInterface *CairoGraphics::NewImage(const char *tag,
 
 void CairoGraphics::OnImageDelete(const CairoGraphics *gfx,
                                   const std::string &tag, bool is_mask) {
-  DLOG("CairoGraphics %p, delete image %s", gfx, tag.c_str());
+  //DLOG("CairoGraphics %p, delete image %s", gfx, tag.c_str());
   Impl::ImageMap *image_map;
   if (gfx) {
     image_map =

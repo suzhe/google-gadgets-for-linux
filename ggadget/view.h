@@ -391,6 +391,14 @@ class View : public ViewInterface {
   void SetTooltip(const char *tooltip);
 
   /**
+   * Sets the current mouse cursor.
+   *
+   * @param type the cursor type, see @c ViewInterface::CursorType.
+   *        -1 means the default type.
+   */
+  void SetCursor(int type);
+
+  /**
    * Shows the associated View by proper method according to type of the View.
    *
    * The behavior of this function will be different for different types of

@@ -55,6 +55,7 @@ static const double kVDMainCaptionMarginH = 4;
 static const double kVDExpandedBorderWidth = 6;
 static const double kVDDetailsBorderWidth = 6;
 static const double kVDDetailsButtonHeight = 22;
+static const double kVDDetailsCaptionMargin = 1;
 
 static const unsigned int kVDShowTimeout = 200;
 static const unsigned int kVDHideTimeout = 500;
@@ -424,6 +425,7 @@ class DecoratedViewHost::Impl {
         bottom_->SetRelativeWidth(1);
         bottom_->SetHitTest(HT_BOTTOM);
         bottom_->SetCursor(CURSOR_SIZENS);
+        bottom_->SetStretchMiddle(true);
       }
       bottom_->SetVisible(false);
       GetChildren()->InsertElement(bottom_, NULL);
@@ -507,9 +509,8 @@ class DecoratedViewHost::Impl {
 
    public:
     virtual EventResult OnMouseEvent(const MouseEvent &event) {
-      EventResult result = ViewDecoratorBase::OnMouseEvent(event);
-
       Event::Type t = event.GetType();
+      hittest_ = HT_CLIENT;
       if (t == Event::EVENT_MOUSE_OVER || t == Event::EVENT_MOUSE_OUT) {
         mouseover_ = (t == Event::EVENT_MOUSE_OVER);
         if (!update_visibility_timer_) {
@@ -517,12 +518,9 @@ class DecoratedViewHost::Impl {
               NewSlot(this, &NormalMainViewDecorator::UpdateVisibility),
               mouseover_ ? kVDShowTimeout : kVDHideTimeout);
         }
-
-        if (!mouseover_) {
-          hittest_ = HT_CLIENT;
-          GetViewHost()->SetCursor(-1);
-        }
-      } else if (t == Event::EVENT_MOUSE_MOVE) {
+        if (!mouseover_)
+          SetCursor(-1);
+      } else {
         if (!mouseover_) {
           mouseover_ = true;
           UpdateVisibility();
@@ -543,7 +541,6 @@ class DecoratedViewHost::Impl {
         double h = GetHeight();
         double top = transparent_ ? kVDMainToolbarHeight : 0;
 
-        hittest_ = HT_CLIENT;
         if (!sidebar_) {
           // Only show bottom right corner when there is no transparent
           // background or the child view is not resizable.
@@ -556,39 +553,43 @@ class DecoratedViewHost::Impl {
           } else if (x >= w - kVDMainBorderWidth * 2 &&
                      y >= h - kVDMainBorderWidth * 2) {
             hittest_ = HT_BOTTOMRIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZENWSE);
+            SetCursor(CURSOR_SIZENWSE);
           } else if (x >= w - kVDMainBorderWidth * 2 &&
                      y >= top && y <= top + kVDMainBorderWidth * 2) {
             hittest_ = HT_TOPRIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZENESW);
+            SetCursor(CURSOR_SIZENESW);
           } else if (x <= kVDMainBorderWidth * 2 &&
                      y >= top && y <= top + kVDMainBorderWidth * 2) {
             hittest_ = HT_TOPLEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZENWSE);
+            SetCursor(CURSOR_SIZENWSE);
           } else if (x <= kVDMainBorderWidth  * 2 &&
                      y >= h - kVDMainBorderWidth * 2) {
             hittest_ = HT_BOTTOMLEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZENESW);
+            SetCursor(CURSOR_SIZENESW);
           } else if (x >= w - kVDMainBorderWidth && h_resizable) {
             hittest_ = HT_RIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZEWE);
+            SetCursor(CURSOR_SIZEWE);
           } else if (x <= kVDMainBorderWidth && h_resizable) {
             hittest_ = HT_LEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZEWE);
+            SetCursor(CURSOR_SIZEWE);
           } else if (y >= h - kVDMainBorderWidth && v_resizable) {
             hittest_ = HT_BOTTOM;
-            GetViewHost()->SetCursor(CURSOR_SIZENS);
+            SetCursor(CURSOR_SIZENS);
           } else if (y >= top && y <= top + kVDMainBorderWidth &&
                      v_resizable) {
             hittest_ = HT_TOP;
-            GetViewHost()->SetCursor(CURSOR_SIZENS);
+            SetCursor(CURSOR_SIZENS);
           }
         } else if (y >= h - kVDMainBorderWidth && !minimized_) {
           hittest_ = HT_BOTTOM;
-          GetViewHost()->SetCursor(CURSOR_SIZENS);
+          SetCursor(CURSOR_SIZENS);
         }
       }
-      return result;
+
+      if (hittest_ == HT_CLIENT)
+        return ViewDecoratorBase::OnMouseEvent(event);
+
+      return EVENT_RESULT_UNHANDLED;
     }
 
     virtual bool OnAddContextMenuItems(MenuInterface *menu) {
@@ -1052,13 +1053,11 @@ class DecoratedViewHost::Impl {
 
    public:
     virtual EventResult OnMouseEvent(const MouseEvent &event) {
-      EventResult result = ViewDecoratorBase::OnMouseEvent(event);
-
       Event::Type t = event.GetType();
+      hittest_ = HT_CLIENT;
       if (t == Event::EVENT_MOUSE_OUT) {
-        hittest_ = HT_CLIENT;
-        GetViewHost()->SetCursor(-1);
-      } else if (t == Event::EVENT_MOUSE_MOVE) {
+        SetCursor(-1);
+      } else {
         double x = event.GetX();
         double y = event.GetY();
         double w = GetWidth();
@@ -1068,40 +1067,43 @@ class DecoratedViewHost::Impl {
         bool resizable =
             child ? (child->GetResizable() == RESIZABLE_TRUE) : false;
 
-        hittest_ = HT_CLIENT;
         if (resizable) {
           if (x >= w - kVDExpandedBorderWidth &&
               y >= h - kVDExpandedBorderWidth) {
             hittest_ = HT_BOTTOMRIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZENWSE);
+            SetCursor(CURSOR_SIZENWSE);
           } else if (x >= w - kVDExpandedBorderWidth &&
                      y <= kVDExpandedBorderWidth) {
             hittest_ = HT_TOPRIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZENESW);
+            SetCursor(CURSOR_SIZENESW);
           } else if (x <= kVDExpandedBorderWidth &&
                      y <= kVDExpandedBorderWidth) {
             hittest_ = HT_TOPLEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZENWSE);
+            SetCursor(CURSOR_SIZENWSE);
           } else if (x <= kVDExpandedBorderWidth &&
                      y >= h - kVDExpandedBorderWidth) {
             hittest_ = HT_BOTTOMLEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZENESW);
+            SetCursor(CURSOR_SIZENESW);
           } else if (x >= w - kVDExpandedBorderWidth) {
             hittest_ = HT_RIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZEWE);
+            SetCursor(CURSOR_SIZEWE);
           } else if (x <= kVDExpandedBorderWidth) {
             hittest_ = HT_LEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZEWE);
+            SetCursor(CURSOR_SIZEWE);
           } else if (y >= h - kVDExpandedBorderWidth) {
             hittest_ = HT_BOTTOM;
-            GetViewHost()->SetCursor(CURSOR_SIZENS);
+            SetCursor(CURSOR_SIZENS);
           } else if (y <= kVDExpandedBorderWidth) {
             hittest_ = HT_TOP;
-            GetViewHost()->SetCursor(CURSOR_SIZENS);
+            SetCursor(CURSOR_SIZENS);
           }
         }
       }
-      return result;
+
+      if (hittest_ == HT_CLIENT)
+        return ViewDecoratorBase::OnMouseEvent(event);
+
+      return EVENT_RESULT_UNHANDLED;
     }
 
     virtual HitTest GetHitTest() const {
@@ -1165,6 +1167,7 @@ class DecoratedViewHost::Impl {
         owner_(owner),
         hittest_(HT_CLIENT),
         background_(NULL),
+        top_(NULL),
         bottom_(NULL),
         close_button_(NULL),
         remove_button_(NULL),
@@ -1172,19 +1175,19 @@ class DecoratedViewHost::Impl {
         caption_(NULL),
         flags_(0),
         feedback_handler_(NULL) {
-      ImgElement *top = new ImgElement(NULL, this, NULL);
-      top->SetSrc(Variant(kVDDetailsTop));
-      top->SetStretchMiddle(true);
-      top->SetPixelX(0);
-      top->SetPixelY(0);
-      top->SetRelativeWidth(1);
-      GetChildren()->InsertElement(top, GetViewElement());
+      top_ = new ImgElement(NULL, this, NULL);
+      top_->SetSrc(Variant(kVDDetailsTop));
+      top_->SetStretchMiddle(true);
+      top_->SetPixelX(0);
+      top_->SetPixelY(0);
+      top_->SetRelativeWidth(1);
+      GetChildren()->InsertElement(top_, GetViewElement());
 
       background_ = new ImgElement(NULL, this, NULL);
       background_->SetSrc(Variant(kVDDetailsMiddle));
       background_->SetStretchMiddle(true);
       background_->SetPixelX(0);
-      background_->SetPixelY(top->GetSrcHeight());
+      background_->SetPixelY(top_->GetSrcHeight());
       background_->SetRelativeWidth(1);
       background_->EnableCanvasCache(true);
       GetChildren()->InsertElement(background_, GetViewElement());
@@ -1201,11 +1204,11 @@ class DecoratedViewHost::Impl {
       caption_ = new LabelElement(NULL, this, NULL);
       caption_->GetTextFrame()->SetSize(10);
       caption_->GetTextFrame()->SetColor(Color::kBlack, 1);
-      caption_->GetTextFrame()->SetWordWrap(false);
+      caption_->GetTextFrame()->SetWordWrap(true);
       caption_->GetTextFrame()->SetTrimming(
-          CanvasInterface::TRIMMING_CHARACTER);
-      caption_->SetPixelX(kVDDetailsBorderWidth);
-      caption_->SetPixelY(kVDDetailsBorderWidth);
+          CanvasInterface::TRIMMING_CHARACTER_ELLIPSIS);
+      caption_->SetPixelX(kVDDetailsBorderWidth + kVDDetailsCaptionMargin);
+      caption_->SetPixelY(kVDDetailsBorderWidth + kVDDetailsCaptionMargin);
       GetChildren()->InsertElement(caption_, NULL);
 
       close_button_ = new ButtonElement(NULL, this, NULL);
@@ -1226,13 +1229,11 @@ class DecoratedViewHost::Impl {
 
    public:
     virtual EventResult OnMouseEvent(const MouseEvent &event) {
-      EventResult result = ViewDecoratorBase::OnMouseEvent(event);
-
       Event::Type t = event.GetType();
+      hittest_ = HT_CLIENT;
       if (t == Event::EVENT_MOUSE_OUT) {
-        hittest_ = HT_CLIENT;
-        GetViewHost()->SetCursor(-1);
-      } else if (t == Event::EVENT_MOUSE_MOVE) {
+        SetCursor(-1);
+      } else {
         double x = event.GetX();
         double y = event.GetY();
         double w = GetWidth();
@@ -1242,40 +1243,43 @@ class DecoratedViewHost::Impl {
         bool resizable =
             child ? (child->GetResizable() == RESIZABLE_TRUE) : false;
 
-        hittest_ = HT_CLIENT;
         if (resizable) {
           if (x >= w - kVDDetailsBorderWidth &&
               y >= h - kVDDetailsBorderWidth) {
             hittest_ = HT_BOTTOMRIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZENWSE);
+            SetCursor(CURSOR_SIZENWSE);
           } else if (x >= w - kVDDetailsBorderWidth &&
                      y <= kVDDetailsBorderWidth) {
             hittest_ = HT_TOPRIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZENESW);
+            SetCursor(CURSOR_SIZENESW);
           } else if (x <= kVDDetailsBorderWidth &&
                      y <= kVDDetailsBorderWidth) {
             hittest_ = HT_TOPLEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZENWSE);
+            SetCursor(CURSOR_SIZENWSE);
           } else if (x <= kVDDetailsBorderWidth &&
                      y >= h - kVDDetailsBorderWidth) {
             hittest_ = HT_BOTTOMLEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZENESW);
+            SetCursor(CURSOR_SIZENESW);
           } else if (x >= w - kVDDetailsBorderWidth) {
             hittest_ = HT_RIGHT;
-            GetViewHost()->SetCursor(CURSOR_SIZEWE);
+            SetCursor(CURSOR_SIZEWE);
           } else if (x <= kVDDetailsBorderWidth) {
             hittest_ = HT_LEFT;
-            GetViewHost()->SetCursor(CURSOR_SIZEWE);
+            SetCursor(CURSOR_SIZEWE);
           } else if (y >= h - kVDDetailsBorderWidth) {
             hittest_ = HT_BOTTOM;
-            GetViewHost()->SetCursor(CURSOR_SIZENS);
+            SetCursor(CURSOR_SIZENS);
           } else if (y <= kVDDetailsBorderWidth) {
             hittest_ = HT_TOP;
-            GetViewHost()->SetCursor(CURSOR_SIZENS);
+            SetCursor(CURSOR_SIZENS);
           }
         }
       }
-      return result;
+
+      if (hittest_ == HT_CLIENT)
+        return ViewDecoratorBase::OnMouseEvent(event);
+
+      return EVENT_RESULT_UNHANDLED;
     }
 
     virtual HitTest GetHitTest() const {
@@ -1361,14 +1365,41 @@ class DecoratedViewHost::Impl {
     virtual void DoLayout() {
       double width = GetWidth();
       double height = GetHeight();
-      background_->SetPixelHeight(height - background_->GetPixelY() -
+      double caption_width, caption_height;
+      double top_height;
+      caption_width = close_button_->GetPixelX() - caption_->GetPixelX() -
+                      kVDDetailsCaptionMargin;
+
+      caption_->SetPixelWidth(caption_width);
+      caption_->GetTextFrame()->GetExtents(caption_width,
+                                           &caption_width, &caption_height);
+      top_height = top_->GetSrcHeight();
+
+      // Only allow displaying two lines of caption.
+      if (caption_height > top_height - kVDDetailsBorderWidth -
+          kVDDetailsCaptionMargin * 2) {
+        caption_->GetTextFrame()->GetSimpleExtents(&caption_width,
+                                                   &caption_height);
+        caption_height = std::min(caption_height * 2, top_height * 2);
+        top_height = caption_height + kVDDetailsBorderWidth +
+            kVDDetailsCaptionMargin * 2;
+      }
+
+      caption_->SetPixelHeight(caption_height);
+      top_->SetPixelHeight(top_height);
+
+      // If there is no button at the bottom, then don't show bottom image.
+      if (!remove_button_ && !negative_button_)
+        bottom_->SetPixelHeight(kVDDetailsBorderWidth);
+      else
+        bottom_->SetPixelHeight(bottom_->GetSrcHeight());
+
+      background_->SetPixelY(top_height);
+      background_->SetPixelHeight(height - top_height -
                                   bottom_->GetPixelHeight());
       close_button_->Layout();
       close_button_->SetPixelX(width - close_button_->GetPixelWidth() -
                                kVDDetailsBorderWidth);
-      caption_->SetPixelWidth(close_button_->GetPixelX() -
-                              caption_->GetPixelX() - 1);
-
       if (remove_button_) {
         remove_button_->Layout();
         width -= (kVDDetailsBorderWidth + remove_button_->GetPixelWidth());
@@ -1439,6 +1470,7 @@ class DecoratedViewHost::Impl {
     // Once added to this view, these are owned by the view.
     // Do not delete.
     ImgElement *background_;
+    ImgElement *top_;
     ImgElement *bottom_;
 
     // Close button.
@@ -1638,9 +1670,7 @@ void DecoratedViewHost::SetShowCaptionAlways(bool always) {
 }
 
 void DecoratedViewHost::SetCursor(int type) {
-  ViewHostInterface *view_host = impl_->view_decorator_->GetViewHost();
-  if (view_host)
-    view_host->SetCursor(type);
+  impl_->view_decorator_->SetCursor(type);
 }
 
 void DecoratedViewHost::SetTooltip(const char *tooltip) {

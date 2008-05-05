@@ -252,7 +252,8 @@ class SingleViewHost::Impl {
   }
 
   void SetCursor(int type) {
-    GdkCursor *cursor = CreateCursor(type);
+    //DLOG("SingleViewHost::SetCursor(%d)", type);
+    GdkCursor *cursor = CreateCursor(type, view_->GetHitTest());
     if (widget_->window)
       gdk_window_set_cursor(widget_->window, cursor);
     if (cursor)
@@ -260,6 +261,7 @@ class SingleViewHost::Impl {
   }
 
   void SetTooltip(const char *tooltip) {
+    //DLOG("SingleViewHost::SetTooltip(%s)", tooltip);
     tooltip_->Show(tooltip);
   }
 

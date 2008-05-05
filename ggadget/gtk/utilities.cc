@@ -320,14 +320,44 @@ static const CursorTypeMapping kCursorTypeMappings[] = {
   { ViewInterface::CURSOR_HELP, GDK_QUESTION_ARROW }
 };
 
-GdkCursor *CreateCursor(int type) {
+struct HitTestCursorTypeMapping {
+  ViewInterface::HitTest hittest;
+  GdkCursorType gdk_type;
+};
+
+static const HitTestCursorTypeMapping kHitTestCursorTypeMappings[] = {
+  { ViewInterface::HT_LEFT, GDK_LEFT_SIDE },
+  { ViewInterface::HT_RIGHT, GDK_RIGHT_SIDE },
+  { ViewInterface::HT_TOP, GDK_TOP_SIDE },
+  { ViewInterface::HT_BOTTOM, GDK_BOTTOM_SIDE },
+  { ViewInterface::HT_TOPLEFT, GDK_TOP_LEFT_CORNER },
+  { ViewInterface::HT_TOPRIGHT, GDK_TOP_RIGHT_CORNER },
+  { ViewInterface::HT_BOTTOMLEFT, GDK_BOTTOM_LEFT_CORNER },
+  { ViewInterface::HT_BOTTOMRIGHT, GDK_BOTTOM_RIGHT_CORNER }
+};
+
+GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
   if (type < 0) return NULL;
 
+  GdkCursorType gdk_type = GDK_ARROW;
   for (size_t i = 0; i < arraysize(kCursorTypeMappings); ++i) {
-    if (kCursorTypeMappings[i].type == type)
-      return gdk_cursor_new(kCursorTypeMappings[i].gdk_type);
+    if (kCursorTypeMappings[i].type == type) {
+      gdk_type = kCursorTypeMappings[i].gdk_type;
+      break;
+    }
   }
-  return NULL;
+
+  // No suitable mapping, try matching with hittest.
+  if (gdk_type == GDK_ARROW) {
+    for (size_t i = 0; i < arraysize(kHitTestCursorTypeMappings); ++i) {
+      if (kHitTestCursorTypeMappings[i].hittest == hittest) {
+        gdk_type = kHitTestCursorTypeMappings[i].gdk_type;
+        break;
+      }
+    }
+  }
+
+  return gdk_cursor_new(gdk_type);
 }
 
 bool DisableWidgetBackground(GtkWidget *widget) {

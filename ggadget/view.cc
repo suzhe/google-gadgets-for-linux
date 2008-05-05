@@ -15,7 +15,7 @@
 */
 
 // Enable it to print verbose debug info
- #define VIEW_VERBOSE_DEBUG
+// #define VIEW_VERBOSE_DEBUG
 // #define EVENT_VERBOSE_DEBUG
 
 #include <sys/time.h>
@@ -186,6 +186,8 @@ class View::Impl {
       view_draw_count_(0),
       accum_draw_time_(0),
 #endif
+      mouse_over_(false),
+      last_cursor_type_(-1),
       hittest_(ViewInterface::HT_CLIENT) {
     ASSERT(main_loop_);
 
@@ -445,32 +447,73 @@ class View::Impl {
     }
 
     if (in_element_holder.Get()) {
-      view_host_->SetCursor(in_element->GetCursor());
-      if (type == Event::EVENT_MOUSE_MOVE &&
-          in_element != tooltip_element_.Get()) {
-        tooltip_element_.Reset(in_element);
-        view_host_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
-      }
       // Gets the hit test value of the element currently pointed by mouse.
       // It'll be used as the hit test value of the View.
       hittest_ = in_element->GetHitTest();
+      owner_->SetCursor(in_element->GetCursor());
+      if (type == Event::EVENT_MOUSE_MOVE &&
+          in_element != tooltip_element_.Get()) {
+        tooltip_element_.Reset(in_element);
+        owner_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
+      }
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
       DLOG("In element: %s type %s, hitTest:%d", in_element->GetName().c_str(),
            in_element->GetTagName().c_str(), hittest_);
 #endif
     } else {
-      view_host_->SetCursor(-1);
-      tooltip_element_.Reset(NULL);
       hittest_ = ViewInterface::HT_CLIENT;
+      owner_->SetCursor(-1);
+      tooltip_element_.Reset(NULL);
     }
 
     return result;
   }
 
   EventResult OnMouseEvent(const MouseEvent &event) {
+    Event::Type type = event.GetType();
+    double opacity;
+
+    // Don't handle the mouse event if the pixel under the mouse pointer is
+    // fully transparent.
+    if (type != Event::EVENT_MOUSE_OUT && enable_cache_ && canvas_cache_ &&
+        canvas_cache_->GetPointValue(event.GetX(), event.GetY(),
+                                     NULL, &opacity) && opacity == 0) {
+      // Send out fake mouse out event if the pixel is fully transparent and
+      // the mouse is over the view.
+      if (mouse_over_) {
+        MouseEvent new_event(Event::EVENT_MOUSE_OUT,
+                             event.GetX(), event.GetY(), 0, 0,
+                             MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
+        OnMouseEvent(new_event);
+      }
+      hittest_ = ViewInterface::HT_TRANSPARENT;
+      return EVENT_RESULT_UNHANDLED;
+    }
+
+    // If the mouse is already out of the view, don't handle the mouse out
+    // event again.
+    if (type == Event::EVENT_MOUSE_OUT && !mouse_over_) {
+      return EVENT_RESULT_UNHANDLED;
+    }
+
+    // If the mouse is already over the view, don't handle the mouse over
+    // event again.
+    if (type == Event::EVENT_MOUSE_OVER && mouse_over_) {
+      return EVENT_RESULT_UNHANDLED;
+    }
+
+    // Send fake mouse over event if the pixel is not fully transparent and the
+    // mouse over state is not set yet.
+    if (type != Event::EVENT_MOUSE_OVER && type != Event::EVENT_MOUSE_OUT &&
+        !mouse_over_) {
+      MouseEvent new_event(Event::EVENT_MOUSE_OVER,
+                           event.GetX(), event.GetY(), 0, 0,
+                           MouseEvent::BUTTON_NONE, MouseEvent::MOD_NONE);
+      OnMouseEvent(new_event);
+    }
+
     // Send event to view first.
     ScriptableEvent scriptable_event(&event, NULL, NULL);
-    Event::Type type = event.GetType();
 
     bool old_interactive = false;
     if (gadget_ && type != Event::EVENT_MOUSE_MOVE &&
@@ -508,9 +551,11 @@ class View::Impl {
         FireEvent(&scriptable_event, onrdblclick_event_);
         break;
       case Event::EVENT_MOUSE_OUT:
+        mouse_over_ = false;
         FireEvent(&scriptable_event, onmouseout_event_);
         break;
       case Event::EVENT_MOUSE_OVER:
+        mouse_over_ = true;
         FireEvent(&scriptable_event, onmouseover_event_);
         break;
       case Event::EVENT_MOUSE_WHEEL:
@@ -594,7 +639,7 @@ class View::Impl {
       bool old_interactive = false;
       if (gadget_ && type == Event::EVENT_DRAG_DROP)
         old_interactive = gadget_->SetInUserInteraction(old_interactive);
-      
+
       EventResult result = EVENT_RESULT_UNHANDLED;
       // Send the event and clear the dragover state.
       if (dragover_element_.Get()) {
@@ -1033,8 +1078,8 @@ class View::Impl {
   void OnElementRemove(BasicElement *element) {
     ASSERT(element);
     owner_->AddElementToClipRegion(element, NULL);
-    if (element == tooltip_element_.Get() && view_host_)
-      view_host_->SetTooltip(NULL);
+    if (element == tooltip_element_.Get())
+      owner_->SetTooltip(NULL);
 
     std::string name = element->GetName();
     if (!name.empty()) {
@@ -1268,6 +1313,8 @@ class View::Impl {
   uint64_t accum_draw_time_;
 #endif
 
+  bool mouse_over_;
+  int last_cursor_type_;
   ViewInterface::HitTest hittest_;
 
   Signal0<void> on_destroy_signal_;
@@ -1609,8 +1656,16 @@ void View::SetTooltip(const char *tooltip) {
     impl_->view_host_->SetTooltip(tooltip);
 }
 
+void View::SetCursor(int type) {
+  if (impl_->view_host_ && impl_->last_cursor_type_ != type) {
+    impl_->last_cursor_type_ = type;
+    impl_->view_host_->SetCursor(type);
+  }
+}
+
 bool View::ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
-  return impl_->view_host_ ? impl_->view_host_->ShowView(modal, flags, feedback_handler) :
+  return impl_->view_host_ ?
+         impl_->view_host_->ShowView(modal, flags, feedback_handler) :
          false;
 }
 
