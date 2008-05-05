@@ -23,8 +23,6 @@
 
 namespace ggadget {
 
-template <typename R> class Slot0;
-class CanvasInterface;
 class HostInterface;
 class MenuInterface;
 class ViewElement;
@@ -63,12 +61,23 @@ class SideBar {
    *        based on the @c height
    * @return a new Viewhost instance.
    */
-  ViewHostInterface *NewViewHost(int height);
+  ViewHostInterface *NewViewHost(double height);
 
   /**
    * @return the ViewHost instance associated with this instance.
    */
   ViewHostInterface *GetViewHost() const;
+
+  /**
+   * Set the size of the sidebar.
+   */
+  void SetSize(double width, double height);
+
+  /** Retrieves the width of the side bar in pixels. */
+  double GetWidth() const;
+
+  /** Retrieves the height of side bar in pixels. */
+  double GetHeight() const;
 
   /**
    * Insert a null element in the side bar.
@@ -78,7 +87,7 @@ class SideBar {
    * @param view The side bar will talk with the instance to decide the size
    *        of the null element.
    */
-  void InsertNullElement(int height, ViewInterface *view);
+  void InsertNullElement(double height, ViewInterface *view);
 
   /**
    * Clear null element(s).

@@ -43,7 +43,7 @@ class SideBar::Impl : public View {
     SideBarViewHost(SideBar::Impl *owner,
                     ViewHostInterface::Type type,
                     ViewHostInterface *real_viewhost,
-                    int height)
+                    double height)
         : owner_(owner),
           private_view_(NULL),
           view_element_(NULL),
@@ -158,7 +158,7 @@ class SideBar::Impl : public View {
     ViewElement *view_element_;
     ViewHostInterface *real_viewhost_;
     EventSignal resize_event_;
-    int height_;
+    double height_;
   };
 
   Impl(HostInterface *host, SideBar *owner, ViewHostInterface *view_host)
@@ -371,7 +371,7 @@ class SideBar::Impl : public View {
       if (element == main_div_->GetChildren()->GetItemByIndex(i)) return i;
     return -1;
   }
-  void GetInsertPoint(int y, BasicElement *insertee,
+  void GetInsertPoint(double y, BasicElement *insertee,
       BasicElement **previous, BasicElement **next) {
     BasicElement *e = NULL;
     if (next) *next = NULL;
@@ -387,7 +387,7 @@ class SideBar::Impl : public View {
     }
     if (previous) *previous = e;
   }
-  void InsertViewElement(int height, BasicElement *element) {
+  void InsertViewElement(double height, BasicElement *element) {
     ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
     BasicElement *pre, *next;
     GetInsertPoint(height, element, &pre, &next);
@@ -428,18 +428,20 @@ class SideBar::Impl : public View {
     }
     return NULL;
   }
-  void InsertNullElement(int y, ViewInterface *view) {
+  void InsertNullElement(double height, ViewInterface *view) {
     ASSERT(view);
     if (null_element_ && null_element_->GetChildView() != view) {
       // only one null element is allowed
-      main_div_->GetChildren()->RemoveElement(null_element_);
+      if (!main_div_->GetChildren()->RemoveElement(null_element_))
+        delete null_element_;
+      null_element_ = NULL;
     }
     if (!null_element_) {
       null_element_ = new ViewElement(main_div_, this, down_cast<View *>(view));
       null_element_->SetPixelHeight(view->GetHeight());
       null_element_->SetVisible(false);
     }
-    InsertViewElement(y, null_element_);
+    InsertViewElement(height, null_element_);
   }
   void ClearNullElement() {
     if (null_element_) {
@@ -555,7 +557,7 @@ SideBar::~SideBar() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SideBar::NewViewHost(int height) {
+ViewHostInterface *SideBar::NewViewHost(double height) {
   Impl::SideBarViewHost *vh =
       new Impl::SideBarViewHost(impl_, ViewHostInterface::VIEW_HOST_MAIN,
                                 impl_->view_host_, height);
@@ -567,7 +569,19 @@ ViewHostInterface *SideBar::GetViewHost() const {
   return impl_->GetViewHost();
 }
 
-void SideBar::InsertNullElement(int height, ViewInterface *view) {
+void SideBar::SetSize(double width, double height) {
+  impl_->SetSize(width, height);
+}
+
+double SideBar::GetWidth() const {
+  return impl_->GetWidth();
+}
+
+double SideBar::GetHeight() const {
+  return impl_->GetHeight();
+}
+
+void SideBar::InsertNullElement(double height, ViewInterface *view) {
   return impl_->InsertNullElement(height, view);
 }
 
