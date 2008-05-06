@@ -462,7 +462,7 @@ class View::Impl {
 #endif
     } else {
       hittest_ = ViewInterface::HT_CLIENT;
-      owner_->SetCursor(-1);
+      owner_->SetCursor(CURSOR_DEFAULT);
       tooltip_element_.Reset(NULL);
     }
 
@@ -519,7 +519,7 @@ class View::Impl {
     bool old_interactive = false;
     if (gadget_ && type != Event::EVENT_MOUSE_MOVE &&
         type != Event::EVENT_MOUSE_OVER && type != Event::EVENT_MOUSE_OUT)
-      gadget_->SetInUserInteraction(true);
+      old_interactive = gadget_->SetInUserInteraction(true);
 
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (type != Event::EVENT_MOUSE_MOVE)

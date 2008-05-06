@@ -28,24 +28,38 @@ class MenuInterface {
  public:
   enum MenuItemFlag {
     MENU_ITEM_FLAG_GRAYED = 1,
-    MENU_ITEM_FLAG_CHECKED = 8,
-    MENU_ITEM_FLAG_CHECKABLE = 0x80,   // Not an official feature.
-    MENU_ITEM_FLAG_SEPARATOR = 0x800,  // Not an official feature.
+    MENU_ITEM_FLAG_CHECKED = 8
+  };
+
+  enum MenuItemPriority {
+    /** For menu items added by client code, like elements or javascript. */
+    MENU_ITEM_PRI_CLIENT = 0,
+    /** For menu items added by view decorator. */
+    MENU_ITEM_PRI_DECORATOR = 10,
+    /** For menu items added by host. */
+    MENU_ITEM_PRI_HOST = 20,
+    /** For menu items added by Gadget. */
+    MENU_ITEM_PRI_GADGET = 30
   };
 
   /**
-   * Adds a single menu item. If @a item_text is blank or NULL, or @a style
-   * is @c MENU_ITEM_FLAG_SEPARATOR, and the menu is not blank and the last
-   * menu item is not a separator, a menu separator will be added.
+   * Adds a single menu item. If @a item_text is blank or NULL, a menu
+   * separator will be added.
    *
    * @param item_text the text displayed in the menu item. '&'s act as hotkey
    *     indicator. If it's blank or NULL, style is automatically treated as
    *     @c MENU_ITEM_FLAG_SEPARATOR.
    * @param style combination of <code>MenuItemFlag</code>s.
    * @param handler handles menu command.
+   * @param priority Priority of the menu item, item with smaller priority will
+   *      be placed to higher position in the menu. Must be >= 0.
+   *      0-9 is reserved for menu items added by Element and JavaScript.
+   *      10-19 is reserved for menu items added by View Decorator.
+   *      20-29 is reserved for menu items added by host.
+   *      30-39 is reserved for menu items added by Gadget.
    */
   virtual void AddItem(const char *item_text, int style,
-                       Slot1<void, const char *> *handler) = 0;
+                       Slot1<void, const char *> *handler, int priority) = 0;
 
   /**
    * Sets the style of the given menu item.
@@ -57,9 +71,11 @@ class MenuInterface {
   /**
    * Adds a submenu/popup showing the given text.
    * @param popup_text
+   * @param style combination of <code>MenuItemFlag</code>s.
+   * @param priority of the popup menu item.
    * @return the menu object of the new popup menu.
    */
-  virtual MenuInterface *AddPopup(const char *popup_text) = 0;
+  virtual MenuInterface *AddPopup(const char *popup_text, int priority) = 0;
 };
 
 } // namespace ggadget

@@ -211,7 +211,10 @@ class ContentItem : public ScriptableHelperDefault {
       Slot7<bool, ContentItem *, Gadget::DisplayTarget,
             ScriptableCanvas *, int, int, int, int> *handler);
 
-  /** Called before showing the details view for the given item. */
+  /**
+   * Called before showing the details view for the given item.
+   * @return true to cancel the details view.
+   */
   bool OnDetailsView(std::string *title, DetailsViewData **details_view_data,
                      int *flags);
   typedef Slot1<ScriptableInterface *, ContentItem *> OnDetailsViewHandler;

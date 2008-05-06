@@ -60,15 +60,16 @@ class ContentAreaElement::Impl {
         mouse_down_(false), mouse_over_pin_(false),
         mouse_x_(-1), mouse_y_(-1),
         mouse_over_item_(NULL),
+        details_open_item_(NULL),
         content_height_(0),
         scrolling_line_step_(0),
         refresh_timer_(0),
         modified_(false),
         death_detector_(NULL),
-        context_menu_time_(0), 
-        background_color_src_(kDefaultBackground.ToString()), 
-        mouseover_color_src_(kMouseOverBackground.ToString()), 
-        mousedown_color_src_(kMouseDownBackground.ToString()), 
+        context_menu_time_(0),
+        background_color_src_(kDefaultBackground.ToString()),
+        mouseover_color_src_(kMouseOverBackground.ToString()),
+        mousedown_color_src_(kMouseDownBackground.ToString()),
         background_opacity_(1.),
         mouseover_opacity_(1.),
         mousedown_opacity_(1.),
@@ -221,7 +222,7 @@ class ContentAreaElement::Impl {
       death_detector_ = NULL;
   }
 
-  void Draw(CanvasInterface *canvas) {    
+  void Draw(CanvasInterface *canvas) {
     int height = static_cast<int>(ceil(owner_->GetClientHeight()));
     if (background_opacity_ > 0.) {
       if (background_opacity_ != 1.) {
@@ -231,10 +232,10 @@ class ContentAreaElement::Impl {
       int width = static_cast<int>(ceil(owner_->GetClientWidth()));
       canvas->DrawFilledRect(0, 0, width, height, background_color_);
       if (background_opacity_ != 1.) {
-        canvas->PopState(); 
+        canvas->PopState();
       }
     }
-    
+
     // Add a modification checker to detect whether the set of content items
     // or this object itself is modified during the following loop. If such
     // things happen, break the loop and return to ensure safety.
@@ -436,6 +437,9 @@ class ContentAreaElement::Impl {
                                           content_items_.end(),
                                           item);
     if (it != content_items_.end()) {
+      if (*it == details_open_item_)
+        owner_->GetView()->GetGadget()->CloseDetailsView();
+
       (*it)->DetachContentArea(owner_);
       content_items_.erase(it);
       Modified();
@@ -450,23 +454,46 @@ class ContentAreaElement::Impl {
       (*it)->DetachContentArea(owner_);
     }
     content_items_.clear();
+    if (details_open_item_)
+      owner_->GetView()->GetGadget()->CloseDetailsView();
     Modified();
   }
 
-  static const unsigned int kContextMenuMouseOutInterval = 50;
+  class DetailsViewFeedbackHandler {
+   public:
+    DetailsViewFeedbackHandler(Impl *impl, ContentItem *item)
+      : impl_(impl), item_(item), content_area_(impl->owner_) {
+    }
+    void operator()(int flags) const {
+      if (content_area_.Get() && item_.Get()) {
+        impl_->details_open_item_ = NULL;
+        if (flags & ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
+          impl_->OnItemOpen(item_.Get());
+        if (flags & ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK)
+          impl_->OnItemNegativeFeedback(item_.Get());
+        if (flags & ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
+          impl_->OnItemRemove(item_.Get());
+      }
+    }
+    // Not used.
+    bool operator==(const DetailsViewFeedbackHandler &) const {
+      return false;
+    }
+   private:
+    Impl *impl_;
+    ScriptableHolder<ContentItem> item_;
+    ElementHolder content_area_;
+  };
+
   EventResult HandleMouseEvent(const MouseEvent &event) {
     bool queue_draw = false;
     EventResult result = EVENT_RESULT_UNHANDLED;
     if (event.GetType() == Event::EVENT_MOUSE_OUT) {
-      // Ignore the mouseout event caused by the context menu.
-      if (owner_->GetView()->GetCurrentTime() - context_menu_time_ >
-          kContextMenuMouseOutInterval) {
-        mouse_over_pin_ = false;
-        mouse_over_item_ = NULL;
-        mouse_x_ = mouse_y_ = -1;
-        mouse_down_ = false;
-        queue_draw = true;
-      }
+      mouse_over_pin_ = false;
+      mouse_over_item_ = NULL;
+      mouse_x_ = mouse_y_ = -1;
+      mouse_down_ = false;
+      queue_draw = true;
       result = EVENT_RESULT_HANDLED;
     } else {
       mouse_x_ = static_cast<int>(round(event.GetX()));
@@ -536,7 +563,9 @@ class ContentAreaElement::Impl {
                     details_view_data) {
                   owner_->GetView()->GetGadget()->ShowDetailsView(
                       details_view_data, title.c_str(), flags,
-                      NewSlot(this, &Impl::ProcessDetailsViewFeedback));
+                      NewFunctorSlot<void, int>(DetailsViewFeedbackHandler(
+                          this, mouse_over_item_)));
+                  details_open_item_ = mouse_over_item_;
                 }
               }
             }
@@ -559,32 +588,21 @@ class ContentAreaElement::Impl {
     return result;
   }
 
-  void ProcessDetailsViewFeedback(int flags) {
-    if (flags & ViewInterface::DETAILS_VIEW_FLAG_TOOLBAR_OPEN)
-      OnItemOpen(NULL);
-    if (flags & ViewInterface::DETAILS_VIEW_FLAG_NEGATIVE_FEEDBACK)
-      OnItemNegativeFeedback(NULL);
-    if (flags & ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON)
-      OnItemRemove(NULL);
-  }
-
   // Handler of the "Open" menu item.
-  void OnItemOpen(const char *menu_item) {
-    if (mouse_over_item_)
-      mouse_over_item_->OpenItem();
+  void OnItemOpen(ContentItem *item) {
+    if (item)
+      item->OpenItem();
   }
 
   // Handler of the "Remove" menu item.
-  void OnItemRemove(const char *menu_item) {
-    if (mouse_over_item_) {
+  void OnItemRemove(ContentItem *item) {
+    if (item) {
       bool dead = false;
       death_detector_ = &dead;
-      if (!mouse_over_item_->ProcessDetailsViewFeedback(
-              ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
-          !dead && mouse_over_item_ &&
-          !mouse_over_item_->OnUserRemove() &&
-          !dead && mouse_over_item_) {
-        RemoveContentItem(mouse_over_item_);
+      if (!item->ProcessDetailsViewFeedback(
+            ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
+          !dead && !item->OnUserRemove() && !dead) {
+        RemoveContentItem(item);
       }
       if (!dead)
         death_detector_ = NULL;
@@ -592,18 +610,78 @@ class ContentAreaElement::Impl {
   }
 
   // Handler of the "Don't show me ..." menu item.
-  void OnItemNegativeFeedback(const char *menu_item) {
-    if (mouse_over_item_) {
+  void OnItemNegativeFeedback(ContentItem *item) {
+    if (item) {
       bool dead = false;
       death_detector_ = &dead;
-      if (!mouse_over_item_->ProcessDetailsViewFeedback(
-              ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) &&
-          !dead && mouse_over_item_) {
-        RemoveContentItem(mouse_over_item_);
+      if (!item->ProcessDetailsViewFeedback(
+            ViewInterface::DETAILS_VIEW_FLAG_REMOVE_BUTTON) && !dead) {
+        RemoveContentItem(item);
       }
       if (!dead)
         death_detector_ = NULL;
     }
+  }
+
+  class MenuItemHandler {
+   public:
+    MenuItemHandler(Impl *impl, void (Impl::*method)(ContentItem *),
+                    ContentItem *item)
+      : impl_(impl), method_(method), item_(item), content_area_(impl->owner_) {
+    }
+    void operator()(const char *) const {
+      if (content_area_.Get() && item_.Get()) {
+        // Make sure that openUrl can work.
+        bool old_interaction = false;
+        Gadget *gadget = impl_->owner_->GetView()->GetGadget();
+        if (gadget)
+          old_interaction = gadget->SetInUserInteraction(true);
+        (impl_->*method_)(item_.Get());
+        if (gadget)
+          gadget->SetInUserInteraction(old_interaction);
+      }
+    }
+    // Not used.
+    bool operator==(const MenuItemHandler &) const {
+      return false;
+    }
+   private:
+    Impl *impl_;
+    void (Impl::*method_)(ContentItem *);
+    ScriptableHolder<ContentItem> item_;
+    ElementHolder content_area_;
+  };
+
+  bool OnAddContextMenuItems(MenuInterface *menu) {
+    if (mouse_over_item_) {
+      int item_flags = mouse_over_item_->GetFlags();
+      if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
+        if (mouse_over_item_->CanOpen()) {
+          menu->AddItem(GM_("OPEN_CONTENT_ITEM"), 0,
+            NewFunctorSlot<void, const char *>(
+                MenuItemHandler(this, &Impl::OnItemOpen,
+                                mouse_over_item_)),
+            MenuInterface::MENU_ITEM_PRI_CLIENT);
+        }
+        if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
+          menu->AddItem(GM_("REMOVE_CONTENT_ITEM"), 0,
+            NewFunctorSlot<void, const char *>(
+                MenuItemHandler(this, &Impl::OnItemRemove,
+                                mouse_over_item_)),
+            MenuInterface::MENU_ITEM_PRI_CLIENT);
+        }
+        if (item_flags & ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
+          menu->AddItem(GM_("DONT_SHOW_CONTENT_ITEM"), 0,
+            NewFunctorSlot<void, const char *>(
+                MenuItemHandler(this, &Impl::OnItemNegativeFeedback,
+                                mouse_over_item_)),
+            MenuInterface::MENU_ITEM_PRI_CLIENT);
+        }
+      }
+    }
+    // To keep compatible with the Windows version, don't show default menu
+    // items.
+    return false;
   }
 
   ContentAreaElement *owner_;
@@ -617,6 +695,7 @@ class ContentAreaElement::Impl {
   bool mouse_down_, mouse_over_pin_;
   int mouse_x_, mouse_y_;
   ContentItem *mouse_over_item_;
+  ContentItem *details_open_item_;
   int content_height_;
   int scrolling_line_step_;
   int refresh_timer_;
@@ -677,13 +756,13 @@ std::string ContentAreaElement::GetBackgroundColor() const {
 
 void ContentAreaElement::SetBackgroundColor(const char *color) {
   if (impl_->background_color_src_ != color) {
-    if (Color::FromString(color, &impl_->background_color_, 
+    if (Color::FromString(color, &impl_->background_color_,
                           &impl_->background_opacity_)) {
       impl_->background_color_src_ = color;
-      
+
       QueueDraw();
-    }    
-  }  
+    }
+  }
 }
 
 std::string ContentAreaElement::GetDownColor() const {
@@ -692,13 +771,13 @@ std::string ContentAreaElement::GetDownColor() const {
 
 void ContentAreaElement::SetDownColor(const char *color) {
   if (impl_->mousedown_color_src_ != color) {
-    if (Color::FromString(color, &impl_->mousedown_color_, 
+    if (Color::FromString(color, &impl_->mousedown_color_,
                           &impl_->mousedown_opacity_)) {
       impl_->mousedown_color_src_ = color;
-      
+
       QueueDraw();
-    }    
-  }  
+    }
+  }
 }
 
 std::string ContentAreaElement::GetOverColor() const {
@@ -707,13 +786,13 @@ std::string ContentAreaElement::GetOverColor() const {
 
 void ContentAreaElement::SetOverColor(const char *color) {
   if (impl_->mouseover_color_src_ != color) {
-    if (Color::FromString(color, &impl_->mouseover_color_, 
+    if (Color::FromString(color, &impl_->mouseover_color_,
                           &impl_->mouseover_opacity_)) {
       impl_->mouseover_color_src_ = color;
-      
+
       QueueDraw();
-    }    
-  }  
+    }
+  }
 }
 
 int ContentAreaElement::GetContentFlags() const {
@@ -806,48 +885,8 @@ BasicElement *ContentAreaElement::CreateInstance(BasicElement *parent,
   return new ContentAreaElement(parent, view, name);
 }
 
-class FeedbackSlot : public Slot1<void, const char *> {
- public:
-  FeedbackSlot(ContentAreaElement *content_area,
-               Slot1<void, const char *> *slot)
-      : content_area_(content_area), slot_(slot) {
-  }
-
-  virtual Variant Call(int argc, const Variant argv[]) const {
-    // Test if the slot owner is still valid.
-    if (content_area_.Get())
-      return slot_->Call(argc, argv);
-    return Variant();
-  }
-  // Not used.
-  virtual bool operator==(const Slot &another) const { return false; }
- private:
-  ElementHolder content_area_;
-  Slot1<void, const char *> *slot_;
-};
-
 bool ContentAreaElement::OnAddContextMenuItems(MenuInterface *menu) {
-  if (impl_->mouse_over_item_) {
-    int item_flags = impl_->mouse_over_item_->GetFlags();
-    if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
-      impl_->context_menu_time_ = GetView()->GetCurrentTime();
-      if (impl_->mouse_over_item_->CanOpen()) {
-        menu->AddItem(GM_("OPEN_CONTENT_ITEM"), 0,
-            new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemOpen)));
-      }
-      if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_NO_REMOVE)) {
-        menu->AddItem(GM_("REMOVE_CONTENT_ITEM"), 0,
-            new FeedbackSlot(this, NewSlot(impl_, &Impl::OnItemRemove)));
-      }
-      if (item_flags & ContentItem::CONTENT_ITEM_FLAG_NEGATIVE_FEEDBACK) {
-        menu->AddItem(GM_("DONT_SHOW_CONTENT_ITEM"), 0,
-            new FeedbackSlot(this,
-                             NewSlot(impl_, &Impl::OnItemNegativeFeedback)));
-      }
-    }
-  }
-  // To keep compatible with the Windows version, don't show default menu items.
-  return false;
+  return impl_->OnAddContextMenuItems(menu);
 }
 
 ScriptableArray *ContentAreaElement::ScriptGetContentItems() {

@@ -22,6 +22,8 @@ namespace ggadget {
 namespace gtk {
 
 static const char *kMenuItemTextTag = "menu-item-text";
+static const char *kMenuItemStyleTag = "menu-item-style";
+static const char *kMenuItemPriorityTag = "menu-item-priority";
 static const char *kMenuItemCallbackTag = "menu-item-callback";
 static const char *kMenuItemBuilderTag = "menu-item-builder";
 static const char *kMenuItemNoCallbackTag = "menu-item-no-callback";
@@ -53,7 +55,7 @@ class MenuBuilder::Impl {
     return result;
   }
 
-  void SetMenuItemStyle(GtkMenuItem *item, int style) {
+  static void SetMenuItemStyle(GtkMenuItem *item, int style) {
     // Set a signature to disable callback, to avoid trigger handler when
     // setting checked state.
     g_object_set_data(G_OBJECT(item), kMenuItemNoCallbackTag,
@@ -69,6 +71,10 @@ class MenuBuilder::Impl {
 
     // Clear the signature.
     g_object_set_data(G_OBJECT(item), kMenuItemNoCallbackTag, NULL);
+
+    // Attach the style value to the menu item for later reference.
+    g_object_set_data(G_OBJECT(item), kMenuItemStyleTag,
+                      GINT_TO_POINTER(style));
   }
 
   static void DestroyHandlerCallback(gpointer handler) {
@@ -89,20 +95,14 @@ class MenuBuilder::Impl {
     if (handler) (*handler)(text);
   }
 
-  void AddItem(const char *text, int style,
-               ggadget::Slot1<void, const char *> *handler) {
+  static GtkMenuItem *NewMenuItem(const char *text, int style,
+                                  Slot1<void, const char *> *handler,
+                                  int priority) {
     GtkMenuItem *item = NULL;
 
-    if (style & MENU_ITEM_FLAG_SEPARATOR || !text || !*text) {
-      // Only add a separator if the menu is not empty and the last item is
-      // not another separator.
-      GList *children = gtk_container_get_children(GTK_CONTAINER(gtk_menu_));
-      if (children) {
-        if (!GTK_IS_SEPARATOR_MENU_ITEM(g_list_last(children)->data))
-          item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
-        g_list_free(children);
-      }
-    } else if (style & (MENU_ITEM_FLAG_CHECKABLE | MENU_ITEM_FLAG_CHECKED)) {
+    if (!text || !*text) {
+      item = GTK_MENU_ITEM(gtk_separator_menu_item_new());
+    } else if (style & MENU_ITEM_FLAG_CHECKED) {
       item = GTK_MENU_ITEM(gtk_check_menu_item_new_with_mnemonic(
         ConvertWindowsStyleMnemonics(text).c_str()));
     } else {
@@ -111,72 +111,191 @@ class MenuBuilder::Impl {
     }
 
     if (item) {
-      gtk_widget_show(GTK_WIDGET(item));
       SetMenuItemStyle(item, style);
-  
+      g_object_set_data(G_OBJECT(item), kMenuItemPriorityTag,
+                        GINT_TO_POINTER(priority < 0 ? 0 : priority));
+
       if (text && *text)
         g_object_set_data_full(G_OBJECT(item), kMenuItemTextTag,
                                g_strdup(text), g_free);
       if (handler)
         g_object_set_data_full(G_OBJECT(item), kMenuItemCallbackTag,
                                handler, DestroyHandlerCallback);
-  
+
+      gtk_widget_show(GTK_WIDGET(item));
       g_signal_connect(item, "activate", G_CALLBACK(OnItemActivate), NULL);
-      gtk_menu_shell_append(gtk_menu_, GTK_WIDGET(item));
-      item_added_ = true;
     }
+    return item;
   }
 
   struct FindItemData {
-    FindItemData(const char *item_text) : text(item_text), item(NULL) {}
+    FindItemData(const char *text, int min_pri, int max_pri, bool first)
+      : text_(text), min_priority_(min_pri), max_priority_(max_pri),
+        first_(first), item_(NULL), index_(-1), count_(0) {
+    }
 
-    const char *text;
-    GtkMenuItem *item;
+    // input members.
+    const char *text_;
+    int min_priority_;
+    int max_priority_;
+    bool first_;
+
+    // output members.
+    GtkMenuItem *item_;
+    int index_;
+    int count_;
   };
 
-  static void FindItemCallback(GtkWidget *item, gpointer data) {
+  static void FindItemByTextCallback(GtkWidget *item, gpointer data) {
     const char *text = reinterpret_cast<const char *>(
         g_object_get_data(G_OBJECT(item), kMenuItemTextTag));
     FindItemData *item_data = reinterpret_cast<FindItemData *>(data);
-    if (!item_data->item && text && strcmp(text, item_data->text) == 0)
-      item_data->item = GTK_MENU_ITEM(item);
+    if ((!item_data->first_ || !item_data->item_) &&
+        text && strcmp(text, item_data->text_) == 0) {
+      item_data->item_ = GTK_MENU_ITEM(item);
+      item_data->index_ = item_data->count_;
+    }
+    item_data->count_++;
   }
 
-  GtkMenuItem *FindItem(const char *item_text) {
-    FindItemData data(item_text);
-    gtk_container_foreach(GTK_CONTAINER(gtk_menu_), FindItemCallback,
+  GtkMenuItem *FindItemByText(const char *text, bool first,
+                              int *index, int *count) {
+    FindItemData data(text, 0, 0, first);
+    gtk_container_foreach(GTK_CONTAINER(gtk_menu_), FindItemByTextCallback,
                           reinterpret_cast<gpointer>(&data));
-    return data.item;
+    if (index) *index = data.index_;
+    if (count) *count = data.count_;
+    return data.item_;
+  }
+
+  static void FindItemByPriorityCallback(GtkWidget *item, gpointer data) {
+    int priority = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item),
+                                                     kMenuItemPriorityTag));
+    FindItemData *item_data = reinterpret_cast<FindItemData *>(data);
+    if ((!item_data->first_ || !item_data->item_) &&
+        priority >= item_data->min_priority_ &&
+        (priority <= item_data->max_priority_ ||
+         item_data->max_priority_ < 0)) {
+      item_data->item_ = GTK_MENU_ITEM(item);
+      item_data->index_ = item_data->count_;
+    }
+    item_data->count_++;
+  }
+
+  // Find the last built-in or external menu item.
+  GtkMenuItem *FindItemByPriority(int min_pri, int max_pri, bool first,
+                                  int *index, int *count) {
+    FindItemData data(NULL, min_pri, max_pri, first);
+    gtk_container_foreach(GTK_CONTAINER(gtk_menu_), FindItemByPriorityCallback,
+                          reinterpret_cast<gpointer>(&data));
+
+    if (index) *index = data.index_;
+    if (count) *count = data.count_;
+    return data.item_;
+  }
+
+  GtkMenuItem *AddMenuItem(const char *text, int style,
+                           ggadget::Slot1<void, const char *> *handler,
+                           int priority) {
+    ASSERT(priority >= 0);
+    GtkMenuItem *item = NewMenuItem(text, style, handler, priority);
+    if (item) {
+      int last_index = 0;
+      int count = 0;
+      GtkMenuItem *last_item =
+          FindItemByPriority(0, priority, false, &last_index, &count);
+
+      // If last item is not found, then the last_index will be -1, then the
+      // item will be inserted before all other items.
+      if (last_index < count - 1)
+        gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(item), last_index + 1);
+      else
+        gtk_menu_shell_append(gtk_menu_, GTK_WIDGET(item));
+
+      if (!GTK_IS_SEPARATOR_MENU_ITEM(item)) {
+        // Add a separator between the last item and the new item if necessary.
+        if (last_item) {
+          int last_priority = GPOINTER_TO_INT(
+              g_object_get_data(G_OBJECT(last_item), kMenuItemPriorityTag));
+
+          if (last_priority != priority &&
+              !GTK_IS_SEPARATOR_MENU_ITEM(last_item)) {
+            GtkMenuItem *sep = NewMenuItem(NULL, 0, NULL, priority);
+            gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(sep), last_index + 1);
+          }
+        }
+
+        // Add a separator between the new item and the next item if necessary.
+        if (count && last_index < count - 1) {
+          int next_index = 0;
+          GtkMenuItem *next_item =
+              FindItemByPriority(priority + 1, -1, true, &next_index, &count);
+          if (next_item && last_index + 1 == next_index - 1 &&
+              !GTK_IS_SEPARATOR_MENU_ITEM(next_item)) {
+            int next_priority = GPOINTER_TO_INT(
+                g_object_get_data(G_OBJECT(next_item), kMenuItemPriorityTag));
+            GtkMenuItem *sep = NewMenuItem(NULL, 0, NULL, next_priority);
+            gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(sep), next_index);
+          }
+        }
+      }
+
+      item_added_ = true;
+    }
+    return item;
   }
 
   void SetItemStyle(const char *text, int style) {
-    GtkMenuItem *item = FindItem(text);
-    if (item)
-      SetMenuItemStyle(item, style);
+    int index, count;
+    GtkMenuItem *item = FindItemByText(text, false, &index, &count);
+    if (item) {
+      int old_style = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item),
+                                                        kMenuItemStyleTag));
+      // If the checked flag has been changed, then we need re-create the menu
+      // item with new style.
+      if ((old_style ^ style) & MENU_ITEM_FLAG_CHECKED) {
+        // Can't re-create the item with a submenu attached.
+        if (gtk_menu_item_get_submenu(item) != NULL) {
+          ASSERT_M(false,
+               ("Can't change the checked style of a menu item with submenu."));
+          return;
+        }
+
+        // Steal the callback handler.
+        ggadget::Slot1<void, const char *> *handler =
+            reinterpret_cast<ggadget::Slot1<void, const char *> *>(
+                g_object_steal_data(G_OBJECT(item), kMenuItemCallbackTag));
+
+        int priority = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item),
+                                                         kMenuItemPriorityTag));
+
+        gtk_widget_destroy(GTK_WIDGET(item));
+        item = NewMenuItem(text, style, handler, priority);
+        if (item)
+          gtk_menu_shell_insert(gtk_menu_, GTK_WIDGET(item), index);
+      } else {
+        SetMenuItemStyle(item, style);
+      }
+    }
   }
 
   static void DestroyMenuBuilderCallback(gpointer data) {
     delete reinterpret_cast<MenuBuilder *>(data);
   }
 
-  MenuInterface *AddPopup(const char *text) {
-    GtkMenuItem *item = GTK_MENU_ITEM(gtk_menu_item_new_with_mnemonic(
-        ConvertWindowsStyleMnemonics(text).c_str()));
-    gtk_widget_show(GTK_WIDGET(item));
-    GtkMenu *popup = GTK_MENU(gtk_menu_new());
-    gtk_widget_show(GTK_WIDGET(popup));
-    MenuBuilder *submenu = new MenuBuilder(GTK_MENU_SHELL(popup));
+  MenuInterface *AddPopup(const char *text, int priority) {
+    MenuBuilder *submenu = NULL;
+    GtkMenuItem *item = AddMenuItem(text, 0, NULL, priority);
+    if (item) {
+      GtkMenu *popup = GTK_MENU(gtk_menu_new());
+      gtk_widget_show(GTK_WIDGET(popup));
+      submenu = new MenuBuilder(GTK_MENU_SHELL(popup));
 
-    gtk_menu_item_set_submenu(item, GTK_WIDGET(popup));
-    g_object_set_data_full(G_OBJECT(item), kMenuItemBuilderTag,
-                           reinterpret_cast<gpointer>(submenu),
-                           DestroyMenuBuilderCallback);
-    if (text && *text)
-      g_object_set_data_full(G_OBJECT(item), kMenuItemTextTag,
-                             g_strdup(text), g_free);
-
-    gtk_menu_shell_append(gtk_menu_, GTK_WIDGET(item));
-    item_added_ = true;
+      gtk_menu_item_set_submenu(item, GTK_WIDGET(popup));
+      g_object_set_data_full(G_OBJECT(item), kMenuItemBuilderTag,
+                             reinterpret_cast<gpointer>(submenu),
+                             DestroyMenuBuilderCallback);
+    }
     return submenu;
   }
 
@@ -196,16 +315,17 @@ MenuBuilder::~MenuBuilder() {
 }
 
 void MenuBuilder::AddItem(const char *item_text, int style,
-                          ggadget::Slot1<void, const char *> *handler) {
-  impl_->AddItem(item_text, style, handler);
+                          Slot1<void, const char *> *handler, int priority) {
+  impl_->AddMenuItem(item_text, style, handler, priority);
 }
 
 void MenuBuilder::SetItemStyle(const char *item_text, int style) {
   impl_->SetItemStyle(item_text, style);
 }
 
-ggadget::MenuInterface *MenuBuilder::AddPopup(const char *popup_text) {
-  return impl_->AddPopup(popup_text);
+ggadget::MenuInterface *MenuBuilder::AddPopup(const char *popup_text,
+                                              int priority) {
+  return impl_->AddPopup(popup_text, priority);
 }
 
 GtkMenuShell *MenuBuilder::GetGtkMenuShell() const {

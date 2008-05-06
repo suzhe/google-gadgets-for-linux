@@ -41,9 +41,9 @@ class MenuBuilder : public ggadget::MenuInterface {
   virtual ~MenuBuilder();
 
   virtual void AddItem(const char *item_text, int style,
-                       ggadget::Slot1<void, const char *> *handler);
+                       Slot1<void, const char *> *handler, int priority);
   virtual void SetItemStyle(const char *item_text, int style);
-  virtual MenuInterface *AddPopup(const char *popup_text);
+  virtual MenuInterface *AddPopup(const char *popup_text, int priority);
 
   GtkMenuShell *GetGtkMenuShell() const;
 
