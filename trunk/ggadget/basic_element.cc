@@ -46,7 +46,7 @@ class BasicElement::Impl {
                   NULL),
         view_(view),
         hittest_(ViewInterface::HT_CLIENT),
-        cursor_(ViewInterface::CURSOR_ARROW),
+        cursor_(ViewInterface::CURSOR_DEFAULT),
         drop_target_(false),
         enabled_(false),
         width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),

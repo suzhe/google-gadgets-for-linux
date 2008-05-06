@@ -40,13 +40,14 @@ ScriptableMenu::~ScriptableMenu() {
 
 void ScriptableMenu::ScriptAddItem(const char *item_text, int style,
                                    Slot *handler) {
-  // All menu items added by gadget shall be checkable.
-  menu_->AddItem(item_text, style | MenuInterface::MENU_ITEM_FLAG_CHECKABLE,
-                 handler ? new SlotProxy1<void, const char *>(handler) : NULL);
+  menu_->AddItem(item_text, style,
+                 handler ? new SlotProxy1<void, const char *>(handler) : NULL,
+                 MenuInterface::MENU_ITEM_PRI_CLIENT);
 }
 
 ScriptableMenu *ScriptableMenu::ScriptAddPopup(const char *popup_text) {
-  ScriptableMenu *submenu = new ScriptableMenu(menu_->AddPopup(popup_text));
+  ScriptableMenu *submenu = new ScriptableMenu(
+          menu_->AddPopup(popup_text, MenuInterface::MENU_ITEM_PRI_CLIENT));
   submenus_.push_back(submenu);
   return submenu;
 }

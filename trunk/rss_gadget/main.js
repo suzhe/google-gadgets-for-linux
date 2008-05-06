@@ -370,7 +370,8 @@ function OnDetailsView(item) {
   var details = new Object();
   details.title = item.heading;
   details.details_control = control;
-  details.flags = gddDetailsViewFlagRemoveButton;
+  details.flags = gddDetailsViewFlagRemoveButton |
+                  gddDetailsViewFlagToolbarOpen;
 
   MarkItemAsRead(item);
 

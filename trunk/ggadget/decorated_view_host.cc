@@ -91,8 +91,8 @@ class DecoratedViewHost::Impl {
       if (child_view_ != child_view) {
         child_view_ = child_view;
         view_element_->SetChildView(child_view);
+        UpdateViewSize();
         ChildViewChanged();
-        // UpdateViewSize() will be triggered by ViewElement's OnSizeEvent.
       }
     }
 
@@ -519,7 +519,7 @@ class DecoratedViewHost::Impl {
               mouseover_ ? kVDShowTimeout : kVDHideTimeout);
         }
         if (!mouseover_)
-          SetCursor(-1);
+          SetCursor(CURSOR_DEFAULT);
       } else {
         if (!mouseover_) {
           mouseover_ = true;
@@ -566,10 +566,10 @@ class DecoratedViewHost::Impl {
                      y >= h - kVDMainBorderWidth * 2) {
             hittest_ = HT_BOTTOMLEFT;
             SetCursor(CURSOR_SIZENESW);
-          } else if (x >= w - kVDMainBorderWidth && h_resizable) {
+          } else if (x >= w - kVDMainBorderWidth && y >= top && h_resizable) {
             hittest_ = HT_RIGHT;
             SetCursor(CURSOR_SIZEWE);
-          } else if (x <= kVDMainBorderWidth && h_resizable) {
+          } else if (x <= kVDMainBorderWidth && y >= top && h_resizable) {
             hittest_ = HT_LEFT;
             SetCursor(CURSOR_SIZEWE);
           } else if (y >= h - kVDMainBorderWidth && v_resizable) {
@@ -586,52 +586,67 @@ class DecoratedViewHost::Impl {
         }
       }
 
-      if (hittest_ == HT_CLIENT)
+      if (hittest_ == HT_CLIENT) {
+        SetCursor(CURSOR_DEFAULT);
         return ViewDecoratorBase::OnMouseEvent(event);
+      }
 
       return EVENT_RESULT_UNHANDLED;
     }
 
     virtual bool OnAddContextMenuItems(MenuInterface *menu) {
-      menu->AddItem(
-          GM_(minimized_ ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0,
-          NewSlot(this, &NormalMainViewDecorator::CollapseExpandMenuCallback));
+      bool result = false;
+      View *child = GetChildView();
+      if (child)
+        result = child->OnAddContextMenuItems(menu);
+      else if (original_child_view_)
+        result = original_child_view_->OnAddContextMenuItems(menu);
 
-      menu->AddItem(
+      if (result) {
+        int checked = MenuInterface::MENU_ITEM_FLAG_CHECKED;
+        int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
+        menu->AddItem(
+          GM_(minimized_ ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0,
+          NewSlot(this, &NormalMainViewDecorator::CollapseExpandMenuCallback),
+          priority);
+
+        menu->AddItem(
           GM_(sidebar_ ? "MENU_ITEM_UNDOCK" : "MENU_ITEM_DOCK"), 0,
           NewSlot(this, sidebar_ ?
                   &NormalMainViewDecorator::UndockMenuCallback :
-                  &NormalMainViewDecorator::DockMenuCallback));
+                  &NormalMainViewDecorator::DockMenuCallback), priority);
 
-      if (!sidebar_ && !minimized_ && !popped_out_) {
-        MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"));
-        zoom->AddItem(GM_("MENU_ITEM_AUTO_FIT"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0));
-        zoom->AddItem(GM_("MENU_ITEM_50P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.5));
-        zoom->AddItem(GM_("MENU_ITEM_75P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.75));
-        zoom->AddItem(GM_("MENU_ITEM_100P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0));
-        zoom->AddItem(GM_("MENU_ITEM_125P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.25));
-        zoom->AddItem(GM_("MENU_ITEM_150P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.5));
-        zoom->AddItem(GM_("MENU_ITEM_175P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.75));
-        zoom->AddItem(GM_("MENU_ITEM_200P"), 0,
-          NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 2.0));
+        if (!sidebar_ && !minimized_ && !popped_out_) {
+          double scale = GetViewElement()->GetScale();
+          MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
+          zoom->AddItem(GM_("MENU_ITEM_AUTO_FIT"), 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_50P"), scale == 0.5 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.5),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_75P"), scale == 0.75 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.75),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_100P"), scale == 1.0 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_125P"), scale == 1.25 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.25),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_150P"), scale == 1.5 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.5),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_175P"), scale == 1.75 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.75),
+            priority);
+          zoom->AddItem(GM_("MENU_ITEM_200P"), scale == 2.0 ? checked : 0,
+            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 2.0),
+            priority);
+        }
       }
 
-      View *child = GetChildView();
-      if (child || original_child_view_) {
-        menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
-        if (child)
-          return child->OnAddContextMenuItems(menu);
-        else
-          return original_child_view_->OnAddContextMenuItems(menu);
-      }
-      return true;
+      return result;
     }
 
     virtual EventResult OnOtherEvent(const Event &event) {
@@ -1056,7 +1071,7 @@ class DecoratedViewHost::Impl {
       Event::Type t = event.GetType();
       hittest_ = HT_CLIENT;
       if (t == Event::EVENT_MOUSE_OUT) {
-        SetCursor(-1);
+        SetCursor(CURSOR_DEFAULT);
       } else {
         double x = event.GetX();
         double y = event.GetY();
@@ -1232,7 +1247,7 @@ class DecoratedViewHost::Impl {
       Event::Type t = event.GetType();
       hittest_ = HT_CLIENT;
       if (t == Event::EVENT_MOUSE_OUT) {
-        SetCursor(-1);
+        SetCursor(CURSOR_DEFAULT);
       } else {
         double x = event.GetX();
         double y = event.GetY();
@@ -1348,9 +1363,18 @@ class DecoratedViewHost::Impl {
 
     virtual void CloseDecoratedView() {
       if (feedback_handler_) {
+        // To make sure that openUrl can work.
+        bool old_interaction = false;
+        Gadget *gadget = GetGadget();
+        if (gadget)
+          old_interaction = gadget->SetInUserInteraction(true);
+
         (*feedback_handler_)(flags_);
         delete feedback_handler_;
         feedback_handler_ = NULL;
+
+        if (gadget)
+          gadget->SetInUserInteraction(old_interaction);
       }
       ViewDecoratorBase::CloseDecoratedView();
     }

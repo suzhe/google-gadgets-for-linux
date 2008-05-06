@@ -35,6 +35,8 @@
 #include <ggadget/sidebar.h>
 #include <ggadget/view.h>
 #include <ggadget/view_element.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_interface.h>
 
 using namespace ggadget;
 using namespace ggadget::gtk;
@@ -850,38 +852,41 @@ class SidebarGtkHost::Impl {
   }
 
   bool MenuGenerator(MenuInterface *menu) {
+    int priority = MenuInterface::MENU_ITEM_PRI_HOST;
     menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
-                  NewSlot(this, &Impl::AddGadgetHandlerWithOneArg));
-    menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+                  NewSlot(this, &Impl::AddGadgetHandlerWithOneArg), priority);
+    menu->AddItem(NULL, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
                   option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                  NewSlot(this, &Impl::HandleMenuAutoHide));
+                  NewSlot(this, &Impl::HandleMenuAutoHide), priority);
     menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"), option_always_on_top_ ?
                   MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                  NewSlot(this, &Impl::HandleMenuAlwaysOnTop));
+                  NewSlot(this, &Impl::HandleMenuAlwaysOnTop), priority);
     {
-      MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_ADD_SIDEBAR"));
+      MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_ADD_SIDEBAR"),
+                                          priority);
       sub->AddItem(GM_("MENU_ITEM_LEFT"),
                    option_sidebar_position_ == SIDEBAR_POSITION_LEFT ?
                    MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                   NewSlot(this, &Impl::HandleMenuReplaceSidebar));
+                   NewSlot(this, &Impl::HandleMenuReplaceSidebar), priority);
       sub->AddItem(GM_("MENU_ITEM_RIGHT"),
                    option_sidebar_position_ == SIDEBAR_POSITION_RIGHT ?
                    MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                   NewSlot(this, &Impl::HandleMenuReplaceSidebar));
+                   NewSlot(this, &Impl::HandleMenuReplaceSidebar), priority);
     }
     {
-      MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"));
+      MenuInterface *sub = menu->AddPopup(GM_("MENU_ITEM_FONT_SIZE"),
+                                          priority);
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_LARGE"), 0,
-                   NewSlot(this, &Impl::HandleMenuFontSizeChange));
+                   NewSlot(this, &Impl::HandleMenuFontSizeChange), priority);
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_DEFAULT"), 0,
-                   NewSlot(this, &Impl::HandleMenuFontSizeChange));
+                   NewSlot(this, &Impl::HandleMenuFontSizeChange), priority);
       sub->AddItem(GM_("MENU_ITEM_FONT_SIZE_SMALL"), 0,
-                   NewSlot(this, &Impl::HandleMenuFontSizeChange));
+                   NewSlot(this, &Impl::HandleMenuFontSizeChange), priority);
     }
-    menu->AddItem("", MenuInterface::MENU_ITEM_FLAG_SEPARATOR, NULL);
+    menu->AddItem(NULL, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_CLOSE"), 0,
-                  NewSlot(this, &Impl::HandleMenuClose));
+                  NewSlot(this, &Impl::HandleMenuClose), priority);
     return true;
   }
 
