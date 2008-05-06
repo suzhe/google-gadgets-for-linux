@@ -478,6 +478,7 @@ class View::Impl {
     if (type != Event::EVENT_MOUSE_OUT && enable_cache_ && canvas_cache_ &&
         canvas_cache_->GetPointValue(event.GetX(), event.GetY(),
                                      NULL, &opacity) && opacity == 0) {
+      DLOG("OnMouseEvent, type: %d", event.GetType());
       // Send out fake mouse out event if the pixel is fully transparent and
       // the mouse is over the view.
       if (mouse_over_) {

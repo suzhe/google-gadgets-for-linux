@@ -451,12 +451,9 @@ class SidebarGtkHost::Impl {
     DecoratedViewHost *decorator =
         new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED, false);
     decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
-    decorator->ConnectOnClose(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnCloseHandler)));
-    decorator->ConnectOnPopOut(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnPopOutHandler)));
-    decorator->ConnectOnPopIn(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnPopInHandler)));
+    decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
+    decorator->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, decorator));
+    decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
     ViewHostInterface *old = view->SwitchViewHost(decorator);
     if (old) old->Destroy();
     side_bar_->Layout();
@@ -491,6 +488,7 @@ class SidebarGtkHost::Impl {
       gtk_window_get_position(GTK_WINDOW(main_widget_), &sx, &sy);
       gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
       ele->ViewCoordToSelfCoord(px - sx, py - sy, &wpx, &wpy);
+      gdk_pointer_ungrab(gtk_get_current_event_time());
     }
     ViewHostInterface *new_host = NewSingleViewHost(view, true, wy);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
@@ -650,10 +648,8 @@ class SidebarGtkHost::Impl {
 
     DecoratedViewHost *decorator = new DecoratedViewHost(
         view_host, DecoratedViewHost::MAIN_STANDALONE, true);
-    decorator->ConnectOnClose(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnCloseHandler)));
-    decorator->ConnectOnPopIn(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnPopInHandler)));
+    decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
+    decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
     GadgetMoveClosure *closure =
         new GadgetMoveClosure(this, view_host, decorator, view, height);
     move_slots_[view->GetGadget()] = closure;
@@ -684,31 +680,10 @@ class SidebarGtkHost::Impl {
                                           true);
         break;
     }
-    decorator->ConnectOnClose(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnCloseHandler)));
-    decorator->ConnectOnPopIn(NewFunctorSlot<void>(
-        DecoratorSignalHandler(decorator, this, &Impl::OnPopInHandler)));
+    decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
+    decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
     return view_host;
   }
-
-  //TODO: refactor these methods/subclass which are the same w/ simple_gtk_host
-  class DecoratorSignalHandler {
-   public:
-    DecoratorSignalHandler(DecoratedViewHost *decorator, Impl *impl,
-                           void (Impl::*handler)(DecoratedViewHost *))
-      : decorator_(decorator), impl_(impl), handler_(handler) {
-    }
-    void operator()() const {
-      (impl_->*handler_)(decorator_);
-    }
-    // No use.
-    bool operator==(const DecoratorSignalHandler &) const { return false; }
-
-   private:
-    DecoratedViewHost *decorator_;
-    Impl *impl_;
-    void (Impl::*handler_)(DecoratedViewHost *);
-  };
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
     ASSERT(gadget);
@@ -763,8 +738,8 @@ class SidebarGtkHost::Impl {
       svh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
       expanded_popout_ =
           new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED, true);
-      expanded_popout_->ConnectOnClose(NewFunctorSlot<void>(
-        DecoratorSignalHandler(expanded_popout_, this, &Impl::OnCloseHandler)));
+      expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
+                                               expanded_popout_));
 
       // Send popout event to decorator first.
       SimpleEvent event(Event::EVENT_POPOUT);
@@ -800,7 +775,7 @@ class SidebarGtkHost::Impl {
     element_in_sidebar->SelfCoordToViewCoord(0, 0, &ex, &ey);
     int sx, sy;
     //FIXME: should use Decorator View's width, but now it is 0...
-    int pw = static_cast<int>(popout_view_host->GetView()->GetWidth());
+    int pw = static_cast<int>(popout_view_host->GetDecoratedView()->GetWidth());
     gtk_window_get_position(GTK_WINDOW(main_widget_), &sx, &sy);
     GtkWidget *win = gtk_widget_get_toplevel(GTK_WIDGET(
         popout_view_host->GetNativeWidget()));
