@@ -28,12 +28,19 @@
 #include <jsapi.h>
 
 #include <nsCOMPtr.h>
+#include <content/nsIContentPolicy.h>
 #include <dom/nsIScriptNameSpaceManager.h>
 #include <nsCRT.h>
 #include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
+#include <nsIDOMAbstractView.h>
+#include <nsIDOMDocument.h>
+#include <nsIDOMDocumentView.h>
+#include <nsIDOMNode.h>
+#include <nsIDOMWindow.h>
 #include <nsIGenericFactory.h>
 #include <nsIInterfaceRequestor.h>
+#include <nsIURI.h>
 #include <nsServiceManagerUtils.h>
 #include <nsStringAPI.h>
 #include <nsXPCOMCID.h>
@@ -51,6 +58,7 @@ using ggadget::gtkmoz::kEndOfMessage;
 using ggadget::gtkmoz::kEndOfMessageFull;
 using ggadget::gtkmoz::kNewBrowserCommand;
 using ggadget::gtkmoz::kSetContentCommand;
+using ggadget::gtkmoz::kOpenURLCommand;
 using ggadget::gtkmoz::kCloseBrowserCommand;
 using ggadget::gtkmoz::kQuitCommand;
 using ggadget::gtkmoz::kGetPropertyFeedback;
@@ -65,9 +73,6 @@ using ggadget::gtkmoz::kPingInterval;
 // The default values are useful when browser child is tested independently.
 static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0;
 static std::vector<GtkMozEmbed *> g_embeds;
-static GtkMozEmbed *g_embed_for_new_window = NULL;
-static GtkMozEmbed *g_last_new_window_embed = NULL;
-static GtkWidget *g_popup_for_new_window = NULL;
 
 #define EXTOBJ_CLASSNAME  "ExternalObject"
 #define EXTOBJ_PROPERTY_NAME "external" 
@@ -75,6 +80,13 @@ static GtkWidget *g_popup_for_new_window = NULL;
 #define EXTOBJ_CID { \
     0x224fb7b5, 0x6db0, 0x48db, \
     { 0xb8, 0x1e, 0x85, 0x15, 0xe7, 0x9f, 0x00, 0x30 } \
+}
+
+#define CONTENT_POLICY_CLASSNAME "ContentPolicy"
+#define CONTENT_POLICY_CONTRACTID "@google.com/ggl/content-policy;1"
+#define CONTENT_POLICY_CID { \
+    0x74d0deec, 0xb36b, 0x4b03, \
+    { 0xb0, 0x09, 0x36, 0xe3, 0x07, 0x68, 0xc8, 0x2c } \
 }
 
 static const char kDataURLPrefix[] = "data:";
@@ -86,7 +98,7 @@ static const nsIID kIScriptGlobalObjectIID = {
     { 0x98, 0x97, 0x22, 0x11, 0xea, 0xbc, 0xd0, 0x1c }
 };
 
-static int FindBrowserId(JSContext *cx) {
+static int FindBrowserIdByJSContext(JSContext *cx) {
   JSObject *js_global = JS_GetGlobalObject(cx);
   if (!js_global) {
     fprintf(stderr, "browser_child: No global object\n");
@@ -162,7 +174,7 @@ static std::string SendFeedbackWithBrowserId(const char *type, int browser_id,
 // Send a feedback with parameters to the controller through the up channel,
 // and return the reply (got in the return value channel).
 static std::string SendFeedback(const char *type, JSContext *cx, ...) {
-  int browser_id = FindBrowserId(cx);
+  int browser_id = FindBrowserIdByJSContext(cx);
   if (browser_id == -1)
     return "";
 
@@ -173,9 +185,9 @@ static std::string SendFeedback(const char *type, JSContext *cx, ...) {
   return result;
 }
 
-JSBool InvokeFunction(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
-                      jsval *rval) {
-  int browser_id = FindBrowserId(cx);
+static JSBool InvokeFunction(JSContext *cx, JSObject *obj, uintN argc,
+                             jsval *argv, jsval *rval) {
+  int browser_id = FindBrowserIdByJSContext(cx);
   if (browser_id == -1)
     return JS_FALSE;
 
@@ -201,9 +213,6 @@ JSBool InvokeFunction(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
 class ExternalObject : public nsIXPCScriptable {
  public:
-  ExternalObject() {
-  }
-
   NS_DECL_ISUPPORTS
 
   NS_IMETHOD GetClassName(char **class_name) {
@@ -326,44 +335,22 @@ class ExternalObject : public nsIXPCScriptable {
 
 NS_IMPL_ISUPPORTS1(ExternalObject, nsIXPCScriptable)
 
-ExternalObject g_external_object;
+static ExternalObject g_external_object;
 static ExternalObject *GetExternalObject() {
   g_external_object.AddRef();
   return &g_external_object;
 }
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(ExternalObject, GetExternalObject)
 
-static const nsModuleComponentInfo kComponentInfo = {
+static const nsModuleComponentInfo kExternalObjectComponentInfo = {
   EXTOBJ_CLASSNAME, EXTOBJ_CID, EXTOBJ_CONTRACTID, ExternalObjectConstructor
 };
 
-nsresult InitExternalObject() {
-  g_external_object.AddRef();
-
-  nsCOMPtr<nsIComponentRegistrar> registrar;
-  nsresult rv = NS_GetComponentRegistrar(getter_AddRefs(registrar));
-  NS_ENSURE_SUCCESS(rv, rv);
-  nsCOMPtr<nsIGenericFactory> factory;
-  rv = NS_NewGenericFactory(getter_AddRefs(factory), &kComponentInfo);
-  NS_ENSURE_SUCCESS(rv, rv);
-  rv = registrar->RegisterFactory(kComponentInfo.mCID,
-                                  EXTOBJ_CLASSNAME, EXTOBJ_CONTRACTID,
-                                  factory);
-  NS_ENSURE_SUCCESS(rv, rv);
-  nsCOMPtr<nsICategoryManager> categoryManager =
-        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-  return categoryManager->AddCategoryEntry(JAVASCRIPT_GLOBAL_PROPERTY_CATEGORY,
-                                           EXTOBJ_PROPERTY_NAME,
-                                           EXTOBJ_CONTRACTID,
-                                           PR_FALSE, PR_TRUE, nsnull);
-}
-
-std::string g_down_buffer;
+static std::string g_down_buffer;
 
 // This function is only used to decode the HTML/Text content sent in CONTENT.
 // We can't use JSONDecode because the script context is not available now.
-bool DecodeJSONString(const char *json_string, nsString *result) {
+static bool DecodeJSONString(const char *json_string, nsString *result) {
   if (!json_string || *json_string != '"')
     return false;
   while (*++json_string != '"') {
@@ -402,58 +389,97 @@ bool DecodeJSONString(const char *json_string, nsString *result) {
   return true;
 }
 
-static gint OnOpenURL(GtkMozEmbed *embed, const char *url, gpointer data) {
-  gboolean result = FALSE;
-
-  // "data:" URLs are the result of SetContent calls.
-  // Do not generate down message in this case.
-  if (strncmp(kDataURLPrefix, url, arraysize(kDataURLPrefix) - 1)) {
-    if (embed == g_embed_for_new_window) {
-      gtk_widget_destroy(g_popup_for_new_window);
-      g_popup_for_new_window = NULL;
-      g_embed_for_new_window = NULL;
-      embed = g_last_new_window_embed;
+static int FindBrowserIdByContentPolicyContext(nsISupports *context) {
+  nsCOMPtr<nsIDOMWindow> window(do_QueryInterface(context));
+  nsresult rv = NS_OK;
+  if (!window) {
+    nsCOMPtr<nsIDOMDocument> document(do_QueryInterface(context));
+    if (!document) {
+      nsCOMPtr<nsIDOMNode> node(do_QueryInterface(context, &rv));
+      NS_ENSURE_SUCCESS(rv, -1);
+      node->GetOwnerDocument(getter_AddRefs(document));
     }
+    nsCOMPtr<nsIDOMDocumentView> docview(do_QueryInterface(document, &rv));
+    NS_ENSURE_SUCCESS(rv, -1);
+    nsCOMPtr<nsIDOMAbstractView> view;
+    rv = docview->GetDefaultView(getter_AddRefs(view));
+    NS_ENSURE_SUCCESS(rv, -1);
+    window = do_QueryInterface(view);
+  }
 
-    std::vector<GtkMozEmbed *>::const_iterator it =
-        std::find(g_embeds.begin(), g_embeds.end(), embed);
-    if (it != g_embeds.end()) {
-      std::string r = SendFeedbackWithBrowserId(kOpenURLFeedback, 
-                                                it - g_embeds.begin(),
-                                                url, NULL);
-      // The controller should have opened the URL, so don't let the embedded
-      // browser open it.
-      if (r[0] != '0') {
-        result = TRUE;
+  for (std::vector<GtkMozEmbed *>::const_iterator it = g_embeds.begin();
+       it != g_embeds.end(); ++it) {
+    if (*it) {
+      nsCOMPtr<nsIWebBrowser> browser;
+      gtk_moz_embed_get_nsIWebBrowser(*it, getter_AddRefs(browser));
+      nsCOMPtr<nsIDOMWindow> window1;
+      rv = browser->GetContentDOMWindow(getter_AddRefs(window1));
+      NS_ENSURE_SUCCESS(rv, -1);
+      if (window == window1)
+        return it - g_embeds.begin();
+    }
+  }
+  fprintf(stderr, "browser_child: Can't find GtkMozEmbed from "
+          "ContentPolicy context\n");
+  return -1;
+}
+
+class ContentPolicy : public nsIContentPolicy {
+ public:
+  NS_DECL_ISUPPORTS
+
+  NS_IMETHOD ShouldLoad(PRUint32 content_type, nsIURI *content_location,
+                        nsIURI *request_origin, nsISupports *context,
+                        const nsACString &mime_type_guess, nsISupports *extra,
+                        PRInt16 *retval) {
+    *retval = ACCEPT;
+    if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
+      // If the URL is opened the first time in a blank window or frame,
+      // request_origin is NULL or "about:blank". 
+      if (content_location && request_origin) {
+        nsCString url_spec, origin_spec;
+        content_location->GetSpec(url_spec);
+        request_origin->GetSpec(origin_spec);
+        if (!origin_spec.Equals(nsCString("about:blank")) &&
+            !origin_spec.Equals(url_spec)) {
+          int browser_id = FindBrowserIdByContentPolicyContext(context);
+          if (browser_id != -1) {
+            std::string r = SendFeedbackWithBrowserId(kOpenURLFeedback, 
+                                                      browser_id,
+                                                      url_spec.get(), NULL);
+            // The controller should have opened the URL, so don't let the
+            // embedded browser open it.
+            if (r[0] != '0')
+              *retval = REJECT_OTHER;
+          }
+        }
       }
     }
+    return NS_OK;
   }
 
-  return result;
-}
-
-static void OnNewWindow(GtkMozEmbed *embed, GtkMozEmbed **retval,
-                        gint chrome_mask, gpointer data) {
-  if (embed == g_embed_for_new_window) {
-    *retval = NULL;
-  } else {
-    if (!GTK_IS_WIDGET(g_embed_for_new_window)) {
-      g_embed_for_new_window = GTK_MOZ_EMBED(gtk_moz_embed_new());
-      g_signal_connect(g_embed_for_new_window, "new_window",
-                       G_CALLBACK(OnNewWindow), NULL);
-      g_signal_connect(g_embed_for_new_window, "open_uri",
-                       G_CALLBACK(OnOpenURL), NULL);
-      g_popup_for_new_window = gtk_window_new(GTK_WINDOW_POPUP);
-      gtk_container_add(GTK_CONTAINER(g_popup_for_new_window),
-                        GTK_WIDGET(g_embed_for_new_window));
-      gtk_widget_set_size_request(GTK_WIDGET(g_embed_for_new_window), 0, 0);
-      gtk_window_resize(GTK_WINDOW(g_popup_for_new_window), 0, 0);
-      gtk_widget_show_all(g_popup_for_new_window);
-    }
-    *retval = g_embed_for_new_window;
-    g_last_new_window_embed = embed;
+  NS_IMETHOD ShouldProcess(PRUint32 content_type, nsIURI *content_location,
+                           nsIURI *request_origin, nsISupports *context,
+                           const nsACString & mime_type, nsISupports *extra,
+                           PRInt16 *retval) {
+    return ShouldLoad(content_type, content_location, request_origin,
+                      context, mime_type, extra, retval);
   }
+};
+
+NS_IMPL_ISUPPORTS1(ContentPolicy, nsIContentPolicy)
+
+static ContentPolicy g_content_policy;
+static ContentPolicy *GetContentPolicy() {
+  g_content_policy.AddRef();
+  return &g_content_policy;
 }
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(ContentPolicy, GetContentPolicy)
+
+static const nsModuleComponentInfo kContentPolicyComponentInfo = {
+  CONTENT_POLICY_CLASSNAME, CONTENT_POLICY_CID, CONTENT_POLICY_CONTRACTID,
+  ContentPolicyConstructor
+};
 
 static void OnBrowserDestroy(GtkObject *object, gpointer user_data) {
   size_t id = reinterpret_cast<size_t>(user_data);
@@ -506,8 +532,6 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
   GtkMozEmbed *embed = GTK_MOZ_EMBED(gtk_moz_embed_new());
   g_embeds[id] = embed;
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(embed));
-  g_signal_connect(embed, "new_window", G_CALLBACK(OnNewWindow), NULL);
-  g_signal_connect(embed, "open_uri", G_CALLBACK(OnOpenURL), NULL);
   gtk_widget_show_all(window);
 }
 
@@ -543,6 +567,20 @@ static void SetContent(int param_count, const char **params, size_t id) {
   gtk_moz_embed_load_url(embed, url.c_str());
 }
 
+static void OpenURL(int param_count, const char **params, size_t id) {
+  if (param_count != 3) {
+    fprintf(stderr, "browser_child: Incorrect param count for %s: "
+            "3 expected, %d given\n", kOpenURLCommand, param_count);
+    return;
+  }
+  if (id >= g_embeds.size()) {
+    fprintf(stderr, "browser_child: Invalid browser id %zd given to SetContent\n", id);
+    return;
+  }
+  // params[2]: URL.
+  gtk_moz_embed_load_url(g_embeds[id], params[2]);
+}
+
 static void ProcessDownMessage(int param_count, const char **params) {
   NS_ASSERTION(param_count > 0, "");
   if (strcmp(params[0], kQuitCommand) == 0) {
@@ -561,6 +599,10 @@ static void ProcessDownMessage(int param_count, const char **params) {
   }
   if (strcmp(params[0], kSetContentCommand) == 0) {
     SetContent(param_count, params, id);
+    return;
+  }
+  if (strcmp(params[0], kOpenURLCommand) == 0) {
+    OpenURL(param_count, params, id);
     return;
   }
   if (strcmp(params[0], kCloseBrowserCommand) == 0) {
@@ -633,6 +675,48 @@ static gboolean CheckController(gpointer data) {
   return TRUE;
 }
 
+static nsresult InitCustomComponents() {
+  nsCOMPtr<nsIComponentRegistrar> registrar;
+  nsresult rv = NS_GetComponentRegistrar(getter_AddRefs(registrar));
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsICategoryManager> category_manager =
+        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Register external object (Javascript window.external object). 
+  g_external_object.AddRef();
+  nsCOMPtr<nsIGenericFactory> factory;
+  rv = NS_NewGenericFactory(getter_AddRefs(factory),
+                            &kExternalObjectComponentInfo);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = registrar->RegisterFactory(kExternalObjectComponentInfo.mCID,
+                                  EXTOBJ_CLASSNAME, EXTOBJ_CONTRACTID,
+                                  factory);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = category_manager->AddCategoryEntry(JAVASCRIPT_GLOBAL_PROPERTY_CATEGORY,
+                                          EXTOBJ_PROPERTY_NAME,
+                                          EXTOBJ_CONTRACTID,
+                                          PR_FALSE, PR_TRUE, nsnull);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Register customized content policy.
+  g_content_policy.AddRef();
+  rv = NS_NewGenericFactory(getter_AddRefs(factory),
+                            &kContentPolicyComponentInfo);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = registrar->RegisterFactory(kContentPolicyComponentInfo.mCID,
+                                  CONTENT_POLICY_CLASSNAME,
+                                  CONTENT_POLICY_CONTRACTID,
+                                  factory);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = category_manager->AddCategoryEntry("content-policy",
+                                          CONTENT_POLICY_CONTRACTID,
+                                          CONTENT_POLICY_CONTRACTID,
+                                          PR_FALSE, PR_TRUE, nsnull);
+  NS_ENSURE_SUCCESS(rv, rv);
+  return rv;
+}
+
 int main(int argc, char **argv) {
   gtk_init(&argc, &argv);
   signal(SIGPIPE, OnSigPipe);
@@ -653,7 +737,7 @@ int main(int argc, char **argv) {
   g_io_channel_unref(channel);
 
   gtk_moz_embed_push_startup();
-  InitExternalObject();
+  InitCustomComponents();
   if (g_ret_fd != g_down_fd) {
     // Only start ping timer in actual environment to ease testing.
     g_timeout_add(kPingInterval, CheckController, NULL);

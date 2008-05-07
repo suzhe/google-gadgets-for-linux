@@ -57,6 +57,19 @@ const char kNewBrowserCommand[] = "NEW";
 const char kSetContentCommand[] = "CONTENT";
 
 /**
+ * The controller lets browser child to open a URL.
+ *
+ * Message format:
+ * <code>
+ * URL\n
+ * Browser ID\n
+ * URL (not JSON encoded)\n
+ * """EOM"""\n
+ * </code>
+ */
+const char kOpenURLCommand[] = "URL";
+
+/**
  * The controller wants to close a browser.
  *
  * Message format:
