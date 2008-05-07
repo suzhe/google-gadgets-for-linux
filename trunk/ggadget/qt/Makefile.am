@@ -20,7 +20,7 @@ if GGL_BUILD_LIBGGADGET_QT
 SUBDIRS = . tests
 
 MOC_FILES		= qt_main_loop.moc \
-			  qt_menu.moc \
+			  qt_menu_internal.moc \
 			  qt_gadget_widget.moc \
 			  qt_view_host.moc
 
@@ -79,7 +79,7 @@ CLEANFILES		= $(MOC_FILES)
 
 qt_main_loop.moc:qt_main_loop.h
 	$(MOC) $< -o $@
-qt_menu.moc:qt_menu.h
+qt_menu_internal.moc:qt_menu_internal.h
 	$(MOC) $< -o $@
 qt_gadget_widget.moc:qt_gadget_widget.h
 	$(MOC) $< -o $@

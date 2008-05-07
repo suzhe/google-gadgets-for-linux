@@ -17,25 +17,79 @@
 #include <ggadget/logger.h>
 #include <ggadget/slot.h>
 #include "qt_menu.h"
+#include "qt_menu_internal.h"
 
 namespace ggadget {
 namespace qt {
-#include "qt_menu.moc"
 
 class QtMenu::Impl {
  public:
-  Impl(QMenu *qmenu) : qt_menu_(qmenu) { }
-  void AddItem(const char *item_text, int style,
-      ggadget::Slot1<void, const char *> *handler) {
-    QAction *action;
-    if (style & MENU_ITEM_FLAG_SEPARATOR || !item_text || !*item_text) {
-      action = qt_menu_->addSeparator();
-    } else {
-      action = qt_menu_->addAction(item_text);
-      MenuItemInfo *info = new MenuItemInfo(item_text, handler, action);
-      if (item_text) menu_items_[item_text] = info;
-    }
+  Impl(QMenu *qmenu) : qt_menu_(qmenu) {}
 
+  void AddItem(const char *item_text, int style,
+      ggadget::Slot1<void, const char *> *handler,
+      int priority) {
+    QAction *action;
+    if (!item_text || !*item_text) {
+      action = new QAction(qt_menu_);
+      action->setSeparator(true);
+    } else {
+      action = new QAction(item_text, qt_menu_);
+      MenuItemInfo *info = new MenuItemInfo(qt_menu_, item_text, handler, action);
+      menu_items_[item_text] = info;
+      ApplyStyle(action, style);
+    }
+    AddAction(action, priority);
+  }
+
+  void SetItemStyle(const char *item_text, int style) {
+    std::map<std::string, MenuItemInfo*>::iterator iter;
+    iter = menu_items_.find(item_text);
+    if (iter == menu_items_.end()) return;
+    QAction *action = iter->second->action_;
+    ApplyStyle(action, style);
+  }
+
+  MenuInterface *AddPopup(const char *popup_text, int priority){
+    std::string text_str(popup_text ? popup_text : "");
+    QMenu *submenu = new QMenu(text_str.c_str());
+    AddAction(submenu->menuAction(), priority);
+    return new QtMenu(submenu);
+  }
+
+  void AddAction(QAction *action, int priority) {
+    std::map<int, QAction*>::iterator iter = prio_map_.begin();
+    int prev = -1, next = -1;
+
+    for (; iter != prio_map_.end(); iter++) {
+      if (iter->first < priority) {
+        prev = iter->first;
+        continue;
+      }
+      if (iter->first > priority) {
+        next = iter->first;
+        break;
+      }
+    }
+    if (next != -1) {
+      qt_menu_->insertAction(iter->second, action);
+    } else {
+      qt_menu_->addAction(action);
+    }
+    if (prio_map_.find(priority) == prio_map_.end()) {
+      // A new priority added
+      if (prev != -1) {
+        prio_map_[priority] = qt_menu_->insertSeparator(action);
+      } else if (next != -1) {
+        QAction *before = prio_map_[next];
+        prio_map_[next] = qt_menu_->insertSeparator(before);
+      } else {
+        prio_map_[priority] = action;
+      }
+    }
+  }
+
+  void ApplyStyle(QAction *action, int style) {
     if (style & MENU_ITEM_FLAG_GRAYED)
       action->setDisabled(true);
     else
@@ -49,34 +103,12 @@ class QtMenu::Impl {
     }
   }
 
-  void SetItemStyle(const char *item_text, int style) {
-    std::map<std::string, MenuItemInfo*>::iterator iter;
-    iter = menu_items_.find(item_text);
-    if (iter == menu_items_.end()) return;
-    QAction *action = iter->second->action_;
-
-    if (style & MENU_ITEM_FLAG_GRAYED)
-      action->setDisabled(true);
-    else
-      action->setDisabled(false);
-    
-    if (style & MENU_ITEM_FLAG_CHECKED)
-      action->setChecked(true);
-    else
-      action->setChecked(false);
-  }
-
-  MenuInterface *AddPopup(const char *popup_text){
-    std::string text_str(popup_text ? popup_text : "");
-    QMenu *submenu = qt_menu_->addMenu(text_str.c_str());
-    return new QtMenu(submenu);
-  }
-
   QMenu *GetNativeMenu() { return qt_menu_; }
   QMenu *qt_menu_;
   std::map<std::string, MenuItemInfo*> menu_items_;
+  // store the first action of each priority
+  std::map<int, QAction*> prio_map_;
 };
-//bool QtMenu::setting_style_ = false;
 
 QtMenu::QtMenu(QMenu *qmenu)
     : impl_(new Impl(qmenu)) {
@@ -86,21 +118,23 @@ QtMenu::~QtMenu() {
 }
 
 void QtMenu::AddItem(const char *item_text, int style,
-                          ggadget::Slot1<void, const char *> *handler) {
-  impl_->AddItem(item_text, style, handler);
+                     ggadget::Slot1<void, const char *> *handler,
+                     int priority) {
+  impl_->AddItem(item_text, style, handler, priority);
 }
 
 void QtMenu::SetItemStyle(const char *item_text, int style) {
   impl_->SetItemStyle(item_text, style);
 }
 
-ggadget::MenuInterface *QtMenu::AddPopup(const char *popup_text) {
-  return impl_->AddPopup(popup_text);
+ggadget::MenuInterface *QtMenu::AddPopup(const char *popup_text, int priority) {
+  return impl_->AddPopup(popup_text, priority);
 }
 
-QMenu *QtMenu::GetNativeMenu() { 
+QMenu *QtMenu::GetNativeMenu() {
   return impl_->GetNativeMenu();
 }
 
 } // namespace qt
 } // namespace ggadget
+#include "qt_menu_internal.moc"
