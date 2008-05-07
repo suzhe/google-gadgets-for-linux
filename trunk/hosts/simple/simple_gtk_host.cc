@@ -18,7 +18,6 @@
 #include <string>
 #include <map>
 
-#include "simple_gtk_host.h"
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
 #include <ggadget/gadget.h>
@@ -33,6 +32,9 @@
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/file_manager_factory.h>
 
+#include "simple_gtk_host.h"
+#include "gadget_browser_host.h"
+
 using namespace ggadget;
 using namespace ggadget::gtk;
 
@@ -45,36 +47,6 @@ namespace gtk {
 
 class SimpleGtkHost::Impl {
  public:
-  // A special Host for Gadget browser to show browser in a decorated window.
-  class GadgetBrowserHost : public HostInterface {
-   public:
-    GadgetBrowserHost(HostInterface *owner, int view_debug_mode)
-      : owner_(owner), view_debug_mode_(view_debug_mode) {
-    }
-    virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-      return new SingleViewHost(type, 1.0, true, true, true, view_debug_mode_);
-    }
-    virtual void RemoveGadget(Gadget *gadget, bool save_data) {
-      GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());
-    }
-    virtual void DebugOutput(DebugLevel level, const char *message) const {
-      owner_->DebugOutput(level, message);
-    }
-    virtual bool OpenURL(const char *url) const {
-      return owner_->OpenURL(url);
-    }
-    virtual bool LoadFont(const char *filename) {
-      return owner_->LoadFont(filename);
-    }
-    virtual void ShowGadgetAboutDialog(Gadget *gadget) {
-      owner_->ShowGadgetAboutDialog(gadget);
-    }
-    virtual void Run() {}
-   private:
-    HostInterface *owner_;
-    int view_debug_mode_;
-  };
-
   Impl(SimpleGtkHost *owner, double zoom, bool decorated, int view_debug_mode)
     : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
@@ -387,7 +359,7 @@ class SimpleGtkHost::Impl {
       expanded_original_ = decorated;
       ViewHostInterface *svh =
           new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, zoom_,
-                             false, false, true, view_debug_mode_);
+                             false, false, false, view_debug_mode_);
       expanded_popout_ =
           new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED, true);
       expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,

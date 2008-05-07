@@ -1406,7 +1406,7 @@ class DecoratedViewHost::Impl {
                                                    &caption_height);
         caption_height = std::min(caption_height * 2, top_height * 2);
         top_height = caption_height + kVDDetailsBorderWidth +
-            kVDDetailsCaptionMargin * 2;
+            kVDDetailsCaptionMargin * 2 + 1;
       }
 
       caption_->SetPixelHeight(caption_height);
@@ -1414,7 +1414,7 @@ class DecoratedViewHost::Impl {
 
       // If there is no button at the bottom, then don't show bottom image.
       if (!remove_button_ && !negative_button_)
-        bottom_->SetPixelHeight(kVDDetailsBorderWidth);
+        bottom_->SetPixelHeight(kVDDetailsBorderWidth - 1);
       else
         bottom_->SetPixelHeight(bottom_->GetSrcHeight());
 

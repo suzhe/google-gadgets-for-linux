@@ -478,7 +478,6 @@ class View::Impl {
     if (type != Event::EVENT_MOUSE_OUT && enable_cache_ && canvas_cache_ &&
         canvas_cache_->GetPointValue(event.GetX(), event.GetY(),
                                      NULL, &opacity) && opacity == 0) {
-      DLOG("OnMouseEvent, type: %d", event.GetType());
       // Send out fake mouse out event if the pixel is fully transparent and
       // the mouse is over the view.
       if (mouse_over_) {
@@ -849,6 +848,7 @@ class View::Impl {
       target->ClearRect(0, 0, width_, height_);
     } else {
       target = canvas;
+      target->PushState();
     }
 
     // No need to draw children if there is a popup element and it's fully
@@ -901,7 +901,9 @@ class View::Impl {
 
       popup_element_.Get()->Draw(target);
     }
+
     target->PopState();
+
     if (target == canvas_cache_)
       canvas->DrawCanvas(0, 0, canvas_cache_);
 
