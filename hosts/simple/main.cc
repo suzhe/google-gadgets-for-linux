@@ -53,7 +53,8 @@ static const char *kGlobalExtensions[] = {
   "default-framework",
   "libxml2-xml-parser",
   "default-options",
-  "dbus-script-class",
+  // Disable DBUS script class for now to ensure security.
+  // "dbus-script-class",
   "gtk-edit-element",
   "gtkmoz-browser-element",
   "gst-mediaplayer-element",

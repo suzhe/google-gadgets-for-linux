@@ -69,7 +69,10 @@ ADD_DEFINITIONS(
   -DGGL_HOST_LINUX
   -DGGL_USE_X11
   -DGGL_MODULE_DIR=\\\"../modules\\\"
-  -DGGL_RESOURCE_DIR=\\\".\\\")
+  # TODO:
+  -DGGL_RESOURCE_DIR=\\\".\\\"
+  # TODO:
+  -DGGL_LIBEXEC_DIR=\\\".\\\")
 
 IF(UNIX)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Werror -Wconversion")

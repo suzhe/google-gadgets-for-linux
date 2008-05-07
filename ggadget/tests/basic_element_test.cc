@@ -76,9 +76,9 @@ TEST_F(BasicElementTest, TestCursor) {
             NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
-  ASSERT_TRUE(m.GetCursor() == ViewInterface::CURSOR_ARROW);
+  ASSERT_EQ(ViewInterface::CURSOR_DEFAULT, m.GetCursor());
   m.SetCursor(ViewInterface::CURSOR_BUSY);
-  ASSERT_TRUE(m.GetCursor() == ViewInterface::CURSOR_BUSY);
+  ASSERT_EQ(ViewInterface::CURSOR_BUSY, m.GetCursor());
 }
 
 TEST_F(BasicElementTest, TestDropTarget) {
