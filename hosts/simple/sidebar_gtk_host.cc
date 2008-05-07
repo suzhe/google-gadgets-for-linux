@@ -107,10 +107,11 @@ class SidebarGtkHost::Impl {
           height_(height) {
       sidebar_ = gtk_widget_get_toplevel(GTK_WIDGET(down_cast<SingleViewHost *>(
             owner->side_bar_->GetViewHost())->GetNativeWidget()));
-      AddConnection(outer_view_host_->ConnectOnMoveDrag(
-            NewSlot(this, &GadgetMoveClosure::HandleMove)));
-      AddConnection(outer_view_host_->ConnectOnEndMoveDrag(
-            NewSlot(this, &GadgetMoveClosure::HandleMoveEnd)));
+      // FIXME:
+      //AddConnection(outer_view_host_->ConnectOnMoveDrag(
+      //      NewSlot(this, &GadgetMoveClosure::HandleMove)));
+      //AddConnection(outer_view_host_->ConnectOnEndMoveDrag(
+      //      NewSlot(this, &GadgetMoveClosure::HandleMoveEnd)));
       AddConnection(decorator_view_host_->ConnectOnDock(
             NewSlot(this, &GadgetMoveClosure::HandleDock)));
     }
@@ -196,7 +197,8 @@ class SidebarGtkHost::Impl {
         NewSlot(this, &Impl::ReportScriptError));
     view_host_ = new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
                                     decorated, false, false, view_debug_mode_);
-    view_host_->ConnectOnEndMoveDrag(NewSlot(this, &Impl::HandleSideBarMove));
+    // FIXME:
+    //view_host_->ConnectOnEndMoveDrag(NewSlot(this, &Impl::HandleSideBarMove));
     side_bar_ = new SideBar(owner_, view_host_);
     side_bar_->ConnectOnAddGadget(NewSlot(this, &Impl::AddGadgetHandler));
     side_bar_->ConnectOnMenuOpen(NewSlot(this, &Impl::MenuGenerator));

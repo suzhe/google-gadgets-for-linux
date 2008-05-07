@@ -21,6 +21,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/gadget.h>
+#include <ggadget/messages.h>
 #include "single_view_host.h"
 #include "view_widget_binder.h"
 #include "cairo_graphics.h"
@@ -38,7 +39,7 @@ class SingleViewHost::Impl {
        double zoom,
        bool decorated,
        bool remove_on_close,
-       bool native_drag_mode,
+       bool record_states,
        int debug_mode)
     : type_(type),
       owner_(owner),
@@ -51,17 +52,21 @@ class SingleViewHost::Impl {
       cancel_button_(NULL),
       tooltip_(new Tooltip(kShowTooltipDelay, kHideTooltipDelay)),
       binder_(NULL),
-      debug_mode_(debug_mode),
-      feedback_handler_(NULL),
-      adjust_window_size_source_(0),
+      zoom_(zoom),
       decorated_(decorated),
       remove_on_close_(remove_on_close),
-      native_drag_mode_(native_drag_mode),
-      zoom_(zoom),
+      record_states_(record_states),
+      debug_mode_(debug_mode),
+      adjust_window_size_source_(0),
       win_x_(0),
       win_y_(0),
-      cursor_offset_x_(-1),
-      cursor_offset_y_(-1) {
+      win_width_(0),
+      win_height_(0),
+      is_keep_above_(false),
+      move_dragging_(false),
+      resize_dragging_(false),
+      enable_signals_(true),
+      feedback_handler_(NULL) {
     ASSERT(owner);
   }
 
@@ -73,11 +78,11 @@ class SingleViewHost::Impl {
   }
 
   void Detach() {
-    // To make sure that it won't be accessed anymore.
-    view_ = NULL;
-
     if (window_)
       CloseView();
+
+    // To make sure that it won't be accessed anymore.
+    view_ = NULL;
 
     if (adjust_window_size_source_)
       g_source_remove(adjust_window_size_source_);
@@ -85,8 +90,10 @@ class SingleViewHost::Impl {
 
     delete feedback_handler_;
     feedback_handler_ = NULL;
+
     delete binder_;
     binder_ = NULL;
+
     if (window_) {
       gtk_widget_destroy(window_);
       window_ = NULL;
@@ -102,8 +109,15 @@ class SingleViewHost::Impl {
   }
 
   void SetView(ViewInterface *view) {
+    if (view_ == view)
+      return;
+
     Detach();
-    if (view == NULL) return;
+
+    if (view == NULL) {
+      on_view_changed_signal_();
+      return;
+    }
 
     view_ = view;
     bool no_background = false;
@@ -129,44 +143,49 @@ class SingleViewHost::Impl {
       widget_ = fixed_;
     } else {
       // details and main view only need a toplevel window.
-      // TODO: buttons of details view shall be provided by view decorator.
+      // buttons of details view shall be provided by view decorator.
       window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
       gtk_container_add(GTK_CONTAINER(window_), fixed_);
-      if (type_ == ViewHostInterface::VIEW_HOST_MAIN) {
-        // Only main view may have transparent background.
-        no_background = true;
-        DisableWidgetBackground(window_);
-        if (!decorated_)
-          gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
-      }
+      no_background = true;
+      DisableWidgetBackground(window_);
+      if (!decorated_)
+        gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
       widget_ = window_;
     }
 
     gtk_widget_realize(GTK_WIDGET(window_));
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
+    gtk_window_set_gravity(GTK_WINDOW(window_), GDK_GRAVITY_STATIC);
 
     g_signal_connect(G_OBJECT(window_), "delete-event",
                      G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+    g_signal_connect(G_OBJECT(window_), "focus-in-event",
+                     G_CALLBACK(FocusInHandler), this);
+#ifdef _DEBUG
+    g_signal_connect(G_OBJECT(window_), "focus-out-event",
+                     G_CALLBACK(FocusOutHandler), this);
+#endif
+    g_signal_connect(G_OBJECT(window_), "enter-notify-event",
+                     G_CALLBACK(EnterNotifyHandler), this);
+    g_signal_connect(G_OBJECT(window_), "window-state-event",
+                     G_CALLBACK(WindowStateHandler), this);
     g_signal_connect_after(G_OBJECT(window_), "show",
-                           G_CALLBACK(WindowShowHandler), this);
-    g_signal_connect(G_OBJECT(window_), "hide",
+                     G_CALLBACK(WindowShowHandler), this);
+    g_signal_connect_after(G_OBJECT(window_), "hide",
                      G_CALLBACK(WindowHideHandler), this);
     g_signal_connect(G_OBJECT(window_), "configure-event",
                      G_CALLBACK(ConfigureHandler), this);
+
     g_signal_connect(G_OBJECT(fixed_), "size-request",
                      G_CALLBACK(FixedSizeRequestHandler), this);
-    if (!native_drag_mode_) {
-      g_signal_connect(G_OBJECT(window_), "motion-notify-event",
-          G_CALLBACK(MotionHandler), this);
-      g_signal_connect(G_OBJECT(window_), "button-release-event",
-          G_CALLBACK(ButtonHandler), this);
-    }
 
     // For details and main view, the view is bound to the toplevel window
     // instead of the GtkFixed widget, to get better performance and make the
     // input event mask effective.
     binder_ = new ViewWidgetBinder(view_, owner_, widget_, no_background);
+
+    on_view_changed_signal_();
   }
 
   void ViewCoordToNativeWidgetCoord(
@@ -267,13 +286,18 @@ class SingleViewHost::Impl {
 
   bool ShowView(bool modal, int flags, Slot1<void, int> *feedback_handler) {
     ASSERT(view_);
-    if (feedback_handler_)
-      delete feedback_handler_;
+    ASSERT(window_);
+
+    delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
     // Adjust the window size just before showing the view, to make sure that
     // the window size has correct default size when showing.
-    LoadViewGeometricInfo();
+    if (record_states_)
+      LoadWindowStates();
+    else
+      gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
+
     AdjustWindowSize();
     gtk_window_present(GTK_WINDOW(window_));
 
@@ -297,7 +321,33 @@ class SingleViewHost::Impl {
   }
 
   void CloseView() {
-    gtk_widget_hide(window_);
+    ASSERT(window_);
+    if (window_)
+      gtk_widget_hide(window_);
+  }
+
+  void SetWindowPosition(int x, int y) {
+    ASSERT(window_);
+    if (window_)
+      gtk_window_move(GTK_WINDOW(window_), x, y);
+  }
+
+  void SetWindowSize(int width, int height) {
+    ASSERT(window_);
+    if (window_)
+      gtk_window_resize(GTK_WINDOW(window_), width, height);
+  }
+
+  void SetKeepAbove(bool keep_above) {
+    ASSERT(window_);
+    if (window_) {
+      bool shown = GTK_WIDGET_MAPPED(window_);
+      enable_signals_ = false;
+      if (shown) gtk_widget_hide(window_);
+      gtk_window_set_keep_above(GTK_WINDOW(window_), keep_above);
+      if (shown) gtk_widget_show(window_);
+      enable_signals_ = true;
+    }
   }
 
   std::string GetViewPositionOptionPrefix() {
@@ -314,7 +364,7 @@ class SingleViewHost::Impl {
     return "";
   }
 
-  void SaveViewGeometricInfo() {
+  void SaveWindowStates() {
     if (view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
@@ -322,59 +372,43 @@ class SingleViewHost::Impl {
                             Variant(win_x_));
       opt->PutInternalValue((opt_prefix + "_y").c_str(),
                             Variant(win_y_));
+      opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
+                            Variant(is_keep_above_));
 
-      // Don't save size and zoom information, it's conflict with view
-      // decorator.
-      /*
-      ViewInterface::ResizableMode mode = view_->GetResizable();
-      if (mode == ViewInterface::RESIZABLE_TRUE) {
-        opt->PutInternalValue((opt_prefix + "_width").c_str(),
-                              Variant(view_->GetWidth()));
-        opt->PutInternalValue((opt_prefix + "_height").c_str(),
-                              Variant(view_->GetHeight()));
-      }
-
-      if (mode != ViewInterface::RESIZABLE_FALSE) {
-        opt->PutInternalValue((opt_prefix + "_zoom").c_str(),
-                              Variant(view_->GetGraphics()->GetZoom()));
-      }
-      */
     }
+    // Don't save size and zoom information, it's conflict with view
+    // decorator.
   }
 
-  void LoadViewGeometricInfo() {
-    OptionsInterface *opt = view_->GetGadget()->GetOptions();
-    std::string opt_prefix = GetViewPositionOptionPrefix();
-    Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
-    Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
-    int x, y;
-    if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
-      gtk_window_move(GTK_WINDOW(window_), x, y);
+  void LoadWindowStates() {
+    if (view_ && view_->GetGadget()) {
+      OptionsInterface *opt = view_->GetGadget()->GetOptions();
+      std::string opt_prefix = GetViewPositionOptionPrefix();
+      Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
+      Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
+      int x, y;
+      if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
+        gtk_window_move(GTK_WINDOW(window_), x, y);
+      } else {
+        // Always place the window to the center of the screen if the window
+        // position was not saved before.
+        gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
+      }
+      Variant keep_above =
+          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
+      if (keep_above.type() == Variant::TYPE_BOOL &&
+          VariantValue<bool>()(keep_above)) {
+        SetKeepAbove(true);
+      } else {
+        SetKeepAbove(false);
+      }
     }
-
     // Don't load size and zoom information, it's conflict with view
     // decorator.
-    /*
-    ViewInterface::ResizableMode mode = view_->GetResizable();
-    if (mode == ViewInterface::RESIZABLE_TRUE) {
-      double w, h;
-      Variant vw = opt->GetInternalValue((opt_prefix + "_width").c_str());
-      Variant vh = opt->GetInternalValue((opt_prefix + "_height").c_str());
-      if (vw.ConvertToDouble(&w) && vh.ConvertToDouble(&h) &&
-          view_->OnSizing(&w, &h)) {
-        view_->SetSize(w, h);
-      }
-    }
+  }
 
-    if (mode != ViewInterface::RESIZABLE_FALSE) {
-      double zoom;
-      Variant vzoom = opt->GetInternalValue((opt_prefix + "_zoom").c_str());
-      if (vzoom.ConvertToDouble(&zoom) &&
-          view_->GetGraphics()->GetZoom() != zoom) {
-        view_->GetGraphics()->SetZoom(zoom);
-      }
-    }
-    */
+  void KeepAboveMenuCallback(const char *, bool keep_above) {
+    SetKeepAbove(keep_above);
   }
 
   bool ShowContextMenu(int button) {
@@ -387,9 +421,15 @@ class SingleViewHost::Impl {
     context_menu_ = gtk_menu_new();
     MenuBuilder menu_builder(GTK_MENU_SHELL(context_menu_));
 
-    // The return value is ignored, because the context menu will be shown
-    // if there is any menu item added.
-    view_->OnAddContextMenuItems(&menu_builder);
+    // If it returns true, then means that it's allowed to add additional menu
+    // items.
+    if (view_->OnAddContextMenuItems(&menu_builder)) {
+      menu_builder.AddItem(
+          GM_("MENU_ITEM_ALWAYS_ON_TOP"),
+          is_keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+          NewSlot(this, &Impl::KeepAboveMenuCallback, !is_keep_above_),
+          MenuInterface::MENU_ITEM_PRI_HOST);
+    }
 
     if (menu_builder.ItemAdded()) {
       int gtk_button;
@@ -409,11 +449,9 @@ class SingleViewHost::Impl {
   }
 
   void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {
+    ASSERT(window_);
     if (!gtk_window_get_resizable(GTK_WINDOW(window_)) ||
         !GTK_WIDGET_MAPPED(window_))
-      return;
-
-    if (on_resize_drag_signal_(button, hittest))
       return;
 
     GdkWindowEdge edge;
@@ -439,6 +477,11 @@ class SingleViewHost::Impl {
       return;
     }
 
+    if (on_begin_resize_drag_signal_(button, hittest))
+      return;
+
+    resize_dragging_ = true;
+
     int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
                       button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
     gint x, y;
@@ -448,94 +491,119 @@ class SingleViewHost::Impl {
   }
 
   void BeginMoveDrag(int button) {
+    ASSERT(window_);
     if (!GTK_WIDGET_MAPPED(window_))
       return;
 
     if (on_begin_move_drag_signal_(button))
       return;
 
+    move_dragging_ = true;
+
     gint x, y;
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
-    if (native_drag_mode_) {
-      int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
-                        button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
-      gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
-                                 x, y, gtk_get_current_event_time());
-    } else {
-      gtk_window_get_position(GTK_WINDOW(window_), &win_x_, &win_y_);
-      cursor_offset_x_ = x - win_x_;
-      cursor_offset_y_ = y - win_y_;
-      DLOG("handle move by the window(%p), cursor: %dx%d, window org: %dx%d",
-          window_, cursor_offset_x_, cursor_offset_y_, win_x_, win_y_);
+    int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
+                      button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
+    gtk_window_begin_move_drag(GTK_WINDOW(window_), gtk_button,
+                               x, y, gtk_get_current_event_time());
+  }
+
+  // gtk signal handlers.
+  static gboolean FocusInHandler(GtkWidget *widget, GdkEventFocus *event,
+                                 gpointer user_data) {
+    DLOG("FocusInHandler(%p)", widget);
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->enable_signals_) {
+      if (impl->resize_dragging_) {
+        impl->resize_dragging_ = false;
+        impl->on_end_resize_drag_signal_();
+      }
+      if (impl->move_dragging_) {
+        impl->move_dragging_ = false;
+        impl->on_end_move_drag_signal_();
+      }
     }
+    return FALSE;
   }
 
-  void MoveDrag(int button) {
-    on_move_drag_signal_(button);
+#ifdef _DEBUG
+  static gboolean FocusOutHandler(GtkWidget *widget, GdkEventFocus *event,
+                                  gpointer user_data) {
+    DLOG("FocusOutHandler(%p)", widget);
+    return FALSE;
+  }
+#endif
+
+  static gboolean EnterNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
+                                     gpointer user_data) {
+    DLOG("EnterNotifyHandler(%p): %d, %d", widget, event->mode, event->detail);
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->enable_signals_) {
+      if (impl->resize_dragging_) {
+        impl->resize_dragging_ = false;
+        impl->on_end_resize_drag_signal_();
+      }
+      if (impl->move_dragging_) {
+        impl->move_dragging_ = false;
+        impl->on_end_move_drag_signal_();
+      }
+    }
+    return FALSE;
   }
 
-  void EndMoveDrag(int button) {
-    if (!GTK_WIDGET_MAPPED(window_))
-      return;
-    on_end_move_drag_signal_(button);
+  static gboolean WindowStateHandler(GtkWidget *widget,
+                                     GdkEventWindowState *event,
+                                     gpointer user_data) {
+    DLOG("WindowStateHandler(%p): 0x%x, 0x%x", widget,
+         event->changed_mask, event->new_window_state);
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    impl->is_keep_above_ = (event->new_window_state & GDK_WINDOW_STATE_ABOVE);
+    return FALSE;
   }
 
   static void WindowShowHandler(GtkWidget *widget, gpointer user_data) {
     DLOG("View window is shown.");
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->view_ && impl->enable_signals_)
+      impl->on_show_hide_signal_(true);
   }
 
   static void WindowHideHandler(GtkWidget *widget, gpointer user_data) {
     DLOG("View window is going to be hidden.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->view_ && impl->enable_signals_) {
+      impl->on_show_hide_signal_(false);
 
-    if (impl->view_) {
-      impl->SaveViewGeometricInfo();
+      if (impl->record_states_)
+        impl->SaveWindowStates();
       if (impl->feedback_handler_ &&
           impl->type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
         (*impl->feedback_handler_)(ViewInterface::DETAILS_VIEW_FLAG_NONE);
         delete impl->feedback_handler_;
         impl->feedback_handler_ = NULL;
       } else if (impl->type_ == ViewHostInterface::VIEW_HOST_MAIN &&
-                 impl->remove_on_close_) {
+                 impl->remove_on_close_ && impl->view_->GetGadget()) {
         impl->view_->GetGadget()->RemoveMe(true);
       }
     }
   }
 
-  static gboolean MotionHandler(GtkWidget *widget, GdkEventButton *event,
-                                gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->cursor_offset_x_ < 0 || impl->cursor_offset_y_ < 0)
-      return FALSE;
-    gdk_pointer_grab(impl->widget_->window, FALSE,
-                     (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
-                                    GDK_POINTER_MOTION_MASK |
-                                    GDK_POINTER_MOTION_HINT_MASK),
-                     NULL, NULL, event->time);
-    int x = static_cast<int>(event->x_root) - impl->cursor_offset_x_;
-    int y = static_cast<int>(event->y_root) - impl->cursor_offset_y_;
-    gtk_window_move(GTK_WINDOW(widget), x, y);
-    impl->MoveDrag(event->button);
-    return TRUE;
-  }
-
-  static gboolean ButtonHandler(GtkWidget *widget, GdkEventButton *event,
-                                gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->cursor_offset_x_ < 0 || impl->cursor_offset_y_ < 0)
-      return FALSE;
-    DLOG("Handle button release event.");
-    impl->EndMoveDrag(event->button);
-    impl->cursor_offset_x_ = -1;
-    impl->cursor_offset_y_ = -1;
-    gdk_pointer_ungrab(event->time);
-    return TRUE;
-  }
-
   static gboolean ConfigureHandler(GtkWidget *widget, GdkEventConfigure *event,
                                    gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    gtk_window_get_position(GTK_WINDOW(widget), &impl->win_x_, &impl->win_y_);
+    if (impl->enable_signals_) {
+      if (impl->win_x_ != event->x || impl->win_y_ != event->y) {
+        impl->win_x_ = event->x;
+        impl->win_y_ = event->y;
+        impl->on_moved_signal_(event->x, event->y);
+      }
+      if (impl->win_width_ != event->width ||
+          impl->win_height_ != event->height) {
+        impl->win_width_ = event->width;
+        impl->win_height_ = event->height;
+        impl->on_resized_signal_(event->width, event->height);
+      }
+    }
     return FALSE;
   }
 
@@ -580,28 +648,37 @@ class SingleViewHost::Impl {
   Tooltip *tooltip_;
   ViewWidgetBinder *binder_;
 
-  int debug_mode_;
-  Slot1<void, int> *feedback_handler_;
-
-  int adjust_window_size_source_;
+  double zoom_;
   bool decorated_;
   bool remove_on_close_;
-  bool native_drag_mode_;
-  double zoom_;
+  bool record_states_;
+
+  int debug_mode_;
+
+  int adjust_window_size_source_;
+
   int win_x_;
   int win_y_;
-  int cursor_offset_x_;
-  int cursor_offset_y_;
+  int win_width_;
+  int win_height_;
 
-  Signal2<bool, int, int> on_resize_drag_signal_;
+  bool is_keep_above_;
+  bool move_dragging_;
+  bool resize_dragging_;
+  bool enable_signals_;
+
+  Slot1<void, int> *feedback_handler_;
+
+  Signal0<void> on_view_changed_signal_;
+  Signal1<void, bool> on_show_hide_signal_;
+
+  Signal2<bool, int, int> on_begin_resize_drag_signal_;
+  Signal2<void, int, int> on_resized_signal_;
+  Signal0<void> on_end_resize_drag_signal_;
 
   Signal1<bool, int> on_begin_move_drag_signal_;
-  Signal1<void, int> on_end_move_drag_signal_;
-  Signal1<void, int> on_move_drag_signal_;
-  Signal0<void> on_dock_signal_;
-  Signal0<void> on_undock_signal_;
-  Signal0<void> on_expand_signal_;
-  Signal0<void> on_unexpand_signal_;
+  Signal2<void, int, int> on_moved_signal_;
+  Signal0<void> on_end_move_drag_signal_;
 
   static const unsigned int kShowTooltipDelay = 500;
   static const unsigned int kHideTooltipDelay = 4000;
@@ -611,10 +688,10 @@ SingleViewHost::SingleViewHost(ViewHostInterface::Type type,
                                double zoom,
                                bool decorated,
                                bool remove_on_close,
-                               bool native_drag_mode,
+                               bool record_states,
                                int debug_mode)
     : impl_(new Impl(type, this, zoom, decorated, remove_on_close,
-                   native_drag_mode, debug_mode)) {
+                     record_states, debug_mode)) {
 }
 
 SingleViewHost::~SingleViewHost() {
@@ -702,14 +779,6 @@ void SingleViewHost::BeginMoveDrag(int button) {
   impl_->BeginMoveDrag(button);
 }
 
-void SingleViewHost::MoveDrag(int button) {
-  impl_->MoveDrag(button);
-}
-
-void SingleViewHost::EndMoveDrag(int button) {
-  impl_->EndMoveDrag(button);
-}
-
 void SingleViewHost::Alert(const char *message) {
   ShowAlertDialog(impl_->view_->GetCaption().c_str(), message);
 }
@@ -732,20 +801,67 @@ GraphicsInterface *SingleViewHost::NewGraphics() const {
   return new CairoGraphics(impl_->zoom_);
 }
 
-Connection *SingleViewHost::ConnectOnResizeDrag(Slot2<bool, int, int> *slot) {
-  return impl_->on_resize_drag_signal_.Connect(slot);
+GtkWidget *SingleViewHost::GetWindow() const {
+  return impl_->window_;
+}
+
+void SingleViewHost::GetWindowPosition(int *x, int *y) const {
+  if (x) *x = impl_->win_x_;
+  if (y) *y = impl_->win_y_;
+}
+
+void SingleViewHost::SetWindowPosition(int x, int y) {
+  impl_->SetWindowPosition(x, y);
+}
+
+void SingleViewHost::GetWindowSize(int *width, int *height) const {
+  if (width) *width = impl_->win_width_;
+  if (height) *height = impl_->win_height_;
+}
+
+void SingleViewHost::SetWindowSize(int width, int height) {
+  impl_->SetWindowSize(width, height);
+}
+
+bool SingleViewHost::IsKeepAbove() const {
+  return impl_->is_keep_above_;
+}
+
+void SingleViewHost::SetKeepAbove(bool keep_above) {
+  impl_->SetKeepAbove(keep_above);
+}
+
+Connection *SingleViewHost::ConnectOnViewChanged(Slot0<void> *slot) {
+  return impl_->on_view_changed_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnShowHide(Slot1<void, bool> *slot) {
+  return impl_->on_show_hide_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnBeginResizeDrag(
+    Slot2<bool, int, int> *slot) {
+  return impl_->on_begin_resize_drag_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnResized(Slot2<void, int, int> *slot) {
+  return impl_->on_resized_signal_.Connect(slot);
+}
+
+Connection *SingleViewHost::ConnectOnEndResizeDrag(Slot0<void> *slot) {
+  return impl_->on_end_resize_drag_signal_.Connect(slot);
 }
 
 Connection *SingleViewHost::ConnectOnBeginMoveDrag(Slot1<bool, int> *slot) {
   return impl_->on_begin_move_drag_signal_.Connect(slot);
 }
 
-Connection *SingleViewHost::ConnectOnEndMoveDrag(Slot1<void, int> *slot) {
-  return impl_->on_end_move_drag_signal_.Connect(slot);
+Connection *SingleViewHost::ConnectOnMoved(Slot2<void, int, int> *slot) {
+  return impl_->on_moved_signal_.Connect(slot);
 }
 
-Connection *SingleViewHost::ConnectOnMoveDrag(Slot1<void, int> *slot) {
-  return impl_->on_move_drag_signal_.Connect(slot);
+Connection *SingleViewHost::ConnectOnEndMoveDrag(Slot0<void> *slot) {
+  return impl_->on_end_move_drag_signal_.Connect(slot);
 }
 
 } // namespace gtk

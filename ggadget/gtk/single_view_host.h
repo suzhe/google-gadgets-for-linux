@@ -46,13 +46,15 @@ class SingleViewHost : public ViewHostInterface {
    * @param view The View instance associated to this host.
    * @param zoom Zoom factor used by the Graphics object.
    * @param remove_on_close remove the gadget when the main view is closed.
+   * @param record_states records the window states (eg. position),
+   *        so that they can be restored next time.
    * @param debug_mode DebugMode when drawing elements.
    */
   SingleViewHost(ViewHostInterface::Type type,
                  double zoom,
                  bool decorated,
                  bool remove_on_close,
-                 bool native_drag_mode,
+                 bool record_states,
                  int debug_mode);
   virtual ~SingleViewHost();
 
@@ -79,8 +81,6 @@ class SingleViewHost : public ViewHostInterface {
   virtual void BeginResizeDrag(int button, ViewInterface::HitTest hittest);
 
   virtual void BeginMoveDrag(int button);
-  virtual void MoveDrag(int button);
-  virtual void EndMoveDrag(int button);
 
   virtual void Alert(const char *message);
   virtual bool Confirm(const char *message);
@@ -89,8 +89,40 @@ class SingleViewHost : public ViewHostInterface {
   virtual int GetDebugMode() const;
 
  public:
+  /** Gets the top level gtk window. */
+  GtkWidget *GetWindow() const;
+
+  /** Gets and sets position of the top level window. */
+  void GetWindowPosition(int *x, int *y) const;
+  void SetWindowPosition(int x, int y);
+
+  /** Gets and sets size of the top level window. */
+  void GetWindowSize(int *width, int *height) const;
+  void SetWindowSize(int width, int height);
+
+  /** Gets and sets keep-above state. */
+  bool IsKeepAbove() const;
+  void SetKeepAbove(bool keep_above);
+
+ public:
   /**
-   * Connects a slot to OnResizeDrag signal.
+   * Connects a slot to OnViewChanged signal.
+   *
+   * The slot will be called when the attached view has been changed.
+   */
+  Connection *ConnectOnViewChanged(Slot0<void> *slot);
+
+  /**
+   * Connects a slot to OnShowHide signal.
+   *
+   * The slot will be called when the show/hide state of the top level window
+   * has been changed. The first parameter of the slot indicates the new
+   * show/hide state, true means the top level window has been shown.
+   */
+  Connection *ConnectOnShowHide(Slot1<void, bool> *slot);
+
+  /**
+   * Connects a slot to OnBeginResizeDrag signal.
    *
    * The slot will be called when BeginResizeDrag() method is called, the first
    * parameter of the slot is the mouse button initiated the drag. See
@@ -101,10 +133,25 @@ class SingleViewHost : public ViewHostInterface {
    * performed for the topleve GtkWindow, otherwise no other action will be
    * performed.
    */
-  Connection *ConnectOnResizeDrag(Slot2<bool, int, int> *slot);
+  Connection *ConnectOnBeginResizeDrag(Slot2<bool, int, int> *slot);
 
   /**
-   * Connects a slot to OnMoveDrag signal.
+   * Connects a slot to OnResized signal.
+   *
+   * The slot will be called when the top level window size is changed.
+   * The two parameters are the new width and height of the window.
+   */
+  Connection *ConnectOnResized(Slot2<void, int, int> *slot);
+
+  /**
+   * Connects a slot to OnEndResizeDrag signal.
+   *
+   * The slot will be called when the resize drag has been finished.
+   */
+  Connection *ConnectOnEndResizeDrag(Slot0<void> *slot);
+
+  /**
+   * Connects a slot to OnBeginMoveDrag signal.
    *
    * The slot will be called when BeginMoveDrag() method is called, the first
    * parameter of the slot is the mouse button initiated the drag. @See
@@ -116,9 +163,21 @@ class SingleViewHost : public ViewHostInterface {
    */
   Connection *ConnectOnBeginMoveDrag(Slot1<bool, int> *slot);
 
-  Connection *ConnectOnEndMoveDrag(Slot1<void, int> *slot);
+  /**
+   * Connects a slot to OnMoved signal.
+   *
+   * The slot will be called when the top level window position is changed.
+   * The two parameters are the new x and y position of the top level window's
+   * top left corner, related to the screen.
+   */
+  Connection *ConnectOnMoved(Slot2<void, int, int> *slot);
 
-  Connection *ConnectOnMoveDrag(Slot1<void, int> *slot);
+  /**
+   * Connects a slot to OnEndMoveDrag signal.
+   *
+   * The slot will be called when the move drag has been finished.
+   */
+  Connection *ConnectOnEndMoveDrag(Slot0<void> *slot);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(SingleViewHost);
