@@ -99,6 +99,8 @@ void QGadgetWidget::mouseDoubleClickEvent(QMouseEvent * event) {
 
 void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
   int buttons = GetMouseButtons(event->buttons());
+  if (buttons != MouseEvent::BUTTON_NONE)
+    grabMouse();
   MouseEvent e(Event::EVENT_MOUSE_MOVE,
                event->x() / zoom_, event->y() / zoom_, 0, 0,
                buttons, 0);
@@ -124,7 +126,6 @@ void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
 
 void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
   setFocus(Qt::MouseFocusReason);
-  grabMouse();
   EventResult handler_result = EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 

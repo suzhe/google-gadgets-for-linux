@@ -36,51 +36,18 @@ class QtMenu : public ggadget::MenuInterface {
   virtual ~QtMenu();
 
   virtual void AddItem(const char *item_text, int style,
-                       ggadget::Slot1<void, const char *> *handler);
+                       ggadget::Slot1<void, const char *> *handler,
+                       int priority);
   virtual void SetItemStyle(const char *item_text, int style);
-  virtual MenuInterface *AddPopup(const char *popup_text);
+  virtual MenuInterface *AddPopup(const char *popup_text, int priority);
 
   QMenu *GetNativeMenu();
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(QtMenu);
 
- /* static void OnItemActivate(GtkMenuItem *menu_item, gpointer user_data);
-  static void SetMenuItemStyle(GtkMenuItem *menu_item, int style);
-
-  struct MenuItemInfo {
-    std::string item_text;
-    GtkMenuItem *gtk_menu_item;
-    int style;
-    ggadget::Slot1<void, const char *> *handler;
-    QtMenu *submenu;
-  };
-
-  typedef std::multimap<std::string, MenuItemInfo> ItemMap;
-  ItemMap item_map_;
-  static bool setting_style_; */
   class Impl;
   Impl *impl_;
-};
-
-class MenuItemInfo : public QObject {
-  Q_OBJECT
- public:
-  MenuItemInfo(const char *text,
-               ggadget::Slot1<void, const char *> *handler,
-               QAction *action)
-    : item_text_(text), handler_(handler), action_(action) {
-      connect(action, SIGNAL(triggered()), this, SLOT(OnTriggered()));
-  }
-
-  std::string item_text_;
-  ggadget::Slot1<void, const char *> *handler_;
-  QAction *action_;
-
- public slots:
-  void OnTriggered() {
-    if (handler_) (*handler_)(item_text_.c_str());
-  }
 };
 
 } // namesapce qt
