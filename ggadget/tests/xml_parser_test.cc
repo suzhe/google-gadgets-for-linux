@@ -30,14 +30,15 @@ const char *xml =
   "<?pi value?>"
   "<!DOCTYPE root [\n"
   "  <!ENTITY test \"Test Entity\">\n"
+  "  <!ENTITY testext SYSTEM \"file:///dev/tty\">\n"
   "]>"
-  "<root a=\"v\" a1=\"v1\">\n"
+  "<root a=\"&lt;v&gt;\" a1=\"v1\">\n"
   " <s aa=\"&VV;\" aa1=\"vv1\">s &CONTENT;</s>\n"
   " <s b=\"bv\" b1=\"bv1\"/>\n"
   " <s1 c=\"cv\" c1=\"cv1\">s1 &CONTENT;</s1>\n"
   " <s aa=\"&VV;\" aa1=\"&VV;1\">s &CONTENT1;</s>\n"
   " <s1 c=\"cv\" c1=\"cv1\">\n"
-  "   s1 &CONTENT1; &test;\n"
+  "   s1 &CONTENT1; &test; &testext;\n"
   "   <!-- &COMMENTS; -->\n"
   "   <s11>s11 &CONTENT;</s11>\n"
   "   <![CDATA[ cdata &cdata; ]]>\n"
@@ -54,14 +55,14 @@ TEST(XMLParser, ParseXMLIntoXPathMap) {
                                                "TheFileName", "root",
                                                NULL, NULL, &map));
   ASSERT_EQ(19U, map.size());
-  EXPECT_STREQ("v", map.find("@a")->second.c_str());
+  EXPECT_STREQ("<v>", map.find("@a")->second.c_str());
   EXPECT_STREQ("v1", map.find("@a1")->second.c_str());
   EXPECT_STREQ("s content", map.find("s")->second.c_str());
-  EXPECT_STREQ("vv", map.find("s@aa")->second.c_str());
+  EXPECT_STREQ("<&vv>", map.find("s@aa")->second.c_str());
   EXPECT_STREQ("s1 content", map.find("s1")->second.c_str());
   EXPECT_STREQ("", map.find("s[2]")->second.c_str());
   EXPECT_STREQ("s content1", map.find("s[3]")->second.c_str());
-  EXPECT_STREQ("vv", map.find("s[3]@aa")->second.c_str());
+  EXPECT_STREQ("<&vv>", map.find("s[3]@aa")->second.c_str());
   EXPECT_STREQ("", map.find("s2")->second.c_str());
 
 }
@@ -105,7 +106,7 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
   ASSERT_TRUE(doc_ele);
   EXPECT_STREQ("root", doc_ele->GetTagName().c_str());
-  EXPECT_STREQ("v", doc_ele->GetAttribute("a").c_str());
+  EXPECT_STREQ("<v>", doc_ele->GetAttribute("a").c_str());
   EXPECT_STREQ("v1", doc_ele->GetAttribute("a1").c_str());
   DOMNodeListInterface *children = doc_ele->GetChildNodes();
   EXPECT_EQ(13U, children->GetLength());
@@ -116,8 +117,9 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   DOMElementInterface *sub_ele = down_cast<DOMElementInterface *>(sub_node);
   DOMNodeListInterface *sub_children = sub_ele->GetChildNodes();
   EXPECT_EQ(7U, sub_children->GetLength());
-  EXPECT_EQ(DOMNodeInterface::TEXT_NODE, sub_children->GetItem(0)->GetNodeType());
-  EXPECT_STREQ("\n   s1 content1 Test Entity\n   ",
+  EXPECT_EQ(DOMNodeInterface::TEXT_NODE,
+            sub_children->GetItem(0)->GetNodeType());
+  EXPECT_STREQ("\n   s1 content1 Test Entity testext\n   ",
                sub_children->GetItem(0)->GetNodeValue());
   EXPECT_EQ(DOMNodeInterface::COMMENT_NODE,
             sub_children->GetItem(1)->GetNodeType());
@@ -136,6 +138,40 @@ TEST(XMLParser, ParseXMLIntoDOM) {
   delete children;
   delete sub_children;
   ASSERT_EQ(1, domdoc->GetRefCount());
+  domdoc->Unref();
+}
+
+TEST(XMLParser, LaughsAttack) {
+  // The "Billion Laughs" attack; see
+  // http://www-128.ibm.com/developerworks/xml/library/x-tipcfsx.html
+  static const char* laughs_attack =
+    "<!DOCTYPE doc ["
+    "<!ENTITY ha \"Ha !\">"
+    "<!ENTITY ha2 \"&ha; &ha; &ha; &ha; &ha;\">"
+    "<!ENTITY ha3 \"&ha2; &ha2; &ha2; &ha2; &ha2;\">"
+    "<!ENTITY ha4 \"&ha3; &ha3; &ha3; &ha3; &ha3;\">"
+    "<!ENTITY ha5 \"&ha4; &ha4; &ha4; &ha4; &ha4;\">"
+    "<!ENTITY ha6 \"&ha5; &ha5; &ha5; &ha5; &ha5;\">"
+    "<!ENTITY ha7 \"&ha6; &ha6; &ha6; &ha6; &ha6;\">"
+    "<!ENTITY ha8 \"&ha7; &ha7; &ha7; &ha7; &ha7;\">"
+    "<!ENTITY ha9 \"&ha8; &ha8; &ha8; &ha8; &ha8;\">"
+    "<!ENTITY ha10 \"&ha9; &ha9; &ha9; &ha9; &ha9;\">"
+    "<!ENTITY ha11 \"&ha10; &ha10; &ha10; &ha10; &ha10;\">"
+    "<!ENTITY ha12 \"&ha11; &ha11; &ha11; &ha11; &ha11;\">"
+    "<!ENTITY ha13 \"&ha12; &ha12; &ha12; &ha12; &ha12;\">"
+    "<!ENTITY ha14 \"&ha13; &ha13; &ha13; &ha13; &ha13;\">"
+    "<!ENTITY ha15 \"&ha14; &ha14; &ha14; &ha14; &ha14;\">"
+    "]>"
+    "<ele>&ha2; &ha15;</ele>";
+
+  XMLParserInterface *xml_parser = GetXMLParser();
+  DOMDocumentInterface *domdoc = xml_parser->CreateDOMDocument();
+  domdoc->Ref();
+  ASSERT_TRUE(xml_parser->ParseContentIntoDOM(laughs_attack, &g_strings,
+                                              "attack", NULL, NULL, NULL,
+                                              domdoc, NULL, NULL));
+  DOMElementInterface *doc_ele = domdoc->GetDocumentElement();
+  ASSERT_STREQ("Ha ! ", doc_ele->GetTextContent().substr(0, 5).c_str());
   domdoc->Unref();
 }
 
@@ -329,7 +365,7 @@ int main(int argc, char **argv) {
 
   g_strings["CONTENT"] = "content";
   g_strings["CONTENT1"] = "content1";
-  g_strings["VV"] = "vv";
+  g_strings["VV"] = "<&vv>";
   g_strings["COMMENTS"] = "comments";
 
   return RUN_ALL_TESTS();

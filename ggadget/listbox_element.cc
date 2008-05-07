@@ -229,8 +229,7 @@ ListBoxElement::~ListBoxElement() {
 }
 
 void ListBoxElement::ScrollToIndex(int index) {
-  SetScrollYPosition(index *
-                     static_cast<int>(GetItemPixelHeight()));
+  SetScrollYPosition(index * static_cast<int>(GetItemPixelHeight()));
 }
 
 Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
@@ -238,8 +237,8 @@ Connection *ListBoxElement::ConnectOnChangeEvent(Slot0<void> *slot) {
 }
 
 EventResult ListBoxElement::OnMouseEvent(const MouseEvent &event, bool direct,
-                                     BasicElement **fired_element,
-                                     BasicElement **in_element) {
+                                         BasicElement **fired_element,
+                                         BasicElement **in_element) {
   // Interecept mouse wheel events from Item elements and send to Div
   // directly to enable wheel scrolling.
   bool wheel = (event.GetType() == Event::EVENT_MOUSE_WHEEL);

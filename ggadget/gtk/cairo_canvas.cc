@@ -682,9 +682,9 @@ bool CairoCanvas::DrawFilledRectWithCanvas(double x, double y,
 }
 
 bool CairoCanvas::DrawCanvasWithMask(double x, double y,
-                                    const CanvasInterface *img,
-                                    double mx, double my,
-                                    const CanvasInterface *mask) {
+                                     const CanvasInterface *img,
+                                     double mx, double my,
+                                     const CanvasInterface *mask) {
   if (!img || !mask) return false;
 
   const CairoCanvas *cmask =  down_cast<const CairoCanvas *>(mask);

@@ -30,6 +30,9 @@
 namespace ggadget {
 namespace libxml2 {
 
+// Entity will be ignored if size bigger than this limit.
+static const size_t kMaxEntitySize = 65536U;
+
 static inline char *FromXmlCharPtr(xmlChar *xml_char_ptr) {
   return reinterpret_cast<char *>(xml_char_ptr);
 }
@@ -85,8 +88,6 @@ static void ErrorFunc(void *ctx, const char *msg, ...) {
   va_end(ap);
   g_error_occurred = true;
 }
-// initGenericErrorDefaultFunc needs a pointer to function pointer.
-xmlGenericErrorFunc kErrorFunc = ErrorFunc;
 
 // Converts a string in given encoding to a utf8.
 // Here use libxml routines instead of normal iconv routines to simplify
@@ -109,11 +110,12 @@ static bool ConvertStringToUTF8(const std::string &content,
   xmlBuffer *output_buffer = xmlBufferCreate();
   // xmlCharEncInFunc's result > 0 even if encoding error occurred, so use
   // ErrorFunc to detect errors.
-  initGenericErrorDefaultFunc(&kErrorFunc);
+  xmlGenericErrorFunc old_error_func = xmlGenericError;
+  xmlSetGenericErrorFunc(NULL, ErrorFunc);
   g_error_occurred = false;
   bool success = false;
   int result = xmlCharEncInFunc(handler, output_buffer, input_buffer);
-  initGenericErrorDefaultFunc(NULL);
+  xmlSetGenericErrorFunc(NULL, old_error_func);
   if (!g_error_occurred && result > 0) {
     ASSERT(result == xmlBufferLength(output_buffer));
     const char *output = FromXmlCharPtr(xmlBufferContent(output_buffer));
@@ -150,30 +152,78 @@ static void ReplaceXMLEncodingDecl(std::string *xml) {
 
 struct ContextData {
   const StringMap *extra_entities;
-  getEntitySAXFunc original_handler;
+  getEntitySAXFunc original_get_entity_handler;
+  entityDeclSAXFunc original_entity_decl_handler;
 };
 
-xmlEntity *GetEntityHandler(void *ctx, const xmlChar *name) {
+static void EntityDeclHandler(void *ctx, const xmlChar *name, int type,
+                              const xmlChar *public_id,
+                              const xmlChar *system_id,
+                              xmlChar *content) {
+  if (type == 1 && system_id == NULL) {
+    // Only handle internal entities.
+    xmlParserCtxt *ctxt = static_cast<xmlParserCtxt *>(ctx);
+    ASSERT(ctxt && ctxt->_private);
+    ContextData *data = static_cast<ContextData *>(ctxt->_private);
+    data->original_entity_decl_handler(ctx, name, type, public_id,
+                                       system_id, content);
+  } else {
+    DLOG("External or bad entity decl ignored: %d %s %s %s %s",
+         type, name, public_id, system_id, content);
+  }
+}
+
+// Expand the entity and check the length.
+static void ExpandEntity(xmlEntity *entity) {
+  if (entity->children && (entity->children->next ||
+                           entity->children->type != XML_TEXT_NODE)) {
+    xmlNode *text = xmlNewText(ToXmlCharPtr(""));
+    size_t size = 0;
+    for (xmlNode *child = entity->children; child; child = child->next) {
+      xmlChar *child_content = xmlNodeGetContent(child);
+      size_t child_size = strlen(FromXmlCharPtr(child_content));
+      size += child_size;
+      if (size > kMaxEntitySize) {
+        LOG("Entity '%s' is too long, truncated", entity->name);
+        xmlFree(child_content);
+        break;
+      }
+      xmlNodeAddContentLen(text, child_content, child_size);
+      xmlFree(child_content);
+    }
+    xmlFreeNodeList(entity->children);
+    entity->children = NULL;
+    xmlAddChild(reinterpret_cast<xmlNode *>(entity), text);
+    entity->length = static_cast<int>(size);
+  }
+}
+
+static xmlEntity *GetEntityHandler(void *ctx, const xmlChar *name) {
   xmlParserCtxt *ctxt = static_cast<xmlParserCtxt *>(ctx);
   ASSERT(ctxt && ctxt->_private);
   ContextData *data = static_cast<ContextData *>(ctxt->_private);
-  xmlEntity *result = data->original_handler(ctx, name);
-  if (!result && ctxt->myDoc) {
+  xmlEntity *result = data->original_get_entity_handler(ctx, name);
+  if (result) {
+    ExpandEntity(result);
+  } else if (ctxt->myDoc) {
     if (!ctxt->myDoc->intSubset) {
       ctxt->myDoc->intSubset =
           xmlCreateIntSubset(ctxt->myDoc, NULL, NULL, NULL);
     }
     StringMap::const_iterator it =
         data->extra_entities->find(FromXmlCharPtr(name));
-    const xmlChar *value = name;
     if (it != data->extra_entities->end()) {
-      value = ToXmlCharPtr(it->second.c_str());
+      xmlChar *encoded_value =
+          xmlEncodeSpecialChars(NULL, ToXmlCharPtr(it->second.c_str()));
+      result = xmlAddDocEntity(ctxt->myDoc, name, XML_INTERNAL_GENERAL_ENTITY,
+                               NULL, NULL, encoded_value);
+      xmlFree(encoded_value);
     } else {
       LOG("Entity '%s' not defined.", name);
+      // If the entity is not defined, just use it's name.
+      result = xmlAddDocEntity(ctxt->myDoc, name, XML_INTERNAL_GENERAL_ENTITY,
+                               NULL, NULL, name);
     }
-    // If the entity is not defined, just use it's name.
-    result = xmlAddDocEntity(ctxt->myDoc, name, XML_INTERNAL_GENERAL_ENTITY,
-                             NULL, NULL, value);
   }
   return result;
 }
@@ -201,7 +251,7 @@ static xmlDoc *ParseXML(const std::string &xml,
   }
 
   xmlDoc *result = NULL;
-  bool retry; 
+  bool retry;
   do {
     retry = false;
     if (!use_encoding.empty()) {
@@ -231,12 +281,19 @@ static xmlDoc *ParseXML(const std::string &xml,
 
     ASSERT(ctxt->sax);
     ContextData data;
+    ctxt->_private = &data;
     if (extra_entities && !extra_entities->empty()) {
+      // Hook getEntity handler to provide extra entities.
       data.extra_entities = extra_entities;
-      data.original_handler = ctxt->sax->getEntity;
-      ctxt->_private = &data;
+      data.original_get_entity_handler = ctxt->sax->getEntity;
       ctxt->sax->getEntity = GetEntityHandler;
     }
+
+    // Disable external entities to avoid security troubles.
+    data.original_entity_decl_handler = ctxt->sax->entityDecl;
+    ctxt->sax->entityDecl = EntityDeclHandler;
+    ctxt->sax->resolveEntity = NULL;
+
     // Let the built-in libxml2 error reporter print the correct filename.
     ctxt->input->filename = xmlMemStrdup(filename);
   
@@ -255,6 +312,8 @@ static xmlDoc *ParseXML(const std::string &xml,
                 ctxt->errNo == XML_ERR_UNKNOWN_ENCODING ||
                 ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) &&
                encoding_fallback && use_encoding != encoding_fallback) { 
+      xmlFreeDoc(ctxt->myDoc);
+      ctxt->myDoc = NULL;
       // libxml2 encoding conversion failed, try fallback_encoding if it has
       // not been tried.
       use_encoding = encoding_fallback;
