@@ -1004,6 +1004,8 @@ class DecoratedViewHost::Impl {
                           Event::EVENT_RESTORE);
         child->OnOtherEvent(event);
       }
+
+      SaveViewStates();
     }
 
     void DockMenuCallback(const char *) {

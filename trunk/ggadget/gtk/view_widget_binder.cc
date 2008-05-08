@@ -75,7 +75,8 @@ class ViewWidgetBinder::Impl {
                   GDK_BUTTON_RELEASE_MASK |
                   GDK_POINTER_MOTION_MASK |
                   GDK_POINTER_MOTION_HINT_MASK |
-                  GDK_STRUCTURE_MASK;
+                  GDK_STRUCTURE_MASK |
+                  GDK_ALL_EVENTS_MASK;
 
     if (GTK_WIDGET_REALIZED(widget_))
       gtk_widget_add_events(widget_, events);
@@ -453,6 +454,9 @@ class ViewWidgetBinder::Impl {
           resize_drag = false;
 #endif
       }
+
+      // ungrab the pointer before starting move/resize drag.
+      gdk_pointer_ungrab(gtk_get_current_event_time());
 
       if (resize_drag) {
         impl->host_->BeginResizeDrag(button, hittest);
