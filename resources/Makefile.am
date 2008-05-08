@@ -74,6 +74,7 @@ RESOURCE_FILES= button_down.png \
 		vd_close_down.png \
 		vd_close_normal.png \
 		vd_close_over.png \
+		vd_details_background.png \
 		vd_details_bottom.png \
 		vd_details_button_bkgnd_click.png \
 		vd_details_button_bkgnd_normal.png \

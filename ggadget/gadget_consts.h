@@ -200,6 +200,7 @@ const char kVDPopOutCloseDown[] = "resource://vd_popout_close_down.png";
 const char kVDPopOutCloseNormal[] = "resource://vd_popout_close_normal.png";
 const char kVDPopOutCloseOver[] = "resource://vd_popout_close_over.png";
 
+const char kVDDetailsBackground[] = "resource://vd_details_background.png";
 const char kVDDetailsBottom[] = "resource://vd_details_bottom.png";
 const char kVDDetailsButtonBkgndClick[] =
     "resource://vd_details_button_bkgnd_click.png";
