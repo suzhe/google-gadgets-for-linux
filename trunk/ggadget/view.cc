@@ -214,6 +214,7 @@ class View::Impl {
     }
 
     if (view_host_) {
+      view_host_->CloseView();
       view_host_->SetView(NULL);
       view_host_->Destroy();
       view_host_ = NULL;

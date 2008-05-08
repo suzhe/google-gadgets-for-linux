@@ -25,8 +25,12 @@
 #include "signals.h"
 #include "view.h"
 #include "view_host_interface.h"
+#include "math_utils.h"
 
 namespace ggadget {
+
+static const double kMinimumScale = 0.5;
+static const double kMaximumScale = 2.0;
 
 class ViewElement::Impl {
  public:
@@ -152,6 +156,15 @@ bool ViewElement::OnSizing(double *width, double *height) {
     *width = *height * aspect_ratio;
   }
 
+  // Don't allow scale to too small.
+  if (*width / child_width < kMinimumScale) {
+    *width = child_width * kMinimumScale;
+    *height = child_height * kMinimumScale;
+  } else if (*width / child_width > kMaximumScale) {
+    *width = child_width * kMaximumScale;
+    *height = child_height * kMaximumScale;
+  }
+
   return true;
 }
 
@@ -191,7 +204,8 @@ void ViewElement::SetSize(double width, double height) {
 
 void ViewElement::SetScale(double scale) {
   // Only set scale if child view is available.
-  if (impl_->child_view_ && scale > 0 && scale != impl_->scale_) {
+  scale = Clamp(scale, kMinimumScale, kMaximumScale);
+  if (impl_->child_view_ && scale != impl_->scale_) {
     double new_zoom = GetView()->GetGraphics()->GetZoom() * scale;
     impl_->child_view_->GetGraphics()->SetZoom(new_zoom);
     impl_->child_view_->MarkRedraw();

@@ -39,6 +39,7 @@
 #include "label_element.h"
 #include "text_frame.h"
 #include "messages.h"
+#include "options_interface.h"
 
 namespace ggadget {
 
@@ -259,8 +260,6 @@ class DecoratedViewHost::Impl {
         double vh = std::max(height - top - bottom, ch);
         view_element_->SetSize(vw, vh);
 
-        // Call SetViewSize directly here to make sure that
-        // allow_x_margin_ and allow_y_margin_ can take effect.
         cw = std::max(view_element_->GetPixelWidth(), cw);
         ch = std::max(view_element_->GetPixelHeight(), ch);
       } else {
@@ -270,6 +269,8 @@ class DecoratedViewHost::Impl {
 
       cw += (left + right);
       ch += (top + bottom);
+      // Call SetViewSize directly here to make sure that
+      // allow_x_margin_ and allow_y_margin_ can take effect.
       if (SetViewSize(width, height, cw, ch))
         Layout();
     }
@@ -382,6 +383,10 @@ class DecoratedViewHost::Impl {
         minimized_(false),
         popped_out_(false),
         mouseover_(false),
+        original_states_saved_(false),
+        original_child_width_(0),
+        original_child_height_(0),
+        original_child_scale_(0),
         update_visibility_timer_(0),
         hittest_(HT_CLIENT),
         child_resizable_(RESIZABLE_TRUE),
@@ -544,26 +549,30 @@ class DecoratedViewHost::Impl {
         if (!sidebar_) {
           // Only show bottom right corner when there is no transparent
           // background or the child view is not resizable.
-          if (!transparent_ ||
-              (child_resizable_ != RESIZABLE_TRUE && !minimized_)) {
+          if ((child_resizable_ != RESIZABLE_TRUE && !minimized_) ||
+              (!transparent_ && h_resizable && v_resizable)) {
             if (x > w - kVDMainCornerSize && y > h - kVDMainCornerSize)
               bottom_->SetVisible(true);
             else
               bottom_->SetVisible(false);
           } else if (x >= w - kVDMainBorderWidth * 2 &&
-                     y >= h - kVDMainBorderWidth * 2) {
+                     y >= h - kVDMainBorderWidth * 2 &&
+                     h_resizable && v_resizable) {
             hittest_ = HT_BOTTOMRIGHT;
             SetCursor(CURSOR_SIZENWSE);
           } else if (x >= w - kVDMainBorderWidth * 2 &&
-                     y >= top && y <= top + kVDMainBorderWidth * 2) {
+                     y >= top && y <= top + kVDMainBorderWidth * 2 &&
+                     h_resizable && v_resizable) {
             hittest_ = HT_TOPRIGHT;
             SetCursor(CURSOR_SIZENESW);
           } else if (x <= kVDMainBorderWidth * 2 &&
-                     y >= top && y <= top + kVDMainBorderWidth * 2) {
+                     y >= top && y <= top + kVDMainBorderWidth * 2 &&
+                     h_resizable && v_resizable) {
             hittest_ = HT_TOPLEFT;
             SetCursor(CURSOR_SIZENWSE);
           } else if (x <= kVDMainBorderWidth  * 2 &&
-                     y >= h - kVDMainBorderWidth * 2) {
+                     y >= h - kVDMainBorderWidth * 2 &&
+                     h_resizable && v_resizable) {
             hittest_ = HT_BOTTOMLEFT;
             SetCursor(CURSOR_SIZENESW);
           } else if (x >= w - kVDMainBorderWidth && y >= top && h_resizable) {
@@ -595,6 +604,21 @@ class DecoratedViewHost::Impl {
     }
 
     virtual bool OnAddContextMenuItems(MenuInterface *menu) {
+      static const struct {
+        const char *label;
+        double zoom;
+      } kZoomMenuItems[] = {
+        { "MENU_ITEM_AUTO_FIT", 0 },
+        { "MENU_ITEM_50P", 0.5 },
+        { "MENU_ITEM_75P", 0.75 },
+        { "MENU_ITEM_100P", 1.0 },
+        { "MENU_ITEM_125P", 1.25 },
+        { "MENU_ITEM_150P", 1.50 },
+        { "MENU_ITEM_175P", 1.75 },
+        { "MENU_ITEM_200P", 2.0 },
+      };
+      static const int kNumZoomMenuItems = 8;
+
       bool result = false;
       View *child = GetChildView();
       if (child)
@@ -603,8 +627,8 @@ class DecoratedViewHost::Impl {
         result = original_child_view_->OnAddContextMenuItems(menu);
 
       if (result) {
-        int checked = MenuInterface::MENU_ITEM_FLAG_CHECKED;
         int priority = MenuInterface::MENU_ITEM_PRI_DECORATOR;
+
         menu->AddItem(
           GM_(minimized_ ? "MENU_ITEM_EXPAND" : "MENU_ITEM_COLLAPSE"), 0,
           NewSlot(this, &NormalMainViewDecorator::CollapseExpandMenuCallback),
@@ -618,31 +642,31 @@ class DecoratedViewHost::Impl {
 
         if (!sidebar_ && !minimized_ && !popped_out_) {
           double scale = GetViewElement()->GetScale();
+          int flags[kNumZoomMenuItems];
+          bool has_checked = false;
+
+          for (int i = 0; i < kNumZoomMenuItems; ++i) {
+            flags[i] = 0;
+            if (kZoomMenuItems[i].zoom == scale) {
+              flags[i] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
+              has_checked = true;
+            }
+          }
+
+          // Check "Auto Fit" item if the current scale doesn't match with any
+          // other menu items.
+          if (!has_checked)
+            flags[0] = MenuInterface::MENU_ITEM_FLAG_CHECKED;
+
           MenuInterface *zoom = menu->AddPopup(GM_("MENU_ITEM_ZOOM"), priority);
-          zoom->AddItem(GM_("MENU_ITEM_AUTO_FIT"), 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_50P"), scale == 0.5 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.5),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_75P"), scale == 0.75 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 0.75),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_100P"), scale == 1.0 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.0),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_125P"), scale == 1.25 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.25),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_150P"), scale == 1.5 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.5),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_175P"), scale == 1.75 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 1.75),
-            priority);
-          zoom->AddItem(GM_("MENU_ITEM_200P"), scale == 2.0 ? checked : 0,
-            NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback, 2.0),
-            priority);
+
+          for (int i = 0; i < kNumZoomMenuItems; ++i) {
+            zoom->AddItem(
+                GM_(kZoomMenuItems[i].label), flags[i],
+                NewSlot(this, &NormalMainViewDecorator::OnZoomMenuCallback,
+                        kZoomMenuItems[i].zoom),
+                priority);
+          }
         }
       }
 
@@ -697,9 +721,28 @@ class DecoratedViewHost::Impl {
     }
 
    public:
+    virtual bool ShowDecoratedView(bool modal, int flags,
+                                   Slot1<void, int> *handler) {
+      // If the view states haven't been loaded from gadget's options,
+      // then it's safe to keep the child's size as its original size.
+      if (!original_states_saved_) {
+          original_child_width_ = GetViewElement()->GetPixelWidth();
+          original_child_height_ = GetViewElement()->GetPixelHeight();
+          original_child_scale_ = GetViewElement()->GetScale();
+          original_states_saved_ = true;
+      }
+
+      // Always loads view states no matter if they have been loaded before.
+      // So that the states can be restored correctly when the child view is
+      // popped in.
+      LoadViewStates(true);
+      return ViewDecoratorBase::ShowDecoratedView(modal, flags, handler);
+    }
+
     virtual void CloseDecoratedView() {
       if (popped_out_)
         owner_->on_popin_signal_();
+      SaveViewStates();
       ViewDecoratorBase::CloseDecoratedView();
     }
 
@@ -741,6 +784,10 @@ class DecoratedViewHost::Impl {
           SimpleEvent event(Event::EVENT_MINIMIZE);
           child->OnOtherEvent(event);
         }
+
+        // Only takes effect after the view has been shown and
+        // original_states_saved_ has been set to true.
+        LoadViewStates(false);
       }
 
       DoLayout();
@@ -909,6 +956,7 @@ class DecoratedViewHost::Impl {
     }
 
     void OnToggleExpandedButtonClicked() {
+      SaveViewStates();
       if (popped_out_)
         owner_->on_popin_signal_();
       else
@@ -959,15 +1007,108 @@ class DecoratedViewHost::Impl {
     }
 
     void DockMenuCallback(const char *) {
+      SaveViewStates();
       owner_->on_dock_signal_();
     }
 
     void UndockMenuCallback(const char *) {
+      SaveViewStates();
       owner_->on_undock_signal_();
     }
 
     void OnZoomMenuCallback(const char *, double zoom) {
-      SetChildViewScale(zoom);
+      SetChildViewScale(zoom == 0 ? 1.0 : zoom);
+    }
+
+    // mode: 0 - none, 1 - original, 2 - standalone, 3 - sidebar.
+    static std::string GetOptionKey(int mode, const char *suffix) {
+      std::string key("main_view_");
+      switch(mode) {
+        case 1: key.append("original_"); break;
+        case 2: key.append("standalone_"); break;
+        case 3: key.append("docked_"); break;
+        default: break;
+      };
+      key.append(suffix);
+      return key;
+    }
+
+    void SaveViewStates() {
+      Gadget *gadget = GetGadget();
+      if (gadget) {
+        OptionsInterface *opt = gadget->GetOptions();
+        ViewElement *elm = GetViewElement();
+        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "width").c_str(),
+                              Variant(elm->GetPixelWidth()));
+        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "height").c_str(),
+                              Variant(elm->GetPixelHeight()));
+        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "scale").c_str(),
+                              Variant(elm->GetScale()));
+        opt->PutInternalValue(GetOptionKey(0, "minimized").c_str(),
+                              Variant(minimized_));
+        if (original_child_width_ > 0 && original_child_height_ > 0 &&
+            original_child_scale_ > 0) {
+          opt->PutInternalValue(GetOptionKey(1, "width").c_str(),
+                                Variant(original_child_width_));
+          opt->PutInternalValue(GetOptionKey(1, "height").c_str(),
+                                Variant(original_child_height_));
+          opt->PutInternalValue(GetOptionKey(1, "scale").c_str(),
+                                Variant(original_child_scale_));
+        }
+        DLOG("SaveViewStates(%d, %d): w:%.0lf h:%.0lf s: %.2lf "
+             "ow:%.0lf oh:%.0lf os:%.2lf c:%d",
+             gadget->GetInstanceID(), sidebar_,
+             elm->GetPixelWidth(), elm->GetPixelHeight(), elm->GetScale(),
+             original_child_width_, original_child_height_,
+             original_child_scale_, minimized_);
+      }
+    }
+
+    void LoadViewStates(bool load_minimized_state) {
+      Gadget *gadget = GetGadget();
+      // Only load view states when the original size has been saved.
+      if (gadget && original_states_saved_) {
+        OptionsInterface *opt = gadget->GetOptions();
+        ViewElement *elm = GetViewElement();
+        Variant vw = opt->GetInternalValue(
+            GetOptionKey(sidebar_ ? 3 : 2, "width").c_str());
+        Variant vh = opt->GetInternalValue(
+            GetOptionKey(sidebar_ ? 3 : 2, "height").c_str());
+        Variant vs = opt->GetInternalValue(
+            GetOptionKey(sidebar_ ? 3 : 2, "scale").c_str());
+        if (vw.type() != Variant::TYPE_DOUBLE ||
+            vh.type() != Variant::TYPE_DOUBLE ||
+            vs.type() != Variant::TYPE_DOUBLE) {
+          vw = opt->GetInternalValue(GetOptionKey(1, "width").c_str());
+          vh = opt->GetInternalValue(GetOptionKey(1, "height").c_str());
+          vs = opt->GetInternalValue(GetOptionKey(1, "scale").c_str());
+        }
+        if (child_resizable_ == ViewInterface::RESIZABLE_TRUE &&
+            vw.type() == Variant::TYPE_DOUBLE &&
+            vh.type() == Variant::TYPE_DOUBLE) {
+          double width = VariantValue<double>()(vw);
+          double height = VariantValue<double>()(vh);
+          if (elm->OnSizing(&width, &height))
+            elm->SetSize(width, height);
+        } else if (vs.type() == Variant::TYPE_DOUBLE) {
+          elm->SetScale(VariantValue<double>()(vs));
+        }
+
+        if (load_minimized_state) {
+          Variant vm = opt->GetInternalValue(
+              GetOptionKey(0, "minimized").c_str());
+          if (vm.type() == Variant::TYPE_BOOL &&
+             minimized_ != VariantValue<bool>()(vm)) {
+            CollapseExpandMenuCallback(NULL);
+          }
+        }
+        DLOG("LoadViewStates(%d, %d): w:%.0lf h:%.0lf s: %.2lf "
+             "ow:%.0lf oh:%.0lf os:%.2lf c:%d",
+             gadget->GetInstanceID(), sidebar_,
+             elm->GetPixelWidth(), elm->GetPixelHeight(), elm->GetScale(),
+             original_child_width_, original_child_height_,
+             original_child_scale_, minimized_);
+      }
     }
 
    private:
@@ -979,7 +1120,11 @@ class DecoratedViewHost::Impl {
     bool minimized_;
     bool popped_out_;
     bool mouseover_;
-    bool always_show_caption_;
+
+    bool original_states_saved_;
+    double original_child_width_;
+    double original_child_height_;
+    double original_child_scale_;
 
     int update_visibility_timer_;
 
@@ -1132,6 +1277,13 @@ class DecoratedViewHost::Impl {
       ViewDecoratorBase::SetCaption(caption);
     }
 
+   public:
+    virtual bool ShowDecoratedView(bool modal, int flags,
+                                   Slot1<void, int> *handler) {
+      LoadViewStates();
+      return ViewDecoratorBase::ShowDecoratedView(modal, flags, handler);
+    }
+
    protected:
     virtual void ChildViewChanged() {
       View *child = GetChildView();
@@ -1157,6 +1309,31 @@ class DecoratedViewHost::Impl {
    private:
     void OnCloseButtonClicked() {
       PostSignal(&owner_->on_close_signal_);
+    }
+
+    void LoadViewStates() {
+      Gadget *gadget = GetGadget();
+      if (gadget) {
+        OptionsInterface *opt = gadget->GetOptions();
+        ViewElement *elm = GetViewElement();
+        Variant vw = opt->GetInternalValue("main_view_original_width");
+        Variant vh = opt->GetInternalValue("main_view_original_height");
+        Variant vs = opt->GetInternalValue("main_view_original_scale");
+        if (GetChildView()->GetResizable() == ViewInterface::RESIZABLE_TRUE &&
+            vw.type() == Variant::TYPE_DOUBLE &&
+            vh.type() == Variant::TYPE_DOUBLE) {
+          double width = VariantValue<double>()(vw);
+          double height = VariantValue<double>()(vh);
+          if (width > 0 && height > 0 && elm->OnSizing(&width, &height))
+            elm->SetSize(width, height);
+        } else if (vs.type() == Variant::TYPE_DOUBLE) {
+          elm->SetScale(VariantValue<double>()(vs));
+        }
+
+        DLOG("LoadViewStates(%d, expanded): w:%.0lf h:%.0lf",
+             gadget->GetInstanceID(),
+             elm->GetPixelWidth(), elm->GetPixelHeight());
+      }
     }
 
    private:
@@ -1199,22 +1376,12 @@ class DecoratedViewHost::Impl {
       GetChildren()->InsertElement(top_, GetViewElement());
 
       background_ = new ImgElement(NULL, this, NULL);
-      background_->SetSrc(Variant(kVDDetailsMiddle));
       background_->SetStretchMiddle(true);
       background_->SetPixelX(0);
       background_->SetPixelY(top_->GetSrcHeight());
       background_->SetRelativeWidth(1);
       background_->EnableCanvasCache(true);
       GetChildren()->InsertElement(background_, GetViewElement());
-
-      bottom_ = new ImgElement(NULL, this, NULL);
-      bottom_->SetSrc(Variant(kVDDetailsBottom));
-      bottom_->SetStretchMiddle(true);
-      bottom_->SetPixelX(0);
-      bottom_->SetRelativeY(1);
-      bottom_->SetRelativePinY(1);
-      bottom_->SetRelativeWidth(1);
-      GetChildren()->InsertElement(bottom_, GetViewElement());
 
       caption_ = new LabelElement(NULL, this, NULL);
       caption_->GetTextFrame()->SetSize(10);
@@ -1357,6 +1524,23 @@ class DecoratedViewHost::Impl {
             NewSlot(this, &DetailsViewDecorator::OnNegativeButtonClicked));
         GetChildren()->InsertElement(negative_button_, NULL);
       }
+
+      if (remove_button_ && negative_button_) {
+        bottom_ = new ImgElement(NULL, this, NULL);
+        bottom_->SetSrc(Variant(kVDDetailsBottom));
+        bottom_->SetStretchMiddle(true);
+        bottom_->SetPixelX(0);
+        bottom_->SetRelativeY(1);
+        bottom_->SetRelativePinY(1);
+        bottom_->SetRelativeWidth(1);
+        GetChildren()->InsertElement(bottom_, GetViewElement());
+        background_->SetSrc(Variant(kVDDetailsMiddle));
+      } else {
+        // If there is no bottom buttons, then just use the normal background
+        // image.
+        background_->SetSrc(Variant(kVDDetailsBackground));
+      }
+
       DoLayout();
       return ShowView(modal, 0, NULL);
     }
@@ -1412,15 +1596,9 @@ class DecoratedViewHost::Impl {
       caption_->SetPixelHeight(caption_height);
       top_->SetPixelHeight(top_height);
 
-      // If there is no button at the bottom, then don't show bottom image.
-      if (!remove_button_ && !negative_button_)
-        bottom_->SetPixelHeight(kVDDetailsBorderWidth - 1);
-      else
-        bottom_->SetPixelHeight(bottom_->GetSrcHeight());
-
       background_->SetPixelY(top_height);
       background_->SetPixelHeight(height - top_height -
-                                  bottom_->GetPixelHeight());
+                                  (bottom_ ? bottom_->GetPixelHeight() : 0));
       close_button_->Layout();
       close_button_->SetPixelX(width - close_button_->GetPixelWidth() -
                                kVDDetailsBorderWidth);
@@ -1445,7 +1623,7 @@ class DecoratedViewHost::Impl {
       *left = kVDDetailsBorderWidth;
       *right = kVDDetailsBorderWidth;
       *top = background_->GetPixelY();
-      *bottom = bottom_->GetPixelHeight();
+      *bottom = (bottom_ ? bottom_->GetPixelHeight() : kVDDetailsBorderWidth);
     }
 
     virtual void GetMinimumClientExtents(double *width, double *height) {
