@@ -17,7 +17,6 @@
 #include <sys/time.h>
 
 #include <QtGui/QCursor>
-#include <QtGui/QBitmap>
 #include <QtGui/QToolTip>
 #include <QtGui/QMessageBox>
 #include <QtGui/QDialogButtonBox>
@@ -35,6 +34,7 @@
 #include "qt_menu.h"
 #include "qt_graphics.h"
 #include "qt_gadget_widget.h"
+#include "qt_view_host.moc"
 
 namespace ggadget {
 namespace qt {
@@ -51,6 +51,7 @@ class QtViewHost::Impl {
       dialog_(NULL),
       debug_mode_(debug_mode),
       zoom_(zoom),
+      decorated_(decorated),
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
       composite_(false),
@@ -69,6 +70,7 @@ class QtViewHost::Impl {
       delete view_;
       view_ = NULL;
     }
+    Detach();
 
     if (qt_obj_) delete qt_obj_;
   }
@@ -85,8 +87,9 @@ class QtViewHost::Impl {
 
   bool ShowView(bool modal, int flags,
                 Slot1<void, int> *feedback_handler) {
+    LOG("ShowView: %p:%p", this, view_);
     ASSERT(view_);
-    if (feedback_handler_)
+    if (feedback_handler_ && feedback_handler_ != feedback_handler)
       delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
@@ -95,6 +98,7 @@ class QtViewHost::Impl {
       QVBoxLayout *layout = new QVBoxLayout();
       widget_->setFixedSize(D2I(view_->GetWidth()), D2I(view_->GetHeight()));
       layout->addWidget(widget_);
+      ASSERT(!dialog_);
       dialog_ = new QDialog();
 
       QDialogButtonBox::StandardButtons what_buttons = 0;
@@ -116,6 +120,7 @@ class QtViewHost::Impl {
       }
 
       dialog_->setLayout(layout);
+      dialog_->setWindowTitle(caption_);
 
       if (modal) {
         dialog_->exec();
@@ -127,13 +132,14 @@ class QtViewHost::Impl {
       window_->setAttribute(Qt::WA_DeleteOnClose, false);
       widget_->connect(widget_, SIGNAL(closed()),
                        qt_obj_, SLOT(OnDetailsViewClose()));
+      window_->setWindowTitle(caption_);
       window_->show();
     } else {
       window_ = widget_;
       widget_->EnableInputShapeMask(input_shape_mask_);
+      window_->setWindowTitle(caption_);
       window_->show();
     }
-
     return true;
   }
 
@@ -154,6 +160,16 @@ class QtViewHost::Impl {
     }
   }
 
+  void SetVisibility(bool flag) {
+    if (!window_) return;
+    if (flag) {
+      widget_->hide();
+      widget_->show();
+    } else {
+      widget_->hide();
+    }
+  }
+
   ViewInterface *view_;
   ViewHostInterface::Type type_;
   QGadgetWidget *widget_;
@@ -161,6 +177,7 @@ class QtViewHost::Impl {
   QDialog *dialog_;     // Top level window of the view
   int debug_mode_;
   double zoom_;
+  bool decorated_;      // frameless or not
   Connection *onoptionchanged_connection_;
 
   static const unsigned int kShowTooltipDelay = 500;
@@ -171,6 +188,7 @@ class QtViewHost::Impl {
   bool composite_;
   bool input_shape_mask_;
   QtViewHostObject *qt_obj_;    // used for handling qt signal
+  QString caption_;
 };
 
 void QtViewHostObject::OnOptionViewOK() {
@@ -185,10 +203,14 @@ void QtViewHostObject::OnDetailsViewClose() {
   owner_->HandleDetailsViewClose();
 }
 
+void QtViewHostObject::OnShow(bool flag) {
+  owner_->SetVisibility(flag);
+}
+
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
                        double zoom, bool decorated,
                        int debug_mode)
-  : impl_(new Impl(type, zoom, debug_mode, debug_mode)) {
+  : impl_(new Impl(type, zoom, decorated, debug_mode)) {
 }
 
 QtViewHost::~QtViewHost() {
@@ -216,10 +238,12 @@ void QtViewHost::Destroy() {
 }
 
 void QtViewHost::SetView(ViewInterface *view) {
+  if (impl_->view_ == view) return;
   impl_->Detach();
   if (view == NULL) return;
   impl_->view_ = view;
-  impl_->widget_ = new QGadgetWidget(view, this, impl_->composite_);
+  impl_->widget_ = new QGadgetWidget(view, this,
+                                     impl_->composite_, impl_->decorated_);
 }
 
 void QtViewHost::ViewCoordToNativeWidgetCoord(
@@ -252,7 +276,9 @@ void QtViewHost::SetResizable(ViewInterface::ResizableMode mode) {
 }
 
 void QtViewHost::SetCaption(const char *caption) {
-  // TODO:
+  if (impl_->window_)
+    impl_->window_->setWindowTitle(caption);
+  impl_->caption_ = caption;
 }
 
 void QtViewHost::SetShowCaptionAlways(bool always) {
@@ -270,7 +296,7 @@ void QtViewHost::SetTooltip(const char *tooltip) {
 bool QtViewHost::ShowView(bool modal, int flags,
                           Slot1<void, int> *feedback_handler) {
   return impl_->ShowView(modal, flags, feedback_handler);
- }
+}
 
 void QtViewHost::CloseView() {
   // DetailsView will be only hiden here since it may be reused later.
@@ -324,7 +350,9 @@ int QtViewHost::GetDebugMode() const {
   return impl_->debug_mode_;
 }
 
-#include "qt_view_host.moc"
+QtViewHostObject *QtViewHost::GetQObject() {
+  return impl_->qt_obj_;
+}
 
 } // namespace qt
 } // namespace ggadget

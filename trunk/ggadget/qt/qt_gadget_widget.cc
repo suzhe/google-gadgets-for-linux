@@ -28,6 +28,8 @@
 #include <QtGui/QX11Info>
 #include <QtGui/QBitmap>
 #include <X11/extensions/shape.h>
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #endif
 
 namespace ggadget {
@@ -35,7 +37,8 @@ namespace qt {
 
 QGadgetWidget::QGadgetWidget(ViewInterface *view,
                              ViewHostInterface *host,
-                             bool composite)
+                             bool composite,
+                             bool decorated)
      : canvas_(NULL), graphics_(NULL), view_(view), view_host_(host),
        width_(0), height_(0),
        drag_files_(NULL),
@@ -46,7 +49,10 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
   zoom_ = graphics_->GetZoom();
   setMouseTracking(true);
   setAcceptDrops(true);
-  setWindowFlags(Qt::FramelessWindowHint);
+  if (!decorated) {
+    setWindowFlags(Qt::FramelessWindowHint);
+    SkipTaskBar();
+  }
   setAttribute(Qt::WA_InputMethodEnabled);
 }
 
@@ -330,6 +336,18 @@ void QGadgetWidget::SetInputMask(QPixmap *pixmap) {
                     0, 0,
                     bm.handle(),
                     ShapeSet);
+#endif
+}
+
+void QGadgetWidget::SkipTaskBar() {
+#ifdef GGL_USE_X11
+  Display *dpy = QX11Info::display();
+  Atom net_wm_state_skip_taskbar=XInternAtom(dpy, "_NET_WM_STATE_SKIP_TASKBAR",
+                                             False);
+  Atom net_wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
+  XChangeProperty(dpy, winId(), net_wm_state,
+                  XA_ATOM, 32, PropModeAppend,
+                  (unsigned char *)&net_wm_state_skip_taskbar, 1);
 #endif
 }
 #include "qt_gadget_widget.moc"

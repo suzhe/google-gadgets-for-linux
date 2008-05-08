@@ -17,10 +17,14 @@
 #include <string>
 #include <map>
 #include <QtGui/QIcon>
+#include <QtGui/QSystemTrayIcon>
+#include <QtGui/QMenu>
+#include <QtGui/QApplication>
 #include <QtGui/QMessageBox>
 #include <QtGui/QFontDatabase>
 #include <ggadget/common.h>
 #include <ggadget/messages.h>
+#include <ggadget/locales.h>
 #include <ggadget/logger.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/qt/qt_view_host.h>
@@ -32,6 +36,7 @@
 #include <ggadget/view.h>
 #include <ggadget/gadget_consts.h>
 #include "qt_host.h"
+#include "gadget_browser_host.h"
 #include "qt_host_internal.h"
 
 using namespace ggadget;
@@ -44,12 +49,13 @@ class QtHost::Impl {
  public:
   Impl(QtHost *host, int view_debug_mode)
     : gadget_manager_(GetGadgetManager()),
+      gadget_browser_host_(host, view_debug_mode),
       host_(host),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
       expanded_popout_(NULL),
       expanded_original_(NULL),
-      obj_(new QtHostObject(host)) {
+      obj_(new QtHostObject(host, &gadget_browser_host_)) {
     ScriptRuntimeManager::get()->ConnectErrorReporter(
       NewSlot(this, &Impl::ReportScriptError));
     SetupUI();
@@ -62,8 +68,15 @@ class QtHost::Impl {
 
   void SetupUI() {
     menu_.addAction("Add gadget", obj_, SLOT(OnAddGadget()));
+    menu_.addAction("Show all", obj_, SLOT(OnShowAll()));
+    menu_.addAction("Hide all", obj_, SLOT(OnHideAll()));
+    menu_.addSeparator();
     menu_.addAction("Exit", qApp, SLOT(quit()));
     tray_.setContextMenu(&menu_);
+    QObject::connect(&tray_,
+                     SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+                     obj_,
+                     SLOT(OnTrayActivated(QSystemTrayIcon::ActivationReason)));
     std::string icon_data;
     if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
       QPixmap pixmap;
@@ -94,7 +107,7 @@ class QtHost::Impl {
         .append(title).append("\n")
         .append(download_url).append("\n\n")
         .append(GM_("GADGET_DESCRIPTION"))
-        .append(description));
+        .append(description);
     int ret = QMessageBox::question(NULL,
                                     GM_("GADGET_CONFIRM_TITLE"),
                                     message.c_str(),
@@ -161,11 +174,11 @@ class QtHost::Impl {
   }
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-    //  bool decorated = type == ViewHostInterface::VIEW_HOST_OPTIONS;
-
     QtViewHost *qvh = new QtViewHost(
-        type, 1.0, true,
+        type, 1.0, false,
         static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+    QObject::connect(obj_, SIGNAL(show(bool)),
+                     qvh->GetQObject(), SLOT(OnShow(bool)));
 
     if (type == ViewHostInterface::VIEW_HOST_OPTIONS)
       return qvh;
@@ -266,6 +279,7 @@ class QtHost::Impl {
   }
 
   GadgetManagerInterface *gadget_manager_;
+  GadgetBrowserHost gadget_browser_host_;
   QtHost *host_;
   int view_debug_mode_;
   bool gadgets_shown_;
