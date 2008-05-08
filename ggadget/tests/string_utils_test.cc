@@ -159,6 +159,16 @@ TEST(StringUtils, ExtractTextFromHTML) {
       " &#32;&#x&#&unknown;&#x30;&#x101111;&#x2009;\n\r\t Text ").c_str());
 }
 
+TEST(StringUtils, ContainsHTML) {
+  EXPECT_FALSE(ContainsHTML(""));
+  EXPECT_FALSE(ContainsHTML(NULL));
+  EXPECT_FALSE(ContainsHTML("abcde"));
+  EXPECT_FALSE(ContainsHTML("<abcde>"));
+  EXPECT_TRUE(ContainsHTML("1234<!-- comments -->6789"));
+  EXPECT_TRUE(ContainsHTML("1234<a href=abcde>abcde</a>defg"));
+  EXPECT_TRUE(ContainsHTML("1234<br>5678"));
+}
+
 TEST(StringUtils, SimpleMatchXPath) {
   EXPECT_TRUE(SimpleMatchXPath("", ""));
   EXPECT_TRUE(SimpleMatchXPath("a[1]", "a"));

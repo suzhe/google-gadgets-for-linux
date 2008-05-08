@@ -24,6 +24,8 @@
 
 namespace ggadget {
 
+template <typename R> class Slot0;
+template <typename R, typename P1> class Slot1;
 class CanvasInterface;
 class Elements;
 class MenuInterface;
@@ -660,12 +662,14 @@ public: // Other overridable public methods.
   Connection *ConnectOnMouseUpEvent(Slot0<void> *handler);
   Connection *ConnectOnMouseWheelEvent(Slot0<void> *handler);
   Connection *ConnectOnSizeEvent(Slot0<void> *handler);
-
   /**
    * Special signal which will be emitted when this element or any of its
    * children is changed.
    */
   Connection *ConnectOnContentChanged(Slot0<void> *handler);
+
+  Connection *ConnectOnAddContextMenuItems(
+      Slot1<bool, MenuInterface *> *handler);
 
  protected:
   /**

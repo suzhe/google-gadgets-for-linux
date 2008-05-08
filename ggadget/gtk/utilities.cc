@@ -151,6 +151,14 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   copyright_text = TrimString(copyright_text);
   about_text = TrimString(about_text);
 
+  // Remove HTML tags from the text because this dialog can't render them.
+  if (ContainsHTML(title_text.c_str()))
+    title_text = ExtractTextFromHTML(title_text.c_str());
+  if (ContainsHTML(copyright_text.c_str()))
+    copyright_text = ExtractTextFromHTML(copyright_text.c_str());
+  if (ContainsHTML(about_text.c_str()))
+    about_text = ExtractTextFromHTML(about_text.c_str());
+
   GtkWidget *title = gtk_label_new("");
   gchar *gadget_name_markup = g_markup_printf_escaped(
       "<b><big>%s</big></b>", title_text.c_str());
@@ -197,6 +205,7 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   gtk_container_set_border_width(
       GTK_CONTAINER(GTK_DIALOG(dialog)->action_area), 10);
 
+  gtk_window_set_title(GTK_WINDOW(dialog), title_text.c_str());
   gtk_widget_show_all(dialog);
   gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);

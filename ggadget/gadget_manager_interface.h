@@ -91,7 +91,14 @@ class GadgetManagerInterface {
    */
   virtual bool IsGadgetInstanceTrusted(int instance_id) = 0;
 
-  virtual std::string GetGadgetInstanceDownloadURL(int instance_id) = 0;
+  /**
+   * Gets information of a gadget instance.
+   */ 
+  virtual bool GetGadgetInstanceInfo(int instance_id, const char *locale,
+                                     std::string *author,
+                                     std::string *download_url,
+                                     std::string *title,
+                                     std::string *description) = 0;
 
  public:
   /**

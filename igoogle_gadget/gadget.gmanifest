@@ -21,10 +21,9 @@
     <author>Google Inc.</author>
     <authorEmail>google-gadgets-for-linux-dev@googlegroups.com</authorEmail>
     <authorWebsite>http://code.google.com/p/google-gadgets-for-linux</authorWebsite>
-    <copyright>&GADGET_COPYRIGHT;</copyright>
-    <description>&GADGET_DESC;</description>
     <name>&GADGET_NAME;</name>
-    <aboutText>&GADGET_ABOUT;</aboutText>
+    <!-- No copyright, description and aboutText because we need to display
+         information of the real igoogle gadget. -->
     <smallIcon>igoogle_32.gif</smallIcon>
     <icon>igoogle_32.gif</icon>
   </about>
