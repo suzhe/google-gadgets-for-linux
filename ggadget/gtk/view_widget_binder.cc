@@ -149,8 +149,6 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ButtonPressHandler(GtkWidget *widget, GdkEventButton *event,
                                      gpointer user_data) {
-    DLOG("Button press %d", event->button);
-
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
 
@@ -210,8 +208,6 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ButtonReleaseHandler(GtkWidget *widget, GdkEventButton *event,
                                        gpointer user_data) {
-    DLOG("Button release %d", event->button);
-
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     EventResult result = EVENT_RESULT_UNHANDLED;
     EventResult result2 = EVENT_RESULT_UNHANDLED;
@@ -248,14 +244,6 @@ class ViewWidgetBinder::Impl {
 
     return result != EVENT_RESULT_UNHANDLED ||
            result2 != EVENT_RESULT_UNHANDLED;
-  }
-
-  static gboolean ConfigureHandler(GtkWidget *widget, GdkEventConfigure *event,
-                                   gpointer user_data) {
-    //For debug purpose.
-    //DLOG("Configure : x:%d y:%d - w:%d h:%d",
-    //     event->x, event->y, event->width, event->height);
-    return FALSE;
   }
 
   static gboolean KeyPressHandler(GtkWidget *widget, GdkEventKey *event,
@@ -321,7 +309,6 @@ class ViewWidgetBinder::Impl {
 
   static gboolean ExposeHandler(GtkWidget *widget, GdkEventExpose *event,
                                 gpointer user_data) {
-    // DLOG("Expose for widget: %p", widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     gint width, height;
     gdk_drawable_get_size(widget->window, &width, &height);
@@ -507,10 +494,8 @@ class ViewWidgetBinder::Impl {
   static gboolean LeaveNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
                                      gpointer user_data) {
     if (event->mode != GDK_CROSSING_NORMAL ||
-        event->detail == GDK_NOTIFY_INFERIOR) {
-      DLOG("Ignores the leave notify: %d %d", event->mode, event->detail);
+        event->detail == GDK_NOTIFY_INFERIOR)
       return FALSE;
-    }
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->host_->SetTooltip(NULL);
@@ -525,10 +510,8 @@ class ViewWidgetBinder::Impl {
   static gboolean EnterNotifyHandler(GtkWidget *widget, GdkEventCrossing *event,
                                      gpointer user_data) {
     if (event->mode != GDK_CROSSING_NORMAL ||
-        event->detail == GDK_NOTIFY_INFERIOR) {
-      DLOG("Ignores the enter notify: %d %d", event->mode, event->detail);
+        event->detail == GDK_NOTIFY_INFERIOR)
       return FALSE;
-    }
 
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     impl->host_->SetTooltip(NULL);
@@ -784,8 +767,6 @@ ViewWidgetBinder::Impl::kEventHandlers[] = {
     G_CALLBACK(ViewWidgetBinder::Impl::ButtonReleaseHandler) },
   { "composited-changed",
     G_CALLBACK(ViewWidgetBinder::Impl::CompositedChangedHandler) },
-  //{ "configure-event",
-  //  G_CALLBACK(ViewWidgetBinder::Impl::ConfigureHandler) },
   { "drag-data-received",
     G_CALLBACK(ViewWidgetBinder::Impl::DragDataReceivedHandler) },
   { "drag-drop",

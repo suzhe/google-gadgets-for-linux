@@ -90,6 +90,7 @@ class DecoratedViewHost::Impl {
 
     void SetChildView(View *child_view) {
       if (child_view_ != child_view) {
+        SaveViewStates();
         child_view_ = child_view;
         view_element_->SetChildView(child_view);
         UpdateViewSize();
@@ -284,6 +285,7 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void CloseDecoratedView() {
+      SaveViewStates();
       // Derived class shall override this method to do more things.
       CloseView();
     }
@@ -326,6 +328,10 @@ class DecoratedViewHost::Impl {
       *height = view_element_->GetPixelHeight();
     }
 
+    virtual void SaveViewStates() {
+      // Nothing to save here. Derived classes shall override this method to
+      // save necessary view states.
+    }
    private:
     // Returns true if the view size was changed.
     bool SetViewSize(double req_w, double req_h, double min_w, double min_h) {
@@ -742,7 +748,6 @@ class DecoratedViewHost::Impl {
     virtual void CloseDecoratedView() {
       if (popped_out_)
         owner_->on_popin_signal_();
-      SaveViewStates();
       ViewDecoratorBase::CloseDecoratedView();
     }
 
@@ -878,6 +883,37 @@ class DecoratedViewHost::Impl {
       }
     }
 
+    virtual void SaveViewStates() {
+      Gadget *gadget = GetGadget();
+      if (gadget) {
+        OptionsInterface *opt = gadget->GetOptions();
+        ViewElement *elm = GetViewElement();
+        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "width").c_str(),
+                              Variant(elm->GetPixelWidth()));
+        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "height").c_str(),
+                              Variant(elm->GetPixelHeight()));
+        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "scale").c_str(),
+                              Variant(elm->GetScale()));
+        opt->PutInternalValue(GetOptionKey(0, "minimized").c_str(),
+                              Variant(minimized_));
+        if (original_child_width_ > 0 && original_child_height_ > 0 &&
+            original_child_scale_ > 0) {
+          opt->PutInternalValue(GetOptionKey(1, "width").c_str(),
+                                Variant(original_child_width_));
+          opt->PutInternalValue(GetOptionKey(1, "height").c_str(),
+                                Variant(original_child_height_));
+          opt->PutInternalValue(GetOptionKey(1, "scale").c_str(),
+                                Variant(original_child_scale_));
+        }
+        DLOG("SaveViewStates(%d, %d): w:%.0lf h:%.0lf s: %.2lf "
+             "ow:%.0lf oh:%.0lf os:%.2lf c:%d",
+             gadget->GetInstanceID(), sidebar_,
+             elm->GetPixelWidth(), elm->GetPixelHeight(), elm->GetScale(),
+             original_child_width_, original_child_height_,
+             original_child_scale_, minimized_);
+      }
+    }
+
    private:
     void UpdateVisibility() {
       update_visibility_timer_ = 0;
@@ -956,7 +992,6 @@ class DecoratedViewHost::Impl {
     }
 
     void OnToggleExpandedButtonClicked() {
-      SaveViewStates();
       if (popped_out_)
         owner_->on_popin_signal_();
       else
@@ -1004,17 +1039,13 @@ class DecoratedViewHost::Impl {
                           Event::EVENT_RESTORE);
         child->OnOtherEvent(event);
       }
-
-      SaveViewStates();
     }
 
     void DockMenuCallback(const char *) {
-      SaveViewStates();
       owner_->on_dock_signal_();
     }
 
     void UndockMenuCallback(const char *) {
-      SaveViewStates();
       owner_->on_undock_signal_();
     }
 
@@ -1033,37 +1064,6 @@ class DecoratedViewHost::Impl {
       };
       key.append(suffix);
       return key;
-    }
-
-    void SaveViewStates() {
-      Gadget *gadget = GetGadget();
-      if (gadget) {
-        OptionsInterface *opt = gadget->GetOptions();
-        ViewElement *elm = GetViewElement();
-        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "width").c_str(),
-                              Variant(elm->GetPixelWidth()));
-        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "height").c_str(),
-                              Variant(elm->GetPixelHeight()));
-        opt->PutInternalValue(GetOptionKey(sidebar_ ? 3 : 2, "scale").c_str(),
-                              Variant(elm->GetScale()));
-        opt->PutInternalValue(GetOptionKey(0, "minimized").c_str(),
-                              Variant(minimized_));
-        if (original_child_width_ > 0 && original_child_height_ > 0 &&
-            original_child_scale_ > 0) {
-          opt->PutInternalValue(GetOptionKey(1, "width").c_str(),
-                                Variant(original_child_width_));
-          opt->PutInternalValue(GetOptionKey(1, "height").c_str(),
-                                Variant(original_child_height_));
-          opt->PutInternalValue(GetOptionKey(1, "scale").c_str(),
-                                Variant(original_child_scale_));
-        }
-        DLOG("SaveViewStates(%d, %d): w:%.0lf h:%.0lf s: %.2lf "
-             "ow:%.0lf oh:%.0lf os:%.2lf c:%d",
-             gadget->GetInstanceID(), sidebar_,
-             elm->GetPixelWidth(), elm->GetPixelHeight(), elm->GetScale(),
-             original_child_width_, original_child_height_,
-             original_child_scale_, minimized_);
-      }
     }
 
     void LoadViewStates(bool load_minimized_state) {

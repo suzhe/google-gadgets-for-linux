@@ -254,28 +254,31 @@ void ViewElement::DoDraw(CanvasInterface *canvas) {
   }
 }
 
-EventResult ViewElement::HandleMouseEvent(const MouseEvent &event) {
+EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
+                                      bool direct,
+                                      BasicElement **fired_element,
+                                      BasicElement **in_element) {
+  // child view must process the mouse event first, so that the hittest value
+  // can be updated correctly.
   EventResult result = EVENT_RESULT_UNHANDLED;
-  // The view containing this ViewElement translates EVENT_MOUSE_OVER as
-  // EVENT_MOUSE_MOVE, and then send EVENT_MOUSE_OVER to this ViewElement,
-  // so don't pass this EVENT_MOUSE_OVER to the child_view because it has
-  // already processed mouse over logic on the last EVENT_MOUSE_MOVE.
-  if (event.GetType() != Event::EVENT_MOUSE_OVER) {
-    if (impl_->scale_ != 1.) {
-      MouseEvent new_event(event);
-      new_event.SetX(event.GetX() / impl_->scale_);
-      new_event.SetY(event.GetY() / impl_->scale_);
-      result = impl_->child_view_->OnMouseEvent(new_event);
-    } else {
-      result = impl_->child_view_->OnMouseEvent(event);
-    }
-    // set hittest
-    SetHitTest(impl_->child_view_->GetHitTest());
+  if (impl_->scale_ != 1.) {
+    MouseEvent new_event(event);
+    new_event.SetX(event.GetX() / impl_->scale_);
+    new_event.SetY(event.GetY() / impl_->scale_);
+    result = impl_->child_view_->OnMouseEvent(new_event);
+  } else {
+    result = impl_->child_view_->OnMouseEvent(event);
   }
-  return result;
+
+  // update hittest value.
+  SetHitTest(impl_->child_view_->GetHitTest());
+
+  return std::max(
+      BasicElement::OnMouseEvent(event, direct, fired_element, in_element),
+      result);
 }
 
-EventResult ViewElement::HandleDragEvent(const DragEvent &event) {
+EventResult ViewElement::OnDragEvent(const DragEvent &event) {
   if (impl_->scale_ != 1.) {
     DragEvent new_event(event);
     new_event.SetX(event.GetX() / impl_->scale_);
@@ -290,11 +293,11 @@ bool ViewElement::OnAddContextMenuItems(MenuInterface *menu) {
   return impl_->child_view_->OnAddContextMenuItems(menu);
 }
 
-EventResult ViewElement::HandleKeyEvent(const KeyboardEvent &event) {
+EventResult ViewElement::OnKeyEvent(const KeyboardEvent &event) {
   return impl_->child_view_->OnKeyEvent(event);
 }
 
-EventResult ViewElement::HandleOtherEvent(const Event &event) {
+EventResult ViewElement::OnOtherEvent(const Event &event) {
   return impl_->child_view_->OnOtherEvent(event);
 }
 

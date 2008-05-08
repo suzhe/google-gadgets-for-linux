@@ -462,7 +462,8 @@ class View::Impl {
            in_element->GetTagName().c_str(), hittest_);
 #endif
     } else {
-      hittest_ = ViewInterface::HT_CLIENT;
+      // FIXME: If HT_NOWHERE is more suitable?
+      hittest_ = ViewInterface::HT_TRANSPARENT;
       owner_->SetCursor(CURSOR_DEFAULT);
       tooltip_element_.Reset(NULL);
     }
