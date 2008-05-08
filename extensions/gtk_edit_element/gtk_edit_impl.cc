@@ -578,7 +578,7 @@ void GtkEditImpl::QueueDraw() {
     owner_->QueueDraw();
     content_modified_ = false;
     update_canvas_ = true;
-    DLOG("QueueDraw: content modified.");
+    // DLOG("QueueDraw: content modified.");
   } else {
     if (selection_changed_) {
       UpdateSelectionRegion();
@@ -792,7 +792,7 @@ void GtkEditImpl::AdjustScroll() {
 }
 
 void GtkEditImpl::QueueRefresh(bool relayout, bool adjust_scroll) {
-  DLOG("GtkEditImpl::QueueRefresh(%d,%d)", relayout, adjust_scroll);
+  // DLOG("GtkEditImpl::QueueRefresh(%d,%d)", relayout, adjust_scroll);
   if (relayout)
     ResetLayout();
 
