@@ -172,7 +172,6 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
       node->removing_ = true;
       if (!node->calling_) {
         WatchCallbackInterface *callback = node->callback_;
-        DLOG("QtMainLoop::RemoveWatch: id=%d", watch_id);
         callback->OnRemove(main_loop_, watch_id);
         watches_.erase(watch_id);
         delete node;

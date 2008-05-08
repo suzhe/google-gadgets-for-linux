@@ -31,7 +31,9 @@ namespace qt {
 class QGadgetWidget : public QWidget {
   Q_OBJECT
  public:
-  QGadgetWidget(ViewInterface* view, ViewHostInterface *host, bool composite);
+  QGadgetWidget(ViewInterface* view,
+                ViewHostInterface *host,
+                bool composite, bool decorated);
   ~QGadgetWidget();
   void EnableInputShapeMask(bool enable);
 
@@ -56,6 +58,7 @@ class QGadgetWidget : public QWidget {
   virtual void closeEvent(QCloseEvent *event);
 
   void SetInputMask(QPixmap *pixmap);
+  void SkipTaskBar();
   QtCanvas *canvas_;
   GraphicsInterface *graphics_;
   ViewInterface *view_;

@@ -29,6 +29,7 @@
 namespace ggadget {
 namespace qt {
 
+class QtViewHostObject;
 class QtViewHost : public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
@@ -64,12 +65,12 @@ class QtViewHost : public ViewHostInterface {
   virtual std::string Prompt(const char *message,
                              const char *default_value);
   virtual int GetDebugMode() const;
-  void HandleOptionViewResponse(ViewInterface::OptionsViewFlags flag);
-  void HandleDetailsViewClose();
+
+  friend class QtViewHostObject;
+  QtViewHostObject *GetQObject();
 
  private:
   class Impl;
-  friend class QtViewHostObject;
   Impl *impl_;
   DISALLOW_EVIL_CONSTRUCTORS(QtViewHost);
 };
@@ -83,6 +84,7 @@ class QtViewHostObject : public QObject {
   void OnOptionViewOK();
   void OnOptionViewCancel();
   void OnDetailsViewClose();
+  void OnShow(bool);
 
  private:
   QtViewHost::Impl* owner_;

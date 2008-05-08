@@ -22,15 +22,40 @@ namespace qt {
 class QtHostObject : public QObject {
   Q_OBJECT
  public:
-  QtHostObject(QtHost *owner) : owner_(owner) {}
+  QtHostObject(QtHost *owner, GadgetBrowserHost *ghost)
+    : owner_(owner),
+      gadget_browser_host_(ghost),
+      show_(true) {}
+
+ signals:
+  void show(bool);
 
  public slots:
   void OnAddGadget() {
-    GetGadgetManager()->ShowGadgetBrowserDialog(owner_);
+    GetGadgetManager()->ShowGadgetBrowserDialog(gadget_browser_host_);
+  }
+  void OnShowAll() {
+    emit show(true);
+    show_ = true;
+  }
+  void OnHideAll() {
+    emit show(false);
+    show_ = false;
+  }
+
+  void OnTrayActivated(QSystemTrayIcon::ActivationReason reason) {
+    if (reason == QSystemTrayIcon::DoubleClick) {
+      if (show_)
+        OnHideAll();
+      else
+        OnShowAll();
+    }
   }
 
  private:
   QtHost *owner_;
+  GadgetBrowserHost *gadget_browser_host_;
+  bool show_;
 };
 
 }
