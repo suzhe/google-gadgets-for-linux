@@ -32,6 +32,8 @@
 namespace ggadget {
 namespace gtk {
 
+static const int kStopDraggingTimeout = 200;
+
 class SingleViewHost::Impl {
  public:
   Impl(ViewHostInterface::Type type,
@@ -58,6 +60,7 @@ class SingleViewHost::Impl {
       record_states_(record_states),
       debug_mode_(debug_mode),
       adjust_window_size_source_(0),
+      stop_dragging_source_(0),
       win_x_(0),
       win_y_(0),
       win_width_(0),
@@ -87,6 +90,10 @@ class SingleViewHost::Impl {
     if (adjust_window_size_source_)
       g_source_remove(adjust_window_size_source_);
     adjust_window_size_source_ = 0;
+
+    if (stop_dragging_source_)
+      g_source_remove(stop_dragging_source_);
+    stop_dragging_source_ = 0;
 
     delete feedback_handler_;
     feedback_handler_ = NULL;
@@ -482,6 +489,12 @@ class SingleViewHost::Impl {
 
     resize_dragging_ = true;
 
+    if (stop_dragging_source_)
+      g_source_remove(stop_dragging_source_);
+
+    stop_dragging_source_ =
+        g_timeout_add(kStopDraggingTimeout, StopDraggingTimeoutHandler, this);
+
     int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
                       button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
     gint x, y;
@@ -500,6 +513,12 @@ class SingleViewHost::Impl {
 
     move_dragging_ = true;
 
+    if (stop_dragging_source_)
+      g_source_remove(stop_dragging_source_);
+
+    stop_dragging_source_ =
+        g_timeout_add(kStopDraggingTimeout, StopDraggingTimeoutHandler, this);
+
     gint x, y;
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
     int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
@@ -508,20 +527,31 @@ class SingleViewHost::Impl {
                                x, y, gtk_get_current_event_time());
   }
 
+  void StopDragging() {
+    if (resize_dragging_) {
+      DLOG("Stop resize dragging.");
+      resize_dragging_ = false;
+      on_end_resize_drag_signal_();
+    }
+    if (move_dragging_) {
+      DLOG("Stop move dragging.");
+      move_dragging_ = false;
+      on_end_move_drag_signal_();
+    }
+    if (stop_dragging_source_) {
+      g_source_remove(stop_dragging_source_);
+      stop_dragging_source_ = 0;
+    }
+  }
+
   // gtk signal handlers.
   static gboolean FocusInHandler(GtkWidget *widget, GdkEventFocus *event,
                                  gpointer user_data) {
     DLOG("FocusInHandler(%p)", widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->enable_signals_) {
-      if (impl->resize_dragging_) {
-        impl->resize_dragging_ = false;
-        impl->on_end_resize_drag_signal_();
-      }
-      if (impl->move_dragging_) {
-        impl->move_dragging_ = false;
-        impl->on_end_move_drag_signal_();
-      }
+    if (impl->enable_signals_ &&
+        (impl->resize_dragging_ || impl->move_dragging_)) {
+      impl->StopDragging();
     }
     return FALSE;
   }
@@ -538,15 +568,9 @@ class SingleViewHost::Impl {
                                      gpointer user_data) {
     DLOG("EnterNotifyHandler(%p): %d, %d", widget, event->mode, event->detail);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->enable_signals_) {
-      if (impl->resize_dragging_) {
-        impl->resize_dragging_ = false;
-        impl->on_end_resize_drag_signal_();
-      }
-      if (impl->move_dragging_) {
-        impl->move_dragging_ = false;
-        impl->on_end_move_drag_signal_();
-      }
+    if (impl->enable_signals_ &&
+        (impl->resize_dragging_ || impl->move_dragging_)) {
+      impl->StopDragging();
     }
     return FALSE;
   }
@@ -632,6 +656,24 @@ class SingleViewHost::Impl {
     requisition->height = 1;
   }
 
+  static gboolean StopDraggingTimeoutHandler(gpointer data) {
+    Impl *impl = reinterpret_cast<Impl *>(data);
+    if (impl->move_dragging_ || impl->resize_dragging_) {
+      GdkDisplay *display = gtk_widget_get_display(impl->window_);
+      GdkModifierType mod;
+      gdk_display_get_pointer(display, NULL, NULL, NULL, &mod);
+      int btn_mods = GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK;
+      if ((mod & btn_mods) == 0) {
+        impl->stop_dragging_source_ = 0;
+        impl->StopDragging();
+        return FALSE;
+      }
+      return TRUE;
+    }
+    impl->stop_dragging_source_ = 0;
+    return FALSE;
+  }
+
   ViewHostInterface::Type type_;
   SingleViewHost *owner_;
   ViewInterface *view_;
@@ -656,6 +698,7 @@ class SingleViewHost::Impl {
   int debug_mode_;
 
   int adjust_window_size_source_;
+  int stop_dragging_source_;
 
   int win_x_;
   int win_y_;
