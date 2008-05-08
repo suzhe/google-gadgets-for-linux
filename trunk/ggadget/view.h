@@ -18,11 +18,16 @@
 #define GGADGET_VIEW_H__
 
 #include <ggadget/common.h>
+#include <ggadget/slot.h>
 #include <ggadget/view_interface.h>
 
 namespace ggadget {
 
-template <typename R> class Slot0;
+#ifndef DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
+#define DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
+DECLARE_VARIANT_PTR_TYPE(MenuInterface);
+#endif
+
 class BasicElement;
 class Elements;
 class ContentAreaElement;
@@ -199,7 +204,7 @@ class View : public ViewInterface {
    */
   void SetPopupElement(BasicElement *element);
 
-  /** Gets the element to be shown ad a popup. */
+  /** Gets the element to be shown as a popup. */
   BasicElement *GetPopupElement() const;
 
   /** Gets the element currently having the input focus. */
@@ -453,6 +458,8 @@ class View : public ViewInterface {
   Connection *ConnectOnSizeEvent(Slot0<void> *handler);
   Connection *ConnectOnSizingEvent(Slot0<void> *handler);
   Connection *ConnectOnUndockEvent(Slot0<void> *handler);
+  Connection *ConnectOnAddContextMenuItems(
+      Slot1<bool, MenuInterface *> *handler);
 
  public:
   /** For performance testing. */

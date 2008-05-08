@@ -185,6 +185,14 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   copyright_text = TrimString(copyright_text);
   about_text = TrimString(about_text);
 
+  // Remove HTML tags from the text.
+  if (ContainsHTML(title_text.c_str()))
+    title_text = ExtractTextFromHTML(title_text.c_str());
+  if (ContainsHTML(copyright_text.c_str()))
+    copyright_text = ExtractTextFromHTML(copyright_text.c_str());
+  if (ContainsHTML(about_text.c_str()))
+    about_text = ExtractTextFromHTML(about_text.c_str());
+
   std::string title_copyright = "<b>";
   title_copyright.append(title_text);
   title_copyright.append("</b><br>");

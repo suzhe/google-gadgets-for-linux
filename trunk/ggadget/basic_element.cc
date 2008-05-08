@@ -1021,6 +1021,7 @@ class BasicElement::Impl {
   EventSignal onsize_event_;
 
   EventSignal on_content_changed_signal_;
+  Signal1<bool, MenuInterface *> on_add_context_menu_items_signal_;
 };
 
 #ifdef _DEBUG
@@ -1829,8 +1830,8 @@ void BasicElement::OnPopupOff() {
 }
 
 bool BasicElement::OnAddContextMenuItems(MenuInterface *menu) {
-  // Let the default menu items shown by default.
-  return true;
+  return !impl_->on_add_context_menu_items_signal_.HasActiveConnections() ||
+         impl_->on_add_context_menu_items_signal_(menu);
 }
 
 bool BasicElement::IsChildInVisibleArea(const BasicElement *child) const {
@@ -1904,6 +1905,11 @@ Connection *BasicElement::ConnectOnSizeEvent(Slot0<void> *handler) {
 }
 Connection *BasicElement::ConnectOnContentChanged(Slot0<void> *handler) {
   return impl_->on_content_changed_signal_.Connect(handler);
+}
+
+Connection *BasicElement::ConnectOnAddContextMenuItems(
+    Slot1<bool, MenuInterface *> *handler) {
+  return impl_->on_add_context_menu_items_signal_.Connect(handler);
 }
 
 EventResult BasicElement::HandleMouseEvent(const MouseEvent &event) {

@@ -82,16 +82,19 @@ class QtHost::Impl {
 
   bool ConfirmGadget(int id) {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    StringMap data;
-    if (!Gadget::GetGadgetManifest(path.c_str(), &data))
+    std::string download_url, title, description;
+    if (!gadget_manager_->GetGadgetInstanceInfo(id,
+                                                GetSystemLocaleName().c_str(),
+                                                NULL, &download_url,
+                                                &title, &description))
       return false;
 
     std::string message = GM_("GADGET_CONFIRM_MESSAGE");
     message.append("\n\n")
-        .append(data[kManifestName] + "\n")
-        .append(gadget_manager_->GetGadgetInstanceDownloadURL(id) + "\n\n")
+        .append(title).append("\n")
+        .append(download_url).append("\n\n")
         .append(GM_("GADGET_DESCRIPTION"))
-        .append(data[kManifestDescription]);
+        .append(description));
     int ret = QMessageBox::question(NULL,
                                     GM_("GADGET_CONFIRM_TITLE"),
                                     message.c_str(),

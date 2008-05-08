@@ -946,6 +946,10 @@ class View::Impl {
 
   bool OnAddContextMenuItems(MenuInterface *menu) {
     if (!view_host_) return false;
+    if (on_add_context_menu_items_signal_.HasActiveConnections() &&
+        !on_add_context_menu_items_signal_(menu))
+      return false;
+
     bool result = true;
     if (mouseover_element_.Get()) {
       if (mouseover_element_.Get()->IsReallyEnabled())
@@ -1261,6 +1265,7 @@ class View::Impl {
   EventSignal onsize_event_;
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
+  Signal1<bool, MenuInterface *> on_add_context_menu_items_signal_;
 
   // Note: though other things are case-insenstive, this map is case-sensitive,
   // to keep compatible with the Windows version.
@@ -1752,6 +1757,10 @@ Connection *View::ConnectOnSizingEvent(Slot0<void> *handler) {
 }
 Connection *View::ConnectOnUndockEvent(Slot0<void> *handler) {
   return impl_->onundock_event_.Connect(handler);
+}
+Connection *View::ConnectOnAddContextMenuItems(
+    Slot1<bool, MenuInterface *> *handler) {
+  return impl_->on_add_context_menu_items_signal_.Connect(handler);
 }
 
 } // namespace ggadget

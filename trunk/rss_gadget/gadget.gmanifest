@@ -21,10 +21,9 @@
     <author>Google Inc.</author>
     <authorEmail>google-gadgets-for-linux-dev@googlegroups.com</authorEmail>
     <authorWebsite>http://code.google.com/p/google-gadgets-for-linux</authorWebsite>
-    <copyright>&GADGET_COPYRIGHT;</copyright>
-    <description>&GADGET_DESC;</description>
     <name>&GADGET_NAME;</name>
-    <aboutText>&GADGET_ABOUT;</aboutText>
+    <!-- No copyright, description and aboutText because we need to display
+         information of the real rss gadget. -->
     <smallIcon>small_rss_icon.png</smallIcon>
     <icon>large_rss_icon.png</icon>
   </about>

@@ -28,7 +28,10 @@ class MenuInterface;
 class ViewElement;
 class ViewInterface;
 
+#ifndef DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
+#define DECLARED_VARIANT_PTR_TYPE_MENU_INTERFACE
 DECLARE_VARIANT_PTR_TYPE(MenuInterface);
+#endif
 
 /*
  * Object that represent the side bar.

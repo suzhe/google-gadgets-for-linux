@@ -450,10 +450,51 @@ std::string ExtractTextFromHTML(const char *source) {
   return result;
 }
 
+bool ContainsHTML(const char *s) {
+  if (!s || !*s)
+    return false;
+
+  const int kMaxSearch = 50000;
+  int i = 0;
+  while (s[i] && s[i] != '<' && i < kMaxSearch)  // must contain <
+    i++;
+
+  if (s[i] != '<')
+    return false;
+
+  i = 0;
+  while (s[i] && i < kMaxSearch) {
+    if (s[i] != '/' && s[i] != '<') {
+      i++;
+      continue;
+    }
+
+    if (s[i] == '/' && s[i + 1] == '>')  // />
+      return true;
+
+    if (s[i] == '<') {
+      char first = tolower(s[i + 1]);
+      if (first) {
+        if (first == '/' || first == '!')
+          return true;
+        char second = tolower(s[i + 2]);
+        if (second) {
+          if (first == 'p' && second == '>')  // <p>
+            return true;
+          if ((first == 'b' || first == 'h') && (s[i + 3] == '>'))
+            return true;  // <b?> <h?> (<br>, <hr>, <h1>, <h2>, etc.)
+        }
+      }
+    }
+    i++;
+  }
+  return false;
+}
+
 bool SimpleMatchXPath(const char *xpath, const char *pattern) {
   ASSERT(xpath && pattern);
   while (*xpath && *pattern) {
-    // In the case of xpath[0] == '[', return false because it's invalid. 
+    // In the case of xpath[0] == '[', return false because it's invalid.
     if (GadgetCharCmp(*xpath, *pattern) != 0)
       return false;
     xpath++;

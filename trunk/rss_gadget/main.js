@@ -15,7 +15,8 @@
 */
 
 var kURLOption = "rss_url";
-var kRefreshInterval = 600000; // every 10 minutes
+var kMinRefreshInterval = 600000; // every 10 minutes
+var g_refresh_interval = kMinRefreshInterval;
 
 var kItemHeadingColor = "#ffffff";
 var kItemSourceColor = "#00ffff";
@@ -25,7 +26,9 @@ var kHeightOffset = 23;
 
 var g_xml_request = null;
 
-var g_feed_title = null;
+var g_feed_title = "";
+var g_feed_description = "";
+var g_feed_copyright = "";
 var g_feed_items = null;
 
 options.putDefaultValue(kURLOption, "http://googleblog.blogspot.com/atom.xml");
@@ -34,7 +37,7 @@ contents.contentFlags = gddContentFlagHaveDetails;
 
 plugin.onAddCustomMenuItems = OnAddCustomMenuItems;
 
-view.setInterval("Refresh()", kRefreshInterval);
+var g_refresh_timer = 0;
 
 function OnAddCustomMenuItems(menu) {
   menu.AddItem(strings.GADGET_REFRESH, 0, RefreshMenuHandler);
@@ -114,6 +117,8 @@ function ParseDocument() {
 
   gadget.debug.trace("finished parsing");
   DisplayFeedItems();
+  if (g_refresh_timer == 0)
+    g_refresh_timer = view.setInterval(Refresh, g_refresh_interval);
 }
 
 function BuildAtomDoc(xml) {
@@ -128,6 +133,9 @@ function BuildAtomDoc(xml) {
   }
 
   g_feed_title = GetElementText("title", feed_elem);
+  g_feed_description = GetElementText("subtitle", feed_elem);
+  g_refresh_interval = kMinRefreshInterval;
+  g_feed_copyright = GetElementText("rights", feed_elem);
   feed_items = new Array();
 
   var items = xml.getElementsByTagName("entry");
@@ -202,6 +210,10 @@ function BuildRSSDoc(xml) {
   }
 
   g_feed_title = GetElementText("title", chan_elem);
+  g_feed_description = GetElementText("description", chan_elem);
+  var ttl = parseInt(GetElementText("ttl", chan_elem)) * 60 * 1000;
+  g_refresh_interval = ttl > kMinRefreshInterval ? ttl : kMinRefreshInterval;
+  g_feed_copyright = GetElementText("copyright", chan_elem);
   feed_items = new Array();
 
   // In older feeds, the "item" elements are under "rdf".
@@ -300,12 +312,23 @@ function UpdateCaption(text) {
   } else {
     view.caption = text;
   }
-  gadget.debug.trace("new caption: " + view.caption);
+  if (!g_feed_items || g_feed_items.length == 0) {
+    // Display the text as a static content item if there is no real item.
+    contents.removeAllContentItems();
+    var item = new ContentItem();
+    item.heading = text;
+    item.headingColor = kItemHeadingColor;
+    item.flags = gddContentItemFlagStatic;
+    contents.addContentItem(item, 0);
+  }
 }
 
 function DisplayFeedItems() {
-  UpdateCaption(g_feed_title);
   contents.removeAllContentItems();
+
+  UpdateCaption(g_feed_title);
+  plugin.about_text = g_feed_title + "\n\n" + g_feed_copyright + "\n\n"
+      + g_feed_description;
 
   if (g_feed_items) {
     // Append in reverse.
@@ -404,6 +427,8 @@ function SetNewFeedURL(url) {
   UpdateCaption(null);
   contents.removeAllContentItems();
   options.putValue(kURLOption, url);
+  view.cancelInterval(g_refresh_timer);
+  g_refresh_timer = 0;
   Refresh();
 }
 

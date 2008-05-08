@@ -124,6 +124,10 @@ class ContentItem::Impl {
     QueueDraw();
   }
 
+  static std::string StripHTML(const std::string &s) {
+    return ContainsHTML(s.c_str()) ? ExtractTextFromHTML(s.c_str()) : s;
+  }
+
   void UpdateDisplayText() {
     if (display_text_changed_) {
       if (flags_ & CONTENT_ITEM_FLAG_DISPLAY_AS_IS) {
@@ -131,9 +135,9 @@ class ContentItem::Impl {
         source_text_.SetText(source_);
         snippet_text_.SetText(snippet_);
       } else {
-        heading_text_.SetText(ExtractTextFromHTML(heading_.c_str()));
-        source_text_.SetText(ExtractTextFromHTML(source_.c_str()));
-        snippet_text_.SetText(ExtractTextFromHTML(snippet_.c_str()));
+        heading_text_.SetText(StripHTML(heading_));
+        source_text_.SetText(StripHTML(source_));
+        snippet_text_.SetText(StripHTML(snippet_));
       }
       display_text_changed_ = false;
     }

@@ -25,6 +25,7 @@
 #include <ggadget/gadget_manager_interface.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
+#include <ggadget/locales.h>
 #include <ggadget/messages.h>
 #include <ggadget/logger.h>
 #include <ggadget/script_runtime_manager.h>
@@ -143,16 +144,18 @@ class SimpleGtkHost::Impl {
 
   bool ConfirmGadget(int id) {
     std::string path = gadget_manager_->GetGadgetInstancePath(id);
-    StringMap data;
-    if (!Gadget::GetGadgetManifest(path.c_str(), &data))
+    std::string download_url, title, description;
+    if (!gadget_manager_->GetGadgetInstanceInfo(id,
+                                                GetSystemLocaleName().c_str(),
+                                                NULL, &download_url,
+                                                &title, &description))
       return false;
 
     GtkWidget *dialog = gtk_message_dialog_new(
         NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
         "%s\n\n%s\n%s\n\n%s%s",
-        GM_("GADGET_CONFIRM_MESSAGE"), data[kManifestName].c_str(),
-        gadget_manager_->GetGadgetInstanceDownloadURL(id).c_str(),
-        GM_("GADGET_DESCRIPTION"), data[kManifestDescription].c_str());
+        GM_("GADGET_CONFIRM_MESSAGE"), title.c_str(), download_url.c_str(),
+        GM_("GADGET_DESCRIPTION"), description.c_str());
 
     GdkScreen *screen;
     gdk_display_get_pointer(gdk_display_get_default(), &screen,

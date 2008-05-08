@@ -16,7 +16,6 @@
 
 var kDownloadURLOption = "download_url";
 var kModuleURLOption = "module_url_prefix";
-var kLocaleOption = "locale";
 
 var g_user_pref_names = null;
 var g_user_pref_optional = null;
@@ -30,7 +29,6 @@ var kShowOptions = "ShowOptions";
 var kDefaultLocale = "en-US";
 var kDefaultModuleURLPrefix = "http://gmodules.com/ig/ifr?url=";
 options.putDefaultValue(kModuleURLOption, kDefaultModuleURLPrefix);
-options.putDefaultValue(kLocaleOption, kDefaultLocale);
 
 var g_download_url = options.getValue(kDownloadURLOption);
 var g_module_url_prefix = options.getValue(kModuleURLOption);
@@ -52,29 +50,11 @@ LoadGadget();
 function OnAddCustomMenuItems(menu) {
   // Grayed if gadget hasn't been loaded yet.
   var flags = (g_user_pref_names == null) ? gddMenuItemFlagGrayed : 0;
-
   menu.AddItem(strings.GADGET_REFRESH, flags, RefreshMenuHandler);
-  menu.AddItem(strings.GADGET_ABOUTMENU, flags, AboutMenuHandler);
 }
 
 function RefreshMenuHandler(item_text) {
   RefreshGadget();
-}
-
-function AboutMenuHandler(item_text) {
-  var html =  "<html><head><style type=\"text/css\">"
-    + "p {font-size: 12px;}</style></head>"
-    + kHTMLMeta
-    + "<body><h5>" + g_gadget_attribs.title + "</h5><p>"
-    + g_gadget_attribs.author + "<br>"
-    + g_gadget_attribs.author_email + "</p><p>"
-    + g_gadget_attribs.description
-    + "</p></body></html>";
-
-  var control = new DetailsView();
-  control.SetContent("", null, html, true, 0);
-  control.html_content = true;
-  plugin.showDetailsView(control, strings.GADGET_ABOUTMENU, 0, null);
 }
 
 // Options view
@@ -243,6 +223,11 @@ function ViewOnSize() {
 
 function ShowGadget() {
   view.caption = g_gadget_attribs.title;
+  plugin.about_text = g_gadget_attribs.title + "\n\n"
+      + g_gadget_attribs.author
+      + (g_gadget_attribs.author_email ?
+         " (" + g_gadget_attribs.author_email + ")" : "")
+      + "\n\n" + g_gadget_attribs.description;
 
   var w = g_gadget_attribs.width;
   var h = g_gadget_attribs.height;
@@ -279,8 +264,7 @@ function ParseRawXML() {
   g_gadget_attribs.title = GetElementAttrib(attribs, "title");
   g_gadget_attribs.description = GetElementAttrib(attribs, "description");
   g_gadget_attribs.author = GetElementAttrib(attribs, "author");
-  g_gadget_attribs.author_email
-    = GetElementAttrib(attribs, "author_email");
+  g_gadget_attribs.author_email = GetElementAttrib(attribs, "author_email");
 
   var param = GetElementAttrib(attribs, "width");
   g_gadget_attribs.width = (param == "") ? null : Number(param);
@@ -346,9 +330,9 @@ function DisplayMessage(msg) {
 }
 
 function SetUpCommonParams() {
-  var locale = options.getValue(kLocaleOption).split('-', 2);
-  g_commonparams = "&.lang=" + locale[0] + "&.country=" + locale[1]
-    + "&synd=open";
+  var locale = framework.system.languageCode();
+  var parts = locale.split('-', 2);
+  g_commonparams = "&.lang=" + locale + "&.country=" + parts[1] + "&synd=open";
 }
 
 function GetConfigURL() {

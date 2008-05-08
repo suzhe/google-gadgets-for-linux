@@ -432,7 +432,10 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                     MenuInterface::MENU_ITEM_PRI_GADGET);
       menu->AddItem(NULL, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
     }
-    menu->AddItem(GM_("MENU_ITEM_ABOUT"), 0,
+    bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
+                         !oncommand_signal_.HasActiveConnections(); 
+    menu->AddItem(GM_("MENU_ITEM_ABOUT"),
+                  disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0, 
                   NewSlot(this, &Impl::AboutMenuCallback),
                   MenuInterface::MENU_ITEM_PRI_GADGET);
     menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,
@@ -598,13 +601,16 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       options_view_ = new ViewBundle(
           host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
           owner_, element_factory_, NULL, NULL, false);
-      DisplayWindow *window = new DisplayWindow(options_view_->view());
+      View *view = options_view_->view();
+      DisplayWindow *window = new DisplayWindow(view);
       Variant result = onshowoptionsdlg_signal_(window);
       if ((result.type() != Variant::TYPE_BOOL ||
            VariantValue<bool>()(result)) && window->AdjustSize()) {
-        options_view_->view()->SetResizable(ViewInterface::RESIZABLE_FALSE);
-        ret = options_view_->view()->ShowView(
-            true, flag, NewSlot(this, &Impl::OptionsDialogCallback));
+        view->SetResizable(ViewInterface::RESIZABLE_FALSE);
+        if (view->GetCaption().empty())
+          view->SetCaption(main_view_->view()->GetCaption().c_str());
+        ret = view->ShowView(true, flag,
+                             NewSlot(this, &Impl::OptionsDialogCallback));
       } else {
         LOG("gadget cancelled the options dialog.");
       }
@@ -617,12 +623,17 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         options_view_ = new ViewBundle(
             host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
             owner_, element_factory_, &global_, NULL, true);
+        View *view = options_view_->view();
         RegisterScriptExtensions(options_view_->context());
         std::string full_path = file_manager_->GetFullPath(kOptionsXML);
         if (options_view_->scriptable()->InitFromXML(xml, full_path.c_str())) {
-          options_view_->view()->SetResizable(ViewInterface::RESIZABLE_FALSE);
-          ret = options_view_->view()->ShowView(
-              true, flag, NewSlot(this, &Impl::OptionsDialogCallback));
+          // Allow XML options dialog to resize, but not zoom.
+          if (view->GetResizable() == ViewInterface::RESIZABLE_ZOOM)
+            view->SetResizable(ViewInterface::RESIZABLE_FALSE);
+          if (view->GetCaption().empty())
+            view->SetCaption(main_view_->view()->GetCaption().c_str());
+          ret = view->ShowView(true, flag,
+                               NewSlot(this, &Impl::OptionsDialogCallback));
         } else {
           LOG("Failed to setup the options view");
         }
@@ -693,8 +704,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     }
 
     // For details view, the caption set in xml file will be discarded.
-    if (title && *title)
+    if (title && *title) {
       details_view_->view()->SetCaption(title);
+    } else if (details_view_->view()->GetCaption().empty()) {
+      details_view_->view()->SetCaption(
+          main_view_->view()->GetCaption().c_str());
+    }
 
     details_view_->view()->ShowView(title, flags, feedback_handler);
     return true;

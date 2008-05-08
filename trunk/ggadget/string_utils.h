@@ -182,6 +182,13 @@ std::string CompressWhiteSpaces(const char *source);
 std::string ExtractTextFromHTML(const char *source);
 
 /**
+ * Guess if a string contains HTML. We basically check for common constructs
+ * in html such as </, />, <br>, <hr>, <p>, etc.
+ * This function only scans the 50k characters as an optimization.
+ */
+bool ContainsHTML(const char *s);
+
+/**
  * Matches an XPath string against an XPath pattern, and returns whether
  * matches. This function only supports simple xpath grammar, containing only
  * element tag name, element index (not allowed in pattern) and attribute
