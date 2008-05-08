@@ -610,7 +610,7 @@ class BasicElement::Impl {
 
       ++total_draw_count_;
       view_->IncreaseDrawCount();
-      if ((total_draw_count_ % 1000) == 0)
+      if ((total_draw_count_ % 5000) == 0)
         DLOG("BasicElement: %d draws, %d queues, %d%% q/d",
              total_draw_count_, total_queue_draw_count_,
              total_queue_draw_count_ * 100 / total_draw_count_);

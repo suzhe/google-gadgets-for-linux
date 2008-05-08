@@ -18,6 +18,8 @@
 #include <string>
 #include <map>
 
+#include "simple_gtk_host.h"
+
 #include <ggadget/common.h>
 #include <ggadget/decorated_view_host.h>
 #include <ggadget/gadget.h>
@@ -33,7 +35,6 @@
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/file_manager_factory.h>
 
-#include "simple_gtk_host.h"
 #include "gadget_browser_host.h"
 
 using namespace ggadget;

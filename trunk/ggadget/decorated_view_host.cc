@@ -80,7 +80,7 @@ class DecoratedViewHost::Impl {
           NewSlot(this, &ViewDecoratorBase::UpdateViewSize));
       // Always resizable.
       View::SetResizable(RESIZABLE_TRUE);
-      //View::EnableCanvasCache(false);
+      View::EnableCanvasCache(false);
     }
     virtual ~ViewDecoratorBase() {}
 

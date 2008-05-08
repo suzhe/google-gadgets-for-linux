@@ -168,8 +168,11 @@ class SideBar::Impl : public View {
         view_host_(view_host),
         null_element_(NULL),
         popout_element_(NULL),
+        blank_height_(0),
         mouse_move_event_x_(-1),
         mouse_move_event_y_(-1),
+        hit_element_transparent_part_(false),
+        hit_element_bottom_(false),
         background_(NULL),
         icon_(NULL),
         main_div_(NULL) {
@@ -188,47 +191,80 @@ class SideBar::Impl : public View {
       popin_event_();
       return EVENT_RESULT_HANDLED;
     }
-    EventResult result = View::OnMouseEvent(event);
-    if (event.GetType() == Event::EVENT_MOUSE_DOWN &&
-        mouse_move_event_x_ < 0 && mouse_move_event_y_ < 0) {
+
+    EventResult result = EVENT_RESULT_UNHANDLED;
+    // don't sent mouse event to view elements when user is doing layout by drag
+    if (!hit_element_bottom_)
+      result = View::OnMouseEvent(event);
+
+    // don't handle sidebar's resize logic in this method, return directly
+    if (GetHitTest() == HT_LEFT || GetHitTest() == HT_RIGHT)
+      return EVENT_RESULT_UNHANDLED;
+
+    if (event.GetType() == Event::EVENT_MOUSE_DOWN && GetMouseOverElement()) {
+      if (GetMouseOverElement()->GetHitTest() == HT_TRANSPARENT) {
+        hit_element_transparent_part_ = true;
+        return EVENT_RESULT_HANDLED;
+      } else if (GetHitTest() == HT_BOTTOM) {
+        hit_element_bottom_ = true;
+        // record the original height of each view elements
+        int index = 0;
+        BasicElement *element = NULL;
+        for (; index < main_div_->GetChildren()->GetCount(); ++index) {
+          element = main_div_->GetChildren()->GetItemByIndex(index);
+          elements_height_.push_back(element->GetPixelHeight());
+        }
+        if (element) {
+          blank_height_ = main_div_->GetPixelHeight() -
+              element->GetPixelY() - element->GetPixelHeight();
+        }
+      }
       DLOG("Mouse down at (%f,%f)", event.GetX(), event.GetY());
       mouse_move_event_x_ = event.GetX();
       mouse_move_event_y_ = event.GetY();
     } else if (event.GetType() == Event::EVENT_MOUSE_UP) {
       DLOG("Mouse up at (%f,%f)", event.GetX(), event.GetY());
       ResetState();
+    } else if (event.GetType() == Event::EVENT_MOUSE_OUT) {
+      DLOG("Mouse out at (%f,%f)", event.GetX(), event.GetY());
+      ResetState();
     }
+
     if (result != EVENT_RESULT_UNHANDLED ||
         event.GetButton() != MouseEvent::BUTTON_LEFT ||
         event.GetType() != Event::EVENT_MOUSE_MOVE ||
         !GetMouseOverElement() ||
         !GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID))
       return result;
-    if (GetHitTest() == ViewInterface::HT_BOTTOM) {
-      double old_height = mouse_move_event_y_ -
-          GetMouseOverElement()->GetPixelY();
-      double new_height = event.GetY() - GetMouseOverElement()->GetPixelY();
-      double offset = std::abs(new_height - old_height);
-      DLOG("old height: %.1lf, new: %.1lf", old_height, new_height);
+    // ignore all move events after the transparent part is hitten
+    if (hit_element_transparent_part_)
+      return EVENT_RESULT_HANDLED;
+
+    double offset = mouse_move_event_y_ - event.GetY();
+    if (hit_element_bottom_) {
+      // set cursor so that user understand that we are still in layout process
+      SetCursor(CURSOR_SIZENS);
       int index = GetIndex(GetMouseOverElement());
-      if (new_height > old_height && DownResize(index + 1, &offset)) {
-        mouse_move_event_y_ = event.GetY();
-        ViewElement *element = down_cast<ViewElement *>(GetMouseOverElement());
-        element->SetSize(element->GetPixelWidth(),
-                         element->GetPixelHeight() + offset);
+      if (offset < 0) {
+        DownResize(false, index + 1, &offset);
+        UpResize(true, index, &offset);
+        DownResize(true, index + 1, &offset);
         QueueDraw();
-      }
-      if (new_height < old_height && UpResize(index, &offset)) {
-        mouse_move_event_y_ = event.GetY();
+      } else {
+        UpResize(true, index, &offset);
         Layout();
-        QueueDraw();
       }
-    } else if (GetMouseOverElement() != popout_element_) {
+    } else if (GetMouseOverElement() != popout_element_ &&
+               (std::abs(event.GetX() - mouse_move_event_x_) >
+                kMouseMoveThreshold ||
+                std::abs(event.GetY() - mouse_move_event_y_) >
+                kMouseMoveThreshold)) {
       undock_event_();
       ResetState();
     }
     return EVENT_RESULT_HANDLED;
   }
+
   virtual bool OnAddContextMenuItems(MenuInterface *menu) {
     if (GetMouseOverElement() &&
         GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
@@ -251,13 +287,10 @@ class SideBar::Impl : public View {
     button_array_[1]->SetPixelX(width - 2 * kIconHeight - 1 - kBoderWidth);
     button_array_[2]->SetPixelX(width - kIconHeight - kBoderWidth);
 
-    border_array_[2]->SetPixelX(width - kBoderWidth);
-    border_array_[1]->SetPixelY(height - kBoderWidth);
+    border_array_[0]->SetPixelHeight(height);
+    border_array_[1]->SetPixelHeight(height);
+    border_array_[1]->SetPixelX(width - kBoderWidth);
 
-    border_array_[0]->SetPixelWidth(width - 2 * kBoderWidth);
-    border_array_[1]->SetPixelWidth(width - 2 * kBoderWidth);
-    border_array_[2]->SetPixelHeight(height - 2 * kBoderWidth);
-    border_array_[3]->SetPixelHeight(height - 2 * kBoderWidth);
     Layout();
   }
   void ResetState() {
@@ -268,8 +301,11 @@ class SideBar::Impl : public View {
     }
     mouse_move_event_x_ = -1;
     mouse_move_event_y_ = -1;
+    hit_element_transparent_part_ = false;
+    hit_element_bottom_ = false;
+    blank_height_ = 0;
+    elements_height_.clear();
   }
-  //TODO: refactor this method
   void SetupDecorator() {
     background_ = new ImgElement(NULL, this, NULL);
     background_->SetSrc(Variant(kVDMainBackground));
@@ -282,40 +318,16 @@ class SideBar::Impl : public View {
     background_->EnableCanvasCache(true);
     GetChildren()->InsertElement(background_, NULL);
 
-    // Just use DrawLine to draw border.
-    //TODO: Variant border_h = LoadGlobalImageAsVariant(kVDBorderH);
-    //TODO: Variant border_v = LoadGlobalImageAsVariant(kVDBorderV);
-    for (int i = 0; i < 4; ++i) {
-      ImgElement *img = new ImgElement(NULL, this, NULL);
-      border_array_[i] = img;
-      GetChildren()->InsertElement(img, NULL);
+    for (int i = 0; i < 2; ++i) {
+      DivElement *div = new DivElement(NULL, this, NULL);
+      div->SetPixelWidth(kBoderWidth);
+      div->SetPixelY(0);
+      div->SetCursor(CURSOR_SIZEWE);
+      border_array_[i] = div;
+      GetChildren()->InsertElement(div, NULL);
     }
-    //TODO: border_array_[0]->SetSrc(border_h);
-    //TODO: border_array_[1]->SetSrc(border_h);
-    //TODO: border_array_[2]->SetSrc(border_v);
-    //TODO: border_array_[3]->SetSrc(border_v);
-
-    border_array_[0]->SetPixelHeight(kBoderWidth);
-    border_array_[1]->SetPixelHeight(kBoderWidth);
-    border_array_[2]->SetPixelWidth(kBoderWidth);
-    border_array_[3]->SetPixelWidth(kBoderWidth);
-
-    border_array_[1]->SetFlip(ImgElement::FLIP_HORIZONTAL);
-    border_array_[2]->SetFlip(ImgElement::FLIP_VERTICAL);
-
-    border_array_[0]->SetPixelX(kBoderWidth);
-    border_array_[1]->SetPixelX(kBoderWidth);
-    border_array_[2]->SetPixelY(kBoderWidth);
-    border_array_[3]->SetPixelY(kBoderWidth);
-
-    border_array_[0]->SetHitTest(HT_TOP);
-    border_array_[1]->SetHitTest(HT_BOTTOM);
-    border_array_[2]->SetHitTest(HT_RIGHT);
-    border_array_[3]->SetHitTest(HT_LEFT);
-
-    // FIXME: choose proper cursor type~~
-    for (int i = 0; i < 4; ++i)
-      border_array_[i]->SetCursor(ViewInterface::CURSOR_SIZE);
+    border_array_[0]->SetHitTest(HT_LEFT);
+    border_array_[1]->SetHitTest(HT_RIGHT);
 
     SetupButtons();
 
@@ -414,6 +426,8 @@ class SideBar::Impl : public View {
       element->SetPixelX(0);
       element->SetPixelY(height);
       height += element->GetPixelHeight() + kSperator;
+      double sx, sy;
+      element->SelfCoordToViewCoord(0, 0, &sx, &sy);
     }
     QueueDraw();
   }
@@ -450,50 +464,76 @@ class SideBar::Impl : public View {
       Layout();
     }
   }
-  bool UpResize(int index, double *offset) {
+  // *offset could be any value
+  bool UpResize(bool do_resize, int index, double *offset) {
+    double sign = *offset > 0 ? 1 : -1;
     double count = 0;
-    while (*offset > count && index >= 0) {
-      DLOG("index: %d, offset: %f", index, *offset);
+    while (*offset * sign > count * sign && index >= 0) {
       ViewElement *element = down_cast<ViewElement *>(
           main_div_->GetChildren()->GetItemByIndex(index));
       double w = element->GetPixelWidth();
-      double h = element->GetPixelHeight() + count - *offset;
+      double h = elements_height_[index] + count - *offset;
+      // don't send non-positive resize request
+      if (h <= .0) h = 1;
       if (element->OnSizing(&w, &h)) {
-        double diff = std::min(element->GetPixelHeight() - h, *offset - count);
-        DLOG("original: %.1lfx%.1lf, new: %.1lfx%.1lf, diff: %f",
-             element->GetPixelWidth(), element->GetPixelHeight(), w, h, diff);
-        element->SetPixelHeight(element->GetPixelHeight() - diff);
+        double diff = std::min(sign * (elements_height_[index] - h),
+                               sign * (*offset - count)) * sign;
+        if (do_resize)
+          element->SetSize(w, elements_height_[index] - diff);
         count += diff;
+      } else {
+        double oh = element->GetPixelHeight();
+        double diff = std::min(sign * (elements_height_[index] - oh),
+                               sign * (*offset - count)) * sign;
+        if (diff > 0) count += diff;
       }
       index--;
     }
+    if (do_resize)
+      // recover upmost elemnts' size
+      while (index >= 0) {
+        ViewElement *element = down_cast<ViewElement *>(
+            main_div_->GetChildren()->GetItemByIndex(index));
+        element->SetSize(main_div_->GetPixelWidth(), elements_height_[index]);
+        index--;
+      }
+    DLOG("original: at last off: %.1lf, count: %.1lf", *offset, count);
     if (count == 0) return false;
     *offset = count;
     return true;
   }
-  bool DownResize(int index, double *offset) {
-    double blank = GetBlankHeight();
+  bool DownResize(bool do_resize, int index, double *offset) {
     double count = 0;
-    if (blank > 0) {
-      count = std::min(blank, *offset);
-      for (int i = index; i < main_div_->GetChildren()->GetCount(); ++i) {
-        BasicElement *element = main_div_->GetChildren()->GetItemByIndex(i);
-        element->SetPixelY(element->GetPixelY() + count);
-      }
-    }
-    while (*offset > count && index < main_div_->GetChildren()->GetCount()) {
+    if (blank_height_ > 0) count = std::max(-blank_height_, *offset);
+    while (*offset < count && index < main_div_->GetChildren()->GetCount()) {
       ViewElement *element = down_cast<ViewElement *>(
           main_div_->GetChildren()->GetItemByIndex(index));
       double w = element->GetPixelWidth();
-      double h = element->GetPixelHeight() + *offset - count;
-      if (element->OnSizing(&w, &h) &&
-          w == element->GetPixelWidth() && h < element->GetPixelHeight()) {
-        double diff = std::min(element->GetPixelHeight() - h, *offset - count);
-        element->SetPixelHeight(element->GetPixelHeight() - diff);
-        element->SetPixelY(element->GetPixelY() + diff);
-        count += diff;
+      double h = elements_height_[index] + *offset - count;
+      // don't send non-positive resize request
+      if (h <= .0) h = 1;
+      if (element->OnSizing(&w, &h) && h < elements_height_[index]) {
+        double diff = std::min(elements_height_[index] - h, count - *offset);
+        if (do_resize) {
+          element->SetSize(w, elements_height_[index] - diff);
+        }
+        count -= diff;
+      } else {
+        double oh = element->GetPixelHeight();
+        double diff = std::min(elements_height_[index] - oh, count - *offset);
+        if (diff > 0) count -= diff;
       }
       index++;
+    }
+    if (do_resize) {
+      // recover upmost elemnts' size
+      while (index < main_div_->GetChildren()->GetCount()) {
+        ViewElement *element = down_cast<ViewElement *>(
+            main_div_->GetChildren()->GetItemByIndex(index));
+        element->SetSize(main_div_->GetPixelWidth(), elements_height_[index]);
+        index++;
+      }
+      Layout();
     }
     if (count == 0) return false;
     *offset = count;
@@ -514,21 +554,25 @@ class SideBar::Impl : public View {
   ViewElement *null_element_;
   ViewElement *popout_element_;
 
+  std::vector<double> elements_height_;
+  double blank_height_;
   double mouse_move_event_x_;
   double mouse_move_event_y_;
+  bool hit_element_transparent_part_;
+  bool hit_element_bottom_;
 
   // elements of sidebar decorator
   ImgElement *background_;
   ImgElement *icon_;
   DivElement *main_div_;
   ButtonElement *button_array_[3];
-  ImgElement *border_array_[4];
+  DivElement *border_array_[2];
 
   Signal1<bool, MenuInterface *> system_menu_event_;
   EventSignal undock_event_;
   EventSignal popin_event_;
 
-  static const int kSperator = 2;
+  static const int kSperator = 5;
   static const int kMouseMoveThreshold = 2;
   static const double kOpacityFactor = 0.618;
   static const double kSideBarMinWidth = 50;
