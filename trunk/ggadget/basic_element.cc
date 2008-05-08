@@ -764,7 +764,9 @@ class BasicElement::Impl {
 
     // Always process direct messages because the sender wants this element
     // to process.
-    if (!direct && (!visible_ || opacity_ == 0)) {
+    // FIXME: Verify if the hittest logic is correct.
+    if (!direct && (!visible_ || opacity_ == 0 ||
+                    hittest_ == ViewInterface::HT_TRANSPARENT)) {
       return EVENT_RESULT_UNHANDLED;
     }
 
@@ -1041,7 +1043,7 @@ static const char *kCursorTypeNames[] = {
 // Must sync with ViewInterface::HitTest enumerates
 // defined in view_interface.h
 static const char *kHitTestNames[] = {
-  "httransparent", "htnowhere", "htclient", "htcaption", " htsysmenu",
+  "httransparent", "htnowhere", "htclient", "htcaption", "htsysmenu",
   "htsize", "htmenu", "hthscroll", "htvscroll", "htminbutton", "htmaxbutton",
   "htleft", "htright", "httop", "httopleft", "httopright",
   "htbottom", "htbottomleft", "htbottomright", "htborder",
@@ -1190,6 +1192,9 @@ ViewInterface::HitTest BasicElement::GetHitTest() const {
 
 void BasicElement::SetHitTest(ViewInterface::HitTest value) {
   impl_->hittest_ = value;
+  // FIXME: Verify if the hittest logic is correct.
+  if (value != ViewInterface::HT_CLIENT)
+    impl_->enabled_ = false;
 }
 
 const Elements *BasicElement::GetChildren() const {

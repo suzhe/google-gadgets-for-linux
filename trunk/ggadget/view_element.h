@@ -72,6 +72,14 @@ class ViewElement : public BasicElement {
   void ChildViewCoordToViewCoord(double child_x, double child_y,
                                  double *parent_x, double *parent_y) const;
  public:
+  virtual EventResult OnMouseEvent(const MouseEvent &event,
+                                   bool direct,
+                                   BasicElement **fired_element,
+                                   BasicElement **in_element);
+  virtual EventResult OnOtherEvent(const Event &event);
+  virtual EventResult OnDragEvent(const DragEvent &event);
+  virtual EventResult OnKeyEvent(const KeyboardEvent &event);
+
   /**
    * The size of ViewElement will always be synced with the size of child view.
    */
@@ -83,10 +91,6 @@ class ViewElement : public BasicElement {
 
  protected:
   virtual void DoDraw(CanvasInterface *canvas);
-  virtual EventResult HandleMouseEvent(const MouseEvent &event);
-  virtual EventResult HandleOtherEvent(const Event &event);
-  virtual EventResult HandleDragEvent(const DragEvent &event);
-  virtual EventResult HandleKeyEvent(const KeyboardEvent &event);
 
   virtual void GetDefaultSize(double *width, double *height) const;
 

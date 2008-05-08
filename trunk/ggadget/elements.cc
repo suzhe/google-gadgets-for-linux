@@ -213,8 +213,7 @@ class Elements::Impl {
           return result;
         }
         if (!in_element_holder.Get()) {
-          in_element_holder.Reset(descendant_in_element ?
-                                  descendant_in_element : child);
+          in_element_holder.Reset(descendant_in_element);
         }
         if (*fired_element) {
           *in_element = in_element_holder.Get();
