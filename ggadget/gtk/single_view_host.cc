@@ -33,6 +33,7 @@ namespace ggadget {
 namespace gtk {
 
 static const int kStopDraggingTimeout = 200;
+static const char kMainViewWindowRole[] = "Google-Gadgets";
 
 class SingleViewHost::Impl {
  public:
@@ -158,6 +159,8 @@ class SingleViewHost::Impl {
       if (!decorated_)
         gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
       widget_ = window_;
+      if (type_ == ViewHostInterface::VIEW_HOST_MAIN)
+        gtk_window_set_role(GTK_WINDOW(window_), kMainViewWindowRole);
     }
 
     gtk_widget_realize(GTK_WIDGET(window_));
@@ -278,7 +281,6 @@ class SingleViewHost::Impl {
   }
 
   void SetCursor(int type) {
-    //DLOG("SingleViewHost::SetCursor(%d)", type);
     GdkCursor *cursor = CreateCursor(type, view_->GetHitTest());
     if (widget_->window)
       gdk_window_set_cursor(widget_->window, cursor);
@@ -287,7 +289,6 @@ class SingleViewHost::Impl {
   }
 
   void SetTooltip(const char *tooltip) {
-    //DLOG("SingleViewHost::SetTooltip(%s)", tooltip);
     tooltip_->Show(tooltip);
   }
 

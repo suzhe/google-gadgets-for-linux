@@ -77,6 +77,7 @@ SET(SRCS
   copy_element.cc
   div_element.cc
   edit_element_base.cc
+  image_cache.cc
   img_element.cc
   item_element.cc
   label_element.cc

@@ -240,6 +240,13 @@ double ViewElement::GetPixelHeight() const {
   return BasicElement::GetPixelHeight();
 }
 
+ViewInterface::HitTest ViewElement::GetHitTest() const {
+  if (impl_->child_view_)
+    return impl_->child_view_->GetHitTest();
+
+  return BasicElement::GetHitTest();
+}
+
 void ViewElement::MarkRedraw() {
   BasicElement::MarkRedraw();
   if (impl_->child_view_)
@@ -260,22 +267,19 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
                                       BasicElement **in_element) {
   // child view must process the mouse event first, so that the hittest value
   // can be updated correctly.
-  EventResult result = EVENT_RESULT_UNHANDLED;
+  EventResult result1 = EVENT_RESULT_UNHANDLED;
   if (impl_->scale_ != 1.) {
     MouseEvent new_event(event);
     new_event.SetX(event.GetX() / impl_->scale_);
     new_event.SetY(event.GetY() / impl_->scale_);
-    result = impl_->child_view_->OnMouseEvent(new_event);
+    result1 = impl_->child_view_->OnMouseEvent(new_event);
   } else {
-    result = impl_->child_view_->OnMouseEvent(event);
+    result1 = impl_->child_view_->OnMouseEvent(event);
   }
 
-  // update hittest value.
-  SetHitTest(impl_->child_view_->GetHitTest());
-
-  return std::max(
-      BasicElement::OnMouseEvent(event, direct, fired_element, in_element),
-      result);
+  EventResult result2 = BasicElement::OnMouseEvent(event, direct,
+                                                   fired_element, in_element);
+  return std::max(result1, result2);
 }
 
 EventResult ViewElement::OnDragEvent(const DragEvent &event) {

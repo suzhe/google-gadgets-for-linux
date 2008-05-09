@@ -72,6 +72,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  ggadget.h \
 			  graphics_interface.h \
 			  host_interface.h \
+			  image_cache.h \
 			  image_interface.h \
 			  img_element.h \
 			  item_element.h \
@@ -163,6 +164,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  file_manager_wrapper.cc \
 			  gadget.cc \
 			  gadget_manager.cc \
+			  image_cache.cc \
 			  img_element.cc \
 			  item_element.cc \
 			  label_element.cc \

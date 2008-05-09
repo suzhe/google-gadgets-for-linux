@@ -90,7 +90,7 @@ class ImageInterface {
                              Color *color, double *opacity) const = 0;
 
   /**
-   * Returns the string tag set by SetTag() method previously.
+   * Returns the string tag specified when loading the image.
    */
   virtual std::string GetTag() const = 0;
 

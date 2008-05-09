@@ -207,8 +207,13 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   /** Sets the rotation of the element, in degrees. */
   void SetRotation(double rotation);
 
-  /** Gets and sets the hit-test value for this element. */
-  ViewInterface::HitTest GetHitTest() const;
+  /**
+   * Gets and sets the hit-test value for this element.
+   *
+   * Derived classes can override GetHitTest() to return customized hittest
+   * value.
+   */
+  virtual ViewInterface::HitTest GetHitTest() const;
   void SetHitTest(ViewInterface::HitTest value);
 
   /**

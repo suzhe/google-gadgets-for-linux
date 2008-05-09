@@ -373,7 +373,7 @@ class ViewWidgetBinder::Impl {
                  event->x / impl->zoom_, event->y / impl->zoom_,
                  0, 0, button, mod);
 
-    if (button != MouseEvent::BUTTON_NONE) {
+    if (button != MouseEvent::BUTTON_NONE && !gdk_pointer_is_grabbed()) {
       // Grab the cursor to prevent losing events.
       gdk_pointer_grab(widget->window, FALSE,
                        (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |

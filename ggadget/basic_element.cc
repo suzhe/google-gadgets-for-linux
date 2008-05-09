@@ -415,7 +415,6 @@ class BasicElement::Impl {
   }
 
   void Layout() {
-    // DLOG("Layout for element: %p", owner_);
     if (!width_specified_ || !height_specified_) {
       double width, height;
       owner_->GetDefaultSize(&width, &height);
@@ -513,9 +512,6 @@ class BasicElement::Impl {
   }
 
   void Draw(CanvasInterface *canvas) {
-    // DLOG("Draw %s(%p) on cavase(%p) with size: %fx%f", name_.c_str(), owner_,
-    //      canvas, canvas->GetWidth(), canvas->GetHeight());
-
     // GetPixelWidth() and GetPixelHeight might be overrode.
     double width = owner_->GetPixelWidth();
     double height = owner_->GetPixelHeight();
@@ -764,9 +760,10 @@ class BasicElement::Impl {
 
     // Always process direct messages because the sender wants this element
     // to process.
+    // GetHitTest() might be overrode.
     // FIXME: Verify if the hittest logic is correct.
     if (!direct && (!visible_ || opacity_ == 0 ||
-                    hittest_ == ViewInterface::HT_TRANSPARENT)) {
+                    owner_->GetHitTest() == ViewInterface::HT_TRANSPARENT)) {
       return EVENT_RESULT_UNHANDLED;
     }
 

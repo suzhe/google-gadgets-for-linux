@@ -118,9 +118,6 @@ class MockedGraphics : public ggadget::GraphicsInterface {
       ggadget::FontInterface::Weight weight) const {
     return NULL;
   }
-  virtual ggadget::GraphicsInterface *Clone() const {
-    return new MockedGraphics();
-  }
   virtual double GetZoom() const {
     return 1.;
   }

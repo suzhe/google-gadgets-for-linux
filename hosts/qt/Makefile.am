@@ -21,7 +21,9 @@ MOC_FILES		= qt_host_internal.moc
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= qt_host.h
+noinst_HEADERS		= qt_host.h \
+			  qt_host_internal.h \
+			  gadget_browser_host.h
 
 bin_PROGRAMS		= ggl-qt
 
