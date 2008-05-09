@@ -68,7 +68,7 @@ check_PROGRAMS		= backoff_test \
 check_LTLIBRARIES	= foo-module.la \
 			  bar-module.la
 
-backoff_set_SOURCES		= backoff_test.cc
+backoff_test_SOURCES		= backoff_test.cc
 color_test_SOURCES		= color_test.cc
 common_test_SOURCES		= common_test.cc
 extension_manager_test_SOURCES	= extension_manager_test.cc
