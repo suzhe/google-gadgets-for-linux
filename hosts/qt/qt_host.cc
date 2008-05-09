@@ -59,7 +59,6 @@ class QtHost::Impl {
     ScriptRuntimeManager::get()->ConnectErrorReporter(
       NewSlot(this, &Impl::ReportScriptError));
     SetupUI();
-    InitGadgets();
   }
 
   ~Impl() {
@@ -110,7 +109,7 @@ class QtHost::Impl {
         .append(description);
     int ret = QMessageBox::question(NULL,
                                     GM_("GADGET_CONFIRM_TITLE"),
-                                    message.c_str(),
+                                    QString::fromUtf8(message.c_str()),
                                     QMessageBox::Yes| QMessageBox::No,
                                     QMessageBox::Yes);
     return ret == QMessageBox::Yes;
@@ -175,7 +174,7 @@ class QtHost::Impl {
 
   ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
     QtViewHost *qvh = new QtViewHost(
-        type, 1.0, false,
+        type, 1.0, false, true,
         static_cast<ViewInterface::DebugMode>(view_debug_mode_));
     QObject::connect(obj_, SIGNAL(show(bool)),
                      qvh->GetQObject(), SLOT(OnShow(bool)));
@@ -245,8 +244,8 @@ class QtHost::Impl {
     if (child) {
       expanded_original_ = decorated;
       QtViewHost *qvh = new QtViewHost(
-          ViewHostInterface::VIEW_HOST_MAIN, 1.0, false,
-          static_cast<ViewInterface::DebugMode>(view_debug_mode_));
+          ViewHostInterface::VIEW_HOST_MAIN, 1.0, false, false,
+          view_debug_mode_);
       // qvh->ConnectOnBeginMoveDrag(NewSlot(this, &Impl::HandlePopoutViewMove));
       expanded_popout_ =
           new DecoratedViewHost(qvh, DecoratedViewHost::MAIN_EXPANDED, true);
@@ -294,6 +293,7 @@ class QtHost::Impl {
 
 QtHost::QtHost(int view_debug_mode)
   : impl_(new Impl(this, view_debug_mode)) {
+  impl_->InitGadgets();
 }
 
 QtHost::~QtHost() {

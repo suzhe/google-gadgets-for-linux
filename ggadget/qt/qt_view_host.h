@@ -34,7 +34,7 @@ class QtViewHost : public ViewHostInterface {
  public:
   QtViewHost(ViewHostInterface::Type type,
              double zoom, bool decorated,
-             int debug_mode);
+             bool record_states, int debug_mode);
   virtual ~QtViewHost();
 
   virtual Type GetType() const;

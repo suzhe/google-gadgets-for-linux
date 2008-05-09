@@ -24,6 +24,7 @@
 #include <QtGui/QInputDialog>
 #include <ggadget/file_manager_interface.h>
 #include <ggadget/gadget_consts.h>
+#include <ggadget/gadget.h>
 #include <ggadget/logger.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
@@ -42,7 +43,9 @@ namespace qt {
 class QtViewHost::Impl {
  public:
   Impl(ViewHostInterface::Type type,
-       double zoom, bool decorated,
+       double zoom,
+       bool decorated,
+       bool record_states,
        int debug_mode)
     : view_(NULL),
       type_(type),
@@ -52,6 +55,7 @@ class QtViewHost::Impl {
       debug_mode_(debug_mode),
       zoom_(zoom),
       decorated_(decorated),
+      record_states_(record_states),
       onoptionchanged_connection_(NULL),
       feedback_handler_(NULL),
       composite_(false),
@@ -85,9 +89,64 @@ class QtViewHost::Impl {
     dialog_ = NULL;
   }
 
+  std::string GetViewPositionOptionPrefix() {
+    switch (type_) {
+      case ViewHostInterface::VIEW_HOST_MAIN:
+        return "main_view";
+      case ViewHostInterface::VIEW_HOST_OPTIONS:
+        return "options_view";
+      case ViewHostInterface::VIEW_HOST_DETAILS:
+        return "details_view";
+      default:
+        return "view";
+    }
+    return "";
+  }
+
+  void SaveWindowStates() {
+    if (view_ && view_->GetGadget()) {
+      ASSERT(window_);
+      OptionsInterface *opt = view_->GetGadget()->GetOptions();
+      std::string opt_prefix = GetViewPositionOptionPrefix();
+      LOG("Save:%d, %d", window_->pos().x(), window_->pos().y());
+      opt->PutInternalValue((opt_prefix + "_x").c_str(),
+                            Variant(window_->pos().x()));
+      opt->PutInternalValue((opt_prefix + "_y").c_str(),
+                            Variant(window_->pos().y()));
+//      opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
+//                            Variant(is_keep_above_));
+    }
+  }
+
+  void LoadWindowStates() {
+    if (view_ && view_->GetGadget()) {
+      ASSERT(window_);
+      OptionsInterface *opt = view_->GetGadget()->GetOptions();
+      std::string opt_prefix = GetViewPositionOptionPrefix();
+      Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
+      Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
+      int x, y;
+      if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
+        LOG("Restore:%d, %d", x, y);
+        window_->move(x, y);
+      } else {
+        // Always place the window to the center of the screen if the window
+        // position was not saved before.
+        // gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
+      }
+ /*     Variant keep_above =
+          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
+      if (keep_above.type() == Variant::TYPE_BOOL &&
+          VariantValue<bool>()(keep_above)) {
+        SetKeepAbove(true);
+      } else {
+        SetKeepAbove(false);
+      }*/
+    }
+  }
+
   bool ShowView(bool modal, int flags,
                 Slot1<void, int> *feedback_handler) {
-    LOG("ShowView: %p:%p", this, view_);
     ASSERT(view_);
     if (feedback_handler_ && feedback_handler_ != feedback_handler)
       delete feedback_handler_;
@@ -127,17 +186,18 @@ class QtViewHost::Impl {
       } else {
         dialog_->show();
       }
-    } else if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
-      window_ = widget_;
-      window_->setAttribute(Qt::WA_DeleteOnClose, false);
-      widget_->connect(widget_, SIGNAL(closed()),
-                       qt_obj_, SLOT(OnDetailsViewClose()));
-      window_->setWindowTitle(caption_);
-      window_->show();
     } else {
       window_ = widget_;
-      widget_->EnableInputShapeMask(input_shape_mask_);
       window_->setWindowTitle(caption_);
+      if (record_states_) LoadWindowStates();
+
+      if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
+        window_->setAttribute(Qt::WA_DeleteOnClose, false);
+        widget_->connect(widget_, SIGNAL(closed()),
+                         qt_obj_, SLOT(OnDetailsViewClose()));
+      } else {
+        widget_->EnableInputShapeMask(input_shape_mask_);
+      }
       window_->show();
     }
     return true;
@@ -165,7 +225,9 @@ class QtViewHost::Impl {
     if (flag) {
       widget_->hide();
       widget_->show();
+      LoadWindowStates();
     } else {
+      SaveWindowStates();
       widget_->hide();
     }
   }
@@ -178,6 +240,7 @@ class QtViewHost::Impl {
   int debug_mode_;
   double zoom_;
   bool decorated_;      // frameless or not
+  bool record_states_;
   Connection *onoptionchanged_connection_;
 
   static const unsigned int kShowTooltipDelay = 500;
@@ -209,8 +272,8 @@ void QtViewHostObject::OnShow(bool flag) {
 
 QtViewHost::QtViewHost(ViewHostInterface::Type type,
                        double zoom, bool decorated,
-                       int debug_mode)
-  : impl_(new Impl(type, zoom, decorated, debug_mode)) {
+                       bool record_states, int debug_mode)
+  : impl_(new Impl(type, zoom, decorated, record_states, debug_mode)) {
 }
 
 QtViewHost::~QtViewHost() {

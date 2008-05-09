@@ -208,10 +208,10 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   }
 
   QMessageBox box(QMessageBox::NoIcon,
-                   title_text.c_str(),
-                   title_copyright.c_str(),
-                   QMessageBox::Ok);
-  box.setInformativeText(about_text.c_str());
+                  QString::fromUtf8(title_text.c_str()),
+                  QString::fromUtf8(title_copyright.c_str()),
+                  QMessageBox::Ok);
+  box.setInformativeText(QString::fromUtf8(about_text.c_str()));
 
   box.setIconPixmap(icon);
   box.exec();

@@ -31,7 +31,7 @@ class GadgetBrowserHost : public ggadget::HostInterface {
     : owner_(owner), view_debug_mode_(view_debug_mode) {
   }
   virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
-    return new ggadget::qt::QtViewHost(type, 1.0, true, view_debug_mode_);
+    return new ggadget::qt::QtViewHost(type, 1.0, true, false, view_debug_mode_);
   }
   virtual void RemoveGadget(Gadget *gadget, bool save_data) {
     ggadget::GetGadgetManager()->RemoveGadgetInstance(gadget->GetInstanceID());

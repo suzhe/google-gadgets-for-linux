@@ -129,6 +129,7 @@ build_libggadget_dbus=yes
 build_libggadget_gtk=yes
 build_libggadget_qt=yes
 build_gtkmoz_browser_element=yes
+build_qtwebkit_browser_element=yes
 build_gst_audio_framework=yes
 build_gst_mediaplayer_element=yes
 build_qt_system_framework=yes
@@ -210,6 +211,12 @@ AC_ARG_ENABLE([qt-system-framework],
 	      [build_qt_system_framework=$enableval],
 	      [build_qt_system_framework=yes])
 
+AC_ARG_ENABLE([qtwebkit-browser-element],
+	      AS_HELP_STRING([--disable-qtwebkit-browser-element],
+			     [don't build qtwebkit-browser-element]),
+	      [build_qtwebkit_browser_element=$enableval],
+	      [build_qtwebkit_browser_element=yes])
+
 AC_ARG_ENABLE([gtk-system-framework],
 	      AS_HELP_STRING([--disable-gtk-system-framework],
 			     [don't build gtk-system-framework]),
@@ -240,6 +247,7 @@ fi
 
 if test x$build_libggadget_qt != xyes; then
   build_qt_host=no
+  build_qtwebkit_browser_element=no
 fi
 
 ###########################################################
@@ -398,6 +406,9 @@ if test x$ggl_host_type = xlinux; then
 		    [has_qt4=yes
 		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
 		     [has_qt4=no])
+  PKG_CHECK_MODULES(QT4WEBKIT, [QtWebKit >= 4.4],
+		    [has_qtwebkit=yes],
+		    [has_qtwebkit=no])
 elif test x$ggl_host_type = xmacosx; then
   # There is no pkgconfig for Qt on MacOSX, just do header check.
   AC_CHECK_HEADERS([QtCore/QObject QtGui/QApplication QtOpenGL/QGLWidget],
@@ -541,6 +552,11 @@ if test x$has_qt4 != xyes; then
   build_qt_system_framework=no
 fi
 
+if test x$has_qtwebkit != xyes; then
+  AC_MSG_WARN([Library qt-4.4 or above is needed to build qtwebkit_browser_element])
+  build_qtwebkit_browser_element=no
+fi
+
 if test x$has_spidermonkey != xyes -a x$build_smjs_script_runtime = xyes; then
   AC_MSG_WARN([Library SpiderMonkey is not available, smjs-script-runtime extension won't be built.])
   build_smjs_script_runtime=no
@@ -575,6 +591,10 @@ AM_CONDITIONAL(
 AM_CONDITIONAL(
   [GGL_BUILD_GTKMOZ_BROWSER_ELEMENT],
   [test x$build_gtkmoz_browser_element = xyes])
+
+AM_CONDITIONAL(
+  [GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT],
+  [test x$build_qtwebkit_browser_element = xyes])
 
 AM_CONDITIONAL(
   [GGL_BUILD_GST_AUDIO_FRAMEWORK],
@@ -662,6 +682,7 @@ AC_CONFIG_FILES([Makefile
 		 extensions/gtk_edit_element/Makefile
 		 extensions/qt_edit_element/Makefile
 		 extensions/gtkmoz_browser_element/Makefile
+		 extensions/qtwebkit_browser_element/Makefile
 		 extensions/gst_audio_framework/Makefile
 		 extensions/gst_mediaplayer_element/Makefile
 		 extensions/gtk_system_framework/Makefile
@@ -725,6 +746,7 @@ Build options:
   Build dbus-script-class       $build_libggadget_dbus
   Build gtk-edit-element        $build_libggadget_gtk
   Build gtkmoz-browser-element  $build_gtkmoz_browser_element
+  Build qtwebkit-browser        $build_qtwebkit_browser_element
   Build gst-audio-framework     $build_gst_audio_framework
   Build gst-mediaplayer-element $build_gst_mediaplayer_element
   Build gtk-system-framework    $build_gtk_system_framework

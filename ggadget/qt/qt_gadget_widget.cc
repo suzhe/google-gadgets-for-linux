@@ -44,7 +44,8 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
        drag_files_(NULL),
        composite_(composite),
        enable_input_mask_(true),
-       mouse_move_drag_(false) {
+       mouse_move_drag_(false),
+       child_(NULL) {
   graphics_ = host->NewGraphics();
   zoom_ = graphics_->GetZoom();
   setMouseTracking(true);
@@ -69,12 +70,11 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
 
   if (old_width != width_ || old_height != height_) {
     setFixedSize(int_width, int_height);
-    QPixmap pixmap(int_width, int_height);
-    offscreen_pixmap_ = pixmap;
     setMinimumSize(0, 0);
     setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+    QPixmap pixmap(int_width, int_height);
+    offscreen_pixmap_ = pixmap;
   }
-
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
   p.setClipRect(event->rect());
@@ -349,6 +349,11 @@ void QGadgetWidget::SkipTaskBar() {
                   XA_ATOM, 32, PropModeAppend,
                   (unsigned char *)&net_wm_state_skip_taskbar, 1);
 #endif
+}
+
+void QGadgetWidget::SetChild(QWidget *widget) {
+  child_ = widget;
+  widget->setParent(this);
 }
 #include "qt_gadget_widget.moc"
 }

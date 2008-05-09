@@ -14,19 +14,14 @@
 # limitations under the License.
 #
 
-SUBDIRS = dbus_script_class \
-	  gtk_edit_element \
-	  qt_edit_element \
-	  gtkmoz_browser_element \
-	  qtwebkit_browser_element \
-	  default_framework \
-	  gst_audio_framework \
-	  gst_mediaplayer_element \
-	  gtk_system_framework \
-	  qt_system_framework \
-	  linux_system_framework \
-	  smjs_script_runtime \
-	  curl_xml_http_request \
-	  libxml2_xml_parser \
-	  default_options \
-	  google_gadget_manager
+IF(GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT)
+
+APPLY_CONFIG(QT)
+
+SET(LIB_SRCS browser_element.cc)
+
+ADD_MODULE(qtwebkit-browser-element ${LIB_SRCS})
+TARGET_LINK_LIBRARIES(qtwebkit-browser-element ggadget ${QT_LIBRARIES})
+OUTPUT_MODULE(qtwebkit-browser-element)
+
+ENDIF(GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT)
