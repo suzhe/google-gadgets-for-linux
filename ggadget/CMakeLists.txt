@@ -20,6 +20,7 @@ ADD_SUBDIRECTORY(qt)
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
+  backoff.cc
   basic_element.cc
   canvas_utils.cc
   clip_region.cc

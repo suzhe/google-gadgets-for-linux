@@ -143,6 +143,13 @@ bool IsValidRSSURL(const char* url);
 bool IsValidURL(const char* url);
 
 /**
+ * Returns the host part of a URL in common Internet scheme syntax:
+ * <scheme>://[<user>:<password>@]<host>[:<port>][/<url_path>].
+ * Returns blank string if the URL is invalid.
+ */
+std::string GetHostFromURL(const char *url);
+
+/**
  * Encode a string into a JavaScript string literal (without the begining and
  * ending quotes), by escaping special characters in the source string.
  */

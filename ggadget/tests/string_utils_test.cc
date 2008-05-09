@@ -103,6 +103,28 @@ TEST(StringUtils, EncodeURL) {
   EXPECT_STREQ("\x7f%80%81%20asd%8f%203%9a%aa%fe%ff", dest.c_str());
 }
 
+TEST(StringUtils, GetHostFromURL) {
+  EXPECT_STREQ("", GetHostFromURL(NULL).c_str());
+  EXPECT_STREQ("", GetHostFromURL("").c_str());
+  EXPECT_STREQ("", GetHostFromURL("mailto:a@b.com").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com/").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com/path/path?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com:1234").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com:1234/").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com:1234?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://a.com:1234/path/path?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://user:pa?ss@a.com").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://user:@a.com/").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://user:pa?ss@a.com?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://@a.com/path/path?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://user:pa?ss@a.com:1234").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://user:pa?ss@a.com?param=value").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://user:@a.com:1234/").c_str());
+  EXPECT_STREQ("a.com", GetHostFromURL("http://@a.com:1234/path/path?param=value").c_str());
+}
+
 TEST(StringUtils, EncodeJavaScriptString) {
   UTF16Char src1[] = { '\"', '\\', 'a', 'b', 1, 0x1f, 0xfff, 0 };
   std::string dest = EncodeJavaScriptString(src1);

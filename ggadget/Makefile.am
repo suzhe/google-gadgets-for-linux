@@ -35,6 +35,7 @@ gglsysdepsincludedir	= $(GGL_SYSDEPS_INCLUDE_DIR)/ggadget
 
 gglinclude_HEADERS	= anchor_element.h \
 			  audioclip_interface.h \
+			  backoff.h \
 			  basic_element.h \
 			  button_element.h \
 			  canvas_interface.h \
@@ -136,6 +137,7 @@ lib_LTLIBRARIES		= libggadget@GGL_EPOCH@.la
 
 libggadget@GGL_EPOCH@_la_SOURCES = \
 			  anchor_element.cc \
+			  backoff.cc \
 			  basic_element.cc \
 			  button_element.cc \
 			  canvas_utils.cc \

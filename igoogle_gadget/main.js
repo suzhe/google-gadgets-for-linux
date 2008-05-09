@@ -144,8 +144,13 @@ function LoadGadget() {
 
   DisplayMessage(strings.GADGET_LOADING);
 
-  LoadRawXML();
-  LoadOptions();
+  try {
+    LoadRawXML();
+    LoadOptions();
+  } catch (e) {
+    gadget.debug.error(e);
+    DisplayMessage(strings.GADGET_ERROR);
+  }
 }
 
 function LoadRawXML() {

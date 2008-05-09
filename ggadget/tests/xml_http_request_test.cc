@@ -583,6 +583,7 @@ int main(int argc, char **argv) {
   static const char *kExtensions[] = {
     "curl_xml_http_request/curl-xml-http-request",
     "libxml2_xml_parser/libxml2-xml-parser",
+    // Don't load options module to disable backoff.
   };
   INIT_EXTENSIONS(argc, argv, kExtensions);
 
