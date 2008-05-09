@@ -452,7 +452,7 @@ if test x$has_gstreamer_plugins_base = xyes; then
 fi
 
 # Check libcurl.
-LIBCURL_CHECK_CONFIG([yes], [7.16.0], [has_libcurl=yes], [has_libcurl=no])
+LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
 
 # Check openssl.
 PKG_CHECK_MODULES(OPENSSL, [openssl >= 0.9.8a], [has_openssl=yes], [has_openssl=no])
@@ -514,7 +514,7 @@ if test x$has_libxml2 != xyes -a x$build_libxml2_xml_parser = xyes; then
 fi
 
 if test x$has_libcurl != xyes -o x$has_openssl != xyes; then
-  if x$build_curl_xml_http_request = xyes; then
+  if test x$build_curl_xml_http_request = xyes; then
     AC_MSG_WARN([Library curl or openssl is not available, curl-xml-http-request extension won't be built.])
     build_curl_xml_http_request=no
   fi
