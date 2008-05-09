@@ -36,6 +36,7 @@ class QGadgetWidget : public QWidget {
                 bool composite, bool decorated);
   ~QGadgetWidget();
   void EnableInputShapeMask(bool enable);
+  void SetChild(QWidget *widget);
 
  signals:
   void closed();
@@ -73,6 +74,7 @@ class QGadgetWidget : public QWidget {
   QPixmap offscreen_pixmap_;
   QPoint mouse_pos_;
   bool mouse_move_drag_;
+  QWidget *child_;
 };
 
 

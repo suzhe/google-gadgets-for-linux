@@ -43,6 +43,11 @@ ADD_EXECUTABLE(wrapper_test_shell
 TARGET_LINK_LIBRARIES(wrapper_test_shell ${LIBS})
 TEST_WRAPPER(wrapper_test_shell)
 
+STRING(REPLACE "-Wall" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+STRING(REPLACE "-Wall" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+STRING(REPLACE "-Werror" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+STRING(REPLACE "-Werror" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 # Customized js_shell for testing DOM.
 ADD_EXECUTABLE(dom_test_shell
   js_shell.cc

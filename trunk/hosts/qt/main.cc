@@ -61,8 +61,7 @@ static const char *kGlobalExtensions[] = {
   "default-options",
 // Disable DBUS script class for now to ensure security.
 //  "dbus-script-class",
-// gtkmoz browser element doesn't support qt.
-//  "gtkmoz-browser-element",
+  "qtwebkit-browser-element",
   "qt-system-framework",
   "qt-edit-element",
 // gst and Qt may not work together.
@@ -169,6 +168,8 @@ int main(int argc, char* argv[]) {
 #else
   QApplication app(argc, argv);
 #endif
+
+  setlocale(LC_ALL, "");
   // Set global main loop
   g_main_loop = new ggadget::qt::QtMainLoop();
   ggadget::SetGlobalMainLoop(g_main_loop);
