@@ -57,6 +57,7 @@
 #include "xml_http_request_interface.h"
 #include "xml_parser_interface.h"
 #include "xml_utils.h"
+#include "image_cache.h"
 
 namespace ggadget {
 
@@ -457,16 +458,23 @@ class View::Impl {
         tooltip_element_.Reset(in_element);
         owner_->SetTooltip(tooltip_element_.Get()->GetTooltip().c_str());
       }
-#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
-      DLOG("In element: %s type %s, hitTest:%d", in_element->GetName().c_str(),
-           in_element->GetTagName().c_str(), hittest_);
-#endif
     } else {
       // FIXME: If HT_NOWHERE is more suitable?
       hittest_ = ViewInterface::HT_TRANSPARENT;
       owner_->SetCursor(CURSOR_DEFAULT);
       tooltip_element_.Reset(NULL);
     }
+
+#if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
+    if (in_element_holder.Get()) {
+      DLOG("Mouse Event result: In:%s type:%s, hitTest:%d, result: %d",
+           in_element->GetName().c_str(),
+           in_element->GetTagName().c_str(), hittest_,
+           result);
+    } else {
+      DLOG("Mouse Event result: hitTest:%d, result: %d", hittest_, result);
+    }
+#endif
 
     return result;
   }
@@ -476,10 +484,10 @@ class View::Impl {
     double opacity;
 
     // Don't handle the mouse event if the pixel under the mouse pointer is
-    // fully transparent.
-    if (type != Event::EVENT_MOUSE_OUT && enable_cache_ && canvas_cache_ &&
-        canvas_cache_->GetPointValue(event.GetX(), event.GetY(),
-                                     NULL, &opacity) && opacity == 0) {
+    // fully transparent and there is no element grabbing the mouse.
+    if (type != Event::EVENT_MOUSE_OUT && !grabmouse_element_.Get() &&
+        enable_cache_ && canvas_cache_ && canvas_cache_->GetPointValue(
+            event.GetX(), event.GetY(), NULL, &opacity) && opacity == 0) {
       // Send out fake mouse out event if the pixel is fully transparent and
       // the mouse is over the view.
       if (mouse_over_) {
@@ -1190,15 +1198,8 @@ class View::Impl {
     Variant::Type type = src.type();
     if (type == Variant::TYPE_STRING) {
       const char *filename = VariantValue<const char*>()(src);
-      if (filename && *filename) {
-        std::string data;
-        FileManagerInterface *fm = owner_->GetFileManager();
-        if (fm && fm->ReadFile(filename, &data)) {
-          return graphics_->NewImage(filename, data, is_mask);
-        } else if (GetGlobalFileManager()->ReadFile(filename, &data)) {
-          return graphics_->NewImage(filename, data, is_mask);
-        }
-      }
+      FileManagerInterface *fm = owner_->GetFileManager();
+      return image_cache_.LoadImage(graphics_, fm, filename, is_mask);
     } else if (type == Variant::TYPE_SCRIPTABLE) {
       const ScriptableBinaryData *binary =
           VariantValue<const ScriptableBinaryData *>()(src);
@@ -1212,13 +1213,7 @@ class View::Impl {
   }
 
   ImageInterface *LoadImageFromGlobal(const char *name, bool is_mask) {
-    if (name && *name && graphics_) {
-      std::string data;
-      if (GetGlobalFileManager()->ReadFile(name, &data)) {
-        return graphics_->NewImage(name, data, is_mask);
-      }
-    }
-    return NULL;
+    return image_cache_.LoadImage(graphics_, NULL, name, is_mask);
   }
 
   Texture *LoadTexture(const Variant &src) {
@@ -1267,6 +1262,8 @@ class View::Impl {
   EventSignal onsizing_event_;
   EventSignal onundock_event_;
   Signal1<bool, MenuInterface *> on_add_context_menu_items_signal_;
+
+  ImageCache image_cache_;
 
   // Note: though other things are case-insenstive, this map is case-sensitive,
   // to keep compatible with the Windows version.

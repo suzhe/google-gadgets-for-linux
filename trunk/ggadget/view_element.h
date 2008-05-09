@@ -86,6 +86,11 @@ class ViewElement : public BasicElement {
   virtual double GetPixelWidth() const;
   virtual double GetPixelHeight() const;
 
+  /**
+   * Delegates to child view's GetHitTest().
+   */
+  virtual ViewInterface::HitTest GetHitTest() const;
+
   virtual void MarkRedraw();
   virtual bool OnAddContextMenuItems(MenuInterface *menu);
 

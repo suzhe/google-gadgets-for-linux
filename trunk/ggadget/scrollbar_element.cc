@@ -226,7 +226,6 @@ class ScrollBarElement::Impl {
 
     if (value != value_) {
       value_ = value;
-      DLOG("scroll value: %d", value_);
       owner_->QueueDraw();
       SimpleEvent event(Event::EVENT_CHANGE);
       ScriptableEvent s_event(&event, owner_, NULL);

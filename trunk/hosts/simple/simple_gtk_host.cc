@@ -70,8 +70,7 @@ class SimpleGtkHost::Impl {
       delete it->second;
 
     gtk_widget_destroy(host_menu_);
-//#if GTK_CHECK_VERSION(2,10,0)
-#if 0
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     g_object_unref(G_OBJECT(status_icon_));
 #else
     gtk_widget_destroy(main_widget_);
@@ -110,8 +109,7 @@ class SimpleGtkHost::Impl {
                      G_CALLBACK(ExitHandler), this);
     gtk_menu_shell_append(GTK_MENU_SHELL(host_menu_), item);
 
-//#if GTK_CHECK_VERSION(2,10,0)
-#if 0
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     // FIXME:
     std::string icon_data;
     if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
@@ -394,8 +392,7 @@ class SimpleGtkHost::Impl {
     }
   }
 
-//#if GTK_CHECK_VERSION(2,10,0)
-#if 0
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,
                                          guint activate_time,
                                          gpointer user_data) {
@@ -425,8 +422,7 @@ class SimpleGtkHost::Impl {
   bool gadgets_shown_;
 
   GadgetManagerInterface *gadget_manager_;
-//#if GTK_CHECK_VERSION(2,10,0)
-#if 0
+#if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
   GtkStatusIcon *status_icon_;
 #else
   GtkWidget *main_widget_;

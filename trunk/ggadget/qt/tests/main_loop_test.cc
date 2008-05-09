@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <QCoreApplication>
+#include <QtCore/QCoreApplication>
 
 #include "ggadget/logger.h"
 #include "ggadget/qt/qt_main_loop.h"

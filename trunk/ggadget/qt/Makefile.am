@@ -31,7 +31,8 @@ lib_LTLIBRARIES		= libggadget-qt@GGL_EPOCH@.la
 
 noinst_HEADERS		= qt_canvas.h \
 			  qt_font.h \
-			  qt_image.h
+			  qt_image.h \
+			  qt_menu_internal.h
 
 qtincludedir		= $(GGL_INCLUDE_DIR)/ggadget/qt
 qtinclude_HEADERS	= qt_gadget_widget.h \
