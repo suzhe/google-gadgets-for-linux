@@ -35,6 +35,7 @@ ADD_SUBDIRECTORY(test_modules)
 TEST_RESOURCE_DIR(file_manager_test_data file_manager_test_data_dest)
 ADD_DIR_TO_ZIP(file_manager_test_data file_manager_test_data_dest.gg)
 
+UNIT_TEST(backoff_test)
 UNIT_TEST(common_test)
 UNIT_TEST(extension_manager_test)
 UNIT_TEST(variant_test)

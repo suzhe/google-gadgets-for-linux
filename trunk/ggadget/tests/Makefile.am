@@ -38,7 +38,8 @@ noinst_HEADERS		= init_extensions.h \
 			  scriptables.h \
 			  slots.h
 
-check_PROGRAMS		= color_test \
+check_PROGRAMS		= backoff_test \
+			  color_test \
 			  common_test \
 			  extension_manager_test \
 			  variant_test \
@@ -67,6 +68,7 @@ check_PROGRAMS		= color_test \
 check_LTLIBRARIES	= foo-module.la \
 			  bar-module.la
 
+backoff_set_SOURCES		= backoff_test.cc
 color_test_SOURCES		= color_test.cc
 common_test_SOURCES		= common_test.cc
 extension_manager_test_SOURCES	= extension_manager_test.cc

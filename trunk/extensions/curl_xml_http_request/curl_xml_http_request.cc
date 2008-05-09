@@ -20,9 +20,11 @@
 #include <pthread.h>
 #include <vector>
 
+#include <ggadget/backoff.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/main_loop_interface.h>
 #include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/scriptable_binary_data.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/scriptable_helper.h>
@@ -39,6 +41,11 @@ static const long kMaxRedirections = 10;
 static const long kTimeoutSec = 60;
 static const long kConnectTimeoutSec = 10;
 
+// The name of the options to store backoff data.
+static const char kBackoffOptions[] = "backoff";
+// The name of the options item to store backoff data.
+static const char kBackoffDataOption[] = "backoff";
+
 static const Variant kOpenDefaultArgs[] = {
   Variant(), Variant(),
   Variant(true),
@@ -47,6 +54,10 @@ static const Variant kOpenDefaultArgs[] = {
 };
 
 static const Variant kSendDefaultArgs[] = { Variant("") };
+
+static bool IsSuccessHTTPStatus(unsigned short status) {
+  return status >= 200 && status < 400;
+}
 
 class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
  public:
@@ -64,8 +75,31 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         request_headers_(NULL),
         status_(0),
         response_dom_(NULL) {
+    VERIFY_M(EnsureBackoffOptions(main_loop->GetCurrentTime()),
+             ("Required options module have not been loaded"));
     pthread_attr_init(&thread_attr_);
     pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_DETACHED);
+  }
+
+  static bool EnsureBackoffOptions(uint64_t now) {
+    if (!backoff_options_) {
+      backoff_options_ = CreateOptions(kBackoffOptions);
+      if (backoff_options_) {
+        std::string data;
+        Variant value = backoff_options_->GetValue(kBackoffDataOption);
+        if (value.ConvertToString(&data))
+          backoff_.SetData(now, data.c_str());
+      }
+    }
+    return backoff_options_ != NULL;
+  }
+
+  static void SaveBackoffData(uint64_t now) {
+    if (EnsureBackoffOptions(now)) {
+      backoff_options_->PutValue(kBackoffDataOption,
+                                 Variant(backoff_.GetData(now)));
+      backoff_options_->Flush();
+    }
   }
 
   virtual void DoRegister() {
@@ -140,9 +174,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode Open(const char *method, const char *url, bool async,
                              const char *user, const char *password) {
-    DLOG("XMLHttpRequest: Open(%s, %s, %d, %s, %s) this=%p",
-         method, url, async, user, password, this);
-
     Abort();
     if (!method || !url)
       return NULL_POINTER_ERR;
@@ -158,6 +189,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     url_ = url;
+    host_ = GetHostFromURL(url);
     curl_ = curl_easy_init();
     if (!curl_) {
       DLOG("XMLHttpRequest: curl_easy_init failed");
@@ -337,7 +369,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     if (!CheckSize(size, 0, 512)) {
-      LOG("XMLHttpRequest: Size too big: %zu", size);
+      LOG("XMLHttpRequest: Send: Size too big: %zu", size);
       return SYNTAX_ERR;
     }
 
@@ -381,6 +413,14 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       // Add an internal reference when this request is working to prevent
       // this object from being GC'ed.
       Ref();
+      // Do backoff checking to avoid DDOS attack to the server.
+      if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
+                                  host_.c_str())) {
+        Abort();
+        // Don't raise exception here because async callers might not expect
+        // this kind of exception.
+        return NO_ERR;
+      }
       pthread_t thread;
       if (pthread_create(&thread, &thread_attr_, Worker, context) != 0) {
         DLOG("Failed to create worker thread");
@@ -388,6 +428,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         return ABORT_ERR;
       }
     } else {
+      // Do backoff checking to avoid DDOS attack to the server.
+      if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
+                                  host_.c_str())) {
+        Abort();
+        return NETWORK_ERR;
+      }
       // Run the worker directly in this thread.
       void *result = Worker(context);
       CURLcode code = *reinterpret_cast<CURLcode *>(&result);
@@ -424,11 +470,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (code != CURLE_OK) {
       DLOG("XMLHttpRequest: Send: curl_easy_perform failed: %s",
            curl_easy_strerror(code));
-      WorkerDone(true, status, context);
-    } else {
-      WorkerDone(false, status, context);
     }
 
+    WorkerDone(status, context);
     delete context;
     return reinterpret_cast<void *>(code);
   }
@@ -474,10 +518,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   // Passes the Done() request from worker thread to the main thread.
   class DoneTask : public WriteBodyTask {
    public:
-    DoneTask(bool aborted, unsigned short status,
-             const WorkerContext *worker_context)
+    DoneTask(unsigned short status, const WorkerContext *worker_context)
           // Write blank data to ensure the header is parsed.
-        : WriteBodyTask("", 0, status, worker_context), aborted_(aborted) { }
+        : WriteBodyTask("", 0, status, worker_context) { }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
       // This cleanup of share handle will only succeed if this request is the
       // final request that was active when the belonging session has been
@@ -489,20 +532,18 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
       WriteBodyTask::Call(main_loop, watch_id);
       if (worker_context_.this_p->curl_ == worker_context_.curl)
-        worker_context_.this_p->Done(aborted_);
+        worker_context_.this_p->Done(false);
       return false;
     }
-    bool aborted_;
   };
 
-  static void WorkerDone(bool aborted, unsigned short status,
-                         WorkerContext *context) {
+  static void WorkerDone(unsigned short status, WorkerContext *context) {
     if (context->async) {
       // Do actual work in the main thread. AddTimeoutWatch() is threadsafe.
       context->this_p->main_loop_->AddTimeoutWatch(
-          0, new DoneTask(aborted, status, context));
+          0, new DoneTask(status, context));
     } else {
-      context->this_p->Done(aborted);
+      context->this_p->Done(false);
     }
   }
 
@@ -687,7 +728,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       if (!send_flag_) {
         // This cleanup only happens if an XMLHttpRequest is opened but
         // no send() is called. For an active request, the curl handle will
-        // be cleaned up when the request finishes.
+        // be cleaned up when the request finishes or is aborted by error
+        // return value of WriteHeader() and WriteBody().
         curl_easy_cleanup(curl_);
       }
       curl_ = NULL;
@@ -703,12 +745,21 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
     send_flag_ = false;
+    bool no_unexpected_state_change = true;
     if ((state_ == OPENED && save_send_flag) ||
-        state_ == HEADERS_RECEIVED || state_ == LOADING)
-      ChangeState(DONE);
+        state_ == HEADERS_RECEIVED || state_ == LOADING) {
+      uint64_t now = main_loop_->GetCurrentTime();
+      if (backoff_.ReportRequestResult(now, host_.c_str(),
+                                       IsSuccessHTTPStatus(status_))) {
+        SaveBackoffData(now);
+      }
+      // The caller may call Open() again in the OnReadyStateChange callback,
+      // which may cause Done() re-entered.
+      no_unexpected_state_change = ChangeState(DONE);
+    }
 
-    if (aborting) {
-      // Don't dispatch this state change event, according to the specification.
+    if (aborting && no_unexpected_state_change) {
+      // Don't dispatch this state change event, according to the spec.
       state_ = UNSENT;
     }
 
@@ -720,7 +771,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   }
 
   virtual void Abort() {
-    // DLOG("XMLHttpRequest: Abort this=%p", this);
     response_headers_.clear();
     response_headers_map_.clear();
     response_body_.clear();
@@ -980,7 +1030,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   Signal0<void> onreadystatechange_signal_;
 
   std::vector<std::string> accepted_cert_domains_;
-  std::string url_;
+  std::string url_, host_;
   bool async_;
 
   State state_;
@@ -999,7 +1049,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   DOMDocumentInterface *response_dom_;
   CaseInsensitiveStringMap response_headers_map_;
   pthread_attr_t thread_attr_;
+  static Backoff backoff_;
+  static OptionsInterface *backoff_options_;
 };
+
+Backoff XMLHttpRequest::backoff_;
+OptionsInterface *XMLHttpRequest::backoff_options_ = NULL;
 
 class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
  public:

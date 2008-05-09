@@ -245,6 +245,35 @@ bool IsValidURL(const char* url) {
   return true;
 }
 
+std::string GetHostFromURL(const char *url) {
+  if (!url || !*url)
+    return std::string();
+
+  const char *start = strstr(url, "://");
+  if (!start)
+    return std::string();
+
+  start += 3;
+  const char *end = strchr(start, '/');
+  // Get the part between :// and the first '/'.
+  std::string result(end ? std::string(start, end - start) :
+                           std::string(start));
+  // Remove the user:passwd@ part.
+  size_t pos = result.find('@');
+  if (pos != result.npos)
+    result.erase(0, pos + 1);
+  // Remove the parameter part when it directly follows the host name like
+  // this: http://a.com?xyz.
+  pos = result.find('?');
+  if (pos != result.npos)
+    result.erase(pos);
+  // Remove the port part.
+  pos = result.find(':');
+  if (pos != result.npos)
+    result.erase(pos);
+  return result;
+}
+
 std::string EncodeJavaScriptString(const UTF16Char *source) {
   ASSERT(source);
 
