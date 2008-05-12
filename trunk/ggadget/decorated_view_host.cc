@@ -1832,6 +1832,14 @@ void DecoratedViewHost::ViewCoordToNativeWidgetCoord(
                                                        widget_x, widget_y);
 }
 
+void DecoratedViewHost::NativeWidgetCoordToViewCoord(
+    double x, double y, double *view_x, double *view_y) const {
+  double px, py;
+  impl_->view_decorator_->NativeWidgetCoordToViewCoord(x, y, &px, &py);
+  impl_->view_decorator_->GetViewElement()->ViewCoordToChildViewCoord(
+      px, py, view_x, view_y);
+}
+
 void DecoratedViewHost::QueueDraw() {
   impl_->view_decorator_->GetViewElement()->QueueDraw();
 }

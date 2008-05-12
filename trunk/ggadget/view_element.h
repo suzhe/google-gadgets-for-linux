@@ -75,6 +75,13 @@ class ViewElement : public BasicElement {
    */
   void ChildViewCoordToViewCoord(double child_x, double child_y,
                                  double *parent_x, double *parent_y) const;
+
+  /**
+   * Converts coordinates in the parent view's space to coordinates in the
+   * child view's space.
+   */
+  void ViewCoordToChildViewCoord(double view_x, double view_y,
+                                 double *child_x, double *child_y) const;
  public:
   virtual EventResult OnMouseEvent(const MouseEvent &event,
                                    bool direct,

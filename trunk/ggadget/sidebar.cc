@@ -89,11 +89,19 @@ class SideBar::Impl : public View {
     virtual void ViewCoordToNativeWidgetCoord(double x, double y,
                                               double *widget_x,
                                               double *widget_y) const {
-      if (GetView()) {
-        x += GetView()->GetWidth();
-        y += GetView()->GetHeight();
-      }
-      real_viewhost_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
+      double vx = x, vy = y;
+      if (view_element_)
+        view_element_->SelfCoordToViewCoord(x, y, &vx, &vy);
+      if (real_viewhost_)
+        real_viewhost_->ViewCoordToNativeWidgetCoord(vx, vy, widget_x, widget_y);
+    }
+    virtual void NativeWidgetCoordToViewCoord(
+        double x, double y, double *view_x, double *view_y) const {
+      double vx = x, vy = y;
+      if (real_viewhost_)
+        real_viewhost_->NativeWidgetCoordToViewCoord(x, y, &vx, &vy);
+      if (view_element_)
+        view_element_->ViewCoordToSelfCoord(vx, vy, view_x, view_y);
     }
     virtual void QueueDraw() {
       if (view_element_)
@@ -173,8 +181,9 @@ class SideBar::Impl : public View {
         blank_height_(0),
         mouse_move_event_x_(-1),
         mouse_move_event_y_(-1),
-        hit_element_transparent_part_(false),
         hit_element_bottom_(false),
+        hit_element_normal_part_(false),
+        hit_sidebar_border_(false),
         background_(NULL),
         icon_(NULL),
         main_div_(NULL) {
@@ -195,62 +204,70 @@ class SideBar::Impl : public View {
     }
 
     EventResult result = EVENT_RESULT_UNHANDLED;
-    // don't sent mouse event to view elements when user is doing layout by drag
-    if (!hit_element_bottom_)
+    // don't sent mouse event to view elements when layouting or resizing
+    if (!hit_element_bottom_ && !hit_sidebar_border_)
       result = View::OnMouseEvent(event);
 
-    // don't handle sidebar's resize logic in this method, return directly
-    if (GetHitTest() == HT_LEFT || GetHitTest() == HT_RIGHT)
-      return EVENT_RESULT_UNHANDLED;
-
-    BasicElement *elm = GetMouseOverElement();
-    if (event.GetType() == Event::EVENT_MOUSE_DOWN && elm) {
-      double x, y;
-      elm->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
-      HitTest elm_hittest = elm->GetHitTest(x, y);
-      if (elm_hittest == HT_TRANSPARENT || elm_hittest == HT_NOWHERE) {
-        hit_element_transparent_part_ = true;
-        return EVENT_RESULT_HANDLED;
-      } else if (elm_hittest == HT_BOTTOM) {
-        hit_element_bottom_ = true;
-        // record the original height of each view elements
-        int index = 0;
-        BasicElement *element = NULL;
-        for (; index < main_div_->GetChildren()->GetCount(); ++index) {
-          element = main_div_->GetChildren()->GetItemByIndex(index);
-          elements_height_.push_back(element->GetPixelHeight());
-        }
-        if (element) {
-          blank_height_ = main_div_->GetPixelHeight() -
-              element->GetPixelY() - element->GetPixelHeight();
-        }
-      }
-      DLOG("Mouse down at (%f,%f)", event.GetX(), event.GetY());
-      mouse_move_event_x_ = event.GetX();
-      mouse_move_event_y_ = event.GetY();
-    } else if (event.GetType() == Event::EVENT_MOUSE_UP) {
-      DLOG("Mouse up at (%f,%f)", event.GetX(), event.GetY());
-      ResetState();
-    } else if (event.GetType() == Event::EVENT_MOUSE_OUT) {
-      DLOG("Mouse out at (%f,%f)", event.GetX(), event.GetY());
-      ResetState();
-    }
-
     if (result != EVENT_RESULT_UNHANDLED ||
-        event.GetButton() != MouseEvent::BUTTON_LEFT ||
-        event.GetType() != Event::EVENT_MOUSE_MOVE ||
-        !GetMouseOverElement() ||
-        !GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID))
+        event.GetButton() != MouseEvent::BUTTON_LEFT)
       return result;
-    // ignore all move events after the transparent part is hitten
-    if (hit_element_transparent_part_)
-      return EVENT_RESULT_HANDLED;
+
+    int index = 0;
+    double x, y;
+    BasicElement *element = NULL;
+    ViewElement *focused = owner_->GetMouseOverElement();
+    switch (event.GetType()) {
+      case Event::EVENT_MOUSE_DOWN:
+        if (GetHitTest() == HT_LEFT || GetHitTest() == HT_RIGHT) {
+          hit_sidebar_border_ = true;
+          return EVENT_RESULT_UNHANDLED;
+        }
+        if (!focused) return result;
+
+        DLOG("Mouse down at (%f,%f)", event.GetX(), event.GetY());
+        mouse_move_event_x_ = event.GetX();
+        mouse_move_event_y_ = event.GetY();
+        focused->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
+        switch (focused->GetHitTest(x, y)) {
+          case HT_BOTTOM:
+            hit_element_bottom_ = true;
+            // record the original height of each view elements
+            for (; index < main_div_->GetChildren()->GetCount(); ++index) {
+              element = main_div_->GetChildren()->GetItemByIndex(index);
+              elements_height_.push_back(element->GetPixelHeight());
+            }
+            if (element) {
+              blank_height_ = main_div_->GetPixelHeight() -
+                  element->GetPixelY() - element->GetPixelHeight();
+            }
+            break;
+          case HT_CLIENT:
+            if (focused != popout_element_)
+              hit_element_normal_part_ = true;
+            break;
+          default:
+            break;
+        }
+        return result;
+        break;
+      case Event::EVENT_MOUSE_UP:
+        DLOG("Mouse up at (%f,%f)", event.GetX(), event.GetY());
+        ResetState();
+        return result;
+        break;
+      case Event::EVENT_MOUSE_MOVE:  // handle it soon
+        if (!focused)
+          return result;
+        break;
+      default:
+        return result;
+    }
 
     double offset = mouse_move_event_y_ - event.GetY();
     if (hit_element_bottom_) {
       // set cursor so that user understand that we are still in layout process
       SetCursor(CURSOR_SIZENS);
-      int index = GetIndex(GetMouseOverElement());
+      int index = GetIndex(focused);
       if (offset < 0) {
         DownResize(false, index + 1, &offset);
         UpResize(true, index, &offset);
@@ -260,13 +277,14 @@ class SideBar::Impl : public View {
         UpResize(true, index, &offset);
         Layout();
       }
-    } else if (GetMouseOverElement() != popout_element_ &&
-               (std::abs(event.GetX() - mouse_move_event_x_) >
-                kMouseMoveThreshold ||
-                std::abs(event.GetY() - mouse_move_event_y_) >
+    } else if (hit_element_normal_part_ &&
+               (std::abs(offset) > kMouseMoveThreshold ||
+                std::abs(event.GetX() - mouse_move_event_x_) >
                 kMouseMoveThreshold)) {
       undock_event_();
       ResetState();
+    } else if (hit_sidebar_border_) {
+      return EVENT_RESULT_UNHANDLED;
     }
     return EVENT_RESULT_HANDLED;
   }
@@ -307,8 +325,9 @@ class SideBar::Impl : public View {
     }
     mouse_move_event_x_ = -1;
     mouse_move_event_y_ = -1;
-    hit_element_transparent_part_ = false;
     hit_element_bottom_ = false;
+    hit_element_normal_part_ = false;
+    hit_sidebar_border_ = false;
     blank_height_ = 0;
     elements_height_.clear();
   }
@@ -389,7 +408,8 @@ class SideBar::Impl : public View {
       if (element == main_div_->GetChildren()->GetItemByIndex(i)) return i;
     return -1;
   }
-  void GetInsertPoint(double y, BasicElement *insertee,
+  // Get the insert point. The height is in the sidebar coordinates system.
+  void GetInsertPoint(double height, BasicElement *insertee,
       BasicElement **previous, BasicElement **next) {
     BasicElement *e = NULL;
     if (next) *next = NULL;
@@ -398,7 +418,7 @@ class SideBar::Impl : public View {
       e = main_div_->GetChildren()->GetItemByIndex(i);
       if (insertee == e) continue;
       double middle = e->GetPixelY() + e->GetPixelHeight() / 2;
-      if (y - main_div_->GetPixelY() < middle) {
+      if (height - main_div_->GetPixelY() < middle) {
         if (next) *next = e;
         return;
       }
@@ -430,7 +450,7 @@ class SideBar::Impl : public View {
         element->SetSize(x, y);
       }
       element->SetPixelX(0);
-      element->SetPixelY(height);
+      element->SetPixelY(ceil(height));
       height += element->GetPixelHeight() + kSperator;
       double sx, sy;
       element->SelfCoordToViewCoord(0, 0, &sx, &sy);
@@ -450,8 +470,8 @@ class SideBar::Impl : public View {
   }
   void InsertNullElement(double height, ViewInterface *view) {
     ASSERT(view);
+    // only one null element is allowed
     if (null_element_ && null_element_->GetChildView() != view) {
-      // only one null element is allowed
       if (!main_div_->GetChildren()->RemoveElement(null_element_))
         delete null_element_;
       null_element_ = NULL;
@@ -565,8 +585,9 @@ class SideBar::Impl : public View {
   double blank_height_;
   double mouse_move_event_x_;
   double mouse_move_event_y_;
-  bool hit_element_transparent_part_;
   bool hit_element_bottom_;
+  bool hit_element_normal_part_;
+  bool hit_sidebar_border_;
 
   // elements of sidebar decorator
   ImgElement *background_;
@@ -576,6 +597,7 @@ class SideBar::Impl : public View {
   DivElement *border_array_[2];
 
   Signal1<bool, MenuInterface *> system_menu_event_;
+  EventSignal size_event_;
   EventSignal undock_event_;
   EventSignal popin_event_;
 
@@ -600,7 +622,6 @@ const double SideBar::Impl::kIconHeight;
 
 SideBar::SideBar(HostInterface *host, ViewHostInterface *view_host)
   : impl_(new Impl(host, this, view_host)) {
-  impl_->SetSize(220, 640);
 }
 
 SideBar::~SideBar() {
@@ -681,6 +702,10 @@ Connection *SideBar::ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot) {
 
 Connection *SideBar::ConnectOnClose(Slot0<void> *slot) {
   return impl_->button_array_[2]->ConnectOnClickEvent(slot);
+}
+
+Connection *SideBar::ConnectOnSizeEvent(Slot0<void> *slot) {
+  return impl_->ConnectOnSizeEvent(slot);
 }
 
 }  // namespace ggadget

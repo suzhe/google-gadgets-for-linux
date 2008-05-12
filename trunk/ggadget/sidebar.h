@@ -132,6 +132,7 @@ class SideBar {
   Connection *ConnectOnAddGadget(Slot0<void> *slot);
   Connection *ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot);
   Connection *ConnectOnClose(Slot0<void> *slot);
+  Connection *ConnectOnSizeEvent(Slot0<void> *slot);
 
  private:
   class Impl;
