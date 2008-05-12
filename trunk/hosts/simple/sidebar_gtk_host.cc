@@ -911,7 +911,7 @@ class SidebarGtkHost::Impl {
     menu->AddItem(NULL, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_CLOSE"), 0,
                   NewSlot(this, &Impl::HandleMenuClose), priority);
-    return true;
+    return false;
   }
 
   void HandleClose() {

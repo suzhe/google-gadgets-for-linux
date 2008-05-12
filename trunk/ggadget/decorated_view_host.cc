@@ -79,6 +79,7 @@ class DecoratedViewHost::Impl {
         cursor_(CURSOR_DEFAULT),
         hittest_(HT_CLIENT),
         child_resizable_(ViewInterface::RESIZABLE_ZOOM),
+        auto_restore_view_states_(true),
         child_view_(NULL),
         view_element_(new ViewElement(NULL, this, NULL, false)) {
       view_element_->SetVisible(true);
@@ -100,9 +101,15 @@ class DecoratedViewHost::Impl {
         SaveViewStates();
         child_view_ = child_view;
         view_element_->SetChildView(child_view);
+
         if (child_view_)
           child_resizable_ = child_view_->GetResizable();
-        LoadViewStates();
+
+        if (auto_restore_view_states_)
+          RestoreViewStates();
+        else
+          UpdateViewSize();
+
         ChildViewChanged();
       }
     }
@@ -203,6 +210,9 @@ class DecoratedViewHost::Impl {
       return child_resizable_;
     }
 
+    void EnableAutoRestoreViewStates(bool enable) {
+      auto_restore_view_states_ = enable;
+    }
    public:
     // Overridden methods.
     virtual Gadget *GetGadget() const {
@@ -339,7 +349,8 @@ class DecoratedViewHost::Impl {
    public:
     virtual bool ShowDecoratedView(bool modal, int flags,
                                    Slot1<void, int> *feedback_handler) {
-      LoadViewStates();
+      if (auto_restore_view_states_)
+        RestoreViewStates();
       // Nothing else. Derived class shall override this method to do more
       // things.
       return ShowView(modal, flags, feedback_handler);
@@ -354,6 +365,58 @@ class DecoratedViewHost::Impl {
       // Only valid for NormalMainViewDecorator with MAIN_DOCKED type.
     }
 
+    virtual void SaveViewStates() {
+      Gadget *gadget = GetGadget();
+      if (gadget) {
+        OptionsInterface *opt = gadget->GetOptions();
+        ViewElement *elm = GetViewElement();
+        std::string prefix(option_prefix_);
+        opt->PutInternalValue((prefix + "_width").c_str(),
+                              Variant(elm->GetPixelWidth()));
+        opt->PutInternalValue((prefix + "_height").c_str(),
+                              Variant(elm->GetPixelHeight()));
+        opt->PutInternalValue((prefix + "_scale").c_str(),
+                              Variant(elm->GetScale()));
+        DLOG("SaveViewStates(%d): w:%.0lf h:%.0lf s: %.2lf",
+             gadget->GetInstanceID(), elm->GetPixelWidth(),
+             elm->GetPixelHeight(), elm->GetScale());
+      }
+    }
+
+    virtual void RestoreViewStates() {
+      Gadget *gadget = GetGadget();
+      // Only load view states when the original size has been saved.
+      if (gadget) {
+        OptionsInterface *opt = gadget->GetOptions();
+        ViewElement *elm = GetViewElement();
+        std::string prefix(option_prefix_);
+        Variant vw = opt->GetInternalValue((prefix + "_width").c_str());
+        Variant vh = opt->GetInternalValue((prefix + "_height").c_str());
+        Variant vs = opt->GetInternalValue((prefix + "_scale").c_str());
+        if (vs.type() == Variant::TYPE_DOUBLE) {
+          elm->SetScale(VariantValue<double>()(vs));
+        } else {
+          elm->SetScale(1);
+        }
+        if (GetChildResizable() == ViewInterface::RESIZABLE_TRUE) {
+          double width, height;
+          if (vw.type() == Variant::TYPE_DOUBLE &&
+              vh.type() == Variant::TYPE_DOUBLE) {
+            width = VariantValue<double>()(vw);
+            height = VariantValue<double>()(vh);
+          } else {
+            // Restore to default size if there is no size information saved.
+            GetChildView()->GetDefaultSize(&width, &height);
+          }
+          if (elm->OnSizing(&width, &height))
+            elm->SetSize(width, height);
+        }
+        DLOG("RestoreViewStates(%d): w:%.0lf h:%.0lf s: %.2lf",
+             gadget->GetInstanceID(), elm->GetPixelWidth(),
+             elm->GetPixelHeight(), elm->GetScale());
+        UpdateViewSize();
+      }
+    }
    protected:
     // To be implemented by derived classes to do additional mouse event
     // handling.
@@ -398,58 +461,6 @@ class DecoratedViewHost::Impl {
       *height = view_element_->GetPixelHeight();
     }
 
-    virtual void SaveViewStates() {
-      Gadget *gadget = GetGadget();
-      if (gadget) {
-        OptionsInterface *opt = gadget->GetOptions();
-        ViewElement *elm = GetViewElement();
-        std::string prefix(option_prefix_);
-        opt->PutInternalValue((prefix + "_width").c_str(),
-                              Variant(elm->GetPixelWidth()));
-        opt->PutInternalValue((prefix + "_height").c_str(),
-                              Variant(elm->GetPixelHeight()));
-        opt->PutInternalValue((prefix + "_scale").c_str(),
-                              Variant(elm->GetScale()));
-        DLOG("SaveViewStates(%d): w:%.0lf h:%.0lf s: %.2lf",
-             gadget->GetInstanceID(), elm->GetPixelWidth(),
-             elm->GetPixelHeight(), elm->GetScale());
-      }
-    }
-
-    virtual void LoadViewStates() {
-      Gadget *gadget = GetGadget();
-      // Only load view states when the original size has been saved.
-      if (gadget) {
-        OptionsInterface *opt = gadget->GetOptions();
-        ViewElement *elm = GetViewElement();
-        std::string prefix(option_prefix_);
-        Variant vw = opt->GetInternalValue((prefix + "_width").c_str());
-        Variant vh = opt->GetInternalValue((prefix + "_height").c_str());
-        Variant vs = opt->GetInternalValue((prefix + "_scale").c_str());
-        if (vs.type() == Variant::TYPE_DOUBLE) {
-          elm->SetScale(VariantValue<double>()(vs));
-        } else {
-          elm->SetScale(1);
-        }
-        if (GetChildResizable() == ViewInterface::RESIZABLE_TRUE) {
-          double width, height;
-          if (vw.type() == Variant::TYPE_DOUBLE &&
-              vh.type() == Variant::TYPE_DOUBLE) {
-            width = VariantValue<double>()(vw);
-            height = VariantValue<double>()(vh);
-          } else {
-            // Restore to default size if there is no size information saved.
-            GetChildView()->GetDefaultSize(&width, &height);
-          }
-          if (elm->OnSizing(&width, &height))
-            elm->SetSize(width, height);
-        }
-        DLOG("LoadViewStates(%d): w:%.0lf h:%.0lf s: %.2lf",
-             gadget->GetInstanceID(), elm->GetPixelWidth(),
-             elm->GetPixelHeight(), elm->GetScale());
-        UpdateViewSize();
-      }
-    }
    private:
     // Returns true if the view size was changed.
     bool SetViewSize(double req_w, double req_h, double min_w, double min_h) {
@@ -476,6 +487,7 @@ class DecoratedViewHost::Impl {
     int cursor_;
     HitTest hittest_;
     ViewInterface::ResizableMode child_resizable_;
+    bool auto_restore_view_states_;
 
     View *child_view_;
     ViewElement *view_element_;
@@ -774,6 +786,30 @@ class DecoratedViewHost::Impl {
       UpdateToggleExpandedButton();
     }
 
+    virtual void SaveViewStates() {
+      Gadget *gadget = GetGadget();
+      if (gadget) {
+        OptionsInterface *opt = gadget->GetOptions();
+        opt->PutInternalValue("main_view_minimized", Variant(minimized_));
+      }
+      ViewDecoratorBase::SaveViewStates();
+    }
+
+    virtual void RestoreViewStates() {
+      Gadget *gadget = GetGadget();
+      // Only load view states when the original size has been saved.
+      if (gadget && load_minimized_state_) {
+        OptionsInterface *opt = gadget->GetOptions();
+        Variant vm = opt->GetInternalValue("main_view_minimized");
+        if (vm.type() == Variant::TYPE_BOOL &&
+           minimized_ != VariantValue<bool>()(vm)) {
+          CollapseExpandMenuCallback(NULL);
+        }
+        load_minimized_state_ = false;
+      }
+      ViewDecoratorBase::RestoreViewStates();
+    }
+
    protected:
     virtual EventResult HandleMouseEvent(const MouseEvent &event) {
       Event::Type t = event.GetType();
@@ -980,30 +1016,6 @@ class DecoratedViewHost::Impl {
       } else {
         ViewDecoratorBase::GetClientExtents(width, height);
       }
-    }
-
-    virtual void SaveViewStates() {
-      Gadget *gadget = GetGadget();
-      if (gadget) {
-        OptionsInterface *opt = gadget->GetOptions();
-        opt->PutInternalValue("main_view_minimized", Variant(minimized_));
-      }
-      ViewDecoratorBase::SaveViewStates();
-    }
-
-    virtual void LoadViewStates() {
-      Gadget *gadget = GetGadget();
-      // Only load view states when the original size has been saved.
-      if (gadget && load_minimized_state_) {
-        OptionsInterface *opt = gadget->GetOptions();
-        Variant vm = opt->GetInternalValue("main_view_minimized");
-        if (vm.type() == Variant::TYPE_BOOL &&
-           minimized_ != VariantValue<bool>()(vm)) {
-          CollapseExpandMenuCallback(NULL);
-        }
-        load_minimized_state_ = false;
-      }
-      ViewDecoratorBase::LoadViewStates();
     }
 
    private:
@@ -1795,6 +1807,14 @@ Connection *DecoratedViewHost::ConnectOnClose(Slot0<void> *slot) {
 
 void DecoratedViewHost::SetDockEdge(bool right) {
   impl_->view_decorator_->SetDockEdge(right);
+}
+
+void DecoratedViewHost::RestoreViewStates() {
+  impl_->view_decorator_->RestoreViewStates();
+}
+
+void DecoratedViewHost::EnableAutoRestoreViewStates(bool enable) {
+  impl_->view_decorator_->EnableAutoRestoreViewStates(enable);
 }
 
 ViewHostInterface::Type DecoratedViewHost::GetType() const {

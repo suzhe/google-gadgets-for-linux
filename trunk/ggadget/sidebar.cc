@@ -294,9 +294,10 @@ class SideBar::Impl : public View {
         GetMouseOverElement()->IsInstanceOf(ViewElement::CLASS_ID)) {
       GetMouseOverElement()->OnAddContextMenuItems(menu);
     } else {
-      return system_menu_event_(menu);
+      system_menu_event_(menu);
     }
-    return true;
+    // In sidebar mode, view host shouldn't add any host level menu items.
+    return false;
   }
   virtual bool OnSizing(double *width, double *height) {
     return kSideBarMinWidth < *width && *width < kSideBarMaxWidth;
