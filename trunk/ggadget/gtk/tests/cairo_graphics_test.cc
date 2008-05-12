@@ -112,7 +112,6 @@ TEST_F(CairoGfxTest, LoadImage) {
   ASSERT_FALSE(NULL == img);
   ImageInterface *img1 = gfx_.NewImage("", std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img1);
-  // Images without tags should not be shared.
   ASSERT_TRUE(img != img1);
   img->Destroy();
   img1->Destroy();
@@ -121,8 +120,8 @@ TEST_F(CairoGfxTest, LoadImage) {
   ASSERT_FALSE(NULL == img);
   img1 = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), false);
   ASSERT_FALSE(NULL == img1);
-  ASSERT_TRUE(img == img1);
-  img->Destroy();
+  ASSERT_TRUE(img != img1);
+  img1->Destroy();
   img1 = gfx_.NewImage(kTestFile120day.c_str(), std::string(buffer, filelen), true);
   ASSERT_TRUE(img != img1);
   img1->Destroy();

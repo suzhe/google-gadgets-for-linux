@@ -38,10 +38,6 @@ class CairoGraphics : public GraphicsInterface {
   virtual ~CairoGraphics();
 
   Connection *ConnectOnZoom(Slot1<void, double> *slot) const;
-  Connection *ConnectOnDestroy(Slot0<void> *slot) const;
-
-  static void OnImageDelete(const CairoGraphics *gfx, const std::string &tag,
-                            bool is_mask);
 
  public:
   virtual CanvasInterface *NewCanvas(double w, double h) const;

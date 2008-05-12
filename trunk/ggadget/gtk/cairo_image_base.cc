@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <string>
 #include <gdk/gdkcairo.h>
 #include <ggadget/logger.h>
@@ -32,54 +28,25 @@ namespace gtk {
 
 class CairoImageBase::Impl {
  public:
-  Impl(const CairoGraphics *graphics, const std::string &tag, bool is_mask)
-    : graphics_(graphics),
-      tag_(tag), is_mask_(is_mask),
-      ref_count_(1) {
-    on_gfx_destroy_connection_ =
-        graphics_->ConnectOnDestroy(NewSlot(this, &Impl::OnGfxDestroy));
+  Impl(const std::string &tag, bool is_mask)
+    : tag_(tag), is_mask_(is_mask) {
   }
 
-  ~Impl() {
-    ASSERT(ref_count_ == 0);
-    if (on_gfx_destroy_connection_)
-      on_gfx_destroy_connection_->Disconnect();
-  }
-
-  void OnGfxDestroy() {
-    graphics_ = NULL;
-    on_gfx_destroy_connection_ = NULL;
-  }
-
-  Connection *on_gfx_destroy_connection_;
-  const CairoGraphics *graphics_;
   std::string tag_;
   bool is_mask_;
-  int ref_count_;
 };
 
-CairoImageBase::CairoImageBase(const CairoGraphics *graphics,
-                               const std::string &tag, bool is_mask)
-    : impl_(new Impl(graphics, tag, is_mask)) {
+CairoImageBase::CairoImageBase(const std::string &tag, bool is_mask)
+  : impl_(new Impl(tag, is_mask)) {
 }
 
 CairoImageBase::~CairoImageBase() {
-  CairoGraphics::OnImageDelete(impl_->graphics_, impl_->tag_, impl_->is_mask_);
   delete impl_;
   impl_ = NULL;
 }
 
-void CairoImageBase::Ref() {
-  impl_->ref_count_++;
-}
-
-void CairoImageBase::Unref() {
-  if (--impl_->ref_count_ == 0)
-    delete this;
-}
-
 void CairoImageBase::Destroy() {
-  Unref();
+  delete this;
 }
 
 void CairoImageBase::Draw(CanvasInterface *canvas, double x, double y) const {
@@ -112,10 +79,9 @@ void CairoImageBase::StretchDraw(CanvasInterface *canvas,
 
 class ColorMultipliedImage : public CairoImageBase {
  public:
-  ColorMultipliedImage(const CairoGraphics *graphics,
-                       const CairoImageBase *image,
+  ColorMultipliedImage(const CairoImageBase *image,
                        const Color &color_multiply)
-      : CairoImageBase(graphics, "", false),
+      : CairoImageBase("", false),
         width_(0), height_(0), fully_opaque_(false),
         color_multiply_(color_multiply), canvas_(NULL) {
     if (image) {
@@ -129,8 +95,7 @@ class ColorMultipliedImage : public CairoImageBase {
   }
 
   virtual ~ColorMultipliedImage() {
-    if (canvas_)
-      canvas_->Destroy();
+    DestroyCanvas(canvas_);
   }
 
   virtual double GetWidth() const { return width_; }
@@ -149,7 +114,7 @@ class ColorMultipliedImage : public CairoImageBase {
 ImageInterface *CairoImageBase::MultiplyColor(const Color &color) const {
   // Because this method is const, we should always return a new image even
   // if the color is pure white.
-  return new ColorMultipliedImage(impl_->graphics_, this, color);
+  return new ColorMultipliedImage(this, color);
 }
 
 bool CairoImageBase::GetPointValue(double x, double y,

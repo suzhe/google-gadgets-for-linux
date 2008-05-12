@@ -163,9 +163,12 @@ TEST_F(BasicElementTest, TestHitTest) {
             NULL, g_factory, NULL);
 
   Muffin m(NULL, &view, NULL);
-  ASSERT_TRUE(m.GetHitTest() == ggadget::ViewInterface::HT_CLIENT);
+  m.SetPixelWidth(1);
+  m.SetPixelHeight(1);
+  ASSERT_TRUE(m.GetHitTest(0, 0) == ggadget::ViewInterface::HT_CLIENT);
   m.SetHitTest(ggadget::ViewInterface::HT_CAPTION);
-  ASSERT_TRUE(m.GetHitTest() == ggadget::ViewInterface::HT_CAPTION);
+  ASSERT_TRUE(m.GetHitTest(0, 0) == ggadget::ViewInterface::HT_CAPTION);
+  ASSERT_TRUE(m.GetHitTest(1, 1) == ggadget::ViewInterface::HT_TRANSPARENT);
 }
 
 /*TEST_F(BasicElementTest, TestMask) {
@@ -504,20 +507,20 @@ TEST_F(BasicElementTest, TestFromXML) {
       "<pie name=\"big-pie\"/>");
   ASSERT_EQ(4, children->GetCount());
   ASSERT_TRUE(e1 == children->GetItemByIndex(2));
-  ASSERT_STREQ("muffin", e1->GetTagName().c_str());
+  ASSERT_STREQ("muffin", e1->GetTagName());
   ASSERT_STREQ("", e1->GetName().c_str());
   ASSERT_TRUE(e2 == children->GetItemByIndex(1));
-  ASSERT_STREQ("pie", e2->GetTagName().c_str());
+  ASSERT_STREQ("pie", e2->GetTagName());
   ASSERT_STREQ("", e2->GetName().c_str());
   ASSERT_TRUE(e3 == children->GetItemByIndex(0));
   ASSERT_TRUE(e3 == children->GetItemByName("a-pie"));
-  ASSERT_STREQ("pie", e3->GetTagName().c_str());
+  ASSERT_STREQ("pie", e3->GetTagName());
   ASSERT_STREQ("a-pie", e3->GetName().c_str());
   ASSERT_TRUE(NULL == e4);
   ASSERT_TRUE(NULL == e5);
   ASSERT_TRUE(e6 == children->GetItemByIndex(3));
   ASSERT_TRUE(e6 == children->GetItemByName("big-pie"));
-  ASSERT_STREQ("pie", e6->GetTagName().c_str());
+  ASSERT_STREQ("pie", e6->GetTagName());
   ASSERT_STREQ("big-pie", e6->GetName().c_str());
 }
 
@@ -545,7 +548,7 @@ TEST_F(BasicElementTest, XMLConstruction) {
   ASSERT_TRUE(e1->IsInstanceOf(ggadget::BasicElement::CLASS_ID));
   Muffin *m1 = down_cast<Muffin *>(e1);
   ASSERT_STREQ("top", m1->GetName().c_str());
-  ASSERT_STREQ("muffin", m1->GetTagName().c_str());
+  ASSERT_STREQ("muffin", m1->GetTagName());
   ASSERT_EQ(2, m1->GetChildren()->GetCount());
   ggadget::BasicElement *e2 = m1->GetChildren()->GetItemByIndex(0);
   ASSERT_TRUE(e2);
@@ -554,7 +557,7 @@ TEST_F(BasicElementTest, XMLConstruction) {
   ASSERT_TRUE(e2->IsInstanceOf(ggadget::BasicElement::CLASS_ID));
   Pie *p1 = down_cast<Pie *>(e2);
   ASSERT_STREQ("", p1->GetName().c_str());
-  ASSERT_STREQ("pie", p1->GetTagName().c_str());
+  ASSERT_STREQ("pie", p1->GetTagName());
   ASSERT_STREQ("pie-tooltip", p1->GetTooltip().c_str());
   ASSERT_TRUE(p1->XIsRelative());
   ASSERT_FLOAT_EQ(0.5, p1->GetRelativeX());
