@@ -70,7 +70,8 @@ class SideBar::Impl : public View {
       }
       if (!view) return;
       view_element_ =
-          new ViewElement(owner_->main_div_, owner_, down_cast<View *>(view));
+          new ViewElement(owner_->main_div_, owner_, down_cast<View *>(view),
+                          true);
       // insert the view element in proper place
       owner_->InsertViewElement(height_, view_element_);
       private_view_ = view_element_->GetChildView();
@@ -95,7 +96,8 @@ class SideBar::Impl : public View {
       real_viewhost_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
     }
     virtual void QueueDraw() {
-      real_viewhost_->QueueDraw();
+      if (view_element_)
+        view_element_->QueueDraw();
     }
     virtual void QueueResize() {
       resize_event_();
@@ -178,7 +180,7 @@ class SideBar::Impl : public View {
         main_div_(NULL) {
     ASSERT(host);
     SetResizable(ViewInterface::RESIZABLE_TRUE);
-    EnableCanvasCache(false);
+    //EnableCanvasCache(false);
     SetupDecorator();
   }
   ~Impl() {
@@ -201,11 +203,15 @@ class SideBar::Impl : public View {
     if (GetHitTest() == HT_LEFT || GetHitTest() == HT_RIGHT)
       return EVENT_RESULT_UNHANDLED;
 
-    if (event.GetType() == Event::EVENT_MOUSE_DOWN && GetMouseOverElement()) {
-      if (GetMouseOverElement()->GetHitTest() == HT_TRANSPARENT) {
+    BasicElement *elm = GetMouseOverElement();
+    if (event.GetType() == Event::EVENT_MOUSE_DOWN && elm) {
+      double x, y;
+      elm->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
+      HitTest elm_hittest = elm->GetHitTest(x, y);
+      if (elm_hittest == HT_TRANSPARENT || elm_hittest == HT_NOWHERE) {
         hit_element_transparent_part_ = true;
         return EVENT_RESULT_HANDLED;
-      } else if (GetHitTest() == HT_BOTTOM) {
+      } else if (elm_hittest == HT_BOTTOM) {
         hit_element_bottom_ = true;
         // record the original height of each view elements
         int index = 0;
@@ -451,7 +457,8 @@ class SideBar::Impl : public View {
       null_element_ = NULL;
     }
     if (!null_element_) {
-      null_element_ = new ViewElement(main_div_, this, down_cast<View *>(view));
+      null_element_ = new ViewElement(main_div_, this, down_cast<View *>(view),
+                                      true);
       null_element_->SetPixelHeight(view->GetHeight());
       null_element_->SetVisible(false);
     }

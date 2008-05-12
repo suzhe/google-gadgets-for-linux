@@ -105,7 +105,7 @@ ImgElement::~ImgElement() {
   impl_ = NULL;
 }
 
-bool ImgElement::IsPointIn(double x, double y) {
+bool ImgElement::IsPointIn(double x, double y) const {
   // Return false directly if the point is outside the element boundary.
   if (!BasicElement::IsPointIn(x, y))
     return false;

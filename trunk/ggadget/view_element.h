@@ -29,8 +29,12 @@ class ViewElement : public BasicElement {
  public:
   DEFINE_CLASS_ID(0x3be02fb3f45b405b, BasicElement);
 
+  /**
+   * If no_transparent is true, then the ViewElement will never return
+   * HT_TRANSPARENT hittest value.
+   */
   ViewElement(BasicElement *parent, View *parent_view,
-              View *child_view);
+              View *child_view, bool no_transparent);
   virtual ~ViewElement();
 
   void SetChildView(View *child_view);
@@ -76,9 +80,11 @@ class ViewElement : public BasicElement {
                                    bool direct,
                                    BasicElement **fired_element,
                                    BasicElement **in_element);
-  virtual EventResult OnOtherEvent(const Event &event);
-  virtual EventResult OnDragEvent(const DragEvent &event);
+  virtual EventResult OnDragEvent(const DragEvent &event,
+                                  bool direct,
+                                  BasicElement **fired_element);
   virtual EventResult OnKeyEvent(const KeyboardEvent &event);
+  virtual EventResult OnOtherEvent(const Event &event);
 
   /**
    * The size of ViewElement will always be synced with the size of child view.
@@ -89,7 +95,7 @@ class ViewElement : public BasicElement {
   /**
    * Delegates to child view's GetHitTest().
    */
-  virtual ViewInterface::HitTest GetHitTest() const;
+  virtual ViewInterface::HitTest GetHitTest(double x, double y) const;
 
   virtual void MarkRedraw();
   virtual bool OnAddContextMenuItems(MenuInterface *menu);

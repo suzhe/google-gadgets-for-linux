@@ -114,13 +114,14 @@ class ImageCache::Impl {
   }
 
   ~Impl() {
+#ifdef _DEBUG
     DLOG("Image statistics(new/shared): local %d/%d;"
          " global %d/%d remain local %zd global %zd",
          num_new_images_, num_shared_images_,
          global_num_new_images_, global_num_shared_images_,
          images_.size() + mask_images_.size(),
          global_images_.size() + global_mask_images_.size());
-
+#endif
     for (ImageMap::const_iterator it = images_.begin();
          it != images_.end(); ++it) {
       DLOG("!!! Image leak: %s", it->first.c_str());
@@ -168,7 +169,7 @@ class ImageCache::Impl {
     std::string data;
     FileManagerInterface *global_fm = GetGlobalFileManager();
 
-    bool is_global;
+    bool is_global = false;
     if (fm && fm->ReadFile(filename, &data)) {
       is_global = false;
     } else if (global_fm && global_fm->ReadFile(filename, &data)) {

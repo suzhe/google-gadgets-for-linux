@@ -387,5 +387,13 @@ bool DisableWidgetBackground(GtkWidget *widget) {
   return result;
 }
 
+bool SupportsComposite() {
+#if GTK_CHECK_VERSION(2,10,0)
+  return gdk_screen_is_composited(gdk_screen_get_default());
+#else
+  return gdk_screen_get_rgba_colormap(gdk_screen_get_default()) != NULL;
+#endif
+}
+
 } // namespace gtk
 } // namespace ggadget

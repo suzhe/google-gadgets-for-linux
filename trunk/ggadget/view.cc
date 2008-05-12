@@ -175,6 +175,8 @@ class View::Impl {
       dragover_result_(EVENT_RESULT_UNHANDLED),
       width_(0),
       height_(0),
+      default_width_(320),
+      default_height_(240),
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_ZOOM),
       show_caption_always_(false),
@@ -215,7 +217,6 @@ class View::Impl {
     }
 
     if (view_host_) {
-      view_host_->CloseView();
       view_host_->SetView(NULL);
       view_host_->Destroy();
       view_host_ = NULL;
@@ -449,9 +450,16 @@ class View::Impl {
     }
 
     if (in_element_holder.Get()) {
+      double x, y;
+      in_element->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
       // Gets the hit test value of the element currently pointed by mouse.
       // It'll be used as the hit test value of the View.
-      hittest_ = in_element->GetHitTest();
+      // hittest_ must be set before calling SetCursor(), because ViewHost
+      // might want to get view's hittest value to help determine the correct
+      // cursor type.
+      // FIXME: Integrate GetHitTest into OnMouseEvent to prevent extra
+      // coordinate translation.
+      hittest_ = in_element->GetHitTest(x, y);
       owner_->SetCursor(in_element->GetCursor());
       if (type == Event::EVENT_MOUSE_MOVE &&
           in_element != tooltip_element_.Get()) {
@@ -467,12 +475,12 @@ class View::Impl {
 
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (in_element_holder.Get()) {
-      DLOG("Mouse Event result: In:%s type:%s, hitTest:%d, result: %d",
-           in_element->GetName().c_str(),
-           in_element->GetTagName().c_str(), hittest_,
-           result);
+      DLOG("Mouse Event result(%p): In:%s type:%s, hitTest:%d, result: %d",
+           owner_, in_element->GetName().c_str(), in_element->GetTagName(),
+           hittest_, result);
     } else {
-      DLOG("Mouse Event result: hitTest:%d, result: %d", hittest_, result);
+      DLOG("Mouse Event result(%p): hitTest:%d, result: %d",
+           owner_, hittest_, result);
     }
 #endif
 
@@ -772,6 +780,12 @@ class View::Impl {
         canvas_cache_->Destroy();
         canvas_cache_ = NULL;
       }
+
+      // Store default width and height if the size has not been set before.
+      if (width_ == 0)
+        default_width_ = width;
+      if (height_ == 0)
+        default_height_ = height;
 
       width_ = width;
       height_ = height;
@@ -1305,6 +1319,8 @@ class View::Impl {
   EventResult dragover_result_;
   double width_;
   double height_;
+  double default_width_;
+  double default_height_;
   ResizableMode resizable_;
   std::string caption_;
   bool show_caption_always_;
@@ -1389,6 +1405,11 @@ double View::GetWidth() const {
 
 double View::GetHeight() const {
   return impl_->height_;
+}
+
+void View::GetDefaultSize(double *width, double *height) const {
+  if (width) *width = impl_->default_width_;
+  if (height) *height = impl_->default_height_;
 }
 
 void View::SetResizable(ViewInterface::ResizableMode resizable) {

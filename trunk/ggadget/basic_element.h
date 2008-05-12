@@ -38,6 +38,15 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   DEFINE_CLASS_ID(0xfd70820c5bbf11dc, ScriptableInterface);
 
  public:
+  /**
+   * Constructor.
+   *
+   * @param parent The parent element.
+   * @param view The View which this element belongs to.
+   * @param tag_name Type name of this element, must be static const string.
+   * @param name Name of this element.
+   * @param children If this element can have children elements.
+   */
   BasicElement(BasicElement *parent, View *view,
                const char *tag_name, const char *name, bool children);
   virtual ~BasicElement();
@@ -54,8 +63,8 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   };
 
  public:
-  /** Get the type of the current object. */
-  std::string GetTagName() const;
+  /** Get the type name of the current object. */
+  const char *GetTagName() const;
 
   /** Retrieves the name of the element.  */
   std::string GetName() const;
@@ -212,8 +221,13 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    *
    * Derived classes can override GetHitTest() to return customized hittest
    * value.
+   *
+   * GetHitTest() returns a hittest value of specified position.
+   * The default behavior is: If IsPointIn(x, y) returns true, then returns the
+   * hittest value set by SetHitTest() or HT_CLIENT by default, otherwise
+   * returns HT_TRANSPARENT.
    */
-  virtual ViewInterface::HitTest GetHitTest() const;
+  virtual ViewInterface::HitTest GetHitTest(double x, double y) const;
   void SetHitTest(ViewInterface::HitTest value);
 
   /**
@@ -324,7 +338,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
   View *GetView();
 
   /** Gets the canvas for the element mask. Returns NULL if no mask is set. */
-  const CanvasInterface *GetMaskCanvas();
+  const CanvasInterface *GetMaskCanvas() const;
 
   /**
    * Draws the element to a specified canvas.
@@ -537,7 +551,7 @@ class BasicElement: public ScriptableHelperNativeOwnedDefault {
    * Derived class must call this method of its parent first, then does more
    * check when parent method returns true.
    */
-  virtual bool IsPointIn(double x, double y);
+  virtual bool IsPointIn(double x, double y) const;
 
   /**
    * Handler of the keyboard events.

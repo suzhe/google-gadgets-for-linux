@@ -143,7 +143,7 @@ class SidebarGtkHost::Impl {
   };
 
   Impl(SidebarGtkHost *owner, bool decorated, int view_debug_mode)
-    : gadget_browser_host_(owner, view_debug_mode_),
+    : gadget_browser_host_(owner, view_debug_mode),
       owner_(owner),
       decorated_(decorated),
       gadgets_shown_(true),
@@ -425,13 +425,14 @@ class SidebarGtkHost::Impl {
     DLOG("Dock in SidebarGtkHost, view: %p", view);
     ViewHostInterface *view_host = side_bar_->NewViewHost(height);
     DecoratedViewHost *decorator =
-        new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED, false);
+        new DecoratedViewHost(view_host, DecoratedViewHost::MAIN_DOCKED, true);
     decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
     decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
     decorator->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, decorator));
     decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
     ViewHostInterface *old = view->SwitchViewHost(decorator);
     if (old) old->Destroy();
+    view->ShowView(false, 0, NULL);
     side_bar_->Layout();
     return true;
   }
@@ -639,7 +640,7 @@ class SidebarGtkHost::Impl {
         view_host = side_bar_->NewViewHost(0);
         decorator = new DecoratedViewHost(view_host,
                                           DecoratedViewHost::MAIN_DOCKED,
-                                          false);
+                                          true);
         decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
         break;
       case ViewHostInterface::VIEW_HOST_OPTIONS:
