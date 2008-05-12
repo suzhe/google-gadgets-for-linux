@@ -28,21 +28,18 @@ class CairoCanvas;
 
 /**
  * This class is the base class for @c ImageInterface implementations.
- * The instances are reference-counted. This class provides default
- * drawing methods implmenetations using the result of GetCanvas().
- * These methods should be overriden if more sophisticated drawing needed.
+ * This class provides default drawing methods implmenetations using the
+ * result of GetCanvas(). These methods should be overriden if more
+ * sophisticated drawing needed.
  */
 class CairoImageBase : public ImageInterface {
  public:
-  CairoImageBase(const CairoGraphics *graphics,
-                 const std::string &tag, bool is_mask);
+  CairoImageBase(const std::string &tag, bool is_mask);
 
  protected:
   virtual ~CairoImageBase();
 
  public:
-  void Ref();
-  void Unref();
   /** Checks if this image object is valid. */
   virtual bool IsValid() const = 0;
 

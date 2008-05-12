@@ -83,8 +83,7 @@ class PixbufImage::Impl {
   }
 
   ~Impl() {
-    if (canvas_)
-      canvas_->Destroy();
+    DestroyCanvas(canvas_);
   }
 
   bool fully_opaque_;
@@ -93,9 +92,11 @@ class PixbufImage::Impl {
   CairoCanvas *canvas_;
 };
 
-PixbufImage::PixbufImage(const CairoGraphics *graphics, const std::string &tag,
-                         const std::string &data, bool is_mask)
-  : CairoImageBase(graphics, tag, is_mask),
+// Currently graphics is not used.
+PixbufImage::PixbufImage(const CairoGraphics * /* graphics */,
+                         const std::string &tag, const std::string &data,
+                         bool is_mask)
+  : CairoImageBase(tag, is_mask),
     impl_(new Impl(data, is_mask)) {
 }
 

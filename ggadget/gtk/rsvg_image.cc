@@ -36,8 +36,7 @@ class RsvgImage::Impl {
  public:
   Impl(const CairoGraphics *graphics, const std::string &data)
       : width_(0), height_(0), rsvg_(NULL), canvas_(NULL),
-        zoom_(graphics->GetZoom()), on_zoom_connection_(NULL),
-        on_gfx_destroy_connection_(NULL) {
+        zoom_(graphics->GetZoom()), on_zoom_connection_(NULL) {
     GError *error = NULL;
     const guint8 *ptr = reinterpret_cast<const guint8*>(data.c_str());
     rsvg_ = rsvg_handle_new_from_data(ptr, data.size(), &error);
@@ -50,36 +49,34 @@ class RsvgImage::Impl {
       height_ = dim.height;
       on_zoom_connection_ =
         graphics->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
-      on_gfx_destroy_connection_ =
-        graphics->ConnectOnDestroy(NewSlot(this, &Impl::OnGfxDestroy));
     }
   }
 
   ~Impl() {
     if (rsvg_)
       g_object_unref(rsvg_);
-    if (canvas_)
-      canvas_->Destroy();
     if (on_zoom_connection_)
       on_zoom_connection_->Disconnect();
+    DestroyCanvas(canvas_);
   }
 
   void OnZoom(double zoom) {
     if (zoom_ != zoom && zoom > 0) {
       zoom_ = zoom;
-
       // Destroy the canvas so that it'll be recreated again with new zoom
       // factor when calling GetCanvas().
-      if (canvas_) {
-        canvas_->Destroy();
+      DestroyCanvas(canvas_);
+      canvas_ = NULL;
+    } else if (zoom < 0) {
+      // if zoom < 0 then means the graphics has been destroyed, then change
+      // the zoom level back to 1 and remove the connection to graphics.
+      if (zoom_ != 1) {
+        DestroyCanvas(canvas_);
         canvas_ = NULL;
       }
+      zoom_ = 1;
+      on_zoom_connection_ = NULL;
     }
-  }
-
-  void OnGfxDestroy() {
-    on_zoom_connection_ = NULL;
-    on_gfx_destroy_connection_ = NULL;
   }
 
   double width_;
@@ -88,12 +85,11 @@ class RsvgImage::Impl {
   CairoCanvas *canvas_;
   double zoom_;
   Connection *on_zoom_connection_;
-  Connection *on_gfx_destroy_connection_;
 };
 
 RsvgImage::RsvgImage(const CairoGraphics *graphics, const std::string &tag,
                      const std::string &data, bool is_mask)
-    : CairoImageBase(graphics, tag, is_mask),
+    : CairoImageBase(tag, is_mask),
       impl_(new Impl(graphics, data)) {
   // RsvgImage doesn't support mask for now.
   ASSERT(!is_mask);
