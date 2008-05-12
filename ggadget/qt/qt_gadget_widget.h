@@ -32,7 +32,6 @@ class QGadgetWidget : public QWidget {
   Q_OBJECT
  public:
   QGadgetWidget(ViewInterface* view,
-                ViewHostInterface *host,
                 bool composite, bool decorated);
   ~QGadgetWidget();
   void EnableInputShapeMask(bool enable);
@@ -49,32 +48,28 @@ class QGadgetWidget : public QWidget {
   virtual void mouseReleaseEvent(QMouseEvent *event);
   virtual void enterEvent(QEvent *event);
   virtual void leaveEvent(QEvent *event);
+  virtual void wheelEvent(QWheelEvent * event);
   virtual void keyPressEvent(QKeyEvent *event);
   virtual void keyReleaseEvent(QKeyEvent *event);
   virtual void dragEnterEvent(QDragEnterEvent *event);
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
-  virtual void resizeEvent(QResizeEvent *event);
   virtual void closeEvent(QCloseEvent *event);
 
   void SetInputMask(QPixmap *pixmap);
   void SkipTaskBar();
-  QtCanvas *canvas_;
-  GraphicsInterface *graphics_;
+  void SetSize(int width, int height);
   ViewInterface *view_;
-  ViewHostInterface *view_host_;
-  double width_, height_;  // The view size
   const char **drag_files_;
   std::vector<std::string> drag_urls_;
-  uint64_t mouse_down_time_;
-  double zoom_;
   bool composite_;
   bool enable_input_mask_;
   QPixmap offscreen_pixmap_;
   QPoint mouse_pos_;
   bool mouse_move_drag_;
   QWidget *child_;
+  double zoom_;
 };
 
 

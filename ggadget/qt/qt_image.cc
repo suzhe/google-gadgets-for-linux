@@ -60,8 +60,7 @@ class QtImage::Impl {
       canvas_(NULL),
       tag_(tag),
       graphics_(g),
-      fully_opaque_(false),
-      ref_count_(1) {
+      fully_opaque_(false) {
     canvas_ = new QtCanvas(data);
     if (!canvas_) return;
     if (canvas_->GetWidth() == 0) {
@@ -92,8 +91,7 @@ class QtImage::Impl {
   Impl(size_t width, size_t height)
     : is_mask_(false),
       canvas_(NULL),
-      graphics_(NULL),
-      ref_count_(1) {
+      graphics_(NULL) {
     canvas_ = new QtCanvas(NULL, width, height);
     if (!canvas_) return;
     if (canvas_->GetWidth() == 0) {
@@ -104,8 +102,6 @@ class QtImage::Impl {
 
   ~Impl() {
     if (canvas_) delete canvas_;
-    if (graphics_)
-      graphics_->RemoveImageTag(tag_.c_str(), is_mask_);
   }
 
   void Draw(CanvasInterface *canvas, double x, double y) {
@@ -134,7 +130,6 @@ class QtImage::Impl {
   std::string tag_;
   QtGraphics *graphics_;
   bool fully_opaque_;
-  int ref_count_;
 };
 
 QtImage::QtImage(QtGraphics *graphics,
@@ -159,7 +154,6 @@ bool QtImage::IsValid() const {
 
 void QtImage::Destroy() {
   delete this;
-//  Unref();
 }
 
 const CanvasInterface *QtImage::GetCanvas() const {
@@ -211,16 +205,6 @@ std::string QtImage::GetTag() const {
 bool QtImage::IsFullyOpaque() const {
   return impl_->fully_opaque_;
 }
-
-void QtImage::Ref() {
-  impl_->ref_count_++;
-}
-
-void QtImage::Unref() {
-  if (--impl_->ref_count_ == 0)
-    delete this;
-}
-
 
 } // namespace qt
 } // namespace ggadget

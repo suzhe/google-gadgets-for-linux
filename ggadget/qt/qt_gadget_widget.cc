@@ -17,8 +17,8 @@
 #include <QtCore/QUrl>
 #include <QtGui/QPainter>
 #include <QtGui/QMouseEvent>
+#include <ggadget/graphics_interface.h>
 #include <ggadget/gadget.h>
-#include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_canvas.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/qt/qt_menu.h>
@@ -36,19 +36,16 @@ namespace ggadget {
 namespace qt {
 
 QGadgetWidget::QGadgetWidget(ViewInterface *view,
-                             ViewHostInterface *host,
                              bool composite,
                              bool decorated)
-     : canvas_(NULL), graphics_(NULL), view_(view), view_host_(host),
-       width_(0), height_(0),
+     : view_(view),
        drag_files_(NULL),
        composite_(composite),
        enable_input_mask_(true),
        mouse_move_drag_(false),
        child_(NULL) {
-  graphics_ = host->NewGraphics();
-  zoom_ = graphics_->GetZoom();
   setMouseTracking(true);
+  SetSize(2, 2);
   setAcceptDrops(true);
   if (!decorated) {
     setWindowFlags(Qt::FramelessWindowHint);
@@ -58,22 +55,39 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
 }
 
 QGadgetWidget::~QGadgetWidget() {
-  if (graphics_) delete graphics_;
+  LOG("Widget freed");
 }
 
 void QGadgetWidget::paintEvent(QPaintEvent *event) {
-  double old_width = width_, old_height = height_;
-  width_ = view_->GetWidth();
-  height_ = view_->GetHeight();
-  int int_width = D2I(width_ * zoom_);
-  int int_height = D2I(height_ * zoom_);
+  zoom_ = view_->GetGraphics()->GetZoom();
+  int int_width = D2I(view_->GetWidth() * zoom_);
+  int int_height = D2I(view_->GetHeight() * zoom_);
 
-  if (old_width != width_ || old_height != height_) {
-    setFixedSize(int_width, int_height);
-    setMinimumSize(0, 0);
-    setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+  if (width() != int_width || height() != int_height
+      || offscreen_pixmap_.isNull()) {
+    SetSize(int_width, int_height);
     QPixmap pixmap(int_width, int_height);
     offscreen_pixmap_ = pixmap;
+  }
+  // Draw view on offscreen pixmap
+  {
+    QPainter p(&offscreen_pixmap_);
+    p.scale(zoom_, zoom_);
+    p.setCompositionMode(QPainter::CompositionMode_Source);
+    p.fillRect(offscreen_pixmap_.rect(), Qt::transparent);
+    QtCanvas canvas(int_width, int_height, &p);
+    view_->Draw(&canvas);
+    // view_'s size may be changed after Draw
+    int_width = D2I(view_->GetWidth() * zoom_);
+    int_height = D2I(view_->GetHeight() * zoom_);
+    if (width() != int_width || height() != int_height) {
+      update();
+      return;
+    }
+  }
+
+  if (enable_input_mask_ && composite_) {
+    SetInputMask(&offscreen_pixmap_);
   }
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
@@ -84,18 +98,6 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(rect(), Qt::transparent);
     p.restore();
-  }
-
-  {
-    QPainter p(&offscreen_pixmap_);
-    p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(offscreen_pixmap_.rect(), Qt::transparent);
-    QtCanvas canvas(int_width, int_height, &p);
-    view_->Draw(&canvas);
-  }
-
-  if (enable_input_mask_ && composite_) {
-    SetInputMask(&offscreen_pixmap_);
   }
   p.drawPixmap(0, 0, offscreen_pixmap_);
 }
@@ -184,6 +186,23 @@ void QGadgetWidget::leaveEvent(QEvent *event) {
                0, 0, 0, 0,
                MouseEvent::BUTTON_NONE, 0);
   if (view_->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED)
+    event->accept();
+}
+
+void QGadgetWidget::wheelEvent(QWheelEvent * event) {
+  int delta_x = 0, delta_y = 0;
+  if (event->orientation() == Qt::Horizontal) {
+    delta_x = -event->delta();
+  } else {
+    delta_y = -event->delta();
+  }
+  MouseEvent e(Event::EVENT_MOUSE_WHEEL,
+               event->x() / zoom_, event->y() / zoom_,
+               delta_x, delta_y,
+               GetMouseButtons(event->buttons()),
+               0);
+
+  if (view_->OnMouseEvent(e) != EVENT_RESULT_UNHANDLED)
     event->accept();
 }
 
@@ -277,8 +296,8 @@ void QGadgetWidget::dropEvent(QDropEvent *event) {
   }
 }
 
+#if 0
 void QGadgetWidget::resizeEvent(QResizeEvent *event) {
-  if (width_ == 0) return;
   ViewInterface::ResizableMode mode = view_->GetResizable();
   if (mode == ViewInterface::RESIZABLE_ZOOM) {
     double x_ratio =
@@ -305,6 +324,7 @@ void QGadgetWidget::resizeEvent(QResizeEvent *event) {
     view_host_->QueueResize();
   }
 }
+#endif
 
 void QGadgetWidget::closeEvent(QCloseEvent *event) {
   event->accept();
@@ -351,9 +371,17 @@ void QGadgetWidget::SkipTaskBar() {
 #endif
 }
 
+void QGadgetWidget::SetSize(int width, int height) {
+  setFixedSize(width, height);
+  setMinimumSize(0, 0);
+  setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+}
+
 void QGadgetWidget::SetChild(QWidget *widget) {
   child_ = widget;
   widget->setParent(this);
+  // this will expose parent widget so its paintEvent will be triggered.
+  widget->move(0, 10);
 }
 #include "qt_gadget_widget.moc"
 }

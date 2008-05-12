@@ -70,10 +70,6 @@ class QtViewHost::Impl {
     if (onoptionchanged_connection_)
       onoptionchanged_connection_->Disconnect();
 
-    if (view_) {
-      delete view_;
-      view_ = NULL;
-    }
     Detach();
 
     if (qt_obj_) delete qt_obj_;
@@ -87,6 +83,10 @@ class QtViewHost::Impl {
       delete dialog_;
     window_ = widget_ = NULL;
     dialog_ = NULL;
+    if (feedback_handler_) {
+      delete feedback_handler_;
+      feedback_handler_ = NULL;
+    }
   }
 
   std::string GetViewPositionOptionPrefix() {
@@ -190,9 +190,9 @@ class QtViewHost::Impl {
       window_ = widget_;
       window_->setWindowTitle(caption_);
       if (record_states_) LoadWindowStates();
+      window_->setAttribute(Qt::WA_DeleteOnClose, false);
 
       if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
-        window_->setAttribute(Qt::WA_DeleteOnClose, false);
         widget_->connect(widget_, SIGNAL(closed()),
                          qt_obj_, SLOT(OnDetailsViewClose()));
       } else {
@@ -305,8 +305,8 @@ void QtViewHost::SetView(ViewInterface *view) {
   impl_->Detach();
   if (view == NULL) return;
   impl_->view_ = view;
-  impl_->widget_ = new QGadgetWidget(view, this,
-                                     impl_->composite_, impl_->decorated_);
+  impl_->widget_ = new QGadgetWidget(view, impl_->composite_,
+                                     impl_->decorated_);
 }
 
 void QtViewHost::ViewCoordToNativeWidgetCoord(
@@ -366,6 +366,7 @@ void QtViewHost::CloseView() {
   // window_ will be freed when SetView is called
   if (impl_->window_) {
     impl_->window_->close();
+    if (impl_->type_ == VIEW_HOST_MAIN) impl_->window_ = NULL;
   }
 }
 

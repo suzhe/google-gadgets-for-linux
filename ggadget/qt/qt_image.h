@@ -35,8 +35,6 @@ class QtImage : public ImageInterface {
           const std::string &data, bool is_mask);
   /** Check if the QtImage object is valid. */
   bool IsValid() const;
-  void Ref();
-  void Unref();
 
  public:
   virtual ~QtImage();

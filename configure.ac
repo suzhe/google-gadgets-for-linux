@@ -406,7 +406,7 @@ if test x$ggl_host_type = xlinux; then
 		    [has_qt4=yes
 		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
 		     [has_qt4=no])
-  PKG_CHECK_MODULES(QT4WEBKIT, [QtWebKit >= 4.4],
+  PKG_CHECK_MODULES(QT4WEBKIT, [QtWebKit],
 		    [has_qtwebkit=yes],
 		    [has_qtwebkit=no])
 elif test x$ggl_host_type = xmacosx; then
