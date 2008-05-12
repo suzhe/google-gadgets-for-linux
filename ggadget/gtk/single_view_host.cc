@@ -431,7 +431,8 @@ class SingleViewHost::Impl {
 
     // If it returns true, then means that it's allowed to add additional menu
     // items.
-    if (view_->OnAddContextMenuItems(&menu_builder)) {
+    if (view_->OnAddContextMenuItems(&menu_builder) &&
+        type_ == ViewHostInterface::VIEW_HOST_MAIN) {
       menu_builder.AddItem(
           GM_("MENU_ITEM_ALWAYS_ON_TOP"),
           is_keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,

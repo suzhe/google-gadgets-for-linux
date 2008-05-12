@@ -433,9 +433,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       menu->AddItem(NULL, 0, NULL, MenuInterface::MENU_ITEM_PRI_GADGET);
     }
     bool disable_about = GetManifestInfo(kManifestAboutText).empty() &&
-                         !oncommand_signal_.HasActiveConnections(); 
+                         !oncommand_signal_.HasActiveConnections();
     menu->AddItem(GM_("MENU_ITEM_ABOUT"),
-                  disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0, 
+                  disable_about ? MenuInterface::MENU_ITEM_FLAG_GRAYED : 0,
                   NewSlot(this, &Impl::AboutMenuCallback),
                   MenuInterface::MENU_ITEM_PRI_GADGET);
     menu->AddItem(GM_("MENU_ITEM_REMOVE"), 0,

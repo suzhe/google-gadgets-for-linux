@@ -97,6 +97,14 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest);
  */
 bool DisableWidgetBackground(GtkWidget *widget);
 
+/**
+ * Checks if the window system supports composite drawing mode.
+ *
+ * If it returns true, then it means that a window can have transparent
+ * background.
+ */
+bool SupportsComposite();
+
 } // namespace gtk
 } // namespace ggadget
 

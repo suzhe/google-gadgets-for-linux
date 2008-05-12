@@ -49,6 +49,8 @@ class BasicElement::Impl {
         cursor_(ViewInterface::CURSOR_DEFAULT),
         drop_target_(false),
         enabled_(false),
+        tag_name_(tag_name),
+        name_(name ? name : ""),
         width_(0.0), height_(0.0), pwidth_(0.0), pheight_(0.0),
         width_relative_(false), height_relative_(false),
         width_specified_(false), height_specified_(false),
@@ -74,10 +76,6 @@ class BasicElement::Impl {
         cache_enabled_(false),
         content_changed_(false),
         draw_queued_(false) {
-    if (name)
-      name_ = name;
-    if (tag_name)
-      tag_name_ = tag_name;
     if (parent)
       ASSERT(parent->GetView() == view);
   }
@@ -749,6 +747,10 @@ class BasicElement::Impl {
          (parent_->IsReallyVisible() && parent_->IsChildInVisibleArea(owner_)));
   }
 
+  ViewInterface::HitTest GetHitTest() const {
+    return hittest_;
+  }
+
  public:
   EventResult OnMouseEvent(const MouseEvent &event, bool direct,
                            BasicElement **fired_element,
@@ -763,7 +765,8 @@ class BasicElement::Impl {
     // GetHitTest() might be overrode.
     // FIXME: Verify if the hittest logic is correct.
     if (!direct && (!visible_ || opacity_ == 0 ||
-                    owner_->GetHitTest() == ViewInterface::HT_TRANSPARENT)) {
+         owner_->GetHitTest(event.GetX(), event.GetY()) ==
+           ViewInterface::HT_TRANSPARENT)) {
       return EVENT_RESULT_UNHANDLED;
     }
 
@@ -791,7 +794,7 @@ class BasicElement::Impl {
     if (type != Event::EVENT_MOUSE_MOVE) {
       DLOG("%s(%s|%s): x:%g y:%g dx:%d dy:%d b:%d m:%d",
            scriptable_event.GetName(),
-           name_.c_str(), tag_name_.c_str(),
+           name_.c_str(), tag_name_,
            event.GetX(), event.GetY(),
            event.GetWheelDeltaX(), event.GetWheelDeltaY(),
            event.GetButton(), event.GetModifier());
@@ -848,6 +851,17 @@ class BasicElement::Impl {
     ElementHolder this_element_holder(owner_);
 
     *fired_element = NULL;
+
+    // Always process direct messages because the sender wants this element
+    // to process.
+    // GetHitTest() might be overrode.
+    // FIXME: Verify if the hittest logic is correct.
+    if (!direct && (!visible_ || opacity_ == 0 ||
+         owner_->GetHitTest(event.GetX(), event.GetY()) ==
+           ViewInterface::HT_TRANSPARENT)) {
+      return EVENT_RESULT_UNHANDLED;
+    }
+
     if (!direct && children_) {
       // Send to the children first.
       EventResult result = children_->OnDragEvent(event, fired_element);
@@ -855,7 +869,7 @@ class BasicElement::Impl {
         return result;
     }
 
-    if (!drop_target_ || !visible_ || opacity_ == 0)
+    if (!drop_target_)
       return EVENT_RESULT_UNHANDLED;
 
     // Take this event, since no children took it, and we're enabled.
@@ -863,7 +877,7 @@ class BasicElement::Impl {
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     if (event.GetType() != Event::EVENT_DRAG_MOTION)
       DLOG("%s(%s|%s): %g %g file0=%s", scriptable_event.GetName(),
-           name_.c_str(), tag_name_.c_str(),
+           name_.c_str(), tag_name_,
            event.GetX(), event.GetY(), event.GetDragFiles()[0]);
 #endif
 
@@ -903,7 +917,7 @@ class BasicElement::Impl {
     ScriptableEvent scriptable_event(&event, owner_, NULL);
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     DLOG("%s(%s|%s): %d", scriptable_event.GetName(),
-         name_.c_str(), tag_name_.c_str(), event.GetKeyCode());
+         name_.c_str(), tag_name_, event.GetKeyCode());
 #endif
 
     switch (event.GetType()) {
@@ -934,7 +948,7 @@ class BasicElement::Impl {
     ScriptableEvent scriptable_event(&event, owner_, NULL);
 #if defined(_DEBUG) && defined(EVENT_VERBOSE_DEBUG)
     DLOG("%s(%s|%s)", scriptable_event.GetName(),
-         name_.c_str(), tag_name_.c_str());
+         name_.c_str(), tag_name_);
 #endif
 
     // TODO: focus logic.
@@ -963,7 +977,7 @@ class BasicElement::Impl {
   ViewInterface::CursorType cursor_;
   bool drop_target_;
   bool enabled_;
-  std::string tag_name_;
+  const char *tag_name_;
   std::string name_;
   double width_, height_, pwidth_, pheight_;
   bool width_relative_, height_relative_;
@@ -1090,7 +1104,7 @@ void BasicElement::DoRegister() {
                    NewSlot(this, &BasicElement::IsEnabled),
                    NewSlot(this, &BasicElement::SetEnabled));
   RegisterStringEnumProperty("hitTest",
-                             NewSlot(this, &BasicElement::GetHitTest),
+                             NewSlot(impl_, &Impl::GetHitTest),
                              NewSlot(this, &BasicElement::SetHitTest),
                              kHitTestNames, arraysize(kHitTestNames));
   RegisterProperty("mask",
@@ -1120,7 +1134,6 @@ void BasicElement::DoRegister() {
   RegisterProperty("rotation",
                    NewSlot(this, &BasicElement::GetRotation),
                    NewSlot(this, &BasicElement::SetRotation));
-  RegisterConstant("tagname", impl_->tag_name_);
   RegisterProperty("tooltip",
                    NewSlot(this, &BasicElement::GetTooltip),
                    NewSlot(this, &BasicElement::SetTooltip));
@@ -1171,7 +1184,7 @@ BasicElement::~BasicElement() {
   delete impl_;
 }
 
-std::string BasicElement::GetTagName() const {
+const char *BasicElement::GetTagName() const {
   return impl_->tag_name_;
 }
 
@@ -1183,8 +1196,11 @@ const View *BasicElement::GetView() const {
   return impl_->view_;
 }
 
-ViewInterface::HitTest BasicElement::GetHitTest() const {
-  return impl_->hittest_;
+ViewInterface::HitTest BasicElement::GetHitTest(double x, double y) const {
+  if (IsPointIn(x, y))
+    return impl_->hittest_;
+  else
+    return ViewInterface::HT_TRANSPARENT;
 }
 
 void BasicElement::SetHitTest(ViewInterface::HitTest value) {
@@ -1238,7 +1254,7 @@ void BasicElement::SetMask(const Variant &mask) {
   impl_->SetMask(mask);
 }
 
-const CanvasInterface *BasicElement::GetMaskCanvas() {
+const CanvasInterface *BasicElement::GetMaskCanvas() const {
   return impl_->GetMaskCanvas();
 }
 
@@ -1654,7 +1670,7 @@ EventResult BasicElement::OnOtherEvent(const Event &event) {
   return impl_->OnOtherEvent(event);
 }
 
-bool BasicElement::IsPointIn(double x, double y) {
+bool BasicElement::IsPointIn(double x, double y) const {
   if (!IsPointInElement(x, y, impl_->width_, impl_->height_))
     return false;
 

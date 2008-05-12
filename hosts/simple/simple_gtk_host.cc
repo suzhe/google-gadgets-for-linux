@@ -56,6 +56,7 @@ class SimpleGtkHost::Impl {
       decorated_(decorated),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
+      transparent_(SupportsComposite()),
       gadget_manager_(GetGadgetManager()),
       expanded_original_(NULL),
       expanded_popout_(NULL) {
@@ -232,10 +233,10 @@ class SimpleGtkHost::Impl {
     DecoratedViewHost *dvh;
     if (type == ViewHostInterface::VIEW_HOST_MAIN)
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
-                                  true);
+                                  transparent_);
     else
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
-                                  true);
+                                  transparent_);
 
     dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
     dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
@@ -363,7 +364,8 @@ class SimpleGtkHost::Impl {
           new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, zoom_,
                              false, false, false, view_debug_mode_);
       expanded_popout_ =
-          new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED, true);
+          new DecoratedViewHost(svh, DecoratedViewHost::MAIN_EXPANDED,
+                                transparent_);
       expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
                                                expanded_popout_));
 
@@ -420,6 +422,7 @@ class SimpleGtkHost::Impl {
   bool decorated_;
   int view_debug_mode_;
   bool gadgets_shown_;
+  bool transparent_;
 
   GadgetManagerInterface *gadget_manager_;
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)

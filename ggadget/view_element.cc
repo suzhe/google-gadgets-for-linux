@@ -34,10 +34,11 @@ static const double kMaximumScale = 2.0;
 
 class ViewElement::Impl {
  public:
-  Impl(ViewElement *owner)
+  Impl(ViewElement *owner, bool no_transparent)
     : owner_(owner),
       child_view_(NULL),
       scale_(1),
+      no_transparent_(no_transparent),
       onsize_connection_(NULL),
       onopen_connection_(NULL) {
   }
@@ -67,15 +68,17 @@ class ViewElement::Impl {
   ViewElement *owner_;
   View *child_view_; // This view is not owned by the element.
   double scale_;
+  bool no_transparent_;
+
   Connection *onsize_connection_;
   Connection *onopen_connection_;
 };
 
 ViewElement::ViewElement(BasicElement *parent, View *parent_view,
-                         View *child_view)
-    // Only 1 child so no need to involve Elements here.
-    : BasicElement(parent, parent_view, "", NULL, false),
-      impl_(new Impl(this)) {
+                         View *child_view, bool no_transparent)
+  // Only 1 child so no need to involve Elements here.
+  : BasicElement(parent, parent_view, "view", NULL, false),
+    impl_(new Impl(this, no_transparent)) {
   SetEnabled(true);
   SetChildView(child_view);
 }
@@ -240,11 +243,21 @@ double ViewElement::GetPixelHeight() const {
   return BasicElement::GetPixelHeight();
 }
 
-ViewInterface::HitTest ViewElement::GetHitTest() const {
-  if (impl_->child_view_)
-    return impl_->child_view_->GetHitTest();
+ViewInterface::HitTest ViewElement::GetHitTest(double x, double y) const {
+  // Assume GetHitTest() will be called immediately after calling
+  // OnMouseEvent().
+  if (impl_->child_view_) {
+    // If the ViewElement's parent is a Sidebar, then in most case,
+    // the child view is a view decorator, then it's necessary to
+    // /return HT_NOWHERE instead of HT_TRANSPARENT to make sure that
+    // the child view decorator won't hide the decorator while the mouse
+    // pointer is still inside it.
+    ViewInterface::HitTest hittest = impl_->child_view_->GetHitTest();
+    return (hittest == ViewInterface::HT_TRANSPARENT &&
+            impl_->no_transparent_) ? ViewInterface::HT_NOWHERE : hittest;
+  }
 
-  return BasicElement::GetHitTest();
+  return BasicElement::GetHitTest(x, y);
 }
 
 void ViewElement::MarkRedraw() {
@@ -282,15 +295,23 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
   return std::max(result1, result2);
 }
 
-EventResult ViewElement::OnDragEvent(const DragEvent &event) {
-  if (impl_->scale_ != 1.) {
-    DragEvent new_event(event);
-    new_event.SetX(event.GetX() / impl_->scale_);
-    new_event.SetY(event.GetY() / impl_->scale_);
-    return impl_->child_view_->OnDragEvent(new_event);
-  } else {
-    return impl_->child_view_->OnDragEvent(event);
-  }
+EventResult ViewElement::OnDragEvent(const DragEvent &event, bool direct,
+                                     BasicElement **fired_element) {
+  Event::Type type = event.GetType();
+
+  // View doesn't accept DRAG_OVER event, so converts it to DRAG_MOTION.
+  DragEvent new_event(type == Event::EVENT_DRAG_OVER ?
+                      Event::EVENT_DRAG_MOTION : type,
+                      event.GetX() / impl_->scale_,
+                      event.GetY() / impl_->scale_,
+                      event.GetDragFiles());
+
+  EventResult result = impl_->child_view_->OnDragEvent(new_event);
+
+  if (result == EVENT_RESULT_HANDLED)
+    *fired_element = this;
+
+  return result;
 }
 
 bool ViewElement::OnAddContextMenuItems(MenuInterface *menu) {

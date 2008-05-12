@@ -97,6 +97,16 @@ class DecoratedViewHost : public ViewHostInterface {
    */
   Connection *ConnectOnClose(Slot0<void> *slot);
 
+  /**
+   * Sets screen edge which is current snapping the docked decorator.
+   *
+   * It's only valid for DecoratedViewHost with MAIN_DOCKED type.
+   * Only left and right are supported.
+   *
+   * @param right true to select right edge, otherwise choose left edge.
+   */
+  void SetDockEdge(bool right);
+
  public:
 
   /** Returns the ViewHost type. */

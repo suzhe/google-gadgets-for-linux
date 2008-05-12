@@ -100,6 +100,7 @@ class View : public ViewInterface {
   virtual void SetSize(double width, double height);
   virtual double GetWidth() const;
   virtual double GetHeight() const;
+  virtual void GetDefaultSize(double *width, double *height) const;
 
   virtual void SetResizable(ResizableMode resizable);
   virtual ResizableMode GetResizable() const;

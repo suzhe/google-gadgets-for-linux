@@ -50,7 +50,7 @@ class CopyElement : public BasicElement {
   virtual void DoRegister();
 
  public:
-  virtual bool IsPointIn(double x, double y);
+  virtual bool IsPointIn(double x, double y) const;
 
  public:
   /**

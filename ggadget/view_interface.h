@@ -176,6 +176,15 @@ class ViewInterface {
   virtual double GetHeight() const = 0;
 
   /**
+   * Retrieves the default size of view in pixels.
+   *
+   * Normally, the size set in view's xml description file will be returned.
+   * If there is no default size in xml description, then the first size set to
+   * View will be used as the default size.
+   */
+  virtual void GetDefaultSize(double *width, double *height) const = 0;
+
+  /**
    * Indicates what happens when the user attempts to resize the gadget using
    * the window border.
    * @see ResizableMode
