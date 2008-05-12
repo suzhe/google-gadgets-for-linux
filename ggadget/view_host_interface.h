@@ -87,6 +87,18 @@ class ViewHostInterface {
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const = 0;
 
+  /**
+   * Converts coordinates in the native widget which holds the view to
+   * coordinates in the view's space.
+   *
+   * @param x x-coordinate in the native widget which holds the view.
+   * @param y y-coordinate in the native widget which holds the view.
+   * @param[out] view_x parameter to store the converted view x-coordinate.
+   * @param[out] view_y parameter to store the converted view y-coordinate.
+   */
+  virtual void NativeWidgetCoordToViewCoord(
+      double x, double y, double *view_x, double *view_y) const = 0;
+
   /** Asks the view host to redraw the given view. */
   virtual void QueueDraw() = 0;
 

@@ -229,6 +229,13 @@ void ViewElement::ChildViewCoordToViewCoord(
   SelfCoordToViewCoord(child_x, child_y, parent_x, parent_y);
 }
 
+void ViewElement::ViewCoordToChildViewCoord(
+    double view_x, double view_y, double *child_x, double *child_y) const {
+  ViewCoordToSelfCoord(view_x, view_y, child_x, child_y);
+  *child_x /= impl_->scale_;
+  *child_y /= impl_->scale_;
+}
+
 double ViewElement::GetPixelWidth() const {
   if (impl_->child_view_)
     return impl_->child_view_->GetWidth() * impl_->scale_;

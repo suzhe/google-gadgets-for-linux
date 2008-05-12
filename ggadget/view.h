@@ -348,6 +348,13 @@ class View : public ViewInterface {
                                     double *widget_x, double *widget_y) const;
 
   /**
+   * Converts coordinates in the native widget which holds the view to
+   * coordinates in the view's space.
+   */
+  void NativeWidgetCoordToViewCoord(double x, double y,
+                                    double *view_x, double *view_y) const;
+
+  /**
    * Asks the host to redraw the given view.
    * @param changed_element the pointer to the basic element that file this
    * request.

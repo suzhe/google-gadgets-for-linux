@@ -1639,10 +1639,16 @@ ViewHostInterface *View::GetViewHost() const {
   return impl_->view_host_;
 }
 
-void View::ViewCoordToNativeWidgetCoord(
-    double x, double y, double *widget_x, double *widget_y) const {
+void View::ViewCoordToNativeWidgetCoord(double x, double y, double *widget_x,
+                                        double *widget_y) const {
   if (impl_->view_host_)
     impl_->view_host_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
+}
+
+void View::NativeWidgetCoordToViewCoord(double x, double y,
+                                        double *view_x, double *view_y) const {
+  if (impl_->view_host_)
+    impl_->view_host_->NativeWidgetCoordToViewCoord(x, y, view_x, view_y);
 }
 
 void View::QueueDraw() {

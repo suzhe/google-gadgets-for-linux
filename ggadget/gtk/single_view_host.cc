@@ -163,8 +163,6 @@ class SingleViewHost::Impl {
         gtk_window_set_role(GTK_WINDOW(window_), kMainViewWindowRole);
     }
 
-    gtk_widget_realize(GTK_WIDGET(window_));
-
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
     gtk_window_set_gravity(GTK_WINDOW(window_), GDK_GRAVITY_STATIC);
 
@@ -199,12 +197,20 @@ class SingleViewHost::Impl {
   }
 
   void ViewCoordToNativeWidgetCoord(
-      double x, double y, double *widget_x, double *widget_y) {
+      double x, double y, double *widget_x, double *widget_y) const {
     double zoom = view_->GetGraphics()->GetZoom();
     if (widget_x)
       *widget_x = x * zoom;
     if (widget_y)
       *widget_y = y * zoom;
+  }
+
+  void NativeWidgetCoordToViewCoord(double x, double y,
+                                    double *view_x, double *view_y) const {
+    double zoom = view_->GetGraphics()->GetZoom();
+    if (zoom == 0) return;
+    if (view_x) *view_x = x / zoom;
+    if (view_y) *view_y = y / zoom;
   }
 
   void AdjustWindowSize() {
@@ -768,6 +774,11 @@ void *SingleViewHost::GetNativeWidget() const {
 void SingleViewHost::ViewCoordToNativeWidgetCoord(
     double x, double y, double *widget_x, double *widget_y) const {
   impl_->ViewCoordToNativeWidgetCoord(x, y, widget_x, widget_y);
+}
+
+void SingleViewHost::NativeWidgetCoordToViewCoord(
+    double x, double y, double *view_x, double *view_y) const {
+  impl_->NativeWidgetCoordToViewCoord(x, y, view_x, view_y);
 }
 
 void SingleViewHost::QueueDraw() {
