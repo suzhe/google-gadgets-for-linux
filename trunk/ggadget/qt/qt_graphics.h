@@ -38,7 +38,6 @@ class QtGraphics : public GraphicsInterface {
 
   void SetZoom(double zoom);
 
-  void RemoveImageTag(const char* tag, bool is_mask);
   Connection *ConnectOnZoom(Slot1<void, double> *slot) const;
 
  public:

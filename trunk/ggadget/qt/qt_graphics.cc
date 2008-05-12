@@ -17,8 +17,6 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <map>
-
 #include <ggadget/color.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
@@ -30,8 +28,6 @@
 namespace ggadget {
 namespace qt {
 
-typedef std::map<std::string, QtImage*> ImageMap;
-
 class QtGraphics::Impl {
  public:
   Impl(double zoom) : zoom_(zoom) {
@@ -40,7 +36,6 @@ class QtGraphics::Impl {
 
   double zoom_;
   Signal1<void, double> on_zoom_signal_;
-  ImageMap image_map_, mask_image_map_;
 };
 
 QtGraphics::QtGraphics(double zoom) : impl_(new Impl(zoom)) {
@@ -83,39 +78,13 @@ ImageInterface *QtGraphics::NewImage(const char *tag,
                                      bool is_mask) const {
   if (data.empty()) return NULL;
 
-  std::string tag_str(tag ? tag : "");
- /* ImageMap *map = is_mask ?
-      &impl_->mask_image_map_ : &impl_->image_map_;
-  if (!tag_str.empty()) {
-    // Image with blank tag should not be cached, because it may not come
-    // from a file.
-    ImageMap::const_iterator it = map->find(tag_str);
-    if (it != map->end()) {
-      it->second->Ref();
-      return it->second;
-    }
-  }*/
-
   QtImage *img = new QtImage(NULL, tag, data, is_mask);
   if (!img) return NULL;
   if (!img->IsValid()) {
     img->Destroy();
     img = NULL;
   }
-
-/*  if (img && !tag_str.empty()) {
-    (*map)[tag_str] = img;
-  }*/
   return img;
-}
-
-void QtGraphics::RemoveImageTag(const char *tag, bool is_mask) {
-  std::string tag_str(tag ? tag : "");
-  ImageMap *map = is_mask ?
-      &impl_->mask_image_map_ : &impl_->image_map_;
-  if (!tag_str.empty()) {
-    map->erase(tag_str);
-  }
 }
 
 FontInterface *QtGraphics::NewFont(const char *family, double pt_size,

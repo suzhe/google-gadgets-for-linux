@@ -135,7 +135,7 @@ class QtCanvas::Impl {
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
     Impl *impl = canvas->impl_;
     double sx, sy;
-    if (impl->GetScale(&sx, &sy) && image_) {
+    if (impl->GetScale(&sx, &sy)) {
       p->save();
       p->scale(sx, sy);
       p->drawImage(D2I(x / sx), D2I(y / sy), *canvas->GetImage());
@@ -274,6 +274,7 @@ class QtCanvas::Impl {
                            Alignment align, VAlignment valign,
                            Trimming trimming, int text_flags) {
     DLOG("DrawTextWithTexture: %s", text);
+    ASSERT(0);
     return true;
   }
 
@@ -325,7 +326,7 @@ class QtCanvas::Impl {
   }
 
   void OnZoom(double zoom) {
-    LOG("zoom:%f", zoom);
+    LOG("zoom, width_, height_:%f, %f, %f", zoom, width_, height_);
     if (zoom == zoom_) return;
     ASSERT(image_); // Not support zoom
     QImage* new_image = new QImage(D2I(width_*zoom), D2I(height_*zoom),

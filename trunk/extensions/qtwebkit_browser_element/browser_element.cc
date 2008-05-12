@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include <QtWebKit/QWebView>
+#include <QtWebKit/qwebview.h>
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>
 #include <ggadget/main_loop_interface.h>
