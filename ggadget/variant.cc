@@ -50,22 +50,36 @@ Variant::Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
 }
 
 Variant::~Variant() {
-  if (type_ == TYPE_STRING || type_ == TYPE_JSON)
-    delete v_.string_value_;
-  else if (type_ == TYPE_UTF16STRING)
-    delete v_.utf16_string_value_;
-  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
+  if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
+    if (v_.string_value_.s_) {
+      // Don't delete because the pointer is allocated in place.
+      typedef std::string String;
+      v_.string_value_.s_->~String();
+    }
+  } else if (type_ == TYPE_UTF16STRING) {
+    if (v_.utf16_string_value_.s_) {
+      // Don't delete because the pointer is allocated in place.
+      v_.utf16_string_value_.s_->~UTF16String();
+    }
+  } else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
     v_.scriptable_value_.refchange_connection_->Disconnect();
     v_.scriptable_value_.value_->Unref();
   }
 }
 
 Variant &Variant::operator=(const Variant &source) {
-  if (type_ == TYPE_STRING || type_ == TYPE_JSON)
-    delete v_.string_value_;
-  else if (type_ == TYPE_UTF16STRING)
-    delete v_.utf16_string_value_;
-  else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
+  if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
+    if (v_.string_value_.s_) {
+      // Don't delete because the pointer is allocated in place.
+      typedef std::string String;
+      v_.string_value_.s_->~String();
+    }
+  } else if (type_ == TYPE_UTF16STRING) {
+    if (v_.utf16_string_value_.s_) {
+      // Don't delete because the pointer is allocated in place.
+      v_.utf16_string_value_.s_->~UTF16String();
+    }
+  } else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
     v_.scriptable_value_.refchange_connection_->Disconnect();
     v_.scriptable_value_.value_->Unref();
   }
@@ -85,13 +99,18 @@ Variant &Variant::operator=(const Variant &source) {
       break;
     case TYPE_STRING:
     case TYPE_JSON:
-      v_.string_value_ = source.v_.string_value_ ?
-                         new std::string(*source.v_.string_value_) : NULL;
+      v_.string_value_.s_ =
+          source.v_.string_value_.s_ ?
+          new (&v_.string_value_.place_)
+              std::string(*source.v_.string_value_.s_) :
+          NULL;
       break;
     case TYPE_UTF16STRING:
-      v_.utf16_string_value_ = source.v_.utf16_string_value_ ?
-                               new UTF16String(*source.v_.utf16_string_value_) :
-                               NULL;
+      v_.utf16_string_value_.s_ =
+          source.v_.utf16_string_value_.s_ ?
+          new (&v_.utf16_string_value_.place_)
+              UTF16String(*source.v_.utf16_string_value_.s_) :
+          NULL;
       break;
     case TYPE_SCRIPTABLE:
       v_.scriptable_value_.value_ = source.v_.scriptable_value_.value_;
@@ -140,13 +159,13 @@ bool Variant::operator==(const Variant &another) const {
       return v_.double_value_ == another.v_.double_value_;
     case TYPE_STRING:
     case TYPE_JSON:
-      return v_.string_value_ == another.v_.string_value_ ||
-            (v_.string_value_ && another.v_.string_value_ &&
-             *v_.string_value_ == *another.v_.string_value_);
+      return v_.string_value_.s_ == another.v_.string_value_.s_ ||
+            (v_.string_value_.s_ && another.v_.string_value_.s_ &&
+             *v_.string_value_.s_ == *another.v_.string_value_.s_);
     case TYPE_UTF16STRING:
-      return v_.utf16_string_value_ == another.v_.utf16_string_value_ ||
-            (v_.utf16_string_value_ && another.v_.utf16_string_value_ &&
-             *v_.utf16_string_value_ == *another.v_.utf16_string_value_);
+      return v_.utf16_string_value_.s_ == another.v_.utf16_string_value_.s_ ||
+            (v_.utf16_string_value_.s_ && another.v_.utf16_string_value_.s_ &&
+             *v_.utf16_string_value_.s_ == *another.v_.utf16_string_value_.s_);
     case TYPE_SCRIPTABLE:
       return v_.scriptable_value_.value_ == another.v_.scriptable_value_.value_;
     case TYPE_SLOT: {
@@ -186,14 +205,14 @@ std::string Variant::Print() const {
       return "DOUBLE:" + StringPrintf("%g", v_.double_value_);
     case TYPE_STRING:
       return std::string("STRING:") +
-             (v_.string_value_ ? FitString(*v_.string_value_) : "(nil)");
+             (v_.string_value_.s_ ? FitString(*v_.string_value_.s_) : "(nil)");
     case TYPE_JSON:
       return std::string("JSON:") +
              FitString(VariantValue<JSONString>()(*this).value);
     case TYPE_UTF16STRING:
-      if (v_.utf16_string_value_) {
+      if (v_.utf16_string_value_.s_) {
         std::string utf8_string;
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &utf8_string);
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &utf8_string);
         return "UTF16STRING:" + FitString(utf8_string);
       }
       return "UTF16STRING:(nil)";
@@ -233,13 +252,13 @@ bool Variant::ConvertToString(std::string *result) const {
       *result = StringPrintf("%g", v_.double_value_);
       return true;
     case TYPE_STRING:
-      *result = v_.string_value_ ? *v_.string_value_ : "";
+      *result = v_.string_value_.s_ ? *v_.string_value_.s_ : "";
       return true;
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING:
-      if (v_.utf16_string_value_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, result);
+      if (v_.utf16_string_value_.s_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, result);
       else
         *result = "";
       return true;
@@ -283,13 +302,13 @@ bool Variant::ConvertToBool(bool *result) const {
       return true;
     case TYPE_STRING:
       return ParseStringToBool(
-          v_.string_value_ ? v_.string_value_->c_str() : "", result);
+          v_.string_value_.s_ ? v_.string_value_.s_->c_str() : "", result);
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING: {
       std::string s;
-      if (v_.utf16_string_value_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &s);
+      if (v_.utf16_string_value_.s_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &s);
       return ParseStringToBool(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
@@ -372,13 +391,13 @@ bool Variant::ConvertToInt64(int64_t *result) const {
       return true;
     case TYPE_STRING:
       return ParseStringToInt64(
-          v_.string_value_ ? v_.string_value_->c_str() : "", result);
+          v_.string_value_.s_ ? v_.string_value_.s_->c_str() : "", result);
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING: {
       std::string s;
-      if (v_.utf16_string_value_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &s);
+      if (v_.utf16_string_value_.s_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &s);
       return ParseStringToInt64(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
@@ -408,13 +427,13 @@ bool Variant::ConvertToDouble(double *result) const {
       return true;
     case TYPE_STRING:
       return ParseStringToDouble(
-          v_.string_value_ ? v_.string_value_->c_str() : "", result);
+          v_.string_value_.s_ ? v_.string_value_.s_->c_str() : "", result);
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING: {
       std::string s;
-      if (v_.utf16_string_value_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_, &s);
+      if (v_.utf16_string_value_.s_)
+        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &s);
       return ParseStringToDouble(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:

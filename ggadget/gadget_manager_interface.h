@@ -93,7 +93,7 @@ class GadgetManagerInterface {
 
   /**
    * Gets information of a gadget instance.
-   */ 
+   */
   virtual bool GetGadgetInstanceInfo(int instance_id, const char *locale,
                                      std::string *author,
                                      std::string *download_url,

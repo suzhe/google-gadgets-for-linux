@@ -291,7 +291,7 @@ bool DetectUTFEncoding(const std::string &stream, std::string *encoding);
  * Detects the encoding of a byte stream based on both BOM and contents,
  * and converts a byte stream into UTF8. If there is no BOM, but the stream
  * is a valid UTF8 stream, return the stream directly. Otherwise, the stream
- * will be converted to UTF8 as if the stream's encoding is ISO8859-1. 
+ * will be converted to UTF8 as if the stream's encoding is ISO8859-1.
  *
  * @param stream the input byte stream.
  * @param[out] result the converted result.

@@ -106,7 +106,7 @@ const char kNameAttr[] = "name";
 const char kInnerTextProperty[] = "innerText";
 /** The tag name of the contentarea element. */
 const char kContentAreaTag[] = "contentarea";
-/** The tag name for <param> subelement of <object>. */  
+/** The tag name for <param> subelement of <object>. */
 const char kParamTag[] = "param";
 /** The attribute name for param value. */
 const char kValueAttr[] = "value";

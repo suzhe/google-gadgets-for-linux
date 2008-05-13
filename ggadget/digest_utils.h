@@ -52,13 +52,13 @@ bool DecodeBase64(const char *input, std::string *result);
  * The WebSafe format use '-' instead of '+' and '_' instead of '/' so that
  * the string can be placed into URLs and MIME headers without having to
  * escape them.
- */ 
+ */
 bool WebSafeEncodeBase64(const std::string &input, bool add_padding,
                          std::string *result);
 
 /**
  * Decode a Base64 string in WebSafe format.
- */ 
+ */
 bool WebSafeDecodeBase64(const char *input, std::string *result);
 
 } // namespace ggadget

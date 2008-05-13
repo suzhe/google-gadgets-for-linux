@@ -69,7 +69,6 @@ gglinclude_HEADERS	= anchor_element.h \
 			  gadget.h \
 			  gadget_consts.h \
 			  gadget_manager_interface.h \
-			  ggadget.h \
 			  graphics_interface.h \
 			  host_interface.h \
 			  image_cache.h \
@@ -114,6 +113,7 @@ gglinclude_HEADERS	= anchor_element.h \
 			  sidebar.h \
 			  signals.h \
 			  slot.h \
+			  small_object.h \
 			  string_utils.h \
 			  system_utils.h \
 			  text_frame.h \
@@ -196,6 +196,7 @@ libggadget@GGL_EPOCH@_la_SOURCES = \
 			  sidebar.cc \
 			  signals.cc \
 			  slot.cc \
+			  small_object.cc \
 			  string_utils.cc \
 			  system_utils.cc \
 			  text_frame.cc \

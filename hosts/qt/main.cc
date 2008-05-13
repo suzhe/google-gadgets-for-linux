@@ -27,23 +27,23 @@
 #include <config.h>
 #endif
 
-#include <ggadget/script_runtime_interface.h>
+#include <ggadget/dir_file_manager.h>
+#include <ggadget/extension_manager.h>
+#include <ggadget/file_manager_factory.h>
+#include <ggadget/file_manager_wrapper.h>
+#include <ggadget/gadget.h>
+#include <ggadget/gadget_consts.h>
+#include <ggadget/gadget_manager_interface.h>
+#include <ggadget/host_interface.h>
+#include <ggadget/localized_file_manager.h>
+#include <ggadget/options_interface.h>
 #include <ggadget/qt/qt_gadget_widget.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_menu.h>
 #include <ggadget/qt/qt_main_loop.h>
-#include <ggadget/extension_manager.h>
+#include <ggadget/script_runtime_interface.h>
 #include <ggadget/script_runtime_manager.h>
-#include <ggadget/ggadget.h>
-#include <ggadget/gadget_consts.h>
-#include <ggadget/file_manager_factory.h>
-#include <ggadget/file_manager_wrapper.h>
-#include <ggadget/dir_file_manager.h>
-#include <ggadget/localized_file_manager.h>
-#include <ggadget/host_interface.h>
 #include <ggadget/system_utils.h>
-#include <ggadget/options_interface.h>
-#include <ggadget/gadget_manager_interface.h>
 #include "qt_host.h"
 #ifdef GGL_USE_X11
 #include <X11/extensions/Xrender.h>

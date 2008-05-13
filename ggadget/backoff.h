@@ -62,12 +62,12 @@ class Backoff {
    * Returns @c true if the backoff data changed.
    */
   bool ReportRequestResult(uint64_t now, const char *request, bool success);
-  
+
   /**
    * Clear all backoff data (for testing only).
    */
   void Clear();
-  
+
   /**
    * Gets/sets the string representation of the backoff data.
    * Useful to save/load backoff data into/from config file.

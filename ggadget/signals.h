@@ -19,6 +19,7 @@
 
 #include <ggadget/common.h>
 #include <ggadget/slot.h>
+#include <ggadget/small_object.h>
 
 namespace ggadget {
 
@@ -28,9 +29,8 @@ class Signal;
  * The connection object between a @c Singal and a @c Slot.
  * The caller can use the connection to temporarily block the slot.
  */
-class Connection {
+class Connection : public SmallObject<> {
  public:
-
   /**
    * Block the connection.  No more signals will be emitted to the slot.
    * It's useful when the caller know that a <code>MethodSlot</code>'s

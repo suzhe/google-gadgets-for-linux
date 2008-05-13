@@ -20,6 +20,7 @@
 #include <cstring>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
+#include <ggadget/small_object.h>
 #include <ggadget/variant.h>
 
 namespace ggadget {
@@ -29,7 +30,7 @@ namespace ggadget {
  * The real targets are implemented in subclasses.
  * The instances are immutable, because all methods are @c const.
  */
-class Slot {
+class Slot : public SmallObject<> {
  public:
   virtual ~Slot() { }
 

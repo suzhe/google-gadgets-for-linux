@@ -28,7 +28,7 @@ AC_INIT([google-gadgets-for-linux],
 AC_PREREQ([2.50])
 
 # Specifies a source file in the source directory.
-AC_CONFIG_SRCDIR([ggadget/ggadget.h])
+AC_CONFIG_SRCDIR([ggadget/common.h])
 
 # Tells autoconf where to find necessary build scripts and macros.
 AC_CONFIG_AUX_DIR([autotools])

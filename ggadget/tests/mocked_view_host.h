@@ -144,6 +144,8 @@ class MockedViewHost : public ggadget::ViewHostInterface {
   virtual void *GetNativeWidget() const { return NULL; }
   virtual void ViewCoordToNativeWidgetCoord(double, double,
                                             double *, double *) const { }
+  virtual void NativeWidgetCoordToViewCoord(double, double,
+                                            double *, double *) const { }
   virtual void QueueDraw() { draw_queued_ = true; }
   virtual void QueueResize() { resize_queued_ = true; }
   virtual void EnableInputShapeMask(bool enable) { };

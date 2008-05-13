@@ -18,30 +18,31 @@
 #include <cstdlib>
 #include <gtk/gtk.h>
 #include <locale.h>
+#include <signal.h>
 #include <unistd.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
-#include <ggadget/script_runtime_interface.h>
-#include <ggadget/gtk/single_view_host.h>
-#include <ggadget/gtk/main_loop.h>
-#include <ggadget/gtk/utilities.h>
+#include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
-#include <ggadget/script_runtime_manager.h>
-#include <ggadget/ggadget.h>
-#include <ggadget/gadget_consts.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/file_manager_wrapper.h>
-#include <ggadget/dir_file_manager.h>
-#include <ggadget/localized_file_manager.h>
-#include <ggadget/host_interface.h>
-#include <ggadget/string_utils.h>
-#include <ggadget/logger.h>
-#include <ggadget/system_utils.h>
-#include <ggadget/options_interface.h>
+#include <ggadget/gadget.h>
+#include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/gtk/main_loop.h>
+#include <ggadget/gtk/single_view_host.h>
+#include <ggadget/gtk/utilities.h>
+#include <ggadget/host_interface.h>
+#include <ggadget/localized_file_manager.h>
+#include <ggadget/logger.h>
+#include <ggadget/options_interface.h>
+#include <ggadget/script_runtime_interface.h>
+#include <ggadget/script_runtime_manager.h>
+#include <ggadget/string_utils.h>
+#include <ggadget/system_utils.h>
 #include "sidebar_gtk_host.h"
 #include "simple_gtk_host.h"
 
@@ -81,6 +82,7 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
+
 static const char *g_help_string =
   "Usage: %s [Options] [Gadgets]\n"
   "Options:\n"
@@ -101,7 +103,6 @@ static const char *g_help_string =
 int main(int argc, char* argv[]) {
   gtk_init(&argc, &argv);
 
-
   double zoom = 1.0;
   int debug_mode = 0;
   bool install_gadgets = true;
@@ -109,51 +110,36 @@ int main(int argc, char* argv[]) {
   bool sidebar = false;
   // Parse command line.
   std::vector<std::string> gadget_paths;
-  int i = 0;
-  while (i<argc) {
-    if (++i >= argc) break;
-
-    if (std::string("-h") == argv[i] || std::string("--help") == argv[i]) {
+  for (int i = 1; i < argc; i++) {
+    if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
       printf(g_help_string, argv[0]);
       return 0;
-    }
-
-    if (std::string("-n") == argv[i] || std::string("--no-inst") == argv[i]) {
+    } else if (strcmp("-n", argv[i]) == 0 ||
+               strcmp("--no-inst", argv[i]) == 0) {
       install_gadgets = false;
-      continue;
-    }
-
-    if (std::string("-b") == argv[i] || std::string("--border") == argv[i]) {
+    } else if (strcmp("-b", argv[i]) == 0 ||
+               strcmp("--border", argv[i]) == 0) {
       decorated = true;
-      continue;
-    }
-
-    if (std::string("-s") == argv[i] || std::string("--sidebar") == argv[i]) {
+    } else if (strcmp("-s", argv[i]) == 0 ||
+               strcmp("--sidebar", argv[i]) == 0) {
       sidebar = true;
-      continue;
-    }
-
-    if (std::string("-d") == argv[i] || std::string("--debug") == argv[i]) {
+    } else if (strcmp("-d", argv[i]) == 0 || strcmp("--debug", argv[i]) == 0) {
       if (++i < argc) {
         debug_mode = atoi(argv[i]);
       } else {
         debug_mode = 1;
       }
-      continue;
-    }
-
-    if (std::string("-z") == argv[i] || std::string("--zoom") == argv[i]) {
+    } else if (strcmp("-z", argv[i]) == 0 || strcmp("--zoom", argv[i]) == 0) {
       if (++i < argc) {
         zoom = strtod(argv[i], NULL);
         if (zoom <= 0)
           zoom = 1.0;
         DLOG("Use zoom factor %lf", zoom);
       }
-      continue;
+    } else {
+      gadget_paths.push_back(argv[i]);
     }
-
-    gadget_paths.push_back(argv[i]);
-  };
+  }
 
   // set locale according to env vars
   setlocale(LC_ALL, "");
