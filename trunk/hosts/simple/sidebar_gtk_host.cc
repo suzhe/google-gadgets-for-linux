@@ -112,7 +112,8 @@ class SidebarGtkHost::Impl {
         height_ = h;
         HandleDock();
       } else {
-        decorator_view_host_->RestoreViewStates();
+        decorator_view_host_->RestoreViewSize();
+        decorator_view_host_->EnableAutoRestoreViewSize(true);
       }
       owner_->side_bar_->ClearNullElement();
     }
@@ -291,8 +292,6 @@ class SidebarGtkHost::Impl {
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(main_widget_), FALSE);
 #endif
     gtk_window_set_title(GTK_WINDOW(main_widget_), "Google Gadgets");
-    gtk_widget_show(main_widget_);
-    g_assert(GTK_WIDGET_REALIZED(main_widget_));
     AdjustSidebar();
   }
 
@@ -488,7 +487,7 @@ class SidebarGtkHost::Impl {
     }
     DecoratedViewHost *new_host = NewSingleViewHost(view, true, native_y);
     if (move_to_cursor)
-      new_host->EnableAutoRestoreViewStates(false);
+      new_host->EnableAutoRestoreViewSize(false);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
     bool r = view->ShowView(false, 0, NULL);
@@ -641,10 +640,12 @@ class SidebarGtkHost::Impl {
       return false;
     }
 
+    /*
     if (!Dock(gadget->GetMainView(), 0, false)) {
       DLOG("Dock view(%p) failed.", gadget->GetMainView());
       Undock(gadget->GetMainView(), false);
     }
+    */
 
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);
@@ -673,7 +674,8 @@ class SidebarGtkHost::Impl {
     return decorator;
   }
 
-  ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
+  ViewHostInterface *NewViewHost(Gadget *gadget,
+                                 ViewHostInterface::Type type) {
     ViewHostInterface *view_host;
     DecoratedViewHost *decorator;
     switch (type) {
@@ -1006,6 +1008,7 @@ SidebarGtkHost::SidebarGtkHost(bool decorated, int view_debug_mode)
   : impl_(new Impl(this, decorated, view_debug_mode)) {
   impl_->SetupUI();
   impl_->InitGadgets();
+  impl_->view_host_->ShowView(false, 0, NULL);
 }
 
 SidebarGtkHost::~SidebarGtkHost() {
@@ -1013,8 +1016,9 @@ SidebarGtkHost::~SidebarGtkHost() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SidebarGtkHost::NewViewHost(ViewHostInterface::Type type) {
-  return impl_->NewViewHost(type);
+ViewHostInterface *SidebarGtkHost::NewViewHost(Gadget *gadget,
+                                               ViewHostInterface::Type type) {
+  return impl_->NewViewHost(gadget, type);
 }
 
 void SidebarGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {

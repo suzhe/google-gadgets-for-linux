@@ -217,6 +217,7 @@ class View::Impl {
     }
 
     if (view_host_) {
+      view_host_->CloseView();
       view_host_->SetView(NULL);
       view_host_->Destroy();
       view_host_ = NULL;
@@ -598,7 +599,7 @@ class View::Impl {
     }
 
     if (result == EVENT_RESULT_UNHANDLED &&
-        event.GetType() == Event::EVENT_MOUSE_DOWN &&
+        event.GetType() == Event::EVENT_MOUSE_RCLICK &&
         event.GetButton() == MouseEvent::BUTTON_RIGHT) {
       // Handle ShowContextMenu event.
       if (view_host_->ShowContextMenu(MouseEvent::BUTTON_RIGHT))
@@ -794,11 +795,11 @@ class View::Impl {
       // so do layout here to make sure the layout is correct.
       children_.Layout();
 
-      if (view_host_) view_host_->QueueResize();
-
       SimpleEvent event(Event::EVENT_SIZE);
       ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
+
+      if (view_host_) view_host_->QueueResize();
     }
   }
 
@@ -826,22 +827,24 @@ class View::Impl {
     draw_count_ = 0;
     uint64_t start = main_loop_->GetCurrentTime();
 #endif
-    // no draw queued, so the draw request is initiated from host.
-    // And because the canvas cache_ is valid, just need to paint the canvas
-    // cache to the dest canvas.
-    if (!draw_queued_ && canvas_cache_ && !need_redraw_) {
-#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
-      //DLOG("Draw from canvas cache.");
-#endif
-      canvas->DrawCanvas(0, 0, canvas_cache_);
-      return;
-    }
 
     // Any QueueDraw() called during Layout() will be ignored, because
     // draw_queued_ is true.
     draw_queued_ = true;
     children_.Layout();
     draw_queued_ = false;
+
+    // no draw queued, so the draw request is initiated from host.
+    // And because the canvas cache_ is valid, just need to paint the canvas
+    // cache to the dest canvas.
+    if (clip_region_.IsEmpty() && clip_region_enabled_ &&
+        canvas_cache_ && !need_redraw_) {
+#if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
+      DLOG("Draw View(%p) from canvas cache.", owner_);
+#endif
+      canvas->DrawCanvas(0, 0, canvas_cache_);
+      return;
+    }
 
     if (popup_element_.Get() && !popup_element_.Get()->IsReallyVisible())
       SetPopupElement(NULL);

@@ -35,7 +35,8 @@ class QtHost : public ggadget::HostInterface {
  public:
   QtHost(int view_debug_mode);
   virtual ~QtHost();
-  virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
+  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+                                         ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;

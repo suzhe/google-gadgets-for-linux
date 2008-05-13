@@ -34,6 +34,8 @@
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/script_runtime_manager.h>
+#include <ggadget/decorated_view_host.h>
+#include <ggadget/gadget.h>
 #include <ggadget/view.h>
 #include "qt_host.h"
 #include "gadget_browser_host.h"
@@ -172,7 +174,8 @@ class QtHost::Impl {
     return true;
   }
 
-  ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
+  ViewHostInterface *NewViewHost(Gadget *gadget,
+                                 ViewHostInterface::Type type) {
     QtViewHost *qvh = new QtViewHost(
         type, 1.0, false, true,
         static_cast<ViewInterface::DebugMode>(view_debug_mode_));
@@ -300,8 +303,9 @@ QtHost::~QtHost() {
   delete impl_;
 }
 
-ViewHostInterface *QtHost::NewViewHost(ViewHostInterface::Type type) {
-  return impl_->NewViewHost(type);
+ViewHostInterface *QtHost::NewViewHost(Gadget *gadget,
+                                       ViewHostInterface::Type type) {
+  return impl_->NewViewHost(gadget, type);
 }
 
 void QtHost::RemoveGadget(Gadget *gadget, bool save_data) {

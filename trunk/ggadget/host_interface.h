@@ -52,9 +52,13 @@ class HostInterface {
    * The newly created ViewHost instance must be deleted by the caller
    * afterwards.
    *
+   * @param gadget The Gadget instance which will own this ViewHost instance.
+   * @param type Type of the new ViewHost instance.
+   *
    * @return a new Viewhost instance.
    */
-  virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type) = 0;
+  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+                                         ViewHostInterface::Type type) = 0;
 
   /**
    * Requests that the gadget be removed from the container (e.g. sidebar).

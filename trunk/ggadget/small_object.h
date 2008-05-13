@@ -14,7 +14,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Tailored by Google to remove the dependency on Loki's thread and singleton
-// modules, and added statistics feature.
+// modules.
 
 #ifndef GGADGET_SMALL_OBJECT_H__
 #define GGADGET_SMALL_OBJECT_H__
@@ -346,8 +346,6 @@ namespace ggadget
         inline SmallObjectBase & operator = ( const SmallObjectBase & )
         { return *this; }
         inline ~SmallObjectBase() {}
-    private:
-        const char *class_name_;
     }; // end class SmallObjectBase
 
 

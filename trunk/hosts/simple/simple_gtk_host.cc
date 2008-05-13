@@ -48,6 +48,20 @@ namespace hosts {
 namespace gtk {
 
 class SimpleGtkHost::Impl {
+  struct GadgetViewHostInfo {
+    GadgetViewHostInfo()
+      : main_(NULL), popout_(NULL), details_(NULL),
+        popout_on_right_(false), details_on_right_(false) {
+    }
+
+    SingleViewHost *main_;
+    SingleViewHost *popout_;
+    SingleViewHost *details_;
+
+    bool popout_on_right_;
+    bool details_on_right_;
+  };
+
  public:
   Impl(SimpleGtkHost *owner, double zoom, bool decorated, int view_debug_mode)
     : gadget_browser_host_(owner, view_debug_mode),
@@ -220,7 +234,11 @@ class SimpleGtkHost::Impl {
     return true;
   }
 
-  ViewHostInterface *NewViewHost(ViewHostInterface::Type type) {
+  ViewHostInterface *NewViewHost(Gadget *gadget,
+                                 ViewHostInterface::Type type) {
+    ASSERT(gadget);
+    int gadget_id = gadget->GetInstanceID();
+
     bool decorated =
         (decorated_ || type == ViewHostInterface::VIEW_HOST_OPTIONS);
 
@@ -231,12 +249,36 @@ class SimpleGtkHost::Impl {
       return svh;
 
     DecoratedViewHost *dvh;
-    if (type == ViewHostInterface::VIEW_HOST_MAIN)
+    if (type == ViewHostInterface::VIEW_HOST_MAIN) {
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
                                   transparent_);
-    else
+      GadgetViewHostInfo *info = &view_hosts_[gadget_id];
+      ASSERT(!info->main_);
+      info->main_ = svh;
+
+      svh->ConnectOnShowHide(
+          NewSlot(this, &Impl::OnMainViewShowHideHandler, gadget_id));
+      svh->ConnectOnResized(
+          NewSlot(this, &Impl::OnMainViewResizedHandler, gadget_id));
+      svh->ConnectOnMoved(
+          NewSlot(this, &Impl::OnMainViewMovedHandler, gadget_id));
+    } else {
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
                                   transparent_);
+      GadgetViewHostInfo *info = &view_hosts_[gadget_id];
+      ASSERT(info->main_);
+      ASSERT(!info->details_);
+      info->details_ = svh;
+
+      svh->ConnectOnShowHide(
+          NewSlot(this, &Impl::OnDetailsViewShowHideHandler, gadget_id));
+      svh->ConnectOnBeginResizeDrag(
+          NewSlot(this, &Impl::OnDetailsViewBeginResizeHandler, gadget_id));
+      svh->ConnectOnResized(
+          NewSlot(this, &Impl::OnDetailsViewResizedHandler, gadget_id));
+      svh->ConnectOnBeginMoveDrag(
+          NewSlot(this, &Impl::OnDetailsViewBeginMoveHandler, gadget_id));
+    }
 
     dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
     dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
@@ -261,6 +303,7 @@ class SimpleGtkHost::Impl {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
+      view_hosts_.erase(instance_id);
       delete it->second;
       gadgets_.erase(it);
     } else {
@@ -293,23 +336,29 @@ class SimpleGtkHost::Impl {
 
   static void ShowAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    for (GadgetsMap::iterator it = impl->gadgets_.begin();
-         it != impl->gadgets_.end(); ++it) {
-      it->second->ShowMainView();
+    for (GadgetViewHostsMap::iterator it = impl->view_hosts_.begin();
+         it != impl->view_hosts_.end(); ++it) {
+      it->second.main_->ShowView(false, 0, NULL);
     }
     impl->gadgets_shown_ = true;
   }
 
   static void HideAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    for (GadgetsMap::iterator it = impl->gadgets_.begin();
-         it != impl->gadgets_.end(); ++it) {
-      it->second->CloseMainView();
+    for (GadgetViewHostsMap::iterator it = impl->view_hosts_.begin();
+         it != impl->view_hosts_.end(); ++it) {
+      it->second.main_->CloseView();
     }
     impl->gadgets_shown_ = false;
   }
 
   static void ExitHandler(GtkWidget *widget, gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    // Close the poppped out view, to make sure that the main view decorator
+    // can save its states correctly.
+    if (impl->expanded_popout_)
+      impl->OnPopInHandler(impl->expanded_original_);
+
     gtk_main_quit();
   }
 
@@ -360,7 +409,7 @@ class SimpleGtkHost::Impl {
     ASSERT(child);
     if (child) {
       expanded_original_ = decorated;
-      ViewHostInterface *svh =
+      SingleViewHost *svh =
           new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, zoom_,
                              false, false, false, view_debug_mode_);
       expanded_popout_ =
@@ -368,6 +417,22 @@ class SimpleGtkHost::Impl {
                                 transparent_);
       expanded_popout_->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler,
                                                expanded_popout_));
+
+      int gadget_id = child->GetGadget()->GetInstanceID();
+
+      GadgetViewHostInfo *info = &view_hosts_[gadget_id];
+      ASSERT(info->main_);
+      ASSERT(!info->popout_);
+      info->popout_ = svh;
+
+      svh->ConnectOnShowHide(
+          NewSlot(this, &Impl::OnPopOutViewShowHideHandler, gadget_id));
+      svh->ConnectOnBeginResizeDrag(
+          NewSlot(this, &Impl::OnPopOutViewBeginResizeHandler, gadget_id));
+      svh->ConnectOnResized(
+          NewSlot(this, &Impl::OnPopOutViewResizedHandler, gadget_id));
+      svh->ConnectOnBeginMoveDrag(
+          NewSlot(this, &Impl::OnPopOutViewBeginMoveHandler, gadget_id));
 
       // Send popout event to decorator first.
       SimpleEvent event(Event::EVENT_POPOUT);
@@ -390,8 +455,188 @@ class SimpleGtkHost::Impl {
         old_host->Destroy();
         expanded_original_ = NULL;
         expanded_popout_ = NULL;
+
+        // Clear the popout info.
+        int gadget_id = child->GetGadget()->GetInstanceID();
+        view_hosts_[gadget_id].popout_ = NULL;
       }
     }
+  }
+
+  void AdjustViewHostPosition(GadgetViewHostInfo *info) {
+    ASSERT(info && info->main_);
+    int x, y;
+    int width, height;
+    info->main_->GetWindowPosition(&x, &y);
+    info->main_->GetWindowSize(&width, &height);
+    int screen_width = gdk_screen_get_width(
+        gtk_widget_get_screen(info->main_->GetWindow()));
+    int screen_height = gdk_screen_get_height(
+        gtk_widget_get_screen(info->main_->GetWindow()));
+
+    if (info->popout_ && info->popout_->IsVisible()) {
+      int popout_width, popout_height;
+      info->popout_->GetWindowSize(&popout_width, &popout_height);
+      if (info->popout_on_right_ && popout_width < x &&
+          x + width + popout_width > screen_width)
+        info->popout_on_right_ = false;
+      else if (!info->popout_on_right_ && popout_width > x &&
+               x + width + popout_width < screen_width)
+        info->popout_on_right_ = true;
+
+      if (y + popout_height > screen_height)
+        y = screen_height - popout_height;
+
+      if (info->popout_on_right_) {
+        info->popout_->SetWindowPosition(x + width, y);
+        width += popout_width;
+      } else {
+        info->popout_->SetWindowPosition(x - popout_width, y);
+        x -= popout_width;
+        width += popout_width;
+      }
+    }
+
+    if (info->details_ && info->details_->IsVisible()) {
+      int details_width, details_height;
+      info->details_->GetWindowSize(&details_width, &details_height);
+      if (info->details_on_right_ && details_width < x &&
+          x + width + details_width > screen_width)
+        info->details_on_right_ = false;
+      else if (!info->details_on_right_ && details_width > x &&
+               x + width + details_width < screen_width)
+        info->details_on_right_ = true;
+
+      if (y + details_height > screen_height)
+        y = screen_height - details_height;
+
+      if (info->details_on_right_) {
+        info->details_->SetWindowPosition(x + width, y);
+      } else {
+        info->details_->SetWindowPosition(x - details_width, y);
+      }
+    }
+  }
+
+  void OnMainViewShowHideHandler(bool show, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end()) {
+      if (show) {
+        if (it->second.popout_ && !it->second.popout_->IsVisible())
+          it->second.popout_->ShowView(false, 0, NULL);
+        AdjustViewHostPosition(&it->second);
+      } else {
+        if (it->second.popout_) {
+          it->second.popout_->CloseView();
+        }
+        if (it->second.details_) {
+          // The details view won't be shown again.
+          it->second.details_->CloseView();
+          it->second.details_ = NULL;
+        }
+      }
+    }
+  }
+
+  void OnMainViewResizedHandler(int width, int height, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end()) {
+      AdjustViewHostPosition(&it->second);
+    }
+  }
+
+  void OnMainViewMovedHandler(int x, int y, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end()) {
+      AdjustViewHostPosition(&it->second);
+    }
+  }
+
+  void OnPopOutViewShowHideHandler(bool show, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end() && it->second.popout_) {
+      if (it->second.details_) {
+        // Close Details whenever the popout view shows or hides.
+        it->second.details_->CloseView();
+        it->second.details_ = NULL;
+      }
+      if (show)
+        AdjustViewHostPosition(&it->second);
+    }
+  }
+
+  bool OnPopOutViewBeginResizeHandler(int button, int hittest, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end() && it->second.popout_) {
+      if (it->second.popout_on_right_)
+        return hittest == ViewInterface::HT_LEFT ||
+               hittest == ViewInterface::HT_TOPLEFT ||
+               hittest == ViewInterface::HT_BOTTOMLEFT ||
+               hittest == ViewInterface::HT_TOP ||
+               hittest == ViewInterface::HT_TOPRIGHT;
+      else
+        return hittest == ViewInterface::HT_RIGHT ||
+               hittest == ViewInterface::HT_TOPRIGHT ||
+               hittest == ViewInterface::HT_BOTTOMRIGHT ||
+               hittest == ViewInterface::HT_TOP ||
+               hittest == ViewInterface::HT_TOPLEFT;
+    }
+    return false;
+  }
+
+  void OnPopOutViewResizedHandler(int width, int height, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end() && it->second.popout_) {
+      AdjustViewHostPosition(&it->second);
+    }
+  }
+
+  bool OnPopOutViewBeginMoveHandler(int button, int gadget_id) {
+    // User can't move popout view window.
+    return true;
+  }
+
+  void OnDetailsViewShowHideHandler(bool show, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end() && it->second.details_) {
+      if (show) {
+        AdjustViewHostPosition(&it->second);
+      } else {
+        // The same details view will never shown again.
+        it->second.details_ = NULL;
+      }
+    }
+  }
+
+  bool OnDetailsViewBeginResizeHandler(int button, int hittest, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end() && it->second.details_) {
+      if (it->second.details_on_right_)
+        return hittest == ViewInterface::HT_LEFT ||
+               hittest == ViewInterface::HT_TOPLEFT ||
+               hittest == ViewInterface::HT_BOTTOMLEFT ||
+               hittest == ViewInterface::HT_TOP ||
+               hittest == ViewInterface::HT_TOPRIGHT;
+      else
+        return hittest == ViewInterface::HT_RIGHT ||
+               hittest == ViewInterface::HT_TOPRIGHT ||
+               hittest == ViewInterface::HT_BOTTOMRIGHT ||
+               hittest == ViewInterface::HT_TOP ||
+               hittest == ViewInterface::HT_TOPLEFT;
+    }
+    return false;
+  }
+
+  void OnDetailsViewResizedHandler(int width, int height, int gadget_id) {
+    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
+    if (it != view_hosts_.end() && it->second.details_) {
+      AdjustViewHostPosition(&it->second);
+    }
+  }
+
+  bool OnDetailsViewBeginMoveHandler(int button, int gadget_id) {
+    // User can't move popout view window.
+    return true;
   }
 
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
@@ -412,10 +657,14 @@ class SimpleGtkHost::Impl {
     return TRUE;
   }
 
+  typedef std::map<int, GadgetViewHostInfo> GadgetViewHostsMap;
+  typedef std::map<int, Gadget *> GadgetsMap;
+
   GadgetBrowserHost gadget_browser_host_;
 
-  typedef std::map<int, Gadget *> GadgetsMap;
+  GadgetViewHostsMap view_hosts_;
   GadgetsMap gadgets_;
+
   SimpleGtkHost *owner_;
 
   double zoom_;
@@ -447,8 +696,9 @@ SimpleGtkHost::~SimpleGtkHost() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SimpleGtkHost::NewViewHost(ViewHostInterface::Type type) {
-  return impl_->NewViewHost(type);
+ViewHostInterface *SimpleGtkHost::NewViewHost(Gadget *gadget,
+                                              ViewHostInterface::Type type) {
+  return impl_->NewViewHost(gadget, type);
 }
 
 void SimpleGtkHost::RemoveGadget(Gadget *gadget, bool save_data) {

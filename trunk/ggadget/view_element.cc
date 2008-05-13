@@ -54,15 +54,15 @@ class ViewElement::Impl {
     if (child_view_) {
       scale_ = child_view_->GetGraphics()->GetZoom() /
                owner_->GetView()->GetGraphics()->GetZoom();
+
+      double width = child_view_->GetWidth() * scale_;
+      double height = child_view_->GetHeight() * scale_;
+
+      owner_->BasicElement::SetPixelWidth(width);
+      owner_->BasicElement::SetPixelHeight(height);
     } else {
       scale_ = 1.0;
     }
-
-    double width = owner_->GetPixelWidth();
-    double height = owner_->GetPixelHeight();
-
-    owner_->BasicElement::SetPixelWidth(width);
-    owner_->BasicElement::SetPixelHeight(height);
   }
 
   ViewElement *owner_;
@@ -236,20 +236,6 @@ void ViewElement::ViewCoordToChildViewCoord(
   *child_y /= impl_->scale_;
 }
 
-double ViewElement::GetPixelWidth() const {
-  if (impl_->child_view_)
-    return impl_->child_view_->GetWidth() * impl_->scale_;
-
-  return BasicElement::GetPixelWidth();
-}
-
-double ViewElement::GetPixelHeight() const {
-  if (impl_->child_view_)
-    return impl_->child_view_->GetHeight() * impl_->scale_;
-
-  return BasicElement::GetPixelHeight();
-}
-
 ViewInterface::HitTest ViewElement::GetHitTest(double x, double y) const {
   // Assume GetHitTest() will be called immediately after calling
   // OnMouseEvent().
@@ -299,6 +285,7 @@ EventResult ViewElement::OnMouseEvent(const MouseEvent &event,
 
   EventResult result2 = BasicElement::OnMouseEvent(event, direct,
                                                    fired_element, in_element);
+
   return std::max(result1, result2);
 }
 
