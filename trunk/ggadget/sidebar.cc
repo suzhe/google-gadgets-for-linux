@@ -448,7 +448,7 @@ class SideBar::Impl : public View {
         down_cast<ViewElement *>(main_div_->GetChildren()->GetItemByIndex(i));
       double x = main_div_->GetPixelWidth(), y = element->GetPixelHeight();
       if (element->IsVisible() && element->OnSizing(&x, &y)) {
-        element->SetSize(x, y);
+        element->SetSize(main_div_->GetPixelWidth(), y);
       }
       element->SetPixelX(0);
       element->SetPixelY(ceil(height));

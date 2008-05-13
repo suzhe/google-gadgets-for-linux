@@ -111,6 +111,8 @@ class SidebarGtkHost::Impl {
         view_->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
         height_ = h;
         HandleDock();
+      } else {
+        decorator_view_host_->RestoreViewStates();
       }
       owner_->side_bar_->ClearNullElement();
     }
@@ -292,12 +294,6 @@ class SidebarGtkHost::Impl {
     gtk_widget_show(main_widget_);
     g_assert(GTK_WIDGET_REALIZED(main_widget_));
     AdjustSidebar();
-
-    // FIXME: should set height to the most length except panel's height
-    GdkRectangle rect;
-    GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(main_widget_));
-    gdk_screen_get_monitor_geometry(screen, option_sidebar_monitor_, &rect);
-    side_bar_->SetSize(option_sidebar_width_, rect.height);
   }
 
   bool ConfirmGadget(int id) {
@@ -361,6 +357,8 @@ class SidebarGtkHost::Impl {
          rect.x, rect.y, rect.width, rect.height);
 
     // adjust properties
+    // FIXME: should set height to the most length except panel's height
+    side_bar_->SetSize(option_sidebar_width_, rect.height);
     AdjustOnTopProperties(rect, monitor_number);
     AdjustPositionProperties(rect);
   }
@@ -380,7 +378,7 @@ class SidebarGtkHost::Impl {
   }
 
   void AdjustOnTopProperties(const GdkRectangle &rect, int monitor_number) {
-    view_host_->SetKeepAbove(option_always_on_top_);
+    gtk_window_set_keep_above(GTK_WINDOW(main_widget_), option_always_on_top_);
 
     // if sidebar is on the edge, do strut
     if (option_always_on_top_ &&
@@ -488,7 +486,9 @@ class SidebarGtkHost::Impl {
       //FIXME: a minor bug of inserting null element to a wrong place
       side_bar_->InsertNullElement(native_y, view);
     }
-    ViewHostInterface *new_host = NewSingleViewHost(view, true, native_y);
+    DecoratedViewHost *new_host = NewSingleViewHost(view, true, native_y);
+    if (move_to_cursor)
+      new_host->EnableAutoRestoreViewStates(false);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
     bool r = view->ShowView(false, 0, NULL);
@@ -656,7 +656,7 @@ class SidebarGtkHost::Impl {
     return true;
   }
 
-  ViewHostInterface *NewSingleViewHost(View *view,
+  DecoratedViewHost *NewSingleViewHost(View *view,
                                        bool remove_on_close, double height) {
     SingleViewHost *view_host =
       new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
