@@ -318,6 +318,14 @@ void QtViewHost::ViewCoordToNativeWidgetCoord(
     *widget_y = y * zoom;
 }
 
+void QtViewHost::NativeWidgetCoordToViewCoord(
+    double x, double y, double *view_x, double *view_y) const {
+  double zoom = impl_->view_->GetGraphics()->GetZoom();
+  if (zoom == 0) return;
+  if (view_x) *view_x = x / zoom;
+  if (view_y) *view_y = y / zoom;
+}
+
 void QtViewHost::QueueDraw() {
   ASSERT(impl_->widget_);
   impl_->widget_->update();

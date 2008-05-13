@@ -45,6 +45,8 @@ class QtViewHost : public ViewHostInterface {
   virtual void *GetNativeWidget() const;
   virtual void ViewCoordToNativeWidgetCoord(
       double x, double y, double *widget_x, double *widget_y) const;
+  virtual void NativeWidgetCoordToViewCoord(
+      double x, double y, double *view_x, double *view_y) const;
   virtual void QueueDraw();
   virtual void QueueResize();
   virtual void EnableInputShapeMask(bool enable);
