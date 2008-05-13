@@ -28,7 +28,7 @@ class EncryptorInterface {
    * @param input the input string to encrypt. The string may contain arbitrary
    *     binary data, including '\0's.
    * @param output[out] the encrypted result. The string may contain arbitrary
-   *     binary data, including '\0's. 
+   *     binary data, including '\0's.
    */
   virtual void Encrypt(const std::string &input, std::string *output) = 0;
 
@@ -38,7 +38,7 @@ class EncryptorInterface {
    *     binary data, including '\0's.
    * @param output[out] the decrypted result. The string may contain arbitrary
    *     binary data, including '\0's.
-   * @return true on success. 
+   * @return true on success.
    */
   virtual bool Decrypt(const std::string &input, std::string *output) = 0;
 

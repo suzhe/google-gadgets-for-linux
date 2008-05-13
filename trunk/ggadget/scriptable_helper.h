@@ -205,7 +205,7 @@ class ScriptableHelper : public I, public RegisterableInterface {
     impl_->Ref();
     if (TrackRefs)
       DLOG("Ref: classid=%jx this=%p ref=%d",
-           GetClassId(), this, GetRefCount()); 
+           GetClassId(), this, GetRefCount());
   }
 
   /**

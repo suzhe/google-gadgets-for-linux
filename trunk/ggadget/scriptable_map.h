@@ -25,7 +25,8 @@
 namespace ggadget {
 
 /**
- * This class is used to reflect a const native array to script.
+ * This class is used to reflect a const native map to script. The life of
+ * the native map must be longer than the life of this object.
  * The script can access this object by getting "count" property and "item"
  * method, or with an Enumerator.
  */
@@ -48,7 +49,7 @@ class ScriptableMap : public ScriptableHelperDefault {
   }
 
   /**
-   * These methods are overriden to make this object act like normal
+   * This method is overriden to make this object act like normal
    * JavaScript arrays for C++ users.
    */
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) {

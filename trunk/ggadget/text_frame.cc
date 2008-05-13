@@ -203,6 +203,8 @@ Variant TextFrame::GetColor() const {
 void TextFrame::SetColor(const Variant &color) {
   delete impl_->color_texture_;
   impl_->color_texture_ = impl_->view_->LoadTexture(color);
+  if (!impl_->color_texture_)
+    impl_->color_texture_ = new Texture(kDefaultColor, 1.0);
   impl_->QueueDraw();
 }
 
@@ -314,6 +316,7 @@ bool TextFrame::SetText(const std::string &text) {
 
 void TextFrame::DrawWithTexture(CanvasInterface *canvas, double x, double y,
                                 double width, double height, Texture *texture) {
+  ASSERT(texture);
   impl_->SetUpFont();
   if (impl_->font_ && !impl_->text_.empty()) {
     texture->DrawText(canvas, x, y, width, height,

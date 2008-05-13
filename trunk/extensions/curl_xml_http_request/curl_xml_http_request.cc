@@ -749,7 +749,8 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if ((state_ == OPENED && save_send_flag) ||
         state_ == HEADERS_RECEIVED || state_ == LOADING) {
       uint64_t now = main_loop_->GetCurrentTime();
-      if (backoff_.ReportRequestResult(now, host_.c_str(),
+      if (!aborting &&
+          backoff_.ReportRequestResult(now, host_.c_str(),
                                        IsSuccessHTTPStatus(status_))) {
         SaveBackoffData(now);
       }

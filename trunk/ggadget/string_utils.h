@@ -39,6 +39,12 @@ int GadgetStrCmp(const char *s1, const char *s2);
 int GadgetStrNCmp(const char *s1, const char *s2, size_t n);
 int GadgetCharCmp(char c1, char c2);
 
+struct CharPtrComparator {
+  bool operator()(const char* s1, const char* s2) const {
+    return strcmp(s1, s2) < 0;
+  }
+};
+
 /**
  * A comparison functor for <code>const char *</code> parameters.
  * It's useful when using <code>const char *</code> as the key of a map.
@@ -58,7 +64,7 @@ struct GadgetStringComparator {
 /**
  * Default gadget string map, case sensitivity controled by
  * @c GADGET_CASE_SENSITIVE.
- */ 
+ */
 typedef std::map<std::string, std::string,
                  GadgetStringComparator> GadgetStringMap;
 
@@ -136,8 +142,8 @@ bool IsValidURLChar(unsigned char c);
 /** Returns whether the given string is a valid URL for a RSS feed. */
 bool IsValidRSSURL(const char* url);
 
-/** 
- * Returns whether the given string is a valid URL. 
+/**
+ * Returns whether the given string is a valid URL.
  * Not a very complete check at the moment.
  */
 bool IsValidURL(const char* url);

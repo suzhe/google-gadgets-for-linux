@@ -17,6 +17,7 @@
 #ifndef GGADGET_VARIANT_H__
 #define GGADGET_VARIANT_H__
 
+#include <new>
 #include <string>
 #include <ostream>
 #include <ggadget/common.h>
@@ -184,7 +185,7 @@ class Variant {
    */
   explicit Variant(const std::string &value)
       : type_(TYPE_STRING) {
-    v_.string_value_ = new std::string(value);
+    v_.string_value_.s_ = new (&v_.string_value_.place_) std::string(value);
   }
 
   /**
@@ -193,7 +194,8 @@ class Variant {
    * The type of the constructed @c Variant is @c TYPE_STRING.
    */
   explicit Variant(const char *value) : type_(TYPE_STRING) {
-    v_.string_value_ = value ? new std::string(value) : NULL;
+    v_.string_value_.s_ = value ?
+        new (&v_.string_value_.place_) std::string(value) : NULL;
   }
 
   /**
@@ -202,7 +204,8 @@ class Variant {
    */
   explicit Variant(const JSONString &value)
       : type_(TYPE_JSON) {
-    v_.string_value_ = new std::string(value.value);
+    v_.string_value_.s_ =
+        new (&v_.string_value_.place_) std::string(value.value);
   }
 
   /**
@@ -211,7 +214,8 @@ class Variant {
    */
   explicit Variant(const UTF16String &value)
       : type_(TYPE_UTF16STRING) {
-    v_.utf16_string_value_ = new UTF16String(value);
+    v_.utf16_string_value_.s_ =
+        new (&v_.utf16_string_value_.place_) UTF16String(value);
   }
 
   /**
@@ -220,7 +224,8 @@ class Variant {
    * The type of the constructed @c Variant is @c TYPE_UTF16STRING.
    */
   explicit Variant(const UTF16Char *value) : type_(TYPE_UTF16STRING) {
-    v_.utf16_string_value_ = value ? new UTF16String(value) : NULL;
+    v_.utf16_string_value_.s_ = value ?
+        new (&v_.utf16_string_value_.place_) UTF16String(value) : NULL;
   }
 
   /**
@@ -312,8 +317,19 @@ class Variant {
     bool bool_value_;
     int64_t int64_value_;
     double double_value_;
-    std::string *string_value_;  // For both TYPE_STRING and TYPE_JSON.
-    UTF16String *utf16_string_value_;
+    // For TYPE_STRING and TYPE_JSON
+    struct {
+      // The s_ pointer is created in-place in place_.
+      // Normally sizeof(std::string) equals to sizeof a pointer, thus it won't
+      // make Variant bigger.
+      char place_[sizeof(std::string)];
+      std::string *s_;
+    } string_value_;
+    struct {
+      // The s_ pointer is created in-place in place_. 
+      char place_[sizeof(UTF16String)];
+      UTF16String *s_;
+    } utf16_string_value_;
     struct {
       ScriptableInterface *value_;
       Connection *refchange_connection_;
@@ -504,7 +520,7 @@ struct VariantValue<const char *> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return NULL;
-    return v.v_.string_value_ ? v.v_.string_value_->c_str() : NULL;
+    return v.v_.string_value_.s_ ? v.v_.string_value_.s_->c_str() : NULL;
   }
 };
 
@@ -520,7 +536,7 @@ struct VariantValue<std::string> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return "";
-    return v.v_.string_value_ ? *v.v_.string_value_ : std::string();
+    return v.v_.string_value_.s_ ? *v.v_.string_value_.s_ : std::string();
   }
 };
 
@@ -536,7 +552,7 @@ struct VariantValue<const std::string &> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return "";
-    return v.v_.string_value_ ? *v.v_.string_value_ : std::string();
+    return v.v_.string_value_.s_ ? *v.v_.string_value_.s_ : std::string();
   }
 };
 
@@ -554,7 +570,8 @@ struct VariantValue<const UTF16Char *> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return NULL;
-    return v.v_.utf16_string_value_ ? v.v_.utf16_string_value_->c_str() : NULL;
+    return v.v_.utf16_string_value_.s_ ?
+           v.v_.utf16_string_value_.s_->c_str() : NULL;
   }
 };
 
@@ -570,7 +587,8 @@ struct VariantValue<UTF16String> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return UTF16String();
-    return v.v_.utf16_string_value_ ? *v.v_.utf16_string_value_ : UTF16String();
+    return v.v_.utf16_string_value_.s_ ?
+           *v.v_.utf16_string_value_.s_ : UTF16String();
   }
 };
 
@@ -586,7 +604,8 @@ struct VariantValue<const UTF16String &> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return UTF16String();
-    return v.v_.utf16_string_value_ ? *v.v_.utf16_string_value_ : UTF16String();
+    return v.v_.utf16_string_value_.s_ ?
+           *v.v_.utf16_string_value_.s_ : UTF16String();
   }
 };
 
@@ -602,7 +621,8 @@ struct VariantValue<JSONString> {
     ASSERT(v.type_ == Variant::TYPE_JSON);
     if (v.type_ != Variant::TYPE_JSON)
       return JSONString("");
-    return JSONString(v.v_.string_value_ ? *v.v_.string_value_ : std::string());
+    return JSONString(v.v_.string_value_.s_ ?
+                      *v.v_.string_value_.s_ : std::string());
   }
 };
 
@@ -618,7 +638,8 @@ struct VariantValue<const JSONString &> {
     ASSERT(v.type_ == Variant::TYPE_JSON);
     if (v.type_ != Variant::TYPE_JSON)
       return JSONString("");
-    return JSONString(v.v_.string_value_ ? *v.v_.string_value_ : std::string());
+    return JSONString(v.v_.string_value_.s_ ?
+                      *v.v_.string_value_.s_ : std::string());
   }
 };
 

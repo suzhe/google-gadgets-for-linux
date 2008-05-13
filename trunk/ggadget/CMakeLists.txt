@@ -57,6 +57,7 @@ SET(SRCS
   sidebar.cc
   signals.cc
   slot.cc
+  small_object.cc
   string_utils.cc
   system_utils.cc
   texture.cc
