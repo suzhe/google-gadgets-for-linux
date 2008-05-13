@@ -94,12 +94,6 @@ class ViewElement : public BasicElement {
   virtual EventResult OnOtherEvent(const Event &event);
 
   /**
-   * The size of ViewElement will always be synced with the size of child view.
-   */
-  virtual double GetPixelWidth() const;
-  virtual double GetPixelHeight() const;
-
-  /**
    * Delegates to child view's GetHitTest().
    */
   virtual ViewInterface::HitTest GetHitTest(double x, double y) const;

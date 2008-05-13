@@ -108,19 +108,28 @@ class DecoratedViewHost : public ViewHostInterface {
   void SetDockEdge(bool right);
 
   /**
-   * Lets the view decorator to restore previously stored child view states.
-   * The states include child view's size, zoom level etc.
+   * Lets the view decorator to restore previously stored child view size.
    */
-  void RestoreViewStates();
+  void RestoreViewSize();
 
   /**
-   * Enables or disables automatically restore child view states.
+   * Enables or disables automatically restore child view size.
    *
    * If it's enabled, then the view decorator will restore previously stored
-   * child view states automatically when the child view is attached to the
+   * child view size automatically when the child view is attached to the
    * decorator or it's shown the first time.
    */
-  void EnableAutoRestoreViewStates(bool enable);
+  void EnableAutoRestoreViewSize(bool enable);
+
+  /**
+   * Gets or sets minimized state.
+   *
+   * It's only applicable for MainView decorator. It should be called after
+   * attaching the view.
+   */
+  bool IsMinimized() const;
+  void SetMinimized(bool minimized);
+
  public:
 
   /** Returns the ViewHost type. */

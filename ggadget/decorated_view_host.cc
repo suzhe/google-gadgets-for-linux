@@ -79,7 +79,7 @@ class DecoratedViewHost::Impl {
         cursor_(CURSOR_DEFAULT),
         hittest_(HT_CLIENT),
         child_resizable_(ViewInterface::RESIZABLE_ZOOM),
-        auto_restore_view_states_(true),
+        auto_restore_view_size_(true),
         child_view_(NULL),
         view_element_(new ViewElement(NULL, this, NULL, false)) {
       view_element_->SetVisible(true);
@@ -105,11 +105,7 @@ class DecoratedViewHost::Impl {
         if (child_view_)
           child_resizable_ = child_view_->GetResizable();
 
-        if (auto_restore_view_states_)
-          RestoreViewStates();
-        else
-          UpdateViewSize();
-
+        RestoreViewStates();
         ChildViewChanged();
       }
     }
@@ -210,8 +206,8 @@ class DecoratedViewHost::Impl {
       return child_resizable_;
     }
 
-    void EnableAutoRestoreViewStates(bool enable) {
-      auto_restore_view_states_ = enable;
+    void EnableAutoRestoreViewSize(bool enable) {
+      auto_restore_view_size_ = enable;
     }
    public:
     // Overridden methods.
@@ -349,8 +345,7 @@ class DecoratedViewHost::Impl {
    public:
     virtual bool ShowDecoratedView(bool modal, int flags,
                                    Slot1<void, int> *feedback_handler) {
-      if (auto_restore_view_states_)
-        RestoreViewStates();
+      RestoreViewStates();
       // Nothing else. Derived class shall override this method to do more
       // things.
       return ShowView(modal, flags, feedback_handler);
@@ -365,7 +360,19 @@ class DecoratedViewHost::Impl {
       // Only valid for NormalMainViewDecorator with MAIN_DOCKED type.
     }
 
+    virtual bool IsMinimized() {
+      // Only valid for NormalMainViewDecorator.
+      return false;
+    }
+
+    virtual void SetMinimized(bool minimized) {
+      // Only valid for NormalMainViewDecorator.
+    }
+
     virtual void SaveViewStates() {
+      if (!auto_restore_view_size_)
+        return;
+
       Gadget *gadget = GetGadget();
       if (gadget) {
         OptionsInterface *opt = gadget->GetOptions();
@@ -384,6 +391,11 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void RestoreViewStates() {
+      if (!auto_restore_view_size_) {
+        UpdateViewSize();
+        return;
+      }
+
       Gadget *gadget = GetGadget();
       // Only load view states when the original size has been saved.
       if (gadget) {
@@ -487,7 +499,7 @@ class DecoratedViewHost::Impl {
     int cursor_;
     HitTest hittest_;
     ViewInterface::ResizableMode child_resizable_;
-    bool auto_restore_view_states_;
+    bool auto_restore_view_size_;
 
     View *child_view_;
     ViewElement *view_element_;
@@ -659,6 +671,13 @@ class DecoratedViewHost::Impl {
     }
 
    public:
+    virtual Gadget *GetGadget() const {
+      if (popped_out_ && original_child_view_)
+        return original_child_view_->GetGadget();
+
+      return ViewDecoratorBase::GetGadget();
+    }
+
     virtual bool OnAddContextMenuItems(MenuInterface *menu) {
       static const struct {
         const char *label;
@@ -786,16 +805,28 @@ class DecoratedViewHost::Impl {
       UpdateToggleExpandedButton();
     }
 
+    virtual bool IsMinimized() {
+      return minimized_;
+    }
+
+    virtual void SetMinimized(bool minimized) {
+      if (minimized_ != minimized)
+        CollapseExpandMenuCallback(NULL);
+    }
+
     virtual void SaveViewStates() {
       Gadget *gadget = GetGadget();
       if (gadget) {
         OptionsInterface *opt = gadget->GetOptions();
         opt->PutInternalValue("main_view_minimized", Variant(minimized_));
+        DLOG("SaveViewStates(%d): main view minimized: %s",
+             gadget->GetInstanceID(), minimized_ ? "true" : "false");
       }
       ViewDecoratorBase::SaveViewStates();
     }
 
     virtual void RestoreViewStates() {
+      ViewDecoratorBase::RestoreViewStates();
       Gadget *gadget = GetGadget();
       // Only load view states when the original size has been saved.
       if (gadget && load_minimized_state_) {
@@ -807,7 +838,6 @@ class DecoratedViewHost::Impl {
         }
         load_minimized_state_ = false;
       }
-      ViewDecoratorBase::RestoreViewStates();
     }
 
    protected:
@@ -1809,12 +1839,21 @@ void DecoratedViewHost::SetDockEdge(bool right) {
   impl_->view_decorator_->SetDockEdge(right);
 }
 
-void DecoratedViewHost::RestoreViewStates() {
-  impl_->view_decorator_->RestoreViewStates();
+bool DecoratedViewHost::IsMinimized() const {
+  return impl_->view_decorator_->IsMinimized();
 }
 
-void DecoratedViewHost::EnableAutoRestoreViewStates(bool enable) {
-  impl_->view_decorator_->EnableAutoRestoreViewStates(enable);
+void DecoratedViewHost::SetMinimized(bool minimized) {
+  impl_->view_decorator_->SetMinimized(minimized);
+}
+
+void DecoratedViewHost::RestoreViewSize() {
+  // ViewDecoratorBase::RestoreViewStates() only restores view's size state.
+  impl_->view_decorator_->ViewDecoratorBase::RestoreViewStates();
+}
+
+void DecoratedViewHost::EnableAutoRestoreViewSize(bool enable) {
+  impl_->view_decorator_->EnableAutoRestoreViewSize(enable);
 }
 
 ViewHostInterface::Type DecoratedViewHost::GetType() const {

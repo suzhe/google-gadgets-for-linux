@@ -106,6 +106,9 @@ class SingleViewHost : public ViewHostInterface {
   bool IsKeepAbove() const;
   void SetKeepAbove(bool keep_above);
 
+  /** Checks if the top level window is visible or not. */
+  bool IsVisible() const;
+
  public:
   /**
    * Connects a slot to OnViewChanged signal.

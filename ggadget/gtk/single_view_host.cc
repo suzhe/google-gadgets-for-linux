@@ -178,7 +178,7 @@ class SingleViewHost::Impl {
                      G_CALLBACK(EnterNotifyHandler), this);
     g_signal_connect(G_OBJECT(window_), "window-state-event",
                      G_CALLBACK(WindowStateHandler), this);
-    g_signal_connect_after(G_OBJECT(window_), "show",
+    g_signal_connect(G_OBJECT(window_), "show",
                      G_CALLBACK(WindowShowHandler), this);
     g_signal_connect_after(G_OBJECT(window_), "hide",
                      G_CALLBACK(WindowHideHandler), this);
@@ -234,6 +234,13 @@ class SingleViewHost::Impl {
     } else {
       // The window is not resizable, set the size request instead.
       gtk_widget_set_size_request(window_, req.width, req.height);
+    }
+
+    // If the window is not mapped yet, then save the window size as initial
+    // size.
+    if (!GTK_WIDGET_MAPPED(window_)) {
+      win_width_ = req.width;
+      win_height_ = req.height;
     }
 
     // DLOG("End adjusting window size.");
@@ -305,17 +312,6 @@ class SingleViewHost::Impl {
     delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
-    // Adjust the window size just before showing the view, to make sure that
-    // the window size has correct default size when showing.
-    if (record_states_)
-      LoadWindowStates();
-    else
-      gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
-
-    AdjustWindowSize();
-    gtk_window_present(GTK_WINDOW(window_));
-
-    // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       if (flags & ViewInterface::OPTIONS_VIEW_FLAG_OK)
         gtk_widget_show(ok_button_);
@@ -326,11 +322,22 @@ class SingleViewHost::Impl {
         gtk_widget_show(cancel_button_);
       else
         gtk_widget_hide(cancel_button_);
-
-      if (modal)
-        gtk_dialog_run(GTK_DIALOG(window_));
     }
 
+    // Adjust the window size just before showing the view, to make sure that
+    // the window size has correct default size when showing.
+    AdjustWindowSize();
+
+    if (record_states_)
+      LoadWindowStates();
+    else
+      gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
+
+    gtk_window_present(GTK_WINDOW(window_));
+    // Main view and details view doesn't support modal.
+    if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS && modal) {
+      gtk_dialog_run(GTK_DIALOG(window_));
+    }
     return true;
   }
 
@@ -389,6 +396,9 @@ class SingleViewHost::Impl {
       opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
                             Variant(is_keep_above_));
 
+      DLOG("SaveWindowStates(%d): x:%d y:%d keep_above:%d",
+           view_->GetGadget()->GetInstanceID(),
+           win_x_, win_y_, is_keep_above_);
     }
     // Don't save size and zoom information, it's conflict with view
     // decorator.
@@ -594,7 +604,7 @@ class SingleViewHost::Impl {
   }
 
   static void WindowShowHandler(GtkWidget *widget, gpointer user_data) {
-    DLOG("View window is shown.");
+    DLOG("View window is going to be shown.");
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->view_ && impl->enable_signals_)
       impl->on_show_hide_signal_(true);
@@ -885,6 +895,10 @@ bool SingleViewHost::IsKeepAbove() const {
 
 void SingleViewHost::SetKeepAbove(bool keep_above) {
   impl_->SetKeepAbove(keep_above);
+}
+
+bool SingleViewHost::IsVisible() const {
+  return impl_->window_ && GTK_WIDGET_VISIBLE(impl_->window_);
 }
 
 Connection *SingleViewHost::ConnectOnViewChanged(Slot0<void> *slot) {

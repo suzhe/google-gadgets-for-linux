@@ -31,7 +31,8 @@ class SimpleGtkHost : public ggadget::HostInterface {
  public:
   SimpleGtkHost(double zoom, bool decorated, int view_debug_mode);
   virtual ~SimpleGtkHost();
-  virtual ViewHostInterface *NewViewHost(ViewHostInterface::Type type);
+  virtual ViewHostInterface *NewViewHost(Gadget *gadget,
+                                         ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);
   virtual void DebugOutput(DebugLevel level, const char *message) const;
   virtual bool OpenURL(const char *url) const;

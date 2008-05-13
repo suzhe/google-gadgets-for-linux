@@ -227,7 +227,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     // main view must be created before calling RegisterProperties();
     main_view_ = new ViewBundle(
-        host_->NewViewHost(ViewHostInterface::VIEW_HOST_MAIN),
+        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_MAIN),
         owner_, element_factory_, &global_, NULL, true);
     ASSERT(main_view_);
 
@@ -599,7 +599,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     if (onshowoptionsdlg_signal_.HasActiveConnections()) {
       options_view_ = new ViewBundle(
-          host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
+          host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
           owner_, element_factory_, NULL, NULL, false);
       View *view = options_view_->view();
       DisplayWindow *window = new DisplayWindow(view);
@@ -621,7 +621,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
       std::string xml;
       if (file_manager_->ReadFile(kOptionsXML, &xml)) {
         options_view_ = new ViewBundle(
-            host_->NewViewHost(ViewHostInterface::VIEW_HOST_OPTIONS),
+            host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_OPTIONS),
             owner_, element_factory_, &global_, NULL, true);
         View *view = options_view_->view();
         RegisterScriptExtensions(options_view_->context());
@@ -662,7 +662,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
                        Slot1<void, int> *feedback_handler) {
     CloseDetailsView();
     details_view_ = new ViewBundle(
-        host_->NewViewHost(ViewHostInterface::VIEW_HOST_DETAILS),
+        host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_DETAILS),
         owner_, element_factory_, &global_, details_view_data, true);
     ScriptContextInterface *context = details_view_->context();
     ScriptableOptions *scriptable_data = details_view_->details()->GetData();
