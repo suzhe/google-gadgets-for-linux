@@ -24,7 +24,7 @@
 #include <ggadget/view.h>
 #include <ggadget/element_factory.h>
 #include <ggadget/script_context_interface.h>
-#include <ggadget/qt/qt_gadget_widget.h>
+#include <ggadget/qt/qt_view_widget.h>
 
 #include "browser_element.h"
 #include "browser_element_internal.h"

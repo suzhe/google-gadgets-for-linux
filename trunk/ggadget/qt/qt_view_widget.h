@@ -14,12 +14,11 @@
   limitations under the License.
 */
 
-#ifndef GGADGET_QT_QT_GADGET_WIDGET_H__
-#define GGADGET_QT_QT_GADGET_WIDGET_H__
+#ifndef GGADGET_QT_QT_VIEW_WIDGET_H__
+#define GGADGET_QT_QT_VIEW_WIDGET_H__
 
 #include <string>
 #include <vector>
-// #include <QtOpenGL/QGLWidget>
 #include <QtGui/QWidget>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
@@ -28,11 +27,11 @@
 namespace ggadget {
 namespace qt {
 
-class QGadgetWidget : public QWidget {
+class QtViewWidget : public QWidget {
  public:
-  QGadgetWidget(ViewInterface* view,
+  QtViewWidget(ViewInterface* view,
                 bool composite, bool decorated);
-  ~QGadgetWidget();
+  ~QtViewWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
 
@@ -71,4 +70,4 @@ class QGadgetWidget : public QWidget {
 } // end of namespace qt
 } // end of namespace ggadget
 
-#endif // GGADGET_QT_QT_GADGET_VIEW_WIDGET_H__
+#endif // GGADGET_QT_QT_VIEW_WIDGET_H__

@@ -37,7 +37,7 @@
 #include <ggadget/host_interface.h>
 #include <ggadget/localized_file_manager.h>
 #include <ggadget/options_interface.h>
-#include <ggadget/qt/qt_gadget_widget.h>
+#include <ggadget/qt/qt_view_widget.h>
 #include <ggadget/qt/qt_view_host.h>
 #include <ggadget/qt/qt_menu.h>
 #include <ggadget/qt/qt_main_loop.h>

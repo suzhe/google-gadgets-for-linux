@@ -34,7 +34,7 @@
 #include "qt_view_host.h"
 #include "qt_menu.h"
 #include "qt_graphics.h"
-#include "qt_gadget_widget.h"
+#include "qt_view_widget.h"
 #include "qt_view_host.moc"
 
 namespace ggadget {
@@ -153,7 +153,7 @@ class QtViewHost::Impl {
       delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
-    widget_ = new QGadgetWidget(view_, composite_, decorated_);
+    widget_ = new QtViewWidget(view_, composite_, decorated_);
     // Initialize window and widget.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       QVBoxLayout *layout = new QVBoxLayout();
@@ -235,7 +235,7 @@ class QtViewHost::Impl {
 
   ViewInterface *view_;
   ViewHostInterface::Type type_;
-  QGadgetWidget *widget_;
+  QtViewWidget *widget_;
   QWidget *window_;     // Top level window of the view
   QDialog *dialog_;     // Top level window of the view
   int debug_mode_;

@@ -23,7 +23,7 @@
 #include <QtCore/QTimer>
 #include <ggadget/view_interface.h>
 #include <ggadget/view_host_interface.h>
-#include <ggadget/qt/qt_gadget_widget.h>
+#include <ggadget/qt/qt_view_widget.h>
 #include <ggadget/qt/qt_graphics.h>
 
 namespace ggadget {
