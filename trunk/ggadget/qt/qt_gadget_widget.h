@@ -67,7 +67,7 @@ class QGadgetWidget : public QWidget {
   bool enable_input_mask_;
   QPixmap offscreen_pixmap_;
   QPoint mouse_pos_;
-  bool mouse_move_drag_;
+  bool mouse_drag_moved_;
   QWidget *child_;
   double zoom_;
 };

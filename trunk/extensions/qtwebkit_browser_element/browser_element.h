@@ -29,6 +29,7 @@ class BrowserElement : public BasicElement {
 
   BrowserElement(BasicElement *parent, View *view, const char *name);
   virtual ~BrowserElement();
+  class Impl;
 
  protected:
   virtual void DoRegister();
@@ -56,7 +57,6 @@ class BrowserElement : public BasicElement {
  private:
   DISALLOW_EVIL_CONSTRUCTORS(BrowserElement);
 
-  class Impl;
   Impl *impl_;
 };
 

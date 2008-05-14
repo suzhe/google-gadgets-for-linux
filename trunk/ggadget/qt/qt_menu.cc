@@ -34,7 +34,7 @@ class QtMenu::Impl {
       action = new QAction(qt_menu_);
       action->setSeparator(true);
     } else {
-      action = new QAction(item_text, qt_menu_);
+      action = new QAction(QString::fromUtf8(item_text), qt_menu_);
       MenuItemInfo *info = new MenuItemInfo(qt_menu_, item_text, handler, action);
       menu_items_[item_text] = info;
       ApplyStyle(action, style);
@@ -52,7 +52,7 @@ class QtMenu::Impl {
 
   MenuInterface *AddPopup(const char *popup_text, int priority){
     std::string text_str(popup_text ? popup_text : "");
-    QMenu *submenu = new QMenu(text_str.c_str());
+    QMenu *submenu = new QMenu(QString::fromUtf8(text_str.c_str()));
     AddAction(submenu->menuAction(), priority);
     return new QtMenu(submenu);
   }

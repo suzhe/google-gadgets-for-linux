@@ -42,7 +42,7 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
        drag_files_(NULL),
        composite_(composite),
        enable_input_mask_(true),
-       mouse_move_drag_(false),
+       mouse_drag_moved_(false),
        child_(NULL) {
   setMouseTracking(true);
   SetSize(2, 2);
@@ -56,6 +56,9 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
 
 QGadgetWidget::~QGadgetWidget() {
   LOG("Widget freed");
+  if (child_) {
+    child_->setParent(NULL);
+  }
 }
 
 void QGadgetWidget::paintEvent(QPaintEvent *event) {
@@ -119,21 +122,25 @@ void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
     // Send fake mouse up event to the view so that we can start to drag
     // the window. Note: no mouse click event is sent in this case, to prevent
     // unwanted action after window move.
-    MouseEvent e(Event::EVENT_MOUSE_UP,
-                 event->x() / zoom_, event->y() / zoom_,
-                 0, 0, buttons, 0);
-    // Ignore the result of this fake event.
-    view_->OnMouseEvent(e);
-
-    if (mouse_move_drag_) {
-      move(pos() + QCursor::pos() - mouse_pos_);
-      mouse_pos_ = QCursor::pos();
+    if (!mouse_drag_moved_) {
+      MouseEvent e(Event::EVENT_MOUSE_UP,
+                   event->x() / zoom_, event->y() / zoom_,
+                   0, 0, buttons, 0);
+      // Ignore the result of this fake event.
+      view_->OnMouseEvent(e);
+      mouse_drag_moved_ = true;
     }
+
+    window()->move(window()->pos() + QCursor::pos() - mouse_pos_);
+    mouse_pos_ = QCursor::pos();
   }
 }
 
 void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
   setFocus(Qt::MouseFocusReason);
+  mouse_drag_moved_ = false;
+  // Remember the position of mouse, it may be used to move the gadget
+  mouse_pos_ = QCursor::pos();
   EventResult handler_result = EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
 
@@ -143,20 +150,15 @@ void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
 
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED) {
     event->accept();
-  } else {
-    // Remember the position of mouse, it may be used to move the gadget
-    mouse_pos_ = QCursor::pos();
-    mouse_move_drag_ = true;
   }
 }
 
-static const unsigned int kWindowMoveDelay = 100;
-
 void QGadgetWidget::mouseReleaseEvent(QMouseEvent * event ) {
   releaseMouse();
-  mouse_move_drag_ = false;
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
+
+  if (mouse_drag_moved_) return;
 
   MouseEvent e(Event::EVENT_MOUSE_UP,
                event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
