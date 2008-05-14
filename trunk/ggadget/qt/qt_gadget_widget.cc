@@ -328,11 +328,6 @@ void QGadgetWidget::resizeEvent(QResizeEvent *event) {
 }
 #endif
 
-void QGadgetWidget::closeEvent(QCloseEvent *event) {
-  event->accept();
-  emit closed();
-}
-
 void QGadgetWidget::EnableInputShapeMask(bool enable) {
   if (enable_input_mask_ != enable) {
     enable_input_mask_ = enable;

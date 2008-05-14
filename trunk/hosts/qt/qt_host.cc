@@ -68,6 +68,7 @@ class QtHost::Impl {
   }
 
   void SetupUI() {
+    qApp->setQuitOnLastWindowClosed(false);
     menu_.addAction("Add gadget", obj_, SLOT(OnAddGadget()));
     menu_.addAction("Show all", obj_, SLOT(OnShowAll()));
     menu_.addAction("Hide all", obj_, SLOT(OnHideAll()));

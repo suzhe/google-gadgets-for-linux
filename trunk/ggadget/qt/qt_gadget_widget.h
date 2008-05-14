@@ -29,16 +29,12 @@ namespace ggadget {
 namespace qt {
 
 class QGadgetWidget : public QWidget {
-  Q_OBJECT
  public:
   QGadgetWidget(ViewInterface* view,
                 bool composite, bool decorated);
   ~QGadgetWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
-
- signals:
-  void closed();
 
  protected:
   virtual void paintEvent(QPaintEvent *event);
@@ -55,7 +51,6 @@ class QGadgetWidget : public QWidget {
   virtual void dragLeaveEvent(QDragLeaveEvent *event);
   virtual void dragMoveEvent(QDragMoveEvent *event);
   virtual void dropEvent(QDropEvent *event);
-  virtual void closeEvent(QCloseEvent *event);
 
   void SetInputMask(QPixmap *pixmap);
   void SkipTaskBar();

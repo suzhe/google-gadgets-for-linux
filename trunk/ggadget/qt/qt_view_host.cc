@@ -192,14 +192,13 @@ class QtViewHost::Impl {
       window_ = widget_;
       window_->setWindowTitle(caption_);
       if (record_states_) LoadWindowStates();
-      window_->setAttribute(Qt::WA_DeleteOnClose, false);
+      window_->setAttribute(Qt::WA_DeleteOnClose, true);
 
-      if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
-        widget_->connect(widget_, SIGNAL(closed()),
-                         qt_obj_, SLOT(OnDetailsViewClose()));
-      } else {
+      if (type_ == ViewHostInterface::VIEW_HOST_MAIN) {
         widget_->EnableInputShapeMask(input_shape_mask_);
       }
+      widget_->connect(widget_, SIGNAL(destroyed(QObject*)),
+                       qt_obj_, SLOT(OnViewWidgetClose(QObject*)));
       window_->show();
     }
     return true;
@@ -261,8 +260,11 @@ void QtViewHostObject::OnOptionViewCancel() {
   owner_->HandleOptionViewResponse(ViewInterface::OPTIONS_VIEW_FLAG_CANCEL);
 }
 
-void QtViewHostObject::OnDetailsViewClose() {
-  owner_->HandleDetailsViewClose();
+void QtViewHostObject::OnViewWidgetClose(QObject *obj) {
+  if (owner_->type_ == ViewHostInterface::VIEW_HOST_DETAILS)
+    owner_->HandleDetailsViewClose();
+  owner_->window_ = NULL;
+  owner_->widget_ = NULL;
 }
 
 void QtViewHostObject::OnShow(bool flag) {
