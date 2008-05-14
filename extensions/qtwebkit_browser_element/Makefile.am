@@ -14,11 +14,14 @@
 # limitations under the License.
 
 if GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT
+MOC_FILES		= browser_element_internal.moc
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
 noinst_HEADERS		= browser_element.h
+
+nodist_qtwekit_browser_element = $(MOC_FILES)
 
 extension_LTLIBRARIES	= qtwebkit-browser-element.la
 extensiondir		= $(GGL_MODULE_DIR)
@@ -43,5 +46,9 @@ qtwebkit_browser_element_la_LIBADD = \
 qtwebkit_browser_element_la_LDFLAGS = \
 			  -avoid-version \
 			  -module
+BUILT_SOURCES		= $(MOC_FILES)
+CLEANFILES		= $(MOC_FILES)
 
+browser_element_internal.moc:browser_element_internal.h
+	$(MOC) $< -o $@
 endif

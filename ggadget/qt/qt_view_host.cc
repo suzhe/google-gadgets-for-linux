@@ -148,10 +148,12 @@ class QtViewHost::Impl {
   bool ShowView(bool modal, int flags,
                 Slot1<void, int> *feedback_handler) {
     ASSERT(view_);
+    ASSERT(!widget_);
     if (feedback_handler_ && feedback_handler_ != feedback_handler)
       delete feedback_handler_;
     feedback_handler_ = feedback_handler;
 
+    widget_ = new QGadgetWidget(view_, composite_, decorated_);
     // Initialize window and widget.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS) {
       QVBoxLayout *layout = new QVBoxLayout();
@@ -243,9 +245,6 @@ class QtViewHost::Impl {
   bool record_states_;
   Connection *onoptionchanged_connection_;
 
-  static const unsigned int kShowTooltipDelay = 500;
-  static const unsigned int kHideTooltipDelay = 4000;
-
   Slot1<void, int> *feedback_handler_;
 
   bool composite_;
@@ -305,8 +304,6 @@ void QtViewHost::SetView(ViewInterface *view) {
   impl_->Detach();
   if (view == NULL) return;
   impl_->view_ = view;
-  impl_->widget_ = new QGadgetWidget(view, impl_->composite_,
-                                     impl_->decorated_);
 }
 
 void QtViewHost::ViewCoordToNativeWidgetCoord(
@@ -327,8 +324,8 @@ void QtViewHost::NativeWidgetCoordToViewCoord(
 }
 
 void QtViewHost::QueueDraw() {
-  ASSERT(impl_->widget_);
-  impl_->widget_->update();
+  if (impl_->widget_)
+    impl_->widget_->update();
 }
 
 void QtViewHost::QueueResize() {
@@ -347,9 +344,9 @@ void QtViewHost::SetResizable(ViewInterface::ResizableMode mode) {
 }
 
 void QtViewHost::SetCaption(const char *caption) {
+  impl_->caption_ = QString::fromUtf8(caption);
   if (impl_->window_)
-    impl_->window_->setWindowTitle(caption);
-  impl_->caption_ = caption;
+    impl_->window_->setWindowTitle(impl_->caption_);
 }
 
 void QtViewHost::SetShowCaptionAlways(bool always) {
@@ -370,12 +367,12 @@ bool QtViewHost::ShowView(bool modal, int flags,
 }
 
 void QtViewHost::CloseView() {
-  // DetailsView will be only hiden here since it may be reused later.
-  // window_ will be freed when SetView is called
   if (impl_->window_) {
-    impl_->window_->close();
-    if (impl_->type_ == VIEW_HOST_MAIN) impl_->window_ = NULL;
+    delete impl_->window_;
+    impl_->window_ = NULL;
+    impl_->widget_ = NULL;
   }
+  ASSERT(!impl_->widget_);
 }
 
 bool QtViewHost::ShowContextMenu(int button) {
