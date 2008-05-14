@@ -147,6 +147,11 @@ bool RemoveDirectory(const char *path);
  */
 bool GetSystemLocaleInfo(std::string *language, std::string *territory);
 
+/**
+ * Puts the process into background.
+ */
+void Daemonize();
+
 } // namespace ggadget
 
 #endif // GGADGET_SYSTEM_UTILS_H__

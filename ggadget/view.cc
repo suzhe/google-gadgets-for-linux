@@ -859,7 +859,7 @@ class View::Impl {
     clip_region_.PrintLog();
 #endif
 
-    if (enable_cache_ && !canvas_cache_ && view_host_) {
+    if (enable_cache_ && !canvas_cache_ && graphics_) {
       canvas_cache_ = graphics_->NewCanvas(width_, height_);
       need_redraw_ = true;
     }

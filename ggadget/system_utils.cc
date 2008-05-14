@@ -438,4 +438,11 @@ bool GetSystemLocaleInfo(std::string *language, std::string *territory) {
   return true;
 }
 
+void Daemonize() {
+  // FIXME: How about other systems?
+#ifdef GGL_HOST_LINUX
+  daemon(0, 0);
+#endif
+}
+
 }  // namespace ggadget

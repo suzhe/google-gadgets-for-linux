@@ -238,22 +238,24 @@ class DecoratedViewHost::Impl {
       GetMargins(&left, &right, &top, &bottom);
       GetMinimumClientExtents(&cw, &ch);
 
-      bool result = true;
       cw = std::max(*width - left - right, cw);
       ch = std::max(*height - top - bottom, ch);
       if (IsChildViewVisible()) {
-        result = view_element_->OnSizing(&cw, &ch);
+        view_element_->OnSizing(&cw, &ch);
       } else {
-        result = OnClientSizing(&cw, &ch);
+        OnClientSizing(&cw, &ch);
       }
       cw += (left + right);
       ch += (top + bottom);
 
-      if (*width < cw || !allow_x_margin_)
+      if (!allow_x_margin_)
         *width = cw;
-      if (*height < ch || !allow_y_margin_)
+      if (!allow_y_margin_)
         *height = ch;
-      return result;
+
+      // Always returns true here, SetSize() can handle the case when
+      // view element is OnSizing() returns false.
+      return true;
     }
 
     virtual void SetResizable(ResizableMode resizable) {
@@ -294,7 +296,8 @@ class DecoratedViewHost::Impl {
       if (IsChildViewVisible()) {
         double vw = std::max(width - left - right, cw);
         double vh = std::max(height - top - bottom, ch);
-        view_element_->SetSize(vw, vh);
+        if (view_element_->OnSizing(&vw, &vh))
+          view_element_->SetSize(vw, vh);
 
         cw = std::max(view_element_->GetPixelWidth(), cw);
         ch = std::max(view_element_->GetPixelHeight(), ch);
@@ -480,9 +483,9 @@ class DecoratedViewHost::Impl {
    private:
     // Returns true if the view size was changed.
     bool SetViewSize(double req_w, double req_h, double min_w, double min_h) {
-      if (req_w < min_w || !allow_x_margin_)
+      if (!allow_x_margin_)
         req_w = min_w;
-      if (req_h < min_h || !allow_y_margin_)
+      if (!allow_y_margin_)
         req_h = min_h;
 
       if (req_w != GetWidth() || req_h != GetHeight()) {
@@ -714,12 +717,12 @@ class DecoratedViewHost::Impl {
           priority);
 
         if (owner_->on_undock_signal_.HasActiveConnections() && sidebar_) {
-          menu->AddItem(GM_("MENU_ITEM_UNDOCK"), 0,
+          menu->AddItem(GM_("MENU_ITEM_UNDOCK_FROM_SIDEBAR"), 0,
             NewSlot(this, &NormalMainViewDecorator::UndockMenuCallback),
             priority);
         } else if (owner_->on_dock_signal_.HasActiveConnections() &&
                    !sidebar_) {
-          menu->AddItem(GM_("MENU_ITEM_DOCK"), 0,
+          menu->AddItem(GM_("MENU_ITEM_DOCK_TO_SIDEBAR"), 0,
             NewSlot(this, &NormalMainViewDecorator::DockMenuCallback),
             priority);
         }

@@ -39,6 +39,12 @@ class ViewElement::Impl {
       child_view_(NULL),
       scale_(1),
       no_transparent_(no_transparent),
+      onsizing_called_(false),
+      onsizing_result_(false),
+      onsizing_width_request_(0),
+      onsizing_height_request_(0),
+      onsizing_width_result_(0),
+      onsizing_height_result_(0),
       onsize_connection_(NULL),
       onopen_connection_(NULL) {
   }
@@ -69,6 +75,13 @@ class ViewElement::Impl {
   View *child_view_; // This view is not owned by the element.
   double scale_;
   bool no_transparent_;
+
+  bool onsizing_called_;
+  bool onsizing_result_;
+  double onsizing_width_request_;
+  double onsizing_height_request_;
+  double onsizing_width_result_;
+  double onsizing_height_result_;
 
   Connection *onsize_connection_;
   Connection *onopen_connection_;
@@ -130,6 +143,21 @@ bool ViewElement::OnSizing(double *width, double *height) {
   if (!impl_->child_view_)
     return true;
 
+  if (impl_->onsizing_called_ &&
+      impl_->onsizing_width_request_ == *width &&
+      impl_->onsizing_height_request_ == *height) {
+    DLOG("ViewElement::OnSizing(%.1lf, %.1lf) cached result: %.1lf, %.1lf.",
+         *width, *height, impl_->onsizing_width_result_,
+         impl_->onsizing_height_result_);
+    *width = impl_->onsizing_width_result_;
+    *height = impl_->onsizing_height_result_;
+    return impl_->onsizing_result_;
+  }
+
+  impl_->onsizing_called_ = true;
+  impl_->onsizing_width_request_ = *width;
+  impl_->onsizing_height_request_ = *height;
+
   ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
   double child_width;
   double child_height;
@@ -143,6 +171,9 @@ bool ViewElement::OnSizing(double *width, double *height) {
     bool ret = impl_->child_view_->OnSizing(&child_width, &child_height);
     *width = child_width * impl_->scale_;
     *height = child_height * impl_->scale_;
+    impl_->onsizing_width_result_ = *width;
+    impl_->onsizing_height_result_ = *height;
+    impl_->onsizing_result_ = ret;
     return ret;
   }
 
@@ -168,6 +199,9 @@ bool ViewElement::OnSizing(double *width, double *height) {
     *height = child_height * kMaximumScale;
   }
 
+  impl_->onsizing_width_result_ = *width;
+  impl_->onsizing_height_result_ = *height;
+  impl_->onsizing_result_ = true;
   return true;
 }
 
@@ -202,6 +236,7 @@ void ViewElement::SetSize(double width, double height) {
       SetScale(height / child_height);
   }
 
+  impl_->onsizing_called_ = false;
   QueueDraw();
 }
 

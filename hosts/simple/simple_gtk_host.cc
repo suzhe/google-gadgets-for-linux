@@ -25,6 +25,7 @@
 #include <ggadget/gadget.h>
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget_manager_interface.h>
+#include <ggadget/gtk/menu_builder.h>
 #include <ggadget/gtk/single_view_host.h>
 #include <ggadget/gtk/utilities.h>
 #include <ggadget/locales.h>
@@ -94,36 +95,31 @@ class SimpleGtkHost::Impl {
   }
 
   void SetupUI() {
-    GtkWidget *item;
     host_menu_ = gtk_menu_new();
+    MenuBuilder menu_builder(GTK_MENU_SHELL(host_menu_));
 
-    item = gtk_menu_item_new_with_label("Add gadget...");
-    gtk_widget_show(item);
-    g_signal_connect(G_OBJECT(item), "activate",
-                     G_CALLBACK(AddGadgetHandler), this);
-    gtk_menu_shell_append(GTK_MENU_SHELL(host_menu_), item);
+    menu_builder.AddItem(
+        GM_("MENU_ITEM_ADD_GADGETS"), 0,
+        NewSlot(this, &Impl::AddGadgetMenuCallback),
+        MenuInterface::MENU_ITEM_PRI_HOST);
 
-    item = gtk_menu_item_new_with_label("Show all gadgets");
-    gtk_widget_show(item);
-    g_signal_connect(G_OBJECT(item), "activate",
-                     G_CALLBACK(ShowAllGadgetsHandler), this);
-    gtk_menu_shell_append(GTK_MENU_SHELL(host_menu_), item);
+    menu_builder.AddItem(
+        GM_("MENU_ITEM_SHOW_ALL"), 0,
+        NewSlot(this, &Impl::ShowAllMenuCallback),
+        MenuInterface::MENU_ITEM_PRI_HOST);
 
-    item = gtk_menu_item_new_with_label("Hide all gadgets");
-    gtk_widget_show(item);
-    g_signal_connect(G_OBJECT(item), "activate",
-                     G_CALLBACK(HideAllGadgetsHandler), this);
-    gtk_menu_shell_append(GTK_MENU_SHELL(host_menu_), item);
+    menu_builder.AddItem(
+        GM_("MENU_ITEM_HIDE_ALL"), 0,
+        NewSlot(this, &Impl::HideAllMenuCallback),
+        MenuInterface::MENU_ITEM_PRI_HOST);
 
-    item = gtk_separator_menu_item_new();
-    gtk_widget_show(item);
-    gtk_menu_shell_append(GTK_MENU_SHELL(host_menu_), item);
+    // Separator
+    menu_builder.AddItem(NULL, 0, 0, MenuInterface::MENU_ITEM_PRI_HOST);
 
-    item = gtk_menu_item_new_with_label("Exit");
-    gtk_widget_show(item);
-    g_signal_connect(G_OBJECT(item), "activate",
-                     G_CALLBACK(ExitHandler), this);
-    gtk_menu_shell_append(GTK_MENU_SHELL(host_menu_), item);
+    menu_builder.AddItem(
+        GM_("MENU_ITEM_EXIT"), 0,
+        NewSlot(this, &Impl::ExitMenuCallback),
+        MenuInterface::MENU_ITEM_PRI_HOST);
 
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
     // FIXME:
@@ -136,6 +132,9 @@ class SimpleGtkHost::Impl {
       DLOG("Failed to load Gadgets icon.");
       status_icon_ = gtk_status_icon_new_from_stock(GTK_STOCK_ABOUT);
     }
+
+    gtk_status_icon_set_tooltip(status_icon_, GM_("GOOGLE_GADGETS"));
+
     g_signal_connect(G_OBJECT(status_icon_), "activate",
                      G_CALLBACK(ToggleAllGadgetsHandler), this);
     g_signal_connect(G_OBJECT(status_icon_), "popup-menu",
@@ -143,12 +142,12 @@ class SimpleGtkHost::Impl {
 #else
     GtkWidget *menu_bar = gtk_menu_bar_new();
     gtk_widget_show(menu_bar);
-    item = gtk_menu_item_new_with_label("Gadgets");
+    GtkWidget *item = gtk_menu_item_new_with_label(GM_("GOOGLE_GADGETS"));
     gtk_widget_show(item);
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), host_menu_);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu_bar), item);
     main_widget_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(main_widget_), "Google Gadgets");
+    gtk_window_set_title(GTK_WINDOW(main_widget_), GM_("GOOGLE_GADGETS"));
     gtk_window_set_resizable(GTK_WINDOW(main_widget_), FALSE);
     gtk_container_add(GTK_CONTAINER(main_widget_), menu_bar);
     gtk_widget_show(main_widget_);
@@ -336,45 +335,33 @@ class SimpleGtkHost::Impl {
         NewSlot(this, &Impl::AddGadgetInstanceCallback));
   }
 
-  static void ShowAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    for (GadgetViewHostsMap::iterator it = impl->view_hosts_.begin();
-         it != impl->view_hosts_.end(); ++it) {
+  void ShowAllMenuCallback(const char *) {
+    for (GadgetViewHostsMap::iterator it = view_hosts_.begin();
+         it != view_hosts_.end(); ++it) {
       it->second.main_->ShowView(false, 0, NULL);
     }
-    impl->gadgets_shown_ = true;
+    gadgets_shown_ = true;
   }
 
-  static void HideAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    for (GadgetViewHostsMap::iterator it = impl->view_hosts_.begin();
-         it != impl->view_hosts_.end(); ++it) {
+  void HideAllMenuCallback(const char *) {
+    for (GadgetViewHostsMap::iterator it = view_hosts_.begin();
+         it != view_hosts_.end(); ++it) {
       it->second.main_->CloseView();
     }
-    impl->gadgets_shown_ = false;
+    gadgets_shown_ = false;
   }
 
-  static void ExitHandler(GtkWidget *widget, gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
+  void ExitMenuCallback(const char *) {
     // Close the poppped out view, to make sure that the main view decorator
     // can save its states correctly.
-    if (impl->expanded_popout_)
-      impl->OnPopInHandler(impl->expanded_original_);
+    if (expanded_popout_)
+      OnPopInHandler(expanded_original_);
 
     gtk_main_quit();
   }
 
-  static void AddGadgetHandler(GtkMenuItem *item, gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->gadget_manager_->ShowGadgetBrowserDialog(&impl->gadget_browser_host_);
-  }
-
-  static void ToggleAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->gadgets_shown_)
-      HideAllGadgetsHandler(widget, user_data);
-    else
-      ShowAllGadgetsHandler(widget, user_data);
+  void AddGadgetMenuCallback(const char *) {
+    gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
   void OnCloseHandler(DecoratedViewHost *decorated) {
@@ -664,6 +651,14 @@ class SimpleGtkHost::Impl {
                                      gpointer data) {
     gtk_main_quit();
     return TRUE;
+  }
+
+  static void ToggleAllGadgetsHandler(GtkWidget *widget, gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->gadgets_shown_)
+      impl->HideAllMenuCallback(NULL);
+    else
+      impl->ShowAllMenuCallback(NULL);
   }
 
   typedef std::map<int, GadgetViewHostInfo> GadgetViewHostsMap;
