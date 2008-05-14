@@ -202,9 +202,9 @@ class QtCanvas::Impl {
 
     // Setup align
     Qt::Alignment a;
-    if (align == ALIGN_RIGHT) a = Qt::AlignRight;
-    if (align == ALIGN_LEFT) a = Qt::AlignLeft;
-    if (align == ALIGN_CENTER) a = Qt::AlignHCenter;
+    a = align == ALIGN_RIGHT ? Qt::AlignRight :
+        align == ALIGN_LEFT ? Qt::AlignLeft :
+        Qt::AlignHCenter;
     QTextOption option(a);
     if (text_flags & TEXT_FLAGS_WORDWRAP) {
       option.setWrapMode(QTextOption::WordWrap);

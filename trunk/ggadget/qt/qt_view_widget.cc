@@ -137,7 +137,12 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void QtViewWidget::mousePressEvent(QMouseEvent * event ) {
-  setFocus(Qt::MouseFocusReason);
+  if (!hasFocus()) {
+    setFocus(Qt::MouseFocusReason);
+    SimpleEvent e(Event::EVENT_FOCUS_IN);
+    view_->OnOtherEvent(e);
+  }
+
   mouse_drag_moved_ = false;
   // Remember the position of mouse, it may be used to move the gadget
   mouse_pos_ = QCursor::pos();
@@ -167,7 +172,8 @@ void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   if (handler_result != ggadget::EVENT_RESULT_UNHANDLED)
     event->accept();
 
-  MouseEvent e1(Event::EVENT_MOUSE_CLICK,
+  MouseEvent e1(event->button() == Qt::LeftButton ? Event::EVENT_MOUSE_CLICK :
+                                                    Event::EVENT_MOUSE_RCLICK,
                event->x() / zoom_, event->y() / zoom_, 0, 0, button, 0);
   handler_result = view_->OnMouseEvent(e1);
 
