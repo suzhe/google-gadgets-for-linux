@@ -217,7 +217,6 @@ class View::Impl {
     }
 
     if (view_host_) {
-      view_host_->CloseView();
       view_host_->SetView(NULL);
       view_host_->Destroy();
       view_host_ = NULL;
@@ -406,6 +405,13 @@ class View::Impl {
         SetPopupElement(NULL);
       }
     }
+
+    // If the mouse pointer moves out of the view after calling children's
+    // mouse event handler, then just return the result without handling the
+    // mouse over/out things.
+    if (!mouse_over_)
+      return result;
+
     fired_element_holder.Reset(fired_element);
     in_element_holder.Reset(in_element);
 
@@ -598,7 +604,7 @@ class View::Impl {
       }
     }
 
-    if (result == EVENT_RESULT_UNHANDLED &&
+    if (mouse_over_ && result == EVENT_RESULT_UNHANDLED &&
         event.GetType() == Event::EVENT_MOUSE_RCLICK &&
         event.GetButton() == MouseEvent::BUTTON_RIGHT) {
       // Handle ShowContextMenu event.

@@ -102,10 +102,13 @@ class DecoratedViewHost::Impl {
         child_view_ = child_view;
         view_element_->SetChildView(child_view);
 
-        if (child_view_)
+        if (child_view_) {
           child_resizable_ = child_view_->GetResizable();
 
-        RestoreViewStates();
+          // Only restore view states if the view has been initialized.
+          if (child_view_->GetWidth() > 0 && child_view_->GetHeight() > 0)
+            RestoreViewStates();
+        }
         ChildViewChanged();
       }
     }
@@ -372,8 +375,8 @@ class DecoratedViewHost::Impl {
     virtual void SaveViewStates() {
       if (!auto_restore_view_size_)
         return;
-
-      Gadget *gadget = GetGadget();
+      View *child = GetChildView();
+      Gadget *gadget = child ? child->GetGadget() : NULL;
       if (gadget) {
         OptionsInterface *opt = gadget->GetOptions();
         ViewElement *elm = GetViewElement();
@@ -396,7 +399,8 @@ class DecoratedViewHost::Impl {
         return;
       }
 
-      Gadget *gadget = GetGadget();
+      View *child = GetChildView();
+      Gadget *gadget = child ? child->GetGadget() : NULL;
       // Only load view states when the original size has been saved.
       if (gadget) {
         OptionsInterface *opt = gadget->GetOptions();
@@ -542,7 +546,7 @@ class DecoratedViewHost::Impl {
         minimized_(false),
         popped_out_(false),
         mouseover_(false),
-        load_minimized_state_(false),
+        minimized_state_loaded_(false),
         update_visibility_timer_(0),
         background_(NULL),
         bottom_(NULL),
@@ -788,12 +792,6 @@ class DecoratedViewHost::Impl {
     }
 
    public:
-    virtual bool ShowDecoratedView(bool modal, int flags,
-                                   Slot1<void, int> *handler) {
-      load_minimized_state_ = true;
-      return ViewDecoratorBase::ShowDecoratedView(modal, flags, handler);
-    }
-
     virtual void CloseDecoratedView() {
       if (popped_out_)
         owner_->on_popin_signal_();
@@ -801,8 +799,10 @@ class DecoratedViewHost::Impl {
     }
 
     virtual void SetDockEdge(bool right) {
-      dock_right_ = right;
-      UpdateToggleExpandedButton();
+      if (dock_right_ != right) {
+        dock_right_ = right;
+        UpdateToggleExpandedButton();
+      }
     }
 
     virtual bool IsMinimized() {
@@ -829,14 +829,14 @@ class DecoratedViewHost::Impl {
       ViewDecoratorBase::RestoreViewStates();
       Gadget *gadget = GetGadget();
       // Only load view states when the original size has been saved.
-      if (gadget && load_minimized_state_) {
+      if (gadget && !minimized_state_loaded_) {
         OptionsInterface *opt = gadget->GetOptions();
         Variant vm = opt->GetInternalValue("main_view_minimized");
         if (vm.type() == Variant::TYPE_BOOL &&
            minimized_ != VariantValue<bool>()(vm)) {
           CollapseExpandMenuCallback(NULL);
         }
-        load_minimized_state_ = false;
+        minimized_state_loaded_ = true;
       }
     }
 
@@ -1203,7 +1203,7 @@ class DecoratedViewHost::Impl {
     bool minimized_;
     bool popped_out_;
     bool mouseover_;
-    bool load_minimized_state_;
+    bool minimized_state_loaded_;
 
     int update_visibility_timer_;
 
@@ -1598,6 +1598,11 @@ class DecoratedViewHost::Impl {
       double height = GetHeight();
       double caption_width, caption_height;
       double top_height;
+
+      close_button_->Layout();
+      close_button_->SetPixelX(width - close_button_->GetPixelWidth() -
+                               kVDDetailsBorderWidth);
+
       caption_width = close_button_->GetPixelX() - caption_->GetPixelX() -
                       kVDDetailsCaptionMargin;
 
@@ -1622,9 +1627,6 @@ class DecoratedViewHost::Impl {
       background_->SetPixelY(top_height);
       background_->SetPixelHeight(height - top_height -
                                   (bottom_ ? bottom_->GetPixelHeight() : 0));
-      close_button_->Layout();
-      close_button_->SetPixelX(width - close_button_->GetPixelWidth() -
-                               kVDDetailsBorderWidth);
       if (remove_button_) {
         remove_button_->Layout();
         width -= (kVDDetailsBorderWidth + remove_button_->GetPixelWidth());
