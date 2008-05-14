@@ -85,7 +85,7 @@ class QtViewHostObject : public QObject {
  public slots:
   void OnOptionViewOK();
   void OnOptionViewCancel();
-  void OnDetailsViewClose();
+  void OnViewWidgetClose(QObject*);
   void OnShow(bool);
 
  private:
