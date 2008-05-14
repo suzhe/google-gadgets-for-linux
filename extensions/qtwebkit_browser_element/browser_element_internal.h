@@ -149,7 +149,7 @@ class BrowserElement::Impl {
 
   void Layout() {
     if (!parent_) {
-      parent_ = static_cast<QGadgetWidget*>(
+      parent_ = static_cast<QtViewWidget*>(
           owner_->GetView()->GetNativeWidget()
           );
       if (!parent_) return;
@@ -181,7 +181,7 @@ class BrowserElement::Impl {
 
  public:
   BrowserElement *owner_;
-  QGadgetWidget *parent_;
+  QtViewWidget *parent_;
   QWebView *child_;
   std::string content_type_;
   std::string content_;

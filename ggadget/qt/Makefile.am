@@ -21,7 +21,6 @@ SUBDIRS = . tests
 
 MOC_FILES		= qt_main_loop.moc \
 			  qt_menu_internal.moc \
-			  qt_gadget_widget.moc \
 			  qt_view_host.moc
 
 INCLUDES		= -I$(top_builddir) \
@@ -35,7 +34,7 @@ noinst_HEADERS		= qt_canvas.h \
 			  qt_menu_internal.h
 
 qtincludedir		= $(GGL_INCLUDE_DIR)/ggadget/qt
-qtinclude_HEADERS	= qt_gadget_widget.h \
+qtinclude_HEADERS	= qt_view_widget.h \
 			  qt_graphics.h \
 			  qt_main_loop.h \
 			  qt_menu.h \
@@ -44,7 +43,7 @@ qtinclude_HEADERS	= qt_gadget_widget.h \
 
 libggadget_qt@GGL_EPOCH@_la_SOURCES = \
 			  qt_menu.cc \
-			  qt_gadget_widget.cc \
+			  qt_view_widget.cc \
 			  qt_view_host.cc \
 			  qt_canvas.cc \
 			  qt_image.cc \
@@ -81,8 +80,6 @@ CLEANFILES		= $(MOC_FILES)
 qt_main_loop.moc:qt_main_loop.h
 	$(MOC) $< -o $@
 qt_menu_internal.moc:qt_menu_internal.h
-	$(MOC) $< -o $@
-qt_gadget_widget.moc:qt_gadget_widget.h
 	$(MOC) $< -o $@
 qt_view_host.moc:qt_view_host.h
 	$(MOC) $< -o $@

@@ -22,7 +22,7 @@
 #include <ggadget/qt/qt_canvas.h>
 #include <ggadget/qt/utilities.h>
 #include <ggadget/qt/qt_menu.h>
-#include "qt_gadget_widget.h"
+#include "qt_view_widget.h"
 
 #ifdef GGL_USE_X11
 #include <QtGui/QX11Info>
@@ -35,7 +35,7 @@
 namespace ggadget {
 namespace qt {
 
-QGadgetWidget::QGadgetWidget(ViewInterface *view,
+QtViewWidget::QtViewWidget(ViewInterface *view,
                              bool composite,
                              bool decorated)
      : view_(view),
@@ -54,14 +54,14 @@ QGadgetWidget::QGadgetWidget(ViewInterface *view,
   setAttribute(Qt::WA_InputMethodEnabled);
 }
 
-QGadgetWidget::~QGadgetWidget() {
+QtViewWidget::~QtViewWidget() {
   LOG("Widget freed");
   if (child_) {
     child_->setParent(NULL);
   }
 }
 
-void QGadgetWidget::paintEvent(QPaintEvent *event) {
+void QtViewWidget::paintEvent(QPaintEvent *event) {
   zoom_ = view_->GetGraphics()->GetZoom();
   int int_width = D2I(view_->GetWidth() * zoom_);
   int int_height = D2I(view_->GetHeight() * zoom_);
@@ -105,10 +105,10 @@ void QGadgetWidget::paintEvent(QPaintEvent *event) {
   p.drawPixmap(0, 0, offscreen_pixmap_);
 }
 
-void QGadgetWidget::mouseDoubleClickEvent(QMouseEvent * event) {
+void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
 }
 
-void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
+void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
   int buttons = GetMouseButtons(event->buttons());
   if (buttons != MouseEvent::BUTTON_NONE)
     grabMouse();
@@ -136,7 +136,7 @@ void QGadgetWidget::mouseMoveEvent(QMouseEvent* event) {
   }
 }
 
-void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
+void QtViewWidget::mousePressEvent(QMouseEvent * event ) {
   setFocus(Qt::MouseFocusReason);
   mouse_drag_moved_ = false;
   // Remember the position of mouse, it may be used to move the gadget
@@ -153,7 +153,7 @@ void QGadgetWidget::mousePressEvent(QMouseEvent * event ) {
   }
 }
 
-void QGadgetWidget::mouseReleaseEvent(QMouseEvent * event ) {
+void QtViewWidget::mouseReleaseEvent(QMouseEvent * event ) {
   releaseMouse();
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   int button = GetMouseButton(event->button());
@@ -175,7 +175,7 @@ void QGadgetWidget::mouseReleaseEvent(QMouseEvent * event ) {
     event->accept();
 }
 
-void QGadgetWidget::enterEvent(QEvent *event) {
+void QtViewWidget::enterEvent(QEvent *event) {
   MouseEvent e(Event::EVENT_MOUSE_OVER,
       0, 0, 0, 0,
       MouseEvent::BUTTON_NONE, 0);
@@ -183,7 +183,7 @@ void QGadgetWidget::enterEvent(QEvent *event) {
     event->accept();
 }
 
-void QGadgetWidget::leaveEvent(QEvent *event) {
+void QtViewWidget::leaveEvent(QEvent *event) {
   MouseEvent e(Event::EVENT_MOUSE_OUT,
                0, 0, 0, 0,
                MouseEvent::BUTTON_NONE, 0);
@@ -191,7 +191,7 @@ void QGadgetWidget::leaveEvent(QEvent *event) {
     event->accept();
 }
 
-void QGadgetWidget::wheelEvent(QWheelEvent * event) {
+void QtViewWidget::wheelEvent(QWheelEvent * event) {
   int delta_x = 0, delta_y = 0;
   if (event->orientation() == Qt::Horizontal) {
     delta_x = -event->delta();
@@ -208,7 +208,7 @@ void QGadgetWidget::wheelEvent(QWheelEvent * event) {
     event->accept();
 }
 
-void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
+void QtViewWidget::keyPressEvent(QKeyEvent *event) {
   // For key down event
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
   // For key press event
@@ -236,7 +236,7 @@ void QGadgetWidget::keyPressEvent(QKeyEvent *event) {
     event->accept();
 }
 
-void QGadgetWidget::keyReleaseEvent(QKeyEvent *event) {
+void QtViewWidget::keyReleaseEvent(QKeyEvent *event) {
   EventResult handler_result = ggadget::EVENT_RESULT_UNHANDLED;
 
   int mod = GetModifiers(event->modifiers());
@@ -252,7 +252,7 @@ void QGadgetWidget::keyReleaseEvent(QKeyEvent *event) {
     event->accept();
 }
 
-void QGadgetWidget::dragEnterEvent(QDragEnterEvent *event) {
+void QtViewWidget::dragEnterEvent(QDragEnterEvent *event) {
   LOG("drag enter");
   if (event->mimeData()->hasUrls()) {
     drag_urls_.clear();
@@ -272,13 +272,13 @@ void QGadgetWidget::dragEnterEvent(QDragEnterEvent *event) {
   }
 }
 
-void QGadgetWidget::dragLeaveEvent(QDragLeaveEvent *event) {
+void QtViewWidget::dragLeaveEvent(QDragLeaveEvent *event) {
   LOG("drag leave");
   DragEvent drag_event(Event::EVENT_DRAG_OUT, 0, 0, drag_files_);
   view_->OnDragEvent(drag_event);
 }
 
-void QGadgetWidget::dragMoveEvent(QDragMoveEvent *event) {
+void QtViewWidget::dragMoveEvent(QDragMoveEvent *event) {
   DragEvent drag_event(Event::EVENT_DRAG_MOTION,
                        event->pos().x(), event->pos().y(),
                        drag_files_);
@@ -288,7 +288,7 @@ void QGadgetWidget::dragMoveEvent(QDragMoveEvent *event) {
     event->ignore();
 }
 
-void QGadgetWidget::dropEvent(QDropEvent *event) {
+void QtViewWidget::dropEvent(QDropEvent *event) {
   LOG("drag drop");
   DragEvent drag_event(Event::EVENT_DRAG_DROP,
                        event->pos().x(), event->pos().y(),
@@ -299,7 +299,7 @@ void QGadgetWidget::dropEvent(QDropEvent *event) {
 }
 
 #if 0
-void QGadgetWidget::resizeEvent(QResizeEvent *event) {
+void QtViewWidget::resizeEvent(QResizeEvent *event) {
   ViewInterface::ResizableMode mode = view_->GetResizable();
   if (mode == ViewInterface::RESIZABLE_ZOOM) {
     double x_ratio =
@@ -328,14 +328,14 @@ void QGadgetWidget::resizeEvent(QResizeEvent *event) {
 }
 #endif
 
-void QGadgetWidget::EnableInputShapeMask(bool enable) {
+void QtViewWidget::EnableInputShapeMask(bool enable) {
   if (enable_input_mask_ != enable) {
     enable_input_mask_ = enable;
     if (!enable) SetInputMask(NULL);
   }
 }
 
-void QGadgetWidget::SetInputMask(QPixmap *pixmap) {
+void QtViewWidget::SetInputMask(QPixmap *pixmap) {
 #ifdef GGL_USE_X11
   if (!pixmap) {
     XShapeCombineMask(QX11Info::display(),
@@ -356,7 +356,7 @@ void QGadgetWidget::SetInputMask(QPixmap *pixmap) {
 #endif
 }
 
-void QGadgetWidget::SkipTaskBar() {
+void QtViewWidget::SkipTaskBar() {
 #ifdef GGL_USE_X11
   Display *dpy = QX11Info::display();
   Atom net_wm_state_skip_taskbar=XInternAtom(dpy, "_NET_WM_STATE_SKIP_TASKBAR",
@@ -368,18 +368,17 @@ void QGadgetWidget::SkipTaskBar() {
 #endif
 }
 
-void QGadgetWidget::SetSize(int width, int height) {
+void QtViewWidget::SetSize(int width, int height) {
   setFixedSize(width, height);
   setMinimumSize(0, 0);
   setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
 }
 
-void QGadgetWidget::SetChild(QWidget *widget) {
+void QtViewWidget::SetChild(QWidget *widget) {
   child_ = widget;
   widget->setParent(this);
   // this will expose parent widget so its paintEvent will be triggered.
   widget->move(0, 10);
 }
-#include "qt_gadget_widget.moc"
 }
 }
