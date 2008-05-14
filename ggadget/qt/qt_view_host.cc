@@ -204,6 +204,19 @@ class QtViewHost::Impl {
     return true;
   }
 
+  bool ShowContextMenu(int button) {
+    ASSERT(view_);
+    context_menu_.clear();
+    QtMenu qt_menu(&context_menu_);
+    view_->OnAddContextMenuItems(&qt_menu);
+    if (!context_menu_.isEmpty()) {
+      context_menu_.popup(QCursor::pos());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   void HandleOptionViewResponse(ViewInterface::OptionsViewFlags flag) {
     if (feedback_handler_) {
       (*feedback_handler_)(flag);
@@ -250,6 +263,7 @@ class QtViewHost::Impl {
   bool input_shape_mask_;
   QtViewHostObject *qt_obj_;    // used for handling qt signal
   QString caption_;
+  QMenu context_menu_;
 };
 
 void QtViewHostObject::OnOptionViewOK() {
@@ -378,16 +392,7 @@ void QtViewHost::CloseView() {
 }
 
 bool QtViewHost::ShowContextMenu(int button) {
-  ASSERT(impl_->view_);
-  QMenu menu;
-  QtMenu qt_menu(&menu);
-  impl_->view_->OnAddContextMenuItems(&qt_menu);
-  if (!menu.isEmpty()) {
-    menu.exec(QCursor::pos());
-    return true;
-  } else {
-    return false;
-  }
+  return impl_->ShowContextMenu(button);
 }
 
 void QtViewHost::BeginMoveDrag(int button) {

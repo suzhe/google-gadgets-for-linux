@@ -64,6 +64,9 @@ class QtHost::Impl {
   }
 
   ~Impl() {
+    for (GadgetsMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it)
+      delete it->second;
     delete obj_;
   }
 
@@ -93,6 +96,8 @@ class QtHost::Impl {
         NewSlot(this, &Impl::AddGadgetInstanceCallback));
     gadget_manager_->ConnectOnNewGadgetInstance(
         NewSlot(this, &Impl::NewGadgetInstanceCallback));
+    gadget_manager_->ConnectOnRemoveGadgetInstance(
+        NewSlot(this, &Impl::RemoveGadgetInstanceCallback));
   }
 
   bool ConfirmGadget(int id) {
@@ -157,6 +162,11 @@ class QtHost::Impl {
 
   bool LoadGadget(const char *path, const char *options_name,
                   int instance_id) {
+    if (gadgets_.find(instance_id) != gadgets_.end()) {
+      // Gadget is already loaded.
+      return true;
+    }
+
     Gadget *gadget =
         new Gadget(host_, path, options_name, instance_id,
                    gadget_manager_->IsGadgetInstanceTrusted(instance_id));
@@ -172,6 +182,7 @@ class QtHost::Impl {
       delete gadget;
       return false;
     }
+    gadgets_[instance_id] = gadget;
     return true;
   }
 
@@ -208,9 +219,18 @@ class QtHost::Impl {
     if (main_view->GetViewHost() == expanded_popout_) {
       OnPopInHandler(expanded_original_);
     }
-    int instance_id = gadget->GetInstanceID();
-    delete gadget;
-    gadget_manager_->RemoveGadgetInstance(instance_id);
+    gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
+  }
+
+  void RemoveGadgetInstanceCallback(int instance_id) {
+    GadgetsMap::iterator it = gadgets_.find(instance_id);
+
+    if (it != gadgets_.end()) {
+      delete it->second;
+      gadgets_.erase(it);
+    } else {
+      LOG("Can't find gadget instance %d", instance_id);
+    }
   }
 
   void OnCloseHandler(DecoratedViewHost *decorated) {
@@ -293,6 +313,9 @@ class QtHost::Impl {
   QMenu menu_;
   QSystemTrayIcon tray_;
   QtHostObject *obj_;        // provides slots for qt
+
+  typedef std::map<int, Gadget *> GadgetsMap;
+  GadgetsMap gadgets_;
 };
 
 QtHost::QtHost(int view_debug_mode)
