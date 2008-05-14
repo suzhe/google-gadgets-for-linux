@@ -19,7 +19,8 @@ MOC_FILES		= browser_element_internal.moc
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
-noinst_HEADERS		= browser_element.h
+noinst_HEADERS		= browser_element.h \
+			  browser_element_internal.h
 
 nodist_qtwekit_browser_element = $(MOC_FILES)
 

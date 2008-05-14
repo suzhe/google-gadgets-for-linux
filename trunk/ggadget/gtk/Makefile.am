@@ -61,7 +61,8 @@ libggadget_gtk@GGL_EPOCH@_la_SOURCES = \
 			  $(RSVG_IMAGE_CC)
 
 libggadget_gtk@GGL_EPOCH@_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS)
+			  $(DEFAULT_COMPILE_FLAGS) \
+			  -fno-strict-aliasing
 
 libggadget_gtk@GGL_EPOCH@_la_CPPFLAGS = \
 			  @GTK2_CFLAGS@ \

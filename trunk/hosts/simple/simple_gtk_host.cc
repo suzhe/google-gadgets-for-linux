@@ -57,6 +57,7 @@ class SimpleGtkHost::Impl {
     SingleViewHost *main_;
     SingleViewHost *popout_;
     SingleViewHost *details_;
+    DecoratedViewHost *main_decorator_;
 
     bool popout_on_right_;
     bool details_on_right_;
@@ -255,6 +256,7 @@ class SimpleGtkHost::Impl {
       GadgetViewHostInfo *info = &view_hosts_[gadget_id];
       ASSERT(!info->main_);
       info->main_ = svh;
+      info->main_decorator_ = dvh;
 
       svh->ConnectOnShowHide(
           NewSlot(this, &Impl::OnMainViewShowHideHandler, gadget_id));
@@ -448,6 +450,7 @@ class SimpleGtkHost::Impl {
       ViewInterface *child = expanded_popout_->GetView();
       ASSERT(child);
       if (child) {
+        expanded_popout_->CloseView();
         ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
         SimpleEvent event(Event::EVENT_POPIN);
         expanded_original_->GetDecoratedView()->OnOtherEvent(event);
@@ -464,7 +467,7 @@ class SimpleGtkHost::Impl {
   }
 
   void AdjustViewHostPosition(GadgetViewHostInfo *info) {
-    ASSERT(info && info->main_);
+    ASSERT(info && info->main_ && info->main_decorator_);
     int x, y;
     int width, height;
     info->main_->GetWindowPosition(&x, &y);
@@ -473,6 +476,8 @@ class SimpleGtkHost::Impl {
         gtk_widget_get_screen(info->main_->GetWindow()));
     int screen_height = gdk_screen_get_height(
         gtk_widget_get_screen(info->main_->GetWindow()));
+
+    bool main_dock_right = (x > width);
 
     if (info->popout_ && info->popout_->IsVisible()) {
       int popout_width, popout_height;
@@ -495,6 +500,8 @@ class SimpleGtkHost::Impl {
         x -= popout_width;
         width += popout_width;
       }
+
+      main_dock_right = !info->popout_on_right_;
     }
 
     if (info->details_ && info->details_->IsVisible()) {
@@ -516,6 +523,8 @@ class SimpleGtkHost::Impl {
         info->details_->SetWindowPosition(x - details_width, y);
       }
     }
+
+    info->main_decorator_->SetDockEdge(main_dock_right);
   }
 
   void OnMainViewShowHideHandler(bool show, int gadget_id) {

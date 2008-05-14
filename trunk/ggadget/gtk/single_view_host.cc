@@ -82,9 +82,6 @@ class SingleViewHost::Impl {
   }
 
   void Detach() {
-    if (window_)
-      CloseView();
-
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
 
@@ -395,10 +392,6 @@ class SingleViewHost::Impl {
                             Variant(win_y_));
       opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
                             Variant(is_keep_above_));
-
-      DLOG("SaveWindowStates(%d): x:%d y:%d keep_above:%d",
-           view_->GetGadget()->GetInstanceID(),
-           win_x_, win_y_, is_keep_above_);
     }
     // Don't save size and zoom information, it's conflict with view
     // decorator.
@@ -599,7 +592,10 @@ class SingleViewHost::Impl {
     DLOG("WindowStateHandler(%p): 0x%x, 0x%x", widget,
          event->changed_mask, event->new_window_state);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
+    bool old_value = impl->is_keep_above_;
     impl->is_keep_above_ = (event->new_window_state & GDK_WINDOW_STATE_ABOVE);
+    if (impl->record_states_ && old_value != impl->is_keep_above_)
+      impl->SaveWindowStates();
     return FALSE;
   }
 
@@ -616,8 +612,6 @@ class SingleViewHost::Impl {
     if (impl->view_ && impl->enable_signals_) {
       impl->on_show_hide_signal_(false);
 
-      if (impl->record_states_)
-        impl->SaveWindowStates();
       if (impl->feedback_handler_ &&
           impl->type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
         (*impl->feedback_handler_)(ViewInterface::DETAILS_VIEW_FLAG_NONE);
@@ -634,17 +628,23 @@ class SingleViewHost::Impl {
                                    gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->enable_signals_) {
+      bool states_changed = false;
       if (impl->win_x_ != event->x || impl->win_y_ != event->y) {
         impl->win_x_ = event->x;
         impl->win_y_ = event->y;
         impl->on_moved_signal_(event->x, event->y);
+        states_changed = true;
       }
       if (impl->win_width_ != event->width ||
           impl->win_height_ != event->height) {
         impl->win_width_ = event->width;
         impl->win_height_ = event->height;
         impl->on_resized_signal_(event->width, event->height);
+        states_changed = true;
       }
+
+      if (states_changed && impl->record_states_)
+        impl->SaveWindowStates();
     }
     return FALSE;
   }
