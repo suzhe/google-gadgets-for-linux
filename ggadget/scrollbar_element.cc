@@ -444,7 +444,11 @@ int ScrollBarElement::GetPageStep() const {
 }
 
 void ScrollBarElement::SetPageStep(int value) {
-  impl_->pagestep_ = value;
+  if (impl_->pagestep_ != value) {
+    // Changing page step may change the size of thumb, so must QueueDraw(). 
+    impl_->pagestep_ = value;
+    QueueDraw();
+  }
 }
 
 int ScrollBarElement::GetLineStep() const {
@@ -452,6 +456,7 @@ int ScrollBarElement::GetLineStep() const {
 }
 
 void ScrollBarElement::SetLineStep(int value) {
+  // Changing line step doesn't change visual effect, so no QueueDraw(). 
   impl_->linestep_ = value;
 }
 

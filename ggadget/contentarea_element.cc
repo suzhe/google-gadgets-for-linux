@@ -853,16 +853,16 @@ void ContentAreaElement::Layout() {
   ScrollingElement::Layout();
   impl_->Layout();
 
+  // Set reasonable scrolling step length.
+  SetYPageStep(static_cast<int>(round(GetClientHeight())));
+  SetYLineStep(impl_->scrolling_line_step_);
+
   int y_range = static_cast<int>(ceil(impl_->content_height_ -
                                       GetClientHeight()));
   if (y_range < 0) y_range = 0;
   if (UpdateScrollBar(0, y_range)) {
     // Layout again to reflect change of the scroll bar.
     Layout();
-  } else {
-    // Set reasonable scrolling step length.
-    SetYPageStep(static_cast<int>(round(GetClientHeight())));
-    SetYLineStep(impl_->scrolling_line_step_);
   }
 
   --recurse_depth;

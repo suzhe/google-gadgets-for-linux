@@ -79,14 +79,13 @@ void GtkEditElement::Layout() {
   impl_->SetHeight(static_cast<int>(ceil(GetClientHeight())));
   impl_->GetScrollBarInfo(&range, &line_step, &page_step, &cur_pos);
 
-  // If the scrollbar display state was changed, then call Layout() recursively
-  // to redo Layout.
+  SetScrollYPosition(cur_pos);
+  SetYLineStep(line_step);
+  SetYPageStep(page_step);
   if (UpdateScrollBar(0, range)) {
+    // If the scrollbar display state was changed, then call Layout()
+    // recursively to redo Layout.
     Layout();
-  } else {
-    SetScrollYPosition(cur_pos);
-    SetYLineStep(line_step);
-    SetYPageStep(page_step);
   }
 }
 
