@@ -401,6 +401,19 @@ class SingleViewHost::Impl {
     if (view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
+
+      // Restore keep above state first, otherwise it might be affect the
+      // restoring of window position.
+      Variant keep_above =
+          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
+      if (keep_above.type() == Variant::TYPE_BOOL &&
+          VariantValue<bool>()(keep_above)) {
+        SetKeepAbove(true);
+      } else {
+        SetKeepAbove(false);
+      }
+
+      // Restore window position.
       Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
       Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
       int x, y;
@@ -410,14 +423,6 @@ class SingleViewHost::Impl {
         // Always place the window to the center of the screen if the window
         // position was not saved before.
         gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
-      }
-      Variant keep_above =
-          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
-      if (keep_above.type() == Variant::TYPE_BOOL &&
-          VariantValue<bool>()(keep_above)) {
-        SetKeepAbove(true);
-      } else {
-        SetKeepAbove(false);
       }
     }
     // Don't load size and zoom information, it's conflict with view

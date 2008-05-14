@@ -33,6 +33,7 @@
 #include "scriptable_binary_data.h"
 #include "view_element.h"
 #include "view.h"
+#include "messages.h"
 
 namespace ggadget {
 
@@ -375,6 +376,7 @@ class SideBar::Impl : public View {
     button_array_[0]->SetDownImage(Variant(kSBButtonAddDown));
     button_array_[0]->SetOverImage(Variant(kSBButtonAddOver));
     button_array_[0]->SetPixelY(kBoderWidth + (kIconHeight - kButtonWidth) / 2);
+    button_array_[0]->SetTooltip(GM_("ADD_GADGETS_TOOLTIP"));
     GetChildren()->InsertElement(button_array_[0], NULL);
 
     button_array_[1] = new ButtonElement(NULL, this, NULL);

@@ -140,7 +140,8 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         display_target_(TARGET_FLOATING_VIEW),
         xml_http_request_session_(GetXMLHttpRequestFactory()->CreateSession()),
         trusted_(trusted),
-        in_user_interaction_(false) {
+        in_user_interaction_(false),
+        remove_me_timer_(0) {
     // Checks if necessary objects are created successfully.
     ASSERT(host_);
     ASSERT(element_factory_);
@@ -407,8 +408,29 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     global_.SetInheritsFrom(&framework_);
   }
 
+  class RemoveMeWatchCallback : public WatchCallbackInterface {
+   public:
+    RemoveMeWatchCallback(HostInterface *host, Gadget *owner, bool save_data)
+      : host_(host), owner_(owner), save_data_(save_data) {
+    }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      host_->RemoveGadget(owner_, save_data_);
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+   private:
+    HostInterface *host_;
+    Gadget *owner_;
+    bool save_data_;
+  };
+
   void RemoveMe(bool save_data) {
-    host_->RemoveGadget(owner_, save_data);
+    if (!remove_me_timer_) {
+      remove_me_timer_ = GetGlobalMainLoop()->AddTimeoutWatch(
+          0, new RemoveMeWatchCallback(host_, owner_, save_data));
+    }
   }
 
   void AboutMenuCallback(const char *) {
@@ -846,6 +868,7 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   int xml_http_request_session_;
   bool trusted_;
   bool in_user_interaction_;
+  int remove_me_timer_;
 };
 
 Gadget::Gadget(HostInterface *host,
