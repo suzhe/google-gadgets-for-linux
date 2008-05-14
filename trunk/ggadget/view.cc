@@ -856,7 +856,7 @@ class View::Impl {
       SetPopupElement(NULL);
 
 #if defined(_DEBUG) && defined(VIEW_VERBOSE_DEBUG)
-    //clip_region_.PrintLog();
+    clip_region_.PrintLog();
 #endif
 
     if (enable_cache_ && !canvas_cache_ && view_host_) {

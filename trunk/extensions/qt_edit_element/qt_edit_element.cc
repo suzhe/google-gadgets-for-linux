@@ -134,14 +134,13 @@ void QtEditElement::Layout() {
 
   int x_range, y_range, line_step, page_step, cur_pos;
   GetScrollBarInfo(&x_range, &y_range, &line_step, &page_step, &cur_pos);
-  // If the scrollbar display state was changed, then call Layout() recursively
-  // to redo Layout.
+  SetScrollYPosition(cur_pos);
+  SetYLineStep(line_step);
+  SetYPageStep(page_step);
   if (UpdateScrollBar(x_range, y_range)) {
+    // If the scrollbar display state was changed, then call Layout()
+    // recursively to redo Layout.
     Layout();
-  } else {
-    SetScrollYPosition(cur_pos);
-    SetYLineStep(line_step);
-    SetYPageStep(page_step);
   }
 }
 

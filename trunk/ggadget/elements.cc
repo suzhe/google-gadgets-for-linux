@@ -465,8 +465,11 @@ BasicElement *Elements::InsertElementFromXML(const std::string &xml,
     if (!xml_element) {
       LOG("No root element in xml definition: %s", xml.c_str());
     } else {
-     result = InsertElementFromDOM(this, impl_->view_->GetScriptContext(),
-                                   xml_element, before, "");
+      // Disable events during parsing XML into Elements.
+      impl_->view_->EnableEvents(false);
+      result = InsertElementFromDOM(this, impl_->view_->GetScriptContext(),
+                                    xml_element, before, "");
+      impl_->view_->EnableEvents(true);
     }
   }
   xmldoc->Unref();
