@@ -134,8 +134,8 @@ class MainLoop::Impl {
     node->callback = callback;
     node->impl = this;
     node->watch_id = (interval <= 1 ?
-                      g_idle_add(TimeoutCallback, node) :
-                      g_timeout_add(interval, TimeoutCallback, node));
+         g_idle_add_full(G_PRIORITY_HIGH_IDLE, TimeoutCallback, node, NULL) :
+         g_timeout_add(interval, TimeoutCallback, node));
     g_hash_table_insert(watches_, GINT_TO_POINTER(node->watch_id), node);
     WakeUp();
     g_static_mutex_unlock(&mutex_);
