@@ -32,7 +32,7 @@ gpg2 --export -a your_key_id
 
 Then please post your key to our mailing list.
 After examining the ownership of the key,
-we'll add the key to the [gpg_public_keys members' public keys] page.
+we'll add the key to the [GPGPublicKeys members' public keys] page.
 
 = Note =
 
