@@ -124,7 +124,6 @@ class ProgressBarElement::Impl {
 
     if (value != value_) {
       value_ = value;
-      DLOG("progress value: %d", value_);
       owner_->QueueDraw();
       SimpleEvent event(Event::EVENT_CHANGE);
       ScriptableEvent s_event(&event, owner_, NULL);
