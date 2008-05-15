@@ -1,0 +1,30 @@
+#summary TODO List
+#labels Phase-Requirements
+
+= Introduction =
+
+This page is dedicated to collect future plans and action items of this project. All items listed below are proposals. If we decide to implement any of them, a corresponding issue entry shall be created to track the development progress.
+
+= Details =
+
+The TODO List contains several different categories. Each item belongs to one specific category and has a priority value assigned. The priority value ranges from 1 to 5, the smaller the higher.
+
+== Code and Design ==
+
+Action items for code optimization, cleanup and refactory.
+
+== New Features in Gadget API level ==
+
+New features that need to be implemented to support additional Gadget APIs
+
+== New extensions ==
+
+== Porting / Platform integration ==
+
+== Security related ==
+
+Features related to security.
+
+== Packaging ==
+
+== Documentation ==
