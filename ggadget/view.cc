@@ -78,17 +78,21 @@ class View::Impl {
     TimerWatchCallback(Impl *impl, Slot *slot, int start, int end,
                        int duration, uint64_t start_time,
                        bool is_event)
-      : impl_(impl), slot_(slot), start_(start), end_(end),
+      : event_(0, 0), scriptable_event_(&event_, NULL, NULL),
+        impl_(impl), slot_(slot), start_(start), end_(end),
         duration_(duration), start_time_(start_time), last_finished_time_(0),
-        last_value_(start), watch_id_(0),
-        is_event_(is_event), destroy_connection_(NULL) {
+        last_value_(start), is_event_(is_event), destroy_connection_(NULL) {
       destroy_connection_ = impl_->on_destroy_signal_.Connect(
           NewSlot(this, &TimerWatchCallback::OnDestroy));
     }
 
-    void SetWatchId(int watch_id) { watch_id_ = watch_id; }
+    void SetWatchId(int watch_id) {
+      event_.SetToken(watch_id);
+    }
 
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      ASSERT(event_.GetToken() == watch_id);
+
       bool fire = true;
       bool ret = true;
       int value = 0;
@@ -116,9 +120,8 @@ class View::Impl {
           // openUrl() etc.
           bool old_interaction = impl_->gadget_ ?
               impl_->gadget_->SetInUserInteraction(false) : false;
-          TimerEvent event(watch_id, value);
-          ScriptableEvent scriptable_event(&event, NULL, NULL);
-          impl_->FireEventSlot(&scriptable_event, slot_);
+          event_.SetValue(value);
+          impl_->FireEventSlot(&scriptable_event_, slot_);
           if (impl_->gadget_)
             impl_->gadget_->SetInUserInteraction(old_interaction);
         } else {
@@ -131,16 +134,20 @@ class View::Impl {
     }
 
     virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      ASSERT(event_.GetToken() == watch_id);
+
       destroy_connection_->Disconnect();
       delete slot_;
       delete this;
     }
 
     void OnDestroy() {
-      impl_->RemoveTimer(watch_id_);
+      impl_->RemoveTimer(event_.GetToken());
     }
 
    private:
+    TimerEvent event_;
+    ScriptableEvent scriptable_event_;
     Impl *impl_;
     Slot *slot_;
     int start_;
@@ -149,7 +156,6 @@ class View::Impl {
     uint64_t start_time_;
     uint64_t last_finished_time_;
     int last_value_;
-    int watch_id_;
     bool is_event_;
     Connection *destroy_connection_;
   };
@@ -866,6 +872,9 @@ class View::Impl {
 
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
+    if (post_event_token_)
+      main_loop_->RemoveWatch(post_event_token_);
+
     FirePostedEvents();
 
     CanvasInterface *target;

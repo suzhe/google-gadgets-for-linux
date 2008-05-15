@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstdlib>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -371,6 +372,10 @@ class BrowserElement::Impl {
         std::string down_fd_str = StringPrintf("%d", down_pipe_fds[0]);
         std::string up_fd_str = StringPrintf("%d", up_pipe_fds[1]);
         std::string ret_fd_str = StringPrintf("%d", ret_pipe_fds[0]);
+#ifdef MOZILLA_FIVE_HOME
+        // Set appropriate environment variable for running mozilla gecko.
+        setenv("MOZILLA_FIVE_HOME", MOZILLA_FIVE_HOME, 0);
+#endif
         for (size_t i = 0; kBrowserChildNames[i]; ++i) {
           execl(kBrowserChildNames[i], kBrowserChildNames[i],
                 down_fd_str.c_str(), up_fd_str.c_str(),

@@ -478,9 +478,12 @@ fi
 PKG_CHECK_MODULES(RSVG, librsvg-2.0 >= 2.14.0, [has_rsvg=yes], [has_rsvg=no])
 
 # Check gtkmozembed
-PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js], [has_gtkmozembed=yes],
-  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js], [has_gtkmozembed=yes],
-    [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js], [has_gtkmozembed=yes],
+PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
+		  [has_gtkmozembed=xulrunner-gtkmozembed],
+  [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox2-gtkmozembed firefox2-js],
+		     [has_gtkmozembed=firefox2-gtkmozembed],
+    [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
+		       [has_gtkmozembed=firefox-gtkmozembed],
       [has_gtkmozembed=no])])])
 
 if test x$has_dbus = xyes; then
@@ -567,9 +570,13 @@ if test x$has_dbus != xyes -a x$build_libggadget_dbus = xyes; then
   build_libggadget_dbus=no
 fi
 
-if test x$has_gtkmozembed != xyes -a x$build_gtkmoz_browser_element = xyes; then
+if test x$has_gtkmozembed = xno -a x$build_gtkmoz_browser_element = xyes; then
   AC_MSG_WARN([Library GtkMozEmbed is not available, gtkmoz-browser-element extension won't be built.])
   build_gtkmoz_browser_element=no
+else
+  MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
+  PREDEFINED_MACROS="$PREDEFINED_MACROS \
+		     -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
 fi
 
 AM_CONDITIONAL(
