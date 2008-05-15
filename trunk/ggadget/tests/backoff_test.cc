@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 using namespace ggadget;
 
 // The following constants should be kept the same values as in the impl.
-// Not put them into header because they are impl specific. 
+// Not put them into header because they are impl specific.
 static const uint64_t kBaseInterval = 30000U; // 30 seconds.
 static const uint64_t kMaxRetryInterval = 12U * 3600U * 1000U; // 12 hours.
 static const uint64_t kExpirationInterval = 24U * 3600U * 1000U; // 24 hours.
@@ -144,7 +144,7 @@ TEST(Backoff, TimeoutRandomization) {
   for (int error_count = 1; error_count <= 10; error_count++)
     EnsureRandomization(error_count);
 }
-  
+
 TEST(Backoff, GetSetData) {
   const char *kSite1 = "http://site.com/stuff";
   const char *kSite2 = "http://site.com";

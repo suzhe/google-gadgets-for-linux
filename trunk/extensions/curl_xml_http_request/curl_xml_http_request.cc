@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -210,7 +210,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       }
     }
 
-    // Disable curl using signals because we use curl in multiple threads. 
+    // Disable curl using signals because we use curl in multiple threads.
     curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, 1);
     if (share_)
       curl_easy_setopt(curl_, CURLOPT_SHARE, share_);
@@ -386,7 +386,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (data && size > 0) {
       curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
                        context->request_data.size());
-      // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.  
+      // CURLOPT_COPYPOSTFIELDS is better, but requires libcurl version 7.17.
       curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
                        context->request_data.c_str());
     }
@@ -664,7 +664,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
                      value[pos1] != ';') {
                 pos1++;
               }
-              response_encoding_ = value.substr(pos, pos1 - pos); 
+              response_encoding_ = value.substr(pos, pos1 - pos);
             }
           } else {
             response_content_type_ = value;

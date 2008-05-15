@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -67,9 +67,9 @@ static void InitFilePath(const char *filename,
   if (last_index == -1) {
     // if filename uses relative path, then use current working directory
     // as base path
-    
+
     char current_dir[PATH_MAX + 1];
-    
+
     // get current working directory
     if (!getcwd(current_dir, PATH_MAX)) {
       path = base = name = "";
@@ -281,7 +281,7 @@ class File : public FileInterface {
   }
 
   virtual FolderInterface *GetParentFolder();
-  
+
   virtual FileAttribute GetAttributes() {
     if (name_ == "" || base_ == "" || path_ == "")
       return FILE_ATTR_NORMAL;
@@ -291,12 +291,12 @@ class File : public FileInterface {
     if (name_.size() && name_[0] == '.') {
       attribute = (FileAttribute) (attribute | FILE_ATTR_HIDDEN);
     }
-    
+
     struct stat statbuf;
     if (stat(path_.c_str(), &statbuf) == -1) {
       return attribute;
     }
-    
+
     int mode = statbuf.st_mode;
 
     if (S_ISLNK(mode)) {
@@ -306,7 +306,7 @@ class File : public FileInterface {
 
     if (!(mode & S_IWUSR) && mode & S_IRUSR) {
       // it is read only by owner
-      attribute = (FileAttribute) (attribute | FILE_ATTR_READONLY); 
+      attribute = (FileAttribute) (attribute | FILE_ATTR_READONLY);
     }
 
     return attribute;
@@ -533,7 +533,7 @@ class Folder : public FolderInterface {
       return false;
     if (!strcmp(name, name_.c_str()))
       return true;
-    
+
     std::string oldpath = path_;
     name_ = std::string(name);
     ReplaceAll(&name_, '\\', '/');
@@ -596,7 +596,7 @@ class Folder : public FolderInterface {
 
     if (!(mode & S_IWUSR) && mode & S_IRUSR) {
       // it is read only by owner
-      attribute = (FileAttribute) (attribute | FILE_ATTR_READONLY); 
+      attribute = (FileAttribute) (attribute | FILE_ATTR_READONLY);
     }
 
     return attribute;
@@ -764,9 +764,9 @@ class Folder : public FolderInterface {
 
         // add the current folder
         folders_ptr->AddItem(folder_ptr);
-        
+
         FoldersInterface *subfolders_ptr = folder_ptr->GetSubFolders();
-        
+
         // add all the sub-folders of current folder
         folders_ptr->AddItems(subfolders_ptr);
 
@@ -915,7 +915,7 @@ class TextStream : public TextStreamInterface {
       return result;
     return false;
   }
-  
+
   virtual std::string Read(int characters) {
     if (characters <= 0)
       return "";
@@ -940,8 +940,8 @@ class TextStream : public TextStreamInterface {
       result = result + std::string(buffer);
     }
 
-    
-    
+
+
     // update member variable line_ and column_
     UpdateLineAndColumn(result.c_str());
 
@@ -959,7 +959,7 @@ class TextStream : public TextStreamInterface {
       if ('\n' == ch)
         break;
     }
-    
+
     // update member variable line_ and column_
     line_ ++;
     column_ = 1;
@@ -975,8 +975,8 @@ class TextStream : public TextStreamInterface {
     std::string result = "";
     while ((ch = fgetc(fp_)) != EOF) {
       result.append(1, ch);
-      
-      // update member variable line_ and column_ 
+
+      // update member variable line_ and column_
       if (ch == '\n')
         line_ ++, column_ = 1;
       else
@@ -1002,7 +1002,7 @@ class TextStream : public TextStreamInterface {
 
     Write(text);
     Write("\n");
-    
+
     // update member variable line_ and column_
     line_ ++, column_ = 1;
   }
@@ -1014,7 +1014,7 @@ class TextStream : public TextStreamInterface {
     for (int i = 0; i < lines; ++i) {
       Write("\n");
     }
-    
+
     // update member variable line_ and column_
     if (lines > 0)
       line_ += lines, column_ = 1;
@@ -1096,7 +1096,7 @@ std::string FileSystem::GetDriveName(const char *path) {
 std::string FileSystem::GetParentFolderName(const char *path) {
   if (!path || !strlen(path))
     return "";
-  
+
   std::string str_path(path);
   ReplaceAll(&str_path, '\\', '/');
 
@@ -1161,7 +1161,7 @@ std::string FileSystem::GetExtensionName(const char *path) {
 std::string FileSystem::GetAbsolutePathName(const char *path) {
   if (!path || !strlen(path))
     return "";
-  
+
   std::string str_path(path);
   ReplaceAll(&str_path, '\\', '/');
   if (str_path[0] == '/')
@@ -1180,7 +1180,7 @@ static char GetFileChar() {
     srand(1);
   else
     srand(tv.tv_sec * tv.tv_usec); // overflow can be ignored.
-      
+
   while (1) {
     char ch = (char) (random() % 123);
     if (ch == '_' ||
@@ -1224,11 +1224,11 @@ bool FileSystem::FileExists(const char *file_spec) {
   struct stat statbuf;
   if (stat(str_path.c_str(), &statbuf))
     return false;
-  
+
   if (statbuf.st_mode & S_IFDIR)
     // it is a directory
     return false;
-  
+
   return true;
 }
 
@@ -1245,7 +1245,7 @@ bool FileSystem::FolderExists(const char *folder_spec) {
   struct stat statbuf;
   if (stat(str_path.c_str(), &statbuf))
     return false;
-  
+
   if (!(statbuf.st_mode & S_IFDIR))
     // it is not a directory
     return false;
@@ -1320,7 +1320,7 @@ bool FileSystem::MoveFile(const char *source, const char *dest) {
 bool FileSystem::MoveFolder(const char *source, const char *dest) {
   if (!source || !dest || !strlen(source) || !strlen(dest))
     return false;
-  
+
   std::string source_path(source);
   ReplaceAll(&source_path, '\\', '/');
 
@@ -1367,7 +1367,7 @@ bool FileSystem::CopyFile(const char *source, const char *dest,
   if (FolderExists(dest_path.c_str()))
     return false;
 
-  std::string exe_command = "cp " + source_path + " " + dest_path; 
+  std::string exe_command = "cp " + source_path + " " + dest_path;
 
   std::system(exe_command.c_str());
 
@@ -1384,7 +1384,7 @@ bool FileSystem::CopyFolder(const char *source, const char *dest,
 
   if (!FolderExists(source_path.c_str()))
     return false;
-    
+
   std::string dest_input(dest);
   ReplaceAll(&dest_input, '\\', '/');
 
@@ -1395,7 +1395,7 @@ bool FileSystem::CopyFolder(const char *source, const char *dest,
     return false;
 
   if (FolderExists(dest_path.c_str())) {
-    if (!overwrite) 
+    if (!overwrite)
       // if dest-folder exists and overwrite is false, just return
       return false;
 
@@ -1434,7 +1434,7 @@ TextStreamInterface *FileSystem::CreateTextFile(const char *filename,
 
   if (FolderExists(str_path.c_str()))
     return NULL;
-  
+
   if (!FileExists(str_path.c_str())) {
     FILE *fp = fopen(str_path.c_str(), "wb");
     if (!fp)
@@ -1451,13 +1451,13 @@ TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
                                                    Tristate format) {
   if (!filename || !strlen(filename))
     return NULL;
-  
+
   std::string str_path(filename);
   ReplaceAll(&str_path, '\\', '/');
 
   if (FolderExists(str_path.c_str()))
     return NULL;
-  
+
   if (!FileExists(str_path.c_str())) {
     if (!create)
       return NULL;
@@ -1467,7 +1467,7 @@ TextStreamInterface *FileSystem::OpenTextFile(const char *filename,
       return NULL;
     fclose(fp);
   }
- 
+
   return new TextStream(str_path.c_str());
 }
 

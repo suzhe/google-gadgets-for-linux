@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -497,7 +497,7 @@ bool DetectUTFEncoding(const std::string &stream, std::string *encoding) {
 
   // We don't check BOM-less UTF-8, because there is ambiguity among UTF-8 and
   // some CJK encodings. This function returns true only if the detection is
-  // confidental. 
+  // confidental.
 
   switch (DetectUTF16Encoding(stream)) {
     case 1:
@@ -518,7 +518,7 @@ static void ConvertUTF16LEStreamToString(const char *input, size_t size,
   result->clear();
   if (size < 2) return;
   result->reserve(size / 2);
-  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 1; i += 2)
     result->push_back(stream[i] | (stream[i + 1] << 8));
 }
@@ -529,7 +529,7 @@ static void ConvertUTF16BEStreamToString(const char *input, size_t size,
   result->clear();
   if (size < 2) return;
   result->reserve(size / 2);
-  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 1; i += 2)
     result->push_back((stream[i] << 8) | stream[i + 1]);
 }
@@ -540,7 +540,7 @@ static void ConvertUTF32LEStreamToString(const char *input, size_t size,
   result->clear();
   if (size < 4) return;
   result->reserve(size / 4);
-  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 3; i += 4)
     result->push_back(stream[i] | (stream[i + 1] << 8) |
                       (stream[i + 2] << 16) | (stream[i + 3] << 24));
@@ -552,7 +552,7 @@ static void ConvertUTF32BEStreamToString(const char *input, size_t size,
   result->clear();
   if (size < 4) return;
   result->reserve(size / 4);
-  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input); 
+  const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 3; i += 4)
     result->push_back((stream[i] << 24) | (stream[i + 1] << 16) |
                       (stream[i + 2] << 8) | stream[i + 3]);
@@ -669,7 +669,7 @@ bool ConvertLocaleStringToUTF16(const char *input, UTF16String *result) {
     result->assign(reinterpret_cast<UTF16Char *>(buffer));
   } else {
     success = ConvertStringUTF32ToUTF16(reinterpret_cast<UTF32Char *>(buffer),
-                                        buffer_size - 1, result) == 
+                                        buffer_size - 1, result) ==
               buffer_size - 1;
   }
 
@@ -729,7 +729,7 @@ bool ConvertLocaleStringToUTF8(const char *input, std::string *result) {
               buffer_size - 1;
   } else {
     success = ConvertStringUTF32ToUTF8(reinterpret_cast<UTF32Char *>(buffer),
-                                       buffer_size - 1, result) == 
+                                       buffer_size - 1, result) ==
               buffer_size - 1;
   }
 

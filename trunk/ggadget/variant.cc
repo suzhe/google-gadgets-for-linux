@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -358,7 +358,7 @@ static bool ParseStringToDouble(const char *str_value, double *result) {
 
 static bool ParseStringToInt64(const char *str_value, int64_t *result) {
   char *end_ptr;
-  // TODO: Check if strtoll is available 
+  // TODO: Check if strtoll is available
   int64_t i = static_cast<int64_t>(std::strtoll(str_value, &end_ptr, 10));
   if (*end_ptr == '\0') {
     *result = i;

@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ TEST(DefaultOptions, TestBasics) {
     EXPECT_EQ(Variant(), options->GetValue(it->first.c_str()));
     options->PutValue(it->first.c_str(), it->second);
     options->PutValue((it->first + "_encrypted").c_str(), it->second);
-    options->EncryptValue((it->first + "_encrypted").c_str()); 
+    options->EncryptValue((it->first + "_encrypted").c_str());
   }
 
   for (TestData::const_iterator it = test_data.begin();
@@ -105,7 +105,7 @@ TEST(DefaultOptions, TestBasics) {
     EXPECT_EQ(it->second, options->GetValue(it->first.c_str()));
     EXPECT_FALSE(options->IsEncrypted(it->first.c_str()));
     EXPECT_EQ(it->second, options->GetValue((it->first + "_encrypted").c_str()));
-    EXPECT_TRUE(options->IsEncrypted((it->first + "_encrypted").c_str())); 
+    EXPECT_TRUE(options->IsEncrypted((it->first + "_encrypted").c_str()));
   }
 
   options->PutDefaultValue("test_default", Variant("default"));
@@ -133,7 +133,7 @@ TEST(DefaultOptions, TestBasics) {
     EXPECT_EQ(it->second, options->GetValue(it->first.c_str()));
     EXPECT_FALSE(options->IsEncrypted(it->first.c_str()));
     EXPECT_EQ(it->second, options->GetValue((it->first + "_encrypted").c_str()));
-    EXPECT_TRUE(options->IsEncrypted((it->first + "_encrypted").c_str())); 
+    EXPECT_TRUE(options->IsEncrypted((it->first + "_encrypted").c_str()));
   }
   EXPECT_EQ(Variant("internal"), options->GetInternalValue("test_internal"));
   // Default values won't get persisted.

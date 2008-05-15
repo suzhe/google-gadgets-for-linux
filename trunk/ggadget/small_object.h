@@ -2,14 +2,14 @@
 // The Loki Library
 // Copyright (c) 2001 by Andrei Alexandrescu
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
+// Permission to use, copy, modify, distribute and sell this software for any
+//     purpose is hereby granted without fee, provided that the above copyright
+//     notice appear in all copies and that both that copyright notice and this
 //     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
+// The author or Addison-Wesley Longman make no representations about the
+//     suitability of this software for any purpose. It is provided "as is"
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -78,7 +78,7 @@ namespace ggadget
     public:
         /** Allocates a block of memory of requested size.  Complexity is often
          constant-time, but might be O(C) where C is the number of Chunks in a
-         FixedAllocator. 
+         FixedAllocator.
 
          @par Exception Safety Level
          Provides either strong-exception safety, or no-throw exception-safety
@@ -172,7 +172,7 @@ namespace ggadget
      This template class is derived from
      SmallObjAllocator in order to pass template arguments into it, and still
      have a default constructor for the singleton.  Each instance is a unique
-     combination of all the template parameters, and hence is singleton only 
+     combination of all the template parameters, and hence is singleton only
      with respect to those parameters.  The template parameters have default
      values and the class has typedefs identical to both SmallObject and
      SmallValueObject so that this class can be used directly instead of going
@@ -222,9 +222,9 @@ namespace ggadget
         @ingroup SmallObjectGroup
      Base class for small object allocation classes.
      The shared implementation of the new and delete operators are here instead
-     of being duplicated in both SmallObject or SmallValueObject, later just 
-     called Small-Objects.  This class is not meant to be used directly by clients, 
-     or derived from by clients. Class has no data members so compilers can 
+     of being duplicated in both SmallObject or SmallValueObject, later just
+     called Small-Objects.  This class is not meant to be used directly by clients,
+     or derived from by clients. Class has no data members so compilers can
      use Empty-Base-Optimization.
      */
     template
@@ -238,12 +238,12 @@ namespace ggadget
 
 #if (LOKI_MAX_SMALL_OBJECT_SIZE != 0) && (LOKI_DEFAULT_CHUNK_SIZE != 0) && (LOKI_DEFAULT_OBJECT_ALIGNMENT != 0)
 
-    public:        
-        /// Defines type of allocator singleton, must be public 
+    public:
+        /// Defines type of allocator singleton, must be public
         /// to handle singleton lifetime dependencies.
         typedef AllocatorSingleton< chunkSize,
             maxSmallObjectSize, objectAlignSize > ObjAllocatorSingleton;
-    
+
     public:
 
         /// Throwing single-object new throws bad_alloc when allocation fails.

@@ -95,7 +95,7 @@ function GeneratePage() {
           + preset
           + "obj.onchange=OnChange;obj.onclick=OnChange;}}"
       + "</script>"
-      + "<body bgcolor=\"" + options.getvalue(kBGColorOption) 
+      + "<body bgcolor=\"" + options.getvalue(kBGColorOption)
       + "\" marginheight=\"0\" marginwidth=\"0\" onload=\"OnLoad()\">"
       + code;
   }
@@ -105,7 +105,7 @@ function GeneratePage() {
 }
 
 function OnOptionChanged() {
-  if (event.propertyName == kOptionsHTML || 
+  if (event.propertyName == kOptionsHTML ||
       event.propertyName == kPresetOptions) {
     opbrowser.innerText = GeneratePage();
   }

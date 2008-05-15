@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -97,10 +97,10 @@ class TestPrototype : public ScriptableHelperNativeOwnedDefault {
   }
 
   // Place this signal declaration here for testing.
-  // In production code, it should be palced in private section. 
+  // In production code, it should be palced in private section.
   Signal0<void> ontest_signal_;
 
-  ScriptableInterface *Method(const ScriptableInterface *s) { 
+  ScriptableInterface *Method(const ScriptableInterface *s) {
     return const_cast<ScriptableInterface *>(s);
   }
   TestPrototype *GetSelf() { return this; }

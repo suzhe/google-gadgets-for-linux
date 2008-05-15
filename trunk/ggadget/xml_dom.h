@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ class XMLParserInterface;
 /**
  * Create a new document. In most cases, you should create
  * DOMDocumentInterface instances with the global XML parser, which is
- * provided by some extension module. 
+ * provided by some extension module.
  */
 DOMDocumentInterface *CreateDOMDocument(XMLParserInterface *xml_parser);
 

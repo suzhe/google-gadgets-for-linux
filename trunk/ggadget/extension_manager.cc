@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -172,7 +172,7 @@ class ExtensionManager::Impl {
         extension->MakeResident();
 
       extensions_.push_back(std::make_pair(name_str, extension));
-      LOG("Extension %s was loaded successfully.", name);
+      DLOG("Extension %s was loaded successfully.", name);
       return extension;
     }
     return NULL;

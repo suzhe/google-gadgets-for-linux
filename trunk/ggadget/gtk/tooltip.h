@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class Tooltip {
 
   /**
    * Shows a tooltip. The tooltip will be actually shown after @c show_timeout,
-   * near the position of the mouse cursor. 
+   * near the position of the mouse cursor.
    */
   void Show(const char *tooltip);
 

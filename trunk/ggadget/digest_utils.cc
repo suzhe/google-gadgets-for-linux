@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ bool GenerateSHA1(const std::string &input, std::string *result) {
   uint32_t H[] = { 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
   unsigned char M[64];
   uint32_t input_size = static_cast<uint32_t>(input.size());
-  uint32_t bit_length = input_size * 8; 
+  uint32_t bit_length = input_size * 8;
   const char *input_ptr = input.c_str();
 
   while (input_size >= 64) {
@@ -174,7 +174,7 @@ static const unsigned char WS = 254; // White spaces.
 static const unsigned char PD = 253; // Tail padding.
 static const unsigned char kUnBase64Chars[] = {
   BD, BD, BD, BD, BD, BD, BD, BD, // 0 - 7
-  BD, WS, WS, BD, BD, WS, BD, BD, // 8 - 0x0f ?,TAB,LF,?,?,CR,?,?, 
+  BD, WS, WS, BD, BD, WS, BD, BD, // 8 - 0x0f ?,TAB,LF,?,?,CR,?,?,
   BD, BD, BD, BD, BD, BD, BD, BD, // 0x10 - 0x17
   BD, BD, BD, BD, BD, BD, BD, BD, // 0x18 - 0x1f
   WS, BD, BD, BD, BD, BD, BD, BD, // 0x20 - 0x27 SPACE,!,",#,$,%,&,'
@@ -182,7 +182,7 @@ static const unsigned char kUnBase64Chars[] = {
   52, 53, 54, 55, 56, 57, 58, 59, // 0x30 - 0x37 0,1,2,3,4,5,6,7
   60, 61, BD, BD, BD, PD, BD, BD, // 0x38 - 0x3f 8,9,:,;,<,=,>,?
   BD,  0,  1,  2,  3,  4,  5,  6, // 0x40 - 0x47 @,A -->
-  7,   8,  9, 10, 11, 12, 13, 14, 
+  7,   8,  9, 10, 11, 12, 13, 14,
   15, 16, 17, 18, 19, 20, 21, 22,
   23, 24, 25, BD, BD, BD, BD, BD, // 0x58 - 0x5f --> Z
   BD, 26, 27, 28, 29, 30, 31, 32, // 0x60 - 0x67 `,a -->
@@ -193,7 +193,7 @@ static const unsigned char kUnBase64Chars[] = {
 
 static const unsigned char kWebSafeUnBase64Chars[] = {
   BD, BD, BD, BD, BD, BD, BD, BD, // 0 - 7
-  BD, BD, BD, BD, BD, BD, BD, BD, // 8 - 0x0f ?,TAB,LF,?,?,CR,?,?, 
+  BD, BD, BD, BD, BD, BD, BD, BD, // 8 - 0x0f ?,TAB,LF,?,?,CR,?,?,
   BD, BD, BD, BD, BD, BD, BD, BD, // 0x10 - 0x17
   BD, BD, BD, BD, BD, BD, BD, BD, // 0x18 - 0x1f
   BD, BD, BD, BD, BD, BD, BD, BD, // 0x20 - 0x27 SPACE,!,",#,$,%,&,'
@@ -201,7 +201,7 @@ static const unsigned char kWebSafeUnBase64Chars[] = {
   52, 53, 54, 55, 56, 57, 58, 59, // 0x30 - 0x37 0,1,2,3,4,5,6,7
   60, 61, BD, BD, BD, PD, BD, BD, // 0x38 - 0x3f 8,9,:,;,<,=,>,?
   BD,  0,  1,  2,  3,  4,  5,  6, // 0x40 - 0x47 @,A -->
-  7,   8,  9, 10, 11, 12, 13, 14, 
+  7,   8,  9, 10, 11, 12, 13, 14,
   15, 16, 17, 18, 19, 20, 21, 22,
   23, 24, 25, BD, BD, BD, BD, 63, // 0x58 - 0x5f --> Z,[,\,],^,_
   BD, 26, 27, 28, 29, 30, 31, 32, // 0x60 - 0x67 `,a -->

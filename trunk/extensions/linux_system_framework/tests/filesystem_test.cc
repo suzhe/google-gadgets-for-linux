@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -115,7 +115,7 @@ TEST(FileSystem, GetDriveName) {
   EXPECT_EQ("", filesystem.GetDriveName(kTestDir));
 }
 
-// test method GetParentFolderName with valid arguments 
+// test method GetParentFolderName with valid arguments
 TEST(FileSystem, GetParentFolderName_Accuracy1) {
   FileSystem filesystem;
   const char *path = kTestDir;
@@ -134,7 +134,7 @@ TEST(FileSystem, GetParentFolderName_Accuracy3) {
   EXPECT_EQ("", filesystem.GetParentFolderName(path));
 }
 
-// test method GetParentFolderName with '\' arguments 
+// test method GetParentFolderName with '\' arguments
 TEST(FileSystem, GetParentFolderName_Accuracy4) {
   FileSystem filesystem;
   char path[] = "\\tmp\\GGL_FileSystem_Test";
@@ -432,7 +432,7 @@ TEST(FileSystem, FileExists_Accuracy1) {
   std::system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
-// if the target is not a file, it should return false 
+// if the target is not a file, it should return false
 TEST(FileSystem, FileExists_Accuracy2) {
   FileSystem filesystem;
   std::system("rm -R /tmp/GGL_FileSystem_Test");
@@ -464,7 +464,7 @@ TEST(FileSystem, FolderExists_Accuracy1) {
   std::system("rm -R /tmp/GGL_FileSystem_Test");
 }
 
-// if the target is not a folder, it should return false 
+// if the target is not a folder, it should return false
 TEST(FileSystem, FolderExists_Accuracy2) {
   FileSystem filesystem;
   std::system("rm -R /tmp/GGL_FileSystem_Test");
@@ -781,10 +781,10 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/GGL_FileSystem_Test/subfolder/");
-  
+
   EXPECT_TRUE(result);
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(
@@ -803,7 +803,7 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFile("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp\\GGL_FileSystem_Test\\subfolder");
 
@@ -826,7 +826,7 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_3) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/");
 
@@ -849,7 +849,7 @@ TEST(FileSystem, MoveFile_Accuracy_ExistingFile_4) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFile("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp");
 
@@ -870,7 +870,7 @@ TEST(FileSystem, MoveFile_Accuracy_NonExistingFile_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/");
 
@@ -887,7 +887,7 @@ TEST(FileSystem, MoveFile_Accuracy_NonExistingFile_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFile("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp");
 
@@ -953,10 +953,10 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/GGL_FileSystem_Test/subfolder/");
-  
+
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
@@ -973,7 +973,7 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFolder("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp\\GGL_FileSystem_Test\\subfolder");
 
@@ -993,7 +993,7 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_3) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/");
 
@@ -1014,7 +1014,7 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFile_4) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFolder("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp");
 
@@ -1034,7 +1034,7 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFolder_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFolder("/tmp/GGL_FileSystem_Test/folder1",
                                     "/tmp/GGL_FileSystem_Test/subfolder");
 
@@ -1055,7 +1055,7 @@ TEST(FileSystem, MoveFolder_Accuracy_ExistingFolder_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.MoveFolder("\\tmp/GGL_FileSystem_Test\\folder1",
                                     "/tmp\\GGL_FileSystem_Test\\subfolder");
 
@@ -1122,11 +1122,11 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/GGL_FileSystem_Test/subfolder/",
                                     false);
-  
+
   EXPECT_TRUE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(
@@ -1145,7 +1145,7 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp\\GGL_FileSystem_Test\\subfolder",
                                     false);
@@ -1169,7 +1169,7 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_3) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/",
                                     false);
@@ -1193,7 +1193,7 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_4) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp",
                                     false);
@@ -1218,7 +1218,7 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_5) {
   std::system("touch /tmp/GGL_FileSystem_Test/subfolder/file1");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/GGL_FileSystem_Test/subfolder",
                                     false);
@@ -1239,18 +1239,18 @@ TEST(FileSystem, CopyFile_Accuracy_ExistingFile_6) {
   std::system("touch /tmp/GGL_FileSystem_Test/subfolder/file1");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/GGL_FileSystem_Test/subfolder",
                                     true);
 
   EXPECT_TRUE(result);
-  
+
   TextStreamInterface *text =
     filesystem.CreateTextFile("/tmp/GGL_FileSystem_Test/subfolder/file1",
                               false,
                               false);
-  
+
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("sample content", text->ReadAll());
 
@@ -1270,7 +1270,7 @@ TEST(FileSystem, CopyFile_Accuracy_NonExistingFile_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/",
                                     false);
@@ -1288,7 +1288,7 @@ TEST(FileSystem, CopyFile_Accuracy_NonExistingFile_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_FALSE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFile("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp",
                                     false);
@@ -1361,11 +1361,11 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/file1",
                                     "/tmp/GGL_FileSystem_Test/subfolder/",
                                     false);
-  
+
   EXPECT_FALSE(result);
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
 
@@ -1382,7 +1382,7 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFolder("\\tmp\\GGL_FileSystem_Test\\file1",
                                     "\\tmp\\GGL_FileSystem_Test\\subfolder",
                                     false);
@@ -1403,7 +1403,7 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_3) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/file1",
                                       "/tmp/",
                                       false);
@@ -1425,7 +1425,7 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFile_4) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FileExists("/tmp/GGL_FileSystem_Test/file1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFolder("\\tmp\\GGL_FileSystem_Test\\file1",
                                       "\\tmp",
                                       false);
@@ -1446,7 +1446,7 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_1) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFolder("/tmp/GGL_FileSystem_Test/folder1",
                                       "/tmp/GGL_FileSystem_Test/subfolder",
                                       false);
@@ -1468,7 +1468,7 @@ TEST(FileSystem, CopyFolder_Accuracy_ExistingFolder_2) {
   std::system("mkdir /tmp/GGL_FileSystem_Test/subfolder");
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/folder1"));
   EXPECT_TRUE(filesystem.FolderExists("/tmp/GGL_FileSystem_Test/subfolder"));
-  
+
   bool result = filesystem.CopyFolder("\\tmp/GGL_FileSystem_Test\\folder1",
                                       "/tmp\\GGL_FileSystem_Test\\subfolder",
                                       false);

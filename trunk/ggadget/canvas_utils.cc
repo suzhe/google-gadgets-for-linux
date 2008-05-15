@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ void DrawCanvasArea(const CanvasInterface *src, double src_x, double src_y,
     dest->PushState();
     Rectangle dest_rect(dest_x, dest_y, dest_width, dest_height);
     // Integerize to avoid gap between the areas drawn by
-    // StretchMiddleDrawCanvas().  
+    // StretchMiddleDrawCanvas().
     dest_rect.Integerize(true);
     dest->IntersectRectClipRegion(dest_rect.x, dest_rect.y,
                                   dest_rect.w, dest_rect.h);

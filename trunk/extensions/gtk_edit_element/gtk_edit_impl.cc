@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -1220,7 +1220,7 @@ int GtkEditImpl::MoveWords(int current_pos, int count) {
     PangoLayoutLine *line = pango_layout_get_line_readonly(layout, line_index);
 #else
     PangoLayoutLine *line = pango_layout_get_line(layout, line_index);
-#endif        
+#endif
     bool rtl = (line->resolved_dir == PANGO_DIRECTION_RTL);
     while (count != 0) {
       if (((rtl && count < 0) || (!rtl && count > 0)) &&

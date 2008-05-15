@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -394,7 +394,7 @@ class OptionsDelegator : public OptionsInterface {
   virtual Connection *ConnectOnOptionChanged(
       Slot1<void, const char *> *handler) {
     return back_options_->ConnectOnOptionChanged(handler);
-  } 
+  }
   virtual size_t GetCount() { return back_options_->GetCount(); }
   virtual void Add(const char *name, const Variant &value) {
     return back_options_->Add(name, value);

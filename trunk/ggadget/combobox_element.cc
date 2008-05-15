@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -423,8 +423,8 @@ std::string ComboBoxElement::GetValue() const {
   if (impl_->edit_) {
     return impl_->edit_->GetValue();
   } else {
-    // The release notes are wrong here: the value property can be read 
-    // but not modified in droplist mode. 
+    // The release notes are wrong here: the value property can be read
+    // but not modified in droplist mode.
     return impl_->GetSelectedText();
   }
 }
@@ -433,8 +433,8 @@ void ComboBoxElement::SetValue(const char *value) {
   if (impl_->edit_) {
     impl_->edit_->SetValue(value);
   }
-  // The release notes are wrong here: the value property can be read 
-  // but not modified in droplist mode. 
+  // The release notes are wrong here: the value property can be read
+  // but not modified in droplist mode.
 }
 
 bool ComboBoxElement::IsAutoscroll() const {

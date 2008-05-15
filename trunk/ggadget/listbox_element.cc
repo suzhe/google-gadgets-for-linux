@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -104,8 +104,8 @@ class ListBoxElement::Impl {
       if (selected->IsInstanceOf(ItemElement::CLASS_ID)) {
         ItemElement *item = down_cast<ItemElement *>(selected);
 
-        // ClearSelection() is called to work around a bug in a sample 
-        // test gadget. The selectedItem property of listbox/combobox takes 
+        // ClearSelection() is called to work around a bug in a sample
+        // test gadget. The selectedItem property of listbox/combobox takes
         // precedence over the selected property of individual items.
         ClearSelection(item); // ignore return
 

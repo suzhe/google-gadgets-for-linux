@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ extern "C" {
       factory->RegisterElementClass(
           "progid:WMPlayer.OCX.7",
           &ggadget::gst::GstMediaPlayerElement::CreateInstance);
-      // Disable this for now. 
+      // Disable this for now.
       // Used when the mediaplayer element acts as a normal element.
       // factory->RegisterElementClass("_mediaplayer",
       //     &ggadget::gst::GstMediaPlayerElement::CreateInstance);

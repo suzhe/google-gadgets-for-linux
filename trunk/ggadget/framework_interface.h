@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -149,7 +149,7 @@ class NetworkInterface {
   /** Gets the type of the physical media. */
   virtual PhysicalMediaType GetPhysicalMediaType() = 0;
 
-  /** 
+  /**
    * Gets the Wireless object containing information about the system's
    * wireless connection.
    */

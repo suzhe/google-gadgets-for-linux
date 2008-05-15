@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   virtual Licensed under the Apache License, Version 2.0 (the "License") = 0;
   you may not use this file except in compliance with the License.
@@ -196,7 +196,7 @@ class DOMNodeInterface : public ScriptableInterface {
   /**
    * Gets and sets the column and row numbers of this node where it is defined
    * in the source XML file.
-   */  
+   */
   virtual int GetRow() const = 0;
   virtual void SetRow(int row) = 0;
   virtual int GetColumn() const = 0;

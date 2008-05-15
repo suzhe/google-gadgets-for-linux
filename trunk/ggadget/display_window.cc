@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -415,7 +415,7 @@ class DisplayWindow::Impl {
             element->GetTextFrame()->SetSize(kLabelTextSize);
             element->UseDefaultImages();
             // Default value of gadget checkbox element is false, but here
-            // the default value should be false. 
+            // the default value should be false.
             element->SetValue(false);
             // The DisplayWindow expects the control has changed its value when
             // onClicked is fired, but our CheckBoxElement changes value after

@@ -153,7 +153,7 @@ class Message {
 #ifdef __SYMBIAN32__
 // These are needed as the Nokia Symbian Compiler cannot decide between
 // const T& and const T* in a function template. The Nokia compiler _can_
-// decide between class template specializations for T and T*, so a 
+// decide between class template specializations for T and T*, so a
 // tr1::type_traits-like is_pointer works, and we can overload on that.
 
   template <typename T>
