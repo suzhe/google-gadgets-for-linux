@@ -16,7 +16,7 @@
 
 # TODO: install and dist
 
-bin_PROGRAMS		= codesighs nm2tsv maptsvdifftool
+noinst_PROGRAMS		= codesighs nm2tsv maptsvdifftool
 
 codesighs_SOURCES	= codesighs.c
 

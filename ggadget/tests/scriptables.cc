@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ TestScriptable1::~TestScriptable1() {
 TestPrototype *TestPrototype::instance_ = NULL;
 
 const Variant kNewObjectDefaultArgs[] = { Variant(true), Variant(true) };
-const Variant kReleaseObjectDefaultArgs[] = 
+const Variant kReleaseObjectDefaultArgs[] =
    { Variant(static_cast<ScriptableInterface *>(NULL)) };
 
 TestPrototype::TestPrototype() {
@@ -162,7 +162,7 @@ ScriptableArray *TestScriptable2::ConcatArray(ScriptableInterface *array1,
   array2->GetPropertyInfoByName("length", &id, &prototype, &is_method);
   size_t count2 = VariantValue<size_t>()(array2->GetProperty(id));
   LOG("id=%d count2=%zd", id, count2);
-  
+
   Variant *new_array = new Variant[count1 + count2];
   for (size_t i = 0; i < count1; i++)
     new_array[i] = array1->GetProperty(i);

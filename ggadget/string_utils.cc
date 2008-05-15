@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -213,7 +213,7 @@ bool IsValidRSSURL(const char* url) {
   if (strncasecmp(url, kHttpUrlPrefix, arraysize(kHttpUrlPrefix) - 1) &&
       strncasecmp(url, kHttpsUrlPrefix, arraysize(kHttpsUrlPrefix) - 1) &&
       strncasecmp(url, kFeedUrlPrefix, arraysize(kFeedUrlPrefix) - 1)) {
-    return false;    
+    return false;
   }
 
   for (int i = 0; url[i]; i++) {

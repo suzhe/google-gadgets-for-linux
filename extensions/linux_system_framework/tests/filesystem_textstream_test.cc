@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ TEST_F(TextStreamTest, GetColumn2) {
 
   text_->Skip(1);
   EXPECT_EQ(2, text_->GetColumn());
-  
+
   text_->Skip(2);
   EXPECT_EQ(4, text_->GetColumn());
 }
@@ -268,7 +268,7 @@ TEST_F(TextStreamTest, WriteLine1) {
   text->WriteLine("new content");
   text->Close();
   text->Destroy();
-  
+
   text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("new content\n", text->ReadAll());
@@ -329,7 +329,7 @@ TEST_F(TextStreamTest, WriteBlankLines1) {
   text->WriteBlankLines(1);
   text->Close();
   text->Destroy();
-  
+
   text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("\n", text->ReadAll());
@@ -346,7 +346,7 @@ TEST_F(TextStreamTest, WriteBlankLines1_) {
   text->WriteBlankLines(3);
   text->Close();
   text->Destroy();
-  
+
   text = filesystem_.CreateTextFile("/tmp/file.cc", false, false);
   EXPECT_TRUE(text != NULL);
   EXPECT_EQ("\n\n\n", text->ReadAll());

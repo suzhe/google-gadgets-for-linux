@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0;
 static std::vector<GtkMozEmbed *> g_embeds;
 
 #define EXTOBJ_CLASSNAME  "ExternalObject"
-#define EXTOBJ_PROPERTY_NAME "external" 
+#define EXTOBJ_PROPERTY_NAME "external"
 #define EXTOBJ_CONTRACTID "@google.com/ggl/extobj;1"
 #define EXTOBJ_CID { \
     0x224fb7b5, 0x6db0, 0x48db, \
@@ -264,13 +264,13 @@ class ExternalObject : public nsIXPCScriptable {
 
   NS_IMETHOD PreCreate(nsISupports *, JSContext *, JSObject *, JSObject **) {
     return NS_ERROR_NOT_IMPLEMENTED;
-  } 
+  }
   NS_IMETHOD Create(nsIXPConnectWrappedNative *, JSContext *, JSObject *) {
     return NS_ERROR_NOT_IMPLEMENTED;
-  } 
+  }
   NS_IMETHOD PostCreate(nsIXPConnectWrappedNative *, JSContext *, JSObject *) {
     return NS_ERROR_NOT_IMPLEMENTED;
-  } 
+  }
   NS_IMETHOD AddProperty(nsIXPConnectWrappedNative *, JSContext *, JSObject *,
                          jsval, jsval *, PRBool *) {
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -435,7 +435,7 @@ class ContentPolicy : public nsIContentPolicy {
     *retval = ACCEPT;
     if (content_type == TYPE_DOCUMENT || content_type == TYPE_SUBDOCUMENT) {
       // If the URL is opened the first time in a blank window or frame,
-      // request_origin is NULL or "about:blank". 
+      // request_origin is NULL or "about:blank".
       if (content_location && request_origin) {
         nsCString url_spec, origin_spec;
         content_location->GetSpec(url_spec);
@@ -444,7 +444,7 @@ class ContentPolicy : public nsIContentPolicy {
             !origin_spec.Equals(url_spec)) {
           int browser_id = FindBrowserIdByContentPolicyContext(context);
           if (browser_id != -1) {
-            std::string r = SendFeedbackWithBrowserId(kOpenURLFeedback, 
+            std::string r = SendFeedbackWithBrowserId(kOpenURLFeedback,
                                                       browser_id,
                                                       url_spec.get(), NULL);
             // The controller should have opened the URL, so don't let the
@@ -554,12 +554,12 @@ static void SetContent(int param_count, const char **params, size_t id) {
     return;
   }
 
-  NS_ConvertUTF16toUTF8 utf8(content);  
+  NS_ConvertUTF16toUTF8 utf8(content);
   std::string url(utf8.get(), utf8.Length());
   std::string data;
   if (!ggadget::EncodeBase64(url, false, &data)) {
     fprintf(stderr, "browser_child: Unable to convert to base64: %s\n", url.c_str());
-    return;    
+    return;
   }
 
   url = (std::string(kDataURLPrefix) + params[2]) + ";base64," + data;
@@ -683,7 +683,7 @@ static nsresult InitCustomComponents() {
         do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Register external object (Javascript window.external object). 
+  // Register external object (Javascript window.external object).
   g_external_object.AddRef();
   nsCOMPtr<nsIGenericFactory> factory;
   rv = NS_NewGenericFactory(getter_AddRefs(factory),

@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -211,7 +211,7 @@ TEST(XMLParser, ConvertStringToUTF8) {
   ASSERT_STREQ("UTF-8", encoding.c_str());
   ASSERT_STREQ(src, output.c_str());
 
-  // The last '\0' omitted, because the compiler will add it for us. 
+  // The last '\0' omitted, because the compiler will add it for us.
   const char utf16le[] = "\xFF\xFEU\0T\0F\0001\0006\0 \0S\0t\0r\0i\0n\0g";
   const char *dest = "\xEF\xBB\xBFUTF16 String";
   ASSERT_TRUE(xml_parser->ParseContentIntoDOM(

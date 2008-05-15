@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -332,7 +332,7 @@ void NativeJSWrapper::OnReferenceChange(int ref_count, int change) {
     JSScriptContext::FinalizeNativeJSWrapper(js_context_, this);
 
     // As the native side is deleting the object, now the script side can also
-    // delete it if there is no other active references. 
+    // delete it if there is no other active references.
     DetachJS(true);
 
 #ifdef DEBUG_JS_WRAPPER_MEMORY
@@ -568,7 +568,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   Variant return_value = scriptable_->GetProperty(int_id);
   if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
-  
+
   if (!ConvertNativeToJS(js_context_, return_value, vp)) {
     JS_ReportError(
         js_context_,
@@ -703,7 +703,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   const char *name = JS_GetStringBytes(idstr);
 
   // The JS program defines a new symbol. This has higher priority than the
-  // properties of the global scriptable object. 
+  // properties of the global scriptable object.
   if (flags & JSRESOLVE_DECLARING)
     return JS_TRUE;
 

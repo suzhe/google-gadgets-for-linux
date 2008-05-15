@@ -584,19 +584,19 @@ String StreamableToString(const T& streamable);
 
 // These are needed as the Nokia Symbian Compiler cannot decide between
 // const T& and const T* in a function template. The Nokia compiler _can_
-// decide between class template specializations for T and T*, so a 
+// decide between class template specializations for T and T*, so a
 // tr1::type_traits-like is_pointer works, and we can overload on that.
 
 // This overload makes sure that all pointers (including
 // those to char or wchar_t) are printed as raw pointers.
 template <typename T>
-inline String FormatValueForFailureMessage(internal::true_type dummy, 
+inline String FormatValueForFailureMessage(internal::true_type dummy,
                                            T* pointer) {
   return StreamableToString(static_cast<const void*>(pointer));
 }
 
 template <typename T>
-inline String FormatValueForFailureMessage(internal::false_type dummy, 
+inline String FormatValueForFailureMessage(internal::false_type dummy,
                                            const T& value) {
   return StreamableToString(value);
 }

@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ class Backoff::Impl {
   }
 
   static uint64_t GetNextRequestInterval(int failure_count) {
-    // wait_exp is failure_count - 3 .. failure_count result. 
+    // wait_exp is failure_count - 3 .. failure_count result.
     int wait_exp = failure_count - (rand() / (0xFFFF / 4)) % 4;
     if (wait_exp <= 0)
       return 0;
@@ -98,7 +98,7 @@ class Backoff::Impl {
         if (sscanf(p + 1, "%ju\t%d\n",
                    &backoff_info.last_failure_time,
                    &backoff_info.failure_count) == 2) {
-          backoff_info.next_try_time = 
+          backoff_info.next_try_time =
               backoff_info.last_failure_time +
               GetNextRequestInterval(backoff_info.failure_count);
           if (backoff_info.next_try_time + kExpirationInterval > now)

@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -56,11 +56,11 @@ class JSFunctionSlot : public Slot {
 
   JSContext *js_context() const { return context_; }
   JSObject *js_function() const { return function_; }
-  std::string function_info() const { return function_info_; } 
+  std::string function_info() const { return function_info_; }
 
   /** Called by the owner to mark this object is reachable from GC roots. */
   void Mark();
-  /** Called by the owner when the owner is about to be finalized. */ 
+  /** Called by the owner when the owner is about to be finalized. */
   void Finalize();
 
  private:

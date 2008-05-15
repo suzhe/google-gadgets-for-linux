@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -296,7 +296,7 @@ static xmlDoc *ParseXML(const std::string &xml,
 
     // Let the built-in libxml2 error reporter print the correct filename.
     ctxt->input->filename = xmlMemStrdup(filename);
-  
+
     xmlParseDocument(ctxt);
     if (ctxt->wellFormed) {
       result = ctxt->myDoc;
@@ -311,7 +311,7 @@ static xmlDoc *ParseXML(const std::string &xml,
     } else if ((ctxt->errNo == XML_ERR_INVALID_CHAR ||
                 ctxt->errNo == XML_ERR_UNKNOWN_ENCODING ||
                 ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) &&
-               encoding_fallback && use_encoding != encoding_fallback) { 
+               encoding_fallback && use_encoding != encoding_fallback) {
       xmlFreeDoc(ctxt->myDoc);
       ctxt->myDoc = NULL;
       // libxml2 encoding conversion failed, try fallback_encoding if it has
@@ -527,7 +527,7 @@ static int CountTagSequence(const xmlNode *child, const char *tag) {
 
   last_parent = child->parent;
   last_count = 1;
-  last_tag = tag; 
+  last_tag = tag;
   for (const xmlNode *node = child->prev; node != NULL; node = node->prev) {
     if (node->type == XML_ELEMENT_NODE &&
         GadgetStrCmp(tag, FromXmlCharPtr(node->name)) == 0)

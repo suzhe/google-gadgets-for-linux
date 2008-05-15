@@ -76,13 +76,13 @@ function LoadDocument(url) {
     g_xml_request = new XMLHttpRequest();
     g_xml_request.onreadystatechange = ProcessRequest;
     g_xml_request.open("GET", url, true);
-  
+
     // disable caching
     g_xml_request.setRequestHeader("Cache-Control", "no-cache");
     g_xml_request.setRequestHeader("Cache-Control", "must-revalidate");
     g_xml_request.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 1978 00:00:00 GMT");
     g_xml_request.setRequestHeader("Pragma", "no-cache");
-  
+
     g_xml_request.send(null);
   } catch (e) {
     gadget.debug.error(e);

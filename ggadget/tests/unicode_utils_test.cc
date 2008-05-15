@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -159,7 +159,7 @@ TEST(UnicodeUtils, IsLegalString) {
                                   arraysize(invalid_utf16_string) - 1));
   EXPECT_FALSE(IsLegalUTF16String(UTF16String(invalid_utf16_string)));
   EXPECT_TRUE(IsLegalUTF16String(invalid_utf16_string, invalid_utf16_length));
-} 
+}
 
 TEST(UnicodeUtils, DetectUTFEncoding) {
   std::string encoding("Garbage");

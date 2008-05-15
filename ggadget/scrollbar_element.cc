@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -301,7 +301,7 @@ class ScrollBarElement::Impl {
       double grippy_w, grippy_h;
       GetImageSize(images_[IMAGE_GRIPPY], flip, &grippy_w, &grippy_h);
       double min_grippy_size = kGrippyOffset * 2 + grippy_w;
-      if (thumb_rect_.w > min_grippy_size) { 
+      if (thumb_rect_.w > min_grippy_size) {
         Rectangle grippy_rect(thumb_rect_.x + (thumb_rect_.w - grippy_w) / 2,
                               (height - grippy_h) / 2, grippy_w, grippy_h);
         // Because the default grippy image contains interlaced black and
@@ -445,7 +445,7 @@ int ScrollBarElement::GetPageStep() const {
 
 void ScrollBarElement::SetPageStep(int value) {
   if (impl_->pagestep_ != value) {
-    // Changing page step may change the size of thumb, so must QueueDraw(). 
+    // Changing page step may change the size of thumb, so must QueueDraw().
     impl_->pagestep_ = value;
     QueueDraw();
   }
@@ -456,7 +456,7 @@ int ScrollBarElement::GetLineStep() const {
 }
 
 void ScrollBarElement::SetLineStep(int value) {
-  // Changing line step doesn't change visual effect, so no QueueDraw(). 
+  // Changing line step doesn't change visual effect, so no QueueDraw().
   impl_->linestep_ = value;
 }
 

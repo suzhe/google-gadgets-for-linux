@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -173,7 +173,7 @@ var gddSoundErrorUnknown = 1;
 var gddSoundErrorBadClipSrc = 2;
 var gddSoundErrorFormatNotSupported = 3;
 
-// Network connection types 
+// Network connection types
 // (needs to match with the NDIS_MEDIUM enum in ntddndis.h)
 var gddConnectionType802_3 = 0;
 var gddConnectionType802_5 = 1;
@@ -194,7 +194,7 @@ var gddConnectionTypeTunnel = 15;
 var gddConnectionTypeNative802_11 = 16;
 var gddConnectionTypeXdsl = 17;
 
-// Network connection physical media types 
+// Network connection physical media types
 // (needs to match with the NDIS_PHYSICAL_MEDIUM enum in ntddndis.h)
 var gddPhysicalMediaTypeUnspecified = 0;
 var gddPhysicalMediaTypeWirelessLan = 1;

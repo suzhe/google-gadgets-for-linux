@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ JSScriptContext::~JSScriptContext() {
 #if 0
     // This leak check is not reliable. The remaining objects may be leaks,
     // but can be also native owned objects or constants of native owned
-    // objects. 
+    // objects.
     if (wrapper->scriptable()->GetRefCount() > 1) {
       DLOG("Still referenced by native: jsobj=%p wrapper=%p scriptable=%s"
            " refcount=%d", wrapper->js_object(), wrapper,

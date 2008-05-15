@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ size_t MemoryOptions::GetCount() {
 }
 
 void MemoryOptions::Add(const char *name, const Variant &value) {
-  std::string name_str(name); // Avoid multiple std::string() construction. 
+  std::string name_str(name); // Avoid multiple std::string() construction.
   if (impl_->values_.find(name_str) == impl_->values_.end()) {
     size_t new_total_size = impl_->total_size_ + name_str.size() +
                             GetVariantSize(value);

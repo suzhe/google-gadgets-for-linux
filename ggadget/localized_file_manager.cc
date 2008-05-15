@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ bool LocalizedFileManager::ReadFile(const char *file, std::string *data) {
     // Try non-localized file first.
     if (impl_->file_manager_->ReadFile(file, data))
       return true;
- 
+
     // Then try localized file.
     for (std::vector<std::string>::iterator it = impl_->prefixes_.begin();
          it != impl_->prefixes_.end(); ++it) {

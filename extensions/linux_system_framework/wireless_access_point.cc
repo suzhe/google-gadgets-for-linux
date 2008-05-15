@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #include "hal_strings.h"
 
 // defined in <linux/wireless.h>, but we don't want to introduce such
-// dependency. 
+// dependency.
 #define IW_MODE_INFRA 2
 #define IW_MODE_ADHOC 1
 

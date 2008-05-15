@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -174,7 +174,7 @@ class ZipFileManager::Impl {
     if (!CheckFilePath(file, &relative_path, NULL))
       return false;
 
-    // The 'overwrite' parameter is ignored here. 
+    // The 'overwrite' parameter is ignored here.
     if (FileExists(file, NULL)) {
       LOG("Can't overwrite an existing file %s in zip archive %s.",
           relative_path.c_str(), base_path_.c_str());

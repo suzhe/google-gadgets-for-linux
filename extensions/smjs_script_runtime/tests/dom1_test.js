@@ -220,10 +220,10 @@ See W3C License http://www.w3.org/Consortium/Legal/ for more details.
 */
 
 /**
-* 
+*
     Attr nodes may be associated with Element nodes contained within a DocumentFragment.
-  Create a new DocumentFragment and add a newly created Element node(with one attribute).  
-  Once the element is added, its attribute should be available as an attribute associated 
+  Create a new DocumentFragment and add a newly created Element node(with one attribute).
+  Once the element is added, its attribute should be available as an attribute associated
   with an Element within a DocumentFragment.
 
 * @author NIST
@@ -242,7 +242,7 @@ TEST("attrcreatedocumentfragment", function() {
       var attrs;
       var attrName;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -260,21 +260,21 @@ TEST("attrcreatedocumentfragment", function() {
       attrName = attrs.name;
 
       ASSERT(STRICT_EQ("newdomestic",attrName),"attrCreateDocumentFragmentAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "setValue()" method for an attribute creates a 
+*
+    The "setValue()" method for an attribute creates a
   Text node with the unparsed content of the string.
-  Retrieve the attribute named "street" from the last 
-  child of of the fourth employee and assign the "Y&ent1;" 
+  Retrieve the attribute named "street" from the last
+  child of of the fourth employee and assign the "Y&ent1;"
   string to its value attribute.  This value is not yet
   parsed and therefore should still be the same upon
   retrieval. This test uses the "getNamedItem(name)" method
-  from the NamedNodeMap interface.  
+  from the NamedNodeMap interface.
 
 * @author NIST
 * @author Mary Brady
@@ -289,7 +289,7 @@ TEST("attrcreatetextnode", function() {
       var attributes;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -308,21 +308,21 @@ TEST("attrcreatetextnode", function() {
        value = streetAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Y&ent1;",value),"nodeValue");
-       
+
 });
 
 
 
 /**
-* 
-    The "setNodeValue()" method for an attribute creates a 
+*
+    The "setNodeValue()" method for an attribute creates a
   Text node with the unparsed content of the string.
-  Retrieve the attribute named "street" from the last 
-  child of of the fourth employee and assign the "Y&ent1;" 
+  Retrieve the attribute named "street" from the last
+  child of of the fourth employee and assign the "Y&ent1;"
   string to its value attribute.  This value is not yet
   parsed and therefore should still be the same upon
   retrieval. This test uses the "getNamedItem(name)" method
-  from the NamedNodeMap interface. 
+  from the NamedNodeMap interface.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
@@ -336,7 +336,7 @@ TEST("attrcreatetextnode2", function() {
       var attributes;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -355,16 +355,16 @@ TEST("attrcreatetextnode2", function() {
        value = streetAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Y&ent1;",value),"nodeValue");
-       
+
 });
 
 
 
 /**
-* 
+*
     If an Attr is explicitly assigned any value, then that value is the attributes effective value.
-  Retrieve the attribute named "domestic" from the last child of of the first employee 
-  and examine its nodeValue attribute.  This test uses the "getNamedItem(name)" method 
+  Retrieve the attribute named "domestic" from the last child of of the first employee
+  and examine its nodeValue attribute.  This test uses the "getNamedItem(name)" method
   from the NamedNodeMap interface.
 
 * @author NIST
@@ -380,7 +380,7 @@ TEST("attreffectivevalue", function() {
       var attributes;
       var domesticAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -394,22 +394,22 @@ TEST("attreffectivevalue", function() {
       value = domesticAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Yes",value),"attrEffectiveValueAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getValue()" method will return the value of the
   attribute as a string.  The general entity references
   are replaced with their values.
-  Retrieve the attribute named "street" from the last 
-  child of of the fourth employee and examine the string 
+  Retrieve the attribute named "street" from the last
+  child of of the fourth employee and examine the string
   returned by the "getValue()" method.  The value should
   be set to "Yes" after the EntityReference is
-  replaced with its value.  This test uses the  
-  "getNamedItem(name)" method from the NamedNodeMap 
+  replaced with its value.  This test uses the
+  "getNamedItem(name)" method from the NamedNodeMap
   interface.
 
 * @author NIST
@@ -424,7 +424,7 @@ TEST("attrentityreplacement", function() {
       var attributes;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -438,17 +438,17 @@ TEST("attrentityreplacement", function() {
       value = streetAttr.value;
 
       ASSERT(STRICT_EQ("Yes",value),"streetYes");
-       
+
 });
 
 
 
 /**
-* 
-    The getNodeName() method of an Attribute node. 
-  Retrieve the attribute named street from the last 
-  child of of the second employee and examine its 
-  NodeName.  This test uses the getNamedItem(name) method from the NamedNodeMap 
+*
+    The getNodeName() method of an Attribute node.
+  Retrieve the attribute named street from the last
+  child of of the second employee and examine its
+  NodeName.  This test uses the getNamedItem(name) method from the NamedNodeMap
   interface.
 
 * @author NIST
@@ -464,7 +464,7 @@ TEST("attrname", function() {
       var attributes;
       var streetAttr;
       var name;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -481,13 +481,13 @@ TEST("attrname", function() {
        name = streetAttr.name;
 
       ASSERT(STRICT_EQ("street",name),"name");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getNextSibling()" method for an Attr node should return null.
 Retrieve the attribute named "domestic" from the last child of of the
 first employee and examine its NextSibling node.  This test uses the
@@ -506,7 +506,7 @@ TEST("attrnextsiblingnull", function() {
       var attributes;
       var domesticAttr;
       var s;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -520,13 +520,13 @@ TEST("attrnextsiblingnull", function() {
       s = domesticAttr.nextSibling;
 
       ASSERT(NULL(s),"attrNextSiblingNullAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
 The "getParentNode()" method for an Attr node should return null.  Retrieve
 the attribute named "domestic" from the last child of the first employee
 and examine its parentNode attribute.  This test also uses the "getNamedItem(name)"
@@ -545,7 +545,7 @@ TEST("attrparentnodenull", function() {
       var attributes;
       var domesticAttr;
       var s;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -559,13 +559,13 @@ TEST("attrparentnodenull", function() {
       s = domesticAttr.parentNode;
 
       ASSERT(NULL(s),"attrParentNodeNullAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
 The "getPreviousSibling()" method for an Attr node should return null.
 Retrieve the attribute named "domestic" from the last child of of the
 first employee and examine its PreviousSibling node.  This test uses the
@@ -584,7 +584,7 @@ TEST("attrprevioussiblingnull", function() {
       var attributes;
       var domesticAttr;
       var s;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -598,20 +598,20 @@ TEST("attrprevioussiblingnull", function() {
       s = domesticAttr.previousSibling;
 
       ASSERT(NULL(s),"attrPreviousSiblingNullAssert");
-    
+
 });
 
 
 
 /**
-* 
-    The "getSpecified()" method for an Attr node should 
+*
+    The "getSpecified()" method for an Attr node should
   be set to true if the attribute was explicitly given
   a value.
-  Retrieve the attribute named "domestic" from the last 
-  child of of the first employee and examine the value 
-  returned by the "getSpecified()" method.  This test uses 
-  the "getNamedItem(name)" method from the NamedNodeMap 
+  Retrieve the attribute named "domestic" from the last
+  child of of the first employee and examine the value
+  returned by the "getSpecified()" method.  This test uses
+  the "getNamedItem(name)" method from the NamedNodeMap
   interface.
 
 * @author NIST
@@ -626,7 +626,7 @@ TEST("attrspecifiedvalue", function() {
       var attributes;
       var domesticAttr;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -646,11 +646,11 @@ TEST("attrspecifiedvalue", function() {
 
 
 /**
-* 
-    The "getSpecified()" method for an Attr node should return true if the 
-  value of the attribute is changed. 
-  Retrieve the attribute named "street" from the last 
-  child of of the THIRD employee and change its 
+*
+    The "getSpecified()" method for an Attr node should return true if the
+  value of the attribute is changed.
+  Retrieve the attribute named "street" from the last
+  child of of the THIRD employee and change its
   value to "Yes"(which is the default DTD value).  This
   should cause the "getSpecified()" method to be true.
   This test uses the "setAttribute(name,value)" method
@@ -669,7 +669,7 @@ TEST("attrspecifiedvaluechanged", function() {
       var attributes;
       var streetAttr;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -690,7 +690,7 @@ TEST("attrspecifiedvaluechanged", function() {
 
 
 /**
-* 
+*
 Retrieve the last CDATASection node located inside the
 second child of the second employee and examine its
 content.  Since the CDATASection interface inherits
@@ -710,7 +710,7 @@ TEST("cdatasectiongetdata", function() {
       var lastChild;
       var data;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -726,13 +726,13 @@ TEST("cdatasectiongetdata", function() {
        data = lastChild.data;
 
       ASSERT(STRICT_EQ("This is an adjacent CDATASection with a reference to a tab &tab;",data),"data");
-       
+
 });
 
 
 
 /**
-* 
+*
 Adjacent CDATASection nodes cannot be merged together by
 use of the "normalize()" method from the Element interface.
 Retrieve second child of the second employee and invoke
@@ -752,7 +752,7 @@ TEST("cdatasectionnormalize", function() {
       var childNodes;
       var cdataN;
       var data;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -773,20 +773,20 @@ data = cdataN.data;
 data = cdataN.data;
 
       ASSERT(STRICT_EQ("This is an adjacent CDATASection with a reference to a tab &tab;",data),"data3");
-       
+
 });
 
 
 
 /**
-* 
-    The "appendData(arg)" method appends a string to the end 
+*
+    The "appendData(arg)" method appends a string to the end
    of the character data of the node.
-   
-   Retrieve the character data from the second child 
+
+   Retrieve the character data from the second child
    of the first employee.  The appendData(arg) method is
-   called with arg=", Esquire".  The method should append 
-   the specified data to the already existing character  
+   called with arg=", Esquire".  The method should append
+   the specified data to the already existing character
    data.  The new value return by the "getLength()" method
    should be 24.
 
@@ -803,7 +803,7 @@ TEST("characterdataappenddata", function() {
       var child;
       var childValue;
       var childLength;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -818,21 +818,21 @@ TEST("characterdataappenddata", function() {
 
       childLength = childValue.length;
       ASSERT(STRICT_EQ(24,childLength),"characterdataAppendDataAssert");
-       
+
 });
 
 
 
 /**
-* 
-    On successful invocation of the "appendData(arg)" 
+*
+    On successful invocation of the "appendData(arg)"
    method the "getData()" method provides access to the
    concatentation of data and the specified string.
-   
-   Retrieve the character data from the second child 
+
+   Retrieve the character data from the second child
    of the first employee.  The appendData(arg) method is
-   called with arg=", Esquire".  The method should append 
-   the specified data to the already existing character  
+   called with arg=", Esquire".  The method should append
+   the specified data to the already existing character
    data.  The new value return by the "getData()" method
    should be "Margaret Martin, Esquire".
 
@@ -848,7 +848,7 @@ TEST("characterdataappenddatagetdata", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -862,13 +862,13 @@ TEST("characterdataappenddatagetdata", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Martin, Esquire",childData),"characterdataAppendDataGetDataAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "deleteData(offset,count)" method removes a range of
 characters from the node.  Delete data at the beginning
 of the character data.
@@ -891,7 +891,7 @@ TEST("characterdatadeletedatabegining", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -905,17 +905,17 @@ TEST("characterdatadeletedatabegining", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Dallas, Texas 98551",childData),"characterdataDeleteDataBeginingAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "deleteData(offset,count)" method removes a range of 
-   characters from the node.  Delete data at the end 
+*
+    The "deleteData(offset,count)" method removes a range of
+   characters from the node.  Delete data at the end
    of the character data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=30 and count=5.
@@ -935,7 +935,7 @@ TEST("characterdatadeletedataend", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -949,18 +949,18 @@ TEST("characterdatadeletedataend", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 North Ave. Dallas, Texas ",childData),"characterdataDeleteDataEndAssert");
-       
+
 });
 
 
 
 /**
-* 
-    If the sum of the offset and count used in the        
+*
+    If the sum of the offset and count used in the
    "deleteData(offset,count) method is greater than the
    length of the character data then all the characters
-   from the offset to the end of the data are deleted. 
-   
+   from the offset to the end of the data are deleted.
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=4 and count=50.
@@ -981,7 +981,7 @@ TEST("characterdatadeletedataexceedslength", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -995,17 +995,17 @@ TEST("characterdatadeletedataexceedslength", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230",childData),"characterdataDeleteDataExceedsLengthAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     On successful invocation of the "deleteData(offset,count)"
    method, the "getData()" and "getLength()" methods reflect
-   the changes. 
-   
+   the changes.
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=30 and count=5.
@@ -1031,7 +1031,7 @@ TEST("characterdatadeletedatagetlengthanddata", function() {
       var childLength;
       var result = new Array();
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1048,17 +1048,17 @@ TEST("characterdatadeletedatagetlengthanddata", function() {
        childLength = child.length;
 
       ASSERT(STRICT_EQ(30,childLength),"length");
-       
+
 });
 
 
 
 /**
-* 
-    The "deleteData(offset,count)" method removes a range of 
-   characters from the node.  Delete data in the middle 
+*
+    The "deleteData(offset,count)" method removes a range of
+   characters from the node.  Delete data in the middle
    of the character data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=16 and count=8.
@@ -1078,7 +1078,7 @@ TEST("characterdatadeletedatamiddle", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1092,23 +1092,23 @@ TEST("characterdatadeletedatamiddle", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 North Ave. Texas 98551",childData),"characterdataDeleteDataMiddleAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The "getData()" method retrieves the character data 
+    The "getData()" method retrieves the character data
 
   currently stored in the node.
 
-  Retrieve the character data from the second child 
+  Retrieve the character data from the second child
 
-  of the first employee and invoke the "getData()" 
+  of the first employee and invoke the "getData()"
 
-  method.  The method returns the character data 
+  method.  The method returns the character data
 
   string.
 
@@ -1124,7 +1124,7 @@ TEST("characterdatagetdata", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1137,18 +1137,18 @@ TEST("characterdatagetdata", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Martin",childData),"characterdataGetDataAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "getLength()" method returns the number of characters 
+*
+    The "getLength()" method returns the number of characters
   stored in this nodes data.
-  Retrieve the character data from the second 
-  child of the first employee and examine the 
-  value returned by the getLength() method.  
+  Retrieve the character data from the second
+  child of the first employee and examine the
+  value returned by the getLength() method.
 
 * @author NIST
 * @author Mary Brady
@@ -1163,7 +1163,7 @@ TEST("characterdatagetlength", function() {
       var child;
       var childValue;
       var childLength;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1177,17 +1177,17 @@ TEST("characterdatagetlength", function() {
 
       childLength = childValue.length;
       ASSERT(STRICT_EQ(15,childLength),"characterdataGetLengthAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "deleteData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is greater that the number of characters in the string. 
-   
+   is greater that the number of characters in the string.
+
    Retrieve the character data of the last child of the
    first employee and invoke its "deleteData(offset,count)"
    method with offset=40 and count=3.  It should raise the
@@ -1208,7 +1208,7 @@ TEST("characterdataindexsizeerrdeletedataoffsetgreater", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1218,7 +1218,7 @@ TEST("characterdataindexsizeerrdeletedataoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1235,11 +1235,11 @@ TEST("characterdataindexsizeerrdeletedataoffsetgreater", function() {
 
 
 /**
-* 
+*
     The "deleteData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its "deleteData(offset,count)"
    method with offset=-5 and count=3.  It should raise the
@@ -1258,7 +1258,7 @@ TEST("characterdataindexsizeerrdeletedataoffsetnegative", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1268,7 +1268,7 @@ TEST("characterdataindexsizeerrdeletedataoffsetnegative", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1285,11 +1285,11 @@ TEST("characterdataindexsizeerrdeletedataoffsetnegative", function() {
 
 
 /**
-* 
+*
     The "insertData(offset,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is greater than the number of characters in the string. 
-   
+   is greater than the number of characters in the string.
+
    Retrieve the character data of the last child of the
    first employee and invoke its insertData"(offset,arg)"
    method with offset=40 and arg="ABC".  It should raise
@@ -1309,7 +1309,7 @@ TEST("characterdataindexsizeerrinsertdataoffsetgreater", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1319,7 +1319,7 @@ TEST("characterdataindexsizeerrinsertdataoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1336,11 +1336,11 @@ TEST("characterdataindexsizeerrinsertdataoffsetgreater", function() {
 
 
 /**
-* 
+*
     The "insertData(offset,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its insertData"(offset,arg)"
    method with offset=-5 and arg="ABC".  It should raise
@@ -1358,7 +1358,7 @@ TEST("characterdataindexsizeerrinsertdataoffsetnegative", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1368,7 +1368,7 @@ TEST("characterdataindexsizeerrinsertdataoffsetnegative", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1385,11 +1385,11 @@ TEST("characterdataindexsizeerrinsertdataoffsetnegative", function() {
 
 
 /**
-* 
+*
     The "replaceData(offset,count,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is greater than the length of the string. 
-   
+   is greater than the length of the string.
+
    Retrieve the character data of the last child of the
    first employee and invoke its
    "replaceData(offset,count,arg) method with offset=40
@@ -1410,7 +1410,7 @@ TEST("characterdataindexsizeerrreplacedataoffsetgreater", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1420,7 +1420,7 @@ TEST("characterdataindexsizeerrreplacedataoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1437,11 +1437,11 @@ TEST("characterdataindexsizeerrreplacedataoffsetgreater", function() {
 
 
 /**
-* 
+*
     The "replaceData(offset,count,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its
    "replaceData(offset,count,arg) method with offset=-5
@@ -1461,7 +1461,7 @@ TEST("characterdataindexsizeerrreplacedataoffsetnegative", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1471,7 +1471,7 @@ TEST("characterdataindexsizeerrreplacedataoffsetnegative", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1488,11 +1488,11 @@ TEST("characterdataindexsizeerrreplacedataoffsetnegative", function() {
 
 
 /**
-* 
+*
     The "substringData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its "substringData(offset,count)
    method with offset=-5 and count=3.  It should raise the
@@ -1511,7 +1511,7 @@ TEST("characterdataindexsizeerrsubstringnegativeoffset", function() {
       var nameNode;
       var child;
       var badString;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1521,7 +1521,7 @@ TEST("characterdataindexsizeerrsubstringnegativeoffset", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1538,11 +1538,11 @@ TEST("characterdataindexsizeerrsubstringnegativeoffset", function() {
 
 
 /**
-* 
+*
     The "substringData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
    is greater than the number of characters in the string.
-   
+
    Retrieve the character data of the last child of the
    first employee and invoke its "substringData(offset,count)
    method with offset=40 and count=3.  It should raise the
@@ -1563,7 +1563,7 @@ TEST("characterdataindexsizeerrsubstringoffsetgreater", function() {
       var nameNode;
       var child;
       var badString;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1573,7 +1573,7 @@ TEST("characterdataindexsizeerrsubstringoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -1590,7 +1590,7 @@ TEST("characterdataindexsizeerrsubstringoffsetgreater", function() {
 
 
 /**
-* 
+*
 The "insertData(offset,arg)" method will insert a string
 at the specified character offset.  Insert the data at
 the beginning of the character data.
@@ -1613,7 +1613,7 @@ TEST("characterdatainsertdatabeginning", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1627,21 +1627,21 @@ TEST("characterdatainsertdatabeginning", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Mss. Margaret Martin",childData),"characterdataInsertDataBeginningAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertData(offset,arg)" method will insert a string 
-   at the specified character offset.  Insert the data at 
-   the end of the character data. 
-   
-   Retrieve the character data from the second child of  
+*
+    The "insertData(offset,arg)" method will insert a string
+   at the specified character offset.  Insert the data at
+   the end of the character data.
+
+   Retrieve the character data from the second child of
    the first employee.  The "insertData(offset,arg)"
    method is then called with offset=15 and arg=", Esquire".
-   The method should insert the string ", Esquire" at 
+   The method should insert the string ", Esquire" at
    position 15.  The new value of the character data should
    be "Margaret Martin, Esquire".
 
@@ -1657,7 +1657,7 @@ TEST("characterdatainsertdataend", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1671,18 +1671,18 @@ TEST("characterdatainsertdataend", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Martin, Esquire",childData),"characterdataInsertDataEndAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertData(offset,arg)" method will insert a string 
-   at the specified character offset.  Insert the data in 
-   the middle of the character data. 
-   
-   Retrieve the character data from the second child of  
+*
+    The "insertData(offset,arg)" method will insert a string
+   at the specified character offset.  Insert the data in
+   the middle of the character data.
+
+   Retrieve the character data from the second child of
    the first employee.  The "insertData(offset,arg)"
    method is then called with offset=9 and arg="Ann".
    The method should insert the string "Ann" at position 9.
@@ -1701,7 +1701,7 @@ TEST("characterdatainsertdatamiddle", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1715,13 +1715,13 @@ TEST("characterdatainsertdatamiddle", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Ann Martin",childData),"characterdataInsertDataMiddleAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "replaceData(offset,count,arg)" method replaces the
 characters starting at the specified offset with the
 specified string.  Test for replacement in the
@@ -1744,7 +1744,7 @@ TEST("characterdatareplacedatabegining", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1758,22 +1758,22 @@ TEST("characterdatareplacedatabegining", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("2500 North Ave. Dallas, Texas 98551",childData),"characterdataReplaceDataBeginingAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceData(offset,count,arg)" method replaces the 
+*
+    The "replaceData(offset,count,arg)" method replaces the
    characters starting at the specified offset with the
-   specified string.  Test for replacement at the 
+   specified string.  Test for replacement at the
    end of the data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=30 and count=5 and
-   arg="98665".  The method should replace characters 30  
+   arg="98665".  The method should replace characters 30
    thru 34 of the character data with "98665".
 
 * @author NIST
@@ -1788,7 +1788,7 @@ TEST("characterdatareplacedataend", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1802,22 +1802,22 @@ TEST("characterdatareplacedataend", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 North Ave. Dallas, Texas 98665",childData),"characterdataReplaceDataEndAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceData(offset,count,arg)" method replaces the 
+*
+    The "replaceData(offset,count,arg)" method replaces the
    characters starting at the specified offset with the
-   specified string.  Test the situation where the length 
+   specified string.  Test the situation where the length
    of the arg string is greater than the specified offset.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=0 and count=4 and
-   arg="260030".  The method should replace characters one  
+   arg="260030".  The method should replace characters one
    thru four with "260030".  Note that the length of the
    specified string is greater that the specified offset.
 
@@ -1833,7 +1833,7 @@ TEST("characterdatareplacedataexceedslengthofarg", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1847,16 +1847,16 @@ TEST("characterdatareplacedataexceedslengthofarg", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("260030 North Ave. Dallas, Texas 98551",childData),"characterdataReplaceDataExceedsLengthOfArgAssert");
-       
+
 });
 
 
 
 /**
-* 
-    If the sum of the offset and count exceeds the length then 
+*
+    If the sum of the offset and count exceeds the length then
    all the characters to the end of the data are replaced.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=0 and count=50 and
@@ -1876,7 +1876,7 @@ TEST("characterdatareplacedataexceedslengthofdata", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1890,22 +1890,22 @@ TEST("characterdatareplacedataexceedslengthofdata", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("2600",childData),"characterdataReplaceDataExceedsLengthOfDataAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceData(offset,count,arg)" method replaces the 
+*
+    The "replaceData(offset,count,arg)" method replaces the
    characters starting at the specified offset with the
-   specified string.  Test for replacement in the 
+   specified string.  Test for replacement in the
    middle of the data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=5 and count=5 and
-   arg="South".  The method should replace characters five  
+   arg="South".  The method should replace characters five
    thru 9 of the character data with "South".
 
 * @author NIST
@@ -1920,7 +1920,7 @@ TEST("characterdatareplacedatamiddle", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1934,17 +1934,17 @@ TEST("characterdatareplacedatamiddle", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 South Ave. Dallas, Texas 98551",childData),"characterdataReplaceDataMiddleAssert");
-       
+
 });
 
 
 
 /**
-* 
-  The "setNodeValue()" method changes the character data 
+*
+  The "setNodeValue()" method changes the character data
   currently stored in the node.
-  Retrieve the character data from the second child 
-  of the first employee and invoke the "setNodeValue()" 
+  Retrieve the character data from the second child
+  of the first employee and invoke the "setNodeValue()"
   method, call "getData()" and compare.
 
 * @author Curt Arnold
@@ -1958,7 +1958,7 @@ TEST("characterdatasetnodevalue", function() {
       var child;
       var childData;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -1976,21 +1976,21 @@ TEST("characterdatasetnodevalue", function() {
        childValue = child.nodeValue;
 
       ASSERT(STRICT_EQ("Marilyn Martin",childValue),"value");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the sum of the "offset" and "count" exceeds the
    "length" then the "substringData(offset,count)" method
-   returns all the characters to the end of the data. 
-   
-   Retrieve the character data from the second child 
-   of the first employee and access part of the data 
+   returns all the characters to the end of the data.
+
+   Retrieve the character data from the second child
+   of the first employee and access part of the data
    by using the substringData(offset,count) method
-   with offset=9 and count=10.  The method should return 
+   with offset=9 and count=10.  The method should return
    the substring "Martin" since offset+count > length
    (19 > 15).
 
@@ -2005,7 +2005,7 @@ TEST("characterdatasubstringexceedsvalue", function() {
       var nameNode;
       var child;
       var substring;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2017,20 +2017,20 @@ TEST("characterdatasubstringexceedsvalue", function() {
 
       substring = child.substringData(9,10);
       ASSERT(STRICT_EQ("Martin",substring),"characterdataSubStringExceedsValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "substringData(offset,count)" method returns the 
+*
+    The "substringData(offset,count)" method returns the
    specified string.
-   
-   Retrieve the character data from the second child 
-   of the first employee and access part of the data 
+
+   Retrieve the character data from the second child
+   of the first employee and access part of the data
    by using the substringData(offset,count) method.  The
-   method should return the specified substring starting 
+   method should return the specified substring starting
    at position "offset" and extract "count" characters.
    The method should return the string "Margaret".
 
@@ -2045,7 +2045,7 @@ TEST("characterdatasubstringvalue", function() {
       var nameNode;
       var child;
       var substring;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2057,16 +2057,16 @@ TEST("characterdatasubstringvalue", function() {
 
       substring = child.substringData(0,8);
       ASSERT(STRICT_EQ("Margaret",substring),"characterdataSubStringValueAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     A comment is all the characters between the starting
-  '<!--' and ending '-->' 
-  Retrieve the nodes of the DOM document.  Search for a 
+  '<!--' and ending '-->'
+  Retrieve the nodes of the DOM document.  Search for a
   comment node and the content is its value.
 
 * @author NIST
@@ -2085,7 +2085,7 @@ TEST("commentgetcomment", function() {
       var childValue;
       var commentCount = 0;
       var childType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2097,7 +2097,7 @@ TEST("commentgetcomment", function() {
       child = elementList.item(indexid2258656);
       childType = child.nodeType;
 
-      
+
 	if(
 	(8 == childType)
 	) {
@@ -2113,18 +2113,18 @@ TEST("commentgetcomment", function() {
 	
 	}
    ASSERT(STRICT_EQ(1,commentCount),"commentCount");
-       
+
 });
 
 
 
 /**
-* 
-    The "createAttribute(name)" method creates an Attribute 
+*
+    The "createAttribute(name)" method creates an Attribute
    node of the given name.
-   
-   Retrieve the entire DOM document and invoke its 
-   "createAttribute(name)" method.  It should create a  
+
+   Retrieve the entire DOM document and invoke its
+   "createAttribute(name)" method.  It should create a
    new Attribute node with the given name. The name, value
    and type of the newly created object are retrieved and
    output.
@@ -2140,7 +2140,7 @@ TEST("documentcreateattribute", function() {
       var attrValue;
       var attrName;
       var attrType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2156,18 +2156,18 @@ TEST("documentcreateattribute", function() {
        attrType = newAttrNode.nodeType;
 
       ASSERT(STRICT_EQ(2,attrType),"type");
-       
+
 });
 
 
 
 /**
-* 
-    The "createCDATASection(data)" method creates a new 
+*
+    The "createCDATASection(data)" method creates a new
    CDATASection node whose value is the specified string.
-   Retrieve the entire DOM document and invoke its 
+   Retrieve the entire DOM document and invoke its
    "createCDATASection(data)" method.  It should create a
-   new CDATASection node whose "data" is the specified 
+   new CDATASection node whose "data" is the specified
    string.  The content, name and type are retrieved and
    output.
 
@@ -2182,7 +2182,7 @@ TEST("documentcreatecdatasection", function() {
       var newCDATASectionValue;
       var newCDATASectionName;
       var newCDATASectionType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2198,16 +2198,16 @@ TEST("documentcreatecdatasection", function() {
        newCDATASectionType = newCDATASectionNode.nodeType;
 
       ASSERT(STRICT_EQ(4,newCDATASectionType),"nodeType");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "createComment(data)" method creates a new Comment
-   node given the specified string. 
-   Retrieve the entire DOM document and invoke its 
+   node given the specified string.
+   Retrieve the entire DOM document and invoke its
    "createComment(data)" method.  It should create a new
    Comment node whose "data" is the specified string.
    The content, name and type are retrieved and output.
@@ -2223,7 +2223,7 @@ TEST("documentcreatecomment", function() {
       var newCommentValue;
       var newCommentName;
       var newCommentType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2239,17 +2239,17 @@ TEST("documentcreatecomment", function() {
        newCommentType = newCommentNode.nodeType;
 
       ASSERT(STRICT_EQ(8,newCommentType),"type");
-       
+
 });
 
 
 
 /**
-* 
-    The "createDocumentFragment()" method creates an empty 
+*
+    The "createDocumentFragment()" method creates an empty
    DocumentFragment object.
-   Retrieve the entire DOM document and invoke its 
-   "createDocumentFragment()" method.  The content, name, 
+   Retrieve the entire DOM document and invoke its
+   "createDocumentFragment()" method.  The content, name,
    type and value of the newly created object are output.
 
 * @author NIST
@@ -2265,7 +2265,7 @@ TEST("documentcreatedocumentfragment", function() {
       var newDocFragmentName;
       var newDocFragmentType;
       var newDocFragmentValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2286,19 +2286,19 @@ TEST("documentcreatedocumentfragment", function() {
        newDocFragmentValue = newDocFragment.nodeValue;
 
       ASSERT(NULL(newDocFragmentValue),"value");
-    
+
 });
 
 
 
 /**
-* 
-    The "createElement(tagName)" method creates an Element 
+*
+    The "createElement(tagName)" method creates an Element
    of the type specified.
-   Retrieve the entire DOM document and invoke its 
+   Retrieve the entire DOM document and invoke its
    "createElement(tagName)" method with tagName="address".
    The method should create an instance of an Element node
-   whose tagName is "address".  The NodeName, NodeType 
+   whose tagName is "address".  The NodeName, NodeType
    and NodeValue are returned.
 
 * @author NIST
@@ -2312,7 +2312,7 @@ TEST("documentcreateelement", function() {
       var newElementName;
       var newElementType;
       var newElementValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2328,20 +2328,20 @@ TEST("documentcreateelement", function() {
        newElementValue = newElement.nodeValue;
 
       ASSERT(NULL(newElementValue),"valueInitiallyNull");
-    
+
 });
 
 
 
 /**
-* 
+*
     The tagName parameter in the "createElement(tagName)"
    method is case-sensitive for XML documents.
-   Retrieve the entire DOM document and invoke its 
+   Retrieve the entire DOM document and invoke its
    "createElement(tagName)" method twice.  Once for tagName
    equal to "address" and once for tagName equal to "ADDRESS"
    Each call should create a distinct Element node.  The
-   newly created Elements are then assigned attributes 
+   newly created Elements are then assigned attributes
    that are retrieved.
 
 * @author NIST
@@ -2355,7 +2355,7 @@ TEST("documentcreateelementcasesensitive", function() {
       var newElement2;
       var attribute1;
       var attribute2;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2369,20 +2369,20 @@ TEST("documentcreateelementcasesensitive", function() {
       attribute2 = newElement2.getAttribute("county");
       ASSERT(STRICT_EQ("Fort Worth",attribute1),"attrib1");
        ASSERT(STRICT_EQ("Dallas",attribute2),"attrib2");
-       
+
 });
 
 
 
 /**
-* 
-    The "createProcessingInstruction(target,data)" method 
+*
+    The "createProcessingInstruction(target,data)" method
    creates a new ProcessingInstruction node with the
    specified name and data string.
-   
-   Retrieve the entire DOM document and invoke its 
-   "createProcessingInstruction(target,data)" method.  
-   It should create a new PI node with the specified target 
+
+   Retrieve the entire DOM document and invoke its
+   "createProcessingInstruction(target,data)" method.
+   It should create a new PI node with the specified target
    and data.  The target, data and type are retrieved and
    output.
 
@@ -2401,7 +2401,7 @@ TEST("documentcreateprocessinginstruction", function() {
       var piValue;
       var piName;
       var piType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2418,17 +2418,17 @@ piName = newPINode.nodeName;
        piType = newPINode.nodeType;
 
       ASSERT(STRICT_EQ(7,piType),"type");
-       
+
 });
 
 
 
 /**
-* 
-    The "createTextNode(data)" method creates a Text node 
+*
+    The "createTextNode(data)" method creates a Text node
    given the specfied string.
-   Retrieve the entire DOM document and invoke its 
-   "createTextNode(data)" method.  It should create a 
+   Retrieve the entire DOM document and invoke its
+   "createTextNode(data)" method.  It should create a
    new Text node whose "data" is the specified string.
    The NodeName and NodeType are also checked.
 
@@ -2443,7 +2443,7 @@ TEST("documentcreatetextnode", function() {
       var newTextName;
       var newTextValue;
       var newTextType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2459,17 +2459,17 @@ TEST("documentcreatetextnode", function() {
        newTextType = newTextNode.nodeType;
 
       ASSERT(STRICT_EQ(3,newTextType),"type");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getDoctype()" method returns null for XML documents
    without a document type declaration.
-   Retrieve the XML document without a DTD and invoke the 
-   "getDoctype()" method.  It should return null. 
+   Retrieve the XML document without a DTD and invoke the
+   "getDoctype()" method.  It should return null.
 
 * @author NIST
 * @author Mary Brady
@@ -2479,7 +2479,7 @@ TEST("documentgetdoctypenodtd", function() {
    var success;
     var doc;
       var docType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2488,19 +2488,19 @@ TEST("documentgetdoctypenodtd", function() {
       docType = doc.doctype;
 
       ASSERT(NULL(docType),"documentGetDocTypeNoDTDAssert");
-    
+
 });
 
 
 
 /**
-* 
-    The "getElementsByTagName(tagName)" method returns a 
+*
+    The "getElementsByTagName(tagName)" method returns a
    NodeList of all the Elements with a given tagName.
-   
-   Retrieve the entire DOM document and invoke its 
+
+   Retrieve the entire DOM document and invoke its
    "getElementsByTagName(tagName)" method with tagName
-   equal to "name".  The method should return a NodeList 
+   equal to "name".  The method should return a NodeList
    that contains 5 elements.
 
 * @author NIST
@@ -2511,7 +2511,7 @@ TEST("documentgetelementsbytagnamelength", function() {
    var success;
     var doc;
       var nameList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2525,14 +2525,14 @@ TEST("documentgetelementsbytagnamelength", function() {
 
 
 /**
-* 
-    The "getElementsByTagName(tagName)" method returns a 
+*
+    The "getElementsByTagName(tagName)" method returns a
    NodeList of all the Elements with a given tagName
    in a pre-order traversal of the tree.
-   
-   Retrieve the entire DOM document and invoke its 
+
+   Retrieve the entire DOM document and invoke its
    "getElementsByTagName(tagName)" method with tagName
-   equal to "name".  The method should return a NodeList 
+   equal to "name".  The method should return a NodeList
    that contains 5 elements.  The FOURTH item in the
    list is retrieved and output.
 
@@ -2547,7 +2547,7 @@ TEST("documentgetelementsbytagnamevalue", function() {
       var nameNode;
       var firstChild;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2560,17 +2560,17 @@ TEST("documentgetelementsbytagnamevalue", function() {
       childValue = firstChild.nodeValue;
 
       ASSERT(STRICT_EQ("Jeny Oconnor",childValue),"documentGetElementsByTagNameValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "getImplementation()" method returns the 
-   DOMImplementation object that handles this document. 
-   Retrieve the entire DOM document and invoke its 
-   "getImplementation()" method.  It should return a 
+*
+    The "getImplementation()" method returns the
+   DOMImplementation object that handles this document.
+   Retrieve the entire DOM document and invoke its
+   "getImplementation()" method.  It should return a
    DOMImplementation whose "hasFeature("XML","1.0")
    method returns the boolean value "true".
 
@@ -2583,7 +2583,7 @@ TEST("documentgetimplementation", function() {
     var doc;
       var docImpl;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2598,10 +2598,10 @@ ASSERT(STRICT_EQ(true,state),"documentGetImplementationAssert");
 
 
 /**
-* 
-    The "getDocumentElement()" method provides direct access 
+*
+    The "getDocumentElement()" method provides direct access
    to the child node that is the root element of the document.
-   Retrieve the entire DOM document and invoke its 
+   Retrieve the entire DOM document and invoke its
    "getDocumentElement()" method.  It should return an
    Element node whose NodeName is "staff" (or "svg").
 
@@ -2615,7 +2615,7 @@ TEST("documentgetrootnode", function() {
     var doc;
       var root;
       var rootName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2625,19 +2625,19 @@ TEST("documentgetrootnode", function() {
 
       rootName = root.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",rootName),"svgRootNode");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("staff",rootName),"documentGetRootNodeAssert");
-       
+
 		}
 	
 });
@@ -2645,14 +2645,14 @@ TEST("documentgetrootnode", function() {
 
 
 /**
-* 
+*
     The "createAttribute(tagName)" method raises an
    INVALID_CHARACTER_ERR DOMException if the specified
-   tagName contains an invalid character. 
-   
-   Retrieve the entire DOM document and invoke its 
+   tagName contains an invalid character.
+
+   Retrieve the entire DOM document and invoke its
    "createAttribute(tagName)" method with the tagName equal
-   to the string "invalid^Name".  Due to the invalid 
+   to the string "invalid^Name".  Due to the invalid
    character the desired EXCEPTION should be raised.
 
 * @author NIST
@@ -2667,13 +2667,13 @@ TEST("documentinvalidcharacterexceptioncreateattribute", function() {
    var success;
     var doc;
       var createdAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "staff");
-      
+
 	{
 		success = false;
 		try {
@@ -2690,14 +2690,14 @@ TEST("documentinvalidcharacterexceptioncreateattribute", function() {
 
 
 /**
-* 
+*
     The "createElement(tagName)" method raises an
    INVALID_CHARACTER_ERR DOMException if the specified
-   tagName contains an invalid character. 
-   
-   Retrieve the entire DOM document and invoke its 
+   tagName contains an invalid character.
+
+   Retrieve the entire DOM document and invoke its
    "createElement(tagName)" method with the tagName equal
-   to the string "invalid^Name".  Due to the invalid 
+   to the string "invalid^Name".  Due to the invalid
    character the desired EXCEPTION should be raised.
 
 * @author NIST
@@ -2712,13 +2712,13 @@ TEST("documentinvalidcharacterexceptioncreateelement", function() {
    var success;
     var doc;
       var badElement;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "staff");
-      
+
 	{
 		success = false;
 		try {
@@ -2735,10 +2735,10 @@ TEST("documentinvalidcharacterexceptioncreateelement", function() {
 
 
 /**
-* 
-    The "createProcessingInstruction(target,data) method 
+*
+    The "createProcessingInstruction(target,data) method
    raises an INVALID_CHARACTER_ERR DOMException if the
-   specified tagName contains an invalid character. 
+   specified tagName contains an invalid character.
 
 * @author NIST
 * @author Mary Brady
@@ -2751,13 +2751,13 @@ TEST("documentinvalidcharacterexceptioncreatepi", function() {
    var success;
     var doc;
       var badPI;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
 	if(
 	
 	(builder.contentType == "text/html")
@@ -2797,7 +2797,7 @@ TEST("documentinvalidcharacterexceptioncreatepi", function() {
 
 
 /**
-* 
+*
 Creating a processing instruction with an empty target should cause an INVALID_CHARACTER_ERR.
 
 * @author Curt Arnold
@@ -2810,13 +2810,13 @@ TEST("documentinvalidcharacterexceptioncreatepi1", function() {
    var success;
     var doc;
       var badPI;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
 	if(
 	
 	(builder.contentType == "text/html")
@@ -2856,7 +2856,7 @@ TEST("documentinvalidcharacterexceptioncreatepi1", function() {
 
 
 /**
-* 
+*
 hasFeature("XML", "") should return true for implementations that can read staff files.
 
 * @author NIST
@@ -2869,7 +2869,7 @@ TEST("domimplementationfeaturenoversion", function() {
     var doc;
       var domImpl;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2884,7 +2884,7 @@ ASSERT(STRICT_EQ(true,state),"hasXMLEmpty");
 
 
 /**
-* 
+*
 hasFeature("XML", null) should return true for implementations that can read staff documents.
 
 * @author NIST
@@ -2899,7 +2899,7 @@ TEST("domimplementationfeaturenull", function() {
       var state;
       var nullVersion = null;
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2914,7 +2914,7 @@ ASSERT(STRICT_EQ(true,state),"hasXMLnull");
 
 
 /**
-* 
+*
 hasFeature("xml", "1.0") should return true for implementations that can read staff documents.
 
 * @author NIST
@@ -2926,7 +2926,7 @@ TEST("domimplementationfeaturexml", function() {
     var doc;
       var domImpl;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2941,14 +2941,14 @@ ASSERT(STRICT_EQ(true,state),"hasXML1");
 
 
 /**
-* 
+*
     The "setAttribute(name,value)" method adds a new attribute
-   to the Element 
-   
-   Retrieve the last child of the last employee, then 
-   add an attribute to it by invoking the             
+   to the Element
+
+   Retrieve the last child of the last employee, then
+   add an attribute to it by invoking the
    "setAttribute(name,value)" method.  It should create
-   a "name" attribute with an assigned value equal to 
+   a "name" attribute with an assigned value equal to
    "value".
 
 * @author NIST
@@ -2961,7 +2961,7 @@ TEST("elementaddnewattribute", function() {
       var elementList;
       var testEmployee;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -2972,19 +2972,19 @@ TEST("elementaddnewattribute", function() {
       testEmployee.setAttribute("district","dallas");
       attrValue = testEmployee.getAttribute("district");
       ASSERT(STRICT_EQ("dallas",attrValue),"elementAddNewAttributeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     Elements may have attributes associated with them.
-   
+
    Retrieve the first attribute from the last child of
-   the first employee and invoke the "getSpecified()" 
-   method.  This test is only intended to show that   
-   Elements can actually have attributes.  This test uses  
+   the first employee and invoke the "getSpecified()"
+   method.  This test is only intended to show that
+   Elements can actually have attributes.  This test uses
    the "getNamedItem(name)" method from the NamedNodeMap
    interface.
 
@@ -3000,7 +3000,7 @@ TEST("elementassociatedattribute", function() {
       var attributes;
       var domesticAttr;
       var specified;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3020,16 +3020,16 @@ TEST("elementassociatedattribute", function() {
 
 
 /**
-* 
+*
     The "setAttribute(name,value)" method adds a new attribute
    to the Element.  If the "name" is already present, then
    its value should be changed to the new one that is in
-   the "value" parameter. 
-   
-   Retrieve the last child of the fourth employee, then add 
-   an attribute to it by invoking the 
+   the "value" parameter.
+
+   Retrieve the last child of the fourth employee, then add
+   an attribute to it by invoking the
    "setAttribute(name,value)" method.  Since the name of the
-   used attribute("street") is already present in this     
+   used attribute("street") is already present in this
    element, then its value should be changed to the new one
    of the "value" parameter.
 
@@ -3043,7 +3043,7 @@ TEST("elementchangeattributevalue", function() {
       var elementList;
       var testEmployee;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3054,18 +3054,18 @@ TEST("elementchangeattributevalue", function() {
       testEmployee.setAttribute("street","Neither");
       attrValue = testEmployee.getAttribute("street");
       ASSERT(STRICT_EQ("Neither",attrValue),"elementChangeAttributeValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "setAttributeNode(newAttr)" method adds a new 
-   attribute to the Element.  
-   
+*
+    The "setAttributeNode(newAttr)" method adds a new
+   attribute to the Element.
+
    Retrieve first address element and add
-   a new attribute node to it by invoking its         
+   a new attribute node to it by invoking its
    "setAttributeNode(newAttr)" method.  This test makes use
    of the "createAttribute(name)" method from the Document
    interface.
@@ -3083,7 +3083,7 @@ TEST("elementcreatenewattribute", function() {
       var oldAttr;
       var districtAttr;
       var attrVal;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3098,16 +3098,16 @@ TEST("elementcreatenewattribute", function() {
       ASSERT(NOT_NULL(districtAttr),"new_district_accessible");
 attrVal = testAddress.getAttribute("district");
       ASSERT(STRICT_EQ("",attrVal),"attr_value");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getAttributeNode(name)" method retrieves an
    attribute node by name.
-   
+
    Retrieve the attribute "domestic" from the last child
    of the first employee.  Since the method returns an
    Attr object, the "name" can be examined to ensure the
@@ -3124,7 +3124,7 @@ TEST("elementgetattributenode", function() {
       var testEmployee;
       var domesticAttr;
       var name;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3136,17 +3136,17 @@ TEST("elementgetattributenode", function() {
       name = domesticAttr.nodeName;
 
       ASSERT(STRICT_EQ("domestic",name),"elementGetAttributeNodeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getAttributeNode(name)" method retrieves an
    attribute node by name.  It should return null if the
    "name" attribute does not exist.
-   
+
    Retrieve the last child of the first employee and attempt
    to retrieve a non-existing attribute.  The method should
    return "null".  The non-existing attribute to be used
@@ -3162,7 +3162,7 @@ TEST("elementgetattributenodenull", function() {
       var elementList;
       var testEmployee;
       var domesticAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3172,20 +3172,20 @@ TEST("elementgetattributenodenull", function() {
       testEmployee = elementList.item(0);
       domesticAttr = testEmployee.getAttributeNode("invalidAttribute");
       ASSERT(NULL(domesticAttr),"elementGetAttributeNodeNullAssert");
-    
+
 });
 
 
 
 /**
-* 
-    The "getAttribute(name)" method returns an empty 
-   string if no value was assigned to an attribute and 
+*
+    The "getAttribute(name)" method returns an empty
+   string if no value was assigned to an attribute and
    no default value was given in the DTD file.
-   
+
    Retrieve the last child of the last employee, then
    invoke "getAttribute(name)" method, where "name" is an
-   attribute without a specified or DTD default value. 
+   attribute without a specified or DTD default value.
    The "getAttribute(name)" method should return the empty
    string.  This method makes use of the
    "createAttribute(newAttr)" method from the Document
@@ -3203,7 +3203,7 @@ TEST("elementgetelementempty", function() {
       var testEmployee;
       var domesticAttr;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3215,13 +3215,13 @@ TEST("elementgetelementempty", function() {
       domesticAttr = testEmployee.setAttributeNode(newAttribute);
       attrValue = testEmployee.getAttribute("district");
       ASSERT(STRICT_EQ("",attrValue),"elementGetElementEmptyAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method returns a list
 of all descendant Elements with the given tag name.
 Test for an empty list.
@@ -3240,7 +3240,7 @@ TEST("elementgetelementsbytagname", function() {
    var success;
     var doc;
       var elementList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3254,7 +3254,7 @@ TEST("elementgetelementsbytagname", function() {
 
 
 /**
-* 
+*
 Element.getElementsByTagName("employee") should return a NodeList whose length is
 "5" in the order the children were encountered.
 
@@ -3271,7 +3271,7 @@ TEST("elementgetelementsbytagnameaccessnodelist", function() {
       var childName;
       var childValue;
       var childType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3283,13 +3283,13 @@ TEST("elementgetelementsbytagnameaccessnodelist", function() {
 
       childType = child.nodeType;
 
-      
+
 	if(
 	(3 == childType)
 	) {
 	child = child.nextSibling;
 
-      
+
 	}
 	childName = child.nodeName;
 
@@ -3299,13 +3299,13 @@ TEST("elementgetelementsbytagnameaccessnodelist", function() {
       childValue = child.nodeValue;
 
       ASSERT(STRICT_EQ("EMP0004",childValue),"emp0004");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method returns a list
 of all descendant Elements with the given tag name.
 
@@ -3322,7 +3322,7 @@ TEST("elementgetelementsbytagnamenomatch", function() {
    var success;
     var doc;
       var elementList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3336,7 +3336,7 @@ TEST("elementgetelementsbytagnamenomatch", function() {
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method may use the
 special value "*" to match all tags in the element
 tree.
@@ -3368,7 +3368,7 @@ TEST("elementgetelementsbytagnamespecialvalue", function() {
       expectedResult[4] = "gender";
       expectedResult[5] = "address";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3385,23 +3385,23 @@ TEST("elementgetelementsbytagnamespecialvalue", function() {
 
 	}
    ASSERT(DOM_LIST_EQ(expectedResult,result),"tagNames");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The "getTagName()" method returns the 
+    The "getTagName()" method returns the
 
-   tagName of an element.    
+   tagName of an element.
 
-   
 
-   Invoke the "getTagName()" method one the 
 
-   root node. The value returned should be "staff". 
+   Invoke the "getTagName()" method one the
+
+   root node. The value returned should be "staff".
 
 
 * @author NIST
@@ -3414,7 +3414,7 @@ TEST("elementgettagname", function() {
     var doc;
       var root;
       var tagname;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3424,19 +3424,19 @@ TEST("elementgettagname", function() {
 
       tagname = root.tagName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",tagname),"svgTagName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("staff",tagname),"elementGetTagNameAssert");
-       
+
 		}
 	
 });
@@ -3444,11 +3444,11 @@ TEST("elementgettagname", function() {
 
 
 /**
-* 
-    The "setAttributeNode(newAttr)" method raises an 
-   "INUSE_ATTRIBUTE_ERR DOMException if the "newAttr" 
+*
+    The "setAttributeNode(newAttr)" method raises an
+   "INUSE_ATTRIBUTE_ERR DOMException if the "newAttr"
    is already an attribute of another element.
-   
+
    Retrieve the last child of the second employee and append
    a newly created element.  The "createAttribute(name)"
    and "setAttributeNode(newAttr)" methods are invoked
@@ -3474,7 +3474,7 @@ TEST("elementinuseattributeerr", function() {
       var appendedChild;
       var setAttr1;
       var setAttr2;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3486,7 +3486,7 @@ TEST("elementinuseattributeerr", function() {
       appendedChild = testAddress.appendChild(newElement);
       newAttribute = doc.createAttribute("newAttribute");
       setAttr1 = newElement.setAttributeNode(newAttribute);
-      
+
 	{
 		success = false;
 		try {
@@ -3503,21 +3503,21 @@ TEST("elementinuseattributeerr", function() {
 
 
 /**
-* 
+*
 
-    The "setAttribute(name,value)" method raises an 
+    The "setAttribute(name,value)" method raises an
 
-   "INVALID_CHARACTER_ERR DOMException if the specified 
+   "INVALID_CHARACTER_ERR DOMException if the specified
 
    name contains an invalid character.
 
-   
 
-   Retrieve the last child of the first employee and 
 
-   call its "setAttribute(name,value)" method with    
+   Retrieve the last child of the first employee and
 
-   "name" containing an invalid character. 
+   call its "setAttribute(name,value)" method with
+
+   "name" containing an invalid character.
 
 
 * @author NIST
@@ -3532,7 +3532,7 @@ TEST("elementinvalidcharacterexception", function() {
     var doc;
       var elementList;
       var testAddress;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3540,7 +3540,7 @@ TEST("elementinvalidcharacterexception", function() {
       doc = load(docRef, "doc", "staff");
       elementList = doc.getElementsByTagName("address");
       testAddress = elementList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -3557,13 +3557,13 @@ TEST("elementinvalidcharacterexception", function() {
 
 
 /**
-* 
+*
     The "normalize()" method puts all the nodes in the full
-   depth of the sub-tree underneath this element into a 
-   "normal" form. 
-   
+   depth of the sub-tree underneath this element into a
+   "normal" form.
+
    Retrieve the third employee and access its second child.
-   This child contains a block of text that is spread 
+   This child contains a block of text that is spread
    across multiple lines.  The content of the "name" child
    should be parsed and treated as a single Text node.
 
@@ -3579,7 +3579,7 @@ TEST("elementnormalize", function() {
       var testName;
       var firstChild;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3595,21 +3595,21 @@ TEST("elementnormalize", function() {
       childValue = firstChild.nodeValue;
 
       ASSERT(STRICT_EQ("Roger\n Jones",childValue),"elementNormalizeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "removeAttributeNode(oldAttr)" method raises a
    NOT_FOUND_ERR DOMException if the "oldAttr" attribute
    is not an attribute of the element.
-    
+
    Retrieve the last employee and attempt to remove
    a non existing attribute node.  This should cause the
    intended exception to be raised.  This test makes use
-   of the "createAttribute(name)" method from the Document 
+   of the "createAttribute(name)" method from the Document
    interface.
 
 * @author NIST
@@ -3626,7 +3626,7 @@ TEST("elementnotfounderr", function() {
       var addressElementList;
       var testAddress;
       var attrAddress;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3635,7 +3635,7 @@ TEST("elementnotfounderr", function() {
       addressElementList = doc.getElementsByTagName("address");
       testAddress = addressElementList.item(4);
       oldAttribute = doc.createAttribute("oldAttribute");
-      
+
 	{
 		success = false;
 		try {
@@ -3652,12 +3652,12 @@ TEST("elementnotfounderr", function() {
 
 
 /**
-* 
-    The "removeAttributeNode(oldAttr)" method removes the 
-   specified attribute. 
-   
+*
+    The "removeAttributeNode(oldAttr)" method removes the
+   specified attribute.
+
    Retrieve the last child of the third employee, add a
-   new "district" node to it and then try to remove it. 
+   new "district" node to it and then try to remove it.
    To verify that the node was removed use the
    "getNamedItem(name)" method from the NamedNodeMap
    interface.  It also uses the "getAttributes()" method
@@ -3675,7 +3675,7 @@ TEST("elementremoveattributeaftercreate", function() {
       var newAttribute;
       var attributes;
       var districtAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3690,18 +3690,18 @@ TEST("elementremoveattributeaftercreate", function() {
 
       districtAttr = attributes.getNamedItem("district");
       ASSERT(NULL(districtAttr),"elementRemoveAttributeAfterCreateAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "removeAttributeNode(oldAttr)" method returns the
-   node that was removed. 
-   
+   node that was removed.
+
    Retrieve the last child of the third employee and
-   remove its "street" Attr node.  The method should  
+   remove its "street" Attr node.  The method should
    return the old attribute node.
 
 * @author NIST
@@ -3716,7 +3716,7 @@ TEST("elementremoveattributenode", function() {
       var streetAttr;
       var removedAttr;
       var removedValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3729,14 +3729,14 @@ TEST("elementremoveattributenode", function() {
       removedValue = removedAttr.value;
 
       ASSERT(STRICT_EQ("No",removedValue),"elementRemoveAttributeNodeAssert");
-       
+
 });
 
 
 
 /**
-* 
-This test calls setAttributeNode to replace an attribute with itself.  
+*
+This test calls setAttributeNode to replace an attribute with itself.
 Since the node is not an attribute of another Element, it would
 be inappropriate to throw an INUSE_ATTRIBUTE_ERR.
 
@@ -3754,7 +3754,7 @@ TEST("elementreplaceattributewithself", function() {
       var testEmployee;
       var streetAttr;
       var replacedAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3771,19 +3771,19 @@ TEST("elementreplaceattributewithself", function() {
 
 
 /**
-* 
+*
     The "setAttributeNode(newAttr)" method adds a new
    attribute to the Element.  If the "newAttr" Attr node is
    already present in this element, it should replace the
-   existing one. 
-   
-   Retrieve the last child of the third employee and add a 
-   new attribute node by invoking the "setAttributeNode(new 
-   Attr)" method.  The new attribute node to be added is 
+   existing one.
+
+   Retrieve the last child of the third employee and add a
+   new attribute node by invoking the "setAttributeNode(new
+   Attr)" method.  The new attribute node to be added is
    "street", which is already present in this element.  The
-   method should replace the existing Attr node with the 
+   method should replace the existing Attr node with the
    new one.  This test uses the "createAttribute(name)"
-   method from the Document interface. 
+   method from the Document interface.
 
 * @author NIST
 * @author Mary Brady
@@ -3796,7 +3796,7 @@ TEST("elementreplaceexistingattribute", function() {
       var newAttribute;
       var name;
       var setAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3808,13 +3808,13 @@ TEST("elementreplaceexistingattribute", function() {
       setAttr = testEmployee.setAttributeNode(newAttribute);
       name = testEmployee.getAttribute("street");
       ASSERT(STRICT_EQ("",name),"elementReplaceExistingAttributeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 If the "setAttributeNode(newAttr)" method replaces an
 existing Attr node with the same name, then it should
 return the previously existing Attr node.
@@ -3838,7 +3838,7 @@ TEST("elementreplaceexistingattributegevalue", function() {
       var newAttribute;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3851,16 +3851,16 @@ TEST("elementreplaceexistingattributegevalue", function() {
       value = streetAttr.value;
 
       ASSERT(STRICT_EQ("No",value),"streetNo");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getAttribute(name)" method returns an attribute
    value by name.
-   
+
    Retrieve the second address element, then
    invoke the 'getAttribute("street")' method.  This should
    return the value of the attribute("No").
@@ -3875,7 +3875,7 @@ TEST("elementretrieveattrvalue", function() {
       var elementList;
       var testAddress;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3885,19 +3885,19 @@ TEST("elementretrieveattrvalue", function() {
       testAddress = elementList.item(2);
       attrValue = testAddress.getAttribute("street");
       ASSERT(STRICT_EQ("No",attrValue),"attrValue");
-       
+
 });
 
 
 
 /**
-* 
-    The "getElementsByTagName()" method returns a NodeList 
-   of all descendant elements with a given tagName.    
-   
+*
+    The "getElementsByTagName()" method returns a NodeList
+   of all descendant elements with a given tagName.
+
    Invoke the "getElementsByTagName()" method and create
-   a NodeList of "position" elements.  Retrieve the second 
-   "position" element in the list and return the NodeName. 
+   a NodeList of "position" elements.  Retrieve the second
+   "position" element in the list and return the NodeName.
 
 * @author NIST
 * @author Mary Brady
@@ -3910,7 +3910,7 @@ TEST("elementretrievetagname", function() {
       var elementList;
       var testEmployee;
       var name;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3924,23 +3924,23 @@ TEST("elementretrievetagname", function() {
        name = testEmployee.tagName;
 
       ASSERT(STRICT_EQ("position",name),"tagname");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "setAttributeNode(newAttr)" method returns the
    null value if no previously existing Attr node with the
    same name was replaced.
-   
-   Retrieve the last child of the third employee and add a 
-   new attribute to it.  The new attribute node added is 
-   "district", which is not part of this Element.  The   
-   method should return the null value.   
+
+   Retrieve the last child of the third employee and add a
+   new attribute to it.  The new attribute node added is
+   "district", which is not part of this Element.  The
+   method should return the null value.
    This test uses the "createAttribute(name)"
-   method from the Document interface. 
+   method from the Document interface.
 
 * @author NIST
 * @author Mary Brady
@@ -3953,7 +3953,7 @@ TEST("elementsetattributenodenull", function() {
       var testEmployee;
       var newAttribute;
       var districtAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -3964,23 +3964,23 @@ TEST("elementsetattributenodenull", function() {
       newAttribute = doc.createAttribute("district");
       districtAttr = testEmployee.setAttributeNode(newAttribute);
       ASSERT(NULL(districtAttr),"elementSetAttributeNodeNullAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
 
-    The "setAttributeNode(newAttr)" method raises an 
+    The "setAttributeNode(newAttr)" method raises an
 
-   "WRONG_DOCUMENT_ERR DOMException if the "newAttr" 
+   "WRONG_DOCUMENT_ERR DOMException if the "newAttr"
 
    was created from a different document than the one that
 
    created this document.
 
-   
+
 
    Retrieve the last employee and attempt to set a new
 
@@ -4012,13 +4012,13 @@ TEST("elementwrongdocumenterr", function() {
       var addressElementList;
       var testAddress;
       var attrAddress;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -4027,7 +4027,7 @@ TEST("elementwrongdocumenterr", function() {
       newAttribute = doc2.createAttribute("newAttribute");
       addressElementList = doc1.getElementsByTagName("address");
       testAddress = addressElementList.item(4);
-      
+
 	{
 		success = false;
 		try {
@@ -4044,7 +4044,7 @@ TEST("elementwrongdocumenterr", function() {
 
 
 /**
-* 
+*
 Appends a text node to an attribute and checks if the value of
 the attribute is changed.
 
@@ -4063,7 +4063,7 @@ TEST("hc_attrappendchild1", function() {
       var textNode;
       var retval;
       var lastChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4090,13 +4090,13 @@ TEST("hc_attrappendchild1", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("terday",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Attempts to append an element to the child nodes of an attribute.
 
 * @author Curt Arnold
@@ -4114,7 +4114,7 @@ TEST("hc_attrappendchild2", function() {
       var newChild;
       var retval;
       var lastChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4126,7 +4126,7 @@ TEST("hc_attrappendchild2", function() {
 
       titleAttr = attributes.getNamedItem("title");
       newChild = doc.createElement("terday");
-      
+
 	{
 		success = false;
 		try {
@@ -4143,7 +4143,7 @@ TEST("hc_attrappendchild2", function() {
 
 
 /**
-* 
+*
 Appends a document fragment to an attribute and checks if the value of
 the attribute is changed.
 
@@ -4164,7 +4164,7 @@ TEST("hc_attrappendchild3", function() {
       var retval;
       var lastChild;
       var docFrag;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4195,13 +4195,13 @@ TEST("hc_attrappendchild3", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("day",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Attempt to append a CDATASection to an attribute which should result
 in a HIERARCHY_REQUEST_ERR.
 
@@ -4220,7 +4220,7 @@ TEST("hc_attrappendchild4", function() {
       var textNode;
       var retval;
       var lastChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4231,7 +4231,7 @@ TEST("hc_attrappendchild4", function() {
       attributes = testNode.attributes;
 
       titleAttr = attributes.getNamedItem("title");
-      
+
 	if(
 	
 	(builder.contentType == "text/html")
@@ -4253,7 +4253,7 @@ TEST("hc_attrappendchild4", function() {
 	
 		else {
 			textNode = doc.createCDATASection("terday");
-      
+
 	{
 		success = false;
 		try {
@@ -4272,7 +4272,7 @@ TEST("hc_attrappendchild4", function() {
 
 
 /**
-* 
+*
 Attempt to append a node from another document to an attribute which should result
 in a WRONG_DOCUMENT_ERR.
 
@@ -4292,13 +4292,13 @@ TEST("hc_attrappendchild5", function() {
       var retval;
       var lastChild;
       var otherDoc;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
       var otherDocRef = null;
       if (typeof(this.otherDoc) != 'undefined') {
         otherDocRef = this.otherDoc;
@@ -4310,7 +4310,7 @@ TEST("hc_attrappendchild5", function() {
 
       titleAttr = attributes.getNamedItem("title");
       textNode = otherDoc.createTextNode("terday");
-      
+
 	{
 		success = false;
 		try {
@@ -4327,7 +4327,7 @@ TEST("hc_attrappendchild5", function() {
 
 
 /**
-* 
+*
 Creates an new attribute node and appends a text node.
 
 * @author Curt Arnold
@@ -4345,7 +4345,7 @@ TEST("hc_attrappendchild6", function() {
       var textNode;
       var retval;
       var lastChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4368,13 +4368,13 @@ TEST("hc_attrappendchild6", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("Yesterday",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Checks that Node.childNodes for an attribute node contains
 the expected text node.
 
@@ -4392,7 +4392,7 @@ TEST("hc_attrchildnodes1", function() {
       var value;
       var textNode;
       var childNodes;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4412,13 +4412,13 @@ textNode = childNodes.item(0);
       ASSERT(STRICT_EQ("Yes",value),"child1IsYes");
        textNode = childNodes.item(1);
       ASSERT(NULL(textNode),"secondItemIsNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 Checks Node.childNodes for an attribute with multiple child nodes.
 
 * @author Curt Arnold
@@ -4436,7 +4436,7 @@ TEST("hc_attrchildnodes2", function() {
       var textNode;
       var childNodes;
       var retval;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4462,13 +4462,13 @@ textNode = childNodes.item(0);
       ASSERT(STRICT_EQ("terday",value),"child2IsTerday");
        textNode = childNodes.item(2);
       ASSERT(NULL(textNode),"thirdItemIsNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 Appends a text node to an attribute and clones the node.
 
 * @author Curt Arnold
@@ -4487,7 +4487,7 @@ TEST("hc_attrclonenode1", function() {
       var retval;
       var lastChild;
       var clonedTitle;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4514,15 +4514,15 @@ TEST("hc_attrclonenode1", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("terday",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
-  Create a new DocumentFragment and add a newly created Element node(with one attribute).  
-  Once the element is added, its attribute should be available as an attribute associated 
+*
+  Create a new DocumentFragment and add a newly created Element node(with one attribute).
+  Once the element is added, its attribute should be available as an attribute associated
   with an Element within a DocumentFragment.
 
 * @author Curt Arnold
@@ -4544,7 +4544,7 @@ TEST("hc_attrcreatedocumentfragment", function() {
       var attrName;
       var appendedChild;
       var langAttrCount = 0;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4562,7 +4562,7 @@ TEST("hc_attrcreatedocumentfragment", function() {
       attribute = attributes.item(indexid2258715);
       attrName = attribute.nodeName;
 
-      
+
 	if(
 	equalsAutoCase("attribute", "lang", attrName)
 	) {
@@ -4572,21 +4572,21 @@ TEST("hc_attrcreatedocumentfragment", function() {
 	
 	}
    ASSERT(STRICT_EQ(1,langAttrCount),"hasLangAttr");
-       
+
 });
 
 
 
 /**
-* 
-    The "setValue()" method for an attribute creates a 
+*
+    The "setValue()" method for an attribute creates a
   Text node with the unparsed content of the string.
-  Retrieve the attribute named "class" from the last 
-  child of of the fourth employee and assign the "Y&ent1;" 
+  Retrieve the attribute named "class" from the last
+  child of of the fourth employee and assign the "Y&ent1;"
   string to its value attribute.  This value is not yet
   parsed and therefore should still be the same upon
   retrieval. This test uses the "getNamedItem(name)" method
-  from the NamedNodeMap interface.  
+  from the NamedNodeMap interface.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-221662474
@@ -4600,7 +4600,7 @@ TEST("hc_attrcreatetextnode", function() {
       var attributes;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4619,21 +4619,21 @@ TEST("hc_attrcreatetextnode", function() {
        value = streetAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Y&ent1;",value),"nodeValue");
-       
+
 });
 
 
 
 /**
-* 
-    The "setNodeValue()" method for an attribute creates a 
+*
+    The "setNodeValue()" method for an attribute creates a
   Text node with the unparsed content of the string.
-  Retrieve the attribute named "class" from the last 
-  child of of the fourth employee and assign the "Y&ent1;" 
+  Retrieve the attribute named "class" from the last
+  child of of the fourth employee and assign the "Y&ent1;"
   string to its value attribute.  This value is not yet
   parsed and therefore should still be the same upon
   retrieval. This test uses the "getNamedItem(name)" method
-  from the NamedNodeMap interface. 
+  from the NamedNodeMap interface.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
@@ -4647,7 +4647,7 @@ TEST("hc_attrcreatetextnode2", function() {
       var attributes;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4666,16 +4666,16 @@ TEST("hc_attrcreatetextnode2", function() {
        value = streetAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Y&ent1;",value),"nodeValue");
-       
+
 });
 
 
 
 /**
-* 
+*
     If an Attr is explicitly assigned any value, then that value is the attributes effective value.
-  Retrieve the attribute named "domestic" from the last child of of the first employee 
-  and examine its nodeValue attribute.  This test uses the "getNamedItem(name)" method 
+  Retrieve the attribute named "domestic" from the last child of of the first employee
+  and examine its nodeValue attribute.  This test uses the "getNamedItem(name)" method
   from the NamedNodeMap interface.
 
 * @author Curt Arnold
@@ -4690,7 +4690,7 @@ TEST("hc_attreffectivevalue", function() {
       var attributes;
       var domesticAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4704,13 +4704,13 @@ TEST("hc_attreffectivevalue", function() {
       value = domesticAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Yes",value),"attrEffectiveValueAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 Checks that Node.firstChild for an attribute node contains
 the expected text node.
 
@@ -4728,7 +4728,7 @@ TEST("hc_attrfirstchild", function() {
       var value;
       var textNode;
       var otherChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4751,13 +4751,13 @@ value = textNode.nodeValue;
     otherChild = textNode.previousSibling;
 
       ASSERT(NULL(otherChild),"previousSiblingIsNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 Checks the value of an attribute that contains entity references.
 
 * @author Curt Arnold
@@ -4774,7 +4774,7 @@ TEST("hc_attrgetvalue1", function() {
       var textNode;
       var retval;
       var lastChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4788,13 +4788,13 @@ TEST("hc_attrgetvalue1", function() {
       value = titleAttr.value;
 
       ASSERT(STRICT_EQ("Yα",value),"attrValue1");
-       
+
 });
 
 
 
 /**
-* 
+*
 Checks that Node.hasChildNodes() is true for an attribute with content.
 
 * @author Curt Arnold
@@ -4809,7 +4809,7 @@ TEST("hc_attrhaschildnodes", function() {
       var attributes;
       var titleAttr;
       var hasChildNodes;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4828,7 +4828,7 @@ TEST("hc_attrhaschildnodes", function() {
 
 
 /**
-* 
+*
 Appends a text node to an attribute and checks if the value of
 the attribute is changed.
 
@@ -4850,7 +4850,7 @@ TEST("hc_attrinsertbefore1", function() {
       var lastChild;
       var refChild = null;
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4882,13 +4882,13 @@ TEST("hc_attrinsertbefore1", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("terday",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Prepends a text node to an attribute and checks if the value of
 the attribute is changed.
 
@@ -4909,7 +4909,7 @@ TEST("hc_attrinsertbefore2", function() {
       var lastChild;
       var firstChild;
       var refChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -4943,13 +4943,13 @@ TEST("hc_attrinsertbefore2", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("Yes",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Appends a document fragment to an attribute and checks if the value of
 the attribute is changed.
 
@@ -4973,7 +4973,7 @@ TEST("hc_attrinsertbefore3", function() {
       var lastChild;
       var refChild = null;
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5009,13 +5009,13 @@ TEST("hc_attrinsertbefore3", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("day",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Prepends a document fragment to an attribute and checks if the value of
 the attribute is changed.
 
@@ -5038,7 +5038,7 @@ TEST("hc_attrinsertbefore4", function() {
       var firstChild;
       var lastChild;
       var refChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5076,13 +5076,13 @@ TEST("hc_attrinsertbefore4", function() {
       value = lastChild.nodeValue;
 
       ASSERT(STRICT_EQ("Yes",value),"lastChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Attempt to append a CDATASection to an attribute which should result
 in a HIERARCHY_REQUEST_ERR.
 
@@ -5102,7 +5102,7 @@ TEST("hc_attrinsertbefore5", function() {
       var retval;
       var refChild = null;
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5113,7 +5113,7 @@ TEST("hc_attrinsertbefore5", function() {
       attributes = testNode.attributes;
 
       titleAttr = attributes.getNamedItem("title");
-      
+
 	if(
 	
 	(builder.contentType == "text/html")
@@ -5135,7 +5135,7 @@ TEST("hc_attrinsertbefore5", function() {
 	
 		else {
 			textNode = doc.createCDATASection("terday");
-      
+
 	{
 		success = false;
 		try {
@@ -5154,7 +5154,7 @@ TEST("hc_attrinsertbefore5", function() {
 
 
 /**
-* 
+*
 Attempt to append a text node from another document to an attribute which should result
 in a WRONG_DOCUMENT_ERR.
 
@@ -5175,13 +5175,13 @@ TEST("hc_attrinsertbefore6", function() {
       var refChild = null;
 
       var otherDoc;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
       var otherDocRef = null;
       if (typeof(this.otherDoc) != 'undefined') {
         otherDocRef = this.otherDoc;
@@ -5193,7 +5193,7 @@ TEST("hc_attrinsertbefore6", function() {
 
       titleAttr = attributes.getNamedItem("title");
       textNode = otherDoc.createTextNode("terday");
-      
+
 	{
 		success = false;
 		try {
@@ -5210,7 +5210,7 @@ TEST("hc_attrinsertbefore6", function() {
 
 
 /**
-* 
+*
 Appends a document fragment containing a CDATASection to an attribute.
 
 * @author Curt Arnold
@@ -5233,7 +5233,7 @@ TEST("hc_attrinsertbefore7", function() {
       var lastChild;
       var refChild = null;
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5245,7 +5245,7 @@ TEST("hc_attrinsertbefore7", function() {
 
       titleAttr = attributes.getNamedItem("title");
       terNode = doc.createTextNode("ter");
-      
+
 	if(
 	
 	(builder.contentType == "text/html")
@@ -5270,7 +5270,7 @@ TEST("hc_attrinsertbefore7", function() {
       docFrag = doc.createDocumentFragment();
       retval = docFrag.appendChild(terNode);
       retval = docFrag.appendChild(dayNode);
-      
+
 	{
 		success = false;
 		try {
@@ -5289,7 +5289,7 @@ TEST("hc_attrinsertbefore7", function() {
 
 
 /**
-* 
+*
 Checks that Node.lastChild for an attribute node contains
 the expected text node.
 
@@ -5307,7 +5307,7 @@ TEST("hc_attrlastchild", function() {
       var value;
       var textNode;
       var otherChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5330,15 +5330,15 @@ value = textNode.nodeValue;
     otherChild = textNode.previousSibling;
 
       ASSERT(NULL(otherChild),"previousSiblingIsNull");
-    
+
 });
 
 
 
 /**
-* 
-  Retrieve the attribute named class from the last 
-  child of of the second "p" element and examine its 
+*
+  Retrieve the attribute named class from the last
+  child of of the second "p" element and examine its
   NodeName.
 
 * @author Curt Arnold
@@ -5356,7 +5356,7 @@ TEST("hc_attrname", function() {
       var streetAttr;
       var strong1;
       var strong2;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5373,13 +5373,13 @@ TEST("hc_attrname", function() {
 
       ASSERT(STRICT_EQ("class",strong1), "nodeName");
        ASSERT(STRICT_EQ("class",strong2), "name");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getNextSibling()" method for an Attr node should return null.
 Retrieve the attribute named "domestic" from the last child of of the
 first employee and examine its NextSibling node.  This test uses the
@@ -5397,7 +5397,7 @@ TEST("hc_attrnextsiblingnull", function() {
       var attributes;
       var domesticAttr;
       var s;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5411,13 +5411,13 @@ TEST("hc_attrnextsiblingnull", function() {
       s = domesticAttr.nextSibling;
 
       ASSERT(NULL(s),"attrNextSiblingNullAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
 Appends a text node to an attribute, normalizes the attribute
 and checks for a single child node.
 
@@ -5437,7 +5437,7 @@ TEST("hc_attrnormalize", function() {
       var retval;
       var firstChild;
       var secondChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5464,13 +5464,13 @@ TEST("hc_attrnormalize", function() {
        secondChild = firstChild.nextSibling;
 
       ASSERT(NULL(secondChild),"secondChildIsNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 The "getParentNode()" method for an Attr node should return null.  Retrieve
 the attribute named "domestic" from the last child of the first employee
 and examine its parentNode attribute.  This test also uses the "getNamedItem(name)"
@@ -5488,7 +5488,7 @@ TEST("hc_attrparentnodenull", function() {
       var attributes;
       var domesticAttr;
       var s;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5502,13 +5502,13 @@ TEST("hc_attrparentnodenull", function() {
       s = domesticAttr.parentNode;
 
       ASSERT(NULL(s),"attrParentNodeNullAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
 The "getPreviousSibling()" method for an Attr node should return null.
 Retrieve the attribute named "domestic" from the last child of of the
 first employee and examine its PreviousSibling node.  This test uses the
@@ -5526,7 +5526,7 @@ TEST("hc_attrprevioussiblingnull", function() {
       var attributes;
       var domesticAttr;
       var s;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5540,13 +5540,13 @@ TEST("hc_attrprevioussiblingnull", function() {
       s = domesticAttr.previousSibling;
 
       ASSERT(NULL(s),"attrPreviousSiblingNullAssert");
-    
+
 });
 
 
 
 /**
-* 
+*
 Removes the child node of an attribute and checks that the value is empty.
 
 * @author Curt Arnold
@@ -5564,7 +5564,7 @@ TEST("hc_attrremovechild1", function() {
       var textNode;
       var retval;
       var firstChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5591,13 +5591,13 @@ retval = titleAttr.removeChild(textNode);
        firstChild = titleAttr.firstChild;
 
       ASSERT(NULL(firstChild),"firstChildNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 Attempts to remove a freshly created text node which should result in a NOT_FOUND_ERR exception.
 
 * @author Curt Arnold
@@ -5614,7 +5614,7 @@ TEST("hc_attrremovechild2", function() {
       var value;
       var textNode;
       var retval;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5626,7 +5626,7 @@ TEST("hc_attrremovechild2", function() {
 
       titleAttr = attributes.getNamedItem("title");
       textNode = doc.createTextNode("Yesterday");
-      
+
 	{
 		success = false;
 		try {
@@ -5643,7 +5643,7 @@ TEST("hc_attrremovechild2", function() {
 
 
 /**
-* 
+*
 Replaces a text node of an attribute and checks if the value of
 the attribute is changed.
 
@@ -5662,7 +5662,7 @@ TEST("hc_attrreplacechild1", function() {
       var textNode;
       var retval;
       var firstChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5692,13 +5692,13 @@ retval = titleAttr.replaceChild(textNode,firstChild);
       value = firstChild.nodeValue;
 
       ASSERT(STRICT_EQ("terday",value),"firstChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Replaces a text node of an attribute with a document fragment and checks if the value of
 the attribute is changed.
 
@@ -5719,7 +5719,7 @@ TEST("hc_attrreplacechild2", function() {
       var docFrag;
       var retval;
       var firstChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5753,13 +5753,13 @@ retval = titleAttr.replaceChild(docFrag,firstChild);
       value = firstChild.nodeValue;
 
       ASSERT(STRICT_EQ("ter",value),"firstChildValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 Sets Attr.value on an attribute that only has a simple value.
 
 * @author Curt Arnold
@@ -5776,7 +5776,7 @@ TEST("hc_attrsetvalue1", function() {
       var retval;
       var firstChild;
       var otherChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5808,13 +5808,13 @@ titleAttr.value = "Tomorrow";
        otherChild = firstChild.nextSibling;
 
       ASSERT(NULL(otherChild),"nextSiblingIsNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 Sets Attr.value on an attribute that should contain multiple child nodes.
 
 * @author Curt Arnold
@@ -5832,7 +5832,7 @@ TEST("hc_attrsetvalue2", function() {
       var retval;
       var firstChild;
       var otherChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5866,20 +5866,20 @@ titleAttr.value = "Tomorrow";
        otherChild = firstChild.nextSibling;
 
       ASSERT(NULL(otherChild),"nextSiblingIsNull");
-    
+
 });
 
 
 
 /**
-* 
-    The "getSpecified()" method for an Attr node should 
+*
+    The "getSpecified()" method for an Attr node should
   be set to true if the attribute was explicitly given
   a value.
-  Retrieve the attribute named "domestic" from the last 
-  child of of the first employee and examine the value 
-  returned by the "getSpecified()" method.  This test uses 
-  the "getNamedItem(name)" method from the NamedNodeMap 
+  Retrieve the attribute named "domestic" from the last
+  child of of the first employee and examine the value
+  returned by the "getSpecified()" method.  This test uses
+  the "getNamedItem(name)" method from the NamedNodeMap
   interface.
 
 * @author Curt Arnold
@@ -5893,7 +5893,7 @@ TEST("hc_attrspecifiedvalue", function() {
       var attributes;
       var domesticAttr;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5913,11 +5913,11 @@ TEST("hc_attrspecifiedvalue", function() {
 
 
 /**
-* 
-    The "getSpecified()" method for an Attr node should return true if the 
-  value of the attribute is changed. 
-  Retrieve the attribute named "class" from the last 
-  child of of the THIRD employee and change its 
+*
+    The "getSpecified()" method for an Attr node should return true if the
+  value of the attribute is changed.
+  Retrieve the attribute named "class" from the last
+  child of of the THIRD employee and change its
   value to "Yes"(which is the default DTD value).  This
   should cause the "getSpecified()" method to be true.
   This test uses the "setAttribute(name,value)" method
@@ -5935,7 +5935,7 @@ TEST("hc_attrspecifiedvaluechanged", function() {
       var attributes;
       var streetAttr;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5956,14 +5956,14 @@ TEST("hc_attrspecifiedvaluechanged", function() {
 
 
 /**
-* 
-    The "appendData(arg)" method appends a string to the end 
+*
+    The "appendData(arg)" method appends a string to the end
    of the character data of the node.
-   
-   Retrieve the character data from the second child 
+
+   Retrieve the character data from the second child
    of the first employee.  The appendData(arg) method is
-   called with arg=", Esquire".  The method should append 
-   the specified data to the already existing character  
+   called with arg=", Esquire".  The method should append
+   the specified data to the already existing character
    data.  The new value return by the "getLength()" method
    should be 24.
 
@@ -5979,7 +5979,7 @@ TEST("hc_characterdataappenddata", function() {
       var child;
       var childValue;
       var childLength;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -5994,21 +5994,21 @@ TEST("hc_characterdataappenddata", function() {
 
       childLength = childValue.length;
       ASSERT(STRICT_EQ(24,childLength),"characterdataAppendDataAssert");
-       
+
 });
 
 
 
 /**
-* 
-    On successful invocation of the "appendData(arg)" 
+*
+    On successful invocation of the "appendData(arg)"
    method the "getData()" method provides access to the
    concatentation of data and the specified string.
-   
-   Retrieve the character data from the second child 
+
+   Retrieve the character data from the second child
    of the first employee.  The appendData(arg) method is
-   called with arg=", Esquire".  The method should append 
-   the specified data to the already existing character  
+   called with arg=", Esquire".  The method should append
+   the specified data to the already existing character
    data.  The new value return by the "getData()" method
    should be "Margaret Martin, Esquire".
 
@@ -6023,7 +6023,7 @@ TEST("hc_characterdataappenddatagetdata", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6037,13 +6037,13 @@ TEST("hc_characterdataappenddatagetdata", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Martin, Esquire",childData),"characterdataAppendDataGetDataAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "deleteData(offset,count)" method removes a range of
 characters from the node.  Delete data at the beginning
 of the character data.
@@ -6065,7 +6065,7 @@ TEST("hc_characterdatadeletedatabegining", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6079,17 +6079,17 @@ TEST("hc_characterdatadeletedatabegining", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Dallas, Texas 98551",childData),"data");
-       
+
 });
 
 
 
 /**
-* 
-    The "deleteData(offset,count)" method removes a range of 
-   characters from the node.  Delete data at the end 
+*
+    The "deleteData(offset,count)" method removes a range of
+   characters from the node.  Delete data at the end
    of the character data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=30 and count=5.
@@ -6108,7 +6108,7 @@ TEST("hc_characterdatadeletedataend", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6122,18 +6122,18 @@ TEST("hc_characterdatadeletedataend", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 North Ave. Dallas, Texas ",childData),"characterdataDeleteDataEndAssert");
-       
+
 });
 
 
 
 /**
-* 
-    If the sum of the offset and count used in the        
+*
+    If the sum of the offset and count used in the
    "deleteData(offset,count) method is greater than the
    length of the character data then all the characters
-   from the offset to the end of the data are deleted. 
-   
+   from the offset to the end of the data are deleted.
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=4 and count=50.
@@ -6153,7 +6153,7 @@ TEST("hc_characterdatadeletedataexceedslength", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6167,17 +6167,17 @@ TEST("hc_characterdatadeletedataexceedslength", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230",childData),"characterdataDeleteDataExceedsLengthAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     On successful invocation of the "deleteData(offset,count)"
    method, the "getData()" and "getLength()" methods reflect
-   the changes. 
-   
+   the changes.
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=30 and count=5.
@@ -6202,7 +6202,7 @@ TEST("hc_characterdatadeletedatagetlengthanddata", function() {
       var childLength;
       var result = new Array();
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6219,17 +6219,17 @@ TEST("hc_characterdatadeletedatagetlengthanddata", function() {
        childLength = child.length;
 
       ASSERT(STRICT_EQ(30,childLength),"length");
-       
+
 });
 
 
 
 /**
-* 
-    The "deleteData(offset,count)" method removes a range of 
-   characters from the node.  Delete data in the middle 
+*
+    The "deleteData(offset,count)" method removes a range of
+   characters from the node.  Delete data in the middle
    of the character data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "deleteData(offset,count)"
    method is then called with offset=16 and count=8.
@@ -6248,7 +6248,7 @@ TEST("hc_characterdatadeletedatamiddle", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6262,23 +6262,23 @@ TEST("hc_characterdatadeletedatamiddle", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 North Ave. Texas 98551",childData),"characterdataDeleteDataMiddleAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The "getData()" method retrieves the character data 
+    The "getData()" method retrieves the character data
 
   currently stored in the node.
 
-  Retrieve the character data from the second child 
+  Retrieve the character data from the second child
 
-  of the first employee and invoke the "getData()" 
+  of the first employee and invoke the "getData()"
 
-  method.  The method returns the character data 
+  method.  The method returns the character data
 
   string.
 
@@ -6293,7 +6293,7 @@ TEST("hc_characterdatagetdata", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6306,18 +6306,18 @@ TEST("hc_characterdatagetdata", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Martin",childData),"characterdataGetDataAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "getLength()" method returns the number of characters 
+*
+    The "getLength()" method returns the number of characters
   stored in this nodes data.
-  Retrieve the character data from the second 
-  child of the first employee and examine the 
-  value returned by the getLength() method.  
+  Retrieve the character data from the second
+  child of the first employee and examine the
+  value returned by the getLength() method.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-72AB8359
@@ -6331,7 +6331,7 @@ TEST("hc_characterdatagetlength", function() {
       var child;
       var childValue;
       var childLength;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6345,17 +6345,17 @@ TEST("hc_characterdatagetlength", function() {
 
       childLength = childValue.length;
       ASSERT(STRICT_EQ(15,childLength),"characterdataGetLengthAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "deleteData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is greater that the number of characters in the string. 
-   
+   is greater that the number of characters in the string.
+
    Retrieve the character data of the last child of the
    first employee and invoke its "deleteData(offset,count)"
    method with offset=40 and count=3.  It should raise the
@@ -6375,7 +6375,7 @@ TEST("hc_characterdataindexsizeerrdeletedataoffsetgreater", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6385,7 +6385,7 @@ TEST("hc_characterdataindexsizeerrdeletedataoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6402,11 +6402,11 @@ TEST("hc_characterdataindexsizeerrdeletedataoffsetgreater", function() {
 
 
 /**
-* 
+*
     The "deleteData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its "deleteData(offset,count)"
    method with offset=-5 and count=3.  It should raise the
@@ -6424,7 +6424,7 @@ TEST("hc_characterdataindexsizeerrdeletedataoffsetnegative", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6434,7 +6434,7 @@ TEST("hc_characterdataindexsizeerrdeletedataoffsetnegative", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6451,11 +6451,11 @@ TEST("hc_characterdataindexsizeerrdeletedataoffsetnegative", function() {
 
 
 /**
-* 
+*
     The "insertData(offset,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is greater than the number of characters in the string. 
-   
+   is greater than the number of characters in the string.
+
    Retrieve the character data of the last child of the
    first employee and invoke its insertData"(offset,arg)"
    method with offset=40 and arg="ABC".  It should raise
@@ -6474,7 +6474,7 @@ TEST("hc_characterdataindexsizeerrinsertdataoffsetgreater", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6484,7 +6484,7 @@ TEST("hc_characterdataindexsizeerrinsertdataoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6501,11 +6501,11 @@ TEST("hc_characterdataindexsizeerrinsertdataoffsetgreater", function() {
 
 
 /**
-* 
+*
     The "insertData(offset,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its insertData"(offset,arg)"
    method with offset=-5 and arg="ABC".  It should raise
@@ -6522,7 +6522,7 @@ TEST("hc_characterdataindexsizeerrinsertdataoffsetnegative", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6532,7 +6532,7 @@ TEST("hc_characterdataindexsizeerrinsertdataoffsetnegative", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6549,11 +6549,11 @@ TEST("hc_characterdataindexsizeerrinsertdataoffsetnegative", function() {
 
 
 /**
-* 
+*
     The "replaceData(offset,count,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is greater than the length of the string. 
-   
+   is greater than the length of the string.
+
    Retrieve the character data of the last child of the
    first employee and invoke its
    "replaceData(offset,count,arg) method with offset=40
@@ -6573,7 +6573,7 @@ TEST("hc_characterdataindexsizeerrreplacedataoffsetgreater", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6583,7 +6583,7 @@ TEST("hc_characterdataindexsizeerrreplacedataoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6600,11 +6600,11 @@ TEST("hc_characterdataindexsizeerrreplacedataoffsetgreater", function() {
 
 
 /**
-* 
+*
     The "replaceData(offset,count,arg)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its
    "replaceData(offset,count,arg) method with offset=-5
@@ -6623,7 +6623,7 @@ TEST("hc_characterdataindexsizeerrreplacedataoffsetnegative", function() {
       var elementList;
       var nameNode;
       var child;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6633,7 +6633,7 @@ TEST("hc_characterdataindexsizeerrreplacedataoffsetnegative", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6650,11 +6650,11 @@ TEST("hc_characterdataindexsizeerrreplacedataoffsetnegative", function() {
 
 
 /**
-* 
+*
     The "substringData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
-   is negative. 
-   
+   is negative.
+
    Retrieve the character data of the last child of the
    first employee and invoke its "substringData(offset,count)
    method with offset=-5 and count=3.  It should raise the
@@ -6672,7 +6672,7 @@ TEST("hc_characterdataindexsizeerrsubstringnegativeoffset", function() {
       var nameNode;
       var child;
       var badString;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6682,7 +6682,7 @@ TEST("hc_characterdataindexsizeerrsubstringnegativeoffset", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6699,11 +6699,11 @@ TEST("hc_characterdataindexsizeerrsubstringnegativeoffset", function() {
 
 
 /**
-* 
+*
     The "substringData(offset,count)" method raises an
    INDEX_SIZE_ERR DOMException if the specified offset
    is greater than the number of characters in the string.
-   
+
    Retrieve the character data of the last child of the
    first employee and invoke its "substringData(offset,count)
    method with offset=40 and count=3.  It should raise the
@@ -6723,7 +6723,7 @@ TEST("hc_characterdataindexsizeerrsubstringoffsetgreater", function() {
       var nameNode;
       var child;
       var badString;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6733,7 +6733,7 @@ TEST("hc_characterdataindexsizeerrsubstringoffsetgreater", function() {
       nameNode = elementList.item(0);
       child = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -6750,7 +6750,7 @@ TEST("hc_characterdataindexsizeerrsubstringoffsetgreater", function() {
 
 
 /**
-* 
+*
 The "insertData(offset,arg)" method will insert a string
 at the specified character offset.  Insert the data at
 the beginning of the character data.
@@ -6772,7 +6772,7 @@ TEST("hc_characterdatainsertdatabeginning", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6786,21 +6786,21 @@ TEST("hc_characterdatainsertdatabeginning", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Mss. Margaret Martin",childData),"characterdataInsertDataBeginningAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertData(offset,arg)" method will insert a string 
-   at the specified character offset.  Insert the data at 
-   the end of the character data. 
-   
-   Retrieve the character data from the second child of  
+*
+    The "insertData(offset,arg)" method will insert a string
+   at the specified character offset.  Insert the data at
+   the end of the character data.
+
+   Retrieve the character data from the second child of
    the first employee.  The "insertData(offset,arg)"
    method is then called with offset=15 and arg=", Esquire".
-   The method should insert the string ", Esquire" at 
+   The method should insert the string ", Esquire" at
    position 15.  The new value of the character data should
    be "Margaret Martin, Esquire".
 
@@ -6815,7 +6815,7 @@ TEST("hc_characterdatainsertdataend", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6829,18 +6829,18 @@ TEST("hc_characterdatainsertdataend", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Martin, Esquire",childData),"characterdataInsertDataEndAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertData(offset,arg)" method will insert a string 
-   at the specified character offset.  Insert the data in 
-   the middle of the character data. 
-   
-   Retrieve the character data from the second child of  
+*
+    The "insertData(offset,arg)" method will insert a string
+   at the specified character offset.  Insert the data in
+   the middle of the character data.
+
+   Retrieve the character data from the second child of
    the first employee.  The "insertData(offset,arg)"
    method is then called with offset=9 and arg="Ann".
    The method should insert the string "Ann" at position 9.
@@ -6858,7 +6858,7 @@ TEST("hc_characterdatainsertdatamiddle", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6872,13 +6872,13 @@ TEST("hc_characterdatainsertdatamiddle", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("Margaret Ann Martin",childData),"characterdataInsertDataMiddleAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "replaceData(offset,count,arg)" method replaces the
 characters starting at the specified offset with the
 specified string.  Test for replacement in the
@@ -6900,7 +6900,7 @@ TEST("hc_characterdatareplacedatabegining", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6914,22 +6914,22 @@ TEST("hc_characterdatareplacedatabegining", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("2500 North Ave. Dallas, Texas 98551",childData),"characterdataReplaceDataBeginingAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceData(offset,count,arg)" method replaces the 
+*
+    The "replaceData(offset,count,arg)" method replaces the
    characters starting at the specified offset with the
-   specified string.  Test for replacement at the 
+   specified string.  Test for replacement at the
    end of the data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=30 and count=5 and
-   arg="98665".  The method should replace characters 30  
+   arg="98665".  The method should replace characters 30
    thru 34 of the character data with "98665".
 
 * @author Curt Arnold
@@ -6943,7 +6943,7 @@ TEST("hc_characterdatareplacedataend", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -6957,22 +6957,22 @@ TEST("hc_characterdatareplacedataend", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 North Ave. Dallas, Texas 98665",childData),"characterdataReplaceDataEndAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceData(offset,count,arg)" method replaces the 
+*
+    The "replaceData(offset,count,arg)" method replaces the
    characters starting at the specified offset with the
-   specified string.  Test the situation where the length 
+   specified string.  Test the situation where the length
    of the arg string is greater than the specified offset.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=0 and count=4 and
-   arg="260030".  The method should replace characters one  
+   arg="260030".  The method should replace characters one
    thru four with "260030".  Note that the length of the
    specified string is greater that the specified offset.
 
@@ -6987,7 +6987,7 @@ TEST("hc_characterdatareplacedataexceedslengthofarg", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7001,16 +7001,16 @@ TEST("hc_characterdatareplacedataexceedslengthofarg", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("260030 North Ave. Dallas, Texas 98551",childData),"characterdataReplaceDataExceedsLengthOfArgAssert");
-       
+
 });
 
 
 
 /**
-* 
-    If the sum of the offset and count exceeds the length then 
+*
+    If the sum of the offset and count exceeds the length then
    all the characters to the end of the data are replaced.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=0 and count=50 and
@@ -7029,7 +7029,7 @@ TEST("hc_characterdatareplacedataexceedslengthofdata", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7043,22 +7043,22 @@ TEST("hc_characterdatareplacedataexceedslengthofdata", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("2600",childData),"characterdataReplaceDataExceedsLengthOfDataAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceData(offset,count,arg)" method replaces the 
+*
+    The "replaceData(offset,count,arg)" method replaces the
    characters starting at the specified offset with the
-   specified string.  Test for replacement in the 
+   specified string.  Test for replacement in the
    middle of the data.
-   
+
    Retrieve the character data from the last child of the
    first employee.  The "replaceData(offset,count,arg)"
    method is then called with offset=5 and count=5 and
-   arg="South".  The method should replace characters five  
+   arg="South".  The method should replace characters five
    thru 9 of the character data with "South".
 
 * @author Curt Arnold
@@ -7072,7 +7072,7 @@ TEST("hc_characterdatareplacedatamiddle", function() {
       var nameNode;
       var child;
       var childData;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7086,17 +7086,17 @@ TEST("hc_characterdatareplacedatamiddle", function() {
       childData = child.data;
 
       ASSERT(STRICT_EQ("1230 South Ave. Dallas, Texas 98551",childData),"characterdataReplaceDataMiddleAssert");
-       
+
 });
 
 
 
 /**
-* 
-  The "setNodeValue()" method changes the character data 
+*
+  The "setNodeValue()" method changes the character data
   currently stored in the node.
-  Retrieve the character data from the second child 
-  of the first employee and invoke the "setNodeValue()" 
+  Retrieve the character data from the second child
+  of the first employee and invoke the "setNodeValue()"
   method, call "getData()" and compare.
 
 * @author Curt Arnold
@@ -7110,7 +7110,7 @@ TEST("hc_characterdatasetnodevalue", function() {
       var child;
       var childData;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7128,21 +7128,21 @@ TEST("hc_characterdatasetnodevalue", function() {
        childValue = child.nodeValue;
 
       ASSERT(STRICT_EQ("Marilyn Martin",childValue),"value");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the sum of the "offset" and "count" exceeds the
    "length" then the "substringData(offset,count)" method
-   returns all the characters to the end of the data. 
-   
-   Retrieve the character data from the second child 
-   of the first employee and access part of the data 
+   returns all the characters to the end of the data.
+
+   Retrieve the character data from the second child
+   of the first employee and access part of the data
    by using the substringData(offset,count) method
-   with offset=9 and count=10.  The method should return 
+   with offset=9 and count=10.  The method should return
    the substring "Martin" since offset+count > length
    (19 > 15).
 
@@ -7156,7 +7156,7 @@ TEST("hc_characterdatasubstringexceedsvalue", function() {
       var nameNode;
       var child;
       var substring;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7168,20 +7168,20 @@ TEST("hc_characterdatasubstringexceedsvalue", function() {
 
       substring = child.substringData(9,10);
       ASSERT(STRICT_EQ("Martin",substring),"characterdataSubStringExceedsValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "substringData(offset,count)" method returns the 
+*
+    The "substringData(offset,count)" method returns the
    specified string.
-   
-   Retrieve the character data from the second child 
-   of the first employee and access part of the data 
+
+   Retrieve the character data from the second child
+   of the first employee and access part of the data
    by using the substringData(offset,count) method.  The
-   method should return the specified substring starting 
+   method should return the specified substring starting
    at position "offset" and extract "count" characters.
    The method should return the string "Margaret".
 
@@ -7195,7 +7195,7 @@ TEST("hc_characterdatasubstringvalue", function() {
       var nameNode;
       var child;
       var substring;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7207,16 +7207,16 @@ TEST("hc_characterdatasubstringvalue", function() {
 
       substring = child.substringData(0,8);
       ASSERT(STRICT_EQ("Margaret",substring),"characterdataSubStringValueAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     A comment is all the characters between the starting
-  '<!--' and ending '-->' 
-  Retrieve the nodes of the DOM document.  Search for a 
+  '<!--' and ending '-->'
+  Retrieve the nodes of the DOM document.  Search for a
   comment node and the content is its value.
 
 * @author Curt Arnold
@@ -7237,7 +7237,7 @@ TEST("hc_commentgetcomment", function() {
       var commentCount = 0;
       var childType;
       var attributes;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7249,7 +7249,7 @@ TEST("hc_commentgetcomment", function() {
       child = elementList.item(indexid2258674);
       childType = child.nodeType;
 
-      
+
 	if(
 	(8 == childType)
 	) {
@@ -7268,7 +7268,7 @@ TEST("hc_commentgetcomment", function() {
 	
 	}
    	assertTrue("atMostOneComment",
-      
+
 	(commentCount < 2)
 );
 
@@ -7277,9 +7277,9 @@ TEST("hc_commentgetcomment", function() {
 
 
 /**
-* 
-   Retrieve the entire DOM document and invoke its 
-   "createAttribute(name)" method.  It should create a  
+*
+   Retrieve the entire DOM document and invoke its
+   "createAttribute(name)" method.  It should create a
    new Attribute node with the given name. The name, value
    and type of the newly created object are retrieved and
    output.
@@ -7297,7 +7297,7 @@ TEST("hc_documentcreateattribute", function() {
       var attrValue;
       var attrName;
       var attrType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7313,16 +7313,16 @@ TEST("hc_documentcreateattribute", function() {
        attrType = newAttrNode.nodeType;
 
       ASSERT(STRICT_EQ(2,attrType),"type");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "createComment(data)" method creates a new Comment
-   node given the specified string. 
-   Retrieve the entire DOM document and invoke its 
+   node given the specified string.
+   Retrieve the entire DOM document and invoke its
    "createComment(data)" method.  It should create a new
    Comment node whose "data" is the specified string.
    The content, name and type are retrieved and output.
@@ -7337,7 +7337,7 @@ TEST("hc_documentcreatecomment", function() {
       var newCommentValue;
       var newCommentName;
       var newCommentType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7353,17 +7353,17 @@ TEST("hc_documentcreatecomment", function() {
        newCommentType = newCommentNode.nodeType;
 
       ASSERT(STRICT_EQ(8,newCommentType),"type");
-       
+
 });
 
 
 
 /**
-* 
-    The "createDocumentFragment()" method creates an empty 
+*
+    The "createDocumentFragment()" method creates an empty
    DocumentFragment object.
-   Retrieve the entire DOM document and invoke its 
-   "createDocumentFragment()" method.  The content, name, 
+   Retrieve the entire DOM document and invoke its
+   "createDocumentFragment()" method.  The content, name,
    type and value of the newly created object are output.
 
 * @author Curt Arnold
@@ -7378,7 +7378,7 @@ TEST("hc_documentcreatedocumentfragment", function() {
       var newDocFragmentName;
       var newDocFragmentType;
       var newDocFragmentValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7399,19 +7399,19 @@ TEST("hc_documentcreatedocumentfragment", function() {
        newDocFragmentValue = newDocFragment.nodeValue;
 
       ASSERT(NULL(newDocFragmentValue),"value");
-    
+
 });
 
 
 
 /**
-* 
-    The "createElement(tagName)" method creates an Element 
+*
+    The "createElement(tagName)" method creates an Element
    of the type specified.
-   Retrieve the entire DOM document and invoke its 
+   Retrieve the entire DOM document and invoke its
    "createElement(tagName)" method with tagName="acronym".
    The method should create an instance of an Element node
-   whose tagName is "acronym".  The NodeName, NodeType 
+   whose tagName is "acronym".  The NodeName, NodeType
    and NodeValue are returned.
 
 * @author Curt Arnold
@@ -7424,7 +7424,7 @@ TEST("hc_documentcreateelement", function() {
       var newElementName;
       var newElementType;
       var newElementValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7440,20 +7440,20 @@ TEST("hc_documentcreateelement", function() {
        newElementValue = newElement.nodeValue;
 
       ASSERT(NULL(newElementValue),"valueInitiallyNull");
-    
+
 });
 
 
 
 /**
-* 
+*
     The tagName parameter in the "createElement(tagName)"
    method is case-sensitive for XML documents.
-   Retrieve the entire DOM document and invoke its 
+   Retrieve the entire DOM document and invoke its
    "createElement(tagName)" method twice.  Once for tagName
    equal to "acronym" and once for tagName equal to "ACRONYM"
    Each call should create a distinct Element node.  The
-   newly created Elements are then assigned attributes 
+   newly created Elements are then assigned attributes
    that are retrieved.
 
    Modified on 27 June 2003 to avoid setting an invalid style
@@ -7472,7 +7472,7 @@ TEST("hc_documentcreateelementcasesensitive", function() {
       var attribute2;
       var nodeName1;
       var nodeName2;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7492,17 +7492,17 @@ TEST("hc_documentcreateelementcasesensitive", function() {
 
       ASSERT(STRICT_EQ("ACRONYM",nodeName1), "nodeName1");
        ASSERT(STRICT_EQ("acronym",nodeName2), "nodeName2");
-       
+
 });
 
 
 
 /**
-* 
-    The "createTextNode(data)" method creates a Text node 
+*
+    The "createTextNode(data)" method creates a Text node
    given the specfied string.
-   Retrieve the entire DOM document and invoke its 
-   "createTextNode(data)" method.  It should create a 
+   Retrieve the entire DOM document and invoke its
+   "createTextNode(data)" method.  It should create a
    new Text node whose "data" is the specified string.
    The NodeName and NodeType are also checked.
 
@@ -7516,7 +7516,7 @@ TEST("hc_documentcreatetextnode", function() {
       var newTextName;
       var newTextValue;
       var newTextType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7532,19 +7532,19 @@ TEST("hc_documentcreatetextnode", function() {
        newTextType = newTextNode.nodeType;
 
       ASSERT(STRICT_EQ(3,newTextType),"type");
-       
+
 });
 
 
 
 /**
-* 
-    The "getElementsByTagName(tagName)" method returns a 
+*
+    The "getElementsByTagName(tagName)" method returns a
    NodeList of all the Elements with a given tagName.
-   
-   Retrieve the entire DOM document and invoke its 
+
+   Retrieve the entire DOM document and invoke its
    "getElementsByTagName(tagName)" method with tagName
-   equal to "strong".  The method should return a NodeList 
+   equal to "strong".  The method should return a NodeList
    that contains 5 elements.
 
 * @author Curt Arnold
@@ -7554,7 +7554,7 @@ TEST("hc_documentgetelementsbytagnamelength", function() {
    var success;
     var doc;
       var nameList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7568,11 +7568,11 @@ TEST("hc_documentgetelementsbytagnamelength", function() {
 
 
 /**
-* 
-   Retrieve the entire DOM document and invoke its 
+*
+   Retrieve the entire DOM document and invoke its
    "getElementsByTagName(tagName)" method with tagName
-   equal to "*".  The method should return a NodeList 
-   that contains all the elements of the document. 
+   equal to "*".  The method should return a NodeList
+   that contains all the elements of the document.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-A6C9094
@@ -7675,7 +7675,7 @@ TEST("hc_documentgetelementsbytagnametotallength", function() {
 
       var thisElement;
       var thisTag;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7689,19 +7689,19 @@ TEST("hc_documentgetelementsbytagnametotallength", function() {
       actualNames[actualNames.length] = thisTag;
 
 	}
-   
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(DOM_LIST_EQ(svgExpectedNames,actualNames), "svgTagNames");
-       
+
 	}
 	
 		else {
 			ASSERT(DOM_LIST_EQ(expectedNames,actualNames), "tagNames");
-       
+
 		}
 	
 });
@@ -7709,14 +7709,14 @@ TEST("hc_documentgetelementsbytagnametotallength", function() {
 
 
 /**
-* 
-    The "getElementsByTagName(tagName)" method returns a 
+*
+    The "getElementsByTagName(tagName)" method returns a
    NodeList of all the Elements with a given tagName
    in a pre-order traversal of the tree.
-   
-   Retrieve the entire DOM document and invoke its 
+
+   Retrieve the entire DOM document and invoke its
    "getElementsByTagName(tagName)" method with tagName
-   equal to "strong".  The method should return a NodeList 
+   equal to "strong".  The method should return a NodeList
    that contains 5 elements.  The FOURTH item in the
    list is retrieved and output.
 
@@ -7730,7 +7730,7 @@ TEST("hc_documentgetelementsbytagnamevalue", function() {
       var nameNode;
       var firstChild;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7743,16 +7743,16 @@ TEST("hc_documentgetelementsbytagnamevalue", function() {
       childValue = firstChild.nodeValue;
 
       ASSERT(STRICT_EQ("Jeny Oconnor",childValue),"documentGetElementsByTagNameValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-   Retrieve the entire DOM document and invoke its 
-   "getImplementation()" method.  If contentType="text/html", 
-   DOMImplementation.hasFeature("HTML","1.0") should be true.  
+*
+   Retrieve the entire DOM document and invoke its
+   "getImplementation()" method.  If contentType="text/html",
+   DOMImplementation.hasFeature("HTML","1.0") should be true.
    Otherwise, DOMImplementation.hasFeature("XML", "1.0")
    should be true.
 
@@ -7766,7 +7766,7 @@ TEST("hc_documentgetimplementation", function() {
       var docImpl;
       var xmlstate;
       var htmlstate;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7795,8 +7795,8 @@ htmlstate = docImpl.hasFeature("HTML","1.0");
 
 
 /**
-* 
-  Load a document and invoke its 
+*
+  Load a document and invoke its
    "getDocumentElement()" method.
 
 * @author Curt Arnold
@@ -7808,7 +7808,7 @@ TEST("hc_documentgetrootnode", function() {
     var doc;
       var root;
       var rootName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -7818,19 +7818,19 @@ TEST("hc_documentgetrootnode", function() {
 
       rootName = root.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",rootName),"svgTagName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("html",rootName), "docElemName");
-       
+
 		}
 	
 });
@@ -7838,14 +7838,14 @@ TEST("hc_documentgetrootnode", function() {
 
 
 /**
-* 
+*
     The "createAttribute(tagName)" method raises an
    INVALID_CHARACTER_ERR DOMException if the specified
-   tagName contains an invalid character. 
-   
-   Retrieve the entire DOM document and invoke its 
+   tagName contains an invalid character.
+
+   Retrieve the entire DOM document and invoke its
    "createAttribute(tagName)" method with the tagName equal
-   to the string "invalid^Name".  Due to the invalid 
+   to the string "invalid^Name".  Due to the invalid
    character the desired EXCEPTION should be raised.
 
 * @author Curt Arnold
@@ -7859,13 +7859,13 @@ TEST("hc_documentinvalidcharacterexceptioncreateattribute", function() {
    var success;
     var doc;
       var createdAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
 	{
 		success = false;
 		try {
@@ -7882,7 +7882,7 @@ TEST("hc_documentinvalidcharacterexceptioncreateattribute", function() {
 
 
 /**
-* 
+*
 Creating an attribute with an empty name should cause an INVALID_CHARACTER_ERR.
 
 * @author Curt Arnold
@@ -7896,13 +7896,13 @@ TEST("hc_documentinvalidcharacterexceptioncreateattribute1", function() {
    var success;
     var doc;
       var createdAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
 	{
 		success = false;
 		try {
@@ -7919,14 +7919,14 @@ TEST("hc_documentinvalidcharacterexceptioncreateattribute1", function() {
 
 
 /**
-* 
+*
     The "createElement(tagName)" method raises an
    INVALID_CHARACTER_ERR DOMException if the specified
-   tagName contains an invalid character. 
-   
-   Retrieve the entire DOM document and invoke its 
+   tagName contains an invalid character.
+
+   Retrieve the entire DOM document and invoke its
    "createElement(tagName)" method with the tagName equal
-   to the string "invalid^Name".  Due to the invalid 
+   to the string "invalid^Name".  Due to the invalid
    character the desired EXCEPTION should be raised.
 
 * @author Curt Arnold
@@ -7940,13 +7940,13 @@ TEST("hc_documentinvalidcharacterexceptioncreateelement", function() {
    var success;
     var doc;
       var badElement;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
 	{
 		success = false;
 		try {
@@ -7963,7 +7963,7 @@ TEST("hc_documentinvalidcharacterexceptioncreateelement", function() {
 
 
 /**
-* 
+*
 Creating an element with an empty name should cause an INVALID_CHARACTER_ERR.
 
 * @author Curt Arnold
@@ -7977,13 +7977,13 @@ TEST("hc_documentinvalidcharacterexceptioncreateelement1", function() {
    var success;
     var doc;
       var badElement;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
       }
       doc = load(docRef, "doc", "hc_staff");
-      
+
 	{
 		success = false;
 		try {
@@ -8000,8 +8000,8 @@ TEST("hc_documentinvalidcharacterexceptioncreateelement1", function() {
 
 
 /**
-* 
-   Load a document and invoke its 
+*
+   Load a document and invoke its
    "getImplementation()" method.  This should create a
    DOMImplementation object whose "hasFeature(feature,
    version)" method is invoked with version equal to "".
@@ -8018,7 +8018,7 @@ TEST("hc_domimplementationfeaturenoversion", function() {
     var doc;
       var domImpl;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8046,8 +8046,8 @@ TEST("hc_domimplementationfeaturenoversion", function() {
 
 
 /**
-* 
-   Load a document and invoke its 
+*
+   Load a document and invoke its
    "getImplementation()" method.  This should create a
    DOMImplementation object whose "hasFeature(feature,
    version)" method is invoked with version equal to null.
@@ -8065,7 +8065,7 @@ TEST("hc_domimplementationfeaturenull", function() {
     var doc;
       var domImpl;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8094,8 +8094,8 @@ ASSERT(STRICT_EQ(true,state),"supports_XML_null");
 
 
 /**
-* 
-   Retrieve the entire DOM document and invoke its 
+*
+   Retrieve the entire DOM document and invoke its
    "getImplementation()" method.  This should create a
    DOMImplementation object whose "hasFeature(feature,
    version)" method is invoked with "feature" equal to "html" or "xml".
@@ -8110,7 +8110,7 @@ TEST("hc_domimplementationfeaturexml", function() {
     var doc;
       var domImpl;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8139,14 +8139,14 @@ ASSERT(STRICT_EQ(true,state),"supports_xml_1.0");
 
 
 /**
-* 
+*
     The "setAttribute(name,value)" method adds a new attribute
-   to the Element 
-   
-   Retrieve the last child of the last employee, then 
-   add an attribute to it by invoking the             
+   to the Element
+
+   Retrieve the last child of the last employee, then
+   add an attribute to it by invoking the
    "setAttribute(name,value)" method.  It should create
-   a "strong" attribute with an assigned value equal to 
+   a "strong" attribute with an assigned value equal to
    "value".
 
 * @author Curt Arnold
@@ -8159,7 +8159,7 @@ TEST("hc_elementaddnewattribute", function() {
       var elementList;
       var testEmployee;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8170,17 +8170,17 @@ TEST("hc_elementaddnewattribute", function() {
       testEmployee.setAttribute("lang","EN-us");
       attrValue = testEmployee.getAttribute("lang");
       ASSERT(STRICT_EQ("EN-us",attrValue),"attrValue");
-       
+
 });
 
 
 
 /**
-* 
+*
    Retrieve the first attribute from the last child of
-   the first employee and invoke the "getSpecified()" 
-   method.  This test is only intended to show that   
-   Elements can actually have attributes.  This test uses  
+   the first employee and invoke the "getSpecified()"
+   method.  This test is only intended to show that
+   Elements can actually have attributes.  This test uses
    the "getNamedItem(name)" method from the NamedNodeMap
    interface.
 
@@ -8195,7 +8195,7 @@ TEST("hc_elementassociatedattribute", function() {
       var attributes;
       var domesticAttr;
       var specified;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8215,16 +8215,16 @@ TEST("hc_elementassociatedattribute", function() {
 
 
 /**
-* 
+*
     The "setAttribute(name,value)" method adds a new attribute
    to the Element.  If the "strong" is already present, then
    its value should be changed to the new one that is in
-   the "value" parameter. 
-   
-   Retrieve the last child of the fourth employee, then add 
-   an attribute to it by invoking the 
+   the "value" parameter.
+
+   Retrieve the last child of the fourth employee, then add
+   an attribute to it by invoking the
    "setAttribute(name,value)" method.  Since the name of the
-   used attribute("class") is already present in this     
+   used attribute("class") is already present in this
    element, then its value should be changed to the new one
    of the "value" parameter.
 
@@ -8237,7 +8237,7 @@ TEST("hc_elementchangeattributevalue", function() {
       var elementList;
       var testEmployee;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8248,18 +8248,18 @@ TEST("hc_elementchangeattributevalue", function() {
       testEmployee.setAttribute("class","Neither");
       attrValue = testEmployee.getAttribute("class");
       ASSERT(STRICT_EQ("Neither",attrValue),"elementChangeAttributeValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "setAttributeNode(newAttr)" method adds a new 
-   attribute to the Element.  
-   
+*
+    The "setAttributeNode(newAttr)" method adds a new
+   attribute to the Element.
+
    Retrieve first address element and add
-   a new attribute node to it by invoking its         
+   a new attribute node to it by invoking its
    "setAttributeNode(newAttr)" method.  This test makes use
    of the "createAttribute(name)" method from the Document
    interface.
@@ -8277,7 +8277,7 @@ TEST("hc_elementcreatenewattribute", function() {
       var oldAttr;
       var districtAttr;
       var attrVal;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8292,13 +8292,13 @@ TEST("hc_elementcreatenewattribute", function() {
       ASSERT(NOT_NULL(districtAttr),"new_district_accessible");
 attrVal = testAddress.getAttribute("lang");
       ASSERT(STRICT_EQ("",attrVal),"attr_value");
-       
+
 });
 
 
 
 /**
-* 
+*
    Retrieve the attribute "title" from the last child
    of the first "p" element and check its node name.
 
@@ -8314,7 +8314,7 @@ TEST("hc_elementgetattributenode", function() {
       var testEmployee;
       var domesticAttr;
       var nodeName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8326,17 +8326,17 @@ TEST("hc_elementgetattributenode", function() {
       nodeName = domesticAttr.nodeName;
 
       ASSERT(STRICT_EQ("title",nodeName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getAttributeNode(name)" method retrieves an
    attribute node by name.  It should return null if the
    "strong" attribute does not exist.
-   
+
    Retrieve the last child of the first employee and attempt
    to retrieve a non-existing attribute.  The method should
    return "null".  The non-existing attribute to be used
@@ -8351,7 +8351,7 @@ TEST("hc_elementgetattributenodenull", function() {
       var elementList;
       var testEmployee;
       var domesticAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8361,20 +8361,20 @@ TEST("hc_elementgetattributenodenull", function() {
       testEmployee = elementList.item(0);
       domesticAttr = testEmployee.getAttributeNode("invalidAttribute");
       ASSERT(NULL(domesticAttr),"elementGetAttributeNodeNullAssert");
-    
+
 });
 
 
 
 /**
-* 
-    The "getAttribute(name)" method returns an empty 
-   string if no value was assigned to an attribute and 
+*
+    The "getAttribute(name)" method returns an empty
+   string if no value was assigned to an attribute and
    no default value was given in the DTD file.
-   
+
    Retrieve the last child of the last employee, then
    invoke "getAttribute(name)" method, where "strong" is an
-   attribute without a specified or DTD default value. 
+   attribute without a specified or DTD default value.
    The "getAttribute(name)" method should return the empty
    string.  This method makes use of the
    "createAttribute(newAttr)" method from the Document
@@ -8392,7 +8392,7 @@ TEST("hc_elementgetelementempty", function() {
       var testEmployee;
       var domesticAttr;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8404,13 +8404,13 @@ TEST("hc_elementgetelementempty", function() {
       domesticAttr = testEmployee.setAttributeNode(newAttribute);
       attrValue = testEmployee.getAttribute("lang");
       ASSERT(STRICT_EQ("",attrValue),"elementGetElementEmptyAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method returns a list
 of all descendant Elements with the given tag name.
 Test for an empty list.
@@ -8428,7 +8428,7 @@ TEST("hc_elementgetelementsbytagname", function() {
    var success;
     var doc;
       var elementList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8442,7 +8442,7 @@ TEST("hc_elementgetelementsbytagname", function() {
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method returns a list
 of all descendant Elements in the order the children
 were encountered in a pre order traversal of the element
@@ -8470,7 +8470,7 @@ TEST("hc_elementgetelementsbytagnameaccessnodelist", function() {
       var nodeType;
       var employeeIDNode;
       var employeeID;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8482,7 +8482,7 @@ TEST("hc_elementgetelementsbytagnameaccessnodelist", function() {
 
       nodeType = firstC.nodeType;
 
-      
+
     while(
 	(3 == nodeType)
 	) {
@@ -8490,7 +8490,7 @@ TEST("hc_elementgetelementsbytagnameaccessnodelist", function() {
 
       nodeType = firstC.nodeType;
 
-      
+
 	}
 childName = firstC.nodeName;
 
@@ -8500,13 +8500,13 @@ childName = firstC.nodeName;
       employeeID = employeeIDNode.nodeValue;
 
       ASSERT(STRICT_EQ("EMP0004",employeeID),"employeeID");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method returns a list
 of all descendant Elements with the given tag name.
 
@@ -8522,7 +8522,7 @@ TEST("hc_elementgetelementsbytagnamenomatch", function() {
    var success;
     var doc;
       var elementList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8536,7 +8536,7 @@ TEST("hc_elementgetelementsbytagnamenomatch", function() {
 
 
 /**
-* 
+*
 The "getElementsByTagName(name)" method may use the
 special value "*" to match all tags in the element
 tree.
@@ -8567,7 +8567,7 @@ TEST("hc_elementgetelementsbytagnamespecialvalue", function() {
       expectedResult[4] = "var";
       expectedResult[5] = "acronym";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8584,15 +8584,15 @@ TEST("hc_elementgetelementsbytagnamespecialvalue", function() {
 
 	}
    ASSERT(DOM_LIST_EQ(expectedResult,result), "tagNames");
-       
+
 });
 
 
 
 /**
-* 
-   Invoke the "getTagName()" method one the 
-   root node. The value returned should be "html" or "svg". 
+*
+   Invoke the "getTagName()" method one the
+   root node. The value returned should be "html" or "svg".
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-104682815
@@ -8603,7 +8603,7 @@ TEST("hc_elementgettagname", function() {
     var doc;
       var root;
       var tagname;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8613,19 +8613,19 @@ TEST("hc_elementgettagname", function() {
 
       tagname = root.tagName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",tagname),"svgTagname");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("html",tagname), "tagname");
-       
+
 		}
 	
 });
@@ -8633,9 +8633,9 @@ TEST("hc_elementgettagname", function() {
 
 
 /**
-* 
-    The "setAttributeNode(newAttr)" method raises an 
-   "INUSE_ATTRIBUTE_ERR DOMException if the "newAttr" 
+*
+    The "setAttributeNode(newAttr)" method raises an
+   "INUSE_ATTRIBUTE_ERR DOMException if the "newAttr"
    is already an attribute of another element.
 
 * @author Curt Arnold
@@ -8655,7 +8655,7 @@ TEST("hc_elementinuseattributeerr", function() {
       var appendedChild;
       var setAttr1;
       var setAttr2;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8667,7 +8667,7 @@ TEST("hc_elementinuseattributeerr", function() {
       appendedChild = testAddress.appendChild(newElement);
       newAttribute = doc.createAttribute("title");
       setAttr1 = newElement.setAttributeNode(newAttribute);
-      
+
 	{
 		success = false;
 		try {
@@ -8684,14 +8684,14 @@ TEST("hc_elementinuseattributeerr", function() {
 
 
 /**
-* 
-    The "setAttribute(name,value)" method raises an 
-   "INVALID_CHARACTER_ERR DOMException if the specified 
-   name contains an invalid character.   
+*
+    The "setAttribute(name,value)" method raises an
+   "INVALID_CHARACTER_ERR DOMException if the specified
+   name contains an invalid character.
 
-   Retrieve the last child of the first employee and 
-   call its "setAttribute(name,value)" method with    
-   "strong" containing an invalid character. 
+   Retrieve the last child of the first employee and
+   call its "setAttribute(name,value)" method with
+   "strong" containing an invalid character.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#xpointer(id('ID-258A00AF')/constant[@name='INVALID_CHARACTER_ERR'])
@@ -8704,7 +8704,7 @@ TEST("hc_elementinvalidcharacterexception", function() {
     var doc;
       var elementList;
       var testAddress;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8712,7 +8712,7 @@ TEST("hc_elementinvalidcharacterexception", function() {
       doc = load(docRef, "doc", "hc_staff");
       elementList = doc.getElementsByTagName("acronym");
       testAddress = elementList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -8729,7 +8729,7 @@ TEST("hc_elementinvalidcharacterexception", function() {
 
 
 /**
-* 
+*
 Calling Element.setAttribute with an empty name will cause an INVALID_CHARACTER_ERR.
 
 * @author Curt Arnold
@@ -8743,7 +8743,7 @@ TEST("hc_elementinvalidcharacterexception1", function() {
     var doc;
       var elementList;
       var testAddress;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8751,7 +8751,7 @@ TEST("hc_elementinvalidcharacterexception1", function() {
       doc = load(docRef, "doc", "hc_staff");
       elementList = doc.getElementsByTagName("acronym");
       testAddress = elementList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -8768,7 +8768,7 @@ TEST("hc_elementinvalidcharacterexception1", function() {
 
 
 /**
-* 
+*
 Append a couple of text nodes to the first sup element, normalize the
 document element and check that the element has been normalized.
 
@@ -8786,7 +8786,7 @@ TEST("hc_elementnormalize", function() {
       var childValue;
       var textNode;
       var retNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8808,13 +8808,13 @@ TEST("hc_elementnormalize", function() {
       childValue = firstChild.nodeValue;
 
       ASSERT(STRICT_EQ("56,000,000",childValue),"elementNormalizeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 Add an empty text node to an existing attribute node, normalize the containing element
 and check that the attribute node has eliminated the empty text.
 
@@ -8834,7 +8834,7 @@ TEST("hc_elementnormalize2", function() {
       var emptyText;
       var attrNode;
       var retval;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8857,21 +8857,21 @@ TEST("hc_elementnormalize2", function() {
        secondChild = firstChild.nextSibling;
 
       ASSERT(NULL(secondChild),"secondChildNull");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "removeAttributeNode(oldAttr)" method raises a
    NOT_FOUND_ERR DOMException if the "oldAttr" attribute
    is not an attribute of the element.
-    
+
    Retrieve the last employee and attempt to remove
    a non existing attribute node.  This should cause the
    intended exception to be raised.  This test makes use
-   of the "createAttribute(name)" method from the Document 
+   of the "createAttribute(name)" method from the Document
    interface.
 
 * @author Curt Arnold
@@ -8887,7 +8887,7 @@ TEST("hc_elementnotfounderr", function() {
       var addressElementList;
       var testAddress;
       var attrAddress;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8896,7 +8896,7 @@ TEST("hc_elementnotfounderr", function() {
       addressElementList = doc.getElementsByTagName("acronym");
       testAddress = addressElementList.item(4);
       oldAttribute = doc.createAttribute("title");
-      
+
 	{
 		success = false;
 		try {
@@ -8913,7 +8913,7 @@ TEST("hc_elementnotfounderr", function() {
 
 
 /**
-* 
+*
     The "removeAttribute(name)" removes an attribute by name.
    If the attribute has a default value, it is immediately
    replaced.  However, there is no default values in the HTML
@@ -8929,7 +8929,7 @@ TEST("hc_elementremoveattribute", function() {
       var elementList;
       var testEmployee;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8940,18 +8940,18 @@ TEST("hc_elementremoveattribute", function() {
       testEmployee.removeAttribute("class");
       attrValue = testEmployee.getAttribute("class");
       ASSERT(STRICT_EQ("",attrValue),"attrValue");
-       
+
 });
 
 
 
 /**
-* 
-    The "removeAttributeNode(oldAttr)" method removes the 
-   specified attribute. 
-   
+*
+    The "removeAttributeNode(oldAttr)" method removes the
+   specified attribute.
+
    Retrieve the last child of the third employee, add a
-   new "lang" attribute to it and then try to remove it. 
+   new "lang" attribute to it and then try to remove it.
    To verify that the node was removed use the
    "getNamedItem(name)" method from the NamedNodeMap
    interface.  It also uses the "getAttributes()" method
@@ -8969,7 +8969,7 @@ TEST("hc_elementremoveattributeaftercreate", function() {
       var newAttribute;
       var attributes;
       var districtAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -8984,18 +8984,18 @@ TEST("hc_elementremoveattributeaftercreate", function() {
 
       districtAttr = attributes.getNamedItem("lang");
       ASSERT(NULL(districtAttr),"removed_item_null");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "removeAttributeNode(oldAttr)" method returns the
-   node that was removed. 
-   
+   node that was removed.
+
    Retrieve the last child of the third employee and
-   remove its "class" Attr node.  The method should  
+   remove its "class" Attr node.  The method should
    return the old attribute node.
 
 * @author Curt Arnold
@@ -9009,7 +9009,7 @@ TEST("hc_elementremoveattributenode", function() {
       var streetAttr;
       var removedAttr;
       var removedValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9023,14 +9023,14 @@ TEST("hc_elementremoveattributenode", function() {
 removedValue = removedAttr.value;
 
       ASSERT(STRICT_EQ("No",removedValue),"elementRemoveAttributeNodeAssert");
-       
+
 });
 
 
 
 /**
-* 
-This test calls setAttributeNode to replace an attribute with itself.  
+*
+This test calls setAttributeNode to replace an attribute with itself.
 Since the node is not an attribute of another Element, it would
 be inappropriate to throw an INUSE_ATTRIBUTE_ERR.
 
@@ -9049,7 +9049,7 @@ TEST("hc_elementreplaceattributewithself", function() {
       var streetAttr;
       var replacedAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9066,19 +9066,19 @@ TEST("hc_elementreplaceattributewithself", function() {
 
 
 /**
-* 
+*
     The "setAttributeNode(newAttr)" method adds a new
    attribute to the Element.  If the "newAttr" Attr node is
    already present in this element, it should replace the
-   existing one. 
-   
-   Retrieve the last child of the third employee and add a 
-   new attribute node by invoking the "setAttributeNode(new 
-   Attr)" method.  The new attribute node to be added is 
+   existing one.
+
+   Retrieve the last child of the third employee and add a
+   new attribute node by invoking the "setAttributeNode(new
+   Attr)" method.  The new attribute node to be added is
    "class", which is already present in this element.  The
-   method should replace the existing Attr node with the 
+   method should replace the existing Attr node with the
    new one.  This test uses the "createAttribute(name)"
-   method from the Document interface. 
+   method from the Document interface.
 
 * @author Curt Arnold
 */
@@ -9090,7 +9090,7 @@ TEST("hc_elementreplaceexistingattribute", function() {
       var newAttribute;
       var strong;
       var setAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9102,13 +9102,13 @@ TEST("hc_elementreplaceexistingattribute", function() {
       setAttr = testEmployee.setAttributeNode(newAttribute);
       strong = testEmployee.getAttribute("class");
       ASSERT(STRICT_EQ("",strong),"replacedValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 If the "setAttributeNode(newAttr)" method replaces an
 existing Attr node with the same name, then it should
 return the previously existing Attr node.
@@ -9131,7 +9131,7 @@ TEST("hc_elementreplaceexistingattributegevalue", function() {
       var newAttribute;
       var streetAttr;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9145,16 +9145,16 @@ TEST("hc_elementreplaceexistingattributegevalue", function() {
 value = streetAttr.value;
 
       ASSERT(STRICT_EQ("No",value),"previousAttrValue");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getAttribute(name)" method returns an attribute
    value by name.
-   
+
    Retrieve the second address element, then
    invoke the 'getAttribute("class")' method.  This should
    return the value of the attribute("No").
@@ -9168,7 +9168,7 @@ TEST("hc_elementretrieveattrvalue", function() {
       var elementList;
       var testAddress;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9178,19 +9178,19 @@ TEST("hc_elementretrieveattrvalue", function() {
       testAddress = elementList.item(2);
       attrValue = testAddress.getAttribute("class");
       ASSERT(STRICT_EQ("No",attrValue),"attrValue");
-       
+
 });
 
 
 
 /**
-* 
-    The "getElementsByTagName()" method returns a NodeList 
-   of all descendant elements with a given tagName.    
-   
+*
+    The "getElementsByTagName()" method returns a NodeList
+   of all descendant elements with a given tagName.
+
    Invoke the "getElementsByTagName()" method and create
-   a NodeList of "code" elements.  Retrieve the second 
-   "code" element in the list and return the NodeName. 
+   a NodeList of "code" elements.  Retrieve the second
+   "code" element in the list and return the NodeName.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D095
@@ -9202,7 +9202,7 @@ TEST("hc_elementretrievetagname", function() {
       var elementList;
       var testEmployee;
       var strong;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9216,23 +9216,23 @@ TEST("hc_elementretrievetagname", function() {
        strong = testEmployee.tagName;
 
       ASSERT(STRICT_EQ("code",strong), "tagname");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "setAttributeNode(newAttr)" method returns the
    null value if no previously existing Attr node with the
    same name was replaced.
-   
-   Retrieve the last child of the third employee and add a 
-   new attribute to it.  The new attribute node added is 
-   "lang", which is not part of this Element.  The   
-   method should return the null value.   
+
+   Retrieve the last child of the third employee and add a
+   new attribute to it.  The new attribute node added is
+   "lang", which is not part of this Element.  The
+   method should return the null value.
    This test uses the "createAttribute(name)"
-   method from the Document interface. 
+   method from the Document interface.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-887236154
@@ -9245,7 +9245,7 @@ TEST("hc_elementsetattributenodenull", function() {
       var testEmployee;
       var newAttribute;
       var districtAttr;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9256,15 +9256,15 @@ TEST("hc_elementsetattributenodenull", function() {
       newAttribute = doc.createAttribute("lang");
       districtAttr = testEmployee.setAttributeNode(newAttribute);
       ASSERT(NULL(districtAttr),"elementSetAttributeNodeNullAssert");
-    
+
 });
 
 
 
 /**
-* 
-    The "setAttributeNode(newAttr)" method raises an 
-   "WRONG_DOCUMENT_ERR DOMException if the "newAttr" 
+*
+    The "setAttributeNode(newAttr)" method raises an
+   "WRONG_DOCUMENT_ERR DOMException if the "newAttr"
    was created from a different document than the one that
    created this document.
 
@@ -9291,13 +9291,13 @@ TEST("hc_elementwrongdocumenterr", function() {
       var addressElementList;
       var testAddress;
       var attrAddress;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "hc_staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -9306,7 +9306,7 @@ TEST("hc_elementwrongdocumenterr", function() {
       newAttribute = doc2.createAttribute("newAttribute");
       addressElementList = doc1.getElementsByTagName("acronym");
       testAddress = addressElementList.item(4);
-      
+
 	{
 		success = false;
 		try {
@@ -9323,8 +9323,8 @@ TEST("hc_elementwrongdocumenterr", function() {
 
 
 /**
-* 
-   Retrieve the second "p" element and create a NamedNodeMap 
+*
+   Retrieve the second "p" element and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getNamedItem(name)"
    method is done with name="title".  This should result
@@ -9344,7 +9344,7 @@ TEST("hc_namednodemapgetnameditem", function() {
       var attributes;
       var domesticAttr;
       var attrName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9358,13 +9358,13 @@ TEST("hc_namednodemapgetnameditem", function() {
       attrName = domesticAttr.nodeName;
 
       ASSERT(STRICT_EQ("title",attrName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "setNamedItem(arg)" method raises a
 INUSE_ATTRIBUTE_ERR DOMException if "arg" is an
 Attr that is already in an attribute of another Element.
@@ -9390,7 +9390,7 @@ TEST("hc_namednodemapinuseattributeerr", function() {
       var domesticAttr;
       var setAttr;
       var setNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9406,7 +9406,7 @@ TEST("hc_namednodemapinuseattributeerr", function() {
       testNode = elementList.item(2);
       attributes = testNode.attributes;
 
-      
+
 	{
 		success = false;
 		try {
@@ -9423,15 +9423,15 @@ TEST("hc_namednodemapinuseattributeerr", function() {
 
 
 /**
-* 
-    The "removeNamedItem(name)" method raises a 
+*
+    The "removeNamedItem(name)" method raises a
    NOT_FOUND_ERR DOMException if there is not a node
    named "strong" in the map.
-   
+
    Create a NamedNodeMap object from the attributes of the
    last child of the third employee and attempt to remove
    the "lang" attribute.  There is not a node named
-   "lang" in the list and therefore the desired   
+   "lang" in the list and therefore the desired
    exception should be raised.
 
 * @author Curt Arnold
@@ -9447,7 +9447,7 @@ TEST("hc_namednodemapnotfounderr", function() {
       var testEmployee;
       var attributes;
       var removedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9457,7 +9457,7 @@ TEST("hc_namednodemapnotfounderr", function() {
       testEmployee = elementList.item(2);
       attributes = testEmployee.attributes;
 
-      
+
 	{
 		success = false;
 		try {
@@ -9474,11 +9474,11 @@ TEST("hc_namednodemapnotfounderr", function() {
 
 
 /**
-* 
-    The "removeNamedItem(name)" method removes a node 
-   specified by name. 
-   
-   Retrieve the third employee and create a NamedNodeMap 
+*
+    The "removeNamedItem(name)" method removes a node
+   specified by name.
+
+   Retrieve the third employee and create a NamedNodeMap
    object of the attributes of the last child.  Once the
    list is created invoke the "removeNamedItem(name)"
    method with name="class".  This should result
@@ -9499,7 +9499,7 @@ TEST("hc_namednodemapremovenameditem", function() {
       var streetAttr;
       var specified;
       var removedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9512,14 +9512,14 @@ TEST("hc_namednodemapremovenameditem", function() {
       removedNode = attributes.removeNamedItem("class");
       streetAttr = attributes.getNamedItem("class");
       ASSERT(NULL(streetAttr),"isnull");
-    
+
 });
 
 
 
 /**
-* 
-   Retrieve the second p element and create a NamedNodeMap 
+*
+   Retrieve the second p element and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getNamedItem(name)"
    method is done with name="class".  This should result
@@ -9540,7 +9540,7 @@ TEST("hc_namednodemapreturnattrnode", function() {
       var attributes;
       var streetAttr;
       var attrName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9558,20 +9558,20 @@ attrName = streetAttr.nodeName;
        attrName = streetAttr.name;
 
       ASSERT(STRICT_EQ("class",attrName), "name");
-       
+
 });
 
 
 
 /**
-* 
-    The "getNamedItem(name)" method returns null of the 
-   specified name did not identify any node in the map. 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "getNamedItem(name)" method returns null of the
+   specified name did not identify any node in the map.
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getNamedItem(name)"
-   method is done with name="lang".  This name does not 
+   method is done with name="lang".  This name does not
    match any names in the list therefore the method should
    return null.
 
@@ -9587,7 +9587,7 @@ TEST("hc_namednodemapreturnnull", function() {
       var testEmployee;
       var attributes;
       var districtNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9599,20 +9599,20 @@ TEST("hc_namednodemapreturnnull", function() {
 
       districtNode = attributes.getNamedItem("lang");
       ASSERT(NULL(districtNode),"langAttrNull");
-    
+
 });
 
 
 
 /**
-* 
-   Retrieve the second "p" element and create a NamedNodeMap 
+*
+   Retrieve the second "p" element and create a NamedNodeMap
    object from the attributes of the last child by
    invoking the "getAttributes()" method.  Once the
    list is created an invocation of the "setNamedItem(arg)"
    method is done with arg=newAttr, where newAttr is a
    new Attr Node previously created.  The "setNamedItem(arg)"
-   method should add then new node to the NamedNodeItem 
+   method should add then new node to the NamedNodeItem
    object by using its "nodeName" attribute("lang').
    This node is then retrieved using the "getNamedItem(name)"
    method.
@@ -9634,7 +9634,7 @@ TEST("hc_namednodemapsetnameditem", function() {
       var districtNode;
       var attrName;
       var setNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9650,18 +9650,18 @@ TEST("hc_namednodemapsetnameditem", function() {
       attrName = districtNode.nodeName;
 
       ASSERT(STRICT_EQ("lang",attrName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
-    If the "setNamedItem(arg)" method replaces an already 
-   existing node with the same name then the already 
+*
+    If the "setNamedItem(arg)" method replaces an already
+   existing node with the same name then the already
    existing node is returned.
-   
-   Retrieve the third employee and create a NamedNodeMap 
+
+   Retrieve the third employee and create a NamedNodeMap
    object from the attributes of the last child by
    invoking the "getAttributes()" method.  Once the
    list is created an invocation of the "setNamedItem(arg)"
@@ -9669,7 +9669,7 @@ TEST("hc_namednodemapsetnameditem", function() {
    new Attr Node previously created and whose node name
    already exists in the map.  The "setNamedItem(arg)"
    method should replace the already existing node with
-   the new one and return the existing node.   
+   the new one and return the existing node.
    This test uses the "createAttribute(name)" method from
    the document interface.
 
@@ -9686,7 +9686,7 @@ TEST("hc_namednodemapsetnameditemreturnvalue", function() {
       var attributes;
       var newNode;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9702,18 +9702,18 @@ TEST("hc_namednodemapsetnameditemreturnvalue", function() {
 attrValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("No",attrValue),"previousAttrValue");
-       
+
 });
 
 
 
 /**
-* 
-    If the node to be added by the "setNamedItem(arg)" method 
+*
+    If the node to be added by the "setNamedItem(arg)" method
    already exists in the NamedNodeMap, it is replaced by
    the new one.
-   
-   Retrieve the second employee and create a NamedNodeMap 
+
+   Retrieve the second employee and create a NamedNodeMap
    object from the attributes of the last child by
    invoking the "getAttributes()" method.  Once the
    list is created an invocation of the "setNamedItem(arg)"
@@ -9721,7 +9721,7 @@ attrValue = newNode.nodeValue;
    new Attr Node previously created and whose node name
    already exists in the map.  The "setNamedItem(arg)"
    method should replace the already existing node with
-   the new one.   
+   the new one.
    This node is then retrieved using the "getNamedItem(name)"
    method.  This test uses the "createAttribute(name)"
    method from the document interface
@@ -9740,7 +9740,7 @@ TEST("hc_namednodemapsetnameditemthatexists", function() {
       var districtNode;
       var attrValue;
       var setNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9756,17 +9756,17 @@ TEST("hc_namednodemapsetnameditemthatexists", function() {
       attrValue = districtNode.nodeValue;
 
       ASSERT(STRICT_EQ("",attrValue),"namednodemapSetNamedItemThatExistsAssert");
-       
+
 });
 
 
 
 /**
-* 
-    If the "setNamedItem(arg)" method does not replace an 
-   existing node with the same name then it returns null. 
-   
-   Retrieve the third employee and create a NamedNodeMap 
+*
+    If the "setNamedItem(arg)" method does not replace an
+   existing node with the same name then it returns null.
+
+   Retrieve the third employee and create a NamedNodeMap
    object from the attributes of the last child.
    Once the list is created the "setNamedItem(arg)" method
    is invoked with arg=newAttr, where newAttr is a
@@ -9789,7 +9789,7 @@ TEST("hc_namednodemapsetnameditemwithnewvalue", function() {
       var testAddress;
       var attributes;
       var newNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9802,21 +9802,21 @@ TEST("hc_namednodemapsetnameditemwithnewvalue", function() {
 
       newNode = attributes.setNamedItem(newAttribute);
       ASSERT(NULL(newNode),"prevValueNull");
-    
+
 });
 
 
 
 /**
-* 
-    The "setNamedItem(arg)" method raises a 
+*
+    The "setNamedItem(arg)" method raises a
    WRONG_DOCUMENT_ERR DOMException if "arg" was created
    from a different document than the one that created
-   the NamedNodeMap. 
-   
+   the NamedNodeMap.
+
    Create a NamedNodeMap object from the attributes of the
    last child of the third employee and attempt to add
-   another Attr node to it that was created from a 
+   another Attr node to it that was created from a
    different DOM document.  This should raise the desired
    exception.  This method uses the "createAttribute(name)"
    method from the Document interface.
@@ -9837,13 +9837,13 @@ TEST("hc_namednodemapwrongdocumenterr", function() {
       var newAttribute;
       var strong;
       var setNode;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "hc_staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -9854,7 +9854,7 @@ TEST("hc_namednodemapwrongdocumenterr", function() {
       newAttribute = doc2.createAttribute("newAttribute");
       attributes = testAddress.attributes;
 
-      
+
 	{
 		success = false;
 		try {
@@ -9871,7 +9871,7 @@ TEST("hc_namednodemapwrongdocumenterr", function() {
 
 
 /**
-* 
+*
     Retrieve the second "p" and append a "br" Element
     node to the list of children.   The last node in the list
     is then retrieved and its NodeName examined.   The
@@ -9891,7 +9891,7 @@ TEST("hc_nodeappendchild", function() {
       var lchild;
       var childName;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9908,19 +9908,19 @@ TEST("hc_nodeappendchild", function() {
       childName = lchild.nodeName;
 
       ASSERT(STRICT_EQ("br",childName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the "newChild" is already in the tree, it is first
     removed before the new one is appended.
-    
-    Retrieve the "em" second employee and   
+
+    Retrieve the "em" second employee and
     append the first child to the end of the list.   After
-    the "appendChild(newChild)" method is invoked the first 
+    the "appendChild(newChild)" method is invoked the first
     child should be the one that was second and the last
     child should be the one that was first.
 
@@ -9951,7 +9951,7 @@ TEST("hc_nodeappendchildchildexists", function() {
       expected[5] = "em";
 
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -9976,7 +9976,7 @@ TEST("hc_nodeappendchildchildexists", function() {
       memberNode = childList.item(indexid2258874);
       nodeType = memberNode.nodeType;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -9988,18 +9988,18 @@ TEST("hc_nodeappendchildchildexists", function() {
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,refreshedActual), "refreshedChildNodes");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the "newChild" is a DocumentFragment object then
     all its content is added to the child list of this node.
-    
+
     Create and populate a new DocumentFragment object and
-    append it to the second employee.   After the 
+    append it to the second employee.   After the
     "appendChild(newChild)" method is invoked retrieve the
     new nodes at the end of the list, they should be the
     two Element nodes from the DocumentFragment.
@@ -10034,7 +10034,7 @@ TEST("hc_nodeappendchilddocfragment", function() {
       expected[6] = "br";
       expected[7] = "b";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10054,7 +10054,7 @@ TEST("hc_nodeappendchilddocfragment", function() {
       child = childList.item(indexid2258773);
       nodeType = child.nodeType;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -10066,17 +10066,17 @@ TEST("hc_nodeappendchilddocfragment", function() {
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,result), "nodeNames");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "appendChild(newChild)" method returns the node
     added.
-    
-    Append a newly created node to the child list of the 
+
+    Append a newly created node to the child list of the
     second employee and check the NodeName returned.   The
     "getNodeName()" method should return "br".
 
@@ -10094,7 +10094,7 @@ TEST("hc_nodeappendchildgetnodename", function() {
       var newChild;
       var appendNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10109,18 +10109,18 @@ TEST("hc_nodeappendchildgetnodename", function() {
       childName = appendNode.nodeName;
 
       ASSERT(STRICT_EQ("br",childName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
-    The "appendChild(newChild)" method raises a 
+*
+    The "appendChild(newChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if this node is of
     a type that does not allow children of the type "newChild"
     to be inserted.
-    
+
     Retrieve the root node and attempt to append a newly
     created Attr node.   An Element node cannot have children
     of the "Attr" type, therefore the desired exception
@@ -10139,7 +10139,7 @@ TEST("hc_nodeappendchildinvalidnodetype", function() {
       var rootNode;
       var newChild;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10148,7 +10148,7 @@ TEST("hc_nodeappendchildinvalidnodetype", function() {
       rootNode = doc.documentElement;
 
       newChild = doc.createAttribute("newAttribute");
-      
+
 	{
 		success = false;
 		try {
@@ -10165,15 +10165,15 @@ TEST("hc_nodeappendchildinvalidnodetype", function() {
 
 
 /**
-* 
-    The "appendChild(newChild)" method raises a 
+*
+    The "appendChild(newChild)" method raises a
     WRONG_DOCUMENT_ERR DOMException if the "newChild" was
-    created from a different document than the one that 
+    created from a different document than the one that
     created this node.
-    
-    Retrieve the second employee and attempt to append    
-    a node created from a different document.   An attempt 
-    to make such a replacement should raise the desired 
+
+    Retrieve the second employee and attempt to append
+    a node created from a different document.   An attempt
+    to make such a replacement should raise the desired
     exception.
 
 * @author Curt Arnold
@@ -10191,13 +10191,13 @@ TEST("hc_nodeappendchildnewchilddiffdocument", function() {
       var elementList;
       var elementNode;
       var appendedChild;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "hc_staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -10206,7 +10206,7 @@ TEST("hc_nodeappendchildnewchilddiffdocument", function() {
       newChild = doc1.createElement("br");
       elementList = doc2.getElementsByTagName("p");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -10223,14 +10223,14 @@ TEST("hc_nodeappendchildnewchilddiffdocument", function() {
 
 
 /**
-* 
-    The "appendChild(newChild)" method raises a 
-    HIERARCHY_REQUEST_ERR DOMException if the node to 
+*
+    The "appendChild(newChild)" method raises a
+    HIERARCHY_REQUEST_ERR DOMException if the node to
     append is one of this node's ancestors.
-    
-    Retrieve the second employee and attempt to append 
+
+    Retrieve the second employee and attempt to append
     an ancestor node(root node) to it.
-    An attempt to make such an addition should raise the 
+    An attempt to make such an addition should raise the
     desired exception.
 
 * @author Curt Arnold
@@ -10248,7 +10248,7 @@ TEST("hc_nodeappendchildnodeancestor", function() {
       var childList;
       var oldChild;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10258,7 +10258,7 @@ TEST("hc_nodeappendchildnodeancestor", function() {
 
       elementList = doc.getElementsByTagName("p");
       employeeNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -10275,7 +10275,7 @@ TEST("hc_nodeappendchildnodeancestor", function() {
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on an Attribute
 Node returns null.
 
@@ -10295,7 +10295,7 @@ TEST("hc_nodeattributenodeattribute", function() {
       var addrAttr;
       var attrNode;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10309,17 +10309,17 @@ TEST("hc_nodeattributenodeattribute", function() {
       attrList = attrNode.attributes;
 
       ASSERT(NULL(attrList),"nodeAttributeNodeAttributeAssert1");
-    
+
 });
 
 
 
 /**
-* 
-    Retrieve the Attribute named "title" from the last 
-    child of the first p element and check the string returned 
-    by the "getNodeName()" method.   It should be equal to 
-    "title". 
+*
+    Retrieve the Attribute named "title" from the last
+    child of the first p element and check the string returned
+    by the "getNodeName()" method.   It should be equal to
+    "title".
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D095
@@ -10332,7 +10332,7 @@ TEST("hc_nodeattributenodename", function() {
       var testAddr;
       var addrAttr;
       var attrName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10344,25 +10344,25 @@ TEST("hc_nodeattributenodename", function() {
       attrName = addrAttr.nodeName;
 
       ASSERT(STRICT_EQ("title",attrName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     The "getNodeType()" method for an Attribute Node
 
     returns the constant value 2.
 
-    
+
 
     Retrieve the first attribute from the last child of
 
-    the first employee and invoke the "getNodeType()"   
+    the first employee and invoke the "getNodeType()"
 
-    method.   The method should return 2. 
+    method.   The method should return 2.
 
 
 * @author Curt Arnold
@@ -10375,7 +10375,7 @@ TEST("hc_nodeattributenodetype", function() {
       var testAddr;
       var addrAttr;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10387,21 +10387,21 @@ TEST("hc_nodeattributenodetype", function() {
       nodeType = addrAttr.nodeType;
 
       ASSERT(STRICT_EQ(2,nodeType),"nodeAttrNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The string returned by the "getNodeValue()" method for an 
+    The string returned by the "getNodeValue()" method for an
     Attribute Node is the value of the Attribute.
-    
-    Retrieve the Attribute named "title" from the last 
-    child of the first "p" and check the string returned 
-    by the "getNodeValue()" method.   It should be equal to 
-    "Yes". 
+
+    Retrieve the Attribute named "title" from the last
+    child of the first "p" and check the string returned
+    by the "getNodeValue()" method.   It should be equal to
+    "Yes".
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
@@ -10413,7 +10413,7 @@ TEST("hc_nodeattributenodevalue", function() {
       var testAddr;
       var addrAttr;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10425,17 +10425,17 @@ TEST("hc_nodeattributenodevalue", function() {
       attrValue = addrAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Yes",attrValue),"nodeValue");
-       
+
 });
 
 
 
 /**
-* 
-    
+*
+
     The "getChildNodes()" method returns a NodeList
-    that contains all children of this node. 
-    
+    that contains all children of this node.
+
     Retrieve the second employee and check the NodeList
     returned by the "getChildNodes()" method.   The
     length of the list should be 13.
@@ -10463,7 +10463,7 @@ TEST("hc_nodechildnodes", function() {
       expected[4] = "var";
       expected[5] = "acronym";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10479,7 +10479,7 @@ TEST("hc_nodechildnodes", function() {
 
       childName = childNode.nodeName;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -10489,22 +10489,22 @@ TEST("hc_nodechildnodes", function() {
 	
 		else {
 			ASSERT(STRICT_EQ(3,nodeType),"textNodeType");
-       
+
 		}
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,actual), "elementNames");
-       
+
 });
 
 
 
 /**
-* 
+*
     The NodeList returned by the "getChildNodes()" method
     is live.   Changes on the node's children are immediately
     reflected on the nodes returned in the NodeList.
-    
+
     Create a NodeList of the children of the second employee
     and then add a newly created element that was created
     by the "createElement()" method(Document Interface) to
@@ -10540,7 +10540,7 @@ TEST("hc_nodechildnodesappendchild", function() {
       expected[5] = "acronym";
       expected[6] = "br";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10558,7 +10558,7 @@ TEST("hc_nodechildnodesappendchild", function() {
 
       childType = childNode.nodeType;
 
-      
+
 	if(
 	(1 == childType)
 	) {
@@ -10568,22 +10568,22 @@ TEST("hc_nodechildnodesappendchild", function() {
 	
 		else {
 			ASSERT(STRICT_EQ(3,childType),"textNodeType");
-       
+
 		}
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,actual), "childElements");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getChildNodes()" method returns a NodeList
     that contains all children of this node.   If there
-    are not any children, this is a NodeList that does not 
-    contain any nodes. 
+    are not any children, this is a NodeList that does not
+    contain any nodes.
 
     Retrieve the character data of the second "em" node and
     invoke the "getChildNodes()" method.   The
@@ -10601,7 +10601,7 @@ TEST("hc_nodechildnodesempty", function() {
       var employeeNode;
       var textNode;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10616,16 +10616,16 @@ TEST("hc_nodechildnodesempty", function() {
       length = childList.length;
 
       ASSERT(STRICT_EQ(0,length),"length_zero");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method does not copy text unless it
     is deep cloned.(Test for deep=false)
-    
+
     Retrieve the fourth child of the second employee and
     the "cloneNode(deep)" method with deep=false.   The
     duplicate node returned by the method should not copy
@@ -10643,7 +10643,7 @@ TEST("hc_nodeclonefalsenocopytext", function() {
       var childNode;
       var clonedNode;
       var lastChildNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10658,16 +10658,16 @@ TEST("hc_nodeclonefalsenocopytext", function() {
       lastChildNode = clonedNode.lastChild;
 
       ASSERT(NULL(lastChildNode),"nodeCloneFalseNoCopyTextAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The duplicate node returned by the "cloneNode(deep)"
     method does not have a ParentNode.
-    
+
     Retrieve the second employee and invoke the
     "cloneNode(deep)" method with deep=false.   The
     duplicate node returned should return null when the
@@ -10683,7 +10683,7 @@ TEST("hc_nodeclonegetparentnull", function() {
       var employeeNode;
       var clonedNode;
       var parentNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10695,16 +10695,16 @@ TEST("hc_nodeclonegetparentnull", function() {
       parentNode = clonedNode.parentNode;
 
       ASSERT(NULL(parentNode),"nodeCloneGetParentNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method returns a copy of the node
     only if deep=false.
-    
+
     Retrieve the second employee and invoke the
     "cloneNode(deep)" method with deep=false.   The
     method should only clone this node.   The NodeName and
@@ -10724,7 +10724,7 @@ TEST("hc_nodeclonenodefalse", function() {
       var cloneName;
       var cloneChildren;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10741,20 +10741,20 @@ TEST("hc_nodeclonenodefalse", function() {
       length = cloneChildren.length;
 
       ASSERT(STRICT_EQ(0,length),"length");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method returns a copy of the node
     and the subtree under it if deep=true.
-    
+
     Retrieve the second employee and invoke the
     "cloneNode(deep)" method with deep=true.   The
     method should clone this node and the subtree under it.
-    The NodeName of each child in the returned node is 
+    The NodeName of each child in the returned node is
     checked to insure the entire subtree under the second
     employee was cloned.
 
@@ -10778,7 +10778,7 @@ TEST("hc_nodeclonenodetrue", function() {
 
       var expected = new Array();
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10806,16 +10806,16 @@ TEST("hc_nodeclonenodetrue", function() {
 
 	}
    ASSERT(DOM_LIST_EQ(expected,result),"clone");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method does not copy text unless it
     is deep cloned.(Test for deep=true)
-    
+
     Retrieve the eighth child of the second employee and
     the "cloneNode(deep)" method with deep=true.   The
     duplicate node returned by the method should copy
@@ -10833,7 +10833,7 @@ TEST("hc_nodeclonetruecopytext", function() {
       var clonedNode;
       var lastChildNode;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10847,20 +10847,20 @@ TEST("hc_nodeclonetruecopytext", function() {
       childValue = lastChildNode.nodeValue;
 
       ASSERT(STRICT_EQ("35,000",childValue),"cloneContainsText");
-       
+
 });
 
 
 
 /**
-* 
-    The "getAttributes()" method invoked on a Comment 
+*
+    The "getAttributes()" method invoked on a Comment
     Node returns null.
 
     Find any comment that is an immediate child of the root
     and assert that Node.attributes is null.  Then create
     a new comment node (in case they had been omitted) and
-    make the assertion.    
+    make the assertion.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-84CF096
@@ -10875,7 +10875,7 @@ TEST("hc_nodecommentnodeattributes", function() {
       var nodeList;
       var attrList;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10887,14 +10887,14 @@ TEST("hc_nodecommentnodeattributes", function() {
       commentNode = nodeList.item(indexid2258625);
       nodeType = commentNode.nodeType;
 
-      
+
 	if(
 	(8 == nodeType)
 	) {
 	attrList = commentNode.attributes;
 
       ASSERT(NULL(attrList),"existingCommentAttributesNull");
-    
+
 	}
 	
 	}
@@ -10902,18 +10902,18 @@ TEST("hc_nodecommentnodeattributes", function() {
       attrList = commentNode.attributes;
 
       ASSERT(NULL(attrList),"createdCommentAttributesNull");
-    
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     Comment Node is "#comment".
-    
-    Retrieve the Comment node in the XML file 
-    and check the string returned by the "getNodeName()" 
+
+    Retrieve the Comment node in the XML file
+    and check the string returned by the "getNodeName()"
     method.   It should be equal to "#comment".
 
 * @author Curt Arnold
@@ -10929,7 +10929,7 @@ TEST("hc_nodecommentnodename", function() {
       var nodeType;
       var commentName;
       var commentNodeName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10941,14 +10941,14 @@ TEST("hc_nodecommentnodename", function() {
       commentNode = elementList.item(indexid2258626);
       nodeType = commentNode.nodeType;
 
-      
+
 	if(
 	(8 == nodeType)
 	) {
 	commentNodeName = commentNode.nodeName;
 
       ASSERT(STRICT_EQ("#comment",commentNodeName),"existingNodeName");
-       
+
 	}
 	
 	}
@@ -10956,19 +10956,19 @@ TEST("hc_nodecommentnodename", function() {
       commentNodeName = commentNode.nodeName;
 
       ASSERT(STRICT_EQ("#comment",commentNodeName),"createdNodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getNodeType()" method for a Comment Node
     returns the constant value 8.
-    
+
     Retrieve the nodes from the document and check for
-    a comment node and invoke the "getNodeType()" method.   This should   
-    return 8. 
+    a comment node and invoke the "getNodeType()" method.   This should
+    return 8.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-111237558
@@ -10982,7 +10982,7 @@ TEST("hc_nodecommentnodetype", function() {
       var commentNode;
       var commentNodeName;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -10994,14 +10994,14 @@ TEST("hc_nodecommentnodetype", function() {
       commentNode = testList.item(indexid2258619);
       commentNodeName = commentNode.nodeName;
 
-      
+
 	if(
 	("#comment" == commentNodeName)
 	) {
 	nodeType = commentNode.nodeType;
 
       ASSERT(STRICT_EQ(8,nodeType),"existingCommentNodeType");
-       
+
 	}
 	
 	}
@@ -11009,18 +11009,18 @@ TEST("hc_nodecommentnodetype", function() {
       nodeType = commentNode.nodeType;
 
       ASSERT(STRICT_EQ(8,nodeType),"createdCommentNodeType");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Comment Node is the content of the comment.
-    
-    Retrieve the comment in the XML file and   
-    check the string returned by the "getNodeValue()" method. 
+
+    Retrieve the comment in the XML file and
+    check the string returned by the "getNodeValue()" method.
     It should be equal to "This is comment number 1".
 
 * @author Curt Arnold
@@ -11035,7 +11035,7 @@ TEST("hc_nodecommentnodevalue", function() {
       var commentNode;
       var commentName;
       var commentValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11047,14 +11047,14 @@ TEST("hc_nodecommentnodevalue", function() {
       commentNode = elementList.item(indexid2258620);
       commentName = commentNode.nodeName;
 
-      
+
 	if(
 	("#comment" == commentName)
 	) {
 	commentValue = commentNode.nodeValue;
 
       ASSERT(STRICT_EQ(" This is comment number 1.",commentValue),"value");
-       
+
 	}
 	
 	}
@@ -11062,19 +11062,19 @@ TEST("hc_nodecommentnodevalue", function() {
       commentValue = commentNode.nodeValue;
 
       ASSERT(STRICT_EQ(" This is a comment",commentValue),"createdCommentNodeValue");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     DocumentFragment Node is "#document-frament".
 
     Retrieve the DOM document and invoke the
-    "createDocumentFragment()" method and check the string      
-    returned by the "getNodeName()" method.   It should be 
+    "createDocumentFragment()" method and check the string
+    returned by the "getNodeName()" method.   It should be
     equal to "#document-fragment".
 
 * @author Curt Arnold
@@ -11086,7 +11086,7 @@ TEST("hc_nodedocumentfragmentnodename", function() {
     var doc;
       var docFragment;
       var documentFragmentName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11096,20 +11096,20 @@ TEST("hc_nodedocumentfragmentnodename", function() {
       documentFragmentName = docFragment.nodeName;
 
       ASSERT(STRICT_EQ("#document-fragment",documentFragmentName),"nodeDocumentFragmentNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getNodeType()" method for a DocumentFragment Node
     returns the constant value 11.
 
-    Invoke the "createDocumentFragment()" method and    
+    Invoke the "createDocumentFragment()" method and
     examine the NodeType of the document fragment
-    returned by the "getNodeType()" method.   The method 
-    should return 11. 
+    returned by the "getNodeType()" method.   The method
+    should return 11.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-111237558
@@ -11120,7 +11120,7 @@ TEST("hc_nodedocumentfragmentnodetype", function() {
     var doc;
       var documentFragmentNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11130,19 +11130,19 @@ TEST("hc_nodedocumentfragmentnodetype", function() {
       nodeType = documentFragmentNode.nodeType;
 
       ASSERT(STRICT_EQ(11,nodeType),"nodeDocumentFragmentNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     DocumentFragment Node is null.
-    
+
     Retrieve the DOM document and invoke the
-    "createDocumentFragment()" method and check the string      
-    returned by the "getNodeValue()" method.   It should be 
+    "createDocumentFragment()" method and check the string
+    returned by the "getNodeValue()" method.   It should be
     equal to null.
 
 * @author Curt Arnold
@@ -11157,7 +11157,7 @@ TEST("hc_nodedocumentfragmentnodevalue", function() {
       var docFragment;
       var attrList;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11170,13 +11170,13 @@ TEST("hc_nodedocumentfragmentnodevalue", function() {
     value = docFragment.nodeValue;
 
       ASSERT(NULL(value),"initiallyNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on a Document
 Node returns null.
 
@@ -11192,7 +11192,7 @@ TEST("hc_nodedocumentnodeattribute", function() {
    var success;
     var doc;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11201,18 +11201,18 @@ TEST("hc_nodedocumentnodeattribute", function() {
       attrList = doc.attributes;
 
       ASSERT(NULL(attrList),"doc_attributes_is_null");
-    
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     Document Node is "#document".
 
     Retrieve the DOM document and check the string returned
-    by the "getNodeName()" method.   It should be equal to 
+    by the "getNodeName()" method.   It should be equal to
     "#document".
 
 * @author Curt Arnold
@@ -11223,7 +11223,7 @@ TEST("hc_nodedocumentnodename", function() {
    var success;
     var doc;
       var documentName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11232,18 +11232,18 @@ TEST("hc_nodedocumentnodename", function() {
       documentName = doc.nodeName;
 
       ASSERT(STRICT_EQ("#document",documentName),"documentNodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getNodeType()" method for a Document Node
 returns the constant value 9.
 
-Retrieve the document and invoke the "getNodeType()" 
-method.   The method should return 9. 
+Retrieve the document and invoke the "getNodeType()"
+method.   The method should return 9.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#i-Document
@@ -11253,7 +11253,7 @@ TEST("hc_nodedocumentnodetype", function() {
    var success;
     var doc;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11262,19 +11262,19 @@ TEST("hc_nodedocumentnodetype", function() {
       nodeType = doc.nodeType;
 
       ASSERT(STRICT_EQ(9,nodeType),"nodeDocumentNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Document Node is null.
 
     Retrieve the DOM Document and check the string returned
-    by the "getNodeValue()" method.   It should be equal to 
-    null. 
+    by the "getNodeValue()" method.   It should be equal to
+    null.
 
 
 * @author Curt Arnold
@@ -11285,7 +11285,7 @@ TEST("hc_nodedocumentnodevalue", function() {
    var success;
     var doc;
       var documentValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11294,17 +11294,17 @@ TEST("hc_nodedocumentnodevalue", function() {
       documentValue = doc.nodeValue;
 
       ASSERT(NULL(documentValue),"documentNodeValue");
-    
+
 });
 
 
 
 /**
-* 
-    Retrieve the first Element Node(Root Node) of the   
-    DOM object and check the string returned by the            
+*
+    Retrieve the first Element Node(Root Node) of the
+    DOM object and check the string returned by the
     "getNodeName()" method.   It should be equal to its
-    tagName. 
+    tagName.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D095
@@ -11315,7 +11315,7 @@ TEST("hc_nodeelementnodename", function() {
     var doc;
       var elementNode;
       var elementName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11325,19 +11325,19 @@ TEST("hc_nodeelementnodename", function() {
 
       elementName = elementNode.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",elementName),"svgNodeName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("html",elementName), "nodeName");
-       
+
 		}
 	
 });
@@ -11345,12 +11345,12 @@ TEST("hc_nodeelementnodename", function() {
 
 
 /**
-* 
+*
     The "getNodeType()" method for an Element Node
     returns the constant value 1.
-    
-    Retrieve the root node and invoke the "getNodeType()"   
-    method.   The method should return 1. 
+
+    Retrieve the root node and invoke the "getNodeType()"
+    method.   The method should return 1.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-111237558
@@ -11360,7 +11360,7 @@ TEST("hc_nodeelementnodetype", function() {
     var doc;
       var rootNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11371,14 +11371,14 @@ TEST("hc_nodeelementnodetype", function() {
       nodeType = rootNode.nodeType;
 
       ASSERT(STRICT_EQ(1,nodeType),"nodeElementNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for an 
+*
+    The string returned by the "getNodeValue()" method for an
     Element Node is null.
 
 * @author Curt Arnold
@@ -11389,7 +11389,7 @@ TEST("hc_nodeelementnodevalue", function() {
     var doc;
       var elementNode;
       var elementValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11400,16 +11400,16 @@ TEST("hc_nodeelementnodevalue", function() {
       elementValue = elementNode.nodeValue;
 
       ASSERT(NULL(elementValue),"elementNodeValue");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getFirstChild()" method returns the first child
-    of this node. 
-    
+    of this node.
+
     Retrieve the second employee and invoke the
     "getFirstChild()" method.   The NodeName returned
     should be "#text" or "EM".
@@ -11426,7 +11426,7 @@ TEST("hc_nodegetfirstchild", function() {
       var fchildNode;
       var childName;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11438,17 +11438,17 @@ TEST("hc_nodegetfirstchild", function() {
 
       childName = fchildNode.nodeName;
 
-      
+
 	if(
 	("#text" == childName)
 	) {
 	ASSERT(STRICT_EQ("#text",childName),"firstChild_w_whitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("em",childName), "firstChild_wo_whitespace");
-       
+
 		}
 	
 });
@@ -11456,7 +11456,7 @@ TEST("hc_nodegetfirstchild", function() {
 
 
 /**
-* 
+*
     If there is not a first child then the "getFirstChild()"
     method returns null.
 
@@ -11474,7 +11474,7 @@ TEST("hc_nodegetfirstchildnull", function() {
       var emNode;
       var emText;
       var nullChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11487,16 +11487,16 @@ TEST("hc_nodegetfirstchildnull", function() {
       nullChild = emText.firstChild;
 
       ASSERT(NULL(nullChild),"nullChild");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getLastChild()" method returns the last child
-    of this node. 
-    
+    of this node.
+
     Retrieve the second employee and invoke the
     "getLastChild()" method.   The NodeName returned
     should be "#text".
@@ -11511,7 +11511,7 @@ TEST("hc_nodegetlastchild", function() {
       var employeeNode;
       var lchildNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11524,13 +11524,13 @@ TEST("hc_nodegetlastchild", function() {
       childName = lchildNode.nodeName;
 
       ASSERT(STRICT_EQ("#text",childName),"whitespace");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a last child then the "getLastChild()"
     method returns null.
@@ -11549,7 +11549,7 @@ TEST("hc_nodegetlastchildnull", function() {
       var emNode;
       var emText;
       var nullChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11562,16 +11562,16 @@ TEST("hc_nodegetlastchildnull", function() {
       nullChild = emText.lastChild;
 
       ASSERT(NULL(nullChild),"nullChild");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getNextSibling()" method returns the node immediately
-    following this node. 
-    
+    following this node.
+
     Retrieve the first child of the second employee and
     invoke the "getNextSibling()" method.   It should return
     a node with the NodeName of "#text".
@@ -11586,7 +11586,7 @@ TEST("hc_nodegetnextsibling", function() {
       var emNode;
       var nsNode;
       var nsName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11599,25 +11599,25 @@ TEST("hc_nodegetnextsibling", function() {
       nsName = nsNode.nodeName;
 
       ASSERT(STRICT_EQ("#text",nsName),"whitespace");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a node immediately following this node the
 
     "getNextSibling()" method returns null.
 
-    
+
 
     Retrieve the first child of the second employee and
 
     invoke the "getNextSibling()" method.   It should
 
-    be set to null. 
+    be set to null.
 
 
 * @author Curt Arnold
@@ -11630,7 +11630,7 @@ TEST("hc_nodegetnextsiblingnull", function() {
       var employeeNode;
       var lcNode;
       var nsNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11643,13 +11643,13 @@ TEST("hc_nodegetnextsiblingnull", function() {
       nsNode = lcNode.nextSibling;
 
       ASSERT(NULL(nsNode),"nodeGetNextSiblingNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
 Evaluate Node.ownerDocument on the second "p" element.
 
 * @author Curt Arnold
@@ -11664,7 +11664,7 @@ TEST("hc_nodegetownerdocument", function() {
       var ownerDocument;
       var docElement;
       var elementName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11678,19 +11678,19 @@ TEST("hc_nodegetownerdocument", function() {
 
       elementName = docElement.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",elementName),"svgNodeName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("html",elementName), "ownerDocElemTagName");
-       
+
 		}
 	
 });
@@ -11698,15 +11698,15 @@ TEST("hc_nodegetownerdocument", function() {
 
 
 /**
-* 
+*
 
     The "getOwnerDocument()" method returns null if the target
 
     node itself is a document.
 
-    
 
-    Invoke the "getOwnerDocument()" method on the master 
+
+    Invoke the "getOwnerDocument()" method on the master
 
     document.   The Document returned should be null.
 
@@ -11718,7 +11718,7 @@ TEST("hc_nodegetownerdocumentnull", function() {
    var success;
     var doc;
       var ownerDocument;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11727,17 +11727,17 @@ TEST("hc_nodegetownerdocumentnull", function() {
       ownerDocument = doc.ownerDocument;
 
       ASSERT(NULL(ownerDocument),"nodeGetOwnerDocumentNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getPreviousSibling()" method returns the node
-    immediately preceding this node. 
-    
-    Retrieve the second child of the second employee and    
+    immediately preceding this node.
+
+    Retrieve the second child of the second employee and
     invoke the "getPreviousSibling()" method.   It should
     return a node with a NodeName of "#text".
 
@@ -11751,7 +11751,7 @@ TEST("hc_nodegetprevioussibling", function() {
       var nameNode;
       var psNode;
       var psName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11764,25 +11764,25 @@ TEST("hc_nodegetprevioussibling", function() {
       psName = psNode.nodeName;
 
       ASSERT(STRICT_EQ("#text",psName),"whitespace");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a node immediately preceding this node the
 
     "getPreviousSibling()" method returns null.
 
-    
+
 
     Retrieve the first child of the second employee and
 
     invoke the "getPreviousSibling()" method.   It should
 
-    be set to null. 
+    be set to null.
 
 
 * @author Curt Arnold
@@ -11795,7 +11795,7 @@ TEST("hc_nodegetprevioussiblingnull", function() {
       var employeeNode;
       var fcNode;
       var psNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11808,17 +11808,17 @@ TEST("hc_nodegetprevioussiblingnull", function() {
       psNode = fcNode.previousSibling;
 
       ASSERT(NULL(psNode),"nodeGetPreviousSiblingNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "hasChildNodes()" method returns true if the node
     has children.
-    
-    Retrieve the root node("staff") and invoke the 
+
+    Retrieve the root node("staff") and invoke the
     "hasChildNodes()" method.   It should return the boolean
     value "true".
 
@@ -11831,7 +11831,7 @@ TEST("hc_nodehaschildnodes", function() {
       var elementList;
       var employeeNode;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11847,10 +11847,10 @@ TEST("hc_nodehaschildnodes", function() {
 
 
 /**
-* 
+*
     The "hasChildNodes()" method returns false if the node
     does not have any children.
-    
+
     Retrieve the text of the first "em" element and invoke the "hasChildNodes()" method.   It
     should return false.
 
@@ -11866,7 +11866,7 @@ TEST("hc_nodehaschildnodesfalse", function() {
       var emNode;
       var emText;
       var hasChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11884,10 +11884,10 @@ TEST("hc_nodehaschildnodesfalse", function() {
 
 
 /**
-* 
+*
     The "insertBefore(newChild,refChild)" method inserts the
-    node "newChild" before the node "refChild". 
-    
+    node "newChild" before the node "refChild".
+
     Insert a newly created Element node before the second
     sup element in the document and check the "newChild"
     and "refChild" after insertion for correct placement.
@@ -11921,7 +11921,7 @@ TEST("hc_nodeinsertbefore", function() {
       expected[6] = "acronym";
 
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -11939,7 +11939,7 @@ TEST("hc_nodeinsertbefore", function() {
       child = childList.item(indexid2258748);
       nodeType = child.nodeType;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -11951,22 +11951,22 @@ TEST("hc_nodeinsertbefore", function() {
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,actual), "nodeNames");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the "newChild" is a DocumentFragment object then all
     its children are inserted in the same order before the
-    the "refChild". 
-    
+    the "refChild".
+
     Create a DocumentFragment object and populate it with
     two Element nodes.   Retrieve the second employee and
     insert the newly created DocumentFragment before its
     fourth child.   The second employee should now have two
-    extra children("newChild1" and "newChild2") at 
+    extra children("newChild1" and "newChild2") at
     positions fourth and fifth respectively.
 
 * @author Curt Arnold
@@ -11987,7 +11987,7 @@ TEST("hc_nodeinsertbeforedocfragment", function() {
       var childName;
       var appendedChild;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12012,18 +12012,18 @@ TEST("hc_nodeinsertbeforedocfragment", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("b",childName), "childName4");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if this node is of
     a type that does not allow children of the type "newChild"
     to be inserted.
-    
+
     Retrieve the root node and attempt to insert a newly
     created Attr node.   An Element node cannot have children
     of the "Attr" type, therefore the desired exception
@@ -12046,7 +12046,7 @@ TEST("hc_nodeinsertbeforeinvalidnodetype", function() {
       var elementList;
       var refChild;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12057,7 +12057,7 @@ TEST("hc_nodeinsertbeforeinvalidnodetype", function() {
       refChild = elementList.item(1);
       rootNode = refChild.parentNode;
 
-      
+
 	{
 		success = false;
 		try {
@@ -12074,13 +12074,13 @@ TEST("hc_nodeinsertbeforeinvalidnodetype", function() {
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     WRONG_DOCUMENT_ERR DOMException if the "newChild" was
-    created from a different document than the one that 
+    created from a different document than the one that
     created this node.
-    
-    Retrieve the second employee and attempt to insert a new 
+
+    Retrieve the second employee and attempt to insert a new
     child that was created from a different document than the
     one that created the second employee.   An attempt to
     insert such a child should raise the desired exception.
@@ -12101,13 +12101,13 @@ TEST("hc_nodeinsertbeforenewchilddiffdocument", function() {
       var elementList;
       var elementNode;
       var insertedNode;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "hc_staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -12118,7 +12118,7 @@ TEST("hc_nodeinsertbeforenewchilddiffdocument", function() {
       elementNode = elementList.item(1);
       refChild = elementNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -12135,13 +12135,13 @@ TEST("hc_nodeinsertbeforenewchilddiffdocument", function() {
 
 
 /**
-* 
+*
     If the "newChild" is already in the tree, the
     "insertBefore(newChild,refChild)" method must first
     remove it before the insertion takes place.
-    
+
     Insert a node Element ("em") that is already
-    present in the tree.   The existing node should be 
+    present in the tree.   The existing node should be
     removed first and the new one inserted.   The node is
     inserted at a different position in the tree to assure
     that it was indeed inserted.
@@ -12172,7 +12172,7 @@ TEST("hc_nodeinsertbeforenewchildexists", function() {
       var result = new Array();
 
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12188,7 +12188,7 @@ TEST("hc_nodeinsertbeforenewchildexists", function() {
       child = childList.item(indexid2258746);
       nodeType = child.nodeType;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -12200,20 +12200,20 @@ TEST("hc_nodeinsertbeforenewchildexists", function() {
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,result), "childNames");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if the node to be
     inserted is one of this nodes ancestors.
-    
+
     Retrieve the second employee and attempt to insert a
-    node that is one of its ancestors(root node).   An 
-    attempt to insert such a node should raise the 
+    node that is one of its ancestors(root node).   An
+    attempt to insert such a node should raise the
     desired exception.
 
 * @author Curt Arnold
@@ -12231,7 +12231,7 @@ TEST("hc_nodeinsertbeforenodeancestor", function() {
       var childList;
       var refChild;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12244,7 +12244,7 @@ TEST("hc_nodeinsertbeforenodeancestor", function() {
       childList = employeeNode.childNodes;
 
       refChild = childList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -12261,13 +12261,13 @@ TEST("hc_nodeinsertbeforenodeancestor", function() {
 
 
 /**
-* 
-    The "insertBefore(newChild,refchild)" method returns 
+*
+    The "insertBefore(newChild,refchild)" method returns
     the node being inserted.
-    
+
     Insert an Element node before the fourth
     child of the second employee and check the node
-    returned from the "insertBefore(newChild,refChild)" 
+    returned from the "insertBefore(newChild,refChild)"
     method.   The node returned should be "newChild".
 
 * @author Curt Arnold
@@ -12285,7 +12285,7 @@ TEST("hc_nodeinsertbeforenodename", function() {
       var newChild;
       var insertedNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12301,17 +12301,17 @@ TEST("hc_nodeinsertbeforenodename", function() {
       childName = insertedNode.nodeName;
 
       ASSERT(STRICT_EQ("br",childName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     NOT_FOUND_ERR DOMException if the reference child is
     not a child of this node.
-    
+
     Retrieve the second employee and attempt to insert a
     new node before a reference node that is not a child
     of this node.   An attempt to insert before a non child
@@ -12333,7 +12333,7 @@ TEST("hc_nodeinsertbeforerefchildnonexistent", function() {
       var elementList;
       var elementNode;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12343,7 +12343,7 @@ TEST("hc_nodeinsertbeforerefchildnonexistent", function() {
       refChild = doc.createElement("b");
       elementList = doc.getElementsByTagName("p");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -12360,11 +12360,11 @@ TEST("hc_nodeinsertbeforerefchildnonexistent", function() {
 
 
 /**
-* 
+*
     If the "refChild" is null then the
     "insertBefore(newChild,refChild)" method inserts the
-    node "newChild" at the end of the list of children. 
-    
+    node "newChild" at the end of the list of children.
+
     Retrieve the second employee and invoke the
     "insertBefore(newChild,refChild)" method with
     refChild=null.   Since "refChild" is null the "newChild"
@@ -12388,7 +12388,7 @@ TEST("hc_nodeinsertbeforerefchildnull", function() {
       var child;
       var childName;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12405,17 +12405,17 @@ TEST("hc_nodeinsertbeforerefchildnull", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("br",childName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
    Create a list of all the children elements of the third
    employee and access its first child by using an index
    of 0.  This should result in the whitspace before "em" being
-   selected (em when ignoring whitespace).  
+   selected (em when ignoring whitespace).
    Further we evaluate its content(by using
    the "getNodeName()" method) to ensure the proper
    element was accessed.
@@ -12433,7 +12433,7 @@ TEST("hc_nodelistindexequalzero", function() {
       var child;
       var childName;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12448,17 +12448,17 @@ TEST("hc_nodelistindexequalzero", function() {
       child = employeeList.item(0);
       childName = child.nodeName;
 
-      
+
 	if(
 	(13 == length)
 	) {
 	ASSERT(STRICT_EQ("#text",childName),"childName_w_whitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("em",childName), "childName_wo_whitespace");
-       
+
 		}
 	
 });
@@ -12466,12 +12466,12 @@ TEST("hc_nodelistindexequalzero", function() {
 
 
 /**
-* 
+*
     The "getLength()" method returns the number of nodes
    in the list.
-   
+
    Create a list of all the children elements of the third
-   employee and invoke the "getLength()" method. 
+   employee and invoke the "getLength()" method.
    It should contain the value 13.
 
 * @author Curt Arnold
@@ -12485,7 +12485,7 @@ TEST("hc_nodelistindexgetlength", function() {
       var employeeNode;
       var employeeList;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12497,17 +12497,17 @@ TEST("hc_nodelistindexgetlength", function() {
 
       length = employeeList.length;
 
-      
+
 	if(
 	(6 == length)
 	) {
 	ASSERT(STRICT_EQ(6,length),"length_wo_space");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ(13,length),"length_w_space");
-       
+
 		}
 	
 });
@@ -12515,11 +12515,11 @@ TEST("hc_nodelistindexgetlength", function() {
 
 
 /**
-* 
+*
     The "getLength()" method returns the number of nodes
    in the list.(Test for EMPTY list)
-   
-   Create a list of all the children of the Text node 
+
+   Create a list of all the children of the Text node
    inside the first child of the third employee and
    invoke the "getLength()" method.   It should contain
    the value 0.
@@ -12536,7 +12536,7 @@ TEST("hc_nodelistindexgetlengthofemptylist", function() {
       var textNode;
       var textList;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12551,17 +12551,17 @@ TEST("hc_nodelistindexgetlengthofemptylist", function() {
       length = textList.length;
 
       ASSERT(STRICT_EQ(0,length),"length");
-       
+
 });
 
 
 
 /**
-* 
+*
     The items in the list are accessible via an integral
    index starting from zero.
    (Index not equal 0)
-   
+
    Create a list of all the children elements of the third
    employee and access its fourth child by using an index
    of 3 and calling getNodeName() which should return
@@ -12579,7 +12579,7 @@ TEST("hc_nodelistindexnotzero", function() {
       var employeeList;
       var child;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12592,17 +12592,17 @@ TEST("hc_nodelistindexnotzero", function() {
       child = employeeList.item(3);
       childName = child.nodeName;
 
-      
+
 	if(
 	("#text" == childName)
 	) {
 	ASSERT(STRICT_EQ("#text",childName),"childName_space");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("strong",childName), "childName_strong");
-       
+
 		}
 	
 });
@@ -12610,9 +12610,9 @@ TEST("hc_nodelistindexnotzero", function() {
 
 
 /**
-* 
+*
    Create a list of all the children elements of the third
-   employee and access its first child by invoking the 
+   employee and access its first child by invoking the
    "item(index)" method with an index=0.  This should
    result in node with a nodeName of "#text" or "em".
 
@@ -12628,7 +12628,7 @@ TEST("hc_nodelistreturnfirstitem", function() {
       var employeeList;
       var child;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12641,17 +12641,17 @@ TEST("hc_nodelistreturnfirstitem", function() {
       child = employeeList.item(0);
       childName = child.nodeName;
 
-      
+
 	if(
 	("#text" == childName)
 	) {
 	ASSERT(STRICT_EQ("#text",childName),"nodeName_w_space");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("em",childName), "nodeName_wo_space");
-       
+
 		}
 	
 });
@@ -12659,9 +12659,9 @@ TEST("hc_nodelistreturnfirstitem", function() {
 
 
 /**
-* 
+*
    Create a list of all the children elements of the third
-   employee and access its last child by invoking the 
+   employee and access its last child by invoking the
    "item(index)" method with an index=length-1.  This should
    result in node with nodeName="#text" or acronym.
 * @author Curt Arnold
@@ -12677,7 +12677,7 @@ TEST("hc_nodelistreturnlastitem", function() {
       var child;
       var childName;
       var index;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12693,18 +12693,18 @@ TEST("hc_nodelistreturnlastitem", function() {
 child = employeeList.item(index);
       childName = child.nodeName;
 
-      
+
 	if(
 	(12 == index)
 	) {
 	ASSERT(STRICT_EQ("#text",childName),"lastNodeName_w_whitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("acronym",childName), "lastNodeName");
        ASSERT(STRICT_EQ(5,index),"index");
-       
+
 		}
 	
 });
@@ -12712,12 +12712,12 @@ child = employeeList.item(index);
 
 
 /**
-* 
+*
     The range of valid child node indices is 0 thru length -1
-   
+
    Create a list of all the children elements of the third
    employee and traverse the list from index=0 thru
-   length -1.     
+   length -1.
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-203510337
@@ -12743,7 +12743,7 @@ TEST("hc_nodelisttraverselist", function() {
       expected[4] = "var";
       expected[5] = "acronym";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12759,7 +12759,7 @@ TEST("hc_nodelisttraverselist", function() {
 
       childName = child.nodeName;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -12770,22 +12770,22 @@ TEST("hc_nodelisttraverselist", function() {
 		else {
 			ASSERT(STRICT_EQ(3,nodeType),"textNodeType");
        ASSERT(STRICT_EQ("#text",childName),"textNodeName");
-       
+
 		}
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,result), "nodeNames");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getParentNode()" method returns the parent
-    of this node. 
-    
-    Retrieve the second employee and invoke the 
+    of this node.
+
+    Retrieve the second employee and invoke the
     "getParentNode()" method on this node.   It should
     be set to "body".
 
@@ -12799,7 +12799,7 @@ TEST("hc_nodeparentnode", function() {
       var employeeNode;
       var parentNode;
       var parentName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12812,17 +12812,17 @@ TEST("hc_nodeparentnode", function() {
       parentName = parentNode.nodeName;
 
       ASSERT(STRICT_EQ("body",parentName), "parentNodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getParentNode()" method invoked on a node that has
-    just been created and not yet added to the tree is null. 
+    just been created and not yet added to the tree is null.
 
-    Create a new "employee" Element node using the             
+    Create a new "employee" Element node using the
     "createElement(name)" method from the Document interface.
     Since this new node has not yet been added to the tree,
     the "getParentNode()" method will return null.
@@ -12836,7 +12836,7 @@ TEST("hc_nodeparentnodenull", function() {
     var doc;
       var createdNode;
       var parentNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12846,17 +12846,17 @@ TEST("hc_nodeparentnodenull", function() {
       parentNode = createdNode.parentNode;
 
       ASSERT(NULL(parentNode),"parentNode");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "removeChild(oldChild)" method removes the child node
     indicated by "oldChild" from the list of children and
-    returns it. 
-    
+    returns it.
+
     Remove the first employee by invoking the
     "removeChild(oldChild)" method an checking the
     node returned by the "getParentNode()" method.   It
@@ -12874,7 +12874,7 @@ TEST("hc_noderemovechild", function() {
       var childToRemove;
       var removedChild;
       var parentNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12889,18 +12889,18 @@ TEST("hc_noderemovechild", function() {
       parentNode = removedChild.parentNode;
 
       ASSERT(NULL(parentNode),"parentNodeNull");
-    
+
 });
 
 
 
 /**
-* 
-    The "removeChild(oldChild)" method returns 
+*
+    The "removeChild(oldChild)" method returns
     the node being removed.
-    
-    Remove the first child of the second employee 
-    and check the NodeName returned by the 
+
+    Remove the first child of the second employee
+    and check the NodeName returned by the
     "removeChild(oldChild)" method.   The returned node
     should have a NodeName equal to "#text".
 
@@ -12919,7 +12919,7 @@ TEST("hc_noderemovechildgetnodename", function() {
       var removedChild;
       var childName;
       var oldName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -12937,16 +12937,16 @@ TEST("hc_noderemovechildgetnodename", function() {
 childName = removedChild.nodeName;
 
       ASSERT(STRICT_EQ(oldName,childName),"nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "removeChild(oldChild)" method removes the node
-    indicated by "oldChild". 
-    
+    indicated by "oldChild".
+
     Retrieve the second p element and remove its first child.
     After the removal, the second p element should have 5 element
     children and the first child should now be the child
@@ -12979,7 +12979,7 @@ TEST("hc_noderemovechildnode", function() {
 
       var actual = new Array();
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13001,7 +13001,7 @@ TEST("hc_noderemovechildnode", function() {
 
       childName = child.nodeName;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -13012,22 +13012,22 @@ TEST("hc_noderemovechildnode", function() {
 		else {
 			ASSERT(STRICT_EQ(3,nodeType),"textNodeType");
        ASSERT(STRICT_EQ("#text",childName),"textNodeName");
-       
+
 		}
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,actual), "childNames");
-       
+
 });
 
 
 
 /**
-* 
-    The "removeChild(oldChild)" method raises a 
+*
+    The "removeChild(oldChild)" method raises a
     NOT_FOUND_ERR DOMException if the old child is
     not a child of this node.
-    
+
     Retrieve the second employee and attempt to remove a
     node that is not one of its children.   An attempt to
     remove such a node should raise the desired exception.
@@ -13046,7 +13046,7 @@ TEST("hc_noderemovechildoldchildnonexistent", function() {
       var elementList;
       var elementNode;
       var removedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13055,7 +13055,7 @@ TEST("hc_noderemovechildoldchildnonexistent", function() {
       oldChild = doc.createElement("br");
       elementList = doc.getElementsByTagName("p");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -13072,10 +13072,10 @@ TEST("hc_noderemovechildoldchildnonexistent", function() {
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method replaces 
-    the node "oldChild" with the node "newChild". 
-    
+*
+    The "replaceChild(newChild,oldChild)" method replaces
+    the node "oldChild" with the node "newChild".
+
     Replace the first element of the second employee with
     a newly created Element node.   Check the first position
     after the replacement operation is completed.   The new
@@ -13096,7 +13096,7 @@ TEST("hc_nodereplacechild", function() {
       var child;
       var childName;
       var replacedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13113,19 +13113,19 @@ TEST("hc_nodereplacechild", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("br",childName), "nodeName");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if this node is of
     a type that does not allow children of the type "newChild"
     to be inserted.
-    
-    Retrieve the root node and attempt to replace 
+
+    Retrieve the root node and attempt to replace
     one of its children with a newly created Attr node.
     An Element node cannot have children of the "Attr"
     type, therefore the desired exception should be raised.
@@ -13147,7 +13147,7 @@ TEST("hc_nodereplacechildinvalidnodetype", function() {
       var elementList;
       var oldChild;
       var replacedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13158,7 +13158,7 @@ TEST("hc_nodereplacechildinvalidnodetype", function() {
       oldChild = elementList.item(1);
       rootNode = oldChild.parentNode;
 
-      
+
 	{
 		success = false;
 		try {
@@ -13175,15 +13175,15 @@ TEST("hc_nodereplacechildinvalidnodetype", function() {
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     WRONG_DOCUMENT_ERR DOMException if the "newChild" was
-    created from a different document than the one that 
+    created from a different document than the one that
     created this node.
-    
-    Retrieve the second employee and attempt to replace one   
-    of its children with a node created from a different 
-    document.   An attempt to make such a replacement 
+
+    Retrieve the second employee and attempt to replace one
+    of its children with a node created from a different
+    document.   An attempt to make such a replacement
     should raise the desired exception.
 
 * @author Curt Arnold
@@ -13202,13 +13202,13 @@ TEST("hc_nodereplacechildnewchilddiffdocument", function() {
       var elementList;
       var elementNode;
       var replacedChild;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "hc_staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -13219,7 +13219,7 @@ TEST("hc_nodereplacechildnewchilddiffdocument", function() {
       elementNode = elementList.item(1);
       oldChild = elementNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -13236,10 +13236,10 @@ TEST("hc_nodereplacechildnewchilddiffdocument", function() {
 
 
 /**
-* 
+*
     If the "newChild" is already in the tree, it is first
     removed before the new one is added.
-   
+
     Retrieve the second "p" and replace "acronym" with its "em".
 
 * @author Curt Arnold
@@ -13270,7 +13270,7 @@ TEST("hc_nodereplacechildnewchildexists", function() {
 
       var replacedChild;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13289,7 +13289,7 @@ for(var indexid2258862 = 0;indexid2258862 < childList.length; indexid2258862++) 
 
       nodeType = childNode.nodeType;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -13300,25 +13300,25 @@ for(var indexid2258862 = 0;indexid2258862 < childList.length; indexid2258862++) 
 		else {
 			ASSERT(STRICT_EQ(3,nodeType),"textNodeType");
        ASSERT(STRICT_EQ("#text",childName),"textNodeName");
-       
+
 		}
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,actual), "childNames");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if the node to put
     in is one of this node's ancestors.
-    
+
     Retrieve the second employee and attempt to replace
     one of its children with an ancestor node(root node).
-    An attempt to make such a replacement should raise the 
+    An attempt to make such a replacement should raise the
     desired exception.
 
 * @author Curt Arnold
@@ -13336,7 +13336,7 @@ TEST("hc_nodereplacechildnodeancestor", function() {
       var childList;
       var oldChild;
       var replacedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13349,7 +13349,7 @@ TEST("hc_nodereplacechildnodeancestor", function() {
       childList = employeeNode.childNodes;
 
       oldChild = childList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -13366,12 +13366,12 @@ TEST("hc_nodereplacechildnodeancestor", function() {
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method returns 
+*
+    The "replaceChild(newChild,oldChild)" method returns
     the node being replaced.
-    
+
     Replace the second Element of the second employee with
-    a newly created node Element and check the NodeName 
+    a newly created node Element and check the NodeName
     returned by the "replaceChild(newChild,oldChild)"
     method.   The returned node should have a NodeName equal
     to "em".
@@ -13391,7 +13391,7 @@ TEST("hc_nodereplacechildnodename", function() {
       var newChild;
       var replacedNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13406,17 +13406,17 @@ TEST("hc_nodereplacechildnodename", function() {
       childName = replacedNode.nodeName;
 
       ASSERT(STRICT_EQ("em",childName), "replacedNodeName");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     NOT_FOUND_ERR DOMException if the old child is
     not a child of this node.
-    
+
     Retrieve the second employee and attempt to replace a
     node that is not one of its children.   An attempt to
     replace such a node should raise the desired exception.
@@ -13436,7 +13436,7 @@ TEST("hc_nodereplacechildoldchildnonexistent", function() {
       var elementList;
       var elementNode;
       var replacedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13446,7 +13446,7 @@ TEST("hc_nodereplacechildoldchildnonexistent", function() {
       oldChild = doc.createElement("b");
       elementList = doc.getElementsByTagName("p");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -13463,7 +13463,7 @@ TEST("hc_nodereplacechildoldchildnonexistent", function() {
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on a Text
 Node returns null.
 
@@ -13482,7 +13482,7 @@ TEST("hc_nodetextnodeattribute", function() {
       var testAddr;
       var textNode;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13495,14 +13495,14 @@ TEST("hc_nodetextnodeattribute", function() {
       attrList = textNode.attributes;
 
       ASSERT(NULL(attrList),"text_attributes_is_null");
-    
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     Text Node is "#text".
 
 * @author Curt Arnold
@@ -13515,7 +13515,7 @@ TEST("hc_nodetextnodename", function() {
       var testAddr;
       var textNode;
       var textName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13528,25 +13528,25 @@ TEST("hc_nodetextnodename", function() {
       textName = textNode.nodeName;
 
       ASSERT(STRICT_EQ("#text",textName),"textNodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     The "getNodeType()" method for a Text Node
 
     returns the constant value 3.
 
-     
+
 
     Retrieve the Text node from the last child of
 
-    the first employee and invoke the "getNodeType()"   
+    the first employee and invoke the "getNodeType()"
 
-    method.   The method should return 3. 
+    method.   The method should return 3.
 
 
 * @author Curt Arnold
@@ -13559,7 +13559,7 @@ TEST("hc_nodetextnodetype", function() {
       var testAddr;
       var textNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13572,20 +13572,20 @@ TEST("hc_nodetextnodetype", function() {
       nodeType = textNode.nodeType;
 
       ASSERT(STRICT_EQ(3,nodeType),"nodeTextNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Text Node is the content of the Text node.
-    
-    Retrieve the Text node from the last child of the first 
-    employee and check the string returned by the 
-    "getNodeValue()" method.   It should be equal to 
-    "1230 North Ave. Dallas, Texas 98551". 
+
+    Retrieve the Text node from the last child of the first
+    employee and check the string returned by the
+    "getNodeValue()" method.   It should be equal to
+    "1230 North Ave. Dallas, Texas 98551".
 
 * @author Curt Arnold
 * @see http://www.w3.org/TR/1998/REC-DOM-Level-1-19981001/level-one-core#ID-F68D080
@@ -13597,7 +13597,7 @@ TEST("hc_nodetextnodevalue", function() {
       var testAddr;
       var textNode;
       var textValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13610,13 +13610,13 @@ TEST("hc_nodetextnodevalue", function() {
       textValue = textNode.nodeValue;
 
       ASSERT(STRICT_EQ("1230 North Ave. Dallas, Texas 98551",textValue),"textNodeValue");
-       
+
 });
 
 
 
 /**
-* 
+*
 An element is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -13629,7 +13629,7 @@ TEST("hc_nodevalue01", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13644,13 +13644,13 @@ TEST("hc_nodevalue01", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-    
+
 });
 
 
 
 /**
-* 
+*
 An comment is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -13663,7 +13663,7 @@ TEST("hc_nodevalue02", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13678,13 +13678,13 @@ TEST("hc_nodevalue02", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("This should have an effect",newValue),"afterChange");
-       
+
 });
 
 
 
 /**
-* 
+*
 A document fragment is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -13697,7 +13697,7 @@ TEST("hc_nodevalue05", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13712,13 +13712,13 @@ TEST("hc_nodevalue05", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-    
+
 });
 
 
 
 /**
-* 
+*
 An document is accessed, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -13730,7 +13730,7 @@ TEST("hc_nodevalue06", function() {
    var success;
     var newNode;
       var newValue;
-      
+
       var newNodeRef = null;
       if (typeof(this.newNode) != 'undefined') {
         newNodeRef = this.newNode;
@@ -13744,18 +13744,18 @@ TEST("hc_nodevalue06", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "splitText(offset)" method raises an
     INDEX_SIZE_ERR DOMException if the specified offset is
     negative.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The desired exception should be raised since the offset
     is a negative number.
@@ -13772,7 +13772,7 @@ TEST("hc_textindexsizeerrnegativeoffset", function() {
       var nameNode;
       var textNode;
       var splitNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13782,7 +13782,7 @@ TEST("hc_textindexsizeerrnegativeoffset", function() {
       nameNode = elementList.item(2);
       textNode = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -13799,12 +13799,12 @@ TEST("hc_textindexsizeerrnegativeoffset", function() {
 
 
 /**
-* 
+*
     The "splitText(offset)" method raises an
     INDEX_SIZE_ERR DOMException if the specified offset is
     greater than the number of characters in the Text node.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The desired exception should be raised since the offset
     is a greater than the number of characters in the Text
@@ -13823,7 +13823,7 @@ TEST("hc_textindexsizeerroffsetoutofbounds", function() {
       var nameNode;
       var textNode;
       var splitNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13833,7 +13833,7 @@ TEST("hc_textindexsizeerroffsetoutofbounds", function() {
       nameNode = elementList.item(2);
       textNode = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -13850,9 +13850,9 @@ TEST("hc_textindexsizeerroffsetoutofbounds", function() {
 
 
 /**
-* 
-    Retrieve the textual data from the last child of the 
-    second employee.   That node is composed of two   
+*
+    Retrieve the textual data from the last child of the
+    second employee.   That node is composed of two
     EntityReference nodes and two Text nodes.   After
     the content node is parsed, the "acronym" Element
     should contain four children with each one of the
@@ -13884,7 +13884,7 @@ TEST("hc_textparseintolistofelements", function() {
       expectedExpanded = new Array();
       expectedExpanded[0] = "β Dallas, γ\n 98554";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13900,7 +13900,7 @@ TEST("hc_textparseintolistofelements", function() {
       child = childList.item(indexid2258715);
       value = child.nodeValue;
 
-      
+
 	if(
 	
 	(value == null)
@@ -13921,17 +13921,17 @@ value = grandChild.nodeValue;
 		}
 	
 	}
-   
+
 	if(
 	(1 == length)
 	) {
 	ASSERT(DOM_LIST_EQ(expectedExpanded,result),"assertEqCoalescing");
-       
+
 	}
 	
 		else {
 			ASSERT(DOM_LIST_EQ(expectedNormal,result),"assertEqNormal");
-       
+
 		}
 	
 });
@@ -13939,10 +13939,10 @@ value = grandChild.nodeValue;
 
 
 /**
-* 
+*
     The "splitText(offset)" method returns the new Text node.
-    
-    Retrieve the textual data from the last child of the 
+
+    Retrieve the textual data from the last child of the
     first employee and invoke the "splitText(offset)" method.
     The method should return the new Text node.   The offset
     value used for this test is 30.   The "getNodeValue()"
@@ -13961,7 +13961,7 @@ TEST("hc_textsplittextfour", function() {
       var textNode;
       var splitNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -13975,18 +13975,18 @@ TEST("hc_textsplittextfour", function() {
       value = splitNode.nodeValue;
 
       ASSERT(STRICT_EQ("98551",value),"textSplitTextFourAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "splitText(offset)" method breaks the Text node into
     two Text nodes at the specified offset keeping each node
     as siblings in the tree.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The method splits the Text node into two new sibling
     Text nodes keeping both of them in the tree.   This test
@@ -14005,7 +14005,7 @@ TEST("hc_textsplittextone", function() {
       var splitNode;
       var secondPart;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14021,18 +14021,18 @@ TEST("hc_textsplittextone", function() {
       value = secondPart.nodeValue;
 
       ASSERT(STRICT_EQ("Jones",value),"textSplitTextOneAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     After the "splitText(offset)" method breaks the Text node
     into two Text nodes, the new Text node contains all the
     content at and after the offset point.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The new Text node should contain all the content
     at and after the offset point.   The "getNodeValue()"
@@ -14051,7 +14051,7 @@ TEST("hc_textsplittextthree", function() {
       var textNode;
       var splitNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14065,18 +14065,18 @@ TEST("hc_textsplittextthree", function() {
       value = splitNode.nodeValue;
 
       ASSERT(STRICT_EQ(" Jones",value),"textSplitTextThreeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     After the "splitText(offset)" method breaks the Text node
     into two Text nodes, the original node contains all the
     content up to the offset point.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The original Text node should contain all the content
     up to the offset point.   The "getNodeValue()" method
@@ -14094,7 +14094,7 @@ TEST("hc_textsplittexttwo", function() {
       var textNode;
       var splitNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14108,22 +14108,22 @@ TEST("hc_textsplittexttwo", function() {
       value = textNode.nodeValue;
 
       ASSERT(STRICT_EQ("Roger",value),"textSplitTextTwoAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     If there is not any markup inside an Element or Attr node
-    content, then the text is contained in a single object   
+    content, then the text is contained in a single object
     implementing the Text interface that is the only child
     of the element.
-    
-    Retrieve the textual data from the second child of the 
-    third employee.   That Text node contains a block of 
+
+    Retrieve the textual data from the second child of the
+    third employee.   That Text node contains a block of
     multiple text lines without markup, so they should be
-    treated as a single Text node.   The "getNodeValue()"    
+    treated as a single Text node.   The "getNodeValue()"
     method should contain the combination of the two lines.
 
 * @author Curt Arnold
@@ -14137,7 +14137,7 @@ TEST("hc_textwithnomarkup", function() {
       var nameNode;
       var nodeV;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14150,15 +14150,15 @@ TEST("hc_textwithnomarkup", function() {
       value = nodeV.nodeValue;
 
       ASSERT(STRICT_EQ("Roger\n Jones",value),"textWithNoMarkupAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The range of valid child node indices is 0 to Length -1.
-   
+
    Create a NamedNodeMap object from the attributes of the
    last child of the third employee and traverse the
    list from index 0 thru length -1.  All indices should
@@ -14178,7 +14178,7 @@ TEST("namednodemapchildnoderange", function() {
       var attributes;
       var child;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14193,17 +14193,17 @@ TEST("namednodemapchildnoderange", function() {
       ASSERT(STRICT_EQ(2,length),"length");
        child = attributes.item(0);
       child = attributes.item(1);
-      
+
 });
 
 
 
 /**
-* 
-    The "getNamedItem(name)" method retrieves a node 
-   specified by name. 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "getNamedItem(name)" method retrieves a node
+   specified by name.
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getNamedItem(name)"
    method is done with name="domestic".  This should result
@@ -14222,7 +14222,7 @@ TEST("namednodemapgetnameditem", function() {
       var attributes;
       var domesticAttr;
       var attrName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14236,13 +14236,13 @@ TEST("namednodemapgetnameditem", function() {
       attrName = domesticAttr.nodeName;
 
       ASSERT(STRICT_EQ("domestic",attrName),"namednodemapGetNamedItemAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "setNamedItem(arg)" method raises a
 INUSE_ATTRIBUTE_ERR DOMException if "arg" is an
 Attr that is already in an attribute of another Element.
@@ -14269,7 +14269,7 @@ TEST("namednodemapinuseattributeerr", function() {
       var domesticAttr;
       var setAttr;
       var setNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14285,7 +14285,7 @@ TEST("namednodemapinuseattributeerr", function() {
       testNode = elementList.item(2);
       attributes = testNode.attributes;
 
-      
+
 	{
 		success = false;
 		try {
@@ -14302,15 +14302,15 @@ TEST("namednodemapinuseattributeerr", function() {
 
 
 /**
-* 
-    The "removeNamedItem(name)" method raises a 
+*
+    The "removeNamedItem(name)" method raises a
    NOT_FOUND_ERR DOMException if there is not a node
    named "name" in the map.
-   
+
    Create a NamedNodeMap object from the attributes of the
    last child of the third employee and attempt to remove
    the "district" attribute.  There is not a node named
-   "district" in the list and therefore the desired   
+   "district" in the list and therefore the desired
    exception should be raised.
 
 * @author NIST
@@ -14326,7 +14326,7 @@ TEST("namednodemapnotfounderr", function() {
       var testEmployee;
       var attributes;
       var removedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14336,7 +14336,7 @@ TEST("namednodemapnotfounderr", function() {
       testEmployee = elementList.item(2);
       attributes = testEmployee.attributes;
 
-      
+
 	{
 		success = false;
 		try {
@@ -14353,11 +14353,11 @@ TEST("namednodemapnotfounderr", function() {
 
 
 /**
-* 
+*
     The "getLength()" method returns the number of nodes
-   in the map. 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+   in the map.
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getLength()"
    method is executed.  The number of nodes should be 2.
@@ -14374,7 +14374,7 @@ TEST("namednodemapnumberofnodes", function() {
       var testEmployee;
       var attributes;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14387,17 +14387,17 @@ TEST("namednodemapnumberofnodes", function() {
       length = attributes.length;
 
       ASSERT(STRICT_EQ(2,length),"length");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "removeNamedItem(name)" method returns the node
-   removed from the map.  
-   
-   Retrieve the third employee and create a NamedNodeMap 
+   removed from the map.
+
+   Retrieve the third employee and create a NamedNodeMap
    object of the attributes of the last child.  Once the
    list is created invoke the "removeNamedItem(name)"
    method with name="street".  The "removeNamedItem(name)"
@@ -14417,7 +14417,7 @@ TEST("namednodemapremovenameditemreturnnodevalue", function() {
       var attributes;
       var removedNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14431,17 +14431,17 @@ TEST("namednodemapremovenameditemreturnnodevalue", function() {
       value = removedNode.nodeValue;
 
       ASSERT(STRICT_EQ("No",value),"namednodemapRemoveNamedItemReturnNodeValueAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "getNamedItem(name)" method returns a node of any 
-   type specified by name. 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "getNamedItem(name)" method returns a node of any
+   type specified by name.
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getNamedItem(name)"
    method is done with name="street".  This should result
@@ -14462,7 +14462,7 @@ TEST("namednodemapreturnattrnode", function() {
       var attributes;
       var streetAttr;
       var attrName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14480,17 +14480,17 @@ attrName = streetAttr.nodeName;
        attrName = streetAttr.name;
 
       ASSERT(STRICT_EQ("street",attrName),"attrName");
-       
+
 });
 
 
 
 /**
-* 
-    The "item(index)" method returns the indexth item in 
-   the map(test for first item). 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "item(index)" method returns the indexth item in
+   the map(test for first item).
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child. Since the
    DOM does not specify an order of these nodes the contents
    of the FIRST node can contain either "domestic" or "street".
@@ -14509,7 +14509,7 @@ TEST("namednodemapreturnfirstitem", function() {
       var attributes;
       var child;
       var name;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14523,7 +14523,7 @@ TEST("namednodemapreturnfirstitem", function() {
       name = child.nodeName;
 
       	assertTrue("namednodemapReturnFirstItemAssert",
-      
+
 	(("domestic" == name) || ("street" == name))
 );
 
@@ -14532,11 +14532,11 @@ TEST("namednodemapreturnfirstitem", function() {
 
 
 /**
-* 
-    The "item(index)" method returns the indexth item in 
-   the map(test for last item). 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "item(index)" method returns the indexth item in
+   the map(test for last item).
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child. Since the
    DOM does not specify an order of these nodes the contents
    of the LAST node can contain either "domestic" or "street".
@@ -14555,7 +14555,7 @@ TEST("namednodemapreturnlastitem", function() {
       var attributes;
       var child;
       var name;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14569,7 +14569,7 @@ TEST("namednodemapreturnlastitem", function() {
       name = child.nodeName;
 
       	assertTrue("namednodemapReturnLastItemAssert",
-      
+
 	(("domestic" == name) || ("street" == name))
 );
 
@@ -14578,14 +14578,14 @@ TEST("namednodemapreturnlastitem", function() {
 
 
 /**
-* 
-    The "getNamedItem(name)" method returns null of the 
-   specified name did not identify any node in the map. 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "getNamedItem(name)" method returns null of the
+   specified name did not identify any node in the map.
+
+   Retrieve the second employee and create a NamedNodeMap
    listing of the attributes of the last child.  Once the
    list is created an invocation of the "getNamedItem(name)"
-   method is done with name="district".  This name does not 
+   method is done with name="district".  This name does not
    match any names in the list therefore the method should
    return null.
 
@@ -14600,7 +14600,7 @@ TEST("namednodemapreturnnull", function() {
       var testEmployee;
       var attributes;
       var districtNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14612,23 +14612,23 @@ TEST("namednodemapreturnnull", function() {
 
       districtNode = attributes.getNamedItem("district");
       ASSERT(NULL(districtNode),"namednodemapReturnNullAssert");
-    
+
 });
 
 
 
 /**
-* 
-    The "setNamedItem(arg)" method adds a node using its 
-   nodeName attribute. 
-   
-   Retrieve the second employee and create a NamedNodeMap 
+*
+    The "setNamedItem(arg)" method adds a node using its
+   nodeName attribute.
+
+   Retrieve the second employee and create a NamedNodeMap
    object from the attributes of the last child by
    invoking the "getAttributes()" method.  Once the
    list is created an invocation of the "setNamedItem(arg)"
    method is done with arg=newAttr, where newAttr is a
    new Attr Node previously created.  The "setNamedItem(arg)"
-   method should add then new node to the NamedNodeItem 
+   method should add then new node to the NamedNodeItem
    object by using its "nodeName" attribute("district').
    This node is then retrieved using the "getNamedItem(name)"
    method.  This test uses the "createAttribute(name)"
@@ -14649,7 +14649,7 @@ TEST("namednodemapsetnameditem", function() {
       var districtNode;
       var attrName;
       var setNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14665,18 +14665,18 @@ TEST("namednodemapsetnameditem", function() {
       attrName = districtNode.nodeName;
 
       ASSERT(STRICT_EQ("district",attrName),"namednodemapSetNamedItemAssert");
-       
+
 });
 
 
 
 /**
-* 
-    If the "setNamedItem(arg)" method replaces an already 
-   existing node with the same name then the already 
+*
+    If the "setNamedItem(arg)" method replaces an already
+   existing node with the same name then the already
    existing node is returned.
-   
-   Retrieve the third employee and create a NamedNodeMap 
+
+   Retrieve the third employee and create a NamedNodeMap
    object from the attributes of the last child by
    invoking the "getAttributes()" method.  Once the
    list is created an invocation of the "setNamedItem(arg)"
@@ -14684,7 +14684,7 @@ TEST("namednodemapsetnameditem", function() {
    new Attr Node previously created and whose node name
    already exists in the map.  The "setNamedItem(arg)"
    method should replace the already existing node with
-   the new one and return the existing node.   
+   the new one and return the existing node.
    This test uses the "createAttribute(name)" method from
    the document interface.
 
@@ -14702,7 +14702,7 @@ TEST("namednodemapsetnameditemreturnvalue", function() {
       var attributes;
       var newNode;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14717,18 +14717,18 @@ TEST("namednodemapsetnameditemreturnvalue", function() {
       attrValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("No",attrValue),"returnedNodeValue");
-       
+
 });
 
 
 
 /**
-* 
-    If the node to be added by the "setNamedItem(arg)" method 
+*
+    If the node to be added by the "setNamedItem(arg)" method
    already exists in the NamedNodeMap, it is replaced by
    the new one.
-   
-   Retrieve the second employee and create a NamedNodeMap 
+
+   Retrieve the second employee and create a NamedNodeMap
    object from the attributes of the last child by
    invoking the "getAttributes()" method.  Once the
    list is created an invocation of the "setNamedItem(arg)"
@@ -14736,7 +14736,7 @@ TEST("namednodemapsetnameditemreturnvalue", function() {
    new Attr Node previously created and whose node name
    already exists in the map.  The "setNamedItem(arg)"
    method should replace the already existing node with
-   the new one.   
+   the new one.
    This node is then retrieved using the "getNamedItem(name)"
    method.  This test uses the "createAttribute(name)"
    method from the document interface
@@ -14756,7 +14756,7 @@ TEST("namednodemapsetnameditemthatexists", function() {
       var districtNode;
       var attrValue;
       var setNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14772,17 +14772,17 @@ TEST("namednodemapsetnameditemthatexists", function() {
       attrValue = districtNode.nodeValue;
 
       ASSERT(STRICT_EQ("",attrValue),"streetValue");
-       
+
 });
 
 
 
 /**
-* 
-    If the "setNamedItem(arg)" method does not replace an 
-   existing node with the same name then it returns null. 
-   
-   Retrieve the third employee and create a NamedNodeMap 
+*
+    If the "setNamedItem(arg)" method does not replace an
+   existing node with the same name then it returns null.
+
+   Retrieve the third employee and create a NamedNodeMap
    object from the attributes of the last child.
    Once the list is created the "setNamedItem(arg)" method
    is invoked with arg=newAttr, where newAttr is a
@@ -14805,7 +14805,7 @@ TEST("namednodemapsetnameditemwithnewvalue", function() {
       var testAddress;
       var attributes;
       var newNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14818,21 +14818,21 @@ TEST("namednodemapsetnameditemwithnewvalue", function() {
 
       newNode = attributes.setNamedItem(newAttribute);
       ASSERT(NULL(newNode),"returnedNodeNull");
-    
+
 });
 
 
 
 /**
-* 
-    The "setNamedItem(arg)" method raises a 
+*
+    The "setNamedItem(arg)" method raises a
    WRONG_DOCUMENT_ERR DOMException if "arg" was created
    from a different document than the one that created
-   the NamedNodeMap. 
-   
+   the NamedNodeMap.
+
    Create a NamedNodeMap object from the attributes of the
    last child of the third employee and attempt to add
-   another Attr node to it that was created from a 
+   another Attr node to it that was created from a
    different DOM document.  This should raise the desired
    exception.  This method uses the "createAttribute(name)"
    method from the Document interface.
@@ -14853,13 +14853,13 @@ TEST("namednodemapwrongdocumenterr", function() {
       var attributes;
       var newAttribute;
       var setNode;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -14870,7 +14870,7 @@ TEST("namednodemapwrongdocumenterr", function() {
       newAttribute = doc2.createAttribute("newAttribute");
       attributes = testAddress.attributes;
 
-      
+
 	{
 		success = false;
 		try {
@@ -14887,11 +14887,11 @@ TEST("namednodemapwrongdocumenterr", function() {
 
 
 /**
-* 
+*
     The "appendChild(newChild)" method adds the node
     "newChild" to the end of the list of children of the
     node.
-    
+
     Retrieve the second employee and append a new Element
     node to the list of children.   The last node in the list
     is then retrieved and its NodeName examined.   The
@@ -14911,7 +14911,7 @@ TEST("nodeappendchild", function() {
       var lchild;
       var childName;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14928,19 +14928,19 @@ TEST("nodeappendchild", function() {
       childName = lchild.nodeName;
 
       ASSERT(STRICT_EQ("newChild",childName),"nodeAppendChildAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the "newChild" is already in the tree, it is first
     removed before the new one is appended.
-    
-    Retrieve the first child of the second employee and   
+
+    Retrieve the first child of the second employee and
     append the first child to the end of the list.   After
-    the "appendChild(newChild)" method is invoked the first 
+    the "appendChild(newChild)" method is invoked the first
     child should be the one that was second and the last
     child should be the one that was first.
 
@@ -14960,7 +14960,7 @@ TEST("nodeappendchildchildexists", function() {
       var fchildName;
       var appendedChild;
       var initialName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -14981,19 +14981,19 @@ TEST("nodeappendchildchildexists", function() {
 
       lchildName = lchild.nodeName;
 
-      
+
 	if(
 	("employeeId" == initialName)
 	) {
 	ASSERT(STRICT_EQ("name",fchildName),"assert1_nowhitespace");
        ASSERT(STRICT_EQ("employeeId",lchildName),"assert2_nowhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("employeeId",fchildName),"assert1");
        ASSERT(STRICT_EQ("#text",lchildName),"assert2");
-       
+
 		}
 	
 });
@@ -15001,9 +15001,9 @@ TEST("nodeappendchildchildexists", function() {
 
 
 /**
-* 
+*
     Create and populate a new DocumentFragment object and
-    append it to the second employee.   After the 
+    append it to the second employee.   After the
     "appendChild(newChild)" method is invoked retrieve the
     new nodes at the end of the list, they should be the
     two Element nodes from the DocumentFragment.
@@ -15037,7 +15037,7 @@ TEST("nodeappendchilddocfragment", function() {
       expected[6] = "newChild1";
       expected[7] = "newChild2";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15057,7 +15057,7 @@ TEST("nodeappendchilddocfragment", function() {
       child = childList.item(indexid2258770);
       nodeType = child.nodeType;
 
-      
+
 	if(
 	(1 == nodeType)
 	) {
@@ -15069,17 +15069,17 @@ TEST("nodeappendchilddocfragment", function() {
 	
 	}
    ASSERT(DOM_LIST_EQ(expected,result),"elementNames");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "appendChild(newChild)" method returns the node
     added.
-    
-    Append a newly created node to the child list of the 
+
+    Append a newly created node to the child list of the
     second employee and check the NodeName returned.   The
     "getNodeName()" method should return "newChild".
 
@@ -15097,7 +15097,7 @@ TEST("nodeappendchildgetnodename", function() {
       var newChild;
       var appendNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15112,18 +15112,18 @@ TEST("nodeappendchildgetnodename", function() {
       childName = appendNode.nodeName;
 
       ASSERT(STRICT_EQ("newChild",childName),"nodeAppendChildGetNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The "appendChild(newChild)" method raises a 
+*
+    The "appendChild(newChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if this node is of
     a type that does not allow children of the type "newChild"
     to be inserted.
-    
+
     Retrieve the root node and attempt to append a newly
     created Attr node.   An Element node cannot have children
     of the "Attr" type, therefore the desired exception
@@ -15143,7 +15143,7 @@ TEST("nodeappendchildinvalidnodetype", function() {
       var rootNode;
       var newChild;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15152,7 +15152,7 @@ TEST("nodeappendchildinvalidnodetype", function() {
       rootNode = doc.documentElement;
 
       newChild = doc.createAttribute("newAttribute");
-      
+
 	{
 		success = false;
 		try {
@@ -15169,15 +15169,15 @@ TEST("nodeappendchildinvalidnodetype", function() {
 
 
 /**
-* 
-    The "appendChild(newChild)" method raises a 
+*
+    The "appendChild(newChild)" method raises a
     WRONG_DOCUMENT_ERR DOMException if the "newChild" was
-    created from a different document than the one that 
+    created from a different document than the one that
     created this node.
-    
-    Retrieve the second employee and attempt to append    
-    a node created from a different document.   An attempt 
-    to make such a replacement should raise the desired 
+
+    Retrieve the second employee and attempt to append
+    a node created from a different document.   An attempt
+    to make such a replacement should raise the desired
     exception.
 
 * @author NIST
@@ -15196,13 +15196,13 @@ TEST("nodeappendchildnewchilddiffdocument", function() {
       var elementList;
       var elementNode;
       var appendedChild;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -15211,7 +15211,7 @@ TEST("nodeappendchildnewchilddiffdocument", function() {
       newChild = doc1.createElement("newChild");
       elementList = doc2.getElementsByTagName("employee");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -15228,14 +15228,14 @@ TEST("nodeappendchildnewchilddiffdocument", function() {
 
 
 /**
-* 
-    The "appendChild(newChild)" method raises a 
-    HIERARCHY_REQUEST_ERR DOMException if the node to 
+*
+    The "appendChild(newChild)" method raises a
+    HIERARCHY_REQUEST_ERR DOMException if the node to
     append is one of this node's ancestors.
-    
-    Retrieve the second employee and attempt to append 
+
+    Retrieve the second employee and attempt to append
     an ancestor node(root node) to it.
-    An attempt to make such an addition should raise the 
+    An attempt to make such an addition should raise the
     desired exception.
 
 * @author NIST
@@ -15253,7 +15253,7 @@ TEST("nodeappendchildnodeancestor", function() {
       var elementList;
       var employeeNode;
       var appendedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15263,7 +15263,7 @@ TEST("nodeappendchildnodeancestor", function() {
 
       elementList = doc.getElementsByTagName("employee");
       employeeNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -15280,7 +15280,7 @@ TEST("nodeappendchildnodeancestor", function() {
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on an Attribute
 Node returns null.
 
@@ -15301,7 +15301,7 @@ TEST("nodeattributenodeattribute", function() {
       var addrAttr;
       var attrNode;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15315,27 +15315,27 @@ TEST("nodeattributenodeattribute", function() {
       attrList = attrNode.attributes;
 
       ASSERT(NULL(attrList),"nodeAttributeNodeAttributeAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
 
-    The string returned by the "getNodeName()" method for an 
+    The string returned by the "getNodeName()" method for an
 
     Attribute Node is the name of the Attribute.
 
-    
 
-    Retrieve the Attribute named "domestic" from the last 
 
-    child of the first employee and check the string returned 
+    Retrieve the Attribute named "domestic" from the last
 
-    by the "getNodeName()" method.   It should be equal to 
+    child of the first employee and check the string returned
 
-    "domestic". 
+    by the "getNodeName()" method.   It should be equal to
+
+    "domestic".
 
 
 * @author NIST
@@ -15349,7 +15349,7 @@ TEST("nodeattributenodename", function() {
       var testAddr;
       var addrAttr;
       var attrName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15361,25 +15361,25 @@ TEST("nodeattributenodename", function() {
       attrName = addrAttr.nodeName;
 
       ASSERT(STRICT_EQ("domestic",attrName),"nodeAttributeNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     The "getNodeType()" method for an Attribute Node
 
     returns the constant value 2.
 
-    
+
 
     Retrieve the first attribute from the last child of
 
-    the first employee and invoke the "getNodeType()"   
+    the first employee and invoke the "getNodeType()"
 
-    method.   The method should return 2. 
+    method.   The method should return 2.
 
 
 * @author NIST
@@ -15393,7 +15393,7 @@ TEST("nodeattributenodetype", function() {
       var testAddr;
       var addrAttr;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15405,27 +15405,27 @@ TEST("nodeattributenodetype", function() {
       nodeType = addrAttr.nodeType;
 
       ASSERT(STRICT_EQ(2,nodeType),"nodeAttrNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The string returned by the "getNodeValue()" method for an 
+    The string returned by the "getNodeValue()" method for an
 
     Attribute Node is the value of the Attribute.
 
-    
 
-    Retrieve the Attribute named "domestic" from the last 
 
-    child of the first employee and check the string returned 
+    Retrieve the Attribute named "domestic" from the last
 
-    by the "getNodeValue()" method.   It should be equal to 
+    child of the first employee and check the string returned
 
-    "Yes". 
+    by the "getNodeValue()" method.   It should be equal to
+
+    "Yes".
 
 
 * @author NIST
@@ -15439,7 +15439,7 @@ TEST("nodeattributenodevalue", function() {
       var testAddr;
       var addrAttr;
       var attrValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15451,13 +15451,13 @@ TEST("nodeattributenodevalue", function() {
       attrValue = addrAttr.nodeValue;
 
       ASSERT(STRICT_EQ("Yes",attrValue),"nodeAttributeNodeValueAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on a CDATASection
 Node returns null.
 
@@ -15479,7 +15479,7 @@ TEST("nodecdatasectionnodeattribute", function() {
       var cdataNode;
       var attrList;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15491,30 +15491,30 @@ TEST("nodecdatasectionnodeattribute", function() {
 
       nodeType = cdataNode.nodeType;
 
-      
+
 	if(
 	!(4 == nodeType)
 	) {
 	cdataNode = doc.createCDATASection("");
-      
+
 	}
 	attrList = cdataNode.attributes;
 
       ASSERT(NULL(attrList),"cdataSection");
-    
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     CDATASection Node is #cdata-section".
-    
+
     Retrieve the CDATASection node inside the second child
-    of the second employee and check the string returned 
-    by the "getNodeName()" method.   It should be equal to 
-    "#cdata-section". 
+    of the second employee and check the string returned
+    by the "getNodeName()" method.   It should be equal to
+    "#cdata-section".
 
 * @author NIST
 * @author Mary Brady
@@ -15529,7 +15529,7 @@ TEST("nodecdatasectionnodename", function() {
       var cdataNode;
       var nodeType;
       var cdataNodeName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15541,29 +15541,29 @@ TEST("nodecdatasectionnodename", function() {
 
       nodeType = cdataNode.nodeType;
 
-      
+
 	if(
 	!(4 == nodeType)
 	) {
 	cdataNode = doc.createCDATASection("");
-      
+
 	}
 	cdataNodeName = cdataNode.nodeName;
 
       ASSERT(STRICT_EQ("#cdata-section",cdataNodeName),"cdataNodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getNodeType()" method for a CDATASection Node
     returns the constant value 4.
-    
+
     Retrieve the CDATASection node contained inside the
-    second child of the second employee and invoke the 
-    "getNodeType()" method.   The method should return 4. 
+    second child of the second employee and invoke the
+    "getNodeType()" method.   The method should return 4.
 
 * @author NIST
 * @author Mary Brady
@@ -15577,7 +15577,7 @@ TEST("nodecdatasectionnodetype", function() {
       var testName;
       var cdataNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15589,30 +15589,30 @@ TEST("nodecdatasectionnodetype", function() {
 
       nodeType = cdataNode.nodeType;
 
-      
+
 	if(
 	(3 == nodeType)
 	) {
 	cdataNode = doc.createCDATASection("");
       nodeType = cdataNode.nodeType;
 
-      
+
 	}
 	ASSERT(STRICT_EQ(4,nodeType),"nodeTypeCDATA");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
-    CDATASection Node is the content of the CDATASection. 
-    
+*
+    The string returned by the "getNodeValue()" method for a
+    CDATASection Node is the content of the CDATASection.
+
     Retrieve the CDATASection node inside the second child
-    of the second employee and check the string returned 
-    by the "getNodeValue()" method.   It should be equal to 
-    "This is a CDATA Section with EntityReference number 2 
+    of the second employee and check the string returned
+    by the "getNodeValue()" method.   It should be equal to
+    "This is a CDATA Section with EntityReference number 2
     &ent2;".
 
 * @author NIST
@@ -15628,7 +15628,7 @@ TEST("nodecdatasectionnodevalue", function() {
       var childList;
       var child;
       var cdataNodeValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15639,25 +15639,25 @@ TEST("nodecdatasectionnodevalue", function() {
       childList = cdataName.childNodes;
 
       child = childList.item(1);
-      
+
 	if(
 	
 	(child == null)
 
 	) {
 	child = doc.createCDATASection("This is a CDATASection with EntityReference number 2 &ent2;");
-      
+
 	}
 	cdataNodeValue = child.nodeValue;
 
       ASSERT(STRICT_EQ("This is a CDATASection with EntityReference number 2 &ent2;",cdataNodeValue),"value");
-       
+
 });
 
 
 
 /**
-* 
+*
 Collect the element names from Node.childNodes and check against expectations.
 
 * @author NIST
@@ -15683,7 +15683,7 @@ TEST("nodechildnodes", function() {
       expectedElementNames[4] = "gender";
       expectedElementNames[5] = "address";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15697,7 +15697,7 @@ TEST("nodechildnodes", function() {
       childNode = childNodes.item(indexid2258680);
       childType = childNode.nodeType;
 
-      
+
 	if(
 	(1 == childType)
 	) {
@@ -15709,13 +15709,13 @@ TEST("nodechildnodes", function() {
 	
 	}
    ASSERT(DOM_LIST_EQ(expectedElementNames,elementNames),"elementNames");
-       
+
 });
 
 
 
 /**
-* 
+*
 Add an element and check that the previously retrieved childNodes NodeList
 is live.
 
@@ -15733,7 +15733,7 @@ TEST("nodechildnodesappendchild", function() {
       var createdNode;
       var expectedLength;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15751,17 +15751,17 @@ createdNode = doc.createElement("text3");
       length = childList.length;
 
       ASSERT(STRICT_EQ(expectedLength,length),"childNodeLength");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getChildNodes()" method returns a NodeList
     that contains all children of this node.   If there
-    are not any children, this is a NodeList that does not 
-    contain any nodes. 
+    are not any children, this is a NodeList that does not
+    contain any nodes.
 
     Retrieve the Text node from the second child of the second
     employee and invoke the "getChildNodes()" method.   The
@@ -15780,7 +15780,7 @@ TEST("nodechildnodesempty", function() {
       var secondCNode;
       var textNode;
       var childNodesList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15802,11 +15802,11 @@ TEST("nodechildnodesempty", function() {
 
 
 /**
-* 
+*
     If the cloneNode method is used to clone an
     Element node, all the attributes of the Element are
     copied along with their values.
-    
+
     Retrieve the last child of the second employee and invoke
     the cloneNode method.   The
     duplicate node returned by the method should copy the
@@ -15831,7 +15831,7 @@ TEST("nodecloneattributescopied", function() {
       expectedResult[0] = "domestic";
       expectedResult[1] = "street";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15850,16 +15850,16 @@ TEST("nodecloneattributescopied", function() {
 
 	}
    ASSERT(DOM_COLLECTION_EQ(expectedResult,result),"nodeCloneAttributesCopiedAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method does not copy text unless it
     is deep cloned.(Test for deep=false)
-    
+
     Retrieve the fourth child of the second employee and
     the "cloneNode(deep)" method with deep=false.   The
     duplicate node returned by the method should not copy
@@ -15878,7 +15878,7 @@ TEST("nodeclonefalsenocopytext", function() {
       var childNode;
       var clonedNode;
       var lastChildNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15893,16 +15893,16 @@ TEST("nodeclonefalsenocopytext", function() {
       lastChildNode = clonedNode.lastChild;
 
       ASSERT(NULL(lastChildNode),"noTextNodes");
-    
+
 });
 
 
 
 /**
-* 
+*
     The duplicate node returned by the "cloneNode(deep)"
     method does not have a ParentNode.
-    
+
     Retrieve the second employee and invoke the
     "cloneNode(deep)" method with deep=false.   The
     duplicate node returned should return null when the
@@ -15919,7 +15919,7 @@ TEST("nodeclonegetparentnull", function() {
       var employeeNode;
       var clonedNode;
       var parentNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15931,16 +15931,16 @@ TEST("nodeclonegetparentnull", function() {
       parentNode = clonedNode.parentNode;
 
       ASSERT(NULL(parentNode),"nodeCloneGetParentNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method returns a copy of the node
     only if deep=false.
-    
+
     Retrieve the second employee and invoke the
     "cloneNode(deep)" method with deep=false.   The
     method should only clone this node.   The NodeName and
@@ -15961,7 +15961,7 @@ TEST("nodeclonenodefalse", function() {
       var cloneName;
       var cloneChildren;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -15978,20 +15978,20 @@ TEST("nodeclonenodefalse", function() {
       length = cloneChildren.length;
 
       ASSERT(STRICT_EQ(0,length),"length");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "cloneNode(deep)" method returns a copy of the node
     and the subtree under it if deep=true.
-    
+
     Retrieve the second employee and invoke the
     "cloneNode(deep)" method with deep=true.   The
     method should clone this node and the subtree under it.
-    The NodeName of each child in the returned node is 
+    The NodeName of each child in the returned node is
     checked to insure the entire subtree under the second
     employee was cloned.
 
@@ -16035,7 +16035,7 @@ TEST("nodeclonenodetrue", function() {
       expectedNoWhitespace[4] = "gender";
       expectedNoWhitespace[5] = "address";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16057,17 +16057,17 @@ TEST("nodeclonenodetrue", function() {
       result[result.length] = clonedChildName;
 
 	}
-   
+
 	if(
 	(6 == length)
 	) {
 	ASSERT(DOM_LIST_EQ(expectedNoWhitespace,result),"nowhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(DOM_LIST_EQ(expectedWhitespace,result),"whitespace");
-       
+
 		}
 	
 });
@@ -16075,7 +16075,7 @@ TEST("nodeclonenodetrue", function() {
 
 
 /**
-* 
+*
     Retrieve the second salary and
     the "cloneNode(deep)" method with deep=true.   The
     duplicate node returned by the method should copy
@@ -16094,7 +16094,7 @@ TEST("nodeclonetruecopytext", function() {
       var clonedNode;
       var lastChildNode;
       var childValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16108,20 +16108,20 @@ TEST("nodeclonetruecopytext", function() {
       childValue = lastChildNode.nodeValue;
 
       ASSERT(STRICT_EQ("35,000",childValue),"nodeCloneTrueCopyTextAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The "getAttributes()" method invoked on a Comment 
+*
+    The "getAttributes()" method invoked on a Comment
     Node returns null.
 
     Find any comment that is an immediate child of the root
     and assert that Node.attributes is null.  Then create
     a new comment node (in case they had been omitted) and
-    make the assertion.    
+    make the assertion.
 
 * @author NIST
 * @author Mary Brady
@@ -16136,7 +16136,7 @@ TEST("nodecommentnodeattributes", function() {
       var childNode;
       var attrList;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16148,14 +16148,14 @@ TEST("nodecommentnodeattributes", function() {
       childNode = childList.item(indexid2258624);
       nodeType = childNode.nodeType;
 
-      
+
 	if(
 	(8 == nodeType)
 	) {
 	attrList = childNode.attributes;
 
       ASSERT(NULL(attrList),"attributesNull");
-    
+
 	}
 	
 	}
@@ -16163,18 +16163,18 @@ TEST("nodecommentnodeattributes", function() {
       attrList = childNode.attributes;
 
       ASSERT(NULL(attrList),"createdAttributesNull");
-    
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     Comment Node is "#comment".
-    
-    Retrieve the Comment node in the XML file 
-    and check the string returned by the "getNodeName()" 
+
+    Retrieve the Comment node in the XML file
+    and check the string returned by the "getNodeName()"
     method.   It should be equal to "#comment".
 
 * @author NIST
@@ -16189,7 +16189,7 @@ TEST("nodecommentnodename", function() {
       var commentNode;
       var nodeType;
       var commentNodeName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16201,30 +16201,30 @@ TEST("nodecommentnodename", function() {
       commentNode = elementList.item(indexid2258614);
       nodeType = commentNode.nodeType;
 
-      
+
 	if(
 	(8 == nodeType)
 	) {
 	commentNodeName = commentNode.nodeName;
 
       ASSERT(STRICT_EQ("#comment",commentNodeName),"commentNodeName");
-       
+
 	}
 	
 	}
-   
+
 });
 
 
 
 /**
-* 
+*
     The "getNodeType()" method for a Comment Node
     returns the constant value 8.
-    
+
     Retrieve the nodes from the document and check for
-    a comment node and invoke the "getNodeType()" method.   This should   
-    return 8. 
+    a comment node and invoke the "getNodeType()" method.   This should
+    return 8.
 
 * @author NIST
 * @author Mary Brady
@@ -16238,7 +16238,7 @@ TEST("nodecommentnodetype", function() {
       var commentNode;
       var commentNodeName;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16250,29 +16250,29 @@ TEST("nodecommentnodetype", function() {
       commentNode = testList.item(indexid2258613);
       commentNodeName = commentNode.nodeName;
 
-      
+
 	if(
 	("#comment" == commentNodeName)
 	) {
 	nodeType = commentNode.nodeType;
 
       ASSERT(STRICT_EQ(8,nodeType),"nodeCommentNodeTypeAssert1");
-       
+
 	}
 	
 	}
-   
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Comment Node is the content of the comment.
-    
-    Retrieve the comment in the XML file and   
-    check the string returned by the "getNodeValue()" method. 
+
+    Retrieve the comment in the XML file and
+    check the string returned by the "getNodeValue()" method.
     It should be equal to "This is comment number 1".
 
 * @author NIST
@@ -16287,7 +16287,7 @@ TEST("nodecommentnodevalue", function() {
       var commentNode;
       var commentName;
       var commentValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16299,30 +16299,30 @@ TEST("nodecommentnodevalue", function() {
       commentNode = elementList.item(indexid2258615);
       commentName = commentNode.nodeName;
 
-      
+
 	if(
 	("#comment" == commentName)
 	) {
 	commentValue = commentNode.nodeValue;
 
       ASSERT(STRICT_EQ(" This is comment number 1.",commentValue),"value");
-       
+
 	}
 	
 	}
-   
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     DocumentFragment Node is "#document-frament".
 
     Retrieve the DOM document and invoke the
-    "createDocumentFragment()" method and check the string      
-    returned by the "getNodeName()" method.   It should be 
+    "createDocumentFragment()" method and check the string
+    returned by the "getNodeName()" method.   It should be
     equal to "#document-fragment".
 
 * @author NIST
@@ -16335,7 +16335,7 @@ TEST("nodedocumentfragmentnodename", function() {
     var doc;
       var docFragment;
       var documentFragmentName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16345,20 +16345,20 @@ TEST("nodedocumentfragmentnodename", function() {
       documentFragmentName = docFragment.nodeName;
 
       ASSERT(STRICT_EQ("#document-fragment",documentFragmentName),"nodeDocumentFragmentNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "getNodeType()" method for a DocumentFragment Node
     returns the constant value 11.
 
-    Invoke the "createDocumentFragment()" method and    
+    Invoke the "createDocumentFragment()" method and
     examine the NodeType of the document fragment
-    returned by the "getNodeType()" method.   The method 
-    should return 11. 
+    returned by the "getNodeType()" method.   The method
+    should return 11.
 
 * @author NIST
 * @author Mary Brady
@@ -16370,7 +16370,7 @@ TEST("nodedocumentfragmentnodetype", function() {
     var doc;
       var documentFragmentNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16380,19 +16380,19 @@ TEST("nodedocumentfragmentnodetype", function() {
       nodeType = documentFragmentNode.nodeType;
 
       ASSERT(STRICT_EQ(11,nodeType),"nodeDocumentFragmentNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     DocumentFragment Node is null.
-    
+
     Retrieve the DOM document and invoke the
-    "createDocumentFragment()" method and check the string      
-    returned by the "getNodeValue()" method.   It should be 
+    "createDocumentFragment()" method and check the string
+    returned by the "getNodeValue()" method.   It should be
     equal to null.
 
 * @author NIST
@@ -16408,7 +16408,7 @@ TEST("nodedocumentfragmentnodevalue", function() {
       var docFragment;
       var attrList;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16421,13 +16421,13 @@ TEST("nodedocumentfragmentnodevalue", function() {
     value = docFragment.nodeValue;
 
       ASSERT(NULL(value),"initiallyNull");
-    
+
 });
 
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on a Document
 Node returns null.
 
@@ -16440,7 +16440,7 @@ TEST("nodedocumentnodeattribute", function() {
    var success;
     var doc;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16449,18 +16449,18 @@ TEST("nodedocumentnodeattribute", function() {
       attrList = doc.attributes;
 
       ASSERT(NULL(attrList),"documentAttributesNull");
-    
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeName()" method for a 
+*
+    The string returned by the "getNodeName()" method for a
     Document Node is "#document".
 
     Retrieve the DOM document and check the string returned
-    by the "getNodeName()" method.   It should be equal to 
+    by the "getNodeName()" method.   It should be equal to
     "#document".
 
 * @author NIST
@@ -16472,7 +16472,7 @@ TEST("nodedocumentnodename", function() {
    var success;
     var doc;
       var documentName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16481,18 +16481,18 @@ TEST("nodedocumentnodename", function() {
       documentName = doc.nodeName;
 
       ASSERT(STRICT_EQ("#document",documentName),"documentNodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 The "getNodeType()" method for a Document Node
 returns the constant value 9.
 
-Retrieve the document and invoke the "getNodeType()" 
-method.   The method should return 9. 
+Retrieve the document and invoke the "getNodeType()"
+method.   The method should return 9.
 
 * @author NIST
 * @author Mary Brady
@@ -16503,7 +16503,7 @@ TEST("nodedocumentnodetype", function() {
    var success;
     var doc;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16512,19 +16512,19 @@ TEST("nodedocumentnodetype", function() {
       nodeType = doc.nodeType;
 
       ASSERT(STRICT_EQ(9,nodeType),"nodeDocumentNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Document Node is null.
 
     Retrieve the DOM Document and check the string returned
-    by the "getNodeValue()" method.   It should be equal to 
-    null. 
+    by the "getNodeValue()" method.   It should be equal to
+    null.
 
 
 * @author NIST
@@ -16536,7 +16536,7 @@ TEST("nodedocumentnodevalue", function() {
    var success;
     var doc;
       var documentValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16545,21 +16545,21 @@ TEST("nodedocumentnodevalue", function() {
       documentValue = doc.nodeValue;
 
       ASSERT(NULL(documentValue),"documentNodeValueNull");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getAttributes()" method invoked on an Element
     Node returns a NamedNodeMap containing the attributes
     of this node.
-    
+
     Retrieve the last child of the third employee and
     invoke the "getAttributes()" method.   It should return
     a NamedNodeMap containing the attributes of the Element
-    node. 
+    node.
 
 * @author NIST
 * @author Mary Brady
@@ -16579,7 +16579,7 @@ TEST("nodeelementnodeattributes", function() {
       expected[0] = "domestic";
       expected[1] = "street";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16597,27 +16597,27 @@ TEST("nodeelementnodeattributes", function() {
 
 	}
    ASSERT(DOM_COLLECTION_EQ(expected,attrList),"nodeElementNodeValueAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The string returned by the "getNodeName()" method for an 
+    The string returned by the "getNodeName()" method for an
 
-    Element Node is its tagName. 
+    Element Node is its tagName.
 
-    
 
-    Retrieve the first Element Node(Root Node) of the   
 
-    DOM object and check the string returned by the            
+    Retrieve the first Element Node(Root Node) of the
+
+    DOM object and check the string returned by the
 
     "getNodeName()" method.   It should be equal to its
 
-    tagName. 
+    tagName.
 
 
 * @author NIST
@@ -16630,7 +16630,7 @@ TEST("nodeelementnodename", function() {
     var doc;
       var elementNode;
       var elementName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16640,19 +16640,19 @@ TEST("nodeelementnodename", function() {
 
       elementName = elementNode.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",elementName),"svgNodeName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("staff",elementName),"nodeElementNodeNameAssert1");
-       
+
 		}
 	
 });
@@ -16660,12 +16660,12 @@ TEST("nodeelementnodename", function() {
 
 
 /**
-* 
+*
     The "getNodeType()" method for an Element Node
     returns the constant value 1.
-    
-    Retrieve the root node and invoke the "getNodeType()"   
-    method.   The method should return 1. 
+
+    Retrieve the root node and invoke the "getNodeType()"
+    method.   The method should return 1.
 
 * @author NIST
 * @author Mary Brady
@@ -16676,7 +16676,7 @@ TEST("nodeelementnodetype", function() {
     var doc;
       var rootNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16687,14 +16687,14 @@ TEST("nodeelementnodetype", function() {
       nodeType = rootNode.nodeType;
 
       ASSERT(STRICT_EQ(1,nodeType),"nodeElementNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for an 
+*
+    The string returned by the "getNodeValue()" method for an
     Element Node is null.
 
 * @author NIST
@@ -16706,7 +16706,7 @@ TEST("nodeelementnodevalue", function() {
     var doc;
       var elementNode;
       var elementValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16717,15 +16717,15 @@ TEST("nodeelementnodevalue", function() {
       elementValue = elementNode.nodeValue;
 
       ASSERT(NULL(elementValue),"elementNodeValueNull");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getFirstChild()" method returns the first child
-    of this node. 
+    of this node.
 
 * @author NIST
 * @author Mary Brady
@@ -16738,7 +16738,7 @@ TEST("nodegetfirstchild", function() {
       var employeeNode;
       var fchildNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16750,7 +16750,7 @@ TEST("nodegetfirstchild", function() {
 
       childName = fchildNode.nodeName;
 
-      
+
 	if(
 	("#text" == childName)
 	) {
@@ -16758,22 +16758,22 @@ TEST("nodegetfirstchild", function() {
 
       childName = fchildNode.nodeName;
 
-      
+
 	}
 	ASSERT(STRICT_EQ("employeeId",childName),"nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a first child then the "getFirstChild()"
 
     method returns null.
 
-    
+
 
     Retrieve the Text node form the second child of the first
 
@@ -16795,7 +16795,7 @@ TEST("nodegetfirstchildnull", function() {
       var secondChildNode;
       var textNode;
       var noChildNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16811,15 +16811,15 @@ TEST("nodegetfirstchildnull", function() {
       noChildNode = textNode.firstChild;
 
       ASSERT(NULL(noChildNode),"nodeGetFirstChildNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getLastChild()" method returns the last child
-    of this node. 
+    of this node.
 
 * @author NIST
 * @author Mary Brady
@@ -16832,7 +16832,7 @@ TEST("nodegetlastchild", function() {
       var employeeNode;
       var lchildNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16844,7 +16844,7 @@ TEST("nodegetlastchild", function() {
 
       childName = lchildNode.nodeName;
 
-      
+
 	if(
 	("#text" == childName)
 	) {
@@ -16852,22 +16852,22 @@ TEST("nodegetlastchild", function() {
 
       childName = lchildNode.nodeName;
 
-      
+
 	}
 	ASSERT(STRICT_EQ("address",childName),"nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a last child then the "getLastChild()"
 
     method returns null.
 
-    
+
 
     Retrieve the Text node from the second child of the first
 
@@ -16889,7 +16889,7 @@ TEST("nodegetlastchildnull", function() {
       var secondChildNode;
       var textNode;
       var noChildNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16905,15 +16905,15 @@ TEST("nodegetlastchildnull", function() {
       noChildNode = textNode.lastChild;
 
       ASSERT(NULL(noChildNode),"nodeGetLastChildNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getNextSibling()" method returns the node immediately
-    following this node. 
+    following this node.
 
 * @author NIST
 * @author Mary Brady
@@ -16926,7 +16926,7 @@ TEST("nodegetnextsibling", function() {
       var employeeIdNode;
       var nsNode;
       var nsName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16938,7 +16938,7 @@ TEST("nodegetnextsibling", function() {
 
       nsName = nsNode.nodeName;
 
-      
+
 	if(
 	("#text" == nsName)
 	) {
@@ -16946,28 +16946,28 @@ TEST("nodegetnextsibling", function() {
 
       nsName = nsNode.nodeName;
 
-      
+
 	}
 	ASSERT(STRICT_EQ("name",nsName),"nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a node immediately following this node the
 
     "getNextSibling()" method returns null.
 
-    
+
 
     Retrieve the first child of the second employee and
 
     invoke the "getNextSibling()" method.   It should
 
-    be set to null. 
+    be set to null.
 
 
 * @author NIST
@@ -16981,7 +16981,7 @@ TEST("nodegetnextsiblingnull", function() {
       var employeeNode;
       var lcNode;
       var nsNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -16994,17 +16994,17 @@ TEST("nodegetnextsiblingnull", function() {
       nsNode = lcNode.nextSibling;
 
       ASSERT(NULL(nsNode),"nodeGetNextSiblingNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getOwnerDocument()" method returns the Document
     object associated with this node.
-    
-    Retrieve the second employee and examine Document 
+
+    Retrieve the second employee and examine Document
     returned by the "getOwnerDocument()" method.   Invoke
     the "getDocumentElement()" on the Document which will
     return an Element that is equal to "staff".
@@ -17022,7 +17022,7 @@ TEST("nodegetownerdocument", function() {
       var ownerDocument;
       var docElement;
       var elementName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17036,19 +17036,19 @@ TEST("nodegetownerdocument", function() {
 
       elementName = docElement.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",elementName),"svgTagName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("staff",elementName),"nodeGetOwnerDocumentAssert1");
-       
+
 		}
 	
 });
@@ -17056,7 +17056,7 @@ TEST("nodegetownerdocument", function() {
 
 
 /**
-* 
+*
     The "getOwnerDocument()" method returns null if the target
     node itself is a document.
 
@@ -17068,7 +17068,7 @@ TEST("nodegetownerdocumentnull", function() {
    var success;
     var doc;
       var ownerDocument;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17077,15 +17077,15 @@ TEST("nodegetownerdocumentnull", function() {
       ownerDocument = doc.ownerDocument;
 
       ASSERT(NULL(ownerDocument),"documentOwnerDocumentNull");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "getPreviousSibling()" method returns the node
-    immediately preceding this node. 
+    immediately preceding this node.
 
 * @author NIST
 * @author Mary Brady
@@ -17098,7 +17098,7 @@ TEST("nodegetprevioussibling", function() {
       var nameNode;
       var psNode;
       var psName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17110,7 +17110,7 @@ TEST("nodegetprevioussibling", function() {
 
       psName = psNode.nodeName;
 
-      
+
 	if(
 	("#text" == psName)
 	) {
@@ -17118,28 +17118,28 @@ TEST("nodegetprevioussibling", function() {
 
       psName = psNode.nodeName;
 
-      
+
 	}
 	ASSERT(STRICT_EQ("employeeId",psName),"nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     If there is not a node immediately preceding this node the
 
     "getPreviousSibling()" method returns null.
 
-    
+
 
     Retrieve the first child of the second employee and
 
     invoke the "getPreviousSibling()" method.   It should
 
-    be set to null. 
+    be set to null.
 
 
 * @author NIST
@@ -17153,7 +17153,7 @@ TEST("nodegetprevioussiblingnull", function() {
       var employeeNode;
       var fcNode;
       var psNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17166,17 +17166,17 @@ TEST("nodegetprevioussiblingnull", function() {
       psNode = fcNode.previousSibling;
 
       ASSERT(NULL(psNode),"nodeGetPreviousSiblingNullAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
     The "hasChildNodes()" method returns true if the node
     has children.
-    
-    Retrieve the root node("staff") and invoke the 
+
+    Retrieve the root node("staff") and invoke the
     "hasChildNodes()" method.   It should return the boolean
     value "true".
 
@@ -17190,7 +17190,7 @@ TEST("nodehaschildnodes", function() {
       var elementList;
       var employeeNode;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17206,11 +17206,11 @@ TEST("nodehaschildnodes", function() {
 
 
 /**
-* 
+*
     The "hasChildNodes()" method returns false if the node
     does not have any children.
-    
-    Retrieve the Text node inside the first child of the 
+
+    Retrieve the Text node inside the first child of the
     second employee and invoke the "hasChildNodes()" method.
     It should return the boolean value "false".
 
@@ -17228,7 +17228,7 @@ TEST("nodehaschildnodesfalse", function() {
       var employeeNode;
       var textNode;
       var state;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17249,10 +17249,10 @@ TEST("nodehaschildnodesfalse", function() {
 
 
 /**
-* 
+*
     The "insertBefore(newChild,refChild)" method inserts the
-    node "newChild" before the node "refChild". 
-    
+    node "newChild" before the node "refChild".
+
     Insert a newly created Element node before the eigth
     child of the second employee and check the "newChild"
     and "refChild" after insertion for correct placement.
@@ -17302,7 +17302,7 @@ TEST("nodeinsertbefore", function() {
 
       var expected = new Array();
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17314,7 +17314,7 @@ TEST("nodeinsertbefore", function() {
 
       length = childList.length;
 
-      
+
 	if(
 	(6 == length)
 	) {
@@ -17338,22 +17338,22 @@ TEST("nodeinsertbefore", function() {
 
 	}
    ASSERT(DOM_LIST_EQ(expected,actual),"nodeNames");
-       
+
 });
 
 
 
 /**
-* 
+*
     If the "newChild" is a DocumentFragment object then all
     its children are inserted in the same order before the
-    the "refChild". 
-    
+    the "refChild".
+
     Create a DocumentFragment object and populate it with
     two Element nodes.   Retrieve the second employee and
     insert the newly created DocumentFragment before its
     fourth child.   The second employee should now have two
-    extra children("newChild1" and "newChild2") at 
+    extra children("newChild1" and "newChild2") at
     positions fourth and fifth respectively.
 
 * @author NIST
@@ -17374,7 +17374,7 @@ TEST("nodeinsertbeforedocfragment", function() {
       var childName;
       var appendedChild;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17399,18 +17399,18 @@ TEST("nodeinsertbeforedocfragment", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("newChild2",childName),"childName4");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if this node is of
     a type that does not allow children of the type "newChild"
     to be inserted.
-    
+
     Retrieve the root node and attempt to insert a newly
     created Attr node.   An Element node cannot have children
     of the "Attr" type, therefore the desired exception
@@ -17432,7 +17432,7 @@ TEST("nodeinsertbeforeinvalidnodetype", function() {
       var elementList;
       var refChild;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17443,7 +17443,7 @@ TEST("nodeinsertbeforeinvalidnodetype", function() {
       newChild = doc.createAttribute("newAttribute");
       elementList = doc.getElementsByTagName("employee");
       refChild = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -17460,13 +17460,13 @@ TEST("nodeinsertbeforeinvalidnodetype", function() {
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     WRONG_DOCUMENT_ERR DOMException if the "newChild" was
-    created from a different document than the one that 
+    created from a different document than the one that
     created this node.
-    
-    Retrieve the second employee and attempt to insert a new 
+
+    Retrieve the second employee and attempt to insert a new
     child that was created from a different document than the
     one that created the second employee.   An attempt to
     insert such a child should raise the desired exception.
@@ -17487,13 +17487,13 @@ TEST("nodeinsertbeforenewchilddiffdocument", function() {
       var elementList;
       var elementNode;
       var insertedNode;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -17504,7 +17504,7 @@ TEST("nodeinsertbeforenewchilddiffdocument", function() {
       elementNode = elementList.item(1);
       refChild = elementNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -17521,13 +17521,13 @@ TEST("nodeinsertbeforenewchilddiffdocument", function() {
 
 
 /**
-* 
+*
     If the "newChild" is already in the tree, the
     "insertBefore(newChild,refChild)" method must first
     remove it before the insertion takes place.
-    
+
     Insert a node Element ("employeeId") that is already
-    present in the tree.   The existing node should be 
+    present in the tree.   The existing node should be
     removed first and the new one inserted.   The node is
     inserted at a different position in the tree to assure
     that it was indeed inserted.
@@ -17575,7 +17575,7 @@ TEST("nodeinsertbeforenewchildexists", function() {
 
       var result = new Array();
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17587,21 +17587,21 @@ TEST("nodeinsertbeforenewchildexists", function() {
 
       length = childList.length;
 
-      
+
 	if(
 	(6 == length)
 	) {
 	expected =  expectedNoWhitespace;
 refChild = childList.item(5);
       newChild = childList.item(0);
-      
+
 	}
 	
 		else {
 			expected =  expectedWhitespace;
 refChild = childList.item(11);
       newChild = childList.item(1);
-      
+
 		}
 	insertedNode = employeeNode.insertBefore(newChild,refChild);
       for(var indexid2258859 = 0;indexid2258859 < childList.length; indexid2258859++) {
@@ -17612,20 +17612,20 @@ refChild = childList.item(11);
 
 	}
    ASSERT(DOM_LIST_EQ(expected,result),"childNames");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if the node to be
     inserted is one of this nodes ancestors.
-    
+
     Retrieve the second employee and attempt to insert a
-    node that is one of its ancestors(root node).   An 
-    attempt to insert such a node should raise the 
+    node that is one of its ancestors(root node).   An
+    attempt to insert such a node should raise the
     desired exception.
 
 * @author NIST
@@ -17645,7 +17645,7 @@ TEST("nodeinsertbeforenodeancestor", function() {
       var childList;
       var refChild;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17658,7 +17658,7 @@ TEST("nodeinsertbeforenodeancestor", function() {
       childList = employeeNode.childNodes;
 
       refChild = childList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -17675,13 +17675,13 @@ TEST("nodeinsertbeforenodeancestor", function() {
 
 
 /**
-* 
-    The "insertBefore(newChild,refchild)" method returns 
+*
+    The "insertBefore(newChild,refchild)" method returns
     the node being inserted.
-    
+
     Insert an Element node before the fourth
     child of the second employee and check the node
-    returned from the "insertBefore(newChild,refChild)" 
+    returned from the "insertBefore(newChild,refChild)"
     method.   The node returned should be "newChild".
 
 * @author NIST
@@ -17699,7 +17699,7 @@ TEST("nodeinsertbeforenodename", function() {
       var newChild;
       var insertedNode;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17715,17 +17715,17 @@ TEST("nodeinsertbeforenodename", function() {
       childName = insertedNode.nodeName;
 
       ASSERT(STRICT_EQ("newChild",childName),"nodeInsertBeforeNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The "insertBefore(newChild,refChild)" method raises a 
+*
+    The "insertBefore(newChild,refChild)" method raises a
     NOT_FOUND_ERR DOMException if the reference child is
     not a child of this node.
-    
+
     Retrieve the second employee and attempt to insert a
     new node before a reference node that is not a child
     of this node.   An attempt to insert before a non child
@@ -17747,7 +17747,7 @@ TEST("nodeinsertbeforerefchildnonexistent", function() {
       var elementList;
       var elementNode;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17757,7 +17757,7 @@ TEST("nodeinsertbeforerefchildnonexistent", function() {
       refChild = doc.createElement("refChild");
       elementList = doc.getElementsByTagName("employee");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -17774,11 +17774,11 @@ TEST("nodeinsertbeforerefchildnonexistent", function() {
 
 
 /**
-* 
+*
     If the "refChild" is null then the
     "insertBefore(newChild,refChild)" method inserts the
-    node "newChild" at the end of the list of children. 
-    
+    node "newChild" at the end of the list of children.
+
     Retrieve the second employee and invoke the
     "insertBefore(newChild,refChild)" method with
     refChild=null.   Since "refChild" is null the "newChild"
@@ -17802,7 +17802,7 @@ TEST("nodeinsertbeforerefchildnull", function() {
       var child;
       var childName;
       var insertedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17819,13 +17819,13 @@ TEST("nodeinsertbeforerefchildnull", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("newChild",childName),"nodeInsertBeforeRefChildNullAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
    Create a list of all the children elements of the third
    employee and access its first child by using an index
    of 0.
@@ -17842,7 +17842,7 @@ TEST("nodelistindexequalzero", function() {
       var employeeList;
       var child;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17855,12 +17855,12 @@ TEST("nodelistindexequalzero", function() {
       child = employeeList.item(0);
       childName = child.nodeName;
 
-      
+
 	if(
 	!("#text" == childName)
 	) {
 	ASSERT(STRICT_EQ("employeeId",childName),"childName");
-       
+
 	}
 	
 });
@@ -17868,7 +17868,7 @@ TEST("nodelistindexequalzero", function() {
 
 
 /**
-* 
+*
     The "getLength()" method returns the number of nodes
    in the list should be 6 (no whitespace) or 13.
 
@@ -17884,7 +17884,7 @@ TEST("nodelistindexgetlength", function() {
       var employeeList;
       var length;
       var expectedCount = 0;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17897,7 +17897,7 @@ TEST("nodelistindexgetlength", function() {
       length = employeeList.length;
 
       	assertTrue("lengthIs6or13",
-      
+
 	((6 == length) || (13 == length))
 );
 
@@ -17906,11 +17906,11 @@ TEST("nodelistindexgetlength", function() {
 
 
 /**
-* 
+*
     The "getLength()" method returns the number of nodes
    in the list.(Test for EMPTY list)
-   
-   Create a list of all the children of the Text node 
+
+   Create a list of all the children of the Text node
    inside the first child of the third employee and
    invoke the "getLength()" method.   It should contain
    the value 0.
@@ -17928,7 +17928,7 @@ TEST("nodelistindexgetlengthofemptylist", function() {
       var childNode;
       var textNode;
       var textList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17950,7 +17950,7 @@ TEST("nodelistindexgetlengthofemptylist", function() {
 
 
 /**
-* 
+*
    Create a list of all the children elements of the third
    employee and access its fourth child by using an index
    of 3.  This should result in "name" being
@@ -17971,7 +17971,7 @@ TEST("nodelistindexnotzero", function() {
       var child;
       var length;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -17983,28 +17983,28 @@ TEST("nodelistindexnotzero", function() {
 
       length = employeeList.length;
 
-      
+
 	if(
 	(6 == length)
 	) {
 	child = employeeList.item(1);
-      
+
 	}
 	
 		else {
 			child = employeeList.item(3);
-      
+
 		}
 	childName = child.nodeName;
 
       ASSERT(STRICT_EQ("name",childName),"nodeName");
-       
+
 });
 
 
 
 /**
-* 
+*
 Get the first child of the third employee using NodeList.item(0)
 which will either be a Text node (whitespace) or employeeId element.
 
@@ -18021,7 +18021,7 @@ TEST("nodelistreturnfirstitem", function() {
       var child;
       var childName;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18036,17 +18036,17 @@ TEST("nodelistreturnfirstitem", function() {
 
       length = employeeList.length;
 
-      
+
 	if(
 	(6 == length)
 	) {
 	ASSERT(STRICT_EQ("employeeId".toLowerCase(),childName.toLowerCase()),"firstChildNoWhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("#text".toLowerCase(),childName.toLowerCase()),"firstChildWithWhitespace");
-       
+
 		}
 	
 });
@@ -18054,7 +18054,7 @@ TEST("nodelistreturnfirstitem", function() {
 
 
 /**
-* 
+*
 Get this last child of the third employee using NodeList.item(NodeList.length - 1)
 and check that it is either a Text element (with whitespace) or an address element.
 
@@ -18071,7 +18071,7 @@ TEST("nodelistreturnlastitem", function() {
       var child;
       var childName;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18083,7 +18083,7 @@ TEST("nodelistreturnlastitem", function() {
 
       length = employeeList.length;
 
-      
+
 	if(
 	(6 == length)
 	) {
@@ -18091,7 +18091,7 @@ TEST("nodelistreturnlastitem", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("address",childName),"nodeName1");
-       
+
 	}
 	
 		else {
@@ -18099,7 +18099,7 @@ TEST("nodelistreturnlastitem", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("#text",childName),"nodeName2");
-       
+
 		}
 	
 });
@@ -18107,12 +18107,12 @@ TEST("nodelistreturnlastitem", function() {
 
 
 /**
-* 
+*
     The range of valid child node indices is 0 thru length -1
-   
+
    Create a list of all the children elements of the third
    employee and traverse the list from index=0 thru
-   length -1.     
+   length -1.
 
 * @author NIST
 * @author Mary Brady
@@ -18153,7 +18153,7 @@ TEST("nodelisttraverselist", function() {
       expectedNoWhitespace[4] = "gender";
       expectedNoWhitespace[5] = "address";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18172,17 +18172,17 @@ TEST("nodelisttraverselist", function() {
       result[result.length] = childName;
 
 	}
-   
+
 	if(
 	(6 == length)
 	) {
 	ASSERT(DOM_LIST_EQ(expectedNoWhitespace,result),"nowhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(DOM_LIST_EQ(expectedWhitespace,result),"whitespace");
-       
+
 		}
 	
 });
@@ -18190,11 +18190,11 @@ TEST("nodelisttraverselist", function() {
 
 
 /**
-* 
+*
     The "getParentNode()" method returns the parent
-    of this node. 
-    
-    Retrieve the second employee and invoke the 
+    of this node.
+
+    Retrieve the second employee and invoke the
     "getParentNode()" method on this node.   It should
     be set to "staff".
 
@@ -18210,7 +18210,7 @@ TEST("nodeparentnode", function() {
       var employeeNode;
       var parentNode;
       var parentName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18222,19 +18222,19 @@ TEST("nodeparentnode", function() {
 
       parentName = parentNode.nodeName;
 
-      
+
 	if(
 	
 	(builder.contentType == "image/svg+xml")
 
 	) {
 	ASSERT(STRICT_EQ("svg",parentName),"svgTagName");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("staff",parentName),"nodeParentNodeAssert1");
-       
+
 		}
 	
 });
@@ -18242,11 +18242,11 @@ TEST("nodeparentnode", function() {
 
 
 /**
-* 
+*
     The "getParentNode()" method invoked on a node that has
-    just been created and not yet added to the tree is null. 
+    just been created and not yet added to the tree is null.
 
-    Create a new "employee" Element node using the             
+    Create a new "employee" Element node using the
     "createElement(name)" method from the Document interface.
     Since this new node has not yet been added to the tree,
     the "getParentNode()" method will return null.
@@ -18260,7 +18260,7 @@ TEST("nodeparentnodenull", function() {
     var doc;
       var createdNode;
       var parentNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18270,23 +18270,23 @@ TEST("nodeparentnodenull", function() {
       parentNode = createdNode.parentNode;
 
       ASSERT(NULL(parentNode),"parentNode");
-    
+
 });
 
 
 
 /**
-* 
+*
 
-    The "getAttributes()" method invoked on a Processing 
+    The "getAttributes()" method invoked on a Processing
 
     Instruction Node returns null.
 
-    
 
-    Retrieve the Processing Instruction node and invoke 
 
-    the "getAttributes()" method.   It should return null. 
+    Retrieve the Processing Instruction node and invoke
+
+    the "getAttributes()" method.   It should return null.
 
 
 * @author NIST
@@ -18299,7 +18299,7 @@ TEST("nodeprocessinginstructionnodeattributes", function() {
       var testList;
       var piNode;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18311,25 +18311,25 @@ TEST("nodeprocessinginstructionnodeattributes", function() {
       attrList = piNode.attributes;
 
       ASSERT(NULL(attrList),"nodeProcessingInstructionNodeAttrAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
 
-    The string returned by the "getNodeName()" method for a 
+    The string returned by the "getNodeName()" method for a
 
     Processing Instruction Node is the target.
 
-    
 
-    Retrieve the Processing Instruction Node in the XML file 
 
-    and check the string returned by the "getNodeName()" 
+    Retrieve the Processing Instruction Node in the XML file
 
-    method.   It should be equal to "XML-STYLE". 
+    and check the string returned by the "getNodeName()"
+
+    method.   It should be equal to "XML-STYLE".
 
 
 * @author NIST
@@ -18342,7 +18342,7 @@ TEST("nodeprocessinginstructionnodename", function() {
       var testList;
       var piNode;
       var piName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18354,25 +18354,25 @@ TEST("nodeprocessinginstructionnodename", function() {
       piName = piNode.nodeName;
 
       ASSERT(STRICT_EQ("TEST-STYLE",piName),"nodeProcessingInstructionNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 
-    The "getNodeType()" method for a Processing Instruction 
+    The "getNodeType()" method for a Processing Instruction
 
     node returns the constant value 7.
 
-    
+
 
     Retrieve a NodeList of child elements from the document.
 
-    Retrieve the first child and invoke the "getNodeType()"   
+    Retrieve the first child and invoke the "getNodeType()"
 
-    method.   The method should return 7. 
+    method.   The method should return 7.
 
 
 * @author NIST
@@ -18385,7 +18385,7 @@ TEST("nodeprocessinginstructionnodetype", function() {
       var testList;
       var piNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18397,19 +18397,19 @@ TEST("nodeprocessinginstructionnodetype", function() {
       nodeType = piNode.nodeType;
 
       ASSERT(STRICT_EQ(7,nodeType),"nodeProcessingInstructionNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Processing Instruction Node is the content of the
     Processing Instruction(exclude the target).
-    
-    Retrieve the Processing Instruction node in the XML file 
-    and check the string returned by the "getNodeValue()" 
+
+    Retrieve the Processing Instruction node in the XML file
+    and check the string returned by the "getNodeValue()"
     method.   It should be equal to "PIDATA".
 
 * @author NIST
@@ -18422,7 +18422,7 @@ TEST("nodeprocessinginstructionnodevalue", function() {
       var testList;
       var piNode;
       var piValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18434,13 +18434,13 @@ TEST("nodeprocessinginstructionnodevalue", function() {
       piValue = piNode.nodeValue;
 
       ASSERT(STRICT_EQ("PIDATA",piValue),"value");
-       
+
 });
 
 
 
 /**
-* 
+*
     Setting the nodeValue should change the value returned by
     nodeValue and ProcessingInstruction.getData.
 
@@ -18456,7 +18456,7 @@ TEST("nodeprocessinginstructionsetnodevalue", function() {
       var testList;
       var piNode;
       var piValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18473,17 +18473,17 @@ TEST("nodeprocessinginstructionsetnodevalue", function() {
        piValue = piNode.data;
 
       ASSERT(STRICT_EQ("Something different",piValue),"data");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "removeChild(oldChild)" method removes the child node
     indicated by "oldChild" from the list of children and
-    returns it. 
-    
+    returns it.
+
     Remove the first employee by invoking the
     "removeChild(oldChild)" method an checking the
     node returned by the "getParentNode()" method.   It
@@ -18501,7 +18501,7 @@ TEST("noderemovechild", function() {
       var childToRemove;
       var removedChild;
       var parentNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18516,15 +18516,15 @@ TEST("noderemovechild", function() {
       parentNode = removedChild.parentNode;
 
       ASSERT(NULL(parentNode),"nodeRemoveChildAssert1");
-    
+
 });
 
 
 
 /**
-* 
-    Remove the first child of the second employee 
-    and check the NodeName returned by the 
+*
+    Remove the first child of the second employee
+    and check the NodeName returned by the
     "removeChild(oldChild)" method.   The returned node
     should have a NodeName equal to "#text" or employeeId depending on whitespace.
 
@@ -18543,7 +18543,7 @@ TEST("noderemovechildgetnodename", function() {
       var removedChild;
       var childName;
       var length;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18559,17 +18559,17 @@ TEST("noderemovechildgetnodename", function() {
       removedChild = employeeNode.removeChild(oldChild);
       childName = removedChild.nodeName;
 
-      
+
 	if(
 	(6 == length)
 	) {
 	ASSERT(STRICT_EQ("employeeId",childName),"nowhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("#text",childName),"whitespace");
-       
+
 		}
 	
 });
@@ -18577,9 +18577,9 @@ TEST("noderemovechildgetnodename", function() {
 
 
 /**
-* 
+*
     Retrieve the second employee and remove its first child.
-    After the removal, the second employee should have five or twelve 
+    After the removal, the second employee should have five or twelve
     children and the first child should now be the child
     that used to be at the second position in the list.
 
@@ -18599,7 +18599,7 @@ TEST("noderemovechildnode", function() {
       var length;
       var removedChild;
       var removedName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18618,20 +18618,20 @@ TEST("noderemovechildnode", function() {
 
       length = childList.length;
 
-      
+
 	if(
 	(5 == length)
 	) {
 	ASSERT(STRICT_EQ("employeeId",removedName),"removedNameNoWhitespace");
        ASSERT(STRICT_EQ("name",childName),"childNameNoWhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("#text",removedName),"removedName");
        ASSERT(STRICT_EQ("employeeId",childName),"childName");
        ASSERT(STRICT_EQ(12,length),"length");
-       
+
 		}
 	
 });
@@ -18639,11 +18639,11 @@ TEST("noderemovechildnode", function() {
 
 
 /**
-* 
-    The "removeChild(oldChild)" method raises a 
+*
+    The "removeChild(oldChild)" method raises a
     NOT_FOUND_ERR DOMException if the old child is
     not a child of this node.
-    
+
     Retrieve the second employee and attempt to remove a
     node that is not one of its children.   An attempt to
     remove such a node should raise the desired exception.
@@ -18663,7 +18663,7 @@ TEST("noderemovechildoldchildnonexistent", function() {
       var elementList;
       var elementNode;
       var removedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18672,7 +18672,7 @@ TEST("noderemovechildoldchildnonexistent", function() {
       oldChild = doc.createElement("oldChild");
       elementList = doc.getElementsByTagName("employee");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -18689,10 +18689,10 @@ TEST("noderemovechildoldchildnonexistent", function() {
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method replaces 
-    the node "oldChild" with the node "newChild". 
-    
+*
+    The "replaceChild(newChild,oldChild)" method replaces
+    the node "oldChild" with the node "newChild".
+
     Replace the first element of the second employee with
     a newly created Element node.   Check the first position
     after the replacement operation is completed.   The new
@@ -18713,7 +18713,7 @@ TEST("nodereplacechild", function() {
       var child;
       var childName;
       var replacedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18730,19 +18730,19 @@ TEST("nodereplacechild", function() {
       childName = child.nodeName;
 
       ASSERT(STRICT_EQ("newChild",childName),"nodeReplaceChildAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if this node is of
     a type that does not allow children of the type "newChild"
     to be inserted.
-    
-    Retrieve the root node and attempt to replace 
+
+    Retrieve the root node and attempt to replace
     one of its children with a newly created Attr node.
     An Element node cannot have children of the "Attr"
     type, therefore the desired exception should be raised.
@@ -18763,7 +18763,7 @@ TEST("nodereplacechildinvalidnodetype", function() {
       var elementList;
       var oldChild;
       var replacedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18774,7 +18774,7 @@ TEST("nodereplacechildinvalidnodetype", function() {
       newChild = doc.createAttribute("newAttribute");
       elementList = doc.getElementsByTagName("employee");
       oldChild = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -18791,15 +18791,15 @@ TEST("nodereplacechildinvalidnodetype", function() {
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     WRONG_DOCUMENT_ERR DOMException if the "newChild" was
-    created from a different document than the one that 
+    created from a different document than the one that
     created this node.
-    
-    Retrieve the second employee and attempt to replace one   
-    of its children with a node created from a different 
-    document.   An attempt to make such a replacement 
+
+    Retrieve the second employee and attempt to replace one
+    of its children with a node created from a different
+    document.   An attempt to make such a replacement
     should raise the desired exception.
 
 * @author NIST
@@ -18818,13 +18818,13 @@ TEST("nodereplacechildnewchilddiffdocument", function() {
       var elementList;
       var elementNode;
       var replacedChild;
-      
+
       var doc1Ref = null;
       if (typeof(this.doc1) != 'undefined') {
         doc1Ref = this.doc1;
       }
       doc1 = load(doc1Ref, "doc1", "staff");
-      
+
       var doc2Ref = null;
       if (typeof(this.doc2) != 'undefined') {
         doc2Ref = this.doc2;
@@ -18835,7 +18835,7 @@ TEST("nodereplacechildnewchilddiffdocument", function() {
       elementNode = elementList.item(1);
       oldChild = elementNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -18852,10 +18852,10 @@ TEST("nodereplacechildnewchilddiffdocument", function() {
 
 
 /**
-* 
-    Retrieve the second employee and replace its TWELFTH 
+*
+    Retrieve the second employee and replace its TWELFTH
     child(address) with its SECOND child(employeeId).   After the
-    replacement the second child should now be the one that used   
+    replacement the second child should now be the one that used
     to be at the third position and the TWELFTH child should be the
     one that used to be at the SECOND position.
 
@@ -18902,7 +18902,7 @@ TEST("nodereplacechildnewchildexists", function() {
       expectedWithWhitespace[11] = "#text";
 
       var replacedChild;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18914,7 +18914,7 @@ TEST("nodereplacechildnewchildexists", function() {
 
       length = childList.length;
 
-      
+
 	if(
 	(13 == length)
 	) {
@@ -18940,20 +18940,20 @@ for(var indexid2258967 = 0;indexid2258967 < childList.length; indexid2258967++) 
 
 	}
    ASSERT(DOM_LIST_EQ(expected,actual),"childNames");
-       
+
 });
 
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     HIERARCHY_REQUEST_ERR DOMException if the node to put
     in is one of this node's ancestors.
-    
+
     Retrieve the second employee and attempt to replace
     one of its children with an ancestor node(root node).
-    An attempt to make such a replacement should raise the 
+    An attempt to make such a replacement should raise the
     desired exception.
 
 * @author NIST
@@ -18973,7 +18973,7 @@ TEST("nodereplacechildnodeancestor", function() {
       var childList;
       var oldChild;
       var replacedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -18986,7 +18986,7 @@ TEST("nodereplacechildnodeancestor", function() {
       childList = employeeNode.childNodes;
 
       oldChild = childList.item(0);
-      
+
 	{
 		success = false;
 		try {
@@ -19003,9 +19003,9 @@ TEST("nodereplacechildnodeancestor", function() {
 
 
 /**
-* 
+*
     Replace the second Element of the second employee with
-    a newly created node Element and check the NodeName 
+    a newly created node Element and check the NodeName
     returned by the "replaceChild(newChild,oldChild)"
     method.   The returned node should have a NodeName equal
     to "employeeId".
@@ -19026,7 +19026,7 @@ TEST("nodereplacechildnodename", function() {
       var replacedNode;
       var length;
       var childName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19043,17 +19043,17 @@ TEST("nodereplacechildnodename", function() {
       replacedNode = employeeNode.replaceChild(newChild,oldChild);
       childName = replacedNode.nodeName;
 
-      
+
 	if(
 	(6 == length)
 	) {
 	ASSERT(STRICT_EQ("name",childName),"nowhitespace");
-       
+
 	}
 	
 		else {
 			ASSERT(STRICT_EQ("employeeId",childName),"whitespace");
-       
+
 		}
 	
 });
@@ -19061,11 +19061,11 @@ TEST("nodereplacechildnodename", function() {
 
 
 /**
-* 
-    The "replaceChild(newChild,oldChild)" method raises a 
+*
+    The "replaceChild(newChild,oldChild)" method raises a
     NOT_FOUND_ERR DOMException if the old child is
     not a child of this node.
-    
+
     Retrieve the second employee and attempt to replace a
     node that is not one of its children.   An attempt to
     replace such a node should raise the desired exception.
@@ -19086,7 +19086,7 @@ TEST("nodereplacechildoldchildnonexistent", function() {
       var elementList;
       var elementNode;
       var replacedNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19096,7 +19096,7 @@ TEST("nodereplacechildoldchildnonexistent", function() {
       oldChild = doc.createElement("oldChild");
       elementList = doc.getElementsByTagName("employee");
       elementNode = elementList.item(1);
-      
+
 	{
 		success = false;
 		try {
@@ -19113,7 +19113,7 @@ TEST("nodereplacechildoldchildnonexistent", function() {
 
 
 /**
-* 
+*
 The "getAttributes()" method invoked on a Text
 Node returns null.
 
@@ -19133,7 +19133,7 @@ TEST("nodetextnodeattribute", function() {
       var testAddr;
       var textNode;
       var attrList;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19146,27 +19146,27 @@ TEST("nodetextnodeattribute", function() {
       attrList = textNode.attributes;
 
       ASSERT(NULL(attrList),"nodeTextNodeAttributesAssert1");
-    
+
 });
 
 
 
 /**
-* 
+*
 
-    The string returned by the "getNodeName()" method for a 
+    The string returned by the "getNodeName()" method for a
 
     Text Node is "#text".
 
-    
+
 
     Retrieve the Text Node from the last child of the
 
-    first employee and check the string returned 
+    first employee and check the string returned
 
-    by the "getNodeName()" method.   It should be equal to 
+    by the "getNodeName()" method.   It should be equal to
 
-    "#text". 
+    "#text".
 
 
 * @author NIST
@@ -19180,7 +19180,7 @@ TEST("nodetextnodename", function() {
       var testAddr;
       var textNode;
       var textName;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19193,25 +19193,25 @@ TEST("nodetextnodename", function() {
       textName = textNode.nodeName;
 
       ASSERT(STRICT_EQ("#text",textName),"nodeTextNodeNameAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 
     The "getNodeType()" method for a Text Node
 
     returns the constant value 3.
 
-     
+
 
     Retrieve the Text node from the last child of
 
-    the first employee and invoke the "getNodeType()"   
+    the first employee and invoke the "getNodeType()"
 
-    method.   The method should return 3. 
+    method.   The method should return 3.
 
 
 * @author NIST
@@ -19225,7 +19225,7 @@ TEST("nodetextnodetype", function() {
       var testAddr;
       var textNode;
       var nodeType;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19238,20 +19238,20 @@ TEST("nodetextnodetype", function() {
       nodeType = textNode.nodeType;
 
       ASSERT(STRICT_EQ(3,nodeType),"nodeTextNodeTypeAssert1");
-       
+
 });
 
 
 
 /**
-* 
-    The string returned by the "getNodeValue()" method for a 
+*
+    The string returned by the "getNodeValue()" method for a
     Text Node is the content of the Text node.
-    
-    Retrieve the Text node from the last child of the first 
-    employee and check the string returned by the 
-    "getNodeValue()" method.   It should be equal to 
-    "1230 North Ave. Dallas, Texas 98551". 
+
+    Retrieve the Text node from the last child of the first
+    employee and check the string returned by the
+    "getNodeValue()" method.   It should be equal to
+    "1230 North Ave. Dallas, Texas 98551".
 
 * @author NIST
 * @author Mary Brady
@@ -19264,7 +19264,7 @@ TEST("nodetextnodevalue", function() {
       var testAddr;
       var textNode;
       var textValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19277,13 +19277,13 @@ TEST("nodetextnodevalue", function() {
       textValue = textNode.nodeValue;
 
       ASSERT(STRICT_EQ("1230 North Ave. Dallas, Texas 98551",textValue),"nodeTextNodeValueAssert1");
-       
+
 });
 
 
 
 /**
-* 
+*
 An element is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -19296,7 +19296,7 @@ TEST("nodevalue01", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19311,13 +19311,13 @@ TEST("nodevalue01", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-    
+
 });
 
 
 
 /**
-* 
+*
 An comment is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -19330,7 +19330,7 @@ TEST("nodevalue02", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19345,13 +19345,13 @@ TEST("nodevalue02", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("This should have an effect",newValue),"afterChange");
-       
+
 });
 
 
 
 /**
-* 
+*
 A document fragment is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -19364,7 +19364,7 @@ TEST("nodevalue05", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19379,13 +19379,13 @@ TEST("nodevalue05", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-    
+
 });
 
 
 
 /**
-* 
+*
 An document is accessed, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -19397,7 +19397,7 @@ TEST("nodevalue06", function() {
    var success;
     var newNode;
       var newValue;
-      
+
       var newNodeRef = null;
       if (typeof(this.newNode) != 'undefined') {
         newNodeRef = this.newNode;
@@ -19411,13 +19411,13 @@ TEST("nodevalue06", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(NULL(newValue),"nullAfterAttemptedChange");
-    
+
 });
 
 
 
 /**
-* 
+*
 An processing instruction is created, setNodeValue is called with a non-null argument, but getNodeValue
 should still return null.
 
@@ -19430,7 +19430,7 @@ TEST("nodevalue09", function() {
     var doc;
       var newNode;
       var newValue;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19445,20 +19445,20 @@ TEST("nodevalue09", function() {
       newValue = newNode.nodeValue;
 
       ASSERT(STRICT_EQ("This should have an effect",newValue),"after");
-       
+
 });
 
 
 
 /**
-* 
-    The "getData()" method returns the content of the  
+*
+    The "getData()" method returns the content of the
    processing instruction.  It starts at the first non
    white character following the target and ends at the
    character immediately preceding the "?>".
-   
-   Retrieve the ProcessingInstruction node located  
-   immediately after the prolog.  Create a nodelist of the 
+
+   Retrieve the ProcessingInstruction node located
+   immediately after the prolog.  Create a nodelist of the
    child nodes of this document.  Invoke the "getData()"
    method on the first child in the list. This should
    return the content of the ProcessingInstruction.
@@ -19473,7 +19473,7 @@ TEST("processinginstructiongetdata", function() {
       var childNodes;
       var piNode;
       var data;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19485,19 +19485,19 @@ TEST("processinginstructiongetdata", function() {
       data = piNode.data;
 
       ASSERT(STRICT_EQ("PIDATA",data),"processinginstructionGetTargetAssert");
-       
+
 });
 
 
 
 /**
-* 
-    The "getTarget()" method returns the target of the  
+*
+    The "getTarget()" method returns the target of the
    processing instruction.  It is the first token following
    the markup that begins the processing instruction.
-   
-   Retrieve the ProcessingInstruction node located  
-   immediately after the prolog.  Create a nodelist of the 
+
+   Retrieve the ProcessingInstruction node located
+   immediately after the prolog.  Create a nodelist of the
    child nodes of this document.  Invoke the "getTarget()"
    method on the first child in the list. This should
    return the target of the ProcessingInstruction.
@@ -19512,7 +19512,7 @@ TEST("processinginstructiongettarget", function() {
       var childNodes;
       var piNode;
       var target;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19524,18 +19524,18 @@ TEST("processinginstructiongettarget", function() {
       target = piNode.target;
 
       ASSERT(STRICT_EQ("TEST-STYLE",target),"processinginstructionGetTargetAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "splitText(offset)" method raises an
     INDEX_SIZE_ERR DOMException if the specified offset is
     negative.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The desired exception should be raised since the offset
     is a negative number.
@@ -19553,7 +19553,7 @@ TEST("textindexsizeerrnegativeoffset", function() {
       var nameNode;
       var textNode;
       var splitNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19563,7 +19563,7 @@ TEST("textindexsizeerrnegativeoffset", function() {
       nameNode = elementList.item(2);
       textNode = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -19580,12 +19580,12 @@ TEST("textindexsizeerrnegativeoffset", function() {
 
 
 /**
-* 
+*
     The "splitText(offset)" method raises an
     INDEX_SIZE_ERR DOMException if the specified offset is
     greater than the number of characters in the Text node.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The desired exception should be raised since the offset
     is a greater than the number of characters in the Text
@@ -19605,7 +19605,7 @@ TEST("textindexsizeerroffsetoutofbounds", function() {
       var nameNode;
       var textNode;
       var splitNode;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19615,7 +19615,7 @@ TEST("textindexsizeerroffsetoutofbounds", function() {
       nameNode = elementList.item(2);
       textNode = nameNode.firstChild;
 
-      
+
 	{
 		success = false;
 		try {
@@ -19632,9 +19632,9 @@ TEST("textindexsizeerroffsetoutofbounds", function() {
 
 
 /**
-* 
-    Retrieve the textual data from the last child of the 
-    second employee.   That node is composed of two   
+*
+    Retrieve the textual data from the last child of the
+    second employee.   That node is composed of two
     EntityReference nodes and two Text nodes.   After
     the content node is parsed, the "address" Element
     should contain four children with each one of the
@@ -19667,7 +19667,7 @@ TEST("textparseintolistofelements", function() {
       expectedExpanded = new Array();
       expectedExpanded[0] = "1900 Dallas Road Dallas, Texas\n 98554";
 
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19683,7 +19683,7 @@ TEST("textparseintolistofelements", function() {
       child = childList.item(indexid2258719);
       value = child.nodeValue;
 
-      
+
 	if(
 	
 	(value == null)
@@ -19704,17 +19704,17 @@ value = grandChild.nodeValue;
 		}
 	
 	}
-   
+
 	if(
 	(4 == length)
 	) {
 	ASSERT(DOM_LIST_EQ(expectedNormal,result),"assertEqNormal");
-       
+
 	}
 	
 		else {
 			ASSERT(DOM_LIST_EQ(expectedExpanded,result),"assertEqCoalescing");
-       
+
 		}
 	
 });
@@ -19722,10 +19722,10 @@ value = grandChild.nodeValue;
 
 
 /**
-* 
+*
     The "splitText(offset)" method returns the new Text node.
-    
-    Retrieve the textual data from the last child of the 
+
+    Retrieve the textual data from the last child of the
     first employee and invoke the "splitText(offset)" method.
     The method should return the new Text node.   The offset
     value used for this test is 30.   The "getNodeValue()"
@@ -19745,7 +19745,7 @@ TEST("textsplittextfour", function() {
       var textNode;
       var splitNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19759,18 +19759,18 @@ TEST("textsplittextfour", function() {
       value = splitNode.nodeValue;
 
       ASSERT(STRICT_EQ("98551",value),"textSplitTextFourAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     The "splitText(offset)" method breaks the Text node into
     two Text nodes at the specified offset keeping each node
     as siblings in the tree.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The method splits the Text node into two new sibling
     Text nodes keeping both of them in the tree.   This test
@@ -19790,7 +19790,7 @@ TEST("textsplittextone", function() {
       var splitNode;
       var secondPart;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19806,18 +19806,18 @@ TEST("textsplittextone", function() {
       value = secondPart.nodeValue;
 
       ASSERT(STRICT_EQ("Jones",value),"textSplitTextOneAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     After the "splitText(offset)" method breaks the Text node
     into two Text nodes, the new Text node contains all the
     content at and after the offset point.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The new Text node should contain all the content
     at and after the offset point.   The "getNodeValue()"
@@ -19837,7 +19837,7 @@ TEST("textsplittextthree", function() {
       var textNode;
       var splitNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19851,18 +19851,18 @@ TEST("textsplittextthree", function() {
       value = splitNode.nodeValue;
 
       ASSERT(STRICT_EQ(" Jones",value),"textSplitTextThreeAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     After the "splitText(offset)" method breaks the Text node
     into two Text nodes, the original node contains all the
     content up to the offset point.
-    
-    Retrieve the textual data from the second child of the 
+
+    Retrieve the textual data from the second child of the
     third employee and invoke the "splitText(offset)" method.
     The original Text node should contain all the content
     up to the offset point.   The "getNodeValue()" method
@@ -19881,7 +19881,7 @@ TEST("textsplittexttwo", function() {
       var textNode;
       var splitNode;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19895,22 +19895,22 @@ TEST("textsplittexttwo", function() {
       value = textNode.nodeValue;
 
       ASSERT(STRICT_EQ("Roger",value),"textSplitTextTwoAssert");
-       
+
 });
 
 
 
 /**
-* 
+*
     If there is not any markup inside an Element or Attr node
-    content, then the text is contained in a single object   
+    content, then the text is contained in a single object
     implementing the Text interface that is the only child
     of the element.
-    
-    Retrieve the textual data from the second child of the 
-    third employee.   That Text node contains a block of 
+
+    Retrieve the textual data from the second child of the
+    third employee.   That Text node contains a block of
     multiple text lines without markup, so they should be
-    treated as a single Text node.   The "getNodeValue()"    
+    treated as a single Text node.   The "getNodeValue()"
     method should contain the combination of the two lines.
 
 * @author NIST
@@ -19925,7 +19925,7 @@ TEST("textwithnomarkup", function() {
       var nameNode;
       var nodeV;
       var value;
-      
+
       var docRef = null;
       if (typeof(this.doc) != 'undefined') {
         docRef = this.doc;
@@ -19938,7 +19938,7 @@ TEST("textwithnomarkup", function() {
       value = nodeV.nodeValue;
 
       ASSERT(STRICT_EQ("Roger\n Jones",value),"textNodeValue");
-       
+
 });
 
 RUN_ALL_TESTS();

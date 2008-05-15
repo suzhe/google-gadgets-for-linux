@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -139,17 +139,17 @@ TEST(MathUtilsTest, GetChildCoord) {
     EXPECT_DOUBLE_EQ(i, child_y);
 
     // distance should be constant in a circular rotation around origin
-    ParentCoordToChildCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i), 
+    ParentCoordToChildCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i),
                             &child_x, &child_y);
     EXPECT_DOUBLE_EQ(20000., child_x * child_x + child_y * child_y);
 
     // distance should be constant in a circular rotation around top-left
-    ParentCoordToChildCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i), 
+    ParentCoordToChildCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i),
                             &child_x, &child_y);
     EXPECT_DOUBLE_EQ(20000., child_x * child_x + child_y * child_y);
 
     // distance to pin should be constant in a circular rotation
-    ParentCoordToChildCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i), 
+    ParentCoordToChildCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i),
                             &child_x, &child_y);
     EXPECT_NEAR(0., (child_x - 1) * (child_x - 1) +
                     (child_y - 1) * (child_y - 1), kErrorDelta);
@@ -196,17 +196,17 @@ TEST(MathUtilsTest, GetParentCoord) {
     EXPECT_DOUBLE_EQ(-i, parent_y);
 
     // distance should be constant in a circular rotation around origin
-    ChildCoordToParentCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i), 
+    ChildCoordToParentCoord(100, 100, 0, 0, 0, 0, DegreesToRadians(i),
                             &parent_x, &parent_y);
     EXPECT_DOUBLE_EQ(20000., parent_x * parent_x + parent_y * parent_y);
 
     // distance should be constant in a circular rotation around top-left
-    ChildCoordToParentCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i), 
+    ChildCoordToParentCoord(0, 0, 100, 100, 0, 0, DegreesToRadians(i),
                             &parent_x, &parent_y);
     EXPECT_DOUBLE_EQ(20000., parent_x * parent_x + parent_y * parent_y);
 
     // distance to pin should be constant in a circular rotation
-    ChildCoordToParentCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i), 
+    ChildCoordToParentCoord(0, 0, 0, 0, 1, 1, DegreesToRadians(i),
                             &parent_x, &parent_y);
     EXPECT_NEAR(2., parent_x * parent_x + parent_y * parent_y, kErrorDelta);
   }

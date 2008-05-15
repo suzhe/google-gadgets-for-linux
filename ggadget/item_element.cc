@@ -1,5 +1,5 @@
 /*
-  Copyright 2007 Google Inc.
+  Copyright 2008 Google Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ void ItemElement::SetSelected(bool selected) {
   }
 }
 
-std::string ItemElement::GetLabelText() const {  
+std::string ItemElement::GetLabelText() const {
   const Elements *elements = GetChildren();
   int childcount = elements->GetCount();
   for (int i = 0; i < childcount; i++) {
@@ -245,7 +245,7 @@ EventResult ItemElement::HandleMouseEvent(const MouseEvent &event) {
        }
 
        // If inside combobox, turn off droplist on click.
-       if (impl_->parent_->IsImplicit() && 
+       if (impl_->parent_->IsImplicit() &&
            impl_->parent_->GetParentElement() == GetView()->GetPopupElement()) {
          GetView()->SetPopupElement(NULL);
        }
