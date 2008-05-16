@@ -32,7 +32,9 @@ This project also depends on the following libraries:
  * [http://www.gtk.org gtk] >= 2.8.0, 2.10.0 or above is better.
  * [http://www.zlib.net zlib] >= 1.2.0
  * [http://www.mozilla.org xulrunner] >= 1.8
- * [http://trolltech.com Qt and QtWebKit] >= 4.3, optional, 4.4 is better.
+ * [http://www.freedesktop.org/wiki/Software/dbus D-Bus] >= 1.0.2
+ * [http://www.gstreamer.net/ gstreamer and gstreamer-plugin-base] >= 0.10.0
+ * [http://trolltech.com Qt and QtWebKit] >= 4.3, (it's optional, and 4.4 is better).
 
 These packages are included in most modern Linux distributions, you can install them using software management application provided by the distribution.
 
