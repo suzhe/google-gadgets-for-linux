@@ -72,11 +72,15 @@ class QtHost::Impl {
 
   void SetupUI() {
     qApp->setQuitOnLastWindowClosed(false);
-    menu_.addAction("Add gadget", obj_, SLOT(OnAddGadget()));
-    menu_.addAction("Show all", obj_, SLOT(OnShowAll()));
-    menu_.addAction("Hide all", obj_, SLOT(OnHideAll()));
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_ADD_GADGETS")),
+                    obj_, SLOT(OnAddGadget()));
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_SHOW_ALL")),
+                    obj_, SLOT(OnShowAll()));
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_HIDE_ALL")),
+                    obj_, SLOT(OnHideAll()));
     menu_.addSeparator();
-    menu_.addAction("Exit", qApp, SLOT(quit()));
+    menu_.addAction(QString::fromUtf8(GM_("MENU_ITEM_EXIT")),
+                    qApp, SLOT(quit()));
     tray_.setContextMenu(&menu_);
     QObject::connect(&tray_,
                      SIGNAL(activated(QSystemTrayIcon::ActivationReason)),

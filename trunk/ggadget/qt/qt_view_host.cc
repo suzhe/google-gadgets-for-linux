@@ -148,10 +148,16 @@ class QtViewHost::Impl {
   bool ShowView(bool modal, int flags,
                 Slot1<void, int> *feedback_handler) {
     ASSERT(view_);
-    ASSERT(!widget_);
     if (feedback_handler_ && feedback_handler_ != feedback_handler)
       delete feedback_handler_;
     feedback_handler_ = feedback_handler;
+
+    if (widget_) {
+      // we just move existing widget_ to the front
+      widget_->hide();
+      widget_->show();
+      return true;
+    }
 
     widget_ = new QtViewWidget(view_, composite_, decorated_);
     // Initialize window and widget.

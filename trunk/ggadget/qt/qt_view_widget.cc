@@ -381,10 +381,16 @@ void QtViewWidget::SetSize(int width, int height) {
 }
 
 void QtViewWidget::SetChild(QWidget *widget) {
+  if (child_) {
+    child_->setParent(NULL);
+  }
   child_ = widget;
-  widget->setParent(this);
-  // this will expose parent widget so its paintEvent will be triggered.
-  widget->move(0, 10);
+  if (widget) {
+    widget->setParent(this);
+    // this will expose parent widget so its paintEvent will be triggered.
+    widget->move(0, 10);
+  }
 }
+
 }
 }
