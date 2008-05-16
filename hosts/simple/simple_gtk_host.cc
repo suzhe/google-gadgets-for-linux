@@ -49,11 +49,13 @@ namespace hosts {
 namespace gtk {
 
 class SimpleGtkHost::Impl {
-  struct GadgetViewHostInfo {
-    GadgetViewHostInfo()
-      : main_(NULL), popout_(NULL), details_(NULL),
+  struct GadgetInfo {
+    GadgetInfo()
+      : gadget_(NULL), main_(NULL), popout_(NULL), details_(NULL),
         popout_on_right_(false), details_on_right_(false) {
     }
+
+    Gadget *gadget_;
 
     SingleViewHost *main_;
     SingleViewHost *popout_;
@@ -82,9 +84,9 @@ class SimpleGtkHost::Impl {
   }
 
   ~Impl() {
-    for (GadgetsMap::iterator it = gadgets_.begin();
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
-      delete it->second;
+      delete it->second.gadget_;
 
     gtk_widget_destroy(host_menu_);
 #if GTK_CHECK_VERSION(2,10,0) && defined(GGL_HOST_LINUX)
@@ -230,7 +232,8 @@ class SimpleGtkHost::Impl {
       return false;
     }
 
-    gadgets_[instance_id] = gadget;
+    gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
+    gadgets_[instance_id].gadget_ = gadget;
     return true;
   }
 
@@ -252,7 +255,7 @@ class SimpleGtkHost::Impl {
     if (type == ViewHostInterface::VIEW_HOST_MAIN) {
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::MAIN_STANDALONE,
                                   transparent_);
-      GadgetViewHostInfo *info = &view_hosts_[gadget_id];
+      GadgetInfo *info = &gadgets_[gadget_id];
       ASSERT(!info->main_);
       info->main_ = svh;
       info->main_decorator_ = dvh;
@@ -266,7 +269,7 @@ class SimpleGtkHost::Impl {
     } else {
       dvh = new DecoratedViewHost(svh, DecoratedViewHost::DETAILS,
                                   transparent_);
-      GadgetViewHostInfo *info = &view_hosts_[gadget_id];
+      GadgetInfo *info = &gadgets_[gadget_id];
       ASSERT(info->main_);
       ASSERT(!info->details_);
       info->details_ = svh;
@@ -301,11 +304,10 @@ class SimpleGtkHost::Impl {
   }
 
   void RemoveGadgetInstanceCallback(int instance_id) {
-    GadgetsMap::iterator it = gadgets_.find(instance_id);
+    GadgetInfoMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
-      view_hosts_.erase(instance_id);
-      delete it->second;
+      delete it->second.gadget_;
       gadgets_.erase(it);
     } else {
       LOG("Can't find gadget instance %d", instance_id);
@@ -336,16 +338,16 @@ class SimpleGtkHost::Impl {
   }
 
   void ShowAllMenuCallback(const char *) {
-    for (GadgetViewHostsMap::iterator it = view_hosts_.begin();
-         it != view_hosts_.end(); ++it) {
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it) {
       it->second.main_->ShowView(false, 0, NULL);
     }
     gadgets_shown_ = true;
   }
 
   void HideAllMenuCallback(const char *) {
-    for (GadgetViewHostsMap::iterator it = view_hosts_.begin();
-         it != view_hosts_.end(); ++it) {
+    for (GadgetInfoMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it) {
       it->second.main_->CloseView();
     }
     gadgets_shown_ = false;
@@ -409,7 +411,7 @@ class SimpleGtkHost::Impl {
 
       int gadget_id = child->GetGadget()->GetInstanceID();
 
-      GadgetViewHostInfo *info = &view_hosts_[gadget_id];
+      GadgetInfo *info = &gadgets_[gadget_id];
       ASSERT(info->main_);
       ASSERT(!info->popout_);
       info->popout_ = svh;
@@ -448,12 +450,12 @@ class SimpleGtkHost::Impl {
 
         // Clear the popout info.
         int gadget_id = child->GetGadget()->GetInstanceID();
-        view_hosts_[gadget_id].popout_ = NULL;
+        gadgets_[gadget_id].popout_ = NULL;
       }
     }
   }
 
-  void AdjustViewHostPosition(GadgetViewHostInfo *info) {
+  void AdjustViewHostPosition(GadgetInfo *info) {
     ASSERT(info && info->main_ && info->main_decorator_);
     int x, y;
     int width, height;
@@ -515,8 +517,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnMainViewShowHideHandler(bool show, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end()) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end()) {
       if (show) {
         if (it->second.popout_ && !it->second.popout_->IsVisible())
           it->second.popout_->ShowView(false, 0, NULL);
@@ -535,22 +537,22 @@ class SimpleGtkHost::Impl {
   }
 
   void OnMainViewResizedHandler(int width, int height, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end()) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end()) {
       AdjustViewHostPosition(&it->second);
     }
   }
 
   void OnMainViewMovedHandler(int x, int y, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end()) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end()) {
       AdjustViewHostPosition(&it->second);
     }
   }
 
   void OnPopOutViewShowHideHandler(bool show, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end() && it->second.popout_) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end() && it->second.popout_) {
       if (it->second.details_) {
         // Close Details whenever the popout view shows or hides.
         it->second.details_->CloseView();
@@ -562,8 +564,8 @@ class SimpleGtkHost::Impl {
   }
 
   bool OnPopOutViewBeginResizeHandler(int button, int hittest, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end() && it->second.popout_) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end() && it->second.popout_) {
       if (it->second.popout_on_right_)
         return hittest == ViewInterface::HT_LEFT ||
                hittest == ViewInterface::HT_TOPLEFT ||
@@ -581,8 +583,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnPopOutViewResizedHandler(int width, int height, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end() && it->second.popout_) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end() && it->second.popout_) {
       AdjustViewHostPosition(&it->second);
     }
   }
@@ -593,8 +595,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnDetailsViewShowHideHandler(bool show, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end() && it->second.details_) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end() && it->second.details_) {
       if (show) {
         AdjustViewHostPosition(&it->second);
       } else {
@@ -605,8 +607,8 @@ class SimpleGtkHost::Impl {
   }
 
   bool OnDetailsViewBeginResizeHandler(int button, int hittest, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end() && it->second.details_) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end() && it->second.details_) {
       if (it->second.details_on_right_)
         return hittest == ViewInterface::HT_LEFT ||
                hittest == ViewInterface::HT_TOPLEFT ||
@@ -624,8 +626,8 @@ class SimpleGtkHost::Impl {
   }
 
   void OnDetailsViewResizedHandler(int width, int height, int gadget_id) {
-    GadgetViewHostsMap::iterator it = view_hosts_.find(gadget_id);
-    if (it != view_hosts_.end() && it->second.details_) {
+    GadgetInfoMap::iterator it = gadgets_.find(gadget_id);
+    if (it != gadgets_.end() && it->second.details_) {
       AdjustViewHostPosition(&it->second);
     }
   }
@@ -661,14 +663,10 @@ class SimpleGtkHost::Impl {
       impl->ShowAllMenuCallback(NULL);
   }
 
-  typedef std::map<int, GadgetViewHostInfo> GadgetViewHostsMap;
-  typedef std::map<int, Gadget *> GadgetsMap;
+  typedef std::map<int, GadgetInfo> GadgetInfoMap;
+  GadgetInfoMap gadgets_;
 
   GadgetBrowserHost gadget_browser_host_;
-
-  GadgetViewHostsMap view_hosts_;
-  GadgetsMap gadgets_;
-
   SimpleGtkHost *owner_;
 
   double zoom_;

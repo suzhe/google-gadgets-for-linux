@@ -1,11 +1,8 @@
-DIRECTORY STRUCTURE
-===================
+The goal of this project is to provide a platform for running Google Gadgets
+under Linux.
 
-build:    Build output directory.
-cmake:    CMake modules.
-docs:     Documentations.
-examples: Source files of example gadgets.
-ggadget:  Source files of gadget library.
-hosts:    Source files of gadget container.
-testing:  Source files of Testing framework.
-utils:    Build scripts and utils.
+Please visit http://code.google.com/p/google-gadgets-for-linux/ for more
+details.
+
+For installation instruction, please read INSTALL file and:
+http://code.google.com/p/google-gadgets-for-linux/wiki/HowToBuild
