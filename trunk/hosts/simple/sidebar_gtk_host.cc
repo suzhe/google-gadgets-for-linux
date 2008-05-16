@@ -13,6 +13,11 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+//TODO: monitor the resize of popouted element
+//TODO: add map structure to manage the function of gadget and mainview/detailview etc
+//TODO: replace the sidebar by monitoring sidebar's ShowHide signal
+//TODO: autohide's problem: by shown by mouse over; should not hide if our other
+//window get the focus
 
 #include "sidebar_gtk_host.h"
 
@@ -54,10 +59,12 @@ const char *kOptionPosition     = "position";
 const char *kOptionFontSize     = "font-size";
 const char *kOptionWidth        = "width";
 const char *kOptionMonitor      = "monitor";
+const char *kDisplayTarget      = "display_target";
 
-const int kDefaultFontSize     = 14;
-const int kDefaultSidebarWidth = 200;
-const int kDefaultMonitor      = 0;
+const int kDefaultFontSize         = 14;
+const int kDefaultSidebarWidth     = 200;
+const int kDefaultMonitor          = 0;
+const int kSidebarMinimizedHeight  = 28;
 
 enum SideBarPosition {
   SIDEBAR_POSITION_NONE,
@@ -67,82 +74,27 @@ enum SideBarPosition {
 
 class SidebarGtkHost::Impl {
  public:
-  class GadgetMoveClosure {
+  // TODO:refactor this class
+  class GadgetClosure {
    public:
-    GadgetMoveClosure(SidebarGtkHost::Impl *owner,
-                      SingleViewHost *outer_view_host,
-                      DecoratedViewHost *decorator_view_host,
-                      View *view,
-                      double height)
-        : owner_(owner),
-          outer_view_host_(outer_view_host),
-          decorator_view_host_(decorator_view_host),
-          view_(view),
-          sidebar_(NULL),
-          height_(height) {
-      sidebar_ = owner->view_host_->GetWindow();
-      AddConnection(outer_view_host_->ConnectOnMoved(
-            NewSlot(this, &GadgetMoveClosure::HandleMoved)));
-      AddConnection(outer_view_host_->ConnectOnEndMoveDrag(
-            NewSlot(this, &GadgetMoveClosure::HandleEndMoveDrag)));
-      AddConnection(decorator_view_host_->ConnectOnDock(
-            NewSlot(this, &GadgetMoveClosure::HandleDock)));
+    GadgetClosure(Gadget *g) {
+      Reset(g);
     }
-    ~GadgetMoveClosure() {
-      for (size_t i = 0; i < connections_.size(); ++i)
-        connections_[i]->Disconnect();
+    ~GadgetClosure() {
+      delete gadget;
+      gadget = NULL;
     }
-    void AddConnection(Connection *connection) {
-      connections_.push_back(connection);
+    void Reset(Gadget *g) {
+      gadget = g;
+      view_host = NULL;
+      decorated_view_host = NULL;
+      x_in_sidebar = 0;
     }
-    void HandleMoved(int x, int y) {
-      int h;
-      if (IsOverlapWithSideBar(&h, x, y)) {
-        owner_->side_bar_->InsertNullElement(h, view_);
-        height_ = h;
-      } else {
-        owner_->side_bar_->ClearNullElement();
-      }
-    }
-    void HandleEndMoveDrag() {
-      int h, x, y;
-      outer_view_host_->GetWindowPosition(&x, &y);
-      if (IsOverlapWithSideBar(&h, x, y)) {
-        view_->GetGadget()->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
-        height_ = h;
-        HandleDock();
-      } else {
-        decorator_view_host_->RestoreViewSize();
-        decorator_view_host_->EnableAutoRestoreViewSize(true);
-      }
-      owner_->side_bar_->ClearNullElement();
-    }
-    void HandleDock() {
-      owner_->Dock(view_, height_, true);
-    }
-   private:
-    bool IsOverlapWithSideBar(int *height, int x, int y) {
-      int w, h;
-      outer_view_host_->GetWindowSize(&w, &h);
-      int sx, sy, sw, sh;
-      owner_->view_host_->GetWindowPosition(&sx, &sy);
-      owner_->view_host_->GetWindowSize(&sw, &sh);
-      if ((x + w >= sx) && (sx + sw >= x)) {
-        if (height) {
-          int dummy;
-          gtk_widget_get_pointer(sidebar_, &dummy, height);
-        }
-        return true;
-      }
-      return false;
-    }
-    SidebarGtkHost::Impl *owner_;
-    SingleViewHost *outer_view_host_;
-    DecoratedViewHost *decorator_view_host_;
-    View *view_;
-    GtkWidget *sidebar_;
-    double height_;
-    std::vector<Connection *> connections_;
+   public:
+    Gadget *gadget;
+    SingleViewHost *view_host;
+    DecoratedViewHost *decorated_view_host;
+    double x_in_sidebar;
   };
 
   Impl(SidebarGtkHost *owner, bool decorated, int view_debug_mode)
@@ -158,13 +110,17 @@ class SidebarGtkHost::Impl {
       options_(GetGlobalOptions()),
       option_auto_hide_(false),
       option_always_on_top_(false),
+      option_font_size_(kDefaultFontSize),
+      option_sidebar_monitor_(kDefaultMonitor),
       option_sidebar_position_(SIDEBAR_POSITION_RIGHT),
       option_sidebar_width_(kDefaultSidebarWidth),
-      option_sidebar_monitor_(kDefaultMonitor),
-      option_font_size_(kDefaultFontSize),
       net_wm_strut_(GDK_NONE),
       net_wm_strut_partial_(GDK_NONE),
       gadget_manager_(GetGadgetManager()) {
+#if GTK_CHECK_VERSION(2,10,0)
+    status_icon_ = NULL;
+#endif
+
     ASSERT(gadget_manager_);
     ScriptRuntimeManager::get()->ConnectErrorReporter(
         NewSlot(this, &Impl::ReportScriptError));
@@ -178,7 +134,9 @@ class SidebarGtkHost::Impl {
         NewSlot(this, &Impl::HandleSideBarBeginMoveDrag));
     view_host_->ConnectOnEndMoveDrag(
         NewSlot(this, &Impl::HandleSideBarEndMoveDrag));
-    side_bar_ = new SideBar(owner_, view_host_);
+    view_host_->ConnectOnShowHide(
+        NewSlot(this, &Impl::HandleSideBarShow));
+    side_bar_ = new SideBar(view_host_);
     side_bar_->ConnectOnAddGadget(NewSlot(this, &Impl::HandleAddGadget));
     side_bar_->ConnectOnMenuOpen(NewSlot(this, &Impl::HandleMenuOpen));
     side_bar_->ConnectOnClose(NewSlot(this, &Impl::HandleClose));
@@ -190,8 +148,6 @@ class SidebarGtkHost::Impl {
   }
 
   ~Impl() {
-    FlushGlobalOptions();
-
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
       delete it->second;
@@ -212,67 +168,46 @@ class SidebarGtkHost::Impl {
 
     bool corrupt_data = false;
     Variant value;
-    if (!options_->Exists(kOptionAutoHide)) {
-      corrupt_data = true;
-    } else {
-      value = options_->GetValue(kOptionAutoHide);
-      if (!value.ConvertToBool(&option_auto_hide_)) corrupt_data = true;
-    }
+    value = options_->GetInternalValue(kOptionAutoHide);
+    if (!value.ConvertToBool(&option_auto_hide_)) corrupt_data = true;
 
-    if (!options_->Exists(kOptionAlwaysOnTop)) {
-      corrupt_data = true;
-    } else {
-      value = options_->GetValue(kOptionAlwaysOnTop);
-      if (!value.ConvertToBool(&option_always_on_top_)) corrupt_data = true;
-    }
+    value = options_->GetInternalValue(kOptionAlwaysOnTop);
+    if (!value.ConvertToBool(&option_always_on_top_)) corrupt_data = true;
 
-    if (!options_->Exists(kOptionPosition)) {
-      corrupt_data = true;
-    } else {
-      value = options_->GetValue(kOptionPosition);
-      if (!value.ConvertToInt(&option_sidebar_position_)) corrupt_data = true;
-    }
+    value = options_->GetInternalValue(kOptionPosition);
+    if (!value.ConvertToInt(&option_sidebar_position_)) corrupt_data = true;
 
-    if (!options_->Exists(kOptionWidth)) {
-      corrupt_data = true;
-    } else {
-      value = options_->GetValue(kOptionWidth);
-      if (!value.ConvertToInt(&option_sidebar_width_)) corrupt_data = true;
-    }
+    value = options_->GetInternalValue(kOptionWidth);
+    if (!value.ConvertToInt(&option_sidebar_width_)) corrupt_data = true;
 
-    if (!options_->Exists(kOptionMonitor)) {
-      corrupt_data = true;
-    } else {
-      value = options_->GetValue(kOptionMonitor);
-      if (!value.ConvertToInt(&option_sidebar_monitor_)) corrupt_data = true;
-    }
+    value = options_->GetInternalValue(kOptionMonitor);
+    if (!value.ConvertToInt(&option_sidebar_monitor_)) corrupt_data = true;
 
-    if (!options_->Exists(kOptionFontSize)) {
-      corrupt_data = true;
-    } else {
-      value = options_->GetValue(kOptionFontSize);
-      if (!value.ConvertToInt(&option_font_size_)) corrupt_data = true;
-    }
+    value = options_->GetInternalValue(kOptionFontSize);
+    if (!value.ConvertToInt(&option_font_size_)) corrupt_data = true;
 
     if (corrupt_data) FlushGlobalOptions();
   }
 
   void FlushGlobalOptions() {
-    options_->PutValue(kOptionAutoHide, Variant(option_auto_hide_));
-    options_->PutValue(kOptionAlwaysOnTop, Variant(option_always_on_top_));
-    options_->PutValue(kOptionPosition, Variant(option_sidebar_position_));
-    options_->PutValue(kOptionWidth, Variant(option_sidebar_width_));
-    options_->PutValue(kOptionMonitor, Variant(option_sidebar_monitor_));
-    options_->PutValue(kOptionFontSize, Variant(option_font_size_));
+    options_->PutInternalValue(kOptionAutoHide, Variant(option_auto_hide_));
+    options_->PutInternalValue(kOptionAlwaysOnTop,
+                               Variant(option_always_on_top_));
+    options_->PutInternalValue(kOptionPosition,
+                               Variant(option_sidebar_position_));
+    options_->PutInternalValue(kOptionWidth, Variant(option_sidebar_width_));
+    options_->PutInternalValue(kOptionMonitor,
+                               Variant(option_sidebar_monitor_));
+    options_->PutInternalValue(kOptionFontSize, Variant(option_font_size_));
     options_->Flush();
   }
 
   void SetupUI() {
     main_widget_ = view_host_->GetWindow();
-
-#if GTK_CHECK_VERSION(2,10,0)
     g_signal_connect_after(G_OBJECT(main_widget_), "focus-out-event",
                            G_CALLBACK(HandleFocusOutEvent), this);
+
+#if GTK_CHECK_VERSION(2,10,0)
     std::string icon_data;
     if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
       GdkPixbuf *icon_pixbuf = LoadPixbufFromData(icon_data);
@@ -292,6 +227,7 @@ class SidebarGtkHost::Impl {
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(main_widget_), FALSE);
 #endif
     gtk_window_set_title(GTK_WINDOW(main_widget_), "Google Gadgets");
+
     AdjustSidebar();
   }
 
@@ -374,11 +310,17 @@ class SidebarGtkHost::Impl {
     } else {
       ASSERT(option_sidebar_position_ != SIDEBAR_POSITION_NONE);
     }
+
+    for (GadgetsMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it)
+      if (it->second->gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
+        DLOG("Set Dock Edge for %d", it->first);
+        it->second->decorated_view_host->SetDockEdge(
+            option_sidebar_position_ == SIDEBAR_POSITION_RIGHT);
+      }
   }
 
   void AdjustOnTopProperties(const GdkRectangle &rect, int monitor_number) {
-    gtk_window_set_keep_above(GTK_WINDOW(main_widget_), option_always_on_top_);
-
     // if sidebar is on the edge, do strut
     if (option_always_on_top_ &&
         ((option_sidebar_monitor_ == 0 &&
@@ -414,6 +356,9 @@ class SidebarGtkHost::Impl {
       gdk_window_set_type_hint(main_widget_->window,
                                GDK_WINDOW_TYPE_HINT_DOCK);
     } else {
+      gtk_window_set_keep_above(GTK_WINDOW(main_widget_),
+                                option_always_on_top_);
+
       // delete the properties
       gdk_property_delete(main_widget_->window, net_wm_strut_);
       gdk_property_delete(main_widget_->window, net_wm_strut_partial_);
@@ -432,6 +377,7 @@ class SidebarGtkHost::Impl {
     decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
     decorator->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, decorator));
     decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
+    decorator->SetDockEdge(option_sidebar_position_ == SIDEBAR_POSITION_RIGHT);
     ViewHostInterface *old = view->SwitchViewHost(decorator);
     if (old) old->Destroy();
     view->ShowView(false, 0, NULL);
@@ -483,11 +429,18 @@ class SidebarGtkHost::Impl {
       if (gdk_pointer_is_grabbed())
         gdk_pointer_ungrab(gtk_get_current_event_time());
       //FIXME: a minor bug of inserting null element to a wrong place
-      side_bar_->InsertNullElement(native_y, view);
+      side_bar_->InsertPlaceholder(native_y, view->GetHeight());
     }
-    DecoratedViewHost *new_host = NewSingleViewHost(view, true, native_y);
+    DecoratedViewHost *new_host =
+        NewSingleViewHost(view->GetGadget(), false, native_y);
+    GtkWidget *window =
+        gtk_widget_get_toplevel(GTK_WIDGET(new_host->GetNativeWidget()));
     if (move_to_cursor)
       new_host->EnableAutoRestoreViewSize(false);
+    if (option_always_on_top_) {
+      gdk_window_set_type_hint(window->window, GDK_WINDOW_TYPE_HINT_DOCK);
+      gtk_window_set_keep_above(GTK_WINDOW(window), true);
+    }
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
     bool r = view->ShowView(false, 0, NULL);
@@ -497,8 +450,6 @@ class SidebarGtkHost::Impl {
                                              &new_native_x, &new_native_y);
       gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
       // move new gadget to a proper place
-      GtkWidget *window =
-          gtk_widget_get_toplevel(GTK_WIDGET(new_host->GetNativeWidget()));
       gtk_window_move(GTK_WINDOW(window), px - static_cast<int>(new_native_x),
                       py - static_cast<int>(new_native_y));
       DLOG("wx: %d, wy: %d, px: %d, py: %d, vx: %f vy: %f, nx: %f, ny: %f",
@@ -512,12 +463,61 @@ class SidebarGtkHost::Impl {
     return r;
   }
 
+  void HandleDock(Gadget *gadget) {
+    Dock(gadget->GetMainView(),
+         gadgets_[gadget->GetInstanceID()]->x_in_sidebar, true);
+  }
+
   void HandleUndock() {
     ViewElement *element = side_bar_->GetMouseOverElement();
     if (element) {
       Gadget *gadget = element->GetChildView()->GetGadget();
       Undock(gadget->GetMainView(), true);
     }
+  }
+
+  void HandleMoved(int x, int y, Gadget *gadget) {
+    int h;
+    SingleViewHost *vh = gadgets_[gadget->GetInstanceID()]->view_host;
+    if (IsOverlapWithSideBar(vh, &h, x, y)) {
+      side_bar_->InsertPlaceholder(h, vh->GetView()->GetHeight());
+      gadgets_[gadget->GetInstanceID()]->x_in_sidebar = h;
+    } else {
+      side_bar_->ClearPlaceHolder();
+    }
+  }
+
+  void HandleEndMoveDrag(Gadget *gadget) {
+    int h, x, y;
+    SingleViewHost *vh = gadgets_[gadget->GetInstanceID()]->view_host;
+    vh->GetWindowPosition(&x, &y);
+    if (IsOverlapWithSideBar(vh, &h, x, y)) {
+      gadgets_[gadget->GetInstanceID()]->x_in_sidebar = h;
+      HandleDock(gadget);
+    } else {
+      DecoratedViewHost *dvh =
+          gadgets_[gadget->GetInstanceID()]->decorated_view_host;
+      dvh->RestoreViewSize();
+      dvh->EnableAutoRestoreViewSize(true);
+    }
+    side_bar_->ClearPlaceHolder();
+  }
+
+  bool IsOverlapWithSideBar(SingleViewHost *view_host,
+                            int *height, int x, int y) {
+    int w, h;
+    view_host->GetWindowSize(&w, &h);
+    int sx, sy, sw, sh;
+    view_host_->GetWindowPosition(&sx, &sy);
+    view_host_->GetWindowSize(&sw, &sh);
+    if ((x + w >= sx) && (sx + sw >= x)) {
+      if (height) {
+        int dummy;
+        gtk_widget_get_pointer(main_widget_, &dummy, height);
+      }
+      return true;
+    }
+    return false;
   }
 
   // handle undock event triggered by click menu, the undocked gadget should
@@ -535,8 +535,9 @@ class SidebarGtkHost::Impl {
   }
 
   bool HandleSideBarBeginResizeDrag(int button, int hittest) {
-    if (button != MouseEvent::BUTTON_LEFT || (hittest != ViewInterface::HT_LEFT
-                                         && hittest != ViewInterface::HT_RIGHT))
+    if (!gadgets_shown_ || button != MouseEvent::BUTTON_LEFT ||
+        (hittest != ViewInterface::HT_LEFT &&
+         hittest != ViewInterface::HT_RIGHT))
         return true;
 
     if (option_always_on_top_)
@@ -560,6 +561,7 @@ class SidebarGtkHost::Impl {
   }
 
   void HandleSideBarEndMoveDrag() {
+    if (!gadgets_shown_) return;
     GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(main_widget_));
     option_sidebar_monitor_ =
         gdk_screen_get_monitor_at_window(screen, main_widget_->window);
@@ -575,22 +577,8 @@ class SidebarGtkHost::Impl {
     AdjustSidebar();
   }
 
-#if GTK_CHECK_VERSION(2,10,0)
-  void HideOrShowAllGadgets(bool show) {
-    for (GadgetsMap::iterator it = gadgets_.begin();
-         it != gadgets_.end(); ++it) {
-      if (it->second->GetDisplayTarget() != Gadget::TARGET_SIDEBAR)
-        if (show)
-          it->second->ShowMainView();
-        else
-          it->second->CloseMainView();
-    }
-    if (show)
-      gtk_widget_show(main_widget_);
-    else
-      gtk_widget_hide(main_widget_);
-
-    gadgets_shown_ = show;
+  void HandleSideBarShow(bool show) {
+    if (show) AdjustSidebar();
   }
 
   static gboolean HandleFocusOutEvent(GtkWidget *widget, GdkEventFocus *event,
@@ -604,6 +592,7 @@ class SidebarGtkHost::Impl {
     return FALSE;
   }
 
+#if GTK_CHECK_VERSION(2,10,0)
   static void ToggleAllGadgetsHandler(GtkWidget *widget, Impl *this_p) {
     this_p->HideOrShowAllGadgets(!this_p->gadgets_shown_);
   }
@@ -611,9 +600,35 @@ class SidebarGtkHost::Impl {
   static void StatusIconPopupMenuHandler(GtkWidget *widget, guint button,
                                          guint activate_time,
                                          Impl *this_p) {
-    this_p->side_bar_->GetViewHost()->ShowContextMenu(MouseEvent::BUTTON_LEFT);
+    this_p->side_bar_->GetSideBarViewHost()->ShowContextMenu(
+        MouseEvent::BUTTON_LEFT);
   }
 #endif
+
+  void HideOrShowAllGadgets(bool show) {
+    for (GadgetsMap::iterator it = gadgets_.begin();
+         it != gadgets_.end(); ++it) {
+      Gadget *gadget = it->second->gadget;
+      if (gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR)
+        if (show)
+          gadget->ShowMainView();
+        else
+          gadget->CloseMainView();
+    }
+#if GTK_CHECK_VERSION(2,10,0)
+    if (show)
+      gtk_widget_show(main_widget_);
+    else
+      gtk_widget_hide(main_widget_);
+#else
+    if (show)
+      AdjustSidebar();
+    else
+      side_bar_->SetSize(option_sidebar_width_, kSidebarMinimizedHeight);
+#endif
+
+    gadgets_shown_ = show;
+  }
 
   void InitGadgets() {
     gadget_manager_->ConnectOnNewGadgetInstance(
@@ -640,69 +655,100 @@ class SidebarGtkHost::Impl {
       return false;
     }
 
-    /*
-    if (!Dock(gadget->GetMainView(), 0, false)) {
-      DLOG("Dock view(%p) failed.", gadget->GetMainView());
-      Undock(gadget->GetMainView(), false);
-    }
-    */
-
     if (!gadget->ShowMainView()) {
       LOG("Failed to show main view of gadget %s", path);
       delete gadget;
       return false;
     }
 
-    gadgets_[instance_id] = gadget;
+    if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR)
+      gadgets_[gadget->GetInstanceID()]->decorated_view_host->SetDockEdge(
+          option_sidebar_position_ == SIDEBAR_POSITION_RIGHT);
+
     return true;
   }
 
-  DecoratedViewHost *NewSingleViewHost(View *view,
+  DecoratedViewHost *NewSingleViewHost(Gadget *gadget,
                                        bool remove_on_close, double height) {
     SingleViewHost *view_host =
       new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
           decorated_, remove_on_close, false, view_debug_mode_);
+    view_host->ConnectOnMoved(NewSlot(this, &Impl::HandleMoved, gadget));
+    view_host->ConnectOnEndMoveDrag(NewSlot(this, &Impl::HandleEndMoveDrag,
+                                            gadget));
 
     DecoratedViewHost *decorator = new DecoratedViewHost(
         view_host, DecoratedViewHost::MAIN_STANDALONE, true);
     decorator->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, decorator));
     decorator->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, decorator));
-    GadgetMoveClosure *closure =
-        new GadgetMoveClosure(this, view_host, decorator, view, height);
-    move_slots_[view->GetGadget()] = closure;
+    decorator->ConnectOnDock(NewSlot(this, &Impl::HandleDock, gadget));
+    gadgets_[gadget->GetInstanceID()]->view_host = view_host;
+    gadgets_[gadget->GetInstanceID()]->decorated_view_host = decorator;
     DLOG("New decorator %p with vh %p", decorator, view_host);
     return decorator;
   }
 
+  void LoadGadgetOptions(Gadget *gadget) {
+    OptionsInterface *opt = gadget->GetOptions();
+    Variant value = opt->GetInternalValue(kDisplayTarget);
+    int target;
+    if (value.ConvertToInt(&target) && target < Gadget::TARGET_INVALID)
+      gadget->SetDisplayTarget(static_cast<Gadget::DisplayTarget>(target));
+    else  // default value is TARGET_SIDEBAR
+      gadget->SetDisplayTarget(Gadget::TARGET_SIDEBAR);
+    DLOG("Gadget: %d, type: %d",
+         gadget->GetInstanceID(), gadget->GetDisplayTarget());
+  }
+
   ViewHostInterface *NewViewHost(Gadget *gadget,
                                  ViewHostInterface::Type type) {
+    if (!gadget) return NULL;
+    int id = gadget->GetInstanceID();
+    if (gadgets_.find(id) == gadgets_.end() || !gadgets_[id]) {
+      gadgets_[id] = new GadgetClosure(gadget);
+    }
+    if (gadgets_[id]->gadget != gadget)  //FIXME: should remove old gadget?
+      gadgets_[id]->Reset(gadget);
+
     ViewHostInterface *view_host;
     DecoratedViewHost *decorator;
     switch (type) {
       case ViewHostInterface::VIEW_HOST_MAIN:
-        view_host = side_bar_->NewViewHost(0);
-        decorator = new DecoratedViewHost(view_host,
-                                          DecoratedViewHost::MAIN_DOCKED,
-                                          true);
-        decorator->ConnectOnUndock(NewSlot(this, &Impl::HandleFloatingUndock));
+        LoadGadgetOptions(gadget);
+        if (gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
+          view_host = side_bar_->NewViewHost(0);
+          decorator = new DecoratedViewHost(view_host,
+                                            DecoratedViewHost::MAIN_DOCKED,
+                                            true);
+          decorator->ConnectOnUndock(
+              NewSlot(this, &Impl::HandleFloatingUndock));
+          decorator->ConnectOnPopOut(
+              NewSlot(this, &Impl::OnPopOutHandler, decorator));
+          gadgets_[id]->decorated_view_host = decorator;
+        } else {
+          return NewSingleViewHost(gadget, false, 0);
+        }
         break;
       case ViewHostInterface::VIEW_HOST_OPTIONS:
         // No decorator for options view.
-        view_host = new SingleViewHost(type, 1.0, true, true, true,
+        view_host = new SingleViewHost(type, 1.0, true, false, true,
                                        view_debug_mode_);
         return view_host;
       default:
         {
           DLOG("open detail view.");
           SingleViewHost *sv = new SingleViewHost(type, 1.0, decorated_,
-                                                  true, true, view_debug_mode_);
-          decorator = new DecoratedViewHost(sv, DecoratedViewHost::DETAILS,
-                                            true);
+                                                  false, true, view_debug_mode_);
+          // FIXME: the detail view may not be triggered from sidebar
           sv->ConnectOnShowHide(NewSlot(this, &Impl::HandleDetailsViewShow, sv));
           sv->ConnectOnBeginResizeDrag(
               NewSlot(this, &Impl::HandlePopOutBeginResizeDrag));
           sv->ConnectOnBeginMoveDrag(
               NewSlot(this, &Impl::HandlePopoutViewMove));
+          decorator = new DecoratedViewHost(sv, DecoratedViewHost::DETAILS,
+                                            true);
+          gadgets_[id]->view_host = sv;
+          gadgets_[id]->decorated_view_host = decorator;
         }
         break;
     }
@@ -713,11 +759,18 @@ class SidebarGtkHost::Impl {
 
   void RemoveGadget(Gadget *gadget, bool save_data) {
     ASSERT(gadget);
-    ViewInterface *main_view = gadget->GetMainView();
-
     // If this gadget is popped out, popin it first.
+    ViewInterface *main_view = gadget->GetMainView();
     if (main_view->GetViewHost() == expanded_popout_) {
       OnPopInHandler(expanded_original_);
+    }
+
+    DLOG("Gadget: %d, type: %d, save: %d",
+         gadget->GetInstanceID(), gadget->GetDisplayTarget(), save_data);
+    // Save data now
+    if (save_data) {
+      OptionsInterface *opt = gadget->GetOptions();
+      opt->PutInternalValue(kDisplayTarget, Variant(gadget->GetDisplayTarget()));
     }
 
     gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
@@ -756,7 +809,7 @@ class SidebarGtkHost::Impl {
     ViewInterface *child = decorated->GetView();
     ASSERT(child);
     if (child) {
-      ViewElement *ele = side_bar_->SetPopoutedView(child);
+      ViewElement *ele = side_bar_->SetPopOutedView(child);
       expanded_original_ = decorated;
       SingleViewHost *svh = new SingleViewHost(
           ViewHostInterface::VIEW_HOST_MAIN, 1.0, false, false, false,
@@ -784,6 +837,7 @@ class SidebarGtkHost::Impl {
       ViewInterface *child = expanded_popout_->GetView();
       ASSERT(child);
       if (child) {
+        expanded_popout_->CloseView();
         ViewHostInterface *old_host = child->SwitchViewHost(expanded_original_);
         SimpleEvent event(Event::EVENT_POPIN);
         expanded_original_->GetDecoratedView()->OnOtherEvent(event);
@@ -791,7 +845,7 @@ class SidebarGtkHost::Impl {
         old_host->Destroy();
         expanded_original_ = NULL;
         expanded_popout_ = NULL;
-        side_bar_->SetPopoutedView(NULL);
+        side_bar_->SetPopOutedView(NULL);
       }
     }
   }
@@ -839,14 +893,18 @@ class SidebarGtkHost::Impl {
     gadget_manager_->ShowGadgetBrowserDialog(&gadget_browser_host_);
   }
 
+  void HandleMenuShowAll(const char *str) {
+    HideOrShowAllGadgets(true);
+  }
+
   void HandleMenuAutoHide(const char *str) {
     option_auto_hide_ = !option_auto_hide_;
-    options_->PutValue(kOptionAutoHide, Variant(option_auto_hide_));
+    options_->PutInternalValue(kOptionAutoHide, Variant(option_auto_hide_));
   }
 
   void HandleMenuAlwaysOnTop(const char *str) {
     option_always_on_top_ = !option_always_on_top_;
-    options_->PutValue(kOptionAlwaysOnTop, Variant(option_always_on_top_));
+    options_->PutInternalValue(kOptionAlwaysOnTop, Variant(option_always_on_top_));
     AdjustSidebar();
   }
 
@@ -855,7 +913,7 @@ class SidebarGtkHost::Impl {
       option_sidebar_position_ = SIDEBAR_POSITION_LEFT;
     else
       option_sidebar_position_ = SIDEBAR_POSITION_RIGHT;
-    options_->PutValue(kOptionPosition, Variant(option_sidebar_position_));
+    options_->PutInternalValue(kOptionPosition, Variant(option_sidebar_position_));
     AdjustSidebar();
   }
 
@@ -866,11 +924,14 @@ class SidebarGtkHost::Impl {
       option_font_size_ = kDefaultFontSize;
     else
       option_font_size_ -= 2;
-    options_->PutValue(kOptionFontSize, Variant(option_font_size_));
+    options_->PutInternalValue(kOptionFontSize, Variant(option_font_size_));
   }
 
-  void HandleMenuClose(const char *str) {
-    HandleClose();
+  void HandleExit(const char *str) {
+    gtk_main_quit();
+
+    //FIXME: move option save actions to exit handler.
+    FlushGlobalOptions();
   }
 
   void HanldeSizeEvent() {
@@ -882,6 +943,9 @@ class SidebarGtkHost::Impl {
     menu->AddItem(GM_("MENU_ITEM_ADD_GADGETS"), 0,
                   NewSlot(this, &Impl::AddGadgetHandlerWithOneArg), priority);
     menu->AddItem(NULL, 0, NULL, priority);
+    if (!gadgets_shown_)
+      menu->AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0,
+                    NewSlot(this, &Impl::HandleMenuShowAll), priority);
     menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
                   option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
                   NewSlot(this, &Impl::HandleMenuAutoHide), priority);
@@ -912,12 +976,12 @@ class SidebarGtkHost::Impl {
     }
     menu->AddItem(NULL, 0, NULL, priority);
     menu->AddItem(GM_("MENU_ITEM_CLOSE"), 0,
-                  NewSlot(this, &Impl::HandleMenuClose), priority);
+                  NewSlot(this, &Impl::HandleExit), priority);
     return false;
   }
 
   void HandleClose() {
-    gtk_main_quit();
+    HideOrShowAllGadgets(false);
   }
 
   void HandleDetailsViewShow(bool show, SingleViewHost *view_host) {
@@ -969,11 +1033,9 @@ class SidebarGtkHost::Impl {
 
   GadgetBrowserHost gadget_browser_host_;
 
-  typedef std::map<Gadget *, GadgetMoveClosure *> GadgetMoveClosureMap;
-  GadgetMoveClosureMap move_slots_;
-
-  typedef std::map<int, Gadget *> GadgetsMap;
+  typedef std::map<int, GadgetClosure *> GadgetsMap;
   GadgetsMap gadgets_;
+
   SidebarGtkHost *owner_;
 
   bool decorated_;
@@ -989,10 +1051,10 @@ class SidebarGtkHost::Impl {
   //TODO: add another option for visible in all workspace?
   bool option_auto_hide_;
   bool option_always_on_top_;
+  int  option_font_size_;
+  int  option_sidebar_monitor_;
   int  option_sidebar_position_;
   int  option_sidebar_width_;
-  int  option_sidebar_monitor_;
-  int  option_font_size_;
 
   GdkAtom net_wm_strut_;
   GdkAtom net_wm_strut_partial_;

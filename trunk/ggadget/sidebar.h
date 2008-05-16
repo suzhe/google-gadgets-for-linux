@@ -42,14 +42,12 @@ class SideBar {
  public:
   /*
    * Constructor.
-   * @param host Host Interface for the side bar, not owned by the @SideBar.
-   *        Should be destroyed after the object.
    * @param view_host @c SideBar acts as @c View, @c view_host is the ViewHost
    *        instance that is associated with the @c SideBar instance.
    *        It's not owned by the object, and shall be destroyed after
    *        destroying the object.
    */
-  SideBar(HostInterface *host, ViewHostInterface *view_host);
+  SideBar(ViewHostInterface *view_host);
 
   /* Destructor. */
   virtual ~SideBar();
@@ -59,17 +57,17 @@ class SideBar {
    * Creates a new ViewHost instance and of curse a new view element
    * hold in the side bar.
    *
-   * @param height The initial height of the new ViewHost instance. Note this is
-   *        only a hint, @SideBar will choose the proper height for the instance
-   *        based on the @c height
+   * @param x The X-coordinate in sidebar of the new ViewHost instance.
+   *        Note this is only a hint, sidebar will choose the proper
+   *        position.
    * @return a new Viewhost instance.
    */
-  ViewHostInterface *NewViewHost(double height);
+  ViewHostInterface *NewViewHost(double x);
 
   /**
-   * @return the ViewHost instance associated with this instance.
+   * @return the ViewHost instance associated with the sidebar instance.
    */
-  ViewHostInterface *GetViewHost() const;
+  ViewHostInterface *GetSideBarViewHost() const;
 
   /**
    * Set the size of the sidebar.
@@ -83,19 +81,18 @@ class SideBar {
   double GetHeight() const;
 
   /**
-   * Insert a null element in the side bar.
+   * Insert a place holder in the side bar.
    *
-   * @param height The initial height of the null element. Note this is
-   *        only a hint, @SideBar will choose the proper height.
-   * @param view The side bar will talk with the instance to decide the size
-   *        of the null element.
+   * @param x The initial X-coordinate in the sidebar of the place hodler.
+   *        Note this is only a hint, sidebar will choose the proper position.
+   * @param height The height of the position.
    */
-  void InsertNullElement(double height, ViewInterface *view);
+  void InsertPlaceholder(double x, double height);
 
   /**
-   * Clear null element(s).
+   * Clear place holder(s)
    */
-  void ClearNullElement();
+  void ClearPlaceHolder();
 
   /**
    * Explicitly let side bar reorganize the layout.
@@ -104,7 +101,7 @@ class SideBar {
 
   /**
    * @return Return the element that is moused over. Return @c NULL if no
-   * element is moused over.
+   * view element is moused over.
    */
   ViewElement *GetMouseOverElement() const;
 
@@ -116,13 +113,18 @@ class SideBar {
   ViewElement *FindViewElementByView(ViewInterface *view) const;
 
   /**
+   * Find view element by index.
+   */
+  ViewElement *GetViewElementByIndex(int index) const;
+
+  /**
    * Set pop out view.
    * When a element is poped out, the @c host associated with
    * the sidebar should let sidebar know it.
    * @param view the view that was poped out
    * @return the view element that contains the @c view.
    */
-  ViewElement *SetPopoutedView(ViewInterface *view);
+  ViewElement *SetPopOutedView(ViewInterface *view);
 
   /**
    * Event connection methods.

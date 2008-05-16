@@ -71,6 +71,7 @@ class Gadget {
     TARGET_NOTIFIER = 1,
     /** Item is being displayed in its own window floating on the desktop */
     TARGET_FLOATING_VIEW = 2,
+    TARGET_INVALID,
   };
 
   /**
