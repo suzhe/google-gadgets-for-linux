@@ -16,8 +16,8 @@ The TODO List contains several different categories. Each item belongs to one sp
  * Reduce the size of each class, by:
    # Re-order the data members;
    # Use more effective data types, such as replacing bools with bit fields.
- * Refactory Signal, Slot and ScriptableHelper to support class based property registration.
- * Evaluate the effect of SmallObjectAllocator and use it to more classes if possible.
+ * Refactory Signal, Slot and !ScriptableHelper to support class based property registration.
+ * Evaluate the effect of !SmallObjectAllocator and use it to more classes if possible.
  * Investigate the binary size and memory usage of every classes and functions, and optimize them as much as possible.
  * Reduce unnecessary inline functions.
 
@@ -30,9 +30,9 @@ The TODO List contains several different categories. Each item belongs to one sp
 
  * Option extension based on GConf
  * Option extension based on KConfig
- * JavaScript extension based on QtScript
- * JavaScript extension based on KJS or WebKit JavaScriptCore
- * Browser extension based on WebKit gtk/cairo port
+ * !JavaScript extension based on !QtScript
+ * !JavaScript extension based on KJS or !WebKit !JavaScriptCore
+ * Browser extension based on !WebKit gtk/cairo port
  * Audio and Mediaplayer extensions based on KDE Phonon
 
 == New host related features ==
@@ -47,7 +47,7 @@ The TODO List contains several different categories. Each item belongs to one sp
 
  * KDE Plasma integration
  * Support of OpenGL acceleration (both cairo and qt)
- * Port to other X-Window based and UNIX like operation systems, such as OpenSolaris and FreeBSD
+ * Port to other X-Window based and UNIX like operation systems, such as !OpenSolaris and FreeBSD
 
 == Security related ==
 
