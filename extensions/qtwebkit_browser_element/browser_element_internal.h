@@ -107,11 +107,21 @@ class BrowserElement::Impl {
       child_(new WebView(this)),
       content_type_("text/html") {
     child_->setPage(new WebPage(this));
+    owner_->GetView()->ConnectOnMinimizeEvent(
+        NewSlot(this, &Impl::OnViewMinimized));
+    owner_->GetView()->ConnectOnRestoreEvent(
+        NewSlot(this, &Impl::OnViewRestored));
+    owner_->GetView()->ConnectOnPopOutEvent(
+        NewSlot(this, &Impl::OnViewChanged));
+    owner_->GetView()->ConnectOnPopInEvent(
+        NewSlot(this, &Impl::OnViewChanged));
   }
 
   ~Impl() {
-    // if parent set, child_ will deleted by parent_
-    if (!parent_) delete child_;
+    if (parent_) {
+      parent_->SetChild(NULL);
+    }
+    delete child_;
   }
 
   void OpenUrl(const QString &url) const {
@@ -160,7 +170,6 @@ class BrowserElement::Impl {
     }
     int x, y, w, h;
     GetWidgetExtents(&x, &y, &w, &h);
-    LOG("Layout:%d,%d,%d,%d", x, y, w, h);
     child_->setFixedSize(w, h);
     child_->move(x, y);
   }
@@ -175,8 +184,23 @@ class BrowserElement::Impl {
     std::string utf8str = "";
     ConvertStringUTF16ToUTF8(utf16str.c_str(), utf16str.length(), &utf8str);
 
-    LOG("Content: %s", utf8str.c_str());
+    DLOG("Content: %s", utf8str.c_str());
     child_->setContent(utf8str.c_str());
+  }
+
+  void OnViewMinimized() {
+    if (child_) child_->hide();
+  }
+
+  void OnViewRestored() {
+    if (child_) child_->show();
+  }
+
+  void OnViewChanged() {
+    if (parent_) {
+      parent_->SetChild(NULL);
+      parent_ = NULL;
+    }
   }
 
  public:
@@ -201,9 +225,10 @@ QWebPage *WebPage::createWindow(
 }
 
 void WebView::OnParentDestroyed(QObject *obj) {
-  ASSERT(owner_->parent_ == obj);
-  LOG("Parent widget destroyed");
-  owner_->parent_ = NULL;
+  if (owner_->parent_ == obj) {
+    LOG("Parent widget destroyed");
+    owner_->parent_ = NULL;
+  }
 }
 
 }

@@ -319,11 +319,12 @@ void QtEditElement::GetIdealBoundingRect(int *width, int *height) {
 }
 
 void QtEditElement::Select(int start, int end) {
-  // TODO.
+  SetCursorSelection(cursor_, start, end);
 }
 
 void QtEditElement::SelectAll() {
-  // TODO.
+  cursor_->setPosition(0);
+  cursor_->movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
 }
 
 static QRectF GetRectForPosition(QTextDocument *doc, int position) {
@@ -513,6 +514,8 @@ EventResult QtEditElement::HandleKeyEvent(const KeyboardEvent &event) {
     } else if ((keyval == Qt::Key_V && ctrl && !shift) ||
                (keyval == Qt::Key_Insert && shift && !ctrl)) {
       PasteClipboard();
+    } else if (keyval == Qt::Key_A && ctrl) {
+      SelectAll();
     } else if (keyval == Qt::Key_Backspace) {
       cursor_->deletePreviousChar();
     } else if (keyval == Qt::Key_Delete && !shift) {
