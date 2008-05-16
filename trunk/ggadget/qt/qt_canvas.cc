@@ -52,6 +52,12 @@ static void MakeImageTransparent(QImage *img) {
   p.fillRect(img->rect(), Qt::transparent);
 }
 
+static void SetupPainter(QPainter *p) {
+  p->setCompositionMode(QPainter::CompositionMode_SourceOver);
+  p->setRenderHint(QPainter::SmoothPixmapTransform, true);
+  p->setBackground(Qt::transparent);
+}
+
 class QtCanvas::Impl {
  public:
   Impl(const QtGraphics *g, double w, double h)
@@ -67,9 +73,8 @@ class QtCanvas::Impl {
     if (image_ == NULL) return;
     MakeImageTransparent(image_);
     painter_ = new QPainter(image_);
+    SetupPainter(painter_);
     painter_->scale(zoom_, zoom_);
-    painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter_->setBackground(Qt::transparent);
   }
 
   Impl(const std::string &data)
@@ -88,8 +93,7 @@ class QtCanvas::Impl {
       width_ = image_->width();
       height_ = image_->height();
       painter_ = new QPainter(image_);
-      painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
-      painter_->setBackground(Qt::transparent);
+      SetupPainter(painter_);
     } else {
       delete image_;
       image_ = NULL;
@@ -100,7 +104,7 @@ class QtCanvas::Impl {
     : width_(w), height_(h), opacity_(1.), zoom_(1.),
       on_zoom_connection_(NULL), image_(NULL),
       painter_(painter), region_(NULL) {
-    painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    SetupPainter(painter_);
   }
 
   ~Impl() {
@@ -117,7 +121,7 @@ class QtCanvas::Impl {
     QPen pen(color);
     pen.setWidthF(width);
     p->setPen(pen);
-    p->drawLine(D2I(x0), D2I(y0), D2I(x1), D2I(y1));
+    p->drawLine(QPointF(x0, y0), QPointF(x1, y1));
     return true;
   }
 
@@ -125,7 +129,7 @@ class QtCanvas::Impl {
     DLOG("DrawFilledRect:%p", owner_);
     QPainter *p = painter_;
     QColor color(c.RedInt(), c.GreenInt(), c.BlueInt());
-    p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), color);
+    p->fillRect(QRectF(x, y, w, h), color);
     return true;
   }
 
@@ -138,10 +142,10 @@ class QtCanvas::Impl {
     if (impl->GetScale(&sx, &sy)) {
       p->save();
       p->scale(sx, sy);
-      p->drawImage(D2I(x / sx), D2I(y / sy), *canvas->GetImage());
+      p->drawImage(QPointF(x / sx, y / sy), *canvas->GetImage());
       p->restore();
     } else {
-      p->drawImage(D2I(x), D2I(y), *canvas->GetImage());
+      p->drawImage(QPointF(x, y), *canvas->GetImage());
     }
     return true;
   }
@@ -151,7 +155,7 @@ class QtCanvas::Impl {
     DLOG("DrawFilledRectWithCanvas: %p on %p", img, owner_);
     QPainter *p = painter_;
     const QtCanvas *canvas = reinterpret_cast<const QtCanvas*>(img);
-    p->fillRect(D2I(x), D2I(y), D2I(w), D2I(h), *canvas->GetImage());
+    p->fillRect(QRectF(x, y, w, h), *canvas->GetImage());
     return true;
   }
 
@@ -171,10 +175,10 @@ class QtCanvas::Impl {
     if (impl->GetScale(&sx, &sy) && image_) {
       p->save();
       p->scale(sx, sy);
-      p->drawImage(D2I(x / sx), D2I(y / sy), simg);
+      p->drawImage(QPointF(x / sx, y / sy), simg);
       p->restore();
     } else {
-      p->drawImage(D2I(x), D2I(y), simg);
+      p->drawImage(QPointF(x, y), simg);
     }
     return true;
   }
@@ -280,11 +284,10 @@ class QtCanvas::Impl {
 
   bool IntersectRectClipRegion(double x, double y,
                                double w, double h) {
-    if (w <= 0.0 || h <= 0.0) {
-      return false;
-    }
+    if (w <= 0.0 || h <= 0.0) return false;
+
     painter_->setClipping(true);
-    painter_->setClipRect(D2I(x), D2I(y), D2I(w), D2I(h), Qt::IntersectClip);
+    painter_->setClipRect(QRectF(x, y, w, h), Qt::IntersectClip);
     return true;
   }
 
@@ -337,10 +340,9 @@ class QtCanvas::Impl {
     image_ = new_image;
     MakeImageTransparent(image_);
     painter_ = new QPainter(image_);
-    painter_->setBackground(Qt::transparent);
+    SetupPainter(painter_);
     painter_->scale(zoom, zoom);
     zoom_ = zoom;
-    painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
   }
 
   // Return false if no scale at all
