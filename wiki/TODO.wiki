@@ -9,22 +9,57 @@ This page is dedicated to collect future plans and action items of this project.
 
 The TODO List contains several different categories. Each item belongs to one specific category and has a priority value assigned. The priority value ranges from 1 to 5, the smaller the higher.
 
-== Code and Design ==
+== Core code and Design ==
 
-Action items for code optimization, cleanup and refactory.
+ * Reduce the usage of std::map and other complex containers.
+ * Use std::string and static string literals as much as possible.
+ * Reduce the size of each class, by:
+   # Re-order the data members;
+   # Use more effective data types, such as replacing bools with bit fields.
+ * Refactory Signal, Slot and ScriptableHelper to support class based property registration.
+ * Evaluate the effect of SmallObjectAllocator and use it to more classes if possible.
+ * Investigate the binary size and memory usage of every classes and functions, and optimize them as much as possible.
+ * Reduce unnecessary inline functions.
 
 == New Features in Gadget API level ==
 
-New features that need to be implemented to support additional Gadget APIs
+ * DOM2 and DOM3 support
+ * URL detection in edit.
 
 == New extensions ==
 
+ * Option extension based on GConf
+ * Option extension based on KConfig
+ * JavaScript extension based on QtScript
+ * JavaScript extension based on KJS or WebKit JavaScriptCore
+ * Browser extension based on WebKit gtk/cairo port
+ * Audio and Mediaplayer extensions based on KDE Phonon
+
+== New host related features ==
+
+ * Sidebar host based on Qt
+ * Customizable module loading
+ * Support of global hotkeys
+ * Better support of window manager integration
+ * Support of system taskbar
+
 == Porting / Platform integration ==
+
+ * KDE Plasma integration
+ * Support of OpenGL acceleration (both cairo and qt)
+ * Port to other X-Window based and UNIX like operation systems, such as OpenSolaris and FreeBSD
 
 == Security related ==
 
-Features related to security.
+ * Support of fine-grained access control per gadget
 
 == Packaging ==
 
+ * Provide metadata for deb and rpm packages.
+ * Provide desktop files
+
 == Documentation ==
+
+ * Public design doc
+ * Complete API reference
+ * Developer's guide
