@@ -146,9 +146,9 @@ bool ViewElement::OnSizing(double *width, double *height) {
   if (impl_->onsizing_called_ &&
       impl_->onsizing_width_request_ == *width &&
       impl_->onsizing_height_request_ == *height) {
-    DLOG("ViewElement::OnSizing(%.1lf, %.1lf) cached result: %.1lf, %.1lf.",
-         *width, *height, impl_->onsizing_width_result_,
-         impl_->onsizing_height_result_);
+    // DLOG("ViewElement::OnSizing(%.1lf, %.1lf) cached result: %.1lf, %.1lf.",
+    //      *width, *height, impl_->onsizing_width_result_,
+    //      impl_->onsizing_height_result_);
     *width = impl_->onsizing_width_result_;
     *height = impl_->onsizing_height_result_;
     return impl_->onsizing_result_;

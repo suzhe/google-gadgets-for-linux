@@ -172,9 +172,8 @@ class SideBar::Impl : public View {
     double height_;
   };
 
-  Impl(HostInterface *host, SideBar *owner, ViewHostInterface *view_host)
+  Impl(SideBar *owner, ViewHostInterface *view_host)
       : View(view_host, NULL, NULL, NULL),
-        host_(host),
         owner_(owner),
         view_host_(view_host),
         null_element_(NULL),
@@ -188,7 +187,6 @@ class SideBar::Impl : public View {
         background_(NULL),
         icon_(NULL),
         main_div_(NULL) {
-    ASSERT(host);
     SetResizable(ViewInterface::RESIZABLE_TRUE);
     //EnableCanvasCache(false);
     SetupDecorator();
@@ -471,23 +469,16 @@ class SideBar::Impl : public View {
     }
     return NULL;
   }
-  void InsertNullElement(double height, ViewInterface *view) {
-    ASSERT(view);
+  void InsertPlaceholder(double x, double height) {
     // only one null element is allowed
-    if (null_element_ && null_element_->GetChildView() != view) {
-      if (!main_div_->GetChildren()->RemoveElement(null_element_))
-        delete null_element_;
-      null_element_ = NULL;
-    }
     if (!null_element_) {
-      null_element_ = new ViewElement(main_div_, this, down_cast<View *>(view),
-                                      true);
-      null_element_->SetPixelHeight(view->GetHeight());
+      null_element_ = new ViewElement(main_div_, this, NULL, true);
       null_element_->SetVisible(false);
     }
-    InsertViewElement(height, null_element_);
+    null_element_->SetPixelHeight(height);
+    InsertViewElement(x, null_element_);
   }
-  void ClearNullElement() {
+  void ClearPlaceHolder() {
     if (null_element_) {
       main_div_->GetChildren()->RemoveElement(null_element_);
       null_element_ = NULL;
@@ -577,7 +568,6 @@ class SideBar::Impl : public View {
   }
 
  public:
-  HostInterface *host_;
   SideBar *owner_;
   ViewHostInterface *view_host_;
 
@@ -623,8 +613,8 @@ const double SideBar::Impl::kBoderWidth;
 const double SideBar::Impl::kButtonWidth;
 const double SideBar::Impl::kIconHeight;
 
-SideBar::SideBar(HostInterface *host, ViewHostInterface *view_host)
-  : impl_(new Impl(host, this, view_host)) {
+SideBar::SideBar(ViewHostInterface *view_host)
+  : impl_(new Impl(this, view_host)) {
 }
 
 SideBar::~SideBar() {
@@ -632,15 +622,15 @@ SideBar::~SideBar() {
   impl_ = NULL;
 }
 
-ViewHostInterface *SideBar::NewViewHost(double height) {
+ViewHostInterface *SideBar::NewViewHost(double x) {
   Impl::SideBarViewHost *vh =
       new Impl::SideBarViewHost(impl_, ViewHostInterface::VIEW_HOST_MAIN,
-                                impl_->view_host_, height);
+                                impl_->view_host_, x);
   vh->ConnectOnResize(NewSlot(impl_, &Impl::Layout));
   return vh;
 }
 
-ViewHostInterface *SideBar::GetViewHost() const {
+ViewHostInterface *SideBar::GetSideBarViewHost() const {
   return impl_->GetViewHost();
 }
 
@@ -656,12 +646,12 @@ double SideBar::GetHeight() const {
   return impl_->GetHeight();
 }
 
-void SideBar::InsertNullElement(double height, ViewInterface *view) {
-  return impl_->InsertNullElement(height, view);
+void SideBar::InsertPlaceholder(double x, double height) {
+  return impl_->InsertPlaceholder(x, height);
 }
 
-void SideBar::ClearNullElement() {
-  impl_->ClearNullElement();
+void SideBar::ClearPlaceHolder() {
+  impl_->ClearPlaceHolder();
 }
 
 void SideBar::Layout() {
@@ -679,7 +669,12 @@ ViewElement *SideBar::FindViewElementByView(ViewInterface *view) const {
   return impl_->FindViewElementByView(view);
 }
 
-ViewElement *SideBar::SetPopoutedView(ViewInterface *view) {
+ViewElement *SideBar::GetViewElementByIndex(int index) const {
+  return down_cast<ViewElement *>(
+      impl_->main_div_->GetChildren()->GetItemByIndex(index));
+}
+
+ViewElement *SideBar::SetPopOutedView(ViewInterface *view) {
   if (view)
     impl_->popout_element_ = impl_->FindViewElementByView(view);
   else

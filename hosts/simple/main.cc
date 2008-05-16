@@ -92,7 +92,6 @@ static const char *g_help_string =
   "             1 - Draw bounding boxes around container elements.\n"
   "             2 - Draw bounding boxes around all elements.\n"
   "             4 - Draw bounding boxes around clip region.\n"
-  "  -n         Don't install the gadgets specified in command line.\n"
 #endif
   "  -z zoom    Specify initial zoom factor for View, no effect for sidebar.\n"
   "  -b         Draw window border for Main View.\n"
@@ -109,7 +108,6 @@ int main(int argc, char* argv[]) {
 
   int debug_mode = 0;
   double zoom = 1.0;
-  bool install_gadgets = true;
   bool decorated = false;
   bool sidebar = false;
   bool background = false;
@@ -120,9 +118,6 @@ int main(int argc, char* argv[]) {
     if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
       printf(g_help_string, argv[0]);
       return 0;
-    } else if (strcmp("-n", argv[i]) == 0 ||
-               strcmp("--no-inst", argv[i]) == 0) {
-      install_gadgets = false;
     } else if (strcmp("-b", argv[i]) == 0 ||
                strcmp("--border", argv[i]) == 0) {
       decorated = true;
@@ -154,11 +149,6 @@ int main(int argc, char* argv[]) {
 
   // set locale according to env vars
   setlocale(LC_ALL, "");
-
-  // Puth the process into background in the early stage to prevent from
-  // printing any log messages.
-  if (background)
-    ggadget::Daemonize();
 
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
@@ -232,31 +222,18 @@ int main(int argc, char* argv[]) {
 
   // Load gadget files.
   if (gadget_paths.size()) {
-    if (install_gadgets) {
-      ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
-      for (size_t i = 0; i < gadget_paths.size(); ++i) {
-        manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
-      }
-#ifdef _DEBUG
-    } else {
-      // Only runs the gadgets temporarily. For debug purpose.
-      for (size_t i = 0; i < gadget_paths.size(); ++i) {
-        std::string opt_name = ggadget::StringPrintf("temp-gadget-%zu", i);
-        ggadget::Gadget *gadget =
-            new ggadget::Gadget(host, gadget_paths[i].c_str(),
-                                // Note: gadget will run in trusted mode.
-                                opt_name.c_str(), i + 1000, true);
-        if (gadget->IsValid()) {
-          temp_gadgets.push_back(gadget);
-          gadget->ShowMainView();
-        } else {
-          DLOG("Failed to load gadget %s", gadget_paths[i].c_str());
-          delete gadget;
-        }
-      }
-#endif
+    ggadget::GadgetManagerInterface *manager = ggadget::GetGadgetManager();
+    for (size_t i = 0; i < gadget_paths.size(); ++i) {
+      manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
     }
   }
+
+  // FIXME: temporary solution, Daemonize action will change current
+  // path, which will affect the resource loading.
+  // Puth the process into background in the early stage to prevent from
+  // printing any log messages.
+  if (background)
+    ggadget::Daemonize();
 
   host->Run();
 
