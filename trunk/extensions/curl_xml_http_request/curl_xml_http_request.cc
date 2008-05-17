@@ -1085,6 +1085,8 @@ class XMLHttpRequestFactory : public XMLHttpRequestFactoryInterface {
     if (it != sessions_.end()) {
       Session *session = &it->second;
       curl_easy_setopt(session->share_ref, CURLOPT_SHARE, NULL);
+      // Cleanup the share_ref to prevent memory leak.
+      curl_easy_cleanup(session->share_ref);
       // This cleanup will fail if there is still active requests. It'll be
       // actually cleaned up when the requests finish.
       CURLSHcode code = curl_share_cleanup(session->share);

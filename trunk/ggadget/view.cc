@@ -1060,11 +1060,11 @@ class View::Impl {
          it != posted_events_copy.end(); ++it) {
       // Test if the event is still valid. If srcElement has been deleted,
       // it->first->GetSrcElement() should return NULL.
-      if (it->first->GetSrcElement()) {
+      if (it->first->GetSrcElement())
         FireEvent(it->first, *it->second);
-        delete it->first->GetEvent();
-        delete it->first;
-      }
+
+      delete it->first->GetEvent();
+      delete it->first;
     }
     posted_events_copy.clear();
     return false;

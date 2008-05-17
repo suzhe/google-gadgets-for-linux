@@ -400,11 +400,14 @@ bool RemoveDirectory(const char *path) {
       else
         result = (::unlink(file_path.c_str()) == 0);
 
-      if (!result)
+      if (!result) {
+        closedir(pdir);
         return false;
+      }
     }
   }
 
+  closedir(pdir);
   return ::rmdir(dir_path.c_str()) == 0;
 }
 
