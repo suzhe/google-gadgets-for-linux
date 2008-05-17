@@ -59,11 +59,16 @@ class QtViewWidget : public QWidget {
   std::vector<std::string> drag_urls_;
   bool composite_;
   bool enable_input_mask_;
-  QPixmap offscreen_pixmap_;
+  QPixmap *offscreen_pixmap_;
   QPoint mouse_pos_;
   bool mouse_drag_moved_;
   QWidget *child_;
   double zoom_;
+  ViewInterface::HitTest mouse_down_hittest_;
+  bool resize_drag_;
+  QRect origi_geometry_;
+  // used as coefficient of mouse move in window resize
+  int top_, bottom_, left_, right_;
 };
 
 
