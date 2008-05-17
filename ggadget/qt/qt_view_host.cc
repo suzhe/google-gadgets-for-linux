@@ -405,26 +405,29 @@ void QtViewHost::BeginMoveDrag(int button) {
 }
 
 void QtViewHost::Alert(const char *message) {
-  QMessageBox::information(NULL,
-                           impl_->view_->GetCaption().c_str(),
-                           message);
+  QMessageBox::information(
+      NULL,
+      QString::fromUtf8(impl_->view_->GetCaption().c_str()),
+      QString::fromUtf8(message));
 }
 
 bool QtViewHost::Confirm(const char *message) {
-  int ret = QMessageBox::question(NULL,
-                                  impl_->view_->GetCaption().c_str(),
-                                  message,
-                                  QMessageBox::Yes| QMessageBox::No,
-                                  QMessageBox::Yes);
+  int ret = QMessageBox::question(
+      NULL,
+      QString::fromUtf8(impl_->view_->GetCaption().c_str()),
+      QString::fromUtf8(message),
+      QMessageBox::Yes| QMessageBox::No,
+      QMessageBox::Yes);
   return ret == QMessageBox::Yes;
 }
 
 std::string QtViewHost::Prompt(const char *message,
                                 const char *default_value) {
-  QString s= QInputDialog::getText(NULL,
-                                   impl_->view_->GetCaption().c_str(),
-                                   message,
-                                   QLineEdit::Normal);
+  QString s= QInputDialog::getText(
+      NULL,
+      QString::fromUtf8(impl_->view_->GetCaption().c_str()),
+      QString::fromUtf8(message),
+      QLineEdit::Normal);
   return s.toStdString();
 }
 

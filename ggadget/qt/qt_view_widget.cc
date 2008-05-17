@@ -42,8 +42,11 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
        drag_files_(NULL),
        composite_(composite),
        enable_input_mask_(true),
+       offscreen_pixmap_(NULL),
        mouse_drag_moved_(false),
-       child_(NULL) {
+       child_(NULL),
+       mouse_down_hittest_(ViewInterface::HT_CLIENT),
+       resize_drag_(false) {
   setMouseTracking(true);
   SetSize(2, 2);
   setAcceptDrops(true);
@@ -59,6 +62,7 @@ QtViewWidget::~QtViewWidget() {
   if (child_) {
     child_->setParent(NULL);
   }
+  if (offscreen_pixmap_) delete offscreen_pixmap_;
 }
 
 void QtViewWidget::paintEvent(QPaintEvent *event) {
@@ -67,17 +71,16 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   int int_height = D2I(view_->GetHeight() * zoom_);
 
   if (width() != int_width || height() != int_height
-      || offscreen_pixmap_.isNull()) {
+      || !offscreen_pixmap_) {
     SetSize(int_width, int_height);
-    QPixmap pixmap(int_width, int_height);
-    offscreen_pixmap_ = pixmap;
+    offscreen_pixmap_ = new QPixmap(int_width, int_height);
   }
   // Draw view on offscreen pixmap
   {
-    QPainter p(&offscreen_pixmap_);
+    QPainter p(offscreen_pixmap_);
     p.scale(zoom_, zoom_);
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(offscreen_pixmap_.rect(), Qt::transparent);
+    p.fillRect(offscreen_pixmap_->rect(), Qt::transparent);
     QtCanvas canvas(int_width, int_height, &p);
     view_->Draw(&canvas);
     // view_'s size may be changed after Draw
@@ -90,7 +93,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   }
 
   if (enable_input_mask_ && composite_) {
-    SetInputMask(&offscreen_pixmap_);
+    SetInputMask(offscreen_pixmap_);
   }
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
@@ -102,7 +105,7 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     p.fillRect(rect(), Qt::transparent);
     p.restore();
   }
-  p.drawPixmap(0, 0, offscreen_pixmap_);
+  p.drawPixmap(0, 0, *offscreen_pixmap_);
 }
 
 void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
@@ -129,10 +132,58 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
       // Ignore the result of this fake event.
       view_->OnMouseEvent(e);
       mouse_drag_moved_ = true;
+      if (mouse_down_hittest_ == ViewInterface::HT_LEFT ||
+          mouse_down_hittest_ == ViewInterface::HT_RIGHT ||
+          mouse_down_hittest_ == ViewInterface::HT_TOP ||
+          mouse_down_hittest_ == ViewInterface::HT_BOTTOM ||
+          mouse_down_hittest_ == ViewInterface::HT_TOPLEFT ||
+          mouse_down_hittest_ == ViewInterface::HT_TOPRIGHT ||
+          mouse_down_hittest_ == ViewInterface::HT_BOTTOMLEFT ||
+          mouse_down_hittest_ == ViewInterface::HT_BOTTOMRIGHT) {
+        resize_drag_ = true;
+        origi_geometry_ = window()->geometry();
+        top_ = bottom_ = left_ = right_ = 0;
+        if (mouse_down_hittest_ == ViewInterface::HT_LEFT)
+          left_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_RIGHT)
+          right_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_TOP)
+          top_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOM)
+          bottom_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_TOPLEFT)
+          top_ = 1, left_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_TOPRIGHT)
+          top_ = 1, right_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOMLEFT)
+          bottom_ = 1, left_ = 1;
+        else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOMRIGHT)
+          bottom_ = 1, right_ = 1;
+      }
     }
 
-    window()->move(window()->pos() + QCursor::pos() - mouse_pos_);
-    mouse_pos_ = QCursor::pos();
+    if (resize_drag_) {
+      QPoint p = QCursor::pos() - mouse_pos_;
+      QRect rect = origi_geometry_;
+      rect.setTop(rect.top() + top_*p.y());
+      rect.setBottom(rect.bottom() + bottom_*p.y());
+      rect.setLeft(rect.left() + left_*p.x());
+      rect.setRight(rect.right() + right_*p.x());
+      double w = rect.width();
+      double h = rect.height();
+      if (w != view_->GetWidth() || h != view_->GetHeight()) {
+        if (view_->OnSizing(&w, &h)) {
+          view_->SetSize(w, h);
+          window()->setGeometry(rect);
+          delete offscreen_pixmap_;
+          offscreen_pixmap_ = NULL;
+          update();
+        }
+      }
+    }  else {
+      window()->move(window()->pos() + QCursor::pos() - mouse_pos_);
+      mouse_pos_ = QCursor::pos();
+    }
   }
 }
 
@@ -143,7 +194,9 @@ void QtViewWidget::mousePressEvent(QMouseEvent * event ) {
     view_->OnOtherEvent(e);
   }
 
+  mouse_down_hittest_ = view_->GetHitTest();
   mouse_drag_moved_ = false;
+  resize_drag_ = false;
   // Remember the position of mouse, it may be used to move the gadget
   mouse_pos_ = QCursor::pos();
   EventResult handler_result = EVENT_RESULT_UNHANDLED;
