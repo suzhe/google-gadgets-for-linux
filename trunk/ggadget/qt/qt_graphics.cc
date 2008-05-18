@@ -90,9 +90,7 @@ ImageInterface *QtGraphics::NewImage(const char *tag,
 FontInterface *QtGraphics::NewFont(const char *family, double pt_size,
                                    FontInterface::Style style,
                                    FontInterface::Weight weight) const {
-  // TODO:How to get the most proper size
-  double size = pt_size * 96./122.;
-  return new QtFont(family, size, style, weight);
+  return new QtFont(family, pt_size, style, weight);
 }
 
 } // namespace qt
