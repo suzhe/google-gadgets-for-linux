@@ -127,6 +127,16 @@ class SideBar {
   ViewElement *SetPopOutedView(ViewInterface *view);
 
   /**
+   * Set pop out details view.
+   * When a element opens a details view, the @c host associated with
+   * the sidebar should let sidebar know it so that the details view could be
+   * closed at proper time.
+   * @param element the element that opens a details view.
+   * @param details_view the opened details view.
+   */
+  void SetPopOutedDetailsView(ViewElement *element, ViewInterface *details_view);
+
+  /**
    * Event connection methods.
    */
   Connection *ConnectOnUndock(Slot0<void> *slot);
