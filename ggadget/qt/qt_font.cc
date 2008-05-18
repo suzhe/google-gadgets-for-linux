@@ -23,13 +23,14 @@ namespace qt {
 
 QtFont::QtFont(const char *family, double size, Style style,
                      Weight weight)
-    : style_(style), weight_(weight) {
-  int qt_weight = QFont::Normal;
-  bool italic = false;
-  if (weight == WEIGHT_BOLD) qt_weight = QFont::Bold;
-  if (style == STYLE_ITALIC) italic = true;
-  font_ = new QFont(family, D2I(size), qt_weight, italic);
-  size_ = size;
+    : size_(size), style_(style), weight_(weight) {
+  font_ = new QFont(family);
+  int px_size = D2I(size * 96./ 72.);
+  font_->setPixelSize(px_size);
+  if (weight == WEIGHT_BOLD)
+    font_->setWeight(QFont::Bold);
+  if (style == STYLE_ITALIC)
+    font_->setItalic(true);
 }
 
 QtFont::~QtFont() {
