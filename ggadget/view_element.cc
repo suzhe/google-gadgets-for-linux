@@ -20,7 +20,6 @@
 #include "canvas_interface.h"
 #include "elements.h"
 #include "graphics_interface.h"
-#include "gadget.h"
 #include "logger.h"
 #include "signals.h"
 #include "view.h"

@@ -150,6 +150,11 @@ int main(int argc, char* argv[]) {
   // set locale according to env vars
   setlocale(LC_ALL, "");
 
+  // Puth the process into background in the early stage to prevent from
+  // printing any log messages.
+  if (background)
+    ggadget::Daemonize();
+
   // Set global main loop
   ggadget::SetGlobalMainLoop(&g_main_loop);
 
@@ -227,13 +232,6 @@ int main(int argc, char* argv[]) {
       manager->NewGadgetInstanceFromFile(gadget_paths[i].c_str());
     }
   }
-
-  // FIXME: temporary solution, Daemonize action will change current
-  // path, which will affect the resource loading.
-  // Puth the process into background in the early stage to prevent from
-  // printing any log messages.
-  if (background)
-    ggadget::Daemonize();
 
   host->Run();
 
