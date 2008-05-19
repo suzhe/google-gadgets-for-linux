@@ -98,9 +98,8 @@ class SingleViewHost : public ViewHostInterface {
   void GetWindowPosition(int *x, int *y) const;
   void SetWindowPosition(int x, int y);
 
-  /** Gets and sets size of the top level window. */
+  /** Gets size of the top level window. */
   void GetWindowSize(int *width, int *height) const;
-  void SetWindowSize(int width, int height);
 
   /** Gets and sets keep-above state. */
   bool IsKeepAbove() const;
