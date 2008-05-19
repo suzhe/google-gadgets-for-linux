@@ -70,31 +70,9 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
   int int_width = D2I(view_->GetWidth() * zoom_);
   int int_height = D2I(view_->GetHeight() * zoom_);
 
-  if (width() != int_width || height() != int_height
-      || !offscreen_pixmap_) {
+  if (width() != int_width || height() != int_height)
     SetSize(int_width, int_height);
-    offscreen_pixmap_ = new QPixmap(int_width, int_height);
-  }
-  // Draw view on offscreen pixmap
-  {
-    QPainter p(offscreen_pixmap_);
-    p.scale(zoom_, zoom_);
-    p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(offscreen_pixmap_->rect(), Qt::transparent);
-    QtCanvas canvas(int_width, int_height, &p);
-    view_->Draw(&canvas);
-    // view_'s size may be changed after Draw
-    int_width = D2I(view_->GetWidth() * zoom_);
-    int_height = D2I(view_->GetHeight() * zoom_);
-    if (width() != int_width || height() != int_height) {
-      update();
-      return;
-    }
-  }
 
-  if (enable_input_mask_ && composite_) {
-    SetInputMask(offscreen_pixmap_);
-  }
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
   p.setClipRect(event->rect());
@@ -105,7 +83,34 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
     p.fillRect(rect(), Qt::transparent);
     p.restore();
   }
-  p.drawPixmap(0, 0, *offscreen_pixmap_);
+
+  if (enable_input_mask_){
+    if (!offscreen_pixmap_ || offscreen_pixmap_->width() != int_width
+        || offscreen_pixmap_->height() != int_height) {
+      if (offscreen_pixmap_) delete offscreen_pixmap_;
+      offscreen_pixmap_ = new QPixmap(int_width, int_height);
+    }
+    // Draw view on offscreen pixmap
+    QPainter poff(offscreen_pixmap_);
+    poff.scale(zoom_, zoom_);
+    poff.setCompositionMode(QPainter::CompositionMode_Source);
+    poff.fillRect(offscreen_pixmap_->rect(), Qt::transparent);
+    QtCanvas canvas(int_width, int_height, &poff);
+    view_->Draw(&canvas);
+  } else {
+    // Draw directly on widget
+    QtCanvas canvas(int_width, int_height, &p);
+    view_->Draw(&canvas);
+  }
+  // view_'s size may be changed after Draw
+  int_width = D2I(view_->GetWidth() * zoom_);
+  int_height = D2I(view_->GetHeight() * zoom_);
+  if (width() != int_width || height() != int_height) {
+    update();
+  } else if (enable_input_mask_) {
+    SetInputMask(offscreen_pixmap_);
+    p.drawPixmap(0, 0, *offscreen_pixmap_);
+  }
 }
 
 void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
@@ -132,34 +137,27 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
       // Ignore the result of this fake event.
       view_->OnMouseEvent(e);
       mouse_drag_moved_ = true;
-      if (mouse_down_hittest_ == ViewInterface::HT_LEFT ||
-          mouse_down_hittest_ == ViewInterface::HT_RIGHT ||
-          mouse_down_hittest_ == ViewInterface::HT_TOP ||
-          mouse_down_hittest_ == ViewInterface::HT_BOTTOM ||
-          mouse_down_hittest_ == ViewInterface::HT_TOPLEFT ||
-          mouse_down_hittest_ == ViewInterface::HT_TOPRIGHT ||
-          mouse_down_hittest_ == ViewInterface::HT_BOTTOMLEFT ||
-          mouse_down_hittest_ == ViewInterface::HT_BOTTOMRIGHT) {
-        resize_drag_ = true;
-        origi_geometry_ = window()->geometry();
-        top_ = bottom_ = left_ = right_ = 0;
-        if (mouse_down_hittest_ == ViewInterface::HT_LEFT)
-          left_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_RIGHT)
-          right_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_TOP)
-          top_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOM)
-          bottom_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_TOPLEFT)
-          top_ = 1, left_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_TOPRIGHT)
-          top_ = 1, right_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOMLEFT)
-          bottom_ = 1, left_ = 1;
-        else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOMRIGHT)
-          bottom_ = 1, right_ = 1;
-      }
+      resize_drag_ = true;
+      origi_geometry_ = window()->geometry();
+      top_ = bottom_ = left_ = right_ = 0;
+      if (mouse_down_hittest_ == ViewInterface::HT_LEFT)
+        left_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_RIGHT)
+        right_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_TOP)
+        top_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOM)
+        bottom_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_TOPLEFT)
+        top_ = 1, left_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_TOPRIGHT)
+        top_ = 1, right_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOMLEFT)
+        bottom_ = 1, left_ = 1;
+      else if (mouse_down_hittest_ == ViewInterface::HT_BOTTOMRIGHT)
+        bottom_ = 1, right_ = 1;
+      else
+        resize_drag_ = false;
     }
 
     if (resize_drag_) {
@@ -175,8 +173,10 @@ void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
         if (view_->OnSizing(&w, &h)) {
           view_->SetSize(w, h);
           window()->setGeometry(rect);
-          delete offscreen_pixmap_;
-          offscreen_pixmap_ = NULL;
+          if (offscreen_pixmap_) {
+            delete offscreen_pixmap_;
+            offscreen_pixmap_ = NULL;
+          }
           update();
         }
       }
