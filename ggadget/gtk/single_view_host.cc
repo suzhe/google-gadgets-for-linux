@@ -60,7 +60,6 @@ class SingleViewHost::Impl {
       remove_on_close_(remove_on_close),
       record_states_(record_states),
       debug_mode_(debug_mode),
-      adjust_window_size_source_(0),
       stop_dragging_source_(0),
       win_x_(0),
       win_y_(0),
@@ -84,10 +83,6 @@ class SingleViewHost::Impl {
   void Detach() {
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
-
-    if (adjust_window_size_source_)
-      g_source_remove(adjust_window_size_source_);
-    adjust_window_size_source_ = 0;
 
     if (stop_dragging_source_)
       g_source_remove(stop_dragging_source_);
@@ -217,13 +212,13 @@ class SingleViewHost::Impl {
     int width = static_cast<int>(ceil(view_->GetWidth() * zoom));
     int height = static_cast<int>(ceil(view_->GetHeight() * zoom));
 
-    // DLOG("New view size: %d %d", width, height);
+    DLOG("New view size: %d %d", width, height);
 
     GtkRequisition req;
     gtk_widget_set_size_request(widget_, width, height);
     gtk_widget_size_request(window_, &req);
 
-    // DLOG("Required window size: %d %d", req.width, req.height);
+    DLOG("Required window size: %d %d", req.width, req.height);
 
     if (gtk_window_get_resizable(GTK_WINDOW(window_))) {
       gtk_widget_set_size_request(widget_, -1, -1);
@@ -240,25 +235,12 @@ class SingleViewHost::Impl {
       win_height_ = req.height;
     }
 
-    // DLOG("End adjusting window size.");
-  }
-
-  static gboolean AdjustWindowSizeHandler(gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    impl->AdjustWindowSize();
-    impl->adjust_window_size_source_ = 0;
-    return FALSE;
+    DLOG("End adjusting window size.");
   }
 
   void QueueResize() {
-    if (adjust_window_size_source_)
-      g_source_remove(adjust_window_size_source_);
-
-    // Use G_PRIORITY_HIGH_IDLE + 15 to make sure that it'll be executed after
-    // resize event and before redraw event.
-    adjust_window_size_source_ =
-        g_idle_add_full(G_PRIORITY_HIGH_IDLE + 15,
-                        AdjustWindowSizeHandler, this, NULL);
+    if (!resize_dragging_)
+      AdjustWindowSize();
   }
 
   void EnableInputShapeMask(bool enable) {
@@ -348,12 +330,6 @@ class SingleViewHost::Impl {
     ASSERT(window_);
     if (window_)
       gtk_window_move(GTK_WINDOW(window_), x, y);
-  }
-
-  void SetWindowSize(int width, int height) {
-    ASSERT(window_);
-    if (window_)
-      gtk_window_resize(GTK_WINDOW(window_), width, height);
   }
 
   void SetKeepAbove(bool keep_above) {
@@ -504,6 +480,7 @@ class SingleViewHost::Impl {
       return;
 
     resize_dragging_ = true;
+    binder_->BeginResizeDrag();
 
     if (stop_dragging_source_)
       g_source_remove(stop_dragging_source_);
@@ -547,7 +524,9 @@ class SingleViewHost::Impl {
     if (resize_dragging_) {
       DLOG("Stop resize dragging.");
       resize_dragging_ = false;
+      binder_->EndResizeDrag();
       on_end_resize_drag_signal_();
+      QueueResize();
     }
     if (move_dragging_) {
       DLOG("Stop move dragging.");
@@ -719,8 +698,6 @@ class SingleViewHost::Impl {
   bool record_states_;
 
   int debug_mode_;
-
-  int adjust_window_size_source_;
   int stop_dragging_source_;
 
   int win_x_;
@@ -888,10 +865,6 @@ void SingleViewHost::SetWindowPosition(int x, int y) {
 void SingleViewHost::GetWindowSize(int *width, int *height) const {
   if (width) *width = impl_->win_width_;
   if (height) *height = impl_->win_height_;
-}
-
-void SingleViewHost::SetWindowSize(int width, int height) {
-  impl_->SetWindowSize(width, height);
 }
 
 bool SingleViewHost::IsKeepAbove() const {

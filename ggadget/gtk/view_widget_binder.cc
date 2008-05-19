@@ -56,6 +56,7 @@ class ViewWidgetBinder::Impl {
       no_background_(no_background),
       enable_input_shape_mask_(true),
       focused_(false),
+      resize_dragging_(false),
       zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
@@ -644,8 +645,6 @@ class ViewWidgetBinder::Impl {
     int widget_width = allocation->width;
     int widget_height = allocation->height;
 
-    DLOG("SizeAllocate: %d %d", widget_width, widget_height);
-
     if (widget_width == impl->current_widget_width_ &&
         widget_height == impl->current_widget_height_)
       return;
@@ -653,8 +652,15 @@ class ViewWidgetBinder::Impl {
     impl->current_widget_width_ = widget_width;
     impl->current_widget_height_ = widget_height;
 
+    DLOG("SizeAllocate: %d %d", widget_width, widget_height);
+
     if (!GTK_WIDGET_MAPPED(widget)) {
       DLOG("The widget is not mapped yet, don't adjust view size.");
+      return;
+    }
+
+    if (!impl->resize_dragging_) {
+      DLOG("Not in resize dragging, no need to adjust view size.");
       return;
     }
 
@@ -681,8 +687,8 @@ class ViewWidgetBinder::Impl {
           DLOG("Zoom View to: %lf", zoom);
           impl->view_->GetGraphics()->SetZoom(zoom);
           impl->view_->MarkRedraw();
+          impl->host_->QueueResize();
         }
-        impl->host_->QueueResize();
       }
     } else {
       DLOG("The size of view widget was changed, "
@@ -745,6 +751,7 @@ class ViewWidgetBinder::Impl {
   bool no_background_;
   bool enable_input_shape_mask_;
   bool focused_;
+  bool resize_dragging_;
   double zoom_;
   double mouse_down_x_;
   double mouse_down_y_;
@@ -815,6 +822,14 @@ void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
   if (impl_->widget_ && impl_->no_background_ && impl_->composited_ && !enable)
     gtk_widget_input_shape_combine_mask(impl_->widget_, NULL, 0, 0);
 #endif
+}
+
+void ViewWidgetBinder::BeginResizeDrag() {
+  impl_->resize_dragging_ = true;
+}
+
+void ViewWidgetBinder::EndResizeDrag() {
+  impl_->resize_dragging_ = false;
 }
 
 ViewWidgetBinder::~ViewWidgetBinder() {
