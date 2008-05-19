@@ -573,6 +573,7 @@ class SideBar::Impl : public View {
 
   ViewElement *null_element_;
   ViewElement *popout_element_;
+  ViewElement *popout_details_view_element_;
 
   std::vector<double> elements_height_;
   double blank_height_;
@@ -675,10 +676,15 @@ ViewElement *SideBar::GetViewElementByIndex(int index) const {
 }
 
 ViewElement *SideBar::SetPopOutedView(ViewInterface *view) {
-  if (view)
-    impl_->popout_element_ = impl_->FindViewElementByView(view);
-  else
+  if (view) {
+    ViewElement *element = impl_->FindViewElementByView(view);
+    // popin previous element before set other popout one
+    if (impl_->popout_element_ && impl_->popout_element_ != element)
+      impl_->popin_event_();
+    impl_->popout_element_ = element;
+  } else {
     impl_->popout_element_ = NULL;
+  }
   return impl_->popout_element_;
 }
 
