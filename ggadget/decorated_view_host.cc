@@ -62,6 +62,8 @@ static const double kVDDetailsCaptionMargin = 1;
 static const unsigned int kVDShowTimeout = 200;
 static const unsigned int kVDHideTimeout = 500;
 
+static const double kVDMainBackgroundOpacity = 0.618;
+
 class DecoratedViewHost::Impl {
  public:
   // Base class for all kinds of view decorators.
@@ -233,6 +235,8 @@ class DecoratedViewHost::Impl {
       if (*width <= 0 || *height <= 0)
         return false;
 
+      double orig_width = *width;
+      double orig_height = *height;
       double left, right, top, bottom;
       double cw, ch;
       GetMargins(&left, &right, &top, &bottom);
@@ -240,11 +244,16 @@ class DecoratedViewHost::Impl {
 
       cw = std::max(*width - left - right, cw);
       ch = std::max(*height - top - bottom, ch);
+      bool result = false;
       if (IsChildViewVisible()) {
-        view_element_->OnSizing(&cw, &ch);
+        result = view_element_->OnSizing(&cw, &ch);
       } else {
-        OnClientSizing(&cw, &ch);
+        result = OnClientSizing(&cw, &ch);
       }
+
+      if (!result)
+        GetClientExtents(&cw, &ch);
+
       cw += (left + right);
       ch += (top + bottom);
 
@@ -253,9 +262,7 @@ class DecoratedViewHost::Impl {
       if (!allow_y_margin_)
         *height = ch;
 
-      // Always returns true here, SetSize() can handle the case when
-      // view element is OnSizing() returns false.
-      return true;
+      return result || (*width == orig_width && *height == orig_height);
     }
 
     virtual void SetResizable(ResizableMode resizable) {
@@ -340,7 +347,7 @@ class DecoratedViewHost::Impl {
       if (result1 == EVENT_RESULT_UNHANDLED ||
           event.GetType() == Event::EVENT_MOUSE_OVER ||
           event.GetType() == Event::EVENT_MOUSE_OUT) {
-        HandleMouseEvent(event);
+        result2 = HandleMouseEvent(event);
       }
 
       View::SetCursor(cursor_);
@@ -567,6 +574,8 @@ class DecoratedViewHost::Impl {
         background_->SetSrc(Variant(transparent_ ?
                                     kVDMainBackgroundTransparent :
                                     kVDMainBackground));
+        if (!transparent_)
+          background_->SetOpacity(kVDMainBackgroundOpacity);
         background_->SetStretchMiddle(true);
         background_->SetPixelX(0);
         background_->SetPixelY(transparent_ ? kVDMainToolbarHeight : 0);
@@ -767,8 +776,11 @@ class DecoratedViewHost::Impl {
         popped_out_ = true;
         // Take a snapshot for the child view.
         snapshot_->SetFrozen(false);
-        if (minimized_)
+        if (minimized_) {
+          SimpleEvent event(Event::EVENT_MINIMIZE);
+          original_child_view_->OnOtherEvent(event);
           SetChildViewVisible(true);
+        }
         snapshot_->SetSrc(Variant(GetViewElement()));
         snapshot_->SetFrozen(true);
         snapshot_->SetSrc(Variant());

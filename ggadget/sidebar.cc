@@ -183,7 +183,7 @@ class SideBar::Impl : public View {
         mouse_move_event_y_(-1),
         hit_element_bottom_(false),
         hit_element_normal_part_(false),
-        hit_sidebar_border_(false),
+        hittest_(HT_CLIENT),
         background_(NULL),
         icon_(NULL),
         main_div_(NULL) {
@@ -196,6 +196,8 @@ class SideBar::Impl : public View {
 
  public:
   virtual EventResult OnMouseEvent(const MouseEvent &event) {
+    hittest_ = HT_CLIENT;
+
     // the mouse down event after expand event should file unexpand event
     if (ShouldFirePopInEvent(event)) {
       popin_event_();
@@ -204,12 +206,25 @@ class SideBar::Impl : public View {
 
     EventResult result = EVENT_RESULT_UNHANDLED;
     // don't sent mouse event to view elements when layouting or resizing
-    if (!hit_element_bottom_ && !hit_sidebar_border_)
+    if (!hit_element_bottom_)
       result = View::OnMouseEvent(event);
 
+    if (result == EVENT_RESULT_UNHANDLED) {
+      if (event.GetX() >= 0 && event.GetX() < kBoderWidth) {
+        hittest_ = HT_LEFT;
+        SetCursor(CURSOR_SIZEWE);
+      } else if (event.GetX() < GetWidth() &&
+               event.GetX() >= GetWidth() - kBoderWidth) {
+        hittest_ = HT_RIGHT;
+        SetCursor(CURSOR_SIZEWE);
+      }
+    }
+
     if (result != EVENT_RESULT_UNHANDLED ||
-        event.GetButton() != MouseEvent::BUTTON_LEFT)
+        event.GetButton() != MouseEvent::BUTTON_LEFT ||
+        hittest_ != HT_CLIENT) {
       return result;
+    }
 
     int index = 0;
     double x, y;
@@ -217,10 +232,6 @@ class SideBar::Impl : public View {
     ViewElement *focused = owner_->GetMouseOverElement();
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_DOWN:
-        if (GetHitTest() == HT_LEFT || GetHitTest() == HT_RIGHT) {
-          hit_sidebar_border_ = true;
-          return EVENT_RESULT_UNHANDLED;
-        }
         if (!focused) return result;
 
         DLOG("Mouse down at (%f,%f)", event.GetX(), event.GetY());
@@ -277,15 +288,19 @@ class SideBar::Impl : public View {
         Layout();
       }
     } else if (hit_element_normal_part_ &&
-               (std::abs(offset) > kMouseMoveThreshold ||
+               (std::abs(offset) > kUndockDragThreshold ||
                 std::abs(event.GetX() - mouse_move_event_x_) >
-                kMouseMoveThreshold)) {
+                kUndockDragThreshold)) {
       undock_event_();
       ResetState();
-    } else if (hit_sidebar_border_) {
-      return EVENT_RESULT_UNHANDLED;
     }
     return EVENT_RESULT_HANDLED;
+  }
+
+  virtual HitTest GetHitTest() const {
+    // Always return HT_CLIENT except when mouse cursor is on left or right
+    // border.
+    return hittest_;
   }
 
   virtual bool OnAddContextMenuItems(MenuInterface *menu) {
@@ -311,10 +326,6 @@ class SideBar::Impl : public View {
     button_array_[1]->SetPixelX(width - 2 * kIconHeight - 1 - kBoderWidth);
     button_array_[2]->SetPixelX(width - kIconHeight - kBoderWidth);
 
-    border_array_[0]->SetPixelHeight(height);
-    border_array_[1]->SetPixelHeight(height);
-    border_array_[1]->SetPixelX(width - kBoderWidth);
-
     Layout();
   }
   void ResetState() {
@@ -327,7 +338,6 @@ class SideBar::Impl : public View {
     mouse_move_event_y_ = -1;
     hit_element_bottom_ = false;
     hit_element_normal_part_ = false;
-    hit_sidebar_border_ = false;
     blank_height_ = 0;
     elements_height_.clear();
   }
@@ -342,17 +352,6 @@ class SideBar::Impl : public View {
     background_->SetRelativeHeight(1);
     background_->EnableCanvasCache(true);
     GetChildren()->InsertElement(background_, NULL);
-
-    for (int i = 0; i < 2; ++i) {
-      DivElement *div = new DivElement(NULL, this, NULL);
-      div->SetPixelWidth(kBoderWidth);
-      div->SetPixelY(0);
-      div->SetCursor(CURSOR_SIZEWE);
-      border_array_[i] = div;
-      GetChildren()->InsertElement(div, NULL);
-    }
-    border_array_[0]->SetHitTest(HT_LEFT);
-    border_array_[1]->SetHitTest(HT_RIGHT);
 
     SetupButtons();
 
@@ -442,19 +441,18 @@ class SideBar::Impl : public View {
     return r;
   }
   void Layout() {
-    double height = kSperator;
+    double y = kGadgetSpacing;
     for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
       ViewElement *element =
         down_cast<ViewElement *>(main_div_->GetChildren()->GetItemByIndex(i));
-      double x = main_div_->GetPixelWidth(), y = element->GetPixelHeight();
-      if (element->IsVisible() && element->OnSizing(&x, &y)) {
-        element->SetSize(main_div_->GetPixelWidth(), y);
+      double width = main_div_->GetPixelWidth();
+      double height = ceil(element->GetPixelHeight());
+      if (element->IsVisible() && element->OnSizing(&width, &height)) {
+        element->SetSize(width, height);
       }
       element->SetPixelX(0);
-      element->SetPixelY(ceil(height));
-      height += element->GetPixelHeight() + kSperator;
-      double sx, sy;
-      element->SelfCoordToViewCoord(0, 0, &sx, &sy);
+      element->SetPixelY(ceil(y));
+      y += element->GetPixelHeight() + kGadgetSpacing;
     }
     QueueDraw();
   }
@@ -511,7 +509,7 @@ class SideBar::Impl : public View {
       index--;
     }
     if (do_resize)
-      // recover upmost elemnts' size
+      // recover upmost elements' size
       while (index >= 0) {
         ViewElement *element = down_cast<ViewElement *>(
             main_div_->GetChildren()->GetItemByIndex(index));
@@ -581,22 +579,21 @@ class SideBar::Impl : public View {
   double mouse_move_event_y_;
   bool hit_element_bottom_;
   bool hit_element_normal_part_;
-  bool hit_sidebar_border_;
+  HitTest hittest_;
 
   // elements of sidebar decorator
   ImgElement *background_;
   ImgElement *icon_;
   DivElement *main_div_;
   ButtonElement *button_array_[3];
-  DivElement *border_array_[2];
 
   Signal1<bool, MenuInterface *> system_menu_event_;
   EventSignal size_event_;
   EventSignal undock_event_;
   EventSignal popin_event_;
 
-  static const int kSperator = 5;
-  static const int kMouseMoveThreshold = 2;
+  static const double kGadgetSpacing = 1;
+  static const double kUndockDragThreshold = 2;
   static const double kOpacityFactor = 0.618;
   static const double kSideBarMinWidth = 50;
   static const double kSideBarMaxWidth = 999;
@@ -605,8 +602,8 @@ class SideBar::Impl : public View {
   static const double kIconHeight = 22;
 };
 
-const int SideBar::Impl::kSperator;
-const int SideBar::Impl::kMouseMoveThreshold;
+const double SideBar::Impl::kGadgetSpacing;
+const double SideBar::Impl::kUndockDragThreshold;
 const double SideBar::Impl::kOpacityFactor;
 const double SideBar::Impl::kSideBarMinWidth;
 const double SideBar::Impl::kSideBarMaxWidth;

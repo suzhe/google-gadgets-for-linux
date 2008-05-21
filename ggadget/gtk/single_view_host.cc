@@ -22,17 +22,21 @@
 #include <ggadget/options_interface.h>
 #include <ggadget/gadget.h>
 #include <ggadget/messages.h>
+#include <ggadget/math_utils.h>
 #include "single_view_host.h"
 #include "view_widget_binder.h"
 #include "cairo_graphics.h"
 #include "menu_builder.h"
 #include "tooltip.h"
 #include "utilities.h"
+#include "key_convert.h"
 
 namespace ggadget {
 namespace gtk {
 
-static const int kStopDraggingTimeout = 200;
+static const double kMinimumZoom = 0.5;
+static const double kMaximumZoom = 2.0;
+static const int kStopMoveDragTimeout = 200;
 static const char kMainViewWindowRole[] = "Google-Gadgets";
 
 class SingleViewHost::Impl {
@@ -55,19 +59,30 @@ class SingleViewHost::Impl {
       cancel_button_(NULL),
       tooltip_(new Tooltip(kShowTooltipDelay, kHideTooltipDelay)),
       binder_(NULL),
-      zoom_(zoom),
+      initial_zoom_(zoom),
       decorated_(decorated),
       remove_on_close_(remove_on_close),
       record_states_(record_states),
       debug_mode_(debug_mode),
-      stop_dragging_source_(0),
+      stop_move_drag_source_(0),
       win_x_(0),
       win_y_(0),
       win_width_(0),
       win_height_(0),
+      resize_view_zoom_(0),
+      resize_view_width_(0),
+      resize_view_height_(0),
+      resize_win_x_(0),
+      resize_win_y_(0),
+      resize_win_width_(0),
+      resize_win_height_(0),
+      resize_button_(0),
+      resize_mouse_x_(0),
+      resize_mouse_y_(0),
+      resize_width_mode_(0),
+      resize_height_mode_(0),
       is_keep_above_(false),
       move_dragging_(false),
-      resize_dragging_(false),
       enable_signals_(true),
       feedback_handler_(NULL) {
     ASSERT(owner);
@@ -84,9 +99,9 @@ class SingleViewHost::Impl {
     // To make sure that it won't be accessed anymore.
     view_ = NULL;
 
-    if (stop_dragging_source_)
-      g_source_remove(stop_dragging_source_);
-    stop_dragging_source_ = 0;
+    if (stop_move_drag_source_)
+      g_source_remove(stop_move_drag_source_);
+    stop_move_drag_source_ = 0;
 
     delete feedback_handler_;
     feedback_handler_ = NULL;
@@ -157,6 +172,7 @@ class SingleViewHost::Impl {
 
     gtk_window_set_decorated(GTK_WINDOW(window_), decorated_);
     gtk_window_set_gravity(GTK_WINDOW(window_), GDK_GRAVITY_STATIC);
+    gtk_window_set_resizable(GTK_WINDOW(window_), TRUE);
 
     g_signal_connect(G_OBJECT(window_), "delete-event",
                      G_CALLBACK(gtk_widget_hide_on_delete), NULL);
@@ -176,6 +192,12 @@ class SingleViewHost::Impl {
                      G_CALLBACK(WindowHideHandler), this);
     g_signal_connect(G_OBJECT(window_), "configure-event",
                      G_CALLBACK(ConfigureHandler), this);
+
+    // For resize drag.
+    g_signal_connect(G_OBJECT(window_), "motion-notify-event",
+                     G_CALLBACK(MotionNotifyHandler), this);
+    g_signal_connect(G_OBJECT(window_), "button-release-event",
+                     G_CALLBACK(ButtonReleaseHandler), this);
 
     g_signal_connect(G_OBJECT(fixed_), "size-request",
                      G_CALLBACK(FixedSizeRequestHandler), this);
@@ -212,13 +234,9 @@ class SingleViewHost::Impl {
     int width = static_cast<int>(ceil(view_->GetWidth() * zoom));
     int height = static_cast<int>(ceil(view_->GetHeight() * zoom));
 
-    DLOG("New view size: %d %d", width, height);
-
     GtkRequisition req;
     gtk_widget_set_size_request(widget_, width, height);
     gtk_widget_size_request(window_, &req);
-
-    DLOG("Required window size: %d %d", req.width, req.height);
 
     if (gtk_window_get_resizable(GTK_WINDOW(window_))) {
       gtk_widget_set_size_request(widget_, -1, -1);
@@ -235,11 +253,13 @@ class SingleViewHost::Impl {
       win_height_ = req.height;
     }
 
-    DLOG("End adjusting window size.");
+    DLOG("New window size: %d %d", req.width, req.height);
   }
 
   void QueueResize() {
-    if (!resize_dragging_)
+    // When doing resize drag, MotionNotifyHandler() is in charge of resizing
+    // the window, so don't do it here.
+    if (resize_width_mode_ == 0 && resize_height_mode_ == 0)
       AdjustWindowSize();
   }
 
@@ -449,51 +469,85 @@ class SingleViewHost::Impl {
 
   void BeginResizeDrag(int button, ViewInterface::HitTest hittest) {
     ASSERT(window_);
-    if (!gtk_window_get_resizable(GTK_WINDOW(window_)) ||
-        !GTK_WIDGET_MAPPED(window_))
+    if (!GTK_WIDGET_MAPPED(window_))
       return;
 
-    GdkWindowEdge edge;
     // Determine the resize drag edge.
+    resize_width_mode_ = 0;
+    resize_height_mode_ = 0;
     if (hittest == ViewInterface::HT_LEFT) {
-      edge = GDK_WINDOW_EDGE_WEST;
+      resize_width_mode_ = -1;
     } else if (hittest == ViewInterface::HT_RIGHT) {
-      edge = GDK_WINDOW_EDGE_EAST;
+      resize_width_mode_ = 1;
     } else if (hittest == ViewInterface::HT_TOP) {
-      edge = GDK_WINDOW_EDGE_NORTH;
+      resize_height_mode_ = -1;
     } else if (hittest == ViewInterface::HT_BOTTOM) {
-      edge = GDK_WINDOW_EDGE_SOUTH;
+      resize_height_mode_ = 1;
     } else if (hittest == ViewInterface::HT_TOPLEFT) {
-      edge = GDK_WINDOW_EDGE_NORTH_WEST;
+      resize_height_mode_ = -1;
+      resize_width_mode_ = -1;
     } else if (hittest == ViewInterface::HT_TOPRIGHT) {
-      edge = GDK_WINDOW_EDGE_NORTH_EAST;
+      resize_height_mode_ = -1;
+      resize_width_mode_ = 1;
     } else if (hittest == ViewInterface::HT_BOTTOMLEFT) {
-      edge = GDK_WINDOW_EDGE_SOUTH_WEST;
+      resize_height_mode_ = 1;
+      resize_width_mode_ = -1;
     } else if (hittest == ViewInterface::HT_BOTTOMRIGHT) {
-      edge = GDK_WINDOW_EDGE_SOUTH_EAST;
+      resize_height_mode_ = 1;
+      resize_width_mode_ = 1;
     } else {
       // Unsupported hittest;
       return;
     }
 
-    if (on_begin_resize_drag_signal_(button, hittest))
+    if (on_begin_resize_drag_signal_(button, hittest)) {
+      resize_width_mode_ = 0;
+      resize_height_mode_ = 0;
       return;
+    }
 
-    resize_dragging_ = true;
-    binder_->BeginResizeDrag();
+    resize_view_zoom_ = view_->GetGraphics()->GetZoom();
+    resize_view_width_ = view_->GetWidth();
+    resize_view_height_ = view_->GetHeight();
+    resize_win_x_ = win_x_;
+    resize_win_y_ = win_y_;
+    resize_win_width_ = win_width_;
+    resize_win_height_ = win_height_;
+    resize_button_ = button;
 
-    if (stop_dragging_source_)
-      g_source_remove(stop_dragging_source_);
+    GdkEvent *event = gtk_get_current_event();
+    if (!event || !gdk_event_get_root_coords(event, &resize_mouse_x_,
+                                             &resize_mouse_y_)) {
+      gint x, y;
+      gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
+      resize_mouse_x_ = x;
+      resize_mouse_y_ = y;
+    }
 
-    stop_dragging_source_ =
-        g_timeout_add(kStopDraggingTimeout, StopDraggingTimeoutHandler, this);
+    if (event)
+      gdk_event_free(event);
 
-    int gtk_button = (button == MouseEvent::BUTTON_LEFT ? 1 :
-                      button == MouseEvent::BUTTON_MIDDLE ? 2 : 3);
-    gint x, y;
-    gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
-    gtk_window_begin_resize_drag(GTK_WINDOW(window_), edge, gtk_button,
-                                 x, y, gtk_get_current_event_time());
+#ifdef _DEBUG
+    GdkGrabStatus grab_status =
+#endif
+    gdk_pointer_grab(window_->window, FALSE,
+                     (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                    GDK_POINTER_MOTION_MASK |
+                                    GDK_POINTER_MOTION_HINT_MASK),
+                     NULL, NULL, gtk_get_current_event_time());
+#ifdef _DEBUG
+    DLOG("BeginResizeDrag: grab status: %d", grab_status);
+#endif
+  }
+
+  void StopResizeDrag() {
+    if (resize_width_mode_ || resize_height_mode_) {
+      resize_width_mode_ = 0;
+      resize_height_mode_ = 0;
+      gdk_pointer_ungrab(gtk_get_current_event_time());
+      QueueResize();
+      on_end_resize_drag_signal_();
+    }
   }
 
   void BeginMoveDrag(int button) {
@@ -506,11 +560,12 @@ class SingleViewHost::Impl {
 
     move_dragging_ = true;
 
-    if (stop_dragging_source_)
-      g_source_remove(stop_dragging_source_);
+    if (stop_move_drag_source_)
+      g_source_remove(stop_move_drag_source_);
 
-    stop_dragging_source_ =
-        g_timeout_add(kStopDraggingTimeout, StopDraggingTimeoutHandler, this);
+    stop_move_drag_source_ =
+        g_timeout_add(kStopMoveDragTimeout,
+                      StopMoveDragTimeoutHandler, this);
 
     gint x, y;
     gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
@@ -520,22 +575,15 @@ class SingleViewHost::Impl {
                                x, y, gtk_get_current_event_time());
   }
 
-  void StopDragging() {
-    if (resize_dragging_) {
-      DLOG("Stop resize dragging.");
-      resize_dragging_ = false;
-      binder_->EndResizeDrag();
-      on_end_resize_drag_signal_();
-      QueueResize();
-    }
+  void StopMoveDrag() {
     if (move_dragging_) {
       DLOG("Stop move dragging.");
       move_dragging_ = false;
       on_end_move_drag_signal_();
     }
-    if (stop_dragging_source_) {
-      g_source_remove(stop_dragging_source_);
-      stop_dragging_source_ = 0;
+    if (stop_move_drag_source_) {
+      g_source_remove(stop_move_drag_source_);
+      stop_move_drag_source_ = 0;
     }
   }
 
@@ -544,10 +592,8 @@ class SingleViewHost::Impl {
                                  gpointer user_data) {
     DLOG("FocusInHandler(%p)", widget);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->enable_signals_ &&
-        (impl->resize_dragging_ || impl->move_dragging_)) {
-      impl->StopDragging();
-    }
+    if (impl->move_dragging_)
+      impl->StopMoveDrag();
     return FALSE;
   }
 
@@ -563,10 +609,8 @@ class SingleViewHost::Impl {
                                      gpointer user_data) {
     DLOG("EnterNotifyHandler(%p): %d, %d", widget, event->mode, event->detail);
     Impl *impl = reinterpret_cast<Impl *>(user_data);
-    if (impl->enable_signals_ &&
-        (impl->resize_dragging_ || impl->move_dragging_)) {
-      impl->StopDragging();
-    }
+    if (impl->move_dragging_)
+      impl->StopMoveDrag();
     return FALSE;
   }
 
@@ -650,6 +694,77 @@ class SingleViewHost::Impl {
     impl->CloseView();
   }
 
+  static gboolean MotionNotifyHandler(GtkWidget *widget, GdkEventMotion *event,
+                                      gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->resize_width_mode_ || impl->resize_height_mode_) {
+      int button = ConvertGdkModifierToButton(event->state);
+      if (button == impl->resize_button_) {
+        double original_width =
+            impl->resize_view_width_ * impl->resize_view_zoom_;
+        double original_height =
+            impl->resize_view_height_ * impl->resize_view_zoom_;
+        double delta_x = event->x_root - impl->resize_mouse_x_;
+        double delta_y = event->y_root - impl->resize_mouse_y_;
+        double width = original_width;
+        double height = original_height;
+        double new_width = width + impl->resize_width_mode_ * delta_x;
+        double new_height = height + impl->resize_height_mode_ * delta_y;
+
+        if (impl->view_->GetResizable() == ViewInterface::RESIZABLE_TRUE) {
+          double view_width = new_width / impl->resize_view_zoom_;
+          double view_height = new_height / impl->resize_view_zoom_;
+          if (impl->view_->OnSizing(&view_width, &view_height)) {
+            DLOG("Resize view to: %lf %lf", view_width, view_height);
+            impl->view_->SetSize(view_width, view_height);
+            width = impl->view_->GetWidth() * impl->resize_view_zoom_;
+            height = impl->view_->GetHeight() * impl->resize_view_zoom_;
+          }
+        } else if (impl->resize_view_width_ && impl->resize_view_height_) {
+          double xzoom = new_width / impl->resize_view_width_;
+          double yzoom = new_height / impl->resize_view_height_;
+          double zoom = std::min(xzoom, yzoom);
+          zoom = Clamp(zoom, kMinimumZoom, kMaximumZoom);
+          DLOG("Zoom view to: %lf", zoom);
+          impl->view_->GetGraphics()->SetZoom(zoom);
+          width = impl->resize_view_width_ * zoom;
+          height = impl->resize_view_height_ * zoom;
+        }
+
+        if (width != original_width || height != original_height) {
+          delta_x = width - original_width;
+          delta_y = height - original_height;
+          int x = impl->resize_win_x_;
+          int y = impl->resize_win_y_;
+          if (impl->resize_width_mode_ == -1)
+            x -= int(delta_x);
+          if (impl->resize_height_mode_ == -1)
+            y -= int(delta_y);
+          int win_width = impl->resize_win_width_ + int(delta_x);
+          int win_height = impl->resize_win_height_ + int(delta_y);
+          gdk_window_move_resize(widget->window, x, y, win_width, win_height);
+          gdk_window_process_updates(widget->window, TRUE);
+          DLOG("Move resize window: x:%d, y:%d, w:%d, h:%d", x, y,
+               win_width, win_height);
+        }
+        return TRUE;
+      } else {
+        impl->StopResizeDrag();
+      }
+    }
+    return FALSE;
+  }
+
+  static gboolean ButtonReleaseHandler(GtkWidget *widget, GdkEventButton *event,
+                                       gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    if (impl->resize_width_mode_ || impl->resize_height_mode_) {
+      impl->StopResizeDrag();
+      return TRUE;
+    }
+    return FALSE;
+  }
+
   static void FixedSizeRequestHandler(GtkWidget *widget,
                                       GtkRequisition *requisition,
                                       gpointer user_data) {
@@ -658,21 +773,21 @@ class SingleViewHost::Impl {
     requisition->height = 1;
   }
 
-  static gboolean StopDraggingTimeoutHandler(gpointer data) {
+  static gboolean StopMoveDragTimeoutHandler(gpointer data) {
     Impl *impl = reinterpret_cast<Impl *>(data);
-    if (impl->move_dragging_ || impl->resize_dragging_) {
+    if (impl->move_dragging_) {
       GdkDisplay *display = gtk_widget_get_display(impl->window_);
       GdkModifierType mod;
       gdk_display_get_pointer(display, NULL, NULL, NULL, &mod);
       int btn_mods = GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK;
       if ((mod & btn_mods) == 0) {
-        impl->stop_dragging_source_ = 0;
-        impl->StopDragging();
+        impl->stop_move_drag_source_ = 0;
+        impl->StopMoveDrag();
         return FALSE;
       }
       return TRUE;
     }
-    impl->stop_dragging_source_ = 0;
+    impl->stop_move_drag_source_ = 0;
     return FALSE;
   }
 
@@ -692,22 +807,41 @@ class SingleViewHost::Impl {
   Tooltip *tooltip_;
   ViewWidgetBinder *binder_;
 
-  double zoom_;
+  double initial_zoom_;
   bool decorated_;
   bool remove_on_close_;
   bool record_states_;
 
   int debug_mode_;
-  int stop_dragging_source_;
+  int stop_move_drag_source_;
 
   int win_x_;
   int win_y_;
   int win_width_;
   int win_height_;
 
+  // For resize drag
+  double resize_view_zoom_;
+  double resize_view_width_;
+  double resize_view_height_;
+
+  int resize_win_x_;
+  int resize_win_y_;
+  int resize_win_width_;
+  int resize_win_height_;
+
+  int resize_button_;
+  gdouble resize_mouse_x_;
+  gdouble resize_mouse_y_;
+
+  // -1 to resize left, 1 to resize right.
+  int resize_width_mode_;
+  // -1 to resize top, 1 to resize bottom.
+  int resize_height_mode_;
+  // End of resize drag variants.
+
   bool is_keep_above_;
   bool move_dragging_;
-  bool resize_dragging_;
   bool enable_signals_;
 
   Slot1<void, int> *feedback_handler_;
@@ -846,7 +980,7 @@ int SingleViewHost::GetDebugMode() const {
 }
 
 GraphicsInterface *SingleViewHost::NewGraphics() const {
-  return new CairoGraphics(impl_->zoom_);
+  return new CairoGraphics(impl_->initial_zoom_);
 }
 
 GtkWidget *SingleViewHost::GetWindow() const {
