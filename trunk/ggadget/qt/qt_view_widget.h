@@ -34,6 +34,7 @@ class QtViewWidget : public QWidget {
   ~QtViewWidget();
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
+  void SkipTaskBar();
 
  protected:
   virtual void paintEvent(QPaintEvent *event);
@@ -52,7 +53,6 @@ class QtViewWidget : public QWidget {
   virtual void dropEvent(QDropEvent *event);
 
   void SetInputMask(QPixmap *pixmap);
-  void SkipTaskBar();
   void SetSize(int width, int height);
   ViewInterface *view_;
   const char **drag_files_;

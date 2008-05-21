@@ -245,6 +245,7 @@ class QtViewHost::Impl {
     if (flag) {
       widget_->hide();
       widget_->show();
+      widget_->SkipTaskBar();
       LoadWindowStates();
     } else {
       SaveWindowStates();
