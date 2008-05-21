@@ -61,7 +61,7 @@ class QtImage::Impl {
       tag_(tag),
       graphics_(g),
       fully_opaque_(false) {
-    canvas_ = new QtCanvas(data);
+    canvas_ = new QtCanvas(data, false);
     if (!canvas_) return;
     if (canvas_->GetWidth() == 0) {
       delete canvas_;
@@ -92,7 +92,7 @@ class QtImage::Impl {
     : is_mask_(false),
       canvas_(NULL),
       graphics_(NULL) {
-    canvas_ = new QtCanvas(NULL, width, height);
+    canvas_ = new QtCanvas(NULL, width, height, false);
     if (!canvas_) return;
     if (canvas_->GetWidth() == 0) {
       delete canvas_;
@@ -179,7 +179,6 @@ double QtImage::GetHeight() const {
 }
 
 ImageInterface* QtImage::MultiplyColor(const Color &color) const {
-
   QtImage *new_image = new QtImage(D2I(GetWidth()), D2I(GetHeight()));
   if (!new_image) return NULL;
   if (!new_image->IsValid()) {

@@ -64,7 +64,7 @@ Connection *QtGraphics::ConnectOnZoom(Slot1<void, double> *slot) const {
 CanvasInterface *QtGraphics::NewCanvas(double w, double h) const {
   if (!w || !h) return NULL;
 
-  QtCanvas *canvas = new QtCanvas(this, w, h);
+  QtCanvas *canvas = new QtCanvas(this, w, h, true);
   if (!canvas) return NULL;
   if (!canvas->IsValid()) {
     delete canvas;

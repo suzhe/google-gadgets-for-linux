@@ -60,7 +60,7 @@ static void SetupPainter(QPainter *p) {
 
 class QtCanvas::Impl {
  public:
-  Impl(const QtGraphics *g, double w, double h)
+  Impl(const QtGraphics *g, double w, double h, bool create_painter)
     : width_(w), height_(h), opacity_(1.), zoom_(1.),
       on_zoom_connection_(NULL),
       image_(NULL), painter_(NULL), region_(NULL) {
@@ -72,12 +72,14 @@ class QtCanvas::Impl {
     image_ = new QImage(D2I(w*zoom_), D2I(h*zoom_), QImage::Format_ARGB32);
     if (image_ == NULL) return;
     MakeImageTransparent(image_);
-    painter_ = new QPainter(image_);
-    SetupPainter(painter_);
-    painter_->scale(zoom_, zoom_);
+    if (create_painter) {
+      painter_ = new QPainter(image_);
+      SetupPainter(painter_);
+      painter_->scale(zoom_, zoom_);
+    }
   }
 
-  Impl(const std::string &data)
+  Impl(const std::string &data, bool create_painter)
     : width_(0), height_(0),
       opacity_(1.), zoom_(1.),
       on_zoom_connection_(NULL),
@@ -92,8 +94,10 @@ class QtCanvas::Impl {
     if (ret) {
       width_ = image_->width();
       height_ = image_->height();
-      painter_ = new QPainter(image_);
-      SetupPainter(painter_);
+      if (create_painter) {
+        painter_ = new QPainter(image_);
+        SetupPainter(painter_);
+      }
     } else {
       delete image_;
       image_ = NULL;
@@ -285,9 +289,9 @@ class QtCanvas::Impl {
   bool IntersectRectClipRegion(double x, double y,
                                double w, double h) {
     if (w <= 0.0 || h <= 0.0) return false;
-
-    painter_->setClipping(true);
-    painter_->setClipRect(QRectF(x, y, w, h), Qt::IntersectClip);
+    QPainter *p = painter_;
+    p->setClipping(true);
+    p->setClipRect(QRectF(x, y, w, h), Qt::IntersectClip);
     return true;
   }
 
@@ -300,11 +304,13 @@ class QtCanvas::Impl {
   bool IntersectGeneralClipRegion(const ClipRegion &region) {
     QRegion qregion;
     region_ = &qregion;
+    QPainter *p = painter_;
+
     if (region.EnumerateRectangles(NewSlot(this, &Impl::IntersectRectangle))) {
-      painter_->setClipping(true);
-      painter_->setClipRegion(qregion);
+      p->setClipping(true);
+      p->setClipRegion(qregion);
     } else {
-      painter_->setClipping(false);
+      p->setClipping(false);
     }
     return true;
   }
@@ -335,7 +341,7 @@ class QtCanvas::Impl {
     QImage* new_image = new QImage(D2I(width_*zoom), D2I(height_*zoom),
                                    QImage::Format_ARGB32);
     if (!new_image) return;
-    delete painter_;
+    if (painter_) delete painter_;
     delete image_;
     image_ = new_image;
     MakeImageTransparent(image_);
@@ -368,14 +374,14 @@ class QtCanvas::Impl {
   QtCanvas *owner_;
 };
 
-QtCanvas::QtCanvas(const QtGraphics *g, double w, double h)
-  : impl_(new Impl(g, w, h)) { impl_->owner_ = this; }
+QtCanvas::QtCanvas(const QtGraphics *g, double w, double h, bool create_painter)
+  : impl_(new Impl(g, w, h, create_painter)) { impl_->owner_ = this; }
 
 QtCanvas::QtCanvas(double w, double h, QPainter *painter)
   : impl_(new Impl(w, h, painter)) { impl_->owner_ = this; }
 
-QtCanvas::QtCanvas(const std::string &data) :
-  impl_(new Impl(data)) { impl_->owner_ = this; }
+QtCanvas::QtCanvas(const std::string &data, bool create_painter) :
+  impl_(new Impl(data, create_painter)) { impl_->owner_ = this; }
 
 QtCanvas::~QtCanvas() {
   delete impl_;

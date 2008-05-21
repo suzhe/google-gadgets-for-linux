@@ -38,8 +38,8 @@ class QtCanvas : public CanvasInterface {
   /**
    * Creates a QtCanvas object which uses a fixed zoom factor.
    */
-  QtCanvas(const QtGraphics *g, double w, double h);
-  QtCanvas(const std::string &data);
+  QtCanvas(const QtGraphics *g, double w, double h, bool create_painter);
+  QtCanvas(const std::string &data, bool create_painter);
   QtCanvas(double w, double h, QPainter *painter);
 
   virtual ~QtCanvas();
