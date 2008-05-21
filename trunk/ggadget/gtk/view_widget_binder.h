@@ -53,19 +53,6 @@ class ViewWidgetBinder {
    */
   void EnableInputShapeMask(bool enable);
 
-  /**
-   * Begin resize drag.
-   * During resize drag, view widget will adjust the view size
-   * according to the widget size.
-   */
-  void BeginResizeDrag();
-
-  /**
-   * End resize drag.
-   * View widget will not adjust the view size anymore.
-   */
-  void EndResizeDrag();
-
  private:
   DISALLOW_EVIL_CONSTRUCTORS(ViewWidgetBinder);
   class Impl;

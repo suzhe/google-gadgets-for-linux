@@ -63,8 +63,8 @@ class ViewElement::Impl {
       double width = child_view_->GetWidth() * scale_;
       double height = child_view_->GetHeight() * scale_;
 
-      owner_->BasicElement::SetPixelWidth(width);
-      owner_->BasicElement::SetPixelHeight(height);
+      owner_->SetPixelWidth(width);
+      owner_->SetPixelHeight(height);
     } else {
       scale_ = 1.0;
     }
@@ -145,9 +145,6 @@ bool ViewElement::OnSizing(double *width, double *height) {
   if (impl_->onsizing_called_ &&
       impl_->onsizing_width_request_ == *width &&
       impl_->onsizing_height_request_ == *height) {
-    // DLOG("ViewElement::OnSizing(%.1lf, %.1lf) cached result: %.1lf, %.1lf.",
-    //      *width, *height, impl_->onsizing_width_result_,
-    //      impl_->onsizing_height_result_);
     *width = impl_->onsizing_width_result_;
     *height = impl_->onsizing_height_result_;
     return impl_->onsizing_result_;
@@ -160,6 +157,7 @@ bool ViewElement::OnSizing(double *width, double *height) {
   ViewInterface::ResizableMode mode = impl_->child_view_->GetResizable();
   double child_width;
   double child_height;
+  bool ret = false;
 
   // If child view is resizable then just delegate OnSizing request to child
   // view.
@@ -167,41 +165,32 @@ bool ViewElement::OnSizing(double *width, double *height) {
   if (mode == ViewInterface::RESIZABLE_TRUE) {
     child_width = *width / impl_->scale_;
     child_height = *height / impl_->scale_;
-    bool ret = impl_->child_view_->OnSizing(&child_width, &child_height);
+    ret = impl_->child_view_->OnSizing(&child_width, &child_height);
     *width = child_width * impl_->scale_;
     *height = child_height * impl_->scale_;
-    impl_->onsizing_width_result_ = *width;
-    impl_->onsizing_height_result_ = *height;
-    impl_->onsizing_result_ = ret;
-    return ret;
-  }
-
-  // Otherwise adjust the width or height to maintain the aspect ratio of child
-  // view.
-  child_width = impl_->child_view_->GetWidth();
-  child_height = impl_->child_view_->GetHeight();
-  double aspect_ratio = child_width / child_height;
-
-  // Keep the shorter edge unchanged.
-  if (*width / *height < aspect_ratio) {
-    *height = *width / aspect_ratio;
   } else {
-    *width = *height * aspect_ratio;
-  }
+    // Otherwise adjust the width or height to maintain the aspect ratio of
+    // child view.
+    child_width = impl_->child_view_->GetWidth();
+    child_height = impl_->child_view_->GetHeight();
+    double aspect_ratio = child_width / child_height;
 
-  // Don't allow scale to too small.
-  if (*width / child_width < kMinimumScale) {
-    *width = child_width * kMinimumScale;
-    *height = child_height * kMinimumScale;
-  } else if (*width / child_width > kMaximumScale) {
-    *width = child_width * kMaximumScale;
-    *height = child_height * kMaximumScale;
+    // Keep the shorter edge unchanged.
+    if (*width / *height < aspect_ratio) {
+      *height = *width / aspect_ratio;
+    } else {
+      *width = *height * aspect_ratio;
+    }
+
+    // Don't allow scale to too small.
+    double new_scale = *width / child_width;
+    ret = (new_scale >= kMinimumScale && new_scale <= kMaximumScale);
   }
 
   impl_->onsizing_width_result_ = *width;
   impl_->onsizing_height_result_ = *height;
-  impl_->onsizing_result_ = true;
-  return true;
+  impl_->onsizing_result_ = ret;
+  return ret;
 }
 
 void ViewElement::SetSize(double width, double height) {
@@ -213,8 +202,8 @@ void ViewElement::SetSize(double width, double height) {
 
   // If there is no child view, then just adjust BasicElement's size.
   if (!impl_->child_view_) {
-    BasicElement::SetPixelWidth(width);
-    BasicElement::SetPixelHeight(height);
+    SetPixelWidth(width);
+    SetPixelHeight(height);
     return;
   }
 

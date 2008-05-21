@@ -36,7 +36,7 @@ static const char *kUriListTarget = "text/uri-list";
 
 // A small motion threshold to prevent a click with tiny mouse move from being
 // treated as window move or resize.
-static const double kWindowMoveResizeThreshold = 2;
+static const double kDragThreshold = 2;
 
 class ViewWidgetBinder::Impl {
  public:
@@ -49,14 +49,11 @@ class ViewWidgetBinder::Impl {
       handlers_(new gulong[kEventHandlersNum]),
       current_drag_event_(NULL),
       on_zoom_connection_(NULL),
-      current_widget_width_(0),
-      current_widget_height_(0),
       dbl_click_(false),
       composited_(false),
       no_background_(no_background),
       enable_input_shape_mask_(true),
       focused_(false),
-      resize_dragging_(false),
       zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
@@ -137,7 +134,6 @@ class ViewWidgetBinder::Impl {
 
   void OnZoom(double zoom) {
     zoom_ = zoom;
-    host_->QueueResize();
   }
 
   // Disable background if required.
@@ -173,8 +169,8 @@ class ViewWidgetBinder::Impl {
     Event::Type type = Event::EVENT_INVALID;
     if (event->type == GDK_BUTTON_PRESS) {
       type = Event::EVENT_MOUSE_DOWN;
-      impl->mouse_down_x_ = event->x;
-      impl->mouse_down_y_ = event->y;
+      impl->mouse_down_x_ = event->x_root;
+      impl->mouse_down_y_ = event->y_root;
     } else if (event->type == GDK_2BUTTON_PRESS) {
       impl->dbl_click_ = true;
       if (button == MouseEvent::BUTTON_LEFT)
@@ -387,8 +383,8 @@ class ViewWidgetBinder::Impl {
 
     if (result == EVENT_RESULT_UNHANDLED && button != MouseEvent::BUTTON_NONE &&
         impl->mouse_down_x_ >= 0 && impl->mouse_down_y_ >= 0 &&
-        (abs(int(event->x - impl->mouse_down_x_)) >= kWindowMoveResizeThreshold ||
-         abs(int(event->y - impl->mouse_down_y_)) >= kWindowMoveResizeThreshold)) {
+        (std::abs(event->x_root - impl->mouse_down_x_) > kDragThreshold ||
+         std::abs(event->y_root - impl->mouse_down_y_) > kDragThreshold)) {
       // Send fake mouse up event to the view so that we can start to drag
       // the window. Note: no mouse click event is sent in this case, to prevent
       // unwanted action after window move.
@@ -411,36 +407,6 @@ class ViewWidgetBinder::Impl {
           hittest == ViewInterface::HT_BOTTOMLEFT ||
           hittest == ViewInterface::HT_BOTTOMRIGHT) {
         resize_drag = true;
-#ifdef _DEBUG
-      } else if (mod & Event::MOD_CONTROL) {
-        // FIXME: If ctrl is holding, then emulate resize draging.
-        // Only for testing purpose. Shall be removed later.
-        resize_drag = true;
-        gint x = static_cast<int>(event->x);
-        gint y = static_cast<int>(event->y);
-        gint mid_x1 = impl->current_widget_width_ / 3;
-        gint mid_x2 = impl->current_widget_width_ * 2 / 3;
-        gint mid_y1 = impl->current_widget_height_ / 3;
-        gint mid_y2 = impl->current_widget_height_ * 2 / 3;
-        if (x < mid_x1 && y < mid_y1)
-          hittest = ViewInterface::HT_TOPLEFT;
-        else if (x > mid_x1 && x < mid_x2 && y < mid_y1)
-          hittest = ViewInterface::HT_TOP;
-        else if (x > mid_x2 && y < mid_y1)
-          hittest = ViewInterface::HT_TOPRIGHT;
-        else if (x < mid_x1 && y > mid_y1 && y < mid_y2)
-          hittest = ViewInterface::HT_LEFT;
-        else if (x > mid_x2 && y > mid_y1 && y < mid_y2)
-          hittest = ViewInterface::HT_RIGHT;
-        else if (x < mid_x1 && y > mid_y2)
-          hittest = ViewInterface::HT_BOTTOMLEFT;
-        else if (x > mid_x1 && x < mid_x2 && y > mid_y2)
-          hittest = ViewInterface::HT_BOTTOM;
-        else if (x > mid_x2 && y > mid_y2)
-          hittest = ViewInterface::HT_BOTTOMRIGHT;
-        else
-          resize_drag = false;
-#endif
       }
 
       // ungrab the pointer before starting move/resize drag.
@@ -639,64 +605,6 @@ class ViewWidgetBinder::Impl {
     g_strfreev(uris);
   }
 
-  static void SizeAllocateHandler(GtkWidget *widget, GtkAllocation *allocation,
-                                  gpointer user_data) {
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    int widget_width = allocation->width;
-    int widget_height = allocation->height;
-
-    if (widget_width == impl->current_widget_width_ &&
-        widget_height == impl->current_widget_height_)
-      return;
-
-    impl->current_widget_width_ = widget_width;
-    impl->current_widget_height_ = widget_height;
-
-    DLOG("SizeAllocate: %d %d", widget_width, widget_height);
-
-    if (!GTK_WIDGET_MAPPED(widget)) {
-      DLOG("The widget is not mapped yet, don't adjust view size.");
-      return;
-    }
-
-    if (!impl->resize_dragging_) {
-      DLOG("Not in resize dragging, no need to adjust view size.");
-      return;
-    }
-
-    ViewInterface::ResizableMode mode = impl->view_->GetResizable();
-    if (mode == ViewInterface::RESIZABLE_TRUE) {
-      double width = ceil(widget_width / impl->zoom_);
-      double height = ceil(widget_height / impl->zoom_);
-      if (width != impl->view_->GetWidth() ||
-          height != impl->view_->GetHeight()) {
-        if (impl->view_->OnSizing(&width, &height)) {
-          DLOG("Resize View to: %lf %lf", width, height);
-          impl->view_->SetSize(width, height);
-        }
-        impl->host_->QueueResize();
-      }
-    } else if (mode == ViewInterface::RESIZABLE_ZOOM) {
-      double width = impl->view_->GetWidth();
-      double height = impl->view_->GetHeight();
-      if (width && height) {
-        double xzoom = widget_width / width;
-        double yzoom = widget_height / height;
-        double zoom = std::min(xzoom, yzoom);
-        if (zoom != impl->view_->GetGraphics()->GetZoom()) {
-          DLOG("Zoom View to: %lf", zoom);
-          impl->view_->GetGraphics()->SetZoom(zoom);
-          impl->view_->MarkRedraw();
-          impl->host_->QueueResize();
-        }
-      }
-    } else {
-      DLOG("The size of view widget was changed, "
-           "but the view is not resizable.");
-      impl->host_->QueueResize();
-    }
-  }
-
   static void ScreenChangedHandler(GtkWidget *widget, GdkScreen *last_screen,
                                    gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
@@ -744,14 +652,11 @@ class ViewWidgetBinder::Impl {
   gulong *handlers_;
   DragEvent *current_drag_event_;
   Connection *on_zoom_connection_;
-  int current_widget_width_;
-  int current_widget_height_;
   bool dbl_click_;
   bool composited_;
   bool no_background_;
   bool enable_input_shape_mask_;
   bool focused_;
-  bool resize_dragging_;
   double zoom_;
   double mouse_down_x_;
   double mouse_down_y_;
@@ -802,8 +707,6 @@ ViewWidgetBinder::Impl::kEventHandlers[] = {
     G_CALLBACK(ViewWidgetBinder::Impl::ScreenChangedHandler) },
   { "scroll-event",
     G_CALLBACK(ViewWidgetBinder::Impl::ScrollHandler) },
-  { "size-allocate",
-    G_CALLBACK(ViewWidgetBinder::Impl::SizeAllocateHandler) },
 };
 
 const size_t ViewWidgetBinder::Impl::kEventHandlersNum =
@@ -817,19 +720,10 @@ ViewWidgetBinder::ViewWidgetBinder(ViewInterface *view,
 
 void ViewWidgetBinder::EnableInputShapeMask(bool enable) {
   impl_->enable_input_shape_mask_ = enable;
-
 #if GTK_CHECK_VERSION(2,10,0)
   if (impl_->widget_ && impl_->no_background_ && impl_->composited_ && !enable)
     gtk_widget_input_shape_combine_mask(impl_->widget_, NULL, 0, 0);
 #endif
-}
-
-void ViewWidgetBinder::BeginResizeDrag() {
-  impl_->resize_dragging_ = true;
-}
-
-void ViewWidgetBinder::EndResizeDrag() {
-  impl_->resize_dragging_ = false;
 }
 
 ViewWidgetBinder::~ViewWidgetBinder() {
