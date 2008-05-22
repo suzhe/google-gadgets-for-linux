@@ -232,11 +232,13 @@ class SideBar::Impl : public View {
     ViewElement *focused = owner_->GetMouseOverElement();
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_DOWN:
-        if (!focused) return result;
-
         DLOG("Mouse down at (%f,%f)", event.GetX(), event.GetY());
         mouse_move_event_x_ = event.GetX();
         mouse_move_event_y_ = event.GetY();
+
+        if (!focused) {
+          return result;
+        }
         focused->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
         switch (focused->GetHitTest(x, y)) {
           case HT_BOTTOM:
@@ -261,13 +263,26 @@ class SideBar::Impl : public View {
         return result;
         break;
       case Event::EVENT_MOUSE_UP:
-        DLOG("Mouse up at (%f,%f)", event.GetX(), event.GetY());
         ResetState();
         return result;
         break;
       case Event::EVENT_MOUSE_MOVE:  // handle it soon
-        if (!focused)
+        if (mouse_move_event_x_ < 0 && mouse_move_event_y_ < 0) {
+          return EVENT_RESULT_HANDLED;
+        }
+        if (!focused) {
+          // if mouse over null_element_, BasicElement::GetMouseOverElement()
+          // will not return it. Check it specially
+          if (null_element_) {
+            double x, y;
+            null_element_->ViewCoordToSelfCoord(event.GetX(), event.GetY(),
+                                                &x, &y);
+            if (y >= 0 && y <= null_element_->GetPixelHeight()) {
+              return EVENT_RESULT_HANDLED;
+            }
+          }
           return result;
+        }
         break;
       default:
         return result;
@@ -291,7 +306,7 @@ class SideBar::Impl : public View {
                (std::abs(offset) > kUndockDragThreshold ||
                 std::abs(event.GetX() - mouse_move_event_x_) >
                 kUndockDragThreshold)) {
-      undock_event_();
+      undock_event_(mouse_move_event_x_, mouse_move_event_y_);
       ResetState();
     }
     return EVENT_RESULT_HANDLED;
@@ -462,7 +477,8 @@ class SideBar::Impl : public View {
           main_div_->GetChildren()->GetItemByIndex(i));
       // they may be not exactly the same view, but they should be owned by
       // the same gadget...
-      if (element->GetChildView()->GetGadget() == view->GetGadget())
+      if (element->GetChildView() &&
+          element->GetChildView()->GetGadget() == view->GetGadget())
         return element;
     }
     return NULL;
@@ -587,10 +603,10 @@ class SideBar::Impl : public View {
   DivElement *main_div_;
   ButtonElement *button_array_[3];
 
-  Signal1<bool, MenuInterface *> system_menu_event_;
-  EventSignal size_event_;
-  EventSignal undock_event_;
   EventSignal popin_event_;
+  EventSignal size_event_;
+  Signal1<bool, MenuInterface *> system_menu_event_;
+  Signal2<void, double, double> undock_event_;
 
   static const double kGadgetSpacing = 1;
   static const double kUndockDragThreshold = 2;
@@ -685,7 +701,7 @@ ViewElement *SideBar::SetPopOutedView(ViewInterface *view) {
   return impl_->popout_element_;
 }
 
-Connection *SideBar::ConnectOnUndock(Slot0<void> *slot) {
+Connection *SideBar::ConnectOnUndock(Slot2<void, double, double> *slot) {
   return impl_->undock_event_.Connect(slot);
 }
 
