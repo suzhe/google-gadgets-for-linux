@@ -129,7 +129,7 @@ class SideBar {
   /**
    * Event connection methods.
    */
-  Connection *ConnectOnUndock(Slot0<void> *slot);
+  Connection *ConnectOnUndock(Slot2<void, double, double> *slot);
   Connection *ConnectOnPopIn(Slot0<void> *slot);
   Connection *ConnectOnAddGadget(Slot0<void> *slot);
   Connection *ConnectOnMenuOpen(Slot1<bool, MenuInterface *> *slot);

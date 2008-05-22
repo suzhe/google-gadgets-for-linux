@@ -13,8 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-//TODO: autohide's problem: by shown by mouse over; should not hide if our other
-//window get the focus
 
 #include "sidebar_gtk_host.h"
 
@@ -115,6 +113,8 @@ class SidebarGtkHost::Impl {
       expanded_original_(NULL),
       expanded_popout_(NULL),
       details_view_opened_gadget_(NULL),
+      draging_gadget_(NULL),
+      drag_observer_(NULL),
       side_bar_(NULL),
       options_(GetGlobalOptions()),
       option_auto_hide_(false),
@@ -262,7 +262,7 @@ class SidebarGtkHost::Impl {
                    NewSlot(this, &Impl::HandleMenuFontSizeChange), priority);
     }  */
     menu->AddItem(NULL, 0, NULL, priority);
-    menu->AddItem(GM_("MENU_ITEM_CLOSE"), 0,
+    menu->AddItem(GM_("MENU_ITEM_EXIT"), 0,
                   NewSlot(this, &Impl::HandleExit), priority);
     return false;
   }
@@ -275,11 +275,31 @@ class SidebarGtkHost::Impl {
     option_sidebar_width_ = static_cast<int>(side_bar_->GetWidth());
   }
 
-  void HandleUndock() {
+  void HandleUndock(double offset_x, double offset_y) {
     ViewElement *element = side_bar_->GetMouseOverElement();
     if (element) {
       int id = element->GetChildView()->GetGadget()->GetInstanceID();
+      GadgetViewHostInfo *info = gadgets_[id];
+      // calculate the cursor coordinate in the view element
+      double view_x, view_y, h = element->GetPixelHeight();
+      View *view = info->gadget->GetMainView();
+      view->NativeWidgetCoordToViewCoord(offset_x, offset_y, &view_x, &view_y);
+
       Undock(id, true);
+      if (gdk_pointer_grab(drag_observer_->window, FALSE,
+                           (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                          GDK_POINTER_MOTION_MASK),
+                           NULL, NULL, gtk_get_current_event_time()) ==
+          GDK_GRAB_SUCCESS) {
+        draging_gadget_ = info->gadget;
+        DLOG("DragUndock, grab pointor for %p", draging_gadget_);
+        side_bar_->InsertPlaceholder(info->y_in_sidebar, h);
+        View *new_view = down_cast<View *>(draging_gadget_->GetMainView());
+        new_view->ViewCoordToNativeWidgetCoord(view_x, view_y,
+                                               &floating_offset_x_,
+                                               &floating_offset_y_);
+        HandlePopoutDragMove(drag_observer_, NULL, this);
+      }
     }
   }
 
@@ -360,14 +380,20 @@ class SidebarGtkHost::Impl {
                      G_CALLBACK(ToggleAllGadgetsHandler), this);
     g_signal_connect(G_OBJECT(status_icon_), "popup-menu",
                      G_CALLBACK(StatusIconPopupMenuHandler), this);
-#endif
-
-#ifdef _DEBUG
+#else
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(main_widget_), FALSE);
 #endif
-    gtk_window_set_title(GTK_WINDOW(main_widget_), "Google Gadgets");
 
+    gtk_window_set_title(GTK_WINDOW(main_widget_), "Google Gadgets");
     AdjustSidebar();
+
+    // create drag observer
+    drag_observer_ = gtk_invisible_new();
+    gtk_widget_show(drag_observer_);
+    g_signal_connect(G_OBJECT(drag_observer_), "motion-notify-event",
+                     G_CALLBACK(HandlePopoutDragMove), this);
+    g_signal_connect(G_OBJECT(drag_observer_), "button-release-event",
+                     G_CALLBACK(HandlePopoutDragEnd), this);
   }
 
   bool ConfirmGadget(int id) {
@@ -537,82 +563,21 @@ class SidebarGtkHost::Impl {
     return true;
   }
 
-  class SlotPostCallback : public WatchCallbackInterface {
-   public:
-    SlotPostCallback(ViewHostInterface *view_host,
-                     GtkWidget *new_window,
-                     GtkWidget *sidebar_window)
-        : view_host_(view_host),
-          new_window_(new_window),
-          sidebar_window_(sidebar_window) {}
-    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
-      gdk_pointer_grab(new_window_->window, FALSE,
-                       (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
-                                      GDK_POINTER_MOTION_MASK |
-                                      GDK_POINTER_MOTION_HINT_MASK),
-                       NULL, NULL, gtk_get_current_event_time());
-      gtk_window_deiconify(GTK_WINDOW(new_window_));
-      gdk_window_focus(new_window_->window, gtk_get_current_event_time());
-      gtk_window_set_transient_for(GTK_WINDOW(new_window_),
-                                   GTK_WINDOW(sidebar_window_));
-      DLOG("call the slot now");
-      view_host_->BeginMoveDrag(MouseEvent::BUTTON_LEFT);
-      return false;
-    }
-    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
-      delete this;
-    }
-    ViewHostInterface *view_host_;
-    GtkWidget *new_window_;
-    GtkWidget *sidebar_window_;
-  };
-
   bool Undock(int gadget_id, bool move_to_cursor) {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
     info->gadget->SetDisplayTarget(Gadget::TARGET_FLOATING_VIEW);
-    double new_native_x, new_native_y, view_x, view_y;
-    int native_x, native_y, px, py;
-    gtk_widget_get_pointer(main_widget_, &native_x, &native_y);
+    CloseDetailsView(gadget_id);
+    double view_x, view_y;
     View *view = info->gadget->GetMainView();
-    if (move_to_cursor) {
-      // calculate the cursor coordinate in the view element
-      view->NativeWidgetCoordToViewCoord(native_x, native_y, &view_x, &view_y);
-      if (gdk_pointer_is_grabbed())
-        gdk_pointer_ungrab(gtk_get_current_event_time());
-      //FIXME: a minor bug of inserting null element to a wrong place
-      side_bar_->InsertPlaceholder(native_y, view->GetHeight());
-    }
+    ViewElement *view_element = side_bar_->FindViewElementByView(view);
+    view_element->SelfCoordToViewCoord(0, 0, &view_x, &view_y);
+    info->y_in_sidebar = view_y;
     DecoratedViewHost *new_host = NewSingleViewHost(gadget_id);
-    info->y_in_sidebar = native_y;
-    GtkWidget *window =
-        gtk_widget_get_toplevel(GTK_WIDGET(new_host->GetNativeWidget()));
     if (move_to_cursor)
       new_host->EnableAutoRestoreViewSize(false);
-    if (option_always_on_top_) {
-      gdk_window_set_type_hint(window->window, GDK_WINDOW_TYPE_HINT_DOCK);
-      gtk_window_set_keep_above(GTK_WINDOW(window), true);
-    }
-    CloseDetailsView(gadget_id);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
-    bool r = new_host->ShowView(false, 0, NULL);
-    if (move_to_cursor) {
-      View *new_view = down_cast<View *>(new_host->GetView());
-      new_view->ViewCoordToNativeWidgetCoord(view_x, view_y,
-                                             &new_native_x, &new_native_y);
-      gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
-      // move new gadget to a proper place
-      gtk_window_move(GTK_WINDOW(window), px - static_cast<int>(new_native_x),
-                      py - static_cast<int>(new_native_y));
-      DLOG("wx: %d, wy: %d, px: %d, py: %d, vx: %f vy: %f, nx: %f, ny: %f",
-           native_x, native_y, px, py,
-           view_x, view_y, new_native_x, new_native_y);
-      // posted the slot in to main loop, to avoid it is run before the window is
-      // moved
-      GetGlobalMainLoop()->AddTimeoutWatch(200, new SlotPostCallback(
-          new_host, window, main_widget_));
-    }
-    return r;
+    return new_host->ShowView(false, 0, NULL);
   }
 
   void HandleDock(int gadget_id) {
@@ -624,7 +589,17 @@ class SidebarGtkHost::Impl {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
     if (info->details_view_host)
       SetPopoutPosition(gadget_id, info->details_view_host);
+    if (option_always_on_top_) {
+      GtkWidget *win = info->floating_view_host->GetWindow();
+      gtk_window_set_transient_for(GTK_WINDOW(win), GTK_WINDOW(main_widget_));
+      if (GTK_WIDGET_VISIBLE(win)) {
+        gdk_window_raise(win->window);
+      } else {
+        gtk_widget_show(win);
+      }
+    }
     if (IsOverlapWithSideBar(gadget_id, &h, x, y)) {
+      side_bar_->Layout();
       side_bar_->InsertPlaceholder(
           h, info->floating_view_host->GetView()->GetHeight());
       info->y_in_sidebar = h;
@@ -761,7 +736,6 @@ class SidebarGtkHost::Impl {
         NewSlot(this, &Impl::HandleViewHostMoved, gadget_id));
     view_host->ConnectOnEndMoveDrag(
         NewSlot(this, &Impl::HandleViewHostEndMoveDrag, gadget_id));
-
     DecoratedViewHost *decorator = new DecoratedViewHost(
         view_host, DecoratedViewHost::MAIN_STANDALONE, true);
     gadgets_[gadget_id]->decorated_view_host = decorator;
@@ -825,7 +799,6 @@ class SidebarGtkHost::Impl {
           SingleViewHost *sv = new SingleViewHost(type, 1.0, decorated_,
                                                   false, true, view_debug_mode_);
           gadgets_[id]->details_view_host = sv;
-          // FIXME: the detail view may not be triggered from sidebar
           sv->ConnectOnShowHide(NewSlot(this, &Impl::HandleDetailsViewShow, id));
           sv->ConnectOnResized(NewSlot(this, &Impl::HandleDetailsViewResize, id));
           sv->ConnectOnBeginResizeDrag(
@@ -1171,6 +1144,30 @@ class SidebarGtkHost::Impl {
     return FALSE;
   }
 
+  static gboolean HandlePopoutDragMove(GtkWidget *widget, GdkEventMotion *event,
+                                       Impl *impl) {
+    int x, y;
+    if (!impl->draging_gadget_) return FALSE;
+
+    // DLOG("DragUndock, move gadget %p", impl->draging_gadget_);
+    gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
+    int id = impl->draging_gadget_->GetInstanceID();
+    impl->gadgets_[id]->floating_view_host->SetWindowPosition(
+        x - static_cast<int>(impl->floating_offset_x_),
+        y - static_cast<int>(impl->floating_offset_y_));
+    impl->HandleViewHostMoved(x, y, id);
+    return FALSE;
+  }
+
+  static gboolean HandlePopoutDragEnd(GtkWidget *widget, GdkEventMotion *event,
+                                      Impl *impl) {
+    DLOG("DragUndock, ungrab for %p", impl->draging_gadget_);
+    impl->HandleViewHostEndMoveDrag(impl->draging_gadget_->GetInstanceID());
+    impl->draging_gadget_ = NULL;
+    gdk_pointer_ungrab(event->time);
+    return FALSE;
+  }
+
 #if GTK_CHECK_VERSION(2,10,0)
   static void ToggleAllGadgetsHandler(GtkWidget *widget, Impl *this_p) {
     this_p->HideOrShowAllGadgets(!this_p->gadgets_shown_);
@@ -1200,6 +1197,11 @@ class SidebarGtkHost::Impl {
   DecoratedViewHost *expanded_original_;
   DecoratedViewHost *expanded_popout_;
   Gadget *details_view_opened_gadget_;
+  Gadget *draging_gadget_;
+  GtkWidget *drag_observer_;
+  double floating_offset_x_;
+  double floating_offset_y_;
+
   SideBar *side_bar_;
 
   OptionsInterface *options_;

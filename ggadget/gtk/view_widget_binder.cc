@@ -54,6 +54,7 @@ class ViewWidgetBinder::Impl {
       no_background_(no_background),
       enable_input_shape_mask_(true),
       focused_(false),
+      pointer_grabed_(false),
       zoom_(1.0),
       mouse_down_x_(-1),
       mouse_down_y_(-1),
@@ -210,7 +211,10 @@ class ViewWidgetBinder::Impl {
     EventResult result2 = EVENT_RESULT_UNHANDLED;
 
     impl->host_->SetTooltip(NULL);
-    gdk_pointer_ungrab(event->time);
+    if (impl->pointer_grabed_) {
+      gdk_pointer_ungrab(event->time);
+      impl->pointer_grabed_ = false;
+    }
 
     int mod = ConvertGdkModifierToModifier(event->state);
     int button = event->button == 1 ? MouseEvent::BUTTON_LEFT :
@@ -370,13 +374,16 @@ class ViewWidgetBinder::Impl {
                  event->x / impl->zoom_, event->y / impl->zoom_,
                  0, 0, button, mod);
 
-    if (button != MouseEvent::BUTTON_NONE && !gdk_pointer_is_grabbed()) {
+    if (button != MouseEvent::BUTTON_NONE && !gdk_pointer_is_grabbed() &&
+        !impl->pointer_grabed_) {
       // Grab the cursor to prevent losing events.
-      gdk_pointer_grab(widget->window, FALSE,
-                       (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
-                                      GDK_POINTER_MOTION_MASK |
-                                      GDK_POINTER_MOTION_HINT_MASK),
-                       NULL, NULL, event->time);
+      if (gdk_pointer_grab(widget->window, FALSE,
+                           (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
+                                          GDK_POINTER_MOTION_MASK |
+                                          GDK_POINTER_MOTION_HINT_MASK),
+                           NULL, NULL, event->time) == GDK_GRAB_SUCCESS) {
+        impl->pointer_grabed_ = true;
+      }
     }
 
     EventResult result = impl->view_->OnMouseEvent(e);
@@ -410,7 +417,10 @@ class ViewWidgetBinder::Impl {
       }
 
       // ungrab the pointer before starting move/resize drag.
-      gdk_pointer_ungrab(gtk_get_current_event_time());
+      if (impl->pointer_grabed_) {
+        gdk_pointer_ungrab(gtk_get_current_event_time());
+        impl->pointer_grabed_ = false;
+      }
 
       if (resize_drag) {
         impl->host_->BeginResizeDrag(button, hittest);
@@ -508,7 +518,10 @@ class ViewWidgetBinder::Impl {
       impl->focused_ = false;
       SimpleEvent e(Event::EVENT_FOCUS_OUT);
       // Ungrab the pointer if the focus is lost.
-      gdk_pointer_ungrab(gtk_get_current_event_time());
+      if (impl->pointer_grabed_) {
+        gdk_pointer_ungrab(gtk_get_current_event_time());
+        impl->pointer_grabed_ = false;
+      }
       return impl->view_->OnOtherEvent(e) != EVENT_RESULT_UNHANDLED;
     }
     return FALSE;
@@ -533,6 +546,13 @@ class ViewWidgetBinder::Impl {
                                   Event::EVENT_DRAG_DROP, user_data);
     gtk_drag_finish(context, result, FALSE, time);
     return result;
+  }
+
+  static gboolean GrabBrokenHandler(GtkWidget *widget, GdkEvent *event,
+                                    gpointer user_data) {
+    Impl *impl = reinterpret_cast<Impl *>(user_data);
+    impl->pointer_grabed_ = false;
+    return FALSE;
   }
 
   static void DragDataReceivedHandler(GtkWidget *widget,
@@ -657,6 +677,7 @@ class ViewWidgetBinder::Impl {
   bool no_background_;
   bool enable_input_shape_mask_;
   bool focused_;
+  bool pointer_grabed_;
   double zoom_;
   double mouse_down_x_;
   double mouse_down_y_;
@@ -673,40 +694,24 @@ class ViewWidgetBinder::Impl {
 
 ViewWidgetBinder::Impl::EventHandlerInfo
 ViewWidgetBinder::Impl::kEventHandlers[] = {
-  { "button-press-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::ButtonPressHandler) },
-  { "button-release-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::ButtonReleaseHandler) },
-  { "composited-changed",
-    G_CALLBACK(ViewWidgetBinder::Impl::CompositedChangedHandler) },
-  { "drag-data-received",
-    G_CALLBACK(ViewWidgetBinder::Impl::DragDataReceivedHandler) },
-  { "drag-drop",
-    G_CALLBACK(ViewWidgetBinder::Impl::DragDropHandler) },
-  { "drag-leave",
-    G_CALLBACK(ViewWidgetBinder::Impl::DragLeaveHandler) },
-  { "drag-motion",
-    G_CALLBACK(ViewWidgetBinder::Impl::DragMotionHandler) },
-  { "enter-notify-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::EnterNotifyHandler) },
-  { "expose-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::ExposeHandler) },
-  { "focus-in-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::FocusInHandler) },
-  { "focus-out-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::FocusOutHandler) },
-  { "key-press-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::KeyPressHandler) },
-  { "key-release-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::KeyReleaseHandler) },
-  { "leave-notify-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::LeaveNotifyHandler) },
-  { "motion-notify-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::MotionNotifyHandler) },
-  { "screen-changed",
-    G_CALLBACK(ViewWidgetBinder::Impl::ScreenChangedHandler) },
-  { "scroll-event",
-    G_CALLBACK(ViewWidgetBinder::Impl::ScrollHandler) },
+  { "button-press-event", G_CALLBACK(ButtonPressHandler) },
+  { "button-release-event", G_CALLBACK(ButtonReleaseHandler) },
+  { "composited-changed", G_CALLBACK(CompositedChangedHandler) },
+  { "drag-data-received", G_CALLBACK(DragDataReceivedHandler) },
+  { "drag-drop", G_CALLBACK(DragDropHandler) },
+  { "drag-leave", G_CALLBACK(DragLeaveHandler) },
+  { "drag-motion", G_CALLBACK(DragMotionHandler) },
+  { "enter-notify-event", G_CALLBACK(EnterNotifyHandler) },
+  { "expose-event", G_CALLBACK(ExposeHandler) },
+  { "focus-in-event", G_CALLBACK(FocusInHandler) },
+  { "focus-out-event", G_CALLBACK(FocusOutHandler) },
+  { "key-press-event", G_CALLBACK(KeyPressHandler) },
+  { "key-release-event", G_CALLBACK(KeyReleaseHandler) },
+  { "leave-notify-event", G_CALLBACK(LeaveNotifyHandler) },
+  { "motion-notify-event", G_CALLBACK(MotionNotifyHandler) },
+  { "screen-changed", G_CALLBACK(ScreenChangedHandler) },
+  { "scroll-event", G_CALLBACK(ScrollHandler) },
+  { "grab-broken-event", G_CALLBACK(GrabBrokenHandler) },
 };
 
 const size_t ViewWidgetBinder::Impl::kEventHandlersNum =

@@ -544,7 +544,7 @@ class SingleViewHost::Impl {
     if (resize_width_mode_ || resize_height_mode_) {
       resize_width_mode_ = 0;
       resize_height_mode_ = 0;
-      gdk_pointer_ungrab(gtk_get_current_event_time());
+      // gdk_pointer_ungrab(gtk_get_current_event_time());
       QueueResize();
       on_end_resize_drag_signal_();
     }
