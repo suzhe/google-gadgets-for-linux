@@ -33,7 +33,13 @@ static const int kMinWidthToUseLongVersionOfTimeString = 125;
 static const int kNormalFontSize = 9;
 static const int kExtraInfoFontSize = 8;
 static const int kSnippetFontSize = 8;
-static const int kItemBorderWidth = 3;
+
+// In this order: y top, x right, y bottom, x left
+static const int kItemBorderOffsets[] = {2, 3, 3, 3}; 
+static const int kItemBorderWidthOffset = 
+  (kItemBorderOffsets[1] + kItemBorderOffsets[3]);
+static const int kItemBorderHeightOffset = 
+  (kItemBorderOffsets[0] + kItemBorderOffsets[2]);
 
 const Color ScriptableCanvas::kColorNormalBackground(0.984, 0.984, 0.984);
 const Color ScriptableCanvas::kColorNormalText(0, 0, 0);
@@ -78,7 +84,7 @@ class ContentItem::Impl {
   ~Impl() {
   }
 
-  void UpdateTimeText(int width) {
+  void UpdateTimeText(double width) {
     time_text_.SetText(GetTimeDisplayString(
         time_created_,
         flags_ & CONTENT_ITEM_FLAG_TIME_ABSOLUTE ? 0 : view_->GetCurrentTime(),
@@ -89,11 +95,11 @@ class ContentItem::Impl {
   double _d;                                                            \
   switch (BasicElement::ParsePixelOrRelative((input), &_d)) {           \
     case BasicElement::PR_PIXEL:                                        \
-      (result) = static_cast<int>(round(_d));                           \
+      (result) = (_d);                                                  \
       (relative) = false;                                               \
       break;                                                            \
     case BasicElement::PR_RELATIVE:                                     \
-      (result) = static_cast<int>(round(_d * 100));                     \
+      (result) = (_d * 100.);                                           \
       (relative) = true;                                                \
       break;                                                            \
     case BasicElement::PR_UNSPECIFIED:                                  \
@@ -152,17 +158,17 @@ class ContentItem::Impl {
   bool display_text_changed_;
   Layout layout_;
   int flags_;
-  int x_, y_, width_, height_;
+  double x_, y_, width_, height_;
   bool x_relative_, y_relative_, width_relative_, height_relative_;
-  int layout_x_, layout_y_, layout_width_, layout_height_;
+  double layout_x_, layout_y_, layout_width_, layout_height_;
   Signal7<void, ContentItem *, Gadget::DisplayTarget,
-         ScriptableCanvas *, int, int, int, int> on_draw_item_signal_;
-  Signal4<int, ContentItem *, Gadget::DisplayTarget,
-          ScriptableCanvas *, int> on_get_height_signal_;
+         ScriptableCanvas *, double, double, double, double> on_draw_item_signal_;
+  Signal4<double, ContentItem *, Gadget::DisplayTarget,
+          ScriptableCanvas *, double> on_get_height_signal_;
   Signal1<Variant, ContentItem *> on_open_item_signal_;
   Signal1<Variant, ContentItem *> on_toggle_item_pinned_state_signal_;
   Signal7<Variant, ContentItem *, Gadget::DisplayTarget,
-          ScriptableCanvas *, int, int, int, int>
+          ScriptableCanvas *, double, double, double, double>
       on_get_is_tooltip_required_signal_;
   Signal1<ScriptableInterface *, ContentItem *> on_details_view_signal_;
   Signal2<Variant, ContentItem *, int> on_process_details_view_feedback_signal_;
@@ -361,7 +367,7 @@ void ContentItem::SetTooltip(const char *tooltip) {
   impl_->tooltip_ = tooltip;
 }
 
-void ContentItem::SetRect(int x, int y, int width, int height,
+void ContentItem::SetRect(double x, double y, double width, double height,
                           bool x_relative, bool y_relative,
                           bool width_relative, bool height_relative) {
   impl_->x_ = x;
@@ -374,7 +380,7 @@ void ContentItem::SetRect(int x, int y, int width, int height,
   impl_->height_relative_ = height_relative;
 }
 
-void ContentItem::GetRect(int *x, int *y, int *width, int *height,
+void ContentItem::GetRect(double *x, double *y, double *width, double *height,
                           bool *x_relative, bool *y_relative,
                           bool *width_relative, bool *height_relative) {
   ASSERT(x && y && width && height && x_relative && y_relative &&
@@ -389,14 +395,15 @@ void ContentItem::GetRect(int *x, int *y, int *width, int *height,
   *height_relative = impl_->height_relative_;
 }
 
-void ContentItem::SetLayoutRect(int x, int y, int width, int height) {
+void ContentItem::SetLayoutRect(double x, double y, double width, double height) {
   impl_->layout_x_ = x;
   impl_->layout_y_ = y;
   impl_->layout_width_ = width;
   impl_->layout_height_ = height;
 }
 
-void ContentItem::GetLayoutRect(int *x, int *y, int *width, int *height) {
+void ContentItem::GetLayoutRect(double *x, double *y, 
+                                double *width, double *height) {
   ASSERT(x && y && width && height);
   *x = impl_->layout_x_;
   *y = impl_->layout_y_;
@@ -413,7 +420,16 @@ bool ContentItem::CanOpen() const {
 
 void ContentItem::Draw(Gadget::DisplayTarget target,
                        CanvasInterface *canvas,
-                       int x, int y, int width, int height) {
+                       double x, double y, double width, double height) {
+
+  // Rect adjustments apply even if OnDraw handler is set
+  x += kItemBorderOffsets[3];
+  y += kItemBorderOffsets[0];
+  if (width > kItemBorderWidthOffset)
+    width -= kItemBorderWidthOffset;
+  if (height > kItemBorderHeightOffset)
+    height -= kItemBorderHeightOffset;
+
   // Try script handler first.
   if (impl_->on_draw_item_signal_.HasActiveConnections()) {
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
@@ -422,17 +438,10 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
     return;
   }
 
-  x += kItemBorderWidth;
-  y += kItemBorderWidth;
-  if (width > 2 * kItemBorderWidth)
-    width -= 2 * kItemBorderWidth;
-  if (height > 2 * kItemBorderWidth)
-    height -= 2 * kItemBorderWidth;
-
   // Then the default logic.
-  int heading_space_width = width;
-  int heading_left = x;
-  int image_height = 0;
+  double heading_space_width = width;
+  double heading_left = x;
+  double image_height = 0;
   double heading_width = 0, heading_height = 0;
   impl_->heading_text_.GetSimpleExtents(&heading_width, &heading_height);
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NEWS &&
@@ -444,12 +453,12 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
   if (impl_->image_.Get()) {
     const ImageInterface *image = impl_->image_.Get()->GetImage();
     if (image) {
-      int image_width = static_cast<int>(image->GetWidth());
+      double image_width = image->GetWidth();
       heading_space_width -= image_width;
-      image_height = static_cast<int>(image->GetHeight());
-      int image_y = y;
+      image_height = image->GetHeight();
+      double image_y = y;
       if (heading_height > image_height)
-        image_y += static_cast<int>(heading_height - image_height) / 2;
+        image_y += (heading_height - image_height) / 2;
       if (impl_->flags_ & CONTENT_ITEM_FLAG_LEFT_ICON) {
         image->Draw(canvas, x, image_y);
         heading_left += image_width;
@@ -467,7 +476,7 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
   }
 
   impl_->UpdateTimeText(width);
-  y += std::max(static_cast<int>(ceil(heading_height)), image_height);
+  y += std::max(heading_height, image_height);
   double source_width = 0, source_height = 0;
   impl_->source_text_.GetSimpleExtents(&source_width, &source_height);
   double time_width = 0, time_height = 0;
@@ -481,7 +490,7 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
     impl_->source_text_.Draw(canvas, x, y, width - time_width, source_height);
 
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_EMAIL) {
-    y += static_cast<int>(ceil(std::max(source_height, time_height)));
+    y += std::max(source_height, time_height);
     double snippet_width = 0, snippet_height = 0;
     impl_->snippet_text_.GetSimpleExtents(&snippet_width, &snippet_height);
     if (snippet_width > width)
@@ -492,12 +501,12 @@ void ContentItem::Draw(Gadget::DisplayTarget target,
 
 Connection *ContentItem::ConnectOnDrawItem(
     Slot7<void, ContentItem *, Gadget::DisplayTarget,
-          ScriptableCanvas *, int, int, int, int> *handler) {
+          ScriptableCanvas *, double, double, double, double> *handler) {
   return impl_->on_draw_item_signal_.Connect(handler);
 }
 
-int ContentItem::GetHeight(Gadget::DisplayTarget target,
-                           CanvasInterface *canvas, int width) {
+double ContentItem::GetHeight(Gadget::DisplayTarget target,
+                           CanvasInterface *canvas, double width) {
   impl_->UpdateDisplayText();
 
   // Try script handler first.
@@ -507,15 +516,15 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
                                         width);
   }
 
-  if (width > 2 * kItemBorderWidth)
-    width -= 2 * kItemBorderWidth;
-  int heading_space_width = width;
-  int image_height = 0;
+  if (width > kItemBorderWidthOffset)
+    width -= kItemBorderWidthOffset;
+  double heading_space_width = width;
+  double image_height = 0;
   if (impl_->image_.Get()) {
     const ImageInterface *image = impl_->image_.Get()->GetImage();
     if (image) {
-      heading_space_width -= static_cast<int>(image->GetWidth());
-      image_height = static_cast<int>(image->GetHeight());
+      heading_space_width -= image->GetWidth();
+      image_height = image->GetHeight();
     }
   }
 
@@ -525,8 +534,7 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NOWRAP_ITEMS ||
       impl_->layout_ > CONTENT_ITEM_LAYOUT_EMAIL) {
     // Only heading and icon.
-    return std::max(static_cast<int>(ceil(heading_height)), image_height) +
-           2 * kItemBorderWidth;
+    return std::max(heading_height, image_height) + kItemBorderHeightOffset;
   }
 
   impl_->UpdateTimeText(width);
@@ -534,14 +542,13 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
   impl_->source_text_.GetSimpleExtents(&source_width, &source_height);
   double time_width = 0, time_height = 0;
   impl_->time_text_.GetSimpleExtents(&time_width, &time_height);
-  int extra_info_height = static_cast<int>(ceil(std::max(source_height,
-                                                         time_height)));
+  double extra_info_height = std::max(source_height, time_height);
   if (impl_->layout_ == CONTENT_ITEM_LAYOUT_NEWS) {
     // Heading can wrap up to 2 lines. Show extra info.
     if (heading_width > heading_space_width)
       heading_height *= 2;
-    return std::max(static_cast<int>(ceil(heading_height)), image_height) +
-           extra_info_height + 2 * kItemBorderWidth;
+    return std::max(heading_height, image_height) +
+           extra_info_height + kItemBorderHeightOffset;
   }
 
   // Heading doesn't wrap. Show extra info. Snippet can wrap up to 2 lines.
@@ -549,14 +556,13 @@ int ContentItem::GetHeight(Gadget::DisplayTarget target,
   impl_->snippet_text_.GetSimpleExtents(&snippet_width, &snippet_height);
   if (snippet_width > width)
     snippet_height *= 2;
-  return std::max(static_cast<int>(ceil(heading_height)), image_height) +
-         extra_info_height + static_cast<int>(ceil(snippet_height)) +
-         2 * kItemBorderWidth;
+  return std::max(heading_height, image_height) +
+         extra_info_height + snippet_height + kItemBorderHeightOffset;
 }
 
 Connection *ContentItem::ConnectOnGetHeight(
-    Slot4<int, ContentItem *, Gadget::DisplayTarget,
-          ScriptableCanvas *, int> *handler) {
+    Slot4<double, ContentItem *, Gadget::DisplayTarget,
+          ScriptableCanvas *, double> *handler) {
   return impl_->on_get_height_signal_.Connect(handler);
 }
 
@@ -600,7 +606,8 @@ Connection *ContentItem::ConnectOnToggleItemPinnedState(
 
 bool ContentItem::IsTooltipRequired(Gadget::DisplayTarget target,
                                     CanvasInterface *canvas,
-                                    int x, int y, int width, int height) {
+                                    double x, double y, 
+                                    double width, double height) {
   if (impl_->on_get_is_tooltip_required_signal_.HasActiveConnections()) {
     ScriptableCanvas scriptable_canvas(canvas, impl_->view_);
     return VariantToBool(impl_->on_get_is_tooltip_required_signal_(
@@ -611,7 +618,7 @@ bool ContentItem::IsTooltipRequired(Gadget::DisplayTarget target,
 
 Connection *ContentItem::ConnectOnGetIsTooltipRequired(
     Slot7<bool, ContentItem *, Gadget::DisplayTarget,
-          ScriptableCanvas *, int, int, int, int> *handler) {
+          ScriptableCanvas *, double, double, double, double> *handler) {
   return impl_->on_get_is_tooltip_required_signal_.ConnectGeneral(handler);
 }
 
@@ -748,7 +755,7 @@ static const Variant kDrawLineDefaultArgs[] = {
   Variant(), Variant(), Variant(), Variant(), Variant("#000000")
 };
 static const Variant kDrawRectDefaultArgs[] = {
-  Variant(), Variant(), Variant(), Variant(), Variant(), Variant("#000000")
+  Variant(), Variant(), Variant(), Variant(), Variant(), Variant()
 };
 static const Variant kDrawImageDefaultArgs[] = {
   Variant(), Variant(), Variant(), Variant(), Variant(), Variant(100)
@@ -798,24 +805,32 @@ void ScriptableCanvas::DoRegister() {
 ScriptableCanvas::~ScriptableCanvas() {
 }
 
-void ScriptableCanvas::DrawLine(int x1, int y1, int x2, int y2,
+void ScriptableCanvas::DrawLine(double x1, double y1, double x2, double y2,
                                 const Color &color) {
   canvas_->DrawLine(x1, y1, x2, y2, 1, color);
 }
 
-void ScriptableCanvas::DrawRect(int x1, int y1, int width, int height,
-                                const Color &line_color,
-                                const Color &fill_color) {
-  canvas_->DrawFilledRect(x1, y1, width, height, fill_color);
-  int x2 = x1 + width;
-  int y2 = y1 + height;
-  canvas_->DrawLine(x1, y1, x1, y2, 1, line_color);
-  canvas_->DrawLine(x1, y1, x2, y1, 1, line_color);
-  canvas_->DrawLine(x2, y1, x2, y2, 1, line_color);
-  canvas_->DrawLine(x1, y2, x2, y2, 1, line_color);
+void ScriptableCanvas::DrawRect(double x1, double y1, double width, double height,
+                                const Color *line_color,
+                                const Color *fill_color) {
+  if (fill_color) {
+    canvas_->DrawFilledRect(x1, y1, width, height, *fill_color);
+  }
+  if (line_color) {
+    double x2 = x1 + width;
+    double y2 = y1 + height;
+
+    // Make the border actually inside the rect.
+    x1++; x2--; y1++; y2--; 
+
+    canvas_->DrawLine(x1, y1, x1, y2, 1, *line_color);
+    canvas_->DrawLine(x1, y1, x2, y1, 1, *line_color);
+    canvas_->DrawLine(x2, y1, x2, y2, 1, *line_color);
+    canvas_->DrawLine(x1, y2, x2, y2, 1, *line_color);
+  }
 }
 
-void ScriptableCanvas::DrawImage(int x, int y, int width, int height,
+void ScriptableCanvas::DrawImage(double x, double y, double width, double height,
                                  ScriptableImage *image, int alpha_percent) {
   if (image) {
     const ImageInterface *real_image = image->GetImage();
@@ -867,7 +882,7 @@ static void SetupTextFrame(TextFrame *text_frame,
   }
 }
 
-void ScriptableCanvas::DrawText(int x, int y, int width, int height,
+void ScriptableCanvas::DrawText(double x, double y, double width, double height,
                                 const char *text, const Color &color,
                                 int flags, FontID font) {
   TextFrame text_frame(NULL, view_);
@@ -875,42 +890,44 @@ void ScriptableCanvas::DrawText(int x, int y, int width, int height,
   text_frame.Draw(canvas_, x, y, width, height);
 }
 
-int ScriptableCanvas::GetTextWidth(const char *text, int flags, FontID font) {
+double ScriptableCanvas::GetTextWidth(const char *text, int flags, FontID font) {
   TextFrame text_frame(NULL, view_);
   SetupTextFrame(&text_frame, text, Color(0, 0, 0), flags, font);
   double width = 0, height = 0;
   text_frame.GetSimpleExtents(&width, &height);
-  return static_cast<int>(ceil(width));
+  return width;
 }
 
-int ScriptableCanvas::GetTextHeight(const char *text, int width,
+double ScriptableCanvas::GetTextHeight(const char *text, double width,
                                     int flags, FontID font) {
   TextFrame text_frame(NULL, view_);
   SetupTextFrame(&text_frame, text, Color(0, 0, 0), flags, font);
   double ret_width = 0, height = 0;
   text_frame.GetExtents(width, &ret_width, &height);
-  return static_cast<int>(ceil(height));
+  return height;
 }
 
-void ScriptableCanvas::DrawLineWithColorName(int x1, int y1, int x2, int y2,
+void ScriptableCanvas::DrawLineWithColorName(double x1, double y1,
+                                             double x2, double y2,
                                              const char *color) {
   Color c;
   Color::FromString(color, &c, NULL);
   DrawLine(x1, y1, x2, y2, c);
 }
 
-void ScriptableCanvas::DrawRectWithColorName(int x1, int y1,
-                                             int width, int height,
+void ScriptableCanvas::DrawRectWithColorName(double x1, double y1,
+                                             double width, double height,
                                              const char *line_color,
                                              const char *fill_color) {
   Color lc, fc;
-  Color::FromString(line_color, &lc, NULL);
-  Color::FromString(fill_color, &fc, NULL);
-  DrawRect(x1, y1, width, height, lc, fc);
+  bool lc_parsed = Color::FromString(line_color, &lc, NULL);
+  bool fc_parsed = Color::FromString(fill_color, &fc, NULL);
+  DrawRect(x1, y1, width, height, lc_parsed ? &lc : NULL, 
+                                  fc_parsed ? &fc : NULL);
 }
 
-void ScriptableCanvas::DrawTextWithColorName(int x, int y,
-                                             int width, int height,
+void ScriptableCanvas::DrawTextWithColorName(double x, double y,
+                                             double width, double height,
                                              const char *text,
                                              const char *color,
                                              int flags, FontID font) {

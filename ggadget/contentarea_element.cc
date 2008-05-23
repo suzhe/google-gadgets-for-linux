@@ -23,6 +23,7 @@
 #include "gadget_consts.h"
 #include "graphics_interface.h"
 #include "image_interface.h"
+#include "main_loop_interface.h"
 #include "menu_interface.h"
 #include "messages.h"
 #include "scriptable_array.h"
@@ -58,7 +59,7 @@ class ContentAreaElement::Impl {
         max_content_items_(kDefaultMaxContentItems),
         pin_image_max_width_(0), pin_image_max_height_(0),
         mouse_down_(false), mouse_over_pin_(false),
-        mouse_x_(-1), mouse_y_(-1),
+        mouse_x_(-1.), mouse_y_(-1.),
         mouse_over_item_(NULL),
         details_open_item_(NULL),
         content_height_(0),
@@ -112,6 +113,25 @@ class ContentAreaElement::Impl {
     QueueDraw();
   }
 
+  // A class used to queue a redraw in the next iteration. This is necessary
+  // since ContentAreas, unlike other elements, may be modified during 
+  // drawing due to the ability to add custom draw handlers. When modified, an 
+  // immediate redraw necessary.
+  class QueueDrawCallback : public WatchCallbackInterface {
+   public:
+    QueueDrawCallback(ContentAreaElement *area) : area_(area) { ASSERT(area); }
+    virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      area_->QueueDraw();
+      return false;
+    }
+    virtual void OnRemove(MainLoopInterface *main_loop, int watch_id) {
+      delete this;
+    }
+   private:
+    ContentAreaElement *area_; // not owned by this object
+  };
+
+
   void Layout() {
     if (content_flags_ & CONTENT_FLAG_PINNABLE) {
       if (pin_image_max_width_ == 0) {
@@ -119,9 +139,9 @@ class ContentAreaElement::Impl {
           const ImageInterface *image = pin_images_[i].Get()->GetImage();
           if (image) {
             pin_image_max_width_ = std::max(
-                pin_image_max_width_, static_cast<int>(image->GetWidth()));
+                pin_image_max_width_, image->GetWidth());
             pin_image_max_height_ = std::max(
-                pin_image_max_height_, static_cast<int>(image->GetHeight()));
+                pin_image_max_height_, image->GetHeight());
           }
         }
       }
@@ -129,9 +149,9 @@ class ContentAreaElement::Impl {
       pin_image_max_width_ = pin_image_max_height_ = 0;
     }
 
-    int y = 0;
-    int width = static_cast<int>(ceil(owner_->GetClientWidth()));
-    int item_width = width - pin_image_max_width_;
+    double y = 0;
+    double width = owner_->GetClientWidth();
+    double item_width = width - pin_image_max_width_;
 
     // Add a modification checker to detect whether the set of content items
     // or this object itself is modified during the following loop. If such
@@ -147,7 +167,7 @@ class ContentAreaElement::Impl {
       for (size_t i = 0; i < item_count && !dead && !modified_; i++) {
         ContentItem *item = content_items_[i];
         ASSERT(item);
-        int item_x, item_y, item_width, item_height;
+        double item_x, item_y, item_width, item_height;
         bool x_relative, y_relative, width_relative, height_relative;
         item->GetRect(&item_x, &item_y, &item_width, &item_height,
                       &x_relative, &y_relative,
@@ -158,13 +178,13 @@ class ContentAreaElement::Impl {
         double client_width = owner_->GetClientWidth() / 100;
         double client_height = owner_->GetClientHeight() / 100;
         if (x_relative)
-          item_x = static_cast<int>(round(item_x * client_width));
+          item_x = item_x * client_width;
         if (y_relative)
-          item_y = static_cast<int>(round(item_y * client_height));
+          item_y = item_y * client_height;
         if (width_relative)
-          item_width = static_cast<int>(ceil(item_width * client_width));
+          item_width = item_width * client_width;
         if (height_relative)
-          item_height = static_cast<int>(ceil(item_height * client_height));
+          item_height = item_height * client_height;
         item->SetLayoutRect(item_x, item_y, item_width, item_height);
         content_height_ = std::max(content_height_, item_y + item_height);
       }
@@ -179,8 +199,8 @@ class ContentAreaElement::Impl {
           if (item_flags & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) {
             item->SetLayoutRect(0, 0, 0, 0);
           } else if (item_flags & ContentItem::CONTENT_ITEM_FLAG_PINNED) {
-            int item_height = item->GetHeight(target_, layout_canvas_,
-                                              item_width);
+            double item_height = item->GetHeight(target_, layout_canvas_,
+                                                 item_width);
             if (dead)
               break;
             item_height = std::max(item_height, pin_image_max_height_);
@@ -189,7 +209,7 @@ class ContentAreaElement::Impl {
             item->SetLayoutRect(0, y, width, item_height);
             y += item_height;
             if (!scrolling_line_step_ || scrolling_line_step_ > item_height)
-              scrolling_line_step_ = item_height;
+              scrolling_line_step_ = static_cast<int>(ceil(item_height));
           }
         }
       }
@@ -201,7 +221,7 @@ class ContentAreaElement::Impl {
         if (!(item_flags & ContentItem::CONTENT_ITEM_FLAG_HIDDEN) &&
             (!(content_flags_ & CONTENT_FLAG_PINNABLE) ||
              !(item_flags & ContentItem::CONTENT_ITEM_FLAG_PINNED))) {
-          int item_height = item->GetHeight(target_, layout_canvas_,
+          double item_height = item->GetHeight(target_, layout_canvas_,
                                             item_width);
           if (dead)
             break;
@@ -211,7 +231,7 @@ class ContentAreaElement::Impl {
           item->SetLayoutRect(0, y, width, item_height);
           y += item_height;
           if (!scrolling_line_step_ || scrolling_line_step_ > item_height)
-            scrolling_line_step_ = item_height;
+            scrolling_line_step_ = static_cast<int>(ceil(item_height));
         }
       }
       if (!dead)
@@ -220,16 +240,21 @@ class ContentAreaElement::Impl {
 
     if (!dead)
       death_detector_ = NULL;
+
+    if (modified_) {
+      // Need to queue another draw.
+      GetGlobalMainLoop()->AddTimeoutWatch(0, new QueueDrawCallback(owner_)); 
+    }
   }
 
   void Draw(CanvasInterface *canvas) {
-    int height = static_cast<int>(ceil(owner_->GetClientHeight()));
+    double height = owner_->GetClientHeight();
     if (background_opacity_ > 0.) {
       if (background_opacity_ != 1.) {
         canvas->PushState();
         canvas->MultiplyOpacity(background_opacity_);
       }
-      int width = static_cast<int>(ceil(owner_->GetClientWidth()));
+      double width = owner_->GetClientWidth();
       canvas->DrawFilledRect(0, 0, width, height, background_color_);
       if (background_opacity_ != 1.) {
         canvas->PopState();
@@ -250,12 +275,12 @@ class ContentAreaElement::Impl {
       if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)
         continue;
 
-      int item_x = 0, item_y = 0, item_width = 0, item_height = 0;
+      double item_x = 0, item_y = 0, item_width = 0, item_height = 0;
       item->GetLayoutRect(&item_x, &item_y, &item_width, &item_height);
       item_x -= owner_->GetScrollXPosition();
       item_y -= owner_->GetScrollYPosition();
       if (item_width > 0 && item_height > 0 && item_y < height) {
-        bool mouse_over = mouse_x_ != -1 && mouse_y_ != -1 &&
+        bool mouse_over = mouse_x_ != -1. && mouse_y_ != -1. &&
                           mouse_x_ >= item_x &&
                           mouse_x_ < item_x + item_width &&
                           mouse_y_ >= item_y &&
@@ -281,8 +306,8 @@ class ContentAreaElement::Impl {
                                     PIN_IMAGE_UNPINNED].Get()->GetImage();
           }
           if (pin_image) {
-            int image_width = static_cast<int>(pin_image->GetWidth());
-            int image_height = static_cast<int>(pin_image->GetHeight());
+            double image_width = pin_image->GetWidth();
+            double image_height = pin_image->GetHeight();
             pin_image->Draw(canvas,
                             item_x + (pin_image_max_width_ - image_width) / 2,
                             item_y + (item_height - image_height) / 2);
@@ -303,6 +328,11 @@ class ContentAreaElement::Impl {
     }
     if (!dead)
       death_detector_ = NULL;
+
+    if (modified_) {
+      // Need to queue another draw.
+      GetGlobalMainLoop()->AddTimeoutWatch(0, new QueueDrawCallback(owner_));     
+    }
   }
 
   ScriptableArray *ScriptGetContentItems() {
@@ -491,19 +521,22 @@ class ContentAreaElement::Impl {
     if (event.GetType() == Event::EVENT_MOUSE_OUT) {
       mouse_over_pin_ = false;
       mouse_over_item_ = NULL;
-      mouse_x_ = mouse_y_ = -1;
+      mouse_x_ = mouse_y_ = -1.;
       mouse_down_ = false;
       queue_draw = true;
       result = EVENT_RESULT_HANDLED;
     } else {
-      mouse_x_ = static_cast<int>(round(event.GetX()));
-      mouse_y_ = static_cast<int>(round(event.GetY()));
+      mouse_x_ = event.GetX();
+      mouse_y_ = event.GetY();
       ContentItem *new_mouse_over_item = NULL;
       bool tooltip_required = false;
       for (ContentItems::iterator it = content_items_.begin();
            it != content_items_.end(); ++it) {
-        if (!((*it)->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)) {
-          int x, y, w, h;
+        int flags = (*it)->GetFlags();
+        if (!(flags & 
+                (ContentItem::CONTENT_ITEM_FLAG_HIDDEN | 
+                 ContentItem::CONTENT_ITEM_FLAG_STATIC))) {          
+          double x, y, w, h;
           (*it)->GetLayoutRect(&x, &y, &w, &h);
           x -= owner_->GetScrollXPosition();
           y -= owner_->GetScrollYPosition();
@@ -552,9 +585,7 @@ class ContentAreaElement::Impl {
             if (mouse_over_item_) {
               if (mouse_over_pin_) {
                 mouse_over_item_->ToggleItemPinnedState();
-              } else if ((content_flags_ & CONTENT_FLAG_HAVE_DETAILS) &&
-                         !(mouse_over_item_->GetFlags() &
-                           ContentItem::CONTENT_ITEM_FLAG_STATIC)) {
+              } else if (content_flags_ & CONTENT_FLAG_HAVE_DETAILS) {
                 std::string title;
                 DetailsViewData *details_view_data = NULL;
                 int flags = 0;
@@ -571,9 +602,7 @@ class ContentAreaElement::Impl {
             }
             break;
           case Event::EVENT_MOUSE_DBLCLICK:
-            if (mouse_over_item_ && !mouse_over_pin_ &&
-                !(mouse_over_item_->GetFlags() &
-                  ContentItem::CONTENT_ITEM_FLAG_STATIC))
+            if (mouse_over_item_ && !mouse_over_pin_)
               mouse_over_item_->OpenItem();
             break;
           default:
@@ -691,12 +720,12 @@ class ContentAreaElement::Impl {
   size_t max_content_items_;
   ContentItems content_items_;
   ScriptableHolder<ScriptableImage> pin_images_[PIN_IMAGE_COUNT];
-  int pin_image_max_width_, pin_image_max_height_;
+  double pin_image_max_width_, pin_image_max_height_;
   bool mouse_down_, mouse_over_pin_;
-  int mouse_x_, mouse_y_;
+  double mouse_x_, mouse_y_;
   ContentItem *mouse_over_item_;
   ContentItem *details_open_item_;
-  int content_height_;
+  double content_height_;
   int scrolling_line_step_;
   int refresh_timer_;
   bool modified_; // Flags whether items were added, removed or reordered.
