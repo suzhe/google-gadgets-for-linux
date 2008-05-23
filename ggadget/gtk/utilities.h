@@ -105,6 +105,17 @@ bool DisableWidgetBackground(GtkWidget *widget);
  */
 bool SupportsComposite();
 
+/**
+ * Talk to the window manager to maximize to window.
+ *
+ * @param window the gtk window you want to be maximized.
+ * @param maximize_vert @c true if window should be maximized vertically
+ * @param maximize_horz @c true if window should be maximized horizenly.
+ * @return @true if the action succeed.
+ */
+bool MaximizeWindow(GtkWidget *window, bool maximize_vert, bool maximize_horz);
+
+
 } // namespace gtk
 } // namespace ggadget
 

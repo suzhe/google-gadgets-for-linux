@@ -21,6 +21,7 @@
 #include <fontconfig/fontconfig.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 #include <ggadget/common.h>
 #include <ggadget/logger.h>
 #include <ggadget/gadget.h>
@@ -393,6 +394,29 @@ bool SupportsComposite() {
 #else
   return gdk_screen_get_rgba_colormap(gdk_screen_get_default()) != NULL;
 #endif
+}
+
+// This method is based on xlib, changed to gdk in the future if possible
+bool MaximizeWindow(GtkWidget *window, bool maximize_vert, bool maximize_horz) {
+  GdkDisplay *display = gtk_widget_get_display(window);
+  Display *xd = gdk_x11_display_get_xdisplay(display);
+  XClientMessageEvent xclient;
+  memset(&xclient, 0, sizeof(xclient));
+  xclient.type = ClientMessage;
+  xclient.window = GDK_WINDOW_XWINDOW(window->window);
+  xclient.message_type = XInternAtom(xd, "_NET_WM_STATE", False);
+  xclient.format = 32;
+  xclient.data.l[0] = 1;
+  if (maximize_vert)
+    xclient.data.l[1] = XInternAtom(xd, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+  if (maximize_horz)
+    xclient.data.l[2] = XInternAtom(xd, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+
+  gdk_error_trap_push();
+  Status s = XSendEvent(xd, gdk_x11_get_default_root_xwindow(), False,
+      SubstructureRedirectMask | SubstructureNotifyMask, (XEvent *)&xclient);
+  gdk_error_trap_pop();
+  return !s;
 }
 
 } // namespace gtk
