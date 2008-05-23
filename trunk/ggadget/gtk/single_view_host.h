@@ -108,6 +108,10 @@ class SingleViewHost : public ViewHostInterface {
   /** Checks if the top level window is visible or not. */
   bool IsVisible() const;
 
+  /** Gets and sets the gtk window type hint. */
+  void SetWindowType(GdkWindowTypeHint type);
+  GdkWindowTypeHint GetWindowType() const;
+
  public:
   /**
    * Connects a slot to OnViewChanged signal.

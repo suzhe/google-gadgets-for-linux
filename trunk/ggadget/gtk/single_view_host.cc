@@ -544,7 +544,7 @@ class SingleViewHost::Impl {
     if (resize_width_mode_ || resize_height_mode_) {
       resize_width_mode_ = 0;
       resize_height_mode_ = 0;
-      // gdk_pointer_ungrab(gtk_get_current_event_time());
+      gdk_pointer_ungrab(gtk_get_current_event_time());
       QueueResize();
       on_end_resize_drag_signal_();
     }
@@ -1011,6 +1011,16 @@ void SingleViewHost::SetKeepAbove(bool keep_above) {
 
 bool SingleViewHost::IsVisible() const {
   return impl_->window_ && GTK_WIDGET_VISIBLE(impl_->window_);
+}
+
+void SingleViewHost::SetWindowType(GdkWindowTypeHint type) {
+  GdkWindowTypeHint old = gdk_window_get_type_hint(impl_->window_->window);
+  if (old == type) return;
+  gdk_window_set_type_hint(impl_->window_->window, type);
+}
+
+GdkWindowTypeHint SingleViewHost::GetWindowType() const {
+  return gdk_window_get_type_hint(impl_->window_->window);
 }
 
 Connection *SingleViewHost::ConnectOnViewChanged(Slot0<void> *slot) {

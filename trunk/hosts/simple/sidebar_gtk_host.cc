@@ -89,6 +89,7 @@ class SidebarGtkHost::Impl {
       floating_view_host = NULL;
       pop_out_view_host = NULL;
       y_in_sidebar = 0;
+      undock_by_drag = false;
     }
 
    public:
@@ -100,6 +101,7 @@ class SidebarGtkHost::Impl {
     SingleViewHost *pop_out_view_host;
 
     double y_in_sidebar;
+    bool undock_by_drag;
   };
 
   Impl(SidebarGtkHost *owner, bool decorated, int view_debug_mode)
@@ -181,8 +183,7 @@ class SidebarGtkHost::Impl {
         return true;
 
     if (option_always_on_top_)
-      gdk_window_set_type_hint(main_widget_->window,
-                               GDK_WINDOW_TYPE_HINT_NORMAL);
+      view_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
     return false;
   }
 
@@ -195,8 +196,7 @@ class SidebarGtkHost::Impl {
     DLOG("Hanlde Begin Move sidebar.");
     if (button != MouseEvent::BUTTON_LEFT) return true;
     if (option_always_on_top_)
-      gdk_window_set_type_hint(main_widget_->window,
-                               GDK_WINDOW_TYPE_HINT_NORMAL);
+      view_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
     return false;
   }
 
@@ -292,13 +292,21 @@ class SidebarGtkHost::Impl {
                            NULL, NULL, gtk_get_current_event_time()) ==
           GDK_GRAB_SUCCESS) {
         draging_gadget_ = info->gadget;
-        DLOG("DragUndock, grab pointor for %p", draging_gadget_);
         side_bar_->InsertPlaceholder(info->y_in_sidebar, h);
         View *new_view = down_cast<View *>(draging_gadget_->GetMainView());
         new_view->ViewCoordToNativeWidgetCoord(view_x, view_y,
                                                &floating_offset_x_,
                                                &floating_offset_y_);
-        HandlePopoutDragMove(drag_observer_, NULL, this);
+        info->undock_by_drag = true;
+        if (option_always_on_top_)
+          info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
+        // move window the cursor place
+        int x, y;
+        gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
+        info->floating_view_host->SetWindowPosition(
+            x - static_cast<int>(floating_offset_x_),
+            y - static_cast<int>(floating_offset_y_));
+        info->floating_view_host->ShowView(false, 0, NULL);
       }
     }
   }
@@ -365,6 +373,7 @@ class SidebarGtkHost::Impl {
                            G_CALLBACK(HandleFocusInEvent), this);
     g_signal_connect_after(G_OBJECT(main_widget_), "enter-notify-event",
                            G_CALLBACK(HandleEnterNotifyEvent), this);
+    MaximizeWindow(main_widget_, true, false);
 
 #if GTK_CHECK_VERSION(2,10,0)
     std::string icon_data;
@@ -391,9 +400,9 @@ class SidebarGtkHost::Impl {
     drag_observer_ = gtk_invisible_new();
     gtk_widget_show(drag_observer_);
     g_signal_connect(G_OBJECT(drag_observer_), "motion-notify-event",
-                     G_CALLBACK(HandlePopoutDragMove), this);
+                     G_CALLBACK(HandleUndockDragMove), this);
     g_signal_connect(G_OBJECT(drag_observer_), "button-release-event",
-                     G_CALLBACK(HandlePopoutDragEnd), this);
+                     G_CALLBACK(HandleUndockDragEnd), this);
   }
 
   bool ConfirmGadget(int id) {
@@ -518,8 +527,7 @@ class SidebarGtkHost::Impl {
                           reinterpret_cast<guchar *>(&struts), 12);
 
       // change Xwindow type
-      gdk_window_set_type_hint(main_widget_->window,
-                               GDK_WINDOW_TYPE_HINT_DOCK);
+      view_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
     } else {
       gtk_window_set_keep_above(GTK_WINDOW(main_widget_),
                                 option_always_on_top_);
@@ -527,8 +535,7 @@ class SidebarGtkHost::Impl {
       // delete the properties
       gdk_property_delete(main_widget_->window, net_wm_strut_);
       gdk_property_delete(main_widget_->window, net_wm_strut_partial_);
-      gdk_window_set_type_hint(main_widget_->window,
-                               GDK_WINDOW_TYPE_HINT_NORMAL);
+      view_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
     }
   }
 
@@ -577,7 +584,7 @@ class SidebarGtkHost::Impl {
       new_host->EnableAutoRestoreViewSize(false);
     ViewHostInterface *old = view->SwitchViewHost(new_host);
     if (old) old->Destroy();
-    return new_host->ShowView(false, 0, NULL);
+    return true;
   }
 
   void HandleDock(int gadget_id) {
@@ -589,20 +596,14 @@ class SidebarGtkHost::Impl {
     GadgetViewHostInfo *info = gadgets_[gadget_id];
     if (info->details_view_host)
       SetPopoutPosition(gadget_id, info->details_view_host);
-    if (option_always_on_top_) {
-      GtkWidget *win = info->floating_view_host->GetWindow();
-      gtk_window_set_transient_for(GTK_WINDOW(win), GTK_WINDOW(main_widget_));
-      if (GTK_WIDGET_VISIBLE(win)) {
-        gdk_window_raise(win->window);
-      } else {
-        gtk_widget_show(win);
-      }
-    }
     if (IsOverlapWithSideBar(gadget_id, &h, x, y)) {
-      side_bar_->Layout();
+      if (option_always_on_top_) {
+        info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
+      }
       side_bar_->InsertPlaceholder(
           h, info->floating_view_host->GetView()->GetHeight());
       info->y_in_sidebar = h;
+      side_bar_->Layout();
     } else {
       side_bar_->ClearPlaceHolder();
     }
@@ -617,8 +618,13 @@ class SidebarGtkHost::Impl {
       info->y_in_sidebar = h;
       HandleDock(gadget_id);
     } else {
-      info->decorated_view_host->RestoreViewSize();
-      info->decorated_view_host->EnableAutoRestoreViewSize(true);
+      if (info->undock_by_drag) {
+        DLOG("RestoreViewSize");
+        info->decorated_view_host->EnableAutoRestoreViewSize(true);
+        info->decorated_view_host->RestoreViewSize();
+        info->undock_by_drag = false;
+      }
+      info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
     }
     side_bar_->ClearPlaceHolder();
   }
@@ -643,6 +649,7 @@ class SidebarGtkHost::Impl {
   // not move with cursor
   void HandleFloatingUndock(int gadget_id) {
     Undock(gadget_id, false);
+    gadgets_[gadget_id]->floating_view_host->ShowView(false, 0, NULL);
   }
 
   void HideOrShowAllGadgets(bool show) {
@@ -827,6 +834,9 @@ class SidebarGtkHost::Impl {
     if (main_view->GetViewHost() == expanded_popout_) {
       OnPopInHandler(expanded_original_);
     }
+    GadgetsMap::iterator it = gadgets_.find(gadget->GetInstanceID());
+    if (it != gadgets_.end())
+      gadgets_.erase(it);
 
     gadget_manager_->RemoveGadgetInstance(gadget->GetInstanceID());
   }
@@ -1144,22 +1154,20 @@ class SidebarGtkHost::Impl {
     return FALSE;
   }
 
-  static gboolean HandlePopoutDragMove(GtkWidget *widget, GdkEventMotion *event,
+  static gboolean HandleUndockDragMove(GtkWidget *widget, GdkEventMotion *event,
                                        Impl *impl) {
-    int x, y;
     if (!impl->draging_gadget_) return FALSE;
 
-    // DLOG("DragUndock, move gadget %p", impl->draging_gadget_);
-    gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
     int id = impl->draging_gadget_->GetInstanceID();
     impl->gadgets_[id]->floating_view_host->SetWindowPosition(
-        x - static_cast<int>(impl->floating_offset_x_),
-        y - static_cast<int>(impl->floating_offset_y_));
-    impl->HandleViewHostMoved(x, y, id);
+        static_cast<int>(event->x_root - impl->floating_offset_x_),
+        static_cast<int>(event->y_root - impl->floating_offset_y_));
+    impl->HandleViewHostMoved(static_cast<int>(event->x_root),
+                              static_cast<int>(event->y_root), id);
     return FALSE;
   }
 
-  static gboolean HandlePopoutDragEnd(GtkWidget *widget, GdkEventMotion *event,
+  static gboolean HandleUndockDragEnd(GtkWidget *widget, GdkEventMotion *event,
                                       Impl *impl) {
     DLOG("DragUndock, ungrab for %p", impl->draging_gadget_);
     impl->HandleViewHostEndMoveDrag(impl->draging_gadget_->GetInstanceID());
