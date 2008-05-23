@@ -811,7 +811,14 @@ class View::Impl {
       ScriptableEvent scriptable_event(&event, NULL, NULL);
       FireEvent(&scriptable_event, onsize_event_);
 
-      if (view_host_) view_host_->QueueResize();
+      if (gadget_) {
+        // Might be better to send signal from host instead of here.
+        gadget_->OnDisplayStateChange(Gadget::TILE_DISPLAY_STATE_RESIZED);
+      }
+
+      if (view_host_) {
+        view_host_->QueueResize();
+      }
     }
   }
 

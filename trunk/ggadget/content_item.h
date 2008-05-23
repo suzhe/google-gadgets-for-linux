@@ -166,33 +166,33 @@ class ContentItem : public ScriptableHelperDefault {
   void SetTooltip(const char *tooltip);
 
   /** Gets and sets the item's required display position. */
-  void GetRect(int *x, int *y, int *width, int *height,
+  void GetRect(double *x, double *y, double *width, double *height,
                bool *x_relative, bool *y_relative,
                bool *width_relative, bool *height_relative);
-  void SetRect(int x, int y, int width, int height,
+  void SetRect(double x, double y, double width, double height,
                bool x_relative, bool y_relative,
                bool width_relative, bool height_relative);
 
   /** Gets and sets the item's actual display position. */
-  void GetLayoutRect(int *x, int *y, int *width, int *height);
-  void SetLayoutRect(int x, int y, int width, int height);
+  void GetLayoutRect(double *x, double *y, double *width, double *height);
+  void SetLayoutRect(double x, double y, double width, double height);
 
   /** Returns if this item can be opened by the user. */
   bool CanOpen() const;
 
   /** Draws the item. */
   void Draw(Gadget::DisplayTarget target, CanvasInterface *canvas,
-            int x, int y, int width, int height);
+            double x, double y, double width, double height);
   Connection *ConnectOnDrawItem(
       Slot7<void, ContentItem *, Gadget::DisplayTarget,
-            ScriptableCanvas *, int, int, int, int> *handler);
+            ScriptableCanvas *, double, double, double, double> *handler);
 
   /** Gets the height in pixels of the item for the given width. */
-  int GetHeight(Gadget::DisplayTarget target,
-                CanvasInterface *canvas, int width);
+  double GetHeight(Gadget::DisplayTarget target,
+                CanvasInterface *canvas, double width);
   Connection *ConnectOnGetHeight(
-      Slot4<int, ContentItem *, Gadget::DisplayTarget,
-            ScriptableCanvas *, int> *handler);
+      Slot4<double, ContentItem *, Gadget::DisplayTarget,
+            ScriptableCanvas *, double> *handler);
 
   /** Called when the user opens/double clicks the item. */
   void OpenItem();
@@ -206,10 +206,10 @@ class ContentItem : public ScriptableHelperDefault {
   /** Called to check if a tooltip is required for the item. */
   bool IsTooltipRequired(Gadget::DisplayTarget target,
                          CanvasInterface *canvas,
-                         int x, int y, int width, int height);
+                         double x, double y, double width, double height);
   Connection *ConnectOnGetIsTooltipRequired(
       Slot7<bool, ContentItem *, Gadget::DisplayTarget,
-            ScriptableCanvas *, int, int, int, int> *handler);
+            ScriptableCanvas *, double, double, double, double> *handler);
 
   /**
    * Called before showing the details view for the given item.
@@ -311,20 +311,21 @@ class ScriptableCanvas : public ScriptableHelperNativeOwnedDefault {
 
   CanvasInterface *canvas() { return canvas_; }
 
-  void DrawLine(int x1, int y1, int x2, int y2, const Color &color);
-  void DrawRect(int x1, int y1, int width, int height,
-                const Color &line_color, const Color &fill_color);
-  void DrawImage(int x, int y, int width, int height,
+  void DrawLine(double x1, double y1, double x2, double y2, const Color &color);
+  void DrawRect(double x1, double y1, double width, double height,
+                const Color *line_color, const Color *fill_color);
+  void DrawImage(double x, double y, double width, double height,
                  ScriptableImage *image, int alpha_percent);
-  void DrawText(int x, int y, int width, int height, const char *text,
+  void DrawText(double x, double y, double width, double height, const char *text,
                 const Color &color, int flags, FontID font);
-  int GetTextWidth(const char *text, int flags, FontID font);
-  int GetTextHeight(const char *text, int width, int flags, FontID font);
+  double GetTextWidth(const char *text, int flags, FontID font);
+  double GetTextHeight(const char *text, double width, int flags, FontID font);
 
-  void DrawLineWithColorName(int x1, int y1, int x2, int y2, const char *color);
-  void DrawRectWithColorName(int x1, int y1, int width, int height,
+  void DrawLineWithColorName(double x1, double y1, double x2, double y2,
+                             const char *color);
+  void DrawRectWithColorName(double x1, double y1, double width, double height,
                              const char *line_color, const char *fill_color);
-  void DrawTextWithColorName(int x, int y, int width, int height,
+  void DrawTextWithColorName(double x, double y, double width, double height,
                              const char *text, const char *color,
                              int flags, FontID font);
 

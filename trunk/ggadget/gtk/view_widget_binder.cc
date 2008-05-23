@@ -696,7 +696,9 @@ ViewWidgetBinder::Impl::EventHandlerInfo
 ViewWidgetBinder::Impl::kEventHandlers[] = {
   { "button-press-event", G_CALLBACK(ButtonPressHandler) },
   { "button-release-event", G_CALLBACK(ButtonReleaseHandler) },
+#if GTK_CHECK_VERSION(2,10,0)
   { "composited-changed", G_CALLBACK(CompositedChangedHandler) },
+#endif  
   { "drag-data-received", G_CALLBACK(DragDataReceivedHandler) },
   { "drag-drop", G_CALLBACK(DragDropHandler) },
   { "drag-leave", G_CALLBACK(DragLeaveHandler) },

@@ -468,8 +468,9 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   void SetDisplayTarget(DisplayTarget target) {
     bool changed = (target != display_target_);
     display_target_ = target;
-    if (changed)
-      ondisplaystatechange_signal_(target);
+    if (changed) {
+      ondisplaytargetchange_signal_(target);
+    }
   }
 
   void SetPluginFlags(int flags) {
