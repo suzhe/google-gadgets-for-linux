@@ -280,7 +280,7 @@ class SimpleGtkHost::Impl {
       svh->ConnectOnResized(
           NewSlot(this, &Impl::OnDetailsViewResizedHandler, gadget_id));
       svh->ConnectOnBeginMoveDrag(
-          NewSlot(this, &Impl::OnDetailsViewBeginMoveHandler, gadget_id));
+          NewSlot(this, &Impl::OnDetailsViewBeginMoveHandler));
     }
 
     dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
@@ -417,7 +417,7 @@ class SimpleGtkHost::Impl {
       svh->ConnectOnResized(
           NewSlot(this, &Impl::OnPopOutViewResizedHandler, gadget_id));
       svh->ConnectOnBeginMoveDrag(
-          NewSlot(this, &Impl::OnPopOutViewBeginMoveHandler, gadget_id));
+          NewSlot(this, &Impl::OnPopOutViewBeginMoveHandler));
 
       // Send popout event to decorator first.
       SimpleEvent event(Event::EVENT_POPOUT);
@@ -583,7 +583,7 @@ class SimpleGtkHost::Impl {
     }
   }
 
-  bool OnPopOutViewBeginMoveHandler(int button, int gadget_id) {
+  bool OnPopOutViewBeginMoveHandler(int button) {
     // User can't move popout view window.
     return true;
   }
@@ -626,7 +626,7 @@ class SimpleGtkHost::Impl {
     }
   }
 
-  bool OnDetailsViewBeginMoveHandler(int button, int gadget_id) {
+  bool OnDetailsViewBeginMoveHandler(int button) {
     // User can't move popout view window.
     return true;
   }

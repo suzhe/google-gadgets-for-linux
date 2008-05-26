@@ -70,9 +70,10 @@ class SideBar::Impl : public View {
         private_view_ = NULL;
       }
       if (!view) return;
-      view_element_ =
-          new ViewElement(owner_->main_div_, owner_, down_cast<View *>(view),
-                          true);
+      view_element_ = new ViewElement(owner_->main_div_, owner_,
+                                      down_cast<View *>(view), true);
+      // set disable before ShowView is called
+      view_element_->SetEnabled(false);
       // insert the view element in proper place
       owner_->InsertViewElement(height_, view_element_);
       private_view_ = view_element_->GetChildView();
@@ -127,7 +128,7 @@ class SideBar::Impl : public View {
                           Slot1<void, int> *feedback_handler) {
       if (view_element_) {
         view_element_->SetEnabled(true);
-        QueueDraw();
+        owner_->Layout();
       }
       if (feedback_handler) {
         (*feedback_handler)(flags);
@@ -138,7 +139,7 @@ class SideBar::Impl : public View {
     virtual void CloseView() {
       if (view_element_) {
         view_element_->SetEnabled(false);
-        QueueDraw();
+        owner_->Layout();
       }
     }
     virtual bool ShowContextMenu(int button) {
@@ -183,6 +184,7 @@ class SideBar::Impl : public View {
         mouse_move_event_y_(-1),
         hit_element_bottom_(false),
         hit_element_normal_part_(false),
+        hit_sidebar_border_(false),
         hittest_(HT_CLIENT),
         background_(NULL),
         icon_(NULL),
@@ -201,7 +203,6 @@ class SideBar::Impl : public View {
     // the mouse down event after expand event should file unexpand event
     if (ShouldFirePopInEvent(event)) {
       popin_event_();
-      return EVENT_RESULT_HANDLED;
     }
 
     EventResult result = EVENT_RESULT_UNHANDLED;
@@ -221,8 +222,7 @@ class SideBar::Impl : public View {
     }
 
     if (result != EVENT_RESULT_UNHANDLED ||
-        event.GetButton() != MouseEvent::BUTTON_LEFT ||
-        hittest_ != HT_CLIENT) {
+        event.GetButton() != MouseEvent::BUTTON_LEFT) {
       return result;
     }
 
@@ -230,15 +230,19 @@ class SideBar::Impl : public View {
     double x, y;
     BasicElement *element = NULL;
     ViewElement *focused = owner_->GetMouseOverElement();
+    double offset = mouse_move_event_y_ - event.GetY();
     switch (event.GetType()) {
       case Event::EVENT_MOUSE_DOWN:
         DLOG("Mouse down at (%f,%f)", event.GetX(), event.GetY());
         mouse_move_event_x_ = event.GetX();
         mouse_move_event_y_ = event.GetY();
 
-        if (!focused) {
+        if (hittest_ != HT_CLIENT) {
+          hit_sidebar_border_ = true;
           return result;
         }
+
+        if (!focused) return result;
         focused->ViewCoordToSelfCoord(event.GetX(), event.GetY(), &x, &y);
         switch (focused->GetHitTest(x, y)) {
           case HT_BOTTOM:
@@ -283,32 +287,33 @@ class SideBar::Impl : public View {
           }
           return result;
         }
+        if (hit_element_bottom_) {
+          // set cursor so that user understand that it's still in layout process
+          SetCursor(CURSOR_SIZENS);
+          int index = GetIndex(focused);
+          if (offset < 0) {
+            DownResize(false, index + 1, &offset);
+            UpResize(true, index, &offset);
+            DownResize(true, index + 1, &offset);
+            QueueDraw();
+          } else {
+            UpResize(true, index, &offset);
+            Layout();
+          }
+        } else if (hit_element_normal_part_ &&
+                   (std::abs(offset) > kUndockDragThreshold ||
+                    std::abs(event.GetX() - mouse_move_event_x_) >
+                    kUndockDragThreshold)) {
+          undock_event_(mouse_move_event_x_, mouse_move_event_y_);
+          ResetState();
+        } else if (hit_sidebar_border_) {
+          return EVENT_RESULT_UNHANDLED;
+        }
         break;
       default:
         return result;
     }
 
-    double offset = mouse_move_event_y_ - event.GetY();
-    if (hit_element_bottom_) {
-      // set cursor so that user understand that we are still in layout process
-      SetCursor(CURSOR_SIZENS);
-      int index = GetIndex(focused);
-      if (offset < 0) {
-        DownResize(false, index + 1, &offset);
-        UpResize(true, index, &offset);
-        DownResize(true, index + 1, &offset);
-        QueueDraw();
-      } else {
-        UpResize(true, index, &offset);
-        Layout();
-      }
-    } else if (hit_element_normal_part_ &&
-               (std::abs(offset) > kUndockDragThreshold ||
-                std::abs(event.GetX() - mouse_move_event_x_) >
-                kUndockDragThreshold)) {
-      undock_event_(mouse_move_event_x_, mouse_move_event_y_);
-      ResetState();
-    }
     return EVENT_RESULT_HANDLED;
   }
 
@@ -353,6 +358,7 @@ class SideBar::Impl : public View {
     mouse_move_event_y_ = -1;
     hit_element_bottom_ = false;
     hit_element_normal_part_ = false;
+    hit_sidebar_border_ = false;
     blank_height_ = 0;
     elements_height_.clear();
   }
@@ -446,13 +452,14 @@ class SideBar::Impl : public View {
     GetInsertPoint(height, element, &pre, &next);
     if (pre != element && next != element) {
       main_div_->GetChildren()->InsertElement(element, next);
-      Layout();
+      if (element->IsEnabled()) Layout();
     }
   }
   bool RemoveViewElement(BasicElement *element) {
     ASSERT(element && element->IsInstanceOf(ViewElement::CLASS_ID));
+    bool enabled = element->IsEnabled();
     bool r = main_div_->GetChildren()->RemoveElement(element);
-    if (r) Layout();
+    if (enabled && r) Layout();
     return r;
   }
   void Layout() {
@@ -460,6 +467,7 @@ class SideBar::Impl : public View {
     for (int i = 0; i < main_div_->GetChildren()->GetCount(); ++i) {
       ViewElement *element =
         down_cast<ViewElement *>(main_div_->GetChildren()->GetItemByIndex(i));
+      if (!element->IsEnabled()) continue;
       double width = main_div_->GetPixelWidth();
       double height = ceil(element->GetPixelHeight());
       if (element->IsVisible() && element->OnSizing(&width, &height)) {
@@ -595,6 +603,7 @@ class SideBar::Impl : public View {
   double mouse_move_event_y_;
   bool hit_element_bottom_;
   bool hit_element_normal_part_;
+  bool hit_sidebar_border_;
   HitTest hittest_;
 
   // elements of sidebar decorator
