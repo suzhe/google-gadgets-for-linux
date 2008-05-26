@@ -190,8 +190,8 @@ extern "C" {
 
     ScriptableInterface *system = NULL;
     // Gets or adds system object.
-    Variant prop = GetPropertyByName(framework, "system");
-    if (prop.type() != Variant::TYPE_SCRIPTABLE) {
+    ResultVariant prop = framework->GetProperty("system");
+    if (prop.v().type() != Variant::TYPE_SCRIPTABLE) {
       // property "system" is not available or have wrong type, then add one
       // with correct type.
       // Using SharedScriptable here, so that it can be destroyed correctly
@@ -199,7 +199,7 @@ extern "C" {
       system = new SharedScriptable();
       reg_framework->RegisterVariantConstant("system", Variant(system));
     } else {
-      system = VariantValue<ScriptableInterface *>()(prop);
+      system = VariantValue<ScriptableInterface *>()(prop.v());
     }
 
     if (!system) {
