@@ -328,7 +328,9 @@ QtHost::QtHost(int view_debug_mode)
 }
 
 QtHost::~QtHost() {
+  DLOG("Removing QtHost");
   delete impl_;
+  DLOG("QtHost removed");
 }
 
 ViewHostInterface *QtHost::NewViewHost(Gadget *gadget,

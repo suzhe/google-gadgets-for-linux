@@ -69,7 +69,8 @@ class QtCanvas::Impl {
       on_zoom_connection_ =
         g->ConnectOnZoom(NewSlot(this, &Impl::OnZoom));
     }
-    image_ = new QImage(D2I(w*zoom_), D2I(h*zoom_), QImage::Format_ARGB32);
+    image_ = new QImage(D2I(w*zoom_), D2I(h*zoom_),
+                        QImage::Format_ARGB32_Premultiplied);
     if (image_ == NULL) return;
     MakeImageTransparent(image_);
     if (create_painter) {
@@ -172,7 +173,6 @@ class QtCanvas::Impl {
     const QtCanvas *s = reinterpret_cast<const QtCanvas*>(img);
     const QtCanvas *m = reinterpret_cast<const QtCanvas*>(mask);
     QImage simg = *s->GetImage();
-    // TODO: setAlphaChannel is not recommended to use for performance issue.
     simg.setAlphaChannel(*m->GetImage());
     Impl *impl = s->impl_;
     double sx, sy;
@@ -337,9 +337,9 @@ class QtCanvas::Impl {
   void OnZoom(double zoom) {
     LOG("zoom, width_, height_:%f, %f, %f", zoom, width_, height_);
     if (zoom == zoom_) return;
-    ASSERT(image_); // Not support zoom
+    ASSERT(image_); // Not support zoom for such canvas
     QImage* new_image = new QImage(D2I(width_*zoom), D2I(height_*zoom),
-                                   QImage::Format_ARGB32);
+                                   QImage::Format_ARGB32_Premultiplied);
     if (!new_image) return;
     if (painter_) delete painter_;
     delete image_;

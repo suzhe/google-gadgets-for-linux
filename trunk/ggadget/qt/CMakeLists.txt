@@ -22,7 +22,7 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(SRCS
   qt_canvas.cc
   qt_font.cc
-  qt_gadget_widget.cc
+  qt_view_widget.cc
   qt_graphics.cc
   qt_image.cc
   qt_main_loop.cc
