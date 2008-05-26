@@ -208,19 +208,6 @@ void ComboBoxElement::DoRegister() {
   RegisterProperty("background",
                    NewSlot(this, &ComboBoxElement::GetBackground),
                    NewSlot(this, &ComboBoxElement::SetBackground));
-
-  // Register container methods since combobox is really a container.
-  Elements *elements = impl_->listbox_->GetChildren();
-  RegisterConstant("children", elements);
-  RegisterMethod("appendElement",
-                 NewSlot(elements, &Elements::AppendElementFromXML));
-  RegisterMethod("insertElement",
-                 NewSlot(elements, &Elements::InsertElementFromXML));
-  RegisterMethod("removeElement",
-                 NewSlot(elements, &Elements::RemoveElement));
-  RegisterMethod("removeAllElements",
-                 NewSlot(elements, &Elements::RemoveAllElements));
-
   RegisterProperty("itemHeight",
                    NewSlot(impl_->listbox_, &ListBoxElement::GetItemHeight),
                    NewSlot(impl_->listbox_, &ListBoxElement::SetItemHeight));

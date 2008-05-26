@@ -343,16 +343,16 @@ class ContentAreaElement::Impl {
   void ScriptSetContentItems(ScriptableInterface *array) {
     RemoveAllContentItems();
     if (array) {
-      Variant length_v = GetPropertyByName(array, "length");
+      Variant length_v = array->GetProperty("length").v();
       int length;
       if (length_v.ConvertToInt(&length)) {
         if (static_cast<size_t>(length) > max_content_items_)
           length = max_content_items_;
 
         for (int i = 0; i < length; i++) {
-          Variant v = array->GetProperty(i);
-          if (v.type() == Variant::TYPE_SCRIPTABLE) {
-            ContentItem *item = VariantValue<ContentItem *>()(v);
+          ResultVariant v = array->GetPropertyByIndex(i);
+          if (v.v().type() == Variant::TYPE_SCRIPTABLE) {
+            ContentItem *item = VariantValue<ContentItem *>()(v.v());
             if (item)
               AddContentItem(item, ITEM_DISPLAY_IN_SIDEBAR);
           }
@@ -395,16 +395,16 @@ class ContentAreaElement::Impl {
     return ScriptableArray::Create(values, 3);
   }
 
-  void ScriptSetPinImage(PinImageIndex index, const Variant &v) {
-    if (v.type() == Variant::TYPE_SCRIPTABLE)
-      SetPinImage(index, VariantValue<ScriptableImage *>()(v));
+  void ScriptSetPinImage(PinImageIndex index, const ResultVariant &v) {
+    if (v.v().type() == Variant::TYPE_SCRIPTABLE)
+      SetPinImage(index, VariantValue<ScriptableImage *>()(v.v()));
   }
 
   void ScriptSetPinImages(ScriptableInterface *array) {
     if (array) {
-      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetProperty(0));
-      ScriptSetPinImage(PIN_IMAGE_UNPINNED_OVER, array->GetProperty(1));
-      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetProperty(2));
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED, array->GetPropertyByIndex(0));
+      ScriptSetPinImage(PIN_IMAGE_UNPINNED_OVER, array->GetPropertyByIndex(1));
+      ScriptSetPinImage(PIN_IMAGE_PINNED, array->GetPropertyByIndex(2));
     }
   }
 

@@ -26,6 +26,7 @@
 #include "ggadget/scriptable_array.h"
 #include "ggadget/scriptable_interface.h"
 #include "ggadget/scriptable_helper.h"
+#include "ggadget/scriptable_holder.h"
 #include "ggadget/signals.h"
 #include "ggadget/slot.h"
 
@@ -185,14 +186,32 @@ class TestScriptable2 : public TestScriptable1 {
   void SetCallback(Slot *callback);
   std::string CallCallback(int x);
 
+  void FireComplexSignal(const char *s, int i) {
+    // Signals returning ScriptableInterface * call only be called with Emit(). 
+    Variant params[] = { Variant(s), Variant(i) };
+    ResultVariant signal_result = complex_signal_.Emit(2, params);
+    complex_signal_data_.Reset(
+        VariantValue<ScriptableInterface *>()(signal_result.v()));
+  }
+
+  ScriptableInterface *GetComplexSignalData() {
+    return complex_signal_data_.Get();
+  }
+
   // Place signal declarations here for testing.
   // In production code, they should be palced in private section.
   typedef Signal1<std::string, const std::string &> OnLunchSignal;
   typedef Signal2<std::string, const std::string &,
                   TestScriptable2 *> OnSupperSignal;
+  typedef Signal2<ScriptableInterface *, const char *, int> ComplexSignal;
 
   OnLunchSignal onlunch_signal_;
   OnSupperSignal onsupper_signal_;
+  ComplexSignal complex_signal_;
+
+ protected:
+  virtual void DoRegister();
+
  private:
   int array_[kArraySize];
   bool strict_;
@@ -200,6 +219,7 @@ class TestScriptable2 : public TestScriptable1 {
   std::string signal_result_;
   std::map<std::string, std::string> dynamic_properties_;
   Slot *callback_;
+  ScriptableHolder<ScriptableInterface> complex_signal_data_;
 };
 
 extern const Variant kNewObjectDefaultArgs[];

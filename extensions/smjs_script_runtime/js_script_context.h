@@ -126,6 +126,11 @@ class JSScriptContext : public ScriptContextInterface {
                                 const Variant &value);
   /** @see ScriptContextInterface::Evaluate() */
   virtual Variant Evaluate(ScriptableInterface *object, const char *expr);
+  /** @see ScriptContextInterface::ConnectErrorReporter() */
+  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
+  /** @see ScriptContextInterface::ConnectScriptBlockedFeedback() */
+  virtual Connection *ConnectScriptBlockedFeedback(
+      ScriptBlockedFeedback *feedback);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptContext);
@@ -156,6 +161,15 @@ class JSScriptContext : public ScriptContextInterface {
   JSBool EvaluateToJSVal(ScriptableInterface *object, const char *expr,
                          jsval *result);
 
+  static void ReportError(JSContext *cx, const char *message,
+                          JSErrorReport *report);
+  static JSBool OperationCallback(JSContext *cx);
+#ifndef JS_OPERATION_WEIGHT_BASE
+  // To be compatible with old version's deperecated JSBranchCallback.
+  static JSBool BranchCallback(JSContext *cx, JSScript *script);
+#endif
+  static bool OnClearOperationTimeTimer(int watch_id);
+
   class JSClassWithNativeCtor {
    public:
     JSClassWithNativeCtor(const char *name, Slot *constructor);
@@ -180,6 +194,12 @@ class JSScriptContext : public ScriptContextInterface {
 
   typedef std::vector<JSClassWithNativeCtor *> ClassVector;
   ClassVector registered_classes_;
+
+  static uint64_t operation_callback_time_;
+  static int reset_operation_time_timer_;
+
+  Signal1<void, const char *> error_reporter_signal_;
+  Signal2<bool, const char *, int> script_blocked_signal_;
 };
 
 /**

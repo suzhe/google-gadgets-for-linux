@@ -337,4 +337,4 @@ class ScriptableCanvas : public ScriptableHelperNativeOwnedDefault {
 
 } // namespace ggadget
 
-#endif  // GGADGET_DETAILS_INTERFACE_H__
+#endif  // GGADGET_CONTENT_ITEM_H__

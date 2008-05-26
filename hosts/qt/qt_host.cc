@@ -58,8 +58,6 @@ class QtHost::Impl {
       expanded_popout_(NULL),
       expanded_original_(NULL),
       obj_(new QtHostObject(host, &gadget_browser_host_)) {
-    ScriptRuntimeManager::get()->ConnectErrorReporter(
-      NewSlot(this, &Impl::ReportScriptError));
     SetupUI();
   }
 
@@ -159,11 +157,6 @@ class QtHost::Impl {
     LOG("%s%s", str_level, message);
   }
 
-  void ReportScriptError(const char *message) {
-    DebugOutput(DEBUG_ERROR,
-                (std::string("Script error: " ) + message).c_str());
-  }
-
   bool LoadGadget(const char *path, const char *options_name,
                   int instance_id) {
     if (gadgets_.find(instance_id) != gadgets_.end()) {
@@ -171,9 +164,10 @@ class QtHost::Impl {
       return true;
     }
 
-    Gadget *gadget =
-        new Gadget(host_, path, options_name, instance_id,
-                   gadget_manager_->IsGadgetInstanceTrusted(instance_id));
+    Gadget *gadget = new Gadget(host_, path, options_name, instance_id,
+                                // We still don't trust any user added gadgets
+                                // at gadget runtime level.
+                                false);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);

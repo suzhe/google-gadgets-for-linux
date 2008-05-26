@@ -41,9 +41,11 @@ class Slot : public SmallObject<> {
    * @see Variant
    * @param argc number of arguments.
    * @param argv argument array.  Can be @c NULL if <code>argc==0</code>.
-   * @return the return value of the @c Slot target.
+   * @return the return value of the @c Slot target. Use @c ResultVariant
+   *     instead @c Variant as the result type to ensure scriptable object
+   *     to be deleted if the result won't be handled by the caller.
    */
-  virtual Variant Call(int argc, const Variant argv[]) const = 0;
+  virtual ResultVariant Call(int argc, const Variant argv[]) const = 0;
 
   /**
    * @return @c true if this @c Slot can provide metadata.
@@ -100,7 +102,7 @@ class Slot0 : public Slot {
   R operator()() const {
     ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
              ("Use Call() when the slot returns ScriptableInterface *"));
-    return VariantValue<R>()(Call(0, NULL));
+    return VariantValue<R>()(Call(0, NULL).v());
   }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
@@ -122,9 +124,9 @@ class FunctorSlot0 : public Slot0<R> {
  public:
   typedef FunctorSlot0<R, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
-    return Variant(functor_());
+    return ResultVariant(Variant(functor_()));
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -143,10 +145,10 @@ class FunctorSlot0<void, F> : public Slot0<void> {
  public:
   typedef FunctorSlot0<void, F> SelfType;
   FunctorSlot0(F functor) : functor_(functor) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     functor_();
-    return Variant();
+    return ResultVariant(Variant());
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -165,9 +167,9 @@ class MethodSlot0 : public Slot0<R> {
  public:
   typedef MethodSlot0<R, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
-    return Variant((object_->*method_)());
+    return ResultVariant(Variant((object_->*method_)()));
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -187,10 +189,10 @@ class MethodSlot0<void, T, M> : public Slot0<void> {
  public:
   typedef MethodSlot0<void, T, M> SelfType;
   MethodSlot0(T* object, M method) : object_(object), method_(method) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     (object_->*method_)();
-    return Variant();
+    return ResultVariant(Variant());
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -224,7 +226,7 @@ class SlotProxy0 : public Slot0<R> {
   typedef SlotProxy0<R> SelfType;
   SlotProxy0(Slot* slot) : slot_(slot) { ASSERT(slot); }
   ~SlotProxy0() { delete slot_; slot_ = NULL; }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     return slot_->Call(argc, argv);
   }
@@ -246,9 +248,9 @@ class BoundFunctorSlot0 : public Slot0<R> {
  public:
   typedef BoundFunctorSlot0<R, F, PA> SelfType;
   BoundFunctorSlot0(F functor, PA pa) : functor_(functor), pa_(pa) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
-    return Variant(functor_(pa_));
+    return ResultVariant(Variant(functor_(pa_)));
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -268,10 +270,10 @@ class BoundFunctorSlot0<void, F, PA> : public Slot0<void> {
  public:
   typedef BoundFunctorSlot0<void, F, PA> SelfType;
   BoundFunctorSlot0(F functor, PA pa) : functor_(functor), pa_(pa) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     functor_(pa_);
-    return Variant();
+    return ResultVariant(Variant());
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -293,9 +295,9 @@ class BoundMethodSlot0 : public Slot0<R> {
   typedef BoundMethodSlot0<R, T, M, PA> SelfType;
   BoundMethodSlot0(T *obj, M method, PA pa)
     : obj_(obj), method_(method), pa_(pa) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
-    return Variant((obj_->*method_)(pa_));
+    return ResultVariant(Variant((obj_->*method_)(pa_)));
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -317,10 +319,10 @@ class BoundMethodSlot0<void, T, M, PA> : public Slot0<void> {
   typedef BoundMethodSlot0<void, T, M, PA> SelfType;
   BoundMethodSlot0(T *obj, M method, PA pa)
     : obj_(obj), method_(method), pa_(pa) { }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     (obj_->*method_)(pa_);
-    return Variant();
+    return ResultVariant(Variant());
   }
   virtual bool operator==(const Slot &another) const {
     const SelfType *a = down_cast<const SelfType *>(&another);
@@ -343,7 +345,7 @@ class BoundSlotProxy0 : public Slot0<R> {
   typedef BoundSlotProxy0<R, PA> SelfType;
   BoundSlotProxy0(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }
   ~BoundSlotProxy0() { delete slot_; slot_ = NULL; }
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     ASSERT(argc == 0);
     Variant vargs[1];
     vargs[1] = Variant(pa_);
@@ -417,7 +419,6 @@ inline Slot0<R> *NewFunctorSlot(F functor, PA pa) {
   return new BoundFunctorSlot0<R, F, PA>(functor, pa);
 }
 
-
 /**
  * <code>Slot</code>s with 1 or more parameters are defined by this macro.
  */
@@ -437,7 +438,7 @@ class Slot##n : public Slot {                                                 \
              ("Use Call() when the slot returns ScriptableInterface *"));     \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
-    return VariantValue<R>()(Call(n, vargs));                                 \
+    return VariantValue<R>()(Call(n, vargs).v());                             \
   }                                                                           \
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }\
   virtual int GetArgCount() const { return n; }                               \
@@ -465,9 +466,9 @@ class FunctorSlot##n : public Slot##n<R, _arg_type_names> {                   \
  public:                                                                      \
   typedef FunctorSlot##n<R, _arg_type_names, F> SelfType;                     \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
-    return Variant(functor_(_call_args));                                     \
+    return ResultVariant(Variant(functor_(_call_args)));                      \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -484,10 +485,10 @@ class FunctorSlot##n<void, _arg_type_names, F> :                              \
  public:                                                                      \
   typedef FunctorSlot##n<void, _arg_type_names, F> SelfType;                  \
   FunctorSlot##n(F functor) : functor_(functor) { }                           \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     functor_(_call_args);                                                     \
-    return Variant();                                                         \
+    return ResultVariant(Variant());                                          \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -503,9 +504,9 @@ class MethodSlot##n : public Slot##n<R, _arg_type_names> {                    \
  public:                                                                      \
   typedef MethodSlot##n<R, _arg_type_names, T, M> SelfType;                   \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
-    return Variant((obj_->*method_)(_call_args));                             \
+    return ResultVariant(Variant((obj_->*method_)(_call_args)));              \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -523,10 +524,10 @@ class MethodSlot##n<void, _arg_type_names, T, M> :                            \
  public:                                                                      \
   typedef MethodSlot##n<void, _arg_type_names, T, M> SelfType;                \
   MethodSlot##n(T *obj, M method) : obj_(obj), method_(method) { }            \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args);                                             \
-    return Variant();                                                         \
+    return ResultVariant(Variant());                                          \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -544,7 +545,7 @@ class SlotProxy##n : public Slot##n<R, _arg_type_names> {                     \
   typedef SlotProxy##n<R, _arg_type_names> SelfType;                          \
   SlotProxy##n(Slot* slot) : slot_(slot) { }                                  \
   ~SlotProxy##n() { delete slot_; slot_ = NULL; }                             \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     return slot_->Call(argc, argv);                                           \
   }                                                                           \
@@ -562,9 +563,9 @@ class BoundFunctorSlot##n : public Slot##n<R, _arg_type_names> {              \
  public:                                                                      \
   typedef BoundFunctorSlot##n<R, _arg_type_names, F, PA> SelfType;            \
   BoundFunctorSlot##n(F functor, PA pa) : functor_(functor), pa_(pa) { }      \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
-    return Variant(functor_(_call_args, pa_));                                \
+    return ResultVariant(Variant(functor_(_call_args, pa_)));                 \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -582,10 +583,10 @@ class BoundFunctorSlot##n<void, _arg_type_names, F, PA> :                     \
  public:                                                                      \
   typedef BoundFunctorSlot##n<void, _arg_type_names, F, PA> SelfType;         \
   BoundFunctorSlot##n(F functor, PA pa) : functor_(functor), pa_(pa) { }      \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     functor_(_call_args, pa_);                                                \
-    return Variant();                                                         \
+    return ResultVariant(Variant());                                          \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -603,9 +604,9 @@ class BoundMethodSlot##n : public Slot##n<R, _arg_type_names> {               \
   typedef BoundMethodSlot##n<R, _arg_type_names, T, M, PA> SelfType;          \
   BoundMethodSlot##n(T *obj, M method, PA pa)                                 \
     : obj_(obj), method_(method), pa_(pa) { }                                 \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
-    return Variant((obj_->*method_)(_call_args, pa_));                        \
+    return ResultVariant(Variant((obj_->*method_)(_call_args, pa_)));         \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -625,10 +626,10 @@ class BoundMethodSlot##n<void, _arg_type_names, T, M, PA> :                   \
   typedef BoundMethodSlot##n<void, _arg_type_names, T, M, PA> SelfType;       \
   BoundMethodSlot##n(T *obj, M method, PA pa)                                 \
     : obj_(obj), method_(method), pa_(pa) { }                                 \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     (obj_->*method_)(_call_args, pa_);                                        \
-    return Variant();                                                         \
+    return ResultVariant(Variant());                                          \
   }                                                                           \
   virtual bool operator==(const Slot &another) const {                        \
     const SelfType *a = down_cast<const SelfType *>(&another);                \
@@ -647,7 +648,7 @@ class BoundSlotProxy##n : public Slot##n<R, _arg_type_names> {                \
   typedef BoundSlotProxy##n<R, _arg_type_names, PA> SelfType;                 \
   BoundSlotProxy##n(Slot* slot, PA pa) : slot_(slot), pa_(pa) { }             \
   ~BoundSlotProxy##n() { delete slot_; slot_ = NULL; }                        \
-  virtual Variant Call(int argc, const Variant argv[]) const {                \
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {          \
     ASSERT(argc == n);                                                        \
     Variant vargs[n + 1];                                                     \
     for(size_t i = 0; i < n; ++i) vargs[i] = argv[i];                         \

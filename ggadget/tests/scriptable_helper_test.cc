@@ -24,39 +24,25 @@ using namespace ggadget;
 // Structure of expected property information.
 struct PropertyInfo {
   const char *name;
-  int id;
-  bool is_method;
+  ScriptableInterface::PropertyType type;
   Variant prototype;
 };
 
-static void CheckProperty(int i, ScriptableInterface *scriptable,
+static void CheckProperty(ScriptableInterface *scriptable,
                           const PropertyInfo &info) {
-  int id;
+  printf("CheckProperty: %s\n", info.name);
   Variant prototype;
-  bool is_method;
-  const char *name;
-  printf("CheckProperty: %d %s\n", i, info.name);
-  ASSERT_TRUE(scriptable->GetPropertyInfoByName(info.name, &id,
-                                                &prototype, &is_method));
-  ASSERT_EQ(info.id, id);
-  ASSERT_EQ(info.is_method, is_method);
+  ScriptableInterface::PropertyType type =
+      scriptable->GetPropertyInfo(info.name, &prototype);
+  ASSERT_EQ(info.type, type);
   ASSERT_EQ(info.prototype, prototype);
-
-  ASSERT_TRUE(scriptable->GetPropertyInfoById(id, &prototype,
-                                              &is_method, &name));
-  ASSERT_EQ(info.id, id);
-  ASSERT_EQ(info.is_method, is_method);
-  ASSERT_EQ(info.prototype, prototype);
-  ASSERT_STREQ(info.name, name);
+  ASSERT_EQ(info.type, scriptable->GetPropertyInfo(info.name, NULL));
 }
 
 static void CheckFalseProperty(ScriptableInterface *scriptable,
                                const char *name) {
-  int id;
-  Variant prototype;
-  bool is_method;
-  ASSERT_FALSE(scriptable->GetPropertyInfoByName(name, &id,
-                                                 &prototype, &is_method));
+  ASSERT_EQ(ScriptableInterface::PROPERTY_NOT_EXIST,
+            scriptable->GetPropertyInfo(name, NULL));
 }
 
 TEST(scriptable_helper, TestPropertyInfo) {
@@ -65,23 +51,30 @@ TEST(scriptable_helper, TestPropertyInfo) {
 
   // Expected property information for TestScriptable1.
   PropertyInfo property_info[] = {
-    { "ClearBuffer", -1, true,
+    { "ClearBuffer", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &TestScriptable1::ClearBuffer)) },
-    { "TestMethodDouble2", -2, true,
+    { "TestMethodDouble2", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &TestScriptable1::TestMethodDouble2)) },
-    { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
-    { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
-    { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
-    { "JSON", -6, false, Variant(Variant::TYPE_JSON) },
-    { "my_ondelete", -7, false,
+    { "DoubleProperty", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_DOUBLE) },
+    { "BufferReadOnly", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "Buffer", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "JSON", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_JSON) },
+    { "my_ondelete", ScriptableInterface::PROPERTY_NORMAL,
       Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
-    { "EnumSimple", -8, false, Variant(Variant::TYPE_INT64) },
-    { "EnumString", -9, false, Variant(Variant::TYPE_STRING) },
-    { "VariantProperty", -10, false, Variant(Variant::TYPE_VARIANT) },
+    { "EnumSimple", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_INT64) },
+    { "EnumString", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "VariantProperty", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_VARIANT) },
   };
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
-    CheckProperty(i, scriptable, property_info[i]);
+    CheckProperty(scriptable, property_info[i]);
   }
   CheckFalseProperty(scriptable, "not_exist");
 
@@ -106,7 +99,8 @@ TEST(scriptable_helper, TestOnDelete) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
   ASSERT_TRUE(scriptable->ConnectOnReferenceChange(NewSlot(TestOnRefChange)));
-  scriptable->SetProperty(-7, Variant(NewSlot(TestOnDeleteAsEventSink)));
+  scriptable->SetProperty("my_ondelete",
+                          Variant(NewSlot(TestOnDeleteAsEventSink)));
   delete scriptable;
   EXPECT_STREQ("TestOnDeleteAsEventSink\nDestruct\n"
                "TestRefChange(1,-1)\nTestRefChange(0,0)\n",
@@ -116,62 +110,58 @@ TEST(scriptable_helper, TestOnDelete) {
 TEST(scriptable_helper, TestPropertyAndMethod) {
   TestScriptable1 *scriptable = new TestScriptable1();
   ASSERT_STREQ("", g_buffer.c_str());
-  // -4: the "BufferReadOnly" property.
-  ASSERT_EQ(Variant(""), scriptable->GetProperty(-4));
+  ASSERT_EQ(Variant(""), scriptable->GetProperty("BufferReadOnly").v());
   AppendBuffer("TestBuffer\n");
-  // "BufferReadOnly" is a readonly property.
-  ASSERT_FALSE(scriptable->SetProperty(-4, Variant("Buffer\n")));
-  ASSERT_EQ(Variant("TestBuffer\n"), scriptable->GetProperty(-4));
+  ASSERT_FALSE(scriptable->SetProperty("BufferReadOnly",
+                                       Variant("Buffer\n")));
+  ASSERT_EQ(Variant("TestBuffer\n"),
+            scriptable->GetProperty("BufferReadOnly").v());
   g_buffer.clear();
 
-  // -3: the "DoubleProperty" property.
-  ASSERT_EQ(Variant(0.0), scriptable->GetProperty(-3));
+  ASSERT_EQ(Variant(0.0), scriptable->GetProperty("DoubleProperty").v());
   ASSERT_STREQ("GetDoubleProperty()=0.000\n", g_buffer.c_str());
   g_buffer.clear();
-  ASSERT_TRUE(scriptable->SetProperty(-3, Variant(3.25)));
+  ASSERT_TRUE(scriptable->SetProperty("DoubleProperty", Variant(3.25)));
   ASSERT_STREQ("SetDoubleProperty(3.250)\n", g_buffer.c_str());
   g_buffer.clear();
-  ASSERT_EQ(Variant(3.25), scriptable->GetProperty(-3));
+  ASSERT_EQ(Variant(3.25), scriptable->GetProperty("DoubleProperty").v());
   ASSERT_STREQ("GetDoubleProperty()=3.250\n", g_buffer.c_str());
 
-  // -1: the "ClearBuffer" method.
-  Variant result1(scriptable->GetProperty(-1));
+  Variant result1(scriptable->GetProperty("ClearBuffer").v());
   ASSERT_EQ(result1.type(), Variant::TYPE_SLOT);
-  ASSERT_EQ(Variant(), VariantValue<Slot *>()(result1)->Call(0, NULL));
+  ASSERT_EQ(Variant(), VariantValue<Slot *>()(result1)->Call(0, NULL).v());
   ASSERT_STREQ("", g_buffer.c_str());
 
-  // -8: the "EnumSimple" property.
-  ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-8));
-  ASSERT_TRUE(scriptable->SetProperty(-8, Variant(TestScriptable1::VALUE_2)));
-  ASSERT_EQ(Variant(TestScriptable1::VALUE_2), scriptable->GetProperty(-8));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_0),
+            scriptable->GetProperty("EnumSimple").v());
+  ASSERT_TRUE(scriptable->SetProperty("EnumSimple",
+                                      Variant(TestScriptable1::VALUE_2)));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_2),
+            scriptable->GetProperty("EnumSimple").v());
 
-  // -9: the "EnumString" property.
-  ASSERT_EQ(Variant("VALUE_2"), scriptable->GetProperty(-9));
-  ASSERT_TRUE(scriptable->SetProperty(-9, Variant("VALUE_0")));
-  ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-8));
-  ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty(-9));
-  ASSERT_TRUE(scriptable->SetProperty(-9, Variant("VALUE_INVALID")));
-  ASSERT_EQ(Variant(TestScriptable1::VALUE_0), scriptable->GetProperty(-8));
-  ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty(-9));
+  ASSERT_EQ(Variant("VALUE_2"), scriptable->GetProperty("EnumString").v());
+  ASSERT_TRUE(scriptable->SetProperty("EnumString", Variant("VALUE_0")));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_0),
+            scriptable->GetProperty("EnumSimple").v());
+  ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty("EnumString").v());
+  ASSERT_TRUE(scriptable->SetProperty("EnumString", Variant("VALUE_INVALID")));
+  ASSERT_EQ(Variant(TestScriptable1::VALUE_0),
+            scriptable->GetProperty("EnumSimple").v());
+  ASSERT_EQ(Variant("VALUE_0"), scriptable->GetProperty("EnumString").v());
 
-  // -10: the "VariantProperty" property.
-  ASSERT_EQ(Variant(0), scriptable->GetProperty(-10));
-  ASSERT_TRUE(scriptable->SetProperty(-10, Variant(1234)));
-  ASSERT_EQ(Variant(1234), scriptable->GetProperty(-10));
+  ASSERT_EQ(Variant(0), scriptable->GetProperty("VariantProperty").v());
+  ASSERT_TRUE(scriptable->SetProperty("VariantProperty", Variant(1234)));
+  ASSERT_EQ(Variant(1234), scriptable->GetProperty("VariantProperty").v());
   delete scriptable;
 }
 
 static void CheckConstant(const char *name,
                           ScriptableInterface *scriptable,
                           Variant value) {
-  int id;
-  Variant prototype;
-  bool is_method;
   printf("CheckConstant: %s\n", name);
-  ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
-                                                &prototype, &is_method));
-  ASSERT_EQ(ScriptableInterface::kConstantPropertyId, id);
-  ASSERT_FALSE(is_method);
+  Variant prototype;
+  ASSERT_EQ(ScriptableInterface::PROPERTY_CONSTANT,
+            scriptable->GetPropertyInfo(name, &prototype));
   ASSERT_EQ(value, prototype);
 }
 
@@ -196,57 +186,76 @@ TEST(scriptable_helper, TestPropertyInfo2) {
   // Expected property information for TestScriptable1.
   PropertyInfo property_info[] = {
     // -1 ~ -8 are inherited from TestScriptable1.
-    { "ClearBuffer", -1, true,
+    { "ClearBuffer", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable1, &TestScriptable1::ClearBuffer)) },
-    { "TestMethodDouble2", -2, true,
+    { "TestMethodDouble2", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable1, &TestScriptable1::TestMethodDouble2)) },
-    { "DoubleProperty", -3, false, Variant(Variant::TYPE_DOUBLE) },
-    { "BufferReadOnly", -4, false, Variant(Variant::TYPE_STRING) },
-    { "Buffer", -5, false, Variant(Variant::TYPE_STRING) },
-    { "JSON", -6, false, Variant(Variant::TYPE_JSON) },
-    { "my_ondelete", -7, false,
+    { "DoubleProperty", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_DOUBLE) },
+    { "BufferReadOnly", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "Buffer", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "JSON", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_JSON) },
+    { "my_ondelete", ScriptableInterface::PROPERTY_NORMAL,
       Variant(new SignalSlot(&scriptable->my_ondelete_signal_)) },
-    { "EnumSimple", -8, false, Variant(Variant::TYPE_INT64) },
-    { "EnumString", -9, false, Variant(Variant::TYPE_STRING) },
-    { "VariantProperty", -10, false, Variant(Variant::TYPE_VARIANT) },
+    { "EnumSimple", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_INT64) },
+    { "EnumString", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "VariantProperty", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_VARIANT) },
+    
 
     // -9 ~ -14 are defined in TestScriptable2 itself.
-    { "TestMethod", -11, true,
+    { "TestMethod", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &TestScriptable2::TestMethod)) },
-    { "onlunch", -12, false,
+    { "onlunch", ScriptableInterface::PROPERTY_NORMAL,
       Variant(new SignalSlot(&scriptable->onlunch_signal_)) },
-    { "onsupper", -13, false,
+    { "onsupper", ScriptableInterface::PROPERTY_NORMAL,
       Variant(new SignalSlot(&scriptable->onsupper_signal_)) },
-    { "time", -14, false, Variant(Variant::TYPE_STRING) },
-    { "OverrideSelf", -15, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "SignalResult", -16, false, Variant(Variant::TYPE_STRING) },
-    { "NewObject", -17, true,
+    { "time", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "OverrideSelf", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_SCRIPTABLE) },
+    { "SignalResult", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_STRING) },
+    { "NewObject", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlotWithDefaultArgs(
           NewSlot(scriptable, &TestScriptable2::NewObject),
           kNewObjectDefaultArgs)) },
-    { "ReleaseObject", -18, true,
+    { "ReleaseObject", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlotWithDefaultArgs(
           NewSlot(scriptable, &TestScriptable2::ReleaseObject),
           kReleaseObjectDefaultArgs)) },
-    { "NativeOwned", -19, false, Variant(Variant::TYPE_BOOL) },
-    { "ConcatArray", -20, true,
+    { "NativeOwned", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_BOOL) },
+    { "ConcatArray", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &TestScriptable2::ConcatArray)) },
-    { "SetCallback", -21, true,
+    { "SetCallback", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &TestScriptable2::SetCallback)) },
-    { "CallCallback", -22, true,
+    { "CallCallback", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(scriptable, &TestScriptable2::CallCallback)) },
+    { "oncomplex", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(new SignalSlot(&scriptable->complex_signal_)) },
+    { "FireComplexSignal", ScriptableInterface::PROPERTY_METHOD,
+      Variant(NewSlot(scriptable, &TestScriptable2::FireComplexSignal)) },
+    { "ComplexSignalData", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_SCRIPTABLE) },
 
     // The following are defined in the prototype.
-    { "PrototypeMethod", -23, true,
+    { "PrototypeMethod", ScriptableInterface::PROPERTY_METHOD,
       Variant(NewSlot(TestPrototype::GetInstance(), &TestPrototype::Method)) },
-    { "PrototypeSelf", -24, false, Variant(Variant::TYPE_SCRIPTABLE) },
-    { "ontest", -25, false,
+    { "PrototypeSelf", ScriptableInterface::PROPERTY_NORMAL,
+      Variant(Variant::TYPE_SCRIPTABLE) },
+    { "ontest", ScriptableInterface::PROPERTY_NORMAL,
       Variant(new SignalSlot(&TestPrototype::GetInstance()->ontest_signal_)) },
     // Prototype's OverrideSelf is overriden by TestScriptable2's OverrideSelf.
   };
 
   for (int i = 0; i < static_cast<int>(arraysize(property_info)); i++) {
-    CheckProperty(i, scriptable, property_info[i]);
+    CheckProperty(scriptable, property_info[i]);
   }
 
   // Const is defined in prototype.
@@ -264,21 +273,18 @@ TEST(scriptable_helper, TestPropertyInfo2) {
 TEST(scriptable_helper, TestArray) {
   TestScriptable2 *scriptable = new TestScriptable2();
   for (int i = 0; i < TestScriptable2::kArraySize; i++)
-    ASSERT_TRUE(scriptable->SetProperty(i, Variant(i * 2)));
+    ASSERT_TRUE(scriptable->SetPropertyByIndex(i, Variant(i * 2)));
   for (int i = 0; i < TestScriptable2::kArraySize; i++)
-    ASSERT_EQ(Variant(i * 2 + 10000), scriptable->GetProperty(i));
+    ASSERT_EQ(Variant(i * 2 + 10000), scriptable->GetPropertyByIndex(i).v());
 
   int invalid_id = TestScriptable2::kArraySize;
-  ASSERT_FALSE(scriptable->SetProperty(invalid_id, Variant(100)));
-  ASSERT_EQ(Variant(), scriptable->GetProperty(invalid_id));
+  ASSERT_FALSE(scriptable->SetPropertyByIndex(invalid_id, Variant(100)));
+  ASSERT_EQ(Variant(), scriptable->GetPropertyByIndex(invalid_id).v());
   delete scriptable;
 }
 
 TEST(scriptable_helper, TestDynamicProperty) {
   TestScriptable2 *scriptable = new TestScriptable2();
-  int id;
-  Variant prototype;
-  bool is_method;
   char name[20];
   char value[20];
   const int num_tests = 10;
@@ -286,35 +292,36 @@ TEST(scriptable_helper, TestDynamicProperty) {
   for (int i = 0; i < num_tests; i++) {
     snprintf(name, sizeof(name), "d%d", i);
     snprintf(value, sizeof(value), "v%dv", i * 2);
-    ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
-                                                  &prototype, &is_method));
-    ASSERT_EQ(ScriptableInterface::kDynamicPropertyId, id);
-    ASSERT_FALSE(is_method);
-    ASSERT_TRUE(scriptable->SetProperty(id, Variant(value)));
+    ASSERT_EQ(ScriptableInterface::PROPERTY_DYNAMIC,
+              scriptable->GetPropertyInfo(name, NULL));
+    ASSERT_TRUE(scriptable->SetProperty(name, Variant(value)));
   }
   for (int i = 0; i < num_tests; i++) {
     snprintf(name, sizeof(name), "d%d", i);
     snprintf(value, sizeof(value), "Value:v%dv", i * 2);
-    ASSERT_TRUE(scriptable->GetPropertyInfoByName(name, &id,
-                                                  &prototype, &is_method));
-    ASSERT_EQ(ScriptableInterface::kDynamicPropertyId, id);
-    ASSERT_FALSE(is_method);
-    ASSERT_EQ(Variant(value), scriptable->GetProperty(id));
+    ASSERT_EQ(Variant(value), scriptable->GetProperty(name).v());
   }
 
-  ASSERT_FALSE(scriptable->GetPropertyInfoByName("not_supported", &id,
-                                                 &prototype, &is_method));
+  ASSERT_EQ(ScriptableInterface::PROPERTY_NOT_EXIST,
+            scriptable->GetPropertyInfo("not_supported", NULL));
+  ASSERT_EQ(Variant::TYPE_VOID,
+            scriptable->GetProperty("not_supported").v().type());
   delete scriptable;
 }
 
 class NameChecker {
  public:
-  NameChecker(std::set<std::string> *names) : names_(names) { }
-  bool Check(int id, const char *name,
-             const Variant &value, bool is_method) const {
+  NameChecker(ScriptableInterface *scriptable, std::set<std::string> *names)
+      : scriptable_(scriptable), names_(names) { }
+  bool Check(const char *name, ScriptableInterface::PropertyType type,
+             const Variant &value) const {
+    EXPECT_EQ(scriptable_->GetProperty(name).v(), value);
+    EXPECT_EQ(scriptable_->GetPropertyInfo(name, NULL), type);
     EXPECT_EQ(1U, names_->erase(name));
     return true;
   }
+
+  ScriptableInterface *scriptable_;
   std::set<std::string> *names_;
 };
 
@@ -331,12 +338,12 @@ TEST(scirptable_helper, TestEnumerateProperties) {
     "SCONSTANT9", "SetCallback", "SignalResult", "NativeOwned", "TestMethod",
     "TestMethodDouble2", "ClearBuffer", "VALUE_0", "VALUE_1", "VALUE_2",
     "VariantProperty", "length", "my_ondelete", "onlunch", "onsupper",
-    "ontest", "time",
+    "ontest", "time", "oncomplex", "FireComplexSignal", "ComplexSignalData",
   };
   std::set<std::string> expected;
   for (size_t i = 0; i < arraysize(property_names); ++i)
     expected.insert(property_names[i]);
-  NameChecker checker(&expected);
+  NameChecker checker(scriptable, &expected);
   scriptable->EnumerateProperties(NewSlot(&checker, &NameChecker::Check));
   ASSERT_TRUE(expected.empty());
 }

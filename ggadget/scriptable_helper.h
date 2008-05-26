@@ -160,8 +160,8 @@ class ScriptableHelper : public I, public RegisterableInterface {
    *     in a @c Variant.  It should return a @c Variant of type
    *     @c Variant::TYPE_VOID if it doesn't support the property.
    * @param setter handles 'set' accesses.  It accepts an int parameter as the
-   *     array index and a value.  If it returns a @c bool value, @c true on
-   *     success.
+   *     array index and a bool value indicating if property setting is
+   *     successful.
    */
   void SetArrayHandler(Slot *getter, Slot *setter) {
     impl_->SetArrayHandler(getter, setter);
@@ -175,8 +175,8 @@ class ScriptableHelper : public I, public RegisterableInterface {
    *     parameter (<code>const char *</code>) and return the result of any
    *     type that can be contained in a @c Variant.
    * @param setter handles 'set' accesses.  It accepts a property name
-   *     parameter (<code>const char *</code>) and a value. If it returns a
-   *     @c bool value, @c true on success.
+   *     parameter (<code>const char *</code>) and a bool value indicating
+   *     if property setting is successful.
    */
   void SetDynamicPropertyHandler(Slot *getter, Slot *setter) {
     impl_->SetDynamicPropertyHandler(getter, setter);
@@ -238,27 +238,30 @@ class ScriptableHelper : public I, public RegisterableInterface {
     return impl_->ConnectOnReferenceChange(slot);
   }
 
-  /** @see ScriptableInterface::GetPropertyInfoByName() */
-  virtual bool GetPropertyInfoByName(const char *name,
-                                     int *id, Variant *prototype,
-                                     bool *is_method) {
-    return impl_->GetPropertyInfoByName(name, id, prototype, is_method);
-  }
-
-  /** @see ScriptableInterface::GetPropertyInfoById() */
-  virtual bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method, const char **name) {
-    return impl_->GetPropertyInfoById(id, prototype, is_method, name);
+  /** @see ScriptableInterface::GetPropertyInfo() */
+  virtual ScriptableInterface::PropertyType GetPropertyInfo(
+      const char *name, Variant *prototype) {
+    return impl_->GetPropertyInfo(name, prototype);
   }
 
   /** @see ScriptableInterface::GetProperty() */
-  virtual Variant GetProperty(int id) {
-    return impl_->GetProperty(id);
+  virtual ResultVariant GetProperty(const char *name) {
+    return impl_->GetProperty(name);
   }
 
   /** @see ScriptableInterface::SetProperty() */
-  virtual bool SetProperty(int id, const Variant &value) {
-    return impl_->SetProperty(id, value);
+  virtual bool SetProperty(const char *name, const Variant &value) {
+    return impl_->SetProperty(name, value);
+  }
+
+  /** @see ScriptableInterface::GetPropertyByIndex() */
+  virtual ResultVariant GetPropertyByIndex(int index) {
+    return impl_->GetPropertyByIndex(index);
+  }
+
+  /** @see ScriptableInterface::SetPropertyByIndex() */
+  virtual bool SetPropertyByIndex(int index, const Variant &value) {
+    return impl_->SetPropertyByIndex(index, value);
   }
 
   /** @see ScriptableInterface::GetPendingException() */
@@ -339,13 +342,6 @@ class SharedScriptable : public ScriptableHelperDefault {
  public:
   DEFINE_CLASS_ID(0x47d47fe768a8496c, ScriptableInterface);
 };
-
-/**
- * Utility function to get a named property from a scriptable object.
- * It calls <code>scriptable->GetPropertyInfoByName()</code> and then
- * <code>scriptable->GetProperty()</code>.
- */
-Variant GetPropertyByName(ScriptableInterface *scriptable, const char *name);
 
 } // namespace ggadget
 

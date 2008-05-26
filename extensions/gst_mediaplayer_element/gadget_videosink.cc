@@ -96,8 +96,10 @@ class GadgetVideoSink::ImageBuffer {
                                      GstCaps *caps) {
     ImageBuffer *image =
         IMAGE_BUFFER(gst_mini_object_new(ImageBufferGetType()));
-    GstStructure *structure = gst_caps_get_structure(caps, 0);
+    if (!image)
+      return NULL;
 
+    GstStructure *structure = gst_caps_get_structure(caps, 0);
     if (!gst_structure_get_int (structure, "width", &image->width_) ||
         !gst_structure_get_int (structure, "height", &image->height_)) {
       GST_WARNING("failed getting geometry from caps %" GST_PTR_FORMAT, caps);
@@ -109,6 +111,10 @@ class GadgetVideoSink::ImageBuffer {
     image->size_ = image->bytes_per_line_ * image->height_;
 
     GST_BUFFER_DATA(image) = (guchar *)g_malloc(image->size_);
+    if (!GST_BUFFER_DATA(image)) {
+      gst_buffer_unref(GST_BUFFER_CAST(image));
+      return NULL;
+    }
     GST_BUFFER_SIZE(image) = image->size_;
     image->recycle_flag_ = BUFFER_NOT_RECYCLED;
 

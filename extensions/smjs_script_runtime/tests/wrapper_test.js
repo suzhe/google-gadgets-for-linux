@@ -407,6 +407,28 @@ TEST("Test JS callback as function parameter", function() {
   ASSERT(EQ("INT64:20", s));
 });
 
+TEST("Test complex signal returning JS object", function() {
+  scriptable2.oncomplex = function(s, i) {
+    return s ? {
+      s: s, i: i,
+      get_s: function() { return s },
+      get_i: function() { return i },
+    } : null;
+  };
+
+  scriptable2.FireComplexSignal("string", 100);
+  ASSERT(EQ("string", scriptable2.ComplexSignalData.s));
+  ASSERT(EQ(100, scriptable2.ComplexSignalData.i));
+  ASSERT(EQ("string", scriptable2.ComplexSignalData.get_s())); 
+  ASSERT(EQ(100, scriptable2.ComplexSignalData.get_i()));
+
+  scriptable2.FireComplexSignal(null, 0);
+  ASSERT(NULL(scriptable2.ComplexSignalData));
+
+  // Let ComplexSignalData hold a JS object to test if it leaks.
+  scriptable2.FireComplexSignal("string", 100);
+});
+
 TEST("Test Enumeration", function() {
   if (0) { // Feature disabled.
     var expected_array = [

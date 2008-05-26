@@ -131,11 +131,13 @@ class ArrayIterator {
 class DictIterator {
  public:
   std::string signature() const { return signature_; }
-  bool Callback(int id, const char *name,
-                const Variant &value, bool is_method) {
-    /* ignore method and void type properties */
-    if (is_method || value.type() == Variant::TYPE_VOID)
+  bool Callback(const char *name, ScriptableInterface::PropertyType type,
+                const Variant &value) {
+    if (type == ScriptableInterface::PROPERTY_METHOD ||
+        value.type() == Variant::TYPE_VOID) {
+      // Ignore method and void type properties.
       return true;
+    }
     std::string sig = GetVariantSignature(value);
     if (signature_.empty()) {
       signature_ = sig;

@@ -58,7 +58,11 @@ struct Date {
 /**
  * A @c Variant contains a value of arbitrary type that can be transfered
  * between C++ and script engines, or between a @c Signal and a @c Slot.
- * <code>Variant</code>s are immutable.
+ *
+ * @c Variant instances can only be used transiently. It can't hold a
+ * @c ScriptableInterface pointer longer than the life of the pointer.
+ * If you need Variant hold a reference of a @c ScriptableInterface pointer,
+ * use ResultVariant instead. 
  */
 class Variant {
  public:
@@ -185,7 +189,7 @@ class Variant {
    */
   explicit Variant(const std::string &value)
       : type_(TYPE_STRING) {
-    v_.string_value_.s_ = new (&v_.string_value_.place_) std::string(value);
+    new (&v_.string_place_) std::string(value);
   }
 
   /**
@@ -194,8 +198,10 @@ class Variant {
    * The type of the constructed @c Variant is @c TYPE_STRING.
    */
   explicit Variant(const char *value) : type_(TYPE_STRING) {
-    v_.string_value_.s_ = value ?
-        new (&v_.string_value_.place_) std::string(value) : NULL;
+    if (value)
+      new (&v_.string_place_) std::string(value);
+    else
+      new (&v_.string_place_) std::string(kNullString);
   }
 
   /**
@@ -204,8 +210,7 @@ class Variant {
    */
   explicit Variant(const JSONString &value)
       : type_(TYPE_JSON) {
-    v_.string_value_.s_ =
-        new (&v_.string_value_.place_) std::string(value.value);
+    new (&v_.string_place_) std::string(value.value);
   }
 
   /**
@@ -214,8 +219,7 @@ class Variant {
    */
   explicit Variant(const UTF16String &value)
       : type_(TYPE_UTF16STRING) {
-    v_.utf16_string_value_.s_ =
-        new (&v_.utf16_string_value_.place_) UTF16String(value);
+    new (&v_.utf16_string_place_) UTF16String(value);
   }
 
   /**
@@ -224,8 +228,10 @@ class Variant {
    * The type of the constructed @c Variant is @c TYPE_UTF16STRING.
    */
   explicit Variant(const UTF16Char *value) : type_(TYPE_UTF16STRING) {
-    v_.utf16_string_value_.s_ = value ?
-        new (&v_.utf16_string_value_.place_) UTF16String(value) : NULL;
+    if (value)
+      new (&v_.utf16_string_place_) UTF16String(value);
+    else
+      new (&v_.utf16_string_place_) UTF16String(kNullUTF16String);
   }
 
   /**
@@ -233,7 +239,9 @@ class Variant {
    * This @c Variant doesn't owns the @c Scriptable pointer.
    * The type of the constructed @c Variant is @c TYPE_SCRIPTABLE.
    */
-  explicit Variant(ScriptableInterface *value);
+  explicit Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
+    v_.scriptable_value_ = value;
+  }
 
   /**
    * Construct a @c Variant with a @c Slot pointer value.
@@ -269,6 +277,9 @@ class Variant {
   }
 
   ~Variant();
+
+  /** Clear the @c Variant. The @c Variant will become of @c TYPE_VOID. */
+  void Clear();
 
   Variant &operator=(const Variant &source);
 
@@ -308,7 +319,12 @@ class Variant {
   explicit Variant(const ScriptableInterface *);
 
   bool CheckScriptableType(uint64_t class_id) const;
-  void OnRefChange(int ref_count, int change);
+
+  // Constants to indicate if a string value is a null pointer.
+  // This depends on the value sharing behavior of the basic_string template
+  // in the standard C++ library.
+  static const std::string kNullString;
+  static const UTF16String kNullUTF16String;
 
   Type type_;
 
@@ -317,23 +333,14 @@ class Variant {
     bool bool_value_;
     int64_t int64_value_;
     double double_value_;
-    // For TYPE_STRING and TYPE_JSON
-    struct {
-      // The s_ pointer is created in-place in place_.
-      // Normally sizeof(std::string) equals to sizeof a pointer, thus it won't
-      // make Variant bigger.
-      char place_[sizeof(std::string)];
-      std::string *s_;
-    } string_value_;
-    struct {
-      // The s_ pointer is created in-place in place_.
-      char place_[sizeof(UTF16String)];
-      UTF16String *s_;
-    } utf16_string_value_;
-    struct {
-      ScriptableInterface *value_;
-      Connection *refchange_connection_;
-    } scriptable_value_;
+    // For TYPE_STRING and TYPE_JSON. The std::string object is created
+    // in-place in string_place_.
+    // Normally sizeof(std::string) equals to sizeof a pointer, thus it won't
+    // make Variant bigger.
+    char string_place_[sizeof(std::string)];
+    // The s_ pointer is created in-place in place_.
+    char utf16_string_place_[sizeof(UTF16String)];
+    ScriptableInterface *scriptable_value_;
     Slot *slot_value_;
     void *any_value_;
     const void *const_any_value_;
@@ -451,7 +458,7 @@ struct VariantValue<T *> {
     if (v.type_ != Variant::TYPE_SCRIPTABLE)
       return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
-           down_cast<T *>(v.v_.scriptable_value_.value_) : NULL;
+           down_cast<T *>(v.v_.scriptable_value_) : NULL;
   }
 };
 
@@ -470,7 +477,7 @@ struct VariantValue<const T *> {
     if (v.type_ != Variant::TYPE_SCRIPTABLE)
       return NULL;
     return v.CheckScriptableType(T::CLASS_ID) ?
-           down_cast<T *>(v.v_.scriptable_value_.value_) : NULL;
+           down_cast<T *>(v.v_.scriptable_value_) : NULL;
   }
 };
 
@@ -520,7 +527,9 @@ struct VariantValue<const char *> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return NULL;
-    return v.v_.string_value_.s_ ? v.v_.string_value_.s_->c_str() : NULL;
+    const std::string *s =
+        reinterpret_cast<const std::string *>(&v.v_.string_place_);
+    return s->c_str() == Variant::kNullString.c_str() ? NULL : s->c_str();
   }
 };
 
@@ -536,7 +545,9 @@ struct VariantValue<std::string> {
     ASSERT(v.type_ == Variant::TYPE_STRING);
     if (v.type_ != Variant::TYPE_STRING)
       return "";
-    return v.v_.string_value_.s_ ? *v.v_.string_value_.s_ : std::string();
+    const std::string *s =
+        reinterpret_cast<const std::string *>(&v.v_.string_place_);
+    return s->c_str() == Variant::kNullString.c_str() ? std::string() : *s;
   }
 };
 
@@ -549,10 +560,7 @@ struct VariantValue<const std::string &> {
   typedef std::string value_type;
 
   value_type operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_STRING);
-    if (v.type_ != Variant::TYPE_STRING)
-      return "";
-    return v.v_.string_value_.s_ ? *v.v_.string_value_.s_ : std::string();
+    return VariantValue<std::string>()(v);
   }
 };
 
@@ -570,8 +578,9 @@ struct VariantValue<const UTF16Char *> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return NULL;
-    return v.v_.utf16_string_value_.s_ ?
-           v.v_.utf16_string_value_.s_->c_str() : NULL;
+    const UTF16String *s =
+        reinterpret_cast<const UTF16String *>(&v.v_.utf16_string_place_);
+    return s->c_str() == Variant::kNullUTF16String.c_str() ? NULL : s->c_str();
   }
 };
 
@@ -587,8 +596,10 @@ struct VariantValue<UTF16String> {
     ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
     if (v.type_ != Variant::TYPE_UTF16STRING)
       return UTF16String();
-    return v.v_.utf16_string_value_.s_ ?
-           *v.v_.utf16_string_value_.s_ : UTF16String();
+    const UTF16String *s =
+        reinterpret_cast<const UTF16String *>(&v.v_.utf16_string_place_);
+    return s->c_str() == Variant::kNullUTF16String.c_str() ?
+           UTF16String() : *s;
   }
 };
 
@@ -601,11 +612,7 @@ struct VariantValue<const UTF16String &> {
   typedef UTF16String value_type;
 
   value_type operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_UTF16STRING);
-    if (v.type_ != Variant::TYPE_UTF16STRING)
-      return UTF16String();
-    return v.v_.utf16_string_value_.s_ ?
-           *v.v_.utf16_string_value_.s_ : UTF16String();
+    return VariantValue<UTF16String>()(v);
   }
 };
 
@@ -621,8 +628,10 @@ struct VariantValue<JSONString> {
     ASSERT(v.type_ == Variant::TYPE_JSON);
     if (v.type_ != Variant::TYPE_JSON)
       return JSONString("");
-    return JSONString(v.v_.string_value_.s_ ?
-                      *v.v_.string_value_.s_ : std::string());
+    const std::string *s =
+        reinterpret_cast<const std::string *>(&v.v_.string_place_);
+    return JSONString(s->c_str() == Variant::kNullString.c_str() ?
+                      std::string() : *s);
   }
 };
 
@@ -635,11 +644,7 @@ struct VariantValue<const JSONString &> {
   typedef JSONString value_type;
 
   value_type operator()(const Variant &v) {
-    ASSERT(v.type_ == Variant::TYPE_JSON);
-    if (v.type_ != Variant::TYPE_JSON)
-      return JSONString("");
-    return JSONString(v.v_.string_value_.s_ ?
-                      *v.v_.string_value_.s_ : std::string());
+    return VariantValue<JSONString>()(v);
   }
 };
 
@@ -747,6 +752,26 @@ struct VariantValue<const T *> {                                \
            v.type_ == Variant::TYPE_CONST_ANY);                 \
     return reinterpret_cast<value_type>(v.v_.const_any_value_); \
   }                                                             \
+};
+
+/**
+ * Used to return a variant value from a function. If it holds a
+ * @c ScriptableInterface pointer, it will also add a reference count on
+ * the pointer. This reference can prevent the pointer from being deleted
+ * before the function caller gets the value.
+ */
+class ResultVariant {
+ public:
+  ResultVariant() { }
+  explicit ResultVariant(const Variant &);
+  ResultVariant(const ResultVariant &);
+  ~ResultVariant();
+
+  ResultVariant &operator=(const ResultVariant &);
+  const Variant &v() const { return v_; }
+
+ private:
+  Variant v_;
 };
 
 #undef SPECIALIZE_VARIANT_TYPE

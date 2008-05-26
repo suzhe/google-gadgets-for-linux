@@ -63,21 +63,21 @@ JSFunctionSlot::~JSFunctionSlot() {
   }
 }
 
-Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
+ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
   Variant return_value(GetReturnType());
   if (JS_IsExceptionPending(context_))
-    return return_value;
+    return ResultVariant(return_value);
 
   if (!function_) {
     // Don't use JS_ReportError(context_, ...) because the context_ may be
     // invalid now.
     LOG("Finalized JavaScript function still be called");
-    return return_value;
+    return ResultVariant(return_value);
   }
 
   AutoLocalRootScope local_root_scope(context_);
   if (!local_root_scope.good())
-    return return_value;
+    return ResultVariant(return_value);
 
   scoped_array<jsval> js_args;
   if (argc > 0) {
@@ -87,7 +87,7 @@ Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
         JS_ReportError(context_,
             "Failed to convert argument %d(%s) of function(%s) to jsval",
             i, argv[i].Print().c_str(), function_info_.c_str());
-        return return_value;
+        return ResultVariant(return_value);
       }
     }
   }
@@ -101,7 +101,7 @@ Variant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
         "Failed to convert JS function(%s) return value(%s) to native",
         function_info_.c_str(), PrintJSValue(context_, rval).c_str());
   }
-  return return_value;
+  return ResultVariant(return_value);
 }
 
 void JSFunctionSlot::Mark() {

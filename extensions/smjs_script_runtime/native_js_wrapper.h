@@ -96,13 +96,6 @@ private:
                                           jsval id, jsval *vp);
 
   // This pair of methods handle all GetProperty and SetProperty callbacks
-  // for registered native properties with ids fitting in tinyid (-128>=id>0).
-  static JSBool GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
-                                          jsval id, jsval *vp);
-  static JSBool SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
-                                          jsval id, jsval *vp);
-
-  // This pair of methods handle all GetProperty and SetProperty callbacks
   // for dynamic properties and registered native properties with ids not
   // fitting in tinyid (id<-128).
   static JSBool GetWrapperPropertyByName(JSContext *cx, JSObject *obj,

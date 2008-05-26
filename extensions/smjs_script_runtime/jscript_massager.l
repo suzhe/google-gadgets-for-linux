@@ -2,6 +2,7 @@
 %option noyywrap
 %option warn
 %option debug
+%option pointer
 %top{
 /*
   Copyright 2007 Google Inc.

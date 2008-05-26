@@ -39,13 +39,14 @@ class JSNativeWrapper : public ScriptableHelperDefault {
  public:
   virtual void Ref();
   virtual void Unref(bool transient = false);
+  virtual PropertyType GetPropertyInfo(const char *name,
+                                       Variant *prototype);
+  virtual ResultVariant GetProperty(const char *name);
+  virtual bool SetProperty(const char *name, const Variant &value);
+  virtual ResultVariant GetPropertyByIndex(int index);
+  virtual bool SetPropertyByIndex(int index, const Variant &value);
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback);
   virtual bool EnumerateElements(EnumerateElementsCallback *callback);
-
-  Variant GetProperty(const char *name);
-  bool SetProperty(const char *name, const Variant &value);
-  Variant GetElement(int index);
-  bool SetElement(int index, const Variant &value);
 
   JSContext *js_context() { return js_context_; }
   JSObject *js_object() { return js_object_; }
@@ -55,7 +56,6 @@ class JSNativeWrapper : public ScriptableHelperDefault {
   static void FinalizeTracker(JSContext *cx, JSObject *obj);
 
   static JSClass js_reference_tracker_class_;
-  int ref_count_;
   JSContext *js_context_;
   JSObject *js_object_;
   std::string name_;

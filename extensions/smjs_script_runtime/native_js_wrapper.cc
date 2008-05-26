@@ -216,24 +216,6 @@ JSBool NativeJSWrapper::SetWrapperPropertyDefault(JSContext *cx, JSObject *obj,
          (wrapper->CheckNotDeleted() && wrapper->SetPropertyDefault(id, *vp));
 }
 
-JSBool NativeJSWrapper::GetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
-                                                  jsval id, jsval *vp) {
-  if (JS_IsExceptionPending(cx))
-    return JS_FALSE;
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
-  return !wrapper ||
-         (wrapper->CheckNotDeleted() && wrapper->GetPropertyByIndex(id, vp));
-}
-
-JSBool NativeJSWrapper::SetWrapperPropertyByIndex(JSContext *cx, JSObject *obj,
-                                                  jsval id, jsval *vp) {
-  if (JS_IsExceptionPending(cx))
-    return JS_FALSE;
-  NativeJSWrapper *wrapper = GetWrapperFromJS(cx, obj);
-  return !wrapper ||
-         (wrapper->CheckNotDeleted() && wrapper->SetPropertyByIndex(id, *vp));
-}
-
 JSBool NativeJSWrapper::GetWrapperPropertyByName(JSContext *cx, JSObject *obj,
                                                  jsval id, jsval *vp) {
   if (JS_IsExceptionPending(cx))
@@ -370,11 +352,9 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
   ASSERT(scriptable_);
 
   Variant prototype;
-  int int_id;
-  bool is_method;
   // Get the default method for this object.
-  if (!scriptable_->GetPropertyInfoByName("", &int_id,
-                                          &prototype, &is_method)) {
+  if (scriptable_->GetPropertyInfo("", &prototype) !=
+      ScriptableInterface::PROPERTY_METHOD) {
     JS_ReportError(js_context_, "Object can't be called as a function");
     return JS_FALSE;
   }
@@ -382,7 +362,6 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
   if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
-  ASSERT(is_method);
   return CallNativeSlot("DEFAULT", VariantValue<Slot *>()(prototype),
                         argc, argv, rval);
 }
@@ -418,18 +397,18 @@ JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
                              &params, &expected_argc))
     return JS_FALSE;
 
-  Variant return_value = slot->Call(expected_argc, params);
+  ResultVariant return_value = slot->Call(expected_argc, params);
   delete [] params;
   params = NULL;
 
   if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
-  JSBool result = ConvertNativeToJS(js_context_, return_value, rval);
+  JSBool result = ConvertNativeToJS(js_context_, return_value.v(), rval);
   if (!result)
     JS_ReportError(js_context_,
                    "Failed to convert native function result(%s) to jsval",
-                   return_value.Print().c_str());
+                   return_value.v().Print().c_str());
   return result;
 }
 
@@ -473,11 +452,11 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
     return JS_FALSE;
 
   int int_id = JSVAL_TO_INT(id);
-  Variant return_value = scriptable_->GetProperty(int_id);
-  if (!ConvertNativeToJS(js_context_, return_value, vp)) {
+  ResultVariant return_value = scriptable_->GetPropertyByIndex(int_id);
+  if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
     JS_ReportError(js_context_,
                    "Failed to convert native property(%d) value(%s) to jsval.",
-                   int_id, return_value.Print().c_str());
+                   int_id, return_value.v().Print().c_str());
     return JS_FALSE;
   }
 
@@ -496,36 +475,38 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
     return JS_FALSE;
 
   int int_id = JSVAL_TO_INT(id);
-  Variant prototype;
-  bool is_method = false;
-  const char *name = NULL;
-
-  if (!scriptable_->GetPropertyInfoById(int_id, &prototype,
-                                        &is_method, &name)) {
-    // This property is not supported by the Scriptable, use default logic.
-    JS_ReportError(
-        js_context_,
-        "The native object doesn't support setting property %s(%d).",
-        name, int_id);
-    return JS_FALSE;
-  }
+  // Use the original value as the prototype, so that we can convert the
+  // JS value to proper native type.
+  Variant prototype = scriptable_->GetPropertyByIndex(int_id).v();
   if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
-  ASSERT(!is_method);
+  // If there is no original value, don't set it.
+  if (prototype.type() == Variant::TYPE_VOID) {
+    if (scriptable_->IsStrict()) {
+      // The scriptable object don't allow the script engine to assign to
+      // unregistered properties.
+      JS_ReportError(js_context_,
+                     "The native object doesn't support setting property [%d].",
+                     int_id);
+      return JS_FALSE;
+    }
+    // Use the default JavaScript logic.
+    return JS_TRUE;
+  }
 
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
-                   "Failed to convert JS property %s(%d) value(%s) to native.",
-                   name, int_id, PrintJSValue(js_context_, js_val).c_str());
+                   "Failed to convert JS property [%d] value(%s) to native.",
+                   int_id, PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
-  if (!scriptable_->SetProperty(int_id, value)) {
+  if (!scriptable_->SetPropertyByIndex(int_id, value)) {
     JS_ReportError(js_context_,
-                   "Failed to set native property %s(%d) (may be readonly).",
-                   name, int_id);
+                   "Failed to set native property [%d] (may be readonly).",
+                   int_id);
     FreeNativeValue(value);
     return JS_FALSE;
   }
@@ -549,31 +530,21 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
     return JS_FALSE;
 
   const char *name = JS_GetStringBytes(idstr);
-  int int_id;
-  Variant prototype;
-  bool is_method;
-
-  if (!scriptable_->GetPropertyInfoByName(name, &int_id,
-                                          &prototype, &is_method)) {
+  ResultVariant return_value = scriptable_->GetProperty(name);
+  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+    return JS_FALSE;
+  
+  if (return_value.v().type() == Variant::TYPE_VOID) {
     // This must be a dynamic property which is no more available.
     // Remove the property and fallback to the default handler.
     JS_DeleteProperty(js_context_, js_object_, name);
     return GetPropertyDefault(id, vp);
   }
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
-    return JS_FALSE;
 
-  ASSERT(!is_method);
-
-  Variant return_value = scriptable_->GetProperty(int_id);
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
-    return JS_FALSE;
-
-  if (!ConvertNativeToJS(js_context_, return_value, vp)) {
-    JS_ReportError(
-        js_context_,
-        "Failed to convert native property %s(%d) value(%s) to jsval",
-        name, int_id, return_value.Print().c_str());
+  if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
+    JS_ReportError(js_context_,
+                   "Failed to convert native property %s value(%s) to jsval",
+                   name, return_value.v().Print().c_str());
     return JS_FALSE;
   }
   return JS_TRUE;
@@ -595,12 +566,9 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
     return JS_FALSE;
 
   const char *name = JS_GetStringBytes(idstr);
-  int int_id;
   Variant prototype;
-  bool is_method;
-
-  if (!scriptable_->GetPropertyInfoByName(name, &int_id,
-                                          &prototype, &is_method)) {
+  if (scriptable_->GetPropertyInfo(name, &prototype) ==
+      ScriptableInterface::PROPERTY_NOT_EXIST) {
     // This must be a dynamic property which is no more available.
     // Remove the property and fallback to the default handler.
     JS_DeleteProperty(js_context_, js_object_, name);
@@ -609,20 +577,18 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
   if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
-  ASSERT(!is_method);
-
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
     JS_ReportError(js_context_,
-                   "Failed to convert JS property %s(%d) value(%s) to native.",
-                   name, int_id, PrintJSValue(js_context_, js_val).c_str());
+                   "Failed to convert JS property %s value(%s) to native.",
+                   name, PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
-  if (!scriptable_->SetProperty(int_id, value)) {
+  if (!scriptable_->SetProperty(name, value)) {
     JS_ReportError(js_context_,
-                   "Failed to set native property %s(%d) (may be readonly).",
-                   name, int_id);
+                   "Failed to set native property %s (may be readonly).",
+                   name);
     FreeNativeValue(value);
     return JS_FALSE;
   }
@@ -633,8 +599,8 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
 class NameCollector {
  public:
   NameCollector(std::vector<std::string> *names) : names_(names) { }
-  bool Collect(int id, const char *name,
-               const Variant &value, bool is_method) {
+  bool Collect(const char *name, ScriptableInterface::PropertyType type,
+               const Variant &value) {
     names_->push_back(name);
     return true;
   }
@@ -707,21 +673,18 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   if (flags & JSRESOLVE_DECLARING)
     return JS_TRUE;
 
-  int int_id;
   Variant prototype;
-  bool is_method;
-
-  if (!scriptable_->GetPropertyInfoByName(name, &int_id,
-                                          &prototype, &is_method))
+  ScriptableInterface::PropertyType type =
+      scriptable_->GetPropertyInfo(name, &prototype);
+  if (type == ScriptableInterface::PROPERTY_NOT_EXIST) {
     // This property is not supported by the Scriptable, use default logic.
     return JS_TRUE;
+  }
 
   if (!JSScriptContext::CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
-  ASSERT(int_id <= 0);
-
-  if (is_method) {
+  if (type == ScriptableInterface::PROPERTY_METHOD) {
     // Define a Javascript function.
     Slot *slot = VariantValue<Slot *>()(prototype);
     JSFunction *function = JS_DefineFunction(js_context_, js_object_, name,
@@ -746,44 +709,26 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   // Define a JavaScript property.
   jsval js_val = JSVAL_VOID;
   *objp = js_object_;
-  if (int_id == ScriptableInterface::kConstantPropertyId) {
+  if (type == ScriptableInterface::PROPERTY_CONSTANT) {
     if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
       JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
                      prototype.Print().c_str());
       return JS_FALSE;
     }
-    // This property is a constant, register a property with initial value
-    // and without a tiny ID.  Then the JavaScript engine will handle it.
+    // This property is a constant, register a property with initial value.
+    // Then the JavaScript engine will handle it.
     return JS_DefineProperty(js_context_, js_object_, name,
                              js_val, JS_PropertyStub, JS_PropertyStub,
                              JSPROP_READONLY | JSPROP_PERMANENT);
   }
 
-  if (int_id == ScriptableInterface::kDynamicPropertyId) {
-    return JS_DefineProperty(js_context_, js_object_, name, js_val,
-                             GetWrapperPropertyByName,
-                             SetWrapperPropertyByName,
-                             JSPROP_SHARED);
-  }
-
-  if (int_id < 0 && int_id >= -128) {
-    // Javascript tinyid is a 8-bit integer, and should be negative to avoid
-    // conflict with array indexes.
-    // This property is a normal property.  The 'get' and 'set' operations
-    // will call back to native slots.
-    return JS_DefinePropertyWithTinyId(js_context_, js_object_, name,
-                                       static_cast<int8>(int_id), js_val,
-                                       GetWrapperPropertyByIndex,
-                                       SetWrapperPropertyByIndex,
-                                       JSPROP_PERMANENT | JSPROP_SHARED);
-  }
-
-  // Too many properties, can't register all with tiny id.  The rest are
-  // registered by name.
+  uintN property_attrs = JSPROP_SHARED;
+  if (type == ScriptableInterface::PROPERTY_NORMAL)
+    property_attrs |= JSPROP_PERMANENT;
   return JS_DefineProperty(js_context_, js_object_, name, js_val,
                            GetWrapperPropertyByName,
                            SetWrapperPropertyByName,
-                           JSPROP_PERMANENT | JSPROP_SHARED);
+                           property_attrs);
 }
 
 void NativeJSWrapper::AddJSFunctionSlot(JSFunctionSlot *slot) {

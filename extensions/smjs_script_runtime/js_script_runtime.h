@@ -35,15 +35,12 @@ class JSScriptRuntime : public ScriptRuntimeInterface {
 
   /** @see ScriptRuntimeInterface::CreateContext() */
   virtual ScriptContextInterface *CreateContext();
-  /** @see ScriptRuntimeInterface::ConnectErrorReporter() */
-  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter);
 
   void DestroyContext(JSScriptContext *context);
 
  private:
   DISALLOW_EVIL_CONSTRUCTORS(JSScriptRuntime);
-  class Impl;
-  Impl *impl_;
+  JSRuntime *runtime_;
 };
 
 } // namespace smjs

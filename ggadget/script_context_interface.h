@@ -21,7 +21,10 @@
 
 namespace ggadget {
 
+class Connection;
 class Slot;
+template <typename R, typename P1> class Slot1;
+template <typename R, typename P1, typename P2> class Slot2;
 
 /**
  * The context of script compilation and execution.
@@ -135,6 +138,38 @@ class ScriptContextInterface {
    */
   virtual Variant Evaluate(ScriptableInterface *object, const char *expr) = 0;
 
+  /**
+   * An @c ErrorReporter can be connected to the error reporter signal.
+   * It will receive a message string when it is called.
+   */
+  typedef Slot1<void, const char *> ErrorReporter;
+
+  /**
+   * Connects an error reporter to the error reporter signal.
+   * After connected, the reporter will receive all Script error reports.
+   * @param reporter the error reporter.
+   * @return the signal @c Connection.
+   */
+  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter) = 0;
+
+  /**
+   * After connected, a @c ScriptBlockedFeedback will be called if the script
+   * runs too long blocking UI. The first parameter is the script file name,
+   * the second is the current line number. It returns @c true if allows the
+   * script to continue, otherwise the script will be canceled. 
+   */
+  typedef Slot2<bool, const char *, int> ScriptBlockedFeedback;
+
+  /**
+   * Connects a feedback callback that will be called if the script runs
+   * too long blocking UI. A typical feedback would display a dialog and
+   * let user choose whether to cancel current operation or wait for
+   * completion.
+   * @param feedback the feedback callback.
+   * @return the signal @c Connection. 
+   */
+  virtual Connection *ConnectScriptBlockedFeedback(
+      ScriptBlockedFeedback *feedback) = 0;
 };
 
 } // namespace ggadget

@@ -112,9 +112,9 @@ class DirFileManager::Impl {
     if (!CheckFilePath(file, &path))
       return false;
 
-    if (::access(path.c_str(), F_OK) == 0) {
+    if (access(path.c_str(), F_OK) == 0) {
       if (overwrite) {
-        if (::unlink(path.c_str()) == -1) {
+        if (unlink(path.c_str()) == -1) {
           LOG("Failed to unlink file %s when trying to overwrite it: %s.",
               path.c_str(), strerror(errno));
           return false;
@@ -144,7 +144,12 @@ class DirFileManager::Impl {
 
     bool result = (fwrite(data.c_str(), data.length(), 1, datafile) == 1);
     fclose(datafile);
-
+    result = result && ferror(datafile) == 0;
+    if (!result) {
+      // Remove the file if error occured during writing.
+      LOG("Error writing to file %s", path.c_str());
+      unlink(path.c_str());
+    }
     return result;
   }
 

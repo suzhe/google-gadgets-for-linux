@@ -1085,7 +1085,9 @@ void BasicElement::DoRegister() {
                    NewSlot(impl_, &Impl::GetHeight),
                    NewSlot(impl_, &Impl::SetHeight));
   RegisterConstant("name", impl_->name_);
-  RegisterConstant("tagName", impl_->tag_name_);
+  // Use RegisterProperty instead of RegisterConstant for tagName can
+  // reduce the duplicates of std::string of tag_name_.
+  RegisterProperty("tagName", NewSlot(this, &BasicElement::GetTagName), NULL);
 
   // TODO: Contentarea on Windows seems to support some of the following
   // properties.
@@ -1147,16 +1149,19 @@ void BasicElement::DoRegister() {
   RegisterMethod("focus", NewSlot(this, &BasicElement::Focus));
   RegisterMethod("killFocus", NewSlot(this, &BasicElement::KillFocus));
 
-  if (impl_->children_) {
-    RegisterConstant("children", impl_->children_);
+  // Use GetChildren() instead of impl_->children_ because GetChildren()
+  // may be overriden.
+  Elements *children = GetChildren();
+  if (children) {
+    RegisterConstant("children", children);
     RegisterMethod("appendElement",
-                   NewSlot(impl_->children_, &Elements::AppendElementFromXML));
+                   NewSlot(children, &Elements::AppendElementFromXML));
     RegisterMethod("insertElement",
-                   NewSlot(impl_->children_, &Elements::InsertElementFromXML));
+                   NewSlot(children, &Elements::InsertElementFromXML));
     RegisterMethod("removeElement",
-                   NewSlot(impl_->children_, &Elements::RemoveElement));
+                   NewSlot(children, &Elements::RemoveElement));
     RegisterMethod("removeAllElements",
-                   NewSlot(impl_->children_, &Elements::RemoveAllElements));
+                   NewSlot(children, &Elements::RemoveAllElements));
   }
 
   RegisterSignal(kOnClickEvent, &impl_->onclick_event_);

@@ -53,7 +53,7 @@ class SimpleEncryptor : public EncryptorInterface {
     int x = Compute(input[0], input[1], input.c_str() + 2, input.size() - 3,
                     output);
     if (input[input.size() - 1] != static_cast<char>(x)) {
-      // Checksum doesn't not match.
+      // Checksum doesn't match.
       output->clear();
       return false;
     }

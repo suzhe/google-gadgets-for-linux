@@ -14,6 +14,10 @@
   limitations under the License.
 */
 
+// SHA1 algorithm is written based on the reference implementation of SHA1.
+// See RFC3174 for details.
+// BASE64 algorithm is written according to RFC4648.
+
 #include "digest_utils.h"
 #include "common.h"
 #include "logger.h"

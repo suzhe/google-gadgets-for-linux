@@ -119,21 +119,26 @@ Variant MemoryOptions::GetValue(const char *name) {
 
 void MemoryOptions::PutValue(const char *name, const Variant &value) {
   std::string name_str(name); // Avoid multiple std::string construction.
-  Variant *last_value = &impl_->values_[name_str];
-  if (!(*last_value == value)) {
-    ASSERT(impl_->total_size_ >= GetVariantSize(*last_value));
-    size_t new_total_size = impl_->total_size_ + GetVariantSize(value) -
-                            GetVariantSize(*last_value);
-    if (new_total_size > impl_->size_limit_) {
-      LOG("Options exceeds size limit %zu.", impl_->size_limit_);
-    } else {
-      impl_->total_size_ = new_total_size;
-      *last_value = value;
-      impl_->FireChangedEvent(name, value);
+  Impl::OptionsMap::iterator it = impl_->values_.find(name_str);
+  if (it == impl_->values_.end()) {
+    Add(name, value);
+  } else {
+    Variant *last_value = &it->second;
+    if (!(*last_value == value)) {
+      ASSERT(impl_->total_size_ >= GetVariantSize(*last_value));
+      size_t new_total_size = impl_->total_size_ + GetVariantSize(value) -
+                              GetVariantSize(*last_value);
+      if (new_total_size > impl_->size_limit_) {
+        LOG("Options exceeds size limit %zu.", impl_->size_limit_);
+      } else {
+        impl_->total_size_ = new_total_size;
+        *last_value = value;
+        impl_->FireChangedEvent(name, value);
+      }
     }
+    // Putting a value automatically removes the encrypted state.
+    impl_->encrypted_.erase(name_str);
   }
-  // Putting a value automatically removes the encrypted state.
-  impl_->encrypted_.erase(name_str);
 }
 
 void MemoryOptions::Remove(const char *name) {

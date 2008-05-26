@@ -16,7 +16,8 @@
 
 var kURLOption = "rss_url";
 var kMinRefreshInterval = 600000; // every 10 minutes
-var g_refresh_interval = kMinRefreshInterval;
+var g_refresh_interval = kMinRefreshInterval +
+                         Math.round(Math.random() / 3 * kMinRefreshInterval);
 
 var kItemHeadingColor = "#ffffff";
 var kItemSourceColor = "#00ffff";

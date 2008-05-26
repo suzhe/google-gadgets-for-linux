@@ -66,6 +66,9 @@ void ItemElement::DoRegister() {
                    NewSlot(this, &ItemElement::IsSelected),
                    NewSlot(this, &ItemElement::SetSelected));
   if (impl_->parent_) {
+    // Disable getters and setters for position and size because they are
+    // automatically set by the parent. The script can still use offsetXXXX
+    // to get actual place of items.
     RegisterProperty("x", NULL, NewSlot(DummySetter));
     RegisterProperty("y", NULL, NewSlot(DummySetter));
     RegisterProperty("width", NULL, NewSlot(DummySetter));
@@ -115,7 +118,7 @@ void ItemElement::DoDraw(CanvasInterface *canvas) {
       }
 
       item_separator->Draw(separator);
-      canvas->DrawCanvas(0, canvas->GetHeight() - 2, separator);
+      canvas->DrawCanvas(0, GetPixelHeight() - 2, separator);
 
       separator->Destroy();
       separator = NULL;

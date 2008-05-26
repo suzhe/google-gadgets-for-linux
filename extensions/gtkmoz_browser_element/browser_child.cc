@@ -74,6 +74,8 @@ using ggadget::gtkmoz::kPingInterval;
 static int g_down_fd = 0, g_up_fd = 1, g_ret_fd = 0;
 static std::vector<GtkMozEmbed *> g_embeds;
 
+static const size_t kMaxBrowserId = 256;
+
 #define EXTOBJ_CLASSNAME  "ExternalObject"
 #define EXTOBJ_PROPERTY_NAME "external"
 #define EXTOBJ_CONTRACTID "@google.com/ggl/extobj;1"
@@ -495,10 +497,12 @@ static void RemoveBrowser(size_t id) {
   GtkMozEmbed *embed = g_embeds[id];
   if (GTK_IS_WIDGET(embed)) {
     GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(embed));
-    if (GTK_IS_WIDGET(parent))
+    if (GTK_IS_WIDGET(parent)) {
+      // In case of standalone testing.
       gtk_widget_destroy(parent);
-    else
+    } else {
       gtk_widget_destroy(GTK_WIDGET(embed));
+    }
   }
   g_embeds[id] = NULL;
 }
@@ -511,12 +515,12 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
   }
 
   // The new id can be less than or equals to the current size.
-  if (id > g_embeds.size()) {
+  if (id > kMaxBrowserId) {
     fprintf(stderr, "browser_child: New browser id is too big: %zd\n", id);
     return;
   }
-  if (id == g_embeds.size()) {
-    g_embeds.push_back(NULL);
+  if (id >= g_embeds.size()) {
+    g_embeds.resize(id + 1, NULL);
   } else if (g_embeds[id] != NULL) {
     fprintf(stderr, "browser_child: Warning: new browser id slot is "
             "not empty: %zd\n", id);
@@ -535,18 +539,31 @@ static void NewBrowser(int param_count, const char **params, size_t id) {
   gtk_widget_show_all(window);
 }
 
+static GtkMozEmbed *GetGtkEmbedByBrowserId(size_t id) {
+  if (id >= g_embeds.size()) {
+    fprintf(stderr, "browser_child: Invalid browser id %zd\n", id);
+    return NULL;
+  }
+
+  GtkMozEmbed *embed = g_embeds[id];
+  if (!GTK_IS_WIDGET(embed)) {
+    fprintf(stderr, "browser_child: Invalid browser by id %zd\n", id);
+    return NULL;
+  }
+  return embed;
+}
+
 static void SetContent(int param_count, const char **params, size_t id) {
   if (param_count != 4) {
     fprintf(stderr, "browser_child: Incorrect param count for %s: "
             "4 expected, %d given\n", kSetContentCommand, param_count);
     return;
   }
-  if (id >= g_embeds.size()) {
-    fprintf(stderr, "browser_child: Invalid browser id %zd given to SetContent\n", id);
-    return;
-  }
 
-  GtkMozEmbed *embed = g_embeds[id];
+  GtkMozEmbed *embed = GetGtkEmbedByBrowserId(id);
+  if (!embed)
+    return;
+
   // params[2]: mime type; params[3]: JSON encoded content string.
   nsString content;
   if (!DecodeJSONString(params[3], &content)) {
@@ -573,12 +590,12 @@ static void OpenURL(int param_count, const char **params, size_t id) {
             "3 expected, %d given\n", kOpenURLCommand, param_count);
     return;
   }
-  if (id >= g_embeds.size()) {
-    fprintf(stderr, "browser_child: Invalid browser id %zd given to SetContent\n", id);
+
+  GtkMozEmbed *embed = GetGtkEmbedByBrowserId(id);
+  if (!embed)
     return;
-  }
   // params[2]: URL.
-  gtk_moz_embed_load_url(g_embeds[id], params[2]);
+  gtk_moz_embed_load_url(embed, params[2]);
 }
 
 static void ProcessDownMessage(int param_count, const char **params) {

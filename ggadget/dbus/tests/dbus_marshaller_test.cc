@@ -391,9 +391,11 @@ class ScriptableIterator {
     array_.push_back(value);
     return true;
   }
-  bool EnumerateProperties(int id, const char *name,
-                           const Variant &value, bool is_method) {
-    if (!is_method) properties_[name] = value;
+  bool EnumerateProperties(const char *name,
+                           ScriptableInterface::PropertyType type,
+                           const Variant &value) {
+    if (type != ScriptableInterface::PROPERTY_METHOD)
+      properties_[name] = value;
     return true;
   }
  private:

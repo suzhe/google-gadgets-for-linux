@@ -39,11 +39,11 @@ class ScriptableMap : public ScriptableHelperDefault {
   typedef typename Map::const_iterator MapConstIterator;
 
   ScriptableMap(const Map &map) : map_(map) {
-    SetDynamicPropertyHandler(NewSlot(this, &ScriptableMap::GetProperty), NULL);
+    SetDynamicPropertyHandler(NewSlot(this, &ScriptableMap::GetValue), NULL);
   }
 
  public:
-  Variant GetProperty(const char *property_name) const {
+  Variant GetValue(const char *property_name) const {
     MapConstIterator it = map_.find(property_name);
     return it == map_.end() ? Variant() : Variant(it->second);
   }
@@ -54,8 +54,8 @@ class ScriptableMap : public ScriptableHelperDefault {
    */
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) {
     for (MapConstIterator it = map_.begin(); it != map_.end(); ++it) {
-      if (!(*callback)(ScriptableInterface::kDynamicPropertyId,
-                       it->first.c_str(), Variant(it->second), false))
+      if (!(*callback)(it->first.c_str(), ScriptableInterface::PROPERTY_DYNAMIC,
+                       Variant(it->second)))
         return false;
     }
     return true;

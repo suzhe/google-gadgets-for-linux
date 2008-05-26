@@ -34,15 +34,9 @@ JSClass JSNativeWrapper::js_reference_tracker_class_ = {
 static const char *kTrackerReferenceName = "[[[TrackerReference]]]";
 
 JSNativeWrapper::JSNativeWrapper(JSContext *js_context, JSObject *js_object)
-    : ref_count_(0),
-      js_context_(js_context),
+    : js_context_(js_context),
       js_object_(js_object),
       name_(PrintJSValue(js_context, OBJECT_TO_JSVAL(js_object))) {
-  SetDynamicPropertyHandler(NewSlot(this, &JSNativeWrapper::GetProperty),
-                            NewSlot(this, &JSNativeWrapper::SetProperty));
-  SetArrayHandler(NewSlot(this, &JSNativeWrapper::GetElement),
-                  NewSlot(this, &JSNativeWrapper::SetElement));
-
   // Wrap this object again into a JS object, and add this object as a property
   // of the original object, to make it possible to auto detach this object
   // when the original object is finalized.
@@ -80,6 +74,11 @@ void JSNativeWrapper::Unref(bool transient) {
   ScriptableHelperDefault::Unref(transient);
 }
 
+ScriptableInterface::PropertyType JSNativeWrapper::GetPropertyInfo(
+    const char *name, Variant *prototype) {
+  return ScriptableInterface::PROPERTY_DYNAMIC;
+}
+
 bool JSNativeWrapper::EnumerateProperties(
     EnumeratePropertiesCallback *callback) {
   ASSERT(callback);
@@ -93,7 +92,8 @@ bool JSNativeWrapper::EnumerateProperties(
       if (JSVAL_IS_STRING(key)) {
         char *name = JS_GetStringBytes(JSVAL_TO_STRING(key));
         if (name &&
-            !(*callback)(kDynamicPropertyId, name, GetProperty(name), false)) {
+            !(*callback)(name, ScriptableInterface::PROPERTY_DYNAMIC,
+                         GetProperty(name).v())) {
           result = false;
           break;
         }
@@ -117,7 +117,7 @@ bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
       JS_IdToValue(js_context_, id, &key);
       if (JSVAL_IS_INT(key)) {
         int index = JSVAL_TO_INT(key);
-        if (!(*callback)(index, GetElement(index))) {
+        if (!(*callback)(index, GetPropertyByIndex(index).v())) {
           result = false;
           break;
         }
@@ -130,7 +130,7 @@ bool JSNativeWrapper::EnumerateElements(EnumerateElementsCallback *callback) {
   return result;
 }
 
-Variant JSNativeWrapper::GetProperty(const char *name) {
+ResultVariant JSNativeWrapper::GetProperty(const char *name) {
   Variant result;
   jsval rval;
   if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
@@ -139,7 +139,7 @@ Variant JSNativeWrapper::GetProperty(const char *name) {
                    "Failed to convert JS property %s value(%s) to native.",
                    name, PrintJSValue(js_context_, rval).c_str());
   }
-  return result;
+  return ResultVariant(result);
 }
 
 bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
@@ -153,7 +153,7 @@ bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
   return JS_SetProperty(js_context_, js_object_, name, &js_val);
 }
 
-Variant JSNativeWrapper::GetElement(int index) {
+ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
   Variant result;
   jsval rval;
   if (JS_GetElement(js_context_, js_object_, index, &rval) &&
@@ -162,10 +162,10 @@ Variant JSNativeWrapper::GetElement(int index) {
                    "Failed to convert JS property %d value(%s) to native.",
                    index, PrintJSValue(js_context_, rval).c_str());
   }
-  return result;
+  return ResultVariant(result);
 }
 
-bool JSNativeWrapper::SetElement(int index, const Variant &value) {
+bool JSNativeWrapper::SetPropertyByIndex(int index, const Variant &value) {
   jsval js_val;
   if (!ConvertNativeToJS(js_context_, value, &js_val)) {
     JS_ReportError(js_context_,

@@ -14,10 +14,12 @@
   limitations under the License.
 */
 
-#include <ggadget/logger.h>
-#include <ggadget/slot.h>
-#include <ggadget/unicode_utils.h>
 #include "js_script_context.h"
+
+#include <ggadget/logger.h>
+#include <ggadget/main_loop_interface.h>
+#include <ggadget/unicode_utils.h>
+#include <jscntxt.h>
 #include "converter.h"
 #include "js_function_slot.h"
 #include "js_native_wrapper.h"
@@ -26,6 +28,25 @@
 
 namespace ggadget {
 namespace smjs {
+
+// The maximum execution time of a piece of script (10 seconds).
+static const uint64_t kMaxScriptRunTime = 10000;
+// OperationCallback is checked after the script executed instructions
+// weighted 5000 * JS_OPERATION_WEIGHT_BASE (new version), or 5000 branches
+// (old version, deperecated).
+static const uint32 kOperationCallbackMultiply = 5000;
+#ifdef JS_OPERATION_WEIGHT_BASE
+// The accumulated operation weight before OperationCallback is called.
+static const uint32 kOperationCallbackWeight =
+    kOperationCallbackMultiply * JS_OPERATION_WEIGHT_BASE;
+#endif
+
+uint64_t JSScriptContext::operation_callback_time_ = 0;
+int JSScriptContext::reset_operation_time_timer_ = 0;
+
+static JSScriptContext *GetJSScriptContext(JSContext *context) {
+  return reinterpret_cast<JSScriptContext *>(JS_GetContextPrivate(context));
+}
 
 static JSBool LocaleCompare(JSContext *cx, JSString *s1, JSString *s2,
                             jsval *rval) {
@@ -74,7 +95,23 @@ JSScriptContext::JSScriptContext(JSScriptRuntime *runtime, JSContext *context)
       lineno_(0) {
   JS_SetContextPrivate(context_, this);
   JS_SetLocaleCallbacks(context_, &gLocaleCallbacks);
+#ifdef JS_OPERATION_WEIGHT_BASE
+  JS_SetOperationCallback(context_, OperationCallback,
+                          kOperationCallbackWeight);
+#else
+  JS_SetBranchCallback(context_, BranchCallback);
+#endif
+  JS_SetErrorReporter(context, ReportError);
   // JS_SetOptions(context_, JS_GetOptions(context_) | JSOPTION_STRICT);
+
+  if (!reset_operation_time_timer_) {
+    MainLoopInterface *main_loop = GetGlobalMainLoop();
+    if (main_loop) {
+      reset_operation_time_timer_ =
+          main_loop->AddTimeoutWatch(kMaxScriptRunTime / 2,
+              new WatchCallbackSlot(NewSlot(OnClearOperationTimeTimer)));
+    }
+  }
 }
 
 JSScriptContext::~JSScriptContext() {
@@ -113,10 +150,6 @@ JSScriptContext::~JSScriptContext() {
        it != registered_classes_.end(); ++it)
     delete *it;
   registered_classes_.clear();
-}
-
-static JSScriptContext *GetJSScriptContext(JSContext *context) {
-  return reinterpret_cast<JSScriptContext *>(JS_GetContextPrivate(context));
 }
 
 // As we want to depend on only the public SpiderMonkey APIs, the only
@@ -381,10 +414,10 @@ JSBool JSScriptContext::ConstructObject(JSContext *cx, JSObject *obj,
                              &params, &expected_argc))
     return JS_FALSE;
 
-  Variant return_value = cls->constructor_->Call(expected_argc, params);
-  ASSERT(return_value.type() == Variant::TYPE_SCRIPTABLE);
+  ResultVariant return_value = cls->constructor_->Call(expected_argc, params);
+  ASSERT(return_value.v().type() == Variant::TYPE_SCRIPTABLE);
   ScriptableInterface *scriptable =
-      VariantValue<ScriptableInterface *>()(return_value);
+      VariantValue<ScriptableInterface *>()(return_value.v());
 
   JSScriptContext *context_wrapper = GetJSScriptContext(cx);
   ASSERT(context_wrapper);
@@ -497,6 +530,110 @@ JSBool JSScriptContext::EvaluateToJSVal(ScriptableInterface *object,
     *result = OBJECT_TO_JSVAL(js_object);
   }
   return JS_TRUE;
+}
+
+void JSScriptContext::ReportError(JSContext *cx, const char *message,
+                                  JSErrorReport *report) {
+  JSScriptContext *this_p = GetJSScriptContext(cx);
+  if (!this_p)
+    return;
+
+  char lineno_buf[16];
+  snprintf(lineno_buf, sizeof(lineno_buf), "%d", report->lineno);
+  std::string error_report;
+  if (report->filename)
+    error_report = report->filename;
+  error_report += ':';
+  error_report += lineno_buf;
+  error_report += ": ";
+  error_report += message;
+  if (!this_p->error_reporter_signal_.HasActiveConnections())
+    LOG("No error reporter: %s", error_report.c_str());
+  this_p->error_reporter_signal_(error_report.c_str());
+}
+
+Connection *JSScriptContext::ConnectErrorReporter(ErrorReporter *reporter) {
+  return error_reporter_signal_.Connect(reporter);
+}
+
+JSBool JSScriptContext::OperationCallback(JSContext *cx) {
+  JSScriptContext *this_p = GetJSScriptContext(cx);
+  if (!this_p)
+    return JS_TRUE;
+
+  // Trigger GC on certain conditions.
+  JSRuntime *rt = cx->runtime;
+  size_t bytes = rt->gcBytes;
+  size_t last_bytes = rt->gcLastBytes;
+  if (bytes > 8192 && bytes / 16 > last_bytes) {
+    DLOG("GC Triggered: gcBytes=%zu gcLastBytes=%zu gcMaxBytes=%zu "
+         "gcMaxMallocBytes=%zu", bytes, last_bytes, rt->gcMaxBytes,
+         rt->gcMaxMallocBytes);
+    JS_GC(cx);
+    DLOG("GC Finished: gcBytes=%zu gcLastBytes=%zu gcMaxBytes=%zu "
+         "gcMaxMallocBytes=%zu", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
+         rt->gcMaxMallocBytes);
+  }
+
+  // Check for long time script operation that may blocks UI.
+  MainLoopInterface *main_loop = GetGlobalMainLoop();
+  if (!main_loop)
+    return JS_TRUE;
+
+  uint64_t now = main_loop->GetCurrentTime();
+  if (operation_callback_time_ == 0) {
+    // The current script operation is just started. Start timing now.
+    operation_callback_time_ = now;
+    return JS_TRUE;
+  }
+
+  if (now > operation_callback_time_ + kMaxScriptRunTime) {
+    static bool handling_script_blocked_signal = false;
+    if (handling_script_blocked_signal) {
+      // This may occur if some events (e.g. timer) caused again script
+      // blocked before the last ScriptBlockedFeedback (which may displayed
+      // a confirm dialog) returns. Just cancel the script.
+      return JS_FALSE;
+    }
+
+    std::string filename;
+    int lineno;
+    GetCurrentFileAndLine(cx, &filename, &lineno);
+    DLOG("Script runs too long at %s:%d, ask user whether to break",
+         filename.c_str(), lineno);
+    handling_script_blocked_signal = true;
+    if (!this_p->script_blocked_signal_.HasActiveConnections() ||
+        this_p->script_blocked_signal_(filename.c_str(), lineno)) {
+      handling_script_blocked_signal = false;
+      DLOG("Reset script timer");
+      operation_callback_time_ = main_loop->GetCurrentTime();
+      return JS_TRUE;
+    }
+    handling_script_blocked_signal = false;
+    // Cancel the current script.
+    return JS_FALSE;
+  }
+  return JS_TRUE;
+}
+
+JSBool JSScriptContext::BranchCallback(JSContext *cx, JSScript *script) {
+  static uint32 count = 0;
+  if (++count == kOperationCallbackMultiply) {
+    count = 0;
+    return OperationCallback(cx);
+  }
+  return JS_TRUE;
+}
+
+bool JSScriptContext::OnClearOperationTimeTimer(int watch_id) {
+  ASSERT(watch_id == reset_operation_time_timer_);
+  operation_callback_time_ = 0;
+  return true;
+}
+
+Connection *JSScriptContext::ConnectScriptBlockedFeedback(
+    ScriptBlockedFeedback *feedback) {
+  return script_blocked_signal_.Connect(feedback);
 }
 
 } // namespace smjs

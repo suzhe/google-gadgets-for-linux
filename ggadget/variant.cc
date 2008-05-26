@@ -25,6 +25,16 @@
 
 namespace ggadget {
 
+// The values doesn't matter, because we only use their c_str() result to
+// check if a string is constructed from these "NULL" strings.
+// We choose the value "(nil)" to ease printing (see Print()).
+// Don't use blank value, because all strings with blank values are shared
+// in the standard impl of C++ library.
+const std::string Variant::kNullString("(nil)");
+static const UTF16Char kNullUTF16StringValue[] =
+    { '(', 'n', 'i', 'l', ')', 0 };
+const UTF16String Variant::kNullUTF16String(kNullUTF16StringValue);
+
 Variant::Variant() : type_(TYPE_VOID) {
   memset(&v_, 0, sizeof(v_));
 }
@@ -35,53 +45,39 @@ Variant::Variant(const Variant &source) : type_(TYPE_VOID) {
 }
 
 Variant::Variant(Type type) : type_(type) {
-  memset(&v_, 0, sizeof(v_));
-}
-
-Variant::Variant(ScriptableInterface *value) : type_(TYPE_SCRIPTABLE) {
-  if (value) {
-    value->Ref();
-    v_.scriptable_value_.refchange_connection_ =
-        value->ConnectOnReferenceChange(NewSlot(this, &Variant::OnRefChange));
+  if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
+    new (&v_.string_place_) std::string(kNullString);
+  } else if (type_ == TYPE_UTF16STRING) {
+    new (&v_.utf16_string_place_) UTF16String(kNullUTF16String);
   } else {
-    v_.scriptable_value_.refchange_connection_ = NULL;
+    memset(&v_, 0, sizeof(v_));
   }
-  v_.scriptable_value_.value_ = value;
 }
 
 Variant::~Variant() {
   if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
-    if (v_.string_value_.s_) {
-      // Don't delete because the pointer is allocated in place.
-      typedef std::string String;
-      v_.string_value_.s_->~String();
-    }
+    // This typedef is required because ...~std::string() may cause error.
+    typedef std::string String;
+    // Don't delete because the pointer is allocated in place.
+    reinterpret_cast<String *>(&v_.string_place_)->~String();
   } else if (type_ == TYPE_UTF16STRING) {
-    if (v_.utf16_string_value_.s_) {
-      // Don't delete because the pointer is allocated in place.
-      v_.utf16_string_value_.s_->~UTF16String();
-    }
-  } else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
-    v_.scriptable_value_.refchange_connection_->Disconnect();
-    v_.scriptable_value_.value_->Unref();
+    // Don't delete because the pointer is allocated in place.
+    reinterpret_cast<UTF16String *>(&v_.utf16_string_place_)->~UTF16String();
   }
 }
 
 Variant &Variant::operator=(const Variant &source) {
+  if (&source == this)
+    return *this;
+
   if (type_ == TYPE_STRING || type_ == TYPE_JSON) {
-    if (v_.string_value_.s_) {
-      // Don't delete because the pointer is allocated in place.
-      typedef std::string String;
-      v_.string_value_.s_->~String();
-    }
+    // This typedef is required because ...~std::string() may cause error.
+    typedef std::string String;
+    // Don't delete because the pointer is allocated in place.
+    reinterpret_cast<String *>(&v_.string_place_)->~String();
   } else if (type_ == TYPE_UTF16STRING) {
-    if (v_.utf16_string_value_.s_) {
-      // Don't delete because the pointer is allocated in place.
-      v_.utf16_string_value_.s_->~UTF16String();
-    }
-  } else if (type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_) {
-    v_.scriptable_value_.refchange_connection_->Disconnect();
-    v_.scriptable_value_.value_->Unref();
+    // Don't delete because the pointer is allocated in place.
+    reinterpret_cast<UTF16String *>(&v_.utf16_string_place_)->~UTF16String();
   }
 
   type_ = source.type_;
@@ -99,29 +95,15 @@ Variant &Variant::operator=(const Variant &source) {
       break;
     case TYPE_STRING:
     case TYPE_JSON:
-      v_.string_value_.s_ =
-          source.v_.string_value_.s_ ?
-          new (&v_.string_value_.place_)
-              std::string(*source.v_.string_value_.s_) :
-          NULL;
+      new (&v_.string_place_) std::string(
+          *reinterpret_cast<const std::string *>(&source.v_.string_place_));
       break;
     case TYPE_UTF16STRING:
-      v_.utf16_string_value_.s_ =
-          source.v_.utf16_string_value_.s_ ?
-          new (&v_.utf16_string_value_.place_)
-              UTF16String(*source.v_.utf16_string_value_.s_) :
-          NULL;
+      new (&v_.utf16_string_place_) UTF16String(
+       *reinterpret_cast<const UTF16String *>(&source.v_.utf16_string_place_));
       break;
     case TYPE_SCRIPTABLE:
-      v_.scriptable_value_.value_ = source.v_.scriptable_value_.value_;
-      if (v_.scriptable_value_.value_) {
-        v_.scriptable_value_.value_->Ref();
-        v_.scriptable_value_.refchange_connection_ =
-            v_.scriptable_value_.value_->ConnectOnReferenceChange(
-                NewSlot(this, &Variant::OnRefChange));
-      } else {
-        v_.scriptable_value_.refchange_connection_ = NULL;
-      }
+      v_.scriptable_value_ = source.v_.scriptable_value_;
       break;
     case TYPE_SLOT:
       v_.slot_value_ = source.v_.slot_value_;
@@ -157,17 +139,22 @@ bool Variant::operator==(const Variant &another) const {
       return v_.int64_value_ == another.v_.int64_value_;
     case TYPE_DOUBLE:
       return v_.double_value_ == another.v_.double_value_;
-    case TYPE_STRING:
+    case TYPE_STRING: {
+      const char *s1 = VariantValue<const char *>()(*this);
+      const char *s2 = VariantValue<const char *>()(another);
+      return (s1 == s2 || (s1 && s2 && strcmp(s1, s2) == 0));
+    }
     case TYPE_JSON:
-      return v_.string_value_.s_ == another.v_.string_value_.s_ ||
-            (v_.string_value_.s_ && another.v_.string_value_.s_ &&
-             *v_.string_value_.s_ == *another.v_.string_value_.s_);
-    case TYPE_UTF16STRING:
-      return v_.utf16_string_value_.s_ == another.v_.utf16_string_value_.s_ ||
-            (v_.utf16_string_value_.s_ && another.v_.utf16_string_value_.s_ &&
-             *v_.utf16_string_value_.s_ == *another.v_.utf16_string_value_.s_);
+      return VariantValue<JSONString>()(*this) ==
+             VariantValue<JSONString>()(another);
+    case TYPE_UTF16STRING: {
+      const UTF16Char *s1 = VariantValue<const UTF16Char *>()(*this);
+      const UTF16Char *s2 = VariantValue<const UTF16Char *>()(another);
+      return (s1 == s2 || (s1 && s2 && VariantValue<UTF16String>()(*this) ==
+                                       VariantValue<UTF16String>()(another)));
+    }
     case TYPE_SCRIPTABLE:
-      return v_.scriptable_value_.value_ == another.v_.scriptable_value_.value_;
+      return v_.scriptable_value_ == another.v_.scriptable_value_;
     case TYPE_SLOT: {
       Slot *slot1 = v_.slot_value_;
       Slot *slot2 = another.v_.slot_value_;
@@ -205,22 +192,24 @@ std::string Variant::Print() const {
       return "DOUBLE:" + StringPrintf("%g", v_.double_value_);
     case TYPE_STRING:
       return std::string("STRING:") +
-             (v_.string_value_.s_ ? FitString(*v_.string_value_.s_) : "(nil)");
+         // Print "(nil)" for NULL string pointer.
+         FitString(*reinterpret_cast<const std::string *>(&v_.string_place_));
     case TYPE_JSON:
       return std::string("JSON:") +
              FitString(VariantValue<JSONString>()(*this).value);
-    case TYPE_UTF16STRING:
-      if (v_.utf16_string_value_.s_) {
-        std::string utf8_string;
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &utf8_string);
-        return "UTF16STRING:" + FitString(utf8_string);
-      }
-      return "UTF16STRING:(nil)";
+    case TYPE_UTF16STRING: {
+      std::string utf8_string;
+      ConvertStringUTF16ToUTF8(
+          // Print "(nil)" for NULL string pointer.
+          *reinterpret_cast<const UTF16String *>(&v_.utf16_string_place_),
+          &utf8_string);
+      return "UTF16STRING:" + FitString(utf8_string);
+    }
     case TYPE_SCRIPTABLE:
       return StringPrintf("SCRIPTABLE:%p(CLASS_ID=%jx)",
-                          v_.scriptable_value_.value_,
-                          v_.scriptable_value_.value_ ?
-                              v_.scriptable_value_.value_->GetClassId() : 0);
+                          v_.scriptable_value_,
+                          v_.scriptable_value_ ?
+                              v_.scriptable_value_->GetClassId() : 0);
     case TYPE_SLOT:
       return StringPrintf("SLOT:%p", v_.slot_value_);
     case TYPE_DATE:
@@ -252,15 +241,12 @@ bool Variant::ConvertToString(std::string *result) const {
       *result = StringPrintf("%g", v_.double_value_);
       return true;
     case TYPE_STRING:
-      *result = v_.string_value_.s_ ? *v_.string_value_.s_ : "";
+      *result = VariantValue<std::string>()(*this);
       return true;
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING:
-      if (v_.utf16_string_value_.s_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, result);
-      else
-        *result = "";
+      ConvertStringUTF16ToUTF8(VariantValue<UTF16String>()(*this), result);
       return true;
     case TYPE_SCRIPTABLE:
     case TYPE_SLOT:
@@ -301,18 +287,17 @@ bool Variant::ConvertToBool(bool *result) const {
       *result = v_.double_value_ != 0;
       return true;
     case TYPE_STRING:
-      return ParseStringToBool(
-          v_.string_value_.s_ ? v_.string_value_.s_->c_str() : "", result);
+      return ParseStringToBool(VariantValue<std::string>()(*this).c_str(),
+                               result);
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING: {
       std::string s;
-      if (v_.utf16_string_value_.s_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &s);
+      ConvertStringUTF16ToUTF8(VariantValue<UTF16String>()(*this), &s);
       return ParseStringToBool(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
-      *result = v_.scriptable_value_.value_ != NULL;
+      *result = v_.scriptable_value_ != NULL;
       return true;
     case TYPE_SLOT:
       *result = v_.slot_value_ != NULL;
@@ -390,14 +375,13 @@ bool Variant::ConvertToInt64(int64_t *result) const {
       *result = static_cast<int64_t>(v_.double_value_);
       return true;
     case TYPE_STRING:
-      return ParseStringToInt64(
-          v_.string_value_.s_ ? v_.string_value_.s_->c_str() : "", result);
+      return ParseStringToInt64(VariantValue<std::string>()(*this).c_str(),
+                                result);
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING: {
       std::string s;
-      if (v_.utf16_string_value_.s_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &s);
+      ConvertStringUTF16ToUTF8(VariantValue<UTF16String>()(*this), &s);
       return ParseStringToInt64(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
@@ -426,14 +410,13 @@ bool Variant::ConvertToDouble(double *result) const {
       *result = v_.double_value_;
       return true;
     case TYPE_STRING:
-      return ParseStringToDouble(
-          v_.string_value_.s_ ? v_.string_value_.s_->c_str() : "", result);
+      return ParseStringToDouble(VariantValue<std::string>()(*this).c_str(),
+                                 result);
     case TYPE_JSON:
       return false;
     case TYPE_UTF16STRING: {
       std::string s;
-      if (v_.utf16_string_value_.s_)
-        ConvertStringUTF16ToUTF8(*v_.utf16_string_value_.s_, &s);
+      ConvertStringUTF16ToUTF8(VariantValue<UTF16String>()(*this), &s);
       return ParseStringToDouble(s.c_str(), result);
     }
     case TYPE_SCRIPTABLE:
@@ -449,26 +432,61 @@ bool Variant::ConvertToDouble(double *result) const {
 
 bool Variant::CheckScriptableType(uint64_t class_id) const {
   ASSERT(type_ == TYPE_SCRIPTABLE);
-  if (v_.scriptable_value_.value_ &&
-      !v_.scriptable_value_.value_->IsInstanceOf(class_id)) {
+  if (v_.scriptable_value_ &&
+      !v_.scriptable_value_->IsInstanceOf(class_id)) {
     LOG("The parameter is not an instance pointer of 0x%jx", class_id);
     return false;
   }
   return true;
 }
 
-void Variant::OnRefChange(int ref_count, int change) {
-  ASSERT(type_ == TYPE_SCRIPTABLE && v_.scriptable_value_.value_);
-  if (ref_count == 0 && change == 0) {
-    // The object's destructor is being called.
-    // This Variant still holds a reference on this scriptable object.
-    // If the program reaches here, the object must be a native owned object,
-    // so it can be deleted before refcount reaches 0. We must remove the
-    // last reference here.
-    v_.scriptable_value_.refchange_connection_->Disconnect();
-    v_.scriptable_value_.value_->Unref(true);
-    v_.scriptable_value_.value_ = NULL;
+ResultVariant::ResultVariant(const Variant &v)
+    : v_(v) {
+  if (v_.type() == Variant::TYPE_SCRIPTABLE) {
+    ScriptableInterface *scriptable =
+        VariantValue<ScriptableInterface *>()(v_);
+    if (scriptable)
+      scriptable->Ref();
   }
+}
+
+ResultVariant::ResultVariant(const ResultVariant &v)
+    : v_(v.v_) {
+  if (v_.type() == Variant::TYPE_SCRIPTABLE) {
+    ScriptableInterface *scriptable =
+        VariantValue<ScriptableInterface *>()(v_);
+    if (scriptable)
+      scriptable->Ref();
+  }
+}
+    
+ResultVariant::~ResultVariant() {
+  if (v_.type() == Variant::TYPE_SCRIPTABLE) {
+    ScriptableInterface *scriptable =
+        VariantValue<ScriptableInterface *>()(v_);
+    if (scriptable)
+      scriptable->Unref();
+  }
+}
+
+ResultVariant &ResultVariant::operator=(const ResultVariant &v) {
+  if (&v == this)
+    return *this;
+
+  if (v_.type() == Variant::TYPE_SCRIPTABLE) {
+    ScriptableInterface *scriptable =
+        VariantValue<ScriptableInterface *>()(v_);
+    if (scriptable)
+      scriptable->Unref();
+  }
+  v_ = v.v_;
+  if (v_.type() == Variant::TYPE_SCRIPTABLE) {
+    ScriptableInterface *scriptable =
+        VariantValue<ScriptableInterface *>()(v_);
+    if (scriptable)
+      scriptable->Ref();
+  }
+  return *this;
 }
 
 } // namespace ggadget

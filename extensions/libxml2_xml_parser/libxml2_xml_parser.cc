@@ -614,6 +614,9 @@ class XMLParser : public XMLParserInterface {
                                    DOMDocumentInterface *domdoc,
                                    std::string *encoding,
                                    std::string *utf8_content) {
+#ifdef _DEBUG
+    int original_ref_count = domdoc ? domdoc->GetRefCount() : 0;
+#endif
     bool result = true;
     xmlLineNumbersDefault(1);
     // Check if the content is XML according to XMLHttpRequest standard rule.
@@ -663,6 +666,9 @@ class XMLParser : public XMLParserInterface {
       if (encoding)
         *encoding = result ? encoding_to_use : "";
     }
+#ifdef _DEBUG
+    ASSERT(!domdoc || domdoc->GetRefCount() == original_ref_count);
+#endif
     return result;
   }
 

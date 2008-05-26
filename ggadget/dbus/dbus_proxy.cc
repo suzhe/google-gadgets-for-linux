@@ -236,12 +236,12 @@ class DBusProxy::Impl {
     ~MethodSlot() {
       delete [] arg_types_;
     }
-    virtual Variant Call(int argc, const Variant argv[]) const {
+    virtual ResultVariant Call(int argc, const Variant argv[]) const {
       return_values_.clear();
       bool ret = proxy_->Call(prototype_.name.c_str(), true, -1, argv, argc,
                               NewSlot(this, &MethodSlot::GetReturnValue));
-      if (!ret) return Variant();
-      return MergeArguments();
+      if (!ret) return ResultVariant();
+      return ResultVariant(MergeArguments());
     }
     virtual bool HasMetadata() const {
       return true;

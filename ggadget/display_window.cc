@@ -149,19 +149,18 @@ class DisplayWindow::Impl {
     void SetListBoxItems(ListBoxElement *listbox, ScriptableInterface *array) {
       listbox->GetChildren()->RemoveAllElements();
       if (array) {
-        Variant length_v = GetPropertyByName(array, "length");
         int length;
-        if (length_v.ConvertToInt(&length)) {
+        if (array->GetProperty("length").v().ConvertToInt(&length)) {
           if (length > kMaxListItems)
             length = kMaxListItems;
           for (int i = 0; i < length; i++) {
-            Variant v = array->GetProperty(i);
+            ResultVariant v = array->GetPropertyByIndex(i);
             std::string str_value;
-            if (v.ConvertToString(&str_value)) {
+            if (v.v().ConvertToString(&str_value)) {
               listbox->AppendString(str_value.c_str());
             } else {
               LOG("Invalid type of array item(%s) for control %s",
-                  v.Print().c_str(), element_->GetName().c_str());
+                  v.v().Print().c_str(), element_->GetName().c_str());
             }
           }
         }
