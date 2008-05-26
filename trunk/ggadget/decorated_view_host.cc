@@ -150,7 +150,7 @@ class DecoratedViewHost::Impl {
     }
 
     void UpdateViewSize() {
-      DLOG("DecoratedView::UpdateViewSize()");
+      // DLOG("DecoratedView::UpdateViewSize()");
       double left, right, top, bottom;
       GetMargins(&left, &right, &top, &bottom);
       double width = GetWidth();
@@ -172,13 +172,13 @@ class DecoratedViewHost::Impl {
         GetMargins(&left, &right, &top, &bottom);
         double vw = view_element_->GetPixelWidth();
         double vh = view_element_->GetPixelHeight();
-        DLOG("DecoratedView::Layout() ChildSize(%lf, %lf)", vw, vh);
+        // DLOG("DecoratedView::Layout() ChildSize(%lf, %lf)", vw, vh);
         double cw = GetWidth() - left - right;
         double ch = GetHeight() - top - bottom;
-        DLOG("DecoratedView::Layout() ClientSize(%lf, %lf)", cw, ch);
+        // DLOG("DecoratedView::Layout() ClientSize(%lf, %lf)", cw, ch);
         cw = left + (cw - vw) / 2.0;
         ch = top + (ch - vh) / 2.0;
-        DLOG("Layout DecoratedView: MoveChildTo(%lf, %lf)", cw, ch);
+        // DLOG("Layout DecoratedView: MoveChildTo(%lf, %lf)", cw, ch);
         view_element_->SetPixelX(cw);
         view_element_->SetPixelY(ch);
       }
@@ -294,7 +294,7 @@ class DecoratedViewHost::Impl {
       if (GetWidth() == width && GetHeight() == height)
         return;
 
-      DLOG("DecoratedView::SetSize(%lf, %lf)", width, height);
+      // DLOG("DecoratedView::SetSize(%lf, %lf)", width, height);
       double left, right, top, bottom;
       double cw, ch;
       GetMargins(&left, &right, &top, &bottom);
@@ -496,7 +496,7 @@ class DecoratedViewHost::Impl {
         req_h = min_h;
 
       if (req_w != GetWidth() || req_h != GetHeight()) {
-        DLOG("DecoratedView::SetViewSize(%lf, %lf)", req_w, req_h);
+        // DLOG("DecoratedView::SetViewSize(%lf, %lf)", req_w, req_h);
         View::SetSize(req_w, req_h);
         return true;
       }

@@ -835,7 +835,6 @@ class View::Impl {
   }
 
   void MarkRedraw() {
-    DLOG("MarkRedraw: %p", owner_);
     need_redraw_ = true;
     children_.MarkRedraw();
   }

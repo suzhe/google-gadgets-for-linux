@@ -396,8 +396,9 @@ bool SupportsComposite() {
 #endif
 }
 
-// This method is based on xlib, changed to gdk in the future if possible
-bool MaximizeWindow(GtkWidget *window, bool maximize_vert, bool maximize_horz) {
+#ifdef GDK_WINDOWING_X11
+static bool MaximizeXWindow(GtkWidget *window,
+                            bool maximize_vert, bool maximize_horz) {
   GdkDisplay *display = gtk_widget_get_display(window);
   Display *xd = gdk_x11_display_get_xdisplay(display);
   XClientMessageEvent xclient;
@@ -416,7 +417,19 @@ bool MaximizeWindow(GtkWidget *window, bool maximize_vert, bool maximize_horz) {
   Status s = XSendEvent(xd, gdk_x11_get_default_root_xwindow(), False,
       SubstructureRedirectMask | SubstructureNotifyMask, (XEvent *)&xclient);
   gdk_error_trap_pop();
+  DLOG("MaximizeXWindow result: %d", s);
   return !s;
+}
+#endif
+
+bool MaximizeWindow(GtkWidget *window,
+                    bool maximize_vert, bool maximize_horz) {
+// This method is based on xlib, changed to gdk in the future if possible
+#ifdef GDK_WINDOWING_X11
+  return MaximizeXWindow(window, maximize_vert, maximize_horz);
+#else
+  return false;
+#endif
 }
 
 } // namespace gtk

@@ -1014,13 +1014,17 @@ bool SingleViewHost::IsVisible() const {
 }
 
 void SingleViewHost::SetWindowType(GdkWindowTypeHint type) {
-  GdkWindowTypeHint old = gdk_window_get_type_hint(impl_->window_->window);
+  GdkWindowTypeHint old = GetWindowType();
   if (old == type) return;
   gdk_window_set_type_hint(impl_->window_->window, type);
 }
 
 GdkWindowTypeHint SingleViewHost::GetWindowType() const {
+#if GTK_CHECK_VERSION(2,10,0)
   return gdk_window_get_type_hint(impl_->window_->window);
+#else
+  return gtk_window_get_type_hint(GTK_WINDOW(impl_->window_));
+#endif
 }
 
 Connection *SingleViewHost::ConnectOnViewChanged(Slot0<void> *slot) {
