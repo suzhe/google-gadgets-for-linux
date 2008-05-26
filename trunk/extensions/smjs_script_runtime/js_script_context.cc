@@ -566,12 +566,12 @@ JSBool JSScriptContext::OperationCallback(JSContext *cx) {
   size_t bytes = rt->gcBytes;
   size_t last_bytes = rt->gcLastBytes;
   if (bytes > 8192 && bytes / 16 > last_bytes) {
-    DLOG("GC Triggered: gcBytes=%zu gcLastBytes=%zu gcMaxBytes=%zu "
-         "gcMaxMallocBytes=%zu", bytes, last_bytes, rt->gcMaxBytes,
+    DLOG("GC Triggered: gcBytes=%zu gcLastBytes=%zu gcMaxBytes=%u "
+         "gcMaxMallocBytes=%u", bytes, last_bytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
     JS_GC(cx);
-    DLOG("GC Finished: gcBytes=%zu gcLastBytes=%zu gcMaxBytes=%zu "
-         "gcMaxMallocBytes=%zu", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
+    DLOG("GC Finished: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
+         "gcMaxMallocBytes=%u", rt->gcBytes, rt->gcLastBytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
   }
 

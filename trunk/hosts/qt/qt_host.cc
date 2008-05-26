@@ -62,9 +62,12 @@ class QtHost::Impl {
   }
 
   ~Impl() {
+    DLOG("Going to free %zd gadgets", gadgets_.size());
     for (GadgetsMap::iterator it = gadgets_.begin();
-         it != gadgets_.end(); ++it)
+         it != gadgets_.end(); ++it) {
+      DLOG("Close Gadget: %s", it->second->GetManifestInfo(kManifestName).c_str());
       delete it->second;
+    }
     delete obj_;
   }
 
@@ -224,6 +227,7 @@ class QtHost::Impl {
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (it != gadgets_.end()) {
+      DLOG("Close Gadget: %s", it->second->GetManifestInfo(kManifestName).c_str());
       delete it->second;
       gadgets_.erase(it);
     } else {
