@@ -114,6 +114,14 @@ void QtViewWidget::paintEvent(QPaintEvent *event) {
 }
 
 void QtViewWidget::mouseDoubleClickEvent(QMouseEvent * event) {
+  Event::Type type;
+  if (Qt::LeftButton == event->button())
+    type = Event::EVENT_MOUSE_DBLCLICK;
+  else
+    type = Event::EVENT_MOUSE_RDBLCLICK;
+  MouseEvent e(type, event->x() / zoom_, event->y() / zoom_, 0, 0, 0, 0);
+  if (view_->OnMouseEvent(e) != ggadget::EVENT_RESULT_UNHANDLED)
+    event->accept();
 }
 
 void QtViewWidget::mouseMoveEvent(QMouseEvent* event) {
