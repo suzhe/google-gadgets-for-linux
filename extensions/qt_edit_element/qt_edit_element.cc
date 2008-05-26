@@ -281,6 +281,7 @@ std::string QtEditElement::GetValue() const {
 
 void QtEditElement::SetValue(const char *value) {
   doc_.setPlainText(QString::fromUtf8(value));
+  QueueDraw();
 }
 
 bool QtEditElement::IsWordWrap() const {
