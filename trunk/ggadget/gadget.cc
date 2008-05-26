@@ -78,6 +78,12 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
         // ScriptRuntime implementation is required.
         // We may support multiple different script languages later.
         context_ = ScriptRuntimeManager::get()->CreateScriptContext("js");
+        if (context_) {
+          context_->ConnectErrorReporter(
+              NewSlot(gadget->impl_, &Impl::OnScriptError));
+          context_->ConnectScriptBlockedFeedback(
+              NewSlot(this, &ViewBundle::OnScriptBlocked));
+        }
       }
 
       view_ = new View(view_host, gadget, element_factory, context_);
@@ -107,6 +113,15 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
     View *view() { return view_; }
     ScriptableView *scriptable() { return scriptable_; }
     DetailsViewData *details() { return details_; }
+
+    bool OnScriptBlocked(const char *filename, int lineno) {
+      ViewHostInterface *view_host = view_->GetViewHost();
+      if (!view_host)
+        return true; // Maybe in test environment, let the script continue.
+ 
+      return !view_host->Confirm(StringPrintf(GM_("SCRIPT_BLOCKED_MESSAGE"),
+                                              filename, lineno).c_str());
+    }
 
    private:
     ScriptContextInterface *context_;
@@ -827,6 +842,11 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
 
     FileManagerInterface *fm = CreateFileManager(path.c_str());
     return fm ? new LocalizedFileManager(fm) : NULL;
+  }
+
+  void OnScriptError(const char *message) {
+    DebugError((std::string("Script error in gadget " ) + base_path_ +
+               ": " + message).c_str());
   }
 
   NativeOwnedScriptable global_;

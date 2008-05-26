@@ -633,17 +633,23 @@ bool ContentItem::OnDetailsView(std::string *title,
 
   if (impl_->on_details_view_signal_.HasActiveConnections()) {
     Variant param(this);
-    Variant details_info_v = impl_->on_details_view_signal_.Emit(1, &param);
+    ResultVariant details_info_v =
+        impl_->on_details_view_signal_.Emit(1, &param);
     ScriptableInterface *details_info =
-        VariantValue<ScriptableInterface *>()(details_info_v);
+        VariantValue<ScriptableInterface *>()(details_info_v.v());
     if (details_info) {
-      GetPropertyByName(details_info, "title").ConvertToString(title);
-      GetPropertyByName(details_info, "cancel").ConvertToBool(&cancel);
+      details_info->GetProperty("title").v().ConvertToString(title);
+      details_info->GetProperty("cancel").v().ConvertToBool(&cancel);
       // The conversion rule of the flags property is the same as our default.
-      GetPropertyByName(details_info, "flags").ConvertToInt(flags);
-      Variant v = GetPropertyByName(details_info, "details_control");
-      if (v.type() == Variant::TYPE_SCRIPTABLE)
-        *details_view_data = VariantValue<DetailsViewData *>()(v);
+      details_info->GetProperty("flags").v().ConvertToInt(flags);
+      ResultVariant v = details_info->GetProperty("details_control");
+      if (v.v().type() == Variant::TYPE_SCRIPTABLE) {
+        *details_view_data = VariantValue<DetailsViewData *>()(v.v());
+        if (*details_view_data) {
+          // Add a ref to details_view_data to prevent unexpected deletion.
+          (*details_view_data)->Ref();
+        }
+      }
     } else {
       cancel = true;
     }
@@ -653,6 +659,9 @@ bool ContentItem::OnDetailsView(std::string *title,
   if (!*details_view_data) {
     *details_view_data = new DetailsViewData();
     (*details_view_data)->SetContentFromItem(this);
+  } else {
+    // Remove the transient ref becuase other part of program don't expect it.
+    (*details_view_data)->Unref(true);
   }
   if (title->empty()) {
     *title = GetDisplayHeading();

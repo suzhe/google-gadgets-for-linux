@@ -46,8 +46,8 @@ static void CheckSlot(int i, Slot *slot) {
   ASSERT_EQ(testdata[i].return_type, slot->GetReturnType());
   for (int j = 0; j < testdata[i].argc; j++)
     ASSERT_EQ(testdata[i].arg_types[j], slot->GetArgTypes()[j]);
-  Variant call_result = slot->Call(testdata[i].argc, testdata[i].args);
-  ASSERT_EQ(testdata[i].return_value, call_result);
+  ResultVariant call_result = slot->Call(testdata[i].argc, testdata[i].args);
+  ASSERT_EQ(testdata[i].return_value, call_result.v());
   printf("%d: '%s' '%s'\n", i, result, testdata[i].result);
   ASSERT_STREQ(testdata[i].result, result);
 }

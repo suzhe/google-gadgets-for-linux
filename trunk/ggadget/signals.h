@@ -115,7 +115,7 @@ class Signal {
    * Emit the signal in general format.
    * Normally C++ code should use @c operator() in the templated subclasses.
    */
-  Variant Emit(int argc, const Variant argv[]) const;
+  ResultVariant Emit(int argc, const Variant argv[]) const;
 
   /**
    * Get metadata of the @c Signal.
@@ -166,7 +166,7 @@ class SignalSlot : public Slot {
 
   const Signal *signal() const { return signal_; }
 
-  virtual Variant Call(int argc, const Variant argv[]) const {
+  virtual ResultVariant Call(int argc, const Variant argv[]) const {
     return signal_->Emit(argc, argv);
   }
   virtual Variant::Type GetReturnType() const {
@@ -198,7 +198,7 @@ class Signal0 : public Signal {
   R operator()() const {
     ASSERT_M(GetReturnType() != Variant::TYPE_SCRIPTABLE,
              ("Use Emit() when the signal returns ScriptableInterface *"));
-    return VariantValue<R>()(Emit(0, NULL));
+    return VariantValue<R>()(Emit(0, NULL).v());
   }
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }
 };
@@ -231,7 +231,7 @@ class Signal##n : public Signal {                                             \
              ("Use Emit() when the signal returns ScriptableInterface *"));   \
     Variant vargs[n];                                                         \
     _init_args;                                                               \
-    return VariantValue<R>()(Emit(n, vargs));                                 \
+    return VariantValue<R>()(Emit(n, vargs).v());                             \
   }                                                                           \
   virtual Variant::Type GetReturnType() const { return VariantType<R>::type; }\
   virtual int GetArgCount() const { return n; }                               \

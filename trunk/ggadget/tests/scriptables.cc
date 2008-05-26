@@ -114,6 +114,9 @@ TestPrototype::TestPrototype() {
 TestScriptable2::TestScriptable2(bool native_owned, bool strict)
     : TestScriptable1(native_owned),
       strict_(strict), callback_(NULL) {
+}
+
+void TestScriptable2::DoRegister() {
   RegisterMethod("TestMethod", NewSlot(this, &TestScriptable2::TestMethod));
   RegisterSignal("onlunch", &onlunch_signal_);
   RegisterSignal("onsupper", &onsupper_signal_);
@@ -136,6 +139,11 @@ TestScriptable2::TestScriptable2(bool native_owned, bool strict)
   RegisterMethod("ConcatArray", NewSlot(this, &TestScriptable2::ConcatArray));
   RegisterMethod("SetCallback", NewSlot(this, &TestScriptable2::SetCallback));
   RegisterMethod("CallCallback", NewSlot(this, &TestScriptable2::CallCallback));
+  RegisterSignal("oncomplex", &complex_signal_);
+  RegisterProperty("ComplexSignalData",
+                   NewSlot(this, &TestScriptable2::GetComplexSignalData), NULL);
+  RegisterMethod("FireComplexSignal",
+                 NewSlot(this, &TestScriptable2::FireComplexSignal));
   SetInheritsFrom(TestPrototype::GetInstance());
   SetArrayHandler(NewSlot(this, &TestScriptable2::GetArray),
                   NewSlot(this, &TestScriptable2::SetArray));
@@ -153,21 +161,14 @@ ScriptableArray *TestScriptable2::ConcatArray(ScriptableInterface *array1,
                                               ScriptableInterface *array2) {
   if (array1 == NULL || array2 == NULL)
     return NULL;
-  int id;
-  Variant prototype;
-  bool is_method;
-  array1->GetPropertyInfoByName("length", &id, &prototype, &is_method);
-  size_t count1 = VariantValue<size_t>()(array1->GetProperty(id));
-  LOG("id=%d count1=%zd", id, count1);
-  array2->GetPropertyInfoByName("length", &id, &prototype, &is_method);
-  size_t count2 = VariantValue<size_t>()(array2->GetProperty(id));
-  LOG("id=%d count2=%zd", id, count2);
+  size_t count1 = VariantValue<size_t>()(array1->GetProperty("length").v());
+  size_t count2 = VariantValue<size_t>()(array2->GetProperty("length").v());
 
   Variant *new_array = new Variant[count1 + count2];
   for (size_t i = 0; i < count1; i++)
-    new_array[i] = array1->GetProperty(i);
+    new_array[i] = array1->GetPropertyByIndex(i).v();
   for (size_t i = 0; i < count2; i++)
-    new_array[i + count1] = array2->GetProperty(i);
+    new_array[i + count1] = array2->GetPropertyByIndex(i).v();
   return ScriptableArray::Create(new_array, count1 + count2);
 }
 
@@ -179,8 +180,7 @@ void TestScriptable2::SetCallback(Slot *callback) {
 std::string TestScriptable2::CallCallback(int x) {
   if (callback_) {
     Variant vx(x);
-    Variant result = callback_->Call(1, &vx);
-    return result.Print();
+    return callback_->Call(1, &vx).v().Print();
   }
   return "NO CALLBACK";
 }

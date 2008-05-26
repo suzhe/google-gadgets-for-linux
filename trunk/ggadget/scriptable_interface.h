@@ -56,18 +56,6 @@ class ScriptableInterface {
   static const uint64_t CLASS_ID = 0;
 
   /**
-   * The pseudo id for dynamic properties.
-   * @see GetPropertyInfoByName()
-   */
-  static const int kDynamicPropertyId = INT_MIN;
-
-  /**
-   * The pseudo id for constant properties.
-   * @see GetPropertyInfoByName()
-   */
-  static const int kConstantPropertyId = INT_MIN + 1;
-
-  /**
    * Gets the class id of this object. For debugging purpose only.
    */
   virtual uint64_t GetClassId() const = 0;
@@ -92,18 +80,18 @@ class ScriptableInterface {
   virtual int GetRefCount() const = 0;
 
   /**
-   * Judge if this instance is of a given class.
+   * Judges if this instance is of a given class.
    */
   virtual bool IsInstanceOf(uint64_t class_id) const = 0;
 
   /**
-   * Test if this object is 'strict', that is, not allowing the script to
+   * Tests if this object is 'strict', that is, not allowing the script to
    * assign to a previously undefined property.
    */
   virtual bool IsStrict() const = 0;
 
   /**
-   * Connect a callback which will be called when @c Ref() or @c Unref() is
+   * Connects a callback which will be called when @c Ref() or @c Unref() is
    * called.
    * @param slot the callback. The parameters of the slot are:
    *     - the reference count before change.
@@ -111,74 +99,78 @@ class ScriptableInterface {
    *       increased or decreased; or 0 if the object is about to be deleted.
    * @return the connected @c Connection.
    */
-  virtual Connection *ConnectOnReferenceChange(Slot2<void, int, int> *slot) = 0;
+  virtual Connection *ConnectOnReferenceChange(
+      Slot2<void, int, int> *slot) = 0;
+
+  /** Types of named properties returned from @c GetPropertyInfo(). */
+  enum PropertyType {
+    /** The property doesn't exist. */
+    PROPERTY_NOT_EXIST = -1,
+    /** The property always exists. It's value may change during its life. */
+    PROPERTY_NORMAL = 0,
+    /** The property always exists. It's value doesn't change. */ 
+    PROPERTY_CONSTANT,
+    /**
+     * The property is a dynamic property, which can be dynamically created
+     * and deleted after the object is created.
+     */
+    PROPERTY_DYNAMIC,
+    /** The property is a method which always exists. */
+    PROPERTY_METHOD,
+  };
 
   /**
-   * Get the info of a property by its name.
+   * Gets the info of a named property by its name.
    *
-   * Because methods are special properties, if @c name corresponds a method,
-   * a prototype of type @c Variant::TYPE_SLOT will be returned, then the
-   * caller can get the function details from @c slot_value this prototype.
+   * If the property is a method, a prototype of type @c Variant::TYPE_SLOT
+   * will be returned, then the caller can get the function details from
+   * slot value of this prototype.
    *
    * A signal property also expects a script function as the value, and thus
    * also has a prototype of type @c Variant::TYPE_SLOT.
    *
    * @param name the name of the property.
-   * @param[out] id return the property's id which can be used in later
-   *     @c GetProperty(), @c SetProperty() and @c InvokeMethod() calls.
-   *     If the returned id is @c kConstantPropertyId, the script engine
-   *     will treat the property as a constant and the value is returned
-   *     in @a prototype.
-   *     If the returned id is @c kDynamicPropertyId, the script engine
-   *     should not register the property any way, and should call
-   *     @c GetProperty or @c SetProperty immediately.
-   *     Otherwise, the value must be a @b negative number.
-   * @param[out] prototype return a prototype of the property value, from
-   *     which the script engine can get detailed information.
-   * @param[out] is_method @c true if this property corresponds a method.
-   *     It's useful to distinguish between methods and signal properties.
-   * @return @c true if the property is supported and succeeds.
+   * @param[out,optional] prototype returns a prototype of the property value,
+   *     from which the script engine can get detailed information; or returns
+   *     the property value directly if the property is a constant.
+   * @return the type of the property. If the property is known not existing,
+   *     @c PROPERTY_NOT_EXIST should be returned.
    */
-  virtual bool GetPropertyInfoByName(const char *name,
-                                     int *id, Variant *prototype,
-                                     bool *is_method) = 0;
+  virtual PropertyType GetPropertyInfo(const char *name,
+                                       Variant *prototype) = 0;
 
   /**
-   * Get the info of a property by its id.
-   * @param id if negative, it is a property id previously returned from
-   *     @c GetPropertyInfoByName(); otherwise it is the array index of a
-   *     property.
-   * @param[out] prototype return a prototype of the property value, from
-   *             which the script engine can get detailed information.
-   * @param[out] is_method true if this property corresponds a method.
-   * @param[out] name the name of the property. The returned value is a
-   *             constant string, which shall not be freed or modified.
-   * @return @c true if the property is supported and succeeds.
-   */
-  virtual bool GetPropertyInfoById(int id, Variant *prototype,
-                                   bool *is_method,
-                                   const char **name) = 0;
-
-  /**
-   * Get the value of a property by its id.
-   * @param id if negative, it is a property id previously returned from
-   *     @c GetPropertyInfoByName(); otherwise it is the array index of a
-   *     property.
+   * Gets the value of a named property.
+   * @param name the name of the property.
    * @return the property value, or a @c Variant of type @c Variant::TYPE_VOID
-   *     if this property is not supported,
+   *     if this property is not supported.
    */
-  virtual Variant GetProperty(int id) = 0;
+  virtual ResultVariant GetProperty(const char *name) = 0;
 
   /**
-   * Set the value of a property by its id.
-   * @param id if negative, it is a property id previously returned from
-   *     @c GetPropertyInfoByName(); otherwise it is the array index of a
-   *     property.
+   * Sets the value of a named property.
+   * @param name the name of the property.
    * @param value the property value. The type must be compatible with the
-   *     prototype returned from @c GetPropertyInfoByName().
+   *     prototype returned from @c GetPropertyInfo().
    * @return @c true if the property is supported and succeeds.
    */
-  virtual bool SetProperty(int id, const Variant &value) = 0;
+  virtual bool SetProperty(const char *name, const Variant &value) = 0;
+
+  /**
+   * Gets the value of a indexed property.
+   * @param index the array index of the property.
+   * @return the property value, or a @c Variant of type @c Variant::TYPE_VOID
+   *     if this property is not supported.
+   */
+  virtual ResultVariant GetPropertyByIndex(int index) = 0;
+
+  /**
+   * Sets the value of a indexed property.
+   * @param index the array index of the property.
+   * @param value the property value.
+   * @return @c true if the property is supported and succeeds.
+   */
+  virtual bool SetPropertyByIndex(int index, const Variant &value) = 0;
 
   /**
    * Gets and clears the current pending exception.
@@ -190,43 +182,24 @@ class ScriptableInterface {
    */
   virtual ScriptableInterface *GetPendingException(bool clear) = 0;
 
-  /**
-   * The first param is the return value of this call back. Return false if the
-   * call back do not want to enumerate any more.
-   * The second param is the id of the property in the ScriptableInterface
-   * object.
-   * The third and fourth param is the name and the value of the property.
-   * And the last param indicate that if the property is a method.
-   */
-  typedef Slot4<bool, int, const char *, const Variant &, bool>
+  typedef Slot3<bool, const char *, PropertyType, const Variant &>
       EnumeratePropertiesCallback;
   /**
-   * Enumerate all known properties.
+   * Enumerates all known properties.
    * @param callback it will be called for each property. The parameters are
-   *     id, name, current value and a bool indicating if the property is a
-   *     method. The callback should return @c false if it doesn't want to
-   *     continue. The callback will be automatically deleted before this
-   *     method returns, so the caller can use @c NewSlot for the parameter.
+   *     const char *name, PropertyType type, const Variant &value.
+   *     The callback should return @c false if it doesn't want to continue.
    * @return @c false if the callback returns @c false.
    */
   virtual bool EnumerateProperties(EnumeratePropertiesCallback *callback) = 0;
 
-  /**
-   * The first param is the return value of this call back. Return false if the
-   * call back do not want to enumerate any more.
-   * The second param is the index of the element in the ScriptableInterface
-   * object.
-   * The third param is the value of the element.
-   */
   typedef Slot2<bool, int, const Variant &> EnumerateElementsCallback;
   /**
-   * Enumerate all known elements (i.e. properties that can be accessed by
+   * Enumerates all known elements (i.e. properties that can be accessed by
    * non-negative array indexes).
    * @param callback it will be called for each property. The parameters are
-   *     id, and current value. The callback should return @c false if it
-   *     doesn't want to continue. The callback will be automatically deleted
-   *     before this method returns, so the caller can use @c NewSlot for
-   *     the parameter.
+   *     int index, const Variant &value. The callback should return @c false
+   *     if it doesn't want to continue.
    * @return @c false if the callback returns @c false.
    */
   virtual bool EnumerateElements(EnumerateElementsCallback *callback) = 0;

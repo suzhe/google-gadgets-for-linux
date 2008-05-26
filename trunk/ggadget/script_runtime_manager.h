@@ -49,15 +49,6 @@ class ScriptRuntimeManager {
    */
   ScriptContextInterface *CreateScriptContext(const char *tag_name);
 
-  /**
-   * Connect a error reporter to the error reporter signal.
-   * After connected, the reporter will receive all Script error reports.
-   * @param reporter the error reporter.
-   * @return the signal @c Connection.
-   */
-  Connection *
-  ConnectErrorReporter(ScriptRuntimeInterface::ErrorReporter *reporter);
-
  public:
   /**
    * Get the singleton of ScriptRuntimeManager.

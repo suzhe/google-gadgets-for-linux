@@ -99,7 +99,7 @@ class QtSystemBrowseForFileHelper {
     if (multiple) dialog.setFileMode(QFileDialog::ExistingFiles);
     if (filter && *filter) {
       size_t len = strlen(filter);
-      char *copy = static_cast<char*>(malloc(len + 2));
+      char *copy = new char[len + 2];
       memcpy(copy, filter, len + 1);
       copy[len] = '|';
       copy[len + 1] = '\0';
@@ -126,7 +126,7 @@ class QtSystemBrowseForFileHelper {
         }
         i++;
       }
-      free(copy);
+      delete [] copy;
       dialog.setFilters(filters);
     }
     if (dialog.exec()) {

@@ -63,7 +63,7 @@ static JSBool GetLine(FILE *file, char *buffer, int size, const char *prompt) {
     strncpy(buffer, linep, size - 2);
     free(linep);
     buffer[size - 2] = '\0';
-    strcat(buffer, "\n");
+    strncat(buffer, "\n", 1);
   } else {
     if (!fgets(buffer, size, file))
       return JS_FALSE;

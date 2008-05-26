@@ -282,9 +282,10 @@ class ZipFileManager::Impl {
       result = false;
     }
     fclose(out_fp);
+    result = result && ferror(out_fp) == 0;
 
     if (!result)
-      ::unlink(into_file->c_str());
+      unlink(into_file->c_str());
 
     return result;
   }

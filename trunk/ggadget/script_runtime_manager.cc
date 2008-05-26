@@ -30,7 +30,6 @@ class ScriptRuntimeManager::Impl {
     if (GetScriptRuntime(tag_name) != NULL)
       return false;
     runtimes_.push_back(std::make_pair(std::string(tag_name), runtime));
-    runtime->ConnectErrorReporter(NewSlot(this, &Impl::ErrorReporterCallback));
     return true;
   }
 
@@ -49,18 +48,7 @@ class ScriptRuntimeManager::Impl {
     return NULL;
   }
 
-  void ErrorReporterCallback(const char *error) {
-    error_reporter_signal_(error);
-  }
-
-  Connection *
-  ConnectErrorReporter(ScriptRuntimeInterface::ErrorReporter *reporter) {
-    return error_reporter_signal_.Connect(reporter);
-  }
-
   std::vector<std::pair<std::string, ScriptRuntimeInterface *> > runtimes_;
-  Signal1<void, const char *> error_reporter_signal_;
-
   static ScriptRuntimeManager *manager_;
 };
 
@@ -86,11 +74,6 @@ bool ScriptRuntimeManager::RegisterScriptRuntime(
 ScriptContextInterface *
 ScriptRuntimeManager::CreateScriptContext(const char *tag_name) {
   return impl_->CreateScriptContext(tag_name);
-}
-
-Connection *ScriptRuntimeManager::ConnectErrorReporter(
-    ScriptRuntimeInterface::ErrorReporter *reporter) {
-  return impl_->ConnectErrorReporter(reporter);
 }
 
 ScriptRuntimeManager *ScriptRuntimeManager::get() {

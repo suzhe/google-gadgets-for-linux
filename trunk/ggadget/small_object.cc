@@ -13,8 +13,6 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id$
-
 // Modified by Google.
 
 #include "small_object.h"
@@ -23,7 +21,11 @@
 #include <vector>
 #include <bitset>
 
-//#define DO_EXTRA_LOKI_TESTS
+#include "logger.h"
+
+#ifdef _DEBUG
+#define DO_EXTRA_LOKI_TESTS
+#endif
 //#define USE_NEW_TO_ALLOCATE
 
 #ifdef DO_EXTRA_LOKI_TESTS
@@ -228,6 +230,12 @@ namespace ggadget
         Chunk * deallocChunk_;
         /// Pointer to the only empty Chunk if there is one, else NULL.
         Chunk * emptyChunk_;
+
+#ifdef _DEBUG
+        size_t allocCount_;
+        size_t deallocCount_;
+        void ReportStat();
+#endif
 
     public:
         /// Create a FixedAllocator which manages blocks of 'blockSize' size.
@@ -549,6 +557,10 @@ FixedAllocator::FixedAllocator()
     , allocChunk_( NULL )
     , deallocChunk_( NULL )
     , emptyChunk_( NULL )
+#ifdef _DEBUG
+    , allocCount_( 0 )
+    , deallocCount_( 0 )
+#endif
 {
 }
 
@@ -563,6 +575,15 @@ FixedAllocator::~FixedAllocator()
     for ( ChunkIter i( chunks_.begin() ); i != chunks_.end(); ++i )
        i->Release();
 }
+
+#ifdef _DEBUG
+void FixedAllocator::ReportStat() {
+    size_t active = allocCount_ - deallocCount_;
+    DLOG("FixedAllocator Stat: %zu %zu %zu %zu %zu %lf",
+         blockSize_, allocCount_, deallocCount_, active, chunks_.size(), 
+         static_cast<double>(active) / (chunks_.size() * numBlocks_));
+}
+#endif
 
 // FixedAllocator::Initialize -------------------------------------------------
 
@@ -872,6 +893,11 @@ void * FixedAllocator::Allocate( void )
     assert( ( NULL == emptyChunk_ ) || ( emptyChunk_->HasAvailable( numBlocks_ ) ) );
     assert( CountEmptyChunks() < 2 );
 
+#ifdef _DEBUG
+    if (++allocCount_ % 1000 == 0)
+        ReportStat();
+#endif
+
     return place;
 }
 
@@ -907,6 +933,10 @@ bool FixedAllocator::Deallocate( void * p, Chunk * hint )
     DoDeallocate(p);
     assert( CountEmptyChunks() < 2 );
 
+#ifdef _DEBUG
+    if (++deallocCount_ % 1000 == 0)
+        ReportStat();
+#endif
     return true;
 }
 

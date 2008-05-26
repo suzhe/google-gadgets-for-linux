@@ -140,7 +140,7 @@ std::string GetVariantSignature(const Variant &value) {
       {
         ScriptableInterface *scriptable =
             VariantValue<ScriptableInterface*>()(value);
-        Variant length = GetPropertyByName(scriptable, "length");
+        Variant length = scriptable->GetProperty("length").v();
         if (length.type() != Variant::TYPE_VOID) {
           /* firstly treat as an array. */
           ArrayIterator iterator;
@@ -443,9 +443,12 @@ class DBusMarshaller::Impl {
     ~DictIterator() {
       delete marshaller_;
     }
-    bool Callback(int id, const char *name,
-                  const Variant &value, bool is_method) {
-      if (is_method) return true;  /* ignore method. */
+    bool Callback(const char *name, ScriptableInterface::PropertyType type,
+                  const Variant &value) {
+      if (type == ScriptableInterface::PROPERTY_METHOD) {
+        // Methods are ignored.
+        return true;
+      }
       Argument key_arg(key_signature_.c_str(), Variant(name));
       Argument value_arg(value_signature_.c_str(), value);
       Impl *sub = new Impl(marshaller_->iter_, DBUS_TYPE_DICT_ENTRY, NULL);

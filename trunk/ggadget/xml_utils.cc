@@ -38,14 +38,9 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
                                   const char *filename, int row, int column,
                                   const char *name, const char *value,
                                   const char *tag_name) {
-  int id;
   Variant prototype;
-  bool is_method;
-  bool result = scriptable->GetPropertyInfoByName(name, &id,
-                                                  &prototype, &is_method);
-  if (!result || is_method ||
-      id == ScriptableInterface::kConstantPropertyId ||
-      id == ScriptableInterface::kDynamicPropertyId) {
+  if (scriptable->GetPropertyInfo(name, &prototype) !=
+      ScriptableInterface::PROPERTY_NORMAL) {
     LOG("%s:%d:%d Can't set property %s for %s", filename, row, column,
         name, tag_name);
     return;
@@ -129,7 +124,7 @@ static void SetScriptableProperty(ScriptableInterface *scriptable,
       return;
   }
 
-  if (!scriptable->SetProperty(id, property_value))
+  if (!scriptable->SetProperty(name, property_value))
     LOG("%s:%d:%d: Can't set readonly property %s for %s",
         filename, row, column, name, tag_name);
 }

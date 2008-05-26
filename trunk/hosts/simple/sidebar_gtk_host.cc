@@ -134,8 +134,6 @@ class SidebarGtkHost::Impl {
 #endif
 
     ASSERT(gadget_manager_);
-    ScriptRuntimeManager::get()->ConnectErrorReporter(
-        NewSlot(this, &Impl::ReportScriptError));
     view_host_ = new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
                                     decorated, false, false, view_debug_mode_);
     view_host_->ConnectOnBeginResizeDrag(
@@ -700,9 +698,10 @@ class SidebarGtkHost::Impl {
       return true;
     }
 
-    Gadget *gadget =
-        new Gadget(owner_, path, options_name, instance_id,
-                   gadget_manager_->IsGadgetInstanceTrusted(instance_id));
+    Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
+                                // We still don't trust any user added gadgets
+                                // at gadget runtime level.
+                                false);
     GadgetsMap::iterator it = gadgets_.find(instance_id);
 
     if (!gadget->IsValid()) {
@@ -1067,11 +1066,6 @@ class SidebarGtkHost::Impl {
       default: break;
     }
     LOG("%s%s", str_level, message);
-  }
-
-  void ReportScriptError(const char *message) {
-    DebugOutput(DEBUG_ERROR,
-                (std::string("Script error: " ) + message).c_str());
   }
 
   void LoadGadgets() {

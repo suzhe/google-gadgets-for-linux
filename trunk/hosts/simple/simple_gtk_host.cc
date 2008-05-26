@@ -79,8 +79,6 @@ class SimpleGtkHost::Impl {
       expanded_original_(NULL),
       expanded_popout_(NULL) {
     ASSERT(gadget_manager_);
-    ScriptRuntimeManager::get()->ConnectErrorReporter(
-        NewSlot(this, &Impl::ReportScriptError));
   }
 
   ~Impl() {
@@ -216,9 +214,10 @@ class SimpleGtkHost::Impl {
       return true;
     }
 
-    Gadget *gadget = new Gadget(
-        owner_, path, options_name, instance_id,
-        gadget_manager_->IsGadgetInstanceTrusted(instance_id));
+    Gadget *gadget = new Gadget(owner_, path, options_name, instance_id,
+                                // We still don't trust any user added gadgets
+                                // at gadget runtime level.
+                                false);
 
     if (!gadget->IsValid()) {
       LOG("Failed to load gadget %s", path);
@@ -325,11 +324,6 @@ class SimpleGtkHost::Impl {
     }
     // TODO: actual debug console.
     LOG("%s%s", str_level, message);
-  }
-
-  void ReportScriptError(const char *message) {
-    DebugOutput(DEBUG_ERROR,
-                (std::string("Script error: " ) + message).c_str());
   }
 
   void LoadGadgets() {

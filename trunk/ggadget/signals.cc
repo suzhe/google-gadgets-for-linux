@@ -162,7 +162,7 @@ bool Signal::HasActiveConnections() const {
   return false;
 }
 
-Variant Signal::Emit(int argc, const Variant argv[]) const {
+ResultVariant Signal::Emit(int argc, const Variant argv[]) const {
   bool death_flag = false;
   bool *death_flag_ptr = &death_flag;
   if (!impl_->death_flag_ptr_) {
@@ -177,7 +177,7 @@ Variant Signal::Emit(int argc, const Variant argv[]) const {
 #endif
   }
 
-  Variant result(GetReturnType());
+  ResultVariant result = ResultVariant(Variant(GetReturnType()));
   for (Impl::Connections::const_iterator it = impl_->connections_.begin();
        !*death_flag_ptr && it != impl_->connections_.end(); ++it) {
     Connection *connection = *it;

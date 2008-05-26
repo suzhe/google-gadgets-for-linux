@@ -14,75 +14,48 @@
   limitations under the License.
 */
 
+#include "js_script_runtime.h"
+
 #include <ggadget/logger.h>
 #include <ggadget/signals.h>
-#include "js_script_runtime.h"
 #include "js_script_context.h"
 
 namespace ggadget {
 namespace smjs {
 
-static const uint32 kDefaultContextSize = 64 * 1024 * 1024;
+static const uint32 kDefaultContextSize = 32 * 1024 * 1024;
 static const uint32 kDefaultStackTrunkSize = 4096;
 
-class JSScriptRuntime::Impl {
- public:
-  Impl()
-      : runtime_(JS_NewRuntime(kDefaultContextSize)) {
-    JS_SetRuntimePrivate(runtime_, this);
-    ASSERT(runtime_);
-  }
-
-  ~Impl() {
-    JS_DestroyRuntime(runtime_);
-  }
-
-  static void ReportError(JSContext *cx, const char *message,
-                          JSErrorReport *report) {
-    JSRuntime *js_runtime = JS_GetRuntime(cx);
-    ASSERT(js_runtime);
-    Impl *this_p = reinterpret_cast<Impl *>(JS_GetRuntimePrivate(js_runtime));
-    ASSERT(this_p);
-
-    char lineno_buf[16];
-    snprintf(lineno_buf, sizeof(lineno_buf), "%d", report->lineno);
-    std::string error_report;
-    if (report->filename)
-      error_report = report->filename;
-    error_report += ':';
-    error_report += lineno_buf;
-    error_report += ": ";
-    error_report += message;
-    if (!this_p->error_reporter_signal_.HasActiveConnections())
-      LOG("No error reporter: %s", error_report.c_str());
-    this_p->error_reporter_signal_(error_report.c_str());
-  }
-
-  Signal1<void, const char *> error_reporter_signal_;
-  JSRuntime *runtime_;
-};
+#ifdef _DEBUG
+static JSBool GCCallback(JSContext *cx, JSGCStatus status) {
+  DLOG("***********GC: status=%d", status);
+  return JS_TRUE;
+}
+#endif
 
 JSScriptRuntime::JSScriptRuntime()
-    : impl_(new Impl) {
+    : runtime_(JS_NewRuntime(kDefaultContextSize)) {
+  JS_SetRuntimePrivate(runtime_, this);
+  ASSERT(runtime_);
+  // Use the similar policy as Mozilla Gecko that unconstrains the runtime's
+  // threshold on nominal heap size, to avoid triggering GC too often.
+  JS_SetGCParameter(runtime_, JSGC_MAX_BYTES, 0xffffffff);
+#ifdef _DEBUG
+  JS_SetGCCallbackRT(runtime_, GCCallback);
+#endif
 }
 
 JSScriptRuntime::~JSScriptRuntime() {
-  delete impl_;
+  JS_DestroyRuntime(runtime_);
 }
 
 ScriptContextInterface *JSScriptRuntime::CreateContext() {
-  JSContext *context = JS_NewContext(impl_->runtime_, kDefaultStackTrunkSize);
+  JSContext *context = JS_NewContext(runtime_, kDefaultStackTrunkSize);
   ASSERT(context);
   if (!context)
     return NULL;
-  JS_SetErrorReporter(context, Impl::ReportError);
   JSScriptContext *result = new JSScriptContext(this, context);
   return result;
-}
-
-Connection *JSScriptRuntime::ConnectErrorReporter(ErrorReporter *reporter) {
-  printf("ConnectErrorReporter: %p\n", reporter); fflush(stdout);
-  return impl_->error_reporter_signal_.Connect(reporter);
 }
 
 void JSScriptRuntime::DestroyContext(JSScriptContext *context) {

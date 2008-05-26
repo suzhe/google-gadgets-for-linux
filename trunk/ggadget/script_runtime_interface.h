@@ -35,25 +35,11 @@ class ScriptRuntimeInterface {
   virtual ~ScriptRuntimeInterface() { }
 
   /**
-   * Create a new @c ScriptContextInterface instance.
+   * Creates a new @c ScriptContextInterface instance.
    * Must call @c DestroyContext after use.
    * @return the created context.
    */
   virtual ScriptContextInterface *CreateContext() = 0;
-
-  /**
-   * An @c ErrorReporter can be connected to the error reporter signal.
-   * It will receive a message string when it is called.
-   */
-  typedef Slot1<void, const char *> ErrorReporter;
-
-  /**
-   * Connect a error reporter to the error reporter signal.
-   * After connected, the reporter will receive all Script error reports.
-   * @param reporter the error reporter.
-   * @return the signal @c Connection.
-   */
-  virtual Connection *ConnectErrorReporter(ErrorReporter *reporter) = 0;
 };
 
 } // namespace ggadget

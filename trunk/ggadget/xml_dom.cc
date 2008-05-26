@@ -685,7 +685,9 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
                      NewSlot(implicit_cast<DOMNodeInterface *>(this),
                              &DOMNodeInterface::GetNodeType),
                      NULL);
-    RegisterReadonlySimpleProperty("parentNode", &impl_->parent_);
+    // Don't register parentNode as a constant to prevent circular refs.
+    RegisterProperty("parentNode",
+                     NewSlot(this, &DOMNodeBase::GetParentNode), NULL);
     RegisterProperty("childNodes", NewSlot(impl_, &DOMNodeImpl::GetChildNodes),
                      NULL);
     RegisterProperty("firstChild", NewSlot(impl_, &DOMNodeImpl::GetFirstChild),
@@ -700,7 +702,9 @@ class DOMNodeBase : public ScriptableHelper<Interface>,
                      NULL);
     RegisterProperty("attributes", NewSlot(this, &DOMNodeBase::GetAttributes),
                      NULL);
-    RegisterConstant("ownerDocument", impl_->owner_document_);
+    // Don't register ownerDocument as a constant to prevent circular refs.
+    RegisterProperty("ownerDocument",
+                     NewSlot(this, &DOMNodeBase::GetOwnerDocument), NULL);
     RegisterProperty("prefix", NewSlot(this, &DOMNodeBase::GetPrefix),
                      NewSlot(this, &DOMNodeBase::SetPrefix));
     RegisterProperty("text", NewSlot(this, &DOMNodeBase::GetTextContent),

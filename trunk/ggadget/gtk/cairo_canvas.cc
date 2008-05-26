@@ -20,13 +20,13 @@
 
 #include <cmath>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <pango/pango.h>
 #include <pango/pangocairo.h>
 #include <ggadget/clip_region.h>
 #include <ggadget/logger.h>
 #include <ggadget/math_utils.h>
-#include <ggadget/scoped_ptr.h>
 #include <ggadget/signals.h>
 #include <ggadget/slot.h>
 #include "cairo_graphics.h"
@@ -319,7 +319,7 @@ class CairoCanvas::Impl {
     } else {
       // We will use newtext as the content of the layout,
       // because we have to display the trimmed text.
-      scoped_array<char> newtext(new char[strlen(text) + 4]);
+      std::string newtext;
 
       // Set vertical alignment.
       if (valign == VALIGN_MIDDLE)
@@ -338,15 +338,15 @@ class CairoCanvas::Impl {
         pango_cairo_show_layout(cr_, layout);
 
         // The newtext contains the text that will be shown in the last line.
-        strcpy(newtext.get(), text + last_line_index);
+        newtext = text + last_line_index;
         real_y += line_height * (displayed_lines - 1);
 
       } else {
         // When there is only a single line, the newtext equals text.
-        strcpy(newtext.get(), text);
+        newtext = text;
       }
       // Set the newtext as the content of the layout.
-      pango_layout_set_text(layout, newtext.get(), -1);
+      pango_layout_set_text(layout, newtext.c_str(), -1);
 
       // This record the width of the ellipsis text.
       int ellipsis_width = 0;
@@ -377,7 +377,7 @@ class CairoCanvas::Impl {
           pango_layout_set_text(layout, kEllipsisText, -1);
           pango_layout_get_pixel_extents(layout, NULL, &pos);
           ellipsis_width = pos.width;
-          pango_layout_set_text(layout, newtext.get(), -1);
+          pango_layout_set_text(layout, newtext.c_str(), -1);
         }
 
         // Figure out how many characters can be displayed.
@@ -387,12 +387,12 @@ class CairoCanvas::Impl {
         do {
           cluster_index.push_back(pango_layout_iter_get_index(it));
         } while (pango_layout_iter_next_cluster(it));
-        cluster_index.push_back(strlen(newtext.get()));
+        cluster_index.push_back(newtext.size());
         std::sort(cluster_index.begin(), cluster_index.end());
 
         std::vector<int>::iterator cluster_it = cluster_index.begin();
         for (; cluster_it != cluster_index.end(); ++cluster_it) {
-          pango_layout_set_text(layout, newtext.get(), *cluster_it);
+          pango_layout_set_text(layout, newtext.c_str(), *cluster_it);
           pango_layout_get_pixel_extents(layout, NULL, &pos);
           if (pos.width > width - ellipsis_width)
             break;
@@ -405,8 +405,7 @@ class CairoCanvas::Impl {
         // Get the text that will finally be displayed.
         if (trimming == TRIMMING_CHARACTER) {
           // In "character", just show the characters before the index.
-          pango_layout_set_text(layout, newtext.get(), conceal_index);
-
+          pango_layout_set_text(layout, newtext.c_str(), conceal_index);
         } else {
           // In "word" or "word-ellipsis" trimming, we have to find out where
           // last word stops. If we can't find out a reasonable position, then
@@ -414,21 +413,22 @@ class CairoCanvas::Impl {
           PangoLogAttr *log_attrs;
           int n_attrs;
           pango_layout_get_log_attrs(layout, &log_attrs, &n_attrs);
-          int off = g_utf8_pointer_to_offset(newtext.get(),
-                                             newtext.get() + conceal_index);
+          int off = g_utf8_pointer_to_offset(newtext.c_str(),
+                                             newtext.c_str() + conceal_index);
           while (off > 0 && !log_attrs[off].is_word_end &&
                  !log_attrs[off].is_word_start)
             --off;
-          if (off > 0)
-            conceal_index = g_utf8_offset_to_pointer(newtext.get(), off) -
-                                                     newtext.get();
-            newtext[conceal_index] = 0;
+          if (off > 0) {
+            conceal_index = g_utf8_offset_to_pointer(newtext.c_str(), off) -
+                                                     newtext.c_str();
+          }
+          newtext.erase(conceal_index);
 
           // In word-ellipsis, we have to append the ellipsis manualy.
           if (trimming == TRIMMING_WORD_ELLIPSIS)
-            strcpy(newtext.get() + conceal_index, kEllipsisText);
+            newtext.append(kEllipsisText);
 
-          pango_layout_set_text(layout, newtext.get(), -1);
+          pango_layout_set_text(layout, newtext.c_str(), -1);
         }
 
         // We also have to do the horizontal alignment.
