@@ -20,6 +20,7 @@
 #include <jsapi.h>
 #include <string>
 
+#include <ggadget/common.h>
 #include <ggadget/variant.h>
 
 namespace ggadget {
@@ -93,6 +94,18 @@ JSFunction *CompileFunction(JSContext *cx, const char *script,
  */
 JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
                       const char *filename, int lineno, jsval *rval);
+
+/**
+ * Checks if there is pending exception. If there is, convert it into jsval
+ * and throws it into the script engine.
+ */
+JSBool CheckException(JSContext *cx, ScriptableInterface *scriptable);
+
+/**
+ * Report an exception into the script engine.
+ */
+JSBool RaiseException(JSContext *cx, const char *format, ...)
+    PRINTF_ATTRIBUTE(2, 3);
 
 } // namespace smjs
 } // namespace ggadget

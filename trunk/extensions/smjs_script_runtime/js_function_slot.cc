@@ -69,8 +69,7 @@ ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
     return ResultVariant(return_value);
 
   if (!function_) {
-    // Don't use JS_ReportError(context_, ...) because the context_ may be
-    // invalid now.
+    // Don't raise exception because the context_ may be invalid now.
     LOG("Finalized JavaScript function still be called");
     return ResultVariant(return_value);
   }
@@ -84,7 +83,7 @@ ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
     js_args.reset(new jsval[argc]);
     for (int i = 0; i < argc; i++) {
       if (!ConvertNativeToJS(context_, argv[i], &js_args[i])) {
-        JS_ReportError(context_,
+        RaiseException(context_,
             "Failed to convert argument %d(%s) of function(%s) to jsval",
             i, argv[i].Print().c_str(), function_info_.c_str());
         return ResultVariant(return_value);
@@ -96,8 +95,7 @@ ResultVariant JSFunctionSlot::Call(int argc, const Variant argv[]) const {
   if (JS_CallFunctionValue(context_, NULL, OBJECT_TO_JSVAL(function_),
                            argc, js_args.get(), &rval) &&
       !ConvertJSToNative(context_, NULL, return_value, rval, &return_value)) {
-    JS_ReportError(
-        context_,
+    RaiseException(context_,
         "Failed to convert JS function(%s) return value(%s) to native",
         function_info_.c_str(), PrintJSValue(context_, rval).c_str());
   }

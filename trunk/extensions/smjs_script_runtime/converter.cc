@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include "converter.h"
+
 #include <cmath>
 #include <jsobj.h>
 #include <jsfun.h>
@@ -22,7 +24,6 @@
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/string_utils.h>
 #include <ggadget/unicode_utils.h>
-#include "converter.h"
 #include "js_function_slot.h"
 #include "js_native_wrapper.h"
 #include "js_script_context.h"
@@ -381,7 +382,7 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
 
       if (argc > *expected_argc || argc < min_argc) {
         // Argc mismatch.
-        JS_ReportError(cx, "Wrong number of arguments for function(%s): %u "
+        RaiseException(cx, "Wrong number of arguments for function(%s): %u "
                        "(expected: %u, at least: %u)",
                        name, argc, *expected_argc, min_argc);
         return JS_FALSE;
@@ -416,7 +417,7 @@ JSBool ConvertJSArgsToNative(JSContext *cx, NativeJSWrapper *owner,
             FreeNativeValue((*params)[j]);
           delete [] *params;
           *params = NULL;
-          JS_ReportError(cx,
+          RaiseException(cx,
                "Failed to convert argument %d(%s) of function(%s) to native",
                i, PrintJSValue(cx, argv[i]).c_str(), name);
           return JS_FALSE;
@@ -670,8 +671,8 @@ JSFunction *CompileFunction(JSContext *cx, const char *script,
                                 utf16_string.c_str(), utf16_string.size(),
                                 filename, lineno);
   } else {
-    JS_ReportError(cx, "Warning: script %s contains invalid UTF-8 sequences "
-                   "and will be treated as ISO8859-1", filename);
+    JS_ReportWarning(cx, "Script %s contains invalid UTF-8 sequences "
+                     "and will be treated as ISO8859-1", filename);
     return JS_CompileFunction(cx, NULL, NULL, 0, NULL,
                               massaged_script.c_str(), massaged_script.size(),
                               filename, lineno);
@@ -691,12 +692,48 @@ JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
                                utf16_string.c_str(), utf16_string.size(),
                                filename, lineno, rval);
   } else {
-    JS_ReportError(cx, "Warning: script %s contains invalid UTF-8 sequences "
-                   "and will be treated as ISO8859-1", filename);
+    JS_ReportWarning(cx, "Script %s contains invalid UTF-8 sequences "
+                     "and will be treated as ISO8859-1", filename);
     return JS_EvaluateScript(cx, object,
                              massaged_script.c_str(), massaged_script.size(),
                              filename, lineno, rval);
   }
+}
+
+JSBool CheckException(JSContext *cx, ScriptableInterface *scriptable) {
+  ScriptableInterface *exception = scriptable->GetPendingException(true);
+  if (!exception)
+    return JS_TRUE;
+
+  jsval js_exception;
+  if (!ConvertNativeToJSObject(cx, Variant(exception), &js_exception)) {
+    JS_ReportError(cx, "Failed to convert native exception to jsval");
+    return JS_FALSE;
+  }
+
+  JS_SetPendingException(cx, js_exception);
+  return JS_FALSE;
+}
+
+// This dummy JSErrorCallback converts a error message into an exception.
+// It's better than JS_SetPendingException() because it will generate a
+// full error report with the current file name and line number.
+static const JSErrorFormatString *ErrorCallback(void *, const char *,
+                                                const uintN) {
+  static const JSErrorFormatString kErrorFormatString = {
+    "{0}", 1,
+    0, // JSEXN_ERR, not defined in old version of js.
+  };
+  return &kErrorFormatString;
+}
+
+JSBool RaiseException(JSContext *cx, const char *format, ...) {
+  va_list ap;
+  va_start(ap, format);
+  std::string message = StringVPrintf(format, ap);
+  va_end(ap);
+  JS_ReportErrorNumber(cx, ErrorCallback, NULL, 1, message.c_str());
+  return JS_FALSE;
 }
 
 } // namespace smjs
