@@ -143,8 +143,8 @@ class DirFileManager::Impl {
     }
 
     bool result = (fwrite(data.c_str(), data.length(), 1, datafile) == 1);
-    fclose(datafile);
-    result = result && ferror(datafile) == 0;
+    // fclose() is placed first to ensure it's always called.
+    result = (fclose(datafile) == 0 && result);
     if (!result) {
       // Remove the file if error occured during writing.
       LOG("Error writing to file %s", path.c_str());

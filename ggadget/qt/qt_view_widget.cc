@@ -24,7 +24,7 @@
 #include <ggadget/qt/qt_menu.h>
 #include "qt_view_widget.h"
 
-#ifdef GGL_USE_X11
+#ifdef HAVE_X11
 #include <QtGui/QX11Info>
 #include <QtGui/QBitmap>
 #include <X11/extensions/shape.h>
@@ -403,7 +403,7 @@ void QtViewWidget::EnableInputShapeMask(bool enable) {
 }
 
 void QtViewWidget::SetInputMask(QPixmap *pixmap) {
-#ifdef GGL_USE_X11
+#ifdef HAVE_X11
   if (!pixmap) {
     XShapeCombineMask(QX11Info::display(),
                       winId(),
@@ -424,7 +424,7 @@ void QtViewWidget::SetInputMask(QPixmap *pixmap) {
 }
 
 void QtViewWidget::SkipTaskBar() {
-#ifdef GGL_USE_X11
+#ifdef HAVE_X11
   Display *dpy = QX11Info::display();
   Atom net_wm_state_skip_taskbar=XInternAtom(dpy, "_NET_WM_STATE_SKIP_TASKBAR",
                                              False);

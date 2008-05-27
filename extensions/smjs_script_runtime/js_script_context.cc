@@ -563,10 +563,10 @@ JSBool JSScriptContext::OperationCallback(JSContext *cx) {
 
   // Trigger GC on certain conditions.
   JSRuntime *rt = cx->runtime;
-  size_t bytes = rt->gcBytes;
-  size_t last_bytes = rt->gcLastBytes;
+  uint32 bytes = rt->gcBytes;
+  uint32 last_bytes = rt->gcLastBytes;
   if (bytes > 8192 && bytes / 16 > last_bytes) {
-    DLOG("GC Triggered: gcBytes=%zu gcLastBytes=%zu gcMaxBytes=%u "
+    DLOG("GC Triggered: gcBytes=%u gcLastBytes=%u gcMaxBytes=%u "
          "gcMaxMallocBytes=%u", bytes, last_bytes, rt->gcMaxBytes,
          rt->gcMaxMallocBytes);
     JS_GC(cx);

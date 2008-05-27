@@ -281,8 +281,8 @@ class ZipFileManager::Impl {
           relative_path.c_str(), base_path_.c_str());
       result = false;
     }
-    fclose(out_fp);
-    result = result && ferror(out_fp) == 0;
+    // fclose() is placed first to ensure it's always called.
+    result = (fclose(out_fp) == 0 && result);
 
     if (!result)
       unlink(into_file->c_str());

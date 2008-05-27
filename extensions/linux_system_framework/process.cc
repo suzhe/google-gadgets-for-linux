@@ -17,6 +17,11 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#ifdef HAVE_X11
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#endif
+
 #include "process.h"
 #include "machine.h"
 
@@ -96,9 +101,77 @@ ProcessesInterface *Process::EnumerateProcesses() {
   return new Processes;
 }
 
+#ifdef HAVE_X11
+
+static int IgnoreXError(Display *display, XErrorEvent *event) {
+  DLOG("XError: %lu %d %d %d\n", event->serial, event->error_code,
+       event->request_code, event->minor_code);
+  return 0;
+}
+
+static int GetWindowPID(Display *display, Window window, Atom atom) {
+  unsigned char *data = NULL;
+  Atom type;
+  int format;
+  unsigned long count, after;
+  XGetWindowProperty(display, window, atom, 0, 1, False, XA_CARDINAL,
+                     &type, &format, &count, &after, &data);
+  int pid = -1;
+  if (data) {
+    if (format == 32 && count == 1 && after == 0)
+      pid = *reinterpret_cast<int32_t *>(data);
+    XFree(data);
+  }
+  return pid;
+}
+
 ProcessInfoInterface *Process::GetForeground() {
-  // TODO: implement this
-  return NULL;
+  int pid = -1;
+  int (*old_error_handler)(Display *, XErrorEvent *) =
+      XSetErrorHandler(IgnoreXError);
+  Display *display = XOpenDisplay(NULL);
+  if (display) {
+    // See http://standards.freedesktop.org/wm-spec/wm-spec-1.3.html#id2507760.
+    Atom pid_atom = XInternAtom(display, "_NET_WM_PID", True);
+    if (pid_atom != None) {
+      Window focused;
+      int revert_to;
+      XGetInputFocus(display, &focused, &revert_to);
+      if (focused != None) {
+        // Walk up the window tree to find a window with _WM_NET_PID property.
+        Window pid_window = focused;
+        Window parent, root;
+        Window *children = NULL;
+        unsigned int nchildren;
+        while (true) {
+          pid = GetWindowPID(display, pid_window, pid_atom);
+          if (pid != -1)
+            break;
+          if (!XQueryTree(display, pid_window, &root, &parent, &children,
+                          &nchildren))
+            break;
+          if (children)
+            XFree(children);
+          if (parent == None || parent == root)
+            break;
+          pid_window = parent;
+        }
+        // Can't find a correct focused window in parents. try children.
+        if (pid == -1 &&
+            XQueryTree(display, focused, &root, &parent, &children,
+                       &nchildren) &&
+            children) {
+          for (unsigned int i = 0; i < nchildren && pid == -1; ++i)
+            pid = GetWindowPID(display, children[i], pid_atom);
+          XFree(children);
+        }
+      }
+    }
+    XCloseDisplay(display);
+  }
+
+  XSetErrorHandler(old_error_handler);
+  return pid == -1 ? NULL : GetInfo(pid); 
 }
 
 ProcessInfoInterface *Process::GetInfo(int pid) {
@@ -108,6 +181,14 @@ ProcessInfoInterface *Process::GetInfo(int pid) {
   }
   return NULL;
 }
+
+#else // ifdef HAVE_X11
+
+ProcessInfoInterface *Process::GetForeground() {
+  return NULL;
+}
+
+#endif // HAVE_X11
 
 // ---------------------------Utility Functions-------------------------------//
 

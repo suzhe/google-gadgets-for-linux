@@ -118,6 +118,7 @@ bool Power::IsCharging() {
 }
 
 bool Power::IsPluggedIn() {
+  if (!battery_) return true;
   if (!ac_adapter_) return false;
 
   DBusBooleanReceiver result;
@@ -151,7 +152,8 @@ int Power::GetPercentRemaining() {
                      current.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryChargeLevelCurrent,
                      MESSAGE_TYPE_INVALID) && design.GetValue() > 0) {
-    return current.GetValue() * 100 / design.GetValue();
+    return design.GetValue() <= 0 ?
+           0 : current.GetValue() * 100 / design.GetValue();
   }
 
   DLOG("battery.charge_level.design/current is missing.");
