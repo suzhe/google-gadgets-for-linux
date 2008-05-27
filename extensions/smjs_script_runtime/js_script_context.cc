@@ -61,7 +61,7 @@ static JSBool LocaleCompare(JSContext *cx, JSString *s1, JSString *s2,
   std::string locale_s1, locale_s2;
   if (!ConvertUTF16ToLocaleString(chars1, &locale_s1) ||
       !ConvertUTF16ToLocaleString(chars2, &locale_s2)) {
-    JS_ReportError(cx, "Failed to convert strings to locale strings");
+    RaiseException(cx, "Failed to convert strings to locale strings");
     return JS_FALSE;
   }
 
@@ -79,7 +79,7 @@ static JSBool LocaleToUnicode(JSContext *cx, char *src, jsval *rval) {
       return JS_TRUE;
     }
   }
-  JS_ReportError(cx, "Failed to convert locale string '%s' to unicode", src);
+  RaiseException(cx, "Failed to convert locale string '%s' to unicode", src);
   return JS_FALSE;
 }
 
@@ -292,22 +292,6 @@ void JSScriptContext::FinalizeJSNativeWrapper(JSContext *cx,
   ASSERT(context_wrapper);
   if (context_wrapper)
     context_wrapper->FinalizeJSNativeWrapperInternal(wrapper);
-}
-
-JSBool JSScriptContext::CheckException(JSContext *cx,
-                                       ScriptableInterface *scriptable) {
-  ScriptableInterface *exception = scriptable->GetPendingException(true);
-  if (!exception)
-    return JS_TRUE;
-
-  jsval js_exception;
-  if (!ConvertNativeToJS(cx, Variant(exception), &js_exception)) {
-    JS_ReportError(cx, "Failed to convert native exception to jsval");
-    return JS_FALSE;
-  }
-
-  JS_SetPendingException(cx, js_exception);
-  return JS_FALSE;
 }
 
 void JSScriptContext::Destroy() {

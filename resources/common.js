@@ -267,7 +267,11 @@ function Enumerator(coll) {
           " or an object providing item(integer) method.";
 
   this.atEnd = function() {
-    return pos_ >= (coll.length == undefined ? coll.count : coll.length);
+    try {
+      return pos_ >= (coll.length == undefined ? coll.count : coll.length);
+    } catch (e) {
+      return true;
+    }
   };
 
   this.item = function() {

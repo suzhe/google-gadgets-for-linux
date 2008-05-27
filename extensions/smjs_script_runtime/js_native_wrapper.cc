@@ -135,7 +135,7 @@ ResultVariant JSNativeWrapper::GetProperty(const char *name) {
   jsval rval;
   if (JS_GetProperty(js_context_, js_object_, name, &rval) &&
       !ConvertJSToNativeVariant(js_context_, rval, &result)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
                    name, PrintJSValue(js_context_, rval).c_str());
   }
@@ -145,7 +145,7 @@ ResultVariant JSNativeWrapper::GetProperty(const char *name) {
 bool JSNativeWrapper::SetProperty(const char *name, const Variant &value) {
   jsval js_val;
   if (!ConvertNativeToJS(js_context_, value, &js_val)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert native property %s value(%s) to jsval.",
                    name, value.Print().c_str());
     return false;
@@ -158,7 +158,7 @@ ResultVariant JSNativeWrapper::GetPropertyByIndex(int index) {
   jsval rval;
   if (JS_GetElement(js_context_, js_object_, index, &rval) &&
       !ConvertJSToNativeVariant(js_context_, rval, &result)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert JS property %d value(%s) to native.",
                    index, PrintJSValue(js_context_, rval).c_str());
   }

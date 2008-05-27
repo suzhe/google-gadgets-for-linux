@@ -90,12 +90,6 @@ class JSScriptContext : public ScriptContextInterface {
    */
   static void FinalizeJSNativeWrapper(JSContext *cx, JSNativeWrapper *wrapper);
 
-  /**
-   * Checks if there is pending exception. If there is, handles it and throws
-   * it into the script engine.
-   */
-  static JSBool CheckException(JSContext *cx, ScriptableInterface *scriptable);
-
   JSContext *context() const { return context_; }
 
   /** @see ScriptContextInterface::Destroy() */

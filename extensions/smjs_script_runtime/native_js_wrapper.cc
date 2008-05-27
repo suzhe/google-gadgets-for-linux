@@ -170,7 +170,7 @@ NativeJSWrapper *NativeJSWrapper::GetWrapperFromJS(JSContext *cx,
 
 JSBool NativeJSWrapper::CheckNotDeleted() {
   if (!scriptable_) {
-    JS_ReportError(js_context_, "Native object has been deleted");
+    RaiseException(js_context_, "Native object has been deleted");
     return JS_FALSE;
   }
   return JS_TRUE;
@@ -355,11 +355,11 @@ JSBool NativeJSWrapper::CallSelf(uintN argc, jsval *argv, jsval *rval) {
   // Get the default method for this object.
   if (scriptable_->GetPropertyInfo("", &prototype) !=
       ScriptableInterface::PROPERTY_METHOD) {
-    JS_ReportError(js_context_, "Object can't be called as a function");
+    RaiseException(js_context_, "Object can't be called as a function");
     return JS_FALSE;
   }
 
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+  if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
   return CallNativeSlot("DEFAULT", VariantValue<Slot *>()(prototype),
@@ -401,12 +401,12 @@ JSBool NativeJSWrapper::CallNativeSlot(const char *name, Slot *slot,
   delete [] params;
   params = NULL;
 
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+  if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
   JSBool result = ConvertNativeToJS(js_context_, return_value.v(), rval);
   if (!result)
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert native function result(%s) to jsval",
                    return_value.v().Print().c_str());
   return result;
@@ -431,7 +431,7 @@ JSBool NativeJSWrapper::SetPropertyDefault(jsval id, jsval js_val) {
   if (scriptable_->IsStrict()) {
     // The scriptable object don't allow the script engine to assign to
     // unregistered properties.
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "The native object doesn't support setting property %s.",
                    PrintJSValue(js_context_, id).c_str());
     return JS_FALSE;
@@ -454,13 +454,13 @@ JSBool NativeJSWrapper::GetPropertyByIndex(jsval id, jsval *vp) {
   int int_id = JSVAL_TO_INT(id);
   ResultVariant return_value = scriptable_->GetPropertyByIndex(int_id);
   if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
-    JS_ReportError(js_context_,
-                   "Failed to convert native property(%d) value(%s) to jsval.",
+    RaiseException(js_context_,
+                   "Failed to convert native property [%d] value(%s) to jsval.",
                    int_id, return_value.v().Print().c_str());
     return JS_FALSE;
   }
 
-  return JSScriptContext::CheckException(js_context_, scriptable_);
+  return CheckException(js_context_, scriptable_);
 }
 
 JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
@@ -478,7 +478,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
   // Use the original value as the prototype, so that we can convert the
   // JS value to proper native type.
   Variant prototype = scriptable_->GetPropertyByIndex(int_id).v();
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+  if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
   // If there is no original value, don't set it.
@@ -486,7 +486,7 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
     if (scriptable_->IsStrict()) {
       // The scriptable object don't allow the script engine to assign to
       // unregistered properties.
-      JS_ReportError(js_context_,
+      RaiseException(js_context_,
                      "The native object doesn't support setting property [%d].",
                      int_id);
       return JS_FALSE;
@@ -497,21 +497,21 @@ JSBool NativeJSWrapper::SetPropertyByIndex(jsval id, jsval js_val) {
 
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert JS property [%d] value(%s) to native.",
                    int_id, PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
   if (!scriptable_->SetPropertyByIndex(int_id, value)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to set native property [%d] (may be readonly).",
                    int_id);
     FreeNativeValue(value);
     return JS_FALSE;
   }
 
-  return JSScriptContext::CheckException(js_context_, scriptable_);
+  return CheckException(js_context_, scriptable_);
 }
 
 JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
@@ -531,7 +531,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
 
   const char *name = JS_GetStringBytes(idstr);
   ResultVariant return_value = scriptable_->GetProperty(name);
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+  if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
   
   if (return_value.v().type() == Variant::TYPE_VOID) {
@@ -542,7 +542,7 @@ JSBool NativeJSWrapper::GetPropertyByName(jsval id, jsval *vp) {
   }
 
   if (!ConvertNativeToJS(js_context_, return_value.v(), vp)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert native property %s value(%s) to jsval",
                    name, return_value.v().Print().c_str());
     return JS_FALSE;
@@ -574,26 +574,26 @@ JSBool NativeJSWrapper::SetPropertyByName(jsval id, jsval js_val) {
     JS_DeleteProperty(js_context_, js_object_, name);
     return SetPropertyDefault(id, js_val);
   }
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+  if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
   Variant value;
   if (!ConvertJSToNative(js_context_, this, prototype, js_val, &value)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to convert JS property %s value(%s) to native.",
                    name, PrintJSValue(js_context_, js_val).c_str());
     return JS_FALSE;
   }
 
   if (!scriptable_->SetProperty(name, value)) {
-    JS_ReportError(js_context_,
+    RaiseException(js_context_,
                    "Failed to set native property %s (may be readonly).",
                    name);
     FreeNativeValue(value);
     return JS_FALSE;
   }
 
-  return JSScriptContext::CheckException(js_context_, scriptable_);
+  return CheckException(js_context_, scriptable_);
 }
 
 class NameCollector {
@@ -681,7 +681,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
     return JS_TRUE;
   }
 
-  if (!JSScriptContext::CheckException(js_context_, scriptable_))
+  if (!CheckException(js_context_, scriptable_))
     return JS_FALSE;
 
   if (type == ScriptableInterface::PROPERTY_METHOD) {
@@ -711,7 +711,7 @@ JSBool NativeJSWrapper::ResolveProperty(jsval id, uintN flags,
   *objp = js_object_;
   if (type == ScriptableInterface::PROPERTY_CONSTANT) {
     if (!ConvertNativeToJS(js_context_, prototype, &js_val)) {
-      JS_ReportError(js_context_, "Failed to convert init value(%s) to jsval",
+      RaiseException(js_context_, "Failed to convert init value(%s) to jsval",
                      prototype.Print().c_str());
       return JS_FALSE;
     }
