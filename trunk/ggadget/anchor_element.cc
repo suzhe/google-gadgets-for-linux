@@ -87,10 +87,12 @@ Variant AnchorElement::GetOverColor() const {
 }
 
 void AnchorElement::SetOverColor(const Variant &color) {
-  delete impl_->overcolor_texture_;
-  impl_->overcolor_texture_ = GetView()->LoadTexture(color);
-  if (impl_->mouseover_) {
-    QueueDraw();
+  if (color != GetOverColor()) {
+    delete impl_->overcolor_texture_;
+    impl_->overcolor_texture_ = GetView()->LoadTexture(color);
+    if (impl_->mouseover_) {
+      QueueDraw();
+    }
   }
 }
 

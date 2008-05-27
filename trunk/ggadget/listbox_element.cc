@@ -319,21 +319,23 @@ const Texture *ListBoxElement::GetItemOverTexture() const {
 }
 
 void ListBoxElement::SetItemOverColor(const Variant &color) {
-  delete impl_->item_over_color_;
-  impl_->item_over_color_ = GetView()->LoadTexture(color);
+  if (color != GetItemOverColor()) {
+    delete impl_->item_over_color_;
+    impl_->item_over_color_ = GetView()->LoadTexture(color);
 
-  Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      ItemElement *item = down_cast<ItemElement *>(child);
-      if (item->IsMouseOver()) {
-        item->QueueDraw();
-        break;
+    Elements *elements = GetChildren();
+    int childcount = elements->GetCount();
+    for (int i = 0; i < childcount; i++) {
+      BasicElement *child = elements->GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        ItemElement *item = down_cast<ItemElement *>(child);
+        if (item->IsMouseOver()) {
+          item->QueueDraw();
+          break;
+        }
+      } else {
+        LOG(kErrorItemExpected);
       }
-    } else {
-      LOG(kErrorItemExpected);
     }
   }
 }
@@ -347,20 +349,22 @@ const Texture *ListBoxElement::GetItemSelectedTexture() const {
 }
 
 void ListBoxElement::SetItemSelectedColor(const Variant &color) {
-  delete impl_->item_selected_color_;
-  impl_->item_selected_color_ = GetView()->LoadTexture(color);
+  if (color != GetItemSelectedColor()) {
+    delete impl_->item_selected_color_;
+    impl_->item_selected_color_ = GetView()->LoadTexture(color);
 
-  Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      ItemElement *item = down_cast<ItemElement *>(child);
-      if (item->IsSelected()) {
-        item->QueueDraw();
+    Elements *elements = GetChildren();
+    int childcount = elements->GetCount();
+    for (int i = 0; i < childcount; i++) {
+      BasicElement *child = elements->GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        ItemElement *item = down_cast<ItemElement *>(child);
+        if (item->IsSelected()) {
+          item->QueueDraw();
+        }
+      } else {
+        LOG(kErrorItemExpected);
       }
-    } else {
-      LOG(kErrorItemExpected);
     }
   }
 }
@@ -374,18 +378,20 @@ const Texture *ListBoxElement::GetItemSeparatorTexture() const {
 }
 
 void ListBoxElement::SetItemSeparatorColor(const Variant &color) {
-  delete impl_->item_separator_color_;
-  impl_->item_separator_color_ = GetView()->LoadTexture(color);
+  if (color != GetItemSeparatorColor()) {
+    delete impl_->item_separator_color_;
+    impl_->item_separator_color_ = GetView()->LoadTexture(color);
 
-  Elements *elements = GetChildren();
-  int childcount = elements->GetCount();
-  for (int i = 0; i < childcount; i++) {
-    BasicElement *child = elements->GetItemByIndex(i);
-    if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
-      ItemElement *item = down_cast<ItemElement *>(child);
-      item->QueueDraw();
-    } else {
-      LOG(kErrorItemExpected);
+    Elements *elements = GetChildren();
+    int childcount = elements->GetCount();
+    for (int i = 0; i < childcount; i++) {
+      BasicElement *child = elements->GetItemByIndex(i);
+      if (child->IsInstanceOf(ItemElement::CLASS_ID)) {
+        ItemElement *item = down_cast<ItemElement *>(child);
+        item->QueueDraw();
+      } else {
+        LOG(kErrorItemExpected);
+      }
     }
   }
 }

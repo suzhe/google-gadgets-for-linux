@@ -49,7 +49,8 @@ class CanvasInterface {
   enum Alignment {
     ALIGN_LEFT,
     ALIGN_CENTER,
-    ALIGN_RIGHT
+    ALIGN_RIGHT,
+    ALIGN_JUSTIFY
   };
 
   /**

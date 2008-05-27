@@ -202,9 +202,11 @@ Variant ButtonElement::GetImage() const {
 }
 
 void ButtonElement::SetImage(const Variant &img) {
-  DestroyImage(impl_->image_);
-  impl_->image_ = GetView()->LoadImage(img, false);
-  QueueDraw();
+  if (img != GetImage()) {
+    DestroyImage(impl_->image_);
+    impl_->image_ = GetView()->LoadImage(img, false);
+    QueueDraw();
+  }
 }
 
 Variant ButtonElement::GetDisabledImage() const {
@@ -212,10 +214,12 @@ Variant ButtonElement::GetDisabledImage() const {
 }
 
 void ButtonElement::SetDisabledImage(const Variant &img) {
-  DestroyImage(impl_->disabled_image_);
-  impl_->disabled_image_ = GetView()->LoadImage(img, false);
-  if (!IsEnabled()) {
-    QueueDraw();
+  if (img != GetDisabledImage()) {
+    DestroyImage(impl_->disabled_image_);
+    impl_->disabled_image_ = GetView()->LoadImage(img, false);
+    if (!IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -224,10 +228,12 @@ Variant ButtonElement::GetOverImage() const {
 }
 
 void ButtonElement::SetOverImage(const Variant &img) {
-  DestroyImage(impl_->over_image_);
-  impl_->over_image_ = GetView()->LoadImage(img, false);
-  if (impl_->mouseover_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetOverImage()) {
+    DestroyImage(impl_->over_image_);
+    impl_->over_image_ = GetView()->LoadImage(img, false);
+    if (impl_->mouseover_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -236,10 +242,12 @@ Variant ButtonElement::GetDownImage() const {
 }
 
 void ButtonElement::SetDownImage(const Variant &img) {
-  DestroyImage(impl_->down_image_);
-  impl_->down_image_ = GetView()->LoadImage(img, false);
-  if (impl_->mousedown_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetDownImage()) {
+    DestroyImage(impl_->down_image_);
+    impl_->down_image_ = GetView()->LoadImage(img, false);
+    if (impl_->mousedown_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -248,9 +256,11 @@ Variant ButtonElement::GetIconImage() const {
 }
 
 void ButtonElement::SetIconImage(const Variant &img) {
-  DestroyImage(impl_->icon_image_);
-  impl_->icon_image_ = GetView()->LoadImage(img, false);
-  QueueDraw();
+  if (img != GetIconImage()) {
+    DestroyImage(impl_->icon_image_);
+    impl_->icon_image_ = GetView()->LoadImage(img, false);
+    QueueDraw();
+  }
 }
 
 Variant ButtonElement::GetIconDisabledImage() const {
@@ -258,10 +268,12 @@ Variant ButtonElement::GetIconDisabledImage() const {
 }
 
 void ButtonElement::SetIconDisabledImage(const Variant &img) {
-  DestroyImage(impl_->icon_disabled_image_);
-  impl_->icon_disabled_image_ = GetView()->LoadImage(img, false);
-  if (!IsEnabled()) {
-    QueueDraw();
+  if (img != GetIconDisabledImage()) {
+    DestroyImage(impl_->icon_disabled_image_);
+    impl_->icon_disabled_image_ = GetView()->LoadImage(img, false);
+    if (!IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 

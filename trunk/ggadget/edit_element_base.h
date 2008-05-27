@@ -18,6 +18,7 @@
 #define GGADGET_EDIT_ELEMENT_BASE_H__
 
 #include <string>
+#include <ggadget/canvas_interface.h>
 #include <ggadget/basic_element.h>
 #include <ggadget/scrolling_element.h>
 
@@ -126,6 +127,12 @@ class EditElementBase : public ScrollingElement {
    * Added in 5.5 out-of-beta
    */
   virtual void SelectAll() = 0;
+
+  /** Gets the text horizontal alignment setting. */
+  virtual CanvasInterface::Alignment GetAlign() const = 0;
+
+  /** Sets the text horizontal alignment setting. */
+  virtual void SetAlign(CanvasInterface::Alignment align) = 0;
 
  public:
   /**

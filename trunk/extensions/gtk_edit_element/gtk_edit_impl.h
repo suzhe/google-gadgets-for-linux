@@ -27,6 +27,7 @@
 #include <ggadget/common.h>
 #include <ggadget/math_utils.h>
 #include <ggadget/clip_region.h>
+#include <ggadget/canvas_interface.h>
 
 namespace ggadget {
 
@@ -93,6 +94,9 @@ class GtkEditImpl {
   void Select(int start, int end);
   /** Select all text */
   void SelectAll();
+
+  CanvasInterface::Alignment GetAlign() const;
+  void SetAlign(CanvasInterface::Alignment align);
 
  private:
   /**
@@ -361,6 +365,8 @@ class GtkEditImpl {
   Texture *background_;
   /** The text color of the edit control */
   Color text_color_;
+
+  CanvasInterface::Alignment align_;
 
   ClipRegion last_selection_region_;
   ClipRegion selection_region_;

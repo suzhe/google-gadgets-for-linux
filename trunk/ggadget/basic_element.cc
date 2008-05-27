@@ -1256,7 +1256,9 @@ Variant BasicElement::GetMask() const {
 }
 
 void BasicElement::SetMask(const Variant &mask) {
-  impl_->SetMask(mask);
+  if (mask != GetMask()) {
+    impl_->SetMask(mask);
+  }
 }
 
 const CanvasInterface *BasicElement::GetMaskCanvas() const {

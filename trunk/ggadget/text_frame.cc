@@ -28,7 +28,7 @@ static const Color kDefaultColor(0, 0, 0);
 static const char *const kDefaultFont = "sans-serif";
 
 static const char *kAlignNames[] = {
-  "left", "center", "right"
+  "left", "center", "right", "justify"
 };
 static const char *kVAlignNames[] = {
   "top", "middle", "bottom"

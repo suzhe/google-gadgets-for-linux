@@ -485,8 +485,10 @@ Variant ScrollBarElement::GetBackground() const {
 }
 
 void ScrollBarElement::SetBackground(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_BACKGROUND);
-  QueueDraw();
+  if (img != GetBackground()) {
+    impl_->LoadImage(img, IMAGE_BACKGROUND);
+    QueueDraw();
+  }
 }
 
 Variant ScrollBarElement::GetGrippyImage() const {
@@ -494,8 +496,10 @@ Variant ScrollBarElement::GetGrippyImage() const {
 }
 
 void ScrollBarElement::SetGrippyImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_GRIPPY);
-  QueueDraw();
+  if (img != GetGrippyImage()) {
+    impl_->LoadImage(img, IMAGE_GRIPPY);
+    QueueDraw();
+  }
 }
 
 Variant ScrollBarElement::GetLeftDownImage() const {
@@ -503,9 +507,11 @@ Variant ScrollBarElement::GetLeftDownImage() const {
 }
 
 void ScrollBarElement::SetLeftDownImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_LEFT_DOWN);
-  if (impl_->left_state_ == STATE_DOWN) {
-    QueueDraw();
+  if (img != GetLeftDownImage()) {
+    impl_->LoadImage(img, IMAGE_LEFT_DOWN);
+    if (impl_->left_state_ == STATE_DOWN) {
+      QueueDraw();
+    }
   }
 }
 
@@ -514,9 +520,11 @@ Variant ScrollBarElement::GetLeftImage() const {
 }
 
 void ScrollBarElement::SetLeftImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_LEFT_NORMAL);
-  if (impl_->left_state_ == STATE_NORMAL) {
-    QueueDraw();
+  if (img != GetLeftImage()) {
+    impl_->LoadImage(img, IMAGE_LEFT_NORMAL);
+    if (impl_->left_state_ == STATE_NORMAL) {
+      QueueDraw();
+    }
   }
 }
 
@@ -525,9 +533,11 @@ Variant ScrollBarElement::GetLeftOverImage() const {
 }
 
 void ScrollBarElement::SetLeftOverImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_LEFT_OVER);
-  if (impl_->left_state_ == STATE_OVER) {
-    QueueDraw();
+  if (img != GetLeftOverImage()) {
+    impl_->LoadImage(img, IMAGE_LEFT_OVER);
+    if (impl_->left_state_ == STATE_OVER) {
+      QueueDraw();
+    }
   }
 }
 
@@ -536,9 +546,11 @@ Variant ScrollBarElement::GetRightDownImage() const {
 }
 
 void ScrollBarElement::SetRightDownImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_RIGHT_DOWN);
-  if (impl_->right_state_ == STATE_DOWN) {
-    QueueDraw();
+  if (img != GetRightDownImage()) {
+    impl_->LoadImage(img, IMAGE_RIGHT_DOWN);
+    if (impl_->right_state_ == STATE_DOWN) {
+      QueueDraw();
+    }
   }
 }
 
@@ -547,9 +559,11 @@ Variant ScrollBarElement::GetRightImage() const {
 }
 
 void ScrollBarElement::SetRightImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_RIGHT_NORMAL);
-  if (impl_->right_state_ == STATE_NORMAL) {
-    QueueDraw();
+  if (img != GetRightImage()) {
+    impl_->LoadImage(img, IMAGE_RIGHT_NORMAL);
+    if (impl_->right_state_ == STATE_NORMAL) {
+      QueueDraw();
+    }
   }
 }
 
@@ -558,9 +572,11 @@ Variant ScrollBarElement::GetRightOverImage() const {
 }
 
 void ScrollBarElement::SetRightOverImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_RIGHT_OVER);
-  if (impl_->right_state_ == STATE_OVER) {
-    QueueDraw();
+  if (img != GetRightOverImage()) {
+    impl_->LoadImage(img, IMAGE_RIGHT_OVER);
+    if (impl_->right_state_ == STATE_OVER) {
+      QueueDraw();
+    }
   }
 }
 
@@ -569,9 +585,11 @@ Variant ScrollBarElement::GetThumbDownImage() const {
 }
 
 void ScrollBarElement::SetThumbDownImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_THUMB_DOWN);
-  if (impl_->thumb_state_ == STATE_DOWN) {
-    QueueDraw();
+  if (img != GetThumbDownImage()) {
+    impl_->LoadImage(img, IMAGE_THUMB_DOWN);
+    if (impl_->thumb_state_ == STATE_DOWN) {
+      QueueDraw();
+    }
   }
 }
 
@@ -580,9 +598,11 @@ Variant ScrollBarElement::GetThumbImage() const {
 }
 
 void ScrollBarElement::SetThumbImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_THUMB_NORMAL);
-  if (impl_->thumb_state_ == STATE_NORMAL) {
-    QueueDraw();
+  if (img != GetThumbImage()) {
+    impl_->LoadImage(img, IMAGE_THUMB_NORMAL);
+    if (impl_->thumb_state_ == STATE_NORMAL) {
+      QueueDraw();
+    }
   }
 }
 
@@ -591,9 +611,11 @@ Variant ScrollBarElement::GetThumbOverImage() const {
 }
 
 void ScrollBarElement::SetThumbOverImage(const Variant &img) {
-  impl_->LoadImage(img, IMAGE_THUMB_OVER);
-  if (impl_->thumb_state_ == STATE_OVER) {
-    QueueDraw();
+  if (img != GetThumbOverImage()) {
+    impl_->LoadImage(img, IMAGE_THUMB_OVER);
+    if (impl_->thumb_state_ == STATE_OVER) {
+      QueueDraw();
+    }
   }
 }
 
