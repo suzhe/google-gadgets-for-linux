@@ -352,9 +352,11 @@ Variant ProgressBarElement::GetEmptyImage() const {
 }
 
 void ProgressBarElement::SetEmptyImage(const Variant &img) {
-  DestroyImage(impl_->emptyimage_);
-  impl_->emptyimage_ = GetView()->LoadImage(img, false);
-  QueueDraw();
+  if (img != GetEmptyImage()) {
+    DestroyImage(impl_->emptyimage_);
+    impl_->emptyimage_ = GetView()->LoadImage(img, false);
+    QueueDraw();
+  }
 }
 
 Variant ProgressBarElement::GetFullImage() const {
@@ -362,10 +364,12 @@ Variant ProgressBarElement::GetFullImage() const {
 }
 
 void ProgressBarElement::SetFullImage(const Variant &img) {
-  DestroyImage(impl_->fullimage_);
-  impl_->fullimage_ = GetView()->LoadImage(img, false);
-  if (impl_->value_ != impl_->min_) { // not empty
-    QueueDraw();
+  if (img != GetFullImage()) {
+    DestroyImage(impl_->fullimage_);
+    impl_->fullimage_ = GetView()->LoadImage(img, false);
+    if (impl_->value_ != impl_->min_) { // not empty
+      QueueDraw();
+    }
   }
 }
 
@@ -374,10 +378,12 @@ Variant ProgressBarElement::GetThumbDisabledImage() const {
 }
 
 void ProgressBarElement::SetThumbDisabledImage(const Variant &img) {
-  DestroyImage(impl_->thumbdisabledimage_);
-  impl_->thumbdisabledimage_ = GetView()->LoadImage(img, false);
-  if (!IsEnabled()) {
-    QueueDraw();
+  if (img != GetThumbDisabledImage()) {
+    DestroyImage(impl_->thumbdisabledimage_);
+    impl_->thumbdisabledimage_ = GetView()->LoadImage(img, false);
+    if (!IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -386,10 +392,12 @@ Variant ProgressBarElement::GetThumbDownImage() const {
 }
 
 void ProgressBarElement::SetThumbDownImage(const Variant &img) {
-  DestroyImage(impl_->thumbdownimage_);
-  impl_->thumbdownimage_ = GetView()->LoadImage(img, false);
-  if (impl_->thumbdown_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetThumbDownImage()) {
+    DestroyImage(impl_->thumbdownimage_);
+    impl_->thumbdownimage_ = GetView()->LoadImage(img, false);
+    if (impl_->thumbdown_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -398,9 +406,11 @@ Variant ProgressBarElement::GetThumbImage() const {
 }
 
 void ProgressBarElement::SetThumbImage(const Variant &img) {
-  DestroyImage(impl_->thumbimage_);
-  impl_->thumbimage_ = GetView()->LoadImage(img, false);
-  QueueDraw(); // Always queue since this is the fallback.
+  if (img != GetThumbImage()) {
+    DestroyImage(impl_->thumbimage_);
+    impl_->thumbimage_ = GetView()->LoadImage(img, false);
+    QueueDraw(); // Always queue since this is the fallback.
+  }
 }
 
 Variant ProgressBarElement::GetThumbOverImage() const {
@@ -408,10 +418,12 @@ Variant ProgressBarElement::GetThumbOverImage() const {
 }
 
 void ProgressBarElement::SetThumbOverImage(const Variant &img) {
-  DestroyImage(impl_->thumboverimage_);
-  impl_->thumboverimage_ = GetView()->LoadImage(img, false);
-  if (impl_->thumbover_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetThumbOverImage()) {
+    DestroyImage(impl_->thumboverimage_);
+    impl_->thumboverimage_ = GetView()->LoadImage(img, false);
+    if (impl_->thumbover_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 BasicElement *ProgressBarElement::CreateInstance(BasicElement *parent,

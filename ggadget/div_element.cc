@@ -125,9 +125,11 @@ Variant DivElement::GetBackground() const {
 }
 
 void DivElement::SetBackground(const Variant &background) {
-  delete impl_->background_texture_;
-  impl_->background_texture_ = GetView()->LoadTexture(background);
-  QueueDraw();
+  if (background != GetBackground()) {
+    delete impl_->background_texture_;
+    impl_->background_texture_ = GetView()->LoadTexture(background);
+    QueueDraw();
+  }
 }
 
 DivElement::BackgroundMode DivElement::GetBackgroundMode() const {

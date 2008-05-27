@@ -147,9 +147,11 @@ Variant ItemElement::GetBackground() const {
 }
 
 void ItemElement::SetBackground(const Variant &background) {
-  delete impl_->background_;
-  impl_->background_ = GetView()->LoadTexture(background);
-  QueueDraw();
+  if (background != GetBackground()) {
+    delete impl_->background_;
+    impl_->background_ = GetView()->LoadTexture(background);
+    QueueDraw();
+  }
 }
 
 bool ItemElement::IsSelected() const {

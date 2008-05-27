@@ -100,7 +100,8 @@ GtkEditImpl::GtkEditImpl(GtkEditElement *owner,
       font_family_(kDefaultFontFamily),
       font_size_(kDefaultFontSize),
       background_(new Texture(kDefaultBackgroundColor, 1)),
-      text_color_(kDefaultTextColor) {
+      text_color_(kDefaultTextColor),
+      align_(CanvasInterface::ALIGN_LEFT) {
   ASSERT(main_loop_);
   ASSERT(graphics_);
   InitImContext();
@@ -123,17 +124,20 @@ GtkEditImpl::~GtkEditImpl() {
 void GtkEditImpl::Draw(CanvasInterface *canvas) {
   CairoCanvas *edit_canvas = EnsureCanvas();
 
-  if (update_canvas_ || !last_selection_region_.IsEmpty()) {
-    edit_canvas->IntersectRectClipRegion(kInnerBorderX - 1,
-                                         kInnerBorderY - 1,
-                                         width_- kInnerBorderX + 1,
-                                         height_ - kInnerBorderY + 1);
+  if (update_canvas_ || !last_selection_region_.IsEmpty() ||
+      !selection_region_.IsEmpty()) {
     DrawText(down_cast<CairoCanvas*>(edit_canvas));
   }
 
   if (background_)
     background_->Draw(canvas);
+  canvas->PushState();
+  canvas->IntersectRectClipRegion(kInnerBorderX,
+                                  kInnerBorderY,
+                                  width_- kInnerBorderX,
+                                  height_ - kInnerBorderY);
   canvas->DrawCanvas(0, 0, edit_canvas);
+  canvas->PopState();
   DrawCursor(down_cast<CairoCanvas*>(canvas));
 
   update_canvas_ = false;
@@ -704,7 +708,8 @@ PangoLayout* GtkEditImpl::CreateLayout() {
   /* Set alignment according to text direction. Only set layout's alignment
    * when it's not wrapped and in single line mode.
    */
-  if (!wrap_ && pango_layout_get_line_count(layout) <= 1) {
+  if (!wrap_ && pango_layout_get_line_count(layout) <= 1 &&
+      align_ != CanvasInterface::ALIGN_CENTER) {
     PangoDirection dir;
     if (visible_)
       dir = pango_find_base_dir(tmp_string.c_str(), tmp_string.length());
@@ -718,8 +723,30 @@ PangoLayout* GtkEditImpl::CreateLayout() {
       else
         dir = PANGO_DIRECTION_LTR;
     }
-    pango_layout_set_alignment(layout,
-        dir == PANGO_DIRECTION_RTL ? PANGO_ALIGN_RIGHT : PANGO_ALIGN_LEFT);
+
+    // If wordWrap is false then "justify" alignment has no effect.
+    PangoAlignment pango_align = (align_ == CanvasInterface::ALIGN_RIGHT ?
+                                  PANGO_ALIGN_RIGHT : PANGO_ALIGN_LEFT);
+
+    // Invert the alignment if text direction is right to left.
+    if (dir == PANGO_DIRECTION_RTL)
+      pango_align = (align_ == CanvasInterface::ALIGN_RIGHT ?
+                     PANGO_ALIGN_LEFT : PANGO_ALIGN_RIGHT);
+
+    pango_layout_set_alignment(layout, pango_align);
+    pango_layout_set_justify(layout, FALSE);
+  } else if (align_ == CanvasInterface::ALIGN_JUSTIFY) {
+    pango_layout_set_justify(layout, TRUE);
+    pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
+  } else if (align_ == CanvasInterface::ALIGN_RIGHT) {
+    pango_layout_set_justify(layout, FALSE);
+    pango_layout_set_alignment(layout, PANGO_ALIGN_RIGHT);
+  } else if (align_ == CanvasInterface::ALIGN_CENTER) {
+    pango_layout_set_justify(layout, FALSE);
+    pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
+  } else {
+    pango_layout_set_justify(layout, FALSE);
+    pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
   }
 
   return layout;
@@ -756,14 +783,14 @@ void GtkEditImpl::AdjustScroll() {
   GetCursorLocationInLayout(&strong_x, &strong_y, &strong_height,
                             &weak_x, &weak_y, &weak_height);
 
-  if (display_width > text_width) {
+  if (!wrap_ && display_width > text_width) {
     PangoAlignment align = pango_layout_get_alignment(layout);
     if (align == PANGO_ALIGN_RIGHT)
       scroll_offset_x_ = display_width - text_width;
-    else if (align == PANGO_ALIGN_LEFT)
-      scroll_offset_x_ = 0;
-    else
+    else if (align == PANGO_ALIGN_CENTER)
       scroll_offset_x_ = (display_width - text_width) / 2;
+    else
+      scroll_offset_x_ = 0;
   } else {
     if (scroll_offset_x_ + strong_x < 0)
       scroll_offset_x_ = -strong_x;
@@ -1496,6 +1523,15 @@ void GtkEditImpl::SelectAll() {
   QueueRefresh(false, true);
 }
 
+CanvasInterface::Alignment GtkEditImpl::GetAlign() const {
+  return align_;
+}
+
+void GtkEditImpl::SetAlign(CanvasInterface::Alignment align) {
+  align_ = align;
+  QueueRefresh(true, true);
+}
+
 void GtkEditImpl::DeleteSelection() {
   int start, end;
   if (GetSelectionBounds(&start, &end))
@@ -1696,7 +1732,7 @@ void GtkEditImpl::PreeditChangedCallback(GtkIMContext *context, void *gg) {
                                     &edit->preedit_cursor_);
   edit->preedit_.assign(str);
   g_free(str);
-  edit->QueueRefresh(false, true);
+  edit->QueueRefresh(true, true);
   edit->need_im_reset_ = true;
   edit->content_modified_ = true;
 }

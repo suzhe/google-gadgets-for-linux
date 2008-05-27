@@ -24,7 +24,7 @@
 #include <ggadget/qt/qt_menu.h>
 #include "qt_view_widget.h"
 
-#ifdef HAVE_X11
+#if defined(Q_WS_X11) && defined(HAVE_X11)
 #include <QtGui/QX11Info>
 #include <QtGui/QBitmap>
 #include <X11/extensions/shape.h>
@@ -55,6 +55,8 @@ QtViewWidget::QtViewWidget(ViewInterface *view,
     SkipTaskBar();
   }
   setAttribute(Qt::WA_InputMethodEnabled);
+  setAttribute(Qt::WA_OpaquePaintEvent, composite);
+  setAttribute(Qt::WA_NoSystemBackground, composite);
 }
 
 QtViewWidget::~QtViewWidget() {
@@ -403,7 +405,7 @@ void QtViewWidget::EnableInputShapeMask(bool enable) {
 }
 
 void QtViewWidget::SetInputMask(QPixmap *pixmap) {
-#ifdef HAVE_X11
+#if defined(Q_WS_X11) && defined(HAVE_X11)
   if (!pixmap) {
     XShapeCombineMask(QX11Info::display(),
                       winId(),
@@ -424,7 +426,7 @@ void QtViewWidget::SetInputMask(QPixmap *pixmap) {
 }
 
 void QtViewWidget::SkipTaskBar() {
-#ifdef HAVE_X11
+#if defined(Q_WS_X11) && defined(HAVE_X11)
   Display *dpy = QX11Info::display();
   Atom net_wm_state_skip_taskbar=XInternAtom(dpy, "_NET_WM_STATE_SKIP_TASKBAR",
                                              False);

@@ -41,7 +41,7 @@
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/system_utils.h>
 #include "qt_host.h"
-#ifdef HAVE_X11
+#if defined(Q_WS_X11) && defined(HAVE_X11)
 #include <X11/extensions/Xrender.h>
 #endif
 
@@ -85,7 +85,7 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
-#ifdef HAVE_X11
+#if defined(Q_WS_X11) && defined(HAVE_X11)
 static Display *dpy;
 static Colormap colormap = 0;
 static Visual *visual = 0;
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
     sscanf(argv[5], "%d", &decorated);
     g_decorated = (decorated != 0);
   }
-#ifdef HAVE_X11
+#if defined(Q_WS_X11) && defined(HAVE_X11)
   init_argb();
   QApplication app(dpy, argc, argv,
                    Qt::HANDLE(visual), Qt::HANDLE(colormap));

@@ -420,13 +420,18 @@ if test x$ggl_host_type = xlinux; then
 		    [has_qtwebkit=no])
 elif test x$ggl_host_type = xmacosx; then
   # There is no pkgconfig for Qt on MacOSX, just do header check.
-  AC_CHECK_HEADERS([QtCore/QObject QtGui/QApplication QtOpenGL/QGLWidget],
+  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL],
 		   [has_qt4=yes], [has_qt4=no])
+  AC_CHECK_HEADERS([QtWebKit/QtWebKit QtNetwork/QtNetwork],
+		   [has_qtwebkit=yes], [has_qtwebkit=no])
   if test x$has_qt4 = xyes; then
     QT4_LIBS="-framework OpenGL -framework AGL -framework QtGui \
               -framework Carbon -framework AppKit -framework QtCore \
               -framework ApplicationServices -lz -lm"
     AC_PATH_PROG([MOC], [moc])
+  fi
+  if test x$has_qtwebkit = xyes; then
+    QT4WEBKIT_LIBS="-$QT4_LIBS -framework QtWebKit -framework QtNetwork"
   fi
 else
   AC_MSG_WARN([Qt support is not available for $ggl_host_type])

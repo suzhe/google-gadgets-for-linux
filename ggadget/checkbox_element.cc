@@ -243,9 +243,11 @@ Variant CheckBoxElement::GetImage() const {
 }
 
 void CheckBoxElement::SetImage(const Variant &img) {
-  DestroyImage(impl_->image_[STATE_NORMAL]);
-  impl_->image_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-  QueueDraw();
+  if (img != GetImage()) {
+    DestroyImage(impl_->image_[STATE_NORMAL]);
+    impl_->image_[STATE_NORMAL] = GetView()->LoadImage(img, false);
+    QueueDraw();
+  }
 }
 
 Variant CheckBoxElement::GetDisabledImage() const {
@@ -253,10 +255,12 @@ Variant CheckBoxElement::GetDisabledImage() const {
 }
 
 void CheckBoxElement::SetDisabledImage(const Variant &img) {
-  DestroyImage(impl_->disabledimage_[STATE_NORMAL]);
-  impl_->disabledimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-  if (!IsEnabled()) {
-    QueueDraw();
+  if (img != GetDisabledImage()) {
+    DestroyImage(impl_->disabledimage_[STATE_NORMAL]);
+    impl_->disabledimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
+    if (!IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -265,10 +269,12 @@ Variant CheckBoxElement::GetOverImage() const {
 }
 
 void CheckBoxElement::SetOverImage(const Variant &img) {
-  DestroyImage(impl_->overimage_[STATE_NORMAL]);
-  impl_->overimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-  if (impl_->mouseover_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetOverImage()) {
+    DestroyImage(impl_->overimage_[STATE_NORMAL]);
+    impl_->overimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
+    if (impl_->mouseover_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -277,10 +283,12 @@ Variant CheckBoxElement::GetDownImage() const {
 }
 
 void CheckBoxElement::SetDownImage(const Variant &img) {
-  DestroyImage(impl_->downimage_[STATE_NORMAL]);
-  impl_->downimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
-  if (impl_->mousedown_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetDownImage()) {
+    DestroyImage(impl_->downimage_[STATE_NORMAL]);
+    impl_->downimage_[STATE_NORMAL] = GetView()->LoadImage(img, false);
+    if (impl_->mousedown_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -289,9 +297,11 @@ Variant CheckBoxElement::GetCheckedImage() const {
 }
 
 void CheckBoxElement::SetCheckedImage(const Variant &img) {
-  DestroyImage(impl_->image_[STATE_CHECKED]);
-  impl_->image_[STATE_CHECKED] = GetView()->LoadImage(img, false);
-  QueueDraw();
+  if (img != GetCheckedImage()) {
+    DestroyImage(impl_->image_[STATE_CHECKED]);
+    impl_->image_[STATE_CHECKED] = GetView()->LoadImage(img, false);
+    QueueDraw();
+  }
 }
 
 Variant CheckBoxElement::GetCheckedDisabledImage() const {
@@ -299,10 +309,12 @@ Variant CheckBoxElement::GetCheckedDisabledImage() const {
 }
 
 void CheckBoxElement::SetCheckedDisabledImage(const Variant &img) {
-  DestroyImage(impl_->disabledimage_[STATE_CHECKED]);
-  impl_->disabledimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
-  if (!IsEnabled()) {
-    QueueDraw();
+  if (img != GetCheckedDisabledImage()) {
+    DestroyImage(impl_->disabledimage_[STATE_CHECKED]);
+    impl_->disabledimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
+    if (!IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -311,10 +323,12 @@ Variant CheckBoxElement::GetCheckedOverImage() const {
 }
 
 void CheckBoxElement::SetCheckedOverImage(const Variant &img) {
-  DestroyImage(impl_->overimage_[STATE_CHECKED]);
-  impl_->overimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
-  if (impl_->mouseover_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetCheckedOverImage()) {
+    DestroyImage(impl_->overimage_[STATE_CHECKED]);
+    impl_->overimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
+    if (impl_->mouseover_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 
@@ -323,10 +337,12 @@ Variant CheckBoxElement::GetCheckedDownImage() const {
 }
 
 void CheckBoxElement::SetCheckedDownImage(const Variant &img) {
-  DestroyImage(impl_->downimage_[STATE_CHECKED]);
-  impl_->downimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
-  if (impl_->mousedown_ && IsEnabled()) {
-    QueueDraw();
+  if (img != GetCheckedDownImage()) {
+    DestroyImage(impl_->downimage_[STATE_CHECKED]);
+    impl_->downimage_[STATE_CHECKED] = GetView()->LoadImage(img, false);
+    if (impl_->mousedown_ && IsEnabled()) {
+      QueueDraw();
+    }
   }
 }
 

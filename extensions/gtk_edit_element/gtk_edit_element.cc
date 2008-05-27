@@ -226,6 +226,14 @@ void GtkEditElement::SelectAll() {
   GetView()->SetFocus(this);
 }
 
+CanvasInterface::Alignment GtkEditElement::GetAlign() const {
+  return impl_->GetAlign();
+}
+
+void GtkEditElement::SetAlign(CanvasInterface::Alignment align) {
+  impl_->SetAlign(align);
+}
+
 void GtkEditElement::DoDraw(CanvasInterface *canvas) {
   impl_->Draw(canvas);
   DrawScrollbar(canvas);

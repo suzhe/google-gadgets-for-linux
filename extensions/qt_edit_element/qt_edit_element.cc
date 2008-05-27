@@ -328,6 +328,15 @@ void QtEditElement::SelectAll() {
   cursor_->movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
 }
 
+CanvasInterface::Alignment QtEditElement::GetAlign() const {
+  // TODO
+  return CanvasInterface::ALIGN_LEFT;
+}
+
+void QtEditElement::SetAlign(CanvasInterface::Alignment align) {
+  // TODO
+}
+
 static QRectF GetRectForPosition(QTextDocument *doc, int position) {
   const QTextBlock block = doc->findBlock(position);
   if (!block.isValid()) return QRectF();

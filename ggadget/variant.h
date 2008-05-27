@@ -289,6 +289,10 @@ class Variant {
    */
   bool operator==(const Variant &another) const;
 
+  bool operator!=(const Variant &another) const {
+    return !(*this == another);
+  }
+
   std::string Print() const;
 
   /**

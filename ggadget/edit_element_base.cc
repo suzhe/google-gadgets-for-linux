@@ -25,6 +25,10 @@
 
 namespace ggadget {
 
+static const char *kAlignNames[] = {
+  "left", "center", "right", "justify"
+};
+
 class EditElementBase::Impl {
  public:
   Impl(EditElementBase *owner) : owner_(owner) { }
@@ -101,6 +105,11 @@ void EditElementBase::DoRegister() {
   RegisterMethod("selectAll", NewSlot(this, &EditElementBase::SelectAll));
 
   RegisterSignal(kOnChangeEvent, &impl_->onchange_event_);
+
+  RegisterStringEnumProperty("align",
+                             NewSlot(this, &EditElementBase::GetAlign),
+                             NewSlot(this, &EditElementBase::SetAlign),
+                             kAlignNames, arraysize(kAlignNames));
 }
 
 EditElementBase::~EditElementBase() {

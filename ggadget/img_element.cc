@@ -191,18 +191,20 @@ Variant ImgElement::GetSrc() const {
 }
 
 void ImgElement::SetSrc(const Variant &src) {
-  DestroyImage(impl_->image_);
-  impl_->image_ = GetView()->LoadImage(src, false);
-  if (impl_->image_) {
-    impl_->src_width_ = impl_->image_->GetWidth();
-    impl_->src_height_ = impl_->image_->GetHeight();
-  } else {
-    impl_->src_width_ = 0;
-    impl_->src_height_ = 0;
-  }
+  if (src != GetSrc()) {
+    DestroyImage(impl_->image_);
+    impl_->image_ = GetView()->LoadImage(src, false);
+    if (impl_->image_) {
+      impl_->src_width_ = impl_->image_->GetWidth();
+      impl_->src_height_ = impl_->image_->GetHeight();
+    } else {
+      impl_->src_width_ = 0;
+      impl_->src_height_ = 0;
+    }
 
-  impl_->ApplyColorMultiply();
-  QueueDraw();
+    impl_->ApplyColorMultiply();
+    QueueDraw();
+  }
 }
 
 std::string ImgElement::GetColorMultiply() const {

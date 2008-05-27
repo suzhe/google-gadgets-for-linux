@@ -281,6 +281,8 @@ class CairoCanvas::Impl {
       pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
     else if (align == ALIGN_RIGHT)
       pango_layout_set_alignment(layout, PANGO_ALIGN_RIGHT);
+    else if (align == ALIGN_JUSTIFY)
+      pango_layout_set_justify(layout, TRUE);
 
     // Get the pixel extents(logical extents) of the layout.
     pango_layout_get_pixel_extents(layout, NULL, &pos);
@@ -442,11 +444,6 @@ class CairoCanvas::Impl {
       // Show the trimmed text.
       cairo_move_to(cr_, real_x, real_y);
       pango_cairo_show_layout(cr_, layout);
-      pango_layout_get_pixel_extents(layout, NULL, &pos);
-      PangoLayoutIter *it = pango_layout_get_iter(layout);
-      do {
-        pango_layout_iter_get_char_extents(it, &pos);
-      } while(pango_layout_iter_next_char(it));
     }
 
     g_object_unref(layout);

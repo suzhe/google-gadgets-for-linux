@@ -67,6 +67,8 @@ class GtkEditElement : public EditElementBase {
   virtual void GetIdealBoundingRect(int *width, int *height);
   virtual void Select(int start, int end);
   virtual void SelectAll();
+  virtual CanvasInterface::Alignment GetAlign() const;
+  virtual void SetAlign(CanvasInterface::Alignment align);
 
  public:
   static BasicElement *CreateInstance(BasicElement *parent, View *view,
