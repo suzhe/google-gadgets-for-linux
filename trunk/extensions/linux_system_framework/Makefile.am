@@ -57,12 +57,14 @@ libggadget_linux_la_CXXFLAGS = \
 
 libggadget_linux_la_CPPFLAGS = \
 			  $(DBUS_CFLAGS) \
+			  $(X_CFLAGS) \
 			  $(PREDEFINED_MACROS)
 
 libggadget_linux_la_LIBADD = \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/dbus/libggadget-dbus@GGL_EPOCH@.la \
-			  $(DBUS_LIB)
+			  $(DBUS_LIB) \
+			  $(X_LIBS)
 
 extension_LTLIBRARIES	= linux-system-framework.la
 extensiondir		= $(GGL_MODULE_DIR)

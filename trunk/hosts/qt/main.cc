@@ -23,10 +23,6 @@
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QPushButton>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <ggadget/dir_file_manager.h>
 #include <ggadget/extension_manager.h>
 #include <ggadget/file_manager_factory.h>
@@ -45,7 +41,7 @@
 #include <ggadget/script_runtime_manager.h>
 #include <ggadget/system_utils.h>
 #include "qt_host.h"
-#ifdef GGL_USE_X11
+#ifdef HAVE_X11
 #include <X11/extensions/Xrender.h>
 #endif
 
@@ -89,7 +85,7 @@ static const char *kGlobalResourcePaths[] = {
   NULL
 };
 
-#ifdef GGL_USE_X11
+#ifdef HAVE_X11
 static Display *dpy;
 static Colormap colormap = 0;
 static Visual *visual = 0;
@@ -161,7 +157,7 @@ int main(int argc, char* argv[]) {
     sscanf(argv[5], "%d", &decorated);
     g_decorated = (decorated != 0);
   }
-#ifdef GGL_USE_X11
+#ifdef HAVE_X11
   init_argb();
   QApplication app(dpy, argc, argv,
                    Qt::HANDLE(visual), Qt::HANDLE(colormap));

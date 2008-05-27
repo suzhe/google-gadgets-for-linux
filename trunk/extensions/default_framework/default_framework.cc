@@ -119,7 +119,7 @@ class DefaultWirelessAccessPoint : public WirelessAccessPointInterface {
   virtual Type GetType() const {
     return WirelessAccessPointInterface::WIRELESS_TYPE_ANY;
   }
-  virtual int GetSignalStrength() const { return 50; }
+  virtual int GetSignalStrength() const { return 0; }
   virtual void Connect(Slot1<void, bool> *callback) {
     if (callback) {
       (*callback)(true);

@@ -16,6 +16,8 @@
 
 IF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)
 
+APPLY_CONFIG(X11)
+
 ADD_SUBDIRECTORY(tests)
 
 SET(SRCS
@@ -34,7 +36,12 @@ SET(SRCS
 ADD_LIBRARY(ggadget-linux ${SRCS})
 
 ADD_MODULE(linux-system-framework linux_system_framework.cc)
-TARGET_LINK_LIBRARIES(linux-system-framework ggadget ggadget-dbus ggadget-linux)
+TARGET_LINK_LIBRARIES(linux-system-framework
+  ggadget
+  ggadget-dbus
+  ggadget-linux
+  ${X11_LIBRARIES}
+)
 OUTPUT_MODULE(linux-system-framework)
 
 ENDIF(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK)

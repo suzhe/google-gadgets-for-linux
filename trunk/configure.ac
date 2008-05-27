@@ -301,14 +301,14 @@ case $host_os in
     ;;
   *linux* )
     ggl_host_type=linux
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1 -DGGL_USE_X11=1"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_LINUX=1"
     build_linux_system_framework=yes
     GGL_PLATFORM_SHORT=\"linux\"
     GGL_PLATFORM=\"linux\"
     ;;
   *solaris* )
     ggl_host_type=solaris
-    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1 -DGGL_USE_X11=1"
+    PREDEFINED_MACROS="$PREDEFINED_MACROS -DGGL_HOST_SOLARIS=1"
     ;;
   * )
     ggl_host_type=unknown
@@ -399,6 +399,15 @@ GGL_CHECK_ZLIB([1.2.3], [has_zlib=yes], [has_zlib=no])
 
 # Check pthread lib
 AC_CHECK_LIB([pthread], [pthread_create], [has_pthread=yes], [has_pthread=no])
+
+# Check Xlib
+AC_PATH_XTRA()
+if test "x$X_LIBS" != "x"; then
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DHAVE_X11=1"
+  AC_SUBST(X_CFLAGS)
+  AC_SUBST(X_LIBS)
+  AC_SUBST(X_EXTRA_LIBS)
+fi
 
 # Check qt4
 if test x$ggl_host_type = xlinux; then
