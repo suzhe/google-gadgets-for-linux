@@ -184,8 +184,6 @@ class SingleViewHost::Impl {
 #endif
     g_signal_connect(G_OBJECT(window_), "enter-notify-event",
                      G_CALLBACK(EnterNotifyHandler), this);
-    g_signal_connect(G_OBJECT(window_), "window-state-event",
-                     G_CALLBACK(WindowStateHandler), this);
     g_signal_connect(G_OBJECT(window_), "show",
                      G_CALLBACK(WindowShowHandler), this);
     g_signal_connect_after(G_OBJECT(window_), "hide",
@@ -354,13 +352,11 @@ class SingleViewHost::Impl {
 
   void SetKeepAbove(bool keep_above) {
     ASSERT(window_);
-    if (window_) {
-      bool shown = GTK_WIDGET_MAPPED(window_);
-      enable_signals_ = false;
-      if (shown) gtk_widget_hide(window_);
+    if (window_ && keep_above != is_keep_above_) {
       gtk_window_set_keep_above(GTK_WINDOW(window_), keep_above);
-      if (shown) gtk_widget_show(window_);
-      enable_signals_ = true;
+      is_keep_above_ = keep_above;
+      if (record_states_)
+        SaveWindowStates();
     }
   }
 
@@ -611,19 +607,6 @@ class SingleViewHost::Impl {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->move_dragging_)
       impl->StopMoveDrag();
-    return FALSE;
-  }
-
-  static gboolean WindowStateHandler(GtkWidget *widget,
-                                     GdkEventWindowState *event,
-                                     gpointer user_data) {
-    DLOG("WindowStateHandler(%p): 0x%x, 0x%x", widget,
-         event->changed_mask, event->new_window_state);
-    Impl *impl = reinterpret_cast<Impl *>(user_data);
-    bool old_value = impl->is_keep_above_;
-    impl->is_keep_above_ = (event->new_window_state & GDK_WINDOW_STATE_ABOVE);
-    if (impl->record_states_ && old_value != impl->is_keep_above_)
-      impl->SaveWindowStates();
     return FALSE;
   }
 
@@ -1014,17 +997,13 @@ bool SingleViewHost::IsVisible() const {
 }
 
 void SingleViewHost::SetWindowType(GdkWindowTypeHint type) {
-  GdkWindowTypeHint old = GetWindowType();
-  if (old == type) return;
-  gdk_window_set_type_hint(impl_->window_->window, type);
-}
-
-GdkWindowTypeHint SingleViewHost::GetWindowType() const {
-#if GTK_CHECK_VERSION(2,10,0)
-  return gdk_window_get_type_hint(impl_->window_->window);
-#else
-  return gtk_window_get_type_hint(GTK_WINDOW(impl_->window_));
-#endif
+  if (impl_->window_) {
+    impl_->enable_signals_ = false;
+    gtk_widget_hide(impl_->window_);
+    gdk_window_set_type_hint(impl_->window_->window, type);
+    gtk_widget_show(impl_->window_);
+    impl_->enable_signals_ = true;
+  }
 }
 
 Connection *SingleViewHost::ConnectOnViewChanged(Slot0<void> *slot) {

@@ -1143,6 +1143,7 @@ class SidebarGtkHost::Impl {
   // gtk call-backs
   static gboolean HandleFocusOutEvent(GtkWidget *widget, GdkEventFocus *event,
                                       Impl *this_p) {
+    DLOG("HandleFocusOutEvent");
     if (this_p->option_auto_hide_) {
       if (this_p->ShouldHideSidebar()) {
         this_p->HideOrShowSideBar(false);

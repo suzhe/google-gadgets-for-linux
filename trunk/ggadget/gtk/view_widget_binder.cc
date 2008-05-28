@@ -74,8 +74,7 @@ class ViewWidgetBinder::Impl {
                   GDK_BUTTON_RELEASE_MASK |
                   GDK_POINTER_MOTION_MASK |
                   GDK_POINTER_MOTION_HINT_MASK |
-                  GDK_STRUCTURE_MASK |
-                  GDK_ALL_EVENTS_MASK;
+                  GDK_STRUCTURE_MASK;
 
     if (GTK_WIDGET_REALIZED(widget_))
       gtk_widget_add_events(widget_, events);
@@ -158,7 +157,7 @@ class ViewWidgetBinder::Impl {
       // Ignore the result.
       impl->view_->OnOtherEvent(e);
       if (!gtk_widget_is_focus(widget))
-        gtk_widget_grab_focus(widget);
+        gdk_window_focus(impl->widget_->window, event->time);
     }
 
     int mod = ConvertGdkModifierToModifier(event->state);
@@ -698,7 +697,7 @@ ViewWidgetBinder::Impl::kEventHandlers[] = {
   { "button-release-event", G_CALLBACK(ButtonReleaseHandler) },
 #if GTK_CHECK_VERSION(2,10,0)
   { "composited-changed", G_CALLBACK(CompositedChangedHandler) },
-#endif  
+#endif
   { "drag-data-received", G_CALLBACK(DragDataReceivedHandler) },
   { "drag-drop", G_CALLBACK(DragDropHandler) },
   { "drag-leave", G_CALLBACK(DragLeaveHandler) },
