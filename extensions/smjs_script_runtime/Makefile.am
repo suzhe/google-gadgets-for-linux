@@ -41,8 +41,10 @@ libggadget_smjs_la_SOURCES = \
 			  json.cc \
 			  native_js_wrapper.cc
 
+# add "-fcheck-new" to avoid 'operator new' warning when building jscntxt.h
 libggadget_smjs_la_CXXFLAGS = \
-			  $(DEFAULT_COMPILE_FLAGS)
+			  $(DEFAULT_COMPILE_FLAGS) \
+			  -fcheck-new
 
 libggadget_smjs_la_CPPFLAGS = \
 			  @SPIDERMONKEY_CPPFLAGS@ \
