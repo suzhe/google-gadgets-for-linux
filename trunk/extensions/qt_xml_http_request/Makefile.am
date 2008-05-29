@@ -20,6 +20,8 @@ MOC_FILES		= qt_xml_http_request_internal.moc
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
 
+noinst_HEADERS		= qt_xml_http_request_internal.h
+
 extension_LTLIBRARIES	= qt-xml-http-request.la
 extensiondir		= $(GGL_MODULE_DIR)
 
