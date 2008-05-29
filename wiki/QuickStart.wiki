@@ -1,4 +1,5 @@
 #summary A quick start guide to Google Gadgets for Linux.
+#labels Featured,Phase-Deploy
 
 = Project Description =
 
@@ -20,15 +21,27 @@ All of the code are stored in our Subversion repository. You can get instruction
 
 Once checked out, you'll want to build the code in order to run it. Read the [HowToBuild building instructions] Wiki page for details.
 
-`ggl` is the output binary name for the GTK+ host. To run the code with default settings, type:
+`ggl-gtk` is the output binary name for the GTK+ host. To run the code with default settings, type:
 
-  ./ggl
+{{{
+/usr/local/bin/ggl-gtk
+}}}
+
+(Assuming it's installed in the default prefix: /usr/local)
 
 This brings up a simple window with a button allowing you to add gadgets to be run. All added gadgets are displayed right on the desktop. Try it and see how things go!
 
 We also have a sidebar host that should be familiar to anyone who has used the Google Gadgets for Windows. The sidebar is a vertical bar where gadgets can attach on the side of the screen. To run the sidebar:
 
-  ./ggl -s
+{{{
+/usr/local/bin/ggl-gtk -s
+}}}
+
+In order to run it in background mode, just use -bg option, such as:
+
+{{{
+/usr/local/bin/ggl-gtk -s -bg
+}}}
 
 For best results, we recommend a recent system with software and hardware support for alpha-blended windows. Specifically, X Windows with the XComposite extension installed and a version of GTK+ greater or equal to 2.10 are preferred. Otherwise, the gadgets will show up on an opaque background that doesn't convey the same glitz that a newer system would.
 
@@ -38,10 +51,14 @@ Finally, if you're interested in actively contributing the project, you might be
 
 (And [MSMPTQuickStart this page] might be useful if you would like to send us code to review.)
 
+*Note:* We'll allow external developers as soon as the developer related documentations are ready.
+
 == Feedback ==
 
 Even if you don't wish become a contributor, we would still like to hear your feedback. The project is still evolving, so all comments are important. Go here to file them:
 
   http://code.google.com/p/google-gadgets-for-linux/issues/list
+
+Our public [http://groups.google.com/group/google-gadgets-for-linux-user discussion group for users] is also a good place to ask questions and share experiences with other users.
 
 And that's it, enjoy playing with the gadgets!
