@@ -207,7 +207,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
 
   virtual ExceptionCode Open(const char *method, const char *url, bool async,
                              const char *user, const char *password) {
-    LOG("Open %s with %s", url, method);
+    DLOG("Open %s with %s", url, method);
     Abort();
     if (!method || !url)
       return NULL_POINTER_ERR;
@@ -235,7 +235,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     http_ = new QHttp(qurl.host(), mode);
     http_->setUser(user, password);
     handler_ = new HttpHandler(this, http_);
-    request_header_ = new QHttpRequestHeader(method, url_.c_str());
+
+    std::string path = "/";
+    size_t url_length_without_path = host_.length() + qurl.scheme().length() + strlen("://");
+    if (url_.length() > url_length_without_path) {
+      path = url_.substr(url_length_without_path);
+    }
+    request_header_ = new QHttpRequestHeader(method, path.c_str());
+    request_header_->setValue("Host", host_.c_str());
+    DLOG("HOST: %s, PATH: %s", host_.c_str(), path.c_str());
     ChangeState(OPENED);
     return NO_ERR;
   }
