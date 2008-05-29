@@ -36,7 +36,7 @@ For best results, we recommend a recent system with software and hardware suppor
 
 Finally, if you're interested in actively contributing the project, you might be interesting in setting up a SVK infrastructure on your machine. This makes it easier to do some things like code reviews. We have a [SVKQuickStart Wiki page] to help you with that.
 
-(And [MSMPTQuickStart this page] might be useful if you would like to send us code to review.):
+(And [MSMPTQuickStart this page] might be useful if you would like to send us code to review.)
 
 == Feedback ==
 
