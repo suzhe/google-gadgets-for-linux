@@ -26,6 +26,7 @@
 #include <ggadget/gadget_consts.h>
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>
+#include <ggadget/messages.h>
 #include <ggadget/options_interface.h>
 #include <ggadget/script_context_interface.h>
 #include <ggadget/script_runtime_interface.h>
@@ -60,6 +61,7 @@ class QtViewHost::Impl {
       feedback_handler_(NULL),
       composite_(false),
       input_shape_mask_(true),
+      keep_above_(false),
       qt_obj_(new QtViewHostObject(this)) {
     if (type == ViewHostInterface::VIEW_HOST_MAIN)
       composite_ = true;
@@ -76,6 +78,7 @@ class QtViewHost::Impl {
   }
 
   void Detach() {
+    SaveWindowStates();
     view_ = NULL;
     if (window_)
       delete window_;
@@ -104,44 +107,42 @@ class QtViewHost::Impl {
   }
 
   void SaveWindowStates() {
-    if (view_ && view_->GetGadget()) {
-      ASSERT(window_);
+    if (view_ && view_->GetGadget() && type_ == VIEW_HOST_MAIN && window_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
-      LOG("Save:%d, %d", window_->pos().x(), window_->pos().y());
+      DLOG("Save:%d, %d", window_->pos().x(), window_->pos().y());
       opt->PutInternalValue((opt_prefix + "_x").c_str(),
                             Variant(window_->pos().x()));
       opt->PutInternalValue((opt_prefix + "_y").c_str(),
                             Variant(window_->pos().y()));
-//      opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
-//                            Variant(is_keep_above_));
+      opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
+                            Variant(keep_above_));
     }
   }
 
   void LoadWindowStates() {
-    if (view_ && view_->GetGadget()) {
-      ASSERT(window_);
+    if (view_ && view_->GetGadget() && type_ == VIEW_HOST_MAIN && window_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
       Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
       Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
       int x, y;
       if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
-        LOG("Restore:%d, %d", x, y);
+        DLOG("Restore:%d, %d", x, y);
         window_->move(x, y);
       } else {
         // Always place the window to the center of the screen if the window
         // position was not saved before.
         // gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
       }
- /*     Variant keep_above =
+      Variant keep_above =
           opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
       if (keep_above.type() == Variant::TYPE_BOOL &&
           VariantValue<bool>()(keep_above)) {
-        SetKeepAbove(true);
+        KeepAboveMenuCallback(NULL, true);
       } else {
-        SetKeepAbove(false);
-      }*/
+        KeepAboveMenuCallback(NULL, false);
+      }
     }
   }
 
@@ -210,11 +211,28 @@ class QtViewHost::Impl {
     return true;
   }
 
+  void KeepAboveMenuCallback(const char *, bool keep_above) {
+    if (keep_above_ != keep_above) {
+      keep_above_ = keep_above;
+      if (window_) {
+        widget_->SetKeepAbove(keep_above);
+      }
+    }
+  }
+
   bool ShowContextMenu(int button) {
     ASSERT(view_);
     context_menu_.clear();
     QtMenu qt_menu(&context_menu_);
-    view_->OnAddContextMenuItems(&qt_menu);
+    if (view_->OnAddContextMenuItems(&qt_menu) &&
+        type_ == VIEW_HOST_MAIN) {
+      qt_menu.AddItem(
+          GM_("MENU_ITEM_ALWAYS_ON_TOP"),
+          keep_above_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+          NewSlot(this, &Impl::KeepAboveMenuCallback, !keep_above_),
+          MenuInterface::MENU_ITEM_PRI_HOST);
+    }
+
     if (!context_menu_.isEmpty()) {
       context_menu_.popup(QCursor::pos());
       return true;
@@ -268,6 +286,7 @@ class QtViewHost::Impl {
 
   bool composite_;
   bool input_shape_mask_;
+  bool keep_above_;
   QtViewHostObject *qt_obj_;    // used for handling qt signal
   QString caption_;
   QMenu context_menu_;
@@ -391,6 +410,7 @@ bool QtViewHost::ShowView(bool modal, int flags,
 
 void QtViewHost::CloseView() {
   if (impl_->window_) {
+    impl_->SaveWindowStates();
     delete impl_->window_;
     impl_->window_ = NULL;
     impl_->widget_ = NULL;

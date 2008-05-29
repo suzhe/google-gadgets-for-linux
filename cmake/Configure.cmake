@@ -107,6 +107,7 @@ SET(GGL_BUILD_GST_AUDIO_FRAMEWORK 1)
 SET(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT 1)
 SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 1)
 SET(GGL_BUILD_CURL_XML_HTTP_REQUEST 1)
+SET(GGL_BUILD_QT_XML_HTTP_REQUEST 1)
 SET(GGL_BUILD_LIBXML2_XML_PARSER 1)
 SET(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK 1)
 
@@ -176,6 +177,7 @@ GET_CONFIG(librsvg-2.0 2.14 RSVG RSVG_FOUND)
 
 SET(QT_MIN_VERSION 4.3.0)
 SET(QT_USE_QTWEBKIT 1)
+SET(QT_USE_QTNETWORK 1)
 FIND_PACKAGE(Qt4)
 IF(QT4_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND)
   INCLUDE(${QT_USE_FILE})
@@ -242,31 +244,32 @@ ENDIF(GGL_BUILD_LIBGGADGET_GTK AND SMJS_FOUND)
 
 MESSAGE("
 Build options:
-  Version                       ${GGL_VERSION}
-  Build type                    ${CMAKE_BUILD_TYPE}
+  Version                          ${GGL_VERSION}
+  Build type                       ${CMAKE_BUILD_TYPE}
 
  Libraries:
-  GTK SVG Support               ${RSVG_FOUND}
-  Build libggadget-gtk          ${GGL_BUILD_LIBGGADGET_GTK}
-  Build libggadget-qt           ${GGL_BUILD_LIBGGADGET_QT}
-  Build libggadget-dbus         ${GGL_BUILD_LIBGGADGET_DBUS}
+  GTK SVG Support                  ${RSVG_FOUND}
+  Build libggadget-gtk             ${GGL_BUILD_LIBGGADGET_GTK}
+  Build libggadget-qt              ${GGL_BUILD_LIBGGADGET_QT}
+  Build libggadget-dbus            ${GGL_BUILD_LIBGGADGET_DBUS}
 
  Extensions:
-  Build dbus-script-class       ${GGL_BUILD_LIBGGADGET_DBUS}
-  Build gtkmoz-browser-element  ${GGL_BUILD_GTKMOZ_BROWSER_ELEMENT}
-  Build gst-audio-framework     ${GGL_BUILD_GST_AUDIO_FRAMEWORK}
-  Build gst-mediaplayer-element ${GGL_BUILD_GST_MEDIAPLAYER_ELEMENT}
-  Build linux-system-framework  ${GGL_BUILD_LINUX_SYSTEM_FRAMEWORK}
-  Build smjs-script-runtime     ${GGL_BUILD_SMJS_SCRIPT_RUNTIME}
-  Build curl-xml-http-request   ${GGL_BUILD_CURL_XML_HTTP_REQUEST}
-  Build libxml2-xml-parser      ${GGL_BUILD_LIBXML2_XML_PARSER}
-  Build gtk-edit-element        ${GGL_BUILD_LIBGGADGET_GTK}
-  Build gtk-system-framework    ${GGL_BUILD_LIBGGADGET_GTK}
-  Build qt-edit-element         ${GGL_BUILD_LIBGGADGET_QT}
-  Build qtwebkit-browser-element${GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT}
-  Build qt-system-framework     ${GGL_BUILD_LIBGGADGET_QT}
+  Build dbus-script-class          ${GGL_BUILD_LIBGGADGET_DBUS}
+  Build gtkmoz-browser-element     ${GGL_BUILD_GTKMOZ_BROWSER_ELEMENT}
+  Build gst-audio-framework        ${GGL_BUILD_GST_AUDIO_FRAMEWORK}
+  Build gst-mediaplayer-element    ${GGL_BUILD_GST_MEDIAPLAYER_ELEMENT}
+  Build linux-system-framework     ${GGL_BUILD_LINUX_SYSTEM_FRAMEWORK}
+  Build smjs-script-runtime        ${GGL_BUILD_SMJS_SCRIPT_RUNTIME}
+  Build curl-xml-http-request      ${GGL_BUILD_CURL_XML_HTTP_REQUEST}
+  Build libxml2-xml-parser         ${GGL_BUILD_LIBXML2_XML_PARSER}
+  Build gtk-edit-element           ${GGL_BUILD_LIBGGADGET_GTK}
+  Build gtk-system-framework       ${GGL_BUILD_LIBGGADGET_GTK}
+  Build qt-edit-element            ${GGL_BUILD_LIBGGADGET_QT}
+  Build qtwebkit-browser-element   ${GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT}
+  Build qt-xml-http-request        ${GGL_BUILD_QT_XML_HTTP_REQUEST}
+  Build qt-system-framework        ${GGL_BUILD_LIBGGADGET_QT}
 
  Hosts:
-  Build gtk host                ${GGL_BUILD_GTK_HOST}
-  Build qt host                 ${GGL_BUILD_QT_HOST}
+  Build gtk host                   ${GGL_BUILD_GTK_HOST}
+  Build qt host                    ${GGL_BUILD_QT_HOST}
 ")

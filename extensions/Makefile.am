@@ -17,6 +17,7 @@
 SUBDIRS = dbus_script_class \
 	  gtk_edit_element \
 	  qt_edit_element \
+	  qt_xml_http_request \
 	  gtkmoz_browser_element \
 	  qtwebkit_browser_element \
 	  default_framework \

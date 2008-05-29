@@ -67,7 +67,7 @@ static const char *kGlobalExtensions[] = {
   "linux-system-framework",
 #endif
   "smjs-script-runtime",
-  "curl-xml-http-request",
+  "qt-xml-http-request",
   "google-gadget-manager",
   "gadget-browser-script-utils",
   NULL
@@ -220,7 +220,7 @@ int main(int argc, char* argv[]) {
   ext_manager->RegisterLoadedExtensions(&script_runtime_register);
 
   ext_manager->SetReadonly();
-  hosts::qt::QtHost host(g_debug_mode);
+  hosts::qt::QtHost host = hosts::qt::QtHost(g_debug_mode);
 
   // Load gadget files.
   if (argc >= 2) {

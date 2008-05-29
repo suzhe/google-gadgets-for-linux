@@ -15,6 +15,7 @@
 #
 
 ADD_SUBDIRECTORY(curl_xml_http_request)
+ADD_SUBDIRECTORY(qt_xml_http_request)
 ADD_SUBDIRECTORY(dbus_script_class)
 ADD_SUBDIRECTORY(default_framework)
 ADD_SUBDIRECTORY(gst_audio_framework)

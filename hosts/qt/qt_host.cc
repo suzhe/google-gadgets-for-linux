@@ -66,6 +66,7 @@ class QtHost::Impl {
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       DLOG("Close Gadget: %s", it->second->GetManifestInfo(kManifestName).c_str());
+      it->second->CloseMainView();  // TODO: Save window state. A little hacky!
       delete it->second;
     }
     delete obj_;
@@ -208,7 +209,7 @@ class QtHost::Impl {
 
     dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
     dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
-    dvh->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, dvh));
+    // dvh->ConnectOnPopIn(NewSlot(this, &Impl::OnPopInHandler, dvh));
 
     return dvh;
   }
@@ -245,6 +246,7 @@ class QtHost::Impl {
     switch (decorated->GetDecoratorType()) {
       case DecoratedViewHost::MAIN_STANDALONE:
       case DecoratedViewHost::MAIN_DOCKED:
+        gadget->CloseMainView();  // TODO: Save window state. A little hacky!
         gadget->RemoveMe(true);
         break;
       case DecoratedViewHost::MAIN_EXPANDED:
