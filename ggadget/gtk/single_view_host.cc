@@ -352,11 +352,13 @@ class SingleViewHost::Impl {
 
   void SetKeepAbove(bool keep_above) {
     ASSERT(window_);
-    if (window_ && keep_above != is_keep_above_) {
+    if (window_) {
       gtk_window_set_keep_above(GTK_WINDOW(window_), keep_above);
-      is_keep_above_ = keep_above;
-      if (record_states_)
-        SaveWindowStates();
+      if (is_keep_above_ != keep_above) {
+        is_keep_above_ = keep_above;
+        if (record_states_)
+          SaveWindowStates();
+      }
     }
   }
 
@@ -998,11 +1000,7 @@ bool SingleViewHost::IsVisible() const {
 
 void SingleViewHost::SetWindowType(GdkWindowTypeHint type) {
   if (impl_->window_) {
-    impl_->enable_signals_ = false;
-    gtk_widget_hide(impl_->window_);
     gdk_window_set_type_hint(impl_->window_->window, type);
-    gtk_widget_show(impl_->window_);
-    impl_->enable_signals_ = true;
   }
 }
 

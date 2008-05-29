@@ -123,7 +123,7 @@ AC_CANONICAL_HOST
 ###########################################################
 ##                      Config options.                  ##
 ###########################################################
-build_simple_host=yes
+build_gtk_host=yes
 build_qt_host=yes
 build_libggadget_dbus=yes
 build_libggadget_gtk=yes
@@ -157,11 +157,11 @@ AC_ARG_WITH([gst-audio-sink],
 	    [default_gst_audio_sink=$withval],
 	    [default_gst_audio_sink="autoaudiosink"])
 
-AC_ARG_ENABLE([simple-host],
-	      AS_HELP_STRING([--disable-simple-host],
-			     [don't build simple host]),
-	      [build_simple_host=$enableval],
-	      [build_simple_host=yes])
+AC_ARG_ENABLE([gtk-host],
+	      AS_HELP_STRING([--disable-gtk-host],
+			     [don't build gtk host]),
+	      [build_gtk_host=$enableval],
+	      [build_gtk_host=yes])
 
 AC_ARG_ENABLE([qt-host],
 	      AS_HELP_STRING([--disable-qt-host],
@@ -242,7 +242,7 @@ AC_ARG_ENABLE([libxml2-xml-parser],
 	      [build_libxml2_xml_parser=yes])
 
 if test x$build_libggadget_gtk != xyes; then
-  build_simple_host=no
+  build_gtk_host=no
 fi
 
 if test x$build_libggadget_qt != xyes; then
@@ -556,8 +556,8 @@ if test x$build_gst_mediaplayer_element = xyes; then
 fi
 
 if test x$has_gtk2 != xyes; then
-  AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and simple host won't be built.])
-  build_simple_host=no
+  AC_MSG_WARN([Library gtk-2.0 is not available, gtk-system-framework extension and gtk host won't be built.])
+  build_gtk_host=no
   build_gtk_system_framework=no
   build_libggadget_gtk=no
 fi
@@ -646,8 +646,8 @@ AM_CONDITIONAL(
   [test x$build_libxml2_xml_parser = xyes])
 
 AM_CONDITIONAL(
-  [GGL_BUILD_SIMPLE_HOST],
-  [test x$build_simple_host = xyes])
+  [GGL_BUILD_GTK_HOST],
+  [test x$build_gtk_host = xyes])
 
 AM_CONDITIONAL([GGL_HAVE_ZIP], [test x$ZIP != x])
 AM_CONDITIONAL([GGL_HAVE_RSVG], [test x$has_rsvg = xyes])
@@ -730,7 +730,7 @@ AC_CONFIG_FILES([Makefile
 		 ggadget/gtk/Makefile
 		 ggadget/gtk/tests/Makefile
 		 hosts/Makefile
-		 hosts/simple/Makefile
+		 hosts/gtk/Makefile
 		 hosts/qt/Makefile
 		 resources/Makefile
 		 third_party/Makefile
@@ -778,7 +778,7 @@ Build options:
   Build libxml2-xml-parser      $build_libxml2_xml_parser
 
  Hosts:
-  Build simple host             $build_simple_host
+  Build gtk host                $build_gtk_host
   Build qt host                 $build_qt_host
 ])
 

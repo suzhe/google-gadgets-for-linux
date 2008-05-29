@@ -96,7 +96,7 @@ ENDIF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 
-SET(GGL_BUILD_SIMPLE_HOST 1)
+SET(GGL_BUILD_GTK_HOST 1)
 SET(GGL_BUILD_QT_HOST 1)
 SET(GGL_BUILD_LIBGGADGET_DBUS 1)
 SET(GGL_BUILD_LIBGGADGET_GTK 1)
@@ -168,8 +168,8 @@ GET_CONFIG(gdk-2.0 2.8.0 GDK2 GDK2_FOUND)
 GET_CONFIG(gtk+-2.0 2.8.0 GTK2 GTK2_FOUND)
 IF(NOT PANGO_FOUND OR NOT CAIRO_FOUND OR NOT GDK2_FOUND OR NOT GTK2_FOUND)
   SET(GGL_BUILD_LIBGGADGET_GTK 0)
-  SET(GGL_BUILD_SIMPLE_HOST 0)
-  MESSAGE("Library cairo, pando or gtk-2.0 are not available, gtk-system-framework extension, libggadget-gtk, gtk-and simple host won't be built.")
+  SET(GGL_BUILD_GTK_HOST 0)
+  MESSAGE("Library cairo, pando or gtk-2.0 are not available, gtk-system-framework extension, libggadget-gtk, gtk host won't be built.")
 ENDIF(NOT PANGO_FOUND OR NOT CAIRO_FOUND OR NOT GDK2_FOUND OR NOT GTK2_FOUND)
 
 GET_CONFIG(librsvg-2.0 2.14 RSVG RSVG_FOUND)
@@ -267,6 +267,6 @@ Build options:
   Build qt-system-framework     ${GGL_BUILD_LIBGGADGET_QT}
 
  Hosts:
-  Build simple host             ${GGL_BUILD_SIMPLE_HOST}
+  Build gtk host                ${GGL_BUILD_GTK_HOST}
   Build qt host                 ${GGL_BUILD_QT_HOST}
 ")

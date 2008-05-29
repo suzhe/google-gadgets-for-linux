@@ -196,9 +196,9 @@ class SidebarGtkHost::Impl {
                                         GDK_POINTER_MOTION_MASK),
                          NULL, NULL, gtk_get_current_event_time()) ==
         GDK_GRAB_SUCCESS) {
-      DLOG("Hanlde Begin Move sidebar.");
       int dummy, x, y;
       view_host_->GetWindowPosition(&dummy, &sidebar_position_y_);
+      DLOG("Hanlde Begin Move sidebar, height: %d", sidebar_position_y_);
       gtk_widget_get_pointer(main_widget_, &x, &y);
       floating_offset_x_ = x;
       floating_offset_y_ = y;
@@ -218,23 +218,20 @@ class SidebarGtkHost::Impl {
 
   void HandleSideBarEndMoveDrag() {
     if (!gadgets_shown_) return;
-    DLOG("Hanlde end Move sidebar.");
     GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(main_widget_));
     option_sidebar_monitor_ =
         gdk_screen_get_monitor_at_window(screen, main_widget_->window);
     GdkRectangle rect;
     gdk_screen_get_monitor_geometry(screen, option_sidebar_monitor_, &rect);
     int px, py;
-    gdk_display_get_pointer(gdk_display_get_default(), NULL, &px, &py, NULL);
-    px -= static_cast<int>(floating_offset_x_);
-    view_host_->SetWindowPosition(px, sidebar_position_y_);
-    sidebar_position_y_ = -1;
+    view_host_->GetWindowPosition(&px, &py);
     if (px >= rect.x + (rect.width - option_sidebar_width_) / 2)
       option_sidebar_position_ = SIDEBAR_POSITION_RIGHT;
     else
       option_sidebar_position_ = SIDEBAR_POSITION_LEFT;
 
     AdjustSidebar();
+    sidebar_position_y_ = -1;
   }
 
   void HandleSideBarShow(bool show) {
@@ -301,8 +298,11 @@ class SidebarGtkHost::Impl {
       int id = element->GetChildView()->GetGadget()->GetInstanceID();
       GadgetViewHostInfo *info = gadgets_[id];
       // calculate the cursor coordinate in the view element
-      double view_x, view_y, h = element->GetPixelHeight();
-      View *view = info->gadget->GetMainView();
+      View *view = info->decorated_view_host->IsMinimized() ?
+          down_cast<View *>(info->decorated_view_host->GetDecoratedView()) :
+          down_cast<View *>(info->gadget->GetMainView());
+      double view_x, view_y;
+      double w = view->GetWidth(), h = element->GetPixelHeight();
       view->NativeWidgetCoordToViewCoord(offset_x, offset_y, &view_x, &view_y);
 
       Undock(id, true);
@@ -313,7 +313,12 @@ class SidebarGtkHost::Impl {
           GDK_GRAB_SUCCESS) {
         draging_gadget_ = info->gadget;
         side_bar_->InsertPlaceholder(info->y_in_sidebar, h);
-        View *new_view = down_cast<View *>(draging_gadget_->GetMainView());
+        View *new_view = info->decorated_view_host->IsMinimized() ?
+            down_cast<View *>(info->decorated_view_host->GetDecoratedView()) :
+            down_cast<View *>(draging_gadget_->GetMainView());
+        if (info->decorated_view_host->IsMinimized())
+          new_view->SetSize(w, new_view->GetHeight());
+
         new_view->ViewCoordToNativeWidgetCoord(view_x, view_y,
                                                &floating_offset_x_,
                                                &floating_offset_y_);
@@ -499,7 +504,11 @@ class SidebarGtkHost::Impl {
 
   void AdjustPositionProperties(const GdkRectangle &rect) {
     int x, y;
-    view_host_->GetWindowPosition(&x, &y);
+    // get the height of sidebar
+    if (sidebar_position_y_ >= 0)
+      y = sidebar_position_y_;
+    else
+      view_host_->GetWindowPosition(&x, &y);
     if (option_sidebar_position_ == SIDEBAR_POSITION_LEFT) {
       DLOG("move sidebar to %d %d", rect.x, y);
       view_host_->SetWindowPosition(rect.x, y);
@@ -515,7 +524,6 @@ class SidebarGtkHost::Impl {
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it)
       if (it->second->gadget->GetDisplayTarget() == Gadget::TARGET_SIDEBAR) {
-        DLOG("Set Dock Edge for %d", it->first);
         it->second->decorated_view_host->SetDockEdge(
             option_sidebar_position_ == SIDEBAR_POSITION_RIGHT);
       }
@@ -788,7 +796,7 @@ class SidebarGtkHost::Impl {
   DecoratedViewHost *NewSingleViewHost(int gadget_id) {
     SingleViewHost *view_host =
       new SingleViewHost(ViewHostInterface::VIEW_HOST_MAIN, 1.0,
-          decorated_, false, false, view_debug_mode_);
+          decorated_, false, true, view_debug_mode_);
     gadgets_[gadget_id]->floating_view_host = view_host;
     view_host->ConnectOnBeginMoveDrag(
         NewSlot(this, &Impl::HandleViewHostBeginMoveDrag, gadget_id));

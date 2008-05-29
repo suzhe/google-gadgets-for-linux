@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 
-ADD_SUBDIRECTORY(simple)
+ADD_SUBDIRECTORY(gtk)
 ADD_SUBDIRECTORY(qt)

@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-if GGL_BUILD_SIMPLE_HOST
-SUBDIRS = simple
-else
-SUBDIRS = 
+SUBDIRS =
+
+if GGL_BUILD_GTK_HOST
+SUBDIRS += gtk
 endif
 
 if GGL_BUILD_QT_HOST

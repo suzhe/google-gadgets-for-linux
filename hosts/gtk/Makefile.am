@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-if GGL_BUILD_SIMPLE_HOST
+if GGL_BUILD_GTK_HOST
 
 INCLUDES		= -I$(top_builddir) \
 			  -I$(top_srcdir)
@@ -23,32 +23,32 @@ noinst_HEADERS		= gadget_browser_host.h \
 			  simple_gtk_host.h \
 			  sidebar_gtk_host.h
 
-bin_PROGRAMS		= ggl-simple
+bin_PROGRAMS		= ggl-gtk
 
-ggl_simple_SOURCES	= main.cc \
+ggl_gtk_SOURCES	= main.cc \
 			  sidebar_gtk_host.cc \
 			  simple_gtk_host.cc
 
 
-ggl_simple_CPPFLAGS 	= @GTK2_CFLAGS@ \
+ggl_gtk_CPPFLAGS 	= @GTK2_CFLAGS@ \
 			  $(PREDEFINED_MACROS)
 
-ggl_simple_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
+ggl_gtk_CXXFLAGS	= $(DEFAULT_COMPILE_FLAGS)
 
-ggl_simple_LDADD	= @GTK2_LIBS@ \
-			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
-			  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
+ggl_gtk_LDADD	= @GTK2_LIBS@ \
+		  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
+		  $(top_builddir)/ggadget/gtk/libggadget-gtk@GGL_EPOCH@.la
 
 # TODO: install these files into correct path.
 all-local:
 	[ ! -f $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child ] || cp $(top_builddir)/extensions/gtkmoz_browser_element/gtkmoz-browser-child .
 	[ ! -f $(top_builddir)/resources/resources.gg ] || cp $(top_builddir)/resources/resources.gg .
 
-noinst_SCRIPTS=ggl-simple.sh
+noinst_SCRIPTS=ggl-gtk.sh
 
-.PHONY: ggl-simple.sh
+.PHONY: ggl-gtk.sh
 
-ggl-simple.sh: ggl-simple
+ggl-gtk.sh: ggl-gtk
 	(echo '#!/bin/sh' > $@; \
 	 echo 'GGL_MODULE_PATH=`pwd`' >> $@; \
 	 echo 'for i in $(abs_top_builddir)/extensions/*; do' >> $@; \
@@ -57,7 +57,7 @@ ggl-simple.sh: ggl-simple
 	 echo '  fi' >> $@; \
 	 echo 'done' >> $@; \
 	 echo 'export GGL_MODULE_PATH' >> $@; \
-	 echo '$(LIBTOOL) --mode=execute $$MEMCHECK_COMMAND $(abs_builddir)/ggl-simple $$@' >> $@; \
+	 echo '$(LIBTOOL) --mode=execute $$MEMCHECK_COMMAND $(abs_builddir)/ggl-gtk $$@' >> $@; \
 	 chmod 0755 $@)
 
 endif
