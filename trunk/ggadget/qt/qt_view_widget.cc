@@ -367,36 +367,6 @@ void QtViewWidget::dropEvent(QDropEvent *event) {
   }
 }
 
-#if 0
-void QtViewWidget::resizeEvent(QResizeEvent *event) {
-  ViewInterface::ResizableMode mode = view_->GetResizable();
-  if (mode == ViewInterface::RESIZABLE_ZOOM) {
-    double x_ratio =
-        static_cast<double>(event->size().width()) /
-        static_cast<double>(width_);
-    double y_ratio =
-        static_cast<double>(event->size().height()) /
-        static_cast<double>(height_);
-    zoom_ = x_ratio > y_ratio ? y_ratio : x_ratio;
-    graphics_->SetZoom(zoom_);
-    view_->MarkRedraw();
-    repaint();
-  } else if (mode == ViewInterface::RESIZABLE_TRUE) {
-    double width = event->size().width() / zoom_;
-    double height = event->size().height() / zoom_;
-    if (width != view_->GetWidth() || height != view_->GetHeight()) {
-      if (view_->OnSizing(&width, &height)) {
-        view_->SetSize(width, height);
-      } else {
-        view_host_->QueueResize();
-      }
-    }
-  } else {
-    view_host_->QueueResize();
-  }
-}
-#endif
-
 void QtViewWidget::EnableInputShapeMask(bool enable) {
   if (enable_input_mask_ != enable) {
     enable_input_mask_ = enable;
@@ -423,6 +393,16 @@ void QtViewWidget::SetInputMask(QPixmap *pixmap) {
                     bm.handle(),
                     ShapeSet);
 #endif
+}
+
+void QtViewWidget::SetKeepAbove(bool above) {
+  Qt::WindowFlags f = windowFlags();
+  if (above)
+    f |= Qt::WindowStaysOnTopHint;
+  else
+    f &= ~Qt::WindowStaysOnTopHint;
+  setWindowFlags(f);
+  show();
 }
 
 void QtViewWidget::SkipTaskBar() {

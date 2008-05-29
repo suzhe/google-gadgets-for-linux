@@ -136,6 +136,7 @@ build_qt_system_framework=yes
 build_gtk_system_framework=yes
 build_smjs_script_runtime=yes
 build_curl_xml_http_request=yes
+build_qt_xml_http_request=yes
 build_libxml2_xml_parser=yes
 # OS Specific conditions.
 build_linux_system_framework=no
@@ -235,6 +236,12 @@ AC_ARG_ENABLE([curl-xml-http-request],
 	      [build_curl_xml_http_request=$enableval],
 	      [build_curl_xml_http_request=yes])
 
+AC_ARG_ENABLE([qt-xml-http-request],
+	      AS_HELP_STRING([--disable-qt-xml-http-request],
+			     [don't build qt-xml-http-request]),
+	      [build_qt_xml_http_request=$enableval],
+	      [build_qt_xml_http_request=yes])
+
 AC_ARG_ENABLE([libxml2-xml-parser],
 	      AS_HELP_STRING([--disable-libxml2-xml-parser],
 			     [don't build libxml2-xml-parser]),
@@ -248,6 +255,7 @@ fi
 if test x$build_libggadget_qt != xyes; then
   build_qt_host=no
   build_qtwebkit_browser_element=no
+  build_qt_xml_http_request=no
 fi
 
 ###########################################################
@@ -411,7 +419,8 @@ fi
 
 # Check qt4
 if test x$ggl_host_type = xlinux; then
-  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3],
+  PKG_CHECK_MODULES(QT4, [QtGui >= 4.3, QtCore >= 4.3, QtOpenGL >= 4.3,
+			  QtNetwork >= 4.3],
 		    [has_qt4=yes
 		     MOC=`$PKG_CONFIG --variable=moc_location QtCore`],
 		     [has_qt4=no])
@@ -420,18 +429,20 @@ if test x$ggl_host_type = xlinux; then
 		    [has_qtwebkit=no])
 elif test x$ggl_host_type = xmacosx; then
   # There is no pkgconfig for Qt on MacOSX, just do header check.
-  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL],
+  AC_CHECK_HEADERS([QtCore/QtCore QtGui/QtGui QtOpenGL/QtOpenGL \
+		    QtNetwork/QtNetwork],
 		   [has_qt4=yes], [has_qt4=no])
-  AC_CHECK_HEADERS([QtWebKit/QtWebKit QtNetwork/QtNetwork],
+  AC_CHECK_HEADERS([QtWebKit/QtWebKit],
 		   [has_qtwebkit=yes], [has_qtwebkit=no])
   if test x$has_qt4 = xyes; then
     QT4_LIBS="-framework OpenGL -framework AGL -framework QtGui \
               -framework Carbon -framework AppKit -framework QtCore \
+	      -framework QtNetwork \
               -framework ApplicationServices -lz -lm"
     AC_PATH_PROG([MOC], [moc])
   fi
   if test x$has_qtwebkit = xyes; then
-    QT4WEBKIT_LIBS="-$QT4_LIBS -framework QtWebKit -framework QtNetwork"
+    QT4WEBKIT_LIBS="-$QT4_LIBS -framework QtWebKit"
   fi
 else
   AC_MSG_WARN([Qt support is not available for $ggl_host_type])
@@ -634,6 +645,10 @@ AM_CONDITIONAL(
   [test x$build_qt_system_framework = xyes])
 
 AM_CONDITIONAL(
+  [GGL_BUILD_QT_XML_HTTP_REQUEST],
+  [test x$build_qt_xml_http_request = xyes])
+
+AM_CONDITIONAL(
   [GGL_BUILD_SMJS_SCRIPT_RUNTIME],
   [test x$build_smjs_script_runtime = xyes])
 
@@ -712,6 +727,7 @@ AC_CONFIG_FILES([Makefile
 		 extensions/linux_system_framework/tests/Makefile
 		 extensions/smjs_script_runtime/Makefile
 		 extensions/smjs_script_runtime/tests/Makefile
+		 extensions/qt_xml_http_request/Makefile
 		 extensions/curl_xml_http_request/Makefile
 		 extensions/libxml2_xml_parser/Makefile
 		 extensions/default_options/Makefile
@@ -775,6 +791,7 @@ Build options:
   Build linux-system-framework  $build_linux_system_framework
   Build smjs-script-runtime     $build_smjs_script_runtime
   Build curl-xml-http-request   $build_curl_xml_http_request
+  Build qt-xml-http-request     $build_qt_xml_http_request
   Build libxml2-xml-parser      $build_libxml2_xml_parser
 
  Hosts:
