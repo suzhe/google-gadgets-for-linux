@@ -450,6 +450,7 @@ void GtkEditImpl::ScrollTo(int position) {
 
 void GtkEditImpl::MarkRedraw() {
   content_modified_ = true;
+  QueueRefresh(false, false);
 }
 
 EventResult GtkEditImpl::OnMouseEvent(const MouseEvent &event) {

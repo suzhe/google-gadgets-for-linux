@@ -19,7 +19,7 @@
 #include <ggadget/logger.h>
 #include <ggadget/framework_interface.h>
 #include <ggadget/variant.h>
-#include "ggadget/native_main_loop.h"
+#include "ggadget/tests/native_main_loop.h"
 #include <unittest/gtest.h>
 #include "../perfmon.cc"
 
@@ -119,7 +119,7 @@ TEST(Perfmon, GetCurrentValue_Failure_InvalidCounterPath) {
   EXPECT_EQ(kInvalidCpuUsage, value);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   testing::ParseGTestFlags(&argc, argv);
   SetGlobalMainLoop(&g_main_loop);
   return RUN_ALL_TESTS();

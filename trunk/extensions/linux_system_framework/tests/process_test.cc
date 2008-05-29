@@ -36,7 +36,7 @@ TEST(Process, EnumerateProcesses) {
 TEST(Process, GetForeground) {
   Process process;
   ProcessInfoInterface *fore_process = process.GetForeground();
-  EXPECT_TRUE(fore_process == NULL); // always returns NULL
+  EXPECT_TRUE(fore_process != NULL);
 }
 
 TEST(Process, GetInfo) {

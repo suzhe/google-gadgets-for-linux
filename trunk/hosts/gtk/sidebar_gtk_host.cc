@@ -323,17 +323,22 @@ class SidebarGtkHost::Impl {
                                                &floating_offset_x_,
                                                &floating_offset_y_);
         info->undock_by_drag = true;
-        // move window the cursor place
+
+        GtkWidget *window = info->floating_view_host->GetWindow();
+        gdk_window_raise(window->window);
+        gdk_window_set_override_redirect(window->window, true);
+#if GTK_CHECK_VERSION(2,10,0)
+        info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DND);
+#else
+        info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
+#endif
+        // move window to the cursor position.
         int x, y;
         gdk_display_get_pointer(gdk_display_get_default(), NULL, &x, &y, NULL);
         info->floating_view_host->SetWindowPosition(
             x - static_cast<int>(floating_offset_x_),
             y - static_cast<int>(floating_offset_y_));
         info->floating_view_host->ShowView(false, 0, NULL);
-        if (option_always_on_top_) {
-          info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
-          gdk_window_raise(info->floating_view_host->GetWindow()->window);
-        }
       }
     }
   }
@@ -634,14 +639,18 @@ class SidebarGtkHost::Impl {
         GDK_GRAB_SUCCESS) {
       draging_gadget_ = info->gadget;
       int x, y;
-      gtk_widget_get_pointer(info->floating_view_host->GetWindow(), &x, &y);
+      GtkWidget *window = info->floating_view_host->GetWindow();
+      gtk_widget_get_pointer(window, &x, &y);
       floating_offset_x_ = x;
       floating_offset_y_ = y;
 
-      if (option_always_on_top_) {
-        info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
-        gdk_window_raise(info->floating_view_host->GetWindow()->window);
-      }
+      gdk_window_raise(window->window);
+      gdk_window_set_override_redirect(window->window, true);
+#if GTK_CHECK_VERSION(2,10,0)
+      info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DND);
+#else
+      info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
+#endif
     }
     return true;
   }
@@ -680,6 +689,8 @@ class SidebarGtkHost::Impl {
         info->decorated_view_host->RestoreViewSize();
         info->undock_by_drag = false;
       }
+      gdk_window_set_override_redirect(
+          info->floating_view_host->GetWindow()->window, false);
       info->floating_view_host->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
     }
     side_bar_->ClearPlaceHolder();
@@ -860,8 +871,8 @@ class SidebarGtkHost::Impl {
       default:
         {
           DLOG("open detail view.");
-          SingleViewHost *sv = new SingleViewHost(type, 1.0, decorated_,
-                                                  false, true, view_debug_mode_);
+          SingleViewHost *sv = new SingleViewHost(type, 1.0, decorated_, false,
+                                                  false, view_debug_mode_);
           gadgets_[id]->details_view_host = sv;
           sv->ConnectOnShowHide(NewSlot(this, &Impl::HandleDetailsViewShow, id));
           sv->ConnectOnResized(NewSlot(this, &Impl::HandleDetailsViewResize, id));
@@ -951,8 +962,8 @@ class SidebarGtkHost::Impl {
       expanded_original_->GetDecoratedView()->OnOtherEvent(event);
 
       child->SwitchViewHost(expanded_popout_);
-      expanded_popout_->ShowView(false, 0, NULL);
       SetPopoutPosition(child->GetGadget()->GetInstanceID(), svh);
+      expanded_popout_->ShowView(false, 0, NULL);
     }
   }
 
