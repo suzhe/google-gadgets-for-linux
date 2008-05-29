@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-EXTRA_DIST		= dom1_test.js \
+EXTRA_DIST		= dbus_object_test_shell.js \
+			  dom1_test.js \
 			  json_test.js \
 			  wrapper_test.js
 

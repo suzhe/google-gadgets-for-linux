@@ -580,7 +580,7 @@ FixedAllocator::~FixedAllocator()
 void FixedAllocator::ReportStat() {
   size_t active = allocCount_ - deallocCount_;
   DLOG("FixedAllocator Stat: %zu %zu %zu %zu %zu %lf",
-       blockSize_, allocCount_, deallocCount_, active, chunks_.size(), 
+       blockSize_, allocCount_, deallocCount_, active, chunks_.size(),
        static_cast<double>(active) / (chunks_.size() * numBlocks_));
 }
 #endif

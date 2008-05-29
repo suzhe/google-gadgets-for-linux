@@ -762,7 +762,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     response_body_.append(array.data(), array.length());
 #if _DEBUG
     QTextStream out(stdout);
-    LOG("responseFinished: %d, %d, %d",
+    LOG("responseFinished: %d, %zu, %d",
         id,
         response_body_.length(),
         array.length());

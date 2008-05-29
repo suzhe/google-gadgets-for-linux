@@ -28,7 +28,7 @@ TEST(Memory, GetTotal) {
   Memory memory;
   int64_t total = memory.GetTotal();
   EXPECT_GT(total, 0);
-  LOG("total memory: %lld", total);
+  LOG("total memory: %jd", total);
 }
 
 TEST(Memory, GetFree) {
@@ -37,7 +37,7 @@ TEST(Memory, GetFree) {
   int64_t total = memory.GetFree();
   EXPECT_GT(free, 0);
   EXPECT_GE(total, free);
-  LOG("free memory: %lld", free);
+  LOG("free memory: %jd", free);
 }
 
 TEST(Memory, GetUsed) {
@@ -48,14 +48,14 @@ TEST(Memory, GetUsed) {
   EXPECT_GT(used, 0);
   EXPECT_GE(total, used);
   EXPECT_EQ(total, used + free);
-  LOG("used memory: %lld", used);
+  LOG("used memory: %jd", used);
 }
 
 TEST(Memory, GetFreePhysical) {
   Memory memory;
   int64_t free_physical = memory.GetFreePhysical();
   EXPECT_GT(free_physical, 0);
-  LOG("free physical memory: %lld", free_physical);
+  LOG("free physical memory: %jd", free_physical);
 }
 
 TEST(Memory, GetTotalPhysical) {
@@ -64,7 +64,7 @@ TEST(Memory, GetTotalPhysical) {
   int64_t free_physical = memory.GetFreePhysical();
   EXPECT_GT(total_physical, 0);
   EXPECT_GE(total_physical, free_physical);
-  LOG("total physical memory: %lld", total_physical);
+  LOG("total physical memory: %jd", total_physical);
 }
 
 TEST(Memory, GetUsedPhysical) {
@@ -75,7 +75,7 @@ TEST(Memory, GetUsedPhysical) {
   EXPECT_GT(total_physical, 0);
   EXPECT_GE(total_physical, free_physical);
   EXPECT_EQ(total_physical, free_physical + used_physical);
-  LOG("used physical memory: %lld", used_physical);
+  LOG("used physical memory: %jd", used_physical);
 }
 
 

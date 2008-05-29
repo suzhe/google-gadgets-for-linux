@@ -48,7 +48,9 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   static const char *kExtensions[] = {
     "libxml2_xml_parser/libxml2-xml-parser",
   };
-  INIT_EXTENSIONS(0, kExtensions, kExtensions);
+  int argc = 0;
+  const char **argv = NULL;
+  INIT_EXTENSIONS(argc, argv, kExtensions);
 
   global = new GlobalObject();
   context->SetGlobalObject(global);

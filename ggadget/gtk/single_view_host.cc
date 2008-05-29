@@ -205,6 +205,7 @@ class SingleViewHost::Impl {
     // input event mask effective.
     binder_ = new ViewWidgetBinder(view_, owner_, widget_, no_background);
 
+    gtk_widget_realize(window_);
     on_view_changed_signal_();
   }
 
@@ -331,6 +332,12 @@ class SingleViewHost::Impl {
       gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
 
     gtk_window_present(GTK_WINDOW(window_));
+
+    // Load window states again to make sure it's still correct
+    // after the window is shown.
+    if (record_states_)
+      LoadWindowStates();
+
     // Main view and details view doesn't support modal.
     if (type_ == ViewHostInterface::VIEW_HOST_OPTIONS && modal) {
       gtk_dialog_run(GTK_DIALOG(window_));
@@ -346,8 +353,12 @@ class SingleViewHost::Impl {
 
   void SetWindowPosition(int x, int y) {
     ASSERT(window_);
-    if (window_)
+    if (window_) {
+      win_x_ = x;
+      win_y_ = y;
       gtk_window_move(GTK_WINDOW(window_), x, y);
+      SaveWindowStates(true, false);
+    }
   }
 
   void SetKeepAbove(bool keep_above) {
@@ -356,9 +367,25 @@ class SingleViewHost::Impl {
       gtk_window_set_keep_above(GTK_WINDOW(window_), keep_above);
       if (is_keep_above_ != keep_above) {
         is_keep_above_ = keep_above;
-        if (record_states_)
-          SaveWindowStates();
+        SaveWindowStates(false, true);
       }
+    }
+  }
+
+  void SetWindowType(GdkWindowTypeHint type) {
+    ASSERT(window_);
+    if (window_) {
+      bool visible = GTK_WIDGET_VISIBLE(window_);
+      enable_signals_ = false;
+      if (visible)
+        gtk_widget_hide(window_);
+      gtk_window_set_type_hint(GTK_WINDOW(window_), type);
+      if (visible) {
+        gtk_widget_show(window_);
+        // Make sure that the window has correct position.
+        gtk_window_move(GTK_WINDOW(window_), win_x_, win_y_);
+      }
+      enable_signals_ = true;
     }
   }
 
@@ -376,48 +403,49 @@ class SingleViewHost::Impl {
     return "";
   }
 
-  void SaveWindowStates() {
-    if (view_ && view_->GetGadget()) {
+  void SaveWindowStates(bool save_position, bool save_keep_above) {
+    if (record_states_ && view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
-      opt->PutInternalValue((opt_prefix + "_x").c_str(),
-                            Variant(win_x_));
-      opt->PutInternalValue((opt_prefix + "_y").c_str(),
-                            Variant(win_y_));
-      opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
-                            Variant(is_keep_above_));
+      if (save_position) {
+        opt->PutInternalValue((opt_prefix + "_x").c_str(),
+                              Variant(win_x_));
+        opt->PutInternalValue((opt_prefix + "_y").c_str(),
+                              Variant(win_y_));
+      }
+      if (save_keep_above) {
+        opt->PutInternalValue((opt_prefix + "_keep_above").c_str(),
+                              Variant(is_keep_above_));
+      }
     }
     // Don't save size and zoom information, it's conflict with view
     // decorator.
   }
 
   void LoadWindowStates() {
-    if (view_ && view_->GetGadget()) {
+    if (record_states_ && view_ && view_->GetGadget()) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
-
-      // Restore keep above state first, otherwise it might be affect the
-      // restoring of window position.
-      Variant keep_above =
-          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
-      if (keep_above.type() == Variant::TYPE_BOOL &&
-          VariantValue<bool>()(keep_above)) {
-        SetKeepAbove(true);
-      } else {
-        SetKeepAbove(false);
-      }
 
       // Restore window position.
       Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
       Variant vy = opt->GetInternalValue((opt_prefix + "_y").c_str());
       int x, y;
       if (vx.ConvertToInt(&x) && vy.ConvertToInt(&y)) {
+        win_x_ = x;
+        win_y_ = y;
         gtk_window_move(GTK_WINDOW(window_), x, y);
       } else {
         // Always place the window to the center of the screen if the window
         // position was not saved before.
         gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
       }
+
+      // Restore keep above state.
+      Variant keep_above =
+          opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
+      if (keep_above.ConvertToBool(&is_keep_above_))
+        SetKeepAbove(is_keep_above_);
     }
     // Don't load size and zoom information, it's conflict with view
     // decorator.
@@ -641,23 +669,19 @@ class SingleViewHost::Impl {
                                    gpointer user_data) {
     Impl *impl = reinterpret_cast<Impl *>(user_data);
     if (impl->enable_signals_) {
-      bool states_changed = false;
       if (impl->win_x_ != event->x || impl->win_y_ != event->y) {
         impl->win_x_ = event->x;
         impl->win_y_ = event->y;
         impl->on_moved_signal_(event->x, event->y);
-        states_changed = true;
+        // SaveWindowStates() only saves window position.
+        impl->SaveWindowStates(true, false);
       }
       if (impl->win_width_ != event->width ||
           impl->win_height_ != event->height) {
         impl->win_width_ = event->width;
         impl->win_height_ = event->height;
         impl->on_resized_signal_(event->width, event->height);
-        states_changed = true;
       }
-
-      if (states_changed && impl->record_states_)
-        impl->SaveWindowStates();
     }
     return FALSE;
   }
@@ -999,9 +1023,7 @@ bool SingleViewHost::IsVisible() const {
 }
 
 void SingleViewHost::SetWindowType(GdkWindowTypeHint type) {
-  if (impl_->window_) {
-    gdk_window_set_type_hint(impl_->window_->window, type);
-  }
+  impl_->SetWindowType(type);
 }
 
 Connection *SingleViewHost::ConnectOnViewChanged(Slot0<void> *slot) {

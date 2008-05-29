@@ -18,7 +18,7 @@
 #include <ggadget/scriptable_helper.h>
 #include <ggadget/scriptable_interface.h>
 #include <ggadget/extension_manager.h>
-#include <ggadget/native_main_loop.h>
+#include <ggadget/tests/native_main_loop.h>
 #include <ggadget/tests/init_extensions.h>
 #include "../js_script_context.h"
 
@@ -43,8 +43,19 @@ JSBool InitCustomObjects(JSScriptContext *context) {
   global = new GlobalObject();
   context->SetGlobalObject(global);
 
-  static const char *kExtensions[] = { "dbus_script_class/dbus-script-class" };
-  INIT_EXTENSIONS(0, ((const char **)NULL), kExtensions);
+  static const char *kExtensions[] = {
+    "dbus_script_class/dbus-script-class",
+    "libxml2_xml_parser/libxml2-xml-parser"
+  };
+
+  int argc = 0;
+  const char **argv = NULL;
+  INIT_EXTENSIONS(argc, argv, kExtensions);
+
+  ScriptExtensionRegister ext_register(context);
+  ExtensionManager::GetGlobalExtensionManager()->RegisterLoadedExtensions(
+      &ext_register);
+
   return JS_TRUE;
 }
 
