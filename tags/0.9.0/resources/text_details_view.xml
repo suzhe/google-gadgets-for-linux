@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<view width="300" height="250" resizable="true" onopen="onopen()">
+  <script>
+<!--
+function onopen() {
+  label.innerText = detailsViewData.GetValue("content");
+}
+-->
+  </script>
+  <div width="100%" height="100%" autoscroll="true">
+    <label name="label" width="100%" wordWrap="true"/>
+  </div>
+</view>
