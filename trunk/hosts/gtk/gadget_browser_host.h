@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_GADGET_BROWSER_HOST_H__
-#define HOSTS_SIMPLE_GADGET_BROWSER_HOST_H__
+#ifndef HOSTS_GTK_GADGET_BROWSER_HOST_H__
+#define HOSTS_GTK_GADGET_BROWSER_HOST_H__
 
 #include <ggadget/host_interface.h>
 #include <ggadget/gtk/single_view_host.h>
@@ -59,4 +59,4 @@ class GadgetBrowserHost : public ggadget::HostInterface {
 } // namespace gtk
 } // namespace hosts
 
-#endif // HOSTS_SIMPLE_GADGET_BROWSER_HOST_H__
+#endif // HOSTS_GTK_GADGET_BROWSER_HOST_H__

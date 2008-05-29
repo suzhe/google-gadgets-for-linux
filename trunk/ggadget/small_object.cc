@@ -578,10 +578,10 @@ FixedAllocator::~FixedAllocator()
 
 #ifdef _DEBUG
 void FixedAllocator::ReportStat() {
-    size_t active = allocCount_ - deallocCount_;
-    DLOG("FixedAllocator Stat: %zu %zu %zu %zu %zu %lf",
-         blockSize_, allocCount_, deallocCount_, active, chunks_.size(), 
-         static_cast<double>(active) / (chunks_.size() * numBlocks_));
+  size_t active = allocCount_ - deallocCount_;
+  DLOG("FixedAllocator Stat: %zu %zu %zu %zu %zu %lf",
+       blockSize_, allocCount_, deallocCount_, active, chunks_.size(), 
+       static_cast<double>(active) / (chunks_.size() * numBlocks_));
 }
 #endif
 
@@ -1245,4 +1245,3 @@ bool SmallObjAllocator::IsCorrupt( void ) const
 }
 
 } // end namespace ggadget
-

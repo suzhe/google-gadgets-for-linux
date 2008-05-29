@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef HOSTS_SIMPLE_SIDEBAR_GTK_HOST_H__
-#define HOSTS_SIMPLE_SIDEBAR_GTK_HOST_H__
+#ifndef HOSTS_GTK_SIDEBAR_GTK_HOST_H__
+#define HOSTS_GTK_SIDEBAR_GTK_HOST_H__
 
 #include <string>
 #include <ggadget/host_interface.h>
@@ -48,4 +48,4 @@ class SidebarGtkHost : public ggadget::HostInterface {
 } // namespace gtk
 } // namespace hosts
 
-#endif // HOSTS_SIMPLE_SIDEBAR_GTK_HOST_H__
+#endif // HOSTS_GTK_SIDEBAR_GTK_HOST_H__
