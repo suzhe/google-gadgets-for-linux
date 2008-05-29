@@ -250,9 +250,10 @@ class SidebarGtkHost::Impl {
     if (!gadgets_shown_)
       menu->AddItem(GM_("MENU_ITEM_SHOW_ALL"), 0,
                     NewSlot(this, &Impl::HandleMenuShowAll), priority);
-    menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
-                  option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
-                  NewSlot(this, &Impl::HandleMenuAutoHide), priority);
+    // TODO: Auto hide feature is not ready yet.
+    //menu->AddItem(GM_("MENU_ITEM_AUTO_HIDE"),
+    //              option_auto_hide_ ? MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
+    //              NewSlot(this, &Impl::HandleMenuAutoHide), priority);
     menu->AddItem(GM_("MENU_ITEM_ALWAYS_ON_TOP"), option_always_on_top_ ?
                   MenuInterface::MENU_ITEM_FLAG_CHECKED : 0,
                   NewSlot(this, &Impl::HandleMenuAlwaysOnTop), priority);
