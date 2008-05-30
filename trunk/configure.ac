@@ -584,7 +584,7 @@ if test x$has_qt4 != xyes; then
 fi
 
 if test x$has_qtwebkit != xyes; then
-  AC_MSG_WARN([Library qtwebkit or Qt4.4 and above is needed to build qtwebkit_browser_element])
+  AC_MSG_WARN([Library qtwebkit or qt-4.4 and above is needed to build qtwebkit_browser_element])
   build_qtwebkit_browser_element=no
 fi
 
