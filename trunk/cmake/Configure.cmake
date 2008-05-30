@@ -20,7 +20,7 @@ PROJECT(google_gadgets_for_linux)
 
 SET(GGL_MAJOR_VERSION 0)
 SET(GGL_MINOR_VERSION 9)
-SET(GGL_MICRO_VERSION 0)
+SET(GGL_MICRO_VERSION 1)
 SET(GGL_VERSION \"${GGL_MAJOR_VERSION}.${GGL_MINOR_VERSION}.${GGL_MICRO_VERSION}\")
 
 # This string is used in auto update request. It should be updated to the
