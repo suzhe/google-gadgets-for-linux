@@ -26,7 +26,7 @@ You need install following packages in order to prepare and build the source cod
 
 This project also depends on the following libraries:
  * [http://www.mozilla.org/js/spidermonkey/ SpiderMonkey] >= 1.60
- * [http://curl.haxx.se/ libcurl] >= 7.15.0
+ * [http://curl.haxx.se/ libcurl] >= 7.15.0, openssl backend is required
  * [http://xmlsoft.org libxml2] >= 2.6.0
  * [http://www.zlib.net zlib] >= 1.2.0
  * [http://www.mozilla.org xulrunner-dev] >= 1.8
