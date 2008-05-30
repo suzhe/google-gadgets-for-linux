@@ -107,7 +107,6 @@ SET(GGL_BUILD_GST_AUDIO_FRAMEWORK 1)
 SET(GGL_BUILD_GST_MEDIAPLAYER_ELEMENT 1)
 SET(GGL_BUILD_SMJS_SCRIPT_RUNTIME 1)
 SET(GGL_BUILD_CURL_XML_HTTP_REQUEST 1)
-SET(GGL_BUILD_QT_XML_HTTP_REQUEST 1)
 SET(GGL_BUILD_LIBXML2_XML_PARSER 1)
 SET(GGL_BUILD_LINUX_SYSTEM_FRAMEWORK 1)
 
@@ -266,7 +265,7 @@ Build options:
   Build gtk-system-framework       ${GGL_BUILD_LIBGGADGET_GTK}
   Build qt-edit-element            ${GGL_BUILD_LIBGGADGET_QT}
   Build qtwebkit-browser-element   ${GGL_BUILD_QTWEBKIT_BROWSER_ELEMENT}
-  Build qt-xml-http-request        ${GGL_BUILD_QT_XML_HTTP_REQUEST}
+  Build qt-xml-http-request        ${GGL_BUILD_LIBGGADGET_QT}
   Build qt-system-framework        ${GGL_BUILD_LIBGGADGET_QT}
 
  Hosts:
