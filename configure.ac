@@ -256,6 +256,7 @@ if test x$build_libggadget_qt != xyes; then
   build_qt_host=no
   build_qtwebkit_browser_element=no
   build_qt_xml_http_request=no
+  build_qt_system_framework=no
 fi
 
 ###########################################################
@@ -579,10 +580,11 @@ if test x$has_qt4 != xyes; then
   build_qt_host=no
   build_libggadget_qt=no
   build_qt_system_framework=no
+  build_qt_xml_http_request=no
 fi
 
 if test x$has_qtwebkit != xyes; then
-  AC_MSG_WARN([Library qt-4.4 or above is needed to build qtwebkit_browser_element])
+  AC_MSG_WARN([Library qtwebkit or Qt4.4 and above is needed to build qtwebkit_browser_element])
   build_qtwebkit_browser_element=no
 fi
 
