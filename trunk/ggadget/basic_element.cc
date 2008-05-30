@@ -17,6 +17,7 @@
 // Enable it to print verbose debug info
 // #define EVENT_VERBOSE_DEBUG
 
+#include <cstdlib>
 #include <vector>
 #include "basic_element.h"
 #include "common.h"
