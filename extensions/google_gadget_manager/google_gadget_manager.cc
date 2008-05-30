@@ -50,6 +50,8 @@ static std::string MakeGoodFileName(const char *uuid_or_url) {
   return result;
 }
 
+// TODO: Add blacklisting of gadgets and whitelisting of gadget features. 
+
 GoogleGadgetManager::GoogleGadgetManager()
     : main_loop_(GetGlobalMainLoop()),
       global_options_(GetGlobalOptions()),

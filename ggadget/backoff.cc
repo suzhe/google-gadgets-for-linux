@@ -16,6 +16,7 @@
 
 #include "backoff.h"
 
+#include <stdlib.h>
 #include <map>
 #include <ggadget/logger.h>
 #include <ggadget/string_utils.h>
