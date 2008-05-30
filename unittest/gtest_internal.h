@@ -39,6 +39,8 @@
 
 #define GTEST_SCOPED_LOCK(mutex_ptr)
 
+#include <string.h>
+
 #ifdef OS_LINUX
 #include <stdlib.h>
 #include <sys/types.h>

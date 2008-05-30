@@ -21,7 +21,7 @@
 #  Version
 #  Bug report address
 AC_INIT([google-gadgets-for-linux],
-	[0.9.0],
+	[0.9.1],
 	[google-gadgets-for-linux-dev@googlegroups.com])
 
 # Requires autoconf version >= 2.50
@@ -49,7 +49,7 @@ ggl_save_LDFLAGS=$LDFLAGS
 # Version numbers of Google Gadgets for Linux package.
 GGL_MAJOR_VERSION=0
 GGL_MINOR_VERSION=9
-GGL_MICRO_VERSION=0
+GGL_MICRO_VERSION=1
 
 GGL_VERSION=$GGL_MAJOR_VERSION.$GGL_MINOR_VERSION.$GGL_MICRO_VERSION
 
@@ -449,7 +449,14 @@ elif test x$ggl_host_type = xmacosx; then
 else
   AC_MSG_WARN([Qt support is not available for $ggl_host_type])
 fi
+
 AC_SUBST(MOC)
+
+# MOC is mandatory to build qt related code.
+if test "x$MOC" = "x"; then
+  has_qt4=no
+  has_qtwebkit=no
+fi
 
 # Check gtk2 related libraries.
 PKG_CHECK_MODULES(GTK2,
@@ -678,6 +685,23 @@ fi
 if test x$memcheck_command != x; then
   AC_CHECK_PROGS([MEMCHECK_COMMAND], [$memcheck_command])
   AC_SUBST(MEMCHECK_COMMAND)
+fi
+
+# Check mandatory dependencies
+if test x$build_gtk_host = xyes; then
+  if test x$build_curl_xml_http_request != xyes -o \
+          x$build_libxml2_xml_parser != xyes -o \
+          x$build_smjs_script_runtime != xyes; then
+    AC_MSG_ERROR([curl, libxml2 or spidermonkey are missing, which are required for gtk host.])
+  fi
+fi
+
+if test x$build_qt_host = xyes; then
+  if test x$build_qt_xml_http_request != xyes -o \
+          x$build_libxml2_xml_parser != xyes -o \
+          x$build_smjs_script_runtime != xyes; then
+    AC_MSG_ERROR([qt4, libxml2 or spidermonkey are missing, which are required for qt host.])
+  fi
 fi
 
 #Gstreamer audiosink
