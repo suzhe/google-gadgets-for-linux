@@ -26,14 +26,18 @@ You need install following packages in order to prepare and build the source cod
 
 This project also depends on the following libraries:
  * [http://www.mozilla.org/js/spidermonkey/ SpiderMonkey] >= 1.60
- * [http://curl.haxx.se/ libcurl] >= 7.16.0
+ * [http://curl.haxx.se/ libcurl] >= 7.15.0
  * [http://xmlsoft.org libxml2] >= 2.6.0
- * [http://cairographics.org cairo] >= 1.0.0, 1.2.0 or above is better.
- * [http://www.gtk.org gtk] >= 2.8.0, 2.10.0 or above is better.
  * [http://www.zlib.net zlib] >= 1.2.0
- * [http://www.mozilla.org xulrunner] >= 1.8
+ * [http://www.mozilla.org xulrunner-dev] >= 1.8
  * [http://www.freedesktop.org/wiki/Software/dbus D-Bus] >= 1.0.2
  * [http://www.gstreamer.net/ gstreamer and gstreamer-plugin-base] >= 0.10.0
+
+You can choose from the two toolkits: GTK or QT. If you choose GTK, this project also depends on the following libraries:
+ * [http://cairographics.org cairo] >= 1.0.0, 1.2.0 or above is better.
+ * [http://www.gtk.org gtk] >= 2.8.0, 2.10.0 or above is better.
+
+If you choose QT, the project also depends on the following libraries:
  * [http://trolltech.com Qt and QtWebKit] >= 4.3, (it's optional, and 4.4 is better).
 
 These packages are included in most modern Linux distributions, you can install them using software management application provided by the distribution.
@@ -69,7 +73,6 @@ For example, if the spidermonkey library was not installed into system standard 
 If you don't specify any configure option, the configure script will determine the optimal options automatically.
 
 Note: the debug build contains extra code only for debugging purpose, like debug logs. It will affect the runtime performance and increase the code size. Normally it's not necessary for ordinary users.
-
 === Install, run and do unit tests ===
 If the configure and build finished successfully, you can either install it or run it directly.
 
@@ -86,7 +89,7 @@ $ make DESTDIR=</tmp/ggl-root> install
 Then all things will be installed into /tmp/ggl-root directory. Then you can just pack everything in this directory altogether into a package.
 
 
-Currently there are two runnable binaries:
+Currently there are two runnable binaries (both or one of them, depending on which toolkit(s) you chose):
 
  * ggl-gtk  A host based on Gtk widget libraries.
  * ggl-qt  A host based on Qt widget libraries.
