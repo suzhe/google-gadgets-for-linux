@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <cmath>
 #include "contentarea_element.h"
 #include "canvas_interface.h"
@@ -114,8 +115,8 @@ class ContentAreaElement::Impl {
   }
 
   // A class used to queue a redraw in the next iteration. This is necessary
-  // since ContentAreas, unlike other elements, may be modified during 
-  // drawing due to the ability to add custom draw handlers. When modified, an 
+  // since ContentAreas, unlike other elements, may be modified during
+  // drawing due to the ability to add custom draw handlers. When modified, an
   // immediate redraw necessary.
   class QueueDrawCallback : public WatchCallbackInterface {
    public:
@@ -243,7 +244,7 @@ class ContentAreaElement::Impl {
 
     if (modified_) {
       // Need to queue another draw.
-      GetGlobalMainLoop()->AddTimeoutWatch(0, new QueueDrawCallback(owner_)); 
+      GetGlobalMainLoop()->AddTimeoutWatch(0, new QueueDrawCallback(owner_));
     }
   }
 
@@ -268,8 +269,8 @@ class ContentAreaElement::Impl {
     bool dead = false;
     death_detector_ = &dead;
 
-    int item_count = content_items_.size();
-    for (int i = 0; i < item_count && !dead && !modified_; i++) {
+    size_t item_count = content_items_.size();
+    for (size_t i = 0; i < item_count && !dead && !modified_; i++) {
       ContentItem *item = content_items_[i];
       ASSERT(item);
       if (item->GetFlags() & ContentItem::CONTENT_ITEM_FLAG_HIDDEN)
@@ -331,7 +332,7 @@ class ContentAreaElement::Impl {
 
     if (modified_) {
       // Need to queue another draw.
-      GetGlobalMainLoop()->AddTimeoutWatch(0, new QueueDrawCallback(owner_));     
+      GetGlobalMainLoop()->AddTimeoutWatch(0, new QueueDrawCallback(owner_));
     }
   }
 
@@ -347,7 +348,7 @@ class ContentAreaElement::Impl {
       int length;
       if (length_v.ConvertToInt(&length)) {
         if (static_cast<size_t>(length) > max_content_items_)
-          length = max_content_items_;
+          length = static_cast<int>(max_content_items_);
 
         for (int i = 0; i < length; i++) {
           ResultVariant v = array->GetPropertyByIndex(i);
@@ -533,9 +534,9 @@ class ContentAreaElement::Impl {
       for (ContentItems::iterator it = content_items_.begin();
            it != content_items_.end(); ++it) {
         int flags = (*it)->GetFlags();
-        if (!(flags & 
-                (ContentItem::CONTENT_ITEM_FLAG_HIDDEN | 
-                 ContentItem::CONTENT_ITEM_FLAG_STATIC))) {          
+        if (!(flags &
+                (ContentItem::CONTENT_ITEM_FLAG_HIDDEN |
+                 ContentItem::CONTENT_ITEM_FLAG_STATIC))) {
           double x, y, w, h;
           (*it)->GetLayoutRect(&x, &y, &w, &h);
           x -= owner_->GetScrollXPosition();

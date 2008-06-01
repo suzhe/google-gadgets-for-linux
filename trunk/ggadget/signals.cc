@@ -15,6 +15,8 @@
 */
 
 #include "signals.h"
+
+#include <algorithm>
 #include <vector>
 #include "logger.h"
 

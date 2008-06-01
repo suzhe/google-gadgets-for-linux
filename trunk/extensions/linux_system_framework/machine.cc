@@ -15,6 +15,7 @@
 */
 
 #include <sys/utsname.h>
+#include <cstdlib>
 #include <cstdio>
 #include <vector>
 #include "machine.h"
@@ -120,11 +121,11 @@ int Machine::GetProcessorCount() const {
 }
 
 int Machine::GetProcessorFamily() const {
-  return strtol(sysinfo_[CPU_FAMILY].c_str(), NULL, 10);
+  return static_cast<int>(strtol(sysinfo_[CPU_FAMILY].c_str(), NULL, 10));
 }
 
 int Machine::GetProcessorModel() const {
-  return strtol(sysinfo_[CPU_MODEL].c_str(), NULL, 10);
+  return static_cast<int>(strtol(sysinfo_[CPU_MODEL].c_str(), NULL, 10));
 }
 
 std::string Machine::GetProcessorName() const {
@@ -132,11 +133,11 @@ std::string Machine::GetProcessorName() const {
 }
 
 int Machine::GetProcessorSpeed() const {
-  return strtol(sysinfo_[CPU_SPEED].c_str(), NULL, 10);
+  return static_cast<int>(strtol(sysinfo_[CPU_SPEED].c_str(), NULL, 10));
 }
 
 int Machine::GetProcessorStepping() const {
-  return strtol(sysinfo_[CPU_STEPPING].c_str(), NULL, 10);
+  return static_cast<int>(strtol(sysinfo_[CPU_STEPPING].c_str(), NULL, 10));
 }
 
 std::string Machine::GetProcessorVendor() const {

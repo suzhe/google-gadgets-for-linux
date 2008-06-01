@@ -698,14 +698,20 @@ class Gadget::Impl : public ScriptableHelperNativeOwnedDefault {
   bool ShowDetailsView(DetailsViewData *details_view_data,
                        const char *title, int flags,
                        Slot1<void, int> *feedback_handler) {
-    // new details view must be created first so that the details_view_data can
-    // be referenced correctly. Otherwise, CloseDetailsView() may trigger
-    // JavaScript GC, which may destroy details_view_data.
-    ViewBundle *new_details_view = new ViewBundle(
+    // Reference details_view_data to prevent it from being destroyed by
+    // JavaScript GC.
+    if (details_view_data)
+      details_view_data->Ref();
+
+    CloseDetailsView();
+    details_view_ = new ViewBundle(
         host_->NewViewHost(owner_, ViewHostInterface::VIEW_HOST_DETAILS),
         owner_, element_factory_, &global_, details_view_data, true);
-    CloseDetailsView();
-    details_view_ = new_details_view;
+
+    // details_view_data is now referenced by details_view_, so it's safe to
+    // remove the reference.
+    if (details_view_data)
+      details_view_data->Unref();
 
     ScriptContextInterface *context = details_view_->context();
     ScriptableOptions *scriptable_data = details_view_->details()->GetData();

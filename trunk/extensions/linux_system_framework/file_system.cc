@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <algorithm>
+#include <cstdlib>
 #include <string>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -62,9 +64,9 @@ static void InitFilePath(const char *filename,
   std::string str_path(filename);
   ReplaceAll(&str_path, '\\', '/');
 
-  int last_index = str_path.find_last_of('/');
+  size_t last_index = str_path.find_last_of('/');
 
-  if (last_index == -1) {
+  if (last_index == std::string::npos) {
     // if filename uses relative path, then use current working directory
     // as base path
 
@@ -188,7 +190,7 @@ class Files : public FilesInterface {
 
  public:
   virtual int GetCount() const {
-    return files_.size();
+    return static_cast<int>(files_.size());
   }
 
   virtual FileInterface *GetItem(int index) {
@@ -448,7 +450,7 @@ class Folders : public FoldersInterface {
 
  public:
   virtual int GetCount() const {
-    return folders_.size();
+    return static_cast<int>(folders_.size());
   }
 
   virtual FolderInterface *GetItem(int index) {
@@ -567,8 +569,8 @@ class Folder : public FolderInterface {
     if (name_ == "" || base_ == "" || path_ == "")
       return NULL;
 
-    int length = base_.find_last_of('/');
-    if (length == -1)
+    size_t length = base_.find_last_of('/');
+    if (length == std::string::npos)
       return NULL;
 
     if (!length)
@@ -952,7 +954,7 @@ class TextStream : public TextStreamInterface {
     if (!fp_)
       return "";
 
-    char ch = 0;
+    int ch = 0;
     std::string result = "";
     while ((ch = fgetc(fp_)) != EOF) {
       result.append(1, ch);
@@ -971,7 +973,7 @@ class TextStream : public TextStreamInterface {
     if (!fp_)
       return "";
 
-    char ch = 0;
+    int ch = 0;
     std::string result = "";
     while ((ch = fgetc(fp_)) != EOF) {
       result.append(1, ch);
@@ -1049,7 +1051,7 @@ class TextStream : public TextStreamInterface {
         line_ ++;
         if (col_flag)
           continue;
-        column_ = i;
+        column_ = static_cast<int>(i);
         col_flag = true;
       } else {
         if (!col_flag)
@@ -1103,9 +1105,9 @@ std::string FileSystem::GetParentFolderName(const char *path) {
   if (str_path == "/")
     return "";
 
-  int length = str_path.find_last_of('/');
+  size_t length = str_path.find_last_of('/');
   // if no '/' exist, just return empty string
-  if (length == -1)
+  if (length == std::string::npos)
     return "";
 
   if (!length)
@@ -1121,7 +1123,7 @@ std::string FileSystem::GetFileName(const char *path) {
   std::string str_path(path);
   ReplaceAll(&str_path, '\\', '/');
 
-  int start_index = str_path.find_last_of('/');
+  size_t start_index = str_path.find_last_of('/');
   // works correctly even if no '/' exists in input path
   return str_path.substr(start_index + 1, str_path.size() - start_index - 1);
 }
@@ -1132,9 +1134,9 @@ std::string FileSystem::GetBaseName(const char *path) {
 
   std::string str_path(path);
   ReplaceAll(&str_path, '\\', '/');
-  int start_index = str_path.find_last_of('/');
-  int end_index = str_path.find_last_of('.');
-  if (end_index == -1)
+  size_t start_index = str_path.find_last_of('/');
+  size_t end_index = str_path.find_last_of('.');
+  if (end_index == std::string::npos)
     end_index = str_path.size();
 
   if (start_index >= end_index)
@@ -1149,8 +1151,8 @@ std::string FileSystem::GetExtensionName(const char *path) {
 
   std::string str_path(path);
   ReplaceAll(&str_path, '\\', '/');
-  int start_index = str_path.find_last_of('/');
-  int end_index = str_path.find_last_of('.');
+  size_t start_index = str_path.find_last_of('/');
+  size_t end_index = str_path.find_last_of('.');
 
   if (start_index >= end_index)
     return "";
@@ -1175,12 +1177,6 @@ std::string FileSystem::GetAbsolutePathName(const char *path) {
 
 // creates the character for filename
 static char GetFileChar() {
-  struct timeval tv;
-  if (gettimeofday(&tv, NULL))
-    srand(1);
-  else
-    srand(tv.tv_sec * tv.tv_usec); // overflow can be ignored.
-
   while (1) {
     char ch = (char) (random() % 123);
     if (ch == '_' ||
@@ -1489,8 +1485,8 @@ FolderInterface *File::GetParentFolder() {
   if (name_ == "" || base_ == "" || path_ == "")
     return NULL;
 
-  int length = base_.find_last_of('/');
-  if (!length || length == -1)
+  size_t length = base_.find_last_of('/');
+  if (!length || length == std::string::npos)
     return NULL;
   return new Folder(base_.substr(0, length).c_str());
 }

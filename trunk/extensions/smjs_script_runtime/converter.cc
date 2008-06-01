@@ -18,6 +18,7 @@
 
 #include <cmath>
 #include <jsobj.h>
+#include <jscntxt.h>
 #include <jsfun.h>
 #include <ggadget/scriptable_array.h>
 #include <ggadget/scriptable_binary_data.h>
@@ -450,7 +451,7 @@ static JSBool ConvertNativeToJSInt(JSContext *cx,
     *js_val = INT_TO_JSVAL(static_cast<int32>(value));
     return JS_TRUE;
   } else {
-    jsdouble *pdouble = JS_NewDouble(cx, value);
+    jsdouble *pdouble = JS_NewDouble(cx, static_cast<jsdouble>(value));
     if (pdouble) {
       *js_val = DOUBLE_TO_JSVAL(pdouble);
       return JS_TRUE;
@@ -602,8 +603,8 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
                                     jsval *js_val) {
   std::string new_date_script =
       StringPrintf("new Date(%ju)", VariantValue<Date>()(native_val).value);
-  return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
-                           new_date_script.c_str(), new_date_script.length(),
+  return JS_EvaluateScript(cx, JS_GetGlobalObject(cx), new_date_script.c_str(),
+                           static_cast<unsigned int>(new_date_script.length()),
                            "", 1, js_val);
 }
 
@@ -688,14 +689,14 @@ JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
   UTF16String utf16_string;
   if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
       massaged_script.size()) {
-    return JS_EvaluateUCScript(cx, object,
-                               utf16_string.c_str(), utf16_string.size(),
+    return JS_EvaluateUCScript(cx, object, utf16_string.c_str(),
+                               static_cast<unsigned int>(utf16_string.size()),
                                filename, lineno, rval);
   } else {
     JS_ReportWarning(cx, "Script %s contains invalid UTF-8 sequences "
                      "and will be treated as ISO8859-1", filename);
-    return JS_EvaluateScript(cx, object,
-                             massaged_script.c_str(), massaged_script.size(),
+    return JS_EvaluateScript(cx, object, massaged_script.c_str(),
+                             static_cast<unsigned int>(massaged_script.size()),
                              filename, lineno, rval);
   }
 }

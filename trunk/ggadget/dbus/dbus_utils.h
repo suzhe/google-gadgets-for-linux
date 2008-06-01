@@ -85,7 +85,7 @@ class ScriptableDBusContainer : public ScriptableHelperDefault {
   bool EnumerateElements(EnumerateElementsCallback *callback) {
     ASSERT(callback);
     for (size_t i = 0; i < count_; i++)
-      if (!(*callback)(i, array_[i])) {
+      if (!(*callback)(static_cast<int>(i), array_[i])) {
         delete callback;
         return false;
       }

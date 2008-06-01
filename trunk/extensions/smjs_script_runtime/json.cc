@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <algorithm>
+#include <cstring>
 #include <vector>
 #include <ggadget/common.h>
 #include "json.h"
@@ -258,8 +260,8 @@ JSBool JSONDecode(JSContext *cx, const char *json, jsval *js_val) {
 
   std::string json_filename("JSON:");
   json_filename += json;
-  return JS_EvaluateScript(cx, JS_GetGlobalObject(cx),
-                           json_script.c_str(), json_script.length(),
+  return JS_EvaluateScript(cx, JS_GetGlobalObject(cx), json_script.c_str(),
+                           static_cast<unsigned int>(json_script.length()),
                            json_filename.c_str(), 1, js_val);
 }
 

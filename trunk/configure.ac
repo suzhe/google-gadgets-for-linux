@@ -282,7 +282,7 @@ if test x$enable_debug = xyes; then
   DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall -Wconversion"
   DEBUG_MACROS="_DEBUG";
 else
-  DEFAULT_COMPILE_FLAGS="-O2 -Werror -Wall -Wconversion"
+  DEFAULT_COMPILE_FLAGS="-O2 -Wall -Wconversion"
   DEBUG_MACROS="NDEBUG";
 fi
 
@@ -518,7 +518,9 @@ PKG_CHECK_MODULES(GTKMOZEMBED, [xulrunner-gtkmozembed xulrunner-js],
 		     [has_gtkmozembed=firefox2-gtkmozembed],
     [PKG_CHECK_MODULES(GTKMOZEMBED, [firefox-gtkmozembed firefox-js],
 		       [has_gtkmozembed=firefox-gtkmozembed],
-      [has_gtkmozembed=no])])])
+      [PKG_CHECK_MODULES(GTKMOZEMBED, [mozilla-gtkmozembed mozilla-js],
+		         [has_gtkmozembed=mozilla-gtkmozembed],
+      [has_gtkmozembed=no])])])])
 
 if test x$has_dbus = xyes; then
   if test -z "$DBUS_SYSTEM_BUS_SOCKET"; then

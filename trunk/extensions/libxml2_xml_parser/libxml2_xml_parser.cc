@@ -188,7 +188,7 @@ static void ExpandEntity(xmlEntity *entity) {
         xmlFree(child_content);
         break;
       }
-      xmlNodeAddContentLen(text, child_content, child_size);
+      xmlNodeAddContentLen(text, child_content, static_cast<int>(child_size));
       xmlFree(child_content);
     }
     xmlFreeNodeList(entity->children);
@@ -274,8 +274,8 @@ static xmlDoc *ParseXML(const std::string &xml,
       converted_xml = xml;
     }
 
-    xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(converted_xml.c_str(),
-                                                    converted_xml.length());
+    xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(
+        converted_xml.c_str(), static_cast<int>(converted_xml.length()));
     if (!ctxt)
       return NULL;
 
@@ -367,7 +367,7 @@ static void ConvertCharacterDataIntoDOM(DOMDocumentInterface *domdoc,
       break;
   }
   if (data) {
-    data->SetRow(xmlGetLineNo(xmltext));
+    data->SetRow(static_cast<int>(xmlGetLineNo(xmltext)));
     parent->AppendChild(data);
   }
 }
@@ -380,7 +380,7 @@ static void ConvertPIIntoDOM(DOMDocumentInterface *domdoc,
   DOMProcessingInstructionInterface *pi;
   domdoc->CreateProcessingInstruction(target, data, &pi);
   if (pi) {
-    pi->SetRow(xmlGetLineNo(xmlpi));
+    pi->SetRow(static_cast<int>(xmlGetLineNo(xmlpi)));
     parent->AppendChild(pi);
   }
   if (data)
@@ -430,7 +430,7 @@ static void ConvertElementIntoDOM(DOMDocumentInterface *domdoc,
     element->SetPrefix(FromXmlCharPtr(xmlele->ns->prefix));
 
   // libxml2 doesn't support node column position for now.
-  element->SetRow(xmlGetLineNo(xmlele));
+  element->SetRow(static_cast<int>(xmlGetLineNo(xmlele)));
   for (xmlAttr *xmlattr = xmlele->properties; xmlattr != NULL;
        xmlattr = xmlattr->next) {
     const char *name = FromXmlCharPtr(xmlattr->name);
@@ -578,7 +578,8 @@ class XMLParser : public XMLParserInterface {
     if (!name || !*name)
       return false;
 
-    xmlParserCtxt *ctxt = xmlCreateMemoryParserCtxt(name, strlen(name));
+    xmlParserCtxt *ctxt =
+        xmlCreateMemoryParserCtxt(name, static_cast<int>(strlen(name)));
     if (ctxt) {
       const char *result = FromXmlCharPtr(xmlParseName(ctxt));
       bool succeeded = result && strcmp(result, name) == 0;
@@ -620,7 +621,7 @@ class XMLParser : public XMLParserInterface {
     bool result = true;
     xmlLineNumbersDefault(1);
     // Check if the content is XML according to XMLHttpRequest standard rule.
-    int content_type_len = content_type ? strlen(content_type) : 0;
+    size_t content_type_len = content_type ? strlen(content_type) : 0;
     if (content_type_len == 0 ||
         strcasecmp(content_type, "text/xml") == 0 ||
         strcasecmp(content_type, "application/xml") == 0 ||

@@ -16,6 +16,7 @@
 
 #include <sys/types.h>
 #include <dirent.h>
+#include <cstdlib>
 
 #ifdef HAVE_X11
 #include <X11/Xlib.h>
@@ -62,7 +63,7 @@ Processes::Processes() {
 }
 
 int Processes::GetCount() const {
-  return procs_.size();
+  return static_cast<int>(procs_.size());
 }
 
 ProcessInfoInterface *Processes::GetItem(int index) {
@@ -82,7 +83,7 @@ void Processes::InitProcesses() {
   while ((entry = readdir(dir)) != NULL) {
     char *name = entry->d_name;
     char *end;
-    int pid = strtol(name, &end, 10);
+    int pid = static_cast<int>(strtol(name, &end, 10));
 
     // if it is not a process folder, so skip it
     if (!pid || *end)

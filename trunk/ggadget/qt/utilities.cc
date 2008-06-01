@@ -204,7 +204,7 @@ void ShowGadgetAboutDialog(Gadget *gadget) {
   QPixmap icon;
   if (gadget->GetFileManager()->ReadFile(icon_name.c_str(), &data)) {
     icon.loadFromData(reinterpret_cast<const uchar *>(data.c_str()),
-                      data.length());
+                      static_cast<int>(data.length()));
   }
 
   QMessageBox box(QMessageBox::NoIcon,

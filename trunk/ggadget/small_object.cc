@@ -17,6 +17,8 @@
 
 #include "small_object.h"
 
+#include <cstdlib>
+#include <climits>
 #include <cassert>
 #include <vector>
 #include <bitset>
@@ -581,7 +583,8 @@ void FixedAllocator::ReportStat() {
   size_t active = allocCount_ - deallocCount_;
   DLOG("FixedAllocator Stat: %zu %zu %zu %zu %zu %lf",
        blockSize_, allocCount_, deallocCount_, active, chunks_.size(),
-       static_cast<double>(active) / (chunks_.size() * numBlocks_));
+       static_cast<double>(active) /
+       static_cast<double>((chunks_.size() * numBlocks_)));
 }
 #endif
 

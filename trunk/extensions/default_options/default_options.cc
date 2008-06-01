@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstdlib>
 #include <ggadget/encryptor_interface.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/main_loop_interface.h>

@@ -451,8 +451,8 @@ EventResult QtEditElement::HandleMouseEvent(const MouseEvent &event) {
     return EVENT_RESULT_UNHANDLED;
 
   Event::Type type = event.GetType();
-  float x = event.GetX() - kInnerBorderX - scroll_offset_x_;
-  float y = event.GetY() - kInnerBorderY - scroll_offset_y_;
+  double x = event.GetX() - kInnerBorderX - scroll_offset_x_;
+  double y = event.GetY() - kInnerBorderY - scroll_offset_y_;
   int offset = doc_.documentLayout()->hitTest(QPointF(x, y), Qt::FuzzyHit);
   int sel_start = cursor_->selectionStart();
   int sel_end = cursor_->selectionEnd();

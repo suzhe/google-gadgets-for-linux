@@ -16,6 +16,7 @@
 
 #include "gadgets_metadata.h"
 
+#include <cstdlib>
 #include <time.h>
 #include <ggadget/file_manager_factory.h>
 #include <ggadget/scriptable_holder.h>

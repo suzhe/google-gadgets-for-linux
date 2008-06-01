@@ -64,7 +64,7 @@ bool ScriptableArray::EnumerateProperties(
 bool ScriptableArray::EnumerateElements(EnumerateElementsCallback *callback) {
   ASSERT(callback);
   for (size_t i = 0; i < impl_->count_; i++) {
-    if (!(*callback)(i, impl_->array_[i])) {
+    if (!(*callback)(static_cast<int>(i), impl_->array_[i])) {
       delete callback;
       return false;
     }

@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <vector>
 #include <string>
 
@@ -325,7 +326,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         session_->RestoreCookie(request_header_);
 
       if (data && size > 0) {
-        send_data_ = new QByteArray(data, size);
+        send_data_ = new QByteArray(data, static_cast<int>(size));
         http_->request(*request_header_, *send_data_);
       } else {
         http_->request(*request_header_);
@@ -743,7 +744,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     response_header_ = header;
     response_headers_ = header.toString().toStdString();
     response_content_type_ = header.contentType().toStdString();
-    status_ = header.statusCode();
+    status_ = static_cast<unsigned short>(header.statusCode());
     SplitStatusAndHeaders();
     ParseResponseHeaders();
 

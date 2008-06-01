@@ -35,10 +35,10 @@ static const int kExtraInfoFontSize = 8;
 static const int kSnippetFontSize = 8;
 
 // In this order: y top, x right, y bottom, x left
-static const int kItemBorderOffsets[] = {2, 3, 3, 3}; 
-static const int kItemBorderWidthOffset = 
+static const int kItemBorderOffsets[] = {2, 3, 3, 3};
+static const int kItemBorderWidthOffset =
   (kItemBorderOffsets[1] + kItemBorderOffsets[3]);
-static const int kItemBorderHeightOffset = 
+static const int kItemBorderHeightOffset =
   (kItemBorderOffsets[0] + kItemBorderOffsets[2]);
 
 const Color ScriptableCanvas::kColorNormalBackground(0.984, 0.984, 0.984);
@@ -718,7 +718,7 @@ std::string ContentItem::GetTimeDisplayString(uint64_t time,
   if (current_time == 0) {
     // Show absolute time as HH:MMam/pm.
     char buffer[20];
-    time_t t = time / 1000;
+    time_t t = static_cast<time_t>(time / 1000);
     strftime(buffer, sizeof(buffer), GM_("TIME_FORMAT_SHORT"), localtime(&t));
     std::string utf8;
     ConvertLocaleStringToUTF8(buffer, &utf8);

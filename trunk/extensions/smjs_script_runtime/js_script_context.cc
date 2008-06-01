@@ -600,6 +600,7 @@ JSBool JSScriptContext::OperationCallback(JSContext *cx) {
   return JS_TRUE;
 }
 
+#ifndef JS_OPERATION_WEIGHT_BASE
 JSBool JSScriptContext::BranchCallback(JSContext *cx, JSScript *script) {
   static uint32 count = 0;
   if (++count == kOperationCallbackMultiply) {
@@ -608,6 +609,7 @@ JSBool JSScriptContext::BranchCallback(JSContext *cx, JSScript *script) {
   }
   return JS_TRUE;
 }
+#endif
 
 bool JSScriptContext::OnClearOperationTimeTimer(int watch_id) {
   ASSERT(watch_id == reset_operation_time_timer_);

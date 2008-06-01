@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <cstring>
 #include <curl/curl.h>
 #include <openssl/ssl.h>

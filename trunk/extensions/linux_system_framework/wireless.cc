@@ -61,7 +61,7 @@ class Wireless::Impl {
   }
   int GetAPCount() {
     RefreshWireless();
-    return ap_list_.size();
+    return static_cast<int>(ap_list_.size());
   }
   WirelessAccessPointInterface* GetWirelessAccessPoint(int index) {
     RefreshWireless();
@@ -230,7 +230,7 @@ bool Wireless::EnumerationSupported() const {
 }
 
 int Wireless::GetAPCount() const {
-  return impl_->GetAPCount();
+  return static_cast<int>(impl_->GetAPCount());
 }
 
 const WirelessAccessPointInterface *

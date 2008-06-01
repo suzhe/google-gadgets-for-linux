@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstdlib>
 #include <sys/time.h>
 #include <time.h>
 

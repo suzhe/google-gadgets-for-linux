@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include <gtk/gtk.h>
 #include <ggadget/gadget.h>
 #include <ggadget/logger.h>

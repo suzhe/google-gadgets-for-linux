@@ -198,7 +198,8 @@ class ZipFileManager::Impl {
       return false;
     }
 
-    int result = zipWriteInFileInZip(zip_handle_, data.c_str(), data.length());
+    int result = zipWriteInFileInZip(zip_handle_, data.c_str(),
+                                     static_cast<unsigned int>(data.length()));
     zipCloseFileInZip(zip_handle_);
 
     if (result != ZIP_OK) {
@@ -434,8 +435,8 @@ class ZipFileManager::Impl {
       LOG("Can't add .readme file in newly created zip archive.");
       return false;
     }
-    int result =
-        zipWriteInFileInZip(zip, kZipGlobalComment, strlen(kZipGlobalComment));
+    int result = zipWriteInFileInZip(zip, kZipGlobalComment,
+                        static_cast<unsigned int>(strlen(kZipGlobalComment)));
     zipCloseFileInZip(zip);
 
     if (result != ZIP_OK)

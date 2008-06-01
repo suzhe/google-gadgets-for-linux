@@ -379,12 +379,13 @@ class SingleViewHost::Impl {
       enable_signals_ = false;
       if (visible)
         gtk_widget_hide(window_);
-      gtk_window_set_type_hint(GTK_WINDOW(window_), type);
+      gdk_window_set_type_hint(window_->window, type);
       if (visible) {
         gtk_widget_show(window_);
         // Make sure that the window has correct position.
         gtk_window_move(GTK_WINDOW(window_), win_x_, win_y_);
       }
+      gtk_window_set_keep_above(GTK_WINDOW(window_), is_keep_above_);
       enable_signals_ = true;
     }
   }
