@@ -38,6 +38,8 @@
  * remains attached.
  */
 
+#include <cstring>
+#include <cstdlib>
 #include "unicode_utils.h"
 namespace std {
 template class std::basic_string<UTF16Char>;
@@ -520,7 +522,7 @@ static void ConvertUTF16LEStreamToString(const char *input, size_t size,
   result->reserve(size / 2);
   const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 1; i += 2)
-    result->push_back(stream[i] | (stream[i + 1] << 8));
+    result->push_back(static_cast<UTF16Char>(stream[i] | (stream[i + 1] << 8)));
 }
 
 static void ConvertUTF16BEStreamToString(const char *input, size_t size,
@@ -531,7 +533,7 @@ static void ConvertUTF16BEStreamToString(const char *input, size_t size,
   result->reserve(size / 2);
   const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 1; i += 2)
-    result->push_back((stream[i] << 8) | stream[i + 1]);
+    result->push_back(static_cast<UTF16Char>((stream[i] << 8) | stream[i + 1]));
 }
 
 static void ConvertUTF32LEStreamToString(const char *input, size_t size,
@@ -542,8 +544,8 @@ static void ConvertUTF32LEStreamToString(const char *input, size_t size,
   result->reserve(size / 4);
   const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 3; i += 4)
-    result->push_back(stream[i] | (stream[i + 1] << 8) |
-                      (stream[i + 2] << 16) | (stream[i + 3] << 24));
+    result->push_back(static_cast<UTF32Char>(stream[i] | (stream[i + 1] << 8) |
+                      (stream[i + 2] << 16) | (stream[i + 3] << 24)));
 }
 
 static void ConvertUTF32BEStreamToString(const char *input, size_t size,
@@ -554,8 +556,9 @@ static void ConvertUTF32BEStreamToString(const char *input, size_t size,
   result->reserve(size / 4);
   const unsigned char *stream = reinterpret_cast<const unsigned char *>(input);
   for (size_t i = 0; i < size - 3; i += 4)
-    result->push_back((stream[i] << 24) | (stream[i + 1] << 16) |
-                      (stream[i + 2] << 8) | stream[i + 3]);
+    result->push_back(static_cast<UTF32Char>((stream[i] << 24) |
+                      (stream[i + 1] << 16) | (stream[i + 2] << 8) |
+                      stream[i + 3]));
 }
 
 bool DetectAndConvertStreamToUTF8(const std::string &stream,

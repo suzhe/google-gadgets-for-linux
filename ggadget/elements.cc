@@ -47,7 +47,7 @@ class Elements::Impl {
   }
 
   int GetCount() {
-    return children_.size();
+    return static_cast<int>(children_.size());
   }
 
   BasicElement *AppendElement(const char *tag_name, const char *name) {
@@ -154,7 +154,7 @@ class Elements::Impl {
     for (Children::const_iterator ite = children_.begin();
          ite != children_.end(); ++ite) {
       if (GadgetStrCmp((*ite)->GetName().c_str(), name) == 0)
-        return ite - children_.begin();
+        return static_cast<int>(ite - children_.begin());
     }
     return -1;
   }
@@ -281,15 +281,15 @@ class Elements::Impl {
   }
 
   void Layout() {
-    int child_count = children_.size();
-    for (int i = 0; i < child_count; i++) {
+    size_t child_count = children_.size();
+    for (size_t i = 0; i < child_count; i++) {
       children_[i]->Layout();
     }
 
     if (scrollable_) {
       // If scrollable, the canvas size is the max extent of the children.
       bool need_update_extents = false;
-      for (int i = 0; i < child_count; i++) {
+      for (size_t i = 0; i < child_count; i++) {
         if (children_[i]->IsPositionChanged() ||
             children_[i]->IsSizeChanged()) {
           need_update_extents = true;
@@ -299,7 +299,7 @@ class Elements::Impl {
 
       if (need_update_extents) {
         width_ = height_ = 0;
-        for (int i = 0; i < child_count; i++) {
+        for (size_t i = 0; i < child_count; i++) {
           UpdateChildExtent(children_[i], &width_, &height_);
         }
       }
@@ -318,10 +318,10 @@ class Elements::Impl {
     if (children_.empty() || !width_ || !height_)
       return;
 
-    int child_count = children_.size();
+    size_t child_count = children_.size();
 
     BasicElement *popup = view_->GetPopupElement();
-    for (int i = 0; i < child_count; i++) {
+    for (size_t i = 0; i < child_count; i++) {
       BasicElement *element = children_[i];
       // Doesn't draw popup element here.
       if (element == popup) continue;

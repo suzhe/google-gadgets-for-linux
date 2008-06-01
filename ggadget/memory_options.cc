@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <climits>
 #include <set>
 #include "memory_options.h"
 #include "logger.h"

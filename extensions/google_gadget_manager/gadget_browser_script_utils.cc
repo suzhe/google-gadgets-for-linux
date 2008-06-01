@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <cstring>
 #include <ggadget/logger.h>
 #include "google_gadget_manager_interface.h"
 

@@ -18,6 +18,7 @@
 // See RFC3174 for details.
 // BASE64 algorithm is written according to RFC4648.
 
+#include <cstring>
 #include "digest_utils.h"
 #include "common.h"
 #include "logger.h"
@@ -95,10 +96,10 @@ bool GenerateSHA1(const std::string &input, std::string *result) {
     input_size = 0;
   }
   memset(M + input_size, 0, 60 - input_size);
-  M[60] = (bit_length >> 24);
-  M[61] = (bit_length >> 16) & 0xff;
-  M[62] = (bit_length >> 8) & 0xff;
-  M[63] = bit_length & 0xff;
+  M[60] = static_cast<unsigned char>(bit_length >> 24);
+  M[61] = static_cast<unsigned char>((bit_length >> 16) & 0xff);
+  M[62] = static_cast<unsigned char>((bit_length >> 8) & 0xff);
+  M[63] = static_cast<unsigned char>(bit_length & 0xff);
   SHA1ProcessBlock(M, H);
 
   result->resize(20);
@@ -137,8 +138,8 @@ static bool EncodeBase64Internal(const std::string &input,
     unsigned char byte1 = static_cast<unsigned char>(*input_ptr++);
     unsigned char byte2 = static_cast<unsigned char>(*input_ptr++);
     *result += base64_chars[byte0 >> 2];
-    *result += base64_chars[(byte0 << 4) & 0x3f | (byte1 >> 4)];
-    *result += base64_chars[(byte1 << 2) & 0x3f | (byte2 >> 6)];
+    *result += base64_chars[((byte0 << 4) & 0x3f) | (byte1 >> 4)];
+    *result += base64_chars[((byte1 << 2) & 0x3f) | (byte2 >> 6)];
     *result += base64_chars[byte2 & 0x3f];
     length -= 3;
   }
@@ -153,7 +154,7 @@ static bool EncodeBase64Internal(const std::string &input,
     } else {
       ASSERT(length == 2);
       unsigned char byte1 = static_cast<unsigned char>(*input_ptr++);
-      *result += base64_chars[(byte0 << 4) & 0x3f | (byte1 >> 4)];
+      *result += base64_chars[((byte0 << 4) & 0x3f) | (byte1 >> 4)];
       *result += base64_chars[(byte1 << 2) & 0x3f];
       if (add_padding)
         *result += '=';
@@ -228,7 +229,7 @@ bool DecodeBase64Internal(const char *input,
   unsigned char group[4];
   int group_size = 0;
   while (true) {
-    char c = *input++;
+    int c = *input++;
     if (!c)
       break;
 

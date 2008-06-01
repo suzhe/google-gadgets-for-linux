@@ -115,7 +115,7 @@ class GadgetVideoSink::ImageBuffer {
       gst_buffer_unref(GST_BUFFER_CAST(image));
       return NULL;
     }
-    GST_BUFFER_SIZE(image) = image->size_;
+    GST_BUFFER_SIZE(image) = static_cast<guint>(image->size_);
     image->recycle_flag_ = BUFFER_NOT_RECYCLED;
 
     // Keep a ref to our sink.
@@ -447,7 +447,8 @@ GstCaps *GadgetVideoSink::GetCaps(GstBaseSink *bsink) {
       gst_pad_get_pad_template_caps(GST_BASE_SINK(videosink)->sinkpad));
 
   for (i = 0; i < gst_caps_get_size(caps); ++i) {
-    GstStructure *structure = gst_caps_get_structure(caps, i);
+    GstStructure *structure =
+        gst_caps_get_structure(caps, static_cast<guint>(i));
     if (videosink->par_) {
       int nom, den;
       nom = gst_value_get_fraction_numerator(videosink->par_);
@@ -517,8 +518,8 @@ gboolean GadgetVideoSink::SetCaps(GstBaseSink *bsink, GstCaps *caps) {
 
   if (GST_VIDEO_SINK_WIDTH(videosink) <= 0 ||
       GST_VIDEO_SINK_HEIGHT(videosink) <= 0) {
-    GST_ELEMENT_ERROR (videosink, CORE, NEGOTIATION, (NULL),
-                       ("Invalid image size."));
+    //GST_ELEMENT_ERROR (videosink, CORE, NEGOTIATION, (NULL),
+    //                   ("Invalid image size."));
     return FALSE;
   }
 

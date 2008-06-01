@@ -54,7 +54,7 @@ class QtImage : public ImageInterface {
   virtual bool IsFullyOpaque() const;
 
  private:
-  QtImage(size_t width, size_t height);
+  QtImage(double width, double height);
   class Impl;
   Impl *impl_;
 

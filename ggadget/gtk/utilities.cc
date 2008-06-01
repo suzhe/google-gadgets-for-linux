@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <cstdlib>
 #include <string>
 #include <fontconfig/fontconfig.h>
 #include <gtk/gtk.h>

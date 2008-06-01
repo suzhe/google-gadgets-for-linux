@@ -247,7 +247,7 @@ class DBusProxy::Impl {
       return true;
     }
     virtual int GetArgCount() const {
-      return prototype_.in_args.size();
+      return static_cast<int>(prototype_.in_args.size());
     }
     virtual const Variant::Type* GetArgTypes() const {
       return arg_types_;
@@ -626,7 +626,7 @@ bool DBusProxy::Impl::InvokeMethodCallback(DBusMessage *reply,
   if (ret) {
     bool keep_work = true;
     for (std::size_t i = 0; i < out.size() && keep_work; ++i)
-      keep_work = (*callback)(i, out[i].value);
+      keep_work = (*callback)(static_cast<int>(i), out[i].value);
   }
   return ret;
 }

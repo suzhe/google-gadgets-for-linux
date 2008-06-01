@@ -88,7 +88,7 @@ class QtImage::Impl {
     }
   }
 
-  Impl(size_t width, size_t height)
+  Impl(double width, double height)
     : is_mask_(false),
       canvas_(NULL),
       graphics_(NULL) {
@@ -139,7 +139,7 @@ QtImage::QtImage(QtGraphics *graphics,
   : impl_(new Impl(graphics, tag, data, is_mask)) {
 }
 
-QtImage::QtImage(size_t width, size_t height)
+QtImage::QtImage(double width, double height)
   : impl_(new Impl(width, height)) {
 }
 

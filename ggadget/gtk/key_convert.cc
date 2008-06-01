@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <gdk/gdkkeysyms.h>
 #include <ggadget/event.h>
 #include "key_convert.h"

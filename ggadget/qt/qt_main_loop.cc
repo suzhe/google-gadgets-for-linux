@@ -17,6 +17,8 @@
 #include <config.h>
 #endif
 
+#include <cmath>
+#include <cstdlib>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
@@ -193,7 +195,7 @@ class QtMainLoop::Impl : public WatchCallbackInterface {
     int i;
     QMutexLocker locker(&mutex_);
     while (1) {
-      i = abs(random());
+      i = rand();
       if (watches_.find(i) == watches_.end()) break;
     }
     if (node) node->watch_id_ = i;

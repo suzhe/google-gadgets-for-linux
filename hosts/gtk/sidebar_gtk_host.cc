@@ -569,8 +569,7 @@ class SidebarGtkHost::Impl {
                           32, GDK_PROP_MODE_REPLACE,
                           reinterpret_cast<guchar *>(&struts), 12);
     } else {
-      gtk_window_set_keep_above(GTK_WINDOW(main_widget_),
-                                option_always_on_top_);
+      view_host_->SetKeepAbove(option_always_on_top_);
       view_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_NORMAL);
 
       // delete the properties
@@ -726,11 +725,12 @@ class SidebarGtkHost::Impl {
     for (GadgetsMap::iterator it = gadgets_.begin();
          it != gadgets_.end(); ++it) {
       Gadget *gadget = it->second->gadget;
-      if (gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR)
+      if (gadget->GetDisplayTarget() != Gadget::TARGET_SIDEBAR){
         if (show)
           gadget->ShowMainView();
         else
           gadget->CloseMainView();
+      }
     }
 
     HideOrShowSideBar(show);

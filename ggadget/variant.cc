@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include "variant.h"
 #include "logger.h"
 #include "scriptable_interface.h"

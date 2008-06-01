@@ -137,7 +137,7 @@ int Power::GetPercentRemaining() {
                      percent.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryChargeLevelPercentage,
                      MESSAGE_TYPE_INVALID)) {
-    return percent.GetValue();
+    return static_cast<int>(percent.GetValue());
   }
 
   DLOG("battery.charge_level.percentage is missing.");
@@ -152,8 +152,8 @@ int Power::GetPercentRemaining() {
                      current.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryChargeLevelCurrent,
                      MESSAGE_TYPE_INVALID) && design.GetValue() > 0) {
-    return design.GetValue() <= 0 ?
-           0 : current.GetValue() * 100 / design.GetValue();
+    return static_cast<int>(design.GetValue() <= 0 ?
+                            0 : current.GetValue() * 100 / design.GetValue());
   }
 
   DLOG("battery.charge_level.design/current is missing.");
@@ -169,7 +169,7 @@ int Power::GetTimeRemaining() {
                      remaining.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryRemainingTime,
                      MESSAGE_TYPE_INVALID)) {
-    return remaining.GetValue();
+    return static_cast<int>(remaining.GetValue());
   }
 
   DLOG("battery.remaining_time is missing.");
@@ -191,9 +191,10 @@ int Power::GetTimeRemaining() {
     // If the battery is charging then return the remaining time to full.
     // else return the remaining time to empty.
     if (IsCharging()) {
-      return (design.GetValue() - current.GetValue()) / rate.GetValue();
+      return static_cast<int>((design.GetValue() - current.GetValue()) /
+                              rate.GetValue());
     } else {
-      return current.GetValue() / rate.GetValue();
+      return static_cast<int>(current.GetValue() / rate.GetValue());
     }
   }
 
@@ -214,7 +215,7 @@ int Power::GetTimeTotal() {
                      rate.NewSlot(),
                      MESSAGE_TYPE_STRING, kHalPropBatteryChargeLevelRate,
                      MESSAGE_TYPE_INVALID) && rate.GetValue() > 0) {
-    return design.GetValue() / rate.GetValue();
+    return static_cast<int>(design.GetValue() / rate.GetValue());
   }
 
   DLOG("Failed to calculate total time.");

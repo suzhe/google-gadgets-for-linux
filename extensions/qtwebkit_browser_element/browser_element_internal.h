@@ -32,12 +32,12 @@ static bool DecodeJSONString(const char *json_string, UTF16String *result) {
         case 'u': {
           UTF16Char unichar = 0;
           for (int i = 1; i <= 4; i++) {
-            char c = json_string[i];
+            int c = json_string[i];
             if (c >= '0' && c <= '9') c -= '0';
             else if (c >= 'A' && c <= 'F') c = c - 'A' + 10;
             else if (c >= 'a' && c <= 'f') c = c - 'a' + 10;
             else return false;
-            unichar = (unichar << 4) + c;
+            unichar = static_cast<UTF16Char>((unichar << 4) + c);
           }
           result->push_back(unichar);
           json_string += 4;
@@ -53,7 +53,7 @@ static bool DecodeJSONString(const char *json_string, UTF16String *result) {
   return true;
 }
 
-class BrowserElement::Impl;
+//class BrowserElement::Impl;
 
 class WebPage : public QWebPage {
   Q_OBJECT

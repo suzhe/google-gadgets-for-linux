@@ -118,8 +118,8 @@ int Network::GetActiveInterface() {
       last_active_interface_ = -1;
   }
   for (size_t i = 0; i < interfaces_.size(); ++i) {
-    if (IsInterfaceUp(i)) {
-      last_active_interface_ = i;
+    if (IsInterfaceUp(static_cast<int>(i))) {
+      last_active_interface_ = static_cast<int>(i);
       break;
     }
   }

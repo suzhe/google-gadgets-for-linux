@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <algorithm>
+#include <climits>
 #include <cstring>
 #include <ctype.h>
 #include "gadget_consts.h"
@@ -502,11 +504,11 @@ bool ContainsHTML(const char *s) {
       return true;
 
     if (s[i] == '<') {
-      char first = tolower(s[i + 1]);
+      int first = tolower(s[i + 1]);
       if (first) {
         if (first == '/' || first == '!')
           return true;
-        char second = tolower(s[i + 2]);
+        int second = tolower(s[i + 2]);
         if (second) {
           if (first == 'p' && second == '>')  // <p>
             return true;

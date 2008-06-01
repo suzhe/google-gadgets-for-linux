@@ -90,7 +90,7 @@ class QtCanvas::Impl {
 
     bool ret = image_->loadFromData(
         reinterpret_cast<const uchar *>(data.c_str()),
-        data.length());
+        static_cast<int>(data.length()));
 
     if (ret) {
       width_ = image_->width();

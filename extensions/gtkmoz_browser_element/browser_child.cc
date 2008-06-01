@@ -23,13 +23,20 @@
 #include <vector>
 #include <gtk/gtk.h>
 
+#define MOZILLA_CLIENT
+#include <mozilla-config.h>
 #include <gtkmozembed.h>
 #include <gtkmozembed_internal.h>
 #include <jsapi.h>
 
 #include <nsCOMPtr.h>
+#ifdef MOZILLA_1_8_BRANCH
 #include <content/nsIContentPolicy.h>
 #include <dom/nsIScriptNameSpaceManager.h>
+#else
+#include <nsIContentPolicy.h>
+#include <nsIScriptNameSpaceManager.h>
+#endif
 #include <nsCRT.h>
 #include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
@@ -44,8 +51,13 @@
 #include <nsServiceManagerUtils.h>
 #include <nsStringAPI.h>
 #include <nsXPCOMCID.h>
+#ifdef MOZILLA_1_8_BRANCH
 #include <xpconnect/nsIXPConnect.h>
 #include <xpconnect/nsIXPCScriptable.h>
+#else
+#include <nsIXPConnect.h>
+#include <nsIXPCScriptable.h>
+#endif
 
 #include <ggadget/common.h>
 #include <ggadget/digest_utils.h>
@@ -132,7 +144,7 @@ static int FindBrowserIdByJSContext(JSContext *cx) {
       NS_ENSURE_SUCCESS(rv, -1);
       global1->Release();
       if (global1 == global)
-        return it - g_embeds.begin();
+        return static_cast<int>(it - g_embeds.begin());
     }
   }
   fprintf(stderr, "browser_child: Can't find GtkMozEmbed from JS context\n");
@@ -333,6 +345,11 @@ class ExternalObject : public nsIXPCScriptable {
                          JSObject **) {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
+#ifndef MOZILLA_1_8_BRANCH
+  NS_IMETHOD Trace(nsIXPConnectWrappedNative*, JSTracer*, JSObject*){
+   return NS_ERROR_NOT_IMPLEMENTED;
+  }
+#endif
 };
 
 NS_IMPL_ISUPPORTS1(ExternalObject, nsIXPCScriptable)
@@ -370,12 +387,12 @@ static bool DecodeJSONString(const char *json_string, nsString *result) {
         case 'u': {
           PRUnichar unichar = 0;
           for (int i = 1; i <= 4; i++) {
-            char c = json_string[i];
+            int c = json_string[i];
             if (c >= '0' && c <= '9') c -= '0';
             else if (c >= 'A' && c <= 'F') c = c - 'A' + 10;
             else if (c >= 'a' && c <= 'f') c = c - 'a' + 10;
             else return false;
-            unichar = (unichar << 4) + c;
+            unichar = static_cast<PRUnichar>((unichar << 4) + c);
           }
           result->Append(unichar);
           json_string += 4;
@@ -418,7 +435,7 @@ static int FindBrowserIdByContentPolicyContext(nsISupports *context) {
       rv = browser->GetContentDOMWindow(getter_AddRefs(window1));
       NS_ENSURE_SUCCESS(rv, -1);
       if (window == window1)
-        return it - g_embeds.begin();
+        return static_cast<int>(it - g_embeds.begin());
     }
   }
   fprintf(stderr, "browser_child: Can't find GtkMozEmbed from "
@@ -738,11 +755,11 @@ int main(int argc, char **argv) {
   gtk_init(&argc, &argv);
   signal(SIGPIPE, OnSigPipe);
   if (argc >= 2)
-    g_down_fd = g_ret_fd = strtol(argv[1], NULL, 0);
+    g_down_fd = g_ret_fd = static_cast<int>(strtol(argv[1], NULL, 0));
   if (argc >= 3)
-    g_up_fd = strtol(argv[2], NULL, 0);
+    g_up_fd = static_cast<int>(strtol(argv[2], NULL, 0));
   if (argc >= 4)
-    g_ret_fd = strtol(argv[3], NULL, 0);
+    g_ret_fd = static_cast<int>(strtol(argv[3], NULL, 0));
 
   // Set the down FD to non-blocking mode to make the gtk main loop happy.
   int down_fd_flags = fcntl(g_down_fd, F_GETFL);

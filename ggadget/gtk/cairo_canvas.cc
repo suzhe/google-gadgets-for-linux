@@ -389,7 +389,7 @@ class CairoCanvas::Impl {
         do {
           cluster_index.push_back(pango_layout_iter_get_index(it));
         } while (pango_layout_iter_next_cluster(it));
-        cluster_index.push_back(newtext.size());
+        cluster_index.push_back(static_cast<int>(newtext.size()));
         std::sort(cluster_index.begin(), cluster_index.end());
 
         std::vector<int>::iterator cluster_it = cluster_index.begin();
@@ -415,14 +415,15 @@ class CairoCanvas::Impl {
           PangoLogAttr *log_attrs;
           int n_attrs;
           pango_layout_get_log_attrs(layout, &log_attrs, &n_attrs);
-          int off = g_utf8_pointer_to_offset(newtext.c_str(),
-                                             newtext.c_str() + conceal_index);
+          int off = static_cast<int>(g_utf8_pointer_to_offset(newtext.c_str(),
+                                             newtext.c_str() + conceal_index));
           while (off > 0 && !log_attrs[off].is_word_end &&
                  !log_attrs[off].is_word_start)
             --off;
           if (off > 0) {
-            conceal_index = g_utf8_offset_to_pointer(newtext.c_str(), off) -
-                                                     newtext.c_str();
+            conceal_index =
+               static_cast<int>(g_utf8_offset_to_pointer(newtext.c_str(), off) -
+                                newtext.c_str());
           }
           newtext.erase(conceal_index);
 

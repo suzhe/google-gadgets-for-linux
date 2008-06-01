@@ -92,7 +92,7 @@ class QtHost::Impl {
     if (GetGlobalFileManager()->ReadFile(kGadgetsIcon, &icon_data)) {
       QPixmap pixmap;
       pixmap.loadFromData(reinterpret_cast<const uchar *>(icon_data.c_str()),
-                          icon_data.length());
+                          static_cast<int>(icon_data.length()));
       tray_.setIcon(pixmap);
     }
     tray_.show();
