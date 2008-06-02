@@ -30,16 +30,10 @@
 #include <jsapi.h>
 
 #include <nsCOMPtr.h>
-#ifdef MOZILLA_1_8_BRANCH
-#include <content/nsIContentPolicy.h>
-#include <dom/nsIScriptNameSpaceManager.h>
-#else
-#include <nsIContentPolicy.h>
-#include <nsIScriptNameSpaceManager.h>
-#endif
 #include <nsCRT.h>
 #include <nsICategoryManager.h>
 #include <nsIComponentRegistrar.h>
+#include <nsIContentPolicy.h>
 #include <nsIDOMAbstractView.h>
 #include <nsIDOMDocument.h>
 #include <nsIDOMDocumentView.h>
@@ -47,17 +41,13 @@
 #include <nsIDOMWindow.h>
 #include <nsIGenericFactory.h>
 #include <nsIInterfaceRequestor.h>
+#include <nsIScriptNameSpaceManager.h>
 #include <nsIURI.h>
+#include <nsIXPConnect.h>
+#include <nsIXPCScriptable.h>
 #include <nsServiceManagerUtils.h>
 #include <nsStringAPI.h>
 #include <nsXPCOMCID.h>
-#ifdef MOZILLA_1_8_BRANCH
-#include <xpconnect/nsIXPConnect.h>
-#include <xpconnect/nsIXPCScriptable.h>
-#else
-#include <nsIXPConnect.h>
-#include <nsIXPCScriptable.h>
-#endif
 
 #include <ggadget/common.h>
 #include <ggadget/digest_utils.h>
@@ -345,11 +335,11 @@ class ExternalObject : public nsIXPCScriptable {
                          JSObject **) {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
-#ifndef MOZILLA_1_8_BRANCH
-  NS_IMETHOD Trace(nsIXPConnectWrappedNative*, JSTracer*, JSObject*){
-   return NS_ERROR_NOT_IMPLEMENTED;
+  // For Gecko 1.9.
+  struct JSTracer;
+  NS_IMETHOD Trace(nsIXPConnectWrappedNative*, JSTracer *, JSObject *) {
+    return NS_ERROR_NOT_IMPLEMENTED;
   }
-#endif
 };
 
 NS_IMPL_ISUPPORTS1(ExternalObject, nsIXPCScriptable)
