@@ -604,7 +604,7 @@ static JSBool ConvertNativeToJSDate(JSContext *cx,
   std::string new_date_script =
       StringPrintf("new Date(%ju)", VariantValue<Date>()(native_val).value);
   return JS_EvaluateScript(cx, JS_GetGlobalObject(cx), new_date_script.c_str(),
-                           static_cast<unsigned int>(new_date_script.length()),
+                           static_cast<uintN>(new_date_script.length()),
                            "", 1, js_val);
 }
 
@@ -690,13 +690,13 @@ JSBool EvaluateScript(JSContext *cx, JSObject *object, const char *script,
   if (ConvertStringUTF8ToUTF16(massaged_script, &utf16_string) ==
       massaged_script.size()) {
     return JS_EvaluateUCScript(cx, object, utf16_string.c_str(),
-                               static_cast<unsigned int>(utf16_string.size()),
+                               static_cast<uintN>(utf16_string.size()),
                                filename, lineno, rval);
   } else {
     JS_ReportWarning(cx, "Script %s contains invalid UTF-8 sequences "
                      "and will be treated as ISO8859-1", filename);
     return JS_EvaluateScript(cx, object, massaged_script.c_str(),
-                             static_cast<unsigned int>(massaged_script.size()),
+                             static_cast<uintN>(massaged_script.size()),
                              filename, lineno, rval);
   }
 }
