@@ -1,11 +1,25 @@
 #summary Frequently Asked Questions
 #labels Featured
 
-*Q:* What is Google Gadgets for Linux
 
-*A:* It's a platform for running desktop gadgets under Linux. Please read QuickStart for detailed introduction.
+*Q:* What is Google Gadgets for Linux?
+
+*A:* It's a platform for running desktop gadgets under Linux. Please read QuickStart for a detailed introduction.
 
 
-*Q:* How to build and install it on Ubuntu 8.04
+*Q:* How to build and install Gadgets for Linux on Ubuntu 8.04?
 
-*A:* You need install various development packages, including: libgtk2.0-dev, libmozjs-dev, libxul-dev, libcurl4-openssl-dev, libgstreamer0.10-dev, libgstreamer-plugins-base0.10-dev, libdbus-1-dev, libxml2-dev, librsvg2-dev. Other dependent packages will be installed along with these packages. And some user reported that the default prefix /usr/local doesn't work, because of library linking issue. So it's better to use --prefix=/usr when running configure script to override the default prefix value. For detailed instructions about build and installation, please read HowToBuild
+*A:* You need install a number of development packages, including: 
+  * libgtk2.0-dev
+  * libmozjs-dev
+  * libxul-dev
+  * libcurl4-openssl-dev
+  * libgstreamer0.10-dev
+  * libgstreamer-plugins-base0.10-dev
+  * libdbus-1-dev
+  * libxml2-dev
+  * librsvg2-dev
+Dependent packages required by the packages above also need to be installed.
+
+Also, some users are reporting that the default prefix `/usr/local` doesn't work, because of a library linking issue. Thus it's better to run the configure script with 
+`--prefix=/usr` in order to override the default prefix value. For detailed instructions on building and installing Gadgets for Linux, please read HowToBuild.
