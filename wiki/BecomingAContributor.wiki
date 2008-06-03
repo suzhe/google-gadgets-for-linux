@@ -18,9 +18,9 @@ Follow either of the two links above to access the appropriate CLA and instructi
 
 It's very important that you sign the CLA mentioned above. Once you've done that, follow the steps below to submit patches:
 
-   # Join the [http://groups.google.com/group/google-gadgets-for-linux-dev discussion group for developers]. We can only add you if you've sign the CLA.
-   # Decide which code you want to submit. A submission should be a set of changes that addresses one issue in the issue tracker. Please don't mix more than one logical change per submittion because it makes the history hard to follow. If you want to make a change that doesn't have a corresponding issue in the issue tracker, please create an issue first.
-   # Also, coordinate with team members that are listed on the issue in question. This ensures that work isn't being duplicated and communicating your plan early also generally leads to better patches.
+   # Join the [http://groups.google.com/group/google-gadgets-for-linux-dev discussion group for developers]. We can only add you after you've signed the CLA.
+   # Decide what code you want to submit. A submission should be a set of changes that addresses one issue in the issue tracker. Please don't mix more than one logical change per submission as it makes the history hard to follow. If you want to make a change that doesn't have a corresponding issue in the issue tracker, please create an issue first.
+   # Also, coordinate with team members that are listed on the issue in question. This ensures that work isn't being duplicated. Communicating your plan early also generally leads to better patches.
    # Ensure that your code adheres to the source code style.
    # Ensure that there are unit tests for your code.
-   # Attach the code to the issue addressed by the code. For brand new files, attach the whole file. For patches to existing files, attach a Subversion diff (that is, `svn diff`).
+   # Attach the code to the corresponding issue you're trying to fix. For brand new files, attach the whole file. For patches to existing files, attach a Subversion diff (that is, `svn diff`).
