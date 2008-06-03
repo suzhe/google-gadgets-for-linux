@@ -15,6 +15,7 @@
 */
 
 #include <QtCore/QUrl>
+#include <QtGui/QDesktopWidget>
 #include <QtGui/QPainter>
 #include <QtGui/QMouseEvent>
 #include <ggadget/graphics_interface.h>
@@ -421,6 +422,15 @@ void QtViewWidget::SetSize(int width, int height) {
   setFixedSize(width, height);
   setMinimumSize(0, 0);
   setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+}
+
+// Move the widget to the center of the screen inaccurately.
+void QtViewWidget::Center() {
+  QDesktopWidget desktop;
+  QRect rect = desktop.screenGeometry();
+  int x = rect.x() + rect.width() / 2;
+  int y = rect.y() + rect.height() / 2;
+  move(x, y);
 }
 
 void QtViewWidget::SetChild(QWidget *widget) {
