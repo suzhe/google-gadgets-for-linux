@@ -7,6 +7,11 @@
 *A:* It's a platform for running desktop gadgets under Linux. Please read QuickStart for a detailed introduction.
 
 
+*Q:* What is Google's involvement with this project?
+
+*A:* This is an official Google project, and is fully sponsored by the company.
+
+
 *Q:* How to build and install Gadgets for Linux on Ubuntu 8.04?
 
 *A:* You need install a number of development packages, including: 
