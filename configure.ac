@@ -146,6 +146,12 @@ AC_ARG_ENABLE([debug],
 	      [enable_debug=$enableval],
 	      [enable_debug=no])
 
+AC_ARG_ENABLE([werror],
+	      AS_HELP_STRING([--disable-werror],
+			     [Don't make all compile warnings into errors.]),
+	      [use_werror=$withval],
+	      [use_werror=yes])
+
 AC_ARG_WITH([memcheck-command],
 	    AS_HELP_STRING([--with-memcheck-command=CMD],
 		[specify a memory check command for running unit tests.]),
@@ -279,11 +285,15 @@ AC_SUBST(GGL_RESOURCE_DIR)
 ###########################################################
 if test x$enable_debug = xyes; then
   AC_DEFINE(GGL_ENABLE_DEBUG,1,[Enable debug])
-  DEFAULT_COMPILE_FLAGS="-g -O0 -Werror -Wall -Wconversion"
+  DEFAULT_COMPILE_FLAGS="-g -O0 -Wall -Wconversion"
   DEBUG_MACROS="_DEBUG";
 else
   DEFAULT_COMPILE_FLAGS="-O2 -Wall -Wconversion"
   DEBUG_MACROS="NDEBUG";
+fi
+
+if test x$use_werror = xyes; then
+  DEFAULT_COMPILE_FLAGS="$DEFAULT_COMPILE_FLAGS -Werror"
 fi
 
 # Enable stdc const macros by default, like INT64_C etc.
@@ -490,9 +500,6 @@ LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
 if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; then
   AC_MSG_WARN([Libcurl is not useable because it doesn't support SSL or HTTPS])
   has_libcurl=no
-elif ! (echo $LIBCURL | grep -e -lssl >/dev/null 2>&1); then
-  AC_MSG_WARN([Libcurl without OpenSSL backend is not supported])
-  has_libcurl=no
 fi
 
 # Check openssl.
@@ -618,9 +625,13 @@ if test x$has_gtkmozembed = xno -a x$build_gtkmoz_browser_element = xyes; then
   AC_MSG_WARN([Library GtkMozEmbed is not available, gtkmoz-browser-element extension won't be built.])
   build_gtkmoz_browser_element=no
 else
+  EMBED_INCDIR=`$PKG_CONFIG --variable=includedir $has_gtkmozembed`
+# Add additional include dirs for mozilla 1.8
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/content"
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
+  GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpconnect"
   MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
-  PREDEFINED_MACROS="$PREDEFINED_MACROS \
-		     -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
+  PREDEFINED_MACROS="$PREDEFINED_MACROS -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
 fi
 
 AM_CONDITIONAL(
@@ -701,7 +712,8 @@ if test x$build_gtk_host = xyes; then
   if test x$build_curl_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
           x$build_smjs_script_runtime != xyes; then
-    AC_MSG_ERROR([curl, libxml2 or spidermonkey are missing, which are required for gtk host.])
+    AC_MSG_WARN([curl, libxml2 or spidermonkey are missing, which are required for gtk host.])
+    build_gtk_host=no;
   fi
 fi
 
@@ -709,7 +721,8 @@ if test x$build_qt_host = xyes; then
   if test x$build_qt_xml_http_request != xyes -o \
           x$build_libxml2_xml_parser != xyes -o \
           x$build_smjs_script_runtime != xyes; then
-    AC_MSG_ERROR([qt4, libxml2 or spidermonkey are missing, which are required for qt host.])
+    AC_MSG_WARN([qt4, libxml2 or spidermonkey are missing, which are required for qt host.])
+    build_qt_host=no;
   fi
 fi
 
@@ -835,3 +848,14 @@ Build options:
   Build qt host                 $build_qt_host
 ])
 
+if test x$build_gtk_host != xyes -a x$build_qt_host != xyes; then
+  AC_MSG_WARN([Neither gtk host nor qt host will be built !!!]
+	      [Nothing can be used to run Google Gadgets for Linux.])
+fi
+
+if test x$build_curl_xml_http_request = xyes; then
+  AC_MSG_NOTICE(
+    [Please make sure that the curl library on your system is
+     compiled with openssl support. Otherwise this program might
+     not work.])
+fi
