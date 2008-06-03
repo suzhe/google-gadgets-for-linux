@@ -30,14 +30,13 @@ class HttpHandler : public QObject {
     connect(http, SIGNAL(done(bool)),
             this, SLOT(OnDone(bool)));
     connect(http, SIGNAL(sslErrors(const QList<QSslError>&)),
-            this, SLOT(OnSslError(const QList<QSslError>&)));
+            this, SLOT(OnSslErrors(const QList<QSslError>&)));
   }
  private slots:
   void OnResponseHeaderReceived(const QHttpResponseHeader& header);
   void OnDone(bool error);
-  void OnSslError(const QList<QSslError>& errors) {
-    http_->ignoreSslErrors();
-  }
+  void OnSslErrors(const QList<QSslError>& errors);
+
  private:
   XMLHttpRequest *request_;
   QHttp *http_;

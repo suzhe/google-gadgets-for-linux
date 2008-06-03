@@ -24,6 +24,7 @@
 #include <QtCore/QUrl>
 #include <QtCore/QBuffer>
 #include <QtNetwork/QHttp>
+#include <QtNetwork/QSslSocket>
 #include <QtNetwork/QHttpHeader>
 
 #define COOKIE_SUPPORT 0     // TODO: Cookie support is not ready
@@ -104,6 +105,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       : main_loop_(main_loop),
         xml_parser_(xml_parser),
         http_(NULL),
+        ssl_socket_(NULL),
         request_header_(NULL),
         session_(session),
         handler_(NULL),
@@ -180,6 +182,16 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       accepted_cert_domains_.push_back(domain);
   }
 
+  bool IsAcceptedDomain(const std::string &domain) {
+    for (size_t i = 0; i < accepted_cert_domains_.size(); i++) {
+      if (accepted_cert_domains_[i] == domain) {
+        DLOG("AcceptedDomain: %s", domain.c_str());
+        return true;
+      }
+    }
+    return false;
+  }
+
   virtual Connection *ConnectOnReadyStateChange(Slot0<void> *handler) {
     return onreadystatechange_signal_.Connect(handler);
   }
@@ -236,6 +248,12 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     http_ = new QHttp(qurl.host(), mode);
     http_->setUser(user, password);
     handler_ = new HttpHandler(this, http_);
+    // we have to work on QSslSocket since QHttp::sslErrors doesn't provide
+    // certificate as expected
+    if (mode == QHttp::ConnectionModeHttps) {
+      ssl_socket_ = new QSslSocket();
+      http_->setSocket(ssl_socket_);
+    }
 
     std::string path = "/";
     size_t url_length_without_path = host_.length() + qurl.scheme().length() + strlen("://");
@@ -396,6 +414,10 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (http_) {
       delete http_;
       http_ = NULL;
+    }
+    if (ssl_socket_) {
+      delete ssl_socket_;
+      ssl_socket_ = NULL;
     }
     response_headers_.clear();
     response_headers_map_.clear();
@@ -783,6 +805,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
   MainLoopInterface *main_loop_;
   XMLParserInterface *xml_parser_;
   QHttp *http_;
+  QSslSocket *ssl_socket_;
   QHttpRequestHeader *request_header_;
   QHttpResponseHeader response_header_;
   Session *session_;
@@ -818,6 +841,20 @@ void HttpHandler::OnResponseHeaderReceived(const QHttpResponseHeader& header) {
 
 void HttpHandler::OnDone(bool error) {
   request_->OnRequestFinished(0, error);
+}
+
+void HttpHandler::OnSslErrors(const QList<QSslError>& errors) {
+  for (int i = 0; i < errors.count(); i++) {
+    if (QSslError::HostNameMismatch != errors[i].error()) return;
+    QSslCertificate cert = request_->ssl_socket_->peerCertificate();
+    QString common_name =
+        cert.subjectInfo(QSslCertificate::CommonName);
+    if (common_name.isEmpty()) return;
+    if (!request_->IsAcceptedDomain(common_name.toStdString()))
+      return;
+  }
+  // Only accepted error reach here
+  http_->ignoreSslErrors();
 }
 
 Backoff XMLHttpRequest::backoff_;
