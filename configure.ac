@@ -487,6 +487,13 @@ fi
 
 # Check libcurl.
 LIBCURL_CHECK_CONFIG([yes], [7.15.0], [has_libcurl=yes], [has_libcurl=no])
+if test x"$libcurl_feature_SSL" != xyes -o x"$libcurl_protocol_HTTPS" != xyes; then
+  AC_MSG_WARN([Libcurl is not useable because it doesn't support SSL or HTTPS])
+  has_libcurl=no
+elif ! (echo $LIBCURL | grep -e -lssl >/dev/null 2>&1); then
+  AC_MSG_WARN([Libcurl without OpenSSL backend is not supported])
+  has_libcurl=no
+fi
 
 # Check openssl.
 PKG_CHECK_MODULES(OPENSSL, [openssl >= 0.9.8a], [has_openssl=yes], [has_openssl=no])
