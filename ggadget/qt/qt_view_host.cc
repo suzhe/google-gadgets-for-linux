@@ -107,7 +107,7 @@ class QtViewHost::Impl {
   }
 
   void SaveWindowStates() {
-    if (view_ && view_->GetGadget() && type_ == VIEW_HOST_MAIN && window_) {
+    if (view_ && view_->GetGadget() && type_ != VIEW_HOST_OPTIONS && window_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
       DLOG("Save:%d, %d", window_->pos().x(), window_->pos().y());
@@ -121,7 +121,7 @@ class QtViewHost::Impl {
   }
 
   void LoadWindowStates() {
-    if (view_ && view_->GetGadget() && type_ == VIEW_HOST_MAIN && window_) {
+    if (view_ && view_->GetGadget() && type_ != VIEW_HOST_OPTIONS && window_) {
       OptionsInterface *opt = view_->GetGadget()->GetOptions();
       std::string opt_prefix = GetViewPositionOptionPrefix();
       Variant vx = opt->GetInternalValue((opt_prefix + "_x").c_str());
@@ -131,9 +131,11 @@ class QtViewHost::Impl {
         DLOG("Restore:%d, %d", x, y);
         window_->move(x, y);
       } else {
-        // Always place the window to the center of the screen if the window
+        // Always place details window to the center of the screen if the window
         // position was not saved before.
-        // gtk_window_set_position(GTK_WINDOW(window_), GTK_WIN_POS_CENTER);
+        if (type_ == ViewHostInterface::VIEW_HOST_DETAILS) {
+          widget_->Center();
+        }
       }
       Variant keep_above =
           opt->GetInternalValue((opt_prefix + "_keep_above").c_str());
@@ -197,6 +199,7 @@ class QtViewHost::Impl {
       }
     } else {
       window_ = widget_;
+
       window_->setWindowTitle(caption_);
       if (record_states_) LoadWindowStates();
       window_->setAttribute(Qt::WA_DeleteOnClose, true);

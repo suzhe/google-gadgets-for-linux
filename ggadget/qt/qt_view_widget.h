@@ -35,6 +35,7 @@ class QtViewWidget : public QWidget {
   void EnableInputShapeMask(bool enable);
   void SetChild(QWidget *widget);
   void SkipTaskBar();
+  void Center();
   void SetKeepAbove(bool above);
 
  protected:
