@@ -92,11 +92,19 @@ class WebPage : public QWebPage {
 class WebView : public QWebView {
   Q_OBJECT
  public:
-  WebView(BrowserElement::Impl *owner) : owner_(owner) {}
+  WebView(BrowserElement::Impl *owner) : owner_(owner) {
+    setPage(new WebPage(owner));
+#if QT_VERSION >= 0x040400
+    page()->setLinkDelegationPolicy(QWebPage::DelegateExternalLinks);
+    connect(this, SIGNAL(linkClicked(const QUrl&)),
+            this, SLOT(OnLinkClicked(const QUrl&)));
+#endif
+  }
   BrowserElement::Impl *owner_;
 
  public slots:
   void OnParentDestroyed(QObject* obj);
+  void OnLinkClicked(const QUrl& url);
 };
 
 class BrowserElement::Impl {
@@ -106,7 +114,6 @@ class BrowserElement::Impl {
       parent_(NULL),
       child_(new WebView(this)),
       content_type_("text/html") {
-    child_->setPage(new WebPage(this));
     owner_->GetView()->ConnectOnMinimizeEvent(
         NewSlot(this, &Impl::OnViewMinimized));
     owner_->GetView()->ConnectOnRestoreEvent(
@@ -229,6 +236,11 @@ void WebView::OnParentDestroyed(QObject *obj) {
     LOG("Parent widget destroyed");
     owner_->parent_ = NULL;
   }
+}
+
+void WebView::OnLinkClicked(const QUrl& url) {
+  DLOG("LinkClicked: %s", url.toString().toStdString().c_str());
+  owner_->OpenUrl(url.toString());
 }
 
 }
