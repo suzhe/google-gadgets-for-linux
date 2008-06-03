@@ -28,6 +28,7 @@
 #include <gtkmozembed.h>
 #include <gtkmozembed_internal.h>
 #include <jsapi.h>
+#include <jsconfig.h>
 
 #include <nsCOMPtr.h>
 #include <nsCRT.h>
@@ -70,6 +71,12 @@ using ggadget::gtkmoz::kOpenURLFeedback;
 using ggadget::gtkmoz::kPingFeedback;
 using ggadget::gtkmoz::kPingAck;
 using ggadget::gtkmoz::kPingInterval;
+
+#if JS_VERSION < 180
+extern "C" {
+  struct JSTracer;
+}
+#endif
 
 // Default down and ret fds are standard input and up fd is standard output.
 // The default values are useful when browser child is tested independently.
@@ -336,7 +343,6 @@ class ExternalObject : public nsIXPCScriptable {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
   // For Gecko 1.9.
-  struct JSTracer;
   NS_IMETHOD Trace(nsIXPConnectWrappedNative*, JSTracer *, JSObject *) {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
