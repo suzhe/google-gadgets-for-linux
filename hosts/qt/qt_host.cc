@@ -41,6 +41,11 @@
 #include "gadget_browser_host.h"
 #include "qt_host_internal.h"
 
+#if defined(Q_WS_X11) && defined(HAVE_X11)
+#include <QtGui/QX11Info>
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#endif
 using namespace ggadget;
 using namespace ggadget::qt;
 
@@ -54,11 +59,18 @@ class QtHost::Impl {
       gadget_browser_host_(host, view_debug_mode),
       host_(host),
       view_debug_mode_(view_debug_mode),
+      transparent_(false),
       gadgets_shown_(true),
       expanded_popout_(NULL),
       expanded_original_(NULL),
       obj_(new QtHostObject(host, &gadget_browser_host_)) {
     SetupUI();
+#if defined(Q_WS_X11) && defined(HAVE_X11)
+    // Support transparent only when compositing manager running
+    Display *dpy = QX11Info::display();
+    Atom net_wm_state = XInternAtom(dpy, "_NET_WM_CM_S0", False);
+    transparent_ = XGetSelectionOwner(dpy, net_wm_state);
+#endif
   }
 
   ~Impl() {
@@ -200,12 +212,13 @@ class QtHost::Impl {
       return qvh;
 
     DecoratedViewHost *dvh;
+
     if (type == ViewHostInterface::VIEW_HOST_MAIN)
       dvh = new DecoratedViewHost(qvh, DecoratedViewHost::MAIN_STANDALONE,
-                                  true);
+                                  transparent_);
     else
       dvh = new DecoratedViewHost(qvh, DecoratedViewHost::DETAILS,
-                                  true);
+                                  transparent_);
 
     dvh->ConnectOnClose(NewSlot(this, &Impl::OnCloseHandler, dvh));
     dvh->ConnectOnPopOut(NewSlot(this, &Impl::OnPopOutHandler, dvh));
@@ -309,6 +322,7 @@ class QtHost::Impl {
   GadgetBrowserHost gadget_browser_host_;
   QtHost *host_;
   int view_debug_mode_;
+  bool transparent_;
   bool gadgets_shown_;
 
   DecoratedViewHost *expanded_popout_;
