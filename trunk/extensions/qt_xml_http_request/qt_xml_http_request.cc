@@ -226,6 +226,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       return NULL_POINTER_ERR;
 
     QUrl qurl(url);
+    if (!qurl.isValid()) return SYNTAX_ERR;
 
     QHttp::ConnectionMode mode;
 
@@ -256,10 +257,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     std::string path = "/";
-    size_t url_length_without_path = host_.length() + qurl.scheme().length() + strlen("://");
-    if (url_.length() > url_length_without_path) {
-      path = url_.substr(url_length_without_path);
-    }
+    size_t sep = url_.find('/', qurl.scheme().length() + strlen("://"));
+    if (sep > 0) path = url_.substr(sep);
+
     request_header_ = new QHttpRequestHeader(method, path.c_str());
     request_header_->setValue("Host", host_.c_str());
     DLOG("HOST: %s, PATH: %s", host_.c_str(), path.c_str());
