@@ -95,7 +95,7 @@ static const char *g_help_string =
 #endif
   "  -z zoom    Specify initial zoom factor for View, no effect for sidebar.\n"
   "  -b         Draw window border for Main View.\n"
-  "  -s         Use sidebar mode.\n"
+  "  -ns        Use dashboard mode instead of sidebar mode.\n"
   "  -bg        Run in background.\n"
   "\n"
   "Gadgets:\n"
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
   int debug_mode = 0;
   double zoom = 1.0;
   bool decorated = false;
-  bool sidebar = false;
+  bool sidebar = true;
   bool background = false;
 
   // Parse command line.
@@ -124,9 +124,9 @@ int main(int argc, char* argv[]) {
     } else if (strcmp("-bg", argv[i]) == 0 ||
                strcmp("--background", argv[i]) == 0) {
       background = true;
-    } else if (strcmp("-s", argv[i]) == 0 ||
-               strcmp("--sidebar", argv[i]) == 0) {
-      sidebar = true;
+    } else if (strcmp("-ns", argv[i]) == 0 ||
+               strcmp("--no-sidebar", argv[i]) == 0) {
+      sidebar = false;
 #ifdef _DEBUG
     } else if (strcmp("-d", argv[i]) == 0 || strcmp("--debug", argv[i]) == 0) {
       if (++i < argc) {
