@@ -14,26 +14,13 @@
 
 *Q:* How to build and install Gadgets for Linux on Ubuntu 8.04?
 
-*A:* You need install a number of development packages, including: 
-    * libdbus-1-dev
-    * libmozjs-dev
-    * libxml2-dev
-    * libgstreamer0.10-dev
-    * libgstreamer-plugins-base0.10-dev
-    * libltdl3-dev 
+*A:* For information on building on a particular distribution, please refer to the platform-specific instructions page on our user discussion list:
 
-For gtk port,  you need to install following packages:
+http://groups.google.com/group/google-gadgets-for-linux-user/web/building-instructions-addendum
 
-    * libxul-dev
-    * libgtk2.0-dev
-    * librsvg2-dev
-    * libcurl4-openssl-dev
+Users are encouraged to share information on building Gadgets for Linux on that page.
 
-For qt port, you need to install following packages:
 
-    * libqt4-dev
-    * libqtwebkit-dev
-Dependent packages required by the packages above also need to be installed.
+*Q:* Can you provide a binary release of Gadgets for Linux?
 
-Also, some users are reporting that the default prefix `/usr/local` doesn't work, because of a library linking issue. Thus it's better to run the configure script with 
-`--prefix=/usr` in order to override the default prefix value. For detailed instructions on building and installing Gadgets for Linux, please read HowToBuild.
+*A:* We do have plans to distribute a binary release once the code stabilizes some more. The exact details of this release have not been announced. Please stay tuned!
