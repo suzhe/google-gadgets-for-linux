@@ -346,11 +346,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteBodyCallback);
     curl_easy_setopt(curl_, CURLOPT_WRITEDATA, context);
 
-    send_flag_ = true;
     if (async_) {
-      // Add an internal reference when this request is working to prevent
-      // this object from being GC'ed.
-      Ref();
       // Do backoff checking to avoid DDOS attack to the server.
       if (!backoff_.IsOkToRequest(main_loop_->GetCurrentTime(),
                                   host_.c_str())) {
@@ -359,9 +355,15 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         // this kind of exception.
         return NO_ERR;
       }
+      // Add an internal reference when this request is working to prevent
+      // this object from being GC'ed during the request.
+      Ref();
+      send_flag_ = true;
       pthread_t thread;
       if (pthread_create(&thread, &thread_attr_, Worker, context) != 0) {
         DLOG("Failed to create worker thread");
+        Unref();
+        send_flag_ = false;
         Abort();
         return ABORT_ERR;
       }
@@ -372,6 +374,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
         Abort();
         return NETWORK_ERR;
       }
+      send_flag_ = true;
       // Run the worker directly in this thread.
       void *result = Worker(context);
       CURLcode code = *reinterpret_cast<CURLcode *>(&result);
@@ -398,7 +401,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     long curl_status = 0;
     curl_easy_getinfo(context->curl, CURLINFO_RESPONSE_CODE, &curl_status);
     unsigned short status = static_cast<unsigned short>(curl_status);
-    curl_easy_cleanup(context->curl);
 
     if (context->request_headers) {
       curl_slist_free_all(context->request_headers);
@@ -460,6 +462,7 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
           // Write blank data to ensure the header is parsed.
         : WriteBodyTask("", 0, status, worker_context) { }
     virtual bool Call(MainLoopInterface *main_loop, int watch_id) {
+      curl_easy_cleanup(worker_context_.curl);
       // This cleanup of share handle will only succeed if this request is the
       // final request that was active when the belonging session has been
       // destroyed before this request finishes.
@@ -471,6 +474,9 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
       WriteBodyTask::Call(main_loop, watch_id);
       if (worker_context_.this_p->curl_ == worker_context_.curl)
         worker_context_.this_p->Done(false);
+      // Remove the internal reference that was added when the request was
+      // started.
+      worker_context_.this_p->Unref();
       return false;
     }
   };
@@ -679,7 +685,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     }
 
     bool save_send_flag = send_flag_;
-    bool save_async = async_;
     // Set send_flag_ to false early, to prevent problems when Done() is
     // re-entered.
     send_flag_ = false;
@@ -700,12 +705,6 @@ class XMLHttpRequest : public ScriptableHelper<XMLHttpRequestInterface> {
     if (aborting && no_unexpected_state_change) {
       // Don't dispatch this state change event, according to the spec.
       state_ = UNSENT;
-    }
-
-    if (save_send_flag && save_async) {
-      // Remove the internal reference that was added when the request was
-      // started.
-      Unref();
     }
   }
 
