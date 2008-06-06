@@ -29,7 +29,11 @@ noinst_HEADERS		= converter.h \
 			  json.h \
 			  native_js_wrapper.h
 
-noinst_LTLIBRARIES	= libggadget-smjs.la
+noinst_LTLIBRARIES	= libggadget-smjs.la libjscript-massager.la
+
+libjscript_massager_la_SOURCES = jscript_massager.cc
+libjscript_massager_la_CXXFLAGS = $(DEFAULT_COMPILE_FLAGS) -Wno-conversion
+libjscript_massager_la_LIBADD = $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_smjs_la_SOURCES = \
 			  converter.cc \
@@ -37,7 +41,6 @@ libggadget_smjs_la_SOURCES = \
 			  js_native_wrapper.cc \
 			  js_script_context.cc \
 			  js_script_runtime.cc \
-			  jscript_massager.cc \
 			  json.cc \
 			  native_js_wrapper.cc
 
@@ -52,6 +55,7 @@ libggadget_smjs_la_CPPFLAGS = \
 
 libggadget_smjs_la_LIBADD = \
 			  @SPIDERMONKEY_LIBS@ \
+			  libjscript-massager.la
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la
 
 libggadget_smjs_la_LDFLAGS = @SPIDERMONKEY_LDFLAGS@

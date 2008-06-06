@@ -63,4 +63,7 @@ gtkmoz_browser_child_CPPFLAGS	= @GTK2_CFLAGS@ \
 
 gtkmoz_browser_child_LDADD	= @GTK2_LIBS@ \
 				  @GTKMOZEMBED_LIBS@
+
+gtkmoz_browser_child_LDFLAGS	= @GTKMOZEMBED_LDFLAGS@
+
 endif

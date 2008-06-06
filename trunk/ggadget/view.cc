@@ -186,7 +186,6 @@ class View::Impl {
       // TODO: Make sure the default value.
       resizable_(ViewInterface::RESIZABLE_ZOOM),
       show_caption_always_(false),
-      post_event_token_(0),
       draw_queued_(false),
       events_enabled_(true),
       need_redraw_(true),
@@ -879,13 +878,9 @@ class View::Impl {
 
     // Let posted events be processed after Layout() and before actual Draw().
     // This can prevent some flickers, for example, onsize of labels.
-    if (post_event_token_)
-      main_loop_->RemoveWatch(post_event_token_);
-
-    FirePostedEvents();
+    FirePostedSizeEvents();
 
     CanvasInterface *target;
-
     if (canvas_cache_) {
       if (need_redraw_ || !clip_region_enabled_)
         clip_region_.Clear();
@@ -1055,14 +1050,12 @@ class View::Impl {
     }
   }
 
-  bool FirePostedEvents() {
-    post_event_token_ = 0;
-
-    // Make a copy of posted_events_, because it may change during the
+  void FirePostedSizeEvents() {
+    // Make a copy of posted_size_events_, because it may change during the
     // following loop.
-    PostedEvents posted_events_copy;
-    std::swap(posted_events_, posted_events_copy);
-    for (PostedEvents::iterator it = posted_events_copy.begin();
+    PostedSizeEvents posted_events_copy;
+    std::swap(posted_size_events_, posted_events_copy);
+    for (PostedSizeEvents::iterator it = posted_events_copy.begin();
          it != posted_events_copy.end(); ++it) {
       // Test if the event is still valid. If srcElement has been deleted,
       // it->first->GetSrcElement() should return NULL.
@@ -1073,34 +1066,22 @@ class View::Impl {
       delete it->first;
     }
     posted_events_copy.clear();
-    return false;
   }
 
-  void PostEvent(ScriptableEvent *event, const EventSignal &event_signal) {
-    ASSERT(event);
-    ASSERT(event->GetEvent());
-    // Merge multiple size events into one for each element.
-    if (event->GetEvent()->GetType() == Event::EVENT_SIZE) {
-      for (PostedEvents::const_iterator it = posted_events_.begin();
-           it != posted_events_.end(); ++it) {
-        if (it->first->GetEvent()->GetType() == Event::EVENT_SIZE &&
-            it->first->GetSrcElement() == event->GetSrcElement()) {
-          delete event->GetEvent();
-          delete event;
-          // The size event already posted for this element.
-          return;
-        }
+  void PostElementSizeEvent(BasicElement *element, const EventSignal &signal) {
+    ASSERT(element);
+    // Search if the size event has been posted for the element.
+    for (PostedSizeEvents::const_iterator it = posted_size_events_.begin();
+         it != posted_size_events_.end(); ++it) {
+      if (it->first->GetSrcElement() == element) {
+        // The size event already posted for the element.
+        return;
       }
     }
-    posted_events_.push_back(std::make_pair(event, &event_signal));
 
-    if (!post_event_token_) {
-      TimerWatchCallback *watch =
-          new TimerWatchCallback(this, NewSlot(this, &Impl::FirePostedEvents),
-                                 0, 0, 0, 0, false);
-      post_event_token_ = main_loop_->AddTimeoutWatch(0, watch);
-      watch->SetWatchId(post_event_token_);
-    }
+    Event *event = new SimpleEvent(Event::EVENT_SIZE);
+    ScriptableEvent *script_event = new ScriptableEvent(event, element, NULL);
+    posted_size_events_.push_back(std::make_pair(script_event, &signal));
   }
 
   ScriptableEvent *GetEvent() {
@@ -1336,8 +1317,8 @@ class View::Impl {
   ScriptableHolder<ContentAreaElement> content_area_element_;
 
   typedef std::vector<std::pair<ScriptableEvent *, const EventSignal *> >
-      PostedEvents;
-  PostedEvents posted_events_;
+      PostedSizeEvents;
+  PostedSizeEvents posted_size_events_;
 
   std::vector<ScriptableEvent *> event_stack_;
 
@@ -1350,7 +1331,6 @@ class View::Impl {
   std::string caption_;
   bool show_caption_always_;
 
-  int post_event_token_;
   bool draw_queued_;
   bool events_enabled_;
   bool need_redraw_;
@@ -1507,8 +1487,9 @@ void View::FireEvent(ScriptableEvent *event, const EventSignal &event_signal) {
   impl_->FireEvent(event, event_signal);
 }
 
-void View::PostEvent(ScriptableEvent *event, const EventSignal &event_signal) {
-  impl_->PostEvent(event, event_signal);
+void View::PostElementSizeEvent(BasicElement *element,
+                                const EventSignal &signal) {
+  impl_->PostElementSizeEvent(element, signal);
 }
 
 ScriptableEvent *View::GetEvent() const {

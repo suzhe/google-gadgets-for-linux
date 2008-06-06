@@ -166,7 +166,7 @@ class SingleViewHost::Impl {
       if (!decorated_)
         gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window_), TRUE);
       widget_ = window_;
-      if (type_ == ViewHostInterface::VIEW_HOST_MAIN)
+      if (type_ == ViewHostInterface::VIEW_HOST_MAIN && !decorated_)
         gtk_window_set_role(GTK_WINDOW(window_), kMainViewWindowRole);
     }
 
@@ -363,7 +363,7 @@ class SingleViewHost::Impl {
 
   void SetKeepAbove(bool keep_above) {
     ASSERT(window_);
-    if (window_) {
+    if (window_ && window_->window) {
       gtk_window_set_keep_above(GTK_WINDOW(window_), keep_above);
       if (is_keep_above_ != keep_above) {
         is_keep_above_ = keep_above;
@@ -374,7 +374,7 @@ class SingleViewHost::Impl {
 
   void SetWindowType(GdkWindowTypeHint type) {
     ASSERT(window_);
-    if (window_) {
+    if (window_ && window_->window) {
       bool visible = GTK_WIDGET_VISIBLE(window_);
       enable_signals_ = false;
       if (visible)
@@ -384,6 +384,9 @@ class SingleViewHost::Impl {
         gtk_widget_show(window_);
         // Make sure that the window has correct position.
         gtk_window_move(GTK_WINDOW(window_), win_x_, win_y_);
+        if (!decorated_)
+          gdk_window_set_decorations(window_->window,
+                                     static_cast<GdkWMDecoration>(0));
       }
       gtk_window_set_keep_above(GTK_WINDOW(window_), is_keep_above_);
       enable_signals_ = true;

@@ -15,6 +15,7 @@
 
 GADGET_BROWSER_FILES= \
 		en/strings.xml \
+		zh-CN/strings.xml \
 		gadget.gmanifest \
 		icon_large.png \
 		icon_small.png \

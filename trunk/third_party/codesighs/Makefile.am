@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-# TODO: install and dist
-
-noinst_PROGRAMS		= codesighs nm2tsv maptsvdifftool
+EXTRA_PROGRAMS		= codesighs nm2tsv maptsvdifftool
 
 codesighs_SOURCES	= codesighs.c
 

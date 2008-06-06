@@ -134,8 +134,14 @@ class MainLoop::Impl {
     node->callback = callback;
     node->impl = this;
     node->watch_id = (interval <= 1 ?
+         // Let timeout 0 have higher priority (than e.g. repainting),
+         // because it is often used to post events that need to be processed
+         // immediately in the next event loop.
          g_idle_add_full(G_PRIORITY_HIGH_IDLE, TimeoutCallback, node, NULL) :
-         g_timeout_add(interval, TimeoutCallback, node));
+         // Lower priority of other timers to prevent them from congesting the
+         // event loop.
+         g_timeout_add_full(G_PRIORITY_DEFAULT_IDLE, interval, TimeoutCallback,
+                            node, NULL));
     g_hash_table_insert(watches_, GINT_TO_POINTER(node->watch_id), node);
     WakeUp();
     g_static_mutex_unlock(&mutex_);

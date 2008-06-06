@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include <algorithm>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -373,7 +374,7 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest) {
 
 bool DisableWidgetBackground(GtkWidget *widget) {
   bool result = false;
-  if (GTK_IS_WIDGET(widget)) {
+  if (GTK_IS_WIDGET(widget) && SupportsComposite(widget)) {
     GdkScreen *screen = gtk_widget_get_screen(widget);
     GdkColormap *colormap = gdk_screen_get_rgba_colormap(screen);
 
@@ -389,11 +390,16 @@ bool DisableWidgetBackground(GtkWidget *widget) {
   return result;
 }
 
-bool SupportsComposite() {
+bool SupportsComposite(GtkWidget *widget) {
+  GdkScreen *screen = NULL;
+  if (GTK_IS_WINDOW(widget))
+    screen = gtk_widget_get_screen(widget);
+  if (!screen)
+    screen = gdk_screen_get_default();
 #if GTK_CHECK_VERSION(2,10,0)
-  return gdk_screen_is_composited(gdk_screen_get_default());
+  return gdk_screen_is_composited(screen);
 #else
-  return gdk_screen_get_rgba_colormap(gdk_screen_get_default()) != NULL;
+  return gdk_screen_get_rgba_colormap(screen) != NULL;
 #endif
 }
 
@@ -431,6 +437,167 @@ bool MaximizeWindow(GtkWidget *window,
 #else
   return false;
 #endif
+}
+
+void GetWorkAreaGeometry(GtkWidget *window, GdkRectangle *workarea) {
+  ASSERT(GTK_IS_WINDOW(window));
+  ASSERT(workarea);
+
+#ifdef GDK_WINDOWING_X11
+  static GdkAtom net_current_desktop_atom = GDK_NONE;
+  static GdkAtom net_workarea_atom = GDK_NONE;
+
+  if (net_current_desktop_atom == GDK_NONE)
+    net_current_desktop_atom = gdk_atom_intern ("_NET_CURRENT_DESKTOP", TRUE);;
+  if (net_workarea_atom == GDK_NONE)
+    net_workarea_atom = gdk_atom_intern ("_NET_WORKAREA", TRUE);
+#endif
+
+  GdkScreen *screen = gtk_window_get_screen(GTK_WINDOW(window));
+  GdkWindow *root = NULL;
+  gint screen_width = 0;
+  gint screen_height = 0;
+  if (!screen)
+    screen = gdk_screen_get_default();
+  if (screen) {
+    screen_width = gdk_screen_get_width(screen);
+    screen_height = gdk_screen_get_height(screen);
+    root = gdk_screen_get_root_window(screen);
+  }
+  if (!root)
+    root = gdk_get_default_root_window();
+
+  workarea->x = 0;
+  workarea->y = 0;
+  workarea->width = screen_width;
+  workarea->height = screen_height;
+
+  if (root) {
+#ifdef GDK_WINDOWING_X11
+    GdkAtom atom_ret;
+    gint format = 0;
+    gint length = 0;
+    gint cur = 0;
+    guchar *data = NULL;
+    gboolean found = FALSE;
+
+    found = gdk_property_get(root, net_current_desktop_atom,
+                             GDK_NONE, 0, G_MAXLONG, FALSE,
+                             &atom_ret, &format, &length, &data);
+    if (found && format == 32 && length / sizeof(glong) > 0)
+      cur = static_cast<gint>(reinterpret_cast<glong*>(data)[0]);
+    if (found)
+      g_free (data);
+
+    found = gdk_property_get(root, net_workarea_atom,
+                             GDK_NONE, 0, G_MAXLONG, FALSE,
+                             &atom_ret, &format, &length, &data);
+    if (found && format == 32 &&
+        static_cast<gint>(length / sizeof(glong)) >= (cur + 1) * 4) {
+      workarea->x = std::max(
+            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4]), 0);
+      workarea->y = std::max(
+            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4 + 1]), 0);
+      workarea->width = std::min(
+            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4 + 2]),
+            screen_width);
+      workarea->height = std::min(
+            static_cast<int>(reinterpret_cast<glong*>(data)[cur * 4 + 3]),
+            screen_height);
+    }
+    if (found)
+      g_free (data);
+#endif
+  }
+}
+
+#ifdef GDK_WINDOWING_X11
+static const char kWorkAreaChangeSlotTag[] = "workarea-change-slot";
+static const char kWorkAreaChangeSelfTag[] = "workarea-change-self";
+
+static GdkFilterReturn WorkAreaPropertyNotifyFilter(
+    GdkXEvent *gdk_xevent, GdkEvent *event, gpointer data) {
+  g_return_val_if_fail(gdk_xevent, GDK_FILTER_CONTINUE);
+
+  Slot0<void> *slot = static_cast<Slot0<void> *>(
+      g_object_get_data(G_OBJECT(data), kWorkAreaChangeSlotTag));
+
+  if (slot) {
+    XEvent *xev = (XEvent*)gdk_xevent;
+    if (xev->type == PropertyNotify &&
+        (xev->xproperty.atom ==
+         gdk_x11_get_xatom_by_name ("_NET_WORKAREA") ||
+         xev->xproperty.atom ==
+         gdk_x11_get_xatom_by_name ("_NET_CURRENT_DESKTOP"))) {
+      DLOG("Work area changed, call slot.");
+      (*slot)();
+    }
+  }
+
+  return GDK_FILTER_CONTINUE;
+}
+
+static void WorkAreaChangeDestroySlotNotify(gpointer data) {
+  delete static_cast<Slot0<void> *>(data);
+}
+
+static void WorkAreaChangeDestroySelfNotify(gpointer data) {
+  GtkWidget *widget = GTK_WIDGET(data);
+  if (widget) {
+    GdkScreen *screen = gtk_widget_get_screen(widget);
+    if (screen) {
+      GdkWindow *root = gdk_screen_get_root_window(screen);
+      if (root)
+        gdk_window_remove_filter(root, WorkAreaPropertyNotifyFilter, widget);
+    }
+  }
+}
+
+static void WorkAreaScreenChangedCallback(GtkWidget *widget, GdkScreen *prev,
+                                          gpointer data) {
+  if (prev) {
+    GdkWindow *root = gdk_screen_get_root_window(prev);
+    if (root)
+      gdk_window_remove_filter(root, WorkAreaPropertyNotifyFilter, widget);
+  }
+
+  GdkScreen *cur = gtk_widget_get_screen(widget);
+  if (cur) {
+    GdkWindow *root = gdk_screen_get_root_window(cur);
+    if (root) {
+      gdk_window_set_events(root, static_cast<GdkEventMask>(
+          gdk_window_get_events(root) | GDK_PROPERTY_NOTIFY));
+      gdk_window_add_filter(root, WorkAreaPropertyNotifyFilter, widget);
+    }
+  }
+}
+#endif
+
+bool MonitorWorkAreaChange(GtkWidget *window, Slot0<void> *slot) {
+  ASSERT(GTK_IS_WINDOW(window));
+
+  // Only supports X11 window system.
+#ifdef GDK_WINDOWING_X11
+  if (window) {
+    // If it's the first time to set the monitor, setup necessary signal
+    // handlers.
+    if (!g_object_get_data(G_OBJECT(window), kWorkAreaChangeSelfTag)) {
+      g_signal_connect(G_OBJECT(window), "screen-changed",
+                       G_CALLBACK(WorkAreaScreenChangedCallback), NULL);
+      g_object_set_data_full(G_OBJECT(window), kWorkAreaChangeSelfTag,
+                             window, WorkAreaChangeDestroySelfNotify);
+      WorkAreaScreenChangedCallback(window, NULL, NULL);
+    }
+
+    // Attach the slot to the widget, the old one will be destroyed
+    // automatically.
+    g_object_set_data_full(G_OBJECT(window), kWorkAreaChangeSlotTag,
+                           slot, WorkAreaChangeDestroySlotNotify);
+    return true;
+  }
+#endif
+  delete slot;
+  return false;
 }
 
 } // namespace gtk

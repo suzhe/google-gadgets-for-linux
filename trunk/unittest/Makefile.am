@@ -23,7 +23,7 @@ noinst_HEADERS		= gtest_internal_inl.h \
 			  gtest_prod.h \
 			  gtest_spi.h
 
-noinst_LTLIBRARIES	= libgtest.la
+check_LTLIBRARIES	= libgtest.la
 
 libgtest_la_SOURCES	= gtest.cc
 

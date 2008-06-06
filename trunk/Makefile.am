@@ -21,13 +21,13 @@ LIBLTDL_DIR = libltdl
 endif
 
 SUBDIRS = $(LIBLTDL_DIR) \
-	  resources \
-	  rss_gadget \
-	  igoogle_gadget \
 	  third_party \
 	  unittest \
 	  ggadget \
 	  extensions \
+	  resources \
+	  rss_gadget \
+	  igoogle_gadget \
 	  hosts
 
 EXTRA_DIST = autotools

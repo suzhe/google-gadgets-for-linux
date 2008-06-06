@@ -68,8 +68,7 @@ libggadget_qt@GGL_EPOCH@_la_LIBADD = \
 
 libggadget_qt@GGL_EPOCH@_la_LDFLAGS = \
 			  -version-info $(LIBGGADGET_CURRENT):$(LIBGGADGET_REVISION):$(LIBGGADGET_AGE) \
-			  -export-dynamic \
-			  -rpath $(libdir)
+			  -export-dynamic
 
 pkgconfigdir= $(libdir)/pkgconfig
 pkgconfig_DATA= libggadget-qt@GGL_EPOCH@.pc
