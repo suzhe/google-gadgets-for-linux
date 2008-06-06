@@ -227,7 +227,8 @@ class SideBarGtkHost::Impl {
   }
 
   bool HandleSideBarBeginMoveDrag(int button) {
-    if (button != MouseEvent::BUTTON_LEFT) return true;
+    if (button != MouseEvent::BUTTON_LEFT || !gadgets_shown_)
+      return true;
     if (gdk_pointer_grab(drag_observer_->window, FALSE,
                          (GdkEventMask)(GDK_BUTTON_RELEASE_MASK |
                                         GDK_POINTER_MOTION_MASK),
@@ -235,7 +236,7 @@ class SideBarGtkHost::Impl {
         GDK_GRAB_SUCCESS) {
       int x, y;
       gtk_widget_get_pointer(main_widget_, &x, &y);
-      gdk_window_set_override_redirect(main_widget_->window, true);
+      sidebar_host_->SetWindowType(GDK_WINDOW_TYPE_HINT_DOCK);
       floating_offset_x_ = x;
       floating_offset_y_ = y;
       sidebar_moving_ = true;
@@ -262,10 +263,8 @@ class SideBarGtkHost::Impl {
       option_sidebar_position_ = SIDEBAR_POSITION_RIGHT;
     else
       option_sidebar_position_ = SIDEBAR_POSITION_LEFT;
-    gdk_window_set_override_redirect(main_widget_->window, false);
     sidebar_moving_ = false;
-
-    if (gadgets_shown_) AdjustSideBar();
+    AdjustSideBar();
   }
 
   void HandleSideBarShow(bool show) {
