@@ -19,9 +19,6 @@ set -e
 here=`pwd`
 cd `dirname $0`/..
 srcdir=`pwd`
-if [ ! -x cmake/build_spidermonkey.sh ]; then
-  chmod +x cmake/build_spidermonkey.sh
-fi
 mkdir -p build/release
 cd build/release
 cmake -DCMAKE_BUILD_TYPE=Release "$srcdir"
@@ -30,5 +27,5 @@ cd output
 $srcdir/utils/codesize.sh
 cd ..
 if ! ctest . ; then
-  cat Testing/Temporary/LastTest.log
+  echo "See Testing/Temporary/LastTest.log for details."
 fi

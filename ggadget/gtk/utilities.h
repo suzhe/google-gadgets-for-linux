@@ -22,6 +22,7 @@
 #include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <ggadget/view_interface.h>
+#include <ggadget/slot.h>
 
 namespace ggadget {
 
@@ -98,15 +99,19 @@ GdkCursor *CreateCursor(int type, ViewInterface::HitTest hittest);
 bool DisableWidgetBackground(GtkWidget *widget);
 
 /**
- * Checks if the window system supports composite drawing mode.
+ * Checks if the window system supports composite drawing mode for a specific
+ * window.
  *
- * If it returns true, then it means that a window can have transparent
+ * If it returns true, then it means that the window can have transparent
  * background.
+ *
+ * If the window is NULL, then checks if the default screen support composite
+ * drawing mode.
  */
-bool SupportsComposite();
+bool SupportsComposite(GtkWidget *window);
 
 /**
- * Talk to the window manager to maximize to window.
+ * Talk to the window manager to maximize the window.
  *
  * @param window the gtk window you want to be maximized.
  * @param maximize_vert @c true if window should be maximized vertically
@@ -115,6 +120,28 @@ bool SupportsComposite();
  */
 bool MaximizeWindow(GtkWidget *window, bool maximize_vert, bool maximize_horz);
 
+/**
+ * Gets the geometry of the screen work area containing the specified window.
+ *
+ * @param window The specified gtk window in the work area.
+ * @param[out] workarea Returns the geometry of the work area in the screen.
+ */
+void GetWorkAreaGeometry(GtkWidget *window, GdkRectangle *workarea);
+
+/*
+ * Monitor changes of the screen work area containing the specified window.
+ *
+ * The specified slot will be destroyed when the specified gtk window is
+ * destroyed.
+ *
+ * Only one monitor can be attached to the specified window, and setting a
+ * monitor with NULL slot will remove the old monitor.
+ *
+ * @param window The specified gtk window in the work area to be monitored.
+ * @param slot The slot to be called when the work area changed.
+ * @return true if success.
+ */
+bool MonitorWorkAreaChange(GtkWidget *window, Slot0<void> *slot);
 
 } // namespace gtk
 } // namespace ggadget

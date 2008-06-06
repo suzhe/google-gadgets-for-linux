@@ -1037,8 +1037,8 @@ class DecoratedViewHost::Impl {
         *bottom = kVDMainBorderWidth;
         if (transparent_)
           *top += kVDMainBorderWidth;
-        else
-          *top = kVDMainBorderWidth;
+        else if (minimized_)
+          *top = 0;
       }
     }
 

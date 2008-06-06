@@ -17,6 +17,7 @@
 // Enable it to print verbose debug info
 // #define EVENT_VERBOSE_DEBUG
 
+#include <cmath>
 #include <cstdlib>
 #include <vector>
 #include "basic_element.h"
@@ -710,10 +711,8 @@ class BasicElement::Impl {
   }
 
   void PostSizeEvent() {
-    if (onsize_event_.HasActiveConnections()) {
-      Event *event = new SimpleEvent(Event::EVENT_SIZE);
-      view_->PostEvent(new ScriptableEvent(event, owner_, NULL), onsize_event_);
-    }
+    if (onsize_event_.HasActiveConnections())
+      view_->PostElementSizeEvent(owner_, onsize_event_);
   }
 
   void PositionChanged() {

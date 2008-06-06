@@ -631,7 +631,20 @@ else
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/dom"
   GTKMOZEMBED_CFLAGS="$GTKMOZEMBED_CFLAGS -I$EMBED_INCDIR/xpconnect"
   MOZILLA_FIVE_HOME=`$PKG_CONFIG --variable=libdir $has_gtkmozembed`
+  if test "x$MOZILLA_FIVE_HOME" = "x"; then
+# Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+# @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+    MOZILLA_FIVE_HOME=`echo $GTKMOZEMBED_LIBS | sed -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
+    if test ! -e "$MOZILLA_FIVE_HOME"; then
+      MOZILLA_FIVE_HOME=""
+    fi
+  fi
   PREDEFINED_MACROS="$PREDEFINED_MACROS -DMOZILLA_FIVE_HOME=\\\"$MOZILLA_FIVE_HOME\\\""
+  AC_SUBST(MOZILLA_FIVE_HOME)
+  if test "x$MOZILLA_FIVE_HOME" != "x"; then
+    GTKMOZEMBED_LDFLAGS="$GTKMOZEMBED_LDFLAGS -R$MOZILLA_FIVE_HOME"
+    AC_SUBST(GTKMOZEMBED_LDFLAGS)
+  fi
 fi
 
 AM_CONDITIONAL(

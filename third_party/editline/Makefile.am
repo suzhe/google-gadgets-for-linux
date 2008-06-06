@@ -17,7 +17,7 @@
 noinst_HEADERS		= editline.h \
 			  unix.h
 
-noinst_LTLIBRARIES	= libeditline.la
+check_LTLIBRARIES	= libeditline.la
 
 libeditline_la_SOURCES	= editline.c \
 			  sysunix.c

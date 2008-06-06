@@ -132,14 +132,13 @@ class View : public ViewInterface {
   void FireEvent(ScriptableEvent *event, const EventSignal &event_signal);
 
   /**
-   * Post an event into the event queue.  The event will be fired in the next
-   * event loop.
-   * @param event the event to be fired. The caller must allocate the
-   *     @c ScriptableEvent and the @c Event objects on heap. They will be
-   *     deleted by this view.
-   * @param event_signal
+   * Post a onsize event into the event queue for an element. The event will
+   * be fired after the current @c Layout() if this method is called from
+   * @c Layout(), or the next @c Layout().
+   * @param element the element posting the event.
+   * @param signal the onsize signal of the element.
    */
-  void PostEvent(ScriptableEvent *event, const EventSignal &event_signal);
+  void PostElementSizeEvent(BasicElement *element, const EventSignal &signal);
 
   /**
    * This method is provided to the event handlers of native gadgets to

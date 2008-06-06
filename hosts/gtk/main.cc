@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
   ggadget::HostInterface *host;
 
   if (sidebar)
-    host = new hosts::gtk::SidebarGtkHost(decorated, debug_mode);
+    host = new hosts::gtk::SideBarGtkHost(decorated, debug_mode);
   else
     host = new hosts::gtk::SimpleGtkHost(zoom, decorated, debug_mode);
 

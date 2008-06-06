@@ -41,6 +41,8 @@ ggl_qt_LDADD		= @QT4_LIBS@ \
 			  $(top_builddir)/ggadget/libggadget@GGL_EPOCH@.la \
 			  $(top_builddir)/ggadget/qt/libggadget-qt@GGL_EPOCH@.la
 
+ggl_qt_LDFLAGS		= -R$(libdir)
+
 BUILT_SOURCES		= $(MOC_FILES)
 CLEANFILES 		= $(MOC_FILES)
 qt_host_internal.moc:qt_host_internal.h

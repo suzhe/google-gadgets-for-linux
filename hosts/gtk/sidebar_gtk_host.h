@@ -27,10 +27,10 @@ using ggadget::Gadget;
 using ggadget::HostInterface;
 using ggadget::ViewHostInterface;;
 
-class SidebarGtkHost : public ggadget::HostInterface {
+class SideBarGtkHost : public ggadget::HostInterface {
  public:
-  SidebarGtkHost(bool decorated, int view_debug_mode);
-  virtual ~SidebarGtkHost();
+  SideBarGtkHost(bool decorated, int view_debug_mode);
+  virtual ~SideBarGtkHost();
   virtual ViewHostInterface *NewViewHost(Gadget *gadget,
                                          ViewHostInterface::Type type);
   virtual void RemoveGadget(Gadget *gadget, bool save_data);

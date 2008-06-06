@@ -74,7 +74,7 @@ class SimpleGtkHost::Impl {
       decorated_(decorated),
       view_debug_mode_(view_debug_mode),
       gadgets_shown_(true),
-      transparent_(SupportsComposite()),
+      transparent_(SupportsComposite(NULL)),
       gadget_manager_(GetGadgetManager()),
       expanded_original_(NULL),
       expanded_popout_(NULL) {

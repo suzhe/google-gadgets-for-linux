@@ -67,17 +67,27 @@ smjs_LIBS=""
 # if both incdir and libdir are not specified, then try to detect it by
 # pkg-config.
 if test "x$smjs_incdir" = "x" -a "x$smjs_libdir" = "x"; then
-  PKG_CHECK_MODULES([PKGSMJS], [xulrunner-js], [has_pkg_smjs=yes],
-    [PKG_CHECK_MODULES([PKGSMJS], [firefox2-js], [has_pkg_smjs=yes],
-      [PKG_CHECK_MODULES([PKGSMJS], [firefox-js], [has_pkg_smjs=yes],
-        [PKG_CHECK_MODULES([PKGSMJS], [mozilla-js], [has_pkg_smjs=yes],
-          [PKG_CHECK_MODULES([PKGSMJS], [libjs], [has_pkg_smjs=yes],
+  PKG_CHECK_MODULES([PKGSMJS], [xulrunner-js], [has_pkg_smjs=xulrunner-js],
+    [PKG_CHECK_MODULES([PKGSMJS], [firefox2-js], [has_pkg_smjs=firefox2-js],
+      [PKG_CHECK_MODULES([PKGSMJS], [firefox-js], [has_pkg_smjs=firefox-js],
+        [PKG_CHECK_MODULES([PKGSMJS], [mozilla-js], [has_pkg_smjs=mozilla-js],
+          [PKG_CHECK_MODULES([PKGSMJS], [libjs], [has_pkg_smjs=libjs],
             [has_pkg_smjs=no])])])])])
 fi
 
-if test "x$has_pkg_smjs" = "xyes"; then
+if test "x$has_pkg_smjs" != "xno"; then
   smjs_CPPFLAGS="$PKGSMJS_CFLAGS $smjs_CPPFLAGS"
   smjs_LIBS=$PKGSMJS_LIBS
+
+  smjs_libdir=`$PKG_CONFIG --variable=libdir $has_pkg_smjs`
+  if test "x$smjs_libdir" = "x"; then
+# Some distributions doesn't have libdir, so try to extract libdir from LIBS.
+# @<:@ and @:>@ will be replace by [ and ] by M4. Really evil.
+    smjs_libdir=`echo $PKGSMJS_LIBS | sed -e 's/.*-L\(@<:@^ @:>@*\) .*/\1/'`
+    if test ! -e "$smjs_libdir"; then
+      smjs_libdir=""
+    fi
+  fi
 
   CPPFLAGS="$smjs_CPPFLAGS $ggl_save_CPPFLAGS"
   LIBS="$smjs_LIBS $ggl_save_LIBS"
@@ -126,6 +136,9 @@ fi
 
 if test "x$smjs_found" = "xyes" ; then
   smjs_CPPFLAGS="$smjs_CPPFLAGS $ggl_extra_smjs_cppflags"
+  if test "x$smjs_libdir" != "x" -a "x$smjs_libdir" != "x$libdir"; then
+    smjs_LDFLAGS="$smjs_LDFLAGS -R$smjs_libdir"
+  fi
   SPIDERMONKEY_CPPFLAGS="$smjs_CPPFLAGS"
   SPIDERMONKEY_LIBS="$smjs_LIBS"
   SPIDERMONKEY_LDFLAGS="$smjs_LDFLAGS"
