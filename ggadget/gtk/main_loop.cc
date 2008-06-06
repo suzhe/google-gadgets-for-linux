@@ -161,24 +161,19 @@ class MainLoop::Impl {
 
   MainLoopInterface::WatchType GetWatchType(int watch_id) {
     g_static_mutex_lock(&mutex_);
-    MainLoopInterface::WatchType type = MainLoopInterface::INVALID_WATCH;
-    if (!destroyed_) {
-      WatchNode *node = static_cast<WatchNode *>(
+    WatchNode *node = static_cast<WatchNode *>(
           g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
-      type = node ? node->type : MainLoopInterface::INVALID_WATCH;
-    }
+    MainLoopInterface::WatchType type =
+        node ? node->type : MainLoopInterface::INVALID_WATCH;
     g_static_mutex_unlock(&mutex_);
     return type;
   }
 
   int GetWatchData(int watch_id) {
     g_static_mutex_lock(&mutex_);
-    int data = -1;
-    if (!destroyed_) {
-      WatchNode *node = static_cast<WatchNode *>(
-          g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
-      data = node ? node->data : -1;
-    }
+    WatchNode *node = static_cast<WatchNode *>(
+        g_hash_table_lookup(watches_, GINT_TO_POINTER(watch_id)));
+    int data = node ? node->data : -1;
     g_static_mutex_unlock(&mutex_);
     return data;
   }
