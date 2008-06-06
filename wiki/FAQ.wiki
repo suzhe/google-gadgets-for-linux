@@ -29,5 +29,8 @@ Users are encouraged to share information on building Gadgets for Linux on that 
 *Q:* How to setup proxy for Google Gadgets for Linux?
 
 *A:* Currently there is no GUI for proxy setup. But you can setup proxy by setting following environment variables before launching GGL:
+{{{
   http_proxy=http://yourproxy.com:8080
   https_proxy=http://yourproxy.com:8080
+}}}
+Replace yourproxy.com with your proxy address and 8080 with your proxy port.
