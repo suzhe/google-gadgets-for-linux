@@ -135,3 +135,9 @@ There are many options to let you enable/disable individual component. for examp
  * --disable-qt-host
 
 Use option --help to get a complete list of configure options.
+
+== Platform-specific instructions ==
+
+Linux distributions vary greatly, so users may need to customize the build process based on their particular distribution and system setup. There's a page on our user discussion list where users can share information on building GGL on specific platforms:
+
+http://groups.google.com/group/google-gadgets-for-linux-user/web/building-instructions-addendum
